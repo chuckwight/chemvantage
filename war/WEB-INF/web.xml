@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xmlns="http://java.sun.com/xml/ns/javaee"
+xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+xsi:schemaLocation="http://java.sun.com/xml/ns/javaee
+http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
+
+	<welcome-file-list>
+  		<welcome-file>login.html</welcome-file>
+	</welcome-file-list>
+	
+	<servlet>
+		<servlet-name>About</servlet-name>
+		<servlet-class>org.chemvantage.About</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>About</servlet-name>
+		<url-pattern>/About</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<servlet-name>Admin</servlet-name>
+		<servlet-class>org.chemvantage.Admin</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>Admin</servlet-name>
+		<url-pattern>/Admin</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>BLTILaunch</servlet-name>
+		<servlet-class>org.chemvantage.BLTILaunch</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>BLTILaunch</servlet-name>
+		<url-pattern>/BLTILaunch</url-pattern>
+		<url-pattern>/BLTILaunch/</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>Contribute</servlet-name>
+		<servlet-class>org.chemvantage.Contribute</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>Contribute</servlet-name>
+		<url-pattern>/Contribute</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>DataStoreCleaner</servlet-name>
+		<servlet-class>org.chemvantage.DataStoreCleaner</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>DataStoreCleaner</servlet-name>
+		<url-pattern>/DataStoreCleaner</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>Edit</servlet-name>
+		<servlet-class>org.chemvantage.Edit</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>Edit</servlet-name>
+		<url-pattern>/Edit</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>Feedback</servlet-name>
+		<servlet-class>org.chemvantage.Feedback</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>Feedback</servlet-name>
+		<url-pattern>/Feedback</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>Groups</servlet-name>
+		<servlet-class>org.chemvantage.Groups</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>Groups</servlet-name>
+		<url-pattern>/Groups</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>Home</servlet-name>
+		<servlet-class>org.chemvantage.Home</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>Home</servlet-name>
+		<url-pattern>/Home</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>Homework</servlet-name>
+		<servlet-class>org.chemvantage.Homework</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>Homework</servlet-name>
+		<url-pattern>/Homework</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>Login</servlet-name>
+		<servlet-class>org.chemvantage.Login</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>Login</servlet-name>
+		<url-pattern>/login.html</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<servlet-name>PracticeExam</servlet-name>
+		<servlet-class>org.chemvantage.PracticeExam</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>PracticeExam</servlet-name>
+		<url-pattern>/PracticeExam</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<servlet-name>Quiz</servlet-name>
+		<servlet-class>org.chemvantage.Quiz</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>Quiz</servlet-name>
+		<url-pattern>/Quiz</url-pattern>
+	</servlet-mapping>
+	
+	<servlet> 
+  		<servlet-name>remote-api</servlet-name> 
+ 		 <servlet-class>com.google.apphosting.utils.remoteapi.RemoteApiServlet</servlet-class> 
+	</servlet> 
+	<servlet-mapping> 
+		<servlet-name>remote-api</servlet-name> 
+		<url-pattern>/remote_api</url-pattern> 
+	</servlet-mapping> 
+
+	<servlet>
+		<servlet-name>Rescue</servlet-name>
+		<servlet-class>org.chemvantage.Rescue</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>Rescue</servlet-name>
+		<url-pattern>/Rescue</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>Scores</servlet-name>
+		<servlet-class>org.chemvantage.Scores</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>Scores</servlet-name>
+		<url-pattern>/Scores</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>Verification</servlet-name>
+		<servlet-class>org.chemvantage.Verification</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>Verification</servlet-name>
+		<url-pattern>/Verification</url-pattern>
+	</servlet-mapping>
+	
+	<security-constraint>
+		<web-resource-collection>
+			<web-resource-name>AdminServlet</web-resource-name>
+			<url-pattern>/Admin</url-pattern>
+			<url-pattern>/remote_api</url-pattern>
+			<url-pattern>/Rescue</url-pattern>
+			<url-pattern>/DataStoreCleaner</url-pattern>
+		</web-resource-collection>
+		<auth-constraint>
+			<role-name>admin</role-name>
+		</auth-constraint>
+	</security-constraint>
+
+</web-app>

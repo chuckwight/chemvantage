@@ -1,0 +1,12 @@
+<!-- Indices written at Mon, 20 Jun 2011 16:23:06 UTC -->
+
+<datastore-indexes>
+
+    <!-- Used 2 times in query history -->
+    <datastore-index kind="QuizTransaction" ancestor="false" source="auto">
+        <property name="topicId" direction="asc"/>
+        <property name="userId" direction="asc"/>
+        <property name="downloaded" direction="asc"/>
+    </datastore-index>
+
+</datastore-indexes>
