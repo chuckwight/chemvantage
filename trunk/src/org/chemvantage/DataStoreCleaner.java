@@ -1,0 +1,50 @@
+/*  PracticeZone - A Java web application for online learning
+    Copyright (C) 2009 PracticeZone.org
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+package org.chemvantage;
+
+import java.io.IOException;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import com.googlecode.objectify.Objectify;
+import com.googlecode.objectify.Query;
+
+public class DataStoreCleaner extends HttpServlet {
+	private static final long serialVersionUID = 137L;
+	DAO dao = new DAO();
+	Objectify ofy = dao.ofy();
+	Subject subject = dao.getSubject();
+
+	public String getServletInfo() {
+		return "PZone servlet presents user's detailed scores in the Practice Zone site.";
+	}
+	
+	public void doGet(HttpServletRequest request,HttpServletResponse response)
+	throws ServletException, IOException {
+		// This servlet is called by the cron daemon once each day.
+		cleanUsers();
+}
+	
+	private void cleanUsers() {
+		Query<User> users = ofy.query(User.class);
+		for (User u : users) u.clean();
+		ofy.put(users);
+	}
+}

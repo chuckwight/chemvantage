@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cronentries>
+  <cron>
+    <url>/Rescue</url>
+    <description>Send messages to users who miss deadlines</description>
+    <schedule>every 6 hours synchronized</schedule>
+    <timezone>America/Los_Angeles</timezone>
+  </cron>
+</cronentries>
