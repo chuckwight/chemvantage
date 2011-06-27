@@ -125,10 +125,10 @@ public class Quiz extends HttpServlet {
 			
 			if (user.hasPremiumAccount()) buf.append(ajaxQuizJavaScript());  // this code allows premium users to use the Google SOAP search spell checking function
 			
-			buf.append("\n<FORM METHOD=POST ACTION=Quiz "
-					+ "onSubmit=\"return confirm('Submit this quiz for grading now. Are you sure?')\">");
+			buf.append("\n<FORM NAME=Quiz METHOD=POST ACTION=Quiz onSubmit=\"javascript: return confirmSubmission()\">");
 
-			buf.append("<div id='timer0' style='color: red'></div>");
+			buf.append("<div id='timer0' style='color: red'></div><div id=ctrl0 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
+					
 			buf.append("\n<input type=submit value='Grade This Quiz'>");
 
 			// create a set of available questionIds either from the group assignment or from the datastore
@@ -166,18 +166,49 @@ public class Quiz extends HttpServlet {
 
 			buf.append("\n<input type=hidden name='QuizTransactionId' value=" + qt.id + ">");
 			buf.append("\n<input type=hidden name='TopicId' value=" + topic.id + ">");
-			buf.append("\n<div id='timer1' style='color: red'></div>");
+			buf.append("<div id='timer1' style='color: red'></div><div id=ctrl1 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
 			buf.append("\n<input type=submit value='Grade This Quiz'>");
 			buf.append("\n</form>");
-			buf.append("<SCRIPT language='JavaScript'>"
-					+ "function countdown(seconds) {"
-					+ "var minutes = Math.floor(seconds/60);"
-					+ "var oddSeconds = seconds%60;"
+			buf.append("<SCRIPT language='JavaScript'>");
+			if (user.hasPremiumAccount()) {
+				buf.append("function toggleTimers() {"
+						+ "  var timer0 = document.getElementById('timer0');"
+						+ "  var timer1 = document.getElementById('timer1');"
+						+ "  var ctrl0 = document.getElementById('ctrl0');"
+						+ "  var ctrl1 = document.getElementById('ctrl1');"
+						+ "  if (timer0.style.display=='') {" 
+						+ "    timer0.style.display='none';timer1.style.display='none';"
+						+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
+						+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
+						+ "  } else {"
+						+ "    timer0.style.display='';timer1.style.display='';"
+						+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
+						+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
+						+ "  }"
+						+ "}");
+			} else {
+				buf.append("document.getElementById('timer0').style.visibility='hidden';"
+						+ "document.getElementById('timer1').style.visibility='hidden';"
+						+ "document.getElementById('ctrl0').style.visibility='hidden';"
+						+ "document.getElementById('ctrl1').style.visibility='hidden';");
+			}
+			buf.append("function confirmSubmission() {"
+					+ "if (seconds>0) return confirm('Submit this quiz for scoring now?');"
+					+ "}");
+			buf.append("var seconds;var minutes;var oddSeconds;"
+					+ "var endTime = new Date().getTime() + " + secondsRemaining + "*1000;"
+					+ "function countdown() {"
+					+ "var now = new Date().getTime();"
+					+ "seconds=Math.round((endTime-now)/1000);"
+					+ "minutes = seconds<0?Math.ceil(seconds/60):Math.floor(seconds/60);"
+					+ "oddSeconds = seconds%60;"
 					+ "for(i=0;i<2;i++)"
 					+ "document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ' minutes ' + oddSeconds + ' seconds.';"
-					+ "setTimeout('countdown(' + (seconds-1) + ')',1000);"
+					+ "if (seconds==30) alert('30 seconds remaining');"
+					+ "if (seconds < 0) document.Quiz.submit();"
+					+ "setTimeout('countdown()',1000);"
 					+ "}"
-					+ "countdown(" + secondsRemaining + ");"
+					+ "countdown();"
 					+ "</SCRIPT>"); 
 
 		} catch (Exception e) {
@@ -200,7 +231,8 @@ public class Quiz extends HttpServlet {
 				return "<h2>No Score</h2>"
 				+ "Sorry, this quiz has been scored already and cannot be scored again. Please consult the <a href=Scores>scores page</a>.";
 			}
-			if (now.getTime() - qt.downloaded.getTime() > (timeLimit*60000+5000)) return "Sorry, the " + timeLimit + " minute time limit for this quiz has expired.";
+			if (now.getTime() - qt.downloaded.getTime() > (timeLimit*60000+10000)) // includes 10 second grace period
+				return "Sorry, the " + timeLimit + " minute time limit for this quiz has expired.";
 
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			Group myGroup = user.myGroupId>0?ofy.find(Group.class,user.myGroupId):null;
@@ -326,7 +358,7 @@ public class Quiz extends HttpServlet {
 		+ "  var xmlhttp;\n"
 		+ "  var answer = document.getElementById(id).value.trim();\n"
 		+ "  if (answer.length==0) {\n"
-		+ "    document.getElementById('status').innerHTML='Nothing to check';\n"
+		+ "    document.getElementById('status'+id).innerHTML='Nothing to check';\n"
 		+ "    return false;\n"
 		+ "  }\n"
 		+ "  xmlhttp=GetXmlHttpObject();\n"
