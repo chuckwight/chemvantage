@@ -155,6 +155,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet-mapping>
 	
 	<servlet>
+		<servlet-name>SpellingChecker</servlet-name>
+		<servlet-class>org.chemvantage.SpellingChecker</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>SpellingChecker</servlet-name>
+		<url-pattern>/SpellingChecker</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
 		<servlet-name>Verification</servlet-name>
 		<servlet-class>org.chemvantage.Verification</servlet-class>
 	</servlet>
