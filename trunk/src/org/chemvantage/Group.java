@@ -6,7 +6,9 @@ import java.util.List;
 import java.util.TimeZone;
 
 import javax.persistence.Id;
+import javax.persistence.Transient;
 
+import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.ObjectifyService;
 import com.googlecode.objectify.Query;
@@ -31,6 +33,8 @@ public class Group {
     List<Long> topicIds = new ArrayList<Long>();
     List<Long> quizAssignmentIds = new ArrayList<Long>();
     List<Long> hwAssignmentIds = new ArrayList<Long>();
+    
+	@Transient Objectify ofy = ObjectifyService.begin();
      
     Group() {}
     
@@ -50,12 +54,10 @@ public class Group {
     }
     
     public String getInstructorEmail() {
-    	Objectify ofy = ObjectifyService.begin();
     	return ofy.get(User.class,this.instructorId).email;
     }
     
     public String getInstructorFullName() {
-    	Objectify ofy = ObjectifyService.begin();
     	try {
     		return ofy.get(User.class,this.instructorId).getFullName();
     	} catch (Exception e) {
@@ -64,7 +66,6 @@ public class Group {
     }
     
     public String getInstructorBothNames() {
-    	Objectify ofy = ObjectifyService.begin();
     	try {
     		if (this.instructorId.equals("admin@chemvantage.org")) return "TBA";
     		return ofy.get(User.class,this.instructorId).getBothNames();
@@ -91,7 +92,6 @@ public class Group {
     
     public void setNextDeadline() {
     	this.nextDeadline = null;
-    	Objectify ofy = ObjectifyService.begin();
     	Query<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",this.id).filter("deadline >",new Date());
     	for (Assignment a : assignments) if (this.nextDeadline == null || a.deadline.before(nextDeadline)) this.nextDeadline = a.deadline;
     }
@@ -114,7 +114,6 @@ public class Group {
     }
 
     public boolean setGroupTopicIds() {
-    	Objectify ofy = ObjectifyService.begin();
     	this.topicIds.clear();
     	this.quizAssignmentIds.clear();
     	this.hwAssignmentIds.clear();
@@ -136,4 +135,34 @@ public class Group {
     	}
     	return topicIds.isEmpty()?false:true;
     }
+
+    Score getScore(String userId,Assignment assignment) {
+    	try {
+    		Key<Score> k = new Key<Score>(new Key<User>(User.class, userId),Score.class,assignment.id);
+    		Score s = ofy.find(k);
+    		if (s==null) {
+    			s = Score.getInstance(userId,assignment);
+    			ofy.put(s);
+    		}
+    		return s;
+    	} catch (Exception e) {
+    		return null;
+    	}
+    }
+    
+    void deleteScores(long assignmentId) {
+    	List<Score> scores = ofy.query(Score.class).filter("assignmentId",assignmentId).list();
+    	ofy.delete(scores);
+    }
+
+    void deleteScores(String userId) {
+    	List<Score> scores = ofy.query(Score.class).filter("userId",userId).list();
+    	ofy.delete(scores);
+    }
+    
+    void deleteScores() {
+    	List<Score> scores = ofy.query(Score.class).filter("groupId",this.id).list();
+    	ofy.delete(scores);
+   }
+
 }

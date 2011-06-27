@@ -18,6 +18,7 @@ package org.chemvantage;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -30,6 +31,7 @@ import com.google.appengine.api.datastore.QueryResultIterator;
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Objectify;
+import com.googlecode.objectify.ObjectifyService;
 import com.googlecode.objectify.Query;
 
 public class Admin extends HttpServlet {
@@ -49,7 +51,7 @@ public class Admin extends HttpServlet {
 		try {
 			// begin standard user authentication section
 			UserService userService = UserServiceFactory.getUserService();
-			User user = ofy.get(User.class,userService.getCurrentUser().getNickname());
+			User user = ofy.get(User.class,userService.getCurrentUser().getUserId());
 			HttpSession session = request.getSession(true);
 			session.setAttribute("UserId", user.id);
 			
@@ -77,7 +79,7 @@ public class Admin extends HttpServlet {
 		try {
 			// begin standard user authentication section
 			UserService userService = UserServiceFactory.getUserService();
-			User user = ofy.get(User.class,userService.getCurrentUser().getNickname());
+			User user = ofy.get(User.class,userService.getCurrentUser().getUserId());
 			HttpSession session = request.getSession(true);
 			session.setAttribute("UserId", user.id);
 			
@@ -95,7 +97,6 @@ public class Admin extends HttpServlet {
 				User usr = ofy.get(User.class,request.getParameter("UserId")); // user record to modify
 				updateUser(usr,request);
 				searchString = usr.getFullName();
-				ofy.put(usr);
 				if (usr.id.equals(user.id)) user = usr; // admin modifying own record; update now to reflect new status
 			} else if (userRequest.equals("Delete User")) {
 				User usr = ofy.get(User.class,request.getParameter("UserId"));
@@ -113,7 +114,6 @@ public class Admin extends HttpServlet {
 				User usr = ofy.get(User.class,request.getParameter("UserId"));
 				User mergeUser = ofy.get(User.class,request.getParameter("MergeUserId"));
 				mergeAccounts(usr,mergeUser);
-				ofy.delete(mergeUser);
 				searchString = usr.getFullName();
 			}
 			out.println(Home.getHeader(user) + mainAdminForm(user,searchString,cursor) + Home.footer);
@@ -162,7 +162,6 @@ public class Admin extends HttpServlet {
 						+ "<TD><b>Role</b></TD><TD><b>Acct Type</b></TD><TD><b>Last Login</b></TD><TD><b>Action</b></TD></TR>");
 				while (iterator.hasNext()) {
 					User u = iterator.next();
-					u.clean(); // ensures that all User fields are valid for this user
 					buf.append("\n<FORM METHOD=GET>"
 							+ "<TR><TD>" + u.lastName + "</TD>"
 							+ "<TD>" + u.firstName + "</TD>"
@@ -310,6 +309,7 @@ public class Admin extends HttpServlet {
 					roles += Integer.parseInt(userRoles[i]);
 				}
 			}
+			if (!usr.email.equals(request.getParameter("Email"))) usr.verifiedEmail = false;
 			usr.setEmail(request.getParameter("Email"));
 			usr.setFirstName(request.getParameter("FirstName"));
 			usr.setLastName(request.getParameter("LastName"));
@@ -321,6 +321,7 @@ public class Admin extends HttpServlet {
 				usr.changeGroups(newId);
 			} catch (Exception e) {
 			}
+			ofy.put(usr);
 		}
 		catch (Exception e) {
 		}
@@ -370,35 +371,43 @@ public class Admin extends HttpServlet {
 		if (c!=null) ofy.delete(c);
 	}
 	
-	void mergeAccounts(User toUser,User fromUser) {
+	protected static void mergeAccounts(User toUser,User fromUser) {
 		// find all transactions for fromUser and credit to toUser:
-		Query<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId",fromUser.id);
-		for (HWTransaction h:hwTransactions) {
-			h.userId = toUser.id;
-			ofy.put(h);
+		if (toUser.firstName.isEmpty()) toUser.firstName = fromUser.firstName;
+		if (toUser.lastName.isEmpty()) toUser.lastName = fromUser.lastName;
+		if (toUser.email.isEmpty() && fromUser.verifiedEmail) toUser.email = fromUser.email;
+		if (toUser.myGroupId==0) {
+			toUser.myGroupId = fromUser.myGroupId;
+			toUser.notifyDeadlines = toUser.myGroupId>0?(toUser.notifyDeadlines || fromUser.notifyDeadlines):false;
+			toUser.smsMessageDevice = toUser.myGroupId>0?fromUser.smsMessageDevice:null;
 		}
-		Query<PracticeExamTransaction> peTransactions = ofy.query(PracticeExamTransaction.class).filter("userId",fromUser.id);
-		for (PracticeExamTransaction p:peTransactions) {
-			p.userId = toUser.id;
-			ofy.put(p);
-		}
-		Query<QuizTransaction> qTransactions = ofy.query(QuizTransaction.class).filter("userId",fromUser.id);
-		for (QuizTransaction q:qTransactions) {
-			q.userId = toUser.id;
-			ofy.put(q);
-		}
-		Query<VideoTransaction> vTransactions = ofy.query(VideoTransaction.class).filter("userId",fromUser.id);
-		for (VideoTransaction v:vTransactions) {
-			v.userId = toUser.id;
-			ofy.put(v);
-		}
-		Query<Group> myGroups = ofy.query(Group.class).filter("instructorId",fromUser.id);
-		for (Group g:myGroups) {
-			g.instructorId=toUser.id;
-			ofy.put(g);
-		}
-		QuizScore.removeAll(toUser.id);  // clears QuizScore objects to be recalculated when read
-		ofy.delete(fromUser);
+		toUser.roles = fromUser.roles>toUser.roles?fromUser.roles:toUser.roles;
+		
+		Objectify ofy = ObjectifyService.begin();
+		ofy.put(toUser);
+		
+		List<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId",fromUser.id).list();
+		for (HWTransaction h:hwTransactions) h.userId = toUser.id;
+		ofy.put(hwTransactions);
+		
+		List<PracticeExamTransaction> peTransactions = ofy.query(PracticeExamTransaction.class).filter("userId",fromUser.id).list();
+		for (PracticeExamTransaction p:peTransactions) p.userId = toUser.id;
+		ofy.put(peTransactions);
+		
+		List<QuizTransaction> qTransactions = ofy.query(QuizTransaction.class).filter("userId",fromUser.id).list();
+		for (QuizTransaction q:qTransactions) q.userId = toUser.id;
+		ofy.put(qTransactions);
+		
+		List<VideoTransaction> vTransactions = ofy.query(VideoTransaction.class).filter("userId",fromUser.id).list();
+		for (VideoTransaction v:vTransactions) v.userId = toUser.id;
+		ofy.put(vTransactions);
+		
+		List<Group> myGroups = ofy.query(Group.class).filter("instructorId",fromUser.id).list();
+		for (Group g:myGroups) g.instructorId=toUser.id;
+		ofy.put(myGroups);
+		
+		fromUser.setAlias(toUser.id);
+		ofy.put(fromUser);
 	}
 }
 

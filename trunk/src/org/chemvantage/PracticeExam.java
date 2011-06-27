@@ -176,6 +176,8 @@ public class PracticeExam extends HttpServlet {
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
 			rand.setSeed(pt.id);  // random number generator seeded with PracticeExamTransaction id value
 
+			if (user.hasPremiumAccount()) buf.append(ajaxExamJavaScript());  // this code allows premium users to use the Google SOAP search spell checking function
+			
 			buf.append("\n<FORM METHOD=POST ACTION=PracticeExam "
 					+ "onSubmit=\"return confirm('Submit this exam for grading now. Are you sure?')\">");
 
@@ -304,11 +306,8 @@ public class PracticeExam extends HttpServlet {
 			
 			// create a buffer to hold the correct solutions to missed questions:
 			StringBuffer missedQuestions = new StringBuffer();
-			missedQuestions.append("The following questions were answered incorrectly. There may be additional questions (not shown) that were ");
-			missedQuestions.append(user.hasPremiumAccount()?"":"answered incorrectly or ");
-			missedQuestions.append("left unanswered.");
-			if (!user.hasPremiumAccount()) missedQuestions.append("<br><a href=UpgradeAccount>View more answers</a>");
-
+			missedQuestions.append("The following questions were answered incorrectly. There may be additional questions (not shown) that were left unanswered.");
+			
 			missedQuestions.append("<OL>");
 			int[] studentScores = new int[topicIds.length];
 			int wrongAnswers = 0;
@@ -331,7 +330,7 @@ public class PracticeExam extends HttpServlet {
 				int score = studentAnswer[0].length()==0?0:q.isCorrect(studentAnswer[0])?q.pointValue:0;
 				if (score > 0) studentScores[topicList.indexOf(q.topicId)] += score;
 				if (studentAnswer[0].length() > 0) ofy.put(new Response("PracticeExam",q.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now));
-				if ((score == 0) && (studentAnswer[0].length()>0) && (user.hasPremiumAccount() || wrongAnswers < 2)) {  
+				if (score == 0) {
 					// include question in list of incorrectly answered questions
 					wrongAnswers++;
 					missedQuestions.append("\n<LI>" + q.printAllToStudents(studentAnswer[0]) + "</LI>\n");
@@ -355,15 +354,59 @@ public class PracticeExam extends HttpServlet {
 				else buf.append("Some questions were left blank.");
 			}
 			// embed ajax code to provide feedback
-			buf.append(ajaxJavaScript());
+			buf.append(ajaxScoreJavaScript());
 		}
 		catch (Exception e) {
 			buf.append(e.getMessage());
 		}
 		return buf.toString();
 	}
-  
-	String ajaxJavaScript() {
+
+	String ajaxExamJavaScript() {
+		return "<SCRIPT TYPE='text/javascript'>\n"
+		+ "function ajaxSpellCheck(id) {\n"
+		+ "  var xmlhttp;\n"
+		+ "  var answer = document.getElementById(id).value.trim();\n"
+		+ "  if (answer.length==0) {\n"
+		+ "    document.getElementById('status').innerHTML='Nothing to check';\n"
+		+ "    return false;\n"
+		+ "  }\n"
+		+ "  xmlhttp=GetXmlHttpObject();\n"
+		+ "  if (xmlhttp==null) {\n"
+		+ "    alert ('Sorry, your browser does not support AJAX!');\n"
+		+ "    return false;\n"
+		+ "  }\n"
+		+ "  xmlhttp.onreadystatechange=function() {\n"
+		+ "  var correctedAnswer;\n"
+		+ "  var status=document.getElementById('status'+id);\n"
+		+ "  var answerField=document.getElementById(id);\n"
+		+ "    if (xmlhttp.readyState==4) {\n"
+		+ "      correctedAnswer = xmlhttp.responseText.trim();\n"
+		+ "      if (correctedAnswer=='Spell checker is offline, sorry') {\n"
+		+ "      status.innerHTML=correctedAnswer; return false;\n"
+		+ "    }\n"
+		+ "    answerField.value=correctedAnswer;\n"
+		+ "    if (correctedAnswer==answer) status.innerHTML='Spelling is OK';\n"
+		+ "    else status.innerHTML='Did you mean this instead?';\n"
+		+ "    }\n"
+		+ "  }\n"
+		+ "  xmlhttp.open('GET','SpellingChecker?UserRequest=SpellCheck&Answer='+answer,true);\n"
+		+ "  xmlhttp.send(null);\n"  
+		+ "  return false;\n"
+		+ "}\n"
+		+ "function GetXmlHttpObject() {\n"
+		+ "  if (window.XMLHttpRequest) { // code for IE7+, Firefox, Chrome, Opera, Safari\n"
+		+ "    return new XMLHttpRequest();\n"
+		+ "  }\n"
+		+ "  if (window.ActiveXObject) { // code for IE6, IE5\n"
+		+ "    return new ActiveXObject('Microsoft.XMLHTTP');\n"
+		+ "  }\n"
+		+ "  return null;\n"
+		+ "}\n"
+		+ "</SCRIPT>";			
+	}
+
+	String ajaxScoreJavaScript() {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note) {\n"
 		+ "  var xmlhttp;\n"

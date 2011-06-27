@@ -274,7 +274,7 @@ public class Scores extends HttpServlet {
 			
 			// Show/set deadline notification options:
 			buf.append("<FORM METHOD=POST>");
-			if (user.notifyDeadlines && user.verifiedEmail) {
+			if (user.hasPremiumAccount() && user.notifyDeadlines && user.verifiedEmail) {
 				buf.append("ChemVantage will send you an email reminder on the morning of each due date. "
 						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Cancel Notifications'><br>");
 				if (user.smsMessageDevice.isEmpty()) {
@@ -310,7 +310,7 @@ public class Scores extends HttpServlet {
 					}
 					buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Cancel'>");
 				}
-			} else {
+			} else if (user.hasPremiumAccount()) {
 				buf.append("You may elect to receive email or text message reminders of assignment deadlines"
 						+ (user.verifiedEmail?".<br><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Turn Notifications On'>":
 							",<br>but first you must <a href=Verification>verify your contact information</a>."));
@@ -337,13 +337,13 @@ public class Scores extends HttpServlet {
 				buf.append("<TR><TD>" + t.title + "</TD>");
 				
 				if (qa != null) { // print the quiz score for this topic in the table
-					buf.append("<TD ALIGN=CENTER" + (qa.deadline.equals(nextDeadline)?" BGCOLOR=#FFFF00>":">") + df.format(qa.deadline) + "</TD>");
-					buf.append("<TD ALIGN=CENTER>" + QuizScore.getInstance(qa, user.id).getEnhancedScore() + "</TD>");
+					buf.append("<TD ALIGN=CENTER" + (qa.deadline.equals(nextDeadline)?" BGCOLOR=#FFFF00><a href=Quiz?TopicId=" + topicId + ">" + df.format(qa.deadline) + "</a></TD>":">" + df.format(qa.deadline) + "</TD>"));
+					buf.append("<TD ALIGN=CENTER>" + myGroup.getScore(user.id,qa).getEnhancedScore() + "</TD>");
 				} else buf.append("<TD COLSPAN=2 ALIGN=CENTER><FONT COLOR=808080>(not assigned)</FONT></TD>");
 				
 				if (hwa != null && hwa.questionKeys.size()>0) { // print the homework score for this topic in the table
-					buf.append("<TD ALIGN=CENTER" + (hwa.deadline.equals(nextDeadline)?" BGCOLOR=#FFFF00>":">") + df.format(hwa.deadline) + "</TD>");
-					buf.append("<TD ALIGN=CENTER>" + HomeworkScore.getInstance(hwa, user.id).getEnhancedScore() + "</TD>");
+					buf.append("<TD ALIGN=CENTER" + (hwa.deadline.equals(nextDeadline)?" BGCOLOR=#FFFF00><a href=Homework?TopicId=" + topicId + ">" + df.format(hwa.deadline) + "</a></TD>":">" + df.format(hwa.deadline) + "</TD>"));
+					buf.append("<TD ALIGN=CENTER>" + myGroup.getScore(user.id,hwa).getEnhancedScore() + "</TD>");
 				} else buf.append("<TD COLSPAN=2 ALIGN=CENTER><FONT COLOR=808080>(not assigned)</FONT></TD>");
 				buf.append("</TR>");
 				nRows++;

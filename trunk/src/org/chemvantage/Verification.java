@@ -83,11 +83,12 @@ public class Verification extends HttpServlet {
 			if (userRequest == null) userRequest = "";
 
 			if (userRequest.equals("Save My Email")) {
+				if (!user.email.equals(request.getParameter("Email"))) user.verifiedEmail = false;
 				user.setEmail(request.getParameter("Email"));
 				user.lastLogin = new Date();
 				ofy.put(user);
 				if (user.email.substring(user.email.indexOf("@")).toLowerCase().equals("@gmail.com")) {
-					response.sendRedirect(UserServiceFactory.getUserService().createLoginURL("Verification"));
+					response.sendRedirect(UserServiceFactory.getUserService().createLoginURL("/Verification"));
 				} else out.println(Home.getHeader(user) + personalInfoForm(user,verificationEmailSent(user,request)) + Home.footer);
 			} else if (userRequest.equals("Save My Name")) {
 				user.setFirstName(request.getParameter("FirstName"));
@@ -103,7 +104,7 @@ public class Verification extends HttpServlet {
 			} else if (userRequest.equals("Verify With Google")) {
 				user.lastLogin = new Date();
 				ofy.put(user);
-				response.sendRedirect(UserServiceFactory.getUserService().createLoginURL("/Verification"));
+				response.sendRedirect(UserServiceFactory.getUserService().createLoginURL("Verification"));
 			} else if (userRequest.equals("Remind Me Later")) {
 				user.lastLogin = new Date();
 				ofy.put(user);
@@ -159,82 +160,85 @@ public class Verification extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		boolean nameRequired = user.firstName.isEmpty() || user.lastName.isEmpty();
 		boolean emailRequired = user.email.isEmpty();
-		
-		buf.append("<h2>Your Contact Information</h2>"
-				+ "ChemVantage protects your personal information. "
-				+ "For details, see our <a href=About#terms>Privacy Policy</a>.<br>"
-				+ "In order for ChemVantage to function properly as a learning resource, "
-				+ "we need to associate your name and email address with your account. "
-				+ "This is important for protecting <i>you</i> by making it difficult "
-				+ "for someone else to impersonate you or tamper with your account.");
-		
-		buf.append("<FORM NAME=Info ACTION=Verification METHOD=POST>");
-		
-		//  Enter or verify the user's name
-		buf.append("<h3>Your Name" + (nameRequired?"":": " + user.getFullName()) + "</h3>"
-				+ "When you join a ChemVantage group, your name is visible to your instructor for the purpose "
-				+ "of maintaining group enrollments and for reporting ChemVantage scores on assignments. "
-				+ "If you are an instructor, your name is visible to all users for the purpose of identifying "
-				+ "your ChemVantage groups.<p>");
-		if (nameRequired) {
-			buf.append("<FONT COLOR=RED>Please enter your first (given) and last (family) names:</FONT><br>"
-					+ "First Name: <INPUT NAME=FirstName VALUE='" + CharHider.quot2html(user.firstName) + "'><br>"
-					+ "Last Name: <INPUT NAME=LastName VALUE='" + CharHider.quot2html(user.lastName) + "'><br>"
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save My Name'><br>");
-		}
-		
-		// Enter or verify the user's email address
-		buf.append("<h3>Your Email Address" + (emailRequired?"":": " + user.email + (user.verifiedEmail?" (verified)":" <FONT COLOR=RED>(unverified)</FONT>")) + "</h3>");
-		if (verificationEmailSent) {
-			buf.append("<FONT COLOR=RED>An email message was sent to " + user.email
-					+ " with a coded link to verify your email address with ChemVantage.</FONT><p>");
-		}
-		else if (!emailRequired && !user.verifiedEmail) {
-			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Verify My Email Address'>");
-		}
-		buf.append("ChemVantage uses your email address in the following ways:<UL>"
-				+ "<LI>As a unique identifier to distinguish you from other users with similar names"
-				+ "<LI>As a means of communicating with you when necessary to answer your questions or "
-				+ "to remind you (at your option) of assignment deadlines."
-				+ "<LI>Your email address is visible to your instructor for sending you messages.</UL>");
-		if (emailRequired) {
-			buf.append("<FONT COLOR=RED>Please enter your preferred email address: </FONT>"
-					+ "<INPUT NAME=Email>"
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save My Email'><p>");
-			buf.append("or <a href=" + UserServiceFactory.getUserService().createLoginURL("Verification") 
-					+ ">use my Google/GMail account to authenticate to ChemVantage</a><p>");
-		}
-		
-		// View the user's SMS message device, if registered (see the Scores servlet)
-		if (!user.smsMessageDevice.isEmpty()) {
-			try {
-				Long.parseLong(user.smsMessageDevice.substring(0,10));
-				buf.append("<h3>Your SMS/Text Address: " + user.smsMessageDevice + "</h3>"
-						+ "You have registered your SMS device to receive reminders of ChemVantage assignment deadlines.<p>");
-			} catch (Exception e2) {
-				buf.append("<h3>Your SMS/Text Address: " + user.smsMessageDevice.substring(5) + "</h3>"
-						+ "You have registered your SMS device address but have not completed the "
-						+ "confirmation process.<p>");
+		try {
+			buf.append("<h2>Your Contact Information</h2>"
+					+ "ChemVantage protects your personal information. "
+					+ "For details, see our <a href=About#terms>Privacy Policy</a>.<br>"
+					+ "In order for ChemVantage to function properly as a learning resource, "
+					+ "we need to associate your name and email address with your account. "
+					+ "This is important for protecting <i>you</i> by making it difficult "
+					+ "for someone else to impersonate you or tamper with your account.");
+
+			buf.append("<FORM NAME=Info ACTION=Verification METHOD=POST>");
+
+			//  Enter or verify the user's name
+			buf.append("<h3>Your Name" + (nameRequired?"":": " + user.getFullName()) + "</h3>"
+					+ "When you join a ChemVantage group, your name is visible to your instructor for the purpose "
+					+ "of maintaining group enrollments and for reporting ChemVantage scores on assignments. "
+					+ "If you are an instructor, your name is visible to all users for the purpose of identifying "
+					+ "your ChemVantage groups.<p>");
+			if (nameRequired) {
+				buf.append("<FONT COLOR=RED>Please enter your first (given) and last (family) names:</FONT><br>"
+						+ "First Name: <INPUT NAME=FirstName VALUE='" + CharHider.quot2html(user.firstName) + "'><br>"
+						+ "Last Name: <INPUT NAME=LastName VALUE='" + CharHider.quot2html(user.lastName) + "'><br>"
+						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save My Name'><br>");
 			}
-			buf.append("You can manage your SMS notification options on the group <a href=Scores>Scores</a> page.<br>");	
+
+			// Enter or verify the user's email address
+			buf.append("<h3>Your Email Address" + (emailRequired?"":": " + user.email + (user.verifiedEmail?" (verified)":" <FONT COLOR=RED>(unverified)</FONT>")) + "</h3>");
+			if (verificationEmailSent) {
+				buf.append("<FONT COLOR=RED>An email message was sent to " + user.email
+						+ " with a coded link to verify your email address with ChemVantage.</FONT><p>");
+			}
+			else if (!emailRequired && !user.verifiedEmail) {
+				buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Verify My Email Address'><p>");
+			}
+			buf.append("ChemVantage uses your email address in the following ways:<UL>"
+					+ "<LI>As a unique identifier to distinguish you from other users with similar names"
+					+ "<LI>As a means of communicating with you when necessary to answer your questions or "
+					+ "to remind you (at your option) of assignment deadlines."
+					+ "<LI>Your email address is visible to your instructor for sending you messages.</UL>");
+			if (emailRequired) {
+				buf.append("<FONT COLOR=RED>Please enter your preferred email address: </FONT>"
+						+ "<INPUT NAME=Email>"
+						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save My Email'><p>");
+				buf.append("or <a href=" + UserServiceFactory.getUserService().createLoginURL("/Verification") 
+						+ ">use my Google/GMail account to authenticate to ChemVantage</a><p>");
+			}
+
+			// View the user's SMS message device, if registered (see the Scores servlet)
+			if (user.smsMessageDevice!=null && !user.smsMessageDevice.isEmpty()) {
+				try {
+					Long.parseLong(user.smsMessageDevice.substring(0,10));
+					buf.append("<h3>Your SMS/Text Address: " + user.smsMessageDevice + "</h3>"
+							+ "You have registered your SMS device to receive reminders of ChemVantage assignment deadlines.<p>");
+				} catch (Exception e2) {
+					buf.append("<h3>Your SMS/Text Address: " + user.smsMessageDevice.substring(5) + "</h3>"
+							+ "You have registered your SMS device address but have not completed the "
+							+ "confirmation process.<p>");
+				}
+				buf.append("You can manage your SMS notification options on the group <a href=Scores>Scores</a> page.<br>");	
+			}
+
+			// Final wrap-up
+			if (!nameRequired && !emailRequired && user.verifiedEmail) {  // all information is current
+				buf.append("<h3>Any Corrections Needed?</h3>"
+						+ "If your name and/or email shown above is not correct, please send a message to "
+						+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a> giving detailed "
+						+ "instructions for any changes that are necessary. Please include your userId "
+						+ "below with the message.<p>");
+			} else {                                        // something is still incomplete
+				buf.append("<h3>Not Now</h3>"
+						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Remind Me Later'><p>"
+						+ "If you need assistance completing the registration of your name or email address, "
+						+ "please send a message to <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a> "
+						+ "with your request. Be sure to include your userId below with the message.<p>");
+			}
+			buf.append("UserId: " + user.id);
+			buf.append("</FORM>");
+		} catch (Exception e) {
+			buf.append(e.toString());
 		}
-		
-		// Final wrap-up
-		if (!nameRequired && !emailRequired && user.verifiedEmail) {  // all information is current
-			buf.append("<h3>Any Corrections Needed?</h3>"
-					+ "If your name and/or email shown above is not correct, please send a message to "
-					+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a> giving detailed "
-					+ "instructions for any changes that are necessary. Please include your userId "
-					+ "below with the message.<p>");
-		} else {                                        // something is still incomplete
-			buf.append("<h3>Not Now</h3>"
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Remind Me Later'><p>"
-					+ "If you need assistance completing the registration of your name or email address, "
-					+ "please send a message to <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a> "
-					+ "with your request. Be sure to include your userId below with the message.<p>");
-		}
-		buf.append("UserId: " + user.id);
-		buf.append("</FORM>");
 		return buf.toString();
 	}
 }

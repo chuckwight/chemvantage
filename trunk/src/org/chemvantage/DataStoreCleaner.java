@@ -17,6 +17,7 @@
 package org.chemvantage;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -40,6 +41,9 @@ public class DataStoreCleaner extends HttpServlet {
 	throws ServletException, IOException {
 		// This servlet is called by the cron daemon once each day.
 		cleanUsers();
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+		out.println("Done.");
 }
 	
 	private void cleanUsers() {

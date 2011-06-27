@@ -236,7 +236,57 @@ public class Question {
 		case 4: // Fill-in-the-Word
 			buf.append("<b>" + text + "</b><br>");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br>");
+			buf.append("<input id=" + this.id + " type=text name=" + this.id + ">");
+			buf.append("<b>" + tag + "</b><br>");
+			break;
+		case 5: // Numeric Answer
+			buf.append("<b>" + parseString(text) + "</b><br>");
+			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value to " 
+					+ requiredPrecision + "% precision. Express scientific notation like 4.294E-15</FONT><br>");
 			buf.append("<input type=text name=" + this.id + ">");
+			buf.append("<b>" + parseString(tag) + "</b><br>");
+			break;        
+		}
+		return buf.toString();
+	}
+	String printPremium() {  // this method includes functionality for premium users to access spell checking
+		StringBuffer buf = new StringBuffer();
+		char choice = 'a';
+		switch (getQuestionType()) {
+		case 1: // Multiple Choice
+			buf.append("<b>" + text + "</b><br>");
+			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best answer:</FONT><br>");
+			buf.append("<UL>");
+			for (int i = 0; i < nChoices; i++) {
+				buf.append("<input type=radio name=" + this.id + " value=" + choice + ">" + choices.get(i) + "<br>");
+				choice++;
+			}
+			buf.append("</UL>");
+			break;
+		case 2: // True/False
+			buf.append("<b>" + text + "</b><br>");
+			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select true or false:</FONT><br>");
+			buf.append("<UL>");
+			buf.append("<input type=radio name=" + this.id + " value='true'> True<br>");
+			buf.append("<input type=radio name=" + this.id + " value='false'> False<br>");
+			buf.append("</UL>");
+			break;
+		case 3: // Select Multiple
+			buf.append("<b>" + text + "</b><br>");
+			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><br>");
+			buf.append("<UL>");
+			for (int i = 0; i < nChoices; i++) {
+				buf.append("<input type=checkbox name=" + this.id + " value=" + choice + ">" + choices.get(i) + "<br>");
+				choice++;
+			}
+			buf.append("</UL>");
+			break;
+		case 4: // Fill-in-the-Word
+			buf.append("<b>" + text + "</b><br>");
+			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br>");
+			//buf.append("<div id=status" + this.id + " style='font-size:10px'><a href=# onClick=\"javascript: document.getElementById('status" + this.id + "').innerHTML='checking...';ajaxSpellCheck(" + this.id + ");\">Check Spelling</a></div>");
+			buf.append("<div id=status" + this.id + " style='font-size:10px'><button type=button onClick=\"javascript: document.getElementById('status" + this.id + "').innerHTML='checking...';ajaxSpellCheck(" + this.id + ");\">Check Spelling</button></div>");
+			buf.append("<input id=" + this.id + " type=text name=" + this.id + ">");
 			buf.append("<b>" + tag + "</b><br>");
 			break;
 		case 5: // Numeric Answer
@@ -535,6 +585,7 @@ public class Question {
 			for (int i=0;i<correctAnswers.length;i++) {
 				if (compare.equals(answer,correctAnswers[i])) return true;
 			}
+			return false;
 		case 5: // Numeric Answer
 			answer = answer.replaceAll(",","");  // removes comma separators from numbers
 			try {

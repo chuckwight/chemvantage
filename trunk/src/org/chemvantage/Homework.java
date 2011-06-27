@@ -201,6 +201,9 @@ public class Homework extends HttpServlet {
 					studentScore = q.isCorrect(studentAnswer[0])?q.pointValue:0;
 					Response r = new Response("Homework",topic.id,q.id,studentAnswer[0],q.getCorrectAnswer(),studentScore,possibleScore,user.id,now);
 					ofy.put(r);
+					// create/update/store a HomeworkScore object
+					Assignment a = ofy.find(Assignment.class,myGroup.getAssignmentId("Homework",topic.id));
+					if (a != null) ofy.put(Score.getInstance(user.id,a).update(studentScore));
 					ofy.put(new HWTransaction(q.id,topic.id,topic.title,user.id,now,r.id,studentScore,possibleScore,request.getRequestURI()));
 				}
 			}
@@ -235,7 +238,7 @@ public class Homework extends HttpServlet {
 
 			// embed the detailed solution or hint to the exercise in the response, if appropriate
 			buf.append(ajaxJavaScript());
-			if (user.isInstructor() || user.isTeachingAssistant() || (studentScore > 0 && user.hasPremiumAccount())) {
+			if (user.isInstructor() || user.isTeachingAssistant() || (studentScore > 0)) {
 				buf.append("<p><div id=exampleLink>"
 						+ "<a href=# onClick=javascript:document.getElementById('example').style.display='';"
 						+ "document.getElementById('exampleLink').style.display='none';>"
@@ -300,13 +303,10 @@ public class Homework extends HttpServlet {
 		+ "    var msg;\n"
 		+ "    switch (nStars) {\n"
 		+ "      case '1': msg='1 star - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to tell us why:'"
-		+ "                + '<FORM ACTION=Feedback METHOD=POST><INPUT TYPE=HIDDEN NAME=Stars Value=1><INPUT TYPE=HIDDEN NAME=Save VALUE=No>'"
-		+ "                + '<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback><INPUT NAME=Comments SIZE=60><INPUT TYPE=SUBMIT></FORM>';"
+		+ "                + 'please take a moment to <a href=Feedback>tell us why</a>.';"
 		+ "                break;\n"
-		+ "      case '2': msg='2 stars - How we can serve you better?</a>'"
-		+ "                + '<FORM ACTION=Feedback METHOD=POST><INPUT TYPE=HIDDEN NAME=Stars Value=2><INPUT TYPE=HIDDEN NAME=Save VALUE=No>'"
-		+ "                + '<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback><INPUT NAME=Comments SIZE=60><INPUT TYPE=SUBMIT></FORM>';"
+		+ "      case '2': msg='2 stars - If you are dissatisfied with ChemVantage, '"
+		+ "                + 'please take a moment to <a href=Feedback>tell us why</a>.';"
 		+ "                break;\n"
 		+ "      case '3': msg='3 stars - Thank you. <a href=Feedback>Click here</a> '"
 		+ "                + 'to provide additional feedback.';"

@@ -67,6 +67,7 @@ public class Home extends HttpServlet {
 		
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
+
 		out.println(homePage(user,request));
 	}
 
@@ -289,7 +290,7 @@ public class Home extends HttpServlet {
 				}
 			}
 			buf.append("<TR><TD COLSPAN=2 ALIGN=CENTER><FONT SIZE=-1><a href=Scores>Show My Scores</a></FONT></TD></TR>");
-			buf.append("<TR><TD ALIGN=CENTER><FONT SIZE=-1><a href=Verification?UserRequest=View>View My Information</a></FONT></TD></TR>");
+			buf.append("<TR><TD ALIGN=CENTER><FONT SIZE=-1><a href=Verification>View My Information</a></FONT></TD></TR>");
 			buf.append("</TABLE>");
 			buf.append("</TD></TR></TABLE><p>");
 		} catch (Exception e) {
