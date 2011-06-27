@@ -25,6 +25,7 @@ import javax.persistence.Transient;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+import com.google.appengine.api.datastore.QueryResultIterator;
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
@@ -48,6 +49,8 @@ public class User implements Comparable<User> {
 	String smsMessageDevice;
 	boolean notifyDeadlines;
 	boolean verifiedEmail;
+	String alias;
+	String authDomain;
 	
 	@Transient Objectify ofy = ObjectifyService.begin();
 
@@ -66,6 +69,8 @@ public class User implements Comparable<User> {
 		this.smsMessageDevice = "";
 		this.notifyDeadlines = false;
 		this.verifiedEmail = false;
+		this.authDomain = "google.com";
+		this.alias = null;
 	}
 
 	static User getInstance(HttpSession session) {
@@ -73,22 +78,46 @@ public class User implements Comparable<User> {
 		String userId = (String)session.getAttribute("UserId");
 		if (userId==null) {
 			try {  // Google authentication
-				userId = userService.getCurrentUser().getNickname();
+				userId = userService.getCurrentUser().getUserId();
 			} catch (Exception e) {  // invalid user or lost BLTI session
 				return null;
 			}
 		}
 		
-		// from here on, userId should be valid
+		//  from here on, userId should be valid
 		Objectify ofy = ObjectifyService.begin();
-		User user = ofy.find(User.class,userId); // retrieve User attributes from datastore if it exists
-		if (user==null) user = new User(userId); // otherwise, create a new ChemVantage user
-		
+		User user = null;
 		try {
-			if (user.email.isEmpty() && (userService.isUserLoggedIn() && !userService.isUserAdmin())) {
-				user.email = userService.getCurrentUser().getEmail();
-				user.verifiedEmail = true;
-			} else if (!user.verifiedEmail && userService.isUserLoggedIn() && userService.getCurrentUser().getEmail().equals(user.email)) user.verifiedEmail = true;
+			do {
+				user = ofy.get(User.class,userId); // retrieve User attributes from datastore if it exists
+				userId = user.alias==null?userId:user.alias;
+			} while (user.alias!=null);
+		} catch (Exception e) {  // falls to here when datastore call fails or user is at the end of hte alias chain
+		}
+		
+		// this section converts nickname userIds to permanent Google userId strings
+		if (user==null) {
+			try {
+				String oldUserId = userService.getCurrentUser().getNickname();
+				User oldUser = ofy.get(User.class,oldUserId);
+				user = ofy.get(User.class,oldUserId);
+				user.id = userId;
+				Admin.mergeAccounts(user,oldUser);
+				ofy.delete(oldUser);
+			} catch (Exception e) {
+				user = new User(userId);  // user is not in datastore; create a new one
+			}
+		}
+		
+		try {  // try to clean up some unverified accounts
+			if (!user.verifiedEmail && userService.isUserLoggedIn() && !userService.isUserAdmin()) {
+				String email = userService.getCurrentUser().getEmail();
+				if (!email.isEmpty()) {
+					user.email = email;
+					user.verifiedEmail = true;
+					user.authDomain = "google.com";
+				}
+			}
 			InternetAddress addr = new InternetAddress(user.email);
 			addr.validate();
 		} catch (Exception e) {
@@ -96,16 +125,17 @@ public class User implements Comparable<User> {
 			user.verifiedEmail = false;
 		}
 		
-		try {
-			if (userId.equals(userService.getCurrentUser().getNickname())) user.setIsAdministrator(userService.isUserAdmin());
+		try { // determine if this person is an administrator (Google login required)
+			if (userId.equals(userService.getCurrentUser().getUserId())) user.setIsAdministrator(userService.isUserAdmin());
 		} catch (Exception e) {
 			user.setIsAdministrator(false);
 		}
 		
+		// update the lastLogin date only if everything is OK; otherwise the Verification page will stop the user
 		if (!user.lastName.isEmpty() && !user.firstName.isEmpty() && user.verifiedEmail) user.lastLogin = new Date();
 		
-		try {
-			ofy.put(user); // this updates lastLogin and tests the availability of the datastore
+		try {  // this tests the availability of the datastore and locks the site if necessary
+			ofy.put(user); 
 			if (Home.announcement.equals(Home.maintenanceAnnouncement)) {
 				Home.announcement = "";
 				Login.lockedDown = false;
@@ -113,7 +143,25 @@ public class User implements Comparable<User> {
 		} catch (com.google.apphosting.api.ApiProxy.CapabilityDisabledException e) {
 			Home.announcement = Home.maintenanceAnnouncement;
 			Login.lockedDown = true;
-		}	  
+		}
+		
+		if (user.verifiedEmail) {  // this section seeks to merge accounts with the same verified email address
+			try {
+				Query<User> dupUsers = ofy.query(User.class).filter("email",user.email).filter("verifiedEmail",true);
+				if (dupUsers.count() > 1) {
+					// find the Google account (keeper) and merge all other accounts with it, leaving alias for redirection
+					User keeper = null;
+					QueryResultIterator<User> it = dupUsers.iterator();
+					do {keeper = it.next();} while (!keeper.authDomain.equals("google.com"));
+					for (User u : dupUsers) {
+						if (u.id!=keeper.id && u.verifiedEmail) Admin.mergeAccounts(keeper,u);
+					}
+				}
+			} catch (Exception e) {
+				// don't worry
+			}
+		}
+		
 		return user;
 	}
 	
@@ -123,6 +171,8 @@ public class User implements Comparable<User> {
 		String user_id = request.getParameter("user_id");
 		String userId = oauth_consumer_key + (user_id==null?"":":"+user_id);
 		User user = new User(userId);
+		user.authDomain = "BLTI";
+		user.alias = null;
 		user.setFirstName(request.getParameter("lis_person_name_given"));
 		user.setLastName(request.getParameter("lis_person_name_family"));
 		user.setEmail(request.getParameter("lis_person_contact_email_primary"));
@@ -156,6 +206,8 @@ public class User implements Comparable<User> {
 		}
 		if (lastLogin==null) lastLogin = new Date();
 		if (smsMessageDevice==null) smsMessageDevice = "";
+		authDomain = id.contains(":")?"BLTI":"google.com";
+		alias = (alias==null || alias.isEmpty())?null:alias;
 		ofy.put(this);
 	}
 	
@@ -196,6 +248,10 @@ public class User implements Comparable<User> {
 	void setLowerCaseName() {
 		this.lowercaseName = (lastName.length()>0?lastName.toLowerCase():" ") 
 		+ (firstName.length()>0?", " + firstName.toLowerCase():" ");
+	}
+	
+	void setAlias(String newId) {
+		this.alias = newId;
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -299,60 +355,9 @@ public class User implements Comparable<User> {
 	}
 
 	boolean hasPremiumAccount() {
-		return (isInstructor() || premium);
+		return (premium);
 	}
-/*
-	public List<Score> getQuizScores() {
-		// returns a list of quiz scores taken
-		List<Score> scores = new ArrayList<Score>();
-		List<Long> topicIds = new ArrayList<Long>();
-		List<QuizTransaction> quizTransactions = this.getQuizTransactions();
-		for (QuizTransaction q : quizTransactions) {
-			if (!topicIds.contains(q.topicId)) {
-				scores.add(new Score(q.topicId,q.topicTitle,q.score));
-				topicIds.add(q.topicId);
-			} 
-		}
-		return scores;
-	}
-	
-	public List<Score> getHWScores() {
-		// returns a list of quiz scores taken
-		List<Score> scores = new ArrayList<Score>();
-		List<Long> topicIds = new ArrayList<Long>();
-		List<HWTransaction> hwTransactions = this.getHWTransactions();
-		for (HWTransaction h : hwTransactions) {
-			if (h.score == 0) continue;
-			Score s;
-			if (topicIds.contains(h.topicId)) {
-				s = scores.get(topicIds.indexOf(h.topicId));
-			} else {
-				s = new Score(h.topicId,h.topicTitle);
-				scores.add(s);
-				topicIds.add(h.topicId);
-			}
-			if (!s.correctQuestionExists(h.questionId)) s.addCorrectQuestion(h.questionId);
-		}
-		return scores;
-	}
-*/
-/*	
-	public String getHWScore(long topicId) {
-		boolean scoreExists = false;
-		Query<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId",this.id).filter("topicId",topicId);
-		List<Long> questionIds = new ArrayList<Long>();  
-		// add a questionId to the List for each nonduplicated correct answer
-		try {
-			for (HWTransaction h : hwTransactions) {                    
-				scoreExists = true;
-				if (h.score > 0 && !questionIds.contains(h.questionId)) questionIds.add(h.questionId);
-			}
-		} catch (Exception e) {
-			return e.getMessage();
-		}
-		return scoreExists?new Integer(questionIds.size()).toString():"";
-	}
-*/	
+
 	public int getHWQuestionScore(long questionId) {
 		return (ofy.query(HWTransaction.class).filter("userId",this.id).filter("questionId",questionId).filter("score >",0).getKey() == null?0:1);
 	}
@@ -381,7 +386,6 @@ public class User implements Comparable<User> {
 		if (newGroupId==0 || ofy.find(Group.class,newGroupId) != null) this.myGroupId = newGroupId;
 		else this.myGroupId = 0;
 		ofy.put(this);
-		QuizScore.removeAll(this.id);
 		List<Group> allGroups = ofy.query(Group.class).list();
 		for (Group g : allGroups) {
 			if (g.id == newGroupId && !g.isMember(this.id)) {
@@ -389,6 +393,7 @@ public class User implements Comparable<User> {
 				ofy.put(g);
 			} else if (g.id != newGroupId && g.isMember(this.id)) {
 				g.memberIds.remove(this.id);
+				g.deleteScores(this.id);
 				ofy.put(g);
 			}
 		}

@@ -18,7 +18,9 @@ package org.chemvantage;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -37,6 +39,18 @@ public class Login extends HttpServlet {
 	Objectify ofy = dao.ofy();
 	Subject subject = dao.getSubject();
 	List<Video> videos = ofy.query(Video.class).order("orderBy").list();
+
+// OpenId testing here:	
+    private static final Map<String, String> openIdProviders;
+    static {
+        openIdProviders = new HashMap<String, String>();
+        openIdProviders.put("Google", "google.com/accounts/o8/id");
+        openIdProviders.put("Yahoo", "yahoo.com");
+        openIdProviders.put("MySpace", "myspace.com");
+        openIdProviders.put("AOL", "aol.com");
+        openIdProviders.put("MyOpenId.com", "myopenid.com");
+    }
+// End of test section
 	
 	public static String header = "<html>\n"
 		+ "<head><meta http-equiv='content-type' content='text/html; charset=UTF-8'>"
@@ -106,10 +120,22 @@ public class Login extends HttpServlet {
 						+ "You have accessed a code development server that<br>"
 						+ "should be used only by permission.<p>"
 						+ "To reach the ChemVantage production site "
-						+ "<a href=http://www.chemvantage.org>click here</a>.<p>"
-						+ "<CENTER><button type=button onClick=location.href='" 
+						+ "<a href=http://www.chemvantage.org>click here</a>.<p>");
+
+/* OpenID test section
+				Set<String> attributes = new HashSet<String>();
+				UserService userService = UserServiceFactory.getUserService();
+	            for (String providerName : openIdProviders.keySet()) {
+	                String providerUrl = openIdProviders.get(providerName);
+	                String loginUrl = userService.createLoginURL("/Home", null, providerUrl, attributes);
+	                buf.append("[<a href=\"" + loginUrl + "\">" + providerName + "</a>] ");				
+	            }
+// End of test section - replace section below for normal Google Login
+*/				
+				buf.append("<CENTER><button type=button onClick=location.href='" 
 						+ UserServiceFactory.getUserService().createLoginURL("/Home") 
 						+ "'>Authorized users only</button></CENTER><p>");
+
 			} else {
 				buf.append("ChemVantage is a free resource for science education:<ul>"
 						+ "<li>computer-graded quizzes<li>homework exercises"

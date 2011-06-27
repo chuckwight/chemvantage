@@ -23,8 +23,10 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
 
 import javax.servlet.ServletException;
@@ -114,7 +116,8 @@ public class Groups extends HttpServlet {
 				try {
 					long newGroupId = Long.parseLong(request.getParameter("GroupId"));
 					user.changeGroups(newGroupId);
-				} catch (Exception e2) {}
+				} catch (Exception e2) {
+				}
 				out.println(groupsForm(user,request));
 				return;
 			}
@@ -367,8 +370,8 @@ public class Groups extends HttpServlet {
 				ofy.put(a);
 			}
 			group.timeZone = request.getParameter("TimeZone");
+			group.deleteScores();
 			ofy.put(group);
-			for (String userId : group.memberIds) QuizScore.removeAll(userId);
 		} catch (Exception e) {
 		}
 	}
@@ -602,10 +605,7 @@ public class Groups extends HttpServlet {
 				long i = group.getAssignmentId("Quiz",topicId);
 				Assignment a = i>0?ofy.get(Assignment.class,i):null;
 				String d = request.getParameter("QuizDeadline");
-				if (a != null && d.length()==0) {
-					ofy.delete(a);
-					for (String userId : group.memberIds) QuizScore.remove(a.id,userId);
-				}
+				if (a != null && d.length()==0) ofy.delete(a);
 				else if (d.length()>0) {
 					if (a==null) a = new Assignment(group.id,topicId,"Quiz",new Date());
 					deadline.setTime(df.parse(d));
@@ -614,7 +614,7 @@ public class Groups extends HttpServlet {
 					if (a.deadline != deadline.getTime()) { // deadline is being changed
 						a.deadline = deadline.getTime();
 						ofy.put(a);
-						for (String userId : group.memberIds) QuizScore.remove(a.id,userId);
+						group.deleteScores(a.id);
 					}
 				}
 			} catch (Exception e2) {}
@@ -732,6 +732,9 @@ public class Groups extends HttpServlet {
 			// Make a table of user scores for the assignments (1 row per student; 1 column per assignment)
 			List<User> groupMembers = new ArrayList<User>(ofy.get(User.class,group.memberIds).values());
 			Collections.sort(groupMembers);
+			Set<Key<Score>> keys = new HashSet<Key<Score>>();
+			for (User u : groupMembers) for (Assignment a : assignments) keys.add(new Key<Score>(new Key<User>(User.class,u.id),Score.class,a.id));
+			Map<Key<Score>,Score> scoresMap = ofy.get(keys);
 			buf.append("<p><b>Scores for this Group (" + group.memberIds.size() + " users)</b><br>");
 			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR ALIGN=LEFT><TH>#</TH><TH>Name</TH>");
 			for (int i=1;i<=assignments.size();i++) { // add a header for each assigned quiz or homework
@@ -748,17 +751,21 @@ public class Groups extends HttpServlet {
 				int j = 0;
 				boolean redFlag = false;
 				for (Assignment a : assignments) {
-					String score = getAssignmentScore(assignmentType,u.id,a);
+					Key<Score> k = new Key<Score>(new Key<User>(User.class,u.id),Score.class,a.id);
+					Score s = scoresMap.get(k);
+					if (s==null) {
+						s = Score.getInstance(u.id,a);
+						ofy.put(s);
+					}
 					redFlag = a.deadline.before(now);
 					try {
-						int iScore = Integer.parseInt(score);
-						redFlag = redFlag && iScore<5;
-						sumScores[j] += iScore;
-						nScores[j]++;
+						redFlag = redFlag && s.score<5;
+						sumScores[j] += s.score;
+						if (s.numberOfAttempts>0) nScores[j]++;
 					} catch (Exception e) {
 					}
 					j++;
-					buf.append("<TD ALIGN=CENTER>" + (redFlag?"<img src=images/red_dot.gif>&nbsp;":"") + score + "</TD>");
+					buf.append("<TD ALIGN=CENTER>" + (redFlag?"<img src=images/red_dot.gif>&nbsp;":"") + s.getScore() + "</TD>");
 					}
 				buf.append("</TR>");
 				if (System.currentTimeMillis()-startTime > LIMIT_MILLIS) {
@@ -1003,13 +1010,7 @@ public class Groups extends HttpServlet {
 		}
 		return buf.toString();
 	}
-	
-	String getAssignmentScore(String assignmentType,String userId,Assignment a) {
-		if (assignmentType.equals("Quiz")) return QuizScore.getInstance(a, userId).getScore();
-		else if (assignmentType.equals("Homework")) return HomeworkScore.getInstance(a,userId).getScore();
-		else return "";	
-	}
-	
+
 	public String getPracticeExamScore(User user,Topic topic) {
 		Query<PracticeExamTransaction> transactions = ofy.query(PracticeExamTransaction.class).filter("userId",user.id);
 		int score = 0;

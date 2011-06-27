@@ -123,6 +123,8 @@ public class Quiz extends HttpServlet {
 			}
 			buf.append("</OL>");
 			
+			if (user.hasPremiumAccount()) buf.append(ajaxQuizJavaScript());  // this code allows premium users to use the Google SOAP search spell checking function
+			
 			buf.append("\n<FORM METHOD=POST ACTION=Quiz "
 					+ "onSubmit=\"return confirm('Submit this quiz for grading now. Are you sure?')\">");
 
@@ -152,7 +154,7 @@ public class Quiz extends HttpServlet {
 					// the parameterized questions are seeded with a value based on the ids for the quizTransaction and the question
 					// in order to make the value reproducible for grading but variable for each quiz and from one question to the next
 					selected.setParameters((int)(qt.id - selected.id));
-					buf.append("\n<li>" + selected.print() + "<br></li>\n");
+					buf.append("\n<li>" + (user.hasPremiumAccount()?selected.printPremium():selected.print()) + "<br></li>\n");
 				} catch (Exception e) { // most likely reason is that the question no longer exists in the database; try again.
 					nQuestions = (nQuestionsPerSubjectArea < questionKeys.size()+i?nQuestionsPerSubjectArea:questionKeys.size()+i);
 					i--;
@@ -212,15 +214,9 @@ public class Quiz extends HttpServlet {
 			buf.append("<b>" + user.getBothNames() + "</b><br>\n");
 			buf.append(df.format(now));
 
-			buf.append(ajaxJavaScript()); // load javascript for AJAX problem reporting form
-			StringBuffer missedQuestions = new StringBuffer("<h3>Questions Answered Incorrectly</h3>\n");
-			missedQuestions.append("The following questions were answered incorrectly. "
-					+ "There may be additional questions (not shown) that were ");
-			missedQuestions.append(user.hasPremiumAccount()?"":"answered incorrectly or ");
-			missedQuestions.append("left unanswered.");
-			if (!user.hasPremiumAccount()) {
-				missedQuestions.append("<br><a href=UpgradeAccount>View more answers</a>");
-			}
+			buf.append(ajaxScoreJavaScript()); // load javascript for AJAX problem reporting form
+			StringBuffer missedQuestions = new StringBuffer();
+			
 			missedQuestions.append("<OL>");
 
 			for (@SuppressWarnings("unchecked")
@@ -237,7 +233,7 @@ public class Quiz extends HttpServlet {
 							int score = q.isCorrect(studentAnswer[0])?q.pointValue:0;
 							ofy.put(new Response("Quiz",topic.id,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now));
 							studentScore += score;
-							if ((score == 0) && (user.hasPremiumAccount() || wrongAnswers < 2)) {  
+							if (score == 0) {  
 								// include question in list of incorrectly answered questions
 								wrongAnswers++;
 								missedQuestions.append("\n<LI>" + q.printAllToStudents(studentAnswer[0]) + "</LI>\n");
@@ -252,8 +248,8 @@ public class Quiz extends HttpServlet {
 			qt.score = studentScore;
 			qt.graded = now;
 			Assignment a = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",topicId).get();
-			if (a != null) QuizScore.getInstance(a, user.id).update(studentScore);
-			ofy.put(qt); // quiz transaction is put after updating score in case score had to be recalculated
+			if (a != null) ofy.put(Score.getInstance(user.id,a).update(studentScore));
+			ofy.put(qt); // quiz transaction is put after updating score because quizScore had to be recalculated
 			buf.append("<h3>Your score on this quiz is " + studentScore 
 					+ " point" + (studentScore==1?"":"s") + " out of a possible " + qt.possibleScore + " points.</h3>\n");
 
@@ -289,14 +285,15 @@ public class Quiz extends HttpServlet {
 							+ "style='width:30px; height:30px; float:left;' "
 							+ "onmouseover=showStars(this.id); onClick=setStars(this.id); onmouseout=showStars(0); />");
 				}
-				buf.append("</div></TD></TR>"
-						+ "<TR><TD>To leave a comment, please visit the <a href=Feedback>Feedback Page</a>"
-						+ "</TD></TR></TABLE><p>");
+				buf.append("</div></TD></TR></TABLE><p>");
 			}
 			else {
-				if (wrongAnswers > 0) buf.append(missedQuestions.toString());
-				else buf.append("<br>Some questions on this quiz were left unanswered.\n");
-
+				int leftBlank = qt.possibleScore - studentScore - wrongAnswers;
+				if (leftBlank>0) buf.append("<h4>" + leftBlank + " question" 
+						+ (leftBlank>1?"s were":" was") + " left unanswered (blank).</h4>");
+				if (wrongAnswers>0) buf.append("<h4>" + wrongAnswers + " question" 
+						+ (leftBlank>1?"s were":" was") + " answered incoorrectly:</h4>" + missedQuestions.toString());
+			
 				// print some words of encouragement:
 				buf.append("<h4>Improve Your Score</h4>\n");
 				if (studentScore<6) {
@@ -323,7 +320,51 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 
-	String ajaxJavaScript() {
+	String ajaxQuizJavaScript() {
+		return "<SCRIPT TYPE='text/javascript'>\n"
+		+ "function ajaxSpellCheck(id) {\n"
+		+ "  var xmlhttp;\n"
+		+ "  var answer = document.getElementById(id).value.trim();\n"
+		+ "  if (answer.length==0) {\n"
+		+ "    document.getElementById('status').innerHTML='Nothing to check';\n"
+		+ "    return false;\n"
+		+ "  }\n"
+		+ "  xmlhttp=GetXmlHttpObject();\n"
+		+ "  if (xmlhttp==null) {\n"
+		+ "    alert ('Sorry, your browser does not support AJAX!');\n"
+		+ "    return false;\n"
+		+ "  }\n"
+		+ "  xmlhttp.onreadystatechange=function() {\n"
+		+ "  var correctedAnswer;\n"
+		+ "  var status=document.getElementById('status'+id);\n"
+		+ "  var answerField=document.getElementById(id);\n"
+		+ "    if (xmlhttp.readyState==4) {\n"
+		+ "      correctedAnswer = xmlhttp.responseText.trim();\n"
+		+ "      if (correctedAnswer=='Spell checker is offline, sorry') {\n"
+		+ "      status.innerHTML=correctedAnswer; return false;\n"
+		+ "    }\n"
+		+ "    answerField.value=correctedAnswer;\n"
+		+ "    if (correctedAnswer==answer) status.innerHTML='Spelling is OK';\n"
+		+ "    else status.innerHTML='Did you mean this instead?';\n"
+		+ "    }\n"
+		+ "  }\n"
+		+ "  xmlhttp.open('GET','SpellingChecker?UserRequest=SpellCheck&Answer='+answer,true);\n"
+		+ "  xmlhttp.send(null);\n"  
+		+ "  return false;\n"
+		+ "}\n"
+		+ "function GetXmlHttpObject() {\n"
+		+ "  if (window.XMLHttpRequest) { // code for IE7+, Firefox, Chrome, Opera, Safari\n"
+		+ "    return new XMLHttpRequest();\n"
+		+ "  }\n"
+		+ "  if (window.ActiveXObject) { // code for IE6, IE5\n"
+		+ "    return new ActiveXObject('Microsoft.XMLHTTP');\n"
+		+ "  }\n"
+		+ "  return null;\n"
+		+ "}\n"
+		+ "</SCRIPT>";			
+	}
+	
+	String ajaxScoreJavaScript() {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note) {\n"
 		+ "  var xmlhttp;\n"
@@ -356,13 +397,10 @@ public class Quiz extends HttpServlet {
 		+ "    var msg;\n"
 		+ "    switch (nStars) {\n"
 		+ "      case '1': msg='1 star - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to tell us why:'"
-		+ "                + '<FORM ACTION=Feedback METHOD=POST><INPUT TYPE=HIDDEN NAME=Stars Value=1><INPUT TYPE=HIDDEN NAME=Save VALUE=No>'"
-		+ "                + '<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback><INPUT NAME=Comments SIZE=60><INPUT TYPE=SUBMIT></FORM>';"
+		+ "                + 'please take a moment to <a href=Feedback>tell us why</a>.';"
 		+ "                break;\n"
-		+ "      case '2': msg='2 stars - How we can serve you better?</a>'"
-		+ "                + '<FORM ACTION=Feedback METHOD=POST><INPUT TYPE=HIDDEN NAME=Stars Value=2><INPUT TYPE=HIDDEN NAME=Save VALUE=No>'"
-		+ "                + '<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback><INPUT NAME=Comments SIZE=60><INPUT TYPE=SUBMIT></FORM>';"
+		+ "      case '2': msg='2 stars - If you are dissatisfied with ChemVantage, '"
+		+ "                + 'please take a moment to <a href=Feedback>tell us why</a>.';"
 		+ "                break;\n"
 		+ "      case '3': msg='3 stars - Thank you. <a href=Feedback>Click here</a> '"
 		+ "                + 'to provide additional feedback.';"

@@ -126,18 +126,11 @@ public class Feedback extends HttpServlet {
 		buf.append("<b>" + user.getBothNames() + "</b><br />"
 				+ new Date().toString() + "<p>");
 		
-		buf.append("Your comments and opinions are important to us.  We use this<br>"
-				+ "information to improve the functionality of the site for our users.<p>");
+		if (user.verifiedEmail) {
+			buf.append("Your comments and opinions are important to us.  We use this<br>"
+					+ "information to improve the functionality of the site for our users.<p>"
+					+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><p><hr>");
 
-		if (!user.verifiedEmail) {
-			buf.append("The feedback form is not accessible to you because your email<br>"
-					+ "address has not been verified by ChemVantage.<p>"
-					+ "Please send comments or questions to "
-					+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><p>");
-			buf.append("<FORM ACTION=Verification METHOD=POST>"
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Verify My Email Address'><p>"
-					+ "</FORM>");
-		} else {
 			buf.append("<script type='text/javascript'>\n"
 					+ "<!--\n"
 					+ "var star1 = new Image(); star1.src='images/star1.gif';\n"
@@ -187,6 +180,14 @@ public class Feedback extends HttpServlet {
 					+ "document.getElementById('count').innerHTML="
 					+ "'Comments or kudos: <FONT SIZE=-1>(160 characters max.)</FONT>';"
 					+ "\">"
+					+ "</FORM>");
+		} else {
+			buf.append("Sorry, the feedback form is not accessible to you because your email<br>"
+					+ "address has not been verified by ChemVantage. Please send your<br>"
+					+ "comments via email to <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><p>");
+					
+			buf.append("<FORM ACTION=Verification METHOD=POST>"
+					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Verify My Email Address'><p>"
 					+ "</FORM>");
 		}
 		return buf.toString(); 
