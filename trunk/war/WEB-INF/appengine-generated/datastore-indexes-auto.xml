@@ -1,8 +1,8 @@
-<!-- Indices written at Mon, 27 Jun 2011 22:35:18 UTC -->
+<!-- Indices written at Thu, 30 Jun 2011 23:08:38 UTC -->
 
 <datastore-indexes>
 
-    <!-- Used 67 times in query history -->
+    <!-- Used 2 times in query history -->
     <datastore-index kind="QuizTransaction" ancestor="false" source="auto">
         <property name="graded" direction="asc"/>
         <property name="topicId" direction="asc"/>
@@ -10,7 +10,7 @@
         <property name="downloaded" direction="asc"/>
     </datastore-index>
 
-    <!-- Used 26 times in query history -->
+    <!-- Used 2 times in query history -->
     <datastore-index kind="QuizTransaction" ancestor="false" source="auto">
         <property name="topicId" direction="asc"/>
         <property name="userId" direction="asc"/>

@@ -155,6 +155,9 @@ public class Login extends HttpServlet {
 					buf.append("If you reached this page unexpectedly, here are some of the likely reasons:<OL>"
 							+ "<LI>Your web session may have timed out or may have been reset by the server. "
 							+ "In this case, please return to your class LMS and click the ChemVantage link to login again."
+							+ "<LI>Your Internet browser may be showing you a cached page instead of a fresh page "
+							+ "from the ChemVantage site.  Clear your browser's cache (<a href=http://www.wikihow.com/Clear-Your-Browser's-Cache>"
+							+ "here's how to do it</a>) and login to ChemVantage again."
 							+ "<LI>If you are using Internet Explorer, your browser security setting may be too high. "
 							+ "To solve this problem you can either lower the security settings in Internet Explorer, "
 							+ "or designate the web domain for your class LMS to be a trusted Internet zone.");

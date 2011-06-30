@@ -356,7 +356,7 @@ public class Quiz extends HttpServlet {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSpellCheck(id) {\n"
 		+ "  var xmlhttp;\n"
-		+ "  var answer = document.getElementById(id).value.trim();\n"
+		+ "  var answer = document.getElementById(id).value;\n"
 		+ "  if (answer.length==0) {\n"
 		+ "    document.getElementById('status'+id).innerHTML='Nothing to check';\n"
 		+ "    return false;\n"
