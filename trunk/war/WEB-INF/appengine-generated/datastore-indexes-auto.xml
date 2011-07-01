@@ -1,14 +1,8 @@
-<!-- Indices written at Fri, 1 Jul 2011 13:28:29 UTC -->
+<!-- Indices written at Fri, 1 Jul 2011 20:20:56 UTC -->
 
 <datastore-indexes>
 
-    <!-- Used 1 time in query history -->
-    <datastore-index kind="Assignment" ancestor="false" source="auto">
-        <property name="groupId" direction="asc"/>
-        <property name="deadline" direction="asc"/>
-    </datastore-index>
-
-    <!-- Used 2 times in query history -->
+    <!-- Used 12 times in query history -->
     <datastore-index kind="QuizTransaction" ancestor="false" source="auto">
         <property name="graded" direction="asc"/>
         <property name="topicId" direction="asc"/>
