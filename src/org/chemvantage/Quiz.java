@@ -371,7 +371,7 @@ public class Quiz extends HttpServlet {
 		+ "  var status=document.getElementById('status'+id);\n"
 		+ "  var answerField=document.getElementById(id);\n"
 		+ "    if (xmlhttp.readyState==4) {\n"
-		+ "      correctedAnswer = xmlhttp.responseText.trim();\n"
+		+ "      correctedAnswer = xmlhttp.responseText;\n"
 		+ "      if (correctedAnswer=='Spell checker is offline, sorry') {\n"
 		+ "      status.innerHTML=correctedAnswer; return false;\n"
 		+ "    }\n"
