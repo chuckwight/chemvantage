@@ -119,8 +119,9 @@ public class SpellingChecker extends HttpServlet {
 	static String correctedSpelling(String answer) {
 		StringBuffer buf = new StringBuffer();
 		try {
-			if (answer==null || answer.isEmpty()) return "";
+			if (answer==null) return "";
 			answer = answer.trim();
+			if (answer.isEmpty()) return "";
 			SpellChecker sc = new SpellChecker();
 			SpellResponse sr = sc.check(answer);
 			SpellCorrection[] scorr = sr.getCorrections();
