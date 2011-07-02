@@ -154,7 +154,8 @@ public class Quiz extends HttpServlet {
 					// the parameterized questions are seeded with a value based on the ids for the quizTransaction and the question
 					// in order to make the value reproducible for grading but variable for each quiz and from one question to the next
 					selected.setParameters((int)(qt.id - selected.id));
-					buf.append("\n<li>" + (user.hasPremiumAccount()?selected.printPremium():selected.print()) + "<br></li>\n");
+					buf.append("\n<li>" + selected.print() + "<br></li>\n");
+					//buf.append("\n<li>" + (user.hasPremiumAccount()?selected.printPremium():selected.print()) + "<br></li>\n");
 				} catch (Exception e) { // most likely reason is that the question no longer exists in the database; try again.
 					nQuestions = (nQuestionsPerSubjectArea < questionKeys.size()+i?nQuestionsPerSubjectArea:questionKeys.size()+i);
 					i--;
