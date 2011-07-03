@@ -58,6 +58,7 @@ public class Login extends HttpServlet {
 		+ "<meta HTTP-EQUIV='Expires' CONTENT='-1'>"
 		+ "<meta NAME='Description' CONTENT='An online quiz and homework site'>"
 		+ "<meta NAME='Keywords' CONTENT='learning,online,quiz,homework,video,textbook,open,education'>\n"
+		+ "<link rel='P3Pv1' href='http://www.chemvantage.org/w3c/p3p.xml'>\n"
 		+ "<title>ChemVantage</title>\n"
 		+ "<style><!-- body,td,a,p,.h {font-family:arial,sans-serif}"
 		+ "#pzon{float:left;font-weight:bold;height:22px;padding-left:2px}"

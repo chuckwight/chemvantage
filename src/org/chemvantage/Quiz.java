@@ -154,8 +154,8 @@ public class Quiz extends HttpServlet {
 					// the parameterized questions are seeded with a value based on the ids for the quizTransaction and the question
 					// in order to make the value reproducible for grading but variable for each quiz and from one question to the next
 					selected.setParameters((int)(qt.id - selected.id));
-					buf.append("\n<li>" + selected.print() + "<br></li>\n");
-					//buf.append("\n<li>" + (user.hasPremiumAccount()?selected.printPremium():selected.print()) + "<br></li>\n");
+					//buf.append("\n<li>" + selected.print() + "<br></li>\n");
+					buf.append("\n<li>" + (user.hasPremiumAccount()?selected.printPremium():selected.print()) + "<br></li>\n");
 				} catch (Exception e) { // most likely reason is that the question no longer exists in the database; try again.
 					nQuestions = (nQuestionsPerSubjectArea < questionKeys.size()+i?nQuestionsPerSubjectArea:questionKeys.size()+i);
 					i--;
@@ -368,17 +368,11 @@ public class Quiz extends HttpServlet {
 		+ "    return false;\n"
 		+ "  }\n"
 		+ "  xmlhttp.onreadystatechange=function() {\n"
-		//+ "  var correctedAnswer = '';\n"
 		+ "  var status=document.getElementById('status'+id);\n"
 		+ "  var answerField=document.getElementById(id);\n"
 		+ "    if (xmlhttp.readyState==4) {\n"
 		+ "      answerField.value = xmlhttp.responseText;\n"
-		+ "      status.innerHTML += 'done.';\n"
-		//+ "      if (correctedAnswer.length==0 || correctedAnswer==' ') status.innerHTML='Spelling is OK';\n"
-		//+ "      else {\n"
-		//+ "        answerField.value=correctedAnswer;\n"
-		//+ "        status.innerHTML='Did you mean this instead?';\n"
-		//+ "      }\n"
+		+ "      status.innerHTML += 'OK.';\n"
 		+ "    }\n"
 		+ "    return false;\n"
 		+ "  }\n"
