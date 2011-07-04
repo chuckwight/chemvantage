@@ -30,6 +30,10 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.xeustechnologies.googleapi.spelling.SpellChecker;
+import org.xeustechnologies.googleapi.spelling.SpellCorrection;
+import org.xeustechnologies.googleapi.spelling.SpellResponse;
+
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
 
@@ -60,8 +64,10 @@ public class Quiz extends HttpServlet {
 				
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
-			
-			out.println(Home.getHeader(user) + printQuiz(user,request) + Home.footer);
+			if ("SpellCheck".equals(request.getParameter("UserRequest"))) {
+				out.println(correctedSpelling(request.getParameter("Answer")));
+			}
+			else out.println(Home.getHeader(user) + printQuiz(user,request) + Home.footer);
 		} catch (Exception e) {}
 	}
 
@@ -368,15 +374,19 @@ public class Quiz extends HttpServlet {
 		+ "    return false;\n"
 		+ "  }\n"
 		+ "  xmlhttp.onreadystatechange=function() {\n"
-		+ "  var status=document.getElementById('status'+id);\n"
-		+ "  var answerField=document.getElementById(id);\n"
+		+ "    var status=document.getElementById('status'+id);\n"
+		+ "    var answerField=document.getElementById(id);\n"
 		+ "    if (xmlhttp.readyState==4) {\n"
-		+ "      answerField.value = xmlhttp.responseText;\n"
-		+ "      status.innerHTML += 'OK.';\n"
+		+ "      status.innerHTML += 'done.';\n"
+		+ "      if (xmlhttp.responseText.length==1) status.innerHTML='Spelling is OK.';\n"
+		+ "      else {"
+		+ "        status.innerHTML = 'Did you mean:';\n"
+		+ "	       answerField.value=xmlhttp.responseText;\n"
+		+ "      }\n"
 		+ "    }\n"
 		+ "    return false;\n"
 		+ "  }\n"
-		+ "  xmlhttp.open('GET','SpellingChecker?UserRequest=SpellCheck&Answer='+answer,true);\n"
+		+ "  xmlhttp.open('GET','Quiz?UserRequest=SpellCheck&Answer='+answer,true);\n"
 		+ "  xmlhttp.send(null);\n"  
 		+ "  return false;\n"
 		+ "}\n"
@@ -458,4 +468,30 @@ public class Quiz extends HttpServlet {
 		+ "}\n"
 		+ "</SCRIPT>";
 	}
+
+	static String correctedSpelling(String answer) {
+		StringBuffer buf = new StringBuffer();
+		try {
+			if (answer==null) return "";
+			answer = answer.trim();
+			if (answer.isEmpty()) return "";
+			SpellChecker sc = new SpellChecker();
+			SpellResponse sr = sc.check(answer);
+			SpellCorrection[] scorr = sr.getCorrections();
+			if (scorr==null) return "";  // no corrections needed
+			int i = 0; // position index in original submission
+			int j = 0; // offset of correction
+			for(int k = 0;k<scorr.length;k++) {
+				j = scorr[k].getOffset();
+				buf.append(j>i?answer.substring(i,j):"");
+				buf.append(scorr[k].getWords()[0]);
+				i = answer.indexOf(" ",j+1);
+			}
+			buf.append(i>0?answer.substring(i):"");
+		} catch (Exception e) {
+			return "Spell checker is offline, sorry";
+		}
+		return buf.toString().trim();
+	}
+	
 }

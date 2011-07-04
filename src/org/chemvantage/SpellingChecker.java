@@ -38,7 +38,7 @@ public class SpellingChecker extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		if ("SpellCheck".equals(request.getParameter("UserRequest"))) {
-			out.println(correctedSpelling(request.getParameter("Answer")));
+			//out.println(correctedSpelling(request.getParameter("Answer")));
 			return;
 		}
 		out.println(Login.header + testForm() + Login.footer);
@@ -108,16 +108,16 @@ public class SpellingChecker extends HttpServlet {
  
 	String testResult(String word) {
 		StringBuffer buf = new StringBuffer("<h3>Result</h3>");
-		String correctedWord = correctedSpelling(word);
+		String correctedWord = "";  //correctedSpelling(word);
 		if (correctedWord.equals("spell checker is offline, sorry")) buf.append(correctedWord);
 		else if (correctedWord.equals(word)) buf.append("Spelling OK");
 		else buf.append("Did you mean <i>" + correctedWord + "</i>?<br>"
 				+ "(your answer was </i>" + word + "</i>)");
 		return buf.toString();
 	}
-	
+/*	
 	static String correctedSpelling(String answer) {
-		StringBuffer buf = new StringBuffer();
+		StringBuffer buf = new StringBuffer("Did you mean ");
 		try {
 			if (answer==null) return "";
 			answer = answer.trim();
@@ -125,7 +125,7 @@ public class SpellingChecker extends HttpServlet {
 			SpellChecker sc = new SpellChecker();
 			SpellResponse sr = sc.check(answer);
 			SpellCorrection[] scorr = sr.getCorrections();
-			if (scorr==null) return answer;
+			if (scorr==null) return "";  // no corrections needed
 			int i = 0; // position index in original submission
 			int j = 0; // offset of correction
 			for(int k = 0;k<scorr.length;k++) {
@@ -138,8 +138,8 @@ public class SpellingChecker extends HttpServlet {
 		} catch (Exception e) {
 			return "Spell checker is offline, sorry";
 		}
-		return buf.toString().trim();
+		return buf.toString().trim() + "?";
 	}
-	
+*/	
 
 }
