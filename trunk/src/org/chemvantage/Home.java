@@ -48,7 +48,7 @@ public class Home extends HttpServlet {
 
 	public static String footer = "\n<hr><CENTER><FONT SIZE=-1>"
 		+ "&copy; 2007-11 ChemVantage.org. <a href=About#terms>Terms and Conditions of Use</a>"
-		+ "</FONT></CENTER></TD></TR></TABLE></CENTER>\n"
+		+ "</FONT></CENTER></TD></TR></TABLE>\n"
 		+ "</body>"
 		+ "<meta HTTP-EQUIV='Pragma' CONTENT='no-cache'>"
 		+ "<meta HTTP-EQUIV='Expires' CONTENT='-1'>\n</html>";
@@ -90,12 +90,16 @@ public class Home extends HttpServlet {
 
 	static String getHeader(User user) {
 		StringBuffer buf = new StringBuffer();
-		buf.append("<html>\n<head><meta http-equiv='content-type' content='text/html; charset=UTF-8'>"
-				+ "<meta HTTP-EQUIV='Pragma' CONTENT='no-cache'>"
-				+ "<meta HTTP-EQUIV='Expires' CONTENT='-1'>\n"
+		String now = new Date().toString();
+		buf.append("<!DOCTYPE html>"
+				+"<html >"
+				+ "<head>"
+				+ "<meta HTTP-EQUIV='Content-type' CONTENT='text/html;charset=iso-8859-1'>"
+				+ "<meta HTTP-EQUIV='Expires' CONTENT='" + now + "'>\n"
+				+ "<meta HTTP-EQUIV='P3P' CONTENT='policyref=\"http://www.chemvantage.org/w3c/p3p.xml\",CP=\"CURa ADMa DEVa OUR IND DSP OTI COR\"'>\n"
 				+ "<meta NAME='Description' CONTENT='An online quiz and homework site'>\n"
 				+ "<meta NAME='Keywords' CONTENT='learning,online,quiz,homework,video,textbook,open,education'>\n"
-				+ "<link rel='P3Pv1' href='http://www.chemvantage.org/w3c/p3p.xml'>\n"
+				+ "<link rel='P3Pv1' href='/w3c/p3p.xml'>\n"
 				+ "<title>ChemVantage</title>\n"
 				+ "<style><!-- body,td,a,p,.h {font-family:arial,sans-serif}"
 				+ "#pzon{float:left;font-weight:bold;height:22px;padding-left:2px}"
@@ -113,7 +117,7 @@ public class Home extends HttpServlet {
 				+ "--> </style>\n"
 				+ "</head>\n"
 				+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
-				+ "<CENTER><TABLE><TR><TD>\n"
+				+ "<TABLE><TR><TD>\n"
 				+ "<div id=pzon><nobr>"
 				+ "<div class=pz1>ChemVantage.org</div>"
 				+ " <div class=pz1><a href=Home>Home</a></div>"
@@ -144,7 +148,7 @@ public class Home extends HttpServlet {
 	String homePage(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer(Home.getHeader(user));
 		try {			
-			buf.append("<TABLE><TR><TD COLSPAN=2>");
+			buf.append("<TABLE><TR ALIGN=LEFT><TD COLSPAN=2>");
 			buf.append("<TABLE><TR><TD VALIGN=TOP>");
 			buf.append("<img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
 					+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage"     + " - " + subject.title);

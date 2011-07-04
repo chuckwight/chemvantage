@@ -18,6 +18,7 @@ package org.chemvantage;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,13 +53,15 @@ public class Login extends HttpServlet {
     }
 // End of test section
 	
-	public static String header = "<html>\n"
-		+ "<head><meta http-equiv='content-type' content='text/html; charset=UTF-8'>"
-		+ "<meta HTTP-EQUIV='Pragma' CONTENT='no-cache'>"
-		+ "<meta HTTP-EQUIV='Expires' CONTENT='-1'>"
-		+ "<meta NAME='Description' CONTENT='An online quiz and homework site'>"
+	public static String header = "<!DOCTYPE html>"
+		+"<html>\n"
+		+ "<head>"
+		+ "<meta HTTP-EQUIV='Content-type' CONTENT='text/html;charset=iso-8859-1'>"
+		+ "<meta HTTP-EQUIV='Expires' CONTENT='" + (new Date().toString()) + "'>\n"
+		+ "<meta HTTP-EQUIV='P3P' CONTENT='policyref=\"/w3c/p3p.xml\",CP=\"CURa ADMa DEVa OUR IND DSP OTI COR\"'>\n"
+		+ "<meta NAME='Description' CONTENT='An online quiz and homework site'>\n"
 		+ "<meta NAME='Keywords' CONTENT='learning,online,quiz,homework,video,textbook,open,education'>\n"
-		+ "<link rel='P3Pv1' href='http://www.chemvantage.org/w3c/p3p.xml'>\n"
+		+ "<link rel='P3Pv1' href='/w3c/p3p.xml'>\n"
 		+ "<title>ChemVantage</title>\n"
 		+ "<style><!-- body,td,a,p,.h {font-family:arial,sans-serif}"
 		+ "#pzon{float:left;font-weight:bold;height:22px;padding-left:2px}"
@@ -76,7 +79,7 @@ public class Login extends HttpServlet {
 		+ "--> </style>\n"
 		+ "</head>\n"
 		+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
-		+ "<CENTER><TABLE><TR><TD>\n"
+		+ "<TABLE><TR><TD>\n"
 		+ "<div id=pzon><nobr>"
 		+ " <div class=pz1>ChemVantage.org</div>"
 		+ " <div class=pz1><a href=Home>Home</a></div>"
@@ -86,7 +89,7 @@ public class Login extends HttpServlet {
 		+ "</div><br>";
 	public static String footer = "\n<hr><CENTER><FONT SIZE=-1>"
 		+ "&copy; 2007-11 ChemVantage.org. <a href=About#terms>Terms and Conditions of Use</a>"
-		+ "</FONT></CENTER></TD></TR></TABLE></CENTER>\n"
+		+ "</FONT></CENTER></TD></TR></TABLE>\n"
 		+ "</body></html>";
 
 	public String getServletInfo() {
@@ -133,9 +136,9 @@ public class Login extends HttpServlet {
 	            }
 // End of test section - replace section below for normal Google Login
 */				
-				buf.append("<CENTER><button type=button onClick=location.href='" 
+				buf.append("<CENTER><button type=button onClick=\"javascript: location.href='" 
 						+ UserServiceFactory.getUserService().createLoginURL("/Home") 
-						+ "'>Authorized users only</button></CENTER><p>");
+						+ "'\">Authorized users only</button></CENTER><p>");
 
 			} else {
 				buf.append("ChemVantage is a free resource for science education:<ul>"
@@ -159,8 +162,8 @@ public class Login extends HttpServlet {
 							+ "<LI>Your Internet browser may be showing you a cached page instead of a fresh page "
 							+ "from the ChemVantage site.  Clear your browser's cache (<a href=http://www.wikihow.com/Clear-Your-Browser's-Cache>"
 							+ "here's how to do it</a>) and login to ChemVantage again."
-							+ "<LI>If you are using Internet Explorer, your browser security setting may be too high. "
-							+ "To solve this problem you can either lower the security settings in Internet Explorer, "
+							+ "<LI>If you are using Internet Explorer, your browser privacy setting may be too high. "
+							+ "To solve this problem you can either lower the privacy settings in Tools &rarr; Internet Options &rarr; Privacy, "
 							+ "or designate the web domain for your class LMS to be a trusted Internet zone.");
 				}
 			}
