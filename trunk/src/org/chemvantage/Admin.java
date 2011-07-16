@@ -408,7 +408,8 @@ public class Admin extends HttpServlet {
 		for (Group g:myGroups) g.instructorId=toUser.id;
 		ofy.put(myGroups);
 		
-		fromUser.setAlias(toUser.id);
+		fromUser.setAlias(toUser.id);  // diverts future logins to the new UserId
+		fromUser.myGroupId=0;          // removes old userId from the group to avoid duplicate gradebook entries
 		ofy.put(fromUser);
 	}
 }

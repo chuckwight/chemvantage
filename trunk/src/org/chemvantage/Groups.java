@@ -746,6 +746,11 @@ public class Groups extends HttpServlet {
 			int[] nScores = new int[assignments.size()];
 			boolean partialTable = false;
 			for (User u : groupMembers) {
+				if (u.myGroupId != group.id) {  // user has been removed from this group; skip this entry
+					group.memberIds.remove(u.id);
+					ofy.put(group);
+					continue;
+				}
 				i++;
 				buf.append("<TR><TD>" + i + ".</TD><TD><A href=mailto:" + u.email + ">" + u.getFullName() + "</A></TD>");
 				int j = 0;

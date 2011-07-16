@@ -208,6 +208,7 @@ public class User implements Comparable<User> {
 		if (smsMessageDevice==null) smsMessageDevice = "";
 		authDomain = id.contains(":")?"BLTI":"google.com";
 		alias = (alias==null || alias.isEmpty())?null:alias;
+		if (alias != null) myGroupId=0;
 		ofy.put(this);
 	}
 	
