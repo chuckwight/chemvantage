@@ -162,6 +162,7 @@ public class Admin extends HttpServlet {
 						+ "<TD><b>Role</b></TD><TD><b>Acct Type</b></TD><TD><b>Last Login</b></TD><TD><b>Action</b></TD></TR>");
 				while (iterator.hasNext()) {
 					User u = iterator.next();
+					u.clean();
 					buf.append("\n<FORM METHOD=GET>"
 							+ "<TR><TD>" + u.lastName + "</TD>"
 							+ "<TD>" + u.firstName + "</TD>"
@@ -382,6 +383,7 @@ public class Admin extends HttpServlet {
 			toUser.smsMessageDevice = toUser.myGroupId>0?fromUser.smsMessageDevice:null;
 		}
 		toUser.roles = fromUser.roles>toUser.roles?fromUser.roles:toUser.roles;
+		toUser.setLowerCaseName();
 		
 		Objectify ofy = ObjectifyService.begin();
 		ofy.put(toUser);
