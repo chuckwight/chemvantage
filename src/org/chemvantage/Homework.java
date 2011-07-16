@@ -202,9 +202,13 @@ public class Homework extends HttpServlet {
 					Response r = new Response("Homework",topic.id,q.id,studentAnswer[0],q.getCorrectAnswer(),studentScore,possibleScore,user.id,now);
 					ofy.put(r);
 					// create/update/store a HomeworkScore object
-					Assignment a = ofy.find(Assignment.class,myGroup.getAssignmentId("Homework",topic.id));
-					if (a != null) ofy.put(Score.getInstance(user.id,a).update(studentScore));
-					ofy.put(new HWTransaction(q.id,topic.id,topic.title,user.id,now,r.id,studentScore,possibleScore,request.getRequestURI()));
+					long assignmentId = myGroup.getAssignmentId("Homework",topic.id);
+					if (assignmentId > 0) { // assignment exists
+						Assignment a = ofy.find(Assignment.class,assignmentId);
+						ofy.put(Score.getInstance(user.id,a).update(studentScore));
+					}
+					HWTransaction ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,r.id,studentScore,possibleScore,request.getRequestURI());
+					ofy.put(ht);
 				}
 			}
 			// Send response to the user:
