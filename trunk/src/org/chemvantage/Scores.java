@@ -166,7 +166,7 @@ public class Scores extends HttpServlet {
 					}
 				}
 				
-				buf.append("<TABLE><TR><TD><b>Topic</b></TD><TD><b>Score</b></TD>"
+				buf.append("\n<TABLE>\n<TR><TD><b>Topic</b></TD><TD><b>Score</b></TD>"
 						+ "<TD><b>Possible</b></TD><TD><b>Percent</b></TD><TD></TD></TR>");
 				while (!topicIds.isEmpty()) {
 					String title = ofy.get(Topic.class,topicIds.remove(0)).title;
@@ -174,15 +174,15 @@ public class Scores extends HttpServlet {
 					int possible = possibleScores.remove(0);
 					int pct = (possible>0?score*100/possible:0);
 					String color = (pct>84?"#00FF00":(pct<50?"#FF0000":"#FFFF00"));
-					buf.append("<TR>"
+					buf.append("\n<TR>"
 							+ "<TD>" + title + "</TD>"
 							+ "<TD ALIGN=RIGHT>" + score + "</TD>"
 							+ "<TD ALIGN=RIGHT>" + possible + "</TD>"
 							+ "<TD ALIGN=RIGHT>" + pct + "%</TD>"
 							+ "<TD><div style='background-color:" + color + ";width:" + pct 
-							+ ";'/><p>&nbsp;</p></TD></TR>");
+							+ "px;'/>&nbsp;</TD></TR>");
 				}
-				buf.append("</TABLE>");
+				buf.append("\n</TABLE>");
 			}
 
 			// Display video lectures viewed
