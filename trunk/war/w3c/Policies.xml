@@ -3,8 +3,8 @@
 <POLICY name="Privacy" discuri="/w3c/privacy.html" opturi="/w3c/privacy.html" xml:lang="en">
   <ENTITY>
     <DATA-GROUP>
-      <DATA ref="#business.name">ChemVantage</DATA>
-      <DATA ref="#business.contact-info.online.email">chuck.wight@gmail.com</DATA>
+      <DATA ref="#business.name">ChemVantage LLC</DATA>
+      <DATA ref="#business.contact-info.online.email">admin@chemvantage.org</DATA>
       <DATA ref="#business.contact-info.online.uri">http://www.chemvantage.org</DATA>
       <DATA ref="#business.contact-info.telecom.telephone.number">(801) 810-4401</DATA>
       <DATA ref="#business.contact-info.postal.street">2568 Redondo Ave</DATA>
@@ -50,8 +50,8 @@
 <POLICY name="PrivacyPolicy" discuri="/w3c/privacy.html" opturi="/w3c/privacy.html" xml:lang="en">
   <ENTITY>
     <DATA-GROUP>
-      <DATA ref="#business.name">ChemVantage</DATA>
-      <DATA ref="#business.contact-info.online.email">chuck.wight@gmail.com</DATA>
+      <DATA ref="#business.name">ChemVantage LLC</DATA>
+      <DATA ref="#business.contact-info.online.email">admin@chemvantage.org</DATA>
       <DATA ref="#business.contact-info.online.uri">http://www.chemvantage.org</DATA>
       <DATA ref="#business.contact-info.telecom.telephone.number">(801) 810-4401</DATA>
       <DATA ref="#business.contact-info.postal.street">2568 Redondo Ave</DATA>
