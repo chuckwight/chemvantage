@@ -155,6 +155,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet-mapping>
 	
 	<servlet>
+		<servlet-name>Upgrade</servlet-name>
+		<servlet-class>org.chemvantage.Upgrade</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>Upgrade</servlet-name>
+		<url-pattern>/Upgrade</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
 		<servlet-name>Verification</servlet-name>
 		<servlet-class>org.chemvantage.Verification</servlet-class>
 	</servlet>
