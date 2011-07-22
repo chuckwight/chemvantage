@@ -398,7 +398,7 @@ public class Scores extends HttpServlet {
 							+ "<TD ALIGN=RIGHT>" + possible + "</TD>"
 							+ "<TD ALIGN=RIGHT>" + pct + "%</TD>"
 							+ "<TD><div style='background-color:" + color + ";width:" + pct 
-							+ ";'/><p>&nbsp;</p></TD></TR>");
+							+ "px;'/>&nbsp;</TD></TR>");
 				}
 				buf.append("</TABLE>");
 			}

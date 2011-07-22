@@ -94,17 +94,17 @@ public class About extends HttpServlet {
 
 	public static String premium = "<a NAME=accounts></a>"
 		+ "<h3>ChemVantage Basic and Premium Accounts</h3>"
-		+ "Anyone can obtain a basic account at ChemVantage.org at no cost.  All of the functionality "
-		+ "required for completing quiz and homework assignments is included in the basic account. For a $20.00 USD "
-		+ "nonrefundable fee, users may upgrade to a premium account, which includes the following convenience benefits:<OL>"
-		+ "<LI>Premium users have the option of receiving email or SMS reminders of assignment deadlines."
-		+ "<LI>Quizzes display an optional timer that shows the minutes and seconds remaining."
-		+ "<LI>Questions having a 'fill-in-word' format display an optional spelling checker."
-		+ "</OL>"
+		+ "Anyone can obtain a basic account at ChemVantage.org at no cost. "
+		+ "All of the functionality required for completing quiz and homework assignments "
+		+ "is included in the free basic account.<p>For a one-time fee, users may "
+		+ "upgrade to a premium account, which includes the following <i>convenience</i> features:<ol>"
+		+ "<li>Reminders - Premium users have the option of receiving email or SMS reminders of assignment deadlines."
+		+ "<li>Timers - Quizzes display an optional timer that shows the minutes and seconds remaining."
+		+ "<li>Spell Checkers - Questions having a 'fill-in-word' format include an optional spelling checker."
+		+ "</ol>"
 		+ "<a href=Upgrade>Click here to upgrade your account</a><p>"
-		+ "All ChemVantage accounts expire automatically after a 6 month period of inactivity.<p>"
-		+ "<b>During a limited time of site development, all new user accounts are free premium accounts.</b>";
-
+		+ "All ChemVantage accounts expire automatically after a 6 month period of inactivity.";
+		
 	public static String accounts = "<h3>Instructors</h3>"
 		+ "If you are a teacher or professor at an accredited non-profit educational institution, you may obtain "
 		+ "a free instructor account. This allows you to create/edit/delete groups for your students, manage group "
