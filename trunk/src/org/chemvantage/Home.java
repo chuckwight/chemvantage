@@ -117,6 +117,7 @@ public class Home extends HttpServlet {
 				+ "--> </style>\n"
 				+ "</head>\n"
 				+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
+				//+ "onLoad='javascript: if(top.location!=location)top.location.href=document.location.href;'>\n"
 				+ "<TABLE><TR><TD>\n"
 				+ "<div id=pzon><nobr>"
 				+ "<div class=pz1>ChemVantage.org</div>"
