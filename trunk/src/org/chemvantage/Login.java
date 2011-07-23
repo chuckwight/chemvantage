@@ -173,6 +173,7 @@ public class Login extends HttpServlet {
 			try {
 				video = videos.get(Integer.parseInt(request.getParameter("Video")));
 			} catch (Exception e) {
+				if (videos.size()==0) videos = ofy.query(Video.class).order("orderBy").list();
 				video = videos.get(0);
 			}
 			
