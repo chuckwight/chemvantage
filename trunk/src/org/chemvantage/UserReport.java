@@ -1,5 +1,6 @@
 package org.chemvantage;
 
+import java.io.Serializable;
 import java.util.Date;
 
 import javax.persistence.Id;
@@ -7,7 +8,8 @@ import javax.persistence.Id;
 import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.ObjectifyService;
 
-public class UserReport {
+public class UserReport implements Serializable {
+	private static final long serialVersionUID = 137L;
 	@Id Long id;
     String userId;
 	int stars;

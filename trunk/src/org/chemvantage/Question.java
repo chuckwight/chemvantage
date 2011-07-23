@@ -16,6 +16,7 @@
  */
 package org.chemvantage;
 
+import java.io.Serializable;
 import java.text.Collator;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -30,7 +31,8 @@ import com.bestcode.mathparser.MathParserFactory;
 import com.googlecode.objectify.annotation.Cached;
 
 @Cached
-public class Question {
+public class Question implements Serializable {
+	private static final long serialVersionUID = 137L;
 	@Id Long id;
 	long topicId;
 	String assignmentType;

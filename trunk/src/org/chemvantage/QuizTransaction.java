@@ -1,5 +1,6 @@
 package org.chemvantage;
 
+import java.io.Serializable;
 import java.util.Date;
 
 import javax.persistence.Id;
@@ -7,8 +8,9 @@ import javax.persistence.Id;
 import com.googlecode.objectify.annotation.Cached;
 
 @Cached
-public class QuizTransaction {
-    @Id Long id;
+public class QuizTransaction implements Serializable {
+	private static final long serialVersionUID = 137L;
+	@Id Long id;
     long topicId;
     String topicTitle;
     String userId;

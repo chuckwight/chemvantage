@@ -1,5 +1,6 @@
 package org.chemvantage;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -7,12 +8,12 @@ import java.util.List;
 import javax.persistence.Id;
 
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.ObjectifyService;
 import com.googlecode.objectify.annotation.Cached;
 
 @Cached
-public class Assignment implements Comparable<Assignment> {
+public class Assignment implements Comparable<Assignment>,Serializable {
+	private static final long serialVersionUID = 137L;
 	@Id Long id;
 	long groupId;
 	long topicId;
@@ -27,8 +28,7 @@ public class Assignment implements Comparable<Assignment> {
     	this.topicId = topicId;
     	this.assignmentType = assignmentType;
     	this.deadline = deadline;
-    	Objectify ofy = ObjectifyService.begin();
-    	questionKeys = ofy.query(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).listKeys();
+    	questionKeys = ObjectifyService.begin().query(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).listKeys();
     }
     
     public int compareTo(Assignment other) {
