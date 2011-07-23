@@ -1,5 +1,6 @@
 package org.chemvantage;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -16,8 +17,9 @@ import com.googlecode.objectify.annotation.Cached;
 import com.googlecode.objectify.annotation.Unindexed;
 
 @Cached
-public class Group {
-    @Id Long id;
+public class Group implements Serializable {
+	private static final long serialVersionUID = 137L;
+	@Id Long id;
     String instructorId;
     String context_id;
     @Unindexed String description;
@@ -34,7 +36,7 @@ public class Group {
     List<Long> quizAssignmentIds = new ArrayList<Long>();
     List<Long> hwAssignmentIds = new ArrayList<Long>();
     
-	@Transient Objectify ofy = ObjectifyService.begin();
+	@Transient transient Objectify ofy = ObjectifyService.begin();
      
     Group() {}
     

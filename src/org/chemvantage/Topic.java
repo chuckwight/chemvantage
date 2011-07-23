@@ -1,5 +1,7 @@
 package org.chemvantage;
 
+import java.io.Serializable;
+
 import javax.persistence.Id;
 
 import com.google.appengine.api.datastore.QueryResultIterable;
@@ -10,7 +12,8 @@ import com.googlecode.objectify.Query;
 import com.googlecode.objectify.annotation.Cached;
 
 @Cached
-public class Topic {
+public class Topic implements Serializable {
+	private static final long serialVersionUID = 137L;
 	@Id Long id;
 	String title;
 	String orderBy;

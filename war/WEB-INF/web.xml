@@ -56,6 +56,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet-mapping>
 	
 	<servlet>
+		<servlet-name>DataTransfer</servlet-name>
+		<servlet-class>org.chemvantage.DataTransfer</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>DataTransfer</servlet-name>
+		<url-pattern>/DataTransfer</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
 		<servlet-name>Edit</servlet-name>
 		<servlet-class>org.chemvantage.Edit</servlet-class>
 	</servlet>
@@ -155,6 +164,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet-mapping>
 	
 	<servlet>
+		<servlet-name>SendObjects</servlet-name>
+		<servlet-class>org.chemvantage.SendObjects</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>SendObjects</servlet-name>
+		<url-pattern>/SendObjects</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
 		<servlet-name>Upgrade</servlet-name>
 		<servlet-class>org.chemvantage.Upgrade</servlet-class>
 	</servlet>
@@ -179,6 +197,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 			<url-pattern>/remote_api</url-pattern>
 			<url-pattern>/Rescue</url-pattern>
 			<url-pattern>/DataStoreCleaner</url-pattern>
+			<url-pattern>/DataTransfer</url-pattern>
 		</web-resource-collection>
 		<auth-constraint>
 			<role-name>admin</role-name>

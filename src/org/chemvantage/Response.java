@@ -1,10 +1,12 @@
 package org.chemvantage;
 
+import java.io.Serializable;
 import java.util.Date;
 
 import javax.persistence.Id;
 
-public class Response {
+public class Response implements Serializable {
+	private static final long serialVersionUID = 137L;
 	@Id Long id;
 	String assignmentType;
 	long topicId;

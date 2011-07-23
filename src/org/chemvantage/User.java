@@ -16,6 +16,7 @@
  */
 package org.chemvantage;
 
+import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
 
@@ -35,8 +36,9 @@ import com.googlecode.objectify.Query;
 import com.googlecode.objectify.annotation.Cached;
 
 @Cached
-public class User implements Comparable<User> {
+public class User implements Comparable<User>,Serializable {
 
+	private static final long serialVersionUID = 137L;
 	@Id String id;
 	String email;
 	String lastName;
@@ -52,7 +54,7 @@ public class User implements Comparable<User> {
 	String alias;
 	String authDomain;
 	
-	@Transient Objectify ofy = ObjectifyService.begin();
+	@Transient transient Objectify ofy = ObjectifyService.begin();
 
 	User() {}
 

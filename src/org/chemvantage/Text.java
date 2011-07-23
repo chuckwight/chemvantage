@@ -1,11 +1,14 @@
 package org.chemvantage;
 
+import java.io.Serializable;
+
 import javax.persistence.Id;
 
 import com.googlecode.objectify.annotation.Cached;
 
 @Cached
-public class Text {
+public class Text implements Serializable {
+	private static final long serialVersionUID = 137L;
     @Id Long id;
     String title;
     String author;
