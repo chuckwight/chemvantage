@@ -65,7 +65,7 @@ public class User implements Comparable<User>,Serializable {
 		setLowerCaseName();
 		this.email = "";
 		this.roles = 0; // student
-		this.premium = true;
+		this.premium = false;
 		this.lastLogin = new Date(0);
 		this.myGroupId = 0;
 		this.smsMessageDevice = "";
