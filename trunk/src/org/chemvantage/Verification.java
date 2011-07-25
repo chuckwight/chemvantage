@@ -225,8 +225,7 @@ public class Verification extends HttpServlet {
 				buf.append("<h3>Any Corrections Needed?</h3>"
 						+ "If your name and/or email shown above is not correct, please send a message to "
 						+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a> giving detailed "
-						+ "instructions for any changes that are necessary. Please include your userId "
-						+ "below with the message.<p>");
+						+ "instructions for any changes that are necessary.<p>");
 			} else {                                        // something is still incomplete
 				buf.append("<h3>Not Now</h3>"
 						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Remind Me Later'><p>"
@@ -234,7 +233,6 @@ public class Verification extends HttpServlet {
 						+ "please send a message to <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a> "
 						+ "with your request. Be sure to include your userId below with the message.<p>");
 			}
-			buf.append("UserId: " + user.id);
 			buf.append("</FORM>");
 		} catch (Exception e) {
 			buf.append(e.toString());
