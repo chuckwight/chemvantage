@@ -160,7 +160,7 @@ public class Admin extends HttpServlet {
 				buf.append("<FONT SIZE=-1>Showing " + (nResults==this.queryLimit?"first ":"") + nResults + " results. "
 						+ (nResults>4?"You can narrow this search by entering more of the user's <i>lastname, firstname</i>":"") + "</FONT><br>");
 				buf.append("\n<TABLE CELLSPACING=5><TR><TD><b>Last Name</b></TD><TD><b>First Name</b></TD><TD><b>Email</b></TD>"
-						+ "<TD><b>Role</b></TD><TD><b>Acct Type</b></TD><TD><b>Last Login</b></TD><TD><b>Action</b></TD></TR>");
+						+ "<TD><b>Role</b></TD><TD><b>UserId</b></TD><TD><b>Last Login</b></TD><TD><b>Action</b></TD></TR>");
 				while (iterator.hasNext()) {
 					User u = iterator.next();
 					u.clean();
@@ -169,7 +169,7 @@ public class Admin extends HttpServlet {
 							+ "<TD>" + u.firstName + "</TD>"
 							+ "<TD>" + u.email + "</TD>"
 							+ "<TD>" + u.getPrincipalRole() + "</TD>" 
-							+ "<TD>" + (u.hasPremiumAccount()?"Premium":"Basic") + "</TD>"
+							+ "<TD>" + u.id + "</TD>"
 							+ "<TD>" + u.lastLogin + "</TD>"
 							+ "<TD><INPUT TYPE=HIDDEN NAME=UserId VALUE='" + u.id + "'>"
 							+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Edit User'></TD></TR></FORM>");

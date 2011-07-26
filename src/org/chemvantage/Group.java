@@ -154,7 +154,7 @@ public class Group implements Serializable {
     	}
     	return topicIds.isEmpty()?false:true;
     }
-
+    
     Score getScore(String userId,Assignment assignment) {
     	try {
     		Key<Score> k = new Key<Score>(new Key<User>(User.class, userId),Score.class,assignment.id);
