@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -315,14 +316,66 @@ public class User implements Comparable<User>,Serializable {
 	}
 
 	public String getPrincipalRole() {
-		if (roles < 0) return "Guest";
-		else if (roles < 1) return "Student";
-		else if (roles < 2) return "Contributor";
-		else if (roles < 4) return "Editor";
-		else if (roles < 8) return "Teaching Assistant";
-		else if (roles < 16) return "Instructor";
-		else if (roles < 32) return "Administrator";
-		return "";
+		String principalRole;		
+		if (roles < 1) principalRole = "Student";
+		else if (roles < 2) principalRole = "Contributor";
+		else if (roles < 4) principalRole = "Editor";
+		else if (roles < 8) principalRole = "Teaching Assistant";
+		else if (roles < 16) principalRole = "Instructor";
+		else if (roles < 32) principalRole = "Administrator";
+		else principalRole = ""; // unknown role
+		principalRole += " (" + (premium?"premium":"basic") + ")";
+		return principalRole;
+	}
+	
+	public String getDecoratedRole() {
+		String principalRole;		
+		if (roles < 1) principalRole = "Student";
+		else if (roles < 2) principalRole = "Contributor";
+		else if (roles < 4) principalRole = "Editor";
+		else if (roles < 8) principalRole = "Teaching Assistant";
+		else if (roles < 16) principalRole = "Instructor";
+		else if (roles < 32) principalRole = "Administrator";
+		else principalRole = ""; // unknown role
+		
+		if (myGroupId>0) { //user is a student member of a group
+			List<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",myGroupId).list();
+			List<Key<Score>> keys = new ArrayList<Key<Score>>();
+			for(Assignment a : assignments) keys.add(new Key<Score>(new Key<User>(User.class,id),Score.class,a.id));
+			List<Score> scores = new ArrayList<Score>(ofy.get(keys).values());
+			int level = 0;  // user level is set to be the number of non-zero assignment scores
+			for (Score s : scores) level += (s.score>0?1:0);
+			principalRole += " - Level " + level;
+			switch (level) {
+				case (0): principalRole += " (sparrow)"; break;
+				case (1): principalRole += " (sea gull)"; break;
+				case (2): principalRole += " (dove)"; break;
+				case (3): principalRole += " (kestrel)"; break;
+				case (4): principalRole += " (sandpiper)"; break;
+				case (5): principalRole += " (owl)"; break;
+				case (6): principalRole += " (osprey)"; break;
+				case (7): principalRole += " (falcon)"; break;
+				case (8): principalRole += " (harrier)"; break;
+				case (9): principalRole += " (hawk)"; break;
+				case (10): principalRole += " (red kite)"; break;
+				case (11): principalRole += " (egret)"; break;
+				case (12): principalRole += " (bobcat)"; break;
+				case (13): principalRole += " (puma)"; break;
+				case (14): principalRole += " (lynx)"; break;
+				case (15): principalRole += " (janguarundi)"; break;
+				case (16): principalRole += " (kodkod)"; break;
+				case (17): principalRole += " (ocelot)"; break;
+				case (18): principalRole += " (cougar)"; break;
+				case (19): principalRole += " (panther)"; break;
+				case (20): principalRole += " (cheetah)"; break;
+				case (21): principalRole += " (leopard)"; break;
+				case (22): principalRole += " (tiger)"; break;
+				default: principalRole += " (lion)"; level=23; break;
+			}
+			principalRole = "<img alt='animal' src=images/animals/" + level + ".jpg><br>" + principalRole;	
+		}
+		principalRole += " - <a href=Upgrade>" + (premium?"premium":"basic") + "</a>";
+		return principalRole;
 	}
 
 	void setPremium(boolean newValue) {

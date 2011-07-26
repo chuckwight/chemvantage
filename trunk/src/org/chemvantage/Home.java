@@ -245,12 +245,10 @@ public class Home extends HttpServlet {
 			buf.append("<TABLE BORDER=2 CELLSPACING=0 CELLPADDING=0 BORDERCOLOR=#008000><TR><TD>");
 			buf.append("<TABLE BGCOLOR=#FFFF80>"
 					+ "<TR><TD ALIGN=CENTER><b>Welcome, " + user.firstName + "</b>"
-					+ "<br><FONT SIZE=-1><a href='"
+					+ "&nbsp;&nbsp;<FONT SIZE=-1><a href='"
 					+ UserServiceFactory.getUserService().createLogoutURL("/")
 					+ "'>(this isn't me)</a></FONT></TD></TR>");
-			buf.append("<TR><TD ALIGN=CENTER><FONT SIZE=-1> " + user.getPrincipalRole() 
-					//+ (user.hasPremiumAccount()?" (premium)":" <a href=UpgradeAccount>(basic)</a>") 
-					+"</FONT></TD></TR>"); 
+			buf.append("<TR><TD ALIGN=CENTER><FONT SIZE=-1> " + user.getDecoratedRole() +"</FONT></TD></TR>"); 
 
 			Group myGroup = null;
 			if (user.myGroupId > 0) {
