@@ -374,7 +374,7 @@ public class User implements Comparable<User>,Serializable {
 			}
 			principalRole = "<img alt='animal' src=images/animals/" + level + ".jpg><br>" + principalRole;	
 		}
-		principalRole += " - <a href=Upgrade>" + (premium?"premium":"basic") + "</a>";
+		principalRole += " - <a href=Upgrade>" + (premium?"premium":"upgrade me") + "</a>";
 		return principalRole;
 	}
 
