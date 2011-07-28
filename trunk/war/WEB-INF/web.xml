@@ -119,6 +119,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet-mapping>
 
 	<servlet>
+		<servlet-name>Notification</servlet-name>
+		<servlet-class>org.chemvantage.Notification</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>Notification</servlet-name>
+		<url-pattern>/Notification</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
 		<servlet-name>PracticeExam</servlet-name>
 		<servlet-class>org.chemvantage.PracticeExam</servlet-class>
 	</servlet>
@@ -195,10 +204,11 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 			<web-resource-name>AdminServlet</web-resource-name>
 			<url-pattern>/Admin</url-pattern>
 			<url-pattern>/remote_api</url-pattern>
-			<url-pattern>/Rescue</url-pattern>
 			<url-pattern>/DataStoreCleaner</url-pattern>
 			<url-pattern>/DataTransfer</url-pattern>
-		</web-resource-collection>
+			<url-pattern>/Notification</url-pattern>
+			<url-pattern>/Rescue</url-pattern>
+			</web-resource-collection>
 		<auth-constraint>
 			<role-name>admin</role-name>
 		</auth-constraint>
