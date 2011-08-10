@@ -75,8 +75,13 @@ public class Groups extends HttpServlet {
 			} catch (Exception e2) {}
 			Group group = ofy.find(Group.class,groupId);
 			
+			if (userRequest.equals("GroupScoresCSV")) {
+				if (user.isAdministrator() || group.instructorId.equals(user.id) || group.tAIds.contains(user.id)) csvGroupScores(user,group,request,response);
+				return;
+			}
+			
 			out.println(Home.getHeader(user));
-			if (user.isAdministrator() || group.instructorId.equals(user.id)) {
+			if (user.isAdministrator() || group.instructorId.equals(user.id) || group.tAIds.contains(user.id)) {
 				if (userRequest.equals("ManageGroup")) out.println(manageGroupForm(user,group,request));
 				else if (userRequest.equals("AssignHomeworkQuestions")) out.println(assignHWQuestionsForm(user,group,request));
 				else if (userRequest.equals("AssignQuizQuestions")) out.println(assignQuizQuestionsForm(user,group,request));
@@ -85,7 +90,8 @@ public class Groups extends HttpServlet {
 				else if (userRequest.equals("GroupPracticeExams")) out.println(showGroupPracticeExams(user,group,request));
 				else if (userRequest.equals("RescueOptions")) out.println(showRescueOptions(user,group,request));
 				else out.println(groupsForm(user,request));
-			} else out.println("Not authorized.");
+			}
+			else out.println("Not authorized.");
 			out.println(Home.footer);
 		} catch (Exception e) {
 			response.getWriter().println(e.toString());
@@ -127,27 +133,27 @@ public class Groups extends HttpServlet {
 				out.println(groupsForm(user,request));
 				return;
 			}
-			if (!(user.isAdministrator() || group.instructorId.equals(user.id))) {
+			if (!(user.isAdministrator() || group.instructorId.equals(user.id) || group.tAIds.contains(user.id))) {
 				out.println(groupsForm(user,request));
 				return;
 			} 
-			// administrators and group instructor only beyond this point
+			// administrators and group instructor and TAs only beyond this point
 			if (userRequest.equals("UpdateGroup")) {
 				modifyGroup(user,request);
 				out.println(groupsForm(user,request));
 			} else if (userRequest.equals("DeleteGroup")) {
-				//String description = group.description + " (" + group.getInstructorBothNames() + ")";
 				deleteGroup(group);
 				out.println(groupsForm(user,request));
-				//out.println(successfulDelete(description));
 			} else if (userRequest.equals("SetTimeZone")) {
 				setTimeZone(user,group,request);
 				out.println(groupsForm(user,request));
 			} else if (userRequest.equals("UpdateAssignment")) {
 				updateAssignment(user,group,request);
 				out.println(manageGroupForm(user,group,request));
-			}
-			else if (userRequest.equals("UpdateDeadlines")) {
+			} else if (userRequest.equals("Copy Assignments")) {
+				copyAssignments(user,group,request);
+				out.println(manageGroupForm(user,group,request));
+			} else if (userRequest.equals("UpdateDeadlines")) {
 				updateDeadlines(user,group,request);
 				out.println(manageGroupForm(user,group,request));
 			} else if (userRequest.equals("RescueService")) {
@@ -250,7 +256,7 @@ public class Groups extends HttpServlet {
 						+ "<a href=mailto:admin@practicezone.org>admin@practicezone.org</a>");
 			}
 
-			if (user.isInstructor() || user.isAdministrator()) {
+			if (user.isInstructor() || user.isTeachingAssistant() || user.isAdministrator()) {
 				buf.append("<h3>Manage Your Groups</h3>\n");
 				buf.append("As an instructor, you have the ability to create, edit and delete groups. "
 						+ "These are usually groups of students taking a single class.  Students are responsible "
@@ -259,18 +265,16 @@ public class Groups extends HttpServlet {
 						+ "You may create and manage multiple groups of students, but you can be a member of only "
 						+ "one group at a time for each subject. Use the form above to switch groups at any time.<p>\n");
 
-				Query<Group> allMyGroups = null;
-				if (user.isAdministrator()) allMyGroups = ofy.query(Group.class);
-				else allMyGroups = ofy.query(Group.class).filter("instructorId",user.id);
+				Query<Group> allGroups = ofy.query(Group.class);
 				
-				if (allMyGroups.count()>0) { // print the header row of the table
-					buf.append("Use the links at the far right to set deadlines, view group scores and manage "
-							+ "enrollments for your group.<p>\n");
-					buf.append("<TABLE>\n<TR><TD><b>Subject</b></TD><TD><b>Instructor</b></TD>"
-							+ "<TD><b>Description</b></TD><TD COLSPAN=2 ALIGN=CENTER><b>Actions</b></TD><TD><b>View Scores</b></TD>"
-							+ "<TD><b>Deadlines</b></TD><TD><b>Enrollments</b></TD><TD ALIGN=CENTER><b>Time Zone</b></TD></TR>\n");
-				}
-				for (Group g : allMyGroups) {
+				buf.append("Use the links at the far right to set deadlines, view group scores and manage "
+						+ "enrollments for your group.<p>\n");
+				buf.append("<TABLE>\n<TR><TD><b>Subject</b></TD><TD><b>Instructor</b></TD>"
+						+ "<TD><b>Description</b></TD><TD COLSPAN=2 ALIGN=CENTER><b>Actions</b></TD><TD><b>View Scores</b></TD>"
+						+ "<TD><b>Deadlines</b></TD><TD><b>Enrollments</b></TD><TD ALIGN=CENTER><b>Time Zone</b></TD></TR>\n");
+			
+				for (Group g : allGroups) {
+					if (user.isAdministrator() || user.id.equals(g.instructorId) || g.tAIds.contains(user.id))
 					buf.append("<TR>"
 							+ "<TD>" + subject.title + "</TD>"
 							+ "<TD>" + g.getInstructorBothNames() + "</TD>"
@@ -295,19 +299,21 @@ public class Groups extends HttpServlet {
 							+ "</TD></FORM>"
 							+ "</TR>\n");
 				}
-				if (allMyGroups.count() > 0) buf.append("</TABLE>");
+				buf.append("</TABLE>");
 				
-				buf.append("<h3>Create a New Group</h3><FORM METHOD=POST ACTION=Groups>"
-						+ "To create a new group, choose from the existing subjects and provide a complete description "
-						+ "that will help students to identify the proper group to join. For example: <b>"
-						+ "U. of Utah CHEM 1210-002 MWF 9:00-9:50 AM</b><p>\n"
-						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=CreateGroup>\n"
-						+ "<TABLE><TR><TD><b>Instructor</b></TD><TD><b>Description</b></TD><TD>&nbsp;</TD></TR>"
-						+ "<TR><TD>" + user.getBothNames() + "</TD>"
-						+ "<TD><INPUT NAME=Description></TD>"
-						+ "<TD><INPUT TYPE=SUBMIT VALUE='Create This New Group'></TD>"
-						+ "</TR>\n</FORM>\n");
-				buf.append("</TABLE>\n");
+				if (user.isAdministrator() || user.isInstructor()) {
+					buf.append("<h3>Create a New Group</h3><FORM METHOD=POST ACTION=Groups>"
+							+ "To create a new group, choose from the existing subjects and provide a complete description "
+							+ "that will help students to identify the proper group to join. For example: <b>"
+							+ "U. of Utah CHEM 1210-002 MWF 9:00-9:50 AM</b><p>\n"
+							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=CreateGroup>\n"
+							+ "<TABLE><TR><TD><b>Instructor</b></TD><TD><b>Description</b></TD><TD>&nbsp;</TD></TR>"
+							+ "<TR><TD>" + user.getBothNames() + "</TD>"
+							+ "<TD><INPUT NAME=Description></TD>"
+							+ "<TD><INPUT TYPE=SUBMIT VALUE='Create This New Group'></TD>"
+							+ "</TR>\n</FORM>\n");
+					buf.append("</TABLE>\n");
+				}
 			}
 
 		} catch (Exception e) {
@@ -397,12 +403,30 @@ public class Groups extends HttpServlet {
 					+ "<p>You may change the deadline date at any time; scores will be recalculated automatically."
 					+ "<p>When you first create an assignment, all questions in the database are used by default. "
 					+ "However, you may designate a subset of quiz questions by clicking the "
-					+ "'Select' link and/or assign a subset of homework questions using the 'Assign' link. "
+					+ "'Select' link and/or assign a subset of homework questions using the 'Assign' link below. "
 					+ " <p>");
 
 			buf.append("<TABLE>\n<TR><TH>Title</TH><TH>Quiz Deadline</TH><TH COLSPAN=2> Questions</TH>"
 					+ "<TH>&nbsp;&nbsp;&nbsp;&nbsp;</TH><TH>HW Deadline</TH><TH COLSPAN=2>Exercises</TH><TH>&nbsp;</TH></TR>\n");
 
+			// allow copying of assignments from another group:
+			List<Group> groups = ofy.query(Group.class).list();
+			if (groups.size() > 1) {
+				buf.append("<div id=copy>");
+				buf.append("You may copy all assignments, deadlines and selected questions from another group "
+						+ "by selecting it below.<br><FONT COLOR=RED>Warning: this will permanently delete any "
+						+ "current assignments for this group shown below.</FONT>"
+						+ "<FORM ACTION=Groups METHOD=POST>");
+				buf.append("<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>");
+				buf.append("<SELECT NAME=CopyGroupId><OPTION VALUE=0>Select a group to copy from (optional)</OPTION>");
+				for (Group g : groups) {
+					if (g.id==group.id) continue; 
+					buf.append("<OPTION VALUE=" + g.id + ">" + g.description + " (" + User.getBothNames(g.instructorId) + ")</OPTION>");
+				}
+				buf.append("</SELECT><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Copy Assignments'></FORM>");
+				buf.append("</div><p>");
+			}
+			
 			// get a list of topics in the default order and rearrange them to start with the current group topics:
 			List<Topic> topics = ofy.query(Topic.class).order("orderBy").list();
 			for (Long topicId : group.topicIds) {
@@ -462,8 +486,35 @@ public class Groups extends HttpServlet {
 					+ "the items that will be used for this group by checking the boxes in the left column. Students are provided "
 					+ "answers to the items that they answer incorrectly. Therefore, the total number of questions should be "
 					+ "larger than 10, but not much larger than 50.  Experience shows that 30 items is about right in most cases. "
-					+ "Students may submit quizzes after the deadline, but the scores will no be included in their group scores.");
-
+					+ "Students may submit quizzes after the deadline, but the scores will no be included in their group scores.<p>");
+			
+			Query<Question> questions = ofy.query(Question.class).filter("assignmentType","Quiz").filter("topicId",topicId).filter("isActive",true);
+			if (assignment.questionKeys.size()==questions.count()) { // allow instructor to copy assignments from another group:
+				List<Assignment> assignments = ofy.query(Assignment.class).filter("assignmentType","Quiz").filter("topicId",topic.id).list();
+				if (assignments.size() > 1) {
+					buf.append("You may use the box below to copy homework problem selections from another group. "
+							+ "The choices include groups where problems have been specifically selected to match content in a particular "
+							+ "textbook.  Once selected, you may return to this form and customize the question selections as desired.");
+					buf.append("<FORM METHOD=POST ACTION=Groups>"
+							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateAssignment>"
+							+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
+							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
+							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Quiz>");
+					buf.append("<SELECT NAME=AssignmentId><OPTION VALUE=0>Select a group (optional)</OPTION>");
+					for (Assignment a:assignments) {
+						try {
+							if (a.groupId==group.id) continue; 
+							Group g = ofy.get(Group.class,a.groupId);
+							buf.append("<OPTION VALUE='" + a.id + "'>" + g.description + " (" + User.getBothNames(g.instructorId) + ")</OPTION>");
+						} catch (Exception e2) {
+							ofy.delete(a);
+						}
+					}
+					buf.append("</SELECT>");
+					buf.append("<INPUT TYPE=SUBMIT VALUE='Copy Selections From This Group'></FORM><p>");
+				}
+			} else buf.append("To copy assigned questions from another group, first assign all questions below.<p>");
+			
 			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
 					+ "onClick=\"for (var i=0;i<document.Questions.QuestionId.length;i++)"
 					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}\""
@@ -477,7 +528,6 @@ public class Groups extends HttpServlet {
 					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items'>");
 			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
 
-			Query<Question> questions = ofy.query(Question.class).filter("assignmentType","Quiz").filter("topicId",topicId).filter("isActive",true);
 			int i=0;
 			for (Question q : questions) {
 				i++;
@@ -502,7 +552,7 @@ public class Groups extends HttpServlet {
 			long topicId = Long.parseLong(request.getParameter("TopicId"));
 			Topic topic = ofy.get(Topic.class,topicId);
 			long hi = group.getAssignmentId("Homework",topic.id);
-			Assignment assignment = hi>0?ofy.get(Assignment.class,hi):null;
+			Assignment assignment = ofy.get(Assignment.class,hi);
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			df.setTimeZone(group.getTimeZone());
 			buf.append("<b>Subject: " + subject.title + "<br>"
@@ -515,36 +565,41 @@ public class Groups extends HttpServlet {
 					+ "at the bottom of the page. Each question is worth 1 point, so the maximum possible score on the "
 					+ "assignment is equal to the number of questions selected. Students may work unassigned problems and/or submit "
 					+ "post-deadline answers; however, these are not included in their group scores.<p>");
-			
-			// allow instructor to copy assignments from another group:
-			List<Assignment> assignments = ofy.query(Assignment.class).filter("assignmentType","Homework").filter("topicId",topic.id).list();
-			if (assignments.size() > 1) {
-				buf.append("You may use the box below to copy homework problem selections from another group. "
-						+ "The choices include groups where problems have been specifically selected to match content in a particular "
-						+ "textbook.  Once selected, you may return to this form and customize the question selections as desired.");
-				buf.append("<FORM METHOD=POST ACTION=Groups>"
-						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateAssignment>"
-						+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
-						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
-						+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Homework>");
-				buf.append("<SELECT NAME=AssignmentId><OPTION VALUE=0>Select a group (optional)</OPTION>");
-				for (Assignment a:assignments) {
-					try {
-						if (a.groupId==group.id) continue; 
-						Group g = ofy.get(Group.class,a.groupId);
-						buf.append("<OPTION VALUE='" + a.id + "'>" + g.description + " (" + User.getBothNames(g.instructorId) + ")</OPTION>");
-					} catch (Exception e2) {
-						ofy.delete(a);
+
+			Query<Question> questions = ofy.query(Question.class).filter("assignmentType","Homework").filter("topicId",topicId).filter("isActive",true);
+			if (assignment.questionKeys.size()==questions.count()) { // allow instructor to copy assignments from another group:
+				List<Assignment> assignments = ofy.query(Assignment.class).filter("assignmentType","Homework").filter("topicId",topic.id).list();
+				if (assignments.size() > 1) {
+					buf.append("You may use the box below to copy homework problem selections from another group. "
+							+ "The choices include groups where problems have been specifically selected to match content in a particular "
+							+ "textbook.  Once selected, you may return to this form and customize the question selections as desired.");
+					buf.append("<FORM METHOD=POST ACTION=Groups>"
+							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateAssignment>"
+							+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
+							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
+							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Homework>");
+					buf.append("<SELECT NAME=AssignmentId><OPTION VALUE=0>Select a group (optional)</OPTION>");
+					for (Assignment a:assignments) {
+						try {
+							if (a.groupId==group.id) continue; 
+							Group g = ofy.get(Group.class,a.groupId);
+							buf.append("<OPTION VALUE='" + a.id + "'>" + g.description + " (" + User.getBothNames(g.instructorId) + ")</OPTION>");
+						} catch (Exception e2) {
+							ofy.delete(a);
+						}
 					}
+					buf.append("</SELECT>");
+					buf.append("<INPUT TYPE=SUBMIT VALUE='Copy Selections From This Group'></FORM><p>");
 				}
-				buf.append("</SELECT>");
-				buf.append("<INPUT TYPE=SUBMIT VALUE='Copy Selections From This Group'></FORM>");
-			}
+			} else buf.append("To copy assigned questions from another group, first assign all questions below.<p>");
+			
+			// This dummy form uses javascript to select/deselect all questions
 			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
 					+ "onClick=\"for (var i=0;i<document.Questions.QuestionId.length;i++)"
 					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}\""
 					+ "> Select/Unselect All</FORM>");
 
+			// Make a list of individual questions that can be selected or deselected for this assignment
 			buf.append("<FORM NAME=Questions METHOD=POST ACTION=Groups>"
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment'>"
 					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
@@ -553,7 +608,6 @@ public class Groups extends HttpServlet {
 					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items'>");
 			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
 
-			Query<Question> questions = ofy.query(Question.class).filter("assignmentType","Homework").filter("topicId",topicId).filter("isActive",true);
 			int i=0;
 			for (Question q : questions) {
 				i++;
@@ -574,12 +628,15 @@ public class Groups extends HttpServlet {
 
 	void updateAssignment(User user,Group group,HttpServletRequest request) {
 		try {
+			group.setGroupTopicIds();
 			String assignmentType = request.getParameter("AssignmentType");
 			long i = group.getAssignmentId(assignmentType,Long.parseLong(request.getParameter("TopicId")));
 			Assignment assignment = i>0?ofy.get(Assignment.class,i):null;
+			
 			String[] questionIds = request.getParameterValues("QuestionId");
+			String copyAssignmentId = request.getParameter("AssignmentId");
 			assignment.questionKeys.clear();
-			if (questionIds==null) {
+			if (!(copyAssignmentId==null)) {  // copy assigned questions form another group
 				try {
 					Assignment template = ofy.get(Assignment.class,Long.parseLong(request.getParameter("AssignmentId")));
 					for (Key<Question> key: template.questionKeys) assignment.questionKeys.add(key);
@@ -592,7 +649,7 @@ public class Groups extends HttpServlet {
 				for (String id : questionIds) assignment.questionKeys.add(new Key<Question>(Question.class,Long.parseLong(id)));
 			}
 			ofy.put(assignment);
-		} catch (Exception e) {}
+		} catch (Exception e) {System.out.println(e.toString());}
 	}		
 
 	String updateDeadlines(User user,Group group,HttpServletRequest request) {
@@ -643,6 +700,36 @@ public class Groups extends HttpServlet {
 		return buf.toString();
 	}
 
+	void copyAssignments(User user, Group group, HttpServletRequest request) {
+		try {
+			// delete all current assignments for the group
+			List<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",group.id).list();
+			group.quizAssignmentIds.clear();
+			group.hwAssignmentIds.clear();
+			ofy.delete(assignments);
+			
+			// get the properties of the group to be copied from
+			long copyGroupId = Long.parseLong(request.getParameter("CopyGroupId"));
+			Group copyGroup = ofy.get(Group.class,copyGroupId);
+			TimeZone cgTZ = copyGroup.getTimeZone();
+			TimeZone myTZ = group.getTimeZone();			
+			// get a list of assignments from the group to be copied
+			List<Assignment> copyAssignments = ofy.query(Assignment.class).filter("groupId",copyGroupId).list();
+			
+			for (Assignment ca : copyAssignments) {
+				long utcDeadlineMillis = ca.deadline.getTime();
+				Date deadline = new Date(utcDeadlineMillis + cgTZ.getOffset(utcDeadlineMillis) - myTZ.getOffset(utcDeadlineMillis));
+				Assignment newAssignment = new Assignment(group.id,ca.topicId,ca.assignmentType,deadline);
+				newAssignment.questionKeys = ca.questionKeys;
+				ofy.put(newAssignment).getId();	
+			}
+			group.setGroupTopicIds();
+			ofy.put(group);
+		} catch (Exception e) {
+			System.out.println(e.getMessage());
+		}
+	}
+	
 	public String showGroupPracticeExams(User user,Group group,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -711,8 +798,8 @@ public class Groups extends HttpServlet {
 			buf.append("Group: " + group.getInstructorBothNames() + " - " + group.description);
 			
 			// link to save as comma separated values (CSV) file:
-			//buf.append("<br><a href=Scores?Type=" + assignmentType + "&GroupId=" + group.id + "&Format=CSV>"
-			//		+ "Save this page as a comma separated variables (.csv) file</a>");
+			buf.append("<br><a href=Groups?UserRequest=GroupScoresCSV&AssignmentType=" + assignmentType + "&GroupId=" + group.id + ">"
+					+ "Save these scores as a comma separated variables (.csv) file</a>");
 
 			// Make a table of assignments for this group
 			buf.append("<p><b>" + assignmentType + " Assignments for this Group</b><br>");
@@ -741,7 +828,7 @@ public class Groups extends HttpServlet {
 			for (int i=1;i<=assignments.size();i++) { // add a header for each assigned quiz or homework
 				buf.append("<TH>" + (assignmentType.equals("Quiz")?"Q":"HW") + i + "</TH>");
 			}
-			buf.append("</TR>"); // end of header row for scores table
+			buf.append("<TH>Total</TH></TR>"); // end of header row for scores table
 			int i = 0;
 			int[] sumScores = new int[assignments.size()];
 			int[] nScores = new int[assignments.size()];
@@ -756,6 +843,7 @@ public class Groups extends HttpServlet {
 				buf.append("<TR><TD>" + i + ".</TD><TD><A href=mailto:" + u.email + ">" + u.getFullName() + "</A></TD>");
 				int j = 0;
 				boolean redFlag = false;
+				int studentTotalScore = 0;
 				for (Assignment a : assignments) {
 					Key<Score> k = new Key<Score>(new Key<User>(User.class,u.id),Score.class,a.id);
 					Score s = scoresMap.get(k);
@@ -767,13 +855,14 @@ public class Groups extends HttpServlet {
 					try {
 						redFlag = redFlag && s.score<5;
 						sumScores[j] += s.score;
+						studentTotalScore += s.score;
 						if (s.numberOfAttempts>0) nScores[j]++;
 					} catch (Exception e) {
 					}
 					j++;
 					buf.append("<TD ALIGN=CENTER>" + (redFlag?"<img src=images/red_dot.gif>&nbsp;":"") + s.getScore() + "</TD>");
-					}
-				buf.append("</TR>");
+				}
+				buf.append("<TD ALIGN=CENTER>" + studentTotalScore + "</TD></TR>");
 				if (System.currentTimeMillis()-startTime > LIMIT_MILLIS) {
 					partialTable = true;
 					break; 
@@ -784,7 +873,7 @@ public class Groups extends HttpServlet {
 						+ "Due to a timeout limitation of the system, this is only a partial list of scores.<br>" 
 						+ "Please refresh this page to resume calculating the scores.</TD></TR>");
 			} else {
-			// print a row of average scores for the assignments
+				// print a row of average scores for the assignments
 				buf.append("<TR><TD COLSPAN=2>Average Score</TD>");
 				for (int j=0;j<assignments.size();j++) {
 					try {
@@ -794,7 +883,7 @@ public class Groups extends HttpServlet {
 						buf.append("<TD>" + e.toString()+ "</TD>");
 					}
 				}
-				buf.append("</TR>");
+				buf.append("<TD></TD></TR>");
 			}
 			buf.append("</TABLE>");
 		} catch (Exception e) {
@@ -803,6 +892,53 @@ public class Groups extends HttpServlet {
 		return buf.toString();
 	}
 
+	void csvGroupScores(User user,Group group,HttpServletRequest request,HttpServletResponse response) {
+		long LIMIT_MILLIS = 1000 * 25; // response time limit in milliseconds
+		PrintWriter out = null;
+		try {
+			long startTime = System.currentTimeMillis();
+			response.setContentType("text/csv");
+			out = response.getWriter();
+			String assignmentType = request.getParameter("AssignmentType");
+			List<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",group.id).filter("assignmentType",assignmentType).order("deadline").list();
+			List<User> groupMembers = new ArrayList<User>(ofy.get(User.class,group.memberIds).values());
+			Collections.sort(groupMembers);
+			Set<Key<Score>> keys = new HashSet<Key<Score>>();
+			for (User u : groupMembers) for (Assignment a : assignments) keys.add(new Key<Score>(new Key<User>(User.class,u.id),Score.class,a.id));
+			Map<Key<Score>,Score> scoresMap = ofy.get(keys);
+			StringBuffer buf = new StringBuffer();
+			
+			// header row of csv file:
+			buf.append("Name,Email");
+			for (int i=1;i<=assignments.size();i++) buf.append((assignmentType.equals("Quiz")?",Quiz ":",Homework ") + i);
+			out.println(buf.toString());
+			
+			for (User u : groupMembers) {
+				buf = new StringBuffer();
+				if (u.myGroupId != group.id) {  // user has been removed from this group; skip this entry
+					group.memberIds.remove(u.id);
+					ofy.put(group);
+					continue;
+				}
+				buf.append("\"" + u.getFullName() + "\"," + u.email);
+				for (Assignment a : assignments) {
+					Key<Score> k = new Key<Score>(new Key<User>(User.class,u.id),Score.class,a.id);
+					Score s = scoresMap.get(k);
+					if (s==null) {
+						s = Score.getInstance(u.id,a);
+						ofy.put(s);
+					}
+					buf.append("," + s.getScore());
+				}
+				out.println(buf.toString());
+				if (System.currentTimeMillis()-startTime > LIMIT_MILLIS) throw new Exception();
+			}
+		} catch (Exception e) {
+			out.println("An error occurred, most likely due to a system timeout. "
+					+ "Please refresh this page to continue exporting the group scores to a CSV file");
+		}
+	}
+	
 	String showRescueOptions(User user,Group group,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h2>Group Rescue Service Options</h2>");
 		buf.append("Group: " + group.description + "<br>");

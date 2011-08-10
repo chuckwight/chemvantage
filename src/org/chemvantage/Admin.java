@@ -29,8 +29,6 @@ import javax.servlet.http.HttpSession;
 
 import com.google.appengine.api.datastore.Cursor;
 import com.google.appengine.api.datastore.QueryResultIterator;
-import com.google.appengine.api.users.UserService;
-import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.ObjectifyService;
 import com.googlecode.objectify.Query;
@@ -50,14 +48,18 @@ public class Admin extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			// begin standard user authentication section
-			UserService userService = UserServiceFactory.getUserService();
-			User user = ofy.get(User.class,userService.getCurrentUser().getUserId());
 			HttpSession session = request.getSession(true);
-			session.setAttribute("UserId", user.id);
+			session.removeAttribute("UserId");  //access to this service allowed only by admins in that role
+			
+			User user = User.getInstance(request.getSession(true));
+			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
+				response.sendRedirect("/");
+				return;
+			}
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
+
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 
@@ -71,18 +73,21 @@ public class Admin extends HttpServlet {
 				out.println(Home.getHeader(user) + mainAdminForm(user,searchString,cursor) + Home.footer);
 			}
 		} catch (Exception e) {
-			response.sendRedirect("/");
+			//response.sendRedirect("/");
 		}
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			// begin standard user authentication section
-			UserService userService = UserServiceFactory.getUserService();
-			User user = ofy.get(User.class,userService.getCurrentUser().getUserId());
 			HttpSession session = request.getSession(true);
-			session.setAttribute("UserId", user.id);
+			session.removeAttribute("UserId");  //access to this service allowed only by admins in that role
+			
+			User user = User.getInstance(request.getSession(true));
+			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
+				response.sendRedirect("/");
+				return;
+			}
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();

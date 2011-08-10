@@ -120,11 +120,11 @@ public class About extends HttpServlet {
 		+ "<h3>Editors</h3>"
 		+ "Any instructor wishing to contribute question items for quiz or homework assignments may request an "
 		+ "editor account by sending email to <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.  "
-		+ "The copyrights to all question items at this site are owned entirely by <b>PracticeZone.org</b>. The "
+		+ "The copyrights to all question items at this site are owned entirely by <b>ChemVantage LLC</b>. The "
 		+ "only way that we can keep costs low enough to offer free accounts to both students and instructors is "
 		+ "to avoid paying royalties to textbook publishers.  Therefore, all contributors of ChemVantage question "
 		+ "items are asked to certify that all contributed items are original works, and that the author grants the "
-		+ "copyrights to PracticeZone ORG LLC to be shared freely under the terms of a "
+		+ "copyrights to ChemVantage LLC to be shared freely under the terms of a "
 		+ "<a href='http://creativecommons.org/licenses/by/3.0/us/'>Creative Commons Attribution 3.0 License.</a>";
 
 	public static String copyright = "<a NAME=copyright></a>"
