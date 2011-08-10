@@ -83,6 +83,7 @@ public class User implements Comparable<User>,Serializable {
 		if (userId==null) {
 			try {  // Google authentication
 				userId = userService.getCurrentUser().getUserId();
+				session.setAttribute("UserId", userId);
 			} catch (Exception e) {  // invalid user or lost BLTI session
 				return null;
 			}
@@ -397,12 +398,17 @@ public class User implements Comparable<User>,Serializable {
 
 	void setIsInstructor(boolean makeInstructor) {
 		if (isInstructor() && !makeInstructor) roles -= 8;
-		else if (!isInstructor() && makeInstructor) roles += 8;
+		else if (!isInstructor() && makeInstructor) {
+			roles += 8;
+			this.setPremium(true);
+		}
+		
 	}
+	
 	boolean isTeachingAssistant() {    
 		return ((roles%8)/4 == 1);
 	}
-
+	
 	boolean isEditor() {
 		return ((roles%4)/2 == 1);
 	}
