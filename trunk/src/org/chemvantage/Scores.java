@@ -322,6 +322,10 @@ public class Scores extends HttpServlet {
 			DateFormat df = DateFormat.getDateInstance(DateFormat.SHORT);
 			df.setTimeZone(myGroup.getTimeZone());
 			buf.append("\n<h3>Quiz and Homework Assignments</h3>"
+					+ "If a red dot appears in the table below, it means that you either missed an assignment deadline or "
+					+ "your score on the assignment was low enough to trigger a concern. The red dot appears on the class "
+					+ "gradesheet to alert your instructor to a potential problem.  If you complete the assignment "
+					+ "successfully after the deadline, your group score will be unchanged, but the red dot will disappear."
 					+ "\n<TABLE BORDER=1 CELLSPACING=0><TR><TH></TH><TH COLSPAN=2>Quizzes</TH><TH COLSPAN=2>Homework</TH></TR>"
 					+ "\n<TR><TH ALIGN=LEFT>Topic</TH><TH>Deadline</TH><TH>Score <FONT COLOR=GRAY>(Attempts)</FONT></TH>"
 					+ "<TH>Deadline</TH><TH>Score <FONT COLOR=GRAY>(Attempts)</FONT></TH></TR>"); 
@@ -339,12 +343,12 @@ public class Scores extends HttpServlet {
 				
 				if (qa != null) { // print the quiz score for this topic in the table
 					buf.append("<TD ALIGN=CENTER" + (qa.deadline.equals(nextDeadline)?" BGCOLOR=#FFFF00><a href=Quiz?TopicId=" + topicId + ">" + df.format(qa.deadline) + "</a></TD>":">" + df.format(qa.deadline) + "</TD>"));
-					buf.append("<TD ALIGN=CENTER>" + myGroup.getScore(user.id,qa).getEnhancedScore() + "</TD>");
+					buf.append("<TD ALIGN=CENTER>" + myGroup.getScore(user.id,qa).getEnhancedDotScore(qa.deadline,myGroup.rescueThresholdScore) + "</TD>");
 				} else buf.append("<TD COLSPAN=2 ALIGN=CENTER><FONT COLOR=808080>(not assigned)</FONT></TD>");
 				
 				if (hwa != null && hwa.questionKeys.size()>0) { // print the homework score for this topic in the table
 					buf.append("<TD ALIGN=CENTER" + (hwa.deadline.equals(nextDeadline)?" BGCOLOR=#FFFF00><a href=Homework?TopicId=" + topicId + ">" + df.format(hwa.deadline) + "</a></TD>":">" + df.format(hwa.deadline) + "</TD>"));
-					buf.append("<TD ALIGN=CENTER>" + myGroup.getScore(user.id,hwa).getEnhancedScore() + "</TD>");
+					buf.append("<TD ALIGN=CENTER>" + myGroup.getScore(user.id,hwa).getEnhancedDotScore(hwa.deadline,myGroup.rescueThresholdScore) + "</TD>");
 				} else buf.append("<TD COLSPAN=2 ALIGN=CENTER><FONT COLOR=808080>(not assigned)</FONT></TD>");
 				buf.append("</TR>");
 				nRows++;

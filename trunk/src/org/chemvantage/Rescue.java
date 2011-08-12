@@ -17,8 +17,9 @@
 
 package org.chemvantage;
 
+import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
+
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
@@ -33,10 +34,10 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.appengine.api.taskqueue.Queue;
+import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.ObjectifyService;
-import com.googlecode.objectify.Query;
 
 public class Rescue extends HttpServlet {
 	private static final long serialVersionUID = 137L;
@@ -45,132 +46,72 @@ public class Rescue extends HttpServlet {
 	Subject subject = dao.getSubject();
 
 	public String getServletInfo() {
-		return "PZone servlet presents user's detailed scores in the Practice Zone site.";
+		return "ChemVantage servlet sends helpful messages to students who miss assignments or score badly.";
 	}
 	
+	@Override
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
-	throws ServletException, IOException {
-		// This servlet is called by the cron daemon every 6 hours.
-		sendRescueMessages();
-		sendDeadlineReminders();
-	}
-	
-	public void sendRescueMessages() {
-		// This method searches for students who missed group assignment deadlines and sends them email messages.
-		Objectify ofy = ObjectifyService.begin();
-		Date now = new Date();
-		Date then = new Date(now.getTime()-21600000); // 6 hours ago
-		List<Assignment> assignments = ofy.query(Assignment.class).filter("deadline >",then).filter("deadline <",now).list();
-		Properties props = new Properties();
-		Session session = Session.getDefaultInstance(props, null);
-		for (Assignment a : assignments) {
-			try {
-				Group group = ofy.find(Group.class,a.groupId);
-				if (group == null) {
-					ofy.delete(a);
-					continue;
-				}
-				if (!group.sendRescueMessages) continue; // if the rescue service is not activated, go to next assignment
-				if (a.assignmentType.equals("Quiz")) {
-					Query<QuizTransaction> quizTransactions = ofy.query(QuizTransaction.class).filter("userId in",group.memberIds).filter("topicId",a.topicId).filter("downloaded <",a.deadline);
-					for (QuizTransaction qt : quizTransactions) 
-						if (qt.score >= qt.possibleScore*group.thresholdScorePct/100 && group.memberIds.contains(qt.userId)) 
-							group.memberIds.remove(qt.userId);  // leave only ids of group members with low or missing scores
-				} else if (a.assignmentType.equals("Homework")) {
-					int possibleScore = a.questionKeys.size();
-					List<Long> assignedQuestionIds = new ArrayList<Long>();
-					for (Key<Question> k : a.questionKeys) assignedQuestionIds.add(k.getId());
-					// for each group member add a list of assigned questions to the matrix:
-					List<List<Long>> questionIdMatrix = new ArrayList<List<Long>>();
-					for (int i=0;i<group.memberIds.size();i++) questionIdMatrix.add(assignedQuestionIds);
-					// for each homework problem answered correctly, remove the corresponding questionId from the matrix:
-					Query<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId in",group.memberIds).filter("topicId",a.topicId).filter("questionId in",assignedQuestionIds).filter("score >",0);
-					for (HWTransaction hwt : hwTransactions)
-						questionIdMatrix.get(group.memberIds.indexOf(hwt.userId)).remove(hwt.questionId);
-					for (String userId : group.memberIds)
-						if (questionIdMatrix.get(group.memberIds.indexOf(userId)).size() <= possibleScore*group.thresholdScorePct/100) 
-							group.memberIds.remove(userId); // leave only ids of group members high numbers of missing homework scores
-				} else continue; // if the assignment is neither quiz nor homework, go to the next assignment
-
-				if (group.memberIds.size() == 0) continue; // don't send messages for this group; everyone is OK
-
-				for (String userId : group.memberIds) {
-					try {
-						User user = ofy.get(User.class,userId);
-						Message msg = new MimeMessage(session);
-						msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-						msg.setRecipient(Message.RecipientType.TO,new InternetAddress(user.email,user.getBothNames()));
-						msg.setSubject(group.defaultRescueSubject);
-						String messageText = group.defaultRescueMessage;
-						for (String id : group.rescueCcIds) {
-							String email = User.getEmail(id);
-							String name = User.getBothNames(id);
-							messageText += name + " (" + email + ")\n";
-							msg.addRecipient(Message.RecipientType.CC,new InternetAddress(email,name));
-						}
-						msg.setText(messageText);
-						Transport.send(msg);
-					} catch (Exception e) {
-						continue;
-					}
-				}
-			}catch (Exception e2) {
-				continue;
-			}
-		}
-	}
-
-
-	public void sendDeadlineReminders() {
-		// This method searches for assignments due at midnight tonight and sends reminders to users who elect notification
-		Objectify ofy = ObjectifyService.begin();
-		Date now = new Date();
-		Date startWindow = new Date(now.getTime() + 43200000); // 12 hr from now in millis
-		Date endWindow = new Date(startWindow.getTime() + 21600000);   // 6 hours later
-		List<Assignment> assignments = ofy.query(Assignment.class).filter("deadline >",startWindow).filter("deadline <",endWindow).list();
-		Properties props = new Properties();
-		Session session = Session.getDefaultInstance(props, null);
-		for (Assignment a : assignments) {
-			Group group = ofy.find(Group.class,a.groupId);
-			if (group == null) {
-				ofy.delete(a);
-				continue;
-			}
-			for (String userId : group.memberIds) {
-				try {
-					Message msg = new MimeMessage(session);
-					msg.setFrom(new InternetAddress("admin@chemvantage.org","ChemVantage"));
-					msg.setSubject("ChemVantage");
-					User user = ofy.find(User.class,userId);
-					if (user == null) group.memberIds.remove(userId); // user account was deleted
-					if (user.myGroupId != group.id) continue; // user has not yet joined this group 
-					if (user.notifyDeadlines && smsRegistered(user)) {
-						msg.setRecipient(Message.RecipientType.TO,new InternetAddress(user.smsMessageDevice));
-						msg.setText("Reminder: " + a.assignmentType + " at chemvantage.org due by midnight tonight.");
-					}
-					else if (user.notifyDeadlines) {
-						msg.setRecipient(Message.RecipientType.TO,new InternetAddress(user.email));
-						msg.setText("This is a friendly reminder from ChemVantage that you have a " 
-								+ a.assignmentType + " due by midnight tonight. <p>"
-								+ "If you do not wish to receive these reminders, you can change "
-								+ "your notification options on the Scores page at "
-								+ "<a href=http://www.chemvantage.org>www.chemvantage.org</a>");
-					}
-					Transport.send(msg);
-				} catch (Exception e) {
-					continue;
-				}
-			}
-		}
-	}
-
-	private boolean smsRegistered(User user) {
+	throws ServletException, IOException {  // this method is called by cron once every 3 hours
 		try {
-			Long.parseLong(user.smsMessageDevice.substring(0,10));
-			return true;
+			Date now = new Date();
+			Date startWindow = new Date(now.getTime() - 14400000); // 4 hours ago in millis
+			Date endWindow = new Date(now.getTime() - 3600000);    // 1 hour ago in millis
+			List<Assignment> assignments = ofy.query(Assignment.class).filter("deadline >",startWindow).filter("deadline <",endWindow).list();
+			for (Assignment a : assignments) {
+				Group group = ofy.find(Group.class,a.groupId);
+				if (group==null || !group.sendRescueMessages) continue;
+				Queue queue = QueueFactory.getDefaultQueue();
+				queue.add(withUrl("/Rescue").param("AssignmentId",Long.toString(a.id)));
+			}
 		} catch (Exception e) {
-			return false;
 		}
 	}
 	
+	@Override
+	public void doPost(HttpServletRequest request,HttpServletResponse response)
+	throws ServletException, IOException {  // this method is called by cron once every 3 hours
+		try {
+			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+			sendRescueMessages(assignmentId);
+		} catch (Exception e) {		
+		}
+	}
+	
+	public void sendRescueMessages(long assignmentId) {
+		// This method searches for students who missed group assignment deadlines and sends them email messages.
+		try {
+			Assignment assignment = ofy.get(Assignment.class,assignmentId);
+			Group group = ofy.get(Group.class,assignment.groupId);
+			if (!group.sendRescueMessages) return; // if the rescue service is not activated, quit now
+			Properties props = new Properties();
+			Session session = Session.getDefaultInstance(props, null);
+
+			for (String userId : group.memberIds) {
+				Score score = ofy.find(new Key<Score>(new Key<User>(User.class,userId),Score.class,assignment.id));
+				if (score == null) {
+					score = Score.getInstance(userId,assignment);
+					ofy.put(score);
+				}
+				
+				if (score.score > group.rescueThresholdScore) continue;  // this user is OK; go to next group member
+
+				// send a rescue message to this user
+				User user = ofy.get(User.class,userId);
+				Message msg = new MimeMessage(session);
+				msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
+				msg.setRecipient(Message.RecipientType.TO,new InternetAddress(user.id,user.getBothNames()));
+				msg.setSubject(group.defaultRescueSubject);
+				String messageText = group.defaultRescueMessage;
+				for (String id : group.rescueCcIds) {
+					String email = User.getEmail(id);
+					String name = User.getBothNames(id);
+					messageText += name + " (" + email + ")\n";
+					msg.addRecipient(Message.RecipientType.CC,new InternetAddress(email,name));
+				}
+				msg.setText(messageText);
+				Transport.send(msg);			
+			}
+		}catch (Exception e) {
+		}
+	}
 }

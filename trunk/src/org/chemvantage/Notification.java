@@ -50,23 +50,29 @@ public class Notification extends HttpServlet {
 	}
 	
 	@Override
-	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-
-		Objectify ofy = ObjectifyService.begin();
-	    
-	    try {  // slave task to notify for one particular assignment, or continuation
-	    	long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
-	    	sendEmailNotifications(assignmentId);
-	    } catch (Exception e) {   // master task called by cron every 6 hours	
-	    	Date now = new Date();
+	protected void doGet(HttpServletRequest request, HttpServletResponse response) 
+	throws ServletException, IOException {
+		try {
+			Date now = new Date();
 			Date startWindow = new Date(now.getTime() + 43200000); // 12 hr from now in millis
 			Date endWindow = new Date(startWindow.getTime() + 21600000);   // 6 hours later
 			List<Assignment> assignments = ofy.query(Assignment.class).filter("deadline >",startWindow).filter("deadline <",endWindow).list();
 			for (Assignment a : assignments) {
 				Queue queue = QueueFactory.getDefaultQueue();
-    			queue.add(withUrl("/Notification").param("AssignmentId",Long.toString(a.id)));
+				queue.add(withUrl("/Notification").param("AssignmentId",Long.toString(a.id)));
 			}
-	    }
+		} catch (Exception e) {
+		}
+	}
+
+	@Override
+	protected void doPost(HttpServletRequest request,HttpServletResponse response)
+	throws ServletException, IOException {
+		try {  // task to notify users for one particular assignment
+			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+			sendEmailNotifications(assignmentId);
+		} catch (Exception e) { 
+		}
 	}
 	
 	protected void sendEmailNotifications(long assignmentId) {
@@ -91,10 +97,9 @@ public class Notification extends HttpServlet {
 					else if (user.verifiedEmail) {
 						msg.setRecipient(Message.RecipientType.TO,new InternetAddress(user.email));
 						msg.setText("This is a friendly reminder from ChemVantage that you have a " 
-								+ a.assignmentType + " due by midnight tonight. <p>"
+								+ a.assignmentType + " due by midnight tonight. "
 								+ "If you do not wish to receive these reminders, you can change "
-								+ "your notification options on the Scores page at "
-								+ "<a href=http://www.chemvantage.org>www.chemvantage.org</a>");
+								+ "your notification options on the ChemVantage Scores page.");
 					}
 					Transport.send(msg);
 				} catch (Exception e) {

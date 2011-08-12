@@ -842,25 +842,15 @@ public class Groups extends HttpServlet {
 				i++;
 				buf.append("<TR><TD>" + i + ".</TD><TD><A href=mailto:" + u.email + ">" + u.getFullName() + "</A></TD>");
 				int j = 0;
-				boolean redFlag = false;
 				int studentTotalScore = 0;
 				for (Assignment a : assignments) {
 					Key<Score> k = new Key<Score>(new Key<User>(User.class,u.id),Score.class,a.id);
 					Score s = scoresMap.get(k);
-					if (s==null) {
-						s = Score.getInstance(u.id,a);
-						ofy.put(s);
-					}
-					redFlag = a.deadline.before(now);
-					try {
-						redFlag = redFlag && s.score<5;
-						sumScores[j] += s.score;
-						studentTotalScore += s.score;
-						if (s.numberOfAttempts>0) nScores[j]++;
-					} catch (Exception e) {
-					}
+					sumScores[j] += s.score;
+					studentTotalScore += s.score;
+					if (s.numberOfAttempts>0) nScores[j]++;
 					j++;
-					buf.append("<TD ALIGN=CENTER>" + (redFlag?"<img src=images/red_dot.gif>&nbsp;":"") + s.getScore() + "</TD>");
+					buf.append("<TD ALIGN=CENTER>" + s.getDotScore(a.deadline,group.rescueThresholdScore) + "</TD>");
 				}
 				buf.append("<TD ALIGN=CENTER>" + studentTotalScore + "</TD></TR>");
 				if (System.currentTimeMillis()-startTime > LIMIT_MILLIS) {
@@ -962,7 +952,7 @@ public class Groups extends HttpServlet {
 						+ "<INPUT TYPE=HIDDEN NAME=SendRescueMessages VALUE=true>");
 				buf.append("Each student in this group will be notified if he or she misses the deadline for "
 						+ "an assignment<br>or has a score of "
-						+ "<INPUT TYPE=TEXT SIZE=4 NAME=ThresholdScorePct VALUE=" + group.thresholdScorePct + "> percent or less.<p>");
+						+ "<INPUT TYPE=TEXT SIZE=4 NAME=RescueThresholdScore VALUE=" + group.rescueThresholdScore + "> or below.<p>");
 				buf.append("Email subject line: <INPUT TYPE=TEXT SIZE=40 NAME=DefaultRescueSubject VALUE='" + group.defaultRescueSubject + "'><br>");
 				buf.append("Email message text:<br><TEXTAREA NAME=DefaultRescueMessage ROWS=15 COLS=80 WRAP=SOFT>" + group.defaultRescueMessage + "</TEXTAREA><br>");
 				buf.append("Select one or more of the following contacts to be listed in the email:<br>");
@@ -982,7 +972,7 @@ public class Groups extends HttpServlet {
 	void setRescueOptions(User user,Group group,HttpServletRequest request) {
 		if (request.getParameter("SendRescueMessages") != null)	group.sendRescueMessages = Boolean.parseBoolean(request.getParameter("SendRescueMessages"));
 		try {
-			group.thresholdScorePct = Integer.parseInt(request.getParameter("ThresholdScorePct"));
+			group.rescueThresholdScore = Integer.parseInt(request.getParameter("RescueThresholdScore"));
 			group.defaultRescueSubject = request.getParameter("DefaultRescueSubject");
 			group.defaultRescueMessage = request.getParameter("DefaultRescueMessage");
 			String[] rescueCcIds = request.getParameterValues("RescueCcIds");

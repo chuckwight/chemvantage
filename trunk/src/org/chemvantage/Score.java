@@ -17,7 +17,7 @@
 
 package org.chemvantage;
 
-import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import javax.persistence.Id;
@@ -35,6 +35,7 @@ public class Score {    // this object represents a best score achieved by a use
 	@Parent Key<User> owner;
 	long groupId;
 	int score;
+	int overallScore;
 	int numberOfAttempts;
 	
 	Score() {}
@@ -46,24 +47,35 @@ public class Score {    // this object represents a best score achieved by a use
 		s.owner = new Key<User>(User.class,userId);
 		s.groupId = a.groupId;
 		s.score = 0;
+		s.overallScore = 0;
 		s.numberOfAttempts = 0;
 		if (a.assignmentType.equals("Quiz")) {
-			Query<QuizTransaction> quizTransactions = ofy.query(QuizTransaction.class).filter("userId",userId).filter("topicId",a.topicId).filter("downloaded <",a.deadline);
-			s.numberOfAttempts = quizTransactions.count();
-			for (QuizTransaction qt : quizTransactions) if (qt.score > s.score) s.score = qt.score;
+			Query<QuizTransaction> quizTransactions = ofy.query(QuizTransaction.class).filter("userId",userId).filter("topicId",a.topicId);
+			for (QuizTransaction qt : quizTransactions) {
+				if (qt.downloaded.before(a.deadline)) {  // pre-deadline group score
+					s.numberOfAttempts++;  // number of pre-deadline quiz attempts
+					s.score = (qt.score>s.score?qt.score:s.score);  // keep the best (max) score
+				}
+				if (qt.score > s.overallScore) s.overallScore = qt.score;  // overall student score on this assignment
+			}
 		} else if (a.assignmentType.equals("Homework")) {
-			Query<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId",userId).filter("topicId",a.topicId).filter("graded <",a.deadline);
-			s.numberOfAttempts = hwTransactions.count();
-			List<Long> assignedQuestionIds = new ArrayList<Long>();
-			for (Key<Question> k : a.questionKeys) assignedQuestionIds.add(k.getId());
-			for (HWTransaction h : hwTransactions) if (h.score > 0 && assignedQuestionIds.remove(h.questionId)) s.score ++; 
+			Query<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId",userId).filter("topicId",a.topicId);
+			List<Key<Question>> allQuestionKeys = ofy.query(Question.class).filter("assignmentType","Homework").filter("topicId", a.topicId).listKeys();
+			for (HWTransaction h : hwTransactions) {
+				if (h.graded.before(a.deadline)) {
+					s.numberOfAttempts++;
+					// Warning: the following line removes Keys from a.questionKeys to avoid counting duplicate scores
+					// on homework assignments.  Do not "put" the assignment to the database in this method!
+					if (h.score > 0 && a.questionKeys.remove(new Key<Question>(Question.class,h.questionId))) s.score ++; 
+				}
+				if (h.score>0 && allQuestionKeys.remove(new Key<Question>(Question.class,h.questionId))) s.overallScore++;
+			}
 		}
 		return s;
 	}
 		
 	public String getScore() {
-		if (numberOfAttempts == 0) return "";
-		else return Integer.toString(score);
+		return numberOfAttempts>0?Integer.toString(score):"";
 	}
 	
 	public String getEnhancedScore() {
@@ -71,9 +83,29 @@ public class Score {    // this object represents a best score achieved by a use
 		else return Integer.toString(score) + "&nbsp;&nbsp;&nbsp;&nbsp;<FONT COLOR=GRAY>(" + Integer.toString(numberOfAttempts) + ")</FONT>";
 	}
 	
-	public Score update(int newScore) {
-		numberOfAttempts++;
-		if (newScore > score) score = newScore;
+	public String getDotScore(Date deadline,int rescueScore) {
+		try {
+			Date now = new Date();
+			// a red dot indicates a low score that has not been rehabilitated
+			// show the red dot only if the deadline has passed and both the group score and total score are at/below threshold
+			boolean redDot = now.after(deadline) && score<=rescueScore && overallScore<=rescueScore;
+			return (redDot?"<img src=images/red_dot.gif>&nbsp;":"") + (numberOfAttempts>0?Integer.toString(score):"");
+		} catch (Exception e) {
+			return "";
+		}
+	}
+	
+	public String getEnhancedDotScore(Date deadline,int rescueScore) {
+		return getDotScore(deadline,rescueScore) + "&nbsp;&nbsp;&nbsp;&nbsp;<FONT COLOR=GRAY>(" + Integer.toString(numberOfAttempts) + ")</FONT>";
+	}
+	
+	public Score update(Date deadline,int newScore) {
+		Date now = new Date();
+		if (now.before(deadline)) {
+			numberOfAttempts++;
+			if (newScore > score) score = newScore;
+		}
+		if (newScore > overallScore) overallScore = newScore;
 		return this;
 	}
 }
