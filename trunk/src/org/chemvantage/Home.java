@@ -160,7 +160,8 @@ public class Home extends HttpServlet {
 			buf.append(userInfoBox(user));
 			
 			// Add quiz/homework select box to the page
-			buf.append("<TABLE BGCOLOR=#DDDDDD><TR><TD>");
+			//buf.append("<TABLE BGCOLOR=#DDDDDD><TR><TD>");
+			buf.append("<TABLE><TR><TD>");
 			buf.append("<b>Quizzes and Homework Exercises</b>");
 			buf.append("<div id=selectReminder style='display: none'>"
 					+ "<b><FONT COLOR=RED>Please select a topic:</FONT></b><br></div>");
@@ -185,7 +186,8 @@ public class Home extends HttpServlet {
 			buf.append("</FORM></TD></TR></TABLE><p>\n");
 
 			// Add a box for taking practice exams
-			buf.append("<TABLE BGCOLOR=#DDDDDD><TR><TD>");
+			//buf.append("<TABLE BGCOLOR=#DDDDDD><TR><TD>");
+			buf.append("<TABLE><TR><TD>");
 			buf.append("<b>Practice Exams</b>");
 			buf.append("<FORM METHOD=GET ACTION=PracticeExam>");
 			buf.append("<INPUT TYPE=SUBMIT VALUE='Take A Practice Exam Now'>");
@@ -193,7 +195,8 @@ public class Home extends HttpServlet {
 
 			// Add text resources table to the page
 			List<Text> texts = ofy.query(Text.class).list();
-			buf.append("<TABLE BGCOLOR=#DDDDDD><TR><TD NOWRAP>"
+			//buf.append("<TABLE BGCOLOR=#DDDDDD><TR><TD NOWRAP>"
+			buf.append("<TABLE><TR><TD NOWRAP>"
 					+ "<p><b>" + texts.size() + " Free Textbook Resources</b><br>");
 			for (Text t : texts) {
 				buf.append("<a href=" + t.URL + ">" + t.title + "</a><br>");
@@ -222,7 +225,8 @@ public class Home extends HttpServlet {
 					+ video.serialNumber + (i==null?"":"?autoplay=1")
 					+ "' frameborder='0' allowfullscreen></iframe>\n");
 
-			buf.append("<TABLE BGCOLOR=#DDDDDD><TR><TD>");
+			//buf.append("<TABLE BGCOLOR=#DDDDDD><TR><TD>");
+			buf.append("<TABLE><TR><TD>");
 			buf.append("<b>Video Lectures</b>");
 			buf.append("<FORM NAME=VideoSelectForm METHOD=GET><SELECT NAME=Video onChange=submit()>");
 			
