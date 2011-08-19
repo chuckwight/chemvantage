@@ -96,7 +96,8 @@ public class Score {    // this object represents a best score achieved by a use
 	}
 	
 	public String getEnhancedDotScore(Date deadline,int rescueScore) {
-		return getDotScore(deadline,rescueScore) + "&nbsp;&nbsp;&nbsp;&nbsp;<FONT COLOR=GRAY>(" + Integer.toString(numberOfAttempts) + ")</FONT>";
+		Date now = new Date();
+		return getDotScore(deadline,rescueScore) + (deadline.after(now) && numberOfAttempts==0?"":"&nbsp;&nbsp;&nbsp;&nbsp;<FONT COLOR=GRAY>(" + Integer.toString(numberOfAttempts) + ")</FONT>");
 	}
 	
 	public Score update(Date deadline,int newScore) {

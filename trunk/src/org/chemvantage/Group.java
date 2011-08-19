@@ -42,7 +42,7 @@ public class Group implements Serializable {
     @Unindexed String description;
     @Unindexed String timeZone;
     @Unindexed Date nextDeadline;
-    @Unindexed boolean sendRescueMessages;
+    boolean sendRescueMessages;
     @Unindexed int rescueThresholdScore = 5;
     @Unindexed String defaultRescueSubject;
     @Unindexed String defaultRescueMessage;
