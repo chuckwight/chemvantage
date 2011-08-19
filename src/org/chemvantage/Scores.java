@@ -323,9 +323,9 @@ public class Scores extends HttpServlet {
 			df.setTimeZone(myGroup.getTimeZone());
 			buf.append("\n<h3>Quiz and Homework Assignments</h3>"
 					+ "If a red dot appears in the table below, it means that you either missed an assignment deadline or "
-					+ "your score on the assignment was low enough to trigger a concern. The red dot appears on the class "
+					+ "your score on the assignment was low enough to trigger a concern. The red dot also appears on the class "
 					+ "gradesheet to alert your instructor to a potential problem.  If you complete the assignment "
-					+ "successfully after the deadline, your group score will be unchanged, but the red dot will disappear."
+					+ "successfully after the deadline, your group score will remain unchanged, but the red dot will disappear."
 					+ "\n<TABLE BORDER=1 CELLSPACING=0><TR><TH></TH><TH COLSPAN=2>Quizzes</TH><TH COLSPAN=2>Homework</TH></TR>"
 					+ "\n<TR><TH ALIGN=LEFT>Topic</TH><TH>Deadline</TH><TH>Score <FONT COLOR=GRAY>(Attempts)</FONT></TH>"
 					+ "<TH>Deadline</TH><TH>Score <FONT COLOR=GRAY>(Attempts)</FONT></TH></TR>"); 

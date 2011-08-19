@@ -437,9 +437,9 @@ public class Groups extends HttpServlet {
 			}
 			for (Topic t : topics) {
 				long i = group.getAssignmentId("Quiz",t.id);
-				Assignment q = i>0?ofy.get(Assignment.class,i):null;
+				Assignment q = i>0?ofy.find(Assignment.class,i):null;
 				long j = group.getAssignmentId("Homework",t.id);
-				Assignment h = j>0?ofy.get(Assignment.class,j):null;
+				Assignment h = j>0?ofy.find(Assignment.class,j):null;
 				buf.append("<FORM NAME=A" + t.id + " METHOD=POST ACTION=Groups>"
 						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateDeadlines>"
 						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + t.id + "'>"
@@ -955,7 +955,7 @@ public class Groups extends HttpServlet {
 						+ "<INPUT TYPE=TEXT SIZE=4 NAME=RescueThresholdScore VALUE=" + group.rescueThresholdScore + "> or below.<p>");
 				buf.append("Email subject line: <INPUT TYPE=TEXT SIZE=40 NAME=DefaultRescueSubject VALUE='" + group.defaultRescueSubject + "'><br>");
 				buf.append("Email message text:<br><TEXTAREA NAME=DefaultRescueMessage ROWS=15 COLS=80 WRAP=SOFT>" + group.defaultRescueMessage + "</TEXTAREA><br>");
-				buf.append("Select one or more of the following contacts to be listed in the email:<br>");
+				buf.append("Select one or more of the following contacts to be copied in the email:<br>");
 				buf.append("<INPUT TYPE=CHECKBOX NAME=RescueCcIds VALUE=" + group.instructorId + (group.rescueCcIds.contains(group.instructorId)?" CHECKED>":">") 
 						+ User.getBothNames(group.instructorId) + " (" + User.getEmail(group.instructorId) + ")<br>");
 				for (String id : group.tAIds)
@@ -977,8 +977,7 @@ public class Groups extends HttpServlet {
 			group.defaultRescueMessage = request.getParameter("DefaultRescueMessage");
 			String[] rescueCcIds = request.getParameterValues("RescueCcIds");
 			group.rescueCcIds.clear();
-			if (rescueCcIds==null || rescueCcIds.length==0) group.rescueCcIds.add(group.instructorId);
-			else for (String id : rescueCcIds) group.rescueCcIds.add(id);
+			if (rescueCcIds!=null && rescueCcIds.length>0) for (String id : rescueCcIds) group.rescueCcIds.add(id);
 		} catch (Exception e) {}
 		if (group.defaultRescueSubject == null || group.defaultRescueSubject.length()==0) {
 			 group.defaultRescueSubject = "ChemVantage Rescue Service Message";
@@ -987,17 +986,10 @@ public class Groups extends HttpServlet {
 			group.defaultRescueMessage = "Oops! You may have missed a ChemVantage assignment deadline.\n\n"
 				+ "You are receiving this message because you either failed to submit an assignment at "
 				+ "ChemVantage.org before the deadline, or your score was low enough to trigger a concern.\n\n"
-				+ "You may be able to earn some makeup credit.  To do this you MUST meet with one of "
-				+ "the instructors or teaching assistants listed below within 72 hours of the missed deadline. "
-				+ "The purpose of this meeting is to review the subject material covered by the assignment, "
-				+ "assist you in completing the assignment (post-deadline), assign additional work, and/or to "
-				+ "provide whatever other appropriate support you may need to succeed in this course.\n\n"
-				+ "It is your responsibility to make contact ASAP to arrange the meeting.\n"
-				+ "Do not reply directly to this message. Use the contact information below.\n"
-				+ "Any makeup credit earned is tracked outside of the ChemVantage system.\n\n"
-				+ "Instructor and/or Teaching Assistant contacts:\n";
+				+ "You may be able to earn some makeup credit by completing the assignment after the due date. "
+				+ "You should see a red dot beside the score on this assignment on your ChemVantage Scores page. "
+				+ "When you complete the assignment satisfactorily after the deadline, the red dot will disappear.";
 		}
-		if (group.rescueCcIds.size()==0) group.rescueCcIds.add(group.instructorId);
 		ofy.put(group);
 	}
 	

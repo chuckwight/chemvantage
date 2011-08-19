@@ -99,18 +99,17 @@ public class Rescue extends HttpServlet {
 				User user = ofy.get(User.class,userId);
 				Message msg = new MimeMessage(session);
 				msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-				msg.setRecipient(Message.RecipientType.TO,new InternetAddress(user.id,user.getBothNames()));
+				msg.setRecipient(Message.RecipientType.TO,new InternetAddress(user.email,user.getBothNames()));
 				msg.setSubject(group.defaultRescueSubject);
 				String messageText = group.defaultRescueMessage;
 				for (String id : group.rescueCcIds) {
 					String email = User.getEmail(id);
 					String name = User.getBothNames(id);
-					messageText += name + " (" + email + ")\n";
 					msg.addRecipient(Message.RecipientType.CC,new InternetAddress(email,name));
 				}
 				msg.setText(messageText);
-				Transport.send(msg);			
-			}
+				Transport.send(msg);
+				}
 		}catch (Exception e) {
 		}
 	}
