@@ -846,6 +846,10 @@ public class Groups extends HttpServlet {
 				for (Assignment a : assignments) {
 					Key<Score> k = new Key<Score>(new Key<User>(User.class,u.id),Score.class,a.id);
 					Score s = scoresMap.get(k);
+					if (s==null) {
+						s = Score.getInstance(u.id,a);
+						ofy.put(s);
+					}
 					sumScores[j] += s.score;
 					studentTotalScore += s.score;
 					if (s.numberOfAttempts>0) nScores[j]++;
@@ -877,7 +881,7 @@ public class Groups extends HttpServlet {
 			}
 			buf.append("</TABLE>");
 		} catch (Exception e) {
-			buf.append(e.getMessage());
+			buf.append(e.toString());
 		}
 		return buf.toString();
 	}
