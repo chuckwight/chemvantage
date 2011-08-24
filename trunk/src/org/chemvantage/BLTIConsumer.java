@@ -22,6 +22,7 @@ import java.util.Random;
 import javax.persistence.Id;
 
 import com.googlecode.objectify.Key;
+import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.ObjectifyService;
 import com.googlecode.objectify.annotation.Cached;
 
@@ -51,7 +52,8 @@ public class BLTIConsumer {
 	}
 	
 	static String getSecret(String oauth_consumer_key) {
-		BLTIConsumer c = ObjectifyService.begin().find(BLTIConsumer.class,oauth_consumer_key);
+		Objectify ofy = ObjectifyService.begin();
+		BLTIConsumer c = ofy.find(BLTIConsumer.class,oauth_consumer_key);
 		return (c==null?null:c.secret);
 	}
 }

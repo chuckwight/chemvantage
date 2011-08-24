@@ -45,17 +45,17 @@ public class DataTransfer extends HttpServlet {
 	 * is configured for read-only access to the production site.
 	 */
 	public String getServletInfo() {
-		return "ChemVantage servlet for transfering datastore objects between instances";
+		return "ChemVantage servlet for transferring datastore objects between instances";
 	}
 
-		protected void doGet (HttpServletRequest request,HttpServletResponse response) {
+	protected void doGet (HttpServletRequest request,HttpServletResponse response) {
 		try {
 			// begin admin user authentication section
 			UserService userService = UserServiceFactory.getUserService();
 			User user = ofy.get(User.class,userService.getCurrentUser().getUserId());
 			HttpSession session = request.getSession(true);
 			session.setAttribute("UserId", user.id);
-			
+
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 

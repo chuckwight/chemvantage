@@ -102,7 +102,8 @@ public class Login extends HttpServlet {
 		request.getSession().invalidate();
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		out.println(homePage(request));
+		if (request.getRequestURL().indexOf("chem-vantage.appspot.com")>0) out.println(sessionLostMessage());
+		else out.println(homePage(request));
 	}
 
 	String homePage(HttpServletRequest request) {
@@ -203,5 +204,39 @@ public class Login extends HttpServlet {
 			buf.append(e.toString());
 		}
 		return Login.header + buf.toString() + Login.footer;
+	}
+	
+	String sessionLostMessage() {
+		StringBuffer buf = new StringBuffer();
+		
+		buf.append("<img src=images/CVLogo_thumb.jpg alt='ChemVantage Logo'><FONT SIZE=+3>ChemVantage</FONT>");
+		buf.append("<h3>Oops! There's A Problem With Your Connection to ChemVantage</h3>");
+		buf.append("If you reached this page unexpectedly, it's likely that the web session in your browser was " 
+				+ "lost.  Here are some of the most likely reasons and how to fix it.<p>");
+		buf.append("<h4>If you are new to ChemVantage and logged in through a campus LMS</h4>"
+				+ "The most likely culprit is that the privacy settings in your browser are too high to view "
+				+ "third-party applications like ChemVantage inside a frame of your LMS.  This is a known issue "
+				+ "with some versions of Internet Explorer.<p>"
+				+ "To solve this problem you can either lower your browser's privacy settings in "
+				+ "Tools &rarr; Internet Options &rarr; Privacy, or designate the web domain for your class LMS "
+				+ "to be a trusted Internet zone.  Then return to the LMS and login again.");
+		buf.append("<h4>If You Have Been Away From Your Computer For A While</h4>"
+				+ "The most likely reason is that your web session simply timed out.  Just return to your "
+				+ "campus LMS and click the ChemVantage link again to start a new session.");
+		buf.append("<h4>If None of the Previous Options Worked For You</h4>"
+				+ "Your Internet browser may be showing you a cached page instead of a fresh page "
+				+ "from the ChemVantage site.  Clear your browser's cache (<a href=http://www.wikihow.com/Clear-Your-Browser's-Cache>"
+				+ "here's how to do it</a>) and login to ChemVantage again.");
+		buf.append("<h4>If You Have A Google or GMail Account</h4>"
+				+ "Then you have the option of by-passing your campus LMS and logging directly into ChemVantage "
+				+ "at <a href=http://chemvantage.org>http://chemvantage.org</a> using your GMail address and "
+				+ "password.  After logging in, use the 'Find My Group' link in the yellow box to join your class "
+				+ "and gain access to assignments and deadlines.");
+		buf.append("<h4>If All Else Fails</h4>"
+				+ "Please send email to admin@chemvantage.org describing the problem.  Give as much detailed "
+				+ "information as you can about your computer, operating system, browser, any error messages "
+				+ "that you see, and what behavior you didn't expect, so that we can help you diagnose the problem.");
+
+		return buf.toString();
 	}
 }
