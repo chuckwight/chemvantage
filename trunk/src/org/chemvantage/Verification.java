@@ -163,7 +163,7 @@ public class Verification extends HttpServlet {
 			if (user.requiresUpdates()) buf.append("<TR><TD></TD><TD><FONT COLOR=RED SIZE=-2>(all fields are required)</FONT></TD></TR>");
 			buf.append("<TR><TD ALIGN=RIGHT>First Name:</TD><TD>" + (user.firstName.isEmpty()?"<INPUT NAME=FirstName VALUE='" + CharHider.quot2html(user.firstName) + "'>":user.firstName) + "</TD></TR>");
 			buf.append("<TR><TD ALIGN=RIGHT>Last Name:</TD><TD>" + (user.lastName.isEmpty()?"<INPUT NAME=LastName VALUE='" + CharHider.quot2html(user.lastName) + "'>":user.lastName) + "</TD></TR>");
-			buf.append("<TR><TD ALIGN=RIGHT>Email address:</TD><TD>" + (emailRequired?"<INPUT NAME=Email>":user.email));
+			buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>Email address:</TD><TD>" + (emailRequired?"<INPUT NAME=Email>":user.email));
 			if (!emailRequired && !user.verifiedEmail){
 				buf.append(" (unverified) ");
 				if (verificationEmailSent) buf.append("<br><FONT COLOR=RED>A verification email has been sent to your address.</FONT><br>");
