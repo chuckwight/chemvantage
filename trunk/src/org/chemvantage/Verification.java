@@ -159,15 +159,17 @@ public class Verification extends HttpServlet {
 					+ "for someone else to impersonate you or tamper with your account.<p>");
 
 			buf.append("<FORM NAME=Info ACTION=Verification METHOD=POST>");
-			buf.append("First Name: " + (nameRequired?"<INPUT NAME=FirstName VALUE='" + CharHider.quot2html(user.firstName) + "'>":user.firstName) + "<br>");
-			buf.append("Last Name: " + (nameRequired?"<INPUT NAME=LastName VALUE='" + CharHider.quot2html(user.lastName) + "'>":user.lastName) + "<br>");
-			buf.append("Email address: " + (emailRequired?"<INPUT NAME=Email>":user.email));
+			buf.append("<TABLE>");
+			if (user.requiresUpdates()) buf.append("<TR><TD></TD><TD><FONT COLOR=RED SIZE=-2>(all fields are required)</FONT></TD></TR>");
+			buf.append("<TR><TD ALIGN=RIGHT>First Name:</TD><TD>" + (user.firstName.isEmpty()?"<INPUT NAME=FirstName VALUE='" + CharHider.quot2html(user.firstName) + "'>":user.firstName) + "</TD></TR>");
+			buf.append("<TR><TD ALIGN=RIGHT>Last Name:</TD><TD>" + (user.lastName.isEmpty()?"<INPUT NAME=LastName VALUE='" + CharHider.quot2html(user.lastName) + "'>":user.lastName) + "</TD></TR>");
+			buf.append("<TR><TD ALIGN=RIGHT>Email address:</TD><TD>" + (emailRequired?"<INPUT NAME=Email>":user.email));
 			if (!emailRequired && !user.verifiedEmail){
 				buf.append(" (unverified) ");
 				if (verificationEmailSent) buf.append("<br><FONT COLOR=RED>A verification email has been sent to your address.</FONT><br>");
 				else buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Verify My Email Address'><br>");
 			}
-			buf.append("<br>");
+			buf.append("</TD></TR>");
 			if (user.smsMessageDevice!=null && !user.smsMessageDevice.isEmpty()) {
 				String smsAddress = "";
 				try {
@@ -176,12 +178,12 @@ public class Verification extends HttpServlet {
 				} catch (Exception e2) {
 					smsAddress = user.smsMessageDevice.substring(5) + " (unverified)";
 				}
-				buf.append("SMS address: " + smsAddress + "<br>");	
+				buf.append("<TR><TD ALIGN=RIGHT>SMS address:</TD><TD>" + smsAddress + "</TD></TR>");	
 			}
 			if (nameRequired || emailRequired) {
-				buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save'>");
+				buf.append("<TR><TD COLSPAN=2><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save'></TD></TR></TABLE>");
 			} else {  // all information is current
-				buf.append("<h3>Any Corrections Needed?</h3>"
+				buf.append("</TABLE><h3>Any Corrections Needed?</h3>"
 						+ "If your name and/or email shown above is not correct, please send a message to "
 						+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a> giving detailed "
 						+ "instructions for any changes that are necessary.<p>" 
