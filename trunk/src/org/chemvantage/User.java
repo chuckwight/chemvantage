@@ -28,7 +28,6 @@ import javax.persistence.Transient;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
-import com.google.appengine.api.datastore.QueryResultIterator;
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
@@ -80,10 +79,11 @@ public class User implements Comparable<User>,Serializable {
 	static User getInstance(HttpSession session) {
 		UserService userService = UserServiceFactory.getUserService();
 		String userId = (String)session.getAttribute("UserId");
-		if (userId==null) {
+		boolean freshLogin = userId==null?true:false;;
+		
+		if (freshLogin) {
 			try {  // Google authentication
 				userId = userService.getCurrentUser().getUserId();
-				session.setAttribute("UserId", userId);
 			} catch (Exception e) {  // invalid user or lost BLTI session
 				return null;
 			}
@@ -93,88 +93,45 @@ public class User implements Comparable<User>,Serializable {
 		Objectify ofy = ObjectifyService.begin();
 		User user = null;
 		try {
-			do {
+			List<String> aliasChain = new ArrayList<String>();
+			do {  // this loop finds the end of the alias chain without going into an infinite loop
 				user = ofy.get(User.class,userId); // retrieve User attributes from datastore if it exists
-				userId = user.alias==null?userId:user.alias;
-			} while (user.alias!=null);
-		} catch (Exception e) {  // falls to here when datastore call fails or user is at the end of hte alias chain
-		}
-		
-		// this section converts nickname userIds to permanent Google userId strings
-		if (user==null) {
-			try {
-				String oldUserId = userService.getCurrentUser().getNickname();
-				User oldUser = ofy.get(User.class,oldUserId);
-				user = ofy.get(User.class,oldUserId);
-				user.id = userId;
-				Admin.mergeAccounts(user,oldUser);
-				ofy.delete(oldUser);
-			} catch (Exception e) {
-				user = new User(userId);  // user is not in datastore; create a new one
-			}
-		}
-		
-		try {  // try to clean up some unverified accounts
-			if (!user.verifiedEmail && userService.isUserLoggedIn() && !userService.isUserAdmin()) {
-				String email = userService.getCurrentUser().getEmail();
-				if (!email.isEmpty()) {
-					user.email = email;
-					user.verifiedEmail = true;
-					user.authDomain = "google.com";
+				if (user.alias != null) {
+					aliasChain.add(user.id);
+					userId = user.alias;
 				}
-			}
-			InternetAddress addr = new InternetAddress(user.email);
-			addr.validate();
-		} catch (Exception e) {
-			user.setEmail("");
-			user.verifiedEmail = false;
+			} while (user.alias!=null && !aliasChain.contains(userId));
+		} catch (Exception e) {  // falls to here when datastore call fails or user is at the end of the alias chain
 		}
-		
+		session.setAttribute("UserId", userId);
+
 		try { // determine if this person is an administrator (Google login required)
 			if (userId.equals(userService.getCurrentUser().getUserId())) user.setIsAdministrator(userService.isUserAdmin());
 		} catch (Exception e) {
 			user.setIsAdministrator(false);
 		}
-		
+
 		// update the lastLogin date only if everything is OK; otherwise the Verification page will stop the user
-		if (!user.lastName.isEmpty() && !user.firstName.isEmpty() && user.verifiedEmail) user.lastLogin = new Date();
-		
-		try {  // this tests the availability of the datastore and locks the site if necessary
-			ofy.put(user); 
-			if (Home.announcement.equals(Home.maintenanceAnnouncement)) {
-				Home.announcement = "";
-				Login.lockedDown = false;
-			}
-		} catch (com.google.apphosting.api.ApiProxy.CapabilityDisabledException e) {
-			Home.announcement = Home.maintenanceAnnouncement;
-			Login.lockedDown = true;
-		}
-		
-		if (user.verifiedEmail) {  // this section seeks to merge accounts with the same verified email address
-			try {
-				Query<User> dupUsers = ofy.query(User.class).filter("email",user.email).filter("verifiedEmail",true);
-				if (dupUsers.count() > 1) {
-					// find the Google account (keeper) and merge all other accounts with it, leaving alias for redirection
-					User keeper = null;
-					QueryResultIterator<User> it = dupUsers.iterator();
-					do {keeper = it.next();} while (!keeper.authDomain.equals("google.com"));
-					for (User u : dupUsers) {
-						if (u.id!=keeper.id && u.verifiedEmail) Admin.mergeAccounts(keeper,u);
-					}
+		if (freshLogin && !user.requiresUpdates()) {
+			user.lastLogin = new Date();
+			try {  // this tests the availability of the datastore and locks the site if necessary
+				ofy.put(user); 
+				if (Home.announcement.equals(Home.maintenanceAnnouncement)) {
+					Home.announcement = "";
+					Login.lockedDown = false;
 				}
-			} catch (Exception e) {
-				// don't worry
+			} catch (com.google.apphosting.api.ApiProxy.CapabilityDisabledException e) {
+				Home.announcement = Home.maintenanceAnnouncement;
+				Login.lockedDown = true;
 			}
 		}
-		
 		return user;
 	}
 	
 	static User createNew(HttpServletRequest request) {
 		// this method provisions a new account for a BLTI user
-		String oauth_consumer_key = request.getParameter("oauth_consumer_key");
 		String user_id = request.getParameter("user_id");
-		String userId = oauth_consumer_key + (user_id==null?"":":"+user_id);
+		String userId = request.getParameter("oauth_consumer_key") + (user_id==null?"":":"+user_id);
 		User user = new User(userId);
 		user.authDomain = "BLTI";
 		user.alias = null;
@@ -187,7 +144,7 @@ public class User implements Comparable<User>,Serializable {
 		ObjectifyService.begin().put(user);
 		return user;
 	}
-		
+	
 	static String getEmail(String id) {
 		User user = ObjectifyService.begin().find(User.class,id);
 		return (user==null?"":user.email);
@@ -220,9 +177,19 @@ public class User implements Comparable<User>,Serializable {
 	void setEmail(String em) {
 		try {
 			new InternetAddress(em).validate();
+			if (em.indexOf("@")<0) throw new Exception();
 			this.email = em;
 		} catch (Exception e) {
 			this.email = "";
+		}
+	}
+	
+	boolean requiresUpdates() {
+		try {
+			if (!firstName.isEmpty() && !lastName.isEmpty() && !email.isEmpty() && verifiedEmail) return false;
+			return true;
+		} catch (Exception e) {
+			return true;
 		}
 	}
 	
@@ -445,6 +412,11 @@ public class User implements Comparable<User>,Serializable {
 		}
 	}
 
+	void recalculateScores() {
+		Query<Score> myScores = ofy.query(Score.class).ancestor(this);
+		ofy.delete(myScores);
+	}
+	
 	public void changeGroups(long newGroupId) {
 		if (newGroupId==0 || ofy.find(Group.class,newGroupId) != null) this.myGroupId = newGroupId;
 		else this.myGroupId = 0;

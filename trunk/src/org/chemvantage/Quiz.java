@@ -266,7 +266,7 @@ public class Quiz extends HttpServlet {
 			StringBuffer missedQuestions = new StringBuffer();
 			
 			missedQuestions.append("<OL>");
-
+			
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 			for (Enumeration<?> e = request.getParameterNames();e.hasMoreElements();) {
 				try {
@@ -275,6 +275,7 @@ public class Quiz extends HttpServlet {
 			}
 			Map<Key<Question>,Question> questions = ofy.get(questionKeys);
 			
+			List<Response> responses = new ArrayList<Response>();
 			for (Key<Question> k : questionKeys) {
 				try {
 					String studentAnswer[] = request.getParameterValues(Long.toString(k.getId()));
@@ -284,7 +285,7 @@ public class Quiz extends HttpServlet {
 							Question q = questions.get(k);
 							q.setParameters((int)(qt.id - q.id));
 							int score = q.isCorrect(studentAnswer[0])?q.pointValue:0;
-							ofy.put(new Response("Quiz",qt.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now));
+							responses.add(new Response("Quiz",qt.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now));
 							studentScore += score;
 							if (score == 0) {  
 								// include question in list of incorrectly answered questions
@@ -297,6 +298,7 @@ public class Quiz extends HttpServlet {
 					continue;  // this parameter does not correspond to a questionId
 				}
 			}
+			ofy.put(responses);  // save all responses to the datastore
 			missedQuestions.append("</OL>\n");
 			qt.score = studentScore;
 			qt.graded = now;
@@ -345,7 +347,7 @@ public class Quiz extends HttpServlet {
 				if (leftBlank>0) buf.append("<h4>" + leftBlank + " question" 
 						+ (leftBlank>1?"s were":" was") + " left unanswered (blank).</h4>");
 				if (wrongAnswers>0) buf.append("<h4>" + wrongAnswers + " question" 
-						+ (leftBlank>1?"s were":" was") + " answered incoorrectly:</h4>" + missedQuestions.toString());
+						+ (wrongAnswers>1?"s were":" was") + " answered incorrectly:</h4>" + missedQuestions.toString());
 			
 				// print some words of encouragement:
 				buf.append("<h4>Improve Your Score</h4>\n");

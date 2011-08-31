@@ -23,6 +23,9 @@ package org.chemvantage;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URLEncoder;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -39,11 +42,12 @@ import net.oauth.server.OAuthServlet;
 import net.oauth.signature.OAuthSignatureMethod;
 
 import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.ObjectifyService;
 
 public class BLTILaunch extends HttpServlet {
 
 	DAO dao = new DAO();
+	Objectify ofy = dao.ofy();
+	Map<String,String> sharedSecrets = new HashMap<String,String>();
 	private static final long serialVersionUID = 137L;
 
 	@Override
@@ -63,7 +67,7 @@ public class BLTILaunch extends HttpServlet {
 		//System.out.println("Basic LTI Provider request from IP=" + request.getRemoteAddr());
 
 		String oauth_consumer_key = request.getParameter("oauth_consumer_key");
-		String user_id = request.getParameter("user_id");
+		String userId = oauth_consumer_key + ":" + request.getParameter("user_id");
 		String context_id = request.getParameter("context_id");
 		String resource_link_id = request.getParameter("resource_link_id");
 		if ( ! "basic-lti-launch-request".equals(request.getParameter("lti_message_type")) ||
@@ -74,7 +78,11 @@ public class BLTILaunch extends HttpServlet {
 		}
 
 		// Lookup the secret that corresponds to the oauth_consumer_key in the AppEngine datastore
-		String oauth_secret = BLTIConsumer.getSecret(oauth_consumer_key);
+		if (!sharedSecrets.containsKey(oauth_consumer_key)) {
+			String secret = BLTIConsumer.getSecret(oauth_consumer_key);
+			if (secret != null) sharedSecrets.put(oauth_consumer_key,secret);
+		}
+		String oauth_secret = sharedSecrets.get(oauth_consumer_key);
 
 		OAuthMessage oam = OAuthServlet.getMessage(request, null);
 		OAuthValidator oav = new SimpleOAuthValidator();
@@ -100,50 +108,30 @@ public class BLTILaunch extends HttpServlet {
 			return;
 		}
 		// BLTI Launch message was validated successfully. 
-		
-		// Provision a new user, if necessary, and store userId in the user's session
-		try {
-			String userId = oauth_consumer_key + (user_id==null?"":":"+user_id);
 
-			Objectify ofy = ObjectifyService.begin();
-			User user = ofy.find(User.class,userId);
-			if (user==null) user = User.createNew(request); // first-ever login for this user
-			
-			// Update the user's email address, if necessary:
-			String email = request.getParameter("lis_person_contact_email_primary");
-			if (email != null && !user.email.equals(email)) {
-				user.setEmail(email);
-				user.verifiedEmail = true;
-				ofy.put(user);
+		// Provision a new user account if necessary, and store the userId in the user's session
+		User user = ofy.find(User.class,userId);
+		if (user==null) user = User.createNew(request); // first-ever login for this user
+		request.getSession(true).setAttribute("UserId",userId);
+		if (!user.requiresUpdates()) {
+			user.lastLogin = new Date();
+			ofy.put(user);
+		}
+
+		// Provision a new context (group), if necessary and put the user into it
+		if (context_id != null && !context_id.isEmpty()) {
+			Group g = ofy.query(Group.class).filter("context_id",context_id).get();
+			if (g == null) { 
+				g = new Group("BLTI",context_id,request.getParameter("context_title"));
+				ofy.put(g);
 			}
-			
-			request.getSession(true).setAttribute("UserId",userId);
-
-			// Provision a new context (group), if necessary and put the user into it
-			String groupKey = oauth_consumer_key + (context_id==null?"":":"+context_id);
-			System.out.println(groupKey);
-			if (context_id != null && context_id.length() > 0) {
-				Group g = ofy.query(Group.class).filter("context_id",context_id).get();
-				if (g == null) {
-					g = new Group("BLTI",context_id,request.getParameter("context_title"));
+			if (user.myGroupId != g.id) user.changeGroups(g.id);
+			if (user.isInstructor()) {
+				if (g.instructorId==null || !g.instructorId.equals(user.id)) {
+					g.instructorId = user.id;
 					ofy.put(g);
-					if (user.isInstructor()) user.changeGroups(g.id);
 				}
-				if (user.isInstructor()) {
-					if (g.instructorId==null || !g.instructorId.equals(user.id)) {
-						g.instructorId = user.id;
-						ofy.put(g);
-						user.changeGroups(g.id);
-					}
-				} else if (user.myGroupId != g.id) user.changeGroups(g.id);
 			}
-		} catch (Exception e) {
-			System.out.println("Provider failed to validate user and/or group");
-			System.out.println(e.getMessage());
-			if ( base_string != null ) System.out.println(base_string);
-			doError(request, response,"User data does not validate", context_id, null);
-			return;
-
 		}
 		// Redirect the user's browser to the ChemVantage Home page
 		response.sendRedirect("/Home");	
