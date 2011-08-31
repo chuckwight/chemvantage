@@ -93,35 +93,41 @@ public class Scores extends HttpServlet {
 				deleteMyPracticeExamScores(user);
 				response.sendRedirect("/Scores?UserRequest=ShowAll");
 				return;
-			} 
-			else if (userRequest.equals("Turn Notifications On")) { // this option is available only to
-				user.notifyDeadlines = user.verifiedEmail;          // users with verified email addresses
+			} else if (userRequest.equals("Recalculate My Scores")) {
+				user.recalculateScores();
+				out.println(Home.getHeader(user) + myGroupScores(user) + Home.footer);
+				return;
 			}
-			else if (userRequest.equals("Cancel Notifications")) user.notifyDeadlines = false;
-			else if (userRequest.equals("Register")) {
-				try {
-					String cellNumber = request.getParameter("CellNumber");
-					String carrier = request.getParameter("Carrier");
-					String code = "";
-					while (code.length()<5) {
-						code += alpha.charAt(rand.nextInt(alpha.length()));
+			else {  // manage notification options
+				if (userRequest.equals("Turn Notifications On")) { // this option is available only to
+					user.notifyDeadlines = user.verifiedEmail;          // users with verified email addresses
+				} 
+				else if (userRequest.equals("Cancel Notifications")) user.notifyDeadlines = false;
+				else if (userRequest.equals("Register")) {
+					try {
+						String cellNumber = request.getParameter("CellNumber");
+						String carrier = request.getParameter("Carrier");
+						String code = "";
+						while (code.length()<5) {
+							code += alpha.charAt(rand.nextInt(alpha.length()));
+						}
+						if (cellNumber.length()==10 && Long.parseLong(cellNumber) > 0 && !carrier.isEmpty()) { // 10-digit number
+							user.smsMessageDevice = code + cellNumber + "@" + carrier;
+							sendSMSConfirmationCode(cellNumber+"@"+carrier,code);
+						}
+					} catch (Exception e2) {
+						out.println(e2.toString());
+						user.smsMessageDevice = "";
 					}
-					if (cellNumber.length()==10 && Long.parseLong(cellNumber) > 0 && !carrier.isEmpty()) { // 10-digit number
-						user.smsMessageDevice = code + cellNumber + "@" + carrier;
-						sendSMSConfirmationCode(cellNumber+"@"+carrier,code);
+				} else if (userRequest.equals("Confirm")) {
+					if (request.getParameter("Code").toUpperCase().equals(user.smsMessageDevice.substring(0,5))) {
+						user.smsMessageDevice = user.smsMessageDevice.substring(5);
 					}
-				} catch (Exception e2) {
-					out.println(e2.toString());
-					user.smsMessageDevice = "";
 				}
-			} else if (userRequest.equals("Confirm")) {
-				if (request.getParameter("Code").toUpperCase().equals(user.smsMessageDevice.substring(0,5))) {
-					user.smsMessageDevice = user.smsMessageDevice.substring(5);
-				}
+				else if (userRequest.equals("Cancel")) user.smsMessageDevice = "";
+				ofy.put(user);
+				out.println(Home.getHeader(user) + myGroupScores(user) + Home.footer);
 			}
-			else if (userRequest.equals("Cancel")) user.smsMessageDevice = "";
-			ofy.put(user);
-			out.println(Home.getHeader(user) + myGroupScores(user) + Home.footer);
 		} catch (Exception e) {
 		}
 	}
@@ -325,8 +331,11 @@ public class Scores extends HttpServlet {
 					+ "If a red dot appears in the table below, it means that you either missed an assignment deadline or "
 					+ "your score on the assignment was low enough to trigger a concern. The red dot also appears on the class "
 					+ "gradesheet to alert your instructor to a potential problem.  If you complete the assignment "
-					+ "successfully after the deadline, your group score will remain unchanged, but the red dot will disappear."
-					+ "\n<TABLE BORDER=1 CELLSPACING=0><TR><TH></TH><TH COLSPAN=2>Quizzes</TH><TH COLSPAN=2>Homework</TH></TR>"
+					+ "successfully after the deadline, your group score will remain unchanged, but the red dot will disappear.");
+			
+			buf.append("<FORM METHOD=POST ACTION=Scores><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Recalculate My Scores'></FORM>");
+			
+			buf.append("\n<TABLE BORDER=1 CELLSPACING=0><TR><TH></TH><TH COLSPAN=2>Quizzes</TH><TH COLSPAN=2>Homework</TH></TR>"
 					+ "\n<TR><TH ALIGN=LEFT>Topic</TH><TH>Deadline</TH><TH>Score <FONT COLOR=GRAY>(Attempts)</FONT></TH>"
 					+ "<TH>Deadline</TH><TH>Score <FONT COLOR=GRAY>(Attempts)</FONT></TH></TR>"); 
 			// Get a list of Ids for topics assigned to this group in order of deadlines

@@ -63,7 +63,7 @@ public class Home extends HttpServlet {
 			return;
 		}
 		if (new Date().getTime()-user.lastLogin.getTime() > 28800000) {  // more than 8 hours since last login update
-			response.sendRedirect("Verification?UserRequest=View");      // enter name and email address
+			response.sendRedirect("/Verification");      // enter name and email address
 		}
 		
 		response.setContentType("text/html");
