@@ -186,7 +186,7 @@ public class User implements Comparable<User>,Serializable {
 	
 	boolean requiresUpdates() {
 		try {
-			if (!firstName.isEmpty() && !lastName.isEmpty() && !email.isEmpty() && verifiedEmail) return false;
+			if (!firstName.isEmpty() && !lastName.isEmpty() && !email.isEmpty()) return false;
 			return true;
 		} catch (Exception e) {
 			return true;
