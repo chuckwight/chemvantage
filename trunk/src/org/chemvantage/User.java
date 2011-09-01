@@ -151,7 +151,12 @@ public class User implements Comparable<User>,Serializable {
 	}
 	
 	static String getBothNames(String id) {
-		return ObjectifyService.begin().find(User.class,id).getBothNames();	
+		try {
+			return ObjectifyService.begin().find(User.class,id).getBothNames();
+		} catch (Exception e) {
+			return "unknown";
+		}
+			
 	}
 	
 	void clean() {
