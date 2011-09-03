@@ -102,6 +102,8 @@ public class User implements Comparable<User>,Serializable {
 				}
 			} while (user.alias!=null && !aliasChain.contains(userId));
 		} catch (Exception e) {  // falls to here when datastore call fails or user is at the end of the alias chain
+			user = new User(userId);
+			ofy.put(user);
 		}
 		session.setAttribute("UserId", userId);
 
