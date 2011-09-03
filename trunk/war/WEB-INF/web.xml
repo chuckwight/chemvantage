@@ -19,6 +19,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet-mapping>
 
 	<servlet>
+		<servlet-name>Activate</servlet-name>
+		<servlet-class>org.chemvantage.Activate</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>Activate</servlet-name>
+		<url-pattern>/Activate</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
 		<servlet-name>Admin</servlet-name>
 		<servlet-class>org.chemvantage.Admin</servlet-class>
 	</servlet>
@@ -119,6 +128,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet-mapping>
 
 	<servlet>
+		<servlet-name>ManageDemoPremiumAccounts</servlet-name>
+		<servlet-class>org.chemvantage.ManageDemoPremiumAccounts</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ManageDemoPremiumAccounts</servlet-name>
+		<url-pattern>/ManageDemoPremiumAccounts</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
 		<servlet-name>Notification</servlet-name>
 		<servlet-class>org.chemvantage.Notification</servlet-class>
 	</servlet>
@@ -206,6 +224,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 			<url-pattern>/remote_api</url-pattern>
 			<url-pattern>/DataStoreCleaner</url-pattern>
 			<url-pattern>/DataTransfer</url-pattern>
+			<url-pattern>/ManageDemoPremiumAccounts</url-pattern>
 			<url-pattern>/Notification</url-pattern>
 			<url-pattern>/Rescue</url-pattern>
 			</web-resource-collection>
