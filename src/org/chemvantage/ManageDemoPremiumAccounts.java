@@ -145,7 +145,7 @@ public class ManageDemoPremiumAccounts extends HttpServlet {
 			for (String userId : group.memberIds) {
 				try {
 					User u = ofy.get(User.class,userId);
-					if (!u.verifiedEmail || u.hasPremiumAccount()) continue;
+					if (u.email.isEmpty() || u.hasPremiumAccount()) continue;
 					String code = Integer.toString(new Key<User>(User.class,u.id).hashCode());
 					Message msg = new MimeMessage(session);
 					msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
