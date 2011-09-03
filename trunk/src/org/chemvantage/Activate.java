@@ -78,7 +78,7 @@ public class Activate extends HttpServlet {
 
 			return "<h3>Thank you</h3>Your ChemVantage account has been upgraded to premium status.<p>"
 			+ "To get email or SMS/text message notifications of assignment deadlines, "
-			+ "please set your preferences on the ChemVantage 'View My Scores' page.<p>"
+			+ "please set your preferences on the ChemVantage Scores page.<p>"
 			+ "Your free trial will expire on " + df.format(upgrade.endDate) + "<p>"
 			+ "Please send any questions or concerns to admin@chemvantage.org";
 		} catch (Exception e) {
