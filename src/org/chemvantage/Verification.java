@@ -87,18 +87,27 @@ public class Verification extends HttpServlet {
 				String firstName = request.getParameter("FirstName");
 				String lastName = request.getParameter("LastName");
 				String email = request.getParameter("Email");
-				if (firstName != null) user.setFirstName(firstName);
-				if (lastName != null) user.setLastName(lastName);
-				if (email != null) user.setEmail(email);
+				if (firstName != null && !firstName.isEmpty()) user.setFirstName(firstName);
+				if (lastName != null && !lastName.isEmpty()) user.setLastName(lastName);
+				if (email != null && !email.isEmpty()) {
+					user.setEmail(email);
+					try {
+						user.verifiedEmail = user.email.equals(UserServiceFactory.getUserService().getCurrentUser().getEmail());
+					} catch(Exception e){
+						user.verifiedEmail = false;
+					}
+				}
 				user.lastLogin = new Date();
 				ofy.put(user);
 				out.println(Home.getHeader(user) + personalInfoForm(user,false) + Home.footer);
 			} else if (userRequest.equals("Verify My Email Address")) {
+				try {
+					user.verifiedEmail = user.email.equals(UserServiceFactory.getUserService().getCurrentUser().getEmail());
+				} catch(Exception e){
+				}
 				user.lastLogin = new Date();
 				ofy.put(user);
-				if (user.email.substring(user.email.indexOf("@")).toLowerCase().equals("@gmail.com")) {
-					response.sendRedirect(UserServiceFactory.getUserService().createLoginURL("/Verification"));
-				} else out.println(Home.getHeader(user) + personalInfoForm(user,verificationEmailSent(user,request)) + Home.footer);
+				out.println(Home.getHeader(user) + (user.verifiedEmail?personalInfoForm(user,false):personalInfoForm(user,verificationEmailSent(user,request))) + Home.footer);
 			} else {
 				out.println(Home.getHeader(user) + personalInfoForm(user,false) + Home.footer);
 			}
@@ -149,6 +158,10 @@ public class Verification extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		boolean nameRequired = user.firstName.isEmpty() || user.lastName.isEmpty();
 		boolean emailRequired = user.email.isEmpty();
+		String em = "";
+		try {
+			if (emailRequired) em = UserServiceFactory.getUserService().getCurrentUser().getEmail();
+		} catch (Exception e) {}
 		try {
 			buf.append("<h2>Your Contact Information</h2>"
 					+ "ChemVantage protects your personal information. "
@@ -160,10 +173,10 @@ public class Verification extends HttpServlet {
 
 			buf.append("<FORM NAME=Info ACTION=Verification METHOD=POST>");
 			buf.append("<TABLE>");
-			if (user.requiresUpdates()) buf.append("<TR><TD></TD><TD><FONT COLOR=RED SIZE=-2>(all fields are required)</FONT></TD></TR>");
-			buf.append("<TR><TD ALIGN=RIGHT>First Name:</TD><TD>" + (user.firstName.isEmpty()?"<INPUT NAME=FirstName VALUE='" + CharHider.quot2html(user.firstName) + "'>":user.firstName) + "</TD></TR>");
-			buf.append("<TR><TD ALIGN=RIGHT>Last Name:</TD><TD>" + (user.lastName.isEmpty()?"<INPUT NAME=LastName VALUE='" + CharHider.quot2html(user.lastName) + "'>":user.lastName) + "</TD></TR>");
-			buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>Email address:</TD><TD>" + (emailRequired?"<INPUT NAME=Email>":user.email));
+			if (user.requiresUpdates()) buf.append("<TR><TD></TD><TD><span style=color:red>* <span style=font-size:smaller>all fields are required</span></span></TD></TR>");
+			buf.append("<TR><TD ALIGN=RIGHT>First Name:</TD><TD>" + (user.firstName.isEmpty()?"<span style=color:red>*</span><INPUT NAME=FirstName SIZE=50>":user.firstName) + "</TD></TR>");
+			buf.append("<TR><TD ALIGN=RIGHT>Last Name:</TD><TD>" + (user.lastName.isEmpty()?"<span style=color:red>*</span><INPUT NAME=LastName SIZE=50>":user.lastName) + "</TD></TR>");
+			buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>Email address:</TD><TD>" + (emailRequired?"<span style=color:red>*</span><INPUT NAME=Email SIZE=50 VALUE='" + em + "'>":user.email));
 			if (!emailRequired && !user.verifiedEmail){
 				buf.append(" (unverified) ");
 				if (verificationEmailSent) buf.append("<br><FONT COLOR=RED>A verification email has been sent to your address.</FONT><br>");

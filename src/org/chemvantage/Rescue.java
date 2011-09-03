@@ -69,7 +69,7 @@ public class Rescue extends HttpServlet {
 	
 	@Override
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
-	throws ServletException, IOException {  // this method is called by cron once every 3 hours
+	throws ServletException, IOException {  // this method is called by the default Task queue once every 3 hours
 		try {
 			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
 			sendRescueMessages(assignmentId);
