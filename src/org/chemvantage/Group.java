@@ -68,12 +68,16 @@ public class Group implements Serializable {
     		this.context_id = context_id;
     		this.description = description;
     		this.timeZone = TimeZone.getDefault().getID();
-    		this.instructorId = "admin@chemvantage.org";
+    		this.instructorId = "unknown";
     	}
     }
     
     public String getInstructorEmail() {
-    	return ofy.get(User.class,this.instructorId).email;
+    	try {
+    		return ofy.get(User.class,this.instructorId).email;
+    	} catch (Exception e) {
+    		return "";
+    	}
     }
     
     public String getInstructorFullName() {
@@ -86,10 +90,9 @@ public class Group implements Serializable {
     
     public String getInstructorBothNames() {
     	try {
-    		if (this.instructorId.equals("admin@chemvantage.org")) return "TBA";
     		return ofy.get(User.class,this.instructorId).getBothNames();
     	} catch (Exception e) {
-    		return "";
+    		return "TBA";
     	}
     }
 

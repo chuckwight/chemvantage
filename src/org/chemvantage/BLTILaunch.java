@@ -121,13 +121,13 @@ public class BLTILaunch extends HttpServlet {
 		// Provision a new context (group), if necessary and put the user into it
 		if (context_id != null && !context_id.isEmpty()) {
 			Group g = ofy.query(Group.class).filter("context_id",context_id).get();
-			if (g == null) { 
+			if (g == null) { // create this new group
 				g = new Group("BLTI",context_id,request.getParameter("context_title"));
 				ofy.put(g);
 			}
-			if (user.myGroupId != g.id) user.changeGroups(g.id);
+			if (user.myGroupId != g.id) user.changeGroups(g.id);  // add user to this group
 			if (user.isInstructor()) {
-				if (g.instructorId==null || !g.instructorId.equals(user.id)) {
+				if (g.instructorId.equals("unknown")) {  // assign the instructor to this group
 					g.instructorId = user.id;
 					ofy.put(g);
 				}
