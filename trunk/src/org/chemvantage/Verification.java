@@ -173,7 +173,7 @@ public class Verification extends HttpServlet {
 
 			buf.append("<FORM NAME=Info ACTION=Verification METHOD=POST>");
 			buf.append("<TABLE>");
-			if (user.requiresUpdates()) buf.append("<TR><TD></TD><TD><span style=color:red>* <span style=font-size:smaller>all fields are required</span></span></TD></TR>");
+			//if (user.requiresUpdates()) buf.append("<TR><TD></TD><TD><span style=color:red>* <span style=font-size:smaller>all fields are required</span></span></TD></TR>");
 			buf.append("<TR><TD ALIGN=RIGHT>First Name:</TD><TD>" + (user.firstName.isEmpty()?"<span style=color:red>*</span><INPUT NAME=FirstName SIZE=50>":user.firstName) + "</TD></TR>");
 			buf.append("<TR><TD ALIGN=RIGHT>Last Name:</TD><TD>" + (user.lastName.isEmpty()?"<span style=color:red>*</span><INPUT NAME=LastName SIZE=50>":user.lastName) + "</TD></TR>");
 			buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>Email address:</TD><TD>" + (emailRequired?"<span style=color:red>*</span><INPUT NAME=Email SIZE=50 VALUE='" + em + "'>":user.email));
@@ -194,7 +194,8 @@ public class Verification extends HttpServlet {
 				buf.append("<TR><TD ALIGN=RIGHT>SMS address:</TD><TD>" + smsAddress + "</TD></TR>");	
 			}
 			if (nameRequired || emailRequired) {
-				buf.append("<TR><TD COLSPAN=2><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save'></TD></TR></TABLE>");
+				buf.append("<TR><TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save'></TD>"
+						+ "<TD>" + (user.requiresUpdates()?"<span style=color:red>* <span style=font-size:smaller>required field</span></span>":"") + "</TD></TR></TABLE>");
 			} else {  // all information is current
 				buf.append("</TABLE><h3>Any Corrections Needed?</h3>"
 						+ "If your name and/or email shown above is not correct, please send a message to "
