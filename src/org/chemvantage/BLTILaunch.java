@@ -99,6 +99,7 @@ public class BLTILaunch extends HttpServlet {
 		}
 		
 		try {
+			// The following line is a temporary hack to prevent assignment to the default context_id group:
 			oav.validateMessage(oam,acc);
 		} catch(Exception e) {
 			System.out.println("Provider failed to validate message");
@@ -113,13 +114,9 @@ public class BLTILaunch extends HttpServlet {
 		User user = ofy.find(User.class,userId);
 		if (user==null) user = User.createNew(request); // first-ever login for this user
 		request.getSession(true).setAttribute("UserId",userId);
-		if (!user.requiresUpdates()) {
-			user.lastLogin = new Date();
-			ofy.put(user);
-		}
-
+		
 		// Provision a new context (group), if necessary and put the user into it
-		if (context_id != null && !context_id.isEmpty()) {
+		if (user.lastLogin.getTime()==0 && context_id != null && !context_id.isEmpty()) {
 			Group g = ofy.query(Group.class).filter("context_id",context_id).get();
 			if (g == null) { // create this new group
 				g = new Group("BLTI",context_id,request.getParameter("context_title"));
@@ -133,6 +130,13 @@ public class BLTILaunch extends HttpServlet {
 				}
 			}
 		}
+		
+		// if this is a normal login, update the lastLogin field to now
+		if (!user.requiresUpdates()) {
+			user.lastLogin = new Date();
+			ofy.put(user);
+		}
+
 		// Redirect the user's browser to the ChemVantage Home page
 		response.sendRedirect("/Home");	
 	}
