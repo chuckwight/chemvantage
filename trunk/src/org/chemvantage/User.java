@@ -68,22 +68,24 @@ public class User implements Comparable<User>,Serializable {
 		this.roles = 0; // student
 		this.premium = false;
 		this.lastLogin = new Date(0);
-		this.myGroupId = 0;
+		this.myGroupId = 0L;
 		this.smsMessageDevice = "";
 		this.notifyDeadlines = false;
 		this.verifiedEmail = false;
-		this.authDomain = "google.com";
+		this.authDomain = "";
 		this.alias = null;
 	}
 
 	static User getInstance(HttpSession session) {
-		UserService userService = UserServiceFactory.getUserService();
+		UserService userService = null;
+		com.google.appengine.api.users.User googleUser = null;
 		String userId = (String)session.getAttribute("UserId");
 		boolean freshLogin = userId==null?true:false;;
 		
 		if (freshLogin) {
 			try {  // Google authentication
-				userId = userService.getCurrentUser().getUserId();
+				googleUser = UserServiceFactory.getUserService().getCurrentUser();
+				userId = googleUser.getUserId();
 			} catch (Exception e) {  // invalid user or lost BLTI session
 				return null;
 			}
@@ -101,17 +103,16 @@ public class User implements Comparable<User>,Serializable {
 					userId = user.alias;
 				}
 			} while (user.alias!=null && !aliasChain.contains(userId));
-		} catch (Exception e) {  // falls to here when datastore call fails or user is at the end of the alias chain
+		} catch (Exception e) {  // falls to here when datastore call fails
 			user = new User(userId);
+			userService = UserServiceFactory.getUserService();
+			googleUser = userService.getCurrentUser();
+			user.authDomain = googleUser.getAuthDomain();
+			user.email = googleUser.getEmail();
+			user.setIsAdministrator(userService.isUserAdmin());
 			ofy.put(user);
 		}
 		session.setAttribute("UserId", userId);
-
-		try { // determine if this person is an administrator (Google login required)
-			if (userId.equals(userService.getCurrentUser().getUserId())) user.setIsAdministrator(userService.isUserAdmin());
-		} catch (Exception e) {
-			user.setIsAdministrator(false);
-		}
 
 		// update the lastLogin date only if everything is OK; otherwise the Verification page will stop the user
 		if (freshLogin && !user.requiresUpdates()) {
@@ -175,7 +176,7 @@ public class User implements Comparable<User>,Serializable {
 		}
 		if (lastLogin==null) lastLogin = new Date();
 		if (smsMessageDevice==null) smsMessageDevice = "";
-		authDomain = id.contains(":")?"BLTI":"google.com";
+		//authDomain = id.contains(":")?"BLTI":"gmail.com";
 		alias = (alias==null || alias.isEmpty())?null:alias;
 		if (alias != null) myGroupId=0;
 		ofy.put(this);

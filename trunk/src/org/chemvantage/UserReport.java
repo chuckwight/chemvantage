@@ -19,6 +19,7 @@ package org.chemvantage;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
 
 import javax.persistence.Id;
 
@@ -64,16 +65,23 @@ public class UserReport implements Serializable {
 			buf.append("<FONT COLOR=RED>" + comments + "</FONT><br>");
 			try {
 				Question q = ofy.get(Question.class,this.questionId);
-				q.setParameters();
+				q.setParameters(user!=null?userId.hashCode():-1); // -1 randomizes the question
 				Topic topic = ofy.find(Topic.class,q.topicId);
 				buf.append("Topic: " + topic.title + " (" + q.assignmentType + " question)<br>");
 				buf.append(q.printAll());
+				if (user!=null) {
+					buf.append("<table><tr><td>Date/Time (UTC)</td><td>Student Response</td><td>Correct Response</td><td>Score</td></tr>");
+					List<Response> responses = ofy.query(Response.class).filter("userId",userId).filter("questionId",questionId).list();
+					for (Response r : responses) buf.append("<tr><td>" + r.submitted.toString() + "</td><td align=center>" + r.studentResponse 
+							+ "</td><td align=center>" + r.correctAnswer + "</td><td align=center>" + r.score + "</td></tr>");
+					buf.append("</table>");
+				}
 				buf.append("<a href=Edit?UserRequest=Review&QuestionId=" + this.questionId + ">Review Question</a>");
 			} catch (Exception e2) {}
 			buf.append("<INPUT TYPE=HIDDEN NAME=ReportId VALUE=" + this.id + ">"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Report'>"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Reply'>"
-					+ "</FORM>");
+					+ "</FORM><p>");
 
 		} catch (Exception e) {
 			buf.append("<br>" + e.getMessage());

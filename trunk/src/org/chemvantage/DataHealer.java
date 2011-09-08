@@ -18,22 +18,15 @@
 package org.chemvantage;
 
 import java.io.IOException;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-
-import com.google.appengine.api.datastore.Cursor;
-import com.google.appengine.api.taskqueue.Queue;
-import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.ObjectifyService;
-import com.googlecode.objectify.Query;
-import com.googlecode.objectify.util.QueryResultIteratorWrapper;
-
-import static com.google.appengine.api.taskqueue.TaskOptions.Builder.*;
 
 
 
@@ -48,12 +41,19 @@ public class DataHealer extends HttpServlet {
 
 	@Override
 	protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-	    long startTime = System.currentTimeMillis();
 
 	    Objectify ofy = ObjectifyService.begin();
+	    //long startTime = System.currentTimeMillis();
+	    //String cursorStr = "";
 	    
-	    String className = request.getParameter("ClassName");
-	    if (className==null) className = "Assignment";
+	    List<User> users = ofy.query(User.class).filter("authDomain","google.com").list();	    
+	    for (User u : users) u.authDomain = "gmail.com";
+	    ofy.put(users);
+	    
+/*	    String className = request.getParameter("ClassName");
+
+  	    if (className==null) className = "Assignment";
+ 
 	    String cursorStr = request.getParameter("Cursor");
 
 	    if (className.equals("Assignment")) {
@@ -180,6 +180,7 @@ public class DataHealer extends HttpServlet {
 	    	}
 	    	className = "";
 	    	cursorStr = null;
-	    }    
+	    } 
+	    */   
 	}
 }

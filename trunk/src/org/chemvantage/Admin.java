@@ -371,7 +371,7 @@ public class Admin extends HttpServlet {
 			ofy.put(c);
 		}
 	}
-	
+		
 	void deleteBLTIConsumer(HttpServletRequest request) {
 		String oauth_consumer_key = request.getParameter("oauth_consumer_key");
 		BLTIConsumer c = ofy.find(BLTIConsumer.class,oauth_consumer_key); 
