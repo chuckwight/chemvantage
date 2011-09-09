@@ -166,6 +166,7 @@ public class Verification extends HttpServlet {
 			if (emailRequired) em = userService.getCurrentUser().getEmail();
 			if (!(em==null || em.isEmpty())) {
 				user.setEmail(em);
+				user.verifiedEmail = true;
 				ofy.put(user);
 				emailRequired = false;
 			}
