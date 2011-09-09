@@ -32,6 +32,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
@@ -158,9 +159,16 @@ public class Verification extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		boolean nameRequired = user.firstName.isEmpty() || user.lastName.isEmpty();
 		boolean emailRequired = user.email.isEmpty();
-		String em = "";
 		try {
-			if (emailRequired) em = UserServiceFactory.getUserService().getCurrentUser().getEmail();
+			UserService userService = UserServiceFactory.getUserService();
+			if (userService.isUserAdmin()) throw new Exception(); // don't set email for admins logged in as users
+			String em = "";
+			if (emailRequired) em = userService.getCurrentUser().getEmail();
+			if (!(em==null || em.isEmpty())) {
+				user.setEmail(em);
+				ofy.put(user);
+				emailRequired = false;
+			}
 		} catch (Exception e) {}
 		try {
 			buf.append("<h2>Your Contact Information</h2>"
@@ -173,10 +181,9 @@ public class Verification extends HttpServlet {
 
 			buf.append("<FORM NAME=Info ACTION=Verification METHOD=POST>");
 			buf.append("<TABLE>");
-			//if (user.requiresUpdates()) buf.append("<TR><TD></TD><TD><span style=color:red>* <span style=font-size:smaller>all fields are required</span></span></TD></TR>");
 			buf.append("<TR><TD ALIGN=RIGHT>First Name:</TD><TD>" + (user.firstName.isEmpty()?"<span style=color:red>*</span><INPUT NAME=FirstName SIZE=50>":user.firstName) + "</TD></TR>");
 			buf.append("<TR><TD ALIGN=RIGHT>Last Name:</TD><TD>" + (user.lastName.isEmpty()?"<span style=color:red>*</span><INPUT NAME=LastName SIZE=50>":user.lastName) + "</TD></TR>");
-			buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>Email address:</TD><TD>" + (emailRequired?"<span style=color:red>*</span><INPUT NAME=Email SIZE=50 VALUE='" + em + "'>":user.email));
+			buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>Email address:</TD><TD>" + (emailRequired?"<span style=color:red>*</span><INPUT NAME=Email SIZE=50>":user.email));
 			if (!emailRequired && !user.verifiedEmail){
 				buf.append(" (unverified) ");
 				if (verificationEmailSent) buf.append("<br><FONT COLOR=RED>A verification email has been sent to your address.</FONT><br>");
