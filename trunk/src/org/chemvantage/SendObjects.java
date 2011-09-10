@@ -33,12 +33,12 @@ public class SendObjects extends GenericServlet {
 	private static final long serialVersionUID = 137L;
 	DAO dao = new DAO();
 	Objectify ofy = dao.ofy();
-
+	boolean servletDisabled = true;  // set to false in order to utilize the data transfer servlet
+	
 	@Override
 	public void service(ServletRequest request,ServletResponse response) throws ServletException, IOException {
-		// comment out the body of this service method to disable (normal state)
-		/* FROM HERE.....by removing/restoring the first of 2 slashes on this line
-        response.setContentType("application/x-java-serialized-object");
+		response.setContentType("application/x-java-serialized-object");
+		if (servletDisabled) return;
         int value = 0;
         try {
             // read a String object containing the data request parameters
@@ -59,6 +59,5 @@ public class SendObjects extends GenericServlet {
             oStream.close();
         } catch (Exception e) {
         }
-        // TO HERE.....*/
-	}
+    }
 }
