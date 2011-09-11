@@ -411,9 +411,11 @@ public class User implements Comparable<User>,Serializable {
 	}
 	
 	public boolean isEligibleForHints(long questionId) {
+		// users are eligible for hints on homework questions if they have submitted
+		// more than 2 answers more than 15 minutes ago
 		try {
-			Date OneHourAgo = new Date(new Date().getTime()-3600000);
-			Query<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId",this.id).filter("questionId",questionId).filter("graded <",OneHourAgo);
+			Date FifteenMinutesAgo = new Date(new Date().getTime()-900000);
+			Query<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId",this.id).filter("questionId",questionId).filter("graded <",FifteenMinutesAgo);
 			return (hwTransactions.count() > 2?true:false);
 		} catch (Exception e) {
 			return false;
