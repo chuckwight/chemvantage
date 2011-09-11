@@ -122,12 +122,13 @@ public class Homework extends HttpServlet {
 						q.setParameters(user.id.hashCode());
 						buf.append("\n<TR VALIGN=TOP><TD>");
 						if (user.getHWQuestionScore(q.id) > 0) buf.append("<IMG SRC=/images/checkmark.gif ALT='OK'>");
-						buf.append("&nbsp;</TD>"
+						buf.append("&nbsp;<a id=" + q.id + " /></TD>"
 								+ "<FORM METHOD=POST ACTION=Homework>"
 								+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=GradeHomework>"
 								+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 								+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 								+ "<TD><b>" + i + ". </b></TD><TD>" + q.print() 
+								+ (Long.toString(q.id).equals(request.getParameter("Q"))?"Hint:<br>" + q.hint:"")
 								+ "<br><INPUT TYPE=SUBMIT VALUE='Grade This Exercise'><p>&nbsp;</FORM></TD></TR>\n");
 						i++;
 					} catch (Exception e) {
@@ -152,8 +153,9 @@ public class Homework extends HttpServlet {
 						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ "<TD><b>" + i + ". </b></TD><TD>" + q.print() 
+						+ (Long.toString(q.id).equals(request.getParameter("Q"))?"Hint:<br>" + q.hint:"")
 						+ "<br><INPUT TYPE=SUBMIT VALUE='Grade This Exercise'><p>&nbsp;</FORM></TD></TR>\n");
-				i++;
+					i++;
 			}
 			buf.append("</TABLE>");
 		} catch (Exception e) {
@@ -255,7 +257,10 @@ public class Homework extends HttpServlet {
 				buf.append("<div id=example style='display: none'><b>Detailed Solution</b><p>" 
 						+ q.printAllToStudents(studentAnswer[0]) + "</div>");
 			}
-			else if (studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id)) { 
+			
+			boolean offerHint = studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id);
+			
+			/*if (studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id)) { 
 				// embed a hint into this page if the user is eligible
 				buf.append("<p><div id=hintLink>"
 						+ "<a href=# onClick=javascript:document.getElementById('hint').style.display='';"
@@ -267,11 +272,15 @@ public class Homework extends HttpServlet {
 						+ "or a teaching assistant for further assistance. They have access to the complete "
 						+ "solutions to the homework exercises.</div>");
 			}
+			*/
+			
 
 			// if the user response was correct, seek five-star feedback:
 			if (studentScore > 0) buf.append(fiveStars());
 
-			buf.append("<p><a href=Homework?TopicId=" + topic.id + ">Return to this homework assignment</a>");
+			buf.append("<p><a href=Homework?TopicId=" + topic.id 
+					+ (offerHint?"&Q=" + q.id:"")
+					+ "#" + q.id + (offerHint?"><span style='color:red'>Please give me a hint</span>":">Return to this homework assignment") + "</a>");
 		}
 		catch (Exception e) {
 			buf.append("Sorry, we were unable to score this question.<br>" + e.toString());
