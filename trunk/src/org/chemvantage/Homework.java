@@ -147,7 +147,7 @@ public class Homework extends HttpServlet {
 				q.setParameters(user.id.hashCode());
 				buf.append("\n<TR VALIGN=TOP><TD>");
 				if (user.getHWQuestionScore(q.id) > 0) buf.append("<IMG SRC=/images/checkmark.gif ALT='OK'>");
-				buf.append("&nbsp;</TD>"
+				buf.append("&nbsp;<a id=" + q.id + " /></TD>"
 						+ "<FORM METHOD=POST ACTION=Homework>"
 						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=GradeHomework>"
 						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
