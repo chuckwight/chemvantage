@@ -1,0 +1,86 @@
+<HTML>
+<HEAD>
+<TITLE>ChemVantage Help Page</TITLE>
+</HEAD>
+
+<BODY>
+<H2>ChemVantage Help</H2>
+Click one or more of the following help topics:
+<UL>
+
+<LI><a href=# onClick=javascript:document.getElementById(1).style.display=""><b>Connection problems</b></a>
+<div id=1 style=display:none>
+ChemVantage uses a session object (temporary cookie) in your browser in order to maintain a connection to the server.  There are a few common reasons why this session object may be lost:
+<ul>
+ <li>After a period of inactivity (usually 30 minutes), the session is automatically closed by the server. Please login again.
+ <li>If you can't connect at all, be sure that your browser is set to accept cookies. This is usually the default setting and doesn't often need to be changed. See your browser's help pages for instructions on how to enable cookies.
+ <li>If you viewing ChemVantage from inside a class learning management system (LMS, such as Blackboard, Desire2Learn or Canvas) then it's possible that your browser terminated the session in accordance with your privacy settings. This is a known issue with some versions of Internet Explorer, but is much less common with Firefox or Chrome.  There are some common solutions to this problem:
+ <ol>
+  <li>Lower the privacy settings in your browser (see the help pages in your browser)
+  <li>Designate the domains for your class LMS and ChemVantage (http://chem-vantage.appspot.com) as <i>trusted Internet zones</i> in your browser (see the Internet Explorer help pages for instructions on how to do this)
+  <li>Ditch Internet Explorer and use another browser instead (recommended).
+  <li>Login <i>directly</i> to ChemVantage at <a href=http://www.chemvantage.org target=_blank>http://www.chemvantage.org</a> (outside of your LMS)<br>ChemVantage uses third-party OpenId for authentication, so you will need a Google or GMail account and password to do this.  Once you have logged in, enter your name and email address, if required, and then click the <a href=Groups>Find My Group</a> link in the yellow box to rejoin your class.
+ </ol>
+</ul>
+<p/></div>
+
+<LI><a href=# onClick=javascript:document.getElementById(2).style.display=""><b>Can't find my quiz/homework scores</b></a>
+<div id=2 style=display:none>
+<ol>
+ <li>Verify that you are logged into ChemVantage properly. On the <a href=Home>Home Page</a> you should see a yellow box with 'Welcome, &lt;your name&gt;'. If not, see the section on 'Connection Problems' above.
+ <li>Click the <a href=Scores>View My Scores</a> link in the yellow box.
+</ol>
+<p/></div>
+
+<LI><a href=# onClick=javascript:document.getElementById(3).style.display=""><b>Scores are incorrect</b></a>
+<div id=3 style=display:none>
+ChemVantage calculates your best (maximum) score on each quiz or homework assignment. When you are logged into ChemVantage, you can reach the <a href=Scores>Scores Page</a> by clicking on the <a href=Scores>View My Scores</a> link in the yellow box on the <a href=Home>Home Page</a>.  If you are part of a group or class using ChemVantage, you have two scores pages:
+<ol>
+ <li>Your regular <a href=Scores>Scores Page</a> shows only scores for class assignments that were completed prior to the deadline set by your instructor. If these are not correct, you can try clicking the button below to recalculate your group scores from scratch. You must be logged in to ChemVantage to do this.<br><FORM METHOD=POST ACTION=Scores><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Recalculate My Scores'></FORM>
+ <li>Your <a href=Scores?UserRequest=ShowAll>Portfolio Scores Page</a> shows the maximum scores for all quizzes and homework sets, including post-deadline submissions. If you don't find all of your scores on the Portfolio Scores Page, check to see if you might have multiple ChemVantage accounts that can be merged together (see below).<br>
+ </ol>
+ 
+<p/></div>
+
+<LI><a href=# onClick=javascript:document.getElementById(4).style.display=""><b>Can't find my assignments and deadlines</b></a>
+<div id=4 style=display:none>
+ChemVantage lists the deadlines for each assignment on your <a href=Scores>Scores Page</a>.  There are 2 likely reasons why these might not appear.
+<ol>
+ <li>If the heading on your <a href=Scores>Scores Page</a> is 'My General Chemistry Scores' then your instructor has not yet assigned any homework or quizzes.
+ <li>If the heading on your <a href=Scores>Scores Page</a> is 'My General Chemistry Portfolio' then you have not yet joined a ChemVantage group (class). To fix this, click the <a href=Groups>Find My Group</a> link in the yellow box on the <a href=Home>Home Page</a> and select your class and instructor from the drop-down box.
+</ol>
+<p/></div>
+
+<LI><a href=# onClick=javascript:document.getElementById(5).style.display=""><b>Assigned to the wrong group</b></a>
+<div id=5 style=display:none>
+Your instructor's name and a brief description of your class should appear in the yellow box on the <a href=Home>Home Page</a>.  If this information is not correct, then you may have been assigned to the wrong group.  There are 2 ways to correct this:
+<ol>
+ <li>Send email to <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a> giving your first/last name, your instructor's name and a description of the group that you should be in (e.g., CHEM 1210 section 17).
+ <li>Send email to the instructor of your current group (by clicking on the instrutor's name in the yellow box) asking that person to go to Groups | Add/Drop and drop you from the group.  This action will reveal a <a href=Groups>Find My Group</a> link in the yellow box on your Home Page to join the proper group.
+</ol>
+<p/></div>
+
+<LI><a href=# onClick=javascript:document.getElementById(6).style.display=""><b>Contact information is incorrect</b></a>
+<div id=6 style=display:none>
+ChemVantage uses your name, email address and (optionally) your SMS/cell phone number to verify your account, track your scores and send you messages.  You can see this information on the <a href=Verification>Contact Information Page</a> when you are logged into ChemVantage. If any of this infomration is incorrect, please send email to <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a> with detailed instructions for any changes that are needed.
+<p/></div>
+
+<LI><a href=# onClick=javascript:document.getElementById(7).style.display=""><b>Multiple ChemVantage accounts</b></a>
+<div id=7 style=display:none>
+There are multiple ways to login to ChemVantage, (through a class LMS, or directly using OpenID or a Google/GMail account). This can result in a single person having multiple accounts and scores that are tracked separately. You can merge all of your accounts into a single account that can be accessed in multiple ways (using aliases) <u>if each account is associated with the same <i>verified</i> email address</u>. To do this, you should
+<ol>
+ <li>Log into each account separately and click the <a href=Verification>View My Information</a> link in the yellow box to make sure that the email address for each account is verified. If the address is listed as unverified, click the button provided to send a verification email message to that account.
+ <li>Send email to <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a> requesting that your accounts be merged. We will only merge accounts having verified email addresses; this is for your protection. Therefore, if you have different addresses on your accounts, you will have to send the same request from multiple email accounts that match your ChemVantage email addresses.
+</ol>
+<p/></div>
+
+<LI><a href=# onClick=javascript:document.getElementById(8).style.display=""><b>My question/problem isn't listed here</b></a>
+<div id=8 style=display:none>
+Please send email to <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a> giving your name, email address on your ChemVantage account, and a detailed description of the question or problem. If you are seeing an error message, it's helpful to cut/paste it into your email message. Remember that there are lots of things that can go wrong, so just saying something like 'ChemVantage doesn't work' or 'I can't login' is not very helpful. Be as specific as you can about the problem, what messages you see, why you think it's wrong, which browser and operating system you're using, and whether you've tried this on another computer.  This will help us to diagnose and solve the problem for you.<br>
+Thanks.
+<p/></div>
+
+</UL>
+</BODY>
+
+</HTML>
