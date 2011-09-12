@@ -155,36 +155,37 @@ public class Login extends HttpServlet {
 				buf.append("<button type=button onClick=location.href='" 
 						+ UserServiceFactory.getUserService().createLoginURL("/Home") 
 						+ "'>Login to ChemVantage using your Google account</button></CENTER><p>");
-			}
-			buf.append("</TD><TD VALIGN=TOP>");   // start right column of home page
 
-			Video video = null;
-			try {
-				video = videos.get(Integer.parseInt(request.getParameter("Video")));
-			} catch (Exception e) {
-				if (videos.size()==0) videos = ofy.query(Video.class).order("orderBy").list();
-				video = videos.get(0);
-			}
-			
-			
+				buf.append("</TD><TD VALIGN=TOP>");   // start right column of home page
 
-			buf.append("<iframe width=560 height=349 src=http://www.youtube.com/embed/" + video.serialNumber + " frameborder=0 allowfullscreen></iframe>");
-/*			buf.append("<object width='425' height='344'><param name='movie' "
+				Video video = null;
+				try {
+					video = videos.get(Integer.parseInt(request.getParameter("Video")));
+				} catch (Exception e) {
+					if (videos.size()==0) videos = ofy.query(Video.class).order("orderBy").list();
+					video = videos.get(0);
+				}
+
+
+
+				buf.append("<iframe width=560 height=349 src=http://www.youtube.com/embed/" + video.serialNumber + " frameborder=0 allowfullscreen></iframe>");
+				/*			buf.append("<object width='425' height='344'><param name='movie' "
 					+ "value='http://www.youtube.com/v/" + requestedVideo + "&hl=en_US&fs=1'>"
 					+ "</param><param name='allowFullScreen' value='true'></param><param "
 					+ "name='allowscriptaccess' value='always'></param><embed "
 					+ "src='http://www.youtube.com/v/" + requestedVideo + "&hl=en_US&fs=1' "
 					+ "type='application/x-shockwave-flash' allowscriptaccess='always' "
 					+ "allowfullscreen='true' width='425' height='344'></embed></object><br>");
-*/			
-			// video select box:
-			if (videos.size()>0) { 
-				buf.append("<TABLE BGCOLOR=#DDDDDD><TR><TD>");
-				buf.append("<b>Video Lectures</b>");
-				buf.append("<FORM NAME=VideoSelectForm METHOD=GET><SELECT NAME=Video onChange=submit()>"); 
+				 */			
+				// video select box:
+				if (videos.size()>0) { 
+					buf.append("<TABLE BGCOLOR=#DDDDDD><TR><TD>");
+					buf.append("<b>Video Lectures</b>");
+					buf.append("<FORM NAME=VideoSelectForm METHOD=GET><SELECT NAME=Video onChange=submit()>"); 
 					for (Video v : videos) buf.append("<OPTION VALUE=" + videos.indexOf(v) + (v.id.equals(video.id)?" SELECTED":"") + ">" + v.title + "</OPTION>");
-				buf.append("</SELECT></FORM>");
-				buf.append("</TD></TR></TABLE><p>");
+					buf.append("</SELECT></FORM>");
+					buf.append("</TD></TR></TABLE><p>");
+				}
 			}
 			buf.append("</TD></TR></TABLE>\n");
 		} catch (Exception e) {

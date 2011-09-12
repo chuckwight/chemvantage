@@ -6,6 +6,7 @@
 <meta NAME='Keywords' CONTENT='learning,online,quiz,homework,video,textbook,open,education'>
 <link rel='P3Pv1' href='/w3c/p3p.xml'>
 <title>ChemVantage</title>
+
 <style><!-- body,td,a,p,.h {font-family:arial,sans-serif}
 #pzon{float:left;font-weight:bold;height:22px;padding-left:2px}
 #phzl{border-top:1px solid#c9d7f1;font-size:0;height:0;position:absolute;right:0;top:24px;width:200%}
@@ -22,6 +23,7 @@
 --> </style>
 
 </head>
+
 <body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>
 <TABLE><TR><TD>
 <div id=pzon><nobr>
@@ -43,12 +45,12 @@ ChemVantage uses a session object (temporary cookie) in your browser in order to
 <ul>
  <li>After a period of inactivity (usually 30 minutes), the session is automatically closed by the server. Please login again.
  <li>If you can't connect at all, be sure that your browser is set to accept cookies. This is usually the default setting and doesn't often need to be changed. See your browser's help pages for instructions on how to enable cookies.
- <li>If you viewing ChemVantage from inside a class learning management system (LMS, such as Blackboard, Desire2Learn or Canvas) then it's possible that your browser terminated the session in accordance with your privacy settings. This is a known issue with some versions of Internet Explorer, but is much less common with Firefox or Chrome.  There are some common solutions to this problem:
+ <li>If you are viewing ChemVantage from inside a class learning management system (LMS, such as Blackboard, Desire2Learn or Canvas) then it's possible that your browser terminated the session in accordance with your privacy settings. This is a known issue with some versions of Internet Explorer, but is much less common with Firefox or Chrome.  There are some common solutions to this problem:
  <ol>
   <li>Lower the privacy settings in your browser (see the help pages in your browser)
   <li>Designate the domains for your class LMS and ChemVantage (http://chem-vantage.appspot.com) as <i>trusted Internet zones</i> in your browser (see the Internet Explorer help pages for instructions on how to do this)
   <li>Ditch Internet Explorer and use another browser instead (recommended).
-  <li>Login <i>directly</i> to ChemVantage at <a href=http://www.chemvantage.org target=_blank>http://www.chemvantage.org</a> (outside of your LMS)<br>ChemVantage uses third-party OpenId for authentication, so you will need a Google or GMail account and password to do this.  Once you have logged in, enter your name and email address, if required, and then click the <a href=Groups>Find My Group</a> link in the yellow box to rejoin your class.
+  <li>Login <i>directly</i> to ChemVantage at <a href=http://www.chemvantage.org target=_blank>http://www.chemvantage.org</a> (outside of your LMS)<br>ChemVantage uses Google's OpenID protocol for authentication, so you will need a Google or GMail account and password to do this.  Once you have logged in, enter your name and email address, if required, and then click the <a href=Groups>Find My Group</a> link in the yellow box to rejoin your class.
  </ol>
 </ul>
 <p/></div>
@@ -57,13 +59,13 @@ ChemVantage uses a session object (temporary cookie) in your browser in order to
 <div id=2 style=display:none>
 <ol>
  <li>Verify that you are logged into ChemVantage properly. On the <a href=Home>Home Page</a> you should see a yellow box with 'Welcome, &lt;your name&gt;'. If not, see the section on 'Connection Problems' above.
- <li>Click the <a href=Scores>View My Scores</a> link in the yellow box.
+ <li>Click the <a href=Scores>Show My Scores</a> link in the yellow box.
 </ol>
 <p/></div>
 
 <LI><a href=# onClick=javascript:document.getElementById(3).style.display=""><b>Scores are incorrect</b></a>
 <div id=3 style=display:none>
-ChemVantage calculates your best (maximum) score on each quiz or homework assignment. When you are logged into ChemVantage, you can reach the <a href=Scores>Scores Page</a> by clicking on the <a href=Scores>View My Scores</a> link in the yellow box on the <a href=Home>Home Page</a>.  If you are part of a group or class using ChemVantage, you have two scores pages:
+ChemVantage calculates your best (maximum) score on each quiz or homework assignment. When you are logged into ChemVantage, you can reach the <a href=Scores>Scores Page</a> by clicking on the <a href=Scores>Show My Scores</a> link in the yellow box on the <a href=Home>Home Page</a>.  If you are part of a group or class using ChemVantage, you have two scores pages:
 <ol>
  <li>Your regular <a href=Scores>Scores Page</a> shows only scores for class assignments that were completed prior to the deadline set by your instructor. If these are not correct, you can try clicking the button below to recalculate your group scores from scratch. You must be logged in to ChemVantage to do this.<br><FORM METHOD=POST ACTION=Scores><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Recalculate My Scores'></FORM>
  <li>Your <a href=Scores?UserRequest=ShowAll>Portfolio Scores Page</a> shows the maximum scores for all quizzes and homework sets, including post-deadline submissions. If you don't find all of your scores on the Portfolio Scores Page, check to see if you might have multiple ChemVantage accounts that can be merged together (see below).<br>
