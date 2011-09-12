@@ -85,6 +85,7 @@ public class Login extends HttpServlet {
 		+ " <div class=pz1>ChemVantage.org</div>"
 		+ " <div class=pz1><a href=Home>Home</a></div>"
 		+ " <div class=pz1><a href=About>About Us</a></div>"
+		+ " <div class=pz1><a href=help.html>Help</a></div>"
 		+ "</nobr></div>\n"
 		+ "<div id=phzl></div><div align=right id=puzr style='font-size:84%;padding:0 0 4px' width=100%>"
 		+ "</div><br>";
@@ -102,8 +103,7 @@ public class Login extends HttpServlet {
 		request.getSession().invalidate();
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		if (request.getRequestURL().indexOf("chem-vantage.appspot.com")>0) out.println(sessionLostMessage());
-		else out.println(homePage(request));
+		out.println(homePage(request));
 	}
 
 	String homePage(HttpServletRequest request) {
@@ -122,7 +122,7 @@ public class Login extends HttpServlet {
 			StringBuffer thisURL = request.getRequestURL();
 
 			if (thisURL.indexOf("dev-vantage.appspot.com") > 0) {
-				buf.append("<FONT COLOR=RED><b>CAUTION:</b></FONT><p>"
+				buf.append("<span style=color:red><b>CAUTION:</b></span><p>"
 						+ "You have accessed a code development server that<br>"
 						+ "should be used only by permission.<p>"
 						+ "To reach the ChemVantage production site "
@@ -142,35 +142,22 @@ public class Login extends HttpServlet {
 						+ UserServiceFactory.getUserService().createLoginURL("/Home") 
 						+ "'\">Authorized users only</button></CENTER><p>");
 
+			} else if (thisURL.indexOf("chem-vantage.appspot.com") > 0) {
+				buf.append("<h2>Your ChemVantage Session Has Been Closed</h2>");
+				buf.append("This is normal following an extended period of inactivity. Please login again through your class learning management system.<br>"
+						+ "If you reached this page unexpectedly, please see the <a href=help.html>ChemVantage Help Page</a> for further assistance.<br>"
+						+ "If you have a Google or GMail account and password, you may login at <a href=http://www.chemvantage.org target=_blank>http://chemvantage.org</a>.");
 			} else {
 				buf.append("ChemVantage is a free resource for science education:<ul>"
 						+ "<li>computer-graded quizzes<li>homework exercises"
 						+ "<li>practice exams<li>video lectures<li>free online textbooks</ul>");
 
-				if (thisURL.indexOf("chemvantage.org") > 0 || thisURL.indexOf("localhost") > 0) {
-					buf.append("<button type=button onClick=location.href='" 
-							+ UserServiceFactory.getUserService().createLoginURL("/Home") 
-							+ "'>Login to ChemVantage using your Google account</button></CENTER><p>");
-				} else {
-					buf.append("To launch a ChemVantage session, please click<br>"
-							+ "the authorized link inside the learning management<br>"
-							+ "system (LMS) used by your class (e.g., Blackboard,<br>"
-							+ "Moodle, or Canvas).<p>"
-							+ "<CENTER><a href=http://www.chemvantage.org>Click here if you are not using an LMS</a></CENTER><p>");
-
-					buf.append("If you reached this page unexpectedly, here are some of the likely reasons:<OL>"
-							+ "<LI>Your web session may have timed out or may have been reset by the server. "
-							+ "In this case, please return to your class LMS and click the ChemVantage link to login again."
-							+ "<LI>Your Internet browser may be showing you a cached page instead of a fresh page "
-							+ "from the ChemVantage site.  Clear your browser's cache (<a href=http://www.wikihow.com/Clear-Your-Browser's-Cache>"
-							+ "here's how to do it</a>) and login to ChemVantage again."
-							+ "<LI>If you are using Internet Explorer, your browser privacy setting may be too high. "
-							+ "To solve this problem you can either lower the privacy settings in Tools &rarr; Internet Options &rarr; Privacy, "
-							+ "or designate the web domain for your class LMS to be a trusted Internet zone.");
-				}
+				buf.append("<button type=button onClick=location.href='" 
+						+ UserServiceFactory.getUserService().createLoginURL("/Home") 
+						+ "'>Login to ChemVantage using your Google account</button></CENTER><p>");
 			}
 			buf.append("</TD><TD VALIGN=TOP>");   // start right column of home page
-			
+
 			Video video = null;
 			try {
 				video = videos.get(Integer.parseInt(request.getParameter("Video")));
@@ -204,39 +191,5 @@ public class Login extends HttpServlet {
 			buf.append(e.toString());
 		}
 		return Login.header + buf.toString() + Login.footer;
-	}
-	
-	String sessionLostMessage() {
-		StringBuffer buf = new StringBuffer();
-		
-		buf.append("<img src=images/CVLogo_thumb.jpg alt='ChemVantage Logo'><FONT SIZE=+3>ChemVantage</FONT>");
-		buf.append("<h3>Oops! There's A Problem With Your Connection to ChemVantage</h3>");
-		buf.append("If you reached this page unexpectedly, it's likely that the web session in your browser was " 
-				+ "lost.  Here are some of the most likely reasons and how to fix it.<p>");
-		buf.append("<h4>If you are new to ChemVantage and logged in through a campus LMS</h4>"
-				+ "The most likely culprit is that the privacy settings in your browser are too high to view "
-				+ "third-party applications like ChemVantage inside a frame of your LMS.  This is a known issue "
-				+ "with some versions of Internet Explorer.<p>"
-				+ "To solve this problem you can either lower your browser's privacy settings in "
-				+ "Tools &rarr; Internet Options &rarr; Privacy, or designate the web domain for your class LMS "
-				+ "to be a trusted Internet zone.  Then return to the LMS and login again.");
-		buf.append("<h4>If You Have Been Away From Your Computer For A While</h4>"
-				+ "The most likely reason is that your web session simply timed out.  Just return to your "
-				+ "campus LMS and click the ChemVantage link again to start a new session.");
-		buf.append("<h4>If None of the Previous Options Worked For You</h4>"
-				+ "Your Internet browser may be showing you a cached page instead of a fresh page "
-				+ "from the ChemVantage site.  Clear your browser's cache (<a href=http://www.wikihow.com/Clear-Your-Browser's-Cache>"
-				+ "here's how to do it</a>) and login to ChemVantage again.");
-		buf.append("<h4>If You Have A Google or GMail Account</h4>"
-				+ "Then you have the option of by-passing your campus LMS and logging directly into ChemVantage "
-				+ "at <a href=http://chemvantage.org>http://chemvantage.org</a> using your GMail address and "
-				+ "password.  After logging in, use the 'Find My Group' link in the yellow box to join your class "
-				+ "and gain access to assignments and deadlines.");
-		buf.append("<h4>If All Else Fails</h4>"
-				+ "Please send email to admin@chemvantage.org describing the problem.  Give as much detailed "
-				+ "information as you can about your computer, operating system, browser, any error messages "
-				+ "that you see, and what behavior you didn't expect, so that we can help you diagnose the problem.");
-
-		return buf.toString();
 	}
 }
