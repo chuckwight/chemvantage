@@ -94,9 +94,11 @@ public class Rescue extends HttpServlet {
 				}
 				
 				if (score.score > group.rescueThresholdScore) continue;  // this user is OK; go to next group member
-
+				
 				// send a rescue message to this user
 				User user = ofy.get(User.class,userId);
+				if (user.alias != null) continue;  // don't send to accounts aliased to other user accounts
+				
 				Message msg = new MimeMessage(session);
 				msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
 				msg.setRecipient(Message.RecipientType.TO,new InternetAddress(user.email,user.getBothNames()));
