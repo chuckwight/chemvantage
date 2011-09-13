@@ -17,6 +17,7 @@
 
 package org.chemvantage;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -61,12 +62,14 @@ public class Score {    // this object represents a best score achieved by a use
 		} else if (a.assignmentType.equals("Homework")) {
 			Query<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId",userId).filter("topicId",a.topicId);
 			List<Key<Question>> allQuestionKeys = ofy.query(Question.class).filter("assignmentType","Homework").filter("topicId", a.topicId).listKeys();
+			List<Key<Question>> assignmentQuestionKeys = new ArrayList<Key<Question>>();
+			for (Key<Question> k : a.questionKeys) assignmentQuestionKeys.add(k);
 			for (HWTransaction h : hwTransactions) {
 				if (h.graded.before(a.deadline)) {
 					s.numberOfAttempts++;
 					// Warning: the following line removes Keys from a.questionKeys to avoid counting duplicate scores
 					// on homework assignments.  Do not "put" the assignment to the database in this method!
-					if (h.score > 0 && a.questionKeys.remove(new Key<Question>(Question.class,h.questionId))) s.score ++; 
+					if (h.score > 0 && assignmentQuestionKeys.remove(new Key<Question>(Question.class,h.questionId))) s.score ++; 
 				}
 				if (h.score>0 && allQuestionKeys.remove(new Key<Question>(Question.class,h.questionId))) s.overallScore++;
 			}

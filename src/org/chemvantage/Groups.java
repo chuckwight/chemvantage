@@ -669,10 +669,10 @@ public class Groups extends HttpServlet {
 					deadline.setTime(df.parse(d));
 					deadline.add(Calendar.DATE,1);		// add 1 day and subtract 1 second
 					deadline.add(Calendar.SECOND,-1);	// to set deadline 1 second before midnight on the date indicated
-					if (a.deadline != deadline.getTime()) { // deadline is being changed
+					if (a.deadline.compareTo(deadline.getTime())!=0) {  // deadline was changed
 						a.deadline = deadline.getTime();
 						ofy.put(a);
-						group.deleteScores(a.id);
+						group.deleteScores(a);
 					}
 				}
 			} catch (Exception e2) {}
@@ -686,8 +686,11 @@ public class Groups extends HttpServlet {
 					deadline.setTime(df.parse(d));
 					deadline.add(Calendar.DATE,1);		// add 1 day and subtract 1 second
 					deadline.add(Calendar.SECOND,-1);	// to set deadline 1 second before midnight on the date indicated
-					a.deadline = deadline.getTime();
-					ofy.put(a);
+					if (a.deadline.compareTo(deadline.getTime())!=0) {  // deadline was changed
+						a.deadline = deadline.getTime();
+						ofy.put(a);
+						group.deleteScores(a);
+					}
 				}
 			} catch (Exception e2) {}
 			group.setGroupTopicIds();
@@ -823,6 +826,7 @@ public class Groups extends HttpServlet {
 			Set<Key<Score>> keys = new HashSet<Key<Score>>();
 			for (User u : groupMembers) for (Assignment a : assignments) keys.add(new Key<Score>(new Key<User>(User.class,u.id),Score.class,a.id));
 			Map<Key<Score>,Score> scoresMap = ofy.get(keys);
+//buf.append("Map initially has " + scoresMap.size() + " entries.");		
 			buf.append("<p><b>Scores for this Group (" + group.memberIds.size() + " users)</b><br>");
 			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR ALIGN=LEFT><TH>#</TH><TH>Name</TH>");
 			for (int i=1;i<=assignments.size();i++) { // add a header for each assigned quiz or homework
@@ -846,10 +850,11 @@ public class Groups extends HttpServlet {
 				for (Assignment a : assignments) {
 					Key<Score> k = new Key<Score>(new Key<User>(User.class,u.id),Score.class,a.id);
 					Score s = scoresMap.get(k);
-					if (s==null) {
+					if (s==null) s = group.getScore(u.id, a);
+					/*if (s==null) {
 						s = Score.getInstance(u.id,a);
 						ofy.put(s);
-					}
+					}*/
 					sumScores[j] += s.score;
 					studentTotalScore += s.score;
 					if (s.numberOfAttempts>0) nScores[j]++;
