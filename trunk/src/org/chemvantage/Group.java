@@ -172,16 +172,12 @@ public class Group implements Serializable {
     	}
     }
     
-    void deleteScores(long assignmentId) {
-    	List<Score> scores = ofy.query(Score.class).filter("assignmentId",assignmentId).list();
-    	ofy.delete(scores);
+    void deleteScores(Assignment assignment) {
+    	List <Key<Score>> scoreKeys = new ArrayList<Key<Score>>();
+    	for (String u : this.memberIds) scoreKeys.add(new Key<Score>(new Key<User>(User.class, u),Score.class,assignment.id));
+    	ofy.delete(scoreKeys);
     }
 
-    void deleteScores(String userId) {
-    	List<Score> scores = ofy.query(Score.class).filter("userId",userId).list();
-    	ofy.delete(scores);
-    }
-    
     void deleteScores() {
     	List<Score> scores = ofy.query(Score.class).filter("groupId",this.id).list();
     	ofy.delete(scores);

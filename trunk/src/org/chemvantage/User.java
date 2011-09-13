@@ -438,10 +438,10 @@ public class User implements Comparable<User>,Serializable {
 				ofy.put(g);
 			} else if (g.id != newGroupId && g.isMember(this.id)) {
 				g.memberIds.remove(this.id);
-				g.deleteScores(this.id);
 				ofy.put(g);
 			}
 		}
+		recalculateScores();
 	}
 
 	public int compareTo(User other) {
