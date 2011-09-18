@@ -127,6 +127,21 @@ public class About extends HttpServlet {
 		+ "copyrights to ChemVantage LLC to be shared freely under the terms of a "
 		+ "<a href='http://creativecommons.org/licenses/by/3.0/us/'>Creative Commons Attribution 3.0 License.</a>";
 
+	public static String certification = "<a ID=certification></a>"
+		+ "<h3>IMS Basic Learning Tools Interoperability</h3>"
+		+ "<TABLE><TR><TD VALIGN=TOP>"
+		+ "<img alt='IMS BLTI Certification Logo' style='border-width:0' "
+		+ "src='/images/imsBLTI_v1TPweb.png'></TD><TD VALIGN=MIDDLE>ChemVantage is certified by the "
+		+ "<a href=http://imsglobal.org>IMS Global Learning Consortium</a> to be compliant with the "
+		+ "Basic LTI v1.0 standard for learning tools interoperability. The IMS registration "
+		+ "number for ChemVantage v1.0.078 is <a href=http://www.imsglobal.org/cc/detail.cfm?ID=9>IMSB2ce2011W1</a>.<p>"
+		+ "This means that you can configure most learning management systems such as Blackboard, "
+		+ "Canvas, Moodle or Desire2Learn with a Basic LTI link to allow your students to establish and use their "
+		+ "accounts automatically in ChemVantage without having to maintain a separate user ID and "
+		+ "password.  The administrator or your LMS can set this up by contacting admin@chemvantage.org "
+		+ "to obtain a BLTI launch URL, consumer key and shared secret."
+		+ "</TD></TR></TABLE>";
+		
 	public static String copyright = "<a NAME=copyright></a>"
 		+ "<h3>Copyright &copy; 2007-2011 ChemVantage LLC</h3>"
 		+ "<TABLE><TR><TD VALIGN=TOP>"
@@ -147,7 +162,7 @@ public class About extends HttpServlet {
 		+ "<UL>"
 		+ "<LI>LIMITED LIABILITY." 
 		+ "<UL>"
-		+ "<LI>CHEMVANTAGE.ORG IS WITHOUT LIABILITY FOR DAMAGES CAUSED OR ALLEGEDLY CAUSED BY ANY FAILURE "
+		+ "<LI>CHEMVANTAGE LLC IS WITHOUT LIABILITY FOR DAMAGES CAUSED OR ALLEGEDLY CAUSED BY ANY FAILURE "
 		+ "OF PERFORMANCE, ERROR, OMISSION, INTERRUPTION, DELETION, DEFECT, VIRUS, DELAY IN OPERATION OR "
 		+ "TRANSMISSION, INACCURATE INFORMATION, COMMUNICATIONS LINE FAILURE, THEFT OR DESTRUCTION OF OR "
 		+ "UNAUTHORIZED ACCESS TO, ALTERATION OF, OR USE OF RECORDS, WHETHER FOR BREACH OF CONTRACT, "
@@ -170,6 +185,6 @@ public class About extends HttpServlet {
 	throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		out.println(Login.header + about + premium + accounts + copyright + terms + Home.footer);
+		out.println(Login.header + about + premium + accounts + certification + copyright + terms + Home.footer);
 	}
 }
