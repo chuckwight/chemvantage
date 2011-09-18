@@ -129,9 +129,8 @@ public class About extends HttpServlet {
 
 	public static String certification = "<a ID=certification></a>"
 		+ "<h3>IMS Basic Learning Tools Interoperability</h3>"
-		+ "<TABLE><TR><TD VALIGN=TOP>"
-		+ "<img alt='IMS BLTI Certification Logo' style='border-width:0' "
-		+ "src='/images/imsBLTI_v1TPweb.png'></TD><TD VALIGN=MIDDLE>ChemVantage is certified by the "
+		+ "<img alt='IMS BLTI Certification Logo' style='border-width:0' align=left hspace=10 vspace=5 "
+		+ "src='/images/imsBLTI_v1TPweb.png'/> ChemVantage is certified by the "
 		+ "<a href=http://imsglobal.org>IMS Global Learning Consortium</a> to be compliant with the "
 		+ "Basic LTI v1.0 standard for learning tools interoperability. The IMS registration "
 		+ "number for ChemVantage v1.0.078 is <a href=http://www.imsglobal.org/cc/detail.cfm?ID=9>IMSB2ce2011W1</a>.<p>"
@@ -139,23 +138,19 @@ public class About extends HttpServlet {
 		+ "Canvas, Moodle or Desire2Learn with a Basic LTI link to allow your students to establish and use their "
 		+ "accounts automatically in ChemVantage without having to maintain a separate user ID and "
 		+ "password.  The administrator or your LMS can set this up by contacting admin@chemvantage.org "
-		+ "to obtain a BLTI launch URL, consumer key and shared secret."
-		+ "</TD></TR></TABLE>";
+		+ "to obtain a BLTI launch URL, consumer key and shared secret.";
 		
 	public static String copyright = "<a NAME=copyright></a>"
 		+ "<h3>Copyright &copy; 2007-2011 ChemVantage LLC</h3>"
-		+ "<TABLE><TR><TD VALIGN=TOP>"
 		+ "<a rel='license' href=http://creativecommons.org/licenses/by/3.0/us/>"
-		+ "<img alt='Creative Commons License' style='border-width:0' "
+		+ "<img alt='Creative Commons License' style='border-width:0' align=left hspace=10 vspace=5 "
 		+ "src='http://i.creativecommons.org/l/by/3.0/us/88x31.png'/></a>"
-		+ "</TD><TD VALIGN=MIDDLE>"
 		+ "Except where otherwise noted, the copyright to all content on this site is owned by ChemVantage LLC, "
 		+ "and is licensed freely under a "
 		+ "<a href='http://creativecommons.org/licenses/by/3.0/us/'>Creative Commons Attribution 3.0 License</a>. "
 		+ "Any use of this content must acknowledge ownership by ChemVantage LLC and must contain appropriate "
 		+ "notice of this CC-BY licence. Permissions beyond the scope of this license may be available by contacting "
-		+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>"
-		+ "</TD></TR></TABLE>";
+		+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>";
 
 	public static String terms = "<a NAME=terms></a>"
 		+ "<h3>Terms and Conditions of Use</h3>"
