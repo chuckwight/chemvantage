@@ -20,6 +20,7 @@ package org.chemvantage;
 import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
@@ -57,7 +58,10 @@ public class Notification extends HttpServlet {
 			Date startWindow = new Date(now.getTime() + 43200000); // 12 hr from now in millis
 			Date endWindow = new Date(startWindow.getTime() + 21600000);   // 6 hours later
 			List<Assignment> assignments = ofy.query(Assignment.class).filter("deadline >",startWindow).filter("deadline <",endWindow).list();
+			List<Long> groupIds = new ArrayList<Long>();
 			for (Assignment a : assignments) {
+				if (groupIds.contains(a.groupId)) continue;  // This ensures that only 1 email is sent to each student
+				else groupIds.add(a.groupId);                // if there are multiple assignments due tonight.
 				Queue queue = QueueFactory.getDefaultQueue();
 				queue.add(withUrl("/Notification").param("AssignmentId",Long.toString(a.id)));
 			}
@@ -92,12 +96,12 @@ public class Notification extends HttpServlet {
 					msg.setSubject("ChemVantage");
 					if (smsRegistered(user)) {
 						msg.setRecipient(Message.RecipientType.TO,new InternetAddress(user.smsMessageDevice));
-						msg.setText("Reminder: " + a.assignmentType + " at chemvantage.org due by midnight tonight.");
+						msg.setText("Reminder: 1 or more assignments due by midnight tonight.");
 					}
 					else if (user.verifiedEmail) {
 						msg.setRecipient(Message.RecipientType.TO,new InternetAddress(user.email));
-						msg.setText("This is a friendly reminder from ChemVantage that you have a " 
-								+ a.assignmentType + " due by midnight tonight. "
+						msg.setText("This is a friendly reminder from ChemVantage that you have one " 
+								+ "or more assignments due by midnight tonight. "
 								+ "If you do not wish to receive these reminders, you can change "
 								+ "your notification options on the ChemVantage Scores page.");
 					}

@@ -85,7 +85,8 @@ public class Rescue extends HttpServlet {
 			if (!group.sendRescueMessages) return; // if the rescue service is not activated, quit now
 			Properties props = new Properties();
 			Session session = Session.getDefaultInstance(props, null);
-
+			Date now = new Date();
+			Date twelveHoursAgo = new Date(now.getTime()-43200000);  // Date object 12 hours in the past
 			for (String userId : group.memberIds) {
 				Score score = ofy.find(new Key<Score>(new Key<User>(User.class,userId),Score.class,assignment.id));
 				if (score == null) {
@@ -98,6 +99,13 @@ public class Rescue extends HttpServlet {
 				// send a rescue message to this user
 				User user = ofy.get(User.class,userId);
 				if (user.alias != null) continue;  // don't send to accounts aliased to other user accounts
+				
+				RescueMessage rm = ofy.find(RescueMessage.class,userId);  // check for a recent RescueMessages to this user
+				if (rm==null) ofy.put(new RescueMessage(userId));  // create a temporary record of this message being sent
+				else if (rm.sent.before(twelveHoursAgo)) {  // this is an old record. Send a new message and update the record
+					rm.sent = now;
+					ofy.put(rm);
+				} else continue; // a new record was found; skip this user to avoid sending duplicate messages
 				
 				Message msg = new MimeMessage(session);
 				msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
