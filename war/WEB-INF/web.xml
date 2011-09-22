@@ -47,6 +47,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet-mapping>
 	
 	<servlet>
+		<servlet-name>CalculateScores</servlet-name>
+		<servlet-class>org.chemvantage.CalculateScores</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>CalculateScores</servlet-name>
+		<url-pattern>/CalculateScores</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
 		<servlet-name>Contribute</servlet-name>
 		<servlet-class>org.chemvantage.Contribute</servlet-class>
 	</servlet>
@@ -222,6 +231,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 			<web-resource-name>AdminServlet</web-resource-name>
 			<url-pattern>/Admin</url-pattern>
 			<url-pattern>/remote_api</url-pattern>
+			<url-pattern>/CalculateScores</url-pattern>
 			<url-pattern>/DataStoreCleaner</url-pattern>
 			<url-pattern>/DataTransfer</url-pattern>
 			<url-pattern>/ManageDemoPremiumAccounts</url-pattern>

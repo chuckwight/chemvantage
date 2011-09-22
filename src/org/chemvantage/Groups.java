@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.DateFormat;
@@ -35,6 +37,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.Query;
@@ -205,15 +208,6 @@ public class Groups extends HttpServlet {
 			response.getWriter().println(e.toString());
 		}
 	}
-
-	String successfulDelete(String description) {
-		StringBuffer buf = new StringBuffer();
-		buf.append("<h2>Success</h2>");
-		buf.append("The group: <b>" + description + "</b><br>"
-				+ "was successfully deleted from the database.<p>"
-				+ "<a href=Groups>Return to the Groups page</a>");
-		return buf.toString();
-	}
 	
 	String groupsForm(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h3>Join A Class or Group</h3>");
@@ -377,12 +371,13 @@ public class Groups extends HttpServlet {
 				ofy.put(a);
 			}
 			group.timeZone = request.getParameter("TimeZone");
-			group.deleteScores();
 			ofy.put(group);
+			group.deleteScores();
+			QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("GroupId",Long.toString(group.id)));
 		} catch (Exception e) {
 		}
 	}
-
+	
 	String manageGroupForm(User user,Group group,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -673,6 +668,7 @@ public class Groups extends HttpServlet {
 						a.deadline = deadline.getTime();
 						ofy.put(a);
 						group.deleteScores(a);
+						QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));
 					}
 				}
 			} catch (Exception e2) {}
@@ -690,6 +686,7 @@ public class Groups extends HttpServlet {
 						a.deadline = deadline.getTime();
 						ofy.put(a);
 						group.deleteScores(a);
+						QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));
 					}
 				}
 			} catch (Exception e2) {}
@@ -826,7 +823,6 @@ public class Groups extends HttpServlet {
 			Set<Key<Score>> keys = new HashSet<Key<Score>>();
 			for (User u : groupMembers) for (Assignment a : assignments) keys.add(new Key<Score>(new Key<User>(User.class,u.id),Score.class,a.id));
 			Map<Key<Score>,Score> scoresMap = ofy.get(keys);
-//buf.append("Map initially has " + scoresMap.size() + " entries.");		
 			buf.append("<p><b>Scores for this Group (" + group.memberIds.size() + " users)</b><br>");
 			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR ALIGN=LEFT><TH>#</TH><TH>Name</TH>");
 			for (int i=1;i<=assignments.size();i++) { // add a header for each assigned quiz or homework
