@@ -183,19 +183,7 @@ public class Group implements Serializable {
     	for (String u : this.memberIds) scores.add(Score.getInstance(u,assignment));
     	ofy.put(scores);
     }
-    
-    void deleteScores(User user) {
-    	Query<Score> myScores = ofy.query(Score.class).ancestor(user);
-    	ofy.delete(myScores);
-    }
-    
-    void calculateScores(User user) {
-    	Query<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",this.id);
-    	List<Score> scores = new ArrayList<Score>();
-    	for (Assignment a : assignments) scores.add(Score.getInstance(user.id,a));
-    	ofy.put(scores);
-    }
-    
+
     void deleteScores() {
     	List<Score> scores = ofy.query(Score.class).filter("groupId",this.id).list();
     	ofy.delete(scores);
