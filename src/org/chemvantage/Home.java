@@ -39,6 +39,7 @@ public class Home extends HttpServlet {
 	DAO dao = new DAO();
 	Objectify ofy = dao.ofy();
 	Subject subject = dao.getSubject();
+	List<Video> videos = ofy.query(Video.class).order("orderBy").list();
 		
 	public String getServletInfo() {
 		return "Default servlet for user's home page.";
@@ -161,7 +162,6 @@ public class Home extends HttpServlet {
 			buf.append(userInfoBox(user));
 			
 			// Add quiz/homework select box to the page
-			//buf.append("<TABLE BGCOLOR=#DDDDDD><TR><TD>");
 			buf.append("<TABLE><TR><TD>");
 			buf.append("<b>Quizzes and Homework Exercises</b>");
 			buf.append("<div id=selectReminder style='display: none'>"
@@ -187,7 +187,6 @@ public class Home extends HttpServlet {
 			buf.append("</FORM></TD></TR></TABLE><p>\n");
 
 			// Add a box for taking practice exams
-			//buf.append("<TABLE BGCOLOR=#DDDDDD><TR><TD>");
 			buf.append("<TABLE><TR><TD>");
 			buf.append("<b>Practice Exams</b>");
 			buf.append("<FORM METHOD=GET ACTION=PracticeExam>");
@@ -196,7 +195,6 @@ public class Home extends HttpServlet {
 
 			// Add text resources table to the page
 			List<Text> texts = ofy.query(Text.class).list();
-			//buf.append("<TABLE BGCOLOR=#DDDDDD><TR><TD NOWRAP>"
 			buf.append("<TABLE><TR><TD NOWRAP>"
 					+ "<p><b>" + texts.size() + " Free Textbook Resources</b><br>");
 			for (Text t : texts) {
@@ -209,7 +207,7 @@ public class Home extends HttpServlet {
 			// Show embedded video lectures in the right column of the page
 			buf.append("<TD VALIGN=TOP>");   // start right column of home page
 
-			List<Video> videos = ofy.query(Video.class).order("orderBy").list();
+			//List<Video> videos = ofy.query(Video.class).order("orderBy").list();
 			Video video = null;
 			Long i = null;
 			try {
@@ -218,25 +216,27 @@ public class Home extends HttpServlet {
 				if (ofy.query(VideoTransaction.class).filter("userId",user.id).filter("serialNumber",video.serialNumber).get()==null)
 					ofy.put(new VideoTransaction(user.id,video.serialNumber,video.title,new Date()));
 			} catch (Exception e) {
-				int randVideo = new Random().nextInt(videos.size());
-				video = videos.get(randVideo);
+				if (videos.size()>0) {
+					int randVideo = new Random().nextInt(videos.size());
+					video = videos.get(randVideo);
+				}
 			}
 
-			buf.append("<iframe width='425' height='349' src='http://www.youtube.com/embed/" 
-					+ video.serialNumber + (i==null?"":"?autoplay=1")
-					+ "' frameborder='0' allowfullscreen></iframe>\n");
+			if (videos.size()>0) {
+				buf.append("<iframe width='425' height='349' src='http://www.youtube.com/embed/" 
+						+ video.serialNumber + (i==null?"":"?autoplay=1")
+						+ "' frameborder='0' allowfullscreen></iframe>\n");
 
-			//buf.append("<TABLE BGCOLOR=#DDDDDD><TR><TD>");
-			buf.append("<TABLE><TR><TD>");
-			buf.append("<b>Video Lectures</b>");
-			buf.append("<FORM NAME=VideoSelectForm METHOD=GET><SELECT NAME=Video onChange=submit()>");
-			
-			for (Video v : videos) { 
-				buf.append("<OPTION VALUE=" + v.id + (v.id.equals(video.id)?" SELECTED":"") + ">" + v.title + "</OPTION>");
+				buf.append("<TABLE><TR><TD>");
+				buf.append("<b>Video Lectures</b>");
+				buf.append("<FORM NAME=VideoSelectForm METHOD=GET><SELECT NAME=Video onChange=submit()>");
+
+				for (Video v : videos) { 
+					buf.append("<OPTION VALUE=" + v.id + (v.id.equals(video.id)?" SELECTED":"") + ">" + v.title + "</OPTION>");
+				}
+				buf.append("</SELECT></FORM>");
+				buf.append("</TD></TR></TABLE><p>");
 			}
-			buf.append("</SELECT></FORM>");
-			buf.append("</TD></TR></TABLE><p>");
-
 			buf.append("</TD></TR></TABLE>\n");
 		} catch (Exception e) {
 			buf.append(e.toString());
