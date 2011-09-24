@@ -163,12 +163,12 @@ public class Login extends HttpServlet {
 					video = videos.get(Integer.parseInt(request.getParameter("Video")));
 				} catch (Exception e) {
 					if (videos.size()==0) videos = ofy.query(Video.class).order("orderBy").list();
-					video = videos.get(0);
+					video = videos.size()==0?null:videos.get(0);
 				}
 
 
 
-				buf.append("<iframe width=560 height=349 src=http://www.youtube.com/embed/" + video.serialNumber + " frameborder=0 allowfullscreen></iframe>");
+				if (video!=null) buf.append("<iframe width=560 height=349 src=http://www.youtube.com/embed/" + video.serialNumber + " frameborder=0 allowfullscreen></iframe>");
 				/*			buf.append("<object width='425' height='344'><param name='movie' "
 					+ "value='http://www.youtube.com/v/" + requestedVideo + "&hl=en_US&fs=1'>"
 					+ "</param><param name='allowFullScreen' value='true'></param><param "
