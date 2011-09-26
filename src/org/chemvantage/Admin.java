@@ -170,7 +170,7 @@ public class Admin extends HttpServlet {
 					User u = iterator.next();
 					u.clean();
 					buf.append("\n<FORM METHOD=GET>"
-							+ "<TR><TD>" + u.lastName + "</TD>"
+							+ "<TR style=color:" + (u.alias==null?"black":"grey") + "><TD>" + u.lastName + "</TD>"
 							+ "<TD>" + u.firstName + "</TD>"
 							+ "<TD>" + u.email + "</TD>"
 							+ "<TD>" + u.getPrincipalRole() + "</TD>" 
@@ -238,6 +238,7 @@ public class Admin extends HttpServlet {
 					+ "\n<TR><TD ALIGN=RIGHT>Acct Type: </TD><TD>"
 					+ "<INPUT TYPE=RADIO NAME=Premium VALUE='false'" + (!premiumAccount?" CHECKED":"") + ">Basic "
 					+ "<INPUT TYPE=RADIO NAME=Premium VALUE='true'" + (premiumAccount?" CHECKED":"") + ">Premium</TD></TR>");
+			buf.append("<TR><TD ALIGN=RIGHT>Alias: </TD><TD><INPUT TYPE=TEXT NAME=Alias VALUE='" + (usr.alias==null?"":usr.alias) + "'></TD></TR>");
 			buf.append("<TR><TD ALIGN=RIGHT>Group: </TD><TD>" + groupSelectBox(usr.myGroupId) + "</TD></TR>");
 			buf.append("\n<TR><TD ALIGN=RIGHT>Last Login: </TD>"
 					+ "<TD>" + usr.lastLogin + "</TD></TR>"
@@ -323,6 +324,8 @@ public class Admin extends HttpServlet {
 			usr.setLowerCaseName();
 			usr.roles = roles;
 			usr.setPremium(Boolean.parseBoolean(request.getParameter("Premium")));
+			if (request.getParameter("Alias").isEmpty()) usr.alias = null;
+			else usr.alias = request.getParameter("Alias");
 			try {
 				long newId = Long.parseLong(request.getParameter("GroupId"));  // get groupId for new group
 				usr.changeGroups(newId);
