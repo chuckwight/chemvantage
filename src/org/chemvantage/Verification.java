@@ -20,6 +20,7 @@ package org.chemvantage;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Date;
+import java.util.List;
 import java.util.Properties;
 
 import javax.mail.Message;
@@ -85,6 +86,7 @@ public class Verification extends HttpServlet {
 			if (userRequest == null) userRequest = "";
 			
 			if (userRequest.equals("Save")) {
+				boolean verify = false;
 				String firstName = request.getParameter("FirstName");
 				String lastName = request.getParameter("LastName");
 				String email = request.getParameter("Email");
@@ -97,10 +99,11 @@ public class Verification extends HttpServlet {
 					} catch(Exception e){
 						user.verifiedEmail = false;
 					}
+					verify = true;
 				}
 				user.lastLogin = new Date();
 				ofy.put(user);
-				out.println(Home.getHeader(user) + personalInfoForm(user,false) + Home.footer);
+				out.println(Home.getHeader(user) + personalInfoForm(user,verify?verificationEmailSent(user,request):false,request) + Home.footer);
 			} else if (userRequest.equals("Verify My Email Address")) {
 				try {
 					user.verifiedEmail = user.email.equals(UserServiceFactory.getUserService().getCurrentUser().getEmail());
@@ -108,10 +111,25 @@ public class Verification extends HttpServlet {
 				}
 				user.lastLogin = new Date();
 				ofy.put(user);
-				out.println(Home.getHeader(user) + (user.verifiedEmail?personalInfoForm(user,false):personalInfoForm(user,verificationEmailSent(user,request))) + Home.footer);
-			} else {
-				out.println(Home.getHeader(user) + personalInfoForm(user,false) + Home.footer);
-			}
+				out.println(Home.getHeader(user) + (user.verifiedEmail?personalInfoForm(user,false,request):personalInfoForm(user,verificationEmailSent(user,request),request)) + Home.footer);
+			} else if (userRequest.equals("Get Authorization Code")) {
+				if (mergeAuthCodeSent(user,request)) out.println(Home.getHeader(user) + personalInfoForm(user,false,request) + Home.footer);
+				else out.println("Sorry, the authorization code could not be sent. Please try again later.");
+			} else if (userRequest.equals("Merge This Account With Mine")) {
+				try {
+					String fromUserId = request.getParameter("FromAccount");
+					String toUserId = request.getParameter("ToAccount");
+					int code = Integer.parseInt(request.getParameter("Code"));
+					if (code==Math.abs((new Key<User>(User.class,fromUserId).toString() + new Key<User>(User.class,toUserId)).toString().hashCode())) {
+						User fromUser = ofy.get(User.class,fromUserId);
+						User toUser = ofy.get(User.class,toUserId);
+						Admin.mergeAccounts(toUser,fromUser);
+						out.println(Home.getHeader(user) + personalInfoForm(user,false,request) + Home.footer);
+					} else out.println("The authorization code was not valid.");
+				} catch (Exception e) {
+					out.println("The authorization code was not valid.");
+				}
+			} else out.println(Home.getHeader(user) + personalInfoForm(user,false,request) + Home.footer);
 		} catch (Exception e) {
 		}
 
@@ -155,7 +173,7 @@ public class Verification extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String personalInfoForm(User user,boolean verificationEmailSent) {
+	String personalInfoForm(User user,boolean verificationEmailSent,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		boolean nameRequired = user.firstName.isEmpty() || user.lastName.isEmpty();
 		boolean emailRequired = user.email.isEmpty();
@@ -211,10 +229,82 @@ public class Verification extends HttpServlet {
 						+ "instructions for any changes that are necessary.<p>" 
 						+ "<a href=/Home>Go to the ChemVantage Home Page now</a><p>");
 			}
-			buf.append("</FORM");
+			buf.append("</FORM>");
+			
+			buf.append("<h3>Do You Have Multiple ChemVantage Accounts?</h3>"
+					+ "This is fairly common because there are multiple ways of creating ChemVantage accounts. "
+					+ "If you think you have more than one account and you don't see options below for merging "
+					+ "them below, first check each account to make sure that the email address has "
+					+ "been verified by ChemVantage. If that doesn't work, send a detailed account merge request to "
+					+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.<p>");
+			if (user.verifiedEmail) {
+				// This section finds accounts with duplicate verified email addresses for immediate account merging
+				List<User> duplicateEmails = ofy.query(User.class).filter("email",user.email).list();
+				buf.append("<TABLE>");
+				for (User u : duplicateEmails) {
+					if (u.id.equals(user.id) || !u.verifiedEmail || u.alias!=null) continue;
+					int code = Math.abs((new Key<User>(User.class,u.id).toString() + new Key<User>(User.class,user.id).toString()).hashCode());
+					int i = duplicateEmails.indexOf(u);
+					String consumerKey = u.authDomain.equals("BLTI")?u.id.substring(0, u.id.indexOf(":")):u.authDomain;
+					buf.append("<TR><TD>" + u.getFullName() + " (" + u.email + ") - authorization domain=" + consumerKey + "</TD>"
+							+ "<TD><FORM NAME=DuplicateEmail" + i + " ACTION=Verification METHOD=POST>"
+							+ "<INPUT TYPE=HIDDEN NAME=FromAccount VALUE='" + u.id + "'>"
+							+ "<INPUT TYPE=HIDDEN NAME=ToAccount VALUE='" + user.id + "'>"
+							+ "<INPUT TYPE=HIDDEN NAME=Code VALUE='" + code + "'>"
+							+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Merge This Account With Mine' "
+							+ "onClick=\"javascript: document.DuplicateEmail" + i + ".UserRequest.style.visibility='hidden';return confirm('Are you sure? This action cannot be undone.')\">"
+							+ "</FORM></TD></TR>");
+				}
+				// This section finds duplicate names, sends a code to the user's email address and accepts it to initiate an account merge.
+				List<User> duplicateNames = ofy.query(User.class).filter("lowercaseName",user.lowercaseName).list();
+				for (User u : duplicateNames) {
+					if (u.id.equals(user.id) || duplicateEmails.contains(u) || !u.verifiedEmail || u.alias!=null) continue;
+					int i = duplicateNames.indexOf(u);
+					String consumerKey = u.authDomain.equals("BLTI")?u.id.substring(0, u.id.indexOf(":")):u.authDomain;
+					buf.append("<TR><TD>" + u.getFullName() + " (" + u.email + ") - authorization domain=" + consumerKey + "</TD>"
+							+ "<TD><FORM NAME=DuplicateName" + i + " ACTION=Verification METHOD=POST>"
+							+ "<INPUT TYPE=HIDDEN NAME=FromAccount VALUE='" + u.id + "'>"
+							+ "<INPUT TYPE=HIDDEN NAME=ToAccount VALUE='" + user.id + "'>");
+					if ("Get Authorization Code".equals(request.getParameter("UserRequest")) && u.id.equals(request.getParameter("FromAccount"))) {
+						buf.append("</TD></TR><TR><TD COLSPAN=2>"
+								+ "<span style=color:red>An email has been sent to " + u.email + " with an authorization code. Please enter it here: </span>"
+								+ "<INPUT TYPE=TEXT NAME=Code><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Merge This Account With Mine'>");
+					} else {
+						buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Get Authorization Code'>");
+					}
+					buf.append("</TD></TR>");
+				}
+				buf.append("</TABLE>");
+			}
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}
 		return buf.toString();
+	}
+	
+	boolean mergeAuthCodeSent(User user,HttpServletRequest request) {
+		if (!user.verifiedEmail) return false;
+		Properties props = new Properties();
+		Session session = Session.getDefaultInstance(props, null);
+		try {
+			User fromAccountUser = ofy.get(User.class,request.getParameter("FromAccount"));
+			int code = Math.abs((new Key<User>(User.class,fromAccountUser.id).toString() + new Key<User>(User.class,user.id)).toString().hashCode());
+			String msgBody = "<h3>ChemVantage Account Merge Request</h3>"
+				+ "To complete the requested account merge request, please copy/paste the following "
+				+ "authorization number into the request form:<p>"
+				+ code + "<p>"
+				+ "If you did not request this authorization code, please ignore this message.<br>" 
+				+ "For assistance, please reply to admin@chemvantage.org.<p>"
+				+ "Thank you.";
+			Message msg = new MimeMessage(session);
+			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
+			msg.addRecipient(Message.RecipientType.TO,new InternetAddress(fromAccountUser.email, fromAccountUser.getBothNames()));
+			msg.setSubject("ChemVantage Authorization Number");
+			msg.setContent(msgBody,"text/html");
+			Transport.send(msg);
+			return true;
+		} catch (Exception e) {
+			return false;
+		}
 	}
 }
