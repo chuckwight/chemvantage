@@ -92,60 +92,65 @@ public class Home extends HttpServlet {
 
 	static String getHeader(User user) {
 		StringBuffer buf = new StringBuffer();
-		String now = new Date().toString();
-		buf.append("<!DOCTYPE html>"
-				+"<html >"
-				+ "<head>"
-				+ "<meta HTTP-EQUIV='Content-type' CONTENT='text/html;charset=iso-8859-1'>"
-				+ "<meta HTTP-EQUIV='Expires' CONTENT='" + now + "'>\n"
-				+ "<meta HTTP-EQUIV='P3P' CONTENT='policyref=\"http://www.chemvantage.org/w3c/p3p.xml\",CP=\"CURa ADMa DEVa OUR IND DSP OTI COR\"'>\n"
-				+ "<meta NAME='Description' CONTENT='An online quiz and homework site'>\n"
-				+ "<meta NAME='Keywords' CONTENT='learning,online,quiz,homework,video,textbook,open,education'>\n"
-				+ "<link rel='P3Pv1' href='/w3c/p3p.xml'>\n"
-				+ "<title>ChemVantage</title>\n"
-				+ "<style><!-- body,td,a,p,.h {font-family:arial,sans-serif}"
-				+ "#pzon{float:left;font-weight:bold;height:22px;padding-left:2px}"
-				+ "#phzl{border-top:1px solid#c9d7f1;font-size:0;height:0;position:absolute;right:0;top:24px;width:200%}"
-				+ "#pzbg{background:#fff;border:1px solid;border-color:#c9d7f1 #36c #36c#a2bae7;font-size:13px;top:24px;z-index:1000}"
-				+ "#puzr{padding-bottom:7px !important}"
-				+ "#pzon,#puzr{font-size:13px;padding-top:1px!important}"
-				+ ".pz1,.pz2{display:inline;height:22px;margin-right:1em;vertical-align:top}"
-				+ "#pzbg,.pz3{display:none;position:absolute;width:7em}"
-				+ ".pz3{z-index:1001}"
-				+ "#pzon a,#pzon a:active,#pzon a:visited{color:#00c;font-weight:normal}"
-				+ ".pz3 a,.pz2 a{text-decoration:none}"
-				+ ".pz3 a{display:block;padding:.2em .5em}"
-				+ "#pzon .pz3 a:hover{background:#36c;color:#fff}"
-				+ "--> </style>\n"
-				+ "</head>\n"
-				+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
-				//+ "onLoad='javascript: if(top.location!=location)top.location.href=document.location.href;'>\n"
-				+ "<TABLE><TR><TD>\n"
-				+ "<div id=pzon><nobr>"
-				+ "<div class=pz1>ChemVantage.org</div>"
-				+ " <div class=pz1><a href=Home>Home</a></div>"
-				+ " <div class=pz1><a href=About>About Us</a></div>"
-				+ " <div class=pz1><a href=help.html>Help</a></div>"
-				+ "<div class=pz1><a href=Feedback>Feedback</a></div>");
-		
-		buf.append("<div class=pz1><a href=Contribute>Contribute</a></div>");
-		if (user.isEditor()) buf.append("<div class=pz1><a href=Edit>Edit</a></div>");
-		if (user.isInstructor() || user.isTeachingAssistant()) buf.append("<div class=pz1><a href=Groups>Groups</a></div>\n");
-		if (user.isAdministrator()) buf.append("<div class=pz1><a href=Admin>Admin</a></div>");
+		try {
+			String now = new Date().toString();
 
-		buf.append("</nobr></div>\n");
-		
-		buf.append("<div id=phzl></div><div align=right id=puzr "
+			buf.append("<!DOCTYPE html>"
+					+"<html >"
+					+ "<head>"
+					+ "<meta HTTP-EQUIV='Content-type' CONTENT='text/html;charset=iso-8859-1'>"
+					+ "<meta HTTP-EQUIV='Expires' CONTENT='" + now + "'>\n"
+					+ "<meta HTTP-EQUIV='P3P' CONTENT='policyref=\"http://www.chemvantage.org/w3c/p3p.xml\",CP=\"CURa ADMa DEVa OUR IND DSP OTI COR\"'>\n"
+					+ "<meta NAME='Description' CONTENT='An online quiz and homework site'>\n"
+					+ "<meta NAME='Keywords' CONTENT='learning,online,quiz,homework,video,textbook,open,education'>\n"
+					+ "<link rel='P3Pv1' href='/w3c/p3p.xml'>\n"
+					+ "<title>ChemVantage</title>\n"
+					+ "<style><!-- body,td,a,p,.h {font-family:arial,sans-serif}"
+					+ "#pzon{float:left;font-weight:bold;height:22px;padding-left:2px}"
+					+ "#phzl{border-top:1px solid#c9d7f1;font-size:0;height:0;position:absolute;right:0;top:24px;width:200%}"
+					+ "#pzbg{background:#fff;border:1px solid;border-color:#c9d7f1 #36c #36c#a2bae7;font-size:13px;top:24px;z-index:1000}"
+					+ "#puzr{padding-bottom:7px !important}"
+					+ "#pzon,#puzr{font-size:13px;padding-top:1px!important}"
+					+ ".pz1,.pz2{display:inline;height:22px;margin-right:1em;vertical-align:top}"
+					+ "#pzbg,.pz3{display:none;position:absolute;width:7em}"
+					+ ".pz3{z-index:1001}"
+					+ "#pzon a,#pzon a:active,#pzon a:visited{color:#00c;font-weight:normal}"
+					+ ".pz3 a,.pz2 a{text-decoration:none}"
+					+ ".pz3 a{display:block;padding:.2em .5em}"
+					+ "#pzon .pz3 a:hover{background:#36c;color:#fff}"
+					+ "--> </style>\n"
+					+ "</head>\n"
+					+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
+					//+ "onLoad='javascript: if(top.location!=location)top.location.href=document.location.href;'>\n"
+					+ "<TABLE><TR><TD>\n"
+					+ "<div id=pzon><nobr>"
+					+ "<div class=pz1>ChemVantage.org</div>"
+					+ " <div class=pz1><a href=Home>Home</a></div>"
+					+ " <div class=pz1><a href=About>About Us</a></div>"
+					+ " <div class=pz1><a href=help.html>Help</a></div>"
+					+ "<div class=pz1><a href=Feedback>Feedback</a></div>");
+
+			buf.append("<div class=pz1><a href=Contribute>Contribute</a></div>");
+			if (user.isEditor()) buf.append("<div class=pz1><a href=Edit>Edit</a></div>");
+			if (user.isInstructor() || user.isTeachingAssistant()) buf.append("<div class=pz1><a href=Groups>Groups</a></div>\n");
+			if (user.isAdministrator()) buf.append("<div class=pz1><a href=Admin>Admin</a></div>");
+
+			buf.append("</nobr></div>\n");
+
+			buf.append("<div id=phzl></div><div align=right id=puzr "
 					+ "style='font-size:84%;padding:0 0 4px' width=100%><nobr><b>" 
 					+ (user.email != null && user.email.length()>0?user.email:"") + "</b>");
-		
-		buf.append("&nbsp;&nbsp;");
-		buf.append("<a href='"
-				+ UserServiceFactory.getUserService().createLogoutURL("/")
-				+ "'>Sign out</a>");
-		buf.append("</nobr></div>");
 
-		buf.append("<FONT COLOR=RED>" + announcement + "</FONT>");
+			buf.append("&nbsp;&nbsp;");
+			buf.append("<a href='"
+					+ UserServiceFactory.getUserService().createLogoutURL("/")
+					+ "'>Sign out</a>");
+			buf.append("</nobr></div>");
+
+			buf.append("<FONT COLOR=RED>" + announcement + "</FONT>");
+		} catch (Exception e) {
+			return e.toString();
+		}
 		return buf.toString();
 	}
 	
