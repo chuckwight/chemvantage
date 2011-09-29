@@ -40,6 +40,8 @@ public class Home extends HttpServlet {
 	Objectify ofy = dao.ofy();
 	Subject subject = dao.getSubject();
 	List<Video> videos = ofy.query(Video.class).order("orderBy").list();
+	List<Topic> topics = ofy.query(Topic.class).order("orderBy").list();
+	List<Text> texts = ofy.query(Text.class).list();
 		
 	public String getServletInfo() {
 		return "Default servlet for user's home page.";
@@ -175,7 +177,7 @@ public class Home extends HttpServlet {
 			buf.append("<FORM NAME='HQSelectForm' ACTION=Quiz METHOD=GET>");
 			buf.append("<SELECT NAME='TopicId'><OPTION Value='0' SELECTED>Select a topic</OPTION>");
 			
-			List<Topic> topics = ofy.query(Topic.class).order("orderBy").list();
+			//List<Topic> topics = ofy.query(Topic.class).order("orderBy").list();
 			for (Topic t : topics) {
 				if (!t.orderBy.equals("Hide"))
 				buf.append("<OPTION VALUE='" + t.id + "'>" + t.title + "</OPTION>");
@@ -199,7 +201,7 @@ public class Home extends HttpServlet {
 			buf.append("</FORM></TD></TR></TABLE><p>\n");
 
 			// Add text resources table to the page
-			List<Text> texts = ofy.query(Text.class).list();
+			//List<Text> texts = ofy.query(Text.class).list();
 			buf.append("<TABLE><TR><TD NOWRAP>"
 					+ "<p><b>" + texts.size() + " Free Textbook Resources</b><br>");
 			for (Text t : texts) {
