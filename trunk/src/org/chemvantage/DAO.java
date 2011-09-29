@@ -48,10 +48,15 @@ public class DAO extends com.googlecode.objectify.util.DAOBase {
 	}
 	
 	public Subject getSubject() {
-		Subject genChem = ofy().query(Subject.class).get();
-		if (genChem==null) {
-			genChem = new Subject("General Chemistry");
-			ofy().put(genChem);
+		Subject genChem = null;
+		try {
+			genChem = ofy().query(Subject.class).get();
+			if (genChem==null) {
+				genChem = new Subject("General Chemistry");
+				ofy().put(genChem);
+			}
+		} catch (Exception e) {
+			Home.announcement = Home.maintenanceAnnouncement;
 		}
 		return genChem;
 	}
