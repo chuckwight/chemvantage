@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.DateFormat;
@@ -37,6 +39,8 @@ import org.xeustechnologies.googleapi.spelling.SpellChecker;
 import org.xeustechnologies.googleapi.spelling.SpellCorrection;
 import org.xeustechnologies.googleapi.spelling.SpellResponse;
 
+import com.google.appengine.api.taskqueue.Queue;
+import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
 
@@ -275,7 +279,8 @@ public class Quiz extends HttpServlet {
 			}
 			Map<Key<Question>,Question> questions = ofy.get(questionKeys);
 			
-			List<Response> responses = new ArrayList<Response>();
+			//List<Response> responses = new ArrayList<Response>();
+			Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
 			for (Key<Question> k : questionKeys) {
 				try {
 					String studentAnswer[] = request.getParameterValues(Long.toString(k.getId()));
@@ -285,7 +290,16 @@ public class Quiz extends HttpServlet {
 							Question q = questions.get(k);
 							q.setParameters((int)(qt.id - q.id));
 							int score = q.isCorrect(studentAnswer[0])?q.pointValue:0;
-							responses.add(new Response("Quiz",qt.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now));
+							queue.add(withUrl("/ResponseServlet")
+									.param("AssignmentType","Quiz")
+									.param("TopicId", Long.toString(qt.topicId))
+									.param("QuestionId", Long.toString(q.id))
+									.param("StudentResponse", studentAnswer[0])
+									.param("CorrectAnswer", q.getCorrectAnswer())
+									.param("Score", Integer.toString(score))
+									.param("PossibleScore", Integer.toString(q.pointValue))
+									.param("UserId", user.id));
+							//responses.add(new Response("Quiz",qt.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now));
 							studentScore += score;
 							if (score == 0) {  
 								// include question in list of incorrectly answered questions
@@ -298,7 +312,7 @@ public class Quiz extends HttpServlet {
 					continue;  // this parameter does not correspond to a questionId
 				}
 			}
-			ofy.put(responses);  // save all responses to the datastore
+			//ofy.put(responses);  // save all responses to the datastore
 			missedQuestions.append("</OL>\n");
 			qt.score = studentScore;
 			qt.graded = now;

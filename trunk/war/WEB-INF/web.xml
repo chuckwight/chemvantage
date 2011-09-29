@@ -191,6 +191,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet-mapping>
 	
 	<servlet>
+		<servlet-name>ResponseServlet</servlet-name>
+		<servlet-class>org.chemvantage.ResponseServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ResponseServlet</servlet-name>
+		<url-pattern>/ResponseServlet</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
 		<servlet-name>Scores</servlet-name>
 		<servlet-class>org.chemvantage.Scores</servlet-class>
 	</servlet>
@@ -237,6 +246,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 			<url-pattern>/ManageDemoPremiumAccounts</url-pattern>
 			<url-pattern>/Notification</url-pattern>
 			<url-pattern>/Rescue</url-pattern>
+			<url-pattern>/ResponseServlet</url-pattern>
 			</web-resource-collection>
 		<auth-constraint>
 			<role-name>admin</role-name>
