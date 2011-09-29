@@ -72,6 +72,7 @@ public class Upgrade extends HttpServlet {
 		+ "<li>Reminders - Premium users have the option of receiving email or SMS reminders of assignment deadlines."
 		+ "<li>Timers - Quizzes display an optional timer that shows the minutes and seconds remaining."
 		+ "<li>Spell Checkers - Questions having a 'fill-in-word' format include an optional spelling checker."
+		+ "<li>Google Search - Questions having a 'fill-in-word' format have a convenient button to search for information on the subject."
 		+ "</ol>"
 		+ (user.hasPremiumAccount()?"Your account has already been upgraded to premium status.":"<FONT COLOR=RED>"
 		+ "<b>100% Satisfaction Guarantee</b></FONT><br>Try it for 3 weeks. If you aren't satisfied for any reason, "

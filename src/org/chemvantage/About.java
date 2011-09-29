@@ -103,6 +103,7 @@ public class About extends HttpServlet {
 		+ "<li>Reminders - Premium users have the option of receiving email or SMS reminders of assignment deadlines."
 		+ "<li>Timers - Quizzes display an optional timer that shows the minutes and seconds remaining."
 		+ "<li>Spell Checkers - Questions having a 'fill-in-word' format include an optional spelling checker."
+		+ "<li>Google Search - Questions having a 'fill-in-word' format have a convenient button to search for information on the subject."
 		+ "</ol>"
 		+ "<a href=Upgrade>Click here to upgrade your account</a><p>"
 		+ "All ChemVantage accounts expire automatically after a 6 month period of inactivity.";
