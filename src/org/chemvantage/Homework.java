@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.DateFormat;
@@ -29,6 +31,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
 
@@ -202,10 +205,19 @@ public class Homework extends HttpServlet {
 				if (studentAnswer[0].length() > 0) { // an answer was submitted
 					// record the response in the Responses table for question debugging:
 					studentScore = q.isCorrect(studentAnswer[0])?q.pointValue:0;
-					Response r = new Response("Homework",topic.id,q.id,studentAnswer[0],q.getCorrectAnswer(),studentScore,possibleScore,user.id,now);
-					ofy.put(r);
+					QueueFactory.getDefaultQueue().add(withUrl("/ResponseServlet")
+							.param("AssignmentType","Homework")
+							.param("TopicId", Long.toString(topic.id))
+							.param("QuestionId", Long.toString(q.id))
+							.param("StudentResponse", studentAnswer[0])
+							.param("CorrectAnswer", q.getCorrectAnswer())
+							.param("Score", Integer.toString(studentScore))
+							.param("PossibleScore", Integer.toString(possibleScore))
+							.param("UserId", user.id));
+					//Response r = new Response("Homework",topic.id,q.id,studentAnswer[0],q.getCorrectAnswer(),studentScore,possibleScore,user.id,now);
+					//ofy.put(r);
 					// save the Homework Transaction in the datastore
-					HWTransaction ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,r.id,studentScore,possibleScore,request.getRequestURI());
+					HWTransaction ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,0L,studentScore,possibleScore,request.getRequestURI());
 					ofy.put(ht);
 					// create/update/store a HomeworkScore object
 					try {
