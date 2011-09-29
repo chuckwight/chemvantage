@@ -272,7 +272,7 @@ public class Home extends HttpServlet {
 				}
 			}
 			if (myGroup == null) {
-				if (ofy.query(Group.class).count() > 0) buf.append("<TR><TD COLSPAN=2 ALIGN=CENTER><FONT SIZE=-1><a href=Groups>Find My Group</FONT></TD></TR>");
+				buf.append("<TR><TD COLSPAN=2 ALIGN=CENTER><FONT SIZE=-1><a href=Groups>Find My Group</FONT></TD></TR>");
 			} else {
 				if (!myGroup.memberIds.contains(user.id)) {
 					// a user has been invited to join a group when myGroupId 
