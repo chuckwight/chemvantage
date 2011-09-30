@@ -92,41 +92,43 @@ public class User implements Comparable<User>,Serializable {
 		}
 		
 		//  from here on, userId should be valid
-		Objectify ofy = ObjectifyService.begin();
 		User user = null;
 		try {
-			List<String> aliasChain = new ArrayList<String>();
-			do {  // this loop finds the end of the alias chain without going into an infinite loop
-				user = ofy.get(User.class,userId); // retrieve User attributes from datastore if it exists
-				if (user.alias != null) {
-					aliasChain.add(user.id);
-					userId = user.alias;
-				}
-			} while (user.alias!=null && !aliasChain.contains(userId));
-		} catch (Exception e) {  // falls to here when datastore call fails
-			user = new User(userId);
-			userService = UserServiceFactory.getUserService();
-			googleUser = userService.getCurrentUser();
-			user.authDomain = googleUser.getAuthDomain();
-			user.email = googleUser.getEmail();
-			user.setIsAdministrator(userService.isUserAdmin());
-			ofy.put(user);
-		}
-		session.setAttribute("UserId", userId);
+			Objectify ofy = ObjectifyService.begin();
+			try {
+				List<String> aliasChain = new ArrayList<String>();
+				do {  // this loop finds the end of the alias chain without going into an infinite loop
+					user = ofy.get(User.class,userId); // retrieve User attributes from datastore if it exists
+					if (user.alias != null) {
+						aliasChain.add(user.id);
+						userId = user.alias;
+					}
+				} while (user.alias!=null && !aliasChain.contains(userId));
+			} catch (Exception e) {  // falls to here when datastore call fails
+				user = new User(userId);
+				userService = UserServiceFactory.getUserService();
+				googleUser = userService.getCurrentUser();
+				user.authDomain = googleUser.getAuthDomain();
+				user.email = googleUser.getEmail();
+				user.setIsAdministrator(userService.isUserAdmin());
+				ofy.put(user);
+			}
+			session.setAttribute("UserId", userId);
 
-		// update the lastLogin date only if everything is OK; otherwise the Verification page will stop the user
-		if (freshLogin && !user.requiresUpdates()) {
-			user.lastLogin = new Date();
-			try {  // this tests the availability of the datastore and locks the site if necessary
-				ofy.put(user); 
-				if (Home.announcement.equals(Home.maintenanceAnnouncement)) {
-					Home.announcement = "";
-					Login.lockedDown = false;
-				}
-			} catch (com.google.apphosting.api.ApiProxy.CapabilityDisabledException e) {
+			// update the lastLogin date only if everything is OK; otherwise the Verification page will stop the user
+			if (freshLogin && !user.requiresUpdates()) {
+				user.lastLogin = new Date();
+				ofy.put(user);
+			}
+			
+			// if everything is OK, restore the site message to normal
+			if (Home.announcement.equals(Home.maintenanceAnnouncement)) {
+				Home.announcement = "";
+				Login.lockedDown = false;
+			}
+		} catch (Exception e) {  // there's an unexpected problem
 				Home.announcement = Home.maintenanceAnnouncement;
 				Login.lockedDown = true;
-			}
 		}
 		return user;
 	}
