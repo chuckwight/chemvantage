@@ -22,17 +22,21 @@ import java.util.Date;
 
 import javax.persistence.Id;
 
+import com.googlecode.objectify.annotation.Indexed;
+import com.googlecode.objectify.annotation.Unindexed;
+
+@Unindexed
 public class Response implements Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id Long id;
 	String assignmentType;
 	long topicId;
-	long questionId;
+	@Indexed long questionId;
 	String studentResponse;
 	String correctAnswer;
 	int score;
 	int possibleScore;
-	String userId;
+	@Indexed String userId;
 	Date submitted;
 
 	Response() {}

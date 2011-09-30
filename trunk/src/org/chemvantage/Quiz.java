@@ -25,6 +25,7 @@ import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -55,6 +56,7 @@ public class Quiz extends HttpServlet {
 	DAO dao = new DAO();
 	Objectify ofy = dao.ofy();
 	Subject subject = dao.getSubject();
+	Map<Key<Question>,Question> quizQuestions = new HashMap<Key<Question>,Question>();
 
 	public String getServletInfo() {
 		return "This servlet presents a quiz for the user.";
@@ -158,7 +160,32 @@ public class Quiz extends HttpServlet {
 			rand.setSeed(qt.id);  // random number generator seeded with QuizTransaction id value
 			int possibleScore = 0;
 			int nQuestions = (nQuestionsPerSubjectArea < questionKeys.size()?nQuestionsPerSubjectArea:questionKeys.size());
+
+			int i = 0;
+			buf.append("<OL>\n");
+			while (i<nQuestions && questionKeys.size()>0) {
+				Key<Question> k = questionKeys.remove(rand.nextInt(questionKeys.size()));
+				Question q = quizQuestions.get(k);
+				if (q==null) {
+					try {
+						q = ofy.get(k);
+						quizQuestions.put(k,q);
+					} catch (Exception e) {
+						continue;  // this catches cases where an assigned question no longer exists
+					}
+				}
+				// by this point we should have a valid question
+				i++;  // this counter keeps track of the number of questions presented so far
+				possibleScore += q.pointValue;
+				// the parameterized questions are seeded with a value based on the ids for the quizTransaction and the question
+				// in order to make the value reproducible for grading but variable for each quiz and from one question to the next
+				q.setParameters((int)(qt.id - q.id));
+				//buf.append("\n<li>" + selected.print() + "<br></li>\n");
+				buf.append("\n<li>" + (user.hasPremiumAccount()?q.printPremium():q.print()) + "<br></li>\n");
+			}
+			buf.append("</OL>");
 			
+/*			
 			// select nQuestions random keys from questionKeys and store them in keys; then fetch the questions themselves
 			List<Key<Question>> keys = new ArrayList<Key<Question>>();
 			for (int i = 0; i < nQuestions; i++) keys.add(questionKeys.remove(rand.nextInt(questionKeys.size())));
@@ -183,7 +210,7 @@ public class Quiz extends HttpServlet {
 				buf.append("\n<li>" + (user.hasPremiumAccount()?selected.printPremium():selected.print()) + "<br></li>\n");
 			}
 			buf.append("</OL>");
-
+*/
 			// update and store the QuizTransaction for this quiz
 			qt.possibleScore = possibleScore;
 			ofy.put(qt);
@@ -277,7 +304,7 @@ public class Quiz extends HttpServlet {
 					questionKeys.add(new Key<Question>(Question.class,Long.parseLong((String) e.nextElement())));
 				} catch (Exception e2) {}
 			}
-			Map<Key<Question>,Question> questions = ofy.get(questionKeys);
+			//Map<Key<Question>,Question> questions = ofy.get(questionKeys);
 			
 			//List<Response> responses = new ArrayList<Response>();
 			Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
@@ -287,7 +314,15 @@ public class Quiz extends HttpServlet {
 					if (studentAnswer != null) {
 						for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
 						if (studentAnswer[0].length() > 0) { // an answer was submitted
-							Question q = questions.get(k);
+							Question q = quizQuestions.get(k);
+							if (q==null) {
+								try {
+									q = ofy.get(k);
+									quizQuestions.put(k,q);
+								} catch (Exception e) {
+									continue;
+								}
+							}
 							q.setParameters((int)(qt.id - q.id));
 							int score = q.isCorrect(studentAnswer[0])?q.pointValue:0;
 							queue.add(withUrl("/ResponseServlet")

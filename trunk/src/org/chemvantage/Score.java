@@ -29,8 +29,9 @@ import com.googlecode.objectify.ObjectifyService;
 import com.googlecode.objectify.Query;
 import com.googlecode.objectify.annotation.Cached;
 import com.googlecode.objectify.annotation.Parent;
+import com.googlecode.objectify.annotation.Unindexed;
 
-@Cached
+@Cached @Unindexed
 public class Score {    // this object represents a best score achieved by a user on a quiz or homework
 	@Id Long assignmentId;      // from the datastore.
 	@Parent Key<User> owner;

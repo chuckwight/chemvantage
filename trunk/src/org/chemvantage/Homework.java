@@ -23,7 +23,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.DateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.TimeZone;
 
 import javax.servlet.ServletException;
@@ -41,6 +43,7 @@ public class Homework extends HttpServlet {
 	DAO dao = new DAO();
 	Objectify ofy = dao.ofy();
 	Subject subject = dao.getSubject();
+	Map<Key<Question>,Question> hwQuestions = new HashMap<Key<Question>,Question>();
 
 	public String getServletInfo() {
 		return "This servlet presents a homework assignment for the user.";
@@ -121,7 +124,16 @@ public class Homework extends HttpServlet {
 				buf.append("<TABLE>");
 				for (Key<Question> k : hwa.questionKeys) {
 					try {
-						Question q = ofy.get(k);
+						Question q = hwQuestions.get(k);
+						if (q==null) {
+							try {
+								q = ofy.get(k);
+								hwQuestions.put(k,q);
+							} catch (Exception e) {
+								continue;  // this catches cases where an assigned question no longer exists
+							}
+						}
+						//Question q = ofy.get(k);
 						q.setParameters(user.id.hashCode());
 						buf.append("\n<TR VALIGN=TOP><TD>");
 						if (user.getHWQuestionScore(q.id) > 0) buf.append("<IMG SRC=/images/checkmark.gif ALT='OK'>");
@@ -146,7 +158,15 @@ public class Homework extends HttpServlet {
 			int i = 1;
 			buf.append("<TABLE>");
 			for (Key<Question> k : optionalQuestionKeys) {
-				Question q = ofy.get(k);
+				Question q = hwQuestions.get(k);
+				if (q==null) {
+					try {
+						q = ofy.get(k);
+						hwQuestions.put(k,q);
+					} catch (Exception e) {
+						continue;  // this catches cases where an assigned question no longer exists
+					}
+				}
 				q.setParameters(user.id.hashCode());
 				buf.append("\n<TR VALIGN=TOP><TD>");
 				if (user.getHWQuestionScore(q.id) > 0) buf.append("<IMG SRC=/images/checkmark.gif ALT='OK'>");
@@ -171,7 +191,13 @@ public class Homework extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		try {
 			long questionId = Long.parseLong(request.getParameter("QuestionId"));
-			Question q = ofy.get(Question.class,questionId);
+			Key<Question> k = new Key<Question>(Question.class,questionId);
+			Question q = hwQuestions.get(k);
+			if (q==null) {
+				q = ofy.get(k);
+				hwQuestions.put(k,q);
+			}
+			//Question q = ofy.get(Question.class,questionId);
 			Topic topic = ofy.get(Topic.class,q.topicId);
 
 			Date now = new Date();
