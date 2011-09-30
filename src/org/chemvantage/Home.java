@@ -47,8 +47,9 @@ public class Home extends HttpServlet {
 		return "Default servlet for user's home page.";
 	}
 
-	public static String maintenanceAnnouncement = "Due to scheduled maintenance on the datastore, ChemVantage is temporarily unavailable.<br>"
-		+ "Please try again later. We apologize for any inconvenience.";
+	public static String maintenanceAnnouncement = "Due to problem with the Google AppEngine servers, ChemVantage is temporarily unavailable.<br>"
+		+ "You can monitor the status Google AppEngine at <a href=http://code.google.com/status/appengine>http://code.google.com/status/appengine</a><br>"
+		+ "Please try again later. We apologize for the inconvenience. -ChemVantage";
 
 	public static String footer = "\n<hr><CENTER><FONT SIZE=-1>"
 		+ "&copy; 2007-11 ChemVantage.org. <a href=About#terms>Terms and Conditions of Use</a>"
