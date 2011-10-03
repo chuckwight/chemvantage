@@ -110,6 +110,7 @@ public class User implements Comparable<User>,Serializable {
 				googleUser = userService.getCurrentUser();
 				user.authDomain = googleUser.getAuthDomain();
 				user.email = googleUser.getEmail();
+				user.verifiedEmail = !(user.email==null || user.email.isEmpty());
 				user.setIsAdministrator(userService.isUserAdmin());
 				ofy.put(user);
 			}

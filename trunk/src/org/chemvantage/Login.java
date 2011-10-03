@@ -21,14 +21,17 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Objectify;
 
@@ -44,13 +47,16 @@ public class Login extends HttpServlet {
 
 // OpenId testing here:	
     private static final Map<String, String> openIdProviders;
+    private static final Map<String, String> openIdLogos;
     static {
-        openIdProviders = new HashMap<String, String>();
-        openIdProviders.put("Google", "google.com/accounts/o8/id");
-        openIdProviders.put("Yahoo", "yahoo.com");
-        openIdProviders.put("MySpace", "myspace.com");
-        openIdProviders.put("AOL", "aol.com");
-        openIdProviders.put("MyOpenId.com", "myopenid.com");
+    	openIdProviders = new HashMap<String, String>();
+    	openIdLogos = new HashMap<String, String>();
+        
+        openIdProviders.put("Google", "gmail.com"); openIdLogos.put("Google", "images/openid/google.jpg");
+        openIdProviders.put("Yahoo", "yahoo.com"); openIdLogos.put("Yahoo", "images/openid/yahoo.jpg");
+        //openIdProviders.put("Hotmail", "passport.net"); openIdLogos.put("Hotmail", "images/openid/hotmail.jpg");
+        openIdProviders.put("AOL", "aol.com"); openIdLogos.put("AOL", "images/openid/aol.jpg");
+        openIdProviders.put("MyOpenID", "myopenid.com"); openIdLogos.put("MyOpenID", "images/openid/myopenid.jpg");
     }
 // End of test section
 	
@@ -113,11 +119,9 @@ public class Login extends HttpServlet {
 				buf.append("<br><FONT COLOR=RED>" + Home.announcement + "</FONT>");
 			}
 
-			buf.append("<TABLE><TR><TD COLSPAN=2>"
-					+ "<TABLE><TR><TD VALIGN=TOP><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
+			buf.append("<TABLE><TR><TD VALIGN=TOP><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
 					+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - " + subject.title + "</b></FONT>"
-					+ "<br><div align=right>An OpenEducation Resource</div></TD></TR></TABLE>"
-					+ "</TD></TR><TR><TD VALIGN=TOP>");
+					+ "<br><div align=right>An OpenEducation Resource</div></TD></TR></TABLE>");
 			
 			StringBuffer thisURL = request.getRequestURL();
 
@@ -127,67 +131,39 @@ public class Login extends HttpServlet {
 						+ "should be used only by permission.<p>"
 						+ "To reach the ChemVantage production site "
 						+ "<a href=http://www.chemvantage.org>click here</a>.<p>");
-
-/* OpenID test section
-				Set<String> attributes = new HashSet<String>();
-				UserService userService = UserServiceFactory.getUserService();
-	            for (String providerName : openIdProviders.keySet()) {
-	                String providerUrl = openIdProviders.get(providerName);
-	                String loginUrl = userService.createLoginURL("/Home", null, providerUrl, attributes);
-	                buf.append("[<a href=\"" + loginUrl + "\">" + providerName + "</a>] ");				
-	            }
-// End of test section - replace section below for normal Google Login
-*/				
+/*
 				buf.append("<CENTER><button type=button onClick=\"javascript: location.href='" 
 						+ UserServiceFactory.getUserService().createLoginURL("/Home") 
 						+ "'\">Authorized users only</button></CENTER><p>");
-
+*/				
 			} else if (thisURL.indexOf("chem-vantage.appspot.com") > 0) {
 				buf.append("<h2>Your ChemVantage Session Has Been Closed</h2>");
 				buf.append("This is normal following an extended period of inactivity. Please login again through your class learning management system.<br>"
-						+ "If you reached this page unexpectedly, please see the <a href=help.html>ChemVantage Help Page</a> for further assistance.<br>"
-						+ "If you have a Google or GMail account and password, you may login at <a href=http://www.chemvantage.org target=_blank>http://chemvantage.org</a>.");
+						+ "If you reached this page unexpectedly, please see the <a href=help.html>ChemVantage Help Page</a> for further assistance.<p>");
 			} else {
 				buf.append("ChemVantage is a free resource for science education:<ul>"
 						+ "<li>computer-graded quizzes<li>homework exercises"
 						+ "<li>practice exams<li>video lectures<li>free online textbooks</ul>");
-
-				buf.append("<button type=button onClick=location.href='" 
-						+ UserServiceFactory.getUserService().createLoginURL("/Home") 
-						+ "'>Login to ChemVantage using your Google account</button></CENTER><p>");
-
-				buf.append("</TD><TD VALIGN=TOP>");   // start right column of home page
-
-				Video video = null;
-				try {
-					video = videos.get(Integer.parseInt(request.getParameter("Video")));
-				} catch (Exception e) {
-					if (videos.size()==0) videos = ofy.query(Video.class).order("orderBy").list();
-					video = videos.size()==0?null:videos.get(0);
-				}
-
-
-
-				if (video!=null) buf.append("<iframe width=560 height=349 src=http://www.youtube.com/embed/" + video.serialNumber + " frameborder=0 allowfullscreen></iframe>");
-				/*			buf.append("<object width='425' height='344'><param name='movie' "
-					+ "value='http://www.youtube.com/v/" + requestedVideo + "&hl=en_US&fs=1'>"
-					+ "</param><param name='allowFullScreen' value='true'></param><param "
-					+ "name='allowscriptaccess' value='always'></param><embed "
-					+ "src='http://www.youtube.com/v/" + requestedVideo + "&hl=en_US&fs=1' "
-					+ "type='application/x-shockwave-flash' allowscriptaccess='always' "
-					+ "allowfullscreen='true' width='425' height='344'></embed></object><br>");
-				 */			
-				// video select box:
-				if (videos.size()>0) { 
-					buf.append("<TABLE BGCOLOR=#DDDDDD><TR><TD>");
-					buf.append("<b>Video Lectures</b>");
-					buf.append("<FORM NAME=VideoSelectForm METHOD=GET><SELECT NAME=Video onChange=submit()>"); 
-					for (Video v : videos) buf.append("<OPTION VALUE=" + videos.indexOf(v) + (v.id.equals(video.id)?" SELECTED":"") + ">" + v.title + "</OPTION>");
-					buf.append("</SELECT></FORM>");
-					buf.append("</TD></TR></TABLE><p>");
-				}
 			}
-			buf.append("</TD></TR></TABLE>\n");
+
+			Set<String> attributes = new HashSet<String>();
+			attributes.add("email");
+			UserService userService = UserServiceFactory.getUserService();
+			if (request.getRequestURL().toString().contains("chemvantage")) buf.append("<h3>Please Login</h3>");
+			buf.append("ChemVantage uses OpenID for account creation and authentication.<br>"
+					+ "Choose one of the following identity providers to login to ChemVantage.<br>"
+					+ "If you don't already have an account, you will have the opportunity to<br>"
+					+ "create one with the identity provider you select.<p>");
+			
+			buf.append("<TABLE cellspacing=10><TR>");
+			for (String providerName : openIdProviders.keySet()) {
+				String providerUrl = openIdProviders.get(providerName);
+				String loginUrl = userService.createLoginURL("/Home",null,providerUrl,attributes);
+				buf.append("<TD style='text-align:center'><a href='" + loginUrl + "'><img src='" 
+						+ openIdLogos.get(providerName) + "' alt='" + providerName + "'><br/>" 
+						+ providerName + "</a></TD>");
+			}
+			buf.append("</TR></TABLE>");
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}
