@@ -85,8 +85,7 @@ public class Verification extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 			
-			if (userRequest.equals("Save")) {
-				boolean verify = false;
+			if (userRequest.equals("Save My Information")) {
 				String firstName = request.getParameter("FirstName");
 				String lastName = request.getParameter("LastName");
 				String email = request.getParameter("Email");
@@ -94,16 +93,12 @@ public class Verification extends HttpServlet {
 				if (lastName != null && !lastName.isEmpty()) user.setLastName(lastName);
 				if (email != null && !email.isEmpty()) {
 					user.setEmail(email);
-					try {
-						user.verifiedEmail = user.email.equals(UserServiceFactory.getUserService().getCurrentUser().getEmail());
-					} catch(Exception e){
-						user.verifiedEmail = false;
-					}
-					verify = true;
+					user.verifiedEmail = false;
 				}
 				user.lastLogin = new Date();
 				ofy.put(user);
-				out.println(Home.getHeader(user) + personalInfoForm(user,verify?verificationEmailSent(user,request):false,request) + Home.footer);
+				boolean requiresVerification = !user.verifiedEmail && !user.email.isEmpty();
+				out.println(Home.getHeader(user) + personalInfoForm(user,requiresVerification?verificationEmailSent(user,request):false,request) + Home.footer);
 			} else if (userRequest.equals("Verify My Email Address")) {
 				try {
 					user.verifiedEmail = user.email.equals(UserServiceFactory.getUserService().getCurrentUser().getEmail());
@@ -206,7 +201,7 @@ public class Verification extends HttpServlet {
 			if (!emailRequired && !user.verifiedEmail){
 				buf.append(" (unverified) ");
 				if (verificationEmailSent) buf.append("<br><FONT COLOR=RED>A verification email has been sent to your address.</FONT><br>");
-				else buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Verify My Email Address'><br>");
+				else if (!nameRequired) buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Verify My Email Address'><br>");
 			}
 			buf.append("</TD></TR>");
 			if (user.smsMessageDevice!=null && !user.smsMessageDevice.isEmpty()) {
@@ -220,7 +215,7 @@ public class Verification extends HttpServlet {
 				buf.append("<TR><TD ALIGN=RIGHT>SMS address:</TD><TD>" + smsAddress + "</TD></TR>");	
 			}
 			if (nameRequired || emailRequired) {
-				buf.append("<TR><TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save'></TD>"
+				buf.append("<TR><TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save My Information'></TD>"
 						+ "<TD>" + (user.requiresUpdates()?"<span style=color:red>* <span style=font-size:smaller>required field</span></span>":"") + "</TD></TR></TABLE>");
 			} else {  // all information is current
 				buf.append("</TABLE><h3>Any Corrections Needed?</h3>"
@@ -237,7 +232,7 @@ public class Verification extends HttpServlet {
 					+ "them below, first check each account to make sure that the email address has "
 					+ "been verified by ChemVantage. If that doesn't work, send a detailed account merge request to "
 					+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.<p>");
-			if (user.verifiedEmail) {
+			if (user.verifiedEmail && !user.requiresUpdates()) {
 				// This section finds accounts with duplicate verified email addresses for immediate account merging
 				List<User> duplicateEmails = ofy.query(User.class).filter("email",user.email).list();
 				buf.append("<TABLE>");
@@ -272,7 +267,7 @@ public class Verification extends HttpServlet {
 					} else {
 						buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Get Authorization Code'>");
 					}
-					buf.append("</TD></TR>");
+					buf.append("</FORM></TD></TR>");
 				}
 				buf.append("</TABLE>");
 			}
