@@ -45,7 +45,6 @@ public class Login extends HttpServlet {
 	Subject subject = dao.getSubject();
 	List<Video> videos = ofy.query(Video.class).order("orderBy").list();
 
-// OpenId testing here:	
     private static final Map<String, String> openIdProviders;
     private static final Map<String, String> openIdLogos;
     static {
@@ -54,11 +53,9 @@ public class Login extends HttpServlet {
         
         openIdProviders.put("Google", "gmail.com"); openIdLogos.put("Google", "images/openid/google.jpg");
         openIdProviders.put("Yahoo", "yahoo.com"); openIdLogos.put("Yahoo", "images/openid/yahoo.jpg");
-        //openIdProviders.put("Hotmail", "passport.net"); openIdLogos.put("Hotmail", "images/openid/hotmail.jpg");
         openIdProviders.put("AOL", "aol.com"); openIdLogos.put("AOL", "images/openid/aol.jpg");
         openIdProviders.put("MyOpenID", "myopenid.com"); openIdLogos.put("MyOpenID", "images/openid/myopenid.jpg");
     }
-// End of test section
 	
 	public static String header = "<!DOCTYPE html>"
 		+"<html>\n"
@@ -131,11 +128,7 @@ public class Login extends HttpServlet {
 						+ "should be used only by permission.<p>"
 						+ "To reach the ChemVantage production site "
 						+ "<a href=http://www.chemvantage.org>click here</a>.<p>");
-/*
-				buf.append("<CENTER><button type=button onClick=\"javascript: location.href='" 
-						+ UserServiceFactory.getUserService().createLoginURL("/Home") 
-						+ "'\">Authorized users only</button></CENTER><p>");
-*/				
+
 			} else if (thisURL.indexOf("chem-vantage.appspot.com") > 0) {
 				buf.append("<h2>Your ChemVantage Session Has Been Closed</h2>");
 				buf.append("This is normal following an extended period of inactivity. Please login again through your class learning management system.<br>"
@@ -144,6 +137,7 @@ public class Login extends HttpServlet {
 				buf.append("ChemVantage is a free resource for science education:<ul>"
 						+ "<li>computer-graded quizzes<li>homework exercises"
 						+ "<li>practice exams<li>video lectures<li>free online textbooks</ul>");
+				buf.append("<a href=InformationForInstructors.pdf>Information for instructors</a>");
 			}
 
 			Set<String> attributes = new HashSet<String>();
