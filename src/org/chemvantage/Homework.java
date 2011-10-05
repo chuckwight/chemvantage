@@ -197,7 +197,6 @@ public class Homework extends HttpServlet {
 				q = ofy.get(k);
 				hwQuestions.put(k,q);
 			}
-			//Question q = ofy.get(Question.class,questionId);
 			Topic topic = ofy.get(Topic.class,q.topicId);
 
 			Date now = new Date();
@@ -240,20 +239,28 @@ public class Homework extends HttpServlet {
 							.param("Score", Integer.toString(studentScore))
 							.param("PossibleScore", Integer.toString(possibleScore))
 							.param("UserId", user.id));
-					//Response r = new Response("Homework",topic.id,q.id,studentAnswer[0],q.getCorrectAnswer(),studentScore,possibleScore,user.id,now);
-					//ofy.put(r);
-					// save the Homework Transaction in the datastore
-					HWTransaction ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,0L,studentScore,possibleScore,request.getRequestURI());
-					ofy.put(ht);
+					QueueFactory.getDefaultQueue().add(withUrl("/TransactionServlet")
+							.param("AssignmentType","Homework")
+							.param("TopicId", Long.toString(topic.id))
+							.param("QuestionId", Long.toString(q.id))
+							.param("TopicTitle", topic.title)
+							.param("CorrectAnswer", q.getCorrectAnswer())
+							.param("Score", Integer.toString(studentScore))
+							.param("PossibleScore", Integer.toString(possibleScore))
+							.param("GroupId",Long.toString(myGroup.id))
+							.param("IPNumber",request.getRemoteAddr())
+							.param("UserId", user.id));
+					//HWTransaction ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,0L,studentScore,possibleScore,request.getRequestURI());
+					//ofy.put(ht);
 					// create/update/store a HomeworkScore object
-					try {
-						long assignmentId = myGroup.getAssignmentId("Homework",topic.id);
-						if (assignmentId > 0) { // assignment exists; save a Score object
-							Assignment a = ofy.find(Assignment.class,assignmentId);
-							ofy.put(Score.getInstance(user.id,a));
-						}	
-					} catch (Exception e2) {
-					}
+					//try {
+					//	long assignmentId = myGroup.getAssignmentId("Homework",topic.id);
+					//	if (assignmentId > 0) { // assignment exists; save a Score object
+					//		Assignment a = ofy.find(Assignment.class,assignmentId);
+					//		ofy.put(Score.getInstance(user.id,a));
+					//	}	
+					//} catch (Exception e2) {
+					//}
 				}
 			}
 			// Send response to the user:
@@ -298,21 +305,6 @@ public class Homework extends HttpServlet {
 			
 			boolean offerHint = studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id);
 			
-			/*if (studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id)) { 
-				// embed a hint into this page if the user is eligible
-				buf.append("<p><div id=hintLink>"
-						+ "<a href=# onClick=javascript:document.getElementById('hint').style.display='';"
-						+ "document.getElementById('hintLink').style.display='none'>"
-						+ "<FONT COLOR=RED>Give me a hint</FONT></a></div>"
-						+ "<div id=hint style='display: none'>"
-						+ "<h3>Hint</h3>" + q.hint
-						+ "<p>If you're still stuck after considering this hint, please see your instructor "
-						+ "or a teaching assistant for further assistance. They have access to the complete "
-						+ "solutions to the homework exercises.</div>");
-			}
-			*/
-			
-
 			// if the user response was correct, seek five-star feedback:
 			if (studentScore > 0) buf.append(fiveStars());
 

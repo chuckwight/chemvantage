@@ -22,7 +22,9 @@ import javax.servlet.http.HttpServletRequest;
 
 import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.ObjectifyService;
+import com.googlecode.objectify.annotation.Unindexed;
 
+@Unindexed
 public class PayPalIPN {    // this object represents a PayPal Instant Payment Notification transaction
 	@Id String txn_id;
 	String userId;

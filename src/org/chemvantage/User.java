@@ -35,25 +35,26 @@ import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.ObjectifyService;
 import com.googlecode.objectify.Query;
 import com.googlecode.objectify.annotation.Cached;
+import com.googlecode.objectify.annotation.Indexed;
+import com.googlecode.objectify.annotation.Unindexed;
 
-@Cached
+@Cached @Unindexed
 public class User implements Comparable<User>,Serializable {
-
 	private static final long serialVersionUID = 137L;
-	@Id String id;
-	String email;
-	String lastName;
-	String lowercaseName;
-	String firstName;
-	int roles;
-	boolean premium;
-	Date lastLogin;
-	long myGroupId;
-	String smsMessageDevice;
-	boolean notifyDeadlines;
-	boolean verifiedEmail;
-	String alias;
-	String authDomain;
+	@Id 		String id;
+	@Indexed	String email;
+				String lastName;
+	@Indexed	String lowercaseName;
+				String firstName;
+				int roles;
+				boolean premium;
+				Date lastLogin;
+				long myGroupId;
+				String smsMessageDevice;
+				boolean notifyDeadlines;
+				boolean verifiedEmail;
+				String alias;
+				String authDomain;
 	
 	@Transient transient Objectify ofy = ObjectifyService.begin();
 

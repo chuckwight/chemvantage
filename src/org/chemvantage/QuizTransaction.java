@@ -23,19 +23,20 @@ import java.util.Date;
 import javax.persistence.Id;
 
 import com.googlecode.objectify.annotation.Cached;
+import com.googlecode.objectify.annotation.Unindexed;
 
 @Cached
 public class QuizTransaction implements Serializable {
 	private static final long serialVersionUID = 137L;
-	@Id Long id;
-    long topicId;
-    String topicTitle;
-    String userId;
-    Date downloaded;
-    Date graded;
-    int score;
-    int possibleScore;
-    String IPNumber;
+	@Unindexed	@Id Long id;
+				long topicId;
+	@Unindexed	String topicTitle;
+				String userId;
+				Date downloaded;
+				Date graded;
+				int score;
+	@Unindexed	int possibleScore;
+	@Unindexed	String IPNumber;
 
     QuizTransaction() {}
     

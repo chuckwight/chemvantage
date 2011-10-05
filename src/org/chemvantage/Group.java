@@ -31,28 +31,29 @@ import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.ObjectifyService;
 import com.googlecode.objectify.Query;
 import com.googlecode.objectify.annotation.Cached;
+import com.googlecode.objectify.annotation.Indexed;
 import com.googlecode.objectify.annotation.Unindexed;
 
-@Cached
+@Cached @Unindexed
 public class Group implements Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id Long id;
-    String instructorId;
-    String context_id;
-    @Unindexed String description;
-    @Unindexed String timeZone;
-    @Unindexed Date nextDeadline;
-    boolean sendRescueMessages;
-    @Unindexed int rescueThresholdScore = 5;
-    @Unindexed String defaultRescueSubject;
-    @Unindexed String defaultRescueMessage;
-    List<String> rescueCcIds = new ArrayList<String>();
-    List<String> memberIds = new ArrayList<String>();
-    List<String> tAIds = new ArrayList<String>();
-    List<Long> topicIds = new ArrayList<Long>();
-    List<Long> quizAssignmentIds = new ArrayList<Long>();
-    List<Long> hwAssignmentIds = new ArrayList<Long>();
-    
+	@Indexed String instructorId;
+	@Indexed String context_id;
+			 String description;
+			 String timeZone;
+			 Date nextDeadline;
+			 boolean sendRescueMessages;
+			 int rescueThresholdScore = 5;
+			 String defaultRescueSubject;
+			 String defaultRescueMessage;
+			 List<String> rescueCcIds = new ArrayList<String>();
+			 List<String> memberIds = new ArrayList<String>();
+			 List<String> tAIds = new ArrayList<String>();
+			 List<Long> topicIds = new ArrayList<Long>();
+			 List<Long> quizAssignmentIds = new ArrayList<Long>();
+			 List<Long> hwAssignmentIds = new ArrayList<Long>();
+
 	@Transient transient Objectify ofy = ObjectifyService.begin();
      
     Group() {}

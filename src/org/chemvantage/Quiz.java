@@ -117,9 +117,9 @@ public class Quiz extends HttpServlet {
 			// Check to see if this user has any pending quizzes on this topic:
 			Date then = new Date(now.getTime()-timeLimit*60000);  // timeLimit minutes ago
 			QuizTransaction qt = ofy.query(QuizTransaction.class).filter("userId",user.id).filter("topicId",topic.id).filter("graded",null).filter("downloaded >",then).get();
-			if (qt == null) {  // no pending quiz; create a new QuizTransaction
-				qt = new QuizTransaction(topic.id,topic.title,user.id,now,null,0,0,request.getRequestURI());
-				ofy.put(qt);
+			if (qt == null) {
+				qt = new QuizTransaction(topic.id,topic.title,user.id,now,null,0,0,request.getRemoteAddr());
+				ofy.put(qt);  // creates a long id value to use in random number generator
 			}
 			int secondsRemaining = (int) (timeLimit*60 - (now.getTime() - qt.downloaded.getTime())/1000);
 
@@ -185,35 +185,14 @@ public class Quiz extends HttpServlet {
 			}
 			buf.append("</OL>");
 			
-/*			
-			// select nQuestions random keys from questionKeys and store them in keys; then fetch the questions themselves
-			List<Key<Question>> keys = new ArrayList<Key<Question>>();
-			for (int i = 0; i < nQuestions; i++) keys.add(questionKeys.remove(rand.nextInt(questionKeys.size())));
-			List<Question> questions = new ArrayList<Question>(ofy.get(keys).values());
-			
-			// top up the questions because sometimes questions are deleted from the datastore but not from assignments
-			while (questions.size() < keys.size() && questionKeys.size() > 0) {
-				Key<Question> k = questionKeys.remove(rand.nextInt(questionKeys.size()));
-				Question q = ofy.find(k);
-				if (q != null) questions.add(q);
-			}
-			
-			// loop through the questions, presenting them one at a time as the heart of the quiz
-			buf.append("<OL>\n");
-			while (!questions.isEmpty()) {
-				Question selected = questions.remove(0);
-				possibleScore += selected.pointValue;
-				// the parameterized questions are seeded with a value based on the ids for the quizTransaction and the question
-				// in order to make the value reproducible for grading but variable for each quiz and from one question to the next
-				selected.setParameters((int)(qt.id - selected.id));
-				//buf.append("\n<li>" + selected.print() + "<br></li>\n");
-				buf.append("\n<li>" + (user.hasPremiumAccount()?selected.printPremium():selected.print()) + "<br></li>\n");
-			}
-			buf.append("</OL>");
-*/
 			// update and store the QuizTransaction for this quiz
-			qt.possibleScore = possibleScore;
-			ofy.put(qt);
+			QueueFactory.getDefaultQueue().add(withUrl("/TransactionServlet")
+					.param("AssignmentType","Quiz")
+					.param("TransactionId", Long.toString(qt.id))
+					.param("Action", "Download")
+					.param("PossibleScore", Integer.toString(possibleScore)));
+			//qt.possibleScore = possibleScore;
+			//ofy.put(qt);
 			
 			buf.append("\n<input type=hidden name='QuizTransactionId' value=" + qt.id + ">");
 			buf.append("\n<input type=hidden name='TopicId' value=" + topic.id + ">");
@@ -304,9 +283,7 @@ public class Quiz extends HttpServlet {
 					questionKeys.add(new Key<Question>(Question.class,Long.parseLong((String) e.nextElement())));
 				} catch (Exception e2) {}
 			}
-			//Map<Key<Question>,Question> questions = ofy.get(questionKeys);
 			
-			//List<Response> responses = new ArrayList<Response>();
 			Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
 			for (Key<Question> k : questionKeys) {
 				try {
@@ -347,13 +324,19 @@ public class Quiz extends HttpServlet {
 					continue;  // this parameter does not correspond to a questionId
 				}
 			}
-			//ofy.put(responses);  // save all responses to the datastore
 			missedQuestions.append("</OL>\n");
-			qt.score = studentScore;
-			qt.graded = now;
-			ofy.put(qt); // quiz transaction is stored to the database before calculating the quiz score
-			Assignment a = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",qt.topicId).get();
-			if (a != null) ofy.put(Score.getInstance(user.id,a));
+			QueueFactory.getDefaultQueue().add(withUrl("/TransactionServlet")
+					.param("AssignmentType","Quiz")
+					.param("TransactionId", Long.toString(qt.id))
+					.param("Action", "Graded")
+					.param("UserId",user.id)
+					.param("GroupId",Long.toString(myGroup.id))
+					.param("Score", Integer.toString(studentScore)));
+			//qt.score = studentScore;
+			//qt.graded = now;
+			//ofy.put(qt); // quiz transaction is stored to the database before calculating the quiz score
+			//Assignment a = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",qt.topicId).get();
+			//if (a != null) ofy.put(Score.getInstance(user.id,a));
 			buf.append("<h3>Your score on this quiz is " + studentScore 
 					+ " point" + (studentScore==1?"":"s") + " out of a possible " + qt.possibleScore + " points.</h3>\n");
 
