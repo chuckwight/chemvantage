@@ -23,20 +23,21 @@ import java.util.Date;
 import javax.persistence.Id;
 
 import com.googlecode.objectify.annotation.Cached;
+import com.googlecode.objectify.annotation.Unindexed;
 
 @Cached
 public class HWTransaction implements Serializable {
 	private static final long serialVersionUID = 137L;
-	@Id Long id;
-    long questionId;
-    long topicId;
-    String topicTitle;
-    String userId;
-    Date graded;
-    long responseId;
-    int score;
-    int possibleScore;
-    String IPNumber;
+	@Unindexed	@Id Long id;
+    			long questionId;
+    			long topicId;
+    @Unindexed	String topicTitle;
+    			String userId;
+    			Date graded;
+    @Unindexed	long responseId;
+    			int score;
+    @Unindexed	int possibleScore;
+    @Unindexed	String IPNumber;
 
     HWTransaction() {}
     

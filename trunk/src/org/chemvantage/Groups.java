@@ -763,11 +763,15 @@ public class Groups extends HttpServlet {
 				buf.append("<TD>" + i + "</TD>");
 			}
 			buf.append("</TR>"); // end of header row for scores table
-			List<User> groupMembers = new ArrayList<User>();
-			for (String id : group.memberIds) groupMembers.add(ofy.get(User.class,id));
+			List<User> groupMembers = new ArrayList<User>(ofy.get(User.class,group.memberIds).values());
 			Collections.sort(groupMembers);
 			int i = 0;
 			for (User u : groupMembers) {
+				if (u.myGroupId != group.id) {  // user has been removed from this group; skip this entry
+					group.memberIds.remove(u.id);
+					ofy.put(group);
+					continue;
+				}
 				i++;
 				buf.append("<TR><TD>" + i + ".</TD><TD><A href=mailto:" + u.email + ">" + u.getFullName() + "</A></TD>");
 				for (Long t : topicIds) {

@@ -27,11 +27,12 @@ import javax.persistence.Id;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.ObjectifyService;
 import com.googlecode.objectify.annotation.Cached;
+import com.googlecode.objectify.annotation.Unindexed;
 
 @Cached
 public class Assignment implements Comparable<Assignment>,Serializable {
 	private static final long serialVersionUID = 137L;
-	@Id Long id;
+	@Unindexed	@Id Long id;
 	long groupId;
 	long topicId;
 	String assignmentType;

@@ -25,8 +25,9 @@ import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.ObjectifyService;
 import com.googlecode.objectify.annotation.Cached;
+import com.googlecode.objectify.annotation.Unindexed;
 
-@Cached
+@Cached @Unindexed
 public class BLTIConsumer {
 	@Id String oauth_consumer_key;
 	String secret;
