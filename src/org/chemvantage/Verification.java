@@ -37,6 +37,7 @@ import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
+import com.googlecode.objectify.Query;
 
 
 public class Verification extends HttpServlet {
@@ -107,7 +108,16 @@ public class Verification extends HttpServlet {
 				user.lastLogin = new Date();
 				ofy.put(user);
 				out.println(Home.getHeader(user) + (user.verifiedEmail?personalInfoForm(user,false,request):personalInfoForm(user,verificationEmailSent(user,request),request)) + Home.footer);
+			} else if (userRequest.equals("JoinGroup")) {
+				try {
+					long newGroupId = Long.parseLong(request.getParameter("GroupId"));
+					user.changeGroups(newGroupId);
+				} catch (Exception e2) {
+				}
+				out.println(Home.getHeader(user) + personalInfoForm(user,false,request) + Home.footer);
+				return;
 			} else if (userRequest.equals("Get Authorization Code")) {
+
 				if (mergeAuthCodeSent(user,request)) out.println(Home.getHeader(user) + personalInfoForm(user,false,request) + Home.footer);
 				else out.println("Sorry, the authorization code could not be sent. Please try again later.");
 			} else if (userRequest.equals("Merge This Account With Mine")) {
@@ -214,17 +224,46 @@ public class Verification extends HttpServlet {
 				}
 				buf.append("<TR><TD ALIGN=RIGHT>SMS address:</TD><TD>" + smsAddress + "</TD></TR>");	
 			}
+			if (user.myGroupId>0L) { // user already belongs to a group
+				Group myGroup = ofy.find(Group.class,user.myGroupId);
+				buf.append("<TR><TD ALIGN=RIGHT>Group:</TD><TD>" + myGroup.description + " (" + myGroup.getInstructorBothNames() + ")</TD></TR>");
+			}
+			
 			if (nameRequired || emailRequired) {
 				buf.append("<TR><TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save My Information'></TD>"
-						+ "<TD>" + (user.requiresUpdates()?"<span style=color:red>* <span style=font-size:smaller>required field</span></span>":"") + "</TD></TR></TABLE>");
+						+ "<TD>" + (user.requiresUpdates()?"<span style=color:red>* <span style=font-size:smaller>required field</span></span>":"") + "</TD></TR></TABLE></FORM>");
 			} else {  // all information is current
-				buf.append("</TABLE><h3>Any Corrections Needed?</h3>"
+				buf.append("</FORM>");
+				if (user.myGroupId==0L) { // give the user an opportunity to join a group
+					buf.append("<TR><TD ALIGN=RIGHT>Group:</TD><TD>");
+					buf.append("<FORM NAME=JoinGroup METHOD=POST ACTION=Verification>");
+					buf.append("<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=JoinGroup>");
+					
+					Query<Group> allGroups = ofy.query(Group.class);
+					buf.append("<SELECT NAME=GroupId "
+							+ "onChange=\"if(confirm('Are you sure that you  want to join this group? "
+							+ "This action can only be reversed by an instructor.'))document.JoinGroup.submit();\">"
+							+ "<OPTION VALUE=0>Default group (none)</OPTION>\n");
+					for (Group g : allGroups) {
+						try {
+							buf.append("<OPTION VALUE=" + g.id + ">" + g.description + " (" + g.getInstructorBothNames() + ")</OPTION>\n");
+						} catch (Exception e2) {
+							continue;
+						}
+					}
+					buf.append("</SELECT><span style='color:red;font-size:50%'><a href=# onClick=\"javascript:document.getElementById('instructions').style.display='';\">What's this?</a></span>"
+							+ "<span id=instructions style='display:none'><br>If you are enrolled in a chemistry class or other group using ChemVantage, "
+							+ "please select it here.<br>You will have access to group assignments and deadlines; your instructor will have access "
+							+ "to your ChemVantage scores.<br>If you are not enrolled in a class, leave this at 'Default group (none)'</span>");
+					buf.append("</TD></TR></FORM>\n");
+				}
+				buf.append("</TABLE>");
+				buf.append("<h3>Any Corrections Needed?</h3>"
 						+ "If your name and/or email shown above is not correct, please send a message to "
 						+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a> giving detailed "
 						+ "instructions for any changes that are necessary.<p>" 
 						+ "<a href=/Home>Go to the ChemVantage Home Page now</a><p>");
 			}
-			buf.append("</FORM>");
 			
 			buf.append("<h3>Do You Have Multiple ChemVantage Accounts?</h3>"
 					+ "This is fairly common because there are multiple ways of creating ChemVantage accounts. "
