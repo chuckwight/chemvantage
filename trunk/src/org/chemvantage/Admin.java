@@ -220,10 +220,10 @@ public class Admin extends HttpServlet {
 					+ "for this user, login as the user, or delete the user account permanently.<p>");
 
 			int roles = usr.roles;
-			boolean premiumAccount = usr.hasPremiumAccount();
 			buf.append("\n<TABLE><FORM NAME=UserForm METHOD=POST ACTION=Admin>"
 					+ "<INPUT TYPE=HIDDEN NAME=UserId VALUE='" + usr.id + "'>"
 					+ "\n<TR><TD ALIGN=RIGHT>UserID: </TD><TD>" + usr.id + "</TD></TR>"
+					+ "\n<TR><TD ALIGN=RIGHT>AuthDomain: </TD><TD>" + usr.authDomain + "</TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>Email: </TD><TD><INPUT NAME=Email VALUE='" + usr.email + "'></TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>LastName: </TD><TD><INPUT NAME=LastName VALUE='" 
 					+ CharHider.quot2html(usr.lastName) + "'></TD></TR>"
@@ -236,8 +236,9 @@ public class Admin extends HttpServlet {
 					+ "<INPUT TYPE=CHECKBOX NAME=Roles VALUE=16" + (roles%32/16==1?" CHECKED":"") + ">Administrator"
 					+ "</TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>Acct Type: </TD><TD>"
-					+ "<INPUT TYPE=RADIO NAME=Premium VALUE='false'" + (!premiumAccount?" CHECKED":"") + ">Basic "
-					+ "<INPUT TYPE=RADIO NAME=Premium VALUE='true'" + (premiumAccount?" CHECKED":"") + ">Premium</TD></TR>");
+					+ "<INPUT TYPE=RADIO NAME=Premium VALUE='false'" + (!usr.premium?" CHECKED":"") + ">Basic "
+					+ "<INPUT TYPE=RADIO NAME=Premium VALUE='true'" + (usr.premium?" CHECKED":"") + ">Premium "
+					+ (usr.demoPremium?"<br>(demo premium account)":"") + "</TD></TR>");
 			buf.append("<TR><TD ALIGN=RIGHT>Alias: </TD><TD><INPUT TYPE=TEXT NAME=Alias VALUE='" + (usr.alias==null?"":usr.alias) + "'></TD></TR>");
 			buf.append("<TR><TD ALIGN=RIGHT>Group: </TD><TD>" + groupSelectBox(usr.myGroupId) + "</TD></TR>");
 			buf.append("\n<TR><TD ALIGN=RIGHT>Last Login: </TD>"
