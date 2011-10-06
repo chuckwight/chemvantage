@@ -66,9 +66,33 @@ public class Home extends HttpServlet {
 			response.sendRedirect("/");
 			return;
 		}
-		if (user.requiresUpdates() && (new Date().getTime()-user.lastLogin.getTime() > 28800000)) {  // more than 8 hours since last login update
+		Date now = new Date();
+		Date eightHoursAgo = new Date(now.getTime()-28800000L);
+		Date offerDeadline = new Date(1318219200000L);  // 10/10/2011 00:00:00
+		if (user.demoExpires==null) user.demoExpires = new Date(0);
+		
+		if (user.requiresUpdates() && (user.lastLogin.before(eightHoursAgo))) { 
 			response.sendRedirect("/Verification");      // enter name and email address
+			return;
 		}
+		
+		// ================ BEGIN TEST CODE SECTION ====================
+		DemoPremiumAccount demo = ofy.query(DemoPremiumAccount.class).filter("userId", user.id).get();
+		if (demo!=null) {  // converts legacy system to new demo premium account process
+			user.demoPremium = true;
+			user.premium = false;
+			user.demoExpires = demo.endDate;
+			ofy.put(user);
+			ofy.delete(demo);
+		}
+		if (now.before(offerDeadline) && !user.hasPremiumAccount() && user.demoExpires.getTime()==0) {
+			response.sendRedirect("/Upgrade?action=free+offer");
+			return;
+		} else if (now.after(user.demoExpires) && user.demoPremium==true) {
+			response.sendRedirect("/Upgrade?action=expired");
+			return;
+		}
+		// ================= END OF TEST CODE SECTION ===================
 		
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();

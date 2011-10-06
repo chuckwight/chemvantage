@@ -163,7 +163,8 @@ public class Question implements Serializable {
 		// this section uses a fully licensed version of the Jbc Math Parser
 		// from bestcode.com (license purchased by C. Wight on Nov 18, 2007)
 
-		if (!this.requiresParser) return raw==null?"":raw;  // no parsing required for this question
+		// The next line was deleted to allow for student answers in the form of equations, even for nonparameterized questions
+		//if (!this.requiresParser) return raw==null?"":raw;  // no parsing required for this question
 		
 		IMathParser parser = MathParserFactory.create();
 		try {
@@ -596,7 +597,7 @@ public class Question implements Serializable {
 		case 5: // Numeric Answer
 			answer = answer.replaceAll(",","");  // removes comma separators from numbers
 			try {
-				double dAnswer = Double.parseDouble(answer);
+				double dAnswer = Double.parseDouble(parseString(answer));
 				double dCorrectAnswer = Double.parseDouble(parseString(correctAnswer));
 				if (dCorrectAnswer == 0.0) return (dAnswer==0.0?true:false); // traps divide-by-zero
 				else return (Math.abs((dAnswer-dCorrectAnswer)/dCorrectAnswer)*100 <= requiredPrecision?true:false);

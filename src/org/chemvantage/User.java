@@ -48,6 +48,8 @@ public class User implements Comparable<User>,Serializable {
 				String firstName;
 				int roles;
 				boolean premium;
+				boolean demoPremium;
+				Date demoExpires;
 				Date lastLogin;
 				long myGroupId;
 				String smsMessageDevice;
@@ -68,7 +70,9 @@ public class User implements Comparable<User>,Serializable {
 		this.email = "";
 		this.roles = 0; // student
 		this.premium = false;
-		this.lastLogin = new Date(0);
+		this.demoPremium = false;
+		this.demoExpires = new Date(0L);
+		this.lastLogin = new Date(0L);
 		this.myGroupId = 0L;
 		this.smsMessageDevice = "";
 		this.notifyDeadlines = false;
@@ -354,12 +358,21 @@ public class User implements Comparable<User>,Serializable {
 			}
 			principalRole = "<img alt='animal' src=images/animals/" + level + ".jpg><br>" + principalRole;	
 		}
-		principalRole += " - <a href=Upgrade>" + (premium?"premium":"upgrade me") + "</a>";
+		principalRole += " - <a href=Upgrade>" + (hasPremiumAccount()?"premium":"upgrade me") + "</a>";
 		return principalRole;
+	}
+
+	boolean hasPremiumAccount() {
+		return (premium || demoPremium);
 	}
 
 	void setPremium(boolean newValue) {
 		premium = newValue;
+	}
+	
+	void setDemoPremium(boolean newValue) {
+		demoPremium = newValue;
+		demoExpires = new Date(new Date().getTime() + 1210000000L);  // 2 weeks from now
 	}
 
 	boolean isAdministrator() {
@@ -394,10 +407,6 @@ public class User implements Comparable<User>,Serializable {
 
 	boolean isContributor() {
 		return ((roles%2)/1 == 1);
-	}
-
-	boolean hasPremiumAccount() {
-		return (premium);
 	}
 
 	public int getHWQuestionScore(long questionId) {
