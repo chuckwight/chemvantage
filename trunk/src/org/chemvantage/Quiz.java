@@ -262,6 +262,7 @@ public class Quiz extends HttpServlet {
 
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			Group myGroup = user.myGroupId>0?ofy.find(Group.class,user.myGroupId):null;
+			long myGroupId = myGroup==null?0L:myGroup.id;
 			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
 			df.setTimeZone(tz);
 
@@ -271,7 +272,6 @@ public class Quiz extends HttpServlet {
 			buf.append("<h2>Quiz Results - " + qt.topicTitle + " (" + subject.title + ")</h2>\n");
 			buf.append("<b>" + user.getBothNames() + "</b><br>\n");
 			buf.append(df.format(now));
-
 			buf.append(ajaxScoreJavaScript()); // load javascript for AJAX problem reporting form
 			StringBuffer missedQuestions = new StringBuffer();
 			
@@ -325,13 +325,14 @@ public class Quiz extends HttpServlet {
 				}
 			}
 			missedQuestions.append("</OL>\n");
-			QueueFactory.getDefaultQueue().add(withUrl("/TransactionServlet")
+			queue.add(withUrl("/TransactionServlet")
 					.param("AssignmentType","Quiz")
 					.param("TransactionId", Long.toString(qt.id))
 					.param("Action", "Graded")
 					.param("UserId",user.id)
-					.param("GroupId",Long.toString(myGroup.id))
+					.param("GroupId",Long.toString(myGroupId))
 					.param("Score", Integer.toString(studentScore)));
+			buf.append("End");
 			//qt.score = studentScore;
 			//qt.graded = now;
 			//ofy.put(qt); // quiz transaction is stored to the database before calculating the quiz score
@@ -401,6 +402,7 @@ public class Quiz extends HttpServlet {
 			buf.append("<FORM METHOD=GET Action=Quiz>"
 					+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + qt.topicId + "'>"
 					+ "<INPUT TYPE=SUBMIT VALUE='Take this quiz again'></FORM>\n");
+			
 		} catch (Exception e) {
 			buf.append("Sorry, this quiz could not be scored.<br>" + e.getMessage());
 		}

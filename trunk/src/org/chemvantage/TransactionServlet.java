@@ -49,7 +49,8 @@ public class TransactionServlet extends HttpServlet {
 					qt.score = Integer.parseInt(request.getParameter("Score"));
 					qt.graded = new Date();
 					ofy.put(qt);
-					Assignment a = ofy.query(Assignment.class).filter("groupId",Long.parseLong(request.getParameter("GroupId"))).filter("assignmentType","Quiz").filter("topicId",qt.topicId).get();
+					long myGroupId = Long.parseLong(request.getParameter("GroupId"));
+					Assignment a = myGroupId>0?ofy.query(Assignment.class).filter("groupId",myGroupId).filter("assignmentType","Quiz").filter("topicId",qt.topicId).get():null;
 					if (a != null) ofy.put(Score.getInstance(request.getParameter("UserId"),a));
 				}
 			} else if ("Homework".equals(assignmentType)) {
@@ -64,7 +65,8 @@ public class TransactionServlet extends HttpServlet {
 						Integer.parseInt(request.getParameter("PossibleScore")),
 						request.getParameter("IPNumber"));
 				ofy.put(ht);
-				Assignment a = ofy.query(Assignment.class).filter("groupId",Long.parseLong(request.getParameter("GroupId"))).filter("assignmentType","Homework").filter("topicId",ht.topicId).get();
+				long myGroupId = Long.parseLong(request.getParameter("GroupId"));
+				Assignment a = myGroupId>0?ofy.query(Assignment.class).filter("groupId",Long.parseLong(request.getParameter("GroupId"))).filter("assignmentType","Homework").filter("topicId",ht.topicId).get():null;
 				if (a != null) ofy.put(Score.getInstance(request.getParameter("UserId"),a));
 			}
 		} catch (Exception e) {

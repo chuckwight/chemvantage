@@ -100,11 +100,7 @@ public class About extends HttpServlet {
 		+ "All of the functionality required for completing quiz and homework assignments "
 		+ "is included in the free basic account.<p>For a one-time fee, users may "
 		+ "upgrade to a premium account, which includes the following <i>convenience</i> features:<ol>"
-		+ "<li>Reminders - Premium users have the option of receiving email or SMS reminders of assignment deadlines."
-		+ "<li>Timers - Quizzes display an optional timer that shows the minutes and seconds remaining."
-		+ "<li>Spell Checkers - Questions having a 'fill-in-word' format include an optional spelling checker."
-		+ "<li>Google Search - Questions having a 'fill-in-word' format have a convenient button to search for information on the subject."
-		+ "</ol>"
+		+ Upgrade.features + "</ol>"
 		+ "<a href=Upgrade>Click here to upgrade your account</a><p>"
 		+ "All ChemVantage accounts expire automatically after a 6 month period of inactivity.";
 		

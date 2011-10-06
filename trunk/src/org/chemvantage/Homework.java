@@ -202,6 +202,7 @@ public class Homework extends HttpServlet {
 			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			Group myGroup = user.myGroupId>0?ofy.find(Group.class,user.myGroupId):null;
+			long myGroupId = myGroup==null?0L:myGroup.id;
 			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
 			df.setTimeZone(tz);
 
@@ -247,7 +248,7 @@ public class Homework extends HttpServlet {
 							.param("CorrectAnswer", q.getCorrectAnswer())
 							.param("Score", Integer.toString(studentScore))
 							.param("PossibleScore", Integer.toString(possibleScore))
-							.param("GroupId",Long.toString(myGroup.id))
+							.param("GroupId",Long.toString(myGroupId))
 							.param("IPNumber",request.getRemoteAddr())
 							.param("UserId", user.id));
 					//HWTransaction ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,0L,studentScore,possibleScore,request.getRequestURI());
@@ -272,7 +273,7 @@ public class Homework extends HttpServlet {
 				case 5:  // Numeric question
 					try {
 						@SuppressWarnings("unused")
-						double dAnswer = Double.parseDouble(studentAnswer[0]);  // throws exception for non-numeric answer
+						double dAnswer = Double.parseDouble(q.parseString(studentAnswer[0]));  // throws exception for non-numeric answer
 						buf.append("<h3>Incorrect Answer</h3>Your answer was scored incorrect because it does not "
 								+ "agree with the answer in the database to within the required precision (" + q.requiredPrecision + "%). "
 								+ "Please be sure that your response has enough significant figures to assure this level of agreement.");
