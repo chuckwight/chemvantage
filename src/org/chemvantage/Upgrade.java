@@ -87,28 +87,34 @@ public class Upgrade extends HttpServlet {
 	}
 
 	String printUpgradeOptions(User user) {
-		return "<h2>ChemVantage Basic and Premium Accounts</h2>"
+		StringBuffer buf = new StringBuffer();
+		buf.append("<h2>ChemVantage Basic and Premium Accounts</h2>"
 		+ "Anyone can obtain a basic account at ChemVantage.org at no cost. "
 		+ "All of the functionality required for completing quiz and homework assignments "
 		+ "is included in the free basic account.<p>For a one-time fee, users may "
 		+ "upgrade to a premium account, which includes the following <i>convenience</i> features:<ol>"
-		+ features
-		+ "</ol>"
-		+ (user.hasPremiumAccount()?"Your account has already been upgraded to premium status.":"<FONT COLOR=RED>"
-		+ "<b>100% Satisfaction Guarantee</b></FONT><br>Try it for 3 weeks. If you aren't satisfied for any reason, "
-		+ "ChemVantage will cheerfully refund your payment in full.<p>"
-		+ "<TABLE>"
-		+ "<TR><TD ALIGN=CENTER><b>Instant ChemVantage Premium Account Upgrade</b></TD></TR>"
-		+ "<TR><TD ALIGN=CENTER><b>$20.00 USD</b></TD></TR><TR><TD ALIGN=CENTER> "
-		+ "<form action=https://www.paypal.com/cgi-bin/webscr method=post>"
-		+ "<input type=hidden name=cmd value=_s-xclick>"
-		+ "<input type=hidden name=hosted_button_id value=" + (user.authDomain.equals("BLTI")?"U58TNLE8YE4AW":"HKW9475B55NJU") + ">"
-		+ "<input type=hidden name=on0 value=userId><input type=hidden name=os0 value=" + user.id + ">"
-		+ "<input type=image src=https://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif border=0 name=submit alt='PayPal - The safer, easier way to pay online!'>"
-		+ "<br><font size=-2>Your payment will be processed by PayPal.com</font>"
-		+ "<img alt='' border=0 src=https://www.paypalobjects.com/en_US/i/scr/pixel.gif width=1 height=1>"
-		+ "</form>"
-		+ "</TD></TR></TABLE>");
+		+ features + "</ol>");
+		
+		if (user.premium) buf.append("Your account has already been upgraded to premium status.");
+		else {
+			if (user.demoPremium) buf.append("Your free demo premium account expires " + user.demoExpires.toString() + "<p>");
+			buf.append("<FONT COLOR=RED>"
+				+ "<b>100% Satisfaction Guarantee</b></FONT><br>If you aren't satisfied for any reason, "
+				+ "ChemVantage will cheerfully refund your payment in full.<p>"
+				+ "<TABLE>"
+				+ "<TR><TD ALIGN=CENTER><b>Instant ChemVantage Premium Account Upgrade</b></TD></TR>"
+				+ "<TR><TD ALIGN=CENTER><b>$20.00 USD</b></TD></TR><TR><TD ALIGN=CENTER> "
+				+ "<form action=https://www.paypal.com/cgi-bin/webscr method=post>"
+				+ "<input type=hidden name=cmd value=_s-xclick>"
+				+ "<input type=hidden name=hosted_button_id value=" + (user.authDomain.equals("BLTI")?"U58TNLE8YE4AW":"HKW9475B55NJU") + ">"
+				+ "<input type=hidden name=on0 value=userId><input type=hidden name=os0 value=" + user.id + ">"
+				+ "<input type=image src=https://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif border=0 name=submit alt='PayPal - The safer, easier way to pay online!'>"
+				+ "<br><font size=-2>Your payment will be processed by PayPal.com</font>"
+				+ "<img alt='' border=0 src=https://www.paypalobjects.com/en_US/i/scr/pixel.gif width=1 height=1>"
+				+ "</form>"
+				+ "</TD></TR></TABLE>");
+		}
+		return buf.toString();
 	}
 	
 	void processPayPalIPN(HttpServletRequest request) {
