@@ -159,9 +159,10 @@ public class Upgrade extends HttpServlet {
 		return "<h2>Free Trial Offer: ChemVantage Premium Account Upgrade</h2>"
 		+ "ChemVantage is pleased to make this one-time offer of a free account upgrade.<br>"
 		+ "For the next 2 weeks you'll get the following convenience features:<OL>" + features + "</OL>"
-		+ "There's no obligation to purchase a premium account upgrade after the free trial period<br>"
+		+ "There's no obligation to purchase a premium account upgrade after the free trial period "
 		+ "and your satisfaction is 100% guaranteed.<p>"
-		+ "<div style='text-align:center'>"
+		+ "<div style='text-align:center;color:red'>"
+		+ "Your free trial offer will expire on " + new Date(new Date().getTime() + 1210000000L).toString() + "<p>"
 		+ "<FORM ACTION=Upgrade METHOD=Get><input type=submit name=Action value='Accept Free Trial Offer'>"
 		+ "&nbsp;<input type=submit name=Action value='No Thanks'></FORM></div>";
 	}
