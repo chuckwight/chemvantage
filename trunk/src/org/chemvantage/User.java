@@ -194,7 +194,7 @@ public class User implements Comparable<User>,Serializable {
 		try {
 			new InternetAddress(em).validate();
 			if (em.indexOf("@")<0) throw new Exception();
-			this.email = em;
+			this.email = em.toLowerCase();
 		} catch (Exception e) {
 			this.email = "";
 		}
