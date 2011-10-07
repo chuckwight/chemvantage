@@ -71,12 +71,13 @@ public class Home extends HttpServlet {
 		Date offerDeadline = new Date(1318219200000L);  // 10/10/2011 00:00:00
 		if (user.demoExpires==null) user.demoExpires = new Date(0);
 		
+		// Check to see if the user should provide additional contact information
 		if (user.requiresUpdates() && (user.lastLogin.before(eightHoursAgo))) { 
 			response.sendRedirect("/Verification");      // enter name and email address
 			return;
 		}
 		
-		// ================ BEGIN TEST CODE SECTION ====================
+		// ================ BEGIN TEMPORARY SECTION TO MIGRATE AWAY FROM DEMOPREMIUM ENTITIES ====================
 		DemoPremiumAccount demo = ofy.query(DemoPremiumAccount.class).filter("userId", user.id).get();
 		if (demo!=null) {  // converts legacy system to new demo premium account process
 			user.demoPremium = true;
@@ -85,6 +86,9 @@ public class Home extends HttpServlet {
 			ofy.put(user);
 			ofy.delete(demo);
 		}
+		// ================= END OF TEST CODE SECTION; DELETE WHEN DEMOPREMIUM ENTITIES ARE GONE ===================
+		
+		// Check to see if a free demo premium account should be offered or revoked
 		if (now.before(offerDeadline) && !user.hasPremiumAccount() && user.demoExpires.getTime()==0) {
 			response.sendRedirect("/Upgrade?action=free+offer");
 			return;
@@ -92,7 +96,6 @@ public class Home extends HttpServlet {
 			response.sendRedirect("/Upgrade?action=expired");
 			return;
 		}
-		// ================= END OF TEST CODE SECTION ===================
 		
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
@@ -296,9 +299,7 @@ public class Home extends HttpServlet {
 					ofy.put(user);
 				}
 			}
-			if (myGroup == null) {
-				buf.append("<TR><TD COLSPAN=2 ALIGN=CENTER><FONT SIZE=-1><a href=Groups>Find My Group</FONT></TD></TR>");
-			} else {
+			if (myGroup != null) {  // display some group information in the yellow box
 				if (!myGroup.memberIds.contains(user.id)) {
 					// a user has been invited to join a group when myGroupId 
 					// points to a group that does not list the user as a member
