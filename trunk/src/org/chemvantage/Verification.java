@@ -115,7 +115,6 @@ public class Verification extends HttpServlet {
 				} catch (Exception e2) {
 				}
 				out.println(Home.getHeader(user) + personalInfoForm(user,false,request) + Home.footer);
-				return;
 			} else if (userRequest.equals("Get Authorization Code")) {
 
 				if (mergeAuthCodeSent(user,request)) out.println(Home.getHeader(user) + personalInfoForm(user,false,request) + Home.footer);
@@ -137,7 +136,6 @@ public class Verification extends HttpServlet {
 			} else out.println(Home.getHeader(user) + personalInfoForm(user,false,request) + Home.footer);
 		} catch (Exception e) {
 		}
-
 	}
 	
 	private boolean verificationEmailSent(User user,HttpServletRequest request) {
@@ -235,14 +233,15 @@ public class Verification extends HttpServlet {
 			} else {  // all information is current
 				buf.append("</FORM>");
 				if (user.myGroupId==0L) { // give the user an opportunity to join a group
-					buf.append("<TR><TD ALIGN=RIGHT>Group:</TD><TD>");
+					buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>Group:</TD><TD>");
 					buf.append("<FORM NAME=JoinGroup METHOD=POST ACTION=Verification>");
 					buf.append("<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=JoinGroup>");
 					
 					Query<Group> allGroups = ofy.query(Group.class);
 					buf.append("<SELECT NAME=GroupId "
 							+ "onChange=\"if(confirm('Are you sure that you  want to join this group? "
-							+ "This action can only be reversed by an instructor.'))document.JoinGroup.submit();\">"
+							+ "This action can only be reversed by an instructor.'))document.JoinGroup.submit();"
+							+ "else document.JoinGroup.GroupId[0].selected=true;\">"
 							+ "<OPTION VALUE=0>Default group (none)</OPTION>\n");
 					for (Group g : allGroups) {
 						try {
@@ -254,7 +253,7 @@ public class Verification extends HttpServlet {
 					buf.append("</SELECT><span style='color:red;font-size:50%'><a href=# onClick=\"javascript:document.getElementById('instructions').style.display='';\">What's this?</a></span>"
 							+ "<span id=instructions style='display:none'><br>If you are enrolled in a chemistry class or other group using ChemVantage, "
 							+ "please select it here.<br>You will have access to group assignments and deadlines; your instructor will have access "
-							+ "to your ChemVantage scores.<br>If you are not enrolled in a class, leave this at 'Default group (none)'</span>");
+							+ "to your ChemVantage scores.<br>If you are not enrolled in a class, don't change anything! Leave the group selected as 'Default group (none)'</span>");
 					buf.append("</TD></TR></FORM>\n");
 				}
 				buf.append("</TABLE>");
