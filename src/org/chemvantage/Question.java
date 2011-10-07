@@ -589,9 +589,10 @@ public class Question implements Serializable {
 		case 4:  // Fill-in-the-word
 			Collator compare = Collator.getInstance();
 			compare.setStrength(Collator.PRIMARY);
+			answer = answer.replaceAll("\\W", "");
 			String[] correctAnswers = correctAnswer.split(","); // break comma-separated list into array
 			for (int i=0;i<correctAnswers.length;i++) {
-				if (compare.equals(answer,correctAnswers[i])) return true;
+				if (compare.equals(answer,correctAnswers[i].replaceAll("\\W",""))) return true;
 			}
 			return false;
 		case 5: // Numeric Answer

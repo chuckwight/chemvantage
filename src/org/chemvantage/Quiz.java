@@ -332,12 +332,7 @@ public class Quiz extends HttpServlet {
 					.param("UserId",user.id)
 					.param("GroupId",Long.toString(myGroupId))
 					.param("Score", Integer.toString(studentScore)));
-			buf.append("End");
-			//qt.score = studentScore;
-			//qt.graded = now;
-			//ofy.put(qt); // quiz transaction is stored to the database before calculating the quiz score
-			//Assignment a = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",qt.topicId).get();
-			//if (a != null) ofy.put(Score.getInstance(user.id,a));
+			
 			buf.append("<h3>Your score on this quiz is " + studentScore 
 					+ " point" + (studentScore==1?"":"s") + " out of a possible " + qt.possibleScore + " points.</h3>\n");
 
