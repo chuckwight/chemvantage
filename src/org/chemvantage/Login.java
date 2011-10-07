@@ -143,11 +143,10 @@ public class Login extends HttpServlet {
 			Set<String> attributes = new HashSet<String>();
 			attributes.add("email");
 			UserService userService = UserServiceFactory.getUserService();
-			if (request.getRequestURL().toString().contains("chemvantage")) buf.append("<h3>Please Login</h3>");
+			if (!request.getRequestURL().toString().contains("appspot")) buf.append("<h3>Please Login</h3>");
 			buf.append("ChemVantage uses OpenID for account creation and authentication.<br>"
-					+ "Choose one of the following identity providers to login to ChemVantage.<br>"
-					+ "If you don't already have an account, you will have the opportunity to<br>"
-					+ "create one with the identity provider you select.<p>");
+					+ "Choose one of the identity providers below to login to ChemVantage.<br>"
+					+ "If you don't already have a free account, you will have the option to create one.<p>");
 			
 			buf.append("<TABLE cellspacing=10><TR>");
 			for (String providerName : openIdProviders.keySet()) {

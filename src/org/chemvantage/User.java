@@ -114,7 +114,7 @@ public class User implements Comparable<User>,Serializable {
 				userService = UserServiceFactory.getUserService();
 				googleUser = userService.getCurrentUser();
 				user.authDomain = googleUser.getAuthDomain();
-				user.email = googleUser.getEmail();
+				user.email = googleUser.getEmail().toLowerCase();
 				user.verifiedEmail = !(user.email==null || user.email.isEmpty());
 				user.setIsAdministrator(userService.isUserAdmin());
 				ofy.put(user);
@@ -177,7 +177,7 @@ public class User implements Comparable<User>,Serializable {
 		try {
 			if (email==null || email.isEmpty() || !email.contains("@")) throw new Exception();
 			new InternetAddress(email).validate();
-			verifiedEmail = true;
+			email = email.toLowerCase();
 		} catch (Exception e) {
 			verifiedEmail = false;
 			email = "";
