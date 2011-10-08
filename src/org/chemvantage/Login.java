@@ -50,12 +50,12 @@ public class Login extends HttpServlet {
     static {
     	openIdProviders = new HashMap<String, String>();
     	openIdLogos = new HashMap<String, String>();
-        
+    	
         openIdProviders.put("Google", "gmail.com"); openIdLogos.put("Google", "images/openid/google.jpg");
         openIdProviders.put("Yahoo", "yahoo.com"); openIdLogos.put("Yahoo", "images/openid/yahoo.jpg");
         openIdProviders.put("AOL", "aol.com"); openIdLogos.put("AOL", "images/openid/aol.jpg");
         openIdProviders.put("MyOpenID", "myopenid.com"); openIdLogos.put("MyOpenID", "images/openid/myopenid.jpg");
-    }
+     }
 	
 	public static String header = "<!DOCTYPE html>"
 		+"<html>\n"
@@ -144,21 +144,20 @@ public class Login extends HttpServlet {
 			attributes.add("email");
 			UserService userService = UserServiceFactory.getUserService();
 			if (!request.getRequestURL().toString().contains("appspot")) buf.append("<h3>Please Login</h3>");
-			buf.append("ChemVantage uses OpenID and CAS for account creation and authentication.<br>"
+			buf.append("ChemVantage uses OpenID for account creation and authentication.<br>"
 					+ "Choose one of the identity providers below to login to ChemVantage.<br>"
-					+ "If you don't already have a free account, you may have the option to create one.<p>");
+					+ "If you don't already have a free account there, you may create one.<p>");
 			
 			buf.append("<TABLE cellspacing=10><TR>");
 			// display Google-authorized OpenID providers and logos:
 			for (String providerName : openIdProviders.keySet()) {
 				String providerUrl = openIdProviders.get(providerName);
 				String loginUrl = userService.createLoginURL("/Home",null,providerUrl,attributes);
-				buf.append("<TD style='text-align:center'><a href='" + loginUrl + "'><img src='" 
-						+ openIdLogos.get(providerName) + "' alt='" + providerName + "'><br/>" 
+				buf.append("<TD style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
+						+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
+						+ "<img src='" + openIdLogos.get(providerName) + "' alt='" + providerName + "'><br/>" 
 						+ providerName + "</a></TD>");
 			}
-			// display the UofU CAS authentication logo
-			//buf.append("<TD style='text-align:center'><a href='https://ulogin.utah.edu/cas/login?service=https://" + request.getServerName() + "/cas'><img src='images/openid/uofu.jpg' alt='University of Utah'><br>U of Utah</a></TD>");
 			buf.append("</TR></TABLE>");
 		} catch (Exception e) {
 			buf.append(e.toString());
