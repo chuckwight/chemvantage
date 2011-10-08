@@ -44,6 +44,8 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 		<servlet-name>BLTILaunch</servlet-name>
 		<url-pattern>/BLTILaunch</url-pattern>
 		<url-pattern>/BLTILaunch/</url-pattern>
+		<url-pattern>/blti/</url-pattern>
+		<url-pattern>/blti</url-pattern>
 	</servlet-mapping>
 	
 	<servlet>
@@ -53,6 +55,16 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	<servlet-mapping>
 		<servlet-name>CalculateScores</servlet-name>
 		<url-pattern>/CalculateScores</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>CASLaunch</servlet-name>
+		<servlet-class>org.chemvantage.CASLaunch</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>CASLaunch</servlet-name>
+		<url-pattern>/cas/</url-pattern>
+		<url-pattern>/cas</url-pattern>
 	</servlet-mapping>
 	
 	<servlet>
