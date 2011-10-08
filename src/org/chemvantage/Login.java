@@ -144,11 +144,12 @@ public class Login extends HttpServlet {
 			attributes.add("email");
 			UserService userService = UserServiceFactory.getUserService();
 			if (!request.getRequestURL().toString().contains("appspot")) buf.append("<h3>Please Login</h3>");
-			buf.append("ChemVantage uses OpenID for account creation and authentication.<br>"
+			buf.append("ChemVantage uses OpenID and CAS for account creation and authentication.<br>"
 					+ "Choose one of the identity providers below to login to ChemVantage.<br>"
-					+ "If you don't already have a free account, you will have the option to create one.<p>");
+					+ "If you don't already have a free account, you may have the option to create one.<p>");
 			
 			buf.append("<TABLE cellspacing=10><TR>");
+			// display Google-authorized OpenID providers and logos:
 			for (String providerName : openIdProviders.keySet()) {
 				String providerUrl = openIdProviders.get(providerName);
 				String loginUrl = userService.createLoginURL("/Home",null,providerUrl,attributes);
@@ -156,6 +157,8 @@ public class Login extends HttpServlet {
 						+ openIdLogos.get(providerName) + "' alt='" + providerName + "'><br/>" 
 						+ providerName + "</a></TD>");
 			}
+			// display the UofU CAS authentication logo
+			//buf.append("<TD style='text-align:center'><a href='https://ulogin.utah.edu/cas/login?service=https://" + request.getServerName() + "/cas'><img src='images/openid/uofu.jpg' alt='University of Utah'><br>U of Utah</a></TD>");
 			buf.append("</TR></TABLE>");
 		} catch (Exception e) {
 			buf.append(e.toString());
