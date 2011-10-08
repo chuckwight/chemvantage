@@ -43,6 +43,7 @@ public class CASLaunch extends HttpServlet {
 	DAO dao = new DAO();
 	Objectify ofy = dao.ofy();
 	private static final long serialVersionUID = 137L;
+	
 
 	@Override
 	public void init(ServletConfig config) throws ServletException {
@@ -58,13 +59,11 @@ public class CASLaunch extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
-		PrintWriter out = response.getWriter();
-		String userId = null;
 		try {
 			String ticket = request.getParameter("ticket");
 			if (ticket==null || ticket.isEmpty()) return;
 
-			String parameters = "service=" + URLEncoder.encode("https://" + request.getServerName() + "/cas","UTF-8") + "&ticket=" + URLEncoder.encode(ticket,"UTF-8");
+			String parameters = "service=" + URLEncoder.encode("http://" + request.getServerName() + "/cas","UTF-8") + "&ticket=" + URLEncoder.encode(ticket,"UTF-8");
 			URL u = new URL("https://ulogin.utah.edu/cas/validate");
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setDoOutput(true);
@@ -75,22 +74,22 @@ public class CASLaunch extends HttpServlet {
 			outStream.close();
 
 			BufferedReader in = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-			String res = in.readLine();
+			boolean validated = in.readLine().equals("yes");
 			
-			if (res.startsWith("no")) {
-				in.close();
-				response.sendRedirect("https://ulogin.utah.edu/cas/");
+			String userId = null;
+			if (validated) userId = in.readLine();
+			in.close();
+			
+			if (userId==null || userId.isEmpty()) {
+				response.sendRedirect(request.getServerName());
 				return;
-			} else {
-				userId = in.readLine();
-				in.close();
 			}
-			// CAS launch was validated successfully. 
+			// After this point, the CAS launch was validated successfully. 
 
 			// Provision a new user account if necessary, and store the userId in the user's session
 			User user = ofy.find(User.class,userId);
 			if (user==null) user = new User(userId);
-			user.authDomain = "https://ulogin.utah.edu/cas/";
+			user.authDomain = "https://ulogin.utah.edu/cas";
 			if (!user.requiresUpdates()) user.lastLogin = new Date();
 			ofy.put(user);
 
@@ -99,7 +98,9 @@ public class CASLaunch extends HttpServlet {
 			// Redirect the user's browser to the ChemVantage Home page
 			response.sendRedirect("/Home");
 		} catch (Exception e) {
-			out.println(userId + " " + e.toString());
+			response.setContentType("text/html");
+			PrintWriter out = response.getWriter();
+		    out.println("Sorry, the CAS authentication request could not be completed.");
 		}
 	}
 
