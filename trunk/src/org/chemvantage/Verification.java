@@ -250,10 +250,9 @@ public class Verification extends HttpServlet {
 							continue;
 						}
 					}
-					buf.append("</SELECT><span style='color:red;font-size:50%'><a href=# onClick=\"javascript:document.getElementById('instructions').style.display='';\">What's this?</a></span>"
-							+ "<span id=instructions style='display:none'><br>If you are enrolled in a chemistry class or other group using ChemVantage, "
-							+ "please select it here.<br>You will have access to group assignments and deadlines; your instructor will have access "
-							+ "to your ChemVantage scores.<br>If you are not enrolled in a class, don't change anything! Leave the group selected as 'Default group (none)'</span>");
+					buf.append("</SELECT><span id=instructions style='color:red'><br>If you are enrolled in a chemistry class or other group using ChemVantage, "
+							+ "please select it here.<br>You will have access to group assignments, and your instructor will have access to your ChemVantage "
+							+ "scores.<br>If you are not enrolled in a class, don't change anything! Leave the group selected as 'Default group (none)'</span>");
 					buf.append("</TD></TR></FORM>\n");
 				}
 				buf.append("</TABLE>");
