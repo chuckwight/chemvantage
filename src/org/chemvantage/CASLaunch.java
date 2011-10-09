@@ -28,7 +28,9 @@ import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -43,8 +45,11 @@ public class CASLaunch extends HttpServlet {
 	DAO dao = new DAO();
 	Objectify ofy = dao.ofy();
 	private static final long serialVersionUID = 137L;
+	private static final List<String> casProviders = new ArrayList<String>();
+	static {
+        casProviders.add("https://ulogin.utah.edu/cas"); 
+	}
 	
-
 	@Override
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
@@ -61,20 +66,29 @@ public class CASLaunch extends HttpServlet {
 	throws ServletException, IOException {
 		try {
 			String ticket = request.getParameter("ticket");
-			if (ticket==null || ticket.isEmpty()) return;
+			if (ticket==null || ticket.isEmpty()) throw new Exception();
 
 			String parameters = "service=" + URLEncoder.encode("http://" + request.getServerName() + "/cas","UTF-8") + "&ticket=" + URLEncoder.encode(ticket,"UTF-8");
-			URL u = new URL("https://ulogin.utah.edu/cas/validate");
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			uc.setDoOutput(true);
-			uc.setRequestMethod("GET");
-			uc.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
-			OutputStreamWriter outStream = new OutputStreamWriter(uc.getOutputStream());
-			outStream.write(parameters);
-			outStream.close();
+			boolean validated = false;
+			BufferedReader in = null;
+			String authDomain = null;
+			for (String casUrl : casProviders) {       // cycle through the list of trusted CAS identity providers to validate the CAS authentication ticket
+				URL u = new URL(casUrl + "/validate"); 
+				HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+				uc.setDoOutput(true);
+				uc.setRequestMethod("GET");
+				uc.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
+				OutputStreamWriter outStream = new OutputStreamWriter(uc.getOutputStream());
+				outStream.write(parameters);
+				outStream.close();
 
-			BufferedReader in = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-			boolean validated = in.readLine().equals("yes");
+				in = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+				validated = in.readLine().equals("yes");
+				if (validated) {
+					authDomain = casUrl;
+					break;
+				}
+			}
 			
 			String userId = null;
 			if (validated) userId = in.readLine();
@@ -89,7 +103,7 @@ public class CASLaunch extends HttpServlet {
 			// Provision a new user account if necessary, and store the userId in the user's session
 			User user = ofy.find(User.class,userId);
 			if (user==null) user = new User(userId);
-			user.authDomain = "https://ulogin.utah.edu/cas";
+			user.authDomain = authDomain;
 			if (!user.requiresUpdates()) user.lastLogin = new Date();
 			ofy.put(user);
 
@@ -100,7 +114,8 @@ public class CASLaunch extends HttpServlet {
 		} catch (Exception e) {
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
-		    out.println("Sorry, the CAS authentication request could not be completed.");
+		    out.println("Sorry, the CAS authentication request could not be completed.<br>"
+		    		+ "A well-formed CAS request URL looks something like: https://ulogin.utah.edu/cas/login?service=http://www.chemvantage.org/cas");
 		}
 	}
 

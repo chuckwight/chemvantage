@@ -45,9 +45,10 @@ public class Login extends HttpServlet {
 	Subject subject = dao.getSubject();
 	List<Video> videos = ofy.query(Video.class).order("orderBy").list();
 
-    private static final Map<String, String> openIdProviders;
-    private static final Map<String, String> openIdLogos;
-    static {
+    static final Map<String, String> openIdProviders;
+    static final Map<String, String> openIdLogos;
+    static Set<String> attributes = new HashSet<String>();
+	static {
     	openIdProviders = new HashMap<String, String>();
     	openIdLogos = new HashMap<String, String>();
     	
@@ -55,7 +56,9 @@ public class Login extends HttpServlet {
         openIdProviders.put("Yahoo", "yahoo.com"); openIdLogos.put("Yahoo", "images/openid/yahoo.jpg");
         openIdProviders.put("AOL", "aol.com"); openIdLogos.put("AOL", "images/openid/aol.jpg");
         openIdProviders.put("MyOpenID", "myopenid.com"); openIdLogos.put("MyOpenID", "images/openid/myopenid.jpg");
-     }
+        attributes.add("email");
+	}
+    
 	
 	public static String header = "<!DOCTYPE html>"
 		+"<html>\n"
@@ -86,7 +89,7 @@ public class Login extends HttpServlet {
 		+ "<TABLE><TR><TD>\n"
 		+ "<div id=pzon><nobr>"
 		+ " <div class=pz1>ChemVantage.org</div>"
-		+ " <div class=pz1><a href=Home>Home</a></div>"
+		//+ " <div class=pz1><a href=Home>Home</a></div>"
 		+ " <div class=pz1><a href=About>About Us</a></div>"
 		+ " <div class=pz1><a href=help.html>Help</a></div>"
 		+ "</nobr></div>\n"
@@ -140,8 +143,6 @@ public class Login extends HttpServlet {
 				buf.append("<a href=InformationForInstructors.pdf>Information for instructors</a>");
 			}
 
-			Set<String> attributes = new HashSet<String>();
-			attributes.add("email");
 			UserService userService = UserServiceFactory.getUserService();
 			if (!request.getRequestURL().toString().contains("appspot")) buf.append("<h3>Please Login</h3>");
 			buf.append("ChemVantage uses OpenID for account creation and authentication.<br>"
@@ -155,7 +156,7 @@ public class Login extends HttpServlet {
 				String loginUrl = userService.createLoginURL("/Home",null,providerUrl,attributes);
 				buf.append("<TD style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
 						+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
-						+ "<img src='" + openIdLogos.get(providerName) + "' alt='" + providerName + "'><br/>" 
+						+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/>" 
 						+ providerName + "</a></TD>");
 			}
 			buf.append("</TR></TABLE>");
