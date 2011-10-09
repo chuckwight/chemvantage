@@ -119,11 +119,11 @@ public class User implements Comparable<User>,Serializable {
 				user.setIsAdministrator(userService.isUserAdmin());
 				ofy.put(user);
 			}
-			session.setAttribute("UserId", userId);
-
-			// update the lastLogin date only if everything is OK; otherwise the Verification page will stop the user
-			if (freshLogin && !user.requiresUpdates()) {
-				user.lastLogin = new Date();
+			
+			if (freshLogin) {
+				session.setAttribute("UserId", userId);
+				user.authDomain = UserServiceFactory.getUserService().getCurrentUser().getAuthDomain();
+				if (!user.requiresUpdates()) user.lastLogin = new Date();  // stale login time will trigger Verification in Home
 				ofy.put(user);
 			}
 			
