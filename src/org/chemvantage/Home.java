@@ -173,7 +173,7 @@ public class Home extends HttpServlet {
 
 			buf.append("&nbsp;&nbsp;");
 			
-			buf.append("<a href='" + UserServiceFactory.getUserService().createLogoutURL("/") + "'>Sign out</a>");
+			buf.append("<a href='" + UserServiceFactory.getUserService().createLogoutURL("/Logout",user.authDomain) + "'>Sign out</a>");
 			
 			buf.append("</nobr></div>");
 

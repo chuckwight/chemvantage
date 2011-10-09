@@ -158,6 +158,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet-mapping>
 
 	<servlet>
+		<servlet-name>Logout</servlet-name>
+		<servlet-class>org.chemvantage.Logout</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>Logout</servlet-name>
+		<url-pattern>/Logout</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
 		<servlet-name>ManageDemoPremiumAccounts</servlet-name>
 		<servlet-class>org.chemvantage.ManageDemoPremiumAccounts</servlet-class>
 	</servlet>
