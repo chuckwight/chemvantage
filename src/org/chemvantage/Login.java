@@ -89,15 +89,18 @@ public class Login extends HttpServlet {
 		+ "<TABLE><TR><TD>\n"
 		+ "<div id=pzon><nobr>"
 		+ " <div class=pz1>ChemVantage.org</div>"
-		//+ " <div class=pz1><a href=Home>Home</a></div>"
+		+ " <div class=pz1><a href=Home>Home</a></div>"
 		+ " <div class=pz1><a href=About>About Us</a></div>"
 		+ " <div class=pz1><a href=help.html>Help</a></div>"
 		+ "</nobr></div>\n"
 		+ "<div id=phzl></div><div align=right id=puzr style='font-size:84%;padding:0 0 4px' width=100%>"
 		+ "</div><br>";
-	public static String footer = "\n<hr><CENTER><FONT SIZE=-1>"
-		+ "&copy; 2007-11 ChemVantage.org. <a href=About#terms>Terms and Conditions of Use</a>"
-		+ "</FONT></CENTER></TD></TR></TABLE>\n"
+	public static String footer = "\n<hr><span style='font-size:smaller'><table style='width:100%;border-spacing: 20px 0px'><tr><td>"
+		+ "&copy; 2007-11 ChemVantage.org.</td><td align=center><a href=About#terms>Terms and Conditions of Use</a></td>"
+		+ "<td align=right>Powered by<a href='http://code.google.com/appengine/' border=0><img src=/images/GAE.png "
+		+ "alt='Google App Engine' style='vertical-align:middle'>Google App Engine</a></td></tr></table>"
+		+ "</span>"
+		+ "</TD></TR></TABLE>\n"
 		+ "</body></html>";
 
 	public String getServletInfo() {
@@ -149,7 +152,7 @@ public class Login extends HttpServlet {
 					+ "Choose one of the identity providers below to login to ChemVantage.<br>"
 					+ "If you don't already have a free account there, you may create one.<p>");
 			
-			buf.append("<TABLE cellspacing=10><TR>");
+			buf.append("<TABLE style='border-spacing:40px 0px'><TR>");
 			// display Google-authorized OpenID providers and logos:
 			for (String providerName : openIdProviders.keySet()) {
 				String providerUrl = openIdProviders.get(providerName);
