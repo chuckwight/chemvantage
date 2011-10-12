@@ -52,12 +52,7 @@ public class Home extends HttpServlet {
 		+ "You can monitor the status Google AppEngine at <a href=http://code.google.com/status/appengine>http://code.google.com/status/appengine</a><br>"
 		+ "Please try again later. We apologize for the inconvenience. -ChemVantage";
 
-	public static String footer = "\n<hr><CENTER><FONT SIZE=-1>"
-		+ "&copy; 2007-11 ChemVantage.org. <a href=About#terms>Terms and Conditions of Use</a>"
-		+ "</FONT></CENTER></TD></TR></TABLE>\n"
-		+ "</body>"
-		+ "<meta HTTP-EQUIV='Pragma' CONTENT='no-cache'>"
-		+ "<meta HTTP-EQUIV='Expires' CONTENT='-1'>\n</html>";
+	public static String footer = Login.footer;
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {

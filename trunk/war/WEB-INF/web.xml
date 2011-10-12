@@ -113,6 +113,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet-mapping>
 	
 	<servlet>
+		<servlet-name>GoogleAppsLogin</servlet-name>
+		<servlet-class>org.chemvantage.GoogleAppsLogin</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>GoogleAppsLogin</servlet-name>
+		<url-pattern>/app</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
 		<servlet-name>Groups</servlet-name>
 		<servlet-class>org.chemvantage.Groups</servlet-class>
 	</servlet>
