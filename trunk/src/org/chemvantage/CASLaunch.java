@@ -28,9 +28,9 @@ import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -45,9 +45,11 @@ public class CASLaunch extends HttpServlet {
 	DAO dao = new DAO();
 	Objectify ofy = dao.ofy();
 	private static final long serialVersionUID = 137L;
-	private static final List<String> casProviders = new ArrayList<String>();
+	protected static final Map<String,String> casProviders = new HashMap<String,String>();
+	protected static final Map<String,String> casLogos = new HashMap<String,String>();
 	static {
-        casProviders.add("https://ulogin.utah.edu/cas"); 
+        casProviders.put("Utah.edu","https://ulogin.utah.edu/cas");
+        casLogos.put("Utah.edu", "/images/openid/utah.jpg");
 	}
 	
 	@Override
@@ -72,8 +74,8 @@ public class CASLaunch extends HttpServlet {
 			boolean validated = false;
 			BufferedReader in = null;
 			String authDomain = null;
-			for (String casUrl : casProviders) {       // cycle through the list of trusted CAS identity providers to validate the CAS authentication ticket
-				URL u = new URL(casUrl + "/validate"); 
+			for (String p : casProviders.keySet()) {       // cycle through the list of trusted CAS identity providers to validate the CAS authentication ticket
+				URL u = new URL(casProviders.get(p) + "/validate"); 
 				HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 				uc.setDoOutput(true);
 				uc.setRequestMethod("GET");
@@ -85,7 +87,7 @@ public class CASLaunch extends HttpServlet {
 				in = new BufferedReader(new InputStreamReader(uc.getInputStream()));
 				validated = in.readLine().equals("yes");
 				if (validated) {
-					authDomain = casUrl;
+					authDomain = p;
 					break;
 				}
 			}
@@ -102,7 +104,10 @@ public class CASLaunch extends HttpServlet {
 
 			// Provision a new user account if necessary, and store the userId in the user's session
 			User user = ofy.find(User.class,userId);
-			if (user==null) user = new User(userId);
+			if (user==null) {
+				user = new User(userId);
+				user.email = userId + "@utah.edu";
+			}
 			user.authDomain = authDomain;
 			if (!user.requiresUpdates()) user.lastLogin = new Date();
 			ofy.put(user);
