@@ -107,6 +107,7 @@ public class CASLaunch extends HttpServlet {
 			if (user==null) {
 				user = new User(userId);
 				user.email = userId + "@utah.edu";
+				user.verifiedEmail = true;
 			}
 			user.authDomain = authDomain;
 			if (!user.requiresUpdates()) user.lastLogin = new Date();

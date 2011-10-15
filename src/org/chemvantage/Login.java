@@ -149,8 +149,8 @@ public class Login extends HttpServlet {
 
 			UserService userService = UserServiceFactory.getUserService();
 			if (!request.getRequestURL().toString().contains("appspot")) buf.append("<h3>Please Login</h3>");
-			buf.append("ChemVantage uses OpenID for account creation and authentication.<br>"
-					+ "Select your online identity provider below to login to ChemVantage.<br>");
+			buf.append("ChemVantage uses third-party authentication for account creation and login.<br>"
+					+ "Select your preferred online identity provider below to login to ChemVantage.<br>");
 
 			boolean showAll = "all".equals(request.getParameter("show"));
 			Cookie[] cookies = request.getCookies();
@@ -162,20 +162,20 @@ public class Login extends HttpServlet {
 						String providerName = c.getValue();
 						String providerUrl = openIdProviders.get(providerName);
 						String loginUrl = userService.createLoginURL("/Home",null,providerUrl,attributes);
-						buf.append("<br><div style='margin-left:100px'><a id='" + providerName + "' href='" + loginUrl + "' "
+						buf.append("<br><table style='border-spacing:40px 0px'><tr><td style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
 								+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
-								+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/>" 
-								+ providerName + "</a></div>");
+								+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "' style='text-align:center'><br/>" 
+								+ providerName + "</a></td></tr></table>");
 						showAll = false;
 						break;
 					} else if (CASLaunch.casProviders.containsKey(c.getValue())) {
 						String providerName = c.getValue();
 						String casUrl = CASLaunch.casProviders.get(providerName);
 						String loginUrl = casUrl + "/login?service=http://" + request.getServerName() + "/cas";
-						buf.append("<br><div style='margin-left:100px'><a id='" + providerName + "' href='" + loginUrl + "' "
+						buf.append("<br><table style='border-spacing:40px 0px'><tr><td style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
 								+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
-								+ "<img src='" + CASLaunch.casLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/>" 
-								+ providerName + "</a></div>");
+								+ "<img src='" + CASLaunch.casLogos.get(providerName) + "' border=0 alt='" + providerName + "' style='text-align:center'><br/>" 
+								+ providerName + "</a></td></tr></table>");
 					showAll = false;
 						break;
 					}

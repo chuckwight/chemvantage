@@ -77,8 +77,8 @@ public class Logout extends HttpServlet {
 		}
 		
 		buf.append("If you are at a public computer, you must do 2 more things to protect your online identity:<ol>"
-				+ "<li>Visit your identity provider's site to sign out there. (ChemVantage cannot do this for you.)"
-				+ "<li>Shut down this browser completely (don't just close the page) to destroy temporary cookies."
+				+ "<li>Visit your identity provider's site (below) to sign out there. (ChemVantage cannot do this for you.)"
+				+ "<li>Shut down this browser completely to destroy any temporary cookies."
 				+ "</OL>");
 	
 		buf.append("<CENTER><TABLE CELLSPACING=20><TR>");
