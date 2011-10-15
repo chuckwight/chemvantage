@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Random;
 
 import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -62,6 +63,23 @@ public class Home extends HttpServlet {
 			response.sendRedirect("/");
 			return;
 		}
+		// try to set a login cookie specifying the user's preferred OpenID provider:
+		String providerName = user.authDomain;
+		for (String p : Login.openIdProviders.keySet()) {
+			if (user.authDomain.contains(p.toLowerCase())) {
+				providerName = p; break;
+			}
+		}
+		for (String p : CASLaunch.casProviders.keySet()) {
+			if (user.authDomain.contains(p.toLowerCase())) {
+				providerName = p; break;
+			}
+		}
+		if (providerName.equals("gmail.com")) providerName = "Google";
+		Cookie c = new Cookie("IDProvider",providerName);
+		c.setMaxAge(2592000); // expires after 30 days (in seconds)
+		response.addCookie(c);
+		
 		Date now = new Date();
 		Date eightHoursAgo = new Date(now.getTime()-28800000L);
 		Date offerDeadline = new Date(1318219200000L);  // 10/10/2011 00:00:00

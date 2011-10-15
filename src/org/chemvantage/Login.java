@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -149,20 +150,53 @@ public class Login extends HttpServlet {
 			UserService userService = UserServiceFactory.getUserService();
 			if (!request.getRequestURL().toString().contains("appspot")) buf.append("<h3>Please Login</h3>");
 			buf.append("ChemVantage uses OpenID for account creation and authentication.<br>"
-					+ "Choose one of the identity providers below to login to ChemVantage.<br>"
-					+ "If you don't already have a free account there, you may create one.<p>");
+					+ "Select your online identity provider below to login to ChemVantage.<br>");
+
+			boolean showAll = "all".equals(request.getParameter("show"));
+			Cookie[] cookies = request.getCookies();
+			if (!showAll && cookies!=null) {  // a login cookie has been set; try to show a link to the preferred OpenID provider
+				showAll = true;
+				for (Cookie c : cookies) {
+					if (!"IDProvider".equals(c.getName())) continue;
+					if (openIdProviders.containsKey(c.getValue())) {
+						String providerName = c.getValue();
+						String providerUrl = openIdProviders.get(providerName);
+						String loginUrl = userService.createLoginURL("/Home",null,providerUrl,attributes);
+						buf.append("<br><div style='margin-left:100px'><a id='" + providerName + "' href='" + loginUrl + "' "
+								+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
+								+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/>" 
+								+ providerName + "</a></div>");
+						showAll = false;
+						break;
+					} else if (CASLaunch.casProviders.containsKey(c.getValue())) {
+						String providerName = c.getValue();
+						String casUrl = CASLaunch.casProviders.get(providerName);
+						String loginUrl = casUrl + "/login?service=http://" + request.getServerName() + "/cas";
+						buf.append("<br><div style='margin-left:100px'><a id='" + providerName + "' href='" + loginUrl + "' "
+								+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
+								+ "<img src='" + CASLaunch.casLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/>" 
+								+ providerName + "</a></div>");
+					showAll = false;
+						break;
+					}
+				}
+				if (!showAll) buf.append("<p><a style='font-size:smaller' href=/?show=all>Show more login options</a>");
+			} else showAll = true;
 			
-			buf.append("<TABLE style='border-spacing:40px 0px'><TR>");
-			// display Google-authorized OpenID providers and logos:
-			for (String providerName : openIdProviders.keySet()) {
-				String providerUrl = openIdProviders.get(providerName);
-				String loginUrl = userService.createLoginURL("/Home",null,providerUrl,attributes);
-				buf.append("<TD style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
-						+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
-						+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/>" 
-						+ providerName + "</a></TD>");
+			if (showAll) {	
+				buf.append("If you don't already have a free account there, you may create one.<p>");
+				buf.append("<TABLE style='border-spacing:40px 0px'><TR>");
+				// display Google-authorized OpenID providers and logos:
+				for (String providerName : openIdProviders.keySet()) {
+					String providerUrl = openIdProviders.get(providerName);
+					String loginUrl = userService.createLoginURL("/Home",null,providerUrl,attributes);
+					buf.append("<TD style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
+							+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
+							+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/>" 
+							+ providerName + "</a></TD>");
+				}
+				buf.append("</TR></TABLE>");
 			}
-			buf.append("</TR></TABLE>");
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}
