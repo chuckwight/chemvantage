@@ -29,6 +29,7 @@ import java.util.Map;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -114,7 +115,11 @@ public class BLTILaunch extends HttpServlet {
 		User user = ofy.find(User.class,userId);
 		if (user==null) user = User.createNew(request); // first-ever login for this user
 		request.getSession(true).setAttribute("UserId",userId);
-		
+		// try to set a cookie in the user's browser with the identity provider
+		Cookie c = new Cookie("IDProvider","BLTI");
+		c.setMaxAge(2592000); // expires after 30 days (in seconds)
+		response.addCookie(c);
+	
 		// Provision a new context (group), if necessary and put the user into it
 		if (user.lastLogin.getTime()==0 && context_id != null && !context_id.isEmpty()) {
 			Group g = ofy.query(Group.class).filter("context_id",context_id).get();

@@ -171,7 +171,7 @@ public class Login extends HttpServlet {
 					} else if (CASLaunch.casProviders.containsKey(c.getValue())) {
 						String providerName = c.getValue();
 						String casUrl = CASLaunch.casProviders.get(providerName);
-						String loginUrl = casUrl + "/login?service=http://" + request.getServerName() + "/cas";
+						String loginUrl = casUrl + "/login?service=https://" + request.getServerName() + "/cas";
 						buf.append("<br><table style='border-spacing:40px 0px'><tr><td style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
 								+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
 								+ "<img src='" + CASLaunch.casLogos.get(providerName) + "' border=0 alt='" + providerName + "' style='text-align:center'><br/>" 

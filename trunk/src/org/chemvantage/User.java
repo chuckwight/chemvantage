@@ -43,8 +43,9 @@ public class User implements Comparable<User>,Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id 		String id;
 	@Indexed	String email;
-				String lastName;
+	@Indexed	String domain;
 	@Indexed	String lowercaseName;
+				String lastName;
 				String firstName;
 				int roles;
 				boolean premium;
