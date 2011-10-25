@@ -34,6 +34,7 @@ import java.util.Map;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -48,7 +49,7 @@ public class CASLaunch extends HttpServlet {
 	protected static final Map<String,String> casProviders = new HashMap<String,String>();
 	protected static final Map<String,String> casLogos = new HashMap<String,String>();
 	static {
-        casProviders.put("Utah.edu","https://ulogin.utah.edu/cas");
+        casProviders.put("Utah.edu","https://go.utah.edu/cas");
         casLogos.put("Utah.edu", "/images/openid/utah.jpg");
 	}
 	
@@ -70,7 +71,7 @@ public class CASLaunch extends HttpServlet {
 			String ticket = request.getParameter("ticket");
 			if (ticket==null || ticket.isEmpty()) throw new Exception();
 
-			String parameters = "service=" + URLEncoder.encode("http://" + request.getServerName() + "/cas","UTF-8") + "&ticket=" + URLEncoder.encode(ticket,"UTF-8");
+			String parameters = "service=" + URLEncoder.encode("https://" + request.getServerName() + "/cas","UTF-8") + "&ticket=" + URLEncoder.encode(ticket,"UTF-8");
 			boolean validated = false;
 			BufferedReader in = null;
 			String authDomain = null;
@@ -114,14 +115,17 @@ public class CASLaunch extends HttpServlet {
 			ofy.put(user);
 
 			request.getSession(true).setAttribute("UserId",userId);
-
+			// try to set a Cookie with the user's ID provider:
+			Cookie c = new Cookie("IDProvider",authDomain);
+			c.setMaxAge(2592000); // expires after 30 days (in seconds)
+			response.addCookie(c);
+		
 			// Redirect the user's browser to the ChemVantage Home page
-			response.sendRedirect("/Home");
+			response.sendRedirect("http://" + request.getServerName() + "/Home");
 		} catch (Exception e) {
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
-		    out.println("Sorry, the CAS authentication request could not be completed.<br>"
-		    		+ "A well-formed CAS request URL looks something like: https://ulogin.utah.edu/cas/login?service=http://www.chemvantage.org/cas");
+		    out.println("Sorry, the CAS authentication request could not be completed.");
 		}
 	}
 

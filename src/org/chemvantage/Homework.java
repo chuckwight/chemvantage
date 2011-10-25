@@ -202,7 +202,7 @@ public class Homework extends HttpServlet {
 			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			Group myGroup = user.myGroupId>0?ofy.find(Group.class,user.myGroupId):null;
-			long myGroupId = myGroup==null?0L:myGroup.id;
+			//long myGroupId = myGroup==null?0L:myGroup.id;
 			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
 			df.setTimeZone(tz);
 
@@ -240,6 +240,7 @@ public class Homework extends HttpServlet {
 							.param("Score", Integer.toString(studentScore))
 							.param("PossibleScore", Integer.toString(possibleScore))
 							.param("UserId", user.id));
+					/*
 					QueueFactory.getDefaultQueue().add(withUrl("/TransactionServlet")
 							.param("AssignmentType","Homework")
 							.param("TopicId", Long.toString(topic.id))
@@ -251,17 +252,18 @@ public class Homework extends HttpServlet {
 							.param("GroupId",Long.toString(myGroupId))
 							.param("IPNumber",request.getRemoteAddr())
 							.param("UserId", user.id));
-					//HWTransaction ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,0L,studentScore,possibleScore,request.getRequestURI());
-					//ofy.put(ht);
+					*/
+					HWTransaction ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,0L,studentScore,possibleScore,request.getRequestURI());
+					ofy.put(ht);
 					// create/update/store a HomeworkScore object
-					//try {
-					//	long assignmentId = myGroup.getAssignmentId("Homework",topic.id);
-					//	if (assignmentId > 0) { // assignment exists; save a Score object
-					//		Assignment a = ofy.find(Assignment.class,assignmentId);
-					//		ofy.put(Score.getInstance(user.id,a));
-					//	}	
-					//} catch (Exception e2) {
-					//}
+					try {
+						long assignmentId = myGroup.getAssignmentId("Homework",topic.id);
+						if (assignmentId > 0) { // assignment exists; save a Score object
+							Assignment a = ofy.find(Assignment.class,assignmentId);
+							ofy.put(Score.getInstance(user.id,a));
+						}	
+					} catch (Exception e2) {
+					}
 				}
 			}
 			// Send response to the user:

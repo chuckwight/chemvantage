@@ -36,20 +36,15 @@ public class Logout extends HttpServlet {
 	
 	static final Map<String, String> openIdProviders;
     static final Map<String, String> openIdLogos;
-    static final Map<String, String> casProviders;
-    static final Map<String, String> casLogos;
-	static {
+    static {
 		openIdProviders = new HashMap<String, String>();
     	openIdLogos = new HashMap<String, String>();
-    	casProviders = new HashMap<String, String>();
-    	casLogos = new HashMap<String, String>();
     	
         openIdProviders.put("Google", "google.com"); openIdLogos.put("Google", "/images/openid/google.jpg");
         openIdProviders.put("Yahoo", "yahoo.com"); openIdLogos.put("Yahoo", "/images/openid/yahoo.jpg");
         openIdProviders.put("AOL", "aol.com"); openIdLogos.put("AOL", "/images/openid/aol.jpg");
         openIdProviders.put("MyOpenID", "myopenid.com"); openIdLogos.put("MyOpenID", "/images/openid/myopenid.jpg");
-        casProviders.put("Utah.edu", "https://ulogin.utah.edu/cas/"); casLogos.put("Utah.edu", "/images/openid/utah.jpg");
-	}
+    }
     
 	
 	public String getServletInfo() {
@@ -75,45 +70,48 @@ public class Logout extends HttpServlet {
 		else {
 			buf.append("<h2>ChemVantage Logout Failed!</h2>" + user.getBothNames() + "<br>" + user.email + "<br>" + user.authDomain + "<p>");
 		}
-		
-		buf.append("If you are at a public computer, you must do 2 more things to protect your online identity:<ol>"
-				+ "<li>Visit your identity provider's site (below) to sign out there. (ChemVantage cannot do this for you.)"
-				+ "<li>Shut down this browser completely to destroy any temporary cookies."
-				+ "</OL>");
-	
-		buf.append("<CENTER><TABLE CELLSPACING=20><TR>");
+
 		Cookie[] cookies = request.getCookies();
-		String providerName = null;
+		String providerName = "";
 		for (Cookie c : cookies) if ("IDProvider".equals(c.getName())) providerName = c.getValue();
-		
-		if (providerName != null && !providerName.isEmpty()) {  // ID provider is known from cookie
-			String providerUrl=null;
-			String providerLogo=null;
-			if (Login.openIdProviders.keySet().contains(providerName)) {
-				providerUrl = openIdProviders.get(providerName);
-				providerLogo = openIdLogos.get(providerName);
-				buf.append("<TD style='text-align:center'><a href='http://" + providerUrl + "'>"
-						+ "<img src='" + providerLogo + "' border=0 alt='" + providerUrl + "'><br/>" 
-						+ providerUrl + "</a></TD>");			
-			} else if (CASLaunch.casProviders.keySet().contains(providerName)) {
-				providerUrl = casProviders.get(providerName);
-				providerLogo = casLogos.get(providerName);
-				buf.append("<TD style='text-align:center'><a href='" + providerUrl + "'>"
-						+ "<img src='" + providerLogo + "' border=0 alt='" + providerUrl + "'><br/>" 
-						+ providerUrl + "</a></TD>");			
+
+		if ("BLTI".equals(providerName)) {
+			buf.append("If you are at a public computer, please shut down this browser completely to protect your online identity.");
+		} else {
+			buf.append("If you are at a public computer, you must do 2 more things to protect your online identity:<ol>"
+					+ "<li>Visit your identity provider's site below to sign out there."
+					+ "<li>Shut down this browser completely to destroy any temporary cookies."
+					+ "</OL>");
+
+			buf.append("<CENTER><TABLE CELLSPACING=20><TR>");
+
+			if (providerName != null && !providerName.isEmpty()) {  // ID provider is known from cookie
+				String providerUrl=null;
+				String providerLogo=null;
+				if (Login.openIdProviders.keySet().contains(providerName)) {
+					providerUrl = openIdProviders.get(providerName);
+					providerLogo = openIdLogos.get(providerName);
+					buf.append("<TD style='text-align:center'><a href='http://" + providerUrl + "'>"
+							+ "<img src='" + providerLogo + "' border=0 alt='" + providerUrl + "'><br/>" 
+							+ providerUrl + "</a></TD>");			
+				} else if (CASLaunch.casProviders.keySet().contains(providerName)) {
+					providerUrl = CASLaunch.casProviders.get(providerName) + "/logout";
+					providerLogo = CASLaunch.casLogos.get(providerName);
+					buf.append("<TD style='text-align:center'><a href='" + providerUrl + "'>"
+							+ "<img src='" + providerLogo + "' border=0 alt='" + providerUrl + "'><br/>" 
+							+ "CAS Sign Out</a></TD>");			
+				}
+			} else { // present links to all public OpenID providers
+				for (String p : openIdProviders.keySet()) {
+					String providerUrl = openIdProviders.get(p);
+					buf.append("<TD style='text-align:center'><a href='http://" + providerUrl + "'>"
+							+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerUrl + "'><br/>" 
+							+ providerUrl + "</a></TD>");
+				}
 			}
-		} else { // present links to all public OpenID providers
-			for (String p : openIdProviders.keySet()) {
-				String providerUrl = openIdProviders.get(p);
-				buf.append("<TD style='text-align:center'><a href='http://" + providerUrl + "'>"
-						+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerUrl + "'><br/>" 
-						+ providerUrl + "</a></TD>");
-			}
+			buf.append("</TR></TABLE></CENTER><p>");		
+			buf.append("<a href=/>Return to the ChemVantage sign in page</a>.");
 		}
-		buf.append("</TR></TABLE></CENTER><p>");
-
-		buf.append("<a href=/>Return to the ChemVantage sign in page</a>.");
-
 		return buf.toString();
 	}
 }

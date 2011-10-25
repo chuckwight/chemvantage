@@ -29,7 +29,9 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
+import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Objectify;
 
@@ -44,6 +46,7 @@ public class Home extends HttpServlet {
 	List<Video> videos = ofy.query(Video.class).order("orderBy").list();
 	List<Topic> topics = ofy.query(Topic.class).order("orderBy").list();
 	List<Text> texts = ofy.query(Text.class).list();
+	UserService userService = UserServiceFactory.getUserService();
 		
 	public String getServletInfo() {
 		return "Default servlet for user's home page.";
@@ -58,28 +61,26 @@ public class Home extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		// begin standard user authentication section
-		User user = User.getInstance(request.getSession(true));
+		HttpSession session = request.getSession(true);
+		boolean freshOpenIDLogin = session.getAttribute("UserId")==null;
+		User user = User.getInstance(session);
 		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 			response.sendRedirect("/");
 			return;
 		}
-		// try to set a login cookie specifying the user's preferred OpenID provider:
-		String providerName = user.authDomain;
-		for (String p : Login.openIdProviders.keySet()) {
-			if (user.authDomain.contains(p.toLowerCase())) {
-				providerName = p; break;
+		if (freshOpenIDLogin) { // try to set a login cookie specifying the user's preferred OpenID provider:
+			String authDomain = userService.getCurrentUser().getAuthDomain();
+			String providerName = "";
+			if (authDomain.equals("gmail.com")) providerName = "Google";
+			else for (String p : Login.openIdProviders.keySet()) {
+				if (authDomain.contains(p.toLowerCase())) {
+					providerName = p; break;
+				}
 			}
+			Cookie c = new Cookie("IDProvider",providerName);
+			c.setMaxAge(2592000); // expires after 30 days (in seconds)
+			response.addCookie(c);
 		}
-		for (String p : CASLaunch.casProviders.keySet()) {
-			if (user.authDomain.contains(p.toLowerCase())) {
-				providerName = p; break;
-			}
-		}
-		if (providerName.equals("gmail.com")) providerName = "Google";
-		Cookie c = new Cookie("IDProvider",providerName);
-		c.setMaxAge(2592000); // expires after 30 days (in seconds)
-		response.addCookie(c);
-		
 		Date now = new Date();
 		Date eightHoursAgo = new Date(now.getTime()-28800000L);
 		Date offerDeadline = new Date(1318219200000L);  // 10/10/2011 00:00:00
@@ -90,17 +91,6 @@ public class Home extends HttpServlet {
 			response.sendRedirect("/Verification");      // enter name and email address
 			return;
 		}
-		
-		// ================ BEGIN TEMPORARY SECTION TO MIGRATE AWAY FROM DEMOPREMIUM ENTITIES ====================
-		DemoPremiumAccount demo = ofy.query(DemoPremiumAccount.class).filter("userId", user.id).get();
-		if (demo!=null) {  // converts legacy system to new demo premium account process
-			user.demoPremium = true;
-			user.premium = false;
-			user.demoExpires = demo.endDate;
-			ofy.put(user);
-			ofy.delete(demo);
-		}
-		// ================= END OF TEST CODE SECTION; DELETE WHEN DEMOPREMIUM ENTITIES ARE GONE ===================
 		
 		// Check to see if a free demo premium account should be offered or revoked
 		if (now.before(offerDeadline) && !user.hasPremiumAccount() && user.demoExpires.getTime()==0) {

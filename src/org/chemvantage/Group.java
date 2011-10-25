@@ -40,6 +40,7 @@ public class Group implements Serializable {
 	@Id Long id;
 	@Indexed String instructorId;
 	@Indexed String context_id;
+	@Indexed String domain;
 			 String description;
 			 String timeZone;
 			 Date nextDeadline;
