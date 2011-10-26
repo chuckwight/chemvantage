@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--          Google Apps Marketplace Application Manifest file          -->
+<!-- ******************************************************************* -->
+<!--                  DO NOT DELETE THIS FILE MANUALLY                   -->
+<!-- ******************************************************************* -->
+<!-- To delete this file un-check support for Google Apps Marketplace    -->
+<!-- from eclise project properties page.                                -->
+<!-- To create a custom manifest please refer to following link:         -->
+<!-- http://code.google.com/googleapps/marketplace/manifest.html         -->
+<ApplicationManifest xmlns="http://schemas.google.com/ApplicationManifest/2009">
+  <Name>ChemVantage</Name>
+  <Description>An Open Education Resource for teaching and learning college-level General Chemistry.</Description>
+
+  <!-- Administrators and users will be sent to this URL for application support -->
+  <Support>
+    <Link rel="support" href="http://chemvantage.org/help.html" />
+  </Support>
+
+  <!-- Show this link in Google's universal navigation for all users -->
+  <Extension id="navLink" type="link">
+    <Name>ChemVantage</Name>
+    <!-- Example URL. Replace it with your application url -->
+    <Url>http://www.chemvantage.org/app?domain=${DOMAIN_NAME}</Url>
+  </Extension>
+
+  <!-- Declare our OpenID realm so our app is white listed -->
+  <Extension id="realm" type="openIdRealm">
+    <Url>http://www.chemvantage.org</Url>
+  </Extension>
+
+  <Edition id="standard">
+    <Name>Standard Edition</Name>
+    <Extension ref="navLink"/>
+  </Edition>
+</ApplicationManifest>
