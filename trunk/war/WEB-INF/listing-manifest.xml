@@ -14,6 +14,7 @@
       <DisplayName>Standard edition</DisplayName>
       <EditionId>standard</EditionId>
       <PaymentModel>PAID</PaymentModel>
+      <SeatCount>-1</SeatCount>
     </SubListing>
   </SubListings>
 </ListingManifest>

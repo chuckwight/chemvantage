@@ -9,11 +9,11 @@
 <!-- http://code.google.com/googleapps/marketplace/manifest.html         -->
 <ApplicationManifest xmlns="http://schemas.google.com/ApplicationManifest/2009">
   <Name>ChemVantage</Name>
-  <Description>An Open Education Resource for teaching and learning college-level General Chemistry.</Description>
+  <Description>Your Application description</Description>
 
   <!-- Administrators and users will be sent to this URL for application support -->
   <Support>
-    <Link rel="support" href="http://chemvantage.org/help.html" />
+    <Link rel="support" href="http://www.chemvantage.org/help.html" />
   </Support>
 
   <!-- Show this link in Google's universal navigation for all users -->
@@ -25,11 +25,11 @@
 
   <!-- Declare our OpenID realm so our app is white listed -->
   <Extension id="realm" type="openIdRealm">
-    <Url>http://www.chemvantage.org</Url>
+    <Url>http://dev-vantage.appspot.com</Url>
   </Extension>
 
   <Edition id="standard">
-    <Name>Standard Edition</Name>
+    <Name>ChemVantage</Name>
     <Extension ref="navLink"/>
   </Edition>
 </ApplicationManifest>
