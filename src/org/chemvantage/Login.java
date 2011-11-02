@@ -53,10 +53,10 @@ public class Login extends HttpServlet {
     	openIdProviders = new HashMap<String, String>();
     	openIdLogos = new HashMap<String, String>();
     	
-        openIdProviders.put("Google", "gmail.com"); openIdLogos.put("Google", "images/openid/google.jpg");
-        openIdProviders.put("Yahoo", "yahoo.com"); openIdLogos.put("Yahoo", "images/openid/yahoo.jpg");
-        openIdProviders.put("AOL", "aol.com"); openIdLogos.put("AOL", "images/openid/aol.jpg");
-        openIdProviders.put("MyOpenID", "myopenid.com"); openIdLogos.put("MyOpenID", "images/openid/myopenid.jpg");
+        openIdProviders.put("Google", "gmail.com"); openIdLogos.put("Google", "/images/openid/google.jpg");
+        openIdProviders.put("Yahoo", "yahoo.com"); openIdLogos.put("Yahoo", "/images/openid/yahoo.jpg");
+        openIdProviders.put("AOL", "aol.com"); openIdLogos.put("AOL", "/images/openid/aol.jpg");
+        openIdProviders.put("MyOpenID", "myopenid.com"); openIdLogos.put("MyOpenID", "/images/openid/myopenid.jpg");
         attributes.add("email");
 	}
     

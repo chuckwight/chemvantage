@@ -52,7 +52,7 @@ public class Home extends HttpServlet {
 		return "Default servlet for user's home page.";
 	}
 
-	public static String maintenanceAnnouncement = "Due to problem with the Google AppEngine servers, ChemVantage is temporarily unavailable.<br>"
+	public static String maintenanceAnnouncement = "Due to a problem with the Google AppEngine servers, ChemVantage is temporarily unavailable.<br>"
 		+ "You can monitor the status Google AppEngine at <a href=http://code.google.com/status/appengine>http://code.google.com/status/appengine</a><br>"
 		+ "Please try again later. We apologize for the inconvenience. -ChemVantage";
 
