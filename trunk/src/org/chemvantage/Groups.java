@@ -110,17 +110,17 @@ public class Groups extends HttpServlet {
 				return;
 			}
 				
+			response.setContentType("text/html");
+			PrintWriter out = response.getWriter();
+			
 			long groupId = 0;
 			try {
 				groupId = Long.parseLong(request.getParameter("GroupId"));
 			} catch (Exception e2) {}
-			Group group = ofy.find(Group.class,groupId);
+			Group group = groupId>0?ofy.find(Group.class,groupId):null;
 			
 			// Authorized users only beyond this point:
-			if(!(user.isAdministrator() || group.instructorId.equals(user.id) || group.tAIds.contains(user.id))) response.sendRedirect("/");
-			
-			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
+			if (!(user.isAdministrator() || user.isInstructor() || user.isTeachingAssistant())) response.sendRedirect("/Home");
 			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
