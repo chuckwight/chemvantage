@@ -265,7 +265,7 @@ public class Verification extends HttpServlet {
 				buf.append("<a class='nav' href='/Home'>Go To The Home Page Now</a>");
 			}
 			
-			buf.append("<p><a href=# style='font-size:smaller' onClick=\"javascript: document.getElementById('multi').style.display=''\">I can't find my account</a>"
+			buf.append("<p><a href=# style='font-size:smaller' onClick=\"javascript: document.getElementById('multi').style.display=''\">I can't find my stuff</a>"
 					+ "<div id='multi' style='display:none'>"
 					+ "<h3>Do You Have Multiple ChemVantage Accounts?</h3>"
 					+ "This is fairly common because there are multiple ways of creating ChemVantage accounts.<br>"
