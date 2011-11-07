@@ -23,7 +23,6 @@ package org.chemvantage;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URLEncoder;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -113,7 +112,7 @@ public class BLTILaunch extends HttpServlet {
 
 		// Provision a new user account if necessary, and store the userId in the user's session
 		User user = ofy.find(User.class,userId);
-		if (user==null) user = User.createNew(request); // first-ever login for this user
+		if (user==null) user = User.createBLTIUser(request); // first-ever login for this user
 		request.getSession(true).setAttribute("UserId",userId);
 		// try to set a cookie in the user's browser with the identity provider
 		Cookie c = new Cookie("IDProvider","BLTI");
@@ -136,12 +135,6 @@ public class BLTILaunch extends HttpServlet {
 			}
 		}
 		
-		// if this is a normal login, update the lastLogin field to now
-		if (!user.requiresUpdates()) {
-			user.lastLogin = new Date();
-			ofy.put(user);
-		}
-
 		// Redirect the user's browser to the ChemVantage Home page
 		response.sendRedirect("/Home");	
 	}

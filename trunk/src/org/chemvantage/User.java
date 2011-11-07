@@ -28,7 +28,8 @@ import javax.persistence.Transient;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
-import com.google.appengine.api.users.UserService;
+import org.chemvantage.openid.UserInfo;
+
 import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
@@ -83,69 +84,65 @@ public class User implements Comparable<User>,Serializable {
 	}
 
 	static User getInstance(HttpSession session) {
-		UserService userService = null;
-		com.google.appengine.api.users.User googleUser = null;
-		String userId = (String)session.getAttribute("UserId");
-		boolean freshLogin = userId==null?true:false;;
-		
-		if (freshLogin) {
-			try {  // Google authentication
-				googleUser = UserServiceFactory.getUserService().getCurrentUser();
-				userId = googleUser.getUserId();
-			} catch (Exception e) {  // invalid user or lost BLTI session
-				return null;
+		try {
+			String userId = (String)session.getAttribute("UserId");
+			User user = ObjectifyService.begin().get(User.class,userId);
+			if (user.alias != null) { // follow the alias chain to the end
+				List<String> userIds = new ArrayList<String>();
+				userIds.add(userId);
+				if (!user.alias.isEmpty()) userIds.add(0,user.alias);
+				user = User.getInstance(userIds);
 			}
+			Date now = new Date();
+			Date eightHoursAgo = new Date(now.getTime()-28800000L);
+			if (user.lastLogin.before(eightHoursAgo) && !user.requiresUpdates()) {
+				user.lastLogin = now;
+				user.alias = null;  // in case alias is set to ""
+				ObjectifyService.begin().put(user);
+			}
+			return user;
+		} catch (Exception e) {
+			return null;
 		}
+	}
+
+	static User getInstance(List<String> userIds) {
+		Objectify ofy = ObjectifyService.begin();
+		try {
+			User user = ofy.get(User.class,userIds.get(0));			
+			if (user.alias != null && !user.alias.isEmpty() && !userIds.contains(user.alias)) {
+				userIds.add(0,user.alias);
+				user = User.getInstance(userIds);  // follow the alias chain one more link
+			}
+			return user;
+		} catch (Exception e) {
+			return null;  // user object does not exist in the datastore
+		}
+	}
 		
-		//  from here on, userId should be valid
+	static User createUserServiceUser(com.google.appengine.api.users.User u) {
+		if (u == null) return null;
 		User user = null;
 		try {
-			Objectify ofy = ObjectifyService.begin();
-			try {
-				List<String> aliasChain = new ArrayList<String>();
-				do {  // this loop finds the end of the alias chain without going into an infinite loop
-					user = ofy.get(User.class,userId); // retrieve User attributes from datastore if it exists
-					if (user.alias != null) {
-						aliasChain.add(user.id);
-						userId = user.alias;
-					}
-				} while (user.alias!=null && !aliasChain.contains(userId));
-			} catch (Exception e) {  // falls to here when datastore call fails
-				user = new User(userId);
-				userService = UserServiceFactory.getUserService();
-				googleUser = userService.getCurrentUser();
-				user.authDomain = googleUser.getAuthDomain();
-				user.email = googleUser.getEmail().toLowerCase();
-				user.verifiedEmail = !(user.email==null || user.email.isEmpty());
-				user.setIsAdministrator(userService.isUserAdmin());
-				ofy.put(user);
-			}
-			
-			if (freshLogin) {
-				session.setAttribute("UserId", userId);
-				user.authDomain = UserServiceFactory.getUserService().getCurrentUser().getAuthDomain();
-				if (!user.requiresUpdates()) user.lastLogin = new Date();  // stale login time will trigger Verification in Home
-				ofy.put(user);
-			}
-			
-			// if everything is OK, restore the site message to normal
-			if (Home.announcement.equals(Home.maintenanceAnnouncement)) {
-				Home.announcement = "";
-				Login.lockedDown = false;
-			}
-		} catch (Exception e) {  // there's an unexpected problem
-				Home.announcement = Home.maintenanceAnnouncement;
-				Login.lockedDown = true;
+			user = new User(u.getUserId());
+			user.authDomain = u.getAuthDomain();
+			user.setEmail(u.getEmail());
+			user.verifiedEmail = !(user.email==null || user.email.isEmpty());
+			user.setIsAdministrator(UserServiceFactory.getUserService().isUserAdmin());
+			ObjectifyService.begin().put(user);
+		} catch (Exception e) {
+			return null;
 		}
 		return user;
 	}
 	
-	static User createNew(HttpServletRequest request) {
+	static User createBLTIUser(HttpServletRequest request) {
 		// this method provisions a new account for a BLTI user
 		String user_id = request.getParameter("user_id");
 		String userId = request.getParameter("oauth_consumer_key") + (user_id==null?"":":"+user_id);
 		User user = new User(userId);
 		user.authDomain = "BLTI";
+		user.domain = request.getParameter("oauth_consumer_key");
 		user.alias = null;
 		user.setFirstName(request.getParameter("lis_person_name_given"));
 		user.setLastName(request.getParameter("lis_person_name_family"));
@@ -155,6 +152,57 @@ public class User implements Comparable<User>,Serializable {
 		if (userRole!=null) user.setIsInstructor(userRole.toLowerCase().contains("instructor"));
 		ObjectifyService.begin().put(user);
 		return user;
+	}
+	
+	static public User createOpenIdUser(UserInfo userInfo) {
+		if (userInfo == null) return null;
+		User user;
+		try {
+			String userId = userInfo.getClaimedId();
+			user = new User(userId);
+			user.authDomain = "Google Apps";
+			user.domain = extractDomain(userInfo.getClaimedId());
+			user.setEmail(userInfo.getEmail());
+			user.verifiedEmail = !user.email.isEmpty();
+			user.setFirstName(userInfo.getFirstName());
+			user.setLastName(userInfo.getLastName());
+			Objectify ofy = ObjectifyService.begin();
+			if (user.verifiedEmail) { // search for any accounts with the same email address and alias the new one to it
+				User twin = ofy.query(User.class).filter("email", user.email).get();
+				if (twin != null && twin.verifiedEmail) user.alias = twin.id;
+			}
+			ofy.put(user);
+		} catch (Exception e) {
+			return null;
+		}		
+		return user;
+	}
+
+	static public User createCASUser(String userId,String email,String domain) {
+		if (userId == null) return null;
+		User user;
+		try {
+			user = new User(userId);
+			user.authDomain = "CAS";
+			user.domain = domain;
+			user.setEmail(email);
+			user.verifiedEmail = !user.email.isEmpty();
+			Objectify ofy = ObjectifyService.begin();
+			ofy.put(user);
+		} catch (Exception e) {
+			return null;
+		}		
+		return user;
+	}
+
+	static String extractDomain(String claimedId) {
+		StringBuffer domain = new StringBuffer(claimedId);
+		domain = domain.delete(0, domain.indexOf("//")+2);   // strips http:// or https://
+		return domain.substring(0,domain.indexOf("/"));      // strips URI
+	}
+
+	public String getId() {
+		return this.id;
 	}
 	
 	static String getEmail(String id) {
@@ -225,13 +273,13 @@ public class User implements Comparable<User>,Serializable {
 	
 	void setFirstName(String fn) {
 		if (fn==null) return;
-		this.firstName = fn;
+		this.firstName = fn.trim();
 		setLowerCaseName();
 	}
 
 	void setLastName(String ln) {
 		if (ln==null) return;
-		this.lastName = ln;
+		this.lastName = ln.trim();
 		setLowerCaseName();
 	}
 
@@ -442,18 +490,20 @@ public class User implements Comparable<User>,Serializable {
 	}
 	
 	public void changeGroups(long newGroupId) {
-		if (newGroupId==0 || ofy.find(Group.class,newGroupId) != null) this.myGroupId = newGroupId;
-		else this.myGroupId = 0;
-		ofy.put(this);
-		List<Group> allGroups = ofy.query(Group.class).list();
-		for (Group g : allGroups) {
-			if (g.id == newGroupId && !g.isMember(this.id)) {
-				g.memberIds.add(this.id);
-				ofy.put(g);
-			} else if (g.id != newGroupId && g.isMember(this.id)) {
-				g.memberIds.remove(this.id);
-				ofy.put(g);
+		try {
+			Group oldGroup = myGroupId>0?ofy.find(Group.class,myGroupId):null;
+			if (oldGroup != null) {
+				oldGroup.memberIds.remove(this.id);
+				ofy.put(oldGroup);
 			}
+			Group newGroup = newGroupId>0?ofy.find(Group.class,newGroupId):null;
+			if (newGroup != null) {
+				newGroup.memberIds.add(this.id);
+				ofy.put(newGroup);
+			}
+			this.myGroupId = newGroupId;
+			ofy.put(this);
+		} catch (Exception e) {
 		}
 		recalculateScores();
 	}

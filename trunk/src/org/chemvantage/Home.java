@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Random;
 
 import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -62,24 +61,10 @@ public class Home extends HttpServlet {
 	throws ServletException, IOException {
 		// begin standard user authentication section
 		HttpSession session = request.getSession(true);
-		boolean freshOpenIDLogin = session.getAttribute("UserId")==null;
 		User user = User.getInstance(session);
 		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 			response.sendRedirect("/");
 			return;
-		}
-		if (freshOpenIDLogin) { // try to set a login cookie specifying the user's preferred OpenID provider:
-			String authDomain = userService.getCurrentUser().getAuthDomain();
-			String providerName = "";
-			if (authDomain.equals("gmail.com")) providerName = "Google";
-			else for (String p : Login.openIdProviders.keySet()) {
-				if (authDomain.contains(p.toLowerCase())) {
-					providerName = p; break;
-				}
-			}
-			Cookie c = new Cookie("IDProvider",providerName);
-			c.setMaxAge(2592000); // expires after 30 days (in seconds)
-			response.addCookie(c);
 		}
 		Date now = new Date();
 		Date eightHoursAgo = new Date(now.getTime()-28800000L);

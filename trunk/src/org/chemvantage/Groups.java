@@ -62,29 +62,30 @@ public class Groups extends HttpServlet {
 				response.sendRedirect("/");
 				return;
 			}
-					
-			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
-			
-			String userRequest = request.getParameter("UserRequest");
-			if (userRequest==null) {
-				out.println(Home.getHeader(user) + groupsForm(user,request) + Home.footer);
-				return;
-			}
 			
 			long groupId = 0;
 			try {
 				groupId = Long.parseLong(request.getParameter("GroupId"));
 			} catch (Exception e2) {}
-			Group group = ofy.find(Group.class,groupId);
+			Group group = groupId>0?ofy.find(Group.class,groupId):null;
+			
+			// Authorized users only beyond this point:
+			if(!(user.isAdministrator() || user.isInstructor() || user.isTeachingAssistant())) response.sendRedirect("/");
+			
+			response.setContentType("text/html");
+			PrintWriter out = response.getWriter();
+			
+			String userRequest = request.getParameter("UserRequest");
+			if (userRequest==null) userRequest = "";
 			
 			if (userRequest.equals("GroupScoresCSV")) {
-				if (user.isAdministrator() || group.instructorId.equals(user.id) || group.tAIds.contains(user.id)) csvGroupScores(user,group,request,response);
+				csvGroupScores(user,group,request,response);
 				return;
 			}
 			
 			out.println(Home.getHeader(user));
-			if (user.isAdministrator() || group.instructorId.equals(user.id) || group.tAIds.contains(user.id)) {
+			if (group == null) out.println(groupsForm(user,request));
+			else if (user.isAdministrator() || group.instructorId.equals(user.id) || group.tAIds.contains(user.id)) {
 				if (userRequest.equals("ManageGroup")) out.println(manageGroupForm(user,group,request));
 				else if (userRequest.equals("AssignHomeworkQuestions")) out.println(assignHWQuestionsForm(user,group,request));
 				else if (userRequest.equals("AssignQuizQuestions")) out.println(assignQuizQuestionsForm(user,group,request));
@@ -94,7 +95,6 @@ public class Groups extends HttpServlet {
 				else if (userRequest.equals("RescueOptions")) out.println(showRescueOptions(user,group,request));
 				else out.println(groupsForm(user,request));
 			}
-			else out.println("Not authorized.");
 			out.println(Home.footer);
 		} catch (Exception e) {
 			response.getWriter().println(e.toString());
@@ -110,38 +110,39 @@ public class Groups extends HttpServlet {
 				return;
 			}
 				
+			long groupId = 0;
+			try {
+				groupId = Long.parseLong(request.getParameter("GroupId"));
+			} catch (Exception e2) {}
+			Group group = ofy.find(Group.class,groupId);
+			
+			// Authorized users only beyond this point:
+			if(!(user.isAdministrator() || group.instructorId.equals(user.id) || group.tAIds.contains(user.id))) response.sendRedirect("/");
+			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
-			Group group = null;
-			try {
-				group = ofy.get(Group.class,Long.parseLong(request.getParameter("GroupId")));
-			} catch (Exception e2) {}
-			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
-			String message = "";
-			out.println(Home.getHeader(user));
+			
 			if (userRequest.equals("JoinGroup")) {
-				try {
-					long newGroupId = Long.parseLong(request.getParameter("GroupId"));
-					user.changeGroups(newGroupId);
-				} catch (Exception e2) {
-				}
-				out.println(groupsForm(user,request));
+				user.changeGroups(groupId);
+				out.println(Home.getHeader(user) + groupsForm(user,request) + Home.footer);
 				return;
 			}
-			if (user.isInstructor() && userRequest.equals("CreateGroup")) {
+			
+			// Additional user restrictions: no TAs beyond this point
+			if (!(user.isAdministrator() || group.instructorId.equals(user.id))) {
+				out.println(Home.getHeader(user) + "<span style='color:red'>You have read-only access in this area</span>" + groupsForm(user,request) + Home.footer);
+				return;
+			}
+			
+			String message = "";
+			out.println(Home.getHeader(user));			
+			if (userRequest.equals("CreateGroup")) {
 				createGroup(user,request);
 				out.println(groupsForm(user,request));
-				return;
-			}
-			if (!(user.isAdministrator() || group.instructorId.equals(user.id) || group.tAIds.contains(user.id))) {
-				out.println(groupsForm(user,request));
-				return;
-			} 
-			// administrators and group instructor and TAs only beyond this point
-			if (userRequest.equals("UpdateGroup")) {
+			} else if (userRequest.equals("UpdateGroup")) {
 				modifyGroup(user,request);
 				out.println(groupsForm(user,request));
 			} else if (userRequest.equals("DeleteGroup")) {
@@ -212,63 +213,43 @@ public class Groups extends HttpServlet {
 	String groupsForm(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h3>Join A Class or Group</h3>");
 		try {
-			Group myGroup = null;
-			if (user.myGroupId > 0) {
-				myGroup = ofy.find(Group.class,user.myGroupId);
-				if (myGroup==null) { // bulletproofing in case users group disappears
-					user.myGroupId=0; 
-					ofy.put(user);
-				}
+			Group myGroup = user.myGroupId>0?ofy.find(Group.class,user.myGroupId):null;
+			if (myGroup == null && user.myGroupId > 0) { // bulletproofing in case user's group disappears unexpectedly
+				user.changeGroups(0);
+				ofy.put(user);				
 			}
-			if (user.myGroupId == 0 || user.isInstructor()) { // print a select form for the available groups:
-				buf.append("If you are a member of a group or class using this site, please select it below.  By doing this, "
-						+ "you are granting permission for the instructor to view your quiz and homework scores for that subject. "
-						+ "Group deadlines for assignments will be displayed on your home page.<br>"
-						+ "<b>Choose your group carefully. This action can only be reversed by an instructor.</b>");
-				buf.append("<FORM METHOD=POST ACTION=Groups "
-						+ "onSubmit=\"return confirm('Are you sure that you  want to join this group? "
-						+ "This action can only be reversed by an instructor.')\">");
-				buf.append("<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=JoinGroup>");
-				
-				Query<Group> allGroups = ofy.query(Group.class);
-				buf.append("<SELECT NAME=GroupId onChange=submit()>\n"
-						+ "<OPTION VALUE=0>Default group (none)</OPTION>\n");
-				for (Group g : allGroups) {
-					try {
-						buf.append("<OPTION VALUE=" + g.id + (g.id==user.myGroupId?" SELECTED>":">") 
-							+ g.description + " (" + g.getInstructorBothNames() + ")</OPTION>\n");
-					} catch (Exception e2) {
-						continue;
-					}
-				}
-				buf.append("</SELECT></FORM>\n");
-			}
-			else {
-				buf.append("You are currently a member of the following group:<br>");
-				buf.append("<b>" + myGroup.getInstructorBothNames() + " - " + myGroup.description + "</b><p>");
-				buf.append("If you are in the wrong group and need help, please send your request to "
-						+ "<a href=mailto:admin@practicezone.org>admin@practicezone.org</a>");
-			}
-
-			if (user.isInstructor() || user.isTeachingAssistant() || user.isAdministrator()) {
-				buf.append("<h3>Manage Your Groups</h3>\n");
-				buf.append("As an instructor, you have the ability to create, edit and delete groups. "
-						+ "These are usually groups of students taking a single class.  Students are responsible "
-						+ "for joining the appropriate group, but you can manage the enrollments of the group. "
-						+ "You may assign quizzes and homework for your group members by setting deadlines. "
-						+ "You may create and manage multiple groups of students, but you can be a member of only "
-						+ "one group at a time for each subject. Use the form above to switch groups at any time.<p>\n");
-
-				Query<Group> allGroups = ofy.query(Group.class);
-				
-				buf.append("Use the links at the far right to set deadlines, view group scores and manage "
-						+ "enrollments for your group.<p>\n");
-				buf.append("<TABLE>\n<TR><TD><b>Subject</b></TD><TD><b>Instructor</b></TD>"
-						+ "<TD><b>Description</b></TD><TD COLSPAN=2 ALIGN=CENTER><b>Actions</b></TD><TD><b>View Scores</b></TD>"
-						+ "<TD><b>Deadlines</b></TD><TD><b>Enrollments</b></TD><TD ALIGN=CENTER><b>Time Zone</b></TD></TR>\n");
 			
-				for (Group g : allGroups) {
-					if (user.isAdministrator() || user.id.equals(g.instructorId) || g.tAIds.contains(user.id))
+			buf.append("As an instructor or teaching assistant, you have the ability to freely join or move between ChemVantage groups "
+					+ "that you own or to which you have been assigned.  This is useful for viewing assignment deadlines and your own scores "
+					+ "as if you were a student in your group.");
+			buf.append("<FORM METHOD=POST ACTION=Groups>"
+					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=JoinGroup>");
+
+			Query<Group> allGroups = ofy.query(Group.class);
+			buf.append("<SELECT NAME=GroupId onChange=submit()><OPTION VALUE=0>Default group (none)</OPTION>\n");
+			for (Group g : allGroups) {
+				if (user.isAdministrator() || user.id.equals(g.instructorId) || g.tAIds.contains(user.id))
+					buf.append("<OPTION VALUE=" + g.id + (g.id==user.myGroupId?" SELECTED>":">") + g.description + " (" + g.getInstructorBothNames() + ")</OPTION>\n");
+			}
+			buf.append("</SELECT></FORM>\n");
+
+			
+			buf.append("<h3>Manage Your Groups</h3>\n");
+			buf.append("As an instructor, you have the ability to create, edit and delete groups. "
+					+ "These are usually groups of students taking a single class.  Students are responsible "
+					+ "for joining the appropriate group, but you can manage the enrollments of the group. "
+					+ "You may assign quizzes and homework for your group members by setting deadlines. "
+					+ "You may create and manage multiple groups of students, but you can be a member of only "
+					+ "one group at a time for each subject. Use the form above to switch groups at any time.<p>\n");
+
+			buf.append("Use the links at the far right to set deadlines, view group scores and manage "
+					+ "enrollments for your group.<p>\n");
+			buf.append("<TABLE>\n<TR><TD><b>Subject</b></TD><TD><b>Instructor</b></TD>"
+					+ "<TD><b>Description</b></TD><TD COLSPAN=2 ALIGN=CENTER><b>Actions</b></TD><TD><b>View Scores</b></TD>"
+					+ "<TD><b>Deadlines</b></TD><TD><b>Enrollments</b></TD><TD ALIGN=CENTER><b>Time Zone</b></TD></TR>\n");
+
+			for (Group g : allGroups) {
+				if (user.isAdministrator() || user.id.equals(g.instructorId) || g.tAIds.contains(user.id))
 					buf.append("<TR>"
 							+ "<TD>" + subject.title + "</TD>"
 							+ "<TD>" + g.getInstructorBothNames() + "</TD>"
@@ -292,24 +273,22 @@ public class Groups extends HttpServlet {
 							+ timeZoneSelectBox(g.getTimeZone().getID()) 
 							+ "</TD></FORM>"
 							+ "</TR>\n");
-				}
-				buf.append("</TABLE>");
-				
-				if (user.isAdministrator() || user.isInstructor()) {
-					buf.append("<h3>Create a New Group</h3><FORM METHOD=POST ACTION=Groups>"
-							+ "To create a new group, choose from the existing subjects and provide a complete description "
-							+ "that will help students to identify the proper group to join. For example: <b>"
-							+ "U. of Utah CHEM 1210-002 MWF 9:00-9:50 AM</b><p>\n"
-							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=CreateGroup>\n"
-							+ "<TABLE><TR><TD><b>Instructor</b></TD><TD><b>Description</b></TD><TD>&nbsp;</TD></TR>"
-							+ "<TR><TD>" + user.getBothNames() + "</TD>"
-							+ "<TD><INPUT NAME=Description></TD>"
-							+ "<TD><INPUT TYPE=SUBMIT VALUE='Create This New Group'></TD>"
-							+ "</TR>\n</FORM>\n");
-					buf.append("</TABLE>\n");
-				}
 			}
+			buf.append("</TABLE>");
 
+			if (user.isAdministrator() || user.isInstructor()) {
+				buf.append("<h3>Create a New Group</h3><FORM METHOD=POST ACTION=Groups>"
+						+ "To create a new group, choose from the existing subjects and provide a complete description "
+						+ "that will help students to identify the proper group to join. For example: <b>"
+						+ "U. of Utah CHEM 1210-002 MWF 9:00-9:50 AM</b><p>\n"
+						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=CreateGroup>\n"
+						+ "<TABLE><TR><TD><b>Instructor</b></TD><TD><b>Description</b></TD><TD>&nbsp;</TD></TR>"
+						+ "<TR><TD>" + user.getBothNames() + "</TD>"
+						+ "<TD><INPUT NAME=Description></TD>"
+						+ "<TD><INPUT TYPE=SUBMIT VALUE='Create This New Group'></TD>"
+						+ "</TR>\n</FORM>\n");
+				buf.append("</TABLE>\n");
+			}
 		} catch (Exception e) {
 			buf.append(e.getMessage());
 		}

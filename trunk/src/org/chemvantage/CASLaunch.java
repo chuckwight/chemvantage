@@ -28,7 +28,6 @@ import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -105,15 +104,9 @@ public class CASLaunch extends HttpServlet {
 
 			// Provision a new user account if necessary, and store the userId in the user's session
 			User user = ofy.find(User.class,userId);
-			if (user==null) {
-				user = new User(userId);
-				user.email = userId + "@utah.edu";
-				user.verifiedEmail = true;
-			}
-			user.authDomain = authDomain;
-			if (!user.requiresUpdates()) user.lastLogin = new Date();
-			ofy.put(user);
-
+			String email = userId + "@" + authDomain.toLowerCase();
+			if (user==null) user = User.createCASUser(userId,email,authDomain.toLowerCase());
+			
 			request.getSession(true).setAttribute("UserId",userId);
 			// try to set a Cookie with the user's ID provider:
 			Cookie c = new Cookie("IDProvider",authDomain);
