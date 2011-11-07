@@ -25,7 +25,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 import com.google.appengine.api.datastore.Cursor;
 import com.google.appengine.api.datastore.QueryResultIterator;
@@ -48,9 +47,6 @@ public class Admin extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			HttpSession session = request.getSession(true);
-			session.removeAttribute("UserId");  //access to this service allowed only by admins in that role
-			
 			User user = User.getInstance(request.getSession(true));
 			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 				response.sendRedirect("/");
@@ -80,9 +76,6 @@ public class Admin extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			HttpSession session = request.getSession(true);
-			session.removeAttribute("UserId");  //access to this service allowed only by admins in that role
-			
 			User user = User.getInstance(request.getSession(true));
 			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 				response.sendRedirect("/");
@@ -113,7 +106,7 @@ public class Admin extends HttpServlet {
 			} else if (userRequest.equals("Delete BLTI Consumer")) {
 				deleteBLTIConsumer(request);
 			} else if (userRequest.equals("Login As This User")) {
-				session.setAttribute("UserId",request.getParameter("UserId"));
+				request.getSession(true).setAttribute("UserId",request.getParameter("UserId"));
 				response.sendRedirect("/Home");
 				return;
 			} else if (userRequest.equals("Confirm Merge")) {

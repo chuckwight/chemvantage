@@ -161,7 +161,7 @@ public class Login extends HttpServlet {
 					if (openIdProviders.containsKey(c.getValue())) {
 						String providerName = c.getValue();
 						String providerUrl = openIdProviders.get(providerName);
-						String loginUrl = userService.createLoginURL("/Home",null,providerUrl,attributes);
+						String loginUrl = userService.createLoginURL("/userService",null,providerUrl,attributes);
 						buf.append("<br><table style='border-spacing:40px 0px'><tr><td style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
 								+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
 								+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "' style='text-align:center'><br/>" 
@@ -176,7 +176,7 @@ public class Login extends HttpServlet {
 								+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
 								+ "<img src='" + CASLaunch.casLogos.get(providerName) + "' border=0 alt='" + providerName + "' style='text-align:center'><br/>" 
 								+ providerName + "</a></td></tr></table>");
-					showAll = false;
+						showAll = false;
 						break;
 					}
 				}
@@ -189,7 +189,7 @@ public class Login extends HttpServlet {
 				// display Google-authorized OpenID providers and logos:
 				for (String providerName : openIdProviders.keySet()) {
 					String providerUrl = openIdProviders.get(providerName);
-					String loginUrl = userService.createLoginURL("/Home",null,providerUrl,attributes);
+					String loginUrl = userService.createLoginURL("/userService",null,providerUrl,attributes);
 					buf.append("<TD style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
 							+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
 							+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/>" 

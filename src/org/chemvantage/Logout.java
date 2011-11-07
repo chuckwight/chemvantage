@@ -28,8 +28,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.appengine.api.users.UserServiceFactory;
-
 public class Logout extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
@@ -54,29 +52,21 @@ public class Logout extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		request.getSession().invalidate();
-		User user = User.getInstance(request.getSession());
-		if (user != null && request.getParameter("try")==null) {  // prevents infinite loop of login failures
-			response.sendRedirect(UserServiceFactory.getUserService().createLogoutURL("/Logout?try=again",user.authDomain));
-		}
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		out.println(Login.header + logoutPage(request) + Login.footer);
 	}
 	
 	String logoutPage(HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer();
-		User user = User.getInstance(request.getSession());
-		if (user==null) buf.append("<h2>You have successfully signed out of ChemVantage</h2>");
-		else {
-			buf.append("<h2>ChemVantage Logout Failed!</h2>" + user.getBothNames() + "<br>" + user.email + "<br>" + user.authDomain + "<p>");
-		}
-
+		StringBuffer buf = new StringBuffer("<h2>You have successfully signed out of ChemVantage</h2>");
+		
 		Cookie[] cookies = request.getCookies();
 		String providerName = "";
 		for (Cookie c : cookies) if ("IDProvider".equals(c.getName())) providerName = c.getValue();
 
 		if ("BLTI".equals(providerName)) {
-			buf.append("If you are at a public computer, please shut down this browser completely to protect your online identity.");
+			buf.append("If you are at a public computer, please shut down this browser completely to protect your online identity.<p>"
+					+ "To sign in to ChemVantage again, please use the link inside your class learning management system.");
 		} else {
 			buf.append("If you are at a public computer, you must do 2 more things to protect your online identity:<ol>"
 					+ "<li>Visit your identity provider's site below to sign out there."
