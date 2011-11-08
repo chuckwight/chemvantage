@@ -116,7 +116,6 @@ public class Verification extends HttpServlet {
 				}
 				out.println(Home.getHeader(user) + personalInfoForm(user,false,request) + Home.footer);
 			} else if (userRequest.equals("Get Authorization Code")) {
-
 				if (mergeAuthCodeSent(user,request)) out.println(Home.getHeader(user) + personalInfoForm(user,false,request) + Home.footer);
 				else out.println("Sorry, the authorization code could not be sent. Please try again later.");
 			} else if (userRequest.equals("Merge This Account With Mine")) {
@@ -264,10 +263,11 @@ public class Verification extends HttpServlet {
 						+ "a.nav:hover {color:#fff; background:#800;}</style>");
 				buf.append("<a class='nav' href='/Home'>Go To The Home Page Now</a>");
 			}
-			
+			boolean showDuplicateAccounts = "Get Authorization Code".equals(request.getParameter("UserRequest")) || "Merge This Account With Mine".equals(request.getParameter("UserRequest"));
 			buf.append("<p><a href=# style='font-size:smaller' onClick=\"javascript: document.getElementById('multi').style.display=''\">I can't find my stuff</a>"
-					+ "<div id='multi' style='display:none'>"
-					+ "<h3>Do You Have Multiple ChemVantage Accounts?</h3>"
+					+ "<div id='multi'" + (showDuplicateAccounts?">":" style='display:none'>"));
+			
+			buf.append("<h3>Do You Have Multiple ChemVantage Accounts?</h3>"
 					+ "This is fairly common because there are multiple ways of creating ChemVantage accounts.<br>"
 					+ "If you think you have more than one account and you don't see options below for merging<br>"
 					+ "them below, first check each account to make sure that the email address has been verified<br>"
