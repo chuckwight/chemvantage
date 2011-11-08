@@ -191,6 +191,7 @@ public class Home extends HttpServlet {
 					+ "<b><FONT COLOR=RED>Please select a topic:</FONT></b><br></div>");
 
 			buf.append("<FORM NAME='HQSelectForm' ACTION=Quiz METHOD=GET>");
+			buf.append("<INPUT TYPE=HIDDEN NAME=r VALUE=" + new Random().nextInt(99) + ">");
 			buf.append("<SELECT NAME='TopicId'><OPTION Value='0' SELECTED>Select a topic</OPTION>");
 			
 			//List<Topic> topics = ofy.query(Topic.class).order("orderBy").list();
@@ -316,11 +317,11 @@ public class Home extends HttpServlet {
 						DateFormat df = DateFormat.getDateInstance(DateFormat.MEDIUM);
 						df.setTimeZone(myGroup.getTimeZone());
 						buf.append("<TR><TD ALIGN=CENTER><FONT SIZE=-1>Next Deadline: </FONT>"
-								+ "<FONT SIZE=-1><i><a href=Scores>" + df.format(nextDeadline) + "</a></i></FONT></TD></TR>");
+								+ "<FONT SIZE=-1><i><a href=Scores?r=" + new Random().nextInt(99) + ">" + df.format(nextDeadline) + "</a></i></FONT></TD></TR>");
 					}
 				}
 			}
-			buf.append("<TR><TD COLSPAN=2 ALIGN=CENTER><FONT SIZE=-1><a href=Scores>Show My Scores</a></FONT></TD></TR>");
+			buf.append("<TR><TD COLSPAN=2 ALIGN=CENTER><FONT SIZE=-1><a href=Scores?r=" + new Random().nextInt(99) + ">Show My Scores</a></FONT></TD></TR>");
 			buf.append("<TR><TD ALIGN=CENTER><FONT SIZE=-1><a href=Verification>View My Information</a></FONT></TD></TR>");
 			buf.append("</TABLE>");
 			buf.append("</TD></TR></TABLE><p>");
