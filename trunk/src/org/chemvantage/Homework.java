@@ -26,6 +26,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.TimeZone;
 
 import javax.servlet.ServletException;
@@ -218,7 +219,7 @@ public class Homework extends HttpServlet {
 						+ "check your work carefully, and then resubmit your answer.  You will find that by working through "
 						+ "the problems in a careful, deliberate way will enhance your learning and your performance on "
 						+ "the examinations.");
-				buf.append("<p><a href=Homework?TopicId=" + topic.id + ">Return to this homework assignment</a>");
+				buf.append("<p><a href=Homework?TopicId=" + topic.id + "&r=" + new Random().nextInt(99) + ">Return to this homework assignment</a>");
 				return buf.toString();
 			};
 			
@@ -307,11 +308,11 @@ public class Homework extends HttpServlet {
 			}
 			
 			boolean offerHint = studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id);
-			
+			int random = new Random().nextInt(9999);
 			// if the user response was correct, seek five-star feedback:
 			if (studentScore > 0) buf.append(fiveStars());
 
-			buf.append("<p><a href=Homework?TopicId=" + topic.id 
+			buf.append("<p><a href=Homework?TopicId=" + topic.id + "&r=" + random
 					+ (offerHint?"&Q=" + q.id:"")
 					+ "#" + q.id + (offerHint?"><span style='color:red'>Please give me a hint</span>":">Return to this homework assignment") + "</a>");
 		}

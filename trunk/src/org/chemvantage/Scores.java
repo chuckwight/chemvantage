@@ -323,7 +323,7 @@ public class Scores extends HttpServlet {
 							",<br>but first you must <a href=Verification>verify your contact information</a>."));
 			} 
 			buf.append("</FORM>");
-			
+			int random = new Random().nextInt(99);  // selects a random integer between 0 and 9999
 			// Show a table of scores earned for this group:
 			DateFormat df = DateFormat.getDateInstance(DateFormat.SHORT);
 			df.setTimeZone(myGroup.getTimeZone());
@@ -350,13 +350,13 @@ public class Scores extends HttpServlet {
 				if (qa == null && hwa == null) continue;
 				buf.append("<TR><TD>" + t.title + "</TD>");
 				
-				if (qa != null) { // print the quiz score for this topic in the table
-					buf.append("<TD ALIGN=CENTER" + (qa.deadline.equals(nextDeadline)?" style=background:#FFFF00>":">") + "<a href=Quiz?TopicId=" + topicId + ">" + df.format(qa.deadline) + "</a></TD>");
+				if (qa != null) { // print the quiz score for this topic in the table. The random value helps defeat browser page caching
+					buf.append("<TD ALIGN=CENTER" + (qa.deadline.equals(nextDeadline)?" style=background:#FFFF00>":">") + "<a href=Quiz?TopicId=" + topicId + "&r=" + random + ">" + df.format(qa.deadline) + "</a></TD>");
 					buf.append("<TD ALIGN=CENTER>" + myGroup.getScore(user.id,qa).getEnhancedDotScore(qa.deadline,myGroup.rescueThresholdScore) + "</TD>");
 				} else buf.append("<TD COLSPAN=2 ALIGN=CENTER style=color:#808080>(not assigned)</TD>");
 				
-				if (hwa != null && hwa.questionKeys.size()>0) { // print the homework score for this topic in the table
-					buf.append("<TD ALIGN=CENTER" + (hwa.deadline.equals(nextDeadline)?" style=background:#FFFF00>":">") + "<a href=Homework?TopicId=" + topicId + ">" + df.format(hwa.deadline) + "</a></TD>");
+				if (hwa != null && hwa.questionKeys.size()>0) { // print the homework score for this topic in the table. The random value helps defeat browser page caching
+					buf.append("<TD ALIGN=CENTER" + (hwa.deadline.equals(nextDeadline)?" style=background:#FFFF00>":">") + "<a href=Homework?TopicId=" + topicId + "&r=" + random  + ">" + df.format(hwa.deadline) + "</a></TD>");
 					buf.append("<TD ALIGN=CENTER>" + myGroup.getScore(user.id,hwa).getEnhancedDotScore(hwa.deadline,myGroup.rescueThresholdScore) + "</TD>");
 				} else buf.append("<TD COLSPAN=2 ALIGN=CENTER style=color:#808080>(not assigned)</TD>");
 				buf.append("</TR>");

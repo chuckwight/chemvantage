@@ -402,6 +402,7 @@ public class Quiz extends HttpServlet {
 			}
 			buf.append("<FORM METHOD=GET Action=Quiz>"
 					+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + qt.topicId + "'>"
+					+ "<INPUT TYPE=HIDDEN NAME=r VALUE=" + new Random().nextInt(9999) + ">"
 					+ "<INPUT TYPE=SUBMIT VALUE='Take this quiz again'></FORM>\n");
 			
 		} catch (Exception e) {
