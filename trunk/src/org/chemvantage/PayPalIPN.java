@@ -95,7 +95,7 @@ public class PayPalIPN {    // this object represents a PayPal Instant Payment N
 		boolean valid = this.verified;  // IPN message was OK
 		try {
 			if (!"admin@chemvantage.org".equals(receiver_email)) valid=false;
-			if (!"20.00".equals(mc_gross)) valid=false;
+			if (!"4.99".equals(mc_gross)) valid=false;
 			if (!"Completed".equals(payment_status)) valid=false;
 			Objectify ofy = ObjectifyService.begin();
 			User u = ofy.get(User.class,userId);
