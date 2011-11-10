@@ -103,7 +103,7 @@ public class Upgrade extends HttpServlet {
 				+ "ChemVantage will cheerfully refund your payment in full.<p>"
 				+ "<TABLE>"
 				+ "<TR><TD ALIGN=CENTER><b>Instant ChemVantage Premium Account Upgrade</b></TD></TR>"
-				+ "<TR><TD ALIGN=CENTER><b>$20.00 USD</b></TD></TR><TR><TD ALIGN=CENTER> "
+				+ "<TR><TD ALIGN=CENTER><b>$4.99 USD</b></TD></TR><TR><TD ALIGN=CENTER> "
 				+ "<form action=https://www.paypal.com/cgi-bin/webscr method=post>"
 				+ "<input type=hidden name=cmd value=_s-xclick>"
 				+ "<input type=hidden name=hosted_button_id value=" + (user.authDomain.equals("BLTI")?"U58TNLE8YE4AW":"HKW9475B55NJU") + ">"
