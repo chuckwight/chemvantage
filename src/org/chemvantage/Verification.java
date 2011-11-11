@@ -179,6 +179,8 @@ public class Verification extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		boolean nameRequired = user.firstName.isEmpty() || user.lastName.isEmpty();
 		boolean emailRequired = user.email.isEmpty();
+		boolean groupRequired = user.myGroupId < 0;
+		
 		try {
 			UserService userService = UserServiceFactory.getUserService();
 			if (userService.isUserAdmin()) throw new Exception(); // don't set email for admins logged in as users
@@ -228,17 +230,21 @@ public class Verification extends HttpServlet {
 						+ "<TD>" + (user.requiresUpdates()?"<span style=color:red>* <span style=font-size:smaller>required field</span></span>":"") + "</TD></TR></TABLE></FORM>");
 			} else {  // all information is current
 				buf.append("</FORM>");
-				if (user.myGroupId==0L) { // give the user an opportunity to join a group
-					buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>Group:</TD><TD>");
+				if (user.myGroupId<=0L) { // give the user an opportunity to join a group
+					buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>ChemVantage Group:</TD><TD>");
 					buf.append("<FORM NAME=JoinGroup METHOD=POST ACTION=Verification>");
 					buf.append("<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=JoinGroup>");
 
-					Query<Group> allGroups = ofy.query(Group.class);
+					Query<Group> allGroups;
+					if (user.domain == null) allGroups = ofy.query(Group.class);
+					else allGroups = ofy.query(Group.class).filter("domain",user.domain);
+					
 					buf.append("<SELECT NAME=GroupId "
 							+ "onChange=\"if(confirm('Are you sure that you  want to join this group? "
 							+ "This action can only be reversed by an instructor.'))document.JoinGroup.submit();"
 							+ "else document.JoinGroup.GroupId[0].selected=true;\">"
-							+ "<OPTION VALUE=0>Default group (none)</OPTION>\n");
+							+ (groupRequired?"<OPTION VALUE=-1>Please select a ChemVantage group to join:</OPTION>\n":"")
+							+ "<OPTION VALUE=0>I'm not a member of any group or class using ChemVantage</OPTION>\n");
 					for (Group g : allGroups) {
 						try {
 							buf.append("<OPTION VALUE=" + g.id + ">" + g.description + " (" + g.getInstructorBothNames() + ")</OPTION>\n");
@@ -246,27 +252,29 @@ public class Verification extends HttpServlet {
 							continue;
 						}
 					}
-					buf.append("</SELECT></TD></TR></FORM>"
-							+ "<TR><TD COLSPAN=2><span id=instructions style='color:red'><br>If you are enrolled in a chemistry class or other group using ChemVantage, "
-							+ "please select it here.<br>You will have access to group assignments, and your instructor will have access to your ChemVantage "
-							+ "scores.<br>If you are not enrolled in a class, don't change anything! Leave the group selected as 'Default group (none)'</span></TD></TR>");
+					if (groupRequired) buf.append("</SELECT></TD></TR></FORM>"
+							+ "<TR><TD COLSPAN=2><span id=instructions style='color:red'><br>Please select a ChemVantage group. This will give you access to assignments and deadlines.<br>"
+							+ "It will also give your instructor and teaching assistant access to your scores.</span></TD></TR>");
 				}
 				buf.append("</TABLE>\n");
-				
+
+
 				buf.append("<h3>Any Corrections Needed?</h3>"
 						+ "If your name and/or email shown above is not correct, please send a message to "
 						+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><br>giving detailed "
 						+ "instructions for any changes that are needed.<p>"); 
-				buf.append("<style type='text/css'>a.nav, a.nav:link, a.nav:visited {display:block; width:250px; height:35px; "
-						+ "background:red; border:1px solid #000; margin-top:2px; text-align:center; text-decoration:none; "
-						+ "font-family:verdana, arial, sans-serif; font-size:15px; color:white; line-height:35px; overflow:hidden;}"
-						+ "a.nav:hover {color:#fff; background:#800;}</style>");
-				buf.append("<a class='nav' href='/Home'>Go To The Home Page Now</a>");
+				if (!user.requiresUpdates()) {
+					buf.append("<style type='text/css'>a.nav, a.nav:link, a.nav:visited {display:block; width:250px; height:35px; "
+							+ "background:red; border:1px solid #000; margin-top:2px; text-align:center; text-decoration:none; "
+							+ "font-family:verdana, arial, sans-serif; font-size:15px; color:white; line-height:35px; overflow:hidden;}"
+							+ "a.nav:hover {color:#fff; background:#800;}</style>");
+					buf.append("<a class='nav' href='/Home'>Go To The Home Page Now</a>");
+				}
 			}
 			boolean showDuplicateAccounts = "Get Authorization Code".equals(request.getParameter("UserRequest")) || "Merge This Account With Mine".equals(request.getParameter("UserRequest"));
 			buf.append("<p><a href=# style='font-size:smaller' onClick=\"javascript: document.getElementById('multi').style.display=''\">I can't find my stuff</a>"
 					+ "<div id='multi'" + (showDuplicateAccounts?">":" style='display:none'>"));
-			
+
 			buf.append("<h3>Do You Have Multiple ChemVantage Accounts?</h3>"
 					+ "This is fairly common because there are multiple ways of creating ChemVantage accounts.<br>"
 					+ "If you think you have more than one account and you don't see options below for merging<br>"
