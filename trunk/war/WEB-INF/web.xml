@@ -95,6 +95,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet-mapping>
 	
 	<servlet>
+		<servlet-name>DomainAdmin</servlet-name>
+		<servlet-class>org.chemvantage.DomainAdmin</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>DomainAdmin</servlet-name>
+		<url-pattern>/admin</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
 		<servlet-name>Edit</servlet-name>
 		<servlet-class>org.chemvantage.Edit</servlet-class>
 	</servlet>
@@ -203,6 +212,23 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	<servlet-mapping>
 		<servlet-name>OpenIdLaunch</servlet-name>
 		<url-pattern>/openid</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
+		<servlet-name>OpenIdSetup</servlet-name>
+		<servlet-class>org.chemvantage.OpenIdSetup</servlet-class>
+		<init-param>
+			<param-name>realm</param-name>
+			<param-value></param-value>
+		</init-param>
+		<init-param>
+			<param-name>return_to_path</param-name>
+			<param-value>/setup</param-value>
+		</init-param>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>OpenIdSetup</servlet-name>
+		<url-pattern>/setup</url-pattern>
 	</servlet-mapping>
 
 	<servlet>
