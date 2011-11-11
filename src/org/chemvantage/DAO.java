@@ -44,7 +44,7 @@ public class DAO extends com.googlecode.objectify.util.DAOBase {
 		ObjectifyService.register(RescueMessage.class);
 		ObjectifyService.register(VideoTransaction.class);
 		ObjectifyService.register(BLTIConsumer.class);
-		ObjectifyService.register(DemoPremiumAccount.class);
+		ObjectifyService.register(Domain.class);
 	}
 	
 	public Subject getSubject() {

@@ -158,7 +158,10 @@ public class User implements Comparable<User>,Serializable {
 		if (userInfo == null) return null;
 		User user;
 		try {
+			Objectify ofy = ObjectifyService.begin();
 			String userId = userInfo.getClaimedId();
+			user = ofy.find(User.class,userId);
+			if (user != null) return user;
 			user = new User(userId);
 			user.authDomain = "Google Apps";
 			user.domain = extractDomain(userInfo.getClaimedId());
@@ -166,7 +169,6 @@ public class User implements Comparable<User>,Serializable {
 			user.verifiedEmail = !user.email.isEmpty();
 			user.setFirstName(userInfo.getFirstName());
 			user.setLastName(userInfo.getLastName());
-			Objectify ofy = ObjectifyService.begin();
 			if (user.verifiedEmail) { // search for any accounts with the same email address and alias the new one to it
 				User twin = ofy.query(User.class).filter("email", user.email).get();
 				if (twin != null && twin.verifiedEmail) user.alias = twin.id;

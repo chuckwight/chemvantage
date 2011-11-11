@@ -9,12 +9,4 @@
 <!-- To create a custom listing please refer to following link:          -->
 <!-- http://code.google.com/googleapps/marketplace/listing_manifest.html -->
 <ListingManifest>
-  <SubListings>
-    <SubListing>
-      <DisplayName>Standard edition</DisplayName>
-      <EditionId>standard</EditionId>
-      <PaymentModel>PAID</PaymentModel>
-      <SeatCount>-1</SeatCount>
-    </SubListing>
-  </SubListings>
 </ListingManifest>
