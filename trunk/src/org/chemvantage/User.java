@@ -75,7 +75,7 @@ public class User implements Comparable<User>,Serializable {
 		this.demoPremium = false;
 		this.demoExpires = new Date(0L);
 		this.lastLogin = new Date(0L);
-		this.myGroupId = 0L;
+		this.myGroupId = -1L;
 		this.smsMessageDevice = "";
 		this.notifyDeadlines = false;
 		this.verifiedEmail = false;
@@ -253,7 +253,7 @@ public class User implements Comparable<User>,Serializable {
 	
 	boolean requiresUpdates() {
 		try {
-			if (!firstName.isEmpty() && !lastName.isEmpty() && !email.isEmpty()) return false;
+			if (!firstName.isEmpty() && !lastName.isEmpty() && !email.isEmpty() && myGroupId>=0) return false;
 			return true;
 		} catch (Exception e) {
 			return true;
