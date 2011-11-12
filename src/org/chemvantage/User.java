@@ -129,7 +129,12 @@ public class User implements Comparable<User>,Serializable {
 			user.setEmail(u.getEmail());
 			user.verifiedEmail = !(user.email==null || user.email.isEmpty());
 			user.setIsAdministrator(UserServiceFactory.getUserService().isUserAdmin());
-			ObjectifyService.begin().put(user);
+			Objectify ofy = ObjectifyService.begin();
+			if (user.verifiedEmail) { // search for any accounts with the same email address and alias the new one to it
+				User twin = ofy.query(User.class).filter("email", user.email).get();
+				if (twin != null && twin.verifiedEmail) user.alias = twin.id;
+			}
+			ofy.put(user);
 		} catch (Exception e) {
 			return null;
 		}
