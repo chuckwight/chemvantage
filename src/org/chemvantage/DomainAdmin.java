@@ -19,6 +19,7 @@ package org.chemvantage;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Date;
 import java.util.List;
 
 import javax.servlet.ServletException;
@@ -121,13 +122,14 @@ public class DomainAdmin extends HttpServlet {
 		try {
 			Domain domain = ofy.query(Domain.class).filter("domainName", user.domain).get();
 			if (!domain.isAdmin(user.id)) return "Not authorized.";
-			
+			Date now = new Date();
 			buf.append("<table>");
 			buf.append("<tr><td align=right>Domain name: </td><td>" + domain.domainName + "</td></tr>");
 			domain.activeUsers = ofy.query(User.class).filter("domain",domain.domainName).count();
 			buf.append("<tr><td align=right>Total number of users: </td><td>" + domain.activeUsers + "</td></tr>");
 			buf.append("<tr><td align=right>Total premium account seats purchased: </td><td>" + domain.seatsPurchased + "</td></tr>");
 			buf.append("<tr><td align=right>Total premium account seats available: </td><td>" + domain.seatsAvailable + "</td></tr>");
+			if (domain.freeTrialExpires.after(now)) buf.append("<tr><td align=right>Free trial period ends: </td><td>" + domain.freeTrialExpires.toString() + "</td></tr>");
 			buf.append("</table>");
 			
 			// Start user search section for editing user properties
@@ -141,9 +143,9 @@ public class DomainAdmin extends HttpServlet {
 				if (cursor!=null) results.startCursor(Cursor.fromWebSafeString(cursor));
 			}
 			
-			buf.append("\n<h3>User Search</h3>");
+			buf.append("\n<h3>Manage User Accounts</h3>");
 			buf.append("\n<FORM METHOD=GET>"
-					+ "To search for a user, enter a portion of the user's <i>lastname, firstname</i>. Wildcards (*) are OK.<br>");
+					+ "To search for a user, enter a portion of the user's <i>lastname, firstname</i>.<br>");
 
 			buf.append("\n<INPUT NAME=SearchString VALUE='" + (searchString==null?"":CharHider.quot2html(searchString)) + "'>"
 					+ "\n<INPUT TYPE=SUBMIT VALUE='Search for users'></FORM>");
@@ -171,9 +173,28 @@ public class DomainAdmin extends HttpServlet {
 				buf.append("\n</TABLE>");
 				if (nResults==this.queryLimit) buf.append("<a href=/Admin?SearchString=" + searchString + "&Cursor=" + iterator.getCursor().toWebSafeString() + ">show more users</a>"); 
 			} else if (searchString != null) buf.append("\nSorry, the search returned no results.");
-				// write a section here to give the total number of users  
-			}
-		catch (Exception e) {
+
+			buf.append("<h3>Basic and Premium Accounts</h3>"
+					+ "Any individual user may browse ChemVantage without charge using a free basic account simply by navigating to the site.<br>"
+					+ "In order to join a ChemVantage group (usually a chemistry class taught by one of your instructors), a user must upgrade to a premium account. "
+					+ "During the free trial period this happens automatically.<p>"
+					+ "There are 2 ways to upgrade to a premium account after the free trial period:<ol>"
+					+ "<li>The domain (e.g., school or college) may purchase premium account seats ($2.00/ea in quantities of 50 or more) that are allocated to users when they first join a group. If you want to purchase premium accounts on behalf of your students, you simply have to ensure that a sufficient number of seats are purchased in advance."
+					+ "<li>If no seats are available, the user will be asked to purchase an individual premium account upgrade ($4.99) when joining a group for the first time. If you want students to purchase their own premium accounts, you don't have to do anything; it's automatic."
+					+ "</ol>");
+
+			buf.append("<h3>Instructor and Admin Accounts</h3>"
+					+ "As the domain administrator, you have the ability to grant instructor or administrator privileges to users in your domain (i.e., users with a user@" + domain.domainName + " email address). "
+					+ "Find the user's account using the search box above and edit the user's profile to grant the appropriate rights.<ul>" 
+					+ "<li>Instructors can create and manage ChemVantage groups"
+					+ "<li>Administrators can grant and revoke user privileges"
+					+ "</ul>All instructors and administrators are provided premium accounts automatically without charge.");
+					
+			buf.append("<h3>Questions or Comments</h3>"
+					+ "See the <a href=/help.html>Help Page</a> for useful tips and tricks, or send us a message using the <a href=/Feedback>Feedback Page</a>, or contact us directly at <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>. "
+					+ "For emergencies, call us at 1-801-810-4401 (domain administrators only, please)");
+
+		} catch (Exception e) {
 			buf.append("<p>" + e.toString());
 		}
 		return buf.toString();

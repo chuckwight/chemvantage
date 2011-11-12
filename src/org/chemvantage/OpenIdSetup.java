@@ -18,7 +18,6 @@ package org.chemvantage;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Date;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -29,8 +28,6 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import org.apache.commons.lang.StringUtils;
-import org.chemvantage.DAO;
-import org.chemvantage.User;
 import org.chemvantage.openid.ConsumerFactory;
 import org.chemvantage.openid.UserInfo;
 import org.openid4java.OpenIDException;
@@ -137,67 +134,51 @@ public class OpenIdSetup extends HttpServlet {
 			if (user == null) {
 				user = User.createOpenIdUser(userInfo);
 				user.setIsAdministrator(true);
+				user.setIsInstructor(true);
 				ofy.put(user);
 			}
 			HttpSession session = req.getSession();
 			session.setAttribute("UserId", user.getId());
-
-			String callback = (String)req.getSession().getAttribute("callback");
+			String callback = (String)session.getAttribute("callback");
+			if (callback==null) callback = "";
+			session.removeAttribute("callback");
 			
 			Domain domain = ofy.query(Domain.class).filter("domainName",user.domain).get();
 			if (domain == null) {
 				domain = new Domain(user.domain);
 				domain.addAdmin(user.id);
 				ofy.put(domain);
-				resp.sendRedirect(callback);
-			} else {			
-				resp.setContentType("text/html");
-				PrintWriter out = resp.getWriter();
-				out.println(Home.getHeader(user) + welcomeMessage(user,domain,callback) + Home.footer);
-
-				// try to set a Cookie with the user's ID provider:
-				Cookie c = new Cookie("IDProvider", "Google");
-				c.setMaxAge(2592000); // expires after 30 days (in seconds)
-				resp.addCookie(c);
 			}
+		
+			// try to set a Cookie with the user's ID provider:
+			Cookie c = new Cookie("IDProvider", "Google");
+			c.setMaxAge(2592000); // expires after 30 days (in seconds)
+			resp.addCookie(c);
+			
+			if (callback.isEmpty()) {
+			resp.setContentType("text/html");
+			PrintWriter out = resp.getWriter();
+			out.println(Home.getHeader(user) + welcomeMessage(user,domain) + Home.footer);
+			} else resp.sendRedirect(callback);
+			
 		} catch (OpenIDException e) {
 			resp.sendRedirect("?errorString=Error processing OpenID response: "
 					+ e.getMessage());
 		}
 	}
 
-	String welcomeMessage(User user,Domain domain,String callback) {
+	String welcomeMessage(User user,Domain domain) {
 		StringBuffer buf = new StringBuffer();
-		buf.append("<h2>Thank you for adding ChemVantage to your Google Apps domain</h2>"
-				+ "Google Apps Domain: " + domain.domainName + "<br>");
+		buf.append("<h2>Thank you for installing ChemVantage</h2>");
+		buf.append("<table>");
+		buf.append("<tr><td style='text-align:right'>Google Apps Domain: </td><td>" + domain.domainName + "</td></tr>");
 		for (String s : domain.domainAdmins) {
-			buf.append("Administrator: " + User.getBothNames(s) + " (" + User.getEmail(s) + ")<br>");
+			buf.append("<tr><td style='text-align:right'>Administrator: </td><td>" + User.getBothNames(s) + " (" + User.getEmail(s) + ")</td></tr>");
 		}
-		buf.append("<span style='color:red;font-weight:bold'><a href='" + callback + "'>Click here to complete the installation</a></span>");
-		Date now = new Date();
-		if (domain.freeTrialExpires.after(now)) buf.append("<h3>Free Trial Period</h3>"
-				+ "Your free trial period expires " + domain.freeTrialExpires.toString()
-				+ "<br>Until then, the number of free premium account seats in your domain is unlimited.<p>");
+		buf.append("<tr><td style='text-align:right'>Free trial period expires: </td><td>" + domain.freeTrialExpires.toString() + "</td></tr>");
+		buf.append("</table>");
 		
-		buf.append("<h3>Basic and Premium Accounts</h3>"
-				+ "Any individual user may browse ChemVantage without charge using a free basic account simply by navigating to the site.<br>"
-				+ "In order to join a ChemVantage group (usually a chemistry class taught by one of your instructors), a user must upgrade to a premium account.<br>"
-				+ "During the free trial period this happens automatically.<p>"
-				+ "There are 2 ways to upgrade to a premium account after the free trial period:<ol>"
-				+ "<li>The domain (e.g., school or college) may purchase premium account seats ($2.00/ea in quantities of 50 or more) that are allocated to users when they first join a group. If you want to purchase premium accounts on behalf of your students, you simply have to ensure that a sufficient number of seats are purchased in advance."
-				+ "<li>If no seats are available, the user will be asked to purchase an individual premium account upgrade ($4.99) when joining a group for the first time. If you want students to purchase their own premium accounts, you don't have to do anything; it's automatic."
-				+ "</ol>");
-		
-		buf.append("<h3>Instructor and Admin Accounts</h3>"
-				+ "As the domain administrator, you have the ability to grant instructor privileges to users in your domain (i.e., users with a user@" + domain.domainName + " email address). "
-				+ "To do this, you must click the 'Admin' link at the top of the page. Use the user search tool to find the user's account and then edit it to grant or revoke privileges. "
-				+ "You may also use this tool to grant/revoke administrator privileges.  "
-				+ "All instructors and administrators are automatically provided premium accounts without charge.<p>");
-		
-		buf.append("<h3>Questions or Comments</h3>"
-				+ "See the <a href=/help.html>Help Page</a> for useful tips and tricks, or send us a message using the <a href=/Feedback>Feedback Page</a>, or contact us directly at <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.<br>"
-				+ "For emergencies, call us at 1-801-810-4401 (domain administrators only, please)");
-		
+		buf.append("<p><span style='color:red;font-weight:bold'>Your account setup is complete.</span><p>");
 		return buf.toString();
 	}
 	/**
