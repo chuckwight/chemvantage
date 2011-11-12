@@ -173,7 +173,7 @@ public class OpenIdSetup extends HttpServlet {
 		for (String s : domain.domainAdmins) {
 			buf.append("Administrator: " + User.getBothNames(s) + " (" + User.getEmail(s) + ")<br>");
 		}
-		buf.append("<span style='color:red;font-weight:bold'>Setup is complete</span>");
+		buf.append("<span style='color:red;font-weight:bold'><a href='" + callback + "'>Click here to complete the installation</a></span>");
 		Date now = new Date();
 		if (domain.freeTrialExpires.after(now)) buf.append("<h3>Free Trial Period</h3>"
 				+ "Your free trial period expires " + domain.freeTrialExpires.toString()
