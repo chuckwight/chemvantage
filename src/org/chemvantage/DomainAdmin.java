@@ -95,7 +95,7 @@ public class DomainAdmin extends HttpServlet {
 			if (userRequest.equals("Update User")) {
 				User usr = ofy.get(User.class,request.getParameter("UserId")); // user record to modify
 				updateUser(usr,request);
-				searchString = usr.getFullName();
+				searchString = usr.lowercaseName;
 				if (usr.id.equals(user.id)) user = usr; // admin modifying own record; update now to reflect new status
 			} else if (userRequest.equals("Delete User")) {
 				User usr = ofy.get(User.class,request.getParameter("UserId"));
@@ -205,29 +205,24 @@ public class DomainAdmin extends HttpServlet {
 		try {
 			buf.append("\nUsing this form, you may edit edit any user-specific fields "
 					+ "for this user, login as the user, or delete the user account permanently.<p>");
-
+			
 			int roles = usr.roles;
-			buf.append("\n<TABLE><FORM NAME=UserForm METHOD=POST ACTION=Admin>"
+			buf.append("\n<TABLE><FORM NAME=UserForm METHOD=POST ACTION=admin>"
 					+ "<INPUT TYPE=HIDDEN NAME=UserId VALUE='" + usr.id + "'>"
 					+ "\n<TR><TD ALIGN=RIGHT>UserID: </TD><TD>" + usr.id + "</TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>AuthDomain: </TD><TD>" + usr.authDomain + "</TD></TR>"
+					+ "\n<TR><TD ALIGN=RIGHT>Account type: </TD><TD>" + (usr.hasPremiumAccount()?"premium":"basic") + "</TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>Email: </TD><TD><INPUT NAME=Email VALUE='" + usr.email + "'></TD></TR>"
-					+ "\n<TR><TD ALIGN=RIGHT>LastName: </TD><TD><INPUT NAME=LastName VALUE='" 
+					+ "\n<TR><TD ALIGN=RIGHT>Last Name: </TD><TD><INPUT NAME=LastName VALUE='" 
 					+ CharHider.quot2html(usr.lastName) + "'></TD></TR>"
-					+ "\n<TR><TD ALIGN=RIGHT>FirstName: </TD><TD><INPUT NAME=FirstName VALUE='" 
+					+ "\n<TR><TD ALIGN=RIGHT>First Name: </TD><TD><INPUT NAME=FirstName VALUE='" 
 					+ CharHider.quot2html(usr.firstName) + "'></TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT VALIGN=TOP>Roles: </TD><TD>"
-					+ "<INPUT TYPE=CHECKBOX NAME=Roles VALUE=1" + (roles%2/1==1?" CHECKED":"") + ">Contributor<br>"
-					+ "<INPUT TYPE=CHECKBOX NAME=Roles VALUE=2" + (roles%4/2==1?" CHECKED":"") + ">Editor<br>"
 					+ "<INPUT TYPE=CHECKBOX NAME=Roles VALUE=8" + (roles%16/8==1?" CHECKED":"") + ">Instructor<br>"
 					+ "<INPUT TYPE=CHECKBOX NAME=Roles VALUE=16" + (roles%32/16==1?" CHECKED":"") + ">Administrator"
-					+ "</TD></TR>"
-					+ "\n<TR><TD ALIGN=RIGHT>Acct Type: </TD><TD>"
-					+ "<INPUT TYPE=RADIO NAME=Premium VALUE='false'" + (!usr.premium?" CHECKED":"") + ">Basic "
-					+ "<INPUT TYPE=RADIO NAME=Premium VALUE='true'" + (usr.premium?" CHECKED":"") + ">Premium "
-					+ (usr.demoPremium?"<br>(demo premium account)":"") + "</TD></TR>");
+					+ "</TD></TR>");
 			buf.append("<TR><TD ALIGN=RIGHT>Alias: </TD><TD><INPUT TYPE=TEXT NAME=Alias VALUE='" + (usr.alias==null?"":usr.alias) + "'></TD></TR>");
-			buf.append("<TR><TD ALIGN=RIGHT>Group: </TD><TD>" + groupSelectBox(usr.myGroupId) + "</TD></TR>");
+			buf.append("<TR><TD ALIGN=RIGHT>Group: </TD><TD>" + groupSelectBox(usr.myGroupId,usr.domain) + "</TD></TR>");
 			buf.append("\n<TR><TD ALIGN=RIGHT>Last Login: </TD>"
 					+ "<TD>" + usr.lastLogin + "</TD></TR>"
 					+ "\n</TABLE>");
@@ -249,7 +244,7 @@ public class DomainAdmin extends HttpServlet {
 					User mergeUser = ofy.get(User.class,request.getParameter("MergeUserId"));
 					if (usr.id.equals(mergeUser.id)) mergeUser = null; // prevents merging identical accounts
 					Group g = mergeUser.myGroupId>0?ofy.find(Group.class,mergeUser.myGroupId):null;
-					buf.append("<FORM METHOD=POST ACTION=Admin>"
+					buf.append("<FORM METHOD=POST>"
 							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='Confirm Merge'>"
 							+ "<INPUT TYPE=HIDDEN NAME=UserId VALUE='" + usr.id + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=MergeUserId VALUE='" + mergeUser.id + "'>"
@@ -268,7 +263,7 @@ public class DomainAdmin extends HttpServlet {
 			}
 			if (mergeUserId==null) { // either no mergeUserId was specified or the value was invalid
 				buf.append("<br>The account to be retained with all records has a UserId: <b>" + usr.id + "</b>");
-				buf.append("<FORM METHOD=GET ACTION=Admin>Enter the UserId of the account to be deleted: "
+				buf.append("<FORM METHOD=GET>Enter the UserId of the account to be deleted: "
 						+ "<INPUT TYPE=HIDDEN NAME=UserId VALUE='" + usr.id + "'>"
 						+ "<INPUT TYPE=TEXT NAME=MergeUserId>"
 						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Check ID'></FORM>");
@@ -280,10 +275,10 @@ public class DomainAdmin extends HttpServlet {
 		return buf.toString();
 	}
 
-	String groupSelectBox(long myGroupId) {
+	String groupSelectBox(long myGroupId,String domain) {
 		StringBuffer buf = new StringBuffer();
 		try {
-			Query<Group> groups = ofy.query(Group.class);
+			Query<Group> groups = ofy.query(Group.class).filter("domain",domain);
 			buf.append("\n<SELECT NAME=GroupId><OPTION VALUE=0>(none)</OPTION>");
 			for (Group g : groups) {
 				buf.append("\n<OPTION VALUE=" + g.id + (g.id==myGroupId?" SELECTED>":">") 
@@ -311,7 +306,6 @@ public class DomainAdmin extends HttpServlet {
 			usr.setLastName(request.getParameter("LastName"));
 			usr.setLowerCaseName();
 			usr.roles = roles;
-			usr.setPremium(Boolean.parseBoolean(request.getParameter("Premium")));
 			if (request.getParameter("Alias").isEmpty()) usr.alias = null;
 			else usr.alias = request.getParameter("Alias");
 			try {
@@ -323,50 +317,6 @@ public class DomainAdmin extends HttpServlet {
 		}
 		catch (Exception e) {
 		}
-	}
-	
-	String BLTIConsumerForm() {
-		StringBuffer buf = new StringBuffer();
-		try {
-			buf.append("<h3>Basic LTI Consumers</h3>");
-			buf.append("The following is a list of organizations that are permitted to make Basic LTI "
-					+ "connections to ChemVantage, usually from within a learning management system. "
-					+ "In order to authorize a new LMS to make BLTI launch requests, ChemVantage must provide "
-					+ "the LMS administrator with an oauth_consumer_key (a string similar to a domain name like "
-					+ "'webct.utah.edu' or 'webct,business.utah.edu') and a shared secret (random string).");
-			Query<BLTIConsumer> consumers = ofy.query(BLTIConsumer.class);
-			if (consumers.count() == 0) buf.append("(no BLTI consumers have been authorized yet)<p>");
-			for (BLTIConsumer c : consumers) {
-				buf.append(c.oauth_consumer_key);
-				buf.append(" <INPUT TYPE=BUTTON VALUE='Reveal secret' "
-				+ "onClick=javascript:getElementById('" + c.oauth_consumer_key + "').style.display='';this.style.display='none'>"
-				+ "<div id='"+ c.oauth_consumer_key + "' style='display: none'>" + c.secret + "</div><br>");
-			}
-			buf.append("<b>Create/Delete BLTI Consumer</b><br><FORM ACTION=Admin METHOD=POST>"
-					+ "BLTI oath_consumer_key: <INPUT TYPE=TEXT NAME=oath_consumer_key>"
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Generate New BLTI Secret'>"
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete BLTI Consumer'>"
-					+ "</FORM>");
-		} catch (Exception e) {
-			buf.append(e.getMessage());
-		}
-		return buf.toString();
-	}
-	
-	void createBLTIConsumer(HttpServletRequest request) {
-		String oauth_consumer_key = request.getParameter("oauth_consumer_key");
-		// prevent over-writing an existing BLTIConsumer
-		BLTIConsumer c = ofy.find(BLTIConsumer.class,oauth_consumer_key); 
-		if (c==null) {
-			c = new BLTIConsumer(oauth_consumer_key); 
-			ofy.put(c);
-		}
-	}
-		
-	void deleteBLTIConsumer(HttpServletRequest request) {
-		String oauth_consumer_key = request.getParameter("oauth_consumer_key");
-		BLTIConsumer c = ofy.find(BLTIConsumer.class,oauth_consumer_key); 
-		if (c!=null) ofy.delete(c);
 	}
 	
 	protected static void mergeAccounts(User toUser,User fromUser) {

@@ -316,6 +316,7 @@ public class Groups extends HttpServlet {
 	private void createGroup(User user,HttpServletRequest request) {
 		try {
 			Group g = new Group(user.id,CharHider.quot2html(request.getParameter("Description")));
+			g.domain = user.domain;
 			ofy.put(g);
 		} catch (Exception e) {
 		}

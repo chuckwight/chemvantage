@@ -72,7 +72,7 @@ public class Home extends HttpServlet {
 		if (user.demoExpires==null) user.demoExpires = new Date(0);
 		
 		// Check to see if the user should provide additional contact information
-		if (user.requiresUpdates() && (user.lastLogin.before(eightHoursAgo))) { 
+		if (user.requiresUpdates() && (user.lastLogin.before(eightHoursAgo))) {
 			response.sendRedirect("/Verification");      // enter name and email address
 			return;
 		}
