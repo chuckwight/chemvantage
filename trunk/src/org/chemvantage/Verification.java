@@ -19,6 +19,7 @@ package org.chemvantage;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
@@ -247,6 +248,7 @@ public class Verification extends HttpServlet {
 							+ "<OPTION VALUE=0>I'm not a member of any group or class using ChemVantage</OPTION>\n");
 					for (Group g : allGroups) {
 						try {
+							if (g.domain != user.domain) continue;
 							buf.append("<OPTION VALUE=" + g.id + ">" + g.description + " (" + g.getInstructorBothNames() + ")</OPTION>\n");
 						} catch (Exception e2) {
 							continue;
@@ -281,12 +283,15 @@ public class Verification extends HttpServlet {
 					+ "them below, first check each account to make sure that the email address has been verified<br>"
 					+ "by ChemVantage. If that doesn't work, send a detailed account merge request to "
 					+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.<p>");
+			
 			if (user.verifiedEmail && !user.requiresUpdates()) {
+				List<String> otherUserIds = new ArrayList<String>();
 				// This section finds accounts with duplicate verified email addresses for immediate account merging
-				List<User> duplicateEmails = ofy.query(User.class).filter("email",user.email).list();
+				List<User> duplicateEmails = ofy.query(User.class).filter("email",user.email).filter("domain", user.domain).list();
 				buf.append("<TABLE>");
 				for (User u : duplicateEmails) {
 					if (u.id.equals(user.id) || !u.verifiedEmail || u.alias!=null) continue;
+					otherUserIds.add(u.id);
 					int code = Math.abs((new Key<User>(User.class,u.id).toString() + new Key<User>(User.class,user.id).toString()).hashCode());
 					int i = duplicateEmails.indexOf(u);
 					String consumerKey = u.authDomain.equals("BLTI")?u.id.substring(0, u.id.indexOf(":")):u.authDomain;
@@ -300,9 +305,9 @@ public class Verification extends HttpServlet {
 							+ "</FORM></TD></TR>");
 				}
 				// This section finds duplicate names, sends a code to the user's email address and accepts it to initiate an account merge.
-				List<User> duplicateNames = ofy.query(User.class).filter("lowercaseName",user.lowercaseName).list();
+				List<User> duplicateNames = ofy.query(User.class).filter("lowercaseName",user.lowercaseName).filter("domain",user.domain).list();
 				for (User u : duplicateNames) {
-					if (u.id.equals(user.id) || duplicateEmails.contains(u) || !u.verifiedEmail || u.alias!=null) continue;
+					if (u.id.equals(user.id) || otherUserIds.contains(u.id) || !u.verifiedEmail || u.alias!=null) continue;
 					int i = duplicateNames.indexOf(u);
 					String consumerKey = u.authDomain.equals("BLTI")?u.id.substring(0, u.id.indexOf(":")):u.authDomain;
 					buf.append("<TR><TD>" + u.getFullName() + " (" + u.email + ") - authorization domain=" + consumerKey + "</TD>"

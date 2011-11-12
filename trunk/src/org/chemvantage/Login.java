@@ -96,8 +96,9 @@ public class Login extends HttpServlet {
 		+ "</nobr></div>\n"
 		+ "<div id=phzl></div><div align=right id=puzr style='font-size:84%;padding:0 0 4px' width=100%>"
 		+ "</div><br>";
+	
 	public static String footer = "\n<hr><span style='font-size:smaller'><table style='width:100%;border-spacing: 20px 0px'><tr><td>"
-		+ "&copy; 2007-11 ChemVantage.org.</td><td align=center><a href=About#terms>Terms and Conditions of Use</a></td>"
+		+ "&copy; 2007-11 ChemVantage LLC.</td><td align=center><a href=About#terms>Terms and Conditions of Use</a></td>"
 		+ "<td align=right>Powered by<a href='http://code.google.com/appengine/' border=0><img src=/images/GAE.png "
 		+ "alt='Google App Engine' style='vertical-align:middle'>Google App Engine</a></td></tr></table>"
 		+ "</span>"

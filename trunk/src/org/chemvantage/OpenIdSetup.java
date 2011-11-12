@@ -131,12 +131,11 @@ public class OpenIdSetup extends HttpServlet {
 		try {
 			UserInfo userInfo = completeAuthentication(req);
 			User user = ofy.find(User.class, userInfo.getClaimedId());
-			if (user == null) {
-				user = User.createOpenIdUser(userInfo);
-				user.setIsAdministrator(true);
-				user.setIsInstructor(true);
-				ofy.put(user);
-			}
+			if (user == null) user = User.createOpenIdUser(userInfo);
+			user.setIsAdministrator(true);
+			user.setIsInstructor(true);
+			ofy.put(user);
+
 			HttpSession session = req.getSession();
 			session.setAttribute("UserId", user.getId());
 			String callback = (String)session.getAttribute("callback");

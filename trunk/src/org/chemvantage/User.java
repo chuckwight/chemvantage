@@ -85,8 +85,9 @@ public class User implements Comparable<User>,Serializable {
 
 	static User getInstance(HttpSession session) {
 		try {
+			Objectify ofy = ObjectifyService.begin();
 			String userId = (String)session.getAttribute("UserId");
-			User user = ObjectifyService.begin().get(User.class,userId);
+			User user = ofy.get(User.class,userId);
 			if (user.alias != null) { // follow the alias chain to the end
 				List<String> userIds = new ArrayList<String>();
 				userIds.add(userId);
@@ -100,6 +101,7 @@ public class User implements Comparable<User>,Serializable {
 				user.alias = null;  // in case alias is set to ""
 				ObjectifyService.begin().put(user);
 			}
+			session.setAttribute("UserId",user.id);
 			return user;
 		} catch (Exception e) {
 			return null;
@@ -174,11 +176,9 @@ public class User implements Comparable<User>,Serializable {
 			user.verifiedEmail = !user.email.isEmpty();
 			user.setFirstName(userInfo.getFirstName());
 			user.setLastName(userInfo.getLastName());
-			if (user.verifiedEmail) { // search for any accounts with the same email address and alias the new one to it
-				User twin = ofy.query(User.class).filter("email", user.email).get();
-				if (twin != null && twin.verifiedEmail) user.alias = twin.id;
-			}
 			ofy.put(user);
+			Query<User> twins = ofy.query(User.class).filter("email",user.email);
+			for (User t : twins) Admin.mergeAccounts(user, t);
 		} catch (Exception e) {
 			return null;
 		}		
@@ -437,7 +437,10 @@ public class User implements Comparable<User>,Serializable {
 
 	void setIsAdministrator(boolean makeAdmin) {
 		if (isAdministrator() && !makeAdmin) roles -= 16;
-		else if (!isAdministrator() && makeAdmin) roles += 16;
+		else if (!isAdministrator() && makeAdmin) {
+			roles += 16;
+			setPremium(makeAdmin);
+		}
 	}
 	
 	boolean isInstructor() {
