@@ -53,10 +53,10 @@ public class Login extends HttpServlet {
     	openIdProviders = new HashMap<String, String>();
     	openIdLogos = new HashMap<String, String>();
     	
-        openIdProviders.put("Google", "gmail.com"); openIdLogos.put("Google", "/images/openid/google.jpg");
-        openIdProviders.put("Yahoo", "yahoo.com"); openIdLogos.put("Yahoo", "/images/openid/yahoo.jpg");
+    	openIdProviders.put("MyOpenID", "myopenid.com"); openIdLogos.put("MyOpenID", "/images/openid/myopenid.jpg");
         openIdProviders.put("AOL", "aol.com"); openIdLogos.put("AOL", "/images/openid/aol.jpg");
-        openIdProviders.put("MyOpenID", "myopenid.com"); openIdLogos.put("MyOpenID", "/images/openid/myopenid.jpg");
+        openIdProviders.put("Yahoo", "yahoo.com"); openIdLogos.put("Yahoo", "/images/openid/yahoo.jpg");
+        openIdProviders.put("Google", "gmail.com"); openIdLogos.put("Google", "/images/openid/google.jpg");
         attributes.add("email");
 	}
     
@@ -195,6 +195,14 @@ public class Login extends HttpServlet {
 							+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
 							+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/>" 
 							+ providerName + "</a></TD>");
+				}
+				for (String providerName : CASLaunch.casProviders.keySet()) {
+					String casUrl = CASLaunch.casProviders.get(providerName);
+					String loginUrl = casUrl + "/login?service=https://" + request.getServerName() + "/cas";
+					buf.append("<TD style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
+							+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
+							+ "<img src='" + CASLaunch.casLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/>" 
+							+ providerName + "</a></TD>"); 
 				}
 				buf.append("</TR></TABLE>");
 			}
