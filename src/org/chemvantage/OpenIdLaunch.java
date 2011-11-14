@@ -122,6 +122,7 @@ public class OpenIdLaunch extends HttpServlet {
 			throws ServletException, IOException {
 		try {
 			UserInfo userInfo = completeAuthentication(req);
+			if (userInfo==null) resp.sendRedirect("http://chemvantage.org");
 			User user = ofy.find(User.class,userInfo.getClaimedId());
 			if (user == null) user = User.createOpenIdUser(userInfo);
 			req.getSession().setAttribute("UserId", user.getId());
