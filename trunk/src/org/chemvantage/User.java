@@ -258,7 +258,7 @@ public class User implements Comparable<User>,Serializable {
 	
 	boolean requiresUpdates() {
 		try {
-			if (!firstName.isEmpty() && !lastName.isEmpty() && !email.isEmpty() && myGroupId>=0) return false;
+			if (!firstName.isEmpty() && !lastName.isEmpty() && !email.isEmpty() && verifiedEmail && myGroupId>=0) return false;
 			return true;
 		} catch (Exception e) {
 			return true;
@@ -511,7 +511,7 @@ public class User implements Comparable<User>,Serializable {
 				newGroup.memberIds.add(this.id);
 				ofy.put(newGroup);
 			}
-			this.myGroupId = newGroupId;
+			this.myGroupId = newGroup==null?0:newGroupId;
 			ofy.put(this);
 		} catch (Exception e) {
 		}
