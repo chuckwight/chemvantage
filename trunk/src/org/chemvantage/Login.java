@@ -196,6 +196,7 @@ public class Login extends HttpServlet {
 							+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/>" 
 							+ providerName + "</a></TD>");
 				}
+				/* ======= HIDE CAS LOGIN FOR NOW =========
 				for (String providerName : CASLaunch.casProviders.keySet()) {
 					String casUrl = CASLaunch.casProviders.get(providerName);
 					String loginUrl = casUrl + "/login?service=https://" + request.getServerName() + "/cas";
@@ -204,6 +205,7 @@ public class Login extends HttpServlet {
 							+ "<img src='" + CASLaunch.casLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/>" 
 							+ providerName + "</a></TD>"); 
 				}
+				============================================ */
 				buf.append("</TR></TABLE>");
 			}
 		} catch (Exception e) {

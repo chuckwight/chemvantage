@@ -222,7 +222,7 @@ public class Verification extends HttpServlet {
 				}
 				buf.append("<TR><TD ALIGN=RIGHT>SMS address:</TD><TD>" + smsAddress + "</TD></TR>");	
 			}
-			buf.append("<TR><TD ALIGN=RIGHT>Account type: </TD><TD>" + (user.hasPremiumAccount()?"premium":"basic") + "</TD></TR>");
+			buf.append("<TR><TD ALIGN=RIGHT>Account type: </TD><TD>" + (user.hasPremiumAccount()?"premium":"basic (<a href=Upgrade>what's this?</a>)") + "</TD></TR>");
 			if (user.myGroupId>0L) { // user already belongs to a group
 				Group myGroup = ofy.find(Group.class,user.myGroupId);
 				buf.append("<TR><TD ALIGN=RIGHT>Group:</TD><TD>" + myGroup.description + " (" + myGroup.getInstructorBothNames() + ")</TD></TR>");
@@ -239,9 +239,7 @@ public class Verification extends HttpServlet {
 					buf.append("<FORM NAME=JoinGroup METHOD=POST ACTION=Verification>");
 					buf.append("<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=JoinGroup>");
 
-					Query<Group> allGroups;
-					if (user.domain == null) allGroups = ofy.query(Group.class);
-					else allGroups = ofy.query(Group.class).filter("domain",user.domain);
+					Query<Group> allGroups = ofy.query(Group.class).filter("domain",user.domain);
 					
 					buf.append("<SELECT NAME=GroupId "
 							+ "onChange=\"if(confirm('Are you sure that you  want to join this group? "
