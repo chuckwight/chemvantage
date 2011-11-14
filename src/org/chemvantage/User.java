@@ -91,7 +91,7 @@ public class User implements Comparable<User>,Serializable {
 			if (user.alias != null) { // follow the alias chain to the end
 				List<String> userIds = new ArrayList<String>();
 				userIds.add(userId);
-				if (!user.alias.isEmpty()) userIds.add(0,user.alias);
+				userIds.add(0,user.alias);
 				user = User.getInstance(userIds);
 			}
 			Date now = new Date();
@@ -118,7 +118,7 @@ public class User implements Comparable<User>,Serializable {
 			}
 			return user;
 		} catch (Exception e) {
-			return null;  // user object does not exist in the datastore
+			return ofy.find(User.class,userIds.get(1));
 		}
 	}
 		

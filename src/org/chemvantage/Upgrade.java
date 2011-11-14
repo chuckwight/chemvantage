@@ -192,6 +192,10 @@ public class Upgrade extends HttpServlet {
 		+ "Within a few moments, you should see the premium options, including:<ol>" + features + "</ol>"
 		+ "If you have any questions or difficulties using these features, please use the <a href=Feedback>Feedback Page</a> "
 		+ "or send email directly to us at <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>. "
-		+ "If you are not completely satisfied, we will cheerfully refund your money.<p>";
+		+ "If you are not completely satisfied, we will cheerfully refund your money.<p>"
+		+ "<style type='text/css'>a.nav, a.nav:link, a.nav:visited {display:block; width:150px; height:35px; "
+		+ "background:red; border:1px solid #000; margin-top:2px; text-align:center; text-decoration:none; "
+		+ "font-family:verdana, arial, sans-serif; font-size:15px; color:white; line-height:35px; overflow:hidden;}"
+		+ "a.nav:hover {color:#fff; background:#800;}</style><a class='nav' href='/Verification'>Continue</a>";
 	}
 }

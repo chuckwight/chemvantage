@@ -222,6 +222,7 @@ public class Verification extends HttpServlet {
 				}
 				buf.append("<TR><TD ALIGN=RIGHT>SMS address:</TD><TD>" + smsAddress + "</TD></TR>");	
 			}
+			buf.append("<TR><TD ALIGN=RIGHT>Account type: </TD><TD>" + (user.hasPremiumAccount()?"premium":"basic") + "</TD></TR>");
 			if (user.myGroupId>0L) { // user already belongs to a group
 				Group myGroup = ofy.find(Group.class,user.myGroupId);
 				buf.append("<TR><TD ALIGN=RIGHT>Group:</TD><TD>" + myGroup.description + " (" + myGroup.getInstructorBothNames() + ")</TD></TR>");
@@ -250,7 +251,6 @@ public class Verification extends HttpServlet {
 							+ "<OPTION VALUE=0>I'm not a member of any group or class using ChemVantage</OPTION>\n");
 					for (Group g : allGroups) {
 						try {
-							if (g.domain != user.domain) continue;
 							buf.append("<OPTION VALUE=" + g.id + ">" + g.description + " (" + g.getInstructorBothNames() + ")</OPTION>\n");
 						} catch (Exception e2) {
 							continue;
@@ -260,13 +260,8 @@ public class Verification extends HttpServlet {
 							+ "<TR><TD COLSPAN=2><span id=instructions style='color:red'><br>Please select a ChemVantage group. This will give you access to assignments and deadlines.<br>"
 							+ "It will also give your instructor and teaching assistant access to your scores.</span></TD></TR>");
 				} else if (user.myGroupId<=0L && !eligibleToJoin) {
-					buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>ChemVantage Group:</TD><TD>"
-							+ "Most users are members of a college-level chemistry class corresponding to a ChemVantage group. "
-							+ "Unfirtunately, there are no available prepaid seats, so you must upgrade to a premium ChemVantage account "
-							+ "before you can join your group.<p>");
-					buf.append("<span style='color:red'><b>100% Satisfaction Guarantee</b></span><br>"
-							+ "If you aren't satisfied for any reason, ChemVantage will cheerfully refund your payment in full.<p>"
-							+ "<TABLE>"
+					buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>ChemVantage Group:</TD><TD><span style='color:red'>A premium account is required before you can join a group (e.g., chemistry class).</span><p>");
+					buf.append("<TABLE>"
 							+ "<TR><TD ALIGN=CENTER><b>Instant ChemVantage Premium Account Upgrade</b></TD></TR>"
 							+ "<TR><TD ALIGN=CENTER><b>$4.99 USD</b></TD></TR><TR><TD ALIGN=CENTER> "
 							+ "<form action=https://www.paypal.com/cgi-bin/webscr method=post>"
