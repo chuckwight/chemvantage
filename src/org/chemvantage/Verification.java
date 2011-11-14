@@ -110,9 +110,10 @@ public class Verification extends HttpServlet {
 				ofy.put(user);
 				out.println(Home.getHeader(user) + (user.verifiedEmail?personalInfoForm(user,false,request):personalInfoForm(user,verificationEmailSent(user,request),request)) + Home.footer);
 			} else if (userRequest.equals("JoinGroup")) {
+				// This section verifies eligibility to join groups and adjusts available seats if necessary				
 				try {
 					long newGroupId = Long.parseLong(request.getParameter("GroupId"));
-					user.changeGroups(newGroupId);
+					if (processPremiumUpgrade(user,newGroupId)) user.changeGroups(newGroupId);
 				} catch (Exception e2) {
 				}
 				out.println(Home.getHeader(user) + personalInfoForm(user,false,request) + Home.footer);
@@ -206,8 +207,8 @@ public class Verification extends HttpServlet {
 			buf.append("<TR><TD ALIGN=RIGHT>Last Name:</TD><TD>" + (user.lastName.isEmpty()?"<span style=color:red>*</span><INPUT NAME=LastName SIZE=50>":user.lastName) + "</TD></TR>");
 			buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>Email:</TD><TD>" + (emailRequired?"<span style=color:red>*</span><INPUT NAME=Email SIZE=50>":user.email));
 			if (!emailRequired && !user.verifiedEmail){
-				buf.append(" (unverified) ");
-				if (verificationEmailSent) buf.append("<br><FONT COLOR=RED>A verification email has been sent to your address.</FONT><br>");
+				buf.append(" <span style='color:red'>(unverified)</span> ");
+				if (verificationEmailSent) buf.append("<br><span style='color:red'>A verification email has been sent to your address.</span><br>");
 				else if (!nameRequired) buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Verify My Email Address'><br>");
 			}
 			buf.append("</TD></TR>");
@@ -231,7 +232,8 @@ public class Verification extends HttpServlet {
 						+ "<TD>" + (user.requiresUpdates()?"<span style=color:red>* <span style=font-size:smaller>required field</span></span>":"") + "</TD></TR></TABLE></FORM>");
 			} else {  // all information is current
 				buf.append("</FORM>");
-				if (user.myGroupId<=0L) { // give the user an opportunity to join a group
+				boolean eligibleToJoin = eligibleToJoin(user);
+				if (user.myGroupId<=0L && eligibleToJoin) { // give the user an opportunity to join a group
 					buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>ChemVantage Group:</TD><TD>");
 					buf.append("<FORM NAME=JoinGroup METHOD=POST ACTION=Verification>");
 					buf.append("<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=JoinGroup>");
@@ -257,9 +259,27 @@ public class Verification extends HttpServlet {
 					if (groupRequired) buf.append("</SELECT></TD></TR></FORM>"
 							+ "<TR><TD COLSPAN=2><span id=instructions style='color:red'><br>Please select a ChemVantage group. This will give you access to assignments and deadlines.<br>"
 							+ "It will also give your instructor and teaching assistant access to your scores.</span></TD></TR>");
+				} else if (user.myGroupId<=0L && !eligibleToJoin) {
+					buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>ChemVantage Group:</TD><TD>"
+							+ "Most users are members of a college-level chemistry class corresponding to a ChemVantage group. "
+							+ "Unfirtunately, there are no available prepaid seats, so you must upgrade to a premium ChemVantage account "
+							+ "before you can join your group.<p>");
+					buf.append("<span style='color:red'><b>100% Satisfaction Guarantee</b></span><br>"
+							+ "If you aren't satisfied for any reason, ChemVantage will cheerfully refund your payment in full.<p>"
+							+ "<TABLE>"
+							+ "<TR><TD ALIGN=CENTER><b>Instant ChemVantage Premium Account Upgrade</b></TD></TR>"
+							+ "<TR><TD ALIGN=CENTER><b>$4.99 USD</b></TD></TR><TR><TD ALIGN=CENTER> "
+							+ "<form action=https://www.paypal.com/cgi-bin/webscr method=post>"
+							+ "<input type=hidden name=cmd value=_s-xclick>"
+							+ "<input type=hidden name=hosted_button_id value=" + (user.authDomain.equals("BLTI")?"U58TNLE8YE4AW":"HKW9475B55NJU") + ">"
+							+ "<input type=hidden name=on0 value=userId><input type=hidden name=os0 value=" + user.id + ">"
+							+ "<input type=image src=https://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif border=0 name=submit alt='PayPal - The safer, easier way to pay online!'>"
+							+ "<br><font size=-2>Your payment will be processed by PayPal.com</font>"
+							+ "<img alt='' border=0 src=https://www.paypalobjects.com/en_US/i/scr/pixel.gif width=1 height=1>"
+							+ "</form>"
+							+ "</TD></TR></TABLE></TD></TR>");
 				}
 				buf.append("</TABLE>\n");
-
 
 				buf.append("<h3>Any Corrections Needed?</h3>"
 						+ "If your name and/or email shown above is not correct, please send a message to "
@@ -332,6 +352,32 @@ public class Verification extends HttpServlet {
 		return buf.toString();
 	}
 
+	boolean eligibleToJoin(User user) {
+		// This method checks to see if the user is eligible to join a new group
+		if (user.hasPremiumAccount() || user.domain==null) return true;
+		Domain domain = ofy.query(Domain.class).filter("domainName", user.domain).get();
+		if (domain == null) return false;
+		if (domain.seatsAvailable>0 || domain.freeTrialExpires.after(new Date())) return true;
+		return false;
+	}
+	
+	boolean processPremiumUpgrade(User user,long newGroupId) {
+		// this routine converts the user account to premium, if applicable
+		if (user.hasPremiumAccount() || user.domain==null || newGroupId <= 0) return true;
+		Domain domain = ofy.query(Domain.class).filter("domainName", user.domain).get();
+		Group newGroup = ofy.find(Group.class,newGroupId);
+		if (domain == null || newGroup==null || !newGroup.domain.equals(user.domain)) return false;
+		if (domain.freeTrialExpires.after(new Date())) {
+			user.setPremium(true);
+		} else if (domain.seatsAvailable > 0) {
+			user.setPremium(true);
+			domain.seatsAvailable--;
+			ofy.put(domain);
+		} else return false;
+		ofy.put(user);
+		return true;
+	}
+	
 	boolean mergeAuthCodeSent(User user,HttpServletRequest request) {
 		if (!user.verifiedEmail) return false;
 		Properties props = new Properties();

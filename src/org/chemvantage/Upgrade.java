@@ -98,9 +98,8 @@ public class Upgrade extends HttpServlet {
 		if (user.premium) buf.append("Your account has already been upgraded to premium status.");
 		else {
 			if (user.demoPremium) buf.append("Your free demo premium account expires " + user.demoExpires.toString() + "<p>");
-			buf.append("<FONT COLOR=RED>"
-				+ "<b>100% Satisfaction Guarantee</b></FONT><br>If you aren't satisfied for any reason, "
-				+ "ChemVantage will cheerfully refund your payment in full.<p>"
+			buf.append("<span style='color:red'><b>100% Satisfaction Guarantee</b></span><br>"
+				+ "If you aren't satisfied for any reason, ChemVantage will cheerfully refund your payment in full.<p>"
 				+ "<TABLE>"
 				+ "<TR><TD ALIGN=CENTER><b>Instant ChemVantage Premium Account Upgrade</b></TD></TR>"
 				+ "<TR><TD ALIGN=CENTER><b>$4.99 USD</b></TD></TR><TR><TD ALIGN=CENTER> "
