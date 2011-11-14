@@ -121,6 +121,7 @@ public class DomainAdmin extends HttpServlet {
 		StringBuffer buf = new StringBuffer("\n\n<h2>ChemVantage Domain Administration</h2>");
 		try {
 			Domain domain = ofy.query(Domain.class).filter("domainName", user.domain).get();
+			if (domain==null) return "The domain " + user.domain + " does not exist.";
 			if (!domain.isAdmin(user.id)) return "Not authorized.";
 			Date now = new Date();
 			buf.append("<table>");
@@ -305,7 +306,15 @@ public class DomainAdmin extends HttpServlet {
 			usr.setFirstName(request.getParameter("FirstName"));
 			usr.setLastName(request.getParameter("LastName"));
 			usr.setLowerCaseName();
+			if (usr.roles>roles && roles==0) usr.setPremium(false);
 			usr.roles = roles;
+			if (usr.roles>7) usr.setPremium(true);
+			
+			Domain domain = ofy.query(Domain.class).filter("domainName",usr.domain).get();
+			if (usr.roles>15) domain.addAdmin(usr.id);
+			else domain.removeAdmin(usr.id);
+			ofy.put(domain);
+			
 			if (request.getParameter("Alias").isEmpty()) usr.alias = null;
 			else usr.alias = request.getParameter("Alias");
 			try {
