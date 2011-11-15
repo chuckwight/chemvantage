@@ -21,6 +21,7 @@
 package org.chemvantage;
 
 import java.io.IOException;
+import java.util.Random;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -69,7 +70,7 @@ public class UserServiceLaunch extends HttpServlet {
 			c.setMaxAge(2592000); // expires after 30 days (in seconds)
 			response.addCookie(c);
 			
-			response.sendRedirect("/Home");
+			response.sendRedirect("/Home?r=" + new Random().nextInt(9999));
 		} catch (Exception e) {
 			session.invalidate();
 			response.sendRedirect("/");
