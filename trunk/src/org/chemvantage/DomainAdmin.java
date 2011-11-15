@@ -146,6 +146,7 @@ public class DomainAdmin extends HttpServlet {
 			
 			buf.append("\n<h3>Manage User Accounts</h3>");
 			buf.append("\n<FORM METHOD=GET>"
+					+ "As a domain administrator, your main responsibility is to <a href=# onClick=\"javascript: document.getElementById('manage').style.display='';\">manage user accounts</a>.<br>"
 					+ "To search for a user, enter a portion of the user's <i>lastname, firstname</i>.<br>");
 
 			buf.append("\n<INPUT NAME=SearchString VALUE='" + (searchString==null?"":CharHider.quot2html(searchString)) + "'>"
@@ -175,7 +176,8 @@ public class DomainAdmin extends HttpServlet {
 				if (nResults==this.queryLimit) buf.append("<a href=/Admin?SearchString=" + searchString + "&Cursor=" + iterator.getCursor().toWebSafeString() + ">show more users</a>"); 
 			} else if (searchString != null) buf.append("\nSorry, the search returned no results.");
 
-			buf.append("<h3>Basic and Premium Accounts</h3>"
+			buf.append("<div id='manage' style='display:none'>"
+					+ "<h3>Basic and Premium Accounts</h3>"
 					+ "Any individual user may browse ChemVantage without charge using a free basic account simply by navigating to the site.<br>"
 					+ "In order to join a ChemVantage group (usually a chemistry class taught by one of your instructors), a user must upgrade to a premium account. "
 					+ "During the free trial period this happens automatically.<p>"
@@ -189,7 +191,8 @@ public class DomainAdmin extends HttpServlet {
 					+ "Find the user's account using the search box above and edit the user's profile to grant the appropriate rights.<ul>" 
 					+ "<li>Instructors can create and manage ChemVantage groups"
 					+ "<li>Administrators can grant and revoke user privileges"
-					+ "</ul>All instructors and administrators are provided premium accounts automatically without charge.");
+					+ "</ul>All instructors and administrators are provided premium accounts automatically without charge."
+					+ "</div>");
 					
 			buf.append("<h3>Questions or Comments</h3>"
 					+ "See the <a href=/help.html>Help Page</a> for useful tips and tricks, or send us a message using the <a href=/Feedback>Feedback Page</a>, or contact us directly at <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>. "

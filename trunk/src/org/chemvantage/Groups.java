@@ -228,7 +228,7 @@ public class Groups extends HttpServlet {
 			Query<Group> allGroups = ofy.query(Group.class);
 			buf.append("<SELECT NAME=GroupId onChange=submit()><OPTION VALUE=0>Default group (none)</OPTION>\n");
 			for (Group g : allGroups) {
-				if (user.isAdministrator() || user.id.equals(g.instructorId) || g.tAIds.contains(user.id))
+				if ((g.domain==null && user.domain==null) || (g.domain != null && g.domain.equals(user.domain)))
 					buf.append("<OPTION VALUE=" + g.id + (g.id==user.myGroupId?" SELECTED>":">") + g.description + " (" + g.getInstructorBothNames() + ")</OPTION>\n");
 			}
 			buf.append("</SELECT></FORM>\n");
@@ -249,7 +249,7 @@ public class Groups extends HttpServlet {
 					+ "<TD><b>Deadlines</b></TD><TD><b>Enrollments</b></TD><TD ALIGN=CENTER><b>Time Zone</b></TD></TR>\n");
 
 			for (Group g : allGroups) {
-				if (user.isAdministrator() || user.id.equals(g.instructorId) || g.tAIds.contains(user.id))
+				if ((user.isAdministrator() && (user.domain==null || user.domain.equals(g.domain))) || user.id.equals(g.instructorId) || g.tAIds.contains(user.id))
 					buf.append("<TR>"
 							+ "<TD>" + subject.title + "</TD>"
 							+ "<TD>" + g.getInstructorBothNames() + "</TD>"
