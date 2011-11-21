@@ -126,7 +126,7 @@ public class Login extends HttpServlet {
 
 			buf.append("<TABLE><TR><TD VALIGN=TOP><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
 					+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - " + subject.title + "</b></FONT>"
-					+ "<br><div align=right>An OpenEducation Resource</div></TD></TR></TABLE>");
+					+ "<br><div align=right>An OpenEducation Resource</TD></TR></TABLE>");
 			
 			StringBuffer thisURL = request.getRequestURL();
 
@@ -136,11 +136,12 @@ public class Login extends HttpServlet {
 						+ "should be used only by permission.<p>"
 						+ "To reach the ChemVantage production site "
 						+ "<a href=http://www.chemvantage.org>click here</a>.<p>");
-
+/*
 			} else if (thisURL.indexOf("chem-vantage.appspot.com") > 0) {
 				buf.append("<h2>Your ChemVantage Session Has Been Closed</h2>");
 				buf.append("This is normal following an extended period of inactivity. Please login again through your class learning management system.<br>"
 						+ "If you reached this page unexpectedly, please see the <a href=help.html>ChemVantage Help Page</a> for further assistance.<p>");
+*/
 			} else {
 				buf.append("ChemVantage is a free resource for science education:<ul>"
 						+ "<li>computer-graded quizzes<li>homework exercises"
@@ -149,7 +150,7 @@ public class Login extends HttpServlet {
 			}
 
 			UserService userService = UserServiceFactory.getUserService();
-			if (!request.getRequestURL().toString().contains("appspot")) buf.append("<h3>Please Login</h3>");
+			buf.append("<h3>Please Login</h3>");
 			buf.append("ChemVantage uses third-party authentication for account creation and login.<br>"
 					+ "Select your preferred online identity provider below to login to ChemVantage.<br>");
 
@@ -208,6 +209,7 @@ public class Login extends HttpServlet {
 				============================================ */
 				buf.append("</TR></TABLE>");
 			}
+			//buf.append("<div style='text-align:right'><a href=https://www.google.com/enterprise/marketplace/viewListing?productListingId=9006+12752972024151964645><img src=/images/marketplace-addtogoogleapps-shadow.png alt='Add to Google Apps'></a></div>");
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}
