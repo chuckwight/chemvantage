@@ -132,7 +132,7 @@ public class Groups extends HttpServlet {
 			}
 			
 			// Additional user restrictions: no TAs beyond this point
-			if (!(user.isAdministrator() || group.instructorId.equals(user.id))) {
+			if (!(user.isAdministrator() || (group==null && user.isInstructor()) || group.instructorId.equals(user.id))) {
 				out.println(Home.getHeader(user) + "<span style='color:red'>You have read-only access in this area</span>" + groupsForm(user,request) + Home.footer);
 				return;
 			}

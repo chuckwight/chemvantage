@@ -30,14 +30,14 @@ public class Response implements Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id Long id;
 	String assignmentType;
-	long topicId;
-	@Indexed long questionId;
+	@Indexed long topicId;
+	long questionId;
 	String studentResponse;
 	String correctAnswer;
 	int score;
 	int possibleScore;
-	@Indexed String userId;
-	Date submitted;
+	String userId;
+	@Indexed Date submitted;
 
 	Response() {}
     
