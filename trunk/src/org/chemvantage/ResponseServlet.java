@@ -76,9 +76,12 @@ public class ResponseServlet extends HttpServlet {
 				
 				// process and organize the collection of responses
 				int totalResponses = responses.count();
-				out.println("UserId,AssignmentType,TopicId,QuestionId,Score,Submitted");
+				out.println("Total responses," + totalResponses);
+				out.println("");
+				
+				//out.println("UserId,AssignmentType,TopicId,QuestionId,Score,Submitted");
 				for (Response r : responses) {
-					out.println(r.userId + "," + r.assignmentType + "," + r.topicId + "," + r.questionId + "," + r.score + "," + r.submitted);
+					//out.println(r.userId + "," + r.assignmentType + "," + r.topicId + "," + r.questionId + "," + r.score + "," + r.submitted);
 					if (topicId > 0L && r.topicId != topicId) continue;
 					if (!questionIds.contains(r.questionId)) questionIds.add(r.questionId);
 					if (!userIds1.contains(r.userId)) {
@@ -118,13 +121,6 @@ public class ResponseServlet extends HttpServlet {
 						results5.get(userIds5.indexOf(r.userId)).put(r.questionId, r.score);
 					}						
 				}
-				// print out the userIds and questionIds
-				StringBuffer test = new StringBuffer();
-				test.append("UserIds1,"); for (String u : userIds1) test.append("," + u);out.println(test.toString());test.delete(0, 10000);
-				test.append("UserIds2,"); for (String u : userIds2) test.append("," + u);out.println(test.toString());test.delete(0, 10000);
-				test.append("UserIds3,"); for (String u : userIds3) test.append("," + u);out.println(test.toString());test.delete(0, 10000);
-				test.append("UserIds4,"); for (String u : userIds4) test.append("," + u);out.println(test.toString());test.delete(0, 10000);
-				test.append("UserIds5,"); for (String u : userIds5) test.append("," + u);out.println(test.toString());test.delete(0, 10000);
 				
 //				construct a header row
 				StringBuffer header = new StringBuffer();
@@ -176,8 +172,6 @@ public class ResponseServlet extends HttpServlet {
 					out.println(line);
 				}
 				
-				out.println("");
-				out.println("Total responses," + totalResponses);
 			} else {
 				response.setContentType("text/html");
 				out.println(Home.getHeader(user) + responseForm(request) + Home.footer);
