@@ -31,12 +31,12 @@ public class Response implements Serializable {
 	@Id Long id;
 	String assignmentType;
 	@Indexed long topicId;
-	long questionId;
+	@Indexed long questionId;
 	String studentResponse;
 	String correctAnswer;
 	int score;
 	int possibleScore;
-	String userId;
+	@Indexed String userId;
 	@Indexed Date submitted;
 
 	Response() {}

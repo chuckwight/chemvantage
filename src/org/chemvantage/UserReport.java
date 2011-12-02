@@ -103,6 +103,13 @@ public class UserReport implements Serializable {
 				Topic topic = ofy.find(Topic.class,q.topicId);
 				buf.append("Topic: " + topic.title + " (" + q.assignmentType + " question)<br>");
 				buf.append(q.printAll());
+				if (user!=null) {
+					buf.append("<table><tr><td>Date/Time (UTC)</td><td>Student Response</td><td>Correct Response</td><td>Score</td></tr>");
+					List<Response> responses = ofy.query(Response.class).filter("userId",userId).filter("questionId",questionId).list();
+					for (Response r : responses) buf.append("<tr><td>" + r.submitted.toString() + "</td><td align=center>" + r.studentResponse 
+							+ "</td><td align=center>" + r.correctAnswer + "</td><td align=center>" + r.score + "</td></tr>");
+					buf.append("</table>");
+				}
 			} catch (Exception e2) {}
 		} catch (Exception e) {
 			buf.append("<br>" + e.getMessage());
