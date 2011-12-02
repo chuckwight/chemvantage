@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry excluding="openid/" kind="src" path="src"/>
+	<classpathentry kind="src" path="war/WEB-INF/lib"/>
+	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/google-api-spelling-java-1.1.jar"/>
+	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/JbcParser.jar"/>
+	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/oauth.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/apps-marketplace.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/JbcParser.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/jdo2-api-2.3-eb.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/oauth.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/openid4java-0.9.6.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/objectify-3.0.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/google-api-spelling-java-1.1.jar"/>
+	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER/App Engine (2)"/>
+	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>
