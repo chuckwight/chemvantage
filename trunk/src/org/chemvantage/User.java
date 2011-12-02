@@ -28,9 +28,7 @@ import javax.persistence.Transient;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
-import org.openid4java.message.AuthSuccess;
-import org.openid4java.message.ax.AxMessage;
-import org.openid4java.message.ax.FetchResponse;
+import org.chemvantage.samples.apps.marketplace.UserInfo;
 
 import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
@@ -163,25 +161,21 @@ public class User implements Comparable<User>,Serializable {
 		return user;
 	}
 	
-	static public User createOpenIdUser(AuthSuccess authSuccess) {
-		if (authSuccess == null) return null;
+	static public User createOpenIdUser(UserInfo userInfo) {
 		User user;
 		try {
 			Objectify ofy = ObjectifyService.begin();
-			String userId = authSuccess.getIdentity();
+			String userId = userInfo.getClaimedId();
 			user = ofy.find(User.class,userId);
 			if (user != null) return user;
 			user = new User(userId);
 			user.authDomain = "Google Apps";
-			user.domain = extractDomain(authSuccess.getClaimed());
-			if (authSuccess.hasExtension(AxMessage.OPENID_NS_AX)) {
-                FetchResponse fetchResp = (FetchResponse) authSuccess.getExtension(AxMessage.OPENID_NS_AX);
-                user.setEmail((String)fetchResp.getAttributeValues("email").get(0));
-                user.verifiedEmail = !user.email.isEmpty();
-                user.setFirstName((String)fetchResp.getAttributeValues("firstName").get(0));
-                user.setLastName((String)fetchResp.getAttributeValues("lastName").get(0));
-            }
-			ofy.put(user);
+			user.domain = extractDomain(userInfo.getClaimedId());
+			user.setEmail(userInfo.getEmail());
+			user.verifiedEmail = !(user.email==null || user.email.isEmpty());
+			user.setFirstName(userInfo.getFirstName());
+			user.setLastName(userInfo.getLastName());
+            ofy.put(user);
 			Query<User> twins = ofy.query(User.class).filter("email",user.email);
 			for (User t : twins) Admin.mergeAccounts(user, t);
 		} catch (Exception e) {
