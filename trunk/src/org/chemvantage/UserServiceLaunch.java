@@ -39,7 +39,6 @@ public class UserServiceLaunch extends HttpServlet {
 
 	DAO dao = new DAO();
 	Objectify ofy = dao.ofy();
-	UserService userService = UserServiceFactory.getUserService();
 	private static final long serialVersionUID = 137L;
 
 	@Override
@@ -52,9 +51,14 @@ public class UserServiceLaunch extends HttpServlet {
 	throws ServletException, IOException {
 		HttpSession session = request.getSession(true);
 		try {
+			UserService userService = UserServiceFactory.getUserService();
 			String userId = userService.getCurrentUser().getUserId();
-			User user = ofy.find(User.class,userId);
-			if (user == null) user = User.createUserServiceUser(userService.getCurrentUser());
+			if (userId == null) response.sendRedirect("/Login");
+			try { // check to see if this user is in the datastore...
+				ofy.get(User.class,userId);
+			} catch (Exception e2) { // ...and if not, create a new record.
+				User.createUserServiceUser(userService.getCurrentUser());
+			}
 			session.setAttribute("UserId", userId);
 			
 			// try to set a Cookie with the user's ID provider:
