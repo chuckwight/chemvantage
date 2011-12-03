@@ -61,7 +61,7 @@ public class OpenIdLaunch extends HttpServlet {
 		super.init(config);
 		returnToPath = getInitParameter("return_to_path", "/openid");
 		homePath = getInitParameter("home_path", "/");
-		realm = getInitParameter("realm", null);
+		//realm = getInitParameter("realm", null);
 		ConsumerFactory factory = new ConsumerFactory(
 				new InMemoryConsumerAssociationStore());
 		consumerHelper = factory.getConsumerHelper();
@@ -70,6 +70,9 @@ public class OpenIdLaunch extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
+		if (this.realm == null || this.realm.isEmpty()) {
+			this.realm = "http://" + req.getServerName();
+		}
 		String domain = req.getParameter("hd");
 		if (domain != null) {
 			// User attempting to login with provided domain, build an OpenID request and redirect

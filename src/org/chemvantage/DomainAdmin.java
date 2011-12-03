@@ -121,8 +121,13 @@ public class DomainAdmin extends HttpServlet {
 		StringBuffer buf = new StringBuffer("\n\n<h2>ChemVantage Domain Administration</h2>");
 		try {
 			Domain domain = ofy.query(Domain.class).filter("domainName", user.domain).get();
-			if (domain==null) return "The domain " + user.domain + " does not exist.";
-			if (!domain.isAdmin(user.id)) return "Not authorized.";
+			if (domain==null) return "Sorry, the ChemVantage domain " + user.domain + " does not exist.";
+			if (!domain.isAdmin(user.id)) {
+				buf.append("You are not currently listed as a domain administrator for the ChemVantage domain: <b>" + domain.domainName + "</b><br>"
+						+ "To be granted administrator privileges, please contact a domain administrator listed below:<p>");
+				for (String id : domain.domainAdmins) buf.append(User.getBothNames(id) + "&nbsp;&lt;" + User.getEmail(id) + "&gt;");
+				return buf.toString();
+			}
 			Date now = new Date();
 			buf.append("<table>");
 			buf.append("<tr><td align=right>Domain name: </td><td>" + domain.domainName + "</td></tr>");

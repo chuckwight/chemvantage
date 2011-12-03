@@ -74,7 +74,7 @@ public class OpenIdSetup extends HttpServlet {
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
 		returnToPath = getInitParameter("return_to_path", "/setup");
-		realm = getInitParameter("realm", null);
+		//realm = getInitParameter("realm", null);
 		ConsumerFactory factory = new ConsumerFactory(
 				new InMemoryConsumerAssociationStore());
 		consumerHelper = factory.getConsumerHelper();
@@ -92,6 +92,9 @@ public class OpenIdSetup extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest req, HttpServletResponse resp)
 			throws ServletException, IOException {
+		if (this.realm == null || this.realm.isEmpty()) {
+			this.realm = "http://" + req.getServerName();
+		}
 		String domain = req.getParameter("hd");
 		if (domain != null) {
 			// User attempting to login with provided domain, build an OpenID

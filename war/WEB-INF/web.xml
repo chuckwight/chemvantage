@@ -197,10 +197,6 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 		<servlet-name>OpenIdLaunch</servlet-name>
 		<servlet-class>org.chemvantage.OpenIdLaunch</servlet-class>
 		<init-param>
-			<param-name>realm</param-name>
-			<param-value>http://www.chemvantage.org</param-value>
-		</init-param>
-		<init-param>
 			<param-name>return_to_path</param-name>
 			<param-value>/openid</param-value>
 		</init-param>
@@ -217,10 +213,6 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	<servlet>
 		<servlet-name>OpenIdSetup</servlet-name>
 		<servlet-class>org.chemvantage.OpenIdSetup</servlet-class>
-		<init-param>
-			<param-name>realm</param-name>
-			<param-value>http://www.chemvantage.org</param-value>
-		</init-param>
 		<init-param>
 			<param-name>return_to_path</param-name>
 			<param-value>/setup</param-value>
