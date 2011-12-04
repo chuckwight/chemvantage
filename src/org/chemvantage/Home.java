@@ -150,7 +150,7 @@ public class Home extends HttpServlet {
 
 			buf.append("<div class=pz1><a href=Contribute>Contribute</a></div>");
 			if (user.isEditor()) buf.append("<div class=pz1><a href=Edit>Edit</a></div>");
-			if (user.isInstructor() || user.isTeachingAssistant()) buf.append("<div class=pz1><a href=Groups>Groups</a></div>\n");
+			if (user.isInstructor() || user.isTeachingAssistant()) buf.append("<div class=pz1><a href=Groups>Instructor</a></div>\n");
 			if (user.isAdministrator()) buf.append("<div class=pz1><a href=/admin>Admin</a></div>");
 
 			buf.append("</nobr></div>\n");

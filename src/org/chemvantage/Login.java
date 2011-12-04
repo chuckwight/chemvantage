@@ -111,10 +111,14 @@ public class Login extends HttpServlet {
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
-		request.getSession().invalidate();
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		out.println(homePage(request));
+		try {
+			request.getSession().invalidate();
+			out.println(homePage(request));
+		} catch (Exception e) {
+			out.println("<a href='/help.html'>ChemVantage Help Page</a><p>" + e.getMessage() + "<p>" + e.getStackTrace());
+		}
 	}
 
 	String homePage(HttpServletRequest request) {

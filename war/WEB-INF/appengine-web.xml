@@ -9,7 +9,7 @@
 -->
 	<threadsafe>true</threadsafe>
 	<sessions-enabled>true</sessions-enabled> 
- 
+ 	<async-session-persistence enabled="true" />
   <!-- Configure java.util.logging -->
   <system-properties>
     <property name="java.util.logging.config.file" value="WEB-INF/logging.properties"/>
