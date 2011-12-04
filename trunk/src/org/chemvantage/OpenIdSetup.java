@@ -149,11 +149,10 @@ public class OpenIdSetup extends HttpServlet {
 			session.setAttribute("UserId", user.getId());
 			
 			Domain domain = ofy.query(Domain.class).filter("domainName",user.domain).get();
-			if (domain == null) {
-				domain = new Domain(user.domain);
-				if (user.isAdministrator()) domain.addAdmin(user.id);
-				ofy.put(domain);
-			}
+			if (domain == null) domain = new Domain(user.domain);
+			if (user.isAdministrator()) domain.addAdmin(user.id);
+			ofy.put(domain);
+			
 		
 			// try to set a Cookie with the user's ID provider:
 			Cookie c = new Cookie("IDProvider", "Google");
