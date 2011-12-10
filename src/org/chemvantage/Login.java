@@ -140,12 +140,6 @@ public class Login extends HttpServlet {
 						+ "should be used only by permission.<p>"
 						+ "To reach the ChemVantage production site "
 						+ "<a href=http://www.chemvantage.org>click here</a>.<p>");
-/*
-			} else if (thisURL.indexOf("chem-vantage.appspot.com") > 0) {
-				buf.append("<h2>Your ChemVantage Session Has Been Closed</h2>");
-				buf.append("This is normal following an extended period of inactivity. Please login again through your class learning management system.<br>"
-						+ "If you reached this page unexpectedly, please see the <a href=help.html>ChemVantage Help Page</a> for further assistance.<p>");
-*/
 			} else {
 				buf.append("ChemVantage is a free resource for science education:<ul>"
 						+ "<li>computer-graded quizzes<li>homework exercises"

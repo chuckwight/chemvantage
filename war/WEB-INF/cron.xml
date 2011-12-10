@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <cronentries>
+
   <cron>
     <url>/Notification</url>
     <description>Send reminder messages to users who sign up</description>
@@ -12,4 +13,5 @@
     <schedule>every 3 hours synchronized</schedule>
     <timezone>America/Los_Angeles</timezone>
   </cron>
+
 </cronentries>
