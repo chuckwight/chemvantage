@@ -919,7 +919,9 @@ public class Groups extends HttpServlet {
 						s = Score.getInstance(u.id,a);
 						ofy.put(s);
 					}
-					buf.append("," + s.getScore());
+					String score = s.getScore();
+					if (score.isEmpty()) score = "0";
+					buf.append("," + score);
 				}
 				out.println(buf.toString());
 				if (System.currentTimeMillis()-startTime > LIMIT_MILLIS) throw new Exception();
