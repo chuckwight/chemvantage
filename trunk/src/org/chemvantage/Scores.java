@@ -263,11 +263,7 @@ public class Scores extends HttpServlet {
 			DateFormat df_long = DateFormat.getDateTimeInstance(DateFormat.MEDIUM,DateFormat.LONG);
 			df_long.setTimeZone(myGroup.getTimeZone());
 			Date now = new Date();
-			buf.append("<br>" + df_long.format(now));
-			
-			buf.append("<p>\nThe scores listed on this page include only those earned for assignments<br>"
-					+ "specified by your instructor and completed prior to the indicated deadline.<br>"
-					+ "<a href=Scores?UserRequest=ShowAll>Show all my scores.</a><p>");
+			buf.append("<br>" + df_long.format(now) + "<p>");
 			
 			// Calculate the next deadline:
 			Date nextDeadline = myGroup.getNextDeadline();
@@ -327,13 +323,15 @@ public class Scores extends HttpServlet {
 			// Show a table of scores earned for this group:
 			DateFormat df = DateFormat.getDateInstance(DateFormat.SHORT);
 			df.setTimeZone(myGroup.getTimeZone());
-			buf.append("\n<h3>Quiz and Homework Assignments</h3>"
+			buf.append("\n<h3>Assigned Quiz and Homework Scores</h3>");
+			buf.append("<p>\nThe scores listed here include only those earned for group assignments<br>"
+					+ "completed prior to the indicated deadline. "
+					+ "<a href=Scores?UserRequest=ShowAll>Click here to see all your scores.</a><br>"
+					+ "<a href=# onClick=\"javascript: document.getElementById('dots').style.display='';\">Do your scores have red dots?</a><div id=dots style='display:none'>"
 					+ "If a red dot appears in the table below, it means that you either missed an assignment deadline or "
 					+ "your score on the assignment was low enough to trigger a concern. The red dot also appears on the class "
 					+ "gradesheet to alert your instructor to a potential problem.  If you complete the assignment "
-					+ "successfully after the deadline, your group score will remain unchanged, but the red dot will disappear.");
-			
-			buf.append("<FORM METHOD=POST ACTION=Scores><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Recalculate My Scores'></FORM>");
+					+ "successfully after the deadline, your group score will remain unchanged, but the red dot will disappear.</div>");
 			
 			buf.append("\n<TABLE BORDER=1 CELLSPACING=0><TR><TH></TH><TH COLSPAN=2>Quizzes</TH><TH COLSPAN=2>Homework</TH></TR>"
 					+ "\n<TR><TH ALIGN=LEFT>Topic</TH><TH>Deadline</TH><TH>Score <FONT COLOR=GRAY>(Attempts)</FONT></TH>"
@@ -364,6 +362,8 @@ public class Scores extends HttpServlet {
 			}
 			if (nRows == 0) buf.append("<TR><TD COLSPAN=5>(none)</TD></TR>");
 			buf.append("</TABLE>");
+			
+			buf.append("<FORM METHOD=POST ACTION=Scores><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Recalculate My Scores'></FORM>");
 			
 			// Display a summary of practice exam scores
 			buf.append("<h3>Practice Exam Scores</h3>");
