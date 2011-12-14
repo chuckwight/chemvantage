@@ -816,6 +816,7 @@ public class Groups extends HttpServlet {
 			int i = 0;
 			int[] sumScores = new int[assignments.size()];
 			int[] nScores = new int[assignments.size()];
+			int[] nAttempts = new int[assignments.size()];
 			boolean partialTable = false;
 			for (User u : groupMembers) {
 				if (u.myGroupId != group.id) {  // user has been removed from this group; skip this entry
@@ -837,7 +838,10 @@ public class Groups extends HttpServlet {
 					}*/
 					sumScores[j] += s.score;
 					studentTotalScore += s.score;
-					if (s.numberOfAttempts>0) nScores[j]++;
+					if (s.numberOfAttempts>0) {
+						nScores[j]++;
+						nAttempts[j] += s.numberOfAttempts;
+					}
 					j++;
 					buf.append("<TD ALIGN=CENTER>" + s.getDotScore(a.deadline,group.rescueThresholdScore) + "</TD>");
 				}
@@ -853,16 +857,24 @@ public class Groups extends HttpServlet {
 						+ "Please refresh this page to resume calculating the scores.</TD></TR>");
 			} else {
 				// print a row of average scores for the assignments
-				buf.append("<TR><TD COLSPAN=2>Average Score</TD>");
-				for (int j=0;j<assignments.size();j++) {
+				buf.append("<TR><TD COLSPAN=2>Average Score (Attempts)</TD>");
+				double totalPercentCorrect = 0;
+				double totalSubmissions = 0;
+				for (Assignment a : assignments) {
 					try {
-						if (nScores[j] > 0) buf.append("<TD ALIGN=CENTER>" + Math.round(10.0*sumScores[j]/nScores[j])/10.0  + "</TD>");
+						int j = assignments.indexOf(a);
+						int maxScore = "Quiz".equals(a.assignmentType)?10:a.questionKeys.size();
+						double percentCorrect = Math.round(1000*sumScores[j]/nScores[j]/maxScore)/10.0;
+						totalPercentCorrect += percentCorrect;
+						double avgSubmissions = Math.round(10*nAttempts[j]/nScores[j]/("Homework".equals(a.assignmentType)?maxScore:1))/10.0;
+						totalSubmissions += avgSubmissions;
+						if (nScores[j] > 0) buf.append("<TD ALIGN=CENTER>" + percentCorrect  + "% (" + avgSubmissions + ")</TD>");
 						else buf.append("<TD>&nbsp;</TD>");
 					} catch (Exception e) {
 						buf.append("<TD>" + e.toString()+ "</TD>");
 					}
 				}
-				buf.append("<TD></TD></TR>");
+				buf.append("<TD>" + Math.round(10*totalPercentCorrect/assignments.size())/10. + "% (" + Math.round(10*totalSubmissions/assignments.size())/10. + ")</TD></TR>");
 			}
 			buf.append("</TABLE>");
 		} catch (Exception e) {
