@@ -273,7 +273,10 @@ public class Contribute extends HttpServlet {
 				choice++;
 			}
 			double requiredPrecision = 2.0; // percent
-			int pointValue = Integer.parseInt(request.getParameter("PointValue"));
+			int pointValue = 1;
+			try {
+				Integer.parseInt(request.getParameter("PointValue"));
+			} catch (Exception e) {};
 			try {
 				requiredPrecision = Double.parseDouble(request.getParameter("RequiredPrecision"));
 			} catch (Exception e2) {

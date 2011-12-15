@@ -195,16 +195,15 @@ public class Login extends HttpServlet {
 							+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/>" 
 							+ providerName + "</a></TD>");
 				}
-				/* ======= HIDE CAS LOGIN FOR NOW =========
+				// display UofU CAS login logo and link:
 				for (String providerName : CASLaunch.casProviders.keySet()) {
 					String casUrl = CASLaunch.casProviders.get(providerName);
-					String loginUrl = casUrl + "/login?service=https://" + request.getServerName() + "/cas";
+					String loginUrl = casUrl + "/login?service=https://chem-vantage.appspot.com/cas";
 					buf.append("<TD style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
 							+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
 							+ "<img src='" + CASLaunch.casLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/>" 
 							+ providerName + "</a></TD>"); 
 				}
-				============================================ */
 				buf.append("</TR></TABLE>");
 			}
 			//buf.append("<div style='text-align:right'><a href=https://www.google.com/enterprise/marketplace/viewListing?productListingId=9006+12752972024151964645><img src=/images/marketplace-addtogoogleapps-shadow.png alt='Add to Google Apps'></a></div>");
