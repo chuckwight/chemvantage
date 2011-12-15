@@ -55,6 +55,13 @@ public class Question implements Serializable {
 	@Transient int[] parameters = {0,0,0,0};
 	boolean requiresParser = false;
 	boolean isActive = false;
+	
+	public static final int MULTIPLE_CHOICE = 1;
+	public static final int TRUE_FALSE = 2;
+	public static final int SELECT_MULTIPLE = 3;
+	public static final int FILL_IN_WORD = 4;
+	public static final int NUMERIC = 5;
+	
 
 	Question() {}
 
@@ -472,14 +479,29 @@ public class Question implements Serializable {
 	}
 
 	int getQuestionType() {
-		if (this.type.equals("MULTIPLE_CHOICE")) return 1;
-		if (this.type.equals("TRUE_FALSE")) return 2;
-		if (this.type.equals("SELECT_MULTIPLE")) return 3;
-		if (this.type.equals("FILL_IN_WORD")) return 4;
-		if (this.type.equals("NUMERIC")) return 5;
+		return getQuestionType(this.type);
+	}
+	
+	static int getQuestionType(String type) {
+		if (type.equals("MULTIPLE_CHOICE")) return 1;
+		if (type.equals("TRUE_FALSE")) return 2;
+		if (type.equals("SELECT_MULTIPLE")) return 3;
+		if (type.equals("FILL_IN_WORD")) return 4;
+		if (type.equals("NUMERIC")) return 5;
 		else return 0;
 	}
 
+	static String getQuestionType(int type) {
+		switch (type) {
+			case(1): return "MULTIPLE_CHOICE";
+			case(2): return "TRUE_FALSE";
+			case(3): return "SELECT_MULTIPLE";
+			case(4): return "FILL_IN_WORD";
+			case(5): return "NUMERIC";
+			default: return "";
+		}
+	}
+	
 	public void setQuestionType(int t) { // create a blank form for a new question of type t
 		switch (t) {
 		case (1): type = "MULTIPLE_CHOICE"; break;
@@ -495,8 +517,8 @@ public class Question implements Serializable {
 		StringBuffer buf = new StringBuffer();
 		try {
 			String[] choiceNames = {"ChoiceAText","ChoiceBText","ChoiceCText","ChoiceDText","ChoiceEText"};
-			buf.append("<input type=hidden name=QuestionType value=" + this.getQuestionType() + ">"
-					+ "<input type=hidden name=PointValue value=" + this.pointValue + ">");
+			//buf.append("<input type=hidden name=QuestionType value=" + this.getQuestionType() + ">"
+			//		+ "<input type=hidden name=PointValue value=" + this.pointValue + ">");
 			char choice = 'a';
 			switch (this.getQuestionType()) {
 			case 1: // Multiple Choice

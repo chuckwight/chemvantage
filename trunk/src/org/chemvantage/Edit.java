@@ -261,6 +261,18 @@ public class Edit extends HttpServlet {
 		return buf.toString();
 	}
 
+	String questionTypeDropDownBox(int questionType) {
+		StringBuffer buf = new StringBuffer();
+		buf.append("\n<SELECT NAME=QuestionType>"
+				+ "<OPTION VALUE=1" + (questionType==1?" SELECTED>":">") + "Multiple Choice</OPTION>"
+				+ "<OPTION VALUE=2" + (questionType==2?" SELECTED>":">") + "True/False</OPTION>"
+				+ "<OPTION VALUE=3" + (questionType==3?" SELECTED>":">") + "Select Multiple</OPTION>"
+				+ "<OPTION VALUE=4" + (questionType==4?" SELECTED>":">") + "Fill in word/phrase</OPTION>"
+				+ "<OPTION VALUE=5" + (questionType==5?" SELECTED>":">") + "Numeric</OPTION>"
+				+ "</SELECT>");
+		return buf.toString();
+	}
+	
 	String topicsForm(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h3>Manage Quiz/Homework/Exam Topics</h3>");
 		try {
@@ -446,7 +458,9 @@ public class Edit extends HttpServlet {
 			Question question = new Question(questionType);
 			buf.append("<p><FORM METHOD=POST ACTION=Edit>"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>");
+			buf.append("<INPUT TYPE=HIDDEN NAME=QuestionType VALUE=" + questionType + ">");
 			buf.append(subject.getTopicSelectBox(topicId));
+			buf.append(assignmentType.equals("Exam")?"Point Value: " + pointValueSelectBox() + "<br>":"<INPUT TYPE=HIDDEN NAME=PointValue VALUE=1>");
 			buf.append(question.edit());
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Preview'></FORM>");
 		} catch (Exception e) {
@@ -455,6 +469,18 @@ public class Edit extends HttpServlet {
 		return buf.toString();
 	}
 
+	String pointValueSelectBox() {
+		return pointValueSelectBox(0);
+	}
+	
+	String pointValueSelectBox(int points) {
+		return "<SELECT NAME=PointValue>"
+		+ "<OPTION" + (points==2?" SELECTED":"") + ">2</OPTION>"
+		+ "<OPTION" + (points==10?" SELECTED":"") + ">10</OPTION>"
+		+ "<OPTION" + (points==15?" SELECTED":"") + ">15</OPTION>"
+		+ "</SELECT>";
+	}
+	
 	String previewQuestion(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -473,7 +499,16 @@ public class Edit extends HttpServlet {
 			buf.append("<h3>Preview Question</h3>");
 			buf.append("Subject: " + subject.title + "<br>");
 			buf.append("Topic: " + ofy.get(Topic.class,topicId).title + "<br>");
-			buf.append("Assignment Type: " + request.getParameter("AssignmentType") + "<br>");
+			q.assignmentType = request.getParameter("AssignmentType");
+			if (q.assignmentType==null || q.assignmentType.isEmpty()) q.assignmentType = "Quiz";
+			buf.append("Assignment Type: " + q.assignmentType);
+			if (q.assignmentType.equals("Exam")) { // validate point value
+				if (q.pointValue < 2) q.pointValue = 2;
+				buf.append(" (" + q.pointValue + " points)<p>");
+			} else {
+				q.pointValue = 1;
+				buf.append(" (1 point)<p>");
+			}
 			buf.append("<FORM Action=Edit METHOD=POST>");
 			
 			buf.append(q.printAll());
@@ -484,9 +519,10 @@ public class Edit extends HttpServlet {
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save New Question'>");
 			
 			buf.append("<hr><h3>Continue Editing</h3>");
-			buf.append("Topic:" + topicSelectBox(q.topicId) + "<br>");
-			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType));
-			buf.append(" Point Value: <INPUT TYPE=TEXT SIZE=2 NAME=PointValue VALUE=" + q.pointValue + "><br>");
+			buf.append("Topic:" + topicSelectBox(q.topicId));
+			buf.append(" Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
+			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
+			buf.append(" Point Value: " + (q.assignmentType.equals("Exam")?pointValueSelectBox(q.pointValue):"1<INPUT TYPE=HIDDEN NAME=PointValue VALUE=1>") + "<br>");
 			
 			buf.append(q.edit());
 			
@@ -510,8 +546,8 @@ public class Edit extends HttpServlet {
 			if (q.requiresParser) q.setParameters();
 			buf.append("<h3>Current Question</h3>");
 			buf.append("Subject: " + subject.title + "<br>");
-			buf.append("Topic: " + t.title + "<br>");
-			buf.append("Assignment Type: " + q.assignmentType + "<br>");
+			buf.append("Topic: " + t.title);
+			buf.append(" Assignment Type: " + q.assignmentType + "<p>");
 			buf.append("<FORM Action=Edit METHOD=POST>");
 			
 			buf.append(q.printAll());
@@ -520,9 +556,10 @@ public class Edit extends HttpServlet {
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Question'>");
 			
 			buf.append("<hr><h3>Edit This Question</h3>");
-			buf.append("Topic:" + topicSelectBox(t.id) + "<br>");
-			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType));
-			buf.append(" Point Value: <INPUT TYPE=TEXT SIZE=2 NAME=PointValue VALUE=" + q.pointValue + "><br>");
+			buf.append("Topic:" + topicSelectBox(t.id));
+			buf.append(" Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
+			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
+			buf.append(" Point Value: " + (q.assignmentType.equals("Exam")?pointValueSelectBox(q.pointValue):"1<INPUT TYPE=HIDDEN NAME=PointValue VALUE=1>") + "<br>");
 			
 			buf.append(q.edit());
 			
@@ -627,6 +664,10 @@ public class Edit extends HttpServlet {
 		try {
 			topicId = Long.parseLong(request.getParameter("TopicId"));
 		} catch (Exception e) {}
+		int type = q.getQuestionType();
+		try {
+			type = Integer.parseInt(request.getParameter("QuestionType"));
+		}catch (Exception e) {}
 		String questionText = request.getParameter("QuestionText");
 		ArrayList<String> choices = new ArrayList<String>();
 		int nChoices = 0;
@@ -658,6 +699,7 @@ public class Edit extends HttpServlet {
 		
 		q.assignmentType = assignmentType;
 		q.topicId = topicId;
+		q.setQuestionType(type);
 		q.text = questionText;
 		q.nChoices = nChoices;
 		q.choices = choices;
