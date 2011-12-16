@@ -860,6 +860,7 @@ public class Groups extends HttpServlet {
 				buf.append("<TR><TD COLSPAN=2>Average Score (Attempts)</TD>");
 				double totalPercentCorrect = 0;
 				double totalSubmissions = 0;
+				int numberOfAssignments = 0;
 				for (Assignment a : assignments) {
 					try {
 						int j = assignments.indexOf(a);
@@ -870,11 +871,13 @@ public class Groups extends HttpServlet {
 						totalSubmissions += avgSubmissions;
 						if (nScores[j] > 0) buf.append("<TD ALIGN=CENTER>" + percentCorrect  + "% (" + avgSubmissions + ")</TD>");
 						else buf.append("<TD>&nbsp;</TD>");
+						numberOfAssignments++;
 					} catch (Exception e) {
-						buf.append("<TD>" + e.toString()+ "</TD>");
+						buf.append("<TD>&nbsp;</TD>");
 					}
 				}
-				buf.append("<TD>" + Math.round(10*totalPercentCorrect/assignments.size())/10. + "% (" + Math.round(10*totalSubmissions/assignments.size())/10. + ")</TD></TR>");
+				if (numberOfAssignments>0) buf.append("<TD>" + Math.round(10*totalPercentCorrect/numberOfAssignments)/10. + "% (" + Math.round(10*totalSubmissions/numberOfAssignments)/10. + ")</TD></TR>");
+				else buf.append("<TD></TD></TR>");
 			}
 			buf.append("</TABLE>");
 		} catch (Exception e) {
