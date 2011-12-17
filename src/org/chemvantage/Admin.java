@@ -176,6 +176,21 @@ public class Admin extends HttpServlet {
 				if (nResults==this.queryLimit) buf.append("<a href=/Admin?SearchString=" + searchString + "&Cursor=" + iterator.getCursor().toWebSafeString() + ">show more users</a>"); 
 			} else if (searchString != null) buf.append("\nSorry, the search returned no results.");
 				// write a section here to give the total number of users  
+			
+			// This section provides information about domains
+			buf.append("<h3>ChemVantage Domains</h3>");
+			List<Domain> domains = ofy.query(Domain.class).order("-created").list();
+			buf.append("<table><tr><td>Domain Name</td><td>Created</td><td>Users</td><td>Administrator</td></tr>");
+			for (Domain d : domains) {
+				buf.append("<tr><td>" + d.domainName + "</td>"
+						+ "<td>" + d.created.toString() + "</td>"
+						+ "<td style='text-align:center'>" + d.activeUsers + "</td>"
+						+ "<td style='text-align:center'>");
+				for (String uId : d.domainAdmins) buf.append(User.getBothNames(uId) + " (" + User.getEmail(uId) + ")" + (d.domainAdmins.size()>1?"<br>":""));
+				buf.append("</td></tr>");
+			}
+			buf.append("</table>");
+			
 			buf.append("<h3>Basic LTI Consumers</h3>");
 			buf.append("The following is a list of organizations that are permitted to make Basic LTI "
 					+ "connections to ChemVantage, usually from within a learning management system. "
