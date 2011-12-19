@@ -52,8 +52,9 @@ public class DomainAdmin extends HttpServlet {
 			if (user==null || !user.isAdministrator()) {
 				response.sendRedirect("/");
 				return;
-			}			
-			if (user.domain == null) response.sendRedirect("/Admin");
+			}
+			String domainName = user.domain==null?request.getParameter("Domain"):user.domain;			
+			if (domainName==null) response.sendRedirect("/Admin"); // ChemVantage administrator
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
@@ -68,7 +69,7 @@ public class DomainAdmin extends HttpServlet {
 			else {
 				String searchString = request.getParameter("SearchString");
 				String cursor = request.getParameter("Cursor");
-				out.println(Home.getHeader(user) + mainAdminForm(user,searchString,cursor) + Home.footer);
+				out.println(Home.getHeader(user) + mainAdminForm(domainName,user,searchString,cursor) + Home.footer);
 			}
 		} catch (Exception e) {
 		}
@@ -82,7 +83,8 @@ public class DomainAdmin extends HttpServlet {
 				response.sendRedirect("/");
 				return;
 			}			
-			if (user.domain == null) response.sendRedirect("/Admin");
+			String domainName = user.domain==null?request.getParameter("Domain"):user.domain;			
+			if (domainName==null) response.sendRedirect("/Admin"); // ChemVantage administrator
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
@@ -111,18 +113,18 @@ public class DomainAdmin extends HttpServlet {
 				mergeAccounts(usr,mergeUser);
 				searchString = usr.getFullName();
 			}
-			out.println(Home.getHeader(user) + mainAdminForm(user,searchString,cursor) + Home.footer);
+			out.println(Home.getHeader(user) + mainAdminForm(domainName,user,searchString,cursor) + Home.footer);
 		} catch (Exception e) {
 			response.getWriter().println(e.toString());
 		}
 	}
 
-	String mainAdminForm(User user,String searchString,String cursor) {
+	String mainAdminForm(String domainName,User user,String searchString,String cursor) {
 		StringBuffer buf = new StringBuffer("\n\n<h2>ChemVantage Domain Administration</h2>");
 		try {
-			Domain domain = ofy.query(Domain.class).filter("domainName", user.domain).get();
-			if (domain==null) return "Sorry, the ChemVantage domain " + user.domain + " does not exist.";
-			if (!domain.isAdmin(user.id)) {
+			Domain domain = ofy.query(Domain.class).filter("domainName", domainName).get();
+			if (domain==null) return "Sorry, the ChemVantage domain " + domainName + " does not exist.";
+			if (!(domain.isAdmin(user.id) || user.domain==null)) {
 				buf.append("You are not currently listed as a domain administrator for the ChemVantage domain: <b>" + domain.domainName + "</b><br>"
 						+ "To be granted administrator privileges, please contact a domain administrator listed below:<p>");
 				for (String id : domain.domainAdmins) buf.append(User.getBothNames(id) + "&nbsp;&lt;" + User.getEmail(id) + "&gt;");
@@ -155,7 +157,7 @@ public class DomainAdmin extends HttpServlet {
 					+ "To search for a user, enter a portion of the user's <i>lastname, firstname</i>.<br>");
 
 			buf.append("\n<INPUT NAME=SearchString VALUE='" + (searchString==null?"":CharHider.quot2html(searchString)) + "'>"
-					+ "\n<INPUT TYPE=SUBMIT VALUE='Search for users'></FORM>");
+					+ "\n<INPUT TYPE=SUBMIT VALUE='Search for users'><INPUT TYPE=HIDDEN NAME=Domain VALUE=" + domainName + "></FORM>");
 
 			if(results != null) {
 				QueryResultIterator<User> iterator = results.iterator();
@@ -167,7 +169,7 @@ public class DomainAdmin extends HttpServlet {
 				while (iterator.hasNext()) {
 					User u = iterator.next();
 					u.clean();
-					buf.append("\n<FORM METHOD=GET>"
+					buf.append("\n<FORM METHOD=GET><INPUT TYPE=HIDDEN NAME=Domain VALUE=" + domainName + ">"
 							+ "<TR style=color:" + (u.alias==null?"black":"grey") + "><TD>" + u.lastName + "</TD>"
 							+ "<TD>" + u.firstName + "</TD>"
 							+ "<TD>" + u.email + "</TD>"
@@ -178,7 +180,7 @@ public class DomainAdmin extends HttpServlet {
 							+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Edit User'></TD></TR></FORM>");
 				}
 				buf.append("\n</TABLE>");
-				if (nResults==this.queryLimit) buf.append("<a href=/Admin?SearchString=" + searchString + "&Cursor=" + iterator.getCursor().toWebSafeString() + ">show more users</a>"); 
+				if (nResults==this.queryLimit) buf.append("<a href=/admin?Domain=" + domainName + "&SearchString=" + searchString + "&Cursor=" + iterator.getCursor().toWebSafeString() + ">show more users</a>"); 
 			} else if (searchString != null) buf.append("\nSorry, the search returned no results.");
 
 			buf.append("<div id='manage' style='display:none'>"
@@ -214,10 +216,11 @@ public class DomainAdmin extends HttpServlet {
 		try {
 			buf.append("\nUsing this form, you may edit edit any user-specific fields "
 					+ "for this user, login as the user, or delete the user account permanently.<p>");
-			
+			String domainName = user.domain==null?request.getParameter("Domain"):user.domain;
 			int roles = usr.roles;
 			buf.append("\n<TABLE><FORM NAME=UserForm METHOD=POST ACTION=admin>"
 					+ "<INPUT TYPE=HIDDEN NAME=UserId VALUE='" + usr.id + "'>"
+					+ "<INPUT TYPE=HIDDEN NAME=Domain VALUE='" + domainName + "'>"
 					+ "\n<TR><TD ALIGN=RIGHT>UserID: </TD><TD>" + usr.id + "</TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>AuthDomain: </TD><TD>" + usr.authDomain + "</TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>Account type: </TD><TD>" + (usr.hasPremiumAccount()?"premium":"basic") + "</TD></TR>"
@@ -256,6 +259,7 @@ public class DomainAdmin extends HttpServlet {
 					buf.append("<FORM METHOD=POST>"
 							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='Confirm Merge'>"
 							+ "<INPUT TYPE=HIDDEN NAME=UserId VALUE='" + usr.id + "'>"
+							+ "<INPUT TYPE=HIDDEN NAME=Domain VALUE='" + domainName + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=MergeUserId VALUE='" + mergeUser.id + "'>"
 							+ "<TABLE><TR><TD ALIGN=RIGHT>UserId: </TD><TD>" + mergeUser.id + "</TD></TR>"
 							+ "<TR><TD ALIGN=RIGHT>Name: </TD><TD>" + mergeUser.getFullName() + "</TD></TR>"
@@ -274,6 +278,7 @@ public class DomainAdmin extends HttpServlet {
 				buf.append("<br>The account to be retained with all records has a UserId: <b>" + usr.id + "</b>");
 				buf.append("<FORM METHOD=GET>Enter the UserId of the account to be deleted: "
 						+ "<INPUT TYPE=HIDDEN NAME=UserId VALUE='" + usr.id + "'>"
+						+ "<INPUT TYPE=HIDDEN NAME=Domain VALUE='" + domainName + "'>"
 						+ "<INPUT TYPE=TEXT NAME=MergeUserId>"
 						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Check ID'></FORM>");
 			}
