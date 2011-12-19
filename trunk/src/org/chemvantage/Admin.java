@@ -182,7 +182,7 @@ public class Admin extends HttpServlet {
 			List<Domain> domains = ofy.query(Domain.class).order("-created").list();
 			buf.append("<table><tr><td>Domain Name</td><td>Created</td><td>Users</td><td>Administrator</td></tr>");
 			for (Domain d : domains) {
-				buf.append("<tr><td>" + d.domainName + "</td>"
+				buf.append("<tr><td><a href=/admin?Domain=" + d.domainName + ">" + d.domainName + "</a></td>"
 						+ "<td>" + d.created.toString() + "</td>"
 						+ "<td style='text-align:center'>" + d.activeUsers + "</td>"
 						+ "<td style='text-align:center'>");
