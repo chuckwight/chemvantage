@@ -76,14 +76,16 @@ public class ResponseServlet extends HttpServlet {
 				
 				// process and organize the collection of responses
 				int totalResponses = responses.count();
-				out.println("Total responses," + totalResponses);
-				out.println("");
-				
 				//out.println("UserId,AssignmentType,TopicId,QuestionId,Score,Submitted");
+				int nResponsesUsed = 0;
 				for (Response r : responses) {
+					if (nResponsesUsed > 75000) break;
+					if (r.possibleScore>1) continue;
+					if (r.userId.contains("wight")) continue;
 					//out.println(r.userId + "," + r.assignmentType + "," + r.topicId + "," + r.questionId + "," + r.score + "," + r.submitted);
 					if (topicId > 0L && r.topicId != topicId) continue;
 					if (!questionIds.contains(r.questionId)) questionIds.add(r.questionId);
+					nResponsesUsed++;
 					if (!userIds1.contains(r.userId)) {
 						userIds1.add(r.userId);
 						HashMap<Long,Integer> userResult = new HashMap<Long,Integer>();
@@ -121,6 +123,8 @@ public class ResponseServlet extends HttpServlet {
 						results5.get(userIds5.indexOf(r.userId)).put(r.questionId, r.score);
 					}						
 				}
+				out.println("Total responses," + totalResponses + ",Responses Used," + nResponsesUsed);
+				out.println("");
 				
 //				construct a header row
 				StringBuffer header = new StringBuffer();
