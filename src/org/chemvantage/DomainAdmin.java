@@ -224,7 +224,7 @@ public class DomainAdmin extends HttpServlet {
 					+ "\n<TR><TD ALIGN=RIGHT>UserID: </TD><TD>" + usr.id + "</TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>AuthDomain: </TD><TD>" + usr.authDomain + "</TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>Account type: </TD><TD>" + (usr.hasPremiumAccount()?"premium":"basic") + "</TD></TR>"
-					+ "\n<TR><TD ALIGN=RIGHT>Email: </TD><TD><INPUT NAME=Email VALUE='" + usr.email + "'></TD></TR>"
+					+ "\n<TR><TD ALIGN=RIGHT>Email: </TD><TD><INPUT NAME=Email VALUE='" + usr.email + "'>" + (usr.verifiedEmail?" (verified)":" (unverified)") + "</TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>Last Name: </TD><TD><INPUT NAME=LastName VALUE='" 
 					+ CharHider.quot2html(usr.lastName) + "'></TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>First Name: </TD><TD><INPUT NAME=FirstName VALUE='" 

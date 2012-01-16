@@ -195,6 +195,8 @@ public class User implements Comparable<User>,Serializable {
 			user.verifiedEmail = !user.email.isEmpty();
 			Objectify ofy = ObjectifyService.begin();
 			ofy.put(user);
+			Query<User> twins = ofy.query(User.class).filter("email",user.email);
+			for (User t : twins) Admin.mergeAccounts(user, t);
 		} catch (Exception e) {
 			return null;
 		}		

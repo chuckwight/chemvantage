@@ -93,7 +93,7 @@ public class CASLaunch extends HttpServlet {
 			}
 			
 			String userId = null;
-			if (validated) userId = in.readLine();
+			if (validated) userId = in.readLine().toLowerCase();
 			in.close();
 			
 			if (userId==null || userId.isEmpty()) {
