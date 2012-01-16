@@ -20,12 +20,14 @@ package org.chemvantage;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.Query;
 
@@ -568,7 +570,7 @@ public class Edit extends HttpServlet {
 		}
 		return buf.toString();
 	}
-	/*
+	
 	String reviewQuestion(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h2>Editorial Review</h2>\n");
 		try {
@@ -623,7 +625,7 @@ public class Edit extends HttpServlet {
 		}
 		return buf.toString();
 	}
-*/
+
 	private void createTopic(User user,HttpServletRequest request) {
 		Topic t = new Topic(request.getParameter("Title"),request.getParameter("OrderBy"));
 		ofy.put(t);
@@ -731,6 +733,9 @@ public class Edit extends HttpServlet {
 			q.editorId = user.id;
 			q.isActive = true;
 			ofy.put(q);
+			Key<Question> k = new Key<Question>(Question.class,questionId);
+			if ("Quiz".equals(q.assignmentType)) Quiz.quizQuestions.remove(k);
+			else if ("Homework".equals(q.assignmentType)) Homework.hwQuestions.remove(k);
 		} catch (Exception e) {
 			return;
 		}
