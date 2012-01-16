@@ -44,7 +44,7 @@ public class Homework extends HttpServlet {
 	DAO dao = new DAO();
 	Objectify ofy = dao.ofy();
 	Subject subject = dao.getSubject();
-	Map<Key<Question>,Question> hwQuestions = new HashMap<Key<Question>,Question>();
+	static Map<Key<Question>,Question> hwQuestions = new HashMap<Key<Question>,Question>();
 
 	public String getServletInfo() {
 		return "This servlet presents a homework assignment for the user.";
