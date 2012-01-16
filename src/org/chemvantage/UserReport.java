@@ -76,7 +76,7 @@ public class UserReport implements Serializable {
 							+ "</td><td align=center>" + r.correctAnswer + "</td><td align=center>" + r.score + "</td></tr>");
 					buf.append("</table>");
 				}
-				buf.append("<a href=Edit?UserRequest=Edit&QuestionId=" + this.questionId + "&TopicId=" + topic.id + "&AssignmentType=" + q.assignmentType + ">Review Question</a>");
+				buf.append("<a href=Edit?UserRequest=Edit&QuestionId=" + this.questionId + "&TopicId=" + topic.id + "&AssignmentType=" + q.assignmentType + ">Edit Question</a> ");
 			} catch (Exception e2) {}
 			buf.append("<INPUT TYPE=HIDDEN NAME=ReportId VALUE=" + this.id + ">"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Report'>"
