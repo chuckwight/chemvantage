@@ -20,14 +20,12 @@ package org.chemvantage;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.Query;
 
@@ -72,9 +70,9 @@ public class Edit extends HttpServlet {
 			else if (userRequest.equals("NewQuestionForm")) {
 				out.println(Home.getHeader(user) + newQuestionForm(user,request) + Home.footer);
 			}
-			else if (userRequest.equals("Review")) { // review a pending question (problem or contribution)
-				out.println(Home.getHeader(user) + reviewQuestion(user,request) + Home.footer);
-			}
+			//else if (userRequest.equals("Review")) { // review a pending question (problem or contribution)
+			//	out.println(Home.getHeader(user) + reviewQuestion(user,request) + Home.footer);
+			//}
 			else if (userRequest.equals("Edit")) {  // edit a current question in the database
 				out.println(Home.getHeader(user) + editCurrentQuestion(user,request) + Home.footer);
 			}
@@ -179,7 +177,7 @@ public class Edit extends HttpServlet {
 			buf.append("<b>Subject: " + subject.title + "</b><br>");
 			buf.append("<FORM NAME=TopicSelect METHOD=GET ACTION=Edit>");
 			buf.append("<FONT" + (request.getParameter("TopicId")!=null && topicId==0?" COLOR=RED>":">") + "<b>Topic:</b></FONT>" + topicSelectBox(topicId,showQuestions));
-			buf.append("<FONT" + (assignmentType!=null && assignmentType.length()==0?" COLOR=RED>":">") + "<b> Assignment Type:</b></FONT>" + assignmentTypeDropDownBox(assignmentType,showQuestions));
+			buf.append("<FONT" + (assignmentType!=null && assignmentType.length()==0?" COLOR=RED>":">") + "<b> Assignment Type:</b></FONT>" + assignmentTypeDropDownBox(assignmentType,true));
 			buf.append(" <INPUT TYPE=SUBMIT VALUE=" + (showQuestions?"Refresh>":"'Show Questions'>"));
 			buf.append("</FORM>");
 
@@ -570,7 +568,7 @@ public class Edit extends HttpServlet {
 		}
 		return buf.toString();
 	}
-	
+	/*
 	String reviewQuestion(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h2>Editorial Review</h2>\n");
 		try {
@@ -625,7 +623,7 @@ public class Edit extends HttpServlet {
 		}
 		return buf.toString();
 	}
-
+*/
 	private void createTopic(User user,HttpServletRequest request) {
 		Topic t = new Topic(request.getParameter("Title"),request.getParameter("OrderBy"));
 		ofy.put(t);
