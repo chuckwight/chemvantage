@@ -459,8 +459,11 @@ public class Question implements Serializable {
 				+ " onSubmit=\" return ajaxSubmit('Feedback?UserRequest=ReportAProblem','" + this.id + "',document.suggest" + this.id + ".Notes.value);\">"
 				+ "<INPUT TYPE=BUTTON VALUE='Report a problem with this question' "
 				+ "onClick=javascript:getElementById('form" + this.id + "').style.display='';this.style.display='none'>"
-				+ "<div id='form" + this.id + "' style='display: none'>"
-				+ "Comment:<INPUT TYPE=TEXT SIZE=80 NAME=Notes><INPUT TYPE=SUBMIT NAME=SubmitButton VALUE=Send>"
+				+ "<div id='form" + this.id + "' style='display: none'><div style=color:red>"
+				+ (getQuestionType()==3?"Reminder: The correct answers are shown in bold print above. You need to select all of them.":"")
+				+ (getQuestionType()==4?"Reminder: The correct answer will always form a complete, grammatically correct sentence.":"")
+				+ (getQuestionType()==5?"Reminder: Your answer must be in the proper numeric format and within " + requiredPrecision + "% of the exact answer, regardless of significant figures.":"")
+				+ "</div>Comment:<INPUT TYPE=TEXT SIZE=80 NAME=Notes><INPUT TYPE=SUBMIT NAME=SubmitButton VALUE=Send>"
 				+ "</div>"
 				+ "</FORM>"
 				+ "</div>");
