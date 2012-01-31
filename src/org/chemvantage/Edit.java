@@ -743,9 +743,14 @@ public class Edit extends HttpServlet {
 
 	private void deleteQuestion(User user,HttpServletRequest request) {
 		long questionId = 0;
+		String assignmentType;
 		try {
 			questionId = Long.parseLong(request.getParameter("QuestionId"));	
 			ofy.delete(Question.class,questionId);
+			assignmentType = ofy.get(Question.class,questionId).assignmentType;
+			Key<Question> k = new Key<Question>(Question.class,questionId);
+			if ("Quiz".equals(assignmentType)) Quiz.quizQuestions.remove(k);
+			else if ("Homework".equals(assignmentType)) Homework.hwQuestions.remove(k);
 		} catch (Exception e) {
 			return;
 		}
