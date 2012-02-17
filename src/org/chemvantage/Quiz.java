@@ -273,8 +273,8 @@ public class Quiz extends HttpServlet {
 			buf.append("<b>" + user.getBothNames() + "</b><br>\n");
 			buf.append(df.format(now));
 			buf.append(ajaxScoreJavaScript()); // load javascript for AJAX problem reporting form
-			StringBuffer missedQuestions = new StringBuffer();
 			
+			StringBuffer missedQuestions = new StringBuffer();			
 			missedQuestions.append("<OL>");
 			
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
