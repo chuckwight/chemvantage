@@ -194,7 +194,7 @@ public class PracticeExam extends HttpServlet {
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
 			rand.setSeed(pt.id);  // random number generator seeded with PracticeExamTransaction id value
 
-			if (user.hasPremiumAccount()) buf.append(ajaxExamJavaScript());  // this code allows premium users to use the Google SOAP search spell checking function
+			buf.append(ajaxExamJavaScript());  // this code allows users to use the Google SOAP search spell checking function
 			
 			buf.append("\n<FORM METHOD=POST ACTION=PracticeExam "
 					+ "onSubmit=\"return confirm('Submit this exam for grading now. Are you sure?')\">");
