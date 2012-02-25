@@ -23,7 +23,9 @@ import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.TimeZone;
 
@@ -55,6 +57,7 @@ public class PracticeExam extends HttpServlet {
 	DAO dao = new DAO();
 	Objectify ofy = dao.ofy();
 	Subject subject = dao.getSubject();
+	static Map<Key<Question>,Question> examQuestions = new HashMap<Key<Question>,Question>();
 
 	public String getServletInfo() {
 		return "This servlet presents and scores an exam for the user.";
@@ -125,15 +128,23 @@ public class PracticeExam extends HttpServlet {
 	String printExam(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {
-			// Get requested topic keys for this exam
-			long[] topicIds;
-			String[] topicStringIds = request.getParameterValues("TopicId");
-			if (topicStringIds==null) topicIds = new long[0];
-			else topicIds = new long[topicStringIds.length];
-			try {
-				for (int i=0;i<topicStringIds.length;i++) topicIds[i] = Long.parseLong(topicStringIds[i]);
-			} catch (Exception e2) {}
-
+			// Get requested topic ids for this exam
+			long[] topicIds = new long[0];
+			long assignmentId = 0;
+			Assignment a = null;
+			try {  // this branch works if the practice exam is assigned
+				assignmentId=Long.parseLong(request.getParameter("AssignmentId"));
+				a = ofy.get(Assignment.class,assignmentId);
+				topicIds = new long[a.topicIds.size()];
+				for (int i=0;i<topicIds.length;i++) topicIds[i] = a.topicIds.get(i);
+			} catch (Exception e) {  // otherwise this is a student-designed exam
+				String[] topicStringIds = request.getParameterValues("TopicId");
+				if (topicStringIds!=null) {
+					topicIds = new long[topicStringIds.length];
+					for (int i=0;i<topicStringIds.length;i++) topicIds[i] = Long.parseLong(topicStringIds[i]);
+				}
+			}
+			
 			// Check to see if this user has any pending exams:
 			Date now = new Date();
 			Date then = new Date(now.getTime()-timeLimit*60000);  // timeLimit minutes ago
@@ -150,9 +161,15 @@ public class PracticeExam extends HttpServlet {
 			List<Long> topicList = new ArrayList<Long>();
 			for (long id : topicIds) topicList.add(topicList.size(),id); // keep same order of topicIds in array and List
 			
-			List<Key<Question>> questionKeys_02pt = ofy.query(Question.class).filter("assignmentType","Exam").filter("pointValue",2).filter("topicId in",topicList).listKeys();
-			List<Key<Question>> questionKeys_10pt = ofy.query(Question.class).filter("assignmentType","Exam").filter("pointValue",10).filter("topicId in",topicList).listKeys();
-			List<Key<Question>> questionKeys_15pt = ofy.query(Question.class).filter("assignmentType","Exam").filter("pointValue",15).filter("topicId in",topicList).listKeys();
+			List <Key<Question>> questionKeys_02pt = ofy.query(Question.class).filter("assignmentType","Exam").filter("pointValue",2).filter("topicId in",topicList).listKeys();
+			List <Key<Question>> questionKeys_10pt = ofy.query(Question.class).filter("assignmentType","Exam").filter("pointValue",10).filter("topicId in",topicList).listKeys();
+			List <Key<Question>> questionKeys_15pt = ofy.query(Question.class).filter("assignmentType","Exam").filter("pointValue",15).filter("topicId in",topicList).listKeys();
+			
+			if (a != null) {  // eliminate any questionKeys not listed in the assignment
+				for (Key<Question> k : questionKeys_02pt) if (!a.questionKeys.contains(k)) questionKeys_02pt.remove(k);
+				for (Key<Question> k : questionKeys_10pt) if (!a.questionKeys.contains(k)) questionKeys_10pt.remove(k);
+				for (Key<Question> k : questionKeys_15pt) if (!a.questionKeys.contains(k)) questionKeys_15pt.remove(k);
+			}
 			
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			Group myGroup = user.myGroupId==0?null:ofy.get(Group.class,user.myGroupId);
@@ -192,20 +209,22 @@ public class PracticeExam extends HttpServlet {
 			buf.append("<U>2 point questions:</U>");
 			buf.append("<OL>\n");
 			int nQuestions = 10;
-			if (nQuestions > questionKeys_02pt.size()) nQuestions = questionKeys_02pt.size();
-			for (int i = 0; i < nQuestions; i++) {
-				int n = rand.nextInt(questionKeys_02pt.size());
-				try {
-					Question selected = ofy.get(questionKeys_02pt.remove(n));
-					possibleScores[topicList.indexOf(selected.topicId)] += selected.pointValue;
-					// the parameterized questions are seeded with a value based on the ids for the quizTransaction and the question
-					// in order to make the value reproducible for grading but variable for each quiz and from one question to the next
-					selected.setParameters((int)(pt.id - selected.id));
-					buf.append("\n<li>" + selected.print() + "<br></li>\n");
-				} catch (Exception e2) {
-					nQuestions = (questionKeys_02pt.size()+i>10?10:questionKeys_02pt.size()+i);
-					i--;
+			int i = 0;
+			while (i<nQuestions && questionKeys_02pt.size()>0) {
+				Key<Question> k = questionKeys_02pt.remove(rand.nextInt(questionKeys_02pt.size()));
+				Question q = examQuestions.get(k);
+				if (q==null) {
+					try {
+						q = ofy.get(k);
+						examQuestions.put(k,q);
+					} catch (Exception e) {
+						continue;  // this catches cases where an assigned question no longer exists
+					}
 				}
+				i++;
+				possibleScores[topicList.indexOf(q.topicId)] += q.pointValue;
+				q.setParameters((int)(pt.id - q.id));
+				buf.append("\n<li>" + q.print() + "<br></li>\n");
 			}
 			buf.append("</OL>");
 
@@ -213,41 +232,45 @@ public class PracticeExam extends HttpServlet {
 			buf.append("<U>10 point questions:</U>");
 			buf.append("<OL>\n");
 			nQuestions = 5;
-			if (nQuestions > questionKeys_10pt.size()) nQuestions = questionKeys_10pt.size();
-			for (int i = 0; i < nQuestions; i++) {
-				int n = rand.nextInt(questionKeys_10pt.size());
-				try {
-					Question selected = ofy.get(questionKeys_10pt.remove(n));
-					possibleScores[topicList.indexOf(selected.topicId)] += selected.pointValue;
-					// the parameterized questions are seeded with a value based on the ids for the quizTransaction and the question
-					// in order to make the value reproducible for grading but variable for each quiz and from one question to the next
-					selected.setParameters((int)(pt.id - selected.id));
-					buf.append("\n<li>" + selected.print() + "<br></li>\n");
-				} catch (Exception e2) {
-					nQuestions = (questionKeys_10pt.size()+i>5?5:questionKeys_10pt.size()+i);
-					i--;
+			i=0;
+			while (i<nQuestions && questionKeys_10pt.size()>0) {
+				Key<Question> k = questionKeys_10pt.remove(rand.nextInt(questionKeys_10pt.size()));
+				Question q = examQuestions.get(k);
+				if (q==null) {
+					try {
+						q = ofy.get(k);
+						examQuestions.put(k,q);
+					} catch (Exception e) {
+						continue;  // this catches cases where an assigned question no longer exists
+					}
 				}
+				i++;
+				possibleScores[topicList.indexOf(q.topicId)] += q.pointValue;
+				q.setParameters((int)(pt.id - q.id));
+				buf.append("\n<li>" + q.print() + "<br></li>\n");
 			}
-			buf.append("</OL>");
+						buf.append("</OL>");
 
 			// 15-point questions
 			buf.append("<U>15 point questions:</U>");
 			buf.append("<OL>\n");
 			nQuestions = 2;
-			if (nQuestions > questionKeys_15pt.size()) nQuestions = questionKeys_15pt.size();
-			for (int i = 0; i < nQuestions; i++) {
-				int n = rand.nextInt(questionKeys_15pt.size());
-				try {
-					Question selected = ofy.get(questionKeys_15pt.remove(n));
-					possibleScores[topicList.indexOf(selected.topicId)] += selected.pointValue;
-					// the parameterized questions are seeded with a value based on the ids for the quizTransaction and the question
-					// in order to make the value reproducible for grading but variable for each quiz and from one question to the next
-					selected.setParameters((int)(pt.id - selected.id));
-					buf.append("\n<li>" + selected.print() + "<br></li>\n");
-				} catch (Exception e2) {
-					nQuestions = (questionKeys_15pt.size()+i>2?2:questionKeys_15pt.size()+i);
-					i--;
+			i = 0;
+			while (i<nQuestions && questionKeys_15pt.size()>0) {
+				Key<Question> k = questionKeys_15pt.remove(rand.nextInt(questionKeys_15pt.size()));
+				Question q = examQuestions.get(k);
+				if (q==null) {
+					try {
+						q = ofy.get(k);
+						examQuestions.put(k,q);
+					} catch (Exception e) {
+						continue;  // this catches cases where an assigned question no longer exists
+					}
 				}
+				i++;
+				possibleScores[topicList.indexOf(q.topicId)] += q.pointValue;
+				q.setParameters((int)(pt.id - q.id));
+				buf.append("\n<li>" + q.print() + "<br></li>\n");
 			}
 			buf.append("</OL>");
 
@@ -307,26 +330,34 @@ public class PracticeExam extends HttpServlet {
 			
 			// create a buffer to hold the correct solutions to missed questions:
 			StringBuffer missedQuestions = new StringBuffer();
-			missedQuestions.append("The following questions were answered incorrectly. There may be additional questions (not shown) that were left unanswered.");
-			
+			missedQuestions.append("The following questions were answered incorrectly. There may be additional questions (not shown) that were left unanswered.");			
 			missedQuestions.append("<OL>");
+
 			int[] studentScores = new int[topicIds.length];
 			int wrongAnswers = 0;
 
-			// begin the main scoring loop:
-			for (@SuppressWarnings("unchecked")
-					Enumeration<String> e = request.getParameterNames() ; e.hasMoreElements() ;) {
-				Key<Question> questionKey = null;
+			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
+			for (Enumeration<?> e = request.getParameterNames();e.hasMoreElements();) {
 				try {
-					questionKey = new Key<Question>(Question.class,Long.parseLong(e.nextElement()));
-				} catch (Exception e2) {
-					continue;  // this parameter does not correspond to a questionId
-				}
-
-				String studentAnswer[] = request.getParameterValues(Long.toString(questionKey.getId()));
+					questionKeys.add(new Key<Question>(Question.class,Long.parseLong((String) e.nextElement())));
+				} catch (Exception e2) {}
+			}
+			
+			// begin the main scoring loop:
+			for (Key<Question> k : questionKeys) {
+			
+				String studentAnswer[] = request.getParameterValues(Long.toString(k.getId()));
 				if (studentAnswer != null) for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
 				else studentAnswer = new String[] {""};
-				Question q = ofy.get(questionKey);
+				Question q = examQuestions.get(k);
+				if (q==null) {
+					try {
+						q = ofy.get(k);
+						examQuestions.put(k,q);
+					} catch (Exception e) {
+						continue;
+					}
+				}
 				q.setParameters((int)(pt.id - q.id));
 				int score = studentAnswer[0].length()==0?0:q.isCorrect(studentAnswer[0])?q.pointValue:0;
 				if (score > 0) studentScores[topicList.indexOf(q.topicId)] += score;
