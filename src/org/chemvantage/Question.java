@@ -211,7 +211,7 @@ public class Question implements Serializable {
 		}
 		return buf.toString();
 	}
-
+/* This method was deprecated in favor of the printPremium method that shows extra features
 	String print() {
 		StringBuffer buf = new StringBuffer();
 		char choice = 'a';
@@ -260,7 +260,8 @@ public class Question implements Serializable {
 		}
 		return buf.toString();
 	}
-	String printPremium() {  // this method includes functionality for premium users to access spell checking
+	*/
+	String print() {  // this method includes functionality to access spell checking and Google searches
 		StringBuffer buf = new StringBuffer();
 		char choice = 'a';
 		String q = new String(text + " " + tag).replaceAll("\\<[^>]*>","").trim();
