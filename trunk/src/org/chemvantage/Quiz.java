@@ -138,7 +138,7 @@ public class Quiz extends HttpServlet {
 			}
 			buf.append("</OL>");
 			
-			if (user.hasPremiumAccount()) buf.append(ajaxQuizJavaScript());  // this code allows premium users to use the Google SOAP search spell checking function
+			buf.append(ajaxQuizJavaScript());  // this code allows users to use the Google SOAP search spell checking function
 			
 			buf.append("\n<FORM NAME=Quiz METHOD=POST ACTION=Quiz onSubmit=\"javascript: return confirmSubmission()\">");
 
@@ -181,7 +181,7 @@ public class Quiz extends HttpServlet {
 				// in order to make the value reproducible for grading but variable for each quiz and from one question to the next
 				q.setParameters((int)(qt.id - q.id));
 				//buf.append("\n<li>" + selected.print() + "<br></li>\n");
-				buf.append("\n<li>" + (user.hasPremiumAccount()?q.printPremium():q.print()) + "<br></li>\n");
+				buf.append("\n<li>" + q.print() + "<br></li>\n");
 			}
 			buf.append("</OL>");
 			
@@ -191,8 +191,6 @@ public class Quiz extends HttpServlet {
 					.param("TransactionId", Long.toString(qt.id))
 					.param("Action", "Download")
 					.param("PossibleScore", Integer.toString(possibleScore)));
-			//qt.possibleScore = possibleScore;
-			//ofy.put(qt);
 			
 			buf.append("\n<input type=hidden name='QuizTransactionId' value=" + qt.id + ">");
 			buf.append("\n<input type=hidden name='TopicId' value=" + topic.id + ">");
@@ -200,28 +198,22 @@ public class Quiz extends HttpServlet {
 			buf.append("\n<input type=submit value='Grade This Quiz'>");
 			buf.append("\n</form>");
 			buf.append("<SCRIPT language='JavaScript'>");
-			if (user.hasPremiumAccount()) {
-				buf.append("function toggleTimers() {"
-						+ "  var timer0 = document.getElementById('timer0');"
-						+ "  var timer1 = document.getElementById('timer1');"
-						+ "  var ctrl0 = document.getElementById('ctrl0');"
-						+ "  var ctrl1 = document.getElementById('ctrl1');"
-						+ "  if (timer0.style.display=='') {" 
-						+ "    timer0.style.display='none';timer1.style.display='none';"
-						+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
-						+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
-						+ "  } else {"
-						+ "    timer0.style.display='';timer1.style.display='';"
-						+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
-						+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
-						+ "  }"
-						+ "}");
-			} else {
-				buf.append("document.getElementById('timer0').style.visibility='hidden';"
-						+ "document.getElementById('timer1').style.visibility='hidden';"
-						+ "document.getElementById('ctrl0').style.visibility='hidden';"
-						+ "document.getElementById('ctrl1').style.visibility='hidden';");
-			}
+			// this code allows the user to toggle the display of the quiz timers
+			buf.append("function toggleTimers() {"
+					+ "  var timer0 = document.getElementById('timer0');"
+					+ "  var timer1 = document.getElementById('timer1');"
+					+ "  var ctrl0 = document.getElementById('ctrl0');"
+					+ "  var ctrl1 = document.getElementById('ctrl1');"
+					+ "  if (timer0.style.display=='') {" 
+					+ "    timer0.style.display='none';timer1.style.display='none';"
+					+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
+					+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
+					+ "  } else {"
+					+ "    timer0.style.display='';timer1.style.display='';"
+					+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
+					+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
+					+ "  }"
+					+ "}");
 			buf.append("function confirmSubmission() {"
 					+ "if (seconds>0) return confirm('Submit this quiz for scoring now?');"
 					+ "}");
