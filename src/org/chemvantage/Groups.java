@@ -157,7 +157,7 @@ public class Groups extends HttpServlet {
 			} else if (userRequest.equals("Copy Assignments")) {
 				copyAssignments(user,group,request);
 				out.println(manageGroupForm(user,group,request));
-			} else if (userRequest.equals("UpdateDeadlines")) {
+			} else if (userRequest.equals("UpdateDeadlines")||userRequest.equals("Create")) {
 				updateDeadlines(user,group,request);
 				out.println(manageGroupForm(user,group,request));
 			} else if (userRequest.equals("RescueService")) {
@@ -370,24 +370,23 @@ public class Groups extends HttpServlet {
 					+ (group.sendRescueMessages?"activated.":"turned off.")
 					+ " <a href=Groups?UserRequest=RescueOptions&GroupId=" + group.id + ">Show Rescue Service Options</a><p>");
 			
-			buf.append("<b>Assignment Deadlines</b><br>"
-					+ "To assign a quiz or homework for this group, enter a deadline for the assignment and click Update. "
+			buf.append("<a href=# style='font-size:smaller' onClick=\"javascript: document.getElementById('instructions1').style.display=''\">Show Instructions</a><br>"
+					+ "<div id='instructions1' style='display:none'>"
+					+ "<b>Quiz and Homework Assignments</b><br>"
+					+ "To assign a quiz or homework for this group, select a topic, enter a due date for the assignment and click Create. "
 					+ "All deadlines expire just before midnight (23:59:59) local time on the date indicated. "
 					+ "Be sure to set the correct time zone on the Groups page.<p>"
 					+ "To omit or delete an assignment, leave its deadline blank. "
-					+ "<p>You may change the deadline date at any time; scores will be recalculated automatically."
+					+ "You may change the deadline date at any time; scores will be recalculated automatically."
 					+ "<p>When you first create an assignment, all questions in the database are used by default. "
 					+ "However, you may designate a subset of quiz questions by clicking the "
 					+ "'Select' link and/or assign a subset of homework questions using the 'Assign' link below. "
 					+ " <p>");
 
-			buf.append("<TABLE>\n<TR><TH>Title</TH><TH>Quiz Deadline</TH><TH COLSPAN=2> Questions</TH>"
-					+ "<TH>&nbsp;&nbsp;&nbsp;&nbsp;</TH><TH>HW Deadline</TH><TH COLSPAN=2>Exercises</TH><TH>&nbsp;</TH></TR>\n");
-
 			// allow copying of assignments from another group:
 			List<Group> groups = ofy.query(Group.class).list();
 			if (groups.size() > 1) {
-				buf.append("<div id=copy>");
+				//buf.append("<div id=copy>");
 				buf.append("You may copy all assignments, deadlines and selected questions from another group "
 						+ "by selecting it below.<br><FONT COLOR=RED>Warning: this will permanently delete any "
 						+ "current assignments for this group shown below.</FONT>"
@@ -398,42 +397,51 @@ public class Groups extends HttpServlet {
 					if (g.id==group.id) continue; 
 					buf.append("<OPTION VALUE=" + g.id + ">" + g.description + " (" + User.getBothNames(g.instructorId) + ")</OPTION>");
 				}
-				buf.append("</SELECT><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Copy Assignments'></FORM>");
-				buf.append("</div><p>");
+				buf.append("</SELECT><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Copy Assignments'></FORM><p>");
+				buf.append("</div>");
 			}
 			
 			// get a list of topics in the default order and rearrange them to start with the current group topics:
 			List<Topic> topics = ofy.query(Topic.class).order("orderBy").list();
-			for (Long topicId : group.topicIds) {
-				for (Topic t : topics) if (t.id==topicId) {
-					topics.add(group.topicIds.indexOf(topicId),topics.remove(topics.indexOf(t)));
-					break;
+			Map<Long,Topic> groupTopics = ofy.get(Topic.class,group.topicIds);
+
+			if (groupTopics.size() > 0) {
+				buf.append("<TABLE>\n<TR><TH>Topic</TH><TH>Quiz Deadline</TH><TH COLSPAN=2> Questions</TH>"
+						+ "<TH>&nbsp;&nbsp;&nbsp;&nbsp;</TH><TH>HW Deadline</TH><TH COLSPAN=2>Exercises</TH><TH>&nbsp;</TH></TR>\n");
+				for (Topic t : groupTopics.values()) {
+					long i = group.getAssignmentId("Quiz",t.id);
+					Assignment q = i>0?ofy.find(Assignment.class,i):null;
+					long j = group.getAssignmentId("Homework",t.id);
+					Assignment h = j>0?ofy.find(Assignment.class,j):null;
+					buf.append("<FORM NAME=A" + t.id + " METHOD=POST ACTION=Groups>"
+							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateDeadlines>"
+							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + t.id + "'>"
+							+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>\n");
+					buf.append("<TR><TD>" + t.title + "</TD><TD><INPUT SIZE=15 NAME=QuizDeadline ");
+					buf.append((q==null?"onFocus=\"A" + t.id + ".QuizDeadline.value='" + today + "'\"":"VALUE='" + df.format(q.deadline) + "'")
+							+ "></TD>\n"
+							+ "<TD ALIGN=CENTER>" + (q==null?0+"</TD><TD></TD>":q.questionKeys.size() + "</TD>"
+									+ "<TD ALIGN=CENTER><A href=Groups?UserRequest=AssignQuizQuestions&GroupId=" + group.id + "&TopicId=" + t.id + ">Select</A></TD>")
+									+ "<TD></TD>\n");
+					buf.append("<TD><INPUT SIZE=15 NAME=HWDeadline "); 
+					buf.append((h==null?"onFocus=\"A" + t.id + ".HWDeadline.value='" + today + "'\"":"VALUE='" + df.format(h.deadline) + "'")
+							+ "></TD>\n"
+							+ "<TD ALIGN=CENTER>" + (h==null?0+"</TD><TD></TD>":h.questionKeys.size() + "</TD>"
+									+ "<TD ALIGN=CENTER><A href=Groups?UserRequest=AssignHomeworkQuestions&GroupId=" + group.id + "&TopicId=" + t.id + ">Assign</A></TD>")
+									+ "<TD><INPUT TYPE=SUBMIT VALUE='Update'></TD>"
+									+ "</TR></FORM>\n");
 				}
+				buf.append("</TABLE><p>\n");
 			}
-			for (Topic t : topics) {
-				long i = group.getAssignmentId("Quiz",t.id);
-				Assignment q = i>0?ofy.find(Assignment.class,i):null;
-				long j = group.getAssignmentId("Homework",t.id);
-				Assignment h = j>0?ofy.find(Assignment.class,j):null;
-				buf.append("<FORM NAME=A" + t.id + " METHOD=POST ACTION=Groups>"
-						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateDeadlines>"
-						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + t.id + "'>"
-						+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>\n");
-				buf.append("<TR><TD>" + t.title + "</TD><TD><INPUT SIZE=15 NAME=QuizDeadline ");
-				buf.append((q==null?"onFocus=\"A" + t.id + ".QuizDeadline.value='" + today + "'\"":"VALUE='" + df.format(q.deadline) + "'")
-						+ "></TD>\n"
-						+ "<TD ALIGN=CENTER>" + (q==null?0+"</TD><TD></TD>":q.questionKeys.size() + "</TD>"
-						+ "<TD ALIGN=CENTER><A href=Groups?UserRequest=AssignQuizQuestions&GroupId=" + group.id + "&TopicId=" + t.id + ">Select</A></TD>")
-						+ "<TD></TD>\n");
-				buf.append("<TD><INPUT SIZE=15 NAME=HWDeadline "); 
-				buf.append((h==null?"onFocus=\"A" + t.id + ".HWDeadline.value='" + today + "'\"":"VALUE='" + df.format(h.deadline) + "'")
-						+ "></TD>\n"
-						+ "<TD ALIGN=CENTER>" + (h==null?0+"</TD><TD></TD>":h.questionKeys.size() + "</TD>"
-						+ "<TD ALIGN=CENTER><A href=Groups?UserRequest=AssignHomeworkQuestions&GroupId=" + group.id + "&TopicId=" + t.id + ">Assign</A></TD>")
-						+ "<TD><INPUT TYPE=SUBMIT VALUE='Update'></TD>"
-						+ "</TR>\n</FORM>\n");
-			}
-			buf.append("</TABLE>\n");
+
+			buf.append("<b>Add A Quiz or Homework Assignment</b><br>"
+					+ "<FORM NAME=newA ACTION=Groups METHOD=POST>"
+					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
+					+ "<SELECT NAME=TopicId><OPTION>Select a topic here:</OPTION>");
+			for (Topic t : topics) if (!groupTopics.containsKey(t.id)) buf.append("<OPTION VALUE=" + t.id + ">" + t.title + "</OPTION>");
+			buf.append("</SELECT> Quiz Due:<INPUT SIZE=15 NAME=QuizDeadline onFocus=\"newA.QuizDeadline.value='" + today + "'\">"
+					+ "Homework Due:<INPUT SIZE=15 NAME=HWDeadline onFocus=\"newA.HWDeadline.value='" + today + "'\">"
+					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Create></FORM>");
 		}
 		catch (Exception e) {
 			buf.append("<p>" + e.toString());
@@ -675,7 +683,7 @@ public class Groups extends HttpServlet {
 			ofy.put(group);
 		}
 		catch (Exception e) {
-			buf.append("<FONT COLOR=RED>" + e.getMessage() + "</FONT>");
+			buf.append("<FONT COLOR=RED>" + e.toString() + "</FONT>");
 		}
 		return buf.toString();
 	}

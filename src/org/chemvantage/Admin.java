@@ -175,13 +175,19 @@ public class Admin extends HttpServlet {
 				buf.append("\n</TABLE>");
 				if (nResults==this.queryLimit) buf.append("<a href=/Admin?SearchString=" + searchString + "&Cursor=" + iterator.getCursor().toWebSafeString() + ">show more users</a>"); 
 			} else if (searchString != null) buf.append("\nSorry, the search returned no results.");
-				// write a section here to give the total number of users  
+				// write a section here to give the total number of users
+			
 			
 			// This section provides information about domains
 			buf.append("<h3>ChemVantage Domains</h3>");
 			List<Domain> domains = ofy.query(Domain.class).order("-created").list();
 			buf.append("<table><tr><td>Domain Name</td><td>Created</td><td>Users</td><td>Administrator</td></tr>");
 			for (Domain d : domains) {
+				int nUsers = ofy.query(User.class).filter("domain",d.domainName).count();
+				if (d.activeUsers!=nUsers) {
+					d.activeUsers = nUsers;
+					ofy.put(d);
+				}
 				buf.append("<tr><td><a href=/admin?Domain=" + d.domainName + ">" + d.domainName + "</a></td>"
 						+ "<td>" + d.created.toString() + "</td>"
 						+ "<td style='text-align:center'>" + d.activeUsers + "</td>"
