@@ -65,6 +65,7 @@ public class Verification extends HttpServlet {
 			User user = ofy.get(User.class,userId);
 			user.verifiedEmail = (Integer.parseInt(code) == new Key<User>(User.class,userId).hashCode());
 			ofy.put(user);
+			if (user.verifiedEmail) Admin.autoMergeAccounts(user.email);
 			out.println(Login.header + verifiedEmail(user.verifiedEmail) + Login.footer);
 		} catch (Exception e) {	
 			doPost(request,response);  // view current information if logged in; else go to Login page
@@ -168,7 +169,8 @@ public class Verification extends HttpServlet {
 	String verifiedEmail(boolean verified) {
 		StringBuffer buf = new StringBuffer();
 		if (verified) buf.append("<h3>Email Verification Complete</h3>" 
-				+ "Thank you for verifying your email address with ChemVantage.");
+				+ "Thank you for verifying your email address with ChemVantage.<p>"
+				+ "<a href=http://www.chemvantage.org>Go to the ChemVantage login page now</a>.");
 		else buf.append("<h3>Verification Failed</h3>Sorry, this action was unsuccessful. "
 				+ "Please be sure that the complete URL was included in the request by copying " 
 				+ "and pasting it into the URL address bar in your browser. If you need assistance, "
@@ -195,7 +197,7 @@ public class Verification extends HttpServlet {
 			}
 		} catch (Exception e) {}
 		try {
-			buf.append("<h2>Your ChemVantage Account Information</h2>"
+			buf.append("<h2>Your ChemVantage Account Profile</h2>"
 					+ "ChemVantage protects your personal information. For details, see our <a href=/w3c/privacy.html>Privacy Policy</a>.<br>"
 					+ "In order for ChemVantage to function properly as a learning resource, we need to associate your name and email address with your account.<br>"
 					+ "This is important for protecting <i>you</i> by making it difficult for someone else to impersonate you or tamper with your account.<p>");
@@ -221,7 +223,7 @@ public class Verification extends HttpServlet {
 				}
 				buf.append("<TR><TD ALIGN=RIGHT>SMS address:</TD><TD>" + smsAddress + "</TD></TR>");	
 			}
-			buf.append("<TR><TD ALIGN=RIGHT>Account type: </TD><TD>" + (user.hasPremiumAccount()?"premium":"basic (<a href=Upgrade>what's this?</a>)") + "</TD></TR>");
+			buf.append("<TR><TD ALIGN=RIGHT>Account type: </TD><TD>" + (user.hasPremiumAccount()?"premium":"basic") + "</TD></TR>");
 			if (user.myGroupId>0L) { // user already belongs to a group
 				Group myGroup = ofy.find(Group.class,user.myGroupId);
 				buf.append("<TR><TD ALIGN=RIGHT>Group:</TD><TD>" + myGroup.description + " (" + myGroup.getInstructorBothNames() + ")</TD></TR>");
@@ -238,7 +240,9 @@ public class Verification extends HttpServlet {
 					buf.append("<FORM NAME=JoinGroup METHOD=POST ACTION=Verification>");
 					buf.append("<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=JoinGroup>");
 
-					Query<Group> allGroups = ofy.query(Group.class).filter("domain",user.domain);
+					Query<Group> allGroups = null;
+					if (user.domain==null || user.domain.isEmpty()) allGroups=ofy.query(Group.class);
+					else allGroups=ofy.query(Group.class).filter("domain",user.domain);
 					
 					buf.append("<SELECT NAME=GroupId "
 							+ "onChange=\"if(confirm('Are you sure that you  want to join this group? "
@@ -268,8 +272,13 @@ public class Verification extends HttpServlet {
 							+ "<input type=image src=https://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif border=0 name=submit alt='PayPal - The safer, easier way to pay online!'>"
 							+ "<br><font size=-2>Your payment will be processed by PayPal.com</font>"
 							+ "<img alt='' border=0 src=https://www.paypalobjects.com/en_US/i/scr/pixel.gif width=1 height=1>"
-							+ "</form>"
-							+ "</TD></TR></TABLE></TD></TR>");
+							+ "</form></TD>");
+					if (user.myGroupId<0) buf.append("<TD align=center><form action=Verification method=post><input type=hidden name=GroupId value=0>"
+							+ "<input type=hidden name=UserRequest value=JoinGroup>"
+							+ "<input type=submit value='No Thanks' style='font-weight:bold;color:white;background-color:red'>"
+							+ "<br><font size=-2>You may return to this page later to<br>upgrade your account and join a group.</font></TD>");
+					buf.append("</TR></TABLE>");
+					buf.append("</TD></TR>");
 				}
 				buf.append("</TABLE>\n");
 
@@ -297,7 +306,6 @@ public class Verification extends HttpServlet {
 					+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.<p>");
 			
 			if (user.verifiedEmail && !user.requiresUpdates()) {
-				//List<String> otherUserIds = new ArrayList<String>();
 				// This section finds accounts with duplicate verified email addresses for immediate account merging
 				List<User> duplicateEmails = ofy.query(User.class).filter("email",user.email).list();
 				buf.append("<TABLE>");
@@ -317,7 +325,6 @@ public class Verification extends HttpServlet {
 							+ "</FORM></TD></TR>");
 				}
 				// This section finds duplicate names, sends a code to the user's email address and accepts it to initiate an account merge.
-				//List<User> duplicateNames = ofy.query(User.class).filter("lowercaseName",user.lowercaseName).filter("domain",user.domain).list();
 				List<User> duplicateNames = ofy.query(User.class).filter("lowercaseName",user.lowercaseName).list();
 				for (User u : duplicateNames) {
 					if (u.id.equals(user.id) || duplicateEmails.contains(u.id) || !u.verifiedEmail || u.alias!=null) continue;
@@ -347,7 +354,8 @@ public class Verification extends HttpServlet {
 
 	boolean eligibleToJoin(User user) {
 		// This method checks to see if the user is eligible to join a new group
-		if (user.hasPremiumAccount() || user.domain==null) return true;
+		//if (user.hasPremiumAccount() || user.domain==null) return true;
+		if (user.hasPremiumAccount()) return true;
 		Domain domain = ofy.query(Domain.class).filter("domainName", user.domain).get();
 		if (domain == null) return false;
 		if (domain.seatsAvailable>0 || domain.freeTrialExpires.after(new Date())) return true;
