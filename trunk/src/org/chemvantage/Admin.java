@@ -401,16 +401,24 @@ public class Admin extends HttpServlet {
 		if (toUser.firstName.isEmpty()) toUser.firstName = fromUser.firstName;
 		if (toUser.lastName.isEmpty()) toUser.lastName = fromUser.lastName;
 		if (toUser.email.isEmpty() && fromUser.verifiedEmail) toUser.email = fromUser.email;
-		if (toUser.myGroupId==0) {
-			toUser.myGroupId = fromUser.myGroupId;
+		if (toUser.myGroupId<=0 && fromUser.myGroupId>=0) {
+			toUser.changeGroups(fromUser.myGroupId);
+			fromUser.changeGroups(0L);
 			toUser.notifyDeadlines = toUser.myGroupId>0?(toUser.notifyDeadlines || fromUser.notifyDeadlines):false;
-			toUser.smsMessageDevice = toUser.myGroupId>0?fromUser.smsMessageDevice:null;
+			toUser.smsMessageDevice = toUser.smsMessageDevice==null?fromUser.smsMessageDevice:toUser.smsMessageDevice;
+		}
+		if (toUser.domain == null && fromUser.domain != null) {
+			toUser.domain = fromUser.domain;
+			fromUser.domain = null;
 		}
 		toUser.roles = fromUser.roles>toUser.roles?fromUser.roles:toUser.roles;
+		toUser.setPremium(fromUser.hasPremiumAccount() || toUser.hasPremiumAccount());
 		toUser.setLowerCaseName();
+		fromUser.setAlias(toUser.id);  // diverts future logins to the new UserId
 		
 		Objectify ofy = ObjectifyService.begin();
 		ofy.put(toUser);
+		ofy.put(fromUser);
 		
 		List<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId",fromUser.id).list();
 		for (HWTransaction h:hwTransactions) h.userId = toUser.id;
@@ -432,9 +440,47 @@ public class Admin extends HttpServlet {
 		for (Group g:myGroups) g.instructorId=toUser.id;
 		ofy.put(myGroups);
 		
-		fromUser.setAlias(toUser.id);  // diverts future logins to the new UserId
-		fromUser.myGroupId=0;          // removes old userId from the group to avoid duplicate gradebook entries
-		ofy.put(fromUser);
+	}
+	
+	protected static void autoMergeAccounts(String email) {
+		// this method attempts to find all active user accounts having the same 
+		// email address and merge them into a smaller number of accounts by aliasing.
+		// The general strategy is:
+		//   1. Leave CAS accounts alone because it's easy to access them directly from the home page
+		//   2. Don't merge any accounts that have aliases or unverified email addresses.
+		//   3. Any two accounts not associated with a domain can be merged into a single account either direction.
+		//   4. If the user has a domain account (LTI or Google Apps), any non-domain accounts should be merged into it
+		//   5. If the address of any account matches a registered domain, add the user to that domain.
+
+		try {
+			Objectify ofy = ObjectifyService.begin();
+			List<User> userAccounts = ofy.query(User.class).filter("email",email).list();
+			for (User u : userAccounts) {
+				if ((u.alias != null && u.alias.isEmpty()) || !u.verifiedEmail || "CAS".equals(u.authDomain)) {
+					userAccounts.remove(u);
+					continue;
+				}
+				try { // if this domain exists as a registered ChemVantage domain, assign the user to it
+					Domain d = ofy.query(Domain.class).filter("domainName",u.authDomain).get();
+					u.domain = d.domainName;
+					ofy.put(u);
+				} catch (Exception e) {
+				}
+			}
+			if (userAccounts.size()<2) return;
+			User fromUser = null;
+			User toUser = null;
+			for (User u : userAccounts) {			
+				if (fromUser==null && u.domain==null) fromUser = u;
+				else if (toUser==null) toUser = u;
+				if (fromUser!=null && toUser!=null) {
+					Admin.mergeAccounts(toUser, fromUser);
+					Admin.autoMergeAccounts(toUser.email);  // proceed recursively until merge process fails
+					return;
+				}
+			}
+		} catch (Exception e) {
+		}
 	}
 }
 
