@@ -68,8 +68,8 @@ public class Home extends HttpServlet {
 		}
 		Date now = new Date();
 		Date eightHoursAgo = new Date(now.getTime()-28800000L);
-		Date offerDeadline = new Date(1318219200000L);  // 10/10/2011 00:00:00
-		if (user.demoExpires==null) user.demoExpires = new Date(0);
+		//Date offerDeadline = new Date(1318219200000L);  // 10/10/2011 00:00:00
+		//if (user.demoExpires==null) user.demoExpires = new Date(0);
 		
 		// Check to see if the user should provide additional contact information
 		if (user.requiresUpdates() && (user.lastLogin.before(eightHoursAgo))) {
@@ -78,13 +78,13 @@ public class Home extends HttpServlet {
 		}
 		
 		// Check to see if a free demo premium account should be offered or revoked
-		if (now.before(offerDeadline) && !user.hasPremiumAccount() && user.demoExpires.getTime()==0) {
-			response.sendRedirect("/Upgrade?action=free+offer");
-			return;
-		} else if (now.after(user.demoExpires) && user.demoPremium==true) {
-			response.sendRedirect("/Upgrade?action=expired");
-			return;
-		}
+		//if (now.before(offerDeadline) && !user.hasPremiumAccount() && user.demoExpires.getTime()==0) {
+		//	response.sendRedirect("/Upgrade?action=free+offer");
+		//	return;
+		//} else if (now.after(user.demoExpires) && user.demoPremium==true) {
+		//	response.sendRedirect("/Upgrade?action=expired");
+		//	return;
+		//}
 		
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
@@ -322,7 +322,7 @@ public class Home extends HttpServlet {
 				}
 			}
 			buf.append("<TR><TD COLSPAN=2 ALIGN=CENTER><FONT SIZE=-1><a href=Scores?r=" + new Random().nextInt(99) + ">Show My Scores</a></FONT></TD></TR>");
-			buf.append("<TR><TD ALIGN=CENTER><FONT SIZE=-1><a href=Verification>View My Information</a></FONT></TD></TR>");
+			buf.append("<TR><TD ALIGN=CENTER><FONT SIZE=-1><a href=Verification>View Account Profile</a></FONT></TD></TR>");
 			buf.append("</TABLE>");
 			buf.append("</TD></TR></TABLE><p>");
 		} catch (Exception e) {
