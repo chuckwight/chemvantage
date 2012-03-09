@@ -169,15 +169,23 @@ public class User implements Comparable<User>,Serializable {
 			user = ofy.find(User.class,userId);
 			if (user != null) return user;
 			user = new User(userId);
-			user.authDomain = "Google Apps";
-			user.domain = extractDomain(userInfo.getClaimedId());
+			user.authDomain = extractDomain(userInfo.getClaimedId());
+			if (user.authDomain.contains("google.com")) user.authDomain="gmail.com"; 
+			try { // if this domain exists as a registered ChemVantage domain, assign the user to it
+				Domain d = ofy.query(Domain.class).filter("domainName",user.authDomain).get();
+				user.domain = d.domainName;
+			} catch (Exception e) {
+				user.domain = null;  // user is a free agent and can join any ChemVantage group
+			}
 			user.setEmail(userInfo.getEmail());
 			user.verifiedEmail = !(user.email==null || user.email.isEmpty());
 			user.setFirstName(userInfo.getFirstName());
 			user.setLastName(userInfo.getLastName());
             ofy.put(user);
-			Query<User> twins = ofy.query(User.class).filter("email",user.email);
-			for (User t : twins) Admin.mergeAccounts(user, t);
+            if (user.verifiedEmail) {
+            	Query<User> twins = ofy.query(User.class).filter("email",user.email);
+            	for (User t : twins) if (!t.id.equals(user.id)) Admin.mergeAccounts(user, t);
+            }
 		} catch (Exception e) {
 			return null;
 		}		
@@ -195,8 +203,8 @@ public class User implements Comparable<User>,Serializable {
 			user.verifiedEmail = !user.email.isEmpty();
 			Objectify ofy = ObjectifyService.begin();
 			ofy.put(user);
-			Query<User> twins = ofy.query(User.class).filter("email",user.email);
-			for (User t : twins) Admin.mergeAccounts(user, t);
+			//Query<User> twins = ofy.query(User.class).filter("email",user.email);
+			//for (User t : twins) Admin.mergeAccounts(user, t);
 		} catch (Exception e) {
 			return null;
 		}		
@@ -205,6 +213,7 @@ public class User implements Comparable<User>,Serializable {
 
 	static String extractDomain(String claimedId) {
 		StringBuffer domain = new StringBuffer(claimedId);
+		domain = domain.delete(0, domain.indexOf("@")+1);    // strips username from email address
 		domain = domain.delete(0, domain.indexOf("//")+2);   // strips http:// or https://
 		return domain.substring(0,domain.indexOf("/"));      // strips URI
 	}
@@ -243,7 +252,7 @@ public class User implements Comparable<User>,Serializable {
 		if (smsMessageDevice==null) smsMessageDevice = "";
 		//authDomain = id.contains(":")?"BLTI":"gmail.com";
 		alias = (alias==null || alias.isEmpty())?null:alias;
-		if (alias != null) myGroupId=0;
+		//if (alias != null) myGroupId=0;
 		ofy.put(this);
 	}
 	
