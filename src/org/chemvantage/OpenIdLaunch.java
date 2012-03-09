@@ -99,7 +99,8 @@ public class OpenIdLaunch extends HttpServlet {
 			req.getSession().setAttribute("UserId", user.getId());
 			
 			// try to set a Cookie with the user's ID provider:
-			Cookie c = new Cookie("IDProvider","Google");
+			//Cookie c = new Cookie("IDProvider","Google");
+			Cookie c = new Cookie("IDProvider",user.authDomain);
 			c.setMaxAge(2592000); // expires after 30 days (in seconds)
 			resp.addCookie(c);
 		
