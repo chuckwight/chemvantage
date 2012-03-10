@@ -179,6 +179,14 @@ public class Login extends HttpServlet {
 								+ providerName + "</a></td></tr></table>");
 						showAll = false;
 						break;
+					} else if ("BLTI".equals(c.getValue())) {
+						buf.append("<p>It appears that you are using ChemVantage in conjunction with a course learning "
+								+ "management system (LMS). You should access ChemVantage from inside the LMS to access your assignments and scores. "
+								+ "You may create a separate ChemVantage account for more convenient access using the login options link below. "
+								+ "However, you must use <b>exactly the same name or email address</b> in order to be able to merge your accounts later "
+								+ "using the information at the bottom of the 'View My Profile' page.<br>");
+						showAll = false;
+						break;
 					} else {
 						String providerName = c.getValue(); if (providerName==null || providerName.isEmpty()) providerName="example.com";
 						buf.append("<br><table style='border-spacing:40px 0px'><tr><td style='text-align:center'><tr><td>"
