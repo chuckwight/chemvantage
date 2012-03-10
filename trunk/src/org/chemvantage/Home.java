@@ -322,7 +322,7 @@ public class Home extends HttpServlet {
 				}
 			}
 			buf.append("<TR><TD COLSPAN=2 ALIGN=CENTER><FONT SIZE=-1><a href=Scores?r=" + new Random().nextInt(99) + ">Show My Scores</a></FONT></TD></TR>");
-			buf.append("<TR><TD ALIGN=CENTER><FONT SIZE=-1><a href=Verification>View Account Profile</a></FONT></TD></TR>");
+			//buf.append("<TR><TD ALIGN=CENTER><FONT SIZE=-1><a href=Verification>View Account Profile</a></FONT></TD></TR>");
 			buf.append("</TABLE>");
 			buf.append("</TD></TR></TABLE><p>");
 		} catch (Exception e) {

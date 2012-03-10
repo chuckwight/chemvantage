@@ -188,9 +188,10 @@ public class Login extends HttpServlet {
 						showAll = false;
 						break;
 					} else {
-						String providerName = c.getValue(); if (providerName==null || providerName.isEmpty()) providerName="example.com";
+						String providerName = c.getValue(); 
+						if (providerName==null || providerName.isEmpty()) providerName="example.com";
 						buf.append("<br><table style='border-spacing:40px 0px'><tr><td style='text-align:center'><tr><td>"
-								+ "<form id='" + providerName + "' action=/openid method=get>"
+								+ "<form id='GoogleAppsLogin' action=/openid method=get>"
 								+ "<img src=/images/openid/googleapps.png alt='Google Apps'><br>"
 								+ "Domain:<input type=text name=hd value='" + providerName + "'>"
 								+ "<input type=submit name=UserRequest value=Go></form></td></tr></table>");
@@ -223,11 +224,14 @@ public class Login extends HttpServlet {
 							+ providerName + "</a></TD>"); 
 				}
 				// display Google Apps domain login form:
+				String msg = request.getParameter("msg");
+				if (msg==null || msg.isEmpty()) msg = "example.com";
 				buf.append("<form id='GoogleApps' action=/openid method=get>"
 								+ "<TD><img src=/images/openid/googleapps.png alt='Google Apps'><br>"
-								+ "Domain:<input type=text name=hd value='example.com'>"
-								+ "<input type=submit name=UserRequest value=Go></form></TD>");
-				buf.append("</TR></TABLE>");
+								+ "Domain:<input type=text name=hd value='" + msg + "' onFocus=if(this.value==this.defaultValue)this.value=''>"
+								+ "<input type=submit name=UserRequest value=Go></form>"
+								+ "<div style='font-size:smaller'><a href=https://www.google.com/enterprise/marketplace/viewListing?productListingId=9006+12752972024151964645>Add ChemVantage To Your Domain</a></div>");
+				buf.append("</TD></TR></TABLE>");
 			}
 			//buf.append("<div style='text-align:right'><a href=https://www.google.com/enterprise/marketplace/viewListing?productListingId=9006+12752972024151964645><img src=/images/marketplace-addtogoogleapps-shadow.png alt='Add to Google Apps'></a></div>");
 		} catch (Exception e) {
