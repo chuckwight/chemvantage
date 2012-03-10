@@ -131,7 +131,7 @@ public class Login extends HttpServlet {
 
 			buf.append("<TABLE><TR><TD VALIGN=TOP><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
 					+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - " + subject.title + "</b></FONT>"
-					+ "<br><div align=right>An OpenEducation Resource</TD></TR></TABLE>");
+					+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>");
 			
 			StringBuffer thisURL = request.getRequestURL();
 
@@ -142,16 +142,16 @@ public class Login extends HttpServlet {
 						+ "To reach the ChemVantage production site "
 						+ "<a href=http://www.chemvantage.org>click here</a>.<p>");
 			} else {
-				buf.append("ChemVantage is a free resource for science education:<ul>"
+				buf.append("ChemVantage is a resource for science education:<ul>"
 						+ "<li>computer-graded quizzes<li>homework exercises"
 						+ "<li>practice exams<li>video lectures<li>free online textbooks</ul>");
 				buf.append("<a href=InformationForInstructors.pdf>Information for instructors</a>");
 			}
 
 			UserService userService = UserServiceFactory.getUserService();
-			buf.append("<h3>Please Login</h3>");
+			buf.append("<h3>Please Sign In</h3>");
 			buf.append("ChemVantage uses third-party authentication for account creation and login.<br>"
-					+ "Select your preferred online identity provider below to login to ChemVantage.<br>");
+					+ "Select your preferred online identity provider below to login to ChemVantage.<p>");
 
 			boolean showAll = "all".equals(request.getParameter("show"));
 			Cookie[] cookies = request.getCookies();
@@ -163,7 +163,7 @@ public class Login extends HttpServlet {
 						String providerName = c.getValue();
 						String providerUrl = openIdProviders.get(providerName);
 						String loginUrl = userService.createLoginURL("/userService",null,providerUrl,attributes);
-					buf.append("<br><table style='border-spacing:40px 0px'><tr><td style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
+					buf.append("<table style='border-spacing:40px 0px'><tr><td style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
 								+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
 								+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "' style='text-align:center'><br/>" 
 								+ providerName + "</a></td></tr></table>");
@@ -173,14 +173,14 @@ public class Login extends HttpServlet {
 						String providerName = c.getValue();
 						String casUrl = CASLaunch.casProviders.get(providerName);
 						String loginUrl = casUrl + "/login?service=https://" + request.getServerName() + "/cas";
-						buf.append("<br><table style='border-spacing:40px 0px'><tr><td style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
+						buf.append("<table style='border-spacing:40px 0px'><tr><td style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
 								+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
 								+ "<img src='" + CASLaunch.casLogos.get(providerName) + "' border=0 alt='" + providerName + "' style='text-align:center'><br/>" 
 								+ providerName + "</a></td></tr></table>");
 						showAll = false;
 						break;
 					} else if ("BLTI".equals(c.getValue())) {
-						buf.append("<p>It appears that you are using ChemVantage in conjunction with a course learning "
+						buf.append("It appears that you are using ChemVantage in conjunction with a course learning "
 								+ "management system (LMS). You should access ChemVantage from inside the LMS to access your assignments and scores. "
 								+ "You may create a separate ChemVantage account for more convenient access using the login options link below. "
 								+ "However, you must use <b>exactly the same name or email address</b> in order to be able to merge your accounts later "
@@ -190,11 +190,12 @@ public class Login extends HttpServlet {
 					} else {
 						String providerName = c.getValue(); 
 						if (providerName==null || providerName.isEmpty()) providerName="example.com";
-						buf.append("<br><table style='border-spacing:40px 0px'><tr><td style='text-align:center'><tr><td>"
+						buf.append("<table style='border-spacing:40px 0px'><tr><td style='text-align:center'><tr><td>"
 								+ "<form id='GoogleAppsLogin' action=/openid method=get>"
 								+ "<img src=/images/openid/googleapps.png alt='Google Apps'><br>"
-								+ "Domain:<input type=text name=hd value='" + providerName + "'>"
-								+ "<input type=submit name=UserRequest value=Go></form></td></tr></table>");
+								+ "Domain:&nbsp;<b>" + providerName + "</b>&nbsp;"
+								+ "<input type=hidden name=hd value='" + providerName + "'>"
+								+ "<input type=submit name=UserRequest value=Login></form></td></tr></table>");
 						showAll = false;
 						break;
 					}
@@ -203,7 +204,7 @@ public class Login extends HttpServlet {
 			} else showAll = true;
 			
 			if (showAll) {	
-				buf.append("If you don't already have a free account there, you may create one.<p>");
+				//buf.append("If you don't already have a free account there, you may create one.<p>");
 				buf.append("<TABLE style='border-spacing:40px 0px'><TR>");
 				// display Google-authorized OpenID providers and logos:
 				for (String providerName : openIdProviders.keySet()) {
