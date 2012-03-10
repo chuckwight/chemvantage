@@ -66,7 +66,12 @@ public class Domain {
 	}
 	
 	public boolean isAdmin(String adminId) {
-		return domainAdmins.contains(adminId);
+		try {
+			if (domainAdmins.contains(adminId)) return true;
+			else return false;
+		} catch (Exception e) {
+		}
+		return false;
 	}
 	
 	public int getActiveUsers() {

@@ -23,6 +23,7 @@ package org.chemvantage;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URLEncoder;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -119,26 +120,46 @@ public class BLTILaunch extends HttpServlet {
 		c.setMaxAge(2592000); // expires after 30 days (in seconds)
 		response.addCookie(c);
 	
+		// Create the domain if it doesn't already exist
+		Domain domain = ofy.query(Domain.class).filter("domainName",oauth_consumer_key).get();
+		if (domain == null) {
+			domain = new Domain(oauth_consumer_key);
+			if (user.isAdministrator()) domain.addAdmin(user.id);
+			ofy.put(domain);
+		}
+		
 		// Provision a new context (group), if necessary and put the user into it
-		if (user.lastLogin.getTime()==0 && context_id != null && !context_id.isEmpty()) {
-			Group g = ofy.query(Group.class).filter("context_id",context_id).get();
+		Group g = null;
+		if (context_id != null && !context_id.isEmpty()) {
+			g = ofy.query(Group.class).filter("context_id",context_id).get();
 			if (g == null) { // create this new group
 				g = new Group("BLTI",context_id,request.getParameter("context_title"));
 				ofy.put(g);
 			}
-			if (user.myGroupId != g.id) user.changeGroups(g.id);  // add user to this group
+			
 			if (user.isInstructor()) {
+				user.setPremium(true);
 				if (g.instructorId.equals("unknown")) {  // assign the instructor to this group
 					g.instructorId = user.id;
 					ofy.put(g);
 				}
 			}
 		}
+		if ((g != null && user.myGroupId != g.id) && (user.hasPremiumAccount() || domain.seatsAvailable > 0 || domain.freeTrialExpires.after(new Date()))) user.changeGroups(g.id);
 		
 		// Redirect the user's browser to the ChemVantage Home page
 		response.sendRedirect("/Home");	
 	}
 
+	boolean eligibleToJoin(User user) {
+		// This method checks to see if the user is eligible to join a new group
+		if (user.hasPremiumAccount()) return true;
+		Domain domain = ofy.query(Domain.class).filter("domainName", user.domain).get();
+		if (domain == null) return false;
+		if (domain.seatsAvailable>0 || domain.freeTrialExpires.after(new Date())) return true;
+		return false;
+	}
+	
 	public void doError(HttpServletRequest request, HttpServletResponse response, 
 			String s, String message, Exception e)
 	throws java.io.IOException
