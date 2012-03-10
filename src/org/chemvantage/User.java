@@ -212,10 +212,12 @@ public class User implements Comparable<User>,Serializable {
 	}
 
 	static String extractDomain(String claimedId) {
-		StringBuffer domain = new StringBuffer(claimedId);
+		if (claimedId==null || claimedId.isEmpty()) return "";
+		StringBuffer domain = new StringBuffer(claimedId.toLowerCase().trim());
 		domain = domain.delete(0, domain.indexOf("@")+1);    // strips username from email address
-		domain = domain.delete(0, domain.indexOf("//")+2);   // strips http:// or https://
-		return domain.substring(0,domain.indexOf("/"));      // strips URI
+		if (domain.indexOf("//")>=0) domain = domain.delete(0, domain.indexOf("//")+2);   // strips http:// or https:// from beginning
+		if (domain.indexOf("/")>=0) domain = domain.delete(domain.indexOf("/"),domain.length());      // strips URI from end
+		return domain.toString();
 	}
 
 	public String getId() {
@@ -424,7 +426,7 @@ public class User implements Comparable<User>,Serializable {
 			}
 			principalRole = "<img alt='animal' src=images/animals/" + level + ".jpg><br>" + principalRole;	
 		}
-		principalRole += " - <a href=Upgrade>" + (hasPremiumAccount()?"premium":"upgrade me") + "</a>";
+		principalRole += " - <a href=/Verification>" + (hasPremiumAccount()?"account profile":"upgrade me") + "</a>";
 		return principalRole;
 	}
 

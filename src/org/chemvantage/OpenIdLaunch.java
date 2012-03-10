@@ -75,9 +75,35 @@ public class OpenIdLaunch extends HttpServlet {
 		}
 		String domain = req.getParameter("hd");
 		if (domain != null) {
-			// User attempting to login with provided domain, build an OpenID request and redirect
+			// User attempting to login with provided domain
+			
+			// Intercept the thoughtless default click
+			if (domain.equals("example.com")) {
+				resp.sendRedirect("/?msg=Invalid%20Domain&show=all");
+				return;
+			}
+			
+			// OK, this might be a serious login attempt
+			domain = User.extractDomain(domain); //cleans up the domain name
+			
+			// First check to discourage options available with UserService:
+			if (domain.contains("google") || Login.openIdProviders.values().contains(domain)) {
+				String providerName="Google";
+				for (String p : Login.openIdProviders.keySet()) if (Login.openIdProviders.get(p).equals(domain)) providerName=p;
+				Cookie c = new Cookie("IDProvider",providerName);
+				c.setMaxAge(2592000); // expires after 30 days (in seconds)
+				resp.addCookie(c);
+				resp.sendRedirect("/");
+				return;
+			}
+			
+			// Build an OpenID request and redirect
 			try {
 				AuthRequest authRequest = startAuthentication(domain, req);
+				if (authRequest == null) {
+					resp.sendRedirect("/?msg=Invalid%20Domain&show=all");
+					return;
+				}
 				String url = authRequest.getDestinationUrl(true);
 				resp.sendRedirect(url);
 			} catch (OpenIDException e) {
@@ -111,26 +137,31 @@ public class OpenIdLaunch extends HttpServlet {
 	}
 
 	AuthRequest startAuthentication(String op, HttpServletRequest request)
-			throws OpenIDException {
-		IdpIdentifier openId = new IdpIdentifier(op);
+	throws OpenIDException {
+		AuthRequest authReq = null;
+		try {
+			IdpIdentifier openId = new IdpIdentifier(op);
 
-        String realm = realm(request);
-        String returnToUrl = returnTo(request);
+			String realm = realm(request);
+			String returnToUrl = returnTo(request);
 
-        AuthRequestHelper helper = consumerHelper.getAuthRequestHelper(openId, returnToUrl);
-        addAttributes(helper);
+			AuthRequestHelper helper = consumerHelper.getAuthRequestHelper(openId, returnToUrl);
+			addAttributes(helper);
 
-        HttpSession session = request.getSession();
-        AuthRequest authReq = helper.generateRequest();
-        authReq.setRealm(realm);
+			HttpSession session = request.getSession();
+			authReq = helper.generateRequest();
+			authReq.setRealm(realm);
 
-        UiMessageRequest uiExtension = new UiMessageRequest();
-        uiExtension.setIconRequest(true);
-        authReq.addExtension(uiExtension);
+			UiMessageRequest uiExtension = new UiMessageRequest();
+			uiExtension.setIconRequest(true);
+			authReq.addExtension(uiExtension);
 
-        session.setAttribute("discovered", helper.getDiscoveryInformation());
-        return authReq;
-    }
+			session.setAttribute("discovered", helper.getDiscoveryInformation());
+			return authReq;
+		} catch (Exception e) {
+			return null;
+		}
+	}
 
 	UserInfo completeAuthentication(HttpServletRequest request)
 			throws OpenIDException {
