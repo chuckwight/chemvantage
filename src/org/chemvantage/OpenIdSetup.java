@@ -142,6 +142,7 @@ public class OpenIdSetup extends HttpServlet {
 			User user = ofy.find(User.class, userInfo.getClaimedId());
 			if (user == null) user = User.createOpenIdUser(userInfo);
 			if (!callback.isEmpty()) {  // on initial setup assign the domain administrator privileges
+				user.domain = user.authDomain;
 				user.setIsAdministrator(true);
 				user.setIsInstructor(true);
 			}
