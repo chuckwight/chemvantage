@@ -126,6 +126,10 @@ public class OpenIdLaunch extends HttpServlet {
 			
 			// try to set a Cookie with the user's ID provider:
 			//Cookie c = new Cookie("IDProvider","Google");
+			if (user.authDomain.equals("Google Apps")) {
+				user.authDomain = user.domain;
+				ofy.put(user);
+			}
 			Cookie c = new Cookie("IDProvider",user.authDomain);
 			c.setMaxAge(2592000); // expires after 30 days (in seconds)
 			resp.addCookie(c);
