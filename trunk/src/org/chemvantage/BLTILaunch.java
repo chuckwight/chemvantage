@@ -134,6 +134,7 @@ public class BLTILaunch extends HttpServlet {
 			g = ofy.query(Group.class).filter("context_id",context_id).get();
 			if (g == null) { // create this new group
 				g = new Group("BLTI",context_id,request.getParameter("context_title"));
+				g.domain = domain.domainName;
 				ofy.put(g);
 			}
 			
