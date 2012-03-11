@@ -29,6 +29,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.datastore.Cursor;
 import com.google.appengine.api.datastore.QueryResultIterator;
+import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.ObjectifyService;
 import com.googlecode.objectify.Query;
@@ -55,6 +56,12 @@ public class DomainAdmin extends HttpServlet {
 			}
 			String domainName = user.domain==null?request.getParameter("Domain"):user.domain;			
 			if (domainName==null) response.sendRedirect("/Admin"); // ChemVantage administrator
+			
+			// Check to ensure that user is either domain admin or ChemVAntage admin
+			Domain d = ofy.find(Domain.class,domainName);
+			if (!d.domainAdmins.contains(user.id) && !UserServiceFactory.getUserService().isUserAdmin()) {
+				response.sendRedirect("/");
+			}
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
@@ -86,6 +93,12 @@ public class DomainAdmin extends HttpServlet {
 			String domainName = user.domain==null?request.getParameter("Domain"):user.domain;			
 			if (domainName==null) response.sendRedirect("/Admin"); // ChemVantage administrator
 			
+			// Check to ensure that user is either domain admin or ChemVAntage admin
+			Domain d = ofy.find(Domain.class,domainName);
+			if (!d.domainAdmins.contains(user.id) && !UserServiceFactory.getUserService().isUserAdmin()) {
+				response.sendRedirect("/");
+			}
+			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
@@ -112,6 +125,13 @@ public class DomainAdmin extends HttpServlet {
 				User mergeUser = ofy.get(User.class,request.getParameter("MergeUserId"));
 				mergeAccounts(usr,mergeUser);
 				searchString = usr.getFullName();
+			} else if (userRequest.equals("Assign Administrator")) {
+				User usr = ofy.get(User.class,request.getParameter("AdminId"));
+				usr.setIsAdministrator(true);
+				usr.domain = d.domainName;
+				ofy.put(usr);
+				d.domainAdmins.add(usr.id);
+				ofy.put(d);
 			}
 			out.println(Home.getHeader(user) + mainAdminForm(domainName,user,searchString,cursor) + Home.footer);
 		} catch (Exception e) {
@@ -123,16 +143,19 @@ public class DomainAdmin extends HttpServlet {
 		StringBuffer buf = new StringBuffer("\n\n<h2>ChemVantage Domain Administration</h2>");
 		try {
 			Domain domain = ofy.query(Domain.class).filter("domainName", domainName).get();
-			if (domain==null) return "Sorry, the ChemVantage domain " + domainName + " does not exist.";
-			if (!(domain.isAdmin(user.id) || user.domain==null)) {
-				buf.append("You are not currently listed as a domain administrator for the ChemVantage domain: <b>" + domain.domainName + "</b><br>"
-						+ "To be granted administrator privileges, please contact a domain administrator listed below:<p>");
-				for (String id : domain.domainAdmins) buf.append(User.getBothNames(id) + "&nbsp;&lt;" + User.getEmail(id) + "&gt;");
-				return buf.toString();
+			if (domain.domainAdmins.size()==0) { // provide a chance to assign a domain admin
+				buf.append("Assign an administrator for this domain:<br>"
+						+ "<form method=post>"
+						+ "UserId: <input type=text name=AdminId>"
+						+ "<input type=submit name=UserRequest value='Assign Administrator'"
+						+ "</form>");
 			}
 			Date now = new Date();
 			buf.append("<table>");
 			buf.append("<tr><td align=right>Domain name: </td><td>" + domain.domainName + "</td></tr>");
+			buf.append("<tr><td align=right>Domain administrator: </td><td>");
+			for (String id : domain.domainAdmins) buf.append(User.getBothNames(id) + "&nbsp;&lt;" + User.getEmail(id) + "&gt; ");
+			buf.append("</td></tr>");
 			domain.activeUsers = ofy.query(User.class).filter("domain",domain.domainName).count();
 			buf.append("<tr><td align=right>Total number of users: </td><td>" + domain.activeUsers + "</td></tr>");
 			buf.append("<tr><td align=right>Total premium account seats purchased: </td><td>" + domain.seatsPurchased + "</td></tr>");
