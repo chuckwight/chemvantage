@@ -244,22 +244,30 @@ public class Verification extends HttpServlet {
 					if (user.domain==null || user.domain.isEmpty()) allGroups=ofy.query(Group.class);
 					else allGroups=ofy.query(Group.class).filter("domain",user.domain);
 					
-					buf.append("<SELECT NAME=GroupId "
-							+ "onChange=\"if(confirm('Are you sure that you  want to join this group? "
-							+ "This action can only be reversed by an instructor.'))document.JoinGroup.submit();"
-							+ "else document.JoinGroup.GroupId[0].selected=true;\">"
-							+ (groupRequired?"<OPTION VALUE=-1>Please select a ChemVantage group to join:</OPTION>\n":"")
-							+ "<OPTION VALUE=0>I'm not a member of any group or class using ChemVantage</OPTION>\n");
-					for (Group g : allGroups) {
-						try {
-							buf.append("<OPTION VALUE=" + g.id + ">" + g.description + " (" + g.getInstructorBothNames() + ")</OPTION>\n");
-						} catch (Exception e2) {
-							continue;
+					if (allGroups.count() == 0) {  // there are not yet any groups for this domain
+						buf.append("No groups have been created in this domain yet.");
+					} else {					
+						buf.append("<SELECT NAME=GroupId "
+								+ "onChange=\"if(confirm('Are you sure that you  want to join this group? "
+								+ "This action can only be reversed by an instructor.'))document.JoinGroup.submit();"
+								+ "else document.JoinGroup.GroupId[0].selected=true;\">"
+								+ (groupRequired?"<OPTION VALUE=-1>Please select a ChemVantage group to join:</OPTION>\n":"")
+								+ "<OPTION VALUE=0>I'm not a member of any group or class using ChemVantage</OPTION>\n");
+						for (Group g : allGroups) {
+							try {
+								buf.append("<OPTION VALUE=" + g.id + ">" + g.description + " (" + g.getInstructorBothNames() + ")</OPTION>\n");
+							} catch (Exception e2) {
+								continue;
+							}
 						}
+						buf.append("</SELECT>");
 					}
-					if (groupRequired) buf.append("</SELECT></TD></TR></FORM>"
-							+ "<TR><TD COLSPAN=2><span id=instructions style='color:red'><br>Please select a ChemVantage group. This will give you access to assignments and deadlines.<br>"
-							+ "It will also give your instructor and teaching assistant access to your scores.</span></TD></TR>");
+					if (groupRequired) {
+						buf.append("</TD></TR></FORM>");
+						if (allGroups.count() > 0) buf.append("<TR><TD COLSPAN=2><span id=instructions style='color:red'><br>"
+								+ "Please select a ChemVantage group. This will give you access to assignments and deadlines.<br>"
+								+ "It will also give your instructor and teaching assistant access to your scores.</span></TD></TR>");
+						}
 				} else if (user.myGroupId<=0L && !eligibleToJoin) {
 					buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>ChemVantage Group:</TD><TD><span style='color:red'>A premium account is required before you can join a group (e.g., chemistry class).</span><p>");
 					buf.append("<TABLE>"
