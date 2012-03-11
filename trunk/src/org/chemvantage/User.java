@@ -270,10 +270,16 @@ public class User implements Comparable<User>,Serializable {
 	
 	boolean requiresUpdates() {
 		try {
-			if (!firstName.isEmpty() && !lastName.isEmpty() && !email.isEmpty() && verifiedEmail && myGroupId>=0) return false;
-			return true;
+			if (firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || !verifiedEmail) return true;
+			if (myGroupId < 0) {  // new user has not joined a group yet
+				Query<Group> allGroups = null;  // count the available groups to join
+				if (this.domain != null && !this.domain.isEmpty()) allGroups = ofy.query(Group.class).filter("domain",this.domain);
+				else allGroups = ofy.query(Group.class);
+				if (allGroups.count() > 0) return true;  // needs update if there is at least one group available
+				else return false;  // no groups yet; don't bother
+			} else return false;    // user has already joined a group or chosen not to join
 		} catch (Exception e) {
-			return true;
+			return true;  // unexpected error; please check the profile just in case
 		}
 	}
 	
@@ -426,7 +432,7 @@ public class User implements Comparable<User>,Serializable {
 			}
 			principalRole = "<img alt='animal' src=images/animals/" + level + ".jpg><br>" + principalRole;	
 		}
-		principalRole += " - <a href=/Verification>" + (hasPremiumAccount()?"account profile":"upgrade me") + "</a>";
+		principalRole += " - <a href=/Verification>view account profile</a>";
 		return principalRole;
 	}
 
