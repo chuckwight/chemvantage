@@ -267,7 +267,10 @@ public class Verification extends HttpServlet {
 						if (allGroups.count() > 0) buf.append("<TR><TD COLSPAN=2><span id=instructions style='color:red'><br>"
 								+ "Please select a ChemVantage group. This will give you access to assignments and deadlines.<br>"
 								+ "It will also give your instructor and teaching assistant access to your scores.</span></TD></TR>");
-						}
+						else if (user.isInstructor()) buf.append("<TR><TD COLSPAN=2>"
+								+ "<span id=instructions style='color:red'><br>You may click the 'Instructor' link at the top "
+								+ "of the page to create a new ChemVantage group for your chemistry class.</span></TD></TR>");
+					}
 				} else if (user.myGroupId<=0L && !eligibleToJoin) {
 					buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>ChemVantage Group:</TD><TD><span style='color:red'>A premium account is required before you can join a group (e.g., chemistry class).</span><p>");
 					buf.append("<TABLE>"
