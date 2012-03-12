@@ -221,15 +221,15 @@ public class Groups extends HttpServlet {
 			
 			buf.append("As an instructor or teaching assistant, you have the ability to freely join or move between ChemVantage groups "
 					+ "that you own or to which you have been assigned.  This is useful for viewing assignment deadlines and your own scores "
-					+ "as if you were a student in your group.");
+					+ "as if you were a student in your group. Only active groups are shown (new groups or those with active assignments).");
 			buf.append("<FORM METHOD=POST ACTION=Groups>"
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=JoinGroup>");
 
 			Query<Group> allGroups = ofy.query(Group.class);
 			buf.append("<SELECT NAME=GroupId onChange=submit()><OPTION VALUE=0>Default group (none)</OPTION>\n");
 			for (Group g : allGroups) {
-				if ((g.domain==null && user.domain==null) || (g.domain != null && g.domain.equals(user.domain)))
-					buf.append("<OPTION VALUE=" + g.id + (g.id==user.myGroupId?" SELECTED>":">") + g.description + " (" + g.getInstructorBothNames() + ")</OPTION>\n");
+				//if ((g.domain==null && user.domain==null) || (g.domain != null && g.domain.equals(user.domain)))
+				if (g.isActive())  buf.append("<OPTION VALUE=" + g.id + (g.id==user.myGroupId?" SELECTED>":">") + g.description + " (" + g.getInstructorBothNames() + ")</OPTION>\n");
 			}
 			buf.append("</SELECT></FORM>\n");
 
