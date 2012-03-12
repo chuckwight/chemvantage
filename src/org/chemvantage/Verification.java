@@ -37,7 +37,6 @@ import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.Query;
 
 
 public class Verification extends HttpServlet {
@@ -231,7 +230,8 @@ public class Verification extends HttpServlet {
 
 			if (nameRequired || emailRequired) {
 				buf.append("<TR><TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save My Information'></TD>"
-						+ "<TD>" + (user.requiresUpdates()?"<span style=color:red>* <span style=font-size:smaller>required field</span></span>":"") + "</TD></TR></TABLE></FORM>");
+						+ "<TD>" + (user.requiresUpdates()?"<span style=color:red>* <span style=font-size:smaller>required field</span></span>":"") 
+						+ "</TD></TR></TABLE></FORM>");
 			} else {  // all information is current
 				buf.append("</FORM>");
 				boolean eligibleToJoin = eligibleToJoin(user);
@@ -240,11 +240,12 @@ public class Verification extends HttpServlet {
 					buf.append("<FORM NAME=JoinGroup METHOD=POST ACTION=Verification>");
 					buf.append("<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=JoinGroup>");
 
-					Query<Group> allGroups = null;
-					if (user.domain==null || user.domain.isEmpty()) allGroups=ofy.query(Group.class);
-					else allGroups=ofy.query(Group.class).filter("domain",user.domain);
+					List<Group> allGroups = null;
+					if (user.domain==null || user.domain.isEmpty()) allGroups=ofy.query(Group.class).list();
+					else allGroups=ofy.query(Group.class).filter("domain",user.domain).list();
+					for (Group g : allGroups) if (!g.isActive()) allGroups.remove(g);
 					
-					if (allGroups.count() == 0) {  // there are not yet any groups for this domain
+					if (allGroups.size() == 0) {  // there are not yet any groups for this domain
 						buf.append("No groups have been created in this domain yet.");
 					} else {					
 						buf.append("<SELECT NAME=GroupId "
@@ -264,7 +265,7 @@ public class Verification extends HttpServlet {
 					}
 					if (groupRequired) {
 						buf.append("</TD></TR></FORM>");
-						if (allGroups.count() > 0) buf.append("<TR><TD COLSPAN=2><span id=instructions style='color:red'><br>"
+						if (allGroups.size() > 0) buf.append("<TR><TD COLSPAN=2><span id=instructions style='color:red'><br>"
 								+ "Please select a ChemVantage group. This will give you access to assignments and deadlines.<br>"
 								+ "It will also give your instructor and teaching assistant access to your scores.</span></TD></TR>");
 						else if (user.isInstructor()) buf.append("<TR><TD COLSPAN=2>"
@@ -272,7 +273,8 @@ public class Verification extends HttpServlet {
 								+ "of the page to create a new ChemVantage group for your chemistry class.</span></TD></TR>");
 					}
 				} else if (user.myGroupId<=0L && !eligibleToJoin) {
-					buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>ChemVantage Group:</TD><TD><span style='color:red'>A premium account is required before you can join a group (e.g., chemistry class).</span><p>");
+					buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>ChemVantage Group:</TD>"
+							+ "<TD><span style='color:red'>A premium account is required before you can join a group (e.g., chemistry class).</span><p>");
 					buf.append("<TABLE>"
 							+ "<TR><TD ALIGN=CENTER><b>Instant ChemVantage Premium Account Upgrade</b></TD></TR>"
 							+ "<TR><TD ALIGN=CENTER><b>$4.99 USD</b></TD></TR><TR><TD ALIGN=CENTER> "
@@ -280,7 +282,7 @@ public class Verification extends HttpServlet {
 							+ "<input type=hidden name=cmd value=_s-xclick>"
 							+ "<input type=hidden name=hosted_button_id value=" + (user.authDomain.equals("BLTI")?"U58TNLE8YE4AW":"HKW9475B55NJU") + ">"
 							+ "<input type=hidden name=on0 value=userId><input type=hidden name=os0 value=" + user.id + ">"
-							+ "<input type=image src=https://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif border=0 name=submit alt='PayPal - The safer, easier way to pay online!'>"
+							+ "<input type=image src=https://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif border=0 name=submit alt='PayPal online payment'>"
 							+ "<br><font size=-2>Your payment will be processed by PayPal.com</font>"
 							+ "<img alt='' border=0 src=https://www.paypalobjects.com/en_US/i/scr/pixel.gif width=1 height=1>"
 							+ "</form></TD>");

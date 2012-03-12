@@ -43,6 +43,7 @@ public class Group implements Serializable {
 	@Indexed String domain;
 			 String description;
 			 String timeZone;
+			 Date created;
 			 Date nextDeadline;
 			 boolean sendRescueMessages;
 			 int rescueThresholdScore = 5;
@@ -60,6 +61,7 @@ public class Group implements Serializable {
     Group() {}
     
     Group(String instructorId, String description) {
+    	this.created = new Date();
         this.instructorId = instructorId;
         this.description = description;
         this.timeZone = TimeZone.getDefault().getID();
@@ -67,6 +69,7 @@ public class Group implements Serializable {
 
     Group(String type,String context_id,String description) {
     	if ("BLTI".equals(type)) {
+    		this.created = new Date();
     		this.context_id = context_id;
     		this.description = description;
     		this.timeZone = TimeZone.getDefault().getID();
@@ -190,4 +193,14 @@ public class Group implements Serializable {
     	List<Score> scores = ofy.query(Score.class).filter("groupId",this.id).list();
     	ofy.delete(scores);
    }
+    
+    boolean isActive() {
+    	Date oneMonthAgo = new Date(new Date().getTime()-2592000000L);
+    	if (this.created==null) {  // update this new field for older groups
+    		this.created = new Date();
+    		ofy.put(this);
+    	}
+    	// group is active if an upcoming deadline exists or if the group is less than month old
+    	return this.nextDeadline!=null || this.created.after(oneMonthAgo);
+    }
  }
