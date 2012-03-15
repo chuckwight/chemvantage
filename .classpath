@@ -12,6 +12,6 @@
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jaxb-api-2.1.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/jaxb-impl-2.1.5.jar"/>
 	<classpathentry kind="lib" path="war/WEB-INF/lib/stax-api-1.0-2.jar"/>
-	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER/App Engine"/>
+	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>
