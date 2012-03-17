@@ -93,7 +93,7 @@ public class CASLaunch extends HttpServlet {
 			}
 			
 			String userId = null;
-			if (validated) userId = in.readLine().toLowerCase();
+			if (validated) userId = validateCASUserId(in.readLine());
 			in.close();
 			
 			if (userId==null || userId.isEmpty()) {
@@ -122,6 +122,18 @@ public class CASLaunch extends HttpServlet {
 		}
 	}
 
+	String validateCASUserId(String id) {
+		try {
+			id = id.toLowerCase().trim();
+			if (id.length() != 8) return null;
+			if (!id.startsWith("u")) return null;
+			Integer.parseInt(id.substring(1));
+			return id;
+		} catch (Exception e) {
+			return null;
+		}
+	}
+	
 	@Override
 	public void destroy() {
 
