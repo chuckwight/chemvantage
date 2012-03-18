@@ -451,7 +451,7 @@ public class Admin extends HttpServlet {
 		// email address and merge them into a smaller number of accounts by aliasing.
 		// The general strategy is:
 		//   1. Leave CAS accounts alone because it's easy to access them directly from the home page
-		//   2. Don't merge any accounts that have aliases or unverified email addresses.
+		//   2. Don't merge any accounts that have aliases or unverified or empty email addresses.
 		//   3. Any two accounts not associated with a domain can be merged into a single account either direction.
 		//   4. If the user has a domain account (LTI or Google Apps), any non-domain accounts should be merged into it
 		//   5. If the address of any account matches a registered domain, add the user to that domain.
@@ -460,7 +460,7 @@ public class Admin extends HttpServlet {
 			Objectify ofy = ObjectifyService.begin();
 			List<User> userAccounts = ofy.query(User.class).filter("email",email).list();
 			for (User u : userAccounts) {
-				if ((u.alias != null && u.alias.isEmpty()) || !u.verifiedEmail || "CAS".equals(u.authDomain)) {
+				if ((u.alias != null && !u.alias.isEmpty()) || u.email.isEmpty() || !u.verifiedEmail || "CAS".equals(u.authDomain)) {
 					userAccounts.remove(u);
 					continue;
 				}
