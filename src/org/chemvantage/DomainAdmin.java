@@ -263,7 +263,8 @@ public class DomainAdmin extends HttpServlet {
 					+ "<INPUT TYPE=CHECKBOX NAME=Roles VALUE=8" + (roles%16/8==1?" CHECKED":"") + ">Instructor<br>"
 					+ "<INPUT TYPE=CHECKBOX NAME=Roles VALUE=16" + (roles%32/16==1?" CHECKED":"") + ">Administrator"
 					+ "</TD></TR>");
-			buf.append("<TR><TD ALIGN=RIGHT>Alias: </TD><TD><INPUT TYPE=TEXT NAME=Alias VALUE='" + (usr.alias==null?"":usr.alias) + "'></TD></TR>");
+			if (usr.alias != null) buf.append("<TR><TD ALIGN=RIGHT>Alias: </TD><TD>" + usr.alias + "</TD></TR>");
+			
 			buf.append("<TR><TD ALIGN=RIGHT>Group: </TD><TD>" + groupSelectBox(usr.myGroupId,usr.domain) + "</TD></TR>");
 			buf.append("\n<TR><TD ALIGN=RIGHT>Last Login: </TD>"
 					+ "<TD>" + usr.lastLogin + "</TD></TR>"
@@ -358,8 +359,6 @@ public class DomainAdmin extends HttpServlet {
 			else domain.removeAdmin(usr.id);
 			ofy.put(domain);
 			
-			if (request.getParameter("Alias").isEmpty()) usr.alias = null;
-			else usr.alias = request.getParameter("Alias");
 			try {
 				long newId = Long.parseLong(request.getParameter("GroupId"));  // get groupId for new group
 				usr.changeGroups(newId);
