@@ -118,6 +118,10 @@ public class Login extends HttpServlet {
 			request.getSession().invalidate();
 			out.println(homePage(request));
 		} catch (Exception e) {
+			out.println("<h3>Sorry, ChemVantage is temporarily unavailable</h3>"
+					+ "The most likely reason is that Google App Engine is in a period of scheduled maintenance.<br>"
+					+ "If the downtime lasts more than 2 hours, please send email to admin@chemvantage.org<br>"
+					+ "or call us at 801-810-4401.  Thanks in advance for your patience.<p>");
 			out.println("<a href='/help.html'>ChemVantage Help Page</a><p>" + e.getMessage() + "<p>" + e.getStackTrace());
 		}
 	}

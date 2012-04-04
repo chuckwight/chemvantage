@@ -119,6 +119,7 @@ public class Quiz extends HttpServlet {
 			QuizTransaction qt = ofy.query(QuizTransaction.class).filter("userId",user.id).filter("topicId",topic.id).filter("graded",null).filter("downloaded >",then).get();
 			if (qt == null) {
 				qt = new QuizTransaction(topic.id,topic.title,user.id,now,null,0,0,request.getRemoteAddr());
+				if (request.getParameter("lis_result_sourcedid")!=null) qt.lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
 				ofy.put(qt);  // creates a long id value to use in random number generator
 			}
 			int secondsRemaining = (int) (timeLimit*60 - (now.getTime() - qt.downloaded.getTime())/1000);
@@ -254,7 +255,6 @@ public class Quiz extends HttpServlet {
 
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			Group myGroup = user.myGroupId>0?ofy.find(Group.class,user.myGroupId):null;
-			//long myGroupId = myGroup==null?0L:myGroup.id;
 			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
 			df.setTimeZone(tz);
 
@@ -320,17 +320,14 @@ public class Quiz extends HttpServlet {
 			qt.graded = now;
 			qt.score = studentScore;
 			ofy.put(qt);
+			
 			Assignment a = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",qt.topicId).get();
-			if (a != null) ofy.put(Score.getInstance(user.id,a));
-			/*
-			queue.add(withUrl("/TransactionServlet")
-					.param("AssignmentType","Quiz")
-					.param("TransactionId", Long.toString(qt.id))
-					.param("Action", "Graded")
-					.param("UserId",user.id)
-					.param("GroupId",Long.toString(myGroupId))
-					.param("Score", Integer.toString(studentScore)));
-			*/
+			if (a != null) {
+				Score s = Score.getInstance(user.id,a);
+				ofy.put(s);
+				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",user.id));  // put report into the Task Queue
+			}
+			
 			buf.append("<h3>Your score on this quiz is " + studentScore 
 					+ " point" + (studentScore==1?"":"s") + " out of a possible " + qt.possibleScore + " points.</h3>\n");
 

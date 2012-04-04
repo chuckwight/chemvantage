@@ -84,8 +84,9 @@ public class Groups extends HttpServlet {
 			}
 			
 			out.println(Home.getHeader(user));
+			
 			if (group == null) out.println(groupsForm(user,request));
-			else if (user.isAdministrator() || group.instructorId.equals(user.id) || group.tAIds.contains(user.id)) {
+			else if (user.isAdministrator() || user.id.equals(group.instructorId) || group.tAIds.contains(user.id)) {
 				if (userRequest.equals("ManageGroup")) out.println(manageGroupForm(user,group,request));
 				else if (userRequest.equals("AssignHomeworkQuestions")) out.println(assignHWQuestionsForm(user,group,request));
 				else if (userRequest.equals("AssignQuizQuestions")) out.println(assignQuizQuestionsForm(user,group,request));
@@ -93,8 +94,11 @@ public class Groups extends HttpServlet {
 				else if (userRequest.equals("GroupScores")) out.println(showGroupScores(user,group,request));
 				else if (userRequest.equals("GroupPracticeExams")) out.println(showGroupPracticeExams(user,group,request));
 				else if (userRequest.equals("RescueOptions")) out.println(showRescueOptions(user,group,request));
+				else if (userRequest.equals("MakeAssignmentLink")) out.println(makeAssignmentLink(user,group,request.getParameter("resource_link_id")));
 				else out.println(groupsForm(user,request));
-			}
+			} else if (userRequest.equals("MakeAssignmentLink")) out.println(makeAssignmentLink(user,group,request.getParameter("resource_link_id")));
+			else out.println("Sorry, you are not authorized to view this page.");
+			
 			out.println(Home.footer);
 		} catch (Exception e) {
 			response.getWriter().println(e.toString());
@@ -129,10 +133,23 @@ public class Groups extends HttpServlet {
 				user.changeGroups(groupId);
 				out.println(Home.getHeader(user) + groupsForm(user,request) + Home.footer);
 				return;
+			} else if (userRequest.equals("Associate")) {
+				try {
+					long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+					Assignment a = ofy.get(Assignment.class,assignmentId);
+					String linkId = request.getParameter("resource_link_id");
+					if (a.resourceLinkIds==null) a.resourceLinkIds = new ArrayList<String>();
+					if (!a.resourceLinkIds.contains(linkId)){
+						a.resourceLinkIds.add(linkId);
+						ofy.put(a);
+					}
+					response.sendRedirect("/" + a.assignmentType + "?TopicId=" + a.topicId);
+				} catch (Exception e) {
+					response.sendRedirect("/Home");
+				}
 			}
-			
 			// Additional user restrictions: no TAs beyond this point
-			if (!(user.isAdministrator() || (group==null && user.isInstructor()) || group.instructorId.equals(user.id))) {
+			if (!(user.isAdministrator() || (group==null && user.isInstructor()) || user.id.equals(group.instructorId))) {
 				out.println(Home.getHeader(user) + "<span style='color:red'>You have read-only access in this area</span>" + groupsForm(user,request) + Home.footer);
 				return;
 			}
@@ -418,13 +435,13 @@ public class Groups extends HttpServlet {
 							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + t.id + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>\n");
 					buf.append("<TR><TD>" + t.title + "</TD><TD><INPUT SIZE=15 NAME=QuizDeadline ");
-					buf.append((q==null?"onFocus=\"A" + t.id + ".QuizDeadline.value='" + today + "'\"":"VALUE='" + df.format(q.deadline) + "'")
+					buf.append((q==null?"VALUE='not assigned' onFocus=\"A" + t.id + ".QuizDeadline.value='" + today + "'\"":"VALUE='" + df.format(q.deadline) + "'")
 							+ "></TD>\n"
 							+ "<TD ALIGN=CENTER>" + (q==null?0+"</TD><TD></TD>":q.questionKeys.size() + "</TD>"
 									+ "<TD ALIGN=CENTER><A href=Groups?UserRequest=AssignQuizQuestions&GroupId=" + group.id + "&TopicId=" + t.id + ">Select</A></TD>")
 									+ "<TD></TD>\n");
 					buf.append("<TD><INPUT SIZE=15 NAME=HWDeadline "); 
-					buf.append((h==null?"onFocus=\"A" + t.id + ".HWDeadline.value='" + today + "'\"":"VALUE='" + df.format(h.deadline) + "'")
+					buf.append((h==null?"VALUE='not assigned' onFocus=\"A" + t.id + ".HWDeadline.value='" + today + "'\"":"VALUE='" + df.format(h.deadline) + "'")
 							+ "></TD>\n"
 							+ "<TD ALIGN=CENTER>" + (h==null?0+"</TD><TD></TD>":h.questionKeys.size() + "</TD>"
 									+ "<TD ALIGN=CENTER><A href=Groups?UserRequest=AssignHomeworkQuestions&GroupId=" + group.id + "&TopicId=" + t.id + ">Assign</A></TD>")
@@ -434,13 +451,13 @@ public class Groups extends HttpServlet {
 				buf.append("</TABLE><p>\n");
 			}
 
-			buf.append("<b>Add A Quiz or Homework Assignment</b><br>"
+			buf.append("<b>Add A New Quiz or Homework Assignment</b><br>"
 					+ "<FORM NAME=newA ACTION=Groups METHOD=POST>"
 					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
 					+ "<SELECT NAME=TopicId><OPTION>Select a topic here:</OPTION>");
 			for (Topic t : topics) if (!groupTopics.containsKey(t.id)) buf.append("<OPTION VALUE=" + t.id + ">" + t.title + "</OPTION>");
-			buf.append("</SELECT> Quiz Due:<INPUT SIZE=15 NAME=QuizDeadline onFocus=\"newA.QuizDeadline.value='" + today + "'\">"
-					+ "Homework Due:<INPUT SIZE=15 NAME=HWDeadline onFocus=\"newA.HWDeadline.value='" + today + "'\">"
+			buf.append("</SELECT> Quiz Due:<INPUT SIZE=15 NAME=QuizDeadline VALUE='click to assign' onFocus=\"newA.QuizDeadline.value='" + today + "'\">"
+					+ "Homework Due:<INPUT SIZE=15 NAME=HWDeadline VALUE='click to assign' onFocus=\"newA.HWDeadline.value='" + today + "'\">"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Create></FORM>");
 		}
 		catch (Exception e) {
@@ -1168,4 +1185,53 @@ public class Groups extends HttpServlet {
 		return "<img src=images/red_dot.gif alt=red>";
 	}
 
+	protected String makeAssignmentLink(User user, Group group, String resource_link_id) {
+		// this method allows the instructor to associate a link in the LMS with
+		// a particular assignment in order to (optionally) return a score to the LMS
+		StringBuffer buf = new StringBuffer();
+		try {
+		buf.append("<h2>New LTI Assignment Link</h2>"
+				+ "Please select an assignment below to associate with the LTI link that you just activated in your learning management system (LMS). "
+				+ "Be sure to do this for <u>every</u> ChemVantage link in your LMS that is associated with a specific ChemVantage assignment. "
+				+ "<a href=# style='font-size:smaller' onClick=\"javascript: document.getElementById('instructions2').style.display=''\">(learn more)</a><br>"
+				+ "<div id='instructions2' style='display:none'>"
+				+ "As the instructor for this course, you should associate the link that you just "
+				+ "clicked in the class LMS with a particular ChemVantage assignment for your class. "
+				+ "To do this, simply select one of your assignments below and click 'Associate'. "
+				+ "If your LMS supports LTI 1.1, this association will enable the the student scores "
+				+ "for this assignment to be returned to the LMS gradebook automatically. If you don't "
+				+ "see the assignment below, you should create it first and then return here to select it. "
+				+ "If the LMS link is not associated with any particular class assignment, the link "
+				+ "will default to the ChemVantage Home Page for students.</div><p>");
+		buf.append("<a href=Home>Click here if this LTI link is not associated with any particular ChemVantage assignment.</a><br>"
+				+ "(students will be redirected to the ChemVantage Home page automatically)<p>");
+		buf.append("<form method=post action=Groups>"
+				+ "<input type=hidden name=GroupId value='" + group.id + "'>"
+				+ "<input type=hidden name=resource_link_id value='" + resource_link_id + "'>");
+		
+		Map<Long,Topic> groupTopics = ofy.get(Topic.class,group.topicIds);
+		if (groupTopics.size() > 0) {
+			buf.append("<table><tr><td><b>Topic</b></td><td colspan=2><b>Assignment</b></td></tr>");
+			for (Topic t : groupTopics.values()) {
+				long i = group.getAssignmentId("Quiz", t.id);
+				Assignment q = i>0?ofy.find(Assignment.class,i):null;;
+				long j = group.getAssignmentId("Homework", t.id);
+				Assignment h = j>0?ofy.find(Assignment.class,j):null;
+				buf.append("<tr><td>" + t.title + "</td>" 
+						+ "<td>" + (q==null?"&nbsp;":"<input type=radio name=AssignmentId value=" + q.id + ">&nbsp;Quiz") + "</td>"
+						+ "<td>" + (h==null?"&nbsp;":"<input type=radio name=AssignmentId value=" + h.id + ">&nbsp;Homework") + "</td>"
+						+ "</tr>");
+			}
+			buf.append("<tr><td colspan=3><input type=submit name=UserRequest value=Associate></td></tr>");
+			buf.append("</table>");
+			buf.append("</form><p>");
+		}
+		else buf.append("No assignments have been created for this group yet. ");
+		if (user.id.equals(group.instructorId)) buf.append("<a href=/Groups?UserRequest=ManageGroup&GroupId=" + group.id + ">Create a New ChemVantage Assignment</a> for this group");
+		} catch (Exception e) {
+			buf.append(e.getMessage());
+		}
+		return buf.toString();
+	}
+	
 }		

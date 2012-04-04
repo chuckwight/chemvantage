@@ -38,6 +38,7 @@ public class Assignment implements Comparable<Assignment>,Serializable {
 	List<Long> topicIds; // used for practice exams which have multiple topicIds
 	String assignmentType;
 	Date deadline;
+	List<String> resourceLinkIds = new ArrayList<String>();
 	List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 
     Assignment() {}
@@ -50,6 +51,11 @@ public class Assignment implements Comparable<Assignment>,Serializable {
     	questionKeys = ObjectifyService.begin().query(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).listKeys();
     }
     
+    Assignment(long groupId,String assignmentType) {
+    	this.groupId = groupId;
+    	this.assignmentType = assignmentType;
+    }
+
     public int compareTo(Assignment other) {
     	return (int)(this.deadline.getTime() - other.deadline.getTime());
     }

@@ -25,6 +25,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 import java.util.Random;
+import java.util.TimeZone;
 
 import javax.mail.Message;
 import javax.mail.Session;
@@ -67,9 +68,12 @@ public class Scores extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 
-			if (userRequest.equals("ShowAll") || user.myGroupId == 0)
-				out.println(Home.getHeader(user) + allMyScores(user) + Home.footer);
-			else out.println(Home.getHeader(user) + myGroupScores(user) + Home.footer);
+			out.println(Home.getHeader(user));
+			if (userRequest.equals("ShowAll") || user.myGroupId == 0) out.println(allMyScores(user));
+			else if (userRequest.equals("AllQuizzes")) out.println(allQuizTransactions(user));
+			else if (userRequest.equals("AllHomework")) out.println(allHWTransactions(user));
+			else out.println(myGroupScores(user));
+			out.println(Home.footer);
 		} catch (Exception e) {
 		}
 	}
@@ -206,6 +210,9 @@ public class Scores extends HttpServlet {
 			buf.append("</div>");
 
 			buf.append("<h3>Quiz and Homework Scores</h3>"
+					+ "For a complete record of your assignments, click "
+					+ "here for <a href=Scores?UserRequest=AllQuizzes>all quizzes</a> or "
+					+ "<a href=Scores?UserRequest=AllHomework>all homework</a> transactions.<br>"
 					+ "<TABLE BORDER=1 CELLSPACING=0><TR><TH ALIGN=LEFT>Topic</TH><TH>Quiz</TH><TH>Homework</TH></TR>"); 
 			
 			Query<Topic> topics = ofy.query(Topic.class);
@@ -245,6 +252,7 @@ public class Scores extends HttpServlet {
 		try {
 			buf.append("\n<h2>My " + subject.title + " Scores</h2>");
 			buf.append("\nUser: " + user.getBothNames() + (user.email.length()>0?" (" + user.email + ")":"") + "<br>");
+			if (user.myGroupId < 0) user.changeGroups(0);
 			Group myGroup = ofy.get(Group.class,user.myGroupId);
 			if (myGroup == null) { // group may have been deleted
 				user.myGroupId = 0;
@@ -265,6 +273,16 @@ public class Scores extends HttpServlet {
 			Date now = new Date();
 			buf.append("<br>" + df_long.format(now) + "<p>");
 			
+			if (myGroup.getUsingLisOutcomeService()) {
+				buf.append("This group is using a ChemVantage service that automatically returns scores to your "
+						+ "class learning management system (LMS). You should check there to see your scores on ChemVantage "
+						+ "assignments.<p><span style='color:red'>Important:<br>You <u>must</u> begin each assignment "
+						+ "by clicking the assignment link in your LMS. Otherwise, ChemVantage has no way of knowing how "
+						+ "to return your assignment for credit.</span><p>For a complete record of your assignments, click "
+						+ "here for <a href=Scores?UserRequest=AllQuizzes>all quizzes</a> or "
+						+ "<a href=Scores?UserRequest=AllHomework>all homework</a> transactions.");
+				return buf.toString();
+			}
 			// Calculate the next deadline:
 			Date nextDeadline = myGroup.getNextDeadline();
 			if (nextDeadline == null) {
@@ -325,8 +343,9 @@ public class Scores extends HttpServlet {
 			df.setTimeZone(myGroup.getTimeZone());
 			buf.append("\n<h3>Assigned Quiz and Homework Scores</h3>");
 			buf.append("<p>\nThe scores listed here include only those earned for group assignments<br>"
-					+ "completed prior to the indicated deadline. "
-					+ "<a href=Scores?UserRequest=ShowAll>Click here to see all your scores.</a><br>"
+					+ "completed prior to the indicated deadline. For a complete record of your assignments, click "
+					+ "here for <a href=Scores?UserRequest=AllQuizzes>all quizzes</a> or "
+					+ "<a href=Scores?UserRequest=AllHomework>all homework</a> transactions.<br>"
 					+ "<a href=# onClick=\"javascript: document.getElementById('dots').style.display='';\">Do your scores have red dots?</a><div id=dots style='display:none'>"
 					+ "If a red dot appears in the table below, it means that you either missed an assignment deadline or "
 					+ "your score on the assignment was low enough to trigger a concern. The red dot also appears on the class "
@@ -447,6 +466,61 @@ public class Scores extends HttpServlet {
 		}
 	}
 	
+	String allQuizTransactions(User user) {
+		StringBuffer buf = new StringBuffer();
+		try {
+			buf.append("\n<h2>ChemVantage Quiz Transactions</h2>");
+			buf.append("\nUser: " + user.getBothNames() + (user.email.length()>0?" (" + user.email + ")":"") + "<br>");
+			
+			try {  // give some information about the current group
+				Group myGroup = ofy.get(Group.class,user.myGroupId);
+				buf.append("\nGroup: " + myGroup.description + "<br>"
+					+ "Instructor: " + (myGroup.instructorId.length()>0?myGroup.getInstructorBothNames():"(unavailable)"));
+				String instructorEmail = myGroup.getInstructorEmail();
+				if (instructorEmail.length()>0) buf.append(" (<a href=mailto:" + instructorEmail + ">" + instructorEmail + "</a>)");
+			} catch (Exception e) {}
+			
+			DateFormat df_long = DateFormat.getDateTimeInstance(DateFormat.MEDIUM,DateFormat.LONG);
+			df_long.setTimeZone(TimeZone.getDefault());
+			Date now = new Date();
+			buf.append("<br>" + df_long.format(now) + " (all times on this page are in Universal Coordinated Time)<p>");
+
+			// make a list of all quiz transactions for this user
+			List<QuizTransaction> quizTransactions = ofy.query(QuizTransaction.class).filter("userId", user.id).list();
+			for (QuizTransaction qt : quizTransactions) buf.append(qt.toString() + "<br>");
+		} catch (Exception e) {
+			buf.append(e.getMessage());
+		}
+		return buf.toString();
+	}
+
+	String allHWTransactions(User user) {
+		StringBuffer buf = new StringBuffer();
+		try {
+			buf.append("\n<h2>ChemVantage Homework Transactions</h2>");
+			buf.append("\nUser: " + user.getBothNames() + (user.email.length()>0?" (" + user.email + ")":"") + "<br>");
+			
+			try {  // give some information about the current group
+				Group myGroup = ofy.get(Group.class,user.myGroupId);
+				buf.append("\nGroup: " + myGroup.description + "<br>"
+					+ "Instructor: " + (myGroup.instructorId.length()>0?myGroup.getInstructorBothNames():"(unavailable)"));
+				String instructorEmail = myGroup.getInstructorEmail();
+				if (instructorEmail.length()>0) buf.append(" (<a href=mailto:" + instructorEmail + ">" + instructorEmail + "</a>)");
+			} catch (Exception e) {}
+			
+			DateFormat df_long = DateFormat.getDateTimeInstance(DateFormat.MEDIUM,DateFormat.LONG);
+			df_long.setTimeZone(TimeZone.getDefault());
+			Date now = new Date();
+			buf.append("<br>" + df_long.format(now) + " (all times on this page are in Universal Coordinated Time)<p>");
+
+			// make a list of all quiz transactions for this user
+			List<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId", user.id).list();
+			for (HWTransaction ht : hwTransactions) buf.append(ht.toString() + "<br>");
+		} catch (Exception e) {
+			buf.append(e.getMessage());
+		}
+		return buf.toString();
+	}
 }
 /*
 	void deleteMyExamScores (User user, String subject) {

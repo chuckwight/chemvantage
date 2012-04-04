@@ -49,6 +49,8 @@ public class Group implements Serializable {
 			 int rescueThresholdScore = 5;
 			 String defaultRescueSubject;
 			 String defaultRescueMessage;
+			 String lis_outcome_service_url;
+			 boolean isUsingLisOutcomeService;
 			 List<String> rescueCcIds = new ArrayList<String>();
 			 List<String> memberIds = new ArrayList<String>();
 			 List<String> tAIds = new ArrayList<String>();
@@ -124,6 +126,7 @@ public class Group implements Serializable {
     }
     
     public Date getNextDeadline() {
+    	if (isUsingLisOutcomeService) return null;  // don't report deadline to UserInfo box; use the LMS instead
     	if (nextDeadline==null || nextDeadline.before(new Date())) setNextDeadline();
     	return this.nextDeadline;
     }
@@ -146,7 +149,7 @@ public class Group implements Serializable {
     	this.hwAssignmentIds.clear();
     	Query<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",this.id).order("deadline");
     	for (Assignment a : assignments) {
-    		if (ofy.find(Topic.class,a.topicId)==null) {
+    		if (a.topicId==0L || ofy.find(Topic.class,a.topicId)==null) {
     			ofy.delete(a);
     			continue;
     		}
@@ -154,7 +157,7 @@ public class Group implements Serializable {
     			this.topicIds.add(a.topicId);
     			this.quizAssignmentIds.add(a.assignmentType.equals("Quiz")?a.id:0L);
     			this.hwAssignmentIds.add(a.assignmentType.equals("Homework")?a.id:0L);    			
-    		} else { // duplicate entry for this topic
+    		} else { // second assignment for this topic
     			int i = topicIds.indexOf(a.topicId);
     			if (a.assignmentType.equals("Quiz")) quizAssignmentIds.set(i,a.id);
     			if (a.assignmentType.equals("Homework")) hwAssignmentIds.set(i,a.id);
@@ -192,7 +195,18 @@ public class Group implements Serializable {
     void deleteScores() {
     	List<Score> scores = ofy.query(Score.class).filter("groupId",this.id).list();
     	ofy.delete(scores);
-   }
+    }
+    
+    void setUsingLisOutcomeService(boolean using) {
+    	if (this.isUsingLisOutcomeService != using) {
+    		this.isUsingLisOutcomeService = using;
+    		ofy.put(this);
+    	}
+    }
+    
+    boolean getUsingLisOutcomeService() { 
+    	return this.isUsingLisOutcomeService;
+    }
     
     boolean isActive() {
     	Date oneMonthAgo = new Date(new Date().getTime()-2592000000L);

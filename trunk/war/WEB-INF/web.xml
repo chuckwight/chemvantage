@@ -35,8 +35,6 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 		<servlet-name>BLTILaunch</servlet-name>
 		<url-pattern>/BLTILaunch</url-pattern>
 		<url-pattern>/BLTILaunch/</url-pattern>
-		<url-pattern>/blti/</url-pattern>
-		<url-pattern>/blti</url-pattern>
 	</servlet-mapping>
 	
 	<servlet>
@@ -167,6 +165,16 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet-mapping>
 
 	<servlet>
+		<servlet-name>LTILaunch</servlet-name>
+		<servlet-class>org.chemvantage.LTILaunch</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>LTILaunch</servlet-name>
+		<url-pattern>/lti</url-pattern>
+		<url-pattern>/lti/</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
 		<servlet-name>Notification</servlet-name>
 		<servlet-class>org.chemvantage.Notification</servlet-class>
 	</servlet>
@@ -239,6 +247,15 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	<servlet-mapping>
 		<servlet-name>Rescue</servlet-name>
 		<url-pattern>/Rescue</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+		<servlet-name>ReportScore</servlet-name>
+		<servlet-class>org.chemvantage.ReportScore</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ReportScore</servlet-name>
+		<url-pattern>/ReportScore</url-pattern>
 	</servlet-mapping>
 	
 	<servlet>
@@ -315,6 +332,7 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 			<url-pattern>/ManageDemoPremiumAccounts</url-pattern>
 			<url-pattern>/Notification</url-pattern>
 			<url-pattern>/Rescue</url-pattern>
+			<url-pattern>/ReportScore</url-pattern>
 			<url-pattern>/ResponseServlet</url-pattern>
 			<url-pattern>/TransactionServlet</url-pattern>
 			</web-resource-collection>
