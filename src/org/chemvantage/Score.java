@@ -28,6 +28,7 @@ import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.ObjectifyService;
 import com.googlecode.objectify.Query;
 import com.googlecode.objectify.annotation.Cached;
+import com.googlecode.objectify.annotation.Indexed;
 import com.googlecode.objectify.annotation.Parent;
 import com.googlecode.objectify.annotation.Unindexed;
 
@@ -38,9 +39,13 @@ public class Score {    // this object represents a best score achieved by a use
 	long groupId;
 	int score;
 	int overallScore;
+	int maxPossibleScore;
 	int numberOfAttempts;
+	Date mostRecentAttempt;
+	String lis_result_sourcedid;
+	@Indexed boolean lisReportComplete;
 	
-	Score() {}
+	Score() {}	
 	
 	public static Score getInstance(String userId,Assignment a) {
 		Objectify ofy = ObjectifyService.begin();
@@ -59,22 +64,34 @@ public class Score {    // this object represents a best score achieved by a use
 					s.score = (qt.score>s.score?qt.score:s.score);  // keep the best (max) score
 				}
 				if (qt.score > s.overallScore) s.overallScore = qt.score;  // overall student score on this assignment
+				if (s.lis_result_sourcedid == null || s.lis_result_sourcedid.isEmpty()) s.lis_result_sourcedid = qt.lis_result_sourcedid;  // record any available sourcedid value for reporting score to the LMS
+				if (s.mostRecentAttempt == null || qt.downloaded.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far
+					s.mostRecentAttempt = qt.downloaded;
+					s.maxPossibleScore = qt.possibleScore;
+					if (qt.lis_result_sourcedid != null && !qt.lis_result_sourcedid.equals(s.lis_result_sourcedid)) s.lis_result_sourcedid = qt.lis_result_sourcedid;
+				}				
 			}
 		} else if (a.assignmentType.equals("Homework")) {
 			Query<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId",userId).filter("topicId",a.topicId);
 			List<Key<Question>> allQuestionKeys = ofy.query(Question.class).filter("assignmentType","Homework").filter("topicId", a.topicId).listKeys();
 			List<Key<Question>> assignmentQuestionKeys = new ArrayList<Key<Question>>();
-			for (Key<Question> k : a.questionKeys) assignmentQuestionKeys.add(k);
-			for (HWTransaction h : hwTransactions) {
-				if (h.graded.before(a.deadline)) {
+			assignmentQuestionKeys.addAll(a.questionKeys);  // clones the assignment List of question keys
+			for (HWTransaction ht : hwTransactions) {
+				if (ht.graded.before(a.deadline)) {
 					s.numberOfAttempts++;
-					// Warning: the following line removes Keys from a.questionKeys to avoid counting duplicate scores
-					// on homework assignments.  Do not "put" the assignment to the database in this method!
-					if (h.score > 0 && assignmentQuestionKeys.remove(new Key<Question>(Question.class,h.questionId))) s.score ++; 
+					if (ht.score > 0 && assignmentQuestionKeys.remove(new Key<Question>(Question.class,ht.questionId))) s.score++; 
 				}
-				if (h.score>0 && allQuestionKeys.remove(new Key<Question>(Question.class,h.questionId))) s.overallScore++;
+				if (ht.score>0 && allQuestionKeys.remove(new Key<Question>(Question.class,ht.questionId))) s.overallScore++;
+				if (s.lis_result_sourcedid == null || s.lis_result_sourcedid.isEmpty()) s.lis_result_sourcedid = ht.lis_result_sourcedid;  // record any available sourcedid value for reporting score to the LMS				
+				if (s.mostRecentAttempt == null || ht.graded.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far
+					s.mostRecentAttempt = ht.graded;
+					s.maxPossibleScore = a.questionKeys.size();
+					if (ht.lis_result_sourcedid != null && !ht.lis_result_sourcedid.equals(s.lis_result_sourcedid)) s.lis_result_sourcedid = ht.lis_result_sourcedid;
+				}					
 			}
 		}
+		if (s.score > s.maxPossibleScore) s.score = s.maxPossibleScore;  // max really is the limit for LTI reporting
+		if (s.overallScore > s.maxPossibleScore) s.overallScore = s.maxPossibleScore;  // max really is the limit for LTI reporting
 		return s;
 	}
 		
@@ -104,13 +121,8 @@ public class Score {    // this object represents a best score achieved by a use
 		return getDotScore(deadline,rescueScore) + (deadline.after(now) && numberOfAttempts==0?"":"&nbsp;&nbsp;&nbsp;&nbsp;<FONT COLOR=GRAY>(" + Integer.toString(numberOfAttempts) + ")</FONT>");
 	}
 	
-	public Score update(Date deadline,int newScore) {
-		Date now = new Date();
-		if (now.before(deadline)) {
-			numberOfAttempts++;
-			if (newScore > score) score = newScore;
-		}
-		if (newScore > overallScore) overallScore = newScore;
-		return this;
+	public boolean needsLisReporting() {
+		if (lis_result_sourcedid==null || lis_result_sourcedid.isEmpty() || lisReportComplete) return false;
+		return true;
 	}
 }

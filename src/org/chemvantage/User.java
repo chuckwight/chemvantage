@@ -153,10 +153,10 @@ public class User implements Comparable<User>,Serializable {
 		user.alias = null;
 		user.setFirstName(request.getParameter("lis_person_name_given"));
 		user.setLastName(request.getParameter("lis_person_name_family"));
+		if (user.lowercaseName.isEmpty() && request.getParameter("lis_person_name_full") != null) user.setFirstName(request.getParameter("lis_person_name_full"));
+		
 		user.setEmail(request.getParameter("lis_person_contact_email_primary"));
 		if (!user.email.isEmpty()) user.verifiedEmail = true; // value supplied by institution
-		String userRole = request.getParameter("roles");
-		if (userRole!=null) user.setIsInstructor(userRole.toLowerCase().contains("instructor"));
 		ObjectifyService.begin().put(user);
 		return user;
 	}
@@ -297,20 +297,24 @@ public class User implements Comparable<User>,Serializable {
 	}
 	
 	void setFirstName(String fn) {
-		if (fn==null) return;
-		this.firstName = fn.trim();
+		if (fn == null) this.firstName = "";
+		else this.firstName = fn.trim();
 		setLowerCaseName();
 	}
 
 	void setLastName(String ln) {
-		if (ln==null) return;
-		this.lastName = ln.trim();
+		if (ln == null) this.lastName = "";
+		else this.lastName = ln.trim();
 		setLowerCaseName();
 	}
 
 	void setLowerCaseName() {
-		this.lowercaseName = (lastName.length()>0?lastName.toLowerCase():" ") 
-		+ (firstName.length()>0?", " + firstName.toLowerCase():" ");
+		if (this.lastName != null && !this.lastName.isEmpty()) {
+			this.lowercaseName = this.lastName + (this.firstName!=null && !this.firstName.isEmpty()?", " + this.firstName:""); // normal name or last name only
+		} else if (firstName != null && !firstName.isEmpty()) {
+			this.lowercaseName = this.firstName;  // first Name only, like Cher or Bono or full name only
+		} else this.lowercaseName = "";  // no name provided
+		this.lowercaseName = this.lowercaseName.toLowerCase().trim();
 	}
 	
 	void setAlias(String newId) {
@@ -517,6 +521,33 @@ public class User implements Comparable<User>,Serializable {
 		ofy.delete(myScores);
 	}
 	
+	boolean processPremiumUpgrade(Group newGroup) {
+		// this routine converts the user account to premium, if applicable
+		try {
+			// check out the following line that returns true of domin == null
+			// does this allow anyone not in a domain (UserService entry) to join any group for free?
+			// test the effect of eliminating this one check and returning false instead to
+			// force these users to pay $4.99  Keeps people in line with the LMS and reduces account proliferation
+			
+			if (this.hasPremiumAccount() || newGroup == null) return true;
+			else if (this.domain == null) return false;
+			
+			Domain domain = ofy.query(Domain.class).filter("domainName", this.domain).get();
+			if (domain == null || newGroup==null || !newGroup.domain.equals(this.domain)) return false;
+			if (domain.freeTrialExpires.after(new Date())) {
+				this.setPremium(true);
+			} else if (domain.seatsAvailable > 0) {
+				this.setPremium(true);
+				domain.seatsAvailable--;
+				ofy.put(domain);
+			} else return false;
+			ofy.put(this);
+			return true;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+
 	public void changeGroups(long newGroupId) {
 		try {
 			Group oldGroup = myGroupId>0?ofy.find(Group.class,myGroupId):null;

@@ -76,16 +76,7 @@ public class Home extends HttpServlet {
 			response.sendRedirect("/Verification");      // enter name and email address
 			return;
 		}
-		
-		// Check to see if a free demo premium account should be offered or revoked
-		//if (now.before(offerDeadline) && !user.hasPremiumAccount() && user.demoExpires.getTime()==0) {
-		//	response.sendRedirect("/Upgrade?action=free+offer");
-		//	return;
-		//} else if (now.after(user.demoExpires) && user.demoPremium==true) {
-		//	response.sendRedirect("/Upgrade?action=expired");
-		//	return;
-		//}
-		
+				
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 

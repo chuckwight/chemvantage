@@ -36,6 +36,7 @@ public class QuizTransaction implements Serializable {
 				Date graded;
 				int score;
 	@Unindexed	int possibleScore;
+	@Unindexed  String lis_result_sourcedid;
 	@Unindexed	String IPNumber;
 
     QuizTransaction() {}
@@ -50,5 +51,9 @@ public class QuizTransaction implements Serializable {
         this.possibleScore = possibleScore;
         this.IPNumber = IPNumber;
     }
-
+    
+	public String toString() {
+    	return "Quiz - " + topicTitle + " Downloaded:" + downloaded + " Graded:" + graded + " Score:" + score + "/" + possibleScore
+    	+ (lis_result_sourcedid==null?"":" reported to LMS.");
+    }
 }

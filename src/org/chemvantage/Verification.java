@@ -112,8 +112,14 @@ public class Verification extends HttpServlet {
 				// This section verifies eligibility to join groups and adjusts available seats if necessary				
 				try {
 					long newGroupId = Long.parseLong(request.getParameter("GroupId"));
-					if (processPremiumUpgrade(user,newGroupId)) user.changeGroups(newGroupId);
+					Group newGroup = null;
+					if (newGroupId > 0) newGroup = ofy.find(Group.class,newGroupId);
+					if (user.processPremiumUpgrade(newGroup)) user.changeGroups(newGroupId);
 				} catch (Exception e2) {
+				}
+				if (user.myGroupId == 0) {
+					response.sendRedirect("/Home");
+					return;
 				}
 				out.println(Home.getHeader(user) + personalInfoForm(user,false,request) + Home.footer);
 			} else if (userRequest.equals("Get Authorization Code")) {
@@ -377,21 +383,33 @@ public class Verification extends HttpServlet {
 	
 	boolean processPremiumUpgrade(User user,long newGroupId) {
 		// this routine converts the user account to premium, if applicable
-		if (user.hasPremiumAccount() || user.domain==null || newGroupId <= 0) return true;
-		Domain domain = ofy.query(Domain.class).filter("domainName", user.domain).get();
-		Group newGroup = ofy.find(Group.class,newGroupId);
-		if (domain == null || newGroup==null || !newGroup.domain.equals(user.domain)) return false;
-		if (domain.freeTrialExpires.after(new Date())) {
-			user.setPremium(true);
-		} else if (domain.seatsAvailable > 0) {
-			user.setPremium(true);
-			domain.seatsAvailable--;
-			ofy.put(domain);
-		} else return false;
-		ofy.put(user);
-		return true;
+		try {
+			// check out the following line that returns true of domin == null
+			// does this allow anyone not in a domain (UserService entry) to join any group for free?
+			// test the effect of eliminating this one check and returning false instead to
+			// force these users to pay $4.99  Keeps people in line with the LMS and reduces account proliferation
+			/*
+			if (user.hasPremiumAccount() || newGroupId <= 0) return true;
+			else if (user.domain == null) return false;
+			*/
+			if (user.hasPremiumAccount() || user.domain==null || newGroupId <= 0) return true;
+			Domain domain = ofy.query(Domain.class).filter("domainName", user.domain).get();
+			Group newGroup = ofy.find(Group.class,newGroupId);
+			if (domain == null || newGroup==null || !newGroup.domain.equals(user.domain)) return false;
+			if (domain.freeTrialExpires.after(new Date())) {
+				user.setPremium(true);
+			} else if (domain.seatsAvailable > 0) {
+				user.setPremium(true);
+				domain.seatsAvailable--;
+				ofy.put(domain);
+			} else return false;
+			ofy.put(user);
+			return true;
+		} catch (Exception e) {
+			return false;
+		}
 	}
-	
+
 	boolean mergeAuthCodeSent(User user,HttpServletRequest request) {
 		if (!user.verifiedEmail) return false;
 		Properties props = new Properties();

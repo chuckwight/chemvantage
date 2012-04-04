@@ -34,6 +34,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
@@ -115,6 +116,7 @@ public class Homework extends HttpServlet {
 			}
 			buf.append("</UL>");
 
+			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid"); // used for reporting score back to the LMS
 			List<Key<Question>> optionalQuestionKeys = ofy.query(Question.class).filter("assignmentType","Homework").filter("topicId",topicId).filter("isActive",true).listKeys();
 			long hi = myGroup==null?0L:myGroup.getAssignmentId("Homework",topic.id);
 			Assignment hwa = hi>0?ofy.get(Assignment.class,hi):null;
@@ -143,6 +145,7 @@ public class Homework extends HttpServlet {
 								+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=GradeHomework>"
 								+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 								+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
+								+ (lis_result_sourcedid==null || lis_result_sourcedid.isEmpty()?"":"<INPUT TYPE=HIDDEN NAME=lis_result_sourcedid VALUE='" + lis_result_sourcedid + "'>")
 								+ "<TD><b>" + i + ". </b></TD><TD>" + q.print() 
 								+ (Long.toString(q.id).equals(request.getParameter("Q"))?"Hint:<br>" + q.hint:"")
 								+ "<br><INPUT TYPE=SUBMIT VALUE='Grade This Exercise'><p>&nbsp;</FORM></TD></TR>\n");
@@ -232,7 +235,8 @@ public class Homework extends HttpServlet {
 				if (studentAnswer[0].length() > 0) { // an answer was submitted
 					// record the response in the Responses table for question debugging:
 					studentScore = q.isCorrect(studentAnswer[0])?q.pointValue:0;
-					QueueFactory.getDefaultQueue().add(withUrl("/ResponseServlet")
+					Queue queue = QueueFactory.getDefaultQueue();
+					queue.add(withUrl("/ResponseServlet")
 							.param("AssignmentType","Homework")
 							.param("TopicId", Long.toString(topic.id))
 							.param("QuestionId", Long.toString(q.id))
@@ -241,27 +245,19 @@ public class Homework extends HttpServlet {
 							.param("Score", Integer.toString(studentScore))
 							.param("PossibleScore", Integer.toString(possibleScore))
 							.param("UserId", user.id));
-					/*
-					QueueFactory.getDefaultQueue().add(withUrl("/TransactionServlet")
-							.param("AssignmentType","Homework")
-							.param("TopicId", Long.toString(topic.id))
-							.param("QuestionId", Long.toString(q.id))
-							.param("TopicTitle", topic.title)
-							.param("CorrectAnswer", q.getCorrectAnswer())
-							.param("Score", Integer.toString(studentScore))
-							.param("PossibleScore", Integer.toString(possibleScore))
-							.param("GroupId",Long.toString(myGroupId))
-							.param("IPNumber",request.getRemoteAddr())
-							.param("UserId", user.id));
-					*/
+					
 					HWTransaction ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,0L,studentScore,possibleScore,request.getRequestURI());
+					String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
+					if (lis_result_sourcedid != null) ht.lis_result_sourcedid = lis_result_sourcedid;
 					ofy.put(ht);
 					// create/update/store a HomeworkScore object
 					try {
 						long assignmentId = myGroup.getAssignmentId("Homework",topic.id);
 						if (assignmentId > 0) { // assignment exists; save a Score object
 							Assignment a = ofy.find(Assignment.class,assignmentId);
-							ofy.put(Score.getInstance(user.id,a));
+							Score s = Score.getInstance(user.id,a);
+							ofy.put(s);
+							if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",user.id));  // put report into the Task Queue
 						}	
 					} catch (Exception e2) {
 					}
