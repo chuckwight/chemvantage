@@ -30,7 +30,6 @@ import com.googlecode.objectify.annotation.Cached;
 
 @Cached
 public class Domain {
-	private static final long serialVersionUID = 137L;
 	@Id Long id;
 		String domainName;
 		List<String> domainAdmins;

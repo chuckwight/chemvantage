@@ -65,7 +65,6 @@ public class DataStoreCleaner extends HttpServlet {
 		final DatastoreService datastore = 
 			DatastoreServiceFactory.getDatastoreService(); 
 		final Query query = new Query("_ah_SESSION"); 
-		// TODO make this a task 
 		for (final Entity session : 
 			datastore.prepare(query).asIterable(FetchOptions.Builder.withLimit(1000))) 
 		{ 
