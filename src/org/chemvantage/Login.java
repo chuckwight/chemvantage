@@ -149,8 +149,7 @@ public class Login extends HttpServlet {
 				buf.append("ChemVantage is a resource for science education:"
 						+ "<table><tr><td><ul><li>computer-graded quizzes<li>homework exercises<li>practice exams</ul></td>"
 						+ "<td><ul><li>video lectures<li>free online textbooks</ul></td></tr></table>");
-				buf.append("<a href=About#certification><img alt='IMS BLTI Certification Logo' "
-						+ "style='border-width:0' align=left hspace=10 vspace=5 src='/images/imsLTI_v1p1TPweb.png'/></a>");
+				buf.append("<a href=About#certification><img alt='IMS BLTI Certification Logo' src='/images/imsLTI_v1p1TPweb.png'/></a><br>");
 				buf.append("<a href=InformationForInstructors.pdf>Information for instructors</a>");
 			}
 
