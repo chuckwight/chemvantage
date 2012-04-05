@@ -125,7 +125,7 @@ public class About extends HttpServlet {
 		+ "copyrights to ChemVantage LLC to be shared freely under the terms of a "
 		+ "<a href='http://creativecommons.org/licenses/by/3.0/us/'>Creative Commons Attribution 3.0 License.</a>";
 
-	public static String certification = "<a ID=certification></a>"
+	public static String certification = "<a NAME=certification></a>"
 		+ "<h3>Learning Management System Integration</h3>"
 		+ "<img alt='IMS BLTI Certification Logo' style='border-width:0' align=left hspace=10 vspace=5 "
 		+ "src='/images/imsLTI_v1p1TPweb.png'/> ChemVantage is certified by the "

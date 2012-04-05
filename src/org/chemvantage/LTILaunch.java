@@ -168,18 +168,19 @@ public class LTILaunch extends HttpServlet {
 			try {
 				Query<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",g.id);
 				Assignment myAssignment = null;
-				if (assignments.count() > 0) {
-					for (Assignment a : assignments) 
-						if (a.resourceLinkIds != null && a.resourceLinkIds.contains(resource_link_id)) {
-							myAssignment = a;
-							break;
-						}
-				}
+				for (Assignment a : assignments) 
+					if (a.resourceLinkIds != null && a.resourceLinkIds.contains(resource_link_id)) {
+						myAssignment = a;
+						break;
+					}
 				if (lisOutcomeServiceUrl != null && !lisOutcomeServiceUrl.equals(g.lis_outcome_service_url)) {
 					g.lis_outcome_service_url=lisOutcomeServiceUrl;
 					ofy.put(g);
+				}				
+				if (myAssignment != null) {
+					redirectURL = "/" + myAssignment.assignmentType + "?TopicId=" + myAssignment.topicId; // redirect user to an assignment
+					if (lisResultSourcedId != null) redirectURL +=  "&lis_result_sourcedid=" + URLEncoder.encode(lisResultSourcedId,"UTF-8"); // include the gradebook cell id
 				}
-				if (myAssignment != null) redirectURL = "/" + myAssignment.assignmentType + "?TopicId=" + myAssignment.topicId + "&lis_result_sourcedid=" + URLEncoder.encode(lisResultSourcedId,"UTF-8"); // redirect user to an assignment
 				else if (user.isInstructor()) redirectURL = "/Groups?UserRequest=MakeAssignmentLink&GroupId=" + g.id + "&resource_link_id=" + URLEncoder.encode(resource_link_id,"UTF-8");
 			} catch (Exception e) {
 			}
