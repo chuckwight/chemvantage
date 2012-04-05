@@ -253,7 +253,8 @@ public class Scores extends HttpServlet {
 			buf.append("\n<h2>My " + subject.title + " Scores</h2>");
 			buf.append("\nUser: " + user.getBothNames() + (user.email.length()>0?" (" + user.email + ")":"") + "<br>");
 			if (user.myGroupId < 0) user.changeGroups(0);
-			Group myGroup = ofy.get(Group.class,user.myGroupId);
+			Group myGroup = null;
+			if (user.myGroupId > 0) myGroup = ofy.get(Group.class,user.myGroupId);
 			if (myGroup == null) { // group may have been deleted
 				user.myGroupId = 0;
 				ofy.put(user);
