@@ -179,7 +179,7 @@ public class Groups extends HttpServlet {
 				out.println(manageGroupForm(user,group,request));
 			} else if (userRequest.equals("RescueService")) {
 				setRescueOptions(user,group,request);
-				out.println(showRescueOptions(user,group,request));
+				out.println(manageGroupForm(user,group,request));
 			} else {
 				User thisUser = ofy.find(User.class,request.getParameter("UserId"));
 				if (userRequest.equals("InviteUser")) {
@@ -982,8 +982,8 @@ public class Groups extends HttpServlet {
 						+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE=" + group.id + ">"
 						+ "<INPUT TYPE=HIDDEN NAME=SendRescueMessages VALUE=true>");
 				buf.append("Each student in this group will be notified if he or she misses the deadline for "
-						+ "an assignment<br>or has a score of "
-						+ "<INPUT TYPE=TEXT SIZE=4 NAME=RescueThresholdScore VALUE=" + group.rescueThresholdScore + "> or below.<p>");
+						+ "an assignment<br>or has a score that is less than "
+						+ "<INPUT TYPE=TEXT SIZE=2 NAME=RescueThresholdScore VALUE=" + group.rescueThresholdScore + ">% of the maximum possible score.<p>");
 				buf.append("Email subject line: <INPUT TYPE=TEXT SIZE=40 NAME=DefaultRescueSubject VALUE='" + group.defaultRescueSubject + "'><br>");
 				buf.append("Email message text:<br><TEXTAREA NAME=DefaultRescueMessage ROWS=15 COLS=80 WRAP=SOFT>" + group.defaultRescueMessage + "</TEXTAREA><br>");
 				buf.append("Select one or more of the following contacts to be copied in the email:<br>");
@@ -1003,7 +1003,9 @@ public class Groups extends HttpServlet {
 	void setRescueOptions(User user,Group group,HttpServletRequest request) {
 		if (request.getParameter("SendRescueMessages") != null)	group.sendRescueMessages = Boolean.parseBoolean(request.getParameter("SendRescueMessages"));
 		try {
-			group.rescueThresholdScore = Integer.parseInt(request.getParameter("RescueThresholdScore"));
+			group.rescueThresholdScore = Integer.parseInt(request.getParameter("RescueThresholdScore"));   // represents a percentage of the max possible score
+			if (group.rescueThresholdScore >100) group.rescueThresholdScore = 100;  // restrict range to 0-100
+			if (group.rescueThresholdScore < 0) group.rescueThresholdScore = 0;     // avalue of zero will disable the service
 			group.defaultRescueSubject = request.getParameter("DefaultRescueSubject");
 			group.defaultRescueMessage = request.getParameter("DefaultRescueMessage");
 			String[] rescueCcIds = request.getParameterValues("RescueCcIds");

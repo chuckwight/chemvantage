@@ -46,7 +46,7 @@ public class Group implements Serializable {
 			 Date created;
 			 Date nextDeadline;
 			 boolean sendRescueMessages;
-			 int rescueThresholdScore = 5;
+			 int rescueThresholdScore = 50;
 			 String defaultRescueSubject;
 			 String defaultRescueMessage;
 			 String lis_outcome_service_url;

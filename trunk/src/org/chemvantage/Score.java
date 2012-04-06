@@ -109,7 +109,13 @@ public class Score {    // this object represents a best score achieved by a use
 			Date now = new Date();
 			// a red dot indicates a low score that has not been rehabilitated
 			// show the red dot only if the deadline has passed and both the group score and total score are at/below threshold
-			boolean redDot = now.after(deadline) && score<=rescueScore && overallScore<=rescueScore;
+			// convert the percentage into an absolute threshold score:
+			double thresholdScore = 0.0;
+			boolean redDot = false;
+			try {  // may fail if maxPossbileScore == 0;
+				thresholdScore = (double)rescueScore/100.0*(double)this.maxPossibleScore;
+				redDot = now.after(deadline) && score<thresholdScore && overallScore<thresholdScore;
+			} catch (Exception e) {}
 			return (redDot?"<img src=images/red_dot.gif>&nbsp;":"") + (numberOfAttempts>0?Integer.toString(score):"");
 		} catch (Exception e) {
 			return "";
