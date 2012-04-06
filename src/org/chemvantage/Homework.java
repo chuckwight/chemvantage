@@ -147,7 +147,7 @@ public class Homework extends HttpServlet {
 								+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 								+ (lis_result_sourcedid==null || lis_result_sourcedid.isEmpty()?"":"<INPUT TYPE=HIDDEN NAME=lis_result_sourcedid VALUE='" + lis_result_sourcedid + "'>")
 								+ "<TD><b>" + i + ". </b></TD><TD>" + q.print() 
-								+ (Long.toString(q.id).equals(request.getParameter("Q"))?"Hint:<br>" + q.hint:"")
+								+ (Long.toString(q.id).equals(request.getParameter("Q"))?"Hint:<br>" + q.getHint():"")
 								+ "<br><INPUT TYPE=SUBMIT VALUE='Grade This Exercise'><p>&nbsp;</FORM></TD></TR>\n");
 						i++;
 					} catch (Exception e) {
