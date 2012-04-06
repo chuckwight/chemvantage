@@ -316,6 +316,10 @@ public class Question implements Serializable {
 		return buf.toString();
 	}
 
+	String getHint() {
+		return parseString(hint);
+	}
+	
 	String printAll() {
 		// use this method to display an example of the question, correct answer and solution
 		StringBuffer buf = new StringBuffer();
