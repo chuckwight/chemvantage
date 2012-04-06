@@ -258,6 +258,17 @@ public class User implements Comparable<User>,Serializable {
 		ofy.put(this);
 	}
 	
+	void setDomain(String d) {
+		this.domain = null;
+		try {
+			if (d!=null && !d.isEmpty()) {
+				Domain newDomain = ofy.query(Domain.class).filter("domainName",d).get();
+				this.domain = newDomain.domainName;
+			}
+		}catch (Exception e) {
+		}
+	}
+	
 	void setEmail(String em) {
 		try {
 			new InternetAddress(em).validate();
