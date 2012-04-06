@@ -65,7 +65,7 @@ public class UserReport implements Serializable {
 			buf.append("<FONT COLOR=RED>" + comments + "</FONT><br>");
 			try {
 				Question q = ofy.get(Question.class,this.questionId);
-				q.setParameters(user!=null?userId.hashCode():-1); // -1 randomizes the question
+				q.setParameters(userId!=null?userId.hashCode():-1); // -1 randomizes the question
 				Topic topic = ofy.find(Topic.class,q.topicId);
 				buf.append("Topic: " + topic.title + " (" + q.assignmentType + " question)<br>");
 				buf.append(q.printAll());
@@ -99,7 +99,7 @@ public class UserReport implements Serializable {
 			buf.append("<FONT COLOR=RED>" + comments + "</FONT><p>\n\n");
 			try {
 				Question q = ofy.get(Question.class,this.questionId);
-				q.setParameters();
+				q.setParameters(userId!=null?userId.hashCode():-1);
 				Topic topic = ofy.find(Topic.class,q.topicId);
 				buf.append("Topic: " + topic.title + " (" + q.assignmentType + " question)<br>");
 				buf.append(q.printAll());
