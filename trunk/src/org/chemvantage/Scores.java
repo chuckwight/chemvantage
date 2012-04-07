@@ -276,10 +276,10 @@ public class Scores extends HttpServlet {
 			
 			if (myGroup.getUsingLisOutcomeService()) {
 				buf.append("This group is using a ChemVantage service that automatically returns scores to your "
-						+ "class learning management system (LMS). You should check there to see your scores on ChemVantage "
+						+ "class learning<br>management system (LMS). You should check there to see your scores on ChemVantage "
 						+ "assignments.<p><span style='color:red'>Important:<br>You <u>must</u> begin each assignment "
-						+ "by clicking the assignment link in your LMS. Otherwise, ChemVantage has no way of knowing how "
-						+ "to return your assignment for credit.</span><p>For a complete record of your assignments, click "
+						+ "by clicking the assignment link in your LMS.<br>Otherwise, ChemVantage has no way of knowing how "
+						+ "to return your score for credit.</span><p>For a complete record of your assignments, click "
 						+ "here for <a href=Scores?UserRequest=AllQuizzes>all quizzes</a> or "
 						+ "<a href=Scores?UserRequest=AllHomework>all homework</a> transactions.");
 				return buf.toString();
