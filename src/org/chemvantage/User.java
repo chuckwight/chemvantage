@@ -258,6 +258,12 @@ public class User implements Comparable<User>,Serializable {
 		ofy.put(this);
 	}
 	
+
+	boolean needsEmail() {
+		if (email==null || email.isEmpty()) return true;
+		else return false;
+	}
+	
 	void setDomain(String d) {
 		this.domain = null;
 		try {
@@ -277,6 +283,12 @@ public class User implements Comparable<User>,Serializable {
 		} catch (Exception e) {
 			this.email = "";
 		}
+	}
+	
+	boolean requiresUpdatesNow() {
+		Date now = new Date();
+		Date eightHoursAgo = new Date(now.getTime()-28800000L);
+		return this.lastLogin.before(eightHoursAgo) && this.requiresUpdates();
 	}
 	
 	boolean requiresUpdates() {
@@ -305,6 +317,16 @@ public class User implements Comparable<User>,Serializable {
 	
 	public void setLastLogin() {
 		this.lastLogin = new Date();
+	}
+	
+	boolean needsFirstName() {
+		if (firstName==null || firstName.isEmpty()) return true;
+		else return false;
+	}
+	
+	boolean needsLastName() {
+		if (lastName==null || lastName.isEmpty()) return true;
+		else return false;
 	}
 	
 	void setFirstName(String fn) {

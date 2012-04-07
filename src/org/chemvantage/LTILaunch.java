@@ -160,11 +160,22 @@ public class LTILaunch extends HttpServlet {
 		}
 		if (g != null && user.processPremiumUpgrade(g)) user.changeGroups(g.id);
 		
-		// Check to see if the user is requesting a particular assignment, as denoted by the presence of a lis_result_sourcedid value in the launch parameters
-		String redirectURL = "/Home";
-		String lisResultSourcedId = request.getParameter("lis_result_sourcedid");
+		// Check to see if the LMS is providing an LIS Outcome Service URL; if so, store in the Group variable
 		String lisOutcomeServiceUrl = request.getParameter("lis_outcome_service_url");
-		if (!user.requiresUpdates() && user.hasPremiumAccount() && (lisResultSourcedId != null || user.isInstructor())) {
+		if (lisOutcomeServiceUrl != null && !lisOutcomeServiceUrl.equals(g.lis_outcome_service_url)) {
+			g.lis_outcome_service_url=lisOutcomeServiceUrl;
+			ofy.put(g);
+		}				
+		
+		String redirectURL = "";
+		
+		// Check to see if the user needs to provide updated contact information
+		if (user.requiresUpdatesNow()) redirectURL = "/Verification";
+		
+		// Check to see if the user is requesting a particular assignment, as denoted by the presence of a lis_result_sourcedid value
+		String lisResultSourcedId = request.getParameter("lis_result_sourcedid");
+		
+		if (lisResultSourcedId != null || user.isInstructor()) {
 			try {
 				Query<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",g.id);
 				Assignment myAssignment = null;
@@ -173,18 +184,34 @@ public class LTILaunch extends HttpServlet {
 						myAssignment = a;
 						break;
 					}
-				if (lisOutcomeServiceUrl != null && !lisOutcomeServiceUrl.equals(g.lis_outcome_service_url)) {
-					g.lis_outcome_service_url=lisOutcomeServiceUrl;
-					ofy.put(g);
-				}				
 				if (myAssignment != null) {
-					redirectURL = "/" + myAssignment.assignmentType + "?TopicId=" + myAssignment.topicId; // redirect user to an assignment
-					if (lisResultSourcedId != null) redirectURL +=  "&lis_result_sourcedid=" + URLEncoder.encode(lisResultSourcedId,"UTF-8"); // include the gradebook cell id
+					if (redirectURL.isEmpty()) {  // user is good to go. Send her to the assignment
+						redirectURL = "/" + myAssignment.assignmentType + "?TopicId=" + myAssignment.topicId; // redirect user to an assignment
+						if (lisResultSourcedId != null) redirectURL +=  "&lis_result_sourcedid=" + URLEncoder.encode(lisResultSourcedId,"UTF-8"); // include the gradebook cell id
+					} else {  // redirecting to Verification; store the lisResultSourcedId in a transaction for later use
+						Date now = new Date();
+						Topic topic = ofy.get(Topic.class,myAssignment.topicId);
+						if (myAssignment.assignmentType.equals("Quiz")) {
+							Date fifteenMinutesAgo = new Date(now.getTime()-15*60000);  // 15 minutes ago
+							QuizTransaction qt = ofy.query(QuizTransaction.class).filter("userId",user.id).filter("topicId",topic.id).filter("graded",null).filter("downloaded >",fifteenMinutesAgo).get();
+							if (qt == null) {
+								qt = new QuizTransaction(topic.id,topic.title,user.id,now,null,0,0,request.getRemoteAddr());
+								if (request.getParameter("lis_result_sourcedid")!=null) qt.lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
+								ofy.put(qt);  // creates a long id value to use in random number generator
+							}	
+						} else if (myAssignment.assignmentType.equals("Homework")) {
+							HWTransaction ht = new HWTransaction(0L,topic.id,topic.title,user.id,now,0L,0,10,request.getRequestURI());
+							String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
+							if (lis_result_sourcedid != null) ht.lis_result_sourcedid = lis_result_sourcedid;
+							ofy.put(ht);
+						}
+					}
 				}
 				else if (user.isInstructor()) redirectURL = "/Groups?UserRequest=MakeAssignmentLink&GroupId=" + g.id + "&resource_link_id=" + URLEncoder.encode(resource_link_id,"UTF-8");
 			} catch (Exception e) {
 			}
 		}
+		if (redirectURL.isEmpty()) redirectURL="/Home";
 		response.sendRedirect(redirectURL);
 	}
 
