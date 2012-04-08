@@ -94,7 +94,7 @@ public class Rescue extends HttpServlet {
 					ofy.put(score);
 				}
 				
-				if (score.score > group.rescueThresholdScore) continue;  // this user is OK; go to next group member
+				if (100.0*(double)score.score/(double)score.maxPossibleScore > group.rescueThresholdScore) continue;  // this user is OK; go to next group member
 				
 				// send a rescue message to this user
 				User user = ofy.get(User.class,userId);

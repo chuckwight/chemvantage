@@ -104,18 +104,15 @@ public class Score {    // this object represents a best score achieved by a use
 		else return Integer.toString(score) + "&nbsp;&nbsp;&nbsp;&nbsp;<FONT COLOR=GRAY>(" + Integer.toString(numberOfAttempts) + ")</FONT>";
 	}
 	
-	public String getDotScore(Date deadline,int rescueScore) {
+	public String getDotScore(Date deadline,int thresholdPct) {
 		try {
 			Date now = new Date();
 			// a red dot indicates a low score that has not been rehabilitated
 			// show the red dot only if the deadline has passed and both the group score and total score are at/below threshold
-			// convert the percentage into an absolute threshold score:
-			double thresholdScore = 0.0;
-			boolean redDot = false;
-			try {  // may fail if maxPossbileScore == 0;
-				thresholdScore = (double)rescueScore/100.0*(double)this.maxPossibleScore;
-				redDot = now.after(deadline) && score<thresholdScore && overallScore<thresholdScore;
-			} catch (Exception e) {}
+			boolean belowThreshold = maxPossibleScore<=0?false:100.0*(double)score/(double)maxPossibleScore < thresholdPct;
+			boolean rehabilitated = maxPossibleScore<=0?true:100.0*(double)overallScore/(double)maxPossibleScore >= thresholdPct;
+			boolean redDot = now.after(deadline) && belowThreshold && !rehabilitated;
+
 			return (redDot?"<img src=images/red_dot.gif>&nbsp;":"") + (numberOfAttempts>0?Integer.toString(score):"");
 		} catch (Exception e) {
 			return "";
