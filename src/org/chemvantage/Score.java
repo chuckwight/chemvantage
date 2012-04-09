@@ -65,7 +65,7 @@ public class Score {    // this object represents a best score achieved by a use
 				}
 				if (qt.score > s.overallScore) s.overallScore = qt.score;  // overall student score on this assignment
 				if (s.lis_result_sourcedid == null || s.lis_result_sourcedid.isEmpty()) s.lis_result_sourcedid = qt.lis_result_sourcedid;  // record any available sourcedid value for reporting score to the LMS
-				if (s.mostRecentAttempt == null || qt.downloaded.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far
+				if (s.mostRecentAttempt==null || qt.downloaded.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far
 					s.mostRecentAttempt = qt.downloaded;
 					s.maxPossibleScore = qt.possibleScore;
 					if (qt.lis_result_sourcedid != null && !qt.lis_result_sourcedid.equals(s.lis_result_sourcedid)) s.lis_result_sourcedid = qt.lis_result_sourcedid;
@@ -108,11 +108,23 @@ public class Score {    // this object represents a best score achieved by a use
 		try {
 			Date now = new Date();
 			// a red dot indicates a low score that has not been rehabilitated
-			// show the red dot only if the deadline has passed and both the group score and total score are at/below threshold
-			boolean belowThreshold = maxPossibleScore<=0?false:100.0*(double)score/(double)maxPossibleScore < thresholdPct;
-			boolean rehabilitated = maxPossibleScore<=0?true:100.0*(double)overallScore/(double)maxPossibleScore >= thresholdPct;
-			boolean redDot = now.after(deadline) && belowThreshold && !rehabilitated;
-
+			// show the red dot only if the deadline has passed and both the group score and total overall score are at/below threshold
+			boolean redDot = false;
+			
+			if (now.after(deadline)) {  // only consider the red dot if we're past the assignment deadline
+				if (overallScore==0) redDot = true;
+				else if (mostRecentAttempt==null) { // recalculate the Score object
+					Assignment a = ObjectifyService.begin().get(Assignment.class,assignmentId);
+					Score s = Score.getInstance(owner.getName(),a);
+					ObjectifyService.begin().put(s);
+					return s.getDotScore(deadline, thresholdPct);
+				}
+				else {
+					boolean belowThreshold = 100.0*(double)score/(double)maxPossibleScore < thresholdPct;
+					boolean rehabilitated = 100.0*(double)overallScore/(double)maxPossibleScore >= thresholdPct;
+					redDot = belowThreshold && !rehabilitated;
+				}
+			}
 			return (redDot?"<img src=images/red_dot.gif>&nbsp;":"") + (numberOfAttempts>0?Integer.toString(score):"");
 		} catch (Exception e) {
 			return "";
