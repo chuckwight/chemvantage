@@ -489,7 +489,9 @@ public class Scores extends HttpServlet {
 
 			// make a list of all quiz transactions for this user
 			List<QuizTransaction> quizTransactions = ofy.query(QuizTransaction.class).filter("userId", user.id).list();
-			for (QuizTransaction qt : quizTransactions) buf.append(qt.toString() + "<br>");
+			buf.append("<table><tr><th>Topic</th><th>Downloaded</th><th>Graded</th><th>Score</th></tr>");
+			for (QuizTransaction qt : quizTransactions) buf.append(qt.tableRow());
+			buf.append("</table>");
 		} catch (Exception e) {
 			buf.append(e.getMessage());
 		}
@@ -517,7 +519,9 @@ public class Scores extends HttpServlet {
 
 			// make a list of all quiz transactions for this user
 			List<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId", user.id).list();
-			for (HWTransaction ht : hwTransactions) buf.append(ht.toString() + "<br>");
+			buf.append("<table><tr><th>Topic</th><th>Downloaded</th><th>Graded</th><th>Score</th></tr>");
+			for (HWTransaction ht : hwTransactions) buf.append(ht.tableRow());
+			buf.append("</table>");
 		} catch (Exception e) {
 			buf.append(e.getMessage());
 		}

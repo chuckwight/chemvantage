@@ -54,8 +54,9 @@ public class HWTransaction implements Serializable {
         this.IPNumber = IPNumber;
     }
 
-	public String toString() {
-    	return "Homework - " + topicTitle + " QuestionId:" + questionId + " Graded:" + graded + " Score:" + score + "/" + possibleScore
-    	+ (lis_result_sourcedid==null?"":" reported to LMS.");
-	}
+    public String tableRow() {
+    	return "<tr><td>" + topicTitle + "</td><td>" + questionId + "</td><td>" + graded + "</td><td>" + score + "/" + possibleScore
+    	    	+ (lis_result_sourcedid==null?"":" reported to LMS.") + "</td></tr>";
+    }
+    
 }
