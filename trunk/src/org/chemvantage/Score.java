@@ -131,9 +131,9 @@ public class Score {    // this object represents a best score achieved by a use
 		}
 	}
 	
-	public String getEnhancedDotScore(Date deadline,int rescueScore) {
-		Date now = new Date();
-		return getDotScore(deadline,rescueScore) + (deadline.after(now) && numberOfAttempts==0?"":"&nbsp;&nbsp;&nbsp;&nbsp;<FONT COLOR=GRAY>(" + Integer.toString(numberOfAttempts) + ")</FONT>");
+	public String getEnhancedDotScore(Date deadline,int thresholdPct) {
+		return getDotScore(deadline,thresholdPct) + (numberOfAttempts>0?"/"+maxPossibleScore:"");
+		//return getDotScore(deadline,rescueScore) + (deadline.after(now) && numberOfAttempts==0?"":"&nbsp;&nbsp;&nbsp;&nbsp;<FONT COLOR=GRAY>(" + Integer.toString(numberOfAttempts) + ")</FONT>");
 	}
 	
 	public boolean needsLisReporting() {
