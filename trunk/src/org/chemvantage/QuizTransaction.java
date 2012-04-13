@@ -52,8 +52,9 @@ public class QuizTransaction implements Serializable {
         this.IPNumber = IPNumber;
     }
     
-	public String toString() {
-    	return "Quiz - " + topicTitle + " Downloaded:" + downloaded + " Graded:" + graded + " Score:" + score + "/" + possibleScore
-    	+ (lis_result_sourcedid==null?"":" reported to LMS.");
+    public String tableRow() {
+    	return "<tr><td>" + topicTitle + "</td><td>" + downloaded + "</td><td>" + graded + "</td><td>" + score + "/" + possibleScore
+    	    	+ (lis_result_sourcedid==null?"":" reported to LMS.") + "</td></tr>";
     }
+    
 }
