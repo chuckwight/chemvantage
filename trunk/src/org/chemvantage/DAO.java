@@ -41,6 +41,7 @@ public class DAO extends com.googlecode.objectify.util.DAOBase {
 		ObjectifyService.register(Score.class);
 		ObjectifyService.register(PayPalIPN.class);
 		ObjectifyService.register(PracticeExamTransaction.class);
+		ObjectifyService.register(ProposedQuestion.class);
 		ObjectifyService.register(RescueMessage.class);
 		ObjectifyService.register(VideoTransaction.class);
 		ObjectifyService.register(BLTIConsumer.class);

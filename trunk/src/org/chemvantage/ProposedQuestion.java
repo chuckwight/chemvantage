@@ -1,10 +1,12 @@
 package org.chemvantage;
-
+/*
 import java.util.ArrayList;
 import java.util.List;
 
 import javax.persistence.Id;
 import javax.persistence.Transient;
+*/
+import java.util.List;
 
 import com.googlecode.objectify.annotation.Cached;
 
@@ -12,7 +14,19 @@ import com.googlecode.objectify.annotation.Cached;
 public class ProposedQuestion extends Question {
 	
 	private static final long serialVersionUID = 137L;
-	@Id Long id;       // this id is used to store the object in the datastore
+
+	ProposedQuestion() {}
+	ProposedQuestion(int t) {
+		super(t);
+	}
+	ProposedQuestion (long topicId,String text,String type,int nChoices,List<String> choices,
+			double requiredPrecision,String correctAnswer,String tag,int pointValue,String parameterString,
+			String hint,String solution,String authorId,String contributorId,String editorId,String notes) {
+		super(topicId,text,type,nChoices,choices,requiredPrecision,correctAnswer,tag,pointValue,parameterString,hint,solution,authorId,contributorId,editorId,notes);
+	}
+	
+	/*
+  	@Id Long id;       // this id is used to store the object in the datastore
 	long questionId;   // this id corresponds to the original Question object, if any
 	long topicId;
 	String assignmentType;
@@ -103,5 +117,5 @@ public class ProposedQuestion extends Question {
 		this.notes = "";
 		this.isActive = false;
 	}
-
+*/
 }
