@@ -124,12 +124,12 @@ public class Contribute extends HttpServlet {
 			String hint = request.getParameter("Hint");
 			String solution = request.getParameter("Solution");
 
-			Question q = null;
+			ProposedQuestion q = null;
 			boolean preview = false;
 			buf.append("<FORM NAME=NewQuestion ACTION=Contribute METHOD=POST>");
 
 			if (assignmentType.length()>0 && questionType>0 && topicId>0) { // create the question object
-				q = new Question(questionType);
+				q = new ProposedQuestion(questionType);
 				q.topicId = topicId;
 				q.assignmentType = assignmentType;
 				q.text = questionText;
@@ -144,9 +144,8 @@ public class Contribute extends HttpServlet {
 				q.solution = solution;
 				q.authorId = user.id;
 				q.contributorId = user.id;
-				q.editorId = user.isEditor()?user.id:"";
+				q.editorId = "";
 				q.notes = "";
-				q.isActive = false;
 				q.validateFields();
 
 				if (request.getParameter("QuestionText")!=null) {  // preview the formatted question
@@ -164,11 +163,12 @@ public class Contribute extends HttpServlet {
 			else {
 				buf.append("<h2>Contribute a New Question</h2>");
 				buf.append("All users are encouraged to contribute new question items to the "
-						+ "PracticeZone database for quizzes and homework assignments.  Your contribution "
-						+ "will be approved by an editor before is appears in production. All "
-						+ "user-contributed content on this site becomes the property of PracticeZone.org, "
-						+ "but is shared openly through a <a href=http://creativecommons.org/licenses/by/3.0/us/>"
-						+ "Creative Commons Attribution 3.0 License.</a> "
+						+ "ChemVantage database for quizzes and homework assignments.  Your contribution "
+						+ "will be approved by an editor before is appears in production. By using this form, "
+						+ "you certify that the question item is original (not previously copyrighted), and that "
+						+ "you assign the copyrights to ChemVantage LLC with the understanding that it will be "
+						+ "shared openly through a <a href=http://creativecommons.org/licenses/by/3.0/us/>"
+						+ "Creative Commons Attribution 3.0 License</a>. "
 						+ "For details, please see the <a href=About#copyright>About Us</a> page.<p>");
 			}
 
@@ -294,7 +294,7 @@ public class Contribute extends HttpServlet {
 			String hint = request.getParameter("Hint");
 			String solution = request.getParameter("Solution");
 
-			Question q = new Question(questionType);
+			ProposedQuestion q = new ProposedQuestion(questionType);
 			q.topicId = topicId;
 			q.assignmentType = assignmentType;
 			q.text = questionText;
@@ -309,9 +309,8 @@ public class Contribute extends HttpServlet {
 			q.solution = solution;
 			q.authorId = user.id;
 			q.contributorId = user.id;
-			q.editorId = user.isEditor()?user.id:"";
+			q.editorId = "";
 			q.notes = "";
-			q.isActive = user.isEditor();
 			q.validateFields();
 			
 			ofy.put(q);
@@ -320,7 +319,9 @@ public class Contribute extends HttpServlet {
 		}
 		if (buf.length() == 0) { // no errors reported
 			buf.append("<h3>Question Submitted Successfully</h3>"
-			+ (user.isEditor()?"The item is now active.":"Your contribution will be reviewed by an editor and added to the database."));
+			+ "Thank you for contributing this question item to ChemVantage.<br>"
+			+ "Your contribution will be reviewed by an editor before it is added to the database.<br>"
+			+ "<a href=Contribute>Contribute another question item</a>.");
 		}
 		return buf.toString();
 	}
