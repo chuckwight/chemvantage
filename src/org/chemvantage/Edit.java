@@ -214,9 +214,9 @@ public class Edit extends HttpServlet {
 						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=5;submit()\" VALUE='Numeric'>"
 						+ "</FORM>");
 
-				buf.append("This assignment draws from the following questions:");
 				Topic t = ofy.get(Topic.class,topicId);
 				Query<Question> questions = t.getQuestions(assignmentType);
+				buf.append("This assignment draws from the following " + questions.count() + " questions:");
 				
 				buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
 				int i=0;
