@@ -519,7 +519,7 @@ public class Scores extends HttpServlet {
 
 			// make a list of all quiz transactions for this user
 			List<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId", user.id).list();
-			buf.append("<table><tr><th>Topic</th><th>Downloaded</th><th>Graded</th><th>Score</th></tr>");
+			buf.append("<table><tr><th>Topic</th><th>Question ID</th><th>Graded</th><th>Score</th></tr>");
 			for (HWTransaction ht : hwTransactions) buf.append(ht.tableRow());
 			buf.append("</table>");
 		} catch (Exception e) {
