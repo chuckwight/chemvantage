@@ -138,8 +138,8 @@ public class About extends HttpServlet {
 
 	public static String certification = "<a NAME=certification></a>"
 		+ "<h3>Learning Management System Integration</h3>"
-		+ "<img alt='IMS BLTI Certification Logo' style='border-width:0' align=left hspace=10 vspace=5 "
-		+ "src='/images/imsLTI_v1p1TPweb.png'/> ChemVantage is certified by the "
+		+ "<a href=http://imscert.org><img alt='IMS Global Certified' style='border-width:0' align=left hspace=10 vspace=5 "
+		+ "src='/images/imscertifiedfinalsmall.png'/></a> ChemVantage is certified by the "
 		+ "<a href=http://imsglobal.org>IMS Global Learning Consortium</a> to be conformant with the "
 		+ "LTI v1.1 standard for learning tools interoperability. The IMS conformance registration "
 		+ "number for ChemVantage v2.0 is <a href=http://www.imsglobal.org/cc/detail.cfm?ID=102>IMSC2ce2012W1</a>.<p>"
