@@ -626,7 +626,7 @@ public class Question implements Serializable {
 			}
 			return false;
 		case 5: // Numeric Answer
-			answer = answer.replaceAll(",","");  // removes comma separators from numbers
+			answer = answer.replaceAll(",", "").replaceAll("\\s", "");  // removes comma separators and whitespace from numbers
 			try {
 				double dAnswer = Double.parseDouble(parseString(answer));
 				double dCorrectAnswer = Double.parseDouble(parseString(correctAnswer));
