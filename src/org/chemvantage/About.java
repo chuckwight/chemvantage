@@ -216,7 +216,7 @@ public class About extends HttpServlet {
 		+ "If you do not agree to this policy, please do not use our Site. "
 		+ "Your continued use of the Site following the posting of changes to this policy will be deemed your acceptance of those changes."
 		+ "<LI>CONTACTING US<br>"
-		+ "If you have any questions about this Privacy Policy, the practices of this site, or your dealings with this site, please contact us at:<br>"
+		+ "If you have any questions about these Terms and Conditions, our Privacy Policy, the practices of this site, or your dealings with this site, please contact us at:<br>"
 		+ "ChemVantage, 2568 Redondo Ave, Salt Lake City, UT 84108 USA<br>"
 		+ "Phone: +1 (801)810-4401<br>"
 		+ "Email: <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>"
