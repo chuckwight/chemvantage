@@ -53,10 +53,10 @@ public class Login extends HttpServlet {
     	openIdProviders = new HashMap<String, String>();
     	openIdLogos = new HashMap<String, String>();
     	
-    	openIdProviders.put("MyOpenID", "myopenid.com"); openIdLogos.put("MyOpenID", "/images/openid/myopenid.jpg");
-        openIdProviders.put("AOL", "aol.com"); openIdLogos.put("AOL", "/images/openid/aol.jpg");
-        openIdProviders.put("Yahoo", "yahoo.com"); openIdLogos.put("Yahoo", "/images/openid/yahoo.jpg");
-        openIdProviders.put("Google", "gmail.com"); openIdLogos.put("Google", "/images/openid/google.jpg");
+        openIdProviders.put("Google", "gmail.com"); openIdLogos.put("Google", "/images/openid/google");
+        openIdProviders.put("Yahoo", "yahoo.com"); openIdLogos.put("Yahoo", "/images/openid/yahoo");
+        openIdProviders.put("AOL", "aol.com"); openIdLogos.put("AOL", "/images/openid/aol");
+    	openIdProviders.put("MyOpenID", "myopenid.com"); openIdLogos.put("MyOpenID", "/images/openid/myopenid");
         attributes.add("email");
 	}
     
@@ -100,8 +100,8 @@ public class Login extends HttpServlet {
 	public static String footer = "\n<hr><span style='font-size:smaller'><table style='width:100%;border-spacing: 20px 0px'><tr>"
 		+ "<td>&copy; 2007-12 ChemVantage LLC. <a rel='license' href='http://creativecommons.org/licenses/by/3.0/'><img alt='Creative Commons License' style='border-width:0' src='http://i.creativecommons.org/l/by/3.0/80x15.png' /></a></td>"
 		+ "<td align=center><a href=About#terms>Terms and Conditions of Use</a></td>"
-		+ "<td align=right>Powered by<a href='http://code.google.com/appengine/'><img src=/images/GAE.png border=0 "
-		+ "alt='Google App Engine' style='vertical-align:middle'>Google App Engine</a></td></tr></table>"
+		+ "<td align=right><a href='http://code.google.com/appengine/'><img src=/images/GAE.gif border=0 "
+		+ "alt='Powered by Google App Engine'></a></td></tr></table>"
 		+ "</span>"
 		+ "</TD></TR></TABLE>\n"
 		+ "</body></html>";
@@ -149,15 +149,13 @@ public class Login extends HttpServlet {
 				buf.append("ChemVantage is a resource for science education:"
 						+ "<table><tr><td><ul><li>computer-graded quizzes<li>homework exercises<li>practice exams</ul></td>"
 						+ "<td><ul><li>video lectures<li>free online textbooks</ul></td></tr></table>");
-				buf.append("<a href=About#certification><img alt='IMS Global Certified' src='/images/imscertifiedfinalsmall.png'/></a><br>");
+				//buf.append("<a href=About#certification><img alt='IMS Global Certified' src='/images/imscertifiedfinalsmall.png'/></a><br>");
 				buf.append("<a href=InformationForInstructors.pdf>Information for instructors</a>");
 			}
 
 			UserService userService = UserServiceFactory.getUserService();
 			buf.append("<h3>Please Sign In</h3>");
-			buf.append("ChemVantage uses third-party authentication for account creation and login.<br>"
-					+ "Select your preferred online identity provider below to login to ChemVantage.<p>");
-
+			
 			boolean showAll = "all".equals(request.getParameter("show"));
 			Cookie[] cookies = request.getCookies();
 			if (!showAll && cookies!=null) {  // a login cookie has been set; try to show a link to the preferred OpenID provider
@@ -170,7 +168,7 @@ public class Login extends HttpServlet {
 						String loginUrl = userService.createLoginURL("/userService",null,providerUrl,attributes);
 					buf.append("<table style='border-spacing:40px 0px'><tr><td style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
 								+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
-								+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "' style='text-align:center'><br/>" 
+								+ "<img src='" + openIdLogos.get(providerName) + ".jpg ' border=0 alt='" + providerName + "' style='text-align:center'><br/>" 
 								+ providerName + "</a></td></tr></table>");
 						showAll = false;
 						break;
@@ -209,17 +207,21 @@ public class Login extends HttpServlet {
 			} else showAll = true;
 			
 			if (showAll) {	
-				//buf.append("If you don't already have a free account there, you may create one.<p>");
+				buf.append("ChemVantage uses third-party authentication; please select your online identity provider below.<br>"
+						+ "If this is your first ChemVantage login, a free account will be created for you.<p>");
 				buf.append("<TABLE style='border-spacing:40px 0px'><TR>");
 				// display Google-authorized OpenID providers and logos:
+				buf.append("<TD>");
 				for (String providerName : openIdProviders.keySet()) {
 					String providerUrl = openIdProviders.get(providerName);
 					String loginUrl = userService.createLoginURL("/userService",null,providerUrl,attributes);
-					buf.append("<TD style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
-							+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
-							+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/>" 
-							+ providerName + "</a></TD>");
+					buf.append("<a id='" + providerName + "' href='" + loginUrl 
+							+ "' style='text-decoration:none'"
+							+ " onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
+							+ "<img src='" + openIdLogos.get(providerName) + "_tn.jpg' style='vertical-align:middle' border=0 alt='" + providerName + "'> " 
+							+ providerName + "</a><br>");
 				}
+				buf.append("</TD>");
 				// display UofU CAS login logo and link:
 				for (String providerName : CASLaunch.casProviders.keySet()) {
 					String casUrl = CASLaunch.casProviders.get(providerName);
