@@ -101,6 +101,7 @@ public class LTILaunch extends HttpServlet {
 		}
 		
 		try {
+			if (!Nonce.isUnique(request.getParameter("oauth_nonce"), request.getParameter("oauth_timestamp"))) throw new Exception("Bad nonce or timestamp.");
 			oav.validateMessage(oam,acc);
 		} catch(Exception e) {
 			System.out.println("Provider failed to validate message");
