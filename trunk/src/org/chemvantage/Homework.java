@@ -102,7 +102,29 @@ public class Homework extends HttpServlet {
 			Date now = new Date();
 
 			buf.append("\n<h2>Homework Exercises - " + topic.title + " (" + subject.title + ")</h2>");
-			buf.append("\n<b>" + user.getBothNames() + "</b><br>");
+			//buf.append("\n<b>" + user.getBothNames() + "</b><br>");
+
+			// Gather profile information if needed; otherwise just print the user's name.
+			buf.append("<FORM METHOD=POST ACTION=Verification>");
+			boolean submitNeeded = false;
+			if (user.needsFirstName() || user.needsLastName()) { // print a form
+				buf.append("First name: ");
+				if (user.needsFirstName()) {
+					buf.append("<input type=text name=FirstName>"); submitNeeded = true;
+				} else buf.append("<b>" + user.firstName + "</b>");
+				buf.append("<br>");
+				buf.append("Last name: ");
+				if (user.needsLastName()) {
+					buf.append("<input type=text name=LastName>"); submitNeeded = true;
+				} else buf.append("<b>" + user.lastName + "</b>");
+				buf.append("<br>");
+			} else buf.append("\n<b>" + user.getBothNames() + "</b><br>");
+			if (user.needsEmail()) {
+				buf.append("Email: <input type=text name=Email><br>"); submitNeeded = true;
+			}
+			if (submitNeeded) buf.append("<INPUT TYPE=SUBMIT Name=UserRequest VALUE='Save My Information'><br>");
+			buf.append("</FORM>");
+
 			buf.append(df.format(now) + "<p>");
 
 			buf.append("\nHomework Rules<UL>");

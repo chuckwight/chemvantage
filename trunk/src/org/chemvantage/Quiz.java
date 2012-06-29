@@ -125,8 +125,22 @@ public class Quiz extends HttpServlet {
 			int secondsRemaining = (int) (timeLimit*60 - (now.getTime() - qt.downloaded.getTime())/1000);
 
 			buf.append("\n<h2>Quiz - " + topic.title + " (" + subject.title + ")</h2>");
-			buf.append("\n<b>" + user.getBothNames() + "</b><br>");
-			buf.append(df.format(qt.downloaded) + "<p>");
+			
+			buf.append(ajaxQuizJavaScript());  // this code allows users to use the Google SOAP search spell checking function
+			buf.append("\n<FORM NAME=Quiz METHOD=POST ACTION=Quiz onSubmit=\"javascript: return confirmSubmission()\">");
+			
+			// Gather profile information if needed; otherwise just print the user's name.
+			if (user.needsFirstName() || user.needsLastName()) { // print a form
+				buf.append("First name: ");
+				if (user.needsFirstName()) buf.append("<input type=text name=FirstName>"); else buf.append("<b>" + user.firstName + "</b>");
+				buf.append("<br>");
+				buf.append("Last name: ");
+				if (user.needsLastName()) buf.append("<input type=text name=LastName>"); else buf.append("<b>" + user.lastName + "</b>");
+				buf.append("<br>");
+			} else buf.append("\n<b>" + user.getBothNames() + "</b><br>");
+			if (user.needsEmail()) buf.append("Email: <input type=text name=Email><br>");
+			
+			buf.append(df.format(qt.downloaded) + "<p>"); // Print the date/time the quiz was first downloaded (may be up to timeLimit minutes ago)
 
 			buf.append("\nQuiz Rules<OL>");
 			buf.append("\n<LI>Each quiz must be completed within " + timeLimit + " minutes of the time when it is first downloaded.</LI>");
@@ -139,10 +153,6 @@ public class Quiz extends HttpServlet {
 			}
 			buf.append("</OL>");
 			
-			buf.append(ajaxQuizJavaScript());  // this code allows users to use the Google SOAP search spell checking function
-			
-			buf.append("\n<FORM NAME=Quiz METHOD=POST ACTION=Quiz onSubmit=\"javascript: return confirmSubmission()\">");
-
 			buf.append("<div id='timer0' style='color: red'></div><div id=ctrl0 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
 					
 			buf.append("\n<input type=submit value='Grade This Quiz'>");
@@ -243,6 +253,13 @@ public class Quiz extends HttpServlet {
 	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {
+			// Update profile information, if necessary
+			if (user.needsFirstName() || user.needsLastName() || user.needsEmail()) {
+				if (request.getParameter("FirstName")!=null) user.setFirstName(request.getParameter("FirstName"));
+				if (request.getParameter("LastName")!=null) user.setLastName(request.getParameter("LastName"));
+				if (request.getParameter("Email")!=null) user.setEmail(request.getParameter("Email"));
+				ofy.put(user);
+			}
 			Date now = new Date();
 			long transactionId = Long.parseLong(request.getParameter("QuizTransactionId"));
 			QuizTransaction qt = ofy.get(QuizTransaction.class,transactionId);
