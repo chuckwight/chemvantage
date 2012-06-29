@@ -100,7 +100,7 @@ public class BLTILaunch extends HttpServlet {
 		}
 		
 		try {
-			// The following line is a temporary hack to prevent assignment to the default context_id group:
+			if (!Nonce.isUnique(request.getParameter("oauth_nonce"), request.getParameter("oauth_timestamp"))) throw new Exception("Bad nonce or timestamp.");
 			oav.validateMessage(oam,acc);
 		} catch(Exception e) {
 			System.out.println("Provider failed to validate message");
