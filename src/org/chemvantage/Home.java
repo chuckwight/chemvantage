@@ -66,13 +66,9 @@ public class Home extends HttpServlet {
 			response.sendRedirect("/");
 			return;
 		}
-		Date now = new Date();
-		Date eightHoursAgo = new Date(now.getTime()-28800000L);
-		//Date offerDeadline = new Date(1318219200000L);  // 10/10/2011 00:00:00
-		//if (user.demoExpires==null) user.demoExpires = new Date(0);
 		
 		// Check to see if the user should provide additional contact information
-		if (user.requiresUpdates() && (user.lastLogin.before(eightHoursAgo))) {
+		if (user.requiresUpdatesNow()) {
 			response.sendRedirect("/Verification");      // enter name and email address
 			return;
 		}

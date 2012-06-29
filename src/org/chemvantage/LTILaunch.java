@@ -161,17 +161,24 @@ public class LTILaunch extends HttpServlet {
 		}
 		if (g != null && user.processPremiumUpgrade(g)) user.changeGroups(g.id);
 		
-		// Check to see if the LMS is providing an LIS Outcome Service URL; if so, store in the Group variable
+		// Check to see if the LMS is providing an LIS Outcome Service URL (LTI v1.1)
 		String lisOutcomeServiceUrl = request.getParameter("lis_outcome_service_url");
-		if (lisOutcomeServiceUrl != null && !lisOutcomeServiceUrl.equals(g.lis_outcome_service_url)) {
+		if (lisOutcomeServiceUrl == null) {  // No, the LMS does not support LIS Outcome Service (basic LTI v1.0)
+			response.sendRedirect("/Home");
+			return;
+		}
+		else if (!lisOutcomeServiceUrl.equals(g.lis_outcome_service_url)) { // Yes, store the new URL in the Group object
 			g.lis_outcome_service_url=lisOutcomeServiceUrl;
 			ofy.put(g);
 		}				
 		
+		
 		String redirectURL = "";
 		
 		// Check to see if the user needs to provide updated contact information
-		if (user.requiresUpdatesNow()) redirectURL = "/Verification";
+		//if (user.requiresUpdatesNow()) redirectURL = "/Verification";
+		// Note: by deleting the line above we are allowing a basic account student with LTIv1.1 to complete an assignment but not join a group
+		// This has the advantage of not sending people all over the place to register, but will not show customized group assignments.
 		
 		// Check to see if the user is requesting a particular assignment, as denoted by the presence of a lis_result_sourcedid value
 		String lisResultSourcedId = request.getParameter("lis_result_sourcedid");
