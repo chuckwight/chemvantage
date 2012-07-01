@@ -201,16 +201,16 @@ public class Admin extends HttpServlet {
 			}
 			buf.append("</table>");
 			
-			buf.append("<h3>Basic LTI Consumers</h3>");
-			buf.append("The following is a list of organizations that are permitted to make Basic LTI "
+			buf.append("<h3>LTI Consumers</h3>");
+			buf.append("The following is a list of organizations that are permitted to make LTI "
 					+ "connections to ChemVantage, usually from within a learning management system. "
 					+ "In order to authorize a new LMS to make BLTI launch requests, ChemVantage must provide "
 					+ "the LMS administrator with<UL>"
-					+ "<LI>a Basic LTI launch URL (http://chem-vantage.appspot.com/BLTILaunch/)"
+					+ "<LI>a Basic LTI launch URL (http://chem-vantage.appspot.com/lti/)"
 					+ "<LI>an oauth_consumer_key (an identifying string e.g., 'webct.business.utah.edu')"
 					+ "<LI>a shared secret (random string or hex number).</UL>");
 			Query<BLTIConsumer> consumers = ofy.query(BLTIConsumer.class);
-			if (consumers.count() == 0) buf.append("(no BLTI consumers have been authorized yet)<p>");
+			if (consumers.count() == 0) buf.append("(no LTI consumers have been authorized yet)<p>");
 			else buf.append("<TABLE><TR><TH>Consumer Key</TH><TH>Secret</TH></TR>");
 			for (BLTIConsumer c : consumers) {
 				buf.append("<TR><TD>" + c.oauth_consumer_key + "</TD>");
@@ -221,8 +221,8 @@ public class Admin extends HttpServlet {
 			if (consumers.count() > 0) buf.append("</TABLE>");
 			buf.append("<FORM ACTION=Admin METHOD=POST>"
 					+ "Consumer Key: <INPUT TYPE=TEXT NAME=oauth_consumer_key>"
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Generate New BLTI Secret'>"
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete BLTI Consumer'>"
+					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Generate New Shared Secret'>"
+					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete LTI Consumer'>"
 					+ "</FORM>");
 		}
 		catch (Exception e) {
