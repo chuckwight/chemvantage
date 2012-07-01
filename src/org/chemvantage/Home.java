@@ -67,6 +67,30 @@ public class Home extends HttpServlet {
 			return;
 		}
 		
+		// Check to see if the user has a stored groupId from the LTILaunch 
+		// (usually follows account upgrade purchase)
+		try {
+			long groupId = Long.parseLong((String)session.getAttribute("GroupId"));
+			if (user.hasPremiumAccount()) {
+				user.changeGroups(groupId);
+				ofy.put(user);
+				session.removeAttribute("GroupId");
+			}
+		} catch (Exception e) {}
+		
+		// Check to see if the user has a stored resource_link_id from an LTILaunch
+		// (usually deferred to complete a Verification step)
+		String resource_link_id = (String)session.getAttribute("ResourceLinkId");
+		String lis_result_sourcedid = (String)session.getAttribute("LisResultSourcedid");
+		String redirectUrl = null;
+		if (resource_link_id != null) {
+			redirectUrl = "/lti?UserRequest=Go&resource_link_id=" + resource_link_id;
+			if (lis_result_sourcedid != null) redirectUrl += "&lis_result_sourcedid=" + lis_result_sourcedid;
+			response.sendRedirect(redirectUrl);
+			session.removeAttribute("ResourceLinkId");
+			session.removeAttribute("LisResultSourcedid");
+		}
+		
 		// Check to see if the user should provide additional contact information
 		if (user.requiresUpdatesNow()) {
 			response.sendRedirect("/Verification");      // enter name and email address
