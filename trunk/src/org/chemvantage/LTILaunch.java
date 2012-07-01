@@ -1,5 +1,5 @@
 /*  ChemVantage - A Java web application for online learning
-*   Copyright (C) 2011 ChemVantage LLC
+*   Copyright (C) 2012 ChemVantage LLC
 *   
 *	This servlet file is adapted from an open-source Java servlet 
 *	LTIProviderServlet written by Charles Severance at imsglobal.org
@@ -25,6 +25,7 @@ import java.io.PrintWriter;
 import java.net.URLEncoder;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.servlet.ServletConfig;
@@ -61,13 +62,25 @@ public class LTILaunch extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
-		doPost(request, response);
+		try {
+			User user = User.getInstance(request.getSession(true));
+			response.setContentType("text/html");
+			PrintWriter out = response.getWriter();
+			
+			if (user != null && "pick".equals(request.getParameter("UserRequest")))
+				out.println(pickResourceForm(user,request));
+			else if (user != null && "Go".equals(request.getParameter("UserRequest")))
+				response.sendRedirect(resourceUrlFinder(user,request));
+			else doPost(request, response);
+		} catch (Exception e) {}
 	}
 
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
 		
+		if (Login.lockedDown) doError(request,response,"ChemVantage is temporarily unavailable, sorry.",null,null);
+
 		String oauth_consumer_key = request.getParameter("oauth_consumer_key");
 		String userId = oauth_consumer_key + ":" + request.getParameter("user_id");
 		String context_id = request.getParameter("context_id");
@@ -78,7 +91,7 @@ public class LTILaunch extends HttpServlet {
 			doError(request, response, "Missing required parameter.", null, null);
 			return;
 		}
-
+		
 		// Lookup the secret that corresponds to the oauth_consumer_key in the AppEngine datastore
 		if (!sharedSecrets.containsKey(oauth_consumer_key)) {
 			String secret = BLTIConsumer.getSecret(oauth_consumer_key);
@@ -151,6 +164,12 @@ public class LTILaunch extends HttpServlet {
 				g.domain = domain.domainName;
 				ofy.put(g);
 			}
+			// Check to see if the LMS is providing an LIS Outcome Service URL (LTI v1.1)
+			String lisOutcomeServiceUrl = request.getParameter("lis_outcome_service_url");
+			if (lisOutcomeServiceUrl != null && !lisOutcomeServiceUrl.equals(g.lis_outcome_service_url)) {
+				g.lis_outcome_service_url=lisOutcomeServiceUrl;
+				ofy.put(g);
+			}							
 			
 			if (user.isInstructor()) {
 				if (g.instructorId.equals("unknown")) {  // assign the instructor to this group
@@ -161,77 +180,128 @@ public class LTILaunch extends HttpServlet {
 		}
 		if (g != null && user.processPremiumUpgrade(g)) user.changeGroups(g.id);
 		
-		// Check to see if the LMS is providing an LIS Outcome Service URL (LTI v1.1)
-		String lisOutcomeServiceUrl = request.getParameter("lis_outcome_service_url");
-		if (lisOutcomeServiceUrl == null) {  // No, the LMS does not support LIS Outcome Service (basic LTI v1.0)
+		// the lis_result_sourcedid is an optional LTI parameter that specifies a context gradebook entry point
+		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
+		
+		if (g==null) {  // no context data was contained in the launch parameters; send the user home
 			response.sendRedirect("/Home");
 			return;
 		}
-		else if (!lisOutcomeServiceUrl.equals(g.lis_outcome_service_url)) { // Yes, store the new URL in the Group object
-			g.lis_outcome_service_url=lisOutcomeServiceUrl;
-			ofy.put(g);
-		}				
+
+		// Use the resourcePicker method to discover the URL for the assignment associated with this link
+		String redirectUrl = resourceUrlFinder(user,request);
 		
-		
-		String redirectURL = "";
-		
-		// Check to see if the user needs to provide updated contact information
-		//if (user.requiresUpdatesNow()) redirectURL = "/Verification";
-		// Note: by deleting the line above we are allowing a basic account student with LTIv1.1 to complete an assignment but not join a group
-		// This has the advantage of not sending people all over the place to register, but will not show customized group assignments.
-		
-		// Check to see if the user is requesting a particular assignment, as denoted by the presence of a lis_result_sourcedid value
-		String lisResultSourcedId = request.getParameter("lis_result_sourcedid");
-		
-		if (lisResultSourcedId != null || user.isInstructor()) {
-			try {
-				Query<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",g.id);
-				Assignment myAssignment = null;
-				for (Assignment a : assignments) 
-					if (a.resourceLinkIds != null && a.resourceLinkIds.contains(resource_link_id)) {
-						myAssignment = a;
-						break;
+		if (redirectUrl.equals("/Verification")) {
+			session.setAttribute("ResourceLinkId", resource_link_id);
+			session.setAttribute("GroupId", g.id);
+			if (lis_result_sourcedid != null) session.setAttribute("LisResultSourcedid", lis_result_sourcedid);
+		} 
+
+		response.sendRedirect(redirectUrl);
+	}		
+	
+	String resourceUrlFinder(User user, HttpServletRequest request) {
+		String redirectUrl = "";
+		Date now = new Date();
+		Date sixMonthsFromNow = new Date(now.getTime() + 15768000000L);  // exact time far into the future
+		try {  
+			// a resource_link_id string should be provided with every valid LTI launch
+			String resource_link_id = request.getParameter("resource_link_id");
+			
+			// the lis_result_sourcedid is an optional LTI parameter that specifies a context gradebook entry point
+			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
+			
+			// if the user was not provisioned with a premium account automatically (purchase required):
+			if (user.myGroupId <= 0 || user.requiresUpdatesNow()) return "/Verification";
+			
+			Query<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",user.myGroupId);
+			Assignment myAssignment = null;
+			for (Assignment a : assignments) 
+				if (a.resourceLinkIds != null && a.resourceLinkIds.contains(resource_link_id)) {
+					myAssignment = a;
+					break;
+				}
+			if (myAssignment == null) { // try to find it based on the request data
+				String assignmentType = request.getParameter("AssignmentType");
+				long topicId = 0;
+				if (assignmentType != null) {
+					redirectUrl = "/" + assignmentType;
+					try {
+						topicId = Long.parseLong(request.getParameter("TopicId"));
+						redirectUrl += "?TopicId=" + topicId;
+						myAssignment = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType",assignmentType).filter("topicId",topicId).get();
+					} catch (Exception e) {
+						myAssignment = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType",assignmentType).get();	
 					}
-				if (myAssignment != null) {
-					if (redirectURL.isEmpty()) {  // user is good to go. Send her to the assignment
-						redirectURL = "/" + myAssignment.assignmentType + "?TopicId=" + myAssignment.topicId; // redirect user to an assignment
-						if (lisResultSourcedId != null) redirectURL +=  "&lis_result_sourcedid=" + URLEncoder.encode(lisResultSourcedId,"UTF-8"); // include the gradebook cell id
-					} else {  // redirecting to Verification; store the lisResultSourcedId in a transaction for later use
-						Date now = new Date();
-						Topic topic = ofy.get(Topic.class,myAssignment.topicId);
-						if (myAssignment.assignmentType.equals("Quiz")) {
-							Date fifteenMinutesAgo = new Date(now.getTime()-15*60000);  // 15 minutes ago
-							QuizTransaction qt = ofy.query(QuizTransaction.class).filter("userId",user.id).filter("topicId",topic.id).filter("graded",null).filter("downloaded >",fifteenMinutesAgo).get();
-							if (qt == null) {
-								qt = new QuizTransaction(topic.id,topic.title,user.id,now,null,0,0,request.getRemoteAddr());
-								if (request.getParameter("lis_result_sourcedid")!=null) qt.lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
-								ofy.put(qt);  // creates a long id value to use in random number generator
-							}	
-						} else if (myAssignment.assignmentType.equals("Homework")) {
-							HWTransaction ht = new HWTransaction(0L,topic.id,topic.title,user.id,now,0L,0,10,request.getRequestURI());
-							String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
-							if (lis_result_sourcedid != null) ht.lis_result_sourcedid = lis_result_sourcedid;
-							ofy.put(ht);
+					if (myAssignment == null) {
+						myAssignment = new Assignment(user.myGroupId,topicId,assignmentType,sixMonthsFromNow);
+						Group g = ofy.find(Group.class,user.myGroupId);
+						if (g != null) {
+							g.setGroupTopicIds();
+							ofy.put(g);
 						}
 					}
+					if (user.isInstructor()) {  // if this is the instructor, remember this association for future launches
+						myAssignment.resourceLinkIds.add(resource_link_id);
+						ofy.put(myAssignment);
+					}
 				}
-				else if (user.isInstructor()) redirectURL = "/Groups?UserRequest=MakeAssignmentLink&GroupId=" + g.id + "&resource_link_id=" + URLEncoder.encode(resource_link_id,"UTF-8");
-			} catch (Exception e) {
 			}
-		}
-		if (redirectURL.isEmpty()) redirectURL="/Home";
-		response.sendRedirect(redirectURL);
-	}
 
-	boolean eligibleToJoin(User user) {
-		// This method checks to see if the user is eligible to join a new group
-		if (user.hasPremiumAccount()) return true;
-		Domain domain = ofy.query(Domain.class).filter("domainName", user.domain).get();
-		if (domain == null) return false;
-		if (domain.seatsAvailable>0 || domain.freeTrialExpires.after(new Date())) return true;
-		return false;
+			if (myAssignment == null) {  // assignment is unknown at this point; go pick the right one
+				// if the LMS is not supporting the LIS extension services, just send teh user to the Home page
+				Group g = ofy.find(Group.class,user.myGroupId);
+				if (g.lis_outcome_service_url == null || g.lis_outcome_service_url.isEmpty() && !user.isInstructor()) redirectUrl = "/Home"; 
+				else redirectUrl = "/lti?UserRequest=pick&resource_link_id="+resource_link_id;  // send the user to the pickResource page
+			} else {  // found the assignment; configure the correct URL for redirection
+				redirectUrl = "/" + myAssignment.assignmentType;
+				if (myAssignment.topicId>0) redirectUrl += "?TopicId=" + myAssignment.topicId;
+			}
+			if (lis_result_sourcedid != null) redirectUrl += "&lis_result_sourcedid=" + URLEncoder.encode(lis_result_sourcedid,"UTF-8");
+		} catch (Exception e) {
+			redirectUrl="/Home";
+		}
+		return redirectUrl;
 	}
 	
+	String pickResourceForm(User user,HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer();
+		try {
+			String resource_link_id = request.getParameter("resource_link_id"); if (resource_link_id == null) return "/Home";
+			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
+			if (user.isInstructor()) {
+				buf.append("<h3>Choose A ChemVantage Resource For This Link</h3>"
+						+ "Please select the ChemVantage page that should be associated with the link "
+						+ "that you just activated in your learning management system. "
+						+ "ChemVantage will remember this choice and send students directly to the page.<p>");
+
+				buf.append("<form method=GET><input type=hidden name=resource_link_id value='" + resource_link_id + "'>"
+						+ "<input type=hidden name=AssignmentType value=Home><input type=submit name=UserRequest value=Go>"
+						+ " to the <b>ChemVantage Home Page</b> (select this if the link is not associated with an assignment)</form><p>");
+				buf.append("or, select the appropriate assignment type and topic below:<p>");
+				buf.append("<table><form method=GET><input type=hidden name='resource_link_id' value='" + resource_link_id + "'>");
+				if (lis_result_sourcedid != null) buf.append("<input type=hidden name='lis_result_sourcedid' value='" + URLEncoder.encode(lis_result_sourcedid,"UTF-8") + "'>");
+				buf.append("<tr><td><input type=radio name=AssignmentType value=Quiz>Quiz</a></td><td rowspan=2>");
+				buf.append("<SELECT NAME=TopicId><OPTION Value='0' SELECTED>Select a topic</OPTION>");			
+				List<Topic> topics = ofy.query(Topic.class).order("orderBy").list();
+				for (Topic t : topics) if (!t.orderBy.equals("Hide")) buf.append("<OPTION VALUE='" + t.id + "'>" + t.title + "</OPTION>");			 
+				buf.append("</SELECT><input type=submit name=UserRequest value=Go></td></tr>"
+						+ "<tr><td><input type=radio name=AssignmentType value=Homework>Homework</a></td></tr>"
+						+ "</form></table>");
+			} else {
+				buf.append("<h3>Missing ChemVantage Assignment</h3>"
+						+ "The link that you just clicked in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<p>"
+						+ "<b>Please ask your instructor to click the LMS assignment link to make this missing association.</b><p>"
+						+ "You may go to the Home page now to work on any quizzes or homework problems.  However, no scores can be "
+						+ "reported back to the LMS grade book until after your instructor has completed the link to an assignment.<p>"
+						+ "<a href=/Home>Go to the ChemVantage Home Page now</a>");
+			}
+		} catch (Exception e) {
+			buf.append(e.getMessage());
+		}
+		return buf.toString();
+	}
+
 	public void doError(HttpServletRequest request, HttpServletResponse response, 
 			String s, String message, Exception e)
 	throws java.io.IOException

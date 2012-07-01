@@ -305,12 +305,12 @@ public class Verification extends HttpServlet {
 						+ "If your name and/or email shown above is not correct, please send a message to "
 						+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><br>giving detailed "
 						+ "instructions for any changes that are needed.<p>"); 
-				if (!user.requiresUpdates()) {
+				if (!(user.firstName.isEmpty() || user.lastName.isEmpty() || user.email.isEmpty() || user.myGroupId<0)) {
 					buf.append("<style type='text/css'>a.nav, a.nav:link, a.nav:visited {display:block; width:250px; height:35px; "
 							+ "background:red; border:1px solid #000; margin-top:2px; text-align:center; text-decoration:none; "
 							+ "font-family:verdana, arial, sans-serif; font-size:15px; color:white; line-height:35px; overflow:hidden;}"
 							+ "a.nav:hover {color:#fff; background:#800;}</style>");
-					buf.append("<a class='nav' href='/Home'>Go To The Home Page Now</a>");
+					buf.append("<a class='nav' href='/Home'>Continue</a>");
 				}
 			}
 			boolean showDuplicateAccounts = "Get Authorization Code".equals(request.getParameter("UserRequest")) || "Merge This Account With Mine".equals(request.getParameter("UserRequest"));
