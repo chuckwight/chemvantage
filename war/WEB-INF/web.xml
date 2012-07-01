@@ -28,16 +28,6 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 	</servlet-mapping>
 	
 	<servlet>
-		<servlet-name>BLTILaunch</servlet-name>
-		<servlet-class>org.chemvantage.BLTILaunch</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>BLTILaunch</servlet-name>
-		<url-pattern>/BLTILaunch</url-pattern>
-		<url-pattern>/BLTILaunch/</url-pattern>
-	</servlet-mapping>
-	
-	<servlet>
 		<servlet-name>CalculateScores</servlet-name>
 		<servlet-class>org.chemvantage.CalculateScores</servlet-class>
 	</servlet>
@@ -172,6 +162,8 @@ http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" version="2.5">
 		<servlet-name>LTILaunch</servlet-name>
 		<url-pattern>/lti</url-pattern>
 		<url-pattern>/lti/</url-pattern>
+		<url-pattern>/BLTILaunch/</url-pattern>
+		<url-pattern>/BLTILaunch</url-pattern>
 	</servlet-mapping>
 	
 	<servlet>
