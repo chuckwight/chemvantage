@@ -83,12 +83,13 @@ public class Home extends HttpServlet {
 		String resource_link_id = (String)session.getAttribute("ResourceLinkId");
 		String lis_result_sourcedid = (String)session.getAttribute("LisResultSourcedid");
 		String redirectUrl = null;
-		if (resource_link_id != null) {
+		if (resource_link_id != null && user.myGroupId>0) {
 			redirectUrl = "/lti?UserRequest=Go&resource_link_id=" + resource_link_id;
 			if (lis_result_sourcedid != null) redirectUrl += "&lis_result_sourcedid=" + lis_result_sourcedid;
 			response.sendRedirect(redirectUrl);
 			session.removeAttribute("ResourceLinkId");
 			session.removeAttribute("LisResultSourcedid");
+			return;
 		}
 		
 		// Check to see if the user should provide additional contact information
