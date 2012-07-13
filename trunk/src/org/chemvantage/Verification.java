@@ -231,7 +231,8 @@ public class Verification extends HttpServlet {
 			buf.append("<TR><TD ALIGN=RIGHT>Account type: </TD><TD>" + (user.hasPremiumAccount()?"premium":"basic") + "</TD></TR>");
 			if (user.myGroupId>0L) { // user already belongs to a group
 				Group myGroup = ofy.find(Group.class,user.myGroupId);
-				buf.append("<TR><TD ALIGN=RIGHT>Group:</TD><TD>" + myGroup.description + " (" + myGroup.getInstructorBothNames() + ")</TD></TR>");
+				if (!user.hasPremiumAccount() || myGroup==null) user.changeGroups(0L);
+				else buf.append("<TR><TD ALIGN=RIGHT>Group:</TD><TD>" + myGroup.description + " (" + myGroup.getInstructorBothNames() + ")</TD></TR>");
 			}
 
 			if (nameRequired || emailRequired) {
@@ -252,6 +253,7 @@ public class Verification extends HttpServlet {
 					for (Group g : allGroups) if (!g.isActive()) allGroups.remove(g);
 					
 					if (allGroups.size() == 0) {  // there are not yet any groups for this domain
+						user.changeGroups(0L);
 						buf.append("No groups have been created in this domain yet.");
 					} else {					
 						buf.append("<SELECT NAME=GroupId "

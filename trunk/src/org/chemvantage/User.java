@@ -557,7 +557,7 @@ public class User implements Comparable<User>,Serializable {
 	boolean processPremiumUpgrade(Group newGroup) {
 		// this routine converts the user account to premium, if applicable
 		try {
-			// check out the following line that returns true of domin == null
+			// check out the following line that returns true of domain == null
 			// does this allow anyone not in a domain (UserService entry) to join any group for free?
 			// test the effect of eliminating this one check and returning false instead to
 			// force these users to pay $4.99  Keeps people in line with the LMS and reduces account proliferation
