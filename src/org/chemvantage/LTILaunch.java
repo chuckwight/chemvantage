@@ -178,12 +178,16 @@ public class LTILaunch extends HttpServlet {
 				}
 			}
 		}
-		if (g != null && user.processPremiumUpgrade(g)) user.changeGroups(g.id);
-		
+
+		// assign the user to a new group, if necessary and eligible
+		if (g != null && user.myGroupId != g.id && user.processPremiumUpgrade(g)) user.changeGroups(g.id);
+		if (!user.hasPremiumAccount() && user.myGroupId > 0) user.changeGroups(0L);  // boots basic users out of groups
+				
 		// the lis_result_sourcedid is an optional LTI parameter that specifies a context gradebook entry point
 		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
 		
 		if (g==null) {  // no context data was contained in the launch parameters; send the user home
+			user.changeGroups(0L);
 			response.sendRedirect("/Home");
 			return;
 		}

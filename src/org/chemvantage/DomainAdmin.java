@@ -265,7 +265,9 @@ public class DomainAdmin extends HttpServlet {
 					+ "</TD></TR>");
 			if (usr.alias != null) buf.append("<TR><TD ALIGN=RIGHT>Alias: </TD><TD>" + usr.alias + "</TD></TR>");
 			
-			buf.append("<TR><TD ALIGN=RIGHT>Group: </TD><TD>" + groupSelectBox(usr.myGroupId,usr.domain) + "</TD></TR>");
+			if (usr.hasPremiumAccount() || eligibleToJoin(usr,domainName)) buf.append("<TR><TD ALIGN=RIGHT>Group: </TD><TD>" + groupSelectBox(usr.myGroupId,usr.domain) + "</TD></TR>");
+			else buf.append("<TR><TD ALIGN=RIGHT>Group: </TD><TD>(none)</TD></TR>");
+			
 			buf.append("\n<TR><TD ALIGN=RIGHT>Last Login: </TD>"
 					+ "<TD>" + usr.lastLogin + "</TD></TR>"
 					+ "\n</TABLE>");
@@ -320,6 +322,16 @@ public class DomainAdmin extends HttpServlet {
 		return buf.toString();
 	}
 
+	boolean eligibleToJoin(User user,String domainName) {
+		// This method checks to see if the user is eligible to join a new group
+		//if (user.hasPremiumAccount() || user.domain==null) return true;
+		if (user.hasPremiumAccount()) return true;
+		Domain domain = ofy.query(Domain.class).filter("domainName", domainName).get();
+		if (domain == null) return false;
+		if (domain.seatsAvailable>0 || domain.freeTrialExpires.after(new Date())) return true;
+		return false;
+	}
+	
 	String groupSelectBox(long myGroupId,String domain) {
 		StringBuffer buf = new StringBuffer();
 		try {
