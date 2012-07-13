@@ -101,7 +101,7 @@ public class Admin extends HttpServlet {
 				User usr = ofy.get(User.class,request.getParameter("UserId"));
 				searchString = usr.getFullName();
 				ofy.delete(usr);
-			} else if (userRequest.equals("Generate New BLTI Secret")) {
+			} else if (userRequest.equals("Generate New Shared Secret")) {
 				createBLTIConsumer(request);
 			} else if (userRequest.equals("Delete BLTI Consumer")) {
 				deleteBLTIConsumer(request);
