@@ -281,7 +281,15 @@ public class Scores extends HttpServlet {
 						+ "by clicking the assignment link in your LMS.<br>Otherwise, ChemVantage has no way of knowing how "
 						+ "to return your score for credit.</span><p>For a complete record of your assignments, click "
 						+ "here for <a href=Scores?UserRequest=AllQuizzes>all quizzes</a> or "
-						+ "<a href=Scores?UserRequest=AllHomework>all homework</a> transactions.");
+						+ "<a href=Scores?UserRequest=AllHomework>all homework</a> transactions.<p>"
+						+ "<b>Are Your Scores Being Reported To Your LMS Properly?</b><br>"
+						+ "If not, please follow these steps to fix the problem. For each incomplete score:<ol>"
+						+ "<li>Click on the assignment link in your LMS. This will send a code "
+						+ "from the LMS to ChemVantage that is required to report your current score."
+						+ "<li>Submit the assignment (quiz or homework problem). A score of zero is fine.</ol>"
+						+ "ChemVantage will report your best score on that assignment to your LMS. How that score is "
+						+ "handled in the LMS grade book depends on the properties of the LMS.  Some systems will report "
+						+ "the most recent score, some the best score, and still others will enforce local deadlines.");
 				return buf.toString();
 			}
 			// Calculate the next deadline:
