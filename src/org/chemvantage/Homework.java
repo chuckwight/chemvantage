@@ -158,7 +158,6 @@ public class Homework extends HttpServlet {
 								continue;  // this catches cases where an assigned question no longer exists
 							}
 						}
-						//Question q = ofy.get(k);
 						q.setParameters(user.id.hashCode());
 						buf.append("\n<TR VALIGN=TOP><TD>");
 						if (user.getHWQuestionScore(q.id) > 0) buf.append("<IMG SRC=/images/checkmark.gif ALT='OK'>");
@@ -228,14 +227,64 @@ public class Homework extends HttpServlet {
 			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			Group myGroup = user.myGroupId>0?ofy.find(Group.class,user.myGroupId):null;
-			//long myGroupId = myGroup==null?0L:myGroup.id;
 			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
 			df.setTimeZone(tz);
+			String studentAnswer[] = request.getParameterValues(Long.toString(questionId));
+			if (studentAnswer == null || studentAnswer.length==0) {
+				studentAnswer = new String[1];
+				studentAnswer[0] = "";
+			}
+			else for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
+			
+			//  ================ New Section for Retry Delay =================== //
+			Date yesterday = new Date(now.getTime()-86400000);  // 24 hours ago
+			List<HWTransaction> recentTransactions = ofy.query(HWTransaction.class).filter("questionId",q.id).filter("userId",user.id).filter("graded >",yesterday).list();
+			long retryDelayMinutes = recentTransactions.size();  // one minute for each submission in last 24 hr 
+			if (retryDelayMinutes > 5) retryDelayMinutes = 5;    //up to 5 minutes max
+			Date lastSubmission = new Date(0L);
+			for (HWTransaction ht : recentTransactions) if (ht.graded.after(lastSubmission)) lastSubmission = ht.graded;
+			long secondsRemaining = retryDelayMinutes*60 - (now.getTime()-lastSubmission.getTime())/1000;
+			if (secondsRemaining > 5) {  
+				buf.append("<h2>Please Wait For The Retry Delay To Complete</h2>");
+				buf.append("<b>" + user.getBothNames() + "</b><br>\n");
+				buf.append(df.format(now));
+				buf.append("<p>The retry delay for this homework problem is <span id=delay style='color: red'></span><br>");
+				buf.append("Please wait until the retry delay times out and then resubmit your answer for scoring.<p>");
+				buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework>"
+						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=GradeHomework>"
+						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
+						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
+						+ q.print(studentAnswer[0]) + "<br>");
+				
+				buf.append("<INPUT TYPE=SUBMIT id='RetryButton' DISABLED=true VALUE='Grade This Exercise'></FORM>");
+				buf.append("<SCRIPT language='JavaScript'>"
+						+ "var seconds;var minutes;var oddSeconds;"
+						+ "var endTime = new Date().getTime() + " + secondsRemaining + "*1000;"
+						+ "function countdown() {"
+						+ " var now = new Date().getTime();"
+						+ " seconds=Math.round((endTime-now)/1000);"
+						+ " minutes = seconds<0?Math.ceil(seconds/60):Math.floor(seconds/60);"
+						+ " oddSeconds = seconds%60;"
+						+ " if (seconds > 0) {"
+						+ "  document.getElementById('delay').innerHTML = minutes + ' minutes ' + oddSeconds + ' seconds.';"
+						+ "  setTimeout('countdown()',1000);"
+						+ " }"
+						+ " else {"
+						+ "  document.getElementById('delay').innerHTML = minutes + ' minutes ' + oddSeconds + ' seconds.';"
+						+ "  document.getElementById('RetryButton').disabled=false;"
+						+ " }"
+						+ "}"
+						+ "countdown();"
+						+ "</SCRIPT>"); 
+				return buf.toString();
+			}
+			//  ================ End New Section for Retry Delay =================== //
 
 			buf.append("<h2>Homework Results - " + topic.title + " (" + subject.title + ")</h2>\n");
 			buf.append("<b>" + user.getBothNames() + "</b><br>\n");
 			buf.append(df.format(now));
-			
+
+			/*
 			// Check submissions for guessing behavior:
 			 if (user.moreThan1RecentAttempts(questionId,2)) { // in the past 2 minutes
 				buf.append("<h3><FONT COLOR=RED>Your Response Was Not Graded</FONT></h3>"
@@ -247,44 +296,42 @@ public class Homework extends HttpServlet {
 				buf.append("<p><a href=Homework?TopicId=" + topic.id + "&r=" + new Random().nextInt(99) + ">Return to this homework assignment</a>");
 				return buf.toString();
 			};
-			
+*/			
 			q.setParameters(user.id.hashCode());
 			int studentScore = 0;
 			int possibleScore = q.pointValue;
-			String studentAnswer[] = request.getParameterValues(Long.toString(questionId));
-			if (studentAnswer != null) {
-				for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
-				if (studentAnswer[0].length() > 0) { // an answer was submitted
-					// record the response in the Responses table for question debugging:
-					studentScore = q.isCorrect(studentAnswer[0])?q.pointValue:0;
-					Queue queue = QueueFactory.getDefaultQueue();
-					queue.add(withUrl("/ResponseServlet")
-							.param("AssignmentType","Homework")
-							.param("TopicId", Long.toString(topic.id))
-							.param("QuestionId", Long.toString(q.id))
-							.param("StudentResponse", studentAnswer[0])
-							.param("CorrectAnswer", q.getCorrectAnswer())
-							.param("Score", Integer.toString(studentScore))
-							.param("PossibleScore", Integer.toString(possibleScore))
-							.param("UserId", user.id));
-					
-					HWTransaction ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,0L,studentScore,possibleScore,request.getRequestURI());
-					String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
-					if (lis_result_sourcedid != null) ht.lis_result_sourcedid = lis_result_sourcedid;
-					ofy.put(ht);
-					// create/update/store a HomeworkScore object
-					try {
-						long assignmentId = myGroup.getAssignmentId("Homework",topic.id);
-						if (assignmentId > 0) { // assignment exists; save a Score object
-							Assignment a = ofy.find(Assignment.class,assignmentId);
-							Score s = Score.getInstance(user.id,a);
-							ofy.put(s);
-							if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",user.id));  // put report into the Task Queue
-						}	
-					} catch (Exception e2) {
-					}
+			
+			if (studentAnswer[0].length() > 0) { // an answer was submitted
+				// record the response in the Responses table for question debugging:
+				studentScore = q.isCorrect(studentAnswer[0])?q.pointValue:0;
+				Queue queue = QueueFactory.getDefaultQueue();
+				queue.add(withUrl("/ResponseServlet")
+						.param("AssignmentType","Homework")
+						.param("TopicId", Long.toString(topic.id))
+						.param("QuestionId", Long.toString(q.id))
+						.param("StudentResponse", studentAnswer[0])
+						.param("CorrectAnswer", q.getCorrectAnswer())
+						.param("Score", Integer.toString(studentScore))
+						.param("PossibleScore", Integer.toString(possibleScore))
+						.param("UserId", user.id));
+
+				HWTransaction ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,0L,studentScore,possibleScore,request.getRequestURI());
+				String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
+				if (lis_result_sourcedid != null) ht.lis_result_sourcedid = lis_result_sourcedid;
+				ofy.put(ht);
+				// create/update/store a HomeworkScore object
+				try {
+					long assignmentId = myGroup.getAssignmentId("Homework",topic.id);
+					if (assignmentId > 0) { // assignment exists; save a Score object
+						Assignment a = ofy.find(Assignment.class,assignmentId);
+						Score s = Score.getInstance(user.id,a);
+						ofy.put(s);
+						if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",user.id));  // put report into the Task Queue
+					}	
+				} catch (Exception e2) {
 				}
 			}
+
 			// Send response to the user:
 			if (studentScore > 0) {
 				buf.append("<h3>Congratulations. You answered the question correctly.</h3>");
@@ -309,6 +356,8 @@ public class Homework extends HttpServlet {
 					buf.append("<h3>Incorrect Answer</h3>Your answer was scored incorrect because it does not agree with the "
 							+ "answer in the database.");
 				}
+				if (retryDelayMinutes < 5) retryDelayMinutes++;
+				buf.append("<p><b>The retry delay for this question is " + retryDelayMinutes + (retryDelayMinutes>1?" minutes. ":" minute. ") + "</b>");
 			}  
 			else {
 				buf.append("<h3>The answer to the question was left blank.</h3>");
