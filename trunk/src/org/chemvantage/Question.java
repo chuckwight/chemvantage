@@ -261,7 +261,12 @@ public class Question implements Serializable {
 		return buf.toString();
 	}
 	*/
-	String print() {  // this method includes functionality to access spell checking and Google searches
+	
+	String print() {
+		return print("");
+	}
+	
+	String print(String studentAnswer) {  // this method includes functionality to access spell checking and Google searches
 		StringBuffer buf = new StringBuffer();
 		char choice = 'a';
 		String q = new String(text + " " + tag).replaceAll("\\<[^>]*>","").trim();
@@ -272,7 +277,7 @@ public class Question implements Serializable {
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best answer:</FONT><br>");
 			buf.append("<UL>");
 			for (int i = 0; i < nChoices; i++) {
-				buf.append("<input type=radio name=" + this.id + " value=" + choice + ">" + choices.get(i) + "<br>");
+				buf.append("<input type=radio name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED>":">") + choices.get(i) + "<br>");
 				choice++;
 			}
 			buf.append("</UL>");
@@ -281,8 +286,8 @@ public class Question implements Serializable {
 			buf.append("<b>" + text + "</b><br>");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select true or false:</FONT><br>");
 			buf.append("<UL>");
-			buf.append("<input type=radio name=" + this.id + " value='true'> True<br>");
-			buf.append("<input type=radio name=" + this.id + " value='false'> False<br>");
+			buf.append("<input type=radio name=" + this.id + " value='true'" + (studentAnswer.equals("true")?" CHECKED>":">") + " True<br>");
+			buf.append("<input type=radio name=" + this.id + " value='false'" + (studentAnswer.equals("false")?" CHECKED>":">") + " False<br>");
 			buf.append("</UL>");
 			break;
 		case 3: // Select Multiple
@@ -290,7 +295,7 @@ public class Question implements Serializable {
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><br>");
 			buf.append("<UL>");
 			for (int i = 0; i < nChoices; i++) {
-				buf.append("<input type=checkbox name=" + this.id + " value=" + choice + ">" + choices.get(i) + "<br>");
+				buf.append("<input type=checkbox name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED>":">") + choices.get(i) + "<br>");
 				choice++;
 			}
 			buf.append("</UL>");
@@ -302,14 +307,14 @@ public class Question implements Serializable {
 					+ "onClick=\"javascript: document.getElementById('status" + this.id + "')"
 					+ ".innerHTML='checking...';ajaxSpellCheck(" + this.id + ");\">Check Spelling</button>"
 					+ "<a target=_blank href=" + searchURL + ">Google Search</a></div>");
-			buf.append("<input id=" + this.id + " type=text name=" + this.id + ">");
+			buf.append("<input id=" + this.id + " type=text name=" + this.id + " value='" + CharHider.quot2html(studentAnswer) + "'>");
 			buf.append("<b>" + tag + "</b><br>");
 			break;
 		case 5: // Numeric Answer
 			buf.append("<b>" + parseString(text) + "</b><br>");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value to " 
 					+ requiredPrecision + "% precision. Express scientific notation like 4.294E-15</FONT><br>");
-			buf.append("<input type=text name=" + this.id + ">");
+			buf.append("<input type=text name=" + this.id + " value='" + studentAnswer + "'>");
 			buf.append("<b>" + parseString(tag) + "</b><br>");
 			break;        
 		}
