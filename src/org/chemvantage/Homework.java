@@ -46,6 +46,7 @@ public class Homework extends HttpServlet {
 	Objectify ofy = dao.ofy();
 	Subject subject = dao.getSubject();
 	static Map<Key<Question>,Question> hwQuestions = new HashMap<Key<Question>,Question>();
+	int retryDelayMinutes = 2;  // minimum time between answer submissions for any single question
 
 	public String getServletInfo() {
 		return "This servlet presents a homework assignment for the user.";
@@ -129,8 +130,9 @@ public class Homework extends HttpServlet {
 
 			buf.append("\nHomework Rules<UL>");
 			buf.append("\n<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
+			buf.append("\n<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question.</LI>");
 			buf.append("\n<LI>Most questions are customized, so the correct answers are different for each student.</LI>");
-			buf.append("\n<LI>For each topic, the server reports your total score and the total number of submissions.</LI>");
+			buf.append("\n<LI>For each topic, the server tracks your total score and the total number of submissions.</LI>");
 			buf.append("\n<LI>A checkmark will appear to the left of each correctly solved problem.</LI>");
 			if (myGroup != null) {
 				buf.append("However, class credit for assigned problems is awarded only if the answer is submitted prior to the deadline.</LI>");
@@ -237,19 +239,24 @@ public class Homework extends HttpServlet {
 			else for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
 			
 			//  ================ New Section for Retry Delay =================== //
-			Date yesterday = new Date(now.getTime()-86400000);  // 24 hours ago
-			List<HWTransaction> recentTransactions = ofy.query(HWTransaction.class).filter("questionId",q.id).filter("userId",user.id).filter("graded >",yesterday).list();
-			long retryDelayMinutes = recentTransactions.size();  // one minute for each submission in last 24 hr 
-			if (retryDelayMinutes > 5) retryDelayMinutes = 5;    //up to 5 minutes max
-			Date lastSubmission = new Date(0L);
-			for (HWTransaction ht : recentTransactions) if (ht.graded.after(lastSubmission)) lastSubmission = ht.graded;
-			long secondsRemaining = retryDelayMinutes*60 - (now.getTime()-lastSubmission.getTime())/1000;
-			if (secondsRemaining > 5) {  
+			Date minutesAgo = new Date(now.getTime()-retryDelayMinutes*60000);  // 24 hours ago
+			List<HWTransaction> recentTransactions = ofy.query(HWTransaction.class).filter("questionId",q.id).filter("userId",user.id).filter("graded >",minutesAgo).list();
+			long secondsRemaining = 0;
+			if (recentTransactions.size()>0) {
+				Date lastSubmission = new Date(0L);
+				for (HWTransaction ht : recentTransactions) if (ht.graded.after(lastSubmission)) lastSubmission = ht.graded;
+				secondsRemaining = retryDelayMinutes*60 - (now.getTime()-lastSubmission.getTime())/1000;
+			}
+			if (secondsRemaining > 0) {  
 				buf.append("<h2>Please Wait For The Retry Delay To Complete</h2>");
 				buf.append("<b>" + user.getBothNames() + "</b><br>\n");
 				buf.append(df.format(now));
-				buf.append("<p>The retry delay for this homework problem is <span id=delay style='color: red'></span><br>");
-				buf.append("Please wait until the retry delay times out and then resubmit your answer for scoring.<p>");
+				buf.append("<p>The retry delay for this homework problem is <span id=delay style='color: red'></span><p>");
+				buf.append("Please take these few moments to check your work carefully.  You can sometimes find alternate routes to the<br>"
+						+ "same solution, or it may be possible to use your answer to back-calculate the data given in the problem.<p>"
+						+ "Alternatively, you may wish to <a href=Homework?TopicId=" + topic.id + "&r=" + new Random().nextInt(9999)
+						+ ">return to this homework assignment</a> to work on another problem.<p>");
+		
 				buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework>"
 						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=GradeHomework>"
 						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
@@ -356,8 +363,7 @@ public class Homework extends HttpServlet {
 					buf.append("<h3>Incorrect Answer</h3>Your answer was scored incorrect because it does not agree with the "
 							+ "answer in the database.");
 				}
-				if (retryDelayMinutes < 5) retryDelayMinutes++;
-				buf.append("<p><b>The retry delay for this question is " + retryDelayMinutes + (retryDelayMinutes>1?" minutes. ":" minute. ") + "</b>");
+				buf.append("<p>The retry delay for this question is " + retryDelayMinutes + (retryDelayMinutes>1?" minutes. ":" minute. "));
 			}  
 			else {
 				buf.append("<h3>The answer to the question was left blank.</h3>");
