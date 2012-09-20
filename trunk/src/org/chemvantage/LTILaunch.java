@@ -253,15 +253,12 @@ public class LTILaunch extends HttpServlet {
 			}
 
 			if (myAssignment == null) {  // assignment is unknown at this point; go pick the right one
-				// if the LMS is not supporting the LIS extension services, just send teh user to the Home page
-				Group g = ofy.find(Group.class,user.myGroupId);
-				if (g.lis_outcome_service_url == null || g.lis_outcome_service_url.isEmpty() && !user.isInstructor()) redirectUrl = "/Home"; 
-				else redirectUrl = "/lti?UserRequest=pick&resource_link_id="+resource_link_id;  // send the user to the pickResource page
+				redirectUrl = "/lti?UserRequest=pick&resource_link_id="+resource_link_id;  // send the user to the pickResource page
 			} else {  // found the assignment; configure the correct URL for redirection
 				redirectUrl = "/" + myAssignment.assignmentType;
 				if (myAssignment.topicId>0) redirectUrl += "?TopicId=" + myAssignment.topicId;
 			}
-			if (lis_result_sourcedid != null) redirectUrl += "&lis_result_sourcedid=" + URLEncoder.encode(lis_result_sourcedid,"UTF-8");
+			if (lis_result_sourcedid != null && !redirectUrl.equals("/Home")) redirectUrl += "&lis_result_sourcedid=" + URLEncoder.encode(lis_result_sourcedid,"UTF-8");
 		} catch (Exception e) {
 			redirectUrl="/Home";
 		}
