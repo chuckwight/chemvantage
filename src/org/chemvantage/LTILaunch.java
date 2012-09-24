@@ -151,7 +151,13 @@ public class LTILaunch extends HttpServlet {
 			user.setIsInstructor(true);
 			user.setPremium(true);
 			ofy.put(user);
-		}
+		}		
+		
+		// Check to see if the LMS is providing an LIS Outcome Service URL (LTI v1.1)
+		String lisOutcomeServiceUrl = request.getParameter("lis_outcome_service_url");
+		// the lis_result_sourcedid is an optional LTI parameter that specifies a context gradebook entry point
+		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
+		boolean supportsLIS = lisOutcomeServiceUrl != null && lisOutcomeServiceUrl != null;
 		
 		// Provision a new context (group), if necessary and put the user into it
 		Group g = null;
@@ -164,9 +170,8 @@ public class LTILaunch extends HttpServlet {
 				g.domain = domain.domainName;
 				ofy.put(g);
 			}
-			// Check to see if the LMS is providing an LIS Outcome Service URL (LTI v1.1)
-			String lisOutcomeServiceUrl = request.getParameter("lis_outcome_service_url");
-			if (lisOutcomeServiceUrl != null && !lisOutcomeServiceUrl.equals(g.lis_outcome_service_url)) {
+			
+			if (supportsLIS && !lisOutcomeServiceUrl.equals(g.lis_outcome_service_url)) {  // update the URL as a Group property
 				g.lis_outcome_service_url=lisOutcomeServiceUrl;
 				ofy.put(g);
 			}							
@@ -183,10 +188,8 @@ public class LTILaunch extends HttpServlet {
 		if (g != null && user.myGroupId != g.id && user.processPremiumUpgrade(g)) user.changeGroups(g.id);
 		if (!user.hasPremiumAccount() && user.myGroupId > 0) user.changeGroups(0L);  // boots basic users out of groups
 				
-		// the lis_result_sourcedid is an optional LTI parameter that specifies a context gradebook entry point
-		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
 		
-		if (g==null) {  // no context data was contained in the launch parameters; send the user home
+		if (g==null) {  // no context data was contained in the launch parameters; send the user to the Home page
 			user.changeGroups(0L);
 			response.sendRedirect("/Home");
 			return;
@@ -198,7 +201,7 @@ public class LTILaunch extends HttpServlet {
 		if (redirectUrl.equals("/Verification")) {
 			session.setAttribute("ResourceLinkId", resource_link_id);
 			session.setAttribute("GroupId", g.id);
-			if (lis_result_sourcedid != null) session.setAttribute("LisResultSourcedid", lis_result_sourcedid);
+			if (supportsLIS) session.setAttribute("LisResultSourcedid", lis_result_sourcedid);
 		} 
 
 		response.sendRedirect(redirectUrl);
