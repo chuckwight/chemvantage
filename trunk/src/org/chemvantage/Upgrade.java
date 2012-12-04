@@ -41,11 +41,11 @@ public class Upgrade extends HttpServlet {
 	DAO dao = new DAO();
 	Objectify ofy = dao.ofy();
 	Subject subject = dao.getSubject();
-	static String features = "<li>Reminders - Premium users have the option of receiving email or SMS reminders of assignment deadlines."
-		+ "<li>Timers - Quizzes display an optional timer that shows the minutes and seconds remaining."
-		+ "<li>Spell Checkers - Questions having a 'fill-in-word' format include an optional spelling checker."
-		+ "<li>Google Search - Questions having a 'fill-in-word' format have a convenient button to search for information on the subject.";
-
+	static String features = "<li>Assignment Deadlines - These are set by the course instructor."
+		+ "<li>Reminders - Premium users have the option of receiving email or SMS reminders of assignment deadlines."
+		+ "<li>Learner Analytics - The course instructor can set automatic notifications if assignments are missed."
+		+ "<li>LTI Integration - Scores are returned directly to the class learning management system";
+	
 	public String getServletInfo() {
 		return "This servlet allows the user to upgrade to a premium level account.";
 	}
@@ -92,8 +92,8 @@ public class Upgrade extends HttpServlet {
 		+ "Anyone can obtain a basic account at ChemVantage.org at no cost. "
 		+ "All of the functionality required for completing quiz and homework assignments "
 		+ "is included in the free basic account.<p>For a one-time fee, users may "
-		+ "upgrade to a premium account, which includes the following <i>convenience</i> features:<ol>"
-		+ features + "</ol>");
+		+ "upgrade to a premium account, which allows users to join a group or class of students "
+		+ "using the site. Additional group features include:<ol>" + features + "</ol>");
 		
 		if (user.premium) buf.append("Your account has already been upgraded to premium status.");
 		else {
