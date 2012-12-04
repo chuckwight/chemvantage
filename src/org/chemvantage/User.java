@@ -93,15 +93,15 @@ public class User implements Comparable<User>,Serializable {
 				userIds.add(userId);
 				userIds.add(0,user.alias);
 				user = User.getInstance(userIds);
+				session.setAttribute("UserId",user.id);
 			}
 			Date now = new Date();
 			Date eightHoursAgo = new Date(now.getTime()-28800000L);
 			if (user.lastLogin.before(eightHoursAgo) && !user.requiresUpdates()) {
 				user.lastLogin = now;
-				user.alias = null;  // in case alias is set to ""
-				ObjectifyService.begin().put(user);
+				user.alias = null;  // in case alias is set to "" or to invalid userId
+				ofy.put(user);
 			}
-			session.setAttribute("UserId",user.id);
 			return user;
 		} catch (Exception e) {
 			return null;
