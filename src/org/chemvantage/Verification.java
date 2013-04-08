@@ -250,7 +250,7 @@ public class Verification extends HttpServlet {
 					List<Group> allGroups = null;
 					if (user.domain==null || user.domain.isEmpty()) allGroups=ofy.query(Group.class).list();
 					else allGroups=ofy.query(Group.class).filter("domain",user.domain).list();
-					for (Group g : allGroups) if (!g.isActive()) allGroups.remove(g);
+					//for (Group g : allGroups) if (!g.isActive()) allGroups.remove(g);
 					
 					if (allGroups.size() == 0) {  // there are not yet any groups for this domain
 						user.changeGroups(0L);

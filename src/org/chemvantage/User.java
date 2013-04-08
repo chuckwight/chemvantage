@@ -52,7 +52,7 @@ public class User implements Comparable<User>,Serializable {
 				boolean premium;
 				boolean demoPremium;
 				Date demoExpires;
-				Date lastLogin;
+	@Indexed	Date lastLogin;
 				long myGroupId;
 	@Indexed	String smsMessageDevice;
 				boolean notifyDeadlines;

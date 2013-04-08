@@ -14,4 +14,13 @@
     <timezone>America/Los_Angeles</timezone>
   </cron>
 
+<!-- FOR LATER IMPLEMENTATION 
+  <cron>
+  	<url>/DataStoreCleaner</url>
+  	<description>Provides daily routine maintenance for datastore entities</description>
+  	<schedule>every day 00:15</schedule>
+  	<timezone>America/LosAngeles</timezone>
+  </cron>
+-->
+
 </cronentries>

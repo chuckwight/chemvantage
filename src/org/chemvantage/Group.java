@@ -193,8 +193,8 @@ public class Group implements Serializable {
     }
 
     void deleteScores() {
-    	List<Score> scores = ofy.query(Score.class).filter("groupId",this.id).list();
-    	ofy.delete(scores);
+    	Iterable<Key<Score>> scoreKeys = ofy.query(Score.class).filter("groupId",this.id).fetchKeys();
+    	ofy.delete(scoreKeys);
     }
     
     void setUsingLisOutcomeService(boolean using) {
@@ -202,6 +202,19 @@ public class Group implements Serializable {
     		this.isUsingLisOutcomeService = using;
     		ofy.put(this);
     	}
+    }
+    
+    void deleteAssignments() {
+    	List<Key<Assignment>> assignmentKeys = new ArrayList<Key<Assignment>>();
+    	for (Long i : quizAssignmentIds) assignmentKeys.add(new Key<Assignment>(Assignment.class,i));
+    	for (Long i : hwAssignmentIds) assignmentKeys.add(new Key<Assignment>(Assignment.class,i));
+    	ofy.delete(assignmentKeys);
+    }
+    
+    void delete() {
+    	this.deleteAssignments();
+    	this.deleteScores();
+    	ofy.delete(this);
     }
     
     boolean getUsingLisOutcomeService() { 
