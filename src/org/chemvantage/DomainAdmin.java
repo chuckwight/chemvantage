@@ -184,7 +184,7 @@ public class DomainAdmin extends HttpServlet {
 			buf.append("\n<h3>Manage User Accounts</h3>");
 			buf.append("\n<FORM METHOD=GET>"
 					+ "As a domain administrator, your main responsibility is to <a href=# onClick=\"javascript: document.getElementById('manage').style.display='';\">manage user accounts</a>.<br>"
-					+ "To search for a user, enter a portion of the user's <i>lastname, firstname</i>.<br>");
+					+ "To search for a user, enter a portion of the user's <i>lastname, firstname</i>. Leave blank to show all ChemVantage users in this domain.<br>");
 
 			buf.append("\n<INPUT NAME=SearchString VALUE='" + (searchString==null?"":CharHider.quot2html(searchString)) + "'>"
 					+ "\n<INPUT TYPE=SUBMIT VALUE='Search for users'><INPUT TYPE=HIDDEN NAME=Domain VALUE=" + d.domainName + "></FORM>");
