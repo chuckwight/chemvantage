@@ -3,14 +3,14 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry exported="true" kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/google-api-spelling-java-1.1.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/jaxb-api-2.1.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/JbcParser.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/log4j-1.2.16.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/oauth.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/objectify-3.1.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/stax-api-1.0-2.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/apps-marketplace.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/jaxb-impl-2.1.5.jar"/>
+	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/google-api-spelling-java-1.1.jar"/>
+	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/jaxb-api-2.1.jar"/>
+	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/JbcParser.jar"/>
+	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/log4j-1.2.16.jar"/>
+	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/oauth.jar"/>
+	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/objectify-3.1.jar"/>
+	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/stax-api-1.0-2.jar"/>
+	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/apps-marketplace.jar"/>
+	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/jaxb-impl-2.1.5.jar"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>
