@@ -172,7 +172,7 @@ public class User implements Comparable<User>,Serializable {
 			user.authDomain = extractDomain(userInfo.getClaimedId());
 			if (user.authDomain.contains("google.com")) user.authDomain="gmail.com"; 
 			try { // if this domain exists as a registered ChemVantage domain, assign the user to it
-				Domain d = ofy.query(Domain.class).filter("domainName",user.authDomain).get();
+				Domain d = ofy.query(Domain.class).filter("domainName in",user.authDomain).get();
 				user.domain = d.domainName;
 			} catch (Exception e) {
 				user.domain = null;  // user is a free agent and can join any ChemVantage group
