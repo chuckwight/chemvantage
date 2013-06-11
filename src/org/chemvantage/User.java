@@ -135,6 +135,18 @@ public class User implements Comparable<User>,Serializable {
 			if (user.verifiedEmail) { // search for any accounts with the same email address and alias the new one to it
 				User twin = ofy.query(User.class).filter("email", user.email).get();
 				if (twin != null && twin.verifiedEmail) user.alias = twin.id;
+				else { // no twin exists; check to see if this user should be part of a domain
+					String proposedDomain = extractDomain(user.email);
+					if (proposedDomain.contains("google.com")) user.authDomain="gmail.com";
+					else {
+						try { // if this domain exists as a registered ChemVantage domain, assign the user to it
+							Domain d = ofy.query(Domain.class).filter("domainName in",proposedDomain).get();
+							user.domain = d.domainName;
+						} catch (Exception e) {
+							user.domain = null;  // user is a free agent and can join any ChemVantage group
+						}
+					}
+				}
 			}
 			ofy.put(user);
 		} catch (Exception e) {
