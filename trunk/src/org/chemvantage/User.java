@@ -135,18 +135,16 @@ public class User implements Comparable<User>,Serializable {
 			if (user.verifiedEmail) { // search for any accounts with the same email address and alias the new one to it
 				User twin = ofy.query(User.class).filter("email", user.email).get();
 				if (twin != null && twin.verifiedEmail) user.alias = twin.id;
-				else { // no twin exists; check to see if this user should be part of a domain
-					String proposedDomain = extractDomain(user.email);
-					if (proposedDomain.contains("google.com")) user.authDomain="gmail.com";
-					else {
-						try { // if this domain exists as a registered ChemVantage domain, assign the user to it
-							Domain d = ofy.query(Domain.class).filter("domainName in",proposedDomain).get();
-							user.domain = d.domainName;
-						} catch (Exception e) {
-							user.domain = null;  // user is a free agent and can join any ChemVantage group
-						}
-					}
-				}
+				String myDomainName = extractDomain(user.email);
+				do { // try to assign a user to an existing ChemVantage domain by checking the authDomain or super domain
+					try { 
+						Domain d = ofy.query(Domain.class).filter("domainName",myDomainName).get();
+						user.domain = d.domainName;
+					} catch (Exception e) {
+						user.domain = null;  // user is a free agent and can join any ChemVantage group
+					}	
+					myDomainName = myDomainName.substring(myDomainName.indexOf('.')+1);  // removes first subdomain name and period
+				} while (user.domain==null && myDomainName.indexOf('.') >= 0);
 			}
 			ofy.put(user);
 		} catch (Exception e) {
@@ -182,13 +180,17 @@ public class User implements Comparable<User>,Serializable {
 			if (user != null) return user;
 			user = new User(userId);
 			user.authDomain = extractDomain(userInfo.getClaimedId());
-			if (user.authDomain.contains("google.com")) user.authDomain="gmail.com"; 
-			try { // if this domain exists as a registered ChemVantage domain, assign the user to it
-				Domain d = ofy.query(Domain.class).filter("domainName in",user.authDomain).get();
-				user.domain = d.domainName;
-			} catch (Exception e) {
-				user.domain = null;  // user is a free agent and can join any ChemVantage group
-			}
+			if (user.authDomain.contains("google.com")) user.authDomain="gmail.com";
+			String myDomainName = user.authDomain;
+			do { // try to assign a user to an existing ChemVantage domain by checking the authDomain or super domain
+				try { 
+					Domain d = ofy.query(Domain.class).filter("domainName",myDomainName).get();
+					user.domain = d.domainName;
+				} catch (Exception e) {
+					user.domain = null;  // user is a free agent and can join any ChemVantage group
+				}	
+				myDomainName = myDomainName.substring(myDomainName.indexOf('.')+1);  // removes first subdomain name and period
+			} while (user.domain==null && myDomainName.indexOf('.') >= 0);
 			user.setEmail(userInfo.getEmail());
 			user.verifiedEmail = !(user.email==null || user.email.isEmpty());
 			user.setFirstName(userInfo.getFirstName());
