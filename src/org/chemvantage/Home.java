@@ -332,7 +332,8 @@ public class Home extends HttpServlet {
 								+ "<FONT SIZE=-1><i><a href=Scores?r=" + new Random().nextInt(99) + ">" + df.format(nextDeadline) + "</a></i></FONT></TD></TR>");
 					}
 				}
-			} else buf.append("<TR><TD ALIGN=CENTER><FONT SIZE=-1><a href=Verification>Join A ChemVantage Group</a></FONT></TD></TR>");
+			} else if (user.domain!=null && !user.domain.isEmpty())
+				buf.append("<TR><TD ALIGN=CENTER><FONT SIZE=-1><a href=Verification>Join A ChemVantage Group</a></FONT></TD></TR>");
 			buf.append("<TR><TD COLSPAN=2 ALIGN=CENTER><FONT SIZE=-1><a href=Scores?r=" + new Random().nextInt(99) + ">Show My Scores</a></FONT></TD></TR>");
 			buf.append("</TABLE>");
 			buf.append("</TD></TR></TABLE><p>");
