@@ -47,9 +47,9 @@ public class LTIRegistration extends HttpServlet {
 	}
 
 	String welcomeMessage = "<h2>ChemVantage LTI Tool Proxy Registration</h2>"
-			+ "ChemVantage currently supports LTI version 2.0 instant integration with learning management systems that "
-			+ "also support the LTI version 2.0 standard. Your system administrator can do this by entering this URL:<br>"
-			+ "<b>http://chemvantage.org/lti/registration/</b><br>into your LMS Tool Proxy Registration page:<br><br>"
+			+ "ChemVantage is currently working to implement instant LTI integration with learning management systems that "
+			+ "support the LTI version 2.0 standard. Your system administrator will be able to do this by entering this URL "
+			+ "(<b>http://chemvantage.org/lti/registration/</b>) into the LTI Tool Proxy Registration page of your LMS.<br><br>"
 			+ "If your LMS supports a lower version of the LTI standard, please contact Chuck Wight (admin@chemvantage.org) "
 			+ "to request a set of LTI credentials to enter into your LMS manually.";
 	
