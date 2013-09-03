@@ -40,6 +40,9 @@ public class Domain {
 		int premiumAccounts;
 		int seatsPurchased;
 		int seatsAvailable;
+		boolean supportsResultService = false;
+		List<String> capabilities = new ArrayList<String>();
+		
 	@Transient transient Objectify ofy = ObjectifyService.begin();
 	
 	Domain() {}

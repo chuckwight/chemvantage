@@ -161,13 +161,22 @@ public class User implements Comparable<User>,Serializable {
 		user.authDomain = "BLTI";
 		user.domain = request.getParameter("oauth_consumer_key");
 		user.alias = null;
-		user.setFirstName(request.getParameter("lis_person_name_given"));
-		user.setLastName(request.getParameter("lis_person_name_family"));
-		if (user.lowercaseName.isEmpty() && request.getParameter("lis_person_name_full") != null) user.setFirstName(request.getParameter("lis_person_name_full"));
+		Objectify ofy = ObjectifyService.begin();
 		
-		user.setEmail(request.getParameter("lis_person_contact_email_primary"));
+		if ("LTI-2p0".equals(request.getParameter("lti_verion"))) {  // set user profile values using tool consumer profile in domain
+			Domain domain = ofy.query(Domain.class).filter("domainName",user.domain).get();
+			if (domain.capabilities.contains("Person.name.given")) user.setFirstName(request.getParameter("custom_lis_person_name_given"));		
+			if (domain.capabilities.contains("Person.name.family")) user.setLastName(request.getParameter("custom_lis_person_name_family"));		
+			if (domain.capabilities.contains("Person.email.primary")) user.setEmail(request.getParameter("custom_lis_person_contact_email_primary"));		
+		} else {
+			user.setFirstName(request.getParameter("lis_person_name_given"));
+			user.setLastName(request.getParameter("lis_person_name_family"));
+			if (user.lowercaseName.isEmpty() && request.getParameter("lis_person_name_full") != null) user.setFirstName(request.getParameter("lis_person_name_full"));		
+			user.setEmail(request.getParameter("lis_person_contact_email_primary"));
+		}
+		
 		if (!user.email.isEmpty()) user.verifiedEmail = true; // value supplied by institution
-		ObjectifyService.begin().put(user);
+		ofy.put(user);
 		return user;
 	}
 	
