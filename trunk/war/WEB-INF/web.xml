@@ -162,6 +162,16 @@
 	</servlet-mapping>
 	
 	<servlet>
+		<servlet-name>LTIRegistration</servlet-name>
+		<servlet-class>org.chemvantage.LTIRegistration</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>LTIRegistration</servlet-name>
+		<url-pattern>/lti/registration</url-pattern>
+		<url-pattern>/lti/registration/</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
 		<servlet-name>Notification</servlet-name>
 		<servlet-class>org.chemvantage.Notification</servlet-class>
 	</servlet>

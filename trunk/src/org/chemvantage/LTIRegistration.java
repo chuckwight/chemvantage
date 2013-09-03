@@ -23,31 +23,18 @@ package org.chemvantage;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URLEncoder;
-import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
-
-import net.oauth.OAuthAccessor;
-import net.oauth.OAuthConsumer;
-import net.oauth.OAuthMessage;
-import net.oauth.OAuthValidator;
-import net.oauth.SimpleOAuthValidator;
-import net.oauth.server.OAuthServlet;
-import net.oauth.signature.OAuthSignatureMethod;
 
 import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.Query;
 
-public class LTILaunch extends HttpServlet {
+public class LTIRegistration extends HttpServlet {
 
 	DAO dao = new DAO();
 	Objectify ofy = dao.ofy();
@@ -59,27 +46,29 @@ public class LTILaunch extends HttpServlet {
 		super.init(config);
 	}
 
+	String welcomeMessage = "<h2>ChemVantage LTI Tool Proxy Registration</h2>"
+			+ "ChemVantage currently supports LTI version 2.0 instant integration with learning management systems that "
+			+ "also support the LTI version 2.0 standard. Your system administrator can do this by entering this URL:<br>"
+			+ "<b>http://chemvantage.org/lti/registration/</b><br>into your LMS Tool Proxy Registration page:<br><br>"
+			+ "If your LMS supports a lower version of the LTI standard, please contact Chuck Wight (admin@chemvantage.org) "
+			+ "to request a set of LTI credentials to enter into your LMS manually.";
+	
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
-		try {
-			User user = User.getInstance(request.getSession(true));
-			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
-			
-			if (user != null && "pick".equals(request.getParameter("UserRequest")))
-				out.println(pickResourceForm(user,request));
-			else if (user != null && "Go".equals(request.getParameter("UserRequest")))
-				response.sendRedirect(resourceUrlFinder(user,request));
-			else doPost(request, response);
-		} catch (Exception e) {}
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+		out.println(Login.header + welcomeMessage + Login.footer);
 	}
 
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
 		
-		if (Login.lockedDown) doError(request,response,"ChemVantage is temporarily unavailable, sorry.",null,null);
+		doError(request,response,"Sorry, ChemVantage does not yet support LTI Tool Proxy Registration requests.",null,null);
+	}
+	
+		/*   THIS CODE IDENTICAL TO CURRENT VERSION OF LTILaunch.java 
 
 		String oauth_consumer_key = request.getParameter("oauth_consumer_key");
 		String userId = oauth_consumer_key + ":" + request.getParameter("user_id");
@@ -303,7 +292,10 @@ public class LTILaunch extends HttpServlet {
 		}
 		return buf.toString();
 	}
+		 * 
+		 */
 
+	
 	public void doError(HttpServletRequest request, HttpServletResponse response, 
 			String s, String message, Exception e)
 	throws java.io.IOException
