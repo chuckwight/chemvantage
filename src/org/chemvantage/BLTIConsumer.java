@@ -31,6 +31,7 @@ import com.googlecode.objectify.annotation.Unindexed;
 public class BLTIConsumer {
 	@Id String oauth_consumer_key;
 	String secret;
+	String lti_version;
 
 	BLTIConsumer() {}
 
@@ -42,6 +43,7 @@ public class BLTIConsumer {
         String hash2 = Long.toHexString(r2);
         this.secret = hash1 + hash2;
         this.oauth_consumer_key = oauth_consumer_key;
+        this.lti_version = "LTI-1p0";
     }
 	
 	static void create(String oauth_consumer_key) {
@@ -55,6 +57,11 @@ public class BLTIConsumer {
 	static String getSecret(String oauth_consumer_key) {
 		Objectify ofy = ObjectifyService.begin();
 		BLTIConsumer c = ofy.find(BLTIConsumer.class,oauth_consumer_key);
-		return (c==null?null:c.secret);
+		if (c==null) return null;
+		if (c.lti_version==null || c.lti_version.isEmpty()) {
+			c.lti_version = "LTI-1p0";
+			ofy.put(c);
+		}
+		return c.secret;
 	}
 }

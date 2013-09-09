@@ -46,11 +46,15 @@ public class LTIRegistration extends HttpServlet {
 		super.init(config);
 	}
 
-	String welcomeMessage = "<h2>ChemVantage LTI Tool Proxy Registration</h2>"
+	String banner = "<TABLE><TR><TD VALIGN=TOP><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
+			+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
+			+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>";
+			
+	String welcomeMessage = "<h2>LTI Tool Proxy Registration</h2>"
 			+ "ChemVantage is currently working to implement instant LTI integration with learning management systems that "
 			+ "support the LTI version 2.0 standard. Your system administrator will be able to do this by entering this URL "
 			+ "(<b>http://chemvantage.org/lti/registration/</b>) into the LTI Tool Proxy Registration page of your LMS.<br><br>"
-			+ "If your LMS supports a lower version of the LTI standard, please contact Chuck Wight (admin@chemvantage.org) "
+			+ "If your LMS supports an older version of the LTI standard, please contact Chuck Wight (admin@chemvantage.org) "
 			+ "to request a set of LTI credentials to enter into your LMS manually.";
 	
 	@Override
@@ -58,16 +62,90 @@ public class LTIRegistration extends HttpServlet {
 	throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		out.println(Login.header + welcomeMessage + Login.footer);
+		// This page simply prints a brief set of instructions for LTI-2.0 Tool Proxy Registration
+		out.println(Login.header + banner + welcomeMessage + Login.footer);
 	}
 
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
-		
-		doError(request,response,"Sorry, ChemVantage does not yet support LTI Tool Proxy Registration requests.",null,null);
-	}
 	
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+		
+		// Check to see if this POST is an initial Tool Proxy Registration request or a formCompletion post:
+		String userRequest = request.getParameter("UserRequest");
+		String lti_message_type = request.getParameter("lti_message_type");
+		
+		try {
+			if (lti_message_type != null && 
+					(lti_message_type.equals("ToolProxyRegistrationRequest") || lti_message_type.equals("ToolProxyReRegistrationRequest"))) {
+
+				ToolConsumerProfile p = new ToolConsumerProfile(request);
+				p.fetchTCProfile();
+				
+				out.println(Login.header + tcInformationForm(p) + Login.footer);
+				return;
+			} else if (userRequest != null && userRequest.equals("Complete Tool Proxy Registration")) {
+
+			}
+		} catch (Exception e) {
+			doError(request,response,"Sorry, ChemVantage does not yet support LTI Tool Proxy Registration requests.",null,null);
+			//out.println("An unexpected error occurred.  Please check the submitted data for completeness and try again.");
+			return;
+		}
+	}
+		String tcInformationForm(ToolConsumerProfile p) {
+			StringBuffer buf = new StringBuffer();
+			
+			return buf.toString();
+		}
+
+		public void doError(HttpServletRequest request, HttpServletResponse response, String s, String message, Exception e)
+				throws java.io.IOException {
+			//System.out.println(s);
+			String return_url = request.getParameter("launch_presentation_return_url");
+			if ( return_url != null && return_url.length() > 1 ) {
+				if ( return_url.indexOf('?') > 1 ) {
+					return_url += "&lti_msg=" + URLEncoder.encode(s,"UTF-8");
+				} else {
+					return_url += "?lti_msg=" + URLEncoder.encode(s,"UTF-8");
+				}
+				response.sendRedirect(return_url);
+				return;
+			}
+			PrintWriter out = response.getWriter();
+			out.println(s);
+		}
+
+		@Override
+		public void destroy() {
+
+		}
+
+}
+
+class ToolConsumerProfile {
+	String lti_version;
+	String tc_profile_url;
+	String reg_key;
+	String reg_password;
+	String launch_presentation_return_url;
+
+		ToolConsumerProfile() {}
+		
+		ToolConsumerProfile(HttpServletRequest request) {
+			lti_version = request.getParameter("lti_version");
+			tc_profile_url = request.getParameter("tc_profile_url");
+			reg_key = request.getParameter("reg_key");
+			reg_password = request.getParameter("reg_password");
+			launch_presentation_return_url = request.getParameter("launch_presentation_return_url");
+		}
+		
+		void fetchTCProfile() {
+			
+		}
+	}
 		/*   THIS CODE IDENTICAL TO CURRENT VERSION OF LTILaunch.java 
 
 		String oauth_consumer_key = request.getParameter("oauth_consumer_key");
@@ -296,28 +374,4 @@ public class LTIRegistration extends HttpServlet {
 		 */
 
 	
-	public void doError(HttpServletRequest request, HttpServletResponse response, 
-			String s, String message, Exception e)
-	throws java.io.IOException
-	{
-		//System.out.println(s);
-		String return_url = request.getParameter("launch_presentation_return_url");
-		if ( return_url != null && return_url.length() > 1 ) {
-			if ( return_url.indexOf('?') > 1 ) {
-				return_url += "&lti_msg=" + URLEncoder.encode(s,"UTF-8");
-			} else {
-				return_url += "?lti_msg=" + URLEncoder.encode(s,"UTF-8");
-			}
-			response.sendRedirect(return_url);
-			return;
-		}
-		PrintWriter out = response.getWriter();
-		out.println(s);
-	}
 
-	@Override
-	public void destroy() {
-
-	}
-
-}
