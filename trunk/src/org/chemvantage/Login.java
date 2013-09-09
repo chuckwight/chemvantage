@@ -90,9 +90,9 @@ public class Login extends HttpServlet {
 		+ "<TABLE><TR><TD>\n"
 		+ "<div id=pzon><nobr>"
 		+ " <div class=pz1>ChemVantage.org</div>"
-		+ " <div class=pz1><a href=Home>Home</a></div>"
-		+ " <div class=pz1><a href=About>About Us</a></div>"
-		+ " <div class=pz1><a href=help.html>Help</a></div>"
+		+ " <div class=pz1><a href=/Home>Home</a></div>"
+		+ " <div class=pz1><a href=/About>About Us</a></div>"
+		+ " <div class=pz1><a href=/help.html>Help</a></div>"
 		+ "</nobr></div>\n"
 		+ "<div id=phzl></div><div align=right id=puzr style='font-size:84%;padding:0 0 4px' width=100%>"
 		+ "</div><br>";
