@@ -20,8 +20,13 @@
 
 package org.chemvantage;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
@@ -82,7 +87,7 @@ public class LTIRegistration extends HttpServlet {
 					(lti_message_type.equals("ToolProxyRegistrationRequest") || lti_message_type.equals("ToolProxyReRegistrationRequest"))) {
 
 				ToolConsumerProfile p = new ToolConsumerProfile(request);
-				p.fetchTCProfile();
+				p.fetch();
 				
 				out.println(Login.header + tcInformationForm(p) + Login.footer);
 				return;
@@ -132,20 +137,36 @@ class ToolConsumerProfile {
 	String reg_password;
 	String launch_presentation_return_url;
 
-		ToolConsumerProfile() {}
-		
-		ToolConsumerProfile(HttpServletRequest request) {
-			lti_version = request.getParameter("lti_version");
-			tc_profile_url = request.getParameter("tc_profile_url");
-			reg_key = request.getParameter("reg_key");
-			reg_password = request.getParameter("reg_password");
-			launch_presentation_return_url = request.getParameter("launch_presentation_return_url");
-		}
-		
-		void fetchTCProfile() {
-			
+	ToolConsumerProfile() {}
+
+	ToolConsumerProfile(HttpServletRequest request) {
+		lti_version = request.getParameter("lti_version");
+		tc_profile_url = request.getParameter("tc_profile_url");
+		reg_key = request.getParameter("reg_key");
+		reg_password = request.getParameter("reg_password");
+		launch_presentation_return_url = request.getParameter("launch_presentation_return_url");
+	}
+
+	void fetch() {
+		try {
+			URL u = new URL(this.tc_profile_url + "?lti_version=LTI-2p0");
+			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+			uc.setDoOutput(true);
+			uc.setRequestMethod("GET");
+			uc.setRequestProperty("Content-Type","text/html");
+			OutputStreamWriter out = new OutputStreamWriter(uc.getOutputStream());
+			out.write("Tool Consumer Profile Request from ChemVantage LLC (www.chemvantage.org)");
+			out.close();
+
+			BufferedReader in = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+			String res = in.readLine();
+			in.close();
+
+		} catch (Exception e) {
+
 		}
 	}
+}
 		/*   THIS CODE IDENTICAL TO CURRENT VERSION OF LTILaunch.java 
 
 		String oauth_consumer_key = request.getParameter("oauth_consumer_key");
