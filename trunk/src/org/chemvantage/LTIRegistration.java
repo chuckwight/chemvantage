@@ -89,7 +89,7 @@ public class LTIRegistration extends HttpServlet {
 				ToolConsumerProfile p = new ToolConsumerProfile(request);
 				p.fetch();
 				
-				out.println(Login.header + tcInformationForm(p) + Login.footer);
+				out.println(Login.header + tcRegistrationForm(p) + Login.footer);
 				return;
 			} else if (userRequest != null && userRequest.equals("Complete Tool Proxy Registration")) {
 
@@ -100,9 +100,40 @@ public class LTIRegistration extends HttpServlet {
 			return;
 		}
 	}
-		String tcInformationForm(ToolConsumerProfile p) {
+		String tcRegistrationForm(ToolConsumerProfile p) {
 			StringBuffer buf = new StringBuffer();
-			
+			buf.append(banner);
+			buf.append("<h2>ChemVantage LTI Tool Proxy Registration Request</h2>");
+			buf.append("You have requested to establish a trusted Learning Technologies Interoperability (LTI) "
+					+ "relationship between your Tool Consumer (usually a learning management system) and the "
+					+ "Tool Provider at http://chemvantage.org<br><br>");
+			if (p.supportsToolProxyService) {
+				buf.append("<b>Services Offered by Your Tool Consumer:</b>"
+						+ "Supports LTI version: " + p.lti_version + "<br>"
+						+ "Tool Proxy Registration: " + (p.supportsToolProxyService?"false":"true") + "<br>"
+						+ "Result Service (returns scores to the grade book): " + (p.supportsResultService?"false":"true") + "<br>"
+						+ "Provides User Given and Family Names: " + (p.supportsUserNameService?"false":"true") + "<br>"
+						+ "Provides User Email Addresses: " + (p.supportsToolProxyService?"false":"true") + "<br>");
+				buf.append("<span style='color:red'>If the information above is not correct, please DO NOT complete this registration. "
+						+ "Instead, contact Chuck Wight (admin@chemvantage.org) for custom LTI credentials.</span><br><br>");		
+				buf.append("To complete this transaction, ChemVantage needs the following additional information:<br>"
+						+ "<form action=/lti/registration method=post>"
+						+ "<input type=hidden name=lti_version value='" + p.lti_version + "'>"
+						+ "<input type=hidden name=reg_key value='" + p.reg_key + "'>"
+						+ "<input type=hidden name=reg_password value='" + p.reg_password + "'>"
+						+ "<input type=hidden name=launch_presentation_return_url value='" + p.launch_presentation_return_url + "'>"
+						+ "<input type=hidden name=supports_result_service_ value='" + p.supportsResultService + "'>"
+						+ "<input type=hidden name=supports_user_name_service_ value='" + p.supportsUserNameService + "'>"
+						+ "<input type=hidden name=supports_user_email_service_ value='" + p.supportsUserEmailService + "'>"
+						+ "School or Institution Name and Department (if applicable): <input type=text name=institution_name><br>"
+						+ "Please enter a unique identifier for your tool consumer (LMS) using the type of LMS and the domain "
+						+ "covered (e.g., sakai.stanford.edu or moodle.chem.michigan.edu). This does not have to be an actual "
+						+ "domain name but must uniquely identify your LMS (to be used as the LTI oauth_consumer_key value).<br>"
+						+ "LMS admin contact email address: <input type=text name=admin_contact><br>"
+						+ "<input type=submit name=UserRequest value='Complete Tool Proxy Registration'>"
+						+ "</form>");
+			} else buf.append("It appears that your LMS does not support LTI Tool Proxy Registration. "
+					+ "Please contact admin@chemvantage.org for custom LTI credentials.");
 			return buf.toString();
 		}
 
@@ -136,6 +167,10 @@ class ToolConsumerProfile {
 	String reg_key;
 	String reg_password;
 	String launch_presentation_return_url;
+	boolean supportsToolProxyService;
+	boolean supportsResultService;
+	boolean supportsUserNameService;
+	boolean supportsUserEmailService;
 
 	ToolConsumerProfile() {}
 
@@ -160,6 +195,10 @@ class ToolConsumerProfile {
 
 			BufferedReader in = new BufferedReader(new InputStreamReader(uc.getInputStream()));
 			String res = in.readLine();
+			this.supportsToolProxyService = res.contains("application/vnd.ims.lti.v2.ToolConsumerProfile+json");
+			this.supportsResultService = res.contains("application/vnd.ims.lis.v2.Result+json");
+			this.supportsUserNameService = res.contains("Person.name.family") && res.contains("Person.name.given");
+			this.supportsUserEmailService = res.contains("Person.email.primary");
 			in.close();
 
 		} catch (Exception e) {
