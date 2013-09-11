@@ -23,7 +23,6 @@ package org.chemvantage;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -92,7 +91,10 @@ public class LTIRegistration extends HttpServlet {
 				out.println(Login.header + tcRegistrationForm(p) + Login.footer);
 				return;
 			} else if (userRequest != null && userRequest.equals("Complete Tool Proxy Registration")) {
-
+				String launch_presentation_return_url = request.getParameter("launch_presentation_return_url");
+				String tool_proxy_guid = registerToolProxy(request);
+				if (!launch_presentation_return_url.isEmpty() && !tool_proxy_guid.isEmpty()) // everything OK; TC return a unique tool_guid
+					response.sendRedirect(launch_presentation_return_url + URLEncoder.encode("?status=success&tool_guid=" + tool_proxy_guid,"UTF-8"));
 			}
 		} catch (Exception e) {
 			doError(request,response,"Sorry, ChemVantage does not yet support LTI Tool Proxy Registration requests.",null,null);
@@ -137,6 +139,12 @@ public class LTIRegistration extends HttpServlet {
 			return buf.toString();
 		}
 
+		private String registerToolProxy(HttpServletRequest request) {
+			String tool_proxy_guid = "";
+			
+			return tool_proxy_guid;
+		}
+		
 		public void doError(HttpServletRequest request, HttpServletResponse response, String s, String message, Exception e)
 				throws java.io.IOException {
 			//System.out.println(s);
@@ -186,25 +194,37 @@ class ToolConsumerProfile {
 		try {
 			URL u = new URL(this.tc_profile_url + "?lti_version=LTI-2p0");
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			uc.setDoOutput(true);
-			uc.setRequestMethod("GET");
-			uc.setRequestProperty("Content-Type","text/html");
-			OutputStreamWriter out = new OutputStreamWriter(uc.getOutputStream());
-			out.write("Tool Consumer Profile Request from ChemVantage LLC (www.chemvantage.org)");
-			out.close();
-
 			BufferedReader in = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-			String res = in.readLine();
-			this.supportsToolProxyService = res.contains("application/vnd.ims.lti.v2.ToolConsumerProfile+json");
-			this.supportsResultService = res.contains("application/vnd.ims.lis.v2.Result+json");
-			this.supportsUserNameService = res.contains("Person.name.family") && res.contains("Person.name.given");
-			this.supportsUserEmailService = res.contains("Person.email.primary");
+			String inputLine;
+			String tc_profile = "";
+			while ((inputLine = in.readLine()) != null) tc_profile += inputLine;
+			this.supportsToolProxyService = tc_profile.contains("vnd.ims.lti.v2.ToolConsumerProfile+json");
+			this.supportsResultService = tc_profile.contains("vnd.ims.lis.v2.Result+json");
+			this.supportsUserNameService = tc_profile.contains("Person.name.family") && tc_profile.contains("Person.name.given");
+			this.supportsUserEmailService = tc_profile.contains("Person.email.primary");
 			in.close();
-
 		} catch (Exception e) {
-
 		}
 	}
+}
+
+class ToolProxy {
+	String json;
+	
+	ToolProxy() {}
+	
+	ToolProxy(HttpServletRequest request) {
+		this.json = "{"
+				+ "   \"@context\" : \"http://www.imsglobal.org/imspurl/lti/v2/ctx/ToolProxy\","
+				+ "   \"@type\" : \"ToolProxy\","
+				+ "   \"@id\" : \"http://lms.example.com/ToolProxy/869e5ce5-214c-4e85-86c6-b99e8458a592\","
+				+ "   \"lti_version\" : \"LTI-2p0\","
+				+ "   \"tool_proxy_guid\" : \"e8359010-009f-11e1-be50-0800200c9a66\","
+				+ "   \"tool_consumer_profile\" : {  },"
+				+ "   \"tool_profile\"          : {  },"
+				+ "   \"security_contract\"     : {  }"
+				+ "  }";
+}
 }
 		/*   THIS CODE IDENTICAL TO CURRENT VERSION OF LTILaunch.java 
 
