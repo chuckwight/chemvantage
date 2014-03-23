@@ -53,10 +53,9 @@ public class Login extends HttpServlet {
     	openIdProviders = new HashMap<String, String>();
     	openIdLogos = new HashMap<String, String>();
     	
-        openIdProviders.put("Google", "gmail.com"); openIdLogos.put("Google", "/images/openid/google");
-        openIdProviders.put("Yahoo", "yahoo.com"); openIdLogos.put("Yahoo", "/images/openid/yahoo");
-        openIdProviders.put("AOL", "aol.com"); openIdLogos.put("AOL", "/images/openid/aol");
-    	openIdProviders.put("MyOpenID", "myopenid.com"); openIdLogos.put("MyOpenID", "/images/openid/myopenid");
+        openIdProviders.put("Google", "gmail.com"); openIdLogos.put("Google", "/images/openid/google.jpg");
+        openIdProviders.put("AOL", "aol.com"); openIdLogos.put("AOL", "/images/openid/aol.jpg");
+        openIdProviders.put("Yahoo", "yahoo.com"); openIdLogos.put("Yahoo", "/images/openid/yahoo.jpg");
         attributes.add("email");
 	}
     
@@ -168,7 +167,7 @@ public class Login extends HttpServlet {
 						String loginUrl = userService.createLoginURL("/userService",null,providerUrl,attributes);
 					buf.append("<table style='border-spacing:40px 0px'><tr><td style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
 								+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
-								+ "<img src='" + openIdLogos.get(providerName) + ".jpg ' border=0 alt='" + providerName + "' style='text-align:center'><br/>" 
+								+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "' style='text-align:center'><br/>" 
 								+ providerName + "</a></td></tr></table>");
 						showAll = false;
 						break;
@@ -211,17 +210,14 @@ public class Login extends HttpServlet {
 						+ "If this is your first ChemVantage login, a free account will be created for you.<p>");
 				buf.append("<TABLE style='border-spacing:40px 0px'><TR>");
 				// display Google-authorized OpenID providers and logos:
-				buf.append("<TD>");
 				for (String providerName : openIdProviders.keySet()) {
 					String providerUrl = openIdProviders.get(providerName);
 					String loginUrl = userService.createLoginURL("/userService",null,providerUrl,attributes);
-					buf.append("<a id='" + providerName + "' href='" + loginUrl 
-							+ "' style='text-decoration:none'"
+					buf.append("<TD style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
 							+ " onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
-							+ "<img src='" + openIdLogos.get(providerName) + "_tn.jpg' style='vertical-align:middle' border=0 alt='" + providerName + "'> " 
-							+ providerName + "</a><br>");
+							+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/> " 
+							+ providerName + "</a></TD>");
 				}
-				buf.append("</TD>");
 				// display UofU CAS login logo and link:
 				for (String providerName : CASLaunch.casProviders.keySet()) {
 					String casUrl = CASLaunch.casProviders.get(providerName);

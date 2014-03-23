@@ -48,8 +48,8 @@ public class CASLaunch extends HttpServlet {
 	protected static final Map<String,String> casProviders = new HashMap<String,String>();
 	protected static final Map<String,String> casLogos = new HashMap<String,String>();
 	static {
-        casProviders.put("Utah.edu","https://go.utah.edu/cas");
-        casLogos.put("Utah.edu", "/images/openid/utah.jpg");
+//        casProviders.put("Utah.edu","https://go.utah.edu/cas");
+//        casLogos.put("Utah.edu", "/images/openid/utah.jpg");
 	}
 	
 	@Override

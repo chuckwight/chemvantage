@@ -375,12 +375,12 @@ public class Verification extends HttpServlet {
 
 	boolean eligibleToJoin(User user) {
 		// This method checks to see if the user is eligible to join a new group
-		//if (user.hasPremiumAccount() || user.domain==null) return true;
 		if (user.hasPremiumAccount()) return true;
 		Domain domain = ofy.query(Domain.class).filter("domainName", user.domain).get();
 		if (domain == null) return false;
-		if (domain.seatsAvailable>0 || domain.freeTrialExpires.after(new Date())) return true;
-		return false;
+		return true;   // ******* THIS STATEMENT CREATES A FREE ACCOUNT FOR ANYONE IN A DOMAIN **********
+//		if (domain.seatsAvailable>0 || domain.freeTrialExpires.after(new Date())) return true;
+//		return false;
 	}
 	
 	boolean processPremiumUpgrade(User user,long newGroupId) {
