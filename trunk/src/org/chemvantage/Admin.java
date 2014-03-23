@@ -257,7 +257,7 @@ public class Admin extends HttpServlet {
 					+ "\n<TR><TD ALIGN=RIGHT>Acct Type: </TD><TD>"
 					+ "<INPUT TYPE=RADIO NAME=Premium VALUE='false'" + (!usr.premium?" CHECKED":"") + ">Basic "
 					+ "<INPUT TYPE=RADIO NAME=Premium VALUE='true'" + (usr.premium?" CHECKED":"") + ">Premium "
-					+ (usr.demoPremium?"<br>(demo premium account)":"") + "</TD></TR>");
+					+ "</TD></TR>");
 			buf.append("<TR><TD ALIGN=RIGHT>Alias: </TD><TD><INPUT TYPE=TEXT NAME=Alias VALUE='" + (usr.alias==null?"":usr.alias) + "'></TD></TR>");
 			buf.append("<TR><TD ALIGN=RIGHT>Group: </TD><TD>" + groupSelectBox(usr.myGroupId) + "</TD></TR>");
 			buf.append("\n<TR><TD ALIGN=RIGHT>Last Login: </TD>"

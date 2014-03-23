@@ -57,27 +57,14 @@ public class Upgrade extends HttpServlet {
 			response.sendRedirect("/");
 			return;
 		}
-		if (user.demoExpires==null) user.demoExpires = new Date(0);
-		if ("Accept Free Trial Offer".equals(request.getParameter("Action")) && !user.demoPremium && user.demoExpires.getTime()==0L) {
-			user.setDemoPremium(true);
-			ofy.put(user);
-			response.sendRedirect("/Home");
-		}
 		else if ("No Thanks".equals(request.getParameter("Action"))) {
-			user.setDemoPremium(false);
-			ofy.put(user);
 			response.sendRedirect("/Home");
 		}
 
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		if ("free offer".equals(request.getParameter("action"))) out.println(Home.getHeader(user) + extendOffer() + Home.footer);
-		else if ("expired".equals(request.getParameter("action"))) {
-			out.println(Home.getHeader(user) + freeTrialExpired(user) + Home.footer);
-			user.setDemoPremium(false);
-			ofy.put(user);
-		}
-		else if ("completed".equals(request.getParameter("purchase"))) out.println(Home.getHeader(user) + thankYou() + Home.footer);
+		
+		if ("completed".equals(request.getParameter("purchase"))) out.println(Home.getHeader(user) + thankYou() + Home.footer);
 		else out.println(Home.getHeader(user) + printUpgradeOptions(user) + Home.footer);
 	}
 
@@ -97,7 +84,6 @@ public class Upgrade extends HttpServlet {
 		
 		if (user.premium) buf.append("Your account has already been upgraded to premium status.");
 		else {
-			if (user.demoPremium) buf.append("Your free demo premium account expires " + user.demoExpires.toString() + "<p>");
 			buf.append("<span style='color:red'><b>100% Satisfaction Guarantee</b></span><br>"
 				+ "If you aren't satisfied for any reason, ChemVantage will cheerfully refund your payment in full.<p>"
 				+ "<TABLE>"

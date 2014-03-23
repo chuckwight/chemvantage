@@ -50,8 +50,8 @@ public class User implements Comparable<User>,Serializable {
 				String firstName;
 				int roles;
 				boolean premium;
-				boolean demoPremium;
-				Date demoExpires;
+//				boolean demoPremium;
+//				Date demoExpires;
 	@Indexed	Date lastLogin;
 				long myGroupId;
 	@Indexed	String smsMessageDevice;
@@ -72,8 +72,8 @@ public class User implements Comparable<User>,Serializable {
 		this.email = "";
 		this.roles = 0; // student
 		this.premium = false;
-		this.demoPremium = false;
-		this.demoExpires = new Date(0L);
+//		this.demoPremium = false;
+//		this.demoExpires = new Date(0L);
 		this.lastLogin = new Date(0L);
 		this.myGroupId = -1L;
 		this.smsMessageDevice = "";
@@ -497,18 +497,13 @@ public class User implements Comparable<User>,Serializable {
 	}
 
 	boolean hasPremiumAccount() {
-		return (premium || demoPremium);
+		return (premium);
 	}
 
 	void setPremium(boolean newValue) {
 		premium = newValue;
 	}
 	
-	void setDemoPremium(boolean newValue) {
-		demoPremium = newValue;
-		demoExpires = new Date(new Date().getTime() + 1210000000L);  // 2 weeks from now
-	}
-
 	boolean isAdministrator() {
 		return ((roles%32)/16 == 1);
 	}
