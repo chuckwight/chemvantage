@@ -281,7 +281,7 @@ public class Quiz extends HttpServlet {
 			buf.append("<h2>Quiz Results - " + qt.topicTitle + " (" + subject.title + ")</h2>\n");
 			buf.append("<b>" + user.getBothNames() + "</b><br>\n");
 			buf.append(df.format(now));
-			buf.append(ajaxScoreJavaScript()); // load javascript for AJAX problem reporting form
+			buf.append(ajaxScoreJavaScript(user.verifiedEmail)); // load javascript for AJAX problem reporting form
 			
 			StringBuffer missedQuestions = new StringBuffer();			
 			missedQuestions.append("<OL>");
@@ -460,7 +460,7 @@ public class Quiz extends HttpServlet {
 		+ "</SCRIPT>";			
 	}
 	
-	String ajaxScoreJavaScript() {
+	String ajaxScoreJavaScript(boolean verifiedEmail) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note) {\n"
 		+ "  var xmlhttp;\n"
@@ -473,7 +473,9 @@ public class Quiz extends HttpServlet {
 		+ "  xmlhttp.onreadystatechange=function() {\n"
 		+ "    if (xmlhttp.readyState==4) {\n"
 		+ "      document.getElementById('feedback' + id).innerHTML="
-		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
+		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment. "
+		+ (!verifiedEmail?"However, no response is possible unless you verify the email address in your <a href=/Verification>user profile</a>.":"") 
+		+ "</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
 		+ "  url += '&QuestionId=' + id + '&Notes=' + note;\n"
