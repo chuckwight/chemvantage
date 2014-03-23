@@ -386,7 +386,7 @@ public class PracticeExam extends HttpServlet {
 				else buf.append("Some questions were left blank.");
 			}
 			// embed ajax code to provide feedback
-			buf.append(ajaxScoreJavaScript());
+			buf.append(ajaxScoreJavaScript(user.verifiedEmail));
 		}
 		catch (Exception e) {
 			buf.append(e.getMessage());
@@ -438,7 +438,7 @@ public class PracticeExam extends HttpServlet {
 		+ "</SCRIPT>";			
 	}
 
-	String ajaxScoreJavaScript() {
+	String ajaxScoreJavaScript(boolean verifiedEmail) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note) {\n"
 		+ "  var xmlhttp;\n"
@@ -451,7 +451,9 @@ public class PracticeExam extends HttpServlet {
 		+ "  xmlhttp.onreadystatechange=function() {\n"
 		+ "    if (xmlhttp.readyState==4) {\n"
 		+ "      document.getElementById('feedback' + id).innerHTML="
-		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
+		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment. "
+		+ (!verifiedEmail?"However, no response is possible unless you verify the email address in your <a href=/Verification>user profile</a>.":"") 
+		+ "</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
 		+ "  url += '&QuestionId=' + id + '&Notes=' + note;\n"

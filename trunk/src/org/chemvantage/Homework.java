@@ -370,7 +370,7 @@ public class Homework extends HttpServlet {
 			}
 
 			// embed the detailed solution or hint to the exercise in the response, if appropriate
-			buf.append(ajaxJavaScript());
+			buf.append(ajaxJavaScript(user.verifiedEmail));
 			if (user.isInstructor() || user.isTeachingAssistant() || (studentScore > 0)) {
 				buf.append("<p><div id=exampleLink>"
 						+ "<a href=# onClick=javascript:document.getElementById('example').style.display='';"
@@ -395,7 +395,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	String ajaxJavaScript() {
+	String ajaxJavaScript(boolean verifiedEmail) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note) {\n"
 		+ "  var xmlhttp;\n"
@@ -408,7 +408,9 @@ public class Homework extends HttpServlet {
 		+ "  xmlhttp.onreadystatechange=function() {\n"
 		+ "    if (xmlhttp.readyState==4) {\n"
 		+ "      document.getElementById('feedback' + id).innerHTML="
-		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
+		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment. "
+		+ (!verifiedEmail?"However, no response is possible unless you verify the email address in your <a href=/Verification>user profile</a>.":"") 
+		+ "</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
 		+ "  url += '&QuestionId=' + id + '&Notes=' + note;\n"
