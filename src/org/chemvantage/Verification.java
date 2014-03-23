@@ -280,6 +280,9 @@ public class Verification extends HttpServlet {
 								+ "<span id=instructions style='color:red'><br>Use the 'Instructor' link at the top "
 								+ "of the page to create a new ChemVantage group for your chemistry class.</span></TD></TR>");
 					}
+				}
+/*
+ * ================ THIS SECTION ELIMINATED WHILE ALL CHEMVANTAGE ACCOUNTS ARE FREE ======================
 				} else if (user.myGroupId<=0L && !eligibleToJoin) {
 					buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>ChemVantage Group:</TD>"
 							+ "<TD><span style='color:red'>A premium account is required before you can join a group (e.g., chemistry class).</span><p>");
@@ -301,6 +304,8 @@ public class Verification extends HttpServlet {
 					buf.append("</TR></TABLE>");
 					buf.append("</TD></TR>");
 				}
+ * ================ THIS SECTION ELIMINATED WHILE ALL CHEMVANTAGE ACCOUNTS ARE FREE ======================				
+*/
 				buf.append("</TABLE>\n");
 
 				buf.append("<h3>Any Corrections Needed?</h3>"
