@@ -136,7 +136,7 @@ public class ReportScore extends HttpServlet {
 			if (replyBody.toLowerCase().contains("success")) {
 				s.lisReportComplete = true;
 				ofy.put(s);
-				g.setUsingLisOutcomeService(true);
+//				g.setUsingLisOutcomeService(true);
 			}
 			else throw new Exception();  // try again later
 		} catch (Exception e) {

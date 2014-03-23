@@ -196,12 +196,13 @@ public class Group implements Serializable {
     	Iterable<Key<Score>> scoreKeys = ofy.query(Score.class).filter("groupId",this.id).fetchKeys();
     	ofy.delete(scoreKeys);
     }
-    
-    void setUsingLisOutcomeService(boolean using) {
-    	if (this.isUsingLisOutcomeService != using) {
-    		this.isUsingLisOutcomeService = using;
-    		ofy.put(this);
-    	}
+
+    void setUsingLisOutcomeService(String url) {
+    	if (url==null) return;  // no useful information
+    	if (this.isUsingLisOutcomeService && url.equals(this.lis_outcome_service_url)) return;  // no changes needed
+    	this.isUsingLisOutcomeService = true;
+    	this.lis_outcome_service_url = url;
+    	ofy.put(this);
     }
     
     void deleteAssignments() {

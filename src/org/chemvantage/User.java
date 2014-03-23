@@ -309,6 +309,11 @@ public class User implements Comparable<User>,Serializable {
 	}
 	
 	boolean requiresUpdatesNow() {
+		try {
+			Group g = ofy.get(Group.class,this.myGroupId);
+			if (g.isUsingLisOutcomeService) return false;
+		} catch (Exception e) {
+		}
 		Date now = new Date();
 		Date eightHoursAgo = new Date(now.getTime()-28800000L);
 		return this.lastLogin.before(eightHoursAgo) && this.requiresUpdates();
