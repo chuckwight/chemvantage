@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.List;
 
 import javax.servlet.ServletException;
@@ -32,9 +33,10 @@ import com.googlecode.objectify.ObjectifyService;
 
 public class DataHealer extends HttpServlet {
 	private static final long serialVersionUID = 137L;
-
+	Objectify ofy = ObjectifyService.begin();
+	
 	public String getServletInfo() {
-		return "PZone servlet presents user's detailed scores in the Practice Zone site.";
+		return "ChemVantage servlet scans the database to correct mistakes and delete orphan data.";
 	}
 
 	public static final long LIMIT_MILLIS = 1000 * 25; // provide a little leeway
@@ -42,15 +44,54 @@ public class DataHealer extends HttpServlet {
 	@Override
 	protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 
-	    Objectify ofy = ObjectifyService.begin();
+	    Date now = new Date();
+	    Date oneYearAgo = new Date(now.getTime()-31536000000L);
+	    
 	    //long startTime = System.currentTimeMillis();
 	    //String cursorStr = "";
 	    
+	    List<User> users = ofy.query(User.class).filter("lastLogin<","2013").limit(1000).list();
+	    for (User u:users) deleteUser(u,oneYearAgo);
+	}
+	
+	boolean deleteUser(User u,Date expires) {   // recursive user deletion function that follows the alias tree to the end
+		Date almostExpired = new Date(expires.getTime() + 2592000000L);  // one month after expire date
+		if (u.lastLogin.after(expires)) return false;  // if any alias has a recent login, preserve the entire chain
+		if (u.isAdministrator()) return false;
+		if (u.alias==null) {  // found the end of the expired alias chain
+			ofy.delete(u);    // delete this user
+			return true;      // and signal to delete all users that alias this user
+		} else {
+			try {
+				if (deleteUser(ofy.get(User.class,u.alias),expires)) {
+					deleteUserData(u);
+					ofy.delete(u);
+					return true;
+				} else {
+					u.lastLogin = almostExpired;
+					ofy.put(u);
+					return false;
+				}
+			} catch (Exception e) {
+				return true;        // this alias chain has no valid user at the end point
+			}
+		}
+	}
+	
+	void deleteUserData(User u) {
+		ofy.delete(ofy.query(Response.class).filter("userId",u.id).listKeys());
+		ofy.delete(ofy.query(QuizTransaction.class).filter("userId", u.id).listKeys());
+		ofy.delete(ofy.query(HWTransaction.class).filter("userId", u.id).listKeys());
+		ofy.delete(ofy.query(ExamTransaction.class).filter("userId", u.id).listKeys());
+		ofy.delete(ofy.query(PracticeExamTransaction.class).filter("userId", u.id).listKeys());
+		ofy.delete(ofy.query(VideoTransaction.class).filter("userId", u.id).listKeys());	
+	}
+/*	    
 	    List<User> users = ofy.query(User.class).filter("authDomain","google.com").list();	    
 	    for (User u : users) u.authDomain = "gmail.com";
 	    ofy.put(users);
 	    
-/*	    String className = request.getParameter("ClassName");
+	    String className = request.getParameter("ClassName");
 
   	    if (className==null) className = "Assignment";
  
@@ -182,5 +223,5 @@ public class DataHealer extends HttpServlet {
 	    	cursorStr = null;
 	    } 
 	    */   
-	}
+
 }
