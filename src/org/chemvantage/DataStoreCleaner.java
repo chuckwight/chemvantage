@@ -19,9 +19,9 @@ package org.chemvantage;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -34,8 +34,6 @@ import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.FetchOptions;
 import com.google.appengine.api.datastore.Query;
 import com.googlecode.objectify.Objectify;
-//import com.googlecode.objectify.Objectify;
-//import com.googlecode.objectify.Query;
 
 public class DataStoreCleaner extends HttpServlet {
 	private static final long serialVersionUID = 137L;
@@ -66,23 +64,7 @@ public class DataStoreCleaner extends HttpServlet {
 }
 	private void cleanUsers() {
 		Iterable<User> oldUsers = ofy.query(User.class).filter("lastLogin<",sixMonthsAgo.getTime()).limit(1000).list();
-		for (User u : oldUsers) {
-			if (u.lastLogin.getTime() > 0) {  // user account is at least 1 day old
-				User user = u;
-				if (user.alias != null) { // follow the alias chain to the end
-					List<String> userIds = new ArrayList<String>();
-					userIds.add(user.id);
-					userIds.add(0,user.alias);
-					user = getUserInstance(userIds);					
-				}
-				if (user.lastLogin.before(oneYearAgo) || !user.hasPremiumAccount()) {
-//					/===========NEEDS MORE CODE HERE ===============/
-					// delete the user and all aliases in the chain back to u
-				}
-			} else {  // advance the lastLogin value 1 millisecond to provide 1 day grace period for new user
-				u.lastLogin = new Date(1L);
-			}
-		}
+		for (User u : oldUsers) deleteUser(u);
 	}
 	
 	User getUserInstance(List<String> userIds) {
@@ -97,17 +79,45 @@ public class DataStoreCleaner extends HttpServlet {
 			return ofy.find(User.class,userIds.get(1));  // return the previous user in the alias chain
 		}
 	}
-/*
-	private void cleanUsers() {
-		final DatastoreService datastore = DatastoreServiceFactory.getDatastoreService(); 
-		final Query query = new Query("User"); 
-		for (final Entity user : datastore.prepare(query).asIterable(FetchOptions.Builder.withLimit(1000))) {
-			Date lastLogin = (Date) user.getProperty("lastLogin");
-			String aliasId = (String) user.getProperty("alias");
-			if (lastLogin.before(sixMonthsAgo) && aliasExpired(aliasId)) datastore.delete(user.getKey());
+	
+	boolean deleteUser(User u) {   // recursive user deletion function that follows the alias tree to the end
+		Date expires = u.hasPremiumAccount()?oneYearAgo:sixMonthsAgo;
+		if (u.lastLogin.after(expires)) return false;  // if any alias has a recent login, preserve the entire chain
+		if (u.isAdministrator() || u.isInstructor()) return false;
+		if (u.alias==null) {  // found the end of the expired alias chain
+			if (u.lastLogin.getTime()==0L) {  // user never logged in; perhaps this is a brand new account
+				u.lastLogin = new Date(1000L);   // so mark the account by advancing the lastLogin by 1 second
+				ofy.put(u);                   // so it will be deleted tomorrow instead if the user does not login
+				return false;
+			} else ofy.delete(u);    // delete this user
+			return true;      // and signal to delete all users that alias this user
+		} else {  // follow the alias chain to the end
+			try {
+				if (deleteUser(ofy.get(User.class,u.alias))) {  // recursion to end; if returns true then delete everything
+					deleteUserData(u);
+					ofy.delete(u);
+					return true;
+				} else {  // set this alias account to expire sometime in the next 10 days so I don't encounter it every day
+					int upToTenDaysRandom = new Random().nextInt(10);
+					Date almostExpired = new Date(expires.getTime() + upToTenDaysRandom*86400000L);
+					u.lastLogin = almostExpired;
+					ofy.put(u);
+					return false;
+				}
+			} catch (Exception e) {
+				return true;        // this alias chain has no valid user at the end point
+			}
 		}
 	}
-*/
+	
+	void deleteUserData(User u) {
+		ofy.delete(ofy.query(QuizTransaction.class).filter("userId", u.id).listKeys());
+		ofy.delete(ofy.query(HWTransaction.class).filter("userId", u.id).listKeys());
+		ofy.delete(ofy.query(ExamTransaction.class).filter("userId", u.id).listKeys());
+		ofy.delete(ofy.query(PracticeExamTransaction.class).filter("userId", u.id).listKeys());
+		ofy.delete(ofy.query(VideoTransaction.class).filter("userId", u.id).listKeys());	
+	}
+
 	private void cleanSessions() {
 		final long now = new Date().getTime(); 
 		final DatastoreService datastore = DatastoreServiceFactory.getDatastoreService(); 
@@ -123,7 +133,7 @@ public class DataStoreCleaner extends HttpServlet {
 			DatastoreServiceFactory.getDatastoreService(); 
 		final Query query = new Query("Response"); 
 		for (final Entity response : datastore.prepare(query).asIterable(FetchOptions.Builder.withLimit(1000))) {
-			if (((Date)response.getProperty("submitted")).before(now)) datastore.delete(response.getKey());
+			if (((Date)response.getProperty("submitted")).before(oneYearAgo)) datastore.delete(response.getKey());
 		}
 	}
 }
