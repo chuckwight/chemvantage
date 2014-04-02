@@ -123,7 +123,7 @@ public class DataStoreCleaner extends HttpServlet {
 			DatastoreServiceFactory.getDatastoreService(); 
 		final Query query = new Query("Response"); 
 		for (final Entity response : datastore.prepare(query).asIterable(FetchOptions.Builder.withLimit(1000))) {
-			if ((Long)response.getProperty("submitted") < now.getTime()) datastore.delete(response.getKey());
+			if (((Date)response.getProperty("submitted")).before(now)) datastore.delete(response.getKey());
 		}
 	}
 }
