@@ -55,31 +55,33 @@ public class DataStoreCleaner extends HttpServlet {
 		sixMonthsAgo = new Date(now.getTime()-15768000000L);
 		oneYearAgo = new Date(now.getTime()-31536000000L);
 		
-		cleanUsers();
+		PrintWriter out = response.getWriter();
+		response.setContentType("text/html");
+		out.println(cleanUsers());
 		cleanSessions();
 		cleanResponses();
-		response.setContentType("text/html");
-		PrintWriter out = response.getWriter();
 		out.println("Done.");
 }
-	private void cleanUsers() {
-		Iterable<User> oldUsers = ofy.query(User.class).filter("lastLogin<",sixMonthsAgo.getTime()).limit(1000).list();
-		for (User u : oldUsers) deleteUser(u);
-	}
-	
-	User getUserInstance(List<String> userIds) {
-		try {
-			User user = ofy.get(User.class,userIds.get(0));			
-			if (user.alias != null && !user.alias.isEmpty() && !userIds.contains(user.alias)) {
-				userIds.add(0,user.alias);
-				user = getUserInstance(userIds);  // recursion: follow the alias chain one more link
+	private String cleanUsers() {
+		StringBuffer buf = new StringBuffer();
+		final DatastoreService datastore = DatastoreServiceFactory.getDatastoreService(); 
+		final Query query = new Query("User");
+		String userId = "";
+		for (final Entity user : datastore.prepare(query).asIterable(FetchOptions.Builder.withLimit(1000))) {
+			try {
+				Date lastLogin = (Date)user.getProperty("lastLogin");
+				if (lastLogin.before(oneYearAgo)) {
+					userId = user.getKey().getName();
+					deleteUser(ofy.get(User.class,userId));
+					buf.append("Deleting: " + userId + "<br/>");
+				}
+			} catch (Exception e) {
+				buf.append("Failed on: " + userId + "<br/>");
 			}
-			return user;  // found the user at the end of the alias chain
-		} catch (Exception e) {  // this happens if the last alias does not point to a valid user
-			return ofy.find(User.class,userIds.get(1));  // return the previous user in the alias chain
 		}
+		return buf.toString();
 	}
-	
+
 	boolean deleteUser(User u) {   // recursive user deletion function that follows the alias tree to the end
 		Date expires = u.hasPremiumAccount()?oneYearAgo:sixMonthsAgo;
 		if (u.lastLogin.after(expires)) return false;  // if any alias has a recent login, preserve the entire chain
