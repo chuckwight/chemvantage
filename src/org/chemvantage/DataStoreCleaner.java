@@ -1,5 +1,5 @@
 /*  ChemVantage - A Java web application for online learning
-*   Copyright (C) 2011 ChemVantage LLC
+*   Copyright (C) 2014 ChemVantage LLC
 *   
 *    This program is free software: you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -17,22 +17,31 @@
 
 package org.chemvantage;
 
+import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
+
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
-import java.util.Random;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.appengine.api.datastore.Cursor;
 import com.google.appengine.api.datastore.DatastoreService;
 import com.google.appengine.api.datastore.DatastoreServiceFactory;
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.FetchOptions;
+import com.google.appengine.api.datastore.Key;
+import com.google.appengine.api.datastore.PreparedQuery;
 import com.google.appengine.api.datastore.Query;
+import com.google.appengine.api.datastore.Query.FilterOperator;
+import com.google.appengine.api.datastore.Query.FilterPredicate;
+import com.google.appengine.api.datastore.QueryResultList;
+import com.google.appengine.api.taskqueue.Queue;
+import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Objectify;
 
 public class DataStoreCleaner extends HttpServlet {
@@ -42,13 +51,34 @@ public class DataStoreCleaner extends HttpServlet {
 	Date oneYearAgo;
 	DAO dao = new DAO();
 	Objectify ofy = dao.ofy();
+	int querySizeLimit = 1000;
 	Subject subject = dao.getSubject();
-
+	
 	public String getServletInfo() {
 		return "ChemVantage servlet that performs daily maintenance of the datastore.";
 	}
 	
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
+	throws ServletException, IOException {
+		// This servlet is called by the cron daemon once each day.
+		
+		if (request.getParameter("Task")!=null) {  //specify Task to run manually
+			doPost(request,response);
+			return;
+		}
+		
+		try {
+			Queue queue = QueueFactory.getDefaultQueue(); 
+			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanUsers"));
+			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanSessions"));
+			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanResponses"));
+			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanQuizTransactions"));
+			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanHWTransactions"));
+			} catch (Exception e) {
+		}
+	} 
+
+	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		// This servlet is called by the cron daemon once each day.
 		now = new Date();
@@ -57,85 +87,244 @@ public class DataStoreCleaner extends HttpServlet {
 		
 		PrintWriter out = response.getWriter();
 		response.setContentType("text/html");
-		out.println(cleanUsers());
-		cleanSessions();
-		cleanResponses();
-		out.println("Done.");
+		
+		String cursor = request.getParameter("Cursor");
+		
+		String task = request.getParameter("Task");
+		if (task==null) return;
+		else if (task.equals("CleanUsers")) out.println(cleanUsers(cursor,0));
+		else if (task.equals("CleanSessions")) out.println(cleanSessions(cursor,0));
+		else if (task.equals("CleanResponses")) out.println(cleanResponses(cursor,0));
+		else if (task.equals("CleanQuizTransactions")) out.println(cleanQuizTransactions(cursor,0));
+		else if (task.equals("CleanHWTransactions")) out.println(cleanHWTransactions(cursor,0));
 }
-	private String cleanUsers() {
+
+	private String cleanUsers(String cursor,int retries) {
 		StringBuffer buf = new StringBuffer();
-		final DatastoreService datastore = DatastoreServiceFactory.getDatastoreService(); 
-		final Query query = new Query("User");
-		String userId = "";
-		for (final Entity user : datastore.prepare(query).asIterable(FetchOptions.Builder.withLimit(1000))) {
-			try {
-				Date lastLogin = (Date)user.getProperty("lastLogin");
-				if (lastLogin.before(oneYearAgo)) {
-					userId = user.getKey().getName();
-					deleteUser(ofy.get(User.class,userId));
-					buf.append("Deleting: " + userId + "<br/>");
+		try {
+			DatastoreService datastore = DatastoreServiceFactory.getDatastoreService(); 
+			Query q = new Query("User");
+			q.setFilter(new FilterPredicate("lastLogin",FilterOperator.LESS_THAN,oneYearAgo));
+			
+			PreparedQuery pq = datastore.prepare(q);
+
+			FetchOptions fetchOptions = FetchOptions.Builder.withLimit(querySizeLimit);
+			if (cursor==null) buf.append("<h2>Clean Users</h2>");
+			else fetchOptions.startCursor(Cursor.fromWebSafeString(cursor));
+		    
+		    QueryResultList<Entity> users = pq.asQueryResultList(fetchOptions);
+		    
+			ArrayList<Key> keys = new ArrayList<Key>();  // list of user entity keys for batch delete
+			
+			for (Entity u : users) if (deleteUser((String)u.getProperty("id"))) keys.add(u.getKey());  // tests to see if user should be deleted
+			
+			if (keys.size() > 0) {
+				datastore.delete(keys);
+				buf.append("Deleted " + keys.size() + " user objects.<br/>");
+			} else buf.append("Nothing to delete.<br/>");
+
+		    if (users.size()<querySizeLimit) buf.append("Done.");
+		    else if (retries < 9) buf.append(cleanSessions(users.getCursor().toWebSafeString(),retries+1));		
+		    else {  // launch a new task for the next 1000 objects in the datastore
+				cursor = users.getCursor().toWebSafeString();
+				Queue queue = QueueFactory.getDefaultQueue();
+    			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanUserss").param("Cursor", cursor));
+    			buf.append("Launching a new DataStoreCleaner task.");
+    		}
+
+		} catch (Exception e) {
+		}
+		return buf.toString();
+	}
+		
+	private boolean deleteUser(String userId) {   // recursive user deletion function that follows the alias tree to the end
+		try {
+			User u = ofy.get(User.class,userId);
+			if (u.alias != null && !u.alias.equals(u.id)) {  // follow the alias chain to the end
+				if (deleteUser(u.alias)) return true;
+				else {  // this alias is to be retained; advance lastLogin to prevent inspection every day
+					u.lastLogin = sixMonthsAgo;
+					ofy.put(u);
+					return false;
 				}
-			} catch (Exception e) {
-				buf.append("Failed on: " + userId + "<br/>");
+			} else { // found the user at the end of the alias chain
+				if (u.lastLogin.after(oneYearAgo)) return false;  // if any alias has a recent login, preserve the entire chain
+				if (u.isAdministrator() || u.isInstructor()) return false;
+				if (u.lastLogin.getTime()==0L) {  // user never logged in; perhaps this is a brand new account
+					u.lastLogin = new Date(1000L);   // so mark the account by advancing the lastLogin by 1 second
+					ofy.put(u);                   // so it will be deleted tomorrow instead if the user does not login
+					return false;
+				} 
 			}
+		} catch (Exception e) {  // in case of error, delete the user because the alias points to a null user
+		}	
+		return true; // signal that this user object should be deleted
+	}
+
+	private String cleanSessions(String cursor,int retries) {
+		StringBuffer buf = new StringBuffer();
+		long now = new Date().getTime();
+		try {
+			DatastoreService datastore = DatastoreServiceFactory.getDatastoreService(); 
+			Query q = new Query("_ah_SESSION");
+			q.setFilter(new FilterPredicate("_expires",FilterOperator.LESS_THAN,now));
+			
+			PreparedQuery pq = datastore.prepare(q);
+			
+			FetchOptions fetchOptions = FetchOptions.Builder.withLimit(querySizeLimit);
+		    if (cursor==null) buf.append("<h2>Clean Sessions</h2>");
+		    else fetchOptions.startCursor(Cursor.fromWebSafeString(cursor));
+
+		    QueryResultList<Entity> sessions = pq.asQueryResultList(fetchOptions);
+
+		    ArrayList<Key> keys = new ArrayList<Key>();  // list of session entity keys for batch delete
+		    
+		    for (Entity session : sessions) keys.add(session.getKey()); 
+		    
+		    if (keys.size() > 0) { 
+		    	datastore.delete(keys);
+		    	buf.append("Deleted " + keys.size() + " session objects.<br/>");
+		    } else buf.append("Nothing to be deleted.<br/>");
+
+		    if (sessions.size()<querySizeLimit) buf.append("Done.");
+		    else if (retries < 9) buf.append(cleanSessions(sessions.getCursor().toWebSafeString(),retries+1));
+		    else {
+		    	cursor = sessions.getCursor().toWebSafeString();
+		    	Queue queue = QueueFactory.getDefaultQueue();
+		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanSessions").param("Cursor", cursor));
+		    	buf.append("Launching a new DataStoreCleaner task.");
+		    }
+		} catch (Exception e) {
+			buf.append("Error: " + e.toString());
 		}
 		return buf.toString();
 	}
 
-	boolean deleteUser(User u) {   // recursive user deletion function that follows the alias tree to the end
-		Date expires = u.hasPremiumAccount()?oneYearAgo:sixMonthsAgo;
-		if (u.lastLogin.after(expires)) return false;  // if any alias has a recent login, preserve the entire chain
-		if (u.isAdministrator() || u.isInstructor()) return false;
-		if (u.alias==null) {  // found the end of the expired alias chain
-			if (u.lastLogin.getTime()==0L) {  // user never logged in; perhaps this is a brand new account
-				u.lastLogin = new Date(1000L);   // so mark the account by advancing the lastLogin by 1 second
-				ofy.put(u);                   // so it will be deleted tomorrow instead if the user does not login
-				return false;
-			} else ofy.delete(u);    // delete this user
-			return true;      // and signal to delete all users that alias this user
-		} else {  // follow the alias chain to the end
-			try {
-				if (deleteUser(ofy.get(User.class,u.alias))) {  // recursion to end; if returns true then delete everything
-					deleteUserData(u);
-					ofy.delete(u);
-					return true;
-				} else {  // set this alias account to expire sometime in the next 10 days so I don't encounter it every day
-					int upToTenDaysRandom = new Random().nextInt(10);
-					Date almostExpired = new Date(expires.getTime() + upToTenDaysRandom*86400000L);
-					u.lastLogin = almostExpired;
-					ofy.put(u);
-					return false;
-				}
-			} catch (Exception e) {
-				return true;        // this alias chain has no valid user at the end point
-			}
+	private String cleanResponses(String cursor,int retries) {
+		StringBuffer buf = new StringBuffer();
+		try {
+			DatastoreService datastore = DatastoreServiceFactory.getDatastoreService(); 
+			Query q = new Query("Response");
+			q.setFilter(new FilterPredicate("submitted",FilterOperator.LESS_THAN,oneYearAgo));
+			
+			PreparedQuery pq = datastore.prepare(q);
+			
+			FetchOptions fetchOptions = FetchOptions.Builder.withLimit(querySizeLimit);
+		    if (cursor==null) buf.append("<h2>Clean Responses</h2>");
+		    else fetchOptions.startCursor(Cursor.fromWebSafeString(cursor));
+		    
+		    QueryResultList<Entity> responses = pq.asQueryResultList(fetchOptions);
+
+		    ArrayList<Key> keys = new ArrayList<Key>();  // list of session entity keys for batch delete
+
+		    for (Entity r : responses) keys.add(r.getKey()); 
+
+		    if (keys.size() > 0) {
+		    	datastore.delete(keys);
+		    	buf.append("Deleted " + keys.size() + " response objects.<br/>");
+		    }  else buf.append("Nothing to be deleted.<br/>");
+
+		    if (responses.size()<querySizeLimit) buf.append("Done.");
+		    else if (retries < 9) buf.append(cleanResponses(responses.getCursor().toWebSafeString(),retries+1));			
+/*		    else {
+				cursor = responses.getCursor().toWebSafeString();
+				Queue queue = QueueFactory.getDefaultQueue();
+    			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanResponses").param("Cursor", cursor));
+    			buf.append("Launching a new DataStoreCleaner task.");
+		    }
+*/
+		} catch (Exception e) {
+			buf.append("Error: " + e.toString());
 		}
+		return buf.toString();
 	}
 	
-	void deleteUserData(User u) {
-		ofy.delete(ofy.query(QuizTransaction.class).filter("userId", u.id).listKeys());
-		ofy.delete(ofy.query(HWTransaction.class).filter("userId", u.id).listKeys());
-		ofy.delete(ofy.query(ExamTransaction.class).filter("userId", u.id).listKeys());
-		ofy.delete(ofy.query(PracticeExamTransaction.class).filter("userId", u.id).listKeys());
-		ofy.delete(ofy.query(VideoTransaction.class).filter("userId", u.id).listKeys());	
-	}
+	String cleanQuizTransactions(String cursor,int retries) {
+		StringBuffer buf = new StringBuffer();
+		try {
+			DatastoreService datastore = DatastoreServiceFactory.getDatastoreService(); 
+			Query q = new Query("QuizTransaction");
+			
+			PreparedQuery pq = datastore.prepare(q);
+			
+			FetchOptions fetchOptions = FetchOptions.Builder.withLimit(querySizeLimit);
+		    if (cursor==null) buf.append("<h2>Clean QuizTransactions</h2>");
+		    else fetchOptions.startCursor(Cursor.fromWebSafeString(cursor));
 
-	private void cleanSessions() {
-		final long now = new Date().getTime(); 
-		final DatastoreService datastore = DatastoreServiceFactory.getDatastoreService(); 
-		final Query query = new Query("_ah_SESSION"); 
-		for (final Entity session : datastore.prepare(query).asIterable(FetchOptions.Builder.withLimit(1000))) { 
-			Long expires = (Long) session.getProperty("_expires"); 
-			if (expires < now) datastore.delete(session.getKey());
-		}
-	}
+		    QueryResultList<Entity> quizTransactions = pq.asQueryResultList(fetchOptions);
 
-	private void cleanResponses() {
-		final DatastoreService datastore = 
-			DatastoreServiceFactory.getDatastoreService(); 
-		final Query query = new Query("Response"); 
-		for (final Entity response : datastore.prepare(query).asIterable(FetchOptions.Builder.withLimit(1000))) {
-			if (((Date)response.getProperty("submitted")).before(oneYearAgo)) datastore.delete(response.getKey());
+		    ArrayList<Key> keys = new ArrayList<Key>();  // list of session entity keys for batch delete
+		    
+		    for (Entity qt : quizTransactions) {
+		    	try {
+		    		ofy.get(User.class,(String)qt.getProperty("userId"));		    	
+		    	} catch (Exception e) {  // catches exception if user does not exist
+		    		keys.add(qt.getKey());
+		    	}
+		    }
+		    
+		    if (keys.size() > 0) { 
+		    	datastore.delete(keys);
+		    	buf.append("Deleted " + keys.size() + " quizTransaction objects.<br/>");
+		    } else buf.append("Nothing to be deleted.<br/>");
+
+		    if (quizTransactions.size()<querySizeLimit) buf.append("Done.");
+		    else if (retries < 9) buf.append(cleanSessions(quizTransactions.getCursor().toWebSafeString(),retries+1));
+/*		    else {
+		    	cursor = quizTransactions.getCursor().toWebSafeString();
+		    	Queue queue = QueueFactory.getDefaultQueue();
+		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanSessions").param("Cursor", cursor));
+		    	buf.append("Launching a new DataStoreCleaner task.");
+		    }
+*/
+		} catch (Exception e) {
+			buf.append("Error: " + e.toString());
 		}
+
+		return buf.toString();
+	}
+	String cleanHWTransactions(String cursor,int retries) {
+		StringBuffer buf = new StringBuffer();
+		try {
+			DatastoreService datastore = DatastoreServiceFactory.getDatastoreService(); 
+			Query q = new Query("HWTransaction");
+			
+			PreparedQuery pq = datastore.prepare(q);
+			
+			FetchOptions fetchOptions = FetchOptions.Builder.withLimit(querySizeLimit);
+		    if (cursor==null) buf.append("<h2>Clean HWTransactions</h2>");
+		    else fetchOptions.startCursor(Cursor.fromWebSafeString(cursor));
+
+		    QueryResultList<Entity> hwTransactions = pq.asQueryResultList(fetchOptions);
+
+		    ArrayList<Key> keys = new ArrayList<Key>();  // list of session entity keys for batch delete
+		    
+		    for (Entity ht : hwTransactions) {
+		    	try {
+		    		ofy.get(User.class,(String)ht.getProperty("userId"));		    	
+		    	} catch (Exception e) {  // catches exception if user does not exist
+		    		keys.add(ht.getKey());
+		    	}
+		    }
+		    
+		    if (keys.size() > 0) { 
+		    	datastore.delete(keys);
+		    	buf.append("Deleted " + keys.size() + " hwTransaction objects.<br/>");
+		    } else buf.append("Nothing to be deleted.<br/>");
+
+		    if (hwTransactions.size()<querySizeLimit) buf.append("Done.");
+		    else if (retries < 9) buf.append(cleanSessions(hwTransactions.getCursor().toWebSafeString(),retries+1));
+/*		    else {
+		    	cursor = hwTransactions.getCursor().toWebSafeString();
+		    	Queue queue = QueueFactory.getDefaultQueue();
+		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanSessions").param("Cursor", cursor));
+		    	buf.append("Launching a new DataStoreCleaner task.");
+		    }
+*/
+		} catch (Exception e) {
+			buf.append("Error: " + e.toString());
+		}
+
+		return buf.toString();
 	}
 }
