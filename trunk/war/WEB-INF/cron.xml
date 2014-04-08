@@ -15,9 +15,9 @@
   </cron>
   <cron>
   	<url>/DataStoreCleaner</url>
-  	<description>Provides daily routine maintenance for datastore entities</description>
-  	<schedule>every day 00:15</schedule>
-  	<timezone>America/Los_Angeles</timezone>
-  </cron>
+  	<description>Provides monthly routine maintenance for datastore entities</description>
+  	<schedule>1 of month 01:15</schedule>
+    <timezone>America/Los_Angeles</timezone>
+   </cron>
 
 </cronentries>

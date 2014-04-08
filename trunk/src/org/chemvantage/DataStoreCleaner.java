@@ -118,17 +118,16 @@ public class DataStoreCleaner extends HttpServlet {
 			
 			for (Entity u : users) if (deleteUser((String)u.getProperty("id"))) keys.add(u.getKey());  // tests to see if user should be deleted
 			
-			if (keys.size() > 0) {
-				datastore.delete(keys);
-				buf.append("Deleted " + keys.size() + " user objects.<br/>");
-			} else buf.append("Nothing to delete.<br/>");
-
+			 if (keys.size() > 0) datastore.delete(keys);
+			    
+			 buf.append(users.size() + " entities examined, " + keys.size() + " deleted.<br/>");
+			   
 		    if (users.size()<querySizeLimit) buf.append("Done.");
-		    else if (retries < 9) buf.append(cleanSessions(users.getCursor().toWebSafeString(),retries+1));		
+		    else if (retries < 9) buf.append(cleanUsers(users.getCursor().toWebSafeString(),retries+1));		
 		    else {  // launch a new task for the next 1000 objects in the datastore
 				cursor = users.getCursor().toWebSafeString();
 				Queue queue = QueueFactory.getDefaultQueue();
-    			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanUserss").param("Cursor", cursor));
+    			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanUsers").param("Cursor", cursor));
     			buf.append("Launching a new DataStoreCleaner task.");
     		}
 
@@ -181,11 +180,10 @@ public class DataStoreCleaner extends HttpServlet {
 		    
 		    for (Entity session : sessions) keys.add(session.getKey()); 
 		    
-		    if (keys.size() > 0) { 
-		    	datastore.delete(keys);
-		    	buf.append("Deleted " + keys.size() + " session objects.<br/>");
-		    } else buf.append("Nothing to be deleted.<br/>");
-
+		    if (keys.size() > 0) datastore.delete(keys);
+		    
+		    buf.append(sessions.size() + " entities examined, " + keys.size() + " deleted.<br/>");
+		   
 		    if (sessions.size()<querySizeLimit) buf.append("Done.");
 		    else if (retries < 9) buf.append(cleanSessions(sessions.getCursor().toWebSafeString(),retries+1));
 		    else {
@@ -217,22 +215,24 @@ public class DataStoreCleaner extends HttpServlet {
 
 		    ArrayList<Key> keys = new ArrayList<Key>();  // list of session entity keys for batch delete
 
-		    for (Entity r : responses) keys.add(r.getKey()); 
+		    for (Entity r : responses) {
+		    	Date submitted = (Date)r.getProperty("submitted");
+		    	if (submitted.before(oneYearAgo)) keys.add(r.getKey()); 
+		    }
 
-		    if (keys.size() > 0) {
-		    	datastore.delete(keys);
-		    	buf.append("Deleted " + keys.size() + " response objects.<br/>");
-		    }  else buf.append("Nothing to be deleted.<br/>");
-
+		    if (keys.size() > 0) datastore.delete(keys);
+		    
+		    buf.append(responses.size() + " entities examined, " + keys.size() + " deleted.<br/>");
+		   
 		    if (responses.size()<querySizeLimit) buf.append("Done.");
 		    else if (retries < 9) buf.append(cleanResponses(responses.getCursor().toWebSafeString(),retries+1));			
-/*		    else {
+		    else {
 				cursor = responses.getCursor().toWebSafeString();
 				Queue queue = QueueFactory.getDefaultQueue();
     			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanResponses").param("Cursor", cursor));
     			buf.append("Launching a new DataStoreCleaner task.");
 		    }
-*/
+
 		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
 		}
@@ -252,7 +252,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    else fetchOptions.startCursor(Cursor.fromWebSafeString(cursor));
 
 		    QueryResultList<Entity> quizTransactions = pq.asQueryResultList(fetchOptions);
-
+		    
 		    ArrayList<Key> keys = new ArrayList<Key>();  // list of session entity keys for batch delete
 		    
 		    for (Entity qt : quizTransactions) {
@@ -263,20 +263,19 @@ public class DataStoreCleaner extends HttpServlet {
 		    	}
 		    }
 		    
-		    if (keys.size() > 0) { 
-		    	datastore.delete(keys);
-		    	buf.append("Deleted " + keys.size() + " quizTransaction objects.<br/>");
-		    } else buf.append("Nothing to be deleted.<br/>");
-
+		    if (keys.size() > 0) datastore.delete(keys);
+		    
+		    buf.append(quizTransactions.size() + " entities examined, " + keys.size() + " deleted.<br/>");
+		    
 		    if (quizTransactions.size()<querySizeLimit) buf.append("Done.");
-		    else if (retries < 9) buf.append(cleanSessions(quizTransactions.getCursor().toWebSafeString(),retries+1));
-/*		    else {
+		    else if (retries < 9) buf.append(cleanQuizTransactions(quizTransactions.getCursor().toWebSafeString(),retries+1));
+		    else {
 		    	cursor = quizTransactions.getCursor().toWebSafeString();
 		    	Queue queue = QueueFactory.getDefaultQueue();
-		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanSessions").param("Cursor", cursor));
+		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanQuizTransactions").param("Cursor", cursor));
 		    	buf.append("Launching a new DataStoreCleaner task.");
 		    }
-*/
+
 		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
 		}
@@ -306,21 +305,20 @@ public class DataStoreCleaner extends HttpServlet {
 		    		keys.add(ht.getKey());
 		    	}
 		    }
-		    
-		    if (keys.size() > 0) { 
-		    	datastore.delete(keys);
-		    	buf.append("Deleted " + keys.size() + " hwTransaction objects.<br/>");
-		    } else buf.append("Nothing to be deleted.<br/>");
+
+		    if (keys.size() > 0) datastore.delete(keys);
+
+		    buf.append(hwTransactions.size() + " entities examined, " + keys.size() + " deleted.<br/>");
 
 		    if (hwTransactions.size()<querySizeLimit) buf.append("Done.");
-		    else if (retries < 9) buf.append(cleanSessions(hwTransactions.getCursor().toWebSafeString(),retries+1));
-/*		    else {
+		    else if (retries < 9) buf.append(cleanHWTransactions(hwTransactions.getCursor().toWebSafeString(),retries+1));
+		    else {
 		    	cursor = hwTransactions.getCursor().toWebSafeString();
 		    	Queue queue = QueueFactory.getDefaultQueue();
-		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanSessions").param("Cursor", cursor));
+		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanHWTransactions").param("Cursor", cursor));
 		    	buf.append("Launching a new DataStoreCleaner task.");
 		    }
-*/
+
 		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
 		}
