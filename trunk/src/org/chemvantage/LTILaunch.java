@@ -141,12 +141,22 @@ public class LTILaunch extends HttpServlet {
 			ofy.put(domain);
 		}
 		
-		// check if user has Instructor role
+		// check if user has Instructor or Administrator role
 		boolean isInstructor = false;
+		boolean isAdministrator = false;
 		String userRole = request.getParameter("roles");
-		if (userRole != null) isInstructor = userRole.toLowerCase().contains("instructor");
-		if (isInstructor && !user.isInstructor()) {
-			user.setIsInstructor(true);
+		if (userRole != null) {
+			userRole = userRole.toLowerCase();
+			isInstructor = userRole.contains("instructor");
+			isAdministrator = userRole.contains("administrator");
+		}
+		if (isInstructor != !user.isInstructor()) {  // new instructor status
+			user.setIsInstructor(isInstructor);
+			user.setPremium(true);
+			ofy.put(user);
+		}		
+		if (isAdministrator != !user.isAdministrator()) {  // new Administrator status
+			user.setIsAdministrator(isAdministrator);
 			user.setPremium(true);
 			ofy.put(user);
 		}		

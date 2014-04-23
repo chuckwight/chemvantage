@@ -145,7 +145,7 @@ public class Quiz extends HttpServlet {
 			buf.append("\nQuiz Rules<OL>");
 			buf.append("\n<LI>Each quiz must be completed within " + timeLimit + " minutes of the time when it is first downloaded.</LI>");
 			buf.append("\n<LI>You may repeat quizzes as many times as you wish, to improve your score.</LI>");
-			buf.append("\n<LI>For each quiz topic, the server reports your best quiz score and the number of quizzes that you downloaded.</LI>");
+			buf.append("\n<LI>For each quiz topic, the server reports your best quiz score.</LI>");
 
 			if (myGroup != null) {
 				buf.append("\n<LI>You must submit the quiz for scoring before the indicated deadline in order to receive class credit.</LI>");
@@ -536,6 +536,7 @@ public class Quiz extends HttpServlet {
 			answer = answer.trim();
 			if (answer.isEmpty()) return "";
 			SpellChecker sc = new SpellChecker();
+			//sc.setOverHttps( true );
 			SpellResponse sr = sc.check(answer);
 			SpellCorrection[] scorr = sr.getCorrections();
 			if (scorr==null) return "";  // no corrections needed
@@ -549,7 +550,7 @@ public class Quiz extends HttpServlet {
 			}
 			buf.append(i>0?answer.substring(i):"");
 		} catch (Exception e) {
-			return "Spell checker is offline, sorry";
+			return e.toString();
 		}
 		return buf.toString().trim();
 	}
