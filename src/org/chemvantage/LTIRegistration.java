@@ -73,111 +73,49 @@ public class LTIRegistration extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
-	
-		response.setContentType("text/html");
-		PrintWriter out = response.getWriter();
-		
-		// Check to see if this POST is an initial Tool Proxy Registration request or a formCompletion post:
-		String userRequest = request.getParameter("UserRequest");
-		String lti_message_type = request.getParameter("lti_message_type");
-		
 		try {
-			if (lti_message_type != null && 
-					(lti_message_type.equals("ToolProxyRegistrationRequest") || lti_message_type.equals("ToolProxyReRegistrationRequest"))) {
-
-				ToolConsumerProfile p = new ToolConsumerProfile(request);
-				p.fetch();
-				
-				out.println(Login.header + tcRegistrationForm(p) + Login.footer);
-				return;
-			} else if (userRequest != null && userRequest.equals("Complete Tool Proxy Registration")) {
-				String launch_presentation_return_url = request.getParameter("launch_presentation_return_url");
-				String tool_proxy_guid = registerToolProxy(request);
-				if (!launch_presentation_return_url.isEmpty() && !tool_proxy_guid.isEmpty()) // everything OK; TC return a unique tool_guid
-					response.sendRedirect(launch_presentation_return_url + URLEncoder.encode("?status=success&tool_guid=" + tool_proxy_guid,"UTF-8"));
-			}
+			if (!request.getParameter("lti_message_type").equals("ToolProxyRegistrationRequest")) throw new Exception();
+				ToolConsumerProfile cp = new ToolConsumerProfile(request);
+				cp.fetch();
+				BLTIConsumer c = new BLTIConsumer(cp.reg_key,cp.tool_consumer_guid,cp.lti_version);  // creates a new set of login credentials for the TC
+				cp.registerToolProxy(c.secret);  // registers the contract with the remote tool consumer (LMS)
+				ofy.put(c);  // stores the credentials
+				// all steps completed successfully with no exceptions thrown, so report success back to TC administrator
+				response.sendRedirect(cp.launch_presentation_return_url + URLEncoder.encode("?status=success&tool_guid=" + cp.tool_proxy_guid,"UTF-8"));
 		} catch (Exception e) {
-			doError(request,response,"Sorry, ChemVantage does not yet support LTI Tool Proxy Registration requests.",null,null);
-			//out.println("An unexpected error occurred.  Please check the submitted data for completeness and try again.");
-			return;
+			doError(request,response,"Sorry, ChemVantage does not yet fully support LTIv2.0 Tool Proxy Registration requests.",null,null);
 		}
 	}
-		String tcRegistrationForm(ToolConsumerProfile p) {
-			StringBuffer buf = new StringBuffer();
-			buf.append(banner);
-			buf.append("<h2>ChemVantage LTI Tool Proxy Registration Request</h2>");
-			buf.append("You have requested to establish a trusted Learning Technologies Interoperability (LTI) "
-					+ "relationship between your Tool Consumer (usually a learning management system) and the "
-					+ "Tool Provider at http://chemvantage.org<br><br>");
-			if (p.supportsToolProxyService) {
-				buf.append("<b>Services Offered by Your Tool Consumer:</b>"
-						+ "Supports LTI version: " + p.lti_version + "<br>"
-						+ "Tool Proxy Registration: " + (p.supportsToolProxyService?"false":"true") + "<br>"
-						+ "Result Service (returns scores to the grade book): " + (p.supportsResultService?"false":"true") + "<br>"
-						+ "Provides User Given and Family Names: " + (p.supportsUserNameService?"false":"true") + "<br>"
-						+ "Provides User Email Addresses: " + (p.supportsToolProxyService?"false":"true") + "<br>");
-				buf.append("<span style='color:red'>If the information above is not correct, please DO NOT complete this registration. "
-						+ "Instead, contact Chuck Wight (admin@chemvantage.org) for custom LTI credentials.</span><br><br>");		
-				buf.append("To complete this transaction, ChemVantage needs the following additional information:<br>"
-						+ "<form action=/lti/registration method=post>"
-						+ "<input type=hidden name=lti_version value='" + p.lti_version + "'>"
-						+ "<input type=hidden name=reg_key value='" + p.reg_key + "'>"
-						+ "<input type=hidden name=reg_password value='" + p.reg_password + "'>"
-						+ "<input type=hidden name=launch_presentation_return_url value='" + p.launch_presentation_return_url + "'>"
-						+ "<input type=hidden name=supports_result_service_ value='" + p.supportsResultService + "'>"
-						+ "<input type=hidden name=supports_user_name_service_ value='" + p.supportsUserNameService + "'>"
-						+ "<input type=hidden name=supports_user_email_service_ value='" + p.supportsUserEmailService + "'>"
-						+ "School or Institution Name and Department (if applicable): <input type=text name=institution_name><br>"
-						+ "Please enter a unique identifier for your tool consumer (LMS) using the type of LMS and the domain "
-						+ "covered (e.g., sakai.stanford.edu or moodle.chem.michigan.edu). This does not have to be an actual "
-						+ "domain name but must uniquely identify your LMS (to be used as the LTI oauth_consumer_key value).<br>"
-						+ "LMS admin contact email address: <input type=text name=admin_contact><br>"
-						+ "<input type=submit name=UserRequest value='Complete Tool Proxy Registration'>"
-						+ "</form>");
-			} else buf.append("It appears that your LMS does not support LTI Tool Proxy Registration. "
-					+ "Please contact admin@chemvantage.org for custom LTI credentials.");
-			return buf.toString();
-		}
 
-		private String registerToolProxy(HttpServletRequest request) {
-			String tool_proxy_guid = "";
-			
-			return tool_proxy_guid;
-		}
-		
-		public void doError(HttpServletRequest request, HttpServletResponse response, String s, String message, Exception e)
-				throws java.io.IOException {
-			//System.out.println(s);
-			String return_url = request.getParameter("launch_presentation_return_url");
-			if ( return_url != null && return_url.length() > 1 ) {
-				if ( return_url.indexOf('?') > 1 ) {
-					return_url += "&lti_msg=" + URLEncoder.encode(s,"UTF-8");
-				} else {
-					return_url += "?lti_msg=" + URLEncoder.encode(s,"UTF-8");
-				}
-				response.sendRedirect(return_url);
-				return;
+	public void doError(HttpServletRequest request, HttpServletResponse response, String s, String message, Exception e)
+			throws java.io.IOException {
+		String return_url = request.getParameter("launch_presentation_return_url");
+		if ( return_url != null && return_url.length() > 1 ) {
+			if ( return_url.indexOf('?') > 1 ) {
+				return_url += "&lti_msg=" + URLEncoder.encode(s,"UTF-8");
+			} else {
+				return_url += "?lti_msg=" + URLEncoder.encode(s,"UTF-8");
 			}
-			PrintWriter out = response.getWriter();
-			out.println(s);
+			response.sendRedirect(return_url);
+			return;
 		}
-
-		@Override
-		public void destroy() {
-
-		}
-
+		PrintWriter out = response.getWriter();
+		out.println(s);
+	}
 }
 
 class ToolConsumerProfile {
 	String lti_version;
 	String tc_profile_url;
+	String tool_consumer_guid;
+	String tool_proxy_guid;
 	String reg_key;
 	String reg_password;
 	String launch_presentation_return_url;
 	boolean supportsToolProxyService;
 	boolean supportsResultService;
-	boolean supportsUserNameService;
+	boolean supportsUserFamilyNameService;
+	boolean supportsUserGivenNameService;
 	boolean supportsUserEmailService;
 
 	ToolConsumerProfile() {}
@@ -188,10 +126,10 @@ class ToolConsumerProfile {
 		reg_key = request.getParameter("reg_key");
 		reg_password = request.getParameter("reg_password");
 		launch_presentation_return_url = request.getParameter("launch_presentation_return_url");
+		tool_consumer_guid = request.getParameter("tool_consumer_guid");  // optional parameter, but useful
 	}
 
-	void fetch() {
-		try {
+	void fetch() throws Exception {
 			URL u = new URL(this.tc_profile_url + "?lti_version=LTI-2p0");
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			BufferedReader in = new BufferedReader(new InputStreamReader(uc.getInputStream()));
@@ -200,21 +138,14 @@ class ToolConsumerProfile {
 			while ((inputLine = in.readLine()) != null) tc_profile += inputLine;
 			this.supportsToolProxyService = tc_profile.contains("vnd.ims.lti.v2.ToolConsumerProfile+json");
 			this.supportsResultService = tc_profile.contains("vnd.ims.lis.v2.Result+json");
-			this.supportsUserNameService = tc_profile.contains("Person.name.family") && tc_profile.contains("Person.name.given");
+			this.supportsUserFamilyNameService = tc_profile.contains("Person.name.family");
+			this.supportsUserGivenNameService = tc_profile.contains("Person.name.given");
 			this.supportsUserEmailService = tc_profile.contains("Person.email.primary");
 			in.close();
-		} catch (Exception e) {
-		}
 	}
-}
-
-class ToolProxy {
-	String json;
 	
-	ToolProxy() {}
-	
-	ToolProxy(HttpServletRequest request) {
-		this.json = "{"
+	void registerToolProxy(String secret) throws Exception {
+		String toolProxy = "{"
 				+ "   \"@context\" : \"http://www.imsglobal.org/imspurl/lti/v2/ctx/ToolProxy\","
 				+ "   \"@type\" : \"ToolProxy\","
 				+ "   \"@id\" : \"http://lms.example.com/ToolProxy/869e5ce5-214c-4e85-86c6-b99e8458a592\","
@@ -224,8 +155,12 @@ class ToolProxy {
 				+ "   \"tool_profile\"          : {  },"
 				+ "   \"security_contract\"     : {  }"
 				+ "  }";
+		
+		// Here we need to add logic to construct a proper ToolProxy and register it with the Tool Consumer
+	}
 }
-}
+
+
 		/*   THIS CODE IDENTICAL TO CURRENT VERSION OF LTILaunch.java 
 
 		String oauth_consumer_key = request.getParameter("oauth_consumer_key");

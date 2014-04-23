@@ -32,6 +32,7 @@ public class BLTIConsumer {
 	@Id String oauth_consumer_key;
 	String secret;
 	String lti_version;
+	String tool_consumer_guid;
 
 	BLTIConsumer() {}
 
@@ -45,6 +46,18 @@ public class BLTIConsumer {
         this.oauth_consumer_key = oauth_consumer_key;
         this.lti_version = "LTI-1p0";
     }
+	
+	BLTIConsumer(String key,String tool_consumer_guid,String version) {
+		this.oauth_consumer_key = key;
+		Random random =  new Random();
+        long r1 = random.nextLong();
+        long r2 = random.nextLong();
+        String hash1 = Long.toHexString(r1);
+        String hash2 = Long.toHexString(r2);
+        this.secret = hash1 + hash2;
+        this.tool_consumer_guid = tool_consumer_guid;
+		this.lti_version = version;	
+	}
 	
 	static void create(String oauth_consumer_key) {
 		ObjectifyService.begin().put(new BLTIConsumer(oauth_consumer_key));

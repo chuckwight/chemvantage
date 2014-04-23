@@ -269,8 +269,8 @@ public class Question implements Serializable {
 	String print(String studentAnswer) {  // this method includes functionality to access spell checking and Google searches
 		StringBuffer buf = new StringBuffer();
 		char choice = 'a';
-		String q = new String(text + " " + tag).replaceAll("\\<[^>]*>","").trim();
-		String searchURL = "http://www.google.com/search?q=" + q.replace(' ','+');
+		//String q = new String(text + " " + tag).replaceAll("\\<[^>]*>","").trim();
+		//String searchURL = "http://www.google.com/search?q=" + q.replace(' ','+');
 		switch (getQuestionType()) {
 		case 1: // Multiple Choice
 			buf.append("<b>" + text + "</b><br>");
@@ -303,13 +303,13 @@ public class Question implements Serializable {
 		case 4: // Fill-in-the-Word
 			buf.append("<b>" + text + "</b><br>");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br>");
-			/* ====== Spell checker temporarily disabled 4/16/2014 =============
-			 	buf.append("<div id=status" + this.id + " style='font-size:10px'><button type=button "
-			 		+ "onClick=\"javascript: document.getElementById('status" + this.id + "')"
+/*	=========SPELL CHECKING AND GOOGLE SEARCH TEMPORARILY DISABLED===================		
+			buf.append("<div id=status" + this.id + " style='font-size:10px'><button type=button "
+					+ "onClick=\"javascript: document.getElementById('status" + this.id + "')"
 					+ ".innerHTML='checking...';ajaxSpellCheck(" + this.id + ");\">Check Spelling</button>"
 					+ "<a target=_blank href=" + searchURL + ">Google Search</a></div>");
-			 ==================================================================
-			*/
+	==================================================================================
+*/		
 			buf.append("<input id=" + this.id + " type=text name=" + this.id + " value='" + CharHider.quot2html(studentAnswer) + "'>");
 			buf.append("<b>" + tag + "</b><br>");
 			break;
