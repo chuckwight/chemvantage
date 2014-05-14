@@ -27,7 +27,10 @@ import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import javax.servlet.ServletConfig;
@@ -36,6 +39,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.appengine.labs.repackaged.org.json.JSONArray;
+import com.google.appengine.labs.repackaged.org.json.JSONException;
+import com.google.appengine.labs.repackaged.org.json.JSONObject;
 import com.googlecode.objectify.Objectify;
 
 public class LTIRegistration extends HttpServlet {
@@ -44,7 +50,9 @@ public class LTIRegistration extends HttpServlet {
 	Objectify ofy = dao.ofy();
 	Map<String,String> sharedSecrets = new HashMap<String,String>();
 	private static final long serialVersionUID = 137L;
-
+	// the following string constants are associated with the ChemVantage Tool Profile and other
+	// constants needed to construct a valid Tool Proxy
+	
 	@Override
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
@@ -55,338 +63,232 @@ public class LTIRegistration extends HttpServlet {
 			+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>";
 			
 	String welcomeMessage = "<h2>LTI Tool Proxy Registration</h2>"
-			+ "ChemVantage is currently working to implement instant LTI integration with learning management systems that "
-			+ "support the LTI version 2.0 standard. Your system administrator will be able to do this by entering this URL "
+			+ "ChemVantage supports the LTI version 2.0 standard for tool proxy registration. Your system administrator can enter the URL "
 			+ "(<b>http://chemvantage.org/lti/registration/</b>) into the LTI Tool Proxy Registration page of your LMS.<br><br>"
 			+ "If your LMS supports an older version of the LTI standard, please contact Chuck Wight (admin@chemvantage.org) "
-			+ "to request a set of LTI credentials to enter into your LMS manually.";
+			+ "to request a set of LTI credentials to enter into your LMS manually.<hr>"
+			+ "FYI, the following is a JSON representation of the ChemVantage tool profile for LTI integration.<p>";
 	
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		// This page simply prints a brief set of instructions for LTI-2.0 Tool Proxy Registration
-		out.println(Login.header + banner + welcomeMessage + Login.footer);
+		List<String> capabilities = Arrays.asList("Person.email.primary","Person.name.given","Result.autocreate");
+		out.println(Login.header + banner + welcomeMessage);
+		try {
+			getToolProfile(capabilities).write(out);
+		} catch (Exception e) {
+			out.println(e.getMessage());
+		}
+		out.println(Login.footer);
 	}
 
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
+		StringBuffer debug = new StringBuffer("Debug:\n");
+		String lti_message_type = request.getParameter("lti_message_type");
+		String reg_key = request.getParameter("reg_key");
+		String reg_password = request.getParameter("reg_password");
+		String tc_profile_url = request.getParameter("tc_profile_url");
+		String launch_presentation_return_url = request.getParameter("launch_presentation_return_url");
+		
 		try {
-			if (!request.getParameter("lti_message_type").equals("ToolProxyRegistrationRequest")) throw new Exception();
-				ToolConsumerProfile cp = new ToolConsumerProfile(request);
-				cp.fetch();
-				BLTIConsumer c = new BLTIConsumer(cp.reg_key,cp.tool_consumer_guid,cp.lti_version);  // creates a new set of login credentials for the TC
-				cp.registerToolProxy(c.secret);  // registers the contract with the remote tool consumer (LMS)
-				ofy.put(c);  // stores the credentials
+			if (!lti_message_type.equals("ToolProxyRegistrationRequest")) throw new Exception("Invalid message type");
+			if (reg_key==null || reg_key.isEmpty()) throw new Exception("Required reg_key parameter is missing.");
+			if (reg_password==null || reg_password.isEmpty()) throw new Exception("Required reg_password parameter is missing.");
+			if (tc_profile_url==null || tc_profile_url.isEmpty()) throw new Exception("Required tc_profile_url parameter is missing.");
+			if (launch_presentation_return_url==null || launch_presentation_return_url.isEmpty()) throw new Exception("Required launch_presentation_return_url parameter is missing.");
+			
+			JSONObject toolConsumerProfile = fetchToolConsumerProfile(tc_profile_url); 
+			
+			List<String> capability_enabled = getCapabilities(toolConsumerProfile);
+					
+			// check to make sure that this is the first registration for this tool consumer
+			BLTIConsumer c = ofy.find(BLTIConsumer.class,reg_key);
+			if (c != null) throw new Exception("A Tool Consumer is already registered with this key.");
+			// create a new set of LTI oauth_consumer_key and oauth_shared_secret credentials
+			c = new BLTIConsumer(reg_key,toolConsumerProfile.getString("guid"),"LTI-2p0");
+			debug.append("consumer_formed_ok.");
+			
+			JSONObject toolProxy = constructToolProxy(toolConsumerProfile,tc_profile_url,"53714442f1b3c",c.secret,capability_enabled);
+			debug.append("tool_proxy_formed_ok.oauth_consumer_key:" + reg_key + ".");
+			
+			
+			String reply = new LTIMessage("application/vnd.ims.lti.v2.toolproxy+json",toolProxy.toString(),getTCServiceEndpoint("application/vnd.ims.lti.v2.toolproxy+json",toolConsumerProfile),reg_key,reg_password).send();
+			if (reply.length()==0) debug.append("tc_response_empty");
+			
+			JSONObject replyBody = new JSONObject(reply);
+			
+			if (replyBody.getString("@type").equals("ToolProxy") && replyBody.getString("tool_proxy_guid").equals(c.oauth_consumer_key)) {
+				c.putToolProxyURL(toolProxy.getString("@id"));  // store the new tool proxy in the BLTIConsumer entity
+				ofy.put(c);  // stores the new credentials
 				// all steps completed successfully with no exceptions thrown, so report success back to TC administrator
-				response.sendRedirect(cp.launch_presentation_return_url + URLEncoder.encode("?status=success&tool_guid=" + cp.tool_proxy_guid,"UTF-8"));
+				response.sendRedirect(launch_presentation_return_url + URLEncoder.encode("?status=success&tool_proxy_guid=" + toolProxy.getString("tool_proxy_guid"),"UTF-8"));
+			} else {
+				response.sendRedirect(launch_presentation_return_url + URLEncoder.encode("?status=failure&tool_proxy_guid=" + toolProxy.getString("tool_proxy_guid"),"UTF-8"));
+			}
 		} catch (Exception e) {
-			doError(request,response,"Sorry, ChemVantage does not yet fully support LTIv2.0 Tool Proxy Registration requests.",null,null);
+			doError(request,response,"Sorry, the Tool Proxy Registration failed.<br>" + e.getMessage() + "<br>" + debug.toString() + "<br>" + "PLEASE SEND THIS ERROR TO admin@chemvantage.org",null,null);
 		}
 	}
 
 	public void doError(HttpServletRequest request, HttpServletResponse response, String s, String message, Exception e)
 			throws java.io.IOException {
-		String return_url = request.getParameter("launch_presentation_return_url");
-		if ( return_url != null && return_url.length() > 1 ) {
-			if ( return_url.indexOf('?') > 1 ) {
-				return_url += "&lti_msg=" + URLEncoder.encode(s,"UTF-8");
-			} else {
-				return_url += "?lti_msg=" + URLEncoder.encode(s,"UTF-8");
-			}
-			response.sendRedirect(return_url);
-			return;
-		}
-		PrintWriter out = response.getWriter();
-		out.println(s);
-	}
-}
-
-class ToolConsumerProfile {
-	String lti_version;
-	String tc_profile_url;
-	String tool_consumer_guid;
-	String tool_proxy_guid;
-	String reg_key;
-	String reg_password;
-	String launch_presentation_return_url;
-	boolean supportsToolProxyService;
-	boolean supportsResultService;
-	boolean supportsUserFamilyNameService;
-	boolean supportsUserGivenNameService;
-	boolean supportsUserEmailService;
-
-	ToolConsumerProfile() {}
-
-	ToolConsumerProfile(HttpServletRequest request) {
-		lti_version = request.getParameter("lti_version");
-		tc_profile_url = request.getParameter("tc_profile_url");
-		reg_key = request.getParameter("reg_key");
-		reg_password = request.getParameter("reg_password");
-		launch_presentation_return_url = request.getParameter("launch_presentation_return_url");
-		tool_consumer_guid = request.getParameter("tool_consumer_guid");  // optional parameter, but useful
-	}
-
-	void fetch() throws Exception {
-			URL u = new URL(this.tc_profile_url + "?lti_version=LTI-2p0");
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			BufferedReader in = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-			String inputLine;
-			String tc_profile = "";
-			while ((inputLine = in.readLine()) != null) tc_profile += inputLine;
-			this.supportsToolProxyService = tc_profile.contains("vnd.ims.lti.v2.ToolConsumerProfile+json");
-			this.supportsResultService = tc_profile.contains("vnd.ims.lis.v2.Result+json");
-			this.supportsUserFamilyNameService = tc_profile.contains("Person.name.family");
-			this.supportsUserGivenNameService = tc_profile.contains("Person.name.given");
-			this.supportsUserEmailService = tc_profile.contains("Person.email.primary");
-			in.close();
-	}
-	
-	void registerToolProxy(String secret) throws Exception {
-		String toolProxy = "{"
-				+ "   \"@context\" : \"http://www.imsglobal.org/imspurl/lti/v2/ctx/ToolProxy\","
-				+ "   \"@type\" : \"ToolProxy\","
-				+ "   \"@id\" : \"http://lms.example.com/ToolProxy/869e5ce5-214c-4e85-86c6-b99e8458a592\","
-				+ "   \"lti_version\" : \"LTI-2p0\","
-				+ "   \"tool_proxy_guid\" : \"e8359010-009f-11e1-be50-0800200c9a66\","
-				+ "   \"tool_consumer_profile\" : {  },"
-				+ "   \"tool_profile\"          : {  },"
-				+ "   \"security_contract\"     : {  }"
-				+ "  }";
-		
-		// Here we need to add logic to construct a proper ToolProxy and register it with the Tool Consumer
-	}
-}
-
-
-		/*   THIS CODE IDENTICAL TO CURRENT VERSION OF LTILaunch.java 
-
-		String oauth_consumer_key = request.getParameter("oauth_consumer_key");
-		String userId = oauth_consumer_key + ":" + request.getParameter("user_id");
-		String context_id = request.getParameter("context_id");
-		String resource_link_id = request.getParameter("resource_link_id");
-		if ( ! "basic-lti-launch-request".equals(request.getParameter("lti_message_type")) || oauth_consumer_key == null || resource_link_id == null ) {
-			doError(request, response, "LTI launch request was missing a required parameter.", null, null);
-			return;
-		}
-		
-		// Lookup the secret that corresponds to the oauth_consumer_key in the AppEngine datastore
-		if (!sharedSecrets.containsKey(oauth_consumer_key)) {
-			String secret = BLTIConsumer.getSecret(oauth_consumer_key);
-			if (secret != null) sharedSecrets.put(oauth_consumer_key,secret);
-		}
-		String oauth_secret = sharedSecrets.get(oauth_consumer_key);
-
-		OAuthMessage oam = OAuthServlet.getMessage(request, null);
-		OAuthValidator oav = new SimpleOAuthValidator();
-		OAuthConsumer cons = new OAuthConsumer("about:blank#OAuth+CallBack+NotUsed", 
-				oauth_consumer_key, oauth_secret, null);
-
-		OAuthAccessor acc = new OAuthAccessor(cons);
-
-		String base_string = null;
 		try {
-			base_string = OAuthSignatureMethod.getBaseString(oam);
-		} catch (Exception e) {
-			base_string = null;
-		}
-		
-		try {
-			if (!Nonce.isUnique(request.getParameter("oauth_nonce"), request.getParameter("oauth_timestamp"))) throw new Exception("Bad nonce or timestamp.");
-			oav.validateMessage(oam,acc);
-		} catch(Exception e) {
-			System.out.println("Provider failed to validate message");
-			System.out.println(e.getMessage());
-			if ( base_string != null ) System.out.println(base_string);
-			doError(request, response,"Launch data does not validate.", context_id, null);
-			return;
-		}
-		// BLTI Launch message was validated successfully. 
-
-		// Provision a new user account if necessary, and store the userId in the user's session
-		HttpSession session = request.getSession(true);
-		session.setAttribute("UserId",userId);
-		User user = User.getInstance(session);
-		if (user==null) user = User.createBLTIUser(request); // first-ever login for this user
-		// try to set a cookie in the user's browser with the identity provider
-		Cookie c = new Cookie("IDProvider","BLTI");
-		c.setMaxAge(2592000); // expires after 30 days (in seconds)
-		response.addCookie(c);
-	
-		// Create the domain if it doesn't already exist
-		Domain domain = ofy.query(Domain.class).filter("domainName",oauth_consumer_key).get();
-		if (domain == null) {
-			domain = new Domain(oauth_consumer_key);
-			if (user.isAdministrator()) domain.addAdmin(user.id);
-			ofy.put(domain);
-		}
-		
-		// check if user has Instructor role
-		boolean isInstructor = false;
-		String userRole = request.getParameter("roles");
-		if (userRole != null) isInstructor = userRole.toLowerCase().contains("instructor");
-		if (isInstructor && !user.isInstructor()) {
-			user.setIsInstructor(true);
-			user.setPremium(true);
-			ofy.put(user);
-		}		
-		
-		// Check to see if the LMS is providing an LIS Outcome Service URL (LTI v1.1)
-		String lisOutcomeServiceUrl = request.getParameter("lis_outcome_service_url");
-		// the lis_result_sourcedid is an optional LTI parameter that specifies a context gradebook entry point
-		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
-		boolean supportsLIS = lisOutcomeServiceUrl != null && lisOutcomeServiceUrl != null;
-		
-		// Provision a new context (group), if necessary and put the user into it
-		Group g = null;
-		if (context_id != null && !context_id.isEmpty()) {
-			g = ofy.query(Group.class).filter("context_id",context_id).get();
-			if (g == null) { // create this new group
-				String contextTitle = request.getParameter("context_title");
-				if (contextTitle==null) contextTitle = "";
-				g = new Group("BLTI",context_id,contextTitle);
-				g.domain = domain.domainName;
-				ofy.put(g);
+			String return_url = request.getParameter("launch_presentation_return_url");
+			if (return_url != null && !return_url.isEmpty()) {
+				return_url += (return_url.indexOf('?')>1?"&lti_msg=":"?lti_msg=") + URLEncoder.encode(s,"UTF-8");
+				response.sendRedirect(return_url);
+				return;
 			}
-			
-			if (supportsLIS && !lisOutcomeServiceUrl.equals(g.lis_outcome_service_url)) {  // update the URL as a Group property
-				g.lis_outcome_service_url=lisOutcomeServiceUrl;
-				ofy.put(g);
-			}							
-			
-			if (user.isInstructor()) {
-				if (g.instructorId.equals("unknown")) {  // assign the instructor to this group
-					g.instructorId = user.id;
-					ofy.put(g);
-				}
+		} catch (Exception e2) {
+			// in case no return URL was provided, show the error to the user
+			PrintWriter out = response.getWriter();
+			out.println(s);
+		}
+	}
+
+	JSONObject fetchToolConsumerProfile(String tc_profile_url) throws Exception {
+		JSONObject tc_profile = null;		
+		URL u = new URL(tc_profile_url);
+		HttpURLConnection connection = (HttpURLConnection) u.openConnection();
+		connection.setRequestProperty("Content-Type", "application/json");
+		if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+			BufferedReader reader = new BufferedReader(new InputStreamReader(u.openStream()));
+			StringBuffer res = new StringBuffer();
+			String line;
+			while ((line = reader.readLine()) != null) {
+				res.append(line);
 			}
+			reader.close();
+			tc_profile = new JSONObject(res.toString());	
 		}
-
-		// assign the user to a new group, if necessary and eligible
-		if (g != null && user.myGroupId != g.id && user.processPremiumUpgrade(g)) user.changeGroups(g.id);
-		if (!user.hasPremiumAccount() && user.myGroupId > 0) user.changeGroups(0L);  // boots basic users out of groups
-				
-		
-		if (g==null) {  // no context data was contained in the launch parameters; send the user to the Home page
-			user.changeGroups(0L);
-			response.sendRedirect("/Home");
-			return;
-		}
-
-		// Use the resourcePicker method to discover the URL for the assignment associated with this link
-		String redirectUrl = resourceUrlFinder(user,request);
-		
-		if (redirectUrl.equals("/Verification")) {
-			session.setAttribute("ResourceLinkId", resource_link_id);
-			session.setAttribute("GroupId", g.id);
-			if (supportsLIS) session.setAttribute("LisResultSourcedid", lis_result_sourcedid);
-		} 
-
-		response.sendRedirect(redirectUrl);
-	}		
+		return tc_profile;
+	}
 	
-	String resourceUrlFinder(User user, HttpServletRequest request) {
-		String redirectUrl = "";
-		Date now = new Date();
-		Date sixMonthsFromNow = new Date(now.getTime() + 15768000000L);  // exact time far into the future
-		try {  
-			// a resource_link_id string should be provided with every valid LTI launch
-			String resource_link_id = request.getParameter("resource_link_id");
-			
-			// the lis_result_sourcedid is an optional LTI parameter that specifies a context gradebook entry point
-			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
-			
-			// if the user was not provisioned with a premium account automatically (purchase required):
-			if (user.myGroupId <= 0 || user.requiresUpdatesNow()) return "/Verification";
-			
-			Query<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",user.myGroupId);
-			Assignment myAssignment = null;
-			for (Assignment a : assignments) 
-				if (a.resourceLinkIds != null && a.resourceLinkIds.contains(resource_link_id)) {
-					myAssignment = a;
-					break;
-				}
-			if (myAssignment == null) { // try to find it based on the request data
-				String assignmentType = request.getParameter("AssignmentType");
-				long topicId = 0;
-				if (assignmentType != null) {
-					redirectUrl = "/" + assignmentType;
-					try {
-						topicId = Long.parseLong(request.getParameter("TopicId"));
-						redirectUrl += "?TopicId=" + topicId;
-						myAssignment = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType",assignmentType).filter("topicId",topicId).get();
-					} catch (Exception e) {
-						myAssignment = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType",assignmentType).get();	
-					}
-					if (myAssignment == null) {
-						myAssignment = new Assignment(user.myGroupId,topicId,assignmentType,sixMonthsFromNow);
-						Group g = ofy.find(Group.class,user.myGroupId);
-						if (g != null) {
-							g.setGroupTopicIds();
-							ofy.put(g);
+	List<String> getCapabilities(JSONObject toolConsumerProfile) throws JSONException {
+		// list of capabilities offered by the Tool Consumer
+		List<String> capabilities_wanted = Arrays.asList("Person.email.primary","Person.name.given","Result.autocreate");
+		List<String> capability_offered = new ArrayList<String>();
+		List<String> capability_enabled = new ArrayList<String>();
+		JSONArray tcp = toolConsumerProfile.getJSONArray("capability_offered");
+		for (int i=0; i<tcp.length();i++) capability_offered.add(tcp.getString(i));
+
+		for (String s : capabilities_wanted) if (capability_offered.contains(s)) capability_enabled.add(s);	
+		
+		return capability_enabled;
+	}
+
+	JSONObject constructToolProxy(JSONObject toolConsumerProfile,String tc_profile_url,String reg_key,String shared_secret,List<String> capability_enabled) 
+			throws Exception {
+		JSONObject toolProxy = new JSONObject();
+		toolProxy.put("@context", "http://purl.imsglobal.org/ctx/lti/v2/ToolProxy");
+		toolProxy.put("@type", "ToolProxy");
+		toolProxy.put("@id", getTCServiceEndpoint("application/vnd.ims.lti.v2.toolproxy+json",toolConsumerProfile) + "/" + reg_key);
+		toolProxy.put("lti_version", toolConsumerProfile.getString("lti_version"));
+		toolProxy.put("tool_proxy_guid", reg_key);
+		toolProxy.put("tool_consumer_profile", tc_profile_url);
+		toolProxy.put("tool_profile", getToolProfile(capability_enabled));					
+		toolProxy.put("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled));				
+		return toolProxy;
+	}
+
+	JSONObject getToolProfile(List<String> capability_enabled) throws Exception {  // this is the (mostly static) tool profile for ChemVantage
+		JSONObject toolProfile = new JSONObject()
+			.put("lti_version","LTI-2p0")
+			.put("product_instance",new JSONObject()
+				.put("product_info", new JSONObject()
+					.put("product_name", new JSONObject("{'default_value':'ChemVantage'}"))
+					.put("product_version", "3.0")
+					.put("description", new JSONObject("{'default_value':'ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry.'}"))
+					.put("product_family", new JSONObject()
+						.put("@id", "http://chemvantage.org/about")
+						.put("vendor", new JSONObject()
+							.put("vendor_name", new JSONObject("{'default_value':'ChemVantage LLC'}"))
+							.put("website", "http://chemvantage.org")
+							.put("contact", new JSONObject("{'email':'admin@chem=vantage.org'}")))))
+				.put("support", new JSONObject("{'email':'admin@chemvantage.org'}"))
+				.put("service_provider", new JSONObject()
+					.put("guid", "chemvantage.org")
+					.put("timestamp", "2014-05-01T00:00:00-07:00")
+					.put("service_provider_name", new JSONObject("{'default_value':'ChemVantage LLC'}")))
+				.put("service_owner", new JSONObject()
+					.put("guid", "chemvantage.org")
+					.put("timestamp", "2014-05-01T00:00:00-07:00")
+					.put("service_owner_name", new JSONObject("{'default_value':'ChemVantage LLC'}"))))
+				.put("base_url_choice", new JSONArray()
+				.put(new JSONObject()
+					.put("selector", "DefaultSelector")
+					.put("default_base_url", "http://chemvantage.org/")
+					.put("secure_base_url", "https://chemvantage.org/")));
+					
+		// the following are parameters that are available only at the option of the Tool Consumer (LMS)
+		JSONArray parameter = new JSONArray();
+		if (capability_enabled.contains("Person.name.given")) parameter.put(new JSONObject("{'name':'lis_person_name_given','variable':'Person.name.given'}"));
+		if (capability_enabled.contains("Person.email.primary")) parameter.put(new JSONObject("{'name':'lis_person_email_primary','variable':'Person.email.primary'}"));
+		if (capability_enabled.contains("Result.autocreate")) {
+			parameter.put(new JSONObject("{'name':'lis_result_sourcedid','variable':'Result.sourcedId'}"));
+			parameter.put(new JSONObject("{'name':'lis_outcome_service_url','variable':'Result.uri'}"));
+		}
+
+		// construct a generic message object for every basic-lti-launch-request 
+		JSONObject msg = new JSONObject("{'message_type':'basic-lti-launch-request','path':'lti/'}");
+		if (capability_enabled.contains("Result.autocreate")) msg.put("enabled_capability", new JSONArray("['Result.autocreate']"));
+
+		// construct an array of 3 resource handlers for ChemVantage quiz, homework and exam assignments
+		JSONArray resource_handler = new JSONArray();
+		resource_handler.put(new JSONObject("{'name':{'default_value':'ChemVantage Quiz'},'description':{'default_value':'A 15-minute timed quiz on one topic in General Chemistry'}}")
+		   	.put("message",new JSONArray()
+				.put(msg
+					.put("parameter",parameter
+						.put(new JSONObject("{'name':'assignmentType','fixed':'Quiz'}"))))));
+		resource_handler.put(new JSONObject("{'name':{'default_value':'ChemVantage Homework Assignment'},'description':{'default_value':'A set of quantitative problems on one topic in General Chemistry'}}")
+			.put("message",new JSONArray()
+				.put(msg
+					.put("parameter",parameter
+						.put(new JSONObject("{'name':'assignmentType','fixed':'Homework'}"))))));
+		resource_handler.put(new JSONObject("{'name':{'default_value':'ChemVantage Practice Exam'},'description':{'default_value':'A 60-minute practice exam covering at least 3 topics in General Chemistry'}}")
+			.put("message",new JSONArray()
+				.put(msg
+					.put("parameter",parameter
+						.put(new JSONObject("{'name':'assignmentType','fixed':'PracticeExam'}"))))));
+		toolProfile.put("resource_handler",resource_handler);
+		return toolProfile;
+	}
+
+	JSONObject getSecurityContract(JSONObject toolConsumerProfile, String shared_secret,List<String> capabilities) throws Exception {
+		JSONObject security_contract = new JSONObject();
+		security_contract.put("shared_secret",shared_secret);
+		
+		if (capabilities.contains("Result.autocreate")) {
+			security_contract.put("tool_service", new JSONArray().put(new JSONObject()
+				.put("@type","RestServiceProfile")
+				.put("service", getTCServiceEndpoint("application/vnd.ims.lis.v2.result+json",toolConsumerProfile))
+				.put("action", new JSONArray("['GET','PUT']"))));
+		}
+		
+		return security_contract;
+		
+	}
+
+	String getTCServiceEndpoint(String formatString,JSONObject toolConsumerProfile) throws Exception {
+		JSONArray service_offered = toolConsumerProfile.getJSONArray("service_offered");
+		for (int i=0; i<service_offered.length(); i++) {
+			try {
+				JSONObject s = service_offered.getJSONObject(i);
+				if (s.has("format")) {
+					JSONArray formats = s.getJSONArray("format");
+					for (int j=0; j<formats.length(); j++) {
+						if (formats.getString(i).toLowerCase().equals(formatString)) {
+							return s.getString("endpoint");
 						}
 					}
-					if (user.isInstructor()) {  // if this is the instructor, remember this association for future launches
-						myAssignment.resourceLinkIds.add(resource_link_id);
-						ofy.put(myAssignment);
-					}
 				}
-			}
-
-			if (myAssignment == null) {  // assignment is unknown at this point; go pick the right one
-				redirectUrl = "/lti?UserRequest=pick&resource_link_id="+resource_link_id;  // send the user to the pickResource page
-			} else {  // found the assignment; configure the correct URL for redirection
-				redirectUrl = "/" + myAssignment.assignmentType;
-				if (myAssignment.topicId>0) redirectUrl += "?TopicId=" + myAssignment.topicId;
-			}
-			if (lis_result_sourcedid != null && !redirectUrl.equals("/Home")) redirectUrl += "&lis_result_sourcedid=" + URLEncoder.encode(lis_result_sourcedid,"UTF-8");
-		} catch (Exception e) {
-			redirectUrl="/Home";
+			} catch (Exception e) {}
 		}
-		return redirectUrl;
+		return null;
 	}
-	
-	String pickResourceForm(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer();
-		try {
-			String resource_link_id = request.getParameter("resource_link_id"); if (resource_link_id == null) return "/Home";
-			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
-			if (user.isInstructor()) {
-				buf.append("<h3>Choose A ChemVantage Resource For This Link</h3>"
-						+ "Please select the ChemVantage page that should be associated with the link "
-						+ "that you just activated in your learning management system. "
-						+ "ChemVantage will remember this choice and send students directly to the page.<p>");
 
-				buf.append("<form method=GET><input type=hidden name=resource_link_id value='" + resource_link_id + "'>"
-						+ "<input type=hidden name=AssignmentType value=Home><input type=submit name=UserRequest value=Go>"
-						+ " to the <b>ChemVantage Home Page</b> (select this if the link is not associated with an assignment)</form><p>");
-				buf.append("or, select the appropriate assignment type and topic below:<p>");
-				buf.append("<table><form method=GET><input type=hidden name='resource_link_id' value='" + resource_link_id + "'>");
-				if (lis_result_sourcedid != null) buf.append("<input type=hidden name='lis_result_sourcedid' value='" + URLEncoder.encode(lis_result_sourcedid,"UTF-8") + "'>");
-				buf.append("<tr><td><input type=radio name=AssignmentType value=Quiz>Quiz</a></td><td rowspan=2>");
-				buf.append("<SELECT NAME=TopicId><OPTION Value='0' SELECTED>Select a topic</OPTION>");			
-				List<Topic> topics = ofy.query(Topic.class).order("orderBy").list();
-				for (Topic t : topics) if (!t.orderBy.equals("Hide")) buf.append("<OPTION VALUE='" + t.id + "'>" + t.title + "</OPTION>");			 
-				buf.append("</SELECT><input type=submit name=UserRequest value=Go></td></tr>"
-						+ "<tr><td><input type=radio name=AssignmentType value=Homework>Homework</a></td></tr>"
-						+ "</form></table>");
-			} else {
-				buf.append("<h3>Missing ChemVantage Assignment</h3>"
-						+ "The link that you just clicked in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<p>"
-						+ "<b>Please ask your instructor to click the LMS assignment link to make this missing association.</b><p>"
-						+ "You may go to the Home page now to work on any quizzes or homework problems.  However, no scores can be "
-						+ "reported back to the LMS grade book until after your instructor has completed the link to an assignment.<p>"
-						+ "<a href=/Home>Go to the ChemVantage Home Page now</a>");
-			}
-		} catch (Exception e) {
-			buf.append(e.getMessage());
-		}
-		return buf.toString();
-	}
-		 * 
-		 */
-
-	
-
+}

@@ -130,14 +130,7 @@ public class Quiz extends HttpServlet {
 			buf.append("\n<FORM NAME=Quiz METHOD=POST ACTION=Quiz onSubmit=\"javascript: return confirmSubmission()\">");
 			
 			// Gather profile information if needed; otherwise just print the user's name.
-			if (user.needsFirstName() || user.needsLastName()) { // print a form
-				buf.append("First name: ");
-				if (user.needsFirstName()) buf.append("<input type=text name=FirstName>"); else buf.append("<b>" + user.firstName + "</b>");
-				buf.append("<br>");
-				buf.append("Last name: ");
-				if (user.needsLastName()) buf.append("<input type=text name=LastName>"); else buf.append("<b>" + user.lastName + "</b>");
-				buf.append("<br>");
-			} else buf.append("\n<b>" + user.getBothNames() + "</b><br>");
+			if (user.needsFirstName()) buf.append("First name: <input type=text name=FirstName><br/>"); else buf.append("<b>" + user.firstName + "</b><br/>");
 			if (user.needsEmail()) buf.append("Email: <input type=text name=Email><br>");
 			
 			buf.append(df.format(qt.downloaded) + "<p>"); // Print the date/time the quiz was first downloaded (may be up to timeLimit minutes ago)
