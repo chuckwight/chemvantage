@@ -163,17 +163,15 @@ public class User implements Comparable<User>,Serializable {
 		user.alias = null;
 		Objectify ofy = ObjectifyService.begin();
 		
-		if ("LTI-2p0".equals(request.getParameter("lti_verion"))) {  // set user profile values using tool consumer profile in domain
-			Domain domain = ofy.query(Domain.class).filter("domainName",user.domain).get();
-			if (domain.capabilities.contains("Person.name.given")) user.setFirstName(request.getParameter("custom_lis_person_name_given"));		
-			if (domain.capabilities.contains("Person.name.family")) user.setLastName(request.getParameter("custom_lis_person_name_family"));		
-			if (domain.capabilities.contains("Person.email.primary")) user.setEmail(request.getParameter("custom_lis_person_contact_email_primary"));		
-		} else {
-			user.setFirstName(request.getParameter("lis_person_name_given"));
-			user.setLastName(request.getParameter("lis_person_name_family"));
-			if (user.lowercaseName.isEmpty() && request.getParameter("lis_person_name_full") != null) user.setFirstName(request.getParameter("lis_person_name_full"));		
-			user.setEmail(request.getParameter("lis_person_contact_email_primary"));
-		}
+		String lis_person_name_given = request.getParameter("lis_person_name_given");
+		if (lis_person_name_given==null || lis_person_name_given.equals("$Person.name.given")) lis_person_name_given = request.getParameter("custom_lis_person_name_given");
+		if (lis_person_name_given==null || lis_person_name_given.equals("$Person.name.given")) lis_person_name_given = request.getParameter("lis_person_name_full");
+		if (lis_person_name_given==null) lis_person_name_given = request.getParameter("custom_lis_person_name_full");
+		user.setFirstName(lis_person_name_given);
+		
+		String lis_person_contact_email_primary = request.getParameter("lis_person_contact_email_primary");
+		if (lis_person_contact_email_primary==null) lis_person_contact_email_primary = request.getParameter("custom_lis_person_contact_email_primary");
+		user.setEmail(request.getParameter("lis_person_contact_email_primary"));
 		
 		if (!user.email.isEmpty()) user.verifiedEmail = true; // value supplied by institution
 		ofy.put(user);
@@ -321,7 +319,7 @@ public class User implements Comparable<User>,Serializable {
 	
 	boolean requiresUpdates() {
 		try {
-			if (firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || !verifiedEmail) return true;
+			if (firstName.isEmpty() || email.isEmpty() || !verifiedEmail) return true;  // note: lastName no longer required
 			if (myGroupId < 0) {  // new user has not joined a group yet
 				Query<Group> allGroups = null;  // count the available groups to join
 				if (this.domain != null && !this.domain.isEmpty()) allGroups = ofy.query(Group.class).filter("domain",this.domain);

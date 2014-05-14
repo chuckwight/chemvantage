@@ -19,29 +19,16 @@ package org.chemvantage;
 
 import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.net.URLDecoder;
-import java.net.URLEncoder;
-import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.codec.digest.DigestUtils;
-
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
-import com.google.gdata.client.authn.oauth.OAuthHmacSha1Signer;
-import com.google.gdata.client.authn.oauth.OAuthParameters;
-import com.google.gdata.client.authn.oauth.OAuthUtil;
-import com.google.gdata.util.common.util.Base64;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
 
@@ -83,60 +70,13 @@ public class ReportScore extends HttpServlet {
 			if (!s.needsLisReporting()) return;
 			Group g = ofy.get(Group.class,a.groupId);
 			String oauth_consumer_key = g.domain;
-			String oauth_shared_secret = ofy.get(BLTIConsumer.class,g.domain).secret;
 			String body = xmlReplaceResult(s.lis_result_sourcedid,Double.toString(score));
-			String hash = new String(Base64.encode(DigestUtils.sha(body)));
 			
-			OAuthParameters params = new OAuthParameters();
-			params.setOAuthConsumerKey(oauth_consumer_key);
-			params.setOAuthConsumerSecret(oauth_shared_secret);
-			params.setOAuthNonce(OAuthUtil.getNonce());
-			params.setOAuthTimestamp(OAuthUtil.getTimestamp());
-			params.setOAuthSignatureMethod("HMAC-SHA1");
-			params.addCustomBaseParameter("oauth_version", "1.0");
-			params.addCustomBaseParameter("oauth_body_hash",hash);
-			
-			String baseString = OAuthUtil.getSignatureBaseString(g.lis_outcome_service_url,"POST",params.getBaseParameters());
-			String signature = new OAuthHmacSha1Signer().getSignature(baseString,params);
-			params.setOAuthSignature(signature);
-			params.addCustomBaseParameter("oauth_signature",signature);
-			
-			// construct the signed application/xml message in the required format
-			URL u = new URL(g.lis_outcome_service_url);
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			uc.setDoInput(true);
-			uc.setDoOutput(true);
-			uc.setRequestMethod("POST");
-			uc.setRequestProperty("content-type","application/xml");
-			uc.setRequestProperty("content-length",Integer.toString(body.length()));
-			uc.setRequestProperty("Authorization",buildAuthHeaderString(params));
-
-			// send the message
-			OutputStreamWriter toTC = new OutputStreamWriter(uc.getOutputStream());
-			toTC.write(body);
-			toTC.close();
-			
-			BufferedReader fromTC = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-			String line = null;
-			String replyBody = "";
-			
-			while ((line = fromTC.readLine()) != null) replyBody += line;
-			fromTC.close();
-			
-			/*  This parsing method is not functional/incomplete
-			// parse the XML file to determine the result of the replaceResult request
-			DocumentBuilderFactoryImpl dbFactory = new DocumentBuilderFactoryImpl();
-			//Document doc = dbFactory.newDocumentBuilder().parse(replyBody);
-			Document doc = dbFactory.newDocumentBuilder().parse(uc.getInputStream());
-			
-			doc.getDocumentElement().normalize();
-			Node n = doc.getElementsByTagName("imsx_codeMajor").item(0);
-			*/
+			String replyBody = new LTIMessage("application/xml",body,g.lis_outcome_service_url,oauth_consumer_key).send();
 			
 			if (replyBody.toLowerCase().contains("success")) {
 				s.lisReportComplete = true;
 				ofy.put(s);
-//				g.setUsingLisOutcomeService(true);
 			}
 			else throw new Exception();  // try again later
 		} catch (Exception e) {
@@ -152,9 +92,7 @@ public class ReportScore extends HttpServlet {
 		}
 	}
 	
-	String xmlReplaceResult(String lis_result_sourcedid, String score) {
-		//return "";
-		
+	String xmlReplaceResult(String lis_result_sourcedid, String score) {		
 		return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
 		+ "<imsx_POXEnvelopeRequest xmlns = \"http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0\">"
 		+ "<imsx_POXHeader>"
@@ -178,28 +116,6 @@ public class ReportScore extends HttpServlet {
 		+ "</resultRecord>"
 		+ "</replaceResultRequest>"
 		+ "</imsx_POXBody>"
-		+ "</imsx_POXEnvelopeRequest>";
-		
-	}
-	
-	private String buildAuthHeaderString(OAuthParameters params) {
-		StringBuffer buffer = new StringBuffer();
-		try {
-			int cnt = 0;
-			buffer.append("OAuth ");
-			Map<String, String> paramMap = params.getBaseParameters();
-			Object[] paramNames = paramMap.keySet().toArray();
-			for (Object paramName : paramNames) {
-				String value = paramMap.get((String) paramName);
-				buffer.append(paramName + "=\"" + URLEncoder.encode(value,"UTF-8") + "\"");
-				cnt++;
-				if (paramNames.length > cnt) {
-					buffer.append(",");
-				}
-
-			}
-		} catch (Exception e) {
-		}
-		return buffer.toString();
+		+ "</imsx_POXEnvelopeRequest>";		
 	}
 }

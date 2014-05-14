@@ -33,6 +33,9 @@ public class BLTIConsumer {
 	String secret;
 	String lti_version;
 	String tool_consumer_guid;
+	String toolProxyURL;  // Tool Consumer URL containing the tool proxy contract for LTI v2.0
+	String resultServiceEndpoint;
+	String resultServiceFormat;
 
 	BLTIConsumer() {}
 
@@ -76,5 +79,13 @@ public class BLTIConsumer {
 			ofy.put(c);
 		}
 		return c.secret;
+	}
+	
+	void putToolProxyURL(String url) {
+		this.toolProxyURL = url;
+	}
+	
+	String getToolProxyURL() {
+		return this.toolProxyURL;
 	}
 }

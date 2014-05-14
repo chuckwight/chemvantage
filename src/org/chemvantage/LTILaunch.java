@@ -24,9 +24,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URLEncoder;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -51,7 +49,6 @@ public class LTILaunch extends HttpServlet {
 
 	DAO dao = new DAO();
 	Objectify ofy = dao.ofy();
-	Map<String,String> sharedSecrets = new HashMap<String,String>();
 	private static final long serialVersionUID = 137L;
 
 	@Override
@@ -69,8 +66,12 @@ public class LTILaunch extends HttpServlet {
 			
 			if (user != null && "pick".equals(request.getParameter("UserRequest")))
 				out.println(pickResourceForm(user,request));
-			else if (user != null && "Go".equals(request.getParameter("UserRequest")))
-				response.sendRedirect(resourceUrlFinder(user,request));
+			else if (user != null && "Go".equals(request.getParameter("UserRequest"))) {
+				String assignmentType = request.getParameter("AssignmentType");
+				String tId = request.getParameter("TopicId");
+				if (assignmentType!=null && tId!=null) response.sendRedirect(resourceUrlFinder(user,request));
+				else response.sendRedirect(pickResourceForm(user,request));
+			}
 			else doPost(request, response);
 		} catch (Exception e) {}
 	}
@@ -82,21 +83,34 @@ public class LTILaunch extends HttpServlet {
 		if (Login.lockedDown) doError(request,response,"ChemVantage is temporarily unavailable, sorry.",null,null);
 
 		String oauth_consumer_key = request.getParameter("oauth_consumer_key");
-		String userId = oauth_consumer_key + ":" + request.getParameter("user_id");
-		String context_id = request.getParameter("context_id");
 		String resource_link_id = request.getParameter("resource_link_id");
-		if ( ! "basic-lti-launch-request".equals(request.getParameter("lti_message_type")) || oauth_consumer_key == null || resource_link_id == null ) {
-			doError(request, response, "LTI launch request was missing a required parameter.", null, null);
+		String lti_version = request.getParameter("lti_version");
+		
+		// check for minimum required elements for a basic-lti-launch-request
+		if (!"basic-lti-launch-request".equals(request.getParameter("lti_message_type"))) {
+			doError(request,response,"Missing or invalid LTI message type parameter.",null,null);
+			return;
+		}
+		if (oauth_consumer_key==null) {
+			doError(request,response,"Missing oauth_consumer_key.",null,null);
+			return;
+		}
+		if (resource_link_id==null) {
+			doError(request,response,"Missing resource_link_id.",null,null);
+			return;
+		}
+		if (lti_version==null || !(lti_version.equals("LTI-1p0") || lti_version.equals("LTI-2p0"))) {
+			doError(request,response,"Missing or invalid lti_version.",null,null);
 			return;
 		}
 		
-		// Lookup the secret that corresponds to the oauth_consumer_key in the AppEngine datastore
-		if (!sharedSecrets.containsKey(oauth_consumer_key)) {
-			String secret = BLTIConsumer.getSecret(oauth_consumer_key);
-			if (secret != null) sharedSecrets.put(oauth_consumer_key,secret);
-		}
-		String oauth_secret = sharedSecrets.get(oauth_consumer_key);
-
+		String userId = request.getParameter("user_id");
+		userId = oauth_consumer_key + (userId==null?"":":"+userId);
+		
+		String context_id = request.getParameter("context_id");
+		
+		String oauth_secret = BLTIConsumer.getSecret(oauth_consumer_key);
+		
 		OAuthMessage oam = OAuthServlet.getMessage(request, null);
 		OAuthValidator oav = new SimpleOAuthValidator();
 		OAuthConsumer cons = new OAuthConsumer("about:blank#OAuth+CallBack+NotUsed", 
@@ -142,30 +156,29 @@ public class LTILaunch extends HttpServlet {
 		}
 		
 		// check if user has Instructor or Administrator role
-		boolean isInstructor = false;
-		boolean isAdministrator = false;
-		String userRole = request.getParameter("roles");
-		if (userRole != null) {
-			userRole = userRole.toLowerCase();
-			isInstructor = userRole.contains("instructor");
-			isAdministrator = userRole.contains("administrator");
+		String roles = request.getParameter("roles");
+		if (roles != null) {
+			int oldRoles = user.roles;
+			roles = roles.toLowerCase();
+			if (roles.contains("instructor")) user.setIsInstructor(true);
+			if (roles.contains("administrator")) user.setIsAdministrator(true);
+			if (user.roles!=oldRoles) ofy.put(user);
 		}
-		if (isInstructor != !user.isInstructor()) {  // new instructor status
-			user.setIsInstructor(isInstructor);
-			user.setPremium(true);
-			ofy.put(user);
-		}		
-		if (isAdministrator != !user.isAdministrator()) {  // new Administrator status
-			user.setIsAdministrator(isAdministrator);
-			user.setPremium(true);
-			ofy.put(user);
-		}		
+		
+		if (!user.hasPremiumAccount()) {
+			user.setPremium(true);  // new! All LTI users have free premium accounts
+			ofy.put(user);	
+		}
 		
 		// Check to see if the LMS is providing an LIS Outcome Service URL (LTI v1.1)
 		String lisOutcomeServiceUrl = request.getParameter("lis_outcome_service_url");
+		if (lisOutcomeServiceUrl==null) lisOutcomeServiceUrl = request.getParameter("custom_lis_outcome_service_url");
+		
 		// the lis_result_sourcedid is an optional LTI parameter that specifies a context gradebook entry point
 		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
-		boolean supportsLIS = lisOutcomeServiceUrl != null && lisOutcomeServiceUrl != null;
+		if (lis_result_sourcedid==null) lis_result_sourcedid = request.getParameter("custom_lis_result_sourcedid");
+		
+		boolean supportsLIS = lisOutcomeServiceUrl != null && lis_result_sourcedid != null;
 		
 		// Provision a new context (group), if necessary and put the user into it
 		Group g = null;
@@ -192,26 +205,13 @@ public class LTILaunch extends HttpServlet {
 			}
 		}
 
-		// assign the user to a new group, if necessary and eligible
-		if (g != null && user.myGroupId != g.id && user.processPremiumUpgrade(g)) user.changeGroups(g.id);
-		if (!user.hasPremiumAccount() && user.myGroupId > 0) user.changeGroups(0L);  // boots basic users out of groups
-				
+		// assign the user to a new group, if necessary 
+		if (g==null) user.changeGroups(0L);
+		else if (user.myGroupId != g.id) user.changeGroups(g.id);
 		
-		if (g==null) {  // no context data was contained in the launch parameters; send the user to the Home page
-			user.changeGroups(0L);
-			response.sendRedirect("/Home");
-			return;
-		}
-
 		// Use the resourcePicker method to discover the URL for the assignment associated with this link
 		String redirectUrl = resourceUrlFinder(user,request);
 		
-		if (redirectUrl.equals("/Verification")) {
-			session.setAttribute("ResourceLinkId", resource_link_id);
-			session.setAttribute("GroupId", g.id);
-			if (supportsLIS) session.setAttribute("LisResultSourcedid", lis_result_sourcedid);
-		} 
-
 		response.sendRedirect(redirectUrl);
 	}		
 	
@@ -222,12 +222,11 @@ public class LTILaunch extends HttpServlet {
 		try {  
 			// a resource_link_id string should be provided with every valid LTI launch
 			String resource_link_id = request.getParameter("resource_link_id");
+			if (resource_link_id==null) resource_link_id = request.getParameter("custom_resource_link_id");
 			
 			// the lis_result_sourcedid is an optional LTI parameter that specifies a context gradebook entry point
 			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
-			
-			// if the user was not provisioned with a premium account automatically (purchase required):
-			if (user.myGroupId <= 0 || user.requiresUpdatesNow()) return "/Verification";
+			if (lis_result_sourcedid==null) lis_result_sourcedid = request.getParameter("custom_lis_result_sourcedid");
 			
 			Query<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",user.myGroupId);
 			Assignment myAssignment = null;
@@ -238,11 +237,14 @@ public class LTILaunch extends HttpServlet {
 				}
 			if (myAssignment == null) { // try to find it based on the request data
 				String assignmentType = request.getParameter("AssignmentType");
+				if (assignmentType==null) assignmentType = request.getParameter("custom_AssignmentType");
+				String tId = request.getParameter("TopicId");
+				if (tId==null) tId = request.getParameter("custom_TopicId");
 				long topicId = 0;
 				if (assignmentType != null) {
 					redirectUrl = "/" + assignmentType;
 					try {
-						topicId = Long.parseLong(request.getParameter("TopicId"));
+						topicId = Long.parseLong(tId);
 						redirectUrl += "?TopicId=" + topicId;
 						myAssignment = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType",assignmentType).filter("topicId",topicId).get();
 					} catch (Exception e) {
@@ -266,8 +268,7 @@ public class LTILaunch extends HttpServlet {
 			if (myAssignment == null) {  // assignment is unknown at this point; go pick the right one
 				redirectUrl = "/lti?UserRequest=pick&resource_link_id="+resource_link_id;  // send the user to the pickResource page
 			} else {  // found the assignment; configure the correct URL for redirection
-				redirectUrl = "/" + myAssignment.assignmentType;
-				if (myAssignment.topicId>0) redirectUrl += "?TopicId=" + myAssignment.topicId;
+				if (!myAssignment.assignmentType.isEmpty() && myAssignment.topicId>0) redirectUrl ="/" + myAssignment.assignmentType + "?TopicId=" + myAssignment.topicId;
 			}
 			if (lis_result_sourcedid != null && !redirectUrl.equals("/Home")) redirectUrl += "&lis_result_sourcedid=" + URLEncoder.encode(lis_result_sourcedid,"UTF-8");
 		} catch (Exception e) {
@@ -283,14 +284,11 @@ public class LTILaunch extends HttpServlet {
 			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
 			if (user.isInstructor()) {
 				buf.append("<h3>Choose A ChemVantage Resource For This Link</h3>"
-						+ "Please select the ChemVantage page that should be associated with the link "
+						+ "Please select the ChemVantage assignment that should be associated with the link "
 						+ "that you just activated in your learning management system. "
-						+ "ChemVantage will remember this choice and send students directly to the page.<p>");
+						+ "ChemVantage will remember this choice and send students directly to the assignment.<p>"
+						+ "<b>You must choose the assignment type (quiz or homework) AND the topic covered.</b>");
 
-				buf.append("<form method=GET><input type=hidden name=resource_link_id value='" + resource_link_id + "'>"
-						+ "<input type=hidden name=AssignmentType value=Home><input type=submit name=UserRequest value=Go>"
-						+ " to the <b>ChemVantage Home Page</b> (select this if the link is not associated with an assignment)</form><p>");
-				buf.append("or, select the appropriate assignment type and topic below:<p>");
 				buf.append("<table><form method=GET><input type=hidden name='resource_link_id' value='" + resource_link_id + "'>");
 				if (lis_result_sourcedid != null) buf.append("<input type=hidden name='lis_result_sourcedid' value='" + URLEncoder.encode(lis_result_sourcedid,"UTF-8") + "'>");
 				buf.append("<tr><td><input type=radio name=AssignmentType value=Quiz>Quiz</a></td><td rowspan=2>");

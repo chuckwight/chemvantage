@@ -107,22 +107,9 @@ public class Homework extends HttpServlet {
 
 			// Gather profile information if needed; otherwise just print the user's name.
 			buf.append("<FORM METHOD=POST ACTION=Verification>");
-			boolean submitNeeded = false;
-			if (user.needsFirstName() || user.needsLastName()) { // print a form
-				buf.append("First name: ");
-				if (user.needsFirstName()) {
-					buf.append("<input type=text name=FirstName>"); submitNeeded = true;
-				} else buf.append("<b>" + user.firstName + "</b>");
-				buf.append("<br>");
-				buf.append("Last name: ");
-				if (user.needsLastName()) {
-					buf.append("<input type=text name=LastName>"); submitNeeded = true;
-				} else buf.append("<b>" + user.lastName + "</b>");
-				buf.append("<br>");
-			} else buf.append("\n<b>" + user.getBothNames() + "</b><br>");
-			if (user.needsEmail()) {
-				buf.append("Email: <input type=text name=Email><br>"); submitNeeded = true;
-			}
+			boolean submitNeeded = user.needsFirstName() || user.needsEmail();
+			if (user.needsFirstName()) buf.append("First name: <input type=text name=FirstName><br/>"); else buf.append("<b>" + user.firstName + "</b><br/>");
+			if (user.needsEmail()) buf.append("Email: <input type=text name=Email><br>");
 			if (submitNeeded) buf.append("<INPUT TYPE=SUBMIT Name=UserRequest VALUE='Save My Information'><br>");
 			buf.append("</FORM>");
 
