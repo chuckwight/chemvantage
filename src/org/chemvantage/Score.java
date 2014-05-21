@@ -45,7 +45,9 @@ public class Score {    // this object represents a best score achieved by a use
 	String lis_result_sourcedid;
 	@Indexed boolean lisReportComplete;
 	
-	Score() {}	
+	Score() {
+		lisReportComplete=false;
+	}	
 	
 	public static Score getInstance(String userId,Assignment a) {
 		Objectify ofy = ObjectifyService.begin();

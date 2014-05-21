@@ -95,12 +95,24 @@ public class Homework extends HttpServlet {
 				+ "and select a topic for this assignment using the drop-down box.";
 			}
 			Topic topic = ofy.get(Topic.class,topicId);
-
+			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid"); // used for reporting score back to the LMS
+			
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			Group myGroup = user.myGroupId>0?ofy.find(Group.class,user.myGroupId):null;
 			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
 			df.setTimeZone(tz);
 			Date now = new Date();
+
+			Assignment hwa = null;
+			try {
+				hwa = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Homework").filter("topicId",topicId).get();
+				if (user.isInstructor() && hwa!=null) {
+					buf.append("<br><span style='color:red'>Instructor Only: "
+							+ "<a href=Groups?UserRequest=AssignHomeworkQuestions&GroupId=" 
+							+ myGroup.id + "&TopicId=" + topicId 
+							+ ">customize this quiz assignment</a></span>");
+				}
+			} catch (Exception e) {}
 
 			buf.append("\n<h2>Homework Exercises - " + topic.title + " (" + subject.title + ")</h2>");
 			//buf.append("\n<b>" + user.getBothNames() + "</b><br>");
@@ -114,7 +126,7 @@ public class Homework extends HttpServlet {
 			buf.append("</FORM>");
 
 			buf.append(df.format(now) + "<p>");
-
+			
 			buf.append("\nHomework Rules<UL>");
 			buf.append("\n<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
 			buf.append("\n<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question.</LI>");
@@ -127,10 +139,9 @@ public class Homework extends HttpServlet {
 			}
 			buf.append("</UL>");
 
-			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid"); // used for reporting score back to the LMS
 			List<Key<Question>> optionalQuestionKeys = ofy.query(Question.class).filter("assignmentType","Homework").filter("topicId",topicId).filter("isActive",true).listKeys();
-			long hi = myGroup==null?0L:myGroup.getAssignmentId("Homework",topic.id);
-			Assignment hwa = hi>0?ofy.get(Assignment.class,hi):null;
+			//long hi = myGroup==null?0L:myGroup.getAssignmentId("Homework",topic.id);
+			//Assignment hwa = hi>0?ofy.get(Assignment.class,hi):null;
 			if (hwa != null) { // use hwa.questionIds to move assigned questions to the other list
 				optionalQuestionKeys.removeAll(hwa.questionKeys);
 				buf.append("\nAssigned Exercises<br>");
@@ -152,10 +163,9 @@ public class Homework extends HttpServlet {
 						if (user.getHWQuestionScore(q.id) > 0) buf.append("<IMG SRC=/images/checkmark.gif ALT='OK'>");
 						buf.append("&nbsp;<a id=" + q.id + " /></TD>"
 								+ "<FORM METHOD=POST ACTION=Homework>"
-								+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=GradeHomework>"
 								+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 								+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
-								+ (lis_result_sourcedid==null || lis_result_sourcedid.isEmpty()?"":"<INPUT TYPE=HIDDEN NAME=lis_result_sourcedid VALUE='" + lis_result_sourcedid + "'>")
+								+ (lis_result_sourcedid==null?"":"<INPUT TYPE=HIDDEN NAME=lis_result_sourcedid VALUE='" + lis_result_sourcedid + "'>")
 								+ "<TD><b>" + i + ". </b></TD><TD>" + q.print() 
 								+ (Long.toString(q.id).equals(request.getParameter("Q"))?"Hint:<br>" + q.getHint():"")
 								+ "<br><INPUT TYPE=SUBMIT VALUE='Grade This Exercise'><p>&nbsp;</FORM></TD></TR>\n");
@@ -186,7 +196,6 @@ public class Homework extends HttpServlet {
 				if (user.getHWQuestionScore(q.id) > 0) buf.append("<IMG SRC=/images/checkmark.gif ALT='OK'>");
 				buf.append("&nbsp;<a id=" + q.id + " /></TD>"
 						+ "<FORM METHOD=POST ACTION=Homework>"
-						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=GradeHomework>"
 						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ "<TD><b>" + i + ". </b></TD><TD>" + q.print() 
@@ -212,7 +221,8 @@ public class Homework extends HttpServlet {
 				hwQuestions.put(k,q);
 			}
 			Topic topic = ofy.get(Topic.class,q.topicId);
-
+			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
+			
 			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			Group myGroup = user.myGroupId>0?ofy.find(Group.class,user.myGroupId):null;
@@ -245,8 +255,8 @@ public class Homework extends HttpServlet {
 						+ ">return to this homework assignment</a> to work on another problem.<p>");
 		
 				buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework>"
-						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=GradeHomework>"
 						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
+						+ (lis_result_sourcedid==null?"":"<INPUT TYPE=HIDDEN NAME=lis_result_sourcedid VALUE='" + lis_result_sourcedid + "'>")
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ q.print(studentAnswer[0]) + "<br>");
 				
@@ -275,9 +285,9 @@ public class Homework extends HttpServlet {
 			//  ================ End New Section for Retry Delay =================== //
 
 			buf.append("<h2>Homework Results - " + topic.title + " (" + subject.title + ")</h2>\n");
-			buf.append("<b>" + user.getBothNames() + "</b><br>\n");
+			buf.append("<b>" + user.firstName + "</b><br>\n");
 			buf.append(df.format(now));
-
+			
 			/*
 			// Check submissions for guessing behavior:
 			 if (user.moreThan1RecentAttempts(questionId,2)) { // in the past 2 minutes
@@ -310,7 +320,6 @@ public class Homework extends HttpServlet {
 						.param("UserId", user.id));
 
 				HWTransaction ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,0L,studentScore,possibleScore,request.getRequestURI());
-				String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
 				if (lis_result_sourcedid != null) ht.lis_result_sourcedid = lis_result_sourcedid;
 				ofy.put(ht);
 				// create/update/store a HomeworkScore object

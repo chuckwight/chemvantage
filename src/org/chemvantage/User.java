@@ -520,7 +520,7 @@ public class User implements Comparable<User>,Serializable {
 	}
 	
 	boolean isInstructor() {
-		return ((roles%16)/8 == 1);
+		return ((roles%16)/8 == 1) || this.isAdministrator();
 	}
 
 	void setIsInstructor(boolean makeInstructor) {

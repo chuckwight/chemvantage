@@ -77,7 +77,9 @@ public class LTIRegistration extends HttpServlet {
 		List<String> capabilities = Arrays.asList("Person.email.primary","Person.name.given","Result.autocreate");
 		out.println(Login.header + banner + welcomeMessage);
 		try {
-			getToolProfile(capabilities).write(out);
+			StringBuffer base_url = request.getRequestURL();
+			base_url.delete(base_url.indexOf("lti"),base_url.length()).delete(0, base_url.indexOf("://") + 3);
+			getToolProfile(base_url,capabilities).write(out);
 		} catch (Exception e) {
 			out.println(e.getMessage());
 		}
@@ -104,31 +106,42 @@ public class LTIRegistration extends HttpServlet {
 			JSONObject toolConsumerProfile = fetchToolConsumerProfile(tc_profile_url); 
 			
 			List<String> capability_enabled = getCapabilities(toolConsumerProfile);
-					
-			// check to make sure that this is the first registration for this tool consumer
-			BLTIConsumer c = ofy.find(BLTIConsumer.class,reg_key);
-			if (c != null) throw new Exception("A Tool Consumer is already registered with this key.");
-			// create a new set of LTI oauth_consumer_key and oauth_shared_secret credentials
-			c = new BLTIConsumer(reg_key,toolConsumerProfile.getString("guid"),"LTI-2p0");
-			debug.append("consumer_formed_ok.");
 			
-			JSONObject toolProxy = constructToolProxy(toolConsumerProfile,tc_profile_url,"53714442f1b3c",c.secret,capability_enabled);
-			debug.append("tool_proxy_formed_ok.oauth_consumer_key:" + reg_key + ".");
+			String oauth_secret = BLTIConsumer.generateSecret();
+			StringBuffer base_url = request.getRequestURL();
+			base_url.delete(base_url.indexOf("lti"),base_url.length()).delete(0, base_url.indexOf("://") + 3);
 			
+			JSONObject toolProxy = constructToolProxy(toolConsumerProfile,tc_profile_url,base_url,oauth_secret,capability_enabled);
+			debug.append("tool_proxy_formed_ok.");			
 			
 			String reply = new LTIMessage("application/vnd.ims.lti.v2.toolproxy+json",toolProxy.toString(),getTCServiceEndpoint("application/vnd.ims.lti.v2.toolproxy+json",toolConsumerProfile),reg_key,reg_password).send();
-			if (reply.length()==0) debug.append("tc_response_empty");
+			debug.append("tc_response_received.");
 			
-			JSONObject replyBody = new JSONObject(reply);
-			
-			if (replyBody.getString("@type").equals("ToolProxy") && replyBody.getString("tool_proxy_guid").equals(c.oauth_consumer_key)) {
-				c.putToolProxyURL(toolProxy.getString("@id"));  // store the new tool proxy in the BLTIConsumer entity
-				ofy.put(c);  // stores the new credentials
-				// all steps completed successfully with no exceptions thrown, so report success back to TC administrator
-				response.sendRedirect(launch_presentation_return_url + URLEncoder.encode("?status=success&tool_proxy_guid=" + toolProxy.getString("tool_proxy_guid"),"UTF-8"));
-			} else {
-				response.sendRedirect(launch_presentation_return_url + URLEncoder.encode("?status=failure&tool_proxy_guid=" + toolProxy.getString("tool_proxy_guid"),"UTF-8"));
+			String tool_proxy_guid = null;
+			String tool_proxy_url = null;
+			try {
+				JSONObject replyBody = new JSONObject(reply);		
+				debug.append("json_reply_ok.");
+				tool_proxy_guid = replyBody.getString("tool_proxy_guid");
+				tool_proxy_url = replyBody.getString("@id");
+				if (tool_proxy_guid.isEmpty() || tool_proxy_url.isEmpty()) throw new Exception();
+			} catch (Exception e) {
+				throw new Exception ("Could not parse response to tool proxy registration request.");
 			}
+			
+			// check to make sure that this is the first registration for this tool consumer
+			BLTIConsumer c = ofy.find(BLTIConsumer.class,reg_key);
+			if (c==null) {  // this registration is for a new oath_consumer_key
+				c = new BLTIConsumer(tool_proxy_guid,oauth_secret,toolConsumerProfile.getString("guid"),"LTI-2p0");
+				c.putToolProxyURL(tool_proxy_url);
+				ofy.put(c);
+			}
+			else throw new Exception("A Tool Consumer is already registered with this key.");
+						
+			debug.append("LTI_credentials_formed_ok.");
+						
+			// all steps completed successfully with no exceptions thrown, so report success back to TC administrator
+			response.sendRedirect(launch_presentation_return_url + "?status=success&tool_proxy_guid=" + toolProxy.getString("tool_proxy_guid"));
 		} catch (Exception e) {
 			doError(request,response,"Sorry, the Tool Proxy Registration failed.<br>" + e.getMessage() + "<br>" + debug.toString() + "<br>" + "PLEASE SEND THIS ERROR TO admin@chemvantage.org",null,null);
 		}
@@ -181,21 +194,21 @@ public class LTIRegistration extends HttpServlet {
 		return capability_enabled;
 	}
 
-	JSONObject constructToolProxy(JSONObject toolConsumerProfile,String tc_profile_url,String reg_key,String shared_secret,List<String> capability_enabled) 
+	JSONObject constructToolProxy(JSONObject toolConsumerProfile,String tc_profile_url,StringBuffer base_url,String shared_secret,List<String> capability_enabled) 
 			throws Exception {
 		JSONObject toolProxy = new JSONObject();
 		toolProxy.put("@context", "http://purl.imsglobal.org/ctx/lti/v2/ToolProxy");
 		toolProxy.put("@type", "ToolProxy");
-		toolProxy.put("@id", getTCServiceEndpoint("application/vnd.ims.lti.v2.toolproxy+json",toolConsumerProfile) + "/" + reg_key);
+		toolProxy.put("@id", "");
 		toolProxy.put("lti_version", toolConsumerProfile.getString("lti_version"));
-		toolProxy.put("tool_proxy_guid", reg_key);
+		toolProxy.put("tool_proxy_guid", "");
 		toolProxy.put("tool_consumer_profile", tc_profile_url);
-		toolProxy.put("tool_profile", getToolProfile(capability_enabled));					
+		toolProxy.put("tool_profile", getToolProfile(base_url,capability_enabled));					
 		toolProxy.put("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled));				
 		return toolProxy;
 	}
 
-	JSONObject getToolProfile(List<String> capability_enabled) throws Exception {  // this is the (mostly static) tool profile for ChemVantage
+	JSONObject getToolProfile(StringBuffer base_url,List<String> capability_enabled) throws Exception {  // this is the (mostly static) tool profile for ChemVantage
 		JSONObject toolProfile = new JSONObject()
 			.put("lti_version","LTI-2p0")
 			.put("product_instance",new JSONObject()
@@ -221,8 +234,8 @@ public class LTIRegistration extends HttpServlet {
 				.put("base_url_choice", new JSONArray()
 				.put(new JSONObject()
 					.put("selector", "DefaultSelector")
-					.put("default_base_url", "http://chemvantage.org/")
-					.put("secure_base_url", "https://chemvantage.org/")));
+					.put("default_base_url", "http://" + base_url.toString())
+					.put("secure_base_url", "https://" + base_url.toString())));
 					
 		// the following are parameters that are available only at the option of the Tool Consumer (LMS)
 		JSONArray parameter = new JSONArray();
@@ -237,7 +250,7 @@ public class LTIRegistration extends HttpServlet {
 		JSONObject msg = new JSONObject("{'message_type':'basic-lti-launch-request','path':'lti/'}");
 		if (capability_enabled.contains("Result.autocreate")) msg.put("enabled_capability", new JSONArray("['Result.autocreate']"));
 
-		// construct an array of 3 resource handlers for ChemVantage quiz, homework and exam assignments
+		// construct an array of resource handlers for ChemVantage quiz, homework and exam assignments
 		JSONArray resource_handler = new JSONArray();
 		resource_handler.put(new JSONObject("{'name':{'default_value':'ChemVantage Quiz'},'description':{'default_value':'A 15-minute timed quiz on one topic in General Chemistry'}}")
 		   	.put("message",new JSONArray()
@@ -249,11 +262,12 @@ public class LTIRegistration extends HttpServlet {
 				.put(msg
 					.put("parameter",parameter
 						.put(new JSONObject("{'name':'assignmentType','fixed':'Homework'}"))))));
-		resource_handler.put(new JSONObject("{'name':{'default_value':'ChemVantage Practice Exam'},'description':{'default_value':'A 60-minute practice exam covering at least 3 topics in General Chemistry'}}")
+/*		resource_handler.put(new JSONObject("{'name':{'default_value':'ChemVantage Practice Exam'},'description':{'default_value':'A 60-minute practice exam covering at least 3 topics in General Chemistry'}}")
 			.put("message",new JSONArray()
 				.put(msg
 					.put("parameter",parameter
 						.put(new JSONObject("{'name':'assignmentType','fixed':'PracticeExam'}"))))));
+						*/
 		toolProfile.put("resource_handler",resource_handler);
 		return toolProfile;
 	}

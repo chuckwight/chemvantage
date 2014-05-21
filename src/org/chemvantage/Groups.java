@@ -46,10 +46,10 @@ public class Groups extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	private int queryLimit = 10; // maximum number of user-search results returned
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
+	static DAO dao = new DAO();
+	static Objectify ofy = dao.ofy();
 	Subject subject = dao.getSubject();
-
+	
 	public String getServletInfo() {
 		return "This servlet is used by PZone admins to create groups, instructors to set deadlines, and student to join.";
 	}
@@ -175,7 +175,7 @@ public class Groups extends HttpServlet {
 				copyAssignments(user,group,request);
 				out.println(manageGroupForm(user,group,request));
 			} else if (userRequest.equals("UpdateDeadlines")||userRequest.equals("Create")) {
-				updateDeadlines(user,group,request);
+				updateDeadlines(group,request);
 				out.println(manageGroupForm(user,group,request));
 			} else if (userRequest.equals("RescueService")) {
 				setRescueOptions(user,group,request);
@@ -652,7 +652,7 @@ public class Groups extends HttpServlet {
 		} catch (Exception e) {System.out.println(e.toString());}
 	}		
 
-	String updateDeadlines(User user,Group group,HttpServletRequest request) {
+	String updateDeadlines(Group group,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try { 
 			long topicId = Long.parseLong(request.getParameter("TopicId"));
