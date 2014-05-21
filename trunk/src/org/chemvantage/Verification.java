@@ -185,7 +185,8 @@ public class Verification extends HttpServlet {
 
 	String personalInfoForm(User user,boolean verificationEmailSent,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		boolean nameRequired = user.firstName.isEmpty() || user.lastName.isEmpty();
+		//boolean nameRequired = user.firstName.isEmpty() || user.lastName.isEmpty();
+		boolean nameRequired = user.firstName.isEmpty();  // no longer requiring a last name from users because identities are managed externally through LTI and Google Apps
 		boolean emailRequired = user.email.isEmpty();
 		boolean groupRequired = user.myGroupId < 0;
 		
@@ -210,7 +211,7 @@ public class Verification extends HttpServlet {
 			buf.append("<FORM NAME=Info ACTION=Verification METHOD=POST>");
 			buf.append("<TABLE>");
 			buf.append("<TR><TD ALIGN=RIGHT>First Name:</TD><TD>" + (user.firstName.isEmpty()?"<span style=color:red>*</span><INPUT NAME=FirstName SIZE=50>":user.firstName) + "</TD></TR>");
-			buf.append("<TR><TD ALIGN=RIGHT>Last Name:</TD><TD>" + (user.lastName.isEmpty()?"<span style=color:red>*</span><INPUT NAME=LastName SIZE=50>":user.lastName) + "</TD></TR>");
+			buf.append("<TR><TD ALIGN=RIGHT>Last Name:</TD><TD>" + (user.lastName.isEmpty()?"<INPUT NAME=LastName SIZE=50>":user.lastName) + "</TD></TR>");
 			buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>Email:</TD><TD>" + (emailRequired?"<span style=color:red>*</span><INPUT NAME=Email SIZE=50>":user.email));
 			if (!emailRequired && !user.verifiedEmail){
 				buf.append(" <span style='color:red'>(unverified)</span> ");
