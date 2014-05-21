@@ -68,6 +68,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     	params.setOAuthConsumerSecret(oauth_shared_secret);
     	params.setOAuthNonce(OAuthUtil.getNonce());
     	params.setOAuthTimestamp(OAuthUtil.getTimestamp());
+    	params.setOAuthCallback("about:blank");
     	params.setOAuthSignatureMethod("HMAC-SHA1");
     	params.addCustomBaseParameter("oauth_version", "1.0");
     	params.addCustomBaseParameter("oauth_body_hash",hash);
@@ -90,20 +91,23 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     	// send the message
     	OutputStreamWriter toTC = new OutputStreamWriter(uc.getOutputStream());
     	toTC.write(messageText);
-    	toTC.close();
-
-    	int responseCode=uc.getResponseCode();
+    	toTC.flush();
     	
-    	if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED) {
-    		BufferedReader reader = new BufferedReader(new InputStreamReader(u.openStream()));
+    	int responseCode = uc.getResponseCode();
+    	if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED) { // 200 or 201
+    		BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
     		StringBuffer res = new StringBuffer();
     		String line;
     		while ((line = reader.readLine()) != null) {
     			res.append(line);
     		}
     		reader.close();
-    		return (res.length()>0?res.toString():"(no response received from server)");
-    	} else throw new Exception("Server returned status code: " + responseCode);
+    		toTC.close();
+    		return res.toString();
+    	} else {
+    	 	toTC.close();
+    	 	throw new Exception("Server returned status code: " + responseCode);  
+    	}
     }
 
     private boolean messageAppearsValid() {

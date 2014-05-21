@@ -40,25 +40,15 @@ public class BLTIConsumer {
 	BLTIConsumer() {}
 
 	BLTIConsumer(String oauth_consumer_key) {
-		Random random =  new Random();
-        long r1 = random.nextLong();
-        long r2 = random.nextLong();
-        String hash1 = Long.toHexString(r1);
-        String hash2 = Long.toHexString(r2);
-        this.secret = hash1 + hash2;
-        this.oauth_consumer_key = oauth_consumer_key;
+		this.oauth_consumer_key = oauth_consumer_key;
+		this.secret = generateSecret();
         this.lti_version = "LTI-1p0";
     }
 	
-	BLTIConsumer(String key,String tool_consumer_guid,String version) {
+	BLTIConsumer(String key,String secret,String tool_consumer_guid,String version) {
 		this.oauth_consumer_key = key;
-		Random random =  new Random();
-        long r1 = random.nextLong();
-        long r2 = random.nextLong();
-        String hash1 = Long.toHexString(r1);
-        String hash2 = Long.toHexString(r2);
-        this.secret = hash1 + hash2;
-        this.tool_consumer_guid = tool_consumer_guid;
+		this.secret = secret;
+		this.tool_consumer_guid = tool_consumer_guid;
 		this.lti_version = version;	
 	}
 	
@@ -68,6 +58,15 @@ public class BLTIConsumer {
 	
 	static void delete(String oauth_consumer_key) {
 		ObjectifyService.begin().delete(new Key<BLTIConsumer>(BLTIConsumer.class,oauth_consumer_key));
+	}
+	
+	static String generateSecret() {
+		Random random =  new Random();
+        long r1 = random.nextLong();
+        long r2 = random.nextLong();
+        String hash1 = Long.toHexString(r1);
+        String hash2 = Long.toHexString(r2);
+        return hash1 + hash2;
 	}
 	
 	static String getSecret(String oauth_consumer_key) {

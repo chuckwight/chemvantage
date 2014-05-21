@@ -59,4 +59,8 @@ public class Assignment implements Comparable<Assignment>,Serializable {
     public int compareTo(Assignment other) {
     	return (int)(this.deadline.getTime() - other.deadline.getTime());
     }
+    
+    public void addResourceLinkId(String r) {
+    	if (!resourceLinkIds.contains(r)) resourceLinkIds.add(r);
+    }
 }

@@ -124,6 +124,18 @@ public class Quiz extends HttpServlet {
 			}
 			int secondsRemaining = (int) (timeLimit*60 - (now.getTime() - qt.downloaded.getTime())/1000);
 
+			Assignment a = null;
+			try {
+				a = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",topicId).get();
+				if (user.isInstructor() && a!=null) {
+					buf.append("<br><span style='color:red'>Instructor Only: "
+							+ "<a href=Groups?UserRequest=AssignQuizQuestions&GroupId=" 
+							+ myGroup.id + "&TopicId=" + topicId 
+							+ ">customize this quiz assignment</a></span>");
+				}
+			} catch (Exception e) {}
+
+
 			buf.append("\n<h2>Quiz - " + topic.title + " (" + subject.title + ")</h2>");
 			
 			buf.append(ajaxQuizJavaScript());  // this code allows users to use the Google SOAP search spell checking function
@@ -153,7 +165,6 @@ public class Quiz extends HttpServlet {
 			// create a set of available questionIds either from the group assignment or from the datastore
 			List<Key<Question>> questionKeys = null;
 			try {  // check for assigned questions
-				Assignment a = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",topicId).get();
 				questionKeys = a.questionKeys;
 			} catch (Exception e) {  // no assignment exists
 				questionKeys = ofy.query(Question.class).filter("topicId", topicId).filter("assignmentType","Quiz").filter("isActive",true).listKeys();

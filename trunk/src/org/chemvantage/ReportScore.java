@@ -70,9 +70,11 @@ public class ReportScore extends HttpServlet {
 			if (!s.needsLisReporting()) return;
 			Group g = ofy.get(Group.class,a.groupId);
 			String oauth_consumer_key = g.domain;
+			
+			String messageFormat = "application/xml";
 			String body = xmlReplaceResult(s.lis_result_sourcedid,Double.toString(score));
 			
-			String replyBody = new LTIMessage("application/xml",body,g.lis_outcome_service_url,oauth_consumer_key).send();
+			String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
 			
 			if (replyBody.toLowerCase().contains("success")) {
 				s.lisReportComplete = true;
