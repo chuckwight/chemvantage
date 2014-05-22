@@ -78,8 +78,7 @@ public class LTILaunch extends HttpServlet {
 			}
 			else doPost(request, response);
 		} catch (Exception e) {
-			out.println("Sorry, an unexpected error occurred. <br>"
-					+ "Please contact admin@chemvantage.org and explain what you were trying to do when this happened. Thanks.");
+			response.sendRedirect("/lti/registration");
 		}
 	}
 
@@ -90,10 +89,16 @@ public class LTILaunch extends HttpServlet {
 		if (Login.lockedDown) doError(request,response,"ChemVantage is temporarily unavailable, sorry.",null,null);
 
 		// check for minimum required elements for a basic-lti-launch-request
-		if (!"basic-lti-launch-request".equals(request.getParameter("lti_message_type"))) {
+		String lti_message_type=request.getParameter("lti_message_type");
+		if ("ToolProxyRegistrationRequest".equals(lti_message_type)) {  // redirect this LTI registration request
+			String msg = "Please POST LTI registration requests to https://chem-vantage.appspot.com/lti/registration/";
+			doError(request,response,msg,null,null);
+			return;
+		} else if (!"basic-lti-launch-request".equals(lti_message_type)) {
 			doError(request,response,"Missing or invalid lti_message_type parameter.",null,null);
 			return;
-		}		
+		}
+		
 		String lti_version = request.getParameter("lti_version");
 		if (lti_version==null) {
 			doError(request,response,"Missing lti_version parameter.",null,null);

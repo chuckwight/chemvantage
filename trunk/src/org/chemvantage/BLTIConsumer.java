@@ -17,6 +17,7 @@
 
 package org.chemvantage;
 
+import java.util.Date;
 import java.util.Random;
 
 import javax.persistence.Id;
@@ -36,7 +37,9 @@ public class BLTIConsumer {
 	String toolProxyURL;  // Tool Consumer URL containing the tool proxy contract for LTI v2.0
 	String resultServiceEndpoint;
 	String resultServiceFormat;
-
+	String email;
+	Date created;
+	
 	BLTIConsumer() {}
 
 	BLTIConsumer(String oauth_consumer_key) {
@@ -44,6 +47,13 @@ public class BLTIConsumer {
 		this.secret = generateSecret();
         this.lti_version = "LTI-1p0";
     }
+	
+	BLTIConsumer(String key,String email) {
+		this.oauth_consumer_key = key;
+		this.secret = generateSecret();
+		this.email = email;
+		this.created = new Date();
+	}
 	
 	BLTIConsumer(String key,String secret,String tool_consumer_guid,String version) {
 		this.oauth_consumer_key = key;
