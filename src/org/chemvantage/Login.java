@@ -19,6 +19,7 @@ package org.chemvantage;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URLEncoder;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -125,6 +126,17 @@ public class Login extends HttpServlet {
 		}
 	}
 
+	public void doPost(HttpServletRequest request,HttpServletResponse response)
+			throws ServletException, IOException {
+		String lti_message_type = request.getParameter("lti_message_type");
+		if (lti_message_type!=null) {  // redirect this LTI request
+			String msg = "Help for LTI registration is available at https://chem-vantage.appspot.com/lti/registration/";
+			response.sendRedirect(request.getParameter("launch_presentation_return_url") + "?lti_msg=" + URLEncoder.encode(msg,"UTF-8"));
+			return;
+		}		
+	}
+	
+	
 	String homePage(HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {

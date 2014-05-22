@@ -32,7 +32,13 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
+import javax.mail.Message;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -62,33 +68,54 @@ public class LTIRegistration extends HttpServlet {
 			+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
 			+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>";
 			
-	String welcomeMessage = "<h2>LTI Tool Proxy Registration</h2>"
-			+ "ChemVantage supports the LTI version 2.0 standard for tool proxy registration. Your system administrator can enter the URL "
-			+ "(<b>http://chemvantage.org/lti/registration/</b>) into the LTI Tool Proxy Registration page of your LMS.<br><br>"
-			+ "If your LMS supports an older version of the LTI standard, please contact Chuck Wight (admin@chemvantage.org) "
-			+ "to request a set of LTI credentials to enter into your LMS manually.<hr>"
-			+ "FYI, the following is a JSON representation of the ChemVantage tool profile for LTI integration.<p>";
+	String welcomeMessage = "<h2>LTI Support Page</h2>"
+			+ "ChemVantage supports the IMS Global Learning Solutions LTI standard, versions 1.0, 1.1 and 2.0.<p>"
+			+ "All LTI connections and ChemVantage services are provided free of charge.<p>"
+			+ "For LMS platforms that support LTI version 2.0, the system administrator may enter the ChemVantage URL "
+			+ "(<b>https://chem-vantage.appspot.com/lti/registration/</b>) into the LTI Tool Proxy Registration page of your LMS.<p>"
+			+ "If your LMS supports an older version of the LTI standard, the LTI launch URL is http://chem-vantage.appspot.com/lti/<br>"
+			+ "To obtain a set of LTI credentials, please enter an oauth_consumer_key value (any string of characters "
+			+ "that uniquely identifies your LMS) into the form below. Your LTI credentials will be "
+			+ "emailed to you immediately. For further assistance, contact Chuck Wight (admin@chemvantage.org).<p>";
+	
+	String successMessage = "<h2>Thank You</h2> Your LTI credentials have been sent to your email address.";
 	
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		List<String> capabilities = Arrays.asList("Person.email.primary","Person.name.given","Result.autocreate");
+		
 		out.println(Login.header + banner + welcomeMessage);
-		try {
-			StringBuffer base_url = request.getRequestURL();
-			base_url.delete(base_url.indexOf("lti"),base_url.length()).delete(0, base_url.indexOf("://") + 3);
-			getToolProfile(base_url,capabilities).write(out);
-		} catch (Exception e) {
-			out.println(e.getMessage());
-		}
-		out.println(Login.footer);
+		StringBuffer buf = new StringBuffer();
+		buf.append("<TABLE><FORM METHOD=POST>");
+		buf.append("<TR><TD ALIGN=RIGHT>Email Address: </TD><TD><INPUT TYPE=TEXT NAME=Email></TD></TR>");
+		buf.append("<TR><TD ALIGN=RIGHT>Consumer Key: </TD><TD><INPUT TYPE=TEXT NAME=Key></TD></TR>");
+		buf.append("<TR><TD>&nbsp;</TD><TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Generate Shared Secret'></TD></TR>");
+		buf.append("</TABLE></FORM>");
+		out.println(buf.toString() + Login.footer);
 	}
 
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
+		
+		String email = request.getParameter("Email");
+		String key = request.getParameter("Key");
+		if (email!=null && key!=null) {  // generate a new set of LTI credentials
+			response.setContentType("text/html");
+			PrintWriter out = response.getWriter();
+			BLTIConsumer c = ofy.find(BLTIConsumer.class,key);			
+			if (c==null) {
+				c = new BLTIConsumer(key,email);
+				if (sendLTICredentials(email,c)) {  // credentials sent successfully
+					ofy.put(c);
+					out.println(Login.header + banner + successMessage + Login.footer);				
+				}
+			} else doError(request,response,"Sorry, the LTI registration attempt failed.",null,null);			
+			return;	
+		}
+		
 		StringBuffer debug = new StringBuffer("Debug:\n");
 		String lti_message_type = request.getParameter("lti_message_type");
 		String reg_key = request.getParameter("reg_key");
@@ -151,15 +178,13 @@ public class LTIRegistration extends HttpServlet {
 			throws java.io.IOException {
 		try {
 			String return_url = request.getParameter("launch_presentation_return_url");
-			if (return_url != null && !return_url.isEmpty()) {
-				return_url += (return_url.indexOf('?')>1?"&lti_msg=":"?lti_msg=") + URLEncoder.encode(s,"UTF-8");
-				response.sendRedirect(return_url);
-				return;
-			}
+			return_url += (return_url.indexOf('?')>1?"&lti_msg=":"?lti_msg=") + URLEncoder.encode(s,"UTF-8");
+			response.sendRedirect(return_url);
+			return;
 		} catch (Exception e2) {
 			// in case no return URL was provided, show the error to the user
 			PrintWriter out = response.getWriter();
-			out.println(s);
+			out.println(Login.header + banner + s + Login.footer);
 		}
 	}
 
@@ -303,6 +328,33 @@ public class LTIRegistration extends HttpServlet {
 			} catch (Exception e) {}
 		}
 		return null;
+	}
+
+	boolean sendLTICredentials(String email,BLTIConsumer c) {
+		// send a response to a user feedback report
+		Properties props = new Properties();
+		Session session = Session.getDefaultInstance(props, null);
+
+		String msgBody = "Thank you for your interest in ChemVantage. Your LTI credentials are:<p>"
+				+ "Launch URL: http://chem-vantage.appspot.com/lti/ <br/>"
+				+ "Consumer Key: " + c.oauth_consumer_key + " <br/>"
+				+ "Shared Secret: " + c.secret + "<p>"
+				+ "Please use the URL method of launching your LTI connection (not the domain method). <br/>"
+				+ "If you  need additional assistance, please contact me at admin@chemvantage.org. <p>"
+				+ "-Chuck Wight";
+		try {
+			Message msg = new MimeMessage(session);
+			InternetAddress from = new InternetAddress("admin@chemvantage.org", "ChemVantage");
+			msg.setFrom(from);
+			msg.addRecipient(Message.RecipientType.TO,new InternetAddress(email,""));
+			msg.addRecipient(Message.RecipientType.CC,from);
+			msg.setSubject("ChemVantage LTI Credentials");
+			msg.setContent(msgBody,"text/html");
+			Transport.send(msg);
+			return true;
+		} catch (Exception e) {
+			return false;
+		}
 	}
 
 }
