@@ -50,6 +50,7 @@ public class Group implements Serializable {
 			 String defaultRescueSubject;
 			 String defaultRescueMessage;
 			 String lis_outcome_service_url;
+			 String lis_outcome_service_format;
 			 boolean isUsingLisOutcomeService;
 			 List<String> rescueCcIds = new ArrayList<String>();
 			 List<String> memberIds = new ArrayList<String>();
@@ -220,6 +221,10 @@ public class Group implements Serializable {
     
     boolean getUsingLisOutcomeService() { 
     	return this.isUsingLisOutcomeService;
+    }
+    
+    String getLisOutcomeFormat() {
+    	return lis_outcome_service_format==null?"application/xml":lis_outcome_service_format;
     }
     
     boolean isActive() {

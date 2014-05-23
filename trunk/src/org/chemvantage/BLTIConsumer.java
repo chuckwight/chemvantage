@@ -35,7 +35,6 @@ public class BLTIConsumer {
 	String lti_version;
 	String tool_consumer_guid;
 	String toolProxyURL;  // Tool Consumer URL containing the tool proxy contract for LTI v2.0
-	String resultServiceEndpoint;
 	String resultServiceFormat;
 	String email;
 	Date created;
@@ -97,4 +96,16 @@ public class BLTIConsumer {
 	String getToolProxyURL() {
 		return this.toolProxyURL;
 	}
+	
+	void putResultServiceFormat(String format) {
+		this.resultServiceFormat = format;
+	}
+	
+	static String getResultServiceFormat(String oauth_consumer_key) {
+		Objectify ofy = ObjectifyService.begin();
+		BLTIConsumer c = ofy.find(BLTIConsumer.class,oauth_consumer_key);
+		if (c==null) return null;
+		return c.resultServiceFormat==null?"application/xml":c.resultServiceFormat;
+	}
+	
 }
