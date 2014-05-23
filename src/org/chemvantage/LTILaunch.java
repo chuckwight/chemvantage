@@ -195,8 +195,6 @@ public class LTILaunch extends HttpServlet {
 		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
 		if (lis_result_sourcedid==null) lis_result_sourcedid = request.getParameter("custom_lis_result_sourcedid");
 		
-		boolean supportsLIS = lisOutcomeServiceUrl != null && lis_result_sourcedid != null;
-		
 		// Provision a new context (group), if necessary and put the user into it
 		Group g = null;
 		if (context_id==null) context_id = oauth_consumer_key + ":defaultGroup";
@@ -209,10 +207,14 @@ public class LTILaunch extends HttpServlet {
 			ofy.put(g);
 		}
 		user.changeGroups(g.id);
-
+		
+		boolean supportsLIS = lisOutcomeServiceUrl != null && lis_result_sourcedid != null;
+		
+		// update the LIS result outcome service URL, if necessary
 		if (supportsLIS && !lisOutcomeServiceUrl.equals(g.lis_outcome_service_url)) {  // update the URL as a Group property
 			g.lis_outcome_service_url=lisOutcomeServiceUrl;
 			g.isUsingLisOutcomeService = true;
+			g.lis_outcome_service_format = BLTIConsumer.getResultServiceFormat(oauth_consumer_key);
 			ofy.put(g);
 		}							
 

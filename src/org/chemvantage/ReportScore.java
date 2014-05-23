@@ -71,8 +71,9 @@ public class ReportScore extends HttpServlet {
 			Group g = ofy.get(Group.class,a.groupId);
 			String oauth_consumer_key = g.domain;
 			
-			String messageFormat = "application/xml";
-			String body = xmlReplaceResult(s.lis_result_sourcedid,Double.toString(score));
+			String messageFormat = g.getLisOutcomeFormat();
+			
+			String body = messageFormat.contains("jason")?jsonReplaceResult(Double.toString(score)):xmlReplaceResult(s.lis_result_sourcedid,Double.toString(score));
 			
 			String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
 			
@@ -92,6 +93,14 @@ public class ReportScore extends HttpServlet {
 				queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(assignmentId)).param("UserId",userId).param("Delay",Integer.toString(n+1)).param("Error",e.getMessage()).countdownMillis(countdownMillis));
 			} catch (Exception e2) {}
 		}
+	}
+	
+	String jsonReplaceResult(String score) {
+		return "{"
+		+ "'@context' : 'http://purl.imsglobal.org/ctx/lis/v2/Result',"
+		+ "'@type' : 'Result',"
+		+ "'resultScore' : " + score + ","
+		+ "}";
 	}
 	
 	String xmlReplaceResult(String lis_result_sourcedid, String score) {		

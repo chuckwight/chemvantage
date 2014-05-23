@@ -73,7 +73,7 @@ public class LTIRegistration extends HttpServlet {
 			+ "All LTI connections and ChemVantage services are provided free of charge.<p>"
 			+ "For LMS platforms that support LTI version 2.0, the system administrator may enter the ChemVantage URL "
 			+ "(<b>https://chem-vantage.appspot.com/lti/registration/</b>) into the LTI Tool Proxy Registration page of your LMS.<p>"
-			+ "If your LMS supports an older version of the LTI standard, the LTI launch URL is http://chem-vantage.appspot.com/lti/<br>"
+			+ "If your LMS supports an older version of the LTI standard, the LTI launch URL is <a href=http://chem-vantage.appspot.com/lti/>http://chem-vantage.appspot.com/lti/</a><br>"
 			+ "To obtain a set of LTI credentials, please enter an oauth_consumer_key value (any string of characters "
 			+ "that uniquely identifies your LMS) into the form below. Your LTI credentials will be "
 			+ "emailed to you immediately. For further assistance, contact Chuck Wight (admin@chemvantage.org).<p>";
@@ -161,6 +161,8 @@ public class LTIRegistration extends HttpServlet {
 			if (c==null) {  // this registration is for a new oath_consumer_key
 				c = new BLTIConsumer(tool_proxy_guid,oauth_secret,toolConsumerProfile.getString("guid"),"LTI-2p0");
 				c.putToolProxyURL(tool_proxy_url);
+				String resultFormat = toolConsumerProfile.toString().contains("application/vnd.ims.lis.v2.Result+json")?"application/vnd.ims.lis.v2.Result+json":"application/xml";
+				c.putResultServiceFormat(resultFormat);
 				ofy.put(c);
 			}
 			else throw new Exception("A Tool Consumer is already registered with this key.");
