@@ -283,6 +283,15 @@
 	</servlet-mapping>
 	
 	<servlet>
+		<servlet-name>ToolSettingsManager</servlet-name>
+		<servlet-class>org.chemvantage.ToolSettingsManager</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>ToolSettingsManager</servlet-name>
+		<url-pattern>/ToolSettingsManager</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
 		<servlet-name>TransactionServlet</servlet-name>
 		<servlet-class>org.chemvantage.TransactionServlet</servlet-class>
 	</servlet>
@@ -331,6 +340,7 @@
 			<url-pattern>/Rescue</url-pattern>
 			<url-pattern>/ReportScore</url-pattern>
 			<url-pattern>/ResponseServlet</url-pattern>
+			<url-pattern>/ToolSettingsManager</url-pattern>
 			<url-pattern>/TransactionServlet</url-pattern>
 			</web-resource-collection>
 		<auth-constraint>

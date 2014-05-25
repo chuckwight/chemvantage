@@ -36,23 +36,29 @@ public class About extends HttpServlet {
 
 	public static String about = "<TABLE><TR><TD><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
 		+ "<TD>Welcome to<br><b><FONT SIZE=+3>ChemVantage.org</FONT></b></TD></TR></TABLE>"
+		
 		+ "<h3>Who we are</h3>"
 		+ "ChemVantage LLC was founded in 2010 to provide Open Education " 
 		+ "Resources for teaching and learning General Chemistry. The founder and chief software architect of "
-		+ "ChemVantage is Chuck Wight, who has taught General Chemistry at the University of Utah since 1984."
+		+ "ChemVantage is Chuck Wight, who has taught General Chemistry at the University of Utah and at "
+		+ "Weber State University since 1984."
+		
 		+ "<h3>Subject material</h3>"
-		+ "The database is currently populated with more than 2000 quiz and homework questions in General Chemistry. "
+		+ "The database is currently populated with more than 2000 quiz, homework and exam questions in General Chemistry. "
+		
 		+ "<h3>Why we created this site</h3>"
 		+ "Chemistry and many other technical disciplines are taught from a problem-solving approach. Lots of "
 		+ "practice is required to build a solid foundation of skills for using knowledge to solve scientific "
 		+ "problems. We create web sites that provide immediate feedback so that students can learn "
 		+ "problem-solving skills through repeated attempts without having to wait long periods of time for "
 		+ "their assignments to be graded by human instructors."
+		
 		+ "<h3>Learning versus testing</h3>"
 		+ "Usually, web sites with dynamic content like this one are best used as learning tools, not assessment "
 		+ "or testing tools.  For this reason, we have configured the software to allow students to submit "
 		+ "proposed solutions to the problems as often as they want, in order to improve their scores. The objective "
 		+ "is for students to use the feedback to correct their errors prior to the deadline for the assignment."
+		
 		+ "<h3>Quizzes</h3>"
 		+ "The quizzes presented here are designed to encourage students to read and understand the textbook used "
 		+ "for the course. The questions are based on material presented in most introductory General Chemistry "
@@ -65,9 +71,11 @@ public class About extends HttpServlet {
 		+ "assigning quizzes to be completed prior to the lecture, instructors can be assured that their students "
 		+ "have some exposure to the material.  This allows for more discussion, dialog and engagement in the "
 		+ "classroom, and it makes learning more fun (really!)."
+		
 		+ "<h3>Video Lectures</h3>"
 		+ "A series of 10-minute video lectures on a variety of General Chemistry topics is avialable from the "
 		+ "Home Page.  The videos are designed to reinforce the main points presented in many textbooks." 
+		
 		+ "<h3>Homework</h3>"
 		+ "The homework assignments are designed to give students practice in solving quantitative problems having "
 		+ "numerical answers. Each student can download the assignment, work the problems and submit the answers "
@@ -78,6 +86,7 @@ public class About extends HttpServlet {
 		+ "for each student. This makes them suitable for collaboration and working in groups, because even though "
 		+ "the group may work to find a correct algorithm for solving a problem, each student will have to use the "
 		+ "algorithm to find the detailed solution to his or her own problem."
+		
 		+ "<h3>Practice Exams</h3>"
 		+ "Students can take timed practice exams that draw questions from any group of 3 or more topics.  Each "
 		+ "exam is designed to take 60 minutes or less to complete, and includes a selection of 10 quiz questions "
@@ -86,6 +95,7 @@ public class About extends HttpServlet {
 		+ "reveal the student's areas of strength and weakness.  Practice exams may be repeated as often as desired. "
 		+ "The numerical questions are parameterized, making it extremely unlikely that a student will ever get two "
 		+ "identical practice exams."
+		
 		+ "<h3>Portfolio Page</h3>"
 		+ "Each student can access a page that gives the score on each quiz and homework assignment.  Students "
 		+ "who are members of a group have a scores page associated with group assignments. There is a separate "
@@ -95,17 +105,14 @@ public class About extends HttpServlet {
 		+ "Instructors can view the group scores of each student in his/her class or group.</p>";
 
 	public static String premium = "<a NAME=accounts></a>"
-		+ "<h3>ChemVantage Basic and Premium Accounts</h3>"
-		+ "Anyone can obtain an individual account at ChemVantage.org at no cost. "
-		+ "All of the functionality required for completing quiz and homework assignments "
-		+ "is included in the free basic account.<p>In order to use ChemVantage as part of a "
-		+ "group or class, you must first upgrade to a premium account. Account upgrades may be "
-		+ "purchased by individual users for $4.99, or institutions may purchase premium account "
-		+ "seats on behalf of their students for $2.00/seat in quantities of 50 seats or more. "
-		+ "Upgrades for instructors and institutional domain admins are always free.<p>"
-		+ "<a href=Upgrade>Click here to upgrade your account</a><p>"
+		+ "<h3>ChemVantage Accounts Are FREE</h3>"
+		+ "Anyone can obtain a ChemVantage account at no cost, either as an individual by logging in with "
+		+ "a third-party OpenID account (e.g., Google/Gmail account). Chemistry instructors can also make "
+		+ "ChemVantage assignments available to their classes by connecting the class learning management "
+		+ "system (LMS) to ChemVantage using <a href=/lti/registration>our LTI interface</a><p>"
 		+ "All ChemVantage accounts expire automatically after a 6 month period of inactivity."
-		+ "<h3>Why Does ChemVantage Cost So Little?</h3>"
+		
+		+ "<h3>How Can ChemVantage Afford To Be Free?</h3>"
 		+ "None of the question items in ChemVantage are owned by textbook publishers, so we pay no "
 		+ "royalties or license fees. Also, ChemVantage is powered by Google App Engine, so we are "
 		+ "able to provide high quality, reliable service at minimal cost.";
@@ -122,10 +129,12 @@ public class About extends HttpServlet {
 		+ "<li>You can integrate ChemVantage directly into your class learning management system using LTI (see below)."
 		+ "<li>If your school uses GMail for student email accounts, you can add ChemVantage into your Google Apps domain."
 		+ "</ol>Either method creates a private domain in ChemVantage for your college or school and gives you unlimited "
-		+ "free premium account upgrades for the first four months."
+		+ "free accounts for your students and instructors."
+		
 		+ "<h3>Teaching Assistants</h3>"
 		+ "An instructor may assign any user to be a teaching assistant for a group managed by the instructor.  "
 		+ "Teaching assistants may view the scores of group members and may view the solutions to homework exercises."
+		
 		+ "<h3>Editors</h3>"
 		+ "Any instructor wishing to contribute question items for quiz or homework assignments may request an "
 		+ "editor account by sending email to <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.  "
@@ -142,24 +151,25 @@ public class About extends HttpServlet {
 		+ "src='/images/imscertifiedfinalsmall.png'/></a> ChemVantage is certified by the "
 		+ "<a href=http://imsglobal.org>IMS Global Learning Consortium</a> to be conformant with the "
 		+ "LTI v1.1 standard for learning tools interoperability. The IMS conformance registration "
-		+ "number for ChemVantage v2.0 is <a href=http://www.imsglobal.org/cc/detail.cfm?ID=102>IMSC2ce2012W1</a>.<p>"
+		+ "number for ChemVantage v1.1 is <a href=http://www.imsglobal.org/cc/detail.cfm?ID=102>IMSC2ce2012W1</a>.<p>"
 		+ "This means that you can configure most learning management systems such as Blackboard, "
 		+ "Canvas, Moodle or Desire2Learn with a Basic LTI link to allow your students to establish and use their "
 		+ "accounts automatically in ChemVantage without having to maintain a separate user ID and "
 		+ "password. If the LMS supports LTI 1.1, then ChemVantage will report the assignment scores back to the "
-		+ "LMS gradebook. The administrator of your LMS can set this up by contacting "
-		+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a> to obtain the required LTI credentials. "
-		+ "All LTI premium account upgrades are free for the first four months."
+		+ "LMS gradebook. The administrator of your LMS can set this up by generating a set of ChemVantage LTI "
+		+ " credentials at <a href=/lti/registration>our LTI registration page</a>."
+		
 		+ "<h3>Google Apps Integration</h3>"
 		+ "<a href=https://www.google.com/enterprise/marketplace/viewListing?productListingId=9006+12752972024151964645>"
 		+ "<img alt='Add To Google Apps' style='border-width:0' align=left hspace=10 vspace=5 "
 		+ "src='/images/marketplace-addtogoogleapps-shadow.png'/></a>ChemVantage is also certified as an educational "
 		+ "services provider in the Google Apps EDU Marketplace. If your institution uses Google/GMail for student "
 		+ "email accounts, your Google Apps administrator can use this button to install ChemVantage in your Google Apps "
-		+ "domain at no cost. All Google Apps premium account upgrades are free for the first 4 months.";
+		+ "domain at no cost. The administrator will be granted privileges to manage ChemVantage user accounts in your "
+		+ "Google Apps domain, and to assign users as instructors.";
 		
 	public static String copyright = "<a NAME=copyright></a>"
-		+ "<h3>Copyright &copy; 2007-2013 ChemVantage LLC</h3>"
+		+ "<h3>Copyright &copy; 2007-2014 ChemVantage LLC</h3>"
 		+ "<a rel='license' href=http://creativecommons.org/licenses/by/3.0/us/>"
 		+ "<img alt='Creative Commons License' style='border-width:0' align=left hspace=10 vspace=5 "
 		+ "src='http://i.creativecommons.org/l/by/3.0/us/88x31.png'/></a>"
