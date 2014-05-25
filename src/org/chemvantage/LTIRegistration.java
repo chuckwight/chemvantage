@@ -69,14 +69,16 @@ public class LTIRegistration extends HttpServlet {
 			+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>";
 			
 	String welcomeMessage = "<h2>LTI Support Page</h2>"
-			+ "ChemVantage supports the IMS Global Learning Solutions LTI standard, versions 1.0, 1.1 and 2.0.<p>"
-			+ "All LTI connections and ChemVantage services are provided free of charge.<p>"
-			+ "For LMS platforms that support LTI version 2.0, the system administrator may enter the ChemVantage URL "
-			+ "(<b>https://chem-vantage.appspot.com/lti/registration/</b>) into the LTI Tool Proxy Registration page of your LMS.<p>"
-			+ "If your LMS supports an older version of the LTI standard, the LTI launch URL is <a href=http://chem-vantage.appspot.com/lti/>http://chem-vantage.appspot.com/lti/</a><br>"
-			+ "To obtain a set of LTI credentials, please enter an oauth_consumer_key value (any string of characters "
-			+ "that uniquely identifies your LMS) into the form below. Your LTI credentials will be "
-			+ "emailed to you immediately. For further assistance, contact Chuck Wight (admin@chemvantage.org).<p>";
+			+ "<table><tr><td><a href=/About#certification><img alt='IMS Global Certified' src='/images/imscertifiedfinalsmall.png'/></a></td>"
+			+ "<td>ChemVantage supports the IMS Global Learning Solutions LTI standard, versions 1.0, 1.1 and 2.0.<p>"
+			+ "All LTI connections and ChemVantage services are provided free of charge.</td?</tr></table>"
+			+ "For LMS platforms that support LTI version 2.0, the system administrator may enter the ChemVantage LTI registration URL:<br> "
+			+ "<b>https://chem-vantage.appspot.com/lti/registration/</b><br>into the LTI Tool Proxy Registration page of your LMS.<p>"
+			+ "If your LMS supports an older version of the LTI standard, the LTI launch URL is<br>"
+			+ "<b>http://chem-vantage.appspot.com/lti/</b><br>"
+			+ "To obtain a set of LTI credentials, please enter an oauth_consumer_key value (any string of characters that uniquely<br>"
+			+ "identifies your LMS) into the form below. Your LTI credentials will be emailed to you immediately.<br>"
+			+ "For further assistance, contact Chuck Wight (admin@chemvantage.org).<p>";
 	
 	String successMessage = "<h2>Thank You</h2> Your LTI credentials have been sent to your email address.";
 	
@@ -146,11 +148,13 @@ public class LTIRegistration extends HttpServlet {
 			
 			String tool_proxy_guid = null;
 			String tool_proxy_url = null;
+			String tool_settings_url = null;
 			try {
 				JSONObject replyBody = new JSONObject(reply);		
 				debug.append("json_reply_ok.");
 				tool_proxy_guid = replyBody.getString("tool_proxy_guid");
 				tool_proxy_url = replyBody.getString("@id");
+				tool_settings_url = replyBody.getString("custom_uri");
 				if (tool_proxy_guid.isEmpty() || tool_proxy_url.isEmpty()) throw new Exception();
 			} catch (Exception e) {
 				throw new Exception ("Could not parse response to tool proxy registration request.");
@@ -161,6 +165,7 @@ public class LTIRegistration extends HttpServlet {
 			if (c==null) {  // this registration is for a new oath_consumer_key
 				c = new BLTIConsumer(tool_proxy_guid,oauth_secret,toolConsumerProfile.getString("guid"),"LTI-2p0");
 				c.putToolProxyURL(tool_proxy_url);
+				c.putToolSettingsURL(tool_settings_url);
 				String resultFormat = toolConsumerProfile.toString().contains("application/vnd.ims.lis.v2.Result+json")?"application/vnd.ims.lis.v2.Result+json":"application/xml";
 				c.putResultServiceFormat(resultFormat);
 				ofy.put(c);

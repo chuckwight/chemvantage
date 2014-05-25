@@ -259,7 +259,8 @@ public class Home extends HttpServlet {
 			}
 
 			if (videos.size()>0) {
-				buf.append("<iframe width='425' height='349' src='http://www.youtube.com/embed/" 
+				boolean isSecure = request.isSecure();
+				buf.append("<iframe width='425' height='349' src='" + (isSecure?"https://":"http://") + "www.youtube.com/embed/" 
 						+ video.serialNumber + (i==null?"":"?autoplay=1")
 						+ "' frameborder='0' allowfullscreen></iframe>\n");
 

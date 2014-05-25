@@ -25,6 +25,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.appengine.labs.repackaged.org.json.JSONObject;
 import com.googlecode.objectify.Objectify;
 
 public class ToolSettingsManager extends HttpServlet {
@@ -38,6 +39,7 @@ public class ToolSettingsManager extends HttpServlet {
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
+		
 		try {
 			User user = User.getInstance(request.getSession(true));
 			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
@@ -49,13 +51,14 @@ public class ToolSettingsManager extends HttpServlet {
 			PrintWriter out = response.getWriter();
 			
 			StringBuffer buf = new StringBuffer("<h2>LTI Tool Settings Manager</h2>");
-			String oauth_consumer_key = request.getParameter("oath_consumer_key");
+			String oauth_consumer_key = request.getParameter("oauth_consumer_key");
 			if (oauth_consumer_key == null) { // print a form to get the consumer key
 				buf.append("Enter the consumer key value for any tool consumer that supports LTI version 2.0 or higher:<br>"
 						+ "<form method=GET>Consumer key: <input type=text name=oauth_consumer_key><input type=submit name=UserRequest value='Get Tool Settings'></form>");
 			} else {
 				buf.append(getToolSettings(oauth_consumer_key));
 			}
+			out.println(Home.getHeader(user) + buf.toString() + Home.footer);
 		} catch (Exception e) {}
 	}
 
@@ -70,17 +73,22 @@ public class ToolSettingsManager extends HttpServlet {
 				
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
+			out.println("not implemented");
 			
 		} catch (Exception e) {}
 	}
 	
 	String getToolSettings(String key) {
-		StringBuffer buf = new StringBuffer("Tool settings for oauth_consumer_key " + key + "(JSON format):<p>");
+		StringBuffer buf = new StringBuffer("Tool settings for oauth_consumer_key " + key + " (JSON format):<p>");
+		String response = "";
 		try {
 			BLTIConsumer tc = ofy.get(BLTIConsumer.class,key);
-			buf.append(new LTIMessage("GET","","",tc.getToolProxyURL(),key,tc.secret).send());
+			response = new LTIMessage("GET","application/vnd.ims.lti.v2.ToolSettings+json",tc.getToolSettingsURL(),tc).send();
+			JSONObject toolSettings = new JSONObject(response);
+			buf.append(toolSettings.toString(3));
 		} catch (Exception e) {
-			buf.append(e.toString());
+			buf.append(e.toString() + "<p>");
+			buf.append(response);
 		}
 		return buf.toString();
 	}

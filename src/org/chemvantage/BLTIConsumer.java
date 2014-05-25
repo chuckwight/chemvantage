@@ -35,6 +35,7 @@ public class BLTIConsumer {
 	String lti_version;
 	String tool_consumer_guid;
 	String toolProxyURL;  // Tool Consumer URL containing the tool proxy contract for LTI v2.0
+	String toolSettingsURL; // Tool Consumer URL to PUT changes to settings in tool proxy
 	String resultServiceFormat;
 	String email;
 	Date created;
@@ -45,6 +46,7 @@ public class BLTIConsumer {
 		this.oauth_consumer_key = oauth_consumer_key;
 		this.secret = generateSecret();
         this.lti_version = "LTI-1p0";
+        this.created = new Date();
     }
 	
 	BLTIConsumer(String key,String email) {
@@ -58,7 +60,8 @@ public class BLTIConsumer {
 		this.oauth_consumer_key = key;
 		this.secret = secret;
 		this.tool_consumer_guid = tool_consumer_guid;
-		this.lti_version = version;	
+		this.lti_version = version;
+		this.created = new Date();
 	}
 	
 	static void create(String oauth_consumer_key) {
@@ -97,6 +100,14 @@ public class BLTIConsumer {
 		return this.toolProxyURL;
 	}
 	
+	void putToolSettingsURL(String url) {
+		this.toolSettingsURL = url;
+	}
+
+	String getToolSettingsURL() {
+		return this.toolSettingsURL;
+	}
+
 	void putResultServiceFormat(String format) {
 		this.resultServiceFormat = format;
 	}

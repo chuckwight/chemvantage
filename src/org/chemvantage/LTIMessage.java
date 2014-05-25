@@ -33,8 +33,10 @@ import com.google.gdata.client.authn.oauth.OAuthUtil;
 import com.google.gdata.util.common.util.Base64;
 
 public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+JSON" messages to a Tool Consumer (LMS)
-	String messageType;
-	String messageText;
+	String messageType="text/html";
+	String acceptType = "application/xml";
+	String messageText="";
+	String httpMethod="POST";
 	String oauth_consumer_key;
 	String oauth_shared_secret;
 	String destinationURL;
@@ -57,9 +59,16 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     	this.oauth_shared_secret = secret;
     }
     
+    LTIMessage(String httpMethod,String acceptType,String destURL,BLTIConsumer c) {
+    	this.httpMethod = httpMethod;
+    	this.destinationURL = destURL;
+    	this.acceptType = acceptType;
+    	this.oauth_consumer_key = c.oauth_consumer_key;
+    	this.oauth_shared_secret = c.secret;
+    }
+    
     protected String send() throws Exception {
-    	if (!messageAppearsValid()) return "Error: Message parameters were invalid.";
-
+    	
     	// construct a hash of the message text to include as a custom parameter
     	String hash = new String(Base64.encode(DigestUtils.sha(messageText)));
 
@@ -83,11 +92,15 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     	HttpURLConnection uc = (HttpURLConnection) u.openConnection();
     	uc.setDoOutput(true);
     	uc.setDoInput(true);
-    	uc.setRequestMethod("POST");
+    	uc.setRequestMethod(httpMethod);
+    	if (httpMethod.equals("GET")) acceptType = "application/vnd.ims.lti.v2.ToolSettings+json";
     	uc.setRequestProperty("Content-Type",messageType);
+    	uc.setRequestProperty("Accept", acceptType);
     	uc.setRequestProperty("Content-Length",Integer.toString(messageText.length()));
     	uc.setRequestProperty("Authorization",buildAuthHeaderString(params));
     	
+    	if (!messageAppearsValid()) return "Error: Message parameters were invalid.";
+
     	// send the message
     	OutputStreamWriter toTC = new OutputStreamWriter(uc.getOutputStream());
     	toTC.write(messageText);
@@ -112,7 +125,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 
     private boolean messageAppearsValid() {
     	if (messageType == null) return false;
-    	if (messageText==null || messageText.isEmpty()) return false;
+    	if (messageText==null || (messageText.isEmpty() && !httpMethod.equals("GET"))) return false;
     	if (oauth_consumer_key==null || oauth_consumer_key.isEmpty()) return false;
     	if (oauth_shared_secret==null || oauth_shared_secret.isEmpty()) return false;
     	if (destinationURL==null || destinationURL.isEmpty()) return false;
