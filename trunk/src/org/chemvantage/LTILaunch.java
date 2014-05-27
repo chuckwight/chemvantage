@@ -311,7 +311,7 @@ public class LTILaunch extends HttpServlet {
 			
 			buf.append("<h3>Choose the ChemVantage Assignment For This Link</h3>"
 					+ "The link that you just clicked in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<p>"
-					+ "Please select the ChemVantage assignment that should be associated with this link.<p>");
+					+ "Please select the ChemVantage assignment that should be associated with this link. ");
 
 			if (user.isInstructor()) buf.append("ChemVantage will remember this choice and send students directly to the assignment.<p>");
 			else {
@@ -319,18 +319,37 @@ public class LTILaunch extends HttpServlet {
 						+ "Your scores cannot be returned to your LMS grade book until after this has been done.<p>");
 			}
 
-			buf.append("<span " + (flag?"style='color:red'":"") + "><b>You must choose the assignment type (quiz or homework) AND the topic covered.</b></span>");
+			if (flag) buf.append("<span style='color:red'><b>You must choose the assignment type (quiz or homework) AND the topic covered.</b></span>");
 
-				buf.append("<table><form method=GET><input type=hidden name='resource_link_id' value='" + resource_link_id + "'>");
-				buf.append("<input type=hidden name=flag value=true>");  // used to highlight instructions 2nd time
-				if (lis_result_sourcedid != null) buf.append("<input type=hidden name='lis_result_sourcedid' value='" + URLEncoder.encode(lis_result_sourcedid,"UTF-8") + "'>");
-				buf.append("<tr><td><input type=radio name=AssignmentType value=Quiz" + ("Quiz".equals(assignmentType)?" CHECKED":"") + ">Quiz</a></td><td rowspan=2>");
-				buf.append("<SELECT NAME=TopicId><OPTION Value='0'" + ("0".equals(tId)?" SELECTED":"") + ">Select a topic</OPTION>");			
-				List<Topic> topics = ofy.query(Topic.class).order("orderBy").list();
-				for (Topic t : topics) if (!t.orderBy.equals("Hide")) buf.append("<OPTION VALUE='" + t.id + "'" + (String.valueOf(t.id).equals(tId)?" SELECTED":"") + ">" + t.title + "</OPTION>");			 
-				buf.append("</SELECT><input type=submit name=UserRequest value=Go></td></tr>"
-						+ "<tr><td><input type=radio name=AssignmentType value=Homework" + ("Homework".equals(assignmentType)?" CHECKED":"") + ">Homework</a></td></tr>"
-						+ "</form></table>");
+			// insert a script to show/hide the correct box
+			buf.append("<script>"
+					+ "function inspectRadios() { "
+					+ "var radios = document.getElementsByName('AssignmentType');"
+					+ "  if(radios[0].checked || radios[1].checked) "
+					+ "    {document.getElementById('topicSelect').style.visibility='visible';document.getElementById('topicCheck').style.visibility='hidden';}"
+					+ "  else if(radios[2].checked)"
+					+ "    {document.getElementById('topicSelect').style.visibility='hidden';document.getElementById('topicCheck').style.visibility='visible';}"
+					+ "}"
+					+ "</script>");
+
+			buf.append("<table><form method=GET><input type=hidden name='resource_link_id' value='" + resource_link_id + "'>");
+			buf.append("<input type=hidden name=flag value=true>");  // used to highlight instructions 2nd time
+			if (lis_result_sourcedid != null) buf.append("<input type=hidden name='lis_result_sourcedid' value='" + URLEncoder.encode(lis_result_sourcedid,"UTF-8") + "'>");
+			buf.append("<tr><td>"
+					+ "<input type=radio name=AssignmentType onClick='inspectRadios();' value=Quiz" + ("Quiz".equals(assignmentType)?" CHECKED":"") + ">Quiz<br>"
+					+ "<input type=radio name=AssignmentType onClick='inspectRadios();' value=Homework" + ("Homework".equals(assignmentType)?" CHECKED":"") + ">Homework<br>"
+					+ "<input type=radio name=AssignmentType onClick='inspectRadios();' value=PracticeExam" + ("PracticeExam".equals(assignmentType)?" CHECKED":"") + ">Practice&nbsp;Exam"
+					+ "</td><td id=topicSelect style='visibility:hidden'>");
+			buf.append("<SELECT NAME=TopicId><OPTION Value='0'" + ("0".equals(tId)?" SELECTED":"") + ">Select a topic</OPTION>");			
+			List<Topic> topics = ofy.query(Topic.class).order("orderBy").list();
+			for (Topic t : topics) if (!t.orderBy.equals("Hide")) buf.append("<OPTION VALUE='" + t.id + "'" + (String.valueOf(t.id).equals(tId)?" SELECTED":"") + ">" + t.title + "</OPTION>");			 
+			buf.append("</SELECT><input type=submit name=UserRequest value=Go>"
+					+ "</td></tr>"
+					+ "<tr><td colspan=2 id=topicCheck style='visibility:hidden'>"
+					+ "Checkboxes go here"
+					+ "/td></tr>"
+					+ "</form></table>");
+			buf.append("<script>inspectRadios()</script>");
 		} catch (Exception e) {
 			return e.getMessage();
 		}
