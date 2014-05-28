@@ -23,6 +23,7 @@ package org.chemvantage;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -260,14 +261,23 @@ public class LTILaunch extends HttpServlet {
 				String tId = request.getParameter("TopicId");
 				if (tId==null) tId = request.getParameter("custom_TopicId");
 				long topicId = 0L;
+				List<Long> topicIds = new ArrayList<Long>();
 				
 				try {
 					if (assignmentType==null) throw new Exception();
-					topicId = Long.parseLong(tId);  // throws Exception if tId does not represent a long integer
+					if (assignmentType.equals("PracticeExam")) {
+						String[] topicStringIds = request.getParameterValues("TopicId");
+						if (topicStringIds!=null) {
+							for (int i=0;i<topicStringIds.length;i++) topicIds.add(Long.parseLong(topicStringIds[i]));
+						}
+					} else {
+						topicId = Long.parseLong(tId);  // throws Exception if tId does not represent a long integer	
+					}
 					myAssignment = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType",assignmentType).filter("topicId",topicId).get();
 					if (user.isInstructor()) {  // must be the instructor to create this assignment
 						if (myAssignment==null) {  // create this new assignment
-							myAssignment = new Assignment(user.myGroupId,topicId,assignmentType,sixMonthsFromNow);
+							if (assignmentType.equals("PracticeExam")) myAssignment = new Assignment(user.myGroupId,topicIds,assignmentType,sixMonthsFromNow);
+							else myAssignment = new Assignment(user.myGroupId,topicId,assignmentType,sixMonthsFromNow);
 							myAssignment.addResourceLinkId(resource_link_id);
 							ofy.put(myAssignment);
 							Group g = ofy.get(Group.class,user.myGroupId);
@@ -325,29 +335,56 @@ public class LTILaunch extends HttpServlet {
 			buf.append("<script>"
 					+ "function inspectRadios() { "
 					+ "var radios = document.getElementsByName('AssignmentType');"
-					+ "  if(radios[0].checked || radios[1].checked) "
-					+ "    {document.getElementById('topicSelect').style.visibility='visible';document.getElementById('topicCheck').style.visibility='hidden';}"
-					+ "  else if(radios[2].checked)"
-					+ "    {document.getElementById('topicSelect').style.visibility='hidden';document.getElementById('topicCheck').style.visibility='visible';}"
+					+ "  if(radios[0].checked) {"
+					+ "    document.getElementById('topicSelect').style.visibility='visible';"
+					+ "    document.getElementById('topicSelect').style.valign='top';"
+					+ "    document.getElementById('topicCheck').style.visibility='hidden';"
+					+ "  }"
+					+ "  else if(radios[1].checked) {"
+					+ "    document.getElementById('topicSelect').style.visibility='visible';"
+					+ "    document.getElementById('topicSelect').style.valign='middle';"
+					+ "    document.getElementById('topicCheck').style.visibility='hidden';"
+					+ "  }"
+					+ "  else if(radios[2].checked) {"
+					+ "    document.getElementById('topicSelect').style.visibility='hidden';"
+					+ "    document.getElementById('topicCheck').style.visibility='visible';"
+					+ "  }"
 					+ "}"
 					+ "</script>");
 
-			buf.append("<table><form method=GET><input type=hidden name='resource_link_id' value='" + resource_link_id + "'>");
+			buf.append("<table><form name=AssignmentForm method=GET><input type=hidden name='resource_link_id' value='" + resource_link_id + "'>");
 			buf.append("<input type=hidden name=flag value=true>");  // used to highlight instructions 2nd time
 			if (lis_result_sourcedid != null) buf.append("<input type=hidden name='lis_result_sourcedid' value='" + URLEncoder.encode(lis_result_sourcedid,"UTF-8") + "'>");
 			buf.append("<tr><td>"
 					+ "<input type=radio name=AssignmentType onClick='inspectRadios();' value=Quiz" + ("Quiz".equals(assignmentType)?" CHECKED":"") + ">Quiz<br>"
 					+ "<input type=radio name=AssignmentType onClick='inspectRadios();' value=Homework" + ("Homework".equals(assignmentType)?" CHECKED":"") + ">Homework<br>"
 					+ "<input type=radio name=AssignmentType onClick='inspectRadios();' value=PracticeExam" + ("PracticeExam".equals(assignmentType)?" CHECKED":"") + ">Practice&nbsp;Exam"
-					+ "</td><td id=topicSelect style='visibility:hidden'>");
+					+ "</td><td id=topicSelect style='visibility:hidden;vertical-align=top'>");
 			buf.append("<SELECT NAME=TopicId><OPTION Value='0'" + ("0".equals(tId)?" SELECTED":"") + ">Select a topic</OPTION>");			
 			List<Topic> topics = ofy.query(Topic.class).order("orderBy").list();
 			for (Topic t : topics) if (!t.orderBy.equals("Hide")) buf.append("<OPTION VALUE='" + t.id + "'" + (String.valueOf(t.id).equals(tId)?" SELECTED":"") + ">" + t.title + "</OPTION>");			 
 			buf.append("</SELECT><input type=submit name=UserRequest value=Go>"
 					+ "</td></tr>"
 					+ "<tr><td colspan=2 id=topicCheck style='visibility:hidden'>"
-					+ "Checkboxes go here"
-					+ "/td></tr>"
+					+ "<TABLE>");
+			int i = 0;
+			for (Topic t : topics) {
+				if ("Hide".equals(t.orderBy)) continue;
+				buf.append(i%3==0?"<TR><TD>":"<TD>");
+				buf.append("<INPUT TYPE=CHECKBOX NAME=TopicIds VALUE='" + t.id + "' "
+						+ "onClick=\"javascript: var checked=0; "
+						+ "for(i=0;i<document.AssignmentForm.TopicIds.length;i++) if(document.AssignmentForm.TopicIds[i].checked) checked++;"
+						+ "document.AssignmentForm.begin.disabled=(checked<3);"
+						+ "if(document.AssignmentForm.begin.disabled) document.AssignmentForm.begin.value='Select at least 3 topics';"
+						+ "else document.AssignmentForm.begin.value='Begin the Exam';\">" 
+						+ t.title + "<br>\n");
+				buf.append(i%3==2?"</TD></TR>\n":"</TD>");
+				i++;
+			}
+			buf.append("</TABLE>"
+					+"<br>The practice exam is designed to be completed in 60 minutes. "
+					+"<INPUT TYPE=SUBMIT NAME=begin DISABLED=true VALUE='Select at least 3 topics'>"
+					+ "</td></tr>"
 					+ "</form></table>");
 			buf.append("<script>inspectRadios()</script>");
 		} catch (Exception e) {

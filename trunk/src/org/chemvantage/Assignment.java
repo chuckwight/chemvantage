@@ -51,6 +51,13 @@ public class Assignment implements Comparable<Assignment>,Serializable {
     	questionKeys = ObjectifyService.begin().query(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).listKeys();
     }
     
+    Assignment(long groupId,List<Long> topicIds,String assignmentType,Date deadline) {   // specific to Practice Exam assignments with multiple topicIds
+    	this.groupId = groupId;
+    	this.topicIds = topicIds;
+    	this.assignmentType = assignmentType;
+    	this.deadline = deadline;
+    }
+    
     Assignment(long groupId,String assignmentType) {
     	this.groupId = groupId;
     	this.assignmentType = assignmentType;
