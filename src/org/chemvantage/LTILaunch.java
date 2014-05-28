@@ -69,7 +69,7 @@ public class LTILaunch extends HttpServlet {
 			
 			if ("pick".equals(request.getParameter("UserRequest")))
 				out.println(pickResourceForm(user,request));
-			else if ("Go".equals(request.getParameter("UserRequest"))) {
+			else {
 				String assignmentType = request.getParameter("AssignmentType");
 				long topicId = Long.parseLong(request.getParameter("TopicId"));				
 				if (assignmentType!=null && topicId>0L) {
@@ -77,7 +77,6 @@ public class LTILaunch extends HttpServlet {
 				}
 				else out.println(pickResourceForm(user,request));
 			}
-			else doPost(request, response);
 		} catch (Exception e) {
 			response.sendRedirect("/lti/registration");
 		}
@@ -359,14 +358,19 @@ public class LTILaunch extends HttpServlet {
 					+ "<input type=radio name=AssignmentType onClick='inspectRadios();' value=Quiz" + ("Quiz".equals(assignmentType)?" CHECKED":"") + ">Quiz<br>"
 					+ "<input type=radio name=AssignmentType onClick='inspectRadios();' value=Homework" + ("Homework".equals(assignmentType)?" CHECKED":"") + ">Homework<br>"
 					+ "<input type=radio name=AssignmentType onClick='inspectRadios();' value=PracticeExam" + ("PracticeExam".equals(assignmentType)?" CHECKED":"") + ">Practice&nbsp;Exam"
-					+ "</td><td id=topicSelect style='visibility:hidden;vertical-align=top'>");
-			buf.append("<SELECT NAME=TopicId><OPTION Value='0'" + ("0".equals(tId)?" SELECTED":"") + ">Select a topic</OPTION>");			
+					+ "</td><td id=topicSelect style='visibility:hidden;vertical-align=top'>"
+					+ "Please select one topic for this quiz or homework assignment.<br>");
+			buf.append("<SELECT NAME=TopicId onChange=\"javascript: document.AssignmentForm.UserRequest.disabled=(document.AssignmentForm.TopicId.selectedIndex==0);\">"
+					+ "<OPTION Value='0'" + ("0".equals(tId)?" SELECTED":"") + ">Select a topic</OPTION>");			
 			List<Topic> topics = ofy.query(Topic.class).order("orderBy").list();
-			for (Topic t : topics) if (!t.orderBy.equals("Hide")) buf.append("<OPTION VALUE='" + t.id + "'" + (String.valueOf(t.id).equals(tId)?" SELECTED":"") + ">" + t.title + "</OPTION>");			 
-			buf.append("</SELECT><input type=submit name=UserRequest value=Go>"
+			for (Topic t : topics) if (!t.orderBy.equals("Hide")) {
+				buf.append("<OPTION VALUE='" + t.id + "'" + (String.valueOf(t.id).equals(tId)?" SELECTED":"") + ">" + t.title + "</OPTION>");			 
+			}
+			buf.append("</SELECT><input type=submit name=UserRequest DISABLED=true>"
 					+ "</td></tr>"
 					+ "<tr><td colspan=2 id=topicCheck style='visibility:hidden'>"
 					+ "<TABLE>");
+			buf.append("<TR><TD COLSPAN=3 style='color:red'>Please select at least 3 topics for this practice exam:<br></TD></TR>");
 			int i = 0;
 			for (Topic t : topics) {
 				if ("Hide".equals(t.orderBy)) continue;
@@ -376,7 +380,7 @@ public class LTILaunch extends HttpServlet {
 						+ "for(i=0;i<document.AssignmentForm.TopicIds.length;i++) if(document.AssignmentForm.TopicIds[i].checked) checked++;"
 						+ "document.AssignmentForm.begin.disabled=(checked<3);"
 						+ "if(document.AssignmentForm.begin.disabled) document.AssignmentForm.begin.value='Select at least 3 topics';"
-						+ "else document.AssignmentForm.begin.value='Begin the Exam';\">" 
+						+ "else document.AssignmentForm.begin.value='Submit';\">" 
 						+ t.title + "<br>\n");
 				buf.append(i%3==2?"</TD></TR>\n":"</TD>");
 				i++;
@@ -386,7 +390,7 @@ public class LTILaunch extends HttpServlet {
 					+"<INPUT TYPE=SUBMIT NAME=begin DISABLED=true VALUE='Select at least 3 topics'>"
 					+ "</td></tr>"
 					+ "</form></table>");
-			buf.append("<script>inspectRadios()</script>");
+			//buf.append("<script>inspectRadios()</script>");
 		} catch (Exception e) {
 			return e.getMessage();
 		}
