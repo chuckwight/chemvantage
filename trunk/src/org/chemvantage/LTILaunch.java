@@ -224,7 +224,7 @@ public class LTILaunch extends HttpServlet {
 	
 	String resourceUrlFinder(User user, HttpServletRequest request) {
 		/* 
-		 * This method searches for an assignment containing the resource link for this LTI launch
+		 * This method searches for an assignment containing the resource_link_id for this LTI launch
 		 * and redirects the user to the correct assignment. If no assignment can be found, the method 
 		 * tries to validate the assignmentType and topicId or topicIds. If the user is the instructor
 		 * then a new assignment is created and the resource link added. Then the user is redirected 
@@ -299,12 +299,13 @@ public class LTILaunch extends HttpServlet {
 					ofy.put(g);
 				} else lis_result_sourcedid = null; // this prevents students from getting scores for made-up assignments
 			}	
-			redirectUrl ="/" + myAssignment.assignmentType;
 			if (myAssignment.assignmentType.equals("PracticeExam")) {
+				redirectUrl ="/" + myAssignment.assignmentType;
 				for (int i=0;i<myAssignment.topicIds.size();i++) redirectUrl += (i==0?"?":"&") + "TopicId=" + myAssignment.topicIds.get(i);
+				redirectUrl += "&AssignmentId=" + myAssignment.id;
 			}
 			else { // specify topicId for Quiz or Homework assignment
-				redirectUrl += "?TopicId=" + myAssignment.topicId;
+				redirectUrl ="/" + myAssignment.assignmentType + "?TopicId=" + myAssignment.topicId;
 			}
 			if (lis_result_sourcedid!=null) redirectUrl += "&lis_result_sourcedid=" + lis_result_sourcedid;
 			return redirectUrl;  // normal finish; go directly to the assignment

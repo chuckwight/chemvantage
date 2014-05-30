@@ -144,12 +144,13 @@ public class Group implements Serializable {
     	return this.topicIds;
     }
 
-    public boolean setGroupTopicIds() {
+    public boolean setGroupTopicIds() {  // this routine only applies to Quiz and Homework assignments
     	this.topicIds.clear();
     	this.quizAssignmentIds.clear();
     	this.hwAssignmentIds.clear();
     	Query<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",this.id).order("deadline");
     	for (Assignment a : assignments) {
+    		if (!(a.assignmentType.equals("Quiz") || a.assignmentType.equals("Homework"))) continue;
     		if (a.topicId==0L || ofy.find(Topic.class,a.topicId)==null) {
     			ofy.delete(a);
     			continue;

@@ -74,10 +74,9 @@ public class LTIRegistration extends HttpServlet {
 			+ "All LTI connections and ChemVantage services are provided free of charge.</td?</tr></table>"
 			+ "For LMS platforms that support LTI version 2.0, the system administrator may enter the ChemVantage LTI registration URL:<br> "
 			+ "<b>https://chem-vantage.appspot.com/lti/registration/</b><br>into the LTI Tool Proxy Registration page of your LMS.<p>"
-			+ "If your LMS supports an older version of the LTI standard, the LTI launch URL is<br>"
-			+ "<b>http://chem-vantage.appspot.com/lti/</b><br>"
-			+ "To obtain a set of LTI credentials, please enter an oauth_consumer_key value (any string of characters that uniquely<br>"
-			+ "identifies your LMS) into the form below. Your LTI credentials will be emailed to you immediately.<br>"
+			+ "If your LMS supports an older version of the LTI standard, you may obtain a free set of LTI credentials by entering<br>"
+			+ "a consumer key value (any string of characters that uniquely identifies your LMS) into the form below.<br>"
+			+ "Your LTI credentials will be emailed to you immediately.<br>"
 			+ "For further assistance, contact Chuck Wight (admin@chemvantage.org).<p>";
 	
 	String successMessage = "<h2>Thank You</h2> Your LTI credentials have been sent to your email address.";
@@ -103,7 +102,7 @@ public class LTIRegistration extends HttpServlet {
 	throws ServletException, IOException {
 		
 		String email = request.getParameter("Email");
-		String key = request.getParameter("Key");
+		String key = request.getParameter("Key").replaceAll("\\s", "");  // removes all whitespace from key
 		if (email!=null && key!=null) {  // generate a new set of LTI credentials
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
@@ -114,7 +113,7 @@ public class LTIRegistration extends HttpServlet {
 					ofy.put(c);
 					out.println(Login.header + banner + successMessage + Login.footer);				
 				}
-			} else doError(request,response,"Sorry, the LTI registration attempt failed.",null,null);			
+			} else doError(request,response,"Sorry, the LTI registration attempt failed, probably because the consumer key is already in use.",null,null);			
 			return;	
 		}
 		
