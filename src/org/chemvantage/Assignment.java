@@ -70,4 +70,12 @@ public class Assignment implements Comparable<Assignment>,Serializable {
     public void addResourceLinkId(String r) {
     	if (!resourceLinkIds.contains(r)) resourceLinkIds.add(r);
     }
+    
+    public boolean matches(String assignmentType,List<Long> topicIds) {
+    	return (this.assignmentType.equals(assignmentType) && this.topicIds.size()==topicIds.size() && this.topicIds.contains(topicIds));
+    }
+    
+    public boolean matches(String assignmentType,long topicId) {
+    	return (assignmentType.equals(this.assignmentType) && this.topicId==topicId);
+    }
 }

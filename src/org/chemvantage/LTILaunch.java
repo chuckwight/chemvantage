@@ -44,7 +44,6 @@ import net.oauth.server.OAuthServlet;
 import net.oauth.signature.OAuthSignatureMethod;
 
 import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.Query;
 
 public class LTILaunch extends HttpServlet {
 
@@ -69,14 +68,7 @@ public class LTILaunch extends HttpServlet {
 			
 			if ("pick".equals(request.getParameter("UserRequest")))
 				out.println(pickResourceForm(user,request));
-			else {
-				String assignmentType = request.getParameter("AssignmentType");
-				long topicId = Long.parseLong(request.getParameter("TopicId"));				
-				if (assignmentType!=null && topicId>0L) {
-					response.sendRedirect(resourceUrlFinder(user,request));
-				}
-				else out.println(pickResourceForm(user,request));
-			}
+			else response.sendRedirect(resourceUrlFinder(user,request));
 		} catch (Exception e) {
 			response.sendRedirect("/lti/registration");
 		}
@@ -231,76 +223,97 @@ public class LTILaunch extends HttpServlet {
 	}		
 	
 	String resourceUrlFinder(User user, HttpServletRequest request) {
+		/* 
+		 * This method searches for an assignment containing the resource link for this LTI launch
+		 * and redirects the user to the correct assignment. If no assignment can be found, the method 
+		 * tries to validate the assignmentType and topicId or topicIds. If the user is the instructor
+		 * then a new assignment is created and the resource link added. Then the user is redirected 
+		 * to the correct assignment.  If the assignment cannot be validated, the user is sent to the 
+		 * resourcePicker page to choose a valid assignmentId and topicId or topicIds.
+		 */
 		String redirectUrl = "";
 		Date now = new Date();
-		Date sixMonthsFromNow = new Date(now.getTime() + 15768000000L);  // exact time far into the future
+		Date sixMonthsFromNow = new Date(now.getTime() + 15768000000L);  // proposed deadline in six months
+		Assignment myAssignment = null;
+		String assignmentType = request.getParameter("AssignmentType");
+		if (assignmentType==null) assignmentType = request.getParameter("custom_AssignmentType");  // supports custom LTI variables
+		long topicId = 0L;
+		List<Long> topicIds = new ArrayList<Long>();
+
+		// a resource_link_id string is required for every valid LTI launch
+		String resource_link_id = request.getParameter("resource_link_id");
+		if (resource_link_id == null) resource_link_id = request.getParameter("custom_resource_link_id");
+		
+		// the lis_result_sourcedid is an optional LTI parameter that specifies a context grade book entry point
+		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
+		if (lis_result_sourcedid == null) lis_result_sourcedid = request.getParameter("custom_lis_result_sourcedid");
+		try { // encode the lis_result_sourcedid because it will be appended to the redirectUrl
+			lis_result_sourcedid = URLEncoder.encode(lis_result_sourcedid,"UTF-8");
+		} catch (Exception e) {
+			lis_result_sourcedid = null;
+		}
+		
 		try {  
-			// a resource_link_id string should be provided with every valid LTI launch
-			String resource_link_id = request.getParameter("resource_link_id");
-			if (resource_link_id==null) resource_link_id = request.getParameter("custom_resource_link_id");
+			List<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",user.myGroupId).list();
 			
-			// the lis_result_sourcedid is an optional LTI parameter that specifies a context grade book entry point
-			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
-			if (lis_result_sourcedid==null) lis_result_sourcedid = request.getParameter("custom_lis_result_sourcedid");
-			
-			Query<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",user.myGroupId);
-			Assignment myAssignment = null;
-			for (Assignment a : assignments) 
+			for (Assignment a : assignments) {  // look for myAssignment having the correct resource_link_id
 				if (a.resourceLinkIds != null && a.resourceLinkIds.contains(resource_link_id)) {
 					myAssignment = a;
 					break;
 				}
-			if (!(myAssignment == null)) {  // found the correct assignment
-				redirectUrl ="/" + myAssignment.assignmentType + "?TopicId=" + myAssignment.topicId;
-				if (lis_result_sourcedid!=null) redirectUrl += "&lis_result_sourcedid=" + URLEncoder.encode(lis_result_sourcedid,"UTF-8");
-				return redirectUrl;  // normal finish for assignment
-			} else { // try to find it based on the request data AssignmentType and TopicId
-				String assignmentType = request.getParameter("AssignmentType");
-				if (assignmentType==null) assignmentType = request.getParameter("custom_AssignmentType");
-				String tId = request.getParameter("TopicId");
-				if (tId==null) tId = request.getParameter("custom_TopicId");
-				long topicId = 0L;
-				List<Long> topicIds = new ArrayList<Long>();
-				
-				try {
-					if (assignmentType==null) throw new Exception();
-					if (assignmentType.equals("PracticeExam")) {
-						String[] topicStringIds = request.getParameterValues("TopicId");
-						if (topicStringIds!=null) {
-							for (int i=0;i<topicStringIds.length;i++) topicIds.add(Long.parseLong(topicStringIds[i]));
-						}
-					} else {
-						topicId = Long.parseLong(tId);  // throws Exception if tId does not represent a long integer	
-					}
-					myAssignment = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType",assignmentType).filter("topicId",topicId).get();
-					if (user.isInstructor()) {  // must be the instructor to create this assignment
-						if (myAssignment==null) {  // create this new assignment
-							if (assignmentType.equals("PracticeExam")) myAssignment = new Assignment(user.myGroupId,topicIds,assignmentType,sixMonthsFromNow);
-							else myAssignment = new Assignment(user.myGroupId,topicId,assignmentType,sixMonthsFromNow);
-							myAssignment.addResourceLinkId(resource_link_id);
-							ofy.put(myAssignment);
-							Group g = ofy.get(Group.class,user.myGroupId);
-							g.setGroupTopicIds();
-							ofy.put(g);
-
-						} else {  // assignment already exists; add this resource_link_id
-							myAssignment.addResourceLinkId(resource_link_id);
-							ofy.put(myAssignment);
-						}
-					}
-				} catch (Exception e) {  // could not identify the assignment; send user to pickResource page
-					redirectUrl = "/lti?UserRequest=pick&resource_link_id="+resource_link_id;  // send the user to the pickResource page
-					if (assignmentType!=null) redirectUrl += "&AssignmentType=" + assignmentType;
-					if (topicId>0) redirectUrl += "&TopicId=" + topicId;
-					if (lis_result_sourcedid!=null) redirectUrl += "&lis_result_sourcedid=" + URLEncoder.encode(lis_result_sourcedid,"UTF-8");
-					return redirectUrl;
-				}
-				redirectUrl ="/" + assignmentType + "?TopicId=" + topicId;
-				if (lis_result_sourcedid!=null) redirectUrl += "&lis_result_sourcedid=" + URLEncoder.encode(lis_result_sourcedid,"UTF-8");
-				return redirectUrl;
 			}
+			
+			if (myAssignment==null) { // try to find it based on the request data AssignmentType and TopicId or TopicIds (for PracticeExam)
+				if (assignmentType==null) throw new Exception();
+				if (assignmentType.equals("PracticeExam")) {
+					String[] tIds = request.getParameterValues("TopicIds");
+					if (tIds==null) tIds = request.getParameterValues("custom_TopicIds"); // supports custom LTI variables
+					if (tIds==null || tIds.length<3) throw new Exception();
+					for (int i=0;i<tIds.length;i++) topicIds.add(Long.parseLong(tIds[i]));
+					for (Assignment a : assignments) {
+						if (a.matches(assignmentType,topicIds)) {
+							myAssignment=a; 
+							break;
+						}
+					}
+					if (myAssignment==null) myAssignment = new Assignment(user.myGroupId,topicIds,assignmentType,sixMonthsFromNow);
+				
+				} else {  // assignmentType is Quiz or Homework
+					String tId = request.getParameter("TopicId");
+					if (tId==null) tId = request.getParameter("custom_TopicId"); // supports custom LTI variables
+					topicId = Long.parseLong(tId);  // throws Exception if tId does not represent a long integer
+					for (Assignment a : assignments) {
+						if (a.matches(assignmentType,topicId)) {
+							myAssignment=a; 
+							break;
+						}
+					}
+					if (myAssignment==null) myAssignment = new Assignment(user.myGroupId,topicId,assignmentType,sixMonthsFromNow);
+				}
+				
+				if (user.isInstructor()) {  // must be the instructor to modify or store myAssignment
+					myAssignment.addResourceLinkId(resource_link_id);
+					ofy.put(myAssignment);
+					Group g = ofy.get(Group.class,user.myGroupId);
+					g.setGroupTopicIds();
+					ofy.put(g);
+				} else lis_result_sourcedid = null; // this prevents students from getting scores for made-up assignments
+			}	
+			redirectUrl ="/" + myAssignment.assignmentType;
+			if (myAssignment.assignmentType.equals("PracticeExam")) {
+				for (int i=0;i<myAssignment.topicIds.size();i++) redirectUrl += (i==0?"?":"&") + "TopicId=" + myAssignment.topicIds.get(i);
+			}
+			else { // specify topicId for Quiz or Homework assignment
+				redirectUrl += "?TopicId=" + myAssignment.topicId;
+			}
+			if (lis_result_sourcedid!=null) redirectUrl += "&lis_result_sourcedid=" + lis_result_sourcedid;
+			return redirectUrl;  // normal finish; go directly to the assignment
+
 		} catch (Exception e) {
-			return e.toString();  // an unexpected fatal error occurred; 
+			redirectUrl = "/lti?UserRequest=pick&resource_link_id="+resource_link_id;  // send the user to the pickResource page
+			if (assignmentType!=null) redirectUrl += "&AssignmentType=" + assignmentType;
+			if (lis_result_sourcedid!=null) redirectUrl += "&lis_result_sourcedid=" + lis_result_sourcedid;
+			return redirectUrl;  // go to pickResourceForm to specify the assignment
 		}			
 	}
 	
@@ -314,12 +327,10 @@ public class LTILaunch extends HttpServlet {
 			String assignmentType = request.getParameter("AssignmentType");
 			if (assignmentType==null) assignmentType = "";  // must be a valid String object
 			String tId = request.getParameter("TopicId");
-			if (tId==null) tId = "0";  // must be a valis String object
-			
-			boolean flag = Boolean.parseBoolean(request.getParameter("flag"));
+			if (tId==null) tId = "0";  // must be a valid String object
 			
 			buf.append("<h3>Choose the ChemVantage Assignment For This Link</h3>"
-					+ "The link that you just clicked in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<p>"
+					+ "The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<p>"
 					+ "Please select the ChemVantage assignment that should be associated with this link. ");
 
 			if (user.isInstructor()) buf.append("ChemVantage will remember this choice and send students directly to the assignment.<p>");
@@ -327,8 +338,6 @@ public class LTILaunch extends HttpServlet {
 				buf.append("<b>Please ask your instructor to click the LMS assignment link to make this missing association.</b> "
 						+ "Your scores cannot be returned to your LMS grade book until after this has been done.<p>");
 			}
-
-			if (flag) buf.append("<span style='color:red'><b>You must choose the assignment type (quiz or homework) AND the topic covered.</b></span>");
 
 			// insert a script to show/hide the correct box
 			buf.append("<script>"
@@ -352,7 +361,6 @@ public class LTILaunch extends HttpServlet {
 					+ "</script>");
 
 			buf.append("<table><form name=AssignmentForm method=GET><input type=hidden name='resource_link_id' value='" + resource_link_id + "'>");
-			buf.append("<input type=hidden name=flag value=true>");  // used to highlight instructions 2nd time
 			if (lis_result_sourcedid != null) buf.append("<input type=hidden name='lis_result_sourcedid' value='" + URLEncoder.encode(lis_result_sourcedid,"UTF-8") + "'>");
 			buf.append("<tr><td>"
 					+ "<input type=radio name=AssignmentType onClick='inspectRadios();' value=Quiz" + ("Quiz".equals(assignmentType)?" CHECKED":"") + ">Quiz<br>"
@@ -390,7 +398,7 @@ public class LTILaunch extends HttpServlet {
 					+"<INPUT TYPE=SUBMIT NAME=begin DISABLED=true VALUE='Select at least 3 topics'>"
 					+ "</td></tr>"
 					+ "</form></table>");
-			//buf.append("<script>inspectRadios()</script>");
+			buf.append("<script>inspectRadios()</script>");
 		} catch (Exception e) {
 			return e.getMessage();
 		}
