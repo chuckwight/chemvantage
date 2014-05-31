@@ -164,13 +164,13 @@ public class Scores extends HttpServlet {
 				List<Integer> scores = new ArrayList<Integer>();
 				List<Integer> possibleScores = new ArrayList<Integer>();
 				for (PracticeExamTransaction pt : transactions) {
-					for (int i=0;i<pt.topicIds.length;i++) {
-						if (!topicIds.contains(pt.topicIds[i])) {
-							topicIds.add(pt.topicIds[i]);
+					for (int i=0;i<pt.topicIds.size();i++) {
+						if (!topicIds.contains(pt.topicIds.get(i))) {
+							topicIds.add(pt.topicIds.get(i));
 							scores.add(pt.scores[i]);
 							possibleScores.add(pt.possibleScores[i]);
 						} else {
-							int j = topicIds.indexOf(pt.topicIds[i]);
+							int j = topicIds.indexOf(pt.topicIds.get(i));
 							scores.set(j,scores.get(j)+pt.scores[i]);
 							possibleScores.set(j,possibleScores.get(j)+pt.possibleScores[i]);
 						}
@@ -414,13 +414,13 @@ public class Scores extends HttpServlet {
 				List<Integer> scores = new ArrayList<Integer>();
 				List<Integer> possibleScores = new ArrayList<Integer>();
 				for (PracticeExamTransaction pt : transactions) {
-					for (int i=0;i<pt.topicIds.length;i++) {
-						if (!topicIds.contains(pt.topicIds[i])) {
-							topicIds.add(pt.topicIds[i]);
+					for (int i=0;i<pt.topicIds.size();i++) {
+						if (!topicIds.contains(pt.topicIds.get(i))) {
+							topicIds.add(pt.topicIds.get(i));
 							scores.add(pt.scores[i]);
 							possibleScores.add(pt.possibleScores[i]);
 						} else {
-							int j = topicIds.indexOf(pt.topicIds[i]);
+							int j = topicIds.indexOf(pt.topicIds.get(i));
 							scores.set(j,scores.get(j)+pt.scores[i]);
 							possibleScores.set(j,possibleScores.get(j)+pt.possibleScores[i]);
 						}

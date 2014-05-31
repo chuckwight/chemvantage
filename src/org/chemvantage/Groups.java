@@ -1173,11 +1173,10 @@ public class Groups extends HttpServlet {
 		int score = 0;
 		int possibleScore = 0;
 		for (PracticeExamTransaction pt : transactions) {
-			for (int i=0;i<pt.topicIds.length;i++) {
-				if (pt.topicIds[i]==topic.id) {
-					score += pt.scores[i];
-					possibleScore += pt.possibleScores[i];
-				}
+			int i = pt.topicIds.indexOf(topic.id);
+			if (i >= 0) {  // this topic is included in the transaction
+				score += pt.scores[i];
+				possibleScore += pt.possibleScores[i];
 			}
 		}
 		if (possibleScore == 0) return "&nbsp";

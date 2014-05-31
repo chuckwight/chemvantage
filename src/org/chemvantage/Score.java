@@ -91,6 +91,23 @@ public class Score {    // this object represents a best score achieved by a use
 					if (ht.lis_result_sourcedid != null && !ht.lis_result_sourcedid.equals(s.lis_result_sourcedid)) s.lis_result_sourcedid = ht.lis_result_sourcedid;
 				}					
 			}
+		} else if (a.assignmentType.equals("PracticeExam")) {
+			Query<ExamTransaction> examTransactions = ofy.query(ExamTransaction.class).filter("userId",userId);
+			for (ExamTransaction et : examTransactions) {
+				if (!et.topicsMatch(a.topicIds)) continue;
+				if (et.downloaded.before(a.deadline)) {  // pre-deadline group score
+					s.numberOfAttempts++;  // number of pre-deadline quiz attempts
+					s.score = (et.score>s.score?et.score:s.score);  // keep the best (max) score
+				}
+				if (et.score > s.overallScore) s.overallScore = et.score;  // overall student score on this assignment
+				if (s.lis_result_sourcedid == null || s.lis_result_sourcedid.isEmpty()) s.lis_result_sourcedid = et.lis_result_sourcedid;  // record any available sourcedid value for reporting score to the LMS
+				if (s.mostRecentAttempt==null || et.downloaded.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far
+					s.mostRecentAttempt = et.downloaded;
+					s.maxPossibleScore = et.possibleScore;
+					if (et.lis_result_sourcedid != null && !et.lis_result_sourcedid.equals(s.lis_result_sourcedid)) s.lis_result_sourcedid = et.lis_result_sourcedid;
+				}				
+			}
+			
 		}
 		if (s.score > s.maxPossibleScore) s.score = s.maxPossibleScore;  // max really is the limit for LTI reporting
 		if (s.overallScore > s.maxPossibleScore) s.overallScore = s.maxPossibleScore;  // max really is the limit for LTI reporting

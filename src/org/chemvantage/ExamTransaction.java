@@ -17,29 +17,43 @@
 
 package org.chemvantage;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import javax.persistence.Id;
 
+import com.googlecode.objectify.annotation.Cached;
+import com.googlecode.objectify.annotation.Unindexed;
+
+@Cached
 public class ExamTransaction {
-    @Id Long id;
-    long topicID;
-    String userID;
-    Date downloaded;
-    Date graded;
-    int score;
-    int possibleScore;
-    String IPNumber;
+	@Unindexed	@Id Long id;
+    			List<Long> topicIds = new ArrayList<Long>();
+    			String userID;
+    			Date downloaded;
+    			Date graded;
+    			int score;
+    @Unindexed	int possibleScore;
+    @Unindexed	String lis_result_sourcedid;
+    @Unindexed	String IPNumber;
 
     ExamTransaction() {}
     
-    ExamTransaction(long topicID,String userID,Date downloaded,Date graded,int score,int possibleScore,String IPNumber) {
-    	this.topicID = topicID;
+    ExamTransaction(List<Long> topicIds,String userID,Date downloaded,Date graded,int score,int possibleScore,String lis_result_sourcedid,String IPNumber) {
+    	this.topicIds = topicIds;
     	this.userID = userID;
         this.downloaded = downloaded;
         this.graded = graded;
         this.score = score;
         this.possibleScore = possibleScore;
+        this.lis_result_sourcedid = lis_result_sourcedid;
         this.IPNumber = IPNumber;
+    }
+    
+    boolean topicsMatch(List<Long> topicIds) {  // matches if both Lists have identical members but not necessarily in the same order
+    	if (this.topicIds.size() != topicIds.size()) return false;
+    	for (Long tId : this.topicIds) if (!topicIds.contains(tId)) return false;
+    	return true;
     }
 }

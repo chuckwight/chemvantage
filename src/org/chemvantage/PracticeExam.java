@@ -1,5 +1,5 @@
 /*  ChemVantage - A Java web application for online learning
-*   Copyright (C) 2011 ChemVantage LLC
+*   Copyright (C) 2014 ChemVantage LLC
 *   
 *    This program is free software: you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -16,6 +16,8 @@
 */
 
 package org.chemvantage;
+
+import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -34,6 +36,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.appengine.api.taskqueue.Queue;
+import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
 
@@ -129,41 +133,39 @@ public class PracticeExam extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		try {
 			// Get requested topic ids for this exam
-			long[] topicIds = new long[0];
+			List<Long> topicIds = new ArrayList<Long>();
 			long assignmentId = 0;
 			Assignment a = null;
 			try {  // this branch works if the practice exam is assigned
 				assignmentId=Long.parseLong(request.getParameter("AssignmentId"));
 				a = ofy.get(Assignment.class,assignmentId);
-				topicIds = new long[a.topicIds.size()];
-				for (int i=0;i<topicIds.length;i++) topicIds[i] = a.topicIds.get(i);
+				topicIds = a.topicIds;
 			} catch (Exception e) {  // otherwise this is a student-designed exam
 				String[] topicStringIds = request.getParameterValues("TopicId");
-				if (topicStringIds!=null) {
-					topicIds = new long[topicStringIds.length];
-					for (int i=0;i<topicStringIds.length;i++) topicIds[i] = Long.parseLong(topicStringIds[i]);
+				if (topicStringIds != null) {
+					for (int i=0;i<topicStringIds.length;i++) topicIds.add(Long.parseLong(topicStringIds[i]));
 				}
 			}
 			
 			// Check to see if this user has any pending exams:
 			Date now = new Date();
 			Date then = new Date(now.getTime()-timeLimit*60000);  // timeLimit minutes ago
+			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
+			if (lis_result_sourcedid==null) lis_result_sourcedid = request.getParameter("custom_lis_result_sourcedid");
 			
 			PracticeExamTransaction pt = ofy.query(PracticeExamTransaction.class).filter("userId",user.id).filter("graded",null).filter("downloaded >",then).get();
 			if (pt != null) topicIds = pt.topicIds;  // continue an interrupted exam
-			else if (topicIds.length < 3) return designExam(user,request);  // redirect to get a valid set of 3+ topic keys
+			else if (topicIds.size() < 3) return designExam(user,request);  // redirect to get a valid set of 3+ topic keys
 			else {  // this is a valid request for a new exam with at least 3 topicIds; create a new transaction
-				pt = new PracticeExamTransaction(topicIds,user.id,now,null,new int[topicIds.length],new int[topicIds.length],request.getRequestURI());
+				pt = new PracticeExamTransaction(topicIds,user.id,now,null,new int[topicIds.size()],new int[topicIds.size()],lis_result_sourcedid,request.getRequestURI());
 				ofy.put(pt);	
 			}
 			
 			// past this point we will present a practice exam to the student
-			List<Long> topicList = new ArrayList<Long>();
-			for (long id : topicIds) topicList.add(topicList.size(),id); // keep same order of topicIds in array and List
 			
-			List <Key<Question>> questionKeys_02pt = ofy.query(Question.class).filter("assignmentType","Exam").filter("pointValue",2).filter("topicId in",topicList).listKeys();
-			List <Key<Question>> questionKeys_10pt = ofy.query(Question.class).filter("assignmentType","Exam").filter("pointValue",10).filter("topicId in",topicList).listKeys();
-			List <Key<Question>> questionKeys_15pt = ofy.query(Question.class).filter("assignmentType","Exam").filter("pointValue",15).filter("topicId in",topicList).listKeys();
+			List <Key<Question>> questionKeys_02pt = ofy.query(Question.class).filter("assignmentType","Exam").filter("pointValue",2).filter("topicId in",topicIds).listKeys();
+			List <Key<Question>> questionKeys_10pt = ofy.query(Question.class).filter("assignmentType","Exam").filter("pointValue",10).filter("topicId in",topicIds).listKeys();
+			List <Key<Question>> questionKeys_15pt = ofy.query(Question.class).filter("assignmentType","Exam").filter("pointValue",15).filter("topicId in",topicIds).listKeys();
 			
 			if (a != null) {  // eliminate any questionKeys not listed in the assignment
 				for (Key<Question> k : questionKeys_02pt) if (!a.questionKeys.contains(k)) questionKeys_02pt.remove(k);
@@ -203,7 +205,7 @@ public class PracticeExam extends HttpServlet {
 			buf.append("\n<input type=submit value='Grade This Practice Exam'><p>");
 
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
-			int[] possibleScores = new int[topicIds.length];
+			int[] possibleScores = new int[topicIds.size()];
 
 			// Two-point questions
 			buf.append("<U>2 point questions:</U>");
@@ -222,7 +224,7 @@ public class PracticeExam extends HttpServlet {
 					}
 				}
 				i++;
-				possibleScores[topicList.indexOf(q.topicId)] += q.pointValue;
+				possibleScores[topicIds.indexOf(q.topicId)] += q.pointValue;
 				q.setParameters((int)(pt.id - q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
 			}
@@ -245,7 +247,7 @@ public class PracticeExam extends HttpServlet {
 					}
 				}
 				i++;
-				possibleScores[topicList.indexOf(q.topicId)] += q.pointValue;
+				possibleScores[topicIds.indexOf(q.topicId)] += q.pointValue;
 				q.setParameters((int)(pt.id - q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
 			}
@@ -268,7 +270,7 @@ public class PracticeExam extends HttpServlet {
 					}
 				}
 				i++;
-				possibleScores[topicList.indexOf(q.topicId)] += q.pointValue;
+				possibleScores[topicIds.indexOf(q.topicId)] += q.pointValue;
 				q.setParameters((int)(pt.id - q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
 			}
@@ -320,9 +322,7 @@ public class PracticeExam extends HttpServlet {
 			if (now.getTime() - pt.downloaded.getTime() > 60000*(this.timeLimit+1)) return "Sorry, the grading period for this exam has expired.";
 
 			// if everything is still OK, score the exam:
-			long[] topicIds = pt.topicIds;
-			List<Long> topicList = new ArrayList<Long>();
-			for (long id : topicIds) topicList.add(topicList.size(),id); // keep same order of topicIds in array and List
+			List<Long> topicIds = pt.topicIds;
 			
 			buf.append("Topics covered on this exam:<OL>");
 			for (long topicId : topicIds) buf.append("<LI>" + ofy.get(Topic.class,topicId).title + "</LI>");
@@ -333,7 +333,7 @@ public class PracticeExam extends HttpServlet {
 			missedQuestions.append("The following questions were answered incorrectly. There may be additional questions (not shown) that were left unanswered.");			
 			missedQuestions.append("<OL>");
 
-			int[] studentScores = new int[topicIds.length];
+			int[] studentScores = new int[topicIds.size()];
 			int wrongAnswers = 0;
 
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
@@ -360,7 +360,7 @@ public class PracticeExam extends HttpServlet {
 				}
 				q.setParameters((int)(pt.id - q.id));
 				int score = studentAnswer[0].length()==0?0:q.isCorrect(studentAnswer[0])?q.pointValue:0;
-				if (score > 0) studentScores[topicList.indexOf(q.topicId)] += score;
+				if (score > 0) studentScores[topicIds.indexOf(q.topicId)] += score;
 				if (studentAnswer[0].length() > 0) ofy.put(new Response("PracticeExam",q.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now));
 				if (score == 0) {
 					// include question in list of incorrectly answered questions
@@ -373,9 +373,25 @@ public class PracticeExam extends HttpServlet {
 			pt.graded = now;
 			ofy.put(pt);
 			
+			Assignment a = null;  // find the Assignment object for this Practice Exam, if it exists
+			List<Assignment> groupAssignments = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","PracticeExam").list();
+			for (Assignment myAssignment : groupAssignments) {
+				if (myAssignment.matches("PracticeExam", topicIds)) {
+					a = myAssignment;
+					break;
+				}
+			}
+			
+			Queue queue = QueueFactory.getDefaultQueue();  // used for computing Score objects offline by Task queue
+			if (a != null) {
+				Score s = Score.getInstance(user.id,a);
+				ofy.put(s);
+				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",user.id));  // put report into the Task Queue
+			}
+			
 			int score = 0;
 			int possibleScore = 0;
-			for (int i=0;i<topicIds.length;i++) {
+			for (int i=0;i<topicIds.size();i++) {
 				score += studentScores[i];
 				possibleScore += pt.possibleScores[i];
 			}
