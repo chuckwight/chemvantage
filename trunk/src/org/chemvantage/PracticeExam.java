@@ -157,7 +157,7 @@ public class PracticeExam extends HttpServlet {
 			if (pt != null) topicIds = pt.topicIds;  // continue an interrupted exam
 			else if (topicIds.size() < 3) return designExam(user,request);  // redirect to get a valid set of 3+ topic keys
 			else {  // this is a valid request for a new exam with at least 3 topicIds; create a new transaction
-				pt = new PracticeExamTransaction(topicIds,user.id,now,null,new int[topicIds.size()],new int[topicIds.size()],lis_result_sourcedid,request.getRequestURI());
+				pt = new PracticeExamTransaction(topicIds,user.id,now,null,new int[topicIds.size()],new int[topicIds.size()],lis_result_sourcedid,request.getRemoteAddr());
 				ofy.put(pt);	
 			}
 			
@@ -374,9 +374,12 @@ public class PracticeExam extends HttpServlet {
 			ofy.put(pt);
 			
 			Assignment a = null;  // find the Assignment object for this Practice Exam, if it exists
+			buf.append("getting_assignment.");
 			List<Assignment> groupAssignments = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","PracticeExam").list();
+			buf.append("got_"+groupAssignments.size() + "_assignment.");
 			for (Assignment myAssignment : groupAssignments) {
 				if (myAssignment.matches("PracticeExam", topicIds)) {
+					buf.append("matched_assignment.");
 					a = myAssignment;
 					break;
 				}
@@ -384,9 +387,13 @@ public class PracticeExam extends HttpServlet {
 			
 			Queue queue = QueueFactory.getDefaultQueue();  // used for computing Score objects offline by Task queue
 			if (a != null) {
+				buf.append("preparing_score.");
 				Score s = Score.getInstance(user.id,a);
+				buf.append("storing_score.");
 				ofy.put(s);
+				buf.append("recording_score.");
 				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",user.id));  // put report into the Task Queue
+				buf.append("Your score has been recorded in your LMS grade book:<br>" + s.toString() + "<p>");
 			}
 			
 			int score = 0;
