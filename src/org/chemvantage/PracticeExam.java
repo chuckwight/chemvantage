@@ -314,7 +314,7 @@ public class PracticeExam extends HttpServlet {
 			df.setTimeZone(tz);
 
 			Date now = new Date();
-			buf.append(df.format(now) + "<br>");
+			buf.append(df.format(now) + "<p>");
 
 			long examId = Long.parseLong(request.getParameter("ExamId"));
 			PracticeExamTransaction pt = ofy.get(PracticeExamTransaction.class,examId);
@@ -322,11 +322,9 @@ public class PracticeExam extends HttpServlet {
 			if (now.getTime() - pt.downloaded.getTime() > 60000*(this.timeLimit+1)) return "Sorry, the grading period for this exam has expired.";
 
 			// if everything is still OK, score the exam:
-			List<Long> topicIds = pt.topicIds;
-			
-			buf.append("Topics covered on this exam:<OL>");
-			for (long topicId : topicIds) buf.append("<LI>" + ofy.get(Topic.class,topicId).title + "</LI>");
-			buf.append("</OL>");
+			List<Long> topicIds = pt.topicIds;			
+			List<String> topicTitles = new ArrayList<String>();
+			for (int i=0;i<topicIds.size();i++) topicTitles.add(ofy.get(Topic.class,topicIds.get(i)).title);
 			
 			// create a buffer to hold the correct solutions to missed questions:
 			StringBuffer missedQuestions = new StringBuffer();
@@ -374,12 +372,9 @@ public class PracticeExam extends HttpServlet {
 			ofy.put(pt);
 			
 			Assignment a = null;  // find the Assignment object for this Practice Exam, if it exists
-			buf.append("getting_assignment.");
 			List<Assignment> groupAssignments = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","PracticeExam").list();
-			buf.append("got_"+groupAssignments.size() + "_assignment.");
 			for (Assignment myAssignment : groupAssignments) {
 				if (myAssignment.matches("PracticeExam", topicIds)) {
-					buf.append("matched_assignment.");
 					a = myAssignment;
 					break;
 				}
@@ -387,13 +382,9 @@ public class PracticeExam extends HttpServlet {
 			
 			Queue queue = QueueFactory.getDefaultQueue();  // used for computing Score objects offline by Task queue
 			if (a != null) {
-				buf.append("preparing_score.");
 				Score s = Score.getInstance(user.id,a);
-				buf.append("storing_score.");
 				ofy.put(s);
-				buf.append("recording_score.");
 				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",user.id));  // put report into the Task Queue
-				buf.append("Your score has been recorded in your LMS grade book:<br>" + s.toString() + "<p>");
 			}
 			
 			int score = 0;
@@ -405,7 +396,23 @@ public class PracticeExam extends HttpServlet {
 			buf.append("<b>Your score on this exam is " + score + " out of a possible " + possibleScore + " points.</b><p>");
 			if (score > 0 && score == possibleScore) buf.append ("<b>Congratulations on a perfect score!</b>");
 			else {
-				if (wrongAnswers > 0) buf.append(missedQuestions);
+				if (wrongAnswers > 0) {
+					buf.append("<TABLE><TR><TD><b>Topic</b></TD><TD><b>Score</b></TD>"
+							+ "<TD><b>Possible</b></TD><TD><b>Percent</b></TD><TD></TD></TR>");
+					for (int i=0;i<topicIds.size();i++) {
+						int pct = (pt.possibleScores[i]>0?pt.scores[i]*100/pt.possibleScores[i]:0);
+						String color = (pct>84?"#00FF00":(pct<50?"#FF0000":"#FFFF00"));
+						buf.append("<TR>"
+								+ "<TD>" + topicTitles.get(i) + "</TD>"
+								+ "<TD ALIGN=RIGHT>" + pt.scores[i] + "</TD>"
+								+ "<TD ALIGN=RIGHT>" + pt.possibleScores[i] + "</TD>"
+								+ "<TD ALIGN=RIGHT>" + pct + "%</TD>"
+								+ "<TD><div style='background-color:" + color + ";width:" + pct 
+								+ "px;'/>&nbsp;</TD></TR>");
+					}
+					buf.append("</TABLE><p>");
+					buf.append(missedQuestions); // list of missed questions with correct answers
+				}
 				else buf.append("Some questions were left blank.");
 			}
 			// embed ajax code to provide feedback
