@@ -265,9 +265,10 @@ public class LTILaunch extends HttpServlet {
 			
 			if (myAssignment==null) { // try to find it based on the request data AssignmentType and TopicId or TopicIds (for PracticeExam)
 				if (assignmentType==null) throw new Exception();
+				assignments = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType",assignmentType).list();
 				if (assignmentType.equals("PracticeExam")) {
 					String[] tIds = request.getParameterValues("TopicIds");
-					if (tIds==null) tIds = request.getParameterValues("custom_TopicIds"); // supports custom LTI variables
+					//if (tIds==null) tIds = request.getParameterValues("custom_TopicIds"); // supports custom LTI variables
 					if (tIds==null || tIds.length<3) throw new Exception();
 					for (int i=0;i<tIds.length;i++) topicIds.add(Long.parseLong(tIds[i]));
 					for (Assignment a : assignments) {
@@ -277,10 +278,10 @@ public class LTILaunch extends HttpServlet {
 						}
 					}
 					if (myAssignment==null) myAssignment = new Assignment(user.myGroupId,topicIds,assignmentType,sixMonthsFromNow);
-				
+
 				} else {  // assignmentType is Quiz or Homework
 					String tId = request.getParameter("TopicId");
-					if (tId==null) tId = request.getParameter("custom_TopicId"); // supports custom LTI variables
+					//if (tId==null) tId = request.getParameter("custom_TopicId"); // supports custom LTI variables
 					topicId = Long.parseLong(tId);  // throws Exception if tId does not represent a long integer
 					for (Assignment a : assignments) {
 						if (a.matches(assignmentType,topicId)) {
@@ -290,7 +291,7 @@ public class LTILaunch extends HttpServlet {
 					}
 					if (myAssignment==null) myAssignment = new Assignment(user.myGroupId,topicId,assignmentType,sixMonthsFromNow);
 				}
-				
+
 				if (user.isInstructor()) {  // must be the instructor to modify or store myAssignment
 					myAssignment.addResourceLinkId(resource_link_id);
 					ofy.put(myAssignment);
