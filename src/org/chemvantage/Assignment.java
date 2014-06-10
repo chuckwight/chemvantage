@@ -72,12 +72,9 @@ public class Assignment implements Comparable<Assignment>,Serializable {
     	if (!resourceLinkIds.contains(r)) resourceLinkIds.add(r);
     }
     
-    public boolean matches(String assignmentType,List<Long> topicIds) {
-    	if (!"PracticeExam".equals(assignmentType)) return false;  // this method only applies to PracticeExam assignments
-    	if (this.assignmentType.equals(assignmentType) && this.topicIds.size()==topicIds.size()) {
-    		for (Long tId : topicIds) if (!this.topicIds.contains(tId)) return false;
-    	}
-    	return true;
+    public boolean matches(String assignmentType,List<Long> topicIds) { // this method applies only to PracticeExam assignments
+    	if ("PracticeExam".equals(this.assignmentType) && "PracticeExam".equals(assignmentType) && this.topicIds!=null && this.topicIds.equals(topicIds)) return true;
+    	else return false;
     }
     
     public boolean matches(String assignmentType,long topicId) {

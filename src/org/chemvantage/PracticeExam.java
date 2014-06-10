@@ -154,7 +154,12 @@ public class PracticeExam extends HttpServlet {
 			if (lis_result_sourcedid==null) lis_result_sourcedid = request.getParameter("custom_lis_result_sourcedid");
 			
 			PracticeExamTransaction pt = ofy.query(PracticeExamTransaction.class).filter("userId",user.id).filter("graded",null).filter("downloaded >",then).get();
-			if (pt != null) topicIds = pt.topicIds;  // continue an interrupted exam
+			if (pt != null) {
+				topicIds = pt.topicIds;  // continue an interrupted exam
+				buf.append("<script language=javascript>"
+						+ "onload=alert('You are resuming a previously pending exam. Submit it for grading to abandon it.')"
+						+ "</script>");
+			}
 			else if (topicIds.size() < 3) return designExam(user,request);  // redirect to get a valid set of 3+ topic keys
 			else {  // this is a valid request for a new exam with at least 3 topicIds; create a new transaction
 				pt = new PracticeExamTransaction(topicIds,user.id,now,null,new int[topicIds.size()],new int[topicIds.size()],lis_result_sourcedid,request.getRemoteAddr());
@@ -167,12 +172,16 @@ public class PracticeExam extends HttpServlet {
 			List <Key<Question>> questionKeys_10pt = ofy.query(Question.class).filter("assignmentType","Exam").filter("pointValue",10).filter("topicId in",topicIds).listKeys();
 			List <Key<Question>> questionKeys_15pt = ofy.query(Question.class).filter("assignmentType","Exam").filter("pointValue",15).filter("topicId in",topicIds).listKeys();
 			
+			List<Key<Question>> remove = new ArrayList<Key<Question>>();
 			if (a != null) {  // eliminate any questionKeys not listed in the assignment
-				for (Key<Question> k : questionKeys_02pt) if (!a.questionKeys.contains(k)) questionKeys_02pt.remove(k);
-				for (Key<Question> k : questionKeys_10pt) if (!a.questionKeys.contains(k)) questionKeys_10pt.remove(k);
-				for (Key<Question> k : questionKeys_15pt) if (!a.questionKeys.contains(k)) questionKeys_15pt.remove(k);
+				for (Key<Question> k : questionKeys_02pt) if (!a.questionKeys.contains(k)) remove.add(k);
+				questionKeys_02pt.removeAll(remove); remove.clear();
+				for (Key<Question> k : questionKeys_10pt) if (!a.questionKeys.contains(k)) remove.add(k);
+				questionKeys_10pt.removeAll(remove); remove.clear();
+				for (Key<Question> k : questionKeys_15pt) if (!a.questionKeys.contains(k)) remove.add(k);
+				questionKeys_15pt.removeAll(remove); remove.clear();
 			}
-			
+
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			Group myGroup = user.myGroupId==0?null:ofy.get(Group.class,user.myGroupId);
 			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
