@@ -272,7 +272,7 @@ public class LTILaunch extends HttpServlet {
 					if (tIds==null || tIds.length<3) throw new Exception();
 					for (int i=0;i<tIds.length;i++) topicIds.add(Long.parseLong(tIds[i]));
 					for (Assignment a : assignments) {
-						if (a.matches(assignmentType,topicIds)) {
+						if (a.topicIds.equals(topicIds)) {
 							myAssignment=a; 
 							break;
 						}
@@ -331,7 +331,11 @@ public class LTILaunch extends HttpServlet {
 			String tId = request.getParameter("TopicId");
 			if (tId==null) tId = "0";  // must be a valid String object
 			
-			buf.append("<h3>Choose the ChemVantage Assignment For This Link</h3>"
+			buf.append("<TABLE><TR><TD VALIGN=TOP><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
+					+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
+					+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>");
+			
+			buf.append("<h2>Assignment Setup Page</h2>"
 					+ "The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<p>"
 					+ "Please select the ChemVantage assignment that should be associated with this link. ");
 
