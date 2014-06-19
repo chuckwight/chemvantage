@@ -181,6 +181,15 @@
 	</servlet-mapping>
 
 	<servlet>
+		<servlet-name>OneQuestion</servlet-name>
+		<servlet-class>org.chemvantage.OneQuestion</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>OneQuestion</servlet-name>
+		<url-pattern>/OneQuestion</url-pattern>
+	</servlet-mapping>
+
+	<servlet>
 		<servlet-name>OpenIdLaunch</servlet-name>
 		<servlet-class>org.chemvantage.OpenIdLaunch</servlet-class>
 		<init-param>
