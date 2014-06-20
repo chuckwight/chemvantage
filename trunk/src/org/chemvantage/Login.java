@@ -159,7 +159,9 @@ public class Login extends HttpServlet {
 			} else {
 				buf.append("ChemVantage is a resource for science education:"
 						+ "<table><tr><td><ul><li>computer-graded quizzes<li>homework exercises<li>practice exams</ul></td>"
-						+ "<td><ul><li>video lectures<li>free online textbooks</ul></td></tr></table>");
+						+ "<td><ul><li>video lectures<li>free online textbooks</ul>"
+						//+ "<iframe width='400' height='200' src='/OneQuestion' frameborder='1'></iframe>" 
+						+ "</td></tr></table>");
 			}
 			//buf.append("<a href=About#certification><img alt='IMS Global Certified' src='/images/imscertifiedfinalsmall.png'/></a> ");
 			buf.append("<a href='/lti/registration/'>How to connect using LTI</a>");

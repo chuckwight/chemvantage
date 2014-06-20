@@ -320,7 +320,7 @@ public class User implements Comparable<User>,Serializable {
 	boolean requiresUpdates() {
 		try {
 			if (firstName.isEmpty() || email.isEmpty() || !verifiedEmail) return true;  // note: lastName no longer required
-			if (myGroupId < 0) {  // new user has not joined a group yet
+			if (this.hasPremiumAccount() && myGroupId < 0) {  // new user has not joined a group yet
 				Query<Group> allGroups = null;  // count the available groups to join
 				if (this.domain != null && !this.domain.isEmpty()) allGroups = ofy.query(Group.class).filter("domain",this.domain);
 				else allGroups = ofy.query(Group.class);

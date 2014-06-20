@@ -51,7 +51,7 @@ public class Feedback extends HttpServlet {
 	throws ServletException, IOException {
 		try {
 			User user = User.getInstance(request.getSession(true));
-			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
+			if (Login.lockedDown && !user.isAdministrator()) {
 				response.sendRedirect("/");
 				return;
 			}
@@ -63,14 +63,15 @@ public class Feedback extends HttpServlet {
 			if (userRequest == null) userRequest = "";
 
 			if (userRequest.equals("ReportAProblem")) {
+				String userId = user==null?"":user.id;
 				long questionId = Long.parseLong(request.getParameter("QuestionId"));
 				String notes = request.getParameter("Notes");
-				if (notes.length()>0) ofy.put(new UserReport(user.id,questionId,notes));
+				ofy.put(new UserReport(userId,questionId,notes));
 			} else if (userRequest.equals("AjaxRating")) {
 				recordAjaxRating(request);
 			} else out.println(Home.getHeader(user) 
 					+ feedbackForm(user) 
-					+ (user.isAdministrator()?viewUserFeedback():"")
+					+ (user.isAdministrator()?viewUserFeedback(user):"")
 					+ Home.footer);    
 		} catch (Exception e) {
 		}
@@ -93,7 +94,7 @@ public class Feedback extends HttpServlet {
 
 			if (userRequest.equals("SubmitFeedback")) {
 				out.println(Home.getHeader(user) + submitFeedback(user,request) + Home.footer);
-				sendEmailToAdmin();
+				sendEmailToAdmin(user);
 			} else if (user.isAdministrator() && userRequest.equals("Delete Report")) {
 				removeReport(request);
 				doGet(request,response);	
@@ -224,13 +225,13 @@ public class Feedback extends HttpServlet {
 		return buf.toString();
 	}
 
-	String viewUserFeedback() {
+	String viewUserFeedback(User user) {
 		StringBuffer buf = new StringBuffer();
 
 		Query<UserReport> reports = ofy.query(UserReport.class).order("-submitted");
 		if (reports.count()>0) buf.append("<hr><h3>User Feedback</h3>");
 		for (UserReport r : reports) {
-			buf.append(r.adminView());
+			buf.append(r.adminView(user));
 		}
 		return buf.toString();
 	}
@@ -240,11 +241,11 @@ public class Feedback extends HttpServlet {
 		ofy.delete(UserReport.class,reportId);
 	}
 	
-	private void sendEmailToAdmin() {
+	private void sendEmailToAdmin(User user) {
 		Properties props = new Properties();
 		Session session = Session.getDefaultInstance(props, null);
 
-		String msgBody = ofy.query(UserReport.class).order("-submitted").limit(1).get().adminView();
+		String msgBody = ofy.query(UserReport.class).order("-submitted").limit(1).get().adminView(user);
 		
 		try {
 			Message msg = new MimeMessage(session);
@@ -264,7 +265,7 @@ public class Feedback extends HttpServlet {
 			buf.append("<h2>Reply to User Feedback</h2>");
 			long reportId = Long.parseLong(request.getParameter("ReportId"));
 			UserReport report = ofy.get(UserReport.class,reportId);
-			buf.append(report.adminView() + "<hr>");
+			buf.append(report.adminView(user) + "<hr>");
 			buf.append("<FORM ACTION=Feedback METHOD=POST>");
 			buf.append("<TEXTAREA NAME=MessageText ROWS=25 COLS=60 WRAP=SOFT>");
 			buf.append("Thank you for your feedback to ChemVantage. We value your comments and we use "
