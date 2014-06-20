@@ -51,16 +51,28 @@ public class UserReport implements Serializable {
 		this.submitted = new Date();
 	}
 	
-	public String adminView() {
+	public String adminView(User adminUser) {
 		StringBuffer buf = new StringBuffer();
 		Objectify ofy = ObjectifyService.begin();
 		try {
-			User user = userId==null?null:ofy.get(User.class,this.userId);
+			User user = null;
+			try {
+				user = ofy.get(User.class,this.userId);
+			} catch (Exception e) {}
+			
+			// this statement permits viewing the userReport only if the viewer is the ChemVantage administrator
+			// or the domain admin of a report from the domain or the report author (user)
+			boolean showReport = false;
+			if (adminUser.isAdministrator() && (adminUser.domain==null)) showReport = true;  // ChemVantage administrator
+			else if (adminUser.isAdministrator() && adminUser.domain.equals(user.domain)) showReport = true;  // domain administrator
+			else if (adminUser.id.equals(user.id)) showReport = true;			
+			if (!showReport) return "";
+			
 			buf.append("\n<FORM METHOD=POST ACTION=Feedback>"
 					+ "On " + submitted 
-					+ (user==null?" (anonymous) ":" <a href=mailto:" + user.email + ">" + user.getBothNames() + "</a> ")
-					+ (user.verifiedEmail?"":"<FONT SIZE=-1>(unverified)</FONT> ") + "said:<br>");
-			//for (int i=0;i<5;i++) buf.append((i<stars?"<img alt='star' src=images/star2.gif>":"<img alt='' src=images/star1.gif>"));
+					+ (user==null?" (anonymous) ":" <a href=mailto:" + user.email + ">" + user.getBothNames() + "</a> " + (user.verifiedEmail?"":"<FONT SIZE=-1>(unverified)</FONT> "))
+					+ "said:<br>");
+			
 			if (stars>0) buf.append(" (" + stars + " stars)<br>");
 			buf.append("<FONT COLOR=RED>" + comments + "</FONT><br>");
 			try {
@@ -70,17 +82,19 @@ public class UserReport implements Serializable {
 				buf.append("Topic: " + topic.title + " (" + q.assignmentType + " question)<br>");
 				buf.append(q.printAll());
 				if (user!=null) {
-					buf.append("<table><tr><td>Date/Time (UTC)</td><td>Student Response</td><td>Correct Response</td><td>Score</td></tr>");
 					List<Response> responses = ofy.query(Response.class).filter("userId",userId).filter("questionId",questionId).list();
-					for (Response r : responses) buf.append("<tr><td>" + r.submitted.toString() + "</td><td align=center>" + r.studentResponse 
-							+ "</td><td align=center>" + r.correctAnswer + "</td><td align=center>" + r.score + "</td></tr>");
-					buf.append("</table>");
+					if (responses.size() > 0) {
+						buf.append("<table><tr><td>Date/Time (UTC)</td><td>Student Response</td><td>Correct Response</td><td>Score</td></tr>");
+						for (Response r : responses) buf.append("<tr><td>" + r.submitted.toString() + "</td><td align=center>" + r.studentResponse 
+								+ "</td><td align=center>" + r.correctAnswer + "</td><td align=center>" + r.score + "</td></tr>");
+						buf.append("</table>");
+					}
 				}
 				buf.append("<a href=Edit?UserRequest=Edit&QuestionId=" + this.questionId + "&TopicId=" + topic.id + "&AssignmentType=" + q.assignmentType + ">Edit Question</a> ");
 			} catch (Exception e2) {}
 			buf.append("<INPUT TYPE=HIDDEN NAME=ReportId VALUE=" + this.id + ">"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Report'>"
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Reply'>"
+					+ (user != null?"<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Reply'>":"")
 					+ "</FORM><p>");
 
 		} catch (Exception e) {

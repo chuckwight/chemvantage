@@ -211,7 +211,7 @@ public class Verification extends HttpServlet {
 			buf.append("<FORM NAME=Info ACTION=Verification METHOD=POST>");
 			buf.append("<TABLE>");
 			buf.append("<TR><TD ALIGN=RIGHT>First Name:</TD><TD>" + (user.firstName.isEmpty()?"<span style=color:red>*</span><INPUT NAME=FirstName SIZE=50>":user.firstName) + "</TD></TR>");
-			buf.append("<TR><TD ALIGN=RIGHT>Last Name:</TD><TD>" + (user.lastName.isEmpty()?"<INPUT NAME=LastName SIZE=50>":user.lastName) + "</TD></TR>");
+			buf.append("<TR><TD ALIGN=RIGHT>Last Name:</TD><TD>" + (nameRequired && user.lastName.isEmpty()?"<INPUT NAME=LastName SIZE=50>":user.lastName) + "</TD></TR>");
 			buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>Email:</TD><TD>" + (emailRequired?"<span style=color:red>*</span><INPUT NAME=Email SIZE=50>":user.email));
 			if (!emailRequired && !user.verifiedEmail){
 				buf.append(" <span style='color:red'>(unverified)</span> ");
@@ -313,7 +313,7 @@ public class Verification extends HttpServlet {
 						+ "If your name and/or email shown above is not correct, please send a message to "
 						+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><br>giving detailed "
 						+ "instructions for any changes that are needed.<p>"); 
-				if (!(user.firstName.isEmpty() || user.lastName.isEmpty() || user.email.isEmpty() || user.myGroupId<0)) {
+				if (!(user.firstName.isEmpty() || user.email.isEmpty())) {
 					buf.append("<style type='text/css'>a.nav, a.nav:link, a.nav:visited {display:block; width:250px; height:35px; "
 							+ "background:red; border:1px solid #000; margin-top:2px; text-align:center; text-decoration:none; "
 							+ "font-family:verdana, arial, sans-serif; font-size:15px; color:white; line-height:35px; overflow:hidden;}"

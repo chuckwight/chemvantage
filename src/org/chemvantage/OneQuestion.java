@@ -57,7 +57,17 @@ public class OneQuestion extends HttpServlet {
 			+ "  xmlhttp.open('GET',url,true);\n"
 			+ "  xmlhttp.send(null);\n"
 			+ "  return false;\n"
-			+ "}\n</SCRIPT>";
+			+ "}\n"
+			+ "function GetXmlHttpObject() {\n"
+			+ "  if (window.XMLHttpRequest) { // code for IE7+, Firefox, Chrome, Opera, Safari\n"
+			+ "    return new XMLHttpRequest();\n"
+			+ "  }\n"
+			+ "  if (window.ActiveXObject) { // code for IE6, IE5\n"
+			+ "    return new ActiveXObject('Microsoft.XMLHTTP');\n"
+			+ "  }\n"
+			+ "  return null;\n"
+			+ "}\n"
+			+ "</SCRIPT>";
 			
 	public String getServletInfo() {
 		return "This servlet presents a single question for the user.";
@@ -91,7 +101,8 @@ public class OneQuestion extends HttpServlet {
 			long topicId = 0;
 			try {
 				topicId = Long.parseLong(request.getParameter("TopicId"));
-			} catch (Exception e2) {  // choose a random topic
+			} catch (Exception e2) {}
+			if (topicId == 0) {  // choose a random topic
 				List<Key<Topic>> topicKeys = ofy.query(Topic.class).listKeys();
 				int random = new Random().nextInt(topicKeys.size());
 				topicId=ofy.get(topicKeys.get(random)).id;
@@ -166,7 +177,8 @@ public class OneQuestion extends HttpServlet {
 					continue;  // this parameter does not correspond to a questionId
 				}
 			}
-			buf.append("<a href=/OneQuestion?TopicId=" + topicId + "&QuestionType=" + questionType + ">Try another question on this topic</a>");
+			if (topicId>0) buf.append("Try another question on <a href=/OneQuestion?TopicId=" + topicId + "&QuestionType=" + questionType + ">this topic</a> or <a href=/OneQuestion>any topic</a> in General Chemistry.");
+			else buf.append("<a href=/OneQuestion>Try another question</a>");
 		} catch (Exception e) {
 			buf.append("Sorry, this question could not be scored.<br>" + e.getMessage());
 		}
