@@ -140,8 +140,8 @@ public class Homework extends HttpServlet {
 			buf.append("</UL>");
 
 			List<Key<Question>> optionalQuestionKeys = ofy.query(Question.class).filter("assignmentType","Homework").filter("topicId",topicId).filter("isActive",true).listKeys();
-			//long hi = myGroup==null?0L:myGroup.getAssignmentId("Homework",topic.id);
-			//Assignment hwa = hi>0?ofy.get(Assignment.class,hi):null;
+			if (optionalQuestionKeys.size()==0) buf.append("<h2>Sorry, there are no homework questions for this topic.</h2>");
+			
 			if (hwa != null) { // use hwa.questionIds to move assigned questions to the other list
 				optionalQuestionKeys.removeAll(hwa.questionKeys);
 				buf.append("\nAssigned Exercises<br>");
