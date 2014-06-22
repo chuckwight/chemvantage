@@ -1,25 +1,26 @@
 /*  ChemVantage - A Java web application for online learning
-*   Copyright (C) 2011 ChemVantage LLC
-*   
-*    This program is free software: you can redistribute it and/or modify
-*   it under the terms of the GNU General Public License as published by
-*   the Free Software Foundation, either version 3 of the License, or
-*   (at your option) any later version.
-*
-*   This program is distributed in the hope that it will be useful,
-*   but WITHOUT ANY WARRANTY; without even the implied warranty of
-*   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*   GNU General Public License for more details.
-*
-*   You should have received a copy of the GNU General Public License
-*   along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ *   Copyright (C) 2011 ChemVantage LLC
+ *   
+ *    This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 package org.chemvantage;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 
 import javax.mail.internet.InternetAddress;
@@ -46,20 +47,20 @@ public class User implements Comparable<User>,Serializable {
 	@Indexed	String email;
 	@Indexed	String domain;
 	@Indexed	String lowercaseName;
-				String lastName;
-				String firstName;
-				int roles;
-				boolean premium;
-//				boolean demoPremium;
-//				Date demoExpires;
+	String lastName;
+	String firstName;
+	int roles;
+	boolean premium;
+	//				boolean demoPremium;
+	//				Date demoExpires;
 	@Indexed	Date lastLogin;
-				long myGroupId;
+	long myGroupId;
 	@Indexed	String smsMessageDevice;
-				boolean notifyDeadlines;
-				boolean verifiedEmail;
-				String alias;
-				String authDomain;
-	
+	boolean notifyDeadlines;
+	boolean verifiedEmail;
+	String alias;
+	String authDomain;
+
 	@Transient transient Objectify ofy = ObjectifyService.begin();
 
 	User() {}
@@ -72,8 +73,8 @@ public class User implements Comparable<User>,Serializable {
 		this.email = "";
 		this.roles = 0; // student
 		this.premium = false;
-//		this.demoPremium = false;
-//		this.demoExpires = new Date(0L);
+		//		this.demoPremium = false;
+		//		this.demoExpires = new Date(0L);
 		this.lastLogin = new Date(0L);
 		this.myGroupId = -1L;
 		this.smsMessageDevice = "";
@@ -121,7 +122,7 @@ public class User implements Comparable<User>,Serializable {
 			return ofy.find(User.class,userIds.get(1));
 		}
 	}
-		
+
 	static User createUserServiceUser(com.google.appengine.api.users.User u) {
 		if (u == null) return null;
 		User user = null;
@@ -152,7 +153,7 @@ public class User implements Comparable<User>,Serializable {
 		}
 		return user;
 	}
-	
+
 	static User createBLTIUser(HttpServletRequest request) {
 		// this method provisions a new account for a BLTI user
 		String user_id = request.getParameter("user_id");
@@ -162,22 +163,22 @@ public class User implements Comparable<User>,Serializable {
 		user.domain = request.getParameter("oauth_consumer_key");
 		user.alias = null;
 		Objectify ofy = ObjectifyService.begin();
-		
+
 		String lis_person_name_given = request.getParameter("lis_person_name_given");
 		if (lis_person_name_given==null || lis_person_name_given.equals("$Person.name.given")) lis_person_name_given = request.getParameter("custom_lis_person_name_given");
 		if (lis_person_name_given==null || lis_person_name_given.equals("$Person.name.given")) lis_person_name_given = request.getParameter("lis_person_name_full");
 		if (lis_person_name_given==null) lis_person_name_given = request.getParameter("custom_lis_person_name_full");
 		user.setFirstName(lis_person_name_given);
-		
+
 		String lis_person_contact_email_primary = request.getParameter("lis_person_contact_email_primary");
 		if (lis_person_contact_email_primary==null) lis_person_contact_email_primary = request.getParameter("custom_lis_person_contact_email_primary");
 		user.setEmail(request.getParameter("lis_person_contact_email_primary"));
-		
+
 		if (!user.email.isEmpty()) user.verifiedEmail = true; // value supplied by institution
 		ofy.put(user);
 		return user;
 	}
-	
+
 	static public User createOpenIdUser(UserInfo userInfo) {
 		User user;
 		try {
@@ -202,11 +203,11 @@ public class User implements Comparable<User>,Serializable {
 			user.verifiedEmail = !(user.email==null || user.email.isEmpty());
 			user.setFirstName(userInfo.getFirstName());
 			user.setLastName(userInfo.getLastName());
-            ofy.put(user);
-            if (user.verifiedEmail) {
-            	Query<User> twins = ofy.query(User.class).filter("email",user.email);
-            	for (User t : twins) if (!t.id.equals(user.id)) Admin.mergeAccounts(user, t);
-            }
+			ofy.put(user);
+			if (user.verifiedEmail) {
+				Query<User> twins = ofy.query(User.class).filter("email",user.email);
+				for (User t : twins) if (!t.id.equals(user.id)) Admin.mergeAccounts(user, t);
+			}
 		} catch (Exception e) {
 			return null;
 		}		
@@ -244,21 +245,21 @@ public class User implements Comparable<User>,Serializable {
 	public String getId() {
 		return this.id;
 	}
-	
+
 	static String getEmail(String id) {
 		User user = ObjectifyService.begin().find(User.class,id);
 		return (user==null?"":user.email);
 	}
-	
+
 	static String getBothNames(String id) {
 		try {
 			return ObjectifyService.begin().find(User.class,id).getBothNames();
 		} catch (Exception e) {
 			return "unknown";
 		}
-			
+
 	}
-	
+
 	void clean() {
 		if (firstName==null) firstName = "";
 		if (lastName==null) lastName = "";
@@ -278,13 +279,13 @@ public class User implements Comparable<User>,Serializable {
 		//if (alias != null) myGroupId=0;
 		ofy.put(this);
 	}
-	
+
 
 	boolean needsEmail() {
 		if (email==null || email.isEmpty()) return true;
 		else return false;
 	}
-	
+
 	void setDomain(String d) {
 		this.domain = null;
 		try {
@@ -295,7 +296,7 @@ public class User implements Comparable<User>,Serializable {
 		}catch (Exception e) {
 		}
 	}
-	
+
 	void setEmail(String em) {
 		try {
 			new InternetAddress(em).validate();
@@ -305,7 +306,7 @@ public class User implements Comparable<User>,Serializable {
 			this.email = "";
 		}
 	}
-	
+
 	boolean requiresUpdatesNow() {
 		try {
 			Group g = ofy.get(Group.class,this.myGroupId);
@@ -316,7 +317,7 @@ public class User implements Comparable<User>,Serializable {
 		Date eightHoursAgo = new Date(now.getTime()-28800000L);
 		return this.lastLogin.before(eightHoursAgo) && this.requiresUpdates();
 	}
-	
+
 	boolean requiresUpdates() {
 		try {
 			if (firstName.isEmpty() || email.isEmpty() || !verifiedEmail) return true;  // note: lastName no longer required
@@ -331,7 +332,7 @@ public class User implements Comparable<User>,Serializable {
 			return true;  // unexpected error; please check the profile just in case
 		}
 	}
-	
+
 	String getFullName() {
 		setLowerCaseName();
 		return (this.lastName.isEmpty()?" ":this.lastName) + (this.firstName.isEmpty()?" ":", " + firstName);
@@ -340,21 +341,21 @@ public class User implements Comparable<User>,Serializable {
 	String getBothNames() {
 		return firstName + " " + lastName;
 	}
-	
+
 	public void setLastLogin() {
 		this.lastLogin = new Date();
 	}
-	
+
 	boolean needsFirstName() {
 		if (firstName==null || firstName.isEmpty()) return true;
 		else return false;
 	}
-	
+
 	boolean needsLastName() {
 		if (lastName==null || lastName.isEmpty()) return true;
 		else return false;
 	}
-	
+
 	void setFirstName(String fn) {
 		if (fn == null) this.firstName = "";
 		else this.firstName = fn.trim();
@@ -375,11 +376,11 @@ public class User implements Comparable<User>,Serializable {
 		} else this.lowercaseName = "";  // no name provided
 		this.lowercaseName = this.lowercaseName.toLowerCase().trim();
 	}
-	
+
 	void setAlias(String newId) {
 		this.alias = newId;
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	List<QuizTransaction> getQuizTransactions() {
 		return (List<QuizTransaction>) ofy.query(QuizTransaction.class).filter("userId",this.id).order("-score");
@@ -389,7 +390,7 @@ public class User implements Comparable<User>,Serializable {
 	List<Key<QuizTransaction>> getQuizTransactionKeys() {
 		return (List<Key<QuizTransaction>>) ofy.query(QuizTransaction.class).filter("userId",this.id).fetchKeys();
 	}
-	
+
 	QuizTransaction getQuizTransaction(Key<QuizTransaction> key) {
 		return ofy.get(key);
 	}
@@ -403,7 +404,7 @@ public class User implements Comparable<User>,Serializable {
 	List<Key<HWTransaction>> getHWTransactionKeys() {
 		return (List<Key<HWTransaction>>) ofy.query(HWTransaction.class).filter("userId",this.id).fetchKeys();
 	}
-	
+
 	HWTransaction getHWTransaction(Key<HWTransaction> key) {
 		return ofy.get(key);
 	}
@@ -417,7 +418,7 @@ public class User implements Comparable<User>,Serializable {
 	List<Key<ExamTransaction>> getExamTransactionKeys() {
 		return (List<Key<ExamTransaction>>) ofy.query(ExamTransaction.class).filter("userId",this.id).fetchKeys();
 	}
-	
+
 	ExamTransaction getExamTransaction(Key<ExamTransaction> key) {
 		return ofy.get(key);
 	}
@@ -431,7 +432,7 @@ public class User implements Comparable<User>,Serializable {
 	List<Key<PracticeExamTransaction>> getPracticeExamTransactionKeys() {
 		return (List<Key<PracticeExamTransaction>>) ofy.query(PracticeExamTransaction.class).filter("userId",this.id).fetchKeys();
 	}
-	
+
 	PracticeExamTransaction getPracticeExamTransaction(Key<PracticeExamTransaction> key) {
 		return ofy.get(key);
 	}
@@ -448,7 +449,7 @@ public class User implements Comparable<User>,Serializable {
 		principalRole += " (" + (premium?"premium":"basic") + ")";
 		return principalRole;
 	}
-	
+
 	public String getDecoratedRole() {
 		String principalRole;		
 		if (roles < 1) principalRole = "Student";
@@ -458,43 +459,45 @@ public class User implements Comparable<User>,Serializable {
 		else if (roles < 16) principalRole = "Instructor";
 		else if (roles < 32) principalRole = "Administrator";
 		else principalRole = ""; // unknown role
-		
-		if (myGroupId>0) { //user is a student member of a group
-			List<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",myGroupId).list();
-			List<Key<Score>> keys = new ArrayList<Key<Score>>();
-			for(Assignment a : assignments) keys.add(new Key<Score>(new Key<User>(User.class,id),Score.class,a.id));
-			List<Score> scores = new ArrayList<Score>(ofy.get(keys).values());
-			int level = 0;  // user level is set to be the number of non-zero assignment scores
-			for (Score s : scores) level += (s.score>0?1:0);
-			principalRole += " - Level " + level;
-			switch (level) {
-				case (0): principalRole += " (sparrow)"; break;
-				case (1): principalRole += " (sea gull)"; break;
-				case (2): principalRole += " (dove)"; break;
-				case (3): principalRole += " (kestrel)"; break;
-				case (4): principalRole += " (sandpiper)"; break;
-				case (5): principalRole += " (owl)"; break;
-				case (6): principalRole += " (osprey)"; break;
-				case (7): principalRole += " (falcon)"; break;
-				case (8): principalRole += " (harrier)"; break;
-				case (9): principalRole += " (hawk)"; break;
-				case (10): principalRole += " (red kite)"; break;
-				case (11): principalRole += " (egret)"; break;
-				case (12): principalRole += " (bobcat)"; break;
-				case (13): principalRole += " (puma)"; break;
-				case (14): principalRole += " (lynx)"; break;
-				case (15): principalRole += " (janguarundi)"; break;
-				case (16): principalRole += " (kodkod)"; break;
-				case (17): principalRole += " (ocelot)"; break;
-				case (18): principalRole += " (cougar)"; break;
-				case (19): principalRole += " (panther)"; break;
-				case (20): principalRole += " (cheetah)"; break;
-				case (21): principalRole += " (leopard)"; break;
-				case (22): principalRole += " (tiger)"; break;
-				default: principalRole += " (lion)"; level=23; break;
-			}
-			principalRole = "<img alt='animal' src=images/animals/" + level + ".jpg><br>" + principalRole;	
+
+		int level = 0;
+		List<QuizTransaction> quizTransactions = ofy.query(QuizTransaction.class).filter("userId",this.id).list();
+		HashSet<Long> topicIds = new HashSet<Long>();  // HashSet is like a List, but does not allow duplicates
+		for (QuizTransaction qt : quizTransactions) if (qt.graded!=null) topicIds.add(qt.topicId);  // collects unique topicIds
+		level += topicIds.size();  // number of unique quiz topics graded
+		topicIds.clear();
+		List<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId",this.id).list();
+		for (HWTransaction ht : hwTransactions) topicIds.add(ht.topicId);
+		level += topicIds.size();
+		principalRole += " - Level " + level;
+		switch (level) {
+		case (0): principalRole += " (sparrow)"; break;
+		case (1): principalRole += " (sea gull)"; break;
+		case (2): principalRole += " (dove)"; break;
+		case (3): principalRole += " (kestrel)"; break;
+		case (4): principalRole += " (sandpiper)"; break;
+		case (5): principalRole += " (owl)"; break;
+		case (6): principalRole += " (osprey)"; break;
+		case (7): principalRole += " (falcon)"; break;
+		case (8): principalRole += " (harrier)"; break;
+		case (9): principalRole += " (hawk)"; break;
+		case (10): principalRole += " (red kite)"; break;
+		case (11): principalRole += " (egret)"; break;
+		case (12): principalRole += " (bobcat)"; break;
+		case (13): principalRole += " (puma)"; break;
+		case (14): principalRole += " (lynx)"; break;
+		case (15): principalRole += " (janguarundi)"; break;
+		case (16): principalRole += " (kodkod)"; break;
+		case (17): principalRole += " (ocelot)"; break;
+		case (18): principalRole += " (cougar)"; break;
+		case (19): principalRole += " (panther)"; break;
+		case (20): principalRole += " (cheetah)"; break;
+		case (21): principalRole += " (leopard)"; break;
+		case (22): principalRole += " (tiger)"; break;
+		default: principalRole += " (lion)"; level=23; break;
 		}
+		principalRole = "<img alt='animal' src=images/animals/" + level + ".jpg><br>" + principalRole;	
+
 		principalRole += " - <a href=/Verification>view account profile</a>";
 		return principalRole;
 	}
@@ -506,7 +509,7 @@ public class User implements Comparable<User>,Serializable {
 	void setPremium(boolean newValue) {
 		premium = newValue;
 	}
-	
+
 	boolean isAdministrator() {
 		return ((roles%32)/16 == 1);
 	}
@@ -518,7 +521,7 @@ public class User implements Comparable<User>,Serializable {
 			setPremium(makeAdmin);
 		}
 	}
-	
+
 	boolean isInstructor() {
 		return ((roles%16)/8 == 1) || this.isAdministrator();
 	}
@@ -529,13 +532,13 @@ public class User implements Comparable<User>,Serializable {
 			roles += 8;
 			this.setPremium(true);
 		}
-		
+
 	}
-	
+
 	boolean isTeachingAssistant() {    
 		return ((roles%8)/4 == 1);
 	}
-	
+
 	boolean isEditor() {
 		return ((roles%4)/2 == 1);
 	}
@@ -557,7 +560,7 @@ public class User implements Comparable<User>,Serializable {
 			return false;
 		}
 	}
-	
+
 	public boolean isEligibleForHints(long questionId) {
 		// users are eligible for hints on homework questions if they have submitted
 		// more than 2 answers more than 15 minutes ago
@@ -574,7 +577,7 @@ public class User implements Comparable<User>,Serializable {
 		Query<Score> myScores = ofy.query(Score.class).ancestor(this);
 		ofy.delete(myScores);
 	}
-	
+
 	boolean processPremiumUpgrade(Group newGroup) {
 		// this routine converts the user account to premium, if applicable
 		try {
@@ -582,10 +585,10 @@ public class User implements Comparable<User>,Serializable {
 			// does this allow anyone not in a domain (UserService entry) to join any group for free?
 			// test the effect of eliminating this one check and returning false instead to
 			// force these users to pay $4.99  Keeps people in line with the LMS and reduces account proliferation
-			
+
 			if (this.hasPremiumAccount() || newGroup == null) return true;
 			else if (this.domain == null) return false;
-			
+
 			Domain domain = ofy.query(Domain.class).filter("domainName", this.domain).get();
 			if (domain == null || newGroup==null || !newGroup.domain.equals(this.domain)) return false;
 			if (domain.freeTrialExpires.after(new Date())) {
