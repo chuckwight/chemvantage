@@ -83,7 +83,7 @@ public class OneQuestion extends HttpServlet {
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 		
-			out.println(printQuestion(request));
+			out.println(Login.header + printQuestion(request) + Login.footer);
 		} catch (Exception e) {}
 	}
 
@@ -92,7 +92,7 @@ public class OneQuestion extends HttpServlet {
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
-			out.println(printScore(request));
+			out.println(Login.header + printScore(request) + Login.footer);
 	}
 	
 	String printQuestion(HttpServletRequest request) {
@@ -112,6 +112,10 @@ public class OneQuestion extends HttpServlet {
 			String questionType = request.getParameter("QuestionType");
 			if (questionType==null) questionType = "Quiz";
 			
+			buf.append("<TABLE><TR><TD VALIGN=TOP><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
+					+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - " + subject.title + "</b></FONT>"
+					+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>");
+
 			buf.append("\n<h2>" + topic.title + "</h2>");
 			
 			buf.append("\n<FORM METHOD=POST>");
@@ -119,7 +123,7 @@ public class OneQuestion extends HttpServlet {
 			// create a set of available questionIds either from the group assignment or from the datastore
 			List<Key<Question>> questionKeys = ofy.query(Question.class).filter("topicId", topicId).filter("assignmentType",questionType).filter("isActive",true).listKeys();
 			if (questionKeys.size() == 0) {
-				buf.append("No questions are available for this topic, sorry. <a href=/OneQuestion>Try Again.</a>");
+				buf.append("No questions are available for this topic, sorry. <a href=/q>Try Again.</a>");
 				return buf.toString();
 			}
 			// Randomly select one questions to be presented
@@ -177,8 +181,8 @@ public class OneQuestion extends HttpServlet {
 					continue;  // this parameter does not correspond to a questionId
 				}
 			}
-			if (topicId>0) buf.append("Try another question on <a href=/OneQuestion?TopicId=" + topicId + "&QuestionType=" + questionType + ">this topic</a> or <a href=/OneQuestion>any topic</a> in General Chemistry.");
-			else buf.append("<a href=/OneQuestion>Try another question</a>");
+			if (topicId>0) buf.append("Try another question on <a href=/q?TopicId=" + topicId + "&QuestionType=" + questionType + ">this topic</a> or <a href=/q>any topic</a> in General Chemistry.");
+			else buf.append("<a href=/q>Try another question</a>");
 		} catch (Exception e) {
 			buf.append("Sorry, this question could not be scored.<br>" + e.getMessage());
 		}

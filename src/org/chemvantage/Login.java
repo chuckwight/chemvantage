@@ -99,7 +99,7 @@ public class Login extends HttpServlet {
 	
 	public static String footer = "\n<hr><span style='font-size:smaller'><table style='width:100%;border-spacing: 20px 0px'><tr>"
 		+ "<td>&copy; 2007-14 ChemVantage LLC. <a rel='license' href='http://creativecommons.org/licenses/by/3.0/'><img alt='Creative Commons License' style='border-width:0' src='http://i.creativecommons.org/l/by/3.0/80x15.png' /></a></td>"
-		+ "<td align=center><a href=About#terms>Terms and Conditions of Use</a></td>"
+		+ "<td align=center><a href=/About#terms>Terms and Conditions of Use</a></td>"
 		+ "<td align=right><a href='http://code.google.com/appengine/'><img src=/images/GAE.gif border=0 "
 		+ "alt='Powered by Google App Engine'></a></td></tr></table>"
 		+ "</span>"
@@ -157,9 +157,9 @@ public class Login extends HttpServlet {
 						+ "To reach the ChemVantage production site "
 						+ "<a href=http://www.chemvantage.org>click here</a>.<p>");
 			} else {
-				buf.append("ChemVantage is a resource for science education:"
+				buf.append("ChemVantage is a free resource for science education:"
 						+ "<table><tr><td><ul><li>computer-graded quizzes<li>homework exercises<li>practice exams</ul></td>"
-						+ "<td><ul><li>video lectures<li>free online textbooks</ul>"
+						+ "<td><ul><li>video lectures<li>free online textbooks<li><a href=/q>Try one question</a></ul>"
 						//+ "<iframe width='400' height='200' src='/OneQuestion' frameborder='1'></iframe>" 
 						+ "</td></tr></table>");
 			}

@@ -69,9 +69,9 @@ public class Scores extends HttpServlet {
 			if (userRequest == null) userRequest = "";
 
 			out.println(Home.getHeader(user));
-			if (userRequest.equals("ShowAll") || user.myGroupId == 0) out.println(allMyScores(user));
-			else if (userRequest.equals("AllQuizzes")) out.println(allQuizTransactions(user));
+			if (userRequest.equals("AllQuizzes")) out.println(allQuizTransactions(user));
 			else if (userRequest.equals("AllHomework")) out.println(allHWTransactions(user));
+			else if (userRequest.equals("ShowAll") || user.myGroupId <= 0) out.println(allMyScores(user));
 			else out.println(myGroupScores(user));
 			out.println(Home.footer);
 		} catch (Exception e) {
