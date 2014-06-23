@@ -187,6 +187,7 @@
 	<servlet-mapping>
 		<servlet-name>OneQuestion</servlet-name>
 		<url-pattern>/OneQuestion</url-pattern>
+		<url-pattern>/q</url-pattern>
 	</servlet-mapping>
 
 	<servlet>
