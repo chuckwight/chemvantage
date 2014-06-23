@@ -45,6 +45,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import net.tanesha.recaptcha.ReCaptchaImpl;
+import net.tanesha.recaptcha.ReCaptchaResponse;
+
 import com.google.appengine.labs.repackaged.org.json.JSONArray;
 import com.google.appengine.labs.repackaged.org.json.JSONException;
 import com.google.appengine.labs.repackaged.org.json.JSONObject;
@@ -96,6 +99,12 @@ public class LTIRegistration extends HttpServlet {
 		buf.append("<TABLE><FORM METHOD=POST>");
 		buf.append("<TR><TD ALIGN=RIGHT>Email Address: </TD><TD><INPUT TYPE=TEXT NAME=Email></TD></TR>");
 		buf.append("<TR><TD ALIGN=RIGHT>Consumer Key: </TD><TD><INPUT TYPE=TEXT NAME=Key></TD></TR>");
+		buf.append("<TR><TD COLSPAN=2>");
+		buf.append("<script type='text/javascript' src='http://www.google.com/recaptcha/api/challenge?k=6LfMt_USAAAAAAAne9eIV0WQBAZMGqGB0Q88SbLS'> </script>"
+				+ "<noscript><iframe src='http://www.google.com/recaptcha/api/noscript?k=6LfMt_USAAAAAAAne9eIV0WQBAZMGqGB0Q88SbLS' height='300' width='500' frameborder='0'></iframe><br>"
+				+ "<textarea name='recaptcha_challenge_field' rows='3' cols='40'></textarea>"
+				+ "<input type='hidden' name='recaptcha_response_field'value='manual_challenge'></noscript>");
+		buf.append("</TD>");
 		buf.append("<TR><TD>&nbsp;</TD><TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Generate Shared Secret'></TD></TR>");
 		buf.append("</TABLE></FORM>");
 		out.println(buf.toString() + Login.footer);
@@ -107,7 +116,8 @@ public class LTIRegistration extends HttpServlet {
 		
 		String email = request.getParameter("Email");
 		String key = request.getParameter("Key").replaceAll("\\s", "");  // removes all whitespace from key
-		if (email!=null && key!=null) {  // generate a new set of LTI credentials
+		String valid = reCaptchaValidation(request);
+		if (email!=null && key!=null && valid.equals("true")) {  // generate a new set of LTI credentials
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			BLTIConsumer c = ofy.find(BLTIConsumer.class,key);			
@@ -118,9 +128,13 @@ public class LTIRegistration extends HttpServlet {
 					out.println(Login.header + banner + successMessage + Login.footer);				
 				}
 			} else doError(request,response,"Sorry, the LTI registration attempt failed, probably because the consumer key is already in use.",null,null);			
-			return;	
+			return;	// successful LTI v1.x registration attempts and those failed due to duplicate consumer_key values should exit here.
+		} else if (!valid.equals("true")) {
+			doError(request,response,"Sorry, the reCaptcha field was not valid. Please try again.",null,null);
+			return;  // don't go past this point because the reCaptcha field was invalid
 		}
 		
+		// only LTI 2.0 registration attempts should reach this point
 		StringBuffer debug = new StringBuffer("Debug:\n");
 		String lti_message_type = request.getParameter("lti_message_type");
 		String reg_key = request.getParameter("reg_key");
@@ -184,6 +198,17 @@ public class LTIRegistration extends HttpServlet {
 		}
 	}
 
+	String reCaptchaValidation(HttpServletRequest request) {
+		String remoteAddr = request.getRemoteAddr();
+        ReCaptchaImpl reCaptcha = new ReCaptchaImpl();
+        reCaptcha.setPrivateKey("6LfMt_USAAAAABmLjiNqefsh2V9CaD1q7FtxkgRK");
+        String challenge = request.getParameter("recaptcha_challenge_field");
+        String uresponse = request.getParameter("recaptcha_response_field");
+        ReCaptchaResponse reCaptchaResponse = reCaptcha.checkAnswer(remoteAddr, challenge, uresponse);
+        if (reCaptchaResponse.isValid()) return "true";
+        else return reCaptchaResponse.getErrorMessage();
+	}
+	
 	public void doError(HttpServletRequest request, HttpServletResponse response, String s, String message, Exception e)
 			throws java.io.IOException {
 		try {
