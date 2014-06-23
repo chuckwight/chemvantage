@@ -151,7 +151,7 @@ public class About extends HttpServlet {
 		+ "src='/images/imscertifiedfinalsmall.png'/></a> ChemVantage is certified by the "
 		+ "<a href=http://imsglobal.org>IMS Global Learning Consortium</a> to be conformant with the "
 		+ "LTI v1.1 standard for learning tools interoperability. The IMS conformance registration "
-		+ "number for ChemVantage v1.1 is <a href=http://www.imsglobal.org/cc/detail.cfm?ID=102>IMSC2ce2012W1</a>.<p>"
+		+ "number for ChemVantage is <a href=http://www.imsglobal.org/cc/detail.cfm?ID=259>IMSB2C2ce2014W1</a>.<p>"
 		+ "This means that you can configure most learning management systems such as Blackboard, "
 		+ "Canvas, Moodle or Desire2Learn with a Basic LTI link to allow your students to establish and use their "
 		+ "accounts automatically in ChemVantage without having to maintain a separate user ID and "
