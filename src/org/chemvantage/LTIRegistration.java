@@ -97,14 +97,18 @@ public class LTIRegistration extends HttpServlet {
 		out.println(Login.header + banner + welcomeMessage);
 		StringBuffer buf = new StringBuffer();
 		buf.append("<TABLE><FORM METHOD=POST>");
-		buf.append("<TR><TD ALIGN=RIGHT>Email Address: </TD><TD><INPUT TYPE=TEXT NAME=Email></TD></TR>");
-		buf.append("<TR><TD ALIGN=RIGHT>Consumer Key: </TD><TD><INPUT TYPE=TEXT NAME=Key></TD></TR>");
+		buf.append("<TR><TD ALIGN=RIGHT>Email Address: </TD><TD><INPUT TYPE=TEXT NAME=Email> (where the credentials will be sent)</TD></TR>");
+		buf.append("<TR><TD ALIGN=RIGHT>Consumer Key: </TD><TD><INPUT TYPE=TEXT NAME=Key> (e.g., moodle257.myschool.edu)</TD></TR>");
+		
+/*   ========= reCaptch tool not yet functional =============
 		buf.append("<TR><TD COLSPAN=2>");
 		buf.append("<script type='text/javascript' src='http://www.google.com/recaptcha/api/challenge?k=6LfMt_USAAAAAAAne9eIV0WQBAZMGqGB0Q88SbLS'> </script>"
 				+ "<noscript><iframe src='http://www.google.com/recaptcha/api/noscript?k=6LfMt_USAAAAAAAne9eIV0WQBAZMGqGB0Q88SbLS' height='300' width='500' frameborder='0'></iframe><br>"
 				+ "<textarea name='recaptcha_challenge_field' rows='3' cols='40'></textarea>"
 				+ "<input type='hidden' name='recaptcha_response_field'value='manual_challenge'></noscript>");
 		buf.append("</TD>");
+=============================================================*/
+		
 		buf.append("<TR><TD>&nbsp;</TD><TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Generate Shared Secret'></TD></TR>");
 		buf.append("</TABLE></FORM>");
 		out.println(buf.toString() + Login.footer);
@@ -113,25 +117,25 @@ public class LTIRegistration extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
-		
-		String email = request.getParameter("Email");
-		String key = request.getParameter("Key").replaceAll("\\s", "");  // removes all whitespace from key
-		String valid = reCaptchaValidation(request);
-		if (email!=null && key!=null && valid.equals("true")) {  // generate a new set of LTI credentials
-			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
-			BLTIConsumer c = ofy.find(BLTIConsumer.class,key);			
-			if (c==null) {
-				c = new BLTIConsumer(key,email);
-				if (sendLTICredentials(email,c)) {  // credentials sent successfully
-					ofy.put(c);
-					out.println(Login.header + banner + successMessage + Login.footer);				
-				}
-			} else doError(request,response,"Sorry, the LTI registration attempt failed, probably because the consumer key is already in use.",null,null);			
-			return;	// successful LTI v1.x registration attempts and those failed due to duplicate consumer_key values should exit here.
-		} else if (!valid.equals("true")) {
-			doError(request,response,"Sorry, the reCaptcha field was not valid. Please try again.",null,null);
-			return;  // don't go past this point because the reCaptcha field was invalid
+		if ("Generate Shared Secret".equals(request.getParameter("UserRequest"))) {  // manual LTI registration request for version 1.x
+			String email = request.getParameter("Email");
+			String key = request.getParameter("Key").replaceAll("\\s", "");  // removes all whitespace from key
+			if (email!=null && !email.isEmpty() && key!=null && !key.isEmpty()) {  // generate a new set of LTI credentials
+				response.setContentType("text/html");
+				PrintWriter out = response.getWriter();
+				BLTIConsumer c = ofy.find(BLTIConsumer.class,key);			
+				if (c==null) {
+					c = new BLTIConsumer(key,email);
+					if (sendLTICredentials(email,c)) {  // credentials sent successfully
+						ofy.put(c);
+						out.println(Login.header + banner + successMessage + Login.footer);				
+					}
+				} else doError(request,response,"Sorry, the LTI registration attempt failed, probably because the consumer key is already in use.",null,null);			
+				return;	// successful LTI v1.x registration attempts and those failed due to duplicate consumer_key values should exit here.
+			} else { // incomplete registration form
+				doError(request,response,"Sorry, the LTI registration request failed. All form fields are required.",null,null);
+				return;
+			}
 		}
 		
 		// only LTI 2.0 registration attempts should reach this point
@@ -199,14 +203,25 @@ public class LTIRegistration extends HttpServlet {
 	}
 
 	String reCaptchaValidation(HttpServletRequest request) {
-		String remoteAddr = request.getRemoteAddr();
-        ReCaptchaImpl reCaptcha = new ReCaptchaImpl();
-        reCaptcha.setPrivateKey("6LfMt_USAAAAABmLjiNqefsh2V9CaD1q7FtxkgRK");
-        String challenge = request.getParameter("recaptcha_challenge_field");
-        String uresponse = request.getParameter("recaptcha_response_field");
-        ReCaptchaResponse reCaptchaResponse = reCaptcha.checkAnswer(remoteAddr, challenge, uresponse);
-        if (reCaptchaResponse.isValid()) return "true";
-        else return reCaptchaResponse.getErrorMessage();
+		StringBuffer buf = new StringBuffer();
+		try {
+			String remoteAddr = request.getRemoteAddr();
+			buf.append("remoteAddr=" + remoteAddr + "-");
+			ReCaptchaImpl reCaptcha = new ReCaptchaImpl();
+			reCaptcha.setPrivateKey("6LfMt_USAAAAABmLjiNqefsh2V9CaD1q7FtxkgRK");
+			buf.append("reCaptcha OK - ");
+			String challenge = request.getParameter("recaptcha_challenge_field");
+			buf.append("challenge=" + challenge + "-");
+			String uresponse = request.getParameter("recaptcha_response_field");
+			buf.append("uresponse=" + uresponse + "-");
+			ReCaptchaResponse reCaptchaResponse = reCaptcha.checkAnswer(remoteAddr, challenge, uresponse);
+	       //if (challenge == null) return "false"; // no reCaptcha element detected
+			if (reCaptchaResponse==null) return "no user response detected";
+			if (reCaptchaResponse.isValid()) return "true";
+			else return reCaptchaResponse.getErrorMessage();
+		} catch (Exception e) {
+			return "validation failed - " + buf.toString() + "Error: " +e.toString();
+		}
 	}
 	
 	public void doError(HttpServletRequest request, HttpServletResponse response, String s, String message, Exception e)
