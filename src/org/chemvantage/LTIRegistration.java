@@ -386,7 +386,7 @@ public class LTIRegistration extends HttpServlet {
 		Session session = Session.getDefaultInstance(props, null);
 
 		String msgBody = "Thank you for your interest in ChemVantage. Your LTI credentials are:<p>"
-				+ "Launch URL: http://chem-vantage.appspot.com/lti/ <br/>"
+				+ "Launch URL: https://chem-vantage.appspot.com/lti/ <br/>"
 				+ "Consumer Key: " + c.oauth_consumer_key + " <br/>"
 				+ "Shared Secret: " + c.secret + "<p>"
 				+ "Please use the URL method of launching your LTI connection (not the domain method). <br/>"
