@@ -76,8 +76,9 @@ public class DomainAdmin extends HttpServlet {
 			}
 			else {
 				String searchString = request.getParameter("SearchString");
+				String searchField = request.getParameter("SearchField");
 				String cursor = request.getParameter("Cursor");
-				out.println(Home.getHeader(user) + mainAdminForm(d,user,searchString,cursor) + Home.footer);
+				out.println(Home.getHeader(user) + mainAdminForm(d,user,searchField,searchString,cursor) + Home.footer);
 			}
 		} catch (Exception e) {
 			response.getWriter().println(e.toString());
@@ -105,6 +106,7 @@ public class DomainAdmin extends HttpServlet {
 			PrintWriter out = response.getWriter();
 			
 			String searchString = null;
+			String searchField = null;
 			String cursor = null;
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
@@ -112,11 +114,9 @@ public class DomainAdmin extends HttpServlet {
 			if (userRequest.equals("Update User")) {
 				User usr = ofy.get(User.class,request.getParameter("UserId")); // user record to modify
 				updateUser(usr,request);
-				searchString = usr.lowercaseName;
 				if (usr.id.equals(user.id)) user = usr; // admin modifying own record; update now to reflect new status
 			} else if (userRequest.equals("Delete User")) {
 				User usr = ofy.get(User.class,request.getParameter("UserId"));
-				searchString = usr.getFullName();
 				ofy.delete(usr);
 			} else if (userRequest.equals("Login As This User")) {
 				request.getSession(true).setAttribute("UserId",request.getParameter("UserId"));
@@ -126,7 +126,6 @@ public class DomainAdmin extends HttpServlet {
 				User usr = ofy.get(User.class,request.getParameter("UserId"));
 				User mergeUser = ofy.get(User.class,request.getParameter("MergeUserId"));
 				mergeAccounts(usr,mergeUser);
-				searchString = usr.getFullName();
 			} else if (userRequest.equals("Assign Administrator")) {
 				try {
 					User usr = ofy.find(User.class,request.getParameter("AdminId"));
@@ -140,13 +139,13 @@ public class DomainAdmin extends HttpServlet {
 					out.println("Sorry, this user could not be assigned to administer the domain.");
 				}
 			}
-			out.println(Home.getHeader(user) + mainAdminForm(d,user,searchString,cursor) + Home.footer);
+			out.println(Home.getHeader(user) + mainAdminForm(d,user,searchField,searchString,cursor) + Home.footer);
 		} catch (Exception e) {
 			response.getWriter().println(e.toString());
 		}
 	}
 
-	String mainAdminForm(Domain d,User user,String searchString,String cursor) {
+	String mainAdminForm(Domain d,User user,String searchField,String searchString,String cursor) {
 		StringBuffer buf = new StringBuffer("\n\n<h2>ChemVantage Domain Administration</h2>");
 		try {
 			if (d.domainAdmins == null || d.domainAdmins.size()==0) { // provide a chance to assign a domain admin
@@ -174,19 +173,33 @@ public class DomainAdmin extends HttpServlet {
 			Query<User> results = null;
 			if (searchString != null) {
 				searchString = searchString.toLowerCase().trim();
+				if (searchField==null) searchField = "";
 				int i = searchString.indexOf('*');
 				if (i == 0) searchString = "";
 				else if (i > 0) searchString = searchString.substring(0,i);
-				results = ofy.query(User.class).filter("lowercaseName >=",searchString).filter("lowercaseName <",(searchString+'\ufffd')).filter("domain",d.domainName).limit(this.queryLimit);
+				switch (searchField) {
+				case "Lastname":
+					results = ofy.query(User.class).filter("lastName >=",searchString).filter("lastName <",(searchString+'\ufffd')).filter("domain",d.domainName).limit(this.queryLimit);
+					break;
+				case "Email":
+					results = ofy.query(User.class).filter("email >=",searchString).filter("email <",(searchString+'\ufffd')).filter("domain",d.domainName).limit(this.queryLimit);
+					break;
+				default:
+					results = ofy.query(User.class).filter("firstName >=",searchString).filter("firstName <",(searchString+'\ufffd')).filter("domain",d.domainName).limit(this.queryLimit);
+				}
 				if (cursor!=null) results.startCursor(Cursor.fromWebSafeString(cursor));
 			}
 			
 			buf.append("\n<h3>Manage User Accounts</h3>");
 			buf.append("\n<FORM METHOD=GET>"
-					+ "As a domain administrator, your main responsibility is to <a href=# onClick=\"javascript: document.getElementById('manage').style.display='';\">manage user accounts</a>.<br>"
-					+ "To search for a user, enter a portion of the user's <i>lastname, firstname</i>. Leave blank to show all ChemVantage users in this domain.<br>");
+					+ "As a domain administrator, your main responsibility is to manage user accounts.<br>"
+					+ "To search for a user, enter a portion of the user's first name, last name, or email address. Leave blank to show all ChemVantage users in this domain.<br>");
 
-			buf.append("\n<INPUT NAME=SearchString VALUE='" + (searchString==null?"":CharHider.quot2html(searchString)) + "'>"
+			buf.append("Search by:<br>"
+					+ "\n<INPUT TYPE=RADIO NAME=SearchField VALUE=Firstname CHECKED>First (given) name<br>"
+					+ "\n<INPUT TYPE=RADIO NAME=SearchField VALUE=Lastname>Last (family) name<br>"
+					+ "\n<INPUT TYPE=RADIO NAME=SearchField VALUE=Email>Email address<br>"
+					+ "\n<INPUT NAME=SearchString VALUE='" + (searchString==null?"":CharHider.quot2html(searchString)) + "'>"
 					+ "\n<INPUT TYPE=SUBMIT VALUE='Search for users'><INPUT TYPE=HIDDEN NAME=Domain VALUE=" + d.domainName + "></FORM>");
 
 			if(results != null) {
@@ -210,9 +223,9 @@ public class DomainAdmin extends HttpServlet {
 							+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Edit User'></TD></TR></FORM>");
 				}
 				buf.append("\n</TABLE>");
-				if (nResults==this.queryLimit) buf.append("<a href=/admin?Domain=" + d.domainName + "&SearchString=" + searchString + "&Cursor=" + iterator.getCursor().toWebSafeString() + ">show more users</a>"); 
+				if (nResults==this.queryLimit) buf.append("<a href=/admin?Domain=" + d.domainName + "&SearchField=" + searchField + "&SearchString=" + searchString + "&Cursor=" + iterator.getCursor().toWebSafeString() + ">show more users</a>"); 
 			} else if (searchString != null) buf.append("\nSorry, the search returned no results.");
-
+/*
 			buf.append("<div id='manage' style='display:none'>"
 					+ "<h3>Basic and Premium Accounts</h3>"
 					+ "Any individual user may browse ChemVantage without charge using a free basic account simply by navigating to the site.<br>"
@@ -222,7 +235,7 @@ public class DomainAdmin extends HttpServlet {
 					+ "<li>The domain (e.g., school or college) may purchase premium account seats ($2.00/ea in quantities of 50 or more) that are allocated to users when they first join a group. If you want to purchase premium accounts on behalf of your students, you simply have to ensure that a sufficient number of seats are purchased in advance."
 					+ "<li>If no seats are available, the user will be asked to purchase an individual premium account upgrade ($4.99) when joining a group for the first time. If you want students to purchase their own premium accounts, you don't have to do anything; it's automatic."
 					+ "</ol>");
-
+*/
 			buf.append("<h3>Instructor and Admin Accounts</h3>"
 					+ "As the domain administrator, you have the ability to grant instructor or administrator privileges to users in your domain (i.e., users with a user@" + d.domainName + " email address). "
 					+ "Find the user's account using the search box above and edit the user's profile to grant the appropriate rights.<ul>" 
