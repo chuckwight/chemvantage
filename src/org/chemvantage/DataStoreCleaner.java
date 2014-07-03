@@ -47,6 +47,7 @@ import com.googlecode.objectify.Objectify;
 public class DataStoreCleaner extends HttpServlet {
 	private static final long serialVersionUID = 137L;
 	Date now;
+	Date oneMonthAgo;
 	Date sixMonthsAgo;
 	Date oneYearAgo;
 	DAO dao = new DAO();
@@ -85,6 +86,7 @@ public class DataStoreCleaner extends HttpServlet {
 	throws ServletException, IOException {
 		// This servlet is called by the cron daemon once each day.
 		now = new Date();
+		oneMonthAgo = new Date(now.getTime()-2678400000L);
 		sixMonthsAgo = new Date(now.getTime()-15768000000L);
 		oneYearAgo = new Date(now.getTime()-31536000000L);
 		
@@ -105,6 +107,7 @@ public class DataStoreCleaner extends HttpServlet {
 		case "CleanPracticeExamTransactions": out.println(cleanPracticeExamTransactions(cursor,0)); break;
 		case "CleanGroups": out.println(cleanGroups(cursor,0)); break;
 		case "CleanAssignments": out.println(cleanAssignments(cursor,0)); break;
+		case "CleanDomains": out.println(cleanDomains(cursor,0)); break;
 		case "CleanAll": 
 			out.println(cleanUsers(cursor,0));
 			out.println(cleanSessions(cursor,0));
@@ -468,6 +471,48 @@ public class DataStoreCleaner extends HttpServlet {
 		    	cursor = assignments.getCursor().toWebSafeString();
 		    	Queue queue = QueueFactory.getDefaultQueue();
 		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanAssignments").param("Cursor", cursor));
+		    	buf.append("Launching a new DataStoreCleaner task.");
+		    }
+
+		} catch (Exception e) {
+			buf.append("Error: " + e.toString());
+		}
+
+		return buf.toString();
+	}
+
+	private String cleanDomains(String cursor, int retries) {
+		StringBuffer buf = new StringBuffer();
+		try {
+			DatastoreService datastore = DatastoreServiceFactory.getDatastoreService(); 
+			Query q = new Query("Domain");
+			
+			PreparedQuery pq = datastore.prepare(q);
+			
+			FetchOptions fetchOptions = FetchOptions.Builder.withLimit(querySizeLimit);
+		    if (cursor==null) buf.append("<h2>Clean Domains</h2>");
+		    else fetchOptions.startCursor(Cursor.fromWebSafeString(cursor));
+
+		    QueryResultList<Entity> domains = pq.asQueryResultList(fetchOptions);
+
+		    ArrayList<Key> keys = new ArrayList<Key>();  // list of Assignment entity keys for batch delete
+		   
+		    for (Entity d : domains) {
+		    	int activeUsers = ofy.query(User.class).filter("domain",d.getProperty("domainName")).count();
+		    	Date created = (Date)d.getProperty("created");
+		    	if (activeUsers==0 && created.before(oneMonthAgo)) keys.add(d.getKey());
+		    }
+
+		    if (keys.size() > 0) datastore.delete(keys);
+
+		    buf.append(domains.size() + " entities examined, " + keys.size() + " deleted.<br/>");
+
+		    if (domains.size()<querySizeLimit) buf.append("Done.");
+		    else if (retries < 9) buf.append(cleanAssignments(domains.getCursor().toWebSafeString(),retries+1));
+		    else {
+		    	cursor = domains.getCursor().toWebSafeString();
+		    	Queue queue = QueueFactory.getDefaultQueue();
+		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanDomains").param("Cursor", cursor));
 		    	buf.append("Launching a new DataStoreCleaner task.");
 		    }
 

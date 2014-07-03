@@ -141,13 +141,13 @@ public class Admin extends HttpServlet {
 				int i = searchString.indexOf('*');
 				if (i == 0) searchString = "";
 				else if (i > 0) searchString = searchString.substring(0,i);
-				results = ofy.query(User.class).filter("lowercaseName >=",searchString).filter("lowercaseName <",(searchString+'\ufffd')).limit(this.queryLimit);
+				results = ofy.query(User.class).filter("email >=",searchString).filter("email <",(searchString+'\ufffd')).limit(this.queryLimit);
 				if (cursor!=null) results.startCursor(Cursor.fromWebSafeString(cursor));
 			}
 			
 			buf.append("\n<h3>User Search</h3>");
 			buf.append("\n<FORM METHOD=GET>"
-					+ "To search for a user, enter a portion of the user's <i>lastname, firstname</i>. Wildcards (*) are OK.<br>");
+					+ "To search for a user, enter a portion of the user's email address.<br/>Leave blank to browse all users.<br>");
 
 			buf.append("\n<INPUT NAME=SearchString VALUE='" + (searchString==null?"":CharHider.quot2html(searchString)) + "'>"
 					+ "\n<INPUT TYPE=SUBMIT VALUE='Search for users'></FORM>");
@@ -156,7 +156,7 @@ public class Admin extends HttpServlet {
 				QueryResultIterator<User> iterator = results.iterator();
 				int nResults = results.count();
 				buf.append("<FONT SIZE=-1>Showing " + (nResults==this.queryLimit?"first ":"") + nResults + " results. "
-						+ (nResults>4?"You can narrow this search by entering more of the user's <i>lastname, firstname</i>":"") + "</FONT><br>");
+						+ (nResults>4?"You can narrow this search by entering more of the user's email address":"") + "</FONT><br>");
 				buf.append("\n<TABLE CELLSPACING=5><TR><TD><b>Last Name</b></TD><TD><b>First Name</b></TD><TD><b>Email</b></TD>"
 						+ "<TD><b>Role</b></TD><TD><b>UserId</b></TD><TD><b>Last Login</b></TD><TD><b>Action</b></TD></TR>");
 				while (iterator.hasNext()) {
