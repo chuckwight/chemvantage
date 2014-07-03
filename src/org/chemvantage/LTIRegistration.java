@@ -45,9 +45,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import net.tanesha.recaptcha.ReCaptchaImpl;
-import net.tanesha.recaptcha.ReCaptchaResponse;
-
 import com.google.appengine.labs.repackaged.org.json.JSONArray;
 import com.google.appengine.labs.repackaged.org.json.JSONException;
 import com.google.appengine.labs.repackaged.org.json.JSONObject;
@@ -201,7 +198,7 @@ public class LTIRegistration extends HttpServlet {
 			doError(request,response,"Sorry, the Tool Proxy Registration failed.<br>" + e.getMessage() + "<br>" + debug.toString() + "<br>" + "PLEASE SEND THIS ERROR TO admin@chemvantage.org",null,null);
 		}
 	}
-
+/*
 	String reCaptchaValidation(HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -223,7 +220,7 @@ public class LTIRegistration extends HttpServlet {
 			return "validation failed - " + buf.toString() + "Error: " +e.toString();
 		}
 	}
-	
+*/	
 	public void doError(HttpServletRequest request, HttpServletResponse response, String s, String message, Exception e)
 			throws java.io.IOException {
 		try {
