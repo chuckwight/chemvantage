@@ -76,9 +76,8 @@ public class DomainAdmin extends HttpServlet {
 			}
 			else {
 				String searchString = request.getParameter("SearchString");
-				String searchField = request.getParameter("SearchField");
 				String cursor = request.getParameter("Cursor");
-				out.println(Home.getHeader(user) + mainAdminForm(d,user,searchField,searchString,cursor) + Home.footer);
+				out.println(Home.getHeader(user) + mainAdminForm(d,user,searchString,cursor) + Home.footer);
 			}
 		} catch (Exception e) {
 			response.getWriter().println(e.toString());
@@ -106,7 +105,6 @@ public class DomainAdmin extends HttpServlet {
 			PrintWriter out = response.getWriter();
 			
 			String searchString = null;
-			String searchField = null;
 			String cursor = null;
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
@@ -139,13 +137,13 @@ public class DomainAdmin extends HttpServlet {
 					out.println("Sorry, this user could not be assigned to administer the domain.");
 				}
 			}
-			out.println(Home.getHeader(user) + mainAdminForm(d,user,searchField,searchString,cursor) + Home.footer);
+			out.println(Home.getHeader(user) + mainAdminForm(d,user,searchString,cursor) + Home.footer);
 		} catch (Exception e) {
 			response.getWriter().println(e.toString());
 		}
 	}
 
-	String mainAdminForm(Domain d,User user,String searchField,String searchString,String cursor) {
+	String mainAdminForm(Domain d,User user,String searchString,String cursor) {
 		StringBuffer buf = new StringBuffer("\n\n<h2>ChemVantage Domain Administration</h2>");
 		try {
 			if (d.domainAdmins == null || d.domainAdmins.size()==0) { // provide a chance to assign a domain admin
@@ -164,49 +162,32 @@ public class DomainAdmin extends HttpServlet {
 			buf.append("</td></tr>");
 			d.activeUsers = ofy.query(User.class).filter("domain",d.domainName).count();
 			buf.append("<tr><td align=right>Total number of users: </td><td>" + d.activeUsers + "</td></tr>");
-			//buf.append("<tr><td align=right>Total premium account seats purchased: </td><td>" + d.seatsPurchased + "</td></tr>");
-			//buf.append("<tr><td align=right>Total premium account seats available: </td><td>" + d.seatsAvailable + "</td></tr>");
-			//if (d.freeTrialExpires.after(now)) buf.append("<tr><td align=right>Free trial period ends: </td><td>" + d.freeTrialExpires.toString() + "</td></tr>");
 			buf.append("</table>");
 			
 			// Start user search section for editing user properties
 			Query<User> results = null;
 			if (searchString != null) {
 				searchString = searchString.toLowerCase().trim();
-				if (searchField==null) searchField = "";
 				int i = searchString.indexOf('*');
 				if (i == 0) searchString = "";
 				else if (i > 0) searchString = searchString.substring(0,i);
-				switch (searchField) {
-				case "Lastname":
-					results = ofy.query(User.class).filter("lastName >=",searchString).filter("lastName <",(searchString+'\ufffd')).filter("domain",d.domainName).limit(this.queryLimit);
-					break;
-				case "Email":
-					results = ofy.query(User.class).filter("email >=",searchString).filter("email <",(searchString+'\ufffd')).filter("domain",d.domainName).limit(this.queryLimit);
-					break;
-				default:
-					results = ofy.query(User.class).filter("firstName >=",searchString).filter("firstName <",(searchString+'\ufffd')).filter("domain",d.domainName).limit(this.queryLimit);
-				}
+				results = ofy.query(User.class).filter("email >=",searchString).filter("email <",(searchString+'\ufffd')).filter("domain",d.domainName).limit(this.queryLimit);
 				if (cursor!=null) results.startCursor(Cursor.fromWebSafeString(cursor));
 			}
 			
 			buf.append("\n<h3>Manage User Accounts</h3>");
 			buf.append("\n<FORM METHOD=GET>"
-					+ "As a domain administrator, your main responsibility is to manage user accounts.<br>"
-					+ "To search for a user, enter a portion of the user's first name, last name, or email address. Leave blank to show all ChemVantage users in this domain.<br>");
+					+ "As a domain administrator, your main responsibility is to <a href=# onClick=document.getElementById('manage').style.display='inLine'>manage user accounts</a>.<br>"
+					+ "To search for a user, enter a portion of the user's email address. Leave blank to browse all ChemVantage users in this domain.<br>");
 
-			buf.append("Search by:<br>"
-					+ "\n<INPUT TYPE=RADIO NAME=SearchField VALUE=Firstname CHECKED>First (given) name<br>"
-					+ "\n<INPUT TYPE=RADIO NAME=SearchField VALUE=Lastname>Last (family) name<br>"
-					+ "\n<INPUT TYPE=RADIO NAME=SearchField VALUE=Email>Email address<br>"
-					+ "\n<INPUT NAME=SearchString VALUE='" + (searchString==null?"":CharHider.quot2html(searchString)) + "'>"
+			buf.append("\n<INPUT NAME=SearchString VALUE='" + (searchString==null?"":CharHider.quot2html(searchString)) + "'>"
 					+ "\n<INPUT TYPE=SUBMIT VALUE='Search for users'><INPUT TYPE=HIDDEN NAME=Domain VALUE=" + d.domainName + "></FORM>");
 
 			if(results != null) {
 				QueryResultIterator<User> iterator = results.iterator();
 				int nResults = results.count();
 				buf.append("<FONT SIZE=-1>Showing " + (nResults==this.queryLimit?"first ":"") + nResults + " results. "
-						+ (nResults>4?"You can narrow this search by entering more of the user's <i>lastname, firstname</i>":"") + "</FONT><br>");
+						+ (nResults>4?"You can narrow this search by entering more of the user's email address":"") + "</FONT><br>");
 				buf.append("\n<TABLE CELLSPACING=5><TR><TD><b>Last Name</b></TD><TD><b>First Name</b></TD><TD><b>Email</b></TD>"
 						+ "<TD><b>Role</b></TD><TD><b>UserId</b></TD><TD><b>Last Login</b></TD><TD><b>Action</b></TD></TR>");
 				while (iterator.hasNext()) {
@@ -223,7 +204,7 @@ public class DomainAdmin extends HttpServlet {
 							+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Edit User'></TD></TR></FORM>");
 				}
 				buf.append("\n</TABLE>");
-				if (nResults==this.queryLimit) buf.append("<a href=/admin?Domain=" + d.domainName + "&SearchField=" + searchField + "&SearchString=" + searchString + "&Cursor=" + iterator.getCursor().toWebSafeString() + ">show more users</a>"); 
+				if (nResults==this.queryLimit) buf.append("<a href=/admin?Domain=" + d.domainName + "&SearchString=" + searchString + "&Cursor=" + iterator.getCursor().toWebSafeString() + ">show more users</a>"); 
 			} else if (searchString != null) buf.append("\nSorry, the search returned no results.");
 /*
 			buf.append("<div id='manage' style='display:none'>"
@@ -236,16 +217,16 @@ public class DomainAdmin extends HttpServlet {
 					+ "<li>If no seats are available, the user will be asked to purchase an individual premium account upgrade ($4.99) when joining a group for the first time. If you want students to purchase their own premium accounts, you don't have to do anything; it's automatic."
 					+ "</ol>");
 */
-			buf.append("<h3>Instructor and Admin Accounts</h3>"
-					+ "As the domain administrator, you have the ability to grant instructor or administrator privileges to users in your domain (i.e., users with a user@" + d.domainName + " email address). "
+			buf.append("<div id='manage' style='display:none'><h3>Instructor and Admin Accounts</h3>"
+					+ "As the domain administrator, you have the ability to grant instructor or administrator privileges to users in your domain.<br/> "
 					+ "Find the user's account using the search box above and edit the user's profile to grant the appropriate rights.<ul>" 
-					+ "<li>Instructors can create and manage ChemVantage groups"
+					+ "<li>Instructors can create and manage ChemVantage groups (classes)"
 					+ "<li>Administrators can grant and revoke user privileges"
-					+ "</ul>All instructors and administrators are provided premium accounts automatically without charge."
+					+ "</ul>"
 					+ "</div>");
 					
 			buf.append("<h3>Questions or Comments</h3>"
-					+ "See the <a href=/help.html>Help Page</a> for useful tips and tricks, or send us a message using the <a href=/Feedback>Feedback Page</a>, or contact us directly at <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>. "
+					+ "See the <a href=/help.html>Help Page</a> for useful tips and tricks, or send us a message using the <a href=/Feedback>Feedback Page</a>, or contact us directly at <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.<br> "
 					+ "For emergencies, call us at 1-801-810-4401 (domain administrators only, please)");
 
 		} catch (Exception e) {
