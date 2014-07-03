@@ -77,6 +77,7 @@ public class Domain {
 	}
 	
 	public int getActiveUsers() {
+		this.activeUsers = ofy.query(User.class).filter("domain",this.domainName).count();
 		return activeUsers;
 	}
 	

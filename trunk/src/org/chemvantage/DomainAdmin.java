@@ -160,8 +160,7 @@ public class DomainAdmin extends HttpServlet {
 			buf.append("<tr><td align=right>Domain administrator: </td><td>");
 			if (d.domainAdmins != null) for (String id : d.domainAdmins) buf.append(User.getBothNames(id) + "&nbsp;&lt;" + User.getEmail(id) + "&gt; <br/>");
 			buf.append("</td></tr>");
-			d.activeUsers = ofy.query(User.class).filter("domain",d.domainName).count();
-			buf.append("<tr><td align=right>Total number of users: </td><td>" + d.activeUsers + "</td></tr>");
+			buf.append("<tr><td align=right>Total number of users: </td><td>" + d.getActiveUsers() + "</td></tr>");
 			buf.append("</table>");
 			
 			// Start user search section for editing user properties
