@@ -156,17 +156,17 @@ public class DomainAdmin extends HttpServlet {
 						+ "<input type=hidden name=Domain value='" + d.domainName + "'>"
 						+ "</form>");
 			}
-			Date now = new Date();
+			//Date now = new Date();
 			buf.append("<table>");
 			buf.append("<tr><td align=right>Domain name: </td><td>" + d.domainName + "</td></tr>");
 			buf.append("<tr><td align=right>Domain administrator: </td><td>");
-			if (d.domainAdmins != null) for (String id : d.domainAdmins) buf.append(User.getBothNames(id) + "&nbsp;&lt;" + User.getEmail(id) + "&gt; ");
+			if (d.domainAdmins != null) for (String id : d.domainAdmins) buf.append(User.getBothNames(id) + "&nbsp;&lt;" + User.getEmail(id) + "&gt; <br/>");
 			buf.append("</td></tr>");
 			d.activeUsers = ofy.query(User.class).filter("domain",d.domainName).count();
 			buf.append("<tr><td align=right>Total number of users: </td><td>" + d.activeUsers + "</td></tr>");
-			buf.append("<tr><td align=right>Total premium account seats purchased: </td><td>" + d.seatsPurchased + "</td></tr>");
-			buf.append("<tr><td align=right>Total premium account seats available: </td><td>" + d.seatsAvailable + "</td></tr>");
-			if (d.freeTrialExpires.after(now)) buf.append("<tr><td align=right>Free trial period ends: </td><td>" + d.freeTrialExpires.toString() + "</td></tr>");
+			//buf.append("<tr><td align=right>Total premium account seats purchased: </td><td>" + d.seatsPurchased + "</td></tr>");
+			//buf.append("<tr><td align=right>Total premium account seats available: </td><td>" + d.seatsAvailable + "</td></tr>");
+			//if (d.freeTrialExpires.after(now)) buf.append("<tr><td align=right>Free trial period ends: </td><td>" + d.freeTrialExpires.toString() + "</td></tr>");
 			buf.append("</table>");
 			
 			// Start user search section for editing user properties
