@@ -318,7 +318,7 @@ public class PracticeExam extends HttpServlet {
 			buf.append("\n<b>" + user.getBothNames() + "</b><br>");
 			
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			Group myGroup = user.myGroupId==0?null:ofy.get(Group.class,user.myGroupId);
+			Group myGroup = user.myGroupId<=0?null:ofy.find(Group.class,user.myGroupId);
 			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
 			df.setTimeZone(tz);
 

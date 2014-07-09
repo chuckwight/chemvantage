@@ -98,7 +98,7 @@ public class User implements Comparable<User>,Serializable {
 			}
 			Date now = new Date();
 			Date eightHoursAgo = new Date(now.getTime()-28800000L);
-			if (user.lastLogin.before(eightHoursAgo) && !user.requiresUpdates()) {
+			if (user.lastLogin.before(eightHoursAgo)) {
 				user.lastLogin = now;
 				user.alias = null;  // in case alias is set to "" or to invalid userId
 				ofy.put(user);
