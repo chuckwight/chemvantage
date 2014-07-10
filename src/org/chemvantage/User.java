@@ -47,19 +47,19 @@ public class User implements Comparable<User>,Serializable {
 	@Indexed	String email;
 	@Indexed	String domain;
 	@Indexed	String lowercaseName;
-	String lastName;
-	String firstName;
-	int roles;
-	boolean premium;
-	//				boolean demoPremium;
-	//				Date demoExpires;
+				String lastName;
+				String firstName;
+				int roles;
+				boolean premium;
+				//				boolean demoPremium;
+				//				Date demoExpires;
 	@Indexed	Date lastLogin;
-	long myGroupId;
+				long myGroupId;
 	@Indexed	String smsMessageDevice;
-	boolean notifyDeadlines;
-	boolean verifiedEmail;
-	String alias;
-	String authDomain;
+				boolean notifyDeadlines;
+				boolean verifiedEmail;
+				String alias;
+				String authDomain;
 
 	@Transient transient Objectify ofy = ObjectifyService.begin();
 
@@ -100,6 +100,7 @@ public class User implements Comparable<User>,Serializable {
 			Date eightHoursAgo = new Date(now.getTime()-28800000L);
 			if (user.lastLogin.before(eightHoursAgo)) {
 				user.lastLogin = now;
+				user.setPremium(true);  // all accounts are premium accounts now
 				user.alias = null;  // in case alias is set to "" or to invalid userId
 				ofy.put(user);
 			}
