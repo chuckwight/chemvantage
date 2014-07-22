@@ -91,6 +91,21 @@
 
     <datastore-index kind="User" ancestor="false" source="auto">
         <property name="domain" direction="asc"/>
+        <property name="email" direction="asc"/>
+    </datastore-index>
+
+    <datastore-index kind="User" ancestor="false" source="auto">
+        <property name="domain" direction="asc"/>
+        <property name="firstName" direction="asc"/>
+    </datastore-index>
+
+    <datastore-index kind="User" ancestor="false" source="auto">
+        <property name="domain" direction="asc"/>
+        <property name="lastName" direction="asc"/>
+    </datastore-index>
+
+    <datastore-index kind="User" ancestor="false" source="auto">
+        <property name="domain" direction="asc"/>
         <property name="lowercaseName" direction="asc"/>
     </datastore-index>
 
