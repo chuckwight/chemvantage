@@ -133,6 +133,7 @@ public class Group implements Serializable {
     }
 
     public Long getAssignmentId(String assignmentType,long topicId) {
+    	setGroupTopicIds();
     	if (topicIds.indexOf(topicId)<0) return 0L;
     	if (assignmentType.equals("Quiz")) return this.quizAssignmentIds.get(topicIds.indexOf(topicId));
     	if (assignmentType.equals("Homework")) return this.hwAssignmentIds.get(topicIds.indexOf(topicId));
