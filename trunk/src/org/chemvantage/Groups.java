@@ -170,7 +170,9 @@ public class Groups extends HttpServlet {
 				out.println(groupsForm(user,request));
 			} else if (userRequest.equals("UpdateAssignment")) {
 				updateAssignment(user,group,request);
-				out.println(manageGroupForm(user,group,request));
+				String url = "/" + request.getParameter("AssignmentType") + "?TopicId=" + request.getParameter("TopicId");
+				response.sendRedirect(url);
+				//out.println(manageGroupForm(user,group,request));
 			} else if (userRequest.equals("Copy Assignments")) {
 				copyAssignments(user,group,request);
 				out.println(manageGroupForm(user,group,request));
