@@ -144,7 +144,8 @@ public class LTIRegistration extends HttpServlet {
 		String launch_presentation_return_url = request.getParameter("launch_presentation_return_url");
 		
 		try {
-			if (!lti_message_type.equals("ToolProxyRegistrationRequest")) throw new Exception("Invalid message type");
+			if ("basic-lti-launch-request".equals(lti_message_type)) throw new Exception("The correct ChemVantage LTI Launch URL is https://chem-vantage.appspot.com/lti/");
+			if (!"ToolProxyRegistrationRequest".equals(lti_message_type)) throw new Exception("Invalid message type");
 			if (reg_key==null || reg_key.isEmpty()) throw new Exception("Required reg_key parameter is missing.");
 			if (reg_password==null || reg_password.isEmpty()) throw new Exception("Required reg_password parameter is missing.");
 			if (tc_profile_url==null || tc_profile_url.isEmpty()) throw new Exception("Required tc_profile_url parameter is missing.");
