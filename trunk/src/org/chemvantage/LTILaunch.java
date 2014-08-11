@@ -160,7 +160,6 @@ public class LTILaunch extends HttpServlet {
 		Domain domain = ofy.query(Domain.class).filter("domainName",oauth_consumer_key).get();
 		if (domain == null) {
 			domain = new Domain(oauth_consumer_key);
-			if (user.isAdministrator()) domain.addAdmin(user.id);
 			ofy.put(domain);
 		}
 		
@@ -170,7 +169,10 @@ public class LTILaunch extends HttpServlet {
 			int oldRoles = user.roles;
 			roles = roles.toLowerCase();
 			if (roles.contains("instructor")) user.setIsInstructor(true);
-			if (roles.contains("administrator")) user.setIsAdministrator(true);
+			if (roles.contains("administrator")) {
+				user.setIsAdministrator(true);
+				domain.addAdmin(user.id);
+			}
 			if (user.roles!=oldRoles) ofy.put(user);
 		}
 		
