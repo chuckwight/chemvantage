@@ -179,12 +179,13 @@ public class Login extends HttpServlet {
 						String providerName = c.getValue();
 						String providerUrl = openIdProviders.get(providerName);
 						String loginUrl = userService.createLoginURL("/userService",null,providerUrl,attributes);
-					buf.append("<table style='border-spacing:40px 0px'><tr><td style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
+						buf.append("<table style='border-spacing:40px 0px'><tr><td style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
 								+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
 								+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "' style='text-align:center'><br/>" 
 								+ providerName + "</a></td></tr></table>");
 						showAll = false;
 						break;
+/*		===== THIS SECTION OBSOLETE; CAS LOGINS DISCONTINUED ===============		
 					} else if (CASLaunch.casProviders.containsKey(c.getValue())) {
 						String providerName = c.getValue();
 						String casUrl = CASLaunch.casProviders.get(providerName);
@@ -195,6 +196,7 @@ public class Login extends HttpServlet {
 								+ providerName + "</a></td></tr></table>");
 						showAll = false;
 						break;
+        =====================================================================     */
 					} else if ("BLTI".equals(c.getValue())) {
 						buf.append("It appears that you are using ChemVantage in conjunction with a course learning "
 								+ "management system (LMS). You should access ChemVantage from inside the LMS to access your assignments and scores. "
@@ -203,6 +205,9 @@ public class Login extends HttpServlet {
 								+ "using the information at the bottom of the 'View My Profile' page.<br>");
 						showAll = false;
 						break;
+					}
+				}
+/*		===== THIS SECTION OBSOLETE; GOOGLE APPS LOGINS HANDLED THRU GOOGLE ===============							
 					} else {
 						String providerName = c.getValue(); 
 						if (providerName==null || providerName.isEmpty()) providerName="example.com";
@@ -216,6 +221,7 @@ public class Login extends HttpServlet {
 						break;
 					}
 				}
+		=====================================================================	*/
 				if (!showAll) buf.append("<p><a style='font-size:smaller' href=/?show=all>Show more login options</a>");
 			} else showAll = true;
 			
@@ -232,6 +238,7 @@ public class Login extends HttpServlet {
 							+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/> " 
 							+ providerName + "</a></TD>");
 				}
+/*
 				// display UofU CAS login logo and link:
 				for (String providerName : CASLaunch.casProviders.keySet()) {
 					String casUrl = CASLaunch.casProviders.get(providerName);
@@ -249,6 +256,7 @@ public class Login extends HttpServlet {
 								+ "Domain:<input type=text name=hd value='" + msg + "' onFocus=if(this.value==this.defaultValue)this.value=''>"
 								+ "<input type=submit name=UserRequest value=Go></form>"
 								+ "<div style='font-size:smaller'><a href=https://www.google.com/enterprise/marketplace/viewListing?productListingId=9006+12752972024151964645>Add ChemVantage To Your Domain</a></div>");
+*/
 				buf.append("</TD></TR></TABLE>");
 			}
 			//buf.append("<div style='text-align:right'><a href=https://www.google.com/enterprise/marketplace/viewListing?productListingId=9006+12752972024151964645><img src=/images/marketplace-addtogoogleapps-shadow.png alt='Add to Google Apps'></a></div>");

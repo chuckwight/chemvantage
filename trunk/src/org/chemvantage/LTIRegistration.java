@@ -83,6 +83,31 @@ public class LTIRegistration extends HttpServlet {
 			+ "Your LTI credentials will be emailed to you immediately.<br>"
 			+ "For further assistance, contact Chuck Wight (admin@chemvantage.org).<p>";
 	
+	String instructions = "<h3>Implementation in Canvas (other LMS platforms may be similar)</h3>"
+			+ "<ol>"
+			+ "<li>Obtain a set of LTI credentials using the form in the preceding section above."
+			+ "<li>Login to Canvas as a course Instructor, navigate to Settings, select the Apps tab, and click the "
+			+ "blue Add New App button to create a new External Tool. Use the following parameters:<ul>"
+			+ "<li>Name: ChemVantage"
+			+ "<li>Consumer Key and Shared Secret: (cut/paste from the email sent by ChemVantage in step 1; do not include any blank spaces)"
+			+ "<li>Configuration Type: Manual Entry"
+			+ "<li>URL: https://chem-vantage.appspot.com/lti/"
+			+ "<li>Domain: (leave blank)"
+			+ "<li>Privacy: Public (ChemVantage will use only email address and first name)"
+			+ "<li>Custom Fields (leave blank)"
+			+ "<li>Description: ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry.</ul>"
+			+ "<li>Create a new Canvas assignment with the following recommended parameters:"
+			+ "<ul><li>Name: (as appropriate, e.g. Quiz - Heat and Enthalpy)"
+			+ "<li>Points: 10 for quiz or homework; 100 for practice exam"
+			+ "<li>Submission Type: External Tool"
+			+ "<li>External Tool URL: https://chem-vantage.appspot.com (or select ChemVantage from the list of installed apps)</ul>"
+			+ "<li>After you update the assignment, you should see the ChemVantage Assignment Setup Page (if not, click the "
+			+ "assignment link to connect to ChemVantage). Select the appropriate Quiz, Homework or Practice Exam for the assignment."
+			+ "<li>A sample assignment should be displayed, including a link near the top (visible only to instructors) that "
+			+ "can be used to select question items to be shown to your students for that assignment."
+			+ "<li>Navigate to Settings, Student View to take the assignment and ensure that the score is posted correctly in the Canvas grade book."
+			+ "</ol>";
+			
 	String successMessage = "<h2>Thank You</h2> Your LTI credentials have been sent to your email address.";
 	
 	@Override
@@ -108,6 +133,7 @@ public class LTIRegistration extends HttpServlet {
 		
 		buf.append("<TR><TD>&nbsp;</TD><TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Generate Shared Secret'></TD></TR>");
 		buf.append("</TABLE></FORM>");
+		buf.append(instructions);
 		out.println(buf.toString() + Login.footer);
 	}
 
