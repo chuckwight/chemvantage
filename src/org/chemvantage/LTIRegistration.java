@@ -85,11 +85,11 @@ public class LTIRegistration extends HttpServlet {
 	
 	String instructions = "<h3>Implementation in Canvas (other LMS platforms may be similar)</h3>"
 			+ "<ol>"
-			+ "<li>Obtain a set of LTI credentials using the form in the preceding section above."
+			+ "<li>Obtain a set of LTI credentials (see above)."
 			+ "<li>Login to Canvas as a course Instructor, navigate to Settings, select the Apps tab, and click the "
 			+ "blue Add New App button to create a new External Tool. Use the following parameters:<ul>"
 			+ "<li>Name: ChemVantage"
-			+ "<li>Consumer Key and Shared Secret: (cut/paste from the email sent by ChemVantage in step 1; do not include any blank spaces)"
+			+ "<li>Consumer Key and Shared Secret: (cut/paste values from step 1; do not include any blank spaces)"
 			+ "<li>Configuration Type: Manual Entry"
 			+ "<li>URL: https://chem-vantage.appspot.com/lti/"
 			+ "<li>Domain: (leave blank)"
@@ -415,7 +415,8 @@ public class LTIRegistration extends HttpServlet {
 				+ "Shared Secret: " + c.secret + "<p>"
 				+ "Please use the URL method of launching your LTI connection (not the domain method). <br/>"
 				+ "If you  need additional assistance, please contact me at admin@chemvantage.org. <p>"
-				+ "-Chuck Wight";
+				+ "-Chuck Wight"
+				+ "<p><hr>" + instructions;
 		try {
 			Message msg = new MimeMessage(session);
 			InternetAddress from = new InternetAddress("admin@chemvantage.org", "ChemVantage");
