@@ -95,11 +95,11 @@ public class Admin extends HttpServlet {
 			} else if (userRequest.equals("Update User")) {
 				User usr = ofy.get(User.class,request.getParameter("UserId")); // user record to modify
 				updateUser(usr,request);
-				searchString = usr.getFullName();
+				searchString = usr.email;
 				if (usr.id.equals(user.id)) user = usr; // admin modifying own record; update now to reflect new status
 			} else if (userRequest.equals("Delete User")) {
 				User usr = ofy.get(User.class,request.getParameter("UserId"));
-				searchString = usr.getFullName();
+				searchString = usr.email;
 				ofy.delete(usr);
 			} else if (userRequest.equals("Generate New Shared Secret")) {
 				createBLTIConsumer(request);
@@ -113,7 +113,7 @@ public class Admin extends HttpServlet {
 				User usr = ofy.get(User.class,request.getParameter("UserId"));
 				User mergeUser = ofy.get(User.class,request.getParameter("MergeUserId"));
 				mergeAccounts(usr,mergeUser);
-				searchString = usr.getFullName();
+				searchString = usr.email;
 			}
 			out.println(Home.getHeader(user) + mainAdminForm(user,searchString,cursor) + Home.footer);
 		} catch (Exception e) {
