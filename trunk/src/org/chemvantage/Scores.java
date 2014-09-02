@@ -355,7 +355,8 @@ public class Scores extends HttpServlet {
 					+ "completed prior to the indicated deadline. For a complete record of your assignments, click "
 					+ "here for <a href=Scores?UserRequest=AllQuizzes>all quizzes</a> or "
 					+ "<a href=Scores?UserRequest=AllHomework>all homework</a> transactions.<br>"
-					+ "<a href=# onClick=\"javascript: document.getElementById('dots').style.display='';\">Do your scores have red dots?</a><div id=dots style='display:none'>"
+					+ "<a href=# onClick=\"javascript: document.getElementById('dots').style.display='';\">Do your scores have red dots?</a>"
+					+ "<div id=dots style='display:none'>"
 					+ "If a red dot appears in the table below, it means that you either missed an assignment deadline or "
 					+ "your score on the assignment was low enough to trigger a concern. The red dot also appears on the class "
 					+ "gradesheet to alert your instructor to a potential problem.  If you complete the assignment "
@@ -368,6 +369,7 @@ public class Scores extends HttpServlet {
 			// Get a list of Ids for topics assigned to this group in order of deadlines
 			List<Long> topicIds = myGroup.getGroupTopicIds();
 			int nRows = 0;
+			myGroup.setGroupTopicIds();
 			for (Long topicId : topicIds) {
 				Topic t = ofy.get(Topic.class,topicId);
 				long i = myGroup.getAssignmentId("Quiz",topicId);
