@@ -427,6 +427,7 @@ public class Groups extends HttpServlet {
 			if (groupTopics.size() > 0) {
 				buf.append("<TABLE>\n<TR><TH>Topic</TH><TH>Quiz Deadline</TH><TH COLSPAN=2> Questions</TH>"
 						+ "<TH>&nbsp;&nbsp;&nbsp;&nbsp;</TH><TH>HW Deadline</TH><TH COLSPAN=2>Exercises</TH><TH>&nbsp;</TH></TR>\n");
+				group.setGroupTopicIds();
 				for (Topic t : groupTopics.values()) {
 					long i = group.getAssignmentId("Quiz",t.id);
 					Assignment q = i>0?ofy.find(Assignment.class,i):null;
@@ -474,6 +475,7 @@ public class Groups extends HttpServlet {
 		try {
 			long topicId = Long.parseLong(request.getParameter("TopicId"));
 			Topic topic = ofy.get(Topic.class,topicId);
+			group.setGroupTopicIds();
 			long qi = group.getAssignmentId("Quiz",topic.id);
 			Assignment assignment = qi>0?ofy.get(Assignment.class,qi):null;
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
@@ -553,6 +555,7 @@ public class Groups extends HttpServlet {
 		try {
 			long topicId = Long.parseLong(request.getParameter("TopicId"));
 			Topic topic = ofy.get(Topic.class,topicId);
+			group.setGroupTopicIds();
 			long hi = group.getAssignmentId("Homework",topic.id);
 			Assignment assignment = ofy.get(Assignment.class,hi);
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
@@ -661,6 +664,7 @@ public class Groups extends HttpServlet {
 			DateFormat df = DateFormat.getDateInstance(DateFormat.SHORT);
 			df.setTimeZone(group.getTimeZone());
 			Calendar deadline = Calendar.getInstance(group.getTimeZone());
+			group.setGroupTopicIds();
 			try { // update the quiz deadline for this topic
 				long i = group.getAssignmentId("Quiz",topicId);
 				Assignment a = i>0?ofy.get(Assignment.class,i):null;
@@ -1215,6 +1219,7 @@ public class Groups extends HttpServlet {
 		Map<Long,Topic> groupTopics = ofy.get(Topic.class,group.topicIds);
 		if (groupTopics.size() > 0) {
 			buf.append("<table><tr><td><b>Topic</b></td><td colspan=2><b>Assignment</b></td></tr>");
+			group.setGroupTopicIds();
 			for (Topic t : groupTopics.values()) {
 				long i = group.getAssignmentId("Quiz", t.id);
 				Assignment q = i>0?ofy.find(Assignment.class,i):null;;

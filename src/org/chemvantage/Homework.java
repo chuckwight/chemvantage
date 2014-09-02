@@ -324,6 +324,7 @@ public class Homework extends HttpServlet {
 				ofy.put(ht);
 				// create/update/store a HomeworkScore object
 				try {
+					myGroup.setGroupTopicIds();
 					long assignmentId = myGroup.getAssignmentId("Homework",topic.id);
 					if (assignmentId > 0) { // assignment exists; save a Score object
 						Assignment a = ofy.find(Assignment.class,assignmentId);
