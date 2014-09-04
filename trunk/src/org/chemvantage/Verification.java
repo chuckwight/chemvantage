@@ -210,8 +210,8 @@ public class Verification extends HttpServlet {
 
 			buf.append("<FORM NAME=Info ACTION=Verification METHOD=POST>");
 			buf.append("<TABLE>");
-			buf.append("<TR><TD ALIGN=RIGHT>First Name:</TD><TD>" + (user.firstName.isEmpty()?"<span style=color:red>*</span><INPUT NAME=FirstName SIZE=50>":user.firstName) + "</TD></TR>");
-			buf.append("<TR><TD ALIGN=RIGHT>Last Name:</TD><TD>" + (nameRequired && user.lastName.isEmpty()?"<INPUT NAME=LastName SIZE=50>":user.lastName) + "</TD></TR>");
+			buf.append("<TR><TD ALIGN=RIGHT>First Name:</TD><TD>" + (nameRequired?"<span style=color:red>*</span><INPUT NAME=FirstName SIZE=50>":user.firstName) + "</TD></TR>");
+			buf.append("<TR><TD ALIGN=RIGHT>Last Name:</TD><TD>" + (user.lastName.isEmpty()?"<INPUT NAME=LastName SIZE=50> (optional)":user.lastName) + "</TD></TR>");
 			buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>Email:</TD><TD>" + (emailRequired?"<span style=color:red>*</span><INPUT NAME=Email SIZE=50>":user.email));
 			if (!emailRequired && !user.verifiedEmail){
 				buf.append(" <span style='color:red'>(unverified)</span> ");
@@ -236,11 +236,13 @@ public class Verification extends HttpServlet {
 				else buf.append("<TR><TD ALIGN=RIGHT>Group:</TD><TD>" + myGroup.description + " (" + myGroup.getInstructorBothNames() + ")</TD></TR>");
 			}
 
-			if (nameRequired || emailRequired) {
-				buf.append("<TR><TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save My Information'></TD>"
-						+ "<TD>" + (user.requiresUpdates()?"<span style=color:red>* <span style=font-size:smaller>required field</span></span>":"") 
-						+ "</TD></TR></TABLE></FORM>");
-			} else {  // all information is current
+			if (nameRequired || emailRequired || user.lastName.isEmpty()) {
+				buf.append("<TR><TD>&nbsp;</TD>"
+						+ "<TD>" + ((nameRequired || emailRequired)?"<span style=color:red>* <span style=font-size:smaller>required field</span></span><p>":"") 
+						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save My Information'></TD></TR>");
+			}
+			if (nameRequired || emailRequired) buf.append("</TABLE></FORM>");  // finish table
+			else {  // all information is current; continue table
 				buf.append("</FORM>");
 				boolean eligibleToJoin = eligibleToJoin(user);
 				if (user.myGroupId<=0L && eligibleToJoin) { // give the user an opportunity to join a group
