@@ -166,14 +166,12 @@ public class LTILaunch extends HttpServlet {
 		// check if user has Instructor or Administrator role
 		String roles = request.getParameter("roles");
 		if (roles != null) {
-			int oldRoles = user.roles;
 			roles = roles.toLowerCase();
-			if (roles.contains("instructor")) user.setIsInstructor(true);
+			if (roles.contains("instructor") && user.setIsInstructor(true)) ofy.put(user); // saves user if role is changed
 			if (roles.contains("administrator")) {
-				user.setIsAdministrator(true);
-				domain.addAdmin(user.id);
+				if (user.setIsAdministrator(true)) ofy.put(user);  // saves user if role is changed
+				if (domain.addAdmin(user.id)) ofy.put(domain);  // saves domain object if new admin is added
 			}
-			if (user.roles!=oldRoles) ofy.put(user);
 		}
 		
 		if (!user.hasPremiumAccount()) {
