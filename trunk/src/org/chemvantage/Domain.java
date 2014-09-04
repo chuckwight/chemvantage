@@ -59,8 +59,12 @@ public class Domain {
 		domainAdmins = new ArrayList<String>();
 	}
 	
-	public void addAdmin(String adminId) {
-		if (!domainAdmins.contains(adminId)) domainAdmins.add(adminId);
+	public boolean addAdmin(String adminId) {
+		if (!domainAdmins.contains(adminId)) {
+			domainAdmins.add(adminId);
+			return true;
+		}
+		else return false;
 	}
 	
 	public void removeAdmin(String adminId) {

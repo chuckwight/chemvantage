@@ -176,6 +176,8 @@ public class User implements Comparable<User>,Serializable {
 		user.setEmail(request.getParameter("lis_person_contact_email_primary"));
 
 		if (!user.email.isEmpty()) user.verifiedEmail = true; // value supplied by institution
+		
+		user.setPremium(true);  // all LTI users have premium accounts by default
 		ofy.put(user);
 		return user;
 	}
@@ -515,24 +517,34 @@ public class User implements Comparable<User>,Serializable {
 		return ((roles%32)/16 == 1);
 	}
 
-	void setIsAdministrator(boolean makeAdmin) {
-		if (isAdministrator() && !makeAdmin) roles -= 16;
+	boolean setIsAdministrator(boolean makeAdmin) {  // returns true if state is changed; otherwise returns false
+		if (isAdministrator() && !makeAdmin) {
+			roles -= 16;
+			return true;
+		}
 		else if (!isAdministrator() && makeAdmin) {
 			roles += 16;
 			setPremium(makeAdmin);
+			return true;
 		}
+		else return false; // user already had the requested status; no changes made
 	}
 
 	boolean isInstructor() {
 		return ((roles%16)/8 == 1) || this.isAdministrator();
 	}
 
-	void setIsInstructor(boolean makeInstructor) {
-		if (isInstructor() && !makeInstructor) roles -= 8;
+	boolean setIsInstructor(boolean makeInstructor) {  // returns true if state is changed; otherwise returns false
+		if (isInstructor() && !makeInstructor) {
+			roles -= 8;
+			return true;
+		}
 		else if (!isInstructor() && makeInstructor) {
 			roles += 8;
 			this.setPremium(true);
+			return true;
 		}
+		else return false; // user already had the requested status; no changes made
 
 	}
 
