@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
 import javax.servlet.ServletException;
@@ -35,6 +36,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
+import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
 
 public class Login extends HttpServlet {
@@ -60,7 +62,6 @@ public class Login extends HttpServlet {
         attributes.add("email");
 	}
     
-	
 	public static String header = "<!DOCTYPE html>"
 		+"<html>\n"
 		+ "<head>"
@@ -106,6 +107,37 @@ public class Login extends HttpServlet {
 		+ "</TD></TR></TABLE>\n"
 		+ "</body></html>";
 
+	String ajaxSubmitScript = "<SCRIPT TYPE='text/javascript'>\n"
+			+ "function ajaxSubmit(url,id,note) {\n"
+			+ "  var xmlhttp;\n"
+			+ "  if (url.length==0) return false;\n"
+			+ "  xmlhttp=GetXmlHttpObject();\n"
+			+ "  if (xmlhttp==null) {\n"
+			+ "    alert ('Sorry, your browser does not support AJAX!');\n"
+			+ "    return false;\n"
+			+ "  }\n"
+			+ "  xmlhttp.onreadystatechange=function() {\n"
+			+ "    if (xmlhttp.readyState==4) {\n"
+			+ "      document.getElementById('feedback' + id).innerHTML="
+			+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
+			+ "    }\n"
+			+ "  }\n"
+			+ "  url += '&QuestionId=' + id + '&Notes=' + note;\n"
+			+ "  xmlhttp.open('GET',url,true);\n"
+			+ "  xmlhttp.send(null);\n"
+			+ "  return false;\n"
+			+ "}\n"
+			+ "function GetXmlHttpObject() {\n"
+			+ "  if (window.XMLHttpRequest) { // code for IE7+, Firefox, Chrome, Opera, Safari\n"
+			+ "    return new XMLHttpRequest();\n"
+			+ "  }\n"
+			+ "  if (window.ActiveXObject) { // code for IE6, IE5\n"
+			+ "    return new ActiveXObject('Microsoft.XMLHTTP');\n"
+			+ "  }\n"
+			+ "  return null;\n"
+			+ "}\n"
+			+ "</SCRIPT>";
+
 	public String getServletInfo() {
 		return "Default servlet for user's login page in the ChemVantage site.";
 	}
@@ -135,8 +167,7 @@ public class Login extends HttpServlet {
 			return;
 		}		
 	}
-	
-	
+		
 	String homePage(HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -158,13 +189,13 @@ public class Login extends HttpServlet {
 						+ "<a href=http://www.chemvantage.org>click here</a>.<p>");
 			} else {
 				buf.append("ChemVantage is a free resource for science education:"
-						+ "<table><tr><td><ul><li>computer-graded quizzes<li>homework exercises<li>practice exams</ul></td>"
-						+ "<td><ul><li>video lectures<li>free online textbooks<li><a href=/q>Try one question</a></ul>"
-						//+ "<iframe width='400' height='200' src='/OneQuestion' frameborder='1'></iframe>" 
-						+ "</td></tr></table>");
+						+ "<ul><li>computer-graded quizzes<li>homework exercises<li>practice exams"
+						+ "<li>video lectures<li>free online textbooks"
+						+ "<li><a href='/lti/registration/'>How to connect using LTI</a>"
+						+ "</ul><p>");
 			}
-			//buf.append("<a href=About#certification><img alt='IMS Global Certified' src='/images/imscertifiedfinalsmall.png'/></a> ");
-			buf.append("<a href='/lti/registration/'>How to connect using LTI</a>");
+			
+			buf.append(printOneQuestion(request));
 		
 			UserService userService = UserServiceFactory.getUserService();
 			buf.append("<h3>Please Sign In</h3>");
@@ -185,18 +216,6 @@ public class Login extends HttpServlet {
 								+ providerName + "</a></td></tr></table>");
 						showAll = false;
 						break;
-/*		===== THIS SECTION OBSOLETE; CAS LOGINS DISCONTINUED ===============		
-					} else if (CASLaunch.casProviders.containsKey(c.getValue())) {
-						String providerName = c.getValue();
-						String casUrl = CASLaunch.casProviders.get(providerName);
-						String loginUrl = casUrl + "/login?service=https://" + request.getServerName() + "/cas";
-						buf.append("<table style='border-spacing:40px 0px'><tr><td style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
-								+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
-								+ "<img src='" + CASLaunch.casLogos.get(providerName) + "' border=0 alt='" + providerName + "' style='text-align:center'><br/>" 
-								+ providerName + "</a></td></tr></table>");
-						showAll = false;
-						break;
-        =====================================================================     */
 					} else if ("BLTI".equals(c.getValue())) {
 						buf.append("It appears that you are using ChemVantage in conjunction with a course learning "
 								+ "management system (LMS). You should access ChemVantage from inside the LMS to access your assignments and scores. "
@@ -207,21 +226,6 @@ public class Login extends HttpServlet {
 						break;
 					}
 				}
-/*		===== THIS SECTION OBSOLETE; GOOGLE APPS LOGINS HANDLED THRU GOOGLE ===============							
-					} else {
-						String providerName = c.getValue(); 
-						if (providerName==null || providerName.isEmpty()) providerName="example.com";
-						buf.append("<table style='border-spacing:40px 0px'><tr><td style='text-align:center'><tr><td>"
-								+ "<form id='GoogleAppsLogin' action=/openid method=get>"
-								+ "<img src=/images/openid/googleapps.png alt='Google Apps'><br>"
-								+ "Domain:&nbsp;<b>" + providerName + "</b>&nbsp;"
-								+ "<input type=hidden name=hd value='" + providerName + "'>"
-								+ "<input type=submit name=UserRequest value=Login></form></td></tr></table>");
-						showAll = false;
-						break;
-					}
-				}
-		=====================================================================	*/
 				if (!showAll) buf.append("<p><a style='font-size:smaller' href=/?show=all>Show more login options</a>");
 			} else showAll = true;
 			
@@ -238,25 +242,6 @@ public class Login extends HttpServlet {
 							+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/> " 
 							+ providerName + "</a></TD>");
 				}
-/*
-				// display UofU CAS login logo and link:
-				for (String providerName : CASLaunch.casProviders.keySet()) {
-					String casUrl = CASLaunch.casProviders.get(providerName);
-					String loginUrl = casUrl + "/login?service=https://chem-vantage.appspot.com/cas";
-					buf.append("<TD style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
-							+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
-							+ "<img src='" + CASLaunch.casLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/>" 
-							+ providerName + "</a></TD>"); 
-				}
-				// display Google Apps domain login form:
-				String msg = request.getParameter("msg");
-				if (msg==null || msg.isEmpty()) msg = "example.com";
-				buf.append("<form id='GoogleApps' action=/openid method=get>"
-								+ "<TD><img src=/images/openid/googleapps.png alt='Google Apps'><br>"
-								+ "Domain:<input type=text name=hd value='" + msg + "' onFocus=if(this.value==this.defaultValue)this.value=''>"
-								+ "<input type=submit name=UserRequest value=Go></form>"
-								+ "<div style='font-size:smaller'><a href=https://www.google.com/enterprise/marketplace/viewListing?productListingId=9006+12752972024151964645>Add ChemVantage To Your Domain</a></div>");
-*/
 				buf.append("</TD></TR></TABLE>");
 			}
 			//buf.append("<div style='text-align:right'><a href=https://www.google.com/enterprise/marketplace/viewListing?productListingId=9006+12752972024151964645><img src=/images/marketplace-addtogoogleapps-shadow.png alt='Add to Google Apps'></a></div>");
@@ -265,4 +250,51 @@ public class Login extends HttpServlet {
 		}
 		return Login.header + buf.toString() + Login.footer;
 	}
+	
+	String printOneQuestion(HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer();
+		try {
+			long topicId = 0;
+			try {
+				topicId = Long.parseLong(request.getParameter("TopicId"));
+			} catch (Exception e2) {}
+			if (topicId == 0) {  // choose a random topic
+				List<Key<Topic>> topicKeys = ofy.query(Topic.class).listKeys();
+				int random = new Random().nextInt(topicKeys.size());
+				topicId=ofy.get(topicKeys.get(random)).id;
+			}
+			Topic topic = ofy.get(Topic.class,topicId);
+
+			String questionType = request.getParameter("QuestionType");
+			if (questionType==null) questionType = "Quiz";
+			
+			buf.append("\n<b>Sample quiz question: <u>" + topic.title + "</u></b>");
+			
+			buf.append("\n<FORM ACTION=/q METHOD=POST>");
+			
+			// create a set of available questionIds either from the group assignment or from the datastore
+			List<Key<Question>> questionKeys = ofy.query(Question.class).filter("topicId", topicId).filter("assignmentType",questionType).filter("isActive",true).listKeys();
+			if (questionKeys.size() == 0) {
+				buf.append("No questions are available for this topic, sorry. <a href=/q>Try Again.</a>");
+				return buf.toString();
+			}
+			// Randomly select one questions to be presented
+			Random rand = new Random();  // create random number generator to select quiz questions
+			Key<Question> k = questionKeys.remove(rand.nextInt(questionKeys.size()));
+			Question q = ofy.get(k);
+			int param = rand.nextInt();
+			q.setParameters(param);  // randomizes parameterized questions
+			buf.append("\n" + q.print() + "<br>\n");
+			
+			buf.append("\n<input type=hidden name='TopicId' value=" + topic.id + ">");
+			buf.append("\n<input type=hidden name='Param' value=" + param + ">");
+			buf.append("\n<input type=submit>");
+			buf.append("\n</form>");
+		} catch (Exception e) {
+			buf.append(e.getMessage());
+		}
+		return buf.toString();
+	}
+
+	
 }
