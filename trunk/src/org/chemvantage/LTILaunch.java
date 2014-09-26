@@ -119,6 +119,10 @@ public class LTILaunch extends HttpServlet {
 		String context_id = request.getParameter("context_id");
 		
 		String oauth_secret = BLTIConsumer.getSecret(oauth_consumer_key);
+		if (oauth_secret==null) {
+			doError(request,response,"Invalid oauth_consumer_key.",null,null);
+			return;
+		}
 		
 		OAuthMessage oam = OAuthServlet.getMessage(request, null);
 		OAuthValidator oav = new SimpleOAuthValidator();
