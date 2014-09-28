@@ -90,12 +90,13 @@ public class LTIRegistration extends HttpServlet {
 			+ "blue Add New App button to create a new External Tool. Use the following parameters:<ul>"
 			+ "<li>Name: ChemVantage"
 			+ "<li>Consumer Key and Shared Secret: (cut/paste values from step 1; do not include any blank spaces)"
-			+ "<li>Configuration Type: Manual Entry"
-			+ "<li>URL: https://chem-vantage.appspot.com/lti/"
+			+ "<li>Configuration URL (optional): https://chem-vantage.appspot.com/lti_config.xml"
+			+ "<li>Manual Configuration (optional):"
+			+ "<ul><li>URL: https://chem-vantage.appspot.com/lti/"
 			+ "<li>Domain: (leave blank)"
 			+ "<li>Privacy: Public (ChemVantage will use only email address and first name)"
 			+ "<li>Custom Fields: (leave blank)"
-			+ "<li>Description: ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry.</ul>"
+			+ "<li>Description: ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry.</ul></ul>"
 			+ "<li>Create a new Canvas assignment with the following recommended parameters:"
 			+ "<ul><li>Name: (as appropriate, e.g. Quiz - Heat and Enthalpy)"
 			+ "<li>Points: 10 for quiz or homework; 100 for practice exam"
@@ -106,7 +107,13 @@ public class LTIRegistration extends HttpServlet {
 			+ "<li>A sample assignment should be displayed, including a link near the top (visible only to instructors) that "
 			+ "can be used to select question items to be shown to your students for that assignment."
 			+ "<li>Navigate to Settings, Student View to take the assignment and ensure that the score is posted correctly in the Canvas grade book."
-			+ "</ol>";
+			+ "</ol>"
+			+ "<h3>Use these links to find general instructions for installing external tools with LTI:</h3>"
+			+ "<a href=https://docs.moodle.org/22/en/External_tool_settings>Moodle</a><p>"
+			+ "<a href=http://library.blackboard.com/ref/df5b20ed-ce8d-4428-a595-a0091b23dda3/Content/_admin_app_system/admin_app_basic_lti_tool_providers.htm>Blackboard</a><p>"
+			+ "<a href=https://www.eduappcenter.com/tutorials/sakai>Sakai</a><p>"
+			+ "<a href=https://community.brightspace.com/resources/additional_resources/scenarios/yourfirsttoolintegrationwithbasiclearningtoolsinteroperability>Desire2Learn</a><p>"
+			;
 			
 	String successMessage = "<h2>Thank You</h2> Your LTI credentials have been sent to your email address.";
 	
@@ -120,7 +127,7 @@ public class LTIRegistration extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		buf.append("<TABLE><FORM METHOD=POST>");
 		buf.append("<TR><TD ALIGN=RIGHT>Email Address: </TD><TD><INPUT TYPE=TEXT NAME=Email> (where the credentials will be sent)</TD></TR>");
-		buf.append("<TR><TD ALIGN=RIGHT>Consumer Key: </TD><TD><INPUT TYPE=TEXT NAME=Key> (e.g., moodle257.myschool.edu)</TD></TR>");
+		buf.append("<TR><TD ALIGN=RIGHT>Consumer Key: </TD><TD><INPUT TYPE=TEXT NAME=Key> (e.g., moodle257-myschool-edu)</TD></TR>");
 		
 /*   ========= reCaptch tool not yet functional =============
 		buf.append("<TR><TD COLSPAN=2>");
