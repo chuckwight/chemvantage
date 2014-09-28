@@ -11,6 +11,12 @@
     <blti:title>ChemVantage</blti:title>
     <blti:description>ChemVantage is an Open Education resource for teaching and learning college-level General Chemistry.</blti:description>
     <blti:launch_url>https://chem-vantage.appspot.com/lti/</blti:launch_url>
+    <blti:vendor>
+      <lticp:contact>
+      <lticp:name>Chuck Wight</lticp:name>
+      <lticp:email>admin@chemvantage.org</lticp:email>
+      </lticp:contact>
+    </blti:vendor>
     <blti:extensions platform="canvas.instructure.com">
       <lticm:property name="privacy_level">public</lticm:property>
     </blti:extensions>
