@@ -70,6 +70,7 @@ public class Login extends HttpServlet {
 		+ "<meta HTTP-EQUIV='P3P' CONTENT='policyref=\"/w3c/p3p.xml\",CP=\"CURa ADMa DEVa OUR IND DSP OTI COR\"'>\n"
 		+ "<meta NAME='Description' CONTENT='An online quiz and homework site'>\n"
 		+ "<meta NAME='Keywords' CONTENT='learning,online,quiz,homework,video,textbook,open,education'>\n"
+		+ "<meta name='msapplication-config' content='none'/>"
 		+ "<link rel='P3Pv1' href='/w3c/p3p.xml'>\n"
 		+ "<title>ChemVantage</title>\n"
 		+ "<style><!-- body,td,a,p,.h {font-family:arial,sans-serif}"
