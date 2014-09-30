@@ -32,7 +32,6 @@ import com.googlecode.objectify.annotation.Cached;
 public class Domain {
 	@Id Long id;
 		String domainName;
-		List<String> domainAdmins;
 		Date created;
 		Date freeTrialExpires;
 		int activeUsers;
@@ -42,6 +41,7 @@ public class Domain {
 		int seatsAvailable;
 		boolean supportsResultService = false;
 		List<String> capabilities = new ArrayList<String>();
+		List<String> domainAdmins = new ArrayList<String>();
 		
 	@Transient transient Objectify ofy = ObjectifyService.begin();
 	
@@ -56,15 +56,18 @@ public class Domain {
 		this.premiumAccounts = 1;
 		this.seatsPurchased = 0;
 		this.seatsAvailable = 0;
-		domainAdmins = new ArrayList<String>();
 	}
 	
 	public boolean addAdmin(String adminId) {
-		if (!domainAdmins.contains(adminId)) {
-			domainAdmins.add(adminId);
-			return true;
+		try {
+			if (!domainAdmins.contains(adminId)) {
+				domainAdmins.add(adminId);
+				return true;
+			}
+			else return false;
+		} catch (Exception e) {
+			return false;
 		}
-		else return false;
 	}
 	
 	public void removeAdmin(String adminId) {
