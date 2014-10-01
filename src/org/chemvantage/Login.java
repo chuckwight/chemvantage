@@ -178,7 +178,7 @@ public class Login extends HttpServlet {
 
 			buf.append("<TABLE><TR><TD VALIGN=TOP><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
 					+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - " + subject.title + "</b></FONT>"
-					+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>");
+					+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE><p>");
 			
 			StringBuffer thisURL = request.getRequestURL();
 
@@ -193,11 +193,11 @@ public class Login extends HttpServlet {
 						+ "<ul><li>computer-graded quizzes<li>homework exercises<li>practice exams"
 						+ "<li>video lectures<li>free online textbooks"
 						+ "<li><a href='/lti/registration/'>How to connect using LTI</a>"
-						+ "</ul><p>");
+						+ "</ul>");
 			}
 			
-			buf.append(printOneQuestion(request));
-		
+			buf.append("<p>" + printOneQuestion(request));
+			
 			UserService userService = UserServiceFactory.getUserService();
 			buf.append("<h3>Please Sign In</h3>");
 			
@@ -269,7 +269,7 @@ public class Login extends HttpServlet {
 			String questionType = request.getParameter("QuestionType");
 			if (questionType==null) questionType = "Quiz";
 			
-			buf.append("\n<b>Sample quiz question: <u>" + topic.title + "</u></b>");
+			//buf.append("\n<b>Sample quiz question: <u>" + topic.title + "</u></b>");
 			
 			buf.append("\n<FORM ACTION=/q METHOD=POST>");
 			
