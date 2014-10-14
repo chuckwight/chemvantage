@@ -182,7 +182,7 @@ public class Login extends HttpServlet {
 			
 			StringBuffer thisURL = request.getRequestURL();
 
-			if (thisURL.indexOf("dev-vantage.appspot.com") > 0) {
+			if (thisURL.indexOf("dev-vantage") > 0) {
 				buf.append("<span style=color:red><b>CAUTION:</b></span><p>"
 						+ "You have accessed a code development server that<br>"
 						+ "should be used only by permission.<p>"
@@ -190,13 +190,15 @@ public class Login extends HttpServlet {
 						+ "<a href=http://www.chemvantage.org>click here</a>.<p>");
 			} else {
 				buf.append("ChemVantage is a free resource for science education:"
-						+ "<ul><li>computer-graded quizzes<li>homework exercises<li>practice exams"
-						+ "<li>video lectures<li>free online textbooks"
-						+ "<li><a href='/lti/registration/'>How to connect using LTI</a>"
-						+ "</ul>");
+						+ "<table><tr><td>"
+						+ "<ul><li>computer-graded quizzes<li>homework exercises<li>practice exams</ul>"
+						+ "</td><td>"
+						+ "<ul><li>video lectures<li>free online textbooks"
+						+ "<li><a href='/lti/registration/'>How to connect using LTI</a></ul>"
+						+ "</td></tr></table>");
 			}
 			
-			buf.append("<p>" + printOneQuestion(request));
+			//buf.append("<p>" + printOneQuestion(request));
 			
 			UserService userService = UserServiceFactory.getUserService();
 			buf.append("<h3>Please Sign In</h3>");
@@ -246,6 +248,11 @@ public class Login extends HttpServlet {
 				buf.append("</TD></TR></TABLE>");
 			}
 			//buf.append("<div style='text-align:right'><a href=https://www.google.com/enterprise/marketplace/viewListing?productListingId=9006+12752972024151964645><img src=/images/marketplace-addtogoogleapps-shadow.png alt='Add to Google Apps'></a></div>");
+			
+			buf.append("<hr><h3>Try One Question</h3>");
+			buf.append("<table width=650><tr><td>" + printOneQuestion(request) + "</td></tr></table>");
+			
+		
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}

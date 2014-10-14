@@ -172,7 +172,7 @@ public class OneQuestion extends HttpServlet {
 							if (score>0) buf.append("<h2>Congratulations! Your answer is correct.</h2>");
 							else {
 								buf.append("<h2>Sorry, you did not submit the correct answer.</h2>");							
-								buf.append("\n" + q.printAllToStudents(studentAnswer[0]) + "\n");
+								buf.append("\n" + q.printAllToStudents(studentAnswer[0]) + "<p>\n");
 								buf.append(ajaxSubmitScript);
 							}
 						}
@@ -181,7 +181,10 @@ public class OneQuestion extends HttpServlet {
 					continue;  // this parameter does not correspond to a questionId
 				}
 			}
-			if (topicId>0) buf.append("Try another question on <a href=/q?TopicId=" + topicId + "&QuestionType=" + questionType + ">this topic</a> or <a href=/q>any topic</a> in General Chemistry.");
+			if (topicId>0) buf.append("Try another question on "
+					+ "<a href=/q?TopicId=" + topicId + "&QuestionType=" + questionType + ">this topic</a> "
+					+ "or <a href=/q>any topic</a> in General Chemistry, or "
+					+ "<a href=/Home>return to the home page</a>.");
 			else buf.append("<a href=/q>Try another question</a>");
 		} catch (Exception e) {
 			buf.append("Sorry, this question could not be scored.<br>" + e.getMessage());
