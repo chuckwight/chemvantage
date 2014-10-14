@@ -99,18 +99,23 @@ public class OneQuestion extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		try {
 			long topicId = 0;
-			try {
-				topicId = Long.parseLong(request.getParameter("TopicId"));
-			} catch (Exception e2) {}
-			if (topicId == 0) {  // choose a random topic
-				List<Key<Topic>> topicKeys = ofy.query(Topic.class).listKeys();
-				int random = new Random().nextInt(topicKeys.size());
-				topicId=ofy.get(topicKeys.get(random)).id;
-			}
-			Topic topic = ofy.get(Topic.class,topicId);
-
 			String questionType = request.getParameter("QuestionType");
 			if (questionType==null) questionType = "Quiz";
+			List<Key<Question>> questionKeys;
+			
+			try {
+				topicId = Long.parseLong(request.getParameter("TopicId"));
+				questionKeys = ofy.query(Question.class).filter("topicId", topicId).filter("assignmentType",questionType).filter("isActive",true).listKeys();
+				if (questionKeys.size()==0) throw new Exception();  // accidentally chose a topic with no questions; choose a random topic instead
+			} catch (Exception e2) {
+				do {  // choose a random topic
+					List<Key<Topic>> topicKeys = ofy.query(Topic.class).listKeys();
+					int random = new Random().nextInt(topicKeys.size());
+					topicId=ofy.get(topicKeys.get(random)).id;
+					questionKeys = ofy.query(Question.class).filter("topicId", topicId).filter("assignmentType",questionType).filter("isActive",true).listKeys();
+				} while (questionKeys.size()==0);
+			}
+			Topic topic = ofy.get(Topic.class,topicId);
 			
 			buf.append("<TABLE><TR><TD VALIGN=TOP><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
 					+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - " + subject.title + "</b></FONT>"
@@ -120,13 +125,7 @@ public class OneQuestion extends HttpServlet {
 			
 			buf.append("\n<FORM METHOD=POST>");
 			
-			// create a set of available questionIds either from the group assignment or from the datastore
-			List<Key<Question>> questionKeys = ofy.query(Question.class).filter("topicId", topicId).filter("assignmentType",questionType).filter("isActive",true).listKeys();
-			if (questionKeys.size() == 0) {
-				buf.append("No questions are available for this topic, sorry. <a href=/q>Try Again.</a>");
-				return buf.toString();
-			}
-			// Randomly select one questions to be presented
+			// Randomly select one question to be presented
 			Random rand = new Random();  // create random number generator to select quiz questions
 			Key<Question> k = questionKeys.remove(rand.nextInt(questionKeys.size()));
 			Question q = ofy.get(k);
