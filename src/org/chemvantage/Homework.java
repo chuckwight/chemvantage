@@ -110,7 +110,7 @@ public class Homework extends HttpServlet {
 					buf.append("<br><span style='color:red'>Instructor Only: "
 							+ "<a href=Groups?UserRequest=AssignHomeworkQuestions&GroupId=" 
 							+ myGroup.id + "&TopicId=" + topicId 
-							+ ">customize this homeowrk assignment</a></span>");
+							+ ">customize this homework assignment</a></span>");
 				}
 			} catch (Exception e) {}
 
