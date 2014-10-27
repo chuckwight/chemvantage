@@ -67,11 +67,11 @@ public class Feedback extends HttpServlet {
 				long questionId = Long.parseLong(request.getParameter("QuestionId"));
 				String notes = request.getParameter("Notes");
 				ofy.put(new UserReport(userId,questionId,notes));
+				sendEmailToAdmin();
 			} else if (userRequest.equals("AjaxRating")) {
 				recordAjaxRating(request);
 			} else out.println(Home.getHeader(user) 
 					+ feedbackForm(user) 
-					+ (user.isAdministrator()?viewUserFeedback(user):"")
 					+ Home.footer);    
 		} catch (Exception e) {
 		}
@@ -94,7 +94,7 @@ public class Feedback extends HttpServlet {
 
 			if (userRequest.equals("SubmitFeedback")) {
 				out.println(Home.getHeader(user) + submitFeedback(user,request) + Home.footer);
-				sendEmailToAdmin(user);
+				sendEmailToAdmin();
 			} else if (user.isAdministrator() && userRequest.equals("Delete Report")) {
 				removeReport(request);
 				doGet(request,response);	
@@ -104,7 +104,7 @@ public class Feedback extends HttpServlet {
 				String result = sendReplyToUser(request);
 				if (result.isEmpty()) doGet(request,response);
 				else out.println(Home.getHeader(user) + result + Home.footer);
-			}
+			} else out.println(Home.getHeader(user) + feedbackForm(user) + Home.footer);
 		} catch (Exception e) {
 		}
 	}
@@ -183,10 +183,12 @@ public class Feedback extends HttpServlet {
 					+ "'Comments or kudos: <FONT SIZE=-1>(160 characters max.)</FONT>';"
 					+ "\">"
 					+ "</FORM>");
+			buf.append(viewUserFeedback(user));
 		} else {
 			buf.append("Sorry, the feedback form is not accessible to you because your email<br>"
-					+ "address has not been verified by ChemVantage. Please send your<br>"
-					+ "comments via email to <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><p>");
+					+ "address has not been verified by ChemVantage. Please <a href=/Verification>update your profile</a>.<br>"
+					+ "You may also send your comments via email to <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><p>"
+					+ "Thank you");
 					
 			buf.append("<FORM ACTION=Verification METHOD=POST>"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Verify My Email Address'><p>"
@@ -226,14 +228,18 @@ public class Feedback extends HttpServlet {
 	}
 
 	String viewUserFeedback(User user) {
-		StringBuffer buf = new StringBuffer();
-
+		StringBuffer buf = new StringBuffer("<hr><h3>User Feedback</h3>");
+		boolean showFeedback = false;  // show feedback only if reports are available
+		
 		Query<UserReport> reports = ofy.query(UserReport.class).order("-submitted");
-		if (reports.count()>0) buf.append("<hr><h3>User Feedback</h3>");
 		for (UserReport r : reports) {
-			buf.append(r.adminView(user));
+			String report = r.adminView(user);  // returns report only for ChemVantage admins, domainAdmins and report author
+			if (report.length()>0) {
+				showFeedback = true;
+				buf.append(report);
+			}
 		}
-		return buf.toString();
+		return showFeedback?buf.toString():"";
 	}
 	
 	private void removeReport(HttpServletRequest request) {
@@ -241,11 +247,12 @@ public class Feedback extends HttpServlet {
 		ofy.delete(UserReport.class,reportId);
 	}
 	
-	private void sendEmailToAdmin(User user) {
+	private void sendEmailToAdmin() {
 		Properties props = new Properties();
 		Session session = Session.getDefaultInstance(props, null);
 
-		String msgBody = ofy.query(UserReport.class).order("-submitted").limit(1).get().adminView(user);
+		String msgBody = ofy.query(UserReport.class).order("-submitted").limit(1).get().view();
+		if (msgBody.length()==0) return;  // no reports exist
 		
 		try {
 			Message msg = new MimeMessage(session);
@@ -271,7 +278,7 @@ public class Feedback extends HttpServlet {
 			buf.append("Thank you for your feedback to ChemVantage. We value your comments and we use "
 					+ "your feedback to improve the functionality of the site for our users.<p>\n\n"
 					+ "<p>\n\nadmin@chemvantage.org<p>\n\n--<br>\n");
-			buf.append(report.replyView());
+			buf.append(report.view());
 			buf.append("</TEXTAREA><br>");
 			buf.append("<INPUT TYPE=HIDDEN NAME=ReportId VALUE=" + reportId + ">" 
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Send Reply'></FORM>");
