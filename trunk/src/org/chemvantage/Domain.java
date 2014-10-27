@@ -27,12 +27,15 @@ import javax.persistence.Transient;
 import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.ObjectifyService;
 import com.googlecode.objectify.annotation.Cached;
+import com.googlecode.objectify.annotation.Indexed;
+import com.googlecode.objectify.annotation.Unindexed;
 
-@Cached
+@Cached @Unindexed 
 public class Domain {
 	@Id Long id;
-		String domainName;
+@Indexed		String domainName;
 		Date created;
+@Indexed		Date lastLogin;
 		Date freeTrialExpires;
 		int activeUsers;
 		int basicAccounts;
@@ -50,6 +53,7 @@ public class Domain {
 	Domain(String hd) {
 		this.domainName = hd;
 		this.created = new Date();
+		this.lastLogin = new Date();
 		this.freeTrialExpires = new Date(created.getTime() + 10368000000L);  // 120 days
 		this.activeUsers = 1;
 		this.basicAccounts = 0;

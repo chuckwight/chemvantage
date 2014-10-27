@@ -180,35 +180,39 @@ public class Admin extends HttpServlet {
 			
 			// This section provides information about domains
 			buf.append("<h3>ChemVantage Domains</h3>");
-			List<Domain> domains = ofy.query(Domain.class).order("-created").list();
-			buf.append("<table><tr><td>Domain Name</td><td>Created</td><td>Users</td><td>Administrator</td></tr>");
-			for (Domain d : domains) {
-				int nUsers = ofy.query(User.class).filter("domain",d.domainName).count();
-				if (d.activeUsers!=nUsers) {
-					d.activeUsers = nUsers;
-					ofy.put(d);
+			List<Domain> domains = ofy.query(Domain.class).order("-lastLogin").limit(10).list();
+			if (domains.size()>0) {
+				buf.append("<table><tr><td>Domain Name</td><td>Last Login</td><td>Users</td><td>Administrator</td></tr>");
+				for (Domain d : domains) {
+					int nUsers = ofy.query(User.class).filter("domain",d.domainName).count();
+					if (d.activeUsers!=nUsers) {
+						d.activeUsers = nUsers;
+						ofy.put(d);
+					}
+					buf.append("<tr><td><a href=/admin?Domain=" + d.domainName + ">" + d.domainName + "</a></td>"
+							+ "<td>" + d.lastLogin.toString() + "</td>"
+							+ "<td style='text-align:center'>" + d.activeUsers + "</td>"
+							+ "<td style='text-align:center'>");
+					try {
+						for (String uId : d.domainAdmins) buf.append(User.getBothNames(uId) + " (" + User.getEmail(uId) + ")" + (d.domainAdmins.size()>1?"<br>":""));
+					} catch (Exception e) {
+						buf.append ("(not assigned)");
+					}
+					buf.append("</td></tr>");
 				}
-				buf.append("<tr><td><a href=/admin?Domain=" + d.domainName + ">" + d.domainName + "</a></td>"
-						+ "<td>" + d.created.toString() + "</td>"
-						+ "<td style='text-align:center'>" + d.activeUsers + "</td>"
-						+ "<td style='text-align:center'>");
-				try {
-					for (String uId : d.domainAdmins) buf.append(User.getBothNames(uId) + " (" + User.getEmail(uId) + ")" + (d.domainAdmins.size()>1?"<br>":""));
-				} catch (Exception e) {
-					buf.append ("(not assigned)");
-				}
-				buf.append("</td></tr>");
-			}
-			buf.append("</table>");
-			
-			buf.append("<h3>LTI Consumers</h3>");
-			buf.append("The following is a list of organizations that are permitted to make LTI "
-					+ "connections to ChemVantage, usually from within a learning management system. "
-					+ "In order to authorize a new LMS to make BLTI launch requests, ChemVantage must provide "
+				buf.append("</table>");
+			} else buf.append("No domains are currently active.");
+
+			buf.append("<h3>Basic LTI Consumers</h3>");
+			buf.append("In order to authorize a new LMS to make BLTI launch requests, ChemVantage must provide "
 					+ "the LMS administrator with<UL>"
-					+ "<LI>a Basic LTI launch URL (http://chem-vantage.appspot.com/lti/)"
-					+ "<LI>an oauth_consumer_key (an identifying string e.g., 'webct.business.utah.edu')"
-					+ "<LI>a shared secret (random string or hex number).</UL>");
+					+ "<LI>a Basic LTI launch URL (https://chem-vantage.appspot.com/lti/)"
+					+ "<LI>an oauth_consumer_key (an identifying string e.g., 'webct-business-utah-edu')"
+					+ "<LI>a shared secret (random string or hex number).</UL>"
+					+ "Credentials can be created automatically at "
+					+ "<a href=https://chem-vantage.appspot.com/lti/registration/>https://chem-vantage.appspot.com/lti/registration/</a><br>"
+					+ "or generated manually using the form below:<p>");					
+/*
 			Query<BLTIConsumer> consumers = ofy.query(BLTIConsumer.class);
 			if (consumers.count() == 0) buf.append("(no LTI consumers have been authorized yet)<p>");
 			else buf.append("<TABLE><TR><TH>Consumer Key</TH><TH>Secret</TH></TR>");
@@ -219,6 +223,7 @@ public class Admin extends HttpServlet {
 				+ "<div id='"+ c.oauth_consumer_key + "' style='display: none'>" + c.secret + "</div></TD></TR>");
 			}
 			if (consumers.count() > 0) buf.append("</TABLE>");
+*/
 			buf.append("<FORM ACTION=Admin METHOD=POST>"
 					+ "Consumer Key: <INPUT TYPE=TEXT NAME=oauth_consumer_key>"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Generate New Shared Secret'>"

@@ -18,6 +18,7 @@ package org.chemvantage;
 
 import org.chemvantage.samples.apps.marketplace.UserInfo;
 import org.chemvantage.samples.apps.marketplace.openid.ConsumerFactory;
+
 import com.google.step2.AuthRequestHelper;
 import com.google.step2.AuthResponseHelper;
 import com.google.step2.ConsumerHelper;
@@ -40,7 +41,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+
 import java.io.IOException;
+import java.util.Date;
 
 /**
  * Servlet for handling OpenID logins.  Uses the Step2 library from code.google.com and the
@@ -133,7 +136,12 @@ public class OpenIdLaunch extends HttpServlet {
 			Cookie c = new Cookie("IDProvider",user.authDomain);
 			c.setMaxAge(2592000); // expires after 30 days (in seconds)
 			resp.addCookie(c);
-		
+			Domain domain = ofy.query(Domain.class).filter("domainName",user.domain).get();
+			Date now = new Date();
+			if (domain != null) {
+				domain.lastLogin = now;
+				ofy.put(domain);
+			}
 			resp.sendRedirect(homePath);
 		} catch (OpenIDException e) {
 			throw new ServletException("Error processing OpenID response", e);
