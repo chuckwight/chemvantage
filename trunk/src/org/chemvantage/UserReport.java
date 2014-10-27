@@ -58,7 +58,9 @@ public class UserReport implements Serializable {
 			User user = null;
 			try {
 				user = ofy.get(User.class,this.userId);
-			} catch (Exception e) {}
+			} catch (Exception e) {
+				return "";  // no adminUser was identified; do not show the report
+			}
 			
 			// this statement permits viewing the userReport only if the viewer is the ChemVantage administrator
 			// or the domain admin of a report from the domain or the report author (user)
@@ -68,8 +70,7 @@ public class UserReport implements Serializable {
 			else if (adminUser.id.equals(user.id)) showReport = true;			
 			if (!showReport) return "";
 			
-			buf.append("\n<FORM METHOD=POST ACTION=Feedback>"
-					+ "On " + submitted 
+			buf.append("\nOn " + submitted 
 					+ (user==null?" (anonymous) ":" <a href=mailto:" + user.email + ">" + user.getBothNames() + "</a> " + (user.verifiedEmail?"":"<FONT SIZE=-1>(unverified)</FONT> "))
 					+ "said:<br>");
 			
@@ -90,20 +91,22 @@ public class UserReport implements Serializable {
 						buf.append("</table>");
 					}
 				}
-				buf.append("<a href=Edit?UserRequest=Edit&QuestionId=" + this.questionId + "&TopicId=" + topic.id + "&AssignmentType=" + q.assignmentType + ">Edit Question</a> ");
+				if (adminUser.isEditor()) buf.append("<a href=Edit?UserRequest=Edit&QuestionId=" + this.questionId + "&TopicId=" + topic.id + "&AssignmentType=" + q.assignmentType + ">Edit Question</a> ");
 			} catch (Exception e2) {}
-			buf.append("<INPUT TYPE=HIDDEN NAME=ReportId VALUE=" + this.id + ">"
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Report'>"
-					+ (user != null?"<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Reply'>":"")
-					+ "</FORM><p>");
-
+			if (adminUser.isAdministrator()) {
+				buf.append("<FORM METHOD=POST ACTION=Feedback>"
+						+ "<INPUT TYPE=HIDDEN NAME=ReportId VALUE=" + this.id + ">"
+						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Report'>"
+						+ (user != null?"<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Reply'>":"")
+						+ "</FORM><p>");
+			} else buf.append("<p>");
 		} catch (Exception e) {
 			buf.append("<br>" + e.getMessage());
 		}
 		return buf.toString();
 	}
 
-	public String replyView() {
+	public String view() {
 		StringBuffer buf = new StringBuffer();
 		Objectify ofy = ObjectifyService.begin();
 		try {
