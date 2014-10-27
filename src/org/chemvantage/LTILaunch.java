@@ -162,8 +162,12 @@ public class LTILaunch extends HttpServlet {
 	
 		// Create the domain if it doesn't already exist
 		Domain domain = ofy.query(Domain.class).filter("domainName",oauth_consumer_key).get();
+		Date now = new Date();
 		if (domain == null) {
 			domain = new Domain(oauth_consumer_key);
+			ofy.put(domain);
+		} else {
+			domain.lastLogin = now;
 			ofy.put(domain);
 		}
 		

@@ -95,6 +95,11 @@ public class User implements Comparable<User>,Serializable {
 				userIds.add(0,user.alias);
 				user = User.getInstance(userIds);
 				session.setAttribute("UserId",user.id);
+				Domain d = ofy.query(Domain.class).filter("domainName", user.domain).get();
+				if (d!=null) {
+					d.lastLogin = new Date();
+					ofy.put(d);
+				}
 			}
 			Date now = new Date();
 			Date eightHoursAgo = new Date(now.getTime()-28800000L);
