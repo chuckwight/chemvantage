@@ -78,6 +78,7 @@ public class DataStoreCleaner extends HttpServlet {
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanPracticeExamTransactions"));
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanAssignments"));
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanGroups"));
+			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanDomains"));
 		} catch (Exception e) {
 		}
 	} 
