@@ -101,6 +101,8 @@ public class Admin extends HttpServlet {
 				User usr = ofy.get(User.class,request.getParameter("UserId"));
 				searchString = usr.email;
 				ofy.delete(usr);
+			} else if (userRequest.equals("Search")) {
+				searchString = request.getParameter("oauth_consumer_key");
 			} else if (userRequest.equals("Generate New Shared Secret")) {
 				createBLTIConsumer(request);
 			} else if (userRequest.equals("Delete BLTI Consumer")) {
@@ -149,7 +151,7 @@ public class Admin extends HttpServlet {
 			buf.append("\n<FORM METHOD=GET>"
 					+ "To search for a user, enter a portion of the user's email address.<br/>Leave blank to browse all users.<br>");
 
-			buf.append("\n<INPUT NAME=SearchString VALUE='" + (searchString==null?"":CharHider.quot2html(searchString)) + "'>"
+			buf.append("\n<INPUT NAME=SearchString VALUE='" + (searchString==null||searchString.equals("(show all)")?"":CharHider.quot2html(searchString)) + "'>"
 					+ "\n<INPUT TYPE=SUBMIT VALUE='Search for users'></FORM>");
 
 			if(results != null) {
@@ -203,30 +205,38 @@ public class Admin extends HttpServlet {
 				buf.append("</table>");
 			} else buf.append("No domains are currently active.");
 
-			buf.append("<h3>Basic LTI Consumers</h3>");
-			buf.append("In order to authorize a new LMS to make BLTI launch requests, ChemVantage must provide "
-					+ "the LMS administrator with<UL>"
-					+ "<LI>a Basic LTI launch URL (https://chem-vantage.appspot.com/lti/)"
-					+ "<LI>an oauth_consumer_key (an identifying string e.g., 'webct-business-utah-edu')"
-					+ "<LI>a shared secret (random string or hex number).</UL>"
-					+ "Credentials can be created automatically at "
-					+ "<a href=https://chem-vantage.appspot.com/lti/registration/>https://chem-vantage.appspot.com/lti/registration/</a><br>"
-					+ "or generated manually using the form below:<p>");					
-/*
-			Query<BLTIConsumer> consumers = ofy.query(BLTIConsumer.class);
-			if (consumers.count() == 0) buf.append("(no LTI consumers have been authorized yet)<p>");
-			else buf.append("<TABLE><TR><TH>Consumer Key</TH><TH>Secret</TH></TR>");
-			for (BLTIConsumer c : consumers) {
-				buf.append("<TR><TD>" + c.oauth_consumer_key + "</TD>");
-				buf.append("<TD><INPUT TYPE=BUTTON VALUE='Reveal secret' "
-				+ "onClick=javascript:getElementById('" + c.oauth_consumer_key + "').style.display='';this.style.display='none'>"
-				+ "<div id='"+ c.oauth_consumer_key + "' style='display: none'>" + c.secret + "</div></TD></TR>");
+			buf.append("<h3>Basic LTI Consumer</h3>");
+			BLTIConsumer c = null;
+			if (searchString==null) {
+				buf.append("Use the form below to search for, create or delete specific LTI consumers.<br>");
 			}
-			if (consumers.count() > 0) buf.append("</TABLE>");
-*/
-			buf.append("<FORM ACTION=Admin METHOD=POST>"
-					+ "Consumer Key: <INPUT TYPE=TEXT NAME=oauth_consumer_key>"
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Generate New Shared Secret'>"
+			else if (searchString.equals("(show all)")) {
+				Query<BLTIConsumer> consumers = ofy.query(BLTIConsumer.class);
+				if (consumers.count() == 0) buf.append("(no LTI consumers have been authorized yet)<p>");
+				else {
+					buf.append("<TABLE><TR><TH>Consumer Key</TH><TH>Secret</TH></TR>");
+					for (BLTIConsumer cons : consumers) {
+						buf.append("<TR><TD>" + cons.oauth_consumer_key + "</TD>");
+						buf.append("<TD><INPUT TYPE=BUTTON VALUE='Reveal secret' "
+						+ "onClick=javascript:getElementById('" + cons.oauth_consumer_key + "').style.display='';this.style.display='none'>"
+						+ "<div id='"+ cons.oauth_consumer_key + "' style='display: none'>" + cons.secret + "</div></TD></TR>");
+					}
+					buf.append("</TABLE>");
+				}
+			}
+			else if (!searchString.isEmpty()){
+				c = ofy.find(BLTIConsumer.class,searchString);
+				if (c==null) buf.append("LTI Consumer not found.");
+				else buf.append("Launch URL: https://chem-vantage.appspot.com/lti/ <br>"
+						+ "Configuration file: https://chem-vantage.appspot.com/lti_config.xml <br>"
+						+ "Consumer Key: " + c.oauth_consumer_key + "<br>"
+						+ "Shared Secret: " + c.secret + "<p>");
+			}
+			String defKey = c==null?"(show all)":c.oauth_consumer_key;
+			buf.append("<FORM NAME=ConsKey ACTION=Admin METHOD=POST>"
+					+ "Consumer Key: <INPUT TYPE=TEXT NAME=oauth_consumer_key VALUE='" + defKey + "' onFocus=ConsKey.oauth_consumer_key.value=''>"
+					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Search'> "
+					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Generate New Shared Secret'> "
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete LTI Consumer'>"
 					+ "</FORM>");
 		}
