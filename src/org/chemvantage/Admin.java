@@ -196,7 +196,8 @@ public class Admin extends HttpServlet {
 							+ "<td style='text-align:center'>" + d.activeUsers + "</td>"
 							+ "<td style='text-align:center'>");
 					try {
-						for (String uId : d.domainAdmins) buf.append(User.getBothNames(uId) + " (" + User.getEmail(uId) + ")" + (d.domainAdmins.size()>1?"<br>":""));
+						List<String> domainAdmins = d.getDomainAdmins();
+						for (String uId : domainAdmins) buf.append(User.getBothNames(uId) + " (" + User.getEmail(uId) + ")" + (domainAdmins.size()>1?"<br>":""));
 					} catch (Exception e) {
 						buf.append ("(not assigned)");
 					}
