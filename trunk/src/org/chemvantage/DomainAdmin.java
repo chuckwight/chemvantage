@@ -49,25 +49,29 @@ public class DomainAdmin extends HttpServlet {
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
 		try {
 			User user = User.getInstance(request.getSession(true));
 			if (user==null || !user.isAdministrator()) {
 				response.sendRedirect("/");
 				return;
 			}
-			String domainName = user.domain==null?request.getParameter("Domain"):user.domain;			
+			String domainName = request.getParameter("Domain");
+			if (domainName==null) domainName = user.domain;        // domain administrator
 			if (domainName==null) response.sendRedirect("/Admin"); // ChemVantage administrator
 			
 			// Check to ensure that user is either domain admin or ChemVAntage admin
 			Domain d = ofy.query(Domain.class).filter("domainName", domainName).get();
+			if (d==null) {
+				out.println("The ChemVantage domain " + domainName + " does not exist.");
+				return;
+			}
 			List<String> domainAdmins = d.getDomainAdmins();
 			if (!((domainAdmins != null && domainAdmins.contains(user.id)) || UserServiceFactory.getUserService().isUserAdmin())) {
 				response.sendRedirect("/");
 			}
 			
-			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
-
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 
