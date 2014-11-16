@@ -36,7 +36,6 @@ public class Domain {
 @Indexed		String domainName;
 		Date created;
 @Indexed		Date lastLogin;
-		Date freeTrialExpires;
 		int activeUsers;
 		int basicAccounts;
 		int premiumAccounts;
@@ -54,7 +53,6 @@ public class Domain {
 		this.domainName = hd;
 		this.created = new Date();
 		this.lastLogin = new Date();
-		this.freeTrialExpires = new Date(created.getTime() + 10368000000L);  // 120 days
 		this.activeUsers = 1;
 		this.basicAccounts = 0;
 		this.premiumAccounts = 1;

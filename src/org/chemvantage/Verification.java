@@ -406,9 +406,7 @@ public class Verification extends HttpServlet {
 			Domain domain = ofy.query(Domain.class).filter("domainName", user.domain).get();
 			Group newGroup = ofy.find(Group.class,newGroupId);
 			if (domain == null || newGroup==null || !newGroup.domain.equals(user.domain)) return false;
-			if (domain.freeTrialExpires.after(new Date())) {
-				user.setPremium(true);
-			} else if (domain.seatsAvailable > 0) {
+			if (domain.seatsAvailable > 0) {
 				user.setPremium(true);
 				domain.seatsAvailable--;
 				ofy.put(domain);
