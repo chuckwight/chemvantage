@@ -60,7 +60,8 @@ public class DomainAdmin extends HttpServlet {
 			
 			// Check to ensure that user is either domain admin or ChemVAntage admin
 			Domain d = ofy.query(Domain.class).filter("domainName", domainName).get();
-			if (!((d.domainAdmins != null && d.domainAdmins.contains(user.id)) || UserServiceFactory.getUserService().isUserAdmin())) {
+			List<String> domainAdmins = d.getDomainAdmins();
+			if (!((domainAdmins != null && domainAdmins.contains(user.id)) || UserServiceFactory.getUserService().isUserAdmin())) {
 				response.sendRedirect("/");
 			}
 			
@@ -97,7 +98,8 @@ public class DomainAdmin extends HttpServlet {
 			
 			// Check to ensure that user is either domain admin or ChemVAntage admin
 			Domain d = ofy.query(Domain.class).filter("domainName", domainName).get();
-			if (!((d.domainAdmins != null && d.domainAdmins.contains(user.id)) || UserServiceFactory.getUserService().isUserAdmin())) {
+			List<String> domainAdmins = d.getDomainAdmins();
+			if (!((domainAdmins != null && domainAdmins.contains(user.id)) || UserServiceFactory.getUserService().isUserAdmin())) {
 				response.sendRedirect("/");
 			}
 			
@@ -130,7 +132,6 @@ public class DomainAdmin extends HttpServlet {
 					usr.setIsAdministrator(true);
 					usr.domain = d.domainName;
 					ofy.put(usr);
-					if (d.domainAdmins == null) d.domainAdmins = new ArrayList<String>();
 					d.addAdmin(usr.id);
 					ofy.put(d);
 				} catch (Exception e) {
@@ -146,7 +147,8 @@ public class DomainAdmin extends HttpServlet {
 	String mainAdminForm(Domain d,User user,String searchString,String cursor) {
 		StringBuffer buf = new StringBuffer("\n\n<h2>ChemVantage Domain Administration</h2>");
 		try {
-			if (d.domainAdmins == null || d.domainAdmins.size()==0) { // provide a chance to assign a domain admin
+			List<String> domainAdmins = d.getDomainAdmins();
+			if (domainAdmins == null || domainAdmins.size()==0) { // provide a chance to assign a domain admin
 				buf.append("Assign an administrator for this domain:<br>"
 						+ "<form method=post>"
 						+ "UserId: <input type=text name=AdminId>"
@@ -158,7 +160,7 @@ public class DomainAdmin extends HttpServlet {
 			buf.append("<table>");
 			buf.append("<tr><td align=right>Domain name: </td><td>" + d.domainName + "</td></tr>");
 			buf.append("<tr><td align=right>Domain administrator: </td><td>");
-			if (d.domainAdmins != null) for (String id : d.domainAdmins) buf.append(User.getBothNames(id) + "&nbsp;&lt;" + User.getEmail(id) + "&gt; <br/>");
+			if (domainAdmins != null) for (String id : domainAdmins) buf.append(User.getBothNames(id) + "&nbsp;&lt;" + User.getEmail(id) + "&gt; <br/>");
 			buf.append("</td></tr>");
 			buf.append("<tr><td align=right>Total number of users: </td><td>" + d.getActiveUsers() + "</td></tr>");
 			buf.append("</table>");

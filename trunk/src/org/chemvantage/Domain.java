@@ -60,7 +60,20 @@ public class Domain {
 		this.seatsAvailable = 0;
 	}
 	
+	public List<String> getDomainAdmins() {
+		List<String> admins = new ArrayList<String>();
+		List<String> remove = new ArrayList<String>();
+		for (String da : domainAdmins) {
+			User u = ofy.find(User.class,da);
+			if (u!=null && u.domain.equals(this.domainName)) admins.add(da);
+			else remove.add(da);
+		}
+		if (remove.size()>0) domainAdmins.removeAll(remove);
+		return admins;
+	}
+	
 	public boolean addAdmin(String adminId) {
+		if (this.domainAdmins==null) this.domainAdmins = new ArrayList<String>();
 		try {
 			if (!domainAdmins.contains(adminId)) {
 				domainAdmins.add(adminId);
