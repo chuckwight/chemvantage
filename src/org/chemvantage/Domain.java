@@ -90,6 +90,7 @@ public class Domain {
 	}
 	
 	public boolean isAdmin(String adminId) {
+		if (domainAdmins==null || domainAdmins.size()==0) return false;
 		try {
 			if (domainAdmins.contains(adminId)) return true;
 			else return false;
