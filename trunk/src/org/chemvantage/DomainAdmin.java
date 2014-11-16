@@ -321,7 +321,7 @@ public class DomainAdmin extends HttpServlet {
 		if (user.hasPremiumAccount()) return true;
 		Domain domain = ofy.query(Domain.class).filter("domainName", domainName).get();
 		if (domain == null) return false;
-		if (domain.seatsAvailable>0 || domain.freeTrialExpires.after(new Date())) return true;
+		if (domain.seatsAvailable>0) return true;
 		return false;
 	}
 	

@@ -609,9 +609,7 @@ public class User implements Comparable<User>,Serializable {
 
 			Domain domain = ofy.query(Domain.class).filter("domainName", this.domain).get();
 			if (domain == null || newGroup==null || !newGroup.domain.equals(this.domain)) return false;
-			if (domain.freeTrialExpires.after(new Date())) {
-				this.setPremium(true);
-			} else if (domain.seatsAvailable > 0) {
+			if (domain.seatsAvailable > 0) {
 				this.setPremium(true);
 				domain.seatsAvailable--;
 				ofy.put(domain);

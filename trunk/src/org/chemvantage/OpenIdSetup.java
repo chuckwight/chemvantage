@@ -179,10 +179,6 @@ public class OpenIdSetup extends HttpServlet {
 		for (String s : domain.domainAdmins) {
 			buf.append("<tr><td style='text-align:right'>Administrator: </td><td>" + User.getBothNames(s) + " (" + User.getEmail(s) + ")</td></tr>");
 		}
-		Date now = new Date();
-		if (domain.freeTrialExpires.after(now)) {
-			buf.append("<tr><td style='text-align:right'>Free trial period expires: </td><td>" + domain.freeTrialExpires.toString() + "</td></tr>");
-		}
 		buf.append("</table>");
 		
 		buf.append("<p><span style='color:red;font-weight:bold'>Your account setup is complete.</span><p>");
