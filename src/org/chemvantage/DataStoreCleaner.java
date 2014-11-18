@@ -171,7 +171,7 @@ public class DataStoreCleaner extends HttpServlet {
 				}
 			} else { // found the user at the end of the alias chain
 				if (u.lastLogin.after(oneYearAgo)) return false;  // if any alias has a recent login, preserve the entire chain
-				if (u.isAdministrator() || u.isInstructor()) return false;
+				if (u.isAdministrator()) return false;  // preserve all admin accounts
 				if (u.lastLogin.getTime()==0L) {  // user never logged in; perhaps this is a brand new account
 					u.lastLogin = new Date(1000L);   // so mark the account by advancing the lastLogin by 1 second
 					ofy.put(u);                   // so it will be deleted tomorrow instead if the user does not login
@@ -412,13 +412,16 @@ public class DataStoreCleaner extends HttpServlet {
 		    
 		    for (Entity g : groups) {
 		    	try {
-		    		ofy.get(User.class,(String)g.getProperty("instructorId"));		    	
-		    	} catch (Exception e) {  // catches exception if user does not exist
-		    		keys.add(g.getKey());
+		    		Group group = ofy.get(Group.class,(Long)g.getProperty("id"));
+		    		if (group.isActive()) continue;
+		    		if (group.validatedMemberCount() > 0) continue;
+		    		ofy.get(User.class,group.instructorId);		    	
+		    	} catch (Exception e) {  // catches exception if instructor does not exist
+		    		keys.add(g.getKey());  // put group on the list to be deleted
 		    	}
 		    }
 
-		    if (keys.size() > 0) datastore.delete(keys);
+		    //if (keys.size() > 0) datastore.delete(keys);
 
 		    buf.append(groups.size() + " entities examined, " + keys.size() + " deleted.<br/>");
 
