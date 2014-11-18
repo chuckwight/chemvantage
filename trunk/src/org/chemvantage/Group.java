@@ -19,6 +19,7 @@ package org.chemvantage;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
@@ -226,6 +227,15 @@ public class Group implements Serializable {
     
     String getLisOutcomeFormat() {
     	return lis_outcome_service_format==null?"application/xml":lis_outcome_service_format;
+    }
+    
+    int validatedMemberCount() {
+    	List<String> memberIds = new ArrayList<String>();
+    	Collection<User> coll = ofy.get(User.class,memberIds).values();
+    	for (User u : coll) memberIds.add(u.id);
+    	this.memberIds = memberIds;
+    	ofy.put(this);
+    	return memberIds.size();
     }
     
     boolean isActive() {
