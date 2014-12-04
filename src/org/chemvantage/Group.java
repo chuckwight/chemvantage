@@ -245,6 +245,6 @@ public class Group implements Serializable {
     		ofy.put(this);
     	}
     	// group is active if an upcoming deadline exists or if the group is less than month old
-    	return this.nextDeadline!=null || this.created.after(oneMonthAgo);
+    	return this.getNextDeadline()!=null || this.created.after(oneMonthAgo);
     }
  }

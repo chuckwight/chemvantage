@@ -62,7 +62,7 @@ public class DataStoreCleaner extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		// This servlet is called by the cron daemon once each day.
-		
+		// To run manually, use the URL /DataStoreCleaner?Task=CleanUsers  or similar. No parameter runs all methods.
 		if (request.getParameter("Task")!=null) {  //specify Task to run manually
 			doPost(request,response);
 			return;
@@ -408,15 +408,18 @@ public class DataStoreCleaner extends HttpServlet {
 
 		    QueryResultList<Entity> groups = pq.asQueryResultList(fetchOptions);
 
-		    ArrayList<Key> keys = new ArrayList<Key>();  // list of Assignment entity keys for batch delete
+		    ArrayList<Key> keys = new ArrayList<Key>();  // list of Group entity keys for batch delete
 		    
 		    for (Entity g : groups) {
 		    	try {
+		    		buf.append("Examining entity " + g.toString() + "<br>");
 		    		Group group = ofy.get(Group.class,(Long)g.getProperty("id"));
-		    		if (group.isActive()) continue;
+		    		//if (group.isActive()) continue;
+		    		buf.append("Group " + group.id + (group.isActive()?" is active.":" is not active.") + "<br>");
 		    		if (group.validatedMemberCount() > 0) continue;
+		    		buf.append("It has " + group.validatedMemberCount() + "members.");
 		    		ofy.get(User.class,group.instructorId);		    	
-		    	} catch (Exception e) {  // catches exception if instructor does not exist
+		    	} catch (Exception e) {  // catches exception if instructor does not exist, group is not active and member count is zero.
 		    		keys.add(g.getKey());  // put group on the list to be deleted
 		    	}
 		    }
