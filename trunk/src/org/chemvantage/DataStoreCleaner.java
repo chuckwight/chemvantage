@@ -140,12 +140,12 @@ public class DataStoreCleaner extends HttpServlet {
 			ArrayList<Key> keys = new ArrayList<Key>();  // list of user entity keys for batch delete
 			
 			for (Entity u : users) if (deleteUser((String)u.getProperty("id"))) keys.add(u.getKey());  // tests to see if user should be deleted
-			
-			 if (keys.size() > 0) datastore.delete(keys);
-			    
-			 buf.append(users.size() + " entities examined, " + keys.size() + " deleted.<br/>");
-			   
-		    if (users.size()<querySizeLimit) buf.append("Done.");
+
+			if (keys.size() > 0) datastore.delete(keys);
+
+			buf.append(users.size() + " entities examined, " + keys.size() + " deleted.<br/>");
+
+			if (users.size()<querySizeLimit) buf.append("Done.");
 		    else if (retries < 9) buf.append(cleanUsers(users.getCursor().toWebSafeString(),retries+1));		
 		    else {  // launch a new task for the next 1000 objects in the datastore
 				cursor = users.getCursor().toWebSafeString();
@@ -412,9 +412,9 @@ public class DataStoreCleaner extends HttpServlet {
 		    
 		    for (Entity g : groups) {
 		    	try {
-		    		buf.append("Examining entity " + g.toString() + "<br>");
-		    		Group group = ofy.get(Group.class,(Long)g.getProperty("id"));
-		    		//if (group.isActive()) continue;
+		    		Group group = ofy.get(Group.class,g.getKey().getId());
+		    		buf.append("Goup id = " + group.id + "<br>");
+		    		if (group.isActive()) continue;
 		    		buf.append("Group " + group.id + (group.isActive()?" is active.":" is not active.") + "<br>");
 		    		if (group.validatedMemberCount() > 0) continue;
 		    		buf.append("It has " + group.validatedMemberCount() + "members.");
