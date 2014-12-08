@@ -19,7 +19,6 @@ package org.chemvantage;
 
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
@@ -123,13 +122,16 @@ public class Group implements Serializable {
     
     public void setNextDeadline() {
     	this.nextDeadline = null;
-    	Query<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",this.id).filter("deadline >",new Date());
-    	for (Assignment a : assignments) if (this.nextDeadline == null || a.deadline.before(nextDeadline)) this.nextDeadline = a.deadline;
+    	try {
+    		Query<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",this.id).filter("deadline >",new Date());
+    		for (Assignment a : assignments) if (this.nextDeadline == null || a.deadline.before(nextDeadline)) this.nextDeadline = a.deadline;
+    		ofy.put(this);
+    	} catch (Exception e) {}
     }
     
     public Date getNextDeadline() {
+    	setNextDeadline();
     	if (isUsingLisOutcomeService) return null;  // don't report deadline to UserInfo box; use the LMS instead
-    	if (nextDeadline==null || nextDeadline.before(new Date())) setNextDeadline();
     	return this.nextDeadline;
     }
 
@@ -229,22 +231,24 @@ public class Group implements Serializable {
     	return lis_outcome_service_format==null?"application/xml":lis_outcome_service_format;
     }
     
-    int validatedMemberCount() {
-    	List<String> memberIds = new ArrayList<String>();
-    	Collection<User> coll = ofy.get(User.class,memberIds).values();
-    	for (User u : coll) memberIds.add(u.id);
-    	this.memberIds = memberIds;
-    	ofy.put(this);
+    @SuppressWarnings("unchecked")
+	int validatedMemberCount() {
+    	// This method retrieves memberIds from the datastore, omitting any users that 
+    	// have been deleted from the datastore without being deleted from this group
+    	// and updates the memberIds List.
+    	// The method then returns the integer number of current group members.
+    	try {
+    		this.memberIds = (List<String>) ofy.get(User.class,memberIds).keySet();
+    		ofy.put(this);
+    	} catch (Exception e) {}
     	return memberIds.size();
+    	
+    	
     }
     
     boolean isActive() {
-    	Date oneMonthAgo = new Date(new Date().getTime()-2592000000L);
-    	if (this.created==null) {  // update this new field for older groups
-    		this.created = new Date();
-    		ofy.put(this);
-    	}
-    	// group is active if an upcoming deadline exists or if the group is less than month old
-    	return this.getNextDeadline()!=null || this.created.after(oneMonthAgo);
+    	// group is active if it has at least one member or a valid instructor
+    	return (validatedMemberCount()>0 || ofy.find(User.class,instructorId)!=null);
     }
+
  }
