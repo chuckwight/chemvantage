@@ -411,22 +411,13 @@ public class DataStoreCleaner extends HttpServlet {
 		    ArrayList<Key> keys = new ArrayList<Key>();  // list of Group entity keys for batch delete
 		    
 		    for (Entity g : groups) {
-		    	try {
-		    		Group group = ofy.get(Group.class,g.getKey().getId());
-		    		buf.append("Goup id = " + group.id);
-		    		buf.append((group.isActive()?" is active with ":" is not active with ") + group.validatedMemberCount() + " members.<br>");
-		    		if (group.isActive() || group.validatedMemberCount() > 0) continue;
-		    		ofy.get(User.class,group.instructorId);		    	
-		    	} catch (Exception e) {  // catches exception if instructor does not exist, group is not active and member count is zero.
-		    		keys.add(g.getKey());  // put group on the list to be deleted
-		    	}
+		    	Group group = ofy.get(Group.class,g.getKey().getId());
+		    	if (!group.isActive()) keys.add(g.getKey());		    	
 		    }
 
-		    //if (keys.size() > 0) datastore.delete(keys);
-		    //buf.append(groups.size() + " entities examined, " + keys.size() + " deleted.<br/>");
+		    if (keys.size() > 0) datastore.delete(keys);
+		    buf.append(groups.size() + " entities examined, " + keys.size() + " deleted.<br/>");
 		    
-		    buf.append(groups.size() + " entities examined, " + keys.size() + "need to be deleted, none executed.<br/>");
-
 		    if (groups.size()<querySizeLimit) buf.append("Done.");
 		    else if (retries < 9) buf.append(cleanAssignments(groups.getCursor().toWebSafeString(),retries+1));
 		    else {
