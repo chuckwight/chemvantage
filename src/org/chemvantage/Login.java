@@ -178,28 +178,28 @@ public class Login extends HttpServlet {
 
 			buf.append("<TABLE><TR><TD VALIGN=TOP><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
 					+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - " + subject.title + "</b></FONT>"
-					+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE><p>");
+					+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>");
 			
 			StringBuffer thisURL = request.getRequestURL();
 
 			if (thisURL.indexOf("dev-vantage") > 0) {
-				buf.append("<span style=color:red><b>CAUTION:</b></span><p>"
-						+ "You have accessed a code development server that<br>"
-						+ "should be used only by permission.<p>"
-						+ "To reach the ChemVantage production site "
-						+ "<a href=http://www.chemvantage.org>click here</a>.<p>");
-			} else {
-				buf.append("ChemVantage is a free resource for science education:"
-						+ "<table><tr><td>"
-						+ "<ul><li>computer-graded quizzes<li>homework exercises<li>practice exams</ul>"
-						+ "</td><td>"
-						+ "<ul><li>video lectures<li>free online textbooks"
-						+ "<li><a href='/lti/registration/'>How to connect using LTI</a></ul>"
-						+ "</td></tr></table>");
+				buf.append("<p><hr><span style=color:red><b>CAUTION: </b>"
+						+ "This is a code development server. Go to the "
+						+ "<a href=http://www.chemvantage.org>production server instead</a>.</span><hr>");
 			}
-			
+			buf.append("ChemVantage is a free resource for science education:"
+					+ "<table><tr><td>"
+					+ "<ul><li>computer-graded quizzes<li>homework exercises<li>practice exams</ul>"
+					+ "</td><td>"
+					+ "<ul><li>video lectures<li>free online textbooks"
+					+ "<li><a href='/lti/registration/'>Connect using LTI</a></ul>"
+					+ "</td></tr></table>");
+
+			buf.append("View the <a href=https://www.youtube.com/watch?v=PWDPQMhvghA>ChemVantage video</a>.");
+
+
 			//buf.append("<p>" + printOneQuestion(request));
-			
+
 			UserService userService = UserServiceFactory.getUserService();
 			buf.append("<h3>Please Sign In</h3>");
 			
