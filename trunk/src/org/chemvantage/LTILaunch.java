@@ -64,7 +64,8 @@ public class LTILaunch extends HttpServlet {
 		
 		try {
 			User user = User.getInstance(request.getSession(true));
-			if (user==null) throw new Exception();
+			if (user==null) throw new Exception();  // unauthenticated user
+			if (request.getParameter("resource_link_id")==null && request.getParameter("custom_resource_link_id")==null) throw new Exception();
 			
 			if ("pick".equals(request.getParameter("UserRequest")))
 				out.println(pickResourceForm(user,request));
@@ -330,7 +331,10 @@ public class LTILaunch extends HttpServlet {
 	String pickResourceForm(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {
-			String resource_link_id = request.getParameter("resource_link_id"); if (resource_link_id == null) return "/Home";
+			String resource_link_id = request.getParameter("resource_link_id"); 
+			if (resource_link_id == null) resource_link_id = request.getParameter("custom_resource_link_id");
+			if (resource_link_id == null) return "/Home";  // a resource_link_id value is required for every LTI launch
+			
 			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
 			if (lis_result_sourcedid==null) lis_result_sourcedid = request.getParameter("custom_lis_result_sourcedid");
 			
