@@ -1116,8 +1116,23 @@ public class Groups extends HttpServlet {
 				}
 			}
 			buf.append("<h4>Current Group Members</h4>");
+			int nonStudents = 0;
+			// list of instructors and administrators
+			buf.append("Instructors and Administrators<br>");
+			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TD><b>Name</b></TD><TD><b>Email</b></TD></TR>");
+			for (User u : groupMembers) {
+				 if (u.isInstructor() || u.isAdministrator()) {
+					 nonStudents++;
+					 buf.append("<TR><TD>" + u.getFullName() + "</TD>");
+					 buf.append("<TD><A href=mailto:" + u.email + ">" + u.email + "</a></TD></TR>");
+				 }
+			}
+			buf.append("</TABLE><br>");
+			
+			// list of TAs, if any
 			boolean headerWritten = false;
 			for (User u : groupTAs) {
+				nonStudents++;
 				if (!headerWritten) {
 					buf.append("Teaching Assistants<br>");
 					buf.append("<TABLE BORDER=1 CELLSPACING=0>"
@@ -1135,12 +1150,14 @@ public class Groups extends HttpServlet {
 			}
 			if (headerWritten) buf.append("</TABLE><br>");
 
-			int nStudents = groupMembers.size();
+			// list of everyone else
+			int nStudents = groupMembers.size() - nonStudents;
 			if (nStudents > 0) { // make a table of current student group members
 				buf.append("Students (" + nStudents + ")<br>");
 				buf.append("<TABLE BORDER=1 CELLSPACING=0>"
 						+ "<TR><TD><b>Name</b></TD><TD><b>Email</b></TD><TD><b>Remove From Group</b></TD></TR>");
 				for (User u : groupMembers) {
+					if (u.isInstructor() || u.isAdministrator() || u.isTeachingAssistant()) continue;
 					buf.append("<TR><TD>" + u.getFullName() + "</TD>");
 					String email = u.email;
 					buf.append("<TD><A href=mailto:" + email + ">" + email + "</a></TD>"
