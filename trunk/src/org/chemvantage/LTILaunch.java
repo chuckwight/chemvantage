@@ -65,6 +65,7 @@ public class LTILaunch extends HttpServlet {
 		try {
 			User user = User.getInstance(request.getSession(true));
 			if (user==null) throw new Exception();  // unauthenticated user
+			// resource_link_id is a required parameter for LTI; if missing, send to registration page
 			if (request.getParameter("resource_link_id")==null && request.getParameter("custom_resource_link_id")==null) throw new Exception();
 			
 			if ("pick".equals(request.getParameter("UserRequest")))
@@ -172,6 +173,12 @@ public class LTILaunch extends HttpServlet {
 			ofy.put(domain);
 		}
 		
+		// ensure that this user is associated with the LTI domain
+		if (user.domain == null || !user.domain.equals(domain.domainName)) {
+			user.domain = domain.domainName;
+			ofy.put(user);
+		}
+		
 		// check if user has Instructor or Administrator role
 		String roles = request.getParameter("roles");
 		if (roles != null) {
@@ -184,17 +191,9 @@ public class LTILaunch extends HttpServlet {
 		}
 		
 		if (!user.hasPremiumAccount()) {
-			user.setPremium(true);  // new! All LTI users have free premium accounts
+			user.setPremium(true);  // All LTI users have free premium accounts
 			ofy.put(user);	
 		}
-		
-		// Check to see if the LMS is providing an LIS Outcome Service URL (LTI v1.1)
-		String lisOutcomeServiceUrl = request.getParameter("lis_outcome_service_url");
-		if (lisOutcomeServiceUrl==null) lisOutcomeServiceUrl = request.getParameter("custom_lis_outcome_service_url");
-		
-		// the lis_result_sourcedid is an optional LTI parameter that specifies a context gradebook entry point
-		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
-		if (lis_result_sourcedid==null) lis_result_sourcedid = request.getParameter("custom_lis_result_sourcedid");
 		
 		// Provision a new context (group), if necessary and put the user into it
 		Group g = null;
@@ -208,6 +207,14 @@ public class LTILaunch extends HttpServlet {
 			ofy.put(g);
 		}
 		user.changeGroups(g.id);
+		
+		// Check to see if the LMS is providing an LIS Outcome Service URL (LTI v1.1)
+		String lisOutcomeServiceUrl = request.getParameter("lis_outcome_service_url");
+		if (lisOutcomeServiceUrl==null) lisOutcomeServiceUrl = request.getParameter("custom_lis_outcome_service_url");
+		
+		// the lis_result_sourcedid is an optional LTI parameter that specifies a context gradebook entry point
+		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
+		if (lis_result_sourcedid==null) lis_result_sourcedid = request.getParameter("custom_lis_result_sourcedid");
 		
 		boolean supportsLIS = lisOutcomeServiceUrl != null && lis_result_sourcedid != null;
 		
