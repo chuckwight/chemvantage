@@ -343,10 +343,11 @@ public class User implements Comparable<User>,Serializable {
 
 	String getFullName() {
 		setLowerCaseName();
-		return (this.lastName.isEmpty()?" ":this.lastName) + (this.firstName.isEmpty()?" ":", " + firstName);
+		return this.lastName + (this.lastName.isEmpty()?"":", ") + this.firstName;
 	}
 
 	String getBothNames() {
+		setLowerCaseName();
 		return firstName + " " + lastName;
 	}
 
@@ -377,12 +378,12 @@ public class User implements Comparable<User>,Serializable {
 	}
 
 	void setLowerCaseName() {
-		if (this.lastName != null && !this.lastName.isEmpty()) {
-			this.lowercaseName = this.lastName + (this.firstName!=null && !this.firstName.isEmpty()?", " + this.firstName:""); // normal name or last name only
-		} else if (firstName != null && !firstName.isEmpty()) {
-			this.lowercaseName = this.firstName;  // first Name only, like Cher or Bono or full name only
-		} else this.lowercaseName = "";  // no name provided
+		String temp = this.lowercaseName;
+		if (this.lastName==null || this.lastName.isEmpty()) this.lastName = "";
+		if (this.firstName==null || this.firstName.isEmpty()) this.firstName = "";
+		this.lowercaseName = this.lastName + (!this.lastName.isEmpty()&&!this.firstName.isEmpty()?", ":"") + this.firstName;
 		this.lowercaseName = this.lowercaseName.toLowerCase().trim();
+		if (!lowercaseName.equals(temp)) ofy.put(this);
 	}
 
 	void setAlias(String newId) {
