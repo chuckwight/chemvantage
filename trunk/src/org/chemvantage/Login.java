@@ -171,6 +171,7 @@ public class Login extends HttpServlet {
 		
 	String homePage(HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
+		String googleClientId = "";  // put ChemVantage Google+ClientID here when certified for login
 		try {
 			if (Home.announcement.length() > 0) { // post the announcement at the top of the page
 				buf.append("<br><FONT COLOR=RED>" + Home.announcement + "</FONT>");
@@ -186,6 +187,7 @@ public class Login extends HttpServlet {
 				buf.append("<p><hr><span style=color:red><b>CAUTION: </b>"
 						+ "This is a code development server. Go to the "
 						+ "<a href=http://www.chemvantage.org>production server instead</a>.</span><hr>");
+				googleClientId = "890312835091-rtjtii84uafa0v1bsmoe03nc0uutivb7.apps.googleusercontent.com"; // dev-vantage-hrd
 			}
 			buf.append("ChemVantage is a free resource for science education:"
 					+ "<table><tr><td>"
@@ -245,7 +247,20 @@ public class Login extends HttpServlet {
 							+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/> " 
 							+ providerName + "</a></TD>");
 				}
-				buf.append("</TD></TR></TABLE>");
+				// Begin new section to implement Google+ Login option
+		        // See https://developers.google.com/+/web/signin/add-button for details.
+		       /*
+		 		buf.append("<TD><span id='signinButton'>
+		 			<span class='g-signin' 
+		 			data-callback='signinCallback' 
+		 			data-clientid=" + googleClientId + " 
+		 			data-cookiepolicy='single_host_origin' 
+		 			data-requestvisibleactions='http://schema.org/AddAction' 
+		 			data-scope='https://www.googleapis.com/auth/plus.login'>
+  					</span>
+				</span></TD>");		  
+		       */
+			buf.append("</TR></TABLE>");
 			}
 			//buf.append("<div style='text-align:right'><a href=https://www.google.com/enterprise/marketplace/viewListing?productListingId=9006+12752972024151964645><img src=/images/marketplace-addtogoogleapps-shadow.png alt='Add to Google Apps'></a></div>");
 			
