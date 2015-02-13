@@ -96,6 +96,15 @@
 	</servlet-mapping>
 	
 	<servlet>
+		<servlet-name>GooglePlusLaunch</servlet-name>
+		<servlet-class>org.chemvantage.GooglePlusLaunch</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>GooglePlusLaunch</servlet-name>
+		<url-pattern>/googleplus</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
 		<servlet-name>Groups</servlet-name>
 		<servlet-class>org.chemvantage.Groups</servlet-class>
 	</servlet>
