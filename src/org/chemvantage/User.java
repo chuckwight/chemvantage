@@ -29,6 +29,8 @@ import javax.persistence.Transient;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+import net.sf.json.JSONObject;
+
 import org.chemvantage.samples.apps.marketplace.UserInfo;
 
 import com.google.appengine.api.users.UserServiceFactory;
@@ -88,6 +90,7 @@ public class User implements Comparable<User>,Serializable {
 		try {
 			Objectify ofy = ObjectifyService.begin();
 			String userId = (String)session.getAttribute("UserId");
+			System.out.println("User: id=" + userId);
 			User user = ofy.get(User.class,userId);
 			if (user.alias != null) { // follow the alias chain to the end
 				List<String> userIds = new ArrayList<String>();
@@ -222,6 +225,40 @@ public class User implements Comparable<User>,Serializable {
 		return user;
 	}
 
+	static public User createGooglePlusUser(JSONObject payload) {
+		User user;
+		try {
+			Objectify ofy = ObjectifyService.begin();
+			String userId = payload.getString("id");
+			user = ofy.find(User.class,userId);
+			if (user != null) return user;
+			user = new User(userId);
+			user.setEmail(payload.getString("email"));
+			user.verifiedEmail = payload.getBoolean("email_verified");
+			user.authDomain = payload.getString("hd");
+			if (user.authDomain==null) user.authDomain="gmail.com";
+			if (user.authDomain.contains("google.com")) user.authDomain="gmail.com";
+			String myDomainName = user.authDomain;
+			do { // try to assign a user to an existing ChemVantage domain by checking the authDomain or super domain
+				try { 
+					Domain d = ofy.query(Domain.class).filter("domainName",myDomainName).get();
+					user.domain = d.domainName;
+				} catch (Exception e) {
+					user.domain = null;  // user is a free agent and can join any ChemVantage group
+				}	
+				myDomainName = myDomainName.substring(myDomainName.indexOf('.')+1);  // removes first subdomain name and period
+			} while (user.domain==null && myDomainName.indexOf('.') >= 0);
+			ofy.put(user);
+			if (user.verifiedEmail) {
+				Query<User> twins = ofy.query(User.class).filter("email",user.email);
+				for (User t : twins) if (!t.id.equals(user.id)) Admin.mergeAccounts(user, t);
+			}
+		} catch (Exception e) {
+			return null;
+		}		
+		return user;
+	}
+	
 	static public User createCASUser(String userId,String email,String domain) {
 		if (userId == null) return null;
 		User user;

@@ -26,28 +26,29 @@ import com.googlecode.objectify.ObjectifyService;
 
 public class DAO extends com.googlecode.objectify.util.DAOBase {
 	static { 
-		ObjectifyService.register(Subject.class);
-		ObjectifyService.register(User.class);
-		ObjectifyService.register(Video.class);
-		ObjectifyService.register(Text.class);
-		ObjectifyService.register(Topic.class);
-		ObjectifyService.register(Question.class);
-		ObjectifyService.register(Group.class);
 		ObjectifyService.register(Assignment.class);
-		ObjectifyService.register(Response.class);
-		ObjectifyService.register(UserReport.class);
-		ObjectifyService.register(QuizTransaction.class);
+		ObjectifyService.register(BLTIConsumer.class);
+		ObjectifyService.register(Domain.class);
+		ObjectifyService.register(GoogleClient.class);
+		ObjectifyService.register(Group.class);
 		ObjectifyService.register(HWTransaction.class);
-		ObjectifyService.register(Score.class);
+		ObjectifyService.register(Nonce.class);
 		ObjectifyService.register(PayPalIPN.class);
 		ObjectifyService.register(PracticeExamTransaction.class);
 		ObjectifyService.register(ProposedQuestion.class);
+		ObjectifyService.register(Question.class);
+		ObjectifyService.register(QuizTransaction.class);
 		ObjectifyService.register(RescueMessage.class);
+		ObjectifyService.register(Response.class);
+		ObjectifyService.register(Score.class);
+		ObjectifyService.register(Subject.class);
+		ObjectifyService.register(Text.class);
+		ObjectifyService.register(Topic.class);
+		ObjectifyService.register(User.class);
+		ObjectifyService.register(UserReport.class);
+		ObjectifyService.register(Video.class);
 		ObjectifyService.register(VideoTransaction.class);
-		ObjectifyService.register(BLTIConsumer.class);
-		ObjectifyService.register(Domain.class);
-		ObjectifyService.register(Nonce.class);
-		}
+	}
 	
 	public Subject getSubject() {
 		Subject genChem = null;
