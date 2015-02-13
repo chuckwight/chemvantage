@@ -19,7 +19,9 @@ package org.chemvantage;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.math.BigInteger;
 import java.net.URLEncoder;
+import java.security.SecureRandom;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -33,6 +35,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
@@ -48,7 +51,9 @@ public class Login extends HttpServlet {
 	Objectify ofy = dao.ofy();
 	Subject subject = dao.getSubject();
 	List<Video> videos = ofy.query(Video.class).order("orderBy").list();
-
+	
+	String googleClientId = GoogleClient.getInstance().client_id;
+	
     static final Map<String, String> openIdProviders;
     static final Map<String, String> openIdLogos;
     static Set<String> attributes = new HashSet<String>();
@@ -87,6 +92,11 @@ public class Login extends HttpServlet {
 		+ ".pz3 a{display:block;padding:.2em .5em}"
 		+ "#pzon .pz3 a:hover{background:#36c;color:#fff}"
 		+ "--> </style>\n"
+// The following section is for implementation of Google+ Sign-in
+		+ "<script src='https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js' async defer></script>\n"
+		+ "<script src='https://apis.google.com/js/platform.js' async defer></script>"
+		+ "<script src='https://apis.google.com/js/client:platform.js?onload=start' async defer></script>\n"
+// end of Google+ Sing-in scripts
 		+ "</head>\n"
 		+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
 		+ "<TABLE><TR><TD>\n"
@@ -100,7 +110,7 @@ public class Login extends HttpServlet {
 		+ "</div><br>";
 	
 	public static String footer = "\n<hr><span style='font-size:smaller'><table style='width:100%;border-spacing: 20px 0px'><tr>"
-		+ "<td>&copy; 2007-14 ChemVantage LLC. <a rel='license' href='http://creativecommons.org/licenses/by/3.0/'><img alt='Creative Commons License' style='border-width:0' src='http://i.creativecommons.org/l/by/3.0/80x15.png' /></a></td>"
+		+ "<td>&copy; 2007-14 ChemVantage LLC. <a rel='license' href='https://creativecommons.org/licenses/by/3.0/'><img alt='Creative Commons License' style='border-width:0' src='https://i.creativecommons.org/l/by/3.0/80x15.png' /></a></td>"
 		+ "<td align=center><a href=/About#terms>Terms and Conditions of Use</a></td>"
 		+ "<td align=right><a href='http://code.google.com/appengine/'><img src=/images/GAE.gif border=0 "
 		+ "alt='Powered by Google App Engine'></a></td></tr></table>"
@@ -149,7 +159,10 @@ public class Login extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		try {
 			request.getSession().invalidate();
-			out.println(homePage(request));
+			HttpSession session = request.getSession();
+			String state = new BigInteger(130, new SecureRandom()).toString(32);
+			session.setAttribute("state", state);
+			out.println(homePage(request,state));
 		} catch (Exception e) {
 			out.println("<h3>Sorry, ChemVantage is temporarily unavailable</h3>"
 					+ "The most likely reason is that Google App Engine is in a period of scheduled maintenance.<br>"
@@ -169,9 +182,9 @@ public class Login extends HttpServlet {
 		}		
 	}
 		
-	String homePage(HttpServletRequest request) {
+	String homePage(HttpServletRequest request,String state) {
 		StringBuffer buf = new StringBuffer();
-		String googleClientId = "";  // put ChemVantage Google+ClientID here when certified for login
+		
 		try {
 			if (Home.announcement.length() > 0) { // post the announcement at the top of the page
 				buf.append("<br><FONT COLOR=RED>" + Home.announcement + "</FONT>");
@@ -181,13 +194,14 @@ public class Login extends HttpServlet {
 					+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - " + subject.title + "</b></FONT>"
 					+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>");
 			
-			StringBuffer thisURL = request.getRequestURL();
+			String thisURL = request.getRequestURL().toString();
+			thisURL = thisURL.substring(0,thisURL.indexOf("/login.html"));
 
 			if (thisURL.indexOf("dev-vantage") > 0) {
 				buf.append("<p><hr><span style=color:red><b>CAUTION: </b>"
+						//+ thisURL
 						+ "This is a code development server. Go to the "
 						+ "<a href=http://www.chemvantage.org>production server instead</a>.</span><hr>");
-				googleClientId = "890312835091-rtjtii84uafa0v1bsmoe03nc0uutivb7.apps.googleusercontent.com"; // dev-vantage-hrd
 			}
 			buf.append("ChemVantage is a free resource for science education:"
 					+ "<table><tr><td>"
@@ -198,14 +212,11 @@ public class Login extends HttpServlet {
 					+ "</td></tr></table>");
 
 			buf.append("View the <a href=https://www.youtube.com/watch?v=PWDPQMhvghA>ChemVantage video</a>.");
-
-
-			//buf.append("<p>" + printOneQuestion(request));
-
+			
 			UserService userService = UserServiceFactory.getUserService();
 			buf.append("<h3>Please Sign In</h3>");
 			
-			boolean showAll = "all".equals(request.getParameter("show"));
+			boolean showAll = true;  //"all".equals(request.getParameter("show"));
 			Cookie[] cookies = request.getCookies();
 			if (!showAll && cookies!=null) {  // a login cookie has been set; try to show a link to the preferred OpenID provider
 				showAll = true;
@@ -248,22 +259,36 @@ public class Login extends HttpServlet {
 							+ providerName + "</a></TD>");
 				}
 				// Begin new section to implement Google+ Login option
-		        // See https://developers.google.com/+/web/signin/add-button for details.
-		       /*
-		 		buf.append("<TD><span id='signinButton'>
-		 			<span class='g-signin' 
-		 			data-callback='signinCallback' 
-		 			data-clientid=" + googleClientId + " 
-		 			data-cookiepolicy='single_host_origin' 
-		 			data-requestvisibleactions='http://schema.org/AddAction' 
-		 			data-scope='https://www.googleapis.com/auth/plus.login'>
-  					</span>
-				</span></TD>");		  
-		       */
-			buf.append("</TR></TABLE>");
+				// See https://developers.google.com/+/web/signin/add-button for details.		
+				buf.append("<TD style='text-align:center'><span id='signinButton'>"
+						+ "<span class='g-signin' "
+						+ "data-callback='signinCallback' "
+						+ "data-clientid='" + "890312835091-rtjtii84uafa0v1bsmoe03nc0uutivb7.apps.googleusercontent.com" + "' "  //googleClientId
+						+ "data-cookiepolicy='single_host_origin' "
+						+ "data-redirecturi='postmessage' "  // named google+ parameter for hybrid server code exchange schema
+						+ "data-scope='profile email'> "
+						+ "<a href=#><img id=g+ src=/images/openid/google+.jpg border=0 alt='Google'><br/>Google</a>"
+						+ "</span></span></TD>\n");		  
+				// load javascript for processing a google+ sing-in flow
+				buf.append("<script>"
+						+ "function signinCallback(authResult) {"
+						+ " if (authResult['status']['method']=='PROMPT' && authResult['status']['signed_in']) {"
+						//+ "  gapi.client.load('plus','v1').then(function() {"
+						//+ "   gapi.client.plus.people.get({'userId':'me'}).then(function(res) {"
+						+ "    document.getElementById('signinButton').innerHTML='working...';"
+						+ "    $.ajax({type:'POST',url:'/googleplus',contentType:'application/x-www-form-urlencoded; charset=UTF-8', "
+						+ "     data: 'state=" + state + "&code=' + authResult['code'], " // + '&gPlusId=' + res.result.id, "
+						+ "     success: function(result) {"
+						+ "      document.getElementById('signinButton').innerHTML='OK';" //.innerHTML=authResult;"
+						+ "      window.location='/About';"
+						+ "     }, "
+						+ "     error: function(textStatus) {document.getElementById('signinButton').innerHTML='Error';}});"
+						//+ "  })});"
+						+ "}}"
+						+ "</script>");
+				buf.append("</TR></TABLE>");
 			}
-			//buf.append("<div style='text-align:right'><a href=https://www.google.com/enterprise/marketplace/viewListing?productListingId=9006+12752972024151964645><img src=/images/marketplace-addtogoogleapps-shadow.png alt='Add to Google Apps'></a></div>");
-			
+
 			buf.append("<hr><h3>Try One Question</h3>");
 			buf.append("<table width=650><tr><td>" + printOneQuestion(request) + "</td></tr></table>");
 			
