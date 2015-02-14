@@ -91,7 +91,7 @@ public class Logout extends HttpServlet {
 							+ "<img src='" + providerLogo + "' border=0 alt='" + providerUrl + "'><br/>" 
 							+ "CAS Sign Out</a></TD>");			
 				} else buf.append("<TD style='text-align:center'><a href='http://google.com'>"
-							+ "<img src='/images/openid/google.jpg' border=0 alt='google.com'><br/>" 
+							+ "<img src='/images/openid/google+.jpg' border=0 alt='google.com'><br/>" 
 							+ "google.com</a></TD>");
 			} else { // present links to all public OpenID providers
 				for (String p : openIdProviders.keySet()) {

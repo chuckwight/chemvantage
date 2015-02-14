@@ -49,6 +49,7 @@ public class Login extends HttpServlet {
 
 	DAO dao = new DAO();
 	Objectify ofy = dao.ofy();
+	GoogleClient CLIENT = GoogleClient.getInstance();
 	Subject subject = dao.getSubject();
 	List<Video> videos = ofy.query(Video.class).order("orderBy").list();
 	
@@ -61,7 +62,6 @@ public class Login extends HttpServlet {
     	openIdProviders = new HashMap<String, String>();
     	openIdLogos = new HashMap<String, String>();
     	
-        //openIdProviders.put("Google", "gmail.com"); openIdLogos.put("Google", "/images/openid/google.jpg");
         openIdProviders.put("AOL", "aol.com"); openIdLogos.put("AOL", "/images/openid/aol.jpg");
         openIdProviders.put("Yahoo", "yahoo.com"); openIdLogos.put("Yahoo", "/images/openid/yahoo.jpg");
         attributes.add("email");
@@ -274,7 +274,7 @@ public class Login extends HttpServlet {
 				buf.append("<TD style='text-align:center'><span id='signinButton'>"
 						+ "<span class='g-signin' "
 						+ "data-callback='signinCallback' "
-						+ "data-clientid='" + "890312835091-rtjtii84uafa0v1bsmoe03nc0uutivb7.apps.googleusercontent.com" + "' "  //googleClientId
+						+ "data-clientid='" + CLIENT.client_id + "' "  //googleClientId
 						+ "data-cookiepolicy='single_host_origin' "
 						+ "data-redirecturi='postmessage' "  // named google+ parameter for hybrid server code exchange schema
 						+ "data-scope='profile email'> "
@@ -287,17 +287,14 @@ public class Login extends HttpServlet {
 			buf.append("<script>"
 						+ "function signinCallback(authResult) {"
 						+ " if (authResult['status']['method']=='PROMPT' && authResult['status']['signed_in']) {"
-						//+ "  gapi.client.load('plus','v1').then(function() {"
-						//+ "   gapi.client.plus.people.get({'userId':'me'}).then(function(res) {"
 						+ "    document.getElementById('signinButton').innerHTML='working...';"
 						+ "    $.ajax({type:'POST',url:'/googleplus',contentType:'application/x-www-form-urlencoded; charset=UTF-8', "
-						+ "     data: 'state=" + state + "&code=' + authResult['code'], " // + '&gPlusId=' + res.result.id, "
+						+ "     data: 'state=" + state + "&code=' + authResult['code'], "
 						+ "     success: function(result) {"
-						+ "      document.getElementById('signinButton').innerHTML='OK';" //.innerHTML=authResult;"
+						+ "      document.getElementById('signinButton').innerHTML='OK';"
 						+ "      window.location='/Home';"
 						+ "     }, "
 						+ "     error: function(textStatus) {document.getElementById('signinButton').innerHTML='Error';}});"
-						//+ "  })});"
 						+ "}}"
 						+ "</script>");
 			

@@ -47,12 +47,12 @@ import com.googlecode.objectify.Objectify;
 public class GooglePlusLaunch extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
-	private static final GoogleClient CLIENT = GoogleClient.getInstance();
 	//private static final String client_id = "890312835091-rtjtii84uafa0v1bsmoe03nc0uutivb7.apps.googleusercontent.com";
 	//private static final String client_secret = "wSvwjpiomYbePKl5Z62apDFr";
 	
 	DAO dao = new DAO();
 	Objectify ofy = dao.ofy();
+	GoogleClient CLIENT = GoogleClient.getInstance();
 	JSONObject openid_config = null;
 	
 	@Override
@@ -75,35 +75,34 @@ public class GooglePlusLaunch extends HttpServlet {
 			JSONObject accessToken = getToken(code);
 			
 			// Handle possible authentication failure
-			if (accessToken.containsKey("error")) throw new Exception();
+			if (accessToken.containsKey("error")) throw new Exception("Authentication failed");
 			
 			// Retrieve the id_token inside the accessToken and decode the JSON Web Token (JWT) payload:
 			String id_token = accessToken.getString("id_token");
 			String[] pieces = id_token.split("\\.");
-			if (pieces.length!=3) throw new Exception();  // JWT token structure is invalid			
+			if (pieces.length!=3) throw new Exception("Invalid JWT payload.");  // JWT token structure is invalid			
 			JSONObject payload = JSONObject.fromObject(new String(Base64.decode(pieces[1])));
 			
 			// Verify that this JWT is targeted to the correct site for Google+ login
-			if (!CLIENT.client_id.equals(payload.getString("aud"))) throw new Exception();  // JWT token has wrong audience
+			if (!CLIENT.client_id.equals(payload.getString("aud"))) throw new Exception("AuthToken not valid for this site.");  // JWT token has wrong audience
 			
 			// Check to ensure that JWT has not expired
 			Date now = new Date();
 			Date expires = new Date(1000L*new Long(payload.getInt("exp")));
-			if (expires.before(now)) throw new Exception();
+			if (expires.before(now)) throw new Exception("AuthToken expired.");
 			
 			// Retrieve the id from the JWT 
 			String userId = payload.getString("id");
-			if (userId==null || userId.isEmpty()) throw new Exception();
+			if (userId==null || userId.isEmpty()) throw new Exception("JWT did not contain a valid user id.");
 				
 			// Everything looks OK; sign-in to ChemVantage
 			session.setAttribute("UserId", userId);			
 
 			// Check to see if this is a first-time Google+ sign-in
 			User user = User.getInstance(session);		
-			if (user==null) {  
-				user = User.createGooglePlusUser(payload);
-				user.setFirstName(getUserName(userId,accessToken));
-				ofy.put(user);
+			if (user==null) { 
+				String firstName = getUserFirstName(userId,accessToken);
+				user = User.createGooglePlusUser(payload,firstName);
 			}
 			Cookie c = new Cookie("IDProvider","Google");
 			c.setMaxAge(2592000); // expires after 30 days (in seconds)
@@ -155,8 +154,8 @@ public class GooglePlusLaunch extends HttpServlet {
 			uc.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
 			uc.setRequestProperty("Accept-Charset", "UTF-8");
 			String queryString = "code=" + code;
-			queryString += "&client_id=890312835091-rtjtii84uafa0v1bsmoe03nc0uutivb7.apps.googleusercontent.com"; //+ CLIENT.client_id;
-			queryString += "&client_secret=wSvwjpiomYbePKl5Z62apDFr"; //+ CLIENT.client_secret;
+			queryString += "&client_id=" + CLIENT.client_id; 
+			queryString += "&client_secret=" + CLIENT.client_secret;
 			queryString += "&redirect_uri=postmessage";
 			queryString += "&grant_type=authorization_code";
 			
@@ -180,7 +179,7 @@ public class GooglePlusLaunch extends HttpServlet {
 		return accessToken;
 	}
 	
-	String getUserName(String userId,JSONObject accessToken) {
+	String getUserFirstName(String userId,JSONObject accessToken) {
 		String givenName = "";
 		try {
 			// Open a new URL connection to the Google People API endpoint:
