@@ -223,7 +223,7 @@ public class User implements Comparable<User>,Serializable {
 		return user;
 	}
 
-	static public User createGooglePlusUser(JSONObject payload) {
+	static public User createGooglePlusUser(JSONObject payload,String firstName) {
 		User user = null;
 		try {
 			Objectify ofy = ObjectifyService.begin();
@@ -236,6 +236,8 @@ public class User implements Comparable<User>,Serializable {
 				user.setEmail(email);
 				user.verifiedEmail = payload.getBoolean("email_verified");
 			}
+			user.setFirstName(firstName);
+			
 			user.authDomain = "google.com";
 		
 			if (payload.containsKey("hd")) user.authDomain = payload.getString("hd");
