@@ -61,7 +61,7 @@ public class Login extends HttpServlet {
     	openIdProviders = new HashMap<String, String>();
     	openIdLogos = new HashMap<String, String>();
     	
-        openIdProviders.put("Google", "gmail.com"); openIdLogos.put("Google", "/images/openid/google.jpg");
+        //openIdProviders.put("Google", "gmail.com"); openIdLogos.put("Google", "/images/openid/google.jpg");
         openIdProviders.put("AOL", "aol.com"); openIdLogos.put("AOL", "/images/openid/aol.jpg");
         openIdProviders.put("Yahoo", "yahoo.com"); openIdLogos.put("Yahoo", "/images/openid/yahoo.jpg");
         attributes.add("email");
@@ -216,7 +216,7 @@ public class Login extends HttpServlet {
 			UserService userService = UserServiceFactory.getUserService();
 			buf.append("<h3>Please Sign In</h3>");
 			
-			boolean showAll = true;  //"all".equals(request.getParameter("show"));
+			boolean showAll = "all".equals(request.getParameter("show"));
 			Cookie[] cookies = request.getCookies();
 			if (!showAll && cookies!=null) {  // a login cookie has been set; try to show a link to the preferred OpenID provider
 				showAll = true;
@@ -232,6 +232,17 @@ public class Login extends HttpServlet {
 								+ providerName + "</a></td></tr></table>");
 						showAll = false;
 						break;
+					} else if ("Google".equals(c.getValue())) {
+						buf.append("<span id='signinButton'>"
+								+ "<span class='g-signin' "
+								+ "data-callback='signinCallback' "
+								+ "data-clientid='" + "890312835091-rtjtii84uafa0v1bsmoe03nc0uutivb7.apps.googleusercontent.com" + "' "  //googleClientId
+								+ "data-cookiepolicy='single_host_origin' "
+								+ "data-redirecturi='postmessage' "  // named google+ parameter for hybrid server code exchange schema
+								+ "data-scope='profile email'> "
+								+ "<a href=#><img id=g+ src=/images/openid/google+.jpg border=0 alt='Google'><br/>Google</a>"
+								+ "</span></span>\n");
+						showAll = false;
 					} else if ("BLTI".equals(c.getValue())) {
 						buf.append("It appears that you are using ChemVantage in conjunction with a course learning "
 								+ "management system (LMS). You should access ChemVantage from inside the LMS to access your assignments and scores. "
@@ -269,8 +280,11 @@ public class Login extends HttpServlet {
 						+ "data-scope='profile email'> "
 						+ "<a href=#><img id=g+ src=/images/openid/google+.jpg border=0 alt='Google'><br/>Google</a>"
 						+ "</span></span></TD>\n");		  
-				// load javascript for processing a google+ sing-in flow
-				buf.append("<script>"
+				buf.append("</TR></TABLE>");
+			}
+			
+			// load javascript for processing a google+ sing-in flow
+			buf.append("<script>"
 						+ "function signinCallback(authResult) {"
 						+ " if (authResult['status']['method']=='PROMPT' && authResult['status']['signed_in']) {"
 						//+ "  gapi.client.load('plus','v1').then(function() {"
@@ -280,14 +294,13 @@ public class Login extends HttpServlet {
 						+ "     data: 'state=" + state + "&code=' + authResult['code'], " // + '&gPlusId=' + res.result.id, "
 						+ "     success: function(result) {"
 						+ "      document.getElementById('signinButton').innerHTML='OK';" //.innerHTML=authResult;"
-						+ "      window.location='/About';"
+						+ "      window.location='/Home';"
 						+ "     }, "
 						+ "     error: function(textStatus) {document.getElementById('signinButton').innerHTML='Error';}});"
 						//+ "  })});"
 						+ "}}"
 						+ "</script>");
-				buf.append("</TR></TABLE>");
-			}
+			
 
 			buf.append("<hr><h3>Try One Question</h3>");
 			buf.append("<table width=650><tr><td>" + printOneQuestion(request) + "</td></tr></table>");

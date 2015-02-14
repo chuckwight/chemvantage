@@ -38,7 +38,7 @@ public class Logout extends HttpServlet {
 		openIdProviders = new HashMap<String, String>();
     	openIdLogos = new HashMap<String, String>();
     	
-        openIdProviders.put("Google", "google.com"); openIdLogos.put("Google", "/images/openid/google.jpg");
+        openIdProviders.put("Google", "google.com"); openIdLogos.put("Google", "/images/openid/google+.jpg");
         openIdProviders.put("Yahoo", "yahoo.com"); openIdLogos.put("Yahoo", "/images/openid/yahoo.jpg");
         openIdProviders.put("AOL", "aol.com"); openIdLogos.put("AOL", "/images/openid/aol.jpg");
     }
