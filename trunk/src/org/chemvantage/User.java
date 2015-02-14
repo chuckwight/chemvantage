@@ -71,12 +71,10 @@ public class User implements Comparable<User>,Serializable {
 		this.id = id;
 		this.firstName = "";
 		this.lastName = "";
-		setLowerCaseName();
+		this.lowercaseName = "";
 		this.email = "";
 		this.roles = 0; // student
 		this.premium = false;
-		//		this.demoPremium = false;
-		//		this.demoExpires = new Date(0L);
 		this.lastLogin = new Date(0L);
 		this.myGroupId = -1L;
 		this.smsMessageDevice = "";
@@ -226,19 +224,25 @@ public class User implements Comparable<User>,Serializable {
 	}
 
 	static public User createGooglePlusUser(JSONObject payload) {
-		User user;
+		User user = null;
 		try {
 			Objectify ofy = ObjectifyService.begin();
 			String userId = payload.getString("id");
-			user = ofy.find(User.class,userId);
+			if (userId != null) user = ofy.find(User.class,userId);
 			if (user != null) return user;
 			user = new User(userId);
-			user.setEmail(payload.getString("email"));
-			user.verifiedEmail = payload.getBoolean("email_verified");
-			user.authDomain = payload.getString("hd");
-			if (user.authDomain==null) user.authDomain="gmail.com";
-			if (user.authDomain.contains("google.com")) user.authDomain="gmail.com";
-			String myDomainName = user.authDomain;
+			String email = payload.getString("email");
+			if (email!=null) {
+				user.setEmail(email);
+				user.verifiedEmail = payload.getBoolean("email_verified");
+			}
+			user.authDomain = "google.com";
+		
+			if (payload.containsKey("hd")) user.authDomain = payload.getString("hd");
+			else if (payload.containsKey("iss")) user.authDomain = payload.getString("iss");
+			else user.authDomain = "accounts.google.com";
+			
+			String myDomainName = User.extractDomain(email);
 			do { // try to assign a user to an existing ChemVantage domain by checking the authDomain or super domain
 				try { 
 					Domain d = ofy.query(Domain.class).filter("domainName",myDomainName).get();
@@ -248,12 +252,15 @@ public class User implements Comparable<User>,Serializable {
 				}	
 				myDomainName = myDomainName.substring(myDomainName.indexOf('.')+1);  // removes first subdomain name and period
 			} while (user.domain==null && myDomainName.indexOf('.') >= 0);
+	
 			ofy.put(user);
+			
 			if (user.verifiedEmail) {
 				Query<User> twins = ofy.query(User.class).filter("email",user.email);
 				for (User t : twins) if (!t.id.equals(user.id)) Admin.mergeAccounts(user, t);
 			}
 		} catch (Exception e) {
+			System.out.println("Error: " + e.getMessage());
 			return null;
 		}		
 		return user;
@@ -403,6 +410,7 @@ public class User implements Comparable<User>,Serializable {
 	}
 
 	void setFirstName(String fn) {
+		System.out.println("Setting firstName to: " + fn);
 		if (fn == null) this.firstName = "";
 		else this.firstName = fn.trim();
 		setLowerCaseName();
@@ -415,12 +423,10 @@ public class User implements Comparable<User>,Serializable {
 	}
 
 	void setLowerCaseName() {
-		String temp = this.lowercaseName;
 		if (this.lastName==null || this.lastName.isEmpty()) this.lastName = "";
 		if (this.firstName==null || this.firstName.isEmpty()) this.firstName = "";
 		this.lowercaseName = this.lastName + (!this.lastName.isEmpty()&&!this.firstName.isEmpty()?", ":"") + this.firstName;
 		this.lowercaseName = this.lowercaseName.toLowerCase().trim();
-		if (!lowercaseName.equals(temp)) ofy.put(this);
 	}
 
 	void setAlias(String newId) {

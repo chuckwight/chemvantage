@@ -27,6 +27,7 @@ import java.net.URL;
 import java.util.Date;
 
 import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -47,8 +48,8 @@ public class GooglePlusLaunch extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	private static final GoogleClient CLIENT = GoogleClient.getInstance();
-	private static final String client_id = "890312835091-rtjtii84uafa0v1bsmoe03nc0uutivb7.apps.googleusercontent.com";
-	private static final String client_secret = "wSvwjpiomYbePKl5Z62apDFr";
+	//private static final String client_id = "890312835091-rtjtii84uafa0v1bsmoe03nc0uutivb7.apps.googleusercontent.com";
+	//private static final String client_secret = "wSvwjpiomYbePKl5Z62apDFr";
 	
 	DAO dao = new DAO();
 	Objectify ofy = dao.ofy();
@@ -83,7 +84,7 @@ public class GooglePlusLaunch extends HttpServlet {
 			JSONObject payload = JSONObject.fromObject(new String(Base64.decode(pieces[1])));
 			
 			// Verify that this JWT is targeted to the correct site for Google+ login
-			if (!client_id.equals(payload.getString("aud"))) throw new Exception();  // JWT token has wrong audience
+			if (!CLIENT.client_id.equals(payload.getString("aud"))) throw new Exception();  // JWT token has wrong audience
 			
 			// Check to ensure that JWT has not expired
 			Date now = new Date();
@@ -95,7 +96,7 @@ public class GooglePlusLaunch extends HttpServlet {
 			if (userId==null || userId.isEmpty()) throw new Exception();
 				
 			// Everything looks OK; sign-in to ChemVantage
-			session.setAttribute("userId", userId);			
+			session.setAttribute("UserId", userId);			
 
 			// Check to see if this is a first-time Google+ sign-in
 			User user = User.getInstance(session);		
@@ -104,8 +105,10 @@ public class GooglePlusLaunch extends HttpServlet {
 				user.setFirstName(getUserName(userId,accessToken));
 				ofy.put(user);
 			}
-			System.out.println("Welcome " + user.getFullName());
-			
+			Cookie c = new Cookie("IDProvider","Google");
+			c.setMaxAge(2592000); // expires after 30 days (in seconds)
+			response.addCookie(c);
+
 		} catch (Exception e) {
 			System.out.println(e.toString());
 			response.setStatus(500);
@@ -190,10 +193,8 @@ public class GooglePlusLaunch extends HttpServlet {
 			if (content==null || content.isEmpty()) throw new Exception();
 			
 			JSONObject userInfo = JSONObject.fromObject(content);
-			System.out.println("UserInfo: " + userInfo.toString());
 			givenName = userInfo.getJSONObject("name").getString("givenName");
 		} catch (Exception e) {
-			givenName = e.getMessage();
 		}
 		return givenName;
 	}
