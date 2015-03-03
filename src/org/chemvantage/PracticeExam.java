@@ -149,19 +149,26 @@ public class PracticeExam extends HttpServlet {
 			
 			// Check to see if this user has any pending exams:
 			Date now = new Date();
-			Date then = new Date(now.getTime()-timeLimit*60000);  // timeLimit minutes ago
+			Date oneHourAgo = new Date(now.getTime()-timeLimit*60000);  // timeLimit minutes ago
 			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
 			if (lis_result_sourcedid==null) lis_result_sourcedid = request.getParameter("custom_lis_result_sourcedid");
 			
-			PracticeExamTransaction pt = ofy.query(PracticeExamTransaction.class).filter("userId",user.id).filter("graded",null).filter("downloaded >",then).get();
-			if (pt != null) {
-				topicIds = pt.topicIds;  // continue an interrupted exam
-				buf.append("<script language=javascript>"
-						+ "onload=alert('You are resuming a previously pending exam. Submit it for grading to abandon it.')"
-						+ "</script>");
+			PracticeExamTransaction pt = ofy.query(PracticeExamTransaction.class).filter("userId",user.id).filter("graded",null).filter("downloaded >",oneHourAgo).get();
+		
+			if (pt != null) {  // there is a pending practice exam
+				if (a == null || a.topicIds.equals(pt.topicIds)) { // entered not using an assignment link or using the same assignment link as before
+					topicIds = pt.topicIds;
+					buf.append("<script language=javascript>"
+							+ "onload=alert('You are resuming a previously pending exam.')"
+							+ "</script>");
+				} else {  // the request is for a new exam corresponding to a different assignment; abandon the old exam automatically.
+					pt = null;
+				}
 			}
 			else if (topicIds.size() < 3) return designExam(user,request);  // redirect to get a valid set of 3+ topic keys
-			else {  // this is a valid request for a new exam with at least 3 topicIds; create a new transaction
+			
+			
+			if (pt == null) {  // this is a valid request for a new exam with at least 3 topicIds; create a new transaction
 				pt = new PracticeExamTransaction(topicIds,user.id,now,null,new int[topicIds.size()],new int[topicIds.size()],lis_result_sourcedid,request.getRemoteAddr());
 				ofy.put(pt);	
 			}
@@ -432,7 +439,7 @@ public class PracticeExam extends HttpServlet {
 		}
 		return buf.toString();
 	}
-
+	
 	String ajaxExamJavaScript() {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSpellCheck(id) {\n"
