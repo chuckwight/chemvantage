@@ -236,7 +236,7 @@ public class Login extends HttpServlet {
 						buf.append("<span id='signinButton'>"
 								+ "<span class='g-signin' "
 								+ "data-callback='signinCallback' "
-								+ "data-clientid='" + "890312835091-rtjtii84uafa0v1bsmoe03nc0uutivb7.apps.googleusercontent.com" + "' "  //googleClientId
+								+ "data-clientid='" + CLIENT.client_id + "' "  //googleClientId
 								+ "data-cookiepolicy='single_host_origin' "
 								+ "data-redirecturi='postmessage' "  // named google+ parameter for hybrid server code exchange schema
 								+ "data-scope='profile email'> "
