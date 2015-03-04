@@ -40,6 +40,7 @@ import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
+import com.googlecode.objectify.Query;
 
 public class PracticeExam extends HttpServlet {
 	// parameters that determine the properties of the exam program:
@@ -153,16 +154,23 @@ public class PracticeExam extends HttpServlet {
 			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
 			if (lis_result_sourcedid==null) lis_result_sourcedid = request.getParameter("custom_lis_result_sourcedid");
 			
-			PracticeExamTransaction pt = ofy.query(PracticeExamTransaction.class).filter("userId",user.id).filter("graded",null).filter("downloaded >",oneHourAgo).get();
-		
-			if (pt != null) {  // there is a pending practice exam
-				if (a == null || a.topicIds.equals(pt.topicIds)) { // entered not using an assignment link or using the same assignment link as before
+			Query<PracticeExamTransaction> qpt = ofy.query(PracticeExamTransaction.class).filter("userId",user.id).filter("graded",null).filter("downloaded >",oneHourAgo);
+			PracticeExamTransaction pt = null;  // placeholder for recovery of one of the pending exam transactions
+			
+			if (qpt.count()>0) {  // there is at least one pending practice exam
+				if (a == null) { // entered not using an assignment link or using the same assignment link as before
+					pt = qpt.get();  // gets the oldest pending practice exam transaction in the query
 					topicIds = pt.topicIds;
 					buf.append("<script language=javascript>"
 							+ "onload=alert('You are resuming a previously pending exam.')"
 							+ "</script>");
-				} else {  // the request is for a new exam corresponding to a different assignment; abandon the old exam automatically.
-					pt = null;
+				} else {  // the request is for an exam corresponding to an assignment
+					for (PracticeExamTransaction t : qpt) {
+						if (t.topicIds.equals(a.topicIds)) {
+							pt = t;  // found the correct pending exam for this assignment
+							break;
+						}
+					}  // if the for-loop expires without finding a corresponding transaction, pt remains null and a new exam is created below
 				}
 			}
 			else if (topicIds.size() < 3) return designExam(user,request);  // redirect to get a valid set of 3+ topic keys
