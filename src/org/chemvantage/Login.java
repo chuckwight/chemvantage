@@ -294,7 +294,7 @@ public class Login extends HttpServlet {
 						+ "      document.getElementById('signinButton').innerHTML='OK';"
 						+ "      window.location='/Home';"
 						+ "     }, "
-						+ "     error: function(textStatus) {document.getElementById('signinButton').innerHTML='Error';}});"
+						+ "     error: function(textStatus) {document.getElementById('signinButton').innerHTML='Google+ Sign-in Error: Please reload this page, wait 10 seconds and try again.';}});"
 						+ "}}"
 						+ "</script>");
 			
