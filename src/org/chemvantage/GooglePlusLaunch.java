@@ -47,8 +47,6 @@ import com.googlecode.objectify.Objectify;
 public class GooglePlusLaunch extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
-	//private static final String client_id = "890312835091-rtjtii84uafa0v1bsmoe03nc0uutivb7.apps.googleusercontent.com";
-	//private static final String client_secret = "wSvwjpiomYbePKl5Z62apDFr";
 	
 	DAO dao = new DAO();
 	Objectify ofy = dao.ofy();

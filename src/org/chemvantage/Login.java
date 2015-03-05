@@ -53,8 +53,6 @@ public class Login extends HttpServlet {
 	Subject subject = dao.getSubject();
 	List<Video> videos = ofy.query(Video.class).order("orderBy").list();
 	
-	String googleClientId = GoogleClient.getInstance().client_id;
-	
     static final Map<String, String> openIdProviders;
     static final Map<String, String> openIdLogos;
     static Set<String> attributes = new HashSet<String>();
