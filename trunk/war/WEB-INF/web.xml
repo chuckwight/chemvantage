@@ -310,30 +310,12 @@
 	</servlet-mapping>
 	
 	<servlet>
-		<servlet-name>TransactionServlet</servlet-name>
-		<servlet-class>org.chemvantage.TransactionServlet</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>TransactionServlet</servlet-name>
-		<url-pattern>/TransactionServlet</url-pattern>
-	</servlet-mapping>
-	
-	<servlet>
 		<servlet-name>Upgrade</servlet-name>
 		<servlet-class>org.chemvantage.Upgrade</servlet-class>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>Upgrade</servlet-name>
 		<url-pattern>/Upgrade</url-pattern>
-	</servlet-mapping>
-	
-	<servlet>
-		<servlet-name>UserServiceLaunch</servlet-name>
-		<servlet-class>org.chemvantage.UserServiceLaunch</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>UserServiceLaunch</servlet-name>
-		<url-pattern>/userService</url-pattern>
 	</servlet-mapping>
 	
 	<servlet>
