@@ -158,7 +158,7 @@ public class PracticeExam extends HttpServlet {
 			PracticeExamTransaction pt = null;  // placeholder for recovery of one of the pending exam transactions
 			
 			if (qpt.count()>0) {  // there is at least one pending practice exam
-				if (a == null) { // entered not using an assignment link or using the same assignment link as before
+				if (a == null) {  // entered by manual topic selection (no assignment)
 					pt = qpt.get();  // gets the oldest pending practice exam transaction in the query
 					topicIds = pt.topicIds;
 					buf.append("<script language=javascript>"
