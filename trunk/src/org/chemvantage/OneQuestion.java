@@ -156,6 +156,10 @@ public class OneQuestion extends HttpServlet {
 			long topicId = 0L;
 			String questionType = "Quiz";
 					
+			buf.append("<TABLE><TR><TD VALIGN=TOP><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
+					+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - " + subject.title + "</b></FONT>"
+					+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>");
+
 			for (Key<Question> k : questionKeys) {
 				try {
 					String studentAnswer[] = request.getParameterValues(Long.toString(k.getId()));
