@@ -17,9 +17,14 @@
 
 package org.chemvantage;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.math.BigInteger;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.security.SecureRandom;
 import java.util.Date;
@@ -37,8 +42,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import net.sf.json.JSONObject;
+
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
+import com.google.gdata.util.common.base.Charsets;
+import com.google.gdata.util.common.io.CharStreams;
+import com.google.gdata.util.common.util.Base64;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
 
@@ -52,6 +62,7 @@ public class Login extends HttpServlet {
 	GoogleClient CLIENT = GoogleClient.getInstance();
 	Subject subject = dao.getSubject();
 	List<Video> videos = ofy.query(Video.class).order("orderBy").list();
+	JSONObject openid_config = null;
 	
     static final Map<String, String> openIdProviders;
     static final Map<String, String> openIdLogos;
@@ -172,11 +183,84 @@ public class Login extends HttpServlet {
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
+		
+		// catch a misdirected attempt to connect using LTI (should use /lti instead)
 		String lti_message_type = request.getParameter("lti_message_type");
-		if (lti_message_type!=null) {  // redirect this LTI request
+		if (lti_message_type!=null) {  // this is a misdirected LTI request; return standard LTI error message
 			String msg = "Help for LTI registration is available at https://chem-vantage.appspot.com/lti/registration/";
 			response.sendRedirect(request.getParameter("launch_presentation_return_url") + "?lti_msg=" + URLEncoder.encode(msg,"UTF-8"));
 			return;
+		}
+		
+		// handle a valid Google+ sign-in attempt
+		try {  
+			// Load openId configuration endpoint URLS, if necessary
+			if (openid_config==null) openid_config = getOpenIdConfig();
+			
+			// Validate the session/parameter state variable
+			HttpSession session = request.getSession();
+			String sessionState = (String)session.getAttribute("state");
+			String requestState = request.getParameter("state");
+			if (!sessionState.equals(requestState)) {
+				response.setStatus(400); // Bad request
+				throw new Exception("State parameters did not match.");  // protects against request forgery attack
+			}
+			session.removeAttribute("state");  // state is for one-time login only
+
+			//Exchange the one-time code for a Google+ access token JSON object
+			String code = request.getParameter("code");
+			JSONObject accessToken = getToken(code);
+			
+			// Handle possible authentication failure
+			if (accessToken.containsKey("error")) {
+				response.setStatus(401); // Unauthorized
+				throw new Exception("Access token contained error.");
+			}
+			
+			// Retrieve the id_token inside the accessToken and decode the JSON Web Token (JWT) payload:
+			String id_token = accessToken.getString("id_token");
+			String[] pieces = id_token.split("\\.");
+			if (pieces.length!=3) {
+				response.setStatus(501); // not implemented; server lacks the ability to fulfill the request
+				throw new Exception("Invalid JWT payload.");  // JWT token structure is invalid			
+			}
+			JSONObject payload = JSONObject.fromObject(new String(Base64.decode(pieces[1])));
+			
+			// Verify that this JWT is targeted to the correct site for Google+ login
+			if (!CLIENT.client_id.equals(payload.getString("aud"))) {
+				response.setStatus(403); // forbidden
+				throw new Exception("AuthToken not valid for this site.");  // JWT token has wrong audience
+			}
+			
+			// Check to ensure that JWT has not expired
+			Date now = new Date();
+			Date expires = new Date(1000L*new Long(payload.getInt("exp")));
+			if (expires.before(now)) {
+				response.setStatus(498); // token expired
+				throw new Exception("AuthToken expired.");
+			}
+			
+			// Retrieve the id from the JWT 
+			String userId = payload.getString("sub");
+			if (userId==null) {
+				response.setStatus(499); // token required
+				throw new Exception("JWT did not contain a valid user id.");
+			}
+				
+			// Everything looks OK; sign-in to ChemVantage
+			session.setAttribute("UserId", userId);			
+
+			// Check to see if this is a first-time Google+ sign-in
+			if (ofy.find(User.class,userId)==null) { 
+				String firstName = getUserFirstName(userId,accessToken);
+				User.createGooglePlusUser(payload,firstName);
+			}
+			Cookie c = new Cookie("IDProvider","Google");
+			c.setMaxAge(2592000); // expires after 30 days (in seconds)
+			response.addCookie(c);
+
+		} catch (Exception e) {	
+			response.setStatus(500);
 		}		
 	}
 		
@@ -234,7 +318,7 @@ public class Login extends HttpServlet {
 						buf.append("<span id='signinButton'>"
 								+ "<span class='g-signin' "
 								+ "data-callback='signinCallback' "
-								+ "data-clientid='" + CLIENT.client_id + "' "  //googleClientId
+								+ "data-clientid='" + CLIENT.client_id + "' "
 								+ "data-cookiepolicy='single_host_origin' "
 								+ "data-redirecturi='postmessage' "  // named google+ parameter for hybrid server code exchange schema
 								+ "data-scope='profile email'> "
@@ -272,7 +356,7 @@ public class Login extends HttpServlet {
 				buf.append("<TD style='text-align:center'><span id='signinButton'>"
 						+ "<span class='g-signin' "
 						+ "data-callback='signinCallback' "
-						+ "data-clientid='" + CLIENT.client_id + "' "  //googleClientId
+						+ "data-clientid='" + CLIENT.client_id + "' "
 						+ "data-cookiepolicy='single_host_origin' "
 						+ "data-redirecturi='postmessage' "  // named google+ parameter for hybrid server code exchange schema
 						+ "data-scope='profile email'> "
@@ -281,18 +365,19 @@ public class Login extends HttpServlet {
 				buf.append("</TR></TABLE>");
 			}
 			
-			// load javascript for processing a google+ sing-in flow
+			// load javascript for processing a google+ sign-in flow
 			buf.append("<script>"
 						+ "function signinCallback(authResult) {"
 						+ " if (authResult['status']['method']=='PROMPT' && authResult['status']['signed_in']) {"
 						+ "    document.getElementById('signinButton').innerHTML='working...';"
-						+ "    $.ajax({type:'POST',url:'/googleplus',contentType:'application/x-www-form-urlencoded; charset=UTF-8', "
-						+ "     data: 'state=" + state + "&code=' + authResult['code'], "
-						+ "     success: function(result) {"
-						+ "      document.getElementById('signinButton').innerHTML='OK';"
-						+ "      window.location='/Home';"
-						+ "     }, "
-						+ "     error: function(textStatus) {document.getElementById('signinButton').innerHTML='Google+ Sign-in Error: Please reload this page, wait 10 seconds and try again.';}});"
+						+ "      $.ajax({type:'POST',url:'/login',contentType:'application/x-www-form-urlencoded; charset=UTF-8', "
+						+ "       data: 'state=" + state + "&code=' + authResult['code'], "
+						+ "       success: function(result) {"
+						+ "        document.getElementById('signinButton').innerHTML='OK';"
+						+ "        window.location='/Home';},"
+						+ "       error: function(xhr,ajaxOptions,thrownError){"
+						+ "        document.getElementById('signinButton').innerHTML=xhr.status + ': ' + ajaxOptions;}"
+						+ "      })"
 						+ "}}"
 						+ "</script>");
 			
@@ -352,5 +437,76 @@ public class Login extends HttpServlet {
 		return buf.toString();
 	}
 
+	JSONObject getOpenIdConfig() {
+		try {
+			URL u = new URL("https://accounts.google.com/.well-known/openid-configuration");
+			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+			StringBuffer res = new StringBuffer();
+			String line;
+			while ((line = reader.readLine()) != null) {
+				res.append(line);
+			}
+			reader.close();			
+			return JSONObject.fromObject(res.toString());	
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+	JSONObject getToken(String code) {
+		JSONObject accessToken = null;
+		try {
+			// Exchange the one-time authorization code for an access token:		
+			URL u = new URL(openid_config.getString("token_endpoint"));
+			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+			uc.setDoOutput(true);
+			uc.setRequestMethod("POST");
+			uc.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
+			uc.setRequestProperty("Accept-Charset", "UTF-8");
+			String queryString = "code=" + code;
+			queryString += "&client_id=" + CLIENT.client_id; 
+			queryString += "&client_secret=" + CLIENT.client_secret;
+			queryString += "&redirect_uri=postmessage";
+			queryString += "&grant_type=authorization_code";
+			
+			OutputStream output = uc.getOutputStream();
+			output.write(queryString.getBytes());
+			output.flush();
+
+			//read the response from Google+ and convert it to a JSON object
+			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+			StringBuffer res = new StringBuffer();
+			String line;
+			while ((line = reader.readLine()) != null) {
+				res.append(line);
+			}
+			reader.close();
+			
+			accessToken = JSONObject.fromObject(res.toString());
+		} catch (Exception e) {
+			System.out.println("Error: " + e.getMessage());
+		}
+		return accessToken;
+	}
 	
+	String getUserFirstName(String userId,JSONObject accessToken) {
+		String givenName = "";
+		try {
+			// Open a new URL connection to the Google People API endpoint:
+			URL u = new URL("https://www.googleapis.com/plus/v1/people/" + userId);
+			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+			uc.setRequestProperty("Authorization", "Bearer " + accessToken.getString("access_token"));
+			
+			//read the response from Google+ and convert it to a JSON object
+			String content = CharStreams.toString(new InputStreamReader(uc.getInputStream(),Charsets.UTF_8));
+			if (content==null || content.isEmpty()) throw new Exception();
+			
+			JSONObject userInfo = JSONObject.fromObject(content);
+			givenName = userInfo.getJSONObject("name").getString("givenName");
+		} catch (Exception e) {
+		}
+		return givenName;
+	}
+
 }

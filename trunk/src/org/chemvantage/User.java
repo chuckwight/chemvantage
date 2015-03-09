@@ -88,7 +88,7 @@ public class User implements Comparable<User>,Serializable {
 		try {
 			Objectify ofy = ObjectifyService.begin();
 			String userId = (String)session.getAttribute("UserId");
-			System.out.println("User: id=" + userId);
+			System.out.println("UserId: " + userId);
 			User user = ofy.get(User.class,userId);
 			if (user.alias != null) { // follow the alias chain to the end
 				List<String> userIds = new ArrayList<String>();
@@ -112,6 +112,7 @@ public class User implements Comparable<User>,Serializable {
 			}
 			return user;
 		} catch (Exception e) {
+			System.out.println("User.getInstance error: " + e.getMessage());
 			return null;
 		}
 	}
@@ -227,7 +228,7 @@ public class User implements Comparable<User>,Serializable {
 		User user = null;
 		try {
 			Objectify ofy = ObjectifyService.begin();
-			String userId = payload.getString("id");
+			String userId = payload.getString("sub");
 			if (userId != null) user = ofy.find(User.class,userId);
 			if (user != null) return user;
 			user = new User(userId);
