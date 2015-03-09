@@ -65,7 +65,7 @@ public class GooglePlusLaunch extends HttpServlet {
 			HttpSession session = request.getSession();
 			String sessionState = (String)session.getAttribute("state");
 			String requestState = request.getParameter("state");
-			if (!sessionState.equals(requestState)) throw new Exception();  // protects against request forgery attack
+			if (!sessionState.equals(requestState)) throw new Exception("State parameters did not match.");  // protects against request forgery attack
 			session.removeAttribute("state");  // state is for one-time login only
 
 			//Exchange the one-time code for a Google+ access token JSON object
@@ -73,7 +73,7 @@ public class GooglePlusLaunch extends HttpServlet {
 			JSONObject accessToken = getToken(code);
 			
 			// Handle possible authentication failure
-			if (accessToken.containsKey("error")) throw new Exception("Authentication failed");
+			if (accessToken.containsKey("error")) throw new Exception("Access token contained error.");
 			
 			// Retrieve the id_token inside the accessToken and decode the JSON Web Token (JWT) payload:
 			String id_token = accessToken.getString("id_token");
