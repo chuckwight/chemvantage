@@ -49,7 +49,7 @@ public class Topic implements Serializable {
 	
 	public Query<Question> getQuestions(String assignmentType) {
 		Objectify ofy = ObjectifyService.begin();
-		return ofy.query(Question.class).filter("topicId", this.id).filter("assignmentType",assignmentType);
+		return ofy.query(Question.class).filter("topicId", this.id).filter("assignmentType",assignmentType).order("pointValue");
 	}
 	
 	public int getQuestionCount(String assignmentType) {
