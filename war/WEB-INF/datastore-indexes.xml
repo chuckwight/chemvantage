@@ -59,6 +59,12 @@
         <property name="downloaded" direction="asc"/>
     </datastore-index>
 
+   <datastore-index kind="Question" ancestor="false" source="auto">
+        <property name="topicId" direction="asc"/>
+        <property name="assignmentType" direction="asc"/>
+        <property name="pointValue" direction="asc"/>
+    </datastore-index>
+
    <datastore-index kind="QuizTransaction" ancestor="false" source="auto">
         <property name="graded" direction="asc"/>
         <property name="topicId" direction="asc"/>
