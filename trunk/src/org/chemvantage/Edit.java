@@ -232,9 +232,8 @@ public class Edit extends HttpServlet {
 							+ "<TD ALIGN=RIGHT NOWRAP><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit> " + i + ".</TD><TD>");
 					buf.append("\n" + q.printAll() + "</TD>");
 					
-				if (q.requiresParser) {
-					buf.append("<TD><a href=Edit?TopicId=" + topicId + "&AssignmentType=" + assignmentType + "#" 
-							+ questionId + "><FONT SIZE=-2>Refresh</FONT></a></TD>");
+				if (assignmentType.equals("Exam")) {
+					buf.append("<TD><FONT SIZE=-2>(" + q.pointValue + "&nbsp;pts)</FONT></TD>");
 				}
 					 
 					buf.append("</TR></FORM>");
@@ -719,7 +718,7 @@ public class Edit extends HttpServlet {
 		double requiredPrecision = 2.0; // percent
 		int pointValue = 1;
 		try {
-			Integer.parseInt(request.getParameter("PointValue"));
+			pointValue = Integer.parseInt(request.getParameter("PointValue"));
 		} catch (Exception e) {
 		}
 		try {
