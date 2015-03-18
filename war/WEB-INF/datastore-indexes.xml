@@ -90,6 +90,11 @@
         <property name="score" direction="desc"/>
     </datastore-index>
 
+      <datastore-index kind="QuizTransaction" ancestor="false" source="auto">
+        <property name="userId" direction="asc"/>
+        <property name="downloaded" direction="asc"/>
+    </datastore-index>
+
     <datastore-index kind="Response" ancestor="false" source="auto">
         <property name="topicId" direction="asc"/>
         <property name="submitted" direction="asc"/>
