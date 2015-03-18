@@ -498,7 +498,7 @@ public class Scores extends HttpServlet {
 			buf.append("<br>" + df_long.format(now) + " (all times on this page are in Universal Coordinated Time)<p>");
 
 			// make a list of all quiz transactions for this user
-			List<QuizTransaction> quizTransactions = ofy.query(QuizTransaction.class).filter("userId", user.id).list();
+			List<QuizTransaction> quizTransactions = ofy.query(QuizTransaction.class).filter("userId", user.id).order("downloaded").list();
 			buf.append("<table><tr><th>Topic</th><th>Downloaded</th><th>Graded</th><th>Score</th></tr>");
 			for (QuizTransaction qt : quizTransactions) buf.append(qt.tableRow());
 			buf.append("</table>");
