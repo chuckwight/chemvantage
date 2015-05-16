@@ -156,7 +156,7 @@ public class About extends HttpServlet {
 		+ "credentials at <a href=/lti/registration/>our LTI registration page</a>.";
 			
 	public static String copyright = "<a NAME=copyright></a>"
-		+ "<h3>Copyright &copy; 2007-2014 ChemVantage LLC</h3>"
+		+ "<h3>Copyright &copy; 2007-2015 ChemVantage LLC</h3>"
 		+ "<a rel='license' href=http://creativecommons.org/licenses/by/3.0/us/>"
 		+ "<img alt='Creative Commons License' style='border-width:0' align=left hspace=10 vspace=5 "
 		+ "src='http://i.creativecommons.org/l/by/3.0/us/88x31.png'/></a>"
