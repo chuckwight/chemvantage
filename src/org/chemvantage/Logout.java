@@ -28,6 +28,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
 
 public class Logout extends HttpServlet {
@@ -53,9 +54,13 @@ public class Logout extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		request.getSession().invalidate();
-		response.setContentType("text/html");
+		UserService userService = UserServiceFactory.getUserService();
+		if (userService.isUserLoggedIn()) response.sendRedirect(userService.createLogoutURL("/Logout"));
+		else {
+			response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		out.println(Login.header + logoutPage(request) + Login.footer);
+		}
 	}
 	
 	String logoutPage(HttpServletRequest request) {
@@ -82,9 +87,8 @@ public class Logout extends HttpServlet {
 				String providerLogo=null;
 				if (Login.openIdProviders.keySet().contains(providerName)) {
 					providerUrl = openIdProviders.get(providerName);
-					String logoutUrl = UserServiceFactory.getUserService().createLogoutURL(providerUrl);
 					providerLogo = openIdLogos.get(providerName);
-					buf.append("<TD style='text-align:center'><a href='http://" + logoutUrl + "'>"
+					buf.append("<TD style='text-align:center'><a href='http://" + providerUrl + "'>"
 							+ "<img src='" + providerLogo + "' border=0 alt='" + providerUrl + "'><br/>" 
 							+ providerUrl + "</a></TD>");
 				} else if (CASLaunch.casProviders.keySet().contains(providerName)) {
