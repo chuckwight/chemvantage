@@ -30,8 +30,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
-import com.google.appengine.api.users.UserService;
-import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Objectify;
 
 public class Home extends HttpServlet {
@@ -45,7 +43,6 @@ public class Home extends HttpServlet {
 	List<Video> videos = ofy.query(Video.class).order("orderBy").list();
 	List<Topic> topics = ofy.query(Topic.class).order("orderBy").list();
 	List<Text> texts = ofy.query(Text.class).list();
-	UserService userService = UserServiceFactory.getUserService();
 		
 	public String getServletInfo() {
 		return "Default servlet for user's home page.";
@@ -174,7 +171,7 @@ public class Home extends HttpServlet {
 
 			buf.append("&nbsp;&nbsp;");
 			
-			buf.append("<a href='" + UserServiceFactory.getUserService().createLogoutURL("/Logout",user.authDomain) + "'>Sign out</a>");
+			buf.append("<a href='/Logout'>Sign out</a>");
 			
 			buf.append("</nobr></div>");
 
@@ -288,9 +285,7 @@ public class Home extends HttpServlet {
 			buf.append("<TABLE BORDER=2 CELLSPACING=0 CELLPADDING=0 BORDERCOLOR=#008000><TR><TD>");
 			buf.append("<TABLE BGCOLOR=#FFFF80>"
 					+ "<TR><TD ALIGN=CENTER><b>Welcome, " + user.firstName + "</b>"
-					+ "&nbsp;&nbsp;<FONT SIZE=-1><a href='"
-					+ UserServiceFactory.getUserService().createLogoutURL("/")
-					+ "'>(this isn't me)</a></FONT></TD></TR>");
+					+ "&nbsp;&nbsp;<FONT SIZE=-1><a href='/Logout'>(this isn't me)</a></FONT></TD></TR>");
 			buf.append("<TR><TD ALIGN=CENTER><FONT SIZE=-1> " + user.getDecoratedRole() +"</FONT></TD></TR>"); 
 
 			Group myGroup = null;
