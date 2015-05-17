@@ -28,7 +28,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.datastore.Cursor;
 import com.google.appengine.api.datastore.QueryResultIterator;
-import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.ObjectifyService;
 import com.googlecode.objectify.Query;
@@ -55,8 +54,8 @@ public class DomainAdmin extends HttpServlet {
 				response.sendRedirect("/");
 				return;
 			}
-			String domainName = request.getParameter("Domain");
-			if (domainName==null) domainName = user.domain;        // domain administrator
+			String domainName = user.domain;
+			if (domainName==null && user.isChemVantageAdmin()) domainName = request.getParameter("Domain");
 			if (domainName==null) response.sendRedirect("/Admin"); // ChemVantage administrator
 			
 			// Check to ensure that user is either domain admin or ChemVAntage admin
@@ -66,8 +65,8 @@ public class DomainAdmin extends HttpServlet {
 				return;
 			}
 			List<String> domainAdmins = d.getDomainAdmins();
-			if (!((domainAdmins != null && domainAdmins.contains(user.id)) || UserServiceFactory.getUserService().isUserAdmin())) {
-				response.sendRedirect("/");
+			if (!((domainAdmins != null && domainAdmins.contains(user.id)) || user.isChemVantageAdmin())) {
+				response.sendRedirect("/Home");
 			}
 			
 			String userRequest = request.getParameter("UserRequest");
@@ -94,16 +93,19 @@ public class DomainAdmin extends HttpServlet {
 			if (user==null || !user.isAdministrator()) {
 				response.sendRedirect("/");
 				return;
-			}			
-			String domainName = user.domain==null?request.getParameter("Domain"):user.domain;			
+			}
+			
+			String domainName = user.domain;
+			if (domainName==null && user.isChemVantageAdmin()) domainName = request.getParameter("Domain");
 			if (domainName==null) response.sendRedirect("/Admin"); // ChemVantage administrator
 			
-			// Check to ensure that user is either domain admin or ChemVAntage admin
+			// Check to ensure that user is either domain admin or ChemVantage admin
 			Domain d = ofy.query(Domain.class).filter("domainName", domainName).get();
 			List<String> domainAdmins = d.getDomainAdmins();
-			if (!((domainAdmins != null && domainAdmins.contains(user.id)) || UserServiceFactory.getUserService().isUserAdmin())) {
-				response.sendRedirect("/");
+			if (!((domainAdmins != null && domainAdmins.contains(user.id)) || user.isChemVantageAdmin())) {
+				response.sendRedirect("/Home");
 			}
+			
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();

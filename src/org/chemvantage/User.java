@@ -500,6 +500,7 @@ public class User implements Comparable<User>,Serializable {
 		else if (roles < 8) principalRole = "Teaching Assistant";
 		else if (roles < 16) principalRole = "Instructor";
 		else if (roles < 32) principalRole = "Administrator";
+		else if (roles < 64) principalRole = "ChemVantageAdmin";
 		else principalRole = ""; // unknown role
 		principalRole += " (" + (premium?"premium":"basic") + ")";
 		return principalRole;
@@ -513,6 +514,7 @@ public class User implements Comparable<User>,Serializable {
 		else if (roles < 8) principalRole = "Teaching Assistant";
 		else if (roles < 16) principalRole = "Instructor";
 		else if (roles < 32) principalRole = "Administrator";
+		else if (roles < 64) principalRole = "ChemVantageAdmin";
 		else principalRole = ""; // unknown role
 
 		int level = 0;
@@ -566,9 +568,13 @@ public class User implements Comparable<User>,Serializable {
 	}
 
 	boolean isAdministrator() {
-		return ((roles%32)/16 == 1);
+		return ((roles%32)/16 == 1) || this.isChemVantageAdmin();
 	}
 
+	boolean isChemVantageAdmin() {
+		return ((roles%64)/32 == 1);
+	}
+	
 	boolean setIsAdministrator(boolean makeAdmin) {  // returns true if state is changed; otherwise returns false
 		if (isAdministrator() && !makeAdmin) {
 			roles -= 16;
