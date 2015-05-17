@@ -586,6 +586,20 @@ public class User implements Comparable<User>,Serializable {
 		else return false; // user already had the requested status; no changes made
 	}
 
+	boolean setIsChemVantageAdmin(boolean makeAdmin) {  // returns true if state is changed; otherwise returns false
+		if (isChemVantageAdmin() && !makeAdmin) {
+			roles -= 32;
+			ofy.put(this);
+			return true;
+		}
+		else if (!isChemVantageAdmin() && makeAdmin) {
+			roles += 32;
+			ofy.put(this);
+			return true;
+		}
+		else return false; // user already had the requested status; no changes made
+	}
+
 	boolean isInstructor() {
 		return ((roles%16)/8 == 1) || this.isAdministrator();
 	}

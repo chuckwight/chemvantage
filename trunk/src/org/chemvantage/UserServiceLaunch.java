@@ -60,6 +60,8 @@ public class UserServiceLaunch extends HttpServlet {
 				User.createUserServiceUser(userService.getCurrentUser());
 			}
 			session.setAttribute("UserId", userId);
+			User user = User.getInstance(session);
+			if (userService.isUserAdmin()) user.setIsChemVantageAdmin(true);
 			
 			// try to set a Cookie with the user's ID provider:
 			String authDomain = userService.getCurrentUser().getAuthDomain();
