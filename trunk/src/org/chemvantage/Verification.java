@@ -33,7 +33,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
@@ -190,18 +189,6 @@ public class Verification extends HttpServlet {
 		boolean emailRequired = user.email.isEmpty();
 		boolean groupRequired = user.myGroupId < 0;
 		
-		try {
-			UserService userService = UserServiceFactory.getUserService();
-			if (userService.isUserAdmin()) throw new Exception(); // don't set email for admins logged in as users
-			String em = "";
-			if (emailRequired) em = userService.getCurrentUser().getEmail();
-			if (!(em==null || em.isEmpty())) {
-				user.setEmail(em);
-				user.verifiedEmail = true;
-				ofy.put(user);
-				emailRequired = false;
-			}
-		} catch (Exception e) {}
 		try {
 			buf.append("<h2>Your ChemVantage Account Profile</h2>"
 					+ "ChemVantage protects your personal information. For details, see our <a href=/w3c/privacy.html>Privacy Policy</a>.<br>"
