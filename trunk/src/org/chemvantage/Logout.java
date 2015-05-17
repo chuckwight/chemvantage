@@ -28,6 +28,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.appengine.api.users.UserServiceFactory;
+
 public class Logout extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
@@ -80,10 +82,11 @@ public class Logout extends HttpServlet {
 				String providerLogo=null;
 				if (Login.openIdProviders.keySet().contains(providerName)) {
 					providerUrl = openIdProviders.get(providerName);
+					String logoutUrl = UserServiceFactory.getUserService().createLogoutURL(providerUrl);
 					providerLogo = openIdLogos.get(providerName);
-					buf.append("<TD style='text-align:center'><a href='http://" + providerUrl + "'>"
+					buf.append("<TD style='text-align:center'><a href='http://" + logoutUrl + "'>"
 							+ "<img src='" + providerLogo + "' border=0 alt='" + providerUrl + "'><br/>" 
-							+ providerUrl + "</a></TD>");			
+							+ providerUrl + "</a></TD>");
 				} else if (CASLaunch.casProviders.keySet().contains(providerName)) {
 					providerUrl = CASLaunch.casProviders.get(providerName) + "/logout";
 					providerLogo = CASLaunch.casLogos.get(providerName);
