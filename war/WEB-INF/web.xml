@@ -189,7 +189,7 @@
 		<servlet-name>OneQuestion</servlet-name>
 		<url-pattern>/q</url-pattern>
 	</servlet-mapping>
-
+<!-- 
 	<servlet>
 		<servlet-name>OpenIdLaunch</servlet-name>
 		<servlet-class>org.chemvantage.OpenIdLaunch</servlet-class>
@@ -206,7 +206,7 @@
 		<servlet-name>OpenIdLaunch</servlet-name>
 		<url-pattern>/openid</url-pattern>
 	</servlet-mapping>
-
+ -->
 	<servlet>
 		<servlet-name>OpenIdSetup</servlet-name>
 		<servlet-class>org.chemvantage.OpenIdSetup</servlet-class>
@@ -320,6 +320,15 @@
 	</servlet-mapping>
 	
 	<servlet>
+		<servlet-name>UserServiceLaunch</servlet-name>
+		<servlet-class>org.chemvantage.UserServiceLaunch</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>UserServiceLaunch</servlet-name>
+		<url-pattern>/userService</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
 		<servlet-name>Verification</servlet-name>
 		<servlet-class>org.chemvantage.Verification</servlet-class>
 	</servlet>
@@ -331,11 +340,13 @@
 	<security-constraint>
 		<web-resource-collection>
 			<web-resource-name>AdminServlet</web-resource-name>
-			<url-pattern>/Admin</url-pattern>
+			<!--  
+			<url-pattern>/Admin</url-pattern> 
+			<url-pattern>/DataTransfer</url-pattern>
+			-->
 			<url-pattern>/remote_api</url-pattern>
 			<url-pattern>/CalculateScores</url-pattern>
 			<url-pattern>/DataStoreCleaner</url-pattern>
-			<url-pattern>/DataTransfer</url-pattern>
 			<url-pattern>/ManageDemoPremiumAccounts</url-pattern>
 			<url-pattern>/Notification</url-pattern>
 			<url-pattern>/Rescue</url-pattern>
