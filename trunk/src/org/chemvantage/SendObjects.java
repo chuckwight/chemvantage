@@ -33,31 +33,32 @@ public class SendObjects extends GenericServlet {
 	private static final long serialVersionUID = 137L;
 	DAO dao = new DAO();
 	Objectify ofy = dao.ofy();
-	boolean servletDisabled = true;  // set to false in order to utilize the data transfer servlet
+	boolean servletEnabled = true;  // set to false to disable all transfers
 	
 	@Override
 	public void service(ServletRequest request,ServletResponse response) throws ServletException, IOException {
 		response.setContentType("application/x-java-serialized-object");
-		if (servletDisabled) return;
-        int value = 0;
-        try {
-            // read a String object containing the data request parameters
-            ObjectInputStream is = new ObjectInputStream(request.getInputStream());
-            String userRequest = (String) is.readObject();
-            String className = "org.chemvantage." + (String) is.readObject();
-            is.close();
-            
-            Class<?> c = Class.forName(className);
-            ObjectOutputStream oStream = new ObjectOutputStream(response.getOutputStream());
-            if ("Check Quantity".equals(userRequest)) {
-            	value = ofy.query(c).listKeys().size();
-                oStream.writeInt(value);
-            } else {
-            	List<?> objects = ofy.query(c).list();
-            	oStream.writeObject(objects);
-            }
-            oStream.close();
-        } catch (Exception e) {
-        }
-    }
+		if (servletEnabled && request.getServerName().equals("dev-vantage.appspot.com")) {
+			int value = 0;
+			try {
+				// read a String object containing the data request parameters
+				ObjectInputStream is = new ObjectInputStream(request.getInputStream());
+				String userRequest = (String) is.readObject();
+				String className = "org.chemvantage." + (String) is.readObject();
+				is.close();
+
+				Class<?> c = Class.forName(className);
+				ObjectOutputStream oStream = new ObjectOutputStream(response.getOutputStream());
+				if ("Check Quantity".equals(userRequest)) {
+					value = ofy.query(c).listKeys().size();
+					oStream.writeInt(value);
+				} else {
+					List<?> objects = ofy.query(c).list();
+					oStream.writeObject(objects);
+				}
+				oStream.close();
+			} catch (Exception e) {
+			}
+		}
+	}
 }
