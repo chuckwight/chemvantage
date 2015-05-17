@@ -33,7 +33,6 @@ import net.sf.json.JSONObject;
 
 import org.chemvantage.samples.apps.marketplace.UserInfo;
 
-import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.ObjectifyService;
@@ -139,7 +138,6 @@ public class User implements Comparable<User>,Serializable {
 			user.authDomain = u.getAuthDomain();
 			user.setEmail(u.getEmail());
 			user.verifiedEmail = !(user.email==null || user.email.isEmpty());
-			user.setIsAdministrator(UserServiceFactory.getUserService().isUserAdmin());
 			Objectify ofy = ObjectifyService.begin();
 			if (user.verifiedEmail) { // search for any accounts with the same email address and alias the new one to it
 				User twin = ofy.query(User.class).filter("email", user.email).get();
