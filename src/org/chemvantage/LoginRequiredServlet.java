@@ -18,36 +18,28 @@
 package org.chemvantage;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.appengine.api.users.UserServiceFactory;
-
 public class LoginRequiredServlet extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 
 	public String getServletInfo() {
-		return "This servlet handles the URI /_ah/login_required and redirects the user to the Google OpenID endpoint for login. Normally, this is only required for accessing servlets restricted to Admin users.";
+		return "This servlet handles the URI /_ah/login_required and redirects the user to the Home page.";
 	}
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
-		doPost(request,response);
+		response.sendRedirect("/Home");	
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
-		Set<String> attributes = new HashSet<String>();
-		attributes.add("email");
-		String destinationURL = request.getParameter("continue");
-		if (destinationURL==null || destinationURL.isEmpty()) destinationURL = "/";
-		response.sendRedirect(UserServiceFactory.getUserService().createLoginURL(destinationURL,null,"gmail.com",attributes));
+		response.sendRedirect("/Home");	
 	}
 
 }
