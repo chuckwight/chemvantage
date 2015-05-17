@@ -59,15 +59,14 @@ public class UserReport implements Serializable {
 			try {
 				user = ofy.get(User.class,this.userId);
 			} catch (Exception e) {
-				return "";  // no adminUser was identified; do not show the report
 			}
 			
 			// this statement permits viewing the userReport only if the viewer is the ChemVantage administrator
 			// or the domain admin of a report from the domain or the report author (user)
 			boolean showReport = false;
-			if (adminUser.isAdministrator() && (adminUser.domain==null)) showReport = true;  // ChemVantage administrator
-			else if (adminUser.isAdministrator() && adminUser.domain.equals(user.domain)) showReport = true;  // domain administrator
-			else if (adminUser.id.equals(user.id)) showReport = true;			
+			if (adminUser.isChemVantageAdmin()) showReport = true;  // ChemVantage administrator
+			else if (adminUser.isAdministrator() && user!=null && adminUser.domain.equals(user.domain)) showReport = true;  // domain administrator
+			else if (user!=null && adminUser.id.equals(user.id)) showReport = true;			
 			if (!showReport) return "";
 			
 			buf.append("\nOn " + submitted 
@@ -109,25 +108,29 @@ public class UserReport implements Serializable {
 	public String view() {
 		StringBuffer buf = new StringBuffer();
 		Objectify ofy = ObjectifyService.begin();
+		User user = null;
+		String userName = "anonymous";
 		try {
-			User user = userId==null?null:ofy.get(User.class,this.userId);
-			buf.append("On " + submitted + " " + user.getBothNames() + " said:<br>\n");
-			if (stars>0) buf.append("(" + stars + " stars)<br>\n");
-			buf.append("<FONT COLOR=RED>" + comments + "</FONT><p>\n\n");
-			try {
-				Question q = ofy.get(Question.class,this.questionId);
-				q.setParameters(userId!=null?userId.hashCode():-1);
-				Topic topic = ofy.find(Topic.class,q.topicId);
-				buf.append("Topic: " + topic.title + " (" + q.assignmentType + " question)<br>");
-				buf.append(q.printAll());
-				if (user!=null) {
-					buf.append("<table><tr><td>Date/Time (UTC)</td><td>Student Response</td><td>Correct Response</td><td>Score</td></tr>");
-					List<Response> responses = ofy.query(Response.class).filter("userId",userId).filter("questionId",questionId).list();
-					for (Response r : responses) buf.append("<tr><td>" + r.submitted.toString() + "</td><td align=center>" + r.studentResponse 
-							+ "</td><td align=center>" + r.correctAnswer + "</td><td align=center>" + r.score + "</td></tr>");
-					buf.append("</table>");
-				}
-			} catch (Exception e2) {}
+			user = ofy.get(User.class,this.userId);
+			userName = user.getBothNames() + " (" + user.email + ")";
+		} catch (Exception e2) {				
+		}
+		buf.append("On " + submitted + " " + userName + " said:<br>\n");
+		if (stars>0) buf.append("(" + stars + " stars)<br>\n");
+		buf.append("<FONT COLOR=RED>" + comments + "</FONT><p>\n\n");
+		try {
+			Question q = ofy.get(Question.class,this.questionId);
+			q.setParameters(userId!=null?userId.hashCode():-1);
+			Topic topic = ofy.find(Topic.class,q.topicId);
+			buf.append("Topic: " + topic.title + " (" + q.assignmentType + " question)<br>");
+			buf.append(q.printAll());
+			if (user!=null) {
+				buf.append("<table><tr><td>Date/Time (UTC)</td><td>Student Response</td><td>Correct Response</td><td>Score</td></tr>");
+				List<Response> responses = ofy.query(Response.class).filter("userId",userId).filter("questionId",questionId).list();
+				for (Response r : responses) buf.append("<tr><td>" + r.submitted.toString() + "</td><td align=center>" + r.studentResponse 
+						+ "</td><td align=center>" + r.correctAnswer + "</td><td align=center>" + r.score + "</td></tr>");
+				buf.append("</table>");
+			}
 		} catch (Exception e) {
 			buf.append("<br>" + e.getMessage());
 		}
