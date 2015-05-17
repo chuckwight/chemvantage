@@ -27,10 +27,7 @@ import java.util.List;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
-import com.google.appengine.api.users.UserService;
-import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Objectify;
 
 public class DataTransfer extends HttpServlet {
@@ -51,11 +48,9 @@ public class DataTransfer extends HttpServlet {
 	protected void doGet (HttpServletRequest request,HttpServletResponse response) {
 		try {
 			// begin admin user authentication section
-			UserService userService = UserServiceFactory.getUserService();
-			User user = ofy.get(User.class,userService.getCurrentUser().getUserId());
-			HttpSession session = request.getSession(true);
-			session.setAttribute("UserId", user.id);
-
+			User user = User.getInstance(request.getSession(true));
+			if (user==null || !user.isChemVantageAdmin()) response.sendRedirect("/Home");
+			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 
@@ -68,11 +63,9 @@ public class DataTransfer extends HttpServlet {
 	protected void doPost (HttpServletRequest request,HttpServletResponse response) {
 		try {
 			// begin admin user authentication section
-			UserService userService = UserServiceFactory.getUserService();
-			User user = ofy.get(User.class,userService.getCurrentUser().getUserId());
-			HttpSession session = request.getSession(true);
-			session.setAttribute("UserId", user.id);
-
+			User user = User.getInstance(request.getSession(true));
+			if (user==null || !user.isChemVantageAdmin()) response.sendRedirect("/Home");
+			
 			getObjects(request);
 			doGet(request,response);
 			
