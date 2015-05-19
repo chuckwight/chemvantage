@@ -23,6 +23,7 @@ package org.chemvantage;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -129,14 +130,12 @@ public class LTIRegistration extends HttpServlet {
 		buf.append("<TR><TD ALIGN=RIGHT>Email Address: </TD><TD><INPUT TYPE=TEXT NAME=Email> (where the credentials will be sent)</TD></TR>");
 		buf.append("<TR><TD ALIGN=RIGHT>Consumer Key: </TD><TD><INPUT TYPE=TEXT NAME=Key> (e.g., moodle257-myschool-edu)</TD></TR>");
 		
-/*   ========= reCaptch tool not yet functional =============
+///*   ============== reCaptcha tool  =========================
 		buf.append("<TR><TD COLSPAN=2>");
-		buf.append("<script type='text/javascript' src='http://www.google.com/recaptcha/api/challenge?k=6LfMt_USAAAAAAAne9eIV0WQBAZMGqGB0Q88SbLS'> </script>"
-				+ "<noscript><iframe src='http://www.google.com/recaptcha/api/noscript?k=6LfMt_USAAAAAAAne9eIV0WQBAZMGqGB0Q88SbLS' height='300' width='500' frameborder='0'></iframe><br>"
-				+ "<textarea name='recaptcha_challenge_field' rows='3' cols='40'></textarea>"
-				+ "<input type='hidden' name='recaptcha_response_field'value='manual_challenge'></noscript>");
+		buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>"
+				+ "<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div>");
 		buf.append("</TD>");
-=============================================================*/
+//=============================================================*/
 		
 		buf.append("<TR><TD>&nbsp;</TD><TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Generate Shared Secret'></TD></TR>");
 		buf.append("</TABLE></FORM>");
@@ -150,7 +149,7 @@ public class LTIRegistration extends HttpServlet {
 		if ("Generate Shared Secret".equals(request.getParameter("UserRequest"))) {  // manual LTI registration request for version 1.x
 			String email = request.getParameter("Email");
 			String key = request.getParameter("Key").replaceAll("\\s", "");  // removes all whitespace from key
-			if (email!=null && !email.isEmpty() && key!=null && !key.isEmpty()) {  // generate a new set of LTI credentials
+			if (email!=null && !email.isEmpty() && key!=null && !key.isEmpty() && reCaptchaOK(request)) {  // generate a new set of LTI credentials
 				response.setContentType("text/html");
 				PrintWriter out = response.getWriter();
 				BLTIConsumer c = ofy.find(BLTIConsumer.class,key);			
@@ -232,29 +231,39 @@ public class LTIRegistration extends HttpServlet {
 			doError(request,response,"Sorry, the Tool Proxy Registration failed.<br>" + e.getMessage() + "<br>" + debug.toString() + "<br>" + "PLEASE SEND THIS ERROR TO admin@chemvantage.org",null,null);
 		}
 	}
-/*
-	String reCaptchaValidation(HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer();
+
+	boolean reCaptchaOK(HttpServletRequest request) {
 		try {
-			String remoteAddr = request.getRemoteAddr();
-			buf.append("remoteAddr=" + remoteAddr + "-");
-			ReCaptchaImpl reCaptcha = new ReCaptchaImpl();
-			reCaptcha.setPrivateKey("6LfMt_USAAAAABmLjiNqefsh2V9CaD1q7FtxkgRK");
-			buf.append("reCaptcha OK - ");
-			String challenge = request.getParameter("recaptcha_challenge_field");
-			buf.append("challenge=" + challenge + "-");
-			String uresponse = request.getParameter("recaptcha_response_field");
-			buf.append("uresponse=" + uresponse + "-");
-			ReCaptchaResponse reCaptchaResponse = reCaptcha.checkAnswer(remoteAddr, challenge, uresponse);
-	       //if (challenge == null) return "false"; // no reCaptcha element detected
-			if (reCaptchaResponse==null) return "no user response detected";
-			if (reCaptchaResponse.isValid()) return "true";
-			else return reCaptchaResponse.getErrorMessage();
+			URL u = new URL("https://www.google.com/recaptcha/api/siteverify");
+	    	HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+	    	uc.setDoOutput(true);
+	    	uc.setDoInput(true);
+	    	uc.setRequestMethod("POST");
+	    	
+	    	String queryString = "secret=6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG&response=" 
+					+ request.getParameter("g-recaptcha-response") + "&remoteIp=" + request.getRemoteAddr();
+			
+			OutputStream output = uc.getOutputStream();
+			output.write(queryString.getBytes());
+			output.flush();
+
+			// read & interpret the JSON response from Google
+			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+			StringBuffer res = new StringBuffer();
+			String line;
+			while ((line = reader.readLine()) != null) {
+				res.append(line);
+			}
+			reader.close();
+			
+			JSONObject reCaptchaValidation = new JSONObject(res.toString());
+			return reCaptchaValidation.getBoolean("success");
+			
 		} catch (Exception e) {
-			return "validation failed - " + buf.toString() + "Error: " +e.toString();
+			return false;
 		}
 	}
-*/	
+	
 	public void doError(HttpServletRequest request, HttpServletResponse response, String s, String message, Exception e)
 			throws java.io.IOException {
 		try {
