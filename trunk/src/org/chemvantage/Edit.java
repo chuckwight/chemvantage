@@ -184,16 +184,15 @@ public class Edit extends HttpServlet {
 					+ nPending + " items are currently pending editorial review.</a><br>");
 			buf.append("<a href=Edit?UserRequest=ManageTopics>Manage Topics</a><br>");
 			buf.append("<a href=Edit?UserRequest=ManageVideos>Manage Videos</a><br>");
-			buf.append("<a href=Edit?UserRequest=ManageTexts>Manage Texts</a>");
+			buf.append("<a href=Edit?UserRequest=ManageTexts>Manage Texts</a><p>");
 			
-			buf.append("<h4>Current Questions</h4>");
 			long topicId = 0;
 			try {
 				topicId = Long.parseLong(request.getParameter("TopicId"));
 			} catch (Exception e2) {}
 			String assignmentType = request.getParameter("AssignmentType");
 			boolean showQuestions = (topicId >0 && assignmentType != null && assignmentType.length()>0);
-			buf.append("<b>Subject: " + subject.title + "</b><br>");
+			//buf.append("<b>Subject: " + subject.title + "</b><br>");
 			buf.append("<FORM NAME=TopicSelect METHOD=GET ACTION=Edit>");
 			buf.append("<FONT" + (request.getParameter("TopicId")!=null && topicId==0?" COLOR=RED>":">") + "<b>Topic:</b></FONT>" + topicSelectBox(topicId,showQuestions));
 			buf.append("<FONT" + (assignmentType!=null && assignmentType.length()==0?" COLOR=RED>":">") + "<b> Assignment Type:</b></FONT>" + assignmentTypeDropDownBox(assignmentType,true));
@@ -216,6 +215,9 @@ public class Edit extends HttpServlet {
 
 				Topic t = ofy.get(Topic.class,topicId);
 				Query<Question> questions = t.getQuestions(assignmentType);
+				
+				buf.append("<h4>Current Questions</h4>");
+				
 				buf.append("This assignment draws from the following " + questions.count() + " questions:");
 				
 				buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
@@ -239,6 +241,19 @@ public class Edit extends HttpServlet {
 					buf.append("</TR></FORM>");
 				}
 				buf.append("</TABLE>");	
+			} else {  // show the number of questions in each topic and assignment type
+				buf.append("<h4>Numbers of Questions By Topic and Assignment Type</h4>");
+				
+				buf.append("<TABLE><TR><TH>Topic</><TH>Quiz</TH><TH>Homework</TH><TH>Exam</TH></TR>");
+				Query<Topic> topics = ofy.query(Topic.class).order("orderBy");
+				for (Topic t:topics) {
+					buf.append("<TR><TD>" + t.title + "</TD>");
+					int nq = ofy.query(Question.class).filter("topicId",t.id).filter("assignmentType","Quiz").count();
+					int nh = ofy.query(Question.class).filter("topicId",t.id).filter("assignmentType","Homework").count();
+					int ne = ofy.query(Question.class).filter("topicId",t.id).filter("assignmentType","Exam").count();
+					buf.append("<TD>" + nq + "</TD><TD>" + nh + "</TD><TD>" + ne + "</TD></TR>");
+				}
+				buf.append("</TABLE>");
 			}
 		} catch (Exception e) {
 			buf.append(e.getMessage());
@@ -491,6 +506,7 @@ public class Edit extends HttpServlet {
 	
 	String pointValueSelectBox(int points) {
 		return "<SELECT NAME=PointValue>"
+		+ "<OPTION" + (points==1?" SELECTED":"") + ">1</OPTION>"
 		+ "<OPTION" + (points==2?" SELECTED":"") + ">2</OPTION>"
 		+ "<OPTION" + (points==10?" SELECTED":"") + ">10</OPTION>"
 		+ "<OPTION" + (points==15?" SELECTED":"") + ">15</OPTION>"
@@ -519,6 +535,7 @@ public class Edit extends HttpServlet {
 			
 			Question q = assembleQuestion(request);
 			if (q.requiresParser) q.setParameters();
+			
 			buf.append("<h3>Preview Question</h3>");
 			buf.append("Subject: " + subject.title + "<br>");
 			buf.append("Topic: " + ofy.get(Topic.class,topicId).title + "<br>");
@@ -549,7 +566,11 @@ public class Edit extends HttpServlet {
 			buf.append("Topic:" + topicSelectBox(q.topicId));
 			buf.append(" Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
 			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
-			buf.append(" Point Value: " + (q.assignmentType.equals("Exam")?pointValueSelectBox(q.pointValue):"1<INPUT TYPE=HIDDEN NAME=PointValue VALUE=1>") + "<br>");
+			
+			if (q.assignmentType.equals("Exam")) {
+				if (q.pointValue!=2 && q.pointValue!=10 && q.pointValue!=15) q.pointValue = 2;
+			} else q.pointValue = 1;
+			buf.append(" Point Value: " + pointValueSelectBox(q.pointValue) + "<br>");
 			
 			buf.append(q.edit());
 			
@@ -579,8 +600,8 @@ public class Edit extends HttpServlet {
 			if (q.requiresParser) q.setParameters();
 			buf.append("<h3>Current Question</h3>");
 			buf.append("Subject: " + subject.title + "<br>");
-			buf.append("Topic: " + t.title);
-			buf.append(" Assignment Type: " + q.assignmentType + "<p>");
+			buf.append("Topic: " + t.title + "<br>");
+			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":"point") + ")<p>");
 			buf.append("<FORM Action=Edit METHOD=POST>");
 			
 			buf.append(q.printAll());
@@ -592,7 +613,7 @@ public class Edit extends HttpServlet {
 			buf.append("Topic:" + topicSelectBox(t.id));
 			buf.append(" Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
 			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
-			buf.append(" Point Value: " + (q.assignmentType.equals("Exam")?pointValueSelectBox(q.pointValue):"1<INPUT TYPE=HIDDEN NAME=PointValue VALUE=1>") + "<br>");
+			buf.append(" Point Value: " + pointValueSelectBox(q.pointValue) + "<br>");
 			
 			buf.append(q.edit());
 			
