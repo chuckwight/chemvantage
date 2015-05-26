@@ -41,7 +41,16 @@ public class Edit extends HttpServlet {
 	public String getServletInfo() {
 		return "This servlet is used by editors and admins to create, edit and delete Quiz questions.";
 	}
-
+	
+/* ====================== NOTES ========================
+ * 
+ * The general strategy here is to provide a space for editors to receive/edit/activate/delete question items 
+ * submitted form the community, and to create/edit/delete questions of their own.
+ * Proposed questions are stored temporarily as PropoedQuestion items in the database, and if approved, are
+ * then converted to regular Question items with a new ID number.
+ * 
+ */
+	
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
@@ -249,13 +258,20 @@ public class Edit extends HttpServlet {
 				
 				buf.append("<TABLE><TR><TH>Topic</><TH>Quiz</TH><TH>Homework</TH><TH>Exam</TH></TR>");
 				Query<Topic> topics = ofy.query(Topic.class).order("orderBy");
+				int nqt = 0;
+				int nht = 0;
+				int net = 0;
 				for (Topic t:topics) {
 					buf.append("<TR><TD>" + t.title + "</TD>");
 					int nq = ofy.query(Question.class).filter("topicId",t.id).filter("assignmentType","Quiz").count();
+					nqt += nq; // running total
 					int nh = ofy.query(Question.class).filter("topicId",t.id).filter("assignmentType","Homework").count();
+					nht += nh; // running total
 					int ne = ofy.query(Question.class).filter("topicId",t.id).filter("assignmentType","Exam").count();
-					buf.append("<TD>" + nq + "</TD><TD>" + nh + "</TD><TD>" + ne + "</TD></TR>");
+					net += ne; // running total
+					buf.append("<TD style='text-align:center'>" + nq + "</TD><TD style='text-align:center'>" + nh + "</TD><TD style='text-align:center'>" + ne + "</TD></TR>");
 				}
+				buf.append("<TR><TD>Totals</TD><TD style='text-align:center'>" + nqt + "</TD><TD style='text-align:center'>" + nht + "</TD><TD style='text-align:center'>" + net + "</TD></TR>");
 				buf.append("</TABLE>");
 			}
 		} catch (Exception e) {
