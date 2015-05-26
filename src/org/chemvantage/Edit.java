@@ -174,6 +174,9 @@ public class Edit extends HttpServlet {
 			} catch (Exception e) {}
 			out.println(Home.getHeader(user) + reviewQuestion(user,request) + Home.footer);
 		}
+		else { // show the default Editors page
+			out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
+		}
 	}
 
 	String editorsPage(User user,HttpServletRequest request) {
@@ -562,6 +565,8 @@ public class Edit extends HttpServlet {
 				buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Activate This Question'>");
 			} else buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save New Question'>");
 			
+			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit'>");
+			
 			buf.append("<hr><h3>Continue Editing</h3>");
 			buf.append("Topic:" + topicSelectBox(q.topicId));
 			buf.append(" Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
@@ -608,6 +613,7 @@ public class Edit extends HttpServlet {
 			
 			buf.append("<INPUT TYPE=HIDDEN NAME=QuestionId VALUE=" + questionId + ">");
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Question'>");
+			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit'>");
 			
 			buf.append("<hr><h3>Edit This Question</h3>");
 			buf.append("Topic:" + topicSelectBox(t.id));
@@ -639,6 +645,8 @@ public class Edit extends HttpServlet {
 				k = pendingQuestionKeys.get(0);
 			}
 			ProposedQuestion q = ofy.get(k);
+			questionId = String.valueOf(q.id);
+			
 			if (q.requiresParser) q.setParameters();
 			
 			buf.append("<h3>Contributed New Question</h3>");
@@ -663,7 +671,8 @@ public class Edit extends HttpServlet {
 				buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Skip>");
 			}
 			buf.append("<INPUT TYPE=HIDDEN NAME=ProposedQuestionId VALUE='" + questionId + "'>\n"
-				+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Discard Question'>");
+				+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Discard Question'>"
+				+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit'>");
 			buf.append("</FORM>");
 			
 			buf.append("<FORM ACTION=Edit METHOD=POST>\n");

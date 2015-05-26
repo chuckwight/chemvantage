@@ -154,8 +154,7 @@ public class Contribute extends HttpServlet {
 					preview = true;
 					q.setParameters();
 					buf.append(q.printAll());
-					buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Preview'>"
-							+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save'><hr>");
+					buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save'><hr>");
 				}
 			}
 
