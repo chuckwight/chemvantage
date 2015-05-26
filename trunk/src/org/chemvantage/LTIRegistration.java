@@ -23,7 +23,7 @@ package org.chemvantage;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -126,14 +126,14 @@ public class LTIRegistration extends HttpServlet {
 		
 		out.println(Login.header + banner + welcomeMessage);
 		StringBuffer buf = new StringBuffer();
-		buf.append("<TABLE><FORM METHOD=POST>");
+		buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");
+		buf.append("<FORM METHOD=POST><TABLE>");
 		buf.append("<TR><TD ALIGN=RIGHT>Email Address: </TD><TD><INPUT TYPE=TEXT NAME=Email> (where the credentials will be sent)</TD></TR>");
 		buf.append("<TR><TD ALIGN=RIGHT>Consumer Key: </TD><TD><INPUT TYPE=TEXT NAME=Key> (e.g., moodle257-myschool-edu)</TD></TR>");
 		
-///*   ============== reCaptcha tool  =========================
-		buf.append("<TR><TD COLSPAN=2>");
-		buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>"
-				+ "<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div>");
+//   ============== reCaptcha tool  =========================
+		buf.append("<TR><TD COLSPAN=2>");		
+		buf.append("<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div>");
 		buf.append("</TD>");
 //=============================================================*/
 		
@@ -149,7 +149,13 @@ public class LTIRegistration extends HttpServlet {
 		if ("Generate Shared Secret".equals(request.getParameter("UserRequest"))) {  // manual LTI registration request for version 1.x
 			String email = request.getParameter("Email");
 			String key = request.getParameter("Key").replaceAll("\\s", "");  // removes all whitespace from key
-			if (email!=null && !email.isEmpty() && key!=null && !key.isEmpty() && reCaptchaOK(request)) {  // generate a new set of LTI credentials
+			
+			if (!reCaptchaOK(request)) {
+				doError(request,response,"Sorry, the reCaptcha response could not be validated. Please try again.", null, null);
+				return;
+			}
+			
+			if (email!=null && !email.isEmpty() && key!=null && !key.isEmpty()) {  // generate a new set of LTI credentials
 				response.setContentType("text/html");
 				PrintWriter out = response.getWriter();
 				BLTIConsumer c = ofy.find(BLTIConsumer.class,key);			
@@ -234,21 +240,22 @@ public class LTIRegistration extends HttpServlet {
 
 	boolean reCaptchaOK(HttpServletRequest request) {
 		try {
+			String queryString = "secret=6Ld_GAcTAAAAAD2k2iFF7Ywl8lyk9LY2v_yRh3Ci&response=" 
+					+ request.getParameter("g-recaptcha-response") + "&remoteip=" + request.getRemoteAddr();
 			URL u = new URL("https://www.google.com/recaptcha/api/siteverify");
 	    	HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 	    	uc.setDoOutput(true);
-	    	uc.setDoInput(true);
 	    	uc.setRequestMethod("POST");
+	    	uc.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
+	    	uc.setRequestProperty("Content-Length", String.valueOf(queryString.length()));
 	    	
-	    	String queryString = "secret=6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG&response=" 
-					+ request.getParameter("g-recaptcha-response") + "&remoteIp=" + request.getRemoteAddr();
+	    	OutputStreamWriter writer = new OutputStreamWriter(uc.getOutputStream());
+			writer.write(queryString);
+	    	writer.flush();
+	    	writer.close();
 			
-			OutputStream output = uc.getOutputStream();
-			output.write(queryString.getBytes());
-			output.flush();
-
 			// read & interpret the JSON response from Google
-			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+	    	BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
 			StringBuffer res = new StringBuffer();
 			String line;
 			while ((line = reader.readLine()) != null) {
@@ -257,6 +264,7 @@ public class LTIRegistration extends HttpServlet {
 			reader.close();
 			
 			JSONObject reCaptchaValidation = new JSONObject(res.toString());
+			
 			return reCaptchaValidation.getBoolean("success");
 			
 		} catch (Exception e) {
