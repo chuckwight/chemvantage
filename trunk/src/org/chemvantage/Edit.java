@@ -39,14 +39,14 @@ public class Edit extends HttpServlet {
 	Subject subject = dao.getSubject();
 
 	public String getServletInfo() {
-		return "This servlet is used by editors and admins to create, edit and delete Quiz questions.";
+		return "This servlet is used by editors and admins to create, review, edit and delete question items.";
 	}
 	
 /* ====================== NOTES ========================
  * 
  * The general strategy here is to provide a space for editors to receive/edit/activate/delete question items 
  * submitted form the community, and to create/edit/delete questions of their own.
- * Proposed questions are stored temporarily as PropoedQuestion items in the database, and if approved, are
+ * Proposed questions are stored temporarily as ProposedQuestion items in the database, and if approved, are
  * then converted to regular Question items with a new ID number.
  * 
  */
@@ -83,7 +83,7 @@ public class Edit extends HttpServlet {
 				out.println(Home.getHeader(user) + newQuestionForm(user,request) + Home.footer);
 			}
 			else if (userRequest.equals("Review") || userRequest.equals("Skip")) { // review a pending question (problem or contribution)
-				out.println(Home.getHeader(user) + reviewQuestion(user,request) + Home.footer);
+				out.println(Home.getHeader(user) + reviewProposedQuestion(user,request) + Home.footer);
 			}
 			else if (userRequest.equals("Edit")) {  // edit a current question in the database
 				out.println(Home.getHeader(user) + editCurrentQuestion(user,request) + Home.footer);
@@ -93,7 +93,7 @@ public class Edit extends HttpServlet {
 					long proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
 					ofy.delete(ProposedQuestion.class,proposedQuestionId);
 				} catch (Exception e) {}
-				out.println(Home.getHeader(user) + reviewQuestion(user,request) + Home.footer);
+				out.println(Home.getHeader(user) + reviewProposedQuestion(user,request) + Home.footer);
 			}
 			else { // show the default Editors page
 				out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
@@ -174,14 +174,14 @@ public class Edit extends HttpServlet {
 				long proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
 				ofy.delete(ProposedQuestion.class,proposedQuestionId);
 			} catch (Exception e) {}
-			out.println(Home.getHeader(user) + reviewQuestion(user,request) + Home.footer);
+			out.println(Home.getHeader(user) + reviewProposedQuestion(user,request) + Home.footer);
 		}
 		else if (userRequest.equals("Discard Question")) {
 			try {
 				long proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
 				ofy.delete(ProposedQuestion.class,proposedQuestionId);
 			} catch (Exception e) {}
-			out.println(Home.getHeader(user) + reviewQuestion(user,request) + Home.footer);
+			out.println(Home.getHeader(user) + reviewProposedQuestion(user,request) + Home.footer);
 		}
 		else { // show the default Editors page
 			out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
@@ -467,7 +467,6 @@ public class Edit extends HttpServlet {
 		ofy.delete(Text.class,Long.parseLong(request.getParameter("TextId")));
 	}
 	
-	
 	String newQuestionForm(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		long topicId = 0;
@@ -546,6 +545,7 @@ public class Edit extends HttpServlet {
 			try {
 				proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
 				proposed = true;
+				current = false;
 			} catch (Exception e2) {}
 			long topicId = 0;
 			try {
@@ -563,14 +563,22 @@ public class Edit extends HttpServlet {
 			buf.append("Assignment Type: " + q.assignmentType);
 			if (q.assignmentType.equals("Exam")) { // validate point value
 				if (q.pointValue < 2) q.pointValue = 2;
-				buf.append(" (" + q.pointValue + " points)<p>");
+				buf.append(" (" + q.pointValue + " points)<br>");
 			} else {
 				q.pointValue = 1;
-				buf.append(" (1 point)<p>");
+				buf.append(" (1 point)<br>");
 			}
+			buf.append("Author: <a href=mailto:'" + User.getEmail(q.authorId) + "'>" + User.getBothNames(q.authorId) + "</a><br>");
+			buf.append("Editor: <a href=mailto:'" + user.email + "'>" + user.getBothNames() + "</a><p>");
+			
 			buf.append("<FORM Action=Edit METHOD=POST>");
 			
 			buf.append(q.printAll());
+			
+			if (q.authorId==null) q.authorId="";
+			buf.append("<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + q.authorId + "'>");
+			buf.append("<INPUT TYPE=HIDDEN NAME=EditorId VALUE='" + user.id + "'>");
+			
 			
 			if (current) {
 				buf.append("<INPUT TYPE=HIDDEN NAME=QuestionId VALUE=" + questionId + ">");
@@ -622,10 +630,17 @@ public class Edit extends HttpServlet {
 			buf.append("<h3>Current Question</h3>");
 			buf.append("Subject: " + subject.title + "<br>");
 			buf.append("Topic: " + t.title + "<br>");
-			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":"point") + ")<p>");
+			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
+			buf.append("Author: <a href=mailto:'" + User.getEmail(q.authorId) + "'>" + User.getBothNames(q.authorId) + "</a><br>");
+			buf.append("Editor: <a href=mailto:'" + user.email + "'>" + User.getBothNames(q.editorId) + "</a><p>");
 			buf.append("<FORM Action=Edit METHOD=POST>");
 			
 			buf.append(q.printAll());
+			
+			if (q.authorId==null) q.authorId="";
+			if (q.editorId==null) q.editorId="";
+			buf.append("<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + q.authorId + "'>");
+			buf.append("<INPUT TYPE=HIDDEN NAME=EditorId VALUE='" + q.editorId + "'>");
 			
 			buf.append("<INPUT TYPE=HIDDEN NAME=QuestionId VALUE=" + questionId + ">");
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Question'>");
@@ -647,61 +662,62 @@ public class Edit extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String reviewQuestion(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer("<h2>Editorial Review</h2>\n");
+	String reviewProposedQuestion (User user, HttpServletRequest request) {
+		// identifies a ProposedQuestion item, either from a specific questionId or next in the list
+		StringBuffer buf = new StringBuffer("<h3>Proposed Question</h3>");
 		try {
-			String questionId = request.getParameter("QuestionId");
 			List<Key<ProposedQuestion>> pendingQuestionKeys = ofy.query(ProposedQuestion.class).listKeys();
-			if (questionId==null && pendingQuestionKeys.size()==0) return buf.toString() + "There are no more questions pending editorial review.";
-			// get the questionId for the question to review (first in list or next in list if editing)
-			Key<ProposedQuestion> k = null;
-			try {
-				k = new Key<ProposedQuestion>(ProposedQuestion.class,Long.parseLong(questionId));
-			} catch (Exception e2) {
-				k = pendingQuestionKeys.get(0);
-			}
-			ProposedQuestion q = ofy.get(k);
-			questionId = String.valueOf(q.id);
+			if (pendingQuestionKeys.size()==0) return editorsPage(user,request);
 			
+			String questionId = request.getParameter("NextQuestionId");
+			ProposedQuestion q = null;
+			if (questionId==null) { // get the first question in the list
+				q = ofy.get(pendingQuestionKeys.get(0));
+				questionId = String.valueOf(q.id);
+			} else { // get the designated question in the list
+				q = ofy.get(ProposedQuestion.class,Long.parseLong(questionId));
+			}
 			if (q.requiresParser) q.setParameters();
 			
-			buf.append("<h3>Contributed New Question</h3>");
-			buf.append("Topic: " + ofy.get(Topic.class,q.topicId).title + "<br>");
-			buf.append("Assignment Type: " + q.assignmentType + "<br>");
-			buf.append("<TABLE><TR><TD BGCOLOR=#FFFF80>" + q.printAll() + "</TD></TR></TABLE>\n");
-
-			buf.append("<TABLE>");
-			buf.append("<TR><TD ALIGN=RIGHT>Notes: </TD><TD><FONT COLOR=RED>" + q.notes + "</FONT></TD></TR>\n");
-			buf.append("<TR><TD ALIGN=RIGHT>Author: </TD><TD>" + q.authorId + "</TD></TR>\n");
-			buf.append("<TR><TD ALIGN=RIGHT>Contributor: </TD><TD>" + q.contributorId + "</TD></TR>\n");
-			buf.append("<TR><TD ALIGN=RIGHT>Editor: </TD><TD>" + q.editorId + "</TD></TR>\n");
-			buf.append("</TABLE>\n");
-			
-			buf.append("<FORM ACTION=Edit METHOD=GET>");
-			// get the questionId for the next question in sequence (defaults to first in list)
+			// If the list contains more than one proposed question, get the index of the next one
+			String nextQuestionId = null;
 			if (pendingQuestionKeys.size()>1) {
-				int i = pendingQuestionKeys.indexOf(k) + 1;
-				if (i >= pendingQuestionKeys.size()) i = 0;
-				long nextQuestionId = pendingQuestionKeys.get(i).getId();
-				buf.append("<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + nextQuestionId + "'>\n");
+				Key<ProposedQuestion> k = new Key<ProposedQuestion>(ProposedQuestion.class,q.id);
+				int i = (pendingQuestionKeys.indexOf(k) + 1)%pendingQuestionKeys.size();				
+				nextQuestionId = String.valueOf(pendingQuestionKeys.get(i).getId());
+			}
+			
+			Topic t = ofy.get(Topic.class,q.topicId);
+			buf.append("Subject: " + subject.title + "<br>");
+			buf.append("Topic: " + t.title + "<br>");
+			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
+			buf.append("Author: <a href=mailto:'" + User.getEmail(q.authorId) + "'>" + User.getBothNames(q.authorId) + "</a><p>");
+			buf.append("<FORM Action=Edit METHOD=GET>");
+			
+			buf.append(q.printAll());
+			
+			buf.append("<INPUT TYPE=HIDDEN NAME=ProposedQuestionId VALUE='" + questionId + "'>");
+			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Discard Question'>");
+			if (nextQuestionId != null) {
+				buf.append("<INPUT TYPE=HIDDEN NAME=NextQuestionId VALUE='" + nextQuestionId + "'>\n");
 				buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Skip>");
 			}
-			buf.append("<INPUT TYPE=HIDDEN NAME=ProposedQuestionId VALUE='" + questionId + "'>\n"
-				+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Discard Question'>"
-				+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit'>");
-			buf.append("</FORM>");
+			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit'>");
+			buf.append("<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + q.authorId + "'>");
 			
-			buf.append("<FORM ACTION=Edit METHOD=POST>\n");
-			buf.append("<h3>Edit This Question</h3>");
+			buf.append("<hr><h3>Edit This Question</h3>");
+			buf.append("Topic:" + topicSelectBox(t.id));
+			buf.append(" Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
+			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
+			buf.append(" Point Value: " + pointValueSelectBox(q.pointValue) + "<br>");
+			
 			buf.append(q.edit());
-			buf.append("<INPUT TYPE=HIDDEN NAME=ProposedQuestionId VALUE='" + q.id + "'>\n");
-			buf.append("<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + q.topicId + "'>\n");
-			buf.append("<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + q.assignmentType + "'>\n");
-			buf.append("<INPUT TYPE=HIDDEN NAME=QuestionType VALUE=" + q.getQuestionType() + ">\n");
+			
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Preview>");
-			buf.append("</FORM>\n");
+			buf.append("</FORM>");
+
 		} catch (Exception e) {
-			buf.append(e.toString());
+			buf.append("<p>" + e.getMessage());
 		}
 		return buf.toString();
 	}
@@ -796,14 +812,14 @@ public class Edit extends HttpServlet {
 		q.hint = request.getParameter("Hint");
 		q.solution = request.getParameter("Solution");
 		q.notes = "";
+		q.authorId = request.getParameter("AuthorId");
+		q.editorId = request.getParameter("EditorId");
 		q.validateFields();
 		return q;
 	}
+	
 	private void createQuestion(User user,HttpServletRequest request) {
 		Question q = assembleQuestion(request);
-		q.authorId = user.id;
-		q.contributorId = user.id;
-		q.editorId = user.id;
 		q.isActive = true;
 		ofy.put(q);
 	}

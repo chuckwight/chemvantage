@@ -300,8 +300,11 @@ public class User implements Comparable<User>,Serializable {
 	}
 
 	static String getEmail(String id) {
-		User user = ObjectifyService.begin().find(User.class,id);
-		return (user==null?"":user.email);
+		try {
+			return ObjectifyService.begin().find(User.class,id).email;
+		} catch (Exception e) {
+			return "";
+		}
 	}
 
 	static String getBothNames(String id) {
