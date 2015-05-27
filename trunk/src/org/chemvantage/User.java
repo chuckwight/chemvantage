@@ -308,10 +308,11 @@ public class User implements Comparable<User>,Serializable {
 	}
 
 	static String getBothNames(String id) {
+		if (id==null || id.isEmpty()) return "missing user id";
 		try {
-			return ObjectifyService.begin().find(User.class,id).getBothNames();
+			return ObjectifyService.begin().get(User.class,id).getBothNames();
 		} catch (Exception e) {
-			return "unknown";
+			return "User " + id + " not found";
 		}
 
 	}
@@ -396,7 +397,8 @@ public class User implements Comparable<User>,Serializable {
 
 	String getBothNames() {
 		setLowerCaseName();
-		return firstName + " " + lastName;
+		String bothNames = firstName + (lastName.isEmpty()?"":" " + lastName);
+		return bothNames.isEmpty()?"anonymous":bothNames;
 	}
 
 	public void setLastLogin() {
@@ -427,10 +429,12 @@ public class User implements Comparable<User>,Serializable {
 	}
 
 	void setLowerCaseName() {
+		String tmp = this.lowercaseName;
 		if (this.lastName==null || this.lastName.isEmpty()) this.lastName = "";
 		if (this.firstName==null || this.firstName.isEmpty()) this.firstName = "";
 		this.lowercaseName = this.lastName + (!this.lastName.isEmpty()&&!this.firstName.isEmpty()?", ":"") + this.firstName;
 		this.lowercaseName = this.lowercaseName.toLowerCase().trim();
+		if (!this.lowercaseName.equals(tmp)) ofy.put(this);  // save User object if lowercaseName changed
 	}
 
 	void setAlias(String newId) {
