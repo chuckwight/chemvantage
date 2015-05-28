@@ -506,7 +506,8 @@ public class Edit extends HttpServlet {
 			}
 			Question question = new Question(questionType);
 			buf.append("<p><FORM METHOD=POST ACTION=Edit>"
-					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>");
+					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
+					+ "<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + user.id + "'>");
 			buf.append("<INPUT TYPE=HIDDEN NAME=QuestionType VALUE=" + questionType + ">");
 			buf.append(subject.getTopicSelectBox(topicId));
 			buf.append(assignmentType.equals("Exam")?"Point Value: " + pointValueSelectBox() + "<br>":"<INPUT TYPE=HIDDEN NAME=PointValue VALUE=1>");
