@@ -187,6 +187,17 @@ public class Question implements Serializable {
 		if (raw == null) raw = "";
 		String[] pieces = raw.split("#");
 		StringBuffer buf = new StringBuffer();
+/*
+		for (int i=0;i<pieces.length;i++) {
+			try {
+				parser.setExpression(pieces[i]);
+				double v = parser.getValue();
+				buf.append(String.format("%.5G",v));
+			} catch (Exception e) {
+				buf.append(pieces[i]);
+			}
+		}
+*/		
 		int i = 0;
 		while (i < pieces.length) {
 			try {
@@ -209,58 +220,9 @@ public class Question implements Serializable {
 				i++;
 			}
 		}
+
 		return buf.toString();
 	}
-/* This method was deprecated in favor of the printPremium method that shows extra features
-	String print() {
-		StringBuffer buf = new StringBuffer();
-		char choice = 'a';
-		switch (getQuestionType()) {
-		case 1: // Multiple Choice
-			buf.append("<b>" + text + "</b><br>");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best answer:</FONT><br>");
-			buf.append("<UL>");
-			for (int i = 0; i < nChoices; i++) {
-				buf.append("<input type=radio name=" + this.id + " value=" + choice + ">" + choices.get(i) + "<br>");
-				choice++;
-			}
-			buf.append("</UL>");
-			break;
-		case 2: // True/False
-			buf.append("<b>" + text + "</b><br>");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select true or false:</FONT><br>");
-			buf.append("<UL>");
-			buf.append("<input type=radio name=" + this.id + " value='true'> True<br>");
-			buf.append("<input type=radio name=" + this.id + " value='false'> False<br>");
-			buf.append("</UL>");
-			break;
-		case 3: // Select Multiple
-			buf.append("<b>" + text + "</b><br>");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><br>");
-			buf.append("<UL>");
-			for (int i = 0; i < nChoices; i++) {
-				buf.append("<input type=checkbox name=" + this.id + " value=" + choice + ">" + choices.get(i) + "<br>");
-				choice++;
-			}
-			buf.append("</UL>");
-			break;
-		case 4: // Fill-in-the-Word
-			buf.append("<b>" + text + "</b><br>");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br>");
-			buf.append("<input id=" + this.id + " type=text name=" + this.id + ">");
-			buf.append("<b>" + tag + "</b><br>");
-			break;
-		case 5: // Numeric Answer
-			buf.append("<b>" + parseString(text) + "</b><br>");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value to " 
-					+ requiredPrecision + "% precision. Express scientific notation like 4.294E-15</FONT><br>");
-			buf.append("<input type=text name=" + this.id + ">");
-			buf.append("<b>" + parseString(tag) + "</b><br>");
-			break;        
-		}
-		return buf.toString();
-	}
-	*/
 	
 	String print() {
 		return print("");
