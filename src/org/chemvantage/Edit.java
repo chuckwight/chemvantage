@@ -778,7 +778,8 @@ public class Edit extends HttpServlet {
 			}
 			choice++;
 		}
-		double requiredPrecision = 2.0; // percent
+		double requiredPrecision = 0.; // percent
+		int significantFigures = 0;
 		int pointValue = 1;
 		try {
 			pointValue = Integer.parseInt(request.getParameter("PointValue"));
@@ -786,6 +787,10 @@ public class Edit extends HttpServlet {
 		}
 		try {
 			requiredPrecision = Double.parseDouble(request.getParameter("RequiredPrecision"));
+		} catch (Exception e) {
+		}
+		try {
+			significantFigures = Integer.parseInt(request.getParameter("SignificantFigures"));
 		} catch (Exception e) {
 		}
 		String correctAnswer = "";
@@ -805,6 +810,7 @@ public class Edit extends HttpServlet {
 		q.nChoices = nChoices;
 		q.choices = choices;
 		q.requiredPrecision = requiredPrecision;
+		q.significantFigures = significantFigures;
 		q.correctAnswer = correctAnswer;
 		q.tag = request.getParameter("QuestionTag");
 		q.pointValue = pointValue;

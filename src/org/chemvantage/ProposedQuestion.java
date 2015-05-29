@@ -20,9 +20,9 @@ public class ProposedQuestion extends Question {
 		super(t);
 	}
 	ProposedQuestion (long topicId,String text,String type,int nChoices,List<String> choices,
-			double requiredPrecision,String correctAnswer,String tag,int pointValue,String parameterString,
+			double requiredPrecision,int significantFigures,String correctAnswer,String tag,int pointValue,String parameterString,
 			String hint,String solution,String authorId,String contributorId,String editorId,String notes) {
-		super(topicId,text,type,nChoices,choices,requiredPrecision,correctAnswer,tag,pointValue,parameterString,hint,solution,authorId,contributorId,editorId,notes);
+		super(topicId,text,type,nChoices,choices,requiredPrecision,significantFigures,correctAnswer,tag,pointValue,parameterString,hint,solution,authorId,contributorId,editorId,notes);
 	}
 	
 	/*
