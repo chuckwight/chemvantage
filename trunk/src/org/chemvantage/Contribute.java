@@ -104,12 +104,17 @@ public class Contribute extends HttpServlet {
 				}
 				choice++;
 			}
-			double requiredPrecision = 2.0; // percent
+			double requiredPrecision = 0.0; // percent
+			int significantFigures = 3;
 			int pointValue = 1;
 			try {
 				pointValue = Integer.parseInt(request.getParameter("PointValue"));
 				requiredPrecision = Double.parseDouble(request.getParameter("RequiredPrecision"));
 			} catch (Exception e2) {
+			}
+			try {
+				significantFigures = Integer.parseInt(request.getParameter("SignificantFigures"));
+			} catch (Exception e) {
 			}
 			String correctAnswer = "";
 			try {
@@ -136,6 +141,7 @@ public class Contribute extends HttpServlet {
 				q.nChoices = nChoices;
 				q.choices = choices;
 				q.requiredPrecision = requiredPrecision;
+				q.significantFigures = significantFigures;
 				q.correctAnswer = correctAnswer;
 				q.tag = questionTag;
 				q.pointValue = pointValue;
@@ -271,7 +277,8 @@ public class Contribute extends HttpServlet {
 				}
 				choice++;
 			}
-			double requiredPrecision = 2.0; // percent
+			double requiredPrecision = 0.0; // percent
+			int significantFigures = 3;
 			int pointValue = 1;
 			try {
 				Integer.parseInt(request.getParameter("PointValue"));
@@ -279,6 +286,10 @@ public class Contribute extends HttpServlet {
 			try {
 				requiredPrecision = Double.parseDouble(request.getParameter("RequiredPrecision"));
 			} catch (Exception e2) {
+			}
+			try {
+				significantFigures = Integer.parseInt(request.getParameter("SignificantFigures"));
+			} catch (Exception e) {
 			}
 			String correctAnswer = "";
 			try {
@@ -300,6 +311,7 @@ public class Contribute extends HttpServlet {
 			q.nChoices = nChoices;
 			q.choices = choices;
 			q.requiredPrecision = requiredPrecision;
+			q.significantFigures = significantFigures;
 			q.correctAnswer = correctAnswer;
 			q.tag = questionTag;
 			q.pointValue = pointValue;
