@@ -41,8 +41,8 @@ public class Question implements Serializable {
 	String type;
 	int nChoices=0;
 	List<String> choices = new ArrayList<String>();
-	double requiredPrecision=2;
-	int significantFigures = 0;
+	double requiredPrecision=0;
+	int significantFigures = 3;
 	int numericItemType = 0;
 	String correctAnswer;
 	String tag;
@@ -81,7 +81,7 @@ public class Question implements Serializable {
 		this.requiresParser = false;
 		this.pointValue = 1;
 		this.requiredPrecision = 0;
-		this.significantFigures = 0;
+		this.significantFigures = 3;
 		this.isActive = false;
 	}
 
@@ -121,7 +121,7 @@ public class Question implements Serializable {
 		if (contributorId==null) contributorId="";
 		if (editorId==null) editorId="";
 		if (notes==null) notes="";
-		this.requiresParser = this.parameterString.length()>0?true:false;
+		this.requiresParser = text.contains("#") || this.parameterString.length()>0;
 		}
 	
 	public String getCorrectAnswer() {
@@ -169,24 +169,13 @@ public class Question implements Serializable {
 			}
 		}  
 	}
-
-	/*
-	 * For numeric problems there are three main cases we want to handle:
-	 * 0 - Questions that require an exact numeric answer, or to display exact numeric values in the
-	 * 		question, such as small integer values (e.g., atomic numbers or answers like 2/3).
-	 * 		For this case, set requiredPrecision and sigficantFigures to 0. This is the default case.
-	 * 1 - Questions that display data to a specific precision and require answers that are rounded to
-	 * 		the correct number of significant figures.
-	 * 		For this case, set requiredPrecision to 0.0 and significantFigures to an integer value (e.g., 3).
-	 * 2 - Questions that have non-linear answers that require a specific precision rather than a
-	 * 		specific number of significant figures.
-	 * 		For this case, set significantFigures to 0 and requiredPrecision to a non-zero value (e.g., 2.0).
-	 */
 	
 	int getNumericItemType() {
-		if (requiredPrecision==0.0 && significantFigures==0) return 0;
-		else if (requiredPrecision==0.0) return 1;
-		else return 2;
+		if (requiredPrecision==0.0 && significantFigures==0) return 0;      // Q: parser output A: exact value match
+		else if (requiredPrecision==0.0 && significantFigures!=0) return 1; // Q: show sig figs A: match sig figs E or f
+		else if (requiredPrecision!=0.0 && significantFigures==0) return 2; // Q: rules/format  A: value agrees to %
+		else if (requiredPrecision!=0.0 && significantFigures!=0) return 3; // Q: show sig figs A: value agrees to %
+		return 0; //default case
 	}
 	
 	public String parseString(String raw) {
@@ -227,20 +216,19 @@ public class Question implements Serializable {
 				parser.setExpression(pieces[i]);
 				double value = parser.getValue();
 				switch (itemType) {
-				case 0: buf.append(pieces[i]); break;
-				case 1: buf.append(String.format(fmt,value)); break;
-				case 2: {
-					DecimalFormat df = new DecimalFormat();
-					if ((Math.abs(value) < 100) && (value - Math.floor(value) == 0)) { // result is small int
-						df.applyPattern("0");
+					case 0: buf.append(pieces[i]); break;
+					case 1: buf.append(String.format(fmt,value)); break;
+					default: {
+						DecimalFormat df = new DecimalFormat();
+						if ((Math.abs(value) < 100) && (value - Math.floor(value) == 0)) { // result is small int
+							df.applyPattern("0");
+						}
+						else if ((Math.abs(value) < 1.0E5) && (Math.abs(value) > 1.0E-2)) { // use decimal number
+							df.applyPattern("0.0#####");
+						}
+						else df.applyPattern("0.####E0"); // use scientific notation
+						buf.append(df.format(value)); break;
 					}
-					else if ((Math.abs(value) < 1.0E5) && (Math.abs(value) > 1.0E-2)) { // use decimal number
-						df.applyPattern("0.0#####");
-					}
-					else df.applyPattern("0.####E0"); // use scientific notation
-					buf.append(df.format(value)); break;
-				}
-				default: buf.append(pieces[i]);
 				}
 			} catch (Exception e) {
 				buf.append(pieces[i]);
@@ -630,13 +618,21 @@ public class Question implements Serializable {
 			studentAnswer = studentAnswer.replaceAll(",", "").replaceAll("\\s", "").toUpperCase();  // removes comma separators and whitespace from numbers, turns e to E
 			switch (getNumericItemType()) {
 			case 0: // exact answer required (no precision or sig figs)
-				return Double.parseDouble(parseString(studentAnswer,0)) == Double.parseDouble(parseString(correctAnswer));
+				return Double.compare(Double.parseDouble(parseString(studentAnswer,0)),Double.parseDouble(parseString(correctAnswer))) == 0;
 			case 1: // requires match of studentAnswer to correctAnswer with significantFigures (decimal or scientific notation)
-				correctAnswer = parseString(correctAnswer,0);
-				String decFormat = "%." + String.valueOf(significantFigures) + "f";
-				String expFormat = "%." + String.valueOf(significantFigures) + "E";
-				return studentAnswer.equals(parseString(correctAnswer,1,decFormat)) || studentAnswer.equals(parseString(correctAnswer,1,expFormat));
-			case 2: // requires agreement with correct answer to requiredPrecision
+				studentAnswer = studentAnswer.toUpperCase(); // ensures that scientific notation has E not e
+				int i = studentAnswer.indexOf("E");
+				String decFormat = parseString(correctAnswer,1,"%." + String.valueOf(significantFigures) + "f");  // correct answer in floating point format
+				String expFormat = parseString(correctAnswer,1,"%." + String.valueOf(significantFigures) + "E");  // correct answer in scientific notation				
+				if (studentAnswer.equals(expFormat) || studentAnswer.equals(decFormat)) return true;
+				else if (i>0){  // compare values and sig figs directly for scientific notation
+					if (Double.compare(Double.parseDouble(parseString(studentAnswer,0)),Double.parseDouble(parseString(correctAnswer))) == 0) {  // values match
+						studentAnswer = studentAnswer.substring(0,studentAnswer.indexOf("E"));
+						correctAnswer = expFormat.substring(0,expFormat.indexOf("E"));
+						return (studentAnswer.length()==expFormat.length());  // if mantissas are equal length, then sig figs match
+					} else return false;
+				} else return false;
+			default: // cases 2 and 3 require agreement with correct answer to requiredPrecision
 				double dAnswer = Double.parseDouble(parseString(studentAnswer,0));
 				double dCorrectAnswer = Double.parseDouble(parseString(correctAnswer));
 				try { // traps divide-by-zero
