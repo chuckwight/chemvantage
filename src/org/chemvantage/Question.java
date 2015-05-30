@@ -141,7 +141,7 @@ public class Question implements Serializable {
 
 	public void setParameters(long seed) {
 		if (!this.requiresParser) return;     // bulletproofing
-		if (this.parameterString==null || this.parameterString.length()==0) {
+		if (this.parameterString==null || this.parameterString.isEmpty()) {
 			this.parameterString = "";
 			this.requiresParser = false;
 			return;
@@ -184,7 +184,7 @@ public class Question implements Serializable {
 	 */
 	
 	int getNumericItemType() {
-		if (requiredPrecision==0.0 || significantFigures==0) return 0;
+		if (requiredPrecision==0.0 && significantFigures==0) return 0;
 		else if (requiredPrecision==0.0) return 1;
 		else return 2;
 	}
@@ -522,6 +522,7 @@ public class Question implements Serializable {
 
 	public String edit() {
 		StringBuffer buf = new StringBuffer();
+		this.validateFields();
 		try {
 			String[] choiceNames = {"ChoiceAText","ChoiceBText","ChoiceCText","ChoiceDText","ChoiceEText"};
 			//buf.append("<input type=hidden name=QuestionType value=" + this.getQuestionType() + ">"
