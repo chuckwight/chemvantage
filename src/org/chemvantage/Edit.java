@@ -554,7 +554,7 @@ public class Edit extends HttpServlet {
 			} catch (Exception e2) {}
 			
 			Question q = assembleQuestion(request);
-			if (q.requiresParser) q.setParameters();
+			if (q.requiresParser()) q.setParameters();
 			
 			buf.append("<h3>Preview Question</h3>");
 			buf.append("Subject: " + subject.title + "<br>");
@@ -627,7 +627,7 @@ public class Edit extends HttpServlet {
 		try {
 			long questionId = q.id;
 			Topic t = ofy.get(Topic.class,q.topicId);
-			if (q.requiresParser) q.setParameters();
+			if (q.requiresParser()) q.setParameters();
 			buf.append("<h3>Current Question</h3>");
 			buf.append("Subject: " + subject.title + "<br>");
 			buf.append("Topic: " + t.title + "<br>");
@@ -678,7 +678,7 @@ public class Edit extends HttpServlet {
 			} else { // get the designated question in the list
 				q = ofy.get(ProposedQuestion.class,Long.parseLong(questionId));
 			}
-			if (q.requiresParser) q.setParameters();
+			if (q.requiresParser()) q.setParameters();
 			
 			// If the list contains more than one proposed question, get the index of the next one
 			String nextQuestionId = null;
@@ -815,7 +815,6 @@ public class Edit extends HttpServlet {
 		q.tag = request.getParameter("QuestionTag");
 		q.pointValue = pointValue;
 		q.parameterString = parameterString;
-		q.requiresParser = (parameterString.length()>0);
 		q.hint = request.getParameter("Hint");
 		q.solution = request.getParameter("Solution");
 		q.notes = "";

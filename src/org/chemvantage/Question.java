@@ -42,8 +42,7 @@ public class Question implements Serializable {
 	int nChoices=0;
 	List<String> choices = new ArrayList<String>();
 	double requiredPrecision=0;
-	int significantFigures = 3;
-	int numericItemType = 0;
+	int significantFigures = 0;
 	String correctAnswer;
 	String tag;
 	int pointValue=1;
@@ -55,7 +54,6 @@ public class Question implements Serializable {
 	String editorId;
 	String notes;
 	@Transient int[] parameters = {0,0,0,0};
-	boolean requiresParser = false;
 	boolean isActive = false;
 	
 	public static final int MULTIPLE_CHOICE = 1;
@@ -78,10 +76,9 @@ public class Question implements Serializable {
 		}
 		this.correctAnswer = "";
 		this.parameterString = "";
-		this.requiresParser = false;
 		this.pointValue = 1;
 		this.requiredPrecision = 0;
-		this.significantFigures = 3;
+		this.significantFigures = 0;
 		this.isActive = false;
 	}
 
@@ -121,8 +118,7 @@ public class Question implements Serializable {
 		if (contributorId==null) contributorId="";
 		if (editorId==null) editorId="";
 		if (notes==null) notes="";
-		this.requiresParser = text.contains("#") || this.parameterString.length()>0;
-		}
+	}
 	
 	public String getCorrectAnswer() {
 		switch (getQuestionType()) {
@@ -135,15 +131,18 @@ public class Question implements Serializable {
 		}
 	}
 	
+	public boolean requiresParser() {
+		return text.contains("#") || this.parameterString.length()>0;
+	}
+	
 	public void setParameters() {
-		if (this.requiresParser) setParameters(-1); // set parameters with a random seed based on the current time
+		if (this.requiresParser()) setParameters(-1); // set parameters with a random seed based on the current time
 	}
 
 	public void setParameters(long seed) {
-		if (!this.requiresParser) return;     // bulletproofing
+		if (!this.requiresParser()) return;     // bulletproofing
 		if (this.parameterString==null || this.parameterString.isEmpty()) {
 			this.parameterString = "";
-			this.requiresParser = false;
 			return;
 		}
 
@@ -171,28 +170,25 @@ public class Question implements Serializable {
 	}
 	
 	int getNumericItemType() {
-		if (requiredPrecision==0.0 && significantFigures==0) return 0;      // Q: parser output A: exact value match
-		else if (requiredPrecision==0.0 && significantFigures!=0) return 1; // Q: show sig figs A: match sig figs E or f
+		if (requiredPrecision==0.0 && significantFigures==0) return 0;      // Q: rules/format  A: exact value match
+		else if (requiredPrecision==0.0 && significantFigures!=0) return 1; // Q: show sig figs A: match sig figs exactly
 		else if (requiredPrecision!=0.0 && significantFigures==0) return 2; // Q: rules/format  A: value agrees to %
 		else if (requiredPrecision!=0.0 && significantFigures!=0) return 3; // Q: show sig figs A: value agrees to %
 		return 0; //default case
 	}
 	
 	public String parseString(String raw) {
-		String fmt = "%." + String.valueOf(significantFigures) + "G";   // formatting string for sig figs
-		return parseString(raw,getNumericItemType(),fmt);
+		int itemType = getNumericItemType();
+		switch (itemType) {
+			case 0: return parseString(raw,1);  // return with historical rules-based display
+			case 1: return parseString(raw,2);  // output with sig figs
+			case 2: return parseString(raw,1);  // output with historical rules-based display
+			case 3: return parseString(raw,2);  // output with sig figs
+			default: return "";  // invalid item type
+		}
 	}
 	
-	public String parseString(String raw, String fmt) {
-		return parseString(raw,1,fmt);
-	}
-	
-	public String parseString(String raw, int itemType) {
-		String fmt = "%." + String.valueOf(significantFigures) + "G";   // formatting string for sig figs
-		return parseString(raw, itemType, fmt);
-	}
-	
-	public String parseString(String raw, int itemType, String fmt) {  
+	public String parseString(String raw, int outputType) {  
 		// this section uses a fully licensed version of the Jbc Math Parser
 		// from bestcode.com (license purchased by C. Wight on Nov 18, 2007)
 
@@ -215,23 +211,29 @@ public class Question implements Serializable {
 			try {
 				parser.setExpression(pieces[i]);
 				double value = parser.getValue();
-				switch (itemType) {
-					case 0: buf.append(pieces[i]); break;
-					case 1: buf.append(String.format(fmt,value)); break;
-					default: {
-						DecimalFormat df = new DecimalFormat();
-						if ((Math.abs(value) < 100) && (value - Math.floor(value) == 0)) { // result is small int
-							df.applyPattern("0");
-						}
-						else if ((Math.abs(value) < 1.0E5) && (Math.abs(value) > 1.0E-2)) { // use decimal number
-							df.applyPattern("0.0#####");
-						}
-						else df.applyPattern("0.####E0"); // use scientific notation
-						buf.append(df.format(value)); break;
-					}
+				String fmt = "%." + significantFigures + "G";
+				/*  There are three styles of parser output:
+				 *  0 - raw output from the JbcParser unit
+				 *  1 - ChemVantage historical rules-based output for integers, floats and exponential styles
+				 *  2 - Output containing the specified number of significant digits
+				 */
+				switch (outputType) {
+					case 0:	buf.append(pieces[i]);
+							break;
+					case 1:	DecimalFormat df = new DecimalFormat();
+							if ((Math.abs(value) < 100) && (value - Math.floor(value) == 0)) df.applyPattern("0"); // small integer output
+							else if ((Math.abs(value) < 1.0E5) && (Math.abs(value) > 1.0E-2)) df.applyPattern("0.0#####"); // use decimal number
+							else df.applyPattern("0.####E0"); // use scientific notation
+							buf.append(df.format(value)); 
+							break;
+					case 2: buf.append(String.format(fmt,value));
+							break;
+					case 3: buf.append(String.format(fmt,value));
+							break;
+					default:		
 				}
 			} catch (Exception e) {
-				buf.append(pieces[i]);
+				buf.append(pieces[i]);  // expression could not be parsed; probably text - return unchanged
 			}
 		}
 		return buf.toString();
@@ -290,9 +292,13 @@ public class Question implements Serializable {
 			break;
 		case 5: // Numeric Answer
 			buf.append("<b>" + parseString(text) + "</b><br>");
-			if (requiredPrecision==0 && significantFigures==0) buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>");
-			else if (requiredPrecision==0) buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures.</FONT><br>");
-			else buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value to " + requiredPrecision + "% precision. Express scientific notation like 4.294E-15</FONT><br>");
+			switch (getNumericItemType()) {
+			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>"); break;
+			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like 4.29E-15</FONT><br>"); break;
+			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br>"); break;
+			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Your answer must agree with the exact value to within " + requiredPrecision + "%. Express scientific notation like 4.29E-15</FONT><br>"); break;
+			default:
+			}			
 			buf.append("<input type=text name=" + this.id + " value='" + studentAnswer + "'>");
 			buf.append("<b>" + parseString(tag) + "</b><br>");
 			break;        
@@ -356,9 +362,13 @@ public class Question implements Serializable {
 			break;
 		case 5: // Numeric Answer
 			buf.append("<b>" + parseString(text) + "</b><br>");
-			if (requiredPrecision==0 && significantFigures==0) buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>");
-			else if (requiredPrecision==0) buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures.</FONT><br>");
-			else buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value to " + requiredPrecision + "% precision. Express scientific notation like 4.294E-15</FONT><br>");
+			switch (getNumericItemType()) {
+			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>"); break;
+			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like 4.29E-15</FONT><br>"); break;
+			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br>"); break;
+			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Your answer must agree with the exact value to within " + requiredPrecision + "%. Express scientific notation like 4.29E-15</FONT><br>"); break;
+			default:
+			}
 			buf.append("<TABLE><TR><TD><TABLE BORDER=1 CELLSPACING=0><TR><TD>"
 					+ "<b>" + getCorrectAnswer() + "</b>"
 					+ "</TD></TR></TABLE></TD><TD>");
@@ -426,9 +436,13 @@ public class Question implements Serializable {
 			break;
 		case 5: // Numeric Answer
 			buf.append("<b>" + parseString(text) + "</b><br>");
-			if (requiredPrecision==0 && significantFigures==0) buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>");
-			else if (requiredPrecision==0) buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures.</FONT><br>");
-			else buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value to " + requiredPrecision + "% precision. Express scientific notation like 4.294E-15</FONT><br>");
+			switch (getNumericItemType()) {
+			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>"); break;
+			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like 4.29E-15</FONT><br>"); break;
+			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br>"); break;
+			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Your answer must agree with the exact value to within " + requiredPrecision + "%. Express scientific notation like 4.29E-15</FONT><br>"); break;
+			default:
+			}
 			buf.append("<TABLE><TR><TD><TABLE BORDER=1 CELLSPACING=0><TR><TD>"
 					+ "<b>" + getCorrectAnswer() + "</b>"
 					+ "</TD></TR></TABLE></TD><TD>");
@@ -452,9 +466,19 @@ public class Question implements Serializable {
 				+ "onClick=javascript:getElementById('form" + this.id + "').style.display='';this.style.display='none'>"
 				+ "<div id='form" + this.id + "' style='display: none'><div style=color:red>");
 		switch (getQuestionType()) {
-			case (3): buf.append("Reminder: The correct answers are shown in bold print above. You need to select all of them."); break;
-			case (4): buf.append("Reminder: The correct answer will always form a complete, grammatically correct sentence."); break;
-			case (5): if (requiredPrecision==0) buf.append("Reminder: Your answer must have the appropriate number of significant figures.");
+			case 1: buf.append("Reminder: The correct answer is shown in bold print above."); break; // MULTIPLE_CHOICE
+			case 2: buf.append("Reminder: The correct answer is shown in bold print above."); break; // TRUE_FALSE
+			case 3: buf.append("Reminder: The correct answers are shown in bold print above. You must select all of them."); break; // SELECT_MULTIPLE
+			case 4: buf.append("Reminder: The correct answer will always form a complete, grammatically correct sentence."); break; // FILL_IN_WORD
+			case 5: // NUMERIC
+				switch (getNumericItemType()) {
+					case 0: buf.append("Reminder: Your answer must have exactly the same value as the correct answer.");
+					case 1: buf.append("Reminder: Your answer must have exactly the same value as the correct answer and have no more than " + significantFigures + " significant figures.");
+					case 2: buf.append("Reminder: Your answer must be within " + requiredPrecision + "% of the correct answer.");
+					case 3: buf.append("Reminder: Your answer must be within " + requiredPrecision + "% of the correct answer and have no more than " + significantFigures + " significant figures.");
+					default:
+				}
+				if (requiredPrecision==0) buf.append("Reminder: Your answer must have the appropriate number of significant figures.");
 					  else buf.append("Reminder: Your answer must be in the proper numeric format and within " + requiredPrecision + "% of the exact answer, regardless of significant figures.");
 			default:
 		}		
@@ -580,9 +604,13 @@ public class Question implements Serializable {
 				buf.append("Question Text:<br><TEXTAREA name=QuestionText rows=5 cols=60 wrap=soft>" 
 						+ CharHider.amp2html(text) + "</TEXTAREA><br>");
 				buf.append("<FONT SIZE=-2>Significant figures: <input size=5 name=SignificantFigures value='" + significantFigures + "'> Required precision: <input size=5 name=RequiredPrecision value='" + requiredPrecision + "'> (set to zero to require exact answer)</FONT><br>");
-				if (requiredPrecision==0 && significantFigures==0) buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>");
-				else if (requiredPrecision==0) buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures.</FONT><br>");
-				else buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value to <input size=5 name=RequiredPrecision value='" + requiredPrecision + "'>% precision. Express scientific notation like 4.294E-15</FONT><br>");
+				switch (getNumericItemType()) {
+				case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>"); break;
+				case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like 4.29E-15</FONT><br>"); break;
+				case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br>"); break;
+				case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Your answer must agree with the exact value to within " + requiredPrecision + "%. Express scientific notation like 4.29E-15</FONT><br>"); break;
+				default:
+				}
 				buf.append("Correct answer:");
 				buf.append("<INPUT TYPE=TEXT NAME=CorrectAnswer VALUE='" + correctAnswer + "'> ");
 				buf.append(" Units:<INPUT TYPE=TEXT NAME=QuestionTag SIZE=8 VALUE='" 
@@ -617,22 +645,12 @@ public class Question implements Serializable {
 		case 5: // Numeric Answer
 			studentAnswer = studentAnswer.replaceAll(",", "").replaceAll("\\s", "").toUpperCase();  // removes comma separators and whitespace from numbers, turns e to E
 			switch (getNumericItemType()) {
-			case 0: // exact answer required (no precision or sig figs)
+			case 0: // exact value required (no precision or sig figs)
 				return Double.compare(Double.parseDouble(parseString(studentAnswer,0)),Double.parseDouble(parseString(correctAnswer))) == 0;
 			case 1: // requires match of studentAnswer to correctAnswer with significantFigures (decimal or scientific notation)
-				studentAnswer = studentAnswer.toUpperCase(); // ensures that scientific notation has E not e
-				int i = studentAnswer.indexOf("E");
-				String decFormat = parseString(correctAnswer,1,"%." + String.valueOf(significantFigures) + "f");  // correct answer in floating point format
-				String expFormat = parseString(correctAnswer,1,"%." + String.valueOf(significantFigures) + "E");  // correct answer in scientific notation				
-				if (studentAnswer.equals(expFormat) || studentAnswer.equals(decFormat)) return true;
-				else if (i>0){  // compare values and sig figs directly for scientific notation
-					if (Double.compare(Double.parseDouble(parseString(studentAnswer,0)),Double.parseDouble(parseString(correctAnswer))) == 0) {  // values match
-						studentAnswer = studentAnswer.substring(0,studentAnswer.indexOf("E"));
-						correctAnswer = expFormat.substring(0,expFormat.indexOf("E"));
-						return (studentAnswer.length()==expFormat.length());  // if mantissas are equal length, then sig figs match
-					} else return false;
-				} else return false;
-			default: // cases 2 and 3 require agreement with correct answer to requiredPrecision
+				if (!hasCorrectSigFigs(studentAnswer)) return false;  // too many sig figs
+				return Double.compare(Double.parseDouble(parseString(studentAnswer,0)),Double.parseDouble(parseString(correctAnswer))) == 0;
+			case 2: // studentAnswer value must agree with database to within requiredPrecision %
 				double dAnswer = Double.parseDouble(parseString(studentAnswer,0));
 				double dCorrectAnswer = Double.parseDouble(parseString(correctAnswer));
 				try { // traps divide-by-zero
@@ -641,11 +659,34 @@ public class Question implements Serializable {
 				}
 				catch (Exception e) {
 					return false;
+				}		
+			case 3: // studentAnswer value must agree with database to within requiredPrecision %
+				    // also, student answer must not have more significantFigures than question item
+				if (!hasCorrectSigFigs(studentAnswer)) return false;
+				dAnswer = Double.parseDouble(parseString(studentAnswer,0));
+				dCorrectAnswer = Double.parseDouble(parseString(correctAnswer));
+				try { // traps divide-by-zero
+					if (dCorrectAnswer == 0.0) return (dAnswer==0.0?true:false); 
+					else return (Math.abs((dAnswer-dCorrectAnswer)/dCorrectAnswer)*100 <= requiredPrecision?true:false);
 				}
-			}
-		default:
+				catch (Exception e) {
+					return false;
+				}
+			default: return false; // invalid numericItemType
+		}
+		default:  // exact match to non-numeric answer (MULTIPLE_CHOICE, TRUE_FALSE, SELECT_MULTIPLE)
 			return correctAnswer.equals(studentAnswer);
 		}
+	}
+	
+	boolean hasCorrectSigFigs(String value) {
+		// This method check the value to ensure that it has a number of significant figures that is consistent with Question.significantFigures
+		// Actually, it only ensures that value does not have more sig figs, because there may be an ambiguity in the number of sig figs if the 
+		// last significant digit in either the question item or the studentAnswer is a zero.
+		Double proposedValue = Double.valueOf(String.format("%."+(significantFigures+6)+"E", Double.valueOf(value)));  // high-resolution representation of value
+		Double roundedValue = Double.valueOf(String.format("%."+significantFigures+"E", Double.valueOf(value)));       // rounded to proper number of significant figures
+		if (Double.compare(roundedValue,proposedValue)==0) return true;
+		else return false;
 	}
 	
 	public Question clone() {
@@ -661,7 +702,6 @@ public class Question implements Serializable {
 		q.tag = this.tag;
 		q.pointValue = this.pointValue;
 		q.parameterString = this.parameterString;
-		q.requiresParser = this.requiresParser;
 		q.hint = this.hint;
 		q.solution = this.solution;
 		q.authorId = this.authorId;
