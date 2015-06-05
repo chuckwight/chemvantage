@@ -85,7 +85,7 @@ public class LTILaunch extends HttpServlet {
 		// check for minimum required elements for a basic-lti-launch-request
 		String lti_message_type=request.getParameter("lti_message_type");
 		if ("ToolProxyRegistrationRequest".equals(lti_message_type)) {  // redirect this LTI registration request
-			String msg = "Please POST LTI registration requests to https://chem-vantage.appspot.com/lti/registration/";
+			String msg = "Please POST LTI registration requests to https://" + request.getServerName() + "/lti/registration/";
 			doError(request,response,msg,null,null);
 			return;
 		} else if (!"basic-lti-launch-request".equals(lti_message_type)) {

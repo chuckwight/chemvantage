@@ -121,7 +121,7 @@ public class DataTransfer extends HttpServlet {
 		// this method retrieves a list of Objects from the ChemVantage production server
 		// and puts them into the local datastore
 		try {
-			URL u = new URL("http://chem-vantage.appspot.com/SendObjects");
+			URL u = new URL("https://www.chemvantage.org/SendObjects");
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setDoOutput(true);
 			uc.setDoInput(true);
