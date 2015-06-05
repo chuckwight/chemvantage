@@ -76,7 +76,7 @@ public class LTIRegistration extends HttpServlet {
 			+ "All LTI connections and ChemVantage services are provided free of charge.</td?</tr></table>"
 			+ "<h3>LTI version 2.0</h3>"
 			+ "For LMS platforms that support LTI version 2.0, the system administrator may enter the ChemVantage LTI registration URL:<br> "
-			+ "<b>https://chem-vantage.appspot.com/lti/registration/</b><br>"
+			+ "<b>https://www.chemvantage.org/lti/registration/</b><br>"
 			+ "into the LTI Tool Proxy Registration page of your LMS. Your LMS will automatically negotiate the connection with ChemVantage.<p>"
 			+ "<h3>LTI version 1.x</h3>"
 			+ "If your LMS supports an older version of the LTI standard, you may obtain a free set of LTI credentials by entering<br>"
@@ -91,9 +91,9 @@ public class LTIRegistration extends HttpServlet {
 			+ "blue Add New App button to create a new External Tool. Use the following parameters:<ul>"
 			+ "<li>Name: ChemVantage"
 			+ "<li>Consumer Key and Shared Secret: (cut/paste values from step 1; do not include any blank spaces)"
-			+ "<li>Configuration URL (optional): https://chem-vantage.appspot.com/lti_config.xml"
+			+ "<li>Configuration URL (optional): https://www.chemvantage.org/lti_config.xml"
 			+ "<li>Manual Configuration (optional):"
-			+ "<ul><li>URL: https://chem-vantage.appspot.com/lti/"
+			+ "<ul><li>URL: https://www.chemvantage.org/lti/"
 			+ "<li>Domain: (leave blank)"
 			+ "<li>Privacy: Public (ChemVantage will use only email address and first name)"
 			+ "<li>Custom Fields: (leave blank)"
@@ -102,7 +102,7 @@ public class LTIRegistration extends HttpServlet {
 			+ "<ul><li>Name: (as appropriate, e.g. Quiz - Heat and Enthalpy)"
 			+ "<li>Points: 10 for quiz or homework; 100 for practice exam"
 			+ "<li>Submission Type: External Tool"
-			+ "<li>External Tool URL: https://chem-vantage.appspot.com/lti/ (or select ChemVantage from the list of installed apps)</ul>"
+			+ "<li>External Tool URL: https://www.chemvantage.org/lti/ (or select ChemVantage from the list of installed apps)</ul>"
 			+ "<li>After you update the assignment, you should see the ChemVantage Assignment Setup Page (if not, click the "
 			+ "assignment link to connect to ChemVantage). Select the appropriate Quiz, Homework or Practice Exam for the assignment."
 			+ "<li>A sample assignment should be displayed, including a link near the top (visible only to instructors) that "
@@ -182,7 +182,7 @@ public class LTIRegistration extends HttpServlet {
 		String launch_presentation_return_url = request.getParameter("launch_presentation_return_url");
 		
 		try {
-			if ("basic-lti-launch-request".equals(lti_message_type)) throw new Exception("The correct ChemVantage LTI Launch URL is https://chem-vantage.appspot.com/lti/");
+			if ("basic-lti-launch-request".equals(lti_message_type)) throw new Exception("The correct ChemVantage LTI Launch URL is https://" + request.getServerName() + "/lti/");
 			if (!"ToolProxyRegistrationRequest".equals(lti_message_type)) throw new Exception("Invalid message type");
 			if (reg_key==null || reg_key.isEmpty()) throw new Exception("Required reg_key parameter is missing.");
 			if (reg_password==null || reg_password.isEmpty()) throw new Exception("Required reg_password parameter is missing.");
@@ -434,7 +434,7 @@ public class LTIRegistration extends HttpServlet {
 		Session session = Session.getDefaultInstance(props, null);
 
 		String msgBody = "Thank you for your interest in ChemVantage. Your LTI credentials are:<p>"
-				+ "Launch URL: https://chem-vantage.appspot.com/lti/ <br/>"
+				+ "Launch URL: https://www.chemvantage.org/lti/ <br/>"
 				+ "Consumer Key: " + c.oauth_consumer_key + " <br/>"
 				+ "Shared Secret: " + c.secret + "<p>"
 				+ "Please use the URL method of launching your LTI connection (not the domain method). <br/>"

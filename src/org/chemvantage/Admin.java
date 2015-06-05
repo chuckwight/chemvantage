@@ -222,8 +222,8 @@ public class Admin extends HttpServlet {
 			else if (!searchString.isEmpty()){
 				c = ofy.find(BLTIConsumer.class,searchString);
 				if (c==null) buf.append("LTI Consumer not found.");
-				else buf.append("Launch URL: https://chem-vantage.appspot.com/lti/ <br>"
-						+ "Configuration file: https://chem-vantage.appspot.com/lti_config.xml <br>"
+				else buf.append("Launch URL: https://www.chemvantage.org/lti/ <br>"
+						+ "Configuration file: https://www.chemvantage.org/lti_config.xml <br>"
 						+ "Consumer Key: " + c.oauth_consumer_key + "<br>"
 						+ "Shared Secret: " + c.secret + "<p>");
 			}

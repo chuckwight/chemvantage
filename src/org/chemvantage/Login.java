@@ -187,7 +187,7 @@ public class Login extends HttpServlet {
 		// catch a misdirected attempt to connect using LTI (should use /lti instead)
 		String lti_message_type = request.getParameter("lti_message_type");
 		if (lti_message_type!=null) {  // this is a misdirected LTI request; return standard LTI error message
-			String msg = "Help for LTI registration is available at https://chem-vantage.appspot.com/lti/registration/";
+			String msg = "Help for LTI registration is available at https://www.chemvantage.org/lti/registration/";
 			response.sendRedirect(request.getParameter("launch_presentation_return_url") + "?lti_msg=" + URLEncoder.encode(msg,"UTF-8"));
 			return;
 		}
