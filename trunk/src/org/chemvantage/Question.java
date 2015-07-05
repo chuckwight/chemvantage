@@ -71,14 +71,15 @@ public class Question implements Serializable {
 		case (2): this.type = "TRUE_FALSE"; break;
 		case (3): this.type = "SELECT_MULTIPLE"; break;
 		case (4): this.type = "FILL_IN_WORD"; break;
-		case (5): this.type = "NUMERIC"; break;
+		case (5): this.type = "NUMERIC";
+				  this.significantFigures = 3;
+				  this.requiredPrecision = 2; // percent
+				  break;
 		default:  this.type = null;
 		}
 		this.correctAnswer = "";
 		this.parameterString = "";
 		this.pointValue = 1;
-		this.requiredPrecision = 0;
-		this.significantFigures = 0;
 		this.isActive = false;
 	}
 
@@ -171,7 +172,7 @@ public class Question implements Serializable {
 	
 	int getNumericItemType() {
 		if (requiredPrecision==0.0 && significantFigures==0) return 0;      // Q: rules/format  A: exact value match
-		else if (requiredPrecision==0.0 && significantFigures!=0) return 1; // Q: show sig figs A: match sig figs exactly
+		else if (requiredPrecision==0.0 && significantFigures!=0) return 1; // Q: show sig figs A: exact value match
 		else if (requiredPrecision!=0.0 && significantFigures==0) return 2; // Q: rules/format  A: value agrees to %
 		else if (requiredPrecision!=0.0 && significantFigures!=0) return 3; // Q: show sig figs A: value agrees to %
 		return 0; //default case
@@ -294,9 +295,9 @@ public class Question implements Serializable {
 			buf.append("<b>" + parseString(text) + "</b><br>");
 			switch (getNumericItemType()) {
 			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>"); break;
-			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like 4.29E-15</FONT><br>"); break;
+			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
 			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br>"); break;
-			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Your answer must agree with the exact value to within " + requiredPrecision + "%. Express scientific notation like 4.29E-15</FONT><br>"); break;
+			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
 			default:
 			}			
 			buf.append("<input type=text name=" + this.id + " value='" + studentAnswer + "'>");
@@ -364,9 +365,9 @@ public class Question implements Serializable {
 			buf.append("<b>" + parseString(text) + "</b><br>");
 			switch (getNumericItemType()) {
 			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>"); break;
-			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like 4.29E-15</FONT><br>"); break;
+			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
 			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br>"); break;
-			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Your answer must agree with the exact value to within " + requiredPrecision + "%. Express scientific notation like 4.29E-15</FONT><br>"); break;
+			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
 			default:
 			}
 			buf.append("<TABLE><TR><TD><TABLE BORDER=1 CELLSPACING=0><TR><TD>"
@@ -438,9 +439,9 @@ public class Question implements Serializable {
 			buf.append("<b>" + parseString(text) + "</b><br>");
 			switch (getNumericItemType()) {
 			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>"); break;
-			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like 4.29E-15</FONT><br>"); break;
+			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
 			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br>"); break;
-			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Your answer must agree with the exact value to within " + requiredPrecision + "%. Express scientific notation like 4.29E-15</FONT><br>"); break;
+			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
 			default:
 			}
 			buf.append("<TABLE><TR><TD><TABLE BORDER=1 CELLSPACING=0><TR><TD>"
@@ -475,11 +476,9 @@ public class Question implements Serializable {
 					case 0: buf.append("Reminder: Your answer must have exactly the same value as the correct answer.");
 					case 1: buf.append("Reminder: Your answer must have exactly the same value as the correct answer and have no more than " + significantFigures + " significant figures.");
 					case 2: buf.append("Reminder: Your answer must be within " + requiredPrecision + "% of the correct answer.");
-					case 3: buf.append("Reminder: Your answer must be within " + requiredPrecision + "% of the correct answer and have no more than " + significantFigures + " significant figures.");
+					case 3: buf.append("Reminder: Your answer must have no more than " + significantFigures + " significant figures and be within " + requiredPrecision + "% of the correct answer.");
 					default:
 				}
-				if (requiredPrecision==0) buf.append("Reminder: Your answer must have the appropriate number of significant figures.");
-					  else buf.append("Reminder: Your answer must be in the proper numeric format and within " + requiredPrecision + "% of the exact answer, regardless of significant figures.");
 			default:
 		}		
 		buf.append("</div>Comment:<INPUT TYPE=TEXT SIZE=80 NAME=Notes><INPUT TYPE=SUBMIT NAME=SubmitButton VALUE=Send></div></FORM></div>");
@@ -537,8 +536,6 @@ public class Question implements Serializable {
 		this.validateFields();
 		try {
 			String[] choiceNames = {"ChoiceAText","ChoiceBText","ChoiceCText","ChoiceDText","ChoiceEText"};
-			//buf.append("<input type=hidden name=QuestionType value=" + this.getQuestionType() + ">"
-			//		+ "<input type=hidden name=PointValue value=" + this.pointValue + ">");
 			char choice = 'a';
 			switch (this.getQuestionType()) {
 			case 1: // Multiple Choice
@@ -606,9 +603,9 @@ public class Question implements Serializable {
 				buf.append("<FONT SIZE=-2>Significant figures: <input size=5 name=SignificantFigures value='" + significantFigures + "'> Required precision: <input size=5 name=RequiredPrecision value='" + requiredPrecision + "'> (set to zero to require exact answer)</FONT><br>");
 				switch (getNumericItemType()) {
 				case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>"); break;
-				case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like 4.29E-15</FONT><br>"); break;
+				case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
 				case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br>"); break;
-				case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Your answer must agree with the exact value to within " + requiredPrecision + "%. Express scientific notation like 4.29E-15</FONT><br>"); break;
+				case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
 				default:
 				}
 				buf.append("Correct answer:");
@@ -683,8 +680,8 @@ public class Question implements Serializable {
 		// This method check the value to ensure that it has a number of significant figures that is consistent with Question.significantFigures
 		// Actually, it only ensures that value does not have more sig figs, because there may be an ambiguity in the number of sig figs if the 
 		// last significant digit in either the question item or the studentAnswer is a zero.
-		Double proposedValue = Double.valueOf(String.format("%."+(significantFigures+6)+"E", Double.valueOf(value)));  // high-resolution representation of value
-		Double roundedValue = Double.valueOf(String.format("%."+significantFigures+"E", Double.valueOf(value)));       // rounded to proper number of significant figures
+		Double proposedValue = Double.valueOf(String.format("%."+(significantFigures+6)+"G", Double.valueOf(value)));  // high-resolution representation of value
+		Double roundedValue = Double.valueOf(String.format("%."+significantFigures+"G", Double.valueOf(value)));       // rounded to proper number of significant figures
 		if (Double.compare(roundedValue,proposedValue)==0) return true;
 		else return false;
 	}
