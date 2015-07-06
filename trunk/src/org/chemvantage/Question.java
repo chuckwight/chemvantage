@@ -600,7 +600,7 @@ public class Question implements Serializable {
 			case 5: // Numeric Answer
 				buf.append("Question Text:<br><TEXTAREA name=QuestionText rows=5 cols=60 wrap=soft>" 
 						+ CharHider.amp2html(text) + "</TEXTAREA><br>");
-				buf.append("<FONT SIZE=-2>Significant figures: <input size=5 name=SignificantFigures value='" + significantFigures + "'> Required precision: <input size=5 name=RequiredPrecision value='" + requiredPrecision + "'> (set to zero to require exact answer)</FONT><br>");
+				buf.append("<FONT SIZE=-2>Significant figures: <input size=5 name=SignificantFigures value='" + significantFigures + "'> Required precision: <input size=5 name=RequiredPrecision value='" + requiredPrecision + "'> (set to zero to require exact answer)</FONT><br/>");
 				switch (getNumericItemType()) {
 				case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>"); break;
 				case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
@@ -613,7 +613,14 @@ public class Question implements Serializable {
 				buf.append(" Units:<INPUT TYPE=TEXT NAME=QuestionTag SIZE=8 VALUE='" 
 						+ CharHider.quot2html(CharHider.amp2html(tag)) + "'><br>");
 				buf.append("Parameters:<input name=ParameterString value='" 
-						+ parameterString + "'><br>");
+						+ parameterString + "'><FONT SIZE=-2><a href=# onClick=\"javascript:document.getElementById('detail1').innerHTML="
+						+ "'You may embed up to 4 parameters (a b c d) in a question using a parameter string like<br>"
+						+ "a 111:434 b 7:39<br>"
+						+ "This will randomly select integers for variables a and b from the specified ranges.<br>"
+						+ "Use these in math expressions with the pound sign delimeter (#) to create randomized data.<br>"
+						+ "Example: Compute the mass of sodium in #a# mL of aqueous #b/10# M NaCl solution.<br>"
+						+ "Correct answer: #22.9898*a/1000*b/10# g<p>'\";>What's This?</a></FONT>");
+				buf.append("<div id=detail1></div>");
 				buf.append("Hint:<br><TEXTAREA NAME=Hint ROWS=3 COLS=60 WRAP=SOFT>"
 						+ CharHider.amp2html(hint) + "</TEXTAREA><br>");
 				buf.append("Solution:<br><TEXTAREA NAME=Solution ROWS=10 COLS=60 WRAP=SOFT>" 

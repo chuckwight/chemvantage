@@ -288,19 +288,6 @@ public class Homework extends HttpServlet {
 			buf.append("<b>" + user.firstName + "</b><br>\n");
 			buf.append(df.format(now));
 			
-			/*
-			// Check submissions for guessing behavior:
-			 if (user.moreThan1RecentAttempts(questionId,2)) { // in the past 2 minutes
-				buf.append("<h3><FONT COLOR=RED>Your Response Was Not Graded</FONT></h3>"
-						+ "It appears that you are guessing the answers to the questions because you submitted at least "
-						+ "2 other responses to this question in the past couple of minutes.<p>Please slow down, "
-						+ "check your work carefully, and then resubmit your answer.  You will find that by working through "
-						+ "the problems in a careful, deliberate way will enhance your learning and your performance on "
-						+ "the examinations.");
-				buf.append("<p><a href=Homework?TopicId=" + topic.id + "&r=" + new Random().nextInt(99) + ">Return to this homework assignment</a>");
-				return buf.toString();
-			};
-*/			
 			q.setParameters(user.id.hashCode());
 			int studentScore = 0;
 			int possibleScore = q.pointValue;
@@ -346,9 +333,9 @@ public class Homework extends HttpServlet {
 					try {
 						@SuppressWarnings("unused")
 						double dAnswer = Double.parseDouble(q.parseString(studentAnswer[0]));  // throws exception for non-numeric answer
-						buf.append("<h3>Incorrect Answer</h3>Your answer was scored incorrect because it does not "
-								+ "agree with the answer in the database to within the required precision (" + q.requiredPrecision + "%). "
-								+ "Please be sure that your response has enough significant figures to assure this level of agreement.");
+						buf.append("<h3>Incorrect Answer</h3>Your answer was scored incorrect because "
+								+ (q.requiredPrecision==0.0?"it does not exactly match the answer in the database.":"it does not agree with the answer in the database to within the required precision (" + q.requiredPrecision + "%)")
+								+ (q.significantFigures>0?", or it does not have the number of significant figures appropriate for the data given in the question.":"."));
 					}
 					catch (Exception e2) {
 						buf.append("<h3>Wrong Format</h3>This question requires a numeric response expressed as an integer, decimal number, "
