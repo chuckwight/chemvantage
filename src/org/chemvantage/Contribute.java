@@ -104,18 +104,6 @@ public class Contribute extends HttpServlet {
 				}
 				choice++;
 			}
-			double requiredPrecision = 0.0; // percent
-			int significantFigures = 3;
-			int pointValue = 1;
-			try {
-				pointValue = Integer.parseInt(request.getParameter("PointValue"));
-				requiredPrecision = Double.parseDouble(request.getParameter("RequiredPrecision"));
-			} catch (Exception e2) {
-			}
-			try {
-				significantFigures = Integer.parseInt(request.getParameter("SignificantFigures"));
-			} catch (Exception e) {
-			}
 			String correctAnswer = "";
 			try {
 				String[] allAnswers = request.getParameterValues("CorrectAnswer");
@@ -123,6 +111,13 @@ public class Contribute extends HttpServlet {
 			} catch (Exception e2) {
 				correctAnswer = request.getParameter("CorrectAnswer");
 			}
+			int significantFigures = 3;
+			double requiredPrecision = 2.0;
+			try {
+				significantFigures = Integer.parseInt(request.getParameter("SignificantFigures"));
+				requiredPrecision = Double.parseDouble(request.getParameter("RequiredPrecision"));
+			} catch (Exception e) {}
+						
 			String questionTag = request.getParameter("QuestionTag");
 			String parameterString = request.getParameter("ParameterString");
 			if (parameterString == null) parameterString = "";
@@ -140,11 +135,10 @@ public class Contribute extends HttpServlet {
 				q.text = questionText;
 				q.nChoices = nChoices;
 				q.choices = choices;
-				q.requiredPrecision = requiredPrecision;
-				q.significantFigures = significantFigures;
 				q.correctAnswer = correctAnswer;
+				q.significantFigures = significantFigures;
+				q.requiredPrecision = requiredPrecision;
 				q.tag = questionTag;
-				q.pointValue = pointValue;
 				q.parameterString = parameterString;
 				q.hint = hint;
 				q.solution = solution;
