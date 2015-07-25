@@ -235,7 +235,6 @@ public class Homework extends HttpServlet {
 			}
 			else for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
 			
-			//  ================ New Section for Retry Delay =================== //
 			Date minutesAgo = new Date(now.getTime()-retryDelayMinutes*60000);  // 24 hours ago
 			List<HWTransaction> recentTransactions = ofy.query(HWTransaction.class).filter("questionId",q.id).filter("userId",user.id).filter("graded >",minutesAgo).list();
 			long secondsRemaining = 0;
@@ -282,8 +281,7 @@ public class Homework extends HttpServlet {
 						+ "</SCRIPT>"); 
 				return buf.toString();
 			}
-			//  ================ End New Section for Retry Delay =================== //
-
+			
 			buf.append("<h2>Homework Results - " + topic.title + " (" + subject.title + ")</h2>\n");
 			buf.append("<b>" + user.firstName + "</b><br>\n");
 			buf.append(df.format(now));
@@ -333,9 +331,9 @@ public class Homework extends HttpServlet {
 					try {
 						@SuppressWarnings("unused")
 						double dAnswer = Double.parseDouble(q.parseString(studentAnswer[0]));  // throws exception for non-numeric answer
-						buf.append("<h3>Incorrect Answer</h3>Your answer was scored incorrect because "
-								+ (q.requiredPrecision==0.0?"it does not exactly match the answer in the database.":"it does not agree with the answer in the database to within the required precision (" + q.requiredPrecision + "%)")
-								+ (q.significantFigures>0?", or it does not have the number of significant figures appropriate for the data given in the question.":"."));
+						buf.append("<h3>Incorrect Answer</h3>");
+						if (!q.hasCorrectSigFigs(studentAnswer[0])) buf.append("Your answer does not have the number of significant figures appropriate for the data given in the question. ");
+						if (!q.agreesToRequiredPrecision(studentAnswer[0])) buf.append("Your answer does not " + (q.requiredPrecision==0?"exactly match the answer in the database.":"agree with the answer in the database to within the required precision (" + q.requiredPrecision + "%)"));
 					}
 					catch (Exception e2) {
 						buf.append("<h3>Wrong Format</h3>This question requires a numeric response expressed as an integer, decimal number, "
