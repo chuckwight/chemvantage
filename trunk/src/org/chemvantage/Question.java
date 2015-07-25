@@ -647,50 +647,40 @@ public class Question implements Serializable {
 			}
 			return false;
 		case 5: // Numeric Answer
-			studentAnswer = studentAnswer.replaceAll(",", "").replaceAll("\\s", "").toUpperCase();  // removes comma separators and whitespace from numbers, turns e to E
-			switch (getNumericItemType()) {
-			case 0: // exact value required (no precision or sig figs)
-				return Double.compare(Double.parseDouble(parseString(studentAnswer,0)),Double.parseDouble(parseString(correctAnswer))) == 0;
-			case 1: // requires match of studentAnswer to correctAnswer with significantFigures (decimal or scientific notation)
-				if (!hasCorrectSigFigs(studentAnswer)) return false;  // too many sig figs
-				return Double.compare(Double.parseDouble(parseString(studentAnswer,0)),Double.parseDouble(parseString(correctAnswer))) == 0;
-			case 2: // studentAnswer value must agree with database to within requiredPrecision %
-				double dAnswer = Double.parseDouble(parseString(studentAnswer,0));
-				double dCorrectAnswer = Double.parseDouble(parseString(correctAnswer));
-				try { // traps divide-by-zero
-					if (dCorrectAnswer == 0.0) return (dAnswer==0.0?true:false); 
-					else return (Math.abs((dAnswer-dCorrectAnswer)/dCorrectAnswer)*100 <= requiredPrecision?true:false);
-				}
-				catch (Exception e) {
-					return false;
-				}		
-			case 3: // studentAnswer value must agree with database to within requiredPrecision %
-				    // also, student answer must not have more significantFigures than question item
-				if (!hasCorrectSigFigs(studentAnswer)) return false;
-				dAnswer = Double.parseDouble(parseString(studentAnswer,0));
-				dCorrectAnswer = Double.parseDouble(parseString(correctAnswer));
-				try { // traps divide-by-zero
-					if (dCorrectAnswer == 0.0) return (dAnswer==0.0?true:false); 
-					else return (Math.abs((dAnswer-dCorrectAnswer)/dCorrectAnswer)*100 <= requiredPrecision?true:false);
-				}
-				catch (Exception e) {
-					return false;
-				}
-			default: return false; // invalid numericItemType
-		}
+			return hasCorrectSigFigs(studentAnswer) && agreesToRequiredPrecision(studentAnswer);
 		default:  // exact match to non-numeric answer (MULTIPLE_CHOICE, TRUE_FALSE, SELECT_MULTIPLE)
 			return correctAnswer.equals(studentAnswer);
 		}
 	}
 	
-	boolean hasCorrectSigFigs(String value) {
+	boolean hasCorrectSigFigs(String studentAnswer) {
 		// This method check the value to ensure that it has a number of significant figures that is consistent with Question.significantFigures
 		// Actually, it only ensures that value does not have more sig figs, because there may be an ambiguity in the number of sig figs if the 
 		// last significant digit in either the question item or the studentAnswer is a zero.
-		Double proposedValue = Double.valueOf(String.format("%."+(significantFigures+6)+"G", Double.valueOf(value)));  // high-resolution representation of value
-		Double roundedValue = Double.valueOf(String.format("%."+significantFigures+"G", Double.valueOf(value)));       // rounded to proper number of significant figures
-		if (Double.compare(roundedValue,proposedValue)==0) return true;
-		else return false;
+		if (significantFigures==0) return true; // correct sig figs not required for this question
+		try {
+			studentAnswer = studentAnswer.replaceAll(",", "").replaceAll("\\s", "").toUpperCase();  // removes comma separators and whitespace from numbers, turns e to E
+			Double proposedValue = Double.valueOf(String.format("%."+(significantFigures+6)+"G", Double.valueOf(studentAnswer)));  // high-resolution representation of value
+			Double roundedValue = Double.valueOf(String.format("%."+significantFigures+"G", Double.valueOf(studentAnswer)));       // rounded to proper number of significant figures
+			if (Double.compare(roundedValue,proposedValue)==0) return true;
+			else return false;
+		} catch (Exception e) {  // unexpected error
+			return false;
+		}
+	}
+	
+	boolean agreesToRequiredPrecision(String studentAnswer) {
+		// This method is used for numeric questions to determine if the student's response agrees with the correct answer to within the required precision
+		try {
+			studentAnswer = studentAnswer.replaceAll(",", "").replaceAll("\\s", "").toUpperCase();  // removes comma separators and whitespace from numbers, turns e to E
+			double dStudentAnswer = Double.parseDouble(parseString(studentAnswer,0));
+			double dCorrectAnswer = Double.parseDouble(parseString(correctAnswer));
+			if (requiredPrecision==0.) return Double.compare(dStudentAnswer,dCorrectAnswer)==0.; // exact match required
+			if (dCorrectAnswer==0.) return dStudentAnswer==0.;  // exact match is always required if the correct answer is zero; avoids divide-by-zero in next line
+			else return (Math.abs((dStudentAnswer-dCorrectAnswer)/dCorrectAnswer)*100 <= requiredPrecision?true:false);  // checks for agreement to required precision
+		} catch (Exception e) {
+			return false;
+		}
 	}
 	
 	public Question clone() {
