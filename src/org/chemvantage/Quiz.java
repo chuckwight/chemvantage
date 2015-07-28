@@ -36,10 +36,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.xeustechnologies.googleapi.spelling.SpellChecker;
-import org.xeustechnologies.googleapi.spelling.SpellCorrection;
-import org.xeustechnologies.googleapi.spelling.SpellResponse;
-
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
@@ -73,10 +69,7 @@ public class Quiz extends HttpServlet {
 				
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
-			if ("SpellCheck".equals(request.getParameter("UserRequest"))) {
-				out.println(correctedSpelling(request.getParameter("Answer")));
-			}
-			else out.println(Home.getHeader(user) + printQuiz(user,request) + Home.footer);
+			out.println(Home.getHeader(user) + printQuiz(user,request) + Home.footer);
 		} catch (Exception e) {}
 	}
 
@@ -138,7 +131,6 @@ public class Quiz extends HttpServlet {
 
 			buf.append("\n<h2>Quiz - " + topic.title + " (" + subject.title + ")</h2>");
 			
-			buf.append(ajaxQuizJavaScript());  // this code allows users to use the Google SOAP search spell checking function
 			buf.append("\n<FORM NAME=Quiz METHOD=POST ACTION=Quiz onSubmit=\"javascript: return confirmSubmission()\">");
 			
 			// Gather profile information if needed; otherwise just print the user's name.
@@ -213,7 +205,8 @@ public class Quiz extends HttpServlet {
 			buf.append("\n<input type=submit value='Grade This Quiz'>");
 			buf.append("\n</form>");
 			buf.append("<SCRIPT language='JavaScript'>");
-			// this code allows the user to toggle the display of the quiz timers
+
+			// this code allows the user to toggle the display of the quiz timers:
 			buf.append("function toggleTimers() {"
 					+ "  var timer0 = document.getElementById('timer0');"
 					+ "  var timer1 = document.getElementById('timer1');"
@@ -420,49 +413,6 @@ public class Quiz extends HttpServlet {
 		}
 		return buf.toString();
 	}
-
-	String ajaxQuizJavaScript() {
-		return "<SCRIPT TYPE='text/javascript'>\n"
-		+ "function ajaxSpellCheck(id) {\n"
-		+ "  var xmlhttp;\n"
-		+ "  var answer = document.getElementById(id).value;\n"
-		+ "  if (answer.length==0) {\n"
-		+ "    document.getElementById('status'+id).innerHTML='Nothing to check';\n"
-		+ "    return false;\n"
-		+ "  }\n"
-		+ "  xmlhttp=GetXmlHttpObject();\n"
-		+ "  if (xmlhttp==null) {\n"
-		+ "    alert ('Sorry, your browser does not support AJAX!');\n"
-		+ "    return false;\n"
-		+ "  }\n"
-		+ "  xmlhttp.onreadystatechange=function() {\n"
-		+ "    var status=document.getElementById('status'+id);\n"
-		+ "    var answerField=document.getElementById(id);\n"
-		+ "    if (xmlhttp.readyState==4) {\n"
-		+ "      status.innerHTML += 'done.';\n"
-		+ "      if (xmlhttp.responseText.length==1) status.innerHTML='Spelling is OK.';\n"
-		+ "      else {"
-		+ "        status.innerHTML = 'Did you mean:';\n"
-		+ "	       answerField.value=xmlhttp.responseText;\n"
-		+ "      }\n"
-		+ "    }\n"
-		+ "    return false;\n"
-		+ "  }\n"
-		+ "  xmlhttp.open('GET','Quiz?UserRequest=SpellCheck&Answer='+answer,true);\n"
-		+ "  xmlhttp.send(null);\n"  
-		+ "  return false;\n"
-		+ "}\n"
-		+ "function GetXmlHttpObject() {\n"
-		+ "  if (window.XMLHttpRequest) { // code for IE7+, Firefox, Chrome, Opera, Safari\n"
-		+ "    return new XMLHttpRequest();\n"
-		+ "  }\n"
-		+ "  if (window.ActiveXObject) { // code for IE6, IE5\n"
-		+ "    return new ActiveXObject('Microsoft.XMLHTTP');\n"
-		+ "  }\n"
-		+ "  return null;\n"
-		+ "}\n"
-		+ "</SCRIPT>";			
-	}
 	
 	String ajaxScoreJavaScript(boolean verifiedEmail) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
@@ -531,32 +481,6 @@ public class Quiz extends HttpServlet {
 		+ "  return null;\n"
 		+ "}\n"
 		+ "</SCRIPT>";
-	}
-	
-	static String correctedSpelling(String answer) {
-		StringBuffer buf = new StringBuffer();
-		try {
-			if (answer==null) return "";
-			answer = answer.trim();
-			if (answer.isEmpty()) return "";
-			SpellChecker sc = new SpellChecker();
-			//sc.setOverHttps( true );
-			SpellResponse sr = sc.check(answer);
-			SpellCorrection[] scorr = sr.getCorrections();
-			if (scorr==null) return "";  // no corrections needed
-			int i = 0; // position index in original submission
-			int j = 0; // offset of correction
-			for(int k = 0;k<scorr.length;k++) {
-				j = scorr[k].getOffset();
-				buf.append(j>i?answer.substring(i,j):"");
-				buf.append(scorr[k].getWords()[0]);
-				i = answer.indexOf(" ",j+1);
-			}
-			buf.append(i>0?answer.substring(i):"");
-		} catch (Exception e) {
-			return e.toString();
-		}
-		return buf.toString().trim();
 	}
 	
 }
