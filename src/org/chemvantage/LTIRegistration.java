@@ -198,9 +198,15 @@ public class LTIRegistration extends HttpServlet {
 			base_url.delete(base_url.indexOf("lti"),base_url.length()).delete(0, base_url.indexOf("://") + 3);
 			
 			JSONObject toolProxy = constructToolProxy(toolConsumerProfile,tc_profile_url,base_url,oauth_secret,capability_enabled);
-			debug.append("tool_proxy_formed_ok.");			
+			debug.append("tool_proxy_formed_ok.");
 			
-			String reply = new LTIMessage("application/vnd.ims.lti.v2.toolproxy+json",toolProxy.toString(),getTCServiceEndpoint("application/vnd.ims.lti.v2.toolproxy+json",toolConsumerProfile),reg_key,reg_password).send();
+			String toolProxyString = toolProxy.toString();
+			String serviceEndpoint = getTCServiceEndpoint("application/vnd.ims.lti.v2.toolproxy+json",toolConsumerProfile);
+			debug.append("tc_service_endpoint:" + serviceEndpoint);
+			LTIMessage msg = new LTIMessage("application/vnd.ims.lti.v2.toolproxy+json",toolProxyString,serviceEndpoint,reg_key,reg_password);
+			debug.append("lti_msg_formed_ok");
+			String reply = msg.send();
+
 			debug.append("tc_response_received.");
 			
 			String tool_proxy_guid = null;
