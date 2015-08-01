@@ -85,9 +85,14 @@ public class LTILaunch extends HttpServlet {
 		// check for minimum required elements for a basic-lti-launch-request
 		String lti_message_type=request.getParameter("lti_message_type");
 		if ("ToolProxyRegistrationRequest".equals(lti_message_type)) {  // redirect this LTI registration request
-			String msg = "Please POST LTI registration requests to https://" + request.getServerName() + "/lti/registration/";
-			doError(request,response,msg,null,null);
-			return;
+			try {
+				response.sendRedirect("/lti/registration/");
+				return;
+			} catch (Exception e) {
+				String msg = "Please POST LTI registration requests to https://" + request.getServerName() + "/lti/registration/";
+				doError(request,response,msg,null,null);
+				return;
+			}
 		} else if (!"basic-lti-launch-request".equals(lti_message_type)) {
 			doError(request,response,"Missing or invalid lti_message_type parameter.",null,null);
 			return;
@@ -430,11 +435,8 @@ public class LTILaunch extends HttpServlet {
 		return buf.toString();
 	}
 
-	public void doError(HttpServletRequest request, HttpServletResponse response, 
-			String s, String message, Exception e)
-	throws java.io.IOException
-	{
-		//System.out.println(s);
+	public void doError(HttpServletRequest request, HttpServletResponse response, String s, String message, Exception e)
+	throws java.io.IOException {
 		String return_url = request.getParameter("launch_presentation_return_url");
 		if ( return_url != null && return_url.length() > 1 ) {
 			if ( return_url.indexOf('?') > 1 ) {

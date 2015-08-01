@@ -76,7 +76,7 @@ public class LTIRegistration extends HttpServlet {
 			+ "All LTI connections and ChemVantage services are provided free of charge.</td?</tr></table>"
 			+ "<h3>LTI version 2.0</h3>"
 			+ "For LMS platforms that support LTI version 2.0, the system administrator may enter the ChemVantage LTI registration URL:<br> "
-			+ "<b>https://www.chemvantage.org/lti/registration/</b><br>"
+			+ "<b>https://www.chemvantage.org/lti/</b><br>"
 			+ "into the LTI Tool Proxy Registration page of your LMS. Your LMS will automatically negotiate the connection with ChemVantage.<p>"
 			+ "<h3>LTI version 1.x</h3>"
 			+ "If your LMS supports an older version of the LTI standard, you may obtain a free set of LTI credentials by entering<br>"
