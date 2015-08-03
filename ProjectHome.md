@@ -1,0 +1,1 @@
+ChemVantage is a suite of Java servlets deployed on Google App Engine that provide electronic quizzes, computer-scored homework assignments, and practice exams on topics typically found in college-level General Chemistry courses. The site includes tools for account and group management for students and instructors.
