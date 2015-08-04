@@ -162,6 +162,7 @@ public class LTILaunch extends HttpServlet {
 		session.setAttribute("UserId",userId);
 		User user = User.getInstance(session);
 		if (user==null) user = User.createBLTIUser(request); // first-ever login for this user
+		
 		// try to set a cookie in the user's browser with the identity provider
 		Cookie c = new Cookie("IDProvider","BLTI");
 		c.setMaxAge(2592000); // expires after 30 days (in seconds)
