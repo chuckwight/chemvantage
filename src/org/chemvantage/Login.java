@@ -255,6 +255,8 @@ public class Login extends HttpServlet {
 				String firstName = getUserFirstName(userId,accessToken);
 				User.createGooglePlusUser(payload,firstName);
 			}
+			
+			// Set a cookie in the user's browser for Google+ login prompt next visit
 			Cookie c = new Cookie("IDProvider","Google");
 			c.setMaxAge(2592000); // expires after 30 days (in seconds)
 			response.addCookie(c);
