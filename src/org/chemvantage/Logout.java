@@ -58,8 +58,8 @@ public class Logout extends HttpServlet {
 		if (userService.isUserLoggedIn()) response.sendRedirect(userService.createLogoutURL("/Logout"));
 		else {
 			response.setContentType("text/html");
-		PrintWriter out = response.getWriter();
-		out.println(Login.header + logoutPage(request) + Login.footer);
+			PrintWriter out = response.getWriter();
+			out.println(Login.header + logoutPage(request) + Login.footer);
 		}
 	}
 	
@@ -72,8 +72,7 @@ public class Logout extends HttpServlet {
 
 		if ("BLTI".equals(providerName)) {
 			buf.append("If you are at a public computer, please shut down this browser completely to protect your online identity.<p>"
-					+ "To sign in to ChemVantage again, please use the link inside your class learning management system."
-					+ "<p><a href='http://" + request.getServerName() + "'>Go to the public ChemVantage login page</a>");
+					+ "To connect to ChemVantage again, click one of the assignment links inside your class learning management system.");
 		} else {
 			buf.append("If you are at a public computer, you must do 2 more things to protect your online identity:<ol>"
 					+ "<li>Visit your identity provider's site below to sign out there."
@@ -104,7 +103,7 @@ public class Logout extends HttpServlet {
 				for (String p : openIdProviders.keySet()) {
 					String providerUrl = openIdProviders.get(p);
 					buf.append("<TD style='text-align:center'><a href='http://" + providerUrl + "'>"
-							+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerUrl + "'><br/>" 
+							+ "<img src='" + openIdLogos.get(p) + "' border=0 alt='" + providerUrl + "'><br/>" 
 							+ providerUrl + "</a></TD>");
 				}
 			}
