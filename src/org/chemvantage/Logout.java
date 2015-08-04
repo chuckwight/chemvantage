@@ -70,10 +70,8 @@ public class Logout extends HttpServlet {
 		String providerName = "";
 		for (Cookie c : cookies) if ("IDProvider".equals(c.getName())) providerName = c.getValue();
 
-		if ("BLTI".equals(providerName)) {
-			buf.append("If you are at a public computer, please shut down this browser completely to protect your online identity.<p>"
-					+ "To sign in to ChemVantage again, please use the link inside your class learning management system."
-					+ "<p><a href='http://" + request.getServerName() + "'>Go to the public ChemVantage login page</a>");
+		if (providerName.isEmpty() || "BLTI".equals(providerName)) {
+			buf.append("If you are at a public computer, please shut down this browser completely to protect your online identity.<p>");
 		} else {
 			buf.append("If you are at a public computer, you must do 2 more things to protect your online identity:<ol>"
 					+ "<li>Visit your identity provider's site below to sign out there."
