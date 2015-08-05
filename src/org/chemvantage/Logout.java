@@ -58,8 +58,8 @@ public class Logout extends HttpServlet {
 		if (userService.isUserLoggedIn()) response.sendRedirect(userService.createLogoutURL("/Logout"));
 		else {
 			response.setContentType("text/html");
-		PrintWriter out = response.getWriter();
-		out.println(Login.header + logoutPage(request) + Login.footer);
+			PrintWriter out = response.getWriter();
+			out.println(Login.header + logoutPage(request) + Login.footer);
 		}
 	}
 	
@@ -102,7 +102,7 @@ public class Logout extends HttpServlet {
 				for (String p : openIdProviders.keySet()) {
 					String providerUrl = openIdProviders.get(p);
 					buf.append("<TD style='text-align:center'><a href='http://" + providerUrl + "'>"
-							+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerUrl + "'><br/>" 
+							+ "<img src='" + openIdLogos.get(p) + "' border=0 alt='" + providerUrl + "'><br/>" 
 							+ providerUrl + "</a></TD>");
 				}
 			}

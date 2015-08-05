@@ -161,6 +161,7 @@ public class LTILaunch extends HttpServlet {
 		session.setAttribute("UserId",userId);
 		User user = User.getInstance(session);
 		if (user==null) user = User.createBLTIUser(request); // first-ever login for this user
+		
 	
 		// Create the domain if it doesn't already exist
 		Domain domain = ofy.query(Domain.class).filter("domainName",oauth_consumer_key).get();
