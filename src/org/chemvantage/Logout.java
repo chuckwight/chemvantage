@@ -53,26 +53,31 @@ public class Logout extends HttpServlet {
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
+		String providerName = "";
+		if ("BLTI".equals(User.getInstance(request.getSession()).authDomain)) {
+			providerName = "BLTI";
+			Cookie c = new Cookie("IDProvider","BLTI");
+			c.setMaxAge(2592000); // expires after 30 days (in seconds)
+			response.addCookie(c);
+		} else {
+			Cookie[] cookies = request.getCookies();
+			for (Cookie c : cookies) if ("IDProvider".equals(c.getName())) providerName = c.getValue();			
+		}
 		request.getSession().invalidate();
 		UserService userService = UserServiceFactory.getUserService();
 		if (userService.isUserLoggedIn()) response.sendRedirect(userService.createLogoutURL("/Logout"));
 		else {
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
-			out.println(Login.header + logoutPage(request) + Login.footer);
+			out.println(Login.header + logoutPage(request,providerName) + Login.footer);
 		}
 	}
 	
-	String logoutPage(HttpServletRequest request) {
+	String logoutPage(HttpServletRequest request,String providerName) {
 		StringBuffer buf = new StringBuffer("<h2>You have successfully signed out of ChemVantage</h2>");
 		
-		Cookie[] cookies = request.getCookies();
-		String providerName = "";
-		for (Cookie c : cookies) if ("IDProvider".equals(c.getName())) providerName = c.getValue();
-
-		if ("BLTI".equals(providerName)) {
-			buf.append("If you are at a public computer, please shut down this browser completely to protect your online identity.<p>"
-					+ "To connect to ChemVantage again, click one of the assignment links inside your class learning management system.");
+		if (providerName.isEmpty() || "BLTI".equals(providerName)) {
+			buf.append("If you are at a public computer, please shut down this browser completely to protect your online identity.<p>");
 		} else {
 			buf.append("If you are at a public computer, you must do 2 more things to protect your online identity:<ol>"
 					+ "<li>Visit your identity provider's site below to sign out there."
