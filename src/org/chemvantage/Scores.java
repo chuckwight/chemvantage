@@ -251,7 +251,7 @@ public class Scores extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		try {
 			buf.append("\n<h2>My " + subject.title + " Scores</h2>");
-			buf.append("\nUser: " + user.getBothNames() + (user.email.length()>0?" (" + user.email + ")":"") + "<br>");
+			buf.append("\nUser: " + user.getBothNames() + (!user.getEmail().isEmpty()?" (" + user.getEmail() + ")":"") + "<br>");
 			if (user.myGroupId < 0) user.changeGroups(0);
 			Group myGroup = null;
 			if (user.myGroupId > 0) myGroup = ofy.get(Group.class,user.myGroupId);
@@ -482,7 +482,7 @@ public class Scores extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		try {
 			buf.append("\n<h2>ChemVantage Quiz Transactions</h2>");
-			buf.append("\nUser: " + user.getBothNames() + (user.email.length()>0?" (" + user.email + ")":"") + "<br>");
+			buf.append("\nUser: " + user.getBothNames() + (!user.getEmail().isEmpty()?" (" + user.getEmail() + ")":"") + "<br>");
 			
 			try {  // give some information about the current group
 				Group myGroup = ofy.get(Group.class,user.myGroupId);
@@ -512,7 +512,7 @@ public class Scores extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		try {
 			buf.append("\n<h2>ChemVantage Homework Transactions</h2>");
-			buf.append("\nUser: " + user.getBothNames() + (user.email.length()>0?" (" + user.email + ")":"") + "<br>");
+			buf.append("\nUser: " + user.getBothNames() + (!user.getEmail().isEmpty()?" (" + user.getEmail() + ")":"") + "<br>");
 			
 			try {  // give some information about the current group
 				Group myGroup = ofy.get(Group.class,user.myGroupId);

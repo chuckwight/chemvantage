@@ -784,7 +784,7 @@ public class Groups extends HttpServlet {
 					continue;
 				}
 				i++;
-				buf.append("<TR><TD>" + i + ".</TD><TD><A href=mailto:" + u.email + ">" + u.getFullName() + "</A></TD>");
+				buf.append("<TR><TD>" + i + ".</TD><TD><A href=mailto:" + u.getEmail() + ">" + u.getFullName() + "</A></TD>");
 				for (Long t : topicIds) {
 					buf.append("<TD>" + getPracticeExamScore(u,topics.get(t)) + "</TD>");
 				}
@@ -862,7 +862,7 @@ public class Groups extends HttpServlet {
 						continue;
 					}
 					i++;
-					buf.append("<TR><TD>" + i + ".</TD><TD><A href=mailto:" + u.email + ">" + u.getFullName() + "</A></TD>");
+					buf.append("<TR><TD>" + i + ".</TD><TD><A href=mailto:" + u.getEmail() + ">" + u.getFullName() + "</A></TD>");
 					int j = 0;
 					int studentTotalScore = 0;
 					for (Assignment a : assignments) {
@@ -905,7 +905,7 @@ public class Groups extends HttpServlet {
 						continue;
 					}
 					i++;
-					buf.append("<TR><TD>" + i + ".</TD><TD><A href=mailto:" + u.email + ">" + u.getFullName() + "</A></TD>");
+					buf.append("<TR><TD>" + i + ".</TD><TD><A href=mailto:" + u.getEmail() + ">" + u.getFullName() + "</A></TD>");
 					int j = 0;
 					int studentTotalScore = 0;
 					for (Assignment a : assignments) {
@@ -991,7 +991,7 @@ public class Groups extends HttpServlet {
 					ofy.put(group);
 					continue;
 				}
-				buf.append("\"" + u.getFullName() + "\"," + u.email);
+				buf.append("\"" + u.getFullName() + "\"," + u.getEmail());
 				for (Assignment a : assignments) {
 					Key<Score> k = new Key<Score>(new Key<User>(User.class,u.id),Score.class,a.id);
 					Score s = scoresMap.get(k);
@@ -1126,10 +1126,10 @@ public class Groups extends HttpServlet {
 							+ "<TR><TD><b>Name</b></TD><TD><b>Email</b></TD><TD COLSPAN=2><b>Add To Group</b></TD></TR>");
 					for (User u : searchResults) {
 						buf.append("<TR><TD>" + u.getFullName() + "</TD>");
-						String email = u.email;
+						String email = u.getEmail();
 						String id = u.id; // this should be identical to email except for Google account holders
 						buf.append("<TD><a href=mailto:" + email + ">" + email + "</a></TD>");
-						if (u.email.equals(searchString)) {
+						if (u.getEmail().equals(searchString)) {
 							buf.append("<TD><FONT COLOR=#FF0000>" + request.getParameter("Message") + "</FONT></TD>");
 						}
 						else {
@@ -1170,7 +1170,7 @@ public class Groups extends HttpServlet {
 				 if (u.isInstructor() || u.isAdministrator()) {
 					 nonStudents++;
 					 buf.append("<TR><TD>" + u.getFullName() + "</TD>");
-					 buf.append("<TD><A href=mailto:" + u.email + ">" + u.email + "</a></TD></TR>");
+					 buf.append("<TD><A href=mailto:" + u.getEmail() + ">" + u.getEmail() + "</a></TD></TR>");
 				 }
 			}
 			buf.append("</TABLE><br>");
@@ -1186,7 +1186,7 @@ public class Groups extends HttpServlet {
 					headerWritten = true;
 				}
 				buf.append("<TR><TD>" + u.getFullName() + "</TD>");
-				String email = u.email;
+				String email = u.getEmail();
 				buf.append("<TD><A href=mailto:" + email + ">" + email + "</a></TD>"
 						+ "<FORM ACTION=Groups METHOD=POST>"
 						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='DropTA'>"
@@ -1205,7 +1205,7 @@ public class Groups extends HttpServlet {
 				for (User u : groupMembers) {
 					if (u.isInstructor() || u.isAdministrator() || u.isTeachingAssistant()) continue;
 					buf.append("<TR><TD>" + u.getFullName() + "</TD>");
-					String email = u.email;
+					String email = u.getEmail();
 					buf.append("<TD><A href=mailto:" + email + ">" + email + "</a></TD>"
 							+ "<FORM ACTION=Groups METHOD=POST>"
 							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='DropUser'>"

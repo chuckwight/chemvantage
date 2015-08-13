@@ -201,7 +201,7 @@ public class DomainAdmin extends HttpServlet {
 					buf.append("\n<FORM METHOD=GET><INPUT TYPE=HIDDEN NAME=Domain VALUE=" + d.domainName + ">"
 							+ "<TR style=color:" + (u.alias==null?"black":"grey") + "><TD>" + u.getLastName() + "</TD>"
 							+ "<TD>" + u.getFirstName() + "</TD>"
-							+ "<TD>" + u.email + "</TD>"
+							+ "<TD>" + u.getEmail() + "</TD>"
 							+ "<TD>" + u.getPrincipalRole() + "</TD>" 
 							+ "<TD>" + u.id + "</TD>"
 							+ "<TD>" + u.lastLogin + "</TD>"
@@ -253,7 +253,7 @@ public class DomainAdmin extends HttpServlet {
 					+ "\n<TR><TD ALIGN=RIGHT>UserID: </TD><TD>" + usr.id + "</TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>AuthDomain: </TD><TD>" + usr.authDomain + "</TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>Account type: </TD><TD>" + (usr.hasPremiumAccount()?"premium":"basic") + "</TD></TR>"
-					+ "\n<TR><TD ALIGN=RIGHT>Email: </TD><TD><INPUT NAME=Email VALUE='" + usr.email + "'>" + (usr.verifiedEmail?" (verified)":" (unverified)") + "</TD></TR>"
+					+ "\n<TR><TD ALIGN=RIGHT>Email: </TD><TD><INPUT NAME=Email VALUE='" + usr.getEmail() + "'>" + (usr.verifiedEmail?" (verified)":" (unverified)") + "</TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>Last Name: </TD><TD><INPUT NAME=LastName VALUE='" 
 					+ CharHider.quot2html(usr.getLastName()) + "'></TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>First Name: </TD><TD><INPUT NAME=FirstName VALUE='" 
@@ -295,7 +295,7 @@ public class DomainAdmin extends HttpServlet {
 							+ "<INPUT TYPE=HIDDEN NAME=MergeUserId VALUE='" + mergeUser.id + "'>"
 							+ "<TABLE><TR><TD ALIGN=RIGHT>UserId: </TD><TD>" + mergeUser.id + "</TD></TR>"
 							+ "<TR><TD ALIGN=RIGHT>Name: </TD><TD>" + mergeUser.getFullName() + "</TD></TR>"
-							+ "<TR><TD ALIGN=RIGHT>Email: </TD><TD>" + mergeUser.email + "</TD></TR>"
+							+ "<TR><TD ALIGN=RIGHT>Email: </TD><TD>" + mergeUser.getEmail() + "</TD></TR>"
 							+ "<TR><TD ALIGN=RIGHT>Role: </TD><TD>" + mergeUser.getPrincipalRole() + "</TD></TR>"
 					        + "<TR><TD ALIGN=RIGHT>Group: </TD><TD>" + (g==null?"(none)":g.description + "(" + User.getBothNames(g.instructorId) + ")") + "</TD></TR>"
 					        + "</TABLE>Transfer records and delete this account: "
@@ -356,7 +356,7 @@ public class DomainAdmin extends HttpServlet {
 					roles += Integer.parseInt(userRoles[i]);
 				}
 			}
-			if (!usr.email.equals(request.getParameter("Email"))) usr.verifiedEmail = false;
+			if (!usr.getEmail().equals(request.getParameter("Email"))) usr.verifiedEmail = false;
 			usr.setEmail(request.getParameter("Email"));
 			usr.setFirstName(request.getParameter("FirstName"));
 			usr.setLastName(request.getParameter("LastName"));
@@ -385,7 +385,7 @@ public class DomainAdmin extends HttpServlet {
 		// find all transactions for fromUser and credit to toUser:
 		if (toUser.getFirstName().isEmpty()) toUser.setFirstName(fromUser.getFirstName());
 		if (toUser.getLastName().isEmpty()) toUser.setLastName(fromUser.getLastName());
-		if (toUser.email.isEmpty() && fromUser.verifiedEmail) toUser.email = fromUser.email;
+		if (toUser.getEmail().isEmpty() && fromUser.verifiedEmail) toUser.setEmail(fromUser.getEmail());
 		if (toUser.myGroupId==0) {
 			toUser.myGroupId = fromUser.myGroupId;
 			toUser.notifyDeadlines = toUser.myGroupId>0?(toUser.notifyDeadlines || fromUser.notifyDeadlines):false;

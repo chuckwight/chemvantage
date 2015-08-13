@@ -45,7 +45,7 @@ import com.googlecode.objectify.annotation.Unindexed;
 public class User implements Comparable<User>,Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id 		String id;
-	@Indexed	String email;
+	@Indexed	private String email;
 	@Indexed	String domain;
 	@Indexed	String lowercaseName;
 				private String lastName;
@@ -299,14 +299,6 @@ public class User implements Comparable<User>,Serializable {
 		return this.id;
 	}
 
-	static String getEmail(String id) {
-		try {
-			return ObjectifyService.begin().find(User.class,id).email;
-		} catch (Exception e) {
-			return "";
-		}
-	}
-
 	static String getBothNames(String id) {
 		if (id==null || id.isEmpty()) return "missing user id";
 		try {
@@ -350,6 +342,18 @@ public class User implements Comparable<User>,Serializable {
 				this.domain = newDomain.domainName;
 			}
 		}catch (Exception e) {
+		}
+	}
+
+	String getEmail() {
+		return this.email==null?"":this.email;
+	}
+		
+	static String getEmail(String id) {
+		try {
+			return ObjectifyService.begin().find(User.class,id).email;
+		} catch (Exception e) {
+			return "";
 		}
 	}
 

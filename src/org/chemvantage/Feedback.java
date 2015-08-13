@@ -221,7 +221,7 @@ public class Feedback extends HttpServlet {
 		buf.append("Thank you for your feedback" + (stars>0?" (" + stars + " stars" + (stars==5?"!":"") + ").":"."));
 		if (stars > 0) buf.append("<br>The average user rating for ChemVantage is " + subject.getAvgStars() + " stars.");
 		if (comments.length() > 0) {
-			buf.append("<br>If your comment requested a response, it will be sent to you at " + user.email + "<p>");
+			buf.append("<br>If your comment requested a response, it will be sent to you at " + user.getEmail() + "<p>");
 		}
 		buf.append("<p><a href=Home>Return to the Home Page</a><br>");
 		return buf.toString();
@@ -302,7 +302,7 @@ public class Feedback extends HttpServlet {
 			Message msg = new MimeMessage(session);
 			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
 			msg.addRecipient(Message.RecipientType.TO,
-					new InternetAddress(recipient.email,recipient.getBothNames()));
+					new InternetAddress(recipient.getEmail(),recipient.getBothNames()));
 			msg.setSubject("ChemVantage Feedback Report");
 			msg.setContent(msgBody,"text/html");
 			Transport.send(msg);

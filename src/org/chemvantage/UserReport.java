@@ -70,7 +70,7 @@ public class UserReport implements Serializable {
 			if (!showReport) return "";
 			
 			buf.append("\nOn " + submitted 
-					+ (user==null?" (anonymous) ":" <a href=mailto:" + user.email + ">" + user.getBothNames() + "</a> " + (user.verifiedEmail?"":"<FONT SIZE=-1>(unverified)</FONT> "))
+					+ (user==null?" (anonymous) ":" <a href=mailto:" + user.getEmail() + ">" + user.getBothNames() + "</a> " + (user.verifiedEmail?"":"<FONT SIZE=-1>(unverified)</FONT> "))
 					+ "said:<br>");
 			
 			if (stars>0) buf.append(" (" + stars + " stars)<br>");
@@ -112,7 +112,7 @@ public class UserReport implements Serializable {
 		String userName = "anonymous";
 		try {
 			user = ofy.get(User.class,this.userId);
-			userName = user.getBothNames() + " (" + user.email + ")";
+			userName = user.getBothNames() + " (" + user.getEmail() + ")";
 		} catch (Exception e2) {				
 		}
 		buf.append("On " + submitted + " " + userName + " said:<br>\n");

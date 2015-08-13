@@ -89,11 +89,11 @@ public class Admin extends HttpServlet {
 			} else if (userRequest.equals("Update User")) {
 				User usr = ofy.get(User.class,request.getParameter("UserId")); // user record to modify
 				updateUser(usr,request);
-				searchString = usr.email;
+				searchString = usr.getEmail();
 				if (usr.id.equals(user.id)) user = usr; // admin modifying own record; update now to reflect new status
 			} else if (userRequest.equals("Delete User")) {
 				User usr = ofy.get(User.class,request.getParameter("UserId"));
-				searchString = usr.email;
+				searchString = usr.getEmail();
 				ofy.delete(usr);
 			} else if (userRequest.equals("Search")) {
 				searchString = request.getParameter("oauth_consumer_key");
@@ -109,7 +109,7 @@ public class Admin extends HttpServlet {
 				User usr = ofy.get(User.class,request.getParameter("UserId"));
 				User mergeUser = ofy.get(User.class,request.getParameter("MergeUserId"));
 				mergeAccounts(usr,mergeUser);
-				searchString = usr.email;
+				searchString = usr.getEmail();
 			}
 			out.println(Home.getHeader(user) + mainAdminForm(user,searchString,cursor) + Home.footer);
 		} catch (Exception e) {
@@ -161,7 +161,7 @@ public class Admin extends HttpServlet {
 					buf.append("\n<FORM METHOD=GET>"
 							+ "<TR style=color:" + (u.alias==null?"black":"grey") + "><TD>" + u.getLastName() + "</TD>"
 							+ "<TD>" + u.getFirstName() + "</TD>"
-							+ "<TD>" + u.email + "</TD>"
+							+ "<TD>" + u.getEmail() + "</TD>"
 							+ "<TD>" + u.getPrincipalRole() + "</TD>" 
 							+ "<TD>" + u.id + "</TD>"
 							+ "<TD>" + u.lastLogin + "</TD>"
@@ -253,7 +253,7 @@ public class Admin extends HttpServlet {
 					+ "\n<TR><TD ALIGN=RIGHT>UserID: </TD><TD>" + usr.id + "</TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>AuthDomain: </TD><TD>" + usr.authDomain + "</TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>Domain: </TD><TD><INPUT NAME=Domain VALUE='" + (usr.domain==null?"":user.domain) + "'>" + "</TD></TR>"
-					+ "\n<TR><TD ALIGN=RIGHT>Email: </TD><TD><INPUT NAME=Email VALUE='" + usr.email + "'>" + (usr.verifiedEmail?" (verified)":" (unverified)") + "</TD></TR>"
+					+ "\n<TR><TD ALIGN=RIGHT>Email: </TD><TD><INPUT NAME=Email VALUE='" + usr.getEmail() + "'>" + (usr.verifiedEmail?" (verified)":" (unverified)") + "</TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>LastName: </TD><TD><INPUT NAME=LastName VALUE='" 
 					+ CharHider.quot2html(usr.getLastName()) + "'></TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>FirstName: </TD><TD><INPUT NAME=FirstName VALUE='" 
@@ -297,7 +297,7 @@ public class Admin extends HttpServlet {
 							+ "<INPUT TYPE=HIDDEN NAME=MergeUserId VALUE='" + mergeUser.id + "'>"
 							+ "<TABLE><TR><TD ALIGN=RIGHT>UserId: </TD><TD>" + mergeUser.id + "</TD></TR>"
 							+ "<TR><TD ALIGN=RIGHT>Name: </TD><TD>" + mergeUser.getFullName() + "</TD></TR>"
-							+ "<TR><TD ALIGN=RIGHT>Email: </TD><TD>" + mergeUser.email + "</TD></TR>"
+							+ "<TR><TD ALIGN=RIGHT>Email: </TD><TD>" + mergeUser.getEmail() + "</TD></TR>"
 							+ "<TR><TD ALIGN=RIGHT>Role: </TD><TD>" + mergeUser.getPrincipalRole() + "</TD></TR>"
 					        + "<TR><TD ALIGN=RIGHT>Group: </TD><TD>" + (g==null?"(none)":g.description + "(" + User.getBothNames(g.instructorId) + ")") + "</TD></TR>"
 					        + "</TABLE>Transfer records and delete this account: "
@@ -348,7 +348,7 @@ public class Admin extends HttpServlet {
 				}
 			}
 			usr.setDomain(request.getParameter("Domain"));
-			if (!usr.email.equals(request.getParameter("Email"))) usr.verifiedEmail = false;
+			if (!usr.getEmail().equals(request.getParameter("Email"))) usr.verifiedEmail = false;
 			usr.setEmail(request.getParameter("Email"));
 			usr.setFirstName(request.getParameter("FirstName"));
 			usr.setLastName(request.getParameter("LastName"));
@@ -416,7 +416,7 @@ public class Admin extends HttpServlet {
 		// find all transactions for fromUser and credit to toUser:
 		if (toUser.getFirstName().isEmpty()) toUser.setFirstName(fromUser.getFirstName());
 		if (toUser.getLastName().isEmpty()) toUser.setLastName(fromUser.getLastName());
-		if (toUser.email.isEmpty() && fromUser.verifiedEmail) toUser.email = fromUser.email;
+		if (toUser.getEmail().isEmpty() && fromUser.verifiedEmail) toUser.setEmail(fromUser.getEmail());
 		if (toUser.myGroupId<=0 && fromUser.myGroupId>=0) {
 			toUser.changeGroups(fromUser.myGroupId);
 			fromUser.changeGroups(0L);
@@ -472,7 +472,7 @@ public class Admin extends HttpServlet {
 			Objectify ofy = ObjectifyService.begin();
 			List<User> userAccounts = ofy.query(User.class).filter("email",email).list();
 			for (User u : userAccounts) {
-				if ((u.alias != null && !u.alias.isEmpty()) || u.email.isEmpty() || !u.verifiedEmail || "CAS".equals(u.authDomain)) {
+				if ((u.alias != null && !u.alias.isEmpty()) || u.getEmail().isEmpty() || !u.verifiedEmail || "CAS".equals(u.authDomain)) {
 					userAccounts.remove(u);
 					continue;
 				}
@@ -491,7 +491,7 @@ public class Admin extends HttpServlet {
 				else if (toUser==null) toUser = u;
 				if (fromUser!=null && toUser!=null) {
 					Admin.mergeAccounts(toUser, fromUser);
-					Admin.autoMergeAccounts(toUser.email);  // proceed recursively until merge process fails
+					Admin.autoMergeAccounts(toUser.getEmail());  // proceed recursively until merge process fails
 					return;
 				}
 			}

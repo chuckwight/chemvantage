@@ -99,7 +99,7 @@ public class Notification extends HttpServlet {
 						msg.setText("Reminder: 1 or more assignments due by midnight tonight.");
 					}
 					else if (user.verifiedEmail) {
-						msg.setRecipient(Message.RecipientType.TO,new InternetAddress(user.email));
+						msg.setRecipient(Message.RecipientType.TO,new InternetAddress(user.getEmail()));
 						msg.setText("This is a friendly reminder from ChemVantage that you have one " 
 								+ "or more assignments due by midnight tonight. "
 								+ "If you do not wish to receive these reminders, you can change "

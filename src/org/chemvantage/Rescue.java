@@ -109,7 +109,7 @@ public class Rescue extends HttpServlet {
 				
 				Message msg = new MimeMessage(session);
 				msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-				msg.setRecipient(Message.RecipientType.TO,new InternetAddress(user.email,user.getBothNames()));
+				msg.setRecipient(Message.RecipientType.TO,new InternetAddress(user.getEmail(),user.getBothNames()));
 				msg.setSubject(group.defaultRescueSubject);
 				String messageText = group.defaultRescueMessage;
 				for (String id : group.rescueCcIds) {
