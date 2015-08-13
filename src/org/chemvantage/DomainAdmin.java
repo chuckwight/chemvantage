@@ -199,8 +199,8 @@ public class DomainAdmin extends HttpServlet {
 					User u = iterator.next();
 					u.clean();
 					buf.append("\n<FORM METHOD=GET><INPUT TYPE=HIDDEN NAME=Domain VALUE=" + d.domainName + ">"
-							+ "<TR style=color:" + (u.alias==null?"black":"grey") + "><TD>" + u.lastName + "</TD>"
-							+ "<TD>" + u.firstName + "</TD>"
+							+ "<TR style=color:" + (u.alias==null?"black":"grey") + "><TD>" + u.getLastName() + "</TD>"
+							+ "<TD>" + u.getFirstName() + "</TD>"
 							+ "<TD>" + u.email + "</TD>"
 							+ "<TD>" + u.getPrincipalRole() + "</TD>" 
 							+ "<TD>" + u.id + "</TD>"
@@ -255,9 +255,9 @@ public class DomainAdmin extends HttpServlet {
 					+ "\n<TR><TD ALIGN=RIGHT>Account type: </TD><TD>" + (usr.hasPremiumAccount()?"premium":"basic") + "</TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>Email: </TD><TD><INPUT NAME=Email VALUE='" + usr.email + "'>" + (usr.verifiedEmail?" (verified)":" (unverified)") + "</TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>Last Name: </TD><TD><INPUT NAME=LastName VALUE='" 
-					+ CharHider.quot2html(usr.lastName) + "'></TD></TR>"
+					+ CharHider.quot2html(usr.getLastName()) + "'></TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>First Name: </TD><TD><INPUT NAME=FirstName VALUE='" 
-					+ CharHider.quot2html(usr.firstName) + "'></TD></TR>"
+					+ CharHider.quot2html(usr.getFirstName()) + "'></TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT VALIGN=TOP>Roles: </TD><TD>"
 					+ "<INPUT TYPE=CHECKBOX NAME=Roles VALUE=8" + (roles%16/8==1?" CHECKED":"") + ">Instructor<br>"
 					+ "<INPUT TYPE=CHECKBOX NAME=Roles VALUE=16" + (roles%32/16==1?" CHECKED":"") + ">Administrator"
@@ -383,8 +383,8 @@ public class DomainAdmin extends HttpServlet {
 	
 	protected static void mergeAccounts(User toUser,User fromUser) {
 		// find all transactions for fromUser and credit to toUser:
-		if (toUser.firstName.isEmpty()) toUser.firstName = fromUser.firstName;
-		if (toUser.lastName.isEmpty()) toUser.lastName = fromUser.lastName;
+		if (toUser.getFirstName().isEmpty()) toUser.setFirstName(fromUser.getFirstName());
+		if (toUser.getLastName().isEmpty()) toUser.setLastName(fromUser.getLastName());
 		if (toUser.email.isEmpty() && fromUser.verifiedEmail) toUser.email = fromUser.email;
 		if (toUser.myGroupId==0) {
 			toUser.myGroupId = fromUser.myGroupId;

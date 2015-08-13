@@ -48,8 +48,8 @@ public class User implements Comparable<User>,Serializable {
 	@Indexed	String email;
 	@Indexed	String domain;
 	@Indexed	String lowercaseName;
-				String lastName;
-				String firstName;
+				private String lastName;
+				private String firstName;
 				int roles;
 				boolean premium;
 				//				boolean demoPremium;
@@ -314,7 +314,6 @@ public class User implements Comparable<User>,Serializable {
 		} catch (Exception e) {
 			return "User " + id + " not found";
 		}
-
 	}
 
 	void clean() {
@@ -415,13 +414,20 @@ public class User implements Comparable<User>,Serializable {
 		else return false;
 	}
 
+	String getFirstName() {
+		return firstName==null?"":this.firstName;
+	}
+	
 	void setFirstName(String fn) {
-		System.out.println("Setting firstName to: " + fn);
 		if (fn == null) this.firstName = "";
 		else this.firstName = fn.trim();
 		setLowerCaseName();
 	}
 
+	String getLastName() {
+		return this.lastName==null?"":this.lastName;
+	}
+	
 	void setLastName(String ln) {
 		if (ln == null) this.lastName = "";
 		else this.lastName = ln.trim();
