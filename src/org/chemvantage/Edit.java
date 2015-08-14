@@ -570,7 +570,7 @@ public class Edit extends HttpServlet {
 				buf.append(" (1 point)<br>");
 			}
 			buf.append("Author: <a href=mailto:'" + User.getEmail(q.authorId) + "'>" + User.getBothNames(q.authorId) + "</a><br>");
-			buf.append("Editor: <a href=mailto:'" + user.email + "'>" + user.getBothNames() + "</a><p>");
+			buf.append("Editor: <a href=mailto:'" + user.getEmail() + "'>" + user.getBothNames() + "</a><p>");
 			
 			buf.append("<FORM Action=Edit METHOD=POST>");
 			
@@ -633,7 +633,7 @@ public class Edit extends HttpServlet {
 			buf.append("Topic: " + t.title + "<br>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
 			buf.append("Author: <a href=mailto:'" + User.getEmail(q.authorId) + "'>" + User.getBothNames(q.authorId) + "</a><br>");
-			buf.append("Editor: <a href=mailto:'" + user.email + "'>" + User.getBothNames(q.editorId) + "</a><p>");
+			buf.append("Editor: <a href=mailto:'" + user.getEmail() + "'>" + User.getBothNames(q.editorId) + "</a><p>");
 			buf.append("<FORM Action=Edit METHOD=POST>");
 			
 			buf.append(q.printAll());

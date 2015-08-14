@@ -63,7 +63,7 @@ public class Verification extends HttpServlet {
 			User user = ofy.get(User.class,userId);
 			user.verifiedEmail = (Integer.parseInt(code) == new Key<User>(User.class,userId).hashCode());
 			ofy.put(user);
-			if (user.verifiedEmail) Admin.autoMergeAccounts(user.email);
+			if (user.verifiedEmail) Admin.autoMergeAccounts(user.getEmail());
 			out.println(Login.header + verifiedEmail(user.verifiedEmail) + Login.footer);
 		} catch (Exception e) {	
 			doPost(request,response);  // view current information if logged in; else go to Login page
@@ -97,11 +97,11 @@ public class Verification extends HttpServlet {
 				}
 				user.lastLogin = new Date();
 				ofy.put(user);
-				boolean requiresVerification = !user.verifiedEmail && !user.email.isEmpty();
+				boolean requiresVerification = !user.verifiedEmail && !user.getEmail().isEmpty();
 				out.println(Home.getHeader(user) + personalInfoForm(user,requiresVerification?verificationEmailSent(user,request):false,request) + Home.footer);
 			} else if (userRequest.equals("Verify My Email Address")) {
 				try {
-					user.verifiedEmail = user.email.equals(UserServiceFactory.getUserService().getCurrentUser().getEmail());
+					user.verifiedEmail = user.getEmail().equals(UserServiceFactory.getUserService().getCurrentUser().getEmail());
 				} catch(Exception e){
 				}
 				user.lastLogin = new Date();
@@ -160,7 +160,7 @@ public class Verification extends HttpServlet {
 		try {
 			Message msg = new MimeMessage(session);
 			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-			msg.addRecipient(Message.RecipientType.TO,new InternetAddress(user.email, user.getBothNames()));
+			msg.addRecipient(Message.RecipientType.TO,new InternetAddress(user.getEmail(), user.getBothNames()));
 			msg.setSubject("ChemVantage Email Verification");
 			msg.setContent(msgBody,"text/html");
 			Transport.send(msg);
@@ -186,7 +186,7 @@ public class Verification extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		//boolean nameRequired = user.firstName.isEmpty() || user.lastName.isEmpty();
 		boolean nameRequired = user.getFirstName().isEmpty();  // no longer requiring a last name from users because identities are managed externally through LTI and Google Apps
-		boolean emailRequired = user.email.isEmpty();
+		boolean emailRequired = user.getEmail().isEmpty();
 		boolean groupRequired = user.myGroupId < 0;
 		
 		try {
@@ -199,7 +199,7 @@ public class Verification extends HttpServlet {
 			buf.append("<TABLE>");
 			buf.append("<TR><TD ALIGN=RIGHT>First Name:</TD><TD>" + (nameRequired?"<span style=color:red>*</span><INPUT NAME=FirstName SIZE=50>":user.getFirstName()) + "</TD></TR>");
 			buf.append("<TR><TD ALIGN=RIGHT>Last Name:</TD><TD>" + (user.getLastName().isEmpty()?"<INPUT NAME=LastName SIZE=50> (optional)":user.getLastName()) + "</TD></TR>");
-			buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>Email:</TD><TD>" + (emailRequired?"<span style=color:red>*</span><INPUT NAME=Email SIZE=50>":user.email));
+			buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>Email:</TD><TD>" + (emailRequired?"<span style=color:red>*</span><INPUT NAME=Email SIZE=50>":user.getEmail()));
 			if (!emailRequired && !user.verifiedEmail){
 				buf.append(" <span style='color:red'>(unverified)</span> ");
 				if (verificationEmailSent) buf.append("<br><span style='color:red'>A verification email has been sent to your address.</span><br>");
@@ -308,7 +308,7 @@ public class Verification extends HttpServlet {
 						+ "If your name and/or email shown above is not correct, please send a message to "
 						+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><br>giving detailed "
 						+ "instructions for any changes that are needed.<p>"); 
-				if (!(user.getFirstName().isEmpty() || user.email.isEmpty())) {
+				if (!(user.getFirstName().isEmpty() || user.getEmail().isEmpty())) {
 					buf.append("<style type='text/css'>a.nav, a.nav:link, a.nav:visited {display:block; width:250px; height:35px; "
 							+ "background:red; border:1px solid #000; margin-top:2px; text-align:center; text-decoration:none; "
 							+ "font-family:verdana, arial, sans-serif; font-size:15px; color:white; line-height:35px; overflow:hidden;}"
@@ -329,7 +329,7 @@ public class Verification extends HttpServlet {
 			
 			if (user.verifiedEmail && !user.requiresUpdates()) {
 				// This section finds accounts with duplicate verified email addresses for immediate account merging
-				List<User> duplicateEmails = ofy.query(User.class).filter("email",user.email).list();
+				List<User> duplicateEmails = ofy.query(User.class).filter("email",user.getEmail()).list();
 				buf.append("<TABLE>");
 				for (User u : duplicateEmails) {
 					if (u.id.equals(user.id) || !u.verifiedEmail || u.alias!=null) continue;
@@ -337,7 +337,7 @@ public class Verification extends HttpServlet {
 					int code = Math.abs((new Key<User>(User.class,u.id).toString() + new Key<User>(User.class,user.id).toString()).hashCode());
 					int i = duplicateEmails.indexOf(u);
 					String consumerKey = u.authDomain.equals("BLTI")?u.id.substring(0, u.id.indexOf(":")):u.authDomain;
-					buf.append("<TR><TD>" + u.getFullName() + " (" + u.email + ") - authorization domain=" + consumerKey + "</TD>"
+					buf.append("<TR><TD>" + u.getFullName() + " (" + u.getEmail() + ") - authorization domain=" + consumerKey + "</TD>"
 							+ "<TD><FORM NAME=DuplicateEmail" + i + " ACTION=Verification METHOD=POST>"
 							+ "<INPUT TYPE=HIDDEN NAME=FromAccount VALUE='" + u.id + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=ToAccount VALUE='" + user.id + "'>"
@@ -352,13 +352,13 @@ public class Verification extends HttpServlet {
 					if (u.id.equals(user.id) || duplicateEmails.contains(u.id) || !u.verifiedEmail || u.alias!=null) continue;
 					int i = duplicateNames.indexOf(u);
 					String consumerKey = u.authDomain.equals("BLTI")?u.id.substring(0, u.id.indexOf(":")):u.authDomain;
-					buf.append("<TR><TD>" + u.getFullName() + " (" + u.email + ") - authorization domain=" + consumerKey + "</TD>"
+					buf.append("<TR><TD>" + u.getFullName() + " (" + u.getEmail() + ") - authorization domain=" + consumerKey + "</TD>"
 							+ "<TD><FORM NAME=DuplicateName" + i + " ACTION=Verification METHOD=POST>"
 							+ "<INPUT TYPE=HIDDEN NAME=FromAccount VALUE='" + u.id + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=ToAccount VALUE='" + user.id + "'>");
 					if ("Get Authorization Code".equals(request.getParameter("UserRequest")) && u.id.equals(request.getParameter("FromAccount"))) {
 						buf.append("</TD></TR><TR><TD COLSPAN=2>"
-								+ "<span style=color:red>An email has been sent to " + u.email + " with an authorization code. Please enter it here: </span>"
+								+ "<span style=color:red>An email has been sent to " + u.getEmail() + " with an authorization code. Please enter it here: </span>"
 								+ "<INPUT TYPE=TEXT NAME=Code><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Merge This Account With Mine'>");
 					} else {
 						buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Get Authorization Code'>");
@@ -427,7 +427,7 @@ public class Verification extends HttpServlet {
 				+ "Thank you.";
 			Message msg = new MimeMessage(session);
 			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-			msg.addRecipient(Message.RecipientType.TO,new InternetAddress(fromAccountUser.email, fromAccountUser.getBothNames()));
+			msg.addRecipient(Message.RecipientType.TO,new InternetAddress(fromAccountUser.getEmail(), fromAccountUser.getBothNames()));
 			msg.setSubject("ChemVantage Authorization Number");
 			msg.setContent(msgBody,"text/html");
 			Transport.send(msg);

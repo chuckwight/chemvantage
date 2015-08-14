@@ -167,7 +167,7 @@ public class Home extends HttpServlet {
 
 			buf.append("<div id=phzl></div><div align=right id=puzr "
 					+ "style='font-size:84%;padding:0 0 4px' width=100%><nobr><b>" 
-					+ (user.email != null && user.email.length()>0?user.email:"") + "</b>");
+					+ user.getEmail() + "</b>");
 
 			buf.append("&nbsp;&nbsp;");
 			

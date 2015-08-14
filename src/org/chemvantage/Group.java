@@ -82,7 +82,7 @@ public class Group implements Serializable {
     
     public String getInstructorEmail() {
     	try {
-    		return ofy.get(User.class,this.instructorId).email;
+    		return ofy.get(User.class,this.instructorId).getEmail();
     	} catch (Exception e) {
     		return "";
     	}
