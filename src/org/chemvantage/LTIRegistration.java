@@ -76,7 +76,7 @@ public class LTIRegistration extends HttpServlet {
 			+ "All LTI connections and ChemVantage services are provided free of charge.</td?</tr></table>"
 			+ "<h3>LTI version 2.0</h3>"
 			+ "For LMS platforms that support LTI version 2.0, the system administrator may enter the ChemVantage LTI registration URL:<br> "
-			+ "<b>https://www.chemvantage.org/lti/</b><br>"
+			+ "<b>https://www.chemvantage.org/lti/registration/</b><br>"
 			+ "into the LTI Tool Proxy Registration page of your LMS. Your LMS will automatically negotiate the connection with ChemVantage.<p>"
 			+ "<h3>LTI version 1.x</h3>"
 			+ "If your LMS supports an older version of the LTI standard, you may obtain a free set of LTI credentials by entering<br>"
@@ -137,7 +137,7 @@ public class LTIRegistration extends HttpServlet {
 		buf.append("</TD>");
 //=============================================================*/
 		
-		buf.append("<TR><TD>&nbsp;</TD><TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Generate Shared Secret'></TD></TR>");
+		buf.append("<TR><TD>&nbsp;</TD><TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Send My Free LTI Credentials'></TD></TR>");
 		buf.append("</TABLE></FORM>");
 		buf.append(instructions);
 		out.println(buf.toString() + Login.footer);
@@ -146,6 +146,8 @@ public class LTIRegistration extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
+		String lti_message_type = request.getParameter("lti_message_type");		
+
 		if ("Generate Shared Secret".equals(request.getParameter("UserRequest"))) {  // manual LTI registration request for version 1.x
 			String email = request.getParameter("Email");
 			String key = request.getParameter("Key").replaceAll("\\s", "");  // removes all whitespace from key
@@ -171,27 +173,33 @@ public class LTIRegistration extends HttpServlet {
 				doError(request,response,"Sorry, the LTI registration request failed. All form fields are required.",null,null);
 				return;
 			}
+		} else if ("basic-lti-launch-request".equals(lti_message_type)) {
+			doError(request,response,"LTI Launch Failed. The correct launch URL for the ChemVantage production server is https://www.chemvantage.org/lti/",null,null);
+			return;
+		} else if (!"ToolProxyRegistrationRequest".equals(lti_message_type)){
+			doError(request,response,"Invalid message type.",null,null);
+			return;
 		}
 		
 		// only LTI 2.0 registration attempts should reach this point
 		StringBuffer debug = new StringBuffer("Debug:\n");
-		String lti_message_type = request.getParameter("lti_message_type");
 		String reg_key = request.getParameter("reg_key");
 		String reg_password = request.getParameter("reg_password");
 		String tc_profile_url = request.getParameter("tc_profile_url");
 		String launch_presentation_return_url = request.getParameter("launch_presentation_return_url");
+		debug.append(lti_message_type + "<br/>" + reg_key + "<br/>" + reg_password + "<br/>" + tc_profile_url + "<br/>" + launch_presentation_return_url + "<br/>");
 		
 		try {
-			if ("basic-lti-launch-request".equals(lti_message_type)) throw new Exception("The correct ChemVantage LTI Launch URL is https://" + request.getServerName() + "/lti/");
-			if (!"ToolProxyRegistrationRequest".equals(lti_message_type)) throw new Exception("Invalid message type");
 			if (reg_key==null || reg_key.isEmpty()) throw new Exception("Required reg_key parameter is missing.");
 			if (reg_password==null || reg_password.isEmpty()) throw new Exception("Required reg_password parameter is missing.");
 			if (tc_profile_url==null || tc_profile_url.isEmpty()) throw new Exception("Required tc_profile_url parameter is missing.");
 			if (launch_presentation_return_url==null || launch_presentation_return_url.isEmpty()) throw new Exception("Required launch_presentation_return_url parameter is missing.");
 			
 			JSONObject toolConsumerProfile = fetchToolConsumerProfile(tc_profile_url); 
+			debug.append(toolConsumerProfile.toString() + "<br/>");
 			
 			List<String> capability_enabled = getCapabilities(toolConsumerProfile);
+			for (String c:capability_enabled) debug.append(c + "<br/>");
 			
 			String oauth_secret = BLTIConsumer.generateSecret();
 			StringBuffer base_url = request.getRequestURL();
@@ -238,7 +246,7 @@ public class LTIRegistration extends HttpServlet {
 			debug.append("LTI_credentials_formed_ok.");
 						
 			// all steps completed successfully with no exceptions thrown, so report success back to TC administrator
-			response.sendRedirect(launch_presentation_return_url + "?status=success&tool_proxy_guid=" + toolProxy.getString("tool_proxy_guid"));
+			response.sendRedirect(launch_presentation_return_url + "?status=success&tool_proxy_guid=" + tool_proxy_guid);
 		} catch (Exception e) {
 			doError(request,response,"Sorry, the Tool Proxy Registration failed.<br>" + e.getMessage() + "<br>" + debug.toString() + "<br>" + "PLEASE SEND THIS ERROR TO admin@chemvantage.org",null,null);
 		}
@@ -293,12 +301,12 @@ public class LTIRegistration extends HttpServlet {
 	}
 
 	JSONObject fetchToolConsumerProfile(String tc_profile_url) throws Exception {
-		JSONObject tc_profile = null;		
+		JSONObject tc_profile = new JSONObject().put("tc_profile_url", tc_profile_url);		
 		URL u = new URL(tc_profile_url);
 		HttpURLConnection connection = (HttpURLConnection) u.openConnection();
-		connection.setRequestProperty("Content-Type", "application/json");
+		connection.setRequestProperty("Accept", "application/vnd.ims.lti.v2.toolconsumerprofile+json");
 		if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
-			BufferedReader reader = new BufferedReader(new InputStreamReader(u.openStream()));
+			BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
 			StringBuffer res = new StringBuffer();
 			String line;
 			while ((line = reader.readLine()) != null) {
@@ -306,6 +314,8 @@ public class LTIRegistration extends HttpServlet {
 			}
 			reader.close();
 			tc_profile = new JSONObject(res.toString());	
+		} else {
+			throw new Exception("Response code " + connection.getResponseCode() + " received from " + tc_profile_url);
 		}
 		return tc_profile;
 	}
@@ -330,7 +340,6 @@ public class LTIRegistration extends HttpServlet {
 		toolProxy.put("@type", "ToolProxy");
 		toolProxy.put("@id", "");
 		toolProxy.put("lti_version", toolConsumerProfile.getString("lti_version"));
-		toolProxy.put("tool_proxy_guid", "");
 		toolProxy.put("tool_consumer_profile", tc_profile_url);
 		toolProxy.put("tool_profile", getToolProfile(base_url,capability_enabled));					
 		toolProxy.put("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled));				

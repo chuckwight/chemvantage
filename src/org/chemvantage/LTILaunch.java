@@ -83,20 +83,18 @@ public class LTILaunch extends HttpServlet {
 
 		// check for minimum required elements for a basic-lti-launch-request
 		String lti_message_type=request.getParameter("lti_message_type");
-		if ("ToolProxyRegistrationRequest".equals(lti_message_type)) {  // redirect this LTI registration request
-			try {
-				response.sendRedirect("/lti/registration/");
-				return;
-			} catch (Exception e) {
-				String msg = "Please POST LTI registration requests to https://" + request.getServerName() + "/lti/registration/";
-				doError(request,response,msg,null,null);
-				return;
-			}
-		} else if (!"basic-lti-launch-request".equals(lti_message_type)) {
+		
+		if ("ToolProxyRegistrationRequest".equals(lti_message_type)) {
+			doError(request,response,"Tool proxy registration request failed. The correct URL for LTI2 registration of ChemVantage is " + request.getServerName() + "/lti/registration/",null,null);
+			return;
+		}
+		
+		if (!"basic-lti-launch-request".equals(lti_message_type)) {
 			doError(request,response,"Missing or invalid lti_message_type parameter.",null,null);
 			return;
 		}
 		
+		// only basic lti launch requests should reach this point
 		String lti_version = request.getParameter("lti_version");
 		if (lti_version==null) {
 			doError(request,response,"Missing lti_version parameter.",null,null);
@@ -105,7 +103,8 @@ public class LTILaunch extends HttpServlet {
 		switch (lti_version) {
 			case "LTI-1p0": break;
 			case "LTI-2p0": break;
-			default: doError(request,response,"ChemVantage supports only LTI versions 1.0, 1.1, and 2.0",null,null); return;
+			default: doError(request,response,"ChemVantage supports only LTI versions 1.0, 1.1, and 2.0",null,null);
+			return;
 		}
 
 		String oauth_consumer_key = request.getParameter("oauth_consumer_key");
