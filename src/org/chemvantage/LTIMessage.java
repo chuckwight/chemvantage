@@ -51,8 +51,9 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     	this.oauth_shared_secret = BLTIConsumer.getSecret(oauth_consumer_key);
     }
     
-    LTIMessage(String msgType,String msgText,String destURL,String key,String secret) {
+    LTIMessage(String msgType,String acceptType,String msgText,String destURL,String key,String secret) {
     	this.messageType = msgType;
+    	this.acceptType = acceptType;
     	this.messageText = msgText;
     	this.destinationURL = destURL;
     	this.oauth_consumer_key = key;

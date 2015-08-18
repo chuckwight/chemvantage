@@ -211,7 +211,7 @@ public class LTIRegistration extends HttpServlet {
 			String toolProxyString = toolProxy.toString();
 			String serviceEndpoint = getTCServiceEndpoint("application/vnd.ims.lti.v2.toolproxy+json",toolConsumerProfile);
 			debug.append("tc_service_endpoint:" + serviceEndpoint);
-			LTIMessage msg = new LTIMessage("application/vnd.ims.lti.v2.toolproxy+json",toolProxyString,serviceEndpoint,reg_key,reg_password);
+			LTIMessage msg = new LTIMessage("application/vnd.ims.lti.v2.toolproxy+json","application/vnd.ims.lti.v2.toolproxy.id+json",toolProxyString,serviceEndpoint,reg_key,reg_password);
 			debug.append("lti_msg_formed_ok");
 			String reply = msg.send();
 
@@ -433,7 +433,7 @@ public class LTIRegistration extends HttpServlet {
 				if (s.has("format")) {
 					JSONArray formats = s.getJSONArray("format");
 					for (int j=0; j<formats.length(); j++) {
-						if (formats.getString(i).toLowerCase().equals(formatString)) {
+						if (formats.getString(j).toLowerCase().equals(formatString.toLowerCase())) {
 							return s.getString("endpoint");
 						}
 					}
