@@ -148,7 +148,7 @@ public class LTIRegistration extends HttpServlet {
 	throws ServletException, IOException {
 		String lti_message_type = request.getParameter("lti_message_type");		
 
-		if ("Generate Shared Secret".equals(request.getParameter("UserRequest"))) {  // manual LTI registration request for version 1.x
+		if ("Send My Free LTI Credentials".equals(request.getParameter("UserRequest"))) {  // manual LTI registration request for version 1.x
 			String email = request.getParameter("Email");
 			String key = request.getParameter("Key").replaceAll("\\s", "");  // removes all whitespace from key
 			
@@ -211,7 +211,8 @@ public class LTIRegistration extends HttpServlet {
 			String toolProxyString = toolProxy.toString();
 			String serviceEndpoint = getTCServiceEndpoint("application/vnd.ims.lti.v2.toolproxy+json",toolConsumerProfile);
 			debug.append("tc_service_endpoint:" + serviceEndpoint);
-			LTIMessage msg = new LTIMessage("application/vnd.ims.lti.v2.toolproxy+json","application/vnd.ims.lti.v2.toolproxy.id+json",toolProxyString,serviceEndpoint,reg_key,reg_password);
+			
+			LTIMessage msg = new LTIMessage("application/vnd.ims.lti.v2.toolproxy+json","application/vnd.ims.lti.v2.ToolProxy.id+json",toolProxyString,serviceEndpoint,reg_key,reg_password);
 			debug.append("lti_msg_formed_ok");
 			String reply = msg.send();
 
@@ -338,7 +339,7 @@ public class LTIRegistration extends HttpServlet {
 		JSONObject toolProxy = new JSONObject();
 		toolProxy.put("@context", "http://purl.imsglobal.org/ctx/lti/v2/ToolProxy");
 		toolProxy.put("@type", "ToolProxy");
-		toolProxy.put("@id", "");
+		//toolProxy.put("@id", "");
 		toolProxy.put("lti_version", toolConsumerProfile.getString("lti_version"));
 		toolProxy.put("tool_consumer_profile", tc_profile_url);
 		toolProxy.put("tool_profile", getToolProfile(base_url,capability_enabled));					
