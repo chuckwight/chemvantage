@@ -205,7 +205,7 @@ public class LTIRegistration extends HttpServlet {
 			StringBuffer base_url = request.getRequestURL();
 			base_url.delete(base_url.indexOf("lti"),base_url.length()).delete(0, base_url.indexOf("://") + 3);
 			
-			JSONObject toolProxy = constructToolProxy(toolConsumerProfile,tc_profile_url,base_url,oauth_secret,capability_enabled);
+			JSONObject toolProxy = constructToolProxy(toolConsumerProfile,tc_profile_url,base_url,reg_key,oauth_secret,capability_enabled);
 			debug.append("tool_proxy_formed_ok.");
 			
 			String toolProxyString = toolProxy.toString();
@@ -233,7 +233,7 @@ public class LTIRegistration extends HttpServlet {
 			}
 			
 			// check to make sure that this is the first registration for this tool consumer
-			BLTIConsumer c = ofy.find(BLTIConsumer.class,reg_key);
+			BLTIConsumer c = ofy.find(BLTIConsumer.class,tool_proxy_guid);
 			if (c==null) {  // this registration is for a new oath_consumer_key
 				c = new BLTIConsumer(tool_proxy_guid,oauth_secret,toolConsumerProfile.getString("guid"),"LTI-2p0");
 				c.putToolProxyURL(tool_proxy_url);
@@ -242,7 +242,7 @@ public class LTIRegistration extends HttpServlet {
 				c.putResultServiceFormat(resultFormat);
 				ofy.put(c);
 			}
-			else throw new Exception("A Tool Consumer is already registered with this key.");
+			else throw new Exception("A Tool Consumer was previously registered with this key.");
 						
 			debug.append("LTI_credentials_formed_ok.");
 						
@@ -334,16 +334,17 @@ public class LTIRegistration extends HttpServlet {
 		return capability_enabled;
 	}
 
-	JSONObject constructToolProxy(JSONObject toolConsumerProfile,String tc_profile_url,StringBuffer base_url,String shared_secret,List<String> capability_enabled) 
+	JSONObject constructToolProxy(JSONObject toolConsumerProfile,String tc_profile_url,StringBuffer base_url,String reg_key,String shared_secret,List<String> capability_enabled) 
 			throws Exception {
 		JSONObject toolProxy = new JSONObject();
 		toolProxy.put("@context", "http://purl.imsglobal.org/ctx/lti/v2/ToolProxy");
 		toolProxy.put("@type", "ToolProxy");
-		//toolProxy.put("@id", "");
 		toolProxy.put("lti_version", toolConsumerProfile.getString("lti_version"));
+		toolProxy.put("tool_proxy_guid", reg_key);
 		toolProxy.put("tool_consumer_profile", tc_profile_url);
-		toolProxy.put("tool_profile", getToolProfile(base_url,capability_enabled));					
-		toolProxy.put("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled));				
+		toolProxy.put("tool_profile", getToolProfile(base_url,capability_enabled));
+		toolProxy.put("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled));
+		toolProxy.put("enabled_capability", "['basic-lti-launch-request']");
 		return toolProxy;
 	}
 
@@ -378,6 +379,12 @@ public class LTIRegistration extends HttpServlet {
 					
 		// the following are parameters that are available only at the option of the Tool Consumer (LMS)
 		JSONArray parameter = new JSONArray();
+/*
+		parameter.put(new JSONObject("{'name':'lis_person_name_given','variable':'Person.name.given'}"));
+		parameter.put(new JSONObject("{'name':'lis_person_email_primary','variable':'Person.email.primary'}"));
+		parameter.put(new JSONObject("{'name':'lis_result_sourcedid','variable':'Result.sourcedId'}"));
+		parameter.put(new JSONObject("{'name':'lis_outcome_service_url','variable':'Result.uri'}"));
+*/
 		if (capability_enabled.contains("Person.name.given")) parameter.put(new JSONObject("{'name':'lis_person_name_given','variable':'Person.name.given'}"));
 		if (capability_enabled.contains("Person.email.primary")) parameter.put(new JSONObject("{'name':'lis_person_email_primary','variable':'Person.email.primary'}"));
 		if (capability_enabled.contains("Result.autocreate")) {
