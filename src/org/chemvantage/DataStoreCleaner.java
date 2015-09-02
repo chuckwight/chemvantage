@@ -48,6 +48,7 @@ public class DataStoreCleaner extends HttpServlet {
 	private static final long serialVersionUID = 137L;
 	Date now;
 	Date oneMonthAgo;
+	Date fiveMonthsAgo;
 	Date sixMonthsAgo;
 	Date oneYearAgo;
 	DAO dao = new DAO();
@@ -87,7 +88,8 @@ public class DataStoreCleaner extends HttpServlet {
 	throws ServletException, IOException {
 		// This servlet is called by the cron daemon once each day.
 		now = new Date();
-		oneMonthAgo = new Date(now.getTime()-2678400000L);
+		oneMonthAgo = new Date(now.getTime()-2592000000L);
+		fiveMonthsAgo = new Date(now.getTime()-13140000000L);
 		sixMonthsAgo = new Date(now.getTime()-15768000000L);
 		oneYearAgo = new Date(now.getTime()-31536000000L);
 		
@@ -127,7 +129,7 @@ public class DataStoreCleaner extends HttpServlet {
 		try {
 			DatastoreService datastore = DatastoreServiceFactory.getDatastoreService(); 
 			Query q = new Query("User");
-			q.setFilter(new FilterPredicate("lastLogin",FilterOperator.LESS_THAN,oneYearAgo));
+			q.setFilter(new FilterPredicate("lastLogin",FilterOperator.LESS_THAN,sixMonthsAgo)); // get user accounts where logins are older than six months
 			
 			PreparedQuery pq = datastore.prepare(q);
 
@@ -162,15 +164,16 @@ public class DataStoreCleaner extends HttpServlet {
 	private boolean deleteUser(String userId) {   // recursive user deletion function that follows the alias tree to the end
 		try {
 			User u = ofy.get(User.class,userId);
-			if (u.alias != null && !u.alias.equals(u.id)) {  // follow the alias chain to the end
+			if (u.alias != null && !u.alias.isEmpty() && !u.alias.equals(u.id)) {  // follow the alias chain to the end
 				if (deleteUser(u.alias)) return true;
 				else {  // this alias is to be retained; advance lastLogin to prevent inspection every day
-					u.lastLogin = sixMonthsAgo;
+					u.lastLogin = fiveMonthsAgo;
 					ofy.put(u);
 					return false;
 				}
 			} else { // found the user at the end of the alias chain
-				if (u.lastLogin.after(oneYearAgo)) return false;  // if any alias has a recent login, preserve the entire chain
+				if (u.lastLogin.after(sixMonthsAgo)) return false;  // if any alias has a recent login, preserve the entire chain
+				if (u.isInstructor() && u.lastLogin.after(oneYearAgo)) return false; // save instructor accounts for one year
 				if (u.isAdministrator()) return false;  // preserve all admin accounts
 				if (u.lastLogin.getTime()==0L) {  // user never logged in; perhaps this is a brand new account
 					u.lastLogin = new Date(1000L);   // so mark the account by advancing the lastLogin by 1 second
