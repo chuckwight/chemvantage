@@ -96,7 +96,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     	uc.setRequestMethod(httpMethod);
     	if (httpMethod.equals("GET")) acceptType = "application/vnd.ims.lti.v2.ToolSettings+json";
     	uc.setRequestProperty("Content-Type",messageType);
-    	//if (!acceptType.isEmpty()) uc.setRequestProperty("Accept", acceptType);
+    	if (!acceptType.isEmpty()) uc.setRequestProperty("Accept", acceptType);
     	uc.setRequestProperty("Content-Length",Integer.toString(messageText.length()));
     	uc.setRequestProperty("Authorization",buildAuthHeaderString(params));
     	

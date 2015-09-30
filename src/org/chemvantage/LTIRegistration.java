@@ -212,25 +212,27 @@ public class LTIRegistration extends HttpServlet {
 			String serviceEndpoint = getTCServiceEndpoint("application/vnd.ims.lti.v2.toolproxy+json",toolConsumerProfile);
 			//debug.append("tc_service_endpoint:" + serviceEndpoint);
 			//debug.append("Tool Proxy: " + toolProxy.toString(2));
-			
-			LTIMessage msg = new LTIMessage("application/vnd.ims.lti.v2.toolproxy+json","application/vnd.ims.lti.v2.ToolProxy.id+json",toolProxyString,serviceEndpoint,reg_key,reg_password);
-			debug.append("lti_msg_formed_ok");
-			String reply = msg.send();
+			String tool_proxy_guid = reg_key; 	// temporary values
+			String tool_proxy_url = "";	
+			String tool_settings_url = "";
 
-			debug.append("tc_response_received: " + reply);
-			
-			String tool_proxy_guid = null;
-			String tool_proxy_url = null;
-			String tool_settings_url = null;
-			try {
-				JSONObject replyBody = new JSONObject(reply);		
-				debug.append("json_reply_ok.");
-				tool_proxy_guid = replyBody.getString("tool_proxy_guid");
-				tool_proxy_url = replyBody.getString("@id");
-				tool_settings_url = replyBody.getString("custom_uri");
-				if (tool_proxy_guid.isEmpty() || tool_proxy_url.isEmpty()) throw new Exception();
-			} catch (Exception e) {
-				throw new Exception ("Could not parse response to tool proxy registration request.");
+			if (serviceEndpoint != null) {  // try to register the ToolProxy
+				LTIMessage msg = new LTIMessage("application/vnd.ims.lti.v2.toolproxy+json","application/json",toolProxyString,serviceEndpoint,reg_key,reg_password);
+				debug.append("lti_msg_formed_ok");
+				String reply = msg.send();
+
+				debug.append("tc_response_received: " + reply);
+
+				try {
+					JSONObject replyBody = new JSONObject(reply);		
+					debug.append("json_reply_ok.");
+					tool_proxy_guid = replyBody.getString("tool_proxy_guid");
+					tool_proxy_url = replyBody.getString("@id");
+					tool_settings_url = replyBody.getString("custom_uri");
+					if (tool_proxy_guid.isEmpty() || tool_proxy_url.isEmpty()) throw new Exception();
+				} catch (Exception e) {
+					throw new Exception ("Could not parse response to tool proxy registration request.");
+				}
 			}
 			
 			// check to make sure that this is the first registration for this tool consumer
