@@ -217,7 +217,7 @@ public class LTIRegistration extends HttpServlet {
 			String tool_settings_url = "";
 
 			if (serviceEndpoint != null) {  // try to register the ToolProxy
-				LTIMessage msg = new LTIMessage("application/vnd.ims.lti.v2.toolproxy+json","application/json",toolProxyString,serviceEndpoint,reg_key,reg_password);
+				LTIMessage msg = new LTIMessage("application/vnd.ims.lti.v2.toolproxy+json","application/vnd.ims.v2.toolproxy.id+json",toolProxyString,serviceEndpoint,reg_key,reg_password);
 				debug.append("lti_msg_formed_ok");
 				String reply = msg.send();
 
@@ -326,7 +326,7 @@ public class LTIRegistration extends HttpServlet {
 	
 	List<String> getCapabilities(JSONObject toolConsumerProfile) throws JSONException {
 		// list of capabilities offered by the Tool Consumer
-		List<String> capabilities_wanted = Arrays.asList("Person.email.primary","Person.name.given","Result.autocreate");
+		List<String> capabilities_wanted = Arrays.asList("basic-lti-launch-request","User.id","Person.email.primary","Person.name.given","Result.autocreate","Result.sourcedId");
 		List<String> capability_offered = new ArrayList<String>();
 		List<String> capability_enabled = new ArrayList<String>();
 		JSONArray tcp = toolConsumerProfile.getJSONArray("capability_offered");
@@ -339,79 +339,88 @@ public class LTIRegistration extends HttpServlet {
 
 	JSONObject constructToolProxy(JSONObject toolConsumerProfile,String tc_profile_url,StringBuffer base_url,String reg_key,String shared_secret,List<String> capability_enabled) 
 			throws Exception {
-		JSONObject toolProxy = new JSONObject();
-		toolProxy.put("@context", "http://purl.imsglobal.org/ctx/lti/v2/ToolProxy");
-		toolProxy.put("@type", "ToolProxy");
-		toolProxy.put("lti_version", toolConsumerProfile.getString("lti_version"));
-		toolProxy.put("tool_proxy_guid", reg_key);
-		toolProxy.put("tool_consumer_profile", tc_profile_url);
-		toolProxy.put("tool_profile", getToolProfile(base_url,capability_enabled));
-		toolProxy.put("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled));
-		toolProxy.put("enabled_capability", "basic-lti-launch-request");
+		JSONObject toolProxy = new JSONObject()
+			.put("@context", "http://purl.imsglobal.org/ctx/lti/v2/ToolProxy")
+			.put("@type", "ToolProxy")
+			.put("lti_version", toolConsumerProfile.getString("lti_version"))
+			//.put("tool_proxy_guid", reg_key)
+			.put("tool_consumer_profile", tc_profile_url)
+			.put("tool_profile", getToolProfile(base_url,capability_enabled))
+			.put("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled));
+		
+			//toolProxy.put("capability_offered", toolConsumerProfile.getJSONArray("capability_offered"));
 		return toolProxy;
 	}
 
 	JSONObject getToolProfile(StringBuffer base_url,List<String> capability_enabled) throws Exception {  // this is the (mostly static) tool profile for ChemVantage
 		JSONObject toolProfile = new JSONObject()
-			.put("lti_version","LTI-2p0")
-			.put("product_instance",new JSONObject()
+			.put("lti_version", "LTI-2p0")
+			.put("product_instance", new JSONObject()
+				.put("guid", base_url)
+				.put("support", new JSONObject()
+					.put("email", "admin@chemvantage.org"))
 				.put("product_info", new JSONObject()
-					.put("product_name", new JSONObject("{'default_value':'ChemVantage'}"))
+					.put("product_name", new JSONObject()
+						.put("default_value", "ChemVantage"))
 					.put("product_version", "3.0")
-					.put("description", new JSONObject("{'default_value':'ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry.'}"))
+					.put("description", new JSONObject()
+						.put("default_value", "ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry"))
 					.put("product_family", new JSONObject()
-						.put("@id", "http://chemvantage.org/about")
 						.put("vendor", new JSONObject()
-							.put("vendor_name", new JSONObject("{'default_value':'ChemVantage LLC'}"))
-							.put("website", "http://chemvantage.org")
-							.put("contact", new JSONObject("{'email':'admin@chem=vantage.org'}")))))
-				.put("support", new JSONObject("{'email':'admin@chemvantage.org'}"))
-				.put("service_provider", new JSONObject()
-					.put("guid", "chemvantage.org")
-					.put("timestamp", "2014-05-01T00:00:00-07:00")
-					.put("service_provider_name", new JSONObject("{'default_value':'ChemVantage LLC'}")))
-				.put("service_owner", new JSONObject()
-					.put("guid", "chemvantage.org")
-					.put("timestamp", "2014-05-01T00:00:00-07:00")
-					.put("service_owner_name", new JSONObject("{'default_value':'ChemVantage LLC'}"))))
-				.put("base_url_choice", new JSONArray()
+							.put("vendor_name", new JSONObject()
+								.put("default_value", "ChemVantage LLC"))
+							.put("website", "https://www.chemvantage.org")
+							.put("contact", new JSONObject()
+								.put("email", "admin@chemvantage.org"))))))
+			.put("base_url_choice", new JSONArray()
 				.put(new JSONObject()
-					.put("selector", "DefaultSelector")
 					.put("default_base_url", "http://" + base_url.toString())
 					.put("secure_base_url", "https://" + base_url.toString())));
-					
-		// the following are parameters that are available only at the option of the Tool Consumer (LMS)
-		JSONArray parameter = new JSONArray();
-		if (capability_enabled.contains("Person.name.given")) parameter.put(new JSONObject("{'name':'lis_person_name_given','variable':'Person.name.given'}"));
-		if (capability_enabled.contains("Person.email.primary")) parameter.put(new JSONObject("{'name':'lis_person_email_primary','variable':'Person.email.primary'}"));
-		if (capability_enabled.contains("Result.autocreate")) {
-			parameter.put(new JSONObject("{'name':'lis_result_sourcedid','variable':'Result.sourcedId'}"));
-			parameter.put(new JSONObject("{'name':'lis_outcome_service_url','variable':'Result.uri'}"));
-		}
 
-		// construct a generic message object for every basic-lti-launch-request 
-		JSONObject msg = new JSONObject("{'message_type':'basic-lti-launch-request','path':'/lti','format':'application/x-www-form-urlencoded'}");
-		if (capability_enabled.contains("Result.autocreate")) msg.put("capability", new JSONArray("['Result.autocreate']"));
-
-		JSONObject resourceHandler = new JSONObject().put("resource_type", new JSONObject().put("code", "Assessment")).put("message", msg);
-		toolProfile.put("resource_handler",resourceHandler);
-
+		JSONObject resourceHandler = new JSONObject()
+			.put("resource_handler", new JSONArray()
+				.put(new JSONObject()
+					.put("resource_name", new JSONObject()
+						.put("default_value", "ChemVantage")
+						.put("key", "assessment.resource.name"))
+					.put("description", new JSONObject()
+						.put("default_value", "An Open Education Resource for teaching and learning college-level General Chemistry")
+						.put("key", "assessment.resource.description"))
+					.put("message", new JSONObject()
+						.put("message_type", "basic-lti-launch-request")
+						.put("path", "/lti")
+						.put("format", "application/x-www-form-urlencoded"))
+					.put("resource_type", new JSONObject()
+						.put("code", "assessment"))));
+		
+		if (capability_enabled.contains("Result.autocreate"))
+			resourceHandler.put("enabled_capability", new JSONArray()
+						.put("Result.autocreate")
+						.put("Result.sourcedId"));
+		
 		return toolProfile;
 	}
-
-	JSONObject getSecurityContract(JSONObject toolConsumerProfile, String shared_secret,List<String> capabilities) throws Exception {
-		JSONObject security_contract = new JSONObject();
-		security_contract.put("shared_secret",shared_secret);
 		
-		if (capabilities.contains("Result.autocreate")) {
-			security_contract.put("tool_service", new JSONArray().put(new JSONObject()
-				.put("@type","RestServiceProfile")
+	JSONObject getSecurityContract(JSONObject toolConsumerProfile, String shared_secret,List<String> capability_enabled) throws Exception {
+		JSONObject securityContract = new JSONObject()
+			.put("shared_secret",shared_secret);
+		
+		JSONArray toolService = new JSONArray();
+		
+		if (capability_enabled.contains("Result.autocreate")) {
+			JSONObject resultService = new JSONObject()
+				.put("@type","RestService")
+				.put("@id", "tcp:Result.item")
+				.put("endpoint", getTCServiceEndpoint("application/vnd.ims.lis.v2.result+json",toolConsumerProfile))
 				.put("service", getTCServiceEndpoint("application/vnd.ims.lis.v2.result+json",toolConsumerProfile))
 				.put("format", "application/vnd.ims.lis.v2.result+json")
-				.put("action", new JSONArray("['GET','PUT']"))));
+				.put("action", new JSONArray("['GET','PUT']"));
+			toolService.put(resultService);
 		}
 		
-		return security_contract;
+		if (toolService.length()>0) securityContract.put("tool_service",toolService);
+		
+		return securityContract;
 		
 	}
 
