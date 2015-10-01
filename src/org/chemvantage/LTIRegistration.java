@@ -409,12 +409,12 @@ public class LTIRegistration extends HttpServlet {
 		
 		if (capability_enabled.contains("Result.autocreate")) {
 			JSONObject resultService = new JSONObject()
-				.put("@type","RestService")
-				.put("@id", "tcp:Result.item")
-				.put("endpoint", getTCServiceEndpoint("application/vnd.ims.lis.v2.result+json",toolConsumerProfile))
+				.put("@type","RestServiceProfile")
 				.put("service", getTCServiceEndpoint("application/vnd.ims.lis.v2.result+json",toolConsumerProfile))
 				.put("format", "application/vnd.ims.lis.v2.result+json")
-				.put("action", new JSONArray("['GET','PUT']"));
+				.put("action", new JSONArray()
+					.put("GET")
+					.put("PUT"));
 			toolService.put(resultService);
 		}
 		
