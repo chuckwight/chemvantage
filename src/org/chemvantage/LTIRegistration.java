@@ -207,6 +207,7 @@ public class LTIRegistration extends HttpServlet {
 			
 			JSONObject toolProxy = constructToolProxy(toolConsumerProfile,tc_profile_url,base_url,reg_key,oauth_secret,capability_enabled);
 			//debug.append("tool_proxy_formed_ok.");
+			debug.append(toolProxy.toString());
 			
 			String toolProxyString = toolProxy.toString();
 			String serviceEndpoint = getTCServiceEndpoint("application/vnd.ims.lti.v2.toolproxy+json",toolConsumerProfile);
@@ -233,7 +234,7 @@ public class LTIRegistration extends HttpServlet {
 				} catch (Exception e) {
 					throw new Exception ("Could not parse response to tool proxy registration request.");
 				}
-			}
+			} else doError(request,response, "Could not find a tool proxy registration endpoint in the Tool Consumer profile.",null,null);
 			
 			// check to make sure that this is the first registration for this tool consumer
 			BLTIConsumer c = ofy.find(BLTIConsumer.class,tool_proxy_guid);
@@ -252,7 +253,7 @@ public class LTIRegistration extends HttpServlet {
 			// all steps completed successfully with no exceptions thrown, so report success back to TC administrator
 			response.sendRedirect(launch_presentation_return_url + "?status=success&tool_proxy_guid=" + tool_proxy_guid);
 		} catch (Exception e) {
-			doError(request,response,"Sorry, the Tool Proxy Registration failed.<br>" + e.getMessage() + "<br>" + debug.toString() + "<br>" + "PLEASE SEND THIS ERROR TO admin@chemvantage.org",null,null);
+			doError(request,response,"Sorry, the Tool Proxy Registration failed.<br>" + e.getMessage() + "<br>" + debug.toString() + "<br>" + "PLEASE SEND THIS ERROR TO admin@chemvantage.org. You may try manual LTI registration using credentials that can be obtained <a href=/lti/registration>here</a>.",null,null);
 		}
 	}
 
@@ -343,10 +344,11 @@ public class LTIRegistration extends HttpServlet {
 			.put("@context", "http://purl.imsglobal.org/ctx/lti/v2/ToolProxy")
 			.put("@type", "ToolProxy")
 			.put("lti_version", toolConsumerProfile.getString("lti_version"))
-			//.put("tool_proxy_guid", reg_key)
+			.put("tool_proxy_guid", reg_key)
 			.put("tool_consumer_profile", tc_profile_url)
 			.put("tool_profile", getToolProfile(base_url,capability_enabled))
-			.put("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled));
+			.put("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled))
+			.put("enabled_capability", new JSONArray().put(capability_enabled));
 		
 			//toolProxy.put("capability_offered", toolConsumerProfile.getJSONArray("capability_offered"));
 		return toolProxy;
