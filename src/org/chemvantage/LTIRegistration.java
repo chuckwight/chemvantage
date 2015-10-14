@@ -212,7 +212,7 @@ public class LTIRegistration extends HttpServlet {
 			String serviceEndpoint = getTCServiceEndpoint("application/vnd.ims.lti.v2.toolproxy+json",toolConsumerProfile);
 			debug.append("tc_service_endpoint:" + serviceEndpoint);
 			
-			LTIMessage msg = new LTIMessage("application/vnd.ims.lti.v2.toolproxy+json","application/vnd.ims.lti.v2.ToolProxy.id+json",toolProxyString,serviceEndpoint,reg_key,reg_password);
+			LTIMessage msg = new LTIMessage("application/vnd.ims.lti.v2.toolproxy+json","",toolProxyString,serviceEndpoint,reg_key,reg_password);
 			debug.append("lti_msg_formed_ok");
 			String reply = msg.send();
 
@@ -344,7 +344,7 @@ public class LTIRegistration extends HttpServlet {
 		toolProxy.put("tool_consumer_profile", tc_profile_url);
 		toolProxy.put("tool_profile", getToolProfile(base_url,capability_enabled));
 		toolProxy.put("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled));
-		toolProxy.put("enabled_capability", "['basic-lti-launch-request']");
+		toolProxy.put("enabled_capability", "basic-lti-launch-request");
 		return toolProxy;
 	}
 

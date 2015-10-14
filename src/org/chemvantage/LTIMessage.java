@@ -33,7 +33,7 @@ import com.google.gdata.client.authn.oauth.OAuthUtil;
 import com.google.gdata.util.common.util.Base64;
 
 public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+JSON" messages to a Tool Consumer (LMS)
-	String messageType="text/html";
+	String contentType="text/html";
 	String acceptType = "application/xml";
 	String messageText="";
 	String httpMethod="POST";
@@ -44,15 +44,15 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	LTIMessage() {}
 
     LTIMessage(String msgType,String msgText,String destURL,String key) {
-    	this.messageType = msgType;
+    	this.contentType = msgType;
     	this.messageText = msgText;
     	this.destinationURL = destURL;
     	this.oauth_consumer_key = key;
     	this.oauth_shared_secret = BLTIConsumer.getSecret(oauth_consumer_key);
     }
     
-    LTIMessage(String msgType,String acceptType,String msgText,String destURL,String key,String secret) {
-    	this.messageType = msgType;
+    LTIMessage(String contentType,String acceptType,String msgText,String destURL,String key,String secret) {
+    	this.contentType = contentType;
     	this.acceptType = acceptType;
     	this.messageText = msgText;
     	this.destinationURL = destURL;
@@ -95,7 +95,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     	uc.setDoInput(true);
     	uc.setRequestMethod(httpMethod);
     	if (httpMethod.equals("GET")) acceptType = "application/vnd.ims.lti.v2.ToolSettings+json";
-    	uc.setRequestProperty("Content-Type",messageType);
+    	uc.setRequestProperty("Content-Type",contentType);
     	if (!acceptType.isEmpty()) uc.setRequestProperty("Accept", acceptType);
     	uc.setRequestProperty("Content-Length",Integer.toString(messageText.length()));
     	uc.setRequestProperty("Authorization",buildAuthHeaderString(params));
@@ -125,7 +125,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     }
 
     private boolean messageAppearsValid() {
-    	if (messageType == null) return false;
+    	if (contentType == null) return false;
     	if (messageText==null || (messageText.isEmpty() && !httpMethod.equals("GET"))) return false;
     	if (oauth_consumer_key==null || oauth_consumer_key.isEmpty()) return false;
     	if (oauth_shared_secret==null || oauth_shared_secret.isEmpty()) return false;
