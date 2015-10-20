@@ -207,7 +207,7 @@ public class LTIRegistration extends HttpServlet {
 			
 			JSONObject toolProxy = constructToolProxy(toolConsumerProfile,tc_profile_url,base_url,reg_key,oauth_secret,capability_enabled);
 			//debug.append("tool_proxy_formed_ok.");
-			debug.append(toolProxy.toString());
+			//debug.append(toolProxy.toString());
 			
 			String toolProxyString = toolProxy.toString();
 			String serviceEndpoint = getTCServiceEndpoint("application/vnd.ims.lti.v2.toolproxy+json",toolConsumerProfile);
@@ -219,14 +219,14 @@ public class LTIRegistration extends HttpServlet {
 
 			if (serviceEndpoint != null) {  // try to register the ToolProxy
 				LTIMessage msg = new LTIMessage("application/vnd.ims.lti.v2.toolproxy+json","application/vnd.ims.v2.toolproxy.id+json",toolProxyString,serviceEndpoint,reg_key,reg_password);
-				debug.append("lti_msg_formed_ok");
+				//debug.append("lti_msg_formed_ok");
 				String reply = msg.send();
 
-				debug.append("tc_response_received: " + reply);
+				//debug.append("tc_response_received: " + reply);
 
 				try {
 					JSONObject replyBody = new JSONObject(reply);		
-					debug.append("json_reply_ok.");
+					//debug.append("json_reply_ok.");
 					tool_proxy_guid = replyBody.getString("tool_proxy_guid");
 					tool_proxy_url = replyBody.getString("@id");
 					tool_settings_url = replyBody.getString("custom_uri");
@@ -248,12 +248,12 @@ public class LTIRegistration extends HttpServlet {
 			}
 			else throw new Exception("A Tool Consumer was previously registered with this key.");
 						
-			debug.append("LTI_credentials_formed_ok.");
+			//debug.append("LTI_credentials_formed_ok.");
 						
 			// all steps completed successfully with no exceptions thrown, so report success back to TC administrator
 			response.sendRedirect(launch_presentation_return_url + "?status=success&tool_proxy_guid=" + tool_proxy_guid);
 		} catch (Exception e) {
-			doError(request,response,"Sorry, the Tool Proxy Registration failed.<br>" + e.getMessage() + "<br>" + debug.toString() + "<br>" + "PLEASE SEND THIS ERROR TO admin@chemvantage.org. You may try manual LTI registration using credentials that can be obtained <a href=/lti/registration>here</a>.",null,null);
+			doError(request,response,"Sorry, the Tool Proxy Registration failed.<br>" + e.getMessage() + "<br>You may try manual LTI registration using credentials that can be obtained at <a href=http://www.chemvantage.org/lti/registration>http://www.chemvantage.org/lti/registration/</a>.",null,null);
 		}
 	}
 
@@ -330,6 +330,7 @@ public class LTIRegistration extends HttpServlet {
 		List<String> capabilities_wanted = Arrays.asList("basic-lti-launch-request","User.id","Person.email.primary","Person.name.given","Result.autocreate","Result.sourcedId");
 		List<String> capability_offered = new ArrayList<String>();
 		List<String> capability_enabled = new ArrayList<String>();
+		
 		JSONArray tcp = toolConsumerProfile.getJSONArray("capability_offered");
 		for (int i=0; i<tcp.length();i++) capability_offered.add(tcp.getString(i));
 
@@ -344,44 +345,55 @@ public class LTIRegistration extends HttpServlet {
 			.put("@context", "http://purl.imsglobal.org/ctx/lti/v2/ToolProxy")
 			.put("@type", "ToolProxy")
 			.put("lti_version", toolConsumerProfile.getString("lti_version"))
-			.put("tool_proxy_guid", reg_key)
+			//.put("tool_proxy_guid", reg_key)
 			.put("tool_consumer_profile", tc_profile_url)
 			.put("tool_profile", getToolProfile(base_url,capability_enabled))
 			.put("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled))
-			.put("enabled_capability", new JSONArray().put(capability_enabled));
+			.put("enabled_capability", new JSONArray(capability_enabled));
 		
 			//toolProxy.put("capability_offered", toolConsumerProfile.getJSONArray("capability_offered"));
 		return toolProxy;
 	}
 
 	JSONObject getToolProfile(StringBuffer base_url,List<String> capability_enabled) throws Exception {  // this is the (mostly static) tool profile for ChemVantage
-		JSONObject toolProfile = new JSONObject()
-			.put("lti_version", "LTI-2p0")
-			.put("product_instance", new JSONObject()
-				.put("guid", base_url)
-				.put("support", new JSONObject()
-					.put("email", "admin@chemvantage.org"))
-				.put("product_info", new JSONObject()
-					.put("product_name", new JSONObject()
-						.put("default_value", "ChemVantage"))
-					.put("product_version", "3.0")
-					.put("description", new JSONObject()
-						.put("default_value", "ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry"))
-					.put("product_family", new JSONObject()
-						.put("vendor", new JSONObject()
-							.put("vendor_name", new JSONObject()
-								.put("default_value", "ChemVantage LLC"))
-							.put("website", "https://www.chemvantage.org")
-							.put("contact", new JSONObject()
-								.put("email", "admin@chemvantage.org"))))))
-			.put("base_url_choice", new JSONArray()
-				.put(new JSONObject()
-					.put("default_base_url", "http://" + base_url.toString())
-					.put("secure_base_url", "https://" + base_url.toString())));
-
+		JSONObject toolProfile = new JSONObject();
+		toolProfile.put("lti_version", "LTI-2p0");
+		toolProfile.put("product_instance", new JSONObject()
+			.put("guid", base_url)
+			.put("support", new JSONObject()
+				.put("email", "admin@chemvantage.org"))
+			.put("product_info", new JSONObject()
+				.put("product_name", new JSONObject()
+					.put("default_value", "ChemVantage"))
+				.put("product_version", "3.0")
+				.put("description", new JSONObject()
+					.put("default_value", "ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry"))
+				.put("product_family", new JSONObject()
+					.put("vendor", new JSONObject()
+						.put("vendor_name", new JSONObject()
+							.put("default_value", "ChemVantage LLC"))
+						.put("website", "https://www.chemvantage.org")
+						.put("contact", new JSONObject()
+							.put("email", "admin@chemvantage.org"))))));
+		toolProfile.put("base_url_choice", new JSONArray()
+			.put(new JSONObject()
+				.put("default_base_url", "http://" + base_url.toString())
+				.put("secure_base_url", "https://" + base_url.toString())));
+		toolProfile.put("message", new JSONArray()
+			.put(new JSONObject()
+				.put("message_type", "basic-lti-launch-request")
+				.put("path", "https://dev-vantage-hrd.appspot.com/lti/")));
+/*
+				.put("parameter", new JSONArray()
+					.put(new JSONObject()
+						.put("name","lis_person_name_given")
+						.put("variable", "$Person.name.given"))
+					.put(new JSONObject()
+						.put("name","lis_person_contact_email_primary")
+						.put("variable", "$Person.email.primary")))));
+					
+/*
 		JSONObject resourceHandler = new JSONObject()
-			.put("resource_handler", new JSONArray()
-				.put(new JSONObject()
 					.put("resource_name", new JSONObject()
 						.put("default_value", "ChemVantage")
 						.put("key", "assessment.resource.name"))
@@ -393,13 +405,15 @@ public class LTIRegistration extends HttpServlet {
 						.put("path", "/lti")
 						.put("format", "application/x-www-form-urlencoded"))
 					.put("resource_type", new JSONObject()
-						.put("code", "assessment"))));
+						.put("code", "assessment"));
 		
 		if (capability_enabled.contains("Result.autocreate"))
 			resourceHandler.put("enabled_capability", new JSONArray()
 						.put("Result.autocreate")
 						.put("Result.sourcedId"));
 		
+		toolProfile.put("resource_handler", new JSONArray().put(resourceHandler));
+*/		
 		return toolProfile;
 	}
 		
