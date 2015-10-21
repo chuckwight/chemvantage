@@ -212,7 +212,7 @@ public class LTIRegistration extends HttpServlet {
 			String toolProxyString = toolProxy.toString();
 			String serviceEndpoint = getTCServiceEndpoint("application/vnd.ims.lti.v2.toolproxy+json",toolConsumerProfile);
 			//debug.append("tc_service_endpoint:" + serviceEndpoint);
-			//debug.append("Tool Proxy: " + toolProxy.toString(2));
+			debug.append("Tool Proxy: " + toolProxy.toString(2));
 			String tool_proxy_guid = reg_key; 	// temporary values
 			String tool_proxy_url = "";	
 			String tool_settings_url = "";
@@ -222,15 +222,15 @@ public class LTIRegistration extends HttpServlet {
 				//debug.append("lti_msg_formed_ok");
 				String reply = msg.send();
 
-				//debug.append("tc_response_received: " + reply);
+				debug.append("tc_response_received: " + reply);
 
 				try {
 					JSONObject replyBody = new JSONObject(reply);		
 					//debug.append("json_reply_ok.");
 					tool_proxy_guid = replyBody.getString("tool_proxy_guid");
 					tool_proxy_url = replyBody.getString("@id");
-					tool_settings_url = replyBody.getString("custom_uri");
-					if (tool_proxy_guid.isEmpty() || tool_proxy_url.isEmpty()) throw new Exception();
+					//tool_settings_url = replyBody.getString("custom_uri");
+					if (tool_proxy_guid.isEmpty() || tool_proxy_url.isEmpty()) throw new Exception("Tool Proxy guid and/or URL was missing.");
 				} catch (Exception e) {
 					throw new Exception ("Could not parse response to tool proxy registration request.");
 				}
@@ -253,7 +253,7 @@ public class LTIRegistration extends HttpServlet {
 			// all steps completed successfully with no exceptions thrown, so report success back to TC administrator
 			response.sendRedirect(launch_presentation_return_url + "?status=success&tool_proxy_guid=" + tool_proxy_guid);
 		} catch (Exception e) {
-			doError(request,response,"Sorry, the Tool Proxy Registration failed.<br>" + e.getMessage() + "<br>You may try manual LTI registration using credentials that can be obtained at <a href=http://www.chemvantage.org/lti/registration>http://www.chemvantage.org/lti/registration/</a>.",null,null);
+			doError(request,response,"Sorry, the Tool Proxy Registration failed.<br>" + e.getMessage() + "<br>You may try manual LTI registration using credentials that can be obtained at <a href=http://www.chemvantage.org/lti/registration>http://www.chemvantage.org/lti/registration/</a>.<br>" + debug.toString(),null,null);
 		}
 	}
 
@@ -379,6 +379,7 @@ public class LTIRegistration extends HttpServlet {
 			.put(new JSONObject()
 				.put("default_base_url", "http://" + base_url.toString())
 				.put("secure_base_url", "https://" + base_url.toString())));
+/*
 		toolProfile.put("message", new JSONArray()
 			.put(new JSONObject()
 				.put("message_type", "basic-lti-launch-request")
@@ -391,8 +392,8 @@ public class LTIRegistration extends HttpServlet {
 					.put(new JSONObject()
 						.put("name","lis_person_contact_email_primary")
 						.put("variable", "$Person.email.primary")))));
-					
-/*
+*/					
+
 		JSONObject resourceHandler = new JSONObject()
 					.put("resource_name", new JSONObject()
 						.put("default_value", "ChemVantage")
@@ -400,10 +401,11 @@ public class LTIRegistration extends HttpServlet {
 					.put("description", new JSONObject()
 						.put("default_value", "An Open Education Resource for teaching and learning college-level General Chemistry")
 						.put("key", "assessment.resource.description"))
-					.put("message", new JSONObject()
-						.put("message_type", "basic-lti-launch-request")
-						.put("path", "/lti")
-						.put("format", "application/x-www-form-urlencoded"))
+					.put("message", new JSONArray()
+						.put(new JSONObject()
+							.put("message_type", "basic-lti-launch-request")
+							.put("path", "/lti/")
+							.put("format", "application/x-www-form-urlencoded")))
 					.put("resource_type", new JSONObject()
 						.put("code", "assessment"));
 		
@@ -413,7 +415,7 @@ public class LTIRegistration extends HttpServlet {
 						.put("Result.sourcedId"));
 		
 		toolProfile.put("resource_handler", new JSONArray().put(resourceHandler));
-*/		
+		
 		return toolProfile;
 	}
 		
