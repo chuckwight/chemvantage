@@ -404,7 +404,7 @@ public class LTIRegistration extends HttpServlet {
 					.put("message", new JSONArray()
 						.put(new JSONObject()
 							.put("message_type", "basic-lti-launch-request")
-							.put("path", "/lti/")
+							.put("path", "lti/")
 							.put("format", "application/x-www-form-urlencoded")))
 					.put("resource_type", new JSONObject()
 						.put("code", "assessment"));
