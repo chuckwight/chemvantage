@@ -409,11 +409,14 @@ public class LTIRegistration extends HttpServlet {
 					.put("resource_type", new JSONObject()
 						.put("code", "assessment"));
 		
-		if (capability_enabled.contains("Result.autocreate"))
+		if (capability_enabled.contains("Result.autocreate")) {
 			resourceHandler.put("enabled_capability", new JSONArray()
-						.put("Result.autocreate")
-						.put("Result.sourcedId"));
-		
+					.put("Result.autocreate")
+					.put("Result.sourcedId"));
+			resourceHandler.put("parameter", new JSONArray()
+					.put(new JSONObject().put("name", "custom_lis_outcome_service_url").put("variable", "Result.uri"))
+					.put(new JSONObject().put("name", "custom_lis_result_sourcedid").put("variable", "Result.sourcedId")));
+		}
 		toolProfile.put("resource_handler", new JSONArray().put(resourceHandler));
 		
 		return toolProfile;
