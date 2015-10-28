@@ -171,14 +171,14 @@ public class User implements Comparable<User>,Serializable {
 		Objectify ofy = ObjectifyService.begin();
 
 		String lis_person_name_given = request.getParameter("lis_person_name_given");
-		if (lis_person_name_given==null || lis_person_name_given.equals("$Person.name.given")) lis_person_name_given = request.getParameter("custom_lis_person_name_given");
-		if (lis_person_name_given==null || lis_person_name_given.equals("$Person.name.given")) lis_person_name_given = request.getParameter("lis_person_name_full");
+		if (lis_person_name_given==null) lis_person_name_given = request.getParameter("custom_lis_person_name_given");
+		if (lis_person_name_given==null) lis_person_name_given = request.getParameter("lis_person_name_full");
 		if (lis_person_name_given==null) lis_person_name_given = request.getParameter("custom_lis_person_name_full");
 		user.setFirstName(lis_person_name_given);
 
 		String lis_person_contact_email_primary = request.getParameter("lis_person_contact_email_primary");
 		if (lis_person_contact_email_primary==null) lis_person_contact_email_primary = request.getParameter("custom_lis_person_contact_email_primary");
-		user.setEmail(request.getParameter("lis_person_contact_email_primary"));
+		user.setEmail(lis_person_contact_email_primary);
 
 		if (!user.email.isEmpty()) user.verifiedEmail = true; // value supplied by institution
 		

@@ -379,20 +379,6 @@ public class LTIRegistration extends HttpServlet {
 			.put(new JSONObject()
 				.put("default_base_url", "http://" + base_url.toString())
 				.put("secure_base_url", "https://" + base_url.toString())));
-/*
-		toolProfile.put("message", new JSONArray()
-			.put(new JSONObject()
-				.put("message_type", "basic-lti-launch-request")
-				.put("path", "https://dev-vantage-hrd.appspot.com/lti/")));
-/*
-				.put("parameter", new JSONArray()
-					.put(new JSONObject()
-						.put("name","lis_person_name_given")
-						.put("variable", "$Person.name.given"))
-					.put(new JSONObject()
-						.put("name","lis_person_contact_email_primary")
-						.put("variable", "$Person.email.primary")))));
-*/					
 
 		JSONObject resourceHandler = new JSONObject()
 					.put("resource_name", new JSONObject()
@@ -409,10 +395,14 @@ public class LTIRegistration extends HttpServlet {
 					.put("resource_type", new JSONObject()
 						.put("code", "assessment"));
 		
-		if (capability_enabled.contains("Result.autocreate"))
+		if (capability_enabled.contains("Result.autocreate")) {
 			resourceHandler.put("enabled_capability", new JSONArray()
 						.put("Result.autocreate")
 						.put("Result.sourcedId"));
+			resourceHandler.put("parameter", new JSONArray()
+					.put(new JSONObject().put("name", "custom_lis_outome_service_url").put("variable", "Result.uri"))
+					.put(new JSONObject().put("name", "custom_lis_result_sourcedid").put("variable", "Result.sourcedId")));			
+		}
 		
 		toolProfile.put("resource_handler", new JSONArray().put(resourceHandler));
 		

@@ -150,7 +150,7 @@ public class LTILaunch extends HttpServlet {
 			System.out.println("Provider failed to validate message");
 			System.out.println(e.getMessage());
 			if ( base_string != null ) System.out.println(base_string);
-			doError(request, response,"Launch data does not validate.", context_id, null);
+			doError(request, response,"Launch data validation failed.", context_id, null);
 			return;
 		}
 		// BLTI Launch message was validated successfully. 
@@ -197,10 +197,11 @@ public class LTILaunch extends HttpServlet {
 		
 		// Provision a new context (group), if necessary and put the user into it
 		Group g = null;
-		if (context_id==null) context_id = oauth_consumer_key + ":defaultGroup";
+		if (context_id==null || context_id.isEmpty()) context_id = oauth_consumer_key + ":defaultGroup";
 		g = ofy.query(Group.class).filter("domain",oauth_consumer_key).filter("context_id",context_id).get();
 		if (g == null) { // create this new group
 			String contextTitle = request.getParameter("context_title");
+			if (contextTitle==null) contextTitle = request.getParameter("custom_context_title");
 			if (contextTitle==null) contextTitle = "";
 			g = new Group("BLTI",context_id,contextTitle);
 			g.domain = domain.domainName;
