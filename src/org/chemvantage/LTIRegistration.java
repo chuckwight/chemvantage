@@ -393,16 +393,15 @@ public class LTIRegistration extends HttpServlet {
 							.put("path", "lti/")
 							.put("format", "application/x-www-form-urlencoded")))
 					.put("resource_type", new JSONObject()
-						.put("code", "assessment"));
-		
-		if (capability_enabled.contains("Result.autocreate")) {
-			resourceHandler.put("enabled_capability", new JSONArray()
-						.put("Result.autocreate")
-						.put("Result.sourcedId"));
-			resourceHandler.put("parameter", new JSONArray()
-					.put(new JSONObject().put("name", "custom_lis_outome_service_url").put("variable", "Result.uri"))
-					.put(new JSONObject().put("name", "custom_lis_result_sourcedid").put("variable", "Result.sourcedId")));			
-		}
+						.put("code", "assessment"))
+					.put("enabled_capability", new JSONArray()
+							.put("Result.autocreate")
+							.put("Result.sourcedId"))
+					.put("parameter", new JSONArray()
+							.put(new JSONObject().put("name", "custom_lis_outome_service_url").put("variable", "Result.uri"))
+							.put(new JSONObject().put("name", "custom_lis_result_sourcedid").put("variable", "Result.sourcedId"))
+							.put(new JSONObject().put("name", "custom_lis_person_name_given").put("variable", "Person.name.given"))
+							.put(new JSONObject().put("name", "custom_lis_person_contact_email_primary").put("variable", "Person.email.primary")));
 		
 		toolProfile.put("resource_handler", new JSONArray().put(resourceHandler));
 		
