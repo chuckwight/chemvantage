@@ -212,7 +212,7 @@ public class LTIRegistration extends HttpServlet {
 			String toolProxyString = toolProxy.toString();
 			String serviceEndpoint = getTCServiceEndpoint("application/vnd.ims.lti.v2.toolproxy+json",toolConsumerProfile);
 			//debug.append("tc_service_endpoint:" + serviceEndpoint);
-			debug.append("Tool Proxy: " + toolProxy.toString(2));
+			//debug.append("Tool Proxy: " + toolProxy.toString(2));
 			String tool_proxy_guid = reg_key; 	// temporary values
 			String tool_proxy_url = "";	
 			String tool_settings_url = "";
@@ -222,7 +222,7 @@ public class LTIRegistration extends HttpServlet {
 				//debug.append("lti_msg_formed_ok");
 				String reply = msg.send();
 
-				debug.append("tc_response_received: " + reply);
+				//debug.append("tc_response_received: " + reply);
 
 				try {
 					JSONObject replyBody = new JSONObject(reply);		
@@ -242,7 +242,7 @@ public class LTIRegistration extends HttpServlet {
 				c = new BLTIConsumer(tool_proxy_guid,oauth_secret,toolConsumerProfile.getString("guid"),"LTI-2p0");
 				c.putToolProxyURL(tool_proxy_url);
 				c.putToolSettingsURL(tool_settings_url);
-				String resultFormat = toolConsumerProfile.toString().contains("application/vnd.ims.lis.v2.Result+json")?"application/vnd.ims.lis.v2.Result+json":"application/xml";
+				String resultFormat = toolConsumerProfile.toString().toLowerCase().contains("application/vnd.ims.lis.v2.result+json")?"application/vnd.ims.lis.v2.result+json":"application/xml";
 				c.putResultServiceFormat(resultFormat);
 				ofy.put(c);
 			}
@@ -253,7 +253,7 @@ public class LTIRegistration extends HttpServlet {
 			// all steps completed successfully with no exceptions thrown, so report success back to TC administrator
 			response.sendRedirect(launch_presentation_return_url + "?status=success&tool_proxy_guid=" + tool_proxy_guid);
 		} catch (Exception e) {
-			doError(request,response,"Sorry, the Tool Proxy Registration failed.<br>" + e.getMessage() + "<br>You may try manual LTI registration using credentials that can be obtained at <a href=http://www.chemvantage.org/lti/registration>http://www.chemvantage.org/lti/registration/</a>.<br>" + debug.toString(),null,null);
+			doError(request,response,"Sorry, the Tool Proxy Registration failed.<br>" + e.getMessage() + "<br>You may try manual LTI registration using credentials that can be obtained at <a href=http://www.chemvantage.org/lti/registration>http://www.chemvantage.org/lti/registration/</a>.<br>" + (debug.length()>7?debug.toString():""),null,null);
 		}
 	}
 
@@ -327,7 +327,18 @@ public class LTIRegistration extends HttpServlet {
 	
 	List<String> getCapabilities(JSONObject toolConsumerProfile) throws JSONException {
 		// list of capabilities offered by the Tool Consumer
-		List<String> capabilities_wanted = Arrays.asList("basic-lti-launch-request","User.id","Person.email.primary","Person.name.given","Result.autocreate","Result.sourcedId");
+		List<String> capabilities_wanted = Arrays.asList(
+				"basic-lti-launch-request",
+				"User.id",
+				"Person.email.primary",
+				"Person.name.family",
+				"Person.name.given",
+				"Person.name.full",
+				"Membership.role",
+				"Context.id",
+				"Context.title",
+				"Result.autocreate",
+				"Result.sourcedId");
 		List<String> capability_offered = new ArrayList<String>();
 		List<String> capability_enabled = new ArrayList<String>();
 		
@@ -345,13 +356,10 @@ public class LTIRegistration extends HttpServlet {
 			.put("@context", "http://purl.imsglobal.org/ctx/lti/v2/ToolProxy")
 			.put("@type", "ToolProxy")
 			.put("lti_version", toolConsumerProfile.getString("lti_version"))
-			//.put("tool_proxy_guid", reg_key)
 			.put("tool_consumer_profile", tc_profile_url)
 			.put("tool_profile", getToolProfile(base_url,capability_enabled))
 			.put("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled))
-			.put("enabled_capability", new JSONArray(capability_enabled));
-		
-			//toolProxy.put("capability_offered", toolConsumerProfile.getJSONArray("capability_offered"));
+			.put("enabled_capability", new JSONArray());		
 		return toolProxy;
 	}
 
@@ -391,17 +399,8 @@ public class LTIRegistration extends HttpServlet {
 						.put(new JSONObject()
 							.put("message_type", "basic-lti-launch-request")
 							.put("path", "lti/")
-							.put("format", "application/x-www-form-urlencoded")))
-					.put("resource_type", new JSONObject()
-						.put("code", "assessment"))
-					.put("enabled_capability", new JSONArray()
-							.put("Result.autocreate")
-							.put("Result.sourcedId"))
-					.put("parameter", new JSONArray()
-							.put(new JSONObject().put("name", "custom_lis_outome_service_url").put("variable", "Result.uri"))
-							.put(new JSONObject().put("name", "custom_lis_result_sourcedid").put("variable", "Result.sourcedId"))
-							.put(new JSONObject().put("name", "custom_lis_person_name_given").put("variable", "Person.name.given"))
-							.put(new JSONObject().put("name", "custom_lis_person_contact_email_primary").put("variable", "Person.email.primary")));
+							.put("parameter", new JSONArray())
+							.put("enabled_capability", new JSONArray(capability_enabled))));
 		
 		toolProfile.put("resource_handler", new JSONArray().put(resourceHandler));
 		
@@ -418,7 +417,6 @@ public class LTIRegistration extends HttpServlet {
 			JSONObject resultService = new JSONObject()
 				.put("@type","RestServiceProfile")
 				.put("service", getTCServiceEndpoint("application/vnd.ims.lis.v2.result+json",toolConsumerProfile))
-				.put("format", "application/vnd.ims.lis.v2.result+json")
 				.put("action", new JSONArray()
 					.put("GET")
 					.put("PUT"));

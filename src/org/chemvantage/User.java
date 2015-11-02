@@ -175,6 +175,18 @@ public class User implements Comparable<User>,Serializable {
 		if (lis_person_name_given==null) lis_person_name_given = request.getParameter("lis_person_name_full");
 		if (lis_person_name_given==null) lis_person_name_given = request.getParameter("custom_lis_person_name_full");
 		user.setFirstName(lis_person_name_given);
+		
+		String roles = request.getParameter("roles");
+		if (roles!=null) {
+			roles = roles.toLowerCase();
+			if (roles.contains("instructor")) user.setIsInstructor(true);
+			if (roles.contains("administrator")) user.setIsAdministrator(true);
+			if (user.isInstructor() || user.isAdministrator()) {
+				String lis_person_name_family = request.getParameter("lis_person_name_family");
+				if (lis_person_name_family==null) lis_person_name_family = request.getParameter("custom_lis_person_name_family");
+				user.setLastName(lis_person_name_family);
+			}
+		}
 
 		String lis_person_contact_email_primary = request.getParameter("lis_person_contact_email_primary");
 		if (lis_person_contact_email_primary==null) lis_person_contact_email_primary = request.getParameter("custom_lis_person_contact_email_primary");
