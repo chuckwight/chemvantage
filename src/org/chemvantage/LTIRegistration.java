@@ -196,7 +196,7 @@ public class LTIRegistration extends HttpServlet {
 			if (launch_presentation_return_url==null || launch_presentation_return_url.isEmpty()) throw new Exception("Required launch_presentation_return_url parameter is missing.");
 			
 			JSONObject toolConsumerProfile = fetchToolConsumerProfile(tc_profile_url); 
-			//debug.append(toolConsumerProfile.toString() + "<br/>");
+			debug.append("Tool Consumer Profile: " + toolConsumerProfile.toString() + "<br/>");
 			
 			List<String> capability_enabled = getCapabilities(toolConsumerProfile);
 			//for (String c:capability_enabled) debug.append(c + "<br/>");
@@ -242,7 +242,7 @@ public class LTIRegistration extends HttpServlet {
 				c = new BLTIConsumer(tool_proxy_guid,oauth_secret,toolConsumerProfile.getString("guid"),"LTI-2p0");
 				c.putToolProxyURL(tool_proxy_url);
 				c.putToolSettingsURL(tool_settings_url);
-				String resultFormat = toolConsumerProfile.toString().toLowerCase().contains("application/vnd.ims.lis.v2.result+json")?"application/vnd.ims.lis.v2.result+json":"application/xml";
+				String resultFormat = toolConsumerProfile.toString().toLowerCase().contains("application/vnd.ims.lis.v2.result+json")?"application/vnd.ims.lis.v2.result+json":"application/vnd.ims.lti.v1.outcome+xml";
 				c.putResultServiceFormat(resultFormat);
 				ofy.put(c);
 			}
@@ -337,8 +337,11 @@ public class LTIRegistration extends HttpServlet {
 				"Membership.role",
 				"Context.id",
 				"Context.title",
+				"CourseSection.sourcedId",
+				"CourseOffering.title",
 				"Result.autocreate",
-				"Result.sourcedId");
+				"Result.sourcedId",
+				"Result.url");
 		List<String> capability_offered = new ArrayList<String>();
 		List<String> capability_enabled = new ArrayList<String>();
 		
@@ -414,13 +417,17 @@ public class LTIRegistration extends HttpServlet {
 		JSONArray toolService = new JSONArray();
 		
 		if (capability_enabled.contains("Result.autocreate")) {
-			JSONObject resultService = new JSONObject()
-				.put("@type","RestServiceProfile")
-				.put("service", getTCServiceEndpoint("application/vnd.ims.lis.v2.result+json",toolConsumerProfile))
-				.put("action", new JSONArray()
-					.put("GET")
-					.put("PUT"));
-			toolService.put(resultService);
+			String serviceEndpoint = getTCServiceEndpoint("application/vnd.ims.lis.v2.result+json",toolConsumerProfile);
+			if (serviceEndpoint==null) serviceEndpoint = getTCServiceEndpoint("application/vnd.ims.lti.v1.outcome+xml",toolConsumerProfile);
+			if (serviceEndpoint!=null) {  // found a valid service endpoint for the LIS outcomes service
+				JSONObject resultService = new JSONObject()
+						.put("@type","RestServiceProfile")
+						.put("service", serviceEndpoint)
+						.put("action", new JSONArray()
+								.put("GET")
+								.put("PUT"));
+				toolService.put(resultService);
+			}
 		}
 		
 		if (toolService.length()>0) securityContract.put("tool_service",toolService);
@@ -434,7 +441,7 @@ public class LTIRegistration extends HttpServlet {
 		for (int i=0; i<service_offered.length(); i++) {
 			try {
 				JSONObject s = service_offered.getJSONObject(i);
-				if (s.has("format")) {
+				if (s.getString("@type").equals("RestService")) {
 					JSONArray formats = s.getJSONArray("format");
 					for (int j=0; j<formats.length(); j++) {
 						if (formats.getString(j).toLowerCase().equals(formatString.toLowerCase())) {

@@ -209,9 +209,9 @@ public class LTILaunch extends HttpServlet {
 		}
 		user.changeGroups(g.id);
 		
-		// Check to see if the LMS is providing an LIS Outcome Service URL (LTI v1.1)
+		// Check to see if the LMS is providing an LIS Outcome Service URL (LTI v1.1 or 2.0)
 		String lisOutcomeServiceUrl = request.getParameter("lis_outcome_service_url");
-		if (lisOutcomeServiceUrl==null) lisOutcomeServiceUrl = request.getParameter("custom_lis_outcome_service_url");
+		if (lisOutcomeServiceUrl==null) lisOutcomeServiceUrl = request.getParameter("custom_result_url");
 		
 		// the lis_result_sourcedid is an optional LTI parameter that specifies a context gradebook entry point
 		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
