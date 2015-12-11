@@ -87,7 +87,6 @@ public class User implements Comparable<User>,Serializable {
 		try {
 			Objectify ofy = ObjectifyService.begin();
 			String userId = (String)session.getAttribute("UserId");
-			System.out.println("UserId: " + userId);
 			User user = ofy.get(User.class,userId);
 			if (user.alias != null) { // follow the alias chain to the end
 				List<String> userIds = new ArrayList<String>();
@@ -97,7 +96,7 @@ public class User implements Comparable<User>,Serializable {
 				session.setAttribute("UserId",user.id);
 				Domain d = ofy.query(Domain.class).filter("domainName", user.domain).get();
 				if (d!=null) {
-					d.lastLogin = new Date();
+					d.setLastLogin(new Date());
 					ofy.put(d);
 				}
 			}

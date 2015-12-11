@@ -139,7 +139,7 @@ public class OpenIdLaunch extends HttpServlet {
 			Domain domain = ofy.query(Domain.class).filter("domainName",user.domain).get();
 			Date now = new Date();
 			if (domain != null) {
-				domain.lastLogin = now;
+				domain.setLastLogin(now);
 				ofy.put(domain);
 			}
 			resp.sendRedirect(homePath);

@@ -169,7 +169,7 @@ public class LTILaunch extends HttpServlet {
 			domain = new Domain(oauth_consumer_key);
 			ofy.put(domain);
 		} else {
-			domain.lastLogin = now;
+			domain.setLastLogin(now);
 			ofy.put(domain);
 		}
 		

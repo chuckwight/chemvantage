@@ -32,18 +32,19 @@ import com.googlecode.objectify.annotation.Unindexed;
 
 @Cached @Unindexed 
 public class Domain {
-	@Id Long id;
-@Indexed		String domainName;
-		Date created;
-@Indexed		Date lastLogin;
-		int activeUsers;
-		int basicAccounts;
-		int premiumAccounts;
-		int seatsPurchased;
-		int seatsAvailable;
-		boolean supportsResultService = false;
-		List<String> capabilities = new ArrayList<String>();
-		List<String> domainAdmins = new ArrayList<String>();
+	@Id 		Long id;
+	@Indexed	String domainName;
+	@Indexed	Date lastLogin;
+	@Indexed	double dailyLoginsAvg; 
+				Date created;
+				int activeUsers;
+				int basicAccounts;
+				int premiumAccounts;
+				int seatsPurchased;
+				int seatsAvailable;
+				boolean supportsResultService = false;
+				List<String> capabilities = new ArrayList<String>();
+				List<String> domainAdmins = new ArrayList<String>();
 		
 	@Transient transient Objectify ofy = ObjectifyService.begin();
 	
@@ -120,4 +121,23 @@ public class Domain {
 		return seatsAvailable;
 	}
 	
+	public void setLastLogin(Date login) {
+		Date now = new Date();
+		if (login.before(now) || login.equals(now))  { // current login
+			this.dailyLoginsAvg = getDailyLoginsAvg();
+			ofy.put(this);
+		}
+		this.lastLogin = login;
+	}
+	
+	public double getDailyLoginsAvg() {
+		Date now = new Date();
+		if (this.dailyLoginsAvg==0.0) this.dailyLoginsAvg = 1.0;
+		try {
+			double interval = (now.getTime() - lastLogin.getTime())/86400L; // days since last login
+			return this.dailyLoginsAvg*(7+interval)/(this.dailyLoginsAvg*interval*interval+7); // exponential 7-day moving average 
+		} catch (Exception e) {
+			return this.dailyLoginsAvg;
+		}
+	}
 }
