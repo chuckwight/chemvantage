@@ -122,20 +122,17 @@ public class Domain {
 	}
 	
 	public void setLastLogin(Date login) {
-		Date now = new Date();
-		if (login.before(now) || login.equals(now))  { // current login
-			this.dailyLoginsAvg = getDailyLoginsAvg();
-			ofy.put(this);
-		}
 		this.lastLogin = login;
+		this.dailyLoginsAvg = this.dailyLoginsAvg==0.0?1.0:getDailyLoginsAvg();
+		ofy.put(this);
 	}
-	
+
 	public double getDailyLoginsAvg() {
-		Date now = new Date();
-		if (this.dailyLoginsAvg==0.0) this.dailyLoginsAvg = 1.0;
 		try {
+			Date now = new Date();
 			double interval = (now.getTime() - lastLogin.getTime())/86400L; // days since last login
-			return this.dailyLoginsAvg*(7+interval)/(this.dailyLoginsAvg*interval*interval+7); // exponential 7-day moving average 
+			int w = (int) interval + 1;   // adds extra weighting factor for more than 1 day
+			return this.dailyLoginsAvg*(6+w)/(6 + this.dailyLoginsAvg*interval*w);  // exponential 7-day moving average 
 		} catch (Exception e) {
 			return this.dailyLoginsAvg;
 		}
