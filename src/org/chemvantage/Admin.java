@@ -178,7 +178,7 @@ public class Admin extends HttpServlet {
 			buf.append("<h3>Most Active ChemVantage Domains</h3>");
 			List<Domain> domains = ofy.query(Domain.class).order("-dailyLoginsAvg").limit(10).list();
 			if (domains.size()>0) {
-				buf.append("<table><tr><td>Domain Name</td><td>Last Login</td><td>Users</td><td>Administrator</td><td>Avg Daily Logins</td></tr>");
+				buf.append("<table><tr><td>Domain Name</td><td>Last Login</td><td>Users</td><td style='text-align:center'>Administrator</td><td>Avg Daily Logins</td></tr>");
 				for (Domain d : domains) {
 					int nUsers = ofy.query(User.class).filter("domain",d.domainName).count();
 					if (d.activeUsers!=nUsers) {
@@ -196,7 +196,7 @@ public class Admin extends HttpServlet {
 					} catch (Exception e) {
 						buf.append ("(not assigned)");
 					}
-					buf.append("</td><td>" + d.getDailyLoginsAvg() + "</td></tr>");
+					buf.append("</td><td style='text-align:center'>" + d.getDailyLoginsAvg() + "</td></tr>");
 				}
 				buf.append("</table>");
 			} else buf.append("No domains are currently active.");

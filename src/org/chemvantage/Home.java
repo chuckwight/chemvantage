@@ -119,6 +119,7 @@ public class Home extends HttpServlet {
 	}
 
 	static String getHeader(User user) {
+		if (user==null) return Login.header;
 		StringBuffer buf = new StringBuffer();
 		try {
 			String now = new Date().toString();
