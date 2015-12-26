@@ -97,7 +97,7 @@ public class Feedback extends HttpServlet {
 				sendEmailToAdmin();
 			} else if (user.isAdministrator() && userRequest.equals("Delete Report")) {
 				removeReport(request);
-				doGet(request,response);	
+				out.println(Home.getHeader(user) + feedbackForm(user) + Home.footer);	
 			} else if (user.isAdministrator() && userRequest.equals("Reply")) {
 				out.println(Home.getHeader(user) + replyForm(user,request) + Home.footer);
 			} else if (user.isAdministrator() && userRequest.equals("Send Reply")) {

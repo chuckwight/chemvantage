@@ -196,7 +196,7 @@ public class LTIRegistration extends HttpServlet {
 			if (launch_presentation_return_url==null || launch_presentation_return_url.isEmpty()) throw new Exception("Required launch_presentation_return_url parameter is missing.");
 			
 			JSONObject toolConsumerProfile = fetchToolConsumerProfile(tc_profile_url); 
-			debug.append("Tool Consumer Profile: " + toolConsumerProfile.toString() + "<br/>");
+			//debug.append("Tool Consumer Profile: " + toolConsumerProfile.toString() + "<br/>");
 			
 			List<String> capability_enabled = getCapabilities(toolConsumerProfile);
 			//for (String c:capability_enabled) debug.append(c + "<br/>");
@@ -211,31 +211,30 @@ public class LTIRegistration extends HttpServlet {
 			
 			String toolProxyString = toolProxy.toString();
 			String serviceEndpoint = getTCServiceEndpoint("application/vnd.ims.lti.v2.toolproxy+json",toolConsumerProfile);
+			if (serviceEndpoint==null) throw new Exception("Could not find a tool proxy registration endpoint in the Tool Consumer profile.");
 			//debug.append("tc_service_endpoint:" + serviceEndpoint);
-			//debug.append("Tool Proxy: " + toolProxy.toString(2));
+			debug.append("Tool Proxy: " + toolProxy.toString());
 			String tool_proxy_guid = reg_key; 	// temporary values
 			String tool_proxy_url = "";	
 			String tool_settings_url = "";
 
-			if (serviceEndpoint != null) {  // try to register the ToolProxy
-				LTIMessage msg = new LTIMessage("application/vnd.ims.lti.v2.toolproxy+json","application/vnd.ims.v2.toolproxy.id+json",toolProxyString,serviceEndpoint,reg_key,reg_password);
-				//debug.append("lti_msg_formed_ok");
-				String reply = msg.send();
+			LTIMessage msg = new LTIMessage("application/vnd.ims.lti.v2.toolproxy+json","application/vnd.ims.v2.toolproxy.id+json",toolProxyString,serviceEndpoint,reg_key,reg_password);
+			//debug.append("lti_msg_formed_ok");
+			String reply = msg.send();
 
-				//debug.append("tc_response_received: " + reply);
+			//debug.append("tc_response_received: " + reply);
 
-				try {
-					JSONObject replyBody = new JSONObject(reply);		
-					//debug.append("json_reply_ok.");
-					tool_proxy_guid = replyBody.getString("tool_proxy_guid");
-					tool_proxy_url = replyBody.getString("@id");
-					//tool_settings_url = replyBody.getString("custom_uri");
-					if (tool_proxy_guid.isEmpty() || tool_proxy_url.isEmpty()) throw new Exception("Tool Proxy guid and/or URL was missing.");
-				} catch (Exception e) {
-					throw new Exception ("Could not parse response to tool proxy registration request.");
-				}
-			} else doError(request,response, "Could not find a tool proxy registration endpoint in the Tool Consumer profile.",null,null);
-			
+			try {
+				JSONObject replyBody = new JSONObject(reply);		
+				//debug.append("json_reply_ok.");
+				tool_proxy_guid = replyBody.getString("tool_proxy_guid");
+				tool_proxy_url = replyBody.getString("@id");
+				//tool_settings_url = replyBody.getString("custom_uri");
+				if (tool_proxy_guid.isEmpty() || tool_proxy_url.isEmpty()) throw new Exception("Tool Proxy guid and/or URL was missing.");
+			} catch (Exception e) {
+				throw new Exception ("Could not parse response to tool proxy registration request.");
+			}
+
 			// check to make sure that this is the first registration for this tool consumer
 			BLTIConsumer c = ofy.find(BLTIConsumer.class,tool_proxy_guid);
 			if (c==null) {  // this registration is for a new oath_consumer_key
@@ -333,7 +332,6 @@ public class LTIRegistration extends HttpServlet {
 				"Person.email.primary",
 				"Person.name.family",
 				"Person.name.given",
-				"Person.name.full",
 				"Membership.role",
 				"Context.id",
 				"Context.title",
@@ -356,13 +354,14 @@ public class LTIRegistration extends HttpServlet {
 	JSONObject constructToolProxy(JSONObject toolConsumerProfile,String tc_profile_url,StringBuffer base_url,String reg_key,String shared_secret,List<String> capability_enabled) 
 			throws Exception {
 		JSONObject toolProxy = new JSONObject()
-			.put("@context", "http://purl.imsglobal.org/ctx/lti/v2/ToolProxy")
+			.put("@context", new JSONArray().put("http://purl.imsglobal.org/ctx/lti/v2/ToolProxy"))
 			.put("@type", "ToolProxy")
+			.put("@id", tc_profile_url)
 			.put("lti_version", toolConsumerProfile.getString("lti_version"))
 			.put("tool_consumer_profile", tc_profile_url)
 			.put("tool_profile", getToolProfile(base_url,capability_enabled))
-			.put("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled))
-			.put("enabled_capability", new JSONArray());		
+			.put("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled));
+			//.put("enabled_capability", new JSONArray());		
 		return toolProxy;
 	}
 
@@ -430,7 +429,7 @@ public class LTIRegistration extends HttpServlet {
 			}
 		}
 		
-		if (toolService.length()>0) securityContract.put("tool_service",toolService);
+		securityContract.put("tool_service",toolService);
 		
 		return securityContract;
 		

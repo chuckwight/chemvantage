@@ -249,41 +249,41 @@ public class Question implements Serializable {
 		char choice = 'a';
 		switch (getQuestionType()) {
 		case 1: // Multiple Choice
-			buf.append("<b>" + text + "</b><br>");
+			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best answer:</FONT><br>");
 			buf.append("<UL>");
 			for (int i = 0; i < nChoices; i++) {
-				buf.append("<input type=radio name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED>":">") + choices.get(i) + "<br>");
+				buf.append("<label><input type=radio name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED>":">") + choices.get(i) + "</label><br>");
 				choice++;
 			}
 			buf.append("</UL>");
 			break;
 		case 2: // True/False
-			buf.append("<b>" + text + "</b><br>");
+			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select true or false:</FONT><br>");
 			buf.append("<UL>");
-			buf.append("<input type=radio name=" + this.id + " value='true'" + (studentAnswer.equals("true")?" CHECKED>":">") + " True<br>");
-			buf.append("<input type=radio name=" + this.id + " value='false'" + (studentAnswer.equals("false")?" CHECKED>":">") + " False<br>");
+			buf.append("<label><input type=radio name=" + this.id + " value='true'" + (studentAnswer.equals("true")?" CHECKED>":">") + " True</label><br>");
+			buf.append("<label><input type=radio name=" + this.id + " value='false'" + (studentAnswer.equals("false")?" CHECKED>":">") + " False</label><br>");
 			buf.append("</UL>");
 			break;
 		case 3: // Select Multiple
-			buf.append("<b>" + text + "</b><br>");
+			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><br>");
 			buf.append("<UL>");
 			for (int i = 0; i < nChoices; i++) {
-				buf.append("<input type=checkbox name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED>":">") + choices.get(i) + "<br>");
+				buf.append("<label><input type=checkbox name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED>":">") + choices.get(i) + "</label><br>");
 				choice++;
 			}
 			buf.append("</UL>");
 			break;
 		case 4: // Fill-in-the-Word
-			buf.append("<b>" + text + "</b><br>");
+			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br>");
 			buf.append("<input id=" + this.id + " type=text name=" + this.id + " value='" + CharHider.quot2html(studentAnswer) + "'>");
-			buf.append("<b>" + tag + "</b><br>");
+			buf.append(tag + "<br>");
 			break;
 		case 5: // Numeric Answer
-			buf.append("<b>" + parseString(text) + "</b><br>");
+			buf.append(parseString(text) + "<br />");
 			switch (getNumericItemType()) {
 			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>"); break;
 			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
@@ -292,7 +292,7 @@ public class Question implements Serializable {
 			default:
 			}			
 			buf.append("<input type=text name=" + this.id + " value='" + studentAnswer + "'>");
-			buf.append("<b>" + parseString(tag) + "</b><br>");
+			buf.append(parseString(tag) + "<br />");
 			break;        
 		}
 		return buf.toString();
@@ -308,7 +308,7 @@ public class Question implements Serializable {
 		char choice = 'a';
 		switch (getQuestionType()) {
 		case 1: // Multiple Choice
-			buf.append("<b>" + text + "</b><br>");
+			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best answer:</FONT><UL>");
 			for (int i = 0; i < nChoices && i < choices.size(); i++) {
 				buf.append("<LI>" 
@@ -321,7 +321,7 @@ public class Question implements Serializable {
 			buf.append("</UL>");
 			break;
 		case 2: // True/False
-			buf.append("<b>" + text + "</b><br>");
+			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select true or false:</FONT><UL>");
 			buf.append("<LI>" 
 					+ (correctAnswer.equals("true")?"<B>True</B>":"<FONT COLOR=#888888>True</FONT>") 
@@ -332,7 +332,7 @@ public class Question implements Serializable {
 			buf.append("</UL>");
 			break;
 		case 3: // Select Multiple
-			buf.append("<b>" + text + "</b><br>");
+			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><UL>");
 			for (int i = 0; i < nChoices && i < choices.size(); i++) {
 				buf.append("<LI>"
@@ -345,15 +345,15 @@ public class Question implements Serializable {
 			buf.append("</UL>");
 			break;
 		case 4: // Fill-in-the-Word
-			buf.append("<b>" + text + "</b><br>");
+			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br>");
 			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TD>"
 					+ "<b>" + CharHider.quot2html(correctAnswer) + "</b>"
 					+ "</TD></TR></TABLE>");
-			buf.append("<b>" + tag + "</b><p><p>");
+			buf.append(tag + "<p><p>");
 			break;
 		case 5: // Numeric Answer
-			buf.append("<b>" + parseString(text) + "</b><br>");
+			buf.append(parseString(text) + "<br />");
 			switch (getNumericItemType()) {
 			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>"); break;
 			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
@@ -364,7 +364,7 @@ public class Question implements Serializable {
 			buf.append("<TABLE><TR><TD><TABLE BORDER=1 CELLSPACING=0><TR><TD>"
 					+ "<b>" + getCorrectAnswer() + "</b>"
 					+ "</TD></TR></TABLE></TD><TD>");
-			buf.append("<b>" + parseString(tag) + "</b></TD></TR></TABLE>");
+			buf.append(parseString(tag) + "</TD></TR></TABLE>");
 			if (hint.length()>0) {
 				buf.append("Hint:<br>" + parseString(hint) + "<p>");
 			}
@@ -385,7 +385,7 @@ public class Question implements Serializable {
 		char choice = 'a';
 		switch (getQuestionType()) {
 		case 1: // Multiple Choice
-			buf.append("<b>" + text + "</b><br>");
+			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best answer:</FONT><br>");
 			for (int i = 0; i < nChoices; i++) {
 				buf.append("&nbsp;" + choice + ". "
@@ -396,7 +396,7 @@ public class Question implements Serializable {
 			}
 			break;
 		case 2: // True/False
-			buf.append("<b>" + text + "</b><br>");
+			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select true or false:</FONT><UL>");
 			buf.append("<LI>" 
 					+ (correctAnswer.equals("true")?"<B>True</B>":"<FONT COLOR=#888888>True</FONT>") 
@@ -407,7 +407,7 @@ public class Question implements Serializable {
 			buf.append("</UL>");
 			break;
 		case 3: // Select Multiple
-			buf.append("<b>" + text + "</b><br>");
+			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><BR>");
 			for (int i = 0; i < nChoices; i++) {
 				buf.append("&nbsp;" + choice + ". "
@@ -418,16 +418,16 @@ public class Question implements Serializable {
 			}
 			break;
 		case 4: // Fill-in-the-Word
-			buf.append("<b>" + text + "</b><br>");
+			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br>");
 			String[] answers = correctAnswer.split(",");
 			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TD>"
 					+ "<b>" + CharHider.quot2html(answers[0]) + "</b>"
 					+ "</TD></TR></TABLE>");
-			if (tag.length() > 0) buf.append("<b>" + tag + "</b><br>");
+			if (tag.length() > 0) buf.append(tag + "<br />");
 			break;
 		case 5: // Numeric Answer
-			buf.append("<b>" + parseString(text) + "</b><br>");
+			buf.append(parseString(text) + "<br />");
 			switch (getNumericItemType()) {
 			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>"); break;
 			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
@@ -438,7 +438,7 @@ public class Question implements Serializable {
 			buf.append("<TABLE><TR><TD><TABLE BORDER=1 CELLSPACING=0><TR><TD>"
 					+ "<b>" + getCorrectAnswer() + "</b>"
 					+ "</TD></TR></TABLE></TD><TD>");
-			buf.append("<b>" + parseString(tag) + "</b></TD></TR></TABLE>");
+			buf.append(parseString(tag) + "</TD></TR></TABLE>");
 			if (hint.length()>0) {
 				buf.append("Hint:<br>" + parseString(hint) + "<p>");
 			}

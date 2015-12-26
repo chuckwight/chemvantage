@@ -64,8 +64,7 @@ public class LTILaunch extends HttpServlet {
 		try {
 			User user = User.getInstance(request.getSession(true));
 			if (user==null) throw new Exception();  // unauthenticated user
-			// resource_link_id is a required parameter for LTI; if missing, send to registration page
-			if (request.getParameter("resource_link_id")==null && request.getParameter("custom_resource_link_id")==null) throw new Exception();
+			if (request.getParameter("resource_link_id")==null) throw new Exception(); // missing required LTI parameter
 			
 			if ("pick".equals(request.getParameter("UserRequest")))
 				out.println(pickResourceForm(user,request));
@@ -118,11 +117,6 @@ public class LTILaunch extends HttpServlet {
 			return;
 		}
 		
-		String userId = request.getParameter("user_id");
-		userId = oauth_consumer_key + (userId==null?"":":"+userId);
-		
-		String context_id = request.getParameter("context_id");
-		
 		String oauth_secret = BLTIConsumer.getSecret(oauth_consumer_key);
 		if (oauth_secret==null) {
 			doError(request,response,"Invalid oauth_consumer_key.",null,null);
@@ -150,18 +144,21 @@ public class LTILaunch extends HttpServlet {
 			System.out.println("Provider failed to validate message");
 			System.out.println(e.getMessage());
 			if ( base_string != null ) System.out.println(base_string);
-			doError(request, response,"Launch data validation failed.", context_id, null);
+			doError(request, response,"Launch data validation failed.", null, null);
 			return;
 		}
 		// BLTI Launch message was validated successfully. 
 
+		// Gather some information about the user
+		String userId = request.getParameter("user_id");
+		userId = oauth_consumer_key + (userId==null?"":":"+userId);
+				
 		// Provision a new user account if necessary, and store the userId in the user's session
 		HttpSession session = request.getSession(true);
 		session.setAttribute("UserId",userId);
 		User user = User.getInstance(session);
 		if (user==null) user = User.createBLTIUser(request); // first-ever login for this user
 		
-	
 		// Create the domain if it doesn't already exist
 		Domain domain = ofy.query(Domain.class).filter("domainName",oauth_consumer_key).get();
 		Date now = new Date();
@@ -194,28 +191,33 @@ public class LTILaunch extends HttpServlet {
 			user.setPremium(true);  // All LTI users have free premium accounts
 			ofy.put(user);	
 		}
+
+		String context_id = request.getParameter("context_id");
+		String context_title = request.getParameter("context_title");
+		if (context_id==null) context_id = request.getParameter("custom_context_id");
+		if (context_id==null) {
+			context_id = oauth_consumer_key + ":defaultGroup";
+			context_title = "default group";
+		}
+		if (context_title==null) context_title = request.getParameter("custom_context_title");
+		if (context_title==null) context_title = "context_id"; // missing course title
 		
 		// Provision a new context (group), if necessary and put the user into it
-		Group g = null;
-		if (context_id==null || context_id.isEmpty()) context_id = oauth_consumer_key + ":defaultGroup";
-		g = ofy.query(Group.class).filter("domain",oauth_consumer_key).filter("context_id",context_id).get();
+		Group g = ofy.query(Group.class).filter("domain",oauth_consumer_key).filter("context_id",context_id).get();	
 		if (g == null) { // create this new group
-			String contextTitle = request.getParameter("context_title");
-			if (contextTitle==null) contextTitle = request.getParameter("custom_context_title");
-			if (contextTitle==null) contextTitle = "";
-			g = new Group("BLTI",context_id,contextTitle);
+			g = new Group("BLTI",context_id,context_title);
 			g.domain = domain.domainName;
 			ofy.put(g);
 		}
 		user.changeGroups(g.id);
 		
 		// Check to see if the LMS is providing an LIS Outcome Service URL (LTI v1.1 or 2.0)
-		String lisOutcomeServiceUrl = request.getParameter("lis_outcome_service_url");
-		if (lisOutcomeServiceUrl==null) lisOutcomeServiceUrl = request.getParameter("custom_result_url");
+		String lisOutcomeServiceUrl = null;
+		if (lti_version.equals("LTI-1p0")) lisOutcomeServiceUrl = request.getParameter("lis_outcome_service_url");
+		if (lti_version.equals("LTI-2p0")) lisOutcomeServiceUrl = request.getParameter("custom_result_url");
 		
 		// the lis_result_sourcedid is an optional LTI parameter that specifies a context gradebook entry point
 		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
-		if (lis_result_sourcedid==null) lis_result_sourcedid = request.getParameter("custom_lis_result_sourcedid");
 		
 		boolean supportsLIS = lisOutcomeServiceUrl != null && lis_result_sourcedid != null;
 		

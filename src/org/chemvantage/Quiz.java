@@ -342,8 +342,8 @@ public class Quiz extends HttpServlet {
 				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",user.id));  // put report into the Task Queue
 			}
 			
-			buf.append("<h3>Your score on this quiz is " + studentScore 
-					+ " point" + (studentScore==1?"":"s") + " out of a possible " + qt.possibleScore + " points.</h3>\n");
+			buf.append("<h4>Your score on this quiz is " + studentScore 
+					+ " point" + (studentScore==1?"":"s") + " out of a possible " + qt.possibleScore + " points.</h4>\n");
 
 			if (studentScore == qt.possibleScore) {
 				buf.append("<H2>Congratulations on a perfect score! Good job.</H2>\n");
@@ -381,10 +381,10 @@ public class Quiz extends HttpServlet {
 			}
 			else {
 				int leftBlank = qt.possibleScore - studentScore - wrongAnswers;
-				if (leftBlank>0) buf.append("<h4>" + leftBlank + " question" 
-						+ (leftBlank>1?"s were":" was") + " left unanswered (blank).</h4>");
-				if (wrongAnswers>0) buf.append("<h4>" + wrongAnswers + " question" 
-						+ (wrongAnswers>1?"s were":" was") + " answered incorrectly:</h4>" + missedQuestions.toString());
+				if (leftBlank>0) buf.append(leftBlank + " question" 
+						+ (leftBlank>1?"s were":" was") + " left unanswered (blank).<p>");
+				if (wrongAnswers>0) buf.append(wrongAnswers + " question" 
+						+ (wrongAnswers>1?"s were":" was") + " answered incorrectly:<p>" + missedQuestions.toString());
 			
 				// print some words of encouragement:
 				buf.append("<h4>Improve Your Score</h4>\n");
