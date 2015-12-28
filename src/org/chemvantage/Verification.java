@@ -216,12 +216,10 @@ public class Verification extends HttpServlet {
 				}
 				buf.append("<TR><TD ALIGN=RIGHT>SMS address:</TD><TD>" + smsAddress + "</TD></TR>");	
 			}
-			buf.append("<TR><TD ALIGN=RIGHT>AuthDomain:</TD><TD>" + user.authDomain + "</TD></TR>");
-			buf.append("<TR><TD ALIGN=RIGHT>Domain:</TD><TD>" + user.domain + "</TD></TR>");
-			buf.append("<TR><TD ALIGN=RIGHT>UserID:</TD><TD>" + user.id + "</TD></TR>");
-			if (user.roles>0) {
-				buf.append("<TR><TD ALIGN=RIGHT>Roles:</TD><TD>" + (user.isInstructor()?"Instructor ":"") + (user.isAdministrator()?"Administrator ":"") +"</TD></TR>");			
-			}
+			buf.append("<TR><TD ALIGN=RIGHT>AuthDomain: </TD><TD>" + user.authDomain + "</TD></TR>");
+			buf.append("<TR><TD ALIGN=RIGHT>Domain: </TD><TD>" + user.domain + "</TD></TR>");
+			buf.append("<TR><TD ALIGN=RIGHT>UserID: </TD><TD>" + user.id + "</TD></TR>");
+			buf.append("<TR><TD ALIGN=RIGHT>Roles: </TD><TD>Learner " + (user.isInstructor()?"Instructor ":"") + (user.isContributor()?"Author ":"") + (user.isEditor()?"Editor ":"") + (user.isAdministrator()?"Administrator ":"") +"</TD></TR>");			
 			buf.append("<TR><TD ALIGN=RIGHT>Account type: </TD><TD>" + (user.hasPremiumAccount()?"premium":"basic") + "</TD></TR>");
 			if (user.myGroupId>0L) { // user already belongs to a group
 				Group myGroup = ofy.find(Group.class,user.myGroupId);
