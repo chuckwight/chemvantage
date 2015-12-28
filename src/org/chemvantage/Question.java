@@ -219,7 +219,7 @@ public class Question implements Serializable {
 				 *  2 - Output containing the specified number of significant digits
 				 */
 				switch (outputType) {
-					case 0:	buf.append(pieces[i]);
+					case 0:	buf.append(value);   //buf.append(pieces[i]);
 							break;
 					case 1:	DecimalFormat df = new DecimalFormat();
 							if ((Math.abs(value) < 100) && (value - Math.floor(value) == 0)) df.applyPattern("0"); // small integer output
@@ -464,10 +464,10 @@ public class Question implements Serializable {
 			case 4: buf.append("Reminder: The correct answer will always form a complete, grammatically correct sentence."); break; // FILL_IN_WORD
 			case 5: // NUMERIC
 				switch (getNumericItemType()) {
-					case 0: buf.append("Reminder: Your answer must have exactly the same value as the correct answer.");
-					case 1: buf.append("Reminder: Your answer must have exactly the same value as the correct answer and have no more than " + significantFigures + " significant figures.");
-					case 2: buf.append("Reminder: Your answer must be within " + requiredPrecision + "% of the correct answer.");
-					case 3: buf.append("Reminder: Your answer must have no more than " + significantFigures + " significant figures and be within " + requiredPrecision + "% of the correct answer.");
+					case 0: buf.append("Reminder: Your answer must have exactly the same value as the correct answer."); break;
+					case 1: buf.append("Reminder: Your answer must have exactly the same value as the correct answer and must have " + significantFigures + " significant figures."); break;
+					case 2: buf.append("Reminder: Your answer must be within " + requiredPrecision + "% of the correct answer."); break;
+					case 3: buf.append("Reminder: Your answer must have " + significantFigures + " significant figures and be within " + requiredPrecision + "% of the correct answer."); break;
 					default:
 				}
 			default:
