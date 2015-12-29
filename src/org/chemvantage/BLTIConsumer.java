@@ -22,6 +22,8 @@ import java.util.Random;
 
 import javax.persistence.Id;
 
+import com.google.appengine.labs.repackaged.org.json.JSONException;
+import com.google.appengine.labs.repackaged.org.json.JSONObject;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.ObjectifyService;
@@ -35,6 +37,7 @@ public class BLTIConsumer {
 	String lti_version;
 	String tool_consumer_guid;
 	String toolProxyURL;  // Tool Consumer URL containing the tool proxy contract for LTI v2.0
+	String toolProxy;
 	String toolSettingsURL; // Tool Consumer URL to PUT changes to settings in tool proxy
 	String resultServiceFormat;
 	String email;
@@ -98,6 +101,18 @@ public class BLTIConsumer {
 	
 	String getToolProxyURL() {
 		return this.toolProxyURL;
+	}
+	
+	void putToolProxy(JSONObject toolProxy) {
+		this.toolProxy = toolProxy.toString();
+	}
+	
+	JSONObject getToolProxy() {
+		try {
+			return new JSONObject(this.toolProxy);
+		} catch (JSONException e) {
+			return null;
+		}
 	}
 	
 	void putToolSettingsURL(String url) {
