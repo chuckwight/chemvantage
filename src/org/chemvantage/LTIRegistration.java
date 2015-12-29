@@ -28,8 +28,10 @@ import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +47,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import com.google.appengine.labs.repackaged.org.json.JSONArray;
 import com.google.appengine.labs.repackaged.org.json.JSONException;
@@ -131,11 +134,10 @@ public class LTIRegistration extends HttpServlet {
 		buf.append("<TR><TD ALIGN=RIGHT>Email Address: </TD><TD><INPUT TYPE=TEXT NAME=Email> (where the credentials will be sent)</TD></TR>");
 		buf.append("<TR><TD ALIGN=RIGHT>Consumer Key: </TD><TD><INPUT TYPE=TEXT NAME=Key> (e.g., moodle257-myschool-edu)</TD></TR>");
 		
-//   ============== reCaptcha tool  =========================
+		// reCaptcha tool
 		buf.append("<TR><TD COLSPAN=2>");		
 		buf.append("<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div>");
 		buf.append("</TD>");
-//=============================================================*/
 		
 		buf.append("<TR><TD>&nbsp;</TD><TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Send My Free LTI Credentials'></TD></TR>");
 		buf.append("</TABLE></FORM>");
@@ -146,8 +148,17 @@ public class LTIRegistration extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
-		String lti_message_type = request.getParameter("lti_message_type");		
-
+		StringBuffer debug = new StringBuffer();
+		String lti_message_type = request.getParameter("lti_message_type");
+		StringBuffer base_url = request.getRequestURL();
+		base_url = base_url.delete(base_url.indexOf("/lti"),base_url.length()).delete(0, base_url.indexOf("://") + 3);
+		List<String> capability_offered = new ArrayList<String>();
+		List<String> tool_service_offered = new ArrayList<String>();
+		String launch_presentation_return_url = request.getParameter("launch_presentation_return_url");
+		String reg_key = null;
+		String reg_password = null;
+		String tc_profile_url = null;
+		
 		if ("Send My Free LTI Credentials".equals(request.getParameter("UserRequest"))) {  // manual LTI registration request for version 1.x
 			String email = request.getParameter("Email");
 			String key = request.getParameter("Key").replaceAll("\\s", "");  // removes all whitespace from key
@@ -174,86 +185,150 @@ public class LTIRegistration extends HttpServlet {
 				return;
 			}
 		} else if ("basic-lti-launch-request".equals(lti_message_type)) {
-			doError(request,response,"LTI Launch Failed. The correct launch URL for the ChemVantage production server is https://www.chemvantage.org/lti/",null,null);
+			doError(request,response,"LTI Launch Failed. The correct launch URL for the ChemVantage production server is https://" + base_url + "/lti/",null,null);
 			return;
-		} else if (!"ToolProxyRegistrationRequest".equals(lti_message_type)){
-			doError(request,response,"Invalid message type.",null,null);
-			return;
-		}
-		
-		// only LTI 2.0 registration attempts should reach this point
-		StringBuffer debug = new StringBuffer("Debug:\n");
-		String reg_key = request.getParameter("reg_key");
-		String reg_password = request.getParameter("reg_password");
-		String tc_profile_url = request.getParameter("tc_profile_url");
-		String launch_presentation_return_url = request.getParameter("launch_presentation_return_url");
-		//debug.append(lti_message_type + "<br/>" + reg_key + "<br/>" + reg_password + "<br/>" + tc_profile_url + "<br/>" + launch_presentation_return_url + "<br/>");
-		
-		try {
-			if (reg_key==null || reg_key.isEmpty()) throw new Exception("Required reg_key parameter is missing.");
-			if (reg_password==null || reg_password.isEmpty()) throw new Exception("Required reg_password parameter is missing.");
-			if (tc_profile_url==null || tc_profile_url.isEmpty()) throw new Exception("Required tc_profile_url parameter is missing.");
-			if (launch_presentation_return_url==null || launch_presentation_return_url.isEmpty()) throw new Exception("Required launch_presentation_return_url parameter is missing.");
+		} else if ("ToolProxyRegistrationRequest".equals(lti_message_type)){
+			reg_key = request.getParameter("reg_key");
+			reg_password = request.getParameter("reg_password");
+			tc_profile_url = request.getParameter("tc_profile_url");
 			
-			JSONObject toolConsumerProfile = fetchToolConsumerProfile(tc_profile_url); 
-			//debug.append("Tool Consumer Profile: " + toolConsumerProfile.toString() + "<br/>");
-			
-			List<String> capability_enabled = getCapabilities(toolConsumerProfile);
-			//for (String c:capability_enabled) debug.append(c + "<br/>");
-			
-			String oauth_secret = BLTIConsumer.generateSecret();
-			StringBuffer base_url = request.getRequestURL();
-			base_url.delete(base_url.indexOf("lti"),base_url.length()).delete(0, base_url.indexOf("://") + 3);
-			
-			JSONObject toolProxy = constructToolProxy(toolConsumerProfile,tc_profile_url,base_url,reg_key,oauth_secret,capability_enabled);
-			//debug.append("tool_proxy_formed_ok.");
-			//debug.append(toolProxy.toString());
-			
-			String toolProxyString = toolProxy.toString();
-			String serviceEndpoint = getTCServiceEndpoint("application/vnd.ims.lti.v2.toolproxy+json",toolConsumerProfile);
-			if (serviceEndpoint==null) throw new Exception("Could not find a tool proxy registration endpoint in the Tool Consumer profile.");
-			//debug.append("tc_service_endpoint:" + serviceEndpoint);
-			debug.append("Tool Proxy: " + toolProxy.toString());
-			String tool_proxy_guid = reg_key; 	// temporary values
-			String tool_proxy_url = "";	
-			String tool_settings_url = "";
-
-			LTIMessage msg = new LTIMessage("application/vnd.ims.lti.v2.toolproxy+json","application/vnd.ims.v2.toolproxy.id+json",toolProxyString,serviceEndpoint,reg_key,reg_password);
-			//debug.append("lti_msg_formed_ok");
-			String reply = msg.send();
-
-			//debug.append("tc_response_received: " + reply);
-
 			try {
-				JSONObject replyBody = new JSONObject(reply);		
-				//debug.append("json_reply_ok.");
-				tool_proxy_guid = replyBody.getString("tool_proxy_guid");
-				tool_proxy_url = replyBody.getString("@id");
-				//tool_settings_url = replyBody.getString("custom_uri");
-				if (tool_proxy_guid.isEmpty() || tool_proxy_url.isEmpty()) throw new Exception("Tool Proxy guid and/or URL was missing.");
-			} catch (Exception e) {
-				throw new Exception ("Could not parse response to tool proxy registration request.");
-			}
+				if (reg_key==null || reg_key.isEmpty()) throw new Exception("Required reg_key parameter is missing.");
+				if (reg_password==null || reg_password.isEmpty()) throw new Exception("Required reg_password parameter is missing.");
+				if (tc_profile_url==null || tc_profile_url.isEmpty()) throw new Exception("Required tc_profile_url parameter is missing.");
+				if (launch_presentation_return_url==null || launch_presentation_return_url.isEmpty()) throw new Exception("Required launch_presentation_return_url parameter is missing.");
 
-			// check to make sure that this is the first registration for this tool consumer
-			BLTIConsumer c = ofy.find(BLTIConsumer.class,tool_proxy_guid);
-			if (c==null) {  // this registration is for a new oath_consumer_key
-				c = new BLTIConsumer(tool_proxy_guid,oauth_secret,toolConsumerProfile.getString("guid"),"LTI-2p0");
-				c.putToolProxyURL(tool_proxy_url);
-				c.putToolSettingsURL(tool_settings_url);
-				String resultFormat = toolConsumerProfile.toString().toLowerCase().contains("application/vnd.ims.lis.v2.result+json")?"application/vnd.ims.lis.v2.result+json":"application/vnd.ims.lti.v1.outcome+xml";
-				c.putResultServiceFormat(resultFormat);
-				ofy.put(c);
+				JSONObject toolConsumerProfile = fetchToolConsumerProfile(tc_profile_url);
+				
+				// store reg_key, reg_password and tc_profile_url in the user's session for later:
+				HttpSession session = request.getSession();
+				session.setAttribute("tc_profile_url", tc_profile_url);
+				session.setAttribute("reg_key", reg_key);
+				session.setAttribute("reg_password", reg_password);
+				
+				JSONArray tcpco = toolConsumerProfile.getJSONArray("capability_offered");
+				for (int i=0; i<tcpco.length();i++) capability_offered.add(tcpco.getString(i));
+				JSONArray tcpso = toolConsumerProfile.getJSONArray("service_offered");
+				for (int i=0;i<tcpso.length();i++) tool_service_offered.add(tcpso.getJSONObject(i).getString("@id"));
+				
+				// separate and select enabled capabilities and tool services by type:
+				List<String> message_types = getCapabilities(toolConsumerProfile,"message_types",capability_offered);
+				List<String> substitution_variables = getCapabilities(toolConsumerProfile,"substitution_variables",capability_offered);
+				List<String> outcomes_capabilities = getCapabilities(toolConsumerProfile,"outcomes_capabilities",capability_offered);
+				List<String> tool_services = getToolServices(toolConsumerProfile);
+				
+				response.setContentType("text/html");
+				PrintWriter out = response.getWriter();
+				
+				StringBuffer buf = new StringBuffer(Login.header + banner);
+				buf.append("<h3>LTI2 Registration</h3>");
+				buf.append("All ChemVantage services are offered at no cost whatsoever. Please review the proposed capabilities<br>"
+						+ "and tool services selected below. Then submit this registration form to complete the process.<p>");
+				
+				buf.append("<form action=/lti/registration method=post encType='application/x-www-form-urlencoded'>");
+				buf.append("<input type=hidden name=launch_presentation_return_url value=" + launch_presentation_return_url + ">");
+				
+				buf.append("<table><tr><td valign=top><b>Offered by TC</b><br/>");
+				for (String s:capability_offered) buf.append(s + "<br/>");
+				for (String s:tool_service_offered) buf.append(s + "<br/>");
+				buf.append("</td>");
+						
+				buf.append("<td valign=top><b>Capabilities Enabled</b><br/>");
+				buf.append("<select name=capabilities multiple style='padding: 0 5px;' size=15>");
+				buf.append("<optgroup label='Message Types'>");
+				for (String s:message_types) buf.append("<option value='" + s + "' selected>" + s + "</option>");
+				buf.append("</optgroup>");
+				
+				buf.append("<optgroup label='Substitution Variables Enabled'>");
+				for (String s:substitution_variables) buf.append("<option value='" + s + "' selected>" + s + "</option>");
+				buf.append("</optgroup>");
+				buf.append("<optgroup label='Outcomes Capabilities Enabled'>");
+				for (String s:outcomes_capabilities) buf.append("<option value='" + s + "' selected>" + s + "</option>");
+				buf.append("</optgroup>");
+				buf.append("</select></td>");
+				
+				buf.append("<td valign=top><b>Tool Services</b><br/>");
+				buf.append("<select name=tool_services multiple style='padding: 0 5px;' size=5>");
+				for (String s:tool_services) buf.append("<option value='" + s + "' selected>" + s + "</option>");
+				buf.append("</select></td></tr></table>");
+		
+				buf.append("<input type=submit name=UserRequest value='Cancel'><input type=submit name='UserRequest' value='Submit Registration'></form>");
+				buf.append(Login.footer);
+				
+				out.println(buf.toString());
+				return;
+			} catch (Exception e){
+				doError(request,response,"Sorry, the Tool Proxy Registration failed.<br>" + e.getMessage() + "<br>You may try manual LTI registration using credentials that can be obtained at <a href=http://www.chemvantage.org/lti/registration>http://www.chemvantage.org/lti/registration/</a>.<br>",null,null);
+				return;
 			}
-			else throw new Exception("A Tool Consumer was previously registered with this key.");
-						
-			//debug.append("LTI_credentials_formed_ok.");
-						
-			// all steps completed successfully with no exceptions thrown, so report success back to TC administrator
-			response.sendRedirect(launch_presentation_return_url + "?status=success&tool_proxy_guid=" + tool_proxy_guid);
-		} catch (Exception e) {
-			doError(request,response,"Sorry, the Tool Proxy Registration failed.<br>" + e.getMessage() + "<br>You may try manual LTI registration using credentials that can be obtained at <a href=http://www.chemvantage.org/lti/registration>http://www.chemvantage.org/lti/registration/</a>.<br>" + (debug.length()>7?debug.toString():""),null,null);
+		} else if (request.getParameter("UserRequest").equals("Submit Registration")) {
+			try {
+				// retrieve capabilities and tool services to be enabled from the registration form:
+				for (String s:request.getParameterValues("capabilities")) capability_offered.add(s);
+				if (capability_offered.isEmpty()) throw new Exception("You must select at least one capability to be enabled.");
+				for (String s:request.getParameterValues("tool_services")) tool_service_offered.add(s);
+				if (tool_service_offered.isEmpty()) throw new Exception("You must select at least one tool service to be enabled.");
+				if (launch_presentation_return_url==null || launch_presentation_return_url.isEmpty()) throw new Exception("Required launch_presentation_return_url parameter is missing.");
+
+				HttpSession session = request.getSession();
+				reg_key = (String)session.getAttribute("reg_key");
+				reg_password = (String)session.getAttribute("reg_password");
+				tc_profile_url = (String)session.getAttribute("tc_profile_url");
+				if (reg_key==null || reg_key.isEmpty() || reg_password==null || reg_password.isEmpty() || tc_profile_url==null || tc_profile_url.isEmpty()) throw new Exception("HttpSession may have timed out.");
+				
+				JSONObject toolConsumerProfile = fetchToolConsumerProfile(tc_profile_url);
+				if (toolConsumerProfile.length()==0) throw new Exception("Could not retrieve the tool consumer profile using the URL provided.");
+				String oauth_secret = BLTIConsumer.generateSecret();
+				
+				JSONObject toolProxy = constructToolProxy(toolConsumerProfile,tc_profile_url,base_url,reg_key,oauth_secret,capability_offered,tool_service_offered);
+				debug.append(toolProxy.toString());
+				
+				String serviceEndpoint = getTCServiceEndpoint("application/vnd.ims.lti.v2.toolproxy+json",toolConsumerProfile);
+				if (serviceEndpoint==null) throw new Exception("Could not find a tool proxy registration endpoint in the Tool Consumer profile.");
+				
+				String tool_proxy_guid = reg_key; 	// temporary values
+				String tool_proxy_url = "";	
+				String tool_settings_url = "";
+
+				LTIMessage msg = new LTIMessage("application/vnd.ims.lti.v2.toolproxy+json","application/vnd.ims.v2.toolproxy.id+json",toolProxy.toString(),serviceEndpoint,reg_key,reg_password);
+				String reply = msg.send();
+
+				try {
+					JSONObject replyBody = new JSONObject(reply);		
+					tool_proxy_guid = replyBody.getString("tool_proxy_guid");
+					tool_proxy_url = replyBody.getString("@id");
+					if (tool_proxy_guid.isEmpty() || tool_proxy_url.isEmpty()) throw new Exception("Tool Proxy guid and/or URL was missing.");
+				} catch (Exception e) {
+					throw new Exception ("Could not parse response to tool proxy registration request.");
+				}
+				toolProxy.put("@id", tool_proxy_url);
+				toolProxy.put("guid", tool_proxy_guid);
+				
+				// check to make sure that this is the first registration for this tool consumer
+				BLTIConsumer c = ofy.find(BLTIConsumer.class,tool_proxy_guid);
+				if (c==null) {  // this registration is for a new oath_consumer_key
+					c = new BLTIConsumer(tool_proxy_guid,oauth_secret,toolConsumerProfile.getString("guid"),"LTI-2p0");
+					c.putToolProxyURL(tool_proxy_url);
+					c.putToolProxy(toolProxy);
+					c.putToolSettingsURL(tool_settings_url);
+					String resultFormat = toolConsumerProfile.toString().toLowerCase().contains("application/vnd.ims.lis.v2.result+json")?"application/vnd.ims.lis.v2.result+json":"application/vnd.ims.lti.v1.outcome+xml";
+					c.putResultServiceFormat(resultFormat);
+					ofy.put(c);
+				}
+				else throw new Exception("A Tool Consumer was previously registered with this key.");
+
+				// all steps completed successfully with no exceptions thrown, so report success back to TC administrator
+				response.sendRedirect(launch_presentation_return_url + "?status=success&tool_proxy_guid=" + tool_proxy_guid);
+
+			} catch (Exception e) {
+				doError(request,response,"Sorry, the Tool Proxy Registration failed.<br>" + e.getMessage() + "<br>You may try manual LTI registration using credentials that can be obtained at <a href=http://www.chemvantage.org/lti/registration>http://www.chemvantage.org/lti/registration/</a>.<br>",null,null);
+				return;	
+			}
+		} else if (request.getParameter("UserRequest").equals("Cancel")) {
+			doError(request,response,"The Tool Proxy Registration request was cancelled by the tool consumer.<br>You may try manual LTI registration using credentials that can be obtained at <a href=http://www.chemvantage.org/lti/registration>http://www.chemvantage.org/lti/registration/</a>.<br>",null,null);			
+			return;
 		}
+		doError(request,response,"The Tool Proxy Registration failed due to an unexpected error.<br>You may try manual LTI registration using credentials that can be obtained at <a href=http://www.chemvantage.org/lti/registration>http://www.chemvantage.org/lti/registration/</a>.<br>",null,null);
 	}
 
 	boolean reCaptchaOK(HttpServletRequest request) {
@@ -324,34 +399,57 @@ public class LTIRegistration extends HttpServlet {
 		return tc_profile;
 	}
 	
-	List<String> getCapabilities(JSONObject toolConsumerProfile) throws JSONException {
-		// list of capabilities offered by the Tool Consumer
-		List<String> capabilities_wanted = Arrays.asList(
-				"basic-lti-launch-request",
-				"User.id",
-				"Person.email.primary",
-				"Person.name.family",
-				"Person.name.given",
-				"Membership.role",
-				"Context.id",
-				"Context.title",
-				"CourseSection.sourcedId",
-				"CourseOffering.title",
-				"Result.autocreate",
-				"Result.sourcedId",
-				"Result.url");
-		List<String> capability_offered = new ArrayList<String>();
+	List<String> getCapabilities(JSONObject toolConsumerProfile, String type, List<String> capability_offered) throws JSONException {
 		List<String> capability_enabled = new ArrayList<String>();
 		
-		JSONArray tcp = toolConsumerProfile.getJSONArray("capability_offered");
-		for (int i=0; i<tcp.length();i++) capability_offered.add(tcp.getString(i));
+		if (type.equals("message_types")) {
+			List<String> chemvantage_message_types = Arrays.asList(
+					"basic-lti-launch-request");
+			for (String s : chemvantage_message_types) if (capability_offered.contains(s)) capability_enabled.add(s);	
+			return capability_enabled;
+		} else if (type.equals("substitution_variables")) {
+			List<String> chemvantage_substitution_variables = Arrays.asList(
+					"User.id",
+					"Person.email.primary",
+					"Person.name.family",
+					"Person.name.given",
+					"Person.name.full",
+					"Membership.role",
+					"Context.id",
+					"Context.title",
+					"CourseSection.sourcedId",
+					"CourseOffering.title",
+					"ResourceLink.id");
+			for (String s : chemvantage_substitution_variables) if (capability_offered.contains(s)) capability_enabled.add(s);	
+			return capability_enabled;			
+		} else if (type.equals("outcomes_capabilities")) {
+			List<String> chemvantage_outcomes_capabilities = Arrays.asList(
+					"Result.autocreate",
+					"Result.sourcedId",
+					"Result.url");
+			for (String s : chemvantage_outcomes_capabilities) if (capability_offered.contains(s)) capability_enabled.add(s);	
+			return capability_enabled;			
+		}
 
-		for (String s : capabilities_wanted) if (capability_offered.contains(s)) capability_enabled.add(s);	
-		
 		return capability_enabled;
 	}
+	
+	List<String> getToolServices(JSONObject toolConsumerProfile) throws JSONException {
+		List<String> tool_services_enabled = new ArrayList<String>();
+		List<String> chemvantage_tool_services = Arrays.asList(
+				"tcp:Outcomes.LTI1",
+				"tcp:Result.item",
+				"tcp:ToolConsumerProfile",
+				"tcp:ToolProxy.collection");
+		JSONArray services_offered = toolConsumerProfile.getJSONArray("service_offered");
+		for (int i=0;i<services_offered.length();i++) {
+			String service_id = services_offered.getJSONObject(i).getString("@id");
+			if (chemvantage_tool_services.contains(service_id)) tool_services_enabled.add(service_id);
+		}
+		return tool_services_enabled;	
+	}
 
-	JSONObject constructToolProxy(JSONObject toolConsumerProfile,String tc_profile_url,StringBuffer base_url,String reg_key,String shared_secret,List<String> capability_enabled) 
+	JSONObject constructToolProxy(JSONObject toolConsumerProfile,String tc_profile_url,StringBuffer base_url,String reg_key,String shared_secret,List<String> capability_enabled,List<String> tool_service_enabled) 
 			throws Exception {
 		JSONObject toolProxy = new JSONObject()
 			.put("@context", new JSONArray().put("http://purl.imsglobal.org/ctx/lti/v2/ToolProxy"))
@@ -360,7 +458,7 @@ public class LTIRegistration extends HttpServlet {
 			.put("lti_version", toolConsumerProfile.getString("lti_version"))
 			.put("tool_consumer_profile", tc_profile_url)
 			.put("tool_profile", getToolProfile(base_url,capability_enabled))
-			.put("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled));
+			.put("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled,tool_service_enabled));
 			//.put("enabled_capability", new JSONArray());		
 		return toolProxy;
 	}
@@ -379,9 +477,12 @@ public class LTIRegistration extends HttpServlet {
 				.put("description", new JSONObject()
 					.put("default_value", "ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry"))
 				.put("product_family", new JSONObject()
+					.put("code", "tools")
 					.put("vendor", new JSONObject()
+						.put("code", "www.chemvantage.org")
 						.put("vendor_name", new JSONObject()
 							.put("default_value", "ChemVantage LLC"))
+						.put("timestamp", DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL).format(new Date()))
 						.put("website", "https://www.chemvantage.org")
 						.put("contact", new JSONObject()
 							.put("email", "admin@chemvantage.org"))))));
@@ -389,18 +490,19 @@ public class LTIRegistration extends HttpServlet {
 			.put(new JSONObject()
 				.put("default_base_url", "http://" + base_url.toString())
 				.put("secure_base_url", "https://" + base_url.toString())));
-
+		capability_enabled.remove("basic-lti-launch-request"); // not to be explicitly included in resourceHandler object except as message type
 		JSONObject resourceHandler = new JSONObject()
 					.put("resource_name", new JSONObject()
 						.put("default_value", "ChemVantage")
 						.put("key", "assessment.resource.name"))
+					.put("resource_type", new JSONObject().put("code", "test"))
 					.put("description", new JSONObject()
 						.put("default_value", "An Open Education Resource for teaching and learning college-level General Chemistry")
 						.put("key", "assessment.resource.description"))
 					.put("message", new JSONArray()
 						.put(new JSONObject()
 							.put("message_type", "basic-lti-launch-request")
-							.put("path", "lti/")
+							.put("path", "/lti")
 							.put("parameter", new JSONArray())
 							.put("enabled_capability", new JSONArray(capability_enabled))));
 		
@@ -409,13 +511,13 @@ public class LTIRegistration extends HttpServlet {
 		return toolProfile;
 	}
 		
-	JSONObject getSecurityContract(JSONObject toolConsumerProfile, String shared_secret,List<String> capability_enabled) throws Exception {
+	JSONObject getSecurityContract(JSONObject toolConsumerProfile, String shared_secret,List<String> capability_enabled,List<String> tool_service_enabled) throws Exception {
 		JSONObject securityContract = new JSONObject()
 			.put("shared_secret",shared_secret);
 		
 		JSONArray toolService = new JSONArray();
 		
-		if (capability_enabled.contains("Result.autocreate")) {
+		if (capability_enabled.contains("Result.autocreate") && tool_service_enabled.contains("tcp:Result.item")) {
 			String serviceEndpoint = getTCServiceEndpoint("application/vnd.ims.lis.v2.result+json",toolConsumerProfile);
 			if (serviceEndpoint==null) serviceEndpoint = getTCServiceEndpoint("application/vnd.ims.lti.v1.outcome+xml",toolConsumerProfile);
 			if (serviceEndpoint!=null) {  // found a valid service endpoint for the LIS outcomes service
@@ -427,8 +529,7 @@ public class LTIRegistration extends HttpServlet {
 								.put("PUT"));
 				toolService.put(resultService);
 			}
-		}
-		
+		}		
 		securityContract.put("tool_service",toolService);
 		
 		return securityContract;
@@ -436,19 +537,17 @@ public class LTIRegistration extends HttpServlet {
 	}
 
 	String getTCServiceEndpoint(String formatString,JSONObject toolConsumerProfile) throws Exception {
+		formatString = formatString.toLowerCase();
 		JSONArray service_offered = toolConsumerProfile.getJSONArray("service_offered");
 		for (int i=0; i<service_offered.length(); i++) {
 			try {
 				JSONObject s = service_offered.getJSONObject(i);
 				if (s.getString("@type").equals("RestService")) {
 					JSONArray formats = s.getJSONArray("format");
-					for (int j=0; j<formats.length(); j++) {
-						if (formats.getString(j).toLowerCase().equals(formatString.toLowerCase())) {
-							return s.getString("endpoint");
-						}
-					}
+					for (int j=0; j<formats.length(); j++) if (formats.getString(j).toLowerCase().equals(formatString)) return s.getString("endpoint");
 				}
-			} catch (Exception e) {}
+			} catch (Exception e) {
+			}
 		}
 		return null;
 	}
