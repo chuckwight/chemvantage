@@ -207,6 +207,7 @@ public class LTILaunch extends HttpServlet {
 		if (g == null) { // create this new group
 			g = new Group("BLTI",context_id,context_title);
 			g.domain = domain.domainName;
+			g.memberIds.add(user.id);
 			ofy.put(g);
 		}
 		user.changeGroups(g.id);
