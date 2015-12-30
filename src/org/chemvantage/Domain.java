@@ -42,7 +42,9 @@ public class Domain {
 				int premiumAccounts;
 				int seatsPurchased;
 				int seatsAvailable;
-				boolean supportsResultService = false;
+				boolean supportsResultService;
+				String resultServiceEndpoint;
+				String resultServiceFormat;
 				List<String> capabilities = new ArrayList<String>();
 				List<String> domainAdmins = new ArrayList<String>();
 		
