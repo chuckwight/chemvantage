@@ -217,6 +217,9 @@ public class LTIRegistration extends HttpServlet {
 				List<String> outcomes_capabilities = getCapabilities(toolConsumerProfile,"outcomes_capabilities",capability_offered);
 				List<String> tool_services = getToolServices(toolConsumerProfile);
 				
+				// choose selected capabilities based on ChemVantage capabilities and preferences
+				if (substitution_variables.contains("Context.id")) substitution_variables.remove("CourseSection.sourcedId");
+				
 				response.setContentType("text/html");
 				PrintWriter out = response.getWriter();
 				
@@ -228,12 +231,12 @@ public class LTIRegistration extends HttpServlet {
 				buf.append("<form action=/lti/registration method=post encType='application/x-www-form-urlencoded'>");
 				buf.append("<input type=hidden name=launch_presentation_return_url value=" + launch_presentation_return_url + ">");
 				
-				buf.append("<table><tr><td valign=top><b>Offered by TC</b><br/>");
+				buf.append("<table><tr><td valign=top><b>Offered by LMS</b><br/>");
 				for (String s:capability_offered) buf.append(s + "<br/>");
 				for (String s:tool_service_offered) buf.append(s + "<br/>");
 				buf.append("</td>");
 						
-				buf.append("<td valign=top><b>Capabilities Enabled</b><br/>");
+				buf.append("<td valign=top><b>Capabilities Selected</b><br/>");
 				buf.append("<select name=capabilities multiple style='padding: 0 5px;' size=15>");
 				buf.append("<optgroup label='Message Types'>");
 				for (String s:message_types) buf.append("<option value='" + s + "' selected>" + s + "</option>");
@@ -245,17 +248,17 @@ public class LTIRegistration extends HttpServlet {
 				buf.append("<optgroup label='Outcomes Capabilities Enabled'>");
 				for (String s:outcomes_capabilities) buf.append("<option value='" + s + "' selected>" + s + "</option>");
 				buf.append("</optgroup>");
-				buf.append("</select>" 
-						+ "<input type=submit name=UserRequest value='Cancel'>" 
-						+ "<input type=submit name='UserRequest' value='Submit Registration'>" 
-						+ "</td>");
-				
-				buf.append("<td valign=top><b>Tool Services</b><br/>");
+				buf.append("</select><br/>");
+								
+				buf.append("<b>Tool Services</b><br/>");
 				buf.append("<select name=tool_services multiple style='padding: 0 5px;' size=5>");
 				for (String s:tool_services) buf.append("<option value='" + s + "' selected>" + s + "</option>");
-				buf.append("</select></td></tr></table>");
-		
-				buf.append("</form>");
+				buf.append("</select><br/>");
+				
+				buf.append("<input type=submit name=UserRequest value='Cancel'>" 
+						+ "<input type=submit name='UserRequest' value='Submit Registration'>");
+
+				buf.append("</td></tr></table></form>");
 				buf.append(Login.footer);
 				
 				out.println(buf.toString());
@@ -314,6 +317,7 @@ public class LTIRegistration extends HttpServlet {
 					c.putToolProxyURL(tool_proxy_url);
 					c.putToolProxy(toolProxy);
 					c.putToolSettingsURL(tool_settings_url);
+					c.putCapabilities(getCapabilitiesEnabled(toolProxy));
 					c.putToolService(getToolServices(toolConsumerProfile));
 					if (c.supportsResultServices()) {
 						String resultFormat = toolConsumerProfile.toString().toLowerCase().contains("application/vnd.ims.lis.v2.result+json")?"application/vnd.ims.lis.v2.result+json":"application/vnd.ims.lti.v1.outcome+xml";
@@ -558,6 +562,30 @@ public class LTIRegistration extends HttpServlet {
 		return null;
 	}
 
+	List<String> getCapabilitiesEnabled(JSONObject toolProxy) {
+		List<String> capabilitiesEnabled = new ArrayList<String>();
+		try {
+			JSONArray resource_handler = toolProxy.getJSONObject("tool_profile").getJSONArray("resource_handler");
+			for (int i=0;i<resource_handler.length();i++) {
+				JSONObject rh = resource_handler.getJSONObject(i);
+				if (rh.has("message")) {
+					JSONArray message = rh.getJSONArray("message");
+					for (int j=0;j<message.length();j++) {
+						JSONObject m = message.getJSONObject(j);
+						if (m.getString("message_type").equals("basic-lti-launch-request")) {
+							JSONArray enabledCapability = m.getJSONArray("enabled_capability");
+							for (int k=0;k<enabledCapability.length();k++) capabilitiesEnabled.add(enabledCapability.getString(k));
+							break;
+						}
+					}
+					break;
+				}
+			}
+		} catch (Exception e) {
+		}
+		return capabilitiesEnabled;
+	}
+	
 	boolean sendLTICredentials(String email,BLTIConsumer c) {
 		// send a response to a user feedback report
 		Properties props = new Properties();
