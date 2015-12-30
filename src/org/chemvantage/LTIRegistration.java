@@ -245,14 +245,17 @@ public class LTIRegistration extends HttpServlet {
 				buf.append("<optgroup label='Outcomes Capabilities Enabled'>");
 				for (String s:outcomes_capabilities) buf.append("<option value='" + s + "' selected>" + s + "</option>");
 				buf.append("</optgroup>");
-				buf.append("</select></td>");
+				buf.append("</select>" 
+						+ "<input type=submit name=UserRequest value='Cancel'>" 
+						+ "<input type=submit name='UserRequest' value='Submit Registration'>" 
+						+ "</td>");
 				
 				buf.append("<td valign=top><b>Tool Services</b><br/>");
 				buf.append("<select name=tool_services multiple style='padding: 0 5px;' size=5>");
 				for (String s:tool_services) buf.append("<option value='" + s + "' selected>" + s + "</option>");
 				buf.append("</select></td></tr></table>");
 		
-				buf.append("<input type=submit name=UserRequest value='Cancel'><input type=submit name='UserRequest' value='Submit Registration'></form>");
+				buf.append("</form>");
 				buf.append(Login.footer);
 				
 				out.println(buf.toString());
@@ -311,8 +314,11 @@ public class LTIRegistration extends HttpServlet {
 					c.putToolProxyURL(tool_proxy_url);
 					c.putToolProxy(toolProxy);
 					c.putToolSettingsURL(tool_settings_url);
-					String resultFormat = toolConsumerProfile.toString().toLowerCase().contains("application/vnd.ims.lis.v2.result+json")?"application/vnd.ims.lis.v2.result+json":"application/vnd.ims.lti.v1.outcome+xml";
-					c.putResultServiceFormat(resultFormat);
+					c.putToolService(getToolServices(toolConsumerProfile));
+					if (c.supportsResultServices()) {
+						String resultFormat = toolConsumerProfile.toString().toLowerCase().contains("application/vnd.ims.lis.v2.result+json")?"application/vnd.ims.lis.v2.result+json":"application/vnd.ims.lti.v1.outcome+xml";
+						c.putResultServiceFormat(resultFormat);
+					}
 					ofy.put(c);
 				}
 				else throw new Exception("A Tool Consumer was previously registered with this key.");

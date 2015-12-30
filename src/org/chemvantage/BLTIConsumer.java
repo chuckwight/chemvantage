@@ -160,4 +160,13 @@ public class BLTIConsumer {
 		}
 		return null;
 	}
+	
+	void putToolService(List<String>toolService) {
+		this.tool_service = toolService;
+	}
+	
+	List<String> getToolService() {
+		if (this.tool_service == null) tool_service = new ArrayList<String>();
+		return this.tool_service;
+	}
 }
