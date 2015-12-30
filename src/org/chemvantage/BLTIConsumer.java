@@ -45,6 +45,7 @@ public class BLTIConsumer {
 	String resultServiceFormat;
 	String email;
 	Date created;
+	List<String> capabilities_enabled;
 	List<String> tool_service;
 	
 	BLTIConsumer() {}
@@ -69,8 +70,9 @@ public class BLTIConsumer {
 		this.tool_consumer_guid = tool_consumer_guid;
 		this.lti_version = version;
 		this.created = new Date();
+		this.capabilities_enabled = new ArrayList<String>();
 		this.tool_service = new ArrayList<String>();
-	}
+		}
 	
 	static void create(String oauth_consumer_key) {
 		ObjectifyService.begin().put(new BLTIConsumer(oauth_consumer_key));
@@ -168,5 +170,14 @@ public class BLTIConsumer {
 	List<String> getToolService() {
 		if (this.tool_service == null) tool_service = new ArrayList<String>();
 		return this.tool_service;
+	}
+	
+	void putCapabilities(List<String>capabilities_enabled) {
+		this.capabilities_enabled = capabilities_enabled;
+	}
+	
+	List<String> getCapabilities() {
+		if (this.capabilities_enabled == null) capabilities_enabled = new ArrayList<String>();
+		return this.capabilities_enabled;
 	}
 }
