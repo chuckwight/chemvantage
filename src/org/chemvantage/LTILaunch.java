@@ -117,7 +117,8 @@ public class LTILaunch extends HttpServlet {
 			return;
 		}
 		
-		String oauth_secret = BLTIConsumer.getSecret(oauth_consumer_key);
+		BLTIConsumer tc = ofy.find(BLTIConsumer.class,oauth_consumer_key);
+		String oauth_secret = tc.secret;
 		if (oauth_secret==null) {
 			doError(request,response,"Invalid oauth_consumer_key.",null,null);
 			return;
@@ -164,12 +165,32 @@ public class LTILaunch extends HttpServlet {
 		Date now = new Date();
 		if (domain == null) {
 			domain = new Domain(oauth_consumer_key);
+			if (tc.supportsResultServices()) {
+				domain.supportsResultService = true;
+				domain.resultServiceEndpoint = tc.getResultServiceEndpoint();
+				domain.resultServiceFormat = tc.getResultServiceFormat();
+			} else {  // check to see if required Outcomes.LTI1 parameters were sent anyway
+				domain.resultServiceEndpoint = request.getParameter("lis_outcome_service_url");
+				if (domain.resultServiceEndpoint!=null) {
+					domain.resultServiceFormat = "application/vnd.ims.lti.v1.outcome+xml";
+					domain.supportsResultService = true;
+				}
+			}
 			ofy.put(domain);
 		} else {
 			domain.setLastLogin(now);
 			ofy.put(domain);
 		}
 		
+		String lisOutcomeServiceURL = request.getParameter("lis_outcome_service_url");
+		if (lisOutcomeServiceURL!=null && !lisOutcomeServiceURL.equals(domain.resultServiceEndpoint)) {
+			domain.resultServiceEndpoint = lisOutcomeServiceURL;
+			domain.resultServiceFormat = "application/vnd.ims.lti.v1.outcome+xml";
+			domain.supportsResultService = true;
+			ofy.put(domain);
+		}
+		
+
 		// ensure that this user is associated with the LTI domain
 		if (user.domain == null || !user.domain.equals(domain.domainName)) {
 			user.domain = domain.domainName;
@@ -212,21 +233,11 @@ public class LTILaunch extends HttpServlet {
 		}
 		user.changeGroups(g.id);
 		
-		// Check to see if the LMS is providing an LIS Outcome Service URL (LTI v1.1 or 2.0)
-		String lisOutcomeServiceUrl = null;
-		if (lti_version.equals("LTI-1p0")) lisOutcomeServiceUrl = request.getParameter("lis_outcome_service_url");
-		if (lti_version.equals("LTI-2p0")) lisOutcomeServiceUrl = request.getParameter("custom_result_url");
-		
-		// the lis_result_sourcedid is an optional LTI parameter that specifies a context gradebook entry point
-		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
-		
-		boolean supportsLIS = lisOutcomeServiceUrl != null && lis_result_sourcedid != null;
-		
 		// update the LIS result outcome service URL, if necessary
-		if (supportsLIS && !lisOutcomeServiceUrl.equals(g.lis_outcome_service_url)) {  // update the URL as a Group property
-			g.lis_outcome_service_url=lisOutcomeServiceUrl;
+		if (domain.supportsResultService || !domain.resultServiceEndpoint.equals(g.lis_outcome_service_url)) {  // update the URL as a Group property
+			g.lis_outcome_service_url=domain.resultServiceEndpoint;
+			g.lis_outcome_service_format = domain.resultServiceFormat;
 			g.isUsingLisOutcomeService = true;
-			g.lis_outcome_service_format = BLTIConsumer.getResultServiceFormat(oauth_consumer_key);
 			ofy.put(g);
 		}							
 
