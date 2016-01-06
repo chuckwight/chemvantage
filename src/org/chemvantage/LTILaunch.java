@@ -168,11 +168,11 @@ public class LTILaunch extends HttpServlet {
 			Date now = new Date();
 			if (domain == null) {
 				domain = new Domain(oauth_consumer_key);
-				if (tc.supportsResultServices()) {
+				if (tc.supportsResultService()) {
 					domain.supportsResultService = true;
 					domain.resultServiceEndpoint = tc.getResultServiceEndpoint();
 					domain.resultServiceFormat = tc.getResultServiceFormat();
-				} 
+				}
 				ofy.put(domain);
 			} else {
 				domain.setLastLogin(now);

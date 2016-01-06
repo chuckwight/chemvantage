@@ -24,7 +24,6 @@ import java.util.Random;
 
 import javax.persistence.Id;
 
-import com.google.appengine.labs.repackaged.org.json.JSONArray;
 import com.google.appengine.labs.repackaged.org.json.JSONException;
 import com.google.appengine.labs.repackaged.org.json.JSONObject;
 import com.googlecode.objectify.Key;
@@ -43,6 +42,7 @@ public class BLTIConsumer {
 	String toolProxy;
 	String toolSettingsURL; // Tool Consumer URL to PUT changes to settings in tool proxy
 	String resultServiceFormat;
+	String resultServiceEndpoint;
 	String email;
 	Date created;
 	List<String> capabilities_enabled;
@@ -144,11 +144,19 @@ public class BLTIConsumer {
 		return c==null?null:c.resultServiceFormat;
 	}
 	
-	boolean supportsResultServices() {
-		if (tool_service.contains("Outcomes.LTI1")) return true;
-		return false;
+	void putResultServiceEndpoint(String endpoint) {
+		this.resultServiceEndpoint= endpoint;
 	}
 	
+	String getResultServiceEndpoint() {
+		return this.resultServiceEndpoint;
+	}
+		
+	boolean supportsResultService() {
+		if (this.resultServiceEndpoint !=null && this.resultServiceFormat != null) return true;
+		return false;
+	}
+/*	
 	String getResultServiceEndpoint() {
 		try {
 			JSONObject toolProxy = new JSONObject(this.toolProxy);
@@ -162,7 +170,7 @@ public class BLTIConsumer {
 		}
 		return null;
 	}
-	
+*/	
 	void putToolService(List<String>toolService) {
 		this.tool_service = toolService;
 	}

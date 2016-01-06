@@ -319,11 +319,16 @@ public class LTIRegistration extends HttpServlet {
 					c.putToolSettingsURL(tool_settings_url);
 					c.putCapabilities(getCapabilitiesEnabled(toolProxy));
 					c.putToolService(getToolServices(toolConsumerProfile));
-					if (c.supportsResultServices()) {
-						String resultFormat = toolConsumerProfile.toString().toLowerCase().contains("application/vnd.ims.lis.v2.result+json")?"application/vnd.ims.lis.v2.result+json":"application/vnd.ims.lti.v1.outcome+xml";
-						c.putResultServiceFormat(resultFormat);
+					String[] result_format = {"application/vnd.ims.lis.v2.result+json","application/vnd.ims.lti.v1.outcome+xml"};
+					for (String rf:result_format) {
+						String result_endpoint = getTCServiceEndpoint(rf,toolConsumerProfile);
+						if (result_endpoint != null) {
+							c.putResultServiceFormat(rf);
+							c.putResultServiceEndpoint(result_endpoint);
+							break;
+						}
 					}
-					ofy.put(c);
+							ofy.put(c);
 				}
 				else throw new Exception("A Tool Consumer was previously registered with this key.");
 
