@@ -125,6 +125,14 @@ public class LTILaunch extends HttpServlet {
 				doError(request,response,"Invalid oauth_consumer_key.",null,null);
 				return;
 			}
+			String tool_consumer_guid = request.getParameter("tool_consumer_guid");
+			if (tool_consumer_guid != null && !tool_consumer_guid.equals(tc.tool_consumer_guid)) {
+				// this place is reached if the launch sends a guid that does not match the guid for the BLTIConsumer
+				if (tc.tool_consumer_guid==null) {  // record a previously unrecorded guid
+					tc.tool_consumer_guid = tool_consumer_guid;
+					ofy.put(tc);
+				} else doError(request,response,"Invalid tool_consumer_guid.",null,null);
+			}
 
 			OAuthMessage oam = OAuthServlet.getMessage(request, null);
 			OAuthValidator oav = new SimpleOAuthValidator();
