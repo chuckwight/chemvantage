@@ -204,42 +204,9 @@ public class Quiz extends HttpServlet {
 			buf.append("<div id='timer1' style='color: red'></div><div id=ctrl1 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
 			buf.append("\n<input type=submit value='Grade This Quiz'>");
 			buf.append("\n</form>");
-			buf.append("<SCRIPT language='JavaScript'>");
 
-			// this code allows the user to toggle the display of the quiz timers:
-			buf.append("function toggleTimers() {"
-					+ "  var timer0 = document.getElementById('timer0');"
-					+ "  var timer1 = document.getElementById('timer1');"
-					+ "  var ctrl0 = document.getElementById('ctrl0');"
-					+ "  var ctrl1 = document.getElementById('ctrl1');"
-					+ "  if (timer0.style.display=='') {" 
-					+ "    timer0.style.display='none';timer1.style.display='none';"
-					+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
-					+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
-					+ "  } else {"
-					+ "    timer0.style.display='';timer1.style.display='';"
-					+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
-					+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
-					+ "  }"
-					+ "}");
-			buf.append("function confirmSubmission() {"
-					+ "if (seconds>0) return confirm('Submit this quiz for scoring now?');"
-					+ "}");
-			buf.append("var seconds;var minutes;var oddSeconds;"
-					+ "var endTime = new Date().getTime() + " + secondsRemaining + "*1000;"
-					+ "function countdown() {"
-					+ "var now = new Date().getTime();"
-					+ "seconds=Math.round((endTime-now)/1000);"
-					+ "minutes = seconds<0?Math.ceil(seconds/60):Math.floor(seconds/60);"
-					+ "oddSeconds = seconds%60;"
-					+ "for(i=0;i<2;i++)"
-					+ "document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ' minutes ' + oddSeconds + ' seconds.';"
-					+ "if (seconds==30) alert('30 seconds remaining');"
-					+ "if (seconds < 0) document.Quiz.submit();"
-					+ "setTimeout('countdown()',1000);"
-					+ "}"
-					+ "countdown();"
-					+ "</SCRIPT>"); 
+			// this code for displaying/hiding timers and a quiz submit confirmation box
+			buf.append(timerScripts(secondsRemaining)); 
 
 		} catch (Exception e) {
 			buf.append(e.getMessage());
@@ -247,6 +214,43 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 
+	String timerScripts(int secondsRemaining) {
+		return "<SCRIPT language='JavaScript'>"
+				+ "function toggleTimers() {"
+				+ "  var timer0 = document.getElementById('timer0');"
+				+ "  var timer1 = document.getElementById('timer1');"
+				+ "  var ctrl0 = document.getElementById('ctrl0');"
+				+ "  var ctrl1 = document.getElementById('ctrl1');"
+				+ "  if (timer0.style.display=='') {" 
+				+ "    timer0.style.display='none';timer1.style.display='none';"
+				+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
+				+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
+				+ "  } else {"
+				+ "    timer0.style.display='';timer1.style.display='';"
+				+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
+				+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
+				+ "  }"
+				+ "}"
+				+ "function confirmSubmission() {"
+				+ "if (seconds>0) return confirm('Submit this quiz for scoring now?');"
+				+ "}"
+				+ "var seconds;var minutes;var oddSeconds;"
+				+ "var endTime = new Date().getTime() + " + secondsRemaining + "*1000;"
+				+ "function countdown() {"
+				+ "var now = new Date().getTime();"
+				+ "seconds=Math.round((endTime-now)/1000);"
+				+ "minutes = seconds<0?Math.ceil(seconds/60):Math.floor(seconds/60);"
+				+ "oddSeconds = seconds%60;"
+				+ "for(i=0;i<2;i++)"
+				+ "document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ' minutes ' + oddSeconds + ' seconds.';"
+				+ "if (seconds==30) alert('30 seconds remaining');"
+				+ "if (seconds < 0) document.Quiz.submit();"
+				+ "setTimeout('countdown()',1000);"
+				+ "}"
+				+ "countdown();"
+				+ "</SCRIPT>"; 
+	}
+	
 	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {
