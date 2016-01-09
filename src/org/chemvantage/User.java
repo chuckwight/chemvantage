@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
@@ -24,45 +26,37 @@ import java.util.HashSet;
 import java.util.List;
 
 import javax.mail.internet.InternetAddress;
-import javax.persistence.Id;
-import javax.persistence.Transient;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
-
-import net.sf.json.JSONObject;
 
 import org.chemvantage.samples.apps.marketplace.UserInfo;
 
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.ObjectifyService;
-import com.googlecode.objectify.Query;
-import com.googlecode.objectify.annotation.Cached;
-import com.googlecode.objectify.annotation.Indexed;
-import com.googlecode.objectify.annotation.Unindexed;
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
+import com.googlecode.objectify.cmd.Query;
 
-@Cached @Unindexed
+import net.sf.json.JSONObject;
+
+@Cache
 public class User implements Comparable<User>,Serializable {
 	private static final long serialVersionUID = 137L;
-	@Id 		String id;
-	@Indexed	private String email;
-	@Indexed	String domain;
-	@Indexed	String lowercaseName;
-				private String lastName;
-				private String firstName;
-				int roles;
-				boolean premium;
-				//				boolean demoPremium;
-				//				Date demoExpires;
-	@Indexed	Date lastLogin;
-				long myGroupId;
-	@Indexed	String smsMessageDevice;
-				boolean notifyDeadlines;
-				boolean verifiedEmail;
-				String alias;
-				String authDomain;
-
-	@Transient transient Objectify ofy = ObjectifyService.begin();
+	@Id 	String id;
+	@Index	private String email;
+	@Index	String domain;
+	@Index	String lowercaseName;
+	@Index	Date lastLogin;
+	@Index	String smsMessageDevice;
+			private String lastName;
+			private String firstName;
+			int roles;
+			boolean premium;
+			long myGroupId;
+			boolean notifyDeadlines;
+			boolean verifiedEmail;
+			String alias;
+			String authDomain;
 
 	User() {}
 
@@ -85,19 +79,18 @@ public class User implements Comparable<User>,Serializable {
 
 	static User getInstance(HttpSession session) {
 		try {
-			Objectify ofy = ObjectifyService.begin();
 			String userId = (String)session.getAttribute("UserId");
-			User user = ofy.get(User.class,userId);
+			User user = ofy().load().type(User.class).id(userId).now();
 			if (user.alias != null) { // follow the alias chain to the end
 				List<String> userIds = new ArrayList<String>();
 				userIds.add(userId);
 				userIds.add(0,user.alias);
 				user = User.getInstance(userIds);
 				session.setAttribute("UserId",user.id);
-				Domain d = ofy.query(Domain.class).filter("domainName", user.domain).get();
+				Domain d = ofy().load().type(Domain.class).filter("domainName", user.domain).first().now();
 				if (d!=null) {
 					d.setLastLogin(new Date());
-					ofy.put(d);
+					ofy().save().entity(d);
 				}
 			}
 			Date now = new Date();
@@ -106,7 +99,7 @@ public class User implements Comparable<User>,Serializable {
 				user.lastLogin = now;
 				user.setPremium(true);  // all accounts are premium accounts now
 				user.alias = null;  // in case alias is set to "" or to invalid userId
-				ofy.put(user);
+				ofy().save().entity(user);
 			}
 			return user;
 		} catch (Exception e) {
@@ -116,16 +109,15 @@ public class User implements Comparable<User>,Serializable {
 	}
 
 	static User getInstance(List<String> userIds) {
-		Objectify ofy = ObjectifyService.begin();
 		try {
-			User user = ofy.get(User.class,userIds.get(0));			
+			User user = ofy().load().type(User.class).id(userIds.get(0)).safe();			
 			if (user.alias != null && !user.alias.isEmpty() && !userIds.contains(user.alias)) {
 				userIds.add(0,user.alias);
 				user = User.getInstance(userIds);  // follow the alias chain one more link
 			}
 			return user;
 		} catch (Exception e) {
-			return ofy.find(User.class,userIds.get(1));
+			return ofy().load().type(User.class).id(userIds.get(1)).now();
 		}
 	}
 
@@ -137,14 +129,13 @@ public class User implements Comparable<User>,Serializable {
 			user.authDomain = u.getAuthDomain();
 			user.setEmail(u.getEmail());
 			user.verifiedEmail = !(user.email==null || user.email.isEmpty());
-			Objectify ofy = ObjectifyService.begin();
 			if (user.verifiedEmail) { // search for any accounts with the same email address and alias the new one to it
-				User twin = ofy.query(User.class).filter("email", user.email).get();
+				User twin = ofy().load().type(User.class).filter("email", user.email).first().now();
 				if (twin != null && twin.verifiedEmail) user.alias = twin.id;
 				String myDomainName = extractDomain(user.email);
 				do { // try to assign a user to an existing ChemVantage domain by checking the authDomain or super domain
 					try { 
-						Domain d = ofy.query(Domain.class).filter("domainName",myDomainName).get();
+						Domain d = ofy().load().type(Domain.class).filter("domainName",myDomainName).first().now();
 						user.domain = d.domainName;
 					} catch (Exception e) {
 						user.domain = null;  // user is a free agent and can join any ChemVantage group
@@ -152,7 +143,7 @@ public class User implements Comparable<User>,Serializable {
 					myDomainName = myDomainName.substring(myDomainName.indexOf('.')+1);  // removes first subdomain name and period
 				} while (user.domain==null && myDomainName.indexOf('.') >= 0);
 			}
-			ofy.put(user);
+			ofy().save().entity(user);
 		} catch (Exception e) {
 			return null;
 		}
@@ -167,8 +158,7 @@ public class User implements Comparable<User>,Serializable {
 		user.authDomain = "BLTI";
 		user.domain = request.getParameter("oauth_consumer_key");
 		user.alias = null;
-		Objectify ofy = ObjectifyService.begin();
-
+		
 		String lis_person_name_given = request.getParameter("lis_person_name_given");
 		if (lis_person_name_given==null) lis_person_name_given = request.getParameter("custom_lis_person_name_given");
 		if (lis_person_name_given==null) lis_person_name_given = request.getParameter("lis_person_name_full");
@@ -194,16 +184,15 @@ public class User implements Comparable<User>,Serializable {
 		if (!user.email.isEmpty()) user.verifiedEmail = true; // value supplied by institution
 		
 		user.setPremium(true);  // all LTI users have premium accounts by default
-		ofy.put(user);
+		ofy().save().entity(user);
 		return user;
 	}
 
 	static public User createOpenIdUser(UserInfo userInfo) {
 		User user;
 		try {
-			Objectify ofy = ObjectifyService.begin();
 			String userId = userInfo.getClaimedId();
-			user = ofy.find(User.class,userId);
+			user = ofy().load().type(User.class).id(userId).now();
 			if (user != null) return user;
 			user = new User(userId);
 			user.authDomain = extractDomain(userInfo.getClaimedId());
@@ -211,7 +200,7 @@ public class User implements Comparable<User>,Serializable {
 			String myDomainName = user.authDomain;
 			do { // try to assign a user to an existing ChemVantage domain by checking the authDomain or super domain
 				try { 
-					Domain d = ofy.query(Domain.class).filter("domainName",myDomainName).get();
+					Domain d = ofy().load().type(Domain.class).filter("domainName",myDomainName).first().now();
 					user.domain = d.domainName;
 				} catch (Exception e) {
 					user.domain = null;  // user is a free agent and can join any ChemVantage group
@@ -222,9 +211,9 @@ public class User implements Comparable<User>,Serializable {
 			user.verifiedEmail = !(user.email==null || user.email.isEmpty());
 			user.setFirstName(userInfo.getFirstName());
 			user.setLastName(userInfo.getLastName());
-			ofy.put(user);
+			ofy().save().entity(user);
 			if (user.verifiedEmail) {
-				Query<User> twins = ofy.query(User.class).filter("email",user.email);
+				Query<User> twins = ofy().load().type(User.class).filter("email",user.email);
 				for (User t : twins) if (!t.id.equals(user.id)) Admin.mergeAccounts(user, t);
 			}
 		} catch (Exception e) {
@@ -236,9 +225,8 @@ public class User implements Comparable<User>,Serializable {
 	static public User createGooglePlusUser(JSONObject payload,String firstName) {
 		User user = null;
 		try {
-			Objectify ofy = ObjectifyService.begin();
 			String userId = payload.getString("sub");
-			if (userId != null) user = ofy.find(User.class,userId);
+			if (userId != null) user = ofy().load().type(User.class).id(userId).now();
 			if (user != null) return user;
 			user = new User(userId);
 			String email = payload.getString("email");
@@ -257,7 +245,7 @@ public class User implements Comparable<User>,Serializable {
 			String myDomainName = User.extractDomain(email);
 			do { // try to assign a user to an existing ChemVantage domain by checking the authDomain or super domain
 				try { 
-					Domain d = ofy.query(Domain.class).filter("domainName",myDomainName).get();
+					Domain d = ofy().load().type(Domain.class).filter("domainName",myDomainName).first().now();
 					user.domain = d.domainName;
 				} catch (Exception e) {
 					user.domain = null;  // user is a free agent and can join any ChemVantage group
@@ -265,10 +253,10 @@ public class User implements Comparable<User>,Serializable {
 				myDomainName = myDomainName.substring(myDomainName.indexOf('.')+1);  // removes first subdomain name and period
 			} while (user.domain==null && myDomainName.indexOf('.') >= 0);
 	
-			ofy.put(user);
+			ofy().save().entity(user);
 			
 			if (user.verifiedEmail) {
-				Query<User> twins = ofy.query(User.class).filter("email",user.email);
+				Query<User> twins = ofy().load().type(User.class).filter("email",user.email);
 				for (User t : twins) if (!t.id.equals(user.id)) Admin.mergeAccounts(user, t);
 			}
 		} catch (Exception e) {
@@ -287,10 +275,7 @@ public class User implements Comparable<User>,Serializable {
 			user.domain = domain;
 			user.setEmail(email);
 			user.verifiedEmail = !user.email.isEmpty();
-			Objectify ofy = ObjectifyService.begin();
-			ofy.put(user);
-			//Query<User> twins = ofy.query(User.class).filter("email",user.email);
-			//for (User t : twins) Admin.mergeAccounts(user, t);
+			ofy().save().entity(user);
 		} catch (Exception e) {
 			return null;
 		}		
@@ -313,7 +298,7 @@ public class User implements Comparable<User>,Serializable {
 	static String getBothNames(String id) {
 		if (id==null || id.isEmpty()) return "missing user id";
 		try {
-			return ObjectifyService.begin().get(User.class,id).getBothNames();
+			return ofy().load().type(User.class).id(id).now().getBothNames();
 		} catch (Exception e) {
 			return "User " + id + " not found";
 		}
@@ -336,7 +321,7 @@ public class User implements Comparable<User>,Serializable {
 		//authDomain = id.contains(":")?"BLTI":"gmail.com";
 		alias = (alias==null || alias.isEmpty())?null:alias;
 		//if (alias != null) myGroupId=0;
-		ofy.put(this);
+		ofy().save().entity(this);
 	}
 
 
@@ -349,7 +334,7 @@ public class User implements Comparable<User>,Serializable {
 		this.domain = null;
 		try {
 			if (d!=null && !d.isEmpty()) {
-				Domain newDomain = ofy.query(Domain.class).filter("domainName",d).get();
+				Domain newDomain = ofy().load().type(Domain.class).filter("domainName",d).first().now();
 				this.domain = newDomain.domainName;
 			}
 		}catch (Exception e) {
@@ -362,7 +347,7 @@ public class User implements Comparable<User>,Serializable {
 		
 	static String getEmail(String id) {
 		try {
-			return ObjectifyService.begin().find(User.class,id).email;
+			return ofy().load().type(User.class).id(id).now().email;
 		} catch (Exception e) {
 			return "";
 		}
@@ -380,7 +365,7 @@ public class User implements Comparable<User>,Serializable {
 
 	boolean requiresUpdatesNow() {
 		try {
-			Group g = ofy.get(Group.class,this.myGroupId);
+			Group g = ofy().load().type(Group.class).id(this.myGroupId).safe();
 			if (g.isUsingLisOutcomeService) return false;
 		} catch (Exception e) {
 		}
@@ -394,8 +379,8 @@ public class User implements Comparable<User>,Serializable {
 			if (firstName.isEmpty() || email.isEmpty() || !verifiedEmail) return true;  // note: lastName no longer required
 			if (this.hasPremiumAccount() && myGroupId < 0) {  // new user has not joined a group yet
 				Query<Group> allGroups = null;  // count the available groups to join
-				if (this.domain != null && !this.domain.isEmpty()) allGroups = ofy.query(Group.class).filter("domain",this.domain);
-				else allGroups = ofy.query(Group.class);
+				if (this.domain != null && !this.domain.isEmpty()) allGroups = ofy().load().type(Group.class).filter("domain",this.domain);
+				else allGroups = ofy().load().type(Group.class);
 				if (allGroups.count() > 0) return true;  // needs update if there is at least one group available
 				else return false;  // no groups yet; don't bother
 			} else return false;    // user has already joined a group or chosen not to join
@@ -455,67 +440,59 @@ public class User implements Comparable<User>,Serializable {
 		if (this.firstName==null || this.firstName.isEmpty()) this.firstName = "";
 		this.lowercaseName = this.lastName + (!this.lastName.isEmpty()&&!this.firstName.isEmpty()?", ":"") + this.firstName;
 		this.lowercaseName = this.lowercaseName.toLowerCase().trim();
-		if (!this.lowercaseName.equals(tmp)) ofy.put(this);  // save User object if lowercaseName changed
+		if (!this.lowercaseName.equals(tmp)) ofy().save().entity(this);  // save User object if lowercaseName changed
 	}
 
 	void setAlias(String newId) {
 		this.alias = newId;
 	}
 
-	@SuppressWarnings("unchecked")
 	List<QuizTransaction> getQuizTransactions() {
-		return (List<QuizTransaction>) ofy.query(QuizTransaction.class).filter("userId",this.id).order("-score");
+		return ofy().load().type(QuizTransaction.class).filter("userId",this.id).order("-score").list();
 	}
 
-	@SuppressWarnings("unchecked")
 	List<Key<QuizTransaction>> getQuizTransactionKeys() {
-		return (List<Key<QuizTransaction>>) ofy.query(QuizTransaction.class).filter("userId",this.id).fetchKeys();
+		return ofy().load().type(QuizTransaction.class).filter("userId",this.id).keys().list();
 	}
 
 	QuizTransaction getQuizTransaction(Key<QuizTransaction> key) {
-		return ofy.get(key);
+		return ofy().load().key(key).now();
 	}
 
-	@SuppressWarnings("unchecked")
 	List<HWTransaction> getHWTransactions() {
-		return (List<HWTransaction>) ofy.query(HWTransaction.class).filter("userId",this.id);
+		return ofy().load().type(HWTransaction.class).filter("userId",this.id).list();
 	}
 
-	@SuppressWarnings("unchecked")
 	List<Key<HWTransaction>> getHWTransactionKeys() {
-		return (List<Key<HWTransaction>>) ofy.query(HWTransaction.class).filter("userId",this.id).fetchKeys();
+		return ofy().load().type(HWTransaction.class).filter("userId",this.id).keys().list();
 	}
 
 	HWTransaction getHWTransaction(Key<HWTransaction> key) {
-		return ofy.get(key);
+		return ofy().load().key(key).now();
 	}
 
-	@SuppressWarnings("unchecked")
 	List<ExamTransaction> getExamTransactions() {
-		return (List<ExamTransaction>) ofy.query(ExamTransaction.class).filter("userId",this.id);
+		return ofy().load().type(ExamTransaction.class).filter("userId",this.id).list();
 	}
 
-	@SuppressWarnings("unchecked")
 	List<Key<ExamTransaction>> getExamTransactionKeys() {
-		return (List<Key<ExamTransaction>>) ofy.query(ExamTransaction.class).filter("userId",this.id).fetchKeys();
+		return ofy().load().type(ExamTransaction.class).filter("userId",this.id).keys().list();
 	}
 
 	ExamTransaction getExamTransaction(Key<ExamTransaction> key) {
-		return ofy.get(key);
+		return ofy().load().key(key).now();
 	}
 
-	@SuppressWarnings("unchecked")
 	List<PracticeExamTransaction> getPracticeExamTransactions() {
-		return (List<PracticeExamTransaction>) ofy.query(PracticeExamTransaction.class).filter("userId",this.id);
+		return ofy().load().type(PracticeExamTransaction.class).filter("userId",this.id).list();
 	}
 
-	@SuppressWarnings("unchecked")
 	List<Key<PracticeExamTransaction>> getPracticeExamTransactionKeys() {
-		return (List<Key<PracticeExamTransaction>>) ofy.query(PracticeExamTransaction.class).filter("userId",this.id).fetchKeys();
+		return ofy().load().type(PracticeExamTransaction.class).filter("userId",this.id).keys().list();
 	}
 
 	PracticeExamTransaction getPracticeExamTransaction(Key<PracticeExamTransaction> key) {
-		return ofy.get(key);
+		return ofy().load().key(key).now();
 	}
 
 	public String getPrincipalRole() {
@@ -544,12 +521,12 @@ public class User implements Comparable<User>,Serializable {
 		else principalRole = ""; // unknown role
 
 		int level = 0;
-		List<QuizTransaction> quizTransactions = ofy.query(QuizTransaction.class).filter("userId",this.id).list();
+		List<QuizTransaction> quizTransactions = ofy().load().type(QuizTransaction.class).filter("userId",this.id).list();
 		HashSet<Long> topicIds = new HashSet<Long>();  // HashSet is like a List, but does not allow duplicates
 		for (QuizTransaction qt : quizTransactions) if (qt.graded!=null) topicIds.add(qt.topicId);  // collects unique topicIds
 		level += topicIds.size();  // number of unique quiz topics graded
 		topicIds.clear();
-		List<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId",this.id).list();
+		List<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",this.id).list();
 		for (HWTransaction ht : hwTransactions) topicIds.add(ht.topicId);
 		level += topicIds.size();
 		principalRole += " - Level " + level;
@@ -617,12 +594,12 @@ public class User implements Comparable<User>,Serializable {
 	boolean setIsChemVantageAdmin(boolean makeAdmin) {  // returns true if state is changed; otherwise returns false
 		if (isChemVantageAdmin() && !makeAdmin) {
 			roles -= 32;
-			ofy.put(this);
+			ofy().save().entity(this);
 			return true;
 		}
 		else if (!isChemVantageAdmin() && makeAdmin) {
 			roles += 32;
-			ofy.put(this);
+			ofy().save().entity(this);
 			return true;
 		}
 		else return false; // user already had the requested status; no changes made
@@ -659,13 +636,13 @@ public class User implements Comparable<User>,Serializable {
 	}
 
 	public int getHWQuestionScore(long questionId) {
-		return (ofy.query(HWTransaction.class).filter("userId",this.id).filter("questionId",questionId).filter("score >",0).getKey() == null?0:1);
+		return (ofy().load().type(HWTransaction.class).filter("userId",this.id).filter("questionId",questionId).filter("score >",0).count() == 0?0:1);
 	}
 
 	public boolean moreThan1RecentAttempts(long questionId,int minutes) { // for Homework question grading
 		try {
 			Date minutesAgo = new Date(new Date().getTime()-minutes*60000);
-			Query<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("graded >",minutesAgo).filter("userId",this.id).filter("questionId",questionId);
+			Query<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("graded >",minutesAgo).filter("userId",this.id).filter("questionId",questionId);
 			return (hwTransactions.count() > 1);
 		} catch (Exception e) {
 			return false;
@@ -677,7 +654,7 @@ public class User implements Comparable<User>,Serializable {
 		// more than 2 answers more than 15 minutes ago
 		try {
 			Date FifteenMinutesAgo = new Date(new Date().getTime()-900000);
-			Query<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId",this.id).filter("questionId",questionId).filter("graded <",FifteenMinutesAgo);
+			Query<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",this.id).filter("questionId",questionId).filter("graded <",FifteenMinutesAgo);
 			return (hwTransactions.count() > 2?true:false);
 		} catch (Exception e) {
 			return false;
@@ -685,8 +662,8 @@ public class User implements Comparable<User>,Serializable {
 	}
 
 	void recalculateScores() {
-		Query<Score> myScores = ofy.query(Score.class).ancestor(this);
-		ofy.delete(myScores);
+		Query<Score> myScores = ofy().load().type(Score.class).ancestor(this);
+		ofy().delete().entity(myScores);
 	}
 
 	boolean processPremiumUpgrade(Group newGroup) {
@@ -700,14 +677,14 @@ public class User implements Comparable<User>,Serializable {
 			if (this.hasPremiumAccount() || newGroup == null) return true;
 			else if (this.domain == null) return false;
 
-			Domain domain = ofy.query(Domain.class).filter("domainName", this.domain).get();
+			Domain domain = ofy().load().type(Domain.class).filter("domainName", this.domain).first().now();
 			if (domain == null || newGroup==null || !newGroup.domain.equals(this.domain)) return false;
 			if (domain.seatsAvailable > 0) {
 				this.setPremium(true);
 				domain.seatsAvailable--;
-				ofy.put(domain);
+				ofy().save().entity(domain);
 			} else return false;
-			ofy.put(this);
+			ofy().save().entity(this);
 			return true;
 		} catch (Exception e) {
 			return false;
@@ -716,18 +693,18 @@ public class User implements Comparable<User>,Serializable {
 
 	public void changeGroups(long newGroupId) {
 		try {
-			Group oldGroup = myGroupId>0?ofy.find(Group.class,myGroupId):null;
+			Group oldGroup = myGroupId>0?ofy().load().type(Group.class).id(myGroupId).now():null;
 			if (oldGroup != null) {
 				oldGroup.memberIds.remove(this.id);
-				ofy.put(oldGroup);
+				ofy().save().entity(oldGroup);
 			}
-			Group newGroup = newGroupId>0?ofy.find(Group.class,newGroupId):null;
+			Group newGroup = newGroupId>0?ofy().load().type(Group.class).id(newGroupId).now():null;
 			if (newGroup != null) {
 				newGroup.memberIds.add(this.id);
-				ofy.put(newGroup);
+				ofy().save().entity(newGroup);
 			}
 			this.myGroupId = newGroup==null?0:newGroupId;
-			ofy.put(this);
+			ofy().save().entity(this);
 		} catch (Exception e) {
 		}
 		recalculateScores();
