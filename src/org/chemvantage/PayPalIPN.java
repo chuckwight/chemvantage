@@ -17,14 +17,12 @@
 
 package org.chemvantage;
 
-import javax.persistence.Id;
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import javax.servlet.http.HttpServletRequest;
 
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.ObjectifyService;
-import com.googlecode.objectify.annotation.Unindexed;
+import com.googlecode.objectify.annotation.Id;
 
-@Unindexed
 public class PayPalIPN {    // this object represents a PayPal Instant Payment Notification transaction
 	@Id String txn_id;
 	String userId;
@@ -97,11 +95,10 @@ public class PayPalIPN {    // this object represents a PayPal Instant Payment N
 			if (!"admin@chemvantage.org".equals(receiver_email)) valid=false;
 			if (!"4.99".equals(mc_gross)) valid=false;
 			if (!"Completed".equals(payment_status)) valid=false;
-			Objectify ofy = ObjectifyService.begin();
-			User u = ofy.get(User.class,userId);
+			User u = ofy().load().type(User.class).id(userId).now();
 			if (u.hasPremiumAccount()) valid = false; // duplicate payment
 			else u.setPremium(valid); // upgrade the user to premium status if everything is OK
-			ofy.put(u);
+			ofy().save().entity(u);
 		} catch (Exception e) {
 			valid = false; // error or no user found with this id
 		}

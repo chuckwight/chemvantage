@@ -17,17 +17,16 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.util.Date;
 import java.util.List;
 
-import javax.persistence.Id;
-
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.ObjectifyService;
-import com.googlecode.objectify.annotation.Cached;
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Id;
 
-@Cached
+@Cache
 public class Nonce {
 	@Id String id;
 		Date created;
@@ -54,15 +53,14 @@ public class Nonce {
 			if (Math.abs(stamped.getTime()-now.getTime()) > interval/2) throw new Exception();  // out of submission interval
 			
 			// delete all Nonce objects older than the interval
-			Objectify ofy = ObjectifyService.begin();
-			List<Key<Nonce>> expired = ofy.query(Nonce.class).filter("created <",oldest).listKeys();
-			if (expired.size() > 0) ofy.delete(expired);
+			List<Key<Nonce>> expired = ofy().load().type(Nonce.class).filter("created <",oldest).keys().list();
+			if (expired.size() > 0) ofy().delete().keys(expired);
 			
 			// check to see if a Nonce with the specified id already exists in the database
-			if (ofy.find(Nonce.class,nonce) != null) throw new Exception();
+			if (ofy().load().type(Nonce.class).id(nonce).safe() != null) throw new Exception(); // if nonce exists
 			
 			// store a new Nonce object in the datastore with the unique nonce string
-			ofy.put(new Nonce(nonce));
+			ofy().save().entity(new Nonce(nonce));
 			
 			return true;
 		} catch (Exception e) {
