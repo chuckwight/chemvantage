@@ -8,9 +8,10 @@ import javax.persistence.Transient;
 */
 import java.util.List;
 
-import com.googlecode.objectify.annotation.Cached;
+import com.googlecode.objectify.annotation.Cache;
 
-@Cached
+
+@Cache
 public class ProposedQuestion extends Question {
 	
 	private static final long serialVersionUID = 137L;

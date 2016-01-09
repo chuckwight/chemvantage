@@ -24,14 +24,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import javax.persistence.Id;
-import javax.persistence.Transient;
-
 import com.bestcode.mathparser.IMathParser;
 import com.bestcode.mathparser.MathParserFactory;
-import com.googlecode.objectify.annotation.Cached;
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Id;
 
-@Cached
+@Cache
 public class Question implements Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id Long id;
@@ -53,7 +51,8 @@ public class Question implements Serializable {
 	String contributorId;
 	String editorId;
 	String notes;
-	@Transient int[] parameters = {0,0,0,0};
+	// Note: the parameters array formerly had the attribute @Transient javax.persistence.Transient
+	int[] parameters = {0,0,0,0};
 	boolean isActive = false;
 	
 	public static final int MULTIPLE_CHOICE = 1;
