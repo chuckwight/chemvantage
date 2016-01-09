@@ -20,6 +20,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -42,8 +44,6 @@ import com.googlecode.objectify.Objectify;
 
 public class CASLaunch extends HttpServlet {
 
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
 	private static final long serialVersionUID = 137L;
 	protected static final Map<String,String> casProviders = new HashMap<String,String>();
 	protected static final Map<String,String> casLogos = new HashMap<String,String>();
@@ -103,7 +103,7 @@ public class CASLaunch extends HttpServlet {
 			// After this point, the CAS launch was validated successfully. 
 
 			// Provision a new user account if necessary, and store the userId in the user's session
-			User user = ofy.find(User.class,userId);
+			User user = ofy().load().type(User.class).id(userId).now();
 			String email = userId + "@" + authDomain.toLowerCase();
 			if (user==null) user = User.createCASUser(userId,email,authDomain.toLowerCase().trim());
 			
