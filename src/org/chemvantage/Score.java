@@ -17,49 +17,46 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import javax.persistence.Id;
-
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.ObjectifyService;
-import com.googlecode.objectify.Query;
-import com.googlecode.objectify.annotation.Cached;
-import com.googlecode.objectify.annotation.Indexed;
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
 import com.googlecode.objectify.annotation.Parent;
-import com.googlecode.objectify.annotation.Unindexed;
+import com.googlecode.objectify.cmd.Query;
 
-@Cached @Unindexed
+@Cache
 public class Score {    // this object represents a best score achieved by a user on a quiz or homework
-	@Id Long assignmentId;      // from the datastore.
+	@Id 	Long assignmentId;      // from the datastore.
 	@Parent Key<User> owner;
-	long groupId;
-	int score;
-	int overallScore;
-	int maxPossibleScore;
-	int numberOfAttempts;
-	Date mostRecentAttempt;
-	String lis_result_sourcedid;
-	@Indexed boolean lisReportComplete;
+	@Index 	boolean lisReportComplete;
+			long groupId;
+			int score;
+			int overallScore;
+			int maxPossibleScore;
+			int numberOfAttempts;
+			Date mostRecentAttempt;
+			String lis_result_sourcedid;
 	
 	Score() {
 		lisReportComplete=false;
 	}	
 	
 	public static Score getInstance(String userId,Assignment a) {
-		Objectify ofy = ObjectifyService.begin();
 		Score s = new Score();
 		s.assignmentId = a.id;
-		s.owner = new Key<User>(User.class,userId);
+		s.owner = Key.create(User.class,userId);
 		s.groupId = a.groupId;
 		s.score = 0;
 		s.overallScore = 0;
 		s.numberOfAttempts = 0;
 		if (a.assignmentType.equals("Quiz")) {
-			Query<QuizTransaction> quizTransactions = ofy.query(QuizTransaction.class).filter("userId",userId).filter("topicId",a.topicId);
+			Query<QuizTransaction> quizTransactions = ofy().load().type(QuizTransaction.class).filter("userId",userId).filter("topicId",a.topicId);
 			for (QuizTransaction qt : quizTransactions) {
 				if (qt.downloaded.before(a.deadline)) {  // pre-deadline group score
 					s.numberOfAttempts++;  // number of pre-deadline quiz attempts
@@ -74,16 +71,16 @@ public class Score {    // this object represents a best score achieved by a use
 				}				
 			}
 		} else if (a.assignmentType.equals("Homework")) {
-			Query<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId",userId).filter("topicId",a.topicId);
-			List<Key<Question>> allQuestionKeys = ofy.query(Question.class).filter("assignmentType","Homework").filter("topicId", a.topicId).listKeys();
+			Query<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",userId).filter("topicId",a.topicId);
+			List<Key<Question>> allQuestionKeys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId", a.topicId).keys().list();
 			List<Key<Question>> assignmentQuestionKeys = new ArrayList<Key<Question>>();
 			assignmentQuestionKeys.addAll(a.questionKeys);  // clones the assignment List of question keys
 			for (HWTransaction ht : hwTransactions) {
 				if (ht.graded.before(a.deadline)) {
 					s.numberOfAttempts++;
-					if (ht.score > 0 && assignmentQuestionKeys.remove(new Key<Question>(Question.class,ht.questionId))) s.score++; 
+					if (ht.score > 0 && assignmentQuestionKeys.remove(Key.create(Question.class,ht.questionId))) s.score++; 
 				}
-				if (ht.score>0 && allQuestionKeys.remove(new Key<Question>(Question.class,ht.questionId))) s.overallScore++;
+				if (ht.score>0 && allQuestionKeys.remove(Key.create(Question.class,ht.questionId))) s.overallScore++;
 				if (s.lis_result_sourcedid == null || s.lis_result_sourcedid.isEmpty()) s.lis_result_sourcedid = ht.lis_result_sourcedid;  // record any available sourcedid value for reporting score to the LMS				
 				if (s.mostRecentAttempt == null || ht.graded.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far
 					s.mostRecentAttempt = ht.graded;
@@ -92,7 +89,7 @@ public class Score {    // this object represents a best score achieved by a use
 				}					
 			}
 		} else if (a.assignmentType.equals("PracticeExam")) {
-			Query<PracticeExamTransaction> practiceExamTransactions = ofy.query(PracticeExamTransaction.class).filter("userId",userId);
+			Query<PracticeExamTransaction> practiceExamTransactions = ofy().load().type(PracticeExamTransaction.class).filter("userId",userId);
 			int score = 0;
 			int possibleScore = 0;
 			for (PracticeExamTransaction pt : practiceExamTransactions) {
@@ -138,9 +135,9 @@ public class Score {    // this object represents a best score achieved by a use
 			if (now.after(deadline)) {  // only consider the red dot if we're past the assignment deadline
 				if (overallScore==0) redDot = true;
 				else if (mostRecentAttempt==null) { // recalculate the Score object
-					Assignment a = ObjectifyService.begin().get(Assignment.class,assignmentId);
+					Assignment a = ofy().load().type(Assignment.class).id(assignmentId).now();
 					Score s = Score.getInstance(owner.getName(),a);
-					ObjectifyService.begin().put(s);
+					ofy().save().entity(s);
 					return s.getDotScore(deadline, thresholdPct);
 				}
 				else {
