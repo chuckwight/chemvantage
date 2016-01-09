@@ -17,12 +17,12 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.text.DecimalFormat;
 
-import javax.persistence.Id;
-
-import com.googlecode.objectify.ObjectifyService;
-import com.googlecode.objectify.Query;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.cmd.Query;
 
 public class Subject {
 	@Id Long id;
@@ -42,7 +42,7 @@ public class Subject {
 	
 	public String getTopicSelectBox(long id) {
 		StringBuffer buf = new StringBuffer();
-		Query<Topic> topics = ObjectifyService.begin().query(Topic.class);
+		Query<Topic> topics = ofy().load().type(Topic.class);
 		buf.append("Topic: <SELECT NAME=TopicId>");
 		if (id == 0) buf.append("<OPTION VALUE=0>Select a topic:</OPTION>");
 		for (Topic t : topics) {
@@ -56,7 +56,7 @@ public class Subject {
 	public void addStarReport(int stars) {
 		avgStars = (avgStars*nStarReports + stars)/(nStarReports+1);
 		nStarReports++;
-		ObjectifyService.begin().put(this);
+		ofy().save().entity(this);
 	}
 
 	public double getAvgStars() {
