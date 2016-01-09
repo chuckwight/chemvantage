@@ -17,14 +17,13 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
 
-import javax.persistence.Id;
-
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.ObjectifyService;
+import com.googlecode.objectify.annotation.Id;
 
 public class UserReport implements Serializable {
 	private static final long serialVersionUID = 137L;
@@ -53,11 +52,10 @@ public class UserReport implements Serializable {
 	
 	public String adminView(User adminUser) {
 		StringBuffer buf = new StringBuffer();
-		Objectify ofy = ObjectifyService.begin();
 		try {
 			User user = null;
 			try {
-				user = ofy.get(User.class,this.userId);
+				user = ofy().load().type(User.class).id(this.userId).now();
 			} catch (Exception e) {
 			}
 			
@@ -76,13 +74,13 @@ public class UserReport implements Serializable {
 			if (stars>0) buf.append(" (" + stars + " stars)<br>");
 			buf.append("<FONT COLOR=RED>" + comments + "</FONT><br>");
 			try {
-				Question q = ofy.get(Question.class,this.questionId);
+				Question q = ofy().load().type(Question.class).id(this.questionId).safe();
 				q.setParameters(userId!=null?userId.hashCode():-1); // -1 randomizes the question
-				Topic topic = ofy.find(Topic.class,q.topicId);
+				Topic topic = ofy().load().type(Topic.class).id(q.topicId).now();
 				buf.append("Topic: " + topic.title + " (" + q.assignmentType + " question)<br>");
 				buf.append(q.printAll());
 				if (user!=null) {
-					List<Response> responses = ofy.query(Response.class).filter("userId",userId).filter("questionId",questionId).list();
+					List<Response> responses = ofy().load().type(Response.class).filter("userId",userId).filter("questionId",questionId).list();
 					if (responses.size() > 0) {
 						buf.append("<table><tr><td>Date/Time (UTC)</td><td>Student Response</td><td>Correct Response</td><td>Score</td></tr>");
 						for (Response r : responses) buf.append("<tr><td>" + r.submitted.toString() + "</td><td align=center>" + r.studentResponse 
@@ -107,11 +105,10 @@ public class UserReport implements Serializable {
 
 	public String view() {
 		StringBuffer buf = new StringBuffer();
-		Objectify ofy = ObjectifyService.begin();
 		User user = null;
 		String userName = "anonymous";
 		try {
-			user = ofy.get(User.class,this.userId);
+			user = ofy().load().type(User.class).id(this.userId).safe();
 			userName = user.getBothNames() + " (" + user.getEmail() + ")";
 		} catch (Exception e2) {				
 		}
@@ -119,14 +116,14 @@ public class UserReport implements Serializable {
 		if (stars>0) buf.append("(" + stars + " stars)<br>\n");
 		buf.append("<FONT COLOR=RED>" + comments + "</FONT><p>\n\n");
 		try {
-			Question q = ofy.get(Question.class,this.questionId);
+			Question q = ofy().load().type(Question.class).id(this.questionId).safe();
 			q.setParameters(userId!=null?userId.hashCode():-1);
-			Topic topic = ofy.find(Topic.class,q.topicId);
+			Topic topic = ofy().load().type(Topic.class).id(q.topicId).now();
 			buf.append("Topic: " + topic.title + " (" + q.assignmentType + " question)<br>");
 			buf.append(q.printAll());
 			if (user!=null) {
 				buf.append("<table><tr><td>Date/Time (UTC)</td><td>Student Response</td><td>Correct Response</td><td>Score</td></tr>");
-				List<Response> responses = ofy.query(Response.class).filter("userId",userId).filter("questionId",questionId).list();
+				List<Response> responses = ofy().load().type(Response.class).filter("userId",userId).filter("questionId",questionId).list();
 				for (Response r : responses) buf.append("<tr><td>" + r.submitted.toString() + "</td><td align=center>" + r.studentResponse 
 						+ "</td><td align=center>" + r.correctAnswer + "</td><td align=center>" + r.score + "</td></tr>");
 				buf.append("</table>");

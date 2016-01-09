@@ -20,18 +20,17 @@ package org.chemvantage;
 import java.io.Serializable;
 import java.util.Date;
 
-import javax.persistence.Id;
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Id;
 
-import com.googlecode.objectify.annotation.Cached;
-
-@Cached
+@Cache
 public class VideoTransaction implements Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id Long id;
-    String userId;
-    String serialNumber;
-    String title;
-    Date viewed;
+    	String userId;
+    	String serialNumber;
+    	String title;
+    	Date viewed;
 
     VideoTransaction() {}
     
