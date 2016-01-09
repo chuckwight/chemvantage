@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
@@ -28,18 +30,13 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.datastore.Cursor;
 import com.google.appengine.api.datastore.QueryResultIterator;
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.ObjectifyService;
-import com.googlecode.objectify.Query;
+import com.googlecode.objectify.cmd.Query;
 
 public class DomainAdmin extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	private int queryLimit = 20;
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
-	Subject subject = dao.getSubject();
-
+	
 	public String getServletInfo() {
 		return "This servlet is used by Google Apps administrators to manage user properties and roles.";
 	}
@@ -59,7 +56,7 @@ public class DomainAdmin extends HttpServlet {
 			if (domainName==null) response.sendRedirect("/Admin"); // ChemVantage administrator
 			
 			// Check to ensure that user is either domain admin or ChemVAntage admin
-			Domain d = ofy.query(Domain.class).filter("domainName", domainName).get();
+			Domain d = ofy().load().type(Domain.class).filter("domainName", domainName).first().now();
 			if (d==null) {
 				out.println("The ChemVantage domain " + domainName + " does not exist.");
 				return;
@@ -73,7 +70,7 @@ public class DomainAdmin extends HttpServlet {
 			if (userRequest == null) userRequest = "";
 
 			if (userRequest.equals("Edit User") || userRequest.equals("Check ID")) {
-				User usr = ofy.get(User.class,request.getParameter("UserId"));
+				User usr = ofy().load().type(User.class).id(request.getParameter("UserId")).safe();
 				out.println(Home.getHeader(user) + editUserForm(user,request,usr) + Home.footer);
 			}
 			else {
@@ -100,7 +97,7 @@ public class DomainAdmin extends HttpServlet {
 			if (domainName==null) response.sendRedirect("/Admin"); // ChemVantage administrator
 			
 			// Check to ensure that user is either domain admin or ChemVantage admin
-			Domain d = ofy.query(Domain.class).filter("domainName", domainName).get();
+			Domain d = ofy().load().type(Domain.class).filter("domainName", domainName).first().now();
 			List<String> domainAdmins = d.getDomainAdmins();
 			if (!((domainAdmins != null && domainAdmins.contains(user.id)) || user.isChemVantageAdmin())) {
 				response.sendRedirect("/Home");
@@ -116,28 +113,28 @@ public class DomainAdmin extends HttpServlet {
 			if (userRequest == null) userRequest = "";
 			
 			if (userRequest.equals("Update User")) {
-				User usr = ofy.get(User.class,request.getParameter("UserId")); // user record to modify
+				User usr = ofy().load().type(User.class).id(request.getParameter("UserId")).safe(); // user record to modify
 				updateUser(usr,request);
 				if (usr.id.equals(user.id)) user = usr; // admin modifying own record; update now to reflect new status
 			} else if (userRequest.equals("Delete User")) {
-				User usr = ofy.get(User.class,request.getParameter("UserId"));
-				ofy.delete(usr);
+				User usr = ofy().load().type(User.class).id(request.getParameter("UserId")).safe();
+				ofy().delete().entity(usr);
 			} else if (userRequest.equals("Login As This User")) {
 				request.getSession(true).setAttribute("UserId",request.getParameter("UserId"));
 				response.sendRedirect("/Home");
 				return;
 			} else if (userRequest.equals("Confirm Merge")) {
-				User usr = ofy.get(User.class,request.getParameter("UserId"));
-				User mergeUser = ofy.get(User.class,request.getParameter("MergeUserId"));
+				User usr = ofy().load().type(User.class).id(request.getParameter("UserId")).safe();
+				User mergeUser = ofy().load().type(User.class).id(request.getParameter("MergeUserId")).safe();
 				mergeAccounts(usr,mergeUser);
 			} else if (userRequest.equals("Assign Administrator")) {
 				try {
-					User usr = ofy.find(User.class,request.getParameter("AdminId"));
+					User usr = ofy().load().type(User.class).id(request.getParameter("AdminId")).now();
 					usr.setIsAdministrator(true);
 					usr.domain = d.domainName;
-					ofy.put(usr);
+					ofy().save().entity(usr);
 					d.addAdmin(usr.id);
-					ofy.put(d);
+					ofy().save().entity(d);
 				} catch (Exception e) {
 					out.println("Sorry, this user could not be assigned to administer the domain.");
 				}
@@ -176,8 +173,8 @@ public class DomainAdmin extends HttpServlet {
 				int i = searchString.indexOf('*');
 				if (i == 0) searchString = "";
 				else if (i > 0) searchString = searchString.substring(0,i);
-				results = ofy.query(User.class).filter("email >=",searchString).filter("email <",(searchString+'\ufffd')).filter("domain",d.domainName).limit(this.queryLimit);
-				if (cursor!=null) results.startCursor(Cursor.fromWebSafeString(cursor));
+				results = ofy().load().type(User.class).filter("email >=",searchString).filter("email <",(searchString+'\ufffd')).filter("domain",d.domainName).limit(this.queryLimit);
+				if (cursor!=null) results.startAt(Cursor.fromWebSafeString(cursor));
 			}
 			
 			buf.append("\n<h3>Manage User Accounts</h3>");
@@ -285,9 +282,9 @@ public class DomainAdmin extends HttpServlet {
 			String mergeUserId = request.getParameter("MergeUserId");
 			if (mergeUserId!=null) {
 				try {
-					User mergeUser = ofy.get(User.class,request.getParameter("MergeUserId"));
+					User mergeUser = ofy().load().type(User.class).id(request.getParameter("MergeUserId")).safe();
 					if (usr.id.equals(mergeUser.id)) mergeUser = null; // prevents merging identical accounts
-					Group g = mergeUser.myGroupId>0?ofy.find(Group.class,mergeUser.myGroupId):null;
+					Group g = mergeUser.myGroupId>0?ofy().load().type(Group.class).id(mergeUser.myGroupId).now():null;
 					buf.append("<FORM METHOD=POST>"
 							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='Confirm Merge'>"
 							+ "<INPUT TYPE=HIDDEN NAME=UserId VALUE='" + usr.id + "'>"
@@ -325,7 +322,7 @@ public class DomainAdmin extends HttpServlet {
 		// This method checks to see if the user is eligible to join a new group
 		//if (user.hasPremiumAccount() || user.domain==null) return true;
 		if (user.hasPremiumAccount()) return true;
-		Domain domain = ofy.query(Domain.class).filter("domainName", domainName).get();
+		Domain domain = ofy().load().type(Domain.class).filter("domainName", domainName).first().now();
 		if (domain == null) return false;
 		if (domain.seatsAvailable>0) return true;
 		return false;
@@ -334,7 +331,7 @@ public class DomainAdmin extends HttpServlet {
 	String groupSelectBox(long myGroupId,String domain) {
 		StringBuffer buf = new StringBuffer();
 		try {
-			Query<Group> groups = ofy.query(Group.class).filter("domain",domain);
+			Query<Group> groups = ofy().load().type(Group.class).filter("domain",domain);
 			buf.append("\n<SELECT NAME=GroupId><OPTION VALUE=0>(none)</OPTION>");
 			for (Group g : groups) {
 				buf.append("\n<OPTION VALUE=" + g.id + (g.id==myGroupId?" SELECTED>":">") 
@@ -365,17 +362,17 @@ public class DomainAdmin extends HttpServlet {
 			usr.roles = roles;
 			if (usr.roles>7) usr.setPremium(true);
 			
-			Domain domain = ofy.query(Domain.class).filter("domainName",usr.domain).get();
+			Domain domain = ofy().load().type(Domain.class).filter("domainName",usr.domain).first().now();
 			if (usr.roles>15) domain.addAdmin(usr.id);
 			else domain.removeAdmin(usr.id);
-			ofy.put(domain);
+			ofy().save().entity(domain);
 			
 			try {
 				long newId = Long.parseLong(request.getParameter("GroupId"));  // get groupId for new group
 				usr.changeGroups(newId);
 			} catch (Exception e) {
 			}
-			ofy.put(usr);
+			ofy().save().entity(usr);
 		}
 		catch (Exception e) {
 		}
@@ -394,32 +391,31 @@ public class DomainAdmin extends HttpServlet {
 		toUser.roles = fromUser.roles>toUser.roles?fromUser.roles:toUser.roles;
 		toUser.setLowerCaseName();
 		
-		Objectify ofy = ObjectifyService.begin();
-		ofy.put(toUser);
+		ofy().save().entity(toUser);
 		
-		List<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId",fromUser.id).list();
+		List<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",fromUser.id).list();
 		for (HWTransaction h:hwTransactions) h.userId = toUser.id;
-		ofy.put(hwTransactions);
+		ofy().save().entity(hwTransactions);
 		
-		List<PracticeExamTransaction> peTransactions = ofy.query(PracticeExamTransaction.class).filter("userId",fromUser.id).list();
+		List<PracticeExamTransaction> peTransactions = ofy().load().type(PracticeExamTransaction.class).filter("userId",fromUser.id).list();
 		for (PracticeExamTransaction p:peTransactions) p.userId = toUser.id;
-		ofy.put(peTransactions);
+		ofy().save().entity(peTransactions);
 		
-		List<QuizTransaction> qTransactions = ofy.query(QuizTransaction.class).filter("userId",fromUser.id).list();
+		List<QuizTransaction> qTransactions = ofy().load().type(QuizTransaction.class).filter("userId",fromUser.id).list();
 		for (QuizTransaction q:qTransactions) q.userId = toUser.id;
-		ofy.put(qTransactions);
+		ofy().save().entity(qTransactions);
 		
-		List<VideoTransaction> vTransactions = ofy.query(VideoTransaction.class).filter("userId",fromUser.id).list();
+		List<VideoTransaction> vTransactions = ofy().load().type(VideoTransaction.class).filter("userId",fromUser.id).list();
 		for (VideoTransaction v:vTransactions) v.userId = toUser.id;
-		ofy.put(vTransactions);
+		ofy().save().entity(vTransactions);
 		
-		List<Group> myGroups = ofy.query(Group.class).filter("instructorId",fromUser.id).list();
+		List<Group> myGroups = ofy().load().type(Group.class).filter("instructorId",fromUser.id).list();
 		for (Group g:myGroups) g.instructorId=toUser.id;
-		ofy.put(myGroups);
+		ofy().save().entity(myGroups);
 		
 		fromUser.setAlias(toUser.id);  // diverts future logins to the new UserId
 		fromUser.myGroupId=0;          // removes old userId from the group to avoid duplicate gradebook entries
-		ofy.put(fromUser);
+		ofy().save().entity(fromUser);
 	}
 }
 
