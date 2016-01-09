@@ -17,22 +17,23 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import javax.persistence.Id;
-
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.ObjectifyService;
-import com.googlecode.objectify.annotation.Cached;
-import com.googlecode.objectify.annotation.Unindexed;
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
 
-@Cached
+
+@Cache @Entity
 public class Assignment implements Comparable<Assignment>,Serializable {
 	private static final long serialVersionUID = 137L;
-	@Unindexed	@Id Long id;
+	@Id Long id;
 	long groupId;
 	long topicId;
 	List<Long> topicIds; // used for practice exams which have multiple topicIds
@@ -43,20 +44,22 @@ public class Assignment implements Comparable<Assignment>,Serializable {
 
     Assignment() {}
 
-    Assignment(long groupId,long topicId,String assignmentType,Date deadline) {
+    @SuppressWarnings("unchecked")
+	Assignment(long groupId,long topicId,String assignmentType,Date deadline) {
     	this.groupId = groupId;
     	this.topicId = topicId;
     	this.assignmentType = assignmentType;
     	this.deadline = deadline;
-    	questionKeys = ObjectifyService.begin().query(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).listKeys();
+    	questionKeys = (List<Key<Question>>)ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).keys();
     }
     
-    Assignment(long groupId,List<Long> topicIds,String assignmentType,Date deadline) {   // specific to Practice Exam assignments with multiple topicIds
+    @SuppressWarnings("unchecked")
+	Assignment(long groupId,List<Long> topicIds,String assignmentType,Date deadline) {   // specific to Practice Exam assignments with multiple topicIds
     	this.groupId = groupId;
     	this.topicIds = topicIds;
     	this.assignmentType = assignmentType;
     	this.deadline = deadline;
-    	for (Long topicId : topicIds) questionKeys.addAll(ObjectifyService.begin().query(Question.class).filter("assignmentType","Exam").filter("topicId",topicId).listKeys());
+    	for (Long topicId : topicIds) questionKeys.addAll((List<Key<Question>>)ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",topicId).keys());
     }
     
     Assignment(long groupId,String assignmentType) {
