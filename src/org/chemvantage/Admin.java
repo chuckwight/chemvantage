@@ -30,15 +30,12 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.datastore.Cursor;
 import com.google.appengine.api.datastore.QueryResultIterator;
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.ObjectifyService;
 import com.googlecode.objectify.cmd.Query;
 
 public class Admin extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	private int queryLimit = 20;
-	DAO dao = new DAO();
 	Subject subject = Subject.getSubject();
 
 	public String getServletInfo() {
