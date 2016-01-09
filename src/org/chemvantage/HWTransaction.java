@@ -20,25 +20,24 @@ package org.chemvantage;
 import java.io.Serializable;
 import java.util.Date;
 
-import javax.persistence.Id;
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
 
-import com.googlecode.objectify.annotation.Cached;
-import com.googlecode.objectify.annotation.Unindexed;
-
-@Cached
+@Cache
 public class HWTransaction implements Serializable {
 	private static final long serialVersionUID = 137L;
-	@Unindexed	@Id Long id;
-    			long questionId;
-    			long topicId;
-    @Unindexed	String topicTitle;
-    			String userId;
-    			Date graded;
-    @Unindexed	long responseId;
-    			int score;
-    @Unindexed	int possibleScore;
-    @Unindexed  String lis_result_sourcedid;
-    @Unindexed	String IPNumber;
+	@Id		Long id;
+	@Index	long questionId;
+	@Index	long topicId;
+	@Index	String userId;
+	@Index	Date graded;
+	@Index	int score;
+			int possibleScore;
+			long responseId;
+			String topicTitle;
+			String lis_result_sourcedid;
+			String IPNumber;
 
     HWTransaction() {}
     
