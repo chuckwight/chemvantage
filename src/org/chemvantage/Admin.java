@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
@@ -30,15 +32,14 @@ import com.google.appengine.api.datastore.Cursor;
 import com.google.appengine.api.datastore.QueryResultIterator;
 import com.googlecode.objectify.Objectify;
 import com.googlecode.objectify.ObjectifyService;
-import com.googlecode.objectify.Query;
+import com.googlecode.objectify.cmd.Query;
 
 public class Admin extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	private int queryLimit = 20;
 	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
-	Subject subject = dao.getSubject();
+	Subject subject = Subject.getSubject();
 
 	public String getServletInfo() {
 		return "This servlet is used by PZone admins to manage user properties and roles.";
@@ -57,7 +58,7 @@ public class Admin extends HttpServlet {
 			if (userRequest == null) userRequest = "";
 
 			if (userRequest.equals("Edit User") || userRequest.equals("Check ID")) {
-				User usr = ofy.get(User.class,request.getParameter("UserId"));
+				User usr = ofy().load().type(User.class).id(request.getParameter("UserId")).safe();
 				out.println(Home.getHeader(user) + editUserForm(user,request,usr) + Home.footer);
 			}
 			else {
@@ -66,7 +67,6 @@ public class Admin extends HttpServlet {
 				out.println(Home.getHeader(user) + mainAdminForm(user,searchString,cursor) + Home.footer);
 			}
 		} catch (Exception e) {
-			//response.sendRedirect("/");
 		}
 	}
 
@@ -87,14 +87,14 @@ public class Admin extends HttpServlet {
 				Home.announcement = request.getParameter("Announcement");
 				Login.lockedDown = Boolean.parseBoolean(request.getParameter("LockedDown"));
 			} else if (userRequest.equals("Update User")) {
-				User usr = ofy.get(User.class,request.getParameter("UserId")); // user record to modify
+				User usr = ofy().load().type(User.class).id(request.getParameter("UserId")).safe(); // user record to modify
 				updateUser(usr,request);
 				searchString = usr.getEmail();
 				if (usr.id.equals(user.id)) user = usr; // admin modifying own record; update now to reflect new status
 			} else if (userRequest.equals("Delete User")) {
-				User usr = ofy.get(User.class,request.getParameter("UserId"));
+				User usr = ofy().load().type(User.class).id(request.getParameter("UserId")).safe();
 				searchString = usr.getEmail();
-				ofy.delete(usr);
+				ofy().delete().entity(usr);
 			} else if (userRequest.equals("Search")) {
 				searchString = request.getParameter("oauth_consumer_key");
 			} else if (userRequest.equals("Generate New Shared Secret")) {
@@ -106,8 +106,8 @@ public class Admin extends HttpServlet {
 				response.sendRedirect("/Home");
 				return;
 			} else if (userRequest.equals("Confirm Merge")) {
-				User usr = ofy.get(User.class,request.getParameter("UserId"));
-				User mergeUser = ofy.get(User.class,request.getParameter("MergeUserId"));
+				User usr = ofy().load().type(User.class).id(request.getParameter("UserId")).safe();
+				User mergeUser = ofy().load().type(User.class).id(request.getParameter("MergeUserId")).safe();
 				mergeAccounts(usr,mergeUser);
 				searchString = usr.getEmail();
 			}
@@ -137,8 +137,8 @@ public class Admin extends HttpServlet {
 				int i = searchString.indexOf('*');
 				if (i == 0) searchString = "";
 				else if (i > 0) searchString = searchString.substring(0,i);
-				results = ofy.query(User.class).filter("email >=",searchString).filter("email <",(searchString+'\ufffd')).limit(this.queryLimit);
-				if (cursor!=null) results.startCursor(Cursor.fromWebSafeString(cursor));
+				results = ofy().load().type(User.class).filter("email >=",searchString).filter("email <",(searchString+'\ufffd')).limit(this.queryLimit);
+				if (cursor!=null) results.startAt(Cursor.fromWebSafeString(cursor));
 			}
 			
 			buf.append("\n<h3>User Search</h3>");
@@ -176,14 +176,14 @@ public class Admin extends HttpServlet {
 			
 			// This section provides information about domains
 			buf.append("<h3>Most Active ChemVantage Domains</h3>");
-			List<Domain> domains = ofy.query(Domain.class).order("-dailyLoginsAvg").limit(10).list();
+			List<Domain> domains = ofy().load().type(Domain.class).order("-dailyLoginsAvg").limit(10).list();
 			if (domains.size()>0) {
 				buf.append("<table><tr><td>Domain Name</td><td>Last Login</td><td>Users</td><td style='text-align:center'>Administrator</td><td>Avg Daily Logins</td></tr>");
 				for (Domain d : domains) {
-					int nUsers = ofy.query(User.class).filter("domain",d.domainName).count();
+					int nUsers = ofy().load().type(User.class).filter("domain",d.domainName).count();
 					if (d.activeUsers!=nUsers) {
 						d.activeUsers = nUsers;
-						ofy.put(d);
+						ofy().save().entity(d);
 					}
 					buf.append("<tr><td><a href=/admin?Domain=" + d.domainName + ">" + d.domainName + "</a></td>"
 							+ "<td>" + d.lastLogin.toString() + "</td>"
@@ -207,7 +207,7 @@ public class Admin extends HttpServlet {
 				buf.append("Use the form below to search for, create or delete specific LTI consumers.<br>");
 			}
 			else if (searchString.equals("(show all)")) {
-				Query<BLTIConsumer> consumers = ofy.query(BLTIConsumer.class);
+				Query<BLTIConsumer> consumers = ofy().load().type(BLTIConsumer.class);
 				if (consumers.count() == 0) buf.append("(no LTI consumers have been authorized yet)<p>");
 				else {
 					buf.append("<TABLE><TR><TH>Consumer Key</TH><TH>Secret</TH></TR>");
@@ -221,7 +221,7 @@ public class Admin extends HttpServlet {
 				}
 			}
 			else if (!searchString.isEmpty()){
-				c = ofy.find(BLTIConsumer.class,searchString);
+				c = ofy().load().type(BLTIConsumer.class).id(searchString).now();
 				if (c==null) buf.append("LTI Consumer not found.");
 				else buf.append("Launch URL: https://www.chemvantage.org/lti/ <br>"
 						+ "Configuration file: https://www.chemvantage.org/lti_config.xml <br>"
@@ -289,9 +289,9 @@ public class Admin extends HttpServlet {
 			String mergeUserId = request.getParameter("MergeUserId");
 			if (mergeUserId!=null) {
 				try {
-					User mergeUser = ofy.get(User.class,request.getParameter("MergeUserId"));
+					User mergeUser = ofy().load().type(User.class).id(request.getParameter("MergeUserId")).safe();
 					if (usr.id.equals(mergeUser.id)) mergeUser = null; // prevents merging identical accounts
-					Group g = mergeUser.myGroupId>0?ofy.find(Group.class,mergeUser.myGroupId):null;
+					Group g = mergeUser.myGroupId>0?ofy().load().type(Group.class).id(mergeUser.myGroupId).now():null;
 					buf.append("<FORM METHOD=POST ACTION=Admin>"
 							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='Confirm Merge'>"
 							+ "<INPUT TYPE=HIDDEN NAME=UserId VALUE='" + usr.id + "'>"
@@ -326,7 +326,7 @@ public class Admin extends HttpServlet {
 	String groupSelectBox(long myGroupId) {
 		StringBuffer buf = new StringBuffer();
 		try {
-			Query<Group> groups = ofy.query(Group.class);
+			Query<Group> groups = ofy().load().type(Group.class);
 			buf.append("\n<SELECT NAME=GroupId><OPTION VALUE=0>(none)</OPTION>");
 			for (Group g : groups) {
 				buf.append("\n<OPTION VALUE=" + g.id + (g.id==myGroupId?" SELECTED>":">") 
@@ -363,7 +363,7 @@ public class Admin extends HttpServlet {
 				usr.changeGroups(newId);
 			} catch (Exception e) {
 			}
-			ofy.put(usr);
+			ofy().save().entity(usr);
 		}
 		catch (Exception e) {
 		}
@@ -378,7 +378,7 @@ public class Admin extends HttpServlet {
 					+ "In order to authorize a new LMS to make BLTI launch requests, ChemVantage must provide "
 					+ "the LMS administrator with an oauth_consumer_key (a string similar to a domain name like "
 					+ "'webct.utah.edu' or 'webct,business.utah.edu') and a shared secret (random string).");
-			Query<BLTIConsumer> consumers = ofy.query(BLTIConsumer.class);
+			Query<BLTIConsumer> consumers = ofy().load().type(BLTIConsumer.class);
 			if (consumers.count() == 0) buf.append("(no BLTI consumers have been authorized yet)<p>");
 			for (BLTIConsumer c : consumers) {
 				buf.append(c.oauth_consumer_key);
@@ -400,17 +400,17 @@ public class Admin extends HttpServlet {
 	void createBLTIConsumer(HttpServletRequest request) {
 		String oauth_consumer_key = request.getParameter("oauth_consumer_key");
 		// prevent over-writing an existing BLTIConsumer
-		BLTIConsumer c = ofy.find(BLTIConsumer.class,oauth_consumer_key); 
+		BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).now(); 
 		if (c==null) {
 			c = new BLTIConsumer(oauth_consumer_key); 
-			ofy.put(c);
+			ofy().save().entity(c);
 		}
 	}
 		
 	void deleteBLTIConsumer(HttpServletRequest request) {
 		String oauth_consumer_key = request.getParameter("oauth_consumer_key");
-		BLTIConsumer c = ofy.find(BLTIConsumer.class,oauth_consumer_key); 
-		if (c!=null) ofy.delete(c);
+		BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).now(); 
+		if (c!=null) ofy().delete().entity(c);
 	}
 	
 	protected static void mergeAccounts(User toUser,User fromUser) {
@@ -433,29 +433,28 @@ public class Admin extends HttpServlet {
 		toUser.setLowerCaseName();
 		fromUser.setAlias(toUser.id);  // diverts future logins to the new UserId
 		
-		Objectify ofy = ObjectifyService.begin();
-		ofy.put(toUser);
-		ofy.put(fromUser);
+		ofy().save().entity(toUser);
+		ofy().save().entity(fromUser);
 		
-		List<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId",fromUser.id).list();
+		List<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",fromUser.id).list();
 		for (HWTransaction h:hwTransactions) h.userId = toUser.id;
-		ofy.put(hwTransactions);
+		ofy().save().entity(hwTransactions);
 		
-		List<PracticeExamTransaction> peTransactions = ofy.query(PracticeExamTransaction.class).filter("userId",fromUser.id).list();
+		List<PracticeExamTransaction> peTransactions = ofy().load().type(PracticeExamTransaction.class).filter("userId",fromUser.id).list();
 		for (PracticeExamTransaction p:peTransactions) p.userId = toUser.id;
-		ofy.put(peTransactions);
+		ofy().save().entity(peTransactions);
 		
-		List<QuizTransaction> qTransactions = ofy.query(QuizTransaction.class).filter("userId",fromUser.id).list();
+		List<QuizTransaction> qTransactions = ofy().load().type(QuizTransaction.class).filter("userId",fromUser.id).list();
 		for (QuizTransaction q:qTransactions) q.userId = toUser.id;
-		ofy.put(qTransactions);
+		ofy().save().entity(qTransactions);
 		
-		List<VideoTransaction> vTransactions = ofy.query(VideoTransaction.class).filter("userId",fromUser.id).list();
+		List<VideoTransaction> vTransactions = ofy().load().type(VideoTransaction.class).filter("userId",fromUser.id).list();
 		for (VideoTransaction v:vTransactions) v.userId = toUser.id;
-		ofy.put(vTransactions);
+		ofy().save().entity(vTransactions);
 		
-		List<Group> myGroups = ofy.query(Group.class).filter("instructorId",fromUser.id).list();
+		List<Group> myGroups = ofy().load().type(Group.class).filter("instructorId",fromUser.id).list();
 		for (Group g:myGroups) g.instructorId=toUser.id;
-		ofy.put(myGroups);
+		ofy().save().entity(myGroups);
 		
 	}
 	
@@ -470,17 +469,16 @@ public class Admin extends HttpServlet {
 		//   5. If the address of any account matches a registered domain, add the user to that domain.
 
 		try {
-			Objectify ofy = ObjectifyService.begin();
-			List<User> userAccounts = ofy.query(User.class).filter("email",email).list();
+			List<User> userAccounts = ofy().load().type(User.class).filter("email",email).list();
 			for (User u : userAccounts) {
 				if ((u.alias != null && !u.alias.isEmpty()) || u.getEmail().isEmpty() || !u.verifiedEmail || "CAS".equals(u.authDomain)) {
 					userAccounts.remove(u);
 					continue;
 				}
 				try { // if this domain exists as a registered ChemVantage domain, assign the user to it
-					Domain d = ofy.query(Domain.class).filter("domainName",u.authDomain).get();
+					Domain d = ofy().load().type(Domain.class).filter("domainName",u.authDomain).first().safe();
 					u.domain = d.domainName;
-					ofy.put(u);
+					ofy().save().entity(u);
 				} catch (Exception e) {
 				}
 			}
