@@ -19,11 +19,10 @@ package org.chemvantage;
 
 import java.util.Date;
 
-import javax.persistence.Id;
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Id;
 
-import com.googlecode.objectify.annotation.Cached;
-
-@Cached
+@Cache
 public class RescueMessage {    // this object represents a best score achieved by a user on a quiz or homework
 	@Id String userId;      // from the datastore.
 	Date sent;
