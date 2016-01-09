@@ -17,15 +17,14 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import javax.persistence.Id;
-
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.ObjectifyService;
+import com.googlecode.objectify.annotation.Id;
 
 public class ExamAssignment implements Comparable<Assignment> {
 	@Id Long id;
@@ -44,10 +43,9 @@ public class ExamAssignment implements Comparable<Assignment> {
     	this.topicIds = topicIds;
     	this.assignmentType = assignmentType;
     	this.deadline = deadline;
-    	Objectify ofy = ObjectifyService.begin();
-    	questionKeys_2pt = ofy.query(Question.class).filter("assignmentType",assignmentType).filter("pointValue",2).filter("topicId in",topicIds).listKeys();
-    	questionKeys_10pt = ofy.query(Question.class).filter("assignmentType",assignmentType).filter("pointValue",10).filter("topicId in",topicIds).listKeys();
-    	questionKeys_15pt = ofy.query(Question.class).filter("assignmentType",assignmentType).filter("pointValue",15).filter("topicId in",topicIds).listKeys();
+    	questionKeys_2pt = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("pointValue",2).filter("topicId in",topicIds).keys().list();
+    	questionKeys_10pt = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("pointValue",10).filter("topicId in",topicIds).keys().list();
+    	questionKeys_15pt = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("pointValue",15).filter("topicId in",topicIds).keys().list();
     }
     
     public int compareTo(Assignment other) {

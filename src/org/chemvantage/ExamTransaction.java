@@ -21,22 +21,21 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import javax.persistence.Id;
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
 
-import com.googlecode.objectify.annotation.Cached;
-import com.googlecode.objectify.annotation.Unindexed;
-
-@Cached
+@Cache
 public class ExamTransaction {
-	@Unindexed	@Id Long id;
-    			List<Long> topicIds = new ArrayList<Long>();
-    			String userID;
-    			Date downloaded;
-    			Date graded;
-    			int score;
-    @Unindexed	int possibleScore;
-    @Unindexed	String lis_result_sourcedid;
-    @Unindexed	String IPNumber;
+	@Id 	Long id;
+    @Index	List<Long> topicIds = new ArrayList<Long>();
+    @Index	String userID;
+    @Index	Date downloaded;
+    @Index	Date graded;
+    @Index	int score;
+    		int possibleScore;
+    		String lis_result_sourcedid;
+    		String IPNumber;
 
     ExamTransaction() {}
     
