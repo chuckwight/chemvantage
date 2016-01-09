@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -26,16 +28,12 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.Query;
+import com.googlecode.objectify.cmd.Query;
 
 public class Contribute extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
-	Subject subject = dao.getSubject();
-
+	
 	public String getServletInfo() {
 		return "This servlet is used by users to contribute new Quiz and Homework questions.";
 	}
@@ -149,7 +147,7 @@ public class Contribute extends HttpServlet {
 				q.validateFields();
 
 				if (request.getParameter("QuestionText")!=null) {  // preview the formatted question
-					Topic topic = ofy.get(Topic.class,topicId);
+					Topic topic = ofy().load().type(Topic.class).id(topicId).now();
 					buf.append("<h2>" + assignmentType + " Question Preview</h2>Topic: " + topic.title + "<p>");
 					preview = true;
 					q.setParameters();
@@ -171,7 +169,7 @@ public class Contribute extends HttpServlet {
 						+ "For details, please see the <a href=About#copyright>About Us</a> page.<p>");
 			}
 
-			Query<Topic> topics = ofy.query(Topic.class);
+			Query<Topic> topics = ofy().load().type(Topic.class);
 			buf.append("<b>Topic: </b><SELECT NAME=TopicId>");
 			if (topicId == 0) buf.append("<OPTION VALUE=0>Select a topic:</OPTION>");
 			for (Topic t : topics) {
@@ -318,7 +316,7 @@ public class Contribute extends HttpServlet {
 			q.notes = "";
 			q.validateFields();
 			
-			ofy.put(q);
+			ofy().save().entity(q);
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}
