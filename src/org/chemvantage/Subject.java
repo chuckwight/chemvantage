@@ -20,7 +20,11 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
 
+import com.google.appengine.api.datastore.QueryResultIterable;
+import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.cmd.Query;
 
@@ -34,6 +38,19 @@ public class Subject {
 	
 	Subject(String title) {
 		this.title = title;
+	}
+
+	static public Subject getSubject() {
+		Subject genChem = null;
+		try {
+			genChem = ofy().load().type(Subject.class).first().safe();
+		} catch (Exception e) { // this should be run only once at setup
+			if (genChem==null) {
+				genChem = new Subject("General Chemistry");
+				ofy().save().entity(genChem);
+			}
+		}
+		return genChem;
 	}
 
 	public String getTopicSelectBox() {
@@ -51,6 +68,27 @@ public class Subject {
 		}
 		buf.append("</SELECT><br>");
 		return buf.toString();
+	}
+
+	public List<Long> getVideos() {
+		List<Long> videoIds = new ArrayList<Long>();
+		QueryResultIterable<Key<Video>> videoKeys = ofy().load().type(Video.class).keys();
+		for (Key<Video> k : videoKeys) videoIds.add(k.getId());
+		return videoIds;
+	}
+
+	public List<Long> getTextIds() {
+		List<Long> textIds = new ArrayList<Long>();
+		QueryResultIterable<Key<Text>> textKeys = ofy().load().type(Text.class).keys();
+		for (Key<Text> k : textKeys) textIds.add(k.getId());
+		return textIds;
+	}
+
+	public List<Long> getTopicIds() {
+		List<Long> topicIds = new ArrayList<Long>();
+		QueryResultIterable<Key<Topic>> topicKeys = ofy().load().type(Topic.class).order("orderBy").keys();
+		for (Key<Topic> k : topicKeys) topicIds.add(k.getId());
+		return topicIds;
 	}
 
 	public void addStarReport(int stars) {
