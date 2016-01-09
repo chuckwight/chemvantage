@@ -518,7 +518,10 @@ public class LTIRegistration extends HttpServlet {
 						.put(new JSONObject()
 							.put("message_type", "basic-lti-launch-request")
 							.put("path", "/lti")
-							.put("parameter", new JSONArray())
+							.put("parameter", new JSONArray()
+									.put(new JSONObject()
+											.put("name", "context_id")
+											.put("name", "context_title")))
 							.put("enabled_capability", new JSONArray(capability_enabled))));
 		
 		toolProfile.put("resource_handler", new JSONArray().put(resourceHandler));
