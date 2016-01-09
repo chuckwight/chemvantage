@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Date;
@@ -32,17 +34,15 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.Query;
+import com.googlecode.objectify.Key;
+import com.googlecode.objectify.cmd.Query;
 
 
 public class Feedback extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
-	Subject subject = dao.getSubject();
-
+	Subject subject = Subject.getSubject();
+	
 	public String getServletInfo() {
 		return "This servlet is used by contributors to suggest new and revised Quiz and Homework questions.";
 	}
@@ -66,7 +66,7 @@ public class Feedback extends HttpServlet {
 				String userId = user==null?"":user.id;
 				long questionId = Long.parseLong(request.getParameter("QuestionId"));
 				String notes = request.getParameter("Notes");
-				ofy.put(new UserReport(userId,questionId,notes));
+				ofy().save().entity(new UserReport(userId,questionId,notes));
 				sendEmailToAdmin();
 			} else if (userRequest.equals("AjaxRating")) {
 				recordAjaxRating(request);
@@ -274,7 +274,7 @@ public class Feedback extends HttpServlet {
 		
 		if (comments.length() > 0) {
 			UserReport r = new UserReport(user==null?null:user.id,stars,comments);
-			ofy.put(r);
+			ofy().save().entity(r);
 		}
 
 		buf.append("<h2>Feedback Page</h2>");
@@ -294,7 +294,7 @@ public class Feedback extends HttpServlet {
 		StringBuffer buf = new StringBuffer("<hr><h3>User Feedback</h3>");
 		boolean showFeedback = false;  // show feedback only if reports are available
 		
-		Query<UserReport> reports = ofy.query(UserReport.class).order("-submitted");
+		Query<UserReport> reports = ofy().load().type(UserReport.class).order("-submitted");
 		for (UserReport r : reports) {
 			String report = r.adminView(user);  // returns report only for ChemVantage admins, domainAdmins and report author
 			if (report.length()>0) {
@@ -307,14 +307,14 @@ public class Feedback extends HttpServlet {
 	
 	private void removeReport(HttpServletRequest request) {
 		long reportId = Long.parseLong(request.getParameter("ReportId"));
-		ofy.delete(UserReport.class,reportId);
+		ofy().delete().key(Key.create(UserReport.class,reportId));
 	}
 	
 	private void sendEmailToAdmin() {
 		Properties props = new Properties();
 		Session session = Session.getDefaultInstance(props, null);
 
-		String msgBody = ofy.query(UserReport.class).order("-submitted").limit(1).get().view();
+		String msgBody = ofy().load().type(UserReport.class).order("-submitted").first().now().view();
 		if (msgBody.length()==0) return;  // no reports exist
 		
 		try {
@@ -334,7 +334,7 @@ public class Feedback extends HttpServlet {
 		try {
 			buf.append("<h2>Reply to User Feedback</h2>");
 			long reportId = Long.parseLong(request.getParameter("ReportId"));
-			UserReport report = ofy.get(UserReport.class,reportId);
+			UserReport report = ofy().load().type(UserReport.class).id(reportId).safe();
 			buf.append(report.adminView(user) + "<hr>");
 			buf.append("<FORM ACTION=Feedback METHOD=POST>");
 			buf.append("<TEXTAREA NAME=MessageText ROWS=25 COLS=60 WRAP=SOFT>");
@@ -360,8 +360,8 @@ public class Feedback extends HttpServlet {
 		if (msgBody.isEmpty()) return "Message body was empty.";
 		try {
 			long reportId = Long.parseLong(request.getParameter("ReportId"));
-			UserReport report = ofy.get(UserReport.class,reportId);
-			User recipient = ofy.get(User.class,report.userId);
+			UserReport report = ofy().load().type(UserReport.class).id(reportId).safe();
+			User recipient = ofy().load().type(User.class).id(report.userId).safe();
 			Message msg = new MimeMessage(session);
 			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
 			msg.addRecipient(Message.RecipientType.TO,
