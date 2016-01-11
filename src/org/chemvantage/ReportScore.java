@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
+import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.net.URLDecoder;
@@ -30,14 +31,10 @@ import javax.servlet.http.HttpServletResponse;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.Objectify;
 
 public class ReportScore extends HttpServlet {
 	private static final long serialVersionUID = 137L;
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
-	Subject subject = dao.getSubject();
-
+	
 	public String getServletInfo() {
 		return "ChemVantage servlet reports a single Score object back to a user's LMS as a Task using the IMS LTI 1.1 Learning Information Services API.";
 	}
@@ -58,9 +55,9 @@ public class ReportScore extends HttpServlet {
 		try {
 			userId = URLDecoder.decode(request.getParameter("UserId"),"UTF-8");
 			assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
-			Assignment a = ofy.get(Assignment.class,assignmentId);
-			Key<Score> k = new Key<Score>(new Key<User>(User.class, userId),Score.class,a.id);
-    		Score s = ofy.find(k);
+			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+			Key<Score> k = Key.create(Key.create(User.class, userId),Score.class,a.id);
+    		Score s = ofy().load().key(k).now();
     		if (s == null) return;
     		
     		// compute a scaled score in the range 0.0-1.0 for LIS services specification
@@ -68,7 +65,7 @@ public class ReportScore extends HttpServlet {
 			if (score < 0.0 || score > 1.0) throw new Exception();
 			
 			if (!s.needsLisReporting()) return;
-			Group g = ofy.get(Group.class,a.groupId);
+			Group g = ofy().load().type(Group.class).id(a.groupId).safe();
 			String oauth_consumer_key = g.domain;
 			
 			String messageFormat = g.getLisOutcomeFormat();
@@ -79,7 +76,7 @@ public class ReportScore extends HttpServlet {
 			
 			if (replyBody.toLowerCase().contains("success")) {
 				s.lisReportComplete = true;
-				ofy.put(s);
+				ofy().save().entity(s);
 			}
 			else throw new Exception();  // try again later
 		} catch (Exception e) {
