@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -31,8 +33,6 @@ import com.googlecode.objectify.Objectify;
 
 public class SendObjects extends GenericServlet {
 	private static final long serialVersionUID = 137L;
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
 	boolean servletEnabled = true;  // set to false to disable all transfers
 	
 	@Override
@@ -50,10 +50,10 @@ public class SendObjects extends GenericServlet {
 				Class<?> c = Class.forName(className);
 				ObjectOutputStream oStream = new ObjectOutputStream(response.getOutputStream());
 				if ("Check Quantity".equals(userRequest)) {
-					value = ofy.query(c).listKeys().size();
+					value = ofy().load().type(c).keys().list().size();
 					oStream.writeInt(value);
 				} else {
-					List<?> objects = ofy.query(c).list();
+					List<?> objects = ofy().load().type(c).list();
 					oStream.writeObject(objects);
 				}
 				oStream.close();
