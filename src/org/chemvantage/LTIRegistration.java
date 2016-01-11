@@ -54,7 +54,6 @@ import javax.servlet.http.HttpSession;
 import com.google.appengine.labs.repackaged.org.json.JSONArray;
 import com.google.appengine.labs.repackaged.org.json.JSONException;
 import com.google.appengine.labs.repackaged.org.json.JSONObject;
-import com.googlecode.objectify.Objectify;
 
 public class LTIRegistration extends HttpServlet {
 

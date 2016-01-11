@@ -44,8 +44,6 @@ import net.oauth.SimpleOAuthValidator;
 import net.oauth.server.OAuthServlet;
 import net.oauth.signature.OAuthSignatureMethod;
 
-import com.googlecode.objectify.Objectify;
-
 public class LTILaunch extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
