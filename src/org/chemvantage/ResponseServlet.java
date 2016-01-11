@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -29,12 +31,10 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.Query;
+import com.googlecode.objectify.cmd.Query;
 
 public class ResponseServlet extends HttpServlet {
 	private static final long serialVersionUID = 137L;
-	Objectify ofy = new DAO().ofy();
 	
 	public String getServletInfo() {
 		return "This admin servlet creates and stores a single instance of a Response object (normally called from a Task queue).";
@@ -71,8 +71,8 @@ public class ResponseServlet extends HttpServlet {
 				List<HashMap<Long,Integer>> results5 = new ArrayList<HashMap<Long,Integer>>();
 				
 				Query<Response> responses;
-				if (topicId==0L) responses = ofy.query(Response.class).order("submitted");
-				else responses = ofy.query(Response.class).filter("topicId", topicId).order("submitted");
+				if (topicId==0L) responses = ofy().load().type(Response.class).order("submitted");
+				else responses = ofy().load().type(Response.class).filter("topicId", topicId).order("submitted");
 				
 				// process and organize the collection of responses
 				int totalResponses = responses.count();
@@ -199,7 +199,7 @@ public class ResponseServlet extends HttpServlet {
 					Integer.parseInt(request.getParameter("PossibleScore")),
 					request.getParameter("UserId"),
 					new Date());
-			ofy.put(r);		
+			ofy().save().entity(r);		
 		} catch (Exception e) {
 		}
 	}
@@ -207,7 +207,7 @@ public class ResponseServlet extends HttpServlet {
 	String topicSelectBox() {
 		StringBuffer buf = new StringBuffer();
 		buf.append("<SELECT NAME=TopicId><OPTION VALUE=all>Include all topics</OPTION>");
-		List<Topic> topics = ofy.query(Topic.class).list();
+		List<Topic> topics = ofy().load().type(Topic.class).list();
 		for (Topic t : topics) buf.append("<OPTION VALUE=" + t.id + ">" + t.title + "</OPTION>");
 		buf.append("</SELECT>");
 		return buf.toString();
