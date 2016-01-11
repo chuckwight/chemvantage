@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
+import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -37,14 +38,11 @@ import javax.servlet.http.HttpServletResponse;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.Objectify;
 
 public class Homework extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
-	Subject subject = dao.getSubject();
+	Subject subject = Subject.getSubject();
 	static Map<Key<Question>,Question> hwQuestions = new HashMap<Key<Question>,Question>();
 	int retryDelayMinutes = 2;  // minimum time between answer submissions for any single question
 
@@ -94,18 +92,18 @@ public class Homework extends HttpServlet {
 				return "<h2>No Homework Assignment Selected</h2>You must return to the <a href=Home>Home Page</a> "
 				+ "and select a topic for this assignment using the drop-down box.";
 			}
-			Topic topic = ofy.get(Topic.class,topicId);
+			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
 			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid"); // used for reporting score back to the LMS
 			
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			Group myGroup = user.myGroupId>0?ofy.find(Group.class,user.myGroupId):null;
+			Group myGroup = user.myGroupId>0?ofy().load().type(Group.class).id(user.myGroupId).now():null;
 			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
 			df.setTimeZone(tz);
 			Date now = new Date();
 
 			Assignment hwa = null;
 			try {
-				hwa = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Homework").filter("topicId",topicId).get();
+				hwa = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Homework").filter("topicId",topicId).first().now();
 				if (user.isInstructor() && hwa!=null) {
 					buf.append("<br><span style='color:red'>Instructor Only: "
 							+ "<a href=Groups?UserRequest=AssignHomeworkQuestions&GroupId=" 
@@ -139,7 +137,7 @@ public class Homework extends HttpServlet {
 			}
 			buf.append("</UL>");
 
-			List<Key<Question>> optionalQuestionKeys = ofy.query(Question.class).filter("assignmentType","Homework").filter("topicId",topicId).filter("isActive",true).listKeys();
+			List<Key<Question>> optionalQuestionKeys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topicId).filter("isActive",true).keys().list();
 			if (optionalQuestionKeys.size()==0) buf.append("<h2>Sorry, there are no homework questions for this topic.</h2>");
 			
 			if (hwa != null) { // use hwa.questionIds to move assigned questions to the other list
@@ -152,7 +150,7 @@ public class Homework extends HttpServlet {
 						Question q = hwQuestions.get(k);
 						if (q==null) {
 							try {
-								q = ofy.get(k);
+								q = ofy().load().key(k).safe();
 								hwQuestions.put(k,q);
 							} catch (Exception e) {
 								continue;  // this catches cases where an assigned question no longer exists
@@ -185,7 +183,7 @@ public class Homework extends HttpServlet {
 				Question q = hwQuestions.get(k);
 				if (q==null) {
 					try {
-						q = ofy.get(k);
+						q = ofy().load().key(k).safe();
 						hwQuestions.put(k,q);
 					} catch (Exception e) {
 						continue;  // this catches cases where an assigned question no longer exists
@@ -214,18 +212,18 @@ public class Homework extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		try {
 			long questionId = Long.parseLong(request.getParameter("QuestionId"));
-			Key<Question> k = new Key<Question>(Question.class,questionId);
+			Key<Question> k = Key.create(Question.class,questionId);
 			Question q = hwQuestions.get(k);
 			if (q==null) {
-				q = ofy.get(k);
+				q = ofy().load().key(k).safe();
 				hwQuestions.put(k,q);
 			}
-			Topic topic = ofy.get(Topic.class,q.topicId);
+			Topic topic = ofy().load().type(Topic.class).id(q.topicId).safe();
 			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
 			
 			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			Group myGroup = user.myGroupId>0?ofy.find(Group.class,user.myGroupId):null;
+			Group myGroup = user.myGroupId>0?ofy().load().type(Group.class).id(user.myGroupId).now():null;
 			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
 			df.setTimeZone(tz);
 			String studentAnswer[] = request.getParameterValues(Long.toString(questionId));
@@ -236,7 +234,7 @@ public class Homework extends HttpServlet {
 			else for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
 			
 			Date minutesAgo = new Date(now.getTime()-retryDelayMinutes*60000);  // 24 hours ago
-			List<HWTransaction> recentTransactions = ofy.query(HWTransaction.class).filter("questionId",q.id).filter("userId",user.id).filter("graded >",minutesAgo).list();
+			List<HWTransaction> recentTransactions = ofy().load().type(HWTransaction.class).filter("questionId",q.id).filter("userId",user.id).filter("graded >",minutesAgo).list();
 			long secondsRemaining = 0;
 			if (recentTransactions.size()>0) {
 				Date lastSubmission = new Date(0L);
@@ -306,15 +304,15 @@ public class Homework extends HttpServlet {
 
 				HWTransaction ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,0L,studentScore,possibleScore,request.getRequestURI());
 				if (lis_result_sourcedid != null) ht.lis_result_sourcedid = lis_result_sourcedid;
-				ofy.put(ht);
+				ofy().save().entity(ht);
 				// create/update/store a HomeworkScore object
 				try {
 					myGroup.setGroupTopicIds();
 					long assignmentId = myGroup.getAssignmentId("Homework",topic.id);
 					if (assignmentId > 0) { // assignment exists; save a Score object
-						Assignment a = ofy.find(Assignment.class,assignmentId);
+						Assignment a = ofy().load().type(Assignment.class).id(assignmentId).now();
 						Score s = Score.getInstance(user.id,a);
-						ofy.put(s);
+						ofy().save().entity(s);
 						if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",user.id));  // put report into the Task Queue
 					}	
 				} catch (Exception e2) {
