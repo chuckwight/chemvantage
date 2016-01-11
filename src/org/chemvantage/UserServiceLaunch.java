@@ -20,6 +20,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.IOException;
 import java.util.Random;
 
@@ -33,12 +35,9 @@ import javax.servlet.http.HttpSession;
 
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
-import com.googlecode.objectify.Objectify;
 
 public class UserServiceLaunch extends HttpServlet {
 
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
 	private static final long serialVersionUID = 137L;
 
 	@Override
@@ -55,7 +54,7 @@ public class UserServiceLaunch extends HttpServlet {
 			String userId = userService.getCurrentUser().getUserId();
 			if (userId == null) response.sendRedirect("/");
 			try { // check to see if this user is in the datastore...
-				ofy.get(User.class,userId);
+				ofy().load().type(User.class).id(userId).safe();
 			} catch (Exception e2) { // ...and if not, create a new record.
 				User.createUserServiceUser(userService.getCurrentUser());
 			}

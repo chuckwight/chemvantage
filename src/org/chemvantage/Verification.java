@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Date;
@@ -35,15 +37,12 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.Objectify;
 
 
 public class Verification extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
-	Subject subject = dao.getSubject();
+	Subject subject = Subject.getSubject();
 
 	public String getServletInfo() {
 		return "This servlet verifies a user-supplied email address.";
@@ -60,9 +59,9 @@ public class Verification extends HttpServlet {
 			String userId = request.getParameter("UserId");
 			String code = request.getParameter("Code");
 			if (userId.isEmpty() || code.isEmpty()) throw new Exception();
-			User user = ofy.get(User.class,userId);
-			user.verifiedEmail = (Integer.parseInt(code) == new Key<User>(User.class,userId).hashCode());
-			ofy.put(user);
+			User user = ofy().load().type(User.class).id(userId).safe();
+			user.verifiedEmail = (Integer.parseInt(code) == Key.create(User.class,userId).hashCode());
+			ofy().save().entity(user);
 			if (user.verifiedEmail) Admin.autoMergeAccounts(user.getEmail());
 			out.println(Login.header + verifiedEmail(user.verifiedEmail) + Login.footer);
 		} catch (Exception e) {	
@@ -96,7 +95,7 @@ public class Verification extends HttpServlet {
 					user.verifiedEmail = false;
 				}
 				user.lastLogin = new Date();
-				ofy.put(user);
+				ofy().save().entity(user);
 				boolean requiresVerification = !user.verifiedEmail && !user.getEmail().isEmpty();
 				out.println(Home.getHeader(user) + personalInfoForm(user,requiresVerification?verificationEmailSent(user,request):false,request) + Home.footer);
 			} else if (userRequest.equals("Verify My Email Address")) {
@@ -105,14 +104,14 @@ public class Verification extends HttpServlet {
 				} catch(Exception e){
 				}
 				user.lastLogin = new Date();
-				ofy.put(user);
+				ofy().save().entity(user);
 				out.println(Home.getHeader(user) + (user.verifiedEmail?personalInfoForm(user,false,request):personalInfoForm(user,verificationEmailSent(user,request),request)) + Home.footer);
 			} else if (userRequest.equals("JoinGroup")) {
 				// This section verifies eligibility to join groups and adjusts available seats if necessary				
 				try {
 					long newGroupId = Long.parseLong(request.getParameter("GroupId"));
 					Group newGroup = null;
-					if (newGroupId > 0) newGroup = ofy.find(Group.class,newGroupId);
+					if (newGroupId > 0) newGroup = ofy().load().type(Group.class).id(newGroupId).now();
 					if (user.processPremiumUpgrade(newGroup)) user.changeGroups(newGroupId);
 				} catch (Exception e2) {
 				}
@@ -129,9 +128,9 @@ public class Verification extends HttpServlet {
 					String fromUserId = request.getParameter("FromAccount");
 					String toUserId = request.getParameter("ToAccount");
 					int code = Integer.parseInt(request.getParameter("Code"));
-					if (code==Math.abs((new Key<User>(User.class,fromUserId).toString() + new Key<User>(User.class,toUserId)).toString().hashCode())) {
-						User fromUser = ofy.get(User.class,fromUserId);
-						User toUser = ofy.get(User.class,toUserId);
+					if (code==Math.abs((Key.create(User.class,fromUserId).toString() + Key.create(User.class,toUserId)).toString().hashCode())) {
+						User fromUser = ofy().load().type(User.class).id(fromUserId).safe();
+						User toUser = ofy().load().type(User.class).id(toUserId).safe();
 						Admin.mergeAccounts(toUser,fromUser);
 						out.println(Home.getHeader(user) + personalInfoForm(user,false,request) + Home.footer);
 					} else out.println("The authorization code was not valid.");
@@ -152,7 +151,7 @@ public class Verification extends HttpServlet {
 			+ "To confirm that this is the email address associated with your ChemVantage account, "
 			+ "please click the link below or copy/paste it into your web browser address bar.<p>"
 			+ request.getRequestURL().toString() + "?UserId=" + user.id + "&Code="
-			+ new Key<User>(User.class,user.id).hashCode() + "  <p>"
+			+ Key.create(User.class,user.id).hashCode() + "  <p>"
 			+ "If you did not request this verification, please do not click the link.<br>" 
 			+ "If you need assistance, please reply to admin@chemvantage.org.<p>"
 			+ "Thank you.";
@@ -222,7 +221,7 @@ public class Verification extends HttpServlet {
 			buf.append("<TR><TD ALIGN=RIGHT>Roles: </TD><TD>Learner " + (user.isInstructor()?"Instructor ":"") + (user.isContributor()?"Author ":"") + (user.isEditor()?"Editor ":"") + (user.isAdministrator()?"Administrator ":"") +"</TD></TR>");			
 			buf.append("<TR><TD ALIGN=RIGHT>Account type: </TD><TD>" + (user.hasPremiumAccount()?"premium":"basic") + "</TD></TR>");
 			if (user.myGroupId>0L) { // user already belongs to a group
-				Group myGroup = ofy.find(Group.class,user.myGroupId);
+				Group myGroup = ofy().load().type(Group.class).id(user.myGroupId).now();
 				if (!user.hasPremiumAccount() || myGroup==null) user.changeGroups(0L);
 				else buf.append("<TR><TD ALIGN=RIGHT>Group:</TD><TD>" + myGroup.description + " (" + myGroup.getInstructorBothNames() + ")</TD></TR>");
 			}
@@ -242,8 +241,8 @@ public class Verification extends HttpServlet {
 					buf.append("<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=JoinGroup>");
 
 					List<Group> allGroups = null;
-					if (user.domain==null || user.domain.isEmpty()) allGroups=ofy.query(Group.class).list();
-					else allGroups=ofy.query(Group.class).filter("domain",user.domain).list();
+					if (user.domain==null || user.domain.isEmpty()) allGroups=ofy().load().type(Group.class).list();
+					else allGroups=ofy().load().type(Group.class).filter("domain",user.domain).list();
 					//for (Group g : allGroups) if (!g.isActive()) allGroups.remove(g);
 					
 					if (allGroups.size() == 0) {  // there are not yet any groups for this domain
@@ -327,12 +326,12 @@ public class Verification extends HttpServlet {
 			
 			if (user.verifiedEmail && !user.requiresUpdates()) {
 				// This section finds accounts with duplicate verified email addresses for immediate account merging
-				List<User> duplicateEmails = ofy.query(User.class).filter("email",user.getEmail()).list();
+				List<User> duplicateEmails = ofy().load().type(User.class).filter("email",user.getEmail()).list();
 				buf.append("<TABLE>");
 				for (User u : duplicateEmails) {
 					if (u.id.equals(user.id) || !u.verifiedEmail || u.alias!=null) continue;
 					//otherUserIds.add(u.id);
-					int code = Math.abs((new Key<User>(User.class,u.id).toString() + new Key<User>(User.class,user.id).toString()).hashCode());
+					int code = Math.abs((Key.create(User.class,u.id).toString() + Key.create(User.class,user.id).toString()).hashCode());
 					int i = duplicateEmails.indexOf(u);
 					String consumerKey = u.authDomain.equals("BLTI")?u.id.substring(0, u.id.indexOf(":")):u.authDomain;
 					buf.append("<TR><TD>" + u.getFullName() + " (" + u.getEmail() + ") - authorization domain=" + consumerKey + "</TD>"
@@ -345,7 +344,7 @@ public class Verification extends HttpServlet {
 							+ "</FORM></TD></TR>");
 				}
 				// This section finds duplicate names, sends a code to the user's email address and accepts it to initiate an account merge.
-				List<User> duplicateNames = ofy.query(User.class).filter("lowercaseName",user.lowercaseName).list();
+				List<User> duplicateNames = ofy().load().type(User.class).filter("lowercaseName",user.lowercaseName).list();
 				for (User u : duplicateNames) {
 					if (u.id.equals(user.id) || duplicateEmails.contains(u.id) || !u.verifiedEmail || u.alias!=null) continue;
 					int i = duplicateNames.indexOf(u);
@@ -375,7 +374,7 @@ public class Verification extends HttpServlet {
 	boolean eligibleToJoin(User user) {
 		// This method checks to see if the user is eligible to join a new group
 		if (user.hasPremiumAccount()) return true;
-		Domain domain = ofy.query(Domain.class).filter("domainName", user.domain).get();
+		Domain domain = ofy().load().type(Domain.class).filter("domainName", user.domain).first().now();
 		if (domain == null) return false;
 		return true;   // ******* THIS STATEMENT CREATES A FREE ACCOUNT FOR ANYONE IN A DOMAIN **********
 //		if (domain.seatsAvailable>0 || domain.freeTrialExpires.after(new Date())) return true;
@@ -394,15 +393,15 @@ public class Verification extends HttpServlet {
 			else if (user.domain == null) return false;
 			*/
 			if (user.hasPremiumAccount() || user.domain==null || newGroupId <= 0) return true;
-			Domain domain = ofy.query(Domain.class).filter("domainName", user.domain).get();
-			Group newGroup = ofy.find(Group.class,newGroupId);
+			Domain domain = ofy().load().type(Domain.class).filter("domainName", user.domain).first().now();
+			Group newGroup = ofy().load().type(Group.class).id(newGroupId).now();
 			if (domain == null || newGroup==null || !newGroup.domain.equals(user.domain)) return false;
 			if (domain.seatsAvailable > 0) {
 				user.setPremium(true);
 				domain.seatsAvailable--;
-				ofy.put(domain);
+				ofy().save().entity(domain);
 			} else return false;
-			ofy.put(user);
+			ofy().save().entity(user);
 			return true;
 		} catch (Exception e) {
 			return false;
@@ -414,8 +413,8 @@ public class Verification extends HttpServlet {
 		Properties props = new Properties();
 		Session session = Session.getDefaultInstance(props, null);
 		try {
-			User fromAccountUser = ofy.get(User.class,request.getParameter("FromAccount"));
-			int code = Math.abs((new Key<User>(User.class,fromAccountUser.id).toString() + new Key<User>(User.class,user.id)).toString().hashCode());
+			User fromAccountUser = ofy().load().type(User.class).id(request.getParameter("FromAccount")).safe();
+			int code = Math.abs((Key.create(User.class,fromAccountUser.id).toString() + Key.create(User.class,user.id)).toString().hashCode());
 			String msgBody = "<h3>ChemVantage Account Merge Request</h3>"
 				+ "To complete the requested account merge request, please copy/paste the following "
 				+ "authorization number into the request form:<p>"
