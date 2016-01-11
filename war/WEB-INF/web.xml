@@ -125,6 +125,7 @@
 	<servlet>
 		<servlet-name>Login</servlet-name>
 		<servlet-class>org.chemvantage.Login</servlet-class>
+		<load-on-startup>0</load-on-startup>
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>Login</servlet-name>
