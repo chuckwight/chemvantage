@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
+import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -39,7 +40,6 @@ import javax.servlet.http.HttpServletResponse;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.Objectify;
 
 public class Quiz extends HttpServlet {
 	// parameters that determine the properties of the quiz program:
@@ -49,9 +49,7 @@ public class Quiz extends HttpServlet {
 	int nQuestionsPerSubjectArea = 10;   // number of questions presented in each area also overridden in method printQuiz()
 	int timeLimit = 15;                  // minutes; set to zero for no time limit to complete the quiz
 	private static final long serialVersionUID = 137L;
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
-	Subject subject = dao.getSubject();
+	Subject subject = Subject.getSubject();
 	static Map<Key<Question>,Question> quizQuestions = new HashMap<Key<Question>,Question>();
 
 	public String getServletInfo() {
@@ -99,28 +97,28 @@ public class Quiz extends HttpServlet {
 				return "<h2>No Quiz Selected</h2>You must return to the <a href=Home>Home Page</a> "
 				+ "and select a topic for this quiz using the drop-down box.";
 			}
-			Topic topic = ofy.get(Topic.class,topicId);
+			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
 
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			Group myGroup = user.myGroupId>0?ofy.find(Group.class,user.myGroupId):null;
+			Group myGroup = user.myGroupId>0?ofy().load().type(Group.class).id(user.myGroupId).now():null;
 			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
 			df.setTimeZone(tz);
 			Date now = new Date();
 
 			// Check to see if this user has any pending quizzes on this topic:
 			Date then = new Date(now.getTime()-timeLimit*60000);  // timeLimit minutes ago
-			QuizTransaction qt = ofy.query(QuizTransaction.class).filter("userId",user.id).filter("topicId",topic.id).filter("graded",null).filter("downloaded >",then).get();
+			QuizTransaction qt = ofy().load().type(QuizTransaction.class).filter("userId",user.id).filter("topicId",topic.id).filter("graded",null).filter("downloaded >",then).first().safe();
 			if (qt == null) {
 				qt = new QuizTransaction(topic.id,topic.title,user.id,now,null,0,0,request.getRemoteAddr());
 				if (request.getParameter("lis_result_sourcedid")!=null) qt.lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
-				ofy.put(qt);  // creates a long id value to use in random number generator
+				ofy().save().entity(qt);  // creates a long id value to use in random number generator
 			}
 			int secondsRemaining = (int) (timeLimit*60 - (now.getTime() - qt.downloaded.getTime())/1000);
 
 			Assignment a = null;
 			try {
-				a = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",topicId).get();
-				if (user.isInstructor() && a!=null) {
+				a = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",topicId).first().safe();
+				if (user.isInstructor()) {
 					buf.append("<br><span style='color:red'>Instructor Only: "
 							+ "<a href=Groups?UserRequest=AssignQuizQuestions&GroupId=" 
 							+ myGroup.id + "&TopicId=" + topicId 
@@ -159,7 +157,7 @@ public class Quiz extends HttpServlet {
 			try {  // check for assigned questions
 				questionKeys = a.questionKeys;
 			} catch (Exception e) {  // no assignment exists
-				questionKeys = ofy.query(Question.class).filter("topicId", topicId).filter("assignmentType","Quiz").filter("isActive",true).listKeys();
+				questionKeys = ofy().load().type(Question.class).filter("topicId", topicId).filter("assignmentType","Quiz").filter("isActive",true).keys().list();
 			}
 			
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
@@ -175,7 +173,7 @@ public class Quiz extends HttpServlet {
 				Question q = quizQuestions.get(k);
 				if (q==null) {
 					try {
-						q = ofy.get(k);
+						q = ofy().load().key(k).safe();
 						quizQuestions.put(k,q);
 					} catch (Exception e) {
 						continue;  // this catches cases where an assigned question no longer exists
@@ -259,11 +257,11 @@ public class Quiz extends HttpServlet {
 				if (request.getParameter("FirstName")!=null) user.setFirstName(request.getParameter("FirstName"));
 				if (request.getParameter("LastName")!=null) user.setLastName(request.getParameter("LastName"));
 				if (request.getParameter("Email")!=null) user.setEmail(request.getParameter("Email"));
-				ofy.put(user);
+				ofy().save().entity(user);
 			}
 			Date now = new Date();
 			long transactionId = Long.parseLong(request.getParameter("QuizTransactionId"));
-			QuizTransaction qt = ofy.get(QuizTransaction.class,transactionId);
+			QuizTransaction qt = ofy().load().type(QuizTransaction.class).id(transactionId).safe();
 			if (qt.graded != null) {
 				return "<h2>No Score</h2>"
 				+ "Sorry, this quiz has been scored already and cannot be scored again. Please consult the <a href=Scores>scores page</a>.";
@@ -272,7 +270,7 @@ public class Quiz extends HttpServlet {
 				return "Sorry, the " + timeLimit + " minute time limit for this quiz has expired.";
 
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			Group myGroup = user.myGroupId>0?ofy.find(Group.class,user.myGroupId):null;
+			Group myGroup = user.myGroupId>0?ofy().load().type(Group.class).id(user.myGroupId).now():null;
 			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
 			df.setTimeZone(tz);
 
@@ -290,7 +288,7 @@ public class Quiz extends HttpServlet {
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 			for (Enumeration<?> e = request.getParameterNames();e.hasMoreElements();) {
 				try {
-					questionKeys.add(new Key<Question>(Question.class,Long.parseLong((String) e.nextElement())));
+					questionKeys.add(Key.create(Question.class,Long.parseLong((String) e.nextElement())));
 				} catch (Exception e2) {}
 			}
 			
@@ -304,7 +302,7 @@ public class Quiz extends HttpServlet {
 							Question q = quizQuestions.get(k);
 							if (q==null) {
 								try {
-									q = ofy.get(k);
+									q = ofy().load().key(k).safe();
 									quizQuestions.put(k,q);
 								} catch (Exception e) {
 									continue;
@@ -337,12 +335,12 @@ public class Quiz extends HttpServlet {
 			missedQuestions.append("</OL>\n");
 			qt.graded = now;
 			qt.score = studentScore;
-			ofy.put(qt);
+			ofy().save().entity(qt);
 			
-			Assignment a = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",qt.topicId).get();
+			Assignment a = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",qt.topicId).first().now();
 			if (a != null) {
 				Score s = Score.getInstance(user.id,a);
-				ofy.put(s);
+				ofy().save().entity(s);
 				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",user.id));  // put report into the Task Queue
 			}
 			
