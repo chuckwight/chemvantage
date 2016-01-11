@@ -140,7 +140,7 @@ public class DataTransfer extends HttpServlet {
 				request.setAttribute("Quantity", n);
 			} else {
 				List<?> objects = (List<?>) ois.readObject();
-				ofy().save().entity(objects);
+				ofy().save().entities(objects);
 				request.setAttribute("Quantity", objects.size());
 			}
 			ois.close();

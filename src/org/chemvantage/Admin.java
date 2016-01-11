@@ -435,23 +435,23 @@ public class Admin extends HttpServlet {
 		
 		List<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",fromUser.id).list();
 		for (HWTransaction h:hwTransactions) h.userId = toUser.id;
-		ofy().save().entity(hwTransactions);
+		ofy().save().entities(hwTransactions);
 		
 		List<PracticeExamTransaction> peTransactions = ofy().load().type(PracticeExamTransaction.class).filter("userId",fromUser.id).list();
 		for (PracticeExamTransaction p:peTransactions) p.userId = toUser.id;
-		ofy().save().entity(peTransactions);
+		ofy().save().entities(peTransactions);
 		
 		List<QuizTransaction> qTransactions = ofy().load().type(QuizTransaction.class).filter("userId",fromUser.id).list();
 		for (QuizTransaction q:qTransactions) q.userId = toUser.id;
-		ofy().save().entity(qTransactions);
+		ofy().save().entities(qTransactions);
 		
 		List<VideoTransaction> vTransactions = ofy().load().type(VideoTransaction.class).filter("userId",fromUser.id).list();
 		for (VideoTransaction v:vTransactions) v.userId = toUser.id;
-		ofy().save().entity(vTransactions);
+		ofy().save().entities(vTransactions);
 		
 		List<Group> myGroups = ofy().load().type(Group.class).filter("instructorId",fromUser.id).list();
 		for (Group g:myGroups) g.instructorId=toUser.id;
-		ofy().save().entity(myGroups);
+		ofy().save().entities(myGroups);
 		
 	}
 	
