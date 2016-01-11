@@ -20,6 +20,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -56,8 +58,6 @@ import com.googlecode.objectify.Objectify;
 
 public class LTIRegistration extends HttpServlet {
 
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
 	Map<String,String> sharedSecrets = new HashMap<String,String>();
 	private static final long serialVersionUID = 137L;
 	// the following string constants are associated with the ChemVantage Tool Profile and other
@@ -171,11 +171,11 @@ public class LTIRegistration extends HttpServlet {
 			if (email!=null && !email.isEmpty() && key!=null && !key.isEmpty()) {  // generate a new set of LTI credentials
 				response.setContentType("text/html");
 				PrintWriter out = response.getWriter();
-				BLTIConsumer c = ofy.find(BLTIConsumer.class,key);			
+				BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(key).now();			
 				if (c==null) {
 					c = new BLTIConsumer(key,email);
 					if (sendLTICredentials(email,c)) {  // credentials sent successfully
-						ofy.put(c);
+						ofy().save().entity(c);
 						out.println(Login.header + banner + successMessage + Login.footer);				
 					}
 				} else doError(request,response,"Sorry, the LTI registration attempt failed, probably because the consumer key is already in use.",null,null);			
@@ -311,7 +311,7 @@ public class LTIRegistration extends HttpServlet {
 				toolProxy.put("guid", tool_proxy_guid);
 				
 				// check to make sure that this is the first registration for this tool consumer
-				BLTIConsumer c = ofy.find(BLTIConsumer.class,tool_proxy_guid);
+				BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(tool_proxy_guid).now();
 				if (c==null) {  // this registration is for a new oath_consumer_key
 					c = new BLTIConsumer(tool_proxy_guid,oauth_secret,toolConsumerProfile.getString("guid"),"LTI-2p0");
 					c.putToolProxyURL(tool_proxy_url);
@@ -328,7 +328,7 @@ public class LTIRegistration extends HttpServlet {
 							break;
 						}
 					}
-							ofy.put(c);
+							ofy().save().entity(c);
 				}
 				else throw new Exception("A Tool Consumer was previously registered with this key.");
 
