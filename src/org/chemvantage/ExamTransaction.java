@@ -22,10 +22,11 @@ import java.util.Date;
 import java.util.List;
 
 import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 
-@Cache
+@Cache @Entity
 public class ExamTransaction {
 	@Id 	Long id;
     @Index	List<Long> topicIds = new ArrayList<Long>();

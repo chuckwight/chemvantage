@@ -27,9 +27,10 @@ import java.util.Random;
 import com.google.appengine.labs.repackaged.org.json.JSONException;
 import com.google.appengine.labs.repackaged.org.json.JSONObject;
 import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 
-@Cache
+@Cache @Entity
 public class BLTIConsumer {
 	@Id String oauth_consumer_key;
 	String secret;

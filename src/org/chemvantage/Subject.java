@@ -25,9 +25,12 @@ import java.util.List;
 
 import com.google.appengine.api.datastore.QueryResultIterable;
 import com.googlecode.objectify.Key;
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.cmd.Query;
 
+@Cache @Entity
 public class Subject {
 	@Id Long id;
 	String title;

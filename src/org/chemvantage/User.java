@@ -33,13 +33,14 @@ import org.chemvantage.samples.apps.marketplace.UserInfo;
 
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 import com.googlecode.objectify.cmd.Query;
 
 import net.sf.json.JSONObject;
 
-@Cache
+@Cache @Entity
 public class User implements Comparable<User>,Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id 	String id;

@@ -23,8 +23,11 @@ import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
 
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 
+@Cache @Entity
 public class UserReport implements Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id Long id;

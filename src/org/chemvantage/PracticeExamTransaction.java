@@ -25,10 +25,11 @@ import java.util.List;
 
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 
-@Cache
+@Cache @Entity
 public class PracticeExamTransaction implements Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id 	Long id;

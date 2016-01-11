@@ -24,10 +24,11 @@ import java.io.Serializable;
 import com.google.appengine.api.datastore.QueryResultIterable;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.cmd.Query;
 
-@Cache
+@Cache @Entity
 public class Topic implements Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id Long id;

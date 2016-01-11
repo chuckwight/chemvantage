@@ -24,10 +24,11 @@ import java.util.Date;
 import java.util.List;
 
 import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 
-@Cache
+@Cache @Entity
 public class Domain {
 	@Id 		Long id;
 	@Index	String domainName;
