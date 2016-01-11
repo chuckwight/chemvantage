@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -30,13 +32,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.Objectify;
 
 public class OneQuestion extends HttpServlet {
 	private static final long serialVersionUID = 137L;
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
-	Subject subject = dao.getSubject();
+	Subject subject = Subject.getSubject();
 
 	String ajaxSubmitScript = "<SCRIPT TYPE='text/javascript'>\n"
 			+ "function ajaxSubmit(url,id,note) {\n"
@@ -105,17 +104,17 @@ public class OneQuestion extends HttpServlet {
 			
 			try {
 				topicId = Long.parseLong(request.getParameter("TopicId"));
-				questionKeys = ofy.query(Question.class).filter("topicId", topicId).filter("assignmentType",questionType).filter("isActive",true).listKeys();
+				questionKeys = ofy().load().type(Question.class).filter("topicId", topicId).filter("assignmentType",questionType).filter("isActive",true).keys().list();
 				if (questionKeys.size()==0) throw new Exception();  // accidentally chose a topic with no questions; choose a random topic instead
 			} catch (Exception e2) {
 				do {  // choose a random topic
-					List<Key<Topic>> topicKeys = ofy.query(Topic.class).listKeys();
+					List<Key<Topic>> topicKeys = ofy().load().type(Topic.class).keys().list();
 					int random = new Random().nextInt(topicKeys.size());
-					topicId=ofy.get(topicKeys.get(random)).id;
-					questionKeys = ofy.query(Question.class).filter("topicId", topicId).filter("assignmentType",questionType).filter("isActive",true).listKeys();
+					topicId=ofy().load().key(topicKeys.get(random)).safe().id;
+					questionKeys = ofy().load().type(Question.class).filter("topicId", topicId).filter("assignmentType",questionType).filter("isActive",true).keys().list();
 				} while (questionKeys.size()==0);
 			}
-			Topic topic = ofy.get(Topic.class,topicId);
+			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
 			
 			buf.append("<TABLE><TR><TD VALIGN=TOP><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
 					+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - " + subject.title + "</b></FONT>"
@@ -128,7 +127,7 @@ public class OneQuestion extends HttpServlet {
 			// Randomly select one question to be presented
 			Random rand = new Random();  // create random number generator to select quiz questions
 			Key<Question> k = questionKeys.remove(rand.nextInt(questionKeys.size()));
-			Question q = ofy.get(k);
+			Question q = ofy().load().key(k).safe();
 			int param = rand.nextInt();
 			q.setParameters(param);  // randomizes parameterized questions
 			buf.append("\n" + q.print() + "<br>\n");
@@ -149,7 +148,7 @@ public class OneQuestion extends HttpServlet {
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 			for (Enumeration<?> e = request.getParameterNames();e.hasMoreElements();) {
 				try {
-					questionKeys.add(new Key<Question>(Question.class,Long.parseLong((String) e.nextElement())));
+					questionKeys.add(Key.create(Question.class,Long.parseLong((String) e.nextElement())));
 				} catch (Exception e2) {}
 			}
 			
@@ -166,7 +165,7 @@ public class OneQuestion extends HttpServlet {
 					if (studentAnswer != null) {
 						for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
 						if (studentAnswer[0].length() > 0) { // an answer was submitted
-							Question q = ofy.get(k);
+							Question q = ofy().load().key(k).safe();
 							int param = Integer.parseInt(request.getParameter("Param"));
 							q.setParameters(param);
 							topicId = q.topicId;
