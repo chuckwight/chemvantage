@@ -21,8 +21,10 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import javax.servlet.http.HttpServletRequest;
 
+import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 
+@Entity
 public class PayPalIPN {    // this object represents a PayPal Instant Payment Notification transaction
 	@Id String txn_id;
 	String userId;

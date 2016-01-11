@@ -52,7 +52,6 @@ import com.google.gdata.util.common.base.Charsets;
 import com.google.gdata.util.common.io.CharStreams;
 import com.google.gdata.util.common.util.Base64;
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.ObjectifyService;
 
 public class Login extends HttpServlet {
 
@@ -74,29 +73,29 @@ public class Login extends HttpServlet {
         openIdProviders.put("AOL", "aol.com"); openIdLogos.put("AOL", "/images/openid/aol.jpg");
         openIdProviders.put("Yahoo", "yahoo.com"); openIdLogos.put("Yahoo", "/images/openid/yahoo.jpg");
         attributes.add("email");
-
-        ObjectifyService.register(Assignment.class);
-		ObjectifyService.register(BLTIConsumer.class);
-		ObjectifyService.register(Domain.class);
-		ObjectifyService.register(GoogleClient.class);
-		ObjectifyService.register(Group.class);
-		ObjectifyService.register(HWTransaction.class);
-		ObjectifyService.register(Nonce.class);
-		ObjectifyService.register(PayPalIPN.class);
-		ObjectifyService.register(PracticeExamTransaction.class);
-		ObjectifyService.register(ProposedQuestion.class);
-		ObjectifyService.register(Question.class);
-		ObjectifyService.register(QuizTransaction.class);
-		ObjectifyService.register(RescueMessage.class);
-		ObjectifyService.register(Response.class);
-		ObjectifyService.register(Score.class);
-		ObjectifyService.register(Subject.class);
-		ObjectifyService.register(Text.class);
-		ObjectifyService.register(Topic.class);
-		ObjectifyService.register(User.class);
-		ObjectifyService.register(UserReport.class);
-		ObjectifyService.register(Video.class);
-		ObjectifyService.register(VideoTransaction.class);	
+        
+        ofy().factory().register(Assignment.class);
+        ofy().factory().register(BLTIConsumer.class);
+        ofy().factory().register(Domain.class);
+        ofy().factory().register(GoogleClient.class);
+        ofy().factory().register(Group.class);
+        ofy().factory().register(HWTransaction.class);
+        ofy().factory().register(Nonce.class);
+        ofy().factory().register(PayPalIPN.class);
+        ofy().factory().register(PracticeExamTransaction.class);
+        ofy().factory().register(ProposedQuestion.class);
+        ofy().factory().register(Question.class);
+        ofy().factory().register(QuizTransaction.class);
+        ofy().factory().register(RescueMessage.class);
+        ofy().factory().register(Response.class);
+        ofy().factory().register(Score.class);
+        ofy().factory().register(Subject.class);
+        ofy().factory().register(Text.class);
+        ofy().factory().register(Topic.class);
+        ofy().factory().register(User.class);
+        ofy().factory().register(UserReport.class);
+        ofy().factory().register(Video.class);
+        ofy().factory().register(VideoTransaction.class);	
 	}
     
 	public static String header = "<!DOCTYPE html>"

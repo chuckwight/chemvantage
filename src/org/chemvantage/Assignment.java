@@ -29,7 +29,6 @@ import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 
-
 @Cache @Entity
 public class Assignment implements Comparable<Assignment>,Serializable {
 	private static final long serialVersionUID = 137L;
