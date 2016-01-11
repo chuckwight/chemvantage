@@ -20,6 +20,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URLEncoder;
@@ -46,8 +48,6 @@ import com.googlecode.objectify.Objectify;
 
 public class LTILaunch extends HttpServlet {
 
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
 	private static final long serialVersionUID = 137L;
 
 	@Override
@@ -119,7 +119,7 @@ public class LTILaunch extends HttpServlet {
 				return;
 			}
 
-			BLTIConsumer tc = ofy.find(BLTIConsumer.class,oauth_consumer_key);
+			BLTIConsumer tc = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).safe();
 			String oauth_secret = tc.secret;
 			if (oauth_secret==null) {
 				doError(request,response,"Invalid oauth_consumer_key.",null,null);
@@ -164,7 +164,7 @@ public class LTILaunch extends HttpServlet {
 			if (user==null) user = User.createBLTIUser(request); // first-ever login for this user
 
 			// Create the domain if it doesn't already exist
-			Domain domain = ofy.query(Domain.class).filter("domainName",oauth_consumer_key).get();
+			Domain domain = ofy().load().type(Domain.class).filter("domainName",oauth_consumer_key).first().now();
 			Date now = new Date();
 			if (domain == null) {
 				domain = new Domain(oauth_consumer_key);
@@ -173,11 +173,8 @@ public class LTILaunch extends HttpServlet {
 					domain.resultServiceEndpoint = tc.getResultServiceEndpoint();
 					domain.resultServiceFormat = tc.getResultServiceFormat();
 				}
-				ofy.put(domain);
-			} else {
-				domain.setLastLogin(now);
-				ofy.put(domain);
-			}
+			} else domain.setLastLogin(now);
+			ofy().save().entity(domain);
 			
 			String lisOutcomeServiceURL = request.getParameter("lis_outcome_service_url");
 			String custom_result_url = request.getParameter("custom_result_url");
@@ -186,13 +183,12 @@ public class LTILaunch extends HttpServlet {
 				domain.resultServiceEndpoint = lisOutcomeServiceURL;
 				domain.resultServiceFormat = "application/vnd.ims.lti.v1.outcome+xml";
 				domain.supportsResultService = true;
-				ofy.put(domain);
+				ofy().save().entity(domain);
 			} else if (custom_result_url!=null && !custom_result_url.equals(domain.resultServiceEndpoint)) {
 				domain.resultServiceEndpoint = custom_result_url;
 				domain.resultServiceFormat = "application/vnd.ims.lti.v2.toolproxy+json";
 				domain.supportsResultService = true;
-				ofy.put(domain);
-				
+				ofy().save().entity(domain);				
 			}
 			debug.append("Domain " + domain.domainName + " OK. ");
 			debug.append(domain.supportsResultService?"ResultServiceEndpoint is " + domain.resultServiceEndpoint + ". ":"");
@@ -201,23 +197,23 @@ public class LTILaunch extends HttpServlet {
 			// ensure that this user is associated with the LTI domain
 			if (user.domain == null || !user.domain.equals(domain.domainName)) {
 				user.domain = domain.domainName;
-				ofy.put(user);
+				ofy().save().entity(user);
 			}
 
 			// check if user has Instructor or Administrator role
 			String roles = request.getParameter("roles");
 			if (roles != null) {
 				roles = roles.toLowerCase();
-				if (roles.contains("instructor") && user.setIsInstructor(true)) ofy.put(user); // saves user if role is changed
+				if (roles.contains("instructor") && user.setIsInstructor(true)) ofy().save().entity(user); // saves user if role is changed
 				if (roles.contains("administrator")) {
-					if (user.setIsAdministrator(true)) ofy.put(user);  // saves user if role is changed
-					if (domain.addAdmin(user.id)) ofy.put(domain);  // saves domain object if new admin is added
+					if (user.setIsAdministrator(true)) ofy().save().entity(user);  // saves user if role is changed
+					if (domain.addAdmin(user.id)) ofy().save().entity(domain);  // saves domain object if new admin is added
 				}
 			}
 
 			if (!user.hasPremiumAccount()) {
 				user.setPremium(true);  // All LTI users have free premium accounts
-				ofy.put(user);	
+				ofy().save().entity(user);	
 			}
 			debug.append("User " + user.id + " OK. ");
 			
@@ -232,12 +228,12 @@ public class LTILaunch extends HttpServlet {
 			if (context_title==null) context_title = context_id; // missing course title
 
 			// Provision a new context (group), if necessary and put the user into it
-			Group g = ofy.query(Group.class).filter("domain",oauth_consumer_key).filter("context_id",context_id).get();	
+			Group g = ofy().load().type(Group.class).filter("domain",oauth_consumer_key).filter("context_id",context_id).first().safe();	
 			if (g == null) { // create this new group
 				g = new Group("BLTI",context_id,context_title);
 				g.domain = domain.domainName;
 				g.memberIds.add(user.id);
-				ofy.put(g);
+				ofy().save().entity(g);
 			}
 			user.changeGroups(g.id);
 			debug.append("Group " + g.description + " OK. ");
@@ -247,14 +243,14 @@ public class LTILaunch extends HttpServlet {
 				g.lis_outcome_service_url=domain.resultServiceEndpoint;
 				g.lis_outcome_service_format = domain.resultServiceFormat;
 				g.isUsingLisOutcomeService = true;
-				ofy.put(g);
+				ofy().save().entity(g);
 			}							
 			debug.append("LIS services OK. ");
 			
 			if (user.isInstructor()) {
 				if (g.instructorId.equals("unknown")) {  // assign the instructor to this group
 					g.instructorId = user.id;
-					ofy.put(g);
+					ofy().save().entity(g);
 				}
 			}
 
@@ -298,7 +294,7 @@ public class LTILaunch extends HttpServlet {
 		}
 		
 		try {  
-			List<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",user.myGroupId).list();
+			List<Assignment> assignments = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).list();
 			
 			for (Assignment a : assignments) {  // look for myAssignment having the correct resource_link_id
 				if (a.resourceLinkIds != null && a.resourceLinkIds.contains(resource_link_id)) {
@@ -309,7 +305,7 @@ public class LTILaunch extends HttpServlet {
 			
 			if (myAssignment==null) { // try to find it based on the request data AssignmentType and TopicId or TopicIds (for PracticeExam)
 				if (assignmentType==null) throw new Exception();
-				assignments = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType",assignmentType).list();
+				assignments = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType",assignmentType).list();
 				if (assignmentType.equals("PracticeExam")) {
 					String[] tIds = request.getParameterValues("TopicIds");
 					//if (tIds==null) tIds = request.getParameterValues("custom_TopicIds"); // supports custom LTI variables
@@ -338,10 +334,10 @@ public class LTILaunch extends HttpServlet {
 
 				if (user.isInstructor()) {  // must be the instructor to modify or store myAssignment
 					myAssignment.addResourceLinkId(resource_link_id);
-					ofy.put(myAssignment);
-					Group g = ofy.get(Group.class,user.myGroupId);
+					ofy().save().entity(myAssignment);
+					Group g = ofy().load().type(Group.class).id(user.myGroupId).safe();
 					g.setGroupTopicIds();
-					ofy.put(g);
+					ofy().save().entity(g);
 				} else lis_result_sourcedid = null; // this prevents students from getting scores for made-up assignments
 			}	
 			if (myAssignment.assignmentType.equals("PracticeExam")) {
@@ -423,7 +419,7 @@ public class LTILaunch extends HttpServlet {
 					+ "Please select one topic for this quiz or homework assignment.<br>");
 			buf.append("<SELECT NAME=TopicId onChange=\"javascript: document.AssignmentForm.UserRequest.disabled=(document.AssignmentForm.TopicId.selectedIndex==0);\">"
 					+ "<OPTION Value='0'" + ("0".equals(tId)?" SELECTED":"") + ">Select a topic</OPTION>");			
-			List<Topic> topics = ofy.query(Topic.class).order("orderBy").list();
+			List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
 			for (Topic t : topics) if (!t.orderBy.equals("Hide")) {
 				buf.append("<OPTION VALUE='" + t.id + "'" + (String.valueOf(t.id).equals(tId)?" SELECTED":"") + ">" + t.title + "</OPTION>");			 
 			}
