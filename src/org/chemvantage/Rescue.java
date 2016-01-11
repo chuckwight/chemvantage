@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
+import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.util.Date;
@@ -37,13 +38,10 @@ import javax.servlet.http.HttpServletResponse;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.Objectify;
 
 public class Rescue extends HttpServlet {
 	private static final long serialVersionUID = 137L;
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
-	Subject subject = dao.getSubject();
+	//Subject subject = dao.getSubject();
 
 	public String getServletInfo() {
 		return "ChemVantage servlet sends helpful messages to students who miss assignments or score badly.";
@@ -56,9 +54,9 @@ public class Rescue extends HttpServlet {
 			Date now = new Date();
 			Date startWindow = new Date(now.getTime() - 14400000); // 4 hours ago in millis
 			Date endWindow = new Date(now.getTime() - 3600000);    // 1 hour ago in millis
-			List<Assignment> assignments = ofy.query(Assignment.class).filter("deadline >",startWindow).filter("deadline <",endWindow).list();
+			List<Assignment> assignments = ofy().load().type(Assignment.class).filter("deadline >",startWindow).filter("deadline <",endWindow).list();
 			for (Assignment a : assignments) {
-				Group group = ofy.find(Group.class,a.groupId);
+				Group group = ofy().load().type(Group.class).id(a.groupId).now();
 				if (group==null || !group.sendRescueMessages) continue;
 				Queue queue = QueueFactory.getDefaultQueue();
 				queue.add(withUrl("/Rescue").param("AssignmentId",Long.toString(a.id)));
@@ -80,31 +78,31 @@ public class Rescue extends HttpServlet {
 	public void sendRescueMessages(long assignmentId) {
 		// This method searches for students who missed group assignment deadlines and sends them email messages.
 		try {
-			Assignment assignment = ofy.get(Assignment.class,assignmentId);
-			Group group = ofy.get(Group.class,assignment.groupId);
+			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
+			Group group = ofy().load().type(Group.class).id(assignment.groupId).safe();
 			if (!group.sendRescueMessages) return; // if the rescue service is not activated, quit now
 			Properties props = new Properties();
 			Session session = Session.getDefaultInstance(props, null);
 			Date now = new Date();
 			Date twelveHoursAgo = new Date(now.getTime()-43200000);  // Date object 12 hours in the past
 			for (String userId : group.memberIds) {
-				Score score = ofy.find(new Key<Score>(new Key<User>(User.class,userId),Score.class,assignment.id));
+				Score score = ofy().load().key(Key.create(Key.create(User.class,userId),Score.class,assignment.id)).safe();
 				if (score == null) {
 					score = Score.getInstance(userId,assignment);
-					ofy.put(score);
+					ofy().save().entity(score);
 				}
 				
 				if (100.0*(double)score.score/(double)score.maxPossibleScore > group.rescueThresholdScore) continue;  // this user is OK; go to next group member
 				
 				// send a rescue message to this user
-				User user = ofy.get(User.class,userId);
+				User user = ofy().load().type(User.class).id(userId).safe();
 				if (user.alias != null) continue;  // don't send to accounts aliased to other user accounts
 				
-				RescueMessage rm = ofy.find(RescueMessage.class,userId);  // check for a recent RescueMessages to this user
-				if (rm==null) ofy.put(new RescueMessage(userId));  // create a temporary record of this message being sent
+				RescueMessage rm = ofy().load().type(RescueMessage.class).id(userId).now();  // check for a recent RescueMessages to this user
+				if (rm==null) ofy().save().entity(new RescueMessage(userId));  // create a temporary record of this message being sent
 				else if (rm.sent.before(twelveHoursAgo)) {  // this is an old record. Send a new message and update the record
 					rm.sent = now;
-					ofy.put(rm);
+					ofy().save().entity(rm);
 				} else continue; // a new record was found; skip this user to avoid sending duplicate messages
 				
 				Message msg = new MimeMessage(session);
