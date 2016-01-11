@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.DateFormat;
@@ -30,19 +32,15 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
-import com.googlecode.objectify.Objectify;
-
 public class Home extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	static String announcement = "";
 	String servername;
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
-	Subject subject = dao.getSubject();
-	List<Video> videos = ofy.query(Video.class).order("orderBy").list();
-	List<Topic> topics = ofy.query(Topic.class).order("orderBy").list();
-	List<Text> texts = ofy.query(Text.class).list();
+	Subject subject = Subject.getSubject();
+	List<Video> videos = ofy().load().type(Video.class).order("orderBy").list();
+	List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
+	List<Text> texts = ofy().load().type(Text.class).list();
 		
 	public String getServletInfo() {
 		return "Default servlet for user's home page.";
@@ -70,7 +68,7 @@ public class Home extends HttpServlet {
 			long groupId = Long.parseLong((String)session.getAttribute("GroupId"));
 			if (user.hasPremiumAccount()) {
 				user.changeGroups(groupId);
-				ofy.put(user);
+				ofy().save().entity(user);
 				session.removeAttribute("GroupId");
 			}
 		} catch (Exception e) {}
@@ -247,9 +245,9 @@ public class Home extends HttpServlet {
 			Long i = null;
 			try {
 				i = Long.parseLong(request.getParameter("Video"));
-				video = ofy.get(Video.class,i);
-				if (ofy.query(VideoTransaction.class).filter("userId",user.id).filter("serialNumber",video.serialNumber).get()==null)
-					ofy.put(new VideoTransaction(user.id,video.serialNumber,video.title,new Date()));
+				video = ofy().load().type(Video.class).id(i).now();
+				if (ofy().load().type(VideoTransaction.class).filter("userId",user.id).filter("serialNumber",video.serialNumber).first().now()==null)
+					ofy().save().entity(new VideoTransaction(user.id,video.serialNumber,video.title,new Date()));
 			} catch (Exception e) {
 				if (videos.size()>0) {
 					int randVideo = new Random().nextInt(videos.size());
@@ -292,10 +290,10 @@ public class Home extends HttpServlet {
 			Group myGroup = null;
 			if (user.myGroupId > 0) {
 				try {
-					myGroup = ofy.get(Group.class,user.myGroupId);
+					myGroup = ofy().load().type(Group.class).id(user.myGroupId).safe();
 				} catch (Exception e2) {
 					user.myGroupId = 0; // reset myGroupId in case my group was unexpectedly deleted
-					ofy.put(user);
+					ofy().save().entity(user);
 				}
 			}
 			if (myGroup != null) {  // display some group information in the yellow box
