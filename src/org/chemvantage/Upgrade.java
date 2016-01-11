@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -33,14 +35,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.googlecode.objectify.Objectify;
-
 public class Upgrade extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
-	Subject subject = dao.getSubject();
 	static String features = "<li>Assignment Deadlines - These are set by the course instructor."
 		+ "<li>Reminders - Premium users have the option of receiving email or SMS reminders of assignment deadlines."
 		+ "<li>Learner Analytics - The course instructor can set automatic notifications if assignments are missed."
@@ -134,7 +131,7 @@ public class Upgrade extends HttpServlet {
 			PayPalIPN ipn = new PayPalIPN(request);
 			ipn.verify(res); // makes sure that the message id from PayPal and is complete
 			ipn.validate();  // makes sure that payment is correct and upgrades user account
-			ofy.put(ipn);		
+			ofy().save().entity(ipn);		
 			
 		} catch (Exception e) {
 		}

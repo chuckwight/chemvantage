@@ -29,8 +29,6 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 
-import com.googlecode.objectify.Objectify;
-
 public class SendObjects extends GenericServlet {
 	private static final long serialVersionUID = 137L;
 	boolean servletEnabled = true;  // set to false to disable all transfers
