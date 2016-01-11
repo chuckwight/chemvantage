@@ -16,23 +16,10 @@
  */
 package org.chemvantage;
 
-import org.chemvantage.samples.apps.marketplace.UserInfo;
-import org.chemvantage.samples.apps.marketplace.openid.ConsumerFactory;
+import static com.googlecode.objectify.ObjectifyService.ofy;
 
-import com.google.step2.AuthRequestHelper;
-import com.google.step2.AuthResponseHelper;
-import com.google.step2.ConsumerHelper;
-import com.google.step2.Step2;
-import com.google.step2.discovery.IdpIdentifier;
-import com.google.step2.openid.ui.UiMessageRequest;
-import com.googlecode.objectify.Objectify;
-
-import org.apache.commons.lang.StringUtils;
-import org.openid4java.OpenIDException;
-import org.openid4java.consumer.InMemoryConsumerAssociationStore;
-import org.openid4java.discovery.DiscoveryInformation;
-import org.openid4java.message.AuthRequest;
-import org.openid4java.message.ParameterList;
+import java.io.IOException;
+import java.util.Date;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -42,8 +29,21 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
-import java.io.IOException;
-import java.util.Date;
+import org.apache.commons.lang.StringUtils;
+import org.chemvantage.samples.apps.marketplace.UserInfo;
+import org.chemvantage.samples.apps.marketplace.openid.ConsumerFactory;
+import org.openid4java.OpenIDException;
+import org.openid4java.consumer.InMemoryConsumerAssociationStore;
+import org.openid4java.discovery.DiscoveryInformation;
+import org.openid4java.message.AuthRequest;
+import org.openid4java.message.ParameterList;
+
+import com.google.step2.AuthRequestHelper;
+import com.google.step2.AuthResponseHelper;
+import com.google.step2.ConsumerHelper;
+import com.google.step2.Step2;
+import com.google.step2.discovery.IdpIdentifier;
+import com.google.step2.openid.ui.UiMessageRequest;
 
 /**
  * Servlet for handling OpenID logins.  Uses the Step2 library from code.google.com and the
@@ -56,8 +56,6 @@ public class OpenIdLaunch extends HttpServlet {
 	protected String realm;
 	protected String returnToPath;
 	protected String homePath;
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
 	
 	@Override
 	public void init(ServletConfig config) throws ServletException {
@@ -123,7 +121,7 @@ public class OpenIdLaunch extends HttpServlet {
 			throws ServletException, IOException {
 		try {
 			UserInfo userInfo = completeAuthentication(req);
-			User user = ofy.find(User.class,userInfo.getClaimedId());
+			User user = ofy().load().type(User.class).id(userInfo.getClaimedId()).now();
 			if (user == null) user = User.createOpenIdUser(userInfo);
 			req.getSession().setAttribute("UserId", user.getId());
 			
@@ -131,16 +129,16 @@ public class OpenIdLaunch extends HttpServlet {
 			//Cookie c = new Cookie("IDProvider","Google");
 			if (user.authDomain.equals("Google Apps")) {
 				user.authDomain = user.domain;
-				ofy.put(user);
+				ofy().save().entity(user);
 			}
 			Cookie c = new Cookie("IDProvider",user.authDomain);
 			c.setMaxAge(2592000); // expires after 30 days (in seconds)
 			resp.addCookie(c);
-			Domain domain = ofy.query(Domain.class).filter("domainName",user.domain).get();
+			Domain domain = ofy().load().type(Domain.class).filter("domainName",user.domain).first().now();
 			Date now = new Date();
 			if (domain != null) {
 				domain.setLastLogin(now);
-				ofy.put(domain);
+				ofy().save().entity(domain);
 			}
 			resp.sendRedirect(homePath);
 		} catch (OpenIDException e) {
