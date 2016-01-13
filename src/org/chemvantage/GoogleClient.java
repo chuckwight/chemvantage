@@ -33,15 +33,16 @@ public class GoogleClient {
 	GoogleClient() {}
 	
 	static GoogleClient getInstance() {
+		GoogleClient gc = new GoogleClient();
 		try {
-			return ofy().load().type(GoogleClient.class).first().safe();
+			int i = ofy().load().type(GoogleClient.class).count();
+			if (i>0) gc = ofy().load().type(GoogleClient.class).first().now();
 		} catch (Exception e) {  // this section runs only once
-			GoogleClient gc = new GoogleClient();
 			// NOTE: Placeholder values must be replaced in the database manually!
 			gc.client_id = "GoogleIdPlaceholder";
 			gc.client_secret = "GoogleSecretPlaceholder";
 			ofy().save().entity(gc);
-			return gc;
 		}
+		return gc;
 	}
 }

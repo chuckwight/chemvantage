@@ -307,7 +307,7 @@ public class Feedback extends HttpServlet {
 	
 	private void removeReport(HttpServletRequest request) {
 		long reportId = Long.parseLong(request.getParameter("ReportId"));
-		ofy().delete().key(Key.create(UserReport.class,reportId));
+		ofy().delete().key(Key.create(UserReport.class,reportId)).now();
 	}
 	
 	private void sendEmailToAdmin() {

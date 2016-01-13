@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry including="**/*.java" kind="src" output="target/classes" path="src">
+	<classpathentry including="**/*.java" kind="src" path="src">
 		<attributes>
 			<attribute name="optional" value="true"/>
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry excluding="**" kind="src" output="target/classes" path="war/WEB-INF/lib">
+	<classpathentry excluding="**" kind="src" path="war/WEB-INF/lib">
 		<attributes>
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
@@ -17,12 +17,12 @@
 			<attribute name="maven.pomderived" value="true"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/JbcParser.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/oauth.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/stax-api-1.0-2.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/apps-marketplace.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/objectify-5.1.9.jar"/>
-	<classpathentry kind="lib" path="war/WEB-INF/lib/guava-18.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/JbcParser.jar"/>
+	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/oauth.jar"/>
+	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/stax-api-1.0-2.jar"/>
+	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/apps-marketplace.jar"/>
+	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/objectify-5.1.9.jar"/>
+	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/guava-18.0.jar"/>
 	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>

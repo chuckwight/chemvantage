@@ -58,8 +58,8 @@ public class Login extends HttpServlet {
 	private static final long serialVersionUID = 137L;
 	static boolean lockedDown = false;
 
-	GoogleClient CLIENT = GoogleClient.getInstance();
 	Subject subject = Subject.getSubject();
+	GoogleClient CLIENT = GoogleClient.getInstance();
 	List<Video> videos = ofy().load().type(Video.class).order("orderBy").list();
 	JSONObject openid_config = null;
 	
@@ -73,7 +73,7 @@ public class Login extends HttpServlet {
         openIdProviders.put("AOL", "aol.com"); openIdLogos.put("AOL", "/images/openid/aol.jpg");
         openIdProviders.put("Yahoo", "yahoo.com"); openIdLogos.put("Yahoo", "/images/openid/yahoo.jpg");
         attributes.add("email");
-        
+/*        
         ofy().factory().register(Assignment.class);
         ofy().factory().register(BLTIConsumer.class);
         ofy().factory().register(Domain.class);
@@ -96,6 +96,7 @@ public class Login extends HttpServlet {
         ofy().factory().register(UserReport.class);
         ofy().factory().register(Video.class);
         ofy().factory().register(VideoTransaction.class);	
+*/
 	}
     
 	public static String header = "<!DOCTYPE html>"

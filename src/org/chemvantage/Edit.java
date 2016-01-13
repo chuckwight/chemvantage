@@ -697,6 +697,7 @@ public class Edit extends HttpServlet {
 			buf.append(q.printAll());
 			
 			buf.append("<INPUT TYPE=HIDDEN NAME=ProposedQuestionId VALUE='" + questionId + "'>");
+			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Activate This Question'>");
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Discard Question'>");
 			if (nextQuestionId != null) {
 				buf.append("<INPUT TYPE=HIDDEN NAME=NextQuestionId VALUE='" + nextQuestionId + "'>\n");
