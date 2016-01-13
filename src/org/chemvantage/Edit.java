@@ -171,14 +171,14 @@ public class Edit extends HttpServlet {
 			createQuestion(user,request);
 			try {
 				long proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
-				ofy().delete().key(Key.create(ProposedQuestion.class,proposedQuestionId));
+				ofy().delete().key(Key.create(ProposedQuestion.class,proposedQuestionId)).now();
 			} catch (Exception e) {}
 			out.println(Home.getHeader(user) + reviewProposedQuestion(user,request) + Home.footer);
 		}
 		else if (userRequest.equals("Discard Question")) {
 			try {
 				long proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
-				ofy().delete().key(Key.create(ProposedQuestion.class,proposedQuestionId));
+				ofy().delete().key(Key.create(ProposedQuestion.class,proposedQuestionId)).now();
 			} catch (Exception e) {}
 			out.println(Home.getHeader(user) + reviewProposedQuestion(user,request) + Home.footer);
 		}
@@ -399,7 +399,7 @@ public class Edit extends HttpServlet {
 	void createVideo(User user,HttpServletRequest request) {
 		Video v = new Video(request.getParameter("SerialNumber"),request.getParameter("Title"));
 		v.orderBy = (request.getParameter("OrderBy"));
-		ofy().save().entity(v);
+		ofy().save().entity(v).now();
 	}
 	
 	void updateVideo(User user,HttpServletRequest request) {
@@ -407,12 +407,12 @@ public class Edit extends HttpServlet {
 			Video v = ofy().load().type(Video.class).id(Long.parseLong(request.getParameter("VideoId"))).safe();
 			v.title = request.getParameter("Title");
 			v.orderBy = request.getParameter("OrderBy");
-			ofy().save().entity(v);
+			ofy().save().entity(v).now();
 		} catch (Exception e) {}
 	}
 	
 	void deleteVideo(User user,HttpServletRequest request) {
-		ofy().delete().key(Key.create(Video.class,Long.parseLong(request.getParameter("VideoId"))));
+		ofy().delete().key(Key.create(Video.class,Long.parseLong(request.getParameter("VideoId")))).now();
 	}
 	
 	public String textsForm(User user,HttpServletRequest request) {
@@ -448,7 +448,7 @@ public class Edit extends HttpServlet {
 
 	void createText(User user,HttpServletRequest request) {
 		Text text = new Text(request.getParameter("Title"),request.getParameter("Author"),request.getParameter("Publisher"),request.getParameter("URL"));
-		ofy().save().entity(text);
+		ofy().save().entity(text).now();
 	}
 	
 	void updateText(User user,HttpServletRequest request) {
@@ -458,12 +458,12 @@ public class Edit extends HttpServlet {
 			text.author = request.getParameter("Author");
 			text.publisher = request.getParameter("Publisher");
 			text.URL = request.getParameter("URL");
-			ofy().save().entity(text);
+			ofy().save().entity(text).now();
 		} catch (Exception e) {}
 	}
 	
 	void deleteText(User user,HttpServletRequest request) {
-		ofy().delete().key(Key.create(Text.class,Long.parseLong(request.getParameter("TextId"))));
+		ofy().delete().key(Key.create(Text.class,Long.parseLong(request.getParameter("TextId")))).now();
 	}
 	
 	String newQuestionForm(User user,HttpServletRequest request) {
@@ -697,7 +697,6 @@ public class Edit extends HttpServlet {
 			buf.append(q.printAll());
 			
 			buf.append("<INPUT TYPE=HIDDEN NAME=ProposedQuestionId VALUE='" + questionId + "'>");
-			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Activate This Question'>");
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Discard Question'>");
 			if (nextQuestionId != null) {
 				buf.append("<INPUT TYPE=HIDDEN NAME=NextQuestionId VALUE='" + nextQuestionId + "'>\n");
@@ -725,7 +724,7 @@ public class Edit extends HttpServlet {
 
 	private void createTopic(User user,HttpServletRequest request) {
 		Topic t = new Topic(request.getParameter("Title"),request.getParameter("OrderBy"));
-		ofy().save().entity(t);
+		ofy().save().entity(t).now();
 	}
 
 	private void updateTopic(User user,HttpServletRequest request) {
@@ -735,14 +734,14 @@ public class Edit extends HttpServlet {
 			Topic t = ofy().load().type(Topic.class).id(topicId).safe();
 			t.title = request.getParameter("Title");
 			t.orderBy = request.getParameter("OrderBy");
-			ofy().save().entity(t);
+			ofy().save().entity(t).now();
 		} catch (Exception e) {}
 	}
 
 	private void deleteTopic(User user,HttpServletRequest request) {	
 		try {
 			Topic t = ofy().load().type(Topic.class).id(Long.parseLong(request.getParameter("TopicId"))).safe();
-			ofy().delete().entity(t);
+			ofy().delete().entity(t).now();
 		} catch (Exception e) {}
 	}
 
@@ -827,7 +826,7 @@ public class Edit extends HttpServlet {
 	private void createQuestion(User user,HttpServletRequest request) {
 		Question q = assembleQuestion(request);
 		q.isActive = true;
-		ofy().save().entity(q);
+		ofy().save().entity(q).now();
 	}
 
 	private void updateQuestion(User user,HttpServletRequest request) {
@@ -838,7 +837,7 @@ public class Edit extends HttpServlet {
 			q = assembleQuestion(request,q);
 			q.editorId = user.id;
 			q.isActive = true;
-			ofy().save().entity(q);
+			ofy().save().entity(q).now();
 			Key<Question> k = Key.create(Question.class,questionId);
 			if ("Quiz".equals(q.assignmentType)) Quiz.quizQuestions.remove(k);
 			else if ("Homework".equals(q.assignmentType)) Homework.hwQuestions.remove(k);
@@ -852,7 +851,7 @@ public class Edit extends HttpServlet {
 		String assignmentType;
 		try {
 			questionId = Long.parseLong(request.getParameter("QuestionId"));	
-			ofy().delete().key(Key.create(Question.class,questionId));
+			ofy().delete().key(Key.create(Question.class,questionId)).now();
 			assignmentType = ofy().load().type(Question.class).id(questionId).safe().assignmentType;
 			Key<Question> k = Key.create(Question.class,questionId);
 			if ("Quiz".equals(assignmentType)) Quiz.quizQuestions.remove(k);
