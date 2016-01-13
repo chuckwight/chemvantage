@@ -73,30 +73,6 @@ public class Login extends HttpServlet {
         openIdProviders.put("AOL", "aol.com"); openIdLogos.put("AOL", "/images/openid/aol.jpg");
         openIdProviders.put("Yahoo", "yahoo.com"); openIdLogos.put("Yahoo", "/images/openid/yahoo.jpg");
         attributes.add("email");
-/*        
-        ofy().factory().register(Assignment.class);
-        ofy().factory().register(BLTIConsumer.class);
-        ofy().factory().register(Domain.class);
-        ofy().factory().register(GoogleClient.class);
-        ofy().factory().register(Group.class);
-        ofy().factory().register(HWTransaction.class);
-        ofy().factory().register(Nonce.class);
-        ofy().factory().register(PayPalIPN.class);
-        ofy().factory().register(PracticeExamTransaction.class);
-        ofy().factory().register(ProposedQuestion.class);
-        ofy().factory().register(Question.class);
-        ofy().factory().register(QuizTransaction.class);
-        ofy().factory().register(RescueMessage.class);
-        ofy().factory().register(Response.class);
-        ofy().factory().register(Score.class);
-        ofy().factory().register(Subject.class);
-        ofy().factory().register(Text.class);
-        ofy().factory().register(Topic.class);
-        ofy().factory().register(User.class);
-        ofy().factory().register(UserReport.class);
-        ofy().factory().register(Video.class);
-        ofy().factory().register(VideoTransaction.class);	
-*/
 	}
     
 	public static String header = "<!DOCTYPE html>"
