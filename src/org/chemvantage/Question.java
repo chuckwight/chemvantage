@@ -29,32 +29,33 @@ import com.bestcode.mathparser.MathParserFactory;
 import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
 
 @Cache @Entity
 public class Question implements Serializable {
 	private static final long serialVersionUID = 137L;
-	@Id Long id;
-	long topicId;
-	String assignmentType;
-	String text;
-	String type;
-	int nChoices=0;
-	List<String> choices = new ArrayList<String>();
-	double requiredPrecision=0;
-	int significantFigures = 0;
-	String correctAnswer;
-	String tag;
-	int pointValue=1;
-	String parameterString;
-	String hint;
-	String solution;
-	String authorId;
-	String contributorId;
-	String editorId;
-	String notes;
-	// Note: the parameters array formerly had the attribute @Transient javax.persistence.Transient
-	int[] parameters = {0,0,0,0};
-	boolean isActive = false;
+	@Id 	Long id;
+	@Index	long topicId;
+	@Index	String assignmentType;
+			String text;
+			String type;
+			int nChoices=0;
+			List<String> choices = new ArrayList<String>();
+			double requiredPrecision=0;
+			int significantFigures = 0;
+			String correctAnswer;
+			String tag;
+	@Index	int pointValue=1;
+			String parameterString;
+			String hint;
+			String solution;
+			String authorId;
+			String contributorId;
+			String editorId;
+			String notes;
+			// Note: the parameters array formerly had the attribute @Transient javax.persistence.Transient
+			int[] parameters = {0,0,0,0};
+			boolean isActive = false;
 	
 	public static final int MULTIPLE_CHOICE = 1;
 	public static final int TRUE_FALSE = 2;

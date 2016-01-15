@@ -26,14 +26,14 @@ import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
-import com.googlecode.objectify.cmd.Query;
+import com.googlecode.objectify.annotation.Index;
 
 @Cache @Entity
 public class Topic implements Serializable {
 	private static final long serialVersionUID = 137L;
-	@Id Long id;
-	String title;
-	String orderBy;
+	@Id 	Long id;
+	@Index 	String title;
+	@Index 	String orderBy;
 	
 	Topic() {}
 	
@@ -45,7 +45,7 @@ public class Topic implements Serializable {
 	public QueryResultIterable<Key<Question>> getQuestionKeys(String assignmentType) {
 		return  ofy().load().type(Question.class).filter("topicId",this.id).filter("assignmentType",assignmentType).keys();
 	}
-	
+/*	
 	public Query<Question> getQuestions(String assignmentType) {
 		return ofy().load().type(Question.class).filter("topicId", this.id).filter("assignmentType",assignmentType).order("pointValue");
 	}
@@ -53,7 +53,7 @@ public class Topic implements Serializable {
 	public int getQuestionCount(String assignmentType) {
 		return this.getQuestions(assignmentType).count();
 	}
-	
+*/	
 	public Question getQuestion(Key<Question> key) {
 		return ofy().load().key(key).now();
 	}
