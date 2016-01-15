@@ -23,15 +23,16 @@ import java.util.Date;
 import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
 
 @Cache @Entity
 public class VideoTransaction implements Serializable {
 	private static final long serialVersionUID = 137L;
-	@Id Long id;
-    	String userId;
-    	String serialNumber;
-    	String title;
-    	Date viewed;
+	@Id 	Long id;
+    @Index	String userId;
+    @Index	String serialNumber;
+			String title;
+			Date viewed;
 
     VideoTransaction() {}
     

@@ -32,8 +32,8 @@ import com.googlecode.objectify.annotation.Index;
 public class Domain {
 	@Id 		Long id;
 	@Index	String domainName;
-	@Index	Date lastLogin;
-	@Index	double dailyLoginsAvg; 
+	Date lastLogin;
+	double dailyLoginsAvg; 
 	Date created;
 	int activeUsers;
 	int basicAccounts;

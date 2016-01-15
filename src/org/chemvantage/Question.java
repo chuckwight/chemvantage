@@ -55,7 +55,7 @@ public class Question implements Serializable {
 			String notes;
 			// Note: the parameters array formerly had the attribute @Transient javax.persistence.Transient
 			int[] parameters = {0,0,0,0};
-			boolean isActive = false;
+	@Index		boolean isActive = false;
 	
 	public static final int MULTIPLE_CHOICE = 1;
 	public static final int TRUE_FALSE = 2;

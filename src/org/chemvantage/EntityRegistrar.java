@@ -1,5 +1,7 @@
 package org.chemvantage;
 
+import java.util.Date;
+
 import javax.servlet.ServletContextEvent;  
 import javax.servlet.ServletContextListener;
 
@@ -34,7 +36,7 @@ public class EntityRegistrar implements ServletContextListener {
 	
     @Override
     public void contextInitialized(ServletContextEvent servletContextEvent) {
-        System.out.println("Starting up!");
+        System.out.println("Starting up: " + new Date());
     }
 
     @Override

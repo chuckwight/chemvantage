@@ -35,8 +35,8 @@ import com.googlecode.objectify.cmd.Query;
 public class Score {    // this object represents a best score achieved by a user on a quiz or homework
 	@Id 	Long assignmentId;      // from the datastore.
 	@Parent Key<User> owner;
-	@Index 	boolean lisReportComplete;
-			long groupId;
+	@Index	long groupId;
+			boolean lisReportComplete;
 			int score;
 			int overallScore;
 			int maxPossibleScore;

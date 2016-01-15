@@ -47,8 +47,8 @@ public class User implements Comparable<User>,Serializable {
 	@Index	private String email;
 	@Index	String domain;
 	@Index	String lowercaseName;
-	@Index	Date lastLogin;
-	@Index	String smsMessageDevice;
+			String smsMessageDevice;
+			Date lastLogin;
 			private String lastName;
 			private String firstName;
 			int roles;
