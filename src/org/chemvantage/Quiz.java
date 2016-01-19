@@ -185,7 +185,10 @@ public class Quiz extends HttpServlet {
 				possibleScore += q.pointValue;
 				// the parameterized questions are seeded with a value based on the ids for the quizTransaction and the question
 				// in order to make the value reproducible for grading but variable for each quiz and from one question to the next
-				q.setParameters((int)(qt.id - q.id));
+				long seed = Math.abs(qt.id - q.id);
+				if (seed==-1) seed--;  // -1 is a special value for randomly seeded Random generator; avoid this (unlikely) situation
+//buf.append("qt.id="+qt.id+" q.id="+q.id+" seed="+seed);
+				q.setParameters(seed); // the values are subtracted to prevent (unlikely) overflow
 				//buf.append("\n<li>" + selected.print() + "<br></li>\n");
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
 			}
@@ -309,7 +312,9 @@ public class Quiz extends HttpServlet {
 									continue;
 								}
 							}
-							q.setParameters((int)(qt.id - q.id));
+							long seed = Math.abs(qt.id - q.id);
+							if (seed==-1) seed--;  // -1 is a special value for randomly seeded Random generator; avoid this (unlikely) situation
+							q.setParameters(seed);
 							int score = q.isCorrect(studentAnswer[0])?q.pointValue:0;
 							queue.add(withUrl("/ResponseServlet")
 									.param("AssignmentType","Quiz")
@@ -336,7 +341,7 @@ public class Quiz extends HttpServlet {
 			missedQuestions.append("</OL>\n");
 			qt.graded = now;
 			qt.score = studentScore;
-			ofy().save().entity(qt);
+			ofy().save().entity(qt).now();
 			
 			Assignment a = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",qt.topicId).first().now();
 			if (a != null) {
