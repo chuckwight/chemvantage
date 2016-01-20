@@ -184,9 +184,10 @@ public class Quiz extends HttpServlet {
 				possibleScore += q.pointValue;
 				// the parameterized questions are seeded with a value based on the ids for the quizTransaction and the question
 				// in order to make the value reproducible for grading but variable for each quiz and from one question to the next
-				q.setParameters((int)(qt.id - q.id));
-buf.append("parameter seed: " + qt.id + " - " + q.id);
-				//buf.append("\n<li>" + selected.print() + "<br></li>\n");
+				long seed = Math.abs(qt.id - q.id);
+				if (seed==-1) seed--;  // -1 is a special value for randomly seeded Random generator; avoid this (unlikely) situation
+				q.setParameters(seed); // the values are subtracted to prevent (unlikely) overflow
+				
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
 			}
 			buf.append("</OL>");
@@ -309,7 +310,9 @@ buf.append("parameter seed: " + qt.id + " - " + q.id);
 									continue;
 								}
 							}
-							q.setParameters((int)(qt.id - q.id));
+							long seed = Math.abs(qt.id - q.id);
+							if (seed==-1) seed--;  // -1 is a special value for randomly seeded Random generator; avoid this (unlikely) situation
+							q.setParameters(seed);
 							int score = q.isCorrect(studentAnswer[0])?q.pointValue:0;
 							queue.add(withUrl("/ResponseServlet")
 									.param("AssignmentType","Quiz")

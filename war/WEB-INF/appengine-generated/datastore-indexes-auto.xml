@@ -1,4 +1,13 @@
-<!-- Indices written at Tue, 12 Jan 2016 16:57:56 MST -->
+<!-- Indices written at Tue, 19 Jan 2016 08:14:38 MST -->
 
-<datastore-indexes/>
+<datastore-indexes>
 
+    <!-- Used 2 times in query history -->
+    <datastore-index kind="QuizTransaction" ancestor="false" source="auto">
+        <property name="graded" direction="asc"/>
+        <property name="topicId" direction="asc"/>
+        <property name="userId" direction="asc"/>
+        <property name="downloaded" direction="asc"/>
+    </datastore-index>
+
+</datastore-indexes>

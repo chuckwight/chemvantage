@@ -37,11 +37,11 @@ public class Home extends HttpServlet {
 	private static final long serialVersionUID = 137L;
 	static String announcement = "";
 	String servername;
-	Subject subject = Subject.getSubject();
-	List<Video> videos = ofy().load().type(Video.class).order("orderBy").list();
-	List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
-	List<Text> texts = ofy().load().type(Text.class).list();
-		
+	Subject subject = Subject.getSubject();	
+	List<Video> videos; 
+	List<Topic> topics; 
+	List<Text> texts; 
+	
 	public String getServletInfo() {
 		return "Default servlet for user's home page.";
 	}
@@ -203,7 +203,7 @@ public class Home extends HttpServlet {
 			buf.append("<INPUT TYPE=HIDDEN NAME=r VALUE=" + new Random().nextInt(99) + ">");
 			buf.append("<SELECT NAME='TopicId'><OPTION Value='0' SELECTED>Select a topic</OPTION>");
 			
-			//List<Topic> topics = ofy.query(Topic.class).order("orderBy").list();
+			if (topics == null) topics = ofy().load().type(Topic.class).order("orderBy").list();
 			for (Topic t : topics) {
 				if (!t.orderBy.equals("Hide"))
 				buf.append("<OPTION VALUE='" + t.id + "'>" + t.title + "</OPTION>");
@@ -228,6 +228,7 @@ public class Home extends HttpServlet {
 
 			// Add text resources table to the page
 			//List<Text> texts = ofy.query(Text.class).list();
+			if (texts == null) texts = ofy().load().type(Text.class).list();
 			buf.append("<TABLE><TR><TD NOWRAP>"
 					+ "<p><b>" + texts.size() + " Free Textbook Resources</b><br>");
 			for (Text t : texts) {
@@ -240,7 +241,7 @@ public class Home extends HttpServlet {
 			// Show embedded video lectures in the right column of the page
 			buf.append("<TD VALIGN=TOP>");   // start right column of home page
 
-			//List<Video> videos = ofy.query(Video.class).order("orderBy").list();
+			if (videos == null) videos = ofy().load().type(Video.class).order("orderBy").list();
 			Video video = null;
 			Long i = null;
 			try {
@@ -254,7 +255,7 @@ public class Home extends HttpServlet {
 					video = videos.get(randVideo);
 				}
 			}
-
+			
 			if (videos.size()>0) {
 				boolean isSecure = request.isSecure();
 				buf.append("<iframe width='425' height='349' src='" + (isSecure?"https://":"http://") + "www.youtube.com/embed/" 
