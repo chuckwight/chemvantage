@@ -98,7 +98,6 @@ public class Quiz extends HttpServlet {
 				+ "and select a topic for this quiz using the drop-down box.";
 			}
 			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
-
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			Group myGroup = user.myGroupId>0?ofy().load().type(Group.class).id(user.myGroupId).now():null;
 			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
@@ -107,14 +106,15 @@ public class Quiz extends HttpServlet {
 
 			// Check to see if this user has any pending quizzes on this topic:
 			Date then = new Date(now.getTime()-timeLimit*60000);  // timeLimit minutes ago
-			QuizTransaction qt = ofy().load().type(QuizTransaction.class).filter("userId",user.id).filter("topicId",topic.id).filter("graded",null).filter("downloaded >",then).first().safe();
+			QuizTransaction qt = ofy().load().type(QuizTransaction.class).filter("userId",user.id).filter("topicId",topic.id).filter("graded",null).filter("downloaded >",then).first().now();
 			if (qt == null) {
 				qt = new QuizTransaction(topic.id,topic.title,user.id,now,null,0,0,request.getRemoteAddr());
 				if (request.getParameter("lis_result_sourcedid")!=null) qt.lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
-				ofy().save().entity(qt);  // creates a long id value to use in random number generator
+				ofy().save().entity(qt).now();  // creates a long id value to use in random number generator
+				assert qt.id != null;
 			}
 			int secondsRemaining = (int) (timeLimit*60 - (now.getTime() - qt.downloaded.getTime())/1000);
-
+			
 			Assignment a = null;
 			try {
 				a = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",topicId).first().safe();
@@ -185,6 +185,7 @@ public class Quiz extends HttpServlet {
 				// the parameterized questions are seeded with a value based on the ids for the quizTransaction and the question
 				// in order to make the value reproducible for grading but variable for each quiz and from one question to the next
 				q.setParameters((int)(qt.id - q.id));
+buf.append("parameter seed: " + qt.id + " - " + q.id);
 				//buf.append("\n<li>" + selected.print() + "<br></li>\n");
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
 			}
@@ -335,7 +336,7 @@ public class Quiz extends HttpServlet {
 			missedQuestions.append("</OL>\n");
 			qt.graded = now;
 			qt.score = studentScore;
-			ofy().save().entity(qt);
+			ofy().save().entity(qt).now();
 			
 			Assignment a = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",qt.topicId).first().now();
 			if (a != null) {
