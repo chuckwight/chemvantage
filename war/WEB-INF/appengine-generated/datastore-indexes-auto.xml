@@ -1,8 +1,8 @@
-<!-- Indices written at Tue, 19 Jan 2016 08:14:38 MST -->
+<!-- Indices written at Tue, 19 Jan 2016 22:08:31 MST -->
 
 <datastore-indexes>
 
-    <!-- Used 2 times in query history -->
+    <!-- Used 38 times in query history -->
     <datastore-index kind="QuizTransaction" ancestor="false" source="auto">
         <property name="graded" direction="asc"/>
         <property name="topicId" direction="asc"/>
