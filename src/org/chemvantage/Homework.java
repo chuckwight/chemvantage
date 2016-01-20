@@ -158,7 +158,8 @@ public class Homework extends HttpServlet {
 						}
 						q.setParameters(user.id.hashCode());
 						buf.append("\n<TR VALIGN=TOP><TD>");
-						if (user.getHWQuestionScore(q.id) > 0) buf.append("<IMG SRC=/images/checkmark.gif ALT='OK'>");
+						boolean solved = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).filter("score >",0).count() > 0;						
+						if (solved) buf.append("<IMG SRC=/images/checkmark.gif ALT='OK'>");
 						buf.append("&nbsp;<a id=" + q.id + " /></TD>"
 								+ "<FORM METHOD=POST ACTION=Homework>"
 								+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
@@ -304,7 +305,7 @@ public class Homework extends HttpServlet {
 
 				HWTransaction ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,0L,studentScore,possibleScore,request.getRequestURI());
 				if (lis_result_sourcedid != null) ht.lis_result_sourcedid = lis_result_sourcedid;
-				ofy().save().entity(ht);
+				ofy().save().entity(ht).now();
 				// create/update/store a HomeworkScore object
 				try {
 					myGroup.setGroupTopicIds();
@@ -312,7 +313,7 @@ public class Homework extends HttpServlet {
 					if (assignmentId > 0) { // assignment exists; save a Score object
 						Assignment a = ofy().load().type(Assignment.class).id(assignmentId).now();
 						Score s = Score.getInstance(user.id,a);
-						ofy().save().entity(s);
+						ofy().save().entity(s).now();
 						if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",user.id));  // put report into the Task Queue
 					}	
 				} catch (Exception e2) {
