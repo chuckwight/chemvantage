@@ -31,6 +31,7 @@ import com.googlecode.objectify.annotation.Id;
 public class Nonce {
 	@Id String id;
 		Date created;
+		User user;
 	
 	Nonce() {}
 	
@@ -39,12 +40,19 @@ public class Nonce {
 		this.created = new Date();
 	}
 	
+	Nonce(User user) {
+		this.id = BLTIConsumer.generateSecret();
+		this.created = new Date();
+		this.user = user;
+	}
+	
+	static long interval = 5400000L;  // 90 minutes in milliseconds
+	
 	public static boolean isUnique(String nonce, String timestamp) {
 		// This method provides a level of security for OAuth launches for LTI
 		// by verifying that oauth_nonce strings are submitted only once
 		// This protects against eavesdropping and copycat login attacks
 		
-		long interval = 5400000L;  // 90 minutes in milliseconds
 		Date now = new Date();
 		Date oldest = new Date(now.getTime()-interval); // converts seconds to millis
 
@@ -67,5 +75,23 @@ public class Nonce {
 		} catch (Exception e) {
 			return false;
 		}
+	}
+
+	static User getUser(String nonce) {
+		Date now = new Date();
+		Date oldest = new Date(now.getTime()-interval); // converts seconds to millis
+
+		// delete all Nonce objects older than the interval
+		List<Key<Nonce>> expired = ofy().load().type(Nonce.class).filter("created <",oldest).keys().list();
+		if (expired.size() > 0) ofy().delete().keys(expired).now();
+		
+		try {
+			Nonce n = ofy().load().type(Nonce.class).id(nonce).safe();		
+			ofy().delete().key(Key.create(n)); // delete this nonce offline
+			return n.user;
+		} catch (Exception e) {
+			return null;
+		}
+					
 	}
 }

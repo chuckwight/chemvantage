@@ -635,11 +635,11 @@ public class User implements Comparable<User>,Serializable {
 	boolean isContributor() {
 		return ((roles%2)/1 == 1);
 	}
-
+/*
 	public int getHWQuestionScore(long questionId) {
 		return (ofy().load().type(HWTransaction.class).filter("userId",this.id).filter("questionId",questionId).filter("score >",0).count() == 0?0:1);
 	}
-
+*/
 	public boolean moreThan1RecentAttempts(long questionId,int minutes) { // for Homework question grading
 		try {
 			Date minutesAgo = new Date(new Date().getTime()-minutes*60000);

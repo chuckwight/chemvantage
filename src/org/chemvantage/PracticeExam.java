@@ -69,6 +69,7 @@ public class PracticeExam extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		User user = User.getInstance(request.getSession(true));
+		if (user==null) user = Nonce.getUser(request.getParameter("Nonce"));
 		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 			response.sendRedirect("/");
 			return;

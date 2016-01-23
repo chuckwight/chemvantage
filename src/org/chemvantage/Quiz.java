@@ -47,7 +47,7 @@ public class Quiz extends HttpServlet {
 
 	int nSubjectAreas = 1;               // default number of subject areas for quiz overridden by values read from AssignmentInfo database
 	int nQuestionsPerSubjectArea = 10;   // number of questions presented in each area also overridden in method printQuiz()
-	int timeLimit = 15;                  // minutes; set to zero for no time limit to complete the quiz
+	static int timeLimit = 15;                  // minutes; set to zero for no time limit to complete the quiz
 	private static final long serialVersionUID = 137L;
 	Subject subject = Subject.getSubject();
 	static Map<Key<Question>,Question> quizQuestions = new HashMap<Key<Question>,Question>();
@@ -60,7 +60,8 @@ public class Quiz extends HttpServlet {
 	throws ServletException, IOException {
 		try {
 			User user = User.getInstance(request.getSession(true));
-			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
+			if (user==null) user = Nonce.getUser(request.getParameter("Nonce"));
+			if (user==null || Login.lockedDown && !user.isAdministrator()) {
 				response.sendRedirect("/");
 				return;
 			}
@@ -75,11 +76,11 @@ public class Quiz extends HttpServlet {
 	throws ServletException, IOException {
 		try {
 			User user = User.getInstance(request.getSession(true));
-			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
+			if (user==null || Login.lockedDown && !user.isAdministrator()) {
 				response.sendRedirect("/");
 				return;
 			}
-				
+			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
@@ -111,7 +112,6 @@ public class Quiz extends HttpServlet {
 				qt = new QuizTransaction(topic.id,topic.title,user.id,now,null,0,0,request.getRemoteAddr());
 				if (request.getParameter("lis_result_sourcedid")!=null) qt.lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
 				ofy().save().entity(qt).now();  // creates a long id value to use in random number generator
-				assert qt.id != null;
 			}
 			int secondsRemaining = (int) (timeLimit*60 - (now.getTime() - qt.downloaded.getTime())/1000);
 			
@@ -191,6 +191,9 @@ public class Quiz extends HttpServlet {
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
 			}
 			buf.append("</OL>");
+			
+			// include a Nonce reference in case session is lost:
+			//buf.append("<input type=hidden name=Nonce value=" + new Nonce(user).id + ">");
 			
 			// update and store the QuizTransaction for this quiz
 			QueueFactory.getDefaultQueue().add(withUrl("/TransactionServlet")
@@ -410,6 +413,7 @@ public class Quiz extends HttpServlet {
 				}
 			}
 			buf.append("<FORM METHOD=GET Action=Quiz>"
+					//+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + new Nonce(user).id + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + qt.topicId + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=r VALUE=" + new Random().nextInt(9999) + ">"
 					+ "<INPUT TYPE=SUBMIT VALUE='Take this quiz again'></FORM>\n");
