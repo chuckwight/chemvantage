@@ -58,10 +58,10 @@ public class Nonce {
 			if (expired.size() > 0) ofy().delete().keys(expired);
 			
 			// check to see if a Nonce with the specified id already exists in the database
-			if (ofy().load().type(Nonce.class).id(nonce).safe() != null) throw new Exception(); // if nonce exists
+			if (ofy().load().type(Nonce.class).id(nonce).now() != null) throw new Exception(); // if nonce exists
 			
 			// store a new Nonce object in the datastore with the unique nonce string
-			ofy().save().entity(new Nonce(nonce));
+			ofy().save().entity(new Nonce(nonce)).now();
 			
 			return true;
 		} catch (Exception e) {

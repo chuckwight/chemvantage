@@ -97,7 +97,7 @@ public class Scores extends HttpServlet {
 				response.sendRedirect("/Scores?UserRequest=ShowAll");
 				return;
 			} else if (userRequest.equals("Recalculate My Scores")) {
-				user.recalculateScores();
+				user.deleteScores();
 				out.println(Home.getHeader(user) + myGroupScores(user) + Home.footer);
 				return;
 			}

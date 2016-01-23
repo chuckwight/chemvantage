@@ -662,9 +662,9 @@ public class User implements Comparable<User>,Serializable {
 		}
 	}
 
-	void recalculateScores() {
+	void deleteScores() {
 		Query<Score> myScores = ofy().load().type(Score.class).ancestor(this);
-		ofy().delete().entity(myScores);
+		ofy().delete().entities(myScores);
 	}
 
 	boolean processPremiumUpgrade(Group newGroup) {
@@ -705,10 +705,10 @@ public class User implements Comparable<User>,Serializable {
 				ofy().save().entity(newGroup);
 			}
 			this.myGroupId = newGroup==null?0:newGroupId;
-			ofy().save().entity(this);
+			ofy().save().entity(this).now();
 		} catch (Exception e) {
 		}
-		recalculateScores();
+		deleteScores();
 	}
 
 	public int compareTo(User other) {
