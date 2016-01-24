@@ -183,7 +183,7 @@ public class LTILaunch extends HttpServlet {
 			
 			if (lisOutcomeServiceURL!=null && !lisOutcomeServiceURL.equals(domain.resultServiceEndpoint)) {
 				domain.resultServiceEndpoint = lisOutcomeServiceURL;
-				domain.resultServiceFormat = "application/vnd.ims.lti.v1.outcome+xml";
+				if (domain.resultServiceFormat==null || domain.resultServiceFormat.isEmpty()) domain.resultServiceFormat = "application/xml";
 				domain.supportsResultService = true;
 				ofy().save().entity(domain).now();
 			} else if (custom_result_url!=null && !custom_result_url.equals(domain.resultServiceEndpoint)) {
@@ -246,7 +246,7 @@ public class LTILaunch extends HttpServlet {
 				g.isUsingLisOutcomeService = true;
 				ofy().save().entity(g).now();
 			}							
-			debug.append("LIS services OK. ");
+			//debug.append("LIS services OK. ");
 			
 			if (user.isInstructor()) {
 				if (g.instructorId.equals("unknown")) {  // assign the instructor to this group

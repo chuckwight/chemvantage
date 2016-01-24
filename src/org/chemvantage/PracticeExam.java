@@ -407,7 +407,7 @@ public class PracticeExam extends HttpServlet {
 			Queue queue = QueueFactory.getDefaultQueue();  // used for computing Score objects offline by Task queue
 			if (a != null) {
 				Score s = Score.getInstance(user.id,a);
-				ofy().save().entity(s);
+				ofy().save().entity(s).now();
 				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
 			}
 			
