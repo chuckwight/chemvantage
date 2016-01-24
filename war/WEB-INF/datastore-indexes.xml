@@ -9,6 +9,12 @@
     </datastore-index>
 
     <datastore-index kind="Assignment" ancestor="false" source="auto">
+        <property name="assignmentType" direction="asc"/>
+        <property name="groupId" direction="asc"/>
+        <property name="topicId" direction="asc"/>
+    </datastore-index>
+
+    <datastore-index kind="Assignment" ancestor="false" source="auto">
 		<property name="groupId" direction="asc" />
 		<property name="assignmentType" direction="asc" />
     </datastore-index>

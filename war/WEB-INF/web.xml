@@ -336,14 +336,10 @@
 		<servlet-name>Verification</servlet-name>
 		<url-pattern>/Verification</url-pattern>
 	</servlet-mapping>
-	
+
 	<security-constraint>
 		<web-resource-collection>
 			<web-resource-name>AdminServlet</web-resource-name>
-			<!--  
-			<url-pattern>/Admin</url-pattern> 
-			<url-pattern>/DataTransfer</url-pattern>
-			-->
 			<url-pattern>/remote_api</url-pattern>
 			<url-pattern>/CalculateScores</url-pattern>
 			<url-pattern>/DataStoreCleaner</url-pattern>
@@ -354,7 +350,7 @@
 			<url-pattern>/ResponseServlet</url-pattern>
 			<url-pattern>/ToolSettingsManager</url-pattern>
 			<url-pattern>/TransactionServlet</url-pattern>
-			</web-resource-collection>
+		</web-resource-collection>
 		<auth-constraint>
 			<role-name>admin</role-name>
 		</auth-constraint>
