@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -192,9 +193,6 @@ public class Quiz extends HttpServlet {
 			}
 			buf.append("</OL>");
 			
-			// include a Nonce reference in case session is lost:
-			//buf.append("<input type=hidden name=Nonce value=" + new Nonce(user).id + ">");
-			
 			// update and store the QuizTransaction for this quiz
 			QueueFactory.getDefaultQueue().add(withUrl("/TransactionServlet")
 					.param("AssignmentType","Quiz")
@@ -344,13 +342,13 @@ public class Quiz extends HttpServlet {
 			qt.score = studentScore;
 			ofy().save().entity(qt).now();
 			
-			Assignment a = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",qt.topicId).first().now();
-			if (a != null) {
+			try {
+				Assignment a = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",qt.topicId).first().safe();
 				Score s = Score.getInstance(user.id,a);
-				ofy().save().entity(s);
-				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",user.id));  // put report into the Task Queue
-			}
-			
+				ofy().save().entity(s).now();
+				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
+			} catch (Exception e) {}
+
 			buf.append("<h4>Your score on this quiz is " + studentScore 
 					+ " point" + (studentScore==1?"":"s") + " out of a possible " + qt.possibleScore + " points.</h4>\n");
 
@@ -413,7 +411,6 @@ public class Quiz extends HttpServlet {
 				}
 			}
 			buf.append("<FORM METHOD=GET Action=Quiz>"
-					//+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + new Nonce(user).id + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + qt.topicId + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=r VALUE=" + new Random().nextInt(9999) + ">"
 					+ "<INPUT TYPE=SUBMIT VALUE='Take this quiz again'></FORM>\n");

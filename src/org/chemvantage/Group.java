@@ -173,7 +173,7 @@ public class Group implements Serializable {
     		Score s = ofy().load().key(k).now();
     		if (s==null) {
     			s = Score.getInstance(userId,assignment);
-    			ofy().save().entity(s);
+    			ofy().save().entity(s).now();
     		}
     		return s;
     	} catch (Exception e) {

@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -160,7 +161,7 @@ public class Homework extends HttpServlet {
 						q.setParameters(user.id.hashCode());
 						buf.append("\n<TR VALIGN=TOP><TD>");
 						
-						boolean solved = ofy().load().type(HWTransaction.class).filter("userId",q.id).filter("questionId",q.id).filter("score >",0).count() > 0;					
+						boolean solved = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).filter("score >",0).count() > 0;					
 						if (solved) buf.append("<IMG SRC=/images/checkmark.gif ALT='This problem was solved previously.'>");
 						
 						buf.append("&nbsp;<a id=" + q.id + " /></TD>"
@@ -197,7 +198,7 @@ public class Homework extends HttpServlet {
 				q.setParameters(user.id.hashCode());
 				buf.append("\n<TR VALIGN=TOP><TD>");
 				
-				boolean solved = ofy().load().type(HWTransaction.class).filter("userId",q.id).filter("questionId",q.id).filter("score >",0).count() > 0;					
+				boolean solved = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).filter("score >",0).count() > 0;					
 				if (solved) buf.append("<IMG SRC=/images/checkmark.gif ALT='This problem was solved previously.'>");
 				
 				buf.append("&nbsp;<a id=" + q.id + " /></TD>"
@@ -315,7 +316,7 @@ public class Homework extends HttpServlet {
 
 				HWTransaction ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,0L,studentScore,possibleScore,request.getRequestURI());
 				if (lis_result_sourcedid != null) ht.lis_result_sourcedid = lis_result_sourcedid;
-				ofy().save().entity(ht);
+				ofy().save().entity(ht).now();
 				// create/update/store a HomeworkScore object
 				try {
 					myGroup.setGroupTopicIds();
@@ -323,8 +324,8 @@ public class Homework extends HttpServlet {
 					if (assignmentId > 0) { // assignment exists; save a Score object
 						Assignment a = ofy().load().type(Assignment.class).id(assignmentId).now();
 						Score s = Score.getInstance(user.id,a);
-						ofy().save().entity(s);
-						if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",user.id));  // put report into the Task Queue
+						ofy().save().entity(s).now();
+						if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
 					}	
 				} catch (Exception e2) {
 				}

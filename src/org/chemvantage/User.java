@@ -44,13 +44,13 @@ import net.sf.json.JSONObject;
 public class User implements Comparable<User>,Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id 	String id;
-	@Index	private String email;
+	@Index	String email;
 	@Index	String domain;
+	@Index 	String lastName;
+	@Index	String firstName;
 	@Index	String lowercaseName;
 			String smsMessageDevice;
 			Date lastLogin;
-			private String lastName;
-			private String firstName;
 			int roles;
 			boolean premium;
 			long myGroupId;

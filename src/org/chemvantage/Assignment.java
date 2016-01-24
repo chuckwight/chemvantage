@@ -37,7 +37,7 @@ public class Assignment implements Comparable<Assignment>,Serializable {
 	@Index	long groupId;
 	@Index	String assignmentType;
 	@Index	Date deadline;
-			long topicId;
+	@Index	long topicId;
 			List<Long> topicIds; // used for practice exams which have multiple topicIds
 			List<String> resourceLinkIds = new ArrayList<String>();
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();

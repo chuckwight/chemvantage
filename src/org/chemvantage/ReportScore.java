@@ -58,13 +58,12 @@ public class ReportScore extends HttpServlet {
 			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			Key<Score> k = Key.create(Key.create(User.class, userId),Score.class,a.id);
     		Score s = ofy().load().key(k).now();
-    		if (s == null) return;
+    		if (s == null || !s.needsLisReporting()) return;
     		
     		// compute a scaled score in the range 0.0-1.0 for LIS services specification
     		double score = (double)s.score / (double)s.maxPossibleScore;
 			if (score < 0.0 || score > 1.0) throw new Exception();
 			
-			if (!s.needsLisReporting()) return;
 			Group g = ofy().load().type(Group.class).id(a.groupId).safe();
 			String oauth_consumer_key = g.domain;
 			
