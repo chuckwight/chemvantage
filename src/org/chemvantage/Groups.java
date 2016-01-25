@@ -397,7 +397,7 @@ public class Groups extends HttpServlet {
 					+ "<p>When you first create an assignment, all questions in the database are used by default. "
 					+ "However, you may designate a subset of quiz questions by clicking the "
 					+ "'Select' link and/or assign a subset of homework questions using the 'Assign' link below. "
-					+ " <p>");
+					+ " <p></div>");
 
 			// allow copying of assignments from another group:
 			List<Group> groups = ofy().load().type(Group.class).list();
@@ -414,7 +414,7 @@ public class Groups extends HttpServlet {
 					buf.append("<OPTION VALUE=" + g.id + ">" + g.description + " (" + User.getBothNames(g.instructorId) + ")</OPTION>");
 				}
 				buf.append("</SELECT><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Copy Assignments'></FORM><p>");
-				buf.append("</div>");
+				//buf.append("</div>");
 			}
 			
 			// get a list of topics in the default order and rearrange them to start with the current group topics:

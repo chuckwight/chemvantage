@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -54,6 +55,7 @@ public class Homework extends HttpServlet {
 	throws ServletException, IOException {
 		try {
 			User user = User.getInstance(request.getSession(true));
+			if (user==null) user = Nonce.getUser(request.getParameter("Nonce"));
 			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 				response.sendRedirect("/");
 				return;
@@ -158,10 +160,13 @@ public class Homework extends HttpServlet {
 						}
 						q.setParameters(user.id.hashCode());
 						buf.append("\n<TR VALIGN=TOP><TD>");
-						boolean solved = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).filter("score >",0).count() > 0;						
-						if (solved) buf.append("<IMG SRC=/images/checkmark.gif ALT='OK'>");
+						
+						boolean solved = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).filter("score >",0).count() > 0;					
+						if (solved) buf.append("<IMG SRC=/images/checkmark.gif ALT='This problem was solved previously.'>");
+						
 						buf.append("&nbsp;<a id=" + q.id + " /></TD>"
 								+ "<FORM METHOD=POST ACTION=Homework>"
+								//+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>"
 								+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 								+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 								+ (lis_result_sourcedid==null?"":"<INPUT TYPE=HIDDEN NAME=lis_result_sourcedid VALUE='" + lis_result_sourcedid + "'>")
@@ -192,9 +197,13 @@ public class Homework extends HttpServlet {
 				}
 				q.setParameters(user.id.hashCode());
 				buf.append("\n<TR VALIGN=TOP><TD>");
-				if (user.getHWQuestionScore(q.id) > 0) buf.append("<IMG SRC=/images/checkmark.gif ALT='OK'>");
+				
+				boolean solved = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).filter("score >",0).count() > 0;					
+				if (solved) buf.append("<IMG SRC=/images/checkmark.gif ALT='This problem was solved previously.'>");
+				
 				buf.append("&nbsp;<a id=" + q.id + " /></TD>"
 						+ "<FORM METHOD=POST ACTION=Homework>"
+						//+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ "<TD><b>" + i + ". </b></TD><TD>" + q.print() 
@@ -211,6 +220,7 @@ public class Homework extends HttpServlet {
 
 	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
+		//String nonce = new Nonce(user).id;
 		try {
 			long questionId = Long.parseLong(request.getParameter("QuestionId"));
 			Key<Question> k = Key.create(Question.class,questionId);
@@ -234,10 +244,10 @@ public class Homework extends HttpServlet {
 			}
 			else for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
 			
-			Date minutesAgo = new Date(now.getTime()-retryDelayMinutes*60000);  // 24 hours ago
+			Date minutesAgo = new Date(now.getTime()-retryDelayMinutes*60000);  // about 2 minutes ago
 			List<HWTransaction> recentTransactions = ofy().load().type(HWTransaction.class).filter("questionId",q.id).filter("userId",user.id).filter("graded >",minutesAgo).list();
 			long secondsRemaining = 0;
-			if (recentTransactions.size()>0) {
+			if (recentTransactions.size()>0) {  // may be more than one if multiple browser sessions are active for one user!
 				Date lastSubmission = new Date(0L);
 				for (HWTransaction ht : recentTransactions) if (ht.graded.after(lastSubmission)) lastSubmission = ht.graded;
 				secondsRemaining = retryDelayMinutes*60 - (now.getTime()-lastSubmission.getTime())/1000;
@@ -255,6 +265,7 @@ public class Homework extends HttpServlet {
 				buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework>"
 						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 						+ (lis_result_sourcedid==null?"":"<INPUT TYPE=HIDDEN NAME=lis_result_sourcedid VALUE='" + lis_result_sourcedid + "'>")
+						//+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ q.print(studentAnswer[0]) + "<br>");
 				
@@ -314,7 +325,7 @@ public class Homework extends HttpServlet {
 						Assignment a = ofy().load().type(Assignment.class).id(assignmentId).now();
 						Score s = Score.getInstance(user.id,a);
 						ofy().save().entity(s).now();
-						if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",user.id));  // put report into the Task Queue
+						if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
 					}	
 				} catch (Exception e2) {
 				}
@@ -367,6 +378,7 @@ public class Homework extends HttpServlet {
 			if (studentScore > 0) buf.append(fiveStars());
 
 			buf.append("<p><a href=Homework?TopicId=" + topic.id + "&r=" + random
+					//+ "&Nonce=" + nonce
 					+ (offerHint?"&Q=" + q.id:"")
 					+ "#" + q.id + (offerHint?"><span style='color:red'>Please give me a hint</span>":">Return to this homework assignment") + "</a>");
 		}

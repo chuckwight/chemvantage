@@ -44,13 +44,13 @@ import net.sf.json.JSONObject;
 public class User implements Comparable<User>,Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id 	String id;
-	@Index	private String email;
+	@Index	String email;
 	@Index	String domain;
+	@Index 	String lastName;
+	@Index	String firstName;
 	@Index	String lowercaseName;
 			String smsMessageDevice;
 			Date lastLogin;
-			private String lastName;
-			private String firstName;
 			int roles;
 			boolean premium;
 			long myGroupId;
@@ -635,11 +635,11 @@ public class User implements Comparable<User>,Serializable {
 	boolean isContributor() {
 		return ((roles%2)/1 == 1);
 	}
-
+/*
 	public int getHWQuestionScore(long questionId) {
 		return (ofy().load().type(HWTransaction.class).filter("userId",this.id).filter("questionId",questionId).filter("score >",0).count() == 0?0:1);
 	}
-
+*/
 	public boolean moreThan1RecentAttempts(long questionId,int minutes) { // for Homework question grading
 		try {
 			Date minutesAgo = new Date(new Date().getTime()-minutes*60000);
@@ -662,9 +662,9 @@ public class User implements Comparable<User>,Serializable {
 		}
 	}
 
-	void recalculateScores() {
+	void deleteScores() {
 		Query<Score> myScores = ofy().load().type(Score.class).ancestor(this);
-		ofy().delete().entity(myScores);
+		ofy().delete().entities(myScores);
 	}
 
 	boolean processPremiumUpgrade(Group newGroup) {
@@ -705,10 +705,10 @@ public class User implements Comparable<User>,Serializable {
 				ofy().save().entity(newGroup);
 			}
 			this.myGroupId = newGroup==null?0:newGroupId;
-			ofy().save().entity(this);
+			ofy().save().entity(this).now();
 		} catch (Exception e) {
 		}
-		recalculateScores();
+		deleteScores();
 	}
 
 	public int compareTo(User other) {

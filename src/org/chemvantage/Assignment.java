@@ -37,29 +37,27 @@ public class Assignment implements Comparable<Assignment>,Serializable {
 	@Index	long groupId;
 	@Index	String assignmentType;
 	@Index	Date deadline;
-			long topicId;
+	@Index	long topicId;
 			List<Long> topicIds; // used for practice exams which have multiple topicIds
 			List<String> resourceLinkIds = new ArrayList<String>();
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 
     Assignment() {}
 
-    @SuppressWarnings("unchecked")
-	Assignment(long groupId,long topicId,String assignmentType,Date deadline) {
+   Assignment(long groupId,long topicId,String assignmentType,Date deadline) {  // specific to Quiz and Homework assignments with a single topicId
     	this.groupId = groupId;
     	this.topicId = topicId;
     	this.assignmentType = assignmentType;
     	this.deadline = deadline;
-    	questionKeys = (List<Key<Question>>)ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).keys();
+    	questionKeys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).keys().list();
     }
     
-    @SuppressWarnings("unchecked")
-	Assignment(long groupId,List<Long> topicIds,String assignmentType,Date deadline) {   // specific to Practice Exam assignments with multiple topicIds
+    Assignment(long groupId,List<Long> topicIds,String assignmentType,Date deadline) {   // specific to Practice Exam assignments with multiple topicIds
     	this.groupId = groupId;
     	this.topicIds = topicIds;
     	this.assignmentType = assignmentType;
     	this.deadline = deadline;
-    	for (Long topicId : topicIds) questionKeys.addAll((List<Key<Question>>)ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",topicId).keys());
+    	for (Long topicId : topicIds) questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",topicId).keys().list());
     }
     
     Assignment(long groupId,String assignmentType) {

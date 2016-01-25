@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -69,6 +70,7 @@ public class PracticeExam extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		User user = User.getInstance(request.getSession(true));
+		if (user==null) user = Nonce.getUser(request.getParameter("Nonce"));
 		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 			response.sendRedirect("/");
 			return;
@@ -176,7 +178,7 @@ public class PracticeExam extends HttpServlet {
 			
 			if (pt == null) {  // this is a valid request for a new exam with at least 3 topicIds; create a new transaction
 				pt = new PracticeExamTransaction(topicIds,user.id,now,null,new int[topicIds.size()],new int[topicIds.size()],lis_result_sourcedid,request.getRemoteAddr());
-				ofy().save().entity(pt);	
+				ofy().save().entity(pt).now();	
 			}
 			
 			// past this point we will present a practice exam to the student
@@ -350,7 +352,7 @@ public class PracticeExam extends HttpServlet {
 			
 			// create a buffer to hold the correct solutions to missed questions:
 			StringBuffer missedQuestions = new StringBuffer();
-			missedQuestions.append("The following questions were answered incorrectly. There may be additional questions (not shown) that were left unanswered.");			
+			missedQuestions.append("The following questions were answered incorrectly. <FONT COLOR=RED>Your incorrect answers are shown below.</FONT> There may be additional questions (not shown) that were left unanswered.");			
 			missedQuestions.append("<OL>");
 
 			int[] studentScores = new int[topicIds.size()];
@@ -365,27 +367,29 @@ public class PracticeExam extends HttpServlet {
 			
 			// begin the main scoring loop:
 			for (Key<Question> k : questionKeys) {
-			
+
 				String studentAnswer[] = request.getParameterValues(Long.toString(k.getId()));
 				if (studentAnswer != null) for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
 				else studentAnswer = new String[] {""};
-				Question q = examQuestions.get(k);
-				if (q==null) {
-					try {
-						q = ofy().load().key(k).safe();
-						examQuestions.put(k,q);
-					} catch (Exception e) {
-						continue;
+				if (studentAnswer[0].length() > 0) { // an answer was submitted
+					Question q = examQuestions.get(k);
+					if (q==null) {
+						try {
+							q = ofy().load().key(k).safe();
+							examQuestions.put(k,q);
+						} catch (Exception e) {
+							continue;
+						}
 					}
-				}
-				q.setParameters((int)(pt.id - q.id));
-				int score = studentAnswer[0].length()==0?0:q.isCorrect(studentAnswer[0])?q.pointValue:0;
-				if (score > 0) studentScores[topicIds.indexOf(q.topicId)] += score;
-				if (studentAnswer[0].length() > 0) ofy().save().entity(new Response("PracticeExam",q.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now));
-				if (score == 0) {
-					// include question in list of incorrectly answered questions
-					wrongAnswers++;
-					missedQuestions.append("\n<LI>" + q.printAllToStudents(studentAnswer[0]) + "</LI>\n");
+					q.setParameters((int)(pt.id - q.id));
+					int score = studentAnswer[0].length()==0?0:q.isCorrect(studentAnswer[0])?q.pointValue:0;
+					if (score > 0) studentScores[topicIds.indexOf(q.topicId)] += score;
+					if (studentAnswer[0].length() > 0) ofy().save().entity(new Response("PracticeExam",q.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now));
+					if (score == 0) {
+						// include question in list of incorrectly answered questions
+						wrongAnswers++;
+						missedQuestions.append("\n<LI>" + q.print(studentAnswer[0]) + "</LI>\n");
+					}
 				}
 			}
 			missedQuestions.append("</OL>\n");
@@ -405,8 +409,8 @@ public class PracticeExam extends HttpServlet {
 			Queue queue = QueueFactory.getDefaultQueue();  // used for computing Score objects offline by Task queue
 			if (a != null) {
 				Score s = Score.getInstance(user.id,a);
-				ofy().save().entity(s);
-				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",user.id));  // put report into the Task Queue
+				ofy().save().entity(s).now();
+				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
 			}
 			
 			int score = 0;
