@@ -77,6 +77,7 @@ public class Quiz extends HttpServlet {
 	throws ServletException, IOException {
 		try {
 			User user = User.getInstance(request.getSession(true));
+			if (user==null) user = Nonce.getUser(request.getParameter("Nonce"));
 			if (user==null || Login.lockedDown && !user.isAdministrator()) {
 				response.sendRedirect("/");
 				return;
@@ -131,7 +132,7 @@ public class Quiz extends HttpServlet {
 			buf.append("\n<h2>Quiz - " + topic.title + " (" + subject.title + ")</h2>");
 			
 			buf.append("\n<FORM NAME=Quiz METHOD=POST ACTION=Quiz onSubmit=\"javascript: return confirmSubmission()\">");
-			
+			buf.append("<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + Nonce.createInstance(user) + "'>");
 			// Gather profile information if needed; otherwise just print the user's name.
 			if (user.needsFirstName()) buf.append("First name: <input type=text name=FirstName><br/>"); else buf.append("<b>" + user.getFirstName() + "</b><br/>");
 			if (user.needsEmail()) buf.append("Email: <input type=text name=Email><br>");
@@ -411,6 +412,7 @@ public class Quiz extends HttpServlet {
 				}
 			}
 			buf.append("<FORM METHOD=GET Action=Quiz>"
+					+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + Nonce.createInstance(user) + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + qt.topicId + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=r VALUE=" + new Random().nextInt(9999) + ">"
 					+ "<INPUT TYPE=SUBMIT VALUE='Take this quiz again'></FORM>\n");

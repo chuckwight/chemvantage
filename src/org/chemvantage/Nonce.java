@@ -40,10 +40,13 @@ public class Nonce {
 		this.created = new Date();
 	}
 	
-	Nonce(User user) {
-		this.id = BLTIConsumer.generateSecret();
-		this.created = new Date();
-		this.user = user;
+	static String createInstance(User user) {
+		Nonce n = new Nonce();
+		n.id = BLTIConsumer.generateSecret();
+		n.user = user;
+		n.created = new Date();
+		ofy().save().entity(n).now();
+		return n.id;
 	}
 	
 	static long interval = 5400000L;  // 90 minutes in milliseconds

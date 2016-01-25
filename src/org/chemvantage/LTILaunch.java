@@ -353,7 +353,7 @@ public class LTILaunch extends HttpServlet {
 			if (lis_result_sourcedid!=null) redirectUrl += "&lis_result_sourcedid=" + lis_result_sourcedid;
 			
 			// Send a Nonce reference in case the session is lost (no browser support for Cookies)
-			redirectUrl += "&Nonce=" + new Nonce(user).id;
+			redirectUrl += "&Nonce=" + Nonce.createInstance(user);
 						
 			return redirectUrl;  // normal finish; go directly to the assignment
 
@@ -363,7 +363,7 @@ public class LTILaunch extends HttpServlet {
 			if (lis_result_sourcedid!=null) redirectUrl += "&lis_result_sourcedid=" + lis_result_sourcedid;
 			
 			// Send a Nonce reference in case the session is lost (no browser support for Cookies)
-			redirectUrl += "&Nonce=" + new Nonce(user).id;
+			redirectUrl += "&Nonce=" + Nonce.createInstance(user);
 			return redirectUrl;  // go to pickResourceForm to specify the assignment
 		}			
 	}
@@ -419,7 +419,7 @@ public class LTILaunch extends HttpServlet {
 					+ "</script>");
 
 			buf.append("<table><form name=AssignmentForm method=GET><input type=hidden name='resource_link_id' value='" + resource_link_id + "'>");
-			buf.append("<input type=hidden name=Nonce value=" + new Nonce(user) + ">");
+			buf.append("<input type=hidden name=Nonce value=" + Nonce.createInstance(user) + ">");
 			if (lis_result_sourcedid != null) buf.append("<input type=hidden name='lis_result_sourcedid' value='" + URLEncoder.encode(lis_result_sourcedid,"UTF-8") + "'>");
 			buf.append("<tr><td>"
 					+ "<input type=radio name=AssignmentType onClick='inspectRadios();' value=Quiz" + ("Quiz".equals(assignmentType)?" CHECKED":"") + ">Quiz<br>"

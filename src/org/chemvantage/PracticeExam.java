@@ -85,6 +85,7 @@ public class PracticeExam extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		User user = User.getInstance(request.getSession(true));
+		if (user==null) user = Nonce.getUser(request.getParameter("Nonce"));
 		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 			response.sendRedirect("/");
 			return;
@@ -228,6 +229,9 @@ public class PracticeExam extends HttpServlet {
 			buf.append("<div id='timer0' style='color: red'></div>");
 			buf.append("\n<input type=submit value='Grade This Practice Exam'><p>");
 
+			// Include a nonce reference as a hedge in case the session is lost by the user's browser
+			buf.append("\n<input type=hidden name=Nonce value='" + Nonce.createInstance(user) + "'>");
+			
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
 			int[] possibleScores = new int[topicIds.size()];
 

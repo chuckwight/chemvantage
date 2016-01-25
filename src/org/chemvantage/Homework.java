@@ -72,6 +72,7 @@ public class Homework extends HttpServlet {
 	throws ServletException, IOException {
 		try {
 			User user = User.getInstance(request.getSession(true));
+			if (user==null) user = Nonce.getUser(request.getParameter("Nonce"));
 			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 				response.sendRedirect("/");
 				return;
@@ -86,6 +87,7 @@ public class Homework extends HttpServlet {
 
 	String printHomework(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
+		String nonce = Nonce.createInstance(user);
 		try {
 			long topicId = 0;
 			try {
@@ -166,7 +168,7 @@ public class Homework extends HttpServlet {
 						
 						buf.append("&nbsp;<a id=" + q.id + " /></TD>"
 								+ "<FORM METHOD=POST ACTION=Homework>"
-								//+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>"
+								+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>"
 								+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 								+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 								+ (lis_result_sourcedid==null?"":"<INPUT TYPE=HIDDEN NAME=lis_result_sourcedid VALUE='" + lis_result_sourcedid + "'>")
@@ -203,7 +205,7 @@ public class Homework extends HttpServlet {
 				
 				buf.append("&nbsp;<a id=" + q.id + " /></TD>"
 						+ "<FORM METHOD=POST ACTION=Homework>"
-						//+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>"
+						+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ "<TD><b>" + i + ". </b></TD><TD>" + q.print() 
@@ -220,7 +222,7 @@ public class Homework extends HttpServlet {
 
 	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		//String nonce = new Nonce(user).id;
+		String nonce = Nonce.createInstance(user);
 		try {
 			long questionId = Long.parseLong(request.getParameter("QuestionId"));
 			Key<Question> k = Key.create(Question.class,questionId);
@@ -265,7 +267,7 @@ public class Homework extends HttpServlet {
 				buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework>"
 						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 						+ (lis_result_sourcedid==null?"":"<INPUT TYPE=HIDDEN NAME=lis_result_sourcedid VALUE='" + lis_result_sourcedid + "'>")
-						//+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>"
+						+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ q.print(studentAnswer[0]) + "<br>");
 				
@@ -378,7 +380,7 @@ public class Homework extends HttpServlet {
 			if (studentScore > 0) buf.append(fiveStars());
 
 			buf.append("<p><a href=Homework?TopicId=" + topic.id + "&r=" + random
-					//+ "&Nonce=" + nonce
+					+ "&Nonce=" + nonce
 					+ (offerHint?"&Q=" + q.id:"")
 					+ "#" + q.id + (offerHint?"><span style='color:red'>Please give me a hint</span>":">Return to this homework assignment") + "</a>");
 		}
