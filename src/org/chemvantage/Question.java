@@ -386,6 +386,7 @@ public class Question implements Serializable {
 		// use this method to display an example of the question, correct answer and solution
 		// this differs from printAll() because only the first of several 
 		// correct fill-in-word answers is presented
+		// showDetails enables display of Solution to numeric problems (default = true)
 		StringBuffer buf = new StringBuffer("<a name=" + this.id + ">");
 		char choice = 'a';
 		switch (getQuestionType()) {
@@ -478,7 +479,7 @@ public class Question implements Serializable {
 			default:
 		}		
 		buf.append("</div>Comment:<INPUT TYPE=TEXT SIZE=80 NAME=Notes><INPUT TYPE=SUBMIT NAME=SubmitButton VALUE=Send></div></FORM></div>");
-
+		buf.append("<br/>");
 		return buf.toString(); 
 	}
 
