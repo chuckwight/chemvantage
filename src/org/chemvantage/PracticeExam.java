@@ -352,7 +352,7 @@ public class PracticeExam extends HttpServlet {
 			
 			// create a buffer to hold the correct solutions to missed questions:
 			StringBuffer missedQuestions = new StringBuffer();
-			missedQuestions.append("The following questions were answered incorrectly. <FONT COLOR=RED>Your incorrect answers are shown below.</FONT> There may be additional questions (not shown) that were left unanswered.");			
+			missedQuestions.append("The following questions were answered incorrectly. There may be additional questions (not shown) that were left unanswered.");			
 			missedQuestions.append("<OL>");
 
 			int[] studentScores = new int[topicIds.size()];
@@ -388,7 +388,7 @@ public class PracticeExam extends HttpServlet {
 					if (score == 0) {
 						// include question in list of incorrectly answered questions
 						wrongAnswers++;
-						missedQuestions.append("\n<LI>" + q.print(studentAnswer[0]) + "</LI>\n");
+						missedQuestions.append("\n<LI>" + q.printAllToStudents(studentAnswer[0],false) + "</LI>\n");
 					}
 				}
 			}

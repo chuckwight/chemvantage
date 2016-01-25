@@ -378,7 +378,11 @@ public class Question implements Serializable {
 		return buf.toString();
 	}
 
-	public String printAllToStudents(String studentAnswer) {
+	String printAllToStudents(String studentAnswer) {
+		return printAllToStudents(studentAnswer,true);
+	}
+	
+	String printAllToStudents(String studentAnswer,boolean showDetails) {
 		// use this method to display an example of the question, correct answer and solution
 		// this differs from printAll() because only the first of several 
 		// correct fill-in-word answers is presented
@@ -443,7 +447,7 @@ public class Question implements Serializable {
 			if (hint.length()>0) {
 				buf.append("Hint:<br>" + parseString(hint) + "<p>");
 			}
-			if (solution.length()>0) {
+			if (showDetails && solution.length()>0) {
 				buf.append("Solution:<br>" + parseString(solution));
 				buf.append("<p>");
 			}
