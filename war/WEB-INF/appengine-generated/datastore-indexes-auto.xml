@@ -1,4 +1,4 @@
-<!-- Indices written at Sun, 24 Jan 2016 09:27:39 MST -->
+<!-- Indices written at Mon, 25 Jan 2016 08:41:29 MST -->
 
 <datastore-indexes>
 
@@ -8,11 +8,11 @@
         <property name="deadline" direction="asc"/>
     </datastore-index>
 
-    <!-- Used 5 times in query history -->
-    <datastore-index kind="HWTransaction" ancestor="false" source="auto">
-        <property name="questionId" direction="asc"/>
+    <!-- Used 2 times in query history -->
+    <datastore-index kind="PracticeExamTransaction" ancestor="false" source="auto">
+        <property name="graded" direction="asc"/>
         <property name="userId" direction="asc"/>
-        <property name="score" direction="asc"/>
+        <property name="downloaded" direction="asc"/>
     </datastore-index>
 
 </datastore-indexes>

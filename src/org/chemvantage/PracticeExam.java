@@ -352,7 +352,7 @@ public class PracticeExam extends HttpServlet {
 			
 			// create a buffer to hold the correct solutions to missed questions:
 			StringBuffer missedQuestions = new StringBuffer();
-			missedQuestions.append("The following questions were answered incorrectly. There may be additional questions (not shown) that were left unanswered.");			
+			missedQuestions.append("The following questions were answered incorrectly. <FONT COLOR=RED>Your incorrect answers are shown below.</FONT> There may be additional questions (not shown) that were left unanswered.");			
 			missedQuestions.append("<OL>");
 
 			int[] studentScores = new int[topicIds.size()];
@@ -367,27 +367,29 @@ public class PracticeExam extends HttpServlet {
 			
 			// begin the main scoring loop:
 			for (Key<Question> k : questionKeys) {
-			
+
 				String studentAnswer[] = request.getParameterValues(Long.toString(k.getId()));
 				if (studentAnswer != null) for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
 				else studentAnswer = new String[] {""};
-				Question q = examQuestions.get(k);
-				if (q==null) {
-					try {
-						q = ofy().load().key(k).safe();
-						examQuestions.put(k,q);
-					} catch (Exception e) {
-						continue;
+				if (studentAnswer[0].length() > 0) { // an answer was submitted
+					Question q = examQuestions.get(k);
+					if (q==null) {
+						try {
+							q = ofy().load().key(k).safe();
+							examQuestions.put(k,q);
+						} catch (Exception e) {
+							continue;
+						}
 					}
-				}
-				q.setParameters((int)(pt.id - q.id));
-				int score = studentAnswer[0].length()==0?0:q.isCorrect(studentAnswer[0])?q.pointValue:0;
-				if (score > 0) studentScores[topicIds.indexOf(q.topicId)] += score;
-				if (studentAnswer[0].length() > 0) ofy().save().entity(new Response("PracticeExam",q.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now));
-				if (score == 0) {
-					// include question in list of incorrectly answered questions
-					wrongAnswers++;
-					missedQuestions.append("\n<LI>" + q.printAllToStudents(studentAnswer[0]) + "</LI>\n");
+					q.setParameters((int)(pt.id - q.id));
+					int score = studentAnswer[0].length()==0?0:q.isCorrect(studentAnswer[0])?q.pointValue:0;
+					if (score > 0) studentScores[topicIds.indexOf(q.topicId)] += score;
+					if (studentAnswer[0].length() > 0) ofy().save().entity(new Response("PracticeExam",q.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now));
+					if (score == 0) {
+						// include question in list of incorrectly answered questions
+						wrongAnswers++;
+						missedQuestions.append("\n<LI>" + q.print(studentAnswer[0]) + "</LI>\n");
+					}
 				}
 			}
 			missedQuestions.append("</OL>\n");
