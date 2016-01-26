@@ -17,39 +17,35 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import javax.persistence.Id;
-import javax.persistence.Transient;
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
 
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.ObjectifyService;
-import com.googlecode.objectify.annotation.Cached;
-import com.googlecode.objectify.annotation.Indexed;
-import com.googlecode.objectify.annotation.Unindexed;
-
-@Cached @Unindexed 
+@Cache @Entity
 public class Domain {
 	@Id 		Long id;
-	@Indexed	String domainName;
-	@Indexed	Date lastLogin;
-	@Indexed	double dailyLoginsAvg; 
-				Date created;
-				int activeUsers;
-				int basicAccounts;
-				int premiumAccounts;
-				int seatsPurchased;
-				int seatsAvailable;
-				boolean supportsResultService;
-				String resultServiceEndpoint;
-				String resultServiceFormat;
-				List<String> capabilities = new ArrayList<String>();
-				List<String> domainAdmins = new ArrayList<String>();
-		
-	@Transient transient Objectify ofy = ObjectifyService.begin();
-	
+	@Index	String domainName;
+	Date lastLogin;
+	double dailyLoginsAvg; 
+	Date created;
+	int activeUsers;
+	int basicAccounts;
+	int premiumAccounts;
+	int seatsPurchased;
+	int seatsAvailable;
+	boolean supportsResultService;
+	String resultServiceEndpoint;
+	String resultServiceFormat;
+	List<String> capabilities = new ArrayList<String>();
+	List<String> domainAdmins = new ArrayList<String>();
+			
 	Domain() {}
 	
 	Domain(String hd) {
@@ -67,7 +63,7 @@ public class Domain {
 		List<String> admins = new ArrayList<String>();
 		List<String> remove = new ArrayList<String>();
 		for (String da : domainAdmins) {
-			User u = ofy.find(User.class,da);
+			User u = ofy().load().type(User.class).id(da).now();
 			if (u!=null && u.domain.equals(this.domainName)) admins.add(da);
 			else remove.add(da);
 		}
@@ -103,7 +99,7 @@ public class Domain {
 	}
 	
 	public int getActiveUsers() {
-		this.activeUsers = ofy.query(User.class).filter("domain",this.domainName).count();
+		this.activeUsers = ofy().load().type(User.class).filter("domain",this.domainName).count();
 		return activeUsers;
 	}
 	
@@ -126,7 +122,7 @@ public class Domain {
 	public void setLastLogin(Date login) {
 		this.lastLogin = login;
 		this.dailyLoginsAvg = this.dailyLoginsAvg<0.1?1.0:getDailyLoginsAvg();
-		ofy.put(this);
+		ofy().save().entity(this);
 	}
 
 	public double getDailyLoginsAvg() {

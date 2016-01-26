@@ -28,9 +28,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.appengine.api.users.UserService;
-import com.google.appengine.api.users.UserServiceFactory;
-
 public class Logout extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
@@ -53,6 +50,14 @@ public class Logout extends HttpServlet {
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+		out.println(Login.header + logoutPage(request,response) + Login.footer);
+	}
+	
+	String logoutPage(HttpServletRequest request,HttpServletResponse response) {
+		StringBuffer buf = new StringBuffer("<h2>You have successfully signed out of ChemVantage</h2>");
+
 		String providerName = "";
 		if ("BLTI".equals(User.getInstance(request.getSession()).authDomain)) {
 			providerName = "BLTI";
@@ -64,17 +69,6 @@ public class Logout extends HttpServlet {
 			for (Cookie c : cookies) if ("IDProvider".equals(c.getName())) providerName = c.getValue();			
 		}
 		request.getSession().invalidate();
-		UserService userService = UserServiceFactory.getUserService();
-		if (userService.isUserLoggedIn()) response.sendRedirect(userService.createLogoutURL("/Logout"));
-		else {
-			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
-			out.println(Login.header + logoutPage(request,providerName) + Login.footer);
-		}
-	}
-	
-	String logoutPage(HttpServletRequest request,String providerName) {
-		StringBuffer buf = new StringBuffer("<h2>You have successfully signed out of ChemVantage</h2>");
 		
 		if (providerName.isEmpty() || "BLTI".equals(providerName)) {
 			buf.append("If you are at a public computer, please shut down this browser completely to protect your online identity.<p>");

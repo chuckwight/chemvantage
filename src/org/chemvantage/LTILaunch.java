@@ -20,6 +20,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URLEncoder;
@@ -42,12 +44,8 @@ import net.oauth.SimpleOAuthValidator;
 import net.oauth.server.OAuthServlet;
 import net.oauth.signature.OAuthSignatureMethod;
 
-import com.googlecode.objectify.Objectify;
-
 public class LTILaunch extends HttpServlet {
 
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
 	private static final long serialVersionUID = 137L;
 
 	@Override
@@ -63,6 +61,7 @@ public class LTILaunch extends HttpServlet {
 		
 		try {
 			User user = User.getInstance(request.getSession(true));
+			if (user==null) user = Nonce.getUser(request.getParameter("Nonce"));
 			if (user==null) throw new Exception();  // unauthenticated user
 			if (request.getParameter("resource_link_id")==null) throw new Exception(); // missing required LTI parameter
 			
@@ -118,26 +117,28 @@ public class LTILaunch extends HttpServlet {
 				doError(request,response,"Missing resource_link_id.",null,null);
 				return;
 			}
-
-			BLTIConsumer tc = ofy.find(BLTIConsumer.class,oauth_consumer_key);
-			String oauth_secret = tc.secret;
-			if (oauth_secret==null) {
-				doError(request,response,"Invalid oauth_consumer_key.",null,null);
-				return;
+			
+			BLTIConsumer tc;
+			try {
+				tc = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).safe();
+				if (tc.secret==null) throw new Exception();
+			} catch (Exception e) {
+				throw new Exception (" Invalid oauth_consumer_key.");
 			}
+
 			String tool_consumer_guid = request.getParameter("tool_consumer_guid");
 			if (tool_consumer_guid != null && !tool_consumer_guid.equals(tc.tool_consumer_guid)) {
 				// this place is reached if the launch sends a guid that does not match the guid for the BLTIConsumer
 				if (tc.tool_consumer_guid==null) {  // record a previously unrecorded guid
 					tc.tool_consumer_guid = tool_consumer_guid;
-					ofy.put(tc);
+					ofy().save().entity(tc).now();
 				} else doError(request,response,"Invalid tool_consumer_guid.",null,null);
 			}
 
 			OAuthMessage oam = OAuthServlet.getMessage(request, null);
 			OAuthValidator oav = new SimpleOAuthValidator();
 			OAuthConsumer cons = new OAuthConsumer("about:blank#OAuth+CallBack+NotUsed", 
-					oauth_consumer_key, oauth_secret, null);
+					oauth_consumer_key, tc.secret, null);
 
 			OAuthAccessor acc = new OAuthAccessor(cons);
 
@@ -147,19 +148,21 @@ public class LTILaunch extends HttpServlet {
 			} catch (Exception e) {
 				base_string = null;
 			}
-
+			//debug.append("checking nonce...");
 			try {
 				if (!Nonce.isUnique(request.getParameter("oauth_nonce"), request.getParameter("oauth_timestamp"))) throw new Exception("Bad nonce or timestamp.");
+				//debug.append("validating...");
 				oav.validateMessage(oam,acc);
 			} catch(Exception e) {
 				System.out.println("Provider failed to validate message");
 				System.out.println(e.getMessage());
 				if ( base_string != null ) System.out.println(base_string);
-				doError(request, response,"Launch data validation failed.", null, null);
-				return;
+				throw new Exception("OAuth validation failed.");
+				//doError(request, response,"Launch data validation failed.", null, null);
+				//return;
 			}
 			// BLTI Launch message was validated successfully. 
-			debug.append("BLTI launch message was validated successfully. ");
+			//debug.append("BLTI launch message was validated successfully. ");
 			
 			// Gather some information about the user
 			String userId = request.getParameter("user_id");
@@ -172,7 +175,7 @@ public class LTILaunch extends HttpServlet {
 			if (user==null) user = User.createBLTIUser(request); // first-ever login for this user
 
 			// Create the domain if it doesn't already exist
-			Domain domain = ofy.query(Domain.class).filter("domainName",oauth_consumer_key).get();
+			Domain domain = ofy().load().type(Domain.class).filter("domainName",oauth_consumer_key).first().now();
 			Date now = new Date();
 			if (domain == null) {
 				domain = new Domain(oauth_consumer_key);
@@ -181,53 +184,48 @@ public class LTILaunch extends HttpServlet {
 					domain.resultServiceEndpoint = tc.getResultServiceEndpoint();
 					domain.resultServiceFormat = tc.getResultServiceFormat();
 				}
-				ofy.put(domain);
-			} else {
-				domain.setLastLogin(now);
-				ofy.put(domain);
-			}
+			} else domain.setLastLogin(now);
+			ofy().save().entity(domain).now();
 			
 			String lisOutcomeServiceURL = request.getParameter("lis_outcome_service_url");
 			String custom_result_url = request.getParameter("custom_result_url");
 			
 			if (lisOutcomeServiceURL!=null && !lisOutcomeServiceURL.equals(domain.resultServiceEndpoint)) {
 				domain.resultServiceEndpoint = lisOutcomeServiceURL;
-				domain.resultServiceFormat = "application/vnd.ims.lti.v1.outcome+xml";
+				if (domain.resultServiceFormat==null || domain.resultServiceFormat.isEmpty()) domain.resultServiceFormat = "application/xml";
 				domain.supportsResultService = true;
-				ofy.put(domain);
+				ofy().save().entity(domain).now();
 			} else if (custom_result_url!=null && !custom_result_url.equals(domain.resultServiceEndpoint)) {
 				domain.resultServiceEndpoint = custom_result_url;
 				domain.resultServiceFormat = "application/vnd.ims.lti.v2.toolproxy+json";
 				domain.supportsResultService = true;
-				ofy.put(domain);
-				
+				ofy().save().entity(domain).now();				
 			}
-			debug.append("Domain " + domain.domainName + " OK. ");
-			debug.append(domain.supportsResultService?"ResultServiceEndpoint is " + domain.resultServiceEndpoint + ". ":"");
-			debug.append(domain.supportsResultService?"ResultServiceFormat is " + domain.resultServiceFormat + ". ":"");
+//			debug.append("Domain " + domain.domainName + " OK. ");
+//			debug.append(domain.supportsResultService?"ResultServiceEndpoint is " + domain.resultServiceEndpoint + ". ":"");
+//			debug.append(domain.supportsResultService?"ResultServiceFormat is " + domain.resultServiceFormat + ". ":"");
 
 			// ensure that this user is associated with the LTI domain
 			if (user.domain == null || !user.domain.equals(domain.domainName)) {
 				user.domain = domain.domainName;
-				ofy.put(user);
+				ofy().save().entity(user).now();
 			}
 
 			// check if user has Instructor or Administrator role
 			String roles = request.getParameter("roles");
 			if (roles != null) {
 				roles = roles.toLowerCase();
-				if (roles.contains("instructor") && user.setIsInstructor(true)) ofy.put(user); // saves user if role is changed
+				if (roles.contains("instructor") && user.setIsInstructor(true)) ofy().save().entity(user).now(); // saves user if role is changed
 				if (roles.contains("administrator")) {
-					if (user.setIsAdministrator(true)) ofy.put(user);  // saves user if role is changed
-					if (domain.addAdmin(user.id)) ofy.put(domain);  // saves domain object if new admin is added
+					if (user.setIsAdministrator(true)) ofy().save().entity(user).now();  // saves user if role is changed
+					if (domain.addAdmin(user.id)) ofy().save().entity(domain).now();  // saves domain object if new admin is added
 				}
 			}
 
 			if (!user.hasPremiumAccount()) {
 				user.setPremium(true);  // All LTI users have free premium accounts
-				ofy.put(user);	
+				ofy().save().entity(user).now();	
 			}
-			debug.append("User " + user.id + " OK. ");
 			
 			String context_id = request.getParameter("context_id");
 			String context_title = request.getParameter("context_title");
@@ -240,34 +238,35 @@ public class LTILaunch extends HttpServlet {
 			if (context_title==null) context_title = context_id; // missing course title
 
 			// Provision a new context (group), if necessary and put the user into it
-			Group g = ofy.query(Group.class).filter("domain",oauth_consumer_key).filter("context_id",context_id).get();	
+			Group g = ofy().load().type(Group.class).filter("domain",oauth_consumer_key).filter("context_id",context_id).first().now();	
 			if (g == null) { // create this new group
 				g = new Group("BLTI",context_id,context_title);
 				g.domain = domain.domainName;
 				g.memberIds.add(user.id);
-				ofy.put(g);
+				ofy().save().entity(g).now();
 			}
 			user.changeGroups(g.id);
-			debug.append("Group " + g.description + " OK. ");
+			debug.append("User change groups OK. ");
 			
 			// update the LIS result outcome service URL, if necessary
 			if (domain.supportsResultService && domain.resultServiceEndpoint!=null && !domain.resultServiceEndpoint.equals(g.lis_outcome_service_url)) {  // update the URL and format as Group properties
 				g.lis_outcome_service_url=domain.resultServiceEndpoint;
 				g.lis_outcome_service_format = domain.resultServiceFormat;
 				g.isUsingLisOutcomeService = true;
-				ofy.put(g);
+				ofy().save().entity(g).now();
 			}							
-			debug.append("LIS services OK. ");
+			//debug.append("LIS services OK. ");
 			
 			if (user.isInstructor()) {
 				if (g.instructorId.equals("unknown")) {  // assign the instructor to this group
 					g.instructorId = user.id;
-					ofy.put(g);
+					ofy().save().entity(g).now();
 				}
 			}
 
 			// Use the resourceUrlFinder method to discover the URL for the assignment associated with this link
-			String redirectUrl = resourceUrlFinder(user,request);		
+			String redirectUrl = resourceUrlFinder(user,request);
+			
 			response.sendRedirect(redirectUrl);
 		} catch (Exception e) {
 			doError(request, response,"LTI Launch failed. " + e.getMessage() + debug.toString(), null, null);
@@ -294,7 +293,7 @@ public class LTILaunch extends HttpServlet {
 
 		// a resource_link_id string is required for every valid LTI launch
 		String resource_link_id = request.getParameter("resource_link_id");
-		if (resource_link_id == null) resource_link_id = request.getParameter("custom_resource_link_id");
+		//if (resource_link_id == null) resource_link_id = request.getParameter("custom_resource_link_id");
 		
 		// the lis_result_sourcedid is an optional LTI parameter that specifies a context grade book entry point
 		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
@@ -306,7 +305,7 @@ public class LTILaunch extends HttpServlet {
 		}
 		
 		try {  
-			List<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",user.myGroupId).list();
+			List<Assignment> assignments = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).list();
 			
 			for (Assignment a : assignments) {  // look for myAssignment having the correct resource_link_id
 				if (a.resourceLinkIds != null && a.resourceLinkIds.contains(resource_link_id)) {
@@ -317,7 +316,7 @@ public class LTILaunch extends HttpServlet {
 			
 			if (myAssignment==null) { // try to find it based on the request data AssignmentType and TopicId or TopicIds (for PracticeExam)
 				if (assignmentType==null) throw new Exception();
-				assignments = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType",assignmentType).list();
+				assignments = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType",assignmentType).list();
 				if (assignmentType.equals("PracticeExam")) {
 					String[] tIds = request.getParameterValues("TopicIds");
 					//if (tIds==null) tIds = request.getParameterValues("custom_TopicIds"); // supports custom LTI variables
@@ -346,10 +345,10 @@ public class LTILaunch extends HttpServlet {
 
 				if (user.isInstructor()) {  // must be the instructor to modify or store myAssignment
 					myAssignment.addResourceLinkId(resource_link_id);
-					ofy.put(myAssignment);
-					Group g = ofy.get(Group.class,user.myGroupId);
+					ofy().save().entity(myAssignment).now();
+					Group g = ofy().load().type(Group.class).id(user.myGroupId).safe();
 					g.setGroupTopicIds();
-					ofy.put(g);
+					ofy().save().entity(g).now();
 				} else lis_result_sourcedid = null; // this prevents students from getting scores for made-up assignments
 			}	
 			if (myAssignment.assignmentType.equals("PracticeExam")) {
@@ -361,12 +360,19 @@ public class LTILaunch extends HttpServlet {
 				redirectUrl ="/" + myAssignment.assignmentType + "?TopicId=" + myAssignment.topicId;
 			}
 			if (lis_result_sourcedid!=null) redirectUrl += "&lis_result_sourcedid=" + lis_result_sourcedid;
+			
+			// Send a Nonce reference in case the session is lost (no browser support for Cookies)
+			redirectUrl += "&Nonce=" + Nonce.createInstance(user);
+						
 			return redirectUrl;  // normal finish; go directly to the assignment
 
 		} catch (Exception e) {
 			redirectUrl = "/lti?UserRequest=pick&resource_link_id="+resource_link_id;  // send the user to the pickResource page
 			if (assignmentType!=null) redirectUrl += "&AssignmentType=" + assignmentType;
 			if (lis_result_sourcedid!=null) redirectUrl += "&lis_result_sourcedid=" + lis_result_sourcedid;
+			
+			// Send a Nonce reference in case the session is lost (no browser support for Cookies)
+			redirectUrl += "&Nonce=" + Nonce.createInstance(user);
 			return redirectUrl;  // go to pickResourceForm to specify the assignment
 		}			
 	}
@@ -422,16 +428,17 @@ public class LTILaunch extends HttpServlet {
 					+ "</script>");
 
 			buf.append("<table><form name=AssignmentForm method=GET><input type=hidden name='resource_link_id' value='" + resource_link_id + "'>");
+			buf.append("<input type=hidden name=Nonce value=" + Nonce.createInstance(user) + ">");
 			if (lis_result_sourcedid != null) buf.append("<input type=hidden name='lis_result_sourcedid' value='" + URLEncoder.encode(lis_result_sourcedid,"UTF-8") + "'>");
 			buf.append("<tr><td>"
 					+ "<input type=radio name=AssignmentType onClick='inspectRadios();' value=Quiz" + ("Quiz".equals(assignmentType)?" CHECKED":"") + ">Quiz<br>"
 					+ "<input type=radio name=AssignmentType onClick='inspectRadios();' value=Homework" + ("Homework".equals(assignmentType)?" CHECKED":"") + ">Homework<br>"
 					+ "<input type=radio name=AssignmentType onClick='inspectRadios();' value=PracticeExam" + ("PracticeExam".equals(assignmentType)?" CHECKED":"") + ">Practice&nbsp;Exam"
 					+ "</td><td id=topicSelect style='visibility:hidden;vertical-align=top'>"
-					+ "Please select one topic for this quiz or homework assignment.<br>");
+					+ "<FONT COLOR=RED>Please select one topic for this quiz or homework assignment.</FONT><br>");
 			buf.append("<SELECT NAME=TopicId onChange=\"javascript: document.AssignmentForm.UserRequest.disabled=(document.AssignmentForm.TopicId.selectedIndex==0);\">"
 					+ "<OPTION Value='0'" + ("0".equals(tId)?" SELECTED":"") + ">Select a topic</OPTION>");			
-			List<Topic> topics = ofy.query(Topic.class).order("orderBy").list();
+			List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
 			for (Topic t : topics) if (!t.orderBy.equals("Hide")) {
 				buf.append("<OPTION VALUE='" + t.id + "'" + (String.valueOf(t.id).equals(tId)?" SELECTED":"") + ">" + t.title + "</OPTION>");			 
 			}

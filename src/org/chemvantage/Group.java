@@ -17,30 +17,28 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
 
-import javax.persistence.Id;
-import javax.persistence.Transient;
-
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.ObjectifyService;
-import com.googlecode.objectify.Query;
-import com.googlecode.objectify.annotation.Cached;
-import com.googlecode.objectify.annotation.Indexed;
-import com.googlecode.objectify.annotation.Unindexed;
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
+import com.googlecode.objectify.cmd.Query;
 
-@Cached @Unindexed
+@Cache @Entity
 public class Group implements Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id Long id;
-	@Indexed String instructorId;
-	@Indexed String context_id;
-	@Indexed String domain;
+	@Index String instructorId;
+	@Index String context_id;
+	@Index String domain;
 			 String description;
 			 String timeZone;
 			 Date created;
@@ -59,8 +57,6 @@ public class Group implements Serializable {
 			 List<Long> quizAssignmentIds = new ArrayList<Long>();
 			 List<Long> hwAssignmentIds = new ArrayList<Long>();
 
-	@Transient transient Objectify ofy = ObjectifyService.begin();
-     
     Group() {}
     
     Group(String instructorId, String description) {
@@ -82,7 +78,7 @@ public class Group implements Serializable {
     
     public String getInstructorEmail() {
     	try {
-    		return ofy.get(User.class,this.instructorId).getEmail();
+    		return ofy().load().type(User.class).id(this.instructorId).safe().getEmail();
     	} catch (Exception e) {
     		return "";
     	}
@@ -90,7 +86,7 @@ public class Group implements Serializable {
     
     public String getInstructorFullName() {
     	try {
-    		return ofy.get(User.class,this.instructorId).getFullName();
+    		return ofy().load().type(User.class).id(this.instructorId).safe().getFullName();
     	} catch (Exception e) {
     		return "";
     	}
@@ -98,7 +94,7 @@ public class Group implements Serializable {
     
     public String getInstructorBothNames() {
     	try {
-    		return ofy.get(User.class,this.instructorId).getBothNames();
+    		return ofy().load().type(User.class).id(this.instructorId).safe().getBothNames();
     	} catch (Exception e) {
     		return "TBA";
     	}
@@ -123,9 +119,9 @@ public class Group implements Serializable {
     public void setNextDeadline() {
     	this.nextDeadline = null;
     	try {
-    		Query<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",this.id).filter("deadline >",new Date());
+    		Query<Assignment> assignments = ofy().load().type(Assignment.class).filter("groupId",this.id).filter("deadline >",new Date());
     		for (Assignment a : assignments) if (this.nextDeadline == null || a.deadline.before(nextDeadline)) this.nextDeadline = a.deadline;
-    		ofy.put(this);
+    		ofy().save().entity(this).now();
     	} catch (Exception e) {}
     }
     
@@ -151,11 +147,11 @@ public class Group implements Serializable {
     	this.topicIds.clear();
     	this.quizAssignmentIds.clear();
     	this.hwAssignmentIds.clear();
-    	Query<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",this.id).order("deadline");
+    	Query<Assignment> assignments = ofy().load().type(Assignment.class).filter("groupId",this.id).order("deadline");
     	for (Assignment a : assignments) {
     		if (!(a.assignmentType.equals("Quiz") || a.assignmentType.equals("Homework"))) continue;
-    		if (a.topicId==0L || ofy.find(Topic.class,a.topicId)==null) {
-    			ofy.delete(a);
+    		if (a.topicId==0L || ofy().load().type(Topic.class).id(a.topicId)==null) {
+    			ofy().delete().entity(a);
     			continue;
     		}
     		if (!this.topicIds.contains(a.topicId)) {  // new entry for this topic
@@ -173,11 +169,11 @@ public class Group implements Serializable {
     
     Score getScore(String userId,Assignment assignment) {
     	try {
-    		Key<Score> k = new Key<Score>(new Key<User>(User.class, userId),Score.class,assignment.id);
-    		Score s = ofy.find(k);
+    		Key<Score> k = Key.create(Key.create(User.class,userId),Score.class,assignment.id);
+    		Score s = ofy().load().key(k).now();
     		if (s==null) {
     			s = Score.getInstance(userId,assignment);
-    			ofy.put(s);
+    			ofy().save().entity(s).now();
     		}
     		return s;
     	} catch (Exception e) {
@@ -187,19 +183,19 @@ public class Group implements Serializable {
     
     void deleteScores(Assignment assignment) {
     	List <Key<Score>> scoreKeys = new ArrayList<Key<Score>>();
-    	for (String u : this.memberIds) scoreKeys.add(new Key<Score>(new Key<User>(User.class, u),Score.class,assignment.id));
-    	ofy.delete(scoreKeys);
+    	for (String u : this.memberIds) scoreKeys.add(Key.create(Key.create(User.class, u),Score.class,assignment.id));
+    	ofy().delete().keys(scoreKeys);
     }
 
     void calculateScores(Assignment assignment) {
     	List<Score> scores = new ArrayList<Score>();
     	for (String u : this.memberIds) scores.add(Score.getInstance(u,assignment));
-    	ofy.put(scores);
+    	ofy().save().entities(scores);
     }
 
     void deleteScores() {
-    	Iterable<Key<Score>> scoreKeys = ofy.query(Score.class).filter("groupId",this.id).fetchKeys();
-    	ofy.delete(scoreKeys);
+    	Iterable<Key<Score>> scoreKeys = ofy().load().type(Score.class).filter("groupId",this.id).keys();
+    	ofy().delete().entities(scoreKeys);
     }
 
     void setUsingLisOutcomeService(String url) {
@@ -207,20 +203,20 @@ public class Group implements Serializable {
     	if (this.isUsingLisOutcomeService && url.equals(this.lis_outcome_service_url)) return;  // no changes needed
     	this.isUsingLisOutcomeService = true;
     	this.lis_outcome_service_url = url;
-    	ofy.put(this);
+    	ofy().save().entity(this);
     }
     
     void deleteAssignments() {
     	List<Key<Assignment>> assignmentKeys = new ArrayList<Key<Assignment>>();
-    	for (Long i : quizAssignmentIds) assignmentKeys.add(new Key<Assignment>(Assignment.class,i));
-    	for (Long i : hwAssignmentIds) assignmentKeys.add(new Key<Assignment>(Assignment.class,i));
-    	ofy.delete(assignmentKeys);
+    	for (Long i : quizAssignmentIds) assignmentKeys.add(Key.create(Assignment.class,i));
+    	for (Long i : hwAssignmentIds) assignmentKeys.add(Key.create(Assignment.class,i));
+    	ofy().delete().keys(assignmentKeys);
     }
     
     void delete() {
     	this.deleteAssignments();
     	this.deleteScores();
-    	ofy.delete(this);
+    	ofy().delete().entity(this);
     }
     
     boolean getUsingLisOutcomeService() { 
@@ -238,8 +234,8 @@ public class Group implements Serializable {
     	// and updates the memberIds List.
     	// The method then returns the integer number of current group members.
     	try {
-    		this.memberIds = (List<String>) ofy.get(User.class,memberIds).keySet();
-    		ofy.put(this);
+    		this.memberIds = (List<String>) ofy().load().type(User.class).ids(memberIds).keySet();
+    		ofy().save().entity(this);
     	} catch (Exception e) {}
     	return memberIds.size();
     	
@@ -248,7 +244,7 @@ public class Group implements Serializable {
     
     boolean isActive() {
     	// group is active if it has at least one member or a valid instructor
-    	return (validatedMemberCount()>0 || ofy.find(User.class,instructorId)!=null);
+    	return (validatedMemberCount()>0 || ofy().load().type(User.class).id(instructorId)!=null);
     }
 
  }

@@ -19,17 +19,18 @@ package org.chemvantage;
 
 import java.io.Serializable;
 
-import javax.persistence.Id;
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
 
-import com.googlecode.objectify.annotation.Cached;
-
-@Cached
+@Cache @Entity
 public class Video implements Serializable {
 	private static final long serialVersionUID = 137L;
-	@Id Long id;
-    String serialNumber;
-    String title;
-    String orderBy;
+	@Id 	Long id;
+    		String serialNumber;
+    		String title;
+    @Index	String orderBy;
 
     Video() {}
     

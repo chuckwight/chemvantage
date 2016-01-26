@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
+import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -37,14 +38,10 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.ObjectifyService;
 
 public class Notification extends HttpServlet {
 	private static final long serialVersionUID = 137L;
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
-	Subject subject = dao.getSubject();
+	//Subject subject = Subject.getSubject();
 
 	public String getServletInfo() {
 		return "ChemVantage servlet sends reminders to premium users on the morning of each assignment deadline.";
@@ -57,7 +54,7 @@ public class Notification extends HttpServlet {
 			Date now = new Date();
 			Date startWindow = new Date(now.getTime() + 43200000); // 12 hr from now in millis
 			Date endWindow = new Date(startWindow.getTime() + 21600000);   // 6 hours later
-			List<Assignment> assignments = ofy.query(Assignment.class).filter("deadline >",startWindow).filter("deadline <",endWindow).list();
+			List<Assignment> assignments = ofy().load().type(Assignment.class).filter("deadline >",startWindow).filter("deadline <",endWindow).list();
 			List<Long> groupIds = new ArrayList<Long>();
 			for (Assignment a : assignments) {
 				if (groupIds.contains(a.groupId)) continue;  // This ensures that only 1 email is sent to each student
@@ -81,14 +78,13 @@ public class Notification extends HttpServlet {
 	
 	protected void sendEmailNotifications(long assignmentId) {
 		try {
-			Objectify ofy = ObjectifyService.begin();
-			Assignment a = ofy.get(Assignment.class,assignmentId);
+			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			Properties props = new Properties();
 			Session session = Session.getDefaultInstance(props, null);
-			Group group = ofy.get(Group.class,a.groupId);
+			Group group = ofy().load().type(Group.class).id(a.groupId).safe();
 			for (String userId : group.memberIds) {
 				try {
-					User user = ofy.get(User.class,userId);
+					User user = ofy().load().type(User.class).id(userId).safe();
 					if (!user.notifyDeadlines) continue;      // user does not want notifications
 					if (user.myGroupId != group.id) continue; // user has not yet joined this group 
 					Message msg = new MimeMessage(session);

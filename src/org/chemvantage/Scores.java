@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.DateFormat;
@@ -37,17 +39,14 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.Query;
+import com.googlecode.objectify.cmd.Query;
 
 public class Scores extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	private static Random rand = new Random();;
 	private static final String alpha = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
-	Subject subject = dao.getSubject();
+	Subject subject = Subject.getSubject();
 
 	public String getServletInfo() {
 		return "PZone servlet presents user's detailed scores in the Practice Zone site.";
@@ -98,7 +97,7 @@ public class Scores extends HttpServlet {
 				response.sendRedirect("/Scores?UserRequest=ShowAll");
 				return;
 			} else if (userRequest.equals("Recalculate My Scores")) {
-				user.recalculateScores();
+				user.deleteScores();
 				out.println(Home.getHeader(user) + myGroupScores(user) + Home.footer);
 				return;
 			}
@@ -129,7 +128,7 @@ public class Scores extends HttpServlet {
 					}
 				}
 				else if (userRequest.equals("Cancel")) user.smsMessageDevice = "";
-				ofy.put(user);
+				ofy().save().entity(user);
 				out.println(Home.getHeader(user) + myGroupScores(user) + Home.footer);
 			}
 		} catch (Exception e) {
@@ -146,7 +145,7 @@ public class Scores extends HttpServlet {
 
 			// Display a summary of practice exam scores
 			buf.append("<h3>Practice Exam Scores</h3>");
-			Query<PracticeExamTransaction> transactions = ofy.query(PracticeExamTransaction.class).filter("userId",user.id);
+			Query<PracticeExamTransaction> transactions = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.id);
 			if (transactions.count()==0) {	
 				buf.append("No practice exam scores have been recorded. ");
 				buf.append("Take a <a href=PracticeExam>practice exam</a> now.");
@@ -180,7 +179,7 @@ public class Scores extends HttpServlet {
 				buf.append("\n<TABLE>\n<TR><TD><b>Topic</b></TD><TD><b>Score</b></TD>"
 						+ "<TD><b>Possible</b></TD><TD><b>Percent</b></TD><TD></TD></TR>");
 				while (!topicIds.isEmpty()) {
-					String title = ofy.get(Topic.class,topicIds.remove(0)).title;
+					String title = ofy().load().type(Topic.class).id(topicIds.remove(0)).safe().title;
 					int score = scores.remove(0);
 					int possible = possibleScores.remove(0);
 					int pct = (possible>0?score*100/possible:0);
@@ -197,7 +196,7 @@ public class Scores extends HttpServlet {
 			}
 
 			// Display video lectures viewed
-			Query<VideoTransaction> watched = ofy.query(VideoTransaction.class).filter("userId",user.id);
+			Query<VideoTransaction> watched = ofy().load().type(VideoTransaction.class).filter("userId",user.id);
 			buf.append("<h3>" + watched.count() + " Video Lectures Viewed</h3>"
 					+ "<div id='videoLink'><FONT SIZE=-1>("
 					+ "<a href=# onCLick=document.getElementById('videoList').style.display='';"
@@ -215,16 +214,16 @@ public class Scores extends HttpServlet {
 					+ "<a href=Scores?UserRequest=AllHomework>all homework</a> transactions.<br>"
 					+ "<TABLE BORDER=1 CELLSPACING=0><TR><TH ALIGN=LEFT>Topic</TH><TH>Quiz</TH><TH>Homework</TH></TR>"); 
 			
-			Query<Topic> topics = ofy.query(Topic.class);
+			Query<Topic> topics = ofy().load().type(Topic.class);
 			int nRows = 0;
 			int score = 0;
 			for (Topic t : topics) {
-				Query<QuizTransaction> quizTransactions = ofy.query(QuizTransaction.class).filter("userId",user.id).filter("topicId",t.id);
+				Query<QuizTransaction> quizTransactions = ofy().load().type(QuizTransaction.class).filter("userId",user.id).filter("topicId",t.id);
 				score = 0;
 				for (QuizTransaction qt : quizTransactions) if (qt.score > score) score = qt.score;
 				String quizScore = (quizTransactions.count()==0?"":Integer.toString(score));
 				
-				Query<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId",user.id).filter("topicId",t.id);
+				Query<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("topicId",t.id);
 				score = 0;
 				List<Long> questionIds = new ArrayList<Long>();
 				for (HWTransaction hwt : hwTransactions) {
@@ -254,10 +253,10 @@ public class Scores extends HttpServlet {
 			buf.append("\nUser: " + user.getBothNames() + (!user.getEmail().isEmpty()?" (" + user.getEmail() + ")":"") + "<br>");
 			if (user.myGroupId < 0) user.changeGroups(0);
 			Group myGroup = null;
-			if (user.myGroupId > 0) myGroup = ofy.get(Group.class,user.myGroupId);
+			if (user.myGroupId > 0) myGroup = ofy().load().type(Group.class).id(user.myGroupId).safe();
 			if (myGroup == null) { // group may have been deleted
 				user.myGroupId = 0;
-				ofy.put(user);
+				ofy().save().entity(user);
 				return allMyScores(user); 
 			}
 			String instructorEmail = null;
@@ -371,11 +370,11 @@ public class Scores extends HttpServlet {
 			int nRows = 0;
 			myGroup.setGroupTopicIds();
 			for (Long topicId : topicIds) {
-				Topic t = ofy.get(Topic.class,topicId);
+				Topic t = ofy().load().type(Topic.class).id(topicId).safe();
 				long i = myGroup.getAssignmentId("Quiz",topicId);
-				Assignment qa = i>0?ofy.get(Assignment.class,i):null;
+				Assignment qa = i>0?ofy().load().type(Assignment.class).id(i).safe():null;
 				long j = myGroup.getAssignmentId("Homework",topicId);
-				Assignment hwa = j>0?ofy.get(Assignment.class,j):null;
+				Assignment hwa = j>0?ofy().load().type(Assignment.class).id(j).safe():null;
 				if (qa == null && hwa == null) continue;
 				buf.append("<TR><TD>" + t.title + "</TD>");
 				
@@ -398,7 +397,7 @@ public class Scores extends HttpServlet {
 			
 			// Display a summary of practice exam scores
 			buf.append("<h3>Practice Exam Scores</h3>");
-			Query<PracticeExamTransaction> transactions = ofy.query(PracticeExamTransaction.class).filter("userId",user.id);
+			Query<PracticeExamTransaction> transactions = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.id);
 			if (transactions.count()==0) {	
 				buf.append("No practice exam scores have been recorded. ");
 				buf.append("Take a <a href=PracticeExam>practice exam</a> now.");
@@ -432,7 +431,7 @@ public class Scores extends HttpServlet {
 				buf.append("<TABLE><TR><TD><b>Topic</b></TD><TD><b>Score</b></TD>"
 						+ "<TD><b>Possible</b></TD><TD><b>Percent</b></TD><TD></TD></TR>");
 				while (!topicIds.isEmpty()) {
-					String title = ofy.get(Topic.class,topicIds.remove(0)).title;
+					String title = ofy().load().type(Topic.class).id(topicIds.remove(0)).safe().title;
 					int score = scores.remove(0);
 					int possible = possibleScores.remove(0);
 					int pct = (possible>0?score*100/possible:0);
@@ -471,7 +470,7 @@ public class Scores extends HttpServlet {
 	
 	void deleteMyPracticeExamScores(User user) {
 		try {
-			ofy.delete(ofy.query(PracticeExamTransaction.class).filter("userId",user.id).fetchKeys());
+			ofy().delete().keys(ofy().load().type(PracticeExamTransaction.class).filter("userId",user.id).keys());
 			//return "<h3>Gone!</h3>All of your practice exam scores were permanently deleted from the datastore.";
 		} catch (Exception e) {
 			//return e.toString();
@@ -485,7 +484,7 @@ public class Scores extends HttpServlet {
 			buf.append("\nUser: " + user.getBothNames() + (!user.getEmail().isEmpty()?" (" + user.getEmail() + ")":"") + "<br>");
 			
 			try {  // give some information about the current group
-				Group myGroup = ofy.get(Group.class,user.myGroupId);
+				Group myGroup = ofy().load().type(Group.class).id(user.myGroupId).safe();
 				buf.append("\nGroup: " + myGroup.description + "<br>"
 					+ "Instructor: " + (myGroup.instructorId.length()>0?myGroup.getInstructorBothNames():"(unavailable)"));
 				String instructorEmail = myGroup.getInstructorEmail();
@@ -498,7 +497,7 @@ public class Scores extends HttpServlet {
 			buf.append("<br>" + df_long.format(now) + " (all times on this page are in Universal Coordinated Time)<p>");
 
 			// make a list of all quiz transactions for this user
-			List<QuizTransaction> quizTransactions = ofy.query(QuizTransaction.class).filter("userId", user.id).order("downloaded").list();
+			List<QuizTransaction> quizTransactions = ofy().load().type(QuizTransaction.class).filter("userId", user.id).order("downloaded").list();
 			buf.append("<table><tr><th>Topic</th><th>Downloaded</th><th>Graded</th><th>Score</th></tr>");
 			for (QuizTransaction qt : quizTransactions) buf.append(qt.tableRow());
 			buf.append("</table>");
@@ -515,7 +514,7 @@ public class Scores extends HttpServlet {
 			buf.append("\nUser: " + user.getBothNames() + (!user.getEmail().isEmpty()?" (" + user.getEmail() + ")":"") + "<br>");
 			
 			try {  // give some information about the current group
-				Group myGroup = ofy.get(Group.class,user.myGroupId);
+				Group myGroup = ofy().load().type(Group.class).id(user.myGroupId).safe();
 				buf.append("\nGroup: " + myGroup.description + "<br>"
 					+ "Instructor: " + (myGroup.instructorId.length()>0?myGroup.getInstructorBothNames():"(unavailable)"));
 				String instructorEmail = myGroup.getInstructorEmail();
@@ -528,7 +527,7 @@ public class Scores extends HttpServlet {
 			buf.append("<br>" + df_long.format(now) + " (all times on this page are in Universal Coordinated Time)<p>");
 
 			// make a list of all quiz transactions for this user
-			List<HWTransaction> hwTransactions = ofy.query(HWTransaction.class).filter("userId", user.id).list();
+			List<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId", user.id).list();
 			buf.append("<table><tr><th>Topic</th><th>Question ID</th><th>Graded</th><th>Score</th></tr>");
 			for (HWTransaction ht : hwTransactions) buf.append(ht.tableRow());
 			buf.append("</table>");

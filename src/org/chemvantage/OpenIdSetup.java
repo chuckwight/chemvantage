@@ -16,6 +16,8 @@
  */
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 
@@ -42,7 +44,6 @@ import com.google.step2.ConsumerHelper;
 import com.google.step2.Step2;
 import com.google.step2.discovery.IdpIdentifier;
 import com.google.step2.openid.ui.UiMessageRequest;
-import com.googlecode.objectify.Objectify;
 
 /**
  * Servlet for handling Google Apps Marketplace domain setup. Uses the Step2
@@ -57,9 +58,7 @@ public class OpenIdSetup extends HttpServlet {
 	protected ConsumerHelper consumerHelper;
 	protected String realm;
 	protected String returnToPath;
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
-
+	
 	/**
 	 * Init the servlet. For demo purposes, we're just using an in-memory
 	 * version of OpenID4Java's ConsumerAssociationStore. Production apps,
@@ -138,20 +137,20 @@ public class OpenIdSetup extends HttpServlet {
 			session.removeAttribute("callback");
 			
 			UserInfo userInfo = completeAuthentication(req);
-			User user = ofy.find(User.class, userInfo.getClaimedId());
+			User user = ofy().load().type(User.class).id(userInfo.getClaimedId()).now();
 			if (user == null) user = User.createOpenIdUser(userInfo);
 			if (!callback.isEmpty()) {  // on initial setup assign the domain administrator privileges
 				user.domain = user.authDomain;
 				user.setIsAdministrator(true);
 				user.setIsInstructor(true);
 			}
-			ofy.put(user);
+			ofy().save().entity(user);
 			session.setAttribute("UserId", user.getId());
 			
-			Domain domain = ofy.query(Domain.class).filter("domainName",user.domain).get();
+			Domain domain = ofy().load().type(Domain.class).filter("domainName",user.domain).first().now();
 			if (domain == null) domain = new Domain(user.domain);
 			if (user.isAdministrator()) domain.addAdmin(user.id);
-			ofy.put(domain);
+			ofy().save().entity(domain);
 			
 		
 			// try to set a Cookie with the user's ID provider:

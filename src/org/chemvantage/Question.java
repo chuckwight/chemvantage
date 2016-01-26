@@ -24,37 +24,38 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import javax.persistence.Id;
-import javax.persistence.Transient;
-
 import com.bestcode.mathparser.IMathParser;
 import com.bestcode.mathparser.MathParserFactory;
-import com.googlecode.objectify.annotation.Cached;
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
 
-@Cached
+@Cache @Entity
 public class Question implements Serializable {
 	private static final long serialVersionUID = 137L;
-	@Id Long id;
-	long topicId;
-	String assignmentType;
-	String text;
-	String type;
-	int nChoices=0;
-	List<String> choices = new ArrayList<String>();
-	double requiredPrecision=0;
-	int significantFigures = 0;
-	String correctAnswer;
-	String tag;
-	int pointValue=1;
-	String parameterString;
-	String hint;
-	String solution;
-	String authorId;
-	String contributorId;
-	String editorId;
-	String notes;
-	@Transient int[] parameters = {0,0,0,0};
-	boolean isActive = false;
+	@Id 	Long id;
+	@Index	long topicId;
+	@Index	String assignmentType;
+			String text;
+			String type;
+			int nChoices=0;
+			List<String> choices = new ArrayList<String>();
+			double requiredPrecision=0;
+			int significantFigures = 0;
+			String correctAnswer;
+			String tag;
+	@Index	int pointValue=1;
+			String parameterString;
+			String hint;
+			String solution;
+			String authorId;
+			String contributorId;
+			String editorId;
+			String notes;
+			// Note: the parameters array formerly had the attribute @Transient javax.persistence.Transient
+			int[] parameters = {0,0,0,0};
+	@Index		boolean isActive = false;
 	
 	public static final int MULTIPLE_CHOICE = 1;
 	public static final int TRUE_FALSE = 2;
@@ -377,10 +378,15 @@ public class Question implements Serializable {
 		return buf.toString();
 	}
 
-	public String printAllToStudents(String studentAnswer) {
+	String printAllToStudents(String studentAnswer) {
+		return printAllToStudents(studentAnswer,true);
+	}
+	
+	String printAllToStudents(String studentAnswer,boolean showDetails) {
 		// use this method to display an example of the question, correct answer and solution
 		// this differs from printAll() because only the first of several 
 		// correct fill-in-word answers is presented
+		// showDetails enables display of Solution to numeric problems (default = true)
 		StringBuffer buf = new StringBuffer("<a name=" + this.id + ">");
 		char choice = 'a';
 		switch (getQuestionType()) {
@@ -442,7 +448,7 @@ public class Question implements Serializable {
 			if (hint.length()>0) {
 				buf.append("Hint:<br>" + parseString(hint) + "<p>");
 			}
-			if (solution.length()>0) {
+			if (showDetails && solution.length()>0) {
 				buf.append("Solution:<br>" + parseString(solution));
 				buf.append("<p>");
 			}
@@ -473,7 +479,7 @@ public class Question implements Serializable {
 			default:
 		}		
 		buf.append("</div>Comment:<INPUT TYPE=TEXT SIZE=80 NAME=Notes><INPUT TYPE=SUBMIT NAME=SubmitButton VALUE=Send></div></FORM></div>");
-
+		buf.append("<br/>");
 		return buf.toString(); 
 	}
 

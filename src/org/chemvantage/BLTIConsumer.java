@@ -17,22 +17,20 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
 
-import javax.persistence.Id;
-
 import com.google.appengine.labs.repackaged.org.json.JSONException;
 import com.google.appengine.labs.repackaged.org.json.JSONObject;
-import com.googlecode.objectify.Key;
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.ObjectifyService;
-import com.googlecode.objectify.annotation.Cached;
-import com.googlecode.objectify.annotation.Unindexed;
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
 
-@Cached @Unindexed
+@Cache @Entity
 public class BLTIConsumer {
 	@Id String oauth_consumer_key;
 	String secret;
@@ -75,11 +73,11 @@ public class BLTIConsumer {
 		}
 	
 	static void create(String oauth_consumer_key) {
-		ObjectifyService.begin().put(new BLTIConsumer(oauth_consumer_key));
+		ofy().save().entity(new BLTIConsumer(oauth_consumer_key)).now();
 	}
 	
 	static void delete(String oauth_consumer_key) {
-		ObjectifyService.begin().delete(new Key<BLTIConsumer>(BLTIConsumer.class,oauth_consumer_key));
+		ofy().delete().type(BLTIConsumer.class).id(oauth_consumer_key);
 	}
 	
 	static String generateSecret() {
@@ -92,12 +90,11 @@ public class BLTIConsumer {
 	}
 	
 	static String getSecret(String oauth_consumer_key) {
-		Objectify ofy = ObjectifyService.begin();
-		BLTIConsumer c = ofy.find(BLTIConsumer.class,oauth_consumer_key);
+		BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).now();
 		if (c==null) return null;
 		if (c.lti_version==null || c.lti_version.isEmpty()) {
 			c.lti_version = "LTI-1p0";
-			ofy.put(c);
+			ofy().save().entity(c);
 		}
 		return c.secret;
 	}
@@ -139,8 +136,7 @@ public class BLTIConsumer {
 	}
 
 	static String getResultServiceFormat(String oauth_consumer_key) {
-		Objectify ofy = ObjectifyService.begin();
-		BLTIConsumer c = ofy.find(BLTIConsumer.class,oauth_consumer_key);
+		BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).now();
 		return c==null?null:c.resultServiceFormat;
 	}
 	
@@ -156,21 +152,7 @@ public class BLTIConsumer {
 		if (this.resultServiceEndpoint !=null && this.resultServiceFormat != null) return true;
 		return false;
 	}
-/*	
-	String getResultServiceEndpoint() {
-		try {
-			JSONObject toolProxy = new JSONObject(this.toolProxy);
-			JSONArray toolService = toolProxy.getJSONObject("security_contract").getJSONArray("tool_service");
-			for (int i=0;i<toolService.length();i++) {
-				JSONObject resultService = toolService.getJSONObject(i);
-				String format = resultService.getString("service").toLowerCase();
-				if (format.equals("application/vnd.ims.lis.v2.result+json") || format.equals("application/vnd.ims.lti.v1.outcome+xml")) return format;
-			}
-		} catch (Exception e) {
-		}
-		return null;
-	}
-*/	
+
 	void putToolService(List<String>toolService) {
 		this.tool_service = toolService;
 	}

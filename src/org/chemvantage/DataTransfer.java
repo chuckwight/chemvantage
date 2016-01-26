@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
@@ -28,13 +30,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.googlecode.objectify.Objectify;
-
 public class DataTransfer extends HttpServlet {
 	private static final long serialVersionUID = 137L;
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
-
+	
 	/* The purpose of this servlet is to provide a mechanism for
 	 * transferring data between instances of ChemVantage.  This
 	 * is useful for backup/restore operations and for testing or
@@ -142,7 +140,7 @@ public class DataTransfer extends HttpServlet {
 				request.setAttribute("Quantity", n);
 			} else {
 				List<?> objects = (List<?>) ois.readObject();
-				ofy.put(objects);
+				ofy().save().entities(objects);
 				request.setAttribute("Quantity", objects.size());
 			}
 			ois.close();

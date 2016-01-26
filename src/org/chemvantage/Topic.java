@@ -17,23 +17,23 @@
 
 package org.chemvantage;
 
-import java.io.Serializable;
+import static com.googlecode.objectify.ObjectifyService.ofy;
 
-import javax.persistence.Id;
+import java.io.Serializable;
 
 import com.google.appengine.api.datastore.QueryResultIterable;
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.ObjectifyService;
-import com.googlecode.objectify.Query;
-import com.googlecode.objectify.annotation.Cached;
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
 
-@Cached
+@Cache @Entity
 public class Topic implements Serializable {
 	private static final long serialVersionUID = 137L;
-	@Id Long id;
-	String title;
-	String orderBy;
+	@Id 	Long id;
+	@Index 	String orderBy;
+	 		String title;
 	
 	Topic() {}
 	
@@ -43,26 +43,22 @@ public class Topic implements Serializable {
 	}
 
 	public QueryResultIterable<Key<Question>> getQuestionKeys(String assignmentType) {
-		Objectify ofy = ObjectifyService.begin();
-		return  ofy.query(Question.class).filter("topicId",this.id).filter("assignmentType",assignmentType).fetchKeys();
+		return  ofy().load().type(Question.class).filter("topicId",this.id).filter("assignmentType",assignmentType).keys();
 	}
-	
+/*	
 	public Query<Question> getQuestions(String assignmentType) {
-		Objectify ofy = ObjectifyService.begin();
-		return ofy.query(Question.class).filter("topicId", this.id).filter("assignmentType",assignmentType).order("pointValue");
+		return ofy().load().type(Question.class).filter("topicId", this.id).filter("assignmentType",assignmentType).order("pointValue");
 	}
 	
 	public int getQuestionCount(String assignmentType) {
 		return this.getQuestions(assignmentType).count();
 	}
-	
+*/	
 	public Question getQuestion(Key<Question> key) {
-		Objectify ofy = ObjectifyService.begin();
-		return ofy.get(key);
+		return ofy().load().key(key).now();
 	}
 
 	public Question getQuestion(long id) {
-		Objectify ofy = ObjectifyService.begin();
-		return ofy.get(Question.class,id);
+		return ofy().load().type(Question.class).id(id).now();
 	}
 }

@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 
@@ -26,13 +28,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.labs.repackaged.org.json.JSONObject;
-import com.googlecode.objectify.Objectify;
 
 public class ToolSettingsManager extends HttpServlet {
 	private static final long serialVersionUID = 137L;
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
-
+	
 	public String getServletInfo() {
 		return "This servlet reads and writes settings to the Tool Service embedded in LTI Tool Consumers (learning management systems).";
 	}
@@ -82,7 +81,7 @@ public class ToolSettingsManager extends HttpServlet {
 		StringBuffer buf = new StringBuffer("Tool settings for oauth_consumer_key " + key + " (JSON format):<p>");
 		String response = "";
 		try {
-			BLTIConsumer tc = ofy.get(BLTIConsumer.class,key);
+			BLTIConsumer tc = ofy().load().type(BLTIConsumer.class).id(key).safe();
 			response = new LTIMessage("GET","application/vnd.ims.lti.v2.ToolSettings+json",tc.getToolSettingsURL(),tc).send();
 			JSONObject toolSettings = new JSONObject(response);
 			buf.append(toolSettings.toString(3));

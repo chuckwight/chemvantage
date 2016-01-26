@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
+import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 
@@ -28,15 +29,11 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.Query;
+import com.googlecode.objectify.cmd.Query;
 
 public class CalculateScores extends HttpServlet {
 	private static final long serialVersionUID = 137L;
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
-	Subject subject = dao.getSubject();
-
+	
 	public String getServletInfo() {
 		return "ChemVantage servlet calculates Score objects for groups as a Task.";
 	}
@@ -53,13 +50,13 @@ public class CalculateScores extends HttpServlet {
 		
 		try {  // recalculate all of the Score objects for the entire group
 			long groupId = Long.parseLong(request.getParameter("GroupId"));
-			Query<Assignment> assignments = ofy.query(Assignment.class).filter("groupId",groupId);
+			Query<Assignment> assignments = ofy().load().type(Assignment.class).filter("groupId",groupId);
 			Queue queue = QueueFactory.getDefaultQueue();
 			for (Assignment a : assignments) queue.add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));
 		} catch (Exception e) {  // recalculate Score objects for one assignment
 			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
-			Assignment assignment = ofy.get(Assignment.class,assignmentId);
-			Group group = ofy.get(Group.class,assignment.groupId);
+			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).now();
+			Group group = ofy().load().type(Group.class).id(assignment.groupId).now();
 			group.calculateScores(assignment);
 		}
 	}

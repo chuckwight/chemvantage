@@ -20,25 +20,25 @@ package org.chemvantage;
 import java.io.Serializable;
 import java.util.Date;
 
-import javax.persistence.Id;
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
 
-import com.googlecode.objectify.annotation.Indexed;
-import com.googlecode.objectify.annotation.Unindexed;
-
-@Unindexed
+@Cache @Entity
 public class Response implements Serializable {
 	private static final long serialVersionUID = 137L;
-	@Id Long id;
-	String assignmentType;
-	@Indexed long topicId;
-	@Indexed long questionId;
-	String studentResponse;
-	String correctAnswer;
-	int score;
-	int possibleScore;
-	@Indexed String userId;
-	@Indexed Date submitted;
-
+	@Id 	Long id;
+	@Index 	String assignmentType;
+	@Index 	long topicId;
+	@Index 	long questionId;
+	@Index 	String userId;
+	@Index 	Date submitted;
+			String studentResponse;
+			String correctAnswer;
+			int score;
+			int possibleScore;
+	
 	Response() {}
     
 	Response(String assignmentType, long topicId, long questionId, String studentResponse, String correctAnswer, int score, int possibleScore, String userId, Date submitted) {

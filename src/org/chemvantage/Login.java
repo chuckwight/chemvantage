@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -50,18 +52,15 @@ import com.google.gdata.util.common.base.Charsets;
 import com.google.gdata.util.common.io.CharStreams;
 import com.google.gdata.util.common.util.Base64;
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.Objectify;
 
 public class Login extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	static boolean lockedDown = false;
 
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
+	Subject subject = Subject.getSubject();
 	GoogleClient CLIENT = GoogleClient.getInstance();
-	Subject subject = dao.getSubject();
-	List<Video> videos = ofy.query(Video.class).order("orderBy").list();
+	List<Video> videos = ofy().load().type(Video.class).order("orderBy").list();
 	JSONObject openid_config = null;
 	
     static final Map<String, String> openIdProviders;
@@ -251,7 +250,7 @@ public class Login extends HttpServlet {
 			session.setAttribute("UserId", userId);			
 
 			// Check to see if this is a first-time Google+ sign-in
-			if (ofy.find(User.class,userId)==null) { 
+			if (ofy().load().type(User.class).id(userId)==null) { 
 				String firstName = getUserFirstName(userId,accessToken);
 				User.createGooglePlusUser(payload,firstName);
 			}
@@ -402,11 +401,11 @@ public class Login extends HttpServlet {
 				topicId = Long.parseLong(request.getParameter("TopicId"));
 			} catch (Exception e2) {}
 			if (topicId == 0) {  // choose a random topic
-				List<Key<Topic>> topicKeys = ofy.query(Topic.class).listKeys();
+				List<Key<Topic>> topicKeys = ofy().load().type(Topic.class).keys().list();
 				int random = new Random().nextInt(topicKeys.size());
-				topicId=ofy.get(topicKeys.get(random)).id;
+				topicId=ofy().load().key(topicKeys.get(random)).now().id;
 			}
-			Topic topic = ofy.get(Topic.class,topicId);
+			Topic topic = ofy().load().type(Topic.class).id(topicId).now();
 
 			String questionType = request.getParameter("QuestionType");
 			if (questionType==null) questionType = "Quiz";
@@ -416,7 +415,7 @@ public class Login extends HttpServlet {
 			buf.append("\n<FORM ACTION=/q METHOD=POST>");
 			
 			// create a set of available questionIds either from the group assignment or from the datastore
-			List<Key<Question>> questionKeys = ofy.query(Question.class).filter("topicId", topicId).filter("assignmentType",questionType).filter("isActive",true).listKeys();
+			List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("topicId", topicId).filter("assignmentType",questionType).filter("isActive",true).keys().list();
 			if (questionKeys.size() == 0) {
 				buf.append("No questions are available for this topic, sorry. <a href=/q>Try Again.</a>");
 				return buf.toString();
@@ -424,7 +423,7 @@ public class Login extends HttpServlet {
 			// Randomly select one questions to be presented
 			Random rand = new Random();  // create random number generator to select quiz questions
 			Key<Question> k = questionKeys.remove(rand.nextInt(questionKeys.size()));
-			Question q = ofy.get(k);
+			Question q = ofy().load().key(k).now();
 			int param = rand.nextInt();
 			q.setParameters(param);  // randomizes parameterized questions
 			buf.append("\n" + q.print() + "<br>\n");

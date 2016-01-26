@@ -17,31 +17,31 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
 
-import javax.persistence.Id;
-
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.ObjectifyService;
-import com.googlecode.objectify.annotation.Cached;
-import com.googlecode.objectify.annotation.Unindexed;
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
 
-@Cached
+@Cache @Entity
 public class PracticeExamTransaction implements Serializable {
 	private static final long serialVersionUID = 137L;
-	@Unindexed	@Id Long id;
-	@Unindexed	List<Long> topicIds;
-				String userId;
-				Date downloaded;
-				Date graded;
-	@Unindexed 	int[] scores;
-	@Unindexed 	int[] possibleScores;
-	@Unindexed 	String lis_result_sourcedid;
-	@Unindexed 	String IPNumber;
-	@Unindexed 	List<Key<Response>> responseKeys;
+	@Id 	Long id;
+	@Index	String userId;
+	@Index	Date downloaded;
+	@Index	Date graded;
+			List<Long> topicIds;
+			int[] scores;
+			int[] possibleScores;
+			String lis_result_sourcedid;
+			String IPNumber;
+			List<Key<Response>> responseKeys;
 
 	PracticeExamTransaction() {}
 
@@ -57,8 +57,7 @@ public class PracticeExamTransaction implements Serializable {
 	}
 
 	public List<Response> getResponses() {
-		Objectify ofy = ObjectifyService.begin();
-		return (List<Response>) ofy.get(Response.class,responseKeys).values();
+		return (List<Response>) ofy().load().type(Response.class).ids(responseKeys).values();
 	}
 
     boolean topicsMatch(List<Long> topicIds) {  // matches if both Lists have identical members but not necessarily in the same order

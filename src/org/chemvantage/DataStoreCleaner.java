@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
+import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -42,7 +43,6 @@ import com.google.appengine.api.datastore.Query.FilterPredicate;
 import com.google.appengine.api.datastore.QueryResultList;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
-import com.googlecode.objectify.Objectify;
 
 public class DataStoreCleaner extends HttpServlet {
 	private static final long serialVersionUID = 137L;
@@ -51,10 +51,8 @@ public class DataStoreCleaner extends HttpServlet {
 	Date fiveMonthsAgo;
 	Date sixMonthsAgo;
 	Date oneYearAgo;
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
 	int querySizeLimit = 1000;
-	Subject subject = dao.getSubject();
+	//Subject subject = Subject.getSubject();
 	
 	public String getServletInfo() {
 		return "ChemVantage servlet that performs daily maintenance of the datastore.";
@@ -163,12 +161,12 @@ public class DataStoreCleaner extends HttpServlet {
 		
 	private boolean deleteUser(String userId) {   // recursive user deletion function that follows the alias tree to the end
 		try {
-			User u = ofy.get(User.class,userId);
+			User u = ofy().load().type(User.class).id(userId).now();
 			if (u.alias != null && !u.alias.isEmpty() && !u.alias.equals(u.id)) {  // follow the alias chain to the end
 				if (deleteUser(u.alias)) return true;
 				else {  // this alias is to be retained; advance lastLogin to prevent inspection every day
 					u.lastLogin = fiveMonthsAgo;
-					ofy.put(u);
+					ofy().save().entity(u);
 					return false;
 				}
 			} else { // found the user at the end of the alias chain
@@ -177,7 +175,7 @@ public class DataStoreCleaner extends HttpServlet {
 				if (u.isAdministrator()) return false;  // preserve all admin accounts
 				if (u.lastLogin.getTime()==0L) {  // user never logged in; perhaps this is a brand new account
 					u.lastLogin = new Date(1000L);   // so mark the account by advancing the lastLogin by 1 second
-					ofy.put(u);                   // so it will be deleted tomorrow instead if the user does not login
+					ofy().save().entity(u);                   // so it will be deleted tomorrow instead if the user does not login
 					return false;
 				} 
 			}
@@ -283,7 +281,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    
 		    for (Entity qt : quizTransactions) {
 		    	try {
-		    		ofy.get(User.class,(String)qt.getProperty("userId"));		    	
+		    		ofy().load().type(User.class).id((String)qt.getProperty("userId"));		    	
 		    	} catch (Exception e) {  // catches exception if user does not exist
 		    		keys.add(qt.getKey());
 		    	}
@@ -327,7 +325,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    
 		    for (Entity ht : hwTransactions) {
 		    	try {
-		    		ofy.get(User.class,(String)ht.getProperty("userId"));		    	
+		    		ofy().load().type(User.class).id((String)ht.getProperty("userId"));		    	
 		    	} catch (Exception e) {  // catches exception if user does not exist
 		    		keys.add(ht.getKey());
 		    	}
@@ -371,7 +369,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    
 		    for (Entity pt : peTransactions) {
 		    	try {
-		    		ofy.get(User.class,(String)pt.getProperty("userId"));		    	
+		    		ofy().load().type(User.class).id((String)pt.getProperty("userId"));		    	
 		    	} catch (Exception e) {  // catches exception if user does not exist
 		    		keys.add(pt.getKey());
 		    	}
@@ -414,7 +412,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    ArrayList<Key> keys = new ArrayList<Key>();  // list of Group entity keys for batch delete
 		    
 		    for (Entity g : groups) {
-		    	Group group = ofy.get(Group.class,g.getKey().getId());
+		    	Group group = ofy().load().type(Group.class).id(g.getKey().getId()).safe();
 		    	if (!group.isActive()) keys.add(g.getKey());		    	
 		    }
 
@@ -455,7 +453,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    
 		    for (Entity a : assignments) {
 		    	try {
-		    		ofy.get(Group.class,(Long)a.getProperty("groupId"));		    	
+		    		ofy().load().type(Group.class).id((Long)a.getProperty("groupId"));		    	
 		    	} catch (Exception e) {  // catches exception if user does not exist
 		    		keys.add(a.getKey());
 		    	}
@@ -498,7 +496,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    ArrayList<Key> keys = new ArrayList<Key>();  // list of Assignment entity keys for batch delete
 		   
 		    for (Entity d : domains) {
-		    	int activeUsers = ofy.query(User.class).filter("domain",d.getProperty("domainName")).count();
+		    	int activeUsers = ofy().load().type(User.class).filter("domain",d.getProperty("domainName")).count();
 		    	Date created = (Date)d.getProperty("created");
 		    	if (activeUsers==0 && created.before(oneMonthAgo)) keys.add(d.getKey());
 		    }

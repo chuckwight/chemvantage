@@ -18,9 +18,11 @@
 package org.chemvantage;
 
 import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
+import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -39,8 +41,7 @@ import javax.servlet.http.HttpServletResponse;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.Query;
+import com.googlecode.objectify.cmd.Query;
 
 public class PracticeExam extends HttpServlet {
 	// parameters that determine the properties of the exam program:
@@ -59,9 +60,7 @@ public class PracticeExam extends HttpServlet {
 	int numberOfSections = 1;            // 
 	boolean trackAnswers= false;         // true keeps track of missed questions for students
 	private static final long serialVersionUID = 137L;
-	DAO dao = new DAO();
-	Objectify ofy = dao.ofy();
-	Subject subject = dao.getSubject();
+	Subject subject = Subject.getSubject();
 	static Map<Key<Question>,Question> examQuestions = new HashMap<Key<Question>,Question>();
 
 	public String getServletInfo() {
@@ -71,6 +70,7 @@ public class PracticeExam extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		User user = User.getInstance(request.getSession(true));
+		if (user==null) user = Nonce.getUser(request.getParameter("Nonce"));
 		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 			response.sendRedirect("/");
 			return;
@@ -85,6 +85,7 @@ public class PracticeExam extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		User user = User.getInstance(request.getSession(true));
+		if (user==null) user = Nonce.getUser(request.getParameter("Nonce"));
 		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 			response.sendRedirect("/");
 			return;
@@ -105,7 +106,7 @@ public class PracticeExam extends HttpServlet {
 			buf.append("Please select <b>at least 3 topics</b> below to be covered on this practice exam.<p>");
 			buf.append("<FORM NAME=TopicForm METHOD=GET>");
 			buf.append("\n<TABLE>");
-			List<Topic> topics = ofy.query(Topic.class).list();
+			List<Topic> topics = ofy().load().type(Topic.class).list();
 			int i = 0;
 			for (Topic t : topics) {
 				if ("Hide".equals(t.orderBy)) continue;
@@ -139,7 +140,7 @@ public class PracticeExam extends HttpServlet {
 			Assignment a = null;
 			try {  // this branch works if the practice exam is assigned
 				assignmentId=Long.parseLong(request.getParameter("AssignmentId"));
-				a = ofy.get(Assignment.class,assignmentId);
+				a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 				topicIds = a.topicIds;
 			} catch (Exception e) {  // otherwise this is a student-designed exam
 				String[] topicStringIds = request.getParameterValues("TopicId");
@@ -154,12 +155,12 @@ public class PracticeExam extends HttpServlet {
 			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
 			if (lis_result_sourcedid==null) lis_result_sourcedid = request.getParameter("custom_lis_result_sourcedid");
 			
-			Query<PracticeExamTransaction> qpt = ofy.query(PracticeExamTransaction.class).filter("userId",user.id).filter("graded",null).filter("downloaded >",oneHourAgo);
+			Query<PracticeExamTransaction> qpt = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.id).filter("graded",null).filter("downloaded >",oneHourAgo);
 			PracticeExamTransaction pt = null;  // placeholder for recovery of one of the pending exam transactions
 			
 			if (qpt.count()>0) {  // there is at least one pending practice exam
 				if (a == null) {  // entered by manual topic selection (no assignment)
-					pt = qpt.get();  // gets the oldest pending practice exam transaction in the query
+					pt = qpt.first().now();  // gets the oldest pending practice exam transaction in the query
 					topicIds = pt.topicIds;
 					buf.append("<script language=javascript>"
 							+ "onload=alert('You are resuming a previously pending exam.')"
@@ -178,14 +179,14 @@ public class PracticeExam extends HttpServlet {
 			
 			if (pt == null) {  // this is a valid request for a new exam with at least 3 topicIds; create a new transaction
 				pt = new PracticeExamTransaction(topicIds,user.id,now,null,new int[topicIds.size()],new int[topicIds.size()],lis_result_sourcedid,request.getRemoteAddr());
-				ofy.put(pt);	
+				ofy().save().entity(pt).now();	
 			}
 			
 			// past this point we will present a practice exam to the student
 			
-			List <Key<Question>> questionKeys_02pt = ofy.query(Question.class).filter("assignmentType","Exam").filter("pointValue",2).filter("topicId in",topicIds).listKeys();
-			List <Key<Question>> questionKeys_10pt = ofy.query(Question.class).filter("assignmentType","Exam").filter("pointValue",10).filter("topicId in",topicIds).listKeys();
-			List <Key<Question>> questionKeys_15pt = ofy.query(Question.class).filter("assignmentType","Exam").filter("pointValue",15).filter("topicId in",topicIds).listKeys();
+			List <Key<Question>> questionKeys_02pt = ofy().load().type(Question.class).filter("assignmentType","Exam").filter("pointValue",2).filter("topicId in",topicIds).keys().list();
+			List <Key<Question>> questionKeys_10pt = ofy().load().type(Question.class).filter("assignmentType","Exam").filter("pointValue",10).filter("topicId in",topicIds).keys().list();
+			List <Key<Question>> questionKeys_15pt = ofy().load().type(Question.class).filter("assignmentType","Exam").filter("pointValue",15).filter("topicId in",topicIds).keys().list();
 			
 			List<Key<Question>> remove = new ArrayList<Key<Question>>();
 			if (a != null) {  // eliminate any questionKeys not listed in the assignment
@@ -198,7 +199,7 @@ public class PracticeExam extends HttpServlet {
 			}
 
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			Group myGroup = user.myGroupId<=0?null:ofy.get(Group.class,user.myGroupId);
+			Group myGroup = user.myGroupId<=0?null:ofy().load().type(Group.class).id(user.myGroupId).safe();
 			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
 			df.setTimeZone(tz);
 
@@ -210,7 +211,7 @@ public class PracticeExam extends HttpServlet {
 
 			buf.append("Topics covered on this exam:<OL>");
 			for (long topicId : topicIds) {
-				buf.append("<LI>" + ofy.get(Topic.class,topicId).title + "</LI>");
+				buf.append("<LI>" + ofy().load().type(Topic.class).id(topicId).safe().title + "</LI>");
 			}
 			buf.append("</OL>");
 
@@ -228,6 +229,9 @@ public class PracticeExam extends HttpServlet {
 			buf.append("<div id='timer0' style='color: red'></div>");
 			buf.append("\n<input type=submit value='Grade This Practice Exam'><p>");
 
+			// Include a nonce reference as a hedge in case the session is lost by the user's browser
+			buf.append("\n<input type=hidden name=Nonce value='" + Nonce.createInstance(user) + "'>");
+			
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
 			int[] possibleScores = new int[topicIds.size()];
 
@@ -241,7 +245,7 @@ public class PracticeExam extends HttpServlet {
 				Question q = examQuestions.get(k);
 				if (q==null) {
 					try {
-						q = ofy.get(k);
+						q = ofy().load().key(k).safe();
 						examQuestions.put(k,q);
 					} catch (Exception e) {
 						continue;  // this catches cases where an assigned question no longer exists
@@ -264,7 +268,7 @@ public class PracticeExam extends HttpServlet {
 				Question q = examQuestions.get(k);
 				if (q==null) {
 					try {
-						q = ofy.get(k);
+						q = ofy().load().key(k).safe();
 						examQuestions.put(k,q);
 					} catch (Exception e) {
 						continue;  // this catches cases where an assigned question no longer exists
@@ -287,7 +291,7 @@ public class PracticeExam extends HttpServlet {
 				Question q = examQuestions.get(k);
 				if (q==null) {
 					try {
-						q = ofy.get(k);
+						q = ofy().load().key(k).safe();
 						examQuestions.put(k,q);
 					} catch (Exception e) {
 						continue;  // this catches cases where an assigned question no longer exists
@@ -301,7 +305,7 @@ public class PracticeExam extends HttpServlet {
 			buf.append("</OL>");
 
 			pt.possibleScores = possibleScores;
-			ofy.put(pt);
+			ofy().save().entity(pt);
 
 			buf.append("\n<input type=hidden name='ExamId' value=" + pt.id + ">");
 			buf.append("\n<input type=hidden name='UserRequest' value='GradeExam'>");
@@ -333,7 +337,7 @@ public class PracticeExam extends HttpServlet {
 			buf.append("\n<b>" + user.getBothNames() + "</b><br>");
 			
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			Group myGroup = user.myGroupId<=0?null:ofy.find(Group.class,user.myGroupId);
+			Group myGroup = user.myGroupId<=0?null:ofy().load().type(Group.class).id(user.myGroupId).now();
 			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
 			df.setTimeZone(tz);
 
@@ -341,14 +345,14 @@ public class PracticeExam extends HttpServlet {
 			buf.append(df.format(now) + "<p>");
 
 			long examId = Long.parseLong(request.getParameter("ExamId"));
-			PracticeExamTransaction pt = ofy.get(PracticeExamTransaction.class,examId);
+			PracticeExamTransaction pt = ofy().load().type(PracticeExamTransaction.class).id(examId).safe();
 			if (pt.graded != null) return "Sorry, this exam has been graded already.";
 			if (now.getTime() - pt.downloaded.getTime() > 60000*(this.timeLimit+1)) return "Sorry, the grading period for this exam has expired.";
 
 			// if everything is still OK, score the exam:
 			List<Long> topicIds = pt.topicIds;			
 			List<String> topicTitles = new ArrayList<String>();
-			for (int i=0;i<topicIds.size();i++) topicTitles.add(ofy.get(Topic.class,topicIds.get(i)).title);
+			for (int i=0;i<topicIds.size();i++) topicTitles.add(ofy().load().type(Topic.class).id(topicIds.get(i)).safe().title);
 			
 			// create a buffer to hold the correct solutions to missed questions:
 			StringBuffer missedQuestions = new StringBuffer();
@@ -361,42 +365,44 @@ public class PracticeExam extends HttpServlet {
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 			for (Enumeration<?> e = request.getParameterNames();e.hasMoreElements();) {
 				try {
-					questionKeys.add(new Key<Question>(Question.class,Long.parseLong((String) e.nextElement())));
+					questionKeys.add(Key.create(Question.class,Long.parseLong((String) e.nextElement())));
 				} catch (Exception e2) {}
 			}
 			
 			// begin the main scoring loop:
 			for (Key<Question> k : questionKeys) {
-			
+
 				String studentAnswer[] = request.getParameterValues(Long.toString(k.getId()));
 				if (studentAnswer != null) for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
 				else studentAnswer = new String[] {""};
-				Question q = examQuestions.get(k);
-				if (q==null) {
-					try {
-						q = ofy.get(k);
-						examQuestions.put(k,q);
-					} catch (Exception e) {
-						continue;
+				if (studentAnswer[0].length() > 0) { // an answer was submitted
+					Question q = examQuestions.get(k);
+					if (q==null) {
+						try {
+							q = ofy().load().key(k).safe();
+							examQuestions.put(k,q);
+						} catch (Exception e) {
+							continue;
+						}
 					}
-				}
-				q.setParameters((int)(pt.id - q.id));
-				int score = studentAnswer[0].length()==0?0:q.isCorrect(studentAnswer[0])?q.pointValue:0;
-				if (score > 0) studentScores[topicIds.indexOf(q.topicId)] += score;
-				if (studentAnswer[0].length() > 0) ofy.put(new Response("PracticeExam",q.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now));
-				if (score == 0) {
-					// include question in list of incorrectly answered questions
-					wrongAnswers++;
-					missedQuestions.append("\n<LI>" + q.printAllToStudents(studentAnswer[0]) + "</LI>\n");
+					q.setParameters((int)(pt.id - q.id));
+					int score = studentAnswer[0].length()==0?0:q.isCorrect(studentAnswer[0])?q.pointValue:0;
+					if (score > 0) studentScores[topicIds.indexOf(q.topicId)] += score;
+					if (studentAnswer[0].length() > 0) ofy().save().entity(new Response("PracticeExam",q.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now));
+					if (score == 0) {
+						// include question in list of incorrectly answered questions
+						wrongAnswers++;
+						missedQuestions.append("\n<LI>" + q.printAllToStudents(studentAnswer[0],false) + "</LI>\n");
+					}
 				}
 			}
 			missedQuestions.append("</OL>\n");
 			pt.scores = studentScores;
 			pt.graded = now;
-			ofy.put(pt);
+			ofy().save().entity(pt);
 			
 			Assignment a = null;  // find the Assignment object for this Practice Exam, if it exists
-			List<Assignment> groupAssignments = ofy.query(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","PracticeExam").list();
+			List<Assignment> groupAssignments = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","PracticeExam").list();
 			for (Assignment myAssignment : groupAssignments) {
 				if (myAssignment.matches("PracticeExam", topicIds)) {
 					a = myAssignment;
@@ -407,8 +413,8 @@ public class PracticeExam extends HttpServlet {
 			Queue queue = QueueFactory.getDefaultQueue();  // used for computing Score objects offline by Task queue
 			if (a != null) {
 				Score s = Score.getInstance(user.id,a);
-				ofy.put(s);
-				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",user.id));  // put report into the Task Queue
+				ofy().save().entity(s).now();
+				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
 			}
 			
 			int score = 0;

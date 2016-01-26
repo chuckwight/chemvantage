@@ -17,20 +17,21 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.util.Date;
 import java.util.List;
 
-import javax.persistence.Id;
-
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.Objectify;
-import com.googlecode.objectify.ObjectifyService;
-import com.googlecode.objectify.annotation.Cached;
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
 
-@Cached
+@Cache @Entity
 public class Nonce {
 	@Id String id;
 		Date created;
+		User user;
 	
 	Nonce() {}
 	
@@ -39,12 +40,22 @@ public class Nonce {
 		this.created = new Date();
 	}
 	
+	static String createInstance(User user) {
+		Nonce n = new Nonce();
+		n.id = BLTIConsumer.generateSecret();
+		n.user = user;
+		n.created = new Date();
+		ofy().save().entity(n).now();
+		return n.id;
+	}
+	
+	static long interval = 5400000L;  // 90 minutes in milliseconds
+	
 	public static boolean isUnique(String nonce, String timestamp) {
 		// This method provides a level of security for OAuth launches for LTI
 		// by verifying that oauth_nonce strings are submitted only once
 		// This protects against eavesdropping and copycat login attacks
 		
-		long interval = 5400000L;  // 90 minutes in milliseconds
 		Date now = new Date();
 		Date oldest = new Date(now.getTime()-interval); // converts seconds to millis
 
@@ -54,19 +65,36 @@ public class Nonce {
 			if (Math.abs(stamped.getTime()-now.getTime()) > interval/2) throw new Exception();  // out of submission interval
 			
 			// delete all Nonce objects older than the interval
-			Objectify ofy = ObjectifyService.begin();
-			List<Key<Nonce>> expired = ofy.query(Nonce.class).filter("created <",oldest).listKeys();
-			if (expired.size() > 0) ofy.delete(expired);
+			List<Key<Nonce>> expired = ofy().load().type(Nonce.class).filter("created <",oldest).keys().list();
+			if (expired.size() > 0) ofy().delete().keys(expired);
 			
 			// check to see if a Nonce with the specified id already exists in the database
-			if (ofy.find(Nonce.class,nonce) != null) throw new Exception();
+			if (ofy().load().type(Nonce.class).id(nonce).now() != null) throw new Exception(); // if nonce exists
 			
 			// store a new Nonce object in the datastore with the unique nonce string
-			ofy.put(new Nonce(nonce));
+			ofy().save().entity(new Nonce(nonce)).now();
 			
 			return true;
 		} catch (Exception e) {
 			return false;
 		}
+	}
+
+	static User getUser(String nonce) {
+		Date now = new Date();
+		Date oldest = new Date(now.getTime()-interval); // converts seconds to millis
+
+		// delete all Nonce objects older than the interval
+		List<Key<Nonce>> expired = ofy().load().type(Nonce.class).filter("created <",oldest).keys().list();
+		if (expired.size() > 0) ofy().delete().keys(expired).now();
+		
+		try {
+			Nonce n = ofy().load().type(Nonce.class).id(nonce).safe();		
+			ofy().delete().key(Key.create(n)); // delete this nonce offline
+			return n.user;
+		} catch (Exception e) {
+			return null;
+		}
+					
 	}
 }
