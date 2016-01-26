@@ -37,6 +37,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
@@ -60,8 +61,8 @@ public class Quiz extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			User user = User.getInstance(request.getSession(true));
-			if (user==null) user = Nonce.getUser(request.getParameter("Nonce"));
+			HttpSession session = request.getSession();
+			User user = session.isNew()?Nonce.getUser(request.getParameter("Nonce")):User.getInstance(request.getSession(true));
 			if (user==null || Login.lockedDown && !user.isAdministrator()) {
 				response.sendRedirect("/");
 				return;
@@ -69,15 +70,17 @@ public class Quiz extends HttpServlet {
 				
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
-			out.println(Home.getHeader(user) + printQuiz(user,request) + Home.footer);
+			
+			String nonce = session.isNew()?Nonce.createInstance(user):null;
+			out.println(Home.getHeader(user,nonce) + printQuiz(user,request,nonce) + Home.footer);
 		} catch (Exception e) {}
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			User user = User.getInstance(request.getSession(true));
-			if (user==null) user = Nonce.getUser(request.getParameter("Nonce"));
+			HttpSession session = request.getSession();
+			User user = session.isNew()?Nonce.getUser(request.getParameter("Nonce")):User.getInstance(request.getSession(true));
 			if (user==null || Login.lockedDown && !user.isAdministrator()) {
 				response.sendRedirect("/");
 				return;
@@ -86,12 +89,13 @@ public class Quiz extends HttpServlet {
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
-			out.println(Home.getHeader(user) + printScore(user,request) + Home.footer);
+			String nonce = session.isNew()?Nonce.createInstance(user):null;
+			out.println(Home.getHeader(user) + printScore(user,request,nonce) + Home.footer);
 		} catch (Exception e) {}
 	}
 
-	String printQuiz(User user,HttpServletRequest request) {
-	StringBuffer buf = new StringBuffer();
+	String printQuiz(User user,HttpServletRequest request,String nonce) {
+		StringBuffer buf = new StringBuffer();
 		try {
 			long topicId = 0;
 			try {
@@ -132,7 +136,7 @@ public class Quiz extends HttpServlet {
 			buf.append("\n<h2>Quiz - " + topic.title + " (" + subject.title + ")</h2>");
 			
 			buf.append("\n<FORM NAME=Quiz METHOD=POST ACTION=Quiz onSubmit=\"javascript: return confirmSubmission()\">");
-			buf.append("<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + Nonce.createInstance(user) + "'>");
+			if (nonce!=null) buf.append("<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>");
 			// Gather profile information if needed; otherwise just print the user's name.
 			if (user.needsFirstName()) buf.append("First name: <input type=text name=FirstName><br/>"); else buf.append("<b>" + user.getFirstName() + "</b><br/>");
 			if (user.needsEmail()) buf.append("Email: <input type=text name=Email><br>");
@@ -253,7 +257,7 @@ public class Quiz extends HttpServlet {
 				+ "</SCRIPT>"; 
 	}
 	
-	String printScore(User user,HttpServletRequest request) {
+	String printScore(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			// Update profile information, if necessary
@@ -412,7 +416,7 @@ public class Quiz extends HttpServlet {
 				}
 			}
 			buf.append("<FORM METHOD=GET Action=Quiz>"
-					+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + Nonce.createInstance(user) + "'>"
+					+ (nonce!=null?"<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>":"")
 					+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + qt.topicId + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=r VALUE=" + new Random().nextInt(9999) + ">"
 					+ "<INPUT TYPE=SUBMIT VALUE='Take this quiz again'></FORM>\n");

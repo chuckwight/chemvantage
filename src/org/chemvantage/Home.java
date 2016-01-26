@@ -55,8 +55,8 @@ public class Home extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		// begin standard user authentication section
-		HttpSession session = request.getSession(true);
-		User user = User.getInstance(session);
+		HttpSession session = request.getSession();
+		User user = session.isNew()?Nonce.getUser(request.getParameter("Nonce")):User.getInstance(request.getSession(true));
 		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 			response.sendRedirect("/");
 			return;
@@ -117,6 +117,10 @@ public class Home extends HttpServlet {
 	}
 
 	static String getHeader(User user) {
+		return getHeader(user,null);
+	}
+	
+	static String getHeader(User user,String nonce) {
 		if (user==null) return Login.header;
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -152,15 +156,15 @@ public class Home extends HttpServlet {
 					+ "<TABLE><TR><TD>\n"
 					+ "<div id=pzon><nobr>"
 					+ "<div class=pz1>ChemVantage.org</div>"
-					+ " <div class=pz1><a href=Home>Home</a></div>"
-					+ " <div class=pz1><a href=About>About Us</a></div>"
-					+ " <div class=pz1><a href=help.html>Help</a></div>"
-					+ "<div class=pz1><a href=Feedback>Feedback</a></div>");
+					+ " <div class=pz1><a href=/Home" + (nonce==null?">":"?Nonce='"+nonce+"' target='_blank'>") + "Home</a></div>"
+					+ " <div class=pz1><a href=/About>About Us</a></div>"
+					+ " <div class=pz1><a href=/help.html>Help</a></div>"
+					+ "<div class=pz1><a href=/Feedback" + (nonce==null?">":"?Nonce='"+nonce+"' target='_blank'>") + "Feedback</a></div>");
 
-			buf.append("<div class=pz1><a href=Contribute>Authors</a></div>");
-			if (user.isEditor()) buf.append("<div class=pz1><a href=Edit>Editors</a></div>");
-			if (user.isInstructor() || user.isTeachingAssistant()) buf.append("<div class=pz1><a href=Groups>Instructors</a></div>\n");
-			if (user.isAdministrator()) buf.append("<div class=pz1><a href=/admin>Admins</a></div>");
+			buf.append("<div class=pz1><a href=/Contribute" + (nonce==null?">":"?Nonce='"+nonce+"' target='_blank'>") + "Authors</a></div>");
+			if (user.isEditor()) buf.append("<div class=pz1><a href=/Edit" + (nonce==null?">":"?Nonce='"+nonce+"' target='_blank'>") + "Editors</a></div>");
+			if (user.isInstructor() || user.isTeachingAssistant()) buf.append("<div class=pz1><a href=/Groups" + (nonce==null?">":"?Nonce='"+nonce+"' target='_blank'>") + "Instructors</a></div>\n");
+			if (user.isAdministrator()) buf.append("<div class=pz1><a href=/admin" + (nonce==null?">":"?Nonce='"+nonce+"' target='_blank'>") + "Admins</a></div>");
 
 			buf.append("</nobr></div>\n");
 

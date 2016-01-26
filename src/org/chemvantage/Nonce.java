@@ -26,12 +26,13 @@ import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
 
 @Cache @Entity
 public class Nonce {
 	@Id String id;
-		Date created;
-		User user;
+	@Index	Date created;
+			String  userId;
 	
 	Nonce() {}
 	
@@ -43,7 +44,7 @@ public class Nonce {
 	static String createInstance(User user) {
 		Nonce n = new Nonce();
 		n.id = BLTIConsumer.generateSecret();
-		n.user = user;
+		n.userId = user.id;
 		n.created = new Date();
 		ofy().save().entity(n).now();
 		return n.id;
@@ -81,17 +82,19 @@ public class Nonce {
 	}
 
 	static User getUser(String nonce) {
+		if (nonce==null) return null;
+		
 		Date now = new Date();
 		Date oldest = new Date(now.getTime()-interval); // converts seconds to millis
 
 		// delete all Nonce objects older than the interval
 		List<Key<Nonce>> expired = ofy().load().type(Nonce.class).filter("created <",oldest).keys().list();
-		if (expired.size() > 0) ofy().delete().keys(expired).now();
+		if (expired.size() > 0) ofy().delete().keys(expired);
 		
 		try {
 			Nonce n = ofy().load().type(Nonce.class).id(nonce).safe();		
 			ofy().delete().key(Key.create(n)); // delete this nonce offline
-			return n.user;
+			return ofy().load().type(User.class).id(n.userId).safe();
 		} catch (Exception e) {
 			return null;
 		}

@@ -35,6 +35,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
@@ -54,8 +55,8 @@ public class Homework extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			User user = User.getInstance(request.getSession(true));
-			if (user==null) user = Nonce.getUser(request.getParameter("Nonce"));
+			HttpSession session = request.getSession();
+			User user = session.isNew()?Nonce.getUser(request.getParameter("Nonce")):User.getInstance(request.getSession(true));
 			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 				response.sendRedirect("/");
 				return;
@@ -64,15 +65,16 @@ public class Homework extends HttpServlet {
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
-			out.println(Home.getHeader(user) + printHomework(user,request) + Home.footer);
+			String nonce = session.isNew()?Nonce.createInstance(user):null;
+			out.println(Home.getHeader(user,nonce) + printHomework(user,request,nonce) + Home.footer);
 		} catch (Exception e) {}
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			User user = User.getInstance(request.getSession(true));
-			if (user==null) user = Nonce.getUser(request.getParameter("Nonce"));
+			HttpSession session = request.getSession();
+			User user = session.isNew()?Nonce.getUser(request.getParameter("Nonce")):User.getInstance(request.getSession(true));
 			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 				response.sendRedirect("/");
 				return;
@@ -81,13 +83,13 @@ public class Homework extends HttpServlet {
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 
-			out.println(Home.getHeader(user) + printScore(user,request) + Home.footer);
+			String nonce = session.isNew()?Nonce.createInstance(user):null;
+			out.println(Home.getHeader(user,nonce) + printScore(user,request,nonce) + Home.footer);
 		} catch (Exception e) {}
 	}
 
-	String printHomework(User user,HttpServletRequest request) {
+	String printHomework(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
-		String nonce = Nonce.createInstance(user);
 		try {
 			long topicId = 0;
 			try {
@@ -220,9 +222,8 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	String printScore(User user,HttpServletRequest request) {
+	String printScore(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
-		String nonce = Nonce.createInstance(user);
 		try {
 			long questionId = Long.parseLong(request.getParameter("QuestionId"));
 			Key<Question> k = Key.create(Question.class,questionId);

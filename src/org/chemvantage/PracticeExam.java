@@ -37,6 +37,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
@@ -69,8 +70,8 @@ public class PracticeExam extends HttpServlet {
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
-		User user = User.getInstance(request.getSession(true));
-		if (user==null) user = Nonce.getUser(request.getParameter("Nonce"));
+		HttpSession session = request.getSession();
+		User user = session.isNew()?Nonce.getUser(request.getParameter("Nonce")):User.getInstance(request.getSession(true));
 		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 			response.sendRedirect("/");
 			return;
@@ -79,13 +80,14 @@ public class PracticeExam extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
-		out.println(Home.getHeader(user) + printExam(user,request) + Home.footer);
+		String nonce = session.isNew()?Nonce.createInstance(user):null;
+		out.println(Home.getHeader(user,nonce) + printExam(user,request,nonce) + Home.footer);
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
-		User user = User.getInstance(request.getSession(true));
-		if (user==null) user = Nonce.getUser(request.getParameter("Nonce"));
+		HttpSession session = request.getSession();
+		User user = session.isNew()?Nonce.getUser(request.getParameter("Nonce")):User.getInstance(request.getSession(true));
 		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 			response.sendRedirect("/");
 			return;
@@ -94,10 +96,11 @@ public class PracticeExam extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
-		out.println(Home.getHeader(user) + printScore(user,request) + Home.footer);
+		String nonce = session.isNew()?Nonce.createInstance(user):null;
+		out.println(Home.getHeader(user,nonce) + printScore(user,request) + Home.footer);
 	}
 
-	String designExam(User user,HttpServletRequest request) {
+	String designExam(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			buf.append("<h2>Practice " + subject.title + " Exam</h2>");
@@ -105,6 +108,7 @@ public class PracticeExam extends HttpServlet {
 
 			buf.append("Please select <b>at least 3 topics</b> below to be covered on this practice exam.<p>");
 			buf.append("<FORM NAME=TopicForm METHOD=GET>");
+			buf.append(nonce!=null?"<input type=hidden name=Nonce value='" + nonce + "'":"");
 			buf.append("\n<TABLE>");
 			List<Topic> topics = ofy().load().type(Topic.class).list();
 			int i = 0;
@@ -131,7 +135,7 @@ public class PracticeExam extends HttpServlet {
 		return buf.toString();
 	}
 
-	String printExam(User user,HttpServletRequest request) {
+	String printExam(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			// Get requested topic ids for this exam
@@ -174,7 +178,7 @@ public class PracticeExam extends HttpServlet {
 					}  // if the for-loop expires without finding a corresponding transaction, pt remains null and a new exam is created below
 				}
 			}
-			else if (topicIds.size() < 3) return designExam(user,request);  // redirect to get a valid set of 3+ topic keys
+			else if (topicIds.size() < 3) return designExam(user,request,nonce);  // redirect to get a valid set of 3+ topic keys
 			
 			
 			if (pt == null) {  // this is a valid request for a new exam with at least 3 topicIds; create a new transaction
@@ -229,8 +233,8 @@ public class PracticeExam extends HttpServlet {
 			buf.append("<div id='timer0' style='color: red'></div>");
 			buf.append("\n<input type=submit value='Grade This Practice Exam'><p>");
 
-			// Include a nonce reference as a hedge in case the session is lost by the user's browser
-			buf.append("\n<input type=hidden name=Nonce value='" + Nonce.createInstance(user) + "'>");
+			// Include a nonce reference as a hedge in case the session is not maintained by the user's browser
+			buf.append(nonce!=null?"\n<input type=hidden name=Nonce value='" + nonce + "'>":"");
 			
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
 			int[] possibleScores = new int[topicIds.size()];

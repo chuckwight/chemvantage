@@ -33,6 +33,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
@@ -53,7 +54,8 @@ public class Feedback extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		try {
-			User user = User.getInstance(request.getSession(true));
+			HttpSession session = request.getSession();
+			User user = session.isNew()?Nonce.getUser(request.getParameter("Nonce")):User.getInstance(request.getSession(true));
 			if (Login.lockedDown && (user==null || !user.isAdministrator())) {
 				response.sendRedirect("/");
 				return;
