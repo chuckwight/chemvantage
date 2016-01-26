@@ -28,6 +28,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
@@ -53,7 +54,12 @@ public class Edit extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			User user = User.getInstance(request.getSession(true));
+			HttpSession session = request.getSession();
+			User user = null;
+			if (session.isNew()) {
+				user = Nonce.getUser(request.getParameter("Nonce"));
+				session.setAttribute("UserId", user.id);
+			} else user = User.getInstance(session);
 			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 				response.sendRedirect("/");
 				return;

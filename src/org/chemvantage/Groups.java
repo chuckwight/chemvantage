@@ -56,7 +56,11 @@ public class Groups extends HttpServlet {
 	throws ServletException, IOException {
 		try {
 			HttpSession session = request.getSession();
-			User user = session.isNew()?Nonce.getUser(request.getParameter("Nonce")):User.getInstance(request.getSession(true));
+			User user = null;
+			if (session.isNew()) {
+				user = Nonce.getUser(request.getParameter("Nonce"));
+				session.setAttribute("UserId", user.id);
+			} else user = User.getInstance(session);
 			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 				response.sendRedirect("/");
 				return;
