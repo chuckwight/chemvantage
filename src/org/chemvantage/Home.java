@@ -160,15 +160,15 @@ public class Home extends HttpServlet {
 					+ "<TABLE><TR><TD>\n"
 					+ "<div id=pzon><nobr>"
 					+ "<div class=pz1>ChemVantage.org</div>"
-					+ " <div class=pz1><a href=/Home" + (nonce==null?">":"?Nonce='"+nonce+"' target='_blank'>") + "Home</a></div>"
+					+ " <div class=pz1><a href=/Home" + (nonce==null?">":"?Nonce="+nonce+" target=_top>") + "Home</a></div>"
 					+ " <div class=pz1><a href=/About>About Us</a></div>"
 					+ " <div class=pz1><a href=/help.html>Help</a></div>"
-					+ "<div class=pz1><a href=/Feedback" + (nonce==null?">":"?Nonce='"+nonce+"' target='_blank'>") + "Feedback</a></div>");
+					+ "<div class=pz1><a href=/Feedback" + (nonce==null?">":"?Nonce="+nonce+" target=_top>") + "Feedback</a></div>");
 
-			buf.append("<div class=pz1><a href=/Contribute" + (nonce==null?">":"?Nonce='"+nonce+"' target='_blank'>") + "Authors</a></div>");
-			if (user.isEditor()) buf.append("<div class=pz1><a href=/Edit" + (nonce==null?">":"?Nonce='"+nonce+"' target='_blank'>") + "Editors</a></div>");
-			if (user.isInstructor() || user.isTeachingAssistant()) buf.append("<div class=pz1><a href=/Groups" + (nonce==null?">":"?Nonce='"+nonce+"' target='_blank'>") + "Instructors</a></div>\n");
-			if (user.isAdministrator()) buf.append("<div class=pz1><a href=/admin" + (nonce==null?">":"?Nonce='"+nonce+"' target='_blank'>") + "Admins</a></div>");
+			buf.append("<div class=pz1><a href=/Contribute" + (nonce==null?">":"?Nonce="+nonce+" target=_top>") + "Authors</a></div>");
+			if (user.isEditor()) buf.append("<div class=pz1><a href=/Edit" + (nonce==null?">":"?Nonce="+nonce+" target=_top>") + "Editors</a></div>");
+			if (user.isInstructor() || user.isTeachingAssistant()) buf.append("<div class=pz1><a href=/Groups" + (nonce==null?">":"?Nonce="+nonce+" target=_top>") + "Instructors</a></div>\n");
+			if (user.isAdministrator()) buf.append("<div class=pz1><a href=/admin" + (nonce==null?">":"?Nonce="+nonce+" target=_top>") + "Admins</a></div>");
 
 			buf.append("</nobr></div>\n");
 
