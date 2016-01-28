@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -31,18 +32,11 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.datastore.Cursor;
-import com.google.appengine.api.datastore.DatastoreService;
-import com.google.appengine.api.datastore.DatastoreServiceFactory;
-import com.google.appengine.api.datastore.Entity;
-import com.google.appengine.api.datastore.FetchOptions;
-import com.google.appengine.api.datastore.Key;
-import com.google.appengine.api.datastore.PreparedQuery;
-import com.google.appengine.api.datastore.Query;
-import com.google.appengine.api.datastore.Query.FilterOperator;
-import com.google.appengine.api.datastore.Query.FilterPredicate;
-import com.google.appengine.api.datastore.QueryResultList;
+import com.google.appengine.api.datastore.QueryResultIterator;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
+import com.googlecode.objectify.Key;
+import com.googlecode.objectify.cmd.Query;
 
 public class DataStoreCleaner extends HttpServlet {
 	private static final long serialVersionUID = 137L;
@@ -60,8 +54,10 @@ public class DataStoreCleaner extends HttpServlet {
 	
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
-		// This servlet is called by the cron daemon once each day.
-		// To run manually, use the URL /DataStoreCleaner?Task=CleanUsers  or similar. No parameter runs all methods.
+		// This servlet is called by the cron daemon once each month.
+		// To run manually, use the URL /DataStoreCleaner?Task=CleanUsers or similar. 
+		// No parameter runs all methods in background. 
+		// Task=CleanAll runs all interactively.
 		if (request.getParameter("Task")!=null) {  //specify Task to run manually
 			doPost(request,response);
 			return;
@@ -70,13 +66,13 @@ public class DataStoreCleaner extends HttpServlet {
 		try {
 			Queue queue = QueueFactory.getDefaultQueue(); 
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanUsers"));
-			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanSessions"));
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanResponses"));
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanQuizTransactions"));
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanHWTransactions"));
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanPracticeExamTransactions"));
-			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanAssignments"));
+			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanScores"));
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanGroups"));
+			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanAssignments"));
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanDomains"));
 		} catch (Exception e) {
 		}
@@ -101,60 +97,58 @@ public class DataStoreCleaner extends HttpServlet {
 		
 		switch (task) {
 		case "CleanUsers": out.println(cleanUsers(cursor,0)); break;
-		case "CleanSessions": out.println(cleanSessions(cursor,0)); break;
 		case "CleanResponses": out.println(cleanResponses(cursor,0)); break;
 		case "CleanQuizTransactions": out.println(cleanQuizTransactions(cursor,0)); break;
 		case "CleanHWTransactions": out.println(cleanHWTransactions(cursor,0)); break;
 		case "CleanPracticeExamTransactions": out.println(cleanPracticeExamTransactions(cursor,0)); break;
+		case "CleanScores": out.println(cleanScores(cursor,0)); break;
 		case "CleanGroups": out.println(cleanGroups(cursor,0)); break;
 		case "CleanAssignments": out.println(cleanAssignments(cursor,0)); break;
 		case "CleanDomains": out.println(cleanDomains(cursor,0)); break;
 		case "CleanAll": 
 			out.println(cleanUsers(cursor,0));
-			out.println(cleanSessions(cursor,0));
 			out.println(cleanResponses(cursor,0));
 			out.println(cleanQuizTransactions(cursor,0));
 			out.println(cleanHWTransactions(cursor,0));
 			out.println(cleanPracticeExamTransactions(cursor,0));
+			out.println(cleanScores(cursor,0));
 			out.println(cleanGroups(cursor,0));
 			out.println(cleanAssignments(cursor,0));
+			out.println(cleanDomains(cursor,0));
 		default: return;
 		}
 	}
 
 	private String cleanUsers(String cursor,int retries) {
 		StringBuffer buf = new StringBuffer();
-		try {
-			DatastoreService datastore = DatastoreServiceFactory.getDatastoreService(); 
-			Query q = new Query("User");
-			q.setFilter(new FilterPredicate("lastLogin",FilterOperator.LESS_THAN,sixMonthsAgo)); // get user accounts where logins are older than six months
-			
-			PreparedQuery pq = datastore.prepare(q);
-
-			FetchOptions fetchOptions = FetchOptions.Builder.withLimit(querySizeLimit);
+		try {			
+			Query<User> query = ofy().load().type(User.class).filter("lastLogin <", sixMonthsAgo).limit(querySizeLimit);
 			if (cursor==null) buf.append("<h2>Clean Users</h2>");
-			else fetchOptions.startCursor(Cursor.fromWebSafeString(cursor));
+		    else query.startAt(Cursor.fromWebSafeString(cursor));
+
+		    QueryResultIterator<User> qri = query.iterator();
+		    ArrayList<Key<User>> keys = new ArrayList<Key<User>>();  // list of User entity keys for batch delete
 		    
-		    QueryResultList<Entity> users = pq.asQueryResultList(fetchOptions);
-		    
-			ArrayList<Key> keys = new ArrayList<Key>();  // list of user entity keys for batch delete
-			
-			for (Entity u : users) if (deleteUser((String)u.getProperty("id"))) keys.add(u.getKey());  // tests to see if user should be deleted
+		    while (qri.hasNext()) {
+		    	User u = qri.next();
+		    	if (deleteUser(u.id)) keys.add(Key.create(u));  // tests to see if user should be deleted
+		    }
 
-			if (keys.size() > 0) datastore.delete(keys);
+		    if (keys.size() > 0) ofy().delete().keys(keys);
 
-			buf.append(users.size() + " entities examined, " + keys.size() + " deleted.<br/>");
+		    buf.append(query.count() + " entities examined, " + keys.size() + " deleted.<br/>");
 
-			if (users.size()<querySizeLimit) buf.append("Done.");
-		    else if (retries < 9) buf.append(cleanUsers(users.getCursor().toWebSafeString(),retries+1));		
-		    else {  // launch a new task for the next 1000 objects in the datastore
-				cursor = users.getCursor().toWebSafeString();
-				Queue queue = QueueFactory.getDefaultQueue();
-    			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanUsers").param("Cursor", cursor));
-    			buf.append("Launching a new DataStoreCleaner task.");
-    		}
+		    if (query.count()<querySizeLimit) buf.append("Done.");
+		    else if (retries < 9) buf.append(cleanUsers(qri.getCursor().toWebSafeString(),retries+1));
+		    else {
+		    	cursor = qri.getCursor().toWebSafeString();
+		    	Queue queue = QueueFactory.getDefaultQueue();
+		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanUsers").param("Cursor", cursor));
+		    	buf.append("Launching a new DataStoreCleaner task.");
+		    }
 
 		} catch (Exception e) {
+			buf.append("Error: " + e.toString());
 		}
 		return buf.toString();
 	}
@@ -172,7 +166,7 @@ public class DataStoreCleaner extends HttpServlet {
 			} else { // found the user at the end of the alias chain
 				if (u.lastLogin.after(sixMonthsAgo)) return false;  // if any alias has a recent login, preserve the entire chain
 				if (u.isInstructor() && u.lastLogin.after(oneYearAgo)) return false; // save instructor accounts for one year
-				if (u.isAdministrator()) return false;  // preserve all admin accounts
+				if (u.isAdministrator() && u.lastLogin.after(oneYearAgo)) return false;  // preserve all admin accounts for one year
 				if (u.lastLogin.getTime()==0L) {  // user never logged in; perhaps this is a brand new account
 					u.lastLogin = new Date(1000L);   // so mark the account by advancing the lastLogin by 1 second
 					ofy().save().entity(u);                   // so it will be deleted tomorrow instead if the user does not login
@@ -184,77 +178,22 @@ public class DataStoreCleaner extends HttpServlet {
 		return true; // signal that this user object should be deleted
 	}
 
-	private String cleanSessions(String cursor,int retries) {
-		StringBuffer buf = new StringBuffer();
-		long now = new Date().getTime();
-		try {
-			DatastoreService datastore = DatastoreServiceFactory.getDatastoreService(); 
-			Query q = new Query("_ah_SESSION");
-			q.setFilter(new FilterPredicate("_expires",FilterOperator.LESS_THAN,now));
-			
-			PreparedQuery pq = datastore.prepare(q);
-			
-			FetchOptions fetchOptions = FetchOptions.Builder.withLimit(querySizeLimit);
-		    if (cursor==null) buf.append("<h2>Clean Sessions</h2>");
-		    else fetchOptions.startCursor(Cursor.fromWebSafeString(cursor));
-
-		    QueryResultList<Entity> sessions = pq.asQueryResultList(fetchOptions);
-
-		    ArrayList<Key> keys = new ArrayList<Key>();  // list of session entity keys for batch delete
-		    
-		    for (Entity session : sessions) keys.add(session.getKey()); 
-		    
-		    if (keys.size() > 0) datastore.delete(keys);
-		    
-		    buf.append(sessions.size() + " entities examined, " + keys.size() + " deleted.<br/>");
-		   
-		    if (sessions.size()<querySizeLimit) buf.append("Done.");
-		    else if (retries < 9) buf.append(cleanSessions(sessions.getCursor().toWebSafeString(),retries+1));
-		    else {
-		    	cursor = sessions.getCursor().toWebSafeString();
-		    	Queue queue = QueueFactory.getDefaultQueue();
-		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanSessions").param("Cursor", cursor));
-		    	buf.append("Launching a new DataStoreCleaner task.");
-		    }
-		} catch (Exception e) {
-			buf.append("Error: " + e.toString());
-		}
-		return buf.toString();
-	}
-
 	private String cleanResponses(String cursor,int retries) {
 		StringBuffer buf = new StringBuffer();
-		try {
-			DatastoreService datastore = DatastoreServiceFactory.getDatastoreService(); 
-			Query q = new Query("Response");
-			q.setFilter(new FilterPredicate("submitted",FilterOperator.LESS_THAN,oneYearAgo));
-			
-			PreparedQuery pq = datastore.prepare(q);
-			
-			FetchOptions fetchOptions = FetchOptions.Builder.withLimit(querySizeLimit);
-		    if (cursor==null) buf.append("<h2>Clean Responses</h2>");
-		    else fetchOptions.startCursor(Cursor.fromWebSafeString(cursor));
+		try {			
+			if (cursor==null) buf.append("<h2>Clean Responses</h2>");
 		    
-		    QueryResultList<Entity> responses = pq.asQueryResultList(fetchOptions);
+			List<Key<Response>> keys = ofy().load().type(Response.class).filter("submitted <", oneYearAgo).limit(querySizeLimit).keys().list();
+			if (keys.size() > 0) ofy().delete().keys(keys);
 
-		    ArrayList<Key> keys = new ArrayList<Key>();  // list of session entity keys for batch delete
+		    buf.append(keys.size() + " entities examined, " + keys.size() + " deleted.<br/>");
 
-		    for (Entity r : responses) {
-		    	Date submitted = (Date)r.getProperty("submitted");
-		    	if (submitted.before(oneYearAgo)) keys.add(r.getKey()); 
-		    }
-
-		    if (keys.size() > 0) datastore.delete(keys);
-		    
-		    buf.append(responses.size() + " entities examined, " + keys.size() + " deleted.<br/>");
-		   
-		    if (responses.size()<querySizeLimit) buf.append("Done.");
-		    else if (retries < 9) buf.append(cleanResponses(responses.getCursor().toWebSafeString(),retries+1));			
+		    if (keys.size()<querySizeLimit) buf.append("Done.");
+		    else if (retries < 9) buf.append(cleanResponses("continue",retries+1));
 		    else {
-				cursor = responses.getCursor().toWebSafeString();
-				Queue queue = QueueFactory.getDefaultQueue();
-    			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanResponses").param("Cursor", cursor));
-    			buf.append("Launching a new DataStoreCleaner task.");
+		    	Queue queue = QueueFactory.getDefaultQueue();
+		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanResponses"));
+		    	buf.append("Launching a new DataStoreCleaner task.");
 		    }
 
 		} catch (Exception e) {
@@ -265,36 +204,31 @@ public class DataStoreCleaner extends HttpServlet {
 	
 	private String cleanQuizTransactions(String cursor,int retries) {
 		StringBuffer buf = new StringBuffer();
-		try {
-			DatastoreService datastore = DatastoreServiceFactory.getDatastoreService(); 
-			Query q = new Query("QuizTransaction");
-			
-			PreparedQuery pq = datastore.prepare(q);
-			
-			FetchOptions fetchOptions = FetchOptions.Builder.withLimit(querySizeLimit);
-		    if (cursor==null) buf.append("<h2>Clean QuizTransactions</h2>");
-		    else fetchOptions.startCursor(Cursor.fromWebSafeString(cursor));
+		try {			
+			Query<QuizTransaction> query = ofy().load().type(QuizTransaction.class).limit(querySizeLimit);
+			if (cursor==null) buf.append("<h2>Clean Quiz Transactions</h2>");
+		    else query.startAt(Cursor.fromWebSafeString(cursor));
 
-		    QueryResultList<Entity> quizTransactions = pq.asQueryResultList(fetchOptions);
+		    QueryResultIterator<QuizTransaction> qri = query.iterator();
+		    ArrayList<Key<QuizTransaction>> keys = new ArrayList<Key<QuizTransaction>>();  // list of QuizTransaction entity keys for batch delete
 		    
-		    ArrayList<Key> keys = new ArrayList<Key>();  // list of session entity keys for batch delete
-		    
-		    for (Entity qt : quizTransactions) {
-		    	try {
-		    		ofy().load().type(User.class).id((String)qt.getProperty("userId"));		    	
+		    while (qri.hasNext()) {
+		    	QuizTransaction q = qri.next();
+	    		try {
+		    		ofy().load().type(User.class).id(q.userId).safe();  // throws Exception if owner (User) does not exist
 		    	} catch (Exception e) {  // catches exception if user does not exist
-		    		keys.add(qt.getKey());
+		    		keys.add(Key.create(q));  // collection of keys for QuizTransactions to be deleted
 		    	}
 		    }
-		    
-		    if (keys.size() > 0) datastore.delete(keys);
-		    
-		    buf.append(quizTransactions.size() + " entities examined, " + keys.size() + " deleted.<br/>");
-		    
-		    if (quizTransactions.size()<querySizeLimit) buf.append("Done.");
-		    else if (retries < 9) buf.append(cleanQuizTransactions(quizTransactions.getCursor().toWebSafeString(),retries+1));
+
+		    if (keys.size() > 0) ofy().delete().keys(keys);
+
+		    buf.append(query.count() + " entities examined, " + keys.size() + " deleted.<br/>");
+
+		    if (query.count()<querySizeLimit) buf.append("Done.");
+		    else if (retries < 9) buf.append(cleanQuizTransactions(qri.getCursor().toWebSafeString(),retries+1));
 		    else {
-		    	cursor = quizTransactions.getCursor().toWebSafeString();
+		    	cursor = qri.getCursor().toWebSafeString();
 		    	Queue queue = QueueFactory.getDefaultQueue();
 		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanQuizTransactions").param("Cursor", cursor));
 		    	buf.append("Launching a new DataStoreCleaner task.");
@@ -303,42 +237,36 @@ public class DataStoreCleaner extends HttpServlet {
 		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
 		}
-
 		return buf.toString();
 	}
 	
 	private String cleanHWTransactions(String cursor,int retries) {
 		StringBuffer buf = new StringBuffer();
-		try {
-			DatastoreService datastore = DatastoreServiceFactory.getDatastoreService(); 
-			Query q = new Query("HWTransaction");
-			
-			PreparedQuery pq = datastore.prepare(q);
-			
-			FetchOptions fetchOptions = FetchOptions.Builder.withLimit(querySizeLimit);
-		    if (cursor==null) buf.append("<h2>Clean HWTransactions</h2>");
-		    else fetchOptions.startCursor(Cursor.fromWebSafeString(cursor));
+		try {			
+			Query<HWTransaction> query = ofy().load().type(HWTransaction.class).limit(querySizeLimit);
+			if (cursor==null) buf.append("<h2>Clean Homework Transactions</h2>");
+		    else query.startAt(Cursor.fromWebSafeString(cursor));
 
-		    QueryResultList<Entity> hwTransactions = pq.asQueryResultList(fetchOptions);
-
-		    ArrayList<Key> keys = new ArrayList<Key>();  // list of HWTransaction entity keys for batch delete
+		    QueryResultIterator<HWTransaction> qri = query.iterator();
+		    ArrayList<Key<HWTransaction>> keys = new ArrayList<Key<HWTransaction>>();  // list of HWTransaction entity keys for batch delete
 		    
-		    for (Entity ht : hwTransactions) {
-		    	try {
-		    		ofy().load().type(User.class).id((String)ht.getProperty("userId"));		    	
+		    while (qri.hasNext()) {
+		    	HWTransaction h = qri.next();
+	    		try {
+		    		ofy().load().type(User.class).id(h.userId).safe();  // throws Exception if user does not exist
 		    	} catch (Exception e) {  // catches exception if user does not exist
-		    		keys.add(ht.getKey());
+		    		keys.add(Key.create(h));  // collection of keys for HWTransactions to be deleted
 		    	}
 		    }
 
-		    if (keys.size() > 0) datastore.delete(keys);
+		    if (keys.size() > 0) ofy().delete().keys(keys);
 
-		    buf.append(hwTransactions.size() + " entities examined, " + keys.size() + " deleted.<br/>");
+		    buf.append(query.count() + " entities examined, " + keys.size() + " deleted.<br/>");
 
-		    if (hwTransactions.size()<querySizeLimit) buf.append("Done.");
-		    else if (retries < 9) buf.append(cleanHWTransactions(hwTransactions.getCursor().toWebSafeString(),retries+1));
+		    if (query.count()<querySizeLimit) buf.append("Done.");
+		    else if (retries < 9) buf.append(cleanHWTransactions(qri.getCursor().toWebSafeString(),retries+1));
 		    else {
-		    	cursor = hwTransactions.getCursor().toWebSafeString();
+		    	cursor = qri.getCursor().toWebSafeString();
 		    	Queue queue = QueueFactory.getDefaultQueue();
 		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanHWTransactions").param("Cursor", cursor));
 		    	buf.append("Launching a new DataStoreCleaner task.");
@@ -347,82 +275,109 @@ public class DataStoreCleaner extends HttpServlet {
 		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
 		}
-
 		return buf.toString();
 	}
 
 	private String cleanPracticeExamTransactions(String cursor,int retries) {
 		StringBuffer buf = new StringBuffer();
-		try {
-			DatastoreService datastore = DatastoreServiceFactory.getDatastoreService(); 
-			Query q = new Query("PracticeExamTransaction");
-			
-			PreparedQuery pq = datastore.prepare(q);
-			
-			FetchOptions fetchOptions = FetchOptions.Builder.withLimit(querySizeLimit);
-		    if (cursor==null) buf.append("<h2>Clean PracticeExamTransactions</h2>");
-		    else fetchOptions.startCursor(Cursor.fromWebSafeString(cursor));
+		try {			
+			Query<PracticeExamTransaction> query = ofy().load().type(PracticeExamTransaction.class).limit(querySizeLimit);
+			if (cursor==null) buf.append("<h2>Clean PracticeExam Transactions</h2>");
+		    else query.startAt(Cursor.fromWebSafeString(cursor));
 
-		    QueryResultList<Entity> peTransactions = pq.asQueryResultList(fetchOptions);
-
-		    ArrayList<Key> keys = new ArrayList<Key>();  // list of HWTransaction entity keys for batch delete
+		    QueryResultIterator<PracticeExamTransaction> qri = query.iterator();
+		    ArrayList<Key<PracticeExamTransaction>> keys = new ArrayList<Key<PracticeExamTransaction>>();  // list of PracticeExamTransaction entity keys for batch delete
 		    
-		    for (Entity pt : peTransactions) {
-		    	try {
-		    		ofy().load().type(User.class).id((String)pt.getProperty("userId"));		    	
+		    while (qri.hasNext()) {
+		    	PracticeExamTransaction p = qri.next();
+	    		try {
+		    		ofy().load().type(User.class).id(p.userId).safe();  // throws Exception if user does not exist
 		    	} catch (Exception e) {  // catches exception if user does not exist
-		    		keys.add(pt.getKey());
+		    		keys.add(Key.create(p));  // collection of keys for PracticeExamTransactions to be deleted
 		    	}
 		    }
 
-		    if (keys.size() > 0) datastore.delete(keys);
+		    if (keys.size() > 0) ofy().delete().keys(keys);
 
-		    buf.append(peTransactions.size() + " entities examined, " + keys.size() + " deleted.<br/>");
+		    buf.append(query.count() + " entities examined, " + keys.size() + " deleted.<br/>");
 
-		    if (peTransactions.size()<querySizeLimit) buf.append("Done.");
-		    else if (retries < 9) buf.append(cleanHWTransactions(peTransactions.getCursor().toWebSafeString(),retries+1));
+		    if (query.count()<querySizeLimit) buf.append("Done.");
+		    else if (retries < 9) buf.append(cleanPracticeExamTransactions(qri.getCursor().toWebSafeString(),retries+1));
 		    else {
-		    	cursor = peTransactions.getCursor().toWebSafeString();
+		    	cursor = qri.getCursor().toWebSafeString();
 		    	Queue queue = QueueFactory.getDefaultQueue();
-		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanHWTransactions").param("Cursor", cursor));
+		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanPracticeExamTransactions").param("Cursor", cursor));
 		    	buf.append("Launching a new DataStoreCleaner task.");
 		    }
 
 		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
 		}
-
 		return buf.toString();
 	}
 
-	private String cleanGroups(String cursor, int retries) {
+	private String cleanScores(String cursor, int retries) {
 		StringBuffer buf = new StringBuffer();
-		try {
-			DatastoreService datastore = DatastoreServiceFactory.getDatastoreService(); 
-			Query q = new Query("Group");
-			
-			PreparedQuery pq = datastore.prepare(q);
-			
-			FetchOptions fetchOptions = FetchOptions.Builder.withLimit(querySizeLimit);
-		    if (cursor==null) buf.append("<h2>Clean Groups</h2>");
-		    else fetchOptions.startCursor(Cursor.fromWebSafeString(cursor));
+		try {			
+			Query<Score> query = ofy().load().type(Score.class).limit(querySizeLimit);
+			if (cursor==null) buf.append("<h2>Clean User Scores</h2>");
+		    else query.startAt(Cursor.fromWebSafeString(cursor));
 
-		    QueryResultList<Entity> groups = pq.asQueryResultList(fetchOptions);
-
-		    ArrayList<Key> keys = new ArrayList<Key>();  // list of Group entity keys for batch delete
+		    QueryResultIterator<Score> qri = query.iterator();
+		    ArrayList<Key<Score>> keys = new ArrayList<Key<Score>>();  // list of Score entity keys for batch delete
 		    
-		    for (Entity g : groups) {
-		    	Group group = ofy().load().type(Group.class).id(g.getKey().getId()).safe();
-		    	if (!group.isActive()) keys.add(g.getKey());		    	
+		    while (qri.hasNext()) {
+		    	Score s = qri.next();
+	    		try {
+		    		ofy().load().key(s.owner).safe();  // throws Exception if owner (User) does not exist
+		    	} catch (Exception e) {  // catches exception if user does not exist
+		    		keys.add(Key.create(s));  // collection of keys for Scores to be deleted
+		    	}
 		    }
 
-		    if (keys.size() > 0) datastore.delete(keys);
-		    buf.append(groups.size() + " entities examined, " + keys.size() + " deleted.<br/>");
-		    
-		    if (groups.size()<querySizeLimit) buf.append("Done.");
-		    else if (retries < 9) buf.append(cleanAssignments(groups.getCursor().toWebSafeString(),retries+1));
+		    if (keys.size() > 0) ofy().delete().keys(keys);
+
+		    buf.append(query.count() + " entities examined, " + keys.size() + " deleted.<br/>");
+
+		    if (query.count()<querySizeLimit) buf.append("Done.");
+		    else if (retries < 9) buf.append(cleanScores(qri.getCursor().toWebSafeString(),retries+1));
 		    else {
-		    	cursor = groups.getCursor().toWebSafeString();
+		    	cursor = qri.getCursor().toWebSafeString();
+		    	Queue queue = QueueFactory.getDefaultQueue();
+		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanScores").param("Cursor", cursor));
+		    	buf.append("Launching a new DataStoreCleaner task.");
+		    }
+
+		} catch (Exception e) {
+			buf.append("Error: " + e.toString());
+		}
+		return buf.toString();
+		
+	}
+	
+	private String cleanGroups(String cursor, int retries) {
+		StringBuffer buf = new StringBuffer();
+		try {			
+			Query<Group> query = ofy().load().type(Group.class).limit(querySizeLimit);
+			if (cursor==null) buf.append("<h2>Clean Groups</h2>");
+		    else query.startAt(Cursor.fromWebSafeString(cursor));
+
+		    QueryResultIterator<Group> qri = query.iterator();
+		    ArrayList<Key<Group>> keys = new ArrayList<Key<Group>>();  // list of Group entity keys for batch delete
+		    
+		    while (qri.hasNext()) {
+		    	Group g = qri.next();
+		    	if (!g.isActive()) keys.add(Key.create(g)); 
+		    }
+
+		    if (keys.size() > 0) ofy().delete().keys(keys);
+
+		    buf.append(query.count() + " entities examined, " + keys.size() + " deleted.<br/>");
+
+		    if (query.count()<querySizeLimit) buf.append("Done.");
+		    else if (retries < 9) buf.append(cleanGroups(qri.getCursor().toWebSafeString(),retries+1));
+		    else {
+		    	cursor = qri.getCursor().toWebSafeString();
 		    	Queue queue = QueueFactory.getDefaultQueue();
 		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanGroups").param("Cursor", cursor));
 		    	buf.append("Launching a new DataStoreCleaner task.");
@@ -431,42 +386,36 @@ public class DataStoreCleaner extends HttpServlet {
 		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
 		}
-
 		return buf.toString();
 	}
 	
 	private String cleanAssignments(String cursor, int retries) {
 		StringBuffer buf = new StringBuffer();
-		try {
-			DatastoreService datastore = DatastoreServiceFactory.getDatastoreService(); 
-			Query q = new Query("Assignment");
-			
-			PreparedQuery pq = datastore.prepare(q);
-			
-			FetchOptions fetchOptions = FetchOptions.Builder.withLimit(querySizeLimit);
-		    if (cursor==null) buf.append("<h2>Clean Assignments</h2>");
-		    else fetchOptions.startCursor(Cursor.fromWebSafeString(cursor));
+		try {			
+			Query<Assignment> query = ofy().load().type(Assignment.class).limit(querySizeLimit);
+			if (cursor==null) buf.append("<h2>Clean Assignments</h2>");
+		    else query.startAt(Cursor.fromWebSafeString(cursor));
 
-		    QueryResultList<Entity> assignments = pq.asQueryResultList(fetchOptions);
-
-		    ArrayList<Key> keys = new ArrayList<Key>();  // list of Assignment entity keys for batch delete
+		    QueryResultIterator<Assignment> qri = query.iterator();
+		    ArrayList<Key<Assignment>> keys = new ArrayList<Key<Assignment>>();  // list of Assignment entity keys for batch delete
 		    
-		    for (Entity a : assignments) {
-		    	try {
-		    		ofy().load().type(Group.class).id((Long)a.getProperty("groupId"));		    	
-		    	} catch (Exception e) {  // catches exception if user does not exist
-		    		keys.add(a.getKey());
+		    while (qri.hasNext()) {
+		    	Assignment a = qri.next();
+	    		try {
+		    		ofy().load().type(Group.class).id(a.groupId).safe();  // throws Exception if the corresponding Group does not exist
+		    	} catch (Exception e) {  // catches exception if Group does not exist
+		    		keys.add(Key.create(a));  // collection of keys for Assignments to be deleted
 		    	}
 		    }
 
-		    if (keys.size() > 0) datastore.delete(keys);
+		    if (keys.size() > 0) ofy().delete().keys(keys);
 
-		    buf.append(assignments.size() + " entities examined, " + keys.size() + " deleted.<br/>");
+		    buf.append(query.count() + " entities examined, " + keys.size() + " deleted.<br/>");
 
-		    if (assignments.size()<querySizeLimit) buf.append("Done.");
-		    else if (retries < 9) buf.append(cleanAssignments(assignments.getCursor().toWebSafeString(),retries+1));
+		    if (query.count()<querySizeLimit) buf.append("Done.");
+		    else if (retries < 9) buf.append(cleanAssignments(qri.getCursor().toWebSafeString(),retries+1));
 		    else {
-		    	cursor = assignments.getCursor().toWebSafeString();
+		    	cursor = qri.getCursor().toWebSafeString();
 		    	Queue queue = QueueFactory.getDefaultQueue();
 		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanAssignments").param("Cursor", cursor));
 		    	buf.append("Launching a new DataStoreCleaner task.");
@@ -475,40 +424,32 @@ public class DataStoreCleaner extends HttpServlet {
 		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
 		}
-
 		return buf.toString();
 	}
 
 	private String cleanDomains(String cursor, int retries) {
 		StringBuffer buf = new StringBuffer();
-		try {
-			DatastoreService datastore = DatastoreServiceFactory.getDatastoreService(); 
-			Query q = new Query("Domain");
-			
-			PreparedQuery pq = datastore.prepare(q);
-			
-			FetchOptions fetchOptions = FetchOptions.Builder.withLimit(querySizeLimit);
-		    if (cursor==null) buf.append("<h2>Clean Domains</h2>");
-		    else fetchOptions.startCursor(Cursor.fromWebSafeString(cursor));
+		try {			
+			Query<Domain> query = ofy().load().type(Domain.class).limit(querySizeLimit);
+			if (cursor==null) buf.append("<h2>Clean Domains</h2>");
+		    else query.startAt(Cursor.fromWebSafeString(cursor));
 
-		    QueryResultList<Entity> domains = pq.asQueryResultList(fetchOptions);
-
-		    ArrayList<Key> keys = new ArrayList<Key>();  // list of Assignment entity keys for batch delete
-		   
-		    for (Entity d : domains) {
-		    	int activeUsers = ofy().load().type(User.class).filter("domain",d.getProperty("domainName")).count();
-		    	Date created = (Date)d.getProperty("created");
-		    	if (activeUsers==0 && created.before(oneMonthAgo)) keys.add(d.getKey());
+		    QueryResultIterator<Domain> qri = query.iterator();
+		    ArrayList<Key<Domain>> keys = new ArrayList<Key<Domain>>();  // list of Domain entity keys for batch delete
+		    
+		    while (qri.hasNext()) {
+		    	Domain d = qri.next();
+	    		if (d.activeUsers==0 && d.created.before(oneMonthAgo)) keys.add(Key.create(d));  // flags for deletion if domain has been around for a while but has no users
 		    }
 
-		    if (keys.size() > 0) datastore.delete(keys);
+		    if (keys.size() > 0) ofy().delete().keys(keys);
 
-		    buf.append(domains.size() + " entities examined, " + keys.size() + " deleted.<br/>");
+		    buf.append(query.count() + " entities examined, " + keys.size() + " deleted.<br/>");
 
-		    if (domains.size()<querySizeLimit) buf.append("Done.");
-		    else if (retries < 9) buf.append(cleanAssignments(domains.getCursor().toWebSafeString(),retries+1));
+		    if (query.count()<querySizeLimit) buf.append("Done.");
+		    else if (retries < 9) buf.append(cleanDomains(qri.getCursor().toWebSafeString(),retries+1));
 		    else {
-		    	cursor = domains.getCursor().toWebSafeString();
+		    	cursor = qri.getCursor().toWebSafeString();
 		    	Queue queue = QueueFactory.getDefaultQueue();
 		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanDomains").param("Cursor", cursor));
 		    	buf.append("Launching a new DataStoreCleaner task.");
@@ -517,7 +458,6 @@ public class DataStoreCleaner extends HttpServlet {
 		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
 		}
-
 		return buf.toString();
 	}
 }
