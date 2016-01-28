@@ -81,7 +81,7 @@ public class User implements Comparable<User>,Serializable {
 	static User getInstance(HttpSession session) {
 		try {
 			String userId = (String)session.getAttribute("UserId");
-			User user = ofy().load().type(User.class).id(userId).now();
+			User user = ofy().load().type(User.class).id(userId).safe();
 			if (user.alias != null) { // follow the alias chain to the end
 				List<String> userIds = new ArrayList<String>();
 				userIds.add(userId);
@@ -104,7 +104,6 @@ public class User implements Comparable<User>,Serializable {
 			}
 			return user;
 		} catch (Exception e) {
-			System.out.println("User.getInstance error: " + e.getMessage());
 			return null;
 		}
 	}
