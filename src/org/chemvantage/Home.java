@@ -59,7 +59,8 @@ public class Home extends HttpServlet {
 		User user = null;
 		if (session.isNew()) {
 			user = Nonce.getUser(request.getParameter("Nonce"));
-			session.setAttribute("UserId", user.id);
+			if (user==null) response.sendRedirect("/");
+			else session.setAttribute("UserId", user.id);
 		} else user = User.getInstance(session);
 		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 			response.sendRedirect("/");
