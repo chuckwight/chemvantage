@@ -14,7 +14,7 @@
     <timezone>America/Los_Angeles</timezone>
   </cron>
   <cron>
-  	<url>/DataStoreCleaner</url>
+  	<url>/DataStoreCleaner?Task=CleanAll</url>
   	<description>Provides monthly routine maintenance for datastore entities</description>
   	<schedule>1 of month 01:15</schedule>
     <timezone>America/Los_Angeles</timezone>
