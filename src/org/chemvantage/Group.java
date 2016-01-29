@@ -244,7 +244,7 @@ public class Group implements Serializable {
     
     boolean isActive() {
     	// group is active if it has at least one member or a valid instructor
-    	return (validatedMemberCount()>0 || ofy().load().type(User.class).id(instructorId)!=null);
+    	return (validatedMemberCount()>0 || ofy().load().type(User.class).id(instructorId).now()!=null);
     }
 
  }
