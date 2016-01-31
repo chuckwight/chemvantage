@@ -103,7 +103,7 @@ public class LTILaunch extends HttpServlet {
 			switch (lti_version) {
 			case "LTI-1p0": break;
 			case "LTI-2p0": break;
-			default: doError(request,response,"ChemVantage supports only LTI versions 1.0, 1.1, and 2.0",null,null);
+			default: doError(request,response,"Invalid lti_version parameter.",null,null);
 			return;
 			}
 
@@ -148,21 +148,17 @@ public class LTILaunch extends HttpServlet {
 			} catch (Exception e) {
 				base_string = null;
 			}
-			//debug.append("checking nonce...");
+			
 			try {
 				if (!Nonce.isUnique(request.getParameter("oauth_nonce"), request.getParameter("oauth_timestamp"))) throw new Exception("Bad nonce or timestamp.");
-				//debug.append("validating...");
 				oav.validateMessage(oam,acc);
 			} catch(Exception e) {
 				System.out.println("Provider failed to validate message");
 				System.out.println(e.getMessage());
 				if ( base_string != null ) System.out.println(base_string);
 				throw new Exception("OAuth validation failed.");
-				//doError(request, response,"Launch data validation failed.", null, null);
-				//return;
 			}
 			// BLTI Launch message was validated successfully. 
-			//debug.append("BLTI launch message was validated successfully. ");
 			
 			// Gather some information about the user
 			String userId = request.getParameter("user_id");
@@ -188,23 +184,14 @@ public class LTILaunch extends HttpServlet {
 			ofy().save().entity(domain).now();
 			
 			String lisOutcomeServiceURL = request.getParameter("lis_outcome_service_url");
-			String custom_result_url = request.getParameter("custom_result_url");
 			
 			if (lisOutcomeServiceURL!=null && !lisOutcomeServiceURL.equals(domain.resultServiceEndpoint)) {
 				domain.resultServiceEndpoint = lisOutcomeServiceURL;
 				if (domain.resultServiceFormat==null || domain.resultServiceFormat.isEmpty()) domain.resultServiceFormat = "application/xml";
 				domain.supportsResultService = true;
 				ofy().save().entity(domain).now();
-			} else if (custom_result_url!=null && !custom_result_url.equals(domain.resultServiceEndpoint)) {
-				domain.resultServiceEndpoint = custom_result_url;
-				domain.resultServiceFormat = "application/vnd.ims.lti.v2.toolproxy+json";
-				domain.supportsResultService = true;
-				ofy().save().entity(domain).now();				
-			}
-//			debug.append("Domain " + domain.domainName + " OK. ");
-//			debug.append(domain.supportsResultService?"ResultServiceEndpoint is " + domain.resultServiceEndpoint + ". ":"");
-//			debug.append(domain.supportsResultService?"ResultServiceFormat is " + domain.resultServiceFormat + ". ":"");
-
+			} 
+			
 			// ensure that this user is associated with the LTI domain
 			if (user.domain == null || !user.domain.equals(domain.domainName)) {
 				user.domain = domain.domainName;

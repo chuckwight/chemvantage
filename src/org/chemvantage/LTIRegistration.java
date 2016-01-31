@@ -327,7 +327,7 @@ public class LTIRegistration extends HttpServlet {
 							break;
 						}
 					}
-							ofy().save().entity(c);
+					ofy().save().entity(c);
 				}
 				else throw new Exception("A Tool Consumer was previously registered with this key.");
 
