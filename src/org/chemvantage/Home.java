@@ -326,8 +326,8 @@ public class Home extends HttpServlet {
 				} else {  
 					// Identify with a group of students using this site:
 					buf.append("<TR><TD ALIGN=CENTER><FONT SIZE=-1>" 
-							+ "Group: <i>" + myGroup.description + "</i><br>"
-							+ (myGroup.instructorId==null?"":"Instructor: <a href=mailto:" + User.getEmail(myGroup.instructorId) + ">" + myGroup.getInstructorBothNames() + "</a>")
+							+ "Group: <i>" + myGroup.description + "</i>"
+							+ (myGroup.instructorId==null||myGroup.instructorId.isEmpty()?"":"<br>Instructor: <a href=mailto:" + User.getEmail(myGroup.instructorId) + ">" + myGroup.getInstructorBothNames() + "</a>")
 							+ "</FONT></TD></TR>");
 					// find the next assignment deadline and link it to the Scores table
 					Date nextDeadline = myGroup.getNextDeadline();

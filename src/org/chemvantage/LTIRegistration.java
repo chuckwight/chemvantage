@@ -423,24 +423,23 @@ public class LTIRegistration extends HttpServlet {
 			return capability_enabled;
 		} else if (type.equals("substitution_variables")) {
 			List<String> chemvantage_substitution_variables = Arrays.asList(
-					"User.id",
+					"BasicOutcome.url",
+					"Context.id",
+					"Context.title",
+					"Membership.role",
 					"Person.email.primary",
 					"Person.name.family",
 					"Person.name.given",
 					"Person.name.full",
-					"Membership.role",
-					"Context.id",
-					"Context.title",
-					"CourseSection.sourcedId",
-					"CourseOffering.title",
-					"ResourceLink.id");
+					"ResourceLink.id",
+					"Result.sourcedId",
+					"ToolConsumerProfile.url",
+					"User.id");
 			for (String s : chemvantage_substitution_variables) if (capability_offered.contains(s)) capability_enabled.add(s);	
 			return capability_enabled;			
 		} else if (type.equals("outcomes_capabilities")) {
 			List<String> chemvantage_outcomes_capabilities = Arrays.asList(
-					"Result.autocreate",
-					"Result.sourcedId",
-					"Result.url");
+					"Result.autocreate");
 			for (String s : chemvantage_outcomes_capabilities) if (capability_offered.contains(s)) capability_enabled.add(s);	
 			return capability_enabled;			
 		}
@@ -467,14 +466,15 @@ public class LTIRegistration extends HttpServlet {
 			throws Exception {
 		JSONObject toolProxy = new JSONObject()
 			.put("@context", new JSONArray().put("http://purl.imsglobal.org/ctx/lti/v2/ToolProxy"))
-			.put("@type", "ToolProxy")
 			.put("@id", tc_profile_url)
+			.put("@type", "ToolProxy")
+			.put("enabled_capability", new JSONArray())		// this section is required but empty
 			.put("lti_version", toolConsumerProfile.getString("lti_version"))
+			.put("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled,tool_service_enabled))
 			.put("tool_consumer_profile", tc_profile_url)
 			.put("tool_profile", getToolProfile(base_url,capability_enabled))
-			.put("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled,tool_service_enabled));
-			//.put("enabled_capability", new JSONArray());		
-		return toolProxy;
+			.put("custom", new JSONObject().put("at", new Date().toString()));
+			return toolProxy;
 	}
 
 	JSONObject getToolProfile(StringBuffer base_url,List<String> capability_enabled) throws Exception {  // this is the (mostly static) tool profile for ChemVantage
@@ -502,7 +502,7 @@ public class LTIRegistration extends HttpServlet {
 							.put("email", "admin@chemvantage.org"))))));
 		toolProfile.put("base_url_choice", new JSONArray()
 			.put(new JSONObject()
-				.put("default_base_url", "http://" + base_url.toString())
+				.put("default_base_url", "https://" + base_url.toString())  // always use secure URL
 				.put("secure_base_url", "https://" + base_url.toString())));
 		capability_enabled.remove("basic-lti-launch-request"); // not to be explicitly included in resourceHandler object except as message type
 		JSONObject resourceHandler = new JSONObject()
@@ -513,15 +513,20 @@ public class LTIRegistration extends HttpServlet {
 					.put("description", new JSONObject()
 						.put("default_value", "An Open Education Resource for teaching and learning college-level General Chemistry")
 						.put("key", "assessment.resource.description"))
+					.put("icon_info", new JSONArray()
+						.put(new JSONObject()
+							.put("key", "iconStyle.default.path")
+							.put("default_location", new JSONObject()
+								.put("path", "/images/CVLogo_thumb.jpg"))))
 					.put("message", new JSONArray()
 						.put(new JSONObject()
 							.put("message_type", "basic-lti-launch-request")
 							.put("path", "/lti")
+							.put("enabled_capability", new JSONArray(capability_enabled))))
 							.put("parameter", new JSONArray()
-									.put(new JSONObject()
-											.put("name", "context_id")
-											.put("name", "context_title")))
-							.put("enabled_capability", new JSONArray(capability_enabled))));
+								.put(new JSONObject()
+									.put("name", "tc_profile_url")
+									.put("variable", "ToolConsumerProfile.url")));
 		
 		toolProfile.put("resource_handler", new JSONArray().put(resourceHandler));
 		
@@ -532,25 +537,32 @@ public class LTIRegistration extends HttpServlet {
 		JSONObject securityContract = new JSONObject()
 			.put("shared_secret",shared_secret);
 		
-		JSONArray toolService = new JSONArray();
+		JSONArray toolService = new JSONArray()
+				.put(new JSONObject()
+						.put("@type", "RestServiceProfile")
+						.put("service", "tcp:ToolProxy.collection")
+						.put("action", new JSONArray().put("POST")));
 		
-		if (capability_enabled.contains("Result.autocreate") && tool_service_enabled.contains("tcp:Result.item")) {
-			String serviceEndpoint = getTCServiceEndpoint("application/vnd.ims.lis.v2.result+json",toolConsumerProfile);
-			if (serviceEndpoint==null) serviceEndpoint = getTCServiceEndpoint("application/vnd.ims.lti.v1.outcome+xml",toolConsumerProfile);
-			if (serviceEndpoint!=null) {  // found a valid service endpoint for the LIS outcomes service
-				JSONObject resultService = new JSONObject()
-						.put("@type","RestServiceProfile")
-						.put("service", serviceEndpoint)
-						.put("action", new JSONArray()
-								.put("GET")
-								.put("PUT"));
-				toolService.put(resultService);
-			}
+		if (tool_service_enabled.contains("tcp:ToolConsumerProfile"))
+			toolService.put(new JSONObject()
+						.put("@type", "RestServiceProfile")
+						.put("service", "tcp:ToolConsumerProfile")
+						.put("action", new JSONArray().put("GET")));
+		
+		if (capability_enabled.contains("Result.autocreate") && tool_service_enabled.contains("tcp:Outcomes.LTI1")) {
+			toolService.put(new JSONObject()
+				.put("@type", "RestServiceProfile")
+				.put("service", "tcp:Outcomes.LTI1")
+				.put("action", new JSONArray().put("POST")));
+		} else if (capability_enabled.contains("Result.autocreate") && tool_service_enabled.contains("tcp:Result.item")) {
+			toolService.put(new JSONObject()
+				.put("@type", "RestServiceProfile")
+				.put("service", "tcp:Result.item")
+				.put("action", new JSONArray().put("POST")));
 		}		
+		
 		securityContract.put("tool_service",toolService);
-		
 		return securityContract;
-		
 	}
 
 	String getTCServiceEndpoint(String formatString,JSONObject toolConsumerProfile) throws Exception {
