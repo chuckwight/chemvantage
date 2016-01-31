@@ -123,13 +123,13 @@ public class PracticeExam extends HttpServlet {
 			for (Topic t : topics) {
 				if ("Hide".equals(t.orderBy)) continue;
 				buf.append(i%3==0?"<TR><TD>":"<TD>");
-				buf.append("<INPUT TYPE=CHECKBOX NAME=TopicId VALUE='" + t.id + "' "
+				buf.append("<label><INPUT TYPE=CHECKBOX NAME=TopicId VALUE='" + t.id + "' "
 						+ "onClick=\"javascript: var checked=0; "
 						+ "for(i=0;i<document.TopicForm.TopicId.length;i++) if(document.TopicForm.TopicId[i].checked) checked++;"
 						+ "document.TopicForm.begin.disabled=(checked<3);"
 						+ "if(document.TopicForm.begin.disabled) document.TopicForm.begin.value='Select at least 3 topics';"
 						+ "else document.TopicForm.begin.value='Begin the exam';\">" 
-						+ t.title + "<br>\n");
+						+ t.title + "</label><br>\n");
 				buf.append(i%3==2?"</TD></TR>\n":"</TD>");
 				i++;
 			}
@@ -154,6 +154,12 @@ public class PracticeExam extends HttpServlet {
 				assignmentId=Long.parseLong(request.getParameter("AssignmentId"));
 				a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 				topicIds = a.topicIds;
+				if (user.isInstructor() && user.myGroupId==a.groupId) {
+					buf.append("<br><span style='color:red'>Instructor Only: "
+							+ "<a href=Groups?UserRequest=AssignExamQuestions&GroupId=" 
+							+ a.groupId + "&AssignmentId=" + a.id 
+							+ ">customize this exam assignment</a></span>");
+				}
 			} catch (Exception e) {  // otherwise this is a student-designed exam
 				String[] topicStringIds = request.getParameterValues("TopicId");
 				if (topicStringIds != null) {
