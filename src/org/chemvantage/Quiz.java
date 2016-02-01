@@ -28,9 +28,11 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.TimeZone;
 
 import javax.servlet.ServletException;
@@ -102,6 +104,84 @@ public class Quiz extends HttpServlet {
 		} catch (Exception e) {}
 	}
 
+	String instructorPage(HttpServletRequest request,long assignmentId,String nonce) {
+		// this page is displayed by default when the instructor accesses this assigned quiz
+		// to view the quiz itself, include ShowQuiz=true as one of the GET parameters
+		StringBuffer buf = new StringBuffer();
+		try {
+			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
+			Group group = ofy().load().type(Group.class).id(assignment.groupId).safe();
+			Topic topic = ofy().load().type(Topic.class).id(assignment.topicId).safe();
+			DateFormat dfShort = DateFormat.getDateInstance(DateFormat.SHORT);
+			DateFormat dfLong = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+			dfShort.setTimeZone(group.getTimeZone());
+			dfLong.setTimeZone(group.getTimeZone());
+			
+			buf.append("<h2>Quiz - " + topic.title + " (" + subject.title + ")</h2>");
+			
+			buf.append("<FORM ACTION='/Groups' METHOD=POST>"
+					+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">"
+					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Quiz>"
+					+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE=" + topic.id + ">"
+					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE=" + group.id + ">"
+					+ "<b>Deadline: " + dfLong.format(assignment.deadline) + "</b> <a href=# onClick=document.getElementById('deadline').style.display='inLine'>change this</a><br/>"
+					+ "<div id='deadline' style='display:none'>After the deadline, ChemVantage will no longer report scores on this quiz to the LMS. "
+					+ "However, students may still use the assignment link to take practice quizzes.<br/>"
+					+ "<INPUT TYPE=TEXT SIZE=15 NAME=QuizDeadline VALUE='" + dfShort.format(assignment.deadline) + "'> at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone."
+					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Set Deadline'></FORM></div><p>");
+			
+			buf.append("<b>Customize This Quiz</b> <a href=# onClick=document.getElementById('customize').style.display='inLine'>show more</a><br/>"
+					+ "<div id='customize' style='display:none'>As the instructor for this class, you may "
+					+ "<a href=/Groups?UserRequest=AssignQuizQuestions&GroupId=" + group.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + ">click this link</a> "
+					+ "to select the set of questions to be used "
+					+ "for presenting quizzes to your students. By default all questions in the database for this topic are preselected. "
+					+ "You may wish to advise students that some questions may cover material not specifically in their textbook, but a "
+					+ "quick Internet search will usually provide a brief article on the subject.</div><p>");
+			
+			buf.append("<b>Quiz Rules</b> <a href=# onClick=document.getElementById('rules').style.display='inLine'>show more</a><br/>"
+					+ "<div id='rules' style='display:none'><OL><LI>Each quiz must be completed within " + timeLimit + " minutes of the time when it is first downloaded.</LI>"
+					+ "<LI>Quizzes may be retaken as many times as desired, to improve the score.</LI>"
+					+ "<LI>For each quiz topic, the server reports the student's best score.</LI>"
+					+ "<LI>Quizzes must be submitted for scoring prior to the deadline below in order to receive class credit.</LI>"
+					+ "</OL></div><p>");
+
+			buf.append("<b>Take This Quiz Now</b> <a href=# onClick=document.getElementById('take').style.display='inLine'>show more</a><br/>"
+					+ "<div id='take' style='display:none'>We encourage you to <a href=/Quiz?TopicId=" + topic.id + "&ShowQuiz=true&Nonce=" + nonce + ">take this quiz now</a>. "
+					+ "Please <a href=/Feedback>leave feedback here</a> or send email to admin@chemvantage.org with your questions or requests for ChemVantage support.</div><p>");
+			
+			buf.append("<b>Quiz Scores</b> <a href=# onClick=document.getElementById('details').style.display='inLine'>show details</a><br/>"
+					+ "<div id='details' style='display:none'>The following is a list of maximum pre-deadline scores on this quiz. In most cases, these scores have been reported to the grade book "
+					+ "in the class learning management system. However, the LMS may have a policy that is different from ChemVantage (e.g., record first score only), so it "
+					+ "is possible that these scores may be different from those in the LMS grade book. The number of quiz attempts is shown in parentheses for your reference. "
+					+ "A red dot indicates a score that is low enough to be a concern. If a student completes this quiz satisfactorily after the quiz deadline, the red dot will "
+					+ "disappear, but the score will remain unchanged. If you change the deadline, all scores will be recalculated to reflect the revised deadline. (Try it!)</div><p>");
+			
+			if (group.memberIds.size()==0) return buf.toString();
+			Map<String,User> members = ofy().load().type(User.class).ids(group.memberIds);
+			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TH></TH><TH>Name</TH><TH>Email</TH><TH>Score</TH></TR>");
+			// prepare a complete set of Score keys for this assignment and load all existing keys into the scoresMap
+			Set<Key<Score>> keys = new HashSet<Key<Score>>();
+			for (String id:group.memberIds) keys.add(Key.create(Key.create(User.class,id),Score.class,assignment.id));
+			Map<Key<Score>,Score> scoresMap = ofy().load().keys(keys);
+			
+			// display the table of scores, filling in where it may be incomplete (this is rare, but possible due to add/drop)
+			for (String id:group.memberIds) {
+				User u = members.get(id);
+				Key<Score> k = Key.create(Key.create(User.class,u.id),Score.class,assignment.id);
+				Score s = scoresMap.get(k);
+				if (s==null) {
+					s = Score.getInstance(u.id,assignment);
+	    			ofy().save().entity(s);
+	    		}
+				buf.append("<TR><TD>" + group.memberIds.indexOf(id) + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.deadline,group.rescueThresholdScore) + "</TD></TR>");
+			}
+			buf.append("</TABLE>");
+		} catch (Exception e) {
+				return buf.toString() + e.getMessage();
+		}
+		return buf.toString();
+	}
+	
 	String printQuiz(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -132,12 +212,15 @@ public class Quiz extends HttpServlet {
 			Assignment a = null;
 			try {
 				a = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",topicId).first().safe();
-				if (user.isInstructor()) {
+				if (user.isInstructor() && request.getParameter("ShowQuiz")==null) return instructorPage(request,a.id,nonce);
+			/*	
+				{
 					buf.append("<br><span style='color:red'>Instructor Only: "
 							+ "<a href=Groups?UserRequest=AssignQuizQuestions&GroupId=" 
 							+ myGroup.id + "&TopicId=" + topicId 
 							+ ">customize this quiz assignment</a></span>");
 				}
+		*/
 			} catch (Exception e) {}
 
 

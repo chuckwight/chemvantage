@@ -172,6 +172,18 @@ public class Groups extends HttpServlet {
 			} else if (userRequest.equals("SetTimeZone")) {
 				setTimeZone(user,group,request);
 				out.println(groupsForm(user,request));
+			} else if (userRequest.equals("Set Deadline")) {
+				setTimeZone(user,group,request);
+				updateDeadlines(group,request);
+				String assignmentType = request.getParameter("AssignmentType");
+				if ("Quiz".equals(assignmentType) || "Homework".equals(assignmentType)) {
+					String url = "/" + request.getParameter("AssignmentType") + "?TopicId=" + request.getParameter("TopicId");
+					response.sendRedirect(url);	
+				} else if ("Exam".equals(assignmentType)) {
+					String url = "/PracticeExam?AssignmentId=" + request.getParameter("AssignmentId");
+					response.sendRedirect(url);		
+				}
+				return;
 			} else if (userRequest.equals("UpdateAssignment")) {
 				updateAssignment(user,group,request);
 				String assignmentType = request.getParameter("AssignmentType");
@@ -182,6 +194,7 @@ public class Groups extends HttpServlet {
 					String url = "/PracticeExam?AssignmentId=" + request.getParameter("AssignmentId");
 					response.sendRedirect(url);		
 				}
+				return;
 			} else if (userRequest.equals("Copy Assignments")) {
 				copyAssignments(user,group,request);
 				out.println(manageGroupForm(user,group,request));
@@ -323,11 +336,14 @@ public class Groups extends HttpServlet {
 		return buf.toString();
 	}
 
-	String timeZoneSelectBox(String myTimeZone) {
+	static String timeZoneSelectBox(String myTimeZone) {
+		return timeZoneSelectBox(myTimeZone,true);
+	}
+	static String timeZoneSelectBox(String myTimeZone,boolean autoSubmit) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			if (myTimeZone == null) myTimeZone = TimeZone.getDefault().getID();
-			buf.append("<SELECT NAME=TimeZone onChange=submit()>");
+			buf.append("<SELECT NAME=TimeZone" + (autoSubmit?" onChange=submit()>":">"));
 			String[] TZIDs = TimeZone.getAvailableIDs();
 			for (int i=0;i<TZIDs.length;i++) {
 				buf.append("<OPTION" 
