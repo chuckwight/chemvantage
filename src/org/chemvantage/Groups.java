@@ -112,12 +112,19 @@ public class Groups extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			User user = User.getInstance(request.getSession(true));
+			HttpSession session = request.getSession();
+			User user = null;
+			if (session.isNew()) {
+				user = Nonce.getUser(request.getParameter("Nonce"));
+				session.setAttribute("UserId", user.id);
+			} else user = User.getInstance(session);
 			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
-				response.sendRedirect("/");
+				response.sendRedirect("/Logout");
 				return;
 			}
-				
+			String nonce = null;
+			if (session.isNew()) nonce = Nonce.createInstance(user);
+			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
@@ -178,10 +185,10 @@ public class Groups extends HttpServlet {
 				String assignmentType = request.getParameter("AssignmentType");
 				if ("Quiz".equals(assignmentType) || "Homework".equals(assignmentType)) {
 					String url = "/" + request.getParameter("AssignmentType") + "?TopicId=" + request.getParameter("TopicId");
-					response.sendRedirect(url);	
+					response.sendRedirect(url + "&Nonce=" + nonce);	
 				} else if ("Exam".equals(assignmentType)) {
 					String url = "/PracticeExam?AssignmentId=" + request.getParameter("AssignmentId");
-					response.sendRedirect(url);		
+					response.sendRedirect(url + "&Nonce=" + nonce);		
 				}
 				return;
 			} else if (userRequest.equals("UpdateAssignment")) {
@@ -189,10 +196,10 @@ public class Groups extends HttpServlet {
 				String assignmentType = request.getParameter("AssignmentType");
 				if ("Quiz".equals(assignmentType) || "Homework".equals(assignmentType)) {
 					String url = "/" + request.getParameter("AssignmentType") + "?TopicId=" + request.getParameter("TopicId");
-					response.sendRedirect(url);	
+					response.sendRedirect(url + "&Nonce=" + nonce);	
 				} else if ("Exam".equals(assignmentType)) {
 					String url = "/PracticeExam?AssignmentId=" + request.getParameter("AssignmentId");
-					response.sendRedirect(url);		
+					response.sendRedirect(url + "&Nonce=" + nonce);		
 				}
 				return;
 			} else if (userRequest.equals("Copy Assignments")) {

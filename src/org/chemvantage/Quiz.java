@@ -118,19 +118,20 @@ public class Quiz extends HttpServlet {
 			dfLong.setTimeZone(group.getTimeZone());
 			
 			buf.append("<h2>Quiz - " + topic.title + " (" + subject.title + ")</h2>");
+			buf.append("<FONT SIZE=-1>This is the instructor page; students will go <a href=/Quiz?TopicId=" + topic.id + "&ShowQuiz=true&Nonce=" + nonce + ">directly to the quiz</a>.</FONT><p>");
 			
 			buf.append("<FORM ACTION='/Groups' METHOD=POST>"
 					+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Quiz>"
 					+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE=" + topic.id + ">"
 					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE=" + group.id + ">"
-					+ "<b>Deadline: " + dfLong.format(assignment.deadline) + "</b> <a href=# onClick=document.getElementById('deadline').style.display='inLine'>change this</a><br/>"
+					+ "<b>Deadline: " + dfLong.format(assignment.deadline) + "</b> <a href=# onClick=document.getElementById('deadline').style.display='inLine'><FONT SIZE=-2>change this</FONT></a><p>"
 					+ "<div id='deadline' style='display:none'>After the deadline, ChemVantage will no longer report scores on this quiz to the LMS. "
 					+ "However, students may still use the assignment link to take practice quizzes.<br/>"
 					+ "<INPUT TYPE=TEXT SIZE=15 NAME=QuizDeadline VALUE='" + dfShort.format(assignment.deadline) + "'> at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone."
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Set Deadline'></FORM></div><p>");
 			
-			buf.append("<b>Customize This Quiz</b> <a href=# onClick=document.getElementById('customize').style.display='inLine'>show more</a><br/>"
+			buf.append("<b>Customize This Quiz</b> <a href=# onClick=document.getElementById('customize').style.display='inLine'><FONT SIZE=-2>show more</FONT></a><br/>"
 					+ "<div id='customize' style='display:none'>As the instructor for this class, you may "
 					+ "<a href=/Groups?UserRequest=AssignQuizQuestions&GroupId=" + group.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + ">click this link</a> "
 					+ "to select the set of questions to be used "
@@ -138,18 +139,16 @@ public class Quiz extends HttpServlet {
 					+ "You may wish to advise students that some questions may cover material not specifically in their textbook, but a "
 					+ "quick Internet search will usually provide a brief article on the subject.</div><p>");
 			
-			buf.append("<b>Quiz Rules</b> <a href=# onClick=document.getElementById('rules').style.display='inLine'>show more</a><br/>"
+			buf.append("<b>Quiz Rules</b> <a href=# onClick=document.getElementById('rules').style.display='inLine'><FONT SIZE=-2>show more</FONT></a><br/>"
 					+ "<div id='rules' style='display:none'><OL><LI>Each quiz must be completed within " + timeLimit + " minutes of the time when it is first downloaded.</LI>"
 					+ "<LI>Quizzes may be retaken as many times as desired, to improve the score.</LI>"
 					+ "<LI>For each quiz topic, the server reports the student's best score.</LI>"
 					+ "<LI>Quizzes must be submitted for scoring prior to the deadline below in order to receive class credit.</LI>"
 					+ "</OL></div><p>");
 
-			buf.append("<b>Take This Quiz Now</b> <a href=# onClick=document.getElementById('take').style.display='inLine'>show more</a><br/>"
-					+ "<div id='take' style='display:none'>We encourage you to <a href=/Quiz?TopicId=" + topic.id + "&ShowQuiz=true&Nonce=" + nonce + ">take this quiz now</a>. "
-					+ "Please <a href=/Feedback>leave feedback here</a> or send email to admin@chemvantage.org with your questions or requests for ChemVantage support.</div><p>");
+			buf.append("<b>Please Rate Your Experience with ChemVantage</b> <a href=/Feedback><FONT SIZE=-2>here</FONT></a><p>");
 			
-			buf.append("<b>Quiz Scores</b> <a href=# onClick=document.getElementById('details').style.display='inLine'>show details</a><br/>"
+			buf.append("<b>Quiz Scores</b> <a href=# onClick=document.getElementById('details').style.display='inLine'><FONT SIZE=-2>show details</FONT></a><br/>"
 					+ "<div id='details' style='display:none'>The following is a list of maximum pre-deadline scores on this quiz. In most cases, these scores have been reported to the grade book "
 					+ "in the class learning management system. However, the LMS may have a policy that is different from ChemVantage (e.g., record first score only), so it "
 					+ "is possible that these scores may be different from those in the LMS grade book. The number of quiz attempts is shown in parentheses for your reference. "
