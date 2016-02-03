@@ -125,7 +125,7 @@ public class Quiz extends HttpServlet {
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Quiz>"
 					+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE=" + topic.id + ">"
 					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE=" + group.id + ">"
-					+ "<b>Deadline: " + dfLong.format(assignment.deadline) + "</b> <a href=# onClick=document.getElementById('deadline').style.display='inLine'><FONT SIZE=-2>change this</FONT></a><p>"
+					+ "<b>Quiz Deadline: " + dfLong.format(assignment.deadline) + "</b> <a href=# onClick=document.getElementById('deadline').style.display='inLine'><FONT SIZE=-2>change this</FONT></a><p>"
 					+ "<div id='deadline' style='display:none'>After the deadline, ChemVantage will no longer report scores on this quiz to the LMS. "
 					+ "However, students may still use the assignment link to take practice quizzes.<br/>"
 					+ "<INPUT TYPE=TEXT SIZE=15 NAME=QuizDeadline VALUE='" + dfShort.format(assignment.deadline) + "'> at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone."

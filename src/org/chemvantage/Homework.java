@@ -26,9 +26,11 @@ import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.TimeZone;
 
 import javax.servlet.ServletException;
@@ -96,6 +98,84 @@ public class Homework extends HttpServlet {
 		} catch (Exception e) {}
 	}
 
+	String instructorPage(HttpServletRequest request,long assignmentId,String nonce) {
+		// this page is displayed by default when the instructor accesses this assigned quiz
+		// to view the quiz itself, include ShowHomework=true as one of the GET parameters
+		StringBuffer buf = new StringBuffer();
+		try {
+			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
+			Group group = ofy().load().type(Group.class).id(assignment.groupId).safe();
+			Topic topic = ofy().load().type(Topic.class).id(assignment.topicId).safe();
+			DateFormat dfShort = DateFormat.getDateInstance(DateFormat.SHORT);
+			DateFormat dfLong = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+			dfShort.setTimeZone(group.getTimeZone());
+			dfLong.setTimeZone(group.getTimeZone());
+			
+			buf.append("<h2>Homework - " + topic.title + " (" + subject.title + ")</h2>");
+			buf.append("<FONT SIZE=-1>This is the instructor page; students will go <a href=/Homework?TopicId=" + topic.id + "&ShowHomework=true&Nonce=" + nonce + ">directly to the assignment</a>.</FONT><p>");
+			
+			buf.append("<FORM ACTION='/Groups' METHOD=POST>"
+					+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">"
+					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Homework>"
+					+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE=" + topic.id + ">"
+					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE=" + group.id + ">"
+					+ "<b>Homework Deadline: " + dfLong.format(assignment.deadline) + "</b> <a href=# onClick=document.getElementById('deadline').style.display='inLine'><FONT SIZE=-2>change this</FONT></a><p>"
+					+ "<div id='deadline' style='display:none'>After the deadline, ChemVantage will no longer report scores on this assignment to the LMS. "
+					+ "However, students may still use the assignment link to practice solving problems.<br/>"
+					+ "<INPUT TYPE=TEXT SIZE=15 NAME=HWDeadline VALUE='" + dfShort.format(assignment.deadline) + "'> at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone."
+					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Set Deadline'></FORM></div><p>");
+			
+			buf.append("<b>Customize This Homework Assignment</b> <a href=# onClick=document.getElementById('customize').style.display='inLine'><FONT SIZE=-2>show more</FONT></a><br/>"
+					+ "<div id='customize' style='display:none'>As the instructor for this class, you may "
+					+ "<a href=/Groups?UserRequest=AssignHomeworkQuestions&GroupId=" + group.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + ">click this link</a> "
+					+ "to select the set of questions assigned to your students for grading. By default all questions in the database for this topic are preselected. "
+					+ "All problems not selected will be available to your students as optional problems.</div><p>");
+			
+			buf.append("<b>Homework Rules</b> <a href=# onClick=document.getElementById('rules').style.display='inLine'><FONT SIZE=-2>show more</FONT></a><br/>"
+					+ "<div id='rules' style='display:none'><OL>"
+					+ "<LI>Answers to problems may be resubmitted as many times as desired, to improve the student's overall score on the assignment.</LI>"
+					+ "<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question to discourage guessing.</LI>"
+					+ "<LI>Most questions are parameterized with different data, so the correct answers are different for each student.</LI>"
+					+ "<LI>For each topic, the server tracks your total score and the total number of submissions.</LI>"
+					+ "<LI>A checkmark will appear to the left of each correctly solved problem.</LI>"
+					+ "<LI>Answers to assigned problems must be submitted for scoring prior to the deadline below in order to receive class credit.</LI>"
+					+ "</OL></div><p>");
+
+			buf.append("<b>Please Rate Your Experience with ChemVantage</b> <a href=/Feedback><FONT SIZE=-2>here</FONT></a><p>");
+			
+			buf.append("<b>Homework Scores</b> <a href=# onClick=document.getElementById('details').style.display='inLine'><FONT SIZE=-2>show details</FONT></a><br/>"
+					+ "<div id='details' style='display:none'>The following is a list of best pre-deadline scores on this assignment. In most cases, these scores have been reported to the grade book "
+					+ "in the class learning management system. However, the LMS may have a policy that is different from ChemVantage (e.g., record first score only), so it "
+					+ "is possible that these scores may be different from those in the LMS grade book. "
+					+ "A red dot indicates a score that is low enough to be a concern. If a student completes this assignment satisfactorily after the deadline, the red dot will "
+					+ "disappear, but the score will remain unchanged. If you change the deadline, all scores will be recalculated to reflect the revised deadline. (Try it!)</div><p>");
+			
+			if (group.memberIds.size()==0) return buf.toString();
+			Map<String,User> members = ofy().load().type(User.class).ids(group.memberIds);
+			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TH></TH><TH>Name</TH><TH>Email</TH><TH>Score</TH></TR>");
+			// prepare a complete set of Score keys for this assignment and load all existing keys into the scoresMap
+			Set<Key<Score>> keys = new HashSet<Key<Score>>();
+			for (String id:group.memberIds) keys.add(Key.create(Key.create(User.class,id),Score.class,assignment.id));
+			Map<Key<Score>,Score> scoresMap = ofy().load().keys(keys);
+			
+			// display the table of scores, filling in where it may be incomplete (this is rare, but possible due to add/drop)
+			for (String id:group.memberIds) {
+				User u = members.get(id);
+				Key<Score> k = Key.create(Key.create(User.class,u.id),Score.class,assignment.id);
+				Score s = scoresMap.get(k);
+				if (s==null) {
+					s = Score.getInstance(u.id,assignment);
+	    			ofy().save().entity(s);
+	    		}
+				buf.append("<TR><TD>" + group.memberIds.indexOf(id) + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.deadline,group.rescueThresholdScore) + "</TD></TR>");
+			}
+			buf.append("</TABLE>");
+		} catch (Exception e) {
+				return buf.toString() + e.getMessage();
+		}
+		return buf.toString();
+	}
+	
 	String printHomework(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -118,12 +198,15 @@ public class Homework extends HttpServlet {
 			Assignment hwa = null;
 			try {
 				hwa = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Homework").filter("topicId",topicId).first().now();
+				if (user.isInstructor() && request.getParameter("ShowHomework")==null) return instructorPage(request,hwa.id,nonce);
+/*				
 				if (user.isInstructor() && hwa!=null) {
 					buf.append("<br><span style='color:red'>Instructor Only: "
 							+ "<a href=Groups?UserRequest=AssignHomeworkQuestions&GroupId=" 
 							+ myGroup.id + "&TopicId=" + topicId 
 							+ ">customize this homework assignment</a></span>");
 				}
+*/
 			} catch (Exception e) {}
 
 			buf.append("\n<h2>Homework Exercises - " + topic.title + " (" + subject.title + ")</h2>");

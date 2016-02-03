@@ -395,6 +395,8 @@ public class Groups extends HttpServlet {
 		try {
 			TimeZone oldTZ = group.getTimeZone();
 			TimeZone newTZ = TimeZone.getTimeZone(request.getParameter("TimeZone"));
+			if (oldTZ.equals(newTZ)) return;  // nothing to be done here
+			
 			Query<Assignment> assignments = ofy().load().type(Assignment.class).filter("groupId",group.id);
 			for (Assignment a : assignments) {  // adjust the deadline to correspond to midnight on the new TimeZone
 				long deadline = a.deadline.getTime();
@@ -808,9 +810,10 @@ public class Groups extends HttpServlet {
 			Calendar deadline = Calendar.getInstance(group.getTimeZone());
 			group.setGroupTopicIds();
 			try { // update the quiz deadline for this topic
+				String d = request.getParameter("QuizDeadline");
+				if (d==null) throw new Exception(); // skip this section
 				long i = group.getAssignmentId("Quiz",topicId);
 				Assignment a = i>0?ofy().load().type(Assignment.class).id(i).safe():null;
-				String d = request.getParameter("QuizDeadline");
 				if (a != null && d.length()==0) ofy().delete().entity(a);
 				else if (d.length()>0) {
 					if (a==null) a = new Assignment(group.id,topicId,"Quiz",new Date());
@@ -826,9 +829,10 @@ public class Groups extends HttpServlet {
 				}
 			} catch (Exception e2) {}
 			try { // update the homework deadline for this topic
+				String d = request.getParameter("HWDeadline");
+				if (d==null) throw new Exception(); // skip this section
 				long i = group.getAssignmentId("Homework",topicId);
 				Assignment a = i>0?ofy().load().type(Assignment.class).id(i).safe():null;
-				String d = request.getParameter("HWDeadline");
 				if (a != null && d.length()==0) ofy().delete().entity(a);
 				else if (d.length()>0) {
 					if (a==null) a = new Assignment(group.id,topicId,"Homework",new Date());
