@@ -131,15 +131,9 @@ public class Quiz extends HttpServlet {
 					+ "<INPUT TYPE=TEXT SIZE=15 NAME=QuizDeadline VALUE='" + dfShort.format(assignment.deadline) + "'> at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone."
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Set Deadline'></FORM></div><p>");
 			
-			buf.append("<b>Customize This Quiz</b> <a href=# onClick=document.getElementById('customize').style.display='inLine'><FONT SIZE=-2>show more</FONT></a><br/>"
-					+ "<div id='customize' style='display:none'>As the instructor for this class, you may "
-					+ "<a href=/Groups?UserRequest=AssignQuizQuestions&GroupId=" + group.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + ">click this link</a> "
-					+ "to select the set of questions to be used "
-					+ "for presenting quizzes to your students. By default all questions in the database for this topic are preselected. "
-					+ "You may wish to advise students that some questions may cover material not specifically in their textbook, but a "
-					+ "quick Internet search will usually provide a brief article on the subject.</div><p>");
-			
-			buf.append("<b>Quiz Rules</b> <a href=# onClick=document.getElementById('rules').style.display='inLine'><FONT SIZE=-2>show more</FONT></a><br/>"
+			buf.append("<b>Customize This Quiz</b> <a id=slink href=/Groups?UserRequest=AssignQuizQuestions&GroupId=" + group.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + "><FONT SIZE=-2>select questions</FONT></a><p>");
+				
+			buf.append("<b>Quiz Rules</b> <a id=rlink href=# onClick=document.getElementById('rules').style.display='inLine';document.getElementById('rlink').style.display='none'><FONT SIZE=-2>show more</FONT></a><br/>"
 					+ "<div id='rules' style='display:none'><OL><LI>Each quiz must be completed within " + timeLimit + " minutes of the time when it is first downloaded.</LI>"
 					+ "<LI>Quizzes may be retaken as many times as desired, to improve the score.</LI>"
 					+ "<LI>For each quiz topic, the server reports the student's best score.</LI>"

@@ -125,13 +125,9 @@ public class Homework extends HttpServlet {
 					+ "<INPUT TYPE=TEXT SIZE=15 NAME=HWDeadline VALUE='" + dfShort.format(assignment.deadline) + "'> at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone."
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Set Deadline'></FORM></div><p>");
 			
-			buf.append("<b>Customize This Homework Assignment</b> <a href=# onClick=document.getElementById('customize').style.display='inLine'><FONT SIZE=-2>show more</FONT></a><br/>"
-					+ "<div id='customize' style='display:none'>As the instructor for this class, you may "
-					+ "<a href=/Groups?UserRequest=AssignHomeworkQuestions&GroupId=" + group.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + ">click this link</a> "
-					+ "to select the set of questions assigned to your students for grading. By default all questions in the database for this topic are preselected. "
-					+ "All problems not selected will be available to your students as optional problems.</div><p>");
-			
-			buf.append("<b>Homework Rules</b> <a href=# onClick=document.getElementById('rules').style.display='inLine'><FONT SIZE=-2>show more</FONT></a><br/>"
+			buf.append("<b>Customize This Homework Assignment</b> <a href=/Groups?UserRequest=AssignHomeworkQuestions&GroupId=" + group.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + "><FONT SIZE=-2>select questions</FONT></a><p>");
+				
+			buf.append("<b>Homework Rules</b> <a id=rlink href=# onClick=document.getElementById('rules').style.display='inLine';document.getElementById('rlink').style.display='none'><FONT SIZE=-2>show more</FONT></a><br/>"
 					+ "<div id='rules' style='display:none'><OL>"
 					+ "<LI>Answers to problems may be resubmitted as many times as desired, to improve the student's overall score on the assignment.</LI>"
 					+ "<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question to discourage guessing.</LI>"
@@ -143,7 +139,7 @@ public class Homework extends HttpServlet {
 
 			buf.append("<b>Please Rate Your Experience with ChemVantage</b> <a href=/Feedback><FONT SIZE=-2>here</FONT></a><p>");
 			
-			buf.append("<b>Homework Scores</b> <a href=# onClick=document.getElementById('details').style.display='inLine'><FONT SIZE=-2>show details</FONT></a><br/>"
+			buf.append("<b>Homework Scores</b> <a id=slink href=# onClick=document.getElementById('details').style.display='inLine';document.getElementById('slink').style.display='none'><FONT SIZE=-2>show details</FONT></a><br/>"
 					+ "<div id='details' style='display:none'>The following is a list of best pre-deadline scores on this assignment. In most cases, these scores have been reported to the grade book "
 					+ "in the class learning management system. However, the LMS may have a policy that is different from ChemVantage (e.g., record first score only), so it "
 					+ "is possible that these scores may be different from those in the LMS grade book. "

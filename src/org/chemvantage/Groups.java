@@ -591,7 +591,7 @@ public class Groups extends HttpServlet {
 			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
 			group.setGroupTopicIds();
 			long hi = group.getAssignmentId("Homework",topic.id);
-			Assignment assignment = ofy().load().type(Assignment.class).id(hi).safe();
+			Assignment assignment = ofy().load().type(Assignment.class).id(hi).now();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			df.setTimeZone(group.getTimeZone());
 			buf.append("<b>Subject: " + subject.title + "<br>"
