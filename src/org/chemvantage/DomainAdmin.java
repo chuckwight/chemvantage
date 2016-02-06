@@ -49,14 +49,16 @@ public class DomainAdmin extends HttpServlet {
 		try {
 			HttpSession session = request.getSession();
 			User user = null;
-			if (session.isNew()) {
-				user = Nonce.getUser(request.getParameter("Nonce"));
-				session.setAttribute("UserId", user.id);
-			} else user = User.getInstance(session);
-			if (user==null || !user.isAdministrator()) {
-				response.sendRedirect("/");
+			if (session.isNew()) user = Nonce.getUser(request.getParameter("Nonce"));
+			else user = User.getInstance(session);
+			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
+				response.sendRedirect("/Logout");
 				return;
 			}
+			session.setAttribute("UserId", user.id);
+			String nonce = null;
+			if (session.isNew()) nonce = Nonce.createInstance(user);
+			
 			String domainName = user.domain;
 			if (domainName==null && user.isChemVantageAdmin()) domainName = request.getParameter("Domain");
 			if (domainName==null) response.sendRedirect("/Admin"); // ChemVantage administrator
@@ -92,11 +94,17 @@ public class DomainAdmin extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			User user = User.getInstance(request.getSession(true));
-			if (user==null || !user.isAdministrator()) {
-				response.sendRedirect("/");
+			HttpSession session = request.getSession();
+			User user = null;
+			if (session.isNew()) user = Nonce.getUser(request.getParameter("Nonce"));
+			else user = User.getInstance(session);
+			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
+				response.sendRedirect("/Logout");
 				return;
 			}
+			session.setAttribute("UserId", user.id);
+			String nonce = null;
+			if (session.isNew()) nonce = Nonce.createInstance(user);
 			
 			String domainName = user.domain;
 			if (domainName==null && user.isChemVantageAdmin()) domainName = request.getParameter("Domain");

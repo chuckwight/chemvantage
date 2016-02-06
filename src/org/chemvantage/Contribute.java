@@ -43,19 +43,20 @@ public class Contribute extends HttpServlet {
 	throws ServletException, IOException {
 		HttpSession session = request.getSession();
 		User user = null;
-		if (session.isNew()) {
-			user = Nonce.getUser(request.getParameter("Nonce"));
-			session.setAttribute("UserId", user.id);
-		} else user = User.getInstance(session);
+		if (session.isNew()) user = Nonce.getUser(request.getParameter("Nonce"));
+		else user = User.getInstance(session);
 		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
-			response.sendRedirect("/");
+			response.sendRedirect("/Logout");
 			return;
 		}
+		session.setAttribute("UserId", user.id);
+		String nonce = null;
+		if (session.isNew()) nonce = Nonce.createInstance(user);
 		
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		if (user.verifiedEmail) {
-			out.println(Home.getHeader(user) + newQuestionForm(user,request) + Home.footer);		
+			out.println(Home.getHeader(user) + newQuestionForm(user,request,nonce) + Home.footer);		
 		}
 		else out.println(Home.getHeader(user) + declineForm() + Home.footer);
 	}
@@ -63,11 +64,17 @@ public class Contribute extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try{
-			User user = User.getInstance(request.getSession(true));
+			HttpSession session = request.getSession();
+			User user = null;
+			if (session.isNew()) user = Nonce.getUser(request.getParameter("Nonce"));
+			else user = User.getInstance(session);
 			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
-				response.sendRedirect("/");
+				response.sendRedirect("/Logout");
 				return;
 			}
+			session.setAttribute("UserId", user.id);
+			String nonce = null;
+			if (session.isNew()) nonce = Nonce.createInstance(user);
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
@@ -75,13 +82,13 @@ public class Contribute extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 			if (userRequest.equals("Save")) {
-				out.println(Home.getHeader(user) + submitQuestion(user,request) + Home.footer);
-			} else out.println(Home.getHeader(user) + newQuestionForm(user,request) + Home.footer);
+				out.println(Home.getHeader(user) + submitQuestion(user,request,nonce) + Home.footer);
+			} else out.println(Home.getHeader(user) + newQuestionForm(user,request,nonce) + Home.footer);
 		} catch (Exception e) {
 		}
 	}
 
-	String newQuestionForm(User user,HttpServletRequest request) {
+	String newQuestionForm(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			// The values of assignmentType, questionType and topicKey are required to start editing
@@ -158,6 +165,7 @@ public class Contribute extends HttpServlet {
 					preview = true;
 					q.setParameters();
 					buf.append(q.printAll());
+					if (nonce!=null) buf.append("<INPUT TYPE=HIDDEN NAME=Nonce VALE=" + nonce + ">");
 					buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save'><hr>");
 				}
 			}
@@ -255,7 +263,7 @@ public class Contribute extends HttpServlet {
 		+ "</FORM>";
 	}
 	
-	String submitQuestion(User user,HttpServletRequest request) {
+	String submitQuestion(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			String assignmentType = request.getParameter("AssignmentType");
@@ -330,7 +338,7 @@ public class Contribute extends HttpServlet {
 			buf.append("<h3>Question Submitted Successfully</h3>"
 			+ "Thank you for contributing this question item to ChemVantage.<br>"
 			+ "Your contribution will be reviewed by an editor before it is added to the database.<br>"
-			+ "<a href=Contribute>Contribute another question item</a>.");
+			+ "<a href=Contribute" + (nonce==null?"":"?Nonce=" + nonce) + ">Contribute another question item</a>.");
 		}
 		return buf.toString();
 	}

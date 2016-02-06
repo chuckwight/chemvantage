@@ -112,7 +112,7 @@ public class Homework extends HttpServlet {
 			dfLong.setTimeZone(group.getTimeZone());
 			
 			buf.append("<h2>Homework - " + topic.title + " (" + subject.title + ")</h2>");
-			buf.append("<FONT SIZE=-1>This is the instructor page; students will go <a href=/Homework?TopicId=" + topic.id + "&ShowHomework=true&Nonce=" + nonce + ">directly to the assignment</a>.</FONT><p>");
+			buf.append("<FONT SIZE=-1>This is the instructor page; students will <a href=/Homework?TopicId=" + topic.id + "&ShowHomework=true&Nonce=" + nonce + ">go directly to the assignment</a>.</FONT><p>");
 			
 			buf.append("<FORM ACTION='/Groups' METHOD=POST>"
 					+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">"

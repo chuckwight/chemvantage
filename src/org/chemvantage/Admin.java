@@ -46,7 +46,7 @@ public class Admin extends HttpServlet {
 	throws ServletException, IOException {
 		try {
 			User user = User.getInstance(request.getSession(true));
-			if (user==null || !user.isChemVantageAdmin()) response.sendRedirect("/");
+			if (user==null || !user.isChemVantageAdmin()) response.sendRedirect("/Logout");
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
@@ -71,7 +71,7 @@ public class Admin extends HttpServlet {
 	throws ServletException, IOException {
 		try {
 			User user = User.getInstance(request.getSession(true));
-			if (user==null || !user.isChemVantageAdmin()) response.sendRedirect("/");
+			if (user==null || !user.isChemVantageAdmin()) response.sendRedirect("/Logout");
 
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();

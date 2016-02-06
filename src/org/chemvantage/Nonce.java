@@ -85,7 +85,7 @@ public class Nonce {
 		if (nonce==null) return null;
 		
 		Date now = new Date();
-		Date oldest = new Date(now.getTime()-interval); // converts seconds to millis
+		Date oldest = new Date(now.getTime()-interval); // 90 minutes ago
 
 		// delete all Nonce objects older than the interval
 		List<Key<Nonce>> expired = ofy().load().type(Nonce.class).filter("created <",oldest).keys().list();

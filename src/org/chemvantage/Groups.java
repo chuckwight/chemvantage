@@ -57,14 +57,15 @@ public class Groups extends HttpServlet {
 		try {
 			HttpSession session = request.getSession();
 			User user = null;
-			if (session.isNew()) {
-				user = Nonce.getUser(request.getParameter("Nonce"));
-				session.setAttribute("UserId", user.id);
-			} else user = User.getInstance(session);
+			if (session.isNew()) user = Nonce.getUser(request.getParameter("Nonce"));
+			else user = User.getInstance(session);
 			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
-				response.sendRedirect("/");
+				response.sendRedirect("/Logout");
 				return;
 			}
+			session.setAttribute("UserId", user.id);
+			String nonce = null;
+			if (session.isNew()) nonce = Nonce.createInstance(user);
 			
 			long groupId = 0;
 			try {
@@ -91,9 +92,9 @@ public class Groups extends HttpServlet {
 			if (group == null) out.println(groupsForm(user,request));
 			else if (user.isAdministrator() || user.id.equals(group.instructorId) || group.tAIds.contains(user.id)) {
 				if (userRequest.equals("ManageGroup")) out.println(manageGroupForm(user,group,request));
-				else if (userRequest.equals("AssignHomeworkQuestions")) out.println(assignHWQuestionsForm(user,group,request));
-				else if (userRequest.equals("AssignQuizQuestions")) out.println(assignQuizQuestionsForm(user,group,request));
-				else if (userRequest.equals("AssignExamQuestions")) out.println(assignExamQuestionsForm(user,group,request));
+				else if (userRequest.equals("AssignHomeworkQuestions")) out.println(assignHWQuestionsForm(user,group,request,nonce));
+				else if (userRequest.equals("AssignQuizQuestions")) out.println(assignQuizQuestionsForm(user,group,request,nonce));
+				else if (userRequest.equals("AssignExamQuestions")) out.println(assignExamQuestionsForm(user,group,request,nonce));
 				else if (userRequest.equals("GroupMembers")) out.println(showGroupMembers(user,group,request));
 				else if (userRequest.equals("GroupScores")) out.println(showGroupScores(user,group,request));
 				else if (userRequest.equals("GroupPracticeExams")) out.println(showGroupPracticeExams(user,group,request));
@@ -114,28 +115,27 @@ public class Groups extends HttpServlet {
 		try {
 			HttpSession session = request.getSession();
 			User user = null;
-			if (session.isNew()) {
-				user = Nonce.getUser(request.getParameter("Nonce"));
-				session.setAttribute("UserId", user.id);
-			} else user = User.getInstance(session);
+			if (session.isNew()) user = Nonce.getUser(request.getParameter("Nonce"));
+			else user = User.getInstance(session);
 			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 				response.sendRedirect("/Logout");
 				return;
 			}
+			session.setAttribute("UserId", user.id);
 			String nonce = null;
 			if (session.isNew()) nonce = Nonce.createInstance(user);
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
-			
+					
 			long groupId = 0;
 			try {
 				groupId = Long.parseLong(request.getParameter("GroupId"));
 			} catch (Exception e2) {}
 			Group group = groupId>0?ofy().load().type(Group.class).id(groupId).now():null;
-			
+				
 			// Authorized users only beyond this point:
-			if (!(user.isAdministrator() || user.isInstructor() || user.isTeachingAssistant())) response.sendRedirect("/Home");
+			if (!(user.isAdministrator() || user.isInstructor() || user.isTeachingAssistant())) response.sendRedirect("/Logout");
 			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
@@ -197,7 +197,7 @@ public class Groups extends HttpServlet {
 				if ("Quiz".equals(assignmentType) || "Homework".equals(assignmentType)) {
 					String url = "/" + request.getParameter("AssignmentType") + "?TopicId=" + request.getParameter("TopicId");
 					response.sendRedirect(url + "&Nonce=" + nonce);	
-				} else if ("Exam".equals(assignmentType)) {
+				} else if ("PracticeExam".equals(assignmentType)) {
 					String url = "/PracticeExam?AssignmentId=" + request.getParameter("AssignmentId");
 					response.sendRedirect(url + "&Nonce=" + nonce);		
 				}
@@ -504,7 +504,7 @@ public class Groups extends HttpServlet {
 		return buf.toString();
 	}
 
-	String assignQuizQuestionsForm(User user,Group group,HttpServletRequest request) {
+	String assignQuizQuestionsForm(User user,Group group,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer("<h3>Select Quiz Questions</h3>");
 		try {
 			long topicId = Long.parseLong(request.getParameter("TopicId"));
@@ -560,6 +560,7 @@ public class Groups extends HttpServlet {
 
 			buf.append("<FORM NAME=Questions METHOD=POST ACTION=Groups>"
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment'>"
+					+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Quiz>"
@@ -584,7 +585,7 @@ public class Groups extends HttpServlet {
 		return buf.toString();
 	}
 
-	String assignHWQuestionsForm(User user,Group group,HttpServletRequest request) {
+	String assignHWQuestionsForm(User user,Group group,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer("<h3>Select Homework Questions</h3>");
 		try {
 			long topicId = Long.parseLong(request.getParameter("TopicId"));
@@ -614,6 +615,7 @@ public class Groups extends HttpServlet {
 							+ "textbook.  Once selected, you may return to this form and customize the question selections as desired.");
 					buf.append("<FORM METHOD=POST ACTION=Groups>"
 							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateAssignment>"
+							+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 							+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Homework>");
@@ -665,8 +667,8 @@ public class Groups extends HttpServlet {
 		return buf.toString();
 	}
 
-	String assignExamQuestionsForm(User user,Group group,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer("<h3>Select Exam Questions</h3>");
+	String assignExamQuestionsForm(User user,Group group,HttpServletRequest request,String nonce) {
+		StringBuffer buf = new StringBuffer("<h3>Select Practice Exam Questions</h3>");
 		try {
 			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
 			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
@@ -698,9 +700,10 @@ public class Groups extends HttpServlet {
 
 			buf.append("<FORM NAME=Questions METHOD=POST ACTION=Groups>"
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment'>"
+					+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + assignment.id + "'>"
-					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Exam>"
+					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=PracticeExam>"
 					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items'>");
 			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
 
@@ -771,17 +774,15 @@ public class Groups extends HttpServlet {
 
 	void updateAssignment(User user,Group group,HttpServletRequest request) {
 		try {
-			group.setGroupTopicIds();
 			String assignmentType = request.getParameter("AssignmentType");
-			
 			long assignmentId = 0L;
-			if ("Exam".equals(assignmentType)) {
+			if ("PracticeExam".equals(assignmentType)) {
 				assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
 			} else {
+				group.setGroupTopicIds();
 				assignmentId = group.getAssignmentId(assignmentType,Long.parseLong(request.getParameter("TopicId")));
 			}
 			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
-					
 			String[] questionIds = request.getParameterValues("QuestionId");
 			String copyAssignmentId = request.getParameter("CopyAssignmentId");
 			assignment.questionKeys.clear();
@@ -792,7 +793,7 @@ public class Groups extends HttpServlet {
 				} catch (Exception e2) {}
 			}
 			else if (questionIds.length==0) {
-				ofy().delete().entity(assignment);
+				ofy().delete().entity(assignment).now();
 			}
 			else {
 				for (String id : questionIds) assignment.questionKeys.add(Key.create(Question.class,Long.parseLong(id)));

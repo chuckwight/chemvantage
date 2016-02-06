@@ -57,15 +57,15 @@ public class Home extends HttpServlet {
 		// begin standard user authentication section
 		HttpSession session = request.getSession();
 		User user = null;
-		if (session.isNew()) {
-			user = Nonce.getUser(request.getParameter("Nonce"));
-			if (user==null) response.sendRedirect("/");
-			else session.setAttribute("UserId", user.id);
-		} else user = User.getInstance(session);
+		if (session.isNew()) user = Nonce.getUser(request.getParameter("Nonce"));
+		else user = User.getInstance(session);
 		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
-			response.sendRedirect("/");
+			response.sendRedirect("/Logout");
 			return;
 		}
+		session.setAttribute("UserId", user.id);
+//		String nonce = null;
+//		if (session.isNew()) nonce = Nonce.createInstance(user);
 		
 		// Check to see if the user has a stored groupId from the LTILaunch 
 		// (usually follows account upgrade purchase)
@@ -109,7 +109,7 @@ public class Home extends HttpServlet {
 		// begin standard user authentication section
 		User user = User.getInstance(request.getSession(true));
 		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
-			response.sendRedirect("/");
+			response.sendRedirect("/Logout");
 			return;
 		}
 
@@ -179,7 +179,7 @@ public class Home extends HttpServlet {
 
 			buf.append("&nbsp;&nbsp;");
 			
-			buf.append("<a href='/Logout'>Sign out</a>");
+			buf.append("<a href=/Logout" + (nonce==null?"":"?Nonce="+nonce) + ">Sign out</a>");
 			
 			buf.append("</nobr></div>");
 
