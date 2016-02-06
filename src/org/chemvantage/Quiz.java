@@ -192,6 +192,12 @@ public class Quiz extends HttpServlet {
 			df.setTimeZone(tz);
 			Date now = new Date();
 
+			Assignment a = null;
+			try {
+				a = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",topicId).first().safe();
+				if (user.isInstructor() && request.getParameter("ShowQuiz")==null) return instructorPage(request,a.id,nonce);
+			} catch (Exception e) {}
+
 			// Check to see if this user has any pending quizzes on this topic:
 			Date then = new Date(now.getTime()-timeLimit*60000);  // timeLimit minutes ago
 			QuizTransaction qt = ofy().load().type(QuizTransaction.class).filter("userId",user.id).filter("topicId",topic.id).filter("graded",null).filter("downloaded >",then).first().now();
@@ -202,21 +208,6 @@ public class Quiz extends HttpServlet {
 			}
 			int secondsRemaining = (int) (timeLimit*60 - (now.getTime() - qt.downloaded.getTime())/1000);
 			
-			Assignment a = null;
-			try {
-				a = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",topicId).first().safe();
-				if (user.isInstructor() && request.getParameter("ShowQuiz")==null) return instructorPage(request,a.id,nonce);
-			/*	
-				{
-					buf.append("<br><span style='color:red'>Instructor Only: "
-							+ "<a href=Groups?UserRequest=AssignQuizQuestions&GroupId=" 
-							+ myGroup.id + "&TopicId=" + topicId 
-							+ ">customize this quiz assignment</a></span>");
-				}
-		*/
-			} catch (Exception e) {}
-
-
 			buf.append("\n<h2>Quiz - " + topic.title + " (" + subject.title + ")</h2>");
 			
 			buf.append("\n<FORM NAME=Quiz METHOD=POST ACTION=Quiz onSubmit=\"javascript: return confirmSubmission()\">");
