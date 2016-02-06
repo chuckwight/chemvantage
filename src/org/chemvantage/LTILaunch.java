@@ -339,7 +339,7 @@ public class LTILaunch extends HttpServlet {
 				} else lis_result_sourcedid = null; // this prevents students from getting scores for made-up assignments
 			}	
 			if (myAssignment.assignmentType.equals("PracticeExam")) {
-				redirectUrl ="/" + myAssignment.assignmentType;
+				redirectUrl = "/PracticeExam";
 				for (int i=0;i<myAssignment.topicIds.size();i++) redirectUrl += (i==0?"?":"&") + "TopicId=" + myAssignment.topicIds.get(i);
 				redirectUrl += "&AssignmentId=" + myAssignment.id;
 			}

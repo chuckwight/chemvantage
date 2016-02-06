@@ -186,7 +186,7 @@ public class Groups extends HttpServlet {
 				if ("Quiz".equals(assignmentType) || "Homework".equals(assignmentType)) {
 					String url = "/" + request.getParameter("AssignmentType") + "?TopicId=" + request.getParameter("TopicId");
 					response.sendRedirect(url + "&Nonce=" + nonce);	
-				} else if ("Exam".equals(assignmentType)) {
+				} else if ("PracticeExam".equals(assignmentType)) {
 					String url = "/PracticeExam?AssignmentId=" + request.getParameter("AssignmentId");
 					response.sendRedirect(url + "&Nonce=" + nonce);		
 				}
@@ -804,7 +804,10 @@ public class Groups extends HttpServlet {
 	String updateDeadlines(Group group,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try { 
-			long topicId = Long.parseLong(request.getParameter("TopicId"));
+			long topicId = 0L;
+			try {
+				topicId  = Long.parseLong(request.getParameter("TopicId"));
+			} catch (Exception e2) {}
 			DateFormat df = DateFormat.getDateInstance(DateFormat.SHORT);
 			df.setTimeZone(group.getTimeZone());
 			Calendar deadline = Calendar.getInstance(group.getTimeZone());
@@ -847,6 +850,26 @@ public class Groups extends HttpServlet {
 					}
 				}
 			} catch (Exception e2) {}
+			try { // update the practice exam deadline for this assignment
+				String d = request.getParameter("PracticeExamDeadline");
+				if (d==null) throw new Exception(); // skip this section
+				long i = Long.parseLong(request.getParameter("AssignmentId"));
+				Assignment a = i>0?ofy().load().type(Assignment.class).id(i).safe():null;
+				if (a != null && d.length()==0) ofy().delete().entity(a);
+				else if (d.length()>0) {
+					if (a==null) a = new Assignment(group.id,topicId,"PracticeExam",new Date());
+					deadline.setTime(df.parse(d));
+					deadline.add(Calendar.DATE,1);		// add 1 day and subtract 1 second
+					deadline.add(Calendar.SECOND,-1);	// to set deadline 1 second before midnight on the date indicated
+					if (a.deadline.compareTo(deadline.getTime())!=0) {  // deadline was changed
+						a.deadline = deadline.getTime();
+						ofy().save().entity(a);
+						group.deleteScores(a);
+						QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));
+					}
+				}
+			} catch (Exception e2) {}
+			
 			group.setGroupTopicIds();
 			group.setNextDeadline();
 			ofy().save().entity(group);

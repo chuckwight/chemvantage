@@ -28,9 +28,11 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.TimeZone;
 
 import javax.servlet.ServletException;
@@ -143,6 +145,80 @@ public class PracticeExam extends HttpServlet {
 		return buf.toString();
 	}
 
+	String instructorPage(HttpServletRequest request,long assignmentId,String nonce) {
+		// this page is displayed by default when the instructor accesses this assigned exam
+		// to view the exam itself, include ShowPracticeExam=true as one of the GET parameters
+		StringBuffer buf = new StringBuffer();
+		try {
+			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
+			Group group = ofy().load().type(Group.class).id(assignment.groupId).safe();
+			DateFormat dfShort = DateFormat.getDateInstance(DateFormat.SHORT);
+			DateFormat dfLong = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+			dfShort.setTimeZone(group.getTimeZone());
+			dfLong.setTimeZone(group.getTimeZone());
+			
+			buf.append("\n<h2>" + subject.title + " Practice Exam</h2>");
+			buf.append("<FONT SIZE=-1>This is the instructor page; students will go <a href=/PracticeExam?AssignmentId=" + assignment.id + "&ShowPracticeExam=true&Nonce=" + nonce + ">directly to the practice exam</a>.</FONT><p>");
+			
+			buf.append("<b>Topics covered:</b><OL>");
+			for (long topicId : assignment.topicIds) buf.append("<LI>" + ofy().load().type(Topic.class).id(topicId).safe().title + "</LI>");
+			buf.append("</OL><p>");
+
+			buf.append("<FORM ACTION='/Groups' METHOD=POST>"
+					+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">"
+					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=PracticeExam>"
+					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE=" + assignment.id + ">"
+					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE=" + group.id + ">"
+					+ "<b>Deadline: " + dfLong.format(assignment.deadline) + "</b> <a href=# onClick=document.getElementById('deadline').style.display='inLine'><FONT SIZE=-2>change this</FONT></a><p>"
+					+ "<div id='deadline' style='display:none'>After the deadline, ChemVantage will no longer report scores on this exam to the LMS. "
+					+ "However, students may still use the assignment link to take practice exams.<br/>"
+					+ "<INPUT TYPE=TEXT SIZE=15 NAME=PracticeExamDeadline VALUE='" + dfShort.format(assignment.deadline) + "'> at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone."
+					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Set Deadline'></FORM></div><p>");
+			
+			buf.append("<b>Customize This Exam</b> <a id=slink href=/Groups?UserRequest=AssignExamQuestions&GroupId=" + group.id + "&AssignmentId=" + assignment.id + "&Nonce=" + nonce + "><FONT SIZE=-2>select questions</FONT></a><p>");
+				
+			buf.append("<b>Practice Exam Rules</b> <a id=rlink href=# onClick=document.getElementById('rules').style.display='inLine';document.getElementById('rlink').style.display='none'><FONT SIZE=-2>show more</FONT></a><br/>"
+					+ "<div id='rules' style='display:none'><OL><LI>Each exam must be completed within " + timeLimit + " minutes of the time when it is first downloaded.</LI>"
+					+ "<LI>Exams may be retaken as many times as desired, to improve the score.</LI>"
+					+ "<LI>For each assigned exam, the server reports the student's best score.</LI>"
+					+ "<LI>Exams must be submitted for scoring prior to the deadline below in order to receive class credit.</LI>"
+					+ "</OL></div><p>");
+
+			buf.append("<b>Please Rate Your Experience with ChemVantage</b> <a href=/Feedback><FONT SIZE=-2>here</FONT></a><p>");
+			
+			buf.append("<b>Pracrtice Exam Scores</b> <a href=# onClick=document.getElementById('details').style.display='inLine'><FONT SIZE=-2>show details</FONT></a><br/>"
+					+ "<div id='details' style='display:none'>The following is a list of maximum pre-deadline scores on this exam. In most cases, these scores have been reported to the grade book "
+					+ "in the class learning management system. However, the LMS may have a policy that is different from ChemVantage (e.g., record first score only), so it "
+					+ "is possible that these scores may be different from those in the LMS grade book. The number of exam attempts is shown in parentheses for your reference. "
+					+ "A red dot indicates a score that is low enough to be a concern. If a student completes this assignment satisfactorily after the deadline, the red dot will "
+					+ "disappear, but the score will remain unchanged. If you change the deadline, all scores will be recalculated to reflect the revised deadline. (Try it!)</div><p>");
+			
+			if (group.memberIds.size()==0) return buf.toString();
+			Map<String,User> members = ofy().load().type(User.class).ids(group.memberIds);
+			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TH></TH><TH>Name</TH><TH>Email</TH><TH>Score</TH></TR>");
+			// prepare a complete set of Score keys for this assignment and load all existing keys into the scoresMap
+			Set<Key<Score>> keys = new HashSet<Key<Score>>();
+			for (String id:group.memberIds) keys.add(Key.create(Key.create(User.class,id),Score.class,assignment.id));
+			Map<Key<Score>,Score> scoresMap = ofy().load().keys(keys);
+			
+			// display the table of scores, filling in where it may be incomplete (this is rare, but possible due to add/drop)
+			for (String id:group.memberIds) {
+				User u = members.get(id);
+				Key<Score> k = Key.create(Key.create(User.class,u.id),Score.class,assignment.id);
+				Score s = scoresMap.get(k);
+				if (s==null) {
+					s = Score.getInstance(u.id,assignment);
+	    			ofy().save().entity(s);
+	    		}
+				buf.append("<TR><TD>" + group.memberIds.indexOf(id) + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.deadline,group.rescueThresholdScore) + "</TD></TR>");
+			}
+			buf.append("</TABLE>");
+		} catch (Exception e) {
+				return buf.toString() + e.getMessage();
+		}
+		return buf.toString();
+	}
+	
 	String printExam(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -154,12 +230,15 @@ public class PracticeExam extends HttpServlet {
 				assignmentId=Long.parseLong(request.getParameter("AssignmentId"));
 				a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 				topicIds = a.topicIds;
+				if (user.isInstructor() && request.getParameter("ShowPracticeExam")==null) return instructorPage(request,a.id,nonce);
+			/*	
 				if (user.isInstructor() && user.myGroupId==a.groupId) {
 					buf.append("<br><span style='color:red'>Instructor Only: "
 							+ "<a href=Groups?UserRequest=AssignExamQuestions&GroupId=" 
 							+ a.groupId + "&AssignmentId=" + a.id 
 							+ ">customize this exam assignment</a></span>");
 				}
+			*/	
 			} catch (Exception e) {  // otherwise this is a student-designed exam
 				String[] topicStringIds = request.getParameterValues("TopicId");
 				if (topicStringIds != null) {
