@@ -210,7 +210,7 @@ public class PracticeExam extends HttpServlet {
 					s = Score.getInstance(u.id,assignment);
 	    			ofy().save().entity(s);
 	    		}
-				buf.append("<TR><TD>" + group.memberIds.indexOf(id) + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.deadline,group.rescueThresholdScore) + "</TD></TR>");
+				buf.append("<TR><TD>" + (group.memberIds.indexOf(id)+1) + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.deadline,group.rescueThresholdScore) + "</TD></TR>");
 			}
 			buf.append("</TABLE>");
 		} catch (Exception e) {

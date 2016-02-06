@@ -700,7 +700,7 @@ public class User implements Comparable<User>,Serializable {
 			}
 			Group newGroup = newGroupId>0?ofy().load().type(Group.class).id(newGroupId).now():null;
 			if (newGroup != null) {
-				newGroup.memberIds.add(this.id);
+				if (newGroup.memberIds.indexOf(id)<0) newGroup.memberIds.add(this.id);
 				ofy().save().entity(newGroup);
 			}
 			this.myGroupId = newGroup==null?0:newGroupId;
