@@ -39,6 +39,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import com.google.appengine.api.datastore.Cursor;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
@@ -89,19 +90,19 @@ public class Groups extends HttpServlet {
 			
 			out.println(Home.getHeader(user));
 			
-			if (group == null) out.println(groupsForm(user,request));
+			if (group == null) out.println(groupsForm(user,request,nonce));
 			else if (user.isAdministrator() || user.id.equals(group.instructorId) || group.tAIds.contains(user.id)) {
-				if (userRequest.equals("ManageGroup")) out.println(manageGroupForm(user,group,request));
+				if (userRequest.equals("ManageGroup")) out.println(manageGroupForm(user,group,request,nonce));
 				else if (userRequest.equals("AssignHomeworkQuestions")) out.println(assignHWQuestionsForm(user,group,request,nonce));
 				else if (userRequest.equals("AssignQuizQuestions")) out.println(assignQuizQuestionsForm(user,group,request,nonce));
 				else if (userRequest.equals("AssignExamQuestions")) out.println(assignExamQuestionsForm(user,group,request,nonce));
-				else if (userRequest.equals("GroupMembers")) out.println(showGroupMembers(user,group,request));
-				else if (userRequest.equals("GroupScores")) out.println(showGroupScores(user,group,request));
-				else if (userRequest.equals("GroupPracticeExams")) out.println(showGroupPracticeExams(user,group,request));
-				else if (userRequest.equals("RescueOptions")) out.println(showRescueOptions(user,group,request));
-				else if (userRequest.equals("MakeAssignmentLink")) out.println(makeAssignmentLink(user,group,request.getParameter("resource_link_id")));
-				else out.println(groupsForm(user,request));
-			} else if (userRequest.equals("MakeAssignmentLink")) out.println(makeAssignmentLink(user,group,request.getParameter("resource_link_id")));
+				else if (userRequest.equals("GroupMembers")) out.println(showGroupMembers(user,group,request,nonce));
+				else if (userRequest.equals("GroupScores")) out.println(showGroupScores(user,group,request,nonce));
+				else if (userRequest.equals("GroupPracticeExams")) out.println(showGroupPracticeExams(user,group,request,nonce));
+				else if (userRequest.equals("RescueOptions")) out.println(showRescueOptions(user,group,request,nonce));
+				else if (userRequest.equals("MakeAssignmentLink")) out.println(makeAssignmentLink(user,group,request.getParameter("resource_link_id"),nonce));
+				else out.println(groupsForm(user,request,nonce));
+			} else if (userRequest.equals("MakeAssignmentLink")) out.println(makeAssignmentLink(user,group,request.getParameter("resource_link_id"),nonce));
 			else out.println("Sorry, you are not authorized to view this page.");
 			
 			out.println(Home.footer);
@@ -142,7 +143,7 @@ public class Groups extends HttpServlet {
 			
 			if (userRequest.equals("JoinGroup")) {
 				user.changeGroups(groupId);
-				out.println(Home.getHeader(user) + groupsForm(user,request) + Home.footer);
+				out.println(Home.getHeader(user) + groupsForm(user,request,nonce) + Home.footer);
 				return;
 			} else if (userRequest.equals("Associate")) {
 				try {
@@ -161,7 +162,7 @@ public class Groups extends HttpServlet {
 			}
 			// Additional user restrictions: no TAs beyond this point
 			if (!(user.isAdministrator() || (group==null && user.isInstructor()) || user.id.equals(group.instructorId))) {
-				out.println(Home.getHeader(user) + "<span style='color:red'>You have read-only access in this area</span>" + groupsForm(user,request) + Home.footer);
+				out.println(Home.getHeader(user) + "<span style='color:red'>You have read-only access in this area</span>" + groupsForm(user,request,nonce) + Home.footer);
 				return;
 			}
 			
@@ -169,16 +170,16 @@ public class Groups extends HttpServlet {
 			out.println(Home.getHeader(user));			
 			if (userRequest.equals("CreateGroup")) {
 				createGroup(user,request);
-				out.println(groupsForm(user,request));
+				out.println(groupsForm(user,request,nonce));
 			} else if (userRequest.equals("UpdateGroup")) {
 				modifyGroup(user,request);
-				out.println(groupsForm(user,request));
+				out.println(groupsForm(user,request,nonce));
 			} else if (userRequest.equals("DeleteGroup")) {
 				deleteGroup(group);
-				out.println(groupsForm(user,request));
+				out.println(groupsForm(user,request,nonce));
 			} else if (userRequest.equals("SetTimeZone")) {
 				setTimeZone(user,group,request);
-				out.println(groupsForm(user,request));
+				out.println(groupsForm(user,request,nonce));
 			} else if (userRequest.equals("Set Deadline")) {
 				setTimeZone(user,group,request);
 				updateDeadlines(group,request);
@@ -204,13 +205,13 @@ public class Groups extends HttpServlet {
 				return;
 			} else if (userRequest.equals("Copy Assignments")) {
 				copyAssignments(user,group,request);
-				out.println(manageGroupForm(user,group,request));
+				out.println(manageGroupForm(user,group,request,nonce));
 			} else if (userRequest.equals("UpdateDeadlines")||userRequest.equals("Create")) {
 				updateDeadlines(group,request);
-				out.println(manageGroupForm(user,group,request));
+				out.println(manageGroupForm(user,group,request,nonce));
 			} else if (userRequest.equals("RescueService")) {
 				setRescueOptions(user,group,request);
-				out.println(manageGroupForm(user,group,request));
+				out.println(manageGroupForm(user,group,request,nonce));
 			} else {
 				User thisUser = ofy().load().type(User.class).id(request.getParameter("UserId")).now();
 				if (userRequest.equals("InviteUser")) {
@@ -224,14 +225,13 @@ public class Groups extends HttpServlet {
 						thisUser.roles+=4;
 						ofy().save().entity(thisUser);
 					}
-					group.tAIds.add(thisUser.id);
-					ofy().save().entity(group);
+					if (group.addTA(thisUser.id)) ofy().save().entity(group);
 					message = thisUser.getBothNames() + " was assigned as a TA for this group.";
 					response.sendRedirect("Groups?UserRequest=GroupMembers&UserId=" + thisUser.id 
 							+ "&Message=" + message + "&GroupId=" + group.id);
 					return;
 				} else if (userRequest.equals("DropTA")) {
-					group.tAIds.remove(thisUser.id); ofy().save().entity(group);
+					group.removeTA(thisUser.id); ofy().save().entity(group);
 					Query<Group> allGroups = ofy().load().type(Group.class);
 					boolean isTA = false;
 					for (Group g : allGroups) if (g.isTA(thisUser.id)) isTA = true;
@@ -258,7 +258,7 @@ public class Groups extends HttpServlet {
 		}
 	}
 	
-	String groupsForm(User user,HttpServletRequest request) {
+	String groupsForm(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer("<h3>Join A Class or Group</h3>");
 		try {
 			Group myGroup = user.myGroupId>0?ofy().load().type(Group.class).id(user.myGroupId).now():null;
@@ -271,6 +271,7 @@ public class Groups extends HttpServlet {
 					+ "that you own or to which you have been assigned.  This is useful for viewing assignment deadlines and your own scores "
 					+ "as if you were a student in your group. Only active groups are shown (new groups or those with active assignments).");
 			buf.append("<FORM METHOD=POST ACTION=Groups>"
+					+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=JoinGroup>");
 
 			Query<Group> allGroups = ofy().load().type(Group.class);
@@ -302,11 +303,13 @@ public class Groups extends HttpServlet {
 							+ "<TD>" + subject.title + "</TD>"
 							+ "<TD>" + g.getInstructorBothNames() + "</TD>"
 							+ "<FORM METHOD=POST ACTION=Groups>"
+							+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateGroup>"
 							+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE=" + g.id + ">"
 							+ "<TD><INPUT NAME=Description VALUE='" + g.description + "'></TD>"
 							+ "<TD><INPUT TYPE=SUBMIT VALUE=Update></TD></FORM>"
 							+ "<FORM METHOD=POST ACTION=Groups><TD>"
+							+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=DeleteGroup>"
 							+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE=" + g.id + ">"
 							+ "<INPUT TYPE=SUBMIT VALUE=Delete onClick=\"return confirm('Permanently delete this group. Are you sure?')\">"
@@ -317,6 +320,7 @@ public class Groups extends HttpServlet {
 							+ "<TD ALIGN=CENTER><a href=Groups?UserRequest=ManageGroup&GroupId=" + g.id + ">Edit</a></TD>"
 							+ "<TD ALIGN=CENTER><a href=Groups?UserRequest=GroupMembers&GroupId=" + g.id + ">Add/Drop</a></TD>"
 							+ "<FORM METHOD=POST ACTION=Groups><INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SetTimeZone>"
+							+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 							+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + g.id + "'><TD>" 
 							+ timeZoneSelectBox(g.getTimeZone().getID()) 
 							+ "</TD></FORM>"
@@ -330,6 +334,7 @@ public class Groups extends HttpServlet {
 						+ "that will help students to identify the proper group to join. For example: <b>"
 						+ "U. of Utah CHEM 1210-002 MWF 9:00-9:50 AM</b><p>\n"
 						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=CreateGroup>\n"
+						+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 						+ "<TABLE><TR><TD><b>Instructor</b></TD><TD><b>Description</b></TD><TD>&nbsp;</TD></TR>"
 						+ "<TR><TD>" + user.getBothNames() + "</TD>"
 						+ "<TD><INPUT NAME=Description></TD>"
@@ -411,7 +416,7 @@ public class Groups extends HttpServlet {
 		}
 	}
 	
-	String manageGroupForm(User user,Group group,HttpServletRequest request) {
+	String manageGroupForm(User user,Group group,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			buf.append("<h3>Manage Group: " + group.description + " (" + group.getInstructorBothNames() + ")</h3>");
@@ -444,7 +449,8 @@ public class Groups extends HttpServlet {
 						+ "by selecting it below.<br><FONT COLOR=RED>Warning: this will permanently delete any "
 						+ "current assignments for this group shown below.</FONT>"
 						+ "<FORM ACTION=Groups METHOD=POST>");
-				buf.append("<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>");
+				buf.append("<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
+						+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">"));
 				buf.append("<SELECT NAME=CopyGroupId><OPTION VALUE=0>Select a group to copy from (optional)</OPTION>");
 				for (Group g : groups) {
 					if (g.id==group.id) continue; 
@@ -468,6 +474,7 @@ public class Groups extends HttpServlet {
 					long j = group.getAssignmentId("Homework",t.id);
 					Assignment h = j>0?ofy().load().type(Assignment.class).id(j).now():null;
 					buf.append("<FORM NAME=A" + t.id + " METHOD=POST ACTION=Groups>"
+							+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateDeadlines>"
 							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + t.id + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>\n");
@@ -490,6 +497,7 @@ public class Groups extends HttpServlet {
 
 			buf.append("<b>Add A New Quiz or Homework Assignment</b><br>"
 					+ "<FORM NAME=newA ACTION=Groups METHOD=POST>"
+					+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
 					+ "<SELECT NAME=TopicId><OPTION>Select a topic here:</OPTION>");
 			for (Topic t : topics) if (!groupTopics.containsKey(t.id)) buf.append("<OPTION VALUE=" + t.id + ">" + t.title + "</OPTION>");
@@ -534,6 +542,7 @@ public class Groups extends HttpServlet {
 							+ "The choices include groups where problems have been specifically selected to match content in a particular "
 							+ "textbook.  Once selected, you may return to this form and customize the question selections as desired.");
 					buf.append("<FORM METHOD=POST ACTION=Groups>"
+							+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateAssignment>"
 							+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
@@ -642,6 +651,7 @@ public class Groups extends HttpServlet {
 
 			// Make a list of individual questions that can be selected or deselected for this assignment
 			buf.append("<FORM NAME=Questions METHOD=POST ACTION=Groups>"
+					+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment'>"
 					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
@@ -911,7 +921,7 @@ public class Groups extends HttpServlet {
 		}
 	}
 	
-	public String showGroupPracticeExams(User user,Group group,HttpServletRequest request) {
+	public String showGroupPracticeExams(User user,Group group,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			buf.append("<h2>PracticeExam Results</h2>");
@@ -968,7 +978,7 @@ public class Groups extends HttpServlet {
 		return buf.toString();
 	}
 	
-	public String showGroupScores(User user,Group group,HttpServletRequest request) {
+	public String showGroupScores(User user,Group group,HttpServletRequest request,String nonce) {
 		long LIMIT_MILLIS = 1000 * 25; // response time limit in milliseconds
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -1182,7 +1192,7 @@ public class Groups extends HttpServlet {
 		}
 	}
 	
-	String showRescueOptions(User user,Group group,HttpServletRequest request) {
+	String showRescueOptions(User user,Group group,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer("<h2>Group Rescue Service Options</h2>");
 		buf.append("Group: " + group.description + "<br>");
 		buf.append("Instructor: " + group.getInstructorBothNames() + "<p>");
@@ -1192,6 +1202,7 @@ public class Groups extends HttpServlet {
 				+ "the form elements on this page to configure this service to meet the needs of your group or class.<p>");
 		try {
 			buf.append("<FORM ACTION=Groups METHOD=POST>"
+					+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=RescueService>"
 					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE=" + group.id + ">"
 					+ "<INPUT TYPE=HIDDEN NAME=SendRescueMessages VALUE=" + Boolean.toString(!group.sendRescueMessages) + ">"
@@ -1201,6 +1212,7 @@ public class Groups extends HttpServlet {
 			if (group.sendRescueMessages) {
 				buf.append("<FORM ACTION=Groups METHOD=POST><h3>Rescue Service Options</h3>");
 				buf.append("<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=RescueService>"
+						+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 						+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE=" + group.id + ">"
 						+ "<INPUT TYPE=HIDDEN NAME=SendRescueMessages VALUE=true>");
 				buf.append("Each student in this group will be notified if he or she misses the deadline for "
@@ -1248,7 +1260,7 @@ public class Groups extends HttpServlet {
 		ofy().save().entity(group);
 	}
 	
-	String showGroupMembers(User user,Group group,HttpServletRequest request) {
+	String showGroupMembers(User user,Group group,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer("<h2>Manage Group Enrollments</h2>");
 		try {
 			List<User> groupMembers = new ArrayList<User>(ofy().load().type(User.class).ids(group.memberIds).values());
@@ -1263,38 +1275,42 @@ public class Groups extends HttpServlet {
 			buf.append("<b>Group: </b>" + group.getInstructorBothNames() + " - " + group.description + "<p>");
 
 			String searchString = request.getParameter("SearchString");
-			if (searchString==null) searchString = "";
-			searchString = searchString.toLowerCase().trim();
-			int i = searchString.indexOf('*');
-			searchString = (i>=0?searchString.substring(0,i+1):searchString);
-
+			if (searchString!=null) {
+				searchString = searchString.toLowerCase().trim();
+				int i = searchString.indexOf('*');
+				searchString = (i>=0?searchString.substring(0,i+1):searchString);
+			}
+			
 			buf.append("<h4>User Search</h4>");
 			buf.append("<FORM ACTION=Groups METHOD=GET>");
 			buf.append("You may search for users in order to:<ul>"
 					+ "<li>Assign a user to be a teaching assistant for this group"
 					+ "<li>Invite any user to join this group</ul>" 
-					+ "Enter the user's exact email address or any portion of the <i>lastName, firstName</i>.<br>"
-					+ "Use * to search for all users. The search will return a maximum of " + this.queryLimit + " results.<br>\n");
-			buf.append("<INPUT NAME=SearchString VALUE='" + searchString + "'>"
+					+ "Enter the first few letters of the user's email address, or leave blank "
+					+ "to browse all users in this domain. The search will return a maximum of " + this.queryLimit + " results.<br>\n");
+			buf.append("<INPUT NAME=SearchString VALUE='" + (searchString==null?"":searchString) + "'>"
+					+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=GroupMembers>"
 					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE=" + group.id + ">"
 					+ "<INPUT TYPE=SUBMIT VALUE='Search for Users'></FORM>\n");
 
-			if (searchString.length() > 0) {   //present the results of the search
-				searchString.replace("*","");	
-				List<User> searchResults = new ArrayList<User>();
-				User foundUser = ofy().load().type(User.class).id(searchString).now();
-				if (foundUser != null) searchResults.add(foundUser);
-				if (searchResults.isEmpty()) searchResults = ofy().load().type(User.class).filter("email",searchString).list();
-				if (searchResults.isEmpty()) searchResults = ofy().load().type(User.class).filter("lowercaseName >=",searchString).filter("lowercaseName <",(searchString+'\ufffd')).limit(this.queryLimit).list();
-
+			Query<User> results = null;
+			if (searchString != null) {
+				searchString = searchString.toLowerCase().trim();
+				int i = searchString.indexOf('*');
+				if (i == 0) searchString = "";
+				else if (i > 0) searchString = searchString.substring(0,i);
+				results = ofy().load().type(User.class).filter("email >=",searchString).filter("email <",(searchString+'\ufffd')).filter("domain",group.domain).limit(this.queryLimit);
+				String cursor = request.getParameter("Cursor");
+				if (cursor!=null) results.startAt(Cursor.fromWebSafeString(cursor));
+			
 				buf.append("<h4>Search Results</h4>");
-				if (searchResults.isEmpty()) {
+				if (results.count()==0) {
 					buf.append("No matching users were found. Try using just the last name, or a shorter portion of the name.");		
 				} else {
 					buf.append("<TABLE BORDER=1 CELLSPACING=0>"
 							+ "<TR><TD><b>Name</b></TD><TD><b>Email</b></TD><TD COLSPAN=2><b>Add To Group</b></TD></TR>");
-					for (User u : searchResults) {
+					for (User u : results) {
 						buf.append("<TR><TD>" + u.getFullName() + "</TD>");
 						String email = u.getEmail();
 						String id = u.id; // this should be identical to email except for Google account holders
@@ -1309,6 +1325,7 @@ public class Groups extends HttpServlet {
 								buf.append("<TD ALIGN=CENTER>invited</TD>");
 							} else {
 								buf.append("<FORM ACTION=Groups METHOD=POST><TD>"
+										+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 										+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=InviteUser>"
 										+ "<INPUT TYPE=HIDDEN NAME=SearchString VALUE='" + CharHider.quot2literal(searchString) + "'>"
 										+ "<INPUT TYPE=HIDDEN NAME=UserId VALUE='" + id + "'>"
@@ -1320,6 +1337,7 @@ public class Groups extends HttpServlet {
 								buf.append("<TD ALIGN=CENTER>TA</TD>");
 							} else {
 								buf.append("<FORM ACTION=Groups METHOD=POST><TD>"
+										+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 										+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=AssignTA>"
 										+ "<INPUT TYPE=HIDDEN NAME=UserId VALUE='" + id + "'>"
 										+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
@@ -1331,6 +1349,7 @@ public class Groups extends HttpServlet {
 					buf.append("</TABLE>");
 				}
 			}
+			
 			buf.append("<h4>Current Group Members</h4>");
 			int nonStudents = 0;
 			// list of instructors and administrators
@@ -1359,6 +1378,7 @@ public class Groups extends HttpServlet {
 				String email = u.getEmail();
 				buf.append("<TD><A href=mailto:" + email + ">" + email + "</a></TD>"
 						+ "<FORM ACTION=Groups METHOD=POST>"
+						+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='DropTA'>"
 						+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE=" + group.id + ">"
 						+ "<INPUT TYPE=HIDDEN NAME=UserId VALUE='" + u.id + "'>"
@@ -1378,6 +1398,7 @@ public class Groups extends HttpServlet {
 					String email = u.getEmail();
 					buf.append("<TD><A href=mailto:" + email + ">" + email + "</a></TD>"
 							+ "<FORM ACTION=Groups METHOD=POST>"
+							+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='DropUser'>"
 							+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=UserId VALUE='" + u.id + "'>"
@@ -1425,7 +1446,7 @@ public class Groups extends HttpServlet {
 		return "<img src=images/red_dot.gif alt=red>";
 	}
 
-	protected String makeAssignmentLink(User user, Group group, String resource_link_id) {
+	protected String makeAssignmentLink(User user, Group group, String resource_link_id,String nonce) {
 		// this method allows the instructor to associate a link in the LMS with
 		// a particular assignment in order to (optionally) return a score to the LMS
 		StringBuffer buf = new StringBuffer();

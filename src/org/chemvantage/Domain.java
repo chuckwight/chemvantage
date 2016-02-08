@@ -30,19 +30,19 @@ import com.googlecode.objectify.annotation.Index;
 
 @Cache @Entity
 public class Domain {
-	@Id 		Long id;
+	@Id 	Long id;
 	@Index	String domainName;
-	Date lastLogin;
-	double dailyLoginsAvg; 
-	Date created;
-	int activeUsers;
-	int basicAccounts;
-	int premiumAccounts;
-	int seatsPurchased;
-	int seatsAvailable;
+	@Index 	double dailyLoginsAvg; 
+	Date 	lastLogin;
+	Date 	created;
+	int 	activeUsers;
+	int 	basicAccounts;
+	int 	premiumAccounts;
+	int 	seatsPurchased;
+	int 	seatsAvailable;
 	boolean supportsResultService;
-	String resultServiceEndpoint;
-	String resultServiceFormat;
+	String 	resultServiceEndpoint;
+	String 	resultServiceFormat;
 	List<String> capabilities = new ArrayList<String>();
 	List<String> domainAdmins = new ArrayList<String>();
 			

@@ -116,6 +116,17 @@ public class Group implements Serializable {
     	return tAIds.contains(id);
     }
     
+    boolean addTA(String userId) {
+    	if (!this.tAIds.contains(userId)) {
+    		tAIds.add(userId);
+    		return true;      // signals an addition to the list so Group entity should be saved
+    	} else return false;  // the TA was already assigned, so no need to save Group entity
+    }
+    
+    void removeTA(String userId) {
+    	this.tAIds.remove(userId);
+    }
+    
     public void setNextDeadline() {
     	this.nextDeadline = null;
     	try {

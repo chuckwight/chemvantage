@@ -250,7 +250,7 @@ public class Admin extends HttpServlet {
 					+ "<INPUT TYPE=HIDDEN NAME=UserId VALUE='" + usr.id + "'>"
 					+ "\n<TR><TD ALIGN=RIGHT>UserID: </TD><TD>" + usr.id + "</TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>AuthDomain: </TD><TD>" + usr.authDomain + "</TD></TR>"
-					+ "\n<TR><TD ALIGN=RIGHT>Domain: </TD><TD><INPUT NAME=Domain VALUE='" + (usr.domain==null?"":user.domain) + "'>" + "</TD></TR>"
+					+ "\n<TR><TD ALIGN=RIGHT>Domain: </TD><TD><INPUT NAME=Domain VALUE='" + (usr.domain==null?"":usr.domain) + "'>" + "</TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>Email: </TD><TD><INPUT NAME=Email VALUE='" + usr.getEmail() + "'>" + (usr.verifiedEmail?" (verified)":" (unverified)") + "</TD></TR>"
 					+ "\n<TR><TD ALIGN=RIGHT>LastName: </TD><TD><INPUT NAME=LastName VALUE='" 
 					+ CharHider.quot2html(usr.getLastName()) + "'></TD></TR>"

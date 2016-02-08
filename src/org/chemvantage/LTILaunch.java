@@ -232,7 +232,9 @@ public class LTILaunch extends HttpServlet {
 				ofy().save().entity(g).now();
 			}
 			user.changeGroups(g.id);
-			debug.append("User change groups OK. ");
+			
+			// Add user to the approved TA list, if necessary
+			if (roles.contains("teachingassistant") && g.addTA(userId)) ofy().save().entity(g);
 			
 			// update the LIS result outcome service URL, if necessary
 			if (domain.supportsResultService && domain.resultServiceEndpoint!=null && !domain.resultServiceEndpoint.equals(g.lis_outcome_service_url)) {  // update the URL and format as Group properties
