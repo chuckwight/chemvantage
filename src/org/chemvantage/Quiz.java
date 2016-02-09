@@ -156,6 +156,7 @@ public class Quiz extends HttpServlet {
 			for (String id:group.memberIds) keys.add(Key.create(Key.create(User.class,id),Score.class,assignment.id));
 			Map<Key<Score>,Score> scoresMap = ofy().load().keys(keys);
 			int i = 0;
+			Score s = null;
 			
 			buf.append("Instructors and Teaching Assistants<br>"
 					+ "<TABLE BORDER=1 CELLSPACING=0><TR><TD></TD><TD>Name</TD><TD>Email</TD><TD>Score</TD></TR>");
@@ -163,10 +164,10 @@ public class Quiz extends HttpServlet {
 				User u = members.get(id);
 				if (u.isInstructor() || u.isAdministrator() || group.isTA(u.id)) {
 					Key<Score> k = Key.create(Key.create(User.class,u.id),Score.class,assignment.id);
-					Score s = scoresMap.get(k);
+					s = scoresMap.get(k);
 					if (s==null) {
 						s = Score.getInstance(u.id,assignment);
-						ofy().save().entity(s);
+						ofy().save().entity(s).now();
 					}
 					i++;
 					buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.deadline,group.rescueThresholdScore) + "</TD></TR>");
@@ -182,10 +183,10 @@ public class Quiz extends HttpServlet {
 				User u = members.get(id);
 				if (u.isInstructor() || u.isAdministrator() || group.isTA(u.id)) continue;
 				Key<Score> k = Key.create(Key.create(User.class,u.id),Score.class,assignment.id);
-				Score s = scoresMap.get(k);
+				s = scoresMap.get(k);
 				if (s==null) {
 					s = Score.getInstance(u.id,assignment);
-					ofy().save().entity(s);
+					ofy().save().entity(s).now();
 				}
 				i++;
 				buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.deadline,group.rescueThresholdScore) + "</TD></TR>");
