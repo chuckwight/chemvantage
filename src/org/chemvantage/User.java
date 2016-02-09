@@ -692,16 +692,28 @@ public class User implements Comparable<User>,Serializable {
 	}
 
 	public void changeGroups(long newGroupId) {
+		if (newGroupId == this.myGroupId) {  // no change needed; just verify that user is listed as a group member
+			if (this.myGroupId == 0) return;
+			Group g = ofy().load().type(Group.class).id(myGroupId).now();
+			if (!g.memberIds.contains(this.id)) {
+				g.memberIds.add(this.id);
+				ofy().save().entity(g).now();
+			}
+			return;
+		}
+		// User is attempting to change groups:
 		try {
 			Group oldGroup = myGroupId>0?ofy().load().type(Group.class).id(myGroupId).now():null;
 			if (oldGroup != null) {
 				oldGroup.memberIds.remove(this.id);
-				ofy().save().entity(oldGroup);
+				ofy().save().entity(oldGroup).now();
 			}
 			Group newGroup = newGroupId>0?ofy().load().type(Group.class).id(newGroupId).now():null;
 			if (newGroup != null) {
-				if (newGroup.memberIds.indexOf(id)<0) newGroup.memberIds.add(this.id);
-				ofy().save().entity(newGroup);
+				if (!newGroup.memberIds.contains(this.id)) {
+					newGroup.memberIds.add(this.id);
+					ofy().save().entity(newGroup).now();
+				}
 			}
 			this.myGroupId = newGroup==null?0:newGroupId;
 			ofy().save().entity(this).now();
