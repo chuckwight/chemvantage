@@ -132,8 +132,9 @@ public class Logout extends HttpServlet {
 					}
 				}
 				buf.append("</TR></TABLE></CENTER><p>");		
-				buf.append("<a href=/>Return to the ChemVantage sign in page</a>.");
 			}
+			buf.append("<p><a href=/>Return to the ChemVantage sign in page</a>.");
+			
 		} catch (Exception e) {
 			request.getSession().invalidate();
 		}
