@@ -60,7 +60,7 @@ public class Home extends HttpServlet {
 		if (session.isNew()) user = Nonce.getUser(request.getParameter("Nonce"));
 		else user = User.getInstance(session);
 		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
-			response.sendRedirect("/Login");
+			response.sendRedirect("/");
 			return;
 		}
 		session.setAttribute("UserId", user.id);
