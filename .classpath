@@ -19,10 +19,9 @@
 	</classpathentry>
 	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/JbcParser.jar"/>
 	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/oauth.jar"/>
-	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/stax-api-1.0-2.jar"/>
-	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/apps-marketplace.jar"/>
 	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/objectify-5.1.9.jar"/>
 	<classpathentry exported="true" kind="lib" path="war/WEB-INF/lib/guava-18.0.jar"/>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/apps-marketplace.jar"/>
 	<classpathentry kind="con" path="com.google.appengine.eclipse.core.GAE_CONTAINER"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>
