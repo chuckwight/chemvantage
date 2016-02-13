@@ -21,6 +21,7 @@ import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
@@ -97,7 +98,13 @@ public class Rescue extends HttpServlet {
 				
 				// send a rescue message to this user
 				User user = ofy().load().type(User.class).id(userId).safe();
-				if (user.alias != null) continue;  // don't send to accounts aliased to other user accounts
+				if (user.alias != null) { // follow the alias chain to the end
+					List<String> userIds = new ArrayList<String>();
+					userIds.add(user.id);
+					userIds.add(0,user.alias);
+					user = User.getInstance(userIds);
+				}
+				if (user.isInstructor() || user.isTeachingAssistant()) continue;
 				
 				RescueMessage rm = ofy().load().type(RescueMessage.class).id(userId).now();  // check for a recent RescueMessages to this user
 				if (rm==null) ofy().save().entity(new RescueMessage(userId));  // create a temporary record of this message being sent

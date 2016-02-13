@@ -76,7 +76,7 @@ public class EmailScores extends HttpServlet {
 			Message msg = new MimeMessage(session);
 			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
 			msg.setRecipient(Message.RecipientType.TO,new InternetAddress(instructor.getEmail(),instructor.getBothNames()));
-			msg.setSubject("Class Assignment Scores");
+			msg.setSubject("ChemVantage Assignment Scores");
 
 			switch (assignment.assignmentType) {
 			case ("Quiz"):

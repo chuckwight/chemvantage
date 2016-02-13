@@ -87,6 +87,15 @@
 	</servlet-mapping>
 	
 	<servlet>
+		<servlet-name>EmailScores</servlet-name>
+		<servlet-class>org.chemvantage.EmailScores</servlet-class>
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>EmailScores</servlet-name>
+		<url-pattern>/EmailScores</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
 		<servlet-name>Feedback</servlet-name>
 		<servlet-class>org.chemvantage.Feedback</servlet-class>
 	</servlet>
@@ -343,6 +352,7 @@
 			<url-pattern>/remote_api</url-pattern>
  			<url-pattern>/CalculateScores</url-pattern>  
  			<url-pattern>/DataStoreCleaner</url-pattern> 
+			<url-pattern>/EmailScores</url-pattern> 
 			<url-pattern>/ManageDemoPremiumAccounts</url-pattern>
 			<url-pattern>/Notification</url-pattern>
 			<url-pattern>/Rescue</url-pattern>
