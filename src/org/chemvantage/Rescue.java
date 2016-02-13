@@ -60,7 +60,7 @@ public class Rescue extends HttpServlet {
 				if (group==null) continue;
 				Queue queue = QueueFactory.getDefaultQueue();
 				if (group.sendRescueMessages) queue.add(withUrl("/Rescue").param("AssignmentId",Long.toString(a.id)));
-				if (group.emailScoresToInstructor) queue.add(withUrl("/EmailScores").param("AssignmentId", Long.toString(a.id)));
+				if (a.emailScoresToInstructor) queue.add(withUrl("/EmailScores").param("AssignmentId", Long.toString(a.id)));
 			}
 		} catch (Exception e) {
 		}

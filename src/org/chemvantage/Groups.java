@@ -181,7 +181,6 @@ public class Groups extends HttpServlet {
 				setTimeZone(user,group,request);
 				out.println(groupsForm(user,request,nonce));
 			} else if (userRequest.equals("Set Deadline")) {
-				setEmailScores(group,request);
 				setTimeZone(user,group,request);
 				updateDeadlines(group,request);
 				String assignmentType = request.getParameter("AssignmentType");
@@ -256,14 +255,6 @@ public class Groups extends HttpServlet {
 			out.println(Home.footer);
 		} catch (Exception e) {
 			response.getWriter().println(e.toString());
-		}
-	}
-	
-	void setEmailScores(Group group,HttpServletRequest request) {
-		try {
-			if ("true".equals(request.getParameter("EmailScores"))) group.emailScoresToInstructor = true;
-			else group.emailScoresToInstructor = false;
-		} catch (Exception e) {	
 		}
 	}
 	
@@ -832,6 +823,8 @@ public class Groups extends HttpServlet {
 			df.setTimeZone(group.getTimeZone());
 			Calendar deadline = Calendar.getInstance(group.getTimeZone());
 			group.setGroupTopicIds();
+			boolean emailOption = Boolean.parseBoolean(request.getParameter("EmailScores"));
+			
 			try { // update the quiz deadline for this topic
 				String d = request.getParameter("QuizDeadline");
 				if (d==null) throw new Exception(); // skip this section
@@ -843,8 +836,9 @@ public class Groups extends HttpServlet {
 					deadline.setTime(df.parse(d));
 					deadline.add(Calendar.DATE,1);		// add 1 day and subtract 1 second
 					deadline.add(Calendar.SECOND,-1);	// to set deadline 1 second before midnight on the date indicated
-					if (a.deadline.compareTo(deadline.getTime())!=0) {  // deadline was changed
+					if (a.deadline.compareTo(deadline.getTime())!=0 || a.emailScoresToInstructor!=emailOption) {  // deadline or option was changed
 						a.deadline = deadline.getTime();
+						a.emailScoresToInstructor = emailOption;
 						ofy().save().entity(a);
 						group.deleteScores(a);
 						QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));
@@ -862,8 +856,9 @@ public class Groups extends HttpServlet {
 					deadline.setTime(df.parse(d));
 					deadline.add(Calendar.DATE,1);		// add 1 day and subtract 1 second
 					deadline.add(Calendar.SECOND,-1);	// to set deadline 1 second before midnight on the date indicated
-					if (a.deadline.compareTo(deadline.getTime())!=0) {  // deadline was changed
+					if (a.deadline.compareTo(deadline.getTime())!=0 || a.emailScoresToInstructor!=emailOption) {  // deadline or option was changed
 						a.deadline = deadline.getTime();
+						a.emailScoresToInstructor = emailOption;
 						ofy().save().entity(a);
 						group.deleteScores(a);
 						QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));
@@ -881,8 +876,9 @@ public class Groups extends HttpServlet {
 					deadline.setTime(df.parse(d));
 					deadline.add(Calendar.DATE,1);		// add 1 day and subtract 1 second
 					deadline.add(Calendar.SECOND,-1);	// to set deadline 1 second before midnight on the date indicated
-					if (a.deadline.compareTo(deadline.getTime())!=0) {  // deadline was changed
+					if (a.deadline.compareTo(deadline.getTime())!=0 || a.emailScoresToInstructor!=emailOption) {  // deadline or option was changed
 						a.deadline = deadline.getTime();
+						a.emailScoresToInstructor = emailOption;
 						ofy().save().entity(a);
 						group.deleteScores(a);
 						QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));

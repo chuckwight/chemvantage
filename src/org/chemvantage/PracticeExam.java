@@ -172,7 +172,8 @@ public class PracticeExam extends HttpServlet {
 					+ "<b>Deadline: " + dfLong.format(assignment.deadline) + "</b> <a href=# onClick=document.getElementById('deadline').style.display='inLine'><FONT SIZE=-2>change this</FONT></a><p>"
 					+ "<div id='deadline' style='display:none'>After the deadline, ChemVantage will no longer report scores on this exam to the LMS. "
 					+ "However, students may still use the assignment link to take practice exams.<br/>"
-					+ "<INPUT TYPE=TEXT SIZE=15 NAME=PracticeExamDeadline VALUE='" + dfShort.format(assignment.deadline) + "'> at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone."
+					+ "<INPUT TYPE=TEXT SIZE=15 NAME=PracticeExamDeadline VALUE='" + dfShort.format(assignment.deadline) + "'> at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone.<br/>"
+					+ "<label><INPUT TYPE=CHECKBOX NAME=EmailScores VALUE=true" + (assignment.emailScoresToInstructor?" CHECKED>":">") + " Email scores to me after the deadline.</lable><br>"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Set Deadline'></FORM></div><p>");
 			
 			buf.append("<b>Customize This Exam</b> <a id=slink href=/Groups?UserRequest=AssignExamQuestions&GroupId=" + group.id + "&AssignmentId=" + assignment.id + "&Nonce=" + nonce + "><FONT SIZE=-2>select questions</FONT></a><p>");

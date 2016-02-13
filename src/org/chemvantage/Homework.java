@@ -122,7 +122,8 @@ public class Homework extends HttpServlet {
 					+ "<b>Homework Deadline: " + dfLong.format(assignment.deadline) + "</b> <a href=# onClick=document.getElementById('deadline').style.display='inLine'><FONT SIZE=-2>change this</FONT></a><p>"
 					+ "<div id='deadline' style='display:none'>After the deadline, ChemVantage will no longer report scores on this assignment to the LMS. "
 					+ "However, students may still use the assignment link to practice solving problems.<br/>"
-					+ "<INPUT TYPE=TEXT SIZE=15 NAME=HWDeadline VALUE='" + dfShort.format(assignment.deadline) + "'> at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone."
+					+ "<INPUT TYPE=TEXT SIZE=15 NAME=HWDeadline VALUE='" + dfShort.format(assignment.deadline) + "'> at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone.<br/>"
+					+ "<label><INPUT TYPE=CHECKBOX NAME=EmailScores VALUE=true" + (assignment.emailScoresToInstructor?" CHECKED>":">") + " Email scores to me after the deadline.</lable><br>"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Set Deadline'></FORM></div><p>");
 			
 			buf.append("<b>Customize This Homework Assignment</b> <a href=/Groups?UserRequest=AssignHomeworkQuestions&GroupId=" + group.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + "><FONT SIZE=-2>select questions</FONT></a><p>");
