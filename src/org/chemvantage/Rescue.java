@@ -57,9 +57,10 @@ public class Rescue extends HttpServlet {
 			List<Assignment> assignments = ofy().load().type(Assignment.class).filter("deadline >",startWindow).filter("deadline <",endWindow).list();
 			for (Assignment a : assignments) {
 				Group group = ofy().load().type(Group.class).id(a.groupId).now();
-				if (group==null || !group.sendRescueMessages) continue;
+				if (group==null) continue;
 				Queue queue = QueueFactory.getDefaultQueue();
-				queue.add(withUrl("/Rescue").param("AssignmentId",Long.toString(a.id)));
+				if (group.sendRescueMessages) queue.add(withUrl("/Rescue").param("AssignmentId",Long.toString(a.id)));
+				if (group.emailScoresToInstructor) queue.add(withUrl("/EmailScores").param("AssignmentId", Long.toString(a.id)));
 			}
 		} catch (Exception e) {
 		}

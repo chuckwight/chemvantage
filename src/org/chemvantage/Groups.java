@@ -181,6 +181,7 @@ public class Groups extends HttpServlet {
 				setTimeZone(user,group,request);
 				out.println(groupsForm(user,request,nonce));
 			} else if (userRequest.equals("Set Deadline")) {
+				setEmailScores(group,request);
 				setTimeZone(user,group,request);
 				updateDeadlines(group,request);
 				String assignmentType = request.getParameter("AssignmentType");
@@ -255,6 +256,14 @@ public class Groups extends HttpServlet {
 			out.println(Home.footer);
 		} catch (Exception e) {
 			response.getWriter().println(e.toString());
+		}
+	}
+	
+	void setEmailScores(Group group,HttpServletRequest request) {
+		try {
+			if ("true".equals(request.getParameter("EmailScores"))) group.emailScoresToInstructor = true;
+			else group.emailScoresToInstructor = false;
+		} catch (Exception e) {	
 		}
 	}
 	
@@ -977,7 +986,7 @@ public class Groups extends HttpServlet {
 		}
 		return buf.toString();
 	}
-	
+
 	public String showGroupScores(User user,Group group,HttpServletRequest request,String nonce) {
 		long LIMIT_MILLIS = 1000 * 25; // response time limit in milliseconds
 		StringBuffer buf = new StringBuffer();
