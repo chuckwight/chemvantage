@@ -271,8 +271,6 @@ public class LTILaunch extends HttpServlet {
 		 * resourcePicker page to choose a valid assignmentId and topicId or topicIds.
 		 */
 		String redirectUrl = "";
-		Date now = new Date();
-		Date sixMonthsFromNow = new Date(now.getTime() + 15768000000L);  // proposed deadline in six months
 		Assignment myAssignment = null;
 		String assignmentType = request.getParameter("AssignmentType");
 		if (assignmentType==null) assignmentType = request.getParameter("custom_AssignmentType");  // supports custom LTI variables
@@ -316,7 +314,7 @@ public class LTILaunch extends HttpServlet {
 							break;
 						}
 					}
-					if (myAssignment==null) myAssignment = new Assignment(user.myGroupId,topicIds,assignmentType,sixMonthsFromNow);
+					if (myAssignment==null) myAssignment = new Assignment(user.myGroupId,topicIds,assignmentType,new Date(0));
 
 				} else {  // assignmentType is Quiz or Homework
 					String tId = request.getParameter("TopicId");
@@ -328,7 +326,7 @@ public class LTILaunch extends HttpServlet {
 							break;
 						}
 					}
-					if (myAssignment==null) myAssignment = new Assignment(user.myGroupId,topicId,assignmentType,sixMonthsFromNow);
+					if (myAssignment==null) myAssignment = new Assignment(user.myGroupId,topicId,assignmentType,new Date(0));
 				}
 
 				if (user.isInstructor()) {  // must be the instructor to modify or store myAssignment

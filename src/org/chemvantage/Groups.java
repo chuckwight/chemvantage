@@ -404,8 +404,8 @@ public class Groups extends HttpServlet {
 			
 			Query<Assignment> assignments = ofy().load().type(Assignment.class).filter("groupId",group.id);
 			for (Assignment a : assignments) {  // adjust the deadline to correspond to midnight on the new TimeZone
-				long deadline = a.deadline.getTime();
-				a.deadline = new Date(deadline + oldTZ.getOffset(deadline) - newTZ.getOffset(deadline));
+				long deadline = a.getDeadline().getTime();
+				a.setDeadline(new Date(deadline + oldTZ.getOffset(deadline) - newTZ.getOffset(deadline)));
 				ofy().save().entity(a);
 			}
 			group.timeZone = request.getParameter("TimeZone");
@@ -479,13 +479,13 @@ public class Groups extends HttpServlet {
 							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + t.id + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>\n");
 					buf.append("<TR><TD>" + t.title + "</TD><TD><INPUT SIZE=15 NAME=QuizDeadline ");
-					buf.append((q==null?"VALUE='not assigned' onFocus=\"A" + t.id + ".QuizDeadline.value='" + today + "'\"":"VALUE='" + df.format(q.deadline) + "'")
+					buf.append((q==null?"VALUE='not assigned' onFocus=\"A" + t.id + ".QuizDeadline.value='" + today + "'\"":"VALUE='" + df.format(q.getDeadline()) + "'")
 							+ "></TD>\n"
 							+ "<TD ALIGN=CENTER>" + (q==null?0+"</TD><TD></TD>":q.questionKeys.size() + "</TD>"
 									+ "<TD ALIGN=CENTER><A href=Groups?UserRequest=AssignQuizQuestions&GroupId=" + group.id + "&TopicId=" + t.id + ">Select</A></TD>")
 									+ "<TD></TD>\n");
 					buf.append("<TD><INPUT SIZE=15 NAME=HWDeadline "); 
-					buf.append((h==null?"VALUE='not assigned' onFocus=\"A" + t.id + ".HWDeadline.value='" + today + "'\"":"VALUE='" + df.format(h.deadline) + "'")
+					buf.append((h==null?"VALUE='not assigned' onFocus=\"A" + t.id + ".HWDeadline.value='" + today + "'\"":"VALUE='" + df.format(h.getDeadline()) + "'")
 							+ "></TD>\n"
 							+ "<TD ALIGN=CENTER>" + (h==null?0+"</TD><TD></TD>":h.questionKeys.size() + "</TD>"
 									+ "<TD ALIGN=CENTER><A href=Groups?UserRequest=AssignHomeworkQuestions&GroupId=" + group.id + "&TopicId=" + t.id + ">Assign</A></TD>")
@@ -525,7 +525,7 @@ public class Groups extends HttpServlet {
 			buf.append("<b>Subject: " + subject.title + "<br>"
 					+ "Topic: " + topic.title + "<br>"
 					+ "Group: " + group.description + "<br>"
-					+ "Deadline: " + df.format(assignment.deadline) + "</b><br>");
+					+ "Deadline: " + df.format(assignment.getDeadline()) + "</b><br>");
 			buf.append("<a href='Groups'>Return to Groups Page</a><p>");
 
 			buf.append("Each quiz consists of 10 questions selected at random from the items below. You may select "
@@ -607,7 +607,7 @@ public class Groups extends HttpServlet {
 			buf.append("<b>Subject: " + subject.title + "<br>"
 					+ "Topic: " + topic.title + "<br>"
 					+ "Group: " + group.description + "<br>"
-					+ "Deadline: " + df.format(assignment.deadline) + "</b><br>");
+					+ "Deadline: " + df.format(assignment.getDeadline()) + "</b><br>");
 			buf.append("<a href='Groups'>Return to Groups Page</a><p>");
 
 			buf.append("Select the questions to be assigned to students in this group, then click the button "
@@ -687,7 +687,7 @@ public class Groups extends HttpServlet {
 			df.setTimeZone(group.getTimeZone());
 			buf.append("<b>Subject: " + subject.title + "</b><br/>"
 					+ "Group: " + group.description + "<br/>"
-					+ "Deadline: " + df.format(assignment.deadline) + "<br/>"
+					+ "Deadline: " + df.format(assignment.getDeadline()) + "<br/>"
 					+ "Topics:<OL>");
 			for (Topic t:topics.values()) buf.append("<LI>" + t.title + "</LI>");
 			buf.append("</OL>");
@@ -830,19 +830,25 @@ public class Groups extends HttpServlet {
 				if (d==null) throw new Exception(); // skip this section
 				long i = group.getAssignmentId("Quiz",topicId);
 				Assignment a = i>0?ofy().load().type(Assignment.class).id(i).safe():null;
-				if (a != null && d.length()==0) ofy().delete().entity(a);
-				else if (d.length()>0) {
-					if (a==null) a = new Assignment(group.id,topicId,"Quiz",new Date());
+				if (a != null && d.length()==0) { // delete this assignment
+					ofy().delete().entity(a).now();
+					throw new Exception(); // escape to next section
+				}
+				if (a==null) a = new Assignment(group.id,topicId,"Quiz",new Date());
+				try {
 					deadline.setTime(df.parse(d));
 					deadline.add(Calendar.DATE,1);		// add 1 day and subtract 1 second
 					deadline.add(Calendar.SECOND,-1);	// to set deadline 1 second before midnight on the date indicated
-					if (a.deadline.compareTo(deadline.getTime())!=0 || a.emailScoresToInstructor!=emailOption) {  // deadline or option was changed
-						a.deadline = deadline.getTime();
-						a.emailScoresToInstructor = emailOption;
-						ofy().save().entity(a);
-						group.deleteScores(a);
-						QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));
-					}
+				} catch (Exception e) {
+					deadline.setTime(new Date(0));
+					emailOption = false;
+				}
+				if (a.getDeadline().compareTo(deadline.getTime())!=0 || a.emailScoresToInstructor!=emailOption) {  // deadline or option was changed
+					a.setDeadline(deadline.getTime());
+					a.emailScoresToInstructor = emailOption;
+					ofy().save().entity(a);
+					group.deleteScores(a);
+					QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));
 				}
 			} catch (Exception e2) {}
 			try { // update the homework deadline for this topic
@@ -850,19 +856,25 @@ public class Groups extends HttpServlet {
 				if (d==null) throw new Exception(); // skip this section
 				long i = group.getAssignmentId("Homework",topicId);
 				Assignment a = i>0?ofy().load().type(Assignment.class).id(i).safe():null;
-				if (a != null && d.length()==0) ofy().delete().entity(a);
-				else if (d.length()>0) {
-					if (a==null) a = new Assignment(group.id,topicId,"Homework",new Date());
+				if (a != null && d.length()==0) { // delete this assignment
+					ofy().delete().entity(a).now();
+					throw new Exception(); // escape to next section
+				}
+				if (a==null) a = new Assignment(group.id,topicId,"Homework",new Date());
+				try {
 					deadline.setTime(df.parse(d));
 					deadline.add(Calendar.DATE,1);		// add 1 day and subtract 1 second
 					deadline.add(Calendar.SECOND,-1);	// to set deadline 1 second before midnight on the date indicated
-					if (a.deadline.compareTo(deadline.getTime())!=0 || a.emailScoresToInstructor!=emailOption) {  // deadline or option was changed
-						a.deadline = deadline.getTime();
-						a.emailScoresToInstructor = emailOption;
-						ofy().save().entity(a);
-						group.deleteScores(a);
-						QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));
-					}
+				} catch (Exception e) {
+					deadline.setTime(new Date(0));
+					emailOption = false;
+				}
+				if (a.getDeadline().compareTo(deadline.getTime())!=0 || a.emailScoresToInstructor!=emailOption) {  // deadline or option was changed
+					a.setDeadline(deadline.getTime());
+					a.emailScoresToInstructor = emailOption;
+					ofy().save().entity(a);
+					group.deleteScores(a);
+					QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));
 				}
 			} catch (Exception e2) {}
 			try { // update the practice exam deadline for this assignment
@@ -870,19 +882,25 @@ public class Groups extends HttpServlet {
 				if (d==null) throw new Exception(); // skip this section
 				long i = Long.parseLong(request.getParameter("AssignmentId"));
 				Assignment a = i>0?ofy().load().type(Assignment.class).id(i).safe():null;
-				if (a != null && d.length()==0) ofy().delete().entity(a);
-				else if (d.length()>0) {
-					if (a==null) a = new Assignment(group.id,topicId,"PracticeExam",new Date());
+				if (a != null && d.length()==0) { // delete this assignment
+					ofy().delete().entity(a).now();
+					throw new Exception(); // escape to next section
+				}
+				if (a==null) a = new Assignment(group.id,topicId,"PracticeExam",new Date());
+				try {
 					deadline.setTime(df.parse(d));
 					deadline.add(Calendar.DATE,1);		// add 1 day and subtract 1 second
 					deadline.add(Calendar.SECOND,-1);	// to set deadline 1 second before midnight on the date indicated
-					if (a.deadline.compareTo(deadline.getTime())!=0 || a.emailScoresToInstructor!=emailOption) {  // deadline or option was changed
-						a.deadline = deadline.getTime();
-						a.emailScoresToInstructor = emailOption;
-						ofy().save().entity(a);
-						group.deleteScores(a);
-						QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));
-					}
+				} catch (Exception e) {
+					deadline.setTime(new Date(0));
+					emailOption = false;
+				}
+				if (a.getDeadline().compareTo(deadline.getTime())!=0 || a.emailScoresToInstructor!=emailOption) {  // deadline or option was changed
+					a.setDeadline(deadline.getTime());
+					a.emailScoresToInstructor = emailOption;
+					ofy().save().entity(a);
+					group.deleteScores(a);
+					QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));
 				}
 			} catch (Exception e2) {}
 			
@@ -913,7 +931,7 @@ public class Groups extends HttpServlet {
 			List<Assignment> copyAssignments = ofy().load().type(Assignment.class).filter("groupId",copyGroupId).list();
 			
 			for (Assignment ca : copyAssignments) {
-				long utcDeadlineMillis = ca.deadline.getTime();
+				long utcDeadlineMillis = ca.getDeadline().getTime();
 				Date deadline = new Date(utcDeadlineMillis + cgTZ.getOffset(utcDeadlineMillis) - myTZ.getOffset(utcDeadlineMillis));
 				Assignment newAssignment = new Assignment(group.id,ca.topicId,ca.assignmentType,deadline);
 				newAssignment.questionKeys = ca.questionKeys;
@@ -1013,7 +1031,7 @@ public class Groups extends HttpServlet {
 				for (Assignment a : assignments) {
 					buf.append("<TR><TD><b>" + (assignmentType.equals("Quiz")?"Q":"HW") + counter + "</b></TD>"
 							+ "<TD>" + ofy().load().type(Topic.class).id(a.topicId).safe().title + "</TD>"
-							+ "<TD>" + df.format(a.deadline) + "</TD></TR>");
+							+ "<TD>" + df.format(a.getDeadline()) + "</TD></TR>");
 					counter++;
 				}
 				buf.append("</TABLE>");
@@ -1061,7 +1079,7 @@ public class Groups extends HttpServlet {
 							nAttempts[j] += s.numberOfAttempts;
 						}
 						j++;
-						buf.append("<TD ALIGN=CENTER>" + s.getDotScore(a.deadline,group.rescueThresholdScore) + "</TD>");
+						buf.append("<TD ALIGN=CENTER>" + s.getDotScore(a.getDeadline(),group.rescueThresholdScore) + "</TD>");
 					}
 					buf.append("<TD ALIGN=CENTER>" + studentTotalScore + "</TD></TR>");
 				}
@@ -1104,7 +1122,7 @@ public class Groups extends HttpServlet {
 							nAttempts[j] += s.numberOfAttempts;
 						}
 						j++;
-						buf.append("<TD ALIGN=CENTER>" + s.getDotScore(a.deadline,group.rescueThresholdScore) + "</TD>");
+						buf.append("<TD ALIGN=CENTER>" + s.getDotScore(a.getDeadline(),group.rescueThresholdScore) + "</TD>");
 					}
 					buf.append("<TD ALIGN=CENTER>" + studentTotalScore + "</TD></TR>");
 					if (System.currentTimeMillis()-startTime > LIMIT_MILLIS) {

@@ -122,7 +122,7 @@ public class EmailScores extends HttpServlet {
 					ofy().save().entity(s).now();
 				}
 				i++;
-				buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.deadline,group.rescueThresholdScore) + "</TD></TR>");
+				buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.getDeadline(),group.rescueThresholdScore) + "</TD></TR>");
 			}
 		}
 		buf.append("</TABLE><p>");
@@ -141,7 +141,7 @@ public class EmailScores extends HttpServlet {
 				ofy().save().entity(s).now();
 			}
 			i++;
-			buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.deadline,group.rescueThresholdScore) + "</TD></TR>");
+			buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.getDeadline(),group.rescueThresholdScore) + "</TD></TR>");
 		}
 		buf.append("</TABLE>");
 		return buf.toString();
@@ -178,7 +178,7 @@ public class EmailScores extends HttpServlet {
 					ofy().save().entity(s).now();
 				}
 				i++;
-				buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.deadline,group.rescueThresholdScore) + "</TD></TR>");
+				buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.getDeadline(),group.rescueThresholdScore) + "</TD></TR>");
 			}
 		}
 		buf.append("</TABLE><p>");
@@ -197,7 +197,7 @@ public class EmailScores extends HttpServlet {
 				ofy().save().entity(s).now();
 			}
 			i++;
-			buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.deadline,group.rescueThresholdScore) + "</TD></TR>");
+			buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.getDeadline(),group.rescueThresholdScore) + "</TD></TR>");
 		}
 		buf.append("</TABLE>");
 		return buf.toString();
@@ -239,7 +239,7 @@ public class EmailScores extends HttpServlet {
 					ofy().save().entity(s).now();
 				}
 				i++;
-				buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.deadline,group.rescueThresholdScore) + "</TD></TR>");
+				buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.getDeadline(),group.rescueThresholdScore) + "</TD></TR>");
 			}
 		}
 		buf.append("</TABLE><p>");
@@ -258,7 +258,7 @@ public class EmailScores extends HttpServlet {
 				ofy().save().entity(s).now();
 			}
 			i++;
-			buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.deadline,group.rescueThresholdScore) + "</TD></TR>");
+			buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.getDeadline(),group.rescueThresholdScore) + "</TD></TR>");
 		}
 		buf.append("</TABLE>");
 	

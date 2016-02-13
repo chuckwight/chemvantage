@@ -119,17 +119,20 @@ public class Quiz extends HttpServlet {
 			
 			buf.append("<h2>Quiz - " + topic.title + " (" + subject.title + ")</h2>");
 			buf.append("<FONT SIZE=-1>This is the instructor page; students will <a href=/Quiz?TopicId=" + topic.id + "&ShowQuiz=true&Nonce=" + nonce + ">go directly to the quiz</a>.</FONT><p>");
-			
+			boolean noDeadline = assignment.getDeadline().getTime()==0L;
 			buf.append("<FORM ACTION='/Groups' METHOD=POST>"
 					+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Quiz>"
 					+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE=" + topic.id + ">"
 					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE=" + group.id + ">"
-					+ "<b>Quiz Deadline: " + dfLong.format(assignment.deadline) + "</b> <a href=# onClick=document.getElementById('deadline').style.display='inLine'><FONT SIZE=-2>change this</FONT></a><p>"
-					+ "<div id='deadline' style='display:none'>After the deadline, ChemVantage will no longer report scores on this quiz to the LMS. "
-					+ "However, students may still use the assignment link to take practice quizzes.<br/>"
-					+ "<INPUT TYPE=TEXT SIZE=15 NAME=QuizDeadline VALUE='" + dfShort.format(assignment.deadline) + "'> at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone.<br/>"
-					+ "<label><INPUT TYPE=CHECKBOX NAME=EmailScores VALUE=true" + (assignment.emailScoresToInstructor?" CHECKED>":">") + " Email scores to me after the deadline.</lable><br>"
+					+ "<b>Quiz Deadline:</b> " + (noDeadline?"<FONT COLOR=RED>none</FONT>":dfLong.format(assignment.getDeadline()))
+					+ " <a href=# onClick=document.getElementById('deadlineForm').style.display='inLine'><FONT SIZE=-2>change this</FONT></a><p>");
+			buf.append("<div id='deadlineForm' style='display:none'>"
+					+ "Enter a date below and select your local time zone. After the deadline ChemVantage will not report scores on this quiz to the LMS, but students may still use the assignment link to take practice quizzes.<br/>"
+					+ "<INPUT TYPE=TEXT SIZE=15 NAME=QuizDeadline VALUE='" + (noDeadline?"none":dfShort.format(assignment.getDeadline())) 
+					+ "' onFocus=QuizDeadline.value='" + dfShort.format(new Date()) + "';document.getElementById('esBox').checked=true>"
+					+ "at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone.<br/>"
+					+ "<label><INPUT TYPE=CHECKBOX ID=esBox NAME=EmailScores VALUE=true" + (assignment.emailScoresToInstructor?" CHECKED>":">") + " Email scores to me after the deadline.</lable><br>"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Set Deadline'></FORM></div><p>");
 			
 			buf.append("<b>Customize This Quiz</b> <a id=slink href=/Groups?UserRequest=AssignQuizQuestions&GroupId=" + group.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + "><FONT SIZE=-2>select questions</FONT></a><p>");
@@ -171,7 +174,7 @@ public class Quiz extends HttpServlet {
 						ofy().save().entity(s).now();
 					}
 					i++;
-					buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.deadline,group.rescueThresholdScore) + "</TD></TR>");
+					buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getScore() + "</TD></TR>");
 				}
 			}
 			buf.append("</TABLE><p>");
@@ -180,6 +183,7 @@ public class Quiz extends HttpServlet {
 			i=0;
 			buf.append("Students<br>"
 					+ "<TABLE BORDER=1 CELLSPACING=0><TR><TD></TD><TD>Name</TD><TD>Email</TD><TD>Score</TD></TR>");
+			Date now = new Date();
 			for (String id:group.memberIds) {
 				User u = members.get(id);
 				if (u.isInstructor() || u.isAdministrator() || group.isTA(u.id)) continue;
@@ -190,7 +194,7 @@ public class Quiz extends HttpServlet {
 					ofy().save().entity(s).now();
 				}
 				i++;
-				buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.deadline,group.rescueThresholdScore) + "</TD></TR>");
+				buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(noDeadline?now:assignment.getDeadline(),group.rescueThresholdScore) + "</TD></TR>");
 			}
 			buf.append("</TABLE>");
 		} catch (Exception e) {

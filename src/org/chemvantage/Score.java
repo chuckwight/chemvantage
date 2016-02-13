@@ -56,10 +56,13 @@ public class Score {    // this object represents a best score achieved by a use
 		s.score = 0;
 		s.overallScore = 0;
 		s.numberOfAttempts = 0;
+		Date now = new Date();
+		Date deadline = a.getDeadline().getTime()==0?now:a.getDeadline();
+		
 		if (a.assignmentType.equals("Quiz")) {
 			Query<QuizTransaction> quizTransactions = ofy().load().type(QuizTransaction.class).filter("userId",userId).filter("topicId",a.topicId);
 			for (QuizTransaction qt : quizTransactions) {
-				if (qt.downloaded.before(a.deadline)) {  // pre-deadline group score
+				if (qt.downloaded.before(deadline)) {  // pre-deadline group score
 					s.numberOfAttempts++;  // number of pre-deadline quiz attempts
 					s.score = (qt.score>s.score?qt.score:s.score);  // keep the best (max) score
 				}
@@ -77,7 +80,7 @@ public class Score {    // this object represents a best score achieved by a use
 			List<Key<Question>> assignmentQuestionKeys = new ArrayList<Key<Question>>();
 			assignmentQuestionKeys.addAll(a.questionKeys);  // clones the assignment List of question keys
 			for (HWTransaction ht : hwTransactions) {
-				if (ht.graded.before(a.deadline)) {
+				if (ht.graded.before(deadline)) {
 					s.numberOfAttempts++;
 					if (ht.score > 0 && assignmentQuestionKeys.remove(Key.create(Question.class,ht.questionId))) s.score++; 
 				}
@@ -95,7 +98,7 @@ public class Score {    // this object represents a best score achieved by a use
 			int possibleScore = 0;
 			for (PracticeExamTransaction pt : practiceExamTransactions) {
 				if (pt.graded==null || !pt.topicsMatch(a.topicIds)) continue;
-				if (pt.downloaded.before(a.deadline)) {  // pre-deadline group score
+				if (pt.downloaded.before(deadline)) {  // pre-deadline group score
 					s.numberOfAttempts++;  // number of pre-deadline quiz attempts
 					score = 0;
 					for (int i=0;i<pt.scores.length;i++) score += pt.scores[i];

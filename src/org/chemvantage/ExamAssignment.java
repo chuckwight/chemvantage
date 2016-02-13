@@ -52,6 +52,6 @@ public class ExamAssignment implements Comparable<Assignment> {
     }
     
     public int compareTo(Assignment other) {
-    	return (int)(this.deadline.getTime() - other.deadline.getTime());
+    	return (int)(this.deadline.getTime() - other.getDeadline().getTime());
     }
 }

@@ -131,7 +131,7 @@ public class Group implements Serializable {
     	this.nextDeadline = null;
     	try {
     		Query<Assignment> assignments = ofy().load().type(Assignment.class).filter("groupId",this.id).filter("deadline >",new Date());
-    		for (Assignment a : assignments) if (this.nextDeadline == null || a.deadline.before(nextDeadline)) this.nextDeadline = a.deadline;
+    		for (Assignment a : assignments) if (this.nextDeadline == null || a.getDeadline().before(nextDeadline)) this.nextDeadline = a.getDeadline();
     		ofy().save().entity(this).now();
     	} catch (Exception e) {}
     }

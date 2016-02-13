@@ -99,8 +99,8 @@ public class Homework extends HttpServlet {
 	}
 
 	String instructorPage(HttpServletRequest request,long assignmentId,String nonce) {
-		// this page is displayed by default when the instructor accesses this assigned quiz
-		// to view the quiz itself, include ShowHomework=true as one of the GET parameters
+		// this page is displayed by default when the instructor accesses this assignment
+		// to view the homework assignment itself, include ShowHomework=true as one of the GET parameters
 		StringBuffer buf = new StringBuffer();
 		try {
 			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
@@ -110,6 +110,7 @@ public class Homework extends HttpServlet {
 			DateFormat dfLong = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			dfShort.setTimeZone(group.getTimeZone());
 			dfLong.setTimeZone(group.getTimeZone());
+			boolean noDeadline = assignment.getDeadline().getTime()==0L;
 			
 			buf.append("<h2>Homework - " + topic.title + " (" + subject.title + ")</h2>");
 			buf.append("<FONT SIZE=-1>This is the instructor page; students will <a href=/Homework?TopicId=" + topic.id + "&ShowHomework=true&Nonce=" + nonce + ">go directly to the assignment</a>.</FONT><p>");
@@ -119,13 +120,16 @@ public class Homework extends HttpServlet {
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Homework>"
 					+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE=" + topic.id + ">"
 					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE=" + group.id + ">"
-					+ "<b>Homework Deadline: " + dfLong.format(assignment.deadline) + "</b> <a href=# onClick=document.getElementById('deadline').style.display='inLine'><FONT SIZE=-2>change this</FONT></a><p>"
-					+ "<div id='deadline' style='display:none'>After the deadline, ChemVantage will no longer report scores on this assignment to the LMS. "
-					+ "However, students may still use the assignment link to practice solving problems.<br/>"
-					+ "<INPUT TYPE=TEXT SIZE=15 NAME=HWDeadline VALUE='" + dfShort.format(assignment.deadline) + "'> at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone.<br/>"
-					+ "<label><INPUT TYPE=CHECKBOX NAME=EmailScores VALUE=true" + (assignment.emailScoresToInstructor?" CHECKED>":">") + " Email scores to me after the deadline.</lable><br>"
+					+ "<b>Homework Deadline:</b> " + (noDeadline?"<FONT COLOR=RED>none</FONT>":dfLong.format(assignment.getDeadline()))
+					+ " <a href=# onClick=document.getElementById('deadlineForm').style.display='inLine'><FONT SIZE=-2>change this</FONT></a><p>");
+			buf.append("<div id='deadlineForm' style='display:none'>"
+					+ "Enter a date below and select your local time zone. After the deadline ChemVantage will not report scores on this assignment to the LMS, but students may still use the assignment link to practice solving problems.<br/>"
+					+ "<INPUT TYPE=TEXT SIZE=15 NAME=HWDeadline VALUE='" + (noDeadline?"none":dfShort.format(assignment.getDeadline())) 
+					+ "' onFocus=HWDeadline.value='" + dfShort.format(new Date()) + "';document.getElementById('esBox').checked=true>"
+					+ "at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone.<br/>"
+					+ "<label><INPUT TYPE=CHECKBOX ID=esBox NAME=EmailScores VALUE=true" + (assignment.emailScoresToInstructor?" CHECKED>":">") + " Email scores to me after the deadline.</lable><br>"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Set Deadline'></FORM></div><p>");
-			
+		
 			buf.append("<b>Customize This Homework Assignment</b> <a href=/Groups?UserRequest=AssignHomeworkQuestions&GroupId=" + group.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + "><FONT SIZE=-2>select questions</FONT></a><p>");
 				
 			buf.append("<b>Homework Rules</b> <a id=rlink href=# onClick=document.getElementById('rules').style.display='inLine';document.getElementById('rlink').style.display='none'><FONT SIZE=-2>show more</FONT></a><br/>"
@@ -169,13 +173,14 @@ public class Homework extends HttpServlet {
 						ofy().save().entity(s).now();
 					}
 					i++;
-					buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.deadline,group.rescueThresholdScore) + "</TD></TR>");
+					buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getScore() + "</TD></TR>");
 				}
 			}
 			buf.append("</TABLE><p>");
 	
 			// display the table of student scores, filling in where it may be incomplete (this is rare, but possible due to add/drop)
 			i=0;
+			Date now = new Date();
 			buf.append("Students<br>"
 					+ "<TABLE BORDER=1 CELLSPACING=0><TR><TD></TD><TD>Name</TD><TD>Email</TD><TD>Score</TD></TR>");
 			for (String id:group.memberIds) {
@@ -188,7 +193,7 @@ public class Homework extends HttpServlet {
 					ofy().save().entity(s).now();
 				}
 				i++;
-				buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.deadline,group.rescueThresholdScore) + "</TD></TR>");
+				buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(noDeadline?now:assignment.getDeadline(),group.rescueThresholdScore) + "</TD></TR>");
 			}
 			buf.append("</TABLE>");
 		} catch (Exception e) {

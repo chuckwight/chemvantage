@@ -156,6 +156,7 @@ public class PracticeExam extends HttpServlet {
 			DateFormat dfLong = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			dfShort.setTimeZone(group.getTimeZone());
 			dfLong.setTimeZone(group.getTimeZone());
+			boolean noDeadline = assignment.getDeadline().getTime()==0L;
 			
 			buf.append("\n<h2>" + subject.title + " Practice Exam</h2>");
 			buf.append("<FONT SIZE=-1>This is the instructor page; students will <a href=/PracticeExam?AssignmentId=" + assignment.id + "&ShowPracticeExam=true&Nonce=" + nonce + ">go directly to the practice exam</a>.</FONT><p>");
@@ -169,13 +170,16 @@ public class PracticeExam extends HttpServlet {
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=PracticeExam>"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE=" + assignment.id + ">"
 					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE=" + group.id + ">"
-					+ "<b>Deadline: " + dfLong.format(assignment.deadline) + "</b> <a href=# onClick=document.getElementById('deadline').style.display='inLine'><FONT SIZE=-2>change this</FONT></a><p>"
-					+ "<div id='deadline' style='display:none'>After the deadline, ChemVantage will no longer report scores on this exam to the LMS. "
-					+ "However, students may still use the assignment link to take practice exams.<br/>"
-					+ "<INPUT TYPE=TEXT SIZE=15 NAME=PracticeExamDeadline VALUE='" + dfShort.format(assignment.deadline) + "'> at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone.<br/>"
-					+ "<label><INPUT TYPE=CHECKBOX NAME=EmailScores VALUE=true" + (assignment.emailScoresToInstructor?" CHECKED>":">") + " Email scores to me after the deadline.</lable><br>"
+					+ "<b>Practice Exam Deadline:</b> " + (noDeadline?"<FONT COLOR=RED>none</FONT>":dfLong.format(assignment.getDeadline()))
+					+ " <a href=# onClick=document.getElementById('deadlineForm').style.display='inLine'><FONT SIZE=-2>change this</FONT></a><p>");
+			buf.append("<div id='deadlineForm' style='display:none'>"
+					+ "Enter a date below and select your local time zone. After the deadline ChemVantage will not report scores on this assignment to the LMS, but students may still use the assignment link for practice.<br/>"
+					+ "<INPUT TYPE=TEXT SIZE=15 NAME=PracticeExamDeadline VALUE='" + (noDeadline?"none":dfShort.format(assignment.getDeadline())) 
+					+ "' onFocus=PracticeExamDeadline.value='" + dfShort.format(new Date()) + "';document.getElementById('esBox').checked=true>"
+					+ "at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone.<br/>"
+					+ "<label><INPUT TYPE=CHECKBOX ID=esBox NAME=EmailScores VALUE=true" + (assignment.emailScoresToInstructor?" CHECKED>":">") + " Email scores to me after the deadline.</lable><br>"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Set Deadline'></FORM></div><p>");
-			
+		
 			buf.append("<b>Customize This Exam</b> <a id=slink href=/Groups?UserRequest=AssignExamQuestions&GroupId=" + group.id + "&AssignmentId=" + assignment.id + "&Nonce=" + nonce + "><FONT SIZE=-2>select questions</FONT></a><p>");
 				
 			buf.append("<b>Practice Exam Rules</b> <a id=rlink href=# onClick=document.getElementById('rules').style.display='inLine';document.getElementById('rlink').style.display='none'><FONT SIZE=-2>show more</FONT></a><br/>"
@@ -216,13 +220,14 @@ public class PracticeExam extends HttpServlet {
 						ofy().save().entity(s).now();
 					}
 					i++;
-					buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.deadline,group.rescueThresholdScore) + "</TD></TR>");
+					buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getScore() + "</TD></TR>");
 				}
 			}
 			buf.append("</TABLE><p>");
 	
 			// display the table of student scores, filling in where it may be incomplete (this is rare, but possible due to add/drop)
 			i=0;
+			Date now = new Date();
 			buf.append("Students<br>"
 					+ "<TABLE BORDER=1 CELLSPACING=0><TR><TD></TD><TD>Name</TD><TD>Email</TD><TD>Score</TD></TR>");
 			for (String id:group.memberIds) {
@@ -235,7 +240,7 @@ public class PracticeExam extends HttpServlet {
 					ofy().save().entity(s).now();
 				}
 				i++;
-				buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.deadline,group.rescueThresholdScore) + "</TD></TR>");
+				buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(noDeadline?now:assignment.getDeadline(),group.rescueThresholdScore) + "</TD></TR>");
 			}
 			buf.append("</TABLE>");
 		} catch (Exception e) {

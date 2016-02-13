@@ -379,13 +379,13 @@ public class Scores extends HttpServlet {
 				buf.append("<TR><TD>" + t.title + "</TD>");
 				
 				if (qa != null) { // print the quiz score for this topic in the table. The random value helps defeat browser page caching
-					buf.append("<TD ALIGN=CENTER" + (qa.deadline.equals(nextDeadline)?" style=background:#FFFF00>":">") + "<a href=Quiz?TopicId=" + topicId + "&r=" + random + ">" + df.format(qa.deadline) + "</a></TD>");
-					buf.append("<TD ALIGN=CENTER>" + myGroup.getScore(user.id,qa).getEnhancedDotScore(qa.deadline,myGroup.rescueThresholdScore) + "</TD>");
+					buf.append("<TD ALIGN=CENTER" + (qa.getDeadline().equals(nextDeadline)?" style=background:#FFFF00>":">") + "<a href=Quiz?TopicId=" + topicId + "&r=" + random + ">" + df.format(qa.getDeadline()) + "</a></TD>");
+					buf.append("<TD ALIGN=CENTER>" + myGroup.getScore(user.id,qa).getEnhancedDotScore(qa.getDeadline(),myGroup.rescueThresholdScore) + "</TD>");
 				} else buf.append("<TD COLSPAN=2 ALIGN=CENTER style=color:#808080>(not assigned)</TD>");
 				
 				if (hwa != null && hwa.questionKeys.size()>0) { // print the homework score for this topic in the table. The random value helps defeat browser page caching
-					buf.append("<TD ALIGN=CENTER" + (hwa.deadline.equals(nextDeadline)?" style=background:#FFFF00>":">") + "<a href=Homework?TopicId=" + topicId + "&r=" + random  + ">" + df.format(hwa.deadline) + "</a></TD>");
-					buf.append("<TD ALIGN=CENTER>" + myGroup.getScore(user.id,hwa).getEnhancedDotScore(hwa.deadline,myGroup.rescueThresholdScore) + "</TD>");
+					buf.append("<TD ALIGN=CENTER" + (hwa.getDeadline().equals(nextDeadline)?" style=background:#FFFF00>":">") + "<a href=Homework?TopicId=" + topicId + "&r=" + random  + ">" + df.format(hwa.getDeadline()) + "</a></TD>");
+					buf.append("<TD ALIGN=CENTER>" + myGroup.getScore(user.id,hwa).getEnhancedDotScore(hwa.getDeadline(),myGroup.rescueThresholdScore) + "</TD>");
 				} else buf.append("<TD COLSPAN=2 ALIGN=CENTER style=color:#808080>(not assigned)</TD>");
 				buf.append("</TR>");
 				nRows++;

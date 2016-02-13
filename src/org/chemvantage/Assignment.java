@@ -36,7 +36,7 @@ public class Assignment implements Comparable<Assignment>,Serializable {
 	@Id 	Long id;
 	@Index	long groupId;
 	@Index	String assignmentType;
-	@Index	Date deadline;
+	@Index	private Date deadline;
 	@Index	long topicId;
 			boolean emailScoresToInstructor;
 			List<Long> topicIds; // used for practice exams which have multiple topicIds
@@ -60,14 +60,23 @@ public class Assignment implements Comparable<Assignment>,Serializable {
     	this.deadline = deadline;
     	for (Long topicId : topicIds) questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",topicId).keys().list());
     }
-    
+/*    
     Assignment(long groupId,String assignmentType) {
     	this.groupId = groupId;
     	this.assignmentType = assignmentType;
     }
-
+*/
     public int compareTo(Assignment other) {
     	return (int)(this.deadline.getTime() - other.deadline.getTime());
+    }
+    
+    public Date getDeadline() {
+    	if (this.deadline==null) return new Date(0);
+    	else return this.deadline;
+    }
+    
+    public void setDeadline(Date d) {
+    	this.deadline = d;
     }
     
     public void addResourceLinkId(String r) {
