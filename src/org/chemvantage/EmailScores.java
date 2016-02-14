@@ -77,15 +77,18 @@ public class EmailScores extends HttpServlet {
 			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
 			msg.setRecipient(Message.RecipientType.TO,new InternetAddress(instructor.getEmail(),instructor.getBothNames()));
 			msg.setSubject("ChemVantage Assignment Scores");
-
+			
+			String message = null;
 			switch (assignment.assignmentType) {
 			case ("Quiz"):
-				msg.setText(quizScores(group,assignment)); break;
+				message = quizScores(group,assignment); break;
 			case ("Homework"):
-				msg.setText(homeworkScores(group,assignment)); break;
+				message = homeworkScores(group,assignment); break;
 			case ("PracticeExam"):
-				msg.setText(practiceExamScores(group,assignment)); break;
+				message = practiceExamScores(group,assignment); break;
 			}
+			msg.setContent(message, "text/html");
+
 			Transport.send(msg);
 		}catch (Exception e) {
 		}

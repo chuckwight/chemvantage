@@ -123,7 +123,7 @@ public class Rescue extends HttpServlet {
 					String name = User.getBothNames(id);
 					msg.addRecipient(Message.RecipientType.CC,new InternetAddress(email,name));
 				}
-				msg.setText(messageText);
+				msg.setContent(messageText,"text/html");
 				Transport.send(msg);
 				}
 		}catch (Exception e) {

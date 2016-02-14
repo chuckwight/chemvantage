@@ -462,7 +462,7 @@ public class Scores extends HttpServlet {
 			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
 			msg.setSubject("ChemVantage.org SMS Registration");
 			String messageText = "Enter this on the Scores page: " + code;
-			msg.setText(messageText);
+			msg.setContent(messageText,"text/html");
 			Transport.send(msg);
 		} catch (Exception e) {
 		}
