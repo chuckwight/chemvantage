@@ -98,11 +98,8 @@ public class EmailScores extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		Topic t = ofy().load().type(Topic.class).id(assignment.topicId).safe();
 		buf.append("<b>ChemVantage Quiz Scores - " + t.title + "</b><p>"
-				+ "The following is a list of maximum pre-deadline scores on this quiz. If you registered your class using a learning management system (LMS), then in most cases "
-				+ "these scores have already been reported to the LMS grade book. However, the LMS may have a policy that is different from ChemVantage (e.g., record first score only), so it "
-				+ "is possible that these scores may be different. The average number of quiz attempts is shown in parentheses for your reference. "
-				+ "A red dot indicates a score that is low enough to be a concern. You may click the assignment link in the LMS or go to the ChemVantage instructor page to change the deadline "
-				+ "at any time. If you change the deadline, all scores will be recalculated to reflect the revised deadline.<p>");
+				+ "The following is a list of best scores on this quiz. In most cases, these have been reported to your LMS grade book; however, there may be differences "
+				+ "if the LMS has a policy that is different from ChemVantage (e.g., record first score only). A red dot indicates a score that is low enough to be a concern.");
 		
 		if (group.memberIds.size()==0) return buf.toString();
 		Map<String,User> members = ofy().load().type(User.class).ids(group.memberIds);
@@ -154,10 +151,8 @@ public class EmailScores extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		Topic t = ofy().load().type(Topic.class).id(assignment.topicId).safe();
 		buf.append("<b>ChemVantage Homework Scores - " + t.title + "</b><p>"
-				+ "The following is a list of best pre-deadline scores on this assignment. In most cases, these scores have been reported to the grade book "
-				+ "in the class learning management system. However, the LMS may have a policy that is different from ChemVantage (e.g., record first score only), so it "
-				+ "is possible that these scores may be different from those in the LMS grade book. "
-				+ "A red dot indicates a score that is low enough to be a concern. If you change the deadline, all scores will be recalculated to reflect the revised deadline.<p>");
+				+ "The following is a list of best scores on this assignment. In most cases, these have been reported to your LMS grade book; however, there may be differences "
+				+ "if the LMS has a policy that is different from ChemVantage (e.g., record first score only). A red dot indicates a score that is low enough to be a concern.");
 		
 		if (group.memberIds.size()==0) return buf.toString();
 		Map<String,User> members = ofy().load().type(User.class).ids(group.memberIds);
@@ -215,10 +210,8 @@ public class EmailScores extends HttpServlet {
 			buf.append("<li>" + t.title);
 		}
 		buf.append("</ol>");
-		buf.append("The following is a list of maximum pre-deadline scores on this exam. In most cases, these scores have been reported to the grade book "
-				+ "in the class learning management system. However, the LMS may have a policy that is different from ChemVantage (e.g., record first score only), so it "
-				+ "is possible that these scores may be different from those in the LMS grade book. The number of exam attempts is shown in parentheses for your reference. "
-				+ "A red dot indicates a score that is low enough to be a concern. If you change the deadline, all scores will be recalculated to reflect the revised deadline.<p>");
+		buf.append("The following is a list of best scores on this assignment. In most cases, these have been reported to your LMS grade book; however, there may be differences "
+				+ "if the LMS has a policy that is different from ChemVantage (e.g., record first score only). A red dot indicates a score that is low enough to be a concern.");
 		
 		if (group.memberIds.size()==0) return buf.toString();
 		Map<String,User> members = ofy().load().type(User.class).ids(group.memberIds);

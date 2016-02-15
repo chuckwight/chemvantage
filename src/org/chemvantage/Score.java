@@ -135,6 +135,7 @@ public class Score {    // this object represents a best score achieved by a use
 			// a red dot indicates a low score that has not been rehabilitated
 			// show the red dot only if the deadline has passed and both the group score and total overall score are at/below threshold
 			boolean redDot = false;
+			String dotUrl = "https://www.chemvantage.org/images/red_dot.gif";
 			
 			if (now.after(deadline)) {  // only consider the red dot if we're past the assignment deadline
 				if (overallScore==0) redDot = true;
@@ -150,7 +151,7 @@ public class Score {    // this object represents a best score achieved by a use
 					redDot = belowThreshold && !rehabilitated;
 				}
 			}
-			return (redDot?"<img src=images/red_dot.gif>&nbsp;":"") + (numberOfAttempts>0?Integer.toString(score):"");
+			return (redDot?"<img src=" + dotUrl + ">&nbsp;":"") + (numberOfAttempts>0?Integer.toString(score):"");
 		} catch (Exception e) {
 			return "";
 		}
@@ -158,7 +159,6 @@ public class Score {    // this object represents a best score achieved by a use
 	
 	public String getEnhancedDotScore(Date deadline,int thresholdPct) {
 		return getDotScore(deadline,thresholdPct) + (numberOfAttempts>0?"/"+maxPossibleScore:"");
-		//return getDotScore(deadline,rescueScore) + (deadline.after(now) && numberOfAttempts==0?"":"&nbsp;&nbsp;&nbsp;&nbsp;<FONT COLOR=GRAY>(" + Integer.toString(numberOfAttempts) + ")</FONT>");
 	}
 	
 	public boolean needsLisReporting() {
