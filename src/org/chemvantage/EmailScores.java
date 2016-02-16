@@ -97,9 +97,10 @@ public class EmailScores extends HttpServlet {
 	String quizScores(Group group,Assignment assignment) {
 		StringBuffer buf = new StringBuffer();
 		Topic t = ofy().load().type(Topic.class).id(assignment.topicId).safe();
-		buf.append("<b>ChemVantage Quiz Scores - " + t.title + "</b><p>"
+		buf.append("<b>ChemVantage Quiz Scores - " + t.title + "</b><br/>"
+				+"Group: " + group.description + "<p>"		
 				+ "The following is a list of best scores on this quiz. In most cases, these have been reported to your LMS grade book; however, there may be differences "
-				+ "if the LMS has a policy that is different from ChemVantage (e.g., record first score only). A red dot indicates a score that is low enough to be a concern.");
+				+ "if the LMS has a policy that is different from ChemVantage (e.g., record first score only). A red dot indicates a score that is low enough to be a concern.<p>");
 		
 		if (group.memberIds.size()==0) return buf.toString();
 		Map<String,User> members = ofy().load().type(User.class).ids(group.memberIds);
@@ -109,7 +110,6 @@ public class EmailScores extends HttpServlet {
 		Map<Key<Score>,Score> scoresMap = ofy().load().keys(keys);
 		int i = 0;
 		Score s = null;
-		buf.append("Group: " + group.description + "<p>");
 		buf.append("Instructors and Teaching Assistants<br>"
 				+ "<TABLE BORDER=1 CELLSPACING=0><TR><TD></TD><TD>Name</TD><TD>Email</TD><TD>Score</TD></TR>");
 		for (String id:group.memberIds) {
@@ -122,7 +122,7 @@ public class EmailScores extends HttpServlet {
 					ofy().save().entity(s).now();
 				}
 				i++;
-				buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.getDeadline(),group.rescueThresholdScore) + "</TD></TR>");
+				buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getScore() + "</TD></TR>");
 			}
 		}
 		buf.append("</TABLE><p>");
@@ -150,9 +150,10 @@ public class EmailScores extends HttpServlet {
 	String homeworkScores(Group group,Assignment assignment) {
 		StringBuffer buf = new StringBuffer();
 		Topic t = ofy().load().type(Topic.class).id(assignment.topicId).safe();
-		buf.append("<b>ChemVantage Homework Scores - " + t.title + "</b><p>"
+		buf.append("<b>ChemVantage Homework Scores - " + t.title + "</b><br/>"
+				+"Group: " + group.description + "<p>"		
 				+ "The following is a list of best scores on this assignment. In most cases, these have been reported to your LMS grade book; however, there may be differences "
-				+ "if the LMS has a policy that is different from ChemVantage (e.g., record first score only). A red dot indicates a score that is low enough to be a concern.");
+				+ "if the LMS has a policy that is different from ChemVantage (e.g., record first score only). A red dot indicates a score that is low enough to be a concern.<p>");
 		
 		if (group.memberIds.size()==0) return buf.toString();
 		Map<String,User> members = ofy().load().type(User.class).ids(group.memberIds);
@@ -163,7 +164,6 @@ public class EmailScores extends HttpServlet {
 		Map<Key<Score>,Score> scoresMap = ofy().load().keys(keys);
 		int i = 0;
 		Score s = null;
-		buf.append("Group: " + group.description + "<p>");
 		buf.append("Instructors and Teaching Assistants<br>"
 				+ "<TABLE BORDER=1 CELLSPACING=0><TR><TD></TD><TD>Name</TD><TD>Email</TD><TD>Score</TD></TR>");
 		for (String id:group.memberIds) {
@@ -176,7 +176,7 @@ public class EmailScores extends HttpServlet {
 					ofy().save().entity(s).now();
 				}
 				i++;
-				buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.getDeadline(),group.rescueThresholdScore) + "</TD></TR>");
+				buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getScore() + "</TD></TR>");
 			}
 		}
 		buf.append("</TABLE><p>");
@@ -203,7 +203,8 @@ public class EmailScores extends HttpServlet {
 	
 	String practiceExamScores(Group group,Assignment assignment) {
 		StringBuffer buf = new StringBuffer();
-		buf.append("<b>Practice Exam Scores</b><p>");
+		buf.append("<b>Practice Exam Scores</b><br/>"
+				+"Group: " + group.description + "<p>");		
 		buf.append("Topics covered on this exam:<ol>");
 		Map<Long,Topic> topics = ofy().load().type(Topic.class).ids(assignment.topicIds);
 		for (Topic t:topics.values()) {
@@ -222,7 +223,6 @@ public class EmailScores extends HttpServlet {
 		Map<Key<Score>,Score> scoresMap = ofy().load().keys(keys);
 		int i = 0;
 		Score s = null;
-		buf.append("Group: " + group.description + "<p>");
 		buf.append("Instructors and Teaching Assistants<br>"
 				+ "<TABLE BORDER=1 CELLSPACING=0><TR><TD></TD><TD>Name</TD><TD>Email</TD><TD>Score</TD></TR>");
 		for (String id:group.memberIds) {
@@ -235,7 +235,7 @@ public class EmailScores extends HttpServlet {
 					ofy().save().entity(s).now();
 				}
 				i++;
-				buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(assignment.getDeadline(),group.rescueThresholdScore) + "</TD></TR>");
+				buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getScore() + "</TD></TR>");
 			}
 		}
 		buf.append("</TABLE><p>");
