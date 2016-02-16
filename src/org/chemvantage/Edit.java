@@ -376,7 +376,6 @@ public class Edit extends HttpServlet {
 	void createTopic(User user,HttpServletRequest request) {
 		Topic t = new Topic(request.getParameter("Title"),request.getParameter("OrderBy"));
 		ofy().save().entity(t).now();
-		assert t.id>0;
 	}
 
 	void updateTopic(User user,HttpServletRequest request) {

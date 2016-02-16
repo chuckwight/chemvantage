@@ -128,7 +128,9 @@ public class Quiz extends HttpServlet {
 					+ "<b>Quiz Deadline:</b> " + (noDeadline?"<FONT COLOR=RED>none</FONT>":dfLong.format(assignment.getDeadline()))
 					+ " <a href=# onClick=document.getElementById('deadlineForm').style.display='inLine'><FONT SIZE=-2>change this</FONT></a><p>");
 			buf.append("<div id='deadlineForm' style='display:none'>"
-					+ "Enter a date below and select your local time zone. After the deadline ChemVantage will not report scores on this quiz to the LMS, but students may still use the assignment link to take practice quizzes.<br/>"
+					+ "Enter a date below and select your local time zone.<br/>"
+					+ "After the deadline ChemVantage will not report scores on this quiz to the LMS,<br/>"
+					+ "but students may still use the assignment link to take practice quizzes.<br/>"
 					+ "<INPUT TYPE=TEXT SIZE=15 NAME=QuizDeadline VALUE='" + (noDeadline?"none":dfShort.format(assignment.getDeadline())) 
 					+ "' onFocus=QuizDeadline.value='" + dfShort.format(new Date()) + "';document.getElementById('esBox').checked=true>"
 					+ "at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone.<br/>"
