@@ -27,7 +27,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.appengine.labs.repackaged.org.json.JSONObject;
+import net.sf.json.JSONObject;
 
 public class ToolSettingsManager extends HttpServlet {
 	private static final long serialVersionUID = 137L;
@@ -83,7 +83,7 @@ public class ToolSettingsManager extends HttpServlet {
 		try {
 			BLTIConsumer tc = ofy().load().type(BLTIConsumer.class).id(key).safe();
 			response = new LTIMessage("GET","application/vnd.ims.lti.v2.ToolSettings+json",tc.getToolSettingsURL(),tc).send();
-			JSONObject toolSettings = new JSONObject(response);
+			JSONObject toolSettings = JSONObject.fromObject(response);
 			buf.append(toolSettings.toString(3));
 		} catch (Exception e) {
 			buf.append(e.toString() + "<p>");

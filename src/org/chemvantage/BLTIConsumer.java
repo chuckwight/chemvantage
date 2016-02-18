@@ -24,11 +24,13 @@ import java.util.Date;
 import java.util.List;
 import java.util.Random;
 
-import com.google.appengine.labs.repackaged.org.json.JSONException;
-import com.google.appengine.labs.repackaged.org.json.JSONObject;
 import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
+
+import net.sf.json.JSONArray;
+import net.sf.json.JSONException;
+import net.sf.json.JSONObject;
 
 @Cache @Entity
 public class BLTIConsumer {
@@ -113,7 +115,7 @@ public class BLTIConsumer {
 	
 	JSONObject getToolProxy() {
 		try {
-			return new JSONObject(this.toolProxy);
+			return JSONObject.fromObject(this.toolProxy);
 		} catch (JSONException e) {
 			return null;
 		}
@@ -153,8 +155,10 @@ public class BLTIConsumer {
 		return false;
 	}
 
-	void putToolService(List<String>toolService) {
-		this.tool_service = toolService;
+	void putToolService(JSONArray toolService) {
+		try {
+			for (int i=0;i<toolService.size();i++) this.tool_service.add(toolService.getJSONObject(i).getString("@id"));
+		} catch (Exception e) {}
 	}
 	
 	List<String> getToolService() {

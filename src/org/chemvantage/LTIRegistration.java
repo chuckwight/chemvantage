@@ -51,9 +51,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
-import com.google.appengine.labs.repackaged.org.json.JSONArray;
-import com.google.appengine.labs.repackaged.org.json.JSONException;
-import com.google.appengine.labs.repackaged.org.json.JSONObject;
+import net.sf.json.JSONArray;
+import net.sf.json.JSONException;
+import net.sf.json.JSONObject;
 
 public class LTIRegistration extends HttpServlet {
 
@@ -206,15 +206,15 @@ public class LTIRegistration extends HttpServlet {
 				session.setAttribute("reg_password", reg_password);
 				
 				JSONArray tcpco = toolConsumerProfile.getJSONArray("capability_offered");
-				for (int i=0; i<tcpco.length();i++) capability_offered.add(tcpco.getString(i));
+				for (int i=0; i<tcpco.size();i++) capability_offered.add(tcpco.getString(i));
 				JSONArray tcpso = toolConsumerProfile.getJSONArray("service_offered");
-				for (int i=0;i<tcpso.length();i++) tool_service_offered.add(tcpso.getJSONObject(i).getString("@id"));
+				for (int i=0;i<tcpso.size();i++) tool_service_offered.add(tcpso.getJSONObject(i).getString("@id"));
 				
 				// separate and select enabled capabilities and tool services by type:
 				List<String> message_types = getCapabilities(toolConsumerProfile,"message_types",capability_offered);
 				List<String> substitution_variables = getCapabilities(toolConsumerProfile,"substitution_variables",capability_offered);
 				List<String> outcomes_capabilities = getCapabilities(toolConsumerProfile,"outcomes_capabilities",capability_offered);
-				List<String> tool_services = getToolServices(toolConsumerProfile);
+				JSONArray tool_services = getToolServices(toolConsumerProfile);
 				
 				// choose selected capabilities based on ChemVantage capabilities and preferences
 				if (substitution_variables.contains("Context.id")) substitution_variables.remove("CourseSection.sourcedId");
@@ -251,7 +251,10 @@ public class LTIRegistration extends HttpServlet {
 								
 				buf.append("<b>Tool Services</b><br/>");
 				buf.append("<select name=tool_services multiple style='padding: 0 5px;' size=5>");
-				for (String s:tool_services) buf.append("<option value='" + s + "' selected>" + s + "</option>");
+				for (int i=0;i<tool_services.size();i++) {
+					String s = tool_services.getJSONObject(i).getString("@id");
+					buf.append("<option value='" + s + "' selected>" + s + "</option>");
+				}
 				buf.append("</select><br/>");
 				
 				buf.append("<input type=submit name=UserRequest value='Cancel'>" 
@@ -282,7 +285,7 @@ public class LTIRegistration extends HttpServlet {
 				if (reg_key==null || reg_key.isEmpty() || reg_password==null || reg_password.isEmpty() || tc_profile_url==null || tc_profile_url.isEmpty()) throw new Exception("HttpSession may have timed out.");
 				
 				JSONObject toolConsumerProfile = fetchToolConsumerProfile(tc_profile_url);
-				if (toolConsumerProfile.length()==0) throw new Exception("Could not retrieve the tool consumer profile using the URL provided.");
+				if (toolConsumerProfile.size()==0) throw new Exception("Could not retrieve the tool consumer profile using the URL provided.");
 				String oauth_secret = BLTIConsumer.generateSecret();
 				
 				JSONObject toolProxy = constructToolProxy(toolConsumerProfile,tc_profile_url,base_url,reg_key,oauth_secret,capability_offered,tool_service_offered);
@@ -299,15 +302,15 @@ public class LTIRegistration extends HttpServlet {
 				String reply = msg.send();
 
 				try {
-					JSONObject replyBody = new JSONObject(reply);		
+					JSONObject replyBody = JSONObject.fromObject(reply);
 					tool_proxy_guid = replyBody.getString("tool_proxy_guid");
 					tool_proxy_url = replyBody.getString("@id");
 					if (tool_proxy_guid.isEmpty() || tool_proxy_url.isEmpty()) throw new Exception("Tool Proxy guid and/or URL was missing.");
 				} catch (Exception e) {
 					throw new Exception ("Could not parse response to tool proxy registration request.");
 				}
-				toolProxy.put("@id", tool_proxy_url);
-				toolProxy.put("guid", tool_proxy_guid);
+				toolProxy.element("@id", tool_proxy_url);
+				toolProxy.element("guid", tool_proxy_guid);
 				
 				// check to make sure that this is the first registration for this tool consumer
 				BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(tool_proxy_guid).now();
@@ -370,7 +373,7 @@ public class LTIRegistration extends HttpServlet {
 			}
 			reader.close();
 			
-			JSONObject reCaptchaValidation = new JSONObject(res.toString());
+			JSONObject reCaptchaValidation = JSONObject.fromObject(res.toString());
 			
 			return reCaptchaValidation.getBoolean("success");
 			
@@ -394,7 +397,7 @@ public class LTIRegistration extends HttpServlet {
 	}
 
 	JSONObject fetchToolConsumerProfile(String tc_profile_url) throws Exception {
-		JSONObject tc_profile = new JSONObject().put("tc_profile_url", tc_profile_url);		
+		JSONObject tc_profile = new JSONObject().element("tc_profile_url", tc_profile_url);		
 		URL u = new URL(tc_profile_url);
 		HttpURLConnection connection = (HttpURLConnection) u.openConnection();
 		connection.setRequestProperty("Accept", "application/vnd.ims.lti.v2.toolconsumerprofile+json");
@@ -406,7 +409,7 @@ public class LTIRegistration extends HttpServlet {
 				res.append(line);
 			}
 			reader.close();
-			tc_profile = new JSONObject(res.toString());	
+			tc_profile = JSONObject.fromObject(res.toString());	
 		} else {
 			throw new Exception("Response code " + connection.getResponseCode() + " received from " + tc_profile_url);
 		}
@@ -447,133 +450,149 @@ public class LTIRegistration extends HttpServlet {
 		return capability_enabled;
 	}
 	
-	List<String> getToolServices(JSONObject toolConsumerProfile) throws JSONException {
-		List<String> tool_services_enabled = new ArrayList<String>();
-		List<String> chemvantage_tool_services = Arrays.asList(
-				"tcp:Outcomes.LTI1",
-				"tcp:Result.item",
-				"tcp:ToolConsumerProfile",
-				"tcp:ToolProxy.collection");
-		JSONArray services_offered = toolConsumerProfile.getJSONArray("service_offered");
-		for (int i=0;i<services_offered.length();i++) {
-			String service_id = services_offered.getJSONObject(i).getString("@id");
-			if (chemvantage_tool_services.contains(service_id)) tool_services_enabled.add(service_id);
+	JSONArray getToolServices(JSONObject toolConsumerProfile) throws JSONException {
+		JSONArray tool_service_enabled = new JSONArray();
+		JSONArray service_offered = toolConsumerProfile.getJSONArray("service_offered");
+		for (int i=0;i<service_offered.size();i++) {
+			JSONObject service = service_offered.getJSONObject(i);
+			// check for tool_consumer_profile
+			if (service.getJSONArray("format").toString().contains("application/vnd.ims.lti.v2.toolconsumerprofile+json")
+					&& service.getJSONArray("action").getString(0).equals("GET")) { // found tool_consumer_profile service
+				tool_service_enabled.add(service);
+				continue;
+			}		
+			// check for tool_proxy_collection
+			if (service.getJSONArray("format").toString().contains("application/vnd.ims.lti.v2.toolproxy+json")
+					&& service.getJSONArray("action").getString(0).equals("POST")) { // found tool_proxy_collection service
+				tool_service_enabled.add(service);
+				continue;
+			}
+			// check for lis_result_service
+			if (service.getJSONArray("format").toString().contains("application/vnd.ims.lis.v2.result+json")) { // found LTI2 result_service
+				tool_service_enabled.add(service);
+				continue;
+			} else if (service.getJSONArray("format").toString().contains("application/vnd.ims.lti.v1.outcome+xml")) { // found LTI1 lis_result_service
+				tool_service_enabled.add(service);
+				continue;
+			} else if (toolConsumerProfile.toString().contains("Result.autocreate") && service.getJSONArray("format").toString().contains("application/xml")) { // found basic lis_result_service
+				tool_service_enabled.add(service);
+				continue;
+			}
 		}
-		return tool_services_enabled;	
+		return tool_service_enabled;	
 	}
 
 	JSONObject constructToolProxy(JSONObject toolConsumerProfile,String tc_profile_url,StringBuffer base_url,String reg_key,String shared_secret,List<String> capability_enabled,List<String> tool_service_enabled) 
 			throws Exception {
 		JSONObject toolProxy = new JSONObject()
-			.put("@context", new JSONArray().put("http://purl.imsglobal.org/ctx/lti/v2/ToolProxy"))
-			.put("@id", tc_profile_url)
-			.put("@type", "ToolProxy")
-			.put("enabled_capability", new JSONArray())		// this section is required but empty
-			.put("lti_version", toolConsumerProfile.getString("lti_version"))
-			.put("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled,tool_service_enabled))
-			.put("tool_consumer_profile", tc_profile_url)
-			.put("tool_profile", getToolProfile(base_url,capability_enabled))
-			.put("custom", new JSONObject().put("at", new Date().toString()));
+			.element("@context", JSONArray.fromObject("http://purl.imsglobal.org/ctx/lti/v2/ToolProxy"))
+			.element("@id", tc_profile_url)
+			.element("@type", "ToolProxy")
+			.element("enabled_capability", new JSONArray())		// this section is required but empty
+			.element("lti_version", toolConsumerProfile.getString("lti_version"))
+			.element("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled,tool_service_enabled))
+			.element("tool_consumer_profile", tc_profile_url)
+			.element("tool_profile", getToolProfile(base_url,capability_enabled))
+			.element("custom", new JSONObject().element("at", new Date().toString()));
 			return toolProxy;
 	}
 
 	JSONObject getToolProfile(StringBuffer base_url,List<String> capability_enabled) throws Exception {  // this is the (mostly static) tool profile for ChemVantage
 		JSONObject toolProfile = new JSONObject();
-		toolProfile.put("lti_version", "LTI-2p0");
-		toolProfile.put("product_instance", new JSONObject()
-			.put("guid", base_url)
-			.put("support", new JSONObject()
-				.put("email", "admin@chemvantage.org"))
-			.put("product_info", new JSONObject()
-				.put("product_name", new JSONObject()
-					.put("default_value", "ChemVantage"))
-				.put("product_version", "3.0")
-				.put("description", new JSONObject()
-					.put("default_value", "ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry"))
-				.put("product_family", new JSONObject()
-					.put("code", "tools")
-					.put("vendor", new JSONObject()
-						.put("code", "www.chemvantage.org")
-						.put("vendor_name", new JSONObject()
-							.put("default_value", "ChemVantage LLC"))
-						.put("timestamp", DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL).format(new Date()))
-						.put("website", "https://www.chemvantage.org")
-						.put("contact", new JSONObject()
-							.put("email", "admin@chemvantage.org"))))));
-		toolProfile.put("base_url_choice", new JSONArray()
-			.put(new JSONObject()
-				.put("default_base_url", "https://" + base_url.toString())  // always use secure URL
-				.put("secure_base_url", "https://" + base_url.toString())));
+		toolProfile.element("lti_version", "LTI-2p0");
+		toolProfile.element("product_instance", new JSONObject()
+			.element("guid", base_url)
+			.element("support", new JSONObject()
+				.element("email", "admin@chemvantage.org"))
+			.element("product_info", new JSONObject()
+				.element("product_name", new JSONObject()
+					.element("default_value", "ChemVantage"))
+				.element("product_version", "3.0")
+				.element("description", new JSONObject()
+					.element("default_value", "ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry"))
+				.element("product_family", new JSONObject()
+					.element("code", "tools")
+					.element("vendor", new JSONObject()
+						.element("code", "www.chemvantage.org")
+						.element("vendor_name", new JSONObject()
+							.element("default_value", "ChemVantage LLC"))
+						.element("timestamp", DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL).format(new Date()))
+						.element("website", "https://www.chemvantage.org")
+						.element("contact", new JSONObject()
+							.element("email", "admin@chemvantage.org"))))));
+		toolProfile.element("base_url_choice", new JSONArray()
+			.add(new JSONObject()
+				.element("default_base_url", "https://" + base_url.toString())  // always use secure URL
+				.element("secure_base_url", "https://" + base_url.toString())));
 		capability_enabled.remove("basic-lti-launch-request"); // not to be explicitly included in resourceHandler object except as message type
 		JSONObject resourceHandler = new JSONObject()
-					.put("resource_name", new JSONObject()
-						.put("default_value", "ChemVantage")
-						.put("key", "assessment.resource.name"))
-					.put("resource_type", new JSONObject().put("code", "test"))
-					.put("description", new JSONObject()
-						.put("default_value", "An Open Education Resource for teaching and learning college-level General Chemistry")
-						.put("key", "assessment.resource.description"))
-					.put("icon_info", new JSONArray()
-						.put(new JSONObject()
-							.put("key", "iconStyle.default.path")
-							.put("default_location", new JSONObject()
-								.put("path", "/images/CVLogo_thumb.jpg"))))
-					.put("message", new JSONArray()
-						.put(new JSONObject()
-							.put("message_type", "basic-lti-launch-request")
-							.put("path", "/lti")
-							.put("enabled_capability", new JSONArray(capability_enabled))))
-							.put("parameter", new JSONArray()
-								.put(new JSONObject()
-									.put("name", "tc_profile_url")
-									.put("variable", "ToolConsumerProfile.url")));
+					.element("resource_name", new JSONObject()
+						.element("default_value", "ChemVantage")
+						.element("key", "assessment.resource.name"))
+					.element("resource_type", new JSONObject().element("code", "test"))
+					.element("description", new JSONObject()
+						.element("default_value", "An Open Education Resource for teaching and learning college-level General Chemistry")
+						.element("key", "assessment.resource.description"))
+					.element("icon_info", new JSONArray()
+						.add(new JSONObject()
+							.element("key", "iconStyle.default.path")
+							.element("default_location", new JSONObject()
+								.element("path", "/images/CVLogo_thumb.jpg"))))
+					.element("message", new JSONArray()
+						.add(new JSONObject()
+							.element("message_type", "basic-lti-launch-request")
+							.element("path", "/lti")
+							.element("enabled_capability", JSONArray.fromObject(capability_enabled))))
+							.element("parameter", new JSONArray()
+								.add(new JSONObject()
+									.element("name", "tc_profile_url")
+									.element("variable", "ToolConsumerProfile.url")));
 		
-		toolProfile.put("resource_handler", new JSONArray().put(resourceHandler));
+		toolProfile.element("resource_handler", new JSONArray().add(resourceHandler));
 		
 		return toolProfile;
 	}
 		
 	JSONObject getSecurityContract(JSONObject toolConsumerProfile, String shared_secret,List<String> capability_enabled,List<String> tool_service_enabled) throws Exception {
-		JSONObject securityContract = new JSONObject()
-			.put("shared_secret",shared_secret);
+		JSONObject securityContract = new JSONObject().element("shared_secret",shared_secret);
 		
-		JSONArray toolService = new JSONArray()
-				.put(new JSONObject()
-						.put("@type", "RestServiceProfile")
-						.put("service", "tcp:ToolProxy.collection")
-						.put("action", new JSONArray().put("POST")));
+		JSONArray toolService = new JSONArray();
+		toolService.add(new JSONObject()
+						.element("@type", "RestServiceProfile")
+						.element("service", "tcp:ToolProxy.collection")
+						.element("action", JSONArray.fromObject("POST")));
 		
 		if (tool_service_enabled.contains("tcp:ToolConsumerProfile"))
-			toolService.put(new JSONObject()
-						.put("@type", "RestServiceProfile")
-						.put("service", "tcp:ToolConsumerProfile")
-						.put("action", new JSONArray().put("GET")));
+			toolService.add(new JSONObject()
+						.element("@type", "RestServiceProfile")
+						.element("service", "tcp:ToolConsumerProfile")
+						.element("action", JSONArray.fromObject("GET")));
 		
 		if (capability_enabled.contains("Result.autocreate") && tool_service_enabled.contains("tcp:Outcomes.LTI1")) {
-			toolService.put(new JSONObject()
-				.put("@type", "RestServiceProfile")
-				.put("service", "tcp:Outcomes.LTI1")
-				.put("action", new JSONArray().put("POST")));
+			toolService.add(new JSONObject()
+				.element("@type", "RestServiceProfile")
+				.element("service", "tcp:Outcomes.LTI1")
+				.element("action", JSONArray.fromObject("POST")));
 		} else if (capability_enabled.contains("Result.autocreate") && tool_service_enabled.contains("tcp:Result.item")) {
-			toolService.put(new JSONObject()
-				.put("@type", "RestServiceProfile")
-				.put("service", "tcp:Result.item")
-				.put("action", new JSONArray().put("POST")));
+			toolService.add(new JSONObject()
+				.element("@type", "RestServiceProfile")
+				.element("service", "tcp:Result.item")
+				.element("action", JSONArray.fromObject("POST")));
 		}		
 		
-		securityContract.put("tool_service",toolService);
+		securityContract.element("tool_service",toolService);
 		return securityContract;
 	}
 
 	String getTCServiceEndpoint(String formatString,JSONObject toolConsumerProfile) throws Exception {
 		formatString = formatString.toLowerCase();
 		JSONArray service_offered = toolConsumerProfile.getJSONArray("service_offered");
-		for (int i=0; i<service_offered.length(); i++) {
+		for (int i=0; i<service_offered.size(); i++) {
 			try {
 				JSONObject s = service_offered.getJSONObject(i);
 				if (s.getString("@type").equals("RestService")) {
 					JSONArray formats = s.getJSONArray("format");
-					for (int j=0; j<formats.length(); j++) if (formats.getString(j).toLowerCase().equals(formatString)) return s.getString("endpoint");
+					for (int j=0; j<formats.size(); j++) if (formats.getString(j).toLowerCase().equals(formatString)) return s.getString("endpoint");
 				}
 			} catch (Exception e) {
 			}
@@ -585,15 +604,15 @@ public class LTIRegistration extends HttpServlet {
 		List<String> capabilitiesEnabled = new ArrayList<String>();
 		try {
 			JSONArray resource_handler = toolProxy.getJSONObject("tool_profile").getJSONArray("resource_handler");
-			for (int i=0;i<resource_handler.length();i++) {
+			for (int i=0;i<resource_handler.size();i++) {
 				JSONObject rh = resource_handler.getJSONObject(i);
 				if (rh.has("message")) {
 					JSONArray message = rh.getJSONArray("message");
-					for (int j=0;j<message.length();j++) {
+					for (int j=0;j<message.size();j++) {
 						JSONObject m = message.getJSONObject(j);
 						if (m.getString("message_type").equals("basic-lti-launch-request")) {
 							JSONArray enabledCapability = m.getJSONArray("enabled_capability");
-							for (int k=0;k<enabledCapability.length();k++) capabilitiesEnabled.add(enabledCapability.getString(k));
+							for (int k=0;k<enabledCapability.size();k++) capabilitiesEnabled.add(enabledCapability.getString(k));
 							break;
 						}
 					}
