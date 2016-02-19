@@ -57,7 +57,7 @@ public class CalculateScores extends HttpServlet {
 			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
 			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).now();
 			Group group = ofy().load().type(Group.class).id(assignment.groupId).now();
-			group.calculateScores(assignment);
+			group.reviseScores(assignment);
 		}
 	}
 }
