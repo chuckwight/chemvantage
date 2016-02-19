@@ -177,27 +177,13 @@ public class Group implements Serializable {
     	}
     	return topicIds.isEmpty()?false:true;
     }
-    
-    Score getScore(String userId,Assignment assignment) {
-    	try {
-    		Key<Score> k = Key.create(Key.create(User.class,userId),Score.class,assignment.id);
-    		Score s = ofy().load().key(k).now();
-    		if (s==null) {
-    			s = Score.getInstance(userId,assignment);
-    			ofy().save().entity(s).now();
-    		}
-    		return s;
-    	} catch (Exception e) {
-    		return null;
-    	}
-    }
-    
+/*
     void deleteScores(Assignment assignment) {
     	List <Key<Score>> scoreKeys = new ArrayList<Key<Score>>();
     	for (String u : this.memberIds) scoreKeys.add(Key.create(Key.create(User.class, u),Score.class,assignment.id));
     	ofy().delete().keys(scoreKeys);
     }
-
+*/
     void calculateScores(Assignment assignment) {
     	List<Score> scores = new ArrayList<Score>();
     	for (String u : this.memberIds) scores.add(Score.getInstance(u,assignment));
