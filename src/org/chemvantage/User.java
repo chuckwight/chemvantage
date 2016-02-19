@@ -722,6 +722,20 @@ public class User implements Comparable<User>,Serializable {
 		deleteScores();
 	}
 
+    Score getScore(Assignment assignment) {
+    	try {
+    		Key<Score> k = Key.create(Key.create(User.class,this.id),Score.class,assignment.id);
+    		Score s = ofy().load().key(k).now();
+    		if (s==null) {
+    			s = Score.getInstance(this.id,assignment);
+    			ofy().save().entity(s).now();
+    		}
+    		return s;
+    	} catch (Exception e) {
+    		return null;
+    	}
+    }
+
 	public int compareTo(User other) {
 		return this.lowercaseName.compareTo(other.lowercaseName);
 	}

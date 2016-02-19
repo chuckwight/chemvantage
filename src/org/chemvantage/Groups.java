@@ -847,7 +847,7 @@ public class Groups extends HttpServlet {
 					a.setDeadline(deadline.getTime());
 					a.emailScoresToInstructor = emailOption;
 					ofy().save().entity(a);
-					group.deleteScores(a);
+//					group.reviseScores(a);
 					QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));
 				}
 			} catch (Exception e2) {}
@@ -873,7 +873,7 @@ public class Groups extends HttpServlet {
 					a.setDeadline(deadline.getTime());
 					a.emailScoresToInstructor = emailOption;
 					ofy().save().entity(a);
-					group.deleteScores(a);
+//					group.reviseScores(a);
 					QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));
 				}
 			} catch (Exception e2) {}
@@ -899,7 +899,7 @@ public class Groups extends HttpServlet {
 					a.setDeadline(deadline.getTime());
 					a.emailScoresToInstructor = emailOption;
 					ofy().save().entity(a);
-					group.deleteScores(a);
+//					group.reviseScores(a);
 					QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));
 				}
 			} catch (Exception e2) {}
@@ -1071,7 +1071,7 @@ public class Groups extends HttpServlet {
 					for (Assignment a : assignments) {
 						Key<Score> k = Key.create(Key.create(User.class,u.id),Score.class,a.id);
 						Score s = scoresMap.get(k);
-						if (s==null) s = group.getScore(u.id, a);
+						if (s==null) s = u.getScore(a);
 						sumScores[j] += s.score;
 						studentTotalScore += s.score;
 						if (s.numberOfAttempts>0) {
@@ -1114,7 +1114,7 @@ public class Groups extends HttpServlet {
 					for (Assignment a : assignments) {
 						Key<Score> k = Key.create(Key.create(User.class,u.id),Score.class,a.id);
 						Score s = scoresMap.get(k);
-						if (s==null) s = group.getScore(u.id, a);
+						if (s==null) s = u.getScore(a);
 						sumScores[j] += s.score;
 						studentTotalScore += s.score;
 						if (s.numberOfAttempts>0) {
