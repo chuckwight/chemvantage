@@ -177,13 +177,19 @@ public class Group implements Serializable {
     	}
     	return topicIds.isEmpty()?false:true;
     }
-/*
-    void deleteScores(Assignment assignment) {
-    	List <Key<Score>> scoreKeys = new ArrayList<Key<Score>>();
-    	for (String u : this.memberIds) scoreKeys.add(Key.create(Key.create(User.class, u),Score.class,assignment.id));
-    	ofy().delete().keys(scoreKeys);
+
+    void reviseScores(Assignment assignment) {
+    	for (String uId : this.memberIds) {
+    		Score revised = Score.getInstance(uId, assignment);
+    		try {
+    			Score previous = ofy().load().key(Key.create(Key.create(User.class,uId),Score.class,assignment.id)).safe();
+    			if (!revised.equals(previous)) ofy().save().entity(revised).now();
+    		} catch (Exception e) {
+    			ofy().save().entity(revised).now();
+    		}
+    	}
     }
-*/
+    
     void calculateScores(Assignment assignment) {
     	List<Score> scores = new ArrayList<Score>();
     	for (String u : this.memberIds) scores.add(Score.getInstance(u,assignment));
@@ -243,5 +249,4 @@ public class Group implements Serializable {
     	// group is active if it has at least one member or a valid instructor
     	return (validatedMemberCount()>0 || ofy().load().type(User.class).id(instructorId).now()!=null);
     }
-
- }
+}

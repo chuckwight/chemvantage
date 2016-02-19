@@ -847,7 +847,7 @@ public class Groups extends HttpServlet {
 					a.setDeadline(deadline.getTime());
 					a.emailScoresToInstructor = emailOption;
 					ofy().save().entity(a);
-//					group.reviseScores(a);
+					group.reviseScores(a);
 					QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));
 				}
 			} catch (Exception e2) {}
@@ -873,7 +873,7 @@ public class Groups extends HttpServlet {
 					a.setDeadline(deadline.getTime());
 					a.emailScoresToInstructor = emailOption;
 					ofy().save().entity(a);
-//					group.reviseScores(a);
+					group.reviseScores(a);
 					QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));
 				}
 			} catch (Exception e2) {}
@@ -899,7 +899,7 @@ public class Groups extends HttpServlet {
 					a.setDeadline(deadline.getTime());
 					a.emailScoresToInstructor = emailOption;
 					ofy().save().entity(a);
-//					group.reviseScores(a);
+					group.reviseScores(a);
 					QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));
 				}
 			} catch (Exception e2) {}

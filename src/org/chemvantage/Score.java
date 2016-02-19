@@ -165,4 +165,17 @@ public class Score {    // this object represents a best score achieved by a use
 		if (lis_result_sourcedid==null || lis_result_sourcedid.isEmpty() || lisReportComplete) return false;
 		return true;
 	}
+	
+    boolean equals(Score s) {
+    	// note: this method does not check the value of lisReportComplete because the comparison is generally to a new Score instance
+    	return s.mostRecentAttempt.equals(s.mostRecentAttempt)
+    			&& s.assignmentId == this.assignmentId
+    			&& s.owner.equals(this.owner)
+    			&& s.groupId == this.groupId
+    			&& s.score == this.score
+    			&& s.overallScore == this.overallScore
+    			&& s.maxPossibleScore == this.maxPossibleScore
+    			&& s.numberOfAttempts == this.numberOfAttempts
+    			&& s.lis_result_sourcedid==null?this.lis_result_sourcedid==null:s.lis_result_sourcedid.equals(this.lis_result_sourcedid);	
+    }
 }
