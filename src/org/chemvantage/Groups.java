@@ -410,7 +410,6 @@ public class Groups extends HttpServlet {
 			}
 			group.timeZone = request.getParameter("TimeZone");
 			ofy().save().entity(group);
-			group.deleteScores();
 			QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("GroupId",Long.toString(group.id)));
 		} catch (Exception e) {
 		}
