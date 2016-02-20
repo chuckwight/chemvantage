@@ -132,9 +132,10 @@ public class Quiz extends HttpServlet {
 					+ "After the deadline ChemVantage will not report scores on this quiz to the LMS,<br/>"
 					+ "but students may still use the assignment link to take practice quizzes.<br/>"
 					+ "<INPUT TYPE=TEXT SIZE=15 NAME=QuizDeadline VALUE='" + (noDeadline?"none":dfShort.format(assignment.getDeadline())) 
-					+ "' onFocus=QuizDeadline.value='" + dfShort.format(new Date()) + "';document.getElementById('esBox').checked=true>"
+					+ "' onFocus=if(QuizDeadline.value=='none'){QuizDeadline.value='" + dfShort.format(new Date()) + "';document.getElementById('esBox').checked=true}>"
 					+ "at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone.<br/>"
 					+ "<label><INPUT TYPE=CHECKBOX ID=esBox NAME=EmailScores VALUE=true" + (assignment.emailScoresToInstructor?" CHECKED>":">") + " Email scores to me after the deadline.</lable><br>"
+					+ "<label><INPUT TYPE=CHECKBOX NAME=UpdateLMSScores VALUE=true> Update scores in the LMS grade book.</label><br>"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Set Deadline'></FORM></div><p>");
 			
 			buf.append("<b>Customize This Quiz</b> <a id=slink href=/Groups?UserRequest=AssignQuizQuestions&GroupId=" + group.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + "><FONT SIZE=-2>select questions</FONT></a><p>");

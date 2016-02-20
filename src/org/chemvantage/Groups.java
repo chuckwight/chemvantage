@@ -823,6 +823,7 @@ public class Groups extends HttpServlet {
 			Calendar deadline = Calendar.getInstance(group.getTimeZone());
 			group.setGroupTopicIds();
 			boolean emailOption = Boolean.parseBoolean(request.getParameter("EmailScores"));
+			boolean updateLMS = Boolean.parseBoolean(request.getParameter("UpdateLMSScores"));
 			
 			try { // update the quiz deadline for this topic
 				String d = request.getParameter("QuizDeadline");
@@ -847,8 +848,8 @@ public class Groups extends HttpServlet {
 					a.emailScoresToInstructor = emailOption;
 					ofy().save().entity(a);
 					group.reviseScores(a);
-					QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));
 				}
+				if (updateLMS) QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("GroupId", Long.toString(group.id)));
 			} catch (Exception e2) {}
 			try { // update the homework deadline for this topic
 				String d = request.getParameter("HWDeadline");
@@ -873,8 +874,8 @@ public class Groups extends HttpServlet {
 					a.emailScoresToInstructor = emailOption;
 					ofy().save().entity(a);
 					group.reviseScores(a);
-					QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));
 				}
+				if (updateLMS) QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("GroupId", Long.toString(group.id)));
 			} catch (Exception e2) {}
 			try { // update the practice exam deadline for this assignment
 				String d = request.getParameter("PracticeExamDeadline");
@@ -899,8 +900,8 @@ public class Groups extends HttpServlet {
 					a.emailScoresToInstructor = emailOption;
 					ofy().save().entity(a);
 					group.reviseScores(a);
-					QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("AssignmentId",Long.toString(a.id)));
 				}
+				if (updateLMS) QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("GroupId", Long.toString(group.id)));
 			} catch (Exception e2) {}
 			
 			group.setGroupTopicIds();

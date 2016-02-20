@@ -48,15 +48,27 @@ public class ReportScore extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
-		// required parameters: AssignmentId,UserId
-		
-		long assignmentId = 0L;
-		String userId = "";
+
+		try {  // post single user score
+			String userId = URLDecoder.decode(request.getParameter("UserId"),"UTF-8");
+			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+			String delay = request.getParameter("Delay");
+			postUserScore(userId,assignmentId,delay);
+			return;
+		} catch (Exception e) {}
+
+		try {  // post group scores for one assignment
+			long groupId = Long.parseLong(request.getParameter("GroupId"));
+			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+			Group g = ofy().load().type(Group.class).id(groupId).safe();
+			for (String uId : g.memberIds) postUserScore(uId,assignmentId,null);			
+			return;
+		} catch (Exception e) {}
+	}
+	
+	void postUserScore(String userId,long assignmentId,String delay) {
 		try {
-			userId = URLDecoder.decode(request.getParameter("UserId"),"UTF-8");
-			assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
-			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
-			Key<Score> k = Key.create(Key.create(User.class, userId),Score.class,a.id);
+			Key<Score> k = Key.create(Key.create(User.class, userId),Score.class,assignmentId);
     		Score s = ofy().load().key(k).now();
     		if (s == null || !s.needsLisReporting()) return;
     		
@@ -64,13 +76,12 @@ public class ReportScore extends HttpServlet {
     		double score = (double)s.score / (double)s.maxPossibleScore;
 			if (score < 0.0 || score > 1.0) throw new Exception();
 			
+			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			Group g = ofy().load().type(Group.class).id(a.groupId).safe();
 			String oauth_consumer_key = g.domain;
 			
-			String messageFormat = g.getLisOutcomeFormat();
-			
-			String body = messageFormat.contains("jason")?jsonReplaceResult(Double.toString(score)):xmlReplaceResult(s.lis_result_sourcedid,Double.toString(score));
-			
+			String messageFormat = g.getLisOutcomeFormat();			
+			String body = (messageFormat.contains("jason")?jsonReplaceResult(Double.toString(score)):xmlReplaceResult(s.lis_result_sourcedid,Double.toString(score)));
 			String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
 			
 			if (replyBody.toLowerCase().contains("success")) {
@@ -80,7 +91,6 @@ public class ReportScore extends HttpServlet {
 			else throw new Exception();  // try again later
 		} catch (Exception e) {
 			try {
-				String delay = request.getParameter("Delay");
 				int n = 0;
 				if (delay != null) n = Integer.parseInt(delay);
 				if (assignmentId<=0 || n>10) return;  // will attempt to record up to 11 times over 17 hours

@@ -177,9 +177,10 @@ public class PracticeExam extends HttpServlet {
 					+ "After the deadline ChemVantage will not report scores on this practice exam to the LMS,<br/>"
 					+ "but students may still use the assignment link to practice taking exams.<br/>"
 					+ "<INPUT TYPE=TEXT SIZE=15 NAME=PracticeExamDeadline VALUE='" + (noDeadline?"none":dfShort.format(assignment.getDeadline())) 
-					+ "' onFocus=PracticeExamDeadline.value='" + dfShort.format(new Date()) + "';document.getElementById('esBox').checked=true>"
+					+ "' onFocus=if(PracticeExamDeadline.value=='none'){PracticeExamDeadline.value='" + dfShort.format(new Date()) + "';document.getElementById('esBox').checked=true}>"
 					+ "at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone.<br/>"
 					+ "<label><INPUT TYPE=CHECKBOX ID=esBox NAME=EmailScores VALUE=true" + (assignment.emailScoresToInstructor?" CHECKED>":">") + " Email scores to me after the deadline.</lable><br>"
+					+ "<label><INPUT TYPE=CHECKBOX NAME=UpdateLMSScores VALUE=true> Update scores in the LMS grade book.</label><br>"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Set Deadline'></FORM></div><p>");
 		
 			buf.append("<b>Customize This Exam</b> <a id=slink href=/Groups?UserRequest=AssignExamQuestions&GroupId=" + group.id + "&AssignmentId=" + assignment.id + "&Nonce=" + nonce + "><FONT SIZE=-2>select questions</FONT></a><p>");
