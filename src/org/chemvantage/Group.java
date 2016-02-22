@@ -231,12 +231,11 @@ public class Group implements Serializable {
     	// and updates the memberIds List.
     	// The method then returns the integer number of current group members.
     	try {
+    		int count = this.memberIds.size();
     		this.memberIds = (List<String>) ofy().load().type(User.class).ids(memberIds).keySet();
-    		ofy().save().entity(this);
+    		if (this.memberIds.size() != count) ofy().save().entity(this).now();  // save any changes
     	} catch (Exception e) {}
-    	return memberIds.size();
-    	
-    	
+    	return memberIds.size();    	
     }
     
     boolean isActive() {
