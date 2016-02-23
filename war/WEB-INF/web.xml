@@ -351,7 +351,7 @@
 			<web-resource-name>AdminServlet</web-resource-name>
 			<url-pattern>/remote_api</url-pattern>
  			<url-pattern>/CalculateScores</url-pattern>  
- 			<url-pattern>/DataStoreCleaner</url-pattern> 
+  			<url-pattern>/DataStoreCleaner</url-pattern> 
 			<url-pattern>/EmailScores</url-pattern> 
 			<url-pattern>/ManageDemoPremiumAccounts</url-pattern>
 			<url-pattern>/Notification</url-pattern>
