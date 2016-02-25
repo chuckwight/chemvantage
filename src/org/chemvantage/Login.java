@@ -294,17 +294,18 @@ public class Login extends HttpServlet {
 					+ "<li><a href='/lti/registration/'>Connect using LTI</a></ul>"
 					+ "</td></tr></table>");
 
-			buf.append("View the <a href=https://www.youtube.com/watch?v=PWDPQMhvghA>ChemVantage video</a>.");
+			buf.append("View the <a href=https://www.youtube.com/watch?v=PWDPQMhvghA>ChemVantage video</a>.<hr><p>");
 			
-			UserService userService = UserServiceFactory.getUserService();
-			buf.append("<h3>Please Sign In</h3>");
-			
+//			UserService userService = UserServiceFactory.getUserService();
+//			buf.append("<h3>Please Sign In</h3>");
+/*			
 			boolean showAll = "all".equals(request.getParameter("show"));
 			Cookie[] cookies = request.getCookies();
 			if (!showAll && cookies!=null) {  // a login cookie has been set; try to show a link to the preferred OpenID provider
 				showAll = true;
 				for (Cookie c : cookies) {
 					if (!"IDProvider".equals(c.getName())) continue;
+					
 					if (openIdProviders.containsKey(c.getValue())) {
 						String providerName = c.getValue();
 						String providerUrl = openIdProviders.get(providerName);
@@ -339,10 +340,12 @@ public class Login extends HttpServlet {
 				if (!showAll) buf.append("<p><a style='font-size:smaller' href=/?show=all>Show more login options</a>");
 			} else showAll = true;
 			
-			if (showAll) {	
-				buf.append("ChemVantage uses third-party authentication; please select your online identity provider below.<br>"
+			if (showAll) {
+*/	
+				buf.append("ChemVantage uses Google+ authentication; please click the Google+ icon and sign in with your Google/GMail credentials.<br>"
 						+ "If this is your first ChemVantage login, a free account will be created for you.<p>");
 				buf.append("<TABLE style='border-spacing:40px 0px'><TR>");
+/*
 				// display Google-authorized OpenID providers and logos:
 				for (String providerName : openIdProviders.keySet()) {
 					String providerUrl = openIdProviders.get(providerName);
@@ -352,6 +355,7 @@ public class Login extends HttpServlet {
 							+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/> " 
 							+ providerName + "</a></TD>");
 				}
+*/
 				// Begin new section to implement Google+ Login option
 				// See https://developers.google.com/+/web/signin/add-button for details.		
 				buf.append("<TD style='text-align:center'><span id='signinButton'>"
@@ -364,7 +368,7 @@ public class Login extends HttpServlet {
 						+ "<a href=#><img id=g+ src=/images/openid/google+.jpg border=0 alt='Google'><br/>Google</a>"
 						+ "</span></span></TD>\n");		  
 				buf.append("</TR></TABLE>");
-			}
+//			}
 			
 			// load javascript for processing a google+ sign-in flow
 			buf.append("<script>"
