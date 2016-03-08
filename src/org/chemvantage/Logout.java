@@ -90,7 +90,7 @@ public class Logout extends HttpServlet {
 						+ "google.com</a></center>");
 			} else buf.append("If you are at a public computer, please shut down this browser completely to protect your online identity.<p>");
 
-			if (!"BLTI".equals(user.authDomain)) buf.append("<p><a href=/>Return to the ChemVantage sign in page</a>.");
+			if (!"BLTI".equals(user.authDomain)) buf.append("<p><a href=/ target=_top>Return to the ChemVantage sign in page</a>.");
 
 		} catch (Exception e) {
 			request.getSession().invalidate();

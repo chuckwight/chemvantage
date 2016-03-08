@@ -175,11 +175,14 @@ public class Login extends HttpServlet {
 			buf.append("View the <a href=https://www.youtube.com/watch?v=PWDPQMhvghA>ChemVantage video</a>.<hr><p>");
 			
 			buf.append("<h3>Please Sign In</h3>"
-					+ "ChemVantage uses third-party authentication by Google.<br>"
+					+ "<div id=signin>ChemVantage uses third-party authentication by Google.<br>"
 					+ "Click the Google icon below to sign in with your Google/GMail credentials.<br>"
 					+ "If this is your first ChemVantage login, a free account will be created for you.<p>");
-			buf.append("<div style=margin-left:40px><a href='" + UserServiceFactory.getUserService().createLoginURL("/userServiceLaunch") + "'><img src=/images/google.png border=0 alt='Google login'></a></div><p>");
+			buf.append("<div style=margin-left:40px><a href='" + UserServiceFactory.getUserService().createLoginURL("/userServiceLaunch") + "'><img src=/images/google.png border=0 alt='Google login'></a></div></div><p>");
 
+			buf.append("<script>function inIframe() {try {return window.self !== window.top;} catch (e) {return true;}}"
+					+ "if (inIframe()) {document.getElementById('signin').innerHTML='To sign into ChemVantage, please <a href=https://www.chemvantage.org target=_blank>open the site in a new window</a>.'}</script>");
+			
 			buf.append("<hr><h3>Try One Question</h3>");
 			buf.append("<table width=650><tr><td>" + printOneQuestion(request) + "</td></tr></table>");
 			
