@@ -181,7 +181,8 @@ public class Login extends HttpServlet {
 			buf.append("<div style=margin-left:40px><a href='" + UserServiceFactory.getUserService().createLoginURL("/userServiceLaunch") + "'><img src=/images/google.png border=0 alt='Google login'></a></div></div><p>");
 
 			buf.append("<script>function inIframe() {try {return window.self !== window.top;} catch (e) {return true;}}"
-					+ "if (inIframe()) {document.getElementById('signin').innerHTML='To sign into ChemVantage, please <a href=https://www.chemvantage.org target=_blank>open the site in a new window</a>.'}</script>");
+					+ "if (inIframe()) {document.getElementById('signin').innerHTML='To login to ChemVantage from inside a learning management system (LMS), click on the assignment link.<br>"
+					+ "To access the public ChemVantage site, click <a href=https://www.chemvantage.org target=_blank>here</a>.'}</script>");
 			
 			buf.append("<hr><h3>Try One Question</h3>");
 			buf.append("<table width=650><tr><td>" + printOneQuestion(request) + "</td></tr></table>");
