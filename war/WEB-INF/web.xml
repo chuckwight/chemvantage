@@ -198,37 +198,6 @@
 		<servlet-name>OneQuestion</servlet-name>
 		<url-pattern>/q</url-pattern>
 	</servlet-mapping>
-<!-- 
-	<servlet>
-		<servlet-name>OpenIdLaunch</servlet-name>
-		<servlet-class>org.chemvantage.OpenIdLaunch</servlet-class>
-		<init-param>
-			<param-name>return_to_path</param-name>
-			<param-value>/openid</param-value>
-		</init-param>
-		<init-param>
-			<param-name>home_path</param-name>
-			<param-value>/Home</param-value>
-		</init-param>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>OpenIdLaunch</servlet-name>
-		<url-pattern>/openid</url-pattern>
-	</servlet-mapping>
- -->
-	<servlet>
-		<servlet-name>OpenIdSetup</servlet-name>
-		<servlet-class>org.chemvantage.OpenIdSetup</servlet-class>
-		<init-param>
-			<param-name>return_to_path</param-name>
-			<param-value>/setup</param-value>
-		</init-param>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>OpenIdSetup</servlet-name>
-		<url-pattern>/setup</url-pattern>
-	</servlet-mapping>
-
 	<servlet>
 		<servlet-name>PracticeExam</servlet-name>
 		<servlet-class>org.chemvantage.PracticeExam</servlet-class>
@@ -334,7 +303,7 @@
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>UserServiceLaunch</servlet-name>
-		<url-pattern>/userService</url-pattern>
+		<url-pattern>/userServiceLaunch</url-pattern>
 	</servlet-mapping>
 	
 	<servlet>

@@ -1,5 +1,5 @@
 /*  ChemVantage - A Java web application for online learning
-*   Copyright (C) 2011 ChemVantage LLC
+*   Copyright (C) 2016 ChemVantage LLC
 *   
 *    This program is free software: you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -19,38 +19,19 @@ package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.math.BigInteger;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.net.URLEncoder;
-import java.security.SecureRandom;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 
 import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
-import net.sf.json.JSONObject;
-
-import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
-import com.google.gdata.util.common.base.Charsets;
-import com.google.gdata.util.common.io.CharStreams;
-import com.google.gdata.util.common.util.Base64;
 import com.googlecode.objectify.Key;
 
 public class Login extends HttpServlet {
@@ -59,21 +40,7 @@ public class Login extends HttpServlet {
 	static boolean lockedDown = false;
 
 	Subject subject = Subject.getSubject();
-	GoogleClient CLIENT = GoogleClient.getInstance();
 	List<Video> videos = ofy().load().type(Video.class).order("orderBy").list();
-	JSONObject openid_config = null;
-	
-    static final Map<String, String> openIdProviders;
-    static final Map<String, String> openIdLogos;
-    static Set<String> attributes = new HashSet<String>();
-	static {
-    	openIdProviders = new HashMap<String, String>();
-    	openIdLogos = new HashMap<String, String>();
-    	
-        openIdProviders.put("AOL", "aol.com"); openIdLogos.put("AOL", "/images/openid/aol.jpg");
-        openIdProviders.put("Yahoo", "yahoo.com"); openIdLogos.put("Yahoo", "/images/openid/yahoo.jpg");
-        attributes.add("email");
-	}
     
 	public static String header = "<!DOCTYPE html>"
 		+"<html>\n"
@@ -100,11 +67,6 @@ public class Login extends HttpServlet {
 		+ ".pz3 a{display:block;padding:.2em .5em}"
 		+ "#pzon .pz3 a:hover{background:#36c;color:#fff}"
 		+ "--> </style>\n"
-// The following section is for implementation of Google+ Sign-in
-		+ "<script src='https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js' async defer></script>\n"
-		+ "<script src='https://apis.google.com/js/platform.js' async defer></script>"
-		+ "<script src='https://apis.google.com/js/client:platform.js?onload=start' async defer></script>\n"
-// end of Google+ Sing-in scripts
 		+ "</head>\n"
 		+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
 		+ "<TABLE><TR><TD>\n"
@@ -165,19 +127,7 @@ public class Login extends HttpServlet {
 	throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		try {
-			request.getSession().invalidate();
-			HttpSession session = request.getSession();
-			String state = new BigInteger(130, new SecureRandom()).toString(32);
-			session.setAttribute("state", state);
-			out.println(homePage(request,state));
-		} catch (Exception e) {
-			out.println("<h3>Sorry, ChemVantage is temporarily unavailable</h3>"
-					+ "The most likely reason is that Google App Engine is in a period of scheduled maintenance.<br>"
-					+ "If the downtime lasts more than 2 hours, please send email to admin@chemvantage.org<br>"
-					+ "or call us at 801-810-4401.  Thanks in advance for your patience.<p>");
-			out.println("<a href='/help.html'>ChemVantage Help Page</a><p>" + e.getMessage() + "<p>" + e.getStackTrace());
-		}
+		out.println(loginPage(request));
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
@@ -189,83 +139,11 @@ public class Login extends HttpServlet {
 			String msg = "Help for LTI registration is available at https://www.chemvantage.org/lti/registration/";
 			response.sendRedirect(request.getParameter("launch_presentation_return_url") + "?lti_msg=" + URLEncoder.encode(msg,"UTF-8"));
 			return;
-		}
-		
-		// handle a valid Google+ sign-in attempt
-		try {  
-			// Load openId configuration endpoint URLS, if necessary
-			if (openid_config==null) openid_config = getOpenIdConfig();
-			
-			// Validate the session/parameter state variable
-			HttpSession session = request.getSession();
-			String sessionState = (String)session.getAttribute("state");
-			String requestState = request.getParameter("state");
-			if (!sessionState.equals(requestState)) {
-				response.setStatus(400); // Bad request
-				throw new Exception("State parameters did not match.");  // protects against request forgery attack
-			}
-			session.removeAttribute("state");  // state is for one-time login only
-
-			//Exchange the one-time code for a Google+ access token JSON object
-			String code = request.getParameter("code");
-			JSONObject accessToken = getToken(code);
-			
-			// Handle possible authentication failure
-			if (accessToken.containsKey("error")) {
-				response.setStatus(401); // Unauthorized
-				throw new Exception("Access token contained error.");
-			}
-			
-			// Retrieve the id_token inside the accessToken and decode the JSON Web Token (JWT) payload:
-			String id_token = accessToken.getString("id_token");
-			String[] pieces = id_token.split("\\.");
-			if (pieces.length!=3) {
-				response.setStatus(501); // not implemented; server lacks the ability to fulfill the request
-				throw new Exception("Invalid JWT payload.");  // JWT token structure is invalid			
-			}
-			JSONObject payload = JSONObject.fromObject(new String(Base64.decode(pieces[1])));
-			
-			// Verify that this JWT is targeted to the correct site for Google+ login
-			if (!CLIENT.client_id.equals(payload.getString("aud"))) {
-				response.setStatus(403); // forbidden
-				throw new Exception("AuthToken not valid for this site.");  // JWT token has wrong audience
-			}
-			
-			// Check to ensure that JWT has not expired
-			Date now = new Date();
-			Date expires = new Date(1000L*new Long(payload.getInt("exp")));
-			if (expires.before(now)) {
-				response.setStatus(498); // token expired
-				throw new Exception("AuthToken expired.");
-			}
-			
-			// Retrieve the id from the JWT 
-			String userId = payload.getString("sub");
-			if (userId==null) {
-				response.setStatus(499); // token required
-				throw new Exception("JWT did not contain a valid user id.");
-			}
-				
-			// Everything looks OK; sign-in to ChemVantage
-			session.setAttribute("UserId", userId);			
-
-			// Check to see if this is a first-time Google+ sign-in
-			if (ofy().load().type(User.class).id(userId)==null) { 
-				String firstName = getUserFirstName(userId,accessToken);
-				User.createGooglePlusUser(payload,firstName);
-			}
-			
-			// Set a cookie in the user's browser for Google+ login prompt next visit
-			Cookie c = new Cookie("IDProvider","Google");
-			c.setMaxAge(2592000); // expires after 30 days (in seconds)
-			response.addCookie(c);
-
-		} catch (Exception e) {	
-			response.setStatus(500);
-		}		
+		} else doGet(request,response);
 	}
-		
-	String homePage(HttpServletRequest request,String state) {
+
+	
+	String loginPage(HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		
 		try {
@@ -296,96 +174,11 @@ public class Login extends HttpServlet {
 
 			buf.append("View the <a href=https://www.youtube.com/watch?v=PWDPQMhvghA>ChemVantage video</a>.<hr><p>");
 			
-//			UserService userService = UserServiceFactory.getUserService();
-//			buf.append("<h3>Please Sign In</h3>");
-/*			
-			boolean showAll = "all".equals(request.getParameter("show"));
-			Cookie[] cookies = request.getCookies();
-			if (!showAll && cookies!=null) {  // a login cookie has been set; try to show a link to the preferred OpenID provider
-				showAll = true;
-				for (Cookie c : cookies) {
-					if (!"IDProvider".equals(c.getName())) continue;
-					
-					if (openIdProviders.containsKey(c.getValue())) {
-						String providerName = c.getValue();
-						String providerUrl = openIdProviders.get(providerName);
-						String loginUrl = userService.createLoginURL("/userService",null,providerUrl,attributes);
-						buf.append("<table style='border-spacing:40px 0px'><tr><td style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
-								+ "onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
-								+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "' style='text-align:center'><br/>" 
-								+ providerName + "</a></td></tr></table>");
-						showAll = false;
-						break;
-					} else if ("Google".equals(c.getValue())) {
-						buf.append("<span id='signinButton'>"
-								+ "<span class='g-signin' "
-								+ "data-callback='signinCallback' "
-								+ "data-clientid='" + CLIENT.client_id + "' "
-								+ "data-cookiepolicy='single_host_origin' "
-								+ "data-redirecturi='postmessage' "  // named google+ parameter for hybrid server code exchange schema
-								+ "data-scope='profile email'> "
-								+ "<a href=#><img id=g+ src=/images/openid/google+.jpg border=0 alt='Google'><br/>Google</a>"
-								+ "</span></span>\n");
-						showAll = false;
-					} else if ("BLTI".equals(c.getValue())) {
-						buf.append("It appears that you are using ChemVantage in conjunction with a course learning "
-								+ "management system (LMS). You should access ChemVantage from inside the LMS to access your assignments and scores. "
-								+ "You may create a separate ChemVantage account for more convenient access using the login options link below. "
-								+ "However, you must use <b>exactly the same name or email address</b> in order to be able to merge your accounts later "
-								+ "using the information at the bottom of the 'View My Profile' page.<br>");
-						showAll = false;
-						break;
-					}
-				}
-				if (!showAll) buf.append("<p><a style='font-size:smaller' href=/?show=all>Show more login options</a>");
-			} else showAll = true;
-			
-			if (showAll) {
-*/	
-				buf.append("ChemVantage uses Google+ authentication; please click the Google+ icon and sign in with your Google/GMail credentials.<br>"
-						+ "If this is your first ChemVantage login, a free account will be created for you.<p>");
-				buf.append("<TABLE style='border-spacing:40px 0px'><TR>");
-/*
-				// display Google-authorized OpenID providers and logos:
-				for (String providerName : openIdProviders.keySet()) {
-					String providerUrl = openIdProviders.get(providerName);
-					String loginUrl = userService.createLoginURL("/userService",null,providerUrl,attributes);
-					buf.append("<TD style='text-align:center'><a id='" + providerName + "' href='" + loginUrl + "' "
-							+ " onClick=\"javascript: if (self!=top) document.getElementById('" + providerName + "').target='_blank';\">"
-							+ "<img src='" + openIdLogos.get(providerName) + "' border=0 alt='" + providerName + "'><br/> " 
-							+ providerName + "</a></TD>");
-				}
-*/
-				// Begin new section to implement Google+ Login option
-				// See https://developers.google.com/+/web/signin/add-button for details.		
-				buf.append("<TD style='text-align:center'><span id='signinButton'>"
-						+ "<span class='g-signin' "
-						+ "data-callback='signinCallback' "
-						+ "data-clientid='" + CLIENT.client_id + "' "
-						+ "data-cookiepolicy='single_host_origin' "
-						+ "data-redirecturi='postmessage' "  // named google+ parameter for hybrid server code exchange schema
-						+ "data-scope='profile email'> "
-						+ "<a href=#><img id=g+ src=/images/openid/google+.jpg border=0 alt='Google'><br/>Google</a>"
-						+ "</span></span></TD>\n");		  
-				buf.append("</TR></TABLE>");
-//			}
-			
-			// load javascript for processing a google+ sign-in flow
-			buf.append("<script>"
-						+ "function signinCallback(authResult) {"
-						+ " if (authResult['status']['method']=='PROMPT' && authResult['status']['signed_in']) {"
-						+ "    document.getElementById('signinButton').innerHTML='working...';"
-						+ "      $.ajax({type:'POST',url:'/login',contentType:'application/x-www-form-urlencoded; charset=UTF-8', "
-						+ "       data: 'state=" + state + "&code=' + authResult['code'], "
-						+ "       success: function(result) {"
-						+ "        document.getElementById('signinButton').innerHTML='OK';"
-						+ "        window.location='/Home';},"
-						+ "       error: function(xhr,ajaxOptions,thrownError){"
-						+ "        document.getElementById('signinButton').innerHTML=xhr.status + ': ' + ajaxOptions;}"
-						+ "      })"
-						+ "}}"
-						+ "</script>");
-			
+			buf.append("<h3>Please Sign In</h3>"
+					+ "ChemVantage uses third-party authentication by Google.<br>"
+					+ "Click the Google icon below to sign in with your Google/GMail credentials.<br>"
+					+ "If this is your first ChemVantage login, a free account will be created for you.<p>");
+			buf.append("<div style=margin-left:40px><a href='" + UserServiceFactory.getUserService().createLoginURL("/userServiceLaunch") + "'><img src=/images/google.png border=0 alt='Google login'></a></div><p>");
 
 			buf.append("<hr><h3>Try One Question</h3>");
 			buf.append("<table width=650><tr><td>" + printOneQuestion(request) + "</td></tr></table>");
@@ -440,78 +233,6 @@ public class Login extends HttpServlet {
 			buf.append(e.getMessage());
 		}
 		return buf.toString();
-	}
-
-	JSONObject getOpenIdConfig() {
-		try {
-			URL u = new URL("https://accounts.google.com/.well-known/openid-configuration");
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-			StringBuffer res = new StringBuffer();
-			String line;
-			while ((line = reader.readLine()) != null) {
-				res.append(line);
-			}
-			reader.close();			
-			return JSONObject.fromObject(res.toString());	
-		} catch (Exception e) {
-			return null;
-		}
-	}
-
-	JSONObject getToken(String code) {
-		JSONObject accessToken = null;
-		try {
-			// Exchange the one-time authorization code for an access token:		
-			URL u = new URL(openid_config.getString("token_endpoint"));
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			uc.setDoOutput(true);
-			uc.setRequestMethod("POST");
-			uc.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
-			uc.setRequestProperty("Accept-Charset", "UTF-8");
-			String queryString = "code=" + code;
-			queryString += "&client_id=" + CLIENT.client_id; 
-			queryString += "&client_secret=" + CLIENT.client_secret;
-			queryString += "&redirect_uri=postmessage";
-			queryString += "&grant_type=authorization_code";
-			
-			OutputStream output = uc.getOutputStream();
-			output.write(queryString.getBytes());
-			output.flush();
-
-			//read the response from Google+ and convert it to a JSON object
-			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-			StringBuffer res = new StringBuffer();
-			String line;
-			while ((line = reader.readLine()) != null) {
-				res.append(line);
-			}
-			reader.close();
-			
-			accessToken = JSONObject.fromObject(res.toString());
-		} catch (Exception e) {
-			System.out.println("Error: " + e.getMessage());
-		}
-		return accessToken;
-	}
-	
-	String getUserFirstName(String userId,JSONObject accessToken) {
-		String givenName = "";
-		try {
-			// Open a new URL connection to the Google People API endpoint:
-			URL u = new URL("https://www.googleapis.com/plus/v1/people/" + userId);
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			uc.setRequestProperty("Authorization", "Bearer " + accessToken.getString("access_token"));
-			
-			//read the response from Google+ and convert it to a JSON object
-			String content = CharStreams.toString(new InputStreamReader(uc.getInputStream(),Charsets.UTF_8));
-			if (content==null || content.isEmpty()) throw new Exception();
-			
-			JSONObject userInfo = JSONObject.fromObject(content);
-			givenName = userInfo.getJSONObject("name").getString("givenName");
-		} catch (Exception e) {
-		}
-		return givenName;
 	}
 
 }

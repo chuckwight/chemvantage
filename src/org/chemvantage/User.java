@@ -126,7 +126,7 @@ public class User implements Comparable<User>,Serializable {
 		User user = null;
 		try {
 			user = new User(u.getUserId());
-			user.authDomain = u.getAuthDomain();
+			user.authDomain = "Google";
 			user.setEmail(u.getEmail());
 			user.verifiedEmail = !(user.email==null || user.email.isEmpty());
 			if (user.verifiedEmail) { // search for any accounts with the same email address and alias the new one to it

@@ -27,7 +27,6 @@ import java.util.Random;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -51,29 +50,17 @@ public class UserServiceLaunch extends HttpServlet {
 		HttpSession session = request.getSession();
 		try {
 			UserService userService = UserServiceFactory.getUserService();
-			String userId = userService.getCurrentUser().getUserId();
-			if (userId == null) response.sendRedirect("/");
-			try { // check to see if this user is in the datastore...
-				ofy().load().type(User.class).id(userId).safe();
-			} catch (Exception e2) { // ...and if not, create a new record.
-				User.createUserServiceUser(userService.getCurrentUser());
-			}
+			String userId = userService.getCurrentUser().getUserId(); // throws exception if user is not authenticated
+			if (ofy().load().type(User.class).id(userId).now()==null) User.createUserServiceUser(userService.getCurrentUser());
 			session.setAttribute("UserId", userId);
-			User user = User.getInstance(session);
+			User user = User.getInstance(session);  // follows the alias chain to the end user
 			if (userService.isUserAdmin()) user.setIsChemVantageAdmin(true);
 			
-			// try to set a Cookie with the user's ID provider:
-			String authDomain = userService.getCurrentUser().getAuthDomain();
-			String providerName = "";
-			if (authDomain.equals("gmail.com")) providerName = "Google";
-			else for (String p : Login.openIdProviders.keySet()) {
-				if (authDomain.contains(p.toLowerCase())) {
-					providerName = p; break;
-				}
+			// ensure the proper authDomain value
+			if (user.authDomain == null || !user.authDomain.equals("Google")) {
+				user.authDomain = "Google";
+				ofy().save().entity(user).now();
 			}
-			Cookie c = new Cookie("IDProvider",providerName);
-			c.setMaxAge(2592000); // expires after 30 days (in seconds)
-			response.addCookie(c);
 			
 			response.sendRedirect("/Home?r=" + new Random().nextInt(9999));
 		} catch (Exception e) {
