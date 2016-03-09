@@ -32,6 +32,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import com.google.appengine.api.users.UserServiceFactory;
+
 public class Home extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
@@ -179,7 +181,9 @@ public class Home extends HttpServlet {
 
 			buf.append("&nbsp;&nbsp;");
 			
-			buf.append("<a href=/Logout" + (nonce==null?"":"?Nonce="+nonce) + ">Sign out</a>");
+			boolean googleAuth = "Google".equals(user.authDomain);
+			if (googleAuth) buf.append("<a href='" + UserServiceFactory.getUserService().createLogoutURL("/Logout") + "'>Sign out</a>");
+			else buf.append("<a href=/Logout" + (nonce==null?"":"?Nonce="+nonce) + ">Sign out</a>");
 			
 			buf.append("</nobr></div>");
 

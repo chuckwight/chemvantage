@@ -82,7 +82,7 @@ public class Logout extends HttpServlet {
 						+ "<li>When you click on a ChemVantage link, open the page in a new window (e.g., in Safari, use Command-click to open the page)</ul><p>");
 			} else if ("Google".equals(user.authDomain)) {
 				buf.append("If you are at a public computer, you must do 2 more things to protect your online identity:<ol>"
-						+ "<li>Visit your identity provider's site below to sign out there."
+						+ "<li>Visit your identity provider's site below to verify that you are signed out there."
 						+ "<li>Shut down this browser completely to destroy any temporary cookies."
 						+ "</ol>");
 				buf.append("<center><a href='http://google.com'>"
