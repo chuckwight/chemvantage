@@ -7,10 +7,10 @@
       <DATA ref="#business.contact-info.online.email">admin@chemvantage.org</DATA>
       <DATA ref="#business.contact-info.online.uri">http://www.chemvantage.org</DATA>
       <DATA ref="#business.contact-info.telecom.telephone.number">(801) 810-4401</DATA>
-      <DATA ref="#business.contact-info.postal.street">2568 Redondo Ave</DATA>
-      <DATA ref="#business.contact-info.postal.city">Salt Lake City</DATA>
+      <DATA ref="#business.contact-info.postal.street">1784 Shadow Ridge Cir</DATA>
+      <DATA ref="#business.contact-info.postal.city">Ogden</DATA>
       <DATA ref="#business.contact-info.postal.stateprov">UT</DATA>
-      <DATA ref="#business.contact-info.postal.postalcode">84108</DATA>
+      <DATA ref="#business.contact-info.postal.postalcode">84403</DATA>
       <DATA ref="#business.contact-info.postal.country">United States</DATA>
     </DATA-GROUP>
   </ENTITY>
@@ -54,10 +54,10 @@
       <DATA ref="#business.contact-info.online.email">admin@chemvantage.org</DATA>
       <DATA ref="#business.contact-info.online.uri">http://www.chemvantage.org</DATA>
       <DATA ref="#business.contact-info.telecom.telephone.number">(801) 810-4401</DATA>
-      <DATA ref="#business.contact-info.postal.street">2568 Redondo Ave</DATA>
-      <DATA ref="#business.contact-info.postal.city">Salt Lake City</DATA>
+      <DATA ref="#business.contact-info.postal.street">1784 Shadow Ridge Cir</DATA>
+      <DATA ref="#business.contact-info.postal.city">Ogden</DATA>
       <DATA ref="#business.contact-info.postal.stateprov">UT</DATA>
-      <DATA ref="#business.contact-info.postal.postalcode">84108</DATA>
+      <DATA ref="#business.contact-info.postal.postalcode">84403</DATA>
       <DATA ref="#business.contact-info.postal.country">United States</DATA>
     </DATA-GROUP>
   </ENTITY>
