@@ -40,6 +40,7 @@ public class Domain {
 	int 	premiumAccounts;
 	int 	seatsPurchased;
 	int 	seatsAvailable;
+	double 	avgInterval = 10.; // Keep a 10-day running average of daily logins
 	boolean supportsResultService;
 	String 	resultServiceEndpoint;
 	String 	resultServiceFormat;
@@ -120,15 +121,15 @@ public class Domain {
 	}
 	
 	public void setLastLogin(Date login) {
-		double avgInterval = 10.; // Keep a 10-day running average
-		Date now = new Date();
-		double interval = (double)(now.getTime() - lastLogin.getTime())/86400000.; // days since last login
-		this.lastLogin = login;
-		this.dailyLoginsAvg =this.dailyLoginsAvg*Math.exp(-interval/avgInterval) + (1/avgInterval);
+		double interval = (double)(login.getTime() - lastLogin.getTime())/86400000.; // days since previous login
+		this.lastLogin = login; // set new value
+		this.dailyLoginsAvg = this.dailyLoginsAvg*Math.exp(-interval/avgInterval) + (1/avgInterval);
 		ofy().save().entity(this).now();
 	}
 
 	public double getDailyLoginsAvg() {
-			return this.dailyLoginsAvg;
+		Date now = new Date();
+		double interval = (double)(now.getTime() - lastLogin.getTime())/86400000.; // days since last login
+		return Math.round(1000*this.dailyLoginsAvg*Math.exp(-interval/avgInterval))/1000.;
 	}
 }
