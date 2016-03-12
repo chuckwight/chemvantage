@@ -152,6 +152,19 @@ public class DomainAdmin extends HttpServlet {
 				} catch (Exception e) {
 					out.println("Sorry, this user could not be assigned to administer the domain.");
 				}
+			} else if (userRequest.equals("Revoke Administrator")) {
+				try {
+					User usr = ofy().load().type(User.class).id(request.getParameter("AdminId")).now();
+					usr.setIsAdministrator(false);
+					usr.domain = d.domainName;
+					ofy().save().entity(usr);
+					d.removeAdmin(usr.id);
+					ofy().save().entity(d);	
+					response.sendRedirect("/admin?Domain=" + domainName);
+					return;
+				} catch (Exception e) {
+					out.println("Sorry, the requested operation failed unexpectedly.");
+				}
 			}
 			out.println(Home.getHeader(user) + mainAdminForm(d,user,searchString,cursor,nonce) + Home.footer);
 		} catch (Exception e) {
@@ -163,19 +176,19 @@ public class DomainAdmin extends HttpServlet {
 		StringBuffer buf = new StringBuffer("\n\n<h2>ChemVantage Domain Administration</h2>");
 		try {
 			List<String> domainAdmins = d.getDomainAdmins();
-			buf.append("Assign an administrator for this domain:<br>"
+			buf.append("<table>");
+			buf.append("<tr><td>Domain name: </td><td>" + d.domainName + "</td></tr>");
+			if (domainAdmins != null) for (String id : domainAdmins) {
+				buf.append("<tr><td>Domain administrator: </td>");
+				buf.append("<td>" + User.getBothNames(id) + "&nbsp;&lt;" + User.getEmail(id) + "&gt;</td><td> <form method=post><input type=hidden name=AdminId value='" + id + "'><input type=submit name=UserRequest value='Revoke Administrator'></form></span></td></tr>");
+			}
+			buf.append("</table>");
+			buf.append("Assign a new administrator for this domain:<br>"
 					+ "<form method=post>"
 					+ "UserId: <input type=text name=AdminId>"
 					+ "<input type=submit name=UserRequest value='Assign Administrator'>"
 					+ "<input type=hidden name=Domain value='" + d.domainName + "'>"
 					+ "</form>");
-			buf.append("<table>");
-			buf.append("<tr><td align=right>Domain name: </td><td>" + d.domainName + "</td></tr>");
-			buf.append("<tr><td align=right>Domain administrator: </td><td>");
-			if (domainAdmins != null) for (String id : domainAdmins) buf.append(User.getBothNames(id) + "&nbsp;&lt;" + User.getEmail(id) + "&gt; <br/>");
-			buf.append("</td></tr>");
-			buf.append("<tr><td align=right>Total number of users: </td><td>" + d.getActiveUsers() + "</td></tr>");
-			buf.append("</table>");
 			
 			// Start user search section for editing user properties
 			Query<User> results = null;
@@ -190,6 +203,7 @@ public class DomainAdmin extends HttpServlet {
 			
 			buf.append("\n<h3>Manage User Accounts</h3>");
 			buf.append("\n<FORM METHOD=GET>"
+					+ "There are " + d.getActiveUsers() + " active user accounts for this domain.<br>"
 					+ "As a domain administrator, your main responsibility is to <a href=# onClick=document.getElementById('manage').style.display='inLine'>manage user accounts</a>.<br>"
 					+ "To search for a user, enter the first few letters of the user's email address. Leave blank to browse all ChemVantage users in this domain.<br>");
 
