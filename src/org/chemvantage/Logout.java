@@ -28,6 +28,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import com.google.appengine.api.users.UserServiceFactory;
+
 public class Logout extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
@@ -56,7 +58,7 @@ public class Logout extends HttpServlet {
 	}
 	
 	String logoutPage(HttpServletRequest request,HttpServletResponse response) {
-		StringBuffer buf = new StringBuffer("<h2>You have successfully signed out of ChemVantage</h2>");
+		StringBuffer buf = new StringBuffer();
 		try {
 			HttpSession session = request.getSession();
 			User user = null;
@@ -64,8 +66,12 @@ public class Logout extends HttpServlet {
 			else user = User.getInstance(session);
 			
 			session.invalidate();  // now the user is logged out of ChemVantage
-
-			if (user==null && !request.isSecure()) {
+			buf.append("<h2>You have successfully signed out of ChemVantage</h2>");
+			
+			if (user==null && "secure".equals(request.getParameter("status"))) {
+				buf.append("You have also successfully signed out of your identity provider.<br/>");
+				buf.append("If you are at a public computer, please shut down this browser completely to protect your online identity.<p>");
+			} else if (user==null && !request.isSecure()) {
 				buf.append("If you were signed out unexpectedly, the most likely reason is because you are using a plain-text (http) URL to "
 						+ "access ChemVantage inside a frame that uses a secure (https) URL. The best way to fix this is to make certain that your "
 						+ "learning management system is configured to launch Chemvantage using the URL https://" + request.getServerName() + "/lti<p>");
@@ -82,10 +88,10 @@ public class Logout extends HttpServlet {
 						+ "<li>When you click on a ChemVantage link, open the page in a new window (e.g., in Safari, use Command-click to open the page)</ul><p>");
 			} else if ("Google".equals(user.authDomain)) {
 				buf.append("If you are at a public computer, you must do 2 more things to protect your online identity:<ol>"
-						+ "<li>Visit your identity provider's site below to verify that you are signed out there."
+						+ "<li>Click the icon below to sign out from your identity provider (Google)."
 						+ "<li>Shut down this browser completely to destroy any temporary cookies."
 						+ "</ol>");
-				buf.append("<center><a href='http://google.com'>"
+				buf.append("<center><a href='" + UserServiceFactory.getUserService().createLogoutURL("/Logout?status=secure") + "'>"
 						+ "<img src='/images/google.png' border=0 alt='google.com'><br/>" 
 						+ "google.com</a></center>");
 			} else buf.append("If you are at a public computer, please shut down this browser completely to protect your online identity.<p>");

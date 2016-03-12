@@ -167,9 +167,10 @@ public class Admin extends HttpServlet {
 				}
 				buf.append("\n</TABLE>");
 				if (nResults==this.queryLimit) buf.append("<a href=/Admin?SearchString=" + searchString + "&Cursor=" + iterator.getCursor().toWebSafeString() + ">show more users</a>"); 
-			} else if (searchString != null) buf.append("\nSorry, the search returned no results.");
-				// write a section here to give the total number of users
+			} else if (searchString != null) buf.append("\nSorry, the search returned no results.<p>");
 			
+			// write a section here to give the total number of users
+			buf.append("The total number of ChemVantage user accounts = " + ofy().load().type(User.class).count());
 			
 			// This section provides information about domains
 			buf.append("<h3>Most Active ChemVantage Domains</h3>");

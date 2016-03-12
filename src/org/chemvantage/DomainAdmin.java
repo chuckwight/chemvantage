@@ -163,15 +163,12 @@ public class DomainAdmin extends HttpServlet {
 		StringBuffer buf = new StringBuffer("\n\n<h2>ChemVantage Domain Administration</h2>");
 		try {
 			List<String> domainAdmins = d.getDomainAdmins();
-			if (domainAdmins == null || domainAdmins.size()==0) { // provide a chance to assign a domain admin
-				buf.append("Assign an administrator for this domain:<br>"
-						+ "<form method=post>"
-						+ "UserId: <input type=text name=AdminId>"
-						+ "<input type=submit name=UserRequest value='Assign Administrator'>"
-						+ "<input type=hidden name=Domain value='" + d.domainName + "'>"
-						+ "</form>");
-			}
-			//Date now = new Date();
+			buf.append("Assign an administrator for this domain:<br>"
+					+ "<form method=post>"
+					+ "UserId: <input type=text name=AdminId>"
+					+ "<input type=submit name=UserRequest value='Assign Administrator'>"
+					+ "<input type=hidden name=Domain value='" + d.domainName + "'>"
+					+ "</form>");
 			buf.append("<table>");
 			buf.append("<tr><td align=right>Domain name: </td><td>" + d.domainName + "</td></tr>");
 			buf.append("<tr><td align=right>Domain administrator: </td><td>");
