@@ -115,8 +115,7 @@ public class DomainAdmin extends HttpServlet {
 			List<String> domainAdmins = d.getDomainAdmins();
 			if (!((domainAdmins != null && domainAdmins.contains(user.id)) || user.isChemVantageAdmin())) {
 				response.sendRedirect("/Home");
-			}
-			
+			}			
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
@@ -180,16 +179,10 @@ public class DomainAdmin extends HttpServlet {
 			buf.append("<tr><td>Domain name: </td><td>" + d.domainName + "</td></tr>");
 			if (domainAdmins != null) for (String id : domainAdmins) {
 				buf.append("<tr><td>Domain administrator: </td>");
-				buf.append("<td>" + User.getBothNames(id) + "&nbsp;&lt;" + User.getEmail(id) + "&gt;</td><td> <form method=post><input type=hidden name=AdminId value='" + id + "'><input type=submit name=UserRequest value='Revoke Administrator'></form></span></td></tr>");
+				buf.append("<td>" + User.getBothNames(id) + "&nbsp;&lt;" + User.getEmail(id) + "&gt;</td></tr>");
 			}
 			buf.append("</table>");
-			buf.append("Assign a new administrator for this domain:<br>"
-					+ "<form method=post>"
-					+ "UserId: <input type=text name=AdminId>"
-					+ "<input type=submit name=UserRequest value='Assign Administrator'>"
-					+ "<input type=hidden name=Domain value='" + d.domainName + "'>"
-					+ "</form>");
-			
+
 			// Start user search section for editing user properties
 			Query<User> results = null;
 			if (searchString != null) {
@@ -198,12 +191,12 @@ public class DomainAdmin extends HttpServlet {
 				if (i == 0) searchString = "";
 				else if (i > 0) searchString = searchString.substring(0,i);
 				results = ofy().load().type(User.class).filter("email >=",searchString).filter("email <",(searchString+'\ufffd')).filter("domain",d.domainName).limit(this.queryLimit);
-				if (cursor!=null) results.startAt(Cursor.fromWebSafeString(cursor));
 			}
 			
 			buf.append("\n<h3>Manage User Accounts</h3>");
+			int nUsers = d.getActiveUsers();
 			buf.append("\n<FORM METHOD=GET>"
-					+ "There are " + d.getActiveUsers() + " active user accounts for this domain.<br>"
+					+ "There are " + nUsers + " active user accounts for this domain.<br>"
 					+ "As a domain administrator, your main responsibility is to <a href=# onClick=document.getElementById('manage').style.display='inLine'>manage user accounts</a>.<br>"
 					+ "To search for a user, enter the first few letters of the user's email address. Leave blank to browse all ChemVantage users in this domain.<br>");
 
@@ -213,10 +206,10 @@ public class DomainAdmin extends HttpServlet {
 					+ "<INPUT TYPE=HIDDEN NAME=Domain VALUE='" + d.domainName + "'></FORM>");
 
 			if(results != null) {
-				QueryResultIterator<User> iterator = results.iterator();
+				QueryResultIterator<User> iterator = cursor==null?results.iterator():results.startAt(Cursor.fromWebSafeString(cursor)).iterator();
 				int nResults = results.count();
-				buf.append("<FONT SIZE=-1>Showing " + (nResults==this.queryLimit?"first ":"") + nResults + " results. "
-						+ (nResults>4?"You can narrow this search by entering more of the user's email address":"") + "</FONT><br>");
+				buf.append("<FONT SIZE=-1>Showing " + nResults + " out of " + nUsers + " users. "
+						+ (nResults==this.queryLimit?"You can narrow this search by entering more of the user's email address.":"") + "</FONT><br>");
 				buf.append("\n<TABLE CELLSPACING=5><TR><TD><b>Last Name</b></TD><TD><b>First Name</b></TD><TD><b>Email</b></TD>"
 						+ "<TD><b>Role</b></TD><TD><b>UserId</b></TD><TD><b>Last Login</b></TD><TD><b>Action</b></TD></TR>");
 				while (iterator.hasNext()) {
@@ -233,19 +226,9 @@ public class DomainAdmin extends HttpServlet {
 							+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Edit User'></TD></TR></FORM>");
 				}
 				buf.append("\n</TABLE>");
-				if (nResults==this.queryLimit) buf.append("<a href=/admin?Domain=" + d.domainName + "&SearchString=" + searchString + "&Cursor=" + iterator.getCursor().toWebSafeString() + ">show more users</a>"); 
+				if (nResults==this.queryLimit) buf.append("<a href=/admin?Domain=" + d.domainName + "&SearchString=" + searchString + "&Cursor=" + iterator.getCursor().toWebSafeString() + "><FONT SIZE=-1>show more users</FONT></a>"); 
 			} else if (searchString != null) buf.append("\nSorry, the search returned no results.");
-/*
-			buf.append("<div id='manage' style='display:none'>"
-					+ "<h3>Basic and Premium Accounts</h3>"
-					+ "Any individual user may browse ChemVantage without charge using a free basic account simply by navigating to the site.<br>"
-					+ "In order to join a ChemVantage group (usually a chemistry class taught by one of your instructors), a user must upgrade to a premium account. "
-					+ "During the free trial period this happens automatically.<p>"
-					+ "There are 2 ways to upgrade to a premium account after the free trial period:<ol>"
-					+ "<li>The domain (e.g., school or college) may purchase premium account seats ($2.00/ea in quantities of 50 or more) that are allocated to users when they first join a group. If you want to purchase premium accounts on behalf of your students, you simply have to ensure that a sufficient number of seats are purchased in advance."
-					+ "<li>If no seats are available, the user will be asked to purchase an individual premium account upgrade ($4.99) when joining a group for the first time. If you want students to purchase their own premium accounts, you don't have to do anything; it's automatic."
-					+ "</ol>");
-*/
+
 			buf.append("<div id='manage' style='display:none'><h3>Instructor and Admin Accounts</h3>"
 					+ "As the domain administrator, you have the ability to grant instructor or administrator privileges to users in your domain.<br/> "
 					+ "Find the user's account using the search box above and edit the user's profile to grant the appropriate rights.<ul>" 

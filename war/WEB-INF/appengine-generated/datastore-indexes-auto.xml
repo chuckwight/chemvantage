@@ -1,4 +1,11 @@
-<!-- Indices written at Tue, 8 Mar 2016 11:39:11 MST -->
+<!-- Indices written at Sun, 13 Mar 2016 19:26:08 MDT -->
 
-<datastore-indexes/>
+<datastore-indexes>
 
+    <!-- Used 1 time in query history -->
+    <datastore-index kind="Assignment" ancestor="false" source="auto">
+        <property name="groupId" direction="asc"/>
+        <property name="deadline" direction="asc"/>
+    </datastore-index>
+
+</datastore-indexes>
