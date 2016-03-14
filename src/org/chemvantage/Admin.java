@@ -61,7 +61,7 @@ public class Admin extends HttpServlet {
 			else {
 				String searchString = request.getParameter("SearchString");
 				String cursor = request.getParameter("Cursor");
-				out.println(Home.getHeader(user) + mainAdminForm(user,searchString,cursor) + Home.footer);
+				out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Home.footer);
 			}
 		} catch (Exception e) {
 		}
@@ -92,7 +92,7 @@ public class Admin extends HttpServlet {
 				User usr = ofy().load().type(User.class).id(request.getParameter("UserId")).safe();
 				searchString = usr.getEmail();
 				ofy().delete().entity(usr);
-			} else if (userRequest.equals("Search")) {
+			} else if (userRequest.equals("Search for Consumer")) {
 				searchString = request.getParameter("oauth_consumer_key");
 			} else if (userRequest.equals("Generate New Shared Secret")) {
 				createBLTIConsumer(request);
@@ -108,13 +108,13 @@ public class Admin extends HttpServlet {
 				mergeAccounts(usr,mergeUser);
 				searchString = usr.getEmail();
 			}
-			out.println(Home.getHeader(user) + mainAdminForm(user,searchString,cursor) + Home.footer);
+			out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Home.footer);
 		} catch (Exception e) {
 			response.getWriter().println(e.toString());
 		}
 	}
 
-	String mainAdminForm(User user,String searchString,String cursor) {
+	String mainAdminForm(User user,String userRequest,String searchString,String cursor) {
 		StringBuffer buf = new StringBuffer("\n\n<h2>Administration</h2>");
 		try {
 			buf.append("<h3>Announcements</h3>");
@@ -129,27 +129,27 @@ public class Admin extends HttpServlet {
 			
 			// Start user search section for editing user properties
 			Query<User> results = null;
-			if (searchString != null) {
+			if ("Search for User".equals(userRequest)) {
+				if ("(show all)".equals(searchString)) searchString = "";
 				searchString = searchString.toLowerCase().trim();
 				int i = searchString.indexOf('*');
 				if (i == 0) searchString = "";
 				else if (i > 0) searchString = searchString.substring(0,i);
-				results = ofy().load().type(User.class).filter("email >=",searchString).filter("email <",(searchString+'\ufffd')).limit(this.queryLimit);
-				if (cursor!=null) results.startAt(Cursor.fromWebSafeString(cursor));
+				results = searchString.isEmpty()?ofy().load().type(User.class).limit(this.queryLimit):ofy().load().type(User.class).filter("email >=",searchString).filter("email <",(searchString+'\ufffd')).limit(this.queryLimit);
 			}
 			
 			buf.append("\n<h3>User Search</h3>");
-			buf.append("\n<FORM METHOD=GET>"
-					+ "To search for a user, enter a portion of the user's email address.<br/>Leave blank to browse all users.<br>");
+			int nUsers = ofy().load().type(User.class).count();
+			buf.append("\n<FORM METHOD=GET>To search for a user, enter a portion of the user's email address.<br/>");
 
-			buf.append("\n<INPUT NAME=SearchString VALUE='" + (searchString==null||searchString.equals("(show all)")?"":CharHider.quot2html(searchString)) + "'>"
-					+ "\n<INPUT TYPE=SUBMIT VALUE='Search for users'></FORM>");
+			buf.append("\n<INPUT NAME=SearchString VALUE='" + (searchString==null||searchString.isEmpty()?"(show all)":CharHider.quot2html(searchString)) + "'>"
+					+ "\n<INPUT TYPE=SUBMIT NAME='UserRequest' VALUE='Search for users'></FORM>");
 
 			if(results != null) {
-				QueryResultIterator<User> iterator = results.iterator();
+				QueryResultIterator<User> iterator = cursor==null?results.iterator():results.startAt(Cursor.fromWebSafeString(cursor)).iterator();
 				int nResults = results.count();
-				buf.append("<FONT SIZE=-1>Showing " + (nResults==this.queryLimit?"first ":"") + nResults + " results. "
-						+ (nResults>4?"You can narrow this search by entering more of the user's email address":"") + "</FONT><br>");
+				buf.append("<FONT SIZE=-1>Showing " + nResults + " out of " + nUsers + " users. "
+						+ (nResults==this.queryLimit?"You can narrow this search by entering more of the user's email address.":"") + "</FONT><br>");
 				buf.append("\n<TABLE CELLSPACING=5><TR><TD><b>Last Name</b></TD><TD><b>First Name</b></TD><TD><b>Email</b></TD>"
 						+ "<TD><b>Role</b></TD><TD><b>UserId</b></TD><TD><b>Last Login</b></TD><TD><b>Action</b></TD></TR>");
 				while (iterator.hasNext()) {
@@ -166,11 +166,9 @@ public class Admin extends HttpServlet {
 							+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Edit User'></TD></TR></FORM>");
 				}
 				buf.append("\n</TABLE>");
-				if (nResults==this.queryLimit) buf.append("<a href=/Admin?SearchString=" + searchString + "&Cursor=" + iterator.getCursor().toWebSafeString() + ">show more users</a>"); 
+				if (nResults==this.queryLimit) buf.append("<a href=/Admin?SearchString=" + searchString + "&Cursor=" + iterator.getCursor().toWebSafeString() + "><FONT SIZE=-1>show more users</FONT></a>"); 
 			} else if (searchString != null) buf.append("\nSorry, the search returned no results.<p>");
-			
-			// write a section here to give the total number of users
-			buf.append("The total number of ChemVantage user accounts = " + ofy().load().type(User.class).count());
+			else buf.append("<FONT SIZE=-1>There are currently " + nUsers + " active ChemVantage accounts.</FONT><p>");
 			
 			// This section provides information about domains
 			buf.append("<h3>Most Active ChemVantage Domains</h3>");
@@ -178,7 +176,7 @@ public class Admin extends HttpServlet {
 			if (domains.size()>0) {
 				buf.append("<table><tr><td>Domain Name</td><td>Last Login</td><td>Users</td><td style='text-align:center'>Administrator</td><td>Avg Daily Logins</td></tr>");
 				for (Domain d : domains) {
-					int nUsers = ofy().load().type(User.class).filter("domain",d.domainName).count();
+					nUsers = ofy().load().type(User.class).filter("domain",d.domainName).count();
 					if (d.activeUsers!=nUsers) {
 						d.activeUsers = nUsers;
 						ofy().save().entity(d);
@@ -201,35 +199,43 @@ public class Admin extends HttpServlet {
 
 			buf.append("<h3>Basic LTI Consumer</h3>");
 			BLTIConsumer c = null;
-			if (searchString==null) {
-				buf.append("Use the form below to search for, create or delete specific LTI consumers.<br>");
-			}
-			else if (searchString.equals("(show all)")) {
-				Query<BLTIConsumer> consumers = ofy().load().type(BLTIConsumer.class);
-				if (consumers.count() == 0) buf.append("(no LTI consumers have been authorized yet)<p>");
-				else {
-					buf.append("<TABLE><TR><TH>Consumer Key</TH><TH>Secret</TH></TR>");
-					for (BLTIConsumer cons : consumers) {
-						buf.append("<TR><TD>" + cons.oauth_consumer_key + "</TD>");
-						buf.append("<TD><INPUT TYPE=BUTTON VALUE='Reveal secret' "
-						+ "onClick=javascript:getElementById('" + cons.oauth_consumer_key + "').style.display='';this.style.display='none'>"
-						+ "<div id='"+ cons.oauth_consumer_key + "' style='display: none'>" + cons.secret + "</div></TD></TR>");
+			if ("Search for Consumer".equals(userRequest)) {
+				if ("(show all)".equals(searchString)) {
+					searchString = "";
+					Query<BLTIConsumer> consumerResults = ofy().load().type(BLTIConsumer.class).limit(this.queryLimit);
+					int nConsumers = consumerResults.count();
+					QueryResultIterator<BLTIConsumer> consumers = consumerResults.iterator();
+					if (!consumers.hasNext()) buf.append("(no LTI consumers have been authorized yet)<p>");
+					else {
+						buf.append("<TABLE><TR><TH>Consumer Key</TH><TH>Secret</TH></TR>");
+						while (consumers.hasNext()) {
+							BLTIConsumer cons = consumers.next();
+							buf.append("<TR><TD>" + cons.oauth_consumer_key + "</TD>");
+							buf.append("<TD><INPUT TYPE=BUTTON VALUE='Reveal secret' "
+									+ "onClick=javascript:getElementById('" + cons.oauth_consumer_key + "').style.display='';this.style.display='none'>"
+									+ "<div id='"+ cons.oauth_consumer_key + "' style='display: none'>" + cons.secret + "</div></TD></TR>");
+						}
+						buf.append("</TABLE>");
+						if (nConsumers==this.queryLimit) {  // offer to show more values
+							buf.append("<FONT SIZE=-1><a href='/Admin?UserRequest=Search for Consumer&SearchString=(show all)&Cursor=" + consumers.getCursor().toWebSafeString() + "'><FONT SIZE=-1>show more users</FONT></a>");
+						}
 					}
-					buf.append("</TABLE>");
 				}
-			}
-			else if (!searchString.isEmpty()){
+			} else if (searchString!=null && !searchString.isEmpty()){
 				c = ofy().load().type(BLTIConsumer.class).id(searchString).now();
 				if (c==null) buf.append("LTI Consumer not found.");
 				else buf.append("Launch URL: https://www.chemvantage.org/lti/ <br>"
 						+ "Configuration file: https://www.chemvantage.org/lti_config.xml <br>"
 						+ "Consumer Key: " + c.oauth_consumer_key + "<br>"
 						+ "Shared Secret: " + c.secret + "<p>");
+			} else {
+				buf.append("Use the form below to search for, create or delete specific LTI consumers.<br>");
 			}
+			
 			String defKey = c==null?"(show all)":c.oauth_consumer_key;
 			buf.append("<FORM NAME=ConsKey ACTION=Admin METHOD=POST>"
 					+ "Consumer Key: <INPUT TYPE=TEXT NAME=oauth_consumer_key VALUE='" + defKey + "' onFocus=ConsKey.oauth_consumer_key.value=''>"
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Search'> "
+					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Search for Consumer'> "
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Generate New Shared Secret'> "
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete LTI Consumer'>"
 					+ "</FORM>");
