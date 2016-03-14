@@ -356,7 +356,7 @@ public class PracticeExam extends HttpServlet {
 			buf.append("\n<FORM METHOD=POST ACTION=PracticeExam "
 					+ "onSubmit=\"return confirm('Submit this exam for grading now. Are you sure?')\">");
 
-			buf.append("<div id='timer0' style='color: red'></div>");
+			buf.append("<div id='timer0' style='color: red'></div><div id=ctrl0 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
 			buf.append("\n<input type=submit value='Grade This Practice Exam'><p>");
 
 			// Include a nonce reference as a hedge in case the session is not maintained by the user's browser
@@ -439,27 +439,52 @@ public class PracticeExam extends HttpServlet {
 
 			buf.append("\n<input type=hidden name='ExamId' value=" + pt.id + ">");
 			buf.append("\n<input type=hidden name='UserRequest' value='GradeExam'>");
-			buf.append("<div id='timer1' style='color: red'></div>");
+			buf.append("<div id='timer1' style='color: red'></div><div id=ctrl1 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
 			buf.append("\n<input type=submit value='Grade This Practice Exam'>");
 			buf.append("\n</form>");
 
-			buf.append("<SCRIPT language='JavaScript'>"
-					+ "function countdown(seconds) {"
-					+ "var minutes = Math.floor(seconds/60);"
-					+ "var oddSeconds = seconds%60;"
-					+ "for(i=0;i<2;i++)"
-					+ "document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ' minutes ' + oddSeconds + ' seconds.';"
-					+ "setTimeout('countdown(' + (seconds-1) + ')',1000);"
-					+ "}"
-					+ "countdown(" + secondsRemaining + ");"
-					+ "</SCRIPT>"); 
-
+			// this code for displaying/hiding timers and a 30-seconds-remaining alert box
+			buf.append(timerScripts(secondsRemaining)); 
+			
 		} catch (Exception e) {
 			buf.append("printExam: " + e.toString());
 		}
 		return buf.toString();
 	}
 
+	String timerScripts(int secondsRemaining) {
+		return "<SCRIPT language='JavaScript'>"
+				+ "function toggleTimers() {"
+				+ "  var timer0 = document.getElementById('timer0');"
+				+ "  var timer1 = document.getElementById('timer1');"
+				+ "  var ctrl0 = document.getElementById('ctrl0');"
+				+ "  var ctrl1 = document.getElementById('ctrl1');"
+				+ "  if (timer0.style.display=='') {" 
+				+ "    timer0.style.display='none';timer1.style.display='none';"
+				+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
+				+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
+				+ "  } else {"
+				+ "    timer0.style.display='';timer1.style.display='';"
+				+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
+				+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
+				+ "  }"
+				+ "}"
+				+ "var seconds;var minutes;var oddSeconds;"
+				+ "var endTime = new Date().getTime() + " + secondsRemaining + "*1000;"
+				+ "function countdown() {"
+				+ "var now = new Date().getTime();"
+				+ "seconds=Math.round((endTime-now)/1000);"
+				+ "minutes = seconds<0?Math.ceil(seconds/60):Math.floor(seconds/60);"
+				+ "oddSeconds = seconds%60;"
+				+ "for(i=0;i<2;i++)"
+				+ "document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ' minutes ' + oddSeconds + ' seconds.';"
+				+ "if (seconds==30) alert('30 seconds remaining');"
+				+ "setTimeout('countdown()',1000);"
+				+ "}"
+				+ "countdown();"
+				+ "</SCRIPT>"; 
+	}
+	
 	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {
