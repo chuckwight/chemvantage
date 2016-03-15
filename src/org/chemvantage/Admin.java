@@ -76,8 +76,8 @@ public class Admin extends HttpServlet {
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
-			String searchString = null;
-			String cursor = null;
+			String searchString = request.getParameter("SearchString");
+			String cursor = request.getParameter("Cursor");
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 			if (userRequest.equals("Announce")) {
@@ -129,7 +129,7 @@ public class Admin extends HttpServlet {
 			
 			// Start user search section for editing user properties
 			Query<User> results = null;
-			if ("Search for User".equals(userRequest)) {
+			if ("Search for users".equals(userRequest)) {
 				if ("(show all)".equals(searchString)) searchString = "";
 				searchString = searchString.toLowerCase().trim();
 				int i = searchString.indexOf('*');
@@ -166,8 +166,8 @@ public class Admin extends HttpServlet {
 							+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Edit User'></TD></TR></FORM>");
 				}
 				buf.append("\n</TABLE>");
-				if (nResults==this.queryLimit) buf.append("<a href=/Admin?SearchString=" + searchString + "&Cursor=" + iterator.getCursor().toWebSafeString() + "><FONT SIZE=-1>show more users</FONT></a>"); 
-			} else if (searchString != null) buf.append("\nSorry, the search returned no results.<p>");
+				if (nResults==this.queryLimit) buf.append("<a href=/Admin?UserRequest=Search+for+users&SearchString=" + searchString + "&Cursor=" + iterator.getCursor().toWebSafeString() + "><FONT SIZE=-1>show more users</FONT></a>"); 
+			} else if ("Search for users".equals(userRequest) && searchString != null) buf.append("\nSorry, the search returned no results.<p>");
 			else buf.append("<FONT SIZE=-1>There are currently " + nUsers + " active ChemVantage accounts.</FONT><p>");
 			
 			// This section provides information about domains
