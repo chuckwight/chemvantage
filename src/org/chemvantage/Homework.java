@@ -135,18 +135,6 @@ public class Homework extends HttpServlet {
 		
 			buf.append("<b>Customize This Homework Assignment</b> <a href=/Groups?UserRequest=AssignHomeworkQuestions&GroupId=" + group.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + "><FONT SIZE=-2>select questions</FONT></a><p>");
 				
-			buf.append("<b>Homework Rules</b> <a id=rlink href=# onClick=document.getElementById('rules').style.display='inLine';document.getElementById('rlink').style.display='none'><FONT SIZE=-2>show more</FONT></a><br/>"
-					+ "<div id='rules' style='display:none'><OL>"
-					+ "<LI>Answers to problems may be resubmitted as many times as desired, to improve the student's overall score on the assignment.</LI>"
-					+ "<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question to discourage guessing.</LI>"
-					+ "<LI>Most questions are parameterized with different data, so the correct answers are different for each student.</LI>"
-					+ "<LI>For each topic, the server tracks your total score and the total number of submissions.</LI>"
-					+ "<LI>A checkmark will appear to the left of each correctly solved problem.</LI>"
-					+ "<LI>Answers to assigned problems must be submitted for scoring prior to the deadline below in order to receive class credit.</LI>"
-					+ "</OL></div><p>");
-
-			buf.append("<b>Please Rate Your Experience with ChemVantage</b> <a href=/Feedback><FONT SIZE=-2>here</FONT></a><p>");
-			
 			buf.append("<b>Homework Scores</b> <a id=slink href=# onClick=document.getElementById('details').style.display='inLine';document.getElementById('slink').style.display='none'><FONT SIZE=-2>show details</FONT></a><br/>"
 					+ "<div id='details' style='display:none'>The following is a list of best pre-deadline scores on this assignment. In most cases, these scores have been reported to the grade book "
 					+ "in the class learning management system. However, the LMS may have a policy that is different from ChemVantage (e.g., record first score only), so it "

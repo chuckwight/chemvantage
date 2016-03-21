@@ -140,15 +140,6 @@ public class Quiz extends HttpServlet {
 			
 			buf.append("<b>Customize This Quiz</b> <a id=slink href=/Groups?UserRequest=AssignQuizQuestions&GroupId=" + group.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + "><FONT SIZE=-2>select questions</FONT></a><p>");
 				
-			buf.append("<b>Quiz Rules</b> <a id=rlink href=# onClick=document.getElementById('rules').style.display='inLine';document.getElementById('rlink').style.display='none'><FONT SIZE=-2>show more</FONT></a><br/>"
-					+ "<div id='rules' style='display:none'><OL><LI>Each quiz must be completed within " + timeLimit + " minutes of the time when it is first downloaded.</LI>"
-					+ "<LI>Quizzes may be retaken as many times as desired, to improve the score.</LI>"
-					+ "<LI>For each quiz topic, the server reports the student's best score.</LI>"
-					+ "<LI>Quizzes must be submitted for scoring prior to the deadline below in order to receive class credit.</LI>"
-					+ "</OL></div><p>");
-
-			buf.append("<b>Please Rate Your Experience with ChemVantage</b> <a href=/Feedback><FONT SIZE=-2>here</FONT></a><p>");
-			
 			buf.append("<b>Quiz Scores</b> <a href=# onClick=document.getElementById('details').style.display='inLine'><FONT SIZE=-2>show details</FONT></a><br/>"
 					+ "<div id='details' style='display:none'>The following is a list of maximum pre-deadline scores on this quiz. In most cases, these scores have been reported to the grade book "
 					+ "in the class learning management system. However, the LMS may have a policy that is different from ChemVantage (e.g., record first score only), so it "
