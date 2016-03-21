@@ -151,7 +151,7 @@ public class Score {    // this object represents a best score achieved by a use
 					redDot = belowThreshold && !rehabilitated;
 				}
 			}
-			return (redDot?"<img src=" + dotUrl + ">&nbsp;":"") + (numberOfAttempts>0?Integer.toString(score):"") + (numberOfAttempts>0?"&nbsp;<FONT COLOR=GRAY>("+numberOfAttempts+")</FONT>":"");
+			return (redDot?"<img src=" + dotUrl + ">&nbsp;":"") + (numberOfAttempts>0?Integer.toString(score):"") + (numberOfAttempts>0?"&nbsp;<FONT COLOR=GRAY>("+numberOfAttempts+"&nbsp;" + (numberOfAttempts>1?"tries":"try") + ")</FONT>":"");
 		} catch (Exception e) {
 			return "";
 		}
