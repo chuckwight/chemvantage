@@ -140,9 +140,9 @@ public class Admin extends HttpServlet {
 			
 			buf.append("\n<h3>User Search</h3>");
 			int nUsers = ofy().load().type(User.class).count();
-			buf.append("\n<FORM METHOD=GET>To search for a user, enter a portion of the user's email address.<br/>");
+			buf.append("\n<FORM NAME=UsrSearch METHOD=GET>To search for a user, enter a portion of the user's email address.<br/>");
 
-			buf.append("\n<INPUT NAME=SearchString VALUE='" + (searchString==null||searchString.isEmpty()?"(show all)":CharHider.quot2html(searchString)) + "'>"
+			buf.append("\n<INPUT NAME=SearchString VALUE='" + ("Search for users".equals(userRequest) && searchString!=null?CharHider.quot2html(searchString):"(show all)") + "' onFocus=UsrSearch.SearchString.value=''>"
 					+ "\n<INPUT TYPE=SUBMIT NAME='UserRequest' VALUE='Search for users'></FORM>");
 
 			if(results != null) {
@@ -198,47 +198,51 @@ public class Admin extends HttpServlet {
 			} else buf.append("No domains are currently active.");
 
 			buf.append("<h3>Basic LTI Consumer</h3>");
-			BLTIConsumer c = null;
 			if ("Search for Consumer".equals(userRequest)) {
-				if ("(show all)".equals(searchString)) {
-					searchString = "";
+				if ("(show all)".equals(searchString)) searchString="";
+				BLTIConsumer c = null;
+				if (!searchString.isEmpty()) c = ofy().load().type(BLTIConsumer.class).id(searchString).now();
+				if (c != null) {
+					buf.append("Launch URL: https://www.chemvantage.org/lti/ <br>"
+							+ "Configuration file: https://www.chemvantage.org/lti_config.xml <br>"
+							+ "Consumer Key: " + c.oauth_consumer_key + "<br>"
+							+ "Shared Secret: " + c.secret + "<p>");
+				} else {
 					Query<BLTIConsumer> consumerResults = ofy().load().type(BLTIConsumer.class).limit(this.queryLimit);
-					int nConsumers = consumerResults.count();
-					QueryResultIterator<BLTIConsumer> consumers = consumerResults.iterator();
-					if (!consumers.hasNext()) buf.append("(no LTI consumers have been authorized yet)<p>");
-					else {
+					if (consumerResults.count()==0) {
+						buf.append("(no LTI consumers have been authorized yet)<p>");
+					} else {
+						QueryResultIterator<BLTIConsumer> consumers = consumerResults.iterator();
 						buf.append("<TABLE><TR><TH>Consumer Key</TH><TH>Secret</TH></TR>");
+						int nResults = 0;
 						while (consumers.hasNext()) {
 							BLTIConsumer cons = consumers.next();
-							buf.append("<TR><TD>" + cons.oauth_consumer_key + "</TD>");
-							buf.append("<TD><INPUT TYPE=BUTTON VALUE='Reveal secret' "
-									+ "onClick=javascript:getElementById('" + cons.oauth_consumer_key + "').style.display='';this.style.display='none'>"
-									+ "<div id='"+ cons.oauth_consumer_key + "' style='display: none'>" + cons.secret + "</div></TD></TR>");
+							if (cons.oauth_consumer_key.startsWith(searchString)) {
+								nResults++;
+								buf.append("<TR><TD>" + cons.oauth_consumer_key + "</TD>");
+								buf.append("<TD><INPUT TYPE=BUTTON VALUE='Reveal secret' "
+										+ "onClick=javascript:getElementById('" + cons.oauth_consumer_key + "').style.display='';this.style.display='none'>"
+										+ "<div id='"+ cons.oauth_consumer_key + "' style='display: none'>" + cons.secret + "</div></TD></TR>");
+							}
 						}
 						buf.append("</TABLE>");
-						if (nConsumers==this.queryLimit) {  // offer to show more values
-							buf.append("<FONT SIZE=-1><a href='/Admin?UserRequest=Search for Consumer&SearchString=(show all)&Cursor=" + consumers.getCursor().toWebSafeString() + "'><FONT SIZE=-1>show more users</FONT></a>");
-						}
+						if (consumerResults.count()==this.queryLimit) {  // offer to show more values
+							buf.append("<FONT SIZE=-1><a href='/Admin?UserRequest=Search for Consumer&SearchString=(show all)&Cursor=" + consumers.getCursor().toWebSafeString() + "'><FONT SIZE=-1>show more consumers</FONT></a>");
+						} else if (nResults==0) buf.append("No LTI consumers matched this search.");
 					}
 				}
-			} else if (searchString!=null && !searchString.isEmpty()){
-				c = ofy().load().type(BLTIConsumer.class).id(searchString).now();
-				if (c==null) buf.append("LTI Consumer not found.");
-				else buf.append("Launch URL: https://www.chemvantage.org/lti/ <br>"
-						+ "Configuration file: https://www.chemvantage.org/lti_config.xml <br>"
-						+ "Consumer Key: " + c.oauth_consumer_key + "<br>"
-						+ "Shared Secret: " + c.secret + "<p>");
 			} else {
 				buf.append("Use the form below to search for, create or delete specific LTI consumers.<br>");
 			}
-			
-			String defKey = c==null?"(show all)":c.oauth_consumer_key;
+			int nConsumers = ofy().load().type(BLTIConsumer.class).count();
+			String defKey = "Search for Consumer".equals(userRequest) && (searchString!=null&&!searchString.isEmpty())?searchString:"(show all)";
 			buf.append("<FORM NAME=ConsKey ACTION=Admin METHOD=POST>"
 					+ "Consumer Key: <INPUT TYPE=TEXT NAME=oauth_consumer_key VALUE='" + defKey + "' onFocus=ConsKey.oauth_consumer_key.value=''>"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Search for Consumer'> "
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Generate New Shared Secret'> "
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete LTI Consumer'>"
 					+ "</FORM>");
+			buf.append("<FONT SIZE=-1>There are currently " + nConsumers + " registered LTI consumers.</FONT><p>");
 		}
 		catch (Exception e) {
 			buf.append("<p>" + e.toString());
