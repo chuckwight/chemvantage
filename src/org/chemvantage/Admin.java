@@ -30,6 +30,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.datastore.Cursor;
 import com.google.appengine.api.datastore.QueryResultIterator;
+import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
 
 public class Admin extends HttpServlet {
@@ -128,14 +129,14 @@ public class Admin extends HttpServlet {
 					+ "<INPUT TYPE=SUBMIT VALUE='Post this message now'></FORM>");
 			
 			// Start user search section for editing user properties
+			if ("(show all)".equals(searchString)) searchString = "";
 			Query<User> results = null;
 			if ("Search for users".equals(userRequest)) {
-				if ("(show all)".equals(searchString)) searchString = "";
 				searchString = searchString.toLowerCase().trim();
 				int i = searchString.indexOf('*');
 				if (i == 0) searchString = "";
 				else if (i > 0) searchString = searchString.substring(0,i);
-				results = searchString.isEmpty()?ofy().load().type(User.class).limit(this.queryLimit):ofy().load().type(User.class).filter("email >=",searchString).filter("email <",(searchString+'\ufffd')).limit(this.queryLimit);
+				results = searchString.isEmpty()?ofy().load().type(User.class).order("email").limit(this.queryLimit):ofy().load().type(User.class).filter("email >=",searchString).filter("email <",(searchString+'\ufffd')).limit(this.queryLimit);
 			}
 			
 			buf.append("\n<h3>User Search</h3>");
@@ -148,17 +149,18 @@ public class Admin extends HttpServlet {
 			if(results != null) {
 				QueryResultIterator<User> iterator = cursor==null?results.iterator():results.startAt(Cursor.fromWebSafeString(cursor)).iterator();
 				int nResults = results.count();
-				buf.append("<FONT SIZE=-1>Showing " + nResults + " out of " + nUsers + " users. "
+				buf.append("<FONT SIZE=-1>Showing " + nResults + " users matching the search criteria. "
 						+ (nResults==this.queryLimit?"You can narrow this search by entering more of the user's email address.":"") + "</FONT><br>");
-				buf.append("\n<TABLE CELLSPACING=5><TR><TD><b>Last Name</b></TD><TD><b>First Name</b></TD><TD><b>Email</b></TD>"
+				buf.append("\n<TABLE CELLSPACING=5><TR><TD><b>Email</b></TD><TD><b>Last Name</b></TD><TD><b>First Name</b></TD>"
 						+ "<TD><b>Role</b></TD><TD><b>UserId</b></TD><TD><b>Last Login</b></TD><TD><b>Action</b></TD></TR>");
 				while (iterator.hasNext()) {
 					User u = iterator.next();
 					u.clean();
 					buf.append("\n<FORM METHOD=GET>"
-							+ "<TR style=color:" + (u.alias==null?"black":"grey") + "><TD>" + u.getLastName() + "</TD>"
-							+ "<TD>" + u.getFirstName() + "</TD>"
+							+ "<TR style=color:" + (u.alias==null?"black":"grey") + ">"
 							+ "<TD>" + u.getEmail() + "</TD>"
+							+ "<TD>" + u.getLastName() + "</TD>"
+							+ "<TD>" + u.getFirstName() + "</TD>"
 							+ "<TD>" + u.getPrincipalRole() + "</TD>" 
 							+ "<TD>" + u.id + "</TD>"
 							+ "<TD>" + u.lastLogin + "</TD>"
@@ -167,8 +169,7 @@ public class Admin extends HttpServlet {
 				}
 				buf.append("\n</TABLE>");
 				if (nResults==this.queryLimit) buf.append("<a href=/Admin?UserRequest=Search+for+users&SearchString=" + searchString + "&Cursor=" + iterator.getCursor().toWebSafeString() + "><FONT SIZE=-1>show more users</FONT></a>"); 
-			} else if ("Search for users".equals(userRequest) && searchString != null) buf.append("\nSorry, the search returned no results.<p>");
-			else buf.append("<FONT SIZE=-1>There are currently " + nUsers + " active ChemVantage accounts.</FONT><p>");
+			} else buf.append("<FONT SIZE=-1>There are currently " + nUsers + " active ChemVantage accounts.</FONT><p>");
 			
 			// This section provides information about domains
 			buf.append("<h3>Most Active ChemVantage Domains</h3>");
@@ -198,51 +199,38 @@ public class Admin extends HttpServlet {
 			} else buf.append("No domains are currently active.");
 
 			buf.append("<h3>Basic LTI Consumer</h3>");
-			if ("Search for Consumer".equals(userRequest)) {
-				if ("(show all)".equals(searchString)) searchString="";
-				BLTIConsumer c = null;
-				if (!searchString.isEmpty()) c = ofy().load().type(BLTIConsumer.class).id(searchString).now();
-				if (c != null) {
-					buf.append("Launch URL: https://www.chemvantage.org/lti/ <br>"
-							+ "Configuration file: https://www.chemvantage.org/lti_config.xml <br>"
-							+ "Consumer Key: " + c.oauth_consumer_key + "<br>"
-							+ "Shared Secret: " + c.secret + "<p>");
-				} else {
-					Query<BLTIConsumer> consumerResults = ofy().load().type(BLTIConsumer.class).limit(this.queryLimit);
-					if (consumerResults.count()==0) {
-						buf.append("(no LTI consumers have been authorized yet)<p>");
-					} else {
-						QueryResultIterator<BLTIConsumer> consumers = consumerResults.iterator();
-						buf.append("<TABLE><TR><TH>Consumer Key</TH><TH>Secret</TH></TR>");
-						int nResults = 0;
-						while (consumers.hasNext()) {
-							BLTIConsumer cons = consumers.next();
-							if (cons.oauth_consumer_key.startsWith(searchString)) {
-								nResults++;
-								buf.append("<TR><TD>" + cons.oauth_consumer_key + "</TD>");
-								buf.append("<TD><INPUT TYPE=BUTTON VALUE='Reveal secret' "
-										+ "onClick=javascript:getElementById('" + cons.oauth_consumer_key + "').style.display='';this.style.display='none'>"
-										+ "<div id='"+ cons.oauth_consumer_key + "' style='display: none'>" + cons.secret + "</div></TD></TR>");
-							}
-						}
-						buf.append("</TABLE>");
-						if (consumerResults.count()==this.queryLimit) {  // offer to show more values
-							buf.append("<FONT SIZE=-1><a href='/Admin?UserRequest=Search for Consumer&SearchString=(show all)&Cursor=" + consumers.getCursor().toWebSafeString() + "'><FONT SIZE=-1>show more consumers</FONT></a>");
-						} else if (nResults==0) buf.append("No LTI consumers matched this search.");
-					}
-				}
-			} else {
-				buf.append("Use the form below to search for, create or delete specific LTI consumers.<br>");
-			}
 			int nConsumers = ofy().load().type(BLTIConsumer.class).count();
 			String defKey = "Search for Consumer".equals(userRequest) && (searchString!=null&&!searchString.isEmpty())?searchString:"(show all)";
-			buf.append("<FORM NAME=ConsKey ACTION=Admin METHOD=POST>"
+			buf.append("<FORM NAME=ConsKey ACTION=Admin METHOD=POST>Use this form below to search for, create or delete specific LTI consumers.<br>"
 					+ "Consumer Key: <INPUT TYPE=TEXT NAME=oauth_consumer_key VALUE='" + defKey + "' onFocus=ConsKey.oauth_consumer_key.value=''>"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Search for Consumer'> "
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Generate New Shared Secret'> "
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete LTI Consumer'>"
 					+ "</FORM>");
-			buf.append("<FONT SIZE=-1>There are currently " + nConsumers + " registered LTI consumers.</FONT><p>");
+
+			if ("Search for Consumer".equals(userRequest)) {
+				Key<BLTIConsumer> keyFirst = Key.create(BLTIConsumer.class,(searchString.isEmpty()?"\u0000":searchString));
+				Key<BLTIConsumer> keyLast = Key.create(BLTIConsumer.class,(searchString.isEmpty()?"\ufffd":searchString+"\ufffd"));					
+				Query<BLTIConsumer> consumerResults = ofy().load().type(BLTIConsumer.class).filterKey(">=",keyFirst).filterKey("<",keyLast).limit(this.queryLimit);
+				QueryResultIterator<BLTIConsumer> consumers = cursor==null?consumerResults.iterator():consumerResults.startAt(Cursor.fromWebSafeString(cursor)).iterator();
+				
+				int nResults = consumerResults.count();
+				if (nResults==0) buf.append("<FONT SIZE=-1>No LTI consumers matched the search criteria.</FONT><p>");
+				else buf.append("<FONT SIZE=-1>Showing " + nResults + " LTI consumers matching the search criteria.</FONT><p>");
+				
+				buf.append("<TABLE><TR><TH>Consumer Key</TH><TH>Secret</TH></TR>");
+				while (consumers.hasNext()) {
+					BLTIConsumer cons = consumers.next();
+					buf.append("<TR><TD>" + cons.oauth_consumer_key + "</TD>");
+					buf.append("<TD><INPUT TYPE=BUTTON VALUE='Reveal secret' "
+							+ "onClick=javascript:getElementById('" + cons.oauth_consumer_key + "').style.display='';this.style.display='none'>"
+							+ "<div id='"+ cons.oauth_consumer_key + "' style='display: none'>" + cons.secret + "</div></TD></TR>");
+				}
+				buf.append("</TABLE>");
+				if (nResults==this.queryLimit) buf.append("<FONT SIZE=-1><a href='/Admin?UserRequest=Search for Consumer&SearchString=(show all)&Cursor=" + consumers.getCursor().toWebSafeString() + "'><FONT SIZE=-1>show more consumers</FONT></a><p>");
+			} else {
+				buf.append("<FONT SIZE=-1>There are currently " + nConsumers + " registered LTI consumers.</FONT><p>");
+			}
 		}
 		catch (Exception e) {
 			buf.append("<p>" + e.toString());
