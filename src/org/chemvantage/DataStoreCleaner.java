@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -88,7 +87,7 @@ public class DataStoreCleaner extends HttpServlet {
 		
 		switch (task) {
 		case "CleanUsers": out.println(cleanUsers(cursor,0,testOnly)); break;
-		case "CleanResponses": out.println(cleanResponses(cursor,0,testOnly)); break;
+		//case "CleanResponses": out.println(cleanResponses(cursor,0,testOnly)); break;
 		case "CleanQuizTransactions": out.println(cleanQuizTransactions(cursor,0,testOnly)); break;
 		case "CleanHWTransactions": out.println(cleanHWTransactions(cursor,0,testOnly)); break;
 		case "CleanPracticeExamTransactions": out.println(cleanPracticeExamTransactions(cursor,0,testOnly)); break;
@@ -98,7 +97,7 @@ public class DataStoreCleaner extends HttpServlet {
 		case "CleanDomains": out.println(cleanDomains(cursor,0,testOnly)); break;
 		case "CleanAll": 
 			out.println(cleanUsers(cursor,0,testOnly));
-			out.println(cleanResponses(cursor,0,testOnly));
+			//out.println(cleanResponses(cursor,0,testOnly));
 			out.println(cleanQuizTransactions(cursor,0,testOnly));
 			out.println(cleanHWTransactions(cursor,0,testOnly));
 			out.println(cleanPracticeExamTransactions(cursor,0,testOnly));
@@ -168,7 +167,7 @@ public class DataStoreCleaner extends HttpServlet {
 		}	
 		return true; // signal that this user object should be deleted
 	}
-
+/*
 	private String cleanResponses(String cursor,int retries,boolean testOnly) {
 		StringBuffer buf = new StringBuffer();
 		try {			
@@ -192,7 +191,7 @@ public class DataStoreCleaner extends HttpServlet {
 		}
 		return buf.toString();
 	}
-	
+*/	
 	private String cleanQuizTransactions(String cursor,int retries,boolean testOnly) {
 		StringBuffer buf = new StringBuffer();
 		try {			
