@@ -36,7 +36,7 @@ public class Response implements Serializable {
 	@Index 	Date submitted;
 			String studentResponse;
 			String correctAnswer;
-			int score;
+	@Index	int score;
 			int possibleScore;
 	
 	Response() {}

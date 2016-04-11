@@ -1,4 +1,18 @@
-<!-- Indices written at Mon, 14 Mar 2016 13:11:05 MDT -->
+<!-- Indices written at Mon, 11 Apr 2016 11:36:23 MDT -->
 
-<datastore-indexes/>
+<datastore-indexes>
 
+    <!-- Used 2 times in query history -->
+    <datastore-index kind="Question" ancestor="false" source="auto">
+        <property name="assignmentType" direction="asc"/>
+        <property name="topicId" direction="asc"/>
+        <property name="pointValue" direction="asc"/>
+    </datastore-index>
+
+    <!-- Used 2 times in query history -->
+    <datastore-index kind="Response" ancestor="false" source="auto">
+        <property name="questionId" direction="asc"/>
+        <property name="score" direction="asc"/>
+    </datastore-index>
+
+</datastore-indexes>

@@ -45,7 +45,7 @@ public class Edit extends HttpServlet {
 /* ====================== NOTES ========================
  * 
  * The general strategy here is to provide a space for editors to receive/edit/activate/delete question items 
- * submitted form the community, and to create/edit/delete questions of their own.
+ * submitted from the community, and to create/edit/delete questions of their own.
  * Proposed questions are stored temporarily as ProposedQuestion items in the database, and if approved, are
  * then converted to regular Question items with a new ID number.
  * 
@@ -240,14 +240,18 @@ public class Edit extends HttpServlet {
 				int i=0;
 				for (Question q : questions) {
 					q.setParameters();
-					long questionId = q.id;
 					i++;
+					int nSuccessful = ofy().load().type(Response.class).filter("questionId",q.id).filter("score >",0).count();
+					int nTotalAttmp = ofy().load().type(Response.class).filter("questionId",q.id).count();
+					int successPct = nTotalAttmp>0?100*nSuccessful/nTotalAttmp:0;
+					
 					buf.append("<FORM METHOD=GET ACTION=Edit>"
 							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topicId + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
-							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + questionId + "'>"
-							+ "<TR ID=" + questionId + " VALIGN=TOP>"
-							+ "<TD ALIGN=RIGHT NOWRAP><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit> " + i + ".</TD><TD>");
+							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>"
+							+ "<TR ID=" + q.id + " VALIGN=TOP>"
+							+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit><p><FONT SIZE=-2>" + successPct + "%&nbsp;avg&nbsp;score</FONT></TD><TD ALIGN=RIGHT NOWRAP> " + i + ".</TD><TD>");
+							//+ "<TD ALIGN=RIGHT NOWRAP><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit> " + i + ".</TD><TD>");
 					buf.append("\n" + q.printAll() + "</TD>");
 					
 				if (assignmentType.equals("Exam")) {
@@ -275,7 +279,7 @@ public class Edit extends HttpServlet {
 					net += ne; // running total
 					buf.append("<TD style='text-align:center'>" + nq + "</TD><TD style='text-align:center'>" + nh + "</TD><TD style='text-align:center'>" + ne + "</TD></TR>");
 				}
-				buf.append("<TR><TD>Totals</TD><TD style='text-align:center'>" + nqt + "</TD><TD style='text-align:center'>" + nht + "</TD><TD style='text-align:center'>" + net + "</TD></TR>");
+				buf.append("<TR style='font-weight:bold'><TD>Totals</TD><TD style='text-align:center'>" + nqt + "</TD><TD style='text-align:center'>" + nht + "</TD><TD style='text-align:center'>" + net + "</TD></TR>");
 				buf.append("</TABLE>");
 			}
 		} catch (Exception e) {
@@ -660,7 +664,14 @@ public class Edit extends HttpServlet {
 			buf.append("Topic: " + t.title + "<br>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
 			buf.append("Author: <a href=mailto:'" + User.getEmail(q.authorId) + "'>" + User.getBothNames(q.authorId) + "</a><br>");
-			buf.append("Editor: <a href=mailto:'" + user.getEmail() + "'>" + User.getBothNames(q.editorId) + "</a><p>");
+			buf.append("Editor: <a href=mailto:'" + user.getEmail() + "'>" + User.getBothNames(q.editorId) + "</a><br>");
+			
+			// Calculate the current success rate for this question:
+			int nSuccessful = ofy().load().type(Response.class).filter("questionId",q.id).filter("score >",0).count();
+			int nTotalAttmp = ofy().load().type(Response.class).filter("questionId",q.id).count();
+			double successPct = nTotalAttmp>0?100.*nSuccessful/nTotalAttmp:0;
+			buf.append("Success Rate: " + nSuccessful + "/" + nTotalAttmp + " (" + successPct + "%)<p>");
+			
 			buf.append("<FORM Action=Edit METHOD=POST>");
 			
 			buf.append(q.printAll());
