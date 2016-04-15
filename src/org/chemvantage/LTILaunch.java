@@ -123,7 +123,7 @@ public class LTILaunch extends HttpServlet {
 				tc = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).safe();
 				if (tc.secret==null) throw new Exception();
 			} catch (Exception e) {
-				throw new Exception (" Invalid oauth_consumer_key.");
+				throw new Exception ("Invalid oauth_consumer_key. Please verify that the oauth_consumer_key is entered into your LMS exactly as you are registered with ChemVantage.");
 			}
 
 			String tool_consumer_guid = request.getParameter("tool_consumer_guid");
@@ -156,7 +156,7 @@ public class LTILaunch extends HttpServlet {
 				System.out.println("Provider failed to validate message");
 				System.out.println(e.getMessage());
 				if ( base_string != null ) System.out.println(base_string);
-				throw new Exception("OAuth validation failed.");
+				throw new Exception("OAuth validation failed. The most likely cause is the shared_secret value was entered into your LMS incorrectly, possibly with leading or trailing blank spaces. Please enter the value again, exactly as you are registered with ChemVantage.");
 			}
 			// BLTI Launch message was validated successfully. 
 			
