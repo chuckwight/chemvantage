@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -87,7 +88,7 @@ public class DataStoreCleaner extends HttpServlet {
 		
 		switch (task) {
 		case "CleanUsers": out.println(cleanUsers(cursor,0,testOnly)); break;
-		//case "CleanResponses": out.println(cleanResponses(cursor,0,testOnly)); break;
+		case "CleanResponses": out.println(cleanResponses(cursor,0,testOnly)); break;
 		case "CleanQuizTransactions": out.println(cleanQuizTransactions(cursor,0,testOnly)); break;
 		case "CleanHWTransactions": out.println(cleanHWTransactions(cursor,0,testOnly)); break;
 		case "CleanPracticeExamTransactions": out.println(cleanPracticeExamTransactions(cursor,0,testOnly)); break;
@@ -96,15 +97,26 @@ public class DataStoreCleaner extends HttpServlet {
 		case "CleanAssignments": out.println(cleanAssignments(cursor,0,testOnly)); break;
 		case "CleanDomains": out.println(cleanDomains(cursor,0,testOnly)); break;
 		case "CleanAll": 
-			out.println(cleanUsers(cursor,0,testOnly));
-			//out.println(cleanResponses(cursor,0,testOnly));
-			out.println(cleanQuizTransactions(cursor,0,testOnly));
-			out.println(cleanHWTransactions(cursor,0,testOnly));
-			out.println(cleanPracticeExamTransactions(cursor,0,testOnly));
-			out.println(cleanScores(cursor,0,testOnly));
-			out.println(cleanGroups(cursor,0,testOnly));
-			out.println(cleanAssignments(cursor,0,testOnly));
-			out.println(cleanDomains(cursor,0,testOnly));
+			out.println("<h2>Clean All</h2>");
+			Queue queue = QueueFactory.getDefaultQueue();
+			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanUsers").param("TestOnly", testOnly?"true":"false"));
+			out.println("Launched CleanUsers as a background task" + (testOnly?" (test only)":"") + ".<br>");
+			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanResponses").param("TestOnly", testOnly?"true":"false"));
+			out.println("Launched CleanResponses as a background task" + (testOnly?" (test only)":"") + ".<br>");
+			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanQuizTransactions").param("TestOnly", testOnly?"true":"false"));
+			out.println("Launched CleanQuizTransactions as a background task" + (testOnly?" (test only)":"") + ".<br>");
+			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanHWTransactions").param("TestOnly", testOnly?"true":"false"));
+			out.println("Launched CleanHWTransactions as a background task" + (testOnly?" (test only)":"") + ".<br>");
+			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanPracticeExamTransactions").param("TestOnly", testOnly?"true":"false"));
+			out.println("Launched CleanPracticeExamTransactions as a background task" + (testOnly?" (test only)":"") + ".<br>");
+			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanScores").param("TestOnly", testOnly?"true":"false"));
+			out.println("Launched CleanScores as a background task" + (testOnly?" (test only)":"") + ".<br>");
+			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanGroups").param("TestOnly", testOnly?"true":"false"));
+			out.println("Launched CleanGroups as a background task" + (testOnly?" (test only)":"") + ".<br>");
+			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanAssignments").param("TestOnly", testOnly?"true":"false"));
+			out.println("Launched CleanAssignments as a background task" + (testOnly?" (test only)":"") + ".<br>");
+			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanDomains").param("TestOnly", testOnly?"true":"false"));
+			out.println("Launched CleanDomains as a background task" + (testOnly?" (test only)":"") + ".<br>");
 		default: return;
 		}
 	}
@@ -167,7 +179,7 @@ public class DataStoreCleaner extends HttpServlet {
 		}	
 		return true; // signal that this user object should be deleted
 	}
-/*
+
 	private String cleanResponses(String cursor,int retries,boolean testOnly) {
 		StringBuffer buf = new StringBuffer();
 		try {			
@@ -191,14 +203,18 @@ public class DataStoreCleaner extends HttpServlet {
 		}
 		return buf.toString();
 	}
-*/	
+	
 	private String cleanQuizTransactions(String cursor,int retries,boolean testOnly) {
 		StringBuffer buf = new StringBuffer();
-		try {			
-			Query<QuizTransaction> query = ofy().load().type(QuizTransaction.class).limit(querySizeLimit);
-			if (cursor==null) buf.append("<h2>Clean Quiz Transactions</h2>");
-		    else query.startAt(Cursor.fromWebSafeString(cursor));
-
+		try {
+			Query<QuizTransaction> query;
+			if (cursor==null) {  // start new entity search
+				buf.append("<h2>Clean Quiz Transactions</h2>");
+				query = ofy().load().type(QuizTransaction.class).limit(querySizeLimit);
+			} else {  // continue search with the next 1000 entities
+				query = ofy().load().type(QuizTransaction.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
+			}
+			
 		    QueryResultIterator<QuizTransaction> qri = query.iterator();
 		    ArrayList<Key<QuizTransaction>> keys = new ArrayList<Key<QuizTransaction>>();  // list of QuizTransaction entity keys for batch delete
 		    
@@ -233,10 +249,14 @@ public class DataStoreCleaner extends HttpServlet {
 	private String cleanHWTransactions(String cursor,int retries,boolean testOnly) {
 		StringBuffer buf = new StringBuffer();
 		try {			
-			Query<HWTransaction> query = ofy().load().type(HWTransaction.class).limit(querySizeLimit);
-			if (cursor==null) buf.append("<h2>Clean Homework Transactions</h2>");
-		    else query.startAt(Cursor.fromWebSafeString(cursor));
-
+			Query<HWTransaction> query;
+			if (cursor==null) {  // start new entity search
+				buf.append("<h2>Clean Homework Transactions</h2>");
+				query = ofy().load().type(HWTransaction.class).limit(querySizeLimit);
+			} else {  // continue search with the next 1000 entities
+				query = ofy().load().type(HWTransaction.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
+			}
+			
 		    QueryResultIterator<HWTransaction> qri = query.iterator();
 		    ArrayList<Key<HWTransaction>> keys = new ArrayList<Key<HWTransaction>>();  // list of HWTransaction entity keys for batch delete
 		    
@@ -271,10 +291,14 @@ public class DataStoreCleaner extends HttpServlet {
 	private String cleanPracticeExamTransactions(String cursor,int retries,boolean testOnly) {
 		StringBuffer buf = new StringBuffer();
 		try {			
-			Query<PracticeExamTransaction> query = ofy().load().type(PracticeExamTransaction.class).limit(querySizeLimit);
-			if (cursor==null) buf.append("<h2>Clean PracticeExam Transactions</h2>");
-		    else query.startAt(Cursor.fromWebSafeString(cursor));
-
+			Query<PracticeExamTransaction> query;
+			if (cursor==null) {  // start new entity search
+				buf.append("<h2>Clean Practice Exam Transactions</h2>");
+				query = ofy().load().type(PracticeExamTransaction.class).limit(querySizeLimit);
+			} else {  // continue search with the next 1000 entities
+				query = ofy().load().type(PracticeExamTransaction.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
+			}
+			
 		    QueryResultIterator<PracticeExamTransaction> qri = query.iterator();
 		    ArrayList<Key<PracticeExamTransaction>> keys = new ArrayList<Key<PracticeExamTransaction>>();  // list of PracticeExamTransaction entity keys for batch delete
 		    
@@ -309,10 +333,14 @@ public class DataStoreCleaner extends HttpServlet {
 	private String cleanScores(String cursor, int retries,boolean testOnly) {
 		StringBuffer buf = new StringBuffer();
 		try {			
-			Query<Score> query = ofy().load().type(Score.class).limit(querySizeLimit);
-			if (cursor==null) buf.append("<h2>Clean User Scores</h2>");
-		    else query.startAt(Cursor.fromWebSafeString(cursor));
-
+			Query<Score> query;
+			if (cursor==null) {  // start new entity search
+				buf.append("<h2>Clean User Scores</h2>");
+				query = ofy().load().type(Score.class).limit(querySizeLimit);
+			} else {  // continue search with the next 1000 entities
+				query = ofy().load().type(Score.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
+			}
+			
 		    QueryResultIterator<Score> qri = query.iterator();
 		    ArrayList<Key<Score>> keys = new ArrayList<Key<Score>>();  // list of Score entity keys for batch delete
 		    
@@ -348,10 +376,14 @@ public class DataStoreCleaner extends HttpServlet {
 	private String cleanGroups(String cursor, int retries,boolean testOnly) {
 		StringBuffer buf = new StringBuffer();
 		try {			
-			Query<Group> query = ofy().load().type(Group.class).limit(querySizeLimit);
-			if (cursor==null) buf.append("<h2>Clean Groups</h2>");
-		    else query.startAt(Cursor.fromWebSafeString(cursor));
-
+			Query<Group> query;
+			if (cursor==null) {  // start new entity search
+				buf.append("<h2>Clean Groups</h2>");
+				query = ofy().load().type(Group.class).limit(querySizeLimit);
+			} else {  // continue search with the next 1000 entities
+				query = ofy().load().type(Group.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
+			}
+			
 		    QueryResultIterator<Group> qri = query.iterator();
 		    ArrayList<Key<Group>> keys = new ArrayList<Key<Group>>();  // list of Group entity keys for batch delete
 		    
@@ -382,10 +414,14 @@ public class DataStoreCleaner extends HttpServlet {
 	private String cleanAssignments(String cursor, int retries,boolean testOnly) {
 		StringBuffer buf = new StringBuffer();
 		try {			
-			Query<Assignment> query = ofy().load().type(Assignment.class).limit(querySizeLimit);
-			if (cursor==null) buf.append("<h2>Clean Assignments</h2>");
-		    else query.startAt(Cursor.fromWebSafeString(cursor));
-
+			Query<Assignment> query;
+			if (cursor==null) {  // start new entity search
+				buf.append("<h2>Clean Assignments</h2>");
+				query = ofy().load().type(Assignment.class).limit(querySizeLimit);
+			} else {  // continue search with the next 1000 entities
+				query = ofy().load().type(Assignment.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
+			}
+			
 		    QueryResultIterator<Assignment> qri = query.iterator();
 		    ArrayList<Key<Assignment>> keys = new ArrayList<Key<Assignment>>();  // list of Assignment entity keys for batch delete
 		    
@@ -420,10 +456,14 @@ public class DataStoreCleaner extends HttpServlet {
 	private String cleanDomains(String cursor, int retries,boolean testOnly) {
 		StringBuffer buf = new StringBuffer();
 		try {			
-			Query<Domain> query = ofy().load().type(Domain.class).limit(querySizeLimit);
-			if (cursor==null) buf.append("<h2>Clean Domains</h2>");
-		    else query.startAt(Cursor.fromWebSafeString(cursor));
-
+			Query<Domain> query;
+			if (cursor==null) {  // start new entity search
+				buf.append("<h2>Clean Domains</h2>");
+				query = ofy().load().type(Domain.class).limit(querySizeLimit);
+			} else {  // continue search with the next 1000 entities
+				query = ofy().load().type(Domain.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
+			}
+			
 		    QueryResultIterator<Domain> qri = query.iterator();
 		    ArrayList<Key<Domain>> keys = new ArrayList<Key<Domain>>();  // list of Domain entity keys for batch delete
 		    
