@@ -76,7 +76,7 @@ public class LTILaunch extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
-		StringBuffer debug = new StringBuffer();
+		StringBuffer debug = new StringBuffer(" ");
 		if (Login.lockedDown) doError(request,response,"ChemVantage is temporarily unavailable, sorry.",null,null);
 
 		// check for minimum required elements for a basic-lti-launch-request
@@ -121,9 +121,9 @@ public class LTILaunch extends HttpServlet {
 			BLTIConsumer tc;
 			try {
 				tc = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).safe();
-				if (tc.secret==null) throw new Exception();
+				if (tc.secret==null) throw new Exception("Shared secret was not found in the ChemVantage database.");
 			} catch (Exception e) {
-				throw new Exception (" Invalid oauth_consumer_key.");
+				throw new Exception("Invalid oauth_consumer_key. Please verify that the oauth_consumer_key is entered into your LMS exactly as you are registered with ChemVantage.");
 			}
 
 			String tool_consumer_guid = request.getParameter("tool_consumer_guid");
@@ -137,8 +137,7 @@ public class LTILaunch extends HttpServlet {
 
 			OAuthMessage oam = OAuthServlet.getMessage(request, null);
 			OAuthValidator oav = new SimpleOAuthValidator();
-			OAuthConsumer cons = new OAuthConsumer("about:blank#OAuth+CallBack+NotUsed", 
-					oauth_consumer_key, tc.secret, null);
+			OAuthConsumer cons = new OAuthConsumer("about:blank#OAuth+CallBack+NotUsed",oauth_consumer_key,tc.secret,null);
 
 			OAuthAccessor acc = new OAuthAccessor(cons);
 
@@ -156,9 +155,9 @@ public class LTILaunch extends HttpServlet {
 				System.out.println("Provider failed to validate message");
 				System.out.println(e.getMessage());
 				if ( base_string != null ) System.out.println(base_string);
-				throw new Exception("OAuth validation failed.");
+				throw new Exception("OAuth validation failed. The most likely cause is the shared_secret value was entered into your LMS incorrectly, possibly with leading or trailing blank spaces. Please enter the value again, exactly as you are registered with ChemVantage.");
 			}
-			// BLTI Launch message was validated successfully. 
+			debug.append("BLTI Launch message was validated successfully. ");
 			
 			// Gather some information about the user
 			String userId = request.getParameter("user_id");
@@ -175,7 +174,8 @@ public class LTILaunch extends HttpServlet {
 				user.authDomain = "BLTI";
 				ofy().save().entity(user).now();
 			}
-
+			debug.append("User info processed successfully. ");
+			
 			// Create the domain if it doesn't already exist
 			Domain domain = ofy().load().type(Domain.class).filter("domainName",oauth_consumer_key).first().now();
 			Date now = new Date();
@@ -203,7 +203,8 @@ public class LTILaunch extends HttpServlet {
 				user.domain = domain.domainName;
 				ofy().save().entity(user).now();
 			}
-
+			debug.append("Domain info processed successfully. ");
+			
 			// check if user has Instructor or Administrator role
 			String roles = request.getParameter("roles");
 			if (roles != null) {
@@ -249,7 +250,7 @@ public class LTILaunch extends HttpServlet {
 				g.isUsingLisOutcomeService = true;
 				ofy().save().entity(g).now();
 			}							
-			//debug.append("LIS services OK. ");
+			debug.append("Context info OK. ");
 			
 			if (user.isInstructor()) {
 				if (g.instructorId.equals("unknown")) {  // assign the instructor to this group
@@ -263,7 +264,7 @@ public class LTILaunch extends HttpServlet {
 			
 			response.sendRedirect(redirectUrl);
 		} catch (Exception e) {
-			doError(request, response,"LTI Launch failed. " + e.getMessage() + debug.toString(), null, null);
+			doError(request, response,"LTI Launch failed. " + e.toString() + debug.toString(), null, null);
 		}
 	}		
 	

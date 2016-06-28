@@ -91,7 +91,7 @@ public class Groups extends HttpServlet {
 			out.println(Home.getHeader(user));
 			
 			if (group == null) out.println(groupsForm(user,request,nonce));
-			else if (user.isAdministrator() || user.id.equals(group.instructorId) || group.tAIds.contains(user.id)) {
+			else if (user.isAdministrator() || (user.isInstructor() && group.domain.equals(user.domain)) || group.tAIds.contains(user.id)) {
 				if (userRequest.equals("ManageGroup")) out.println(manageGroupForm(user,group,request,nonce));
 				else if (userRequest.equals("AssignHomeworkQuestions")) out.println(assignHWQuestionsForm(user,group,request,nonce));
 				else if (userRequest.equals("AssignQuizQuestions")) out.println(assignQuizQuestionsForm(user,group,request,nonce));
@@ -274,7 +274,7 @@ public class Groups extends HttpServlet {
 					+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=JoinGroup>");
 
-			Query<Group> allGroups = ofy().load().type(Group.class);
+			Query<Group> allGroups = ofy().load().type(Group.class).filter("domain",user.domain);
 			buf.append("<SELECT NAME=GroupId onChange=submit()><OPTION VALUE=0>Default group (none)</OPTION>\n");
 			for (Group g : allGroups) {
 				//if ((g.domain==null && user.domain==null) || (g.domain != null && g.domain.equals(user.domain)))
@@ -296,7 +296,6 @@ public class Groups extends HttpServlet {
 			buf.append("<TABLE>\n<TR><TD><b>Subject</b></TD><TD><b>Instructor</b></TD>"
 					+ "<TD><b>Description</b></TD><TD COLSPAN=2 ALIGN=CENTER><b>Actions</b></TD><TD><b>View Scores</b></TD>"
 					+ "<TD><b>Deadlines</b></TD><TD><b>Enrollments</b></TD><TD ALIGN=CENTER><b>Time Zone</b></TD></TR>\n");
-
 			for (Group g : allGroups) {
 				if ((user.isAdministrator() && (user.domain==null || user.domain.equals(g.domain))) || user.id.equals(g.instructorId) || g.tAIds.contains(user.id))
 					buf.append("<TR>"
