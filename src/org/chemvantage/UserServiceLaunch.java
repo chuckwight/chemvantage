@@ -23,8 +23,14 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
+import java.util.Properties;
 import java.util.Random;
 
+import javax.mail.Message;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -54,14 +60,23 @@ public class UserServiceLaunch extends HttpServlet {
 			if (ofy().load().type(User.class).id(userId).now()==null) User.createUserServiceUser(userService.getCurrentUser());
 			session.setAttribute("UserId", userId);
 			User user = User.getInstance(session);  // follows the alias chain to the end user
-			if (userService.isUserAdmin()) user.setIsChemVantageAdmin(true);
-			
-			// ensure the proper authDomain value
 			if (user.authDomain == null || !user.authDomain.equals("Google")) {
 				user.authDomain = "Google";
 				ofy().save().entity(user).now();
 			}
-			
+			try {
+				if (userService.isUserAdmin()) {
+					User chemvantageAdmin = ofy().load().type(User.class).id("110561916370930969984").now();
+					Properties props = new Properties();
+					Session localSession = Session.getDefaultInstance(props, null);
+					Message msg = new MimeMessage(localSession);
+					msg.setFrom(new InternetAddress("admin@chemvantage.org","ChemVantage"));
+					msg.setSubject("ChemVantage Admin Login");
+					msg.setRecipient(Message.RecipientType.TO,new InternetAddress(chemvantageAdmin.smsMessageDevice));
+					msg.setText(user.getEmail() + " signed in just now.");
+					Transport.send(msg);
+				}
+			} catch (Exception e2) {}
 			response.sendRedirect("/Home?r=" + new Random().nextInt(9999));
 		} catch (Exception e) {
 			session.invalidate();
