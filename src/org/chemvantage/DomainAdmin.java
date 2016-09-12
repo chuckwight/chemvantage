@@ -132,10 +132,6 @@ public class DomainAdmin extends HttpServlet {
 			} else if (userRequest.equals("Delete User")) {
 				User usr = ofy().load().type(User.class).id(request.getParameter("UserId")).safe();
 				ofy().delete().entity(usr);
-//			} else if (userRequest.equals("Login As This User")) {
-//				request.getSession(true).setAttribute("UserId",request.getParameter("UserId"));
-//				response.sendRedirect("/Home");
-//				return;
 			} else if (userRequest.equals("Confirm Merge")) {
 				User usr = ofy().load().type(User.class).id(request.getParameter("UserId")).safe();
 				User mergeUser = ofy().load().type(User.class).id(request.getParameter("MergeUserId")).safe();
@@ -251,7 +247,7 @@ public class DomainAdmin extends HttpServlet {
 		StringBuffer buf = new StringBuffer("\n\n<h3>Edit User Properties</h3>");
 		try {
 			buf.append("\nUsing this form, you may edit edit any user-specific fields "
-					+ "for this user, login as the user, or delete the user account permanently.<p>");
+					+ "for this user or delete the user account permanently.<p>");
 			String domainName = user.domain==null?request.getParameter("Domain"):user.domain;
 			int roles = usr.roles;
 			buf.append("\n<TABLE><FORM NAME=UserForm METHOD=POST ACTION=admin>"
@@ -282,7 +278,6 @@ public class DomainAdmin extends HttpServlet {
 			buf.append("\n<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Update User'>"
 					+ "\n <INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete User' "
 					+ "onClick=\"return confirm('Delete this user. Are you sure?')\">"
-//					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Login As This User'>"
 					+ "\n</FORM>");
 
 			// Use this section for merging two user accounts into a single account and deleting the extra account
