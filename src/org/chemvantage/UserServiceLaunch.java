@@ -64,7 +64,19 @@ public class UserServiceLaunch extends HttpServlet {
 				user.authDomain = "Google";
 				ofy().save().entity(user).now();
 			}
-			try {
+			try {  // two-factor authentication
+/*
+				if (user.needs2FactorLogin) {
+					int code = new Random().nextInt(1000000);
+					Message msg = new MimeMessage(Session.getDefaultInstance(new Properties(), null));
+					msg.setFrom(new InternetAddress("admin@chemvantage.org","ChemVantage"));
+					msg.setSubject("ChemVantage Login");
+					msg.setRecipient(Message.RecipientType.TO,new InternetAddress(user.smsMessageDevice));
+					msg.setText("Your verification code is " + code);
+					Transport.send(msg);
+				}
+			} catch (Exception e2) {}
+*/
 				if (userService.isUserAdmin()) {
 					User chemvantageAdmin = ofy().load().type(User.class).id("110561916370930969984").now();
 					Properties props = new Properties();
