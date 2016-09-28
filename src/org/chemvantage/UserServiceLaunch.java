@@ -23,14 +23,9 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
-import java.util.Properties;
+import java.io.PrintWriter;
 import java.util.Random;
 
-import javax.mail.Message;
-import javax.mail.Session;
-import javax.mail.Transport;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeMessage;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -59,40 +54,44 @@ public class UserServiceLaunch extends HttpServlet {
 			String userId = userService.getCurrentUser().getUserId(); // throws exception if user is not authenticated
 			if (ofy().load().type(User.class).id(userId).now()==null) User.createUserServiceUser(userService.getCurrentUser());
 			session.setAttribute("UserId", userId);
-			User user = User.getInstance(session);  // follows the alias chain to the end user
+			User user = User.getInstance(session,false);  // follows the alias chain to the end user; no 2-factor auth required
 			if (user.authDomain == null || !user.authDomain.equals("Google")) {
 				user.authDomain = "Google";
 				ofy().save().entity(user).now();
 			}
-			try {  // two-factor authentication
-/*
-				if (user.needs2FactorLogin) {
-					int code = new Random().nextInt(1000000);
-					Message msg = new MimeMessage(Session.getDefaultInstance(new Properties(), null));
-					msg.setFrom(new InternetAddress("admin@chemvantage.org","ChemVantage"));
-					msg.setSubject("ChemVantage Login");
-					msg.setRecipient(Message.RecipientType.TO,new InternetAddress(user.smsMessageDevice));
-					msg.setText("Your verification code is " + code);
-					Transport.send(msg);
+		
+			if (user.use2FactorAuth && session.getAttribute("Code")==null) {  // send 2-factor authentication form
+				int code = new Random().nextInt(900000) + 100000;
+				if (TwoFactorAuth.sentSMSCode(user, code)) {
+					session.setAttribute("ProposedCode", code);
+					response.setContentType("text/html");
+					PrintWriter out = response.getWriter();
+					out.println(Login.header + TwoFactorAuth.verificationForm("/Home") + Login.footer);
+					return;
 				}
-			} catch (Exception e2) {}
-*/
-				if (userService.isUserAdmin()) {
-					User chemvantageAdmin = ofy().load().type(User.class).id("110561916370930969984").now();
-					Properties props = new Properties();
-					Session localSession = Session.getDefaultInstance(props, null);
-					Message msg = new MimeMessage(localSession);
-					msg.setFrom(new InternetAddress("admin@chemvantage.org","ChemVantage"));
-					msg.setSubject("ChemVantage Admin Login");
-					msg.setRecipient(Message.RecipientType.TO,new InternetAddress(chemvantageAdmin.smsMessageDevice));
-					msg.setText(user.getEmail() + " signed in just now.");
-					Transport.send(msg);
-				}
-			} catch (Exception e2) {}
+			}			
 			response.sendRedirect("/Home?r=" + new Random().nextInt(9999));
 		} catch (Exception e) {
 			session.invalidate();
 			response.sendRedirect("/");
 		}
+	}
+	
+	@Override
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
+	throws ServletException, IOException {
+		HttpSession session = request.getSession();
+		try {
+			int proposedCode = (int)session.getAttribute("ProposedCode");
+			int code = Integer.parseInt(request.getParameter("Code"));
+			if (proposedCode != code) throw new Exception();
+			session.setAttribute("Code", code);
+			String returnURL = request.getParameter("ReturnURL");
+			if (returnURL==null || returnURL.isEmpty()) returnURL = "/Home";
+			response.sendRedirect(returnURL);		
+		} catch (Exception e) {
+			response.sendRedirect("/");
+		}
+		
 	}
 }

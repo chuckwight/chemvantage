@@ -56,6 +56,7 @@ public class User implements Comparable<User>,Serializable {
 			long myGroupId;
 			boolean notifyDeadlines;
 			boolean verifiedEmail;
+			boolean use2FactorAuth;
 			String alias;
 			String authDomain;
 
@@ -74,11 +75,16 @@ public class User implements Comparable<User>,Serializable {
 		this.smsMessageDevice = "";
 		this.notifyDeadlines = false;
 		this.verifiedEmail = false;
+		this.use2FactorAuth  = false;
 		this.authDomain = "";
 		this.alias = null;
 	}
 
 	static User getInstance(HttpSession session) {
+		return getInstance(session,true);  // default action is to verify 2FactorAuth
+	}
+	
+	static User getInstance(HttpSession session, boolean verify) {
 		try {
 			String userId = (String)session.getAttribute("UserId");
 			User user = ofy().load().type(User.class).id(userId).safe();
@@ -102,10 +108,10 @@ public class User implements Comparable<User>,Serializable {
 				user.alias = null;  // in case alias is set to "" or to invalid userId
 				ofy().save().entity(user);
 			}
-			return user;
+			if (!verify || !user.use2FactorAuth || session.getAttribute("Code")!=null || Long.parseLong(user.smsMessageDevice.substring(5,15))>0L) return user;
 		} catch (Exception e) {
-			return null;
 		}
+		return null;
 	}
 
 	static User getInstance(List<String> userIds) {

@@ -24,6 +24,7 @@ import java.io.PrintWriter;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
+import java.util.Random;
 
 import javax.mail.Message;
 import javax.mail.Session;
@@ -34,6 +35,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
@@ -43,7 +45,8 @@ public class Verification extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	Subject subject = Subject.getSubject();
-
+	private static final String alpha = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+	
 	public String getServletInfo() {
 		return "This servlet verifies a user-supplied email address.";
 	}
@@ -72,7 +75,8 @@ public class Verification extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			User user = User.getInstance(request.getSession(true));
+			HttpSession session = request.getSession();
+			User user = User.getInstance(session);
 			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 				response.sendRedirect("/");
 				return;
@@ -119,6 +123,36 @@ public class Verification extends HttpServlet {
 					response.sendRedirect("/Home");
 					return;
 				}
+				out.println(Home.getHeader(user) + personalInfoForm(user,false,request) + Home.footer);
+			} else if (userRequest.equals("Register")) {
+				try {
+					String cellNumber = request.getParameter("CellNumber");
+					String carrier = request.getParameter("Carrier");
+					String code = "";
+					while (code.length()<5) {
+						code += alpha.charAt(new Random().nextInt(alpha.length()));
+					}
+					if (cellNumber.length()==10 && Long.parseLong(cellNumber) > 0 && !carrier.isEmpty()) { // 10-digit number
+						String address = cellNumber + "@" + carrier;
+						user.smsMessageDevice = code + address;
+						user.use2FactorAuth = true;
+						if (sendSMSConfirmationCode(address,code)) ofy().save().entity(user).now();
+					}
+					out.println(Home.getHeader(user) + personalInfoForm(user,false,request) + Home.footer);
+				} catch (Exception e2) {
+					out.println(e2.toString());
+				}
+			} else if (userRequest.equals("Confirm")) {
+				if (request.getParameter("Code").toUpperCase().equals(user.smsMessageDevice.substring(0,5))) {
+					user.smsMessageDevice = user.smsMessageDevice.substring(5);
+					session.setAttribute("Code",999999);
+					ofy().save().entity(user).now();
+				}
+				out.println(Home.getHeader(user) + personalInfoForm(user,false,request) + Home.footer);
+			}
+			else if (userRequest.equals("Cancel")) {
+				user.use2FactorAuth = false;
+				ofy().save().entity(user).now();
 				out.println(Home.getHeader(user) + personalInfoForm(user,false,request) + Home.footer);
 			} else if (userRequest.equals("Get Authorization Code")) {
 				if (mergeAuthCodeSent(user,request)) out.println(Home.getHeader(user) + personalInfoForm(user,false,request) + Home.footer);
@@ -219,7 +253,6 @@ public class Verification extends HttpServlet {
 			buf.append("<TR><TD ALIGN=RIGHT>Domain: </TD><TD>" + user.domain + "</TD></TR>");
 			buf.append("<TR><TD ALIGN=RIGHT>UserID: </TD><TD>" + user.id + "</TD></TR>");
 			buf.append("<TR><TD ALIGN=RIGHT>Roles: </TD><TD>Learner " + (user.isInstructor()?"Instructor ":"") + (user.isContributor()?"Author ":"") + (user.isEditor()?"Editor ":"") + (user.isAdministrator()?"Administrator ":"") +"</TD></TR>");			
-			buf.append("<TR><TD ALIGN=RIGHT>Account type: </TD><TD>" + (user.hasPremiumAccount()?"premium":"basic") + "</TD></TR>");
 			if (user.myGroupId>0L) { // user already belongs to a group
 				Group myGroup = ofy().load().type(Group.class).id(user.myGroupId).now();
 				if (!user.hasPremiumAccount() || myGroup==null) user.changeGroups(0L);
@@ -264,8 +297,9 @@ public class Verification extends HttpServlet {
 						}
 						buf.append("</SELECT>");
 					}
+					buf.append("</FORM>");
 					if (groupRequired) {
-						buf.append("</TD></TR></FORM>");
+						buf.append("</TD></TR>");
 						if (allGroups.size() > 0) buf.append("<TR><TD COLSPAN=2><span id=instructions style='color:red'><br>"
 								+ "Please select a ChemVantage group. This will give you access to assignments and deadlines.<br>"
 								+ "It will also give your instructor and teaching assistant access to your scores.</span></TD></TR>");
@@ -274,31 +308,42 @@ public class Verification extends HttpServlet {
 								+ "of the page to create a new ChemVantage group for your chemistry class.</span></TD></TR>");
 					}
 				}
-/*
- * ================ THIS SECTION ELIMINATED WHILE ALL CHEMVANTAGE ACCOUNTS ARE FREE ======================
-				} else if (user.myGroupId<=0L && !eligibleToJoin) {
-					buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>ChemVantage Group:</TD>"
-							+ "<TD><span style='color:red'>A premium account is required before you can join a group (e.g., chemistry class).</span><p>");
-					buf.append("<TABLE>"
-							+ "<TR><TD ALIGN=CENTER><b>Instant ChemVantage Premium Account Upgrade</b></TD></TR>"
-							+ "<TR><TD ALIGN=CENTER><b>$4.99 USD</b></TD></TR><TR><TD ALIGN=CENTER> "
-							+ "<form action=https://www.paypal.com/cgi-bin/webscr method=post>"
-							+ "<input type=hidden name=cmd value=_s-xclick>"
-							+ "<input type=hidden name=hosted_button_id value=" + (user.authDomain.equals("BLTI")?"U58TNLE8YE4AW":"HKW9475B55NJU") + ">"
-							+ "<input type=hidden name=on0 value=userId><input type=hidden name=os0 value=" + user.id + ">"
-							+ "<input type=image src=https://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif border=0 name=submit alt='PayPal online payment'>"
-							+ "<br><font size=-2>Your payment will be processed by PayPal.com</font>"
-							+ "<img alt='' border=0 src=https://www.paypalobjects.com/en_US/i/scr/pixel.gif width=1 height=1>"
-							+ "</form></TD>");
-					if (user.myGroupId<0) buf.append("<TD align=center><form action=Verification method=post><input type=hidden name=GroupId value=0>"
-							+ "<input type=hidden name=UserRequest value=JoinGroup>"
-							+ "<input type=submit value='No Thanks' style='font-weight:bold;color:white;background-color:red'>"
-							+ "<br><font size=-2>You may return to this page later to<br>upgrade your account and join a group.</font></TD>");
-					buf.append("</TR></TABLE>");
-					buf.append("</TD></TR>");
-				}
- * ================ THIS SECTION ELIMINATED WHILE ALL CHEMVANTAGE ACCOUNTS ARE FREE ======================				
-*/
+				buf.append("<TR><TD ALIGN=RIGHT VALIGN=TOP>Account Security: </TD><FORM METHOD=POST><TD>");
+				if (user.use2FactorAuth) {
+					try {
+						Long.parseLong(user.smsMessageDevice.substring(0,10)); // throws exception if not 10 digits
+						buf.append("Two-factor authentication. <INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Cancel'>");
+					} catch (Exception e) {
+						buf.append("A confirmation code was sent to your wireless device. If the message is not received, please<br>"
+								+ "cancel and try again, or send email to admin@chemvantage.org for assistance.<br>"
+								+ "To complete the SMS registration, enter the code here: "
+								+ "<INPUT TYPE=TEXT SIZE=6 NAME=Code><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Confirm'><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Cancel'>");
+					}
+				} else if (user.authDomain.equals("Google")){
+					buf.append("Password only. <a href=# onClick=javascript:getElementById('register').style.display=''>Click here to activate two-factor authentication.</a>.<br>"
+							+ "<div id=register style='display: none'>Enter your 10-digit cellular device number: "							
+							+ "<INPUT TYPE=TEXT NAME=CellNumber VALUE='10 digits only' onfocus=\"if (this.value == '10 digits only') {this.value = '';}\">"
+							+ "<SELECT NAME=Carrier>"
+							+ "<OPTION VALUE=''>Select your carrier</OPTION>"
+							+ "<OPTION VALUE='txt.att.net'>AT&T</OPTION>"
+							+ "<OPTION VALUE='message.alltel.com'>Alltel</OPTION>"
+							+ "<OPTION VALUE='myboostmobile.com'>Boost</OPTION>"
+							+ "<OPTION VALUE='mobile.celloneusa.com'>CellularOne</OPTION>"
+							+ "<OPTION VALUE='csouth1.com'>Cellular South</OPTION>"
+							+ "<OPTION VALUE='cingularme.com'>Cingular</OPTION>"
+							+ "<OPTION VALUE='gocbw.com'>Cincinnati Bell</OPTION>"
+							+ "<OPTION VALUE='sms.mycricket.com'>Cricket</OPTION>"
+							+ "<OPTION VALUE='clearlydigital.com'>Midwest Wireless</OPTION>"
+							+ "<OPTION VALUE='messaging.nextel.com'>Nextel</OPTION>"
+							+ "<OPTION VALUE='messaging.sprintpcs.com'>Sprint PCS</OPTION>"
+							+ "<OPTION VALUE='tmomail.net'>T-Mobile</OPTION>"
+							+ "<OPTION VALUE='uscc.txtmsg.com'>US Cellular</OPTION>"
+							+ "<OPTION VALUE='vtext.com'>Verizon</OPTION>"
+							+ "<OPTION VALUE='vmobile.com'>Virgin Mobile</OPTION></SELECT>"
+							+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Register'></div>");
+				} else buf.append("Password only.");
+				buf.append("</TD></FORM></TR>");
+
 				buf.append("</TABLE>\n");
 
 				buf.append("<h3>Any Corrections Needed?</h3>"
@@ -427,6 +472,23 @@ public class Verification extends HttpServlet {
 			msg.addRecipient(Message.RecipientType.TO,new InternetAddress(fromAccountUser.getEmail(), fromAccountUser.getBothNames()));
 			msg.setSubject("ChemVantage Authorization Number");
 			msg.setContent(msgBody,"text/html");
+			Transport.send(msg);
+			return true;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+	
+	boolean sendSMSConfirmationCode(String address,String code) {
+		Properties props = new Properties();
+		Session session = Session.getDefaultInstance(props, null);
+		Message msg = new MimeMessage(session);
+		try {
+			msg.setRecipient(Message.RecipientType.TO,new InternetAddress(address));
+			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
+			msg.setSubject("ChemVantage");
+			String messageText = "Your confirmation code is: " + code;
+			msg.setContent(messageText,"text/html");
 			Transport.send(msg);
 			return true;
 		} catch (Exception e) {
