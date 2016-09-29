@@ -66,7 +66,7 @@ public class UserServiceLaunch extends HttpServlet {
 					session.setAttribute("ProposedCode", code);
 					response.setContentType("text/html");
 					PrintWriter out = response.getWriter();
-					out.println(Login.header + TwoFactorAuth.verificationForm("/Home") + Login.footer);
+					out.println(Login.header + TwoFactorAuth.verificationForm("/Home",false) + Login.footer);
 					return;
 				} else { // text message failed to send; allow user temporary access anyway
 					session.setAttribute("Code", 1);
@@ -86,7 +86,14 @@ public class UserServiceLaunch extends HttpServlet {
 		try {
 			int proposedCode = (int)session.getAttribute("ProposedCode");
 			int code = Integer.parseInt(request.getParameter("Code"));
-			if (proposedCode != code) throw new Exception();
+			boolean retry = Boolean.parseBoolean(request.getParameter("Retry"));
+			if (retry && proposedCode != code) throw new Exception();  // exit on failed second attempt
+			else if (proposedCode != code) {
+				response.setContentType("text/html");
+				PrintWriter out = response.getWriter();
+				out.println(Login.header + TwoFactorAuth.verificationForm("/Home",true) + Login.footer);
+				return;
+			}
 			session.setAttribute("Code", code);
 			String returnURL = request.getParameter("ReturnURL");
 			if (returnURL==null || returnURL.isEmpty()) returnURL = "/Home";

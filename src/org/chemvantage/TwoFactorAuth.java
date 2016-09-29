@@ -51,10 +51,12 @@ public class TwoFactorAuth {
 		}
 	}
 	
-	public static String verificationForm(String returnURL) {
+	public static String verificationForm(String returnURL,boolean retry) {
 		StringBuffer buf = new StringBuffer("<h2>ChemVantage Two-Factor Authentication</h2>");		
 		buf.append("<form method=post>");
-		buf.append("A text message was sent to your phone. Please enter your 6-digit verification code here:&nbsp;");
+		if (retry) buf.append("<font color=red>Verification Failed! </font><input type=hidden name=Retry value=true>");
+		else buf.append("A text message was sent to your phone. ");
+		buf.append("Please enter your 6-digit verification code here:&nbsp;");
 		buf.append("<input type=text name=Code>");
 		buf.append("<input type=submit value=Verify><input type=hidden name=ReturnURL value='" + returnURL + "'></form>");		
 		return buf.toString();
