@@ -68,8 +68,10 @@ public class UserServiceLaunch extends HttpServlet {
 					PrintWriter out = response.getWriter();
 					out.println(Login.header + TwoFactorAuth.verificationForm("/Home") + Login.footer);
 					return;
+				} else { // text message failed to send; allow user temporary access anyway
+					session.setAttribute("Code", 1);
 				}
-			}			
+			}
 			response.sendRedirect("/Home?r=" + new Random().nextInt(9999));
 		} catch (Exception e) {
 			session.invalidate();

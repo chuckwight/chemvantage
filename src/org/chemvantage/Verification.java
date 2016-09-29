@@ -320,7 +320,7 @@ public class Verification extends HttpServlet {
 								+ "<INPUT TYPE=TEXT SIZE=6 NAME=Code><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Confirm'><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Cancel'>");
 					}
 				} else if (user.authDomain.equals("Google")){
-					buf.append("Password only. <a href=# onClick=javascript:getElementById('register').style.display=''>Click here to activate two-factor authentication.</a>.<br>"
+					buf.append("<div id=link>Password only. <a href=# onClick=javascript:getElementById('register').style.display='';getElementById('link').style.display='none';>Click here to activate two-factor authentication.</a>.</div>"
 							+ "<div id=register style='display: none'>Enter your 10-digit cellular device number: "							
 							+ "<INPUT TYPE=TEXT NAME=CellNumber VALUE='10 digits only' onfocus=\"if (this.value == '10 digits only') {this.value = '';}\">"
 							+ "<SELECT NAME=Carrier>"
@@ -330,14 +330,15 @@ public class Verification extends HttpServlet {
 							+ "<OPTION VALUE='myboostmobile.com'>Boost</OPTION>"
 							+ "<OPTION VALUE='mobile.celloneusa.com'>CellularOne</OPTION>"
 							+ "<OPTION VALUE='csouth1.com'>Cellular South</OPTION>"
-							+ "<OPTION VALUE='cingularme.com'>Cingular</OPTION>"
-							+ "<OPTION VALUE='gocbw.com'>Cincinnati Bell</OPTION>"
+							+ "<OPTION VALUE='cingularme.com'>Cingular (GSM)</OPTION>"
+							+ "<OPTION VALUE='mmode.com'>Cingular (TDMA)</OPTION>"
 							+ "<OPTION VALUE='sms.mycricket.com'>Cricket</OPTION>"
+							+ "<OPTION VALUE='mymetropcs.com'>Metro PCS</OPTION>"
 							+ "<OPTION VALUE='clearlydigital.com'>Midwest Wireless</OPTION>"
 							+ "<OPTION VALUE='messaging.nextel.com'>Nextel</OPTION>"
 							+ "<OPTION VALUE='messaging.sprintpcs.com'>Sprint PCS</OPTION>"
 							+ "<OPTION VALUE='tmomail.net'>T-Mobile</OPTION>"
-							+ "<OPTION VALUE='uscc.txtmsg.com'>US Cellular</OPTION>"
+							+ "<OPTION VALUE='email.uscc.net'>US Cellular</OPTION>"  // revised
 							+ "<OPTION VALUE='vtext.com'>Verizon</OPTION>"
 							+ "<OPTION VALUE='vmobile.com'>Virgin Mobile</OPTION></SELECT>"
 							+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Register'></div>");
