@@ -342,7 +342,9 @@ public class Verification extends HttpServlet {
 							+ "<OPTION VALUE='vtext.com'>Verizon</OPTION>"
 							+ "<OPTION VALUE='vmobile.com'>Virgin Mobile</OPTION></SELECT>"
 							+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Register'></div>");
-				} else buf.append("Password only.");
+				} else if (user.authDomain.equals("BLTI")) buf.append("Trusted LTI connection.");
+				else buf.append("Password only.");
+				
 				buf.append("</TD></FORM></TR>");
 
 				buf.append("</TABLE>\n");
