@@ -23,7 +23,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.TimeZone;
 
 import com.googlecode.objectify.Key;
@@ -225,22 +224,18 @@ public class Group implements Serializable {
     	return lis_outcome_service_format==null?"application/xml":lis_outcome_service_format;
     }
     
-    @SuppressWarnings("unchecked")
 	int validatedMemberCount() {
     	// This method retrieves memberIds from the datastore, omitting any users that 
     	// have been deleted from the datastore without being deleted from this group
     	// and updates the memberIds List.
     	// The method then returns the integer number of current group members.
-    	try {
-    		int count = this.memberIds.size();
-    		Map<String,User> groupUsers = ofy().load().type(User.class).ids(memberIds);
-    		for (String id:memberIds) if (groupUsers.get(id)==null) groupUsers.remove(id);
-    		if (groupUsers.size() != count) {
-    			memberIds = (List<String>) groupUsers.keySet();
-    			ofy().save().entity(this).now();  // save any changes
-    		}
-    	} catch (Exception e) { return 0;}
-    	return memberIds.size();    	
+    	int count = this.memberIds.size();
+		try {
+    		this.memberIds = new ArrayList<String>(ofy().load().type(User.class).ids(memberIds).keySet());
+    		if (memberIds.size()!=count) ofy().save().entity(this);
+    		return memberIds.size();
+    	} catch (Exception e) {}
+		return count;
     }
     
     boolean isActive() {

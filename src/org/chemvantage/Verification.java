@@ -225,7 +225,7 @@ public class Verification extends HttpServlet {
 		try {
 			buf.append("<h2>Your ChemVantage Account Profile</h2>"
 					+ "ChemVantage protects your personal information. For details, see our <a href=/w3c/privacy.html>Privacy Policy</a>.<br>"
-					+ "In order for ChemVantage to function properly as a learning resource, we need to associate your name and email address with your account.<br>"
+					+ "In order for ChemVantage to function properly as a learning resource, we need to associate your name and email address with your account. "
 					+ "This is important for protecting <i>you</i> by making it difficult for someone else to impersonate you or tamper with your account.<p>");
 
 			buf.append("<FORM NAME=Info ACTION=Verification METHOD=POST>");

@@ -142,7 +142,7 @@ public class Homework extends HttpServlet {
 					+ "A red dot indicates a score that is low enough to be a concern. If a student completes this assignment satisfactorily after the deadline, the red dot will "
 					+ "disappear, but the score will remain unchanged. If you change the deadline, all scores will be recalculated to reflect the revised deadline. (Try it!)</div><p>");
 			
-			if (group.memberIds.size()==0) return buf.toString();
+			if (group.validatedMemberCount()==0) return buf.toString();
 			Map<String,User> members = ofy().load().type(User.class).ids(group.memberIds);
 			
 			// prepare a complete set of Score keys for this assignment and load all existing keys into the scoresMap
@@ -155,8 +155,31 @@ public class Homework extends HttpServlet {
 			buf.append("Instructors and Teaching Assistants<br>"
 					+ "<TABLE BORDER=1 CELLSPACING=0><TR><TD></TD><TD>Name</TD><TD>Email</TD><TD>Score</TD></TR>");
 			for (String id:group.memberIds) {
-				User u = members.get(id);
-				if (u.isInstructor() || u.isAdministrator() || group.isTA(u.id)) {
+				try {
+					User u = members.get(id);
+					if (u.isInstructor() || u.isAdministrator() || group.isTA(u.id)) {
+						Key<Score> k = Key.create(Key.create(User.class,u.id),Score.class,assignment.id);
+						s = scoresMap.get(k);
+						if (s==null) {
+							s = Score.getInstance(u.id,assignment);
+							ofy().save().entity(s).now();
+						}
+						i++;
+						buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getScore() + "</TD></TR>");
+					}
+				} catch (Exception e2) {}
+			}
+			buf.append("</TABLE><p>");
+
+			// display the table of student scores, filling in where it may be incomplete (this is rare, but possible due to add/drop)
+			i=0;
+			Date now = new Date();
+			buf.append("Students<br>"
+					+ "<TABLE BORDER=1 CELLSPACING=0><TR><TD></TD><TD>Name</TD><TD>Email</TD><TD>Score</TD></TR>");
+			for (String id:group.memberIds) {
+				try {
+					User u = members.get(id);
+					if (u.isInstructor() || u.isAdministrator() || group.isTA(u.id)) continue;
 					Key<Score> k = Key.create(Key.create(User.class,u.id),Score.class,assignment.id);
 					s = scoresMap.get(k);
 					if (s==null) {
@@ -164,35 +187,16 @@ public class Homework extends HttpServlet {
 						ofy().save().entity(s).now();
 					}
 					i++;
-					buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getScore() + "</TD></TR>");
-				}
-			}
-			buf.append("</TABLE><p>");
-	
-			// display the table of student scores, filling in where it may be incomplete (this is rare, but possible due to add/drop)
-			i=0;
-			Date now = new Date();
-			buf.append("Students<br>"
-					+ "<TABLE BORDER=1 CELLSPACING=0><TR><TD></TD><TD>Name</TD><TD>Email</TD><TD>Score</TD></TR>");
-			for (String id:group.memberIds) {
-				User u = members.get(id);
-				if (u.isInstructor() || u.isAdministrator() || group.isTA(u.id)) continue;
-				Key<Score> k = Key.create(Key.create(User.class,u.id),Score.class,assignment.id);
-				s = scoresMap.get(k);
-				if (s==null) {
-					s = Score.getInstance(u.id,assignment);
-					ofy().save().entity(s).now();
-				}
-				i++;
-				buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(noDeadline?now:assignment.getDeadline(),group.rescueThresholdScore) + "</TD></TR>");
+					buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(noDeadline?now:assignment.getDeadline(),group.rescueThresholdScore) + "</TD></TR>");
+				} catch (Exception e2) {}
 			}
 			buf.append("</TABLE>");
 		} catch (Exception e) {
-				return buf.toString() + e.getMessage();
+			return buf.toString() + e.getMessage();
 		}
 		return buf.toString();
 	}
-	
+
 	String printHomework(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {

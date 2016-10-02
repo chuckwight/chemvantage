@@ -145,11 +145,9 @@ public class Quiz extends HttpServlet {
 					+ "in the class learning management system. However, the LMS may have a policy that is different from ChemVantage (e.g., record first score only), so it "
 					+ "is possible that these scores may be different from those in the LMS grade book. The number of quiz attempts is shown in parentheses for your reference. "
 					+ "A red dot indicates a score that is low enough to be a concern. If a student completes this quiz satisfactorily after the quiz deadline, the red dot will "
-					+ "disappear, but the score will remain unchanged. If you change the deadline, all scores will be recalculated to reflect the revised deadline. (Try it!)<p>"
-					+ "There are currently " + group.memberIds.size() + " members of this group.<p></div>");
+					+ "disappear, but the score will remain unchanged. If you change the deadline, all scores will be recalculated to reflect the revised deadline. (Try it!)</div><p>");
 			
-			group.validatedMemberCount();
-			if (group.memberIds.size()==0) return buf.toString();
+			if (group.validatedMemberCount()==0) return buf.toString();
 
 			Map<String,User> members = ofy().load().type(User.class).ids(group.memberIds);
 			// prepare a complete set of Score keys for this assignment and load all existing keys into the scoresMap
@@ -158,49 +156,46 @@ public class Quiz extends HttpServlet {
 			Map<Key<Score>,Score> scoresMap = ofy().load().keys(keys);
 			int i = 0;
 			Score s = null;
-				buf.append("Instructors and Teaching Assistants<br>"
-						+ "<TABLE BORDER=1 CELLSPACING=0><TR><TD></TD><TD>Name</TD><TD>Email</TD><TD>Score</TD></TR>");
-				for (String id:group.memberIds) {
-					try {
-						User u = members.get(id);
-						if (u==null) continue;
-						if (u.isInstructor() || u.isAdministrator() || group.isTA(u.id)) {
-							Key<Score> k = Key.create(Key.create(User.class,u.id),Score.class,assignment.id);
-							if (scoresMap != null) s = scoresMap.get(k);
-							if (s==null) {
-								s = Score.getInstance(u.id,assignment);
-								ofy().save().entity(s).now();
-							}
-							i++;
-							buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getScore() + "</TD></TR>");
-						}
-					} catch (Exception e2) {
-						group.memberIds.remove(id);
-						ofy().save().entity(group);
-					}
-				}
-				buf.append("</TABLE><p>");
-
-				// display the table of student scores, filling in where it may be incomplete (this is rare, but possible due to add/drop)
-				i=0;
-				buf.append("Students<p>"
-						+ "<TABLE BORDER=1 CELLSPACING=0><TR><TD></TD><TD>Name</TD><TD>Email</TD><TD>Score</TD></TR>");
-				Date now = new Date();
-				for (String id:group.memberIds) {
-					try { 
-						User u = members.get(id);
-						if (u.isInstructor() || u.isAdministrator() || group.isTA(u.id)) continue;
+			buf.append("Instructors and Teaching Assistants<br>"
+					+ "<TABLE BORDER=1 CELLSPACING=0><TR><TD></TD><TD>Name</TD><TD>Email</TD><TD>Score</TD></TR>");
+			for (String id:group.memberIds) {
+				try {
+					User u = members.get(id);
+					if (u==null) continue;
+					if (u.isInstructor() || u.isAdministrator() || group.isTA(u.id)) {
 						Key<Score> k = Key.create(Key.create(User.class,u.id),Score.class,assignment.id);
-						s = scoresMap.get(k);
+						if (scoresMap != null) s = scoresMap.get(k);
 						if (s==null) {
 							s = Score.getInstance(u.id,assignment);
 							ofy().save().entity(s).now();
 						}
 						i++;
-						buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(noDeadline?now:assignment.getDeadline(),group.rescueThresholdScore) + "</TD></TR>");
-					} catch (Exception e2) {}
-				}
-				buf.append("</TABLE>");
+						buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getScore() + "</TD></TR>");
+					}
+				} catch (Exception e2) {}
+			}
+			buf.append("</TABLE><p>");
+
+			// display the table of student scores, filling in where it may be incomplete (this is rare, but possible due to add/drop)
+			i=0;
+			buf.append("Students<p>"
+					+ "<TABLE BORDER=1 CELLSPACING=0><TR><TD></TD><TD>Name</TD><TD>Email</TD><TD>Score</TD></TR>");
+			Date now = new Date();
+			for (String id:group.memberIds) {
+				try { 
+					User u = members.get(id);
+					if (u.isInstructor() || u.isAdministrator() || group.isTA(u.id)) continue;
+					Key<Score> k = Key.create(Key.create(User.class,u.id),Score.class,assignment.id);
+					s = scoresMap.get(k);
+					if (s==null) {
+						s = Score.getInstance(u.id,assignment);
+						ofy().save().entity(s).now();
+					}
+					i++;
+					buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(noDeadline?now:assignment.getDeadline(),group.rescueThresholdScore) + "</TD></TR>");
+				} catch (Exception e2) {}
+			}
+			buf.append("</TABLE>");
 		} catch (Exception e) {
 			return buf.toString() + e.getMessage();
 		}
