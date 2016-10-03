@@ -216,6 +216,7 @@ public class PracticeExam extends HttpServlet {
 						}
 						i++;
 						buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getScore() + "</TD></TR>");
+						members.remove(id);
 					}
 				} catch (Exception e2) {}
 			}
@@ -224,23 +225,25 @@ public class PracticeExam extends HttpServlet {
 			// display the table of student scores, filling in where it may be incomplete (this is rare, but possible due to add/drop)
 			i=0;
 			Date now = new Date();
-			buf.append("Students<br>"
-					+ "<TABLE BORDER=1 CELLSPACING=0><TR><TD></TD><TD>Name</TD><TD>Email</TD><TD>Score</TD></TR>");
-			for (String id:group.memberIds) {
-				try {
-					User u = members.get(id);
-					if (u.isInstructor() || u.isAdministrator() || group.isTA(u.id)) continue;
-					Key<Score> k = Key.create(Key.create(User.class,u.id),Score.class,assignment.id);
-					s = scoresMap.get(k);
-					if (s==null) {
-						s = Score.getInstance(u.id,assignment);
-						ofy().save().entity(s).now();
-					}
-					i++;
-					buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(noDeadline?now:assignment.getDeadline(),group.rescueThresholdScore) + "</TD></TR>");
-				} catch (Exception e2) {}
-			}
-			buf.append("</TABLE>");
+			buf.append("Students<p>");
+			if (members.size()>0) {
+				buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TD></TD><TD>Name</TD><TD>Email</TD><TD>Score</TD></TR>");
+				for (String id:group.memberIds) {
+					try {
+						User u = members.get(id);
+						if (u.isInstructor() || u.isAdministrator() || group.isTA(u.id)) continue;
+						Key<Score> k = Key.create(Key.create(User.class,u.id),Score.class,assignment.id);
+						s = scoresMap.get(k);
+						if (s==null) {
+							s = Score.getInstance(u.id,assignment);
+							ofy().save().entity(s).now();
+						}
+						i++;
+						buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(noDeadline?now:assignment.getDeadline(),group.rescueThresholdScore) + "</TD></TR>");
+					} catch (Exception e2) {}
+				} 
+				buf.append("</TABLE>");
+			} else buf.append("No students are registered in this group.");
 		} catch (Exception e) {
 			return buf.toString() + e.getMessage();
 		}
