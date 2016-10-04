@@ -274,7 +274,10 @@ public class Groups extends HttpServlet {
 					+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=JoinGroup>");
 
-			Query<Group> allGroups = ofy().load().type(Group.class).filter("domain",user.domain);
+			Query<Group> allGroups;
+			if (user.domain==null) allGroups = ofy().load().type(Group.class).filter("domain",null);
+			else allGroups = ofy().load().type(Group.class).filter("domain",user.domain);
+			
 			buf.append("<SELECT NAME=GroupId onChange=submit()><OPTION VALUE=0>Default group (none)</OPTION>\n");
 			for (Group g : allGroups) {
 				//if ((g.domain==null && user.domain==null) || (g.domain != null && g.domain.equals(user.domain)))
