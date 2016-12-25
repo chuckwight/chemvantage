@@ -333,6 +333,7 @@ public class Verification extends HttpServlet {
 							+ "<OPTION VALUE='cingularme.com'>Cingular (GSM)</OPTION>"
 							+ "<OPTION VALUE='mmode.com'>Cingular (TDMA)</OPTION>"
 							+ "<OPTION VALUE='sms.mycricket.com'>Cricket</OPTION>"
+							+ "<OPTION VALUE='msg.fi.google.com'>Google Fi</OPTION>"
 							+ "<OPTION VALUE='mymetropcs.com'>Metro PCS</OPTION>"
 							+ "<OPTION VALUE='clearlydigital.com'>Midwest Wireless</OPTION>"
 							+ "<OPTION VALUE='messaging.nextel.com'>Nextel</OPTION>"
