@@ -486,7 +486,7 @@ public class LTIRegistration extends HttpServlet {
 	JSONObject constructToolProxy(JSONObject toolConsumerProfile,String tc_profile_url,StringBuffer base_url,String reg_key,String shared_secret,List<String> capability_enabled,List<String> tool_service_enabled) 
 			throws Exception {
 		JSONObject toolProxy = new JSONObject()
-			.element("@context", JSONArray.fromObject("http://purl.imsglobal.org/ctx/lti/v2/ToolProxy"))
+			.element("@context", new JSONArray().element("http://purl.imsglobal.org/ctx/lti/v2/ToolProxy"))
 			.element("@id", tc_profile_url)
 			.element("@type", "ToolProxy")
 			.element("enabled_capability", new JSONArray())		// this section is required but empty
@@ -561,24 +561,24 @@ public class LTIRegistration extends HttpServlet {
 		toolService.add(new JSONObject()
 						.element("@type", "RestServiceProfile")
 						.element("service", "tcp:ToolProxy.collection")
-						.element("action", JSONArray.fromObject("POST")));
+						.element("action", new JSONArray().element("POST")));
 		
 		if (tool_service_enabled.contains("tcp:ToolConsumerProfile"))
 			toolService.add(new JSONObject()
 						.element("@type", "RestServiceProfile")
 						.element("service", "tcp:ToolConsumerProfile")
-						.element("action", JSONArray.fromObject("GET")));
+						.element("action", new JSONArray().element("GET")));
 		
 		if (capability_enabled.contains("Result.autocreate") && tool_service_enabled.contains("tcp:Outcomes.LTI1")) {
 			toolService.add(new JSONObject()
 				.element("@type", "RestServiceProfile")
 				.element("service", "tcp:Outcomes.LTI1")
-				.element("action", JSONArray.fromObject("POST")));
+				.element("action", new JSONArray().element("POST")));
 		} else if (capability_enabled.contains("Result.autocreate") && tool_service_enabled.contains("tcp:Result.item")) {
 			toolService.add(new JSONObject()
 				.element("@type", "RestServiceProfile")
 				.element("service", "tcp:Result.item")
-				.element("action", JSONArray.fromObject("POST")));
+				.element("action", new JSONArray().element("POST")));
 		}		
 		
 		securityContract.element("tool_service",toolService);
