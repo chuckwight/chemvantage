@@ -122,6 +122,7 @@ public class LTILaunch extends HttpServlet {
 			try {
 				tc = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).safe();
 				if (tc.secret==null) throw new Exception("Shared secret was not found in the ChemVantage database.");
+				if (tc.lti_version==null || tc.lti_version.isEmpty()) tc.lti_version="LTI-1p0";
 			} catch (Exception e) {
 				throw new Exception("Invalid oauth_consumer_key. Please verify that the oauth_consumer_key is entered into your LMS exactly as you are registered with ChemVantage.");
 			}
@@ -157,7 +158,9 @@ public class LTILaunch extends HttpServlet {
 				if ( base_string != null ) System.out.println(base_string);
 				throw new Exception("OAuth validation failed. The most likely cause is the shared_secret value was entered into your LMS incorrectly, possibly with leading or trailing blank spaces. Please enter the value again, exactly as you are registered with ChemVantage.");
 			}
-			debug.append("BLTI Launch message was validated successfully. ");
+			//debug.append("BLTI Launch message was validated successfully. ");
+			
+			if (!lti_version.equals(tc.lti_version)) throw new Exception("<br>LTI version for launch does not match tool consumer registration.");
 			
 			// Gather some information about the user
 			String userId = request.getParameter("user_id");
@@ -174,7 +177,7 @@ public class LTILaunch extends HttpServlet {
 				user.authDomain = "BLTI";
 				ofy().save().entity(user).now();
 			}
-			debug.append("User info processed successfully. ");
+			//debug.append("User info processed successfully. ");
 			
 			// Create the domain if it doesn't already exist
 			Domain domain = ofy().load().type(Domain.class).filter("domainName",oauth_consumer_key).first().now();
@@ -203,7 +206,7 @@ public class LTILaunch extends HttpServlet {
 				user.domain = domain.domainName;
 				ofy().save().entity(user).now();
 			}
-			debug.append("Domain info processed successfully. ");
+			//debug.append("Domain info processed successfully. ");
 			
 			// check if user has Instructor or Administrator role
 			String roles = request.getParameter("roles");
@@ -241,7 +244,7 @@ public class LTILaunch extends HttpServlet {
 			user.changeGroups(g.id);
 			
 			// Add user to the approved TA list, if necessary
-			if (roles.contains("teachingassistant") && g.addTA(userId)) ofy().save().entity(g);
+			if ( roles!=null && roles.contains("teachingassistant") && g.addTA(userId)) ofy().save().entity(g);
 			
 			// update the LIS result outcome service URL, if necessary
 			if (domain.supportsResultService && domain.resultServiceEndpoint!=null && !domain.resultServiceEndpoint.equals(g.lis_outcome_service_url)) {  // update the URL and format as Group properties

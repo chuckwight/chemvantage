@@ -299,7 +299,7 @@ public class LTIRegistration extends HttpServlet {
 				String tool_proxy_url = "";	
 				String tool_settings_url = "";
 
-				LTIMessage msg = new LTIMessage("application/vnd.ims.lti.v2.toolproxy+json","application/vnd.ims.v2.toolproxy.id+json",toolProxy.toString(),serviceEndpoint,reg_key,reg_password);
+				LTIMessage msg = new LTIMessage("application/vnd.ims.lti.v2.toolproxy+json","",toolProxy.toString(),serviceEndpoint,reg_key,reg_password);
 				String reply = msg.send();
 
 				try {
@@ -388,6 +388,7 @@ public class LTIRegistration extends HttpServlet {
 		try {
 			String return_url = request.getParameter("launch_presentation_return_url");
 			return_url += (return_url.indexOf('?')>1?"&lti_msg=":"?lti_msg=") + URLEncoder.encode(s,"UTF-8");
+			return_url += "&status=failure";
 			response.sendRedirect(return_url);
 			return;
 		} catch (Exception e2) {
@@ -402,6 +403,7 @@ public class LTIRegistration extends HttpServlet {
 		URL u = new URL(tc_profile_url);
 		HttpURLConnection connection = (HttpURLConnection) u.openConnection();
 		connection.setRequestProperty("Accept", "application/vnd.ims.lti.v2.toolconsumerprofile+json");
+		connection.connect();
 		if (connection.getResponseCode() == HttpURLConnection.HTTP_OK) {
 			BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
 			StringBuffer res = new StringBuffer();
@@ -490,7 +492,7 @@ public class LTIRegistration extends HttpServlet {
 			.element("@id", tc_profile_url)
 			.element("@type", "ToolProxy")
 			.element("enabled_capability", new JSONArray())		// this section is required but empty
-			.element("lti_version", toolConsumerProfile.getString("lti_version"))
+			.element("lti_version", "LTI-2p0")                // toolConsumerProfile.getString("lti_version"))
 			.element("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled,tool_service_enabled))
 			.element("tool_consumer_profile", tc_profile_url)
 			.element("tool_profile", getToolProfile(base_url,capability_enabled))
@@ -521,12 +523,28 @@ public class LTIRegistration extends HttpServlet {
 						.element("website", "https://www.chemvantage.org")
 						.element("contact", new JSONObject()
 							.element("email", "admin@chemvantage.org"))))));
-		toolProfile.element("base_url_choice", new JSONArray()
-			.add(new JSONObject()
-				.element("default_base_url", "https://" + base_url.toString())  // always use secure URL
-				.element("secure_base_url", "https://" + base_url.toString())));
+
+		JSONArray urls = new JSONArray();
+		urls.add(new JSONObject().element("default_base_url", "https://" + base_url.toString()));  // always use secure URL
+
+		toolProfile.element("base_url_choice", urls);
+
 		capability_enabled.remove("basic-lti-launch-request"); // not to be explicitly included in resourceHandler object except as message type
-		JSONObject resourceHandler = new JSONObject()
+
+		JSONArray icon_info = new JSONArray();
+		icon_info.add(new JSONObject()
+				.element("key", "iconStyle.default.path")
+				.element("default_location", new JSONObject()
+					.element("path", "/images/CVLogo_thumb.jpg")));
+
+		JSONArray message = new JSONArray();
+		message.add(new JSONObject()
+				.element("message_type", "basic-lti-launch-request")
+				.element("path", "/lti")
+				.element("enabled_capability", JSONArray.fromObject(capability_enabled)));
+						
+		JSONArray resourceHandler = new JSONArray();
+		resourceHandler.add(new JSONObject()
 					.element("resource_name", new JSONObject()
 						.element("default_value", "ChemVantage")
 						.element("key", "assessment.resource.name"))
@@ -534,22 +552,10 @@ public class LTIRegistration extends HttpServlet {
 					.element("description", new JSONObject()
 						.element("default_value", "An Open Education Resource for teaching and learning college-level General Chemistry")
 						.element("key", "assessment.resource.description"))
-					.element("icon_info", new JSONArray()
-						.add(new JSONObject()
-							.element("key", "iconStyle.default.path")
-							.element("default_location", new JSONObject()
-								.element("path", "/images/CVLogo_thumb.jpg"))))
-					.element("message", new JSONArray()
-						.add(new JSONObject()
-							.element("message_type", "basic-lti-launch-request")
-							.element("path", "/lti")
-							.element("enabled_capability", JSONArray.fromObject(capability_enabled))))
-							.element("parameter", new JSONArray()
-								.add(new JSONObject()
-									.element("name", "tc_profile_url")
-									.element("variable", "ToolConsumerProfile.url")));
+					.element("icon_info", icon_info)
+					.element("message", message));
 		
-		toolProfile.element("resource_handler", new JSONArray().add(resourceHandler));
+		toolProfile.element("resource_handler", resourceHandler);
 		
 		return toolProfile;
 	}

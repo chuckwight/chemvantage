@@ -101,6 +101,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     	uc.setRequestProperty("Authorization",buildAuthHeaderString(params));
     	
     	if (!messageAppearsValid()) return "Error: Message parameters were invalid.";
+    	else uc.connect();
 
     	// send the message
     	OutputStreamWriter toTC = new OutputStreamWriter(uc.getOutputStream());
