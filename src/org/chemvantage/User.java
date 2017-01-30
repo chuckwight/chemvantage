@@ -619,16 +619,24 @@ public class User implements Comparable<User>,Serializable {
 		if (isInstructor() && !makeInstructor) {
 			roles -= 8;
 			return true;
-		}
-		else if (!isInstructor() && makeInstructor) {
+		} else if (!isInstructor() && makeInstructor) {
 			roles += 8;
 			this.setPremium(true);
 			return true;
-		}
-		else return false; // user already had the requested status; no changes made
+		} else return false; // user already had the requested status; no changes made
 
 	}
 
+	boolean setIsTeachingAssistant(boolean makeTeachingAssistant) { // returns true if the state is changed; else false
+		if (isTeachingAssistant() && !makeTeachingAssistant) {
+			roles -= 4;
+			return true;
+		} else if (!isTeachingAssistant() && makeTeachingAssistant) {
+			roles += 4;
+			return true;
+		} else return false; // user already has the requested status; no changes made		
+	}
+	
 	boolean isTeachingAssistant() {    
 		return ((roles%8)/4 == 1);
 	}

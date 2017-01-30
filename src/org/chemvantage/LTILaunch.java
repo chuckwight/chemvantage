@@ -217,6 +217,7 @@ public class LTILaunch extends HttpServlet {
 					if (user.setIsAdministrator(true)) ofy().save().entity(user).now();  // saves user if role is changed
 					if (domain.addAdmin(user.id)) ofy().save().entity(domain).now();  // saves domain object if new admin is added
 				}
+				if (roles.contains("teachingassistant") && user.setIsTeachingAssistant(true)) ofy().save().entity(user).now(); 
 			}
 
 			if (!user.hasPremiumAccount()) {

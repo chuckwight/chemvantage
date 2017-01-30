@@ -200,6 +200,9 @@ public class LTIRegistration extends HttpServlet {
 
 				JSONObject toolConsumerProfile = fetchToolConsumerProfile(tc_profile_url);
 				
+				// check for proper LTI version:
+				if (!toolConsumerProfile.getString("lti_version").equals("LTI-2p0")) throw new Exception("Tool Consumer Profile must declare LTI version 2.0");
+				
 				// store reg_key, reg_password and tc_profile_url in the user's session for later:
 				HttpSession session = request.getSession();
 				session.setAttribute("tc_profile_url", tc_profile_url);
@@ -229,6 +232,7 @@ public class LTIRegistration extends HttpServlet {
 						+ "and tool services selected below. Then submit this registration form to complete the process.<p>");
 				
 				buf.append("<form action=/lti/registration method=post encType='application/x-www-form-urlencoded'>");
+				buf.append("<input type=hidden name=lti_version value='LTI-2p0'>");
 				buf.append("<input type=hidden name=launch_presentation_return_url value=" + launch_presentation_return_url + ">");
 				
 				buf.append("<table><tr><td valign=top><b>Offered by LMS</b><br/>");
@@ -492,7 +496,7 @@ public class LTIRegistration extends HttpServlet {
 			.element("@id", tc_profile_url)
 			.element("@type", "ToolProxy")
 			.element("enabled_capability", new JSONArray())		// this section is required but empty
-			.element("lti_version", "LTI-2p0")                // toolConsumerProfile.getString("lti_version"))
+			.element("lti_version", "LTI-2p0")   //toolConsumerProfile.getString("lti_version"))
 			.element("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled,tool_service_enabled))
 			.element("tool_consumer_profile", tc_profile_url)
 			.element("tool_profile", getToolProfile(base_url,capability_enabled))
