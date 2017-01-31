@@ -403,6 +403,10 @@ public class LTIRegistration extends HttpServlet {
 	}
 
 	JSONObject fetchToolConsumerProfile(String tc_profile_url) throws Exception {
+		// first, append a required lti_version parameter to the tc_profile_url:
+		tc_profile_url += (tc_profile_url.contains("?")?"&":"?") + "lti_version=LTI-2p0"; 
+			
+		// create an empty tc_profile JSON object and put the tc_profile_url into it:
 		JSONObject tc_profile = new JSONObject().element("tc_profile_url", tc_profile_url);		
 		URL u = new URL(tc_profile_url);
 		HttpURLConnection connection = (HttpURLConnection) u.openConnection();
@@ -422,7 +426,7 @@ public class LTIRegistration extends HttpServlet {
 		}
 		return tc_profile;
 	}
-	
+		
 	List<String> getCapabilities(JSONObject toolConsumerProfile, String type, List<String> capability_offered) throws JSONException {
 		List<String> capability_enabled = new ArrayList<String>();
 		
