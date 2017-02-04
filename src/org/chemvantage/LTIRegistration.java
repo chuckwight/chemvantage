@@ -210,7 +210,7 @@ public class LTIRegistration extends HttpServlet {
 				session.setAttribute("reg_key", reg_key);
 				session.setAttribute("reg_password", reg_password);
 				session.setAttribute("lti_version", lti_version);
-				session.setAttribute("tool_proxy_guid", tool_proxy_guid);
+				if (tool_proxy_guid!=null) session.setAttribute("tool_proxy_guid", tool_proxy_guid);
 				
 				JSONArray tcpco = toolConsumerProfile.getJSONArray("capability_offered");
 				for (int i=0; i<tcpco.size();i++) capability_offered.add(tcpco.getString(i));
@@ -314,14 +314,13 @@ public class LTIRegistration extends HttpServlet {
 
 				try {
 					JSONObject replyBody = JSONObject.fromObject(reply);
-					String guid = replyBody.getString("tool_proxy_guid");
+					tool_proxy_guid = replyBody.getString("tool_proxy_guid");
 					tool_proxy_url = replyBody.getString("@id");
-					if (guid.isEmpty() || tool_proxy_url.isEmpty()) throw new Exception("Tool Proxy guid and/or URL was missing.");
+					if (tool_proxy_guid.isEmpty() || tool_proxy_url.isEmpty()) throw new Exception("Tool Proxy guid and/or URL was missing.");
 				} catch (Exception e) {
 					throw new Exception ("Could not parse response to tool proxy registration request.");
 				}
 				toolProxy.element("@id", tool_proxy_url);
-				//toolProxy.element("guid", tool_proxy_guid);
 				
 				// check to make sure that this is the first registration for this tool consumer
 				BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(tool_proxy_guid).now();
