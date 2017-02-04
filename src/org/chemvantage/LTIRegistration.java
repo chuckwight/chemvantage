@@ -158,6 +158,8 @@ public class LTIRegistration extends HttpServlet {
 		String reg_key = null;
 		String reg_password = null;
 		String tc_profile_url = null;
+		String lti_version = null;
+		String tool_proxy_guid = null;
 		
 		if ("Send My Free LTI Credentials".equals(request.getParameter("UserRequest"))) {  // manual LTI registration request for version 1.x
 			String email = request.getParameter("Email");
@@ -191,6 +193,7 @@ public class LTIRegistration extends HttpServlet {
 			reg_key = request.getParameter("reg_key");
 			reg_password = request.getParameter("reg_password");
 			tc_profile_url = request.getParameter("tc_profile_url");
+			tool_proxy_guid = request.getParameter("tool_proxy_guid");
 			
 			try {
 				if (reg_key==null || reg_key.isEmpty()) throw new Exception("Required reg_key parameter is missing.");
@@ -199,15 +202,15 @@ public class LTIRegistration extends HttpServlet {
 				if (launch_presentation_return_url==null || launch_presentation_return_url.isEmpty()) throw new Exception("Required launch_presentation_return_url parameter is missing.");
 
 				JSONObject toolConsumerProfile = fetchToolConsumerProfile(tc_profile_url);
-				
-				// check for proper LTI version:
-				if (!toolConsumerProfile.getString("lti_version").equals("LTI-2p0")) throw new Exception("Tool Consumer Profile must declare LTI version 2.0");
+				lti_version = toolConsumerProfile.getString("lti_version");
 				
 				// store reg_key, reg_password and tc_profile_url in the user's session for later:
 				HttpSession session = request.getSession();
 				session.setAttribute("tc_profile_url", tc_profile_url);
 				session.setAttribute("reg_key", reg_key);
 				session.setAttribute("reg_password", reg_password);
+				session.setAttribute("lti_version", lti_version);
+				session.setAttribute("tool_proxy_guid", tool_proxy_guid);
 				
 				JSONArray tcpco = toolConsumerProfile.getJSONArray("capability_offered");
 				for (int i=0; i<tcpco.size();i++) capability_offered.add(tcpco.getString(i));
@@ -232,7 +235,7 @@ public class LTIRegistration extends HttpServlet {
 						+ "and tool services selected below. Then submit this registration form to complete the process.<p>");
 				
 				buf.append("<form action=/lti/registration method=post encType='application/x-www-form-urlencoded'>");
-				buf.append("<input type=hidden name=lti_version value='LTI-2p0'>");
+				buf.append("<input type=hidden name=lti_version value='" + lti_version + "'>");
 				buf.append("<input type=hidden name=launch_presentation_return_url value=" + launch_presentation_return_url + ">");
 				
 				buf.append("<table><tr><td valign=top><b>Offered by LMS</b><br/>");
@@ -287,19 +290,22 @@ public class LTIRegistration extends HttpServlet {
 				reg_key = (String)session.getAttribute("reg_key");
 				reg_password = (String)session.getAttribute("reg_password");
 				tc_profile_url = (String)session.getAttribute("tc_profile_url");
-				if (reg_key==null || reg_key.isEmpty() || reg_password==null || reg_password.isEmpty() || tc_profile_url==null || tc_profile_url.isEmpty()) throw new Exception("HttpSession may have timed out.");
+				lti_version = (String)session.getAttribute("lti_version");
+				tool_proxy_guid = (String)session.getAttribute("tool_proxy_guid");
+				
+				if (reg_key==null || reg_key.isEmpty() || reg_password==null || reg_password.isEmpty() || tc_profile_url==null || tc_profile_url.isEmpty() || lti_version==null || lti_version.isEmpty()) 
+					throw new Exception("HttpSession may have timed out, or your browser may delete the session if you are viewing this in a frame.");
 				
 				JSONObject toolConsumerProfile = fetchToolConsumerProfile(tc_profile_url);
 				if (toolConsumerProfile.size()==0) throw new Exception("Could not retrieve the tool consumer profile using the URL provided.");
 				String oauth_secret = BLTIConsumer.generateSecret();
 				
-				JSONObject toolProxy = constructToolProxy(toolConsumerProfile,tc_profile_url,base_url,reg_key,oauth_secret,capability_offered,tool_service_offered);
+				JSONObject toolProxy = constructToolProxy(toolConsumerProfile,tc_profile_url,base_url,reg_key,oauth_secret,capability_offered,tool_service_offered,tool_proxy_guid);
 				debug.append(toolProxy.toString());
 				
 				String serviceEndpoint = getTCServiceEndpoint("application/vnd.ims.lti.v2.toolproxy+json",toolConsumerProfile);
 				if (serviceEndpoint==null) throw new Exception("Could not find a tool proxy registration endpoint in the Tool Consumer profile.");
 				
-				String tool_proxy_guid = reg_key; 	// temporary values
 				String tool_proxy_url = "";	
 				String tool_settings_url = "";
 
@@ -308,14 +314,14 @@ public class LTIRegistration extends HttpServlet {
 
 				try {
 					JSONObject replyBody = JSONObject.fromObject(reply);
-					tool_proxy_guid = replyBody.getString("tool_proxy_guid");
+					String guid = replyBody.getString("tool_proxy_guid");
 					tool_proxy_url = replyBody.getString("@id");
-					if (tool_proxy_guid.isEmpty() || tool_proxy_url.isEmpty()) throw new Exception("Tool Proxy guid and/or URL was missing.");
+					if (guid.isEmpty() || tool_proxy_url.isEmpty()) throw new Exception("Tool Proxy guid and/or URL was missing.");
 				} catch (Exception e) {
 					throw new Exception ("Could not parse response to tool proxy registration request.");
 				}
 				toolProxy.element("@id", tool_proxy_url);
-				toolProxy.element("guid", tool_proxy_guid);
+				//toolProxy.element("guid", tool_proxy_guid);
 				
 				// check to make sure that this is the first registration for this tool consumer
 				BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(tool_proxy_guid).now();
@@ -403,10 +409,10 @@ public class LTIRegistration extends HttpServlet {
 	}
 
 	JSONObject fetchToolConsumerProfile(String tc_profile_url) throws Exception {
-		// first, append a required lti_version parameter to the tc_profile_url:
-		tc_profile_url += (tc_profile_url.contains("?")?"&":"?") + "lti_version=LTI-2p0"; 
-			
-		// create an empty tc_profile JSON object and put the tc_profile_url into it:
+		if (!tc_profile_url.contains("lti_version")) { //append the required lti_version parameter
+			tc_profile_url += (tc_profile_url.contains("?")?"&":"?") + "lti_version=LTI-2p0";
+		}
+
 		JSONObject tc_profile = new JSONObject().element("tc_profile_url", tc_profile_url);		
 		URL u = new URL(tc_profile_url);
 		HttpURLConnection connection = (HttpURLConnection) u.openConnection();
@@ -493,19 +499,20 @@ public class LTIRegistration extends HttpServlet {
 		return tool_service_enabled;	
 	}
 
-	JSONObject constructToolProxy(JSONObject toolConsumerProfile,String tc_profile_url,StringBuffer base_url,String reg_key,String shared_secret,List<String> capability_enabled,List<String> tool_service_enabled) 
+	JSONObject constructToolProxy(JSONObject toolConsumerProfile,String tc_profile_url,StringBuffer base_url,String reg_key,String shared_secret,List<String> capability_enabled,List<String> tool_service_enabled,String tool_proxy_guid) 
 			throws Exception {
 		JSONObject toolProxy = new JSONObject()
 			.element("@context", new JSONArray().element("http://purl.imsglobal.org/ctx/lti/v2/ToolProxy"))
 			.element("@id", tc_profile_url)
 			.element("@type", "ToolProxy")
 			.element("enabled_capability", new JSONArray())		// this section is required but empty
-			.element("lti_version", "LTI-2p0")   //toolConsumerProfile.getString("lti_version"))
+			.element("lti_version", toolConsumerProfile.getString("lti_version"))
 			.element("security_contract", getSecurityContract(toolConsumerProfile,shared_secret,capability_enabled,tool_service_enabled))
 			.element("tool_consumer_profile", tc_profile_url)
 			.element("tool_profile", getToolProfile(base_url,capability_enabled))
 			.element("custom", new JSONObject().element("at", new Date().toString()));
-			return toolProxy;
+		if (tool_proxy_guid!=null) toolProxy.element("tool_proxy_guid", tool_proxy_guid); // option tool_proxy_guid specification
+		return toolProxy;
 	}
 
 	JSONObject getToolProfile(StringBuffer base_url,List<String> capability_enabled) throws Exception {  // this is the (mostly static) tool profile for ChemVantage
