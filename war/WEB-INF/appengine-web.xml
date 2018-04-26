@@ -3,9 +3,10 @@
   <application>dev-vantage-hrd</application>
   <version>3</version>
 
-  <!-- Following line needed for free App Engine accounts and Java 8 -->
+  <!-- Following lines are needed for free App Engine accounts and Java 8 -->
   <url-stream-handler>urlfetch</url-stream-handler>
-
+  <runtime>java8</runtime>
+  
   <!--
     By default, App Engine sends requests serially to a given web server.
     To allow App Engine to send multiple requests in parallel specify:
