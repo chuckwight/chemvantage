@@ -1,6 +1,6 @@
 <!-- Indices written at Mon, 11 Apr 2016 11:36:23 MDT -->
 
-<datastore-indexes>
+<datastore-indexes autoGenerate="true">
 
     <!-- Used 2 times in query history -->
     <datastore-index kind="Question" ancestor="false" source="auto">

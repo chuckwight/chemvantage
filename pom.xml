@@ -30,6 +30,11 @@
           <target/>
         </configuration>
       </plugin>
+      <plugin>
+      	<groupId>com.google.cloud.tools</groupId>
+      	<artifactId>endpoints-framework-maven-plugin</artifactId>
+      	<version>1.0.0</version>
+      </plugin>
     </plugins>
   </build>
   <url>https://w.chemvantage.org</url>
@@ -42,6 +47,36 @@
   		<groupId>com.googlecode.objectify</groupId>
   		<artifactId>objectify</artifactId>
   		<version>5.1.9</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>com.google.appengine</groupId>
+  		<artifactId>appengine-endpoints</artifactId>
+  		<version>1.9.64</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>org.eclipse.persistence</groupId>
+  		<artifactId>javax.persistence</artifactId>
+  		<version>2.1.0</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>javax.inject</groupId>
+  		<artifactId>javax.inject</artifactId>
+  		<version>1</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>javax.servlet</groupId>
+  		<artifactId>javax.servlet-api</artifactId>
+  		<version>3.1.0</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>com.google.code.findbugs</groupId>
+  		<artifactId>jsr305</artifactId>
+  		<version>3.0.2</version>
+  	</dependency>
+  	<dependency>
+  		<groupId>com.google.appengine.orm</groupId>
+  		<artifactId>datanucleus-appengine</artifactId>
+  		<version>2.1.2</version>
   	</dependency>
   </dependencies>
 </project>
