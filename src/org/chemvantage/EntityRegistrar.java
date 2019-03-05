@@ -2,16 +2,19 @@ package org.chemvantage;
 
 import java.util.Date;
 
-import javax.servlet.ServletContextEvent;  
+import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 
 import com.googlecode.objectify.ObjectifyService;
 
 public class EntityRegistrar implements ServletContextListener {
-
-	static {
-		ObjectifyService.begin();
-		
+	
+    @Override
+    public void contextInitialized(ServletContextEvent servletContextEvent) {
+        System.out.println("Starting up: " + new Date());
+        
+        ObjectifyService.begin();
+        
         ObjectifyService.register(Assignment.class);
         ObjectifyService.register(BLTIConsumer.class);
         ObjectifyService.register(Domain.class);
@@ -34,12 +37,7 @@ public class EntityRegistrar implements ServletContextListener {
         ObjectifyService.register(UserReport.class);
         ObjectifyService.register(Video.class);
         ObjectifyService.register(VideoTransaction.class);			
-	}
-	
-    @Override
-    public void contextInitialized(ServletContextEvent servletContextEvent) {
-        System.out.println("Starting up: " + new Date());
-    }
+}
 
     @Override
     public void contextDestroyed(ServletContextEvent servletContextEvent) {
