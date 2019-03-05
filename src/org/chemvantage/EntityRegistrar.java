@@ -10,6 +10,8 @@ import com.googlecode.objectify.ObjectifyService;
 public class EntityRegistrar implements ServletContextListener {
 
 	static {
+		ObjectifyService.begin();
+		
         ObjectifyService.register(Assignment.class);
         ObjectifyService.register(BLTIConsumer.class);
         ObjectifyService.register(Domain.class);
