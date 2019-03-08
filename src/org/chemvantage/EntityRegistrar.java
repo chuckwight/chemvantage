@@ -8,36 +8,38 @@ import javax.servlet.ServletContextListener;
 import com.googlecode.objectify.ObjectifyService;
 
 public class EntityRegistrar implements ServletContextListener {
-	
+
+    static {
+    	ObjectifyService.register(Assignment.class);      
+    	ObjectifyService.register(BLTIConsumer.class);
+    	ObjectifyService.register(Domain.class);
+    	ObjectifyService.register(GoogleClient.class);
+    	ObjectifyService.register(Group.class);
+    	ObjectifyService.register(HWTransaction.class);
+    	ObjectifyService.register(Nonce.class);
+    	ObjectifyService.register(PayPalIPN.class);
+    	ObjectifyService.register(PracticeExamTransaction.class);
+    	ObjectifyService.register(ProposedQuestion.class);
+    	ObjectifyService.register(Question.class);
+    	ObjectifyService.register(QuizTransaction.class);
+    	ObjectifyService.register(RescueMessage.class);
+    	ObjectifyService.register(Response.class);
+    	ObjectifyService.register(Score.class);
+    	ObjectifyService.register(Subject.class);
+    	ObjectifyService.register(Text.class);
+    	ObjectifyService.register(Topic.class);
+    	ObjectifyService.register(User.class);
+    	ObjectifyService.register(UserReport.class);
+    	ObjectifyService.register(Video.class);
+    	ObjectifyService.register(VideoTransaction.class);
+    }
+
     @Override
     public void contextInitialized(ServletContextEvent servletContextEvent) {
         System.out.println("Starting up: " + new Date());
         
         ObjectifyService.begin();
-        
-        ObjectifyService.register(Assignment.class);
-        ObjectifyService.register(BLTIConsumer.class);
-        ObjectifyService.register(Domain.class);
-        ObjectifyService.register(GoogleClient.class);
-        ObjectifyService.register(Group.class);
-        ObjectifyService.register(HWTransaction.class);
-        ObjectifyService.register(Nonce.class);
-        ObjectifyService.register(PayPalIPN.class);
-        ObjectifyService.register(PracticeExamTransaction.class);
-        ObjectifyService.register(ProposedQuestion.class);
-        ObjectifyService.register(Question.class);
-        ObjectifyService.register(QuizTransaction.class);
-        ObjectifyService.register(RescueMessage.class);
-        ObjectifyService.register(Response.class);
-        ObjectifyService.register(Score.class);
-        ObjectifyService.register(Subject.class);
-        ObjectifyService.register(Text.class);
-        ObjectifyService.register(Topic.class);
-        ObjectifyService.register(User.class);
-        ObjectifyService.register(UserReport.class);
-        ObjectifyService.register(Video.class);
-        ObjectifyService.register(VideoTransaction.class);			
-}
+        }
 
     @Override
     public void contextDestroyed(ServletContextEvent servletContextEvent) {
