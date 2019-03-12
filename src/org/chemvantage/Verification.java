@@ -395,7 +395,7 @@ public class Verification extends HttpServlet {
 				// This section finds duplicate names, sends a code to the user's email address and accepts it to initiate an account merge.
 				List<User> duplicateNames = ofy().load().type(User.class).filter("lowercaseName",user.lowercaseName).list();
 				for (User u : duplicateNames) {
-					if (u.id.equals(user.id) || duplicateEmails.contains(u.id) || !u.verifiedEmail || u.alias!=null) continue;
+					if (u.id.equals(user.id) || duplicateEmails.contains(u) || !u.verifiedEmail || u.alias!=null) continue;
 					int i = duplicateNames.indexOf(u);
 					String consumerKey = u.authDomain.equals("BLTI")?u.id.substring(0, u.id.indexOf(":")):u.authDomain;
 					buf.append("<TR><TD>" + u.getFullName() + " (" + u.getEmail() + ") - authorization domain=" + consumerKey + "</TD>"

@@ -74,13 +74,12 @@ public class Login extends HttpServlet {
 		+ " <div class=pz1>ChemVantage.org</div>"
 		+ " <div class=pz1><a href=/Home>Home</a></div>"
 		+ " <div class=pz1><a href=/About>About Us</a></div>"
-		+ " <div class=pz1><a href=/help.html>Help</a></div>"
 		+ "</nobr></div>\n"
 		+ "<div id=phzl></div><div align=right id=puzr style='font-size:84%;padding:0 0 4px' width=100%>"
 		+ "</div><br>";
 	
 	public static String footer = "\n<hr><span style='font-size:smaller'><table style='width:100%;border-spacing: 20px 0px'><tr>"
-		+ "<td>&copy; 2007-16 ChemVantage LLC. <a rel='license' href='https://creativecommons.org/licenses/by/3.0/'><img alt='Creative Commons License' style='border-width:0' src='https://i.creativecommons.org/l/by/3.0/80x15.png' /></a></td>"
+		+ "<td>&copy; 2007-19 Charles Wight. <a rel='license' href='https://creativecommons.org/licenses/by/3.0/'><img alt='Creative Commons License' style='border-width:0' src='https://i.creativecommons.org/l/by/3.0/80x15.png' /></a></td>"
 		+ "<td align=center><a href=/About#terms>Terms and Conditions of Use</a></td>"
 		+ "<td align=right><a href='http://code.google.com/appengine/'><img src=/images/GAE.gif border=0 "
 		+ "alt='Powered by Google App Engine'></a></td></tr></table>"

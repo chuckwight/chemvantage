@@ -203,7 +203,6 @@ public class About extends HttpServlet {
 		+ "</UL>"
 		+ "<LI>PRIVACY POLICY.<br>"
 		+ "We protect your privacy to the maximum extent that allows the site to function as designed.<br>"
-		+ "For details, see our official <a href=/w3c/privacy.html>Privacy Policy</a>"
 		+ "<LI>100% SATISFACTION GUARANTEE<br>"
 		+ "We are committed to providing the best possible online learning environment for General Chemistry. "
 		+ "If you have a question or problem using the site, please let us know immediately. "
@@ -214,10 +213,9 @@ public class About extends HttpServlet {
 		+ "Your continued use of the Site following the posting of changes to this policy will be deemed your acceptance of those changes."
 		+ "<LI>CONTACTING US<br>"
 		+ "If you have any questions about these Terms and Conditions, our Privacy Policy, the practices of this site, or your dealings with this site, please contact us at:<br>"
-		+ "ChemVantage LLC, 1784 Shadow Ridge Circle, Ogden, UT 84403 USA<br>"
-		+ "Phone: +1 (801)810-4401<br>"
+		+ "Phone: +1 (443)944-1991<br>"
 		+ "Email: <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>"
-		+ "<LI>These terms and conditions were last updated on April 8, 2013"
+		+ "<LI>These terms and conditions were last updated on March 12, 2019"
 		+ "</UL>";
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
