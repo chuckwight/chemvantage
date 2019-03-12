@@ -156,7 +156,7 @@ public class About extends HttpServlet {
 		+ "credentials at <a href=/lti/registration/>our LTI registration page</a>.";
 			
 	public static String copyright = "<a NAME=copyright></a>"
-		+ "<h3>Copyright &copy; 2007-2015 ChemVantage LLC</h3>"
+		+ "<h3>Copyright &copy; 2007-2019 ChemVantage LLC</h3>"
 		+ "<a rel='license' href=http://creativecommons.org/licenses/by/3.0/us/>"
 		+ "<img alt='Creative Commons License' style='border-width:0' align=left hspace=10 vspace=5 "
 		+ "src='http://i.creativecommons.org/l/by/3.0/us/88x31.png'/></a>"
@@ -184,7 +184,7 @@ public class About extends HttpServlet {
 		+ "the complaining party is authorized to act on behalf of the owner of an exclusive right that is allegedly infringed"
 		+ "</ul>"
 		+ "The information above must be sent as a written postal mail or email notification to "
-		+ "DMCA Office, ChemVantage LLC, 1784 Shadow Ridge Circle, Ogden, UT 84403 USA, admin@chemvantage.org<p>"
+		+ "DMCA Office, ChemVantage LLC, 606 Tony Tank Ln, Salisbury, MD 21801 USA, admin@chemvantage.org<p>"
 		+ "WE CAUTION YOU THAT UNDER FEDERAL LAW, IF YOU KNOWINGLY MISREPRESENT THAT ONLINE MATERIAL IS INFRINGING, "
 		+ "YOU MAY BE SUBJECT TO HEAVY CIVIL PENALTIES. THESE INCLUDE MONETARY DAMAGES, COURT COSTS, AND ATTORNEYS' "
 		+ "FEES INCURRED BY US, BY ANY COPYRIGHT OWNER, OR BY ANY COPYRIGHT OWNER'S LICENSEE THAT IS INJURED AS A "
