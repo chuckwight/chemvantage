@@ -50,7 +50,7 @@ public class Subject {
 		} catch (Exception e) { // this should be run only once at setup
 			if (genChem==null) {
 				genChem = new Subject("General Chemistry");
-				ofy().save().entity(genChem);
+				ofy().save().entity(genChem).now();
 			}
 		}
 		return genChem;
