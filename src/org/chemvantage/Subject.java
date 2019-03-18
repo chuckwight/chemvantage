@@ -25,6 +25,7 @@ import java.util.List;
 
 import com.google.appengine.api.datastore.QueryResultIterable;
 import com.googlecode.objectify.Key;
+import com.googlecode.objectify.ObjectifyService;
 import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
@@ -32,6 +33,7 @@ import com.googlecode.objectify.cmd.Query;
 
 @Cache @Entity
 public class Subject {
+	static Subject genChem = null;
 	@Id Long id;
 	String title;
 	int nStarReports;
@@ -44,9 +46,12 @@ public class Subject {
 	}
 
 	static public Subject getSubject() {
-		Subject genChem = null;
+		
 		try {
-			genChem = ofy().load().type(Subject.class).first().safe();
+			if (genChem==null) {
+				ObjectifyService.begin();
+				genChem = ofy().load().type(Subject.class).first().safe();
+			}	
 		} catch (Exception e) { // this should be run only once at setup
 			if (genChem==null) {
 				genChem = new Subject("General Chemistry");
