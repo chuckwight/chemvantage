@@ -19,8 +19,13 @@ package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.util.Date;
 import java.util.List;
@@ -30,9 +35,11 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
-import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
+
+import net.sf.json.JSONObject;
 
 public class Login extends HttpServlet {
 
@@ -124,9 +131,15 @@ public class Login extends HttpServlet {
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
-		request.getSession().invalidate();
+		
+		HttpSession session = request.getSession();
+		try {
+			session.invalidate();
+		} catch (Exception e) {};
+		
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
+		
 		out.println(loginPage(request));
 	}
 
@@ -139,7 +152,14 @@ public class Login extends HttpServlet {
 			String msg = "LTI Registration Error: the correct URL is https://www.chemvantage.org/lti/registration/";
 			response.sendRedirect(request.getParameter("launch_presentation_return_url") + "?lti_msg=" + URLEncoder.encode(msg,"UTF-8"));
 			return;
-		} else doGet(request,response);
+		}
+		
+		HttpSession session = request.getSession();
+		int randInt = Math.abs(new Random().nextInt());
+		session.setAttribute("UserId", "anonymous" + randInt);
+		
+		if (reCaptchaOK(request)) response.sendRedirect("/");
+		else response.sendRedirect("/Login");
 	}
 
 	
@@ -156,7 +176,8 @@ public class Login extends HttpServlet {
 					+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>");
 			
 			String thisURL = request.getRequestURL().toString();
-			thisURL = thisURL.substring(0,thisURL.indexOf("/login.html"));
+			int i = thisURL.indexOf("/Login");
+			if (i>0) thisURL = thisURL.substring(0,i);
 
 			if (thisURL.indexOf("dev-vantage") > 0) {
 				buf.append("<p><hr><span style=color:red><b>CAUTION: </b>"
@@ -173,7 +194,7 @@ public class Login extends HttpServlet {
 					+ "</td></tr></table>");
 
 			buf.append("View the <a href=https://www.youtube.com/watch?v=PWDPQMhvghA>ChemVantage video</a>.<hr><p>");
-			
+/*			
 			buf.append("<h3>Please Sign In</h3>"
 					+ "<div id=signin>ChemVantage uses third-party authentication by Google.<br>"
 					+ "Click the Google icon below to sign in with your Google/GMail credentials.<br>"
@@ -186,7 +207,17 @@ public class Login extends HttpServlet {
 			
 			buf.append("<hr><h3>Try One Question</h3>");
 			buf.append("<table width=650><tr><td>" + printOneQuestion(request) + "</td></tr></table>");
+*/
+			buf.append("<h3>Try ChemVantage Now. It's 100% Free</h3>");
+			buf.append("To enter the ChemVantage site as an anonymous user, please complete the reCAPTCHA tool<br>"
+					+ "below before clicking the ENTER button. This keeps web crawlers and bots out of our site.");
 			
+			buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");
+			buf.append("<FORM METHOD=POST>");
+			// reCaptcha tool
+			buf.append("<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div>");
+			// finish the form
+			buf.append("<INPUT TYPE=SUBMIT VALUE='ENTER'></FORM>");
 		
 		} catch (Exception e) {
 			buf.append(e.toString());
@@ -239,4 +270,37 @@ public class Login extends HttpServlet {
 		return buf.toString();
 	}
 
+	boolean reCaptchaOK(HttpServletRequest request) {
+		try {
+			String queryString = "secret=6Ld_GAcTAAAAAD2k2iFF7Ywl8lyk9LY2v_yRh3Ci&response=" 
+					+ request.getParameter("g-recaptcha-response") + "&remoteip=" + request.getRemoteAddr();
+			URL u = new URL("https://www.google.com/recaptcha/api/siteverify");
+	    	HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+	    	uc.setDoOutput(true);
+	    	uc.setRequestMethod("POST");
+	    	uc.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
+	    	uc.setRequestProperty("Content-Length", String.valueOf(queryString.length()));
+	    	
+	    	OutputStreamWriter writer = new OutputStreamWriter(uc.getOutputStream());
+			writer.write(queryString);
+	    	writer.flush();
+	    	writer.close();
+			
+			// read & interpret the JSON response from Google
+	    	BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+			StringBuffer res = new StringBuffer();
+			String line;
+			while ((line = reader.readLine()) != null) {
+				res.append(line);
+			}
+			reader.close();
+			
+			JSONObject reCaptchaValidation = JSONObject.fromObject(res.toString());
+			
+			return reCaptchaValidation.getBoolean("success");
+			
+		} catch (Exception e) {
+			return false;
+		}
+	}	
 }

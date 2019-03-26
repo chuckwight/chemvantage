@@ -13,7 +13,6 @@ public class EntityRegistrar implements ServletContextListener {
     	ObjectifyService.register(Assignment.class);      
     	ObjectifyService.register(BLTIConsumer.class);
     	ObjectifyService.register(Domain.class);
-    	ObjectifyService.register(GoogleClient.class);
     	ObjectifyService.register(Group.class);
     	ObjectifyService.register(HWTransaction.class);
     	ObjectifyService.register(Nonce.class);
@@ -22,7 +21,6 @@ public class EntityRegistrar implements ServletContextListener {
     	ObjectifyService.register(ProposedQuestion.class);
     	ObjectifyService.register(Question.class);
     	ObjectifyService.register(QuizTransaction.class);
-    	ObjectifyService.register(RescueMessage.class);
     	ObjectifyService.register(Response.class);
     	ObjectifyService.register(Score.class);
     	ObjectifyService.register(Subject.class);
@@ -31,7 +29,6 @@ public class EntityRegistrar implements ServletContextListener {
     	ObjectifyService.register(User.class);
     	ObjectifyService.register(UserReport.class);
     	ObjectifyService.register(Video.class);
-    	ObjectifyService.register(VideoTransaction.class);
     }
 
     @Override

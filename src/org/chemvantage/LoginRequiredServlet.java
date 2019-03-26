@@ -34,12 +34,12 @@ public class LoginRequiredServlet extends HttpServlet {
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
-		response.sendRedirect("/Home");	
+		response.sendRedirect("/Admin");	
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
-		response.sendRedirect("/Home");	
+		response.sendRedirect("/Admin");	
 	}
 
 }

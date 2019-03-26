@@ -28,11 +28,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 import java.util.TimeZone;
 
 import javax.servlet.ServletException;
@@ -69,6 +67,7 @@ public class Quiz extends HttpServlet {
 				user = Nonce.getUser(request.getParameter("Nonce"));
 				session.setAttribute("UserId", user.id);
 			} else user = User.getInstance(session);
+			
 			if (user==null || Login.lockedDown && !user.isAdministrator()) {
 				response.sendRedirect("/");
 				return;
@@ -78,7 +77,7 @@ public class Quiz extends HttpServlet {
 			PrintWriter out = response.getWriter();
 			
 			String nonce = session.isNew()?Nonce.createInstance(user):null;
-			out.println(Home.getHeader(user,nonce) + printQuiz(user,request,nonce) + Home.footer);
+			out.println(printQuiz(user,request,nonce) + Home.footer);
 		} catch (Exception e) {}
 	}
 
@@ -100,10 +99,10 @@ public class Quiz extends HttpServlet {
 			PrintWriter out = response.getWriter();
 			
 			String nonce = session.isNew()?Nonce.createInstance(user):null;
-			out.println(Home.getHeader(user) + printScore(user,request,nonce) + Home.footer);
+			out.println(printScore(user,request,nonce) + Home.footer);
 		} catch (Exception e) {}
 	}
-
+/*
 	String instructorPage(HttpServletRequest request,long assignmentId,String nonce) {
 		// this page is displayed by default when the instructor accesses this assigned quiz
 		// to view the quiz itself, include ShowQuiz=true as one of the GET parameters
@@ -112,6 +111,7 @@ public class Quiz extends HttpServlet {
 			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			Group group = ofy().load().type(Group.class).id(assignment.groupId).safe();
 			Topic topic = ofy().load().type(Topic.class).id(assignment.topicId).safe();
+
 			DateFormat dfShort = DateFormat.getDateInstance(DateFormat.SHORT);
 			DateFormat dfLong = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			dfShort.setTimeZone(group.getTimeZone());
@@ -119,6 +119,7 @@ public class Quiz extends HttpServlet {
 			
 			buf.append("<h2>Quiz - " + topic.title + " (" + subject.title + ")</h2>");
 			buf.append("<FONT SIZE=-1>This is the instructor page; students will <a href=/Quiz?TopicId=" + topic.id + "&ShowQuiz=true&Nonce=" + nonce + ">go directly to the quiz</a>.</FONT><p>");
+
 			boolean noDeadline = assignment.getDeadline().getTime()==0L;
 			buf.append("<FORM ACTION='/Groups' METHOD=POST>"
 					+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">"
@@ -199,12 +200,13 @@ public class Quiz extends HttpServlet {
 				}
 				buf.append("</TABLE>");
 			} else buf.append("No students are registered in this group.");
+			
 		} catch (Exception e) {
 			return buf.toString() + e.getMessage();
 		}
 		return buf.toString();
 	}
-	
+*/	
 	String printQuiz(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -225,7 +227,7 @@ public class Quiz extends HttpServlet {
 			Assignment a = null;
 			try {
 				a = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",topicId).first().safe();
-				if (user.isInstructor() && request.getParameter("ShowQuiz")==null) return instructorPage(request,a.id,nonce);
+			//	if (user.isInstructor() && request.getParameter("ShowQuiz")==null) return instructorPage(request,a.id,nonce);
 			} catch (Exception e) {}
 
 			// Check to see if this user has any pending quizzes on this topic:
@@ -240,25 +242,30 @@ public class Quiz extends HttpServlet {
 			
 			buf.append("\n<h2>Quiz - " + topic.title + " (" + subject.title + ")</h2>");
 			
+			if (user.isInstructor()) buf.append("Instructor: you may <a href=/Groups?UserRequest=AssignQuizQuestions&GroupId=" + myGroup.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + ">"
+					+ "customize this quiz</a> by selecting/deselecting the available question items.<p>");
+			
 			buf.append("\n<FORM NAME=Quiz METHOD=POST ACTION=Quiz onSubmit=\"javascript: return confirmSubmission()\">");
 			if (nonce!=null) buf.append("<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>");
+/*			
 			// Gather profile information if needed; otherwise just print the user's name.
 			if (user.needsFirstName()) buf.append("First name: <input type=text name=FirstName><br/>"); else buf.append("<b>" + user.getFirstName() + "</b><br/>");
 			if (user.needsEmail()) buf.append("Email: <input type=text name=Email><br>");
 			
 			buf.append(df.format(qt.downloaded) + "<p>"); // Print the date/time the quiz was first downloaded (may be up to timeLimit minutes ago)
+*/
+			if (!user.isAnonymous()) {
+				buf.append("\nQuiz Rules<OL>");
+				buf.append("\n<LI>Each quiz must be completed within " + timeLimit + " minutes of the time when it is first downloaded.</LI>");
+				buf.append("\n<LI>You may repeat quizzes as many times as you wish, to improve your score.</LI>");
+				buf.append("\n<LI>For each quiz topic, the server reports your best quiz score.</LI>");
 
-			buf.append("\nQuiz Rules<OL>");
-			buf.append("\n<LI>Each quiz must be completed within " + timeLimit + " minutes of the time when it is first downloaded.</LI>");
-			buf.append("\n<LI>You may repeat quizzes as many times as you wish, to improve your score.</LI>");
-			buf.append("\n<LI>For each quiz topic, the server reports your best quiz score.</LI>");
-
-			if (myGroup != null) {
-				buf.append("\n<LI>You must submit the quiz for scoring before the indicated deadline in order to receive class credit.</LI>");
-				buf.append("\n<LI>Instructors can view best scores and downloads by date/time in order to enforce quiz deadlines.</LI>");
+				if (myGroup != null) {
+					buf.append("\n<LI>You must submit the quiz for scoring before the indicated deadline in order to receive class credit.</LI>");
+					buf.append("\n<LI>Instructors can view best scores and downloads by date/time in order to enforce quiz deadlines.</LI>");
+				}
+				buf.append("</OL>");
 			}
-			buf.append("</OL>");
-			
 			buf.append("<div id='timer0' style='color: red'></div><div id=ctrl0 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
 					
 			buf.append("\n<input type=submit value='Grade This Quiz'>");
@@ -365,6 +372,7 @@ public class Quiz extends HttpServlet {
 	String printScore(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
+/*
 			// Update profile information, if necessary
 			if (user.needsFirstName() || user.needsLastName() || user.needsEmail()) {
 				if (request.getParameter("FirstName")!=null) user.setFirstName(request.getParameter("FirstName"));
@@ -372,26 +380,33 @@ public class Quiz extends HttpServlet {
 				if (request.getParameter("Email")!=null) user.setEmail(request.getParameter("Email"));
 				ofy().save().entity(user);
 			}
+*/
 			Date now = new Date();
-			long transactionId = Long.parseLong(request.getParameter("QuizTransactionId"));
-			QuizTransaction qt = ofy().load().type(QuizTransaction.class).id(transactionId).safe();
-			if (qt.graded != null) {
-				return "<h2>No Score</h2>"
-				+ "Sorry, this quiz has been scored already and cannot be scored again. Please consult the <a href=Scores>scores page</a>.";
-			}
-			if (now.getTime() - qt.downloaded.getTime() > (timeLimit*60000+10000)) // includes 10 second grace period
-				return "Sorry, the " + timeLimit + " minute time limit for this quiz has expired.";
-
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			Group myGroup = user.myGroupId>0?ofy().load().type(Group.class).id(user.myGroupId).now():null;
 			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
 			df.setTimeZone(tz);
 
+			long transactionId = Long.parseLong(request.getParameter("QuizTransactionId"));
+			QuizTransaction qt = ofy().load().type(QuizTransaction.class).id(transactionId).safe();
+			if (qt.graded != null) {
+				return "<h2>No Score</h2>"
+						+ "Sorry, this quiz was graded on " + df.format(qt.graded) + " and cannot be regraded.<p>"
+						+ "Your score on this quiz was " + qt.score + " out of a possible " + qt.possibleScore + " points.<p>"
+						+ (user.isAnonymous()?"<p><a href=/Quiz?TopicId=" + qt.topicId + (nonce==null?"":"&Nonce=" + nonce) 
+								+ ">Take this quiz again</a>"
+								+ " or go back to the <a href=/>ChemVantage home page</a>.":"");
+			}
+
+			if (now.getTime() - qt.downloaded.getTime() > (timeLimit*60000+10000)) // includes 10 second grace period
+				return "Sorry, the " + timeLimit + " minute time limit for this quiz has expired.";
+
+			
 			int studentScore = 0;
 			int wrongAnswers = 0;
 
 			buf.append("<h2>Quiz Results - " + qt.topicTitle + " (" + subject.title + ")</h2>\n");
-			buf.append("<b>" + user.getBothNames() + "</b><br>\n");
+			//buf.append("<b>" + user.getBothNames() + "</b><br>\n");
 			buf.append(df.format(now));
 			buf.append(ajaxScoreJavaScript(user.verifiedEmail)); // load javascript for AJAX problem reporting form
 			
@@ -520,12 +535,18 @@ public class Quiz extends HttpServlet {
 							+ "the correct answers to problems that you missed.\n");
 				}
 			}
-			buf.append("<FORM METHOD=GET Action=Quiz>"
+			if (user.isAnonymous()) {
+				buf.append("<p>");
+				buf.append("<a href=/Quiz?TopicId=" + qt.topicId + (nonce==null?"":"&Nonce=" + nonce) + ">Take this quiz again</a>");
+				buf.append(" or go back to the <a href=/>ChemVantage home page</a>.");
+			}
+			
+	/*		buf.append("<FORM METHOD=GET Action=Quiz>"
 					+ (nonce!=null?"<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>":"")
 					+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + qt.topicId + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=r VALUE=" + new Random().nextInt(9999) + ">"
 					+ "<INPUT TYPE=SUBMIT VALUE='Take this quiz again'></FORM>\n");
-			
+	*/		
 		} catch (Exception e) {
 			buf.append("Sorry, this quiz could not be scored.<br>" + e.getMessage());
 		}
@@ -546,7 +567,7 @@ public class Quiz extends HttpServlet {
 		+ "    if (xmlhttp.readyState==4) {\n"
 		+ "      document.getElementById('feedback' + id).innerHTML="
 		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment. "
-		+ (!verifiedEmail?"However, no response is possible unless you verify the email address in your <a href=/Verification>user profile</a>.":"") 
+//		+ (!verifiedEmail?"However, no response is possible unless you verify the email address in your <a href=/Verification>user profile</a>.":"") 
 		+ "</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"

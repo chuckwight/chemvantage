@@ -88,7 +88,7 @@ public class Groups extends HttpServlet {
 				return;
 			}
 			
-			out.println(Home.getHeader(user));
+			//out.println(Home.getHeader(user));
 			
 			if (group == null) out.println(groupsForm(user,request,nonce));
 			else if (user.isAdministrator() || (user.isInstructor() && group.domain.equals(user.domain)) || group.tAIds.contains(user.id)) {
@@ -143,7 +143,7 @@ public class Groups extends HttpServlet {
 			
 			if (userRequest.equals("JoinGroup")) {
 				user.changeGroups(groupId);
-				out.println(Home.getHeader(user) + groupsForm(user,request,nonce) + Home.footer);
+				out.println(groupsForm(user,request,nonce) + Home.footer);
 				return;
 			} else if (userRequest.equals("Associate")) {
 				try {
@@ -162,12 +162,12 @@ public class Groups extends HttpServlet {
 			}
 			// Additional user restrictions: no TAs beyond this point
 			if (!(user.isAdministrator() || (group==null && user.isInstructor()) || user.id.equals(group.instructorId))) {
-				out.println(Home.getHeader(user) + "<span style='color:red'>You have read-only access in this area</span>" + groupsForm(user,request,nonce) + Home.footer);
+				out.println("<span style='color:red'>You have read-only access in this area</span>" + groupsForm(user,request,nonce) + Home.footer);
 				return;
 			}
 			
 			String message = "";
-			out.println(Home.getHeader(user));			
+			//out.println(Home.getHeader(user));			
 			if (userRequest.equals("CreateGroup")) {
 				createGroup(user,request);
 				out.println(groupsForm(user,request,nonce));
@@ -520,28 +520,39 @@ public class Groups extends HttpServlet {
 			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
 			group.setGroupTopicIds();
 			long qi = group.getAssignmentId("Quiz",topic.id);
-			Assignment assignment = qi>0?ofy().load().type(Assignment.class).id(qi).safe():null;
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			df.setTimeZone(group.getTimeZone());
 			buf.append("<b>Subject: " + subject.title + "<br>"
 					+ "Topic: " + topic.title + "<br>"
-					+ "Group: " + group.description + "<br>"
-					+ "Deadline: " + df.format(assignment.getDeadline()) + "</b><br>");
-			buf.append("<a href='Groups'>Return to Groups Page</a><p>");
+					+ "Group: " + group.description + "<br>");
+			//		+ "Deadline: " + df.format(assignment.getDeadline()) + "</b><br>");
+			//buf.append("<a href='Groups'>Return to Groups Page</a><p>");
 
 			buf.append("Each quiz consists of 10 questions selected at random from the items below. You may select "
 					+ "the items that will be used for this group by checking the boxes in the left column. Students are provided "
 					+ "answers to the items that they answer incorrectly. Therefore, the total number of questions should be "
-					+ "larger than 10, but not much larger than 50.  Experience shows that 30 items is about right in most cases. "
-					+ "Students may submit quizzes after the deadline, but the scores will no be included in their group scores.<p>");
+					+ "larger than 10, but not much larger than 50.  Experience shows that 30 items is about right in most cases.<p>");
+			//		+ "Students may submit quizzes after the deadline, but the scores will not be included in their group scores.<p>");
 			
 			Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",topicId).filter("isActive",true);
-			if (assignment.questionKeys.size()==questions.count()) { // allow instructor to copy assignments from another group:
+			Assignment assignment = qi>0?ofy().load().type(Assignment.class).id(qi).safe():null;
+			
+			//if (assignment.questionKeys.size()==questions.count()) { // allow instructor to copy assignments from another group:
+			try {
+				//get a list of all assignments for this topic
 				List<Assignment> assignments = ofy().load().type(Assignment.class).filter("assignmentType","Quiz").filter("topicId",topic.id).list();
+
+				for (Assignment a:assignments) { // narrow the list to this instructor's groups
+					try {
+						if (a.groupId==group.id) continue; 
+						Group g = ofy().load().type(Group.class).id(a.groupId).safe();
+						if (!g.instructorId.equals(group.instructorId)) assignments.remove(a);
+					} catch (Exception e2) {
+						ofy().delete().entity(a);
+					}
+				}
 				if (assignments.size() > 1) {
-					buf.append("You may use the box below to copy homework problem selections from another group. "
-							+ "The choices include groups where problems have been specifically selected to match content in a particular "
-							+ "textbook.  Once selected, you may return to this form and customize the question selections as desired.");
+					buf.append("You may use the box below to copy quiz question selections from another of your groups.");
 					buf.append("<FORM METHOD=POST ACTION=Groups>"
 							+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateAssignment>"
@@ -549,24 +560,23 @@ public class Groups extends HttpServlet {
 							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Quiz>");
 					buf.append("<SELECT NAME=CopyAssignmentId><OPTION VALUE=0>Select a group (optional)</OPTION>");
-					for (Assignment a:assignments) {
-						try {
-							if (a.groupId==group.id) continue; 
-							Group g = ofy().load().type(Group.class).id(a.groupId).safe();
-							buf.append("<OPTION VALUE='" + a.id + "'>" + g.description + " (" + User.getBothNames(g.instructorId) + ")</OPTION>");
-						} catch (Exception e2) {
-							ofy().delete().entity(a);
-						}
-					}
 					buf.append("</SELECT>");
+					for (Assignment a : assignments) {
+						Group g = ofy().load().type(Group.class).id(a.groupId).safe();
+						buf.append("<OPTION VALUE='" + a.id + "'>" + g.description + "</OPTION>");
+					}
+
 					buf.append("<INPUT TYPE=SUBMIT VALUE='Copy Selections From This Group'></FORM><p>");
-				}
-			} else buf.append("To copy assigned questions from another group, first assign all questions below.<p>");
+				} 
+			}catch (Exception e) {
+			}
 			
-			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
-					+ "onClick=\"for (var i=0;i<document.Questions.QuestionId.length;i++)"
-					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}\""
-					+ "> Select/Unselect All</FORM>");
+				//} else buf.append("To copy assigned questions from another group, first assign all questions below.<p>");
+
+				buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
+						+ "onClick=\"for (var i=0;i<document.Questions.QuestionId.length;i++)"
+						+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}\""
+						+ "> Select/Unselect All</FORM>");
 
 			buf.append("<FORM NAME=Questions METHOD=POST ACTION=Groups>"
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment'>"
@@ -607,18 +617,29 @@ public class Groups extends HttpServlet {
 			df.setTimeZone(group.getTimeZone());
 			buf.append("<b>Subject: " + subject.title + "<br>"
 					+ "Topic: " + topic.title + "<br>"
-					+ "Group: " + group.description + "<br>"
-					+ "Deadline: " + df.format(assignment.getDeadline()) + "</b><br>");
-			buf.append("<a href='Groups'>Return to Groups Page</a><p>");
+					+ "Group: " + group.description + "<br>");
+			//		+ "Deadline: " + df.format(assignment.getDeadline()) + "</b><br>");
+			//buf.append("<a href='Groups'>Return to Groups Page</a><p>");
 
 			buf.append("Select the questions to be assigned to students in this group, then click the button "
 					+ "at the bottom of the page. Each question is worth 1 point, so the maximum possible score on the "
-					+ "assignment is equal to the number of questions selected. Students may work unassigned problems and/or submit "
-					+ "post-deadline answers; however, these are not included in their group scores.<p>");
+					+ "assignment is equal to the number of questions selected. Students may work unassigned problems; "
+					+ "however, these are not included in the scores reported to the class LMS.<p>");
 
 			Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topicId).filter("isActive",true);
-			if (assignment.questionKeys.size()==questions.count()) { // allow instructor to copy assignments from another group:
+
+			// allow instructor to copy assigned questions list from another group
+			// first make a list of this instructor's groups having an assignment with this topic
+			try {
 				List<Assignment> assignments = ofy().load().type(Assignment.class).filter("assignmentType","Homework").filter("topicId",topic.id).list();
+				for (Assignment a : assignments) {
+					try {
+						if (a.id == hi) continue; // don't list this assignment
+						Group g = ofy().load().type(Group.class).id(a.groupId).safe();
+						if (!g.instructorId.equals(group.instructorId)) assignments.remove(a);
+					} catch (Exception e) {}
+				}
+				// If any such groups exist, create a form for copying
 				if (assignments.size() > 1) {
 					buf.append("You may use the box below to copy homework problem selections from another group. "
 							+ "The choices include groups where problems have been specifically selected to match content in a particular "
@@ -642,8 +663,9 @@ public class Groups extends HttpServlet {
 					buf.append("</SELECT>");
 					buf.append("<INPUT TYPE=SUBMIT VALUE='Copy Selections From This Group'></FORM><p>");
 				}
-			} else buf.append("To copy assigned questions from another group, first assign all questions below.<p>");
-			
+			} catch (Exception e) {}
+			//else buf.append("To copy assigned questions from another group, first assign all questions below.<p>");
+
 			// This dummy form uses javascript to select/deselect all questions
 			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
 					+ "onClick=\"for (var i=0;i<document.Questions.QuestionId.length;i++)"
@@ -688,7 +710,7 @@ public class Groups extends HttpServlet {
 			df.setTimeZone(group.getTimeZone());
 			buf.append("<b>Subject: " + subject.title + "</b><br/>"
 					+ "Group: " + group.description + "<br/>"
-					+ "Deadline: " + df.format(assignment.getDeadline()) + "<br/>"
+			//		+ "Deadline: " + df.format(assignment.getDeadline()) + "<br/>"
 					+ "Topics:<OL>");
 			for (Topic t:topics.values()) buf.append("<LI>" + t.title + "</LI>");
 			buf.append("</OL>");

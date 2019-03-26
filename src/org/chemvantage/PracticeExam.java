@@ -28,11 +28,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 import java.util.TimeZone;
 
 import javax.servlet.ServletException;
@@ -87,7 +85,7 @@ public class PracticeExam extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		String nonce = session.isNew()?Nonce.createInstance(user):null;
-		out.println(Home.getHeader(user,nonce) + printExam(user,request,nonce) + Home.footer);
+		out.println(printExam(user,request,nonce) + Home.footer);
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
@@ -106,8 +104,7 @@ public class PracticeExam extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
-		String nonce = session.isNew()?Nonce.createInstance(user):null;
-		out.println(Home.getHeader(user,nonce) + printScore(user,request) + Home.footer);
+		out.println(printScore(user,request) + Home.footer);
 	}
 
 	String designExam(User user,HttpServletRequest request,String nonce) {
@@ -144,7 +141,7 @@ public class PracticeExam extends HttpServlet {
 		}
 		return buf.toString();
 	}
-
+/*
 	String instructorPage(HttpServletRequest request,long assignmentId,String nonce) {
 		// this page is displayed by default when the instructor accesses this assigned exam
 		// to view the exam itself, include ShowPracticeExam=true as one of the GET parameters
@@ -152,6 +149,7 @@ public class PracticeExam extends HttpServlet {
 		try {
 			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			Group group = ofy().load().type(Group.class).id(assignment.groupId).safe();
+
 			DateFormat dfShort = DateFormat.getDateInstance(DateFormat.SHORT);
 			DateFormat dfLong = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			dfShort.setTimeZone(group.getTimeZone());
@@ -244,12 +242,13 @@ public class PracticeExam extends HttpServlet {
 				} 
 				buf.append("</TABLE>");
 			} else buf.append("No students are registered in this group.");
+
 		} catch (Exception e) {
 			return buf.toString() + e.getMessage();
 		}
 		return buf.toString();
 	}
-	
+*/	
 	String printExam(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -261,7 +260,7 @@ public class PracticeExam extends HttpServlet {
 				assignmentId=Long.parseLong(request.getParameter("AssignmentId"));
 				a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 				topicIds = a.topicIds;
-				if (user.isInstructor() && request.getParameter("ShowPracticeExam")==null) return instructorPage(request,a.id,nonce);
+			//	if (user.isInstructor() && request.getParameter("ShowPracticeExam")==null) return instructorPage(request,a.id,nonce);
 			/*	
 				if (user.isInstructor() && user.myGroupId==a.groupId) {
 					buf.append("<br><span style='color:red'>Instructor Only: "
@@ -332,9 +331,9 @@ public class PracticeExam extends HttpServlet {
 			df.setTimeZone(tz);
 
 			buf.append("\n<h2>" + subject.title + " Exam</h2>");
-			buf.append("\n<b>" + user.getBothNames() + "</b><br>");
+//			buf.append("\n<b>" + user.getBothNames() + "</b><br>");
 			Date downloaded = pt.downloaded;
-			buf.append(df.format(downloaded) + "<p>");
+//			buf.append(df.format(downloaded) + "<p>");
 			int secondsRemaining = (int) (timeLimit*60 - (now.getTime() - downloaded.getTime())/1000);
 
 			buf.append("Topics covered on this exam:<OL>");
@@ -343,6 +342,9 @@ public class PracticeExam extends HttpServlet {
 			}
 			buf.append("</OL>");
 
+			if (user.isInstructor()) buf.append("Instructor: you may <a href=/Groups?UserRequest=AssignExamQuestions&GroupId=" + myGroup.id + "&AssignmentId=" + a.id + "&Nonce=" + nonce + ">"
+					+ "customize this practice exam</a> by selecting/deselecting the available question items.<p>");
+			
 			buf.append("This exam must be submitted for grading within " + timeLimit + " minutes of when it is first downloaded.");
 
 			Random rand = new Random();  // create random number generator to select exam questions
@@ -487,7 +489,7 @@ public class PracticeExam extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		try {
 			buf.append("<h2>Practice Exam Results</h2>");
-			buf.append("\n<b>" + user.getBothNames() + "</b><br>");
+//			buf.append("\n<b>" + user.getBothNames() + "</b><br>");
 			
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			Group myGroup = user.myGroupId<=0?null:ofy().load().type(Group.class).id(user.myGroupId).now();
@@ -495,7 +497,7 @@ public class PracticeExam extends HttpServlet {
 			df.setTimeZone(tz);
 
 			Date now = new Date();
-			buf.append(df.format(now) + "<p>");
+//			buf.append(df.format(now) + "<p>");
 
 			long examId = Long.parseLong(request.getParameter("ExamId"));
 			PracticeExamTransaction pt = ofy().load().type(PracticeExamTransaction.class).id(examId).safe();

@@ -444,10 +444,6 @@ public class Admin extends HttpServlet {
 		for (QuizTransaction q:qTransactions) q.userId = toUser.id;
 		ofy().save().entities(qTransactions);
 		
-		List<VideoTransaction> vTransactions = ofy().load().type(VideoTransaction.class).filter("userId",fromUser.id).list();
-		for (VideoTransaction v:vTransactions) v.userId = toUser.id;
-		ofy().save().entities(vTransactions);
-		
 		List<Group> myGroups = ofy().load().type(Group.class).filter("instructorId",fromUser.id).list();
 		for (Group g:myGroups) g.instructorId=toUser.id;
 		ofy().save().entities(myGroups);

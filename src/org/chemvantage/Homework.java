@@ -26,11 +26,9 @@ import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 import java.util.TimeZone;
 
 import javax.servlet.ServletException;
@@ -63,6 +61,7 @@ public class Homework extends HttpServlet {
 				user = Nonce.getUser(request.getParameter("Nonce"));
 				session.setAttribute("UserId", user.id);
 			} else user = User.getInstance(session);
+			
 			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
 				response.sendRedirect("/");
 				return;
@@ -72,7 +71,7 @@ public class Homework extends HttpServlet {
 			PrintWriter out = response.getWriter();
 			
 			String nonce = session.isNew()?Nonce.createInstance(user):null;
-			out.println(Home.getHeader(user,nonce) + printHomework(user,request,nonce) + Home.footer);
+			out.println(printHomework(user,request,nonce) + Home.footer);
 		} catch (Exception e) {}
 	}
 
@@ -94,7 +93,7 @@ public class Homework extends HttpServlet {
 			PrintWriter out = response.getWriter();
 
 			String nonce = session.isNew()?Nonce.createInstance(user):null;
-			out.println(Home.getHeader(user,nonce) + printScore(user,request,nonce) + Home.footer);
+			out.println(printScore(user,request,nonce) + Home.footer);
 		} catch (Exception e) {}
 	}
 
@@ -106,15 +105,16 @@ public class Homework extends HttpServlet {
 			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			Group group = ofy().load().type(Group.class).id(assignment.groupId).safe();
 			Topic topic = ofy().load().type(Topic.class).id(assignment.topicId).safe();
+/*
 			DateFormat dfShort = DateFormat.getDateInstance(DateFormat.SHORT);
 			DateFormat dfLong = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			dfShort.setTimeZone(group.getTimeZone());
 			dfLong.setTimeZone(group.getTimeZone());
 			boolean noDeadline = assignment.getDeadline().getTime()==0L;
-			
+*/			
 			buf.append("<h2>Homework - " + topic.title + " (" + subject.title + ")</h2>");
 			buf.append("<FONT SIZE=-1>This is the instructor page; students will <a href=/Homework?TopicId=" + topic.id + "&ShowHomework=true&Nonce=" + nonce + ">go directly to the assignment</a>.</FONT><p>");
-			
+/*			
 			buf.append("<FORM ACTION='/Groups' METHOD=POST>"
 					+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Homework>"
@@ -132,9 +132,9 @@ public class Homework extends HttpServlet {
 					+ "<label><INPUT TYPE=CHECKBOX ID=esBox NAME=EmailScores VALUE=true" + (assignment.emailScoresToInstructor?" CHECKED>":">") + " Email scores to me after the deadline.</lable><br>"
 					+ "<label><INPUT TYPE=CHECKBOX NAME=UpdateLMSScores VALUE=true> Update scores in the LMS grade book.</label><br>"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Set Deadline'></FORM></div><p>");
-		
+*/		
 			buf.append("<b>Customize This Homework Assignment</b> <a href=/Groups?UserRequest=AssignHomeworkQuestions&GroupId=" + group.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + "><FONT SIZE=-2>select questions</FONT></a><p>");
-				
+/*				
 			buf.append("<b>Homework Scores</b> <a id=slink href=# onClick=document.getElementById('details').style.display='inLine';document.getElementById('slink').style.display='none'><FONT SIZE=-2>show details</FONT></a><br/>"
 					+ "<div id='details' style='display:none'>The following is a list of best pre-deadline scores on this assignment. In most cases, these scores have been reported to the grade book "
 					+ "in the class learning management system. However, the LMS may have a policy that is different from ChemVantage (e.g., record first score only), so it "
@@ -194,6 +194,7 @@ public class Homework extends HttpServlet {
 				}
 				buf.append("</TABLE>");			
 			} else buf.append("No students are registered in this group.");
+*/
 		} catch (Exception e) {
 			return buf.toString() + e.getMessage();
 		}
@@ -217,12 +218,12 @@ public class Homework extends HttpServlet {
 			Group myGroup = user.myGroupId>0?ofy().load().type(Group.class).id(user.myGroupId).now():null;
 			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
 			df.setTimeZone(tz);
-			Date now = new Date();
+//			Date now = new Date();
 
 			Assignment hwa = null;
 			try {
 				hwa = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Homework").filter("topicId",topicId).first().now();
-				if (user.isInstructor() && request.getParameter("ShowHomework")==null) return instructorPage(request,hwa.id,nonce);
+				//if (user.isInstructor() && request.getParameter("ShowHomework")==null) return instructorPage(request,hwa.id,nonce);
 /*				
 				if (user.isInstructor() && hwa!=null) {
 					buf.append("<br><span style='color:red'>Instructor Only: "
@@ -234,8 +235,11 @@ public class Homework extends HttpServlet {
 			} catch (Exception e) {}
 
 			buf.append("\n<h2>Homework Exercises - " + topic.title + " (" + subject.title + ")</h2>");
-			//buf.append("\n<b>" + user.getBothNames() + "</b><br>");
-
+			if (user.isInstructor()) buf.append("Instructor: you may <a href=/Groups?UserRequest=AssignHomeworkQuestions&GroupId=" + myGroup.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + ">"
+					+ "customize this homework assignment</a> by selecting/deselecting the available question items.<p>");
+			
+						//buf.append("\n<b>" + user.getBothNames() + "</b><br>");
+/*
 			// Gather profile information if needed; otherwise just print the user's name.
 			buf.append("<FORM METHOD=POST ACTION=Verification>");
 			boolean submitNeeded = user.needsFirstName() || user.needsEmail();
@@ -245,19 +249,21 @@ public class Homework extends HttpServlet {
 			buf.append("</FORM>");
 
 			buf.append(df.format(now) + "<p>");
-			
-			buf.append("\nHomework Rules<UL>");
-			buf.append("\n<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
-			buf.append("\n<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question.</LI>");
-			buf.append("\n<LI>Most questions are customized, so the correct answers are different for each student.</LI>");
-			buf.append("\n<LI>For each topic, the server tracks your total score and the total number of submissions.</LI>");
-			buf.append("\n<LI>A checkmark will appear to the left of each correctly solved problem.</LI>");
-			if (myGroup != null) {
-				buf.append("However, class credit for assigned problems is awarded only if the answer is submitted prior to the deadline.</LI>");
-				buf.append("\n<LI>Your instructor can view scores and submissions by date/time in order to enforce homework deadlines.</LI>");
+*/			
+			if (!user.isAnonymous()) {
+				buf.append("\nHomework Rules<UL>");
+				buf.append("\n<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
+				buf.append("\n<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question.</LI>");
+				buf.append("\n<LI>Most questions are customized, so the correct answers are different for each student.</LI>");
+				buf.append("\n<LI>For each topic, the server tracks your total score and the total number of submissions.</LI>");
+				buf.append("\n<LI>A checkmark will appear to the left of each correctly solved problem.</LI>");
+				if (myGroup != null) {
+					buf.append("However, class credit for assigned problems is awarded only if the answer is submitted prior to the deadline.</LI>");
+					buf.append("\n<LI>Your instructor can view scores and submissions by date/time in order to enforce homework deadlines.</LI>");
+				}
+				buf.append("</UL>");
 			}
-			buf.append("</UL>");
-
+			
 			List<Key<Question>> optionalQuestionKeys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topicId).filter("isActive",true).keys().list();
 			if (optionalQuestionKeys.size()==0) buf.append("<h2>Sorry, there are no homework questions for this topic.</h2>");
 			
@@ -372,7 +378,7 @@ public class Homework extends HttpServlet {
 			}
 			if (secondsRemaining > 0) {  
 				buf.append("<h2>Please Wait For The Retry Delay To Complete</h2>");
-				buf.append("<b>" + user.getBothNames() + "</b><br>\n");
+				//buf.append("<b>" + user.getBothNames() + "</b><br>\n");
 				buf.append(df.format(now));
 				buf.append("<p>The retry delay for this homework problem is <span id=delay style='color: red'></span><p>");
 				buf.append("Please take these few moments to check your work carefully.  You can sometimes find alternate routes to the<br>"
@@ -411,12 +417,13 @@ public class Homework extends HttpServlet {
 			}
 			
 			buf.append("<h2>Homework Results - " + topic.title + " (" + subject.title + ")</h2>\n");
-			buf.append("<b>" + user.getFirstName() + "</b><br>\n");
-			buf.append(df.format(now));
+//			buf.append("<b>" + user.getFirstName() + "</b><br>\n");
+//			buf.append(df.format(now));
 			
 			q.setParameters(user.id.hashCode());
 			int studentScore = 0;
 			int possibleScore = q.pointValue;
+			HWTransaction ht = null;
 			
 			if (studentAnswer[0].length() > 0) { // an answer was submitted
 				// record the response in the Responses table for question debugging:
@@ -432,7 +439,7 @@ public class Homework extends HttpServlet {
 						.param("PossibleScore", Integer.toString(possibleScore))
 						.param("UserId", user.id));
 
-				HWTransaction ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,0L,studentScore,possibleScore,request.getRequestURI());
+				ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,0L,studentScore,possibleScore,request.getRequestURI());
 				if (lis_result_sourcedid != null) ht.lis_result_sourcedid = lis_result_sourcedid;
 				ofy().save().entity(ht).now();
 				// create/update/store a HomeworkScore object
@@ -491,14 +498,23 @@ public class Homework extends HttpServlet {
 			}
 			
 			boolean offerHint = studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id);
-			int random = new Random().nextInt(9999);
 			// if the user response was correct, seek five-star feedback:
 			if (studentScore > 0) buf.append(fiveStars());
+			
+			buf.append("<p>");
+			buf.append("<a href=/Homework?TopicId=" + ht.topicId 
+					+ (nonce==null?"":"&Nonce=" + nonce) 
+					+ (offerHint?"&Q=" + q.id + "><span style='color:red'>Please give me a hint</span>":">Return to this homework assignment") + "</a>");
+			
+			if (user.isAnonymous()) buf.append(" or go back to the <a href=/>ChemVantage home page</a>.");
+			
 
+/*
 			buf.append("<p><a href=Homework?TopicId=" + topic.id + "&r=" + random
 					+ "&Nonce=" + nonce
 					+ (offerHint?"&Q=" + q.id:"")
 					+ "#" + q.id + (offerHint?"><span style='color:red'>Please give me a hint</span>":">Return to this homework assignment") + "</a>");
+*/		
 		}
 		catch (Exception e) {
 			buf.append("Sorry, we were unable to score this question.<br>" + e.toString());
@@ -520,7 +536,7 @@ public class Homework extends HttpServlet {
 		+ "    if (xmlhttp.readyState==4) {\n"
 		+ "      document.getElementById('feedback' + id).innerHTML="
 		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment. "
-		+ (!verifiedEmail?"However, no response is possible unless you verify the email address in your <a href=/Verification>user profile</a>.":"") 
+//		+ (!verifiedEmail?"However, no response is possible unless you verify the email address in your <a href=/Verification>user profile</a>.":"") 
 		+ "</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"

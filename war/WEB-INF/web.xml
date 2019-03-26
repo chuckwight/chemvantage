@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" standalone="no"?><web-app xmlns="http://java.sun.com/xml/ns/javaee" xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="2.5" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
 
 	<welcome-file-list>
-  		<welcome-file>login.html</welcome-file>
+  		<welcome-file>index.html</welcome-file>
 	</welcome-file-list>
 	
 	<servlet>
@@ -29,16 +29,6 @@
 	<servlet-mapping>
 		<servlet-name>CalculateScores</servlet-name>
 		<url-pattern>/CalculateScores</url-pattern>
-	</servlet-mapping>
-	
-	<servlet>
-		<servlet-name>CASLaunch</servlet-name>
-		<servlet-class>org.chemvantage.CASLaunch</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>CASLaunch</servlet-name>
-		<url-pattern>/cas/</url-pattern>
-		<url-pattern>/cas</url-pattern>
 	</servlet-mapping>
 	
 	<servlet>
@@ -119,6 +109,7 @@
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>Home</servlet-name>
+		<url-pattern>/index.html</url-pattern>
 		<url-pattern>/Home</url-pattern>
 	</servlet-mapping>
 	
@@ -137,8 +128,7 @@
 	</servlet>
 	<servlet-mapping>
 		<servlet-name>Login</servlet-name>
-		<url-pattern>/login.html</url-pattern>
-		<url-pattern>/login</url-pattern>
+		<url-pattern>/Login</url-pattern>
 	</servlet-mapping>
 
 	<servlet>
@@ -180,24 +170,7 @@
 		<url-pattern>/lti/registration</url-pattern>
 		<url-pattern>/lti/registration/</url-pattern>
 	</servlet-mapping>
-	
-	<servlet>
-		<servlet-name>Notification</servlet-name>
-		<servlet-class>org.chemvantage.Notification</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>Notification</servlet-name>
-		<url-pattern>/Notification</url-pattern>
-	</servlet-mapping>
 
-	<servlet>
-		<servlet-name>OneQuestion</servlet-name>
-		<servlet-class>org.chemvantage.OneQuestion</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>OneQuestion</servlet-name>
-		<url-pattern>/q</url-pattern>
-	</servlet-mapping>
 	<servlet>
 		<servlet-name>PracticeExam</servlet-name>
 		<servlet-class>org.chemvantage.PracticeExam</servlet-class>
@@ -228,15 +201,6 @@
 	</servlet-mapping> 
 
 	<servlet>
-		<servlet-name>Rescue</servlet-name>
-		<servlet-class>org.chemvantage.Rescue</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>Rescue</servlet-name>
-		<url-pattern>/Rescue</url-pattern>
-	</servlet-mapping>
-	
-	<servlet>
 		<servlet-name>ReportScore</servlet-name>
 		<servlet-class>org.chemvantage.ReportScore</servlet-class>
 	</servlet>
@@ -252,15 +216,6 @@
 	<servlet-mapping>
 		<servlet-name>ResponseServlet</servlet-name>
 		<url-pattern>/ResponseServlet</url-pattern>
-	</servlet-mapping>
-	
-	<servlet>
-		<servlet-name>Scores</servlet-name>
-		<servlet-class>org.chemvantage.Scores</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>Scores</servlet-name>
-		<url-pattern>/Scores</url-pattern>
 	</servlet-mapping>
 	
 	<servlet>
@@ -289,16 +244,7 @@
 		<servlet-name>TransactionServlet</servlet-name>
 		<url-pattern>/TransactionServlet</url-pattern>
 	</servlet-mapping>
-	
-	<servlet>
-		<servlet-name>Upgrade</servlet-name>
-		<servlet-class>org.chemvantage.Upgrade</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>Upgrade</servlet-name>
-		<url-pattern>/Upgrade</url-pattern>
-	</servlet-mapping>
-	
+		
 	<servlet>
 		<servlet-name>UserServiceLaunch</servlet-name>
 		<servlet-class>org.chemvantage.UserServiceLaunch</servlet-class>
@@ -308,15 +254,6 @@
 		<url-pattern>/userServiceLaunch</url-pattern>
 	</servlet-mapping>
 	
-	<servlet>
-		<servlet-name>Verification</servlet-name>
-		<servlet-class>org.chemvantage.Verification</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>Verification</servlet-name>
-		<url-pattern>/Verification</url-pattern>
-	</servlet-mapping>
-
 	<security-constraint>
 		<web-resource-collection>
 			<web-resource-name>AdminServlet</web-resource-name>

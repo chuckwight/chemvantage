@@ -54,70 +54,20 @@ public class Home extends HttpServlet {
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
-		// begin standard user authentication section
+		
 		HttpSession session = request.getSession();
-		User user = null;
-		if (session.isNew()) user = Nonce.getUser(request.getParameter("Nonce"));
-		else user = User.getInstance(session);
-		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
-			response.sendRedirect("/");
-			return;
-		}
-		session.setAttribute("UserId", user.id);
-//		String nonce = null;
-//		if (session.isNew()) nonce = Nonce.createInstance(user);
-		
-		// Check to see if the user has a stored groupId from the LTILaunch 
-		// (usually follows account upgrade purchase)
-		try {
-			long groupId = Long.parseLong((String)session.getAttribute("GroupId"));
-			if (user.hasPremiumAccount()) {
-				user.changeGroups(groupId);
-				ofy().save().entity(user);
-				session.removeAttribute("GroupId");
-			}
-		} catch (Exception e) {}
-		
-		// Check to see if the user has a stored resource_link_id from an LTILaunch
-		// (usually deferred to complete a Verification step)
-		String resource_link_id = (String)session.getAttribute("ResourceLinkId");
-		String lis_result_sourcedid = (String)session.getAttribute("LisResultSourcedid");
-		String redirectUrl = null;
-		if (resource_link_id != null && user.myGroupId>0) {
-			redirectUrl = "/lti?UserRequest=Go&resource_link_id=" + resource_link_id;
-			if (lis_result_sourcedid != null) redirectUrl += "&lis_result_sourcedid=" + lis_result_sourcedid;
-			response.sendRedirect(redirectUrl);
-			session.removeAttribute("ResourceLinkId");
-			session.removeAttribute("LisResultSourcedid");
-			return;
+		if (!User.isAnonymous(session)) {
+			response.sendRedirect("/Login");  // strict enforcement of Login reCAPTCHA
 		}
 		
-		// Check to see if the user should provide additional contact information
-		if (user.requiresUpdatesNow()) {
-			response.sendRedirect("/Verification");      // enter name and email address
-			return;
-		}
-				
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 
-		out.println(homePage(user,request));
+		out.println(homePage(request));
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
-		// begin standard user authentication section
-		User user = User.getInstance(request.getSession(true));
-		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
-			response.sendRedirect("/Logout");
-			return;
-		}
-
-		if ("JoinGroup".equals(request.getParameter("UserRequest"))) {
-			try {
-				user.changeGroups(Long.parseLong(request.getParameter("GroupId")));
-			} catch (Exception e) {}
-		}
 		doGet(request,response);
 	}
 
@@ -189,8 +139,8 @@ public class Home extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String homePage(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer(Home.getHeader(user));
+	String homePage(HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer();
 		try {			
 			buf.append("<TABLE><TR ALIGN=LEFT><TD COLSPAN=2>");
 			buf.append("<TABLE><TR><TD VALIGN=TOP>");
@@ -199,7 +149,22 @@ public class Home extends HttpServlet {
 			buf.append("</b></FONT><br><div align=right>An OpenEducation Resource</div></TD></TR></TABLE>");      
 			buf.append("</TD></TR><TR><TD VALIGN=TOP>");
 
-			buf.append(userInfoBox(user));
+			if (User.isAnonymous(request.getSession())) buf.append("<p><h3><font color=red>Anonymous User</font></h3>");
+			
+// test section only
+//			buf.append(request.getHeader("referer") + "<br>"
+//					+ request.getRequestURI() + "<br>"
+//					+ request.getRequestURL().toString() + "<p>");
+// end of test section			
+			
+			buf.append("Select a topic from the dropdown box below and then take a quiz<br>"
+					+ "or solve some homework problems on that topic. You can also test<br>"
+					+ "yourself by taking a 1 hour practice exam on any three topics.<p>"
+					+ "If you are a chemistry teacher or professor, you can use<br>"
+					+ "ChemVantage in your class by using an LTI connection to return<br>"
+					+ "student scores to your class learning management system. Learn<br>"
+					+ "more about <a href='/lti/registration/'>how to connect using LTI</a>.<p>"
+					+ "ChemVantage is always 100% free to use.<p>");
 			
 			// Add quiz/homework select box to the page
 			buf.append("<TABLE><TR><TD>");
@@ -255,8 +220,6 @@ public class Home extends HttpServlet {
 			try {
 				i = Long.parseLong(request.getParameter("Video"));
 				video = ofy().load().type(Video.class).id(i).now();
-				if (ofy().load().type(VideoTransaction.class).filter("userId",user.id).filter("serialNumber",video.serialNumber).first().now()==null)
-					ofy().save().entity(new VideoTransaction(user.id,video.serialNumber,video.title,new Date()));
 			} catch (Exception e) {
 				if (videos.size()>0) {
 					int randVideo = new Random().nextInt(videos.size());

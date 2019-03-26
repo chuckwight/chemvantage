@@ -85,9 +85,11 @@ public class User implements Comparable<User>,Serializable {
 	}
 	
 	static User getInstance(HttpSession session, boolean verify) {
+		User user = null;
+		String userId = null;
 		try {
-			String userId = (String)session.getAttribute("UserId");
-			User user = ofy().load().type(User.class).id(userId).safe();
+			userId = (String)session.getAttribute("UserId");
+			user = ofy().load().type(User.class).id(userId).safe();
 			if (user.alias != null) { // follow the alias chain to the end
 				List<String> userIds = new ArrayList<String>();
 				userIds.add(userId);
@@ -104,12 +106,16 @@ public class User implements Comparable<User>,Serializable {
 			Date eightHoursAgo = new Date(now.getTime()-28800000L);
 			if (user.lastLogin.before(eightHoursAgo)) {
 				user.lastLogin = now;
-				user.setPremium(true);  // all accounts are premium accounts now
 				user.alias = null;  // in case alias is set to "" or to invalid userId
 				ofy().save().entity(user);
 			}
 			if (!verify || !user.use2FactorAuth || session.getAttribute("Code")!=null || Long.parseLong(user.smsMessageDevice.substring(5,15))>0L) return user;
 		} catch (Exception e) {
+			if (User.isAnonymous(session)) {
+				user = new User(userId);
+				ofy().save().entity(user);
+				return user;
+			}
 		}
 		return null;
 	}
@@ -288,6 +294,19 @@ public class User implements Comparable<User>,Serializable {
 		return user;
 	}
 
+	static boolean isAnonymous(HttpSession session) {
+		try {
+			String userId = session.getAttribute("UserId").toString();
+			if (userId.startsWith("anonymous")) return true;
+		} catch (Exception e) {}
+		return false;
+	}
+	
+	boolean isAnonymous() {
+		if (this.id.startsWith("anonymous")) return true;
+		else return false;
+	}
+	
 	static String extractDomain(String claimedId) {
 		if (claimedId==null || claimedId.isEmpty()) return "";
 		StringBuffer domain = new StringBuffer(claimedId.toLowerCase().trim());
