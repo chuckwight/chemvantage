@@ -29,16 +29,12 @@ import javax.mail.internet.InternetAddress;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
-import org.chemvantage.samples.apps.marketplace.UserInfo;
-
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 import com.googlecode.objectify.cmd.Query;
-
-import net.sf.json.JSONObject;
 
 @Cache @Entity
 public class User implements Comparable<User>,Serializable {
@@ -49,8 +45,8 @@ public class User implements Comparable<User>,Serializable {
 	@Index 	String lastName;
 	@Index	String firstName;
 	@Index	String lowercaseName;
+	@Index	Date lastLogin;
 			String smsMessageDevice;
-			Date lastLogin;
 			int roles;
 			boolean premium;
 			long myGroupId;
@@ -113,7 +109,8 @@ public class User implements Comparable<User>,Serializable {
 		} catch (Exception e) {
 			if (User.isAnonymous(session)) {
 				user = new User(userId);
-				ofy().save().entity(user);
+				user.lastLogin = new Date(); // now
+				ofy().save().entity(user).now();
 				return user;
 			}
 		}
@@ -134,7 +131,7 @@ public class User implements Comparable<User>,Serializable {
 	}
 
 	static User createUserServiceUser(com.google.appengine.api.users.User u) {
-		if (u == null) return null;
+		if (u==null) return null;
 		User user = null;
 		try {
 			user = new User(u.getUserId());
@@ -170,36 +167,38 @@ public class User implements Comparable<User>,Serializable {
 		user.authDomain = "BLTI";
 		user.domain = request.getParameter("oauth_consumer_key");
 		user.alias = null;
-		
+/*		
 		String lis_person_name_given = request.getParameter("lis_person_name_given");
 		if (lis_person_name_given==null) lis_person_name_given = request.getParameter("custom_lis_person_name_given");
 		if (lis_person_name_given==null) lis_person_name_given = request.getParameter("lis_person_name_full");
 		if (lis_person_name_given==null) lis_person_name_given = request.getParameter("custom_lis_person_name_full");
 		user.setFirstName(lis_person_name_given);
-		
+*/		
 		String roles = request.getParameter("roles");
 		if (roles!=null) {
 			roles = roles.toLowerCase();
 			if (roles.contains("instructor")) user.setIsInstructor(true);
 			if (roles.contains("administrator")) user.setIsAdministrator(true);
+/*
 			if (user.isInstructor() || user.isAdministrator()) {
 				String lis_person_name_family = request.getParameter("lis_person_name_family");
 				if (lis_person_name_family==null) lis_person_name_family = request.getParameter("custom_lis_person_name_family");
 				user.setLastName(lis_person_name_family);
 			}
+*/
 		}
-
+/*
 		String lis_person_contact_email_primary = request.getParameter("lis_person_contact_email_primary");
 		if (lis_person_contact_email_primary==null) lis_person_contact_email_primary = request.getParameter("custom_lis_person_contact_email_primary");
 		user.setEmail(lis_person_contact_email_primary);
 
 		if (!user.email.isEmpty()) user.verifiedEmail = true; // value supplied by institution
-		
+*/		
 		user.setPremium(true);  // all LTI users have premium accounts by default
 		ofy().save().entity(user);
 		return user;
 	}
-
+/*
 	static public User createOpenIdUser(UserInfo userInfo) {
 		User user;
 		try {
@@ -293,7 +292,7 @@ public class User implements Comparable<User>,Serializable {
 		}		
 		return user;
 	}
-
+*/
 	static boolean isAnonymous(HttpSession session) {
 		try {
 			String userId = session.getAttribute("UserId").toString();
@@ -319,7 +318,7 @@ public class User implements Comparable<User>,Serializable {
 	public String getId() {
 		return this.id;
 	}
-
+/*
 	static String getBothNames(String id) {
 		if (id==null || id.isEmpty()) return "missing user id";
 		try {
@@ -328,7 +327,7 @@ public class User implements Comparable<User>,Serializable {
 			return "User " + id + " not found";
 		}
 	}
-
+*/
 	void clean() {
 		if (firstName==null) firstName = "";
 		if (lastName==null) lastName = "";

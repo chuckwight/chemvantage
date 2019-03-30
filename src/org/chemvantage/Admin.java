@@ -22,14 +22,18 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
+import java.util.Random;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import com.google.appengine.api.datastore.Cursor;
 import com.google.appengine.api.datastore.QueryResultIterator;
+import com.google.appengine.api.users.UserService;
+import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
 
@@ -40,29 +44,50 @@ public class Admin extends HttpServlet {
 	Subject subject = Subject.getSubject();
 
 	public String getServletInfo() {
-		return "This servlet is used by PZone admins to manage user properties and roles.";
+		return "This servlet is used by ChemVantage admins to manage user properties and roles.";
 	}
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			User user = User.getInstance(request.getSession(true));
-			if (user==null || !user.isChemVantageAdmin()) response.sendRedirect("/Logout");
+			UserService userService = UserServiceFactory.getUserService();
+			String userId = userService.getCurrentUser().getUserId();
+			if (ofy().load().type(User.class).id(userId).now()==null) User.createUserServiceUser(userService.getCurrentUser());
+			
+			HttpSession session = request.getSession();
+			session.setAttribute("UserId",userId);
+			
+			User user = User.getInstance(session,false);  // no 2-factor authentication at this point
+			if (user.authDomain==null || !user.authDomain.equals("Google)")) {
+				user.authDomain = "Google";
+				ofy().save().entity(user);
+			}
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
-
+	
+			if (user.use2FactorAuth && session.getAttribute("Code")==null) {
+				int code = new Random().nextInt(900000) + 100000;
+				if (TwoFactorAuth.sentSMSCode(user, code)) {
+					session.setAttribute("ProposedCode", code);
+					out.println(Home.header + TwoFactorAuth.verificationForm("/Admin", false) + Home.footer);
+					return;
+				}
+			} else {
+				session.setAttribute("Code",1); // failed text message; let the user in this time
+			}
+			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 
 			if (userRequest.equals("Edit User") || userRequest.equals("Check ID")) {
 				User usr = ofy().load().type(User.class).id(request.getParameter("UserId")).safe();
-				out.println(Home.getHeader(user) + editUserForm(user,request,usr) + Home.footer);
+				out.println(Home.header + editUserForm(user,request,usr) + Home.footer);
 			}
 			else {
 				String searchString = request.getParameter("SearchString");
 				String cursor = request.getParameter("Cursor");
-				out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Home.footer);
+				out.println(Home.header + mainAdminForm(user,userRequest,searchString,cursor) + Home.footer);
 			}
 		} catch (Exception e) {
 		}
@@ -72,8 +97,7 @@ public class Admin extends HttpServlet {
 	throws ServletException, IOException {
 		try {
 			User user = User.getInstance(request.getSession(true));
-			if (user==null || !user.isChemVantageAdmin()) response.sendRedirect("/Logout");
-
+			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
@@ -182,14 +206,14 @@ public class Admin extends HttpServlet {
 						d.activeUsers = nUsers;
 						ofy().save().entity(d);
 					}
-					buf.append("<tr><td><a href=/admin?Domain=" + d.domainName + ">" + d.domainName + "</a></td>"
+					buf.append("<tr><td>" + d.domainName + "</a></td>"
 							+ "<td>" + d.lastLogin.toString() + "</td>"
 							+ "<td style='text-align:center'>" + d.activeUsers + "</td>"
 							+ "<td style='text-align:center'>");
 					try {
 						List<String> domainAdmins = d.getDomainAdmins();
 						if (domainAdmins.isEmpty()) buf.append("(not assigned)");
-						for (String uId : domainAdmins) buf.append(User.getBothNames(uId) + " (" + User.getEmail(uId) + ")" + (domainAdmins.size()>1?"<br>":""));
+						for (String uId : domainAdmins) buf.append(uId + (domainAdmins.size()>1?"<br>":""));
 					} catch (Exception e) {
 						buf.append ("(not assigned)");
 					}
@@ -296,7 +320,7 @@ public class Admin extends HttpServlet {
 							+ "<TR><TD ALIGN=RIGHT>Name: </TD><TD>" + mergeUser.getFullName() + "</TD></TR>"
 							+ "<TR><TD ALIGN=RIGHT>Email: </TD><TD>" + mergeUser.getEmail() + "</TD></TR>"
 							+ "<TR><TD ALIGN=RIGHT>Role: </TD><TD>" + mergeUser.getPrincipalRole() + "</TD></TR>"
-					        + "<TR><TD ALIGN=RIGHT>Group: </TD><TD>" + (g==null?"(none)":g.description + "(" + User.getBothNames(g.instructorId) + ")") + "</TD></TR>"
+					        + "<TR><TD ALIGN=RIGHT>Group: </TD><TD>" + (g==null?"(none)":g.description + "(anonymous)") + "</TD></TR>"
 					        + "</TABLE>Transfer records and delete this account: "
 					        + "<INPUT TYPE=SUBMIT VALUE='Confirm Merge'>"
 					        + "</FORM>");

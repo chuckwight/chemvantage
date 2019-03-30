@@ -102,7 +102,7 @@ public class LTILaunch extends HttpServlet {
 			}
 			switch (lti_version) {
 			case "LTI-1p0": break;
-			case "LTI-2p0": break;
+			//case "LTI-2p0": break;
 			default: doError(request,response,"Invalid lti_version parameter.",null,null);
 			return;
 			}

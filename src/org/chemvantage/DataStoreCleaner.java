@@ -136,7 +136,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    	if (deleteUser(u.id)) keys.add(Key.create(u));  // tests to see if user should be deleted
 		    }
 
-		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
+		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys).now();
 
 		    buf.append(query.count() + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
 
@@ -167,13 +167,7 @@ public class DataStoreCleaner extends HttpServlet {
 				}
 			} else { // found the user at the end of the alias chain
 				if (u.lastLogin.after(sixMonthsAgo)) return false;  // if any alias has a recent login, preserve the entire chain
-				if (u.isInstructor() && u.lastLogin.after(oneYearAgo)) return false; // save instructor accounts for one year
-				if (u.isAdministrator() && u.lastLogin.after(oneYearAgo)) return false;  // preserve all admin accounts for one year
-				if (u.lastLogin.getTime()==0L) {  // user never logged in; perhaps this is a brand new account
-					u.lastLogin = new Date(1000L);   // so mark the account by advancing the lastLogin by 1 second
-					ofy().save().entity(u);                   // so it will be deleted tomorrow instead if the user does not login
-					return false;
-				} 
+				if (u.isChemVantageAdmin()) return false; 
 			}
 		} catch (Exception e) {  // in case of error, delete the user because the alias points to a null user
 		}	

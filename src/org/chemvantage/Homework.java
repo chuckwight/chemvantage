@@ -71,7 +71,7 @@ public class Homework extends HttpServlet {
 			PrintWriter out = response.getWriter();
 			
 			String nonce = session.isNew()?Nonce.createInstance(user):null;
-			out.println(printHomework(user,request,nonce) + Home.footer);
+			out.println(Home.header + printHomework(user,request,nonce) + Home.footer);
 		} catch (Exception e) {}
 	}
 
@@ -93,10 +93,10 @@ public class Homework extends HttpServlet {
 			PrintWriter out = response.getWriter();
 
 			String nonce = session.isNew()?Nonce.createInstance(user):null;
-			out.println(printScore(user,request,nonce) + Home.footer);
+			out.println(Home.header + printScore(user,request,nonce) + Home.footer);
 		} catch (Exception e) {}
 	}
-
+/*
 	String instructorPage(HttpServletRequest request,long assignmentId,String nonce) {
 		// this page is displayed by default when the instructor accesses this assignment
 		// to view the homework assignment itself, include ShowHomework=true as one of the GET parameters
@@ -105,16 +105,16 @@ public class Homework extends HttpServlet {
 			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			Group group = ofy().load().type(Group.class).id(assignment.groupId).safe();
 			Topic topic = ofy().load().type(Topic.class).id(assignment.topicId).safe();
-/*
+
 			DateFormat dfShort = DateFormat.getDateInstance(DateFormat.SHORT);
 			DateFormat dfLong = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			dfShort.setTimeZone(group.getTimeZone());
 			dfLong.setTimeZone(group.getTimeZone());
 			boolean noDeadline = assignment.getDeadline().getTime()==0L;
-*/			
+			
 			buf.append("<h2>Homework - " + topic.title + " (" + subject.title + ")</h2>");
 			buf.append("<FONT SIZE=-1>This is the instructor page; students will <a href=/Homework?TopicId=" + topic.id + "&ShowHomework=true&Nonce=" + nonce + ">go directly to the assignment</a>.</FONT><p>");
-/*			
+			
 			buf.append("<FORM ACTION='/Groups' METHOD=POST>"
 					+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Homework>"
@@ -132,9 +132,9 @@ public class Homework extends HttpServlet {
 					+ "<label><INPUT TYPE=CHECKBOX ID=esBox NAME=EmailScores VALUE=true" + (assignment.emailScoresToInstructor?" CHECKED>":">") + " Email scores to me after the deadline.</lable><br>"
 					+ "<label><INPUT TYPE=CHECKBOX NAME=UpdateLMSScores VALUE=true> Update scores in the LMS grade book.</label><br>"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Set Deadline'></FORM></div><p>");
-*/		
+		
 			buf.append("<b>Customize This Homework Assignment</b> <a href=/Groups?UserRequest=AssignHomeworkQuestions&GroupId=" + group.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + "><FONT SIZE=-2>select questions</FONT></a><p>");
-/*				
+				
 			buf.append("<b>Homework Scores</b> <a id=slink href=# onClick=document.getElementById('details').style.display='inLine';document.getElementById('slink').style.display='none'><FONT SIZE=-2>show details</FONT></a><br/>"
 					+ "<div id='details' style='display:none'>The following is a list of best pre-deadline scores on this assignment. In most cases, these scores have been reported to the grade book "
 					+ "in the class learning management system. However, the LMS may have a policy that is different from ChemVantage (e.g., record first score only), so it "
@@ -194,13 +194,13 @@ public class Homework extends HttpServlet {
 				}
 				buf.append("</TABLE>");			
 			} else buf.append("No students are registered in this group.");
-*/
+
 		} catch (Exception e) {
 			return buf.toString() + e.getMessage();
 		}
 		return buf.toString();
 	}
-
+*/
 	String printHomework(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -501,7 +501,8 @@ public class Homework extends HttpServlet {
 			// if the user response was correct, seek five-star feedback:
 			if (studentScore > 0) buf.append(fiveStars());
 			
-			buf.append("<p>");
+			buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback>here</a>.<p>");
+			
 			buf.append("<a href=/Homework?TopicId=" + ht.topicId 
 					+ (nonce==null?"":"&Nonce=" + nonce) 
 					+ (offerHint?"&Q=" + q.id + "><span style='color:red'>Please give me a hint</span>":">Return to this homework assignment") + "</a>");

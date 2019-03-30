@@ -455,7 +455,7 @@ public class Groups extends HttpServlet {
 				buf.append("<SELECT NAME=CopyGroupId><OPTION VALUE=0>Select a group to copy from (optional)</OPTION>");
 				for (Group g : groups) {
 					if (g.id==group.id) continue; 
-					buf.append("<OPTION VALUE=" + g.id + ">" + g.description + " (" + User.getBothNames(g.instructorId) + ")</OPTION>");
+					buf.append("<OPTION VALUE=" + g.id + ">" + g.description + "</OPTION>");
 				}
 				buf.append("</SELECT><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Copy Assignments'></FORM><p>");
 				//buf.append("</div>");
@@ -655,7 +655,7 @@ public class Groups extends HttpServlet {
 						try {
 							if (a.groupId==group.id) continue; 
 							Group g = ofy().load().type(Group.class).id(a.groupId).safe();
-							buf.append("<OPTION VALUE='" + a.id + "'>" + g.description + " (" + User.getBothNames(g.instructorId) + ")</OPTION>");
+							buf.append("<OPTION VALUE='" + a.id + "'>" + g.description + "</OPTION>");
 						} catch (Exception e2) {
 							ofy().delete().entity(a);
 						}
@@ -1268,11 +1268,9 @@ public class Groups extends HttpServlet {
 				buf.append("Email subject line: <INPUT TYPE=TEXT SIZE=40 NAME=DefaultRescueSubject VALUE='" + group.defaultRescueSubject + "'><br>");
 				buf.append("Email message text:<br><TEXTAREA NAME=DefaultRescueMessage ROWS=15 COLS=80 WRAP=SOFT>" + group.defaultRescueMessage + "</TEXTAREA><br>");
 				buf.append("Select one or more of the following contacts to be copied in the email:<br>");
-				buf.append("<INPUT TYPE=CHECKBOX NAME=RescueCcIds VALUE=" + group.instructorId + (group.rescueCcIds.contains(group.instructorId)?" CHECKED>":">") 
-						+ User.getBothNames(group.instructorId) + " (" + User.getEmail(group.instructorId) + ")<br>");
+				buf.append("<INPUT TYPE=CHECKBOX NAME=RescueCcIds VALUE=" + group.instructorId + (group.rescueCcIds.contains(group.instructorId)?" CHECKED>":">anonymous<br>"));
 				for (String id : group.tAIds)
-					buf.append("<INPUT TYPE=CHECKBOX NAME=RescueCcIds VALUE=" + id + (group.rescueCcIds.contains(id)?" CHECKED>":">") 
-							+ User.getBothNames(id) + " (" + User.getEmail(id) + ")<br>");
+					buf.append("<INPUT TYPE=CHECKBOX NAME=RescueCcIds VALUE=" + id + (group.rescueCcIds.contains(id)?" CHECKED>":">anonymois<br>"));
 					buf.append("<INPUT TYPE=SUBMIT VALUE='Update Rescue Service Options'></FORM>");
 			}
 		} catch (Exception e) {

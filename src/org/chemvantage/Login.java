@@ -56,35 +56,13 @@ public class Login extends HttpServlet {
 		+ "<meta HTTP-EQUIV='Expires' CONTENT='" + (new Date().toString()) + "'>\n"
 		+ "<meta HTTP-EQUIV='P3P' CONTENT='policyref=\"/w3c/p3p.xml\",CP=\"CURa ADMa DEVa OUR IND DSP OTI COR\"'>\n"
 		+ "<meta NAME='Description' CONTENT='An online quiz and homework site'>\n"
-		+ "<meta NAME='Keywords' CONTENT='learning,online,quiz,homework,video,textbook,open,education'>\n"
+		+ "<meta NAME='Keywords' CONTENT='chemistry,learning,online,quiz,homework,video,textbook,open,education'>\n"
 		+ "<meta name='msapplication-config' content='none'/>"
-		+ "<link rel='P3Pv1' href='/w3c/p3p.xml'>\n"
 		+ "<title>ChemVantage</title>\n"
-		+ "<style><!-- body,td,a,p,.h {font-family:arial,sans-serif}"
-		+ "#pzon{float:left;font-weight:bold;height:22px;padding-left:2px}"
-		+ "#phzl{border-top:1px solid#c9d7f1;font-size:0;height:0;position:absolute;right:0;top:24px;width:200%}"
-		+ "#pzbg{background:#fff;border:1px solid;border-color:#c9d7f1 #36c #36c#a2bae7;font-size:13px;top:24px;z-index:1000}"
-		+ "#puzr{padding-bottom:7px !important}"
-		+ "#pzon,#puzr{font-size:13px;padding-top:1px!important}"
-		+ ".pz1,.pz2{display:inline;height:22px;margin-right:1em;vertical-align:top}"
-		+ "#pzbg,.pz3{display:none;position:absolute;width:7em}"
-		+ ".pz3{z-index:1001}"
-		+ "#pzon a,#pzon a:active,#pzon a:visited{color:#00c;font-weight:normal}"
-		+ ".pz3 a,.pz2 a{text-decoration:none}"
-		+ ".pz3 a{display:block;padding:.2em .5em}"
-		+ "#pzon .pz3 a:hover{background:#36c;color:#fff}"
-		+ "--> </style>\n"
 		+ "</head>\n"
 		+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
-		+ "<TABLE><TR><TD>\n"
-		+ "<div id=pzon><nobr>"
-		+ " <div class=pz1>ChemVantage.org</div>"
-		+ " <div class=pz1><a href=/Home>Home</a></div>"
-		+ " <div class=pz1><a href=/About>About Us</a></div>"
-		+ "</nobr></div>\n"
-		+ "<div id=phzl></div><div align=right id=puzr style='font-size:84%;padding:0 0 4px' width=100%>"
-		+ "</div><br>";
-	
+		+ "<TABLE><TR><TD>\n";
+		
 	public static String footer = "\n<hr><span style='font-size:smaller'><table style='width:100%;border-spacing: 20px 0px'><tr>"
 		+ "<td>&copy; 2007-19 ChemVantage LLC. <a rel='license' href='https://creativecommons.org/licenses/by/3.0/'><img alt='Creative Commons License' style='border-width:0' src='https://i.creativecommons.org/l/by/3.0/80x15.png' /></a></td>"
 		+ "<td align=center><a href=/About#terms>Terms and Conditions of Use</a></td>"
@@ -158,7 +136,9 @@ public class Login extends HttpServlet {
 		int randInt = Math.abs(new Random().nextInt());
 		session.setAttribute("UserId", "anonymous" + randInt);
 		
-		if (reCaptchaOK(request)) response.sendRedirect("/");
+		String thisURL = request.getRequestURL().toString();
+	
+		if (thisURL.indexOf("localhost")>0 || reCaptchaOK(request)) response.sendRedirect("/");
 		else response.sendRedirect("/Login");
 	}
 
@@ -193,7 +173,8 @@ public class Login extends HttpServlet {
 					+ "<li><a href='/lti/registration/'>Connect using LTI</a></ul>"
 					+ "</td></tr></table>");
 
-			buf.append("View the <a href=https://www.youtube.com/watch?v=PWDPQMhvghA>ChemVantage video</a>.<hr><p>");
+			buf.append("View the <a href=https://www.youtube.com/watch?v=PWDPQMhvghA>ChemVantage video</a>"
+					+ " or <a href=/About>read more about us here</a>.<hr><p>");
 /*			
 			buf.append("<h3>Please Sign In</h3>"
 					+ "<div id=signin>ChemVantage uses third-party authentication by Google.<br>"
@@ -215,7 +196,9 @@ public class Login extends HttpServlet {
 			buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");
 			buf.append("<FORM METHOD=POST>");
 			// reCaptcha tool
-			buf.append("<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div>");
+			if (thisURL.indexOf("localhost")<0) { // display reCAPTCHA for all but localhost
+				buf.append("<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div>");
+			}
 			// finish the form
 			buf.append("<INPUT TYPE=SUBMIT VALUE='ENTER'></FORM>");
 		

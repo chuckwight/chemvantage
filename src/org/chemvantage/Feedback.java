@@ -77,11 +77,9 @@ public class Feedback extends HttpServlet {
 				sendEmailToAdmin();
 			} else if (userRequest.equals("AjaxRating")) {
 				recordAjaxRating(request);
-			} else out.println(Home.getHeader(user) 
-					+ feedbackForm(user,nonce) 
-					+ Home.footer);    
+			} else out.println(Home.header + feedbackForm(user,nonce) + Home.footer);    
 		} catch (Exception e) {
-			out.println(Login.header + anonymousFeedbackForm() + Login.footer);
+			out.println(Home.header + anonymousFeedbackForm() + Login.footer);
 		}
 	}
 
@@ -107,18 +105,18 @@ public class Feedback extends HttpServlet {
 			if (userRequest == null) userRequest = "";
 
 			if (userRequest.equals("SubmitFeedback")) {
-				out.println(Home.getHeader(user) + submitFeedback(user,request,nonce) + Home.footer);
+				out.println(Home.header + submitFeedback(user,request,nonce) + Home.footer);
 				sendEmailToAdmin();
 			} else if (user.isAdministrator() && userRequest.equals("Delete Report")) {
 				removeReport(request);
-				out.println(Home.getHeader(user) + feedbackForm(user,nonce) + Home.footer);	
+				out.println(Home.header + feedbackForm(user,nonce) + Home.footer);	
 			} else if (user.isAdministrator() && userRequest.equals("Reply")) {
-				out.println(Home.getHeader(user) + replyForm(user,request,nonce) + Home.footer);
+				out.println(Home.header + replyForm(user,request,nonce) + Home.footer);
 			} else if (user.isAdministrator() && userRequest.equals("Send Reply")) {
 				String result = sendReplyToUser(request);
 				if (result.isEmpty()) doGet(request,response);
-				else out.println(Home.getHeader(user) + result + Home.footer);
-			} else out.println(Home.getHeader(user) + feedbackForm(user,nonce) + Home.footer);
+				else out.println(Home.header + result + Home.footer);
+			} else out.println(Home.header + feedbackForm(user,nonce) + Home.footer);
 		} catch (Exception e) {
 		}
 	}
@@ -137,77 +135,64 @@ public class Feedback extends HttpServlet {
 
 	String feedbackForm(User user,String nonce) {
 		StringBuffer buf = new StringBuffer();
-		
+
 		buf.append("<h2>Feedback Page</h2>");
-		buf.append("<b>" + user.getBothNames() + "</b><br />"
-				+ new Date().toString() + "<p>");
-		
-		if (user.verifiedEmail) {
-			buf.append("Your comments and opinions are important to us.  We use this<br>"
-					+ "information to improve the functionality of the site for our users.<p>"
-					+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><p><hr>");
 
-			buf.append("<script type='text/javascript'>\n"
-					+ "<!--\n"
-					+ "var star1 = new Image(); star1.src='images/star1.gif';\n"
-					+ "var star2 = new Image(); star2.src='images/star2.gif';\n"
-					+ "var set = false;\n"
-					+ "function showStars(n) {"
-					+ "  if (!set) {"
-					+ "    document.getElementById('vote').innerHTML=(n==0?'(click a star)':''+n+(n>1?' stars':' star'));"
-					+ "    for (i=1;i<6;i++) document.getElementById(i).src=(i<=n?star2.src:star1.src);"
-					+ "  }"
-					+ "}\n"
-					+ "function setStars(n) {"
-					+ "  set = (n>0?true:false);"
-					+ "  document.FeedbackForm.Stars.value = n;"
-					+ "}\n"
-					+ "// -->\n"
-					+ "</script>\n");
+		buf.append("Your comments and opinions are important to us.  We use this<br>"
+				+ "information to improve the functionality of the site for our users.<p>"
+				+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><p><hr>");
 
-			buf.append("Please rate your overall experience with ChemVantage:\n");
+		buf.append("<script type='text/javascript'>\n"
+				+ "<!--\n"
+				+ "var star1 = new Image(); star1.src='images/star1.gif';\n"
+				+ "var star2 = new Image(); star2.src='images/star2.gif';\n"
+				+ "var set = false;\n"
+				+ "function showStars(n) {"
+				+ "  if (!set) {"
+				+ "    document.getElementById('vote').innerHTML=(n==0?'(click a star)':''+n+(n>1?' stars':' star'));"
+				+ "    for (i=1;i<6;i++) document.getElementById(i).src=(i<=n?star2.src:star1.src);"
+				+ "  }"
+				+ "}\n"
+				+ "function setStars(n) {"
+				+ "  set = (n>0?true:false);"
+				+ "  document.FeedbackForm.Stars.value = n;"
+				+ "}\n"
+				+ "// -->\n"
+				+ "</script>\n");
 
-			buf.append("<div id='vote' style='color:red;'>(click a star):</div>\n");
-			for (int istar=1;istar<6;istar++) {
-				buf.append("<img src='images/star1.gif' id='" + istar + "' style='width:30px; height:30px; float:left;'"
-						+ "onmouseover=showStars(this.id) onClick=setStars(this.id) onmouseout=showStars(0) />");
-			}
-			buf.append("<br clear='all'><FONT SIZE=-1>(" + subject.nStarReports + " user ratings; avg = " + subject.getAvgStars() + " stars)</FONT><p>\n");
+		buf.append("Please rate your overall experience with ChemVantage:\n");
 
-			buf.append("<FORM NAME=FeedbackForm METHOD=POST>\n"
-					+ "<div id='count'>Comments or kudos: <FONT SIZE=-1>(160 characters max.)</FONT></div>"
-					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback>"
-					+ "<INPUT TYPE=HIDDEN NAME=Stars>"
-					+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
-					+ "<TEXTAREA NAME=Comments ROWS=5 COLS=40 WRAP=SOFT "
-					+ "onKeyUp=\"javascript: "
-					+ "document.FeedbackForm.Comments.value=document.FeedbackForm.Comments.value.substring(0,160);"
-					+ "document.getElementById('count').innerHTML='Comments or kudos: <FONT SIZE=-1 COLOR=RED>"
-					+ "('+(160-document.FeedbackForm.Comments.value.length)+' characters remaining)</FONT>';"
-					+ "\">"
-					+ "</TEXTAREA><br>");
-
-			buf.append("<INPUT TYPE=SUBMIT VALUE='Submit Feedback'>"
-					+ "<INPUT TYPE=RESET VALUE='Clear Form' "
-					+ "onClick=\"javascript: document.FeedbackForm.Stars.value='';"
-					+ "setStars(0);"
-					+ "for (i=1;i<6;i++) document.getElementById(i).src=star1.src;"
-					+ "document.getElementById('vote').innerHTML='(click a star):';"
-					+ "document.getElementById('count').innerHTML="
-					+ "'Comments or kudos: <FONT SIZE=-1>(160 characters max.)</FONT>';"
-					+ "\">"
-					+ "</FORM>");
-			buf.append(viewUserFeedback(user));
-		} else {
-			buf.append("Sorry, the feedback form is not accessible to you because your email<br>"
-					+ "address has not been verified by ChemVantage. Please <a href=/Verification>update your profile</a>.<br>"
-					+ "You may also send your comments via email to <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><p>"
-					+ "Thank you");
-					
-			buf.append("<FORM ACTION=Verification METHOD=POST>"
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Verify My Email Address'><p>"
-					+ "</FORM>");
+		buf.append("<div id='vote' style='color:red;'>(click a star):</div>\n");
+		for (int istar=1;istar<6;istar++) {
+			buf.append("<img src='images/star1.gif' id='" + istar + "' style='width:30px; height:30px; float:left;'"
+					+ "onmouseover=showStars(this.id) onClick=setStars(this.id) onmouseout=showStars(0) />");
 		}
+		buf.append("<br clear='all'><FONT SIZE=-1>(" + subject.nStarReports + " user ratings; avg = " + subject.getAvgStars() + " stars)</FONT><p>\n");
+
+		buf.append("<FORM NAME=FeedbackForm METHOD=POST>\n"
+				+ "<div id='count'>Comments or kudos: <FONT SIZE=-1>(160 characters max.)</FONT></div>"
+				+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback>"
+				+ "<INPUT TYPE=HIDDEN NAME=Stars>"
+				+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
+				+ "<TEXTAREA NAME=Comments ROWS=5 COLS=40 WRAP=SOFT "
+				+ "onKeyUp=\"javascript: "
+				+ "document.FeedbackForm.Comments.value=document.FeedbackForm.Comments.value.substring(0,160);"
+				+ "document.getElementById('count').innerHTML='Comments or kudos: <FONT SIZE=-1 COLOR=RED>"
+				+ "('+(160-document.FeedbackForm.Comments.value.length)+' characters remaining)</FONT>';"
+				+ "\">"
+				+ "</TEXTAREA><br>");
+
+		buf.append("<INPUT TYPE=SUBMIT VALUE='Submit Feedback'>"
+				+ "<INPUT TYPE=RESET VALUE='Clear Form' "
+				+ "onClick=\"javascript: document.FeedbackForm.Stars.value='';"
+				+ "setStars(0);"
+				+ "for (i=1;i<6;i++) document.getElementById(i).src=star1.src;"
+				+ "document.getElementById('vote').innerHTML='(click a star):';"
+				+ "document.getElementById('count').innerHTML="
+				+ "'Comments or kudos: <FONT SIZE=-1>(160 characters max.)</FONT>';"
+				+ "\">"
+				+ "</FORM>");
+		buf.append(viewUserFeedback(user));
 		return buf.toString(); 
 	}
 	
@@ -291,15 +276,14 @@ public class Feedback extends HttpServlet {
 		}
 
 		buf.append("<h2>Feedback Page</h2>");
-		if (user!=null) buf.append("<b>" + user.getBothNames() + "</b><br />");
+		//if (user!=null) buf.append("<b>" + user.getBothNames() + "</b><br />");
 		buf.append(new Date().toString() + "<p>");
 		buf.append("Thank you for your feedback" + (stars>0?" (" + stars + " stars" + (stars==5?"!":"") + ").":"."));
 		if (stars > 0) buf.append("<br>The average user rating for ChemVantage is " + subject.getAvgStars() + " stars (" + subject.nStarReports + " user ratings).");
 		if (comments.length() > 0) {
 			if (user==null) buf.append("<br>Your comment will be reviewed by a ChemVantage administrator.<p>");
-			else buf.append("<br>If your comment requested a response, it will be sent to you at " + user.getEmail() + "<p>");
 		}
-		buf.append("<p><a href=Home>Return to the " + (user==null?"Login":"Home") + " Page</a><br>");
+		if (user.isAnonymous()) buf.append("<p><a href=Home>Return to the Home page</a><br>");
 		return buf.toString();
 	}
 
@@ -308,11 +292,12 @@ public class Feedback extends HttpServlet {
 		boolean showFeedback = false;  // show feedback only if reports are available
 		
 		Query<UserReport> reports = ofy().load().type(UserReport.class).order("-submitted");
+		
 		for (UserReport r : reports) {
 			String report = r.adminView(user);  // returns report only for ChemVantage admins, domainAdmins and report author
 			if (report.length()>0) {
 				showFeedback = true;
-				buf.append(report);
+				buf.append(report + "<hr>");
 			}
 		}
 		return showFeedback?buf.toString():"";

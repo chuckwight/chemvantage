@@ -50,20 +50,20 @@ public class Home extends HttpServlet {
 		+ "You can monitor the status Google AppEngine at <a href=http://code.google.com/status/appengine>http://code.google.com/status/appengine</a><br>"
 		+ "Please try again later. We apologize for the inconvenience. -ChemVantage";
 
-	public static String footer = Login.footer;
-
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
-	throws ServletException, IOException {
-		
-		HttpSession session = request.getSession();
-		if (!User.isAnonymous(session)) {
-			response.sendRedirect("/Login");  // strict enforcement of Login reCAPTCHA
-		}
-		
-		response.setContentType("text/html");
-		PrintWriter out = response.getWriter();
+			throws ServletException, IOException {
 
-		out.println(homePage(request));
+		try {
+			HttpSession session = request.getSession();
+			if (!User.isAnonymous(session)) {
+				response.sendRedirect("/Login");  // strict enforcement of Login reCAPTCHA
+			}
+
+			response.setContentType("text/html");
+			PrintWriter out = response.getWriter();
+
+			out.println(header + homePage(request) + footer);
+		} catch (Exception e) {}
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
@@ -71,6 +71,30 @@ public class Home extends HttpServlet {
 		doGet(request,response);
 	}
 
+	public static String header = "<!DOCTYPE html>"
+			+"<html>\n"
+			+ "<head>"
+			+ "<meta HTTP-EQUIV='Content-type' CONTENT='text/html;charset=iso-8859-1'>"
+			+ "<meta HTTP-EQUIV='Expires' CONTENT='" + (new Date().toString()) + "'>\n"
+			+ "<meta HTTP-EQUIV='P3P' CONTENT='policyref=\"/w3c/p3p.xml\",CP=\"CURa ADMa DEVa OUR IND DSP OTI COR\"'>\n"
+			+ "<meta NAME='Description' CONTENT='An online quiz and homework site'>\n"
+			+ "<meta NAME='Keywords' CONTENT='chemistry,learning,online,quiz,homework,video,textbook,open,education'>\n"
+			+ "<meta name='msapplication-config' content='none'/>"
+			+ "<title>ChemVantage</title>\n"
+			+ "</head>\n"
+			+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
+			+ "<TABLE>"
+			+ "<TR><TD>\n";
+			
+		public static String footer = "\n<hr><span style='font-size:smaller'><table style='width:100%;border-spacing: 20px 0px'><tr>"
+			+ "<td>&copy; 2007-19 ChemVantage LLC. <a rel='license' href='https://creativecommons.org/licenses/by/3.0/'><img alt='Creative Commons License' style='border-width:0' src='https://i.creativecommons.org/l/by/3.0/80x15.png' /></a></td>"
+			+ "<td align=center><a href=/About#terms>Terms and Conditions of Use</a></td>"
+			+ "<td align=right><a href='http://code.google.com/appengine/'><img src=/images/GAE.gif border=0 "
+			+ "alt='Powered by Google App Engine'></a></td></tr></table>"
+			+ "</span>"
+			+ "</TD></TR></TABLE>\n"
+			+ "</body></html>";
+			
 	static String getHeader(User user) {
 		return getHeader(user,null);
 	}
@@ -164,7 +188,7 @@ public class Home extends HttpServlet {
 					+ "ChemVantage in your class by using an LTI connection to return<br>"
 					+ "student scores to your class learning management system. Learn<br>"
 					+ "more about <a href='/lti/registration/'>how to connect using LTI</a>.<p>"
-					+ "ChemVantage is always 100% free to use.<p>");
+					+ "ChemVantage is always free to use. <a href=/About>Read more about us here</a>.<p>");
 			
 			// Add quiz/homework select box to the page
 			buf.append("<TABLE><TR><TD>");
@@ -228,8 +252,7 @@ public class Home extends HttpServlet {
 			}
 			
 			if (videos.size()>0) {
-				boolean isSecure = request.isSecure();
-				buf.append("<iframe width='425' height='349' src='" + (isSecure?"https://":"http://") + "www.youtube.com/embed/" 
+				buf.append("<iframe width='425' height='349' src=https://www.youtube.com/embed/'"
 						+ video.serialNumber + (i==null?"":"?autoplay=1")
 						+ "' frameborder='0' allowfullscreen></iframe>\n");
 
@@ -247,7 +270,7 @@ public class Home extends HttpServlet {
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}
-		return buf.toString() + footer;
+		return buf.toString();
 	}
 
 	String userInfoBox(User user) {

@@ -77,7 +77,7 @@ public class Quiz extends HttpServlet {
 			PrintWriter out = response.getWriter();
 			
 			String nonce = session.isNew()?Nonce.createInstance(user):null;
-			out.println(printQuiz(user,request,nonce) + Home.footer);
+			out.println(Home.header + printQuiz(user,request,nonce) + Home.footer);
 		} catch (Exception e) {}
 	}
 
@@ -99,7 +99,7 @@ public class Quiz extends HttpServlet {
 			PrintWriter out = response.getWriter();
 			
 			String nonce = session.isNew()?Nonce.createInstance(user):null;
-			out.println(printScore(user,request,nonce) + Home.footer);
+			out.println(Home.header + printScore(user,request,nonce) + Home.footer);
 		} catch (Exception e) {}
 	}
 /*
@@ -535,6 +535,7 @@ public class Quiz extends HttpServlet {
 							+ "the correct answers to problems that you missed.\n");
 				}
 			}
+			buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback>here</a>.<p>");
 			if (user.isAnonymous()) {
 				buf.append("<p>");
 				buf.append("<a href=/Quiz?TopicId=" + qt.topicId + (nonce==null?"":"&Nonce=" + nonce) + ">Take this quiz again</a>");

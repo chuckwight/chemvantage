@@ -57,16 +57,7 @@
 		<servlet-name>DataTransfer</servlet-name>
 		<url-pattern>/DataTransfer</url-pattern>
 	</servlet-mapping>
-	
-	<servlet>
-		<servlet-name>DomainAdmin</servlet-name>
-		<servlet-class>org.chemvantage.DomainAdmin</servlet-class>
-	</servlet>
-	<servlet-mapping>
-		<servlet-name>DomainAdmin</servlet-name>
-		<url-pattern>/admin</url-pattern>
-	</servlet-mapping>
-	
+		
 	<servlet>
 		<servlet-name>Edit</servlet-name>
 		<servlet-class>org.chemvantage.Edit</servlet-class>
@@ -261,10 +252,8 @@
  			<url-pattern>/Admin</url-pattern>  
   			<url-pattern>/CalculateScores</url-pattern>  
   			<url-pattern>/DataStoreCleaner</url-pattern> 
+			<url-pattern>/Edit</url-pattern> 
 			<url-pattern>/EmailScores</url-pattern> 
-			<url-pattern>/ManageDemoPremiumAccounts</url-pattern>
-			<url-pattern>/Notification</url-pattern>
-			<url-pattern>/Rescue</url-pattern>
 			<url-pattern>/ReportScore</url-pattern>
 			<url-pattern>/ResponseServlet</url-pattern>
 			<url-pattern>/ToolSettingsManager</url-pattern>
@@ -274,10 +263,20 @@
 			<role-name>admin</role-name>
 		</auth-constraint>
 	</security-constraint>
-	 
-	 <filter>
-	    <filter-name>ObjectifyFilter</filter-name>
-	    <filter-class>com.googlecode.objectify.ObjectifyFilter</filter-class>
+	
+	<security-constraint>
+		<web-resource-collection>
+			<web-resource-name>ForceSSL</web-resource-name>
+			<url-pattern>/*</url-pattern>
+		</web-resource-collection>
+		<user-data-constraint>
+			<transport-guarantee>CONFIDENTIAL</transport-guarantee>
+		</user-data-constraint>			
+	</security-constraint>
+	
+	<filter>
+		<filter-name>ObjectifyFilter</filter-name>
+		<filter-class>com.googlecode.objectify.ObjectifyFilter</filter-class>
 	</filter>
 	<filter-mapping>
 	    <filter-name>ObjectifyFilter</filter-name>

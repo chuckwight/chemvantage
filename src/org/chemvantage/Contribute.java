@@ -55,10 +55,7 @@ public class Contribute extends HttpServlet {
 		
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		if (user.verifiedEmail) {
-			out.println(Home.getHeader(user) + newQuestionForm(user,request,nonce) + Home.footer);		
-		}
-		else out.println(Home.getHeader(user) + declineForm() + Home.footer);
+		out.println(Home.header + newQuestionForm(user,request,nonce) + Home.footer);		
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
@@ -82,8 +79,8 @@ public class Contribute extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 			if (userRequest.equals("Save")) {
-				out.println(Home.getHeader(user) + submitQuestion(user,request,nonce) + Home.footer);
-			} else out.println(Home.getHeader(user) + newQuestionForm(user,request,nonce) + Home.footer);
+				out.println(Home.header + submitQuestion(user,request,nonce) + Home.footer);
+			} else out.println(Home.header + newQuestionForm(user,request,nonce) + Home.footer);
 		} catch (Exception e) {
 		}
 	}
@@ -173,7 +170,7 @@ public class Contribute extends HttpServlet {
 			if (preview) buf.append("<h2>Continue Editing</h2>");
 			else {
 				buf.append("<h2>Contribute a New Question</h2>");
-				buf.append("All users are encouraged to contribute new question items to the "
+				buf.append("All instructors are encouraged to contribute new question items to the "
 						+ "ChemVantage database for quizzes and homework assignments.  Your contribution "
 						+ "will be approved by an editor before is appears in production. By using this form, "
 						+ "you certify that the question item is original (not previously copyrighted), and that "
@@ -254,15 +251,6 @@ public class Contribute extends HttpServlet {
 		return buf.toString();
 	}
 
-	String declineForm() {
-		return "<h3>Contributions Welcome</h3>"
-		+ "ChemVantage encourages all users to contribute quiz and homework question items to the datastore. "
-		+ "However, in order to do this you must first verify your email address with ChemVantage.<p>"
-		+ "<FORM ACTION=Verification METHOD=POST>"
-		+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Verify My Email Address'><p>"
-		+ "</FORM>";
-	}
-	
 	String submitQuestion(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {

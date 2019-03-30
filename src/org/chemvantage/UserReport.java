@@ -71,9 +71,7 @@ public class UserReport implements Serializable {
 			else if (user!=null && adminUser.id.equals(user.id)) showReport = true;			
 			if (!showReport) return "";
 			
-			buf.append("\nOn " + submitted 
-					+ (user==null?" (anonymous) ":" <a href=mailto:" + user.getEmail() + ">" + user.getBothNames() + "</a> " + (user.verifiedEmail?"":"<FONT SIZE=-1>(unverified)</FONT> "))
-					+ "said:<br>");
+			buf.append("\nOn " + submitted + " an anonymous user said:<br>");
 			
 			if (stars>0) buf.append(" (" + stars + " stars)<br>");
 			buf.append("<FONT COLOR=RED>" + comments + "</FONT><br>");
@@ -98,7 +96,7 @@ public class UserReport implements Serializable {
 				buf.append("<FORM METHOD=POST ACTION=Feedback>"
 						+ "<INPUT TYPE=HIDDEN NAME=ReportId VALUE=" + this.id + ">"
 						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Report'>"
-						+ (user != null?"<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Reply'>":"")
+//						+ (user != null?"<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Reply'>":"")
 						+ "</FORM><p>");
 			} else buf.append("<p>");
 		} catch (Exception e) {

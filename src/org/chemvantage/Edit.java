@@ -30,6 +30,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import com.google.appengine.api.users.UserService;
+import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
 
@@ -54,17 +56,14 @@ public class Edit extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
+			UserService userService = UserServiceFactory.getUserService();
+			String userId = userService.getCurrentUser().getUserId();
+			if (ofy().load().type(User.class).id(userId).now()==null) User.createUserServiceUser(userService.getCurrentUser());
+			
 			HttpSession session = request.getSession();
-			User user = null;
-			if (session.isNew()) {
-				user = Nonce.getUser(request.getParameter("Nonce"));
-				session.setAttribute("UserId", user.id);
-			} else user = User.getInstance(session);
-			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
-				response.sendRedirect("/");
-				return;
-			}
-			if (!user.isEditor()) response.sendRedirect("/Home");
+			session.setAttribute("UserId",userId);
+			
+			User user = User.getInstance(session,false);  // no 2-factor authentication at this point
 				
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
@@ -109,12 +108,7 @@ public class Edit extends HttpServlet {
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
-		User user = User.getInstance(request.getSession(true));
-		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
-			response.sendRedirect("/");
-			return;
-		}
-		if (!user.isEditor()) response.sendRedirect("/Home");
+		User user = User.getInstance(request.getSession());
 		
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
@@ -600,8 +594,8 @@ public class Edit extends HttpServlet {
 				q.pointValue = 1;
 				buf.append(" (1 point)<br>");
 			}
-			buf.append("Author: <a href=mailto:'" + User.getEmail(q.authorId) + "'>" + User.getBothNames(q.authorId) + "</a><br>");
-			buf.append("Editor: <a href=mailto:'" + user.getEmail() + "'>" + user.getBothNames() + "</a><p>");
+			buf.append("Author: " + q.authorId + "<br>");
+			buf.append("Editor: " + user.id + "<p>");
 			
 			buf.append("<FORM Action=Edit METHOD=POST>");
 			
@@ -663,8 +657,8 @@ public class Edit extends HttpServlet {
 			buf.append("Subject: " + subject.title + "<br>");
 			buf.append("Topic: " + t.title + "<br>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
-			buf.append("Author: <a href=mailto:'" + User.getEmail(q.authorId) + "'>" + User.getBothNames(q.authorId) + "</a><br>");
-			buf.append("Editor: <a href=mailto:'" + user.getEmail() + "'>" + User.getBothNames(q.editorId) + "</a><br>");
+			buf.append("Author: " + q.authorId + "<br>");
+			buf.append("Editor: " + q.editorId + "<br>");
 			
 			// Calculate the current success rate for this question:
 			int nSuccessful = ofy().load().type(Response.class).filter("questionId",q.id).filter("score >",0).count();
@@ -730,7 +724,7 @@ public class Edit extends HttpServlet {
 			buf.append("Subject: " + subject.title + "<br>");
 			buf.append("Topic: " + t.title + "<br>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
-			buf.append("Author: <a href=mailto:'" + User.getEmail(q.authorId) + "'>" + User.getBothNames(q.authorId) + "</a><p>");
+			buf.append("Author: " + q.authorId + "<p>");
 			buf.append("<FORM Action=Edit METHOD=GET>");
 			
 			buf.append(q.printAll());

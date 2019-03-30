@@ -85,7 +85,7 @@ public class PracticeExam extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		String nonce = session.isNew()?Nonce.createInstance(user):null;
-		out.println(printExam(user,request,nonce) + Home.footer);
+		out.println(Home.header + printExam(user,request,nonce) + Home.footer);
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
@@ -104,7 +104,7 @@ public class PracticeExam extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
-		out.println(printScore(user,request) + Home.footer);
+		out.println(Home.header + printScore(user,request) + Home.footer);
 	}
 
 	String designExam(User user,HttpServletRequest request,String nonce) {
