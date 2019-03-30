@@ -70,7 +70,7 @@ public class Admin extends HttpServlet {
 				int code = new Random().nextInt(900000) + 100000;
 				if (TwoFactorAuth.sentSMSCode(user, code)) {
 					session.setAttribute("ProposedCode", code);
-					out.println(Home.header + TwoFactorAuth.verificationForm("/Admin", false) + Home.footer);
+					out.println(Home.getHeader(user) + TwoFactorAuth.verificationForm("/Admin", false) + Home.footer);
 					return;
 				}
 			} else {
@@ -82,12 +82,12 @@ public class Admin extends HttpServlet {
 
 			if (userRequest.equals("Edit User") || userRequest.equals("Check ID")) {
 				User usr = ofy().load().type(User.class).id(request.getParameter("UserId")).safe();
-				out.println(Home.header + editUserForm(user,request,usr) + Home.footer);
+				out.println(Home.getHeader(user) + editUserForm(user,request,usr) + Home.footer);
 			}
 			else {
 				String searchString = request.getParameter("SearchString");
 				String cursor = request.getParameter("Cursor");
-				out.println(Home.header + mainAdminForm(user,userRequest,searchString,cursor) + Home.footer);
+				out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Home.footer);
 			}
 		} catch (Exception e) {
 		}
