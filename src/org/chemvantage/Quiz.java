@@ -242,8 +242,12 @@ public class Quiz extends HttpServlet {
 			
 			buf.append("\n<h2>Quiz - " + topic.title + " (" + subject.title + ")</h2>");
 			
-			if (user.isInstructor()) buf.append("Instructor: you may <a href=/Groups?UserRequest=AssignQuizQuestions&GroupId=" + myGroup.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + ">"
-					+ "customize this quiz</a> by selecting/deselecting the available question items.<p>");
+			if (user.isInstructor()) {
+				buf.append("Instructor: you may <a href=/Groups?UserRequest=AssignQuizQuestions&GroupId=" + myGroup.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + ">"
+						+ "customize this quiz</a> by selecting/deselecting the available question items.<p>");
+			} else if (user.isAnonymous()) {
+				buf.append("<h3><font color=red>Anonymous User</font></h3>");
+			}
 			
 			buf.append("\n<FORM NAME=Quiz METHOD=POST ACTION=Quiz onSubmit=\"javascript: return confirmSubmission()\">");
 			if (nonce!=null) buf.append("<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>");

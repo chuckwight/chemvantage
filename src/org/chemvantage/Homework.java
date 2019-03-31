@@ -235,8 +235,14 @@ public class Homework extends HttpServlet {
 			} catch (Exception e) {}
 
 			buf.append("\n<h2>Homework Exercises - " + topic.title + " (" + subject.title + ")</h2>");
-			if (user.isInstructor()) buf.append("Instructor: you may <a href=/Groups?UserRequest=AssignHomeworkQuestions&GroupId=" + myGroup.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + ">"
+			
+			if (user.isInstructor()) {
+				buf.append("Instructor: you may <a href=/Groups?UserRequest=AssignHomeworkQuestions&GroupId=" + myGroup.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + ">"
 					+ "customize this homework assignment</a> by selecting/deselecting the available question items.<p>");
+			} else if (user.isAnonymous()) {
+				buf.append("<h3><font color=red>Anonymous User</font></h3>");
+			}
+		
 			
 						//buf.append("\n<b>" + user.getBothNames() + "</b><br>");
 /*
