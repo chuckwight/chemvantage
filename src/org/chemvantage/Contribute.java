@@ -253,11 +253,13 @@ public class Contribute extends HttpServlet {
 
 	String submitQuestion(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
+		ProposedQuestion q = null;
 		try {
 			String assignmentType = request.getParameter("AssignmentType");
 			long topicId = Long.parseLong(request.getParameter("TopicId"));
 			int questionType = 0;
 			questionType = Integer.parseInt(request.getParameter("QuestionType"));
+			q = new ProposedQuestion(questionType);
 			String questionText = request.getParameter("QuestionText");
 			ArrayList<String> choices = new ArrayList<String>();
 			int nChoices = 0;
@@ -298,7 +300,6 @@ public class Contribute extends HttpServlet {
 			String hint = request.getParameter("Hint");
 			String solution = request.getParameter("Solution");
 
-			ProposedQuestion q = new ProposedQuestion(questionType);
 			q.topicId = topicId;
 			q.assignmentType = assignmentType;
 			q.text = questionText;
@@ -326,7 +327,8 @@ public class Contribute extends HttpServlet {
 			buf.append("<h3>Question Submitted Successfully</h3>"
 			+ "Thank you for contributing this question item to ChemVantage.<br>"
 			+ "Your contribution will be reviewed by an editor before it is added to the database.<br>"
-			+ "<a href=Contribute" + (nonce==null?"":"?Nonce=" + nonce) + ">Contribute another question item</a>.");
+			+ "<a href=Contribute" + (nonce==null?"":"?Nonce=" + nonce) + ">Contribute another question item</a>. "
+			+ "or <a href=/" + q.assignmentType + "?TopicId=" + q.topicId + ">return to this assignment</a>.");
 		}
 		return buf.toString();
 	}

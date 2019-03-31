@@ -524,7 +524,7 @@ public class Groups extends HttpServlet {
 			df.setTimeZone(group.getTimeZone());
 			buf.append("<b>Subject: " + subject.title + "<br>"
 					+ "Topic: " + topic.title + "<br>"
-					+ "Group: " + group.description + "<br>");
+					+ "Group: " + group.description + "</b><br>");
 			//		+ "Deadline: " + df.format(assignment.getDeadline()) + "</b><br>");
 			//buf.append("<a href='Groups'>Return to Groups Page</a><p>");
 
@@ -533,6 +533,9 @@ public class Groups extends HttpServlet {
 					+ "answers to the items that they answer incorrectly. Therefore, the total number of questions should be "
 					+ "larger than 10, but not much larger than 50.  Experience shows that 30 items is about right in most cases.<p>");
 			//		+ "Students may submit quizzes after the deadline, but the scores will not be included in their group scores.<p>");
+			
+			buf.append("if you don't see a question you want to include, you may "
+					+ "<a href=/Contribute>contribute a new question item</a> to the database.<p>");
 			
 			Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",topicId).filter("isActive",true);
 			Assignment assignment = qi>0?ofy().load().type(Assignment.class).id(qi).safe():null;
@@ -617,7 +620,7 @@ public class Groups extends HttpServlet {
 			df.setTimeZone(group.getTimeZone());
 			buf.append("<b>Subject: " + subject.title + "<br>"
 					+ "Topic: " + topic.title + "<br>"
-					+ "Group: " + group.description + "<br>");
+					+ "Group: " + group.description + "</b><br>");
 			//		+ "Deadline: " + df.format(assignment.getDeadline()) + "</b><br>");
 			//buf.append("<a href='Groups'>Return to Groups Page</a><p>");
 
@@ -626,6 +629,10 @@ public class Groups extends HttpServlet {
 					+ "assignment is equal to the number of questions selected. Students may work unassigned problems; "
 					+ "however, these are not included in the scores reported to the class LMS.<p>");
 
+			buf.append("if you don't see a question you want to include, you may "
+					+ "<a href=/Contribute>contribute a new question item</a> to the database.<p>");
+			
+			
 			Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topicId).filter("isActive",true);
 
 			// allow instructor to copy assigned questions list from another group

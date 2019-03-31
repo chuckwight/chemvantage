@@ -168,7 +168,7 @@ public class Edit extends HttpServlet {
 			out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
 		}
 		else if (userRequest.equals("Activate This Question")) {
-			out.println(createQuestion(user,request));
+			//out.println(createQuestion(user,request)); // previously printed q.id above the navigation bar for testing
 			try {
 				long proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
 				ofy().delete().key(Key.create(ProposedQuestion.class,proposedQuestionId)).now();
@@ -833,14 +833,14 @@ public class Edit extends HttpServlet {
 		return q;
 	}
 	
-	private long createQuestion(User user,HttpServletRequest request) {
+	private void createQuestion(User user,HttpServletRequest request) { //previously type long
 		try {
 			Question q = assembleQuestion(request);
 			q.isActive = true;
 			ofy().save().entity(q).now();
-			return q.id;
+//			return q.id;
 		} catch (Exception e) {
-			return 0;
+//			return 0;
 		}
 	}
 
