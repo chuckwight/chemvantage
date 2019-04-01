@@ -145,14 +145,11 @@ public class DataStoreCleaner extends HttpServlet {
 		    
 		    	if (deleteUser(u.id)) {  // tests to see if user should be deleted
 		    		keys.add(Key.create(u));  // saves key in group to be deleted
-		    		qri.remove();
-		    	}
+		    	} else ofy().save().entity(u);
 		    }
 
 		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys).now();
-		    
-		    ofy().save().entities(query);
-		    
+		     
 		    buf.append(query.count() + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
 
 		    if (query.count()<querySizeLimit) buf.append("Done.");

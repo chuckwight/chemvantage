@@ -252,9 +252,9 @@ public class Home extends HttpServlet {
 			}
 			
 			if (videos.size()>0) {
-				buf.append("<iframe width='425' height='349' src=https://www.youtube.com/embed/'"
+				buf.append("<iframe width='425' height='349' src=https://www.youtube.com/embed/"
 						+ video.serialNumber + (i==null?"":"?autoplay=1")
-						+ "' frameborder='0' allowfullscreen></iframe>\n");
+						+ " frameborder='0' allowfullscreen></iframe>\n");
 
 				buf.append("<TABLE><TR><TD>");
 				buf.append("<b>Video Lectures</b>");
