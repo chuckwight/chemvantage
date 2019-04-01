@@ -263,11 +263,6 @@ public class Quiz extends HttpServlet {
 				buf.append("\n<LI>Each quiz must be completed within " + timeLimit + " minutes of the time when it is first downloaded.</LI>");
 				buf.append("\n<LI>You may repeat quizzes as many times as you wish, to improve your score.</LI>");
 				buf.append("\n<LI>For each quiz topic, the server reports your best quiz score.</LI>");
-
-				if (myGroup != null) {
-					buf.append("\n<LI>You must submit the quiz for scoring before the indicated deadline in order to receive class credit.</LI>");
-					buf.append("\n<LI>Instructors can view best scores and downloads by date/time in order to enforce quiz deadlines.</LI>");
-				}
 				buf.append("</OL>");
 			}
 			buf.append("<div id='timer0' style='color: red'></div><div id=ctrl0 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");

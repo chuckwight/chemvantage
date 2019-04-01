@@ -261,7 +261,6 @@ public class Homework extends HttpServlet {
 				buf.append("\n<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
 				buf.append("\n<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question.</LI>");
 				buf.append("\n<LI>Most questions are customized, so the correct answers are different for each student.</LI>");
-				buf.append("\n<LI>For each topic, the server tracks your total score and the total number of submissions.</LI>");
 				buf.append("\n<LI>A checkmark will appear to the left of each correctly solved problem.</LI>");
 				if (myGroup != null) {
 					buf.append("However, class credit for assigned problems is awarded only if the answer is submitted prior to the deadline.</LI>");
