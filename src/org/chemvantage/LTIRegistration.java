@@ -105,7 +105,7 @@ public class LTIRegistration extends HttpServlet {
 			+ "assignment link to connect to ChemVantage). Select the appropriate Quiz, Homework or Practice Exam for the assignment."
 			+ "<li>On the ChemVantage quiz or homework page, the instructor will find a link to customizing the assignment for that "
 			+ "class by selecting/deselecting question items to be presented to students. Instructors may also contribute new questions "
-			+ "that will be reviewed by a ChemVantage editor before being oincorporated into the ChemVantage database."
+			+ "that will be reviewed by a ChemVantage editor before being incorporated into the ChemVantage database."
 			+ "<li>Navigate to Settings, Student View to take the assignment and ensure that the score is posted correctly in the Canvas grade book."
 			+ "</ol>"
 			+ "<h3>Use these links to find general instructions for installing external tools with LTI:</h3>"
