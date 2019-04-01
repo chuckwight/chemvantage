@@ -76,10 +76,10 @@ public class LTIRegistration extends HttpServlet {
 			+ "<td>ChemVantage supports the IMS Global Learning Solutions LTI standard, versions 1.0 and 1.1.<br>The IMS conformance registration "
 			+ "number for ChemVantage is <a href=http://www.imsglobal.org/cc/detail.cfm?ID=259>IMSB2C2ce2014W1</a>.<p>"
 			+ "All LTI connections and ChemVantage services are provided free of charge.</td?</tr></table><p>"
-			+ "Most LMS platforms like Canvas, Blackboard, Sakai and Moodle support stamdard LTI connections.<br>"
-			+ "You may obtain a free set of LTI credentials by entering a consumer key value (any string of<br>"
-			+ "characters that uniquely identifies your LMS) along with your email address into the form below.<br>"
-			+ "Your LTI credentials will be emailed to you immediately.<br>"
+			+ "Most LMS platforms like Canvas, Blackboard, Sakai and Moodle support stamdard LTI connections. "
+			+ "You may obtain a free set of LTI credentials by entering a consumer key value (any string of "
+			+ "characters that uniquely identifies your LMS) along with your email address into the form below."
+			+ "Your LTI credentials will be emailed to you immediately.<p>"
 			+ "For further assistance, contact Chuck Wight (admin@chemvantage.org).<p>";
 	
 	String instructions = "<h3>Implementation in Canvas (other LMS platforms may be similar)</h3>"
@@ -93,7 +93,7 @@ public class LTIRegistration extends HttpServlet {
 			+ "<li>Manual Configuration (optional):"
 			+ "<ul><li>URL: https://www.chemvantage.org/lti/"
 			+ "<li>Domain: (leave blank)"
-			+ "<li>Privacy: Anonymous (ChemVantage does not collect any personally identifiable information or PII.)"
+			+ "<li>Privacy: Anonymous"
 			+ "<li>Custom Fields: (leave blank)"
 			+ "<li>Description: ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry.</ul></ul>"
 			+ "<li>Create a new Canvas assignment with the following recommended parameters:"

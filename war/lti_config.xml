@@ -12,7 +12,7 @@
     <blti:description>ChemVantage is a free resource for teaching and learning college level General Chemistry.</blti:description>
     <blti:extensions platform="canvas.instructure.com">
       <lticm:property name="tool_id">chemvantage.org</lticm:property>
-      <lticm:property name="privacy_level">public</lticm:property>
+      <lticm:property name="privacy_level">anonymous</lticm:property>
     </blti:extensions>
     <blti:secure_launch_url>https://www.chemvantage.org/lti</blti:secure_launch_url>
     <blti:secure_icon>https://www.chemvantage.org/favicon.png</blti:secure_icon>
