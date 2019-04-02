@@ -171,6 +171,16 @@ public class LTILaunch extends HttpServlet {
 			session.setAttribute("UserId",userId);
 			User user = User.getInstance(session);
 			if (user==null) user = User.createBLTIUser(request); // first-ever login for this user
+// temporary name collection until current users are transitioned
+			else {
+				String lis_person_name_given = request.getParameter("lis_person_name_given");
+				if (lis_person_name_given==null) lis_person_name_given = request.getParameter("custom_lis_person_name_given");
+				if (lis_person_name_given==null) lis_person_name_given = request.getParameter("lis_person_name_full");
+				if (lis_person_name_given==null) lis_person_name_given = request.getParameter("custom_lis_person_name_full");
+				user.setFirstName(lis_person_name_given);
+				ofy().save().entity(user);
+			}
+// end of temporary section
 			
 			// ensure the proper authDomain value
 			if (user.authDomain == null || !user.authDomain.equals("BLTI")) {

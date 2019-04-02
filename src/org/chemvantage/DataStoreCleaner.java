@@ -124,17 +124,19 @@ public class DataStoreCleaner extends HttpServlet {
 	private String cleanUsers(String cursor,int retries,boolean testOnly) {
 		StringBuffer buf = new StringBuffer();
 		try {
-			Query<User> query = ofy().load().type(User.class).limit(querySizeLimit); // temporary
+			//Query<User> query = ofy().load().type(User.class).limit(querySizeLimit); // temporary
 			
-			//Query<User> query = ofy().load().type(User.class).filter("lastLogin <", sixMonthsAgo).limit(querySizeLimit);
+			Query<User> query = ofy().load().type(User.class).filter("lastLogin <", sixMonthsAgo).limit(querySizeLimit);
 			if (cursor==null) buf.append("<h2>Clean Users</h2>");
 		    else query.startAt(Cursor.fromWebSafeString(cursor));
 
 		    QueryResultIterator<User> qri = query.iterator();
 		    ArrayList<Key<User>> keys = new ArrayList<Key<User>>();  // list of User entity keys for batch delete
+
 		    while (qri.hasNext()) {
 		    	User u = qri.next();
-		    	u.firstName = "";
+/*
+  		    	u.firstName = "";
 		    	u.lastName = "";
 		    	u.lowercaseName = "";
 		    	u.notifyDeadlines = false;
@@ -142,7 +144,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    		u.email = "";
 		    		u.smsMessageDevice = "";
 		    	}
-		    
+*/		    
 		    	if (deleteUser(u.id)) {  // tests to see if user should be deleted
 		    		keys.add(Key.create(u));  // saves key in group to be deleted
 		    	} else ofy().save().entity(u);

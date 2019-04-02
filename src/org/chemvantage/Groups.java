@@ -1096,7 +1096,8 @@ public class Groups extends HttpServlet {
 						continue;
 					}
 					i++;
-					buf.append("<TR><TD>" + i + ".</TD><TD><A href=mailto:" + u.getEmail() + ">" + u.getFullName() + "</A></TD>");
+					String name = (u.getFullName().isEmpty()?u.id:u.getFullName());
+					buf.append("<TR><TD>" + i + ".</TD><TD><A href=mailto:" + u.getEmail() + ">" + name + "</A></TD>");
 					int j = 0;
 					int studentTotalScore = 0;
 					for (Assignment a : assignments) {
@@ -1139,7 +1140,8 @@ public class Groups extends HttpServlet {
 						continue;
 					}
 					i++;
-					buf.append("<TR><TD>" + i + ".</TD><TD><A href=mailto:" + u.getEmail() + ">" + u.getFullName() + "</A></TD>");
+					String name = (u.getFullName().isEmpty()?u.id:u.getFullName());
+					buf.append("<TR><TD>" + i + ".</TD><TD><A href=mailto:" + u.getEmail() + ">" + name + "</A></TD>");
 					int j = 0;
 					int studentTotalScore = 0;
 					for (Assignment a : assignments) {
