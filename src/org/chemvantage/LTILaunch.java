@@ -76,22 +76,15 @@ public class LTILaunch extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
-		StringBuffer debug = new StringBuffer(" ");
 		if (Login.lockedDown) doError(request,response,"ChemVantage is temporarily unavailable, sorry.",null,null);
 
 		// check for minimum required elements for a basic-lti-launch-request
 		String lti_message_type=request.getParameter("lti_message_type");
 		
-		if ("ToolProxyRegistrationRequest".equals(lti_message_type)) {
-			doError(request,response,"Tool proxy registration request failed. The correct URL for LTI2 registration of ChemVantage is " + request.getServerName() + "/lti/registration/",null,null);
-			return;
-		}
-		
 		if (!"basic-lti-launch-request".equals(lti_message_type)) {
 			doError(request,response,"Missing or invalid lti_message_type parameter.",null,null);
 			return;
-		}
-		
+		}	
 		// only basic lti launch requests should reach this point
 		
 		try {
@@ -99,12 +92,9 @@ public class LTILaunch extends HttpServlet {
 			if (lti_version==null) {
 				doError(request,response,"Missing lti_version parameter.",null,null);
 				return;
-			}
-			switch (lti_version) {
-			case "LTI-1p0": break;
-			//case "LTI-2p0": break;
-			default: doError(request,response,"Invalid lti_version parameter.",null,null);
-			return;
+			} else if (!lti_version.equals("LTI-1p0")) {
+				doError(request,response,"Invalid lti_version parameter.",null,null);
+				return;
 			}
 
 			String oauth_consumer_key = request.getParameter("oauth_consumer_key");
@@ -112,6 +102,7 @@ public class LTILaunch extends HttpServlet {
 				doError(request,response,"Missing oauth_consumer_key.",null,null);
 				return;
 			}
+			
 			String resource_link_id = request.getParameter("resource_link_id");
 			if (resource_link_id==null) {
 				doError(request,response,"Missing resource_link_id.",null,null);
@@ -122,7 +113,10 @@ public class LTILaunch extends HttpServlet {
 			try {
 				tc = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).safe();
 				if (tc.secret==null) throw new Exception("Shared secret was not found in the ChemVantage database.");
-				if (tc.lti_version==null || tc.lti_version.isEmpty()) tc.lti_version="LTI-1p0";
+				if (tc.lti_version==null || tc.lti_version.isEmpty() || !tc.lti_version.equals(lti_version)) {
+						tc.lti_version=lti_version;
+						ofy().save().entity(tc);
+				}
 			} catch (Exception e) {
 				throw new Exception("Invalid oauth_consumer_key. Please verify that the oauth_consumer_key is entered into your LMS exactly as you are registered with ChemVantage.");
 			}
@@ -132,46 +126,37 @@ public class LTILaunch extends HttpServlet {
 				// this place is reached if the launch sends a guid that does not match the guid for the BLTIConsumer
 				if (tc.tool_consumer_guid==null) {  // record a previously unrecorded guid
 					tc.tool_consumer_guid = tool_consumer_guid;
-					ofy().save().entity(tc).now();
+					ofy().save().entity(tc);
 				} else doError(request,response,"Invalid tool_consumer_guid.",null,null);
 			}
 
 			OAuthMessage oam = OAuthServlet.getMessage(request, null);
 			OAuthValidator oav = new SimpleOAuthValidator();
 			OAuthConsumer cons = new OAuthConsumer("about:blank#OAuth+CallBack+NotUsed",oauth_consumer_key,tc.secret,null);
-
 			OAuthAccessor acc = new OAuthAccessor(cons);
-
-			String base_string = null;
-			try {
-				base_string = OAuthSignatureMethod.getBaseString(oam);
-			} catch (Exception e) {
-				base_string = null;
-			}
+			OAuthSignatureMethod.getBaseString(oam);
+			
+			if (!Nonce.isUnique(request.getParameter("oauth_nonce"), request.getParameter("oauth_timestamp"))) 
+				throw new Exception("Invalid nonce or timestamp.");
 			
 			try {
-				if (!Nonce.isUnique(request.getParameter("oauth_nonce"), request.getParameter("oauth_timestamp"))) throw new Exception("Bad nonce or timestamp.");
 				oav.validateMessage(oam,acc);
 			} catch(Exception e) {
-				System.out.println("Provider failed to validate message");
-				System.out.println(e.getMessage());
-				if ( base_string != null ) System.out.println(base_string);
-				throw new Exception("OAuth validation failed. The most likely cause is the shared_secret value was entered into your LMS incorrectly, possibly with leading or trailing blank spaces. Please enter the value again, exactly as you are registered with ChemVantage.");
+				throw new Exception("OAuth validation failed, most likely due to an invalid shared_secret value in your LMS. Check carefully to eliminate leading or trailing blank spaces.");
 			}
-			//debug.append("BLTI Launch message was validated successfully. ");
-			
-			if (!lti_version.equals(tc.lti_version)) throw new Exception("<br>LTI version for launch does not match tool consumer registration.");
+			// BLTI Launch message was validated successfully at this point
 			
 			// Gather some information about the user
 			String userId = request.getParameter("user_id");
-			userId = oauth_consumer_key + (userId==null?"":":"+userId);
+			userId = oauth_consumer_key + ":" + (userId==null?"":userId);
 
 			// Provision a new user account if necessary, and store the userId in the user's session
 			HttpSession session = request.getSession(true);
 			session.setAttribute("UserId",userId);
-			User user = User.getInstance(session);
+			User user = User.getInstance(session); // returns null if user is not anonymous and not in the database
 			if (user==null) user = User.createBLTIUser(request); // first-ever login for this user
-// temporary name collection until current users are transitioned
+			
+			// temporary name collection until current users are transitioned
 			else {
 				String lis_person_name_given = request.getParameter("lis_person_name_given");
 				if (lis_person_name_given==null) lis_person_name_given = request.getParameter("custom_lis_person_name_given");
@@ -180,7 +165,7 @@ public class LTILaunch extends HttpServlet {
 				user.setFirstName(lis_person_name_given);
 				ofy().save().entity(user);
 			}
-// end of temporary section
+			// end of temporary section
 			
 			// ensure the proper authDomain value
 			if (user.authDomain == null || !user.authDomain.equals("BLTI")) {
@@ -216,7 +201,7 @@ public class LTILaunch extends HttpServlet {
 				user.domain = domain.domainName;
 				ofy().save().entity(user).now();
 			}
-			//debug.append("Domain info processed successfully. ");
+			//Domain info processed successfully
 			
 			// check if user has Instructor or Administrator role
 			String roles = request.getParameter("roles");
@@ -230,11 +215,6 @@ public class LTILaunch extends HttpServlet {
 				if (roles.contains("teachingassistant") && user.setIsTeachingAssistant(true)) ofy().save().entity(user).now(); 
 			}
 
-			if (!user.hasPremiumAccount()) {
-				user.setPremium(true);  // All LTI users have free premium accounts
-				ofy().save().entity(user).now();	
-			}
-			
 			String context_id = request.getParameter("context_id");
 			String context_title = request.getParameter("context_title");
 			
@@ -264,7 +244,7 @@ public class LTILaunch extends HttpServlet {
 				g.isUsingLisOutcomeService = true;
 				ofy().save().entity(g).now();
 			}							
-			debug.append("Context info OK. ");
+			// Context info OK
 			
 			if (user.isInstructor()) {
 				if (g.instructorId.equals("unknown")) {  // assign the instructor to this group
@@ -278,7 +258,7 @@ public class LTILaunch extends HttpServlet {
 			
 			response.sendRedirect(redirectUrl);
 		} catch (Exception e) {
-			doError(request, response,"LTI Launch failed. " + e.toString() + debug.toString(), null, null);
+			doError(request, response,"LTI Launch failed.", null, null);
 		}
 	}		
 	

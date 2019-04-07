@@ -130,6 +130,14 @@ public class User implements Comparable<User>,Serializable {
 		}
 	}
 
+	static boolean isChemVantageAdministrator(HttpSession session) {
+		try {
+			return User.getInstance(session).isChemVantageAdmin();
+		} catch (Exception e) {
+			return false;
+		}
+	}
+	
 	static User createUserServiceUser(com.google.appengine.api.users.User u) {
 		if (u==null) return null;
 		User user = null;
@@ -302,8 +310,11 @@ public class User implements Comparable<User>,Serializable {
 	}
 	
 	boolean isAnonymous() {
-		if (this.id.startsWith("anonymous")) return true;
-		else return false;
+		try {
+			return id.startsWith("anonymous");
+		} catch (Exception e) {
+			return false;
+		} 
 	}
 	
 	static String extractDomain(String claimedId) {
@@ -630,7 +641,11 @@ public class User implements Comparable<User>,Serializable {
 	}
 
 	boolean isInstructor() {
-		return ((roles%16)/8 == 1) || this.isAdministrator();
+		try {
+			return ((roles%16)/8 == 1) || this.isAdministrator();
+		} catch (Exception e) {
+			return false;
+		}
 	}
 
 	boolean setIsInstructor(boolean makeInstructor) {  // returns true if state is changed; otherwise returns false

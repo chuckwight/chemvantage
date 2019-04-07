@@ -236,7 +236,7 @@ public class Homework extends HttpServlet {
 
 			buf.append("\n<h2>Homework Exercises - " + topic.title + " (" + subject.title + ")</h2>");
 			
-			if (user.isInstructor()) {
+			if (user.isInstructor() && myGroup != null) {
 				buf.append("Instructor: you may <a href=/Groups?UserRequest=AssignHomeworkQuestions&GroupId=" + myGroup.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + ">"
 					+ "customize this homework assignment</a> by selecting/deselecting the available question items.<p>");
 			} else if (user.isAnonymous()) {
@@ -509,6 +509,7 @@ public class Homework extends HttpServlet {
 			buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback>here</a>.<p>");
 			
 			buf.append("<a href=/Homework?TopicId=" + ht.topicId 
+					+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
 					+ (nonce==null?"":"&Nonce=" + nonce) 
 					+ (offerHint?"&Q=" + q.id + "><span style='color:red'>Please give me a hint</span>":">Return to this homework assignment") + "</a>");
 			

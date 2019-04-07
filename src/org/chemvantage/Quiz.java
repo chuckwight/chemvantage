@@ -242,12 +242,14 @@ public class Quiz extends HttpServlet {
 			
 			buf.append("\n<h2>Quiz - " + topic.title + " (" + subject.title + ")</h2>");
 			
-			if (user.isInstructor()) {
+			try {
+			if (user.isInstructor() && myGroup != null) {
 				buf.append("Instructor: you may <a href=/Groups?UserRequest=AssignQuizQuestions&GroupId=" + myGroup.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + ">"
 						+ "customize this quiz</a> by selecting/deselecting the available question items.<p>");
 			} else if (user.isAnonymous()) {
 				buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			}
+			} catch (Exception e) { buf.append(e.getMessage()); }
 			
 			buf.append("\n<FORM NAME=Quiz METHOD=POST ACTION=Quiz onSubmit=\"javascript: return confirmSubmission()\">");
 			if (nonce!=null) buf.append("<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>");
@@ -535,11 +537,15 @@ public class Quiz extends HttpServlet {
 				}
 			}
 			buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback>here</a>.<p>");
-			if (user.isAnonymous()) {
-				buf.append("<p>");
-				buf.append("<a href=/Quiz?TopicId=" + qt.topicId + (nonce==null?"":"&Nonce=" + nonce) + ">Take this quiz again</a>");
-				buf.append(" or go back to the <a href=/>ChemVantage home page</a>.");
-			}
+			
+			buf.append("<p>");
+			
+			buf.append("<a href=/Quiz?TopicId=" + qt.topicId 
+					+ (nonce==null?"":"&Nonce=" + nonce) 
+					+ (qt.lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + qt.lis_result_sourcedid)
+					+ ">Take this quiz again</a>");
+			if (user.isAnonymous()) buf.append(" or go back to the <a href=/>ChemVantage home page</a>.");
+
 			
 	/*		buf.append("<FORM METHOD=GET Action=Quiz>"
 					+ (nonce!=null?"<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>":"")
