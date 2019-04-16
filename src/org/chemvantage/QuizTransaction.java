@@ -34,6 +34,7 @@ public class QuizTransaction implements Serializable {
 	@Index	Date downloaded;
 	@Index	Date graded;
 	@Index	int score;
+	@Index  long assignmentId;
 			int possibleScore;
 			String topicTitle;
 			String lis_result_sourcedid;
@@ -41,13 +42,14 @@ public class QuizTransaction implements Serializable {
 
     QuizTransaction() {}
     
-    QuizTransaction(long topicId,String topicTitle,String userId,Date downloaded,Date graded,int score,int possibleScore,String IPNumber) {
+    QuizTransaction(long topicId,String topicTitle,String userId,Date downloaded,Date graded,int score,long assignmentId,int possibleScore,String IPNumber) {
     	this.topicId = topicId;
     	this.topicTitle = topicTitle;
     	this.userId = userId;
         this.downloaded = downloaded;
         this.graded = graded;
         this.score = score;
+        this.assignmentId = assignmentId;
         this.possibleScore = possibleScore;
         this.IPNumber = IPNumber;
     }

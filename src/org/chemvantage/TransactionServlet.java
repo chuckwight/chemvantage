@@ -61,6 +61,7 @@ public class TransactionServlet extends HttpServlet {
 						new Date(),  // graded
 						0L,          // responseId (not used for now)
 						Integer.parseInt(request.getParameter("Score")),
+						Long.parseLong(request.getParameter("AssignmentId")),
 						Integer.parseInt(request.getParameter("PossibleScore")),
 						request.getParameter("IPNumber"));
 				ofy().save().entity(ht);

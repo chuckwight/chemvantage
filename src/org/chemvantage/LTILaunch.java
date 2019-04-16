@@ -274,78 +274,51 @@ public class LTILaunch extends HttpServlet {
 		String redirectUrl = "";
 		Assignment myAssignment = null;
 		String assignmentType = request.getParameter("AssignmentType");
-		if (assignmentType==null) assignmentType = request.getParameter("custom_AssignmentType");  // supports custom LTI variables
 		long topicId = 0L;
 		List<Long> topicIds = new ArrayList<Long>();
 
 		// a resource_link_id string is required for every valid LTI launch
 		String resource_link_id = request.getParameter("resource_link_id");
-		//if (resource_link_id == null) resource_link_id = request.getParameter("custom_resource_link_id");
 		
 		// the lis_result_sourcedid is an optional LTI parameter that specifies a context grade book entry point
-		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
-		if (lis_result_sourcedid == null) lis_result_sourcedid = request.getParameter("custom_lis_result_sourcedid");
+		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");		
 		try { // encode the lis_result_sourcedid because it will be appended to the redirectUrl
 			lis_result_sourcedid = URLEncoder.encode(lis_result_sourcedid,"UTF-8");
 		} catch (Exception e) {
 			lis_result_sourcedid = null;
 		}
 		
-		try {  
-			List<Assignment> assignments = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).list();
-			
+		try { 
+			// try to fond the correct assignment based on the resource_link_id
+			List<Assignment> assignments = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).list();			
 			for (Assignment a : assignments) {  // look for myAssignment having the correct resource_link_id
+				if (resource_link_id.equals(a.resourceLinkId)) {
+					myAssignment = a;
+					break;
+				}
 				if (a.resourceLinkIds != null && a.resourceLinkIds.contains(resource_link_id)) {
+					a.resourceLinkId = resource_link_id;
+					ofy().save().entity(a).now();
 					myAssignment = a;
 					break;
 				}
 			}
 			
-			if (myAssignment==null) { // try to find it based on the request data AssignmentType and TopicId or TopicIds (for PracticeExam)
-				if (assignmentType==null) throw new Exception();
-				assignments = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType",assignmentType).list();
-				if (assignmentType.equals("PracticeExam")) {
-					String[] tIds = request.getParameterValues("TopicIds");
-					//if (tIds==null) tIds = request.getParameterValues("custom_TopicIds"); // supports custom LTI variables
-					if (tIds==null || tIds.length<3) throw new Exception();
-					for (int i=0;i<tIds.length;i++) topicIds.add(Long.parseLong(tIds[i]));
-					for (Assignment a : assignments) {
-						if (a.topicIds.equals(topicIds)) {
-							myAssignment=a; 
-							break;
-						}
-					}
-					if (myAssignment==null) myAssignment = new Assignment(user.myGroupId,topicIds,assignmentType,new Date(0));
-
-				} else {  // assignmentType is Quiz or Homework
-					String tId = request.getParameter("TopicId");
-					//if (tId==null) tId = request.getParameter("custom_TopicId"); // supports custom LTI variables
-					topicId = Long.parseLong(tId);  // throws Exception if tId does not represent a long integer
-					for (Assignment a : assignments) {
-						if (a.matches(assignmentType,topicId)) {
-							myAssignment=a; 
-							break;
-						}
-					}
-					if (myAssignment==null) myAssignment = new Assignment(user.myGroupId,topicId,assignmentType,new Date(0));
-				}
-
-				if (user.isInstructor()) {  // must be the instructor to modify or store myAssignment
-					myAssignment.addResourceLinkId(resource_link_id);
-					ofy().save().entity(myAssignment).now();
-					Group g = ofy().load().type(Group.class).id(user.myGroupId).safe();
-					g.setGroupTopicIds();
-					ofy().save().entity(g).now();
-				} else lis_result_sourcedid = null; // this prevents students from getting scores for made-up assignments
-			}	
-			if (myAssignment.assignmentType.equals("PracticeExam")) {
-				redirectUrl = "/PracticeExam";
-				for (int i=0;i<myAssignment.topicIds.size();i++) redirectUrl += (i==0?"?":"&") + "TopicId=" + myAssignment.topicIds.get(i);
-				redirectUrl += "&AssignmentId=" + myAssignment.id;
-			}
-			else { // specify topicId for Quiz or Homework assignment
-				redirectUrl ="/" + myAssignment.assignmentType + "?TopicId=" + myAssignment.topicId;
-			}
+			if (myAssignment==null && "PracticeExam".equals(assignmentType)) { // make a new PracticeExam assignment
+				String[] tIds = request.getParameterValues("TopicIds");
+				if (tIds==null || tIds.length<3) throw new Exception();
+				for (int i=0;i<tIds.length;i++) topicIds.add(Long.parseLong(tIds[i]));
+				myAssignment = new Assignment(user.myGroupId,resource_link_id,topicIds,assignmentType);
+				ofy().save().entity(myAssignment).now();
+			} else if (myAssignment==null && ("Quiz".equals(assignmentType) || "Homework".equals(assignmentType))) { // make a new Quiz or Homework assignment
+				topicId = Long.parseLong(request.getParameter("TopicId"));
+				myAssignment = new Assignment(user.myGroupId,resource_link_id,topicId,assignmentType);
+				ofy().save().entity(myAssignment).now();
+			} else if (myAssignment==null) throw new Exception(); //redirect the user to the resource picker page
+			
+			// at this point myAssignment should be known
+			redirectUrl ="/" + myAssignment.assignmentType + "?AssignmentId=" + myAssignment.id;
+			
 			if (lis_result_sourcedid!=null) redirectUrl += "&lis_result_sourcedid=" + lis_result_sourcedid;
 			
 			// Send a Nonce reference in case the session is lost (no browser support for Cookies)
@@ -356,6 +329,7 @@ public class LTILaunch extends HttpServlet {
 		} catch (Exception e) {
 			redirectUrl = "/lti?UserRequest=pick&resource_link_id="+resource_link_id;  // send the user to the pickResource page
 			if (assignmentType!=null) redirectUrl += "&AssignmentType=" + assignmentType;
+			if (topicId>0) redirectUrl += "&TopicId=" + topicId;
 			if (lis_result_sourcedid!=null) redirectUrl += "&lis_result_sourcedid=" + lis_result_sourcedid;
 			
 			// Send a Nonce reference in case the session is lost (no browser support for Cookies)
@@ -384,13 +358,14 @@ public class LTILaunch extends HttpServlet {
 					+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>");
 			
 			buf.append("<h2>Assignment Setup Page</h2>"
-					+ "The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<p>"
-					+ "Please select the ChemVantage assignment that should be associated with this link. ");
-
-			if (user.isInstructor()) buf.append("ChemVantage will remember this choice and send students directly to the assignment.<p>");
+					+ "The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<p>");
+					
+			if (user.isInstructor()) buf.append("Please select the ChemVantage assignment that should be associated with this link. "
+					+ "ChemVantage will remember this choice and send students directly to the assignment.<p>");
 			else {
 				buf.append("<b>Please ask your instructor to click the LMS assignment link to make this missing association.</b> "
-						+ "Your scores cannot be returned to your LMS grade book until after this has been done.<p>");
+						+ "You will not be able to complete this assignment until after this has been done.");
+				return buf.toString();
 			}
 
 			// insert a script to show/hide the correct box

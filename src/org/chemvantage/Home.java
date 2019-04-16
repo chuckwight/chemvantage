@@ -21,7 +21,6 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.text.DateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
@@ -326,13 +325,6 @@ public class Home extends HttpServlet {
 							+ (myGroup.instructorId==null||myGroup.instructorId.isEmpty()?"":"<br>Instructor: <a href=mailto:" + User.getEmail(myGroup.instructorId) + ">" + myGroup.getInstructorBothNames() + "</a>")
 							+ "</FONT></TD></TR>");
 					// find the next assignment deadline and link it to the Scores table
-					Date nextDeadline = myGroup.getNextDeadline();
-					if (nextDeadline != null) {
-						DateFormat df = DateFormat.getDateInstance(DateFormat.MEDIUM);
-						df.setTimeZone(myGroup.getTimeZone());
-						buf.append("<TR><TD ALIGN=CENTER><FONT SIZE=-1>Next Deadline: </FONT>"
-								+ "<FONT SIZE=-1><i><a href=Scores?r=" + new Random().nextInt(99) + ">" + df.format(nextDeadline) + "</a></i></FONT></TD></TR>");
-					}
 				}
 			} else if (user.domain!=null && !user.domain.isEmpty())
 				buf.append("<TR><TD ALIGN=CENTER><FONT SIZE=-1><a href=Verification>Join A ChemVantage Group</a></FONT></TD></TR>");

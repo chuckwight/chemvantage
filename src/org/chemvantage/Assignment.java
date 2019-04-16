@@ -19,9 +19,7 @@ package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
-import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 
 import com.googlecode.objectify.Key;
@@ -31,58 +29,43 @@ import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 
 @Cache @Entity
-public class Assignment implements Comparable<Assignment>,Serializable {
-	private static final long serialVersionUID = 137L;
+public class Assignment {
 	@Id 	Long id;
 	@Index	long groupId;
 	@Index	String assignmentType;
-	@Index	private Date deadline;
 	@Index	long topicId;
-			boolean emailScoresToInstructor;
+	@Index	String resourceLinkId;
 			List<Long> topicIds; // used for practice exams which have multiple topicIds
 			List<String> resourceLinkIds = new ArrayList<String>();
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 
     Assignment() {}
 
-   Assignment(long groupId,long topicId,String assignmentType,Date deadline) {  // specific to Quiz and Homework assignments with a single topicId
+   Assignment(long groupId,String resourceLinkId,long topicId,String assignmentType) {  // specific to Quiz and Homework assignments with a single topicId
     	this.groupId = groupId;
+    	this.resourceLinkId = resourceLinkId;
     	this.topicId = topicId;
     	this.assignmentType = assignmentType;
-    	this.deadline = deadline;
     	questionKeys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).keys().list();
     }
     
-    Assignment(long groupId,List<Long> topicIds,String assignmentType,Date deadline) {   // specific to Practice Exam assignments with multiple topicIds
+    Assignment(long groupId,String resourceLinkId, List<Long> topicIds,String assignmentType) {   // specific to Practice Exam assignments with multiple topicIds
     	this.groupId = groupId;
+    	this.resourceLinkId = resourceLinkId;
     	this.topicIds = topicIds;
     	this.assignmentType = assignmentType;
-    	this.deadline = deadline;
     	for (Long topicId : topicIds) questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",topicId).keys().list());
     }
+
+    public void setResourceLinkId (String r) {
+    	this.resourceLinkId = r;
+    	if (resourceLinkIds.contains(r)) resourceLinkIds.remove(r);
+    }
+    
+    public String getresourceLinkId() {
+    	return this.resourceLinkId;
+    }
 /*    
-    Assignment(long groupId,String assignmentType) {
-    	this.groupId = groupId;
-    	this.assignmentType = assignmentType;
-    }
-*/
-    public int compareTo(Assignment other) {
-    	return (int)(this.deadline.getTime() - other.deadline.getTime());
-    }
-    
-    public Date getDeadline() {
-    	if (this.deadline==null) return new Date(0);
-    	else return this.deadline;
-    }
-    
-    public void setDeadline(Date d) {
-    	this.deadline = d;
-    }
-    
-    public void addResourceLinkId(String r) {
-    	if (!resourceLinkIds.contains(r)) resourceLinkIds.add(r);
-    }
-    
     public boolean matches(String assignmentType,List<Long> topicIds) { // this method applies only to PracticeExam assignments
     	if ("PracticeExam".equals(this.assignmentType) && "PracticeExam".equals(assignmentType) && this.topicIds!=null && this.topicIds.equals(topicIds)) return true;
     	else return false;
@@ -92,4 +75,5 @@ public class Assignment implements Comparable<Assignment>,Serializable {
     	if (!("Quiz".equals(assignmentType) || "Homework".equals(assignmentType))) return false; // this method only applies to Quiz or Homework assignments 
     	return (assignmentType.equals(this.assignmentType) && this.topicId==topicId);
     }
+    */
 }

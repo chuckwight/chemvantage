@@ -56,17 +56,13 @@ public class Score {    // this object represents a best score achieved by a use
 		s.score = 0;
 		s.overallScore = 0;
 		s.numberOfAttempts = 0;
-		Date now = new Date();
-		Date deadline = a.getDeadline().getTime()==0?now:a.getDeadline();
 		
 		if (a.assignmentType.equals("Quiz")) {
-			Query<QuizTransaction> quizTransactions = ofy().load().type(QuizTransaction.class).filter("userId",userId).filter("topicId",a.topicId);
+			Query<QuizTransaction> quizTransactions = ofy().load().type(QuizTransaction.class).filter("userId",userId).filter("assignmentId",a.id);
 			for (QuizTransaction qt : quizTransactions) {
-				if (qt.downloaded.before(deadline)) {  // pre-deadline group score
-					s.numberOfAttempts++;  // number of pre-deadline quiz attempts
-					s.score = (qt.score>s.score?qt.score:s.score);  // keep the best (max) score
-				}
-				if (qt.score > s.overallScore) s.overallScore = qt.score;  // overall student score on this assignment
+				s.numberOfAttempts++;  // number of pre-deadline quiz attempts
+				s.score = (qt.score>s.score?qt.score:s.score);  // keep the best (max) score
+				//if (qt.score > s.overallScore) s.overallScore = qt.score;  // overall student score on this assignment
 				if (s.lis_result_sourcedid == null || s.lis_result_sourcedid.isEmpty()) s.lis_result_sourcedid = qt.lis_result_sourcedid;  // record any available sourcedid value for reporting score to the LMS
 				if (s.mostRecentAttempt==null || qt.downloaded.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far
 					s.mostRecentAttempt = qt.downloaded;
@@ -75,16 +71,14 @@ public class Score {    // this object represents a best score achieved by a use
 				}				
 			}
 		} else if (a.assignmentType.equals("Homework")) {
-			Query<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",userId).filter("topicId",a.topicId);
-			List<Key<Question>> allQuestionKeys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId", a.topicId).keys().list();
+			Query<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",userId).filter("assignmentId",a.id);
+			//List<Key<Question>> allQuestionKeys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId", a.topicId).keys().list();
 			List<Key<Question>> assignmentQuestionKeys = new ArrayList<Key<Question>>();
 			assignmentQuestionKeys.addAll(a.questionKeys);  // clones the assignment List of question keys
-			for (HWTransaction ht : hwTransactions) {
-				if (ht.graded.before(deadline)) {
-					s.numberOfAttempts++;
-					if (ht.score > 0 && assignmentQuestionKeys.remove(Key.create(Question.class,ht.questionId))) s.score++; 
-				}
-				if (ht.score>0 && allQuestionKeys.remove(Key.create(Question.class,ht.questionId))) s.overallScore++;
+			for (HWTransaction ht : hwTransactions) {				
+				s.numberOfAttempts++;
+				if (ht.score > 0 && assignmentQuestionKeys.remove(Key.create(Question.class,ht.questionId))) s.score++; 
+				//if (ht.score>0 && allQuestionKeys.remove(Key.create(Question.class,ht.questionId))) s.overallScore++;
 				if (s.lis_result_sourcedid == null || s.lis_result_sourcedid.isEmpty()) s.lis_result_sourcedid = ht.lis_result_sourcedid;  // record any available sourcedid value for reporting score to the LMS				
 				if (s.mostRecentAttempt == null || ht.graded.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far
 					s.mostRecentAttempt = ht.graded;
@@ -98,12 +92,10 @@ public class Score {    // this object represents a best score achieved by a use
 			int possibleScore = 0;
 			for (PracticeExamTransaction pt : practiceExamTransactions) {
 				if (pt.graded==null || !pt.topicsMatch(a.topicIds)) continue;
-				if (pt.downloaded.before(deadline)) {  // pre-deadline group score
-					s.numberOfAttempts++;  // number of pre-deadline quiz attempts
-					score = 0;
-					for (int i=0;i<pt.scores.length;i++) score += pt.scores[i];
-					s.score = (score>s.score?score:s.score);  // keep the best (max) score
-				}
+				s.numberOfAttempts++;  // number of pre-deadline quiz attempts
+				score = 0;
+				for (int i=0;i<pt.scores.length;i++) score += pt.scores[i];
+				s.score = (score>s.score?score:s.score);  // keep the best (max) score
 				if (score > s.overallScore) s.overallScore = score;  // overall student score on this assignment including post-deadline scores
 				if (s.lis_result_sourcedid == null || s.lis_result_sourcedid.isEmpty()) s.lis_result_sourcedid = pt.lis_result_sourcedid;  // record any available sourcedid value for reporting score to the LMS
 				if (s.mostRecentAttempt==null || pt.downloaded.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far

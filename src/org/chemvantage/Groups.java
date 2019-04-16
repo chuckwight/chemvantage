@@ -17,14 +17,12 @@
 
 package org.chemvantage;
 
-import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.DateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
@@ -40,7 +38,6 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import com.google.appengine.api.datastore.Cursor;
-import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
 
@@ -92,8 +89,7 @@ public class Groups extends HttpServlet {
 			
 			if (group == null) out.println(groupsForm(user,request,nonce));
 			else if (user.isAdministrator() || (user.isInstructor() && group.domain.equals(user.domain)) || group.tAIds.contains(user.id)) {
-				if (userRequest.equals("ManageGroup")) out.println(manageGroupForm(user,group,request,nonce));
-				else if (userRequest.equals("AssignHomeworkQuestions")) out.println(assignHWQuestionsForm(user,group,request,nonce));
+				if (userRequest.equals("AssignHomeworkQuestions")) out.println(assignHWQuestionsForm(user,group,request,nonce));
 				else if (userRequest.equals("AssignQuizQuestions")) out.println(assignQuizQuestionsForm(user,group,request,nonce));
 				else if (userRequest.equals("AssignExamQuestions")) out.println(assignExamQuestionsForm(user,group,request,nonce));
 				else if (userRequest.equals("GroupMembers")) out.println(showGroupMembers(user,group,request,nonce));
@@ -155,7 +151,7 @@ public class Groups extends HttpServlet {
 						a.resourceLinkIds.add(linkId);
 						ofy().save().entity(a);
 					}
-					response.sendRedirect("/" + a.assignmentType + "?TopicId=" + a.topicId);
+					response.sendRedirect("/" + a.assignmentType + "?AssignmentId=" + a.id);
 				} catch (Exception e) {
 					response.sendRedirect("/Home");
 				}
@@ -180,38 +176,17 @@ public class Groups extends HttpServlet {
 			} else if (userRequest.equals("SetTimeZone")) {
 				setTimeZone(user,group,request);
 				out.println(groupsForm(user,request,nonce));
-			} else if (userRequest.equals("Set Deadline")) {
-				setTimeZone(user,group,request);
-				updateDeadlines(group,request);
-				String assignmentType = request.getParameter("AssignmentType");
-				if ("Quiz".equals(assignmentType) || "Homework".equals(assignmentType)) {
-					String url = "/" + request.getParameter("AssignmentType") + "?TopicId=" + request.getParameter("TopicId");
-					response.sendRedirect(url + "&Nonce=" + nonce);	
-				} else if ("PracticeExam".equals(assignmentType)) {
-					String url = "/PracticeExam?AssignmentId=" + request.getParameter("AssignmentId");
-					response.sendRedirect(url + "&Nonce=" + nonce);		
-				}
-				return;
 			} else if (userRequest.equals("UpdateAssignment")) {
 				updateAssignment(user,group,request);
 				String assignmentType = request.getParameter("AssignmentType");
 				if ("Quiz".equals(assignmentType) || "Homework".equals(assignmentType)) {
-					String url = "/" + request.getParameter("AssignmentType") + "?TopicId=" + request.getParameter("TopicId");
+					String url = "/" + request.getParameter("AssignmentType") + "?AssignmentId=" + request.getParameter("AssignmentId");
 					response.sendRedirect(url + "&Nonce=" + nonce);	
 				} else if ("PracticeExam".equals(assignmentType)) {
 					String url = "/PracticeExam?AssignmentId=" + request.getParameter("AssignmentId");
 					response.sendRedirect(url + "&Nonce=" + nonce);		
 				}
 				return;
-			} else if (userRequest.equals("Copy Assignments")) {
-				copyAssignments(user,group,request);
-				out.println(manageGroupForm(user,group,request,nonce));
-			} else if (userRequest.equals("UpdateDeadlines")||userRequest.equals("Create")) {
-				updateDeadlines(group,request);
-				out.println(manageGroupForm(user,group,request,nonce));
-			} else if (userRequest.equals("RescueService")) {
-				setRescueOptions(user,group,request);
-				out.println(manageGroupForm(user,group,request,nonce));
 			} else {
 				User thisUser = ofy().load().type(User.class).id(request.getParameter("UserId")).now();
 				if (userRequest.equals("InviteUser")) {
@@ -403,20 +378,13 @@ public class Groups extends HttpServlet {
 			TimeZone oldTZ = group.getTimeZone();
 			TimeZone newTZ = TimeZone.getTimeZone(request.getParameter("TimeZone"));
 			if (oldTZ.equals(newTZ)) return;  // nothing to be done here
-			
-			Query<Assignment> assignments = ofy().load().type(Assignment.class).filter("groupId",group.id);
-			for (Assignment a : assignments) {  // adjust the deadline to correspond to midnight on the new TimeZone
-				long deadline = a.getDeadline().getTime();
-				a.setDeadline(new Date(deadline + oldTZ.getOffset(deadline) - newTZ.getOffset(deadline)));
-				ofy().save().entity(a);
-			}
 			group.timeZone = request.getParameter("TimeZone");
 			ofy().save().entity(group);
-			QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("GroupId",Long.toString(group.id)));
+		//	QueueFactory.getDefaultQueue().add(withUrl("/CalculateScores").param("GroupId",Long.toString(group.id)));
 		} catch (Exception e) {
 		}
 	}
-	
+/*	
 	String manageGroupForm(User user,Group group,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -512,14 +480,14 @@ public class Groups extends HttpServlet {
 
 		return buf.toString();
 	}
-
+*/
 	String assignQuizQuestionsForm(User user,Group group,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer("<h3>Select Quiz Questions</h3>");
 		try {
-			long topicId = Long.parseLong(request.getParameter("TopicId"));
-			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
-			group.setGroupTopicIds();
-			long qi = group.getAssignmentId("Quiz",topic.id);
+			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
+			Topic topic = ofy().load().type(Topic.class).id(assignment.topicId).safe();
+			
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			df.setTimeZone(group.getTimeZone());
 			buf.append("<b>Subject: " + subject.title + "<br>"
@@ -537,8 +505,7 @@ public class Groups extends HttpServlet {
 			buf.append("if you don't see a question you want to include, you may "
 					+ "<a href=/Contribute>contribute a new question item</a> to the database.<p>");
 			
-			Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",topicId).filter("isActive",true);
-			Assignment assignment = qi>0?ofy().load().type(Assignment.class).id(qi).safe():null;
+			Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",topic.id).filter("isActive",true);
 			
 			//if (assignment.questionKeys.size()==questions.count()) { // allow instructor to copy assignments from another group:
 			try {
@@ -554,7 +521,7 @@ public class Groups extends HttpServlet {
 						ofy().delete().entity(a);
 					}
 				}
-				if (assignments.size() > 1) {
+				if (assignments.size() > 0) {
 					buf.append("You may use the box below to copy quiz question selections from another of your groups.");
 					buf.append("<FORM METHOD=POST ACTION=Groups>"
 							+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
@@ -573,19 +540,19 @@ public class Groups extends HttpServlet {
 				} 
 			}catch (Exception e) {
 			}
-			
-				//} else buf.append("To copy assigned questions from another group, first assign all questions below.<p>");
 
-				buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
-						+ "onClick=\"for (var i=0;i<document.Questions.QuestionId.length;i++)"
-						+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}\""
-						+ "> Select/Unselect All</FORM>");
+			//} else buf.append("To copy assigned questions from another group, first assign all questions below.<p>");
+
+			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
+					+ "onClick=\"for (var i=0;i<document.Questions.QuestionId.length;i++)"
+					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}\""
+					+ "> Select/Unselect All</FORM>");
 
 			buf.append("<FORM NAME=Questions METHOD=POST ACTION=Groups>"
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment'>"
 					+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
-					+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
+					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + assignment.id + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Quiz>"
 					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items'>");
 			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
@@ -611,11 +578,10 @@ public class Groups extends HttpServlet {
 	String assignHWQuestionsForm(User user,Group group,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer("<h3>Select Homework Questions</h3>");
 		try {
-			long topicId = Long.parseLong(request.getParameter("TopicId"));
-			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
-			group.setGroupTopicIds();
-			long hi = group.getAssignmentId("Homework",topic.id);
-			Assignment assignment = ofy().load().type(Assignment.class).id(hi).now();
+			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).now();
+			Topic topic = ofy().load().type(Topic.class).id(assignment.topicId).safe();
+			
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			df.setTimeZone(group.getTimeZone());
 			buf.append("<b>Subject: " + subject.title + "<br>"
@@ -633,7 +599,7 @@ public class Groups extends HttpServlet {
 					+ "<a href=/Contribute>contribute a new question item</a> to the database.<p>");
 			
 			
-			Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topicId).filter("isActive",true);
+			Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topic.id).filter("isActive",true);
 
 			// allow instructor to copy assigned questions list from another group
 			// first make a list of this instructor's groups having an assignment with this topic
@@ -641,16 +607,14 @@ public class Groups extends HttpServlet {
 				List<Assignment> assignments = ofy().load().type(Assignment.class).filter("assignmentType","Homework").filter("topicId",topic.id).list();
 				for (Assignment a : assignments) {
 					try {
-						if (a.id == hi) continue; // don't list this assignment
+						if (a.id == assignmentId) continue; // don't list this assignment
 						Group g = ofy().load().type(Group.class).id(a.groupId).safe();
 						if (!g.instructorId.equals(group.instructorId)) assignments.remove(a);
 					} catch (Exception e) {}
 				}
 				// If any such groups exist, create a form for copying
-				if (assignments.size() > 1) {
-					buf.append("You may use the box below to copy homework problem selections from another group. "
-							+ "The choices include groups where problems have been specifically selected to match content in a particular "
-							+ "textbook.  Once selected, you may return to this form and customize the question selections as desired.");
+				if (assignments.size() > 0) {
+					buf.append("You may use the box below to copy homework problem selections from another assignment:<br>");
 					buf.append("<FORM METHOD=POST ACTION=Groups>"
 							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateAssignment>"
 							+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
@@ -684,7 +648,7 @@ public class Groups extends HttpServlet {
 					+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment'>"
 					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
-					+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
+					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + assignment.id + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Homework>"
 					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items'>");
 			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
@@ -841,7 +805,7 @@ public class Groups extends HttpServlet {
 			ofy().save().entity(assignment).now();
 		} catch (Exception e) {System.out.println(e.toString());}
 	}		
-
+/*
 	String updateDeadlines(Group group,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try { 
@@ -974,7 +938,7 @@ public class Groups extends HttpServlet {
 			System.out.println(e.getMessage());
 		}
 	}
-	
+*/	
 	public String showGroupPracticeExams(User user,Group group,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -1062,7 +1026,7 @@ public class Groups extends HttpServlet {
 				for (Assignment a : assignments) {
 					buf.append("<TR><TD><b>" + (assignmentType.equals("Quiz")?"Q":"HW") + counter + "</b></TD>"
 							+ "<TD>" + ofy().load().type(Topic.class).id(a.topicId).safe().title + "</TD>"
-							+ "<TD>" + df.format(a.getDeadline()) + "</TD></TR>");
+							+ "<TD>n/a</TD></TR>");
 					counter++;
 				}
 				buf.append("</TABLE>");
@@ -1111,7 +1075,7 @@ public class Groups extends HttpServlet {
 							nAttempts[j] += s.numberOfAttempts;
 						}
 						j++;
-						buf.append("<TD ALIGN=CENTER>" + s.getDotScore(a.getDeadline(),group.rescueThresholdScore) + "</TD>");
+						buf.append("<TD ALIGN=CENTER>" + s.getDotScore(new Date(),group.rescueThresholdScore) + "</TD>");
 					}
 					buf.append("<TD ALIGN=CENTER>" + studentTotalScore + "</TD></TR>");
 				}
@@ -1155,7 +1119,7 @@ public class Groups extends HttpServlet {
 							nAttempts[j] += s.numberOfAttempts;
 						}
 						j++;
-						buf.append("<TD ALIGN=CENTER>" + s.getDotScore(a.getDeadline(),group.rescueThresholdScore) + "</TD>");
+						buf.append("<TD ALIGN=CENTER>" + s.getDotScore(new Date(),group.rescueThresholdScore) + "</TD>");
 					}
 					buf.append("<TD ALIGN=CENTER>" + studentTotalScore + "</TD></TR>");
 					if (System.currentTimeMillis()-startTime > LIMIT_MILLIS) {

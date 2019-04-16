@@ -127,21 +127,6 @@ public class Group implements Serializable {
     	this.tAIds.remove(userId);
     }
     
-    public void setNextDeadline() {
-    	this.nextDeadline = null;
-    	try {
-    		Query<Assignment> assignments = ofy().load().type(Assignment.class).filter("groupId",this.id).filter("deadline >",new Date());
-    		for (Assignment a : assignments) if (this.nextDeadline == null || a.getDeadline().before(nextDeadline)) this.nextDeadline = a.getDeadline();
-    		ofy().save().entity(this).now();
-    	} catch (Exception e) {}
-    }
-    
-    public Date getNextDeadline() {
-    	setNextDeadline();
-    	if (isUsingLisOutcomeService) return null;  // don't report deadline to UserInfo box; use the LMS instead
-    	return this.nextDeadline;
-    }
-
     public Long getAssignmentId(String assignmentType,long topicId) {
     	if (topicIds.indexOf(topicId)<0) return 0L;
     	if (assignmentType.equals("Quiz")) return this.quizAssignmentIds.get(topicIds.indexOf(topicId));
