@@ -281,7 +281,7 @@ public class PracticeExam extends HttpServlet {
 					pt = qpt.first().now();  // gets the oldest pending practice exam transaction in the query
 					topicIds = pt.topicIds;
 					buf.append("<script language=javascript>"
-							+ "onload=alert('You are resuming a previously pending exam.')"
+							+ "onload=alert('You are resuming a previously downloaded exam.')"
 							+ "</script>");
 				} else {  // the request is for an exam corresponding to an assignment
 					for (PracticeExamTransaction t : qpt) {
@@ -322,9 +322,10 @@ public class PracticeExam extends HttpServlet {
 			df.setTimeZone(tz);
 
 			buf.append("\n<h2>" + subject.title + " Exam</h2>");
-//			buf.append("\n<b>" + user.getBothNames() + "</b><br>");
+
+			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
+			
 			Date downloaded = pt.downloaded;
-//			buf.append(df.format(downloaded) + "<p>");
 			int secondsRemaining = (int) (timeLimit*60 - (now.getTime() - downloaded.getTime())/1000);
 
 			buf.append("Topics covered on this exam:<OL>");
@@ -480,6 +481,7 @@ public class PracticeExam extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		try {
 			buf.append("<h2>Practice Exam Results</h2>");
+			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			Group myGroup = user.myGroupId<=0?null:ofy().load().type(Group.class).id(user.myGroupId).now();
@@ -648,9 +650,7 @@ public class PracticeExam extends HttpServlet {
 		+ "  xmlhttp.onreadystatechange=function() {\n"
 		+ "    if (xmlhttp.readyState==4) {\n"
 		+ "      document.getElementById('feedback' + id).innerHTML="
-		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment. "
-		+ (!verifiedEmail?"However, no response is possible unless you verify the email address in your <a href=/Verification>user profile</a>.":"") 
-		+ "</b></FONT><p>';\n"
+		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
 		+ "  url += '&QuestionId=' + id + '&Notes=' + note;\n"

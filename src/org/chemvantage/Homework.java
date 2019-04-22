@@ -208,12 +208,18 @@ public class Homework extends HttpServlet {
 			try {  // normal process for LTI assignment launch
 				long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
 				hwa = ofy().load().type(Assignment.class).id(assignmentId).now();
-				topicId = hwa.topicId;
+				if (hwa==null) { // assignment has been deleted
+					return "<h2>Assignment Reset</h2>"
+						+ "This ChemVantage assignment was deleted, probably because all of the "
+						+ "question items were deselected. The course instructor may return to the Learning Management "
+						+ "System (LMS) and click on the assignment link there to reassociate the class assignment "
+						+ "with a new ChemVantage homework set.";
+				} else topicId = hwa.topicId;
 			} catch (Exception e) {  // alternative process for anonymous user
 				try {
 					topicId = Long.parseLong(request.getParameter("TopicId"));
 				} catch (Exception e2) {
-					return "<h2>No Quiz Selected</h2>You must return to the <a href=Home>Home Page</a> "
+					return "<h2>No Homework Assignment Selected</h2>You must return to the <a href=Home>Home Page</a> "
 							+ "and select a topic for this quiz using the drop-down box.";
 				}
 			}
@@ -407,6 +413,8 @@ public class Homework extends HttpServlet {
 			}
 			
 			buf.append("<h2>Homework Results - " + topic.title + " (" + subject.title + ")</h2>\n");
+			
+			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			
 			String hashMe = user.id + (hwa==null?"":hwa.id);
 			q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments

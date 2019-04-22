@@ -211,8 +211,8 @@ public class Quiz extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		try {
 			Assignment qa = null;
-			long topicId = 0;
-			long assignmentId = 0;
+			long topicId = 0L;
+			long assignmentId = 0L;
 			try {  // normal process for LTI assignment launch
 				assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
 				qa = ofy().load().type(Assignment.class).id(assignmentId).now();
@@ -221,7 +221,7 @@ public class Quiz extends HttpServlet {
 				try {
 					topicId = Long.parseLong(request.getParameter("TopicId"));
 				} catch (Exception e2) {
-					return "<h2>No Quiz Selected</h2>You must return to the <a href=Home>Home Page</a> "
+					return "<h2>No Quiz Selected</h2>You must return to the <a href=/>Home Page</a> "
 							+ "and select a topic for this quiz using the drop-down box.";
 				}
 			}
@@ -246,7 +246,7 @@ public class Quiz extends HttpServlet {
 
 			try {
 				if (user.isInstructor() && myGroup != null) {
-					buf.append("Instructor: you may <a href=/Groups?UserRequest=AssignQuizQuestions&GroupId=" + myGroup.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + ">"
+					buf.append("Instructor: you may <a href=/Groups?UserRequest=AssignQuizQuestions&GroupId=" + myGroup.id + "&AssignmentId=" + qa.id + "&Nonce=" + nonce + ">"
 							+ "customize this quiz</a> by selecting/deselecting the available question items.<p>");
 				} else if (user.isAnonymous()) {
 					buf.append("<h3><font color=red>Anonymous User</font></h3>");
@@ -395,8 +395,9 @@ public class Quiz extends HttpServlet {
 			int wrongAnswers = 0;
 
 			buf.append("<h2>Quiz Results - " + qt.topicTitle + " (" + subject.title + ")</h2>\n");
-			//buf.append("<b>" + user.getBothNames() + "</b><br>\n");
-			buf.append(df.format(now));
+			
+			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
+			
 			buf.append(ajaxScoreJavaScript(user.verifiedEmail)); // load javascript for AJAX problem reporting form
 			
 			StringBuffer missedQuestions = new StringBuffer();			

@@ -47,7 +47,7 @@ public class Groups extends HttpServlet {
 	private int queryLimit = 10; // maximum number of user-search results returned
 	Subject subject = Subject.getSubject();
 	public String getServletInfo() {
-		return "This servlet is used by PZone admins to create groups, instructors to set deadlines, and student to join.";
+		return "This servlet is used by ChemVantage admins to create groups, instructors to set deadlines, and student to join.";
 	}
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
@@ -89,9 +89,9 @@ public class Groups extends HttpServlet {
 			
 			if (group == null) out.println(groupsForm(user,request,nonce));
 			else if (user.isAdministrator() || (user.isInstructor() && group.domain.equals(user.domain)) || group.tAIds.contains(user.id)) {
-				if (userRequest.equals("AssignHomeworkQuestions")) out.println(assignHWQuestionsForm(user,group,request,nonce));
-				else if (userRequest.equals("AssignQuizQuestions")) out.println(assignQuizQuestionsForm(user,group,request,nonce));
-				else if (userRequest.equals("AssignExamQuestions")) out.println(assignExamQuestionsForm(user,group,request,nonce));
+				if (userRequest.equals("AssignHomeworkQuestions")) out.println(selectQuestionsForm(user,group,request,nonce));
+				else if (userRequest.equals("AssignQuizQuestions")) out.println(selectQuestionsForm(user,group,request,nonce));
+				else if (userRequest.equals("AssignExamQuestions")) out.println(selectExamQuestionsForm(user,group,request,nonce));
 				else if (userRequest.equals("GroupMembers")) out.println(showGroupMembers(user,group,request,nonce));
 				else if (userRequest.equals("GroupScores")) out.println(showGroupScores(user,group,request,nonce));
 				else if (userRequest.equals("GroupPracticeExams")) out.println(showGroupPracticeExams(user,group,request,nonce));
@@ -163,29 +163,11 @@ public class Groups extends HttpServlet {
 			}
 			
 			String message = "";
-			//out.println(Home.getHeader(user));			
-			if (userRequest.equals("CreateGroup")) {
-				createGroup(user,request);
-				out.println(groupsForm(user,request,nonce));
-			} else if (userRequest.equals("UpdateGroup")) {
-				modifyGroup(user,request);
-				out.println(groupsForm(user,request,nonce));
-			} else if (userRequest.equals("DeleteGroup")) {
-				deleteGroup(group);
-				out.println(groupsForm(user,request,nonce));
-			} else if (userRequest.equals("SetTimeZone")) {
-				setTimeZone(user,group,request);
-				out.println(groupsForm(user,request,nonce));
-			} else if (userRequest.equals("UpdateAssignment")) {
+			if (userRequest.equals("UpdateAssignment")) {
 				updateAssignment(user,group,request);
-				String assignmentType = request.getParameter("AssignmentType");
-				if ("Quiz".equals(assignmentType) || "Homework".equals(assignmentType)) {
-					String url = "/" + request.getParameter("AssignmentType") + "?AssignmentId=" + request.getParameter("AssignmentId");
-					response.sendRedirect(url + "&Nonce=" + nonce);	
-				} else if ("PracticeExam".equals(assignmentType)) {
-					String url = "/PracticeExam?AssignmentId=" + request.getParameter("AssignmentId");
-					response.sendRedirect(url + "&Nonce=" + nonce);		
-				}
+				Assignment assignment = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
+				response.sendRedirect("/" + assignment.assignmentType + "?AssignmentId=" + assignment.id
+						+ (nonce==null?"":"&nonce=" + nonce));
 				return;
 			} else {
 				User thisUser = ofy().load().type(User.class).id(request.getParameter("UserId")).now();
@@ -345,7 +327,7 @@ public class Groups extends HttpServlet {
 		}
 		return buf.toString();
 	}
-
+/*
 	private void createGroup(User user,HttpServletRequest request) {
 		try {
 			Group g = new Group(user.id,CharHider.quot2html(request.getParameter("Description")));
@@ -384,7 +366,7 @@ public class Groups extends HttpServlet {
 		} catch (Exception e) {
 		}
 	}
-/*	
+	
 	String manageGroupForm(User user,Group group,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -481,150 +463,45 @@ public class Groups extends HttpServlet {
 		return buf.toString();
 	}
 */
-	String assignQuizQuestionsForm(User user,Group group,HttpServletRequest request,String nonce) {
-		StringBuffer buf = new StringBuffer("<h3>Select Quiz Questions</h3>");
-		try {
-			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
-			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
-			Topic topic = ofy().load().type(Topic.class).id(assignment.topicId).safe();
-			
-			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			df.setTimeZone(group.getTimeZone());
-			buf.append("<b>Subject: " + subject.title + "<br>"
-					+ "Topic: " + topic.title + "<br>"
-					+ "Group: " + group.description + "</b><br>");
-			//		+ "Deadline: " + df.format(assignment.getDeadline()) + "</b><br>");
-			//buf.append("<a href='Groups'>Return to Groups Page</a><p>");
 
-			buf.append("Each quiz consists of 10 questions selected at random from the items below. You may select "
-					+ "the items that will be used for this group by checking the boxes in the left column. Students are provided "
-					+ "answers to the items that they answer incorrectly. Therefore, the total number of questions should be "
-					+ "larger than 10, but not much larger than 50.  Experience shows that 30 items is about right in most cases.<p>");
-			//		+ "Students may submit quizzes after the deadline, but the scores will not be included in their group scores.<p>");
-			
-			buf.append("if you don't see a question you want to include, you may "
-					+ "<a href=/Contribute>contribute a new question item</a> to the database.<p>");
-			
-			Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",topic.id).filter("isActive",true);
-			
-			//if (assignment.questionKeys.size()==questions.count()) { // allow instructor to copy assignments from another group:
-			try {
-				//get a list of all assignments for this topic
-				List<Assignment> assignments = ofy().load().type(Assignment.class).filter("assignmentType","Quiz").filter("topicId",topic.id).list();
-
-				for (Assignment a:assignments) { // narrow the list to this instructor's groups
-					try {
-						if (a.groupId==group.id) continue; 
-						Group g = ofy().load().type(Group.class).id(a.groupId).safe();
-						if (!g.instructorId.equals(group.instructorId)) assignments.remove(a);
-					} catch (Exception e2) {
-						ofy().delete().entity(a);
-					}
-				}
-				if (assignments.size() > 0) {
-					buf.append("You may use the box below to copy quiz question selections from another of your groups.");
-					buf.append("<FORM METHOD=POST ACTION=Groups>"
-							+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
-							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateAssignment>"
-							+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
-							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
-							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Quiz>");
-					buf.append("<SELECT NAME=CopyAssignmentId><OPTION VALUE=0>Select a group (optional)</OPTION>");
-					buf.append("</SELECT>");
-					for (Assignment a : assignments) {
-						Group g = ofy().load().type(Group.class).id(a.groupId).safe();
-						buf.append("<OPTION VALUE='" + a.id + "'>" + g.description + "</OPTION>");
-					}
-
-					buf.append("<INPUT TYPE=SUBMIT VALUE='Copy Selections From This Group'></FORM><p>");
-				} 
-			}catch (Exception e) {
-			}
-
-			//} else buf.append("To copy assigned questions from another group, first assign all questions below.<p>");
-
-			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
-					+ "onClick=\"for (var i=0;i<document.Questions.QuestionId.length;i++)"
-					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}\""
-					+ "> Select/Unselect All</FORM>");
-
-			buf.append("<FORM NAME=Questions METHOD=POST ACTION=Groups>"
-					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment'>"
-					+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
-					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
-					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + assignment.id + "'>"
-					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Quiz>"
-					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items'>");
-			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
-
-			int i=0;
-			for (Question q : questions) {
-				i++;
-				q.setParameters();
-				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
-						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
-				buf.append(assignment.questionKeys.contains(Key.create(Question.class,q.id))?" CHECKED>":">");
-				buf.append("<b>&nbsp;" + i + ".</b></TD>");
-				buf.append("\n<TD>" + q.printAll() + "</TD>");
-				buf.append("</TR>");
-			}
-			buf.append("</TABLE><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM>");
-		} catch (Exception e) {
-			buf.append(e.getMessage());
-		}
-		return buf.toString();
-	}
-
-	String assignHWQuestionsForm(User user,Group group,HttpServletRequest request,String nonce) {
-		StringBuffer buf = new StringBuffer("<h3>Select Homework Questions</h3>");
+	String selectQuestionsForm(User user,Group group,HttpServletRequest request,String nonce) {
+		StringBuffer buf = new StringBuffer();
 		try {
 			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
 			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).now();
+			String assignmentType = assignment.assignmentType;
 			Topic topic = ofy().load().type(Topic.class).id(assignment.topicId).safe();
 			
-			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			df.setTimeZone(group.getTimeZone());
+			buf.append("<h3>Select " + assignmentType + " Questions</h3>");
 			buf.append("<b>Subject: " + subject.title + "<br>"
 					+ "Topic: " + topic.title + "<br>"
-					+ "Group: " + group.description + "</b><br>");
-			//		+ "Deadline: " + df.format(assignment.getDeadline()) + "</b><br>");
-			//buf.append("<a href='Groups'>Return to Groups Page</a><p>");
-
-			buf.append("Select the questions to be assigned to students in this group, then click the button "
-					+ "at the bottom of the page. Each question is worth 1 point, so the maximum possible score on the "
-					+ "assignment is equal to the number of questions selected. Students may work unassigned problems; "
-					+ "however, these are not included in the scores reported to the class LMS.<p>");
-
-			buf.append("if you don't see a question you want to include, you may "
-					+ "<a href=/Contribute>contribute a new question item</a> to the database.<p>");
-			
-			
-			Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topic.id).filter("isActive",true);
-
-			// allow instructor to copy assigned questions list from another group
+					+ "Group: " + group.description + "</b><p>");
+					
+			// Option 1: allow instructor to copy assigned questions list from another group
 			// first make a list of this instructor's groups having an assignment with this topic
 			try {
-				List<Assignment> assignments = ofy().load().type(Assignment.class).filter("assignmentType","Homework").filter("topicId",topic.id).list();
-				for (Assignment a : assignments) {
+				List<Assignment> allAssignments = ofy().load().type(Assignment.class).filter("assignmentType",assignmentType).filter("topicId",topic.id).list();
+				List<Assignment> eligibleForCopy = new ArrayList<Assignment>();
+				
+				for (Assignment a : allAssignments) {
 					try {
-						if (a.id == assignmentId) continue; // don't list this assignment
+						if (a.groupId == assignment.groupId) continue;  // don't copy from the same group
 						Group g = ofy().load().type(Group.class).id(a.groupId).safe();
-						if (!g.instructorId.equals(group.instructorId)) assignments.remove(a);
+						if (g.domain.equals(group.domain)) eligibleForCopy.add(a);
 					} catch (Exception e) {}
 				}
 				// If any such groups exist, create a form for copying
-				if (assignments.size() > 0) {
-					buf.append("You may use the box below to copy homework problem selections from another assignment:<br>");
+				if (eligibleForCopy.size() > 0) {
+					buf.append("<h4>Option 1: Copy question selections from another group</h4>"
+							+ "Select the class from which to copy the question selections:<br>");
 					buf.append("<FORM METHOD=POST ACTION=Groups>"
 							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateAssignment>"
 							+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
 							+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
-							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
-							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Homework>");
+							+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + assignment.id + "'>");
 					buf.append("<SELECT NAME=CopyAssignmentId><OPTION VALUE=0>Select a group (optional)</OPTION>");
-					for (Assignment a:assignments) {
+					for (Assignment a : eligibleForCopy) {
 						try {
-							if (a.groupId==group.id) continue; 
 							Group g = ofy().load().type(Group.class).id(a.groupId).safe();
 							buf.append("<OPTION VALUE='" + a.id + "'>" + g.description + "</OPTION>");
 						} catch (Exception e2) {
@@ -632,11 +509,29 @@ public class Groups extends HttpServlet {
 						}
 					}
 					buf.append("</SELECT>");
-					buf.append("<INPUT TYPE=SUBMIT VALUE='Copy Selections From This Group'></FORM><p>");
+					buf.append("<INPUT TYPE=SUBMIT VALUE='Copy Selections'></FORM><p>");
+					buf.append("<h4>Option 2: Select questions manually</h4>");
 				}
 			} catch (Exception e) {}
-			//else buf.append("To copy assigned questions from another group, first assign all questions below.<p>");
-
+			
+			// Option 2: allow instructor to pick individual question items from all active questions:
+			if (assignmentType.contentEquals("Quiz")) {
+				buf.append("Each quiz consists of 10 questions selected at random from the items below. You may select "
+						+ "the items that will be used for this group by checking the boxes in the left column. Students are provided "
+						+ "answers to the items that they answer incorrectly. Therefore, the total number of questions should be "
+						+ "larger than 10, but not much larger than 50.  Experience shows that 30 items is about right in most cases.<p>"
+						+ "If you don't see a question you want to include, you may "
+						+ "<a href=/Contribute>contribute a new question item</a> to the database.<p>");
+			} else if (assignmentType.contentEquals("Homework")) {
+				buf.append("Select the homework questions to be assigned to students in this group, then click the "
+						+ "'Use Selected Items' button. Each question is worth 1 point, so the maximum possible score on the "
+						+ "assignment is equal to the number of questions selected. Students may work unassigned problems; "
+						+ "however, these are not included in the scores reported to the class LMS.<p>"
+						+ "If you don't see a question you want to include, you may "
+						+ "<a href=/Contribute>contribute a new question item</a> to the database.<p>");
+			}
+			
+			Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topic.id).filter("isActive",true);
 			// This dummy form uses javascript to select/deselect all questions
 			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
 					+ "onClick=\"for (var i=0;i<document.Questions.QuestionId.length;i++)"
@@ -649,7 +544,6 @@ public class Groups extends HttpServlet {
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment'>"
 					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + assignment.id + "'>"
-					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Homework>"
 					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items'>");
 			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
 
@@ -671,7 +565,7 @@ public class Groups extends HttpServlet {
 		return buf.toString();
 	}
 
-	String assignExamQuestionsForm(User user,Group group,HttpServletRequest request,String nonce) {
+	String selectExamQuestionsForm(User user,Group group,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer("<h3>Select Practice Exam Questions</h3>");
 		try {
 			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
@@ -689,7 +583,7 @@ public class Groups extends HttpServlet {
 			buf.append("Each practice exam consists of items selected at random from the items below:<ul>"
 					+ "<li>10 quiz questions worth 2 points each</li>"
 					+ "<li> 5 homework questions worth 10 points each</li>"
-					+ "<li> 2 more challengine homework questions worth 15 points each</li></ul>"
+					+ "<li> 2 more challenging homework questions worth 15 points each</li></ul>"
 					+ "for a total of 100 points. Each exam must be completed within 60 minutes to be scored.<p>"
 					+ "Select the items to be included in exams assigned to your class.<p>");
 			
@@ -778,32 +672,23 @@ public class Groups extends HttpServlet {
 
 	void updateAssignment(User user,Group group,HttpServletRequest request) {
 		try {
-			String assignmentType = request.getParameter("AssignmentType");
-			long assignmentId = 0L;
-			if ("PracticeExam".equals(assignmentType)) {
-				assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
-			} else {
-				group.setGroupTopicIds();
-				assignmentId = group.getAssignmentId(assignmentType,Long.parseLong(request.getParameter("TopicId")));
-			}
+			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
 			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
-			String[] questionIds = request.getParameterValues("QuestionId");
-			String copyAssignmentId = request.getParameter("CopyAssignmentId");
-			assignment.questionKeys.clear();
-			if (!(copyAssignmentId==null)) {  // copy assigned questions form another group
-				try {
-					Assignment template = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
-					for (Key<Question> key: template.questionKeys) assignment.questionKeys.add(key);
-				} catch (Exception e2) {}
+			
+			try { // copy questionKeys from another assignment
+				long copyAssignmentId = Long.parseLong(request.getParameter("CopyAssignmentId"));
+				Assignment copyAssignment = ofy().load().type(Assignment.class).id(copyAssignmentId).safe();
+				assignment.questionKeys.clear();
+				assignment.questionKeys.addAll(copyAssignment.questionKeys);
+				ofy().save().entity(assignment).now();
+				return;		
+			} catch (Exception e) { // set assignment questionKeys based on checkbox form submission
+				String[] questionIds = request.getParameterValues("QuestionId");
+				assignment.questionKeys.clear();
+				if (questionIds != null) for (String id : questionIds) assignment.questionKeys.add(Key.create(Question.class,Long.parseLong(id)));
+				ofy().save().entity(assignment).now();				
 			}
-			else if (questionIds.length==0) {
-				ofy().delete().entity(assignment).now();
-			}
-			else {
-				for (String id : questionIds) assignment.questionKeys.add(Key.create(Question.class,Long.parseLong(id)));
-			}
-			ofy().save().entity(assignment).now();
-		} catch (Exception e) {System.out.println(e.toString());}
+		} catch (Exception e) {}
 	}		
 /*
 	String updateDeadlines(Group group,HttpServletRequest request) {
