@@ -549,7 +549,7 @@ public class PracticeExam extends HttpServlet {
 			
 			Assignment a = null;  // find the Assignment object for this Practice Exam, if it exists
 			try {
-				a = ofy().load().type(Assignment.class).id(request.getParameter("AssignmentId")).safe();
+				a = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
 				Queue queue = QueueFactory.getDefaultQueue();  // used for computing Score objects offline by Task queue
 				Score s = Score.getInstance(user.id,a);
 				ofy().save().entity(s).now();
