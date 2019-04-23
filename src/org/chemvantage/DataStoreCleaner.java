@@ -223,12 +223,10 @@ public class DataStoreCleaner extends HttpServlet {
 				query = ofy().load().type(QuizTransaction.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
 			}
 			
-		    QueryResultIterator<QuizTransaction> qri = query.iterator();
 		    ArrayList<Key<QuizTransaction>> keys = new ArrayList<Key<QuizTransaction>>();  // list of QuizTransaction entity keys for batch delete
 		    
-		    while (qri.hasNext()) {
-		    	QuizTransaction q = qri.next();
-	    		try {
+		    for (QuizTransaction q : query) {
+		    	try {
 		    		ofy().load().type(User.class).id(q.userId).safe();  // throws Exception if owner (User) does not exist
 		    	} catch (Exception e) {  // catches exception if user does not exist
 		    		keys.add(Key.create(q));  // collection of keys for QuizTransactions to be deleted
@@ -240,9 +238,9 @@ public class DataStoreCleaner extends HttpServlet {
 		    buf.append(query.count() + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
 
 		    if (query.count()<querySizeLimit) buf.append("Done.");
-		    else if (retries < 9) buf.append(cleanQuizTransactions(qri.getCursor().toWebSafeString(),retries+1,testOnly));
+		    else if (retries < 9) buf.append(cleanQuizTransactions(query.iterator().getCursor().toWebSafeString(),retries+1,testOnly));
 		    else if (!testOnly) {
-		    	cursor = qri.getCursor().toWebSafeString();
+		    	cursor = query.iterator().getCursor().toWebSafeString();
 		    	Queue queue = QueueFactory.getDefaultQueue();
 		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanQuizTransactions").param("Cursor", cursor).param("TestOnly", testOnly?"true":"false"));
 		    	buf.append("Launching a new DataStoreCleaner task.");
@@ -258,19 +256,17 @@ public class DataStoreCleaner extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		try {			
 			Query<HWTransaction> query;
-			if (cursor==null) {  // start new entity search
+			 if (cursor==null) {  // start new entity search
 				buf.append("<h2>Clean Homework Transactions</h2>");
 				query = ofy().load().type(HWTransaction.class).limit(querySizeLimit);
 			} else {  // continue search with the next 1000 entities
 				query = ofy().load().type(HWTransaction.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
 			}
 			
-		    QueryResultIterator<HWTransaction> qri = query.iterator();
+			QueryResultIterator<HWTransaction> qri = query.iterator();			   
 		    ArrayList<Key<HWTransaction>> keys = new ArrayList<Key<HWTransaction>>();  // list of HWTransaction entity keys for batch delete
-		    
-		    while (qri.hasNext()) {
-		    	HWTransaction h = qri.next();
-	    		try {
+		    for (HWTransaction h : query) {
+		    	try {
 		    		ofy().load().type(User.class).id(h.userId).safe();  // throws Exception if user does not exist
 		    	} catch (Exception e) {  // catches exception if user does not exist
 		    		keys.add(Key.create(h));  // collection of keys for HWTransactions to be deleted

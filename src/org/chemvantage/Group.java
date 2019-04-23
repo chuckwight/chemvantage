@@ -23,7 +23,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.TimeZone;
 
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Cache;
@@ -36,26 +35,26 @@ import com.googlecode.objectify.cmd.Query;
 public class Group implements Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id Long id;
-	@Index String instructorId;
-	@Index String context_id;
-	@Index String domain;
-			 String description;
-			 String timeZone;
-			 Date created;
-			 Date nextDeadline;
-			 boolean sendRescueMessages;
-			 int rescueThresholdScore = 50;
-			 String defaultRescueSubject;
-			 String defaultRescueMessage;
-			 String lis_outcome_service_url;
-			 String lis_outcome_service_format;
-			 boolean isUsingLisOutcomeService;
-			 List<String> rescueCcIds = new ArrayList<String>();
-			 List<String> memberIds = new ArrayList<String>();
-			 List<String> tAIds = new ArrayList<String>();
-			 List<Long> topicIds = new ArrayList<Long>();
-			 List<Long> quizAssignmentIds = new ArrayList<Long>();
-			 List<Long> hwAssignmentIds = new ArrayList<Long>();
+	@Index 	String instructorId;
+	@Index 	String domain;
+			String context_id;
+			String description;	
+			//String timeZone;
+			Date created;
+			Date nextDeadline;
+			boolean sendRescueMessages;
+			int rescueThresholdScore = 50;
+			String defaultRescueSubject;
+			String defaultRescueMessage;
+			String lis_outcome_service_url;
+			String lis_outcome_service_format;
+			boolean isUsingLisOutcomeService;
+			List<String> rescueCcIds = new ArrayList<String>();
+			List<String> memberIds = new ArrayList<String>();
+			List<String> tAIds = new ArrayList<String>();
+			List<Long> topicIds = new ArrayList<Long>();
+			List<Long> quizAssignmentIds = new ArrayList<Long>();
+			List<Long> hwAssignmentIds = new ArrayList<Long>();
 
     Group() {}
     
@@ -63,7 +62,6 @@ public class Group implements Serializable {
     	this.created = new Date();
         this.instructorId = instructorId;
         this.description = description;
-        this.timeZone = TimeZone.getDefault().getID();
     }
 
     Group(String type,String context_id,String description) {
@@ -71,7 +69,6 @@ public class Group implements Serializable {
     		this.created = new Date();
     		this.context_id = context_id;
     		this.description = description;
-    		this.timeZone = TimeZone.getDefault().getID();
     		this.instructorId = "unknown";
     	}
     }
@@ -100,14 +97,6 @@ public class Group implements Serializable {
     	}
     }
 
-    public TimeZone getTimeZone() {
-        try {
-        	return TimeZone.getTimeZone(timeZone);
-        } catch (Exception e) {
-        	return TimeZone.getDefault();
-        }
-    }
- 
     public boolean isMember(String id) {
     	return memberIds.contains(id);
     }

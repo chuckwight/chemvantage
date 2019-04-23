@@ -31,7 +31,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.TimeZone;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -226,10 +225,7 @@ public class Quiz extends HttpServlet {
 				}
 			}
 			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
-			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			Group myGroup = user.myGroupId>0?ofy().load().type(Group.class).id(user.myGroupId).now():null;
-			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
-			df.setTimeZone(tz);
 			Date now = new Date();
 
 			// Check to see if this user has any pending quizzes on this topic:
@@ -371,10 +367,7 @@ public class Quiz extends HttpServlet {
 		try {
 			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			Group myGroup = user.myGroupId>0?ofy().load().type(Group.class).id(user.myGroupId).now():null;
-			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
-			df.setTimeZone(tz);
-
+			
 			Assignment qa = null;
 			long transactionId = Long.parseLong(request.getParameter("QuizTransactionId"));
 			QuizTransaction qt = ofy().load().type(QuizTransaction.class).id(transactionId).safe();

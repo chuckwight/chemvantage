@@ -28,7 +28,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TimeZone;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -226,11 +225,8 @@ public class Homework extends HttpServlet {
 			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
 			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid"); // used for reporting score back to the LMS
 			
-			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			Group myGroup = user.myGroupId>0?ofy().load().type(Group.class).id(user.myGroupId).now():null;
-			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
-			df.setTimeZone(tz);
-
+			
 			buf.append("\n<h2>Homework Exercises - " + topic.title + " (" + subject.title + ")</h2>");
 			
 			if (user.isInstructor() && myGroup != null) {
@@ -353,9 +349,7 @@ public class Homework extends HttpServlet {
 			
 			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			Group myGroup = user.myGroupId>0?ofy().load().type(Group.class).id(user.myGroupId).now():null;
-			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
-			df.setTimeZone(tz);
+			
 			String studentAnswer[] = request.getParameterValues(Long.toString(questionId));
 			if (studentAnswer == null || studentAnswer.length==0) {
 				studentAnswer = new String[1];
