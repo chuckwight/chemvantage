@@ -483,13 +483,15 @@ public class PracticeExam extends HttpServlet {
 			buf.append("<h2>Practice Exam Results</h2>");
 			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			
+			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+			buf.append(df.format(now) + "<br>");
+			
 			Group myGroup = user.myGroupId<=0?null:ofy().load().type(Group.class).id(user.myGroupId).now();
 			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
 			df.setTimeZone(tz);
 
-			Date now = new Date();
-
+			
 			long examId = Long.parseLong(request.getParameter("ExamId"));
 			PracticeExamTransaction pt = ofy().load().type(PracticeExamTransaction.class).id(examId).safe();
 			if (pt.graded != null) return "Sorry, this exam has been graded already.";

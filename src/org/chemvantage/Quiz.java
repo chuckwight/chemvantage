@@ -397,6 +397,7 @@ public class Quiz extends HttpServlet {
 			buf.append("<h2>Quiz Results - " + qt.topicTitle + " (" + subject.title + ")</h2>\n");
 			
 			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
+			buf.append(df.format(now));
 			
 			buf.append(ajaxScoreJavaScript(user.verifiedEmail)); // load javascript for AJAX problem reporting form
 			

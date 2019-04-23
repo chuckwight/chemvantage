@@ -415,6 +415,7 @@ public class Homework extends HttpServlet {
 			buf.append("<h2>Homework Results - " + topic.title + " (" + subject.title + ")</h2>\n");
 			
 			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
+			buf.append(df.format(now));
 			
 			String hashMe = user.id + (hwa==null?"":hwa.id);
 			q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
