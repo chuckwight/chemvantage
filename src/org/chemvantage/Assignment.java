@@ -31,7 +31,8 @@ import com.googlecode.objectify.annotation.Index;
 @Cache @Entity
 public class Assignment {
 	@Id 	Long id;
-	@Index	long groupId;
+	@Index 	long groupId;
+	@Index	String domain;
 	@Index	String assignmentType;
 	@Index	long topicId;
 	@Index	String resourceLinkId;
@@ -41,16 +42,18 @@ public class Assignment {
 
     Assignment() {}
 
-   Assignment(long groupId,String resourceLinkId,long topicId,String assignmentType) {  // specific to Quiz and Homework assignments with a single topicId
-    	this.groupId = groupId;
+   Assignment(long groupId,String domain,String resourceLinkId,long topicId,String assignmentType) {  // specific to Quiz and Homework assignments with a single topicId
+	   	this.groupId = groupId;
+   		this.domain = domain;
     	this.resourceLinkId = resourceLinkId;
     	this.topicId = topicId;
     	this.assignmentType = assignmentType;
     	questionKeys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).keys().list();
     }
     
-    Assignment(long groupId,String resourceLinkId, List<Long> topicIds,String assignmentType) {   // specific to Practice Exam assignments with multiple topicIds
+    Assignment(long groupId,String domain,String resourceLinkId, List<Long> topicIds,String assignmentType) {   // specific to Practice Exam assignments with multiple topicIds
     	this.groupId = groupId;
+    	this.domain = domain;
     	this.resourceLinkId = resourceLinkId;
     	this.topicIds = topicIds;
     	this.assignmentType = assignmentType;

@@ -225,7 +225,6 @@ public class Quiz extends HttpServlet {
 				}
 			}
 			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
-			Group myGroup = user.myGroupId>0?ofy().load().type(Group.class).id(user.myGroupId).now():null;
 			Date now = new Date();
 
 			// Check to see if this user has any pending quizzes on this topic:
@@ -241,8 +240,8 @@ public class Quiz extends HttpServlet {
 			buf.append("\n<h2>Quiz - " + topic.title + " (" + subject.title + ")</h2>");
 
 			try {
-				if (user.isInstructor() && myGroup != null) {
-					buf.append("Instructor: you may <a href=/Groups?UserRequest=AssignQuizQuestions&GroupId=" + myGroup.id + "&AssignmentId=" + qa.id + "&Nonce=" + nonce + ">"
+				if (user.isInstructor()) {
+					buf.append("Instructor: you may <a href=/Groups?UserRequest=AssignQuizQuestions&AssignmentId=" + qa.id + "&Nonce=" + nonce + ">"
 							+ "customize this quiz</a> by selecting/deselecting the available question items.<p>");
 				} else if (user.isAnonymous()) {
 					buf.append("<h3><font color=red>Anonymous User</font></h3>");

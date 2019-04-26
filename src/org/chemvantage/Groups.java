@@ -61,7 +61,7 @@ public class Groups extends HttpServlet {
 			Group group = groupId>0?ofy().load().type(Group.class).id(groupId).now():null;
 			
 			// Authorized users only beyond this point:
-			if(!(user.isAdministrator() || user.isInstructor() && group.domain.contentEquals(user.domain))) response.sendRedirect("/");
+			if(!(user.isAdministrator() || user.isInstructor())) response.sendRedirect("/");
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
@@ -139,9 +139,8 @@ public class Groups extends HttpServlet {
 				
 				for (Assignment a : allAssignments) {
 					try {
-						if (a.groupId == assignment.groupId) continue;  // don't copy from the same group
-						Group g = ofy().load().type(Group.class).id(a.groupId).safe();
-						if (g.domain.equals(group.domain)) eligibleForCopy.add(a);
+						if (a.id == assignment.id) continue;  // don't copy from the same group
+						if (a.domain.equals(assignment.domain)) eligibleForCopy.add(a);
 					} catch (Exception e) {}
 				}
 				// If any such groups exist, create a form for copying
@@ -327,19 +326,28 @@ public class Groups extends HttpServlet {
 			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
 			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			
-			try { // copy questionKeys from another assignment
-				long copyAssignmentId = Long.parseLong(request.getParameter("CopyAssignmentId"));
-				Assignment copyAssignment = ofy().load().type(Assignment.class).id(copyAssignmentId).safe();
-				assignment.questionKeys.clear();
-				assignment.questionKeys.addAll(copyAssignment.questionKeys);
-				ofy().save().entity(assignment).now();
-				return;		
-			} catch (Exception e) { // set assignment questionKeys based on checkbox form submission
-				String[] questionIds = request.getParameterValues("QuestionId");
-				assignment.questionKeys.clear();
-				if (questionIds != null) for (String id : questionIds) assignment.questionKeys.add(Key.create(Question.class,Long.parseLong(id)));
-				ofy().save().entity(assignment).now();				
+			// Option 1: copy questionKeys from another assignment
+			if (request.getParameter("CopyAssignmentId")!=null) {
+				try { // copy questionKeys from another assignment
+					long copyAssignmentId = Long.parseLong(request.getParameter("CopyAssignmentId"));
+					Assignment copyAssignment = ofy().load().type(Assignment.class).id(copyAssignmentId).safe();
+					assignment.questionKeys.clear();
+					assignment.questionKeys.addAll(copyAssignment.questionKeys);
+					ofy().save().entity(assignment).now();
+					return;	
+				} catch (Exception e) {
+					return;
+				}
+			} else { // Option 2: select questions manually from form
+				try {
+					String[] questionIds = request.getParameterValues("QuestionId");
+					assignment.questionKeys.clear();
+					if (questionIds != null) for (String id : questionIds) assignment.questionKeys.add(Key.create(Question.class,Long.parseLong(id)));
+					ofy().save().entity(assignment).now();	
+					return;
+				} catch (Exception e) { // set assignment questionKeys based on checkbox form submission
+				}
 			}
 		} catch (Exception e) {}
-	}		
-}		
+	}
+}

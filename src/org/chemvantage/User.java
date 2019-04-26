@@ -203,7 +203,8 @@ public class User implements Comparable<User>,Serializable {
 		if (!user.email.isEmpty()) user.verifiedEmail = true; // value supplied by institution
 */		
 		user.setPremium(true);  // all LTI users have premium accounts by default
-		ofy().save().entity(user);
+		user.setLastLogin();
+		ofy().save().entity(user).now();
 		return user;
 	}
 /*

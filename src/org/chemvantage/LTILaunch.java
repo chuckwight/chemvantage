@@ -163,7 +163,7 @@ public class LTILaunch extends HttpServlet {
 				if (lis_person_name_given==null) lis_person_name_given = request.getParameter("lis_person_name_full");
 				if (lis_person_name_given==null) lis_person_name_given = request.getParameter("custom_lis_person_name_full");
 				user.setFirstName(lis_person_name_given);
-				ofy().save().entity(user);
+				ofy().save().entity(user).now();
 			}
 			// end of temporary section
 			
@@ -225,31 +225,37 @@ public class LTILaunch extends HttpServlet {
 			}
 			if (context_title==null) context_title = context_id; // missing course title
 
-			// Provision a new context (group), if necessary and put the user into it
-			Group g = ofy().load().type(Group.class).filter("domain",oauth_consumer_key).filter("context_id",context_id).first().now();	
-			if (g == null) { // create this new group
-				g = new Group("BLTI",context_id,context_title);
-				g.domain = domain.domainName;
-				ofy().save().entity(g).now();
+			// Find the user's group, and if necessary create a new one and put the user in it
+			List<Group> domainGroups= ofy().load().type(Group.class).filter("domain", user.domain).list();
+			Group myGroup = null;
+			for (Group g : domainGroups) 
+				if (g.context_id.contentEquals(context_id)) {
+					myGroup = g;;
+					break;
 			}
-			user.changeGroups(g.id);
+			if (myGroup == null) { // create a new group
+				myGroup = new Group("BLTI",context_id,context_title);
+				myGroup.domain = domain.domainName;
+				ofy().save().entity(myGroup).now();
+			}	
+			user.changeGroups(myGroup.id);
 			
 			// Add user to the approved TA list, if necessary
-			if ( roles!=null && roles.contains("teachingassistant") && g.addTA(userId)) ofy().save().entity(g);
+			if ( roles!=null && roles.contains("teachingassistant") && myGroup.addTA(userId)) ofy().save().entity(myGroup);
 			
 			// update the LIS result outcome service URL, if necessary
-			if (domain.supportsResultService && domain.resultServiceEndpoint!=null && !domain.resultServiceEndpoint.equals(g.lis_outcome_service_url)) {  // update the URL and format as Group properties
-				g.lis_outcome_service_url=domain.resultServiceEndpoint;
-				g.lis_outcome_service_format = domain.resultServiceFormat;
-				g.isUsingLisOutcomeService = true;
-				ofy().save().entity(g).now();
+			if (domain.supportsResultService && domain.resultServiceEndpoint!=null && !domain.resultServiceEndpoint.equals(myGroup.lis_outcome_service_url)) {  // update the URL and format as Group properties
+				myGroup.lis_outcome_service_url=domain.resultServiceEndpoint;
+				myGroup.lis_outcome_service_format = domain.resultServiceFormat;
+				myGroup.isUsingLisOutcomeService = true;
+				ofy().save().entity(myGroup).now();
 			}							
 			// Context info OK
 			
 			if (user.isInstructor()) {
-				if (g.instructorId.equals("unknown")) {  // assign the instructor to this group
-					g.instructorId = user.id;
-					ofy().save().entity(g).now();
+				if (myGroup.instructorId.equals("unknown")) {  // assign the instructor to this group
+					myGroup.instructorId = user.id;
+					ofy().save().entity(myGroup).now();
 				}
 			}
 
@@ -271,15 +277,11 @@ public class LTILaunch extends HttpServlet {
 		 * to the correct assignment.  If the assignment cannot be validated, the user is sent to the 
 		 * resourcePicker page to choose a valid assignmentId and topicId or topicIds.
 		 */
-		String redirectUrl = "";
-		Assignment myAssignment = null;
-		String assignmentType = request.getParameter("AssignmentType");
-		long topicId = 0L;
-		List<Long> topicIds = new ArrayList<Long>();
-
+		
 		// a resource_link_id string is required for every valid LTI launch
 		String resource_link_id = request.getParameter("resource_link_id");
-		
+		Assignment myAssignment = ofy().load().type(Assignment.class).filter("domain",user.domain).filter("resourceLinkId", resource_link_id).first().now();
+
 		// the lis_result_sourcedid is an optional LTI parameter that specifies a context grade book entry point
 		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");		
 		try { // encode the lis_result_sourcedid because it will be appended to the redirectUrl
@@ -287,55 +289,51 @@ public class LTILaunch extends HttpServlet {
 		} catch (Exception e) {
 			lis_result_sourcedid = null;
 		}
-		
-		try { 
-			// try to fond the correct assignment based on the resource_link_id
-			List<Assignment> assignments = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).list();			
-			for (Assignment a : assignments) {  // look for myAssignment having the correct resource_link_id
-				if (resource_link_id.equals(a.resourceLinkId)) {
-					myAssignment = a;
-					break;
-				}
-				if (a.resourceLinkIds != null && a.resourceLinkIds.contains(resource_link_id)) {
-					a.resourceLinkId = resource_link_id;
-					ofy().save().entity(a).now();
-					myAssignment = a;
-					break;
-				}
-			}
-			
-			if (myAssignment==null && "PracticeExam".equals(assignmentType)) { // make a new PracticeExam assignment
-				String[] tIds = request.getParameterValues("TopicIds");
-				if (tIds==null || tIds.length<3) throw new Exception();
-				for (int i=0;i<tIds.length;i++) topicIds.add(Long.parseLong(tIds[i]));
-				myAssignment = new Assignment(user.myGroupId,resource_link_id,topicIds,assignmentType);
-				ofy().save().entity(myAssignment).now();
-			} else if (myAssignment==null && ("Quiz".equals(assignmentType) || "Homework".equals(assignmentType))) { // make a new Quiz or Homework assignment
-				topicId = Long.parseLong(request.getParameter("TopicId"));
-				myAssignment = new Assignment(user.myGroupId,resource_link_id,topicId,assignmentType);
-				ofy().save().entity(myAssignment).now();
-			} else if (myAssignment==null) throw new Exception(); //redirect the user to the resource picker page
-			
-			// at this point myAssignment should be known
-			redirectUrl ="/" + myAssignment.assignmentType + "?AssignmentId=" + myAssignment.id;
-			
-			if (lis_result_sourcedid!=null) redirectUrl += "&lis_result_sourcedid=" + lis_result_sourcedid;
-			
-			// Send a Nonce reference in case the session is lost (no browser support for Cookies)
-			redirectUrl += "&Nonce=" + Nonce.createInstance(user);
-						
-			return redirectUrl;  // normal finish; go directly to the assignment
 
-		} catch (Exception e) {
-			redirectUrl = "/lti?UserRequest=pick&resource_link_id="+resource_link_id;  // send the user to the pickResource page
-			if (assignmentType!=null) redirectUrl += "&AssignmentType=" + assignmentType;
-			if (topicId>0) redirectUrl += "&TopicId=" + topicId;
-			if (lis_result_sourcedid!=null) redirectUrl += "&lis_result_sourcedid=" + lis_result_sourcedid;
+		if (myAssignment == null) { // didn't find it. Look for resource_link_id in the (deprecated) resourceLinkIds list
+			List<Assignment> allAssignments = ofy().load().type(Assignment.class).list();			
+			for (Assignment a : allAssignments) 
+				if (resource_link_id.contentEquals(a.resourceLinkId) || (a.resourceLinkIds != null && a.resourceLinkIds.contains(resource_link_id))) {  // found it
+				myAssignment = a;
+				a.resourceLinkId = resource_link_id;
+				ofy().save().entity(a);
+				break;
+			}
+		}
+		
+		String assignmentType = request.getParameter("AssignmentType");
+		if (myAssignment == null && assignmentType != null) {  // instructor is creating the assignment now
+			long topicId = 0L;
+			List<Long> topicIds = new ArrayList<Long>();
+			try {
+				if ("PracticeExam".equals(assignmentType)) { // make a new PracticeExam assignment
+					String[] tIds = request.getParameterValues("TopicIds");
+					if (tIds==null || tIds.length<3) throw new Exception();
+					for (int i=0;i<tIds.length;i++) topicIds.add(Long.parseLong(tIds[i]));
+					myAssignment = new Assignment(user.myGroupId,user.domain,resource_link_id,topicIds,assignmentType);
+					ofy().save().entity(myAssignment).now();
+				} else if (("Quiz".equals(assignmentType) || "Homework".equals(assignmentType))) { // make a new Quiz or Homework assignment
+					topicId = Long.parseLong(request.getParameter("TopicId"));
+					if (topicId == 0) throw new Exception();
+					myAssignment = new Assignment(user.myGroupId,user.domain,resource_link_id,topicId,assignmentType);
+					ofy().save().entity(myAssignment).now();
+				} else if (myAssignment==null) throw new Exception(); //redirect the user to the resource picker page
+			} catch (Exception e) {}
+		}
+		
+		String redirectUrl = "";
+		if (myAssignment == null) {  // construct a URL to send the user to the assignment picker form
+			redirectUrl = "/lti?UserRequest=pick&resource_link_id="+resource_link_id
+					+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
+					+ (request.getSession().isNew()?"&Nonce=" + Nonce.createInstance(user):"");
+		} else { 	// construct a URL to send the user to the assignment
+			redirectUrl = "/" + myAssignment.assignmentType + "?AssignmentId=" + myAssignment.id
+					+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
+					+ (request.getSession().isNew()?"&Nonce=" + Nonce.createInstance(user):"");
+		}
 			
-			// Send a Nonce reference in case the session is lost (no browser support for Cookies)
-			redirectUrl += "&Nonce=" + Nonce.createInstance(user);
-			return redirectUrl;  // go to pickResourceForm to specify the assignment
-		}			
+		return redirectUrl;  // normal finish; redirects user to the assignment
+
 	}
 	
 	String pickResourceForm(User user,HttpServletRequest request) {
