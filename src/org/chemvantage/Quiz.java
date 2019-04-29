@@ -231,7 +231,7 @@ public class Quiz extends HttpServlet {
 			Date then = new Date(now.getTime()-timeLimit*60000);  // timeLimit minutes ago
 			QuizTransaction qt = ofy().load().type(QuizTransaction.class).filter("userId",user.id).filter("topicId",topic.id).filter("graded",null).filter("downloaded >",then).first().now();
 			if (qt == null || qt.graded != null) {
-				qt = new QuizTransaction(topic.id,topic.title,user.id,now,null,0,assignmentId,0,request.getRemoteAddr());
+				qt = new QuizTransaction(topic.id,topic.title,user.id,now,null,0,assignmentId,0);
 				if (request.getParameter("lis_result_sourcedid")!=null) qt.lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
 				ofy().save().entity(qt).now();  // creates a long id value to use in random number generator
 			}

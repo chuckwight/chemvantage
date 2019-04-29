@@ -41,7 +41,6 @@ import javax.servlet.http.HttpSession;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.cmd.Query;
 
 public class PracticeExam extends HttpServlet {
 	// parameters that determine the properties of the exam program:
@@ -272,12 +271,12 @@ public class PracticeExam extends HttpServlet {
 			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
 			if (lis_result_sourcedid==null) lis_result_sourcedid = request.getParameter("custom_lis_result_sourcedid");
 			
-			Query<PracticeExamTransaction> qpt = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.id).filter("graded",null).filter("downloaded >",oneHourAgo);
+			List<PracticeExamTransaction> qpt = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.id).filter("graded",null).filter("downloaded >",oneHourAgo).list();
 			PracticeExamTransaction pt = null;  // placeholder for recovery of one of the pending exam transactions
 			
-			if (qpt.count()>0) {  // there is at least one pending practice exam
+			if (qpt.size()>0) {  // there is at least one pending practice exam
 				if (a == null) {  // entered by manual topic selection (no assignment)
-					pt = qpt.first().now();  // gets the oldest pending practice exam transaction in the query
+					pt = qpt.get(0);  // gets the first pending practice exam transaction in the list
 					topicIds = pt.topicIds;
 					buf.append("<script language=javascript>"
 							+ "onload=alert('You are resuming a previously downloaded exam.')"

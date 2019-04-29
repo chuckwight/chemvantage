@@ -29,7 +29,6 @@ import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 import com.googlecode.objectify.annotation.Parent;
-import com.googlecode.objectify.cmd.Query;
 
 @Cache @Entity
 public class Score {    // this object represents a best score achieved by a user on a quiz or homework
@@ -45,18 +44,21 @@ public class Score {    // this object represents a best score achieved by a use
 	
 	Score() {
 		lisReportComplete=false;
+		score = 0;
+		maxPossibleScore = 0;
+		numberOfAttempts = 0;
+		mostRecentAttempt = null;
+		lis_result_sourcedid = null;
 	}	
 	
 	public static Score getInstance(String userId,Assignment a) {
 		Score s = new Score();
 		s.assignmentId = a.id;
-		s.owner = Key.create(User.class,userId);
 		s.groupId = a.groupId;
-		s.score = 0;
-		s.numberOfAttempts = 0;
+		s.owner = Key.create(User.class,userId);
 		
 		if (a.assignmentType.equals("Quiz")) {
-			Query<QuizTransaction> quizTransactions = ofy().load().type(QuizTransaction.class).filter("userId",userId).filter("assignmentId",a.id);
+			List<QuizTransaction> quizTransactions = ofy().load().type(QuizTransaction.class).filter("userId",userId).filter("assignmentId",a.id).list();
 			for (QuizTransaction qt : quizTransactions) {
 				s.numberOfAttempts++;  // number of pre-deadline quiz attempts
 				s.score = (qt.score>s.score?qt.score:s.score);  // keep the best (max) score
@@ -64,10 +66,11 @@ public class Score {    // this object represents a best score achieved by a use
 				if (s.mostRecentAttempt==null || qt.downloaded.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far
 					s.mostRecentAttempt = qt.downloaded;
 					s.maxPossibleScore = qt.possibleScore;
-				}				
+					if (qt.lis_result_sourcedid != null && !qt.lis_result_sourcedid.contentEquals(s.lis_result_sourcedid)) s.lis_result_sourcedid = qt.lis_result_sourcedid;
+					}				
 			}
 		} else if (a.assignmentType.equals("Homework")) {
-			Query<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",userId).filter("assignmentId",a.id);
+			List<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",userId).filter("assignmentId",a.id).list();
 			List<Key<Question>> assignmentQuestionKeys = new ArrayList<Key<Question>>();
 			assignmentQuestionKeys.addAll(a.questionKeys);  // clones the assignment List of question keys
 			for (HWTransaction ht : hwTransactions) {				
@@ -77,10 +80,11 @@ public class Score {    // this object represents a best score achieved by a use
 				if (s.mostRecentAttempt == null || ht.graded.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far
 					s.mostRecentAttempt = ht.graded;
 					s.maxPossibleScore = a.questionKeys.size();
+					if (ht.lis_result_sourcedid != null && !ht.lis_result_sourcedid.contentEquals(s.lis_result_sourcedid)) s.lis_result_sourcedid = ht.lis_result_sourcedid;
 				}					
 			}
 		} else if (a.assignmentType.equals("PracticeExam")) {
-			Query<PracticeExamTransaction> practiceExamTransactions = ofy().load().type(PracticeExamTransaction.class).filter("userId",userId);
+			List<PracticeExamTransaction> practiceExamTransactions = ofy().load().type(PracticeExamTransaction.class).filter("userId",userId).list();
 			int score = 0;
 			int possibleScore = 0;
 			for (PracticeExamTransaction pt : practiceExamTransactions) {

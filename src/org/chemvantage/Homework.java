@@ -250,6 +250,8 @@ public class Homework extends HttpServlet {
 			
 			if (hwa != null) { // use hwa.questionIds to move assigned questions to the other list
 				optionalQuestionKeys.removeAll(hwa.questionKeys);
+				int score = 0;
+				
 				buf.append("\nAssigned Exercises<br>");
 				int i = 1;
 				buf.append("<TABLE>");
@@ -269,7 +271,10 @@ public class Homework extends HttpServlet {
 						buf.append("\n<TR VALIGN=TOP><TD>");
 						
 						boolean solved = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("assignmentId",hwa.id).filter("questionId",q.id).filter("score >",0).count() > 0;					
-						if (solved) buf.append("<IMG SRC=/images/checkmark.gif ALT='This problem was solved previously.'>");
+						if (solved) {
+							buf.append("<IMG SRC=/images/checkmark.gif ALT='This problem was solved previously.'>");
+							score++;
+						}
 						
 						buf.append("&nbsp;<a id=" + q.id + " /></TD>"
 								+ "<FORM METHOD=POST ACTION=Homework>"
@@ -287,9 +292,20 @@ public class Homework extends HttpServlet {
 				}
 				buf.append("</TABLE>");
 				if (i == 1) buf.append("(none)<p>");
+				
+				// Check to see if the database has the correct score for this assignment
+				Score s = null;
+				Key<Score> k = Key.create(Key.create(User.class, user.id),Score.class,hwa.id);
+				s = ofy().load().key(k).now();
+				if (score>0 && score != s.score) {
+					s = Score.getInstance(user.id, hwa);
+					ofy().save().entity(s).now();
+					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",hwa.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));
+				}
+
 				if (optionalQuestionKeys.size() > 0) buf.append("\nOptional Exercises<br>");
 			}
-						
+
 			// Print the table of optional problems (the whole set if none are assigned)
 			int i = 1;
 			buf.append("<TABLE>");
@@ -373,7 +389,7 @@ public class Homework extends HttpServlet {
 				buf.append("Please take these few moments to check your work carefully.  You can sometimes find alternate routes to the<br>"
 						+ "same solution, or it may be possible to use your answer to back-calculate the data given in the problem.<p>"
 						+ "Alternatively, you may wish to "
-						+ "<a href=Homework?" + (hwa==null?"TopicId=" + topic.id : "AssignmentId=" + hwa.id) + ">" 
+						+ "<a href=/Homework?" + (hwa==null?"TopicId=" + topic.id : "AssignmentId=" + hwa.id + (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)) + ">" 
 						+ "return to this homework assignment</a> to work on another problem.<p>");
 		
 				buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework>"
@@ -431,7 +447,7 @@ public class Homework extends HttpServlet {
 						.param("PossibleScore", Integer.toString(possibleScore))
 						.param("UserId", user.id));
 
-				ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,0L,studentScore,assignmentId,possibleScore,request.getRequestURI());
+				ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,studentScore,assignmentId,possibleScore);
 				if (lis_result_sourcedid != null) ht.lis_result_sourcedid = lis_result_sourcedid;
 				ofy().save().entity(ht).now();
 				

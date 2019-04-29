@@ -59,11 +59,9 @@ public class TransactionServlet extends HttpServlet {
 						request.getParameter("TopicTitle"),
 						request.getParameter("UserId"),
 						new Date(),  // graded
-						0L,          // responseId (not used for now)
 						Integer.parseInt(request.getParameter("Score")),
 						Long.parseLong(request.getParameter("AssignmentId")),
-						Integer.parseInt(request.getParameter("PossibleScore")),
-						request.getParameter("IPNumber"));
+						Integer.parseInt(request.getParameter("PossibleScore")));
 				ofy().save().entity(ht);
 				long myGroupId = Long.parseLong(request.getParameter("GroupId"));
 				Assignment a = myGroupId>0?ofy().load().type(Assignment.class).filter("groupId",Long.parseLong(request.getParameter("GroupId"))).filter("assignmentType","Homework").filter("topicId",ht.topicId).first().now():null;

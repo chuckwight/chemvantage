@@ -39,21 +39,18 @@ public class HWTransaction implements Serializable {
 			int possibleScore;
 			long responseId;
 			String topicTitle;
-			String IPNumber;
-
+	
     HWTransaction() {}
     
-    HWTransaction(long questionId,long topicId,String topicTitle,String userID,Date graded,long responseId,int score,long assignmentId,int possibleScore,String IPNumber) {
+    HWTransaction(long questionId,long topicId,String topicTitle,String userID,Date graded,int score,long assignmentId,int possibleScore) {
     	this.questionId = questionId;
     	this.topicId = topicId;
     	this.topicTitle = topicTitle;
     	this.userId = userID;
         this.graded = graded;
-        this.responseId = responseId;
         this.score = score;
         this.assignmentId = assignmentId;
         this.possibleScore = possibleScore;
-        this.IPNumber = IPNumber;
     }
 
     public String tableRow() {
