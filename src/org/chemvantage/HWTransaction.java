@@ -37,7 +37,7 @@ public class HWTransaction implements Serializable {
 	@Index	long assignmentId;
 			String lis_result_sourcedid;
 			int possibleScore;
-			long responseId;
+			//long responseId;
 			String topicTitle;
 	
     HWTransaction() {}
