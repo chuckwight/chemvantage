@@ -79,11 +79,10 @@ public class CalculateScores extends HttpServlet {
 				Group group = ofy().load().type(Group.class).id(assignment.groupId).now();
 				group.reviseScores(assignment);
 
-				Date now = new Date();
 				DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 				Topic t = ofy().load().type(Topic.class).id(assignment.topicId).now();
 				StringBuffer buf = new StringBuffer("<h3>" + assignment.assignmentType + " - " + t.title + "</h3>");
-				buf.append(df.format(now));
+				buf.append(df.format(new Date()) + "<p>");
 
 				// make a list of student users, removing instructors, admins and TAs
 				List<User> groupMembers = new ArrayList<User>(ofy().load().type(User.class).ids(group.memberIds).values());
@@ -104,13 +103,14 @@ public class CalculateScores extends HttpServlet {
 						s = u.getScore(assignment);
 						name = u.getFullName();
 						if (name.isEmpty()) name = u.getId();
-						buf.append("<tr><td>" + counter + "</td><td>" + name + "</td<td>" + s.getScore() + "</td><td>" + s.numberOfAttempts + "</td><td>" + df.format(s.mostRecentAttempt + "</td></tr>"));
+						buf.append("<tr><td>" + counter + "</td><td>" + name + "</td><td>" + s.getScore() + "</td><td>" + s.numberOfAttempts + "</td><td>" + (s.mostRecentAttempt==null?"":df.format(s.mostRecentAttempt)) + "</td></tr>");
 					}
 					buf.append("</table>");
 				}
 
 				out.println(Home.header + buf.toString() + Home.footer);
 			} catch (Exception e) {
+				out.println(e.getMessage());
 			}
 		}
 	}

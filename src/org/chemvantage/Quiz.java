@@ -240,11 +240,12 @@ public class Quiz extends HttpServlet {
 
 			try {
 				if (user.isInstructor()) {
-					buf.append("Instructor Only: you may <UL>"
-							+ "<LI><a href=/Groups?UserRequest=AssignQuizQuestions&AssignmentId=" + qa.id + "&Nonce=" + nonce + ">"
+					buf.append("<table style='border: 1px solid black'><tr><td>");
+					buf.append("As the course instructor you may<ul>"
+							+ "<li><a href=/Groups?UserRequest=AssignQuizQuestions&AssignmentId=" + qa.id + (nonce==null?"":"&Nonce=" + nonce) + ">"
 							+ "customize this quiz</a> by selecting/deselecting the available question items"
-							+ "<LI><a href=/CalculateScores?AssignmentId=" + qa.groupId + ">view a table of group scores</a> for this assignment"
-							+ "</UL>");
+							+ "<li>view a deidentified <a href=/CalculateScores?AssignmentId=" + qa.id + ">summary of scores</a> for this assignment"
+							+ "</ul></td></tr></table><p>");
 				} else if (user.isAnonymous()) {
 					buf.append("<h3><font color=red>Anonymous User</font></h3>");
 				}
