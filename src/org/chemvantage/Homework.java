@@ -232,7 +232,7 @@ public class Homework extends HttpServlet {
 			if (user.isInstructor() && myGroup != null) {
 				buf.append("<table style='border: 1px solid black'><tr><td>");
 				buf.append("As the course instructor you may<ul>"
-						+ "<li><a href=/Groups?UserRequest=AssignHomeworkQuestions&GroupId=" + myGroup.id + "&AssignmentId=" + hwa.id + "&Nonce=" + nonce + ">"
+						+ "<li><a href=/Groups?UserRequest=AssignHomeworkQuestions?AssignmentId=" + hwa.id + "&Nonce=" + nonce + ">"
 						+ "customize this homework assignment</a> by selecting/deselecting the available question items."
 						+ "<li>view a deidentified <a href=/CalculateScores?AssignmentId=" + hwa.id + ">summary of scores</a> for this assignment"
 						+ "</ul></td></tr></table><p>");

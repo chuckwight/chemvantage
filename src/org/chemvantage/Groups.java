@@ -54,12 +54,6 @@ public class Groups extends HttpServlet {
 			String nonce = null;
 			if (session.isNew()) nonce = Nonce.createInstance(user);
 			
-			long groupId = 0;
-			try {
-				groupId = Long.parseLong(request.getParameter("GroupId"));
-			} catch (Exception e2) {}
-			Group group = groupId>0?ofy().load().type(Group.class).id(groupId).now():null;
-			
 			// Authorized users only beyond this point:
 			if(!(user.isAdministrator() || user.isInstructor())) response.sendRedirect("/");
 			
@@ -69,9 +63,9 @@ public class Groups extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 						
-			if (userRequest.contentEquals("AssignQuizQuestions")) out.println(selectQuestionsForm(user,group,request,nonce));
-			else if (userRequest.contentEquals("AssignHomeworkQuestions")) out.println(selectQuestionsForm(user,group,request,nonce));
-			else if (userRequest.equals("AssignExamQuestions")) out.println(selectExamQuestionsForm(user,group,request,nonce));
+			if (userRequest.contentEquals("AssignQuizQuestions")) out.println(selectQuestionsForm(user,request,nonce));
+			else if (userRequest.contentEquals("AssignHomeworkQuestions")) out.println(selectQuestionsForm(user,request,nonce));
+			else if (userRequest.equals("AssignExamQuestions")) out.println(selectExamQuestionsForm(user,request,nonce));
 		} catch (Exception e) {
 			response.getWriter().println(e.toString());
 		}
@@ -118,11 +112,12 @@ public class Groups extends HttpServlet {
 		}
 	}
 
-	String selectQuestionsForm(User user,Group group,HttpServletRequest request,String nonce) {
+	String selectQuestionsForm(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
 			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).now();
+			Group group = ofy().load().type(Group.class).id(assignment.groupId).safe();
 			String assignmentType = assignment.assignmentType;
 			Topic topic = ofy().load().type(Topic.class).id(assignment.topicId).safe();
 			
@@ -218,11 +213,12 @@ public class Groups extends HttpServlet {
 		return buf.toString();
 	}
 
-	String selectExamQuestionsForm(User user,Group group,HttpServletRequest request,String nonce) {
+	String selectExamQuestionsForm(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer("<h3>Select Practice Exam Questions</h3>");
 		try {
 			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
 			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
+			Group group = ofy().load().type(Group.class).id(assignment.groupId).safe();
 			Map<Long,Topic>topics = ofy().load().type(Topic.class).ids(assignment.topicIds);
 			buf.append("<b>Subject: " + subject.title + "</b><br/>"
 					+ "Group: " + group.description + "<br/>"

@@ -97,12 +97,12 @@ public class CalculateScores extends HttpServlet {
 				else { 
 					buf.append("In most cases ChemVantage does not store names or other personal identifiable information (PII), so scores are listed only by the user ID supplied by your Learning Management System:<p>");
 					// print a table of scores for this group assignment
-					buf.append("<table><tr><th>#</th><th>Name/UserID</th><th>Score</th><th># attempts</th><th>Most Recent Attempt</th></tr>");
+					buf.append("<table cellspacing=0 border=1><tr><th>#</th><th>Name/UserID</th><th>Score</th><th># attempts</th><th>Most Recent Attempt</th></tr>");
 					for (User u : groupMembers) {
 						counter++;
 						s = u.getScore(assignment);
 						name = u.getFullName();
-						if (name.isEmpty()) name = u.getId();
+						if (name.isEmpty()) name = u.getId().substring(group.domain.length()+1);
 						buf.append("<tr><td>" + counter + "</td><td>" + name + "</td><td>" + s.getScore() + "</td><td>" + s.numberOfAttempts + "</td><td>" + (s.mostRecentAttempt==null?"":df.format(s.mostRecentAttempt)) + "</td></tr>");
 					}
 					buf.append("</table>");

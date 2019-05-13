@@ -314,8 +314,6 @@ public class PracticeExam extends HttpServlet {
 				questionKeys_15pt.removeAll(remove); remove.clear();
 			}
 
-			Group myGroup = user.myGroupId<=0?null:ofy().load().type(Group.class).id(user.myGroupId).safe();
-			
 			buf.append("\n<h2>" + subject.title + " Exam</h2>");
 
 			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
@@ -329,8 +327,10 @@ public class PracticeExam extends HttpServlet {
 			}
 			buf.append("</OL>");
 
-			if (user.isInstructor()) buf.append("Instructor: you may <a href=/Groups?UserRequest=AssignExamQuestions&GroupId=" + myGroup.id + "&AssignmentId=" + a.id + "&Nonce=" + nonce + ">"
-					+ "customize this practice exam</a> by selecting/deselecting the available question items.<p>");
+			if (user.isInstructor()) buf.append("<table style='border: 1px solid'><tr><td>"
+					+ "Instructor: you may <a href=/Groups?UserRequest=AssignExamQuestions&AssignmentId=" + a.id + "&Nonce=" + nonce + ">"
+					+ "customize this practice exam</a> by selecting/deselecting the available question items."
+					+ "</td></tr></table><p>");
 			
 			buf.append("This exam must be submitted for grading within " + timeLimit + " minutes of when it is first downloaded.");
 
