@@ -152,16 +152,21 @@ public class Group implements Serializable {
     	return topicIds.isEmpty()?false:true;
     }
 
-    void reviseScores(Assignment assignment) {
+    boolean reviseScores(Assignment assignment) {
+    	boolean changed = false;
     	for (String uId : this.memberIds) {
     		Score revised = Score.getInstance(uId, assignment);
     		try {
     			Score previous = ofy().load().key(Key.create(Key.create(User.class,uId),Score.class,assignment.id)).safe();
-    			if (!revised.equals(previous)) ofy().save().entity(revised).now();
+    			if (!revised.equals(previous)) {
+    				ofy().save().entity(revised).now();
+    				changed = true;
+    			}
     		} catch (Exception e) {
     			ofy().save().entity(revised).now();
     		}
     	}
+    	return changed;
     }
 
     void deleteScores() {
