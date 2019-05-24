@@ -49,7 +49,7 @@ public class CalculateScores extends HttpServlet {
 	throws ServletException, IOException {
 		
 		User user = User.getInstance(request.getSession());
-		if (!(user.isInstructor() || user.isAdministrator() || user.isChemVantageAdmin())) {
+		if (user==null || !(user.isInstructor() || user.isAdministrator() || user.isChemVantageAdmin())) {
 			response.sendRedirect("/Logout");
 		}
 		
@@ -101,7 +101,8 @@ public class CalculateScores extends HttpServlet {
 					s = u.getScore(assignment);
 					name = u.getFullName();
 					if (name.isEmpty()) name = u.getId().substring(group.domain.length()+1);
-					buf.append("<tr><td>" + name + "</td><td>" + s.getScore() + "</td><td>" + s.numberOfAttempts + "</td><td>" + (s.mostRecentAttempt==null?"":df.format(s.mostRecentAttempt)) + "</td></tr>");
+					double pct = s.score*100./s.maxPossibleScore;
+					buf.append("<tr><td>" + name + "</td><td>" + String.format("%.0f", pct) + "%</td><td>" + s.numberOfAttempts + "</td><td>" + (s.mostRecentAttempt==null?"":df.format(s.mostRecentAttempt)) + "</td></tr>");
 				}
 				buf.append("</table><br>" + counter + " student" + (counter!=1?"s":""));
 			}
