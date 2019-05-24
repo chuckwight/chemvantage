@@ -281,7 +281,21 @@ public class LTILaunch extends HttpServlet {
 		// a resource_link_id string is required for every valid LTI launch
 		String resource_link_id = request.getParameter("resource_link_id");
 		Assignment myAssignment = ofy().load().type(Assignment.class).filter("domain",user.domain).filter("resourceLinkId", resource_link_id).first().now();
-
+		// the following section is temporary until database indexes are built
+		if (myAssignment==null) {
+			myAssignment = ofy().load().type(Assignment.class).filter("resourceLinkId", resource_link_id).first().now();
+			if (myAssignment==null) {
+				List<Assignment> groupAssignments = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).list();
+				for (Assignment a : groupAssignments) {
+					if (a.resourceLinkIds.contains(resource_link_id)) {
+						myAssignment = a;
+						a.resourceLinkId = resource_link_id;
+						ofy().save().entity(a).now();
+					}
+				}
+			}
+		}
+		
 		// the lis_result_sourcedid is an optional LTI parameter that specifies a context grade book entry point
 		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");		
 		try { // encode the lis_result_sourcedid because it will be appended to the redirectUrl

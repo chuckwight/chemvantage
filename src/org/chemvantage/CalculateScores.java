@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
+import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -30,6 +31,9 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import com.google.appengine.api.taskqueue.Queue;
+import com.google.appengine.api.taskqueue.QueueFactory;
 
 public class CalculateScores extends HttpServlet {
 	private static final long serialVersionUID = 137L;
@@ -96,9 +100,11 @@ public class CalculateScores extends HttpServlet {
 						+ "click here to recalculate all student scores for this assignment</a> (this may take a few minutes).<p>");
 				// print a table of scores for this group assignment
 				buf.append("<table cellspacing=0 border=1><tr><th>Name/UserID</th><th>Score</th><th># attempts</th><th>Most Recent Attempt</th></tr>");
+				Queue queue = QueueFactory.getDefaultQueue();
 				for (User u : groupMembers) {
 					counter++;
 					s = u.getScore(assignment);
+					if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(assignment.id)).param("UserId",u.id));
 					name = u.getFullName();
 					if (name.isEmpty()) name = u.getId().substring(group.domain.length()+1);
 					double pct = s.score*100./s.maxPossibleScore;
