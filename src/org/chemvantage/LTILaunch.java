@@ -261,10 +261,9 @@ public class LTILaunch extends HttpServlet {
 
 			// Use the resourceUrlFinder method to discover the URL for the assignment associated with this link
 			String redirectUrl = resourceUrlFinder(user,request);
-			
 			response.sendRedirect(redirectUrl);
 		} catch (Exception e) {
-			doError(request, response,"LTI Launch failed.", null, null);
+			doError(request, response,"LTI Launch failed. " + e.getMessage(), null, null);
 		}
 	}		
 	
@@ -277,77 +276,71 @@ public class LTILaunch extends HttpServlet {
 		 * to the correct assignment.  If the assignment cannot be validated, the user is sent to the 
 		 * resourcePicker page to choose a valid assignmentId and topicId or topicIds.
 		 */
-		
+
 		// a resource_link_id string is required for every valid LTI launch
-		String resource_link_id = request.getParameter("resource_link_id");
-		Assignment myAssignment = ofy().load().type(Assignment.class).filter("domain",user.domain).filter("resourceLinkId", resource_link_id).first().now();
-		// the following section is temporary until database indexes are built
-		if (myAssignment==null) {
-			myAssignment = ofy().load().type(Assignment.class).filter("resourceLinkId", resource_link_id).first().now();
-			if (myAssignment==null) {
-				List<Assignment> groupAssignments = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).list();
-				for (Assignment a : groupAssignments) {
-					if (a.resourceLinkIds.contains(resource_link_id)) {
-						myAssignment = a;
-						a.resourceLinkId = resource_link_id;
-						ofy().save().entity(a).now();
-					}
+		try {
+			String resource_link_id = request.getParameter("resource_link_id");
+
+			// the lis_result_sourcedid is an optional LTI parameter that specifies a context grade book entry point
+			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");		
+			try { // encode the lis_result_sourcedid because it will be appended to the redirectUrl
+				lis_result_sourcedid = URLEncoder.encode(lis_result_sourcedid,"UTF-8");
+			} catch (Exception e) {
+				lis_result_sourcedid = null;
+			}
+			
+			Assignment myAssignment = null;
+
+			try {
+				myAssignment = ofy().load().type(Assignment.class).filter("domain",user.domain).filter("resourceLinkId", resource_link_id).first().now();			
+			} catch (Exception e) {
+				if (myAssignment == null) { // didn't find it. Look for resource_link_id in the (deprecated) resourceLinkIds list
+					List<Assignment> allAssignments = ofy().load().type(Assignment.class).list();			
+					for (Assignment a : allAssignments) 
+						if (resource_link_id.contentEquals(a.resourceLinkId) || (a.resourceLinkIds != null && a.resourceLinkIds.contains(resource_link_id))) {  // found it
+							myAssignment = a;
+							a.resourceLinkId = resource_link_id;
+							ofy().save().entity(a);
+							break;
+						}
 				}
 			}
-		}
-		
-		// the lis_result_sourcedid is an optional LTI parameter that specifies a context grade book entry point
-		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");		
-		try { // encode the lis_result_sourcedid because it will be appended to the redirectUrl
-			lis_result_sourcedid = URLEncoder.encode(lis_result_sourcedid,"UTF-8");
-		} catch (Exception e) {
-			lis_result_sourcedid = null;
-		}
 
-		if (myAssignment == null) { // didn't find it. Look for resource_link_id in the (deprecated) resourceLinkIds list
-			List<Assignment> allAssignments = ofy().load().type(Assignment.class).list();			
-			for (Assignment a : allAssignments) 
-				if (resource_link_id.contentEquals(a.resourceLinkId) || (a.resourceLinkIds != null && a.resourceLinkIds.contains(resource_link_id))) {  // found it
-				myAssignment = a;
-				a.resourceLinkId = resource_link_id;
-				ofy().save().entity(a);
-				break;
+			String assignmentType = request.getParameter("AssignmentType");
+			if (myAssignment == null && assignmentType != null) {  // instructor is creating the assignment now
+				long topicId = 0L;
+				List<Long> topicIds = new ArrayList<Long>();
+				try {
+					if ("PracticeExam".equals(assignmentType)) { // make a new PracticeExam assignment
+						String[] tIds = request.getParameterValues("TopicIds");
+						if (tIds==null || tIds.length<3) throw new Exception();
+						for (int i=0;i<tIds.length;i++) topicIds.add(Long.parseLong(tIds[i]));
+						myAssignment = new Assignment(user.myGroupId,user.domain,resource_link_id,topicIds,assignmentType);
+						ofy().save().entity(myAssignment).now();
+					} else if (("Quiz".equals(assignmentType) || "Homework".equals(assignmentType))) { // make a new Quiz or Homework assignment
+						topicId = Long.parseLong(request.getParameter("TopicId"));
+						if (topicId == 0) throw new Exception();
+						myAssignment = new Assignment(user.myGroupId,user.domain,resource_link_id,topicId,assignmentType);
+						ofy().save().entity(myAssignment).now();
+					} else if (myAssignment==null) throw new Exception(); //redirect the user to the resource picker page
+				} catch (Exception e) {}
 			}
-		}
-		
-		String assignmentType = request.getParameter("AssignmentType");
-		if (myAssignment == null && assignmentType != null) {  // instructor is creating the assignment now
-			long topicId = 0L;
-			List<Long> topicIds = new ArrayList<Long>();
-			try {
-				if ("PracticeExam".equals(assignmentType)) { // make a new PracticeExam assignment
-					String[] tIds = request.getParameterValues("TopicIds");
-					if (tIds==null || tIds.length<3) throw new Exception();
-					for (int i=0;i<tIds.length;i++) topicIds.add(Long.parseLong(tIds[i]));
-					myAssignment = new Assignment(user.myGroupId,user.domain,resource_link_id,topicIds,assignmentType);
-					ofy().save().entity(myAssignment).now();
-				} else if (("Quiz".equals(assignmentType) || "Homework".equals(assignmentType))) { // make a new Quiz or Homework assignment
-					topicId = Long.parseLong(request.getParameter("TopicId"));
-					if (topicId == 0) throw new Exception();
-					myAssignment = new Assignment(user.myGroupId,user.domain,resource_link_id,topicId,assignmentType);
-					ofy().save().entity(myAssignment).now();
-				} else if (myAssignment==null) throw new Exception(); //redirect the user to the resource picker page
-			} catch (Exception e) {}
-		}
-		
-		String redirectUrl = "";
-		if (myAssignment == null) {  // construct a URL to send the user to the assignment picker form
-			redirectUrl = "/lti?UserRequest=pick&resource_link_id="+resource_link_id
-					+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
-					+ (request.getSession().isNew()?"&Nonce=" + Nonce.createInstance(user):"");
-		} else { 	// construct a URL to send the user to the assignment
-			redirectUrl = "/" + myAssignment.assignmentType + "?AssignmentId=" + myAssignment.id
-					+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
-					+ (request.getSession().isNew()?"&Nonce=" + Nonce.createInstance(user):"");
-		}
-			
-		return redirectUrl;  // normal finish; redirects user to the assignment
 
+			String redirectUrl = "";
+			if (myAssignment == null) {  // construct a URL to send the user to the assignment picker form
+				redirectUrl = "/lti?UserRequest=pick&resource_link_id="+resource_link_id
+						+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
+						+ (request.getSession().isNew()?"&Nonce=" + Nonce.createInstance(user):"");
+			} else { 	// construct a URL to send the user to the assignment
+				redirectUrl = "/" + myAssignment.assignmentType + "?AssignmentId=" + myAssignment.id
+						+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
+						+ (request.getSession().isNew()?"&Nonce=" + Nonce.createInstance(user):"");
+			}
+
+			return redirectUrl;  // normal finish; redirects user to the assignment
+		} catch (Exception e) {
+			return e.toString();
+		}
 	}
 	
 	String pickResourceForm(User user,HttpServletRequest request) {
