@@ -277,32 +277,23 @@ public class LTILaunch extends HttpServlet {
 		 * resourcePicker page to choose a valid assignmentId and topicId or topicIds.
 		 */
 
-		// a resource_link_id string is required for every valid LTI launch
 		try {
+			// a resource_link_id string is required for every valid LTI launch
 			String resource_link_id = request.getParameter("resource_link_id");
 
-			// the lis_result_sourcedid is an optional LTI parameter that specifies a context grade book entry point
-			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");		
-			try { // encode the lis_result_sourcedid because it will be appended to the redirectUrl
-				lis_result_sourcedid = URLEncoder.encode(lis_result_sourcedid,"UTF-8");
-			} catch (Exception e) {
-				lis_result_sourcedid = null;
-			}
-			
 			Assignment myAssignment = null;
-
 			try {
 				myAssignment = ofy().load().type(Assignment.class).filter("domain",user.domain).filter("resourceLinkId", resource_link_id).first().now();			
 			} catch (Exception e) {
-				if (myAssignment == null) { // didn't find it. Look for resource_link_id in the (deprecated) resourceLinkIds list
-					List<Assignment> allAssignments = ofy().load().type(Assignment.class).list();			
-					for (Assignment a : allAssignments) 
-						if (resource_link_id.contentEquals(a.resourceLinkId) || (a.resourceLinkIds != null && a.resourceLinkIds.contains(resource_link_id))) {  // found it
-							myAssignment = a;
-							a.resourceLinkId = resource_link_id;
-							ofy().save().entity(a);
-							break;
-						}
+				// didn't find it. Look for resource_link_id in the (deprecated) resourceLinkIds list
+				List<Assignment> allAssignments = ofy().load().type(Assignment.class).list();			
+				for (Assignment a : allAssignments) {
+					if (resource_link_id.contentEquals(a.resourceLinkId) || (a.resourceLinkIds != null && a.resourceLinkIds.contains(resource_link_id))) {  // found it
+						myAssignment = a;
+						a.resourceLinkId = resource_link_id;
+						ofy().save().entity(a);
+						break;
+					}
 				}
 			}
 
@@ -322,11 +313,19 @@ public class LTILaunch extends HttpServlet {
 						if (topicId == 0) throw new Exception();
 						myAssignment = new Assignment(user.myGroupId,user.domain,resource_link_id,topicId,assignmentType);
 						ofy().save().entity(myAssignment).now();
-					} else if (myAssignment==null) throw new Exception(); //redirect the user to the resource picker page
+					}
 				} catch (Exception e) {}
 			}
 
-			String redirectUrl = "";
+			// the lis_result_sourcedid is an optional LTI parameter that specifies a context grade book entry point
+			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");		
+			try { // encode the lis_result_sourcedid because it will be appended to the redirectUrl
+				lis_result_sourcedid = URLEncoder.encode(lis_result_sourcedid,"UTF-8");
+			} catch (Exception e) {
+				lis_result_sourcedid = null;
+			}
+
+			String redirectUrl = "";			
 			if (myAssignment == null) {  // construct a URL to send the user to the assignment picker form
 				redirectUrl = "/lti?UserRequest=pick&resource_link_id="+resource_link_id
 						+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
@@ -339,7 +338,7 @@ public class LTILaunch extends HttpServlet {
 
 			return redirectUrl;  // normal finish; redirects user to the assignment
 		} catch (Exception e) {
-			return e.toString();
+			return "";
 		}
 	}
 	
@@ -347,12 +346,10 @@ public class LTILaunch extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		try {
 			String resource_link_id = request.getParameter("resource_link_id"); 
-			if (resource_link_id == null) resource_link_id = request.getParameter("custom_resource_link_id");
-			if (resource_link_id == null) return "/Home";  // a resource_link_id value is required for every LTI launch
+			if (resource_link_id == null) return "/Logout";  // a resource_link_id value is required for every LTI launch
 			
 			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
-			if (lis_result_sourcedid==null) lis_result_sourcedid = request.getParameter("custom_lis_result_sourcedid");
-			
+			// construct a URL to send the user to the assignment picker form
 			String assignmentType = request.getParameter("AssignmentType");
 			if (assignmentType==null) assignmentType = "";  // must be a valid String object
 			String tId = request.getParameter("TopicId");
