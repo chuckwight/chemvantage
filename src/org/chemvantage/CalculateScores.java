@@ -85,20 +85,21 @@ public class CalculateScores extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		try {
-			if ("quiz".contentEquals(a.assignmentType)) {
+			if ("Quiz".contentEquals(a.assignmentType)) {
 				List<QuizTransaction> quizTransactions = ofy().load().type(QuizTransaction.class).filter("topicId",a.topicId).filter("userId",student.id).order("downloaded").list();
 				if (quizTransactions.size()==0) return "This user has no transactions for this assignment in the database.";
 				// construct a table of quiz transactions for this user on this topic
 				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
 				buf.append("<h3>Complete list of quiz transactions on " + t.title + " for user " + student.id + "</h3>");
-				buf.append("<table><th>Downloaded</th><th>Score</th>");
+				buf.append("<table cellspacing=0 border=1><tr><th>Downloaded</th><th>Score</th></tr>");
 				for (QuizTransaction qt : quizTransactions) {
-					buf.append("<td>" + df.format(qt.downloaded) + "</td><td align=center>" + (qt.graded==null?"-":qt.score*100./qt.possibleScore + "%") + "</td>");
+					buf.append("<tr><td>" + df.format(qt.downloaded) + "</td><td align=center>" + (qt.graded==null?"-":qt.score*100./qt.possibleScore + "%") + "</td></tr>");
 				}
-				buf.append("</table>");
+				buf.append("</table><p>");
 				buf.append("All times are given in Coordinated Universal Time (UTC). If the score is missing, it means that the quiz was downloaded but not submitted for grading within the 15 minute time limit.");
 			}
 		} catch (Exception e) {
+			buf.append(e.toString());
 		}
 		return buf.toString();	
 	}
@@ -133,7 +134,7 @@ public class CalculateScores extends HttpServlet {
 						+ " transactions, or <a href=/CalculateScores?UserRequest=Recalculate&AssignmentId=" + a.id + ">"
 						+ "click here to recalculate all student scores for this assignment</a> (this may take a few minutes).<p>");
 				// print a table of scores for this group assignment
-				buf.append("<table cellspacing=0 border=1><tr><th>Name/UserID</th><th>Score</th><th># attempts</th><th>Most Recent Attempt</th></tr>");
+				buf.append("<table cellspacing=0 border=1><tr><th>Name/UserID</th><th>Score</th><th>Attempts</th><th>Most Recent Attempt</th></tr>");
 				Queue queue = QueueFactory.getDefaultQueue();
 				for (User u : groupMembers) {
 					counter++;
@@ -142,7 +143,7 @@ public class CalculateScores extends HttpServlet {
 					name = u.getFullName();
 					if (name.isEmpty()) name = u.getId().substring(group.domain.length()+1);
 					double pct = s.score*100./s.maxPossibleScore;
-					buf.append("<tr><td><a href=/CalculateScores?UserRequest=ViewTransactions&AssignmentId=" + a.groupId + "&UserId=" + u.id + ">" + name + "</a></td><td>" + String.format("%.0f", pct) + "%</td><td>" + s.numberOfAttempts + "</td><td>" + (s.mostRecentAttempt==null?"":df.format(s.mostRecentAttempt)) + "</td></tr>");
+					buf.append("<tr><td><a href=/CalculateScores?UserRequest=ViewTransactions&AssignmentId=" + a.id + "&UserId=" + u.id + ">" + name + "</a></td><td align=center>" + (s.numberOfAttempts>0?String.format("%.0f", pct) + "%":"-") + "</td><td align=center>" + s.numberOfAttempts + "</td><td>" + (s.mostRecentAttempt==null?"":df.format(s.mostRecentAttempt)) + "</td></tr>");
 				}
 				buf.append("</table><br>" + counter + " student" + (counter!=1?"s":""));
 			}

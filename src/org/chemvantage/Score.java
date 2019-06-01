@@ -107,7 +107,7 @@ public class Score {    // this object represents a best score achieved by a use
 	}
 		
 	public String getScore() {
-		return numberOfAttempts>0?Integer.toString(score):"";
+		return numberOfAttempts>0?Integer.toString(score):"-";
 	}
 	
 	public boolean needsLisReporting() {
