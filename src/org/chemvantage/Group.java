@@ -23,7 +23,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.TimeZone;
 
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Cache;
@@ -36,26 +35,26 @@ import com.googlecode.objectify.cmd.Query;
 public class Group implements Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id Long id;
-	@Index String instructorId;
-	@Index String context_id;
-	@Index String domain;
-			 String description;
-			 String timeZone;
-			 Date created;
-			 Date nextDeadline;
-			 boolean sendRescueMessages;
-			 int rescueThresholdScore = 50;
-			 String defaultRescueSubject;
-			 String defaultRescueMessage;
-			 String lis_outcome_service_url;
-			 String lis_outcome_service_format;
-			 boolean isUsingLisOutcomeService;
-			 List<String> rescueCcIds = new ArrayList<String>();
-			 List<String> memberIds = new ArrayList<String>();
-			 List<String> tAIds = new ArrayList<String>();
-			 List<Long> topicIds = new ArrayList<Long>();
-			 List<Long> quizAssignmentIds = new ArrayList<Long>();
-			 List<Long> hwAssignmentIds = new ArrayList<Long>();
+	@Index 	String instructorId;
+	@Index 	String domain;
+			String context_id;
+			String description;	
+			//String timeZone;
+			Date created;
+			Date nextDeadline;
+			boolean sendRescueMessages;
+			int rescueThresholdScore = 50;
+			String defaultRescueSubject;
+			String defaultRescueMessage;
+			String lis_outcome_service_url;
+			String lis_outcome_service_format;
+			boolean isUsingLisOutcomeService;
+			List<String> rescueCcIds = new ArrayList<String>();
+			List<String> memberIds = new ArrayList<String>();
+			List<String> tAIds = new ArrayList<String>();
+			List<Long> topicIds = new ArrayList<Long>();
+			List<Long> quizAssignmentIds = new ArrayList<Long>();
+			List<Long> hwAssignmentIds = new ArrayList<Long>();
 
     Group() {}
     
@@ -63,7 +62,6 @@ public class Group implements Serializable {
     	this.created = new Date();
         this.instructorId = instructorId;
         this.description = description;
-        this.timeZone = TimeZone.getDefault().getID();
     }
 
     Group(String type,String context_id,String description) {
@@ -71,7 +69,6 @@ public class Group implements Serializable {
     		this.created = new Date();
     		this.context_id = context_id;
     		this.description = description;
-    		this.timeZone = TimeZone.getDefault().getID();
     		this.instructorId = "unknown";
     	}
     }
@@ -100,14 +97,6 @@ public class Group implements Serializable {
     	}
     }
 
-    public TimeZone getTimeZone() {
-        try {
-        	return TimeZone.getTimeZone(timeZone);
-        } catch (Exception e) {
-        	return TimeZone.getDefault();
-        }
-    }
- 
     public boolean isMember(String id) {
     	return memberIds.contains(id);
     }
@@ -127,21 +116,6 @@ public class Group implements Serializable {
     	this.tAIds.remove(userId);
     }
     
-    public void setNextDeadline() {
-    	this.nextDeadline = null;
-    	try {
-    		Query<Assignment> assignments = ofy().load().type(Assignment.class).filter("groupId",this.id).filter("deadline >",new Date());
-    		for (Assignment a : assignments) if (this.nextDeadline == null || a.getDeadline().before(nextDeadline)) this.nextDeadline = a.getDeadline();
-    		ofy().save().entity(this).now();
-    	} catch (Exception e) {}
-    }
-    
-    public Date getNextDeadline() {
-    	setNextDeadline();
-    	if (isUsingLisOutcomeService) return null;  // don't report deadline to UserInfo box; use the LMS instead
-    	return this.nextDeadline;
-    }
-
     public Long getAssignmentId(String assignmentType,long topicId) {
     	if (topicIds.indexOf(topicId)<0) return 0L;
     	if (assignmentType.equals("Quiz")) return this.quizAssignmentIds.get(topicIds.indexOf(topicId));
@@ -178,16 +152,21 @@ public class Group implements Serializable {
     	return topicIds.isEmpty()?false:true;
     }
 
-    void reviseScores(Assignment assignment) {
+    boolean reviseScores(Assignment assignment) {
+    	boolean changed = false;
     	for (String uId : this.memberIds) {
     		Score revised = Score.getInstance(uId, assignment);
     		try {
     			Score previous = ofy().load().key(Key.create(Key.create(User.class,uId),Score.class,assignment.id)).safe();
-    			if (!revised.equals(previous)) ofy().save().entity(revised).now();
+    			if (!revised.equals(previous)) {
+    				ofy().save().entity(revised).now();
+    				changed = true;
+    			}
     		} catch (Exception e) {
     			ofy().save().entity(revised).now();
     		}
     	}
+    	return changed;
     }
 
     void deleteScores() {

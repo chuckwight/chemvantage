@@ -31,7 +31,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.TimeZone;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -210,54 +209,51 @@ public class Quiz extends HttpServlet {
 	String printQuiz(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
-			long topicId = 0;
-			try {
-				topicId = Long.parseLong(request.getParameter("TopicId"));
-			} catch (Exception e2) {
-				return "<h2>No Quiz Selected</h2>You must return to the <a href=Home>Home Page</a> "
-				+ "and select a topic for this quiz using the drop-down box.";
+			Assignment qa = null;
+			long topicId = 0L;
+			long assignmentId = 0L;
+			try {  // normal process for LTI assignment launch
+				assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+				qa = ofy().load().type(Assignment.class).id(assignmentId).now();
+				topicId = qa.topicId;
+			} catch (Exception e) {  // alternative process for anonymous user
+				try {
+					topicId = Long.parseLong(request.getParameter("TopicId"));
+				} catch (Exception e2) {
+					return "<h2>No Quiz Selected</h2>You must return to the <a href=/>Home Page</a> "
+							+ "and select a topic for this quiz using the drop-down box.";
+				}
 			}
 			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
-			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			Group myGroup = user.myGroupId>0?ofy().load().type(Group.class).id(user.myGroupId).now():null;
-			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
-			df.setTimeZone(tz);
 			Date now = new Date();
-
-			Assignment a = null;
-			try {
-				a = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",topicId).first().safe();
-			//	if (user.isInstructor() && request.getParameter("ShowQuiz")==null) return instructorPage(request,a.id,nonce);
-			} catch (Exception e) {}
 
 			// Check to see if this user has any pending quizzes on this topic:
 			Date then = new Date(now.getTime()-timeLimit*60000);  // timeLimit minutes ago
 			QuizTransaction qt = ofy().load().type(QuizTransaction.class).filter("userId",user.id).filter("topicId",topic.id).filter("graded",null).filter("downloaded >",then).first().now();
 			if (qt == null || qt.graded != null) {
-				qt = new QuizTransaction(topic.id,topic.title,user.id,now,null,0,0,request.getRemoteAddr());
-				if (request.getParameter("lis_result_sourcedid")!=null) qt.lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
+				qt = new QuizTransaction(topic.id,topic.title,user.id,now,null,0,assignmentId,0,request.getParameter("lis_result_sourcedid"));
 				ofy().save().entity(qt).now();  // creates a long id value to use in random number generator
 			}
 			int secondsRemaining = (int) (timeLimit*60 - (now.getTime() - qt.downloaded.getTime())/1000);
-			
+
 			buf.append("\n<h2>Quiz - " + topic.title + " (" + subject.title + ")</h2>");
-			
-			if (user.isInstructor()) {
-				buf.append("Instructor: you may <a href=/Groups?UserRequest=AssignQuizQuestions&GroupId=" + myGroup.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + ">"
-						+ "customize this quiz</a> by selecting/deselecting the available question items.<p>");
-			} else if (user.isAnonymous()) {
-				buf.append("<h3><font color=red>Anonymous User</font></h3>");
-			}
-			
+
+			try {
+				if (user.isInstructor()) {
+					buf.append("<table style='border: 1px solid black'><tr><td>");
+					buf.append("As the course instructor you may<ul>"
+							+ "<li><a href=/Groups?UserRequest=AssignQuizQuestions&AssignmentId=" + qa.id + (nonce==null?"":"&Nonce=" + nonce) + ">"
+							+ "customize this quiz</a> by selecting/deselecting the available question items"
+							+ "<li>view a deidentified <a href=/CalculateScores?AssignmentId=" + qa.id + ">summary of scores</a> for this assignment"
+							+ "</ul></td></tr></table><p>");
+				} else if (user.isAnonymous()) {
+					buf.append("<h3><font color=red>Anonymous User</font></h3>");
+				}
+			} catch (Exception e) { buf.append(e.getMessage()); }
+
 			buf.append("\n<FORM NAME=Quiz METHOD=POST ACTION=Quiz onSubmit=\"javascript: return confirmSubmission()\">");
 			if (nonce!=null) buf.append("<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>");
-/*			
-			// Gather profile information if needed; otherwise just print the user's name.
-			if (user.needsFirstName()) buf.append("First name: <input type=text name=FirstName><br/>"); else buf.append("<b>" + user.getFirstName() + "</b><br/>");
-			if (user.needsEmail()) buf.append("Email: <input type=text name=Email><br>");
-			
-			buf.append(df.format(qt.downloaded) + "<p>"); // Print the date/time the quiz was first downloaded (may be up to timeLimit minutes ago)
-*/
+			if (qa!=null) buf.append("<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + qa.id + "'>");
 			if (!user.isAnonymous()) {
 				buf.append("\nQuiz Rules<OL>");
 				buf.append("\n<LI>Each quiz must be completed within " + timeLimit + " minutes of the time when it is first downloaded.</LI>");
@@ -266,17 +262,17 @@ public class Quiz extends HttpServlet {
 				buf.append("</OL>");
 			}
 			buf.append("<div id='timer0' style='color: red'></div><div id=ctrl0 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
-					
+
 			buf.append("\n<input type=submit value='Grade This Quiz'>");
 
 			// create a set of available questionIds either from the group assignment or from the datastore
 			List<Key<Question>> questionKeys = null;
 			try {  // check for assigned questions
-				questionKeys = a.questionKeys;
+				questionKeys = qa.questionKeys;
 			} catch (Exception e) {  // no assignment exists
 				questionKeys = ofy().load().type(Question.class).filter("topicId", topicId).filter("assignmentType","Quiz").filter("isActive",true).keys().list();
 			}
-			
+
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
 			Random rand = new Random();  // create random number generator to select quiz questions
 			rand.setSeed(qt.id);  // random number generator seeded with QuizTransaction id value
@@ -304,18 +300,18 @@ public class Quiz extends HttpServlet {
 				long seed = Math.abs(qt.id - q.id);
 				if (seed==-1) seed--;  // -1 is a special value for randomly seeded Random generator; avoid this (unlikely) situation
 				q.setParameters(seed); // the values are subtracted to prevent (unlikely) overflow
-				
+
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
 			}
 			buf.append("</OL>");
-			
+
 			// update and store the QuizTransaction for this quiz
 			QueueFactory.getDefaultQueue().add(withUrl("/TransactionServlet")
 					.param("AssignmentType","Quiz")
 					.param("TransactionId", Long.toString(qt.id))
 					.param("Action", "Download")
 					.param("PossibleScore", Integer.toString(possibleScore)));
-			
+
 			buf.append("\n<input type=hidden name='QuizTransactionId' value=" + qt.id + ">");
 			buf.append("\n<input type=hidden name='TopicId' value=" + topic.id + ">");
 			buf.append("<div id='timer1' style='color: red'></div><div id=ctrl1 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
@@ -371,21 +367,10 @@ public class Quiz extends HttpServlet {
 	String printScore(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
-/*
-			// Update profile information, if necessary
-			if (user.needsFirstName() || user.needsLastName() || user.needsEmail()) {
-				if (request.getParameter("FirstName")!=null) user.setFirstName(request.getParameter("FirstName"));
-				if (request.getParameter("LastName")!=null) user.setLastName(request.getParameter("LastName"));
-				if (request.getParameter("Email")!=null) user.setEmail(request.getParameter("Email"));
-				ofy().save().entity(user);
-			}
-*/
 			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			Group myGroup = user.myGroupId>0?ofy().load().type(Group.class).id(user.myGroupId).now():null;
-			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
-			df.setTimeZone(tz);
-
+			
+			Assignment qa = null;
 			long transactionId = Long.parseLong(request.getParameter("QuizTransactionId"));
 			QuizTransaction qt = ofy().load().type(QuizTransaction.class).id(transactionId).safe();
 			if (qt.graded != null) {
@@ -405,8 +390,10 @@ public class Quiz extends HttpServlet {
 			int wrongAnswers = 0;
 
 			buf.append("<h2>Quiz Results - " + qt.topicTitle + " (" + subject.title + ")</h2>\n");
-			//buf.append("<b>" + user.getBothNames() + "</b><br>\n");
+			
+			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			buf.append(df.format(now));
+			
 			buf.append(ajaxScoreJavaScript(user.verifiedEmail)); // load javascript for AJAX problem reporting form
 			
 			StringBuffer missedQuestions = new StringBuffer();			
@@ -467,10 +454,11 @@ public class Quiz extends HttpServlet {
 			ofy().save().entity(qt).now();
 			
 			try {
-				Assignment a = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Quiz").filter("topicId",qt.topicId).first().safe();
-				Score s = Score.getInstance(user.id,a);
+				long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+				qa = ofy().load().type(Assignment.class).id(assignmentId).safe();
+				Score s = Score.getInstance(user.id,qa);
 				ofy().save().entity(s).now();
-				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
+				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",qa.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
 			} catch (Exception e) {}
 
 			buf.append("<h4>Your score on this quiz is " + studentScore 
@@ -535,18 +523,15 @@ public class Quiz extends HttpServlet {
 				}
 			}
 			buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback>here</a>.<p>");
-			if (user.isAnonymous()) {
-				buf.append("<p>");
-				buf.append("<a href=/Quiz?TopicId=" + qt.topicId + (nonce==null?"":"&Nonce=" + nonce) + ">Take this quiz again</a>");
-				buf.append(" or go back to the <a href=/>ChemVantage home page</a>.");
-			}
 			
-	/*		buf.append("<FORM METHOD=GET Action=Quiz>"
-					+ (nonce!=null?"<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>":"")
-					+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + qt.topicId + "'>"
-					+ "<INPUT TYPE=HIDDEN NAME=r VALUE=" + new Random().nextInt(9999) + ">"
-					+ "<INPUT TYPE=SUBMIT VALUE='Take this quiz again'></FORM>\n");
-	*/		
+			buf.append("<p>");
+			
+			buf.append("<a href=/Quiz?"
+					+ (qa==null?"TopicId=" + qt.topicId : "AssignmentId=" + qa.id)
+					+ (nonce==null?"":"&Nonce=" + nonce) 
+					+ (qt.lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + qt.lis_result_sourcedid)
+					+ ">Take this quiz again</a>");
+			if (user.isAnonymous()) buf.append(" or go back to the <a href=/>ChemVantage home page</a>.");
 		} catch (Exception e) {
 			buf.append("Sorry, this quiz could not be scored.<br>" + e.getMessage());
 		}

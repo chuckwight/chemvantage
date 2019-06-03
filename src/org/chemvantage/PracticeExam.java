@@ -31,7 +31,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.TimeZone;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -42,7 +41,6 @@ import javax.servlet.http.HttpSession;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.cmd.Query;
 
 public class PracticeExam extends HttpServlet {
 	// parameters that determine the properties of the exam program:
@@ -260,37 +258,28 @@ public class PracticeExam extends HttpServlet {
 				assignmentId=Long.parseLong(request.getParameter("AssignmentId"));
 				a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 				topicIds = a.topicIds;
-			//	if (user.isInstructor() && request.getParameter("ShowPracticeExam")==null) return instructorPage(request,a.id,nonce);
-			/*	
-				if (user.isInstructor() && user.myGroupId==a.groupId) {
-					buf.append("<br><span style='color:red'>Instructor Only: "
-							+ "<a href=Groups?UserRequest=AssignExamQuestions&GroupId=" 
-							+ a.groupId + "&AssignmentId=" + a.id 
-							+ ">customize this exam assignment</a></span>");
-				}
-			*/	
 			} catch (Exception e) {  // otherwise this is a student-designed exam
 				String[] topicStringIds = request.getParameterValues("TopicId");
 				if (topicStringIds != null) {
 					for (int i=0;i<topicStringIds.length;i++) topicIds.add(Long.parseLong(topicStringIds[i]));
 				}
 			}
-			
+
 			// Check to see if this user has any pending exams:
 			Date now = new Date();
 			Date oneHourAgo = new Date(now.getTime()-timeLimit*60000);  // timeLimit minutes ago
 			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
 			if (lis_result_sourcedid==null) lis_result_sourcedid = request.getParameter("custom_lis_result_sourcedid");
 			
-			Query<PracticeExamTransaction> qpt = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.id).filter("graded",null).filter("downloaded >",oneHourAgo);
+			List<PracticeExamTransaction> qpt = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.id).filter("graded",null).filter("downloaded >",oneHourAgo).list();
 			PracticeExamTransaction pt = null;  // placeholder for recovery of one of the pending exam transactions
 			
-			if (qpt.count()>0) {  // there is at least one pending practice exam
+			if (qpt.size()>0) {  // there is at least one pending practice exam
 				if (a == null) {  // entered by manual topic selection (no assignment)
-					pt = qpt.first().now();  // gets the oldest pending practice exam transaction in the query
+					pt = qpt.get(0);  // gets the first pending practice exam transaction in the list
 					topicIds = pt.topicIds;
 					buf.append("<script language=javascript>"
-							+ "onload=alert('You are resuming a previously pending exam.')"
+							+ "onload=alert('You are resuming a previously downloaded exam.')"
 							+ "</script>");
 				} else {  // the request is for an exam corresponding to an assignment
 					for (PracticeExamTransaction t : qpt) {
@@ -325,15 +314,11 @@ public class PracticeExam extends HttpServlet {
 				questionKeys_15pt.removeAll(remove); remove.clear();
 			}
 
-			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			Group myGroup = user.myGroupId<=0?null:ofy().load().type(Group.class).id(user.myGroupId).safe();
-			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
-			df.setTimeZone(tz);
-
 			buf.append("\n<h2>" + subject.title + " Exam</h2>");
-//			buf.append("\n<b>" + user.getBothNames() + "</b><br>");
+
+			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
+			
 			Date downloaded = pt.downloaded;
-//			buf.append(df.format(downloaded) + "<p>");
 			int secondsRemaining = (int) (timeLimit*60 - (now.getTime() - downloaded.getTime())/1000);
 
 			buf.append("Topics covered on this exam:<OL>");
@@ -342,8 +327,10 @@ public class PracticeExam extends HttpServlet {
 			}
 			buf.append("</OL>");
 
-			if (user.isInstructor()) buf.append("Instructor: you may <a href=/Groups?UserRequest=AssignExamQuestions&GroupId=" + myGroup.id + "&AssignmentId=" + a.id + "&Nonce=" + nonce + ">"
-					+ "customize this practice exam</a> by selecting/deselecting the available question items.<p>");
+			if (user.isInstructor()) buf.append("<table style='border: 1px solid'><tr><td>"
+					+ "Instructor: you may <a href=/Groups?UserRequest=AssignExamQuestions&AssignmentId=" + a.id + "&Nonce=" + nonce + ">"
+					+ "customize this practice exam</a> by selecting/deselecting the available question items."
+					+ "</td></tr></table><p>");
 			
 			buf.append("This exam must be submitted for grading within " + timeLimit + " minutes of when it is first downloaded.");
 
@@ -361,7 +348,7 @@ public class PracticeExam extends HttpServlet {
 
 			// Include a nonce reference as a hedge in case the session is not maintained by the user's browser
 			buf.append(nonce!=null?"\n<input type=hidden name=Nonce value='" + nonce + "'>":"");
-			
+			if (a!=null) buf.append("\n<input type=hidden name=AssignmentId value='" + a.id + "'>");
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
 			int[] possibleScores = new int[topicIds.size()];
 
@@ -489,16 +476,12 @@ public class PracticeExam extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		try {
 			buf.append("<h2>Practice Exam Results</h2>");
-//			buf.append("\n<b>" + user.getBothNames() + "</b><br>");
+			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			
-			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			Group myGroup = user.myGroupId<=0?null:ofy().load().type(Group.class).id(user.myGroupId).now();
-			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
-			df.setTimeZone(tz);
-
 			Date now = new Date();
-//			buf.append(df.format(now) + "<p>");
-
+			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+			buf.append(df.format(now) + "<br>");
+			
 			long examId = Long.parseLong(request.getParameter("ExamId"));
 			PracticeExamTransaction pt = ofy().load().type(PracticeExamTransaction.class).id(examId).safe();
 			if (pt.graded != null) return "Sorry, this exam has been graded already.";
@@ -557,21 +540,14 @@ public class PracticeExam extends HttpServlet {
 			ofy().save().entity(pt);
 			
 			Assignment a = null;  // find the Assignment object for this Practice Exam, if it exists
-			List<Assignment> groupAssignments = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","PracticeExam").list();
-			for (Assignment myAssignment : groupAssignments) {
-				if (myAssignment.matches("PracticeExam", topicIds)) {
-					a = myAssignment;
-					break;
-				}
-			}
-			
-			Queue queue = QueueFactory.getDefaultQueue();  // used for computing Score objects offline by Task queue
-			if (a != null) {
+			try {
+				a = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
+				Queue queue = QueueFactory.getDefaultQueue();  // used for computing Score objects offline by Task queue
 				Score s = Score.getInstance(user.id,a);
 				ofy().save().entity(s).now();
 				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
-			}
-			
+			} catch (Exception e) {}
+
 			int score = 0;
 			int possibleScore = 0;
 			for (int i=0;i<topicIds.size();i++) {
@@ -666,9 +642,7 @@ public class PracticeExam extends HttpServlet {
 		+ "  xmlhttp.onreadystatechange=function() {\n"
 		+ "    if (xmlhttp.readyState==4) {\n"
 		+ "      document.getElementById('feedback' + id).innerHTML="
-		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment. "
-		+ (!verifiedEmail?"However, no response is possible unless you verify the email address in your <a href=/Verification>user profile</a>.":"") 
-		+ "</b></FONT><p>';\n"
+		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
 		+ "  url += '&QuestionId=' + id + '&Notes=' + note;\n"

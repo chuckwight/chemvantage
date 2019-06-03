@@ -34,23 +34,24 @@ public class QuizTransaction implements Serializable {
 	@Index	Date downloaded;
 	@Index	Date graded;
 	@Index	int score;
+	@Index  long assignmentId;
 			int possibleScore;
 			String topicTitle;
 			String lis_result_sourcedid;
-			String IPNumber;
-
+	
     QuizTransaction() {}
     
-    QuizTransaction(long topicId,String topicTitle,String userId,Date downloaded,Date graded,int score,int possibleScore,String IPNumber) {
+    QuizTransaction(long topicId,String topicTitle,String userId,Date downloaded,Date graded,int score,long assignmentId,int possibleScore,String lis_result_sourcedid) {
     	this.topicId = topicId;
     	this.topicTitle = topicTitle;
     	this.userId = userId;
         this.downloaded = downloaded;
         this.graded = graded;
         this.score = score;
+        this.assignmentId = assignmentId;
         this.possibleScore = possibleScore;
-        this.IPNumber = IPNumber;
-    }
+        this.lis_result_sourcedid = lis_result_sourcedid;
+   }
     
     public String tableRow() {
     	return "<tr><td>" + topicTitle + "</td><td>" + downloaded + "</td><td>" + graded + "</td><td>" + score + "/" + possibleScore

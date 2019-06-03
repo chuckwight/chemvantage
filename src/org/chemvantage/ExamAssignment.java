@@ -29,7 +29,7 @@ import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 
 @Cache @Entity
-public class ExamAssignment implements Comparable<Assignment> {
+public class ExamAssignment {
 	@Id Long id;
 	long groupId;
 	long[] topicIds;
@@ -49,9 +49,5 @@ public class ExamAssignment implements Comparable<Assignment> {
     	questionKeys_2pt = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("pointValue",2).filter("topicId in",topicIds).keys().list();
     	questionKeys_10pt = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("pointValue",10).filter("topicId in",topicIds).keys().list();
     	questionKeys_15pt = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("pointValue",15).filter("topicId in",topicIds).keys().list();
-    }
-    
-    public int compareTo(Assignment other) {
-    	return (int)(this.deadline.getTime() - other.getDeadline().getTime());
     }
 }

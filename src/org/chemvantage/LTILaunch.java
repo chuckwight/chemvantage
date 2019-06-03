@@ -76,22 +76,15 @@ public class LTILaunch extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
-		StringBuffer debug = new StringBuffer(" ");
 		if (Login.lockedDown) doError(request,response,"ChemVantage is temporarily unavailable, sorry.",null,null);
 
 		// check for minimum required elements for a basic-lti-launch-request
 		String lti_message_type=request.getParameter("lti_message_type");
 		
-		if ("ToolProxyRegistrationRequest".equals(lti_message_type)) {
-			doError(request,response,"Tool proxy registration request failed. The correct URL for LTI2 registration of ChemVantage is " + request.getServerName() + "/lti/registration/",null,null);
-			return;
-		}
-		
 		if (!"basic-lti-launch-request".equals(lti_message_type)) {
 			doError(request,response,"Missing or invalid lti_message_type parameter.",null,null);
 			return;
-		}
-		
+		}	
 		// only basic lti launch requests should reach this point
 		
 		try {
@@ -99,12 +92,9 @@ public class LTILaunch extends HttpServlet {
 			if (lti_version==null) {
 				doError(request,response,"Missing lti_version parameter.",null,null);
 				return;
-			}
-			switch (lti_version) {
-			case "LTI-1p0": break;
-			//case "LTI-2p0": break;
-			default: doError(request,response,"Invalid lti_version parameter.",null,null);
-			return;
+			} else if (!lti_version.equals("LTI-1p0")) {
+				doError(request,response,"Invalid lti_version parameter.",null,null);
+				return;
 			}
 
 			String oauth_consumer_key = request.getParameter("oauth_consumer_key");
@@ -112,6 +102,7 @@ public class LTILaunch extends HttpServlet {
 				doError(request,response,"Missing oauth_consumer_key.",null,null);
 				return;
 			}
+			
 			String resource_link_id = request.getParameter("resource_link_id");
 			if (resource_link_id==null) {
 				doError(request,response,"Missing resource_link_id.",null,null);
@@ -122,7 +113,10 @@ public class LTILaunch extends HttpServlet {
 			try {
 				tc = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).safe();
 				if (tc.secret==null) throw new Exception("Shared secret was not found in the ChemVantage database.");
-				if (tc.lti_version==null || tc.lti_version.isEmpty()) tc.lti_version="LTI-1p0";
+				if (tc.lti_version==null || tc.lti_version.isEmpty() || !tc.lti_version.equals(lti_version)) {
+						tc.lti_version=lti_version;
+						ofy().save().entity(tc);
+				}
 			} catch (Exception e) {
 				throw new Exception("Invalid oauth_consumer_key. Please verify that the oauth_consumer_key is entered into your LMS exactly as you are registered with ChemVantage.");
 			}
@@ -132,55 +126,46 @@ public class LTILaunch extends HttpServlet {
 				// this place is reached if the launch sends a guid that does not match the guid for the BLTIConsumer
 				if (tc.tool_consumer_guid==null) {  // record a previously unrecorded guid
 					tc.tool_consumer_guid = tool_consumer_guid;
-					ofy().save().entity(tc).now();
+					ofy().save().entity(tc);
 				} else doError(request,response,"Invalid tool_consumer_guid.",null,null);
 			}
 
 			OAuthMessage oam = OAuthServlet.getMessage(request, null);
 			OAuthValidator oav = new SimpleOAuthValidator();
 			OAuthConsumer cons = new OAuthConsumer("about:blank#OAuth+CallBack+NotUsed",oauth_consumer_key,tc.secret,null);
-
 			OAuthAccessor acc = new OAuthAccessor(cons);
-
-			String base_string = null;
-			try {
-				base_string = OAuthSignatureMethod.getBaseString(oam);
-			} catch (Exception e) {
-				base_string = null;
-			}
+			OAuthSignatureMethod.getBaseString(oam);
+			
+			if (!Nonce.isUnique(request.getParameter("oauth_nonce"), request.getParameter("oauth_timestamp"))) 
+				throw new Exception("Invalid nonce or timestamp.");
 			
 			try {
-				if (!Nonce.isUnique(request.getParameter("oauth_nonce"), request.getParameter("oauth_timestamp"))) throw new Exception("Bad nonce or timestamp.");
 				oav.validateMessage(oam,acc);
 			} catch(Exception e) {
-				System.out.println("Provider failed to validate message");
-				System.out.println(e.getMessage());
-				if ( base_string != null ) System.out.println(base_string);
-				throw new Exception("OAuth validation failed. The most likely cause is the shared_secret value was entered into your LMS incorrectly, possibly with leading or trailing blank spaces. Please enter the value again, exactly as you are registered with ChemVantage.");
+				throw new Exception("OAuth validation failed, most likely due to an invalid shared_secret value in your LMS. Check carefully to eliminate leading or trailing blank spaces.");
 			}
-			//debug.append("BLTI Launch message was validated successfully. ");
-			
-			if (!lti_version.equals(tc.lti_version)) throw new Exception("<br>LTI version for launch does not match tool consumer registration.");
+			// BLTI Launch message was validated successfully at this point
 			
 			// Gather some information about the user
 			String userId = request.getParameter("user_id");
-			userId = oauth_consumer_key + (userId==null?"":":"+userId);
+			userId = oauth_consumer_key + ":" + (userId==null?"":userId);
 
 			// Provision a new user account if necessary, and store the userId in the user's session
 			HttpSession session = request.getSession(true);
 			session.setAttribute("UserId",userId);
-			User user = User.getInstance(session);
+			User user = User.getInstance(session); // returns null if user is not anonymous and not in the database
 			if (user==null) user = User.createBLTIUser(request); // first-ever login for this user
-// temporary name collection until current users are transitioned
+			
+			// temporary name collection until current users are transitioned
 			else {
 				String lis_person_name_given = request.getParameter("lis_person_name_given");
 				if (lis_person_name_given==null) lis_person_name_given = request.getParameter("custom_lis_person_name_given");
 				if (lis_person_name_given==null) lis_person_name_given = request.getParameter("lis_person_name_full");
 				if (lis_person_name_given==null) lis_person_name_given = request.getParameter("custom_lis_person_name_full");
 				user.setFirstName(lis_person_name_given);
-				ofy().save().entity(user);
+				ofy().save().entity(user).now();
 			}
-// end of temporary section
+			// end of temporary section
 			
 			// ensure the proper authDomain value
 			if (user.authDomain == null || !user.authDomain.equals("BLTI")) {
@@ -216,7 +201,7 @@ public class LTILaunch extends HttpServlet {
 				user.domain = domain.domainName;
 				ofy().save().entity(user).now();
 			}
-			//debug.append("Domain info processed successfully. ");
+			//Domain info processed successfully
 			
 			// check if user has Instructor or Administrator role
 			String roles = request.getParameter("roles");
@@ -230,11 +215,6 @@ public class LTILaunch extends HttpServlet {
 				if (roles.contains("teachingassistant") && user.setIsTeachingAssistant(true)) ofy().save().entity(user).now(); 
 			}
 
-			if (!user.hasPremiumAccount()) {
-				user.setPremium(true);  // All LTI users have free premium accounts
-				ofy().save().entity(user).now();	
-			}
-			
 			String context_id = request.getParameter("context_id");
 			String context_title = request.getParameter("context_title");
 			
@@ -245,40 +225,45 @@ public class LTILaunch extends HttpServlet {
 			}
 			if (context_title==null) context_title = context_id; // missing course title
 
-			// Provision a new context (group), if necessary and put the user into it
-			Group g = ofy().load().type(Group.class).filter("domain",oauth_consumer_key).filter("context_id",context_id).first().now();	
-			if (g == null) { // create this new group
-				g = new Group("BLTI",context_id,context_title);
-				g.domain = domain.domainName;
-				ofy().save().entity(g).now();
+			// Find the user's group, and if necessary create a new one and put the user in it
+			List<Group> domainGroups= ofy().load().type(Group.class).filter("domain", user.domain).list();
+			Group myGroup = null;
+			for (Group g : domainGroups) 
+				if (g.context_id.contentEquals(context_id)) {
+					myGroup = g;;
+					break;
 			}
-			user.changeGroups(g.id);
+			if (myGroup == null) { // create a new group
+				myGroup = new Group("BLTI",context_id,context_title);
+				myGroup.domain = domain.domainName;
+				ofy().save().entity(myGroup).now();
+			}	
+			user.changeGroups(myGroup.id);
 			
 			// Add user to the approved TA list, if necessary
-			if ( roles!=null && roles.contains("teachingassistant") && g.addTA(userId)) ofy().save().entity(g);
+			if ( roles!=null && roles.contains("teachingassistant") && myGroup.addTA(userId)) ofy().save().entity(myGroup);
 			
 			// update the LIS result outcome service URL, if necessary
-			if (domain.supportsResultService && domain.resultServiceEndpoint!=null && !domain.resultServiceEndpoint.equals(g.lis_outcome_service_url)) {  // update the URL and format as Group properties
-				g.lis_outcome_service_url=domain.resultServiceEndpoint;
-				g.lis_outcome_service_format = domain.resultServiceFormat;
-				g.isUsingLisOutcomeService = true;
-				ofy().save().entity(g).now();
+			if (domain.supportsResultService && domain.resultServiceEndpoint!=null && !domain.resultServiceEndpoint.equals(myGroup.lis_outcome_service_url)) {  // update the URL and format as Group properties
+				myGroup.lis_outcome_service_url=domain.resultServiceEndpoint;
+				myGroup.lis_outcome_service_format = domain.resultServiceFormat;
+				myGroup.isUsingLisOutcomeService = true;
+				ofy().save().entity(myGroup).now();
 			}							
-			debug.append("Context info OK. ");
+			// Context info OK
 			
 			if (user.isInstructor()) {
-				if (g.instructorId.equals("unknown")) {  // assign the instructor to this group
-					g.instructorId = user.id;
-					ofy().save().entity(g).now();
+				if (myGroup.instructorId.equals("unknown")) {  // assign the instructor to this group
+					myGroup.instructorId = user.id;
+					ofy().save().entity(myGroup).now();
 				}
 			}
 
 			// Use the resourceUrlFinder method to discover the URL for the assignment associated with this link
 			String redirectUrl = resourceUrlFinder(user,request);
-			
 			response.sendRedirect(redirectUrl);
 		} catch (Exception e) {
-			doError(request, response,"LTI Launch failed. " + e.toString() + debug.toString(), null, null);
+			doError(request, response,"LTI Launch failed. " + e.getMessage(), null, null);
 		}
 	}		
 	
@@ -291,109 +276,80 @@ public class LTILaunch extends HttpServlet {
 		 * to the correct assignment.  If the assignment cannot be validated, the user is sent to the 
 		 * resourcePicker page to choose a valid assignmentId and topicId or topicIds.
 		 */
-		String redirectUrl = "";
-		Assignment myAssignment = null;
-		String assignmentType = request.getParameter("AssignmentType");
-		if (assignmentType==null) assignmentType = request.getParameter("custom_AssignmentType");  // supports custom LTI variables
-		long topicId = 0L;
-		List<Long> topicIds = new ArrayList<Long>();
 
-		// a resource_link_id string is required for every valid LTI launch
-		String resource_link_id = request.getParameter("resource_link_id");
-		//if (resource_link_id == null) resource_link_id = request.getParameter("custom_resource_link_id");
-		
-		// the lis_result_sourcedid is an optional LTI parameter that specifies a context grade book entry point
-		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
-		if (lis_result_sourcedid == null) lis_result_sourcedid = request.getParameter("custom_lis_result_sourcedid");
-		try { // encode the lis_result_sourcedid because it will be appended to the redirectUrl
-			lis_result_sourcedid = URLEncoder.encode(lis_result_sourcedid,"UTF-8");
+		try {
+			// a resource_link_id string is required for every valid LTI launch
+			String resource_link_id = request.getParameter("resource_link_id");
+
+			Assignment myAssignment = null;
+			try {
+				myAssignment = ofy().load().type(Assignment.class).filter("domain",user.domain).filter("resourceLinkId", resource_link_id).first().now();			
+			} catch (Exception e) {
+				// didn't find it. Look for resource_link_id in the (deprecated) resourceLinkIds list
+				List<Assignment> allAssignments = ofy().load().type(Assignment.class).list();			
+				for (Assignment a : allAssignments) {
+					if (resource_link_id.contentEquals(a.resourceLinkId) || (a.resourceLinkIds != null && a.resourceLinkIds.contains(resource_link_id))) {  // found it
+						myAssignment = a;
+						a.resourceLinkId = resource_link_id;
+						ofy().save().entity(a);
+						break;
+					}
+				}
+			}
+
+			String assignmentType = request.getParameter("AssignmentType");
+			if (myAssignment == null && assignmentType != null) {  // instructor is creating the assignment now
+				long topicId = 0L;
+				List<Long> topicIds = new ArrayList<Long>();
+				try {
+					if ("PracticeExam".equals(assignmentType)) { // make a new PracticeExam assignment
+						String[] tIds = request.getParameterValues("TopicIds");
+						if (tIds==null || tIds.length<3) throw new Exception();
+						for (int i=0;i<tIds.length;i++) topicIds.add(Long.parseLong(tIds[i]));
+						myAssignment = new Assignment(user.myGroupId,user.domain,resource_link_id,topicIds,assignmentType);
+						ofy().save().entity(myAssignment).now();
+					} else if (("Quiz".equals(assignmentType) || "Homework".equals(assignmentType))) { // make a new Quiz or Homework assignment
+						topicId = Long.parseLong(request.getParameter("TopicId"));
+						if (topicId == 0) throw new Exception();
+						myAssignment = new Assignment(user.myGroupId,user.domain,resource_link_id,topicId,assignmentType);
+						ofy().save().entity(myAssignment).now();
+					}
+				} catch (Exception e) {}
+			}
+
+			// the lis_result_sourcedid is an optional LTI parameter that specifies a context grade book entry point
+			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");		
+			try { // encode the lis_result_sourcedid because it will be appended to the redirectUrl
+				lis_result_sourcedid = URLEncoder.encode(lis_result_sourcedid,"UTF-8");
+			} catch (Exception e) {
+				lis_result_sourcedid = null;
+			}
+
+			String redirectUrl = "";			
+			if (myAssignment == null) {  // construct a URL to send the user to the assignment picker form
+				redirectUrl = "/lti?UserRequest=pick&resource_link_id="+resource_link_id
+						+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
+						+ (request.getSession().isNew()?"&Nonce=" + Nonce.createInstance(user):"");
+			} else { 	// construct a URL to send the user to the assignment
+				redirectUrl = "/" + myAssignment.assignmentType + "?AssignmentId=" + myAssignment.id
+						+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
+						+ (request.getSession().isNew()?"&Nonce=" + Nonce.createInstance(user):"");
+			}
+
+			return redirectUrl;  // normal finish; redirects user to the assignment
 		} catch (Exception e) {
-			lis_result_sourcedid = null;
+			return "";
 		}
-		
-		try {  
-			List<Assignment> assignments = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).list();
-			
-			for (Assignment a : assignments) {  // look for myAssignment having the correct resource_link_id
-				if (a.resourceLinkIds != null && a.resourceLinkIds.contains(resource_link_id)) {
-					myAssignment = a;
-					break;
-				}
-			}
-			
-			if (myAssignment==null) { // try to find it based on the request data AssignmentType and TopicId or TopicIds (for PracticeExam)
-				if (assignmentType==null) throw new Exception();
-				assignments = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType",assignmentType).list();
-				if (assignmentType.equals("PracticeExam")) {
-					String[] tIds = request.getParameterValues("TopicIds");
-					//if (tIds==null) tIds = request.getParameterValues("custom_TopicIds"); // supports custom LTI variables
-					if (tIds==null || tIds.length<3) throw new Exception();
-					for (int i=0;i<tIds.length;i++) topicIds.add(Long.parseLong(tIds[i]));
-					for (Assignment a : assignments) {
-						if (a.topicIds.equals(topicIds)) {
-							myAssignment=a; 
-							break;
-						}
-					}
-					if (myAssignment==null) myAssignment = new Assignment(user.myGroupId,topicIds,assignmentType,new Date(0));
-
-				} else {  // assignmentType is Quiz or Homework
-					String tId = request.getParameter("TopicId");
-					//if (tId==null) tId = request.getParameter("custom_TopicId"); // supports custom LTI variables
-					topicId = Long.parseLong(tId);  // throws Exception if tId does not represent a long integer
-					for (Assignment a : assignments) {
-						if (a.matches(assignmentType,topicId)) {
-							myAssignment=a; 
-							break;
-						}
-					}
-					if (myAssignment==null) myAssignment = new Assignment(user.myGroupId,topicId,assignmentType,new Date(0));
-				}
-
-				if (user.isInstructor()) {  // must be the instructor to modify or store myAssignment
-					myAssignment.addResourceLinkId(resource_link_id);
-					ofy().save().entity(myAssignment).now();
-					Group g = ofy().load().type(Group.class).id(user.myGroupId).safe();
-					g.setGroupTopicIds();
-					ofy().save().entity(g).now();
-				} else lis_result_sourcedid = null; // this prevents students from getting scores for made-up assignments
-			}	
-			if (myAssignment.assignmentType.equals("PracticeExam")) {
-				redirectUrl = "/PracticeExam";
-				for (int i=0;i<myAssignment.topicIds.size();i++) redirectUrl += (i==0?"?":"&") + "TopicId=" + myAssignment.topicIds.get(i);
-				redirectUrl += "&AssignmentId=" + myAssignment.id;
-			}
-			else { // specify topicId for Quiz or Homework assignment
-				redirectUrl ="/" + myAssignment.assignmentType + "?TopicId=" + myAssignment.topicId;
-			}
-			if (lis_result_sourcedid!=null) redirectUrl += "&lis_result_sourcedid=" + lis_result_sourcedid;
-			
-			// Send a Nonce reference in case the session is lost (no browser support for Cookies)
-			redirectUrl += "&Nonce=" + Nonce.createInstance(user);
-						
-			return redirectUrl;  // normal finish; go directly to the assignment
-
-		} catch (Exception e) {
-			redirectUrl = "/lti?UserRequest=pick&resource_link_id="+resource_link_id;  // send the user to the pickResource page
-			if (assignmentType!=null) redirectUrl += "&AssignmentType=" + assignmentType;
-			if (lis_result_sourcedid!=null) redirectUrl += "&lis_result_sourcedid=" + lis_result_sourcedid;
-			
-			// Send a Nonce reference in case the session is lost (no browser support for Cookies)
-			redirectUrl += "&Nonce=" + Nonce.createInstance(user);
-			return redirectUrl;  // go to pickResourceForm to specify the assignment
-		}			
 	}
 	
 	String pickResourceForm(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			String resource_link_id = request.getParameter("resource_link_id"); 
-			if (resource_link_id == null) resource_link_id = request.getParameter("custom_resource_link_id");
-			if (resource_link_id == null) return "/Home";  // a resource_link_id value is required for every LTI launch
+			if (resource_link_id == null) return "/Logout";  // a resource_link_id value is required for every LTI launch
 			
 			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
-			if (lis_result_sourcedid==null) lis_result_sourcedid = request.getParameter("custom_lis_result_sourcedid");
-			
+			// construct a URL to send the user to the assignment picker form
 			String assignmentType = request.getParameter("AssignmentType");
 			if (assignmentType==null) assignmentType = "";  // must be a valid String object
 			String tId = request.getParameter("TopicId");
@@ -404,13 +360,14 @@ public class LTILaunch extends HttpServlet {
 					+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>");
 			
 			buf.append("<h2>Assignment Setup Page</h2>"
-					+ "The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<p>"
-					+ "Please select the ChemVantage assignment that should be associated with this link. ");
-
-			if (user.isInstructor()) buf.append("ChemVantage will remember this choice and send students directly to the assignment.<p>");
+					+ "The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<p>");
+					
+			if (user.isInstructor()) buf.append("Please select the ChemVantage assignment that should be associated with this link. "
+					+ "ChemVantage will remember this choice and send students directly to the assignment.<p>");
 			else {
 				buf.append("<b>Please ask your instructor to click the LMS assignment link to make this missing association.</b> "
-						+ "Your scores cannot be returned to your LMS grade book until after this has been done.<p>");
+						+ "You will not be able to complete this assignment until after this has been done.");
+				return buf.toString();
 			}
 
 			// insert a script to show/hide the correct box

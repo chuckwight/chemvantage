@@ -28,8 +28,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
-import java.util.TimeZone;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -204,68 +202,50 @@ public class Homework extends HttpServlet {
 	String printHomework(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
+			Assignment hwa = null;
 			long topicId = 0;
-			try {
-				topicId = Long.parseLong(request.getParameter("TopicId"));
-			} catch (Exception e2) {
-				return "<h2>No Homework Assignment Selected</h2>You must return to the <a href=Home>Home Page</a> "
-				+ "and select a topic for this assignment using the drop-down box.";
+			try {  // normal process for LTI assignment launch
+				long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+				hwa = ofy().load().type(Assignment.class).id(assignmentId).now();
+				if (hwa==null) { // assignment has been deleted
+					return "<h2>Assignment Reset</h2>"
+						+ "This ChemVantage assignment was deleted, probably because all of the "
+						+ "question items were deselected. The course instructor may return to the Learning Management "
+						+ "System (LMS) and click on the assignment link there to reassociate the class assignment "
+						+ "with a new ChemVantage homework set.";
+				} else topicId = hwa.topicId;
+			} catch (Exception e) {  // alternative process for anonymous user
+				try {
+					topicId = Long.parseLong(request.getParameter("TopicId"));
+				} catch (Exception e2) {
+					return "<h2>No Homework Assignment Selected</h2>You must return to the <a href=Home>Home Page</a> "
+							+ "and select a topic for this quiz using the drop-down box.";
+				}
 			}
 			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
 			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid"); // used for reporting score back to the LMS
 			
-			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			Group myGroup = user.myGroupId>0?ofy().load().type(Group.class).id(user.myGroupId).now():null;
-			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
-			df.setTimeZone(tz);
-//			Date now = new Date();
-
-			Assignment hwa = null;
-			try {
-				hwa = ofy().load().type(Assignment.class).filter("groupId",user.myGroupId).filter("assignmentType","Homework").filter("topicId",topicId).first().now();
-				//if (user.isInstructor() && request.getParameter("ShowHomework")==null) return instructorPage(request,hwa.id,nonce);
-/*				
-				if (user.isInstructor() && hwa!=null) {
-					buf.append("<br><span style='color:red'>Instructor Only: "
-							+ "<a href=Groups?UserRequest=AssignHomeworkQuestions&GroupId=" 
-							+ myGroup.id + "&TopicId=" + topicId 
-							+ ">customize this homework assignment</a></span>");
-				}
-*/
-			} catch (Exception e) {}
-
+			
 			buf.append("\n<h2>Homework Exercises - " + topic.title + " (" + subject.title + ")</h2>");
 			
-			if (user.isInstructor()) {
-				buf.append("Instructor: you may <a href=/Groups?UserRequest=AssignHomeworkQuestions&GroupId=" + myGroup.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + ">"
-					+ "customize this homework assignment</a> by selecting/deselecting the available question items.<p>");
+			if (user.isInstructor() && myGroup != null) {
+				buf.append("<table style='border: 1px solid black'><tr><td>");
+				buf.append("As the course instructor you may<ul>"
+						+ "<li><a href=/Groups?UserRequest=AssignHomeworkQuestions&AssignmentId=" + hwa.id + "&Nonce=" + nonce + ">"
+						+ "customize this homework assignment</a> by selecting/deselecting the available question items."
+						+ "<li>view a deidentified <a href=/CalculateScores?AssignmentId=" + hwa.id + ">summary of scores</a> for this assignment"
+						+ "</ul></td></tr></table><p>");
 			} else if (user.isAnonymous()) {
 				buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			}
-		
 			
-						//buf.append("\n<b>" + user.getBothNames() + "</b><br>");
-/*
-			// Gather profile information if needed; otherwise just print the user's name.
-			buf.append("<FORM METHOD=POST ACTION=Verification>");
-			boolean submitNeeded = user.needsFirstName() || user.needsEmail();
-			if (user.needsFirstName()) buf.append("First name: <input type=text name=FirstName><br/>"); else buf.append("<b>" + user.getFirstName() + "</b><br/>");
-			if (user.needsEmail()) buf.append("Email: <input type=text name=Email><br>");
-			if (submitNeeded) buf.append("<INPUT TYPE=SUBMIT Name=UserRequest VALUE='Save My Information'><br>");
-			buf.append("</FORM>");
-
-			buf.append(df.format(now) + "<p>");
-*/			
 			if (!user.isAnonymous()) {
 				buf.append("\nHomework Rules<UL>");
 				buf.append("\n<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
 				buf.append("\n<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question.</LI>");
 				buf.append("\n<LI>Most questions are customized, so the correct answers are different for each student.</LI>");
 				buf.append("\n<LI>A checkmark will appear to the left of each correctly solved problem.</LI>");
-				if (myGroup != null) {
-					buf.append("However, class credit for assigned problems is awarded only if the answer is submitted prior to the deadline.</LI>");
-					buf.append("\n<LI>Your instructor can view scores and submissions by date/time in order to enforce homework deadlines.</LI>");
-				}
 				buf.append("</UL>");
 			}
 			
@@ -274,6 +254,8 @@ public class Homework extends HttpServlet {
 			
 			if (hwa != null) { // use hwa.questionIds to move assigned questions to the other list
 				optionalQuestionKeys.removeAll(hwa.questionKeys);
+				int score = 0;
+				
 				buf.append("\nAssigned Exercises<br>");
 				int i = 1;
 				buf.append("<TABLE>");
@@ -288,17 +270,22 @@ public class Homework extends HttpServlet {
 								continue;  // this catches cases where an assigned question no longer exists
 							}
 						}
-						q.setParameters(user.id.hashCode());
+						String hashMe = user.id + hwa.id;
+						q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
 						buf.append("\n<TR VALIGN=TOP><TD>");
 						
-						boolean solved = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).filter("score >",0).count() > 0;					
-						if (solved) buf.append("<IMG SRC=/images/checkmark.gif ALT='This problem was solved previously.'>");
+						boolean solved = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("assignmentId",hwa.id).filter("questionId",q.id).filter("score >",0).count() > 0;					
+						if (solved) {
+							buf.append("<IMG SRC=/images/checkmark.gif ALT='This problem was solved previously.'>");
+							score++;
+						}
 						
 						buf.append("&nbsp;<a id=" + q.id + " /></TD>"
 								+ "<FORM METHOD=POST ACTION=Homework>"
 								+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>"
 								+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 								+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
+								+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>"
 								+ (lis_result_sourcedid==null?"":"<INPUT TYPE=HIDDEN NAME=lis_result_sourcedid VALUE='" + lis_result_sourcedid + "'>")
 								+ "<TD><b>" + i + ". </b></TD><TD>" + q.print() 
 								+ (Long.toString(q.id).equals(request.getParameter("Q"))?"Hint:<br>" + q.getHint():"")
@@ -309,9 +296,20 @@ public class Homework extends HttpServlet {
 				}
 				buf.append("</TABLE>");
 				if (i == 1) buf.append("(none)<p>");
+				
+				// Check to see if the database has the correct score for this assignment
+				Score s = null;
+				Key<Score> k = Key.create(Key.create(User.class, user.id),Score.class,hwa.id);
+				s = ofy().load().key(k).now();
+				if (score>0 && score != s.score) {
+					s = Score.getInstance(user.id, hwa);
+					ofy().save().entity(s).now();
+					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",hwa.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));
+				}
+
 				if (optionalQuestionKeys.size() > 0) buf.append("\nOptional Exercises<br>");
 			}
-						
+
 			// Print the table of optional problems (the whole set if none are assigned)
 			int i = 1;
 			buf.append("<TABLE>");
@@ -325,7 +323,8 @@ public class Homework extends HttpServlet {
 						continue;  // this catches cases where an assigned question no longer exists
 					}
 				}
-				q.setParameters(user.id.hashCode());
+				String hashMe = user.id + (hwa==null?"":hwa.id);
+				q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
 				buf.append("\n<TR VALIGN=TOP><TD>");
 				
 				boolean solved = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).filter("score >",0).count() > 0;					
@@ -335,6 +334,7 @@ public class Homework extends HttpServlet {
 						+ "<FORM METHOD=POST ACTION=Homework>"
 						+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
+						+ (hwa==null?"" : "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>")
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ "<TD><b>" + i + ". </b></TD><TD>" + q.print() 
 						+ (Long.toString(q.id).equals(request.getParameter("Q"))?"Hint:<br>" + q.hint:"")
@@ -360,12 +360,16 @@ public class Homework extends HttpServlet {
 			}
 			Topic topic = ofy().load().type(Topic.class).id(q.topicId).safe();
 			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
+			long assignmentId = 0;
+			Assignment hwa = null;
+			try {
+				assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+				hwa = ofy().load().type(Assignment.class).id(assignmentId).safe();
+			} catch (Exception e) {}
 			
 			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			Group myGroup = user.myGroupId>0?ofy().load().type(Group.class).id(user.myGroupId).now():null;
-			TimeZone tz = myGroup==null?TimeZone.getDefault():myGroup.getTimeZone();
-			df.setTimeZone(tz);
+			
 			String studentAnswer[] = request.getParameterValues(Long.toString(questionId));
 			if (studentAnswer == null || studentAnswer.length==0) {
 				studentAnswer = new String[1];
@@ -388,11 +392,12 @@ public class Homework extends HttpServlet {
 				buf.append("<p>The retry delay for this homework problem is <span id=delay style='color: red'></span><p>");
 				buf.append("Please take these few moments to check your work carefully.  You can sometimes find alternate routes to the<br>"
 						+ "same solution, or it may be possible to use your answer to back-calculate the data given in the problem.<p>"
-						+ "Alternatively, you may wish to <a href=Homework?TopicId=" + topic.id + "&r=" + new Random().nextInt(9999)
-						+ ">return to this homework assignment</a> to work on another problem.<p>");
+						+ "Alternatively, you may wish to "
+						+ "<a href=/Homework?" + (hwa==null?"TopicId=" + topic.id : "AssignmentId=" + hwa.id + (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)) + ">" 
+						+ "return to this homework assignment</a> to work on another problem.<p>");
 		
 				buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework>"
-						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
+						+ (hwa==null?"<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>":"<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>")
 						+ (lis_result_sourcedid==null?"":"<INPUT TYPE=HIDDEN NAME=lis_result_sourcedid VALUE='" + lis_result_sourcedid + "'>")
 						+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
@@ -422,10 +427,12 @@ public class Homework extends HttpServlet {
 			}
 			
 			buf.append("<h2>Homework Results - " + topic.title + " (" + subject.title + ")</h2>\n");
-//			buf.append("<b>" + user.getFirstName() + "</b><br>\n");
-//			buf.append(df.format(now));
 			
-			q.setParameters(user.id.hashCode());
+			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
+			buf.append(df.format(now));
+			
+			String hashMe = user.id + (hwa==null?"":hwa.id);
+			q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
 			int studentScore = 0;
 			int possibleScore = q.pointValue;
 			HWTransaction ht = null;
@@ -444,19 +451,17 @@ public class Homework extends HttpServlet {
 						.param("PossibleScore", Integer.toString(possibleScore))
 						.param("UserId", user.id));
 
-				ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,0L,studentScore,possibleScore,request.getRequestURI());
+				ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,studentScore,assignmentId,possibleScore);
 				if (lis_result_sourcedid != null) ht.lis_result_sourcedid = lis_result_sourcedid;
 				ofy().save().entity(ht).now();
+				
 				// create/update/store a HomeworkScore object
-				try {
-					myGroup.setGroupTopicIds();
-					long assignmentId = myGroup.getAssignmentId("Homework",topic.id);
-					if (assignmentId > 0) { // assignment exists; save a Score object
-						Assignment a = ofy().load().type(Assignment.class).id(assignmentId).now();
-						Score s = Score.getInstance(user.id,a);
+				try {  // throws exception if hwa==null
+					if (hwa.questionKeys.contains(k)) {
+						Score s = Score.getInstance(user.id,hwa);
 						ofy().save().entity(s).now();
-						if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
-					}	
+						if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",hwa.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue	
+					}
 				} catch (Exception e2) {
 				}
 			}
@@ -507,20 +512,13 @@ public class Homework extends HttpServlet {
 			if (studentScore > 0) buf.append(fiveStars());
 			
 			buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback>here</a>.<p>");
-			
-			buf.append("<a href=/Homework?TopicId=" + ht.topicId 
+			buf.append("<a href=/Homework?"
+					+ (assignmentId>0?"AssignmentId=" + assignmentId : "TopicId=" + ht.topicId)
+					+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
 					+ (nonce==null?"":"&Nonce=" + nonce) 
 					+ (offerHint?"&Q=" + q.id + "><span style='color:red'>Please give me a hint</span>":">Return to this homework assignment") + "</a>");
 			
 			if (user.isAnonymous()) buf.append(" or go back to the <a href=/>ChemVantage home page</a>.");
-			
-
-/*
-			buf.append("<p><a href=Homework?TopicId=" + topic.id + "&r=" + random
-					+ "&Nonce=" + nonce
-					+ (offerHint?"&Q=" + q.id:"")
-					+ "#" + q.id + (offerHint?"><span style='color:red'>Please give me a hint</span>":">Return to this homework assignment") + "</a>");
-*/		
 		}
 		catch (Exception e) {
 			buf.append("Sorry, we were unable to score this question.<br>" + e.toString());

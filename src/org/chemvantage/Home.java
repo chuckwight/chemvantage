@@ -21,7 +21,6 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.text.DateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
@@ -55,8 +54,8 @@ public class Home extends HttpServlet {
 
 		try {
 			HttpSession session = request.getSession();
-			if (!User.isAnonymous(session)) {
-				response.sendRedirect("/Login");  // strict enforcement of Login reCAPTCHA
+			if (session.getAttribute("UserId")==null) {
+				response.sendRedirect("/Login");  // must be a ChemVantage user (including anonymous users) to see the Home page
 			}
 
 			response.setContentType("text/html");
@@ -173,7 +172,18 @@ public class Home extends HttpServlet {
 			buf.append("</b></FONT><br><div align=right>An OpenEducation Resource</div></TD></TR></TABLE>");      
 			buf.append("</TD></TR><TR><TD VALIGN=TOP>");
 
-			if (User.isAnonymous(request.getSession())) buf.append("<p><h3><font color=red>Anonymous User</font></h3>");
+			HttpSession session = request.getSession();
+			if (User.isAnonymous(session)) buf.append("<p><h3><font color=red>Anonymous User</font></h3>");
+			else if (User.isChemVantageAdministrator(session)) buf.append("<p><h3>ChemVantage Administrator</h3>");
+			else {
+				buf.append("<h3>LTI User</h3>"
+						+ "It appears that you are using ChemVantage as part of a class. In order to get credit for assignments "
+						+ "completed in ChemVantage, you must access them by clicking the appropriate assignment link in your "
+						+ "class learning management system (LMS). If you continue to the ChemVantage home page, you will be "
+						+ "logged in as an anonymous user. It is not possible to send these scores to your LMS.<p>"
+						+ "<a href=/Logout>Logout of ChemVantage now</a> or <a href=/Login>Login as an anonymous user</a>.");
+				return buf.toString();
+			}
 			
 // test section only
 //			buf.append(request.getHeader("referer") + "<br>"
@@ -315,13 +325,6 @@ public class Home extends HttpServlet {
 							+ (myGroup.instructorId==null||myGroup.instructorId.isEmpty()?"":"<br>Instructor: <a href=mailto:" + User.getEmail(myGroup.instructorId) + ">" + myGroup.getInstructorBothNames() + "</a>")
 							+ "</FONT></TD></TR>");
 					// find the next assignment deadline and link it to the Scores table
-					Date nextDeadline = myGroup.getNextDeadline();
-					if (nextDeadline != null) {
-						DateFormat df = DateFormat.getDateInstance(DateFormat.MEDIUM);
-						df.setTimeZone(myGroup.getTimeZone());
-						buf.append("<TR><TD ALIGN=CENTER><FONT SIZE=-1>Next Deadline: </FONT>"
-								+ "<FONT SIZE=-1><i><a href=Scores?r=" + new Random().nextInt(99) + ">" + df.format(nextDeadline) + "</a></i></FONT></TD></TR>");
-					}
 				}
 			} else if (user.domain!=null && !user.domain.isEmpty())
 				buf.append("<TR><TD ALIGN=CENTER><FONT SIZE=-1><a href=Verification>Join A ChemVantage Group</a></FONT></TD></TR>");

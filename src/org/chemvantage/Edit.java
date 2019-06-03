@@ -168,7 +168,7 @@ public class Edit extends HttpServlet {
 			out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
 		}
 		else if (userRequest.equals("Activate This Question")) {
-			//out.println(createQuestion(user,request)); // previously printed q.id above the navigation bar for testing
+			createQuestion(user,request);
 			try {
 				long proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
 				ofy().delete().key(Key.create(ProposedQuestion.class,proposedQuestionId)).now();
@@ -700,7 +700,6 @@ public class Edit extends HttpServlet {
 		StringBuffer buf = new StringBuffer("<h3>Proposed Question</h3>");
 		try {
 			List<Key<ProposedQuestion>> pendingQuestionKeys = ofy().load().type(ProposedQuestion.class).keys().list();
-			if (pendingQuestionKeys.size()==0) return editorsPage(user,request);
 			
 			String questionId = request.getParameter("NextQuestionId");
 			ProposedQuestion q = null;
@@ -750,7 +749,7 @@ public class Edit extends HttpServlet {
 			buf.append("</FORM>");
 
 		} catch (Exception e) {
-			buf.append("<p>" + e.getMessage());
+			return editorsPage(user,request);
 		}
 		return buf.toString();
 	}

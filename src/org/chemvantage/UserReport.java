@@ -56,22 +56,21 @@ public class UserReport implements Serializable {
 	
 	public String adminView(User adminUser) {
 		StringBuffer buf = new StringBuffer();
+		// this statement permits viewing the userReport only if the viewer is the ChemVantage administrator
+		// or the domain admin of a report from the domain or the report author (user)
+		
+		if (adminUser == null) return "";  // the report can only be viewed by identified users or admins
+		
 		try {
-			User user = null;
-			try {
-				user = ofy().load().type(User.class).id(this.userId).now();
-			} catch (Exception e) {
-			}
+			User user = ofy().load().type(User.class).id(this.userId).now();  // author of the report
 			
-			// this statement permits viewing the userReport only if the viewer is the ChemVantage administrator
-			// or the domain admin of a report from the domain or the report author (user)
-			boolean showReport = false;
-			if (adminUser.isChemVantageAdmin()) showReport = true;  // ChemVantage administrator
-			else if (adminUser.isAdministrator() && user!=null && adminUser.domain.equals(user.domain)) showReport = true;  // domain administrator
-			else if (user!=null && adminUser.id.equals(user.id)) showReport = true;			
-			if (!showReport) return "";
-			
-			buf.append("\nOn " + submitted + " an anonymous user said:<br>");
+			if (user != null && adminUser.id.contentEquals(user.id)) {  // viewed by report author
+				buf.append("On " + submitted + " you said:<br>");
+			} else if (user != null && adminUser.isAdministrator() && adminUser.domain.equals(user.domain)) { // viewed by user's domain admin
+				buf.append("On " + submitted + " an anonymous user in your domain said:<br>");			
+			} else if (adminUser.isChemVantageAdmin()) {  // ChemVantage administrator sees all reports
+				buf.append("On " + submitted + " an anonymous user said:<br>");
+			} else return "";
 			
 			if (stars>0) buf.append(" (" + stars + " stars)<br>");
 			buf.append("<FONT COLOR=RED>" + comments + "</FONT><br>");
@@ -96,7 +95,6 @@ public class UserReport implements Serializable {
 				buf.append("<FORM METHOD=POST ACTION=Feedback>"
 						+ "<INPUT TYPE=HIDDEN NAME=ReportId VALUE=" + this.id + ">"
 						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Report'>"
-//						+ (user != null?"<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Reply'>":"")
 						+ "</FORM><p>");
 			} else buf.append("<p>");
 		} catch (Exception e) {
