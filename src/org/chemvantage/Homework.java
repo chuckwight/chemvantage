@@ -229,7 +229,7 @@ public class Homework extends HttpServlet {
 			
 			buf.append("\n<h2>Homework Exercises - " + topic.title + " (" + subject.title + ")</h2>");
 			
-			if (user.isInstructor() && myGroup != null) {
+			if (user.isInstructor() && myGroup != null && hwa != null) {
 				buf.append("<table style='border: 1px solid black'><tr><td>");
 				buf.append("As the course instructor you may<ul>"
 						+ "<li><a href=/Groups?UserRequest=AssignHomeworkQuestions&AssignmentId=" + hwa.id + "&Nonce=" + nonce + ">"
