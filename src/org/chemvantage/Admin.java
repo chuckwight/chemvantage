@@ -57,7 +57,7 @@ public class Admin extends HttpServlet {
 			HttpSession session = request.getSession();
 			session.setAttribute("UserId",userId);
 			
-			User user = User.getInstance(session,false);  // no 2-factor authentication at this point
+			User user = User.getInstance(session); 
 			if (user.authDomain==null || !user.authDomain.equals("Google)")) {
 				user.authDomain = "Google";
 				ofy().save().entity(user);

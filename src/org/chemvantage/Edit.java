@@ -63,7 +63,7 @@ public class Edit extends HttpServlet {
 			HttpSession session = request.getSession();
 			session.setAttribute("UserId",userId);
 			
-			User user = User.getInstance(session,false);  // no 2-factor authentication at this point
+			User user = User.getInstance(session);
 				
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();

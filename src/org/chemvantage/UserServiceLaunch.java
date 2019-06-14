@@ -54,7 +54,7 @@ public class UserServiceLaunch extends HttpServlet {
 			String userId = userService.getCurrentUser().getUserId(); // throws exception if user is not authenticated
 			if (ofy().load().type(User.class).id(userId).now()==null) User.createUserServiceUser(userService.getCurrentUser());
 			session.setAttribute("UserId", userId);
-			User user = User.getInstance(session,false);  // follows the alias chain to the end user; no 2-factor auth required
+			User user = User.getInstance(session);
 			if (user.authDomain == null || !user.authDomain.equals("Google")) {
 				user.authDomain = "Google";
 				ofy().save().entity(user).now();

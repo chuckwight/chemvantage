@@ -77,10 +77,6 @@ public class User implements Comparable<User>,Serializable {
 	}
 
 	static User getInstance(HttpSession session) {
-		return getInstance(session,true);  // default action is to verify 2FactorAuth
-	}
-	
-	static User getInstance(HttpSession session, boolean verify) {
 		User user = null;
 		String userId = null;
 		try {
@@ -105,7 +101,7 @@ public class User implements Comparable<User>,Serializable {
 				user.alias = null;  // in case alias is set to "" or to invalid userId
 				ofy().save().entity(user);
 			}
-			if (!verify || !user.use2FactorAuth || session.getAttribute("Code")!=null || Long.parseLong(user.smsMessageDevice.substring(5,15))>0L) return user;
+			return user;
 		} catch (Exception e) {
 			if (User.isAnonymous(session)) {
 				user = new User(userId);
@@ -169,39 +165,20 @@ public class User implements Comparable<User>,Serializable {
 
 	static User createBLTIUser(HttpServletRequest request) {
 		// this method provisions a new account for a BLTI user
-		String user_id = request.getParameter("user_id");
-		String userId = request.getParameter("oauth_consumer_key") + (user_id==null?"":":"+user_id);
+		String userId = request.getParameter("user_id");
+		userId = request.getParameter("oauth_consumer_key") + ":" + (userId==null?"":userId);
 		User user = new User(userId);
 		user.authDomain = "BLTI";
 		user.domain = request.getParameter("oauth_consumer_key");
 		user.alias = null;
-/*		
-		String lis_person_name_given = request.getParameter("lis_person_name_given");
-		if (lis_person_name_given==null) lis_person_name_given = request.getParameter("custom_lis_person_name_given");
-		if (lis_person_name_given==null) lis_person_name_given = request.getParameter("lis_person_name_full");
-		if (lis_person_name_given==null) lis_person_name_given = request.getParameter("custom_lis_person_name_full");
-		user.setFirstName(lis_person_name_given);
-*/		
+
 		String roles = request.getParameter("roles");
 		if (roles!=null) {
 			roles = roles.toLowerCase();
 			if (roles.contains("instructor")) user.setIsInstructor(true);
 			if (roles.contains("administrator")) user.setIsAdministrator(true);
-/*
-			if (user.isInstructor() || user.isAdministrator()) {
-				String lis_person_name_family = request.getParameter("lis_person_name_family");
-				if (lis_person_name_family==null) lis_person_name_family = request.getParameter("custom_lis_person_name_family");
-				user.setLastName(lis_person_name_family);
-			}
-*/
 		}
-/*
-		String lis_person_contact_email_primary = request.getParameter("lis_person_contact_email_primary");
-		if (lis_person_contact_email_primary==null) lis_person_contact_email_primary = request.getParameter("custom_lis_person_contact_email_primary");
-		user.setEmail(lis_person_contact_email_primary);
 
-		if (!user.email.isEmpty()) user.verifiedEmail = true; // value supplied by institution
-*/		
 		user.setPremium(true);  // all LTI users have premium accounts by default
 		user.setLastLogin();
 		ofy().save().entity(user).now();
