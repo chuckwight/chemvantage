@@ -531,7 +531,7 @@ public class Quiz extends HttpServlet {
 			List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).filter("assignmentId",a.id).filter("userId",user.id).order("downloaded").list();
 			
 			if (qts.size()==0) {
-				buf.append("Sorry, we were unable to find any of your records in the database for this assignment.");
+				buf.append("Sorry, we did not find any records for you in the database for this assignment.");
 				return buf.toString();
 			}
 			
@@ -540,7 +540,9 @@ public class Quiz extends HttpServlet {
 				buf.append("<tr><td>" + qt.id + "</td><td>" + df.format(qt.downloaded) + "</td><td align=center>" + (qt.graded==null?"-":100.*qt.score/qt.possibleScore + "%") +  "</td></tr>");
 			}
 			buf.append("</table><br>Missing scores indicate quizzes that were downloaded but not submitted for scoring.<p>");
-		} catch (Exception e) {}
+		} catch (Exception e) {
+			buf.append("Sorry, no records found yet.");
+		}
 		return buf.toString();
 	}
 }
