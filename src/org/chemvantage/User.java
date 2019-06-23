@@ -20,6 +20,7 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
@@ -29,6 +30,7 @@ import javax.mail.internet.InternetAddress;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+import com.google.common.hash.Hashing;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
@@ -306,6 +308,10 @@ public class User implements Comparable<User>,Serializable {
 
 	public String getId() {
 		return this.id;
+	}
+	
+	public String getIdHash() {
+		return Hashing.sha256().hashString(this.id, StandardCharsets.UTF_8).toString().substring(0,15);
 	}
 /*
 	static String getBothNames(String id) {

@@ -84,19 +84,29 @@ public class CalculateScores extends HttpServlet {
 	public String viewTransactions(User student,Assignment a) {
 		StringBuffer buf = new StringBuffer();
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+		Date now = new Date();
+		
 		try {
 			if ("Quiz".contentEquals(a.assignmentType)) {
-				List<QuizTransaction> quizTransactions = ofy().load().type(QuizTransaction.class).filter("topicId",a.topicId).filter("userId",student.id).order("downloaded").list();
-				if (quizTransactions.size()==0) return "This user has no transactions for this assignment in the database.";
-				// construct a table of quiz transactions for this user on this topic
+				buf.append("<h2>Quiz Transactions</h2>");
+				buf.append("ChemVantage UserID: " + student.getIdHash() + "<br>");
+				buf.append("Assignment Number: " + a.id + "<br>");
 				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
-				buf.append("<h3>Complete list of quiz transactions on " + t.title + " for user " + student.id + "</h3>");
-				buf.append("<table cellspacing=0 border=1><tr><th>Downloaded</th><th>Score</th></tr>");
-				for (QuizTransaction qt : quizTransactions) {
-					buf.append("<tr><td>" + df.format(qt.downloaded) + "</td><td align=center>" + (qt.graded==null?"-":qt.score*100./qt.possibleScore + "%") + "</td></tr>");
+				buf.append("Topic: "+ t.title + "<br>");
+				buf.append("Valid: " + df.format(now) + "<p>");
+				
+				List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).filter("assignmentId",a.id).filter("userId",student.id).order("downloaded").list();
+				
+				if (qts.size()==0) {
+					buf.append("Sorry, we did not find any records for this student in the database for this assignment.");
+					return buf.toString();
 				}
-				buf.append("</table><p>");
-				buf.append("All times are given in Coordinated Universal Time (UTC). If the score is missing, it means that the quiz was downloaded but not submitted for grading within the 15 minute time limit.");
+				
+				buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Quiz Score</th></tr>");
+				for (QuizTransaction qt : qts) {
+					buf.append("<tr><td>" + qt.id + "</td><td>" + df.format(qt.downloaded) + "</td><td align=center>" + (qt.graded==null?"-":100.*qt.score/qt.possibleScore + "%") +  "</td></tr>");
+				}
+				buf.append("</table><br>Missing scores indicate quizzes that were downloaded but not submitted for scoring.<p>");
 			}
 		} catch (Exception e) {
 			buf.append(e.toString());
@@ -122,28 +132,25 @@ public class CalculateScores extends HttpServlet {
 			groupMembers.removeAll(instructors);  // leaves only the members with a student role
 
 			Score s = null;
-			String name = null;
 			int counter = 0;
 			if (groupMembers.size()==0) buf.append("There are no students in this group yet.");
 			else {
 				if (recalculate) {
 					buf.append("These scores have been recalculated just now:<p>");
-				} else buf.append("In most cases ChemVantage does not store names or other personal identifiable information (PII), "
-						+ "so scores are listed only by the user ID supplied by your Learning Management System. If these scores "
-						+ "don't look right, you may click any student's Name/UserId below to get a complete list of " + a.assignmentType
-						+ " transactions, or <a href=/CalculateScores?UserRequest=Recalculate&AssignmentId=" + a.id + ">"
+				} else buf.append("To protect the privacy of our users, ChemVantage does not store names or other personal identifiable information (PII). "
+						+ "Scores are listed only by an opaque user ID that is derived from the value provided by your class learning management system. "
+						+ "You may click any student's UserID below to get a complete list of transactions for this assignment. If you think there may be "
+						+ "a problem with the scores, you may <a href=/CalculateScores?UserRequest=Recalculate&AssignmentId=" + a.id + ">"
 						+ "click here to recalculate all student scores for this assignment</a> (this may take a few minutes).<p>");
 				// print a table of scores for this group assignment
-				buf.append("<table cellspacing=0 border=1><tr><th>Name/UserID</th><th>Score</th><th>Attempts</th><th>Most Recent Attempt</th></tr>");
+				buf.append("<table cellspacing=0 border=1><tr><th>ChemVantage UserID</th><th>Best Score</th><th>Attempts</th><th>Most Recent Attempt</th></tr>");
 				Queue queue = QueueFactory.getDefaultQueue();
 				for (User u : groupMembers) {
 					counter++;
 					s = u.getScore(a);
 					if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",u.id));
-					name = u.getFullName();
-					if (name.isEmpty()) name = u.getId().substring(group.domain.length()+1);
 					double pct = s.score*100./s.maxPossibleScore;
-					buf.append("<tr><td><a href=/CalculateScores?UserRequest=ViewTransactions&AssignmentId=" + a.id + "&UserId=" + u.id + ">" + name + "</a></td><td align=center>" + (s.numberOfAttempts>0?String.format("%.0f", pct) + "%":"-") + "</td><td align=center>" + s.numberOfAttempts + "</td><td>" + (s.mostRecentAttempt==null?"":df.format(s.mostRecentAttempt)) + "</td></tr>");
+					buf.append("<tr><td align=center><a href=/CalculateScores?UserRequest=ViewTransactions&AssignmentId=" + a.id + "&UserId=" + u.id + ">" + u.getIdHash() + "</a></td><td align=center>" + (s.numberOfAttempts>0?String.format("%.0f", pct) + "%":"-") + "</td><td align=center>" + s.numberOfAttempts + "</td><td>" + (s.mostRecentAttempt==null?"":df.format(s.mostRecentAttempt)) + "</td></tr>");
 				}
 				buf.append("</table><br>" + counter + " student" + (counter!=1?"s":""));
 			}

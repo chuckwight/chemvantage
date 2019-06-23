@@ -522,8 +522,8 @@ public class Quiz extends HttpServlet {
 		}
 
 		try {
+			buf.append("ChemVantage UserID: " + user.getIdHash() + "<br>");
 			buf.append("Assignment Number: " + a.id + "<br>");
-
 			Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
 			buf.append("Topic: "+ t.title + "<br>");
 			buf.append("Valid: " + df.format(now) + "<p>");
