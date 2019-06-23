@@ -76,7 +76,11 @@ public class Quiz extends HttpServlet {
 			PrintWriter out = response.getWriter();
 			
 			String nonce = session.isNew()?Nonce.createInstance(user):null;
-			out.println(Home.header + printQuiz(user,request,nonce) + Home.footer);
+			
+			String userRequest = request.getParameter("UserRequest");
+			
+			if (userRequest != null && "ShowScores".contentEquals(userRequest)) out.println(Home.header + showScores(user,request) + Home.footer);
+			else out.println(Home.header + printQuiz(user,request,nonce) + Home.footer);
 		} catch (Exception e) {}
 	}
 
@@ -424,8 +428,10 @@ public class Quiz extends HttpServlet {
 					+ (qa==null?"TopicId=" + qt.topicId : "AssignmentId=" + qa.id)
 					+ (nonce==null?"":"&Nonce=" + nonce) 
 					+ (qt.lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + qt.lis_result_sourcedid)
-					+ ">Take this quiz again</a>");
+					+ ">Take this quiz again</a>&nbsp;");
 			if (user.isAnonymous()) buf.append(" or go back to the <a href=/>ChemVantage home page</a>.");
+			else if (qa!=null) buf.append(" or <a href=/Quiz?UserRequest=ShowScores&AssignmentId=" + qa.id + ">View a summary of your scores for this assignment</a>");
+					
 		} catch (Exception e) {
 			buf.append("Sorry, this quiz could not be scored.<br>" + e.getMessage());
 		}
@@ -501,4 +507,40 @@ public class Quiz extends HttpServlet {
 		+ "</SCRIPT>";
 	}
 	
+	String showScores (User user, HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer("<h2>Your Quiz Transactions</h2>");
+		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+		Date now = new Date();
+		
+		Assignment a = null;
+		try {
+			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+			a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+		} catch (Exception e) {
+			buf.append("Invalid assignment.");
+			return buf.toString();
+		}
+
+		try {
+			buf.append("Assignment Number: " + a.id + "<br>");
+
+			Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
+			buf.append("Topic: "+ t.title + "<br>");
+			buf.append("Valid: " + df.format(now) + "<p>");
+			
+			List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).filter("assignmentId",a.id).filter("userId",user.id).order("downloaded").list();
+			
+			if (qts.size()==0) {
+				buf.append("Sorry, we were unable to find any of your records in the database for this assignment.");
+				return buf.toString();
+			}
+			
+			buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Quiz Score</th></tr>");
+			for (QuizTransaction qt : qts) {
+				buf.append("<tr><td>" + qt.id + "</td><td>" + df.format(qt.downloaded) + "</td><td align=center>" + (qt.graded==null?"-":100.*qt.score/qt.possibleScore + "%") +  "</td></tr>");
+			}
+			buf.append("</table><br>Missing scores indicate quizzes that were downloaded but not submitted for scoring.<p>");
+		} catch (Exception e) {}
+		return buf.toString();
+	}
 }
