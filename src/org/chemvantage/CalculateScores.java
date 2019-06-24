@@ -34,6 +34,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
+import com.googlecode.objectify.Key;
 
 public class CalculateScores extends HttpServlet {
 	private static final long serialVersionUID = 137L;
@@ -102,12 +103,42 @@ public class CalculateScores extends HttpServlet {
 					return buf.toString();
 				}
 				
+				Key<Score> k = Key.create(Key.create(User.class, student.id),Score.class,a.id);
+	    		Score s = ofy().load().key(k).now();
+	    		if (s==null) s = Score.getInstance(student.id, a);
+	    		buf.append("This student's overall score on the assignment is " + Math.round(100.*s.score/s.maxPossibleScore) + "%.<p>");
+				
 				buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Quiz Score</th></tr>");
 				for (QuizTransaction qt : qts) {
 					buf.append("<tr><td>" + qt.id + "</td><td>" + df.format(qt.downloaded) + "</td><td align=center>" + (qt.graded==null?"-":100.*qt.score/qt.possibleScore + "%") +  "</td></tr>");
 				}
 				buf.append("</table><br>Missing scores indicate quizzes that were downloaded but not submitted for scoring.<p>");
-			}
+			} else if ("Homework".contentEquals(a.assignmentType)) {
+				buf.append("<h2>Homework Transactions</h2>");
+				buf.append("ChemVantage UserID: " + student.getIdHash() + "<br>");
+				buf.append("Assignment Number: " + a.id + "<br>");
+				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
+				buf.append("Topic: "+ t.title + "<br>");
+				buf.append("Valid: " + df.format(now) + "<p>");
+				
+				List<HWTransaction> hwts = ofy().load().type(HWTransaction.class).filter("assignmentId",a.id).filter("userId",student.id).order("graded").list();
+				
+				if (hwts.size()==0) {
+					buf.append("Sorry, we did not find any records for this student in the database for this assignment.");
+					return buf.toString();
+				}
+				
+				Key<Score> k = Key.create(Key.create(User.class, student.id),Score.class,a.id);
+	    		Score s = ofy().load().key(k).now();
+	    		if (s==null) s = Score.getInstance(student.id, a);
+	    		buf.append("This student's overall score on the assignment is " + Math.round(100.*s.score/s.maxPossibleScore) + "%.<p>");
+				
+				buf.append("<table><tr><th>Transaction Number</th><th>QuestionID</th><th>Graded</th><th>Score</th></tr>");
+				for (HWTransaction hwt : hwts) {
+					buf.append("<tr align=center><td>" + hwt.id + "</td><td>" + hwt.questionId + "</td><td>" + df.format(hwt.graded) + "</td><td>" + hwt.score +  "</td></tr>");
+				}
+				buf.append("</table><p>");		
+			} else buf.append("Sorry, we are unable to report transactions for this assignment type.");
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}

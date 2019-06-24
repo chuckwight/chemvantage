@@ -40,6 +40,12 @@
     </datastore-index>
 
     <datastore-index kind="HWTransaction" ancestor="false" source="auto">
+        <property name="assignmentId" direction="asc"/>
+        <property name="userId" direction="asc"/>
+        <property name="graded" direction="asc"/>
+    </datastore-index>
+
+   <datastore-index kind="HWTransaction" ancestor="false" source="auto">
         <property name="questionId" direction="asc"/>
         <property name="topicId" direction="asc"/>
         <property name="userId" direction="asc"/>

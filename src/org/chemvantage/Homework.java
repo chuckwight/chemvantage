@@ -69,7 +69,10 @@ public class Homework extends HttpServlet {
 			PrintWriter out = response.getWriter();
 			
 			String nonce = session.isNew()?Nonce.createInstance(user):null;
-			out.println(Home.header + printHomework(user,request,nonce) + Home.footer);
+			
+			String userRequest = request.getParameter("UserRequest");			
+			if (userRequest != null && "ShowScores".contentEquals(userRequest)) out.println(Home.header + showScores(user,request) + Home.footer);
+			else out.println(Home.header + printHomework(user,request,nonce) + Home.footer);
 		} catch (Exception e) {}
 	}
 
@@ -94,111 +97,7 @@ public class Homework extends HttpServlet {
 			out.println(Home.header + printScore(user,request,nonce) + Home.footer);
 		} catch (Exception e) {}
 	}
-/*
-	String instructorPage(HttpServletRequest request,long assignmentId,String nonce) {
-		// this page is displayed by default when the instructor accesses this assignment
-		// to view the homework assignment itself, include ShowHomework=true as one of the GET parameters
-		StringBuffer buf = new StringBuffer();
-		try {
-			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
-			Group group = ofy().load().type(Group.class).id(assignment.groupId).safe();
-			Topic topic = ofy().load().type(Topic.class).id(assignment.topicId).safe();
 
-			DateFormat dfShort = DateFormat.getDateInstance(DateFormat.SHORT);
-			DateFormat dfLong = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			dfShort.setTimeZone(group.getTimeZone());
-			dfLong.setTimeZone(group.getTimeZone());
-			boolean noDeadline = assignment.getDeadline().getTime()==0L;
-			
-			buf.append("<h2>Homework - " + topic.title + " (" + subject.title + ")</h2>");
-			buf.append("<FONT SIZE=-1>This is the instructor page; students will <a href=/Homework?TopicId=" + topic.id + "&ShowHomework=true&Nonce=" + nonce + ">go directly to the assignment</a>.</FONT><p>");
-			
-			buf.append("<FORM ACTION='/Groups' METHOD=POST>"
-					+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">"
-					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=Homework>"
-					+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE=" + topic.id + ">"
-					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE=" + group.id + ">"
-					+ "<b>Homework Deadline:</b> " + (noDeadline?"<FONT COLOR=RED>none</FONT>":dfLong.format(assignment.getDeadline()))
-					+ " <a href=# onClick=document.getElementById('deadlineForm').style.display='inLine'><FONT SIZE=-2>change this</FONT></a><p>");
-			buf.append("<div id='deadlineForm' style='display:none'>"
-					+ "Enter a date below and select your local time zone.<br/>"
-					+ "After the deadline ChemVantage will not report scores on this assignment to the LMS,<br/>"
-					+ "but students may still use the assignment link to practice solving problems.<br/>"
-					+ "<INPUT TYPE=TEXT SIZE=15 NAME=HWDeadline VALUE='" + (noDeadline?"none":dfShort.format(assignment.getDeadline())) 
-					+ "' onFocus=if(HWDeadline.value=='none'){HWDeadline.value='" + dfShort.format(new Date()) + "';document.getElementById('esBox').checked=true}>"
-					+ "at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone.<br/>"
-					+ "<label><INPUT TYPE=CHECKBOX ID=esBox NAME=EmailScores VALUE=true" + (assignment.emailScoresToInstructor?" CHECKED>":">") + " Email scores to me after the deadline.</lable><br>"
-					+ "<label><INPUT TYPE=CHECKBOX NAME=UpdateLMSScores VALUE=true> Update scores in the LMS grade book.</label><br>"
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Set Deadline'></FORM></div><p>");
-		
-			buf.append("<b>Customize This Homework Assignment</b> <a href=/Groups?UserRequest=AssignHomeworkQuestions&GroupId=" + group.id + "&TopicId=" + topic.id + "&Nonce=" + nonce + "><FONT SIZE=-2>select questions</FONT></a><p>");
-				
-			buf.append("<b>Homework Scores</b> <a id=slink href=# onClick=document.getElementById('details').style.display='inLine';document.getElementById('slink').style.display='none'><FONT SIZE=-2>show details</FONT></a><br/>"
-					+ "<div id='details' style='display:none'>The following is a list of best pre-deadline scores on this assignment. In most cases, these scores have been reported to the grade book "
-					+ "in the class learning management system. However, the LMS may have a policy that is different from ChemVantage (e.g., record first score only), so it "
-					+ "is possible that these scores may be different from those in the LMS grade book. "
-					+ "A red dot indicates a score that is low enough to be a concern. If a student completes this assignment satisfactorily after the deadline, the red dot will "
-					+ "disappear, but the score will remain unchanged. If you change the deadline, all scores will be recalculated to reflect the revised deadline. (Try it!)</div><p>");
-			
-			if (group.validatedMemberCount()==0) return buf.toString();
-			Map<String,User> members = ofy().load().type(User.class).ids(group.memberIds);
-			
-			// prepare a complete set of Score keys for this assignment and load all existing keys into the scoresMap
-			Set<Key<Score>> keys = new HashSet<Key<Score>>();
-			for (String id:group.memberIds) keys.add(Key.create(Key.create(User.class,id),Score.class,assignment.id));
-			Map<Key<Score>,Score> scoresMap = ofy().load().keys(keys);
-			int i = 0;
-			Score s = null;
-			
-			buf.append("Instructors and Teaching Assistants<br>"
-					+ "<TABLE BORDER=1 CELLSPACING=0><TR><TD></TD><TD>Name</TD><TD>Email</TD><TD>Score</TD></TR>");
-			for (String id:group.memberIds) {
-				try {
-					User u = members.get(id);
-					if (u.isInstructor() || u.isAdministrator() || group.isTA(u.id)) {
-						Key<Score> k = Key.create(Key.create(User.class,u.id),Score.class,assignment.id);
-						s = scoresMap.get(k);
-						if (s==null) {
-							s = Score.getInstance(u.id,assignment);
-							ofy().save().entity(s).now();
-						}
-						i++;
-						buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getScore() + "</TD></TR>");
-						members.remove(id);
-					}
-				} catch (Exception e2) {}
-			}
-			buf.append("</TABLE><p>");
-
-			// display the table of student scores, filling in where it may be incomplete (this is rare, but possible due to add/drop)
-			i=0;
-			Date now = new Date();
-			buf.append("Students<p>");
-			if (members.size()>0) {
-				buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TD></TD><TD>Name</TD><TD>Email</TD><TD>Score</TD></TR>");
-				for (String id:group.memberIds) {
-					try {
-						User u = members.get(id);
-						if (u.isInstructor() || u.isAdministrator() || group.isTA(u.id)) continue;
-						Key<Score> k = Key.create(Key.create(User.class,u.id),Score.class,assignment.id);
-						s = scoresMap.get(k);
-						if (s==null) {
-							s = Score.getInstance(u.id,assignment);
-							ofy().save().entity(s).now();
-						}
-						i++;
-						buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(noDeadline?now:assignment.getDeadline(),group.rescueThresholdScore) + "</TD></TR>");
-					} catch (Exception e2) {}
-				}
-				buf.append("</TABLE>");			
-			} else buf.append("No students are registered in this group.");
-
-		} catch (Exception e) {
-			return buf.toString() + e.getMessage();
-		}
-		return buf.toString();
-	}
-*/
 	String printHomework(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -519,7 +418,8 @@ public class Homework extends HttpServlet {
 					+ (offerHint?"&Q=" + q.id + "><span style='color:red'>Please give me a hint</span>":">Return to this homework assignment") + "</a>");
 			
 			if (user.isAnonymous()) buf.append(" or go back to the <a href=/>ChemVantage home page</a>.");
-		}
+			else if (hwa!=null) buf.append(" or <a href=/Homework?UserRequest=ShowScores&AssignmentId=" + hwa.id + ">View a summary of your submissions for this assignment</a>");
+			}
 		catch (Exception e) {
 			buf.append("Sorry, we were unable to score this question.<br>" + e.toString());
 		}
@@ -633,4 +533,49 @@ public class Homework extends HttpServlet {
 		return buf.toString(); 
 	}
 
+	protected String showScores(User user,HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer("<h2>Your Homework Transactions</h2>");
+		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+		Date now = new Date();
+		
+		Assignment a = null;
+		try {
+			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+			a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+		} catch (Exception e) {
+			buf.append("Invalid assignment.");
+			return buf.toString();
+		}
+
+		try {
+			buf.append("ChemVantage UserID: " + user.getIdHash() + "<br>");
+			buf.append("Assignment Number: " + a.id + "<br>");
+			Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
+			buf.append("Topic: "+ t.title + "<br>");
+			buf.append("Valid: " + df.format(now) + "<p>");
+			
+			List<HWTransaction> hwts = ofy().load().type(HWTransaction.class).filter("assignmentId",a.id).filter("userId",user.id).order("graded").list();
+			
+			if (hwts.size()==0) {
+				buf.append("Sorry, we did not find any records for you in the database for this assignment.");
+				return buf.toString();
+			}
+			
+			Key<Score> k = Key.create(Key.create(User.class, user.id),Score.class,a.id);
+    		Score s = ofy().load().key(k).now();
+    		if (s==null) s = Score.getInstance(user.id, a);
+    		
+    		buf.append("Your overall score on this assignment is " + Math.round(100.*s.score/s.maxPossibleScore) + "%.<p>");
+			
+			buf.append("<table><tr><th>Transaction Number</th><th>QuestionID</th><th>Graded</th><th>Score</th></tr>");
+			for (HWTransaction hwt : hwts) {
+				buf.append("<tr align=center><td>" + hwt.id + "</td><td>" + hwt.questionId + "</td><td>" + df.format(hwt.graded) + "</td><td>" + hwt.score +  "</td></tr>");
+			}
+			buf.append("</table><p>");		
+		} catch (Exception e) {
+			buf.append(e.toString());
+		}
+
+		return buf.toString();
+	}
 }

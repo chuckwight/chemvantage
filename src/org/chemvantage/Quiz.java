@@ -535,13 +535,19 @@ public class Quiz extends HttpServlet {
 				return buf.toString();
 			}
 			
+			Key<Score> k = Key.create(Key.create(User.class, user.id),Score.class,a.id);
+    		Score s = ofy().load().key(k).now();
+    		if (s==null) s = Score.getInstance(user.id, a);
+    		
+			buf.append("Your overall score on this assignment is " + Math.round(100.*s.score/s.maxPossibleScore) + "%.<p>");
+			
 			buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Quiz Score</th></tr>");
 			for (QuizTransaction qt : qts) {
 				buf.append("<tr><td>" + qt.id + "</td><td>" + df.format(qt.downloaded) + "</td><td align=center>" + (qt.graded==null?"-":100.*qt.score/qt.possibleScore + "%") +  "</td></tr>");
 			}
 			buf.append("</table><br>Missing scores indicate quizzes that were downloaded but not submitted for scoring.<p>");
 		} catch (Exception e) {
-			buf.append("Sorry, no records found yet.");
+			buf.append(e.toString());
 		}
 		return buf.toString();
 	}
