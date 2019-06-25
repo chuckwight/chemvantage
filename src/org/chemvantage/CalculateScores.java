@@ -106,7 +106,7 @@ public class CalculateScores extends HttpServlet {
 				Key<Score> k = Key.create(Key.create(User.class, student.id),Score.class,a.id);
 	    		Score s = ofy().load().key(k).now();
 	    		if (s==null) s = Score.getInstance(student.id, a);
-	    		buf.append("This student's overall score on the assignment is " + Math.round(100.*s.score/s.maxPossibleScore) + "%.<p>");
+	    		buf.append("This student's best score on the assignment is " + Math.round(100.*s.score/s.maxPossibleScore) + "%.<p>");
 				
 				buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Quiz Score</th></tr>");
 				for (QuizTransaction qt : qts) {
@@ -168,7 +168,7 @@ public class CalculateScores extends HttpServlet {
 			else {
 				if (recalculate) {
 					buf.append("These scores have been recalculated just now:<p>");
-				} else buf.append("To protect the privacy of our users, ChemVantage does not store names or other personal identifiable information (PII). "
+				} else buf.append("To protect the privacy of our users, ChemVantage does not store names or other personally identifiable information (PII). "
 						+ "Scores are listed only by an opaque user ID that is derived from the value provided by your class learning management system. "
 						+ "You may click any student's UserID below to get a complete list of transactions for this assignment. If you think there may be "
 						+ "a problem with the scores, you may <a href=/CalculateScores?UserRequest=Recalculate&AssignmentId=" + a.id + ">"

@@ -539,7 +539,7 @@ public class Quiz extends HttpServlet {
     		Score s = ofy().load().key(k).now();
     		if (s==null) s = Score.getInstance(user.id, a);
     		
-			buf.append("Your overall score on this assignment is " + Math.round(100.*s.score/s.maxPossibleScore) + "%.<p>");
+			buf.append("Your best score on this assignment is " + Math.round(100.*s.score/s.maxPossibleScore) + "%.<p>");
 			
 			buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Quiz Score</th></tr>");
 			for (QuizTransaction qt : qts) {
