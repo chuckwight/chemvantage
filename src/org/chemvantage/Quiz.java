@@ -535,11 +535,44 @@ public class Quiz extends HttpServlet {
 				return buf.toString();
 			}
 			
+			// retrieve the Score entity for this assignment or, if it doesn't exist, create a new one
 			Key<Score> k = Key.create(Key.create(User.class, user.id),Score.class,a.id);
     		Score s = ofy().load().key(k).now();
     		if (s==null) s = Score.getInstance(user.id, a);
+    		double cvPctScore = s.getPctScore();
     		
-			buf.append("Your best score on this assignment is " + Math.round(100.*s.score/s.maxPossibleScore) + "%.<p>");
+			buf.append("Your best score on this assignment is " + Math.round(10*cvPctScore)/10. + "%.<br>");
+			
+			// If the score has been reported to the class LMS, read that result from the LMS now
+			if (s.lisReportComplete) {
+				try {
+					Group g = ofy().load().type(Group.class).id(user.myGroupId).safe();
+					String messageFormat = g.getLisOutcomeFormat();
+					String body = xmlReadResult(s.lis_result_sourcedid);
+					String oauth_consumer_key = g.domain;
+					String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
+					
+					if (replyBody.contains("success")) {
+						int beginIndex = replyBody.indexOf("<textString>") + 12;
+						int endIndex = replyBody.indexOf("</textString>");
+						replyBody = replyBody.substring(beginIndex,endIndex);
+						double lmsPctScore = 100.*Double.parseDouble(replyBody);
+						if (Math.abs(lmsPctScore-cvPctScore)<1.0) { // LMS readResult agrees to within 1%
+							buf.append("This score is accurately recorded in the grade book of your class learning management system.<p>");
+						} else { // there is a significant difference between LMS and ChemVantage scores. Please explain:
+							buf.append("The score reported by your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%. The difference may be due to<br>"
+								+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<p>");
+						}
+					} else throw new Exception("Error in parsing xml file received from the remote server.");
+					
+				} catch (Exception e) {
+					buf.append("This score has been reported to your class LMS, but we are currently unable to retrieve it.<br>" + e.toString() + "<p>");
+				}
+			} else if (s.needsLisReporting()) {
+				buf.append("This score is currently being reported to your class LMS. Please wait 10 seconds and then "
+						+ "<a href=/Quiz?UserRequest=ShowScores&AssignmentId=" + a.id + ">click here to refresh this page.</a><p>");
+			}
+			else buf.append("This score has not been reported to your class LMS because no grade book entry point was provided by the LMS.<p>");
 			
 			buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Quiz Score</th></tr>");
 			for (QuizTransaction qt : qts) {
@@ -551,4 +584,26 @@ public class Quiz extends HttpServlet {
 		}
 		return buf.toString();
 	}
+	
+	String xmlReadResult(String lis_result_sourcedid) {
+		return "<?xml version = \"1.0\" encoding = \"UTF-8\"?>"
+		+ "<imsx_POXEnvelopeRequest xmlns = \"http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0\">"
+		+ "  <imsx_POXHeader>"
+		+ "    <imsx_POXRequestHeaderInfo>"
+		+ "      <imsx_version>V1.0</imsx_version>"
+		+ "      <imsx_messageIdentifier>1</imsx_messageIdentifier>"
+		+ "    </imsx_POXRequestHeaderInfo>"
+		+ "  </imsx_POXHeader>"
+		+ "  <imsx_POXBody>"
+		+ "    <readResultRequest>"
+		+ "      <resultRecord>"
+		+ "        <sourcedGUID>"
+		+ "          <sourcedId>" + lis_result_sourcedid + "</sourcedId>"
+		+ "        </sourcedGUID>"
+		+ "      </resultRecord>"
+		+ "    </readResultRequest>"
+		+ "  </imsx_POXBody>"
+		+ "</imsx_POXEnvelopeRequest>";
+	}
+
 }

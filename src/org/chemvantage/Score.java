@@ -110,6 +110,11 @@ public class Score {    // this object represents a best score achieved by a use
 		return numberOfAttempts>0?Integer.toString(score):"-";
 	}
 	
+	public double getPctScore() {
+		if (maxPossibleScore>0) return 100.*score/maxPossibleScore;
+		else return 0.;
+	}
+	
 	public boolean needsLisReporting() {
 		if (lis_result_sourcedid==null || lis_result_sourcedid.isEmpty() || lisReportComplete) return false;
 		return true;
