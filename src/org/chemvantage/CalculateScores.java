@@ -31,6 +31,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
@@ -53,7 +54,19 @@ public class CalculateScores extends HttpServlet {
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
 		
-		User user = User.getInstance(request.getSession());
+		HttpSession session = request.getSession();
+		User user = null;
+		String nonce = null;
+		if (session.isNew()) {
+			user = Nonce.getUser(request.getParameter("Nonce"));
+			nonce = Nonce.createInstance(user);
+		}
+		else user = User.getInstance(session);
+		if (user==null) {
+			response.sendRedirect("/Logout");
+			return;
+		}
+			
 		if (user==null || !(user.isInstructor() || user.isAdministrator() || user.isChemVantageAdmin())) {
 			response.sendRedirect("/Logout");
 		}
@@ -76,7 +89,7 @@ public class CalculateScores extends HttpServlet {
 		
 		if (userRequest.contentEquals("ViewTransactions")) {  // view assignment transactions for a single student
 			User student = ofy().load().type(User.class).id(request.getParameter("UserId")).now();
-			out.println(Home.header + viewTransactions(student,assignment) + Home.footer);
+			out.println(Home.header + viewTransactions(student,assignment,nonce) + Home.footer);
 		} else if (userRequest.contentEquals("Post this Score")) {  // EXPERIMENTAL SECTION
 			User student = ofy().load().type(User.class).id(request.getParameter("UserId")).now();
 			try {
@@ -88,13 +101,13 @@ public class CalculateScores extends HttpServlet {
 				out.println(e.toString());
 				return;
 			}
-			out.println(Home.header + viewTransactions(student,assignment) + Home.footer);			
+			out.println(Home.header + viewTransactions(student,assignment,nonce) + Home.footer);			
 		} else {  // view group Score objects for one assignment
-			out.println(Home.header + viewGroupScores(assignment,recalculate) + Home.footer); 
+			out.println(Home.header + viewGroupScores(assignment,recalculate,nonce) + Home.footer); 
 		}
 	}
 	
-	public String viewTransactions(User student,Assignment a) {
+	public String viewTransactions(User student,Assignment a,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
@@ -146,6 +159,7 @@ public class CalculateScores extends HttpServlet {
 								+ "You may use the form below to post a revised percentage score for this assignment<br>to the class LMS grade book: "
 								+ "<input type=hidden name=UserId value=" + student.id + ">"
 								+ "<input type=hidden name=AssignmentId value=" + a.id + ">"
+								+ "<input type=hidden name=Nonce value=" + nonce + ">"
 								+ "<input type=text size=4 name=PctScore>% "
 								+ "<input type=submit name=UserRequest value='Post this Score'> (value must be in the range 0-100)"
 								+ "</form><p>");
@@ -193,7 +207,7 @@ public class CalculateScores extends HttpServlet {
 		return buf.toString();	
 	}
 	
-	public String viewGroupScores(Assignment a,boolean recalculate) {
+	public String viewGroupScores(Assignment a,boolean recalculate,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			Group group = ofy().load().type(Group.class).id(a.groupId).now();
@@ -219,7 +233,7 @@ public class CalculateScores extends HttpServlet {
 				} else buf.append("To protect the privacy of our users, ChemVantage does not store names or other personally identifiable information (PII). "
 						+ "Scores are listed only by an opaque user ID that is derived from the value provided by your class learning management system. "
 						+ "You may click any student's UserID below to get a complete list of transactions for this assignment. If you think there may be "
-						+ "a problem with the scores, you may <a href=/CalculateScores?UserRequest=Recalculate&AssignmentId=" + a.id + ">"
+						+ "a problem with the scores, you may <a href=/CalculateScores?UserRequest=Recalculate&AssignmentId=" + a.id + (nonce==null?"":"&Nonce=" + nonce) + ">"
 						+ "click here to recalculate all student scores for this assignment</a> (this may take a few minutes).<p>");
 				// print a table of scores for this group assignment
 				buf.append("<table cellspacing=0 border=1><tr><th>ChemVantage UserID</th><th>Best Score</th><th>Attempts</th><th>Most Recent Attempt</th></tr>");
@@ -229,7 +243,10 @@ public class CalculateScores extends HttpServlet {
 					s = u.getScore(a);
 					if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",u.id));
 					double pct = s.score*100./s.maxPossibleScore;
-					buf.append("<tr><td align=center><a href=/CalculateScores?UserRequest=ViewTransactions&AssignmentId=" + a.id + "&UserId=" + u.id + ">" + u.getIdHash() + "</a></td><td align=center>" + (s.numberOfAttempts>0?String.format("%.0f", pct) + "%":"-") + "</td><td align=center>" + s.numberOfAttempts + "</td><td>" + (s.mostRecentAttempt==null?"":df.format(s.mostRecentAttempt)) + "</td></tr>");
+					buf.append("<tr><td align=center><a href=/CalculateScores?UserRequest=ViewTransactions&AssignmentId=" + a.id 
+							+ "&UserId=" + u.id + (nonce==null?"":"&Nonce=" + nonce) + ">" + u.getIdHash() + "</a></td><td align=center>" 
+							+ (s.numberOfAttempts>0?String.format("%.0f", pct) + "%":"-") + "</td><td align=center>" + s.numberOfAttempts + "</td><td>" 
+							+ (s.mostRecentAttempt==null?"":df.format(s.mostRecentAttempt)) + "</td></tr>");
 				}
 				buf.append("</table><br>" + counter + " student" + (counter!=1?"s":""));
 			}

@@ -62,24 +62,23 @@ public class Quiz extends HttpServlet {
 		try {
 			HttpSession session = request.getSession();
 			User user = null;
+			String nonce = null;
 			if (session.isNew()) {
 				user = Nonce.getUser(request.getParameter("Nonce"));
-				session.setAttribute("UserId", user.id);
-			} else user = User.getInstance(session);
-			
-			if (user==null || Login.lockedDown && !user.isAdministrator()) {
-				response.sendRedirect("/");
+				nonce = Nonce.createInstance(user);
+			}
+			else user = User.getInstance(session);
+			if (user==null) {
+				response.sendRedirect("/Logout");
 				return;
 			}
 				
 			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
-			
-			String nonce = session.isNew()?Nonce.createInstance(user):null;
+			PrintWriter out = response.getWriter();			
 			
 			String userRequest = request.getParameter("UserRequest");
 			
-			if (userRequest != null && "ShowScores".contentEquals(userRequest)) out.println(Home.header + showScores(user,request) + Home.footer);
+			if (userRequest != null && "ShowScores".contentEquals(userRequest)) out.println(Home.header + showScores(user,request,nonce) + Home.footer);
 			else out.println(Home.header + printQuiz(user,request,nonce) + Home.footer);
 		} catch (Exception e) {}
 	}
@@ -89,19 +88,20 @@ public class Quiz extends HttpServlet {
 		try {
 			HttpSession session = request.getSession();
 			User user = null;
+			String nonce = null;
 			if (session.isNew()) {
 				user = Nonce.getUser(request.getParameter("Nonce"));
-				session.setAttribute("UserId", user.id);
-			} else user = User.getInstance(session);
-			if (user==null || Login.lockedDown && !user.isAdministrator()) {
-				response.sendRedirect("/");
+				nonce = Nonce.createInstance(user);
+			}
+			else user = User.getInstance(session);
+			if (user==null) {
+				response.sendRedirect("/Logout");
 				return;
 			}
-			
+					
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
-			String nonce = session.isNew()?Nonce.createInstance(user):null;
 			out.println(Home.header + printScore(user,request,nonce) + Home.footer);
 		} catch (Exception e) {}
 	}
@@ -143,7 +143,7 @@ public class Quiz extends HttpServlet {
 				buf.append("As the course instructor you may<ul>"
 						+ "<li><a href=/Groups?UserRequest=AssignQuizQuestions&AssignmentId=" + qa.id + (nonce==null?"":"&Nonce=" + nonce) + ">"
 						+ "customize this quiz</a> by selecting/deselecting the available question items"
-						+ "<li>view a deidentified <a href=/CalculateScores?AssignmentId=" + qa.id + ">summary of scores</a> for this assignment"
+						+ "<li>view a deidentified <a href=/CalculateScores?AssignmentId=" + qa.id + (nonce==null?"":"&Nonce=" + nonce) + ">summary of scores</a> for this assignment"
 						+ "</ul></td></tr></table><p>");
 			} else if (user.isAnonymous()) {
 				buf.append("<h3><font color=red>Anonymous User</font></h3>");
@@ -157,7 +157,7 @@ public class Quiz extends HttpServlet {
 				buf.append("\n<LI>Each quiz must be completed within " + timeLimit + " minutes of the time when it is first downloaded.</LI>");
 				buf.append("\n<LI>You may repeat quizzes as many times as you wish, to improve your score.</LI>");
 				buf.append("\n<LI>For each quiz topic, the server reports your best quiz score. "
-						+ (qa==null?"":"<a href=/Quiz?UserRequest=ShowScores&AssignmentId=" + qa.id + ">View the details here</a>.") 
+						+ (qa==null?"":"<a href=/Quiz?UserRequest=ShowScores&AssignmentId=" + qa.id + (nonce==null?"":"&Nonce=" + nonce) + ">View the details here</a>.") 
 						+ "</LI>");
 				buf.append("</OL>");
 			}
@@ -294,7 +294,7 @@ public class Quiz extends HttpServlet {
 			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			buf.append(df.format(now));
 			
-			buf.append(ajaxScoreJavaScript(user.verifiedEmail)); // load javascript for AJAX problem reporting form
+			buf.append(ajaxScoreJavaScript(nonce)); // load javascript for AJAX problem reporting form
 			
 			StringBuffer missedQuestions = new StringBuffer();			
 			missedQuestions.append("<OL>");
@@ -422,7 +422,7 @@ public class Quiz extends HttpServlet {
 							+ "the correct answers to problems that you missed.\n");
 				}
 			}
-			buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback>here</a>.<p>");
+			buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback" + (nonce==null?"":"?Nonce=" + nonce) + ">here</a>.<p>");
 			
 			buf.append("<p>");
 			
@@ -432,7 +432,6 @@ public class Quiz extends HttpServlet {
 					+ (qt.lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + qt.lis_result_sourcedid)
 					+ ">Take this quiz again</a>&nbsp;");
 			if (user.isAnonymous()) buf.append(" or go back to the <a href=/>ChemVantage home page</a>.");
-			//else if (qa!=null) buf.append(" or <a href=/Quiz?UserRequest=ShowScores&AssignmentId=" + qa.id + ">View a summary of your scores for this assignment</a>");
 					
 		} catch (Exception e) {
 			buf.append("Sorry, this quiz could not be scored.<br>" + e.getMessage());
@@ -440,7 +439,7 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String ajaxScoreJavaScript(boolean verifiedEmail) {
+	String ajaxScoreJavaScript(String nonce) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note) {\n"
 		+ "  var xmlhttp;\n"
@@ -454,7 +453,6 @@ public class Quiz extends HttpServlet {
 		+ "    if (xmlhttp.readyState==4) {\n"
 		+ "      document.getElementById('feedback' + id).innerHTML="
 		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment. "
-//		+ (!verifiedEmail?"However, no response is possible unless you verify the email address in your <a href=/Verification>user profile</a>.":"") 
 		+ "</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
@@ -475,12 +473,12 @@ public class Quiz extends HttpServlet {
 		+ "    var msg;\n"
 		+ "    switch (nStars) {\n"
 		+ "      case '1': msg='1 star - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to <a href=Feedback>tell us why</a>.';"
+		+ "                + 'please take a moment to <a href=/Feedback" + (nonce==null?"":"?Nonce=" + nonce) + ">tell us why</a>.';"
 		+ "                break;\n"
 		+ "      case '2': msg='2 stars - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to <a href=Feedback>tell us why</a>.';"
+		+ "                + 'please take a moment to <a href=Feedback" + (nonce==null?"":"?Nonce=" + nonce) + ">tell us why</a>.';"
 		+ "                break;\n"
-		+ "      case '3': msg='3 stars - Thank you. <a href=Feedback>Click here</a> '"
+		+ "      case '3': msg='3 stars - Thank you. <a href=Feedback" + (nonce==null?"":"?Nonce=" + nonce) + ">Click here</a> '"
 		+ "                + 'to provide additional feedback.';"
 		+ "                break;\n"
 		+ "      case '4': msg='4 stars - Thank you';"
@@ -509,7 +507,7 @@ public class Quiz extends HttpServlet {
 		+ "</SCRIPT>";
 	}
 	
-	String showScores (User user, HttpServletRequest request) {
+	String showScores (User user, HttpServletRequest request, String nonce) {
 		StringBuffer buf = new StringBuffer("<h2>Your Quiz Transactions</h2>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
@@ -541,9 +539,8 @@ public class Quiz extends HttpServlet {
 			Key<Score> k = Key.create(Key.create(User.class, user.id),Score.class,a.id);
     		Score s = ofy().load().key(k).now();
     		if (s==null) s = Score.getInstance(user.id, a);
-    		double cvPctScore = s.getPctScore();
     		
-			buf.append("Your best score on this assignment is " + Math.round(10*cvPctScore)/10. + "%.<br>");
+			buf.append("Your best score on this assignment is " + Math.round(10*s.getPctScore())/10. + "%.<br>");
 			
 			if (s != null && s.lis_result_sourcedid != null) {  // try to validate the score with the LMS grade book entry
 				try {
@@ -564,7 +561,7 @@ public class Quiz extends HttpServlet {
 							buf.append("The score recorded in your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%. The difference may be due to<br>"
 									+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<p>");
 						}
-					} else buf.append("We attempted to validate the score contained in your class LMS grade book,<br>but the readResult operation failed, sorry.<p>");
+					} else buf.append("We attempted to validate the score contained in your class LMS grade book,<br>but the operation failed, possibly because the student is no longer in the class.<p>");
 				} catch (Exception e) {
 					buf.append("An unexpected error occured: " + e.toString());
 				}

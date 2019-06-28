@@ -55,23 +55,22 @@ public class Homework extends HttpServlet {
 		try {
 			HttpSession session = request.getSession();
 			User user = null;
+			String nonce = null;
 			if (session.isNew()) {
 				user = Nonce.getUser(request.getParameter("Nonce"));
-				session.setAttribute("UserId", user.id);
-			} else user = User.getInstance(session);
-			
-			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
-				response.sendRedirect("/");
+				nonce = Nonce.createInstance(user);
+			}
+			else user = User.getInstance(session);
+			if (user==null) {
+				response.sendRedirect("/Logout");
 				return;
 			}
 				
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
-			String nonce = session.isNew()?Nonce.createInstance(user):null;
-			
 			String userRequest = request.getParameter("UserRequest");			
-			if (userRequest != null && "ShowScores".contentEquals(userRequest)) out.println(Home.header + showScores(user,request) + Home.footer);
+			if (userRequest != null && "ShowScores".contentEquals(userRequest)) out.println(Home.header + showScores(user,request,nonce) + Home.footer);
 			else out.println(Home.header + printHomework(user,request,nonce) + Home.footer);
 		} catch (Exception e) {}
 	}
@@ -81,19 +80,20 @@ public class Homework extends HttpServlet {
 		try {
 			HttpSession session = request.getSession();
 			User user = null;
+			String nonce = null;
 			if (session.isNew()) {
 				user = Nonce.getUser(request.getParameter("Nonce"));
-				session.setAttribute("UserId", user.id);
-			} else user = User.getInstance(session);
-			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
-				response.sendRedirect("/");
+				nonce = Nonce.createInstance(user);
+			}
+			else user = User.getInstance(session);
+			if (user==null) {
+				response.sendRedirect("/Logout");
 				return;
 			}
-			
+							
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 
-			String nonce = session.isNew()?Nonce.createInstance(user):null;
 			out.println(Home.header + printScore(user,request,nonce) + Home.footer);
 		} catch (Exception e) {}
 	}
@@ -131,9 +131,9 @@ public class Homework extends HttpServlet {
 			if (user.isInstructor() && myGroup != null && hwa != null) {
 				buf.append("<table style='border: 1px solid black'><tr><td>");
 				buf.append("As the course instructor you may<ul>"
-						+ "<li><a href=/Groups?UserRequest=AssignHomeworkQuestions&AssignmentId=" + hwa.id + "&Nonce=" + nonce + ">"
+						+ "<li><a href=/Groups?UserRequest=AssignHomeworkQuestions&AssignmentId=" + hwa.id + (nonce==null?"":"&Nonce=" + nonce) + ">"
 						+ "customize this homework assignment</a> by selecting/deselecting the available question items."
-						+ "<li>view a deidentified <a href=/CalculateScores?AssignmentId=" + hwa.id + ">summary of scores</a> for this assignment"
+						+ "<li>view a deidentified <a href=/CalculateScores?AssignmentId=" + hwa.id + (nonce==null?"":"&Nonce=" + nonce) + ">summary of scores</a> for this assignment"
 						+ "</ul></td></tr></table><p>");
 			} else if (user.isAnonymous()) {
 				buf.append("<h3><font color=red>Anonymous User</font></h3>");
@@ -144,7 +144,9 @@ public class Homework extends HttpServlet {
 				buf.append("\n<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
 				buf.append("\n<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question.</LI>");
 				buf.append("\n<LI>Most questions are customized, so the correct answers are different for each student.</LI>");
-				buf.append("\n<LI>A checkmark will appear to the left of each correctly solved problem.</LI>");
+				buf.append("\n<LI>A checkmark will appear to the left of each correctly solved problem. "
+						+ (hwa==null?"":"<a href=/Homework?UserRequest=ShowScores&AssignmentId=" + hwa.id + (nonce==null?"":"&Nonce=" + nonce) + ">View the details here</a>.")
+						+ "</LI>");
 				buf.append("</UL>");
 			}
 			
@@ -292,7 +294,7 @@ public class Homework extends HttpServlet {
 				buf.append("Please take these few moments to check your work carefully.  You can sometimes find alternate routes to the<br>"
 						+ "same solution, or it may be possible to use your answer to back-calculate the data given in the problem.<p>"
 						+ "Alternatively, you may wish to "
-						+ "<a href=/Homework?" + (hwa==null?"TopicId=" + topic.id : "AssignmentId=" + hwa.id + (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)) + ">" 
+						+ "<a href=/Homework?" + (hwa==null?"TopicId=" + topic.id : "AssignmentId=" + hwa.id + (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)) + (nonce==null?"":"&Nonce=" + nonce) + ">" 
 						+ "return to this homework assignment</a> to work on another problem.<p>");
 		
 				buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework>"
@@ -396,7 +398,7 @@ public class Homework extends HttpServlet {
 			}
 
 			// embed the detailed solution or hint to the exercise in the response, if appropriate
-			buf.append(ajaxJavaScript(user.verifiedEmail));
+			buf.append(ajaxJavaScript(nonce));
 			if (user.isInstructor() || user.isTeachingAssistant() || (studentScore > 0)) {
 				buf.append("<p><div id=exampleLink>"
 						+ "<a href=# onClick=javascript:document.getElementById('example').style.display='';"
@@ -410,7 +412,7 @@ public class Homework extends HttpServlet {
 			// if the user response was correct, seek five-star feedback:
 			if (studentScore > 0) buf.append(fiveStars());
 			
-			buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback>here</a>.<p>");
+			buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback" + (nonce==null?"":"&Nonce=" + nonce) + ">here</a>.<p>");
 			buf.append("<a href=/Homework?"
 					+ (assignmentId>0?"AssignmentId=" + assignmentId : "TopicId=" + ht.topicId)
 					+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
@@ -418,7 +420,6 @@ public class Homework extends HttpServlet {
 					+ (offerHint?"&Q=" + q.id + "><span style='color:red'>Please give me a hint</span>":">Return to this homework assignment") + "</a>");
 			
 			if (user.isAnonymous()) buf.append(" or go back to the <a href=/>ChemVantage home page</a>.");
-			else if (hwa!=null) buf.append(" or <a href=/Homework?UserRequest=ShowScores&AssignmentId=" + hwa.id + ">View a summary of your submissions for this assignment</a>");
 			}
 		catch (Exception e) {
 			buf.append("Sorry, we were unable to score this question.<br>" + e.toString());
@@ -426,7 +427,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	String ajaxJavaScript(boolean verifiedEmail) {
+	String ajaxJavaScript(String nonce) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note) {\n"
 		+ "  var xmlhttp;\n"
@@ -440,7 +441,6 @@ public class Homework extends HttpServlet {
 		+ "    if (xmlhttp.readyState==4) {\n"
 		+ "      document.getElementById('feedback' + id).innerHTML="
 		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment. "
-//		+ (!verifiedEmail?"However, no response is possible unless you verify the email address in your <a href=/Verification>user profile</a>.":"") 
 		+ "</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
@@ -461,12 +461,12 @@ public class Homework extends HttpServlet {
 		+ "    var msg;\n"
 		+ "    switch (nStars) {\n"
 		+ "      case '1': msg='1 star - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to <a href=Feedback>tell us why</a>.';"
+		+ "                + 'please take a moment to <a href=Feedback" + (nonce==null?"":"&Nonce=" + nonce) + ">tell us why</a>.';"
 		+ "                break;\n"
 		+ "      case '2': msg='2 stars - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to <a href=Feedback>tell us why</a>.';"
+		+ "                + 'please take a moment to <a href=Feedback" + (nonce==null?"":"&Nonce=" + nonce) + ">tell us why</a>.';"
 		+ "                break;\n"
-		+ "      case '3': msg='3 stars - Thank you. <a href=Feedback>Click here</a> '"
+		+ "      case '3': msg='3 stars - Thank you. <a href=Feedback" + (nonce==null?"":"&Nonce=" + nonce) + ">Click here</a> '"
 		+ "                + 'to provide additional feedback.';"
 		+ "                break;\n"
 		+ "      case '4': msg='4 stars - Thank you';"
@@ -533,7 +533,7 @@ public class Homework extends HttpServlet {
 		return buf.toString(); 
 	}
 
-	protected String showScores(User user,HttpServletRequest request) {
+	protected String showScores(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer("<h2>Your Homework Transactions</h2>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
@@ -565,39 +565,32 @@ public class Homework extends HttpServlet {
     		Score s = ofy().load().key(k).now();
     		if (s==null) s = Score.getInstance(user.id, a);
     		
-    		double cvPctScore = s.getPctScore();
     		buf.append("Your overall score on this assignment is " + 10.*Math.round(s.getPctScore())/10. + "%.<br>");
 
-			// If the score has been reported to the class LMS, read that result from the LMS now
-			if (s.lisReportComplete) {
+    		if (s != null && s.lis_result_sourcedid != null) {  // try to validate the score with the LMS grade book entry
 				try {
 					Group g = ofy().load().type(Group.class).id(user.myGroupId).safe();
 					String messageFormat = g.getLisOutcomeFormat();
 					String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
 					String oauth_consumer_key = g.domain;
 					String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
-					
+
 					if (replyBody.contains("success")) {
 						int beginIndex = replyBody.indexOf("<textString>") + 12;
 						int endIndex = replyBody.indexOf("</textString>");
 						replyBody = replyBody.substring(beginIndex,endIndex);
 						double lmsPctScore = 100.*Double.parseDouble(replyBody);
-						if (Math.abs(lmsPctScore-cvPctScore)<1.0) { // LMS readResult agrees to within 1%
+						if (Math.abs(lmsPctScore-s.getPctScore())<1.0) { // LMS readResult agrees to within 1%
 							buf.append("This score is accurately recorded in the grade book of your class learning management system.<p>");
 						} else { // there is a significant difference between LMS and ChemVantage scores. Please explain:
-							buf.append("The score reported by your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%. The difference may be due to<br>"
-								+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<p>");
+							buf.append("The score recorded in your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%. The difference may be due to<br>"
+									+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<p>");
 						}
-					} else throw new Exception("Error in parsing xml file received from the remote server.");
-					
+					} else buf.append("We attempted to validate the score contained in your class LMS grade book,<br>but the operation failed, possibly because the student is no longer in the class.<p>");
 				} catch (Exception e) {
-					buf.append("This score has been reported to your class LMS, but we are currently unable to retrieve it.<br>" + e.toString() + "<p>");
+					buf.append("An unexpected error occured: " + e.toString());
 				}
-			} else if (s.needsLisReporting()) {
-				buf.append("This score is currently being reported to your class LMS. Please wait 10 seconds and then "
-						+ "<a href=/Homework?UserRequest=ShowScores&AssignmentId=" + a.id + ">click here to refresh this page.</a><p>");
 			}
-			else buf.append("This score has not been reported to your class LMS because no grade book entry point was provided by the LMS.<p>");
 
 			buf.append("<table><tr><th>Transaction Number</th><th>QuestionID</th><th>Graded</th><th>Score</th></tr>");
 			for (HWTransaction hwt : hwts) {

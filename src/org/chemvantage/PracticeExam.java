@@ -70,19 +70,20 @@ public class PracticeExam extends HttpServlet {
 	throws ServletException, IOException {
 		HttpSession session = request.getSession();
 		User user = null;
+		String nonce = null;
 		if (session.isNew()) {
 			user = Nonce.getUser(request.getParameter("Nonce"));
-			session.setAttribute("UserId", user.id);
-		} else user = User.getInstance(session);
-		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
-			response.sendRedirect("/");
+			nonce = Nonce.createInstance(user);
+		}
+		else user = User.getInstance(session);
+		if (user==null) {
+			response.sendRedirect("/Logout");
 			return;
 		}
-		
+			
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
-		String nonce = session.isNew()?Nonce.createInstance(user):null;
 		out.println(Home.header + printExam(user,request,nonce) + Home.footer);
 	}
 
@@ -90,19 +91,21 @@ public class PracticeExam extends HttpServlet {
 	throws ServletException, IOException {
 		HttpSession session = request.getSession();
 		User user = null;
+		String nonce = null;
 		if (session.isNew()) {
 			user = Nonce.getUser(request.getParameter("Nonce"));
-			session.setAttribute("UserId", user.id);
-		} else user = User.getInstance(session);
-		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
-			response.sendRedirect("/");
+			nonce = Nonce.createInstance(user);
+		}
+		else user = User.getInstance(session);
+		if (user==null) {
+			response.sendRedirect("/Logout");
 			return;
 		}
-		
+			
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
-		out.println(Home.header + printScore(user,request) + Home.footer);
+		out.println(Home.header + printScore(user,request,nonce) + Home.footer);
 	}
 
 	String designExam(User user,HttpServletRequest request,String nonce) {
@@ -113,7 +116,7 @@ public class PracticeExam extends HttpServlet {
 
 			buf.append("Please select <b>at least 3 topics</b> below to be covered on this practice exam.<p>");
 			buf.append("<FORM NAME=TopicForm METHOD=GET>");
-			buf.append(nonce!=null?"<input type=hidden name=Nonce value='" + nonce + "'":"");
+			buf.append("<input type=hidden name=Nonce value=" + nonce + ">");
 			buf.append("\n<TABLE>");
 			List<Topic> topics = ofy().load().type(Topic.class).list();
 			int i = 0;
@@ -472,7 +475,7 @@ public class PracticeExam extends HttpServlet {
 				+ "</SCRIPT>"; 
 	}
 	
-	String printScore(User user,HttpServletRequest request) {
+	String printScore(User user,HttpServletRequest request,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			buf.append("<h2>Practice Exam Results</h2>");
