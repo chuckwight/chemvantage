@@ -156,7 +156,9 @@ public class Quiz extends HttpServlet {
 				buf.append("\nQuiz Rules<OL>");
 				buf.append("\n<LI>Each quiz must be completed within " + timeLimit + " minutes of the time when it is first downloaded.</LI>");
 				buf.append("\n<LI>You may repeat quizzes as many times as you wish, to improve your score.</LI>");
-				buf.append("\n<LI>For each quiz topic, the server reports your best quiz score.</LI>");
+				buf.append("\n<LI>For each quiz topic, the server reports your best quiz score. "
+						+ (qa==null?"":"<a href=/Quiz?UserRequest=ShowScores&AssignmentId=" + qa.id + ">View the details here</a>.") 
+						+ "</LI>");
 				buf.append("</OL>");
 			}
 			buf.append("<div id='timer0' style='color: red'></div><div id=ctrl0 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
@@ -430,7 +432,7 @@ public class Quiz extends HttpServlet {
 					+ (qt.lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + qt.lis_result_sourcedid)
 					+ ">Take this quiz again</a>&nbsp;");
 			if (user.isAnonymous()) buf.append(" or go back to the <a href=/>ChemVantage home page</a>.");
-			else if (qa!=null) buf.append(" or <a href=/Quiz?UserRequest=ShowScores&AssignmentId=" + qa.id + ">View a summary of your scores for this assignment</a>");
+			//else if (qa!=null) buf.append(" or <a href=/Quiz?UserRequest=ShowScores&AssignmentId=" + qa.id + ">View a summary of your scores for this assignment</a>");
 					
 		} catch (Exception e) {
 			buf.append("Sorry, this quiz could not be scored.<br>" + e.getMessage());

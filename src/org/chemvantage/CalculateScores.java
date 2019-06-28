@@ -77,6 +77,18 @@ public class CalculateScores extends HttpServlet {
 		if (userRequest.contentEquals("ViewTransactions")) {  // view assignment transactions for a single student
 			User student = ofy().load().type(User.class).id(request.getParameter("UserId")).now();
 			out.println(Home.header + viewTransactions(student,assignment) + Home.footer);
+		} else if (userRequest.contentEquals("Post this Score")) {  // EXPERIMENTAL SECTION
+			User student = ofy().load().type(User.class).id(request.getParameter("UserId")).now();
+			try {
+				double pctScore = Double.parseDouble(request.getParameter("PctScore"));
+				if (pctScore < 0 || pctScore > 100) throw new Exception("<b>Score must be a percentage in the range 0-100.</b>");
+				if (student == null) throw new Exception("<b>There are no records for this student in the database.</b>");
+				postRevisedScore(student,assignment,pctScore);
+			} catch (Exception e) {
+				out.println(e.toString());
+				return;
+			}
+			out.println(Home.header + viewTransactions(student,assignment) + Home.footer);			
 		} else {  // view group Score objects for one assignment
 			out.println(Home.header + viewGroupScores(assignment,recalculate) + Home.footer); 
 		}
@@ -126,14 +138,18 @@ public class CalculateScores extends HttpServlet {
 							buf.append("The score recorded in your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%. The difference may be due to<br>"
 								+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<p>");
 						}
-					} else buf.append("Failed to retrieve this score from your class LMS, sorry.<p>");
-					
-					buf.append("Post a revised percentage score on this assignment to the class LMS grade book: "
-							+ "<form method=post action=CalculateScores>"
-							+ "<input type=hidden name=StudentId value=" + student.id + ">"
+					} else buf.append("We attempted to validate the score contained in your class LMS grade book,<br>but the readResult operation failed, sorry.<p>");
+
+					// This section allows an instructor to send a revised score to the LMS ===== EXPERIMENTAL =====				
+					buf.append("<form method=post action=CalculateScores>"
+							+ "You may use the form below to post a revised percentage score for this assignment<br>to the class LMS grade book: "
+							+ "<input type=hidden name=UserId value=" + student.id + ">"
 							+ "<input type=hidden name=AssignmentId value=" + a.id + ">"
-							+ "<input type=text size=4 name=PctScore>% (value 0-100)"
-							+ "<input type=submit name=UserRequest value='Post this Score'></form><p>");
+							+ "<input type=text size=4 name=PctScore>% "
+							+ "<input type=submit name=UserRequest value='Post this Score'> (value must be in the range 0-100)"
+							+ "</form><p>");
+					// End of EXPERIMENTAL section ==================================================================
+					
 	    		} catch (Exception e) {
 	    			buf.append("An unexpected error occured: " + e.toString());
 	    		}
@@ -219,5 +235,19 @@ public class CalculateScores extends HttpServlet {
 		} catch (Exception e) {
 		}
 		return buf.toString();
+	}
+	
+	void postRevisedScore(User student,Assignment a,double pctScore) 
+	throws Exception {
+		Group g = ofy().load().type(Group.class).id(a.groupId).safe();
+		String oauth_consumer_key = g.domain;
+		Score s = Score.getInstance(student.id, a);
+		
+		String messageFormat = g.getLisOutcomeFormat();			
+		String body = LTIMessage.xmlReplaceResult(s.lis_result_sourcedid,Double.toString(pctScore/100.));
+		String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
+		
+		if (!replyBody.contains("success")) throw new Exception("Sorry, the attempted score posting failed unexpectedly.");
+		return;
 	}
 }
