@@ -126,7 +126,14 @@ public class CalculateScores extends HttpServlet {
 							buf.append("The score recorded in your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%. The difference may be due to<br>"
 								+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<p>");
 						}
-					} else buf.append("Failed to retrieve this score from your class LMS, sorry.");
+					} else buf.append("Failed to retrieve this score from your class LMS, sorry.<p>");
+					
+					buf.append("Post a revised percentage score on this assignment to the class LMS grade book: "
+							+ "<form method=post action=CalculateScores>"
+							+ "<input type=hidden name=StudentId value=" + student.id + ">"
+							+ "<input type=hidden name=AssignmentId value=" + a.id + ">"
+							+ "<input type=text size=4 name=PctScore>% (value 0-100)"
+							+ "<input type=submit name=UserRequest value='Post this Score'></form><p>");
 	    		} catch (Exception e) {
 	    			buf.append("An unexpected error occured: " + e.toString());
 	    		}
