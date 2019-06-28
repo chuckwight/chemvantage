@@ -67,7 +67,7 @@ public class Score {    // this object represents a best score achieved by a use
 					s.mostRecentAttempt = qt.downloaded;
 					s.maxPossibleScore = qt.possibleScore;
 					if (qt.lis_result_sourcedid != null && !qt.lis_result_sourcedid.contentEquals(s.lis_result_sourcedid)) s.lis_result_sourcedid = qt.lis_result_sourcedid;
-					}				
+				}				
 			}
 		} else if (a.assignmentType.equals("Homework")) {
 			List<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",userId).filter("assignmentId",a.id).list();
