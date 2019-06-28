@@ -81,7 +81,7 @@ public class ReportScore extends HttpServlet {
 			String oauth_consumer_key = g.domain;
 			
 			String messageFormat = g.getLisOutcomeFormat();			
-			String body = (messageFormat.contains("jason")?jsonReplaceResult(Double.toString(score)):xmlReplaceResult(s.lis_result_sourcedid,Double.toString(score)));
+			String body = (messageFormat.contains("jason")?jsonReplaceResult(Double.toString(score)):LTIMessage.xmlReplaceResult(s.lis_result_sourcedid,Double.toString(score)));
 			String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
 			
 			if (replyBody.toLowerCase().contains("success")) {
@@ -107,32 +107,5 @@ public class ReportScore extends HttpServlet {
 		+ "'@type' : 'Result',"
 		+ "'resultScore' : " + score + ","
 		+ "}";
-	}
-	
-	String xmlReplaceResult(String lis_result_sourcedid, String score) {		
-		return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-		+ "<imsx_POXEnvelopeRequest xmlns = \"http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0\">"
-		+ "<imsx_POXHeader>"
-		+ "<imsx_POXRequestHeaderInfo>"
-		+ "<imsx_version>V1.0</imsx_version>"
-		+ "<imsx_messageIdentifier>1</imsx_messageIdentifier>"
-		+ "</imsx_POXRequestHeaderInfo>"
-		+ "</imsx_POXHeader>"
-		+ "<imsx_POXBody>"
-		+ "<replaceResultRequest>"
-		+ "<resultRecord>"
-		+ "<sourcedGUID>"
-		+ "<sourcedId>" + lis_result_sourcedid + "</sourcedId>"
-		+ "</sourcedGUID>"
-		+ "<result>"
-		+ "<resultScore>"
-		+ "<language>en</language>"
-		+ "<textString>" + score + "</textString>"
-		+ "</resultScore>"
-		+ "</result>"
-		+ "</resultRecord>"
-		+ "</replaceResultRequest>"
-		+ "</imsx_POXBody>"
-		+ "</imsx_POXEnvelopeRequest>";		
 	}
 }

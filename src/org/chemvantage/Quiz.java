@@ -548,7 +548,7 @@ public class Quiz extends HttpServlet {
 				try {
 					Group g = ofy().load().type(Group.class).id(user.myGroupId).safe();
 					String messageFormat = g.getLisOutcomeFormat();
-					String body = xmlReadResult(s.lis_result_sourcedid);
+					String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
 					String oauth_consumer_key = g.domain;
 					String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
 					
@@ -584,26 +584,4 @@ public class Quiz extends HttpServlet {
 		}
 		return buf.toString();
 	}
-	
-	String xmlReadResult(String lis_result_sourcedid) {
-		return "<?xml version = \"1.0\" encoding = \"UTF-8\"?>"
-		+ "<imsx_POXEnvelopeRequest xmlns = \"http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0\">"
-		+ "  <imsx_POXHeader>"
-		+ "    <imsx_POXRequestHeaderInfo>"
-		+ "      <imsx_version>V1.0</imsx_version>"
-		+ "      <imsx_messageIdentifier>1</imsx_messageIdentifier>"
-		+ "    </imsx_POXRequestHeaderInfo>"
-		+ "  </imsx_POXHeader>"
-		+ "  <imsx_POXBody>"
-		+ "    <readResultRequest>"
-		+ "      <resultRecord>"
-		+ "        <sourcedGUID>"
-		+ "          <sourcedId>" + lis_result_sourcedid + "</sourcedId>"
-		+ "        </sourcedGUID>"
-		+ "      </resultRecord>"
-		+ "    </readResultRequest>"
-		+ "  </imsx_POXBody>"
-		+ "</imsx_POXEnvelopeRequest>";
-	}
-
 }

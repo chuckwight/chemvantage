@@ -108,7 +108,30 @@ public class CalculateScores extends HttpServlet {
 	    		if (s==null) s = Score.getInstance(student.id, a);
 	    		buf.append("This student's best score on the assignment is " + Math.round(100.*s.score/s.maxPossibleScore) + "%.<p>");
 				
-				buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Quiz Score</th></tr>");
+	    		try {
+					Group g = ofy().load().type(Group.class).id(student.myGroupId).safe();
+					String messageFormat = g.getLisOutcomeFormat();
+					String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
+					String oauth_consumer_key = g.domain;
+					String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
+					
+					if (replyBody.contains("success")) {
+						int beginIndex = replyBody.indexOf("<textString>") + 12;
+						int endIndex = replyBody.indexOf("</textString>");
+						replyBody = replyBody.substring(beginIndex,endIndex);
+						double lmsPctScore = 100.*Double.parseDouble(replyBody);
+						if (Math.abs(lmsPctScore-s.getPctScore())<1.0) { // LMS readResult agrees to within 1%
+							buf.append("This score is accurately recorded in the grade book of your class learning management system.<p>");
+						} else { // there is a significant difference between LMS and ChemVantage scores. Please explain:
+							buf.append("The score recorded in your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%. The difference may be due to<br>"
+								+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<p>");
+						}
+					} else buf.append("Failed to retrieve this score from your class LMS, sorry.");
+	    		} catch (Exception e) {
+	    			buf.append("An unexpected error occured: " + e.toString());
+	    		}
+	    		
+	    		buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Quiz Score</th></tr>");
 				for (QuizTransaction qt : qts) {
 					buf.append("<tr><td>" + qt.id + "</td><td>" + df.format(qt.downloaded) + "</td><td align=center>" + (qt.graded==null?"-":100.*qt.score/qt.possibleScore + "%") +  "</td></tr>");
 				}

@@ -155,4 +155,52 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		return buffer.toString();
 	}
 
+	static String xmlReadResult(String lis_result_sourcedid) {
+		return "<?xml version = \"1.0\" encoding = \"UTF-8\"?>"
+		+ "<imsx_POXEnvelopeRequest xmlns = \"http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0\">"
+		+ "  <imsx_POXHeader>"
+		+ "    <imsx_POXRequestHeaderInfo>"
+		+ "      <imsx_version>V1.0</imsx_version>"
+		+ "      <imsx_messageIdentifier>1</imsx_messageIdentifier>"
+		+ "    </imsx_POXRequestHeaderInfo>"
+		+ "  </imsx_POXHeader>"
+		+ "  <imsx_POXBody>"
+		+ "    <readResultRequest>"
+		+ "      <resultRecord>"
+		+ "        <sourcedGUID>"
+		+ "          <sourcedId>" + lis_result_sourcedid + "</sourcedId>"
+		+ "        </sourcedGUID>"
+		+ "      </resultRecord>"
+		+ "    </readResultRequest>"
+		+ "  </imsx_POXBody>"
+		+ "</imsx_POXEnvelopeRequest>";
+	}
+
+	static String xmlReplaceResult(String lis_result_sourcedid, String score) {		
+		return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+		+ "<imsx_POXEnvelopeRequest xmlns = \"http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0\">"
+		+ "<imsx_POXHeader>"
+		+ "<imsx_POXRequestHeaderInfo>"
+		+ "<imsx_version>V1.0</imsx_version>"
+		+ "<imsx_messageIdentifier>1</imsx_messageIdentifier>"
+		+ "</imsx_POXRequestHeaderInfo>"
+		+ "</imsx_POXHeader>"
+		+ "<imsx_POXBody>"
+		+ "<replaceResultRequest>"
+		+ "<resultRecord>"
+		+ "<sourcedGUID>"
+		+ "<sourcedId>" + lis_result_sourcedid + "</sourcedId>"
+		+ "</sourcedGUID>"
+		+ "<result>"
+		+ "<resultScore>"
+		+ "<language>en</language>"
+		+ "<textString>" + score + "</textString>"
+		+ "</resultScore>"
+		+ "</result>"
+		+ "</resultRecord>"
+		+ "</replaceResultRequest>"
+		+ "</imsx_POXBody>"
+		+ "</imsx_POXEnvelopeRequest>";		
+	}
+
 }
