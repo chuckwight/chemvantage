@@ -384,9 +384,9 @@ public class LTILaunch extends HttpServlet {
 			buf.append("<input type=hidden name=Nonce value=" + Nonce.createInstance(user) + ">");
 			if (lis_result_sourcedid != null) buf.append("<input type=hidden name='lis_result_sourcedid' value='" + URLEncoder.encode(lis_result_sourcedid,"UTF-8") + "'>");
 			buf.append("<tr><td>"
-					+ "<input type=radio name=AssignmentType onClick='inspectRadios();' value=Quiz" + ("Quiz".equals(assignmentType)?" CHECKED":"") + ">Quiz<br>"
-					+ "<input type=radio name=AssignmentType onClick='inspectRadios();' value=Homework" + ("Homework".equals(assignmentType)?" CHECKED":"") + ">Homework<br>"
-					+ "<input type=radio name=AssignmentType onClick='inspectRadios();' value=PracticeExam" + ("PracticeExam".equals(assignmentType)?" CHECKED":"") + ">Practice&nbsp;Exam"
+					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Quiz" + ("Quiz".equals(assignmentType)?" CHECKED":"") + ">Quiz</label><br>"
+					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Homework" + ("Homework".equals(assignmentType)?" CHECKED":"") + ">Homework</label><br>"
+					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=PracticeExam" + ("PracticeExam".equals(assignmentType)?" CHECKED":"") + ">Practice&nbsp;Exam</label>"
 					+ "</td><td id=topicSelect style='visibility:hidden;vertical-align=top'>"
 					+ "<FONT COLOR=RED>Please select one topic for this quiz or homework assignment.</FONT><br>");
 			buf.append("<SELECT NAME=TopicId onChange=\"javascript: document.AssignmentForm.UserRequest.disabled=(document.AssignmentForm.TopicId.selectedIndex==0);\">"
