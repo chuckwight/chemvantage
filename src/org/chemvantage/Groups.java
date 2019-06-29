@@ -47,13 +47,17 @@ public class Groups extends HttpServlet {
 		try {
 			HttpSession session = request.getSession();
 			User user = null;
-			if (session.isNew()) user = Nonce.getUser(request.getParameter("Nonce"));
-			else user = User.getInstance(session);
-			
-			session.setAttribute("UserId", user.id);
 			String nonce = null;
-			if (session.isNew()) nonce = Nonce.createInstance(user);
-			
+			if (session.isNew()) {
+				user = Nonce.getUser(request.getParameter("Nonce"));
+				nonce = Nonce.createInstance(user);
+			}
+			else user = User.getInstance(session);
+			if (user==null) {
+				response.sendRedirect("/Logout");
+				return;
+			}
+				
 			// Authorized users only beyond this point:
 			if(!(user.isAdministrator() || user.isInstructor())) response.sendRedirect("/");
 			
@@ -86,8 +90,7 @@ public class Groups extends HttpServlet {
 				response.sendRedirect("/Logout");
 				return;
 			}
-			session.setAttribute("UserId", user.id);
-			
+						
 			long groupId = 0;
 			try {
 				groupId = Long.parseLong(request.getParameter("GroupId"));
@@ -169,14 +172,14 @@ public class Groups extends HttpServlet {
 						+ "answers to the items that they answer incorrectly. Therefore, the total number of questions should be "
 						+ "larger than 10, but not much larger than 50.  Experience shows that 30 items is about right in most cases.<p>"
 						+ "If you don't see a question you want to include, you may "
-						+ "<a href=/Contribute>contribute a new question item</a> to the database.<p>");
+						+ "<a href=/Contribute" + (nonce==null?"":"?Nonce=" + nonce) + ">contribute a new question item</a> to the database.<p>");
 			} else if (assignmentType.contentEquals("Homework")) {
 				buf.append("Select the homework questions to be assigned to students in this group, then click the "
 						+ "'Use Selected Items' button. Each question is worth 1 point, so the maximum possible score on the "
 						+ "assignment is equal to the number of questions selected. Students may work unassigned problems; "
 						+ "however, these are not included in the scores reported to the class LMS.<p>"
 						+ "If you don't see a question you want to include, you may "
-						+ "<a href=/Contribute>contribute a new question item</a> to the database.<p>");
+						+ "<a href=/Contribute" + (nonce==null?"":"?Nonce=" + nonce) + ">contribute a new question item</a> to the database.<p>");
 			}
 			
 			Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topic.id).filter("isActive",true);

@@ -586,7 +586,7 @@ public class Homework extends HttpServlet {
 							buf.append("The score recorded in your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%. The difference may be due to<br>"
 									+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<p>");
 						}
-					} else buf.append("We attempted to validate the score contained in your class LMS grade book,<br>but the operation failed, possibly because the student is no longer in the class.<p>");
+					} else buf.append("We attempted to validate the score contained in your class LMS grade book,<br>but the operation failed, most likely because your LMS failed to provide a valid grade book entry code.<p>");
 				} catch (Exception e) {
 					buf.append("An unexpected error occured: " + e.toString());
 				}

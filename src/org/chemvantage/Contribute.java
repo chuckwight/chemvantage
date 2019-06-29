@@ -43,16 +43,17 @@ public class Contribute extends HttpServlet {
 	throws ServletException, IOException {
 		HttpSession session = request.getSession();
 		User user = null;
-		if (session.isNew()) user = Nonce.getUser(request.getParameter("Nonce"));
+		String nonce = null;
+		if (session.isNew()) {
+			user = Nonce.getUser(request.getParameter("Nonce"));
+			nonce = Nonce.createInstance(user);
+		}
 		else user = User.getInstance(session);
-		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
+		if (user==null) {
 			response.sendRedirect("/Logout");
 			return;
 		}
-		session.setAttribute("UserId", user.id);
-		String nonce = null;
-		if (session.isNew()) nonce = Nonce.createInstance(user);
-		
+				
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		out.println(Home.header + newQuestionForm(user,request,nonce) + Home.footer);		
@@ -63,16 +64,17 @@ public class Contribute extends HttpServlet {
 		try{
 			HttpSession session = request.getSession();
 			User user = null;
-			if (session.isNew()) user = Nonce.getUser(request.getParameter("Nonce"));
+			String nonce = null;
+			if (session.isNew()) {
+				user = Nonce.getUser(request.getParameter("Nonce"));
+				nonce = Nonce.createInstance(user);
+			}
 			else user = User.getInstance(session);
-			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
+			if (user==null) {
 				response.sendRedirect("/Logout");
 				return;
 			}
-			session.setAttribute("UserId", user.id);
-			String nonce = null;
-			if (session.isNew()) nonce = Nonce.createInstance(user);
-			
+				
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
@@ -162,7 +164,7 @@ public class Contribute extends HttpServlet {
 					preview = true;
 					q.setParameters();
 					buf.append(q.printAll());
-					if (nonce!=null) buf.append("<INPUT TYPE=HIDDEN NAME=Nonce VALE=" + nonce + ">");
+					if (nonce!=null) buf.append("<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">");
 					buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save'><hr>");
 				}
 			}
@@ -227,7 +229,7 @@ public class Contribute extends HttpServlet {
 						+ "to indicate the expected dimensions or units of the student response or "
 						+ "to finish any part of the question text that comes last.<p>"); break;
 				default:  buf.append("An unexpected error occurred. "
-						+ "Please <a href=Contribute>try again</a>.");
+						+ "Please <a href=Contribute" + (nonce==null?"":"&Nonce=" + nonce) + ">try again</a>.");
 				}
 			}
 			else {
@@ -327,8 +329,7 @@ public class Contribute extends HttpServlet {
 			buf.append("<h3>Question Submitted Successfully</h3>"
 			+ "Thank you for contributing this question item to ChemVantage.<br>"
 			+ "Your contribution will be reviewed by an editor before it is added to the database.<br>"
-			+ "<a href=Contribute" + (nonce==null?"":"?Nonce=" + nonce) + ">Contribute another question item</a>. "
-			+ "or <a href=/" + q.assignmentType + "?TopicId=" + q.topicId + ">return to this assignment</a>.");
+			+ "<a href=Contribute" + (nonce==null?"":"?Nonce=" + nonce) + ">Contribute another question item</a>.");
 		}
 		return buf.toString();
 	}
