@@ -116,8 +116,12 @@ public class Score {    // this object represents a best score achieved by a use
 	}
 	
 	public boolean needsLisReporting() {
-		if (lis_result_sourcedid==null || lis_result_sourcedid.isEmpty() || lisReportComplete) return false;
-		return true;
+		try {
+			Group g = ofy().load().type(Group.class).id(this.groupId).safe();
+			if (g.isUsingLisOutcomeService && lis_result_sourcedid!=null && !lisReportComplete) return true;
+		} catch (Exception e) {
+		}
+		return false;
 	}
 	
     boolean equals(Score s) {

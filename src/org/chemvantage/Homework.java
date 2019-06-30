@@ -561,9 +561,8 @@ public class Homework extends HttpServlet {
 				return buf.toString();
 			}
 			
-			Key<Score> k = Key.create(Key.create(User.class, user.id),Score.class,a.id);
-    		Score s = ofy().load().key(k).now();
-    		if (s==null) s = Score.getInstance(user.id, a);
+			// create a fresh Score entity to calculate the best score on this assignment
+			Score s = Score.getInstance(user.id, a);
     		
     		buf.append("Your overall score on this assignment is " + 10.*Math.round(s.getPctScore())/10. + "%.<br>");
 
@@ -584,7 +583,9 @@ public class Homework extends HttpServlet {
 							buf.append("This score is accurately recorded in the grade book of your class learning management system.<p>");
 						} else { // there is a significant difference between LMS and ChemVantage scores. Please explain:
 							buf.append("The score recorded in your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%. The difference may be due to<br>"
-									+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<p>");
+									+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<br>"
+									+ "If you think this may be due to a stale score, you may submit this assignment for grading,<br>"
+									+ "even for a score of zero, and ChemVantage will try to refresh your best score to the LMS.<p>");
 						}
 					} else buf.append("We attempted to validate the score contained in your class LMS grade book,<br>but the operation failed, most likely because your LMS failed to provide a valid grade book entry code.<p>");
 				} catch (Exception e) {
