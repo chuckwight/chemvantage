@@ -566,7 +566,7 @@ public class Homework extends HttpServlet {
     		
     		buf.append("Your overall score on this assignment is " + 10.*Math.round(s.getPctScore())/10. + "%.<br>");
 
-    		if (s != null && s.lis_result_sourcedid != null) {  // try to validate the score with the LMS grade book entry
+    		if (s.score>0 && s.lis_result_sourcedid != null) {  // try to validate the score with the LMS grade book entry
 				try {
 					Group g = ofy().load().type(Group.class).id(user.myGroupId).safe();
 					String messageFormat = g.getLisOutcomeFormat();
@@ -587,9 +587,9 @@ public class Homework extends HttpServlet {
 									+ "If you think this may be due to a stale score, you may submit this assignment for grading,<br>"
 									+ "even for a score of zero, and ChemVantage will try to refresh your best score to the LMS.<p>");
 						}
-					} else buf.append("We attempted to validate the score contained in your class LMS grade book,<br>but the operation failed, most likely because your LMS failed to provide a valid grade book entry code.<p>");
+					} else throw new Exception();
 				} catch (Exception e) {
-					buf.append("An unexpected error occured: " + e.toString());
+					buf.append("We attempted to validate the score contained in your class LMS grade book,<br>but the operation failed, most likely because your LMS failed to provide a valid grade book entry code.<p>");
 				}
 			}
 

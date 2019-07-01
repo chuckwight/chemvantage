@@ -56,16 +56,17 @@ public class Feedback extends HttpServlet {
 		try {
 			HttpSession session = request.getSession();
 			User user = null;
-			if (session.isNew()) user = Nonce.getUser(request.getParameter("Nonce"));
+			String nonce = null;
+			if (session.isNew()) {
+				user = Nonce.getUser(request.getParameter("Nonce"));
+				nonce = Nonce.createInstance(user);
+			}
 			else user = User.getInstance(session);
-			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
+			if (user==null) {
 				response.sendRedirect("/Logout");
 				return;
 			}
-			session.setAttribute("UserId", user.id);
-			String nonce = null;
-			if (session.isNew()) nonce = Nonce.createInstance(user);
-			
+				
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 
@@ -88,16 +89,17 @@ public class Feedback extends HttpServlet {
 		try {
 			HttpSession session = request.getSession();
 			User user = null;
-			if (session.isNew()) user = Nonce.getUser(request.getParameter("Nonce"));
+			String nonce = null;
+			if (session.isNew()) {
+				user = Nonce.getUser(request.getParameter("Nonce"));
+				nonce = Nonce.createInstance(user);
+			}
 			else user = User.getInstance(session);
-			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
+			if (user==null) {
 				response.sendRedirect("/Logout");
 				return;
 			}
-			session.setAttribute("UserId", user.id);
-			String nonce = null;
-			if (session.isNew()) nonce = Nonce.createInstance(user);
-			
+							
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			

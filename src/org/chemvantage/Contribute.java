@@ -53,7 +53,7 @@ public class Contribute extends HttpServlet {
 			response.sendRedirect("/Logout");
 			return;
 		}
-				
+			
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		out.println(Home.header + newQuestionForm(user,request,nonce) + Home.footer);		
@@ -137,7 +137,8 @@ public class Contribute extends HttpServlet {
 			ProposedQuestion q = null;
 			boolean preview = false;
 			buf.append("<FORM NAME=NewQuestion ACTION=Contribute METHOD=POST>");
-
+			if (nonce!=null) buf.append("<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">");
+			
 			if (assignmentType.length()>0 && questionType>0 && topicId>0) { // create the question object
 				q = new ProposedQuestion(questionType);
 				q.topicId = topicId;
@@ -164,7 +165,6 @@ public class Contribute extends HttpServlet {
 					preview = true;
 					q.setParameters();
 					buf.append(q.printAll());
-					if (nonce!=null) buf.append("<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">");
 					buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save'><hr>");
 				}
 			}
