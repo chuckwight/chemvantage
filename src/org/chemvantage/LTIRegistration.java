@@ -133,7 +133,7 @@ public class LTIRegistration extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
-		out.println(Login.header + banner + welcomeMessage);
+		out.println(Home.header + banner + welcomeMessage);
 		StringBuffer buf = new StringBuffer();
 		buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");
 		buf.append("<FORM METHOD=POST><TABLE>");
@@ -148,7 +148,7 @@ public class LTIRegistration extends HttpServlet {
 		buf.append("<TR><TD>&nbsp;</TD><TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Send My Free LTI Credentials'></TD></TR>");
 		buf.append("</TABLE></FORM>");
 		buf.append(instructions);
-		out.println(buf.toString() + Login.footer);
+		out.println(buf.toString() + Home.footer);
 	}
 
 	@Override
@@ -184,7 +184,7 @@ public class LTIRegistration extends HttpServlet {
 					c = new BLTIConsumer(key,email);
 					if (sendLTICredentials(email,c)) {  // credentials sent successfully
 						ofy().save().entity(c);
-						out.println(Login.header + banner + successMessage + Login.footer);				
+						out.println(Home.header + banner + successMessage + Home.footer);				
 					}
 				} else doError(request,response,"Sorry, the LTI registration attempt failed, probably because the consumer key is already in use.",null,null);			
 				return;	// successful LTI v1.x registration attempts and those failed due to duplicate consumer_key values should exit here.
@@ -235,7 +235,7 @@ public class LTIRegistration extends HttpServlet {
 				response.setContentType("text/html");
 				PrintWriter out = response.getWriter();
 				
-				StringBuffer buf = new StringBuffer(Login.header + banner);
+				StringBuffer buf = new StringBuffer(Home.header + banner);
 				buf.append("<h3>LTI2 Registration</h3>");
 				buf.append("All ChemVantage services are offered at no cost whatsoever. Please review the proposed capabilities<br>"
 						+ "and tool services selected below. Then submit this registration form to complete the process.<p>");
@@ -275,7 +275,7 @@ public class LTIRegistration extends HttpServlet {
 						+ "<input type=submit name='UserRequest' value='Submit Registration'>");
 
 				buf.append("</td></tr></table></form>");
-				buf.append(Login.footer);
+				buf.append(Home.footer);
 				
 				out.println(buf.toString());
 				return;
@@ -409,7 +409,7 @@ public class LTIRegistration extends HttpServlet {
 		} catch (Exception e2) {
 			// in case no return URL was provided, show the error to the user
 			PrintWriter out = response.getWriter();
-			out.println(Login.header + banner + s + Login.footer);
+			out.println(Home.header + banner + s + Home.footer);
 		}
 	}
 

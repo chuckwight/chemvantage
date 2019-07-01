@@ -26,6 +26,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import net.sf.json.JSONObject;
 
@@ -40,9 +41,10 @@ public class ToolSettingsManager extends HttpServlet {
 	throws ServletException, IOException {
 		
 		try {
-			User user = User.getInstance(request.getSession(true));
-			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
-				response.sendRedirect("/");
+			HttpSession session = request.getSession();
+			User user = User.getInstance(session);
+			if (user==null) {
+				response.sendRedirect("/Logout");
 				return;
 			}
 				
@@ -58,22 +60,6 @@ public class ToolSettingsManager extends HttpServlet {
 				buf.append(getToolSettings(oauth_consumer_key));
 			}
 			out.println(Home.getHeader(user) + buf.toString() + Home.footer);
-		} catch (Exception e) {}
-	}
-
-	public void doPost(HttpServletRequest request,HttpServletResponse response)
-	throws ServletException, IOException {
-		try {
-			User user = User.getInstance(request.getSession(true));
-			if (user==null || (Login.lockedDown && !user.isAdministrator())) {
-				response.sendRedirect("/");
-				return;
-			}
-				
-			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
-			out.println("not implemented");
-			
 		} catch (Exception e) {}
 	}
 	

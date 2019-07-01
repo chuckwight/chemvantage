@@ -22,7 +22,6 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
-import java.util.Random;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -65,18 +64,7 @@ public class Admin extends HttpServlet {
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
-	
-			if (user.use2FactorAuth && session.getAttribute("Code")==null) {
-				int code = new Random().nextInt(900000) + 100000;
-				if (TwoFactorAuth.sentSMSCode(user, code)) {
-					session.setAttribute("ProposedCode", code);
-					out.println(Home.getHeader(user) + TwoFactorAuth.verificationForm("/Admin", false) + Home.footer);
-					return;
-				}
-			} else {
-				session.setAttribute("Code",1); // failed text message; let the user in this time
-			}
-			
+				
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 
@@ -107,7 +95,6 @@ public class Admin extends HttpServlet {
 			if (userRequest == null) userRequest = "";
 			if (userRequest.equals("Announce")) {
 				Home.announcement = request.getParameter("Announcement");
-				Login.lockedDown = Boolean.parseBoolean(request.getParameter("LockedDown"));
 			} else if (userRequest.equals("Update User")) {
 				User usr = ofy().load().type(User.class).id(request.getParameter("UserId")).safe(); // user record to modify
 				updateUser(usr,request);
@@ -147,8 +134,6 @@ public class Admin extends HttpServlet {
 			buf.append("<FORM ACTION=Admin METHOD=POST>"
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=Announce>"
 					+ "<INPUT TYPE=TEXT SIZE=80 NAME=Announcement VALUE='" + Home.announcement + "'><BR>"
-					+ "<INPUT TYPE=RADIO NAME=LockedDown VALUE=false" + (Login.lockedDown?"":" CHECKED") + ">unlock&nbsp;"
-					+ "<INPUT TYPE=RADIO NAME=LockedDown VALUE=true" + (Login.lockedDown?" CHECKED":"") + ">lock"
 					+ " site to prevent logins except by site administrators<br>"
 					+ "<INPUT TYPE=SUBMIT VALUE='Post this message now'></FORM>");
 			

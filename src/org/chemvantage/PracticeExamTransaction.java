@@ -40,12 +40,11 @@ public class PracticeExamTransaction implements Serializable {
 			int[] scores;
 			int[] possibleScores;
 			String lis_result_sourcedid;
-			String IPNumber;
 			List<Key<Response>> responseKeys;
 
 	PracticeExamTransaction() {}
 
-	PracticeExamTransaction(List<Long> topicIds,String userId,Date downloaded,Date graded,int[] scores,int[] possibleScores,String lis_result_sourcedid,String IPNumber) {
+	PracticeExamTransaction(List<Long> topicIds,String userId,Date downloaded,Date graded,int[] scores,int[] possibleScores,String lis_result_sourcedid) {
 		this.topicIds = topicIds;
 		this.userId = userId;
 		this.downloaded = downloaded;
@@ -53,7 +52,6 @@ public class PracticeExamTransaction implements Serializable {
 		this.scores = scores;
 		this.possibleScores = possibleScores;
 		this.lis_result_sourcedid = lis_result_sourcedid;
-		this.IPNumber = IPNumber;
 	}
 
 	public List<Response> getResponses() {

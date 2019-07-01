@@ -76,8 +76,6 @@ public class LTILaunch extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
-		if (Login.lockedDown) doError(request,response,"ChemVantage is temporarily unavailable, sorry.",null,null);
-
 		// check for minimum required elements for a basic-lti-launch-request
 		String lti_message_type=request.getParameter("lti_message_type");
 		

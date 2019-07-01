@@ -16,7 +16,6 @@ public class EntityRegistrar implements ServletContextListener {
         ObjectifyService.register(Group.class);
         ObjectifyService.register(HWTransaction.class);
         ObjectifyService.register(Nonce.class);
-        ObjectifyService.register(PayPalIPN.class);
         ObjectifyService.register(PracticeExamTransaction.class);
         ObjectifyService.register(ProposedQuestion.class);
         ObjectifyService.register(Question.class);

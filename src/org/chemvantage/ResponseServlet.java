@@ -42,11 +42,6 @@ public class ResponseServlet extends HttpServlet {
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
-		User user = User.getInstance(request.getSession(true));
-		if (user==null || (Login.lockedDown && !user.isAdministrator())) {
-			response.sendRedirect("/");
-			return;
-		}
 		PrintWriter out = response.getWriter();
 		try {
 			if ("Go".equals(request.getParameter("UserRequest"))) {
@@ -178,7 +173,7 @@ public class ResponseServlet extends HttpServlet {
 				
 			} else {
 				response.setContentType("text/html");
-				out.println(Home.getHeader(user) + responseForm(request) + Home.footer);
+				out.println(Home.header + responseForm(request) + Home.footer);
 			}
 		} catch (Exception e) {
 			response.setContentType("text/html");

@@ -80,7 +80,7 @@ public class Feedback extends HttpServlet {
 				recordAjaxRating(request);
 			} else out.println(Home.header + feedbackForm(user,nonce) + Home.footer);    
 		} catch (Exception e) {
-			out.println(Home.header + anonymousFeedbackForm() + Login.footer);
+			out.println(Home.header + anonymousFeedbackForm() + Home.footer);
 		}
 	}
 

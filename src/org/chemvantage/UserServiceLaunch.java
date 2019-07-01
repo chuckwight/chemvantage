@@ -23,8 +23,6 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.Random;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -60,47 +58,10 @@ public class UserServiceLaunch extends HttpServlet {
 				ofy().save().entity(user).now();
 			}
 		
-			if (user.use2FactorAuth && session.getAttribute("Code")==null) {  // send 2-factor authentication form
-				int code = new Random().nextInt(900000) + 100000;
-				if (TwoFactorAuth.sentSMSCode(user, code)) {
-					session.setAttribute("ProposedCode", code);
-					response.setContentType("text/html");
-					PrintWriter out = response.getWriter();
-					out.println(Login.header + TwoFactorAuth.verificationForm("/Home",false) + Login.footer);
-					return;
-				} else { // text message failed to send; allow user temporary access anyway
-					session.setAttribute("Code", 1);
-				}
-			}
-			response.sendRedirect("/Home?r=" + new Random().nextInt(9999));
+		response.sendRedirect("/Home");
 		} catch (Exception e) {
 			session.invalidate();
 			response.sendRedirect("/");
 		}
-	}
-	
-	@Override
-	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
-	throws ServletException, IOException {
-		HttpSession session = request.getSession();
-		try {
-			int proposedCode = (int)session.getAttribute("ProposedCode");
-			int code = Integer.parseInt(request.getParameter("Code"));
-			boolean retry = Boolean.parseBoolean(request.getParameter("Retry"));
-			if (retry && proposedCode != code) throw new Exception();  // exit on failed second attempt
-			else if (proposedCode != code) {
-				response.setContentType("text/html");
-				PrintWriter out = response.getWriter();
-				out.println(Login.header + TwoFactorAuth.verificationForm("/Home",true) + Login.footer);
-				return;
-			}
-			session.setAttribute("Code", code);
-			String returnURL = request.getParameter("ReturnURL");
-			if (returnURL==null || returnURL.isEmpty()) returnURL = "/Home";
-			response.sendRedirect(returnURL);		
-		} catch (Exception e) {
-			response.sendRedirect("/");
-		}
-		
 	}
 }

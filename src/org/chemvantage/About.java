@@ -140,14 +140,13 @@ public class About extends HttpServlet {
 		+ "<a href=http://imscert.org><img alt='IMS Global Certified' style='border-width:0' align=left hspace=10 vspace=5 "
 		+ "src='/images/imscertifiedfinalsmall.png'/></a> ChemVantage is certified by the "
 		+ "<a href=http://imsglobal.org>IMS Global Learning Consortium</a> to be conformant with the "
-		+ "LTI v1.0, v1.1 and v2.0 standards for learning tools interoperability. The IMS conformance registration "
-		+ "number for ChemVantage is <a href=http://www.imsglobal.org/cc/detail.cfm?ID=259>IMSB2C2ce2014W1</a>.<p>"
-		+ "This means that you can configure most learning management systems such as Blackboard, "
-		+ "Canvas, Moodle, Sakai or Desire2Learn with an LTI link to ChemVantage.  This allows your LMS to establish "
+		+ "LTI v1.0, v1.1 and Outcomes Service 1.X standards for learning tools interoperability. The IMS registration "
+		+ "number for ChemVantage is <a href=https://site.imsglobal.org/certifications/chemvantage/36981/chemvantage>IMSB2C2C3B2ce2019W1</a>.<p>"
+		+ "This means that you can configure <a href=https://site.imsglobal.org/certifications/chemvantage/36981/chemvantage/180501/compatibility>"
+		+ "compatible learning management systems</a> with an LTI link to ChemVantage.  This allows your LMS to establish "
 		+ "and maintain ChemVantage accounts automatically, without having to maintain separate usernames and "
-		+ "passwords. If the LMS supports LTI v1.1 or higher, then ChemVantage will report the assignment scores back to the "
-		+ "LMS gradebook. The administrator of your LMS can set this up by generating a set of ChemVantage LTI "
-		+ "credentials at <a href=/lti/registration/>our LTI registration page</a>.";
+		+ "passwords. If your LMS supports the LTI Outcomes Service, ChemVantage will report the assignment scores back to the "
+		+ "LMS grade book. You can get a free set of ChemVantage LTI credentials at <a href=/lti/registration/>our LTI registration page</a>.";
 			
 	public static String copyright = "<a NAME=copyright></a>"
 		+ "<h3>Copyright &copy; 2007-2019 ChemVantage LLC</h3>"
@@ -196,9 +195,13 @@ public class About extends HttpServlet {
 		+ "TORTUOUS BEHAVIOR, NEGLIGENCE, OR UNDER ANY OTHER CAUSE OF ACTION.</LI>"
 		+ "</UL>"
 		+ "<LI>PRIVACY POLICY.<br>"
-		+ "We protect your privacy to the maximum extent that allows the site to function as designed. "
-		+ "ChemVantage does not collect ANY personally identifiable information (PII), and we do not share "
-		+ "scores or other user information with anyone except instructors through the LTI interface.</LI>"
+		+ "We protect your privacy to the maximum extent that allows the site to function as designed:<ul> "
+		+ "<li>ChemVantage does not collect ANY personally identifiable information (PII). Users are identified only by opaque ID "
+		+ "numbers provided by the client LMS."
+		+ "<li>ChemVantage does not use web cookies or collect IP addresses"
+		+ "<li>All user assignment scores and data are encrypted during transmission to users browsers using SSL"
+		+ "<li>All user scores and data are stored on secure encrypted Google Datastore servers while at rest."
+		+ "<li>ChemVantage does not share any user information with anyone except instructors through the LTI interface.</ul></LI>"
 		+ "<LI>NO WARRANTEE<br>"
 		+ "We are committed to providing the best possible online learning environment for General Chemistry. "
 		+ "If you have a question or problem using the site, please let us know immediately, and we will do our "
@@ -219,6 +222,6 @@ public class About extends HttpServlet {
 	throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		out.println(Login.header + about + premium + accounts + certification + copyright + terms + Home.footer);
+		out.println(Home.header + about + premium + accounts + certification + copyright + terms + Home.footer);
 	}
 }

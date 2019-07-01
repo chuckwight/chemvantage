@@ -43,6 +43,6 @@ public class Logout extends HttpServlet {
 		} catch (Exception e) {}
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		out.println("<h2>You have successfully signed out of ChemVantage</h2>" + Login.footer);
+		out.println("<h2>You have successfully signed out of ChemVantage</h2>" + Home.footer);
 	}
 }
