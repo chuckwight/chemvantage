@@ -67,7 +67,7 @@ public class CalculateScores extends HttpServlet {
 			return;
 		}
 			
-		if (user==null || !(user.isInstructor() || user.isAdministrator() || user.isChemVantageAdmin())) {
+		if (!(user.isInstructor() || user.isAdministrator() || user.isChemVantageAdmin())) {
 			response.sendRedirect("/Logout");
 		}
 		

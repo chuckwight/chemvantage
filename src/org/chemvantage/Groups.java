@@ -90,7 +90,7 @@ public class Groups extends HttpServlet {
 				response.sendRedirect("/Logout");
 				return;
 			}
-						
+			
 			long groupId = 0;
 			try {
 				groupId = Long.parseLong(request.getParameter("GroupId"));
@@ -107,7 +107,7 @@ public class Groups extends HttpServlet {
 				updateAssignment(user,group,request);
 				Assignment assignment = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
 				response.sendRedirect("/" + assignment.assignmentType + "?AssignmentId=" + assignment.id
-						+ (nonce==null?"":"&nonce=" + nonce));
+						+ (nonce==null?"":"&Nonce=" + nonce));
 				return;
 			}
 		} catch (Exception e) {

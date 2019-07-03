@@ -43,6 +43,13 @@ public class Logout extends HttpServlet {
 		} catch (Exception e) {}
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		out.println("<h2>You have successfully signed out of ChemVantage</h2>" + Home.footer);
+		out.println(Home.header 
+				+ "<h3>You have successfully signed out of ChemVantage</h3>" 
+				+ "If this happened unerxpectedly, it might have been caused by using your browser's BACK button while "
+				+ "viewing ChemVantage in a frame contained by a learning management system (LMS). Some browsers do not permit "
+				+ "using session variables in frames, and therefore do not support backward navigation.<p>"
+				+ "You can avoid this either by using a browser that supports session variables in frames (e.g., Chrome), or by "
+				+ "configuring your LMS to display third-party apps in a separate window."
+				+ Home.footer);
 	}
 }
