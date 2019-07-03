@@ -42,14 +42,19 @@ public class Nonce {
 	}
 	
 	static String createInstance(User user) {
-		Nonce n = new Nonce();
-		n.id = BLTIConsumer.generateSecret();
-		n.userId = user.id;
-		n.created = new Date();
-		ofy().save().entity(n).now();
-		return n.id;
+		if (user == null) return null;
+		try {
+			Nonce n = new Nonce();
+			n.id = BLTIConsumer.generateSecret();
+			n.userId = user.id;
+			n.created = new Date();
+			ofy().save().entity(n).now();
+			return n.id;
+		} catch (Exception e) {
+			return null;
+		}
 	}
-	
+
 	static long interval = 5400000L;  // 90 minutes in milliseconds
 	
 	public static boolean isUnique(String nonce, String timestamp) {
