@@ -203,7 +203,7 @@ public class About extends HttpServlet {
 		+ "ChemVantage protects its users' privacy to the maximum extent that allows the site to function as designed. We "
 		+ "do not collect ANY personally identifiable information (PII), and we do not share any user information with anyone "
 		+ "except instructors and with the user's LMS through a secure LTI interface. "
-		+ "<a href=#terms onClick=javascript:getElementById('privacy').style.display=''>Click here for details</a>"
+		+ "<span><a href=#terms onClick=javascript:getElementById('privacy').style.display='';this.style.display='none'>Click here for details</a></span>"
 		+ "<div id='privacy' style='display:none'>"
 		+ "<ul>"
 		+ "<li><b>Personally identifiable information</b> - Chemvantage does not collect or store any user PII. " 
