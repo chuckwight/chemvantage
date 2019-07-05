@@ -48,7 +48,7 @@ public class DataStoreCleaner extends HttpServlet {
 	int querySizeLimit = 1000;
 	
 	public String getServletInfo() {
-		return "ChemVantage servlet that performs daily maintenance of the datastore.";
+		return "ChemVantage servlet that performs monthly maintenance of the datastore.";
 	}
 	
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
@@ -58,14 +58,42 @@ public class DataStoreCleaner extends HttpServlet {
 		// For GET request, use /DataStoreCleaner?Task=CleanUsers&TestOnly=true (or similar).
 		// Default value of TestOnly is false;
 		// For POST request, no parameters runs all methods
-		if (request.getParameter("Task")!=null) {  // must specify Task parameter
-			doPost(request,response);
-			return;
-		} else {
-			PrintWriter out = response.getWriter();
-			response.setContentType("text/html");
-			out.println("<h2>Data Store Cleaner</h2>Useage: /DataStoreCleaner?Task=CleanAll [&TestOnly=true]");
+		
+		PrintWriter out = response.getWriter();
+		response.setContentType("text/html");
+		out.println(Home.header);
+		
+		String task = request.getParameter("Task");
+		boolean testOnly = Boolean.parseBoolean(request.getParameter("TestOnly"));
+		String cursor = null;
+		
+		if (task!=null) {  // must specify Task parameter
+			switch (task) {
+			case "CleanUsers": out.println(cleanUsers(testOnly)); break;
+			case "CleanResponses": out.println(cleanResponses(testOnly)); break;
+			case "CleanQuizTransactions": out.println(cleanQuizTransactions(cursor,0,testOnly)); break;
+			case "CleanHWTransactions": out.println(cleanHWTransactions(cursor,0,testOnly)); break;
+			case "CleanPracticeExamTransactions": out.println(cleanPracticeExamTransactions(cursor,0,testOnly)); break;
+			case "CleanScores": out.println(cleanScores(cursor,0,testOnly)); break;
+			case "CleanGroups": out.println(cleanGroups(cursor,0,testOnly)); break;
+			case "CleanAssignments": out.println(cleanAssignments(cursor,0,testOnly)); break;
+			case "CleanDomains": out.println(cleanDomains(cursor,0,testOnly)); break;
+			} 
+		} else if (Boolean.parseBoolean(request.getParameter("TestAll"))) {
+			out.println(cleanUsers(true)
+					+ cleanResponses(true)
+					+ cleanQuizTransactions(null,0,true)
+					+ cleanHWTransactions(null,0,true)
+					+ cleanPracticeExamTransactions(null,0,true)
+					+ cleanScores(null,0,true)
+					+ cleanGroups(null,0,true)
+					+ cleanAssignments(null,0,true)
+					+ cleanDomains(null,0,true));
 		}
+
+		out.println(interactiveMenu());
+		out.println(Home.footer);
+
 	} 
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
@@ -87,8 +115,8 @@ public class DataStoreCleaner extends HttpServlet {
 		if (task==null) return;
 		
 		switch (task) {
-		case "CleanUsers": out.println(cleanUsers(cursor,0,testOnly)); break;
-		case "CleanResponses": out.println(cleanResponses(cursor,0,testOnly)); break;
+		case "CleanUsers": out.println(cleanUsers(testOnly)); break;
+		case "CleanResponses": out.println(cleanResponses(testOnly)); break;
 		case "CleanQuizTransactions": out.println(cleanQuizTransactions(cursor,0,testOnly)); break;
 		case "CleanHWTransactions": out.println(cleanHWTransactions(cursor,0,testOnly)); break;
 		case "CleanPracticeExamTransactions": out.println(cleanPracticeExamTransactions(cursor,0,testOnly)); break;
@@ -120,48 +148,45 @@ public class DataStoreCleaner extends HttpServlet {
 		default: return;
 		}
 	}
+	
+	String interactiveMenu() {
+		StringBuffer buf = new StringBuffer("<h2>Data Store Cleaner</h2>Useage: /DataStoreCleaner?Task=CleanAll [&TestOnly=true]<p>");
+		buf.append("<a href=DataStoreCleaner?Task=CleanUsers&TestOnly=true>Test CleanUsers (with no deletions)<br>");
+		buf.append("<a href=DataStoreCleaner?Task=CleanResponses&TestOnly=true>Test CleanResponses (with no deletions)<br>");
+		buf.append("<a href=DataStoreCleaner?Task=CleanQuizTransactions&TestOnly=true>Test CleanQuizTransactions (with no deletions)<br>");
+		buf.append("<a href=DataStoreCleaner?Task=CleanHWTransactions&TestOnly=true>Test CleanHWTransactions (with no deletions)<br>");
+		buf.append("<a href=DataStoreCleaner?Task=CleanPracticeExamTransactions&TestOnly=true>Test CleanPracticeExamTransactions (with no deletions)<br>");
+		buf.append("<a href=DataStoreCleaner?Task=CleanScores&TestOnly=true>Test CleanScores (with no deletions)<br>");
+		buf.append("<a href=DataStoreCleaner?Task=CleanGroups&TestOnly=true>Test CleanGroups (with no deletions)<br>");
+		buf.append("<a href=DataStoreCleaner?Task=CleanAssignments&TestOnly=true>Test CleanAssignments (with no deletions)<br>");
+		buf.append("<a href=DataStoreCleaner?Task=CleanDomains&TestOnly=true>Test CleanDomains (with no deletions)<br>");
+		
+		buf.append("<a href=DataStoreCleaner?TestAll=true>Test all cleaners</a> (with no deletions)<p>");
+	
+		return buf.toString();
+	}
 
-	private String cleanUsers(String cursor,int retries,boolean testOnly) {
+	private String cleanUsers(boolean testOnly) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			//Query<User> query = ofy().load().type(User.class).limit(querySizeLimit); // temporary
 			
 			Query<User> query = ofy().load().type(User.class).filter("lastLogin <", sixMonthsAgo).limit(querySizeLimit);
-			if (cursor==null) buf.append("<h2>Clean Users</h2>");
-		    else query.startAt(Cursor.fromWebSafeString(cursor));
-
+			buf.append("<h2>Clean Users</h2>");
+		    
 		    QueryResultIterator<User> qri = query.iterator();
 		    ArrayList<Key<User>> keys = new ArrayList<Key<User>>();  // list of User entity keys for batch delete
 
 		    while (qri.hasNext()) {
 		    	User u = qri.next();
-/*
-  		    	u.firstName = "";
-		    	u.lastName = "";
-		    	u.lowercaseName = "";
-		    	u.notifyDeadlines = false;
-		    	if (!u.isChemVantageAdmin()) {
-		    		u.email = "";
-		    		u.smsMessageDevice = "";
-		    	}
-*/		    
 		    	if (deleteUser(u.id)) {  // tests to see if user should be deleted
 		    		keys.add(Key.create(u));  // saves key in group to be deleted
-		    	} else ofy().save().entity(u);
+		    	}
 		    }
 
-		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys).now();
+		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 		     
 		    buf.append(query.count() + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
-
-		    if (query.count()<querySizeLimit) buf.append("Done.");
-		    else if (retries < 9) buf.append(cleanUsers(qri.getCursor().toWebSafeString(),retries+1,testOnly));
-		    else if (!testOnly) {
-		    	cursor = qri.getCursor().toWebSafeString();
-		    	Queue queue = QueueFactory.getDefaultQueue();
-		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanUsers").param("Cursor", cursor).param("TestOnly", testOnly?"true":"false"));
-		    	buf.append("Launching a new DataStoreCleaner task.");
-		    }
 
 		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
@@ -188,23 +213,15 @@ public class DataStoreCleaner extends HttpServlet {
 		return true; // signal that this user object should be deleted
 	}
 
-	private String cleanResponses(String cursor,int retries,boolean testOnly) {
+	private String cleanResponses(boolean testOnly) {
 		StringBuffer buf = new StringBuffer();
 		try {			
-			if (cursor==null) buf.append("<h2>Clean Responses</h2>");
+			buf.append("<h2>Clean Responses</h2>");
 		    
 			List<Key<Response>> keys = ofy().load().type(Response.class).filter("submitted <", oneYearAgo).limit(querySizeLimit).keys().list();
 			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
 		    buf.append(keys.size() + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
-
-		    if (keys.size()<querySizeLimit) buf.append("Done.");
-		    else if (retries < 9) buf.append(cleanResponses("continue",retries+1,testOnly));
-		    else if (!testOnly) {
-		    	Queue queue = QueueFactory.getDefaultQueue();
-		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanResponses").param("TestOnly", testOnly?"true":"false"));
-		    	buf.append("Launching a new DataStoreCleaner task.");
-		    }
 
 		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
@@ -224,12 +241,13 @@ public class DataStoreCleaner extends HttpServlet {
 			}
 			
 		    ArrayList<Key<QuizTransaction>> keys = new ArrayList<Key<QuizTransaction>>();  // list of QuizTransaction entity keys for batch delete
-		    
+
 		    for (QuizTransaction q : query) {
 		    	try {
-		    		ofy().load().type(User.class).id(q.userId).safe();  // throws Exception if owner (User) does not exist
-		    	} catch (Exception e) {  // catches exception if user does not exist
-		    		keys.add(Key.create(q));  // collection of keys for QuizTransactions to be deleted
+		    		Key<User> k = Key.create(User.class,q.userId);
+		    		Key<User> key = ofy().load().type(User.class).filterKey(k).keys().first().now();
+		    		if (!k.equals(key)) keys.add(Key.create(q)); // if user does not exist, add the QuizTransaction key to the list to be deleted
+		    	} catch (Exception e) { 
 		    	}
 		    }
 
@@ -267,9 +285,10 @@ public class DataStoreCleaner extends HttpServlet {
 		    ArrayList<Key<HWTransaction>> keys = new ArrayList<Key<HWTransaction>>();  // list of HWTransaction entity keys for batch delete
 		    for (HWTransaction h : query) {
 		    	try {
-		    		ofy().load().type(User.class).id(h.userId).safe();  // throws Exception if user does not exist
+		    		Key<User> k = Key.create(User.class,h.userId);
+		    		Key<User> key = ofy().load().type(User.class).filterKey(k).keys().first().now();
+		    		if (!k.equals(key)) keys.add(Key.create(h)); // if user does not exist, add the QuizTransaction key to the list to be deleted
 		    	} catch (Exception e) {  // catches exception if user does not exist
-		    		keys.add(Key.create(h));  // collection of keys for HWTransactions to be deleted
 		    	}
 		    }
 
@@ -306,12 +325,12 @@ public class DataStoreCleaner extends HttpServlet {
 		    QueryResultIterator<PracticeExamTransaction> qri = query.iterator();
 		    ArrayList<Key<PracticeExamTransaction>> keys = new ArrayList<Key<PracticeExamTransaction>>();  // list of PracticeExamTransaction entity keys for batch delete
 		    
-		    while (qri.hasNext()) {
-		    	PracticeExamTransaction p = qri.next();
-	    		try {
-		    		ofy().load().type(User.class).id(p.userId).safe();  // throws Exception if user does not exist
+		    for (PracticeExamTransaction p : query) {
+		    	try {
+		    		Key<User> k = Key.create(User.class,p.userId);
+		    		Key<User> key = ofy().load().type(User.class).filterKey(k).keys().first().now();
+		    		if (!k.equals(key)) keys.add(Key.create(p)); // if user does not exist, add the QuizTransaction key to the list to be deleted
 		    	} catch (Exception e) {  // catches exception if user does not exist
-		    		keys.add(Key.create(p));  // collection of keys for PracticeExamTransactions to be deleted
 		    	}
 		    }
 
@@ -348,12 +367,12 @@ public class DataStoreCleaner extends HttpServlet {
 		    QueryResultIterator<Score> qri = query.iterator();
 		    ArrayList<Key<Score>> keys = new ArrayList<Key<Score>>();  // list of Score entity keys for batch delete
 		    
-		    while (qri.hasNext()) {
-		    	Score s = qri.next();
-	    		try {
-		    		ofy().load().key(s.owner).safe();  // throws Exception if owner (User) does not exist
+		    for (Score s : query) {
+		    	try {
+		    		Key<User> k = s.owner;
+		    		Key<User> key = ofy().load().type(User.class).filterKey(k).keys().first().now();
+		    		if (!k.equals(key)) keys.add(Key.create(s)); // if user does not exist, add the QuizTransaction key to the list to be deleted
 		    	} catch (Exception e) {  // catches exception if user does not exist
-		    		keys.add(Key.create(s));  // collection of keys for Scores to be deleted
 		    	}
 		    }
 
@@ -391,8 +410,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    QueryResultIterator<Group> qri = query.iterator();
 		    ArrayList<Key<Group>> keys = new ArrayList<Key<Group>>();  // list of Group entity keys for batch delete
 		    
-		    while (qri.hasNext()) {
-		    	Group g = qri.next();
+		    for (Group g : query) {
 		    	if (!g.isActive()) keys.add(Key.create(g)); 
 		    }
 
@@ -429,12 +447,12 @@ public class DataStoreCleaner extends HttpServlet {
 		    QueryResultIterator<Assignment> qri = query.iterator();
 		    ArrayList<Key<Assignment>> keys = new ArrayList<Key<Assignment>>();  // list of Assignment entity keys for batch delete
 		    
-		    while (qri.hasNext()) {
-		    	Assignment a = qri.next();
-	    		try {
-		    		ofy().load().type(Group.class).id(a.groupId).safe();  // throws Exception if the corresponding Group does not exist
+		    for (Assignment a : query) {
+		    	try {
+		    		Key<Group> k = Key.create(Group.class,a.groupId);
+		    		Key<Group> key = ofy().load().type(Group.class).filterKey(k).keys().first().now();
+		    		if (!k.equals(key)) keys.add(Key.create(a)); // if user does not exist, add the QuizTransaction key to the list to be deleted
 		    	} catch (Exception e) {  // catches exception if Group does not exist
-		    		keys.add(Key.create(a));  // collection of keys for Assignments to be deleted
 		    	}
 		    }
 
@@ -471,9 +489,8 @@ public class DataStoreCleaner extends HttpServlet {
 		    QueryResultIterator<Domain> qri = query.iterator();
 		    ArrayList<Key<Domain>> keys = new ArrayList<Key<Domain>>();  // list of Domain entity keys for batch delete
 		    
-		    while (qri.hasNext()) {
-		    	Domain d = qri.next();
-	    		if (d.activeUsers==0 && d.created.before(oneMonthAgo)) keys.add(Key.create(d));  // flags for deletion if domain has been around for a while but has no users
+		    for (Domain d : query) {
+		    	if (d.activeUsers==0 && d.created.before(oneMonthAgo)) keys.add(Key.create(d));  // flags for deletion if domain has been around for a while but has no users
 		    }
 
 		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
