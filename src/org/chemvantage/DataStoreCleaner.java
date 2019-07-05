@@ -78,6 +78,7 @@ public class DataStoreCleaner extends HttpServlet {
 			case "CleanGroups": out.println(cleanGroups(cursor,0,testOnly)); break;
 			case "CleanAssignments": out.println(cleanAssignments(cursor,0,testOnly)); break;
 			case "CleanDomains": out.println(cleanDomains(cursor,0,testOnly)); break;
+			case "CleanAll": doPost(request,response); return;
 			} 
 		} else if (Boolean.parseBoolean(request.getParameter("TestAll"))) {
 			out.println(cleanUsers(true)
@@ -191,6 +192,7 @@ public class DataStoreCleaner extends HttpServlet {
 		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
 		}
+		buf.append("Done.<br>");
 		return buf.toString();
 	}
 		
@@ -226,6 +228,7 @@ public class DataStoreCleaner extends HttpServlet {
 		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
 		}
+		buf.append("Done.<br>");
 		return buf.toString();
 	}
 	
@@ -236,7 +239,7 @@ public class DataStoreCleaner extends HttpServlet {
 			if (cursor==null) {  // start new entity search
 				buf.append("<h2>Clean Quiz Transactions</h2>");
 				query = ofy().load().type(QuizTransaction.class).limit(querySizeLimit);
-			} else {  // continue search with the next 1000 entities
+			} else {  // continue search with the next 100 entities
 				query = ofy().load().type(QuizTransaction.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
 			}
 			
@@ -281,7 +284,7 @@ public class DataStoreCleaner extends HttpServlet {
 			 if (cursor==null) {  // start new entity search
 				buf.append("<h2>Clean Homework Transactions</h2>");
 				query = ofy().load().type(HWTransaction.class).limit(querySizeLimit);
-			} else {  // continue search with the next 1000 entities
+			} else {  // continue search with the next 100 entities
 				query = ofy().load().type(HWTransaction.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
 			}
 			
@@ -326,7 +329,7 @@ public class DataStoreCleaner extends HttpServlet {
 			if (cursor==null) {  // start new entity search
 				buf.append("<h2>Clean Practice Exam Transactions</h2>");
 				query = ofy().load().type(PracticeExamTransaction.class).limit(querySizeLimit);
-			} else {  // continue search with the next 1000 entities
+			} else {  // continue search with the next 100 entities
 				query = ofy().load().type(PracticeExamTransaction.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
 			}
 			
@@ -369,7 +372,7 @@ public class DataStoreCleaner extends HttpServlet {
 			if (cursor==null) {  // start new entity search
 				buf.append("<h2>Clean User Scores</h2>");
 				query = ofy().load().type(Score.class).limit(querySizeLimit);
-			} else {  // continue search with the next 1000 entities
+			} else {  // continue search with the next 100 entities
 				query = ofy().load().type(Score.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
 			}
 			
@@ -413,7 +416,7 @@ public class DataStoreCleaner extends HttpServlet {
 			if (cursor==null) {  // start new entity search
 				buf.append("<h2>Clean Groups</h2>");
 				query = ofy().load().type(Group.class).limit(querySizeLimit);
-			} else {  // continue search with the next 1000 entities
+			} else {  // continue search with the next 100 entities
 				query = ofy().load().type(Group.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
 			}
 			
@@ -451,7 +454,7 @@ public class DataStoreCleaner extends HttpServlet {
 			if (cursor==null) {  // start new entity search
 				buf.append("<h2>Clean Assignments</h2>");
 				query = ofy().load().type(Assignment.class).limit(querySizeLimit);
-			} else {  // continue search with the next 1000 entities
+			} else {  // continue search with the next 100 entities
 				query = ofy().load().type(Assignment.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
 			}
 			
@@ -462,9 +465,9 @@ public class DataStoreCleaner extends HttpServlet {
 		    	Assignment a = iterator.next();
 		    	try {
 		    		Key<Group> k = Key.create(Group.class,a.groupId);
-		    		Key<Group> key = ofy().load().type(Group.class).filterKey(k).keys().first().now();
-		    		if (!k.equals(key)) keys.add(Key.create(a)); // if user does not exist, add the QuizTransaction key to the list to be deleted
+		    		ofy().load().type(Group.class).filterKey(k).keys().first().safe();
 		    	} catch (Exception e) {  // catches exception if Group does not exist
+		    		keys.add(Key.create(a));  // add the Assignment key to the list to be deleted
 		    	}
 		    }
 
@@ -494,7 +497,7 @@ public class DataStoreCleaner extends HttpServlet {
 			if (cursor==null) {  // start new entity search
 				buf.append("<h2>Clean Domains</h2>");
 				query = ofy().load().type(Domain.class).limit(querySizeLimit);
-			} else {  // continue search with the next 1000 entities
+			} else {  // continue search with the next 100 entities
 				query = ofy().load().type(Domain.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
 			}
 			
@@ -503,7 +506,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    
 		    while (iterator.hasNext()) {
 		    	Domain d = iterator.next();
-		    	if (d.activeUsers==0 && d.created.before(oneMonthAgo)) keys.add(Key.create(d));  // flags for deletion if domain has been around for a while but has no users
+		    	if (d.getActiveUsers()==0) keys.add(Key.create(d));  // flags for deletion if domain has no users
 		    }
 
 		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
@@ -512,7 +515,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    cursor = iterator.getCursor().toWebSafeString();
 	    	
 		    if (query.count()<querySizeLimit) buf.append("Done.<br>");
-		    else if (retries < 9) buf.append(cleanDomains(cursor,retries+1,testOnly));
+		    else if (retries < 5) buf.append(cleanDomains(cursor,retries+1,testOnly));
 		    else if (!testOnly) {
 		    	Queue queue = QueueFactory.getDefaultQueue();
 		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanDomains").param("Cursor", cursor).param("TestOnly", testOnly?"true":"false"));
