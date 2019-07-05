@@ -531,47 +531,49 @@ public class Quiz extends HttpServlet {
 			List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).filter("assignmentId",a.id).filter("userId",user.id).order("downloaded").list();
 			
 			if (qts.size()==0) {
-				buf.append("Sorry, we did not find any records for you in the database for this assignment.");
-				return buf.toString();
-			}
-			
-			// create a fresh Score entity to calculate the best score on this assignment
-			Score s = Score.getInstance(user.id, a);
-    		
-			buf.append("Your best score on this assignment is " + Math.round(10*s.getPctScore())/10. + "%.<br>");
-			
-			if (s.score>0 && s.lis_result_sourcedid != null) {  // try to validate the score with the LMS grade book entry
-				try {
-					Group g = ofy().load().type(Group.class).id(user.myGroupId).safe();
-					String messageFormat = g.getLisOutcomeFormat();
-					String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
-					String oauth_consumer_key = g.domain;
-					String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
+				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>"
+						+ "<a href=Quiz?AssignmentId=" + a.id + (nonce==null?"":"&Nonce=" + nonce)+ ">Take me back to the quiz now.</a>");
+			} else {
+				// create a fresh Score entity to calculate the best score on this assignment
+				Score s = Score.getInstance(user.id, a);
 
-					if (replyBody.contains("success")) {
-						int beginIndex = replyBody.indexOf("<textString>") + 12;
-						int endIndex = replyBody.indexOf("</textString>");
-						replyBody = replyBody.substring(beginIndex,endIndex);
-						double lmsPctScore = 100.*Double.parseDouble(replyBody);
-						if (Math.abs(lmsPctScore-s.getPctScore())<1.0) { // LMS readResult agrees to within 1%
-							buf.append("This score is accurately recorded in the grade book of your class learning management system.<p>");
-						} else { // there is a significant difference between LMS and ChemVantage scores. Please explain:
-							buf.append("The score recorded in your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%. The difference may be due to<br>"
-									+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<br>"
-									+ "If you think this may be due to a stale score, you may submit this assignment for grading,<br>"
-									+ "even for a score of zero, and ChemVantage will try to refresh your best score to the LMS.<p>");
-						}
-					} else throw new Exception();
-				} catch (Exception e) {
-					buf.append("We attempted to validate the score contained in your class LMS grade book, but the operation failed.<p>");
+				buf.append("Your best score on this assignment is " + Math.round(10*s.getPctScore())/10. + "%.<br>");
+
+				if (s.score>0 && s.lis_result_sourcedid != null) {  // try to validate the score with the LMS grade book entry
+					try {
+						Group g = ofy().load().type(Group.class).id(user.myGroupId).safe();
+						String messageFormat = g.getLisOutcomeFormat();
+						String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
+						String oauth_consumer_key = g.domain;
+						String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
+
+						if (replyBody.contains("success")) {
+							int beginIndex = replyBody.indexOf("<textString>") + 12;
+							int endIndex = replyBody.indexOf("</textString>");
+							replyBody = replyBody.substring(beginIndex,endIndex);
+							double lmsPctScore = 100.*Double.parseDouble(replyBody);
+							if (Math.abs(lmsPctScore-s.getPctScore())<1.0) { // LMS readResult agrees to within 1%
+								buf.append("This score is accurately recorded in the grade book of your class learning management system.<p>");
+							} else { // there is a significant difference between LMS and ChemVantage scores. Please explain:
+								buf.append("The score recorded in your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%. The difference may be due to<br>"
+										+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<br>"
+										+ "If you think this may be due to a stale score, you may submit this assignment for grading,<br>"
+										+ "even for a score of zero, and ChemVantage will try to refresh your best score to the LMS.<p>");
+							}
+						} else throw new Exception();
+					} catch (Exception e) {
+						buf.append("We attempted to validate the score contained in your class LMS grade book, but the operation failed.<p>");
+					}
 				}
-			}
 
-			buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Quiz Score</th></tr>");
-			for (QuizTransaction qt : qts) {
-				buf.append("<tr><td>" + qt.id + "</td><td>" + df.format(qt.downloaded) + "</td><td align=center>" + (qt.graded==null?"-":100.*qt.score/qt.possibleScore + "%") +  "</td></tr>");
+				buf.append("<a href=Quiz?AssignmentId=" + a.id + (nonce==null?"":"&Nonce=" + nonce)+ ">Take me back to the quiz now.</a><p>");
+			
+				buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Quiz Score</th></tr>");
+				for (QuizTransaction qt : qts) {
+					buf.append("<tr><td>" + qt.id + "</td><td>" + df.format(qt.downloaded) + "</td><td align=center>" + (qt.graded==null?"-":100.*qt.score/qt.possibleScore + "%") +  "</td></tr>");
+				}
+				buf.append("</table><br>Missing scores indicate quizzes that were downloaded but not submitted for scoring.<p>");
 			}
-			buf.append("</table><br>Missing scores indicate quizzes that were downloaded but not submitted for scoring.<p>");
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}

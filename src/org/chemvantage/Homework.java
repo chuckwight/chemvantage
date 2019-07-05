@@ -557,8 +557,9 @@ public class Homework extends HttpServlet {
 			List<HWTransaction> hwts = ofy().load().type(HWTransaction.class).filter("assignmentId",a.id).filter("userId",user.id).order("graded").list();
 			
 			if (hwts.size()==0) {
-				buf.append("Sorry, we did not find any records for you in the database for this assignment.");
-				return buf.toString();
+				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>");
+				buf.append("<a href=Homework?AssignmentId=" + a.id + (nonce==null?"":"&Nonce=" + nonce)+ ">Take me back to the homework assignment.</a><p>");
+					return buf.toString();
 			}
 			
 			// create a fresh Score entity to calculate the best score on this assignment
@@ -592,6 +593,7 @@ public class Homework extends HttpServlet {
 					buf.append("We attempted to validate the score contained in your class LMS grade book,<br>but the operation failed, most likely because your LMS failed to provide a valid grade book entry code.<p>");
 				}
 			}
+    		buf.append("<a href=Homework?AssignmentId=" + a.id + (nonce==null?"":"&Nonce=" + nonce)+ ">Take me back to the homework assignment.</a><p>");
 
 			buf.append("<table><tr><th>Transaction Number</th><th>QuestionID</th><th>Graded</th><th>Score</th></tr>");
 			for (HWTransaction hwt : hwts) {
