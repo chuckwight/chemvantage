@@ -412,7 +412,7 @@ public class Homework extends HttpServlet {
 			// if the user response was correct, seek five-star feedback:
 			if (studentScore > 0) buf.append(fiveStars());
 			
-			buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback" + (nonce==null?"":"&Nonce=" + nonce) + ">here</a>.<p>");
+			buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback" + (nonce==null?"":"?Nonce=" + nonce) + ">here</a>.<p>");
 			buf.append("<a href=/Homework?"
 					+ (assignmentId>0?"AssignmentId=" + assignmentId : "TopicId=" + ht.topicId)
 					+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)

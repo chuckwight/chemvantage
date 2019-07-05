@@ -56,9 +56,9 @@ public class Feedback extends HttpServlet {
 		try {
 			HttpSession session = request.getSession();
 			User user = null;
-			String nonce = null;
+			String nonce = request.getParameter("Nonce");
 			if (session.isNew()) {
-				user = Nonce.getUser(request.getParameter("Nonce"));
+				user = Nonce.getUser(nonce);
 				nonce = Nonce.createInstance(user);
 			}
 			else user = User.getInstance(session);
@@ -89,9 +89,9 @@ public class Feedback extends HttpServlet {
 		try {
 			HttpSession session = request.getSession();
 			User user = null;
-			String nonce = null;
+			String nonce = request.getParameter("Nonce");
 			if (session.isNew()) {
-				user = Nonce.getUser(request.getParameter("Nonce"));
+				user = Nonce.getUser(nonce);
 				nonce = Nonce.createInstance(user);
 			}
 			else user = User.getInstance(session);
@@ -171,20 +171,16 @@ public class Feedback extends HttpServlet {
 		}
 		buf.append("<br clear='all'><FONT SIZE=-1>(" + subject.nStarReports + " user ratings; avg = " + subject.getAvgStars() + " stars)</FONT><p>\n");
 
-		buf.append("<FORM NAME=FeedbackForm METHOD=POST>\n"
-				+ "<div id='count'>Comments or kudos: <FONT SIZE=-1>(160 characters max.)</FONT></div>"
+		buf.append("<FORM NAME=FeedbackForm ACTION=Feedback METHOD=POST>\n"
+				+ "Comments or kudos: <FONT SIZE=-1>(160 characters max.)</FONT><br>"
 				+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback>"
 				+ "<INPUT TYPE=HIDDEN NAME=Stars>"
-				+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
-				+ "<TEXTAREA NAME=Comments ROWS=5 COLS=40 WRAP=SOFT "
-				+ "onKeyUp=\"javascript: "
-				+ "document.FeedbackForm.Comments.value=document.FeedbackForm.Comments.value.substring(0,160);"
-				+ "document.getElementById('count').innerHTML='Comments or kudos: <FONT SIZE=-1 COLOR=RED>"
-				+ "('+(160-document.FeedbackForm.Comments.value.length)+' characters remaining)</FONT>';"
-				+ "\">"
+				+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>")
+				+ "<TEXTAREA NAME=Comments ROWS=5 COLS=40 WRAP=SOFT "				
+				+ "onKeyUp=javascript:document.FeedbackForm.Comments.value=document.FeedbackForm.Comments.value.substring(0,160)>"
 				+ "</TEXTAREA><br>");
 
-		buf.append("<INPUT TYPE=SUBMIT VALUE='Submit Feedback'>"
+		buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Submit Feedback'>"
 				+ "<INPUT TYPE=RESET VALUE='Clear Form' "
 				+ "onClick=\"javascript: document.FeedbackForm.Stars.value='';"
 				+ "setStars(0);"
@@ -240,12 +236,14 @@ public class Feedback extends HttpServlet {
 				+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback>"
 				+ "<INPUT TYPE=HIDDEN NAME=Stars>"
 				+ "<INPUT TYPE=HIDDEN NAME=Save VALUE=Yes>"
-				+ "<TEXTAREA NAME=Comments ROWS=5 COLS=40 WRAP=SOFT "
+				+ "<TEXTAREA NAME=Comments ROWS=5 COLS=40 WRAP=SOFT> "
+	/*
 				+ "onKeyUp=\"javascript: "
 				+ "document.FeedbackForm.Comments.value=document.FeedbackForm.Comments.value.substring(0,160);"
 				+ "document.getElementById('count').innerHTML='Comments or kudos: <FONT SIZE=-1 COLOR=RED>"
 				+ "('+(160-document.FeedbackForm.Comments.value.length)+' characters remaining)</FONT>';"
 				+ "\">"
+	*/
 				+ "</TEXTAREA><br>");
 
 		buf.append("<INPUT TYPE=SUBMIT VALUE='Submit Feedback'>"
@@ -283,7 +281,7 @@ public class Feedback extends HttpServlet {
 		buf.append("Thank you for your feedback" + (stars>0?" (" + stars + " stars" + (stars==5?"!":"") + ").":"."));
 		if (stars > 0) buf.append("<br>The average user rating for ChemVantage is " + subject.getAvgStars() + " stars (" + subject.nStarReports + " user ratings).");
 		if (comments.length() > 0) {
-			if (user==null) buf.append("<br>Your comment will be reviewed by a ChemVantage administrator.<p>");
+			buf.append("<p>Your comment: <font color=red>" + comments + "</font><p>");
 		}
 		if (user.isAnonymous()) buf.append("<p><a href=Home>Return to the Home page</a><br>");
 		return buf.toString();

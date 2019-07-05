@@ -57,20 +57,13 @@ public class UserReport implements Serializable {
 	public String adminView(User adminUser) {
 		StringBuffer buf = new StringBuffer();
 		// this statement permits viewing the userReport only if the viewer is the ChemVantage administrator
-		// or the domain admin of a report from the domain or the report author (user)
 		
-		if (adminUser == null) return "";  // the report can only be viewed by identified users or admins
-		
+		if (adminUser == null || !adminUser.isChemVantageAdmin()) return "";  
+
 		try {
 			User user = ofy().load().type(User.class).id(this.userId).now();  // author of the report
 			
-			if (user != null && adminUser.id.contentEquals(user.id)) {  // viewed by report author
-				buf.append("On " + submitted + " you said:<br>");
-			} else if (user != null && adminUser.isAdministrator() && adminUser.domain.equals(user.domain)) { // viewed by user's domain admin
-				buf.append("On " + submitted + " an anonymous user in your domain said:<br>");			
-			} else if (adminUser.isChemVantageAdmin()) {  // ChemVantage administrator sees all reports
-				buf.append("On " + submitted + " an anonymous user said:<br>");
-			} else return "";
+			buf.append("On " + submitted + " a user said:<br>");
 			
 			if (stars>0) buf.append(" (" + stars + " stars)<br>");
 			buf.append("<FONT COLOR=RED>" + comments + "</FONT><br>");
@@ -91,14 +84,12 @@ public class UserReport implements Serializable {
 				}
 				if (adminUser.isEditor()) buf.append("<a href=Edit?UserRequest=Edit&QuestionId=" + this.questionId + "&TopicId=" + topic.id + "&AssignmentType=" + q.assignmentType + ">Edit Question</a> ");
 			} catch (Exception e2) {}
-			if (adminUser.isAdministrator()) {
-				buf.append("<FORM METHOD=POST ACTION=Feedback>"
-						+ "<INPUT TYPE=HIDDEN NAME=ReportId VALUE=" + this.id + ">"
-						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Report'>"
-						+ "</FORM><p>");
-			} else buf.append("<p>");
+			buf.append("<FORM METHOD=POST ACTION=Feedback>"
+					+ "<INPUT TYPE=HIDDEN NAME=ReportId VALUE=" + this.id + ">"
+					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Report'>"
+					+ "</FORM><p>");
 		} catch (Exception e) {
-			buf.append("<br>" + e.getMessage());
+			buf.append("<br>" + e.toString());
 		}
 		return buf.toString();
 	}
@@ -106,13 +97,11 @@ public class UserReport implements Serializable {
 	public String view() {
 		StringBuffer buf = new StringBuffer();
 		User user = null;
-		String userName = "anonymous";
 		try {
 			user = ofy().load().type(User.class).id(this.userId).safe();
-			userName = user.getBothNames() + " (" + user.getEmail() + ")";
 		} catch (Exception e2) {				
 		}
-		buf.append("On " + submitted + " " + userName + " said:<br>\n");
+		buf.append("On " + submitted + " " + "a user said:<br>\n");
 		if (stars>0) buf.append("(" + stars + " stars)<br>\n");
 		buf.append("<FONT COLOR=RED>" + comments + "</FONT><p>\n\n");
 		try {

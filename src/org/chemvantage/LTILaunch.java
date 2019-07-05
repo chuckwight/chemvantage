@@ -76,7 +76,14 @@ public class LTILaunch extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
-		// check for minimum required elements for a basic-lti-launch-request
+		
+		if (request.getParameter("lti_message_type")!=null) {
+			basicLtiLaunchRequest(request,response);
+		} else {
+			doError(request,response,"Missing lti_message_type parameter.",null,null);
+		}
+	}
+/*		// check for minimum required elements for a basic-lti-launch-request
 		String lti_message_type=request.getParameter("lti_message_type");
 		
 		if (!"basic-lti-launch-request".equals(lti_message_type)) {
@@ -252,7 +259,187 @@ public class LTILaunch extends HttpServlet {
 		} catch (Exception e) {
 			doError(request, response,"LTI Launch failed. " + e.getMessage(), null, null);
 		}
-	}		
+	}
+*/		
+	
+	void basicLtiLaunchRequest(HttpServletRequest request,HttpServletResponse response) 
+			throws IOException {
+		// check for required LTI launch parameters:
+		try {
+			String lti_message_type = request.getParameter("lti_message_type");
+			if (lti_message_type == null || !"basic-lti-launch-request".contentEquals(lti_message_type)) {
+				doError(request,response,"Invalid lti_message_type parameter.",null,null);
+				return;
+			}
+			
+			String lti_version = request.getParameter("lti_version");
+			if (lti_version==null) {
+				doError(request,response,"Missing lti_version parameter.",null,null);
+				return;
+			} else if (!lti_version.equals("LTI-1p0")) {
+				doError(request,response,"Invalid lti_version parameter.",null,null);
+				return;
+			}
+
+			String oauth_consumer_key = request.getParameter("oauth_consumer_key");
+			if (oauth_consumer_key==null) {
+				doError(request,response,"Missing oauth_consumer_key.",null,null);
+				return;
+			}
+			
+			String resource_link_id = request.getParameter("resource_link_id");
+			if (resource_link_id==null) {
+				doError(request,response,"Missing resource_link_id.",null,null);
+				return;
+			}
+			
+			BLTIConsumer tc;
+			try {
+				tc = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).safe();
+				if (tc.secret==null) throw new Exception("Shared secret was not found in the ChemVantage database.");
+				if (tc.lti_version==null || tc.lti_version.isEmpty() || !tc.lti_version.equals(lti_version)) {
+						tc.lti_version=lti_version;
+						ofy().save().entity(tc);
+				}
+			} catch (Exception e) {
+				throw new Exception("Invalid oauth_consumer_key. Please verify that the oauth_consumer_key is entered into your LMS exactly as you are registered with ChemVantage.");
+			}
+
+			String tool_consumer_guid = request.getParameter("tool_consumer_guid");
+			if (tool_consumer_guid != null && !tool_consumer_guid.equals(tc.tool_consumer_guid)) {
+				// this place is reached if the launch sends a guid that does not match the guid for the BLTIConsumer
+				if (tc.tool_consumer_guid==null) {  // record a previously unrecorded guid
+					tc.tool_consumer_guid = tool_consumer_guid;
+					ofy().save().entity(tc);
+				} else doError(request,response,"Invalid tool_consumer_guid.",null,null);
+			}
+
+			OAuthMessage oam = OAuthServlet.getMessage(request, null);
+			OAuthValidator oav = new SimpleOAuthValidator();
+			OAuthConsumer cons = new OAuthConsumer("about:blank#OAuth+CallBack+NotUsed",oauth_consumer_key,tc.secret,null);
+			OAuthAccessor acc = new OAuthAccessor(cons);
+			OAuthSignatureMethod.getBaseString(oam);
+			
+			if (!Nonce.isUnique(request.getParameter("oauth_nonce"), request.getParameter("oauth_timestamp"))) 
+				throw new Exception("Invalid nonce or timestamp.");
+			
+			try {
+				oav.validateMessage(oam,acc);
+			} catch(Exception e) {
+				throw new Exception("OAuth validation failed, most likely due to an invalid shared_secret value in your LMS. Check carefully to eliminate leading or trailing blank spaces.");
+			}
+			// BLTI Launch message was validated successfully at this point
+			
+			// Gather some information about the user
+			String userId = request.getParameter("user_id");
+			userId = oauth_consumer_key + ":" + (userId==null?"":userId);
+
+			// Provision a new user account if necessary, and store the userId in the user's session
+			HttpSession session = request.getSession(true);
+			session.setAttribute("UserId",userId);
+			User user = User.getInstance(session); // returns null if user is not anonymous and not in the database
+			if (user==null) user = User.createBLTIUser(request); // first-ever login for this user
+			
+			// ensure the proper authDomain value
+			if (user.authDomain == null || !user.authDomain.equals("BLTI")) {
+				user.authDomain = "BLTI";
+				ofy().save().entity(user).now();
+			}
+			//debug.append("User info processed successfully. ");
+			
+			// Create the domain if it doesn't already exist
+			Domain domain = ofy().load().type(Domain.class).filter("domainName",oauth_consumer_key).first().now();
+			Date now = new Date();
+			if (domain == null) {
+				domain = new Domain(oauth_consumer_key);
+				if (tc.supportsResultService()) {
+					domain.supportsResultService = true;
+					domain.resultServiceEndpoint = tc.getResultServiceEndpoint();
+					domain.resultServiceFormat = tc.getResultServiceFormat();
+				}
+			} else domain.setLastLogin(now);
+			ofy().save().entity(domain).now();
+			
+			String lisOutcomeServiceURL = request.getParameter("lis_outcome_service_url");
+			
+			if (lisOutcomeServiceURL!=null && !lisOutcomeServiceURL.equals(domain.resultServiceEndpoint)) {
+				domain.resultServiceEndpoint = lisOutcomeServiceURL;
+				if (domain.resultServiceFormat==null || domain.resultServiceFormat.isEmpty()) domain.resultServiceFormat = "application/xml";
+				domain.supportsResultService = true;
+				ofy().save().entity(domain).now();
+			} 
+			
+			// ensure that this user is associated with the LTI domain
+			if (user.domain == null || !user.domain.equals(domain.domainName)) {
+				user.domain = domain.domainName;
+				ofy().save().entity(user).now();
+			}
+			//Domain info processed successfully
+			
+			// check if user has Instructor or Administrator role
+			String roles = request.getParameter("roles");
+			if (roles != null) {
+				roles = roles.toLowerCase();
+				if (roles.contains("instructor") && user.setIsInstructor(true)) ofy().save().entity(user).now(); // saves user if role is changed
+				if (roles.contains("administrator")) {
+					if (user.setIsAdministrator(true)) ofy().save().entity(user).now();  // saves user if role is changed
+					if (domain.addAdmin(user.id)) ofy().save().entity(domain).now();  // saves domain object if new admin is added
+				}
+				if (roles.contains("teachingassistant") && user.setIsTeachingAssistant(true)) ofy().save().entity(user).now(); 
+			}
+
+			String context_id = request.getParameter("context_id");
+			String context_title = request.getParameter("context_title");
+			
+			if (context_id==null && tc.getCapabilities().contains("CourseSection.sourcedId")) context_id = request.getParameter("lis_course_section_sourcedid");
+			else if (context_id==null) {
+				context_id = oauth_consumer_key + ":defaultGroup";
+				context_title = "default group";
+			}
+			if (context_title==null) context_title = context_id; // missing course title
+
+			// Find the user's group, and if necessary create a new one and put the user in it
+			List<Group> domainGroups= ofy().load().type(Group.class).filter("domain", user.domain).list();
+			Group myGroup = null;
+			for (Group g : domainGroups) 
+				if (g.context_id.contentEquals(context_id)) {
+					myGroup = g;;
+					break;
+			}
+			if (myGroup == null) { // create a new group
+				myGroup = new Group("BLTI",context_id,context_title);
+				myGroup.domain = domain.domainName;
+				ofy().save().entity(myGroup).now();
+			}	
+			user.changeGroups(myGroup.id);
+			
+			// Add user to the approved TA list, if necessary
+			if ( roles!=null && roles.contains("teachingassistant") && myGroup.addTA(userId)) ofy().save().entity(myGroup);
+			
+			// update the LIS result outcome service URL, if necessary
+			if (domain.supportsResultService && domain.resultServiceEndpoint!=null && !domain.resultServiceEndpoint.equals(myGroup.lis_outcome_service_url)) {  // update the URL and format as Group properties
+				myGroup.lis_outcome_service_url=domain.resultServiceEndpoint;
+				myGroup.lis_outcome_service_format = domain.resultServiceFormat;
+				myGroup.isUsingLisOutcomeService = true;
+				ofy().save().entity(myGroup).now();
+			}							
+			// Context info OK
+			
+			if (user.isInstructor()) {
+				if (myGroup.instructorId.equals("unknown")) {  // assign the instructor to this group
+					myGroup.instructorId = user.id;
+					ofy().save().entity(myGroup).now();
+				}
+			}
+
+			// Use the resourceUrlFinder method to discover the URL for the assignment associated with this link
+			String redirectUrl = resourceUrlFinder(user,request);
+			response.sendRedirect(redirectUrl);
+		} catch (Exception e) {
+			doError(request, response,"LTI Launch failed. " + e.getMessage(), null, null);
+		}
+		
+	}
 	
 	String resourceUrlFinder(User user, HttpServletRequest request) {
 		/* 
