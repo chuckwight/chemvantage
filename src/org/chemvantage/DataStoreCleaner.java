@@ -70,7 +70,7 @@ public class DataStoreCleaner extends HttpServlet {
 		if (task!=null) {  // must specify Task parameter
 			switch (task) {
 			case "CleanUsers": out.println(cleanUsers(testOnly)); break;
-			case "CleanResponses": out.println(cleanResponses(testOnly)); break;
+			case "CleanResponses": out.println(cleanResponses(0,testOnly)); break;
 			case "CleanQuizTransactions": out.println(cleanQuizTransactions(cursor,0,testOnly)); break;
 			case "CleanHWTransactions": out.println(cleanHWTransactions(cursor,0,testOnly)); break;
 			case "CleanPracticeExamTransactions": out.println(cleanPracticeExamTransactions(cursor,0,testOnly)); break;
@@ -78,18 +78,20 @@ public class DataStoreCleaner extends HttpServlet {
 			case "CleanGroups": out.println(cleanGroups(cursor,0,testOnly)); break;
 			case "CleanAssignments": out.println(cleanAssignments(cursor,0,testOnly)); break;
 			case "CleanDomains": out.println(cleanDomains(cursor,0,testOnly)); break;
+			case "CleanBLTIConsumers": out.println(cleanBLTIConsumers(cursor,0,testOnly)); break;
 			case "CleanAll": doPost(request,response); return;
 			} 
 		} else if (Boolean.parseBoolean(request.getParameter("TestAll"))) {
 			out.println(cleanUsers(true)
-					+ cleanResponses(true)
+					+ cleanResponses(0,true)
 					+ cleanQuizTransactions(null,0,true)
 					+ cleanHWTransactions(null,0,true)
 					+ cleanPracticeExamTransactions(null,0,true)
 					+ cleanScores(null,0,true)
 					+ cleanGroups(null,0,true)
 					+ cleanAssignments(null,0,true)
-					+ cleanDomains(null,0,true));
+					+ cleanDomains(null,0,true)
+					+ cleanBLTIConsumers(null,0,true));
 		}
 
 		out.println(interactiveMenu());
@@ -117,7 +119,7 @@ public class DataStoreCleaner extends HttpServlet {
 		
 		switch (task) {
 		case "CleanUsers": out.println(cleanUsers(testOnly)); break;
-		case "CleanResponses": out.println(cleanResponses(testOnly)); break;
+		case "CleanResponses": out.println(cleanResponses(0,testOnly)); break;
 		case "CleanQuizTransactions": out.println(cleanQuizTransactions(cursor,0,testOnly)); break;
 		case "CleanHWTransactions": out.println(cleanHWTransactions(cursor,0,testOnly)); break;
 		case "CleanPracticeExamTransactions": out.println(cleanPracticeExamTransactions(cursor,0,testOnly)); break;
@@ -125,6 +127,7 @@ public class DataStoreCleaner extends HttpServlet {
 		case "CleanGroups": out.println(cleanGroups(cursor,0,testOnly)); break;
 		case "CleanAssignments": out.println(cleanAssignments(cursor,0,testOnly)); break;
 		case "CleanDomains": out.println(cleanDomains(cursor,0,testOnly)); break;
+		case "CleanBLTIConsumers": out.println(cleanBLTIConsumers(cursor,0,testOnly)); break;
 		case "CleanAll": 
 			out.println("<h2>Clean All</h2>");
 			Queue queue = QueueFactory.getDefaultQueue();
@@ -146,21 +149,24 @@ public class DataStoreCleaner extends HttpServlet {
 			out.println("Launched CleanAssignments as a background task" + (testOnly?" (test only)":"") + ".<br>");
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanDomains").param("TestOnly", testOnly?"true":"false"));
 			out.println("Launched CleanDomains as a background task" + (testOnly?" (test only)":"") + ".<br>");
+			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanBLTIConsumers").param("TestOnly", testOnly?"true":"false"));
+			out.println("Launched CleanBLTIConsumers as a background task" + (testOnly?" (test only)":"") + ".<br>");
 		default: return;
 		}
 	}
 	
 	String interactiveMenu() {
 		StringBuffer buf = new StringBuffer("<h2>Data Store Cleaner</h2>Useage: /DataStoreCleaner?Task=CleanAll [&TestOnly=true]<p>");
-		buf.append("<a href=DataStoreCleaner?Task=CleanUsers&TestOnly=true>Test CleanUsers (with no deletions)<br>");
-		buf.append("<a href=DataStoreCleaner?Task=CleanResponses&TestOnly=true>Test CleanResponses (with no deletions)<br>");
-		buf.append("<a href=DataStoreCleaner?Task=CleanQuizTransactions&TestOnly=true>Test CleanQuizTransactions (with no deletions)<br>");
-		buf.append("<a href=DataStoreCleaner?Task=CleanHWTransactions&TestOnly=true>Test CleanHWTransactions (with no deletions)<br>");
-		buf.append("<a href=DataStoreCleaner?Task=CleanPracticeExamTransactions&TestOnly=true>Test CleanPracticeExamTransactions (with no deletions)<br>");
-		buf.append("<a href=DataStoreCleaner?Task=CleanScores&TestOnly=true>Test CleanScores (with no deletions)<br>");
-		buf.append("<a href=DataStoreCleaner?Task=CleanGroups&TestOnly=true>Test CleanGroups (with no deletions)<br>");
-		buf.append("<a href=DataStoreCleaner?Task=CleanAssignments&TestOnly=true>Test CleanAssignments (with no deletions)<br>");
-		buf.append("<a href=DataStoreCleaner?Task=CleanDomains&TestOnly=true>Test CleanDomains (with no deletions)<br>");
+		buf.append("<a href=DataStoreCleaner?Task=CleanUsers&TestOnly=true>Test CleanUsers</a> (with no deletions)<br>");
+		buf.append("<a href=DataStoreCleaner?Task=CleanResponses&TestOnly=true>Test CleanResponses</a> (with no deletions)<br>");
+		buf.append("<a href=DataStoreCleaner?Task=CleanQuizTransactions&TestOnly=true>Test CleanQuizTransactions</a> (with no deletions)<br>");
+		buf.append("<a href=DataStoreCleaner?Task=CleanHWTransactions&TestOnly=true>Test CleanHWTransactions</a> (with no deletions)<br>");
+		buf.append("<a href=DataStoreCleaner?Task=CleanPracticeExamTransactions&TestOnly=true>Test CleanPracticeExamTransactions</a> (with no deletions)<br>");
+		buf.append("<a href=DataStoreCleaner?Task=CleanScores&TestOnly=true>Test CleanScores</a> (with no deletions)<br>");
+		buf.append("<a href=DataStoreCleaner?Task=CleanGroups&TestOnly=true>Test CleanGroups</a> (with no deletions)<br>");
+		buf.append("<a href=DataStoreCleaner?Task=CleanAssignments&TestOnly=true>Test CleanAssignments</a> (with no deletions)<br>");
+		buf.append("<a href=DataStoreCleaner?Task=CleanDomains&TestOnly=true>Test CleanDomains</a> (with no deletions)<br>");
+		buf.append("<a href=DataStoreCleaner?Task=CleanBLTIConsumers&TestOnly=true>Test CleanBLTIConsumers</a> (with no deletions)<br>");
 		
 		buf.append("<a href=DataStoreCleaner?TestAll=true>Test all cleaners</a> (with no deletions)<p>");
 	
@@ -178,16 +184,18 @@ public class DataStoreCleaner extends HttpServlet {
 		    QueryResultIterator<User> iterator = query.iterator();
 		    ArrayList<Key<User>> keys = new ArrayList<Key<User>>();  // list of User entity keys for batch delete
 
+		    int counter = 0;
 		    while (iterator.hasNext()) {
 		    	User u = iterator.next();
 		    	if (deleteUser(u.id)) {  // tests to see if user should be deleted
 		    		keys.add(Key.create(u));  // saves key in group to be deleted
 		    	}
+		    	counter++;
 		    }
 
 		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 		     
-		    buf.append(query.count() + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
+		    buf.append(counter + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
 
 		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
@@ -215,20 +223,32 @@ public class DataStoreCleaner extends HttpServlet {
 		return true; // signal that this user object should be deleted
 	}
 
-	private String cleanResponses(boolean testOnly) {
+	private String cleanResponses(int retries,boolean testOnly) {
 		StringBuffer buf = new StringBuffer();
-		try {			
+		now = new Date();
+		oneYearAgo = new Date(now.getTime()-31536000000L);
+		
+		try {
 			buf.append("<h2>Clean Responses</h2>");
-		    
-			List<Key<Response>> keys = ofy().load().type(Response.class).filter("submitted <", oneYearAgo).limit(querySizeLimit).keys().list();
-			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
+			
+			List<Key<Response>> keys = ofy().load().type(Response.class).filter("submitted<",oneYearAgo).limit(querySizeLimit).keys().list();
+		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys).now();
 
-		    buf.append(keys.size() + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
+		    buf.append(keys.size() + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br>");
+		    
+		    if (keys.size()<querySizeLimit) buf.append("Done.<br>");
+		    else if (retries < 5) {
+		    	buf.append(cleanResponses(retries+1,testOnly));
+		    }
+		    else if (!testOnly) {
+		    	Queue queue = QueueFactory.getDefaultQueue();
+		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanResponses").param("TestOnly", testOnly?"true":"false"));
+		    	buf.append("Launching a new DataStoreCleaner task.");
+		    }
 
 		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
 		}
-		buf.append("Done.<br>");
 		return buf.toString();
 	}
 	
@@ -519,6 +539,50 @@ public class DataStoreCleaner extends HttpServlet {
 		    else if (!testOnly) {
 		    	Queue queue = QueueFactory.getDefaultQueue();
 		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanDomains").param("Cursor", cursor).param("TestOnly", testOnly?"true":"false"));
+		    	buf.append("Launching a new DataStoreCleaner task.");
+		    }
+
+		} catch (Exception e) {
+			buf.append("Error: " + e.toString());
+		}
+		return buf.toString();
+	}
+
+	private String cleanBLTIConsumers(String cursor, int retries,boolean testOnly) {
+		now = new Date();
+		sixMonthsAgo = new Date(now.getTime()-15768000000L);
+		StringBuffer buf = new StringBuffer();
+		try {			
+			Query<BLTIConsumer> query;
+			if (cursor==null) {  // start new entity search
+				buf.append("<h2>Clean BLTIConsumers</h2>");
+				query = ofy().load().type(BLTIConsumer.class).limit(querySizeLimit);
+			} else {  // continue search with the next 100 entities
+				query = ofy().load().type(BLTIConsumer.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
+			}
+			
+		    ArrayList<Key<BLTIConsumer>> keys = new ArrayList<Key<BLTIConsumer>>();  // list of BLTIConsumer entity keys for batch delete
+		    QueryResultIterator<BLTIConsumer> iterator = query.iterator();
+		    
+		    while (iterator.hasNext()) {
+		    	BLTIConsumer c = iterator.next();
+		    	try {
+		    		ofy().load().type(Domain.class).filter("domainName",c.oauth_consumer_key).first().safe();
+		    	} catch (Exception e) {  // no domain associated with this BLTIConsumer; wait 6 months for first login or delete
+		    		if (c.created != null && c.created.before(sixMonthsAgo)) keys.add(Key.create(c));
+		    	}
+		    }
+
+		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
+
+		    buf.append(query.count() + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
+		    cursor = iterator.getCursor().toWebSafeString();
+	    	
+		    if (query.count()<querySizeLimit) buf.append("Done.<br>");
+		    else if (retries < 5) buf.append(cleanBLTIConsumers(cursor,retries+1,testOnly));
+		    else if (!testOnly) {
+		    	Queue queue = QueueFactory.getDefaultQueue();
+		    	queue.add(withUrl("/DataStoreCleaner").param("Task","CleanBLTIConsumers").param("Cursor", cursor).param("TestOnly", testOnly?"true":"false"));
 		    	buf.append("Launching a new DataStoreCleaner task.");
 		    }
 
