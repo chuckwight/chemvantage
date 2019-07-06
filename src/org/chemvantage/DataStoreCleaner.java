@@ -229,12 +229,13 @@ public class DataStoreCleaner extends HttpServlet {
 		oneYearAgo = new Date(now.getTime()-31536000000L);
 		
 		try {
-			buf.append("<h2>Clean Responses</h2>");
+			if (retries==0) buf.append("<h2>Clean Responses</h2>");
 			
-			List<Key<Response>> keys = ofy().load().type(Response.class).filter("submitted<",oneYearAgo).limit(querySizeLimit).keys().list();
-		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys).now();
+			List<Key<Response>> keys = ofy().load().type(Response.class).filter("submitted <",oneYearAgo).limit(querySizeLimit).keys().list();
+		    int counter = keys.size();
+			if (counter > 0 && !testOnly) ofy().delete().keys(keys).now();
 
-		    buf.append(keys.size() + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br>");
+		    buf.append(counter + " entities examined, " + counter + (testOnly?" identified":" deleted") + ".<br>");
 		    
 		    if (keys.size()<querySizeLimit) buf.append("Done.<br>");
 		    else if (retries < 5) {
@@ -266,6 +267,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    ArrayList<Key<QuizTransaction>> keys = new ArrayList<Key<QuizTransaction>>();  // list of QuizTransaction entity keys for batch delete
 		    QueryResultIterator<QuizTransaction> iterator = query.iterator();
 		    
+		    int counter = 0;
 		    while (iterator.hasNext()) {
 		    	QuizTransaction q = iterator.next();
 		    	try {
@@ -274,14 +276,15 @@ public class DataStoreCleaner extends HttpServlet {
 		    	} catch (Exception e) {  // the user does not exist
 		    		keys.add(Key.create(q)); // add the QuizTransaction key to the list to be deleted
 		    	}
+		    	counter++;
 		    }
 
 		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
-		    buf.append(query.count() + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br>");
+		    buf.append(counter + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br>");
 		    cursor = iterator.getCursor().toWebSafeString();
 	    	
-		    if (query.count()<querySizeLimit) buf.append("Done.<br>");
+		    if (counter<querySizeLimit) buf.append("Done.<br>");
 		    else if (retries < 5) {
 		    	buf.append(cleanQuizTransactions(cursor,retries+1,testOnly));
 		    }
@@ -311,6 +314,7 @@ public class DataStoreCleaner extends HttpServlet {
 			ArrayList<Key<HWTransaction>> keys = new ArrayList<Key<HWTransaction>>();  // list of HWTransaction entity keys for batch delete
 		    QueryResultIterator<HWTransaction> iterator = query.iterator();
 		    
+		    int counter = 0;
 		    while (iterator.hasNext()) {
 		    	HWTransaction h = iterator.next();
 		    	try {
@@ -319,14 +323,15 @@ public class DataStoreCleaner extends HttpServlet {
 		    		if (!k.equals(key)) keys.add(Key.create(h)); // if user does not exist, add the QuizTransaction key to the list to be deleted
 		    	} catch (Exception e) {  // catches exception if user does not exist
 		    	}
+		    	counter++;
 		    }
 
 		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
-		    buf.append(query.count() + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
+		    buf.append(counter + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
 		    cursor = iterator.getCursor().toWebSafeString();
 	    	
-		    if (query.count()<querySizeLimit) buf.append("Done.<br>");
+		    if (counter<querySizeLimit) buf.append("Done.<br>");
 		    else if (retries < 5) {
 		    	buf.append(cleanHWTransactions(cursor,retries+1,testOnly));
 		    }
@@ -356,6 +361,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    ArrayList<Key<PracticeExamTransaction>> keys = new ArrayList<Key<PracticeExamTransaction>>();  // list of PracticeExamTransaction entity keys for batch delete
 		    QueryResultIterator<PracticeExamTransaction> iterator = query.iterator();
 
+		    int counter = 0;
 		    while (iterator.hasNext()) {
 		    	PracticeExamTransaction p = iterator.next();
 		    	try {
@@ -364,14 +370,15 @@ public class DataStoreCleaner extends HttpServlet {
 		    		if (!k.equals(key)) keys.add(Key.create(p)); // if user does not exist, add the QuizTransaction key to the list to be deleted
 		    	} catch (Exception e) {  // catches exception if user does not exist
 		    	}
+		    	counter++;
 		    }
 
 		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
-		    buf.append(query.count() + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
+		    buf.append(counter + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
 		    cursor = iterator.getCursor().toWebSafeString();
 	    	
-		    if (query.count()<querySizeLimit) buf.append("Done.<br>");
+		    if (counter<querySizeLimit) buf.append("Done.<br>");
 		    else if (retries < 5) buf.append(cleanPracticeExamTransactions(cursor,retries+1,testOnly));
 		    else if (!testOnly) {
 		    	Queue queue = QueueFactory.getDefaultQueue();
@@ -399,6 +406,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    ArrayList<Key<Score>> keys = new ArrayList<Key<Score>>();  // list of Score entity keys for batch delete		    
 		    QueryResultIterator<Score> iterator = query.iterator();
 
+		    int counter = 0;
 		    while (iterator.hasNext()) {
 		    	Score s = iterator.next();
 		    	try {
@@ -407,14 +415,15 @@ public class DataStoreCleaner extends HttpServlet {
 		    		if (!k.equals(key)) keys.add(Key.create(s)); // if user does not exist, add the QuizTransaction key to the list to be deleted
 		    	} catch (Exception e) {  // catches exception if user does not exist
 		    	}
+		    	counter++;
 		    }
 
 		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
-		    buf.append(query.count() + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
+		    buf.append(counter + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
 		    cursor = iterator.getCursor().toWebSafeString();
 	    	
-		    if (query.count()<querySizeLimit) buf.append("Done.<br>");
+		    if (counter<querySizeLimit) buf.append("Done.<br>");
 		    else if (retries < 9) buf.append(cleanScores(cursor,retries+1,testOnly));
 		    else if (!testOnly) {
 		    	Queue queue = QueueFactory.getDefaultQueue();
@@ -443,17 +452,19 @@ public class DataStoreCleaner extends HttpServlet {
 		    ArrayList<Key<Group>> keys = new ArrayList<Key<Group>>();  // list of Group entity keys for batch delete
 		    QueryResultIterator<Group> iterator = query.iterator();
 		    
+		    int counter = 0;
 		    while (iterator.hasNext()) {
 		    	Group g = iterator.next();
 		    	if (!g.isActive()) keys.add(Key.create(g)); 
+		    	counter++;
 		    }
 
 		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
-		    buf.append(query.count() + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
+		    buf.append(counter + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
 		    cursor = iterator.getCursor().toWebSafeString();
 	    	
-		    if (query.count()<querySizeLimit) buf.append("Done.<br>");
+		    if (counter<querySizeLimit) buf.append("Done.<br>");
 		    else if (retries < 9) buf.append(cleanGroups(cursor,retries+1,testOnly));
 		    else if (!testOnly) {
 		    	Queue queue = QueueFactory.getDefaultQueue();
@@ -481,6 +492,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    ArrayList<Key<Assignment>> keys = new ArrayList<Key<Assignment>>();  // list of Assignment entity keys for batch delete
 		    QueryResultIterator<Assignment> iterator = query.iterator();
 		    
+		    int counter = 0;
 		    while (iterator.hasNext()) {
 		    	Assignment a = iterator.next();
 		    	try {
@@ -489,14 +501,15 @@ public class DataStoreCleaner extends HttpServlet {
 		    	} catch (Exception e) {  // catches exception if Group does not exist
 		    		keys.add(Key.create(a));  // add the Assignment key to the list to be deleted
 		    	}
+		    	counter++;
 		    }
 
 		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
-		    buf.append(query.count() + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
+		    buf.append(counter + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
 		    cursor = iterator.getCursor().toWebSafeString();
 	    	
-		    if (query.count()<querySizeLimit) buf.append("Done.<br>");
+		    if (counter<querySizeLimit) buf.append("Done.<br>");
 		    else if (retries < 9) buf.append(cleanAssignments(cursor,retries+1,testOnly));
 		    else if (!testOnly) {
 		    	Queue queue = QueueFactory.getDefaultQueue();
@@ -524,17 +537,19 @@ public class DataStoreCleaner extends HttpServlet {
 		    ArrayList<Key<Domain>> keys = new ArrayList<Key<Domain>>();  // list of Domain entity keys for batch delete
 		    QueryResultIterator<Domain> iterator = query.iterator();
 		    
+		    int counter = 0;
 		    while (iterator.hasNext()) {
 		    	Domain d = iterator.next();
 		    	if (d.getActiveUsers()==0) keys.add(Key.create(d));  // flags for deletion if domain has no users
+		    	counter++;
 		    }
 
 		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
-		    buf.append(query.count() + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
+		    buf.append(counter + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
 		    cursor = iterator.getCursor().toWebSafeString();
 	    	
-		    if (query.count()<querySizeLimit) buf.append("Done.<br>");
+		    if (counter<querySizeLimit) buf.append("Done.<br>");
 		    else if (retries < 5) buf.append(cleanDomains(cursor,retries+1,testOnly));
 		    else if (!testOnly) {
 		    	Queue queue = QueueFactory.getDefaultQueue();
@@ -564,6 +579,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    ArrayList<Key<BLTIConsumer>> keys = new ArrayList<Key<BLTIConsumer>>();  // list of BLTIConsumer entity keys for batch delete
 		    QueryResultIterator<BLTIConsumer> iterator = query.iterator();
 		    
+		    int counter = 0;
 		    while (iterator.hasNext()) {
 		    	BLTIConsumer c = iterator.next();
 		    	try {
@@ -571,14 +587,15 @@ public class DataStoreCleaner extends HttpServlet {
 		    	} catch (Exception e) {  // no domain associated with this BLTIConsumer; wait 6 months for first login or delete
 		    		if (c.created != null && c.created.before(sixMonthsAgo)) keys.add(Key.create(c));
 		    	}
+		    	counter++;
 		    }
 
 		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
-		    buf.append(query.count() + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
+		    buf.append(counter + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
 		    cursor = iterator.getCursor().toWebSafeString();
 	    	
-		    if (query.count()<querySizeLimit) buf.append("Done.<br>");
+		    if (counter<querySizeLimit) buf.append("Done.<br>");
 		    else if (retries < 5) buf.append(cleanBLTIConsumers(cursor,retries+1,testOnly));
 		    else if (!testOnly) {
 		    	Queue queue = QueueFactory.getDefaultQueue();
