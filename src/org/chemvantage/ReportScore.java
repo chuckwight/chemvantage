@@ -22,7 +22,13 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.net.URLDecoder;
+import java.util.Properties;
 
+import javax.mail.Message;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -36,7 +42,8 @@ public class ReportScore extends HttpServlet {
 	private static final long serialVersionUID = 137L;
 	
 	public String getServletInfo() {
-		return "ChemVantage servlet reports a single Score object back to a user's LMS as a Task using the IMS LTI 1.1 Learning Information Services API.";
+		return "ChemVantage servlet reports a single Score object back to a user's LMS as a Task "
+				+ "using the IMS LTI 1.X Learning Information Services API.";
 	}
 	
 	@Override
@@ -81,19 +88,21 @@ public class ReportScore extends HttpServlet {
 			String oauth_consumer_key = g.domain;
 			
 			String messageFormat = g.getLisOutcomeFormat();			
-			String body = (messageFormat.contains("jason")?jsonReplaceResult(Double.toString(score)):LTIMessage.xmlReplaceResult(s.lis_result_sourcedid,Double.toString(score)));
+			String body = (messageFormat.contains("json")?jsonReplaceResult(Double.toString(score)):LTIMessage.xmlReplaceResult(s.lis_result_sourcedid,Double.toString(score)));
 			String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
 			
 			if (replyBody.toLowerCase().contains("success")) {
 				s.lisReportComplete = true;
 				ofy().save().entity(s);
-			}
-			else throw new Exception();  // try again later
+			} else throw new Exception("LIS postUserScore failed after " + (Integer.parseInt(delay)+1) + " attempts.");  // try again later
 		} catch (Exception e) {
 			try {
 				int n = 0;
 				if (delay != null) n = Integer.parseInt(delay);
-				if (assignmentId<=0 || n>10) return;  // will attempt to record up to 11 times over 17 hours
+				if (assignmentId<=0 || n>9) {
+					sendEmailToChemVantageAdmin(userId,assignmentId,e.toString());
+					return;  // will attempt to record up to 10 times over 17 hours
+				}
 				long countdownMillis = (long) Math.pow(2,n)*60000;
 				Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
 				queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(assignmentId)).param("UserId",userId).param("Delay",Integer.toString(n+1)).param("Error",e.getMessage()).countdownMillis(countdownMillis));
@@ -108,4 +117,43 @@ public class ReportScore extends HttpServlet {
 		+ "'resultScore' : " + score + ","
 		+ "}";
 	}
+	
+	void sendEmailToChemVantageAdmin(String userId,long assignmentId,String errorMsg) {
+		try {
+			Properties props = new Properties();
+			Session session = Session.getDefaultInstance(props, null);
+
+			User u = ofy().load().type(User.class).id(userId).safe();
+			BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(u.domain).safe();
+			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+			Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
+			Key<Score> k = Key.create(Key.create(User.class, userId),Score.class,assignmentId);
+			Score s = ofy().load().key(k).now();
+			if (s==null) s=Score.getInstance(userId,a);
+			if (!s.needsLisReporting()) return;  // everything is OK and the situation is resolved
+				
+			String msgBody = "<h3>ChemVantage LIS ReportScore Failure</h3>"
+					+ "An attempt to report a score using LIS gave the following error:<br>"
+					+ errorMsg + "<p>"
+					+ "Details:<br>"
+					+ "UserId= " + userId + "<br>"
+					+ "AssignmentId= " + assignmentId + "<br>"
+					+ "Type= " + a.assignmentType + "<br>"
+					+ "Topic= " + t.title + "<br>"
+					+ "Current score= " + 100*s.getPctScore() + "%<br>"
+					+ "Number of attempts = " + s.numberOfAttempts + "<br>"
+					+ "ChemVantage domain = " + u.authDomain + "<br>"
+					+ "Domain contact = " + c.email + "<p>";
+					
+			Message msg = new MimeMessage(session);
+			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
+			msg.addRecipient(Message.RecipientType.TO,
+					new InternetAddress("admin@chemvantage.org", "ChemVantage"));
+			msg.setSubject("ChemVantage LIS Reporting Error");
+			msg.setContent(msgBody,"text/html");
+			Transport.send(msg);
+		} catch (Exception e) {
+		}
+	}
+
 }

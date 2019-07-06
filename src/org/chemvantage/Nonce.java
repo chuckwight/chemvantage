@@ -21,6 +21,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
 
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Cache;
@@ -45,7 +46,7 @@ public class Nonce {
 		if (user == null) return null;
 		try {
 			Nonce n = new Nonce();
-			n.id = BLTIConsumer.generateSecret();
+			n.id = generateNonce();
 			n.userId = user.id;
 			n.created = new Date();
 			ofy().save().entity(n).now();
@@ -98,11 +99,20 @@ public class Nonce {
 		
 		try {
 			Nonce n = ofy().load().type(Nonce.class).id(nonce).safe();		
-			ofy().delete().key(Key.create(n)); // delete this nonce offline
+			ofy().delete().key(Key.create(n)).now(); // remove this nonce from the database immediately
 			return ofy().load().type(User.class).id(n.userId).safe();
 		} catch (Exception e) {
 			return null;
-		}
-					
+		}				
 	}
+	
+	static String generateNonce() {
+		Random random =  new Random(new Date().getTime());
+        long r1 = random.nextLong();
+        long r2 = random.nextLong();
+        String hash1 = Long.toHexString(r1);
+        String hash2 = Long.toHexString(r2);
+        return hash1 + hash2;
+	}
+
 }

@@ -24,7 +24,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 public class Logout extends HttpServlet {
 
@@ -37,16 +36,15 @@ public class Logout extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		
-		try {
-			HttpSession session = request.getSession();
-			session.invalidate();  // now the user is logged out of ChemVantage
-		} catch (Exception e) {}
+		request.getSession().invalidate();  // now the user is logged out of ChemVantage
+		
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
+		
 		out.println(Home.header 
 				+ "<h3>You have successfully signed out of ChemVantage</h3>" 
 				+ "If this happened unexpectedly, it might have been caused by using your browser's BACK button while "
-				+ "viewing ChemVantage in a frame contained by a learning management system (LMS). Some browsers do not permit "
+				+ "viewing ChemVantage in a frame contained by your learning management system (LMS). Some browsers do not permit "
 				+ "using session variables in frames, and therefore do not support backward navigation.<p>"
 				+ "You can avoid this either by using a browser that supports session variables in frames (e.g., Chrome), or by "
 				+ "configuring your LMS to display third-party apps in a separate window."
