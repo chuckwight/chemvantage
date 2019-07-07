@@ -94,13 +94,13 @@ public class ReportScore extends HttpServlet {
 			if (replyBody.toLowerCase().contains("success")) {
 				s.lisReportComplete = true;
 				ofy().save().entity(s);
-			} else throw new Exception("LIS postUserScore failed after " + (Integer.parseInt(delay)+1) + " attempts.");  // try again later
+			} else throw new Exception("LIS postUserScore failed after " + delay + " attempts.");  // try again later
 		} catch (Exception e) {
 			try {
 				int n = 0;
 				if (delay != null) n = Integer.parseInt(delay);
 				if (assignmentId<=0 || n>9) {
-					sendEmailToChemVantageAdmin(userId,assignmentId,e.toString());
+					sendEmailToChemVantageAdmin(userId,assignmentId,e.getMessage());
 					return;  // will attempt to record up to 10 times over 17 hours
 				}
 				long countdownMillis = (long) Math.pow(2,n)*60000;
@@ -136,13 +136,11 @@ public class ReportScore extends HttpServlet {
 					+ "An attempt to report a score using LIS gave the following error:<br>"
 					+ errorMsg + "<p>"
 					+ "Details:<br>"
-					+ "UserId= " + userId + "<br>"
-					+ "AssignmentId= " + assignmentId + "<br>"
-					+ "Type= " + a.assignmentType + "<br>"
-					+ "Topic= " + t.title + "<br>"
-					+ "Current score= " + 100*s.getPctScore() + "%<br>"
-					+ "Number of attempts = " + s.numberOfAttempts + "<br>"
-					+ "ChemVantage domain = " + u.authDomain + "<br>"
+					+ "UserId: " + userId + "<br>"
+					+ "AssignmentId: " + assignmentId + "<br>"
+					+ "Assignment: " + a.assignmentType + (t==null?"":" - " + t.title) + "<br>"
+					+ "Current score= " + s.getPctScore() + "% after " + s.numberOfAttempts + " attempts<br>"
+					+ "ChemVantage domain = " + u.domain + "<br>"
 					+ "Domain contact = " + c.email + "<p>";
 					
 			Message msg = new MimeMessage(session);
