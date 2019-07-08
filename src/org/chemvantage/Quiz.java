@@ -77,10 +77,14 @@ public class Quiz extends HttpServlet {
 			PrintWriter out = response.getWriter();			
 			
 			String userRequest = request.getParameter("UserRequest");
+			if (userRequest==null) userRequest = "";
 			
-			if (userRequest != null && "ShowScores".contentEquals(userRequest)) out.println(Home.header + showScores(user,request,nonce) + Home.footer);
+			if ("ShowScores".contentEquals(userRequest)) out.println(Home.header + showScores(user,request,nonce) + Home.footer);
+			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header + showSummary(user,request,nonce) + Home.footer);
 			else out.println(Home.header + printQuiz(user,request,nonce) + Home.footer);
-		} catch (Exception e) {}
+		} catch (Exception e) {
+			response.getWriter().println(e.toString());
+		}
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
@@ -143,7 +147,7 @@ public class Quiz extends HttpServlet {
 				buf.append("As the course instructor you may<ul>"
 						+ "<li><a href=/Groups?UserRequest=AssignQuizQuestions&AssignmentId=" + qa.id + (nonce==null?"":"&Nonce=" + nonce) + ">"
 						+ "customize this quiz</a> by selecting/deselecting the available question items"
-						+ "<li>view a deidentified <a href=/CalculateScores?AssignmentId=" + qa.id + (nonce==null?"":"&Nonce=" + nonce) + ">summary of scores</a> for this assignment"
+						+ "<li>view a <a href=/Quiz?UserRequest=ShowSummary&AssignmentId=" + qa.id + (nonce==null?"":"&Nonce=" + nonce) + ">summary of scores</a> for this assignment"
 						+ "</ul></td></tr></table><p>");
 			} else if (user.isAnonymous()) {
 				buf.append("<h3><font color=red>Anonymous User</font></h3>");
@@ -574,6 +578,62 @@ public class Quiz extends HttpServlet {
 				}
 				buf.append("</table><br>Missing scores indicate quizzes that were downloaded but not submitted for scoring.<p>");
 			}
+		} catch (Exception e) {
+			buf.append(e.toString());
+		}
+		return buf.toString();
+	}
+	
+	String showSummary(User user,HttpServletRequest request,String nonce) {
+		StringBuffer buf = new StringBuffer();
+		
+		try {
+			if (!user.isInstructor()) throw new Exception("You must be logged in as the instructor to view this page.");
+			
+			Assignment a = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
+			Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
+			buf.append("<h3>" + a.assignmentType + " - " + t.title + "</h3>");
+			
+			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+			buf.append(df.format(new Date()) + "<p>");
+			
+			Group g = ofy().load().type(Group.class).id(a.groupId).now();
+			
+			buf.append("There are " + g.validatedMemberCount() + " members of this group, including instructors, "
+			+ "teaching assistants and test students created by your LMS, if applicable.<p>");
+			
+			Score s = null;
+			int count = 0;
+			int pctScoreSum = 0;
+			int attempts = 0;
+			Date mostRecent = new Date(0);
+			boolean reportScoresOK = true;
+			boolean scoresReported = false;
+			for (String id : g.memberIds) {
+				try {
+					Key<Score> k = Key.create(Key.create(User.class,id),Score.class,a.id);
+					s = ofy().load().key(k).safe();
+					pctScoreSum += s.getPctScore();
+					attempts += s.numberOfAttempts;
+					count++;
+					if (s.mostRecentAttempt.after(mostRecent)) mostRecent = s.mostRecentAttempt;
+					if (s.lisReportComplete) scoresReported = true;
+					if (s.needsLisReporting()) reportScoresOK = false;
+				} catch (Exception e) {}
+			}
+			buf.append("There " + (count==1?"is ":"are ") + count + " score" + (count==1?"":"s") + " for this assignment in the ChemVantage database.<p>");
+			if (count>0) {
+				buf.append("The average score is " + pctScoreSum/count + "%.<br>");
+				buf.append("The average number of attempts (including downloads not submitted for scoring) is " + Math.round(10.*attempts/count)/10. + ".<br>");
+				buf.append("The most recent attempt of this assignment was on " + df.format(mostRecent) + ".<p>");
+			}
+			if (!g.isUsingLisOutcomeService) buf.append("Your LMS is not configured for ChemVantage to report scores to the LMS grade book.<p>");
+			else if (!reportScoresOK) buf.append("It appears that one or more scores may not be reported to your "
+					+ "LMS correctly, may be out of date or may be in transit when this page was printed.<p>");
+			else if (scoresReported) buf.append("All scores have been reported to your LMS successfully.<p>");
+			
+			buf.append("If you have any questions or need assistance, please contact <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.<p>");			
+			buf.append("<a href=/Quiz?AssignmentId=" + a.id + (nonce==null?"":"&Nonce=" + nonce) + ">Return to this quiz</a>.<p>");
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}
