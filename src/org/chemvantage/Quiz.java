@@ -612,7 +612,8 @@ public class Quiz extends HttpServlet {
 			for (String id : g.memberIds) {
 				try {
 					Key<Score> k = Key.create(Key.create(User.class,id),Score.class,a.id);
-					s = ofy().load().key(k).safe();
+					s = ofy().load().key(k).safe();       // throws an exception if no Score entity exists yet
+					if (s.numberOfAttempts==0) continue;  // skip the averaging for those who have not attempted the quiz yet
 					pctScoreSum += s.getPctScore();
 					attempts += s.numberOfAttempts;
 					count++;
