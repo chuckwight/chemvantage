@@ -680,12 +680,13 @@ public class Homework extends HttpServlet {
 					u.changeGroups(0);
 				} catch (Exception e) {}
 			}
-			buf.append("<p>There " + (count==1?"is ":"are ") + count + " score" + (count==1?"":"s") + " for this assignment in the ChemVantage database:<br>");
+			buf.append("<p>There " + (count==1?"is ":"are ") + count + " score" + (count==1?"":"s") + " for this assignment in the ChemVantage database.<br>");
 			if (count>0) {
 				buf.append("The average score is " + pctScoreSum/count + "%.<br>");
 				buf.append("The average number of attempts (including downloads not submitted for scoring) is " + Math.round(10.*attempts/count)/10. + ".<br>");
 				buf.append("The most recent attempt of this assignment was on " + df.format(mostRecent) + ".<p>");
-			}
+			} else buf.append("<br>");
+			
 			if (!g.isUsingLisOutcomeService) buf.append("Your LMS is not configured for ChemVantage to report scores to the LMS grade book.<p>");
 			else if (scoresNotReported>0) {
 				buf.append("It appears that " + scoresNotReported + (scoresNotReported==1?" score":" scores") + " may not have been reported to your LMS correctly. "
