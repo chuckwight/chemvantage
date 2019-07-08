@@ -133,7 +133,7 @@ public class LTIRegistration extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
-		out.println(Home.header + banner + welcomeMessage);
+		out.println(Home.header + banner + About.certification);
 		StringBuffer buf = new StringBuffer();
 		buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");
 		buf.append("<FORM METHOD=POST><TABLE>");
