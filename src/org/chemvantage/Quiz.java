@@ -605,15 +605,16 @@ public class Quiz extends HttpServlet {
 			Group g = ofy().load().type(Group.class).id(a.groupId).now();
 			
 			buf.append("There are " + g.validatedMemberCount() + " members of this group, including instructors, "
-			+ "teaching assistants and test students created by your LMS, if applicable.<p>");
+			+ "teaching assistants and test students created by your LMS, if applicable.<br>");
 			
 			Score s = null;
 			int count = 0;
 			int pctScoreSum = 0;
 			int attempts = 0;
 			Date mostRecent = new Date(0);
-			boolean reportScoresOK = true;
 			boolean scoresReported = false;
+			int scoresNotReported = 0;
+			List<String> removeUsers = new ArrayList<String>();
 			for (String id : g.memberIds) {
 				try {
 					Key<Score> k = Key.create(Key.create(User.class,id),Score.class,a.id);
@@ -624,21 +625,45 @@ public class Quiz extends HttpServlet {
 					count++;
 					if (s.mostRecentAttempt.after(mostRecent)) mostRecent = s.mostRecentAttempt;
 					if (s.lisReportComplete) scoresReported = true;
-					if (s.needsLisReporting()) reportScoresOK = false;
+					if (s.needsLisReporting()) {  // found a stale Score that apparently needs reporting
+						scoresNotReported++;
+						try {  // attempt to read the user's score, then post the stale one, otherwise remove the user from this group
+							String messageFormat = g.getLisOutcomeFormat();
+							String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
+							String oauth_consumer_key = g.domain;
+							String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
+
+							if (replyBody.contains("success")) {  // the lis_result_sourcedid is valid, so post the stale score
+								Queue queue = QueueFactory.getDefaultQueue();  // default task queue
+								queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",id));
+								buf.append("<br>We found a user score that may not have been posted previously, and we're sending it to the LMS now.");
+							} else {  // this user may have dropped the class or the Test Student was reset, so remove the user from this group
+								removeUsers.add(id);
+								buf.append("<br>We found a user who no longer has a valid grade book entry point in your LMS, so we removed this user from your group.");
+							}
+						} catch (Exception e) {
+							buf.append("<br>We attempted to validate a user score, but the operation failed." + e.toString());
+						}
+					}
 				} catch (Exception e) {}
 			}
-			buf.append("There " + (count==1?"is ":"are ") + count + " score" + (count==1?"":"s") + " for this assignment in the ChemVantage database:<br>");
+			for (String id : removeUsers) { // remove these users from the group
+				try {
+					User u = ofy().load().type(User.class).id(id).safe();
+					u.changeGroups(0);
+				} catch (Exception e) {}
+			}
+			buf.append("<p>There " + (count==1?"is ":"are ") + count + " score" + (count==1?"":"s") + " for this assignment in the ChemVantage database:<br>");
 			if (count>0) {
 				buf.append("The average score is " + pctScoreSum/count + "%.<br>");
 				buf.append("The average number of attempts (including downloads not submitted for scoring) is " + Math.round(10.*attempts/count)/10. + ".<br>");
 				buf.append("The most recent attempt of this assignment was on " + df.format(mostRecent) + ".<p>");
 			}
 			if (!g.isUsingLisOutcomeService) buf.append("Your LMS is not configured for ChemVantage to report scores to the LMS grade book.<p>");
-			else if (!reportScoresOK) {
-				buf.append("It appears that one or more scores may not be reported to your LMS correctly. We have automatically initiated a programmed task to find "
-						+ "and correct this. Please check back in a few minutes to ensure that the situation has been resolved.<p>");
-				Queue queue = QueueFactory.getDefaultQueue();  // default task queue
-				queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("GroupId",Long.toString(g.id)));
+			else if (scoresNotReported>0) {
+				buf.append("It appears that " + scoresNotReported + (scoresNotReported==1?"score":"scores") + " may not have been reported to your LMS correctly. "
+						+ "We have automatically initiated a programmed task to correct this. "
+						+ "Please check back in a few minutes to ensure that the situation has been resolved.<p>");
 			}
 			else if (scoresReported) buf.append("All scores for students have been reported to your LMS successfully.<p>");
 			
