@@ -71,12 +71,19 @@ public class LTIRegistration extends HttpServlet {
 			+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
 			+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>";
 			
-	String welcomeMessage = "<h2>LTI Support Page</h2>"
-			+ "<table><tr><td><a href=/About#certification><img alt='IMS Global Certified' src='/images/imscertifiedfinalsmall.png'/></a></td>"
-			+ "<td>ChemVantage supports the IMS Global Learning Solutions LTI standard, versions 1.0 and 1.1.<br>The IMS conformance registration "
-			+ "number for ChemVantage is <a href=http://www.imsglobal.org/cc/detail.cfm?ID=259>IMSB2C2ce2014W1</a>.<p>"
-			+ "All LTI connections and ChemVantage services are provided free of charge.</td?</tr></table><p>"
-			+ "Most LMS platforms like Canvas, Blackboard, Sakai and Moodle support stamdard LTI connections. "
+	String welcomeMessage = "<h2>Learning Management System Integration</h2>"
+			+ "<a href=http://imscert.org><img alt='IMS Global Certified' style='border-width:0' align=left hspace=10 vspace=5 "
+			+ "src='/images/imscertifiedfinalsmall.png'/></a> ChemVantage is certified by the "
+			+ "<a href=http://imsglobal.org>IMS Global Learning Consortium</a> to be conformant with the "
+			+ "LTI v1.0, v1.1 and Outcomes Service 1.X standards for learning tools interoperability. The IMS registration "
+			+ "number for ChemVantage is <a href=https://site.imsglobal.org/certifications/chemvantage/36981/chemvantage>IMSB2C2C3B2ce2019W1</a>.<p>"
+			+ "This means that you can configure <a href=https://site.imsglobal.org/certifications/chemvantage/36981/chemvantage/180501/compatibility>"
+			+ "compatible learning management systems</a> with an LTI link to ChemVantage.  This allows your LMS to establish "
+			+ "and maintain ChemVantage accounts automatically, without having to maintain separate usernames and "
+			+ "passwords.<p>"
+			+ "It's important to verify that your LMS supports the LTI Outcomes Service so ChemVantage will report the assignment scores "
+			+ "back to the LMS grade book. This is important because ChemVantage does not collect any personally identifiable information from users, "
+			+ "so the Outcomes Service is the only way to track student scores.<p>"
 			+ "You may obtain a free set of LTI credentials by entering a consumer key value (any string of "
 			+ "characters that uniquely identifies your LMS) along with your email address into the form below."
 			+ "Your LTI credentials will be emailed to you immediately.<p>"
@@ -133,7 +140,7 @@ public class LTIRegistration extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
-		out.println(Home.header + banner + About.certification);
+		out.println(Home.header + banner + welcomeMessage);
 		StringBuffer buf = new StringBuffer();
 		buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");
 		buf.append("<FORM METHOD=POST><TABLE>");
