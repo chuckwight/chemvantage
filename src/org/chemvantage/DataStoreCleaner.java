@@ -59,6 +59,12 @@ public class DataStoreCleaner extends HttpServlet {
 		// Default value of TestOnly is false;
 		// For POST request, no parameters runs all methods
 		
+		now = new Date();
+		oneMonthAgo = new Date(now.getTime()-2592000000L);
+		fiveMonthsAgo = new Date(now.getTime()-13140000000L);
+		sixMonthsAgo = new Date(now.getTime()-15768000000L);
+		oneYearAgo = new Date(now.getTime()-31536000000L);
+		
 		PrintWriter out = response.getWriter();
 		response.setContentType("text/html");
 		out.println(Home.header);
