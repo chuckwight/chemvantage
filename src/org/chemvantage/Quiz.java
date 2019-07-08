@@ -597,6 +597,11 @@ public class Quiz extends HttpServlet {
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			buf.append(df.format(new Date()) + "<p>");
 			
+			buf.append("To protect the privacy of our users, ChemVantage does not collect any personally identifiable information. "
+					+ "Therefore, we are unable to display a traditional grade book with names and scores. Instead, we rely on a "
+					+ "robust system of reporting scores back to the grade book inside your LMS. Please check the information below "
+					+ "and let us know if you have any questions or problems. Thank you for using ChemVantage for your class.<p>");
+			
 			Group g = ofy().load().type(Group.class).id(a.groupId).now();
 			
 			buf.append("There are " + g.validatedMemberCount() + " members of this group, including instructors, "
@@ -622,16 +627,20 @@ public class Quiz extends HttpServlet {
 					if (s.needsLisReporting()) reportScoresOK = false;
 				} catch (Exception e) {}
 			}
-			buf.append("There " + (count==1?"is ":"are ") + count + " score" + (count==1?"":"s") + " for this assignment in the ChemVantage database.<p>");
+			buf.append("There " + (count==1?"is ":"are ") + count + " score" + (count==1?"":"s") + " for this assignment in the ChemVantage database:<br>");
 			if (count>0) {
 				buf.append("The average score is " + pctScoreSum/count + "%.<br>");
 				buf.append("The average number of attempts (including downloads not submitted for scoring) is " + Math.round(10.*attempts/count)/10. + ".<br>");
 				buf.append("The most recent attempt of this assignment was on " + df.format(mostRecent) + ".<p>");
 			}
 			if (!g.isUsingLisOutcomeService) buf.append("Your LMS is not configured for ChemVantage to report scores to the LMS grade book.<p>");
-			else if (!reportScoresOK) buf.append("It appears that one or more scores may not be reported to your "
-					+ "LMS correctly, may be out of date or may be in transit when this page was printed.<p>");
-			else if (scoresReported) buf.append("All scores have been reported to your LMS successfully.<p>");
+			else if (!reportScoresOK) {
+				buf.append("It appears that one or more scores may not be reported to your LMS correctly. We have automatically initiated a programmed task to find "
+						+ "and correct this. Please check back in a few minutes to ensure that the situation has been resolved.<p>");
+				Queue queue = QueueFactory.getDefaultQueue();  // default task queue
+				queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("GroupId",Long.toString(g.id)));
+			}
+			else if (scoresReported) buf.append("All scores for students have been reported to your LMS successfully.<p>");
 			
 			buf.append("If you have any questions or need assistance, please contact <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.<p>");			
 			buf.append("<a href=/Quiz?AssignmentId=" + a.id + (nonce==null?"":"&Nonce=" + nonce) + ">Return to this quiz</a>.<p>");

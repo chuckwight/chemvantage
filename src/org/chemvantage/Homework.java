@@ -69,8 +69,11 @@ public class Homework extends HttpServlet {
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
-			String userRequest = request.getParameter("UserRequest");			
-			if (userRequest != null && "ShowScores".contentEquals(userRequest)) out.println(Home.header + showScores(user,request,nonce) + Home.footer);
+			String userRequest = request.getParameter("UserRequest");
+			if (userRequest == null) userRequest = "";
+			
+			if ("ShowScores".contentEquals(userRequest)) out.println(Home.header + showScores(user,request,nonce) + Home.footer);
+			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header + showSummary(user,request,nonce) + Home.footer);
 			else out.println(Home.header + printHomework(user,request,nonce) + Home.footer);
 		} catch (Exception e) {}
 	}
@@ -133,7 +136,7 @@ public class Homework extends HttpServlet {
 				buf.append("As the course instructor you may<ul>"
 						+ "<li><a href=/Groups?UserRequest=AssignHomeworkQuestions&AssignmentId=" + hwa.id + (nonce==null?"":"&Nonce=" + nonce) + ">"
 						+ "customize this homework assignment</a> by selecting/deselecting the available question items."
-						+ "<li>view a deidentified <a href=/CalculateScores?AssignmentId=" + hwa.id + (nonce==null?"":"&Nonce=" + nonce) + ">summary of scores</a> for this assignment"
+						+ "<li>view a <a href=/Homework?UserRequest=ShowSummary&AssignmentId=" + hwa.id + (nonce==null?"":"&Nonce=" + nonce) + ">summary of scores</a> for this assignment"
 						+ "</ul></td></tr></table><p>");
 			} else if (user.isAnonymous()) {
 				buf.append("<h3><font color=red>Anonymous User</font></h3>");
@@ -606,4 +609,72 @@ public class Homework extends HttpServlet {
 
 		return buf.toString();
 	}
+	
+	String showSummary(User user,HttpServletRequest request,String nonce) {
+		StringBuffer buf = new StringBuffer();
+		
+		try {
+			if (!user.isInstructor()) throw new Exception("You must be logged in as the instructor to view this page.");
+			
+			Assignment a = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
+			Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
+			buf.append("<h3>" + a.assignmentType + " - " + t.title + "</h3>");
+			
+			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+			buf.append(df.format(new Date()) + "<p>");
+			
+			buf.append("To protect the privacy of our users, ChemVantage does not collect any personally identifiable information. "
+					+ "Therefore, we are unable to display a traditional grade book with names and scores. Instead, we rely on a "
+					+ "robust system of reporting scores back to the grade book inside your LMS. Please check the information below "
+					+ "and let us know if you have any questions or problems. Thank you for using ChemVantage for your class.<p>");
+			
+			Group g = ofy().load().type(Group.class).id(a.groupId).now();
+			
+			buf.append("There are " + g.validatedMemberCount() + " members of this group, including instructors, "
+			+ "teaching assistants and test students created by your LMS, if applicable.<p>");
+			
+			Score s = null;
+			int count = 0;
+			int pctScoreSum = 0;
+			int attempts = 0;
+			Date mostRecent = new Date(0);
+			boolean reportScoresOK = true;
+			boolean scoresReported = false;
+			for (String id : g.memberIds) {
+				try {
+					Key<Score> k = Key.create(Key.create(User.class,id),Score.class,a.id);
+					s = ofy().load().key(k).safe();       // throws an exception if no Score entity exists yet
+					if (s.numberOfAttempts==0) continue;  // skip the averaging for those who have not attempted the assignment
+					pctScoreSum += s.getPctScore();
+					attempts += s.numberOfAttempts;
+					count++;
+					if (s.mostRecentAttempt.after(mostRecent)) mostRecent = s.mostRecentAttempt;
+					if (s.lisReportComplete) scoresReported = true;
+					if (s.needsLisReporting()) reportScoresOK = false;
+				} catch (Exception e) {}
+			}
+			buf.append("There " + (count==1?"is ":"are ") + count + " score" + (count==1?"":"s") + " for this assignment in the ChemVantage database:<br>");
+			if (count>0) {
+				buf.append("The average score is " + pctScoreSum/count + "%.<br>");
+				buf.append("This assignment has " + a.questionKeys.size() + " required questions needing separate submissions.<br>");
+				buf.append("The average number of submissions per user is " + Math.round(10.*attempts/count)/10. + ".<br>");
+				buf.append("The most recent submission was on " + df.format(mostRecent) + ".<p>");
+			}
+			if (!g.isUsingLisOutcomeService) buf.append("Your LMS is not configured for ChemVantage to report scores to the LMS grade book.<p>");
+			else if (!reportScoresOK) {
+				buf.append("It appears that one or more scores may not be reported to your LMS correctly. We have automatically initiated a programmed task to find "
+						+ "and correct this. Please check back in a few minutes to ensure that the situation has been resolved.<p>");
+				Queue queue = QueueFactory.getDefaultQueue();  // default task queue
+				queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("GroupId",Long.toString(g.id)));
+			}
+			else if (scoresReported) buf.append("All scores for students have been reported to your LMS successfully.<p>");
+			
+			buf.append("If you have any questions or need assistance, please contact <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.<p>");			
+			buf.append("<a href=/Homework?AssignmentId=" + a.id + (nonce==null?"":"&Nonce=" + nonce) + ">Return to this assignment</a>.<p>");
+		} catch (Exception e) {
+			buf.append(e.toString());
+		}
+		return buf.toString();
+	}
+
 }
