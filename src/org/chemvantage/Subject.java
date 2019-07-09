@@ -23,7 +23,6 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.google.appengine.api.datastore.QueryResultIterable;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.ObjectifyService;
 import com.googlecode.objectify.annotation.Cache;
@@ -80,21 +79,21 @@ public class Subject {
 
 	public List<Long> getVideos() {
 		List<Long> videoIds = new ArrayList<Long>();
-		QueryResultIterable<Key<Video>> videoKeys = ofy().load().type(Video.class).keys();
+		List<Key<Video>> videoKeys = ofy().load().type(Video.class).keys().list();
 		for (Key<Video> k : videoKeys) videoIds.add(k.getId());
 		return videoIds;
 	}
 
 	public List<Long> getTextIds() {
 		List<Long> textIds = new ArrayList<Long>();
-		QueryResultIterable<Key<Text>> textKeys = ofy().load().type(Text.class).keys();
+		List<Key<Text>> textKeys = ofy().load().type(Text.class).keys().list();
 		for (Key<Text> k : textKeys) textIds.add(k.getId());
 		return textIds;
 	}
 
 	public List<Long> getTopicIds() {
 		List<Long> topicIds = new ArrayList<Long>();
-		QueryResultIterable<Key<Topic>> topicKeys = ofy().load().type(Topic.class).order("orderBy").keys();
+		List<Key<Topic>> topicKeys = ofy().load().type(Topic.class).order("orderBy").keys().list();
 		for (Key<Topic> k : topicKeys) topicIds.add(k.getId());
 		return topicIds;
 	}
