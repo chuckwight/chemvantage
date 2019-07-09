@@ -9,8 +9,7 @@ import com.googlecode.objectify.ObjectifyService;
 
 public class EntityRegistrar implements ServletContextListener {
 	
-    @Override
-    public void contextInitialized(ServletContextEvent servletContextEvent) {
+     public void contextInitialized(ServletContextEvent servletContextEvent) {
         System.out.println("Starting up: " + new Date());
     
         ObjectifyService.init();
@@ -35,7 +34,6 @@ public class EntityRegistrar implements ServletContextListener {
         ObjectifyService.register(Video.class);
     }
 
-    @Override
     public void contextDestroyed(ServletContextEvent servletContextEvent) {
         System.out.println("Shutting down!");
     }
