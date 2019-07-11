@@ -8,13 +8,8 @@ import javax.servlet.ServletContextListener;
 import com.googlecode.objectify.ObjectifyService;
 
 public class EntityRegistrar implements ServletContextListener {
-	
-    @Override
-    public void contextInitialized(ServletContextEvent servletContextEvent) {
-        System.out.println("Starting up: " + new Date());
-    
-        ObjectifyService.init();
-        
+
+	static {
         ObjectifyService.register(Assignment.class);
         ObjectifyService.register(BLTIConsumer.class);
         ObjectifyService.register(Domain.class);
@@ -33,6 +28,13 @@ public class EntityRegistrar implements ServletContextListener {
         ObjectifyService.register(User.class);
         ObjectifyService.register(UserReport.class);
         ObjectifyService.register(Video.class);
+   }
+	
+    @Override
+    public void contextInitialized(ServletContextEvent servletContextEvent) {
+        System.out.println("Starting up: " + new Date());
+    
+        ObjectifyService.begin();
     }
 
     @Override
