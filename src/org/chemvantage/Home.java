@@ -174,8 +174,8 @@ public class Home extends HttpServlet {
 
 			HttpSession session = request.getSession();
 			if (request.getRequestURL().toString().contains("dev-vantage")) buf.append("<p><h3><font color=red>Warning</font></h3>"
-					+ "This is a development server used for code testing. Please do not "
-					+ "use this server for serious educational purposes.<p>");
+					+ "This is a development server used for code testing. Please do not<br>"
+					+ "use this server for serious educational purposes.<p><hr>");
 			else if (User.isAnonymous(session)) buf.append("<p><h3><font color=red>Anonymous User</font></h3>");
 			else if (User.isChemVantageAdministrator(session)) buf.append("<p><h3>ChemVantage Administrator</h3>");
 			else {
