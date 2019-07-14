@@ -71,7 +71,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     protected String send() throws Exception {
     	
     	// construct a hash of the message text to include as a custom parameter
-    	String hash = new String(Base64.encode(DigestUtils.sha(messageText)));
+    	String hash = new String(Base64.encode(DigestUtils.sha1(messageText)));
 
     	OAuthParameters params = new OAuthParameters();
     	params.setOAuthConsumerKey(oauth_consumer_key);
