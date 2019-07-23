@@ -79,7 +79,10 @@ public class LTILaunch extends HttpServlet {
 		
 		if (request.getParameter("lti_message_type")!=null) { // handle LTI launch request for LTIv1p0 and LTIv1p1
 			basicLtiLaunchRequest(request,response);
-		} else {
+		} else if (request.getParameter("id_token")!=null) { // handle LTI launch request for LTIv1.3
+			v1p3LtiLaunchRequest(request,response);
+		}
+		else {
 			doError(request,response,"Missing lti_message_type parameter.",null,null);
 		}
 	}
@@ -259,7 +262,10 @@ public class LTILaunch extends HttpServlet {
 			response.sendRedirect(redirectUrl);
 		} catch (Exception e) {
 			doError(request, response,"LTI Launch failed. " + e.getMessage(), null, null);
-		}
+		}		
+	}
+	
+	void v1p3LtiLaunchRequest(HttpServletRequest request,HttpServletResponse response) {
 		
 	}
 	
