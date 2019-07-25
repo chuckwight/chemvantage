@@ -152,6 +152,21 @@ public class LTILaunch extends HttpServlet {
 			}
 			// BLTI Launch message was validated successfully at this point
 			
+			// Detect whether this is an anonymous LTI launch request per LTIv1.1.2. This is a security patch that
+			// prevents a cross-site request forgery threat applicable to versions of LTI released prior to v1.3.
+			String relaunch_url = request.getParameter("relaunch_url");
+			String platform_state = request.getParameter("platform_state");
+			String tool_state = request.getParameter("tool_state");
+			if (tool_state != null && platform_state != null) { // This is a LTIv1.1.2 relaunch response. Validate the tool_state value
+				if (platform_state.contentEquals(Nonce.getPlatformState(tool_state))) ; // validated; do nothing
+				else throw new Exception("Tool/Platform states could not be validated.");
+			} else if (relaunch_url != null && platform_state != null) {  // Anonymous LRTIv1p1p2 launch request. Execute relaunch sequence:
+				tool_state = Nonce.createInstance(platform_state);
+				response.sendRedirect(relaunch_url + "?platform_state=" + platform_state + "&tool_state=" + tool_state);
+				return;
+			}
+			// End of LTIv1.1.2 section. Continue with normal LTI launch sequence
+			
 			// Gather some information about the user
 			String userId = request.getParameter("user_id");
 			userId = oauth_consumer_key + ":" + (userId==null?"":userId);

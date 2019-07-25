@@ -34,6 +34,7 @@ public class Nonce {
 	@Id String id;
 	@Index	Date created;
 			String  userId;
+			String platform_state;
 	
 	Nonce() {}
 	
@@ -56,6 +57,21 @@ public class Nonce {
 		}
 	}
 
+	static String createInstance(String platform_state) {
+		if (platform_state != null && !platform_state.isEmpty()) { // create and store a new valid Nonce
+			try {
+				Nonce n = new Nonce();
+				n.id = generateNonce();
+				n.platform_state = platform_state;
+				n.created = new Date();
+				ofy().save().entity(n).now();
+				return n.id;
+			} catch (Exception e) {
+			}
+		}
+		return null;
+	}
+	
 	static long interval = 5400000L;  // 90 minutes in milliseconds
 	
 	public static boolean isUnique(String nonce, String timestamp) {
@@ -101,6 +117,25 @@ public class Nonce {
 			Nonce n = ofy().load().type(Nonce.class).id(nonce).safe();		
 			ofy().delete().key(Key.create(n)).now(); // remove this nonce from the database immediately
 			return ofy().load().type(User.class).id(n.userId).safe();
+		} catch (Exception e) {
+			return null;
+		}				
+	}
+	
+	static String getPlatformState(String nonce) {
+		if (nonce==null) return null;
+		
+		Date now = new Date();
+		Date oldest = new Date(now.getTime()-interval); // 90 minutes ago
+		
+		// Delete all Nonce objeects older than the interval
+		List<Key<Nonce>> expired = ofy().load().type(Nonce.class).filter("created <",oldest).keys().list();
+		if (expired.size() > 0) ofy().delete().keys(expired);
+		
+		try {
+			Nonce n = ofy().load().type(Nonce.class).id(nonce).safe();		
+			ofy().delete().key(Key.create(n)).now(); // remove this nonce from the database immediately
+			return n.platform_state;  // this is a String value containing the TC-definined platform_state
 		} catch (Exception e) {
 			return null;
 		}				
