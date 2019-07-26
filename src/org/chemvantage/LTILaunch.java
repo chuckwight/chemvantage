@@ -36,6 +36,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.googlecode.objectify.annotation.Cache;
+import com.googlecode.objectify.annotation.Entity;
+import com.googlecode.objectify.annotation.Id;
+
 import net.oauth.OAuthAccessor;
 import net.oauth.OAuthConsumer;
 import net.oauth.OAuthMessage;
@@ -47,10 +53,19 @@ import net.oauth.signature.OAuthSignatureMethod;
 public class LTILaunch extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
+	private String jwtSecret;
 
 	@Override
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
+		JwtSecret s;
+		try { // load the JWT encryption secret from the datastore into memory
+			s = ofy().load().type(JwtSecret.class).first().safe();
+		} catch (Exception e) {  // this should run only once to create and store one JwtSecret entity
+			s = new JwtSecret();
+			ofy().save().entity(s);
+		}
+		this.jwtSecret = s.jwtSecret;		
 	}
 
 	@Override
@@ -152,20 +167,47 @@ public class LTILaunch extends HttpServlet {
 			}
 			// BLTI Launch message was validated successfully at this point
 			
-			// Detect whether this is an anonymous LTI launch request per LTIv1.1.2. This is a security patch that
+			// Detect whether this is an anonymous LTI launch request per LTIv1p1p2. This is a security patch that
 			// prevents a cross-site request forgery threat applicable to versions of LTI released prior to v1.3.
+			// The launch procedure is for the TC to issue an anonymous BLTI launch request with no user information.
+			// The TP wraps the TC-defined platform_state into an encrypted JSON Web Token (JWT) and redircects the browser
+			// to the TC-specified relaunch_url with the original platform_state and the new tool_state parameters, where
+			// tool_state is the encrypted JWT. The TC then relaunches to the TP with the user information and the
+			// two state parameters, which must be verified by the TP to proceed with the launch. This security patch makes
+			// ChemVantage compliant with LTIv1p1p2. If the parameters are not included, the TP may proceed with a 
+			// normal v1p0 BLTI launch; however this is subject to the following deprecation schedule:
+			// LTIv1p0		last certification 12/31/2019 and last market availability 12/31/2020
+			// LTIv1p1p2 	last certification 06/30/2021 and last market availability 06/30/2022
+			
 			String relaunch_url = request.getParameter("relaunch_url");
 			String platform_state = request.getParameter("platform_state");
 			String tool_state = request.getParameter("tool_state");
+			
 			if (tool_state != null && platform_state != null) { // This is a LTIv1.1.2 relaunch response. Validate the tool_state value
-				if (platform_state.contentEquals(Nonce.getPlatformState(tool_state))) ; // validated; do nothing
-				else throw new Exception("Tool/Platform states could not be validated.");
+				try {
+				    Algorithm algorithm = Algorithm.HMAC256(jwtSecret);
+				    JWT.require(algorithm)
+				        .withIssuer("https://www.chemvantage.org")
+				        .withClaim("platform_state", platform_state)
+				        .build().verify(tool_state);
+				} catch (Exception e) {
+					throw new Exception("Tool state could not be validated.");
+				}			
 			} else if (relaunch_url != null && platform_state != null) {  // Anonymous LRTIv1p1p2 launch request. Execute relaunch sequence:
-				tool_state = Nonce.createInstance(platform_state);
-				response.sendRedirect(relaunch_url + "?platform_state=" + platform_state + "&tool_state=" + tool_state);
-				return;
+				try {
+					Date expires = new Date(new Date().getTime() + 600000); // 10 minutes from now
+				    Algorithm algorithm = Algorithm.HMAC256(jwtSecret);
+				    tool_state = JWT.create()
+				        .withIssuer("https://www.chemvantage.org")
+				        .withClaim("platform_state", platform_state)
+				        .withExpiresAt(expires)
+				        .sign(algorithm);
+				    response.sendRedirect(relaunch_url + "?platform_state=" + platform_state + "&tool_state=" + tool_state);
+				} catch (Exception e){
+					throw new Exception("Tool state JWT could not be created.");
+				}
 			}
-			// End of LTIv1.1.2 section. Continue with normal LTI launch sequence
+			// End of LTIv1p1p2 section. Continue with normal LTI launch sequence
 			
 			// Gather some information about the user
 			String userId = request.getParameter("user_id");
@@ -469,4 +511,11 @@ public class LTILaunch extends HttpServlet {
 
 	}
 
+	@Cache @Entity
+	class JwtSecret {  // this is a container for an opaque string to initialize the HMAC256 encryption for JWTs
+		@Id Long id;
+		String jwtSecret = "change me manually in the datastore";
+		
+		JwtSecret() {}		
+	}
 }

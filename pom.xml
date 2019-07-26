@@ -78,5 +78,10 @@
   		<artifactId>objectify</artifactId>
   		<version>5.1.9</version>
   	</dependency>
+  	<dependency>
+    	<groupId>com.auth0</groupId>
+    	<artifactId>java-jwt</artifactId>
+    	<version>3.8.1</version>
+	</dependency>
   </dependencies>
 </project>
