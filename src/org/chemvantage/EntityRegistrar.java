@@ -5,6 +5,8 @@ import java.util.Date;
 import javax.servlet.ServletContextEvent;  
 import javax.servlet.ServletContextListener;
 
+import org.chemvantage.LTILaunch.JwtSecret;
+
 import com.googlecode.objectify.ObjectifyService;
 
 public class EntityRegistrar implements ServletContextListener {
@@ -15,6 +17,7 @@ public class EntityRegistrar implements ServletContextListener {
         ObjectifyService.register(Domain.class);
         ObjectifyService.register(Group.class);
         ObjectifyService.register(HWTransaction.class);
+        ObjectifyService.register(JwtSecret.class);
         ObjectifyService.register(Nonce.class);
         ObjectifyService.register(PracticeExamTransaction.class);
         ObjectifyService.register(ProposedQuestion.class);
