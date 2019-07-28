@@ -72,30 +72,6 @@ public class Group implements Serializable {
     	}
     }
     
-    public String getInstructorEmail() {
-    	try {
-    		return ofy().load().type(User.class).id(this.instructorId).safe().getEmail();
-    	} catch (Exception e) {
-    		return "";
-    	}
-    }
-    
-    public String getInstructorFullName() {
-    	try {
-    		return ofy().load().type(User.class).id(this.instructorId).safe().getFullName();
-    	} catch (Exception e) {
-    		return "";
-    	}
-    }
-    
-    public String getInstructorBothNames() {
-    	try {
-    		return ofy().load().type(User.class).id(this.instructorId).safe().getBothNames();
-    	} catch (Exception e) {
-    		return "TBA";
-    	}
-    }
-
     public boolean isMember(String id) {
     	return memberIds.contains(id);
     }

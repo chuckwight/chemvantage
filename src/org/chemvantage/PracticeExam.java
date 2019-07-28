@@ -580,7 +580,7 @@ public class PracticeExam extends HttpServlet {
 				else buf.append("Some questions were left blank.");
 			}
 			// embed ajax code to provide feedback
-			buf.append(ajaxScoreJavaScript(user.verifiedEmail));
+			buf.append(ajaxScoreJavaScript());
 		}
 		catch (Exception e) {
 			buf.append(e.getMessage());
@@ -632,7 +632,7 @@ public class PracticeExam extends HttpServlet {
 		+ "</SCRIPT>";			
 	}
 
-	String ajaxScoreJavaScript(boolean verifiedEmail) {
+	String ajaxScoreJavaScript() {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note) {\n"
 		+ "  var xmlhttp;\n"

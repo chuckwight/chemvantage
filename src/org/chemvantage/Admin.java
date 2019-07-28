@@ -52,31 +52,25 @@ public class Admin extends HttpServlet {
 			UserService userService = UserServiceFactory.getUserService();
 			String userId = userService.getCurrentUser().getUserId();
 			if (ofy().load().type(User.class).id(userId).now()==null) User.createUserServiceUser(userService.getCurrentUser());
-			
+
 			HttpSession session = request.getSession();
 			session.setAttribute("UserId",userId);
-			
+
 			User user = User.getInstance(session); 
 			if (user.authDomain==null || !user.authDomain.equals("Google)")) {
 				user.authDomain = "Google";
 				ofy().save().entity(user);
 			}
-			
+
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
-				
+
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 
-			if (userRequest.equals("Edit User") || userRequest.equals("Check ID")) {
-				User usr = ofy().load().type(User.class).id(request.getParameter("UserId")).safe();
-				out.println(Home.getHeader(user) + editUserForm(user,request,usr) + Home.footer);
-			}
-			else {
-				String searchString = request.getParameter("SearchString");
-				String cursor = request.getParameter("Cursor");
-				out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Home.footer);
-			}
+			String searchString = request.getParameter("SearchString");
+			String cursor = request.getParameter("Cursor");
+			out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Home.footer);
 		} catch (Exception e) {
 		}
 	}
@@ -95,15 +89,6 @@ public class Admin extends HttpServlet {
 			if (userRequest == null) userRequest = "";
 			if (userRequest.equals("Announce")) {
 				Home.announcement = request.getParameter("Announcement");
-			} else if (userRequest.equals("Update User")) {
-				User usr = ofy().load().type(User.class).id(request.getParameter("UserId")).safe(); // user record to modify
-				updateUser(usr,request);
-				searchString = usr.getEmail();
-				if (usr.id.equals(user.id)) user = usr; // admin modifying own record; update now to reflect new status
-			} else if (userRequest.equals("Delete User")) {
-				User usr = ofy().load().type(User.class).id(request.getParameter("UserId")).safe();
-				searchString = usr.getEmail();
-				ofy().delete().entity(usr);
 			} else if (userRequest.equals("Search for Consumer")) {
 				searchString = request.getParameter("oauth_consumer_key");
 			} else if (userRequest.equals("Generate New Shared Secret")) {
@@ -114,11 +99,6 @@ public class Admin extends HttpServlet {
 				request.getSession(true).setAttribute("UserId",request.getParameter("UserId"));
 				response.sendRedirect("/Home");
 				return;
-			} else if (userRequest.equals("Confirm Merge")) {
-				User usr = ofy().load().type(User.class).id(request.getParameter("UserId")).safe();
-				User mergeUser = ofy().load().type(User.class).id(request.getParameter("MergeUserId")).safe();
-				mergeAccounts(usr,mergeUser);
-				searchString = usr.getEmail();
 			}
 			out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Home.footer);
 		} catch (Exception e) {
@@ -164,14 +144,10 @@ public class Admin extends HttpServlet {
 						+ "<TD><b>Role</b></TD><TD><b>UserId</b></TD><TD><b>Last Login</b></TD><TD><b>Action</b></TD></TR>");
 				while (iterator.hasNext()) {
 					User u = iterator.next();
-					u.clean();
 					buf.append("\n<FORM METHOD=GET>"
 							+ "<TR style=color:" + (u.alias==null?"black":"grey") + ">"
-							+ "<TD>" + u.getEmail() + "</TD>"
-							+ "<TD>" + u.getLastName() + "</TD>"
-							+ "<TD>" + u.getFirstName() + "</TD>"
-							+ "<TD>" + u.getPrincipalRole() + "</TD>" 
 							+ "<TD>" + u.id + "</TD>"
+							+ "<TD>" + u.getPrincipalRole() + "</TD>" 
 							+ "<TD>" + u.lastLogin + "</TD>"
 							+ "<TD><INPUT TYPE=HIDDEN NAME=UserId VALUE='" + u.id + "'>"
 							+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Edit User'></TD></TR></FORM>");
@@ -247,86 +223,6 @@ public class Admin extends HttpServlet {
 		return buf.toString();
 	}
 
-	String editUserForm(User user,HttpServletRequest request,User usr) {
-		StringBuffer buf = new StringBuffer("\n\n<h3>Edit User Properties</h3>");
-		try {
-			buf.append("\nUsing this form, you may edit edit any user-specific fields "
-					+ "for this user, login as the user, or delete the user account permanently.<p>");
-
-			int roles = usr.roles;
-			buf.append("\n<TABLE><FORM NAME=UserForm METHOD=POST ACTION=Admin>"
-					+ "<INPUT TYPE=HIDDEN NAME=UserId VALUE='" + usr.id + "'>"
-					+ "\n<TR><TD ALIGN=RIGHT>UserID: </TD><TD>" + usr.id + "</TD></TR>"
-					+ "\n<TR><TD ALIGN=RIGHT>AuthDomain: </TD><TD>" + usr.authDomain + "</TD></TR>"
-					+ "\n<TR><TD ALIGN=RIGHT>Domain: </TD><TD><INPUT NAME=Domain VALUE='" + (usr.domain==null?"":usr.domain) + "'>" + "</TD></TR>"
-					+ "\n<TR><TD ALIGN=RIGHT>Email: </TD><TD><INPUT NAME=Email VALUE='" + usr.getEmail() + "'>" + (usr.verifiedEmail?" (verified)":" (unverified)") + "</TD></TR>"
-					+ "\n<TR><TD ALIGN=RIGHT>LastName: </TD><TD><INPUT NAME=LastName VALUE='" 
-					+ CharHider.quot2html(usr.getLastName()) + "'></TD></TR>"
-					+ "\n<TR><TD ALIGN=RIGHT>FirstName: </TD><TD><INPUT NAME=FirstName VALUE='" 
-					+ CharHider.quot2html(usr.getFirstName()) + "'></TD></TR>"
-					+ "\n<TR><TD ALIGN=RIGHT VALIGN=TOP>Roles: </TD><TD>"
-					+ "<INPUT TYPE=CHECKBOX NAME=Roles VALUE=1" + (roles%2/1==1?" CHECKED":"") + ">Contributor<br>"
-					+ "<INPUT TYPE=CHECKBOX NAME=Roles VALUE=2" + (roles%4/2==1?" CHECKED":"") + ">Editor<br>"
-					+ "<INPUT TYPE=CHECKBOX NAME=Roles VALUE=8" + (roles%16/8==1?" CHECKED":"") + ">Instructor<br>"
-					+ "<INPUT TYPE=CHECKBOX NAME=Roles VALUE=16" + (roles%32/16==1?" CHECKED":"") + ">Administrator"
-					+ "</TD></TR>"
-					+ "\n<TR><TD ALIGN=RIGHT>Acct Type: </TD><TD>"
-					+ "<INPUT TYPE=RADIO NAME=Premium VALUE='false'" + (!usr.premium?" CHECKED":"") + ">Basic "
-					+ "<INPUT TYPE=RADIO NAME=Premium VALUE='true'" + (usr.premium?" CHECKED":"") + ">Premium "
-					+ "</TD></TR>");
-			buf.append("<TR><TD ALIGN=RIGHT>Alias: </TD><TD><INPUT TYPE=TEXT NAME=Alias VALUE='" + (usr.alias==null?"":usr.alias) + "'></TD></TR>");
-			buf.append("<TR><TD ALIGN=RIGHT>Group: </TD><TD>" + groupSelectBox(usr.myGroupId) + "</TD></TR>");
-			buf.append("\n<TR><TD ALIGN=RIGHT>Last Login: </TD>"
-					+ "<TD>" + usr.lastLogin + "</TD></TR>"
-					+ "\n</TABLE>");
-
-			buf.append("\n<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Update User'>"
-					+ "\n <INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete User' "
-					+ "onClick=\"return confirm('Delete this user. Are you sure?')\">"
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Login As This User'>"
-					+ "\n</FORM>");
-
-			// Use this section for merging two user accounts into a single account and deleting the extra account
-			buf.append("<h3>Merge User Accounts</h3>");
-			buf.append("Use this form to merge all user records from two separate accounts into a single account. This will "
-					+ "transfer all of the scores to the account indicated above and delete the unwwanted account below:<br>");	
-			
-			String mergeUserId = request.getParameter("MergeUserId");
-			if (mergeUserId!=null) {
-				try {
-					User mergeUser = ofy().load().type(User.class).id(request.getParameter("MergeUserId")).safe();
-					if (usr.id.equals(mergeUser.id)) mergeUser = null; // prevents merging identical accounts
-					Group g = mergeUser.myGroupId>0?ofy().load().type(Group.class).id(mergeUser.myGroupId).now():null;
-					buf.append("<FORM METHOD=POST ACTION=Admin>"
-							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='Confirm Merge'>"
-							+ "<INPUT TYPE=HIDDEN NAME=UserId VALUE='" + usr.id + "'>"
-							+ "<INPUT TYPE=HIDDEN NAME=MergeUserId VALUE='" + mergeUser.id + "'>"
-							+ "<TABLE><TR><TD ALIGN=RIGHT>UserId: </TD><TD>" + mergeUser.id + "</TD></TR>"
-							+ "<TR><TD ALIGN=RIGHT>Name: </TD><TD>" + mergeUser.getFullName() + "</TD></TR>"
-							+ "<TR><TD ALIGN=RIGHT>Email: </TD><TD>" + mergeUser.getEmail() + "</TD></TR>"
-							+ "<TR><TD ALIGN=RIGHT>Role: </TD><TD>" + mergeUser.getPrincipalRole() + "</TD></TR>"
-					        + "<TR><TD ALIGN=RIGHT>Group: </TD><TD>" + (g==null?"(none)":g.description + "(anonymous)") + "</TD></TR>"
-					        + "</TABLE>Transfer records and delete this account: "
-					        + "<INPUT TYPE=SUBMIT VALUE='Confirm Merge'>"
-					        + "</FORM>");
-				} catch (Exception e2) {
-					buf.append("No separate user record was found for <b>" + mergeUserId + "</b>.<br>");
-					mergeUserId = null;
-				}
-			}
-			if (mergeUserId==null) { // either no mergeUserId was specified or the value was invalid
-				buf.append("<br>The account to be retained with all records has a UserId: <b>" + usr.id + "</b>");
-				buf.append("<FORM METHOD=GET ACTION=Admin>Enter the UserId of the account to be deleted: "
-						+ "<INPUT TYPE=HIDDEN NAME=UserId VALUE='" + usr.id + "'>"
-						+ "<INPUT TYPE=TEXT NAME=MergeUserId>"
-						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Check ID'></FORM>");
-			}
-		}
-		catch (Exception e) {
-			buf.append("<br>" + e.toString());
-		}
-		return buf.toString();
-	}
 
 	String groupSelectBox(long myGroupId) {
 		StringBuffer buf = new StringBuffer();
@@ -335,7 +231,7 @@ public class Admin extends HttpServlet {
 			buf.append("\n<SELECT NAME=GroupId><OPTION VALUE=0>(none)</OPTION>");
 			for (Group g : groups) {
 				buf.append("\n<OPTION VALUE=" + g.id + (g.id==myGroupId?" SELECTED>":">") 
-						+ g.description + " (" + g.getInstructorBothNames() + ")</OPTION>");
+						+ g.description + "</OPTION>");
 			}
 			buf.append("</SELECT>");
 		} catch (Exception e) {
@@ -344,35 +240,6 @@ public class Admin extends HttpServlet {
 		return buf.toString();
 	}
 
-	void updateUser(User usr,HttpServletRequest request) {
-		try {
-			int roles = 0;
-			String userRoles[] = request.getParameterValues("Roles");
-			if (userRoles != null) { // calculate the value of roles based on the various roles assigned to this user
-				for (int i = 0; i < userRoles.length; i++) {
-					roles += Integer.parseInt(userRoles[i]);
-				}
-			}
-			usr.setDomain(request.getParameter("Domain"));
-			if (!usr.getEmail().equals(request.getParameter("Email"))) usr.verifiedEmail = false;
-			usr.setEmail(request.getParameter("Email"));
-			usr.setFirstName(request.getParameter("FirstName"));
-			usr.setLastName(request.getParameter("LastName"));
-			usr.setLowerCaseName();
-			usr.roles = roles;
-			usr.setPremium(Boolean.parseBoolean(request.getParameter("Premium")));
-			if (request.getParameter("Alias").isEmpty()) usr.alias = null;
-			else usr.alias = request.getParameter("Alias");
-			try {
-				long newId = Long.parseLong(request.getParameter("GroupId"));  // get groupId for new group
-				usr.changeGroups(newId);
-			} catch (Exception e) {
-			}
-			ofy().save().entity(usr);
-		}
-		catch (Exception e) {
-		}
-	}
 	
 	String BLTIConsumerForm() {
 		StringBuffer buf = new StringBuffer();
@@ -418,85 +285,5 @@ public class Admin extends HttpServlet {
 		if (c!=null) ofy().delete().entity(c);
 	}
 	
-	protected static void mergeAccounts(User toUser,User fromUser) {
-		// find all transactions for fromUser and credit to toUser:
-		if (toUser.getFirstName().isEmpty()) toUser.setFirstName(fromUser.getFirstName());
-		if (toUser.getLastName().isEmpty()) toUser.setLastName(fromUser.getLastName());
-		if (toUser.getEmail().isEmpty() && fromUser.verifiedEmail) toUser.setEmail(fromUser.getEmail());
-		if (toUser.myGroupId<=0 && fromUser.myGroupId>=0) {
-			toUser.changeGroups(fromUser.myGroupId);
-			fromUser.changeGroups(0L);
-			toUser.notifyDeadlines = toUser.myGroupId>0?(toUser.notifyDeadlines || fromUser.notifyDeadlines):false;
-			toUser.smsMessageDevice = toUser.smsMessageDevice==null?fromUser.smsMessageDevice:toUser.smsMessageDevice;
-		}
-		if (toUser.domain == null && fromUser.domain != null) {
-			toUser.domain = fromUser.domain;
-			fromUser.domain = null;
-		}
-		toUser.roles = fromUser.roles>toUser.roles?fromUser.roles:toUser.roles;
-		toUser.setPremium(fromUser.hasPremiumAccount() || toUser.hasPremiumAccount());
-		toUser.setLowerCaseName();
-		fromUser.setAlias(toUser.id);  // diverts future logins to the new UserId
-		
-		ofy().save().entity(toUser);
-		ofy().save().entity(fromUser);
-		
-		List<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",fromUser.id).list();
-		for (HWTransaction h:hwTransactions) h.userId = toUser.id;
-		ofy().save().entities(hwTransactions);
-		
-		List<PracticeExamTransaction> peTransactions = ofy().load().type(PracticeExamTransaction.class).filter("userId",fromUser.id).list();
-		for (PracticeExamTransaction p:peTransactions) p.userId = toUser.id;
-		ofy().save().entities(peTransactions);
-		
-		List<QuizTransaction> qTransactions = ofy().load().type(QuizTransaction.class).filter("userId",fromUser.id).list();
-		for (QuizTransaction q:qTransactions) q.userId = toUser.id;
-		ofy().save().entities(qTransactions);
-		
-		List<Group> myGroups = ofy().load().type(Group.class).filter("instructorId",fromUser.id).list();
-		for (Group g:myGroups) g.instructorId=toUser.id;
-		ofy().save().entities(myGroups);
-		
-	}
-	
-	protected static void autoMergeAccounts(String email) {
-		// this method attempts to find all active user accounts having the same 
-		// email address and merge them into a smaller number of accounts by aliasing.
-		// The general strategy is:
-		//   1. Leave CAS accounts alone because it's easy to access them directly from the home page
-		//   2. Don't merge any accounts that have aliases or unverified or empty email addresses.
-		//   3. Any two accounts not associated with a domain can be merged into a single account either direction.
-		//   4. If the user has a domain account (LTI or Google Apps), any non-domain accounts should be merged into it
-		//   5. If the address of any account matches a registered domain, add the user to that domain.
-
-		try {
-			List<User> userAccounts = ofy().load().type(User.class).filter("email",email).list();
-			for (User u : userAccounts) {
-				if ((u.alias != null && !u.alias.isEmpty()) || u.getEmail().isEmpty() || !u.verifiedEmail || "CAS".equals(u.authDomain)) {
-					userAccounts.remove(u);
-					continue;
-				}
-				try { // if this domain exists as a registered ChemVantage domain, assign the user to it
-					Domain d = ofy().load().type(Domain.class).filter("domainName",u.authDomain).first().safe();
-					u.domain = d.domainName;
-					ofy().save().entity(u);
-				} catch (Exception e) {
-				}
-			}
-			if (userAccounts.size()<2) return;
-			User fromUser = null;
-			User toUser = null;
-			for (User u : userAccounts) {			
-				if (fromUser==null && u.domain==null) fromUser = u;
-				else if (toUser==null) toUser = u;
-				if (fromUser!=null && toUser!=null) {
-					Admin.mergeAccounts(toUser, fromUser);
-					Admin.autoMergeAccounts(toUser.getEmail());  // proceed recursively until merge process fails
-					return;
-				}
-			}
-		} catch (Exception e) {
-		}
-	}
 }
 

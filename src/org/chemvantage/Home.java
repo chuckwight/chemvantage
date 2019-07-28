@@ -145,10 +145,6 @@ public class Home extends HttpServlet {
 
 			buf.append("</nobr></div>\n");
 
-			buf.append("<div id=phzl></div><div align=right id=puzr "
-					+ "style='font-size:84%;padding:0 0 4px' width=100%><nobr><b>" 
-					+ user.getEmail() + "</b>");
-
 			buf.append("&nbsp;&nbsp;");
 			
 			buf.append("<a href=/Logout" + (nonce==null?"":"?Nonce="+nonce) + ">Sign out</a>");
@@ -286,59 +282,4 @@ public class Home extends HttpServlet {
 		}
 		return buf.toString();
 	}
-
-	String userInfoBox(User user) {
-		StringBuffer buf = new StringBuffer();
-		try {
-			buf.append("<TABLE BORDER=2 CELLSPACING=0 CELLPADDING=0 BORDERCOLOR=#008000><TR><TD>");
-			buf.append("<TABLE BGCOLOR=#FFFF80>"
-					+ "<TR><TD ALIGN=CENTER><b>Welcome, " + user.getFirstName() + "</b>"
-					+ "&nbsp;&nbsp;<FONT SIZE=-1><a href='/Logout'>(this isn't me)</a></FONT></TD></TR>");
-			buf.append("<TR><TD ALIGN=CENTER><FONT SIZE=-1> " + user.getDecoratedRole() +"</FONT></TD></TR>"); 
-
-			Group myGroup = null;
-			if (user.myGroupId > 0) {
-				try {
-					myGroup = ofy().load().type(Group.class).id(user.myGroupId).safe();
-				} catch (Exception e2) {
-					user.myGroupId = 0; // reset myGroupId in case my group was unexpectedly deleted
-					ofy().save().entity(user);
-				}
-			}
-			if (myGroup != null) {  // display some group information in the yellow box
-				if (!myGroup.memberIds.contains(user.id)) {
-					// a user has been invited to join a group when myGroupId 
-					// points to a group that does not list the user as a member
-					String instructorEmail = myGroup.getInstructorEmail();
-					if (instructorEmail == null) instructorEmail = "";
-					buf.append("<TR><TD ALIGN=CENTER><b>Please Join This Group</b></TD></TR>"
-							+ "<TR><TD ALIGN=CENTER><FONT SIZE=-1>"
-							+ myGroup.getInstructorBothNames() + (instructorEmail.length()>0?" (" + myGroup.getInstructorEmail() + ")":"") + "<br>"
-							+ "thinks that you should be a member<br>of the ChemVantage group:<br>"
-							+ myGroup.description + " (" + myGroup.getInstructorBothNames() + ")."
-							+ "<FORM NAME=Invitation ACTION=Home METHOD=POST>"
-							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=JoinGroup>"
-							+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE=" + myGroup.id + ">"
-							+ "<INPUT TYPE=SUBMIT VALUE='Join This Group'>"
-							+ "<INPUT TYPE=SUBMIT VALUE='No Thanks' onClick=Invitation.GroupId.value=0>"
-							+ "</FORM></FONT></TD></TR>");
-				} else {  
-					// Identify with a group of students using this site:
-					buf.append("<TR><TD ALIGN=CENTER><FONT SIZE=-1>" 
-							+ "Group: <i>" + myGroup.description + "</i>"
-							+ (myGroup.instructorId==null||myGroup.instructorId.isEmpty()?"":"<br>Instructor: <a href=mailto:" + User.getEmail(myGroup.instructorId) + ">" + myGroup.getInstructorBothNames() + "</a>")
-							+ "</FONT></TD></TR>");
-					// find the next assignment deadline and link it to the Scores table
-				}
-			} else if (user.domain!=null && !user.domain.isEmpty())
-				buf.append("<TR><TD ALIGN=CENTER><FONT SIZE=-1><a href=Verification>Join A ChemVantage Group</a></FONT></TD></TR>");
-			buf.append("<TR><TD COLSPAN=2 ALIGN=CENTER><FONT SIZE=-1><a href=Scores?r=" + new Random().nextInt(99) + ">Show My Scores</a></FONT></TD></TR>");
-			buf.append("</TABLE>");
-			buf.append("</TD></TR></TABLE><p>");
-		} catch (Exception e) {
-			buf.append(e.getMessage());
-		}
-		return buf.toString();
-	}
-	
 }
