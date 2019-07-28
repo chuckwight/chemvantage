@@ -25,13 +25,12 @@ import java.util.Date;
 import java.util.List;
 
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 import com.googlecode.objectify.cmd.Query;
 
-@Cache @Entity
+@Entity
 public class Group implements Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id Long id;

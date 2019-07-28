@@ -66,6 +66,20 @@
 		<servlet-name>Edit</servlet-name>
 		<url-pattern>/Edit</url-pattern>
 	</servlet-mapping>
+	    
+	<servlet>
+        <servlet-name>EndpointsServlet</servlet-name>
+        <servlet-class>com.google.api.server.spi.EndpointsServlet</servlet-class>
+        <init-param>
+            <param-name>services</param-name>
+            <param-value>com.example.skeleton.MyApi</param-value>
+        </init-param>
+    </servlet>
+    <!-- Route API method requests to the backend. -->
+    <servlet-mapping>
+        <servlet-name>EndpointsServlet</servlet-name>
+        <url-pattern>/_ah/api/*</url-pattern>
+    </servlet-mapping>
 		
 	<servlet>
 		<servlet-name>Feedback</servlet-name>
@@ -254,16 +268,16 @@
 			<transport-guarantee>CONFIDENTIAL</transport-guarantee>
 		</user-data-constraint>			
 	</security-constraint>
-	
+  	
 	<filter>
 		<filter-name>ObjectifyFilter</filter-name>
 		<filter-class>com.googlecode.objectify.ObjectifyFilter</filter-class>
 	</filter>
 	<filter-mapping>
-	    <filter-name>ObjectifyFilter</filter-name>
-	    <url-pattern>/*</url-pattern>
+		<filter-name>ObjectifyFilter</filter-name>
+		<url-pattern>/*</url-pattern>
 	</filter-mapping>
-	
+		
 	<listener>  
 	    <listener-class>
 	        org.chemvantage.EntityRegistrar

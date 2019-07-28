@@ -20,12 +20,11 @@ package org.chemvantage;
 import java.io.Serializable;
 import java.util.Date;
 
-import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 
-@Cache @Entity
+@Entity
 public class QuizTransaction implements Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id 	Long id;

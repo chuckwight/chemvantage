@@ -22,15 +22,14 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLEncoder;
-import java.util.Map;
+import java.util.Base64;
+import java.util.Date;
+import java.util.UUID;
 
-import org.apache.commons.codec.digest.DigestUtils;
-
-import com.google.gdata.client.authn.oauth.OAuthHmacSha1Signer;
-import com.google.gdata.client.authn.oauth.OAuthParameters;
-import com.google.gdata.client.authn.oauth.OAuthUtil;
-import com.google.gdata.util.common.util.Base64;
+import net.oauth.OAuth;
+import net.oauth.OAuthAccessor;
+import net.oauth.OAuthConsumer;
+import net.oauth.OAuthMessage;
 
 public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+JSON" messages to a Tool Consumer (LMS)
 	String contentType="text/html";
@@ -68,12 +67,36 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     	this.oauth_shared_secret = c.secret;
     }
     
-    protected String send() throws Exception {
-    	
+    protected String send() throws Exception {	
     	// construct a hash of the message text to include as a custom parameter
-    	String hash = new String(Base64.encode(DigestUtils.sha1(messageText)));
+    	String body_hash = Base64.getEncoder().encodeToString(messageText.getBytes());
+    	
+    	final String nonce = UUID.randomUUID().toString();
+    	final String timestamp = Long.toString(new Date().getTime()/1000);  // current time in seconds
 
-    	OAuthParameters params = new OAuthParameters();
+    	final OAuthMessage message = new OAuthMessage(OAuthMessage.POST, destinationURL, null);
+    	message.addParameter(OAuth.OAUTH_CONSUMER_KEY, oauth_consumer_key);
+    	message.addParameter(OAuth.OAUTH_SIGNATURE_METHOD, OAuth.HMAC_SHA1);
+    	message.addParameter(OAuth.OAUTH_NONCE, nonce);
+    	message.addParameter(OAuth.OAUTH_TIMESTAMP, timestamp);
+    	message.addParameter(OAuth.OAUTH_CALLBACK, "about:blank");
+    	message.addParameter(OAuth.OAUTH_VERSION, "1.0");
+    	message.addParameter("oauth_body_hash", body_hash);
+
+    	final OAuthConsumer consumer = new OAuthConsumer(null, oauth_consumer_key, oauth_shared_secret, null);
+    	final OAuthAccessor accessor = new OAuthAccessor(consumer);
+    	try
+    	{
+    		message.sign(accessor);
+    	}
+    	catch( Exception e )
+    	{
+    		throw new RuntimeException(e);
+    	}
+
+
+/*    	
+    	OAuth$Parameter params = new OAuthParameters();
     	params.setOAuthConsumerKey(oauth_consumer_key);
     	params.setOAuthConsumerSecret(oauth_shared_secret);
     	params.setOAuthNonce(OAuthUtil.getNonce());
@@ -87,6 +110,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     	String signature = new OAuthHmacSha1Signer().getSignature(baseString,params);
     	params.setOAuthSignature(signature);
     	params.addCustomBaseParameter("oauth_signature",signature);
+*/   	
 
     	// construct the signed message in the required format
     	URL u = new URL(destinationURL);
@@ -98,7 +122,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     	uc.setRequestProperty("Content-Type",contentType);
     	if (!acceptType.isEmpty()) uc.setRequestProperty("Accept", acceptType);
     	uc.setRequestProperty("Content-Length",Integer.toString(messageText.length()));
-    	uc.setRequestProperty("Authorization",buildAuthHeaderString(params));
+    	uc.setRequestProperty("Authorization",message.getAuthorizationHeader(""));
     	
     	if (!messageAppearsValid()) return "Error: Message parameters were invalid.";
     	else uc.connect();
@@ -134,27 +158,6 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     	return true;
     }
     
-	private String buildAuthHeaderString(OAuthParameters params) {
-		StringBuffer buffer = new StringBuffer();
-		try {
-			int cnt = 0;
-			buffer.append("OAuth ");
-			Map<String, String> paramMap = params.getBaseParameters();
-			Object[] paramNames = paramMap.keySet().toArray();
-			for (Object paramName : paramNames) {
-				String value = paramMap.get((String) paramName);
-				buffer.append(paramName + "=\"" + URLEncoder.encode(value,"UTF-8") + "\"");
-				cnt++;
-				if (paramNames.length > cnt) {
-					buffer.append(",");
-				}
-
-			}
-		} catch (Exception e) {
-		}
-		return buffer.toString();
-	}
-
 	static String xmlReadResult(String lis_result_sourcedid) {
 		return "<?xml version = \"1.0\" encoding = \"UTF-8\"?>"
 		+ "<imsx_POXEnvelopeRequest xmlns = \"http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0\">"

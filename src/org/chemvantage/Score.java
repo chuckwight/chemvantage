@@ -24,13 +24,12 @@ import java.util.Date;
 import java.util.List;
 
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 import com.googlecode.objectify.annotation.Parent;
 
-@Cache @Entity
+@Entity
 public class Score {    // this object represents a best score achieved by a user on a quiz or homework
 	@Id 	Long assignmentId;      // from the datastore.
 	@Parent Key<User> owner;

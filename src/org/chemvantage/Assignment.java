@@ -29,12 +29,11 @@ import java.util.Map;
 import java.util.Set;
 
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 
-@Cache @Entity
+@Entity
 public class Assignment {
 	@Id 	Long id;
 	@Index 	long groupId;

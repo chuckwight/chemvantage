@@ -26,15 +26,24 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.3</version>
         <configuration>
-          <source/>
-          <target/>
+          <source>1.8</source>
+          <target>1.8</target>
         </configuration>
       </plugin>
       <plugin>
-      	<groupId>com.google.cloud.tools</groupId>
-      	<artifactId>endpoints-framework-maven-plugin</artifactId>
-      	<version>1.0.0</version>
-      </plugin>
+            <groupId>com.google.cloud.tools</groupId>
+            <artifactId>appengine-maven-plugin</artifactId>
+            <version>2.0.0</version>
+            <configuration>
+                <projectId>dev-vantage-hrd.appspot.com</projectId>
+                <version>1</version>
+            </configuration>
+        </plugin>
+        <plugin>
+   	 		<groupId>com.google.cloud.tools</groupId>
+    		<artifactId>endpoints-framework-maven-plugin</artifactId>
+    		<version>1.0.2</version>
+		</plugin>
     </plugins>
   </build>
   <url>https://w.chemvantage.org</url>
@@ -46,7 +55,7 @@
 	<dependency>
   		<groupId>com.google.appengine</groupId>
   		<artifactId>appengine-endpoints</artifactId>
-  		<version>1.9.64</version>
+  		<version>1.9.73</version>
   	</dependency>
   	<dependency>
   		<groupId>org.eclipse.persistence</groupId>
@@ -81,7 +90,17 @@
     <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
-        <version>18.0</version>
+        <version>28.0-jre</version>
     </dependency>
+    <dependency>
+		<groupId>com.google.endpoints</groupId>
+		<artifactId>endpoints-framework</artifactId>
+		<version>2.0.7</version>
+	</dependency>
+    <dependency>
+  		<groupId>com.google.oauth-client</groupId>
+  		<artifactId>google-oauth-client</artifactId>
+  		<version>1.23.0</version>
+	</dependency>
   </dependencies>
 </project>
