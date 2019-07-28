@@ -2,10 +2,9 @@ package org.chemvantage;
 
 import java.util.List;
 
-import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 
-@Cache @Entity
+@Entity
 public class ProposedQuestion extends Question {
 	
 	private static final long serialVersionUID = 137L;

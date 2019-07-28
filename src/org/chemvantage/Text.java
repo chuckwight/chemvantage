@@ -19,11 +19,10 @@ package org.chemvantage;
 
 import java.io.Serializable;
 
-import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 
-@Cache @Entity
+@Entity
 public class Text implements Serializable {
 	private static final long serialVersionUID = 137L;
     @Id Long id;

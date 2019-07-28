@@ -21,7 +21,6 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.text.DateFormat;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -29,12 +28,11 @@ import java.util.Map;
 import java.util.Set;
 
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 
-@Cache @Entity
+@Entity
 public class Assignment {
 	@Id 	Long id;
 	@Index 	long groupId;
@@ -87,7 +85,7 @@ public class Assignment {
 			Date now = new Date();
 			buf.append(df.format(now) + "<br>");
 
-			buf.append("Group: " + group.getInstructorBothNames() + " - " + group.description);
+			buf.append("Group: " + group.description);
 
 			// Make a table of assignments for this group
 
@@ -113,8 +111,7 @@ public class Assignment {
 
 			for (User u: groupMembers) if (u.isInstructor() || u.isAdministrator() || u.isTeachingAssistant()) groupInstructors.add(u);
 			groupMembers.removeAll(groupInstructors);
-			Collections.sort(groupMembers);
-
+			
 			if (groupInstructors.size()>0) {  // print a short table of instructor scores
 				Set<Key<Score>> keys = new HashSet<Key<Score>>();
 				for (User u : groupInstructors) for (Assignment a : assignments) keys.add(Key.create(Key.create(User.class,u.id),Score.class,a.id));
@@ -140,8 +137,7 @@ public class Assignment {
 						continue;
 					}
 					i++;
-					String name = u.getFullName();
-					if (name.isEmpty()) name = u.getId();
+					String name = u.getId();
 					buf.append("<TR><TD>" + i + ".</TD><TD>" + name + "</TD>");
 					int j = 0;
 					int studentTotalScore = 0;
@@ -189,8 +185,7 @@ public class Assignment {
 						continue;
 					}
 					i++;
-					String name = u.getFullName();
-					if (name.isEmpty()) name = u.getId();
+					String name = u.getId();
 					buf.append("<TR><TD>" + i + ".</TD><TD>" + name + "</TD>");
 					int j = 0;
 

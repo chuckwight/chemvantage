@@ -19,42 +19,29 @@ package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
-import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 
-import javax.mail.internet.InternetAddress;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
 import com.google.common.hash.Hashing;
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 import com.googlecode.objectify.cmd.Query;
 
-@Cache @Entity
-public class User implements Comparable<User>,Serializable {
-	private static final long serialVersionUID = 137L;
+@Entity
+public class User {
 	@Id 	String id;
-	@Index	String email;
 	@Index	String domain;
-	@Index 	String lastName;
-	@Index	String firstName;
-	@Index	String lowercaseName;
 	@Index	Date lastLogin;
-			String smsMessageDevice;
 			int roles;
-			boolean premium;
 			long myGroupId;
-			boolean notifyDeadlines;
-			boolean verifiedEmail;
-			boolean use2FactorAuth;
 			String alias;
 			String authDomain;
 
@@ -62,18 +49,9 @@ public class User implements Comparable<User>,Serializable {
 
 	User(String id) {
 		this.id = id;
-		this.firstName = "";
-		this.lastName = "";
-		this.lowercaseName = "";
-		this.email = "";
 		this.roles = 0; // student
-		this.premium = false;
 		this.lastLogin = new Date(0L);
 		this.myGroupId = -1L;
-		this.smsMessageDevice = "";
-		this.notifyDeadlines = false;
-		this.verifiedEmail = false;
-		this.use2FactorAuth  = false;
 		this.authDomain = "";
 		this.alias = null;
 	}
@@ -142,22 +120,6 @@ public class User implements Comparable<User>,Serializable {
 		try {
 			user = new User(u.getUserId());
 			user.authDomain = "Google";
-			user.setEmail(u.getEmail());
-			user.verifiedEmail = !(user.email==null || user.email.isEmpty());
-			if (user.verifiedEmail) { // search for any accounts with the same email address and alias the new one to it
-				User twin = ofy().load().type(User.class).filter("email", user.email).first().now();
-				if (twin != null && twin.verifiedEmail) user.alias = twin.id;
-				String myDomainName = extractDomain(user.email);
-				do { // try to assign a user to an existing ChemVantage domain by checking the authDomain or super domain
-					try { 
-						Domain d = ofy().load().type(Domain.class).filter("domainName",myDomainName).first().now();
-						user.domain = d.domainName;
-					} catch (Exception e) {
-						user.domain = null;  // user is a free agent and can join any ChemVantage group
-					}	
-					myDomainName = myDomainName.substring(myDomainName.indexOf('.')+1);  // removes first subdomain name and period
-				} while (user.domain==null && myDomainName.indexOf('.') >= 0);
-			}
 			ofy().save().entity(user);
 		} catch (Exception e) {
 			return null;
@@ -181,106 +143,11 @@ public class User implements Comparable<User>,Serializable {
 			if (roles.contains("administrator")) user.setIsAdministrator(true);
 		}
 
-		user.setPremium(true);  // all LTI users have premium accounts by default
 		user.setLastLogin();
 		ofy().save().entity(user).now();
 		return user;
 	}
-/*
-	static public User createOpenIdUser(UserInfo userInfo) {
-		User user;
-		try {
-			String userId = userInfo.getClaimedId();
-			user = ofy().load().type(User.class).id(userId).now();
-			if (user != null) return user;
-			user = new User(userId);
-			user.authDomain = extractDomain(userInfo.getClaimedId());
-			if (user.authDomain.contains("google.com")) user.authDomain="gmail.com";
-			String myDomainName = user.authDomain;
-			do { // try to assign a user to an existing ChemVantage domain by checking the authDomain or super domain
-				try { 
-					Domain d = ofy().load().type(Domain.class).filter("domainName",myDomainName).first().now();
-					user.domain = d.domainName;
-				} catch (Exception e) {
-					user.domain = null;  // user is a free agent and can join any ChemVantage group
-				}	
-				myDomainName = myDomainName.substring(myDomainName.indexOf('.')+1);  // removes first subdomain name and period
-			} while (user.domain==null && myDomainName.indexOf('.') >= 0);
-			user.setEmail(userInfo.getEmail());
-			user.verifiedEmail = !(user.email==null || user.email.isEmpty());
-			user.setFirstName(userInfo.getFirstName());
-			user.setLastName(userInfo.getLastName());
-			ofy().save().entity(user);
-			if (user.verifiedEmail) {
-				Query<User> twins = ofy().load().type(User.class).filter("email",user.email);
-				for (User t : twins) if (!t.id.equals(user.id)) Admin.mergeAccounts(user, t);
-			}
-		} catch (Exception e) {
-			return null;
-		}		
-		return user;
-	}
 
-	static public User createGooglePlusUser(JSONObject payload,String firstName) {
-		User user = null;
-		try {
-			String userId = payload.getString("sub");
-			if (userId != null) user = ofy().load().type(User.class).id(userId).now();
-			if (user != null) return user;
-			user = new User(userId);
-			String email = payload.getString("email");
-			if (email!=null) {
-				user.setEmail(email);
-				user.verifiedEmail = payload.getBoolean("email_verified");
-			}
-			user.setFirstName(firstName);
-			
-			user.authDomain = "google.com";
-		
-			if (payload.containsKey("hd")) user.authDomain = payload.getString("hd");
-			else if (payload.containsKey("iss")) user.authDomain = payload.getString("iss");
-			else user.authDomain = "accounts.google.com";
-			
-			String myDomainName = User.extractDomain(email);
-			do { // try to assign a user to an existing ChemVantage domain by checking the authDomain or super domain
-				try { 
-					Domain d = ofy().load().type(Domain.class).filter("domainName",myDomainName).first().now();
-					user.domain = d.domainName;
-				} catch (Exception e) {
-					user.domain = null;  // user is a free agent and can join any ChemVantage group
-				}	
-				myDomainName = myDomainName.substring(myDomainName.indexOf('.')+1);  // removes first subdomain name and period
-			} while (user.domain==null && myDomainName.indexOf('.') >= 0);
-	
-			ofy().save().entity(user);
-			
-			if (user.verifiedEmail) {
-				Query<User> twins = ofy().load().type(User.class).filter("email",user.email);
-				for (User t : twins) if (!t.id.equals(user.id)) Admin.mergeAccounts(user, t);
-			}
-		} catch (Exception e) {
-			System.out.println("Error: " + e.getMessage());
-			return null;
-		}		
-		return user;
-	}
-	
-	static public User createCASUser(String userId,String email,String domain) {
-		if (userId == null) return null;
-		User user;
-		try {
-			user = new User(userId);
-			user.authDomain = "CAS";
-			user.domain = domain;
-			user.setEmail(email);
-			user.verifiedEmail = !user.email.isEmpty();
-			ofy().save().entity(user);
-		} catch (Exception e) {
-			return null;
-		}		
-		return user;
-	}
-*/
 	static boolean isAnonymous(HttpSession session) {
 		try {
 			String userId = session.getAttribute("UserId").toString();
@@ -313,41 +180,6 @@ public class User implements Comparable<User>,Serializable {
 	public String getIdHash() {
 		return Hashing.sha256().hashString(this.id, StandardCharsets.UTF_8).toString().substring(0,15);
 	}
-/*
-	static String getBothNames(String id) {
-		if (id==null || id.isEmpty()) return "missing user id";
-		try {
-			return ofy().load().type(User.class).id(id).now().getBothNames();
-		} catch (Exception e) {
-			return "User " + id + " not found";
-		}
-	}
-*/
-	void clean() {
-		if (firstName==null) firstName = "";
-		if (lastName==null) lastName = "";
-		setLowerCaseName();
-		try {
-			if (email==null || email.isEmpty() || !email.contains("@")) throw new Exception();
-			new InternetAddress(email).validate();
-			email = email.toLowerCase();
-		} catch (Exception e) {
-			verifiedEmail = false;
-			email = "";
-		}
-		if (lastLogin==null) lastLogin = new Date();
-		if (smsMessageDevice==null) smsMessageDevice = "";
-		//authDomain = id.contains(":")?"BLTI":"gmail.com";
-		alias = (alias==null || alias.isEmpty())?null:alias;
-		//if (alias != null) myGroupId=0;
-		ofy().save().entity(this);
-	}
-
-
-	boolean needsEmail() {
-		if (email==null || email.isEmpty()) return true;
-		else return false;
-	}
 
 	void setDomain(String d) {
 		this.domain = null;
@@ -360,110 +192,8 @@ public class User implements Comparable<User>,Serializable {
 		}
 	}
 
-	String getEmail() {
-		return this.email==null?"":this.email;
-	}
-		
-	static String getEmail(String id) {
-		try {
-			return ofy().load().type(User.class).id(id).now().email;
-		} catch (Exception e) {
-			return "";
-		}
-	}
-
-	void setEmail(String em) {
-		try {
-			new InternetAddress(em).validate();
-			if (em.indexOf("@")<0) throw new Exception();
-			this.email = em.toLowerCase();
-		} catch (Exception e) {
-			this.email = "";
-		}
-	}
-
-	boolean requiresUpdatesNow() {
-		try {
-			Group g = ofy().load().type(Group.class).id(this.myGroupId).safe();
-			if (g.isUsingLisOutcomeService) return false;
-		} catch (Exception e) {
-		}
-		Date now = new Date();
-		Date eightHoursAgo = new Date(now.getTime()-28800000L);
-		return this.lastLogin.before(eightHoursAgo) && this.requiresUpdates();
-	}
-
-	boolean requiresUpdates() {
-		try {
-			if (firstName.isEmpty() || email.isEmpty() || !verifiedEmail) return true;  // note: lastName no longer required
-			if (this.hasPremiumAccount() && myGroupId < 0) {  // new user has not joined a group yet
-				Query<Group> allGroups = null;  // count the available groups to join
-				if (this.domain != null && !this.domain.isEmpty()) allGroups = ofy().load().type(Group.class).filter("domain",this.domain);
-				else allGroups = ofy().load().type(Group.class);
-				if (allGroups.count() > 0) return true;  // needs update if there is at least one group available
-				else return false;  // no groups yet; don't bother
-			} else return false;    // user has already joined a group or chosen not to join
-		} catch (Exception e) {
-			return true;  // unexpected error; please check the profile just in case
-		}
-	}
-
-	String getFullName() {
-		setLowerCaseName();
-		return this.lastName + (this.lastName.isEmpty()?"":", ") + this.firstName;
-	}
-
-	String getBothNames() {
-		setLowerCaseName();
-		String bothNames = firstName + (lastName.isEmpty()?"":" " + lastName);
-		return bothNames.isEmpty()?"anonymous":bothNames;
-	}
-
 	public void setLastLogin() {
 		this.lastLogin = new Date();
-	}
-
-	boolean needsFirstName() {
-		if (firstName==null || firstName.isEmpty()) return true;
-		else return false;
-	}
-
-	boolean needsLastName() {
-		if (lastName==null || lastName.isEmpty()) return true;
-		else return false;
-	}
-
-	String getFirstName() {
-		return firstName==null?"":this.firstName;
-	}
-	
-	void setFirstName(String fn) {
-		if (fn == null) this.firstName = "";
-		else this.firstName = fn.trim();
-		setLowerCaseName();
-	}
-
-	String getLastName() {
-		return this.lastName==null?"":this.lastName;
-	}
-	
-	void setLastName(String ln) {
-		if (ln == null) this.lastName = "";
-		else this.lastName = ln.trim();
-		setLowerCaseName();
-	}
-
-	void setLowerCaseName() {
-		String tmp = this.lowercaseName;
-		if (this.lastName==null || this.lastName.isEmpty()) this.lastName = "";
-		if (this.firstName==null || this.firstName.isEmpty()) this.firstName = "";
-		this.lowercaseName = this.lastName + (!this.lastName.isEmpty()&&!this.firstName.isEmpty()?", ":"") + this.firstName;
-		this.lowercaseName = this.lowercaseName.toLowerCase().trim();
-		if (!this.lowercaseName.equals(tmp)) ofy().save().entity(this);  // save User object if lowercaseName changed
-	}
-
-	void setAlias(String newId) {
-		this.alias = newId;
 	}
 
 	List<QuizTransaction> getQuizTransactions() {
@@ -524,7 +254,6 @@ public class User implements Comparable<User>,Serializable {
 		else if (roles < 32) principalRole = "Administrator";
 		else if (roles < 64) principalRole = "ChemVantageAdmin";
 		else principalRole = ""; // unknown role
-		principalRole += " (" + (premium?"premium":"basic") + ")";
 		return principalRole;
 	}
 
@@ -581,14 +310,6 @@ public class User implements Comparable<User>,Serializable {
 		return principalRole;
 	}
 
-	boolean hasPremiumAccount() {
-		return (premium);
-	}
-
-	void setPremium(boolean newValue) {
-		premium = newValue;
-	}
-
 	boolean isAdministrator() {
 		return ((roles%32)/16 == 1) || this.isChemVantageAdmin();
 	}
@@ -604,7 +325,6 @@ public class User implements Comparable<User>,Serializable {
 		}
 		else if (!isAdministrator() && makeAdmin) {
 			roles += 16;
-			setPremium(makeAdmin);
 			return true;
 		}
 		else return false; // user already had the requested status; no changes made
@@ -638,7 +358,6 @@ public class User implements Comparable<User>,Serializable {
 			return true;
 		} else if (!isInstructor() && makeInstructor) {
 			roles += 8;
-			this.setPremium(true);
 			return true;
 		} else return false; // user already had the requested status; no changes made
 
@@ -697,31 +416,6 @@ public class User implements Comparable<User>,Serializable {
 		ofy().delete().entities(myScores);
 	}
 
-	boolean processPremiumUpgrade(Group newGroup) {
-		// this routine converts the user account to premium, if applicable
-		try {
-			// check out the following line that returns true of domain == null
-			// does this allow anyone not in a domain (UserService entry) to join any group for free?
-			// test the effect of eliminating this one check and returning false instead to
-			// force these users to pay $4.99  Keeps people in line with the LMS and reduces account proliferation
-
-			if (this.hasPremiumAccount() || newGroup == null) return true;
-			else if (this.domain == null) return false;
-
-			Domain domain = ofy().load().type(Domain.class).filter("domainName", this.domain).first().now();
-			if (domain == null || newGroup==null || !newGroup.domain.equals(this.domain)) return false;
-			if (domain.seatsAvailable > 0) {
-				this.setPremium(true);
-				domain.seatsAvailable--;
-				ofy().save().entity(domain);
-			} else return false;
-			ofy().save().entity(this);
-			return true;
-		} catch (Exception e) {
-			return false;
-		}
-	}
-
 	public void changeGroups(long newGroupId) {
 		if (newGroupId == this.myGroupId) {  // no change needed; just verify that user is listed as a group member
 			if (this.myGroupId == 0) return;
@@ -766,8 +460,4 @@ public class User implements Comparable<User>,Serializable {
     		return null;
     	}
     }
-
-	public int compareTo(User other) {
-		return this.lowercaseName.compareTo(other.lowercaseName);
-	}
 }

@@ -2,7 +2,7 @@ package org.chemvantage;
 
 import java.util.Date;
 
-import javax.servlet.ServletContextEvent;  
+import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 
 import org.chemvantage.LTILaunch.JwtSecret;
@@ -10,8 +10,12 @@ import org.chemvantage.LTILaunch.JwtSecret;
 import com.googlecode.objectify.ObjectifyService;
 
 public class EntityRegistrar implements ServletContextListener {
-
-	static {
+	
+     public void contextInitialized(ServletContextEvent servletContextEvent) {
+        System.out.println("Starting up: " + new Date());
+        
+        ObjectifyService.init();
+        
         ObjectifyService.register(Assignment.class);
         ObjectifyService.register(BLTIConsumer.class);
         ObjectifyService.register(Domain.class);
@@ -40,7 +44,6 @@ public class EntityRegistrar implements ServletContextListener {
         ObjectifyService.begin();
     }
 
-    @Override
     public void contextDestroyed(ServletContextEvent servletContextEvent) {
         System.out.println("Shutting down!");
     }

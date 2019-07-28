@@ -26,12 +26,11 @@ import java.util.Random;
 
 import com.bestcode.mathparser.IMathParser;
 import com.bestcode.mathparser.MathParserFactory;
-import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 
-@Cache @Entity
+@Entity
 public class Question implements Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id 	Long id;

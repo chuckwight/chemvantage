@@ -114,10 +114,6 @@ public class Feedback extends HttpServlet {
 				out.println(Home.header + feedbackForm(user,nonce) + Home.footer);	
 			} else if (user.isAdministrator() && userRequest.equals("Reply")) {
 				out.println(Home.header + replyForm(user,request,nonce) + Home.footer);
-			} else if (user.isAdministrator() && userRequest.equals("Send Reply")) {
-				String result = sendReplyToUser(request);
-				if (result.isEmpty()) doGet(request,response);
-				else out.println(Home.header + result + Home.footer);
 			} else out.println(Home.header + feedbackForm(user,nonce) + Home.footer);
 		} catch (Exception e) {
 		}
@@ -348,30 +344,6 @@ public class Feedback extends HttpServlet {
 			buf.append(e.toString());
 		}
 		return buf.toString();
-	}
-	
-	String sendReplyToUser(HttpServletRequest request) {
-		// send a response to a user feedback report
-		Properties props = new Properties();
-		Session session = Session.getDefaultInstance(props, null);
-
-		String msgBody = request.getParameter("MessageText");
-		if (msgBody.isEmpty()) return "Message body was empty.";
-		try {
-			long reportId = Long.parseLong(request.getParameter("ReportId"));
-			UserReport report = ofy().load().type(UserReport.class).id(reportId).safe();
-			User recipient = ofy().load().type(User.class).id(report.userId).safe();
-			Message msg = new MimeMessage(session);
-			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-			msg.addRecipient(Message.RecipientType.TO,
-					new InternetAddress(recipient.getEmail(),recipient.getBothNames()));
-			msg.setSubject("ChemVantage Feedback Report");
-			msg.setContent(msgBody,"text/html");
-			Transport.send(msg);
-		} catch (Exception e) {
-			return e.toString();
-		}
-		return "";
 	}
 }
 

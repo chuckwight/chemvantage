@@ -24,12 +24,11 @@ import java.util.List;
 import java.util.Random;
 
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 
-@Cache @Entity
+@Entity
 public class Nonce {
 	@Id String id;
 	@Index	Date created;

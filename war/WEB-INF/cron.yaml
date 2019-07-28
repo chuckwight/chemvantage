@@ -1,0 +1,5 @@
+cron:
+- url: '/DataStoreCleaner?Task=CleanAll'
+  schedule: '1 of month 01:15'
+  timezone: 'America/Los_Angeles'
+  description: 'Provides monthly routine maintenance for datastore entities'

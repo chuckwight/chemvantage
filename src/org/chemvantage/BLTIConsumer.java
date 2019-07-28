@@ -28,10 +28,6 @@ import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 
-import net.sf.json.JSONArray;
-import net.sf.json.JSONException;
-import net.sf.json.JSONObject;
-
 @Cache @Entity
 public class BLTIConsumer {
 	@Id String oauth_consumer_key;
@@ -109,18 +105,6 @@ public class BLTIConsumer {
 		return this.toolProxyURL;
 	}
 	
-	void putToolProxy(JSONObject toolProxy) {
-		this.toolProxy = toolProxy.toString();
-	}
-	
-	JSONObject getToolProxy() {
-		try {
-			return JSONObject.fromObject(this.toolProxy);
-		} catch (JSONException e) {
-			return null;
-		}
-	}
-	
 	void putToolSettingsURL(String url) {
 		this.toolSettingsURL = url;
 	}
@@ -153,12 +137,6 @@ public class BLTIConsumer {
 	boolean supportsResultService() {
 		if (this.resultServiceEndpoint !=null && this.resultServiceFormat != null) return true;
 		return false;
-	}
-
-	void putToolService(JSONArray toolService) {
-		try {
-			for (int i=0;i<toolService.size();i++) this.tool_service.add(toolService.getJSONObject(i).getString("@id"));
-		} catch (Exception e) {}
 	}
 	
 	List<String> getToolService() {
