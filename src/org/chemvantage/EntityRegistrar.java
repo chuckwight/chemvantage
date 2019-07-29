@@ -10,10 +10,11 @@ import org.chemvantage.LTILaunch.JwtSecret;
 import com.googlecode.objectify.ObjectifyService;
 
 public class EntityRegistrar implements ServletContextListener {
-	
-     public void contextInitialized(ServletContextEvent servletContextEvent) {
+		
+    @Override
+    public void contextInitialized(ServletContextEvent servletContextEvent) {
         System.out.println("Starting up: " + new Date());
-        
+    
         ObjectifyService.init();
         
         ObjectifyService.register(Assignment.class);
@@ -35,14 +36,7 @@ public class EntityRegistrar implements ServletContextListener {
         ObjectifyService.register(User.class);
         ObjectifyService.register(UserReport.class);
         ObjectifyService.register(Video.class);
-   }
-	
-    @Override
-    public void contextInitialized(ServletContextEvent servletContextEvent) {
-        System.out.println("Starting up: " + new Date());
-    
-        ObjectifyService.begin();
-    }
+}
 
     public void contextDestroyed(ServletContextEvent servletContextEvent) {
         System.out.println("Shutting down!");

@@ -20,8 +20,8 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.Serializable;
+import java.util.List;
 
-import com.google.appengine.api.datastore.QueryResultIterable;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
@@ -41,8 +41,8 @@ public class Topic implements Serializable {
 		this.orderBy = orderBy;
 	}
 
-	public QueryResultIterable<Key<Question>> getQuestionKeys(String assignmentType) {
-		return  ofy().load().type(Question.class).filter("topicId",this.id).filter("assignmentType",assignmentType).keys();
+	public List<Key<Question>> getQuestionKeys(String assignmentType) {
+		return  ofy().load().type(Question.class).filter("topicId",this.id).filter("assignmentType",assignmentType).keys().list();
 	}
 /*	
 	public Query<Question> getQuestions(String assignmentType) {

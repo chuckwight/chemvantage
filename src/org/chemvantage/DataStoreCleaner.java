@@ -31,10 +31,10 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.appengine.api.datastore.Cursor;
-import com.google.appengine.api.datastore.QueryResultIterator;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
+import com.google.cloud.datastore.Cursor;
+import com.google.cloud.datastore.QueryResults;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
 
@@ -187,7 +187,7 @@ public class DataStoreCleaner extends HttpServlet {
 			Query<User> query = ofy().load().type(User.class).filter("lastLogin <", sixMonthsAgo).limit(querySizeLimit);
 			buf.append("<h2>Clean Users</h2>");
 		    
-		    QueryResultIterator<User> iterator = query.iterator();
+		    QueryResults<User> iterator = query.iterator();
 		    ArrayList<Key<User>> keys = new ArrayList<Key<User>>();  // list of User entity keys for batch delete
 
 		    int counter = 0;
@@ -267,11 +267,11 @@ public class DataStoreCleaner extends HttpServlet {
 				buf.append("<h2>Clean Quiz Transactions</h2>");
 				query = ofy().load().type(QuizTransaction.class).limit(querySizeLimit);
 			} else {  // continue search with the next 100 entities
-				query = ofy().load().type(QuizTransaction.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
+				query = ofy().load().type(QuizTransaction.class).startAt(Cursor.fromUrlSafe(cursor)).limit(querySizeLimit);
 			}
 			
 		    ArrayList<Key<QuizTransaction>> keys = new ArrayList<Key<QuizTransaction>>();  // list of QuizTransaction entity keys for batch delete
-		    QueryResultIterator<QuizTransaction> iterator = query.iterator();
+		    QueryResults<QuizTransaction> iterator = query.iterator();
 		    
 		    int counter = 0;
 		    while (iterator.hasNext()) {
@@ -288,7 +288,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
 		    buf.append(counter + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br>");
-		    cursor = iterator.getCursor().toWebSafeString();
+		    cursor = iterator.getCursorAfter().toUrlSafe();
 	    	
 		    if (counter<querySizeLimit) buf.append("Done.<br>");
 		    else if (retries < 5) {
@@ -314,11 +314,11 @@ public class DataStoreCleaner extends HttpServlet {
 				buf.append("<h2>Clean Homework Transactions</h2>");
 				query = ofy().load().type(HWTransaction.class).limit(querySizeLimit);
 			} else {  // continue search with the next 100 entities
-				query = ofy().load().type(HWTransaction.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
+				query = ofy().load().type(HWTransaction.class).startAt(Cursor.fromUrlSafe(cursor)).limit(querySizeLimit);
 			}
 			
 			ArrayList<Key<HWTransaction>> keys = new ArrayList<Key<HWTransaction>>();  // list of HWTransaction entity keys for batch delete
-		    QueryResultIterator<HWTransaction> iterator = query.iterator();
+		    QueryResults<HWTransaction> iterator = query.iterator();
 		    
 		    int counter = 0;
 		    while (iterator.hasNext()) {
@@ -335,7 +335,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
 		    buf.append(counter + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
-		    cursor = iterator.getCursor().toWebSafeString();
+		    cursor = iterator.getCursorAfter().toUrlSafe();
 	    	
 		    if (counter<querySizeLimit) buf.append("Done.<br>");
 		    else if (retries < 5) {
@@ -361,11 +361,11 @@ public class DataStoreCleaner extends HttpServlet {
 				buf.append("<h2>Clean Practice Exam Transactions</h2>");
 				query = ofy().load().type(PracticeExamTransaction.class).limit(querySizeLimit);
 			} else {  // continue search with the next 100 entities
-				query = ofy().load().type(PracticeExamTransaction.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
+				query = ofy().load().type(PracticeExamTransaction.class).startAt(Cursor.fromUrlSafe(cursor)).limit(querySizeLimit);
 			}
 			
 		    ArrayList<Key<PracticeExamTransaction>> keys = new ArrayList<Key<PracticeExamTransaction>>();  // list of PracticeExamTransaction entity keys for batch delete
-		    QueryResultIterator<PracticeExamTransaction> iterator = query.iterator();
+		    QueryResults<PracticeExamTransaction> iterator = query.iterator();
 
 		    int counter = 0;
 		    while (iterator.hasNext()) {
@@ -382,7 +382,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
 		    buf.append(counter + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
-		    cursor = iterator.getCursor().toWebSafeString();
+		    cursor = iterator.getCursorAfter().toUrlSafe();
 	    	
 		    if (counter<querySizeLimit) buf.append("Done.<br>");
 		    else if (retries < 5) buf.append(cleanPracticeExamTransactions(cursor,retries+1,testOnly));
@@ -406,11 +406,11 @@ public class DataStoreCleaner extends HttpServlet {
 				buf.append("<h2>Clean User Scores</h2>");
 				query = ofy().load().type(Score.class).limit(querySizeLimit);
 			} else {  // continue search with the next 100 entities
-				query = ofy().load().type(Score.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
+				query = ofy().load().type(Score.class).startAt(Cursor.fromUrlSafe(cursor)).limit(querySizeLimit);
 			}
 			
 		    ArrayList<Key<Score>> keys = new ArrayList<Key<Score>>();  // list of Score entity keys for batch delete		    
-		    QueryResultIterator<Score> iterator = query.iterator();
+		    QueryResults<Score> iterator = query.iterator();
 
 		    int counter = 0;
 		    while (iterator.hasNext()) {
@@ -427,7 +427,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
 		    buf.append(counter + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
-		    cursor = iterator.getCursor().toWebSafeString();
+		    cursor = iterator.getCursorAfter().toUrlSafe();
 	    	
 		    if (counter<querySizeLimit) buf.append("Done.<br>");
 		    else if (retries < 9) buf.append(cleanScores(cursor,retries+1,testOnly));
@@ -452,11 +452,11 @@ public class DataStoreCleaner extends HttpServlet {
 				buf.append("<h2>Clean Groups</h2>");
 				query = ofy().load().type(Group.class).limit(querySizeLimit);
 			} else {  // continue search with the next 100 entities
-				query = ofy().load().type(Group.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
+				query = ofy().load().type(Group.class).startAt(Cursor.fromUrlSafe(cursor)).limit(querySizeLimit);
 			}
 			
 		    ArrayList<Key<Group>> keys = new ArrayList<Key<Group>>();  // list of Group entity keys for batch delete
-		    QueryResultIterator<Group> iterator = query.iterator();
+		    QueryResults<Group> iterator = query.iterator();
 		    
 		    int counter = 0;
 		    while (iterator.hasNext()) {
@@ -468,7 +468,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
 		    buf.append(counter + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
-		    cursor = iterator.getCursor().toWebSafeString();
+		    cursor = iterator.getCursorAfter().toUrlSafe();
 	    	
 		    if (counter<querySizeLimit) buf.append("Done.<br>");
 		    else if (retries < 9) buf.append(cleanGroups(cursor,retries+1,testOnly));
@@ -492,11 +492,11 @@ public class DataStoreCleaner extends HttpServlet {
 				buf.append("<h2>Clean Assignments</h2>");
 				query = ofy().load().type(Assignment.class).limit(querySizeLimit);
 			} else {  // continue search with the next 100 entities
-				query = ofy().load().type(Assignment.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
+				query = ofy().load().type(Assignment.class).startAt(Cursor.fromUrlSafe(cursor)).limit(querySizeLimit);
 			}
 			
 		    ArrayList<Key<Assignment>> keys = new ArrayList<Key<Assignment>>();  // list of Assignment entity keys for batch delete
-		    QueryResultIterator<Assignment> iterator = query.iterator();
+		    QueryResults<Assignment> iterator = query.iterator();
 		    
 		    int counter = 0;
 		    while (iterator.hasNext()) {
@@ -513,7 +513,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
 		    buf.append(counter + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
-		    cursor = iterator.getCursor().toWebSafeString();
+		    cursor = iterator.getCursorAfter().toUrlSafe();
 	    	
 		    if (counter<querySizeLimit) buf.append("Done.<br>");
 		    else if (retries < 9) buf.append(cleanAssignments(cursor,retries+1,testOnly));
@@ -537,11 +537,11 @@ public class DataStoreCleaner extends HttpServlet {
 				buf.append("<h2>Clean Domains</h2>");
 				query = ofy().load().type(Domain.class).limit(querySizeLimit);
 			} else {  // continue search with the next 100 entities
-				query = ofy().load().type(Domain.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
+				query = ofy().load().type(Domain.class).startAt(Cursor.fromUrlSafe(cursor)).limit(querySizeLimit);
 			}
 			
 		    ArrayList<Key<Domain>> keys = new ArrayList<Key<Domain>>();  // list of Domain entity keys for batch delete
-		    QueryResultIterator<Domain> iterator = query.iterator();
+		    QueryResults<Domain> iterator = query.iterator();
 		    
 		    int counter = 0;
 		    while (iterator.hasNext()) {
@@ -553,7 +553,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
 		    buf.append(counter + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
-		    cursor = iterator.getCursor().toWebSafeString();
+		    cursor = iterator.getCursorAfter().toUrlSafe();
 	    	
 		    if (counter<querySizeLimit) buf.append("Done.<br>");
 		    else if (retries < 5) buf.append(cleanDomains(cursor,retries+1,testOnly));
@@ -579,11 +579,11 @@ public class DataStoreCleaner extends HttpServlet {
 				buf.append("<h2>Clean BLTIConsumers</h2>");
 				query = ofy().load().type(BLTIConsumer.class).limit(querySizeLimit);
 			} else {  // continue search with the next 100 entities
-				query = ofy().load().type(BLTIConsumer.class).startAt(Cursor.fromWebSafeString(cursor)).limit(querySizeLimit);
+				query = ofy().load().type(BLTIConsumer.class).startAt(Cursor.fromUrlSafe(cursor)).limit(querySizeLimit);
 			}
 			
 		    ArrayList<Key<BLTIConsumer>> keys = new ArrayList<Key<BLTIConsumer>>();  // list of BLTIConsumer entity keys for batch delete
-		    QueryResultIterator<BLTIConsumer> iterator = query.iterator();
+		    QueryResults<BLTIConsumer> iterator = query.iterator();
 		    
 		    int counter = 0;
 		    while (iterator.hasNext()) {
@@ -599,7 +599,7 @@ public class DataStoreCleaner extends HttpServlet {
 		    if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
 		    buf.append(counter + " entities examined, " + keys.size() + (testOnly?" identified":" deleted") + ".<br/>");
-		    cursor = iterator.getCursor().toWebSafeString();
+		    cursor = iterator.getCursorAfter().toUrlSafe();
 	    	
 		    if (counter<querySizeLimit) buf.append("Done.<br>");
 		    else if (retries < 5) buf.append(cleanBLTIConsumers(cursor,retries+1,testOnly));

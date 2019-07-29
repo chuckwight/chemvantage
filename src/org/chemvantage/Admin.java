@@ -29,10 +29,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
-import com.google.appengine.api.datastore.Cursor;
-import com.google.appengine.api.datastore.QueryResultIterator;
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
+import com.google.cloud.datastore.Cursor;
+import com.google.cloud.datastore.QueryResults;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
 
@@ -136,7 +136,7 @@ public class Admin extends HttpServlet {
 					+ "\n<INPUT TYPE=SUBMIT NAME='UserRequest' VALUE='Search for users'></FORM>");
 
 			if(results != null) {
-				QueryResultIterator<User> iterator = cursor==null?results.iterator():results.startAt(Cursor.fromWebSafeString(cursor)).iterator();
+				QueryResults<User> iterator = cursor==null?results.iterator():results.startAt(Cursor.fromUrlSafe(cursor)).iterator();
 				int nResults = results.count();
 				buf.append("<FONT SIZE=-1>Showing " + nResults + " users matching the search criteria. "
 						+ (nResults==this.queryLimit?"You can narrow this search by entering more of the user's email address.":"") + "</FONT><br>");
@@ -153,7 +153,7 @@ public class Admin extends HttpServlet {
 							+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Edit User'></TD></TR></FORM>");
 				}
 				buf.append("\n</TABLE>");
-				if (nResults==this.queryLimit) buf.append("<a href=/Admin?UserRequest=Search+for+users&SearchString=" + searchString + "&Cursor=" + iterator.getCursor().toWebSafeString() + "><FONT SIZE=-1>show more users</FONT></a>"); 
+				if (nResults==this.queryLimit) buf.append("<a href=/Admin?UserRequest=Search+for+users&SearchString=" + searchString + "&Cursor=" + iterator.getCursorAfter().toUrlSafe() + "><FONT SIZE=-1>show more users</FONT></a>"); 
 			} else buf.append("<FONT SIZE=-1>There are currently " + nUsers + " active ChemVantage accounts.</FONT><p>");
 			
 			// This section provides information about domains
@@ -197,7 +197,7 @@ public class Admin extends HttpServlet {
 				Key<BLTIConsumer> keyFirst = Key.create(BLTIConsumer.class,(searchString.isEmpty()?"\u0000":searchString));
 				Key<BLTIConsumer> keyLast = Key.create(BLTIConsumer.class,(searchString.isEmpty()?"\ufffd":searchString+"\ufffd"));					
 				Query<BLTIConsumer> consumerResults = ofy().load().type(BLTIConsumer.class).filterKey(">=",keyFirst).filterKey("<",keyLast).limit(this.queryLimit);
-				QueryResultIterator<BLTIConsumer> consumers = cursor==null?consumerResults.iterator():consumerResults.startAt(Cursor.fromWebSafeString(cursor)).iterator();
+				QueryResults<BLTIConsumer> consumers = cursor==null?consumerResults.iterator():consumerResults.startAt(Cursor.fromUrlSafe(cursor)).iterator();
 				
 				int nResults = consumerResults.count();
 				if (nResults==0) buf.append("<FONT SIZE=-1>No LTI consumers matched the search criteria.</FONT><p>");
@@ -212,7 +212,7 @@ public class Admin extends HttpServlet {
 							+ "<div id='"+ cons.oauth_consumer_key + "' style='display: none'>" + cons.secret + "</div></TD></TR>");
 				}
 				buf.append("</TABLE>");
-				if (nResults==this.queryLimit) buf.append("<FONT SIZE=-1><a href='/Admin?UserRequest=Search for Consumer&SearchString=(show all)&Cursor=" + consumers.getCursor().toWebSafeString() + "'><FONT SIZE=-1>show more consumers</FONT></a><p>");
+				if (nResults==this.queryLimit) buf.append("<FONT SIZE=-1><a href='/Admin?UserRequest=Search for Consumer&SearchString=(show all)&Cursor=" + consumers.getCursorAfter().toUrlSafe() + "'><FONT SIZE=-1>show more consumers</FONT></a><p>");
 			} else {
 				buf.append("<FONT SIZE=-1>There are currently " + nConsumers + " registered LTI consumers.</FONT><p>");
 			}
