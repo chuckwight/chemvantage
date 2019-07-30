@@ -43,7 +43,6 @@ public class Subject {
 	}
 
 	static public Subject getSubject() {
-		
 		try {
 			if (genChem==null) {
 				genChem = ofy().load().type(Subject.class).first().safe();

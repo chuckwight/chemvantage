@@ -59,6 +59,7 @@
     <servlet-name>Edit</servlet-name>
     <url-pattern>/Edit</url-pattern>
   </servlet-mapping>
+<!-- 
   <servlet>
     <servlet-name>EndpointsServlet</servlet-name>
     <servlet-class>com.google.api.server.spi.EndpointsServlet</servlet-class>
@@ -71,6 +72,7 @@
     <servlet-name>EndpointsServlet</servlet-name>
     <url-pattern>/_ah/api/*</url-pattern>
   </servlet-mapping>
+  -->
   <servlet>
     <servlet-name>Feedback</servlet-name>
     <servlet-class>org.chemvantage.Feedback</servlet-class>

@@ -54,7 +54,7 @@ public class LTILaunch extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	private String jwtSecret;
-
+	
 	@Override
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);

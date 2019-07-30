@@ -14,7 +14,7 @@ public class EntityRegistrar implements ServletContextListener {
     @Override
     public void contextInitialized(ServletContextEvent servletContextEvent) {
         System.out.println("Starting up: " + new Date());
-    
+        
         ObjectifyService.init();
         
         ObjectifyService.register(Assignment.class);
@@ -36,6 +36,8 @@ public class EntityRegistrar implements ServletContextListener {
         ObjectifyService.register(User.class);
         ObjectifyService.register(UserReport.class);
         ObjectifyService.register(Video.class);
+        
+        ObjectifyService.begin();
 }
 
     public void contextDestroyed(ServletContextEvent servletContextEvent) {
