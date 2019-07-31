@@ -51,19 +51,15 @@ public class Home extends HttpServlet {
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
+		// make every user anonymous
+		HttpSession session = request.getSession();
+		String userId = "anonymous" + new Random().nextInt();
+		session.setAttribute("UserId", userId);
+		
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
 
-		try {
-			HttpSession session = request.getSession();
-			if (session.getAttribute("UserId")==null) {
-				int randInt = Math.abs(new Random().nextInt());
-				session.setAttribute("UserId", "anonymous" + randInt);
-			}
-
-			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
-
-			out.println(header + homePage(request) + footer);
-		} catch (Exception e) {}
+		out.println(header + homePage(request) + footer);
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
@@ -205,9 +201,12 @@ public class Home extends HttpServlet {
 			buf.append("<b>Quizzes and Homework Exercises</b>");
 			buf.append("<div id=selectReminder style='display: none'>"
 					+ "<b><FONT COLOR=RED>Please select a topic:</FONT></b><br></div>");
-
+			
+			User user = User.getInstance(session);
+			String jwt = CSRFToken.getNewJWT(user.id);
+			
 			buf.append("<FORM NAME='HQSelectForm' ACTION=Quiz METHOD=GET>");
-			buf.append("<INPUT TYPE=HIDDEN NAME=r VALUE=" + new Random().nextInt(99) + ">");
+			buf.append("<INPUT TYPE=HIDDEN NAME=JWT VALUE=" + jwt + ">");
 			buf.append("<SELECT NAME='TopicId'><OPTION Value='0' SELECTED>Select a topic</OPTION>");
 			
 			if (topics == null) topics = ofy().load().type(Topic.class).order("orderBy").list();
@@ -230,6 +229,7 @@ public class Home extends HttpServlet {
 			buf.append("<TABLE><TR><TD>");
 			buf.append("<b>Practice Exams</b>");
 			buf.append("<FORM METHOD=GET ACTION=PracticeExam>");
+			buf.append("<INPUT TYPE=HIDDEN NAME=JWT VALUE=" + jwt + ">");
 			buf.append("<INPUT TYPE=SUBMIT VALUE='Take A Practice Exam Now'>");
 			buf.append("</FORM></TD></TR></TABLE><p>\n");
 

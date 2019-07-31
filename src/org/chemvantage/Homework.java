@@ -34,7 +34,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
@@ -54,55 +53,37 @@ public class Homework extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			HttpSession session = request.getSession();
-			User user = null;
-			String nonce = null;
-			if (session.isNew()) {
-				user = Nonce.getUser(request.getParameter("Nonce"));
-				nonce = Nonce.createInstance(user);
-			}
-			else user = User.getInstance(session);
-			if (user==null) {
-				response.sendRedirect("/Logout");
-				return;
-			}
-				
+			User user = CSRFToken.getUser(request.getParameter("JWT"));
+			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
+			String jwt = CSRFToken.getNewJWT(user.id);
+			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 			
-			if ("ShowScores".contentEquals(userRequest)) out.println(Home.header + showScores(user,request,nonce) + Home.footer);
-			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header + showSummary(user,request,nonce) + Home.footer);
-			else out.println(Home.header + printHomework(user,request,nonce) + Home.footer);
+			if ("ShowScores".contentEquals(userRequest)) out.println(Home.header + showScores(user,request,jwt) + Home.footer);
+			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header + showSummary(user,request,jwt) + Home.footer);
+			else out.println(Home.header + printHomework(user,request,jwt) + Home.footer);
 		} catch (Exception e) {}
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			HttpSession session = request.getSession();
-			User user = null;
-			String nonce = null;
-			if (session.isNew()) {
-				user = Nonce.getUser(request.getParameter("Nonce"));
-				nonce = Nonce.createInstance(user);
-			}
-			else user = User.getInstance(session);
-			if (user==null) {
-				response.sendRedirect("/Logout");
-				return;
-			}
+			User user = CSRFToken.getUser(request.getParameter("JWT"));
+			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
+			String jwt = CSRFToken.getJWT(user.id);
 							
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 
-			out.println(Home.header + printScore(user,request,nonce) + Home.footer);
+			out.println(Home.header + printScore(user,request,jwt) + Home.footer);
 		} catch (Exception e) {}
 	}
 
-	String printHomework(User user,HttpServletRequest request,String nonce) {
+	String printHomework(User user,HttpServletRequest request,String jwt) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			Assignment hwa = null;
@@ -135,9 +116,9 @@ public class Homework extends HttpServlet {
 			if (user.isInstructor() && myGroup != null && hwa != null) {
 				buf.append("<table style='border: 1px solid black'><tr><td>");
 				buf.append("As the course instructor you may<ul>"
-						+ "<li><a href=/Groups?UserRequest=AssignHomeworkQuestions&AssignmentId=" + hwa.id + (nonce==null?"":"&Nonce=" + nonce) + ">"
+						+ "<li><a href=/Groups?UserRequest=AssignHomeworkQuestions&AssignmentId=" + hwa.id + "&JWT=" + jwt + ">"
 						+ "customize this homework assignment</a> by selecting/deselecting the available question items."
-						+ "<li>view a <a href=/Homework?UserRequest=ShowSummary&AssignmentId=" + hwa.id + (nonce==null?"":"&Nonce=" + nonce) + ">summary of scores</a> for this assignment"
+						+ "<li>view a <a href=/Homework?UserRequest=ShowSummary&AssignmentId=" + hwa.id + "&JWT=" + jwt + ">summary of scores</a> for this assignment"
 						+ "</ul></td></tr></table><p>");
 			} else if (user.isAnonymous()) {
 				buf.append("<h3><font color=red>Anonymous User</font></h3>");
@@ -149,7 +130,7 @@ public class Homework extends HttpServlet {
 				buf.append("\n<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question.</LI>");
 				buf.append("\n<LI>Most questions are customized, so the correct answers are different for each student.</LI>");
 				buf.append("\n<LI>A checkmark will appear to the left of each correctly solved problem. "
-						+ (hwa==null?"":"<a href=/Homework?UserRequest=ShowScores&AssignmentId=" + hwa.id + (nonce==null?"":"&Nonce=" + nonce) + ">View the details here</a>.")
+						+ (hwa==null?"":"<a href=/Homework?UserRequest=ShowScores&AssignmentId=" + hwa.id + "&JWT=" + jwt + ">View the details here</a>.")
 						+ "</LI>");
 				buf.append("</UL>");
 			}
@@ -187,7 +168,7 @@ public class Homework extends HttpServlet {
 						
 						buf.append("&nbsp;<a id=" + q.id + " /></TD>"
 								+ "<FORM METHOD=POST ACTION=Homework>"
-								+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>"
+								+ "<INPUT TYPE=HIDDEN NAME=JWT VALUE=" + jwt + ">"
 								+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 								+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 								+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>"
@@ -237,7 +218,7 @@ public class Homework extends HttpServlet {
 				
 				buf.append("&nbsp;<a id=" + q.id + " /></TD>"
 						+ "<FORM METHOD=POST ACTION=Homework>"
-						+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>"
+						+ "<INPUT TYPE=HIDDEN NAME=JWT VALUE=" + jwt + ">"
 						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 						+ (hwa==null?"" : "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>")
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
@@ -253,7 +234,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	String printScore(User user,HttpServletRequest request,String nonce) {
+	String printScore(User user,HttpServletRequest request,String jwt) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			long questionId = Long.parseLong(request.getParameter("QuestionId"));
@@ -298,13 +279,13 @@ public class Homework extends HttpServlet {
 				buf.append("Please take these few moments to check your work carefully.  You can sometimes find alternate routes to the<br>"
 						+ "same solution, or it may be possible to use your answer to back-calculate the data given in the problem.<p>"
 						+ "Alternatively, you may wish to "
-						+ "<a href=/Homework?" + (hwa==null?"TopicId=" + topic.id : "AssignmentId=" + hwa.id + (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)) + (nonce==null?"":"&Nonce=" + nonce) + ">" 
+						+ "<a href=/Homework?" + (hwa==null?"TopicId=" + topic.id : "AssignmentId=" + hwa.id + (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)) + "&JWT=" + jwt + ">" 
 						+ "return to this homework assignment</a> to work on another problem.<p>");
 		
 				buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework>"
 						+ (hwa==null?"<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>":"<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>")
 						+ (lis_result_sourcedid==null?"":"<INPUT TYPE=HIDDEN NAME=lis_result_sourcedid VALUE='" + lis_result_sourcedid + "'>")
-						+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>"
+						+ "<INPUT TYPE=HIDDEN NAME=JWT VALUE=" + jwt + ">"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ q.print(studentAnswer[0]) + "<br>");
 				
@@ -402,7 +383,7 @@ public class Homework extends HttpServlet {
 			}
 
 			// embed the detailed solution or hint to the exercise in the response, if appropriate
-			buf.append(ajaxJavaScript(nonce));
+			buf.append(ajaxJavaScript(jwt));
 			if (user.isInstructor() || user.isTeachingAssistant() || (studentScore > 0)) {
 				buf.append("<p><div id=exampleLink>"
 						+ "<a href=# onClick=javascript:document.getElementById('example').style.display='';"
@@ -416,11 +397,11 @@ public class Homework extends HttpServlet {
 			// if the user response was correct, seek five-star feedback:
 			if (studentScore > 0) buf.append(fiveStars());
 			
-			buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback" + (nonce==null?"":"?Nonce=" + nonce) + ">here</a>.<p>");
+			buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback" + "&JWT=" + jwt + ">here</a>.<p>");
 			buf.append("<a href=/Homework?"
 					+ (assignmentId>0?"AssignmentId=" + assignmentId : "TopicId=" + ht.topicId)
 					+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
-					+ (nonce==null?"":"&Nonce=" + nonce) 
+					+ "&JWT=" + jwt  
 					+ (offerHint?"&Q=" + q.id + "><span style='color:red'>Please give me a hint</span>":">Return to this homework assignment") + "</a>");
 			
 			if (user.isAnonymous()) buf.append(" or go back to the <a href=/>ChemVantage home page</a>.");
@@ -431,7 +412,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	String ajaxJavaScript(String nonce) {
+	String ajaxJavaScript(String jwt) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note) {\n"
 		+ "  var xmlhttp;\n"
@@ -465,12 +446,12 @@ public class Homework extends HttpServlet {
 		+ "    var msg;\n"
 		+ "    switch (nStars) {\n"
 		+ "      case '1': msg='1 star - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to <a href=Feedback" + (nonce==null?"":"&Nonce=" + nonce) + ">tell us why</a>.';"
+		+ "                + 'please take a moment to <a href=Feedback&JWT=" + jwt + ">tell us why</a>.';"
 		+ "                break;\n"
 		+ "      case '2': msg='2 stars - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to <a href=Feedback" + (nonce==null?"":"&Nonce=" + nonce) + ">tell us why</a>.';"
+		+ "                + 'please take a moment to <a href=Feedback&JWT=" + jwt + ">tell us why</a>.';"
 		+ "                break;\n"
-		+ "      case '3': msg='3 stars - Thank you. <a href=Feedback" + (nonce==null?"":"&Nonce=" + nonce) + ">Click here</a> '"
+		+ "      case '3': msg='3 stars - Thank you. <a href=Feedback&JWT=" + jwt + ">Click here</a> '"
 		+ "                + 'to provide additional feedback.';"
 		+ "                break;\n"
 		+ "      case '4': msg='4 stars - Thank you';"
@@ -537,7 +518,7 @@ public class Homework extends HttpServlet {
 		return buf.toString(); 
 	}
 
-	protected String showScores(User user,HttpServletRequest request,String nonce) {
+	protected String showScores(User user,HttpServletRequest request,String jwt) {
 		StringBuffer buf = new StringBuffer("<h2>Your Homework Transactions</h2>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
@@ -562,7 +543,7 @@ public class Homework extends HttpServlet {
 			
 			if (hwts.size()==0) {
 				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>");
-				buf.append("<a href=Homework?AssignmentId=" + a.id + (nonce==null?"":"&Nonce=" + nonce)+ ">Take me back to the homework assignment.</a><p>");
+				buf.append("<a href=Homework?AssignmentId=" + a.id + "&JWT=" + jwt + ">Take me back to the homework assignment.</a><p>");
 					return buf.toString();
 			}
 			
@@ -597,7 +578,7 @@ public class Homework extends HttpServlet {
 					buf.append("We attempted to validate the score contained in your class LMS grade book,<br>but the operation failed, most likely because your LMS failed to provide a valid grade book entry code.<p>");
 				}
 			}
-    		buf.append("<a href=Homework?AssignmentId=" + a.id + (nonce==null?"":"&Nonce=" + nonce)+ ">Take me back to the homework assignment.</a><p>");
+    		buf.append("<a href=Homework?AssignmentId=" + a.id + "&JWT=" + jwt + ">Take me back to the homework assignment.</a><p>");
 
 			buf.append("<table><tr><th>Transaction Number</th><th>QuestionID</th><th>Graded</th><th>Score</th></tr>");
 			for (HWTransaction hwt : hwts) {
@@ -611,7 +592,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String showSummary(User user,HttpServletRequest request,String nonce) {
+	String showSummary(User user,HttpServletRequest request,String jwt) {
 		StringBuffer buf = new StringBuffer();
 		
 		try {
@@ -696,7 +677,7 @@ public class Homework extends HttpServlet {
 			else if (scoresReported) buf.append("All scores for students have been reported to your LMS successfully.<p>");
 			
 			buf.append("If you have any questions or need assistance, please contact <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.<p>");			
-			buf.append("<a href=/Homework?AssignmentId=" + a.id + (nonce==null?"":"&Nonce=" + nonce) + ">Return to this assignment</a>.<p>");
+			buf.append("<a href=/Homework?AssignmentId=" + a.id + "&JWT=" + jwt + ">Return to this assignment</a>.<p>");
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}

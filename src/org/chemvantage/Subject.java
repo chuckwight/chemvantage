@@ -30,30 +30,25 @@ import com.googlecode.objectify.cmd.Query;
 
 @Entity
 public class Subject {
-	static Subject genChem = null;
 	@Id Long id;
 	String title;
+	String HMAC256Secret;
 	int nStarReports;
 	double avgStars;
 	
 	Subject() {}
 	
-	Subject(String title) {
-		this.title = title;
-	}
-
 	static public Subject getSubject() {
 		try {
-			if (genChem==null) {
-				genChem = ofy().load().type(Subject.class).first().safe();
-			}	
+			return ofy().load().type(Subject.class).first().safe();	
 		} catch (Exception e) { // this should be run only once at setup
-			if (genChem==null) {
-				genChem = new Subject("General Chemistry");
-				ofy().save().entity(genChem).now();
-			}
+			Subject s = new Subject();
+			s.id = 1L;
+			s.title = "General Chemistry";
+			s.HMAC256Secret = "ChangeMeInTheDataStoreManuallyForYourProtection";
+			ofy().save().entity(s).now();
+			return s;
 		}
-		return genChem;
 	}
 
 	public String getTopicSelectBox() {

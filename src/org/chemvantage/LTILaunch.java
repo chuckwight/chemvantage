@@ -29,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
@@ -38,9 +37,6 @@ import javax.servlet.http.HttpSession;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
-import com.googlecode.objectify.annotation.Cache;
-import com.googlecode.objectify.annotation.Entity;
-import com.googlecode.objectify.annotation.Id;
 
 import net.oauth.OAuthAccessor;
 import net.oauth.OAuthConsumer;
@@ -53,21 +49,8 @@ import net.oauth.signature.OAuthSignatureMethod;
 public class LTILaunch extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
-	private String jwtSecret;
+	private static String jwtSecret = Subject.getSubject().HMAC256Secret;
 	
-	@Override
-	public void init(ServletConfig config) throws ServletException {
-		super.init(config);
-		JwtSecret s;
-		try { // load the JWT encryption secret from the datastore into memory
-			s = ofy().load().type(JwtSecret.class).first().safe();
-		} catch (Exception e) {  // this should run only once to create and store one JwtSecret entity
-			s = new JwtSecret();
-			ofy().save().entity(s);
-		}
-		this.jwtSecret = s.jwtSecret;		
-	}
-
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
@@ -75,8 +58,7 @@ public class LTILaunch extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		try {
-			User user = User.getInstance(request.getSession(true));
-			if (user==null) user = Nonce.getUser(request.getParameter("Nonce"));
+			User user = CSRFToken.getUser(request.getParameter("JWT"));
 			if (user==null) throw new Exception();  // unauthenticated user
 			if (request.getParameter("resource_link_id")==null) throw new Exception(); // missing required LTI parameter
 			
@@ -218,6 +200,9 @@ public class LTILaunch extends HttpServlet {
 			session.setAttribute("UserId",userId);
 			User user = User.getInstance(session); // returns null if user is not anonymous and not in the database
 			if (user==null) user = User.createBLTIUser(request); // first-ever login for this user
+			
+			// The user should now be established, even if they are anonymous; set the CSRFToken
+			CSRFToken.getInstance(userId);  // this stores a CSRFToken in the datastore
 			
 			// ensure the proper authDomain value
 			if (user.authDomain == null || !user.authDomain.equals("BLTI")) {
@@ -382,12 +367,12 @@ public class LTILaunch extends HttpServlet {
 			if (myAssignment == null) {  // construct a URL to send the user to the assignment picker form
 				redirectUrl = "/lti?UserRequest=pick&resource_link_id="+resource_link_id
 						+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
-						+ (request.getSession().isNew()?"&Nonce=" + Nonce.createInstance(user):"");
+						+ "&JWT=" + CSRFToken.getJWT(user.id);
 			} else { 	// construct a URL to send the user to the assignment
 				redirectUrl = "/" + myAssignment.assignmentType + "?AssignmentId=" + myAssignment.id
 						+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
-						+ (request.getSession().isNew()?"&Nonce=" + Nonce.createInstance(user):"");
-			}
+						+ "&JWT=" + CSRFToken.getJWT(user.id);
+				}
 
 			return redirectUrl;  // normal finish; redirects user to the assignment
 		} catch (Exception e) {
@@ -445,7 +430,7 @@ public class LTILaunch extends HttpServlet {
 					+ "</script>");
 
 			buf.append("<table><form name=AssignmentForm method=GET><input type=hidden name='resource_link_id' value='" + resource_link_id + "'>");
-			if (request.getSession().isNew()) buf.append("<input type=hidden name=Nonce value=" + Nonce.createInstance(user) + ">");
+			buf.append("<input type=hidden name=JWT value=" + CSRFToken.getJWT(user.id) + ">");
 			if (lis_result_sourcedid != null) buf.append("<input type=hidden name='lis_result_sourcedid' value='" + URLEncoder.encode(lis_result_sourcedid,"UTF-8") + "'>");
 			buf.append("<tr><td>"
 					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Quiz" + ("Quiz".equals(assignmentType)?" CHECKED":"") + ">Quiz</label><br>"
@@ -509,13 +494,5 @@ public class LTILaunch extends HttpServlet {
 	@Override
 	public void destroy() {
 
-	}
-
-	@Cache @Entity
-	class JwtSecret {  // this is a container for an opaque string to initialize the HMAC256 encryption for JWTs
-		@Id Long id;
-		String jwtSecret = "change me manually in the datastore";
-		
-		JwtSecret() {}		
 	}
 }
