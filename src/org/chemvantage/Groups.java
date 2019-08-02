@@ -45,18 +45,11 @@ public class Groups extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			HttpSession session = request.getSession();
 			User user = null;
-			String nonce = null;
-			if (session.isNew()) {
-				user = Nonce.getUser(request.getParameter("Nonce"));
-				nonce = Nonce.createInstance(user);
-			}
+			HttpSession session = request.getSession();
+			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
 			else user = User.getInstance(session);
-			if (user==null) {
-				response.sendRedirect("/Logout");
-				return;
-			}
+			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
 				
 			// Authorized users only beyond this point:
 			if(!(user.isAdministrator() || user.isInstructor())) response.sendRedirect("/");
@@ -67,9 +60,9 @@ public class Groups extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 						
-			if (userRequest.contentEquals("AssignQuizQuestions")) out.println(selectQuestionsForm(user,request,nonce));
-			else if (userRequest.contentEquals("AssignHomeworkQuestions")) out.println(selectQuestionsForm(user,request,nonce));
-			else if (userRequest.equals("AssignExamQuestions")) out.println(selectExamQuestionsForm(user,request,nonce));
+			if (userRequest.contentEquals("AssignQuizQuestions")) out.println(selectQuestionsForm(user,request));
+			else if (userRequest.contentEquals("AssignHomeworkQuestions")) out.println(selectQuestionsForm(user,request));
+			else if (userRequest.equals("AssignExamQuestions")) out.println(selectExamQuestionsForm(user,request));
 		} catch (Exception e) {
 			response.getWriter().println(e.toString());
 		}
@@ -78,19 +71,12 @@ public class Groups extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			HttpSession session = request.getSession();
 			User user = null;
-			String nonce = null;
-			if (session.isNew()) {
-				user = Nonce.getUser(request.getParameter("Nonce"));
-				nonce = Nonce.createInstance(user);
-			}
+			HttpSession session = request.getSession();
+			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
 			else user = User.getInstance(session);
-			if (user==null) {
-				response.sendRedirect("/Logout");
-				return;
-			}
-			
+			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
+				
 			long groupId = 0;
 			try {
 				groupId = Long.parseLong(request.getParameter("GroupId"));
@@ -103,11 +89,13 @@ public class Groups extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 			
+			String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
+			
 			if (userRequest.equals("UpdateAssignment")) { // records question item selections in assignment entity
 				updateAssignment(user,group,request);
 				Assignment assignment = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
 				response.sendRedirect("/" + assignment.assignmentType + "?AssignmentId=" + assignment.id
-						+ (nonce==null?"":"&Nonce=" + nonce));
+						+ (cvsToken==null?"":"&CvsToken=" + cvsToken));
 				return;
 			}
 		} catch (Exception e) {
@@ -115,8 +103,9 @@ public class Groups extends HttpServlet {
 		}
 	}
 
-	String selectQuestionsForm(User user,HttpServletRequest request,String nonce) {
+	String selectQuestionsForm(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
+		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		try {
 			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
 			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).now();
@@ -147,7 +136,7 @@ public class Groups extends HttpServlet {
 							+ "Select the class from which to copy the question selections:<br>");
 					buf.append("<FORM METHOD=POST ACTION=Groups>"
 							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateAssignment>"
-							+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
+							+ (cvsToken==null?"":"<INPUT TYPE=HIDDEN NAME=CvsToken VALUE=" + cvsToken + ">")
 							+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + assignment.id + "'>");
 					buf.append("<SELECT NAME=CopyAssignmentId><OPTION VALUE=0>Select a group (optional)</OPTION>");
@@ -172,14 +161,14 @@ public class Groups extends HttpServlet {
 						+ "answers to the items that they answer incorrectly. Therefore, the total number of questions should be "
 						+ "larger than 10, but not much larger than 50.  Experience shows that 30 items is about right in most cases.<p>"
 						+ "If you don't see a question you want to include, you may "
-						+ "<a href=/Contribute" + (nonce==null?"":"?Nonce=" + nonce) + ">contribute a new question item</a> to the database.<p>");
+						+ "<a href=/Contribute" + (cvsToken==null?"":"?CvsToken=" + cvsToken) + ">contribute a new question item</a> to the database.<p>");
 			} else if (assignmentType.contentEquals("Homework")) {
 				buf.append("Select the homework questions to be assigned to students in this group, then click the "
 						+ "'Use Selected Items' button. Each question is worth 1 point, so the maximum possible score on the "
 						+ "assignment is equal to the number of questions selected. Students may work unassigned problems; "
 						+ "however, these are not included in the scores reported to the class LMS.<p>"
 						+ "If you don't see a question you want to include, you may "
-						+ "<a href=/Contribute" + (nonce==null?"":"?Nonce=" + nonce) + ">contribute a new question item</a> to the database.<p>");
+						+ "<a href=/Contribute" + (cvsToken==null?"":"?CvsToken=" + cvsToken) + ">contribute a new question item</a> to the database.<p>");
 			}
 			
 			Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topic.id).filter("isActive",true);
@@ -191,7 +180,7 @@ public class Groups extends HttpServlet {
 
 			// Make a list of individual questions that can be selected or deselected for this assignment
 			buf.append("<FORM NAME=Questions METHOD=POST ACTION=Groups>"
-					+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
+					+ (cvsToken==null?"":"<INPUT TYPE=HIDDEN NAME=CvsToken VALUE=" + cvsToken + ">")
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment'>"
 					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + assignment.id + "'>"
@@ -216,8 +205,9 @@ public class Groups extends HttpServlet {
 		return buf.toString();
 	}
 
-	String selectExamQuestionsForm(User user,HttpServletRequest request,String nonce) {
+	String selectExamQuestionsForm(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h3>Select Practice Exam Questions</h3>");
+		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		try {
 			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
 			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
@@ -248,7 +238,7 @@ public class Groups extends HttpServlet {
 
 			buf.append("<FORM NAME=Questions METHOD=POST ACTION=Groups>"
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment'>"
-					+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
+					+ (cvsToken==null?"":"<INPUT TYPE=HIDDEN NAME=CvsToken VALUE=" + cvsToken + ">")
 					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE='" + group.id + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + assignment.id + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=PracticeExam>"

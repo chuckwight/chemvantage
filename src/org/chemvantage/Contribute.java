@@ -40,40 +40,28 @@ public class Contribute extends HttpServlet {
 	}
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
-	throws ServletException, IOException {
-		HttpSession session = request.getSession();
-		User user = null;
-		String nonce = null;
-		if (session.isNew()) {
-			user = Nonce.getUser(request.getParameter("Nonce"));
-			nonce = Nonce.createInstance(user);
-		}
-		else user = User.getInstance(session);
-		if (user==null) {
-			response.sendRedirect("/Logout");
-			return;
-		}
-			
-		response.setContentType("text/html");
-		PrintWriter out = response.getWriter();
-		out.println(Home.header + newQuestionForm(user,request,nonce) + Home.footer);		
+			throws ServletException, IOException {
+		try {
+			User user = null;
+			HttpSession session = request.getSession();
+			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
+			else user = User.getInstance(session);
+			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
+
+			response.setContentType("text/html");
+			PrintWriter out = response.getWriter();
+			out.println(Home.header + newQuestionForm(user,request) + Home.footer);		
+		} catch (Exception e) {}
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
-		try{
-			HttpSession session = request.getSession();
+		try {
 			User user = null;
-			String nonce = null;
-			if (session.isNew()) {
-				user = Nonce.getUser(request.getParameter("Nonce"));
-				nonce = Nonce.createInstance(user);
-			}
+			HttpSession session = request.getSession();
+			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
 			else user = User.getInstance(session);
-			if (user==null) {
-				response.sendRedirect("/Logout");
-				return;
-			}
+			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
 				
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
@@ -81,14 +69,15 @@ public class Contribute extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 			if (userRequest.equals("Save")) {
-				out.println(Home.header + submitQuestion(user,request,nonce) + Home.footer);
-			} else out.println(Home.header + newQuestionForm(user,request,nonce) + Home.footer);
+				out.println(Home.header + submitQuestion(user,request) + Home.footer);
+			} else out.println(Home.header + newQuestionForm(user,request) + Home.footer);
 		} catch (Exception e) {
 		}
 	}
 
-	String newQuestionForm(User user,HttpServletRequest request,String nonce) {
+	String newQuestionForm(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
+		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		try {
 			// The values of assignmentType, questionType and topicKey are required to start editing
 			String assignmentType = request.getParameter("AssignmentType");
@@ -137,7 +126,7 @@ public class Contribute extends HttpServlet {
 			ProposedQuestion q = null;
 			boolean preview = false;
 			buf.append("<FORM NAME=NewQuestion ACTION=Contribute METHOD=POST>");
-			if (nonce!=null) buf.append("<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">");
+			if (cvsToken!=null) buf.append("<INPUT TYPE=HIDDEN NAME=CvsToken VALUE=" + cvsToken + ">");
 			
 			if (assignmentType.length()>0 && questionType>0 && topicId>0) { // create the question object
 				q = new ProposedQuestion(questionType);
@@ -229,7 +218,7 @@ public class Contribute extends HttpServlet {
 						+ "to indicate the expected dimensions or units of the student response or "
 						+ "to finish any part of the question text that comes last.<p>"); break;
 				default:  buf.append("An unexpected error occurred. "
-						+ "Please <a href=Contribute" + (nonce==null?"":"&Nonce=" + nonce) + ">try again</a>.");
+						+ "Please <a href=Contribute" + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">try again</a>.");
 				}
 			}
 			else {
@@ -253,8 +242,9 @@ public class Contribute extends HttpServlet {
 		return buf.toString();
 	}
 
-	String submitQuestion(User user,HttpServletRequest request,String nonce) {
+	String submitQuestion(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
+		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		ProposedQuestion q = null;
 		try {
 			String assignmentType = request.getParameter("AssignmentType");
@@ -329,7 +319,7 @@ public class Contribute extends HttpServlet {
 			buf.append("<h3>Question Submitted Successfully</h3>"
 			+ "Thank you for contributing this question item to ChemVantage.<br>"
 			+ "Your contribution will be reviewed by an editor before it is added to the database.<br>"
-			+ "<a href=Contribute" + (nonce==null?"":"?Nonce=" + nonce) + ">Contribute another question item</a>.");
+			+ "<a href=Contribute" + (cvsToken==null?"":"?CvsToken=" + cvsToken) + ">Contribute another question item</a>.");
 		}
 		return buf.toString();
 	}

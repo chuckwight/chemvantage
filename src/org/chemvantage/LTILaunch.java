@@ -58,8 +58,12 @@ public class LTILaunch extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		try {
-			User user = CSRFToken.getUser(request.getParameter("JWT"));
-			if (user==null) throw new Exception();  // unauthenticated user
+			User user = null;
+			HttpSession session = request.getSession();
+			if (session.isNew()) user = User.getUser(request.getParameter("cvsToken"));
+			else user = User.getInstance(session);
+			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
+				
 			if (request.getParameter("resource_link_id")==null) throw new Exception(); // missing required LTI parameter
 			
 			if ("pick".equals(request.getParameter("UserRequest")))
@@ -202,7 +206,7 @@ public class LTILaunch extends HttpServlet {
 			if (user==null) user = User.createBLTIUser(request); // first-ever login for this user
 			
 			// The user should now be established, even if they are anonymous; set the CSRFToken
-			CSRFToken.getInstance(userId);  // this stores a CSRFToken in the datastore
+			user.getCvsToken();  // this sets a CvsToken to track the user across sessions and prevent CSRF attacks
 			
 			// ensure the proper authDomain value
 			if (user.authDomain == null || !user.authDomain.equals("BLTI")) {
@@ -364,14 +368,15 @@ public class LTILaunch extends HttpServlet {
 			}
 
 			String redirectUrl = "";			
+			String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 			if (myAssignment == null) {  // construct a URL to send the user to the assignment picker form
 				redirectUrl = "/lti?UserRequest=pick&resource_link_id="+resource_link_id
 						+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
-						+ "&JWT=" + CSRFToken.getJWT(user.id);
+						+ (cvsToken==null?"":"&CvsToken=" + cvsToken);
 			} else { 	// construct a URL to send the user to the assignment
 				redirectUrl = "/" + myAssignment.assignmentType + "?AssignmentId=" + myAssignment.id
 						+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
-						+ "&JWT=" + CSRFToken.getJWT(user.id);
+						+ (cvsToken==null?"":"&CvsToken=" + cvsToken);
 				}
 
 			return redirectUrl;  // normal finish; redirects user to the assignment
@@ -382,6 +387,7 @@ public class LTILaunch extends HttpServlet {
 	
 	String pickResourceForm(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
+		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		try {
 			String resource_link_id = request.getParameter("resource_link_id"); 
 			if (resource_link_id == null) return "/Logout";  // a resource_link_id value is required for every LTI launch
@@ -430,7 +436,7 @@ public class LTILaunch extends HttpServlet {
 					+ "</script>");
 
 			buf.append("<table><form name=AssignmentForm method=GET><input type=hidden name='resource_link_id' value='" + resource_link_id + "'>");
-			buf.append("<input type=hidden name=JWT value=" + CSRFToken.getJWT(user.id) + ">");
+			if (cvsToken!=null) buf.append("<input type=hidden name=CvsToken value=" + cvsToken + ">");
 			if (lis_result_sourcedid != null) buf.append("<input type=hidden name='lis_result_sourcedid' value='" + URLEncoder.encode(lis_result_sourcedid,"UTF-8") + "'>");
 			buf.append("<tr><td>"
 					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Quiz" + ("Quiz".equals(assignmentType)?" CHECKED":"") + ">Quiz</label><br>"

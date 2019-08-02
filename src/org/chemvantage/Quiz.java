@@ -36,6 +36,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
@@ -59,7 +60,10 @@ public class Quiz extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			User user = CSRFToken.getUser(request.getParameter("JWT"));
+			User user = null;
+			HttpSession session = request.getSession();
+			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
+			else user = User.getInstance(session);
 			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
 				
 			response.setContentType("text/html");
@@ -68,10 +72,9 @@ public class Quiz extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 			
-			String jwt = CSRFToken.getNewJWT(user.id);
-			if ("ShowScores".contentEquals(userRequest)) out.println(Home.header + showScores(user,request,jwt) + Home.footer);
-			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header + showSummary(user,request,jwt) + Home.footer);
-			else out.println(Home.header + printQuiz(user,request,jwt) + Home.footer);
+			if ("ShowScores".contentEquals(userRequest)) out.println(Home.header + showScores(user,request) + Home.footer);
+			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header + showSummary(user,request) + Home.footer);
+			else out.println(Home.header + printQuiz(user,request) + Home.footer);
 		} catch (Exception e) {
 			response.getWriter().println(e.toString());
 		}
@@ -80,19 +83,24 @@ public class Quiz extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			User user = CSRFToken.getUser(request.getParameter("JWT"));
+			User user = null;
+			HttpSession session = request.getSession();
+			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
+			else user = User.getInstance(session);
 			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
-					
+				
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
-			String jwt = CSRFToken.getJWT(user.id);
-			out.println(Home.header + printScore(user,request,jwt) + Home.footer);
-		} catch (Exception e) {}
+			out.println(Home.header + printScore(user,request) + Home.footer);
+		} catch (Exception e) {
+			response.getWriter().println(e.toString());
+		}
 	}
 
-	public String printQuiz(User user,HttpServletRequest request,String jwt) {
+	public String printQuiz(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
+		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		try {
 			Assignment qa = null;
 			long topicId = 0L;
@@ -126,23 +134,24 @@ public class Quiz extends HttpServlet {
 			if (user.isInstructor() && qa != null) {
 				buf.append("<table style='border: 1px solid black'><tr><td>");
 				buf.append("As the course instructor you may<ul>"
-						+ "<li><a href=/Groups?UserRequest=AssignQuizQuestions&AssignmentId=" + qa.id + "&JWT=" + jwt + ">"
+						+ "<li><a href=/Groups?UserRequest=AssignQuizQuestions&AssignmentId=" + qa.id 
+						+ (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">"
 						+ "customize this quiz</a> by selecting/deselecting the available question items"
-						+ "<li>view a <a href=/Quiz?UserRequest=ShowSummary&AssignmentId=" + qa.id + "&JWT=" + jwt + ">summary of scores</a> for this assignment"
+						+ "<li>view a <a href=/Quiz?UserRequest=ShowSummary&AssignmentId=" + qa.id + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">summary of scores</a> for this assignment"
 						+ "</ul></td></tr></table><p>");
 			} else if (user.isAnonymous()) {
 				buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			}
 			
 			buf.append("\n<FORM NAME=Quiz METHOD=POST ACTION=Quiz onSubmit=\"javascript: return confirmSubmission()\">");
-			buf.append("<INPUT TYPE=HIDDEN NAME=JWT VALUE=" + jwt + ">");
+			buf.append("<INPUT TYPE=HIDDEN NAME=CvsToken VALUE=" + cvsToken + ">");
 			if (qa!=null) buf.append("<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + qa.id + "'>");
 			if (!user.isAnonymous()) {
 				buf.append("\nQuiz Rules<OL>");
 				buf.append("\n<LI>Each quiz must be completed within " + timeLimit + " minutes of the time when it is first downloaded.</LI>");
 				buf.append("\n<LI>You may repeat quizzes as many times as you wish, to improve your score.</LI>");
 				buf.append("\n<LI>For each quiz topic, the server reports your best quiz score. "
-						+ (qa==null?"":"<a href=/Quiz?UserRequest=ShowScores&AssignmentId=" + qa.id + "&JWT=" + jwt + ">View the details here</a>.") 
+						+ (qa==null?"":"<a href=/Quiz?UserRequest=ShowScores&AssignmentId=" + qa.id + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">View the details here</a>.") 
 						+ "</LI>");
 				buf.append("</OL>");
 			}
@@ -190,13 +199,17 @@ public class Quiz extends HttpServlet {
 			}
 			buf.append("</OL>");
 
+			qt.possibleScore = possibleScore;
+			ofy().save().entity(qt);
+			
+/*
 			// update and store the QuizTransaction for this quiz
 			QueueFactory.getDefaultQueue().add(withUrl("/TransactionServlet")
 					.param("AssignmentType","Quiz")
 					.param("TransactionId", Long.toString(qt.id))
 					.param("Action", "Download")
 					.param("PossibleScore", Integer.toString(possibleScore)));
-
+*/
 			buf.append("\n<input type=hidden name='QuizTransactionId' value=" + qt.id + ">");
 			buf.append("\n<input type=hidden name='TopicId' value=" + topic.id + ">");
 			buf.append("<div id='timer1' style='color: red'></div><div id=ctrl1 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
@@ -249,8 +262,9 @@ public class Quiz extends HttpServlet {
 				+ "</SCRIPT>"; 
 	}
 	
-	String printScore(User user,HttpServletRequest request,String jwt) {
+	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
+		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		try {
 			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
@@ -262,7 +276,8 @@ public class Quiz extends HttpServlet {
 				return "<h2>No Score</h2>"
 						+ "Sorry, this quiz was graded on " + df.format(qt.graded) + " and cannot be regraded.<p>"
 						+ "Your score on this quiz was " + qt.score + " out of a possible " + qt.possibleScore + " points.<p>"
-						+ (user.isAnonymous()?"<p><a href=/Quiz?TopicId=" + qt.topicId + "&JWT=" + jwt
+						+ (user.isAnonymous()?"<p><a href=/Quiz?TopicId=" + qt.topicId 
+								+ (cvsToken==null?"":"&CvsToken=" + cvsToken)
 								+ ">Take this quiz again</a>"
 								+ " or go back to the <a href=/>ChemVantage home page</a>.":"");
 			}
@@ -279,7 +294,7 @@ public class Quiz extends HttpServlet {
 			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			buf.append(df.format(now));
 			
-			buf.append(ajaxScoreJavaScript(jwt)); // load javascript for AJAX problem reporting form
+			buf.append(ajaxScoreJavaScript(cvsToken)); // load javascript for AJAX problem reporting form
 			
 			StringBuffer missedQuestions = new StringBuffer();			
 			missedQuestions.append("<OL>");
@@ -336,7 +351,7 @@ public class Quiz extends HttpServlet {
 			missedQuestions.append("</OL>\n");
 			qt.graded = now;
 			qt.score = studentScore;
-			ofy().save().entity(qt).now();
+			ofy().save().entity(qt);
 			
 			try {
 				long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
@@ -407,13 +422,13 @@ public class Quiz extends HttpServlet {
 							+ "the correct answers to problems that you missed.\n");
 				}
 			}
-			buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback?JWT=" + jwt + ">here</a>.<p>");
+			buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback" + (cvsToken==null?"":"?CvsToken=" + cvsToken) + ">here</a>.<p>");
 			
 			buf.append("<p>");
 			
 			buf.append("<a href=/Quiz?"
 					+ (qa==null?"TopicId=" + qt.topicId : "AssignmentId=" + qa.id)
-					+ "&JWT=" + jwt
+					+ (cvsToken==null?"":"&CvsToken=" + cvsToken)
 					+ (qt.lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + qt.lis_result_sourcedid)
 					+ ">Take this quiz again</a>&nbsp;");
 			if (user.isAnonymous()) buf.append(" or go back to the <a href=/>ChemVantage home page</a>.");
@@ -424,7 +439,7 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String ajaxScoreJavaScript(String jwt) {
+	String ajaxScoreJavaScript(String cvsToken) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note) {\n"
 		+ "  var xmlhttp;\n"
@@ -458,12 +473,12 @@ public class Quiz extends HttpServlet {
 		+ "    var msg;\n"
 		+ "    switch (nStars) {\n"
 		+ "      case '1': msg='1 star - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to <a href=/Feedback?JWT=" + jwt + ">tell us why</a>.';"
+		+ "                + 'please take a moment to <a href=/Feedback?CvsToken=" + cvsToken + ">tell us why</a>.';"
 		+ "                break;\n"
 		+ "      case '2': msg='2 stars - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to <a href=Feedback?JWT=" + jwt + ">tell us why</a>.';"
+		+ "                + 'please take a moment to <a href=Feedback?CvsToken=" + cvsToken + ">tell us why</a>.';"
 		+ "                break;\n"
-		+ "      case '3': msg='3 stars - Thank you. <a href=Feedback?JWT=" + jwt + ">Click here</a> '"
+		+ "      case '3': msg='3 stars - Thank you. <a href=Feedback?CvsToken=" + cvsToken + ">Click here</a> '"
 		+ "                + 'to provide additional feedback.';"
 		+ "                break;\n"
 		+ "      case '4': msg='4 stars - Thank you';"
@@ -492,8 +507,9 @@ public class Quiz extends HttpServlet {
 		+ "</SCRIPT>";
 	}
 	
-	String showScores (User user, HttpServletRequest request, String nonce) {
+	String showScores (User user, HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h2>Your Quiz Transactions</h2>");
+		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
 		
@@ -517,7 +533,7 @@ public class Quiz extends HttpServlet {
 			
 			if (qts.size()==0) {
 				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>"
-						+ "<a href=Quiz?AssignmentId=" + a.id + (nonce==null?"":"&Nonce=" + nonce)+ ">Take me back to the quiz now.</a>");
+						+ "<a href=Quiz?AssignmentId=" + a.id + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">Take me back to the quiz now.</a>");
 			} else {
 				// create a fresh Score entity to calculate the best score on this assignment
 				Score s = Score.getInstance(user.id, a);
@@ -551,7 +567,7 @@ public class Quiz extends HttpServlet {
 					}
 				}
 
-				buf.append("<a href=Quiz?AssignmentId=" + a.id + (nonce==null?"":"&Nonce=" + nonce)+ ">Take me back to the quiz now.</a><p>");
+				buf.append("<a href=Quiz?AssignmentId=" + a.id + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">Take me back to the quiz now.</a><p>");
 			
 				buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Quiz Score</th></tr>");
 				for (QuizTransaction qt : qts) {
@@ -565,8 +581,9 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String showSummary(User user,HttpServletRequest request,String nonce) {
+	String showSummary(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
+		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		
 		try {
 			if (!user.isInstructor()) throw new Exception("You must be logged in as the instructor to view this page.");
@@ -650,7 +667,7 @@ public class Quiz extends HttpServlet {
 			else if (scoresReported) buf.append("All scores for students have been reported to your LMS successfully.<p>");
 			
 			buf.append("If you have any questions or need assistance, please contact <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.<p>");			
-			buf.append("<a href=/Quiz?AssignmentId=" + a.id + (nonce==null?"":"&Nonce=" + nonce) + ">Return to this quiz</a>.<p>");
+			buf.append("<a href=/Quiz?AssignmentId=" + a.id + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">Return to this quiz</a>.<p>");
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}

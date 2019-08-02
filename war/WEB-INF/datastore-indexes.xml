@@ -2,13 +2,8 @@
 
 <datastore-indexes autoGenerate="true">
 
-    <datastore-index kind="Assignment" ancestor="false" source="auto">
-        <property name="assignmentType" direction="asc"/>
-        <property name="groupId" direction="asc"/>
-        <property name="deadline" direction="asc"/>
-    </datastore-index>
-
-    <datastore-index kind="Assignment" ancestor="false" source="auto">
+    <!-- Used 2 times in query history -->
+    <datastore-index kind="Question" ancestor="false" source="auto">
         <property name="assignmentType" direction="asc"/>
         <property name="groupId" direction="asc"/>
         <property name="topicId" direction="asc"/>

@@ -54,18 +54,11 @@ public class Feedback extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		try {
-			HttpSession session = request.getSession();
 			User user = null;
-			String nonce = request.getParameter("Nonce");
-			if (session.isNew()) {
-				user = Nonce.getUser(nonce);
-				nonce = Nonce.createInstance(user);
-			}
+			HttpSession session = request.getSession();
+			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
 			else user = User.getInstance(session);
-			if (user==null) {
-				response.sendRedirect("/Logout");
-				return;
-			}
+			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
 				
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
@@ -78,7 +71,7 @@ public class Feedback extends HttpServlet {
 				sendEmailToAdmin();
 			} else if (userRequest.equals("AjaxRating")) {
 				recordAjaxRating(request);
-			} else out.println(Home.header + feedbackForm(user,nonce) + Home.footer);    
+			} else out.println(Home.header + feedbackForm(user) + Home.footer);    
 		} catch (Exception e) {
 			out.println(Home.header + anonymousFeedbackForm() + Home.footer);
 		}
@@ -87,19 +80,12 @@ public class Feedback extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			HttpSession session = request.getSession();
 			User user = null;
-			String nonce = request.getParameter("Nonce");
-			if (session.isNew()) {
-				user = Nonce.getUser(nonce);
-				nonce = Nonce.createInstance(user);
-			}
+			HttpSession session = request.getSession();
+			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
 			else user = User.getInstance(session);
-			if (user==null) {
-				response.sendRedirect("/Logout");
-				return;
-			}
-							
+			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
+				
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
@@ -107,14 +93,14 @@ public class Feedback extends HttpServlet {
 			if (userRequest == null) userRequest = "";
 
 			if (userRequest.equals("SubmitFeedback")) {
-				out.println(Home.header + submitFeedback(user,request,nonce) + Home.footer);
+				out.println(Home.header + submitFeedback(user,request) + Home.footer);
 				sendEmailToAdmin();
 			} else if (user.isAdministrator() && userRequest.equals("Delete Report")) {
 				removeReport(request);
-				out.println(Home.header + feedbackForm(user,nonce) + Home.footer);	
+				out.println(Home.header + feedbackForm(user) + Home.footer);	
 			} else if (user.isAdministrator() && userRequest.equals("Reply")) {
-				out.println(Home.header + replyForm(user,request,nonce) + Home.footer);
-			} else out.println(Home.header + feedbackForm(user,nonce) + Home.footer);
+				out.println(Home.header + replyForm(user,request) + Home.footer);
+			} else out.println(Home.header + feedbackForm(user) + Home.footer);
 		} catch (Exception e) {
 		}
 	}
@@ -131,9 +117,10 @@ public class Feedback extends HttpServlet {
 		return "Your rating was " + stars + " stars. The average user rating is " + subject.getAvgStars() + " stars.";
 	}
 
-	String feedbackForm(User user,String nonce) {
+	String feedbackForm(User user) {
 		StringBuffer buf = new StringBuffer();
-
+		String cvsToken = user.getCvsToken();
+		
 		buf.append("<h2>Feedback Page</h2>");
 
 		buf.append("Your comments and opinions are important to us.  We use this<br>"
@@ -171,7 +158,7 @@ public class Feedback extends HttpServlet {
 				+ "Comments or kudos: <FONT SIZE=-1>(160 characters max.)</FONT><br>"
 				+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback>"
 				+ "<INPUT TYPE=HIDDEN NAME=Stars>"
-				+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE='" + nonce + "'>")
+				+ "<INPUT TYPE=HIDDEN NAME=CvsToken VALUE='" + cvsToken + "'>"
 				+ "<TEXTAREA NAME=Comments ROWS=5 COLS=40 WRAP=SOFT "				
 				+ "onKeyUp=javascript:document.FeedbackForm.Comments.value=document.FeedbackForm.Comments.value.substring(0,160)>"
 				+ "</TEXTAREA><br>");
@@ -255,7 +242,7 @@ public class Feedback extends HttpServlet {
 		return buf.toString(); 
 	}
 
-	String submitFeedback(User user,HttpServletRequest request,String nonce) {
+	String submitFeedback(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		int stars = 0;
 		try {
@@ -264,7 +251,7 @@ public class Feedback extends HttpServlet {
 		} catch (Exception e) {
 		}
 		String comments = request.getParameter("Comments");
-		if (stars == 0 && comments.length() == 0) return (user==null?anonymousFeedbackForm():feedbackForm(user,nonce));
+		if (stars == 0 && comments.length() == 0) return (user==null?anonymousFeedbackForm():feedbackForm(user));
 		
 		if (comments.length() > 0) {
 			UserReport r = new UserReport(user==null?null:user.id,stars,comments);
@@ -323,8 +310,9 @@ public class Feedback extends HttpServlet {
 		}
 	}
 	
-	String replyForm(User user,HttpServletRequest request,String nonce) {
+	String replyForm(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
+		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		try {
 			buf.append("<h2>Reply to User Feedback</h2>");
 			long reportId = Long.parseLong(request.getParameter("ReportId"));
@@ -338,7 +326,7 @@ public class Feedback extends HttpServlet {
 			buf.append(report.view());
 			buf.append("</TEXTAREA><br>");
 			buf.append("<INPUT TYPE=HIDDEN NAME=ReportId VALUE=" + reportId + ">"
-					+ (nonce==null?"":"<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">")
+					+ (cvsToken==null?"":"<INPUT TYPE=HIDDEN NAME=CvsToken VALUE=" + cvsToken + ">")
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Send Reply'></FORM>");
 		} catch (Exception e) {
 			buf.append(e.toString());

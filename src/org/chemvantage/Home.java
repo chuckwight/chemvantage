@@ -53,8 +53,11 @@ public class Home extends HttpServlet {
 			throws ServletException, IOException {
 		// make every user anonymous
 		HttpSession session = request.getSession();
-		String userId = "anonymous" + new Random().nextInt();
-		session.setAttribute("UserId", userId);
+		String userId = (String) session.getAttribute("UserId");
+		if (userId==null) {
+			userId = "anonymous" + new Random().nextInt();
+			session.setAttribute("UserId", userId);
+		}
 		
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
@@ -70,11 +73,12 @@ public class Home extends HttpServlet {
 	public static String header = "<!DOCTYPE html>"
 			+"<html>\n"
 			+ "<head>"
-			+ "<meta HTTP-EQUIV='Content-type' CONTENT='text/html;charset=iso-8859-1'>"
-			+ "<meta HTTP-EQUIV='Expires' CONTENT='" + (new Date().toString()) + "'>\n"
-			+ "<meta HTTP-EQUIV='P3P' CONTENT='policyref=\"/w3c/p3p.xml\",CP=\"CURa ADMa DEVa OUR IND DSP OTI COR\"'>\n"
-			+ "<meta NAME='Description' CONTENT='An online quiz and homework site'>\n"
-			+ "<meta NAME='Keywords' CONTENT='chemistry,learning,online,quiz,homework,video,textbook,open,education'>\n"
+			+ "<meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />"
+			+ "<meta http-equiv='Pragma' content='no-cache' />"
+			+ "<meta http-equiv='Expires' content='0' />"
+			+ "<meta http-equiv='Content-type' content='text/html;charset=iso-8859-1'>"
+			+ "<meta name='Description' content='An online quiz and homework site'>\n"
+			+ "<meta namew='Keywords' content='chemistry,learning,online,quiz,homework,video,textbook,open,education'>\n"
 			+ "<meta name='msapplication-config' content='none'/>"
 			+ "<title>ChemVantage</title>\n"
 			+ "</head>\n"
@@ -92,10 +96,6 @@ public class Home extends HttpServlet {
 			+ "</body></html>";
 			
 	static String getHeader(User user) {
-		return getHeader(user,null);
-	}
-	
-	static String getHeader(User user,String nonce) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			String now = new Date().toString();
@@ -130,20 +130,20 @@ public class Home extends HttpServlet {
 					+ "<TABLE><TR><TD>\n"
 					+ "<div id=pzon><nobr>"
 					+ "<div class=pz1>ChemVantage.org</div>"
-					+ " <div class=pz1><a href=/Home" + (nonce==null?">":"?Nonce="+nonce+" target=_top>") + "Home</a></div>"
+					+ " <div class=pz1><a href=/Home>Home</a></div>"
 					+ " <div class=pz1><a href=/About>About Us</a></div>"
-					+ "<div class=pz1><a href=/Feedback" + (nonce==null?">":"?Nonce="+nonce+" target=_top>") + "Feedback</a></div>");
+					+ "<div class=pz1><a href=/Feedback>Feedback</a></div>");
 
-			buf.append("<div class=pz1><a href=/Contribute" + (nonce==null?">":"?Nonce="+nonce+" target=_top>") + "Authors</a></div>");
-			if (user.isEditor()) buf.append("<div class=pz1><a href=/Edit" + (nonce==null?">":"?Nonce="+nonce+" target=_top>") + "Editors</a></div>");
-			if (user.isInstructor() || user.isTeachingAssistant()) buf.append("<div class=pz1><a href=/Groups" + (nonce==null?">":"?Nonce="+nonce+" target=_top>") + "Instructors</a></div>\n");
-			if (user.isAdministrator()) buf.append("<div class=pz1><a href=/Admin" + (nonce==null?">":"?Nonce="+nonce+" target=_top>") + "Admin</a></div>");
+			buf.append("<div class=pz1><a href=/Contribute>Authors</a></div>");
+			if (user.isEditor()) buf.append("<div class=pz1><a href=/Edit>Editors</a></div>");
+			if (user.isInstructor() || user.isTeachingAssistant()) buf.append("<div class=pz1><a href=/Groups>Instructors</a></div>\n");
+			if (user.isAdministrator()) buf.append("<div class=pz1><a href=/Admin>Admin</a></div>");
 
 			buf.append("</nobr></div>\n");
 
 			buf.append("&nbsp;&nbsp;");
 			
-			buf.append("<a href=/Logout" + (nonce==null?"":"?Nonce="+nonce) + ">Sign out</a>");
+			buf.append("<a href=/Logout>Sign out</a>");
 			
 			buf.append("</nobr></div>");
 
@@ -202,11 +202,7 @@ public class Home extends HttpServlet {
 			buf.append("<div id=selectReminder style='display: none'>"
 					+ "<b><FONT COLOR=RED>Please select a topic:</FONT></b><br></div>");
 			
-			User user = User.getInstance(session);
-			String jwt = CSRFToken.getNewJWT(user.id);
-			
 			buf.append("<FORM NAME='HQSelectForm' ACTION=Quiz METHOD=GET>");
-			buf.append("<INPUT TYPE=HIDDEN NAME=JWT VALUE=" + jwt + ">");
 			buf.append("<SELECT NAME='TopicId'><OPTION Value='0' SELECTED>Select a topic</OPTION>");
 			
 			if (topics == null) topics = ofy().load().type(Topic.class).order("orderBy").list();
@@ -229,7 +225,6 @@ public class Home extends HttpServlet {
 			buf.append("<TABLE><TR><TD>");
 			buf.append("<b>Practice Exams</b>");
 			buf.append("<FORM METHOD=GET ACTION=PracticeExam>");
-			buf.append("<INPUT TYPE=HIDDEN NAME=JWT VALUE=" + jwt + ">");
 			buf.append("<INPUT TYPE=SUBMIT VALUE='Take A Practice Exam Now'>");
 			buf.append("</FORM></TD></TR></TABLE><p>\n");
 

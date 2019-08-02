@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
@@ -40,6 +41,8 @@ public class User {
 	@Id 	String id;
 	@Index	String domain;
 	@Index	Date lastLogin;
+	@Index	String cvsToken;
+			Date cvsTokenExpires;
 			int roles;
 			long myGroupId;
 			String alias;
@@ -459,5 +462,41 @@ public class User {
     	} catch (Exception e) {
     		return null;
     	}
+    }
+    
+    String getCvsToken() {   // ChemVantage session token to track users when HttpSession not persisted and to prevent CSRF attacks
+    	Date now = new Date();
+    	Date exp = new Date(now.getTime() + 5400000L);  // 90 minutes from now
+    	try {
+    		if (cvsToken==null || cvsTokenExpires==null || cvsTokenExpires.before(now)) { // create a new token
+    			cvsToken = Long.toHexString(new Random().nextLong());
+    			cvsTokenExpires = exp;
+    			ofy().save().entity(this);
+    			return cvsToken;
+    		}
+    		
+    		Date old = new Date(now.getTime() + 3600000L);   // 60 minutes from now
+    		if (cvsTokenExpires.after(old)) return cvsToken;  // token is still valid for >60 min
+    		else {  // update the expiration Date
+    			cvsTokenExpires = exp;  
+    			ofy().save().entity(this);
+    		}
+    	} catch (Exception e) {
+    		return null;
+    	}
+    	return cvsToken;
+    }
+    
+    static User getUser(String cvs) {
+    	try {
+    		User u = ofy().load().type(User.class).filter("cvsToken",cvs).first().now();
+    		Date now = new Date();
+    		if (u.cvsTokenExpires.after(now)) {
+    			u.getCvsToken();  // freshens the token, if needed
+    			return u;
+    		}
+    	} catch (Exception e) {
+    	}
+    	return null;
     }
 }

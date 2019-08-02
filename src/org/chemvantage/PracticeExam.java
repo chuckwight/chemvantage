@@ -67,56 +67,46 @@ public class PracticeExam extends HttpServlet {
 	}
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
-	throws ServletException, IOException {
-		HttpSession session = request.getSession();
-		User user = null;
-		String nonce = null;
-		if (session.isNew()) {
-			user = Nonce.getUser(request.getParameter("Nonce"));
-			nonce = Nonce.createInstance(user);
-		}
-		else user = User.getInstance(session);
-		if (user==null) {
-			response.sendRedirect("/Logout");
-			return;
-		}
-			
-		response.setContentType("text/html");
-		PrintWriter out = response.getWriter();
-		
-		out.println(Home.header + printExam(user,request,nonce) + Home.footer);
+			throws ServletException, IOException {
+		try {
+			User user = null;
+			HttpSession session = request.getSession();
+			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
+			else user = User.getInstance(session);
+			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
+
+			response.setContentType("text/html");
+			PrintWriter out = response.getWriter();
+
+			out.println(Home.header + printExam(user,request) + Home.footer);
+		} catch (Exception e) {}
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
-	throws ServletException, IOException {
+			throws ServletException, IOException {
+		try {User user = null;
 		HttpSession session = request.getSession();
-		User user = null;
-		String nonce = null;
-		if (session.isNew()) {
-			user = Nonce.getUser(request.getParameter("Nonce"));
-			nonce = Nonce.createInstance(user);
-		}
+		if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
 		else user = User.getInstance(session);
-		if (user==null) {
-			response.sendRedirect("/Logout");
-			return;
-		}
-			
+		if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
+
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		
-		out.println(Home.header + printScore(user,request,nonce) + Home.footer);
+
+		out.println(Home.header + printScore(user,request) + Home.footer);
+		} catch (Exception e) {}
 	}
 
-	String designExam(User user,HttpServletRequest request,String nonce) {
+	String designExam(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
+		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		try {
 			buf.append("<h2>Practice " + subject.title + " Exam</h2>");
 			buf.append("<div id=topicsForm>");
 
 			buf.append("Please select <b>at least 3 topics</b> below to be covered on this practice exam.<p>");
 			buf.append("<FORM NAME=TopicForm METHOD=GET>");
-			buf.append("<input type=hidden name=Nonce value=" + nonce + ">");
+			if (cvsToken!=null) buf.append("<input type=hidden name=CvsToken value=" + cvsToken + ">");
 			buf.append("\n<TABLE>");
 			List<Topic> topics = ofy().load().type(Topic.class).list();
 			int i = 0;
@@ -142,116 +132,10 @@ public class PracticeExam extends HttpServlet {
 		}
 		return buf.toString();
 	}
-/*
-	String instructorPage(HttpServletRequest request,long assignmentId,String nonce) {
-		// this page is displayed by default when the instructor accesses this assigned exam
-		// to view the exam itself, include ShowPracticeExam=true as one of the GET parameters
+
+	String printExam(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		try {
-			Assignment assignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
-			Group group = ofy().load().type(Group.class).id(assignment.groupId).safe();
-
-			DateFormat dfShort = DateFormat.getDateInstance(DateFormat.SHORT);
-			DateFormat dfLong = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			dfShort.setTimeZone(group.getTimeZone());
-			dfLong.setTimeZone(group.getTimeZone());
-			boolean noDeadline = assignment.getDeadline().getTime()==0L;
-			
-			buf.append("\n<h2>" + subject.title + " Practice Exam</h2>");
-			buf.append("<FONT SIZE=-1>This is the instructor page; students will <a href=/PracticeExam?AssignmentId=" + assignment.id + "&ShowPracticeExam=true&Nonce=" + nonce + ">go directly to the practice exam</a>.</FONT><p>");
-			
-			buf.append("<b>Topics covered:</b><OL>");
-			for (long topicId : assignment.topicIds) buf.append("<LI>" + ofy().load().type(Topic.class).id(topicId).safe().title + "</LI>");
-			buf.append("</OL><p>");
-
-			buf.append("<FORM ACTION='/Groups' METHOD=POST>"
-					+ "<INPUT TYPE=HIDDEN NAME=Nonce VALUE=" + nonce + ">"
-					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=PracticeExam>"
-					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE=" + assignment.id + ">"
-					+ "<INPUT TYPE=HIDDEN NAME=GroupId VALUE=" + group.id + ">"
-					+ "<b>Practice Exam Deadline:</b> " + (noDeadline?"<FONT COLOR=RED>none</FONT>":dfLong.format(assignment.getDeadline()))
-					+ " <a href=# onClick=document.getElementById('deadlineForm').style.display='inLine'><FONT SIZE=-2>change this</FONT></a><p>");
-			buf.append("<div id='deadlineForm' style='display:none'>"
-					+ "Enter a date below and select your local time zone.<br/>"
-					+ "After the deadline ChemVantage will not report scores on this practice exam to the LMS,<br/>"
-					+ "but students may still use the assignment link to practice taking exams.<br/>"
-					+ "<INPUT TYPE=TEXT SIZE=15 NAME=PracticeExamDeadline VALUE='" + (noDeadline?"none":dfShort.format(assignment.getDeadline())) 
-					+ "' onFocus=if(PracticeExamDeadline.value=='none'){PracticeExamDeadline.value='" + dfShort.format(new Date()) + "';document.getElementById('esBox').checked=true}>"
-					+ "at 11:59:59 PM in the " + Groups.timeZoneSelectBox(group.timeZone,false) + " time zone.<br/>"
-					+ "<label><INPUT TYPE=CHECKBOX ID=esBox NAME=EmailScores VALUE=true" + (assignment.emailScoresToInstructor?" CHECKED>":">") + " Email scores to me after the deadline.</lable><br>"
-					+ "<label><INPUT TYPE=CHECKBOX NAME=UpdateLMSScores VALUE=true> Update scores in the LMS grade book.</label><br>"
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Set Deadline'></FORM></div><p>");
-		
-			buf.append("<b>Customize This Exam</b> <a id=slink href=/Groups?UserRequest=AssignExamQuestions&GroupId=" + group.id + "&AssignmentId=" + assignment.id + "&Nonce=" + nonce + "><FONT SIZE=-2>select questions</FONT></a><p>");
-				
-			buf.append("<b>Practice Exam Scores</b> <a href=# onClick=document.getElementById('details').style.display='inLine'><FONT SIZE=-2>show details</FONT></a><br/>"
-					+ "<div id='details' style='display:none'>The following is a list of maximum pre-deadline scores on this exam. In most cases, these scores have been reported to the grade book "
-					+ "in the class learning management system. However, the LMS may have a policy that is different from ChemVantage (e.g., record first score only), so it "
-					+ "is possible that these scores may be different from those in the LMS grade book. The number of exam attempts is shown in parentheses for your reference. "
-					+ "A red dot indicates a score that is low enough to be a concern. If a student completes this assignment satisfactorily after the deadline, the red dot will "
-					+ "disappear, but the score will remain unchanged. If you change the deadline, all scores will be recalculated to reflect the revised deadline. (Try it!)</div><p>");
-			
-			if (group.validatedMemberCount()==0) return buf.toString();
-			Map<String,User> members = ofy().load().type(User.class).ids(group.memberIds);
-			
-			// prepare a complete set of Score keys for this assignment and load all existing keys into the scoresMap
-			Set<Key<Score>> keys = new HashSet<Key<Score>>();
-			for (String id:group.memberIds) keys.add(Key.create(Key.create(User.class,id),Score.class,assignment.id));
-			Map<Key<Score>,Score> scoresMap = ofy().load().keys(keys);
-			int i = 0;
-			Score s = null;
-			
-			buf.append("Instructors and Teaching Assistants<br>"
-					+ "<TABLE BORDER=1 CELLSPACING=0><TR><TD></TD><TD>Name</TD><TD>Email</TD><TD>Score</TD></TR>");
-			for (String id:group.memberIds) {
-				try {
-					User u = members.get(id);
-					if (u.isInstructor() || u.isAdministrator() || group.isTA(u.id)) {
-						Key<Score> k = Key.create(Key.create(User.class,u.id),Score.class,assignment.id);
-						s = scoresMap.get(k);
-						if (s==null) {
-							s = Score.getInstance(u.id,assignment);
-							ofy().save().entity(s).now();
-						}
-						i++;
-						buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getScore() + "</TD></TR>");
-						members.remove(id);
-					}
-				} catch (Exception e2) {}
-			}
-			buf.append("</TABLE><p>");
-
-			// display the table of student scores, filling in where it may be incomplete (this is rare, but possible due to add/drop)
-			i=0;
-			Date now = new Date();
-			buf.append("Students<p>");
-			if (members.size()>0) {
-				buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TD></TD><TD>Name</TD><TD>Email</TD><TD>Score</TD></TR>");
-				for (String id:group.memberIds) {
-					try {
-						User u = members.get(id);
-						if (u.isInstructor() || u.isAdministrator() || group.isTA(u.id)) continue;
-						Key<Score> k = Key.create(Key.create(User.class,u.id),Score.class,assignment.id);
-						s = scoresMap.get(k);
-						if (s==null) {
-							s = Score.getInstance(u.id,assignment);
-							ofy().save().entity(s).now();
-						}
-						i++;
-						buf.append("<TR><TD>" + i + "</TD><TD>" + u.getFullName() + "</TD><TD>" + u.getEmail() + "</TD><TD ALIGN=CENTER>" + s.getDotScore(noDeadline?now:assignment.getDeadline(),group.rescueThresholdScore) + "</TD></TR>");
-					} catch (Exception e2) {}
-				} 
-				buf.append("</TABLE>");
-			} else buf.append("No students are registered in this group.");
-
-		} catch (Exception e) {
-			return buf.toString() + e.getMessage();
-		}
-		return buf.toString();
-	}
-*/	
-	String printExam(User user,HttpServletRequest request,String nonce) {
-		StringBuffer buf = new StringBuffer();
+		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		try {
 			// Get requested topic ids for this exam
 			List<Long> topicIds = new ArrayList<Long>();
@@ -293,7 +177,7 @@ public class PracticeExam extends HttpServlet {
 					}  // if the for-loop expires without finding a corresponding transaction, pt remains null and a new exam is created below
 				}
 			}
-			else if (topicIds.size() < 3) return designExam(user,request,nonce);  // redirect to get a valid set of 3+ topic keys
+			else if (topicIds.size() < 3) return designExam(user,request);  // redirect to get a valid set of 3+ topic keys
 			
 			
 			if (pt == null) {  // this is a valid request for a new exam with at least 3 topicIds; create a new transaction
@@ -331,7 +215,7 @@ public class PracticeExam extends HttpServlet {
 			buf.append("</OL>");
 
 			if (user.isInstructor()) buf.append("<table style='border: 1px solid'><tr><td>"
-					+ "Instructor: you may <a href=/Groups?UserRequest=AssignExamQuestions&AssignmentId=" + a.id + "&Nonce=" + nonce + ">"
+					+ "Instructor: you may <a href=/Groups?UserRequest=AssignExamQuestions&AssignmentId=" + a.id + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">"
 					+ "customize this practice exam</a> by selecting/deselecting the available question items."
 					+ "</td></tr></table><p>");
 			
@@ -350,7 +234,7 @@ public class PracticeExam extends HttpServlet {
 			buf.append("\n<input type=submit value='Grade This Practice Exam'><p>");
 
 			// Include a nonce reference as a hedge in case the session is not maintained by the user's browser
-			buf.append(nonce!=null?"\n<input type=hidden name=Nonce value='" + nonce + "'>":"");
+			buf.append(cvsToken!=null?"\n<input type=hidden name=CvsToken value='" + cvsToken + "'>":"");
 			if (a!=null) buf.append("\n<input type=hidden name=AssignmentId value='" + a.id + "'>");
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
 			int[] possibleScores = new int[topicIds.size()];
@@ -475,7 +359,7 @@ public class PracticeExam extends HttpServlet {
 				+ "</SCRIPT>"; 
 	}
 	
-	String printScore(User user,HttpServletRequest request,String nonce) {
+	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			buf.append("<h2>Practice Exam Results</h2>");

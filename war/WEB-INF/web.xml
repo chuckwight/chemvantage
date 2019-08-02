@@ -237,7 +237,7 @@
       <transport-guarantee>CONFIDENTIAL</transport-guarantee>
     </user-data-constraint>
   </security-constraint>
-<!--  
+  
   <filter>
     <filter-name>ObjectifyFilter</filter-name>
     <filter-class>com.googlecode.objectify.ObjectifyFilter</filter-class>
@@ -245,8 +245,7 @@
   <filter-mapping>
     <filter-name>ObjectifyFilter</filter-name>
     <url-pattern>/*</url-pattern>
-  </filter-mapping>
- --> 
+  </filter-mapping> 
   
   <listener>
     <listener-class>
