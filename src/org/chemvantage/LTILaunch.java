@@ -206,7 +206,7 @@ public class LTILaunch extends HttpServlet {
 			if (user==null) user = User.createBLTIUser(request); // first-ever login for this user
 			
 			// The user should now be established, even if they are anonymous; set the CSRFToken
-			user.getCvsToken();  // this sets a CvsToken to track the user across sessions and prevent CSRF attacks
+			//user.getCvsToken();  // this sets a CvsToken to track the user across sessions and prevent CSRF attacks
 			
 			// ensure the proper authDomain value
 			if (user.authDomain == null || !user.authDomain.equals("BLTI")) {

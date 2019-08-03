@@ -53,8 +53,9 @@ public class Homework extends HttpServlet {
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
+		
+		User user = null;
 		try {
-			User user = null;
 			HttpSession session = request.getSession();
 			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
 			else user = User.getInstance(session);
@@ -69,13 +70,17 @@ public class Homework extends HttpServlet {
 			if ("ShowScores".contentEquals(userRequest)) out.println(Home.header + showScores(user,request) + Home.footer);
 			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header + showSummary(user,request) + Home.footer);
 			else out.println(Home.header + printHomework(user,request) + Home.footer);
-		} catch (Exception e) {}
+		} catch (Exception e) {
+			String cvsToken = request.getParameter("CvsToken");
+			response.sendRedirect("/Logout" + (cvsToken==null?"":"?CvsToken=" + cvsToken));
+		}
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
+		
+		User user = null;
 		try {
-			User user = null;
 			HttpSession session = request.getSession();
 			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
 			else user = User.getInstance(session);
@@ -85,7 +90,9 @@ public class Homework extends HttpServlet {
 			PrintWriter out = response.getWriter();
 
 			out.println(Home.header + printScore(user,request) + Home.footer);
-		} catch (Exception e) {}
+		} catch (Exception e) {
+			response.sendRedirect("/Logout?CvsToken=" + user.getCvsToken());
+		}
 	}
 
 	String printHomework(User user,HttpServletRequest request) {
@@ -412,7 +419,8 @@ public class Homework extends HttpServlet {
 					+ (assignmentId>0?"AssignmentId=" + assignmentId : "TopicId=" + ht.topicId)
 					+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
 					+ (cvsToken==null?"":"&CvsToken=" + cvsToken)  
-					+ (offerHint?"&Q=" + q.id + "><span style='color:red'>Please give me a hint</span>":">Return to this homework assignment") + "</a>");
+					+ (offerHint?"&Q=" + q.id + "><span style='color:red'>Please give me a hint</span>":">Return to this homework assignment") + "</a> or "
+					+ "<a href=/Logout" + (cvsToken==null?"":"?CvsToken=" + cvsToken) + ">logout of ChemVantage</a> ");
 			
 			if (user.isAnonymous()) buf.append(" or go back to the <a href=/>ChemVantage home page</a>.");
 			}

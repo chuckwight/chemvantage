@@ -54,7 +54,7 @@ public class Home extends HttpServlet {
 		// make every user anonymous
 		HttpSession session = request.getSession();
 		String userId = (String) session.getAttribute("UserId");
-		if (userId==null) {
+		if (userId==null || !User.isAnonymous(session)) {
 			userId = "anonymous" + new Random().nextInt();
 			session.setAttribute("UserId", userId);
 		}
@@ -164,29 +164,12 @@ public class Home extends HttpServlet {
 			buf.append("</b></FONT><br><div align=right>An OpenEducation Resource</div></TD></TR></TABLE>");      
 			buf.append("</TD></TR><TR><TD VALIGN=TOP>");
 
-			HttpSession session = request.getSession();
-			if (request.getRequestURL().toString().contains("dev-vantage")) buf.append("<p><h3><font color=red>Warning</font></h3>"
-					+ "This is a development server used for code testing. Please do not<br>"
-					+ "use this server for serious educational purposes.<p><hr>");
-			else if (User.isAnonymous(session)) buf.append("<p><h3><font color=red>Anonymous User</font></h3>");
-			else if (User.isChemVantageAdministrator(session)) buf.append("<p><h3>ChemVantage Administrator</h3>");
-			else {
-				session.invalidate();
-				buf.append("<h3>LTI User</h3>"
-						+ "It appears that you are using ChemVantage as part of a class. In order to get credit for assignments "
-						+ "completed in ChemVantage, you must access them by clicking the appropriate assignment link in your "
-						+ "class learning management system (LMS). If you continue to the ChemVantage home page, you will be "
-						+ "logged in as an anonymous user. It is not possible to send these scores to your LMS.<p>"
-						+ "<a href=/>Continue as an anonymous user (no credit)</a>.");
-				return buf.toString();
-			}
-			
-// test section only
-//			buf.append(request.getHeader("referer") + "<br>"
-//					+ request.getRequestURI() + "<br>"
-//					+ request.getRequestURL().toString() + "<p>");
-// end of test section			
-			
+			if (request.getRequestURL().toString().contains("dev-vantage")) 
+				buf.append("This is a development server used for code testing. Please do not<br>"
+						+ "use this server for serious educational purposes.<p><hr>");
+
+			buf.append("<p><h3><font color=red>Anonymous User</font></h3>");
+
 			buf.append("Select a topic from the dropdown box below and then take a quiz<br>"
 					+ "or solve some homework problems on that topic. You can also test<br>"
 					+ "yourself by taking a 1 hour practice exam on any three (or more) topics.<p>"

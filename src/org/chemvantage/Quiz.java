@@ -430,7 +430,7 @@ public class Quiz extends HttpServlet {
 					+ (qa==null?"TopicId=" + qt.topicId : "AssignmentId=" + qa.id)
 					+ (cvsToken==null?"":"&CvsToken=" + cvsToken)
 					+ (qt.lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + qt.lis_result_sourcedid)
-					+ ">Take this quiz again</a>&nbsp;");
+					+ ">Take this quiz again</a>&nbsp;or&nbsp;<a href=/Logout?CvsToken=" + cvsToken + ">logout of ChemVantage</a>");
 			if (user.isAnonymous()) buf.append(" or go back to the <a href=/>ChemVantage home page</a>.");
 					
 		} catch (Exception e) {

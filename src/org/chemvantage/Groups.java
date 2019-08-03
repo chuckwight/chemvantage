@@ -227,10 +227,16 @@ public class Groups extends HttpServlet {
 					+ "for a total of 100 points. Each exam must be completed within 60 minutes to be scored.<p>"
 					+ "Select the items to be included in exams assigned to your class.<p>");
 			
-			List <Key<Question>> questionKeys_02pt = ofy().load().type(Question.class).filter("assignmentType","Exam").filter("pointValue",2).filter("topicId in",assignment.topicIds).keys().list();
-			List <Key<Question>> questionKeys_10pt = ofy().load().type(Question.class).filter("assignmentType","Exam").filter("pointValue",10).filter("topicId in",assignment.topicIds).keys().list();
-			List <Key<Question>> questionKeys_15pt = ofy().load().type(Question.class).filter("assignmentType","Exam").filter("pointValue",15).filter("topicId in",assignment.topicIds).keys().list();
-				
+			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
+			List<Key<Question>> questionKeys_10pt = new ArrayList<Key<Question>>();
+			List<Key<Question>> questionKeys_15pt = new ArrayList<Key<Question>>();
+			
+			for (long tid : assignment.topicIds) {  // Sort and collect the question keys
+				questionKeys_02pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("pointValue",2).filter("topicId",tid).keys().list());
+				questionKeys_10pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("pointValue",10).filter("topicId",tid).keys().list());
+				questionKeys_15pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("pointValue",15).filter("topicId",tid).keys().list());
+			}
+			
 			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
 					+ "onClick=\"for (var i=0;i<document.Questions.QuestionId.length;i++)"
 					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}\""

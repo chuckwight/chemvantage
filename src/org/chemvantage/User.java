@@ -487,7 +487,14 @@ public class User {
     	return cvsToken;
     }
     
+    boolean destroyCvsToken() { // returns true if save() operation succeeds
+    	cvsToken = null;
+    	cvsTokenExpires = null;
+    	return Key.create(this).equals(ofy().save().entity(this).now());
+   }
+    
     static User getUser(String cvs) {
+    	if (cvs==null) return null;
     	try {
     		User u = ofy().load().type(User.class).filter("cvsToken",cvs).first().now();
     		Date now = new Date();

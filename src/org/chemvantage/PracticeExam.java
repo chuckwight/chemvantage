@@ -84,16 +84,17 @@ public class PracticeExam extends HttpServlet {
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
-		try {User user = null;
-		HttpSession session = request.getSession();
-		if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
-		else user = User.getInstance(session);
-		if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
+		try {
+			User user = null;
+			HttpSession session = request.getSession();
+			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
+			else user = User.getInstance(session);
+			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
 
-		response.setContentType("text/html");
-		PrintWriter out = response.getWriter();
+			response.setContentType("text/html");
+			PrintWriter out = response.getWriter();
 
-		out.println(Home.header + printScore(user,request) + Home.footer);
+			out.println(Home.header + printScore(user,request) + Home.footer);
 		} catch (Exception e) {}
 	}
 
@@ -185,11 +186,17 @@ public class PracticeExam extends HttpServlet {
 				ofy().save().entity(pt).now();	
 			}
 			
-			// past this point we will present a practice exam to the student
+			// past this point we will present a practice exam to the student. 
 			
-			List <Key<Question>> questionKeys_02pt = ofy().load().type(Question.class).filter("assignmentType","Exam").filter("pointValue",2).filter("topicId in",topicIds).keys().list();
-			List <Key<Question>> questionKeys_10pt = ofy().load().type(Question.class).filter("assignmentType","Exam").filter("pointValue",10).filter("topicId in",topicIds).keys().list();
-			List <Key<Question>> questionKeys_15pt = ofy().load().type(Question.class).filter("assignmentType","Exam").filter("pointValue",15).filter("topicId in",topicIds).keys().list();
+			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
+			List<Key<Question>> questionKeys_10pt = new ArrayList<Key<Question>>();
+			List<Key<Question>> questionKeys_15pt = new ArrayList<Key<Question>>();
+			
+			for (long tid : topicIds) {  //First collect the question keys
+				questionKeys_02pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("pointValue",2).filter("topicId",tid).keys().list());
+				questionKeys_10pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("pointValue",10).filter("topicId",tid).keys().list());
+				questionKeys_15pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("pointValue",15).filter("topicId",tid).keys().list());
+			}
 			
 			List<Key<Question>> remove = new ArrayList<Key<Question>>();
 			if (a != null) {  // eliminate any questionKeys not listed in the assignment
