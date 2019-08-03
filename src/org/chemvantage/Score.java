@@ -65,22 +65,22 @@ public class Score {    // this object represents a best score achieved by a use
 				if (s.mostRecentAttempt==null || qt.downloaded.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far
 					s.mostRecentAttempt = qt.downloaded;
 					s.maxPossibleScore = qt.possibleScore;
-					if (qt.lis_result_sourcedid != null && !qt.lis_result_sourcedid.contentEquals(s.lis_result_sourcedid)) s.lis_result_sourcedid = qt.lis_result_sourcedid;
-				}				
+				}
+				if (qt.lis_result_sourcedid != null && !qt.lis_result_sourcedid.contentEquals(s.lis_result_sourcedid)) s.lis_result_sourcedid = qt.lis_result_sourcedid;				
 			}
 		} else if (a.assignmentType.equals("Homework")) {
 			List<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",userId).filter("assignmentId",a.id).list();
 			List<Key<Question>> assignmentQuestionKeys = new ArrayList<Key<Question>>();
 			assignmentQuestionKeys.addAll(a.questionKeys);  // clones the assignment List of question keys
+			s.maxPossibleScore = a.questionKeys.size();
 			for (HWTransaction ht : hwTransactions) {				
 				s.numberOfAttempts++;
 				if (ht.score > 0 && assignmentQuestionKeys.remove(Key.create(Question.class,ht.questionId))) s.score++; 
 				if (s.lis_result_sourcedid == null || s.lis_result_sourcedid.isEmpty()) s.lis_result_sourcedid = ht.lis_result_sourcedid;  // record any available sourcedid value for reporting score to the LMS				
 				if (s.mostRecentAttempt == null || ht.graded.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far
 					s.mostRecentAttempt = ht.graded;
-					s.maxPossibleScore = a.questionKeys.size();
-					if (ht.lis_result_sourcedid != null && !ht.lis_result_sourcedid.contentEquals(s.lis_result_sourcedid)) s.lis_result_sourcedid = ht.lis_result_sourcedid;
-				}					
+				}
+				if (ht.lis_result_sourcedid != null && !ht.lis_result_sourcedid.contentEquals(s.lis_result_sourcedid)) s.lis_result_sourcedid = ht.lis_result_sourcedid;					
 			}
 		} else if (a.assignmentType.equals("PracticeExam")) {
 			List<PracticeExamTransaction> practiceExamTransactions = ofy().load().type(PracticeExamTransaction.class).filter("userId",userId).list();

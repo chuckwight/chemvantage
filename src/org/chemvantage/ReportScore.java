@@ -88,7 +88,7 @@ public class ReportScore extends HttpServlet {
 			String oauth_consumer_key = g.domain;
 			
 			String messageFormat = g.getLisOutcomeFormat();			
-			String body = (messageFormat.contains("json")?jsonReplaceResult(Double.toString(score)):LTIMessage.xmlReplaceResult(s.lis_result_sourcedid,Double.toString(score)));
+			String body = LTIMessage.xmlReplaceResult(s.lis_result_sourcedid,String.valueOf(score));
 			String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
 			
 			if (replyBody.toLowerCase().contains("success")) {

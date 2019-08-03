@@ -22,6 +22,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.MessageDigest;
 import java.util.Base64;
 import java.util.Date;
 import java.util.UUID;
@@ -68,8 +69,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     }
     
     protected String send() throws Exception {	
-    	// construct a hash of the message text to include as a custom parameter
-    	String body_hash = Base64.getEncoder().encodeToString(messageText.getBytes());
+    	// construct an oauth_body_hash of the message text to include as a custom parameter in the Authorization header
+    	String body_hash = Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-1").digest(messageText.getBytes()));
     	
     	final String nonce = UUID.randomUUID().toString();
     	final String timestamp = Long.toString(new Date().getTime()/1000);  // current time in seconds

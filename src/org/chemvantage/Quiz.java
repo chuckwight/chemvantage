@@ -202,14 +202,6 @@ public class Quiz extends HttpServlet {
 			qt.possibleScore = possibleScore;
 			ofy().save().entity(qt);
 			
-/*
-			// update and store the QuizTransaction for this quiz
-			QueueFactory.getDefaultQueue().add(withUrl("/TransactionServlet")
-					.param("AssignmentType","Quiz")
-					.param("TransactionId", Long.toString(qt.id))
-					.param("Action", "Download")
-					.param("PossibleScore", Integer.toString(possibleScore)));
-*/
 			buf.append("\n<input type=hidden name='QuizTransactionId' value=" + qt.id + ">");
 			buf.append("\n<input type=hidden name='TopicId' value=" + topic.id + ">");
 			buf.append("<div id='timer1' style='color: red'></div><div id=ctrl1 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
@@ -358,7 +350,7 @@ public class Quiz extends HttpServlet {
 				qa = ofy().load().type(Assignment.class).id(assignmentId).safe();
 				Score s = Score.getInstance(user.id,qa);
 				ofy().save().entity(s).now();
-				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",qa.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
+				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(qa.id)).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
 			} catch (Exception e) {}
 
 			buf.append("<h4>Your score on this quiz is " + studentScore 

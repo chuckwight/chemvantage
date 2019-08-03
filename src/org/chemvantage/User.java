@@ -464,22 +464,33 @@ public class User {
     	}
     }
     
+    boolean setCvsToken(Date exp) {
+    	// this sets a temporary CvsToken user credential
+    	if (exp==null) return false;
+    	try {
+    		cvsToken = Long.toHexString(new Random().nextLong());
+    		cvsTokenExpires = exp;
+    		ofy().save().entity(this).now();
+    		return true;
+    	} catch (Exception e) {
+    		return false;
+    	}
+    }
+    
     String getCvsToken() {   // ChemVantage session token to track users when HttpSession not persisted and to prevent CSRF attacks
     	Date now = new Date();
     	Date exp = new Date(now.getTime() + 5400000L);  // 90 minutes from now
     	try {
     		if (cvsToken==null || cvsTokenExpires==null || cvsTokenExpires.before(now)) { // create a new token
-    			cvsToken = Long.toHexString(new Random().nextLong());
-    			cvsTokenExpires = exp;
-    			ofy().save().entity(this);
-    			return cvsToken;
-    		}
-    		
-    		Date old = new Date(now.getTime() + 3600000L);   // 60 minutes from now
-    		if (cvsTokenExpires.after(old)) return cvsToken;  // token is still valid for >60 min
-    		else {  // update the expiration Date
-    			cvsTokenExpires = exp;  
-    			ofy().save().entity(this);
+    			if (setCvsToken(exp)) return cvsToken;
+    			else return null;
+    		} else {  // token is valid; return as is or update the exp time:
+    			long millisRemaining = cvsTokenExpires.getTime() - now.getTime();
+    			if (millisRemaining>3600000L) return cvsToken;  // token is still valid for >60 min
+    			else {  // update the expiration Date
+    				cvsTokenExpires = exp;  
+    				ofy().save().entity(this);
+    			}
     		}
     	} catch (Exception e) {
     		return null;
