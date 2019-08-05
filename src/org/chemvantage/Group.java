@@ -28,33 +28,21 @@ import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
-import com.googlecode.objectify.cmd.Query;
 
 @Entity
 public class Group implements Serializable {
 	private static final long serialVersionUID = 137L;
-	@Id Long id;
+	@Id 	Long id;
 	@Index 	String instructorId;
 	@Index 	String domain;
-			String context_id;
+	@Index	String context_id;
 			String description;	
-			//String timeZone;
 			Date created;
-			Date nextDeadline;
-			boolean sendRescueMessages;
-			int rescueThresholdScore = 50;
-			String defaultRescueSubject;
-			String defaultRescueMessage;
 			String lis_outcome_service_url;
 			String lis_outcome_service_format;
 			boolean isUsingLisOutcomeService;
-			List<String> rescueCcIds = new ArrayList<String>();
 			List<String> memberIds = new ArrayList<String>();
-			List<String> tAIds = new ArrayList<String>();
-			List<Long> topicIds = new ArrayList<Long>();
-			List<Long> quizAssignmentIds = new ArrayList<Long>();
-			List<Long> hwAssignmentIds = new ArrayList<Long>();
-
+			
     Group() {}
     
     Group(String instructorId, String description) {
@@ -75,58 +63,7 @@ public class Group implements Serializable {
     public boolean isMember(String id) {
     	return memberIds.contains(id);
     }
-    
-    public boolean isTA(String id) {
-    	return tAIds.contains(id);
-    }
-    
-    boolean addTA(String userId) {
-    	if (!this.tAIds.contains(userId)) {
-    		tAIds.add(userId);
-    		return true;      // signals an addition to the list so Group entity should be saved
-    	} else return false;  // the TA was already assigned, so no need to save Group entity
-    }
-    
-    void removeTA(String userId) {
-    	this.tAIds.remove(userId);
-    }
-    
-    public Long getAssignmentId(String assignmentType,long topicId) {
-    	if (topicIds.indexOf(topicId)<0) return 0L;
-    	if (assignmentType.equals("Quiz")) return this.quizAssignmentIds.get(topicIds.indexOf(topicId));
-    	if (assignmentType.equals("Homework")) return this.hwAssignmentIds.get(topicIds.indexOf(topicId));
-    	return 0L;
-    }
-    
-    public List<Long> getGroupTopicIds() {
-    	if (this.topicIds.isEmpty()) setGroupTopicIds();
-    	return this.topicIds;
-    }
-
-    public boolean setGroupTopicIds() {  // this routine only applies to Quiz and Homework assignments
-    	this.topicIds.clear();
-    	this.quizAssignmentIds.clear();
-    	this.hwAssignmentIds.clear();
-    	Query<Assignment> assignments = ofy().load().type(Assignment.class).filter("groupId",this.id).order("deadline");
-    	for (Assignment a : assignments) {
-    		if (!(a.assignmentType.equals("Quiz") || a.assignmentType.equals("Homework"))) continue;
-    		if (a.topicId==0L || ofy().load().type(Topic.class).id(a.topicId)==null) {
-    			ofy().delete().entity(a);
-    			continue;
-    		}
-    		if (!this.topicIds.contains(a.topicId)) {  // new entry for this topic
-    			this.topicIds.add(a.topicId);
-    			this.quizAssignmentIds.add(a.assignmentType.equals("Quiz")?a.id:0L);
-    			this.hwAssignmentIds.add(a.assignmentType.equals("Homework")?a.id:0L);    			
-    		} else { // second assignment for this topic
-    			int i = topicIds.indexOf(a.topicId);
-    			if (a.assignmentType.equals("Quiz")) quizAssignmentIds.set(i,a.id);
-    			if (a.assignmentType.equals("Homework")) hwAssignmentIds.set(i,a.id);
-    		}
-    	}
-    	return topicIds.isEmpty()?false:true;
-    }
-
+        
     boolean reviseScores(Assignment assignment) {
     	boolean changed = false;
     	for (String uId : this.memberIds) {
@@ -144,30 +81,12 @@ public class Group implements Serializable {
     	return changed;
     }
 
-    void deleteScores() {
-    	Iterable<Key<Score>> scoreKeys = ofy().load().type(Score.class).filter("groupId",this.id).keys();
-    	ofy().delete().entities(scoreKeys);
-    }
-
     void setUsingLisOutcomeService(String url) {
     	if (url==null) return;  // no useful information
     	if (this.isUsingLisOutcomeService && url.equals(this.lis_outcome_service_url)) return;  // no changes needed
     	this.isUsingLisOutcomeService = true;
     	this.lis_outcome_service_url = url;
     	ofy().save().entity(this);
-    }
-    
-    void deleteAssignments() {
-    	List<Key<Assignment>> assignmentKeys = new ArrayList<Key<Assignment>>();
-    	for (Long i : quizAssignmentIds) assignmentKeys.add(Key.create(Assignment.class,i));
-    	for (Long i : hwAssignmentIds) assignmentKeys.add(Key.create(Assignment.class,i));
-    	ofy().delete().keys(assignmentKeys);
-    }
-    
-    void delete() {
-    	this.deleteAssignments();
-    	this.deleteScores();
-    	ofy().delete().entity(this);
     }
     
     boolean getUsingLisOutcomeService() { 

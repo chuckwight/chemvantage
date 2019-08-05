@@ -90,22 +90,24 @@ public class EraseEntity extends HttpServlet {
 		}
 		return false;
 	}
-
+	
 	boolean deleteGroup(String id) {
-		try {
-			long groupId = Long.parseLong(id);
-			return deleteGroup(groupId);
+		try{
+			Key<Group> k = Key.create(Group.class,Long.parseLong(id));
+			return deleteGroup(k);
 		} catch (Exception e) {
-			return false;
 		}
+		return false;
 	}
 	
-	boolean deleteGroup(long id) {
+	boolean deleteGroup(Key<Group> k) {
 		try {
-			Group group = ofy().load().type(Group.class).id(id).safe();
-			List<Key<Assignment>> akeys = ofy().load().type(Assignment.class).filter("groupId",group.id).keys().list();
-			ofy().delete().keys(akeys);
-			for (String userId : group.memberIds) deleteUser(userId);
+			Group group = ofy().load().key(k).safe();
+		 	List<Key<Score>> scoreKeys = ofy().load().type(Score.class).filter("groupId",group.id).keys().list();
+		 	ofy().delete().keys(scoreKeys);
+		 	List<Key<Assignment>> assignmentKeys = ofy().load().type(Assignment.class).filter("groupId",group.id).keys().list();
+	    	ofy().delete().keys(assignmentKeys);	   
+			for (String uid : group.memberIds) deleteUser(uid);
 			ofy().delete().entity(group);
 			return true;
 		} catch(Exception e) {			
@@ -118,11 +120,10 @@ public class EraseEntity extends HttpServlet {
 			Domain domain = ofy().load().type(Domain.class).filter("domainName",id).first().safe();
 			BLTIConsumer cons = ofy().load().type(BLTIConsumer.class).id(domain.domainName).safe();
 			List<Key<Group>> keys = ofy().load().type(Group.class).filter("domain",domain.id).keys().list();
-			for (Key<Group> k : keys) deleteGroup(k.getId());
+			for (Key<Group> k : keys) deleteGroup(k);
 			ofy().delete().entity(domain);
 			ofy().delete().entity(cons);
-		} catch(Exception e) {
-			
+		} catch(Exception e) {		
 		}
 		return false;
 	}

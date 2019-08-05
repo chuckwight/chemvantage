@@ -229,7 +229,7 @@ public class LTILaunch extends HttpServlet {
 			
 			if (lisOutcomeServiceURL!=null && !lisOutcomeServiceURL.equals(domain.resultServiceEndpoint)) {
 				domain.resultServiceEndpoint = lisOutcomeServiceURL;
-				if (domain.resultServiceFormat==null || domain.resultServiceFormat.isEmpty()) domain.resultServiceFormat = "application/xml";
+				domain.resultServiceFormat = "application/xml";
 				domain.supportsResultService = true;
 				ofy().save().entity(domain).now();
 			} 
@@ -277,9 +277,6 @@ public class LTILaunch extends HttpServlet {
 				ofy().save().entity(myGroup).now();
 			}	
 			user.changeGroups(myGroup.id);
-			
-			// Add user to the approved TA list, if necessary
-			if ( roles!=null && roles.contains("teachingassistant") && myGroup.addTA(userId)) ofy().save().entity(myGroup);
 			
 			// update the LIS result outcome service URL, if necessary
 			if (domain.supportsResultService && domain.resultServiceEndpoint!=null && !domain.resultServiceEndpoint.equals(myGroup.lis_outcome_service_url)) {  // update the URL and format as Group properties
