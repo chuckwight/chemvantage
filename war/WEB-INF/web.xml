@@ -19,16 +19,6 @@
     <servlet-name>Admin</servlet-name>
     <url-pattern>/Admin</url-pattern>
   </servlet-mapping>
-  <!--  
-  <servlet>
-    <servlet-name>CalculateScores</servlet-name>
-    <servlet-class>org.chemvantage.CalculateScores</servlet-class>
-  </servlet>
-  <servlet-mapping>
-    <servlet-name>CalculateScores</servlet-name>
-    <url-pattern>/CalculateScores</url-pattern>
-  </servlet-mapping>
-  -->
   <servlet>
     <servlet-name>Contribute</servlet-name>
     <servlet-class>org.chemvantage.Contribute</servlet-class>
@@ -188,24 +178,6 @@
     <servlet-name>SendObjects</servlet-name>
     <url-pattern>/SendObjects</url-pattern>
   </servlet-mapping>
-  <!--  
-  <servlet>
-    <servlet-name>ToolSettingsManager</servlet-name>
-    <servlet-class>org.chemvantage.ToolSettingsManager</servlet-class>
-  </servlet>
-  <servlet-mapping>
-    <servlet-name>ToolSettingsManager</servlet-name>
-    <url-pattern>/ToolSettingsManager</url-pattern>
-  </servlet-mapping>
-  <servlet>
-    <servlet-name>TransactionServlet</servlet-name>
-    <servlet-class>org.chemvantage.TransactionServlet</servlet-class>
-  </servlet>
-  <servlet-mapping>
-    <servlet-name>TransactionServlet</servlet-name>
-    <url-pattern>/TransactionServlet</url-pattern>
-  </servlet-mapping>
-  -->
   <servlet>
     <servlet-name>UserServiceLaunch</servlet-name>
     <servlet-class>org.chemvantage.UserServiceLaunch</servlet-class>
