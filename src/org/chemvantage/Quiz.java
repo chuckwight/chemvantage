@@ -553,9 +553,9 @@ public class Quiz extends HttpServlet {
 										+ "If you think this may be due to a stale score, you may submit this assignment for grading,<br>"
 										+ "even for a score of zero, and ChemVantage will try to refresh your best score to the LMS.<p>");
 							}
-						} else throw new Exception("We attempted to validate the score contained in your class LMS grade book,<br>but the operation failed, most likely because your LMS did not contain a valid score for this assignment.<p>");
+						} else throw new Exception("We attempted to validate the score contained in your class LMS grade book, but the operation failed.<p>");
 					} catch (Exception e) {
-						buf.append(e.toString() + "<p>");
+						buf.append("We attempted to validate the score contained in your class LMS grade book, but it did not contain a valid score for this assignment.<p>");
 					}
 				}
 
