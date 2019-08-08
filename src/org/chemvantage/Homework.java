@@ -571,7 +571,7 @@ public class Homework extends HttpServlet {
     		
     		buf.append("Your overall score on this assignment is " + 10.*Math.round(s.getPctScore())/10. + "%.<br>");
 
-    		if (s.lis_result_sourcedid != null) {  // try to validate the score with the LMS grade book entry
+    		if (s.numberOfAttempts>0 && s.lis_result_sourcedid != null) {  // try to validate the score with the LMS grade book entry
 				try {
 					Group g = ofy().load().type(Group.class).id(user.myGroupId).safe();
 					String messageFormat = g.getLisOutcomeFormat();
