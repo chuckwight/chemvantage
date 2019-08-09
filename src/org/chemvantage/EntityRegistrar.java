@@ -29,10 +29,7 @@ public class EntityRegistrar implements ServletContextListener {
         ObjectifyService.register(User.class);
         ObjectifyService.register(UserReport.class);
         ObjectifyService.register(Video.class);
-        
-        ObjectifyService.begin();
-        
-    }
+	}
 
     public void contextDestroyed(ServletContextEvent servletContextEvent) {
         System.out.println("Shutting down!");
