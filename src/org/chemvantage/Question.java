@@ -28,6 +28,7 @@ import com.bestcode.mathparser.IMathParser;
 import com.bestcode.mathparser.MathParserFactory;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Ignore;
 import com.googlecode.objectify.annotation.Index;
 
 @Entity
@@ -53,7 +54,7 @@ public class Question implements Serializable {
 			String editorId;
 			String notes;
 			// Note: the parameters array formerly had the attribute @Transient javax.persistence.Transient
-			int[] parameters = {0,0,0,0};
+	@Ignore		int[] parameters = {0,0,0,0};
 	@Index		boolean isActive = false;
 	
 	public static final int MULTIPLE_CHOICE = 1;

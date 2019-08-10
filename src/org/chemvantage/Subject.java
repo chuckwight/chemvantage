@@ -24,13 +24,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.ObjectifyService;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.cmd.Query;
 
 @Entity
 public class Subject {
+	static Subject subject;
 	@Id Long id;
 	String title;
 	String HMAC256Secret;
@@ -41,8 +41,11 @@ public class Subject {
 	
 	static public Subject getSubject() {
 		try {
-			ObjectifyService.begin();
-			return ofy().load().type(Subject.class).first().safe();	
+			if (subject == null) {
+				subject = ofy().load().type(Subject.class).first().safe();
+				return subject;
+			}
+			else return subject;
 		} catch (Exception e) { // this should be run only once at setup
 			Subject s = new Subject();
 			s.id = 1L;
