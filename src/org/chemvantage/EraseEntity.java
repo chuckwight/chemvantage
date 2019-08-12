@@ -4,6 +4,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.servlet.ServletException;
@@ -13,9 +14,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.googlecode.objectify.Key;
 
-/**
- * Servlet implementation class EraseEntity
- */
 public class EraseEntity extends HttpServlet {
 	private static final long serialVersionUID = 1L;
        
@@ -34,15 +32,14 @@ public class EraseEntity extends HttpServlet {
 			String id = request.getParameter("Id");
 			assert(entityType!=null && !entityType.isEmpty());
 			assert(id!=null && !id.isEmpty());
-			boolean success = false;
 			
 			switch(entityType) {
-				case("User"): success = deleteUser(id); break;
-				case("Group"): success = deleteGroup(id); break;
-				case("Domain"): success = deleteDomain(id); break;
+				case("User"): deleteUser(id); break;
+				case("Group"): deleteGroup(id); break;
+				case("Domain"): deleteDomain(id); break;
 				default: throw new Exception();
 			}
-			out.println(success?"The entity was successfully deleted from the database.":"Operation failed, most likely because the entity was not found.");
+			out.println("Done.");
 		} catch (Exception e) {
 			out.println("You must select an entity type and provide an id.");
 		}
@@ -72,59 +69,63 @@ public class EraseEntity extends HttpServlet {
 		return buf.toString();
 	}
 	
-	boolean deleteUser(String id) {
+	void deleteUser(String id) {
 		try {
 			User user = ofy().load().type(User.class).id(id).safe();
+			
 			user.changeGroups(0);
+			
 			List<Key<QuizTransaction>> qkeys = ofy().load().type(QuizTransaction.class).filter("userId",user.id).keys().list();
-			ofy().delete().keys(qkeys);
+			if (!qkeys.isEmpty()) ofy().delete().keys(qkeys).now();
+			
 			List<Key<HWTransaction>> hkeys = ofy().load().type(HWTransaction.class).filter("userId",user.id).keys().list();
-			ofy().delete().keys(hkeys);
+			if (!hkeys.isEmpty()) ofy().delete().keys(hkeys).now();
+			
 			List<Key<PracticeExamTransaction>> pkeys = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.id).keys().list();
-			ofy().delete().keys(pkeys);
+			if (!pkeys.isEmpty()) ofy().delete().keys(pkeys).now();
+			
 			List<Key<Score>> skeys = ofy().load().type(Score.class).ancestor(user).keys().list();
-			ofy().delete().keys(skeys);
-			ofy().delete().entity(user);
-			return true;
+			if (!skeys.isEmpty()) ofy().delete().keys(skeys).now();
+			
+			ofy().delete().entity(user).now();
 		} catch(Exception e) {			
 		}
-		return false;
+	}
+		
+	void deleteGroup(String id) {
+		deleteGroup(Long.parseLong(id));
 	}
 	
-	boolean deleteGroup(String id) {
-		try{
-			Key<Group> k = Key.create(Group.class,Long.parseLong(id));
-			return deleteGroup(k);
-		} catch (Exception e) {
-		}
-		return false;
-	}
-	
-	boolean deleteGroup(Key<Group> k) {
+	void deleteGroup(long id) {
 		try {
-			Group group = ofy().load().key(k).safe();
-		 	List<Key<Score>> scoreKeys = ofy().load().type(Score.class).filter("groupId",group.id).keys().list();
-		 	ofy().delete().keys(scoreKeys);
+			Group group = ofy().load().key(Key.create(Group.class,id)).safe();
+		 	
+			List<Key<Score>> scoreKeys = ofy().load().type(Score.class).filter("groupId",group.id).keys().list();
+		 	if (!scoreKeys.isEmpty()) ofy().delete().keys(scoreKeys).now();
+		 	
 		 	List<Key<Assignment>> assignmentKeys = ofy().load().type(Assignment.class).filter("groupId",group.id).keys().list();
-	    	ofy().delete().keys(assignmentKeys);	   
-			for (String uid : group.memberIds) deleteUser(uid);
-			ofy().delete().entity(group);
-			return true;
+	    	if (!assignmentKeys.isEmpty()) ofy().delete().keys(assignmentKeys).now();	   
+			
+	    	List<Key<User>> userKeys = new ArrayList<Key<User>>();
+			for (String uId : group.memberIds) userKeys.add(Key.create(User.class,uId));
+			if (!userKeys.isEmpty()) ofy().delete().keys(userKeys).now();
+			
+			for (Key<User> k : userKeys) deleteUser(k.getName());
+			
+			ofy().delete().entity(group).now();
 		} catch(Exception e) {			
 		}
-		return false;
 	}
 	
-	boolean deleteDomain(String id) {
+	void deleteDomain(String id) {
 		try {
 			Domain domain = ofy().load().type(Domain.class).filter("domainName",id).first().safe();
-			BLTIConsumer cons = ofy().load().type(BLTIConsumer.class).id(domain.domainName).safe();
-			List<Key<Group>> keys = ofy().load().type(Group.class).filter("domain",domain.id).keys().list();
-			for (Key<Group> k : keys) deleteGroup(k);
-			ofy().delete().entity(domain);
-			ofy().delete().entity(cons);
+			
+			List<Key<Group>> groupKeys = ofy().load().type(Group.class).filter("domain",domain.domainName).keys().list();
+			for (Key<Group> k : groupKeys) deleteGroup(k.getId());
+			
+		 	ofy().delete().entity(domain).now();
 		} catch(Exception e) {		
 		}
-		return false;
 	}
 }
