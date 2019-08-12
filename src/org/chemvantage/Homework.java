@@ -144,7 +144,9 @@ public class Homework extends HttpServlet {
 				buf.append("\n<LI>Most questions are customized, so the correct answers are different for each student.</LI>");
 				buf.append("\n<LI>A checkmark will appear to the left of each correctly solved problem. "
 						+ (hwa==null?"":"<a href=/Homework?UserRequest=ShowScores&AssignmentId=" + hwa.id 
-								+ (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">View the details here</a>.")
+								+ (cvsToken==null?"":"&CvsToken=" + cvsToken)
+								+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
+								+ ">View the details here</a>.")
 						+ "</LI>");
 				buf.append("</UL>");
 			}
@@ -539,6 +541,7 @@ public class Homework extends HttpServlet {
 	protected String showScores(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h2>Your Homework Transactions</h2>");
 		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
+		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
 		
@@ -597,7 +600,10 @@ public class Homework extends HttpServlet {
 					buf.append("We attempted to validate the score contained in your class LMS grade book, but it did not contain a valid score for this assignment.<p>");
 				}
 			}
-    		buf.append("<a href=Homework?AssignmentId=" + a.id + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">Take me back to the homework assignment.</a><p>");
+    		buf.append("<a href=Homework?AssignmentId=" + a.id 
+    				+ (cvsToken==null?"":"&CvsToken=" + cvsToken) 
+    				+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
+    				+ ">Take me back to the homework assignment.</a><p>");
 
 			buf.append("<table><tr><th>Transaction Number</th><th>QuestionID</th><th>Graded</th><th>Score</th></tr>");
 			for (HWTransaction hwt : hwts) {
