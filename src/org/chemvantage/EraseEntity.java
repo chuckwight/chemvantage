@@ -4,6 +4,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.servlet.ServletException;
@@ -96,8 +97,10 @@ public class EraseEntity extends HttpServlet {
 	void deleteGroup(long id) {
 		try {
 			Group group = ofy().load().key(Key.create(Group.class,id)).safe();
+			List<String> members = new ArrayList<String>();  // list of group members to be deleted
+			members.addAll(group.memberIds); // can't use memberIds directly because it will be changed in the loop
 			
-			for (String uId : group.memberIds) deleteUser(uId);
+			for (String uId : members) deleteUser(uId);
 			
 			List<Key<Score>> scoreKeys = ofy().load().type(Score.class).filter("groupId",group.id).keys().list();
 		 	if (!scoreKeys.isEmpty()) ofy().delete().keys(scoreKeys);  // catches any stray scores from prior Users
