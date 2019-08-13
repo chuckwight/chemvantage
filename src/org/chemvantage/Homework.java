@@ -338,13 +338,12 @@ public class Homework extends HttpServlet {
 			
 			String hashMe = user.id + (hwa==null?"":hwa.id);
 			q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
-			int studentScore = 0;
+			int studentScore = q.isCorrect(studentAnswer[0])?q.pointValue:0;
 			int possibleScore = q.pointValue;
 			HWTransaction ht = null;
 			
 			if (studentAnswer[0].length() > 0) { // an answer was submitted
 				// record the response in the Responses table for question debugging:
-				studentScore = q.isCorrect(studentAnswer[0])?q.pointValue:0;
 				Queue queue = QueueFactory.getDefaultQueue();
 				queue.add(withUrl("/ResponseServlet")
 						.param("AssignmentType","Homework")
@@ -359,7 +358,7 @@ public class Homework extends HttpServlet {
 				ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,studentScore,assignmentId,possibleScore);
 				if (lis_result_sourcedid != null) ht.lis_result_sourcedid = lis_result_sourcedid;
 				ofy().save().entity(ht).now();
-				
+
 				// create/update/store a HomeworkScore object
 				try {  // throws exception if hwa==null
 					if (hwa.questionKeys.contains(k)) {
@@ -370,7 +369,6 @@ public class Homework extends HttpServlet {
 				} catch (Exception e2) {
 				}
 			}
-
 			// Send response to the user:
 			if (studentScore > 0) {
 				buf.append("<h3>Congratulations. You answered the question correctly.</h3>");
@@ -418,7 +416,7 @@ public class Homework extends HttpServlet {
 			
 			buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback" + (cvsToken==null?"":"?CvsToken=" + cvsToken) + ">here</a>.<p>");
 			buf.append("<a href=/Homework?"
-					+ (assignmentId>0?"AssignmentId=" + assignmentId : "TopicId=" + ht.topicId)
+					+ (assignmentId>0?"AssignmentId=" + assignmentId : "TopicId=" + topic.id)
 					+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
 					+ (cvsToken==null?"":"&CvsToken=" + cvsToken)  
 					+ (offerHint?"&Q=" + q.id + "><span style='color:red'>Please give me a hint</span>":">Return to this homework assignment") + "</a> or "
