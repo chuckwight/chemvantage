@@ -56,10 +56,10 @@ public class Subject {
 		}
 	}
 
-	
 	public String getTopicSelectBox() {
 		return getTopicSelectBox(0);
 	}
+	
 	
 	public String getTopicSelectBox(long id) {
 		StringBuffer buf = new StringBuffer();
