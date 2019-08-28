@@ -100,7 +100,7 @@ public class ReportScore extends HttpServlet {
 				int n = 0;
 				if (delay != null) n = Integer.parseInt(delay);
 				if (assignmentId<=0 || n>9) {
-					sendEmailToChemVantageAdmin(userId,assignmentId,e.getMessage());
+					sendEmailToDomainAdmin(userId,assignmentId,e.getMessage());
 					return;  // will attempt to record up to 10 times over 17 hours
 				}
 				long countdownMillis = (long) Math.pow(2,n)*60000;
@@ -118,13 +118,14 @@ public class ReportScore extends HttpServlet {
 		+ "}";
 	}
 	
-	void sendEmailToChemVantageAdmin(String userId,long assignmentId,String errorMsg) {
+	void sendEmailToDomainAdmin(String userId,long assignmentId,String errorMsg) {
 		try {
 			Properties props = new Properties();
 			Session session = Session.getDefaultInstance(props, null);
 
 			User u = ofy().load().type(User.class).id(userId).safe();
 			BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(u.domain).safe();
+			String recipient = c.email;
 			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
 			Key<Score> k = Key.create(Key.create(User.class, userId),Score.class,assignmentId);
@@ -133,7 +134,9 @@ public class ReportScore extends HttpServlet {
 			if (!s.needsLisReporting()) return;  // everything is OK and the situation is resolved
 				
 			String msgBody = "<h3>ChemVantage LIS ReportScore Failure</h3>"
-					+ "An attempt to report a score using LIS gave the following error:<br>"
+					+ "You are receiving this message because you received LTI credentials at this address to "
+					+ "establish a connection to the ChemVantage app using the consumer_key " + c.oauth_consumer_key + "<p>"
+					+ "The ChemVantage server encountered the following error while attempting to report a score to your LMS:<br>"
 					+ errorMsg + "<p>"
 					+ "Details:<br>"
 					+ "UserId: " + userId + "<br>"
@@ -141,12 +144,17 @@ public class ReportScore extends HttpServlet {
 					+ "Assignment: " + a.assignmentType + (t==null?"":" - " + t.title) + "<br>"
 					+ "Current score= " + s.getPctScore() + "% after " + s.numberOfAttempts + " attempts<br>"
 					+ "ChemVantage domain = " + u.domain + "<br>"
-					+ "Domain contact = " + c.email + "<p>";
+					+ "Domain contact = " + c.email + "<p>"
+					+ "This message was generated automatically to make you aware of a potential problem with the connection to "
+					+ "your LMS. If you need help, please contact Chuck Wight (admin@chemvantage.org, +1-801-243-8242) for "
+					+ "assistance. Otherwise, to stop the server from generating these messages, reply with STOP.<p>"
+					+ "Thank you,<p>"
+					+ "Chuck Wight<br>ChemVantage LLC";
 					
 			Message msg = new MimeMessage(session);
 			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-			msg.addRecipient(Message.RecipientType.TO,
-					new InternetAddress("admin@chemvantage.org", "ChemVantage"));
+			if (!c.suppressEmailNotifications) msg.addRecipient(Message.RecipientType.TO,new InternetAddress(recipient, ""));
+			msg.addRecipient(Message.RecipientType.CC,new InternetAddress("admin@chemvantage.org", "ChemVantage"));
 			msg.setSubject("ChemVantage LIS Reporting Error");
 			msg.setContent(msgBody,"text/html");
 			Transport.send(msg);

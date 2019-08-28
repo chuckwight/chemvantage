@@ -24,11 +24,10 @@ import java.util.Date;
 import java.util.List;
 import java.util.Random;
 
-import com.googlecode.objectify.annotation.Cache;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 
-@Cache @Entity
+@Entity
 public class BLTIConsumer {
 	@Id String oauth_consumer_key;
 	String secret;
@@ -41,6 +40,7 @@ public class BLTIConsumer {
 	String resultServiceEndpoint;
 	String email;
 	Date created;
+	boolean suppressEmailNotifications;
 	List<String> capabilities_enabled;
 	List<String> tool_service;
 	
