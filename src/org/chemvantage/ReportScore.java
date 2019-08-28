@@ -147,7 +147,7 @@ public class ReportScore extends HttpServlet {
 					+ "Domain contact = " + c.email + "<p>"
 					+ "This message was generated automatically to make you aware of a potential problem with the connection to "
 					+ "your LMS. If you need help, please contact Chuck Wight (admin@chemvantage.org, +1-801-243-8242) for "
-					+ "assistance. Otherwise, to stop the server from generating these messages, reply with STOP.<p>"
+					+ "assistance. Otherwise, to opt out of receiving these messages, reply with STOP.<p>"
 					+ "Thank you,<p>"
 					+ "Chuck Wight<br>ChemVantage LLC";
 					
