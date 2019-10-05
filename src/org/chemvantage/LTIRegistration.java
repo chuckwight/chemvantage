@@ -41,10 +41,12 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+@WebServlet(urlPatterns = {"/lti/registration","/lti/registration/"})
 public class LTIRegistration extends HttpServlet {
 
 	Map<String,String> sharedSecrets = new HashMap<String,String>();
@@ -74,11 +76,11 @@ public class LTIRegistration extends HttpServlet {
 			+ "It's important to verify that your LMS supports the LTI Outcomes Service so ChemVantage will report the assignment scores "
 			+ "back to the LMS grade book. This is important because ChemVantage does not collect any personally identifiable information from users, "
 			+ "so the Outcomes Service is the only way to track student scores.<p>"
-			+ "You may obtain a free set of LTI credentials by entering a consumer key value (any string of "
-			+ "characters that uniquely identifies your LMS) along with your email address into the form below."
-			+ "Your LTI credentials will be emailed to you immediately.<p>"
-			+ "For further assistance, contact Chuck Wight (admin@chemvantage.org).<p>";
-	
+			+ "ChemVantage supports two different LTI protocols for connecting to your LMS. "
+			+ "Please choose the version of LTI supported by your learning management system:<p>"
+			+ "<a href=/lti/registration?lti_version=1p1>LTI version 1.1</a> or "
+			+ "<a href=/lti/registration?lti_version=1p3>LTI version 1.3</a><p>";
+			
 	String instructions = "<h3>Implementation in Canvas (other LMS platforms may be similar)</h3>"
 			+ "<ol>"
 			+ "<li>Obtain a set of LTI credentials (see above)."
@@ -119,8 +121,7 @@ public class LTIRegistration extends HttpServlet {
 			+ "<a href=https://docs.moodle.org/22/en/External_tool_settings>Moodle</a><p>"
 			+ "<a href=http://library.blackboard.com/ref/df5b20ed-ce8d-4428-a595-a0091b23dda3/Content/_admin_app_system/admin_app_basic_lti_tool_providers.htm>Blackboard</a><p>"
 			+ "<a href=https://www.eduappcenter.com/tutorials/sakai>Sakai</a><p>"
-			+ "<a href=https://community.brightspace.com/resources/additional_resources/scenarios/yourfirsttoolintegrationwithbasiclearningtoolsinteroperability>Desire2Learn</a><p>"
-			;
+			+ "<a href=https://community.brightspace.com/resources/additional_resources/scenarios/yourfirsttoolintegrationwithbasiclearningtoolsinteroperability>Desire2Learn</a><p>";
 			
 	String successMessage = "<h2>Thank You</h2> Your LTI credentials have been sent to your email address.";
 	
@@ -131,31 +132,63 @@ public class LTIRegistration extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		out.println(Home.header + banner + welcomeMessage);
+		
 		StringBuffer buf = new StringBuffer();
-		buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");
-		buf.append("<FORM METHOD=POST><TABLE>");
-		buf.append("<TR><TD ALIGN=RIGHT>Email Address: </TD><TD><INPUT TYPE=TEXT NAME=Email> (where the credentials will be sent)</TD></TR>");
-		buf.append("<TR><TD ALIGN=RIGHT>Consumer Key: </TD><TD><INPUT TYPE=TEXT NAME=Key> (e.g., moodle257-myschool-edu)</TD></TR>");
-		
-		// reCaptcha tool
-		buf.append("<TR><TD COLSPAN=2>");		
-		buf.append("<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div>");
-		buf.append("</TD>");
-		
-		buf.append("<TR><TD>&nbsp;</TD><TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Send My Free LTI Credentials'></TD></TR>");
-		buf.append("</TABLE></FORM>");
-		buf.append(instructions);
+		if ("1p1".equals(request.getParameter("lti_version"))) {
+			buf.append("<h3>LTI version 1.1 Integration</h3>"
+			+ "You may obtain a free set of LTI credentials by entering a consumer key value (any string of "
+			+ "characters that uniquely identifies your LMS) along with your email address into the form below."
+			+ "Your LTI credentials will be emailed to you immediately.<p>"
+			+ "For further assistance, contact Chuck Wight (admin@chemvantage.org).<p>");
+			buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");
+			buf.append("<FORM METHOD=POST><INPUT TYPE=HIDDEN NAME=lti_version VALUE=1p1><TABLE>");
+			buf.append("<TR><TD ALIGN=RIGHT>Email Address: </TD><TD><INPUT TYPE=TEXT NAME=Email> (where the credentials will be sent)</TD></TR>");
+			buf.append("<TR><TD ALIGN=RIGHT>Consumer Key: </TD><TD><INPUT TYPE=TEXT NAME=Key> (e.g., moodle257-myschool-edu)</TD></TR>");
+
+			// reCaptcha tool
+			buf.append("<TR><TD COLSPAN=2>");		
+			buf.append("<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div>");
+			buf.append("</TD>");
+
+			buf.append("<TR><TD>&nbsp;</TD><TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Send My Free LTI Credentials'></TD></TR>");
+			buf.append("</TABLE></FORM>");
+			buf.append(instructions);
+		} else if ("1p3".equals(request.getParameter("lti_version"))) {
+			buf.append("<h3>LTI version 1.3 Integration</h3>"
+			+ "LTI integration requires exchange of information needed to identify each party and to securely transmit information "
+			+ "between ChemVantage and your LMS. Please enter the requested information below:");
+			buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");
+			buf.append("<FORM METHOD=POST><INPUT TYPE=HIDDEN NAME=lti_version VALUE=1p3><TABLE>");
+			buf.append("<TR><TD ALIGN=RIGHT>Email Address: </TD><TD><INPUT TYPE=TEXT NAME=Email> (where the credentials will be sent)</TD></TR>");
+			buf.append("<TR><TD ALIGN=RIGHT>Platform ID: </TD><TD><INPUT TYPE=TEXT NAME=PlatformId> (URL host name for your LMS)");
+			buf.append("<TR><TD ALIGN=RIGHT>Deployment ID: </TD><TD><INPUT TYPE=TEXT NAME=DeploymentId> (optional; identifier for your LMS account)");
+			buf.append("<TR><TD ALIGN=RIGHT>Client ID: </TD><TD><INPUT TYPE=TEXT NAME=ClientId> (LMS generated identifier for ChemVantage)");
+			buf.append("<TR><TD ALIGN=RIGHT>OIDC Auth URL: </TD><TD><INPUT TYPE=TEXT NAME=OIDCUrl> (OpenID Connect URL for your LMS)");
+			buf.append("<TR><TD ALIGN=RIGHT>OAuth Access Token URL: </TD><TD><INPUT TYPE=TEXT NAME=OauthTokenUrl> (Initial Service Endpoint for your LMS)");			
+			buf.append("<TR><TD ALIGN=RIGHT>JSON Web Key Set URL: </TD><TD><INPUT TYPE=TEXT NAME=JWKSUrl> (.well-known/jwks URL for your LMS)");
+			
+			// reCaptcha tool
+			buf.append("<TR><TD COLSPAN=2>");		
+			buf.append("<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div>");
+			buf.append("</TD>");
+
+			buf.append("<TR><TD>&nbsp;</TD><TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Send My Free LTI Credentials'></TD></TR>");
+			buf.append("</TABLE></FORM>");
+		}
 		out.println(buf.toString() + Home.footer);
 	}
 
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+		
 		String lti_message_type = request.getParameter("lti_message_type");
 		StringBuffer base_url = request.getRequestURL();
 		base_url = base_url.delete(base_url.indexOf("/lti"),base_url.length()).delete(0, base_url.indexOf("://") + 3);
 		
-		if ("Send My Free LTI Credentials".equals(request.getParameter("UserRequest"))) {  // manual LTI registration request for version 1.x
+		if ("Send My Free LTI Credentials".equals(request.getParameter("UserRequest")) && "1p1".equals(request.getParameter("lti_version"))) {  // manual LTI registration request for version 1.x
 			String email = request.getParameter("Email");
 			String key = request.getParameter("Key").replaceAll("\\s", "");  // removes all whitespace from key
 			
@@ -165,8 +198,6 @@ public class LTIRegistration extends HttpServlet {
 			}
 			
 			if (email!=null && !email.isEmpty() && key!=null && !key.isEmpty()) {  // generate a new set of LTI credentials
-				response.setContentType("text/html");
-				PrintWriter out = response.getWriter();
 				BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(key).now();			
 				if (c==null) {
 					c = new BLTIConsumer(key,email);
@@ -180,11 +211,44 @@ public class LTIRegistration extends HttpServlet {
 				doError(request,response,"Sorry, the LTI registration request failed. All form fields are required.",null,null);
 				return;
 			}
+		} else if ("Send My Free LTI Credentials".equals(request.getParameter("UserRequest")) && "1p3".equals(request.getParameter("lti_version"))) {
+			try {
+				String email = request.getParameter("Email");
+				String platform_id = request.getParameter("PlatformId");
+				if (!platform_id.startsWith("http")) platform_id = "http://" + platform_id;
+				String deployment_id = request.getParameter("DeploymentId");
+				if (deployment_id == null) deployment_id = ""; // create empty ID for single-deployment platform
+				String client_id = request.getParameter("ClientId");
+				String oidc_auth_url = request.getParameter("OIDCUrl");
+				String oauth_access_token_url = request.getParameter("OauthTokenUrl");
+				String well_known_jwks_url = request.getParameter("JWKSUrl");
+
+				if(email == null) throw new Exception("Registration failed. Missing email address");
+				if (client_id == null) throw new Exception("Registration failed. Missing client_id");
+				new URL(oidc_auth_url).getHost().contentEquals(platform_id);	// OIDC Auth URL must be in the platform domain
+				new URL(well_known_jwks_url).getHost().contentEquals(platform_id); // JsonWebKey URL must be in the platform domain
+
+				if (!reCaptchaOK(request)) {
+					doError(request,response,"Sorry, the reCaptcha response could not be validated. Please try again.", null, null);
+					return;
+				}	
+
+				// Check to see if this Deployment entity already exists
+				Deployment d = ofy().load().type(Deployment.class).id(platform_id + "/" + deployment_id).now();
+				if (d != null) throw new Exception ("This deployment has already been registered.");
+
+				// All data have been validated; create a new Deployment entity			
+				d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,email);			
+				ofy().save().entity(d).now();
+				
+				if (sendLTICredentials(email,d,request)) out.println(Home.header + banner + successMessage + Home.footer);				
+			} catch (Exception e) {
+				out.println(e.toString());
+			}
 		} else if ("basic-lti-launch-request".equals(lti_message_type)) {
 			doError(request,response,"LTI Launch Failed. The correct launch URL for the ChemVantage production server is https://" + base_url + "/lti/",null,null);
 			return;
 		}
-		doError(request,response,"The Tool Proxy Registration failed due to an unexpected error.<br>You may try manual LTI registration using credentials that can be obtained at <a href=http://www.chemvantage.org/lti/registration>http://www.chemvantage.org/lti/registration/</a>.<br>",null,null);
 	}
 
 	boolean reCaptchaOK(HttpServletRequest request) {
@@ -262,4 +326,35 @@ public class LTIRegistration extends HttpServlet {
 		}
 	}
 
+	boolean sendLTICredentials(String email,Deployment d, HttpServletRequest request) {
+		// send a response to a user feedback report
+		try {
+			Properties props = new Properties();
+			Session session = Session.getDefaultInstance(props, null);
+			String chemvantage_host = "https://" + request.getServerName();
+			String deployment_id = d.getDeploymentId();
+			String msgBody = "Thank you for your interest in ChemVantage. Your LTI credentials are:<p>"
+					+ "Platform ID: " + d.getPlatformId() + "<br/>"
+					+ "Deployment ID: " + (deployment_id.isEmpty()?"(not specified)":d.getDeploymentId()) + "<br/>"
+					+ "Client ID: " + d.client_id + " <br/>"
+					+ "OIDC Login Initiation URL: " + chemvantage_host + "/auth/token" + " <br/>"
+					+ "Launch URL: " + chemvantage_host + "/lti <br>"
+					+ "Deep Links Initiation URL: " + chemvantage_host + "/lti/deeplinks" + "<p>"
+					+ "ChemVantage Public RSA Key:<p>" + d.getRSAPublicKey()
+					+ "<p>If you  need additional assistance, please contact me at admin@chemvantage.org. <p>"
+					+ "-Chuck Wight";
+
+			Message msg = new MimeMessage(session);
+			InternetAddress from = new InternetAddress("admin@chemvantage.org", "ChemVantage");
+			msg.setFrom(from);
+			msg.addRecipient(Message.RecipientType.TO,new InternetAddress(email,""));
+			msg.addRecipient(Message.RecipientType.CC,from);
+			msg.setSubject("ChemVantage LTI Credentials");
+			msg.setContent(msgBody,"text/html");
+			Transport.send(msg);
+			return true;
+		} catch (Exception e) {
+			return false;
+		}
+	}
 }

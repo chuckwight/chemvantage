@@ -66,16 +66,13 @@
 		<dependency>
     		<groupId>com.auth0</groupId>
     		<artifactId>java-jwt</artifactId>
-    		<version>3.8.1</version>
+    		<version>3.8.3</version>
 		</dependency>
-        
-        <!-- Test Dependencies -->           
-        <dependency>                 
-            <groupId>junit</groupId>                 
-            <artifactId>junit</artifactId>                 
-            <version>4.12</version>                  
-            <scope>test</scope>                
-        </dependency>          
+        <dependency>
+    		<groupId>com.auth0</groupId>
+    		<artifactId>jwks-rsa</artifactId>
+    		<version>0.9.0</version>
+		</dependency>
     </dependencies>
         
     
@@ -140,68 +137,3 @@
        </plugins>
   </build>
 </project>            
-<!--  
-			<plugin>
-       			<artifactId>maven-compiler-plugin</artifactId>
-        		<version>3.3</version>
-       			<configuration>
-          			<source>1.8</source>
-          			<target>1.8</target>
-        		</configuration>
-      		</plugin>
-  
-  <url>https://w.chemvantage.org</url>
-  <organization>
-  	<name>ChemVantage LLC</name>
-  	<url>https://www.chemvantage.org</url>
-  </organization>
-  <dependencies>
-	<dependency>
-  		<groupId>com.google.appengine</groupId>
-  		<artifactId>appengine-endpoints</artifactId>
-  		<version>1.9.73</version>
-  	</dependency>
-  	<dependency>
-  		<groupId>org.eclipse.persistence</groupId>
-  		<artifactId>javax.persistence</artifactId>
-  		<version>2.1.0</version>
-  	</dependency>
-  	<dependency>
-  		<groupId>javax.inject</groupId>
-  		<artifactId>javax.inject</artifactId>
-  		<version>1</version>
-  	</dependency>
-  	<dependency>
-  		<groupId>javax.servlet</groupId>
-  		<artifactId>
-
-</artifactId>
-  		<version>3.1.0</version>
-  	</dependency>
-  	<dependency>
-  		<groupId>com.google.code.findbugs</groupId>
-  		<artifactId>jsr305</artifactId>
-  		<version>3.0.2</version>
-  	</dependency>
-  	<dependency>
-  		<groupId>com.google.appengine.orm</groupId>
-  		<artifactId>datanucleus-appengine</artifactId>
-  		<version>2.1.2</version>
-  	</dependency>
-  	<dependency>
-        <groupId>com.googlecode.objectify</groupId>
-        <artifactId>objectify</artifactId>
-        <version>6.0.4</version>
-    </dependency>
-    <dependency>
-        <groupId>com.google.guava</groupId>
-        <artifactId>guava</artifactId>
-        <version>28.0-jre</version>
-    </dependency>
-    <dependency>
-		<groupId>com.google.endpoints</groupId>
-		<artifactId>endpoints-framework</artifactId>
-		<version>2.0.7</version>
-	</dependency>
-  </dependencies>
-  -->

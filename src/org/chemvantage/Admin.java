@@ -24,6 +24,9 @@ import java.io.PrintWriter;
 import java.util.List;
 
 import javax.servlet.ServletException;
+import javax.servlet.annotation.HttpConstraint;
+import javax.servlet.annotation.ServletSecurity;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -36,6 +39,8 @@ import com.google.cloud.datastore.QueryResults;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
 
+@WebServlet("/Admin")
+@ServletSecurity(@HttpConstraint(rolesAllowed = {"admin"}))
 public class Admin extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
@@ -51,17 +56,18 @@ public class Admin extends HttpServlet {
 		try {
 			UserService userService = UserServiceFactory.getUserService();
 			String userId = userService.getCurrentUser().getUserId();
-			if (ofy().load().type(User.class).id(userId).now()==null) User.createUserServiceUser(userService.getCurrentUser());
-
+			User user = ofy().load().type(User.class).id(userId).safe(); 
+			user.setToken(0);
+			
 			HttpSession session = request.getSession();
 			session.setAttribute("UserId",userId);
-
+		/*
 			User user = User.getInstance(session); 
 			if (user.authDomain==null || !user.authDomain.equals("Google)")) {
 				user.authDomain = "Google";
 				ofy().save().entity(user);
 			}
-
+		*/
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 
@@ -132,7 +138,7 @@ public class Admin extends HttpServlet {
 			int nUsers = ofy().load().type(User.class).count();
 			buf.append("\n<FORM NAME=UsrSearch METHOD=GET>To search for a user, enter a portion of the user's email address.<br/>");
 
-			buf.append("\n<INPUT NAME=SearchString VALUE='" + ("Search for users".equals(userRequest) && searchString!=null?CharHider.quot2html(searchString):"(show all)") + "' onFocus=UsrSearch.SearchString.value=''>"
+			buf.append("\n<INPUT NAME=SearchString VALUE='" + ("Search for users".equals(userRequest) && searchString!=null?Question.quot2html(searchString):"(show all)") + "' onFocus=UsrSearch.SearchString.value=''>"
 					+ "\n<INPUT TYPE=SUBMIT NAME='UserRequest' VALUE='Search for users'></FORM>");
 
 			if(results != null) {

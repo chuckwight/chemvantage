@@ -38,32 +38,33 @@ public class Group implements Serializable {
 	@Index	String context_id;
 			String description;	
 			Date created;
+			String lti_ags_scope;    // comma-separated list of capabilities for LTIv1p3 score reporting
+			String lti_ags_lineitems_url;  // AGS access point to discover grade book columns
 			String lis_outcome_service_url;
 			String lis_outcome_service_format;
+			String context_memberships_url;
 			boolean isUsingLisOutcomeService;
+			boolean canReadLisScores;
 			List<String> memberIds = new ArrayList<String>();
 			
     Group() {}
     
-    Group(String instructorId, String description) {
+    Group(String domain,String context_id,String description, String instructorId) {
     	this.created = new Date();
-        this.instructorId = instructorId;
+        this.domain = domain;   // in LTIv1.3 this is platform_id+"/"+deployment_id
         this.description = description;
+    	this.context_id = context_id;
+        this.instructorId = instructorId;
     }
 
-    Group(String type,String context_id,String description) {
-    	if ("BLTI".equals(type)) {
-    		this.created = new Date();
-    		this.context_id = context_id;
-    		this.description = description;
-    		this.instructorId = "unknown";
-    	}
-    }
-    
     public boolean isMember(String id) {
     	return memberIds.contains(id);
     }
-        
+    
+    public void addMember(String id) {
+    	if (!memberIds.contains(id)) memberIds.add(id);
+    }
+            
     boolean reviseScores(Assignment assignment) {
     	boolean changed = false;
     	for (String uId : this.memberIds) {

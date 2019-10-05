@@ -31,15 +31,16 @@ import java.util.List;
 import java.util.Map;
 
 import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
 
+@WebServlet("/Homework")
 public class Homework extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
@@ -54,13 +55,16 @@ public class Homework extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		
-		User user = null;
 		try {
+			User user = User.getUser(request.getParameter("Token"));
+			if (user == null) throw new Exception();
+		/*
+			User user = null;
 			HttpSession session = request.getSession();
 			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
 			else user = User.getInstance(session);
 			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
-				
+		*/		
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
@@ -71,38 +75,43 @@ public class Homework extends HttpServlet {
 			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header + showSummary(user,request) + Home.footer);
 			else out.println(Home.header + printHomework(user,request) + Home.footer);
 		} catch (Exception e) {
-			String cvsToken = request.getParameter("CvsToken");
-			response.sendRedirect("/Logout" + (cvsToken==null?"":"?CvsToken=" + cvsToken));
+			//response.sendRedirect("/Logout?CvsToken=" + request.getParameter("CvsToken"));
+			response.sendRedirect("/Logout");
 		}
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		
-		User user = null;
 		try {
+			User user = User.getUser(request.getParameter("Token"));
+			if (user == null) throw new Exception();
+		/*
+			User user = null;
 			HttpSession session = request.getSession();
 			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
 			else user = User.getInstance(session);
 			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
-				
+		*/		
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 
 			out.println(Home.header + printScore(user,request) + Home.footer);
 		} catch (Exception e) {
-			response.sendRedirect("/Logout?CvsToken=" + user.getCvsToken());
+			//response.sendRedirect("/Logout?CvsToken=" + request.getParameter("CvsToken"));
+			response.sendRedirect("/Logout");
 		}
 	}
 
 	String printHomework(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
+		//String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		try {
 			Assignment hwa = null;
 			long topicId = 0;
 			try {  // normal process for LTI assignment launch
-				long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+				//long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+				long assignmentId = user.getAssignmentId();
 				hwa = ofy().load().type(Assignment.class).id(assignmentId).now();
 				if (hwa==null) { // assignment has been deleted
 					return "<h2>Assignment Reset</h2>"
@@ -129,9 +138,11 @@ public class Homework extends HttpServlet {
 			if (user.isInstructor() && myGroup != null && hwa != null) {
 				buf.append("<table style='border: 1px solid black'><tr><td>");
 				buf.append("As the course instructor you may<ul>"
-						+ "<li><a href=/Groups?UserRequest=AssignHomeworkQuestions&AssignmentId=" + hwa.id + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">"
+						//+ "<li><a href=/Groups?UserRequest=AssignHomeworkQuestions&AssignmentId=" + hwa.id + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">"
+						+ "<li><a href=/Groups?UserRequest=AssignHomeworkQuestions&Token=" + user.token + ">"
 						+ "customize this homework assignment</a> by selecting/deselecting the available question items."
-						+ "<li>view a <a href=/Homework?UserRequest=ShowSummary&AssignmentId=" + hwa.id + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">summary of scores</a> for this assignment"
+						//+ "<li>view a <a href=/Homework?UserRequest=ShowSummary&AssignmentId=" + hwa.id + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">summary of scores</a> for this assignment"
+						+ "<li>view a <a href=/Homework?UserRequest=ShowSummary&Token=" + user.token + ">summary of scores</a> for this assignment"
 						+ "</ul></td></tr></table><p>");
 			} else if (user.isAnonymous()) {
 				buf.append("<h3><font color=red>Anonymous User</font></h3>");
@@ -143,10 +154,10 @@ public class Homework extends HttpServlet {
 				buf.append("\n<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question.</LI>");
 				buf.append("\n<LI>Most questions are customized, so the correct answers are different for each student.</LI>");
 				buf.append("\n<LI>A checkmark will appear to the left of each correctly solved problem. "
-						+ (hwa==null?"":"<a href=/Homework?UserRequest=ShowScores&AssignmentId=" + hwa.id 
-								+ (cvsToken==null?"":"&CvsToken=" + cvsToken)
-								+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
-								+ ">View the details here</a>.")
+						//+ (hwa==null?"":"<a href=/Homework?UserRequest=ShowScores&AssignmentId=" + hwa.id + (cvsToken==null?"":"&CvsToken=" + cvsToken)
+						+ (hwa==null?"":"<a href=/Homework?UserRequest=ShowScores&Token=" + user.token)
+						+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
+						+ ">View the details here</a>."
 						+ "</LI>");
 				buf.append("</UL>");
 			}
@@ -184,7 +195,8 @@ public class Homework extends HttpServlet {
 						
 						buf.append("&nbsp;<a id=" + q.id + " /></TD>"
 								+ "<FORM METHOD=POST ACTION=Homework>"
-								+ (cvsToken==null?"":"<INPUT TYPE=HIDDEN NAME=CvsToken VALUE=" + cvsToken + ">")
+								//+ (cvsToken==null?"":"<INPUT TYPE=HIDDEN NAME=CvsToken VALUE=" + cvsToken + ">")
+								+ "<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">"
 								+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 								+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 								+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>"
@@ -234,7 +246,8 @@ public class Homework extends HttpServlet {
 				
 				buf.append("&nbsp;<a id=" + q.id + " /></TD>"
 						+ "<FORM METHOD=POST ACTION=Homework>"
-						+ (cvsToken==null?"":"<INPUT TYPE=HIDDEN NAME=CvsToken VALUE=" + cvsToken + ">")
+						//+ (cvsToken==null?"":"<INPUT TYPE=HIDDEN NAME=CvsToken VALUE=" + cvsToken + ">")
+						+ "<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">"
 						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 						+ (hwa==null?"" : "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>")
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
@@ -252,7 +265,7 @@ public class Homework extends HttpServlet {
 
 	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
+		//String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		try {
 			long questionId = Long.parseLong(request.getParameter("QuestionId"));
 			Key<Question> k = Key.create(Question.class,questionId);
@@ -266,7 +279,8 @@ public class Homework extends HttpServlet {
 			long assignmentId = 0;
 			Assignment hwa = null;
 			try {
-				assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+				//assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+				assignmentId = user.getAssignmentId();
 				hwa = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			} catch (Exception e) {}
 			
@@ -298,13 +312,15 @@ public class Homework extends HttpServlet {
 						+ "Alternatively, you may wish to "
 						+ "<a href=/Homework?" + (hwa==null?"TopicId=" + topic.id : "AssignmentId=" + hwa.id 
 								+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)) 
-						+ (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">" 
+						//+ (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">" 
+						+ "&Token=" + user.token + ">" 
 						+ "return to this homework assignment</a> to work on another problem.<p>");
 		
 				buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework>"
 						+ (hwa==null?"<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>":"<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>")
 						+ (lis_result_sourcedid==null?"":"<INPUT TYPE=HIDDEN NAME=lis_result_sourcedid VALUE='" + lis_result_sourcedid + "'>")
-						+ (cvsToken==null?"":"<INPUT TYPE=HIDDEN NAME=CvsToken VALUE=" + cvsToken + ">")
+						//+ (cvsToken==null?"":"<INPUT TYPE=HIDDEN NAME=CvsToken VALUE=" + cvsToken + ">")
+						+ "<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ q.print(studentAnswer[0]) + "<br>");
 				
@@ -364,6 +380,7 @@ public class Homework extends HttpServlet {
 					if (hwa.questionKeys.contains(k)) {
 						Score s = Score.getInstance(user.id,hwa);
 						ofy().save().entity(s).now();
+						LTIMessage.postUserScore(s);
 						if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",hwa.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue	
 					}
 				} catch (Exception e2) {
@@ -400,7 +417,7 @@ public class Homework extends HttpServlet {
 			}
 
 			// embed the detailed solution or hint to the exercise in the response, if appropriate
-			buf.append(ajaxJavaScript(cvsToken));
+			buf.append(ajaxJavaScript(user.token));
 			if (user.isInstructor() || user.isTeachingAssistant() || (studentScore > 0)) {
 				buf.append("<p><div id=exampleLink>"
 						+ "<a href=# onClick=javascript:document.getElementById('example').style.display='';"
@@ -414,13 +431,16 @@ public class Homework extends HttpServlet {
 			// if the user response was correct, seek five-star feedback:
 			if (studentScore > 0) buf.append(fiveStars());
 			
-			buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback" + (cvsToken==null?"":"?CvsToken=" + cvsToken) + ">here</a>.<p>");
+			//buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback" + (cvsToken==null?"":"?CvsToken=" + cvsToken) + ">here</a>.<p>");
+			buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback?Token=" + user.token + ">here</a>.<p>");
 			buf.append("<a href=/Homework?"
 					+ (assignmentId>0?"AssignmentId=" + assignmentId : "TopicId=" + topic.id)
 					+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
-					+ (cvsToken==null?"":"&CvsToken=" + cvsToken)  
+					//+ (cvsToken==null?"":"&CvsToken=" + cvsToken)  
+					+ "&Token=" + user.token  
 					+ (offerHint?"&Q=" + q.id + "><span style='color:red'>Please give me a hint</span>":">Return to this homework assignment") + "</a> or "
-					+ "<a href=/Logout" + (cvsToken==null?"":"?CvsToken=" + cvsToken) + ">logout of ChemVantage</a> ");
+					//+ "<a href=/Logout" + (cvsToken==null?"":"?CvsToken=" + cvsToken) + ">logout of ChemVantage</a> ");
+					+ "<a href=/Logout>logout of ChemVantage</a> ");
 			
 			if (user.isAnonymous()) buf.append(" or go back to the <a href=/>ChemVantage home page</a>.");
 			}
@@ -430,7 +450,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	String ajaxJavaScript(String cvsToken) {
+	String ajaxJavaScript(String token) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note) {\n"
 		+ "  var xmlhttp;\n"
@@ -464,12 +484,12 @@ public class Homework extends HttpServlet {
 		+ "    var msg;\n"
 		+ "    switch (nStars) {\n"
 		+ "      case '1': msg='1 star - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to <a href=/Feedback?CvsToken=" + cvsToken + ">tell us why</a>.';"
+		+ "                + 'please take a moment to <a href=/Feedback?Token=" + token + ">tell us why</a>.';"
 		+ "                break;\n"
 		+ "      case '2': msg='2 stars - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to <a href=/Feedback?CvsToken=" + cvsToken + ">tell us why</a>.';"
+		+ "                + 'please take a moment to <a href=/Feedback?Token=" + token + ">tell us why</a>.';"
 		+ "                break;\n"
-		+ "      case '3': msg='3 stars - Thank you. <a href=/Feedback?CvsToken=" + cvsToken + ">Click here</a> '"
+		+ "      case '3': msg='3 stars - Thank you. <a href=/Feedback?Token=" + token + ">Click here</a> '"
 		+ "                + 'to provide additional feedback.';"
 		+ "                break;\n"
 		+ "      case '4': msg='4 stars - Thank you';"
@@ -538,14 +558,14 @@ public class Homework extends HttpServlet {
 
 	protected String showScores(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h2>Your Homework Transactions</h2>");
-		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
+		//String cvsToken = request.getSession().isNew()?user.getCvsToken():null;			
 		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
 		
 		Assignment a = null;
 		try {
-			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+			long assignmentId = user.getAssignmentId();
 			a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 		} catch (Exception e) {
 			buf.append("Invalid assignment.");
@@ -553,7 +573,6 @@ public class Homework extends HttpServlet {
 		}
 
 		try {
-			buf.append("ChemVantage UserID: " + user.getIdHash() + "<br>");
 			buf.append("Assignment Number: " + a.id + "<br>");
 			Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
 			buf.append("Topic: "+ t.title + "<br>");
@@ -563,63 +582,281 @@ public class Homework extends HttpServlet {
 			
 			if (hwts.size()==0) {
 				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>");
-				buf.append("<a href=Homework?AssignmentId=" + a.id + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">Take me back to the homework assignment.</a><p>");
-					return buf.toString();
-			}
-			
-			// create a fresh Score entity to calculate the best score on this assignment
-			Score s = Score.getInstance(user.id, a);
-    		
-    		buf.append("Your overall score on this assignment is " + 10.*Math.round(s.getPctScore())/10. + "%.<br>");
+				buf.append("<a href=Homework?AssignmentId=" + a.id 
+						+ "&Token=" + user.token
+						+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
+						+ ">Take me back to the homework assignment.</a><p>");
+				return buf.toString();
+			} else {
+				// create a fresh Score entity to calculate the best score on this assignment
+				Score s = Score.getInstance(user.id, a);
 
-    		if (s.numberOfAttempts>0 && s.lis_result_sourcedid != null) {  // try to validate the score with the LMS grade book entry
+				buf.append("Your overall score on this assignment is " + 10.*Math.round(s.getPctScore())/10. + "%.<br>");
+
+				// try to validate the score with the LMS grade book entry
 				try {
 					Group g = ofy().load().type(Group.class).id(user.myGroupId).safe();
-					String messageFormat = g.getLisOutcomeFormat();
-					String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
-					String oauth_consumer_key = g.domain;
-					String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
-
-					if (replyBody.contains("success")) {
-						int beginIndex = replyBody.indexOf("<textString>") + 12;
-						int endIndex = replyBody.indexOf("</textString>");
-						replyBody = replyBody.substring(beginIndex,endIndex);
-						double lmsPctScore = 100.*Double.parseDouble(replyBody);
-						if (Math.abs(lmsPctScore-s.getPctScore())<1.0) { // LMS readResult agrees to within 1%
-							buf.append("This score is accurately recorded in the grade book of your class learning management system.<p>");
-						} else { // there is a significant difference between LMS and ChemVantage scores. Please explain:
-							buf.append("The score recorded in your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%. The difference may be due to<br>"
-									+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<br>"
-									+ "If you think this may be due to a stale score, you may submit this assignment for grading,<br>"
-									+ "even for a score of zero, and ChemVantage will try to refresh your best score to the LMS.<p>");
+					double lmsPctScore = 0;
+					String lmsScore = null;
+					boolean gotScoreOK = false;
+					
+					//buf.append("Retrieving score for user " + User.getRawId(user.id) + " in group " + user.myGroupId + " for this " + a.assignmentType + " assignment " + a.id + "<p>");
+					if (g.canReadLisScores) {  // LTI version 1p3
+						lmsScore = LTIMessage.readUserScore(a, user.id);
+						try {
+							lmsPctScore = Double.parseDouble(lmsScore);
+							gotScoreOK = true;
+						} catch (Exception e) {
 						}
-					} else throw new Exception("We attempted to validate the score contained in your class LMS grade book, but the operation failed.<p>");
-				} catch (Exception e) {
-					buf.append("We attempted to validate the score contained in your class LMS grade book, but it did not contain a valid score for this assignment.<p>");
-				}
-			}
-    		buf.append("<a href=Homework?AssignmentId=" + a.id 
-    				+ (cvsToken==null?"":"&CvsToken=" + cvsToken) 
-    				+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
-    				+ ">Take me back to the homework assignment.</a><p>");
+					}
+					else if (g.isUsingLisOutcomeService && s.lis_result_sourcedid != null) { // LTI version 1p1
+						String messageFormat = g.getLisOutcomeFormat();
+						String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
+						String oauth_consumer_key = g.domain;
+						String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
 
-			buf.append("<table><tr><th>Transaction Number</th><th>QuestionID</th><th>Graded</th><th>Score</th></tr>");
-			for (HWTransaction hwt : hwts) {
-				buf.append("<tr align=center><td>" + hwt.id + "</td><td>" + hwt.questionId + "</td><td>" + df.format(hwt.graded) + "</td><td>" + hwt.score +  "</td></tr>");
+						if (replyBody.contains("success")) {
+							int beginIndex = replyBody.indexOf("<textString>") + 12;
+							int endIndex = replyBody.indexOf("</textString>");
+							replyBody = replyBody.substring(beginIndex,endIndex);
+							lmsPctScore = 100.*Double.parseDouble(replyBody);
+							gotScoreOK = true;
+						}
+					}
+					
+					//buf.append((gotScoreOK?"Got score OK.":lmsScore) + "<br>");
+					
+					if (gotScoreOK && Math.abs(lmsPctScore-s.getPctScore())<1.0) { // LMS readResult agrees to within 1%
+						buf.append("This score is accurately recorded in the grade book of your class learning management system.<p>");
+					} else if (gotScoreOK) { // there is a significant difference between LMS and ChemVantage scores. Please explain:
+						buf.append("The score recorded in your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%. The difference may be due to<br>"
+								+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<br>"
+								+ "If you think this may be due to a stale score, you may submit this assignment for grading,<br>"
+								+ "even for a score of zero, and ChemVantage will try to refresh your best score to the LMS.<p>");
+					} else throw new Exception();
+				} catch (Exception e) {
+					buf.append("ChemVantage was unable to retrieve your score for this assignment from the LMS.<br>");
+					if (s.score==0 && s.numberOfAttempts==0) buf.append("It appears that you may not have submitted a score for this quiz yet.<br>");
+					if (user.isInstructor()) buf.append("Some LMS providers do not store scores for instructors.<br>");
+					buf.append("<br>");
+				}
+
+				//buf.append("<a href=Homework?AssignmentId=" + a.id 
+						//+ (cvsToken==null?"":"&CvsToken=" + cvsToken) 
+				buf.append("<a href=Homework?Token=" + user.token 
+						+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
+						+ ">Take me back to the homework assignment.</a><p>");
+
+				buf.append("<table><tr><th>Transaction Number</th><th>QuestionID</th><th>Graded</th><th>Score</th></tr>");
+				for (HWTransaction hwt : hwts) {
+					buf.append("<tr align=center><td>" + hwt.id + "</td><td>" + hwt.questionId + "</td><td>" + df.format(hwt.graded) + "</td><td>" + hwt.score +  "</td></tr>");
+				}
+				buf.append("</table><p>");
 			}
-			buf.append("</table><p>");		
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}
-
 		return buf.toString();
 	}
 	
 	String showSummary(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
+		//String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
+		Group g = ofy().load().type(Group.class).id(user.myGroupId).safe();
+		String lti_version = null;
+		try {
+			ofy().load().type(Deployment.class).id(g.domain).safe();
+			lti_version = "1p3";
+		} catch (Exception e) {
+			BLTIConsumer cons = ofy().load().type(BLTIConsumer.class).id(g.domain).now();
+			if (cons != null) lti_version = "1p1";
+		}
+
+		if (!user.isInstructor()) return "You must be logged in as the instructor to view this page.";
+
+		if ("1p3".equals(lti_version)) {
+			try { // code for LTI version 1.3
+				//Assignment a = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
+				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
+
+				if (g.context_memberships_url==null) throw new Exception("No Names and Roles Provisioning support.");
+
+				buf.append("<h3>" + a.assignmentType + " - " + t.title + "</h3>");
+				buf.append("Group: " + g.description + "<br>");
+				buf.append("Valid: " + new Date() + "<p>");
+				buf.append("The roster below is obtained using the Names and Role Provisioning service offered by your learning management system, "
+						+ "and may or may not include user's names or emails, depending on the settings of your LMS. The easiest way to "
+						+ "resolve any discrepancies between scores reported by the LMS grade book and ChemVantage is for the user to "
+						+ "submit the assignment again (even for a score of zero). This causes ChemVantage to recalculate the "
+						+ "user's best score and report it to the LMS. However, some discrepancies are to be expected, for example "
+						+ "if the instructor adjusts a score in the LMS manually or if an assignment was submitted after the "
+						+ "deadline and was not accepted by the LMS.<p>");
+
+				Map<String,String> scores = LTIMessage.readMembershipScores(a);
+				Map<String,String[]> membership = LTIMessage.getMembership(g);
+				Map<String,Key<Score>> keys = new HashMap<String,Key<Score>>();
+				Deployment d = ofy().load().type(Deployment.class).id(g.domain).safe();
+				String platform_id = d.getPlatformId() + "/";
+				for (String id : membership.keySet()) {
+					keys.put(id,Key.create(Key.create(User.class,platform_id+id),Score.class,a.id));
+				}
+				Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
+				buf.append("<table><tr><th>User ID</th><th>Role</th><th>Name</th><th>Email</th><th>LMS Score</th><th>CV Score</th></tr>");
+				for (Map.Entry<String,String[]> entry : membership.entrySet()) {
+					String s = scores.get(entry.getKey());
+					Score cvScore = cvScores.get(keys.get(entry.getKey()));
+					buf.append("<tr><td>" + entry.getKey() + "</td>"
+							+ "<td>" + entry.getValue()[0] + "</td>"
+							+ "<td>" + entry.getValue()[1] + "</td>"
+							+ "<td>" + entry.getValue()[2] + "</td>"
+							+ "<td align=center>" + (s == null?" - ":s + "%") + "</td>"
+							+ "<td align=center>" + (cvScore == null?" - ":String.valueOf(cvScore.getPctScore()) + "%") + "</td></tr>");
+				}
+				buf.append("</table>");
+				return buf.toString();
+			} catch (Exception e) {
+				buf.append(e.toString());
+			}
+		} else if ("1p1".equals(lti_version)) {
+			try {  // code for LTI version 1.1
+				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
+				buf.append("<h3>" + a.assignmentType + " - " + t.title + "</h3>");
+
+				DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+				buf.append(df.format(new Date()) + "<p>");
+
+				buf.append("To protect the privacy of our users, ChemVantage does not collect any personally identifiable information. "
+						+ "Therefore, we are unable to display a traditional grade book with names and scores. Instead, we rely on a "
+						+ "robust system of reporting scores back to the grade book inside your LMS. Please check the information below "
+						+ "and let us know if you have any questions or problems. Thank you for using ChemVantage for your class.<p>");
+
+				buf.append("There are " + g.validatedMemberCount() + " members of this group, including instructors, "
+						+ "teaching assistants and test students created by your LMS, if applicable.<br>");
+
+				Score s = null;
+				int count = 0;
+				int pctScoreSum = 0;
+				int attempts = 0;
+				Date mostRecent = new Date(0);
+				boolean scoresReported = false;
+				int scoresNotReported = 0;
+				List<String> removeUsers = new ArrayList<String>();
+				for (String id : g.memberIds) {
+					try {
+						Key<Score> k = Key.create(Key.create(User.class,id),Score.class,a.id);
+						s = ofy().load().key(k).safe();       // throws an exception if no Score entity exists yet
+						if (s.numberOfAttempts==0) continue;  // skip the averaging for those who have not attempted the quiz yet
+						pctScoreSum += s.getPctScore();
+						attempts += s.numberOfAttempts;
+						count++;
+						if (s.mostRecentAttempt.after(mostRecent)) mostRecent = s.mostRecentAttempt;
+						if (s.lisReportComplete) scoresReported = true;
+						if (s.needsLisReporting()) {  // found a stale Score that apparently needs reporting
+							scoresNotReported++;
+							try {  // attempt to read the user's score, then post the stale one, otherwise remove the user from this group
+								String messageFormat = g.getLisOutcomeFormat();
+								String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
+								String oauth_consumer_key = g.domain;
+								String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
+
+								if (replyBody.contains("success")) {  // the lis_result_sourcedid is valid, so post the stale score
+									Queue queue = QueueFactory.getDefaultQueue();  // default task queue
+									queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",id));
+									buf.append("<br>We found a user score that may not have been posted previously, and we're sending it to the LMS now.");
+								} else {  // this user may have dropped the class or the Test Student was reset, so remove the user from this group
+									removeUsers.add(id);
+									buf.append("<br>We found a user who no longer has a valid grade book entry point in your LMS, so we removed this user from your group.");
+								}
+							} catch (Exception e) {
+								buf.append("<br>We attempted to validate a user score, but the operation failed." + e.toString());
+							}
+						}
+					} catch (Exception e) {}
+				}
+				for (String id : removeUsers) { // remove these users from the group
+					try {
+						User u = ofy().load().type(User.class).id(id).safe();
+						u.changeGroups(0);
+						ofy().save().entity(u);
+					} catch (Exception e) {}
+				}
+				buf.append("<p>There " + (count==1?"is ":"are ") + count + " score" + (count==1?"":"s") + " for this assignment in the ChemVantage database.<br>");
+				if (count>0) {
+					buf.append("The average score is " + pctScoreSum/count + "%.<br>");
+					buf.append("The average number of attempts (including downloads not submitted for scoring) is " + Math.round(10.*attempts/count)/10. + ".<br>");
+					buf.append("The most recent attempt of this assignment was on " + df.format(mostRecent) + ".<p>");
+				} else buf.append("<br>");
+
+				if (!g.isUsingLisOutcomeService) buf.append("Your LMS is not configured for ChemVantage to report scores to the LMS grade book.<p>");
+				else if (scoresNotReported>0) {
+					buf.append("It appears that " + scoresNotReported + (scoresNotReported==1?" score":" scores") + " may not have been reported to your LMS correctly. "
+							+ "We have automatically initiated a programmed task to correct this. "
+							+ "Please check back in a few minutes to ensure that the situation has been resolved.<p>");
+				}
+				else if (scoresReported) buf.append("All scores for students have been reported to your LMS successfully.<p>");
+
+				buf.append("If you have any questions or need assistance, please contact <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.<p>");			
+				//buf.append("<a href=/Homework?AssignmentId=" + a.id + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">Return to this homework assignment</a>.<p>");
+				buf.append("<a href=/Homework?Token=" + user.token + ">Return to this homework assignment</a>.<p>");
+			} catch (Exception e) {
+				buf.append(e.toString());
+			}
+		}
+		return buf.toString();
+	}
+/*
+	StringBuffer buf = new StringBuffer();
 		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		
-		try {
+		try { // code for LTI version 1.3
+			if (!user.isInstructor()) throw new Exception("You must be logged in as the instructor to view this page.");
+			Assignment a = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
+			Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
+			
+			Group g = ofy().load().type(Group.class).id(user.myGroupId).safe();
+			String platform_id = g.domain;
+			//ofy().load().key(g.d_key).safe();  // throws Exception if version 1.1
+			if (g.context_memberships_url==null) throw new Exception("No Names and Roles Provisioning support.");
+			
+			buf.append("<h3>" + a.assignmentType + " - " + t.title + "</h3>");
+			buf.append("Group: " + g.description + "<br>");
+			buf.append("Valid: " + new Date() + "<p>");
+			buf.append("The roster below is obtained using the Names and Role Provisioning service offered by your learning management system, "
+					+ "and may or may not include user's names or emails, depending on the settings of your LMS. ChemVantage does "
+					+ "not store any personally identifiable information on our servers, so this content is being provided "
+					+ "dynamically to your browser just now. You may compare the scores reported (just now) by your LMS "
+					+ "to those computed by ChemVantage. The easiest way to resolve any discrepancies is for the user to "
+					+ "submit the assignment again (even for a score of zero). This causes ChemVantage to recalculate the "
+					+ "user's best score and report it to the LMS. However, some discrepancies are to be expected, for example "
+					+ "if the instructor adjusts a score in the LMS manually or if an assignment was submitted after the "
+					+ "deadline and was not accepted by the LMS.<p>");
+					
+			Map<String,String> scores = LTIMessage.readMembershipScores(a);
+			Map<String,String[]> membership = LTIMessage.getMembership(g);
+			Map<String,Key<Score>> keys = new HashMap<String,Key<Score>>();
+			for (String id : membership.keySet()) {
+				keys.put(id,Key.create(Key.create(User.class,platform_id + "/" + id),Score.class,a.id));
+			}
+			Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
+			buf.append("<table><tr><th>User ID</th><th>Role</th><th>Name</th><th>Email</th><th>LMS Score</th><th>CV Score</th></tr>");
+			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
+				String s = scores.get(entry.getKey());
+				Score cvScore = cvScores.get(keys.get(entry.getKey()));
+				buf.append("<tr><td>" + entry.getKey() + "</td>"
+						+ "<td>" + entry.getValue()[0] + "</td>"
+						+ "<td>" + entry.getValue()[1] + "</td>"
+						+ "<td>" + entry.getValue()[2] + "</td>"
+						+ "<td align=center>" + (s == null?" - ":s + "%") + "</td>"
+						+ "<td align=center>" + (cvScore == null?" - ":String.valueOf(cvScore.getPctScore()) + "%") + "</td></tr>");
+			}
+			buf.append("</table>");
+			return buf.toString();
+		} catch (Exception e) {
+		}
+		
+		try {  // code for LTI version 1.1
 			if (!user.isInstructor()) throw new Exception("You must be logged in as the instructor to view this page.");
 			
 			Assignment a = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
@@ -683,6 +920,7 @@ public class Homework extends HttpServlet {
 				try {
 					User u = ofy().load().type(User.class).id(id).safe();
 					u.changeGroups(0);
+					ofy().save().entity(u);
 				} catch (Exception e) {}
 			}
 			buf.append("<p>There " + (count==1?"is ":"are ") + count + " score" + (count==1?"":"s") + " for this assignment in the ChemVantage database.<br>");
@@ -707,5 +945,5 @@ public class Homework extends HttpServlet {
 		}
 		return buf.toString();
 	}
-
+*/
 }

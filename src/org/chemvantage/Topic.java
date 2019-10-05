@@ -17,12 +17,8 @@
 
 package org.chemvantage;
 
-import static com.googlecode.objectify.ObjectifyService.ofy;
-
 import java.io.Serializable;
-import java.util.List;
 
-import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
@@ -40,11 +36,11 @@ public class Topic implements Serializable {
 		this.title = title;
 		this.orderBy = orderBy;
 	}
-
+/*
 	public List<Key<Question>> getQuestionKeys(String assignmentType) {
 		return  ofy().load().type(Question.class).filter("topicId",this.id).filter("assignmentType",assignmentType).keys().list();
 	}
-/*	
+	
 	public Query<Question> getQuestions(String assignmentType) {
 		return ofy().load().type(Question.class).filter("topicId", this.id).filter("assignmentType",assignmentType).order("pointValue");
 	}
@@ -52,7 +48,7 @@ public class Topic implements Serializable {
 	public int getQuestionCount(String assignmentType) {
 		return this.getQuestions(assignmentType).count();
 	}
-*/	
+	
 	public Question getQuestion(Key<Question> key) {
 		return ofy().load().key(key).now();
 	}
@@ -60,4 +56,5 @@ public class Topic implements Serializable {
 	public Question getQuestion(long id) {
 		return ofy().load().type(Question.class).id(id).now();
 	}
+	*/
 }

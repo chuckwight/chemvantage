@@ -19,30 +19,33 @@ package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.google.common.hash.Hashing;
-import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 import com.googlecode.objectify.cmd.Query;
+import com.googlecode.objectify.cmd.QueryKeys;
 
 @Entity
 public class User {
 	@Id 	String id;
 	@Index	String domain;
 	@Index	Date lastLogin;
-	@Index	String cvsToken;
-			Date cvsTokenExpires;
+	//@Index	String cvsToken;
+			String token;
+			//Date cvsTokenExpires;
 			int roles;
 			long myGroupId;
 			String alias;
@@ -59,6 +62,21 @@ public class User {
 		this.alias = null;
 	}
 
+	User(String id, int roles, long groupId) {
+		this.id = id;
+		this.roles = roles;
+		this.myGroupId = groupId;
+	}
+	
+	static User getInstance(String userId) {
+		try {
+			User user = ofy().load().type(User.class).id(userId).safe();
+			return user;
+		} catch (Exception e) {
+		}
+		return null;
+	}
+	
 	static User getInstance(HttpSession session) {
 		User user = null;
 		String userId = null;
@@ -159,6 +177,15 @@ public class User {
 		return false;
 	}
 	
+	static String getRawId(String userId) {
+		try {  // v1p3: strip the platform_id and "/" from the front of the userId
+			return new URI(userId).getRawPath().substring(1);
+		} catch (Exception e) {  // v1p1: strip the domain name and ":" from the front of the userId
+			User u = ofy().load().type(User.class).id(userId).now();
+			return userId.substring(u.domain.length()+1);
+		}
+	}
+	
 	boolean isAnonymous() {
 		try {
 			return id.startsWith("anonymous");
@@ -198,7 +225,7 @@ public class User {
 	public void setLastLogin() {
 		this.lastLogin = new Date();
 	}
-
+/*
 	List<QuizTransaction> getQuizTransactions() {
 		return ofy().load().type(QuizTransaction.class).filter("userId",this.id).order("-score").list();
 	}
@@ -246,7 +273,7 @@ public class User {
 	PracticeExamTransaction getPracticeExamTransaction(Key<PracticeExamTransaction> key) {
 		return ofy().load().key(key).now();
 	}
-
+*/
 	public String getPrincipalRole() {
 		String principalRole;		
 		if (roles < 1) principalRole = "Student";
@@ -259,7 +286,7 @@ public class User {
 		else principalRole = ""; // unknown role
 		return principalRole;
 	}
-
+/*
 	public String getDecoratedRole() {
 		String principalRole;		
 		if (roles < 1) principalRole = "Student";
@@ -312,70 +339,19 @@ public class User {
 		principalRole += " - <a href=/Verification>view account profile</a>";
 		return principalRole;
 	}
-
-	boolean isAdministrator() {
-		return ((roles%32)/16 == 1) || this.isChemVantageAdmin();
-	}
-
+*/
 	boolean isChemVantageAdmin() {
 		return ((roles%64)/32 == 1);
 	}
 	
-	boolean setIsAdministrator(boolean makeAdmin) {  // returns true if state is changed; otherwise returns false
-		if (isAdministrator() && !makeAdmin) {
-			roles -= 16;
-			return true;
-		}
-		else if (!isAdministrator() && makeAdmin) {
-			roles += 16;
-			return true;
-		}
-		else return false; // user already had the requested status; no changes made
-	}
-
-	boolean setIsChemVantageAdmin(boolean makeAdmin) {  // returns true if state is changed; otherwise returns false
-		if (isChemVantageAdmin() && !makeAdmin) {
-			roles -= 32;
-			ofy().save().entity(this);
-			return true;
-		}
-		else if (!isChemVantageAdmin() && makeAdmin) {
-			roles += 32;
-			ofy().save().entity(this);
-			return true;
-		}
-		else return false; // user already had the requested status; no changes made
+	boolean isAdministrator() {
+		return ((roles%32)/16 == 1) || this.isChemVantageAdmin();
 	}
 
 	boolean isInstructor() {
-		try {
-			return ((roles%16)/8 == 1) || this.isAdministrator();
-		} catch (Exception e) {
-			return false;
-		}
+		return ((roles%16)/8 == 1) || this.isAdministrator();
 	}
 
-	boolean setIsInstructor(boolean makeInstructor) {  // returns true if state is changed; otherwise returns false
-		if (isInstructor() && !makeInstructor) {
-			roles -= 8;
-			return true;
-		} else if (!isInstructor() && makeInstructor) {
-			roles += 8;
-			return true;
-		} else return false; // user already had the requested status; no changes made
-
-	}
-
-	boolean setIsTeachingAssistant(boolean makeTeachingAssistant) { // returns true if the state is changed; else false
-		if (isTeachingAssistant() && !makeTeachingAssistant) {
-			roles -= 4;
-			return true;
-		} else if (!isTeachingAssistant() && makeTeachingAssistant) {
-			roles += 4;
-			return true;
-		} else return false; // user already has the requested status; no changes made		
-	}
-	
 	boolean isTeachingAssistant() {    
 		return ((roles%8)/4 == 1);
 	}
@@ -387,11 +363,44 @@ public class User {
 	boolean isContributor() {
 		return ((roles%2)/1 == 1);
 	}
+
+	boolean setIsChemVantageAdmin(boolean makeAdmin) {  // returns true if state is changed; otherwise returns false
+		if (isChemVantageAdmin() ^ makeAdmin) {
+			roles += makeAdmin?+32:-32;
+			return true;
+		}
+		else return false;
+	}
+
+	boolean setIsAdministrator(boolean makeAdmin) {  // returns true if state is changed; otherwise returns false
+		if (isAdministrator() ^ makeAdmin) {
+			roles += makeAdmin?+16:-16;
+			return true;
+		}
+		else return false;
+	}
+
+	boolean setIsInstructor(boolean makeInstructor) {  // returns true if state is changed; otherwise returns false
+		if (isInstructor() ^ makeInstructor) {
+			roles += makeInstructor?+8:-8;
+			return true;
+		}
+		else return false;		
+	}
+
+	boolean setIsTeachingAssistant(boolean makeTeachingAssistant) { // returns true if the state is changed; else false
+		if (isTeachingAssistant() ^ makeTeachingAssistant) {
+			roles += makeTeachingAssistant?+4:-4;
+			return true;
+		}
+		else return false;
+	}
+	
 /*
 	public int getHWQuestionScore(long questionId) {
 		return (ofy().load().type(HWTransaction.class).filter("userId",this.id).filter("questionId",questionId).filter("score >",0).count() == 0?0:1);
 	}
-*/
+
 	public boolean moreThan1RecentAttempts(long questionId,int minutes) { // for Homework question grading
 		try {
 			Date minutesAgo = new Date(new Date().getTime()-minutes*60000);
@@ -401,7 +410,7 @@ public class User {
 			return false;
 		}
 	}
-
+*/
 	public boolean isEligibleForHints(long questionId) {
 		// users are eligible for hints on homework questions if they have submitted
 		// more than 2 answers more than 15 minutes ago
@@ -415,41 +424,46 @@ public class User {
 	}
 
 	void deleteScores() {
-		Query<Score> myScores = ofy().load().type(Score.class).ancestor(this);
-		ofy().delete().entities(myScores);
+		QueryKeys<Score> myScores = ofy().load().type(Score.class).ancestor(this).keys();
+		ofy().delete().keys(myScores);
 	}
 
 	public void changeGroups(long newGroupId) {
+		Group newGroup = null;
+		Group oldGroup = null;
 		if (newGroupId == this.myGroupId) {  // no change needed; just verify that user is listed as a group member
 			if (this.myGroupId == 0) return;
-			Group g = ofy().load().type(Group.class).id(myGroupId).now();
-			if (!g.memberIds.contains(this.id)) {
-				g.memberIds.add(this.id);
-				ofy().save().entity(g).now();
-			}
-			return;
-		}
-		// User is attempting to change groups:
-		try {
-			Group oldGroup = myGroupId>0?ofy().load().type(Group.class).id(myGroupId).now():null;
-			if (oldGroup != null) {
-				oldGroup.memberIds.remove(this.id);
-				ofy().save().entity(oldGroup).now();
-			}
-			Group newGroup = newGroupId>0?ofy().load().type(Group.class).id(newGroupId).now():null;
-			if (newGroup != null) {
+			try {
+				newGroup = ofy().load().type(Group.class).id(myGroupId).safe();
 				if (!newGroup.memberIds.contains(this.id)) {
 					newGroup.memberIds.add(this.id);
-					ofy().save().entity(newGroup).now();
-				}
+					ofy().save().entity(newGroup);
+				}			
+			} catch (Exception e) {
 			}
-			this.myGroupId = newGroup==null?0:newGroupId;
-			ofy().save().entity(this).now();
-		} catch (Exception e) {
+			return;
+		} else {     // User is attempting to change groups:
+			try {
+				oldGroup = myGroupId>0?ofy().load().type(Group.class).id(myGroupId).now():null;
+				if (oldGroup != null) {
+					oldGroup.memberIds.remove(this.id);
+					ofy().save().entity(oldGroup);
+				}
+				newGroup = newGroupId>0?ofy().load().type(Group.class).id(newGroupId).now():null;
+				if (newGroup != null) {
+					if (!newGroup.memberIds.contains(this.id)) {
+						newGroup.memberIds.add(this.id);
+						ofy().save().entity(newGroup);
+					}
+				}
+				this.myGroupId = newGroup==null?0:newGroupId;
+				deleteScores();
+				//ofy().save().entity(this).now();  NOTE: User entity must be saved separately!
+			} catch (Exception e) {
+			}
 		}
-		deleteScores();
 	}
-
+/*
     Score getScore(Assignment assignment) {
     	try {
     		Key<Score> k = Key.create(Key.create(User.class,this.id),Score.class,assignment.id);
@@ -503,11 +517,23 @@ public class User {
     	cvsTokenExpires = null;
     	return Key.create(this).equals(ofy().save().entity(this).now());
    }
-    
-    static User getUser(String cvs) {
-    	if (cvs==null) return null;
+*/    
+    static User getUser(String token) {
+    	if (token==null) return null;
+    	//User u = null;
     	try {
-    		User u = ofy().load().type(User.class).filter("cvsToken",cvs).first().now();
+    		Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
+    		JWT.require(algorithm).build().verify(token);  // checks validity of token
+    		DecodedJWT t = JWT.decode(token);
+    		User u = new User(t.getSubject(),t.getClaim("roles").asInt(),t.getClaim("gId").asLong());
+    		Date in15Min = new Date(new Date().getTime()+900000L);  
+    		if (t.getExpiresAt().before(in15Min)) u.setToken(t.getClaim("aId").asLong()); // refresh the token if it will expire within 15 minutes
+    		else u.token = token;  // no refresh required
+    		return u;
+    	} catch (Exception e) {
+    	}
+/*    	try {
+    		u = ofy().load().type(User.class).filter("cvsToken",token).first().safe();
     		Date now = new Date();
     		if (u.cvsTokenExpires.after(now)) {
     			u.getCvsToken();  // freshens the token, if needed
@@ -515,6 +541,32 @@ public class User {
     		}
     	} catch (Exception e) {
     	}
-    	return null;
+*/    	return null;
     }
+  
+    void setToken(long assignmentId) {  // stores a CRSF JWT token in the field User.token
+    	try {
+    		Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
+    		Date now = new Date();
+    		Date exp = new Date(now.getTime() + 5400000L);  // 90 minutes from now
+    		this.token =  JWT.create()
+    				.withSubject(this.id)
+    				.withExpiresAt(exp)
+    				.withClaim("roles", this.roles)
+    				.withClaim("gId", this.myGroupId)
+    				.withClaim("aId", assignmentId)
+    				.sign(algorithm); 				
+    	} catch (Exception e) {
+    		this.token = null;
+    	}
+    }
+    
+    long getAssignmentId() {
+     	try {
+    		return JWT.decode(this.token).getClaim("aId").asLong();  // assignmentId
+    	} catch (Exception e) {    		
+    		return 0;
+    	}
+    }
+    
 }

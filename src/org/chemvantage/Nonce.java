@@ -40,7 +40,7 @@ public class Nonce {
 		this.id = id;
 		this.created = new Date();
 	}
-	
+		
 	static String createInstance(User user) {
 		if (user == null) return null;
 		try {

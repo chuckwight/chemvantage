@@ -280,7 +280,7 @@ public class Question implements Serializable {
 		case 4: // Fill-in-the-Word
 			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br>");
-			buf.append("<input id=" + this.id + " type=text name=" + this.id + " value='" + CharHider.quot2html(studentAnswer) + "'>");
+			buf.append("<input id=" + this.id + " type=text name=" + this.id + " value='" + quot2html(studentAnswer) + "'>");
 			buf.append(tag + "<br>");
 			break;
 		case 5: // Numeric Answer
@@ -314,7 +314,7 @@ public class Question implements Serializable {
 			for (int i = 0; i < nChoices && i < choices.size(); i++) {
 				buf.append("<LI>" 
 						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
-						+ CharHider.quot2html(choices.get(i))
+						+ quot2html(choices.get(i))
 						+ (correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>")
 						+ "</LI>");
 				choice++;
@@ -338,7 +338,7 @@ public class Question implements Serializable {
 			for (int i = 0; i < nChoices && i < choices.size(); i++) {
 				buf.append("<LI>"
 						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
-						+ CharHider.quot2html(choices.get(i))
+						+ quot2html(choices.get(i))
 						+ (correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>")
 						+ "</LI>");
 				choice++;
@@ -349,7 +349,7 @@ public class Question implements Serializable {
 			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br>");
 			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TD>"
-					+ "<b>" + CharHider.quot2html(correctAnswer) + "</b>"
+					+ "<b>" + quot2html(correctAnswer) + "</b>"
 					+ "</TD></TR></TABLE>");
 			buf.append(tag + "<p><p>");
 			break;
@@ -396,7 +396,7 @@ public class Question implements Serializable {
 			for (int i = 0; i < nChoices; i++) {
 				buf.append("&nbsp;" + choice + ". "
 						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
-						+ CharHider.quot2html(choices.get(i))
+						+ quot2html(choices.get(i))
 						+ (correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>") + "<br>");
 				choice++;
 			}
@@ -418,7 +418,7 @@ public class Question implements Serializable {
 			for (int i = 0; i < nChoices; i++) {
 				buf.append("&nbsp;" + choice + ". "
 						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
-						+ CharHider.quot2html(choices.get(i))
+						+ quot2html(choices.get(i))
 						+ (correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>") + "<br>");
 				choice++;
 			}
@@ -428,7 +428,7 @@ public class Question implements Serializable {
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br>");
 			String[] answers = correctAnswer.split(",");
 			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TD>"
-					+ "<b>" + CharHider.quot2html(answers[0]) + "</b>"
+					+ "<b>" + quot2html(answers[0]) + "</b>"
 					+ "</TD></TR></TABLE>");
 			if (tag.length() > 0) buf.append(tag + "<br />");
 			break;
@@ -537,7 +537,7 @@ public class Question implements Serializable {
 			switch (this.getQuestionType()) {
 			case 1: // Multiple Choice
 				buf.append("Question Text:<br><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
-						+ CharHider.amp2html(text) + "</TEXTAREA><br>");
+						+ amp2html(text) + "</TEXTAREA><br>");
 				buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best choice:</FONT><br>");
 				buf.append("<UL>");
 				for (int i=0;i<5;i++) { 
@@ -545,7 +545,7 @@ public class Question implements Serializable {
 						buf.append("<input type=radio name=CorrectAnswer value=" + choice + "");
 						if (correctAnswer.indexOf(choice) >= 0) buf.append(" CHECKED");
 						buf.append("><input size=30 name=" + choiceNames[i] + " value='"); 
-						if (choices.size() > i) buf.append(CharHider.quot2html(CharHider.amp2html(choices.get(i))));
+						if (choices.size() > i) buf.append(quot2html(amp2html(choices.get(i))));
 						buf.append("'><br>");
 					}
 					else buf.append("<input type=radio name=CorrectAnswer value='" + choice + "'>"
@@ -556,7 +556,7 @@ public class Question implements Serializable {
 				break;
 			case 2: // True/False
 				buf.append("Question Text:<br><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
-						+ CharHider.amp2html(text) + "</TEXTAREA><br>");
+						+ amp2html(text) + "</TEXTAREA><br>");
 				buf.append("<FONT SIZE=-2 COLOR=FF0000>Select true or false:</FONT><br>");
 				buf.append("<input type=radio name=CorrectAnswer value='true'");
 					if (correctAnswer.equals("true")) buf.append(" CHECKED");
@@ -567,7 +567,7 @@ public class Question implements Serializable {
 				break;
 			case 3: // Select Multiple
 				buf.append("Question Text:<br><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
-						+ CharHider.amp2html(text) + "</TEXTAREA><br>");
+						+ amp2html(text) + "</TEXTAREA><br>");
 				buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><br>");
 				buf.append("<UL>");
 				for (int i=0;i<5;i++){
@@ -575,7 +575,7 @@ public class Question implements Serializable {
 						buf.append("<input type=checkbox name=CorrectAnswer value=" + choice);
 						if (correctAnswer.indexOf(choice) >= 0) buf.append(" CHECKED");
 						buf.append("><input size=30 name=" + choiceNames[i] + " value='"); 
-						if (choices.size() > i) buf.append(CharHider.quot2html(CharHider.amp2html(choices.get(i))));
+						if (choices.size() > i) buf.append(quot2html(amp2html(choices.get(i))));
 						buf.append("'><br>");
 					}
 					else buf.append("<input type=checkbox name=CorrectAnswer value=" + choice + ">"
@@ -586,17 +586,17 @@ public class Question implements Serializable {
 				break;
 			case 4: // Fill-in-the-Word
 				buf.append("Question Text:<br><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
-						+ CharHider.amp2html(text) + "</TEXTAREA><br>");
+						+ amp2html(text) + "</TEXTAREA><br>");
 				buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase.<br>"
 						+ "Multiple correct answers can be entered as a comma-separated list.</FONT><br>");
 				buf.append("<input type=text name=CorrectAnswer value=\"" 
-						+ CharHider.quot2html(CharHider.amp2html(correctAnswer)) + "\"'><br>");
+						+ quot2html(amp2html(correctAnswer)) + "\"'><br>");
 				buf.append("<TEXTAREA name=QuestionTag rows=5 cols=60 wrap=soft>" 
-						+ CharHider.amp2html(tag) + "</TEXTAREA><br>");
+						+ amp2html(tag) + "</TEXTAREA><br>");
 				break;
 			case 5: // Numeric Answer
 				buf.append("Question Text:<br><TEXTAREA name=QuestionText rows=5 cols=60 wrap=soft>" 
-						+ CharHider.amp2html(text) + "</TEXTAREA><br>");
+						+ amp2html(text) + "</TEXTAREA><br>");
 				buf.append("<FONT SIZE=-2>Significant figures: <input size=5 name=SignificantFigures value='" + significantFigures + "'> Required precision: <input size=5 name=RequiredPrecision value='" + requiredPrecision + "'> (set to zero to require exact answer)</FONT><br/>");
 				switch (getNumericItemType()) {
 				case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>"); break;
@@ -608,7 +608,7 @@ public class Question implements Serializable {
 				buf.append("Correct answer:");
 				buf.append("<INPUT TYPE=TEXT NAME=CorrectAnswer VALUE='" + correctAnswer + "'> ");
 				buf.append(" Units:<INPUT TYPE=TEXT NAME=QuestionTag SIZE=8 VALUE='" 
-						+ CharHider.quot2html(CharHider.amp2html(tag)) + "'><br>");
+						+ quot2html(amp2html(tag)) + "'><br>");
 				buf.append("Parameters:<input name=ParameterString value='" 
 						+ parameterString + "'><FONT SIZE=-2><a href=# onClick=\"javascript:document.getElementById('detail1').innerHTML="
 						+ "'You may embed up to 4 parameters (a b c d) in a question using a parameter string like<br>"
@@ -619,9 +619,9 @@ public class Question implements Serializable {
 						+ "Correct answer: #22.9898*a/1000*b/10# g<p>'\";>What's This?</a></FONT>");
 				buf.append("<div id=detail1></div>");
 				buf.append("Hint:<br><TEXTAREA NAME=Hint ROWS=3 COLS=60 WRAP=SOFT>"
-						+ CharHider.amp2html(hint) + "</TEXTAREA><br>");
+						+ amp2html(hint) + "</TEXTAREA><br>");
 				buf.append("Solution:<br><TEXTAREA NAME=Solution ROWS=10 COLS=60 WRAP=SOFT>" 
-						+ CharHider.amp2html(solution) + "</TEXTAREA><br>");
+						+ amp2html(solution) + "</TEXTAREA><br>");
 				break;
 			}
 		}
@@ -701,4 +701,35 @@ public class Question implements Serializable {
 		q.notes = this.notes;
 		return q;
 	}
+	
+	// The following methods are from the original CharHider class to guard against
+	// inadvertent mistakes in interpreting user input, especially in Question items.
+
+	static String quot2html(String oldString) {
+		if (oldString == null) return "";
+		// recursive method replaces single quotes with &#39; for HTML pages
+		int i = oldString.indexOf('\'',0);
+		return i<0?oldString:quot2html(new StringBuffer(oldString).replace(i,i+1,"&#39;").toString(),i);
+	}
+
+	static String quot2html(String oldString,int fromIndex) {
+		// recursive method replaces single quotes with &#39; for HTML pages
+		int i = oldString.indexOf('\'',fromIndex);
+		return i<0?oldString:quot2html(new StringBuffer(oldString).replace(i,i+1,"&#39;").toString(),i);
+	}
+
+	static String amp2html(String oldString) {
+		if (oldString == null) return "";
+		// recursive method replaces ampersands with &amp; for preloading Greek/special characters in text fields in HTML forms
+		int i = oldString.indexOf('&',0);
+		//		    return i<0?oldString:new StringBuffer(oldString).replace(i,i+1,"&amp;").toString();
+		return i<0?oldString:amp2html(new StringBuffer(oldString).replace(i,i+1,"&amp;").toString(),i+1);
+	}
+
+	static String amp2html(String oldString,int fromIndex) {
+		// recursive method replaces ampersands with &amp; for preloading Greek/special characters in text fields in HTML forms
+		int i = oldString.indexOf('&',fromIndex);
+		return i<0?oldString:amp2html(new StringBuffer(oldString).replace(i,i+1,"&amp;").toString(),i+1);
+	}
+
 }

@@ -24,13 +24,14 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 
 import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 import com.googlecode.objectify.cmd.Query;
 
+@WebServlet("/Contribute")
 public class Contribute extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
@@ -42,12 +43,15 @@ public class Contribute extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
 		try {
+			User user = User.getUser(request.getParameter("token"));
+			if (user == null) throw new Exception();
+			/*
 			User user = null;
 			HttpSession session = request.getSession();
 			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
 			else user = User.getInstance(session);
 			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
-
+			 */
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			out.println(Home.header + newQuestionForm(user,request) + Home.footer);		
@@ -57,12 +61,15 @@ public class Contribute extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
+			User user = User.getUser(request.getParameter("token"));
+			if (user == null) throw new Exception();
+			/*
 			User user = null;
 			HttpSession session = request.getSession();
 			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
 			else user = User.getInstance(session);
 			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
-				
+			*/	
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
@@ -77,7 +84,7 @@ public class Contribute extends HttpServlet {
 
 	String newQuestionForm(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
+		//String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		try {
 			// The values of assignmentType, questionType and topicKey are required to start editing
 			String assignmentType = request.getParameter("AssignmentType");
@@ -126,7 +133,8 @@ public class Contribute extends HttpServlet {
 			ProposedQuestion q = null;
 			boolean preview = false;
 			buf.append("<FORM NAME=NewQuestion ACTION=Contribute METHOD=POST>");
-			if (cvsToken!=null) buf.append("<INPUT TYPE=HIDDEN NAME=CvsToken VALUE=" + cvsToken + ">");
+			//if (cvsToken!=null) buf.append("<INPUT TYPE=HIDDEN NAME=CvsToken VALUE=" + cvsToken + ">");
+			buf.append("<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">");
 			
 			if (assignmentType.length()>0 && questionType>0 && topicId>0) { // create the question object
 				q = new ProposedQuestion(questionType);
@@ -218,7 +226,8 @@ public class Contribute extends HttpServlet {
 						+ "to indicate the expected dimensions or units of the student response or "
 						+ "to finish any part of the question text that comes last.<p>"); break;
 				default:  buf.append("An unexpected error occurred. "
-						+ "Please <a href=Contribute" + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">try again</a>.");
+						//+ "Please <a href=Contribute" + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">try again</a>.");
+						+ "Please <a href=Contribute?Token=" + user.token + ">try again</a>.");
 				}
 			}
 			else {
@@ -244,7 +253,7 @@ public class Contribute extends HttpServlet {
 
 	String submitQuestion(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
+		//String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		ProposedQuestion q = null;
 		try {
 			String assignmentType = request.getParameter("AssignmentType");
@@ -319,7 +328,8 @@ public class Contribute extends HttpServlet {
 			buf.append("<h3>Question Submitted Successfully</h3>"
 			+ "Thank you for contributing this question item to ChemVantage.<br>"
 			+ "Your contribution will be reviewed by an editor before it is added to the database.<br>"
-			+ "<a href=Contribute" + (cvsToken==null?"":"?CvsToken=" + cvsToken) + ">Contribute another question item</a>.");
+			//+ "<a href=Contribute" + (cvsToken==null?"":"?CvsToken=" + cvsToken) + ">Contribute another question item</a>.");
+			+ "<a href=Contribute?Token=" + user.token + ">Contribute another question item</a>.");
 		}
 		return buf.toString();
 	}

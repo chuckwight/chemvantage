@@ -20,13 +20,9 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.List;
 
-import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
-import com.googlecode.objectify.cmd.Query;
 
 @Entity
 public class Subject {
@@ -56,45 +52,6 @@ public class Subject {
 		}
 	}
 
-	public String getTopicSelectBox() {
-		return getTopicSelectBox(0);
-	}
-	
-	
-	public String getTopicSelectBox(long id) {
-		StringBuffer buf = new StringBuffer();
-		Query<Topic> topics = ofy().load().type(Topic.class);
-		buf.append("Topic: <SELECT NAME=TopicId>");
-		if (id == 0) buf.append("<OPTION VALUE=0>Select a topic:</OPTION>");
-		for (Topic t : topics) {
-			buf.append("<OPTION " + ((t.id == id)?"SELECTED ":"")
-					+ "VALUE='" + t.id + "'>" + t.title + "</OPTION>");
-		}
-		buf.append("</SELECT><br>");
-		return buf.toString();
-	}
-
-	public List<Long> getVideos() {
-		List<Long> videoIds = new ArrayList<Long>();
-		List<Key<Video>> videoKeys = ofy().load().type(Video.class).keys().list();
-		for (Key<Video> k : videoKeys) videoIds.add(k.getId());
-		return videoIds;
-	}
-
-	public List<Long> getTextIds() {
-		List<Long> textIds = new ArrayList<Long>();
-		List<Key<Text>> textKeys = ofy().load().type(Text.class).keys().list();
-		for (Key<Text> k : textKeys) textIds.add(k.getId());
-		return textIds;
-	}
-
-	public List<Long> getTopicIds() {
-		List<Long> topicIds = new ArrayList<Long>();
-		List<Key<Topic>> topicKeys = ofy().load().type(Topic.class).order("orderBy").keys().list();
-		for (Key<Topic> k : topicKeys) topicIds.add(k.getId());
-		return topicIds;
-	}
-
 	public void addStarReport(int stars) {
 		avgStars = (avgStars*nStarReports + stars)/(nStarReports+1);
 		nStarReports++;
@@ -105,4 +62,5 @@ public class Subject {
 		DecimalFormat df2 = new DecimalFormat("#.#");
 		return Double.valueOf(df2.format(avgStars));
 	}
+	
 }
