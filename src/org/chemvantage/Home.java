@@ -30,7 +30,6 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 @WebServlet(urlPatterns={"/","/Home"})
 public class Home extends HttpServlet {
@@ -53,15 +52,14 @@ public class Home extends HttpServlet {
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
-		// make every user anonymous
-
+/*
 		HttpSession session = request.getSession();
 		String userId = (String) session.getAttribute("UserId");
 		if (userId==null || !User.isAnonymous(session)) {
 			userId = "anonymous" + new Random().nextInt();
 			session.setAttribute("UserId", userId);
 		}
-		
+*/		
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 
@@ -83,6 +81,10 @@ public class Home extends HttpServlet {
 			+ "<meta name='Description' content='An online quiz and homework site'>\n"
 			+ "<meta namew='Keywords' content='chemistry,learning,online,quiz,homework,video,textbook,open,education'>\n"
 			+ "<meta name='msapplication-config' content='none'/>"
+			+ "<link rel='icon' type='image/png' href='/favicon.png'>"
+			//+ "<link rel='icon' type='image/gif' href='/image.gif'>"
+			//+ "<link rel='icon' type='image/jpeg' href='/favicon.jpg'>"
+			+ "<link rel='icon' type='image/vnd.microsoft.icon' href='/favicon.ico'>"
 			+ "<title>ChemVantage</title>\n"
 			+ "</head>\n"
 			+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
@@ -189,6 +191,12 @@ public class Home extends HttpServlet {
 					+ "<b><FONT COLOR=RED>Please select a topic:</FONT></b><br></div>");
 			
 			buf.append("<FORM NAME='HQSelectForm' ACTION=Quiz METHOD=GET>");
+			
+			// make every user anonymous
+			User user = new User("anonymous"+new Random().nextInt());
+			user.setToken(0);
+			buf.append("<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">");
+			
 			buf.append("<SELECT NAME='TopicId'><OPTION Value='0' SELECTED>Select a topic</OPTION>");
 			
 			if (topics == null) topics = ofy().load().type(Topic.class).order("orderBy").list();
@@ -211,6 +219,7 @@ public class Home extends HttpServlet {
 			buf.append("<TABLE><TR><TD>");
 			buf.append("<b>Practice Exams</b>");
 			buf.append("<FORM METHOD=GET ACTION=PracticeExam>");
+			buf.append("<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">");
 			buf.append("<INPUT TYPE=SUBMIT VALUE='Take A Practice Exam Now'>");
 			buf.append("</FORM></TD></TR></TABLE><p>\n");
 
