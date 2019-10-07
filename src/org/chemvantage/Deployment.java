@@ -16,16 +16,17 @@ import java.util.Base64.Encoder;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
 
 @Entity
 public class Deployment {
-	@Id String platform_deployment_id;
-	String client_id;
-	String oauth_access_token_url;
-	String oidc_auth_url;
-	String well_known_jwks_url;
-	String email;
-	byte[] rsa_private_key;
+	@Id 	String platform_deployment_id;
+	@Index	String client_id;
+			String oauth_access_token_url;
+			String oidc_auth_url;
+			String well_known_jwks_url;
+			String email;
+			byte[] rsa_private_key;
 
 	Deployment() {}
 	

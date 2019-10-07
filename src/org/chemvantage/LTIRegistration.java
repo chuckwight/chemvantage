@@ -30,6 +30,12 @@ import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.interfaces.RSAPublicKey;
+import java.text.DateFormat;
+import java.util.Base64;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -45,6 +51,14 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 
 @WebServlet(urlPatterns = {"/lti/registration","/lti/registration/"})
 public class LTIRegistration extends HttpServlet {
@@ -130,10 +144,75 @@ public class LTIRegistration extends HttpServlet {
 	throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
+		String sig = request.getParameter("sig");
+		if (sig != null) { // this is a Json configuration URL request
+			try {
+				Deployment d = ofy().load().type(Deployment.class).filter("client_id",sig).first().safe();
+				JsonObject json = getConfigJson(d,request);
+				out.println(new GsonBuilder().setPrettyPrinting().create().toJson(json));
+				return;
+			} catch (Exception e) {
+				response.sendError(401,"The registration request was not valid.");
+				return;
+			}
+		}
+		String userRequest = request.getParameter("UserRequest");
 		
-		out.println(Home.header + banner + welcomeMessage);
+		StringBuffer buf = new StringBuffer(Home.header + banner);
+		if ("Finalize".equals(userRequest)) {
+			buf.append("<h3>Finalize ChemVantage Registration</h3>");
+			// validate the registration JWT
+			try {
+				String token = request.getParameter("Token");
+				Deployment d = validateToken(token);
+				boolean showJson = Boolean.valueOf(request.getParameter("ShowJson"));
+				String refresh_url = request.getRequestURI() + "?UserRequest=Finalize&ShowJson=true&Token=" + token;
+				if (!showJson) {
+				buf.append("Enter the following configuration Json URL into your LMS now to complete "
+						+ "the ChemVantage registration. This is a one-time URL, so copy/paste it carefully, "
+						+ "or you will have to start registration over at the beginning.<p>");
+				buf.append("Configuration Json URL: https://" + request.getServerName() 
+						+ "/lti/registration?sig=" + JWT.decode(token).getSignature() + "<p>");
+				
+				buf.append("If your LMS does not support entering a configuration Json URL, you may "
+						+ "<a href=" + refresh_url + ">click this link</a> "
+						+ "to refresh this page and show the configuration Json in "
+						+ "plain text.<p><b>Warning:</b> this link will only work once, and it will deactivate the "
+						+ "configuration Json URL above so that it cannot be used.<p>");
+				} else {
+					buf.append("Use the configuration Json shown below to complete the ChemVantage "
+							+ "registration in your LMS. You may be able to copy/paste it as a whole, "
+							+ "or you may have to enter the values manually into a multipart form in your "
+							+ "LMS.<p>");
+				}
+				buf.append("When the registration in your LMS is complete, it should generate values for "
+						+ "the LTI client_id, a local identifier for ChemVantage, and (optionally) a "
+						+ "deployment_id, which is a local identifier for your LMS account. You must submit at least "
+						+ "the client_id in the form below to complete the registration process in ChemVantage.<p>");
+				buf.append("<form method=post><input type=hidden name=platform_deployment_id value=" + d.platform_deployment_id + ">");
+				buf.append("Client ID: <input type=text name=ClientId size=20> (required)<br>");
+				buf.append("Deployment ID: <input type=text name=DeploymentId size=20> (recommended)<br>");
+				buf.append("<input type=submit name=UserRequest value=Submit></form>");
+				
+				if (showJson) {
+					buf.append("<h3>Configuration JSON</h3>");
+					Gson gson = new GsonBuilder().setPrettyPrinting().create();
+					JsonObject json = getConfigJson(d,request);
+					if (json==null) throw new Exception();
+					buf.append("<pre>" + gson.toJson(json) + "</pre>");	
+				}
+				buf.append(Home.footer);
+				
+				
+			} catch (Exception e) {
+				response.sendError(401, "Sorry, this one-time URL is either invalid or has expired or has been activated previously. " + e.toString());
+			}
+			out.println(buf.toString());
+			return;
+		}
 		
-		StringBuffer buf = new StringBuffer();
+		buf.append(welcomeMessage);
+		
 		if ("1p1".equals(request.getParameter("lti_version"))) {
 			buf.append("<h3>LTI version 1.1 Integration</h3>"
 			+ "You may obtain a free set of LTI credentials by entering a consumer key value (any string of "
@@ -155,17 +234,30 @@ public class LTIRegistration extends HttpServlet {
 			buf.append(instructions);
 		} else if ("1p3".equals(request.getParameter("lti_version"))) {
 			buf.append("<h3>LTI version 1.3 Integration</h3>"
-			+ "LTI integration requires exchange of information needed to identify each party and to securely transmit information "
-			+ "between ChemVantage and your LMS. Please enter the requested information below:");
+			+ "LTI integration requires exchange of information needed to identify each party and to securely transmit "
+			+ "information between ChemVantage and your LMS. This exchange will take place in three steps:"
+			+ "<ol><li>Complete the form below with information about your LMS platform. When you submit the form, "
+			+ "ChemVantage will send an email to you containing a link to complete the registration process."
+			+ "<li>When you are ready to register ChemVantage as a client in your LMS, activate the link. This will "
+			+ "create a configuration JSON file containing the information about ChemVantage required by your LMS. "
+			+ "You can either enter the URL for the configuration JSON file into your LMS directly, or copy/paste "
+			+ "the JSON text string into yur LMS, or use the JSON string to enter the values into your LMS manually, "
+			+ "depending on which methods are supported by your LMS. "
+			+ "<li>When you register ChemVantage in your LMS, it should generate values for a client_id (local identifier "
+			+ "for ChemVantage) and (optionally) a deployment_id (local account identifier in your LMS). You will be "
+			+ "prompted to send these values back to ChemVantage. Your LTI registration will not be complete without "
+			+ "providing at least the client_id.<p>"
+			+ "</ol>"
+			+ "Please start by enter the requested information below:");
 			buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");
-			buf.append("<FORM METHOD=POST><INPUT TYPE=HIDDEN NAME=lti_version VALUE=1p3><TABLE>");
+			buf.append("<FORM METHOD=POST>");
+			buf.append("<INPUT TYPE=HIDDEN NAME=lti_version VALUE=1p3>");
+			buf.append("<TABLE>");
 			buf.append("<TR><TD ALIGN=RIGHT>Email Address: </TD><TD><INPUT TYPE=TEXT NAME=Email> (where the credentials will be sent)</TD></TR>");
-			buf.append("<TR><TD ALIGN=RIGHT>Platform ID: </TD><TD><INPUT TYPE=TEXT NAME=PlatformId> (URL host name for your LMS)");
-			buf.append("<TR><TD ALIGN=RIGHT>Deployment ID: </TD><TD><INPUT TYPE=TEXT NAME=DeploymentId> (optional; identifier for your LMS account)");
-			buf.append("<TR><TD ALIGN=RIGHT>Client ID: </TD><TD><INPUT TYPE=TEXT NAME=ClientId> (LMS generated identifier for ChemVantage)");
-			buf.append("<TR><TD ALIGN=RIGHT>OIDC Auth URL: </TD><TD><INPUT TYPE=TEXT NAME=OIDCUrl> (OpenID Connect URL for your LMS)");
-			buf.append("<TR><TD ALIGN=RIGHT>OAuth Access Token URL: </TD><TD><INPUT TYPE=TEXT NAME=OauthTokenUrl> (Initial Service Endpoint for your LMS)");			
-			buf.append("<TR><TD ALIGN=RIGHT>JSON Web Key Set URL: </TD><TD><INPUT TYPE=TEXT NAME=JWKSUrl> (.well-known/jwks URL for your LMS)");
+			buf.append("<TR><TD ALIGN=RIGHT>Platform ID: </TD><TD><INPUT TYPE=TEXT NAME=PlatformId> (URL host name for your LMS, e.g., http://salisbury.instructure.com)");
+			buf.append("<TR><TD ALIGN=RIGHT>Platform OIDC Auth URL: </TD><TD><INPUT TYPE=TEXT NAME=OIDCUrl> (OpenID Connect URL for your LMS)");
+			buf.append("<TR><TD ALIGN=RIGHT>Platform OAuth Access Token URL: </TD><TD><INPUT TYPE=TEXT NAME=OauthTokenUrl> (Initial LTI service endpoint for your LMS)");			
+			buf.append("<TR><TD ALIGN=RIGHT>Platform JSON Web Key Set URL: </TD><TD><INPUT TYPE=TEXT NAME=JWKSUrl> (.well-known/jwks URL for your LMS)");
 			
 			// reCaptcha tool
 			buf.append("<TR><TD COLSPAN=2>");		
@@ -175,7 +267,8 @@ public class LTIRegistration extends HttpServlet {
 			buf.append("<TR><TD>&nbsp;</TD><TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Send My Free LTI Credentials'></TD></TR>");
 			buf.append("</TABLE></FORM>");
 		}
-		out.println(buf.toString() + Home.footer);
+		buf.append(Home.footer);
+		out.println(buf.toString());
 	}
 
 	@Override
@@ -183,6 +276,26 @@ public class LTIRegistration extends HttpServlet {
 	throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
+		
+		if ("Submit".equals(request.getParameter("UserRequest"))) {// completing final step in registration process
+			try {
+				String platform_deployment_id = request.getParameter("platform_deployment_id");
+				String client_id = request.getParameter("ClientId");
+				String deployment_id = request.getParameter("DeploymentId");
+				Deployment d = ofy().load().type(Deployment.class).id(platform_deployment_id).safe();
+				if (d.client_id != null && d.getDeploymentId() != null) throw new Exception("Registration failed.");
+				d.client_id = client_id;
+				if (deployment_id != null) {
+					ofy().delete().entity(d);  // removes obsolete Entity from datastore
+					d.platform_deployment_id = d.getPlatformId() + "/" + deployment_id;
+				}
+				ofy().save().entity(d);  // saves a new Entity with revised Id name
+				out.println(Home.header + banner + "<h2>Congratulations. Registration is complete.</h2> + Home.footer");
+			} catch (Exception e) {
+				out.println("An unexpected error occurred: " + e.toString());
+			}
+			return;
+		}
 		
 		String lti_message_type = request.getParameter("lti_message_type");
 		StringBuffer base_url = request.getRequestURL();
@@ -216,15 +329,15 @@ public class LTIRegistration extends HttpServlet {
 				String email = request.getParameter("Email");
 				String platform_id = request.getParameter("PlatformId");
 				if (!platform_id.startsWith("http")) platform_id = "http://" + platform_id;
-				String deployment_id = request.getParameter("DeploymentId");
-				if (deployment_id == null) deployment_id = ""; // create empty ID for single-deployment platform
-				String client_id = request.getParameter("ClientId");
+				//String deployment_id = request.getParameter("DeploymentId");
+				//if (deployment_id == null) deployment_id = ""; // create empty ID for single-deployment platform
+				//String client_id = request.getParameter("ClientId");
 				String oidc_auth_url = request.getParameter("OIDCUrl");
 				String oauth_access_token_url = request.getParameter("OauthTokenUrl");
 				String well_known_jwks_url = request.getParameter("JWKSUrl");
 
 				if(email == null) throw new Exception("Registration failed. Missing email address");
-				if (client_id == null) throw new Exception("Registration failed. Missing client_id");
+				//if (client_id == null) throw new Exception("Registration failed. Missing client_id");
 				new URL(oidc_auth_url).getHost().contentEquals(platform_id);	// OIDC Auth URL must be in the platform domain
 				new URL(well_known_jwks_url).getHost().contentEquals(platform_id); // JsonWebKey URL must be in the platform domain
 
@@ -234,14 +347,21 @@ public class LTIRegistration extends HttpServlet {
 				}	
 
 				// Check to see if this Deployment entity already exists
-				Deployment d = ofy().load().type(Deployment.class).id(platform_id + "/" + deployment_id).now();
+				Deployment d = ofy().load().type(Deployment.class).id(platform_id + "/").now();
 				if (d != null) throw new Exception ("This deployment has already been registered.");
 
+				Date now = new Date();
+				Date exp = new Date(now.getTime() + 259200000L); // token will expire in 3 days
+				
+				Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
+				String token = JWT.create().withSubject(platform_id).withExpiresAt(exp).sign(algorithm);
+				String client_id = JWT.decode(token).getSignature();  // temporary value during registration
+				
 				// All data have been validated; create a new Deployment entity			
-				d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,email);			
+				d = new Deployment(platform_id,"",client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,email);			
 				ofy().save().entity(d).now();
 				
-				if (sendLTICredentials(email,d,request)) out.println(Home.header + banner + successMessage + Home.footer);				
+				if (sendLTICredentials(email,token,request)) out.println(Home.header + banner + successMessage + Home.footer);				
 			} catch (Exception e) {
 				out.println(e.toString());
 			}
@@ -326,22 +446,41 @@ public class LTIRegistration extends HttpServlet {
 		}
 	}
 
-	boolean sendLTICredentials(String email,Deployment d, HttpServletRequest request) {
+	boolean sendLTICredentials(String email, String token, HttpServletRequest request) {
 		// send a response to a user feedback report
 		try {
 			Properties props = new Properties();
 			Session session = Session.getDefaultInstance(props, null);
+			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+			DecodedJWT dt = JWT.decode(token);
+			Date expires = dt.getExpiresAt();
 			String chemvantage_host = "https://" + request.getServerName();
-			String deployment_id = d.getDeploymentId();
-			String msgBody = "Thank you for your interest in ChemVantage. Your LTI credentials are:<p>"
-					+ "Platform ID: " + d.getPlatformId() + "<br/>"
-					+ "Deployment ID: " + (deployment_id.isEmpty()?"(not specified)":d.getDeploymentId()) + "<br/>"
-					+ "Client ID: " + d.client_id + " <br/>"
-					+ "OIDC Login Initiation URL: " + chemvantage_host + "/auth/token" + " <br/>"
-					+ "Launch URL: " + chemvantage_host + "/lti <br>"
-					+ "Deep Links Initiation URL: " + chemvantage_host + "/lti/deeplinks" + "<p>"
-					+ "ChemVantage Public RSA Key:<p>" + d.getRSAPublicKey()
-					+ "<p>If you  need additional assistance, please contact me at admin@chemvantage.org. <p>"
+			String url = chemvantage_host + "/lti/registration?UserRequest=Finalize&Token=" + token;
+					
+			String msgBody = "Thank you for your ChemVantage registration request.<p> "
+					+ "The next step is to enter a configuration Json into your LMS. "
+					+ "This will provide your LMS with the information that it needs to communicate "
+					+ "securely with ChemVantage. Normally, you must have administrator privileges "
+					+ "in your LMS in order to do this. If you are NOT an LMS administrator, please "
+					+ "stop here and forward this message to an administrator with a request to "
+					+ "complete the registration process. DO NOT click the link below unless you are "
+					+ "the LMS administrator and you are ready to complete the registration process.<p>"
+					+ "<hr>"
+					+ "<br>To the LMS Administrator:<p>"
+					+ "ChemVantage is a free Open Education Resource for teaching and learning college-"
+					+ "level General Chemistry. Learn more about ChemVantage "
+					+ "<a href=https://www.chemvantage.org/About>here</a>.<p>"
+					+ "This request uses LTI version 1.3.0 to complete the registration. If your LMS "
+					+ "does not support version 1.3.0, you may register using version 1.1 "
+					+ "<a href=" + chemvantage_host + "/lti/registration?lti_version=1p1>here</a>.<p>"
+					+ "To obtain a one-time configuration Json URL to complete the LTI registration of "
+					+ "ChemVantage using version 1.3.0, please <a href=" + url + ">click here</a>, or copy/paste "
+					+ "the link below into your browser.<p>"
+					+ url
+					+ "<p>The link is active for 3 days and expires " + df.format(expires) + "<p>"
+					+ "If your LMS does not support configuration Json, you will have an option to enter "
+					+ "the required values manually.<p>"
+					+ "If you  need additional assistance, please contact me at admin@chemvantage.org. <p>"
 					+ "-Chuck Wight";
 
 			Message msg = new MimeMessage(session);
@@ -349,12 +488,84 @@ public class LTIRegistration extends HttpServlet {
 			msg.setFrom(from);
 			msg.addRecipient(Message.RecipientType.TO,new InternetAddress(email,""));
 			msg.addRecipient(Message.RecipientType.CC,from);
-			msg.setSubject("ChemVantage LTI Credentials");
+			msg.setSubject("ChemVantage LTI Registration");
 			msg.setContent(msgBody,"text/html");
 			Transport.send(msg);
 			return true;
 		} catch (Exception e) {
 			return false;
 		}
+	}
+	
+	Deployment validateToken(String token) throws Exception {
+		Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
+		DecodedJWT jwt = JWT.require(algorithm).build().verify(token);
+		String platform_deployment_id = jwt.getSubject() + "/";
+		Deployment d = ofy().load().type(Deployment.class).id(platform_deployment_id).safe();
+		if (!jwt.getSignature().equals(d.client_id)) throw new Exception("Registration failed.");
+	    return d;
+	}
+	
+	JsonObject getConfigJson(Deployment d,HttpServletRequest request) {
+		try {
+			KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+	        keyGen.initialize(2048);
+	        KeyPair keyPair = keyGen.genKeyPair();
+	        
+	        d.rsa_private_key = keyPair.getPrivate().getEncoded();
+	        d.client_id = null;
+	        ofy().save().entity(d).now();
+	        
+	        RSAPublicKey pub = (RSAPublicKey) keyPair.getPublic();
+	        String mod = Base64.getEncoder().encodeToString(pub.getModulus().toByteArray());
+	        String exp = Base64.getEncoder().encodeToString(pub.getPublicExponent().toByteArray());
+	        
+			String domain = request.getServerName();
+			
+			JsonObject config = new JsonObject();
+			config.addProperty("title","ChemVantage");			
+			config.addProperty("description", "ChemVantage is a free Open Education Resource for teaching and learning college-level General Chemistry");
+				JsonArray scopes = new JsonArray();
+				scopes.add("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem");
+				scopes.add("https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly");
+				scopes.add("https://purl.imsglobal.org/spec/lti-ags/scope/score");
+				scopes.add("https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly");
+				scopes.add("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly");
+			config.add("scopes", scopes);			
+				JsonArray extensions = new JsonArray();
+					JsonObject extension = new JsonObject();
+					extension.addProperty("domain", domain);
+					extension.addProperty("tool_id", "ChemVantage");
+					extension.addProperty("platform", d.getPlatformId());			
+						JsonObject settings = new JsonObject();
+						settings.addProperty("text", "ChemVantage");
+						settings.addProperty("icon_url", "https://" + domain + "/images/CVLogo_thumb.jpg");			
+							JsonArray placements = new JsonArray();
+								JsonObject placement1 = new JsonObject();
+								placement1.addProperty("text", "ChemVantage");
+								placement1.addProperty("enabled", true);
+								placement1.addProperty("icon_url", "https://" + domain + "/images/CVLogo_thumb.jpg");			
+								placement1.addProperty("placement", "user_navigation");
+								placement1.addProperty("message_type","LtiResourceLinkRequest");
+								placement1.addProperty("target_link_uri", domain + "/lti");
+								placements.add(placement1);	
+						settings.add("placements", placements);
+					extension.add("settings", settings);
+					extension.addProperty("privacy_level", "public");
+				extensions.add(extension);
+			config.add("extensions", extensions);
+				JsonObject jwk = new JsonObject();
+				jwk.addProperty("kty", "RSA");
+				jwk.addProperty("alg", "RS256");
+				jwk.addProperty("e", exp);
+				jwk.addProperty("kid", d.getPlatformId().hashCode());
+				jwk.addProperty("n", mod);
+				jwk.addProperty("use", "sig");				
+			config.add("pubic_jwk", jwk);
+			
+			return config;			
+		} catch (Exception e) {
+			return null;
+		}		
 	}
 }

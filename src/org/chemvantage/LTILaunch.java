@@ -106,7 +106,12 @@ public class LTILaunch extends HttpServlet {
 	void ltiv1p3LaunchRequest(HttpServletRequest request,HttpServletResponse response) 
 			throws IOException {
 		StringBuffer debug = new StringBuffer("Start:<br>");
-		//String cvsToken = null;
+		Deployment d = null;
+		DecodedJWT id_token = null;
+		String platform_id = null;
+		Map<String,Claim> id_token_claims = null;
+		String platform_deployment_id = null;
+		
 		try {
 			String iss = "https://" + request.getServerName();
 			Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
@@ -114,19 +119,19 @@ public class LTILaunch extends HttpServlet {
 		    verifier.verify(request.getParameter("state"));
 		    debug.append("Auth token OK. ");
 		    
-		    DecodedJWT id_token = JWT.decode(request.getParameter("id_token"));
+		    id_token = JWT.decode(request.getParameter("id_token"));
 		    
-		    String platform_id = id_token.getIssuer();
+		    platform_id = id_token.getIssuer();
 		    if (!platform_id.startsWith("http")) platform_id = "http://" + platform_id;
 		    
-		    Map<String,Claim> id_token_claims = id_token.getClaims();
+		    id_token_claims = id_token.getClaims();
 		    // validate the id_token signature:
 		    // first get the correct Deployment entity for this platform to find the public key
 		    Claim deployment_id_claim = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/deployment_id");
 		    if (deployment_id_claim==null) throw new Exception("The deployment_id claim was not found in the id_token payload.");
 		    String deployment_id = deployment_id_claim.asString();
-		    String platform_deployment_id = platform_id + "/" + deployment_id;
-		    Deployment d = Deployment.getInstance(platform_id, deployment_id);
+		    platform_deployment_id = platform_id + "/" + deployment_id;
+		    d = Deployment.getInstance(platform_id, deployment_id);
 		    debug.append("Got deployment: " + platform_deployment_id + "<br>");
 		    
 			// retrieve the public Java Web Key from the platform to verify the signature
@@ -150,9 +155,13 @@ public class LTILaunch extends HttpServlet {
 		    if ("RS256".contentEquals(id_token.getAlgorithm())) algorithm = Algorithm.RSA256(public_key,null);
 			JWT.require(algorithm).build().verify(id_token);  // throws Exception if not valid
 			debug.append("Token validated OK.<br>");
-			
-			// At this point we have a valid LTI launch; process the claims:
-			
+		} catch (Exception e) {
+			response.sendError(401, e.toString());
+		}
+		
+		// At this point we have a valid LTI launch; process the claims:
+		
+		try {			
 			// Process deployment claims:
 			try {
 				d.email = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/tool_platform").asMap().get("contact_email").toString();	
