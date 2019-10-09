@@ -245,7 +245,7 @@ public class LTIDeepLinks extends HttpServlet {
 			//buf.append("Unsigned JWT:<br>" + jwt + "<br>");
 			
 			Signature signature = Signature.getInstance("SHA256withRSA");
-			signature.initSign(d.getRSAPrivateKey(),new SecureRandom());
+			signature.initSign(KeyStore.getRSAPrivateKey(d.rsa_key_id),new SecureRandom());
 			signature.update(jwt.getBytes("UTF-8"));
 			String sig = new String(enc.encode(signature.sign()));
 			jwt = String.format("%s.%s", jwt, sig);

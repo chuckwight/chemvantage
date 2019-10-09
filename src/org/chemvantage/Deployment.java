@@ -3,15 +3,6 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.net.URI;
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.interfaces.RSAPrivateKey;
-import java.security.spec.EncodedKeySpec;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.util.Base64;
-import java.util.Base64.Decoder;
-import java.util.Base64.Encoder;
 
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
@@ -26,7 +17,7 @@ public class Deployment {
 			String oidc_auth_url;
 			String well_known_jwks_url;
 			String email;
-			byte[] rsa_private_key;
+			String rsa_key_id;
 
 	Deployment() {}
 	
@@ -37,6 +28,7 @@ public class Deployment {
 		this.oauth_access_token_url = oauth_access_token_url;		
 		this.well_known_jwks_url = well_known_jwks_url;
 		this.email = email;
+		this.rsa_key_id = KeyStore.getAKeyId();
 	}
 
 	static Deployment getInstance(String platform_id,String deployment_id) {
@@ -73,53 +65,6 @@ public class Deployment {
 		}
 	}
 	
-	String getRSAPublicKey() {
-		// This method computes a NEW RSA key pair, stores the private key 
-		// in PEM format (RFC 7468) and returns the public key
-		StringBuffer key;
-		StringBuffer debug = new StringBuffer("Debug getRSAPublicKey:" + "<br>");
-		try {
-			KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-	        keyGen.initialize(2048);
-	        KeyPair keyPair = keyGen.genKeyPair();
-	        this.rsa_private_key = keyPair.getPrivate().getEncoded();
-	        ofy().save().entity(this);
-	        
-	        Encoder enc = Base64.getEncoder();
-	        String pub = enc.encodeToString(keyPair.getPublic().getEncoded());
-	        debug.append("Public Key: " + pub + "<br>");
-	        debug.append("Public key length: " + pub.length() + "<br>");
-	        key = new StringBuffer("-----BEGIN PUBLIC KEY-----" + "<br>");
-	        for(int n = 0; n < pub.length(); n+=64) {
-	        	key.append(pub.substring(n,(n+64>pub.length()?pub.length():n+64)) + "<br>");
-	        }
-	        key.append("-----END PUBLIC KEY-----" + "<p>");
-		} catch (Exception e) {
-			return e.toString() + "<p>" + debug.toString();
-		}
-		return key.toString();
-	}
-	
-	RSAPrivateKey getRSAPrivateKey() {
-		if (this.rsa_private_key == null) return null;
-		Decoder dec = Base64.getDecoder();
-		String key = this.rsa_private_key.toString();
-		if (key.startsWith("-----BEGIN ")) { // clean up the key contents
-			key = key.substring(key.indexOf("PRIVATE KEY-----")+16);  // strips header (e.g. "-----BEGIN RSA PUBLIC KEY-----")
-			key = key.substring(key.indexOf("-----END ",key.length()));  // strips footer
-			key = key.replaceAll("\\n", ""); // removes all line separators
-			this.rsa_private_key = dec.decode(key);
-			ofy().save().entity(this);
-		}
-		try {
-			EncodedKeySpec privateKeySpec = new PKCS8EncodedKeySpec(this.rsa_private_key);
-			KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-			return (RSAPrivateKey) keyFactory.generatePrivate(privateKeySpec);
-		} catch (Exception e) {
-			return null;
-		}
-	}
-		
 	String getDeploymentId() {
 		try {
 			String path = new URI(platform_deployment_id).getPath();

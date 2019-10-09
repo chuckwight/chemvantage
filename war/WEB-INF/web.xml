@@ -13,11 +13,9 @@
       <transport-guarantee>CONFIDENTIAL</transport-guarantee>
     </user-data-constraint>
   </security-constraint>
- 
   <listener>
     <listener-class>org.chemvantage.ObjectifyWebListener</listener-class>
-  </listener>  
-  
+  </listener>
   <filter>
     <display-name>ObjectifyFilter</display-name>
     <filter-name>ObjectifyFilter</filter-name>
@@ -27,4 +25,14 @@
     <filter-name>ObjectifyFilter</filter-name>
     <url-pattern>/*</url-pattern>
   </filter-mapping>
+  <servlet>
+    <description></description>
+    <display-name>KeyStore</display-name>
+    <servlet-name>KeyStore</servlet-name>
+    <servlet-class>org.chemvantage.KeyStore</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>KeyStore</servlet-name>
+    <url-pattern>/KeyStore</url-pattern>
+  </servlet-mapping>
 </web-app>

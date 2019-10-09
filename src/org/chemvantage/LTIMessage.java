@@ -219,7 +219,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 					.withExpiresAt(exp)
 					.withIssuedAt(now)
 					.withJWTId(Nonce.generateNonce())
-					.sign(Algorithm.RSA256(null,d.getRSAPrivateKey()));
+					.sign(Algorithm.RSA256(null,KeyStore.getRSAPrivateKey(d.rsa_key_id)));
 			
 			String body = "grant_type=client_credentials"
 					+ "&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
