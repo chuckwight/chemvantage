@@ -216,6 +216,8 @@ public class LTIDeepLinks extends HttpServlet {
 			payload.addProperty("nonce", nonce);
 			payload.addProperty("exp", exp.getTime()/1000);
 			payload.addProperty("iat", now.getTime()/1000);
+			payload.addProperty("kid", d.rsa_key_id);
+			payload.addProperty("jwks_uri", serverUrl + "/jwks");
 			payload.addProperty("https://purl.imsglobal.org/spec/lti/claim/message_type", "LtiDeepLinkingResponse");
 			payload.addProperty("https://purl.imsglobal.org/spec/lti/claim/version", "1.3.0");
 			payload.addProperty("https://purl.imsglobal.org/spec/lti/claim/deployment_id", deployment_id);

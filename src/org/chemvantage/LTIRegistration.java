@@ -528,6 +528,8 @@ public class LTIRegistration extends HttpServlet {
 					extension.addProperty("privacy_level", "public");
 				extensions.add(extension);
 			config.add("extensions", extensions);
+			config.addProperty("jwks_uri","https://" + domain + "/jwks");
+			config.addProperty("key_id", d.rsa_key_id);
 			config.add("public_jwk", KeyStore.getJwk(d.rsa_key_id));
 			
 			return config;			
