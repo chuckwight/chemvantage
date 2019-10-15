@@ -107,7 +107,7 @@ public class Score {    // this object represents a best score achieved by a use
 	}
 	
 	public double getPctScore() {
-		if (maxPossibleScore>0) return 100.*score/maxPossibleScore;
+		if (maxPossibleScore>0) return Math.round(1000.*score/maxPossibleScore)/10.;
 		else return 0.;
 	}
 	

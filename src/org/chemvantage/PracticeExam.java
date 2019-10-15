@@ -33,15 +33,16 @@ import java.util.Map;
 import java.util.Random;
 
 import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
 
+@WebServlet("/PracticeExam")
 public class PracticeExam extends HttpServlet {
 	// parameters that determine the properties of the exam program:
 	// Warning! do not use any user-specific variables here. Not thread-safe!
@@ -69,12 +70,15 @@ public class PracticeExam extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
 		try {
+			User user = User.getUser(request.getParameter("Token"));
+			if (user == null) throw new Exception();
+		/*
 			User user = null;
 			HttpSession session = request.getSession();
 			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
 			else user = User.getInstance(session);
 			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
-
+		*/
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 
@@ -85,12 +89,15 @@ public class PracticeExam extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
 		try {
+			User user = User.getUser(request.getParameter("Token"));
+			if (user == null) throw new Exception();
+		/*
 			User user = null;
 			HttpSession session = request.getSession();
 			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
 			else user = User.getInstance(session);
 			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
-
+		*/
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 
@@ -100,14 +107,15 @@ public class PracticeExam extends HttpServlet {
 
 	String designExam(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
+		//String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		try {
 			buf.append("<h2>Practice " + subject.title + " Exam</h2>");
 			buf.append("<div id=topicsForm>");
 
 			buf.append("Please select <b>at least 3 topics</b> below to be covered on this practice exam.<p>");
 			buf.append("<FORM NAME=TopicForm METHOD=GET>");
-			if (cvsToken!=null) buf.append("<input type=hidden name=CvsToken value=" + cvsToken + ">");
+			//if (cvsToken!=null) buf.append("<input type=hidden name=CvsToken value=" + cvsToken + ">");
+			buf.append("<input type=hidden name=Token value=" + user.token + ">");
 			buf.append("\n<TABLE>");
 			List<Topic> topics = ofy().load().type(Topic.class).list();
 			int i = 0;
@@ -136,14 +144,15 @@ public class PracticeExam extends HttpServlet {
 
 	String printExam(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
+		//String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		try {
 			// Get requested topic ids for this exam
 			List<Long> topicIds = new ArrayList<Long>();
 			long assignmentId = 0;
 			Assignment a = null;
 			try {  // this branch works if the practice exam is assigned
-				assignmentId=Long.parseLong(request.getParameter("AssignmentId"));
+				//assignmentId=Long.parseLong(request.getParameter("AssignmentId"));
+				assignmentId=user.getAssignmentId();
 				a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 				topicIds = a.topicIds;
 			} catch (Exception e) {  // otherwise this is a student-designed exam
@@ -222,7 +231,8 @@ public class PracticeExam extends HttpServlet {
 			buf.append("</OL>");
 
 			if (user.isInstructor()) buf.append("<table style='border: 1px solid'><tr><td>"
-					+ "Instructor: you may <a href=/Groups?UserRequest=AssignExamQuestions&AssignmentId=" + a.id + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">"
+					//+ "Instructor: you may <a href=/Groups?UserRequest=AssignExamQuestions&AssignmentId=" + a.id + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">"
+					+ "Instructor: you may <a href=/Groups?UserRequest=AssignExamQuestions&Token=" + user.token + ">"
 					+ "customize this practice exam</a> by selecting/deselecting the available question items."
 					+ "</td></tr></table><p>");
 			
@@ -241,7 +251,8 @@ public class PracticeExam extends HttpServlet {
 			buf.append("\n<input type=submit value='Grade This Practice Exam'><p>");
 
 			// Include a nonce reference as a hedge in case the session is not maintained by the user's browser
-			buf.append(cvsToken!=null?"\n<input type=hidden name=CvsToken value='" + cvsToken + "'>":"");
+			//buf.append(cvsToken!=null?"\n<input type=hidden name=CvsToken value='" + cvsToken + "'>":"");
+			buf.append("<input type=hidden name=Token value='" + user.token + "'>");
 			if (a!=null) buf.append("\n<input type=hidden name=AssignmentId value='" + a.id + "'>");
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
 			int[] possibleScores = new int[topicIds.size()];
@@ -435,10 +446,12 @@ public class PracticeExam extends HttpServlet {
 			
 			Assignment a = null;  // find the Assignment object for this Practice Exam, if it exists
 			try {
-				a = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
+				//a = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
+				a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 				Queue queue = QueueFactory.getDefaultQueue();  // used for computing Score objects offline by Task queue
 				Score s = Score.getInstance(user.id,a);
 				ofy().save().entity(s).now();
+				LTIMessage.postUserScore(s);
 				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
 			} catch (Exception e) {}
 

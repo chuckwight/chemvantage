@@ -2,17 +2,4 @@
 
 <datastore-indexes autoGenerate="true">
 
-    <!-- Used 2 times in query history -->
-    <datastore-index kind="Question" ancestor="false" source="auto">
-        <property name="assignmentType" direction="asc"/>
-        <property name="topicId" direction="asc"/>
-        <property name="pointValue" direction="asc"/>
-    </datastore-index>
-
-    <!-- Used 2 times in query history -->
-    <datastore-index kind="Response" ancestor="false" source="auto">
-        <property name="questionId" direction="asc"/>
-        <property name="score" direction="asc"/>
-    </datastore-index>
-
 </datastore-indexes>

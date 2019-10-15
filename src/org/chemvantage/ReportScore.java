@@ -30,6 +30,7 @@ import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -38,6 +39,7 @@ import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
 
+@WebServlet("/ReportScore")
 public class ReportScore extends HttpServlet {
 	private static final long serialVersionUID = 137L;
 	
@@ -87,13 +89,20 @@ public class ReportScore extends HttpServlet {
 			Group g = ofy().load().type(Group.class).id(a.groupId).safe();
 			String oauth_consumer_key = g.domain;
 			
-			String messageFormat = g.getLisOutcomeFormat();			
-			String body = LTIMessage.xmlReplaceResult(s.lis_result_sourcedid,String.valueOf(score));
-			String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
-			
-			if (replyBody.toLowerCase().contains("success")) {
-				s.lisReportComplete = true;
-				ofy().save().entity(s);
+			String messageFormat = g.getLisOutcomeFormat();
+			if ("application/vnd.ims.lis.v1.score+json".equals(g.lis_outcome_service_format)) { // use LTIv1p3 reporting
+				if (LTIMessage.postUserScore(s)) {
+					s.lisReportComplete = true;
+					ofy().save().entity(s);
+				}
+			} else if ("application/xml".equals(g.lis_outcome_service_format)) {
+				String body = LTIMessage.xmlReplaceResult(s.lis_result_sourcedid,String.valueOf(score));
+				String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
+
+				if (replyBody.toLowerCase().contains("success")) {
+					s.lisReportComplete = true;
+					ofy().save().entity(s);
+				}
 			} else throw new Exception("LIS postUserScore failed after " + delay + " attempts.");  // try again later
 		} catch (Exception e) {
 			try {
@@ -153,7 +162,7 @@ public class ReportScore extends HttpServlet {
 					
 			Message msg = new MimeMessage(session);
 			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-			if (!c.suppressEmailNotifications) msg.addRecipient(Message.RecipientType.TO,new InternetAddress(recipient, ""));
+			msg.addRecipient(Message.RecipientType.TO,new InternetAddress(recipient, ""));
 			msg.addRecipient(Message.RecipientType.CC,new InternetAddress("admin@chemvantage.org", "ChemVantage"));
 			msg.setSubject("ChemVantage LIS Reporting Error");
 			msg.setContent(msgBody,"text/html");

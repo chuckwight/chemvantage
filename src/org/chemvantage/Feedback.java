@@ -30,15 +30,16 @@ import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
 
 
+@WebServlet("/Feedback")
 public class Feedback extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
@@ -54,12 +55,15 @@ public class Feedback extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		try {
+			User user = User.getUser(request.getParameter("Token"));
+			if (user == null) throw new Exception();
+		/*
 			User user = null;
 			HttpSession session = request.getSession();
 			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
 			else user = User.getInstance(session);
 			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
-				
+		*/		
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 
@@ -80,12 +84,15 @@ public class Feedback extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
+			User user = User.getUser(request.getParameter("Token"));
+			if (user == null) throw new Exception();
+		/*
 			User user = null;
 			HttpSession session = request.getSession();
 			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
 			else user = User.getInstance(session);
 			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
-				
+		*/		
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
@@ -119,7 +126,7 @@ public class Feedback extends HttpServlet {
 
 	String feedbackForm(User user) {
 		StringBuffer buf = new StringBuffer();
-		String cvsToken = user.getCvsToken();
+		//String cvsToken = user.getCvsToken();
 		
 		buf.append("<h2>Feedback Page</h2>");
 
@@ -158,7 +165,8 @@ public class Feedback extends HttpServlet {
 				+ "Comments or kudos: <FONT SIZE=-1>(160 characters max.)</FONT><br>"
 				+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback>"
 				+ "<INPUT TYPE=HIDDEN NAME=Stars>"
-				+ "<INPUT TYPE=HIDDEN NAME=CvsToken VALUE='" + cvsToken + "'>"
+				//+ "<INPUT TYPE=HIDDEN NAME=CvsToken VALUE='" + cvsToken + "'>"
+				+ "<INPUT TYPE=HIDDEN NAME=Token VALUE='" + user.token + "'>"
 				+ "<TEXTAREA NAME=Comments ROWS=5 COLS=40 WRAP=SOFT "				
 				+ "onKeyUp=javascript:document.FeedbackForm.Comments.value=document.FeedbackForm.Comments.value.substring(0,160)>"
 				+ "</TEXTAREA><br>");
@@ -312,7 +320,7 @@ public class Feedback extends HttpServlet {
 	
 	String replyForm(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
+		//String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		try {
 			buf.append("<h2>Reply to User Feedback</h2>");
 			long reportId = Long.parseLong(request.getParameter("ReportId"));
@@ -326,7 +334,8 @@ public class Feedback extends HttpServlet {
 			buf.append(report.view());
 			buf.append("</TEXTAREA><br>");
 			buf.append("<INPUT TYPE=HIDDEN NAME=ReportId VALUE=" + reportId + ">"
-					+ (cvsToken==null?"":"<INPUT TYPE=HIDDEN NAME=CvsToken VALUE=" + cvsToken + ">")
+					//+ (cvsToken==null?"":"<INPUT TYPE=HIDDEN NAME=CvsToken VALUE=" + cvsToken + ">")
+					+ "<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Send Reply'></FORM>");
 		} catch (Exception e) {
 			buf.append(e.toString());

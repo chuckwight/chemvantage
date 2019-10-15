@@ -19,9 +19,7 @@ package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
 import java.util.Random;
 
 import com.googlecode.objectify.annotation.Entity;
@@ -32,18 +30,9 @@ public class BLTIConsumer {
 	@Id String oauth_consumer_key;
 	String secret;
 	String lti_version;
-	String tool_consumer_guid;
-	String toolProxyURL;  // Tool Consumer URL containing the tool proxy contract for LTI v2.0
-	String toolProxy;
-	String toolSettingsURL; // Tool Consumer URL to PUT changes to settings in tool proxy
-	String resultServiceFormat;
-	String resultServiceEndpoint;
 	String email;
 	Date created;
-	boolean suppressEmailNotifications;
-	List<String> capabilities_enabled;
-	List<String> tool_service;
-	
+
 	BLTIConsumer() {}
 
 	BLTIConsumer(String oauth_consumer_key) {
@@ -59,7 +48,7 @@ public class BLTIConsumer {
 		this.email = email;
 		this.created = new Date();
 	}
-	
+/*	
 	BLTIConsumer(String key,String secret,String tool_consumer_guid,String version) {
 		this.oauth_consumer_key = key;
 		this.secret = secret;
@@ -69,7 +58,7 @@ public class BLTIConsumer {
 		this.capabilities_enabled = new ArrayList<String>();
 		this.tool_service = new ArrayList<String>();
 		}
-	
+*/	
 	static void create(String oauth_consumer_key) {
 		ofy().save().entity(new BLTIConsumer(oauth_consumer_key)).now();
 	}
@@ -96,7 +85,7 @@ public class BLTIConsumer {
 		}
 		return c.secret;
 	}
-	
+/*	
 	void putToolProxyURL(String url) {
 		this.toolProxyURL = url;
 	}
@@ -152,4 +141,5 @@ public class BLTIConsumer {
 		if (this.capabilities_enabled == null) capabilities_enabled = new ArrayList<String>();
 		return this.capabilities_enabled;
 	}
+*/
 }

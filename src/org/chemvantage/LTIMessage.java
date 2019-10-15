@@ -1,5 +1,5 @@
 /*  ChemVantage - A Java web application for online learning
-*   Copyright (C) 2014 ChemVantage LLC
+*   Copyright (C) 2019 ChemVantage LLC
 *   
 *    This program is free software: you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -17,15 +17,32 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.security.MessageDigest;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.UUID;
+
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 import net.oauth.OAuth;
 import net.oauth.OAuthAccessor;
@@ -94,24 +111,6 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     	{
     		throw new RuntimeException(e);
     	}
-
-
-/*    	
-    	OAuth$Parameter params = new OAuthParameters();
-    	params.setOAuthConsumerKey(oauth_consumer_key);
-    	params.setOAuthConsumerSecret(oauth_shared_secret);
-    	params.setOAuthNonce(OAuthUtil.getNonce());
-    	params.setOAuthTimestamp(OAuthUtil.getTimestamp());
-    	params.setOAuthCallback("about:blank");
-    	params.setOAuthSignatureMethod("HMAC-SHA1");
-    	params.addCustomBaseParameter("oauth_version", "1.0");
-    	params.addCustomBaseParameter("oauth_body_hash",hash);
-
-    	String baseString = OAuthUtil.getSignatureBaseString(destinationURL,"POST",params.getBaseParameters());
-    	String signature = new OAuthHmacSha1Signer().getSignature(baseString,params);
-    	params.setOAuthSignature(signature);
-    	params.addCustomBaseParameter("oauth_signature",signature);
-*/   	
 
     	// construct the signed message in the required format
     	URL u = new URL(destinationURL);
@@ -207,4 +206,403 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		+ "</imsx_POXEnvelopeRequest>";		
 	}
 
+    static String getAccessToken(Group g) {
+    	// First, construct a request token to send to the platform
+    	Date now = new Date();
+    	try {
+			Deployment d = Deployment.getInstance(g.domain);
+			Date exp = new Date(now.getTime() + 300000L);
+			String token = JWT.create()
+					.withIssuer(d.client_id)
+					.withSubject(d.client_id)
+					.withAudience(d.oauth_access_token_url)
+					.withExpiresAt(exp)
+					.withIssuedAt(now)
+					.withJWTId(Nonce.generateNonce())
+					.sign(Algorithm.RSA256(null,KeyStore.getRSAPrivateKey(d.rsa_key_id)));
+			
+			String body = "grant_type=client_credentials"
+					+ "&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+					+ "&client_assertion=" + token
+					+ "&scope=" + g.lti_ags_scope;
+			
+			URL u = new URL(d.oauth_access_token_url);
+			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+			uc.setDoOutput(true);
+			uc.setDoInput(true);
+			uc.setRequestMethod("POST");
+			uc.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
+			uc.setRequestProperty("Accept", "application/json;charset=UTF-8");
+			uc.setRequestProperty("charset", "utf-8");
+			uc.setUseCaches(false);
+			
+			// send the message
+			DataOutputStream wr = new DataOutputStream(uc.getOutputStream());
+			wr.writeBytes(body);
+
+			int responseCode = uc.getResponseCode();
+			
+			if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED) { // 200m or 201
+				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
+				StringBuffer res = new StringBuffer();
+				String line;
+				while ((line = reader.readLine()) != null) res.append(line);
+				reader.close();
+				
+				// decode the Json response object. Fields include access_token, token-type, expires_in, scope
+				JsonObject json = new JsonParser().parse(res.toString()).getAsJsonObject();
+				// return the access_token only
+				return json.get("access_token").getAsString();
+			} else throw new Exception("response code " + responseCode);
+		} catch (Exception e) {
+			return null;
+		}
+    }
+    
+	static String getLineItemUrl(Group g, Assignment a) {
+		try {
+			JsonArray json = new JsonParser().parse(getLineItems(g)).getAsJsonArray();
+			Iterator<JsonElement> iterator = json.iterator();
+			while(iterator.hasNext()){
+		        JsonObject lineitem = iterator.next().getAsJsonObject();
+		        if (a.resourceLinkId.equals(lineitem.get("resourceLinkId").getAsString())) {
+		        	return lineitem.get("id").getAsString();
+		        }
+		    }
+			return "Not found.";
+			} catch (Exception e) {
+				return "An unexpected error occurred: " + e.toString();
+			}
+	}
+	
+	static String getLineItems(Group g) {
+		try {
+			String bearerAuth = "Bearer " + getAccessToken(g);
+			
+			URL u = new URL(g.lti_ags_lineitems_url);
+			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+			uc.setDoOutput(true);
+			uc.setDoInput(true);
+			uc.setRequestMethod("GET");
+			uc.setRequestProperty("Authorization", bearerAuth);
+			uc.setRequestProperty("Accept", "application/vnd.ims.lis.v2.lineitemcontainer+json");
+			uc.connect();
+
+			int responseCode = uc.getResponseCode();
+			if (HttpURLConnection.HTTP_OK == responseCode) { // 200
+				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+				StringBuffer res = new StringBuffer();
+				String line;
+				while ((line = reader.readLine()) != null) {
+					res.append(line);
+				}
+				reader.close();
+				return res.toString();
+			} else return "Response Code was " + responseCode;
+		} catch (Exception e) {
+			return e.toString();
+		}
+	}
+	
+	static String createLineItem(Assignment a) {
+		if (a==null) return null;
+		String lineItemUrl = null;
+		//StringBuffer debug = new StringBuffer();
+		try {
+			Group g = ofy().load().type(Group.class).id(a.groupId).safe();
+			Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
+			String bearerAuth = "Bearer " + getAccessToken(g);
+			int maxPossibleScore = a.assignmentType.equals("PracticeExam")?100:10;
+
+			String json = "{"
+					+ "\"scoreMaximum\":" + maxPossibleScore + ","
+					+ "\"label\":\"" + a.assignmentType + " - " + t.title + "\","
+					+ "\"resourceLinkId\":\"" + a.resourceLinkId + "\""
+					+ "}";
+			//debug.append("POSTed: " + json + "<br>");
+			URL u = new URL(g.lti_ags_lineitems_url);
+			//debug.append("To the lineitems URL: " + g.lti_ags_lineitems_url + "<br>");
+			
+			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+			uc.setDoOutput(true);
+			uc.setRequestMethod("POST");
+			uc.setRequestProperty("Authorization", bearerAuth);
+			uc.setRequestProperty("Content-Type", "application/vnd.ims.lis.v2.lineitem+json");
+			uc.setRequestProperty("Accept-Type", "application/vnd.ims.lis.v2.lineitem+json");
+			uc.setRequestProperty("Content-Length", String.valueOf(json.length()));
+			uc.connect();
+
+			// send the message
+			OutputStreamWriter toTC = new OutputStreamWriter(uc.getOutputStream());
+			toTC.write(json);
+			toTC.flush();
+			int responseCode = uc.getResponseCode(); // success if 200-202
+			//debug.append("Response code: " + responseCode + "<br>");
+			
+			boolean success = responseCode>199 && responseCode<203;
+			if (success) {
+				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+				StringBuffer res = new StringBuffer();
+				String line;
+				while ((line = reader.readLine()) != null) {
+					res.append(line);
+				}
+				reader.close();
+				//debug.append("Received: " + res + "<br>");
+				JsonObject lineItem = new JsonParser().parse(res.toString()).getAsJsonObject();
+				if (lineItem.isJsonObject()) {
+					lineItemUrl = lineItem.get("id").getAsString();
+					new URI(lineItemUrl);  // throws Exception if not a valid URL
+					return lineItemUrl;
+				}
+			}
+		} catch (Exception e) {
+			// return e.toString() + "<p>" + debug.toString();
+		}	
+		return null;
+	}
+
+	static Map<String,String> readMembershipScores(Assignment a) {
+		// This method uses the LTIv1p3 message protocol to retrieve a user's score from the LMS.
+		// The lineitem URL corresponds to the LMS grade book column fpr the Assignment entity,
+		// and the specific cell is identified by the user_id value defined by the LMS platform
+		Map<String,String> scores = new HashMap<String,String>();		
+		String bearerAuth = null;
+		try {
+			Group g = ofy().load().type(Group.class).id(a.groupId).safe();
+			if ((bearerAuth=getAccessToken(g)).startsWith("response")) throw new Exception("the LMS failed to issue an auth token: " + bearerAuth);
+			else bearerAuth = "Bearer " + bearerAuth;
+
+			if (a.lti_ags_lineitem_url==null) throw new Exception("the lineitem URL for this assignment is unknown");
+			URL u = new URL(a.lti_ags_lineitem_url + "/results");
+
+			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+			uc.setDoOutput(true);
+			uc.setDoInput(true);
+			uc.setRequestMethod("GET");
+			uc.setRequestProperty("Authorization", bearerAuth);
+			uc.setRequestProperty("Accept", "application/vnd.ims.lis.v2.resultcontainer+json");
+			uc.connect();
+
+			int responseCode = uc.getResponseCode();
+			if (responseCode > 199 && responseCode < 203) {  // OK
+				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+				StringBuffer res = new StringBuffer();
+				String line;
+				while ((line = reader.readLine()) != null) {
+					res.append(line);
+				}
+				reader.close();
+
+				JsonArray json = new JsonParser().parse(res.toString()).getAsJsonArray();
+				Iterator<JsonElement> iterator = json.iterator();
+				while(iterator.hasNext()) {
+					JsonObject result = iterator.next().getAsJsonObject();
+					scores.put(result.get("userId").getAsString(),String.valueOf(Math.round(1000.*result.get("resultScore").getAsDouble()/result.get("resultMaximum").getAsDouble())/10.));
+				}
+			}
+		} catch (Exception e) {	
+			return null;
+		}
+		return scores;
+	}
+	
+	static String readUserScore(Assignment a, String userId) {
+		// This method uses the LTIv1p3 message protocol to retrieve a user's score from the LMS.
+		// The lineitem URL corresponds to the LMS grade book column fpr the Assignment entity,
+		// and the specific cell is identified by the user_id value defined by the LMS platform
+		String bearerAuth = null;
+		try {
+			Group g = ofy().load().type(Group.class).id(a.groupId).safe();
+			if ((bearerAuth=getAccessToken(g)).startsWith("response")) throw new Exception("the LMS failed to issue an auth token: " + bearerAuth);
+			else bearerAuth = "Bearer " + bearerAuth;
+			String user_id = User.getRawId(userId); // stripped of the platform_id and "/"
+
+			if (a.lti_ags_lineitem_url==null) throw new Exception("the lineitem URL for this assignment is unknown");
+			URL u = new URL(a.lti_ags_lineitem_url + "/results?user_id=" + user_id);
+			
+			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+			uc.setDoOutput(true);
+			uc.setDoInput(true);
+			uc.setRequestMethod("GET");
+			uc.setRequestProperty("Authorization", bearerAuth);
+			uc.setRequestProperty("Accept", "application/vnd.ims.lis.v2.resultcontainer+json");
+			uc.connect();
+
+			int responseCode = uc.getResponseCode();
+			if (responseCode == HttpURLConnection.HTTP_OK) { // 200
+				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+				StringBuffer res = new StringBuffer();
+				String line;
+				while ((line = reader.readLine()) != null) {
+					res.append(line);
+				}
+				reader.close();
+
+				JsonArray json = new JsonParser().parse(res.toString()).getAsJsonArray();
+				Iterator<JsonElement> iterator = json.iterator();
+				while(iterator.hasNext()){
+					JsonObject result = iterator.next().getAsJsonObject();
+					if (result.get("userId").getAsString().equals(user_id)) {
+						return String.valueOf(Math.round(1000.*result.get("resultScore").getAsDouble()/result.get("resultMaximum").getAsDouble())/10.);
+					}
+				}
+				return "no score for this user was found";
+			} else return "the LMS issued response code: " + responseCode; 
+		} catch (Exception e) {	
+			return e.toString();
+		}
+	}
+	
+	static boolean postUserScore(Score s) {
+		// This method uses the LTIv1p3 message protocol to post a user's score to the LMS grade book.
+		// The lineitem URL corresponds to the LMS grade book column for the Assignment entity,
+		// and the specific cell is identified by the user_id value defined by the LMS platform
+		try {
+			Assignment a = ofy().load().type(Assignment.class).id(s.assignmentId).safe();
+			Group g = ofy().load().type(Group.class).id(a.groupId).safe();
+			String bearerAuth = getAccessToken(g);
+			if (bearerAuth.startsWith("response")) return false;
+			bearerAuth = "Bearer " + bearerAuth;
+			
+			String raw_id = User.getRawId(s.owner.getName());
+			String json = "{"
+					+ "\"timestamp\":\"" + ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT) + "\","
+					+ "\"scoreGiven\":\"" + s.score + "\","
+					+ "\"scoreMaximum\":\"" + s.maxPossibleScore + "\","
+					+ "\"comment\":\"\","
+					+ "\"activityProgress\":\"Completed\","
+					+ "\"gradingProgress\":\"FullyGraded\","
+					+ "\"userId\":\"" + raw_id + "\""
+					+ "}";
+			
+			URL u = new URL(a.lti_ags_lineitem_url + "/scores");
+			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+			uc.setDoOutput(true);
+			uc.setRequestMethod("POST");
+			uc.setRequestProperty("Authorization", bearerAuth);
+			uc.setRequestProperty("Content-Type", "application/vnd.ims.lis.v1.score+json");
+			uc.setRequestProperty("Content-Length", String.valueOf(json.length()));
+			uc.connect();
+
+			// send the message
+			OutputStreamWriter toTC = new OutputStreamWriter(uc.getOutputStream());
+			toTC.write(json);
+			toTC.flush();
+			int responseCode = uc.getResponseCode(); // success if 200-202
+			boolean success = responseCode>199 && responseCode<203;
+			if (success) {  
+				s.lisReportComplete = true;
+				ofy().save().entity(s);
+			}
+		} catch (Exception e) {
+		}
+		return false;
+	}
+	
+	static Map<String,String[]> getMembership(Group g) {
+		// This method uses the LTIv1p3 message protocol to retrieve the group membership from the LMS.
+		// If this service is offered by providing the endpoint, the Json array MUST contain the user_id and roles
+		// values, but may also include other fields such as name, given_name, middle_name, family_name, email, ...
+		Map<String,String[]> membership = new HashMap<String,String[]>();
+		String bearerAuth = null;
+		
+		try {
+			if ((bearerAuth=getAccessToken(g)).startsWith("response")) throw new Exception("the LMS failed to issue an auth token: " + bearerAuth);
+			else bearerAuth = "Bearer " + bearerAuth;
+			
+			if (g.context_memberships_url==null) throw new Exception("the service endpoint URL for this group is unknown");
+			URL u = new URL(g.context_memberships_url);
+
+			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+			uc.setDoOutput(true);
+			uc.setDoInput(true);
+			uc.setRequestMethod("GET");
+			uc.setRequestProperty("Authorization", bearerAuth);
+			uc.setRequestProperty("Accept", "application/vnd.ims.lti-nrps.v2.membershipcontainer+json");
+			uc.connect();
+
+			int responseCode = uc.getResponseCode();
+			if (responseCode > 199 && responseCode < 203) { // OK
+				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+				StringBuffer res = new StringBuffer();
+				String line;
+				while ((line = reader.readLine()) != null) {
+					res.append(line);
+				}
+				reader.close();
+
+				JsonObject json = new JsonParser().parse(res.toString()).getAsJsonObject();
+				
+				// check to ensure that the context_id matches the group
+				//JsonObject context = json.get("context").getAsJsonObject();
+				//if (!g.context_id.contains(context.get("id").getAsString())) throw new Exception("incorrect context_id value");
+				
+				JsonArray members = json.get("members").getAsJsonArray();
+				Iterator<JsonElement> iterator = members.iterator();
+				while(iterator.hasNext()){
+					JsonObject member = iterator.next().getAsJsonObject();
+					String user_id = member.get("user_id").getAsString();
+					String roles = member.get("roles").getAsString().toLowerCase();
+					String role = roles.contains("administrator")?"Administrator":roles.contains("instructor")?"Instructor":"Learner";
+					String name = "";
+					try {
+						name = member.get("name").getAsString();
+					} catch (Exception e) {
+						try {
+							name = member.get("family_name").getAsString() + ", " + member.get("given_name").getAsString();
+						} catch (Exception e2) {
+						}
+					}
+					String email = "";
+					try {
+						email = member.get("email").getAsString();
+					} catch (Exception e) {
+					}
+					String[] properties = {role, name, email};
+					membership.put(user_id,properties);
+				}
+			} else return null; 
+		} catch (Exception e) {	
+		}
+		return membership;
+	}
+/*	
+	static String getMembership(boolean start, Group g) {
+		String bearerAuth = null;
+		int responseCode = 0;
+		try {
+			if ((bearerAuth=getAccessToken(g)).startsWith("response")) throw new Exception("the LMS failed to issue an auth token: " + bearerAuth);
+			else bearerAuth = "Bearer " + bearerAuth;
+			
+			if (g.context_memberships_url==null) throw new Exception("the service endpoint URL for this group is unknown");
+			URL u = new URL(g.context_memberships_url);
+
+			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+			uc.setDoOutput(true);
+			uc.setDoInput(true);
+			uc.setRequestMethod("GET");
+			uc.setRequestProperty("Authorization", bearerAuth);
+			uc.setRequestProperty("Accept", "application/vnd.ims.lti-nrps.v2.membershipcontainer+json");
+			uc.connect();
+
+			responseCode = uc.getResponseCode();
+			if (responseCode > 199 & responseCode < 203)  { // OK
+				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+				StringBuffer res = new StringBuffer();
+				String line;
+				while ((line = reader.readLine()) != null) {
+					res.append(line);
+				}
+				reader.close();
+
+				return res.toString();
+
+			}
+		} catch (Exception e) {
+			return e.toString();
+		}
+		return "Response Code: " + responseCode;
+	}
+*/	
 }

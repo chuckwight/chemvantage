@@ -19,13 +19,8 @@ package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
-import java.text.DateFormat;
 import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
@@ -40,30 +35,35 @@ public class Assignment {
 	@Index	String assignmentType;
 	@Index	long topicId;
 	@Index	String resourceLinkId;
+	@Index	String platform_deployment_id;
+			String lti_ags_lineitem_url;
 			List<Long> topicIds; // used for practice exams which have multiple topicIds
-			List<String> resourceLinkIds = new ArrayList<String>();
+			List<String> resourceLinkIds = new ArrayList<String>();  // deprecated
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 
-    Assignment() {}
+	Assignment() {}
 
-   Assignment(long groupId,String domain,String resourceLinkId,long topicId,String assignmentType) {  // specific to Quiz and Homework assignments with a single topicId
-	   	this.groupId = groupId;
-   		this.domain = domain;
-    	this.resourceLinkId = resourceLinkId;
-    	this.topicId = topicId;
-    	this.assignmentType = assignmentType;
-    	questionKeys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).keys().list();
-    }
-    
-    Assignment(long groupId,String domain,String resourceLinkId, List<Long> topicIds,String assignmentType) {   // specific to Practice Exam assignments with multiple topicIds
-    	this.groupId = groupId;
-    	this.domain = domain;
-    	this.resourceLinkId = resourceLinkId;
-    	this.topicIds = topicIds;
-    	this.assignmentType = assignmentType;
-    	for (Long topicId : topicIds) questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",topicId).keys().list());
-    }
+	Assignment(String platform_deployment_id, long groupId,String resourceLinkId) {
+		this.platform_deployment_id = platform_deployment_id;
+		this.groupId = groupId;
+		this.resourceLinkId = resourceLinkId;
+	}
 
+	Assignment(long groupId,String domain,String resourceLinkId) {  // specific to Quiz and Homework assignments with a single topicId
+		this.groupId = groupId;
+		this.domain = domain;
+		this.resourceLinkId = resourceLinkId;
+	}
+
+	Assignment(String assignmentType, long topicId, String platform_deployment_id, long groupId) {
+		this.assignmentType = assignmentType;
+		this.topicId = topicId;
+		this.platform_deployment_id = platform_deployment_id;
+		this.groupId = groupId;
+		this.questionKeys = ofy().load().type(Question.class).filter("assignmentType",this.assignmentType).filter("topicId",this.topicId).keys().list();
+	}
+	
+/*
     public void setResourceLinkId (String r) {
     	this.resourceLinkId = r;
     	if (resourceLinkIds.contains(r)) resourceLinkIds.remove(r);
@@ -72,7 +72,7 @@ public class Assignment {
     public String getresourceLinkId() {
     	return this.resourceLinkId;
     }
-    
+/*    
 	public String showGroupScores(User user,Group group) {
 		long LIMIT_MILLIS = 1000 * 25; // response time limit in milliseconds
 		StringBuffer buf = new StringBuffer();
@@ -247,8 +247,7 @@ public class Assignment {
 		}
 		return buf.toString();
 	}
-    
-/*    
+        
     public boolean matches(String assignmentType,List<Long> topicIds) { // this method applies only to PracticeExam assignments
     	if ("PracticeExam".equals(this.assignmentType) && "PracticeExam".equals(assignmentType) && this.topicIds!=null && this.topicIds.equals(topicIds)) return true;
     	else return false;

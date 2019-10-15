@@ -25,6 +25,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.servlet.ServletException;
+import javax.servlet.annotation.HttpConstraint;
+import javax.servlet.annotation.ServletSecurity;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -35,6 +38,8 @@ import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
 
+@WebServlet("/Edit")
+@ServletSecurity(@HttpConstraint(rolesAllowed = {"admin"}))
 public class Edit extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
@@ -342,7 +347,7 @@ public class Edit extends HttpServlet {
 							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + t.id + "'>");
 					buf.append("\n<TR>"
 							+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4 VALUE='" + t.orderBy + "'></TD>"
-							+ "<TD ALIGN=CENTER><INPUT NAME=Title VALUE='" + CharHider.quot2html(t.title) + "'></TD>"
+							+ "<TD ALIGN=CENTER><INPUT NAME=Title VALUE='" + Question.quot2html(t.title) + "'></TD>"
 							+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE=Update>"
 							+ ((nQuiz==0 && nHW==0)?"<INPUT TYPE=SUBMIT VALUE='Delete' "
 									+ "onClick=\"javascript: document.TopicsForm" + t.id + ".UserRequest.value='DeleteTopic';\">":"")
@@ -403,7 +408,7 @@ public class Edit extends HttpServlet {
 				buf.append("<FORM ACTION=Edit METHOD=POST>"
 						+ "<INPUT TYPE=HIDDEN NAME=VideoId VALUE=" + v.id + ">"
 						+ "<TR><TD><INPUT TYPE=TEXT NAME=OrderBy VALUE=" + v.orderBy + "></TD>"
-						+ "<TD><INPUT TYPE=TEXT NAME=Title VALUE='" + CharHider.quot2html(v.title) + "'></TD>"
+						+ "<TD><INPUT TYPE=TEXT NAME=Title VALUE='" + Question.quot2html(v.title) + "'></TD>"
 						+ "<TD>" + v.serialNumber + "</TD>"
 						+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Update Video'>"
 						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Video'></TD></TR>"
@@ -450,9 +455,9 @@ public class Edit extends HttpServlet {
 			for (Text text : texts) {
 				buf.append("<FORM ACTION=Edit METHOD=POST>"
 						+ "<INPUT TYPE=HIDDEN NAME=TextId VALUE=" + text.id + ">"
-						+ "<TR><TD><INPUT TYPE=TEXT NAME=Title VALUE='" + CharHider.quot2html(text.title) + "'</TD>"
-						+ "<TD><INPUT TYPE=TEXT NAME=Author VALUE='" + CharHider.quot2html(text.author) + "'></TD>"
-						+ "<TD><INPUT TYPE=TEXT NAME=Publisher VALUE='" + CharHider.quot2html(text.publisher) + "'></TD>"
+						+ "<TR><TD><INPUT TYPE=TEXT NAME=Title VALUE='" + Question.quot2html(text.title) + "'</TD>"
+						+ "<TD><INPUT TYPE=TEXT NAME=Author VALUE='" + Question.quot2html(text.author) + "'></TD>"
+						+ "<TD><INPUT TYPE=TEXT NAME=Publisher VALUE='" + Question.quot2html(text.publisher) + "'></TD>"
 						+ "<TD><INPUT TYPE=TEXT NAME=URL VALUE='" + text.URL + "'></TD>"
 						+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Update Text'>"
 						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Text'></TD></TR>"
@@ -534,7 +539,7 @@ public class Edit extends HttpServlet {
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + user.id + "'>");
 			buf.append("<INPUT TYPE=HIDDEN NAME=QuestionType VALUE=" + questionType + ">");
-			buf.append(subject.getTopicSelectBox(topicId));
+			buf.append(getTopicSelectBox(topicId));
 			buf.append(assignmentType.equals("Exam")?"Point Value: " + pointValueSelectBox() + "<br>":"<INPUT TYPE=HIDDEN NAME=PointValue VALUE=1>");
 			buf.append(question.edit());
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Preview'></FORM>");
@@ -873,6 +878,19 @@ public class Edit extends HttpServlet {
 		} catch (Exception e) {
 			return;
 		}
+	}
+
+	public String getTopicSelectBox(long id) {
+		StringBuffer buf = new StringBuffer();
+		Query<Topic> topics = ofy().load().type(Topic.class);
+		buf.append("Topic: <SELECT NAME=TopicId>");
+		if (id == 0) buf.append("<OPTION VALUE=0>Select a topic:</OPTION>");
+		for (Topic t : topics) {
+			buf.append("<OPTION " + ((t.id == id)?"SELECTED ":"")
+					+ "VALUE='" + t.id + "'>" + t.title + "</OPTION>");
+		}
+		buf.append("</SELECT><br>");
+		return buf.toString();
 	}
 
 }

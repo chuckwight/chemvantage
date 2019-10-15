@@ -21,11 +21,12 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
+@WebServlet("/Logout")
 public class Logout extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
@@ -39,37 +40,21 @@ public class Logout extends HttpServlet {
 		
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		User user = null;
-		
+/*		
 		try {
-			HttpSession session = request.getSession();
-			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
-			else user = User.getInstance(session);
-			session.invalidate();  // destroys the session variable
-			boolean successful = user.destroyCvsToken();  // destroys the ChemVantage session token
-			
-			if (successful) out.println(Home.header 
-					+ "<h3>You have successfully signed out of ChemVantage</h3>" 
-					+ "If this happened unexpectedly, there are two likely causes:"
-					+ "<ul>"
-					+ "<li>Your web session may have timed out after a period of "
-					+ "inactivity (typically 60 to 90 minutes)"
-					+ "<li>The web session may have been dropped by your browser "
-					+ "as a result of using the BACK button while viewing ChemVantage "
-					+ "in a frame contained by your learning management system (LMS). "
-					+ "Some browsers do not persist session variables in frames, and "
-					+ "therefore do not support backward navigation. You can avoid this "
-					+ "either by using a browser that supports session variables in "
-					+ "frames (e.g., Chrome), or by configuring your LMS to display "
-					+ "third-party apps in a separate window."
-					+ "</ul>"
-					+ Home.footer);
-			else out.println("An unexpected error occurred, and you may not have been completely "
-					+ "logged out of ChemVantage. Please close your browser completey to destroy "
-					+ "any session variables. This is particularly important if you are at a public "
-					+ "computer.");
-		} catch (Exception e) {
-			out.println(e.toString());
-		}
+			request.getSession().invalidate();
+			User.getUser(request.getParameter("CvsToken")).destroyCvsToken();
+		} catch (Exception e) {}
+*/		
+		out.println(Home.header 
+				+ "<h3>You have successfully signed out of ChemVantage</h3>" 
+				+ "If this happened unexpectedly, it is likely that your browser's web "
+				+ "session timed out after a period of inactivity, or the access token "
+				+ "exchanged between your learning management system (LMS) and ChemVantage "
+				+ "has expired (after a period of typically 90 minutes)."
+				+ "<p>"
+				+ "You can activate a new session and token by returning to your learning "
+				+ "management system (LMS) and clicking the link for any assignment there."
+				+ Home.footer);
 	}
 }
