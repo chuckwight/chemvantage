@@ -419,6 +419,7 @@ public class LTILaunch extends HttpServlet {
 				} catch (Exception e){
 					throw new Exception("Tool state JWT could not be created.");
 				}
+			    return;  // wait for relaunch from platform
 			}
 			// End of LTIv1p1p2 section. Continue with normal LTI launch sequence
 			
