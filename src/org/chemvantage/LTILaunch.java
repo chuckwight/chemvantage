@@ -58,7 +58,7 @@ import net.oauth.SimpleOAuthValidator;
 import net.oauth.server.OAuthServlet;
 import net.oauth.signature.OAuthSignatureMethod;
 
-@WebServlet(urlPatterns = {"/lti","/lti/","/lti/launch","/lti/launch/"})
+@WebServlet(urlPatterns = {"/lti","/lti/"})
 public class LTILaunch extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
