@@ -51,7 +51,7 @@ public class Group implements Serializable {
     
     Group(String domain,String context_id,String description, String instructorId) {
     	this.created = new Date();
-        this.domain = domain;   // in LTIv1.3 this is platform_id+"/"+deployment_id
+        this.domain = domain;   // in LTIv1.3 this is the platformDepoymentId
         this.description = description;
     	this.context_id = context_id;
         this.instructorId = instructorId;

@@ -17,6 +17,27 @@
 
 package org.chemvantage;
 
+/* This servlet executes a valid LTI ResourceLink launch request using LTI v1.3 specifications
+ * The basic requesting entity is a Deployment. Although a single LMS platform may host several
+ * Deployments (e.g., as separate accounts), each Deployment will have a designated client_id
+ * value (identifying the tool provider), which defines the security contract for the connection. 
+ * The following values are determined by the Deployment, and therefore cannot be considered
+ * to be universally unique for the tool provider:
+ * deployment_id - this is mitigated by prepending a platform_id to form a unique platformDeploymentId value
+ * context_id - the groupId should be identified by using both the platformDeploymentId and the context_id
+ * user_id - this should be prepended with the platformDeploymentId to form a unique userId value
+ * resource_link_id - the assignmentId should be identified by the platformDeploymentId and the resource_link_id
+ * 
+ * The token is a JWT containing useful information about the transaction, including
+ * platformDeploymentId
+ * userId
+ * user.roles
+ * groupId
+ * assignmentId
+ * 
+ * 
+ */
+
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
@@ -77,7 +98,6 @@ public class LTIv1p3Launch extends HttpServlet {
 
 	void ltiv1p3LaunchRequest(HttpServletRequest request,HttpServletResponse response) 
 			throws IOException {
-		StringBuffer debug = new StringBuffer("Start:<br>");
 		DecodedJWT id_token = null;
 		Map<String,Claim> id_token_claims = null;
 		
@@ -97,11 +117,12 @@ public class LTIv1p3Launch extends HttpServlet {
 			String platform_id = id_token.getIssuer();
 		    if (!platform_id.startsWith("http")) platform_id = "http://" + platform_id;
 		    String deployment_id = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/deployment_id").asString();
+		    String platformDeploymentId = platform_id + "/" + deployment_id;
 		    			
 			// Process User information:
 			String sub = id_token.getSubject();  // required
 			if (sub==null || sub.isEmpty()) throw new Exception("Missing or empty subject claim in the id_token.");
-			String userId = platform_id + "/" + sub;
+			String userId = platformDeploymentId + "/" + sub;
 			User user = new User(userId);
 			
 			user.roles = 0;
@@ -125,26 +146,24 @@ public class LTIv1p3Launch extends HttpServlet {
 			
 			try {  // look for optional context claim
 				context = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/context").asMap();			
-				context_id = platform_id + "/" + context.get("id").toString();
+				context_id = context.get("id").toString();
 				context_label = context.get("label").toString();
 			} catch (Exception e) { // default context for platform
-				context_id = platform_id + "/";
+				context_id = "";
 			}
-
-			String platform_deployment_id = platform_id + "/" + deployment_id;
 			try {
 				myGroup = ofy().load().type(Group.class).filter("context_id",context_id).first().safe();
 				if (user.isInstructor()) myGroup.instructorId = user.id;
 			} catch (Exception e) {
 				String instructorId = user.isInstructor()?user.id:null;
-				myGroup = new Group(platform_deployment_id,context_id,context_label,instructorId);
+				myGroup = new Group(platformDeploymentId,context_id,context_label,instructorId);
 				ofy().save().entity(myGroup).now(); // produces an id value for the myGroup entity
 			}
+			
 			// Make sure that this user is listed as a member of the group:
 			user.myGroupId = myGroup.id;
 			myGroup.addMember(user.id); // automatically checks for duplicate entries
 
-			debug.append("Start processing LTI-AGS information:<br>");
 			try {  // Process information for LTI Assignment and Grade Services (AGS)
 				lti_ags_claims = id_token_claims.get("https://purl.imsglobal.org/spec/lti-ags/claim/endpoint").asMap();		
 
@@ -183,8 +202,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				throw new Exception("Resource link id was missing from payload.");
 			}
 			
-			// Construct the URL to which the user should be redirected
-			
+/*			
 			Assignment myAssignment = null;
 			long assignmentId = 0;
 			
@@ -200,16 +218,18 @@ public class LTIv1p3Launch extends HttpServlet {
 					ofy().save().entity(myAssignment);
 				}
 			} catch (Exception e) {}
+*/
 
-			if (myAssignment==null) {  // try to find the assignment based on the resourceLinkId value
-				try {  // Find the existing assignment for this resourceLinkId or make a new one
-					myAssignment = ofy().load().type(Assignment.class).filter("platform_deployment_id",platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().safe();		
-				} catch (Exception e) {  // it appears that the assignment does not exist; make a new one:
-					myAssignment = new Assignment(platform_deployment_id,myGroup.id,resourceLinkId);
-					ofy().save().entity(myAssignment).now();  // We will need this Assignment entity immediately
-				}
-			}
+			// Construct the URL to which the user should be redirected
+			Assignment myAssignment = null;
 			
+			try {  // Find the existing assignment for this resourceLinkId or make a new one
+				myAssignment = ofy().load().type(Assignment.class).filter("platformDeploymentId",platformDeploymentId).filter("resourceLinkId",resourceLinkId).first().safe();		
+			} catch (Exception e) {  // it appears that the assignment does not exist; make a new one:
+				myAssignment = new Assignment(myGroup.id,platformDeploymentId,resourceLinkId);
+				ofy().save().entity(myAssignment).now();  // We will need this Assignment entity immediately
+			}
+
 			// Update the lineitem URL for this assignment, if necessary
 			if (myAssignment.lti_ags_lineitem_url==null) {
 				if (lti_ags_claims.get("lineitem") != null) {  // get the lineitem from the id_token
@@ -228,7 +248,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				response.getWriter().println(Home.header + pickResourceForm(user,myAssignment,null) + Home.footer);
 				return;
 			} else {  // redirect the user's browser to the assignment
-				target_link_uri = "/" + myAssignment.assignmentType + "?Token=" + user.token;
+				String target_link_uri = "/" + myAssignment.assignmentType + "?Token=" + user.token;
 				response.sendRedirect(target_link_uri);
 				return;
 			}

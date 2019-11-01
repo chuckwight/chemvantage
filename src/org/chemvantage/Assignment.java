@@ -35,7 +35,6 @@ public class Assignment {
 	@Index	String assignmentType;
 	@Index	long topicId;
 	@Index	String resourceLinkId;
-	@Index	String platform_deployment_id;
 			String lti_ags_lineitem_url;
 			List<Long> topicIds; // used for practice exams which have multiple topicIds
 			List<String> resourceLinkIds = new ArrayList<String>();  // deprecated
@@ -43,22 +42,16 @@ public class Assignment {
 
 	Assignment() {}
 
-	Assignment(String platform_deployment_id, long groupId,String resourceLinkId) {
-		this.platform_deployment_id = platform_deployment_id;
+	Assignment(long groupId,String platformDeploymentId,String resourceLinkId) {  // specific to Quiz and Homework assignments with a single topicId
 		this.groupId = groupId;
-		this.resourceLinkId = resourceLinkId;
-	}
-
-	Assignment(long groupId,String domain,String resourceLinkId) {  // specific to Quiz and Homework assignments with a single topicId
-		this.groupId = groupId;
-		this.domain = domain;
+		this.domain = platformDeploymentId;
 		this.resourceLinkId = resourceLinkId;
 	}
 
 	Assignment(String assignmentType, long topicId, String platform_deployment_id, long groupId) {
 		this.assignmentType = assignmentType;
 		this.topicId = topicId;
-		this.platform_deployment_id = platform_deployment_id;
+		this.domain = platform_deployment_id;
 		this.groupId = groupId;
 		this.questionKeys = ofy().load().type(Question.class).filter("assignmentType",this.assignmentType).filter("topicId",this.topicId).keys().list();
 	}

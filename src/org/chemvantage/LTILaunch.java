@@ -285,7 +285,7 @@ public class LTILaunch extends HttpServlet {
 				try {  // Find the existing assignment for this resourceLinkId or make a new one
 					myAssignment = ofy().load().type(Assignment.class).filter("platform_deployment_id",platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().safe();		
 				} catch (Exception e) {  // it appears that the assignment does not exist; make a new one:
-					myAssignment = new Assignment(platform_deployment_id,myGroup.id,resourceLinkId);
+					myAssignment = new Assignment(myGroup.id,platform_deployment_id,resourceLinkId);
 					ofy().save().entity(myAssignment).now();  // We will need this Assignment entity immediately
 				}
 			}
