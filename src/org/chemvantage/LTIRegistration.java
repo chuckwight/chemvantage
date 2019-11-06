@@ -434,7 +434,6 @@ public class LTIRegistration extends HttpServlet {
 	}
 
 	boolean sendLTICredentials(String email, String token, HttpServletRequest request) {
-		// send a response to a user feedback report
 		try {
 			Properties props = new Properties();
 			Session session = Session.getDefaultInstance(props, null);
