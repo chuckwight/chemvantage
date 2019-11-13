@@ -166,7 +166,8 @@ public class LTIRegistration extends HttpServlet {
 				buf.append("To the LMS Administrator:<p>");
 				buf.append("Please enter the following ChemVantage endpoint URLs into your LMS:<br>"
 						+ "Tool Domain URL: " + chemvantage_host + "<br>"
-						+ "Tool Redirect URL: " + chemvantage_host + "/lti/launch<br>"
+						+ "Tool Launch Redirect URL: " + chemvantage_host + "/lti/launch<br>"
+						+ "Deep Linking Redirect URL: " + chemvantage_host + "/lti/deeplinks<br>"
 						+ "OIDC Login Initiation URL: " + chemvantage_host + "/auth/token<br>"
 						+ "JSON Web Key Set Endpoint: " + chemvantage_host + "/jwks<p>");
 				buf.append("There are three options to enter the ChemVantage configuration details into "
@@ -233,23 +234,22 @@ public class LTIRegistration extends HttpServlet {
 			+ "information between ChemVantage and your LMS. This exchange will take place in three steps:"
 			+ "<ol><li>Complete the form below with information about your LMS platform. When you submit the form, "
 			+ "ChemVantage will send an email to you containing a link to complete the registration process."
-			+ "<li>When you are ready to register ChemVantage as a client in your LMS, activate the link. This will "
-			+ "create a configuration JSON file containing the information about ChemVantage required by your LMS. "
-			+ "You can either enter the URL for the configuration JSON file into your LMS directly, or copy/paste "
-			+ "the JSON text string into yur LMS, or use the JSON string to enter the values into your LMS manually, "
-			+ "depending on which methods are supported by your LMS. "
+			+ "<li>Your LMS administrator should activate the link to get the ChemVantage service endpoint URLs and "
+			+ "the public JWKS encryption keys that are used to verify ChemVantage access tokens. An optional "
+			+ "configuration JSON is also provided by the link."
 			+ "<li>When you register ChemVantage in your LMS, it should generate values for a client_id (local identifier "
 			+ "for ChemVantage) and (optionally) a deployment_id (local account identifier in your LMS). You will be "
 			+ "prompted to send these values back to ChemVantage. Your LTI registration will not be complete without "
-			+ "providing at least the client_id.<p>"
+			+ "providing at least the client_id."
 			+ "</ol>"
-			+ "Please start by enter the requested information below:");
+			+ "Please start by enter the requested information below. If you are not sure of the URLs, please consult your "
+			+ "LMS administrator. All of the URLs should be secure (i.e., https://)");
 			buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");
 			buf.append("<FORM METHOD=POST>");
 			buf.append("<INPUT TYPE=HIDDEN NAME=lti_version VALUE=1p3>");
 			buf.append("<TABLE>");
 			buf.append("<TR><TD ALIGN=RIGHT>Email Address: </TD><TD><INPUT TYPE=TEXT NAME=Email> (where the credentials will be sent)</TD></TR>");
-			buf.append("<TR><TD ALIGN=RIGHT>Platform ID: </TD><TD><INPUT TYPE=TEXT NAME=PlatformId> (URL host name for your LMS, e.g., http://salisbury.instructure.com)");
+			buf.append("<TR><TD ALIGN=RIGHT>Platform ID: </TD><TD><INPUT TYPE=TEXT NAME=PlatformId> (URL host name for your LMS, e.g., https://salisbury.instructure.com)");
 			buf.append("<TR><TD ALIGN=RIGHT>Platform OIDC Auth URL: </TD><TD><INPUT TYPE=TEXT NAME=OIDCUrl> (OpenID Connect URL for your LMS)");
 			buf.append("<TR><TD ALIGN=RIGHT>Platform OAuth Access Token URL: </TD><TD><INPUT TYPE=TEXT NAME=OauthTokenUrl> (Initial LTI service endpoint for your LMS)");			
 			buf.append("<TR><TD ALIGN=RIGHT>Platform JSON Web Key Set URL: </TD><TD><INPUT TYPE=TEXT NAME=JWKSUrl> (.well-known/jwks URL for your LMS)");
