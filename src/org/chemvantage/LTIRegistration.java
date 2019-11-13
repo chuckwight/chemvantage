@@ -161,9 +161,14 @@ public class LTIRegistration extends HttpServlet {
 			try {
 				String token = request.getParameter("Token");
 				Deployment d = validateToken(token);
-				
-				
+				String chemvantage_host = "https://" + request.getServerName();
+								
 				buf.append("To the LMS Administrator:<p>");
+				buf.append("Please enter the following ChemVantage endpoint URLs into your LMS:<br>"
+						+ "Tool Domain URL: " + chemvantage_host + "<br>"
+						+ "Tool Redirect URL: " + chemvantage_host + "/lti/launch<br>"
+						+ "OIDC Login Initiation URL: " + chemvantage_host + "/auth/token<br>"
+						+ "JSON Web Key Set Endpoint: " + chemvantage_host + "/jwks<p>");
 				buf.append("There are three options to enter the ChemVantage configuration details into "
 						+ "your LMS:<ol>"
 						+ "<li>Copy/paste the Configuration JSON URL below into your LMS; or"
@@ -458,6 +463,11 @@ public class LTIRegistration extends HttpServlet {
 					+ "This request uses LTI version 1.3.0 to complete the registration. If your LMS "
 					+ "does not support version 1.3.0, you may register using version 1.1 "
 					+ "<a href=" + chemvantage_host + "/lti/registration?lti_version=1p1>here</a>.<p>"
+					+ "Use the information below to register Measuremental in your LMS:<br>"
+					+ "Tool Domain URL: " + chemvantage_host + "<br>"
+					+ "Tool Redirect URL: " + chemvantage_host + "/lti/launch<br>"
+					+ "OIDC Login Initiation URL: " + chemvantage_host + "/auth/token<br>"
+					+ "JSON Web Key Set Endpoint: " + chemvantage_host + "/jwks<p>"
 					+ "To obtain a one-time configuration JSON URL to complete the LTI registration of "
 					+ "ChemVantage using version 1.3.0, please <a href=" + url + ">click here</a>, or copy/paste "
 					+ "the link below into your browser.<p>"
