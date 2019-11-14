@@ -4,8 +4,13 @@
 
     <!-- Used 2 times in query history -->
     <datastore-index kind="Assignment" ancestor="false" source="auto">
-        <property name="platform_deployment_id" direction="asc"/>
+        <property name="domain" direction="asc"/>
         <property name="resourceLinkId" direction="asc"/>
+    </datastore-index>
+
+     <datastore-index kind="Assignment" ancestor="false" source="auto">
+        <property name="assignmentType" direction="asc"/>
+        <property name="topicId" direction="asc"/>
     </datastore-index>
 
     <datastore-index kind="Assignment" ancestor="false" source="auto">

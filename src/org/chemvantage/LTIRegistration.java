@@ -77,8 +77,8 @@ public class LTIRegistration extends HttpServlet {
 			+ "<a href=http://imscert.org><img alt='IMS Global Certified' style='border-width:0' align=left hspace=10 vspace=5 "
 			+ "src='/images/imscertifiedfinalsmall.png'/></a> ChemVantage is certified by the "
 			+ "<a href=http://imsglobal.org>IMS Global Learning Consortium</a> to be conformant with the "
-			+ "LTI v1.0, v1.1 and Outcomes Service 1.X standards for learning tools interoperability. The IMS registration "
-			+ "number for ChemVantage is <a href=https://site.imsglobal.org/certifications/chemvantage/36981/chemvantage>IMSB2C2C3B2ce2019W1</a>.<p>"
+			+ "LTI v1.1 and LTI Advantage Complete standards for learning tools interoperability. The IMS registration "
+			+ "number for ChemVantage is <a href=https://site.imsglobal.org/certifications/chemvantage/36981/chemvantage>IMSD2C6C25C26C27ce2019W2</a>.<p>"
 			+ "This means that you can configure <a href=https://site.imsglobal.org/certifications/chemvantage/36981/chemvantage/180501/compatibility>"
 			+ "compatible learning management systems</a> with an LTI link to ChemVantage.  This allows your LMS to establish "
 			+ "and maintain ChemVantage accounts automatically, without having to maintain separate usernames and "
@@ -89,7 +89,7 @@ public class LTIRegistration extends HttpServlet {
 			+ "ChemVantage supports two different LTI protocols for connecting to your LMS. "
 			+ "Please choose the version of LTI supported by your learning management system:<p>"
 			+ "<a href=/lti/registration?lti_version=1p1>LTI version 1.1</a> or "
-			+ "<a href=/lti/registration?lti_version=1p3>LTI version 1.3</a><p>";
+			+ "<a href=/lti/registration?lti_version=1p3>LTI version 1.3</a>&nbsp;(recommended)<p>";
 			
 	String instructions = "<h3>Implementation in Canvas (other LMS platforms may be similar)</h3>"
 			+ "<ol>"
@@ -214,6 +214,9 @@ public class LTIRegistration extends HttpServlet {
 			+ "You may obtain a free set of LTI credentials by entering a consumer key value (any string of "
 			+ "characters that uniquely identifies your LMS) along with your email address into the form below."
 			+ "Your LTI credentials will be emailed to you immediately.<p>"
+			+ "<b>Please note: </b> IMS Global Learning Solutions is in the process of deprecating the LTI v1.1 specifications "
+			+ "due to potential weaknesses in security. ChemVantage will follow this <a href=https://www.imsglobal.org/lti-security-announcement-and-deprecation-schedule-july-2019>"
+			+ "deprecation schedule</a>. For this reason, we recommend that you register using the <a href=/lti/registration?lti_version=1p3>LTI version 1.3 protocol</a><p>"
 			+ "For further assistance, contact Chuck Wight (admin@chemvantage.org).<p>");
 			buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");
 			buf.append("<FORM METHOD=POST><INPUT TYPE=HIDDEN NAME=lti_version VALUE=1p1><TABLE>");
@@ -242,7 +245,7 @@ public class LTIRegistration extends HttpServlet {
 			+ "prompted to send these values back to ChemVantage. Your LTI registration will not be complete without "
 			+ "providing at least the client_id."
 			+ "</ol>"
-			+ "Please start by enter the requested information below. If you are not sure of the URLs, please consult your "
+			+ "Please start by entering the requested information below. If you are not sure of the URLs, please consult your "
 			+ "LMS administrator. All of the URLs should be secure (i.e., https://)");
 			buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");
 			buf.append("<FORM METHOD=POST>");
