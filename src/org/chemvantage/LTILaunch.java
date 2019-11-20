@@ -24,14 +24,10 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.URL;
 import java.net.URLEncoder;
-import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -40,14 +36,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
-import com.auth0.jwk.Jwk;
-import com.auth0.jwk.JwkProvider;
-import com.auth0.jwk.UrlJwkProvider;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
-import com.auth0.jwt.interfaces.Claim;
-import com.auth0.jwt.interfaces.DecodedJWT;
-import com.auth0.jwt.interfaces.JWTVerifier;
 import com.googlecode.objectify.Key;
 
 import net.oauth.OAuthAccessor;
@@ -74,22 +64,13 @@ public class LTILaunch extends HttpServlet {
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 			throws ServletException, IOException {
 		try {
-		/*
-			User user = null;
-			HttpSession session = request.getSession();
-			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
-			else user = User.getInstance(session);
-		*/
 			User user = User.getUser(request.getParameter("Token"));  // may be null for LTI launch request
 			
 			if ("UpdateAssignment".equals(request.getParameter("UserRequest"))) {
 				if (!updateAssignment(request,response)) throw new Exception("Assignment update failed.");  // POST the assignmentType and topicIds
 				// construct a redirectUrl to the new assignment
 				String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
-				//long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
 				String redirectUrl = "/" + request.getParameter("AssignmentType") 
-				//+ "?AssignmentId=" + assignmentId
-				//+ (request.getSession().isNew()?"&CvsToken=" + user.getCvsToken():"")
 				+ "?Token=" + user.token
 				+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid);
 				response.sendRedirect(redirectUrl);
@@ -97,12 +78,12 @@ public class LTILaunch extends HttpServlet {
 			} else if (request.getParameter("lti_message_type")!=null) { // handle LTI launch request for LTIv1p0 and LTIv1p1
 				basicLtiLaunchRequest(request,response);
 			} else if (request.getParameter("id_token")!=null) {  // handle LTI v1p3 launch request
-				ltiv1p3LaunchRequest(request,response);
+				response.getWriter().println("The correct launch URL for LTI v1p3 is https://" + request.getServerName() + "/lti/launch");
 			} else doError(request,response,"Invalid LTI launch request.",null,null); 
 		} catch (Exception e) {	
 		}
 	}
-
+/*
 	void ltiv1p3LaunchRequest(HttpServletRequest request,HttpServletResponse response) 
 			throws IOException {
 		StringBuffer debug = new StringBuffer("Start:<br>");
@@ -172,15 +153,6 @@ public class LTILaunch extends HttpServlet {
 			if (sub==null || sub.isEmpty()) throw new Exception("Missing or empty subject claim in the id_token.");
 			String userId = platform_id + "/" + sub;
 			User user = new User(userId);
-/*
-  			try {
-				user = ofy().load().type(User.class).id(userId).safe();
-			} catch (Exception e) {
-				user = new User(userId);
-			}
-*/
-			//HttpSession session = request.getSession(true);
-			//session.setAttribute("UserId",userId);
 			
 			user.roles = 0;
 			Claim roles_claim = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/roles");
@@ -320,7 +292,7 @@ public class LTILaunch extends HttpServlet {
 			doError(request,response,"","",e);
 		}
 	}
-
+*/
 	void basicLtiLaunchRequest(HttpServletRequest request,HttpServletResponse response) 
 			throws IOException {
 		// check for required LTI launch parameters:
@@ -503,17 +475,13 @@ public class LTILaunch extends HttpServlet {
 			// Use the resourceLinkId to find the assignment or create a new one:
 			Assignment myAssignment = null;
 			String redirectUrl;
-			//String cvsToken = user.getCvsToken();
 			
 			try {  // load the requested Assignment entity if it exists
 				myAssignment = ofy().load().type(Assignment.class).filter("domain",domain.domainName).filter("resourceLinkId", resource_link_id).first().safe();
-				//ofy().save().entity(myAssignment);
-
+				
 				if (myAssignment.assignmentType != null) {
 					user.setToken(myAssignment.id);
 					redirectUrl = "/" + myAssignment.assignmentType 
-							//+ "?AssignmentId=" + myAssignment.id 
-							//+ "&CvsToken=" + cvsToken
 							+ "?Token=" + user.token
 							+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid);
 					response.sendRedirect(redirectUrl);
