@@ -2,6 +2,7 @@ package org.chemvantage;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -24,26 +25,37 @@ public class Token extends HttpServlet {
 			throws ServletException, IOException {
 		StringBuffer debug = new StringBuffer("Debug trail: Start.<br>");
 		try {
+			// store parameters required by third-party initiated login procedure:
 			String platform_id = request.getParameter("iss");   // this should be the platform_id URL (aud)
+			debug.append("platform_id: " + platform_id + "<br>");
+			String user_id = request.getParameter("login_hint");
+			debug.append("user_id: " + user_id + "<br>");
+			String target_link_uri = request.getParameter("target_link_uri");
+			debug.append("target_link_uri: " + target_link_uri + "<br>");
+			debug.append("query string: " + request.getQueryString() + "<br>");
+			debug.append("parameters: " + request.getParameterMap().keySet().toString() + "<br>");
+			
+			if (platform_id == null) throw new Exception("Missing required iss parameter.");
+			if (user_id == null) throw new Exception("Missing required login_hint parameter.");
+			if (target_link_uri == null) throw new Exception("Missing required target_link_uri parameter.");
+			
 			if (!platform_id.startsWith("http")) platform_id = "http://" + platform_id;
 			
 			String deployment_id = request.getParameter("lti_deployment_id");
+			debug.append("deployment_id: " + deployment_id + "<br>");
+			
 			String client_id = request.getParameter("client_id");
 			
 			Deployment d = Deployment.getInstance(platform_id,deployment_id);
+			if (d==null) throw new Exception("Deployment " + platform_id + "/" + deployment_id + " was not found in the datastore.");
 			
-			debug.append("iss: " + platform_id + "<br>");
-			debug.append("deployment_id = " + deployment_id + "<br>");
+			if (client_id!=null && !client_id.contentEquals(d.client_id)) throw new Exception("Wrong client_id value");
 			
-			if (d==null) debug.append("Deployment is null<br>");
 			debug.append("deployment_id: " + d.getDeploymentId() + "<br>"
 					+ "client_id: " + d.client_id + "<br>");
 			
 			debug.append("Deployment: " + d.toString() + "<br>");
 			
-			String target_link_uri = request.getParameter("target_link_uri");  // should be https://www.chemvantage.org/lti
-																	// or a deeplink url like https://www.chemvantage.org/Quiz?AssignmentId=3479228
-			debug.append("target_link_url OK: " + target_link_uri + "<br>");
 			String redirect_uri = "https://" + request.getServerName() + "/lti";
 			
 			String login_hint = request.getParameter("login_hint");

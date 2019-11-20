@@ -31,7 +31,7 @@ public class Deployment {
 		this.rsa_key_id = KeyStore.getAKeyId();
 	}
 
-	static Deployment getInstance(String platform_id,String deployment_id) {
+	static Deployment getInstance(String platform_id,String deployment_id) throws Exception {
 		Deployment d = null;
 		if (deployment_id==null) deployment_id = "";  // may be empty String for 1-deployment platforms
 		if (!platform_id.startsWith("http")) platform_id = "http://" + platform_id; // make it into a URL

@@ -92,7 +92,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				}
 			}
 		} catch (Exception e) {	
-			doError(request,response,"Invalid LTI launch request.",null,null); 
+			doError(request,response,"Invalid LTI launch request.",null,e); 
 		}
 	}
 
@@ -102,7 +102,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		Map<String,Claim> id_token_claims = null;
 		
 		try {
-			validateStateToken(request);
+			validateStateToken(request);			
 			id_token = JWT.decode(request.getParameter("id_token"));
 			id_token_claims = validateIdToken(id_token);
 		} catch (Exception e) {
@@ -274,45 +274,46 @@ public class LTIv1p3Launch extends HttpServlet {
 		 * the elements required by the LTI v1.3 standard are present for a valid 
 		 * ResourceLinkId launch request, and returns a set of Claims embedded in the JWT.
 		 */
-		
 		// get the platform_id and deployment_id to load the correct Deployment d
 		String platform_id = id_token.getIssuer();
 	    if (!platform_id.startsWith("http")) platform_id = "http://" + platform_id;
-	    
 	    Map<String,Claim> id_token_claims = id_token.getClaims();
 	    // validate the id_token signature:
 	    // first get the correct Deployment entity for this platform to find the public key
 	    Claim deployment_id_claim = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/deployment_id");
 	    if (deployment_id_claim==null) throw new Exception("The deployment_id claim was not found in the id_token payload.");
 	    String deployment_id = deployment_id_claim.asString();
-	    
 	    Deployment d = Deployment.getInstance(platform_id, deployment_id);
-	    String email = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/tool_platform").asMap().get("contact_email").toString();	
-		if (email != null && !email.isEmpty() && !email.contentEquals(d.email)) {
-			d.email = email;
-			ofy().save().entity(d);
-		}
+	    if (d==null) throw new Exception("Deployment not found in the datastore.");
+		
+	    try {
+			String email = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/tool_platform").asMap().get("contact_email").toString();	
+			if (d.email.contentEquals(email)) {
+				d.email = email;
+				ofy().save().entity(d);
+			}
+	    } catch (Exception e) {}
 		
 	    // retrieve the public Java Web Key from the platform to verify the signature
+		if (d.well_known_jwks_url==null) throw new Exception("The deployment does not have a valid JWKS URL.");
 		URL jwks_url = new URL(d.well_known_jwks_url);
 		JwkProvider provider = new UrlJwkProvider(jwks_url);
 		if (id_token.getKeyId() == null || id_token.getKeyId().isEmpty()) throw new Exception("No JWK id found.");
 	    Jwk jwk = provider.get(id_token.getKeyId()); //throws Exception when not found or can't get one
 	    RSAPublicKey public_key = (RSAPublicKey)jwk.getPublicKey();
-
 	    // verify the JWT signature
 		Algorithm algorithm = Algorithm.RSA256(public_key,null);
 		if (!"RS256".contentEquals(id_token.getAlgorithm())) throw new Exception("JWT algorithm must be RS256");
 		JWT.require(algorithm).build().verify(id_token);  // throws JWTVerificationException if not valid
-	
 	    // verify LTI version 1.3.0
 	    Claim lti_version = id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/version");
-	    if (lti_version==null) throw new Exception("LTI version claim was missing.");    
+	    if (lti_version.isNull()) throw new Exception("LTI version claim was missing.");    
 	    if (!"1.3.0".equals(lti_version.asString())) throw new Exception("Incorrect LTI version claim");
 	    	
 	    // Validate the LTI message_type:
-	    String message_type = id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/message_type").asString();
-	    if (!"LtiResourceLinkRequest".equals(message_type)) throw new Exception("Incorrect or missing LTI message_type claim");
+	    Claim message_type = id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/message_type");
+	    if (message_type.isNull()) throw new Exception("Missing LTI message_type.");
+	    if (!"LtiResourceLinkRequest".equals(message_type.asString())) throw new Exception("LTI message_type claim must be LtiResourceLink");
 
 	    return id_token_claims;
 	}
@@ -461,7 +462,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			return;
 		}
 		PrintWriter out = response.getWriter();
-		out.println(s + "<br>" + e.toString());
+		out.println(s + "<br>" + (e!=null?e.toString():"unknown error"));
 	}
 
 	@Override
