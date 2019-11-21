@@ -26,9 +26,9 @@ public class Token extends HttpServlet {
 		try {
 			// store parameters required by third-party initiated login procedure:
 			String platform_id = request.getParameter("iss");   // this should be the platform_id URL (aud)
-			debug.append("platform_id: " + platform_id + "<br>");
+			debug.append("iss: " + platform_id + "<br>");
 			String login_hint = request.getParameter("login_hint");
-			debug.append("user_id: " + login_hint + "<br>");
+			debug.append("login_hint: " + login_hint + "<br>");
 			String target_link_uri = request.getParameter("target_link_uri");
 			debug.append("target_link_uri: " + target_link_uri + "<br>");
 			debug.append("parameters: " + request.getParameterMap().keySet().toString() + "<br>");
