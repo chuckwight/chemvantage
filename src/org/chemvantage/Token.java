@@ -2,7 +2,6 @@ package org.chemvantage;
 
 import java.io.IOException;
 import java.util.Date;
-import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -23,20 +22,19 @@ public class Token extends HttpServlet {
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) 
 			throws ServletException, IOException {
-		StringBuffer debug = new StringBuffer("Debug trail: Start.<br>");
+		StringBuffer debug = new StringBuffer("Issuing auth token:<br>");
 		try {
 			// store parameters required by third-party initiated login procedure:
 			String platform_id = request.getParameter("iss");   // this should be the platform_id URL (aud)
 			debug.append("platform_id: " + platform_id + "<br>");
-			String user_id = request.getParameter("login_hint");
-			debug.append("user_id: " + user_id + "<br>");
+			String login_hint = request.getParameter("login_hint");
+			debug.append("user_id: " + login_hint + "<br>");
 			String target_link_uri = request.getParameter("target_link_uri");
 			debug.append("target_link_uri: " + target_link_uri + "<br>");
-			debug.append("query string: " + request.getQueryString() + "<br>");
 			debug.append("parameters: " + request.getParameterMap().keySet().toString() + "<br>");
 			
 			if (platform_id == null) throw new Exception("Missing required iss parameter.");
-			if (user_id == null) throw new Exception("Missing required login_hint parameter.");
+			if (login_hint == null) throw new Exception("Missing required login_hint parameter.");
 			if (target_link_uri == null) throw new Exception("Missing required target_link_uri parameter.");
 			
 			if (!platform_id.startsWith("http")) platform_id = "http://" + platform_id;
@@ -47,21 +45,14 @@ public class Token extends HttpServlet {
 			String client_id = request.getParameter("client_id");
 			
 			Deployment d = Deployment.getInstance(platform_id,deployment_id);
-			if (d==null) throw new Exception("Deployment " + platform_id + "/" + deployment_id + " was not found in the datastore.");
-			
+			if (d==null) throw new Exception("Deployment " + platform_id + "/" + deployment_id + " was not found in the datastore.");			
 			if (client_id!=null && !client_id.contentEquals(d.client_id)) throw new Exception("Wrong client_id value");
+			else client_id = d.client_id;
 			
-			debug.append("deployment_id: " + d.getDeploymentId() + "<br>"
-					+ "client_id: " + d.client_id + "<br>");
-			
-			debug.append("Deployment: " + d.toString() + "<br>");
+			debug.append("client_id: " + client_id + "<br>");
 			
 			String redirect_uri = "https://" + request.getServerName() + "/lti";
-			
-			String login_hint = request.getParameter("login_hint");
-			
-			debug.append("Redirect URL: " + target_link_uri + "<br>");
-			
+						
 			Date now = new Date();
 			Date exp = new Date(now.getTime() + 300000L); // 5 minutes from now
 			String nonce = Nonce.generateNonce();
@@ -103,7 +94,7 @@ public class Token extends HttpServlet {
 			response.sendRedirect(oidc_auth_url);
 
 		} catch (Exception e) {
-			response.getWriter().println("Failed token: " + e.toString() + "<p>" + debug.toString());
+			response.getWriter().println("Failed token: " + e.toString() + "<br>" + debug.toString());
 		}
 	}
 
@@ -111,29 +102,4 @@ public class Token extends HttpServlet {
 			throws ServletException, IOException {
 		doGet(request, response);
 	}
-/*
-	static Deployment getDeployment(String iss, String deployment_id, String client_id) {
-		// There are 4 possible legal cases:
-		// 1 - deployment_id == null: verify only 1 Deployment and verify client_id matches
-		// 2 - client_id == null: load the indicated Deployment and return it
-		// 3 - both values null: verify that only 1 Deployment exists and return it
-		// 4 - both values provided: load the indicated Deployment and verify client_id matches
-		try {
-			Key<Platform> p_key = Key.create(Platform.class,iss);
-			Deployment d = null;
-			if (deployment_id == null) {  // Cases 1 & 3
-				//List<Deployment> deployments = ofy().load().type(Deployment.class).ancestor(p_key).list();
-				//if (deployments.size() != 1) throw new Exception();  // reject connection if deployment is ambiguous
-				//d = deployments.get(0);
-				d = ofy().load().type(Deployment.class).ancestor(p_key).first().safe();
-			} else {  //Cases 2 & 4
-				Key<Deployment> d_key = Key.create(p_key,Deployment.class,deployment_id);
-				d = ofy().load().key(d_key).safe();
-			}
-			if (client_id == null || client_id.contentEquals(d.client_id)) return d;			
-		} catch (Exception e) {
-		}
-		return null;
-	}
-*/	
 }
