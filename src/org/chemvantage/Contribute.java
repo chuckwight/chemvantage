@@ -43,15 +43,9 @@ public class Contribute extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
 		try {
-			User user = User.getUser(request.getParameter("token"));
+			User user = User.getUser(request.getParameter("Token"));
 			if (user == null) throw new Exception();
-			/*
-			User user = null;
-			HttpSession session = request.getSession();
-			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
-			else user = User.getInstance(session);
-			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
-			 */
+			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			out.println(Home.header + newQuestionForm(user,request) + Home.footer);		
@@ -61,15 +55,9 @@ public class Contribute extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			User user = User.getUser(request.getParameter("token"));
+			User user = User.getUser(request.getParameter("Token"));
 			if (user == null) throw new Exception();
-			/*
-			User user = null;
-			HttpSession session = request.getSession();
-			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
-			else user = User.getInstance(session);
-			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
-			*/	
+		
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			

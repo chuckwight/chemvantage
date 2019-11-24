@@ -43,13 +43,11 @@ public class User {
 	@Id 	String id;
 	@Index	String domain;
 	@Index	Date lastLogin;
-	//@Index	String cvsToken;
-			String token;
-			//Date cvsTokenExpires;
-			int roles;
-			long myGroupId;
-			String alias;
-			String authDomain;
+	String token;
+	int roles;
+	long myGroupId;
+	String alias;
+	String authDomain;
 
 	User() {}
 
@@ -225,55 +223,7 @@ public class User {
 	public void setLastLogin() {
 		this.lastLogin = new Date();
 	}
-/*
-	List<QuizTransaction> getQuizTransactions() {
-		return ofy().load().type(QuizTransaction.class).filter("userId",this.id).order("-score").list();
-	}
 
-	List<Key<QuizTransaction>> getQuizTransactionKeys() {
-		return ofy().load().type(QuizTransaction.class).filter("userId",this.id).keys().list();
-	}
-
-	QuizTransaction getQuizTransaction(Key<QuizTransaction> key) {
-		return ofy().load().key(key).now();
-	}
-
-	List<HWTransaction> getHWTransactions() {
-		return ofy().load().type(HWTransaction.class).filter("userId",this.id).list();
-	}
-
-	List<Key<HWTransaction>> getHWTransactionKeys() {
-		return ofy().load().type(HWTransaction.class).filter("userId",this.id).keys().list();
-	}
-
-	HWTransaction getHWTransaction(Key<HWTransaction> key) {
-		return ofy().load().key(key).now();
-	}
-
-	List<ExamTransaction> getExamTransactions() {
-		return ofy().load().type(ExamTransaction.class).filter("userId",this.id).list();
-	}
-
-	List<Key<ExamTransaction>> getExamTransactionKeys() {
-		return ofy().load().type(ExamTransaction.class).filter("userId",this.id).keys().list();
-	}
-
-	ExamTransaction getExamTransaction(Key<ExamTransaction> key) {
-		return ofy().load().key(key).now();
-	}
-
-	List<PracticeExamTransaction> getPracticeExamTransactions() {
-		return ofy().load().type(PracticeExamTransaction.class).filter("userId",this.id).list();
-	}
-
-	List<Key<PracticeExamTransaction>> getPracticeExamTransactionKeys() {
-		return ofy().load().type(PracticeExamTransaction.class).filter("userId",this.id).keys().list();
-	}
-
-	PracticeExamTransaction getPracticeExamTransaction(Key<PracticeExamTransaction> key) {
-		return ofy().load().key(key).now();
-	}
-*/
 	public String getPrincipalRole() {
 		String principalRole;		
 		if (roles < 1) principalRole = "Student";
@@ -286,60 +236,7 @@ public class User {
 		else principalRole = ""; // unknown role
 		return principalRole;
 	}
-/*
-	public String getDecoratedRole() {
-		String principalRole;		
-		if (roles < 1) principalRole = "Student";
-		else if (roles < 2) principalRole = "Contributor";
-		else if (roles < 4) principalRole = "Editor";
-		else if (roles < 8) principalRole = "Teaching Assistant";
-		else if (roles < 16) principalRole = "Instructor";
-		else if (roles < 32) principalRole = "Administrator";
-		else if (roles < 64) principalRole = "ChemVantageAdmin";
-		else principalRole = ""; // unknown role
 
-		int level = 0;
-		List<QuizTransaction> quizTransactions = ofy().load().type(QuizTransaction.class).filter("userId",this.id).list();
-		HashSet<Long> topicIds = new HashSet<Long>();  // HashSet is like a List, but does not allow duplicates
-		for (QuizTransaction qt : quizTransactions) if (qt.graded!=null) topicIds.add(qt.topicId);  // collects unique topicIds
-		level += topicIds.size();  // number of unique quiz topics graded
-		topicIds.clear();
-		List<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",this.id).list();
-		for (HWTransaction ht : hwTransactions) topicIds.add(ht.topicId);
-		level += topicIds.size();
-		principalRole += " - Level " + level;
-		switch (level) {
-		case (0): principalRole += " (sparrow)"; break;
-		case (1): principalRole += " (sea gull)"; break;
-		case (2): principalRole += " (dove)"; break;
-		case (3): principalRole += " (kestrel)"; break;
-		case (4): principalRole += " (sandpiper)"; break;
-		case (5): principalRole += " (owl)"; break;
-		case (6): principalRole += " (osprey)"; break;
-		case (7): principalRole += " (falcon)"; break;
-		case (8): principalRole += " (harrier)"; break;
-		case (9): principalRole += " (hawk)"; break;
-		case (10): principalRole += " (red kite)"; break;
-		case (11): principalRole += " (egret)"; break;
-		case (12): principalRole += " (bobcat)"; break;
-		case (13): principalRole += " (puma)"; break;
-		case (14): principalRole += " (lynx)"; break;
-		case (15): principalRole += " (janguarundi)"; break;
-		case (16): principalRole += " (kodkod)"; break;
-		case (17): principalRole += " (ocelot)"; break;
-		case (18): principalRole += " (cougar)"; break;
-		case (19): principalRole += " (panther)"; break;
-		case (20): principalRole += " (cheetah)"; break;
-		case (21): principalRole += " (leopard)"; break;
-		case (22): principalRole += " (tiger)"; break;
-		default: principalRole += " (lion)"; level=23; break;
-		}
-		principalRole = "<img alt='animal' src=images/animals/" + level + ".jpg><br>" + principalRole;	
-
-		principalRole += " - <a href=/Verification>view account profile</a>";
-		return principalRole;
-	}
-*/
 	boolean isChemVantageAdmin() {
 		return ((roles%64)/32 == 1);
 	}
@@ -395,22 +292,7 @@ public class User {
 		}
 		else return false;
 	}
-	
-/*
-	public int getHWQuestionScore(long questionId) {
-		return (ofy().load().type(HWTransaction.class).filter("userId",this.id).filter("questionId",questionId).filter("score >",0).count() == 0?0:1);
-	}
 
-	public boolean moreThan1RecentAttempts(long questionId,int minutes) { // for Homework question grading
-		try {
-			Date minutesAgo = new Date(new Date().getTime()-minutes*60000);
-			Query<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("graded >",minutesAgo).filter("userId",this.id).filter("questionId",questionId);
-			return (hwTransactions.count() > 1);
-		} catch (Exception e) {
-			return false;
-		}
-	}
-*/
 	public boolean isEligibleForHints(long questionId) {
 		// users are eligible for hints on homework questions if they have submitted
 		// more than 2 answers more than 15 minutes ago
@@ -428,145 +310,65 @@ public class User {
 		ofy().delete().keys(myScores);
 	}
 
-	public void changeGroups(long newGroupId) {
-		Group newGroup = null;
-		Group oldGroup = null;
-		if (newGroupId == this.myGroupId) {  // no change needed; just verify that user is listed as a group member
-			if (this.myGroupId == 0) return;
-			try {
-				newGroup = ofy().load().type(Group.class).id(myGroupId).safe();
-				if (!newGroup.memberIds.contains(this.id)) {
-					newGroup.memberIds.add(this.id);
-					ofy().save().entity(newGroup);
-				}			
-			} catch (Exception e) {
-			}
-			return;
-		} else {     // User is attempting to change groups:
-			try {
-				oldGroup = myGroupId>0?ofy().load().type(Group.class).id(myGroupId).now():null;
-				if (oldGroup != null) {
-					oldGroup.memberIds.remove(this.id);
-					ofy().save().entity(oldGroup);
-				}
-				newGroup = newGroupId>0?ofy().load().type(Group.class).id(newGroupId).now():null;
-				if (newGroup != null) {
-					if (!newGroup.memberIds.contains(this.id)) {
-						newGroup.memberIds.add(this.id);
-						ofy().save().entity(newGroup);
-					}
-				}
-				this.myGroupId = newGroup==null?0:newGroupId;
-				deleteScores();
-				//ofy().save().entity(this).now();  NOTE: User entity must be saved separately!
-			} catch (Exception e) {
-			}
-		}
-	}
-/*
-    Score getScore(Assignment assignment) {
-    	try {
-    		Key<Score> k = Key.create(Key.create(User.class,this.id),Score.class,assignment.id);
-    		Score s = ofy().load().key(k).now();
-    		if (s==null) {
-    			s = Score.getInstance(this.id,assignment);
-    			ofy().save().entity(s).now();
-    		}
-    		return s;
-    	} catch (Exception e) {
-    		return null;
-    	}
-    }
-    
-    boolean setCvsToken(Date exp) {
-    	// this sets a temporary CvsToken user credential
-    	if (exp==null) return false;
-    	try {
-    		cvsToken = Long.toHexString(new Random().nextLong());
-    		cvsTokenExpires = exp;
-    		ofy().save().entity(this).now();
-    		return true;
-    	} catch (Exception e) {
-    		return false;
-    	}
-    }
-    
-    String getCvsToken() {   // ChemVantage session token to track users when HttpSession not persisted and to prevent CSRF attacks
-    	Date now = new Date();
-    	Date exp = new Date(now.getTime() + 5400000L);  // 90 minutes from now
-    	try {
-    		if (cvsToken==null || cvsTokenExpires==null || cvsTokenExpires.before(now)) { // create a new token
-    			if (setCvsToken(exp)) return cvsToken;
-    			else return null;
-    		} else {  // token is valid; return as is or update the exp time:
-    			long millisRemaining = cvsTokenExpires.getTime() - now.getTime();
-    			if (millisRemaining>3600000L) return cvsToken;  // token is still valid for >60 min
-    			else {  // update the expiration Date
-    				cvsTokenExpires = exp;  
-    				ofy().save().entity(this);
-    			}
-    		}
-    	} catch (Exception e) {
-    		return null;
-    	}
-    	return cvsToken;
-    }
-    
-    boolean destroyCvsToken() { // returns true if save() operation succeeds
-    	cvsToken = null;
-    	cvsTokenExpires = null;
-    	return Key.create(this).equals(ofy().save().entity(this).now());
-   }
-*/    
-    static User getUser(String token) {
+	static User getUser(String token) {
     	if (token==null) return null;
-    	//User u = null;
     	try {
     		Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
     		JWT.require(algorithm).build().verify(token);  // checks validity of token
     		DecodedJWT t = JWT.decode(token);
     		User u = new User(t.getSubject(),t.getClaim("roles").asInt(),t.getClaim("gId").asLong());
     		Date in15Min = new Date(new Date().getTime()+900000L);  
-    		if (t.getExpiresAt().before(in15Min)) u.setToken(t.getClaim("aId").asLong()); // refresh the token if it will expire within 15 minutes
+    		if (t.getExpiresAt().before(in15Min)) { // refresh the token if it will expire within 15 minutes
+    			if (t.getClaim("lrs")!=null) u.setToken(t.getClaim("aId").asLong(),t.getClaim("lrs").asString());
+    			else u.setToken(t.getClaim("aId").asLong()); 
+    		}
     		else u.token = token;  // no refresh required
     		return u;
     	} catch (Exception e) {
     	}
-/*    	try {
-    		u = ofy().load().type(User.class).filter("cvsToken",token).first().safe();
-    		Date now = new Date();
-    		if (u.cvsTokenExpires.after(now)) {
-    			u.getCvsToken();  // freshens the token, if needed
-    			return u;
-    		}
-    	} catch (Exception e) {
-    	}
-*/    	return null;
+    	return null;
     }
   
-    void setToken(long assignmentId) {  // stores a CRSF JWT token in the field User.token
-    	try {
-    		Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
-    		Date now = new Date();
-    		Date exp = new Date(now.getTime() + 5400000L);  // 90 minutes from now
-    		this.token =  JWT.create()
-    				.withSubject(this.id)
-    				.withExpiresAt(exp)
-    				.withClaim("roles", this.roles)
-    				.withClaim("gId", this.myGroupId)
-    				.withClaim("aId", assignmentId)
-    				.sign(algorithm); 				
-    	} catch (Exception e) {
-    		this.token = null;
-    	}
+    void setToken(long assignmentId) throws Exception {  // stores a CRSF JWT token in the field User.token
+    	Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
+    	Date now = new Date();
+    	Date exp = new Date(now.getTime() + 5400000L);  // 90 minutes from now
+    	this.token =  JWT.create()
+    			.withSubject(this.id)
+    			.withExpiresAt(exp)
+    			.withClaim("roles", this.roles)
+    			.withClaim("gId", this.myGroupId)
+    			.withClaim("aId", assignmentId)
+    			.sign(algorithm); 				
     }
-    
+
+    void setToken(long assignmentId,String lis_result_sourcedid) throws Exception {  // stores a CRSF JWT token in the field User.token
+    	Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
+    	Date now = new Date();
+    	Date exp = new Date(now.getTime() + 5400000L);  // 90 minutes from now
+    	this.token =  JWT.create()
+    			.withSubject(this.id)
+    			.withExpiresAt(exp)
+    			.withClaim("roles", this.roles)
+    			.withClaim("gId", this.myGroupId)
+    			.withClaim("aId", assignmentId)
+    			.withClaim("lrs", lis_result_sourcedid)
+    			.sign(algorithm); 				
+    }
+
     long getAssignmentId() {
      	try {
     		return JWT.decode(this.token).getClaim("aId").asLong();  // assignmentId
     	} catch (Exception e) {    		
-    		return 0;
+    		return 0L;
     	}
     }
     
+    String getLisResultSourcedid() {
+    	try {
+    		return JWT.decode(this.token).getClaim("lrs").asString();
+    	} catch (Exception e) {
+    		return null;
+    	}
+    }
 }

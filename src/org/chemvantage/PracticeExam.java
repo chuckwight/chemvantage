@@ -165,8 +165,6 @@ public class PracticeExam extends HttpServlet {
 			// Check to see if this user has any pending exams:
 			Date now = new Date();
 			Date oneHourAgo = new Date(now.getTime()-timeLimit*60000);  // timeLimit minutes ago
-			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
-			if (lis_result_sourcedid==null) lis_result_sourcedid = request.getParameter("custom_lis_result_sourcedid");
 			
 			List<PracticeExamTransaction> qpt = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.id).filter("graded",null).filter("downloaded >",oneHourAgo).list();
 			PracticeExamTransaction pt = null;  // placeholder for recovery of one of the pending exam transactions
@@ -191,7 +189,7 @@ public class PracticeExam extends HttpServlet {
 			
 			
 			if (pt == null) {  // this is a valid request for a new exam with at least 3 topicIds; create a new transaction
-				pt = new PracticeExamTransaction(topicIds,user.id,now,null,new int[topicIds.size()],new int[topicIds.size()],lis_result_sourcedid);
+				pt = new PracticeExamTransaction(topicIds,user.id,now,null,new int[topicIds.size()],new int[topicIds.size()],user.getLisResultSourcedid());
 				ofy().save().entity(pt).now();	
 			}
 			

@@ -64,13 +64,6 @@ public class Quiz extends HttpServlet {
 			User user = User.getUser(request.getParameter("Token"));
 			if (user == null) throw new Exception();
 			
-		/*
-			User user = null;
-			HttpSession session = request.getSession();
-			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
-			else user = User.getInstance(session);
-			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
-		*/		
 			response.setContentType("text/html");
 			response.setCharacterEncoding("UTF-8");
 			PrintWriter out = response.getWriter();			
@@ -83,7 +76,6 @@ public class Quiz extends HttpServlet {
 			else out.println(Home.header + printQuiz(user,request) + Home.footer);
 		} catch (Exception e) {
 			response.sendRedirect("/Logout");
-			//response.sendRedirect("/Logout?CvsToken=" + request.getParameter("CvsToken"));
 		}
 	}
 
@@ -92,32 +84,23 @@ public class Quiz extends HttpServlet {
 		try {
 			User user = User.getUser(request.getParameter("Token"));
 			if (user == null) throw new Exception();
-		/*	
-			User user = null;
-			HttpSession session = request.getSession();
-			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
-			else user = User.getInstance(session);
-			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
-		*/		
+		
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
 			out.println(Home.header + printScore(user,request) + Home.footer);
 		} catch (Exception e) {
 			response.sendRedirect("/Logout");
-			//response.sendRedirect("/Logout?CvsToken=" + request.getParameter("CvsToken"));
 		}
 	}
 
 	public String printQuiz(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		//String cvsToken = user.getCvsToken();
 		try {
 			Assignment qa = null;
 			long topicId = 0L;
 			long assignmentId = 0L;
 			try {  // normal process for LTI assignment launch
-				//assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
 				assignmentId = user.getAssignmentId();
 				qa = ofy().load().type(Assignment.class).id(assignmentId).now();
 				topicId = qa.topicId;
@@ -136,7 +119,7 @@ public class Quiz extends HttpServlet {
 			Date then = new Date(now.getTime()-timeLimit*60000);  // timeLimit minutes ago
 			QuizTransaction qt = ofy().load().type(QuizTransaction.class).filter("userId",user.id).filter("topicId",topic.id).filter("graded",null).filter("downloaded >",then).first().now();
 			if (qt == null || qt.graded != null) {
-				qt = new QuizTransaction(topic.id,topic.title,user.id,now,null,0,assignmentId,0,request.getParameter("lis_result_sourcedid"));
+				qt = new QuizTransaction(topic.id,topic.title,user.id,now,null,0,assignmentId,0,user.getLisResultSourcedid());
 				ofy().save().entity(qt).now();  // creates a long id value to use in random number generator
 			}
 			int secondsRemaining = (int) (timeLimit*60 - (now.getTime() - qt.downloaded.getTime())/1000);
@@ -302,7 +285,6 @@ public class Quiz extends HttpServlet {
 			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			buf.append(df.format(now));
 			
-			//buf.append(ajaxScoreJavaScript(cvsToken)); // load javascript for AJAX problem reporting form
 			buf.append(ajaxScoreJavaScript(user.token)); // load javascript for AJAX problem reporting form
 			
 			StringBuffer missedQuestions = new StringBuffer();			
@@ -344,7 +326,6 @@ public class Quiz extends HttpServlet {
 									.param("Score", Integer.toString(score))
 									.param("PossibleScore", Integer.toString(q.pointValue))
 									.param("UserId", user.id));
-							//responses.add(new Response("Quiz",qt.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now));
 							studentScore += score;
 							if (score == 0) {  
 								// include question in list of incorrectly answered questions
@@ -363,7 +344,6 @@ public class Quiz extends HttpServlet {
 			ofy().save().entity(qt);
 			
 			try {
-				//long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
 				long assignmentId = user.getAssignmentId();
 				qa = ofy().load().type(Assignment.class).id(assignmentId).safe();
 				Score s = Score.getInstance(user.id,qa);
@@ -519,7 +499,6 @@ public class Quiz extends HttpServlet {
 	
 	String showScores (User user, HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h2>Your Quiz Transactions</h2>");
-		String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
 		
@@ -544,7 +523,6 @@ public class Quiz extends HttpServlet {
 				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>"
 						+ "<a href=Quiz?AssignmentId=" + a.id 
 						+ "&Token=" + user.token 
-						+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
 						+ ">Take me back to the quiz now.</a>");
 			} else {
 				// create a fresh Score entity to calculate the best score on this assignment
@@ -553,7 +531,6 @@ public class Quiz extends HttpServlet {
 				buf.append("Your best score on this assignment is " + Math.round(10*s.getPctScore())/10. + "%.<br>");
 
 				// try to validate the score with the LMS grade book entry
-				//buf.append("Retrieving score for user " + User.getRawId(user.id) + " in group " + user.myGroupId + " for this " + a.assignmentType + " assignment " + a.id + "<p>");
 				try {
 					Group g = ofy().load().type(Group.class).id(user.myGroupId).safe();
 					double lmsPctScore = 0;
@@ -582,7 +559,6 @@ public class Quiz extends HttpServlet {
 							gotScoreOK = true;
 						}
 					}
-					//buf.append((gotScoreOK?"Got score OK.":lmsScore) + "<br>");
 					
 					if (gotScoreOK && Math.abs(lmsPctScore-s.getPctScore())<1.0) { // LMS readResult agrees to within 1%
 						buf.append("This score is accurately recorded in the grade book of your class learning management system.<p>");
@@ -600,9 +576,7 @@ public class Quiz extends HttpServlet {
 				}
 
 				buf.append("<a href=Quiz?AssignmentId=" + a.id 
-						//+ (cvsToken==null?"":"&CvsToken=" + cvsToken) 
 						+ "&Token=" + user.token 
-						+ (lis_result_sourcedid==null?"":"&lis_result_sourcedid=" + lis_result_sourcedid)
 						+ ">Take me back to the quiz now.</a><p>");
 			
 				buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Quiz Score</th></tr>");
@@ -736,13 +710,8 @@ public class Quiz extends HttpServlet {
 						}
 					} catch (Exception e) {}
 				}
-				for (String id : removeUsers) { // remove these users from the group
-					try {
-						User u = ofy().load().type(User.class).id(id).safe();
-						u.changeGroups(0);
-						ofy().save().entity(u);
-					} catch (Exception e) {}
-				}
+				g.memberIds.removeAll(removeUsers); // remove these users from the group roster
+
 				buf.append("<p>There " + (count==1?"is ":"are ") + count + " score" + (count==1?"":"s") + " for this assignment in the ChemVantage database.<br>");
 				if (count>0) {
 					buf.append("The average score is " + pctScoreSum/count + "%.<br>");

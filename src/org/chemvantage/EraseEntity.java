@@ -105,8 +105,6 @@ public class EraseEntity extends HttpServlet {
 			List<Key<Score>> skeys = ofy().load().type(Score.class).ancestor(user).keys().list();
 			if (skeys != null && skeys.size()>0) ofy().delete().keys(skeys);
 			
-			user.changeGroups(0);
-			
 			ofy().delete().entity(user);
 		} catch(Exception e) {			
 		}
