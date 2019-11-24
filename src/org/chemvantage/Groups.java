@@ -48,13 +48,7 @@ public class Groups extends HttpServlet {
 		try {
 			User user = User.getUser(request.getParameter("Token"));
 			if (user == null) throw new Exception();
-		/*
-			User user = null;
-			HttpSession session = request.getSession();
-			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
-			else user = User.getInstance(session);
-			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
-		*/		
+		
 			// Authorized users only beyond this point:
 			if(!(user.isInstructor())) response.sendRedirect("/");
 			
@@ -77,13 +71,7 @@ public class Groups extends HttpServlet {
 		try {
 			User user = User.getUser(request.getParameter("Token"));
 			if (user == null) throw new Exception();
-		/*
-			User user = null;
-			HttpSession session = request.getSession();
-			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
-			else user = User.getInstance(session);
-			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
-		*/		
+		
 			long groupId = 0;
 			try {
 				//groupId = Long.parseLong(request.getParameter("GroupId"));
@@ -97,12 +85,9 @@ public class Groups extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 			
-			//String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 			
 			if (userRequest.equals("UpdateAssignment")) { // records question item selections in assignment entity
 				Assignment assignment = updateAssignment(user,group,request);
-				//Assignment assignment = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
-				//response.sendRedirect("/" + assignment.assignmentType + "?AssignmentId=" + assignment.id+ (cvsToken==null?"":"&CvsToken=" + cvsToken));
 				response.sendRedirect("/" + assignment.assignmentType + "?Token=" + user.token);
 				return;
 			}

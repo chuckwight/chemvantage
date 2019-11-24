@@ -31,7 +31,6 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
@@ -63,13 +62,9 @@ public class Edit extends HttpServlet {
 		try {
 			UserService userService = UserServiceFactory.getUserService();
 			String userId = userService.getCurrentUser().getUserId();
-			if (ofy().load().type(User.class).id(userId).now()==null) User.createUserServiceUser(userService.getCurrentUser());
+			User user = ofy().load().type(User.class).id(userId).safe(); 
+			user.setToken(0);
 			
-			HttpSession session = request.getSession();
-			session.setAttribute("UserId",userId);
-			
-			User user = User.getInstance(session);
-				
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
@@ -113,82 +108,88 @@ public class Edit extends HttpServlet {
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
-		User user = User.getInstance(request.getSession());
-		
-		response.setContentType("text/html");
-		PrintWriter out = response.getWriter();
-		
-		String userRequest = request.getParameter("UserRequest");
-		if (userRequest == null) userRequest = "";
-		
-		if (userRequest.equals("CreateTopic")) {
-			createTopic(user,request);
-			out.println(Home.getHeader(user) + topicsForm(user,request) + Home.footer);
-		}
-		else if (userRequest.equals("UpdateTopic")) {
-			updateTopic(user,request); 
-			out.println(Home.getHeader(user) + topicsForm(user,request) + Home.footer);
-		}
-		else if (userRequest.equals("DeleteTopic")) {
-			deleteTopic(user,request);
-			out.println(Home.getHeader(user) + topicsForm(user,request) + Home.footer);
-		}
-		else if (userRequest.equals("Create Video")) {
-			createVideo(user,request);
-			out.println(Home.getHeader(user) + videosForm(user,request) + Home.footer);
-		}
-		else if (userRequest.equals("Update Video")) {
-			updateVideo(user,request);
-			out.println(Home.getHeader(user) + videosForm(user,request) + Home.footer);
-		}
-		else if (userRequest.equals("Delete Video")) {
-			deleteVideo(user,request);
-			out.println(Home.getHeader(user) + videosForm(user,request) + Home.footer);
-		}
-		else if (userRequest.equals("Create Text")) {
-			createText(user,request);
-			out.println(Home.getHeader(user) + textsForm(user,request) + Home.footer);
-		}
-		else if (userRequest.equals("Update Text")) {
-			updateText(user,request);
-			out.println(Home.getHeader(user) + textsForm(user,request) + Home.footer);
-		}
-		else if (userRequest.equals("Delete Text")) {
-			deleteText(user,request);
-			out.println(Home.getHeader(user) + textsForm(user,request) + Home.footer);
-		}
-		else if (userRequest.equals("Preview")) {
-			out.println(Home.getHeader(user) + previewQuestion(user,request) + Home.footer);
-		}
-		else if (userRequest.equals("Save New Question")) {
-			createQuestion(user,request);
-			out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
-		}
-		else if (userRequest.equals("Update Question")) {
-			try {updateQuestion(user,request);} catch (Exception e) {out.println(e.toString());};
-			out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
-		}
-		else if (userRequest.equals("Delete Question")) {
-			deleteQuestion(user,request);
-			out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
-		}
-		else if (userRequest.equals("Activate This Question")) {
-			createQuestion(user,request);
-			try {
-				long proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
-				ofy().delete().key(Key.create(ProposedQuestion.class,proposedQuestionId)).now();
-			} catch (Exception e) {}
-			out.println(Home.getHeader(user) + reviewProposedQuestion(user,request) + Home.footer);
-		}
-		else if (userRequest.equals("Discard Question")) {
-			try {
-				long proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
-				ofy().delete().key(Key.create(ProposedQuestion.class,proposedQuestionId)).now();
-			} catch (Exception e) {}
-			out.println(Home.getHeader(user) + reviewProposedQuestion(user,request) + Home.footer);
-		}
-		else { // show the default Editors page
-			out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
+		try {
+			UserService userService = UserServiceFactory.getUserService();
+			String userId = userService.getCurrentUser().getUserId();
+			User user = ofy().load().type(User.class).id(userId).safe(); 
+			user.setToken(0);
+
+			response.setContentType("text/html");
+			PrintWriter out = response.getWriter();
+
+			String userRequest = request.getParameter("UserRequest");
+			if (userRequest == null) userRequest = "";
+
+			if (userRequest.equals("CreateTopic")) {
+				createTopic(user,request);
+				out.println(Home.getHeader(user) + topicsForm(user,request) + Home.footer);
+			}
+			else if (userRequest.equals("UpdateTopic")) {
+				updateTopic(user,request); 
+				out.println(Home.getHeader(user) + topicsForm(user,request) + Home.footer);
+			}
+			else if (userRequest.equals("DeleteTopic")) {
+				deleteTopic(user,request);
+				out.println(Home.getHeader(user) + topicsForm(user,request) + Home.footer);
+			}
+			else if (userRequest.equals("Create Video")) {
+				createVideo(user,request);
+				out.println(Home.getHeader(user) + videosForm(user,request) + Home.footer);
+			}
+			else if (userRequest.equals("Update Video")) {
+				updateVideo(user,request);
+				out.println(Home.getHeader(user) + videosForm(user,request) + Home.footer);
+			}
+			else if (userRequest.equals("Delete Video")) {
+				deleteVideo(user,request);
+				out.println(Home.getHeader(user) + videosForm(user,request) + Home.footer);
+			}
+			else if (userRequest.equals("Create Text")) {
+				createText(user,request);
+				out.println(Home.getHeader(user) + textsForm(user,request) + Home.footer);
+			}
+			else if (userRequest.equals("Update Text")) {
+				updateText(user,request);
+				out.println(Home.getHeader(user) + textsForm(user,request) + Home.footer);
+			}
+			else if (userRequest.equals("Delete Text")) {
+				deleteText(user,request);
+				out.println(Home.getHeader(user) + textsForm(user,request) + Home.footer);
+			}
+			else if (userRequest.equals("Preview")) {
+				out.println(Home.getHeader(user) + previewQuestion(user,request) + Home.footer);
+			}
+			else if (userRequest.equals("Save New Question")) {
+				createQuestion(user,request);
+				out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
+			}
+			else if (userRequest.equals("Update Question")) {
+				try {updateQuestion(user,request);} catch (Exception e) {out.println(e.toString());};
+				out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
+			}
+			else if (userRequest.equals("Delete Question")) {
+				deleteQuestion(user,request);
+				out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
+			}
+			else if (userRequest.equals("Activate This Question")) {
+				createQuestion(user,request);
+				try {
+					long proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
+					ofy().delete().key(Key.create(ProposedQuestion.class,proposedQuestionId)).now();
+				} catch (Exception e) {}
+				out.println(Home.getHeader(user) + reviewProposedQuestion(user,request) + Home.footer);
+			}
+			else if (userRequest.equals("Discard Question")) {
+				try {
+					long proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
+					ofy().delete().key(Key.create(ProposedQuestion.class,proposedQuestionId)).now();
+				} catch (Exception e) {}
+				out.println(Home.getHeader(user) + reviewProposedQuestion(user,request) + Home.footer);
+			}
+			else { // show the default Editors page
+				out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
+			}
+		} catch (Exception e) {
 		}
 	}
 

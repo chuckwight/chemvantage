@@ -267,7 +267,6 @@ public class Quiz extends HttpServlet {
 						+ "Sorry, this quiz was graded on " + df.format(qt.graded) + " and cannot be regraded.<p>"
 						+ "Your score on this quiz was " + qt.score + " out of a possible " + qt.possibleScore + " points.<p>"
 						+ (user.isAnonymous()?"<p><a href=/Quiz?TopicId=" + qt.topicId 
-								//+ (cvsToken==null?"":"&CvsToken=" + cvsToken)
 								+ "&Token=" + user.token
 								+ ">Take this quiz again</a>"
 								+ " or go back to the <a href=/>ChemVantage home page</a>.":"");
@@ -419,7 +418,7 @@ public class Quiz extends HttpServlet {
 			buf.append("<p>");
 			
 			// If qa==null this is an anonymous user, otherwise is an LTI user:
-			buf.append((qa==null?"<a href=/Quiz?TopicId=" + qt.topicId + ">Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a> " :
+			buf.append((qa==null?"<a href=/Quiz?TopicId=" + qt.topicId + "&Token=" + user.token + ">Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a> " :
 			"You may take this quiz again by clicking the assignment link in your learning management system ")			
 			+ "or <a href=/Logout>logout of ChemVantage</a>.");
 

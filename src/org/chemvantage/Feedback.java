@@ -57,13 +57,7 @@ public class Feedback extends HttpServlet {
 		try {
 			User user = User.getUser(request.getParameter("Token"));
 			if (user == null) throw new Exception();
-		/*
-			User user = null;
-			HttpSession session = request.getSession();
-			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
-			else user = User.getInstance(session);
-			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
-		*/		
+		
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 
@@ -86,13 +80,7 @@ public class Feedback extends HttpServlet {
 		try {
 			User user = User.getUser(request.getParameter("Token"));
 			if (user == null) throw new Exception();
-		/*
-			User user = null;
-			HttpSession session = request.getSession();
-			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
-			else user = User.getInstance(session);
-			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
-		*/		
+		
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			

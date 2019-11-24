@@ -30,7 +30,6 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
@@ -59,15 +58,6 @@ public class Admin extends HttpServlet {
 			User user = ofy().load().type(User.class).id(userId).safe(); 
 			user.setToken(0);
 			
-			HttpSession session = request.getSession();
-			session.setAttribute("UserId",userId);
-		/*
-			User user = User.getInstance(session); 
-			if (user.authDomain==null || !user.authDomain.equals("Google)")) {
-				user.authDomain = "Google";
-				ofy().save().entity(user);
-			}
-		*/
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 
@@ -84,8 +74,11 @@ public class Admin extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			User user = User.getInstance(request.getSession(true));
-			
+			UserService userService = UserServiceFactory.getUserService();
+			String userId = userService.getCurrentUser().getUserId();
+			User user = ofy().load().type(User.class).id(userId).safe(); 
+			user.setToken(0);
+
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			

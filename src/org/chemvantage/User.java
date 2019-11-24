@@ -21,7 +21,6 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -74,7 +73,7 @@ public class User {
 		}
 		return null;
 	}
-	
+/*	
 	static User getInstance(HttpSession session) {
 		User user = null;
 		String userId = null;
@@ -111,7 +110,7 @@ public class User {
 		}
 		return null;
 	}
-
+*/
 	static User getInstance(List<String> userIds) {
 		try {
 			User user = ofy().load().type(User.class).id(userIds.get(0)).safe();			
@@ -125,14 +124,6 @@ public class User {
 		}
 	}
 
-	static boolean isChemVantageAdministrator(HttpSession session) {
-		try {
-			return User.getInstance(session).isChemVantageAdmin();
-		} catch (Exception e) {
-			return false;
-		}
-	}
-	
 	static User createUserServiceUser(com.google.appengine.api.users.User u) {
 		if (u==null) return null;
 		User user = null;

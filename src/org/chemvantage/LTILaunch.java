@@ -34,7 +34,6 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
@@ -192,14 +191,11 @@ public class LTILaunch extends HttpServlet {
 			userId = oauth_consumer_key + ":" + (userId==null?"":userId);
 
 			// Process user information, provision a new user account if necessary, and store the userId in the user's session
-			HttpSession session = request.getSession(true);
-			session.setAttribute("UserId",userId);
-			User user = User.getInstance(session); // returns null if user is not anonymous and not in the database
-			if (user==null) user = User.createBLTIUser(request); // first-ever login for this user
-			
+			User user = new User(userId);
+
 			// ensure the proper authDomain and domain values
-			if (user.authDomain == null || !user.authDomain.equals("BLTI")) user.authDomain = "BLTI";
-			if (user.domain == null || !user.domain.equals(oauth_consumer_key)) user.domain = oauth_consumer_key;
+			user.authDomain = "BLTI";
+			user.domain = oauth_consumer_key;
 
 			// check if user has Instructor or Administrator role
 			String roles = request.getParameter("roles");
