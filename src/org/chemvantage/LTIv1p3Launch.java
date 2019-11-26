@@ -281,14 +281,14 @@ public class LTIv1p3Launch extends HttpServlet {
 	    // validate the id_token signature:
 	    // first get the correct Deployment entity for this platform to find the public key
 	    Claim deployment_id_claim = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/deployment_id");
-	    if (deployment_id_claim==null) throw new Exception("The deployment_id claim was not found in the id_token payload.");
+	    if (deployment_id_claim.isNull()) throw new Exception("The deployment_id claim was not found in the id_token payload.");
 	    String deployment_id = deployment_id_claim.asString();
 	    Deployment d = Deployment.getInstance(platform_id, deployment_id);
 	    if (d==null) throw new Exception("Deployment not found in the datastore.");
 		
 	    try {
 			String email = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/tool_platform").asMap().get("contact_email").toString();	
-			if (d.email.contentEquals(email)) {
+			if (email != null && !email.contentEquals(d.email)) {
 				d.email = email;
 				ofy().save().entity(d);
 			}
