@@ -126,6 +126,10 @@ public class Quiz extends HttpServlet {
 
 			buf.append("\n<h2>Quiz - " + topic.title + " (" + subject.title + ")</h2>");
 
+			if (request.getServerName().contains("dev-vantage")) buf.append("<font color=red>This is a development server that should be used for testing only. "
+					+ "Please DO NOT use this server for serious educational purposes. See the <a href=/lti/registration>LTI registration page</a> if your need "
+					+ "access to the ChemVantage production server.</font><p>");
+			
 			if (user.isInstructor() && qa != null) {
 				buf.append("<table style='border: 1px solid black'><tr><td>");
 				buf.append("As the course instructor you may<ul>"
