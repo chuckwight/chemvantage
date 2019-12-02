@@ -59,19 +59,25 @@ import com.google.gson.JsonObject;
 @WebServlet(urlPatterns = {"/lti/registration","/lti/registration/"})
 public class LTIRegistration extends HttpServlet {
 
+	/* This servlet class is used to apply for and grant access to LTI connections between client
+	 * LMS platforms and the ChemVantage tool. The user will complete a short form with name, role,
+	 * email, organization, home page and use case (testing or production). Those wanting to test
+	 * will get access to dev-vantage.appspot.com, while production users will see chemvantage.org.
+	 * The user will get an email with a tokenized link to a page containing the ChemVantage 
+	 * end point URLs and a form for submitting the client_id and deployment_id values.
+	 * */
+	
 	Map<String,String> sharedSecrets = new HashMap<String,String>();
 	private static final long serialVersionUID = 137L;
-	// the following string constants are associated with the ChemVantage Tool Profile and other
-	// constants needed to construct a valid Tool Proxy
 	
 	@Override
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
 	}
 
-	String banner = "<TABLE><TR><TD VALIGN=TOP><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
-			+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
-			+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>";
+	String banner = "<div><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'>"
+			+ "Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
+			+ "<br>An Open Education Resource</div>";
 			
 	String welcomeMessage = "<h2>Learning Management System Integration</h2>"
 			+ "<a href=http://imscert.org><img alt='IMS Global Certified' style='border-width:0' align=left hspace=10 vspace=5 "
@@ -140,7 +146,60 @@ public class LTIRegistration extends HttpServlet {
 	throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		String sig = request.getParameter("sig");
+
+		String token = request.getParameter("Token");
+		if (token==null) out.println(Home.header + applicationForm() + Home.footer);
+		else out.println(Home.header + clientIdForm(token) + Home.footer);
+	}
+	
+	String applicationForm() {
+		StringBuffer buf = new StringBuffer(banner);
+		buf.append("<h4>ChemVantage LTI Registration</h4>"
+				+ "ChemVantage uses LTI version 1.3.0 to connect with LMS platforms. Please complete "
+				+ "the form below. You will receive an email containing the ChemVantage end point URLs "
+				+ "to enter into your LMS. You will also receive a link to submit the corresponding end "
+				+ "point URLs and client_id needed by  ChemVantage to access services provided by your LMS."
+				+ "<p>"
+				+ "ChemVantage is an Open Education Resource offered free for nonprofit educational purposes.<p>"
+				+ "<form method=post>"
+				+ "Your Name: <input type=text name=sub>&nbsp;"
+				+ "and Email: <input type=text name=email><br>"
+				+ "Your Organization: <input type=text name=aud>&nbsp;"
+				+ "and Home Page: <input type=text name=url><br>"
+				+ "Initial use case:<br>"
+				+ "<label><input type=radio name=use value=test>Testing the LTI connection</label><br>"
+				+ "<label><input type=radio name=use value=prod>Teaching a chemistry class</label><p>"
+				+ "<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div><p>"
+				+ "<input type=submit name=UserRequest value='Send Me The Registration Email'>"
+				+ "</form>");
+		return buf.toString();
+	}
+	
+	String clientIdForm(String token) {
+		StringBuffer buf = new StringBuffer(banner);
+		
+		try {
+			DecodedJWT jwt = validateToken(token);
+		} catch (Exception e) {
+			buf.append("<h3>Registration Failed</h3>"
+			+ e.getMessage() + "<p>"
+			+ "The token provided with this link could not be validated. It may have expired (after 3 days) "
+			+ "or it may not have contained enough information to complete the registration request. You "
+			+ "may start the registration process again <a href=/lti/registration>here</a> or contact "
+			+ "Chuck Wight (admin@chemvantage.org) for assistance in completing the registration process.");
+		}
+		
+		return buf.toString();
+	}
+	
+	DecodedJWT validateToken(String token) throws Exception {
+		Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
+		DecodedJWT jwt = JWT.require(algorithm).build().verify(token);
+		return jwt;
+	}
+
+
+		/*String sig = request.getParameter("sig");
 		if (sig != null) { // this is a Json configuration URL request
 			try {
 				Deployment d = ofy().load().type(Deployment.class).filter("client_id",sig).first().safe();
@@ -268,7 +327,7 @@ public class LTIRegistration extends HttpServlet {
 		buf.append(Home.footer);
 		out.println(buf.toString());
 	}
-
+*/
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
@@ -494,7 +553,7 @@ public class LTIRegistration extends HttpServlet {
 			return false;
 		}
 	}
-	
+/*	
 	Deployment validateToken(String token) throws Exception {
 		Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
 		DecodedJWT jwt = JWT.require(algorithm).build().verify(token);
@@ -503,7 +562,7 @@ public class LTIRegistration extends HttpServlet {
 		if (!jwt.getSignature().equals(d.client_id)) throw new Exception("Registration failed.");
 	    return d;
 	}
-	
+*/	
 	JsonObject getConfigJson(Deployment d,HttpServletRequest request) {
 		try {  
 			String domain = request.getServerName();
