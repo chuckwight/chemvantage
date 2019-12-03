@@ -194,7 +194,7 @@ public class LTIRegistration extends HttpServlet {
 					+ "<input type=hidden name=Token value='" + token + "'>"
 					+ "Client ID: <input type=text name=ClientId> (required)<br>"
 					+ "Deployment ID: <input type=text name=DeploymentId> (may be left blank for single-deployment platforms)<br>"
-					+ "Platform ID: <input type=text name=platform_id> (must exactly match LMS base URL sent as iss in resource link launch requests)<br>"
+					+ "Platform ID: <input type=text name=PlatformId> (must exactly match LMS base URL sent as iss in resource link launch requests)<br>"
 					+ "Platform OIDC Auth URL: <input type=text name=OIDCAuthUrl> (required)<br>"
 					+ "Platform OAuth Access Token URL: <input type=text name=OauthAccessTokenUrl> (required)<br>"
 					+ "Platform JSON Web Key Set URL: <input type=text name=JWKSUrl> (required)<br>"
