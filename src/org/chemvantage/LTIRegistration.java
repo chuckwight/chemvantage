@@ -157,6 +157,7 @@ public class LTIRegistration extends HttpServlet {
 				+ "point URLs and client_id needed by  ChemVantage to access services provided by your LMS."
 				+ "<p>"
 				+ "ChemVantage is an Open Education Resource offered free for nonprofit educational purposes.<p>"
+				+ "<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>"				
 				+ "<form method=post>"
 				+ "Your Name: <input type=text name=sub>&nbsp;"
 				+ "and Email: <input type=text name=email><br>"
