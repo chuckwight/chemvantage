@@ -151,6 +151,8 @@ public class LTIv1p3Launch extends HttpServlet {
 			} catch (Exception e) { // default context for platform
 				context_id = "";
 			}
+			context_id = platform_id + "/" + context_id;  // prepends platform_id to avoid uniqueness issues across platforms
+			
 			try {
 				myGroup = ofy().load().type(Group.class).filter("context_id",context_id).first().safe();
 				if (user.isInstructor()) myGroup.instructorId = user.id;
@@ -224,7 +226,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			Assignment myAssignment = null;
 			
 			try {  // Find the existing assignment for this resourceLinkId or make a new one
-				myAssignment = ofy().load().type(Assignment.class).filter("platformDeploymentId",platformDeploymentId).filter("resourceLinkId",resourceLinkId).first().safe();		
+				myAssignment = ofy().load().type(Assignment.class).filter("domain",platformDeploymentId).filter("resourceLinkId",resourceLinkId).first().safe();		
 			} catch (Exception e) {  // it appears that the assignment does not exist; make a new one:
 				myAssignment = new Assignment(myGroup.id,platformDeploymentId,resourceLinkId);
 				ofy().save().entity(myAssignment).now();  // We will need this Assignment entity immediately

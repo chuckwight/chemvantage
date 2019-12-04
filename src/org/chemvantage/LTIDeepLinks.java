@@ -100,9 +100,7 @@ public class LTIDeepLinks extends HttpServlet {
 			Map<String,Object> settings = claims.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings").asMap();
 			String data = settings.get("data").toString();
 			String subject = id_token.getSubject();
-			//buf.append("Data: " + data + "<br>");
 			String deep_link_return_url = settings.get("deep_link_return_url").toString();
-			//buf.append("Return Url: " + deep_link_return_url + "<br>");
 			
 			// Use the id_token to verify that this user is an instructor or administrator:
 			String[] roles = claims.get("https://purl.imsglobal.org/spec/lti/claim/roles").asArray(String.class);
@@ -120,9 +118,8 @@ public class LTIDeepLinks extends HttpServlet {
 			Map<String,Object> context = id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/context").asMap();			
 			String context_id = platform_id + "/" + context.get("id").toString();
 			long groupId = ofy().load().type(Group.class).filter("context_id",context_id).first().safe().id;
-			
+	
 			List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
-			//buf.append("Retrieved " + topics.size() + " topics.<br>");
 			buf.append("You may select any of the following Quiz or Homework assignments to make it easy for your LMS "
 					+ "to create assignment links for your students. The subjects are arranged roughly in the order "
 					+ "frequently encountered in many year-long General Chemistry courses, but you may present them to "
@@ -149,7 +146,7 @@ public class LTIDeepLinks extends HttpServlet {
 	}
 	
 	String deepLinkResponseMsg(HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer("<h2>Submit Selections to Your LMS</h2>");
+		StringBuffer buf = new StringBuffer();
 		String platform_id = request.getParameter("PlatformId");
 		String deployment_id = request.getParameter("DeploymentId");
 		String deep_link_return_url = request.getParameter("deep_link_return_url");
@@ -158,12 +155,8 @@ public class LTIDeepLinks extends HttpServlet {
 			Date exp = new Date(now.getTime() + 5400000L); // 90 minutes from now
 			String data = request.getParameter("data");
 			Deployment d = Deployment.getInstance(platform_id, deployment_id);
-	//buf.append("PlatformID: " + platform_id + "<br>");
-	//buf.append("Deployment: " + d.toString() + "<br>");
 			
-			//Algorithm algorithm = Algorithm.RSA256(null,d.getRSAPrivateKey());
 			Group g = ofy().load().type(Group.class).id(Long.parseLong(request.getParameter("GroupId"))).safe();
-	//buf.append("Group: " + g.toString() + "<br>");
 			
 			// The contentPickerForm selections are string values of Topic ids with Q or H prepended to indicate the assignmentType
 			// We need to use these to create the relevant assignments with Topic titles
@@ -174,7 +167,6 @@ public class LTIDeepLinks extends HttpServlet {
 				long tId = Long.parseLong(selections[i].substring(1));
 				if (!topicIds.contains(tId)) topicIds.add(tId);
 			}
-	//buf.append("TopicIds OK.<br>");
 			
 			// Create the assignments corresponding to the selections (Quiz and/or Homework)
 			// and save them to a List<Assignment> so they can be saved in a single operation
@@ -189,24 +181,19 @@ public class LTIDeepLinks extends HttpServlet {
 				assignments.add(new Assignment(assignmentType,tId,d.platform_deployment_id,g.id));				
 			}
 			ofy().save().entities(assignments).now(); // using now() ensures creation of the id values
-	//buf.append("Assignments saved.<br>");
-
+	
 			Map<Long,Topic> topicsMap = ofy().load().type(Topic.class).ids(topicIds);
-	//buf.append("TopicIdsMap OK.<br>");
 			
 			String serverUrl = "https://" + request.getServerName();
 			String client_id = d.client_id;
 			String subject = request.getParameter("Subject");
 			String nonce = Nonce.generateNonce();
 			
-			//Get a Gson object for creating JWT header and payload JsonObjects:
-			//Gson gson = new GsonBuilder().create();
 			Encoder enc = Base64.getUrlEncoder().withoutPadding();
 			
 			JsonObject header = new JsonObject();
 			header.addProperty("typ", "JWT");
 			header.addProperty("alg", "RS256");
-	//buf.append("Header: " + header.toString() + "<br>");
 			byte[] hdr = enc.encode(header.toString().getBytes("UTF-8"));
 		
 			JsonObject payload = new JsonObject();
@@ -222,94 +209,30 @@ public class LTIDeepLinks extends HttpServlet {
 			payload.addProperty("https://purl.imsglobal.org/spec/lti/claim/version", "1.3.0");
 			payload.addProperty("https://purl.imsglobal.org/spec/lti/claim/deployment_id", deployment_id);
 			payload.addProperty("https://purl.imsglobal.org/spec/lti-dl/claim/data", data);
-		//buf.append("Partial payload: " + payload.toString() + "<br>");
 		
 			JsonArray content_items = new JsonArray();
-			//String[] content_strings = new String[assignments.size()];
-			//int j=0;
-		//buf.append("Starting loop.");
 			for (Assignment a : assignments) {
 				JsonObject item = new JsonObject();
 				item.addProperty("type", "ltiResourceLink");
 				item.addProperty("url", serverUrl + "/" + a.assignmentType + "?AssignmentId=" + a.id);
 				item.addProperty("title", a.assignmentType + " - " + topicsMap.get(a.topicId).title);
 				content_items.add(item);
-				//content_strings[j] = item.getAsJsonObject().toString();
-				//j++;
 			}
-		//buf.append("Loop done.<br>");
 			payload.add("https://purl.imsglobal.org/spec/lti-dl/claim/content_items", content_items);
-		//buf.append("Payload:<br>" + payload.toString() + "<br>");
 		
 			byte[] pld = enc.encode(payload.toString().getBytes("UTF-8"));
 			
 			String jwt = String.format("%s.%s",new String(hdr),new String(pld));
-			//buf.append("Unsigned JWT:<br>" + jwt + "<br>");
 			
 			Signature signature = Signature.getInstance("SHA256withRSA");
 			signature.initSign(KeyStore.getRSAPrivateKey(d.rsa_key_id),new SecureRandom());
 			signature.update(jwt.getBytes("UTF-8"));
 			String sig = new String(enc.encode(signature.sign()));
 			jwt = String.format("%s.%s", jwt, sig);
-			buf.append("Signed JWT:<br>" + jwt + "<p>");
-			
-/*			
-			
-			
-			
-			java.security.Key key = d.getRSAPrivateKey();
-			JwtParser parser = Jwts.parser();
-			parser.parse(header.toString()+payload.toString());
-			JwtBuilder jwtb = Jwts.builder();
-			Header head = new Header();
-			head.put("alg","RS256");
-			head.put("typ","JWT");
-			jwtb.setHeader(head);
-			String jws = Jwts.builder().setSubject("Joe").signWith(SignatureAlgorithm.RS256,d.getRSAPrivateKey().getEncoded()).compact();
-JwtParser parser = 
-			
-			
-			Map<String,String> item = new HashMap<String,String>();
-			item.put("id","6734");
-			item.put("name","Bobby");
-			
-			List<Map<String,String>> item_list = new ArrayList<Map<String,String>>();
-			item_list.add(item);
-			
-			@SuppressWarnings("unchecked")
-			Map<String,String>[] item_array = new HashMap[1];
-// Construct the JWT:
-			String responseMsg = JWT.create()
-					.withIssuer(client_id)
-					.withSubject(subject)
-					.withAudience(platform_id)
-					.withExpiresAt(exp)
-					.withIssuedAt(now)								
-					.withClaim("nonce", nonce)
-					.withClaim("https://purl.imsglobal.org/spec/lti/claim/message_type", "LtiDeepLinkingResponse")
-					.withClaim("https://purl.imsglobal.org/spec/lti/claim/version", "1.3.0")
-					.withClaim("https://purl.imsglobal.org/spec/lti/claim/deployment_id", deployment_id)
-					.withClaim("https://purl.imsglobal.org/spec/lti-dl/claim/data", data)
-					//.withArrayClaim("https://purl.imsglobal.org/spec/lti-dl/claim/content_items", item_array)
-					.sign(algorithm);
-
-			JWTParser p = new JWTParser();
-			p.parseHeader(header.toString());
-			p.parsePayload(payload.toString());
-			
-			String responseMessage = JWT.create().sign(algorithm)
-*/			
-			//buf.append("JWT created.<br>" + responseMsg + "<p>");
-
-			//buf.append(Home.header);
-			//buf.append("ChemVantage is ready to send the following information to your LMS:<p>");
-			//buf.append(gson.toJson(header) + "<br>" + gson.toJson(payload) + "<p>");
-			//buf.append(gson_ugly.toJson(header) + "<br>" + gson_ugly.toJson(payload) + "<p>");
-			//buf.append(gson_pretty.toJson(header) + "<br>" + gson_pretty.toJson(payload) + "<p>");
-			
+					
 			//	Create a form to be auto-submitted to the platform by the user_agent browser
 			buf.append("<html><head></head>"
-					+ "<body>"   // onLoad=document.forms['selections'].submit()>"
+					+ "<body onLoad=document.forms['selections'].submit()>"
 					+ "<form name=selections method=POST action='" + deep_link_return_url + "'>"
 					+ "<input type=hidden name=JWT value='" + jwt + "'>"
 					+ "To complete the submission process, please click the Submit button below. "
