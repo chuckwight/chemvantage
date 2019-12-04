@@ -232,10 +232,10 @@ public class LTIDeepLinks extends HttpServlet {
 					
 			//	Create a form to be auto-submitted to the platform by the user_agent browser
 			buf.append("<html><head></head>"
-					+ "<body onLoad=document.forms['selections'].submit()>"
+					+ "<body>"// onLoad=document.forms['selections'].submit()>"
+					+ "Click the Submit button to POST the following JSON Web Token:<p>" + jwt + "<p>"
 					+ "<form name=selections method=POST action='" + deep_link_return_url + "'>"
 					+ "<input type=hidden name=JWT value='" + jwt + "'>"
-					+ "To complete the submission process, please click the Submit button below. "
 					+ "<input type=submit>"
 					+ "</form></body></html>");
 		

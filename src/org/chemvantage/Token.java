@@ -51,8 +51,9 @@ public class Token extends HttpServlet {
 			
 			debug.append("client_id: " + client_id + "<br>");
 			
-			String redirect_uri = "https://" + request.getServerName() + "/lti";
-						
+			//String redirect_uri = "https://" + request.getServerName() + "/lti/launch";
+			String redirect_uri = target_link_uri;
+			
 			Date now = new Date();
 			Date exp = new Date(now.getTime() + 300000L); // 5 minutes from now
 			String nonce = Nonce.generateNonce();

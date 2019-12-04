@@ -247,7 +247,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			user.setToken(myAssignment.id);
 
 			if (myAssignment.assignmentType == null || myAssignment.topicId==0) {  //Show the the pickResource form:									
-				response.getWriter().println(Home.header + pickResourceForm(user,myAssignment,null) + Home.footer);
+				response.getWriter().println(Home.header + pickResourceForm(user,myAssignment) + Home.footer);
 				return;
 			} else {  // redirect the user's browser to the assignment
 				String target_link_uri = "/" + myAssignment.assignmentType + "?Token=" + user.token;
@@ -358,7 +358,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		return null;
 	}
 
-	String pickResourceForm(User user,Assignment myAssignment,String lis_result_sourcedid) {
+	String pickResourceForm(User user,Assignment myAssignment) {
 		StringBuffer buf = new StringBuffer();
 
 		try {			
@@ -402,10 +402,7 @@ public class LTIv1p3Launch extends HttpServlet {
 
 			buf.append("<table><form name=AssignmentForm method=POST>");
 			buf.append("<input type=hidden name=UserRequest value=UpdateAssignment>");
-			//buf.append("<input type=hidden name=AssignmentId value=" + myAssignment.id + ">");
-			//buf.append("<input type=hidden name=CvsToken value=" + user.cvsToken + ">");
 			buf.append("<input type=hidden name=Token value=" + user.token + ">");
-			if (lis_result_sourcedid != null) buf.append("<input type=hidden name=lis_result_sourcedid value=" + lis_result_sourcedid + ">");
 			buf.append("<tr><td>"
 					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Quiz" + ("Quiz".equals(assignmentType)?" CHECKED":"") + ">Quiz</label><br>"
 					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Homework" + ("Homework".equals(assignmentType)?" CHECKED":"") + ">Homework</label><br>"
