@@ -146,7 +146,7 @@ public class LTIDeepLinks extends HttpServlet {
 	}
 	
 	String deepLinkResponseMsg(HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer();
+		StringBuffer buf = new StringBuffer("<html><head></head><body>"); // onLoad=document.forms['selections'].submit()>");
 		String platform_id = request.getParameter("PlatformId");
 		String deployment_id = request.getParameter("DeploymentId");
 		String deep_link_return_url = request.getParameter("deep_link_return_url");
@@ -162,17 +162,20 @@ public class LTIDeepLinks extends HttpServlet {
 			// We need to use these to create the relevant assignments with Topic titles
 			// Start by making a list of the topicIds corresponding to the selections, because we'll need the titles later
 			String[] selections = request.getParameterValues("Selections");
+			int nAssigns = 0;
 			List<Long> topicIds = new ArrayList<Long>();
-			for (int i=0;i<selections.length;i++) {
-				long tId = Long.parseLong(selections[i].substring(1));
-				if (!topicIds.contains(tId)) topicIds.add(tId);
+			if (selections != null) {
+				nAssigns = selections.length;
+				for (int i=0;i<nAssigns;i++) {
+					long tId = Long.parseLong(selections[i].substring(1));
+					if (!topicIds.contains(tId)) topicIds.add(tId);
+				}
 			}
-			
 			// Create the assignments corresponding to the selections (Quiz and/or Homework)
 			// and save them to a List<Assignment> so they can be saved in a single operation
 			List<Assignment> assignments = new ArrayList<Assignment>();
 			String assignmentType = null;
-			for (int i=0;i<selections.length;i++) {
+			for (int i=0;i<nAssigns;i++) {
 				switch (selections[i].substring(0,1)) {
 					case ("Q"): assignmentType = "Quiz"; break;
 					case ("H"): assignmentType = "Homework"; break;
@@ -180,7 +183,7 @@ public class LTIDeepLinks extends HttpServlet {
 				long tId = Long.parseLong(selections[i].substring(1));
 				assignments.add(new Assignment(assignmentType,tId,d.platform_deployment_id,g.id));				
 			}
-			ofy().save().entities(assignments).now(); // using now() ensures creation of the id values
+			if (assignments.size()>0) ofy().save().entities(assignments).now(); // using now() ensures creation of the id values
 	
 			Map<Long,Topic> topicsMap = ofy().load().type(Topic.class).ids(topicIds);
 			
@@ -231,9 +234,7 @@ public class LTIDeepLinks extends HttpServlet {
 			jwt = String.format("%s.%s", jwt, sig);
 					
 			//	Create a form to be auto-submitted to the platform by the user_agent browser
-			buf.append("<html><head></head>"
-					+ "<body>"// onLoad=document.forms['selections'].submit()>"
-					+ "Click the Submit button to POST the following JSON Web Token:<p>" + jwt + "<p>"
+			buf.append("Click the Submit button to POST the following JSON Web Token:<p>" + jwt + "<p>"
 					+ "<form name=selections method=POST action='" + deep_link_return_url + "'>"
 					+ "<input type=hidden name=JWT value='" + jwt + "'>"
 					+ "<input type=submit>"
