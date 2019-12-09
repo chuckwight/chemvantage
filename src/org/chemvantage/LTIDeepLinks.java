@@ -146,7 +146,7 @@ public class LTIDeepLinks extends HttpServlet {
 	}
 	
 	String deepLinkResponseMsg(HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer("<html><head></head><body>"); // onLoad=document.forms['selections'].submit()>");
+		StringBuffer buf = new StringBuffer("<html><head></head><body onLoad=document.forms['selections'].submit()>");
 		String platform_id = request.getParameter("PlatformId");
 		String deployment_id = request.getParameter("DeploymentId");
 		String deep_link_return_url = request.getParameter("deep_link_return_url");
@@ -194,11 +194,14 @@ public class LTIDeepLinks extends HttpServlet {
 			
 			Encoder enc = Base64.getUrlEncoder().withoutPadding();
 			
+			// Create a JSON header for the JWT to send as DeepLinkingResponse
 			JsonObject header = new JsonObject();
 			header.addProperty("typ", "JWT");
 			header.addProperty("alg", "RS256");
+			header.addProperty("kid", d.rsa_key_id);
 			byte[] hdr = enc.encode(header.toString().getBytes("UTF-8"));
 		
+			// Create a JSON payload for the JWT to send as DeepLinkingResponse:
 			JsonObject payload = new JsonObject();
 			payload.addProperty("iss",client_id);
 			payload.addProperty("sub",subject);
@@ -206,13 +209,13 @@ public class LTIDeepLinks extends HttpServlet {
 			payload.addProperty("nonce", nonce);
 			payload.addProperty("exp", exp.getTime()/1000);
 			payload.addProperty("iat", now.getTime()/1000);
-			payload.addProperty("kid", d.rsa_key_id);
-			payload.addProperty("jwks_uri", serverUrl + "/jwks");
+			//payload.addProperty("jwks_uri", serverUrl + "/jwks");
 			payload.addProperty("https://purl.imsglobal.org/spec/lti/claim/message_type", "LtiDeepLinkingResponse");
 			payload.addProperty("https://purl.imsglobal.org/spec/lti/claim/version", "1.3.0");
 			payload.addProperty("https://purl.imsglobal.org/spec/lti/claim/deployment_id", deployment_id);
 			payload.addProperty("https://purl.imsglobal.org/spec/lti-dl/claim/data", data);
 		
+			//Add the user-selected content items to the payload:
 			JsonArray content_items = new JsonArray();
 			for (Assignment a : assignments) {
 				JsonObject item = new JsonObject();
@@ -225,17 +228,21 @@ public class LTIDeepLinks extends HttpServlet {
 		
 			byte[] pld = enc.encode(payload.toString().getBytes("UTF-8"));
 			
+			// Join the header and payload together with a period separator:
 			String jwt = String.format("%s.%s",new String(hdr),new String(pld));
 			
+			// Add a signature item to complete the JWT:
 			Signature signature = Signature.getInstance("SHA256withRSA");
 			signature.initSign(KeyStore.getRSAPrivateKey(d.rsa_key_id),new SecureRandom());
 			signature.update(jwt.getBytes("UTF-8"));
 			String sig = new String(enc.encode(signature.sign()));
 			jwt = String.format("%s.%s", jwt, sig);
 					
-			//	Create a form to be auto-submitted to the platform by the user_agent browser
-			buf.append("Click the Submit button to POST the following JSON Web Token:<p>" + jwt + "<p>"
-					+ "<form name=selections method=POST action='" + deep_link_return_url + "'>"
+			//buf.append("Click the Submit button to POST the following JSON Web Token:<p>" + jwt + "<p>"
+			//		+ "The public signing key is<br>" + KeyStore.getRSAPublicKeyX509(d.rsa_key_id) + "<p>");
+			
+			// Create a form to be auto-submitted to the platform by the user_agent browser
+			buf.append("<form name=selections method=POST action='" + deep_link_return_url + "'>"
 					+ "<input type=hidden name=JWT value='" + jwt + "'>"
 					+ "<input type=submit>"
 					+ "</form></body></html>");
