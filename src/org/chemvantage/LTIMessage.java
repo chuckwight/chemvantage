@@ -216,6 +216,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 					.withIssuer(d.client_id)
 					.withSubject(d.client_id)
 					.withAudience(d.oauth_access_token_url)
+					.withKeyId(d.rsa_key_id)
 					.withExpiresAt(exp)
 					.withIssuedAt(now)
 					.withJWTId(Nonce.generateNonce())

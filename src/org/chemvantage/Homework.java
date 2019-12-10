@@ -689,6 +689,7 @@ public class Homework extends HttpServlet {
 				Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
 				buf.append("<table><tr><th>User ID</th><th>Role</th><th>Name</th><th>Email</th><th>LMS Score</th><th>CV Score</th></tr>");
 				for (Map.Entry<String,String[]> entry : membership.entrySet()) {
+					if (entry == null) continue;
 					String s = scores.get(entry.getKey());
 					Score cvScore = cvScores.get(keys.get(entry.getKey()));
 					buf.append("<tr><td>" + entry.getKey() + "</td>"
