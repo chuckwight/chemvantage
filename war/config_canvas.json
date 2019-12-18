@@ -1,0 +1,34 @@
+{  
+   "title":"Configuration JSON file for LTI Advantage integration of ChemVantage in Canvas accounts",
+   "scopes":[
+      "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem",
+      "https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly",
+      "https://purl.imsglobal.org/spec/lti-ags/scope/score",
+      "https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly"
+   ],
+   "extensions":[  
+      {  
+         "domain":"www.chemvantage.org",
+         "tool_id":"ChemVantage",
+         "platform":"canvas.instructure.com",
+         "settings":{  
+            "text":"ChemVantage Content Selector",
+            "icon_url":"https://www.chemvantage.org/images/CVLogo_thumb.jpg",
+            "placements":[                 
+              {  
+                  "text":"Embed ChemVantage Content as a Canvas Assignment",
+                  "enabled":true,
+                  "icon_url":"https://www.chemvantage.org/images/CVLogo_thumb.jpg",
+                  "placement":"assignment_selection",
+                  "message_type":"LtiDeepLinkingRequest",
+                  "target_link_uri":"https://www.chemvantage.org/lti/deeplinks"
+               }
+            ]
+         }
+      }
+   ],
+   "description":"ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry",
+   "target_link_uri":"https://www.chemvantage.org/lti/launch",
+   "oidc_initiation_url":"https://www.chemvantage.org/auth/token",
+   "public_jwk_url":"https://www.chemvantage.org/jwks"
+}

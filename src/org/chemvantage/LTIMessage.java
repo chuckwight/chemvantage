@@ -276,6 +276,22 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			}
 	}
 	
+	static long getAssignmentId(Group g, String resourceLinkId) {
+		long assignmentId = 0;
+		try {
+			JsonArray json = new JsonParser().parse(getLineItems(g)).getAsJsonArray();
+			Iterator<JsonElement> iterator = json.iterator();
+			while(iterator.hasNext()){
+		        JsonObject lineitem = iterator.next().getAsJsonObject();
+		        if (resourceLinkId.equals(lineitem.get("resourceLinkId").getAsString())) {
+		        	return lineitem.get("resourceId").getAsLong(); // this should be the assignmentId
+		        }  												// that was created during a DeepLinking work flow
+		    }
+		} catch (Exception e) {  // returns value of 0L if unable to find a 
+		}						 // lineitem with the correct resourceLinkId and valid resourceId
+		return assignmentId;
+	}
+	
 	static String getLineItems(Group g) {
 		try {
 			String bearerAuth = "Bearer " + getAccessToken(g);
@@ -568,42 +584,5 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		}
 		return membership;
 	}
-/*	
-	static String getMembership(boolean start, Group g) {
-		String bearerAuth = null;
-		int responseCode = 0;
-		try {
-			if ((bearerAuth=getAccessToken(g)).startsWith("response")) throw new Exception("the LMS failed to issue an auth token: " + bearerAuth);
-			else bearerAuth = "Bearer " + bearerAuth;
-			
-			if (g.context_memberships_url==null) throw new Exception("the service endpoint URL for this group is unknown");
-			URL u = new URL(g.context_memberships_url);
 
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			uc.setDoOutput(true);
-			uc.setDoInput(true);
-			uc.setRequestMethod("GET");
-			uc.setRequestProperty("Authorization", bearerAuth);
-			uc.setRequestProperty("Accept", "application/vnd.ims.lti-nrps.v2.membershipcontainer+json");
-			uc.connect();
-
-			responseCode = uc.getResponseCode();
-			if (responseCode > 199 & responseCode < 203)  { // OK
-				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-				StringBuffer res = new StringBuffer();
-				String line;
-				while ((line = reader.readLine()) != null) {
-					res.append(line);
-				}
-				reader.close();
-
-				return res.toString();
-
-			}
-		} catch (Exception e) {
-			return e.toString();
-		}
-		return "Response Code: " + responseCode;
-	}
-*/	
 }

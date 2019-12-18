@@ -222,14 +222,21 @@ public class LTIv1p3Launch extends HttpServlet {
 			} catch (Exception e) {}
 */
 
-			// Construct the URL to which the user should be redirected
+			// Find the correct Assignment entity in order to construct the URL to which the user should be redirected
 			Assignment myAssignment = null;
-			
-			try {  // Find the existing assignment for this resourceLinkId or make a new one
+			boolean saveAssignment = false;
+			try {  // Find the existing assignment for this resourceLinkId (this is the usual case)
 				myAssignment = ofy().load().type(Assignment.class).filter("domain",platformDeploymentId).filter("resourceLinkId",resourceLinkId).first().safe();		
-			} catch (Exception e) {  // it appears that the assignment does not exist; make a new one:
-				myAssignment = new Assignment(myGroup.id,platformDeploymentId,resourceLinkId);
-				ofy().save().entity(myAssignment).now();  // We will need this Assignment entity immediately
+			} catch (Exception e) {  // this ResourceLinknId is not yet associated with an assignment
+				// first check to see if there is a lineitem that was created by a DeepLinking workflow:
+				try { // the resourceId should be equal to the assignmentId: 
+					myAssignment = ofy().load().type(Assignment.class).id(LTIMessage.getAssignmentId(myGroup, resourceLinkId)).safe();
+					myAssignment.resourceLinkId = resourceLinkId;
+					saveAssignment = true;
+				} catch (Exception e2) { // OK, the assignment probably doesn't exist, so make a new one
+					myAssignment = new Assignment(myGroup.id,platformDeploymentId,resourceLinkId);
+					saveAssignment = true;
+				}
 			}
 
 			// Update the lineitem URL for this assignment, if necessary
@@ -239,8 +246,10 @@ public class LTIv1p3Launch extends HttpServlet {
 				} else if (myAssignment.assignmentType != null && myAssignment.topicId>0) {  // create a new lineitem in the platform
 					myAssignment.lti_ags_lineitem_url = LTIMessage.createLineItem(myAssignment);
 				}
-				ofy().save().entity(myAssignment);
+				saveAssignment = true;
 			}
+			
+			if (saveAssignment) ofy().save().entity(myAssignment).now();
 
 			// At this point we should have a valid Assignment, but it may not have an 
 			// assignmentType or topicId(s) if it's new.

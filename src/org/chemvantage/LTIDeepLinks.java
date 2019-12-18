@@ -8,7 +8,6 @@ import java.net.URL;
 import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.interfaces.RSAPublicKey;
-import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Base64.Encoder;
 import java.util.Date;
@@ -48,7 +47,7 @@ public class LTIDeepLinks extends HttpServlet {
 			verifier.verify(state);  // throws Exception if invalid or expired
 			// At this point, the state parameter is valid
 			
-			if ("Select assignments".equals(request.getParameter("UserRequest"))) {  // submitting desired links
+			if ("Select assignment".equals(request.getParameter("UserRequest"))) {  // submitting desired links
 				out.println(deepLinkResponseMsg(request));
 				return;
 			} else { // This is probably a fresh Deep Links request. Check the required token:
@@ -136,9 +135,9 @@ public class LTIDeepLinks extends HttpServlet {
 			buf.append("<table><tr><th>Title</th><th>Quiz</th><th>Homework</th></tr>");
 			for (Topic t : topics) {
 				// The checkbox values are the topicIds with a Q or H prepended to them to indicate the assignmentType
-				buf.append("<tr><td>" + t.title + "</td><td align=center><input type=checkbox name=Selections value=Q" + t.id + "></td><td align=center><input type=checkbox name=Selections value=H" + t.id + "></td></tr>");
+				buf.append("<tr><td>" + t.title + "</td><td align=center><input type=radio name=Selection value=Q" + t.id + "></td><td align=center><input type=checkbox name=Selection value=H" + t.id + "></td></tr>");
 			}
-			buf.append("</table><input type=submit name=UserRequest value='Select assignments'></form>");
+			buf.append("</table><input type=submit name=UserRequest value='Select assignment'></form>");
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}
@@ -159,33 +158,19 @@ public class LTIDeepLinks extends HttpServlet {
 			Group g = ofy().load().type(Group.class).id(Long.parseLong(request.getParameter("GroupId"))).safe();
 			
 			// The contentPickerForm selections are string values of Topic ids with Q or H prepended to indicate the assignmentType
-			// We need to use these to create the relevant assignments with Topic titles
-			// Start by making a list of the topicIds corresponding to the selections, because we'll need the titles later
-			String[] selections = request.getParameterValues("Selections");
-			int nAssigns = 0;
-			List<Long> topicIds = new ArrayList<Long>();
-			if (selections != null) {
-				nAssigns = selections.length;
-				for (int i=0;i<nAssigns;i++) {
-					long tId = Long.parseLong(selections[i].substring(1));
-					if (!topicIds.contains(tId)) topicIds.add(tId);
-				}
-			}
-			// Create the assignments corresponding to the selections (Quiz and/or Homework)
-			// and save them to a List<Assignment> so they can be saved in a single operation
-			List<Assignment> assignments = new ArrayList<Assignment>();
+			// We need to use these to create the relevant assignment
+			
+			String selection = request.getParameter("Selection");
+			long topicId = Long.parseLong(selection.substring(1));
 			String assignmentType = null;
-			for (int i=0;i<nAssigns;i++) {
-				switch (selections[i].substring(0,1)) {
-					case ("Q"): assignmentType = "Quiz"; break;
-					case ("H"): assignmentType = "Homework"; break;
-				}
-				long tId = Long.parseLong(selections[i].substring(1));
-				assignments.add(new Assignment(assignmentType,tId,d.platform_deployment_id,g.id));				
+			switch (selection.substring(0,1)) {
+				case ("Q"): assignmentType = "Quiz"; break;
+				case ("H"): assignmentType = "Homework"; break;
 			}
-			if (assignments.size()>0) ofy().save().entities(assignments).now(); // using now() ensures creation of the id values
-	
-			Map<Long,Topic> topicsMap = ofy().load().type(Topic.class).ids(topicIds);
+			Assignment assignment = new Assignment(assignmentType,topicId,d.platform_deployment_id,g.id);
+			ofy().save().entity(assignment).now(); // we need the assignmentId to send to the platform as the lineitem resourceId
+			
+			Topic topic = ofy().load().type(Topic.class).id(topicId).now();
 			
 			String serverUrl = "https://" + request.getServerName();
 			String client_id = d.client_id;
@@ -209,21 +194,24 @@ public class LTIDeepLinks extends HttpServlet {
 			payload.addProperty("nonce", nonce);
 			payload.addProperty("exp", exp.getTime()/1000);
 			payload.addProperty("iat", now.getTime()/1000);
-			//payload.addProperty("jwks_uri", serverUrl + "/jwks");
 			payload.addProperty("https://purl.imsglobal.org/spec/lti/claim/message_type", "LtiDeepLinkingResponse");
 			payload.addProperty("https://purl.imsglobal.org/spec/lti/claim/version", "1.3.0");
 			payload.addProperty("https://purl.imsglobal.org/spec/lti/claim/deployment_id", deployment_id);
 			payload.addProperty("https://purl.imsglobal.org/spec/lti-dl/claim/data", data);
 		
-			//Add the user-selected content items to the payload:
+			//Add the user-selected content item to the payload as an array of 1 content_item:
 			JsonArray content_items = new JsonArray();
-			for (Assignment a : assignments) {
-				JsonObject item = new JsonObject();
-				item.addProperty("type", "ltiResourceLink");
-				item.addProperty("url", serverUrl + "/" + a.assignmentType + "?AssignmentId=" + a.id);
-				item.addProperty("title", a.assignmentType + " - " + topicsMap.get(a.topicId).title);
-				content_items.add(item);
-			}
+			  JsonObject item = new JsonObject();
+			  item.addProperty("type", "ltiResourceLink");
+			  item.addProperty("url", serverUrl + "/lti/launch");
+			  item.addProperty("title", assignmentType + " - " + topic.title);
+			    JsonObject lineitem = new JsonObject();
+			    lineitem.addProperty("scoreMaximum", 10);
+			    lineitem.addProperty("label", assignmentType + " - " + topic.title);
+			    lineitem.addProperty("resourceId", assignment.id);
+			  item.add("lineItem", lineitem);
+			content_items.add(item);
+			
 			payload.add("https://purl.imsglobal.org/spec/lti-dl/claim/content_items", content_items);
 		
 			byte[] pld = enc.encode(payload.toString().getBytes("UTF-8"));
