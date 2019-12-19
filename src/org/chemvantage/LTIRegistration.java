@@ -47,6 +47,8 @@ import javax.servlet.http.HttpServletResponse;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 
 @WebServlet(urlPatterns = {"/lti/registration","/lti/registration/"})
 public class LTIRegistration extends HttpServlet {
@@ -78,8 +80,16 @@ public class LTIRegistration extends HttpServlet {
 		PrintWriter out = response.getWriter();
 
 		String token = request.getParameter("token");
-		if (token==null) out.println(Home.header + applicationForm() + Home.footer);
-		else out.println(Home.header + clientIdForm(token) + Home.footer);
+		try {
+			if (token==null) out.println(Home.header + applicationForm() + Home.footer);
+		else if ("config".equals(request.getParameter("UserRequest"))) {
+			response.setContentType("text/json");
+			out.println(getConfigurationJson(token));
+		}
+		else if ("final".equals(request.getParameter("UserRequest"))) out.println(Home.header + clientIdForm(token) + Home.footer);
+		} catch (Exception e) {
+			out.println("Sorry, the registration failed. " + e.getMessage());
+		}
 	}
 	
 	@Override
@@ -96,6 +106,7 @@ public class LTIRegistration extends HttpServlet {
 				String aud = request.getParameter("aud");
 				String url = request.getParameter("url");
 				String use = request.getParameter("use");
+				String lms = request.getParameter("lms");
 				if (sub==null || email==null || aud==null || url==null || use==null) throw new Exception("All form fields are required.");
 				String iss = use.equals("test")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
 				Date now = new Date();
@@ -108,6 +119,7 @@ public class LTIRegistration extends HttpServlet {
 						.withIssuedAt(now)
 						.withClaim("email",email)
 						.withClaim("url", url)
+						.withClaim("lms", lms)
 						.sign(algorithm);
 				sendRegistrationEmail(token);
 				out.println(Home.header + banner + "<h3>Thank you. A registration email has been sent to your address.</h3>" + Home.footer);
@@ -164,8 +176,11 @@ public class LTIRegistration extends HttpServlet {
 				+ "Your Organization: <input type=text name=aud>&nbsp;"
 				+ "and Home Page: <input type=text name=url><br>"
 				+ "Initial use case:<br>"
-				+ "<label><input type=radio name=use value=test>Testing the LTI connection</label><br>"
-				+ "<label><input type=radio name=use value=prod>Teaching a chemistry class</label><p>"
+				+ "<label><input type=radio name=use value=test>Testing the LTI connection (development environment)</label><br>"
+				+ "<label><input type=radio name=use value=prod>Teaching a chemistry class (production environment)</label><p>"
+				+ "Type of Learning Management System:<br>"
+				+ "<label><input type=radio name=lms value=canvas>Instructure Canvas</label><br>"
+				+ "<label><input type=radio name=lms value=other>Other LMS supporting LTI Advantage</label><p>"
 				+ "<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div><p>"
 				+ "<input type=submit name=UserRequest value='Send Me The Registration Email'>"
 				+ "</form>");
@@ -184,6 +199,7 @@ public class LTIRegistration extends HttpServlet {
 			email = jwt.getClaim("email").asString();
 			aud = jwt.getAudience().get(0);
 			url = jwt.getClaim("url").asString();
+			
 			buf.append("To the LMS Administrator:<p>"
 					+ "By now you should have entered the ChemVantage end point URLs into your LMS, and you should have "
 					+ "received a client_id and deployment_id from your LMS that identifies the ChemVantage tool.<p>"
@@ -225,7 +241,10 @@ public class LTIRegistration extends HttpServlet {
 		String name = jwt.getSubject();
 		String email = jwt.getClaim("email").asString();
 		String iss = jwt.getIssuer();
-		String msgBody = "Thank you for your ChemVantage registration request.<p> "
+		String lms = jwt.getClaim("lms").asString();
+		Date exp = jwt.getExpiresAt();
+		StringBuffer buf = new StringBuffer();
+		buf.append("Thank you for your ChemVantage registration request.<p> "
 				+ "The next step is to enter the ChemVantage configuration details into your LMS. "
 				+ "This will enable your LMS to communicate securely with ChemVantage. Normally, "
 				+ "you must have administrator privileges in your LMS in order to do this. "
@@ -247,18 +266,27 @@ public class LTIRegistration extends HttpServlet {
 				+ "Use the information below to register ChemVantage in your LMS:<br>"
 				+ "Tool Domain URL: " + iss + "<br>"
 				+ "Tool Redirect URL: " + iss + "/lti/launch<br>"
+				+ "Tool Deep Linking URL: " + iss + "/lti/deeplinks<br>"
 				+ "OIDC Login Initiation URL: " + iss + "/auth/token<br>"
-				+ "JSON Web Key Set Endpoint: " + iss + "/jwks<p>"
-				+ "When you have finished entering these URLs, your LMS should generate a client_id "
-				+ "value to identify the ChemVantage tool. In addition, your LMS MAY generate a "
+				+ "JSON Web Key Set Endpoint: " + iss + "/jwks<p>");
+		if ("canvas".equals(lms)) {
+			buf.append("You are using the cloud-based Instructure Canvas LMS, so you will need to configure "
+					+ "the developer key using the following configuration JSON URL:<br>" 
+					+ iss + "/lti/registration?UserRequest=config&token=" + token + "<p>"
+					+ "The token is valid for three days and expires at " + exp + ".<p>");
+		} 
+		buf.append("When you have finished the configuration, " + ("canvas".equals(lms)?"Canvas ":"your LMS ") 
+				+ "should generate a client_id value to identify the ChemVantage tool. "
+				+ ("canvas".equals(lms)?"Canvas also calls this the developer key. ":"")
+				+ "In addition, your LMS should generate a "
 				+ "deployment_id value to identify a specific account in your LMS for this tool. "
 				+ "When you have these values in hand, as well as the end point URLs of your LMS that "
 				+ "are needed by ChemVantage, then please click the following link to complete the "
-				+ "LTI registration process:<p><a href=" + iss + "/lti/registration?token=" + token + ">"
-				+ iss + "/lti/registration?token=" + token + "</a><p>"
+				+ "LTI registration process:<p><a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
+				+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><p>"
 				+ "If you  need additional assistance, please contact me at admin@chemvantage.org. <p>"
-				+ "-Chuck Wight";
-		
+				+ "-Chuck Wight");
+
 		Properties props = new Properties();
 		Session session = Session.getDefaultInstance(props, null);
 
@@ -268,7 +296,7 @@ public class LTIRegistration extends HttpServlet {
 		msg.addRecipient(Message.RecipientType.TO,new InternetAddress(email,name));
 		msg.addRecipient(Message.RecipientType.CC,from);
 		msg.setSubject("ChemVantage LTI Registration");
-		msg.setContent(msgBody,"text/html");
+		msg.setContent(buf.toString(),"text/html");
 		Transport.send(msg);
 	}
 
@@ -304,5 +332,42 @@ public class LTIRegistration extends HttpServlet {
 		}
 	}
 	
-
+	String getConfigurationJson(String token) throws Exception {
+		DecodedJWT jwt = validateToken(token);
+		String iss = jwt.getIssuer();
+		JsonObject config = new JsonObject();
+		config.addProperty("title","Configuration JSON file for LTI Advantage integration of ChemVantage in Canvas accounts");
+		  JsonArray scopes = new JsonArray();
+		  scopes.add("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem");
+		  scopes.add("https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly");
+		  scopes.add("https://purl.imsglobal.org/spec/lti-ags/scope/score");
+		  scopes.add("https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly");
+		config.add("scopes", scopes);
+		config.addProperty("description", "ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry");;
+		config.addProperty("target_link_uri", iss + "/lti/launch");
+		config.addProperty("oidc_initiation_url", iss + "/auth/token");
+		config.addProperty("public_jwk_url", iss + "/jwks");
+		  JsonArray extensions = new JsonArray();
+		    JsonObject ext = new JsonObject();
+		    ext.addProperty("domain", iss);
+		    ext.addProperty("platform", "canvas.instructure.com");
+		      JsonObject settings = new JsonObject();
+		      settings.addProperty("text", "ChemVantage Content Selector");
+		      settings.addProperty("icon_url", iss + "/images/CVLogo_thumb.jpg");
+		        JsonArray placements = new JsonArray();
+		          JsonObject plcmnt = new JsonObject();
+		          plcmnt.addProperty("text", "Embed ChemVantage Content as a Canvas Assignment");
+		          plcmnt.addProperty("enabled", true);
+		          plcmnt.addProperty("icon_url", iss + "/images/CVLogo_thumb.jpg");
+		          plcmnt.addProperty("placement", "assignment_selection");
+		          plcmnt.addProperty("message_type", "LtiDeepLinkingRequest");
+		          plcmnt.addProperty("target_link_uri", iss + "/lti/deeplinks");
+		        placements.add(plcmnt);
+		      settings.add("placements", placements);
+		    ext.add("settings", settings);
+		  extensions.add(ext);
+		config.add("extensions", extensions);
+		
+		return config.toString();
+	}
 }
