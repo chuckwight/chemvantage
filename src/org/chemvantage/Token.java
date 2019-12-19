@@ -43,13 +43,12 @@ public class Token extends HttpServlet {
 			debug.append("deployment_id: " + deployment_id + "<br>");
 			
 			String client_id = request.getParameter("client_id");
+			debug.append("client_id: " + client_id + "<br>");
 			
 			Deployment d = Deployment.getInstance(platform_id,deployment_id);
 			if (d==null) throw new Exception("Deployment " + platform_id + "/" + deployment_id + " was not found in the datastore.");			
 			if (client_id!=null && !client_id.contentEquals(d.client_id)) throw new Exception("Wrong client_id value");
 			else client_id = d.client_id;
-			
-			debug.append("client_id: " + client_id + "<br>");
 			
 			//String redirect_uri = "https://" + request.getServerName() + "/lti/launch";
 			String redirect_uri = target_link_uri;

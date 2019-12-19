@@ -127,7 +127,7 @@ public class LTIRegistration extends HttpServlet {
 				out.println(Home.header + "Registration failure: " + e.getMessage() + "<br>" + Home.footer);
 			}
 			return;
-		} else if ("Finalize the LTI Registration".equals(request.getParameter("UserRequest"))) {
+		} else {  //if ("Finalize the LTI Registration".equals(request.getParameter("UserRequest"))) {
 			try {
 				DecodedJWT jwt = validateToken(request.getParameter("Token"));
 				String client_name = jwt.getSubject();
@@ -151,7 +151,7 @@ public class LTIRegistration extends HttpServlet {
 				new URL(oauth_access_token_url);
 				new URL(well_known_jwks_url);
 				Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url);
-				ofy().save().entity(d);
+				ofy().save().entity(d).now();
 				out.println(Home.header + banner + "<h2>Congratulations. Registration is complete.</h2>" + Home.footer);
 			} catch (Exception e) {
 				out.println(Home.header + "<h2>Registration Failed</h2>" + e.getMessage() + Home.footer);
@@ -205,11 +205,11 @@ public class LTIRegistration extends HttpServlet {
 					+ "received a client_id and deployment_id from your LMS that identifies the ChemVantage tool.<p>"
 					+ "To complete the registration process, please complete the form below by supplying the end point "
 					+ "URLs on your LMS so that ChemVantage can access services (e.g., Assignment and Grade Services) "
-					+ "provided by your LMS platform. Generally, all URLs should begin with https://<p>"
+					+ "provided by your LMS platform. All fields are required, and all URLs should begin with https://<p>"
 					+ "<form method=post>"
 					+ "<input type=hidden name=Token value='" + token + "'>"
 					+ "Client ID: <input type=text name=ClientId> (required)<br>"
-					+ "Deployment ID: <input type=text name=DeploymentId> (may be left blank for single-deployment platforms)<br>"
+					+ "Deployment ID: <input type=text name=DeploymentId> (required)<br>"
 					+ "Platform ID: <input type=text name=PlatformId> (must exactly match LMS base URL sent as iss in resource link launch requests)<br>"
 					+ "Platform OIDC Auth URL: <input type=text name=OIDCAuthUrl> (required)<br>"
 					+ "Platform OAuth Access Token URL: <input type=text name=OauthAccessTokenUrl> (required)<br>"
