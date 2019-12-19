@@ -40,7 +40,7 @@ public class Deployment {
 	static Deployment getInstance(String platform_id,String deployment_id) throws Exception {
 		Deployment d = null;
 		if (deployment_id==null) deployment_id = "";  // may be empty String for 1-deployment platforms
-		if (!platform_id.startsWith("http")) platform_id = "http://" + platform_id; // make it into a URL
+		if (!platform_id.startsWith("http")) platform_id = "https://" + platform_id; // make it into a URL
 		String platform_deployment_id = platform_id + "/" + deployment_id;
 		try {
 				return ofy().load().type(Deployment.class).id(platform_deployment_id).safe();
