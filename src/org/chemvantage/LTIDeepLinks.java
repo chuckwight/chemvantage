@@ -8,6 +8,7 @@ import java.net.URL;
 import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.interfaces.RSAPublicKey;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Base64.Encoder;
 import java.util.Date;
@@ -30,6 +31,7 @@ import com.auth0.jwt.interfaces.DecodedJWT;
 import com.auth0.jwt.interfaces.JWTVerifier;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.googlecode.objectify.Key;
 
 @WebServlet(urlPatterns={"/lti/deeplinks","/lti/deeplinks/"})
 public class LTIDeepLinks extends HttpServlet {
@@ -90,7 +92,7 @@ public class LTIDeepLinks extends HttpServlet {
 	String contentPickerForm(DecodedJWT id_token,String state) {
 		StringBuffer buf = new StringBuffer(Home.header);
 		try {
-			buf.append("<h3>ChemVantage Resource Picker</h3>");
+			buf.append("<h2>ChemVantage Resources</h2>");
 			
 			String platform_id = id_token.getIssuer();
 			if (!platform_id.startsWith("http")) platform_id = "http://" + platform_id;
@@ -108,22 +110,45 @@ public class LTIDeepLinks extends HttpServlet {
 				roles[i] = roles[i].toLowerCase();
 				if (roles[i].contains("instructor") || roles[i].contains("administrator")) authorized = true;
 			}			
-			if (!authorized) {
-				buf.append("You must be logged into your LMS in an instructor or administrator role in "
-						+ "order to select assignment links for this class.");
-				throw new Exception();
-			}
+			if (!authorized) throw new Exception("You must be logged into your LMS in an instructor "
+					+ "or administrator role in order to select assignment resources for this class.");
 
-			Map<String,Object> context = id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/context").asMap();			
-			String context_id = platform_id + "/" + context.get("id").toString();
-			long groupId = ofy().load().type(Group.class).filter("context_id",context_id).first().safe().id;
-	
-			List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
-			buf.append("You may select any of the following Quiz or Homework assignments to make it easy for your LMS "
-					+ "to create assignment links for your students. The subjects are arranged roughly in the order "
-					+ "frequently encountered in many year-long General Chemistry courses, but you may present them to "
-					+ "your students in any order without difficulty.<p>");
-					
+			long groupId = 0L; // Try to determine the groupId for this request
+			try {
+				Map<String,Object> context = id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/context").asMap();			
+				String context_id = platform_id + "/" + context.get("id").toString();
+				groupId = ofy().load().type(Group.class).filter("context_id",context_id).first().safe().id;
+			} catch (Exception e2) {}
+		
+			buf.append("<TABLE><TR><TD VALIGN=TOP><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
+					+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
+					+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>");
+
+			buf.append("<h2>Assignment Setup Page</h2>"
+					+ "Please select the ChemVantage resource that should be associated with this assignment. "
+					+ "ChemVantage will remember this choice and send students directly to the assignment.<p>");
+
+			// insert a script to show/hide the correct box
+			buf.append("<script>"
+					+ "function inspectRadios() { "
+					+ "var radios = document.getElementsByName('AssignmentType');"
+					+ "  if(radios[0].checked) {"
+					+ "    document.getElementById('topicSelect').style.visibility='visible';"
+					+ "    document.getElementById('topicSelect').style.valign='top';"
+					+ "    document.getElementById('topicCheck').style.visibility='hidden';"
+					+ "  }"
+					+ "  else if(radios[1].checked) {"
+					+ "    document.getElementById('topicSelect').style.visibility='visible';"
+					+ "    document.getElementById('topicSelect').style.valign='middle';"
+					+ "    document.getElementById('topicCheck').style.visibility='hidden';"
+					+ "  }"
+					+ "  else if(radios[2].checked) {"
+					+ "    document.getElementById('topicSelect').style.visibility='hidden';"
+					+ "    document.getElementById('topicCheck').style.visibility='visible';"
+					+ "  }"
+					+ "}"
+					+ "</script>");
+
 			buf.append("<form action=/lti/deeplinks method=POST>"
 					+ "<input type=hidden name=PlatformId value='" + id_token.getIssuer() + "'>"
 					+ "<input type=hidden name=DeploymentId value='" + deployment_id + "'>"
@@ -131,13 +156,51 @@ public class LTIDeepLinks extends HttpServlet {
 					+ "<input type=hidden name=state value=" + state + ">"
 					+ "<input type=hidden name=GroupId value=" + groupId + ">"
 					+ "<input type=hidden name=deep_link_return_url value=" + deep_link_return_url + ">"
+					+ "<input type=hidden name=UserRequest value='Select assignment'>"
 					+ (data==null?"":"<input type=hidden name=data value='" + data + "'>"));
-			buf.append("<table><tr><th>Title</th><th>Quiz</th><th>Homework</th></tr>");
+
+			// Display radio buttons for the choice of assignment type:
+			buf.append("<table><tr><td>"
+					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Quiz>Quiz</label><br>"
+					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Homework>Homework</label><br>"
+					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=PracticeExam>Practice&nbsp;Exam</label>"
+					+ "</td>");
+			
+			// Display a select box for the choice of topics (initially hidden; visible if Quiz or Homework is the AssignmentType
+			buf.append("<td id=topicSelect style='visibility:hidden;vertical-align=top'>"
+					+ "<FONT COLOR=RED>Please select one topic for this quiz or homework assignment.</FONT><br>");
+
+			List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
+			buf.append("<SELECT NAME=TopicId onChange=document.AssignmentForm.start.disabled=(document.AssignmentForm.TopicId.selectedIndex==0);>"
+					+ "<OPTION Value='0'>Select a topic</OPTION>");			
+			for (Topic t : topics) if (!t.orderBy.equals("Hide")) buf.append("<OPTION VALUE='" + t.id + "'>" + t.title + "</OPTION>");			 			
+			buf.append("</SELECT><input type=submit name=start disabled=true></td></tr>");
+			
+			// Display a checkbox list for choice of multiple topics (initially hidden) if AssignmentType is PracticeExam
+			buf.append("<tr><td colspan=2 id=topicCheck style='visibility:hidden'>");
+			buf.append("<TABLE><TR><TD COLSPAN=3 style='color:red'>Please select at least 3 topics for this practice exam:<br></TD></TR>");
+			int i = 0;
 			for (Topic t : topics) {
-				// The checkbox values are the topicIds with a Q or H prepended to them to indicate the assignmentType
-				buf.append("<tr><td>" + t.title + "</td><td align=center><input type=radio name=Selection value=Q" + t.id + "></td><td align=center><input type=checkbox name=Selection value=H" + t.id + "></td></tr>");
+				if ("Hide".equals(t.orderBy)) continue;
+				buf.append(i%3==0?"<TR><TD>":"<TD>");
+				buf.append("<INPUT TYPE=CHECKBOX NAME=TopicIds VALUE='" + t.id + "' "
+						+ "onClick=\"javascript: var checked=0; "
+						+ "for(i=0;i<document.AssignmentForm.TopicIds.length;i++) if(document.AssignmentForm.TopicIds[i].checked) checked++;"
+						+ "document.AssignmentForm.begin.disabled=(checked<3);"
+						+ "if(document.AssignmentForm.begin.disabled) document.AssignmentForm.begin.value='Select at least 3 topics';"
+						+ "else document.AssignmentForm.begin.value='Submit';\">" 
+						+ t.title + "<br>\n");
+				buf.append(i%3==2?"</TD></TR>\n":"</TD>");
+				i++;
 			}
-			buf.append("</table><input type=submit name=UserRequest value='Select assignment'></form>");
+			buf.append("</TABLE><br>");
+			buf.append("The practice exam is designed to be completed in 60 minutes. "
+					+"<INPUT TYPE=SUBMIT NAME=begin DISABLED=true VALUE='Select at least 3 topics'>"
+					+ "</td></tr></table>");
+			buf.append("</form>");
+			buf.append("<script>inspectRadios()</script>");
+			return buf.toString();
+
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}
@@ -155,22 +218,46 @@ public class LTIDeepLinks extends HttpServlet {
 			String data = request.getParameter("data");
 			Deployment d = Deployment.getInstance(platform_id, deployment_id);
 			
-			Group g = ofy().load().type(Group.class).id(Long.parseLong(request.getParameter("GroupId"))).safe();
+			// Determine the groupId for this assignment selection; it MIGHT be 0 if no previous LtiResourceLink launch has been made
+			long groupId = Long.parseLong(request.getParameter("GroupId"));
 			
-			// The contentPickerForm selections are string values of Topic ids with Q or H prepended to indicate the assignmentType
-			// We need to use these to create the relevant assignment
+			// Determine the assignmentType for this selection
+			String assignmentType = request.getParameter("AssignmentType");
+			if (assignmentType == null || assignmentType.isEmpty()) throw new Exception("Assignment type is missing.");
 			
-			String selection = request.getParameter("Selection");
-			long topicId = Long.parseLong(selection.substring(1));
-			String assignmentType = null;
-			switch (selection.substring(0,1)) {
-				case ("Q"): assignmentType = "Quiz"; break;
-				case ("H"): assignmentType = "Homework"; break;
+			// Determine the topicId or topicIds for this selection
+			// Store a list of topic titles in a List<String>
+			long topicId = 0L;
+			List<Long> topicIds = new ArrayList<Long>();
+			List<String> topicTitles = new ArrayList<String>();
+			if (assignmentType.contentEquals("Quiz") || assignmentType.contentEquals("Homework")) {
+				topicId = Long.parseLong(request.getParameter("TopicId"));
+				topicTitles.add(ofy().load().type(Topic.class).id(topicId).now().title);
+			} else if (assignmentType.contentEquals("PracticeExam")) {
+				String[] topicIdArray = request.getParameterValues("TopicIds");
+				if (topicIdArray==null || topicIdArray.length<3) throw new Exception("At least 3 topics must be selected for a practice exam.");
+				for (int i=0;i<topicIdArray.length;i++) {
+					long tId = Long.parseLong(topicIdArray[i]);
+					topicIds.add(tId);
+					topicTitles.add(ofy().load().type(Topic.class).id(tId).now().title);
+				}
+			} else throw new Exception("TopicId values were missing.");
+			
+			String title = assignmentType + " - ";
+			for (String t : topicTitles) title += t + ", ";
+			title = title.substring(0, title.length()-1);  // strip off the last comma
+			
+			// Create the new Assignment entity and load the questionKeys
+			Assignment assignment = new Assignment(assignmentType,topicId,topicIds,d.platform_deployment_id,groupId);
+			if (assignment.topicId>0) { // Load the quiz or homework questionKeys
+				assignment.questionKeys = ofy().load().type(Question.class).filter("assignmentType",assignment.assignmentType).filter("topicId",assignment.topicId).keys().list();
+			} else if (assignment.topicIds.size()>2) { // Load the practice exam questionKeys for each topic
+				assignment.questionKeys = new ArrayList<Key<Question>>();
+				for (int i=0;i<assignment.topicIds.size();i++) {
+					assignment.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",assignment.topicIds.get(i)).keys().list());
+				}
 			}
-			Assignment assignment = new Assignment(assignmentType,topicId,d.platform_deployment_id,g.id);
 			ofy().save().entity(assignment).now(); // we need the assignmentId to send to the platform as the lineitem resourceId
-			
-			Topic topic = ofy().load().type(Topic.class).id(topicId).now();
 			
 			String serverUrl = "https://" + request.getServerName();
 			String client_id = d.client_id;
@@ -204,10 +291,10 @@ public class LTIDeepLinks extends HttpServlet {
 			  JsonObject item = new JsonObject();
 			  item.addProperty("type", "ltiResourceLink");
 			  item.addProperty("url", serverUrl + "/lti/launch");
-			  item.addProperty("title", assignmentType + " - " + topic.title);
+			  item.addProperty("title", assignmentType + " - " + title);
 			    JsonObject lineitem = new JsonObject();
-			    lineitem.addProperty("scoreMaximum", 10);
-			    lineitem.addProperty("label", assignmentType + " - " + topic.title);
+			    lineitem.addProperty("scoreMaximum", (assignmentType.contentEquals("PracticeExam")?100:10));
+			    lineitem.addProperty("label", assignmentType + " - " + title);
 			    lineitem.addProperty("resourceId", assignment.id);
 			  item.add("lineItem", lineitem);
 			content_items.add(item);

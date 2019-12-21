@@ -43,6 +43,10 @@ public class KeyStore extends HttpServlet {
 		else return jwks;
 	}
 	
+	protected static JsonObject getJwk() {
+		return getJwk(getAKeyId());  // gets a Jwk JsonObject with an existing randomly selected kid
+	}
+	
 	protected static JsonObject getJwk(String rsa_key_id) {
 		try {
 			RSAPublicKey pk = getRSAPublicKey(rsa_key_id);

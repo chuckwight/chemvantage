@@ -197,48 +197,48 @@ public class LTIv1p3Launch extends HttpServlet {
 			
 			// Process the ResourceLinkRequest information:
 			String resourceLinkId = null;
+			long assignmentId = 0L;
 			try {
 				Map<String,Object> resource_link_claims = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link").asMap();
 				resourceLinkId = resource_link_claims.get("id").toString();
+				try {  // try to get a resourceId value from the payload in case this is a Deep Linking assignment
+					assignmentId = Long.parseLong(resource_link_claims.get("resourceId").toString());
+				} catch (Exception e) {}
 			} catch (Exception e) {
 				throw new Exception("Resource link id was missing from payload.");
 			}
-			
-/*			
-			Assignment myAssignment = null;
-			long assignmentId = 0;
-			
-			// If this is a Deep Linking request launch, get the assignmentId from the target_link_uri
-			String target_link_uri = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/target_link_uri").asString();
-			try {
-				int i = target_link_uri.indexOf("AssignmentId=");
-				if (i==-1) throw new Exception(); // this is not a deep link URI
-				assignmentId = Long.parseLong(target_link_uri.substring(i+13));
-				myAssignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
-				if (myAssignment.resourceLinkId == null) {
-					myAssignment.resourceLinkId = resourceLinkId;
-					ofy().save().entity(myAssignment);
-				}
-			} catch (Exception e) {}
-*/
 
 			// Find the correct Assignment entity in order to construct the URL to which the user should be redirected
 			Assignment myAssignment = null;
 			boolean saveAssignment = false;
-			try {  // Find the existing assignment for this resourceLinkId (this is the usual case)
-				myAssignment = ofy().load().type(Assignment.class).filter("domain",platformDeploymentId).filter("resourceLinkId",resourceLinkId).first().safe();		
-			} catch (Exception e) {  // this ResourceLinknId is not yet associated with an assignment
-				// first check to see if there is a lineitem that was created by a DeepLinking workflow:
-				try { // the resourceId should be equal to the assignmentId: 
-					myAssignment = ofy().load().type(Assignment.class).id(LTIMessage.getAssignmentId(myGroup, resourceLinkId)).safe();
+			
+			// First try the direct approach in case we have the assignmentId already
+			if (assignmentId>0) myAssignment = ofy().load().type(Assignment.class).id(assignmentId).now();
+			
+			// Next try to find the assignment using the platformDeploymentId and the resourceLinkId value
+			if (myAssignment == null) myAssignment = ofy().load().type(Assignment.class).filter("domain",platformDeploymentId).filter("resourceLinkId",resourceLinkId).first().now();
+			
+			// Next try to get the resourceId from the lineitem service
+			if (myAssignment == null) {
+				try {
+					myAssignment = ofy().load().type(Assignment.class).id(LTIMessage.getAssignmentId(myGroup,resourceLinkId)).safe();
 					myAssignment.resourceLinkId = resourceLinkId;
 					saveAssignment = true;
-				} catch (Exception e2) { // OK, the assignment probably doesn't exist, so make a new one
-					myAssignment = new Assignment(myGroup.id,platformDeploymentId,resourceLinkId);
-					saveAssignment = true;
-				}
+				} catch (Exception e) {}
 			}
-
+			
+			// If none of that worked, then the assignment probably doesn't exist, so make a new one:
+			if (myAssignment == null) {
+				myAssignment = new Assignment(myGroup.id,platformDeploymentId,resourceLinkId);
+				saveAssignment = true;	
+			}
+			
+			// Make sure that this assignment is associated with myGroup
+			if (myAssignment.groupId == 0L) {
+				myAssignment.groupId = myGroup.id;
+				saveAssignment = true;
+			}
+			
 			// Update the lineitem URL for this assignment, if necessary
 			if (myAssignment.lti_ags_lineitem_url==null) {
 				if (lti_ags_claims.get("lineitem") != null) {  // get the lineitem from the id_token
@@ -249,7 +249,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				saveAssignment = true;
 			}
 			
-			if (saveAssignment) ofy().save().entity(myAssignment).now();
+			if (saveAssignment) ofy().save().entity(myAssignment).now();  // we need the id value to store in the user CSRF token
 
 			// At this point we should have a valid Assignment, but it may not have an 
 			// assignmentType or topicId(s) if it's new.

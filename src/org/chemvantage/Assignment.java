@@ -48,9 +48,10 @@ public class Assignment {
 		this.resourceLinkId = resourceLinkId;
 	}
 
-	Assignment(String assignmentType, long topicId, String platform_deployment_id, long groupId) {
+	Assignment(String assignmentType, long topicId, List<Long> topicIds, String platform_deployment_id, long groupId) {
 		this.assignmentType = assignmentType;
 		this.topicId = topicId;
+		this.topicIds = topicIds;
 		this.domain = platform_deployment_id;
 		this.groupId = groupId;
 		this.questionKeys = ofy().load().type(Question.class).filter("assignmentType",this.assignmentType).filter("topicId",this.topicId).keys().list();
