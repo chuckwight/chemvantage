@@ -629,16 +629,23 @@ public class Quiz extends HttpServlet {
 						+ "deadline and was not accepted by the LMS.<p>");
 
 				Map<String,String> scores = LTIMessage.readMembershipScores(a);
+				if (scores==null) scores = new HashMap<String,String>();  // in case service call fails
+				
 				Map<String,String[]> membership = LTIMessage.getMembership(g);
+				if (membership==null) membership = new HashMap<String,String[]>(); // in case service call fails
+				
 				buf.append("There are " + membership.size() + " members of this group.<p>");
 				
 				Map<String,Key<Score>> keys = new HashMap<String,Key<Score>>();
 				Deployment d = ofy().load().type(Deployment.class).id(g.domain).safe();
 				String platform_id = d.getPlatformId() + "/";
+				
 				for (String id : membership.keySet()) {
-					keys.put(id,Key.create(Key.create(User.class,platform_id+id),Score.class,a.id));
+					String userId = platform_id + id;
+					keys.put(id,Key.create(Key.create(User.class,userId),Score.class,a.id));
 				}
 				Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
+				
 				buf.append("<table><tr><th>User ID</th><th>Role</th><th>Name</th><th>Email</th><th>LMS Score</th><th>CV Score</th></tr>");
 				for (Map.Entry<String,String[]> entry : membership.entrySet()) {
 					if (entry == null) continue;

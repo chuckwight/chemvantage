@@ -67,7 +67,8 @@ public class LTIDeepLinks extends HttpServlet {
 			if (!platform_id.startsWith("http")) platform_id = "http://" + platform_id;
 			Map<String,Claim> id_token_claims = id_token.getClaims();
 			String deployment_id = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/deployment_id").asString();
-			Deployment d = Deployment.getInstance(platform_id, deployment_id);
+			
+			Deployment d = Deployment.getInstance(platform_id + "/" + deployment_id);
 
 			// retrieve the public Java Web Key from the platform to verify the signature
 			URL jwks_url = new URL(d.well_known_jwks_url);
@@ -92,8 +93,6 @@ public class LTIDeepLinks extends HttpServlet {
 	String contentPickerForm(DecodedJWT id_token,String state) {
 		StringBuffer buf = new StringBuffer(Home.header);
 		try {
-			buf.append("<h2>ChemVantage Resources</h2>");
-			
 			String platform_id = id_token.getIssuer();
 			if (!platform_id.startsWith("http")) platform_id = "http://" + platform_id;
 			Map<String,Claim> claims = id_token.getClaims();			
@@ -149,7 +148,7 @@ public class LTIDeepLinks extends HttpServlet {
 					+ "}"
 					+ "</script>");
 
-			buf.append("<form action=/lti/deeplinks method=POST>"
+			buf.append("<form name=AssignmentForm action=/lti/deeplinks method=POST>"
 					+ "<input type=hidden name=PlatformId value='" + id_token.getIssuer() + "'>"
 					+ "<input type=hidden name=DeploymentId value='" + deployment_id + "'>"
 					+ "<input type=hidden name=Subject value='" + subject + "'>"
@@ -216,7 +215,7 @@ public class LTIDeepLinks extends HttpServlet {
 			Date now = new Date();
 			Date exp = new Date(now.getTime() + 5400000L); // 90 minutes from now
 			String data = request.getParameter("data");
-			Deployment d = Deployment.getInstance(platform_id, deployment_id);
+			Deployment d = Deployment.getInstance(platform_id + "/" + deployment_id);
 			
 			// Determine the groupId for this assignment selection; it MIGHT be 0 if no previous LtiResourceLink launch has been made
 			long groupId = Long.parseLong(request.getParameter("GroupId"));

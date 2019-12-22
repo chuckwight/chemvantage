@@ -137,7 +137,7 @@ public class LTIRegistration extends HttpServlet {
 				String client_id = request.getParameter("ClientId");
 				if (client_id==null) throw new Exception("Client ID value is required.");
 				String deployment_id = request.getParameter("DeploymentId");
-				if (deployment_id==null) deployment_id = "";
+				if (deployment_id==null) throw new Exception("Deployment ID value is required.");
 				String platform_id = request.getParameter("PlatformId");
 				if (platform_id==null) throw new Exception("Platform ID value is required.");
 				String oidc_auth_url = request.getParameter("OIDCAuthUrl");
@@ -205,7 +205,8 @@ public class LTIRegistration extends HttpServlet {
 					+ "By now you should have configured your LMS to connect with ChemVantage, and you should have "
 					+ "received a client_id from your LMS that identifies the ChemVantage tool and a deployment_id "
 					+ "that identifies your account in your LMS. Please enter these values here:<p>"
-					+ "<form method=post><input type=hidden name=UserRequest value=finalize>"
+					+ "<form method=post action=/lti/registration>"
+					+ "<input type=hidden name=UserRequest value='finalize'>"
 					+ "<input type=hidden name=Token value='" + token + "'>"
 					+ "Client ID: <input type=text size=40 name=ClientId><br>"
 					+ "Deployment ID: <input type=text size=40 name=DeploymentId><p>");

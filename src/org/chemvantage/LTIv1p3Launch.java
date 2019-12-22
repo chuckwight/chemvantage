@@ -118,11 +118,11 @@ public class LTIv1p3Launch extends HttpServlet {
 		    if (!platform_id.startsWith("http")) platform_id = "http://" + platform_id;
 		    String deployment_id = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/deployment_id").asString();
 		    String platformDeploymentId = platform_id + "/" + deployment_id;
-		    			
+		   			
 			// Process User information:
 			String sub = id_token.getSubject();  // required
 			if (sub==null || sub.isEmpty()) throw new Exception("Missing or empty subject claim in the id_token.");
-			String userId = platformDeploymentId + "/" + sub;
+			String userId = platform_id + "/" + sub;
 			User user = new User(userId);
 			
 			user.roles = 0;
@@ -249,11 +249,15 @@ public class LTIv1p3Launch extends HttpServlet {
 				saveAssignment = true;
 			}
 			
-			if (saveAssignment) ofy().save().entity(myAssignment).now();  // we need the id value to store in the user CSRF token
-
+			if (saveAssignment && user.isInstructor()) {
+				ofy().save().entity(myAssignment).now();  // we need the id value to store in the user CSRF token
+			}
+			
 			// At this point we should have a valid Assignment, but it may not have an 
 			// assignmentType or topicId(s) if it's new.
-			user.setToken(myAssignment.id);
+			if (myAssignment.id == null) assignmentId = 0L;
+			else assignmentId = myAssignment.id;
+			user.setToken(assignmentId);
 
 			if (myAssignment.assignmentType == null || myAssignment.topicId==0) {  //Show the the pickResource form:									
 				response.getWriter().println(Home.header + pickResourceForm(user,myAssignment) + Home.footer);
@@ -294,9 +298,14 @@ public class LTIv1p3Launch extends HttpServlet {
 	    Claim deployment_id_claim = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/deployment_id");
 	    if (deployment_id_claim==null) throw new Exception("The deployment_id claim was not found in the id_token payload.");
 	    String deployment_id = deployment_id_claim.asString();
-	    Deployment d = Deployment.getInstance(platform_id, deployment_id);
+	    Deployment d = Deployment.getInstance(platform_id + "/" + deployment_id);
 	    if (d==null) throw new Exception("Deployment not found in the datastore.");
 
+	    List<String> aud = id_token.getAudience();
+	    if (aud.size()==1 && aud.get(0).contentEquals(d.client_id)); // OK, continue
+	    else if (aud.size()>1 && aud.contains(d.client_id) && id_token.getClaim("azp").asString().contentEquals(d.client_id)); // OK, continue
+	    else throw new Exception("The id_token audience is not authorized in ChemVantage.");
+	    
 	    try {
 			String email = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/tool_platform").asMap().get("contact_email").toString();	
 			if (email != null && !email.contentEquals(d.email)) {

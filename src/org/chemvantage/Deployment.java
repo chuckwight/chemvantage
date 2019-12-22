@@ -4,7 +4,6 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.net.URI;
 
-import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
@@ -36,33 +35,7 @@ public class Deployment {
 		this.org_url = org_url;
 		this.rsa_key_id = KeyStore.getAKeyId();
 	}
-
-	static Deployment getInstance(String platform_id,String deployment_id) throws Exception {
-		Deployment d = null;
-		if (deployment_id==null) deployment_id = "";  // may be empty String for 1-deployment platforms
-		if (!platform_id.startsWith("http")) platform_id = "https://" + platform_id; // make it into a URL
-		String platform_deployment_id = platform_id + "/" + deployment_id;
-		try {
-				return ofy().load().type(Deployment.class).id(platform_deployment_id).safe();
-		} catch (Exception e) {
-			if (deployment_id.isEmpty()) { // look for exactly one child deployment from this platform
-				Key<Deployment> k = Key.create(Deployment.class,platform_id+"/");
-				Deployment child = ofy().load().type(Deployment.class).filterKey(">", k).limit(1).first().safe();
-				if (child.platform_deployment_id.startsWith(platform_id + "/")) d = child;
-				d.platform_deployment_id = platform_id + "/";
-				ofy().save().entity(d);
-			} else { // check to see if we should create a new child Deployment for this platform
-				try {
-					d = ofy().load().type(Deployment.class).id(platform_id + "/").safe(); // gets parent Deployment
-					d.platform_deployment_id = platform_deployment_id;
-					ofy().save().entity(d);
-				} catch (Exception e1) {
-				}
-			}
-		} 
-		return d;
-	}
-	
+			
 	static Deployment getInstance(String platform_deployment_id) {
 		try {
 			return ofy().load().type(Deployment.class).id(platform_deployment_id).safe();

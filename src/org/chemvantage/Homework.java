@@ -679,7 +679,11 @@ public class Homework extends HttpServlet {
 						+ "deadline and was not accepted by the LMS.<p>");
 
 				Map<String,String> scores = LTIMessage.readMembershipScores(a);
+				if (scores==null) scores = new HashMap<String,String>();  // in case service call fails
+				
 				Map<String,String[]> membership = LTIMessage.getMembership(g);
+				if (membership==null) membership = new HashMap<String,String[]>(); // in case service call fails
+				
 				Map<String,Key<Score>> keys = new HashMap<String,Key<Score>>();
 				Deployment d = ofy().load().type(Deployment.class).id(g.domain).safe();
 				String platform_id = d.getPlatformId() + "/";

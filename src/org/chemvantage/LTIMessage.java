@@ -380,9 +380,16 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	}
 
 	static Map<String,String> readMembershipScores(Assignment a) {
-		// This method uses the LTIv1p3 message protocol to retrieve a user's score from the LMS.
-		// The lineitem URL corresponds to the LMS grade book column fpr the Assignment entity,
-		// and the specific cell is identified by the user_id value defined by the LMS platform
+		// This method uses the LTIv1p3 message protocol to retrieve a JSON containing all of
+		// the existing  scores for one assignment from the LMS. 
+		// The lineitem URL corresponds to the LMS grade book column fpr the Assignment entity.
+		
+		// Construct the deployment_id because we may need to strip this from the userId values
+		String deploymentId = "";
+		try {
+			deploymentId = new URI(a.domain).getPath().substring(1);
+		} catch (Exception e) {}
+	
 		Map<String,String> scores = new HashMap<String,String>();		
 		String bearerAuth = null;
 		try {
@@ -415,7 +422,9 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				Iterator<JsonElement> iterator = json.iterator();
 				while(iterator.hasNext()) {
 					JsonObject result = iterator.next().getAsJsonObject();
-					scores.put(result.get("userId").getAsString(),String.valueOf(Math.round(1000.*result.get("resultScore").getAsDouble()/result.get("resultMaximum").getAsDouble())/10.));
+					String userId = result.get("userId").getAsString();
+					if (userId.startsWith(deploymentId)) userId = userId.substring(deploymentId.length()+1);
+					scores.put(userId,String.valueOf(Math.round(1000.*result.get("resultScore").getAsDouble()/result.get("resultMaximum").getAsDouble())/10.));
 				}
 			}
 		} catch (Exception e) {	
@@ -423,7 +432,47 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		}
 		return scores;
 	}
-	
+/*
+	static JsonArray readMembershipScores(Assignment a,String dummy) {
+		// This method uses the LTIv1p3 message protocol to retrieve a JSON containing all of
+		// the existing  scores for one assignment from the LMS. 
+		// The lineitem URL corresponds to the LMS grade book column fpr the Assignment entity.
+		
+		//Map<String,String> scores = new HashMap<String,String>();		
+		String bearerAuth = null;
+		try {
+			Group g = ofy().load().type(Group.class).id(a.groupId).safe();
+			if ((bearerAuth=getAccessToken(g)).startsWith("response")) throw new Exception("the LMS failed to issue an auth token: " + bearerAuth);
+			else bearerAuth = "Bearer " + bearerAuth;
+
+			if (a.lti_ags_lineitem_url==null) throw new Exception("the lineitem URL for this assignment is unknown");
+			URL u = new URL(a.lti_ags_lineitem_url + "/results");
+
+			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+			uc.setDoOutput(true);
+			uc.setDoInput(true);
+			uc.setRequestMethod("GET");
+			uc.setRequestProperty("Authorization", bearerAuth);
+			uc.setRequestProperty("Accept", "application/vnd.ims.lis.v2.resultcontainer+json");
+			uc.connect();
+			
+			StringBuffer res = new StringBuffer();
+			
+			int responseCode = uc.getResponseCode();
+			if (responseCode > 199 && responseCode < 203) {  // OK
+				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+				String line;
+				while ((line = reader.readLine()) != null) {
+					res.append(line);
+				}
+				reader.close();
+			}
+			return new JsonParser().parse(res.toString()).getAsJsonArray();
+		} catch (Exception e) {	
+			return null;
+		}
+	}
+*/	
 	static String readUserScore(Assignment a, String userId) {
 		// This method uses the LTIv1p3 message protocol to retrieve a user's score from the LMS.
 		// The lineitem URL corresponds to the LMS grade book column fpr the Assignment entity,

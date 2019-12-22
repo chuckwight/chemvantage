@@ -1,5 +1,7 @@
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.IOException;
 import java.util.Date;
 
@@ -11,6 +13,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.googlecode.objectify.Key;
 
 @WebServlet("/auth/token")
 public class Token extends HttpServlet {
@@ -37,20 +40,17 @@ public class Token extends HttpServlet {
 			if (login_hint == null) throw new Exception("Missing required login_hint parameter.");
 			if (target_link_uri == null) throw new Exception("Missing required target_link_uri parameter.");
 			
-			if (!platform_id.startsWith("http")) platform_id = "http://" + platform_id;
+			if (!platform_id.startsWith("http")) platform_id = "https://" + platform_id;
 			
 			String deployment_id = request.getParameter("lti_deployment_id");
+			if (deployment_id == null) deployment_id = "";
 			debug.append("deployment_id: " + deployment_id + "<br>");
 			
 			String client_id = request.getParameter("client_id");
 			debug.append("client_id: " + client_id + "<br>");
 			
-			Deployment d = Deployment.getInstance(platform_id,deployment_id);
-			if (d==null) throw new Exception("Deployment " + platform_id + "/" + deployment_id + " was not found in the datastore.");			
-			if (client_id!=null && !client_id.contentEquals(d.client_id)) throw new Exception("Wrong client_id value");
-			else client_id = d.client_id;
+			Deployment d = getDeployment(platform_id,deployment_id);
 			
-			//String redirect_uri = "https://" + request.getServerName() + "/lti/launch";
 			String redirect_uri = target_link_uri;
 			
 			Date now = new Date();
@@ -70,7 +70,7 @@ public class Token extends HttpServlet {
 					.withExpiresAt(exp)
 					.withIssuedAt(now)
 					.withClaim("nonce", nonce)
-					.withClaim("deployment_id",d.getDeploymentId())
+					.withClaim("deployment_id",deployment_id)
 					.withClaim("client_id", client_id)
 					.withClaim("redirect_uri", redirect_uri)
 					.sign(algorithm);
@@ -94,9 +94,31 @@ public class Token extends HttpServlet {
 			response.sendRedirect(oidc_auth_url);
 
 		} catch (Exception e) {
-			response.getWriter().println("Failed token: " + e.toString() + "<br>" + debug.toString());
+			response.getWriter().println("Failed token: " + e.toString()); // + "<br>" + debug.toString());
 		}
 	}
+
+	private Deployment getDeployment(String platform_id,String deployment_id) throws Exception {
+		// This method should only be used to issue an auth token because it is overly permissive:
+		// The method returns the first Deployment entity in the database matching the platform_id
+		// and returns the corresponding client_id value to the consumer, per OAuth 2.0 specs. This
+		// means that an auth token may be issued even if a deployment instance is not registered.
+		// However, the error will be caught during the LTIRourceLink launch process, which requires
+		// that the deployment_id be sent in the id_token.
+		if (deployment_id==null) deployment_id = "";  // may be empty String for 1-deployment platforms
+		if (!platform_id.startsWith("http")) platform_id = "https://" + platform_id; // make it into a URL
+		String platform_deployment_id = platform_id + "/" + deployment_id;
+		try {  // normally, the deployment should be registered under a platform_id and deployment_id
+			Deployment d = ofy().load().type(Deployment.class).id(platform_deployment_id).safe();
+			return d;
+		} catch (Exception e) {  // in case the deployment_id is not sent, send token if the platform exists
+			Key<Deployment> k = Key.create(Deployment.class, platform_deployment_id);
+			Deployment dummy = ofy().load().type(Deployment.class).filterKey(">", k).first().now();
+			if (dummy.platform_deployment_id.startsWith(platform_deployment_id)) return dummy; // platform is registered with a different deployment_id
+		}
+		throw new Exception("This LMS platform is not registered with ChemVantage.");
+	}
+	
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 			throws ServletException, IOException {
