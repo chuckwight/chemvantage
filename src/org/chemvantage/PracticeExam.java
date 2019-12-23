@@ -217,8 +217,8 @@ public class PracticeExam extends HttpServlet {
 
 			buf.append("\n<h2>" + subject.title + " Exam</h2>");
 
-			if (request.getServerName().contains("dev-vantage")) buf.append("<font color=red>This is a development server that should be used for testing only. "
-					+ "Please DO NOT use this server for serious educational purposes. See the <a href=/lti/registration>LTI registration page</a> if your need "
+			if (request.getServerName().contains("dev-vantage")) buf.append("<font color=red>This is a development server that should be used for testing only.<br>"
+					+ "Please DO NOT use this server for serious instruction.<br>See the <a href=/lti/registration>LTI registration page</a> if your need "
 					+ "access to the ChemVantage production server.</font><p>");
 			
 			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");

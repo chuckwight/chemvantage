@@ -126,8 +126,8 @@ public class Quiz extends HttpServlet {
 
 			buf.append("\n<h2>Quiz - " + topic.title + " (" + subject.title + ")</h2>");
 
-			if (request.getServerName().contains("dev-vantage")) buf.append("<font color=red>This is a development server that should be used for testing only. "
-					+ "Please DO NOT use this server for serious educational purposes. See the <a href=/lti/registration>LTI registration page</a> if your need "
+			if (request.getServerName().contains("dev-vantage")) buf.append("<font color=red>This is a development server that should be used for testing only.<br>"
+					+ "Please DO NOT use this server for serious instruction.<br>See the <a href=/lti/registration>LTI registration page</a> if your need "
 					+ "access to the ChemVantage production server.</font><p>");
 			
 			if (user.isInstructor() && qa != null) {
@@ -258,7 +258,7 @@ public class Quiz extends HttpServlet {
 	
 	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		//String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
+		
 		try {
 			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
@@ -266,19 +266,19 @@ public class Quiz extends HttpServlet {
 			Assignment qa = null;
 			long transactionId = Long.parseLong(request.getParameter("QuizTransactionId"));
 			QuizTransaction qt = ofy().load().type(QuizTransaction.class).id(transactionId).safe();
+			
+			// if this Quiz has already been graded, stop here.
 			if (qt.graded != null) {
 				return "<h2>No Score</h2>"
 						+ "Sorry, this quiz was graded on " + df.format(qt.graded) + " and cannot be regraded.<p>"
 						+ "Your score on this quiz was " + qt.score + " out of a possible " + qt.possibleScore + " points.<p>"
-						+ (user.isAnonymous()?"<p><a href=/Quiz?TopicId=" + qt.topicId 
-								+ "&Token=" + user.token
-								+ ">Take this quiz again</a>"
-								+ " or go back to the <a href=/>ChemVantage home page</a>.":"");
+						+ (user.isAnonymous()?"<p><a href=/Quiz?TopicId=" + qt.topicId + "&Token=" + user.token + ">"
+						+ "Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a>.":"");
 			}
 
+			// Check to see if the time limit (15 minutes) for taking the Quiz has expired:
 			if (now.getTime() - qt.downloaded.getTime() > (timeLimit*60000+10000)) // includes 10 second grace period
 				return "Sorry, the " + timeLimit + " minute time limit for this quiz has expired.";
-
 			
 			int studentScore = 0;
 			int wrongAnswers = 0;
@@ -290,9 +290,12 @@ public class Quiz extends HttpServlet {
 			
 			buf.append(ajaxScoreJavaScript(user.token)); // load javascript for AJAX problem reporting form
 			
+			// Create a StringBuffer to contain correct answers to questions answered correctly
 			StringBuffer missedQuestions = new StringBuffer();			
 			missedQuestions.append("<OL>");
 			
+			// For each question the form contains a parameter: (questionId,studentAnswer)
+			// Make a list of the question keys. Non-numeric inputs are ignored (catch and continue).
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 			for (Enumeration<?> e = request.getParameterNames();e.hasMoreElements();) {
 				try {
@@ -301,6 +304,8 @@ public class Quiz extends HttpServlet {
 			}
 			
 			Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
+			
+			// This is the main scoring loop:
 			for (Key<Question> k : questionKeys) {
 				try {
 					String studentAnswer[] = request.getParameterValues(Long.toString(k.getId()));
@@ -346,12 +351,15 @@ public class Quiz extends HttpServlet {
 			qt.score = studentScore;
 			ofy().save().entity(qt);
 			
+			// Try to post the score to the student's LMS:
 			try {
+				if (user.isAnonymous()) throw new Exception();  // don't save Scores for anonymous users
 				long assignmentId = user.getAssignmentId();
 				qa = ofy().load().type(Assignment.class).id(assignmentId).safe();
 				Score s = Score.getInstance(user.id,qa);
 				ofy().save().entity(s).now();
-				LTIMessage.postUserScore(s);
+				LTIMessage.postUserScore(s);  // LTIv1p3 grade reporting
+				// LTIv1p1 score reporting:
 				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(qa.id)).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
 			} catch (Exception e) {}
 

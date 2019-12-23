@@ -532,6 +532,17 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			bearerAuth = "Bearer " + bearerAuth;
 			
 			String raw_id = User.getRawId(s.owner.getName());
+			
+			JsonObject j = new JsonObject();
+			j.addProperty("timestamp", ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
+			j.addProperty("scoreGiven", String.valueOf(s.score));
+			j.addProperty("scoreMaximum", String.valueOf(s.maxPossibleScore));
+			j.addProperty("comment",  "");
+			j.addProperty("activityProgress", "Completed");
+			j.addProperty("gradingProgress", "FullyGraded");
+			j.addProperty("userId", raw_id);
+			String json = j.toString();
+/*			
 			String json = "{"
 					+ "\"timestamp\":\"" + ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT) + "\","
 					+ "\"scoreGiven\":\"" + s.score + "\","
@@ -541,7 +552,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 					+ "\"gradingProgress\":\"FullyGraded\","
 					+ "\"userId\":\"" + raw_id + "\""
 					+ "}";
-			
+*/			
 			URL u = new URL(a.lti_ags_lineitem_url + "/scores");
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setDoOutput(true);
