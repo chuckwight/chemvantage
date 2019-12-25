@@ -114,6 +114,16 @@ public class LTIRegistration extends HttpServlet {
 				String lms = request.getParameter("lms");
 				
 				if (sub.isEmpty() || email.isEmpty() || aud.isEmpty() || url.isEmpty() || use.isEmpty() || ver.isEmpty()) throw new Exception("All form fields are required.");
+				
+				String regex = "^[\\w-_\\.+]*[\\w-_\\.]\\@([\\w]+\\.)+[\\w]+[\\w]$";
+				if (!email.matches(regex)) throw new Exception("Your email address was not formatted correctly.");
+				
+				try {
+					new URL(url);   // throws Exception if URL is not formatted correctly
+				} catch (Exception e) {
+					throw new Exception("Badly formatted home page URL (" + e.getMessage() + ")");
+				}
+				
 				if (lms==null) throw new Exception("Please select the type of LMS that you are connecting to ChemVantage.");
 				if ("other".contentEquals(lms)) lms = request.getParameter("lms_other");
 				if (lms==null || lms.isEmpty()) throw new Exception("Please describe the type of LMS that you are connecting to ChemVantage.");
@@ -307,6 +317,7 @@ public class LTIRegistration extends HttpServlet {
 		String iss = jwt.getIssuer();
 		String lms = jwt.getClaim("lms").asString();
 		String ver = jwt.getClaim("ver").asString();
+		
 		StringBuffer buf = new StringBuffer();
 		
 		if (ver.contentEquals("1p1")) { // older LTIv1p1 registration process; deprecated 12/31/2020
