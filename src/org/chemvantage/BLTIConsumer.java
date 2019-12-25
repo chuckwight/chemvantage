@@ -31,6 +31,10 @@ public class BLTIConsumer {
 	String secret;
 	String lti_version;
 	String email;
+	String contact_name;
+	String organization;
+	String org_url;
+	String lms;
 	Date created;
 
 	BLTIConsumer() {}
@@ -58,13 +62,21 @@ public class BLTIConsumer {
 		this.capabilities_enabled = new ArrayList<String>();
 		this.tool_service = new ArrayList<String>();
 		}
-*/	
+	
 	static void create(String oauth_consumer_key) {
 		ofy().save().entity(new BLTIConsumer(oauth_consumer_key)).now();
 	}
-	
+*/	
 	static void delete(String oauth_consumer_key) {
 		ofy().delete().type(BLTIConsumer.class).id(oauth_consumer_key);
+	}
+	
+	static String getNewConsumerKey() {
+		int random = new Random().nextInt(899999) + 100000;
+		String key = "CK" + String.valueOf(random);
+		BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(key).now();
+		if (c==null) return key;  // this is a new unique key
+		else return getNewConsumerKey();  // key is in use; get another
 	}
 	
 	static String generateSecret() {

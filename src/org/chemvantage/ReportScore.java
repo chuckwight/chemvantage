@@ -1,5 +1,5 @@
 /*  ChemVantage - A Java web application for online learning
-*   Copyright (C) 2011 ChemVantage LLC
+*   Copyright (C) 2019 ChemVantage LLC
 *   
 *    This program is free software: you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -45,7 +45,7 @@ public class ReportScore extends HttpServlet {
 	
 	public String getServletInfo() {
 		return "ChemVantage servlet reports a single Score object back to a user's LMS as a Task "
-				+ "using the IMS LTI 1.X Learning Information Services API.";
+				+ "using the IMS LTI 1.1 Learning Information Services API or LTIAdvantage 1.3.0 API.";
 	}
 	
 	@Override
@@ -61,85 +61,126 @@ public class ReportScore extends HttpServlet {
 		try {  // post single user score
 			String userId = URLDecoder.decode(request.getParameter("UserId"),"UTF-8");
 			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
-			String delay = request.getParameter("Delay");
-			postUserScore(userId,assignmentId,delay);
-			return;
+			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+			int attempts = 1;
+			try {
+				attempts = Integer.parseInt(request.getParameter("Retry")) + 1;
+			} catch (Exception e) {}
+
+			if (a.lti_ags_lineitem_url != null) {  // use LTIAdvantage reporting specs
+				postUserScore(userId,a,attempts);
+			} else postUserScore(userId,a,attempts,"");  // use LTI v1.1 specs
 		} catch (Exception e) {}
 
-		try {  // post group scores for one assignment
-			long groupId = Long.parseLong(request.getParameter("GroupId"));
-			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
-			Group g = ofy().load().type(Group.class).id(groupId).safe();
-			for (String uId : g.memberIds) postUserScore(uId,assignmentId,null);			
-			return;
-		} catch (Exception e) {}
 	}
 	
-	void postUserScore(String userId,long assignmentId,String delay) {
+	void postUserScore(String userId,Assignment a,int attempts,String dummy) { // LTIv1.1 only
+		Group group = null;
+		String oauth_consumer_key = null;
 		try {
-			Key<Score> k = Key.create(Key.create(User.class, userId),Score.class,assignmentId);
-    		Score s = ofy().load().key(k).now();
-    		if (s == null || !s.needsLisReporting()) return;
-    		
-    		// compute a scaled score in the range 0.0-1.0 for LIS services specification
-    		double score = (double)s.score / (double)s.maxPossibleScore;
-			if (score < 0.0 || score > 1.0) throw new Exception();
-			
-			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
-			Group g = ofy().load().type(Group.class).id(a.groupId).safe();
-			String oauth_consumer_key = g.domain;
-			
-			String messageFormat = g.getLisOutcomeFormat();
-			if ("application/vnd.ims.lis.v1.score+json".equals(g.lis_outcome_service_format)) { // use LTIv1p3 reporting
-				if (LTIMessage.postUserScore(s)) {
-					s.lisReportComplete = true;
-					ofy().save().entity(s);
-				}
-			} else if ("application/xml".equals(g.lis_outcome_service_format)) {
-				String body = LTIMessage.xmlReplaceResult(s.lis_result_sourcedid,String.valueOf(score));
-				String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
+			Key<Score> k = Key.create(Key.create(User.class, userId),Score.class,a.id);
+			Score s = ofy().load().key(k).now();
+			if (s == null || !s.needsLisReporting()) return;
 
-				if (replyBody.toLowerCase().contains("success")) {
-					s.lisReportComplete = true;
-					ofy().save().entity(s);
-				}
-			} else throw new Exception("LIS postUserScore failed after " + delay + " attempts.");  // try again later
-		} catch (Exception e) {
-			try {
-				int n = 0;
-				if (delay != null) n = Integer.parseInt(delay);
-				if (assignmentId<=0 || n>9) {
-					sendEmailToDomainAdmin(userId,assignmentId,e.getMessage());
-					return;  // will attempt to record up to 10 times over 17 hours
-				}
-				long countdownMillis = (long) Math.pow(2,n)*60000;
+			// compute a scaled score in the range 0.0-1.0 for LIS services specification
+			double score = (double)s.score / (double)s.maxPossibleScore;
+			if (score < 0.0 || score > 1.0) throw new Exception();
+
+			group = ofy().load().type(Group.class).id(a.groupId).safe();
+			oauth_consumer_key = group.domain;
+
+			String messageFormat = group.getLisOutcomeFormat();
+			String body = LTIMessage.xmlReplaceResult(s.lis_result_sourcedid,String.valueOf(score));
+			String replyBody = new LTIMessage(messageFormat,body,group.lis_outcome_service_url,oauth_consumer_key).send();
+
+			if (replyBody.toLowerCase().contains("success")) {
+				s.lisReportComplete = true;
+				ofy().save().entity(s);
+			} else if (attempts < 10){
+				long countdownMillis = (long) Math.pow(2,attempts)*60000;
 				Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
-				queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(assignmentId)).param("UserId",userId).param("Delay",Integer.toString(n+1)).param("Error",e.getMessage()).countdownMillis(countdownMillis));
-			} catch (Exception e2) {}
+				queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",userId).param("Retry",Integer.toString(attempts)).countdownMillis(countdownMillis));			
+			} else throw new Exception("User " + userId + " earned a score of " + s.getPctScore() + "% on assignment "
+					+ a.id + "; however, the score could not be posted to the LMS grade book, even after " + attempts + " attempts.");
+		} catch (Exception e) {
+			sendEmailToDomainAdmin(userId,a,oauth_consumer_key,e.getMessage());
 		}
 	}
 	
-	String jsonReplaceResult(String score) {
-		return "{"
-		+ "'@context' : 'http://purl.imsglobal.org/ctx/lis/v2/Result',"
-		+ "'@type' : 'Result',"
-		+ "'resultScore' : " + score + ","
-		+ "}";
+	void postUserScore(String userId,Assignment a,int attempts) {
+		try {
+			Key<Score> k = Key.create(Key.create(User.class,userId),Score.class,a.id);
+			Score s = ofy().load().key(k).safe();
+			boolean success = LTIMessage.postUserScore(s);
+			if (!success) {
+				if (attempts < 10) {
+					long countdownMillis = (long) Math.pow(2,attempts)*60000;
+					Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
+					queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",userId).param("Retry",Integer.toString(attempts)).countdownMillis(countdownMillis));			
+				} else throw new Exception("User " + userId + " earned a score of " + s.getPctScore() + "% on assignment "
+						+ a.id + "; however, the score could not be posted to the LMS grade book, even after " + attempts + " attempts.");
+			}
+		} catch (Exception e) {
+			Group g = ofy().load().type(Group.class).id(a.groupId).now();
+			Deployment d = ofy().load().type(Deployment.class).id(g.domain).now();
+			sendEmailToLmsAdmin(userId,a,d,e.getMessage());
+		}
 	}
 	
-	void sendEmailToDomainAdmin(String userId,long assignmentId,String errorMsg) {
+	void sendEmailToLmsAdmin(String userId,Assignment assignment,Deployment d,String errorMsg) {  // LTIAdvantage
 		try {
 			Properties props = new Properties();
 			Session session = Session.getDefaultInstance(props, null);
 
-			User u = ofy().load().type(User.class).id(userId).safe();
-			BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(u.domain).safe();
-			String recipient = c.email;
-			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
-			Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
-			Key<Score> k = Key.create(Key.create(User.class, userId),Score.class,assignmentId);
+			String recipient = d.email;
+			Topic t = ofy().load().type(Topic.class).id(assignment.topicId).safe();
+			Key<Score> k = Key.create(Key.create(User.class, userId),Score.class,assignment.id);
 			Score s = ofy().load().key(k).now();
-			if (s==null) s=Score.getInstance(userId,a);
+			if (s==null) s=Score.getInstance(userId,assignment);
+			if (!s.needsLisReporting()) return;  // everything is OK and the situation is resolved
+			
+			userId = User.getRawId(userId); // strips the platform_deployment_id from the front of the userId
+			
+			String msgBody = "<h3>ChemVantage LIS ReportScore Failure</h3>"
+					+ "You are receiving this message because you are listed as the LMS administrator for an LTI "
+					+ "connection to the ChemVantage app using the client_id " + d.client_id + "<p>"
+					+ "The ChemVantage server encountered the following error while attempting to report a score to your LMS:<br>"
+					+ errorMsg + "<p>"
+					+ "Details:<br>"
+					+ "UserId: " + userId + "<br>"
+					+ "AssignmentId: " + assignment.id + "<br>"
+					+ "Assignment: " + assignment.assignmentType + (t==null?"":" - " + t.title) + "<br>"
+					+ "Current score= " + s.getPctScore() + "% after " + s.numberOfAttempts + " attempts<br>"
+					+ "ChemVantage domain = " + d.platform_deployment_id + "<br>"
+					+ "Domain contact = " + d.email + "<p>"
+					+ "This message was generated automatically to make you aware of a potential problem with the connection to "
+					+ "your LMS. If you need help, please contact Chuck Wight (admin@chemvantage.org) for assistance.<p>"
+					+ "Thank you,<p>"
+					+ "Chuck Wight<br>ChemVantage LLC";
+					
+			Message msg = new MimeMessage(session);
+			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
+			msg.addRecipient(Message.RecipientType.TO,new InternetAddress(recipient, ""));
+			msg.addRecipient(Message.RecipientType.CC,new InternetAddress("admin@chemvantage.org", "ChemVantage"));
+			msg.setSubject("ChemVantage LIS Reporting Error");
+			msg.setContent(msgBody,"text/html");
+			Transport.send(msg);
+		} catch (Exception e) {
+		}
+
+	}
+	
+	void sendEmailToDomainAdmin(String userId,Assignment assignment,String oauth_consumer_key,String errorMsg) {  // LTIv1p1
+		try {
+			Properties props = new Properties();
+			Session session = Session.getDefaultInstance(props, null);
+
+			BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).safe();
+			String recipient = c.email;
+			Topic t = ofy().load().type(Topic.class).id(assignment.topicId).safe();
+			Key<Score> k = Key.create(Key.create(User.class, userId),Score.class,assignment.id);
+			Score s = ofy().load().key(k).now();
+			if (s==null) s=Score.getInstance(userId,assignment);
 			if (!s.needsLisReporting()) return;  // everything is OK and the situation is resolved
 				
 			String msgBody = "<h3>ChemVantage LIS ReportScore Failure</h3>"
@@ -149,14 +190,13 @@ public class ReportScore extends HttpServlet {
 					+ errorMsg + "<p>"
 					+ "Details:<br>"
 					+ "UserId: " + userId + "<br>"
-					+ "AssignmentId: " + assignmentId + "<br>"
-					+ "Assignment: " + a.assignmentType + (t==null?"":" - " + t.title) + "<br>"
+					+ "AssignmentId: " + assignment.id + "<br>"
+					+ "Assignment: " + assignment.assignmentType + (t==null?"":" - " + t.title) + "<br>"
 					+ "Current score= " + s.getPctScore() + "% after " + s.numberOfAttempts + " attempts<br>"
-					+ "ChemVantage domain = " + u.domain + "<br>"
+					+ "ChemVantage domain = " + oauth_consumer_key + "<br>"
 					+ "Domain contact = " + c.email + "<p>"
 					+ "This message was generated automatically to make you aware of a potential problem with the connection to "
-					+ "your LMS. If you need help, please contact Chuck Wight (admin@chemvantage.org, +1-801-243-8242) for "
-					+ "assistance. Otherwise, to opt out of receiving these messages, reply with STOP.<p>"
+					+ "your LMS. If you need help, please contact Chuck Wight (admin@chemvantage.org) for assistance.<p>"
 					+ "Thank you,<p>"
 					+ "Chuck Wight<br>ChemVantage LLC";
 					

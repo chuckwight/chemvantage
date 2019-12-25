@@ -358,9 +358,7 @@ public class Quiz extends HttpServlet {
 				qa = ofy().load().type(Assignment.class).id(assignmentId).safe();
 				Score s = Score.getInstance(user.id,qa);
 				ofy().save().entity(s).now();
-				LTIMessage.postUserScore(s);  // LTIv1p3 grade reporting
-				// LTIv1p1 score reporting:
-				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(qa.id)).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
+				queue.add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(qa.id)).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
 			} catch (Exception e) {}
 
 			buf.append("<h4>Your score on this quiz is " + studentScore 
