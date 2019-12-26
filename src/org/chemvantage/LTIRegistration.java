@@ -183,25 +183,28 @@ public class LTIRegistration extends HttpServlet {
 
 	String applicationForm() {
 		StringBuffer buf = new StringBuffer(banner);
-		buf.append("<h4>ChemVantage LTI Registration</h4>"
-				+ "Please complete the form below. This information will help us to provide you with a "
-				+ "secure and convenient means to connect your learning management system (LMS) to ChemVantage. "
+		buf.append("ChemVantage is an Open Education Resource for teaching and learning college-level General "
+				+ "Chemistry. We offer this service at no charge for nonprofit educational purposes.");
+		buf.append("<h4>ChemVantage LTI Registration</h4>");
+		buf.append("Please complete the form below to obtain a free set of LTI credentials. The information you "
+				+ "provide will help us to create a convenient and secure connection between your learning "
+				+ "management system (LMS) and ChemVantage. "
 				+ "When you submit the form, you will receive an email containing the information you need to "
-				+ "complete the configuration of your LMS as well as a link to finalize the registration.<p>"
-				+ "ChemVantage is an Open Education Resource for teaching and learning college-level General "
-				+ "Chemistry. We offer this service at no charge for nonprofit educational purposes.<p>"
-				+ "<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>"				
-				+ "<form method=post action=/lti/registration>"
+				+ "complete the configuration of your LMS as well as a link to finalize the registration.<p>");
+		buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");				
+		buf.append("<form method=post action=/lti/registration>"
 				+ "Your Name: <input type=text name=sub>&nbsp;"
 				+ "and Email: <input type=text name=email><br>"
 				+ "Your Organization: <input type=text name=aud>&nbsp;"
 				+ "and Home Page: <input type=text name=url><br>"
-				+ "Initial use case:<br>"
+				+ "Select your initial use case:<br>"
 				+ "<label><input type=radio name=use value=test checked>Testing the LTI connection (development environment)</label><br>"
 				+ "<label><input type=radio name=use value=prod>Teaching a chemistry class (production environment)</label><p>"
 				+ "Type of LTI registration:<br>"
-				+ "<label><input type=radio name=ver value=1p1 checked>LTI version 1.1.2 (default)</label><br>"
-				+ "<label><input type=radio name=ver value=1p3>LTI Advantage (v1.3.0)</label><p>"
+				+ "<label><input type=radio name=ver value=1p1 checked>LTI version 1.1.2 "
+				+ "(<a href=https://site.imsglobal.org/membership/members/chemvantage/36981>IMS certified</a> and stable)</label><br>"
+				+ "<label><input type=radio name=ver value=1p3>LTI Advantage "
+				+ "(<a href=https://site.imsglobal.org/membership/members/chemvantage/36981>IMS certified</a>, but still clunky)</label><p>"
 				+ "Type of Learning Management System:<br>"
 				+ "<label><input type=radio name=lms value=blackboard>Blackboard</label><br>"
 				+ "<label><input type=radio name=lms value=brightspace>Brightspace</label><br>"

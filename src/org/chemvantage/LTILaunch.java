@@ -158,6 +158,7 @@ public class LTILaunch extends HttpServlet {
 			String relaunch_url = request.getParameter("relaunch_url");
 			String platform_state = request.getParameter("platform_state");
 			String tool_state = request.getParameter("tool_state");
+			boolean securityAlert = false; 
 			
 			if (tool_state != null && platform_state != null) { // This is a LTIv1.1.2 relaunch response. Validate the tool_state value
 				try {
@@ -183,6 +184,15 @@ public class LTILaunch extends HttpServlet {
 					throw new Exception("Tool state JWT could not be created.");
 				}
 			    return;  // wait for relaunch from platform
+			} else { // this is an basic LTIv1.1.1 launch not supported after Dec 31, 2010
+				Date jan2021 = new Date(1609477200000L);
+				Date now = new Date();
+				if (now.after(jan2021)) throw new Exception("Due to potential internet security flaws, the version of LTI "
+						+ "supported by your LMS was <a href=https://www.imsglobal.org/lti-security-announcement-and-deprecation-schedule-july-2019> "
+						+ "deprecated by IMS Global Learning Solutions</a> effective 1 January 2021. We are therefore unable "
+						+ "to support this connection until you upgrade to an LMS that supports, at a minimum, the LTI version "
+						+ "1.1.2 security update. We apologize for this inconvenience.");
+				else securityAlert=true;
 			}
 			// End of LTIv1p1p2 section. Continue with normal LTI launch sequence
 			
@@ -267,6 +277,7 @@ public class LTILaunch extends HttpServlet {
 				
 				if (myAssignment.assignmentType != null) {
 					redirectUrl = "/" + myAssignment.assignmentType + "?Token=" + user.token;
+					//if (securityAlert && user.isInstructor()) redirectUrl += "&SecurityAlert=true";
 					response.sendRedirect(redirectUrl);
 					return;
 				}

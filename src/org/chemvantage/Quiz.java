@@ -130,6 +130,11 @@ public class Quiz extends HttpServlet {
 					+ "Please DO NOT use this server for serious instruction.<br>See the <a href=/lti/registration>LTI registration page</a> if your need "
 					+ "access to the ChemVantage production server.</font><p>");
 			
+			if (Boolean.parseBoolean(request.getParameter("SecurityAlert"))) buf.append("<font color=red>Notice:<br>"
+					+ "Due to potential internet security flaws, this LTI connection cannot be supported "
+					+ "after December 31, 2020. Please ask your LMS administrator to upgrade to a version that "
+					+ "supports, at a minimum, LTI version 1.1.2</font><p>");
+			
 			if (user.isInstructor() && qa != null) {
 				buf.append("<table style='border: 1px solid black'><tr><td>");
 				buf.append("As the course instructor you may<ul>"
