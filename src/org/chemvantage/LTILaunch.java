@@ -158,7 +158,8 @@ public class LTILaunch extends HttpServlet {
 			String relaunch_url = request.getParameter("relaunch_url");
 			String platform_state = request.getParameter("platform_state");
 			String tool_state = request.getParameter("tool_state");
-			boolean securityAlert = false; 
+			boolean ltiv1p1p2 = false;
+			boolean securityAlert = false;
 			
 			if (tool_state != null && platform_state != null) { // This is a LTIv1.1.2 relaunch response. Validate the tool_state value
 				try {
@@ -169,7 +170,8 @@ public class LTILaunch extends HttpServlet {
 				        .build().verify(tool_state);
 				} catch (Exception e) {
 					throw new Exception("Tool state could not be validated.");
-				}			
+				}
+				ltiv1p1p2 = true;
 			} else if (relaunch_url != null && platform_state != null) {  // Anonymous LRTIv1p1p2 launch request. Execute relaunch sequence:
 				try {
 					Date expires = new Date(new Date().getTime() + 600000); // 10 minutes from now
@@ -185,14 +187,15 @@ public class LTILaunch extends HttpServlet {
 				}
 			    return;  // wait for relaunch from platform
 			} else { // this is an basic LTIv1.1.1 launch not supported after Dec 31, 2010
-				Date jan2021 = new Date(1609477200000L);
+				Date jan2021 = new Date(1609477200000L); // January 1, 2021
+				Date jul2020 = new Date(1593576000000L); // July 1, 2020
 				Date now = new Date();
 				if (now.after(jan2021)) throw new Exception("Due to potential internet security flaws, the version of LTI "
 						+ "supported by your LMS was <a href=https://www.imsglobal.org/lti-security-announcement-and-deprecation-schedule-july-2019> "
 						+ "deprecated by IMS Global Learning Solutions</a> effective 1 January 2021. We are therefore unable "
 						+ "to support this connection until you upgrade to an LMS that supports, at a minimum, the LTI version "
 						+ "1.1.2 security update. We apologize for this inconvenience.");
-				else securityAlert=true;
+				else if (now.after(jul2020)) securityAlert = true;
 			}
 			// End of LTIv1p1p2 section. Continue with normal LTI launch sequence
 			
@@ -221,6 +224,7 @@ public class LTILaunch extends HttpServlet {
 			Domain domain = ofy().load().type(Domain.class).filter("domainName",oauth_consumer_key).first().now();
 			if (domain==null) domain = new Domain(oauth_consumer_key);
 			domain.setLastLogin(new Date());
+			domain.ltiv1p1p2 = ltiv1p1p2;
 			
 			String lisOutcomeServiceURL = request.getParameter("lis_outcome_service_url");
 			if (lisOutcomeServiceURL!=null) {
@@ -231,7 +235,7 @@ public class LTILaunch extends HttpServlet {
 			
 			if (user.isAdministrator()) domain.addAdmin(user.id);
 			
-			ofy().save().entity(domain).now();
+			ofy().save().entity(domain);
 			//Domain info processed successfully
 			
 			// Process context (group) information
@@ -277,7 +281,7 @@ public class LTILaunch extends HttpServlet {
 				
 				if (myAssignment.assignmentType != null) {
 					redirectUrl = "/" + myAssignment.assignmentType + "?Token=" + user.token;
-					//if (securityAlert && user.isInstructor()) redirectUrl += "&SecurityAlert=true";
+					if (securityAlert && user.isInstructor()) redirectUrl += "&SecurityAlert=true";
 					response.sendRedirect(redirectUrl);
 					return;
 				}

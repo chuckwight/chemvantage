@@ -41,6 +41,7 @@ public class Domain {
 	int 	seatsAvailable;
 	double 	avgInterval = 10.; // Keep a 10-day running average of daily logins
 	boolean supportsResultService;
+	boolean ltiv1p1p2; // supports LTI version 1.1.2 security patch
 	String 	resultServiceEndpoint;
 	String 	resultServiceFormat;
 	List<String> capabilities = new ArrayList<String>();
