@@ -230,7 +230,7 @@ public class Edit extends HttpServlet {
 						+ "</FORM>");
 
 				Topic t = ofy().load().type(Topic.class).id(topicId).safe();
-				Query<Question> questions = ofy().load().type(Question.class).filter("topicId", t.id).filter("assignmentType",assignmentType).order("pointValue");
+				Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId", t.id).order("pointValue");
 				
 				buf.append("<h4>Current Questions</h4>");
 				
@@ -271,11 +271,11 @@ public class Edit extends HttpServlet {
 				int net = 0;
 				for (Topic t:topics) {
 					buf.append("<TR><TD>" + t.title + "</TD>");
-					int nq = ofy().load().type(Question.class).filter("topicId",t.id).filter("assignmentType","Quiz").count();
+					int nq = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",t.id).count();
 					nqt += nq; // running total
-					int nh = ofy().load().type(Question.class).filter("topicId",t.id).filter("assignmentType","Homework").count();
+					int nh = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",t.id).count();
 					nht += nh; // running total
-					int ne = ofy().load().type(Question.class).filter("topicId",t.id).filter("assignmentType","Exam").count();
+					int ne = ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",t.id).count();
 					net += ne; // running total
 					buf.append("<TD style='text-align:center'>" + nq + "</TD><TD style='text-align:center'>" + nh + "</TD><TD style='text-align:center'>" + ne + "</TD></TR>");
 				}

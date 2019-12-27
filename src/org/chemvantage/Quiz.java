@@ -171,7 +171,7 @@ public class Quiz extends HttpServlet {
 			try {  // check for assigned questions
 				questionKeys = qa.questionKeys;
 			} catch (Exception e) {  // no assignment exists
-				questionKeys = ofy().load().type(Question.class).filter("topicId", topicId).filter("assignmentType","Quiz").filter("isActive",true).keys().list();
+				questionKeys = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId", topicId).filter("isActive",true).keys().list();
 			}
 
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
@@ -531,7 +531,7 @@ public class Quiz extends HttpServlet {
 			buf.append("Topic: "+ t.title + "<br>");
 			buf.append("Valid: " + df.format(now) + "<p>");
 			
-			List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).filter("assignmentId",a.id).filter("userId",user.id).order("downloaded").list();
+			List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).filter("userId",user.id).filter("assignmentId",a.id).order("downloaded").list();
 			
 			if (qts.size()==0) {
 				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>"

@@ -1,4 +1,4 @@
-<!-- Indices written at Mon, 11 Apr 2016 11:36:23 MDT -->
+<!-- Indices written at Thur 26 Dec 2019 at 16:39 EST -->
 
 <datastore-indexes autoGenerate="true">
 
@@ -28,44 +28,39 @@
         <property name="context_id" direction="asc"/>
     </datastore-index>
 
-    <datastore-index kind="HWTransaction" ancestor="false" source="auto">
-        <property name="questionId" direction="asc"/>
-        <property name="topicId" direction="asc"/>
+     <datastore-index kind="HWTransaction" ancestor="false" source="auto">
         <property name="userId" direction="asc"/>
-        <property name="graded" direction="asc"/>
+        <property name="assignmentId" direction="asc"/>
     </datastore-index>
 
-    <datastore-index kind="HWTransaction" ancestor="false" source="auto">
-        <property name="questionId" direction="asc"/>
+     <datastore-index kind="HWTransaction" ancestor="false" source="auto">
         <property name="userId" direction="asc"/>
-        <property name="graded" direction="asc"/>
-    </datastore-index>
-
-    <datastore-index kind="HWTransaction" ancestor="false" source="auto">
-        <property name="questionId" direction="asc"/>
-        <property name="userId" direction="asc"/>
+        <property name="assignmentId" direction="asc"/>
+    	<property name="questionId" direction="asc"/>
         <property name="score" direction="asc"/>
     </datastore-index>
 
     <datastore-index kind="HWTransaction" ancestor="false" source="auto">
-        <property name="topicId" direction="asc"/>
         <property name="userId" direction="asc"/>
+        <property name="questionId" direction="asc"/>
+        <property name="score" direction="asc"/>
+    </datastore-index>
+
+    <datastore-index kind="HWTransaction" ancestor="false" source="auto">
+        <property name="userId" direction="asc"/>
+        <property name="assignmentId" direction="asc"/>
         <property name="graded" direction="asc"/>
     </datastore-index>
 
     <datastore-index kind="HWTransaction" ancestor="false" source="auto">
         <property name="userId" direction="asc"/>
         <property name="assignmentId" direction="asc"/>
-    </datastore-index>
+    	<property name="graded" direction="asc"/>
+   	</datastore-index>
 
     <datastore-index kind="PracticeExamTransaction" ancestor="false" source="auto">
-        <property name="graded" direction="asc"/>
-        <property name="downloaded" direction="asc"/>
-    </datastore-index>
-
-    <datastore-index kind="PracticeExamTransaction" ancestor="false" source="auto">
-        <property name="graded" direction="asc"/>
         <property name="userId" direction="asc"/>
+        <property name="graded" direction="asc"/>
         <property name="downloaded" direction="asc"/>
     </datastore-index>
 
@@ -77,43 +72,36 @@
     <datastore-index kind="Question" ancestor="false" source="auto">
         <property name="assignmentType" direction="asc"/>
         <property name="topicId" direction="asc"/>
-        <property name="pointValue" direction="asc"/>
+        <property name="isActive" direction="asc"/>
     </datastore-index>
 
-   <datastore-index kind="Question" ancestor="false" source="auto">
-        <property name="topicId" direction="asc"/>
+    <datastore-index kind="Question" ancestor="false" source="auto">
         <property name="assignmentType" direction="asc"/>
+        <property name="topicId" direction="asc"/>
         <property name="pointValue" direction="asc"/>
     </datastore-index>
 
    <datastore-index kind="QuizTransaction" ancestor="false" source="auto">
-        <property name="graded" direction="asc"/>
-        <property name="topicId" direction="asc"/>
+        <property name="userId" direction="asc"/>
+        <property name="assignmentId" direction="asc"/>
+    </datastore-index>
+
+   <datastore-index kind="QuizTransaction" ancestor="false" source="auto">
+        <property name="userId" direction="asc"/>
+        <property name="assignmentId" direction="asc"/>
         <property name="downloaded" direction="asc"/>
     </datastore-index>
 
     <datastore-index kind="QuizTransaction" ancestor="false" source="auto">
+        <property name="userId" direction="asc"/>
+        <property name="topicId" direction="asc"/>
         <property name="graded" direction="asc"/>
-        <property name="topicId" direction="asc"/>
-        <property name="userId" direction="asc"/>
         <property name="downloaded" direction="asc"/>
     </datastore-index>
 
-    <datastore-index kind="QuizTransaction" ancestor="false" source="auto">
-        <property name="topicId" direction="asc"/>
-        <property name="userId" direction="asc"/>
-        <property name="downloaded" direction="asc"/>
-    </datastore-index>
-
-     <datastore-index kind="QuizTransaction" ancestor="false" source="auto">
-        <property name="topicId" direction="asc"/>
-        <property name="userId" direction="asc"/>
-        <property name="score" direction="desc"/>
-    </datastore-index>
-
-      <datastore-index kind="QuizTransaction" ancestor="false" source="auto">
-        <property name="userId" direction="asc"/>
-        <property name="downloaded" direction="asc"/>
+    <datastore-index kind="Response" ancestor="false" source="auto">
+        <property name="questionId" direction="asc"/>
+        <property name="score" direction="asc"/>
     </datastore-index>
 
     <datastore-index kind="Response" ancestor="false" source="auto">
@@ -122,8 +110,8 @@
     </datastore-index>
 
     <datastore-index kind="Response" ancestor="false" source="auto">
+        <property name="userId" direction="asc"/>
         <property name="questionId" direction="asc"/>
-        <property name="score" direction="asc"/>
     </datastore-index>
 
 </datastore-indexes>

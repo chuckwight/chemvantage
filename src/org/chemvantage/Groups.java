@@ -231,9 +231,9 @@ public class Groups extends HttpServlet {
 			List<Key<Question>> questionKeys_15pt = new ArrayList<Key<Question>>();
 			
 			for (long tid : assignment.topicIds) {  // Sort and collect the question keys
-				questionKeys_02pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("pointValue",2).filter("topicId",tid).keys().list());
-				questionKeys_10pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("pointValue",10).filter("topicId",tid).keys().list());
-				questionKeys_15pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("pointValue",15).filter("topicId",tid).keys().list());
+				questionKeys_02pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",2).keys().list());
+				questionKeys_10pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",10).keys().list());
+				questionKeys_15pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",15).keys().list());
 			}
 			
 			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "

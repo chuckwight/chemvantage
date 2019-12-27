@@ -299,7 +299,7 @@ public class Homework extends HttpServlet {
 			else for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
 			
 			Date minutesAgo = new Date(now.getTime()-retryDelayMinutes*60000);  // about 2 minutes ago
-			List<HWTransaction> recentTransactions = ofy().load().type(HWTransaction.class).filter("questionId",q.id).filter("userId",user.id).filter("graded >",minutesAgo).list();
+			List<HWTransaction> recentTransactions = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).filter("graded >",minutesAgo).list();
 			long secondsRemaining = 0;
 			if (recentTransactions.size()>0) {  // may be more than one if multiple browser sessions are active for one user!
 				Date lastSubmission = new Date(0L);
@@ -572,7 +572,7 @@ public class Homework extends HttpServlet {
 			buf.append("Topic: "+ t.title + "<br>");
 			buf.append("Valid: " + df.format(now) + "<p>");
 			
-			List<HWTransaction> hwts = ofy().load().type(HWTransaction.class).filter("assignmentId",a.id).filter("userId",user.id).order("graded").list();
+			List<HWTransaction> hwts = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("assignmentId",a.id).order("graded").list();
 			
 			if (hwts.size()==0) {
 				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>");
