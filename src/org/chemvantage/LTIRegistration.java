@@ -145,9 +145,9 @@ public class LTIRegistration extends HttpServlet {
 						.withClaim("con", con)  // this is specific to LTI1.1 registrations
 						.sign(algorithm);
 				sendRegistrationEmail(token);
-				out.println(Home.header + banner + "<h3>Thank you. A registration email has been sent to your address.</h3>" + Home.footer);
+				out.println(Home.header + banner + "<h3>Registration Success</h3>Thank you. A registration email has been sent to your address.<p>" + Home.footer);
 			} catch (Exception e) {
-				out.println(Home.header + "Registration failure: " + e.getMessage() + "<br>" + Home.footer);
+				out.println(Home.header + banner + "<h3>Registration Failure</h3>" + e.getMessage() + "<p>" + Home.footer);
 			}
 		} else if ("finalize".contentEquals(userRequest)) {
 			try {
@@ -182,13 +182,14 @@ public class LTIRegistration extends HttpServlet {
 	}	
 
 	String applicationForm() {
-		StringBuffer buf = new StringBuffer(banner);
+		StringBuffer buf = new StringBuffer(banner + "<p>");
 		buf.append("ChemVantage is an Open Education Resource for teaching and learning college-level General "
 				+ "Chemistry. We offer this service at no charge for nonprofit educational purposes.");
 		buf.append("<h4>ChemVantage LTI Registration</h4>");
 		buf.append("Please complete the form below to obtain a free set of LTI credentials. The information you "
-				+ "provide will help us to create a convenient and secure connection between your learning "
-				+ "management system (LMS) and ChemVantage. "
+				+ "provide will help us to create a connection between your learning management system (LMS) and "
+				+ "ChemVantage that is convenient, secure and "
+				+ "<a href=https://site.imsglobal.org/certifications?query=chemvantage>certified by IMS</a>. "
 				+ "When you submit the form, you will receive an email containing the information you need to "
 				+ "complete the configuration of your LMS as well as a link to finalize the registration.<p>");
 		buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");				
@@ -201,10 +202,8 @@ public class LTIRegistration extends HttpServlet {
 				+ "<label><input type=radio name=use value=test checked>Testing the LTI connection (development environment)</label><br>"
 				+ "<label><input type=radio name=use value=prod>Teaching a chemistry class (production environment)</label><p>"
 				+ "Type of LTI registration:<br>"
-				+ "<label><input type=radio name=ver value=1p1 checked>LTI version 1.1.2 "
-				+ "(<a href=https://site.imsglobal.org/membership/members/chemvantage/36981>IMS certified</a> and stable)</label><br>"
-				+ "<label><input type=radio name=ver value=1p3>LTI Advantage "
-				+ "(<a href=https://site.imsglobal.org/membership/members/chemvantage/36981>IMS certified</a>, but still clunky)</label><p>"
+				+ "<label><input type=radio name=ver value=1p1 checked>LTI version 1.1.2 (preferred)</label><br>"
+				+ "<label><input type=radio name=ver value=1p3>LTI Advantage (certified but still clunky)</label><p>"
 				+ "Type of Learning Management System:<br>"
 				+ "<label><input type=radio name=lms value=blackboard>Blackboard</label><br>"
 				+ "<label><input type=radio name=lms value=brightspace>Brightspace</label><br>"
