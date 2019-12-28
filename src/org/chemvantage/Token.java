@@ -4,6 +4,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.util.Date;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -13,7 +14,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
-import com.googlecode.objectify.Key;
+import com.googlecode.objectify.Key;;
 
 @WebServlet("/auth/token")
 public class Token extends HttpServlet {
@@ -49,7 +50,7 @@ public class Token extends HttpServlet {
 			String client_id = request.getParameter("client_id");
 			debug.append("client_id: " + client_id + "<br>");
 			
-			Deployment d = getDeployment(platform_id,deployment_id);
+			Deployment d = getDeployment(platform_id,deployment_id,client_id);
 			
 			String redirect_uri = target_link_uri;
 			
@@ -98,25 +99,40 @@ public class Token extends HttpServlet {
 		}
 	}
 
-	private Deployment getDeployment(String platform_id,String deployment_id) throws Exception {
-		// This method should only be used to issue an auth token because it is overly permissive:
-		// The method returns the first Deployment entity in the database matching the platform_id
-		// and returns the corresponding client_id value to the consumer, per OAuth 2.0 specs. This
-		// means that an auth token may be issued even if a deployment instance is not registered.
-		// However, the error will be caught during the LTIRourceLink launch process, which requires
-		// that the deployment_id be sent in the id_token.
+	private Deployment getDeployment(String platform_id,String deployment_id, String client_id) throws Exception {
+		// This method attempts to identify a unique registered Deployment entity based on the required
+		// platform_id value and the optional lti_deployment_id and client_id values. The latter should 
+		// be used in case the platform supports multiple deployments with different client_id values for the tool.
+		// However, this is not technically required by the specifications. Hmm.
+		
 		if (deployment_id==null) deployment_id = "";  // may be empty String for 1-deployment platforms
 		if (!platform_id.startsWith("http")) platform_id = "https://" + platform_id; // make it into a URL
 		String platform_deployment_id = platform_id + "/" + deployment_id;
-		try {  // normally, the deployment should be registered under a platform_id and deployment_id
-			Deployment d = ofy().load().type(Deployment.class).id(platform_deployment_id).safe();
-			return d;
-		} catch (Exception e) {  // in case the deployment_id is not sent, send token if the platform exists
-			Key<Deployment> k = Key.create(Deployment.class, platform_deployment_id);
-			Deployment dummy = ofy().load().type(Deployment.class).filterKey(">", k).first().now();
-			if (dummy.platform_deployment_id.startsWith(platform_deployment_id)) return dummy; // platform is registered with a different deployment_id
+		
+		// Optimistic route first:
+		Deployment d = ofy().load().type(Deployment.class).id(platform_deployment_id).now();
+		if (d != null) return d;
+	
+		// OK, that didn't work; try a range of Deployments all with the matching platform_id
+		Key<Deployment> kstart = Key.create(Deployment.class, platform_id);
+		Key<Deployment> kend = Key.create(Deployment.class, platform_id + "~");			
+		
+		if (client_id != null) { // try matching the client_id to any Deployment with matching platform_id
+			d = ofy().load().type(Deployment.class).filterKey(">",kstart).filterKey("<",kend).filter("client_id",client_id).first().now();
+			if (d != null) return d;		
+		} else {  // check to see if there is only one Deployment with this platform_id
+			List<Deployment> d_list = ofy().load().type(Deployment.class).filterKey(">",kstart).filterKey("<",kend).list();
+			if (d_list.size()==0) throw new Exception("This platform is not a registered entity in ChemVantage.");
+			if (d_list.size()==1) return d_list.get(0); // success
+			else { // check to see if multiple deployments all have the same client_id value
+				client_id = d_list.get(0).client_id;
+				for (int i=1;i<d_list.size();i++) if (!d_list.get(i).client_id.contentEquals(client_id)) throw new Exception("Unable to identify Deployment due to multiple security contracts in this platform.");
+				return d_list.get(0);
+			}
 		}
-		throw new Exception("This LMS platform is not registered with ChemVantage.");
+		
+		// At this point the Deployment does not exist in the datastore
+		throw new Exception("ChemVantage was unable to identify this platform as a registered entity, sorry.");
 	}
 	
 
