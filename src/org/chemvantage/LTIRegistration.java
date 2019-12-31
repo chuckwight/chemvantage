@@ -250,7 +250,6 @@ public class LTIRegistration extends HttpServlet {
 					ofy().save().entity(con).now();
 				}
 				
-				buf.append("<h2>ChemVantage Registration</h2>");
 				buf.append("Here are your LTI registration credentials:<p>"
 						+ "Launch URL: " + jwt.getIssuer() + "/lti<br>"
 						+ "Consumer Key: " + con.oauth_consumer_key + "<br>"
@@ -316,11 +315,18 @@ public class LTIRegistration extends HttpServlet {
 		DecodedJWT jwt = validateToken(token);
 		String name = jwt.getSubject();
 		String email = jwt.getClaim("email").asString();
+		String org = jwt.getAudience().get(0);
+		String url = jwt.getClaim("url").asString();
 		String iss = jwt.getIssuer();
 		String lms = jwt.getClaim("lms").asString();
 		String ver = jwt.getClaim("ver").asString();
 		
 		StringBuffer buf = new StringBuffer();
+		
+		buf.append("<h2>ChemVantage Registration</h2>");
+		buf.append("Name: " + name + " (" + email + ")<br>"
+				+ "Org: " + org + " (" + url + ")<br>"
+				+ "LMS: " + lms + "<p>");
 		
 		if (ver.contentEquals("1p1")) { // older LTIv1p1 registration process; deprecated 12/31/2020
 			buf.append("Thank you for your ChemVantage registration request. Click the link below "
