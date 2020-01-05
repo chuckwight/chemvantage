@@ -602,11 +602,11 @@ public class Homework extends HttpServlet {
 						} catch (Exception e) {
 						}
 					}
-					else if (g.isUsingLisOutcomeService && s.lis_result_sourcedid != null) { // LTI version 1p1
+					else if (a.lis_outcome_service_url != null && s.lis_result_sourcedid != null) { // LTI version 1p1
 						String messageFormat = g.getLisOutcomeFormat();
 						String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
 						String oauth_consumer_key = g.domain;
-						String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
+						String replyBody = new LTIMessage(messageFormat,body,a.lis_outcome_service_url,oauth_consumer_key).send();
 
 						if (replyBody.contains("success")) {
 							int beginIndex = replyBody.indexOf("<textString>") + 12;
@@ -754,7 +754,7 @@ public class Homework extends HttpServlet {
 								String messageFormat = g.getLisOutcomeFormat();
 								String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
 								String oauth_consumer_key = g.domain;
-								String replyBody = new LTIMessage(messageFormat,body,g.lis_outcome_service_url,oauth_consumer_key).send();
+								String replyBody = new LTIMessage(messageFormat,body,a.lis_outcome_service_url,oauth_consumer_key).send();
 
 								if (replyBody.contains("success")) {  // the lis_result_sourcedid is valid, so post the stale score
 									Queue queue = QueueFactory.getDefaultQueue();  // default task queue
@@ -779,7 +779,7 @@ public class Homework extends HttpServlet {
 					buf.append("The most recent attempt of this assignment was on " + df.format(mostRecent) + ".<p>");
 				} else buf.append("<br>");
 
-				if (!g.isUsingLisOutcomeService) buf.append("Your LMS is not configured for ChemVantage to report scores to the LMS grade book.<p>");
+				if (a.lis_outcome_service_url==null) buf.append("Your LMS is not configured for ChemVantage to report scores to the LMS grade book.<p>");
 				else if (scoresNotReported>0) {
 					buf.append("It appears that " + scoresNotReported + (scoresNotReported==1?" score":" scores") + " may not have been reported to your LMS correctly. "
 							+ "We have automatically initiated a programmed task to correct this. "

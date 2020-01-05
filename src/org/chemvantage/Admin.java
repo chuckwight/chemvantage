@@ -21,7 +21,6 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.HttpConstraint;
@@ -154,7 +153,7 @@ public class Admin extends HttpServlet {
 				buf.append("\n</TABLE>");
 				if (nResults==this.queryLimit) buf.append("<a href=/Admin?UserRequest=Search+for+users&SearchString=" + searchString + "&Cursor=" + iterator.getCursorAfter().toUrlSafe() + "><FONT SIZE=-1>show more users</FONT></a>"); 
 			} else buf.append("<FONT SIZE=-1>There are currently " + nUsers + " active ChemVantage accounts.</FONT><p>");
-			
+/*			
 			// This section provides information about domains
 			buf.append("<h3>Most Active ChemVantage Domains</h3>");
 			List<Domain> domains = ofy().load().type(Domain.class).order("-dailyLoginsAvg").limit(10).list();
@@ -181,7 +180,7 @@ public class Admin extends HttpServlet {
 				}
 				buf.append("</table>");
 			} else buf.append("No domains are currently active.");
-
+*/
 			buf.append("<h3>Basic LTI Consumer</h3>");
 			int nConsumers = ofy().load().type(BLTIConsumer.class).count();
 			String defKey = "Search for Consumer".equals(userRequest) && (searchString!=null&&!searchString.isEmpty())?searchString:"(show all)";

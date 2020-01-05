@@ -229,12 +229,12 @@ public class LTIv1p3Launch extends HttpServlet {
 			
 			// If none of that worked, then the assignment probably doesn't exist, so make a new one:
 			if (myAssignment == null) {
-				myAssignment = new Assignment(myGroup.id,platformDeploymentId,resourceLinkId);
+				myAssignment = new Assignment(myGroup.id,platformDeploymentId,resourceLinkId,null);
 				saveAssignment = true;	
 			}
 			
 			// Make sure that this assignment is associated with myGroup
-			if (myAssignment.groupId == 0L) {
+			if (myAssignment.groupId != myGroup.id) {
 				myAssignment.groupId = myGroup.id;
 				saveAssignment = true;
 			}

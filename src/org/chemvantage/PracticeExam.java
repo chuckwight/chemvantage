@@ -453,8 +453,11 @@ public class PracticeExam extends HttpServlet {
 				Queue queue = QueueFactory.getDefaultQueue();  // used for computing Score objects offline by Task queue
 				Score s = Score.getInstance(user.id,a);
 				ofy().save().entity(s).now();
-				LTIMessage.postUserScore(s);
-				if (s.needsLisReporting()) queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
+				if (a.lti_ags_lineitem_url != null) { // LTI v1.3
+					LTIMessage.postUserScore(s);
+				} else if (a.lis_outcome_service_url != null) { // LTI v1.1 put report into the Task Queue
+					queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  
+				}
 			} catch (Exception e) {}
 
 			int score = 0;

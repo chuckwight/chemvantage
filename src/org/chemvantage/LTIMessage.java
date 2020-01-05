@@ -179,7 +179,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		+ "</imsx_POXEnvelopeRequest>";
 	}
 
-	static String xmlReplaceResult(String lis_result_sourcedid, String score) {		
+	static String xmlReplaceResult(String lis_result_sourcedid, String score) {	
+		//lis_result_sourcedid = lis_result_sourcedid.replaceAll("\"", "\\\"");
 		return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
 		+ "<imsx_POXEnvelopeRequest xmlns = \"http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0\">"
 		+ "<imsx_POXHeader>"

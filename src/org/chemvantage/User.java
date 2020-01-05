@@ -199,7 +199,7 @@ public class User {
 	public String getIdHash() {
 		return Hashing.sha256().hashString(this.id, StandardCharsets.UTF_8).toString().substring(0,15);
 	}
-
+/*
 	void setDomain(String d) {
 		this.domain = null;
 		try {
@@ -210,7 +210,7 @@ public class User {
 		}catch (Exception e) {
 		}
 	}
-
+*/
 	public void setLastLogin() {
 		this.lastLogin = new Date();
 	}

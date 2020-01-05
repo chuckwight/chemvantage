@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.Properties;
 
 import javax.mail.Message;
@@ -78,6 +79,7 @@ public class ReportScore extends HttpServlet {
 		Group group = null;
 		String oauth_consumer_key = null;
 		try {
+			
 			Key<Score> k = Key.create(Key.create(User.class, userId),Score.class,a.id);
 			Score s = ofy().load().key(k).now();
 			if (s == null || !s.needsLisReporting()) return;
@@ -92,6 +94,33 @@ public class ReportScore extends HttpServlet {
 			String messageFormat = group.getLisOutcomeFormat();
 			String body = LTIMessage.xmlReplaceResult(s.lis_result_sourcedid,String.valueOf(score));
 			String replyBody = new LTIMessage(messageFormat,body,group.lis_outcome_service_url,oauth_consumer_key).send();
+/*===== temporary logging for data collection
+			try {
+				final Logger logger = Logger.getLogger(ReportScore.class.getName());
+				if (!replyBody.toLowerCase().contains("success")) {
+					logger.log(Level.SEVERE, "ReportScore failed with response: " + replyBody);
+				} else logger.log(Level.INFO, "ReportScore succeeded for user: " + userId);
+			} catch (Exception e) {}
+//===== */
+			try {
+				// Send an email to the administrator
+				Properties props = new Properties();
+				Session session = Session.getDefaultInstance(props, null);
+
+				String msgBody = "ReportScore " + (replyBody.contains("success")?"success.":"failure.") + "<p>"
+						+ "XML file submitted:<br>" + body + "<p>"
+						+ "Reply received from LMS:<br>" + replyBody;
+
+				Message msg = new MimeMessage(session);
+				msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
+				msg.addRecipient(Message.RecipientType.TO,
+						new InternetAddress("admin@chemvantage.org", "ChemVantage"));
+				msg.setSubject("ChemVantage ReportScore " + (replyBody.contains("success")?"Success":"Failure"));
+				msg.setContent(msgBody,"text/xml");
+				Transport.send(msg);
+			} catch (Exception e) {
+			}
+//====== END OF TEMPORARY SECTION
 
 			if (replyBody.toLowerCase().contains("success")) {
 				s.lisReportComplete = true;
@@ -99,7 +128,7 @@ public class ReportScore extends HttpServlet {
 			} else if (attempts < 10){
 				long countdownMillis = (long) Math.pow(2,attempts)*60000;
 				Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
-				queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",userId).param("Retry",Integer.toString(attempts)).countdownMillis(countdownMillis));			
+				queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",URLEncoder.encode(userId, "UTF-8")).param("Retry",Integer.toString(attempts)).countdownMillis(countdownMillis));			
 			} else throw new Exception("User " + userId + " earned a score of " + s.getPctScore() + "% on assignment "
 					+ a.id + "; however, the score could not be posted to the LMS grade book, even after " + attempts + " attempts.");
 		} catch (Exception e) {

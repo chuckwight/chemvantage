@@ -35,6 +35,7 @@ public class Assignment {
 	@Index	String assignmentType;
 	@Index	long topicId;
 	@Index	String resourceLinkId;
+			String lis_outcome_service_url;
 			String lti_ags_lineitem_url;
 			List<Long> topicIds; // used for practice exams which have multiple topicIds
 			List<String> resourceLinkIds = new ArrayList<String>();  // deprecated
@@ -42,10 +43,11 @@ public class Assignment {
 
 	Assignment() {}
 
-	Assignment(long groupId,String platformDeploymentId,String resourceLinkId) {  // specific to Quiz and Homework assignments with a single topicId
+	Assignment(long groupId,String platformDeploymentId,String resourceLinkId,String lisOutcomeServiceUrl) {  // specific to Quiz and Homework assignments with a single topicId
 		this.groupId = groupId;
 		this.domain = platformDeploymentId;
 		this.resourceLinkId = resourceLinkId;
+		this.lis_outcome_service_url = lisOutcomeServiceUrl;
 	}
 
 	Assignment(String assignmentType, long topicId, List<Long> topicIds, String platform_deployment_id, long groupId) {

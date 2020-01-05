@@ -158,7 +158,6 @@ public class LTILaunch extends HttpServlet {
 			String relaunch_url = request.getParameter("relaunch_url");
 			String platform_state = request.getParameter("platform_state");
 			String tool_state = request.getParameter("tool_state");
-			boolean ltiv1p1p2 = false;
 			boolean securityAlert = false;
 			
 			if (tool_state != null && platform_state != null) { // This is a LTIv1.1.2 relaunch response. Validate the tool_state value
@@ -171,7 +170,6 @@ public class LTILaunch extends HttpServlet {
 				} catch (Exception e) {
 					throw new Exception("Tool state could not be validated.");
 				}
-				ltiv1p1p2 = true;
 			} else if (relaunch_url != null && platform_state != null) {  // Anonymous LRTIv1p1p2 launch request. Execute relaunch sequence:
 				try {
 					Date expires = new Date(new Date().getTime() + 600000); // 10 minutes from now
@@ -219,7 +217,7 @@ public class LTILaunch extends HttpServlet {
 				user.setIsTeachingAssistant(roles.contains("teachingassistant"));
 			}
 			// user information OK; save user after processing context info
-			
+/*			
 			// Create the domain if it doesn't already exist
 			Domain domain = ofy().load().type(Domain.class).filter("domainName",oauth_consumer_key).first().now();
 			if (domain==null) domain = new Domain(oauth_consumer_key);
@@ -237,7 +235,7 @@ public class LTILaunch extends HttpServlet {
 			
 			ofy().save().entity(domain);
 			//Domain info processed successfully
-			
+*/			
 			// Process context (group) information
 			String context_id = request.getParameter("context_id");
 			String context_title = request.getParameter("context_title");
@@ -252,17 +250,18 @@ public class LTILaunch extends HttpServlet {
 			Group myGroup = ofy().load().type(Group.class).filter("domain",oauth_consumer_key).filter("context_id",context_id).first().now();
 			if (myGroup == null) { // create a new group
 				String instructorId = user.isInstructor()?user.id:"unknown";
-				myGroup = new Group(domain.domainName,context_id,context_title,instructorId);
+				myGroup = new Group(oauth_consumer_key,context_id,context_title,instructorId);
 			}
 			
 			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
+/*
 			// update the LIS result outcome service URL, if necessary
 			if (domain.supportsResultService && domain.resultServiceEndpoint!=null && !domain.resultServiceEndpoint.equals(myGroup.lis_outcome_service_url)) {  // update the URL and format as Group properties
 				myGroup.lis_outcome_service_url=domain.resultServiceEndpoint;
 				myGroup.lis_outcome_service_format = domain.resultServiceFormat;
 				myGroup.isUsingLisOutcomeService = true;
 			}							
-			
+*/			
 			if (user.isInstructor()) myGroup.instructorId = user.id;
 			myGroup.addMember(user.id);
 			ofy().save().entity(myGroup).now();
@@ -274,11 +273,15 @@ public class LTILaunch extends HttpServlet {
 			// Use the resourceLinkId to find the assignment or create a new one:
 			Assignment myAssignment = null;
 			String redirectUrl;
+			String lisOutcomeServiceUrl = request.getParameter("lis_outcome_service_url");
 			
 			try {  // load the requested Assignment entity if it exists
-				myAssignment = ofy().load().type(Assignment.class).filter("domain",domain.domainName).filter("resourceLinkId", resource_link_id).first().safe();
+				myAssignment = ofy().load().type(Assignment.class).filter("domain",oauth_consumer_key).filter("resourceLinkId", resource_link_id).first().safe();
 				user.setToken(myAssignment.id,lis_result_sourcedid);
-				
+				if (lisOutcomeServiceUrl != null && !lisOutcomeServiceUrl.equals(myAssignment.lis_outcome_service_url)) {
+					myAssignment.lis_outcome_service_url = lisOutcomeServiceUrl;
+					ofy().save().entity(myAssignment);
+				}
 				if (myAssignment.assignmentType != null) {
 					redirectUrl = "/" + myAssignment.assignmentType + "?Token=" + user.token;
 					if (securityAlert && user.isInstructor()) redirectUrl += "&SecurityAlert=true";
@@ -286,7 +289,7 @@ public class LTILaunch extends HttpServlet {
 					return;
 				}
 			} catch (Exception e) {  // or create a new one with the available information (but no assignmentType or topicIds)
-				myAssignment = new Assignment(myGroup.id,domain.domainName,resource_link_id);
+				myAssignment = new Assignment(myGroup.id,oauth_consumer_key,resource_link_id,lisOutcomeServiceUrl);
 				ofy().save().entity(myAssignment).now(); // we'll need to load this in a second from the pickResource form
 				user.setToken(myAssignment.id,lis_result_sourcedid);
 			}

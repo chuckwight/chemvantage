@@ -17,19 +17,13 @@
 
 package org.chemvantage;
 
-import static com.googlecode.objectify.ObjectifyService.ofy;
-
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
-import com.googlecode.objectify.annotation.Index;
 
 @Entity
 public class Domain {
 	@Id 	Long id;
+/*
 	@Index	String domainName;
 	@Index 	double dailyLoginsAvg; 
 	Date 	lastLogin;
@@ -46,9 +40,9 @@ public class Domain {
 	String 	resultServiceFormat;
 	List<String> capabilities = new ArrayList<String>();
 	List<String> domainAdmins = new ArrayList<String>();
-			
+*/			
 	Domain() {}
-	
+/*	
 	Domain(String hd) {
 		this.domainName = hd;
 		this.created = new Date();
@@ -132,4 +126,5 @@ public class Domain {
 		double interval = (double)(now.getTime() - lastLogin.getTime())/86400000.; // days since last login
 		return Math.round(1000*this.dailyLoginsAvg*Math.exp(-interval/avgInterval))/1000.;
 	}
+*/
 }
