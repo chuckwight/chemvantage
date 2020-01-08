@@ -265,6 +265,7 @@ public class LTIRegistration extends HttpServlet {
 						+ "LTI v1.1.2 for this connection to work after December 31, 2020."
 						+ "</ol>");
 				buf.append("If you need assistance for this registration, please contact me at admin@chemvantage.org<p>- Chuck Wight");
+			
 			} else {  // LTIAdvantage (version 1.3.0) registration request
 				buf.append("<h4>To the LMS Administrator:</h4>"
 						+ "By now you should have configured your LMS to connect with ChemVantage, and you should have "
@@ -368,7 +369,14 @@ public class LTIRegistration extends HttpServlet {
 				buf.append("You are using the cloud-based Instructure Canvas LMS, so you will need to configure "
 						+ "the developer key using the following configuration JSON URL:<br>" 
 						+ iss + "/lti/registration?UserRequest=config&iss=" + iss + "<p>");
-			} 
+			} else if ("moodle".contentEquals(lms)) {
+				buf.append("Please note: Several Moodle users have experienced difficulty getting "
+						+ "scores returned to the Moodle grade book using LTI. We believe that this is due to the Moodle server being "
+						+ "configured in a way that refuses this type of LTI connection. You can rectify the situation by adding the "
+						+ "following rewrite rule into the .htaccess file on the Moodle server:<br>"
+						+ "RewriteCond %{HTTP:Authorization} ^(.+)" 
+						+ "RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]<p>");
+				}			 
 			buf.append("When you have finished the configuration, " + ("canvas".equals(lms)?"Canvas ":"your LMS ") 
 					+ "should generate a client_id value to identify the ChemVantage tool. "
 					+ ("canvas".equals(lms)?"Canvas also calls this the developer key. ":"")

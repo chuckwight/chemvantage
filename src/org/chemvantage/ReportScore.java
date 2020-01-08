@@ -21,8 +21,10 @@ import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.util.List;
 import java.util.Properties;
 
 import javax.mail.Message;
@@ -52,13 +54,28 @@ public class ReportScore extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
-		doPost(request,response);
+		if (request.getParameter("AssignmentId") == null || request.getParameter("UserId") == null) {
+			PrintWriter out = response.getWriter();
+			response.setContentType("text/html");
+			out.println(Home.header + "<h3>Unreported Scores</h3>");
+			out.println("For each of the scores below, click the link to report it manually.<p>");
+			List<Score> scores = ofy().load().type(Score.class).list();   //.filter("lisReportComplete",false).list();
+			for (Score s : scores) {
+				String userId = s.owner.getName();
+				String url = "/ReportScore?UserId=" + userId + "&AssignmentId=" + s.assignmentId;
+				out.println(s.lisReportComplete?"Report is complete. ":"Submit report: ");
+				out.println("<a href=" + url + ">" + url + "</a><br>");
+			}
+			if (scores.size()==0) out.println("None. All scores are up to date.");
+			out.println(Home.footer);
+		} else 	doPost(request,response);	
 	}
 	
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
-
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
 		try {  // post single user score
 			String userId = URLDecoder.decode(request.getParameter("UserId"),"UTF-8");
 			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
@@ -70,20 +87,24 @@ public class ReportScore extends HttpServlet {
 
 			if (a.lti_ags_lineitem_url != null) {  // use LTIAdvantage reporting specs
 				postUserScore(userId,a,attempts);
-			} else postUserScore(userId,a,attempts,"");  // use LTI v1.1 specs
-		} catch (Exception e) {}
+			} else out.println(postUserScore(userId,a,attempts,""));  // use LTI v1.1 specs
+		} catch (Exception e) {
+			out.println(e.getMessage());
+		}
 
 	}
 	
-	void postUserScore(String userId,Assignment a,int attempts,String dummy) { // LTIv1.1 only
+	String postUserScore(String userId,Assignment a,int attempts,String dummy) { // LTIv1.1 only
 		Group group = null;
 		String oauth_consumer_key = null;
+		StringBuffer buf = new StringBuffer();
 		try {
 			
 			Key<Score> k = Key.create(Key.create(User.class, userId),Score.class,a.id);
 			Score s = ofy().load().key(k).now();
-			if (s == null || !s.needsLisReporting()) return;
-
+			if (s == null || !s.needsLisReporting()) return "Score does not need to be reported";
+			buf.append("LisResultSourcedId:<br>" + s.lis_result_sourcedid + "<p>");
+			
 			// compute a scaled score in the range 0.0-1.0 for LIS services specification
 			double score = (double)s.score / (double)s.maxPossibleScore;
 			if (score < 0.0 || score > 1.0) throw new Exception();
@@ -93,8 +114,11 @@ public class ReportScore extends HttpServlet {
 
 			String messageFormat = group.getLisOutcomeFormat();
 			String body = LTIMessage.xmlReplaceResult(s.lis_result_sourcedid,String.valueOf(score));
+			buf.append("XML file:<br><pre>" + body + "</pre><p>");
 			String replyBody = new LTIMessage(messageFormat,body,group.lis_outcome_service_url,oauth_consumer_key).send();
-/*===== temporary logging for data collection
+			buf.append("LMS Replied:<br>" + replyBody);
+
+			/*===== temporary logging for data collection
 			try {
 				final Logger logger = Logger.getLogger(ReportScore.class.getName());
 				if (!replyBody.toLowerCase().contains("success")) {
@@ -134,6 +158,7 @@ public class ReportScore extends HttpServlet {
 		} catch (Exception e) {
 			sendEmailToDomainAdmin(userId,a,oauth_consumer_key,e.getMessage());
 		}
+		return buf.toString();
 	}
 	
 	void postUserScore(String userId,Assignment a,int attempts) {

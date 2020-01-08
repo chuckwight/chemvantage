@@ -34,7 +34,7 @@ public class Score {    // this object represents a best score achieved by a use
 	@Id 	Long assignmentId;      // from the datastore.
 	@Parent Key<User> owner;
 	@Index	long groupId;
-			boolean lisReportComplete;
+	@Index	boolean lisReportComplete;
 			int score;
 			int maxPossibleScore;
 			int numberOfAttempts;
@@ -113,9 +113,10 @@ public class Score {    // this object represents a best score achieved by a use
 	
 	public boolean needsLisReporting() {
 		try {
-			Group g = ofy().load().type(Group.class).id(this.groupId).safe();
-			if (g.isUsingLisOutcomeService && lis_result_sourcedid!=null && !lisReportComplete) return true;
+			Assignment a = ofy().load().type(Assignment.class).id(this.assignmentId).safe();
+			if ((a.lis_outcome_service_url != null || a.lti_ags_lineitem_url != null) && !lisReportComplete) return true;
 		} catch (Exception e) {
+			ofy().delete().entity(this);
 		}
 		return false;
 	}
