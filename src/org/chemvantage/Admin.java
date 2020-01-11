@@ -221,7 +221,7 @@ public class Admin extends HttpServlet {
 		return buf.toString();
 	}
 
-
+/*
 	String groupSelectBox(long myGroupId) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -237,7 +237,7 @@ public class Admin extends HttpServlet {
 		}
 		return buf.toString();
 	}
-
+*/
 	
 	String BLTIConsumerForm() {
 		StringBuffer buf = new StringBuffer();

@@ -112,13 +112,6 @@ public class LTIDeepLinks extends HttpServlet {
 			if (!authorized) throw new Exception("You must be logged into your LMS in an instructor "
 					+ "or administrator role in order to select assignment resources for this class.");
 
-			long groupId = 0L; // Try to determine the groupId for this request
-			try {
-				Map<String,Object> context = id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/context").asMap();			
-				String context_id = platform_id + "/" + context.get("id").toString();
-				groupId = ofy().load().type(Group.class).filter("context_id",context_id).first().safe().id;
-			} catch (Exception e2) {}
-		
 			buf.append("<TABLE><TR><TD VALIGN=TOP><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
 					+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
 					+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>");
@@ -153,7 +146,6 @@ public class LTIDeepLinks extends HttpServlet {
 					+ "<input type=hidden name=DeploymentId value='" + deployment_id + "'>"
 					+ "<input type=hidden name=Subject value='" + subject + "'>"
 					+ "<input type=hidden name=state value=" + state + ">"
-					+ "<input type=hidden name=GroupId value=" + groupId + ">"
 					+ "<input type=hidden name=deep_link_return_url value=" + deep_link_return_url + ">"
 					+ "<input type=hidden name=UserRequest value='Select assignment'>"
 					+ (data==null?"":"<input type=hidden name=data value='" + data + "'>"));
@@ -217,9 +209,6 @@ public class LTIDeepLinks extends HttpServlet {
 			String data = request.getParameter("data");
 			Deployment d = Deployment.getInstance(platform_id + "/" + deployment_id);
 			
-			// Determine the groupId for this assignment selection; it MIGHT be 0 if no previous LtiResourceLink launch has been made
-			long groupId = Long.parseLong(request.getParameter("GroupId"));
-			
 			// Determine the assignmentType for this selection
 			String assignmentType = request.getParameter("AssignmentType");
 			if (assignmentType == null || assignmentType.isEmpty()) throw new Exception("Assignment type is missing.");
@@ -247,7 +236,7 @@ public class LTIDeepLinks extends HttpServlet {
 			title = title.substring(0, title.length()-1);  // strip off the last comma
 			
 			// Create the new Assignment entity and load the questionKeys
-			Assignment assignment = new Assignment(assignmentType,topicId,topicIds,d.platform_deployment_id,groupId);
+			Assignment assignment = new Assignment(assignmentType,topicId,topicIds,d.platform_deployment_id);
 			if (assignment.topicId>0) { // Load the quiz or homework questionKeys
 				assignment.questionKeys = ofy().load().type(Question.class).filter("assignmentType",assignment.assignmentType).filter("topicId",assignment.topicId).keys().list();
 			} else if (assignment.topicIds.size()>2) { // Load the practice exam questionKeys for each topic

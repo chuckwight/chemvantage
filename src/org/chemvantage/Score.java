@@ -33,7 +33,7 @@ import com.googlecode.objectify.annotation.Parent;
 public class Score {    // this object represents a best score achieved by a user on a quiz or homework
 	@Id 	Long assignmentId;      // from the datastore.
 	@Parent Key<User> owner;
-	@Index	long groupId;
+	//@Index	long groupId;
 	@Index	boolean lisReportComplete;
 			int score;
 			int maxPossibleScore;
@@ -53,7 +53,6 @@ public class Score {    // this object represents a best score achieved by a use
 	public static Score getInstance(String userId,Assignment a) {
 		Score s = new Score();
 		s.assignmentId = a.id;
-		s.groupId = a.groupId;
 		s.owner = Key.create(User.class,userId);
 		
 		if (a.assignmentType.equals("Quiz")) {
@@ -126,7 +125,7 @@ public class Score {    // this object represents a best score achieved by a use
     	return s.score == this.score
     			&& s.assignmentId == this.assignmentId
     			&& s.owner.equals(this.owner)
-    			&& s.groupId == this.groupId
+    			//&& s.groupId == this.groupId
     			&& s.score == this.score
     			&& s.maxPossibleScore == this.maxPossibleScore
     			&& s.numberOfAttempts == this.numberOfAttempts

@@ -20,6 +20,8 @@ public class Deployment {
 			String organization;
 			String org_url;
 			String rsa_key_id;
+			String scope;
+			String lti_ags_lineitems_url;
 
 	Deployment() {}
 	

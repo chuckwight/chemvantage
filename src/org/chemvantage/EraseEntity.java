@@ -21,7 +21,6 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.servlet.ServletException;
@@ -57,7 +56,7 @@ public class EraseEntity extends HttpServlet {
 			
 			switch(entityType) {
 				case("User"): deleteUser(id); break;
-				case("Group"): deleteGroup(id); break;
+				//case("Group"): deleteGroup(id); break;
 				case("Domain"): deleteDomain(id); break;
 				default: throw new Exception();
 			}
@@ -109,7 +108,7 @@ public class EraseEntity extends HttpServlet {
 		} catch(Exception e) {			
 		}
 	}
-		
+/*		
 	void deleteGroup(String id) {
 		deleteGroup(Long.parseLong(id));
 	}
@@ -132,13 +131,13 @@ public class EraseEntity extends HttpServlet {
 		} catch(Exception e) {			
 		}
 	}
-	
+*/	
 	void deleteDomain(String dname) {
 		try {
 			Domain domain = ofy().load().type(Domain.class).filter("domainName",dname).first().safe();
 			
-			List<Key<Group>> groupKeys = ofy().load().type(Group.class).filter("domain",dname).keys().list();
-			for (Key<Group> k : groupKeys) deleteGroup(k.getId());
+			//List<Key<Group>> groupKeys = ofy().load().type(Group.class).filter("domain",dname).keys().list();
+			//for (Key<Group> k : groupKeys) deleteGroup(k.getId());
 			
 		 	ofy().delete().entity(domain);
 		} catch(Exception e) {		

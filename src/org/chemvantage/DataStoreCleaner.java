@@ -86,8 +86,8 @@ public class DataStoreCleaner extends HttpServlet {
 			case "CleanHWTransactions": out.println(cleanHWTransactions(cursor,0,testOnly)); break;
 			case "CleanPracticeExamTransactions": out.println(cleanPracticeExamTransactions(cursor,0,testOnly)); break;
 			case "CleanScores": out.println(cleanScores(cursor,0,testOnly)); break;
-			case "CleanGroups": out.println(cleanGroups(cursor,0,testOnly)); break;
-			case "CleanAssignments": out.println(cleanAssignments(cursor,0,testOnly)); break;
+			//case "CleanGroups": out.println(cleanGroups(cursor,0,testOnly)); break;
+			//case "CleanAssignments": out.println(cleanAssignments(cursor,0,testOnly)); break;
 			//case "CleanDomains": out.println(cleanDomains(cursor,0,testOnly)); break;
 			case "CleanBLTIConsumers": out.println(cleanBLTIConsumers(cursor,0,testOnly)); break;
 			case "CleanAll": doPost(request,response); return;
@@ -99,8 +99,8 @@ public class DataStoreCleaner extends HttpServlet {
 					+ cleanHWTransactions(null,0,true)
 					+ cleanPracticeExamTransactions(null,0,true)
 					+ cleanScores(null,0,true)
-					+ cleanGroups(null,0,true)
-					+ cleanAssignments(null,0,true)
+					//+ cleanGroups(null,0,true)
+					//+ cleanAssignments(null,0,true)
 					//+ cleanDomains(null,0,true)
 					+ cleanBLTIConsumers(null,0,true));
 		}
@@ -135,8 +135,8 @@ public class DataStoreCleaner extends HttpServlet {
 		case "CleanHWTransactions": out.println(cleanHWTransactions(cursor,0,testOnly)); break;
 		case "CleanPracticeExamTransactions": out.println(cleanPracticeExamTransactions(cursor,0,testOnly)); break;
 		case "CleanScores": out.println(cleanScores(cursor,0,testOnly)); break;
-		case "CleanGroups": out.println(cleanGroups(cursor,0,testOnly)); break;
-		case "CleanAssignments": out.println(cleanAssignments(cursor,0,testOnly)); break;
+		//case "CleanGroups": out.println(cleanGroups(cursor,0,testOnly)); break;
+		//case "CleanAssignments": out.println(cleanAssignments(cursor,0,testOnly)); break;
 		//case "CleanDomains": out.println(cleanDomains(cursor,0,testOnly)); break;
 		case "CleanBLTIConsumers": out.println(cleanBLTIConsumers(cursor,0,testOnly)); break;
 		case "CleanAll": 
@@ -448,7 +448,7 @@ public class DataStoreCleaner extends HttpServlet {
 		return buf.toString();
 		
 	}
-	
+/*	
 	private String cleanGroups(String cursor, int retries,boolean testOnly) {
 		StringBuffer buf = new StringBuffer();
 		try {			
@@ -488,7 +488,11 @@ public class DataStoreCleaner extends HttpServlet {
 		}
 		return buf.toString();
 	}
-	
+*/
+	//=======================
+	// For cleanAssignments we need a total rewrite that depends on Names and Roles service
+	//
+/*	
 	private String cleanAssignments(String cursor, int retries,boolean testOnly) {
 		StringBuffer buf = new StringBuffer();
 		try {			
@@ -533,6 +537,8 @@ public class DataStoreCleaner extends HttpServlet {
 		}
 		return buf.toString();
 	}
+*/	
+	
 /*
 	private String cleanDomains(String cursor, int retries,boolean testOnly) {
 		StringBuffer buf = new StringBuffer();

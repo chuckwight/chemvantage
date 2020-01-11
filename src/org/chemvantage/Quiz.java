@@ -73,6 +73,10 @@ public class Quiz extends HttpServlet {
 			
 			if ("ShowScores".contentEquals(userRequest)) out.println(Home.header + showScores(user,request) + Home.footer);
 			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header + showSummary(user,request) + Home.footer);
+			else if ("AssignQuizQuestions".contentEquals(userRequest) && user.isInstructor()) {
+				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+				out.println(Home.header + a.selectQuestionsForm(user) + Home.footer);
+			}
 			else out.println(Home.header + printQuiz(user,request) + Home.footer);
 		} catch (Exception e) {
 			response.sendRedirect("/Logout");
@@ -88,7 +92,14 @@ public class Quiz extends HttpServlet {
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
-			out.println(Home.header + printScore(user,request) + Home.footer);
+			String userRequest = request.getParameter("UserRequest");
+			if (userRequest==null) userRequest = "";
+			
+			if ("UpdateAssignment".contentEquals(userRequest)) {
+				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+				a.updateQuestions(request);
+				out.println(Home.header + printQuiz(user,request) + Home.footer);
+			} else out.println(Home.header + printScore(user,request) + Home.footer);
 		} catch (Exception e) {
 			response.sendRedirect("/Logout");
 		}
@@ -138,10 +149,8 @@ public class Quiz extends HttpServlet {
 			if (user.isInstructor() && qa != null) {
 				buf.append("<table style='border: 1px solid black'><tr><td>");
 				buf.append("As the course instructor you may<ul>"
-						//+ "<li><a href=/Groups?UserRequest=AssignQuizQuestions&AssignmentId=" + qa.id + "&CvsToken=" + cvsToken + ">"
-						+ "<li><a href=/Groups?UserRequest=AssignQuizQuestions&Token=" + user.token + ">"
+						+ "<li><a href=/Quiz?UserRequest=AssignQuizQuestions&Token=" + user.token + ">"
 						+ "customize this quiz</a> by selecting/deselecting the available question items"
-						//+ "<li>view a <a href=/Quiz?UserRequest=ShowSummary&AssignmentId=" + qa.id + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">summary of scores</a> for this assignment"
 						+ "<li>view a <a href=/Quiz?UserRequest=ShowSummary&Token=" + user.token + ">summary of scores</a> for this assignment"
 						+ "</ul></td></tr></table><p>");
 			} else if (user.isAnonymous()) {
@@ -357,13 +366,17 @@ public class Quiz extends HttpServlet {
 			ofy().save().entity(qt);
 			
 			// Try to post the score to the student's LMS:
+			boolean reportScoreToLms = false;
 			try {
 				if (user.isAnonymous()) throw new Exception();  // don't save Scores for anonymous users
 				long assignmentId = user.getAssignmentId();
 				qa = ofy().load().type(Assignment.class).id(assignmentId).safe();
 				Score s = Score.getInstance(user.id,qa);
 				ofy().save().entity(s).now();
-				queue.add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(qa.id)).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
+				reportScoreToLms = qa.lti_ags_lineitem_url != null || (qa.lis_outcome_service_url != null && user.getLisResultSourcedid() != null);
+				if (reportScoreToLms) {
+					queue.add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(qa.id)).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
+				}
 			} catch (Exception e) {}
 
 			buf.append("<h4>Your score on this quiz is " + studentScore 
@@ -416,19 +429,25 @@ public class Quiz extends HttpServlet {
 					buf.append("If you get stuck on a difficult question, "
 							+ "you may refer to your textbook during the quiz. Please keep the " + timeLimit
 							+ " minute time limit in mind, though. Hard work and persistence will produce "
-							+ "higher scores and better grades.\n");
+							+ "higher scores and better grades.<p>");
 				}
 				else {
 					buf.append("You're working hard and making great progress.  ");
 					if (wrongAnswers > 0) buf.append("Be sure to read and understand the "
 							+ "correct answers to the problems that you missed (above) so that you can get them "
-							+ "right the next time.\n");
+							+ "right the next time.<p>");
 					else buf.append("Be sure to attempt all the questions so that we can show you "
-							+ "the correct answers to problems that you missed.\n");
+							+ "the correct answers to problems that you missed.<p>");
 				}
 			}
-			//buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback" + (cvsToken==null?"":"?CvsToken=" + cvsToken) + ">here</a>.<p>");
-			buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback?Token=" + user.token + ">here</a>.<p>");
+			
+			if (!reportScoreToLms) {
+				buf.append("<b>Please note: </b> Your score was not reported back to the grade book of your class "
+						+ "LMS because the LTI launch request did not contain enough information to do this. "
+						+ (user.isInstructor()?"For instructors this is common.":"") + "<p>");				
+			}
+			
+			buf.append("We welcome comments about your ChemVantage experience <a href=/Feedback?Token=" + user.token + ">here</a>.<p>");
 			
 			buf.append("<p>");
 			
@@ -546,12 +565,12 @@ public class Quiz extends HttpServlet {
 
 				// try to validate the score with the LMS grade book entry
 				try {
-					Group g = ofy().load().type(Group.class).id(user.myGroupId).safe();
+					//Group g = ofy().load().type(Group.class).id(user.myGroupId).safe();
 					double lmsPctScore = 0;
 					String lmsScore = null;
 					boolean gotScoreOK = false;
 					
-					if (g.canReadLisScores) {  // LTI version 1.3
+					if (a.lti_ags_lineitem_url!=null) {  // LTI version 1.3
 						lmsScore = LTIMessage.readUserScore(a, user.id);
 						try {
 							lmsPctScore = Double.parseDouble(lmsScore);
@@ -560,9 +579,9 @@ public class Quiz extends HttpServlet {
 						}
 					}
 					else if (a.lis_outcome_service_url != null && s.lis_result_sourcedid != null) {  // LTI version 1.1
-						String messageFormat = g.getLisOutcomeFormat();
+						String messageFormat = "application/xml";
 						String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
-						String oauth_consumer_key = g.domain;
+						String oauth_consumer_key = user.id.substring(0, user.id.indexOf(":"));
 						String replyBody = new LTIMessage(messageFormat,body,a.lis_outcome_service_url,oauth_consumer_key).send();
 
 						if (replyBody.contains("success")) {
@@ -607,28 +626,23 @@ public class Quiz extends HttpServlet {
 	
 	String showSummary(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		//String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
-		Group g = ofy().load().type(Group.class).id(user.myGroupId).safe();
 		String lti_version = null;
-		try {
-			ofy().load().type(Deployment.class).id(g.domain).safe();
-			lti_version = "1p3";
-		} catch (Exception e) {
-			BLTIConsumer cons = ofy().load().type(BLTIConsumer.class).id(g.domain).now();
-			if (cons != null) lti_version = "1p1";
-		}
+		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
+		if (a==null) return "No assignment was specified for this request.";
+		if (a.lis_outcome_service_url!=null) lti_version = "1p1";
+		else if (a.lti_ags_lineitem_url != null) lti_version = "1p3";
+		else return "Could not determine the LTI version for this request.";
 		
 		if (!user.isInstructor()) return "You must be logged in as the instructor to view this page.";
 
 		if ("1p3".equals(lti_version)) {
 			try { // code for LTI version 1.3
-				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 				Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
 
-				if (g.context_memberships_url==null) throw new Exception("No Names and Roles Provisioning support.");
+				if (a.lti_nrps_context_membership_url==null) throw new Exception("No Names and Roles Provisioning support.");
 
 				buf.append("<h3>" + a.assignmentType + " - " + t.title + "</h3>");
-				buf.append("Group: " + g.description + "<br>");
+				//buf.append("Group: " + g.description + "<br>");
 				buf.append("Assignment ID: " + a.id + "<br>");
 				buf.append("Valid: " + new Date() + "<p>");
 				buf.append("The roster below is obtained using the Names and Role Provisioning service offered by your learning management system, "
@@ -642,13 +656,13 @@ public class Quiz extends HttpServlet {
 				Map<String,String> scores = LTIMessage.readMembershipScores(a);
 				if (scores==null) scores = new HashMap<String,String>();  // in case service call fails
 				
-				Map<String,String[]> membership = LTIMessage.getMembership(g);
+				Map<String,String[]> membership = LTIMessage.getMembership(a);
 				if (membership==null) membership = new HashMap<String,String[]>(); // in case service call fails
 				
 				buf.append("There are " + membership.size() + " members of this group.<p>");
 				
 				Map<String,Key<Score>> keys = new HashMap<String,Key<Score>>();
-				Deployment d = ofy().load().type(Deployment.class).id(g.domain).safe();
+				Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
 				String platform_id = d.getPlatformId() + "/";
 				
 				for (String id : membership.keySet()) {
@@ -676,8 +690,6 @@ public class Quiz extends HttpServlet {
 			}
 		} else if ("1p1".equals(lti_version)) {
 			try {  // code for LTI version 1.1
-				//Assignment a = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
-				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
 				buf.append("<h3>" + a.assignmentType + " - " + t.title + "</h3>");
 
@@ -686,54 +698,29 @@ public class Quiz extends HttpServlet {
 
 				buf.append("To protect the privacy of our users, ChemVantage does not collect any personally identifiable information. "
 						+ "Therefore, we are unable to display a traditional grade book with names and scores. Instead, we rely on a "
-						+ "robust system of reporting scores back to the grade book inside your LMS. Please check the information below "
-						+ "and let us know if you have any questions or problems. Thank you for using ChemVantage for your class.<p>");
+						+ "robust system of reporting scores back to the grade book inside your LMS.<p>");
 
-				buf.append("There are " + g.validatedMemberCount() + " members of this group, including instructors, "
-						+ "teaching assistants and test students created by your LMS, if applicable.<br>");
-
-				Score s = null;
-				int count = 0;
-				int pctScoreSum = 0;
-				int attempts = 0;
+				List<Score> scores = ofy().load().type(Score.class).filterKey("=", a.id).list();
+				int count = scores.size();
 				Date mostRecent = new Date(0);
-				boolean scoresReported = false;
+				boolean allScoresReported = true;
+				double pctScoreSum = 0;
 				int scoresNotReported = 0;
-				List<String> removeUsers = new ArrayList<String>();
-				for (String id : g.memberIds) {
-					try {
-						Key<Score> k = Key.create(Key.create(User.class,id),Score.class,a.id);
-						s = ofy().load().key(k).safe();       // throws an exception if no Score entity exists yet
-						if (s.numberOfAttempts==0) continue;  // skip the averaging for those who have not attempted the quiz yet
+				Queue queue = QueueFactory.getDefaultQueue();  // default task queue
+				int attempts = 0;
+				for (Score s : scores) {
+					if (s.numberOfAttempts==0) continue;  // skip the averaging for those who have not attempted the quiz yet
+					attempts += s.numberOfAttempts;
+					if (s.mostRecentAttempt.after(mostRecent)) mostRecent = s.mostRecentAttempt;
+					if (s.needsLisReporting()) {
+						scoresNotReported++;
+						allScoresReported = false;
 						pctScoreSum += s.getPctScore();
-						attempts += s.numberOfAttempts;
-						count++;
-						if (s.mostRecentAttempt.after(mostRecent)) mostRecent = s.mostRecentAttempt;
-						if (s.lisReportComplete) scoresReported = true;
-						if (s.needsLisReporting()) {  // found a stale Score that apparently needs reporting
-							scoresNotReported++;
-							try {  // attempt to read the user's score, then post the stale one, otherwise remove the user from this group
-								String messageFormat = g.getLisOutcomeFormat();
-								String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
-								String oauth_consumer_key = g.domain;
-								String replyBody = new LTIMessage(messageFormat,body,a.lis_outcome_service_url,oauth_consumer_key).send();
-
-								if (replyBody.contains("success")) {  // the lis_result_sourcedid is valid, so post the stale score
-									Queue queue = QueueFactory.getDefaultQueue();  // default task queue
-									queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",id));
-									buf.append("<br>We found a user score that may not have been posted previously, and we're sending it to the LMS now.");
-								} else {  // this user may have dropped the class or the Test Student was reset, so remove the user from this group
-									removeUsers.add(id);
-									buf.append("<br>We found a user who no longer has a valid grade book entry point in your LMS, so we removed this user from your group.");
-								}
-							} catch (Exception e) {
-								buf.append("<br>We attempted to validate a user score, but the operation failed." + e.toString());
-							}
-						}
-					} catch (Exception e) {}
+						queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",s.owner.getName()));
+					}
+					
 				}
-				g.memberIds.removeAll(removeUsers); // remove these users from the group roster
-
+				
 				buf.append("<p>There " + (count==1?"is ":"are ") + count + " score" + (count==1?"":"s") + " for this assignment in the ChemVantage database.<br>");
 				if (count>0) {
 					buf.append("The average score is " + pctScoreSum/count + "%.<br>");
@@ -747,10 +734,9 @@ public class Quiz extends HttpServlet {
 							+ "We have automatically initiated a programmed task to correct this. "
 							+ "Please check back in a few minutes to ensure that the situation has been resolved.<p>");
 				}
-				else if (scoresReported) buf.append("All scores for students have been reported to your LMS successfully.<p>");
+				else if (allScoresReported) buf.append("All scores for students have been reported to your LMS successfully.<p>");
 
 				buf.append("If you have any questions or need assistance, please contact <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.<p>");			
-				//buf.append("<a href=/Quiz?AssignmentId=" + a.id + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">Return to this quiz</a>.<p>");
 				buf.append("<a href=/Quiz?Token=" + user.token + ">Return to this quiz</a>.<p>");
 				} catch (Exception e) {
 				buf.append(e.toString());

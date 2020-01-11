@@ -245,14 +245,14 @@ public class LTILaunch extends HttpServlet {
 				context_title = "default group";
 			}
 			if (context_title==null) context_title = context_id; // missing course title
-
+/*
 			// Find the user's group, and if necessary create a new one and put the user in it
 			Group myGroup = ofy().load().type(Group.class).filter("domain",oauth_consumer_key).filter("context_id",context_id).first().now();
 			if (myGroup == null) { // create a new group
 				String instructorId = user.isInstructor()?user.id:"unknown";
 				myGroup = new Group(oauth_consumer_key,context_id,context_title,instructorId);
 			}
-			
+*/			
 			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
 /*
 			// update the LIS result outcome service URL, if necessary
@@ -262,12 +262,13 @@ public class LTILaunch extends HttpServlet {
 				myGroup.isUsingLisOutcomeService = true;
 			}							
 */			
+/*
 			if (user.isInstructor()) myGroup.instructorId = user.id;
 			myGroup.addMember(user.id);
 			ofy().save().entity(myGroup).now();
 			user.myGroupId = myGroup.id;
 			ofy().save().entity(user);			
-			
+*/			
 			// Context info OK
 			
 			// Use the resourceLinkId to find the assignment or create a new one:
@@ -289,7 +290,7 @@ public class LTILaunch extends HttpServlet {
 					return;
 				}
 			} catch (Exception e) {  // or create a new one with the available information (but no assignmentType or topicIds)
-				myAssignment = new Assignment(myGroup.id,oauth_consumer_key,resource_link_id,lisOutcomeServiceUrl);
+				myAssignment = new Assignment(oauth_consumer_key,resource_link_id,lisOutcomeServiceUrl);
 				ofy().save().entity(myAssignment).now(); // we'll need to load this in a second from the pickResource form
 				user.setToken(myAssignment.id,lis_result_sourcedid);
 			}

@@ -59,12 +59,14 @@ public class ReportScore extends HttpServlet {
 			response.setContentType("text/html");
 			out.println(Home.header + "<h3>Unreported Scores</h3>");
 			out.println("For each of the scores below, click the link to report it manually.<p>");
-			List<Score> scores = ofy().load().type(Score.class).list();   //.filter("lisReportComplete",false).list();
+			List<Score> scores = ofy().load().type(Score.class).list(); //filter("lisReportComplete",false).list();
 			for (Score s : scores) {
 				String userId = s.owner.getName();
 				String url = "/ReportScore?UserId=" + userId + "&AssignmentId=" + s.assignmentId;
-				out.println(s.lisReportComplete?"Report is complete. ":"Submit report: ");
-				out.println("<a href=" + url + ">" + url + "</a><br>");
+				if (s.lisReportComplete) out.println("Report is complete: " + url + "<br>");
+				else if (s.lis_result_sourcedid==null) out.println("No lisResultSourcedId: " + url + "<br>");
+				else if (s.needsLisReporting()) out.println("Score needs reporting: <a href=" + url + ">" + url + "</a><br>");
+				else out.println("No reporting URL provided: " + url + "<br>");
 			}
 			if (scores.size()==0) out.println("None. All scores are up to date.");
 			out.println(Home.footer);
@@ -87,7 +89,9 @@ public class ReportScore extends HttpServlet {
 
 			if (a.lti_ags_lineitem_url != null) {  // use LTIAdvantage reporting specs
 				postUserScore(userId,a,attempts);
-			} else out.println(postUserScore(userId,a,attempts,""));  // use LTI v1.1 specs
+			} else if (a.lis_outcome_service_url != null) { // use LTI 1.1 reporting
+				out.println(postUserScore(userId,a,attempts,""));  // use LTI v1.1 specs
+			}
 		} catch (Exception e) {
 			out.println(e.getMessage());
 		}
@@ -95,11 +99,9 @@ public class ReportScore extends HttpServlet {
 	}
 	
 	String postUserScore(String userId,Assignment a,int attempts,String dummy) { // LTIv1.1 only
-		Group group = null;
 		String oauth_consumer_key = null;
 		StringBuffer buf = new StringBuffer();
-		try {
-			
+		try {		
 			Key<Score> k = Key.create(Key.create(User.class, userId),Score.class,a.id);
 			Score s = ofy().load().key(k).now();
 			if (s == null || !s.needsLisReporting()) return "Score does not need to be reported";
@@ -109,42 +111,13 @@ public class ReportScore extends HttpServlet {
 			double score = (double)s.score / (double)s.maxPossibleScore;
 			if (score < 0.0 || score > 1.0) throw new Exception();
 
-			group = ofy().load().type(Group.class).id(a.groupId).safe();
-			oauth_consumer_key = group.domain;
+			oauth_consumer_key = a.domain;
 
-			String messageFormat = group.getLisOutcomeFormat();
+			String messageFormat = "application/xml";
 			String body = LTIMessage.xmlReplaceResult(s.lis_result_sourcedid,String.valueOf(score));
 			buf.append("XML file:<br><pre>" + body + "</pre><p>");
-			String replyBody = new LTIMessage(messageFormat,body,group.lis_outcome_service_url,oauth_consumer_key).send();
+			String replyBody = new LTIMessage(messageFormat,body,a.lis_outcome_service_url,oauth_consumer_key).send();
 			buf.append("LMS Replied:<br>" + replyBody);
-
-			/*===== temporary logging for data collection
-			try {
-				final Logger logger = Logger.getLogger(ReportScore.class.getName());
-				if (!replyBody.toLowerCase().contains("success")) {
-					logger.log(Level.SEVERE, "ReportScore failed with response: " + replyBody);
-				} else logger.log(Level.INFO, "ReportScore succeeded for user: " + userId);
-			} catch (Exception e) {}
-//===== */
-			try {
-				// Send an email to the administrator
-				Properties props = new Properties();
-				Session session = Session.getDefaultInstance(props, null);
-
-				String msgBody = "ReportScore " + (replyBody.contains("success")?"success.":"failure.") + "<p>"
-						+ "XML file submitted:<br>" + body + "<p>"
-						+ "Reply received from LMS:<br>" + replyBody;
-
-				Message msg = new MimeMessage(session);
-				msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-				msg.addRecipient(Message.RecipientType.TO,
-						new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-				msg.setSubject("ChemVantage ReportScore " + (replyBody.contains("success")?"Success":"Failure"));
-				msg.setContent(msgBody,"text/xml");
-				Transport.send(msg);
-			} catch (Exception e) {
-			}
-//====== END OF TEMPORARY SECTION
 
 			if (replyBody.toLowerCase().contains("success")) {
 				s.lisReportComplete = true;
@@ -156,7 +129,16 @@ public class ReportScore extends HttpServlet {
 			} else throw new Exception("User " + userId + " earned a score of " + s.getPctScore() + "% on assignment "
 					+ a.id + "; however, the score could not be posted to the LMS grade book, even after " + attempts + " attempts.");
 		} catch (Exception e) {
-			sendEmailToDomainAdmin(userId,a,oauth_consumer_key,e.getMessage());
+			buf.append(e.toString());
+			if (attempts < 10){
+				try{
+					long countdownMillis = (long) Math.pow(2,attempts)*60000;
+					Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
+					queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",URLEncoder.encode(userId, "UTF-8")).param("Retry",Integer.toString(attempts)).countdownMillis(countdownMillis));			
+				} catch (Exception e2) {}
+			} else {
+				sendEmailToDomainAdmin(userId,a,oauth_consumer_key,e.getMessage());
+			}
 		}
 		return buf.toString();
 	}
@@ -175,8 +157,7 @@ public class ReportScore extends HttpServlet {
 						+ a.id + "; however, the score could not be posted to the LMS grade book, even after " + attempts + " attempts.");
 			}
 		} catch (Exception e) {
-			Group g = ofy().load().type(Group.class).id(a.groupId).now();
-			Deployment d = ofy().load().type(Deployment.class).id(g.domain).now();
+			Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
 			sendEmailToLmsAdmin(userId,a,d,e.getMessage());
 		}
 	}

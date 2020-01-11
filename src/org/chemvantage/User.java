@@ -44,7 +44,6 @@ public class User {
 	@Index	Date lastLogin;
 	String token;
 	int roles;
-	long myGroupId;
 	String alias;
 	String authDomain;
 
@@ -54,15 +53,13 @@ public class User {
 		this.id = id;
 		this.roles = 0; // student
 		this.lastLogin = new Date(0L);
-		this.myGroupId = -1L;
 		this.authDomain = "";
 		this.alias = null;
 	}
 
-	User(String id, int roles, long groupId) {
+	User(String id, int roles) {
 		this.id = id;
 		this.roles = roles;
-		this.myGroupId = groupId;
 	}
 	
 	static User getInstance(String userId) {
@@ -307,7 +304,7 @@ public class User {
     		Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
     		JWT.require(algorithm).build().verify(token);  // checks validity of token
     		DecodedJWT t = JWT.decode(token);
-    		User u = new User(t.getSubject(),t.getClaim("roles").asInt(),t.getClaim("gId").asLong());
+    		User u = new User(t.getSubject(),t.getClaim("roles").asInt());
     		Date in15Min = new Date(new Date().getTime()+900000L);  
     		if (t.getExpiresAt().before(in15Min)) { // refresh the token if it will expire within 15 minutes
     			if (t.getClaim("lrs")!=null) u.setToken(t.getClaim("aId").asLong(),t.getClaim("lrs").asString());
@@ -328,7 +325,7 @@ public class User {
     			.withSubject(this.id)
     			.withExpiresAt(exp)
     			.withClaim("roles", this.roles)
-    			.withClaim("gId", this.myGroupId)
+    			//.withClaim("gId", this.myGroupId)
     			.withClaim("aId", assignmentId)
     			.sign(algorithm); 				
     }
@@ -341,7 +338,7 @@ public class User {
     			.withSubject(this.id)
     			.withExpiresAt(exp)
     			.withClaim("roles", this.roles)
-    			.withClaim("gId", this.myGroupId)
+    			//.withClaim("gId", this.myGroupId)
     			.withClaim("aId", assignmentId)
     			.withClaim("lrs", lis_result_sourcedid)
     			.sign(algorithm); 				

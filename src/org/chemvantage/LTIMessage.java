@@ -118,6 +118,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     	uc.setDoOutput(true);
     	uc.setDoInput(true);
     	uc.setRequestMethod(httpMethod);
+    	uc.setConnectTimeout(5000);
     	if (httpMethod.equals("GET")) acceptType = "application/vnd.ims.lti.v2.ToolSettings+json";
     	uc.setRequestProperty("Content-Type",contentType);
     	if (!acceptType.isEmpty()) uc.setRequestProperty("Accept", acceptType);
@@ -207,11 +208,11 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		+ "</imsx_POXEnvelopeRequest>";		
 	}
 
-    static String getAccessToken(Group g) {
+    static String getAccessToken(String platformDeploymentId) {
     	// First, construct a request token to send to the platform
     	Date now = new Date();
     	try {
-			Deployment d = Deployment.getInstance(g.domain);
+			Deployment d = Deployment.getInstance(platformDeploymentId);
 			Date exp = new Date(now.getTime() + 300000L);
 			String token = JWT.create()
 					.withIssuer(d.client_id)
@@ -226,7 +227,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			String body = "grant_type=client_credentials"
 					+ "&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 					+ "&client_assertion=" + token
-					+ "&scope=" + g.lti_ags_scope;
+					+ "&scope=" + d.scope;
 			
 			URL u = new URL(d.oauth_access_token_url);
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
@@ -261,9 +262,10 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		}
     }
     
-	static String getLineItemUrl(Group g, Assignment a) {
+	static String getLineItemUrl(Assignment a) {
 		try {
-			JsonArray json = new JsonParser().parse(getLineItems(g)).getAsJsonArray();
+			Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
+			JsonArray json = new JsonParser().parse(getLineItems(d.platform_deployment_id)).getAsJsonArray();
 			Iterator<JsonElement> iterator = json.iterator();
 			while(iterator.hasNext()){
 		        JsonObject lineitem = iterator.next().getAsJsonObject();
@@ -277,10 +279,10 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			}
 	}
 	
-	static long getAssignmentId(Group g, String resourceLinkId) {
+	static long getAssignmentId(String lti_ags_lineitems_url, String resourceLinkId) {
 		long assignmentId = 0;
 		try {
-			JsonArray json = new JsonParser().parse(getLineItems(g)).getAsJsonArray();
+			JsonArray json = new JsonParser().parse(getLineItems(lti_ags_lineitems_url)).getAsJsonArray();
 			Iterator<JsonElement> iterator = json.iterator();
 			while(iterator.hasNext()){
 		        JsonObject lineitem = iterator.next().getAsJsonObject();
@@ -293,11 +295,12 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		return assignmentId;
 	}
 	
-	static String getLineItems(Group g) {
+	static String getLineItems(String platformDeploymentId) {
 		try {
-			String bearerAuth = "Bearer " + getAccessToken(g);
+			Deployment d = ofy().load().type(Deployment.class).id(platformDeploymentId).safe();
+			String bearerAuth = "Bearer " + getAccessToken(platformDeploymentId);
 			
-			URL u = new URL(g.lti_ags_lineitems_url);
+			URL u = new URL(d.lti_ags_lineitems_url);
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setDoOutput(true);
 			uc.setDoInput(true);
@@ -327,9 +330,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		String lineItemUrl = null;
 		//StringBuffer debug = new StringBuffer();
 		try {
-			Group g = ofy().load().type(Group.class).id(a.groupId).safe();
 			Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
-			String bearerAuth = "Bearer " + getAccessToken(g);
+			String bearerAuth = "Bearer " + getAccessToken(a.domain);
 			int maxPossibleScore = a.assignmentType.equals("PracticeExam")?100:10;
 
 			String json = "{"
@@ -338,7 +340,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 					+ "\"resourceLinkId\":\"" + a.resourceLinkId + "\""
 					+ "}";
 			//debug.append("POSTed: " + json + "<br>");
-			URL u = new URL(g.lti_ags_lineitems_url);
+			Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
+			URL u = new URL(d.lti_ags_lineitems_url);
 			//debug.append("To the lineitems URL: " + g.lti_ags_lineitems_url + "<br>");
 			
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
@@ -392,11 +395,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		} catch (Exception e) {}
 	
 		Map<String,String> scores = new HashMap<String,String>();		
-		String bearerAuth = null;
 		try {
-			Group g = ofy().load().type(Group.class).id(a.groupId).safe();
-			if ((bearerAuth=getAccessToken(g)).startsWith("response")) throw new Exception("the LMS failed to issue an auth token: " + bearerAuth);
-			else bearerAuth = "Bearer " + bearerAuth;
+			String bearerAuth = "Bearer" + getAccessToken(a.domain);
 
 			if (a.lti_ags_lineitem_url==null) throw new Exception("the lineitem URL for this assignment is unknown");
 			URL u = new URL(a.lti_ags_lineitem_url + "/results");
@@ -478,11 +478,9 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		// This method uses the LTIv1p3 message protocol to retrieve a user's score from the LMS.
 		// The lineitem URL corresponds to the LMS grade book column fpr the Assignment entity,
 		// and the specific cell is identified by the user_id value defined by the LMS platform
-		String bearerAuth = null;
 		try {
-			Group g = ofy().load().type(Group.class).id(a.groupId).safe();
-			if ((bearerAuth=getAccessToken(g)).startsWith("response")) throw new Exception("the LMS failed to issue an auth token: " + bearerAuth);
-			else bearerAuth = "Bearer " + bearerAuth;
+			String bearerAuth=getAccessToken(a.domain);
+
 			String user_id = User.getRawId(userId); // stripped of the platform_id and "/"
 
 			if (a.lti_ags_lineitem_url==null) throw new Exception("the lineitem URL for this assignment is unknown");
@@ -527,8 +525,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		// and the specific cell is identified by the user_id value defined by the LMS platform
 		try {
 			Assignment a = ofy().load().type(Assignment.class).id(s.assignmentId).safe();
-			Group g = ofy().load().type(Group.class).id(a.groupId).safe();
-			String bearerAuth = getAccessToken(g);
+			String bearerAuth = getAccessToken(a.domain);
 			if (bearerAuth.startsWith("response")) return false;
 			bearerAuth = "Bearer " + bearerAuth;
 			
@@ -578,7 +575,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		return false;
 	}
 	
-	static Map<String,String[]> getMembership(Group g) {
+	static Map<String,String[]> getMembership(Assignment a) {
 		// This method uses the LTIv1p3 message protocol to retrieve the group membership from the LMS.
 		// If this service is offered by providing the endpoint, the Json array MUST contain the user_id and roles
 		// values, but may also include other fields such as name, given_name, middle_name, family_name, email, ...
@@ -586,11 +583,11 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		String bearerAuth = null;
 		
 		try {
-			if ((bearerAuth=getAccessToken(g)).startsWith("response")) throw new Exception("the LMS failed to issue an auth token: " + bearerAuth);
+			if ((bearerAuth=getAccessToken(a.domain)).startsWith("response")) throw new Exception("the LMS failed to issue an auth token: " + bearerAuth);
 			else bearerAuth = "Bearer " + bearerAuth;
 			
-			if (g.context_memberships_url==null) throw new Exception("the service endpoint URL for this group is unknown");
-			URL u = new URL(g.context_memberships_url);
+			if (a.lti_nrps_context_membership_url==null) throw new Exception("the service endpoint URL for this group is unknown");
+			URL u = new URL(a.lti_nrps_context_membership_url);
 
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setDoOutput(true);
