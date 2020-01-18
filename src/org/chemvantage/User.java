@@ -325,23 +325,24 @@ public class User {
     			.withSubject(this.id)
     			.withExpiresAt(exp)
     			.withClaim("roles", this.roles)
-    			//.withClaim("gId", this.myGroupId)
     			.withClaim("aId", assignmentId)
     			.sign(algorithm); 				
     }
 
     void setToken(long assignmentId,String lis_result_sourcedid) throws Exception {  // stores a CRSF JWT token in the field User.token
-    	Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
-    	Date now = new Date();
-    	Date exp = new Date(now.getTime() + 5400000L);  // 90 minutes from now
-    	this.token =  JWT.create()
-    			.withSubject(this.id)
-    			.withExpiresAt(exp)
-    			.withClaim("roles", this.roles)
-    			//.withClaim("gId", this.myGroupId)
-    			.withClaim("aId", assignmentId)
-    			.withClaim("lrs", lis_result_sourcedid)
-    			.sign(algorithm); 				
+    	if (lis_result_sourcedid == null) setToken(assignmentId);
+    	else {
+    		Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
+    		Date now = new Date();
+    		Date exp = new Date(now.getTime() + 5400000L);  // 90 minutes from now
+    		this.token =  JWT.create()
+    				.withSubject(this.id)
+    				.withExpiresAt(exp)
+    				.withClaim("roles", this.roles)
+    				.withClaim("aId", assignmentId)
+    				.withClaim("lrs", lis_result_sourcedid)
+    				.sign(algorithm); 				
+    	}
     }
 
     long getAssignmentId() {

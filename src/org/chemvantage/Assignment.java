@@ -42,16 +42,18 @@ public class Assignment {
 			String lis_outcome_service_url;
 			String lti_ags_lineitem_url;
 			String lti_nrps_context_membership_url;
+			String custom_context_memberships_url;
 			List<Long> topicIds; // used for practice exams which have multiple topicIds
 			List<String> resourceLinkIds = new ArrayList<String>();  // deprecated
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 
 	Assignment() {}
 
-	Assignment(String platformDeploymentId,String resourceLinkId,String lisOutcomeServiceUrl) {  // specific to Quiz and Homework assignments with a single topicId
+	Assignment(String platformDeploymentId,String resourceLinkId,String lisOutcomeServiceUrl,String customContextMembershipsUrl) {  // specific to Quiz and Homework assignments with a single topicId
 		this.domain = platformDeploymentId;
 		this.resourceLinkId = resourceLinkId;
 		this.lis_outcome_service_url = lisOutcomeServiceUrl;
+		this.custom_context_memberships_url = customContextMembershipsUrl;
 	}
 
 	Assignment(String assignmentType, long topicId, List<Long> topicIds, String platform_deployment_id) {

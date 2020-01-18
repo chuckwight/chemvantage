@@ -89,7 +89,7 @@ public class DataStoreCleaner extends HttpServlet {
 			//case "CleanGroups": out.println(cleanGroups(cursor,0,testOnly)); break;
 			//case "CleanAssignments": out.println(cleanAssignments(cursor,0,testOnly)); break;
 			//case "CleanDomains": out.println(cleanDomains(cursor,0,testOnly)); break;
-			case "CleanBLTIConsumers": out.println(cleanBLTIConsumers(cursor,0,testOnly)); break;
+			//case "CleanBLTIConsumers": out.println(cleanBLTIConsumers(cursor,0,testOnly)); break;
 			case "CleanAll": doPost(request,response); return;
 			} 
 		} else if (Boolean.parseBoolean(request.getParameter("TestAll"))) {
@@ -98,11 +98,11 @@ public class DataStoreCleaner extends HttpServlet {
 					+ cleanQuizTransactions(null,0,true)
 					+ cleanHWTransactions(null,0,true)
 					+ cleanPracticeExamTransactions(null,0,true)
-					+ cleanScores(null,0,true)
+					+ cleanScores(null,0,true));
 					//+ cleanGroups(null,0,true)
 					//+ cleanAssignments(null,0,true)
 					//+ cleanDomains(null,0,true)
-					+ cleanBLTIConsumers(null,0,true));
+					//+ cleanBLTIConsumers(null,0,true));
 		}
 
 		out.println(interactiveMenu());
@@ -138,7 +138,7 @@ public class DataStoreCleaner extends HttpServlet {
 		//case "CleanGroups": out.println(cleanGroups(cursor,0,testOnly)); break;
 		//case "CleanAssignments": out.println(cleanAssignments(cursor,0,testOnly)); break;
 		//case "CleanDomains": out.println(cleanDomains(cursor,0,testOnly)); break;
-		case "CleanBLTIConsumers": out.println(cleanBLTIConsumers(cursor,0,testOnly)); break;
+		//case "CleanBLTIConsumers": out.println(cleanBLTIConsumers(cursor,0,testOnly)); break;
 		case "CleanAll": 
 			out.println("<h2>Clean All</h2>");
 			Queue queue = QueueFactory.getDefaultQueue();
@@ -580,6 +580,7 @@ public class DataStoreCleaner extends HttpServlet {
 		return buf.toString();
 	}
 */
+/*
 	private String cleanBLTIConsumers(String cursor, int retries,boolean testOnly) {
 		now = new Date();
 		sixMonthsAgo = new Date(now.getTime()-15768000000L);
@@ -625,4 +626,5 @@ public class DataStoreCleaner extends HttpServlet {
 		}
 		return buf.toString();
 	}
+*/
 }

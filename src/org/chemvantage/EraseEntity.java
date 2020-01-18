@@ -57,7 +57,7 @@ public class EraseEntity extends HttpServlet {
 			switch(entityType) {
 				case("User"): deleteUser(id); break;
 				//case("Group"): deleteGroup(id); break;
-				case("Domain"): deleteDomain(id); break;
+				//case("Domain"): deleteDomain(id); break;
 				default: throw new Exception();
 			}
 			out.println("Done.<p>");
@@ -131,7 +131,7 @@ public class EraseEntity extends HttpServlet {
 		} catch(Exception e) {			
 		}
 	}
-*/	
+	
 	void deleteDomain(String dname) {
 		try {
 			Domain domain = ofy().load().type(Domain.class).filter("domainName",dname).first().safe();
@@ -143,4 +143,5 @@ public class EraseEntity extends HttpServlet {
 		} catch(Exception e) {		
 		}
 	}
+	*/
 }

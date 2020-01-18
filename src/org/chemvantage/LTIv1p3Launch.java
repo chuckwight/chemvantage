@@ -206,26 +206,20 @@ public class LTIv1p3Launch extends HttpServlet {
 		
 			// Process the ResourceLinkRequest information:
 			String resourceLinkId = null;
-			long assignmentId = 0L;
 			try {
 				Map<String,Object> resource_link_claims = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link").asMap();
 				resourceLinkId = resource_link_claims.get("id").toString();
-				try {  // try to get a resourceId value from the payload in case this is a Deep Linking assignment
-					assignmentId = Long.parseLong(resource_link_claims.get("resourceId").toString());
-				} catch (Exception e) {}
 			} catch (Exception e) {
 				throw new Exception("Resource link id was missing from payload.");
 			}
-
+			
 			// Find the correct Assignment entity in order to construct the URL to which the user should be redirected
+			long assignmentId = 0L;
 			Assignment myAssignment = null;
 			boolean saveAssignment = false;
 			
-			// First try the direct approach in case we have the assignmentId already
-			if (assignmentId>0) myAssignment = ofy().load().type(Assignment.class).id(assignmentId).now();
-			
-			// Next try to find the assignment using the platformDeploymentId and the resourceLinkId value
-			if (myAssignment == null) myAssignment = ofy().load().type(Assignment.class).filter("domain",platformDeploymentId).filter("resourceLinkId",resourceLinkId).first().now();
+			// Try to find the assignment using the platformDeploymentId and the resourceLinkId value
+			myAssignment = ofy().load().type(Assignment.class).filter("domain",platformDeploymentId).filter("resourceLinkId",resourceLinkId).first().now();
 			
 			// Next try to get the resourceId from the lineitem service
 			if (myAssignment == null) {
@@ -238,18 +232,10 @@ public class LTIv1p3Launch extends HttpServlet {
 			
 			// If none of that worked, then the assignment probably doesn't exist, so make a new one:
 			if (myAssignment == null) {
-				myAssignment = new Assignment(platformDeploymentId,resourceLinkId,null);
+				myAssignment = new Assignment(platformDeploymentId,resourceLinkId,null,null);
 				saveAssignment = true;	
 			}
 
-			
-			/*			
-			// Make sure that this assignment is associated with myGroup
-			if (myAssignment.groupId != myGroup.id) {
-				myAssignment.groupId = myGroup.id;
-				saveAssignment = true;
-			}
-*/			
 			// Update the AGS lineitem URL for this assignment, if necessary
 			if (myAssignment.lti_ags_lineitem_url==null) {
 				if (lti_ags_claims.get("lineitem") != null) {  // get the lineitem from the id_token

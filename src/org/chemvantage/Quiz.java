@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -40,6 +41,10 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.googlecode.objectify.Key;
 
 @WebServlet("/Quiz")
@@ -602,10 +607,10 @@ public class Quiz extends HttpServlet {
 								+ "even for a score of zero, and ChemVantage will try to refresh your best score to the LMS.<p>");
 					} else throw new Exception();
 				} catch (Exception e) {
-					buf.append("ChemVantage was unable to retrieve your score for this assignment from the LMS.<br>");
-					if (s.score==0 && s.numberOfAttempts<=1) buf.append("It appears that you may not have submitted a score for this quiz yet.<br>");
-					if (user.isInstructor()) buf.append("Some LMS providers do not store scores for instructors.<br>");
-					buf.append("<br>");
+					buf.append("ChemVantage was unable to retrieve your score for this assignment from the LMS. ");
+					if (s.score==0 && s.numberOfAttempts<=1) buf.append("It appears that you may not have submitted a score for this quiz yet. ");
+					if (user.isInstructor()) buf.append("Some LMS providers do not store scores for instructors.");
+					buf.append("<p>");
 				}
 
 				buf.append("<a href=Quiz?AssignmentId=" + a.id 
@@ -695,12 +700,43 @@ public class Quiz extends HttpServlet {
 
 				DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 				buf.append(df.format(new Date()) + "<p>");
-
+				
+				if (a.custom_context_memberships_url == null) buf.append("Memberships service is not available from your LMS, sorry.<p>");
+				else {
+					BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(a.domain).safe();
+					String json = new LTIMessage("text/plain","application/vnd.ims.lis.v2.membershipcontainer+json","",a.custom_context_memberships_url,c.oauth_consumer_key,c.secret).send();
+				buf.append(json);
+					JsonObject context_memberships = new JsonParser().parse(json).getAsJsonObject();
+					JsonArray members = context_memberships.get("pageOf").getAsJsonObject().get("membershipSubject").getAsJsonObject().get("membership").getAsJsonArray();
+					Iterator<JsonElement> iterator = members.iterator();
+					buf.append("<table><tr><th>User ID</th><th>Role</th><th>Name</th><th>Email</th><th>LMS Score</th><th>CV Score</th></tr>");
+					while(iterator.hasNext()){
+						JsonObject member = iterator.next().getAsJsonObject();
+						String roles = member.get("roles").getAsString().toLowerCase();
+						String role = roles.contains("administrator")?"Administrator":roles.contains("instructor")?"Instructor":"Learner";
+						JsonObject person = member.get("member").getAsJsonObject();
+						String userId = c.oauth_consumer_key + ":" + person.get("userId").getAsString();
+						String email = person.get("email").getAsString();
+						String name = person.get("name").getAsString();
+						
+						String s = null;
+						Key<Score> scoreKey = Key.create(Key.create(User.class,userId),Score.class,a.id);
+						Score cvScore = ofy().load().key(scoreKey).now();
+						buf.append("<tr><td>" + userId + "</td>"
+								+ "<td>" + role + "</td>"
+								+ "<td>" + name + "</td>"
+								+ "<td>" + email + "</td>"
+								+ "<td align=center>" + (s == null?" - ":s + "%") + "</td>"
+								+ "<td align=center>" + (cvScore == null?" - ":String.valueOf(cvScore.getPctScore()) + "%") + "</td></tr>");
+					}
+					buf.append("</table>");		
+				}
+/*
 				buf.append("To protect the privacy of our users, ChemVantage does not collect any personally identifiable information. "
 						+ "Therefore, we are unable to display a traditional grade book with names and scores. Instead, we rely on a "
 						+ "robust system of reporting scores back to the grade book inside your LMS.<p>");
 
-				List<Score> scores = ofy().load().type(Score.class).filterKey("=", a.id).list();
+				List<Score> scores = ofy().load().type(Score.class).filter("id", a.id).list();
 				int count = scores.size();
 				Date mostRecent = new Date(0);
 				boolean allScoresReported = true;
@@ -735,7 +771,7 @@ public class Quiz extends HttpServlet {
 							+ "Please check back in a few minutes to ensure that the situation has been resolved.<p>");
 				}
 				else if (allScoresReported) buf.append("All scores for students have been reported to your LMS successfully.<p>");
-
+*/
 				buf.append("If you have any questions or need assistance, please contact <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.<p>");			
 				buf.append("<a href=/Quiz?Token=" + user.token + ">Return to this quiz</a>.<p>");
 				} catch (Exception e) {
