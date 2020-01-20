@@ -34,14 +34,13 @@ import com.googlecode.objectify.cmd.Query;
 @Entity
 public class Assignment {
 	@Id 	Long id;
-	//@Index 	long groupId;
 	@Index	String domain;
 	@Index	String assignmentType;
 	@Index	long topicId;
 	@Index	String resourceLinkId;
 			String lis_outcome_service_url;
 			String lti_ags_lineitem_url;
-			String lti_nrps_context_membership_url;
+			String lti_nrps_context_memberships_url;
 			String custom_context_memberships_url;
 			List<Long> topicIds; // used for practice exams which have multiple topicIds
 			List<String> resourceLinkIds = new ArrayList<String>();  // deprecated

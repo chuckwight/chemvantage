@@ -32,7 +32,6 @@ import com.googlecode.objectify.annotation.Index;
 public class Nonce {
 	@Id String id;
 	@Index	Date created;
-			String  userId;
 			
 	Nonce() {}
 	
@@ -40,23 +39,17 @@ public class Nonce {
 		this.id = id;
 		this.created = new Date();
 	}
-		
-	static String createInstance(User user) {
-		if (user == null) return null;
-		try {
-			Nonce n = new Nonce();
-			n.id = generateNonce();
-			n.userId = user.id;
-			n.created = new Date();
-			ofy().save().entity(n).now();
-			return n.id;
-		} catch (Exception e) {
-			return null;
-		}
-	}
-	
 	static long interval = 5400000L;  // 90 minutes in milliseconds
 	
+	static String generateNonce() {
+		Random random =  new Random(new Date().getTime());
+        long r1 = random.nextLong();
+        long r2 = random.nextLong();
+        String hash1 = Long.toHexString(r1);
+        String hash2 = Long.toHexString(r2);
+        return hash1 + hash2;
+	}
+
 	public static boolean isUnique(String nonce, String timestamp) {
 		// This method provides a level of security for OAuth launches for LTI
 		// by verifying that oauth_nonce strings are submitted only once
@@ -85,33 +78,4 @@ public class Nonce {
 			return false;
 		}
 	}
-
-	static User getUser(String nonce) {
-		if (nonce==null) return null;
-		
-		Date now = new Date();
-		Date oldest = new Date(now.getTime()-interval); // 90 minutes ago
-
-		// delete all Nonce objects older than the interval
-		List<Key<Nonce>> expired = ofy().load().type(Nonce.class).filter("created <",oldest).keys().list();
-		if (expired.size() > 0) ofy().delete().keys(expired);
-		
-		try {
-			Nonce n = ofy().load().type(Nonce.class).id(nonce).safe();		
-			ofy().delete().key(Key.create(n)).now(); // remove this nonce from the database immediately
-			return ofy().load().type(User.class).id(n.userId).safe();
-		} catch (Exception e) {
-			return null;
-		}				
-	}
-	
-	static String generateNonce() {
-		Random random =  new Random(new Date().getTime());
-        long r1 = random.nextLong();
-        long r2 = random.nextLong();
-        String hash1 = Long.toHexString(r1);
-        String hash2 = Long.toHexString(r2);
-        return hash1 + hash2;
-	}
-
 }

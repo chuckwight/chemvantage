@@ -659,7 +659,7 @@ public class Homework extends HttpServlet {
 			try { // code for LTI version 1.3
 				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
 
-				if (a.lti_nrps_context_membership_url==null) throw new Exception("No Names and Roles Provisioning support.");
+				if (a.lti_nrps_context_memberships_url==null) throw new Exception("No Names and Roles Provisioning support.");
 
 				buf.append("<h3>" + a.assignmentType + " - " + t.title + "</h3>");
 				buf.append("Valid: " + new Date() + "<p>");
@@ -752,7 +752,8 @@ public class Homework extends HttpServlet {
 				buf.append("If you have any questions or need assistance, please contact <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.<p>");			
 				buf.append("<a href=/Homework?Token=" + user.token + ">Return to this homework assignment</a>.<p>");
 			} catch (Exception e) {
-				buf.append(e.toString());
+				buf.append("ChemVantage was unable to access the LISMembershipContainer REST service on your LMS, so a summary of scores cannot be provided "
+						+ "at this time, sorry. We are working to resolve this problem in the near future.<p>");
 			}
 		}
 		return buf.toString();

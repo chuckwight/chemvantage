@@ -355,7 +355,9 @@ public class User {
     
     String getLisResultSourcedid() {
     	try {
-    		return JWT.decode(this.token).getClaim("lrs").asString();
+    		String lis_result_sourcedid = JWT.decode(this.token).getClaim("lrs").asString();
+    		if (lis_result_sourcedid == null || lis_result_sourcedid.isEmpty()) return null;
+    		return lis_result_sourcedid;
     	} catch (Exception e) {
     		return null;
     	}

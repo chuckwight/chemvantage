@@ -586,8 +586,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			if ((bearerAuth=getAccessToken(a.domain)).startsWith("response")) throw new Exception("the LMS failed to issue an auth token: " + bearerAuth);
 			else bearerAuth = "Bearer " + bearerAuth;
 			
-			if (a.lti_nrps_context_membership_url==null) throw new Exception("the service endpoint URL for this group is unknown");
-			URL u = new URL(a.lti_nrps_context_membership_url);
+			if (a.lti_nrps_context_memberships_url==null) throw new Exception("the service endpoint URL for this group is unknown");
+			URL u = new URL(a.lti_nrps_context_memberships_url);
 
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setDoOutput(true);

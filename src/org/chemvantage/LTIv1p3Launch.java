@@ -100,7 +100,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			throws IOException {
 		DecodedJWT id_token = null;
 		Map<String,Claim> id_token_claims = null;
-		
+		StringBuffer debug = new StringBuffer("Starting LTIv1.3 launch sequence...");
 		try {
 			validateStateToken(request);			
 			id_token = JWT.decode(request.getParameter("id_token"));
@@ -111,6 +111,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		}
 		
 		// At this point we have a valid LTI launch; process the claims:
+		debug.append("state token and id_token validated...");
 		
 		try {			
 			// Process deployment claims:
@@ -118,7 +119,8 @@ public class LTIv1p3Launch extends HttpServlet {
 		    if (!platform_id.startsWith("http")) platform_id = "http://" + platform_id;
 		    String deployment_id = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/deployment_id").asString();
 		    String platformDeploymentId = platform_id + "/" + deployment_id;
-		   			
+		    debug.append("platformDeploymentId=" + platformDeploymentId + "...");
+					
 			// Process User information:
 			String sub = id_token.getSubject();  // required
 			if (sub==null || sub.isEmpty()) throw new Exception("Missing or empty subject claim in the id_token.");
@@ -135,35 +137,8 @@ public class LTIv1p3Launch extends HttpServlet {
 				if (roles[i].contains("instructor")) user.setIsInstructor(true);
 				if (roles[i].contains("administrator")) user.setIsAdministrator(true);
 			}
-/*			
-			// Process context (Group) information:
-			//Group myGroup = null;
-			Map<String,Object> context = null;
-			String context_id = null;
-			String context_label = "default group";
+			debug.append("user info OK...");
 			
-			try {  // look for optional context claim
-				context = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/context").asMap();			
-				context_id = context.get("id").toString();
-				context_label = context.get("label").toString();
-			} catch (Exception e) { // default context for platform
-				context_id = "";
-			}
-			context_id = platform_id + "/" + context_id;  // prepends platform_id to avoid uniqueness issues across platforms
-			
-			try {
-				myGroup = ofy().load().type(Group.class).filter("context_id",context_id).first().safe();
-				if (user.isInstructor()) myGroup.instructorId = user.id;
-			} catch (Exception e) {
-				String instructorId = user.isInstructor()?user.id:null;
-				myGroup = new Group(platformDeploymentId,context_id,context_label,instructorId);
-				ofy().save().entity(myGroup).now(); // produces an id value for the myGroup entity
-			}
-			
-			// Make sure that this user is listed as a member of the group:
-			user.myGroupId = myGroup.id;
-			myGroup.addMember(user.id); // automatically checks for duplicate entries
-*/
 			Map<String,Object> lti_ags_claims = new HashMap<String,Object>();
 			Map<String,Object> lti_nrps_claims = new HashMap<String,Object>();
 			String scope = "";
@@ -177,44 +152,42 @@ public class LTIv1p3Launch extends HttpServlet {
 				scope = scope.replaceAll(",", " "); // replace commas to make a space separated URL-safe list of scopes
 				scope = scope.replaceAll("  ", " "); // remove any leftover white space (tidying up)
 				if (scope.contains("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem")) lti_ags_lineitems_url = lti_ags_claims.get("lineitems").toString();
-				
-/*				
-				myGroup.lti_ags_scope = scope;  // store this in the Group entity for use with LTI services calls to the platform
-
-				// if the platform allows reading/writing scores using LIS, store the URL where lineitem URLs can be found for the assignments
-				if (myGroup.lti_ags_scope.contains("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem")) myGroup.lti_ags_lineitems_url = lti_ags_claims.get("lineitems").toString();
-				myGroup.canReadLisScores = myGroup.lti_ags_scope.contains("https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly");
-				myGroup.isUsingLisOutcomeService = myGroup.lti_ags_scope.contains("https://purl.imsglobal.org/spec/lti-ags/scope/score");
-				myGroup.lis_outcome_service_format = "application/vnd.ims.lis.v1.score+json";
-*/
+				debug.append("supports AGS...");
 			} catch (Exception e) {				
 			}
 
-			String nrps_context_membership_url = null;
+			String nrps_context_memberships_url = null;
 			try { // if the platform allows LTI Advantage Names and Roles Provisioning, store the URL
 				lti_nrps_claims = id_token_claims.get("https://purl.imsglobal.org/spec/lti-nrps/claim/namesroleservice").asMap();
 				if (lti_nrps_claims != null) scope += " https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly";
-				nrps_context_membership_url = lti_nrps_claims.get("context_membership_url").toString();
+				nrps_context_memberships_url = lti_nrps_claims.get("context_memberships_url").toString();
+				debug.append("supports NRPS...");
 			} catch (Exception e) {
 			}
 			
+			debug.append("getting deployment " + platformDeploymentId + "...");
 			Deployment d = Deployment.getInstance(platformDeploymentId);
-			if (!scope.contentEquals(d.scope)) {
+			if (d == null) debug.append("failed...");
+			else debug.append("scope=" + d.scope + "...");
+			
+			if (scope != null && !scope.equals(d.scope)) {
 				d.scope = scope;
 				ofy().save().entity(d);
+				debug.append("scope updated OK...");
 			}
 		
 			// Process the ResourceLinkRequest information:
 			String resourceLinkId = null;
 			try {
 				Map<String,Object> resource_link_claims = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link").asMap();
+				debug.append("resource_link_claims OK...");
 				resourceLinkId = resource_link_claims.get("id").toString();
+				debug.append("resourceLinkId is OK...");
 			} catch (Exception e) {
 				throw new Exception("Resource link id was missing from payload.");
 			}
 			
 			// Find the correct Assignment entity in order to construct the URL to which the user should be redirected
-			long assignmentId = 0L;
 			Assignment myAssignment = null;
 			boolean saveAssignment = false;
 			
@@ -235,7 +208,8 @@ public class LTIv1p3Launch extends HttpServlet {
 				myAssignment = new Assignment(platformDeploymentId,resourceLinkId,null,null);
 				saveAssignment = true;	
 			}
-
+			debug.append("assignmentId=" + myAssignment.resourceLinkId + "...");
+			
 			// Update the AGS lineitem URL for this assignment, if necessary
 			if (myAssignment.lti_ags_lineitem_url==null) {
 				if (lti_ags_claims.get("lineitem") != null) {  // get the lineitem from the id_token
@@ -247,21 +221,19 @@ public class LTIv1p3Launch extends HttpServlet {
 			}
 			
 			// Update the NRPS endpoint for this context, if necessary
-			if (myAssignment.lti_nrps_context_membership_url==null && nrps_context_membership_url != null) {
-				myAssignment.lti_nrps_context_membership_url = nrps_context_membership_url;
+			if (myAssignment.lti_nrps_context_memberships_url==null && nrps_context_memberships_url != null) {
+				myAssignment.lti_nrps_context_memberships_url = nrps_context_memberships_url;
 				saveAssignment = true;
 			}
 			
-			if (saveAssignment && user.isInstructor()) {
+			if (saveAssignment) {
 				ofy().save().entity(myAssignment).now();  // we need the id value to store in the user CSRF token
+				debug.append("assignment saved OK...");
 			}
 			
-			// At this point we should have a valid Assignment, but it may not have an 
-			// assignmentType or topicId(s) if it's new.
-			if (myAssignment.id == null) assignmentId = 0L;
-			else assignmentId = myAssignment.id;
-			user.setToken(assignmentId);
-
+			user.setToken(myAssignment.id);
+			debug.append("user token set OK...");
+			
 			if (myAssignment.assignmentType == null || myAssignment.topicId==0) {  //Show the the pickResource form:									
 				response.getWriter().println(Home.header + pickResourceForm(user,myAssignment) + Home.footer);
 				return;
@@ -272,7 +244,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			}
 		
 		} catch (Exception e) {
-			doError(request,response,"","",e);
+			doError(request,response,"",debug.toString(),e);
 		}
 	}
 	
@@ -363,18 +335,6 @@ public class LTIv1p3Launch extends HttpServlet {
 				}
 			}
 
-			/*
-			if (a.lti_ags_lineitem_url==null) { // create a new lineitem in the platform
-				try {
-					Group g = ofy().load().type(Group.class).id(a.groupId).safe();
-					String url = null;
-					if (g.lti_ags_lineitems_url != null) url = LTIMessage.createLineItem(a);
-					if (url != null) a.lti_ags_lineitem_url = url;
-				} catch (Exception e) {
-				}
-			}
-			*/
-			
 			ofy().save().entity(a).now(); // going to need this is just a few milliseconds
 			return user.token;
 		} catch (Exception e) {
@@ -485,7 +445,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			return;
 		}
 		PrintWriter out = response.getWriter();
-		out.println(s + "<br>" + (e!=null?e.toString():"unknown error"));
+		out.println(s + "<br>" + (e!=null?e.toString():"unknown error") + "<br>" + message);
 	}
 
 	@Override

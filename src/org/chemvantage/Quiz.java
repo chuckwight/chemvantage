@@ -644,7 +644,7 @@ public class Quiz extends HttpServlet {
 			try { // code for LTI version 1.3
 				Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
 
-				if (a.lti_nrps_context_membership_url==null) throw new Exception("No Names and Roles Provisioning support.");
+				if (a.lti_nrps_context_memberships_url==null) throw new Exception("No Names and Roles Provisioning support.");
 
 				buf.append("<h3>" + a.assignmentType + " - " + t.title + "</h3>");
 				//buf.append("Group: " + g.description + "<br>");
@@ -704,8 +704,10 @@ public class Quiz extends HttpServlet {
 				if (a.custom_context_memberships_url == null) buf.append("Memberships service is not available from your LMS, sorry.<p>");
 				else {
 					BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(a.domain).safe();
-					String json = new LTIMessage("text/plain","application/vnd.ims.lis.v2.membershipcontainer+json","",a.custom_context_memberships_url,c.oauth_consumer_key,c.secret).send();
-				buf.append(json);
+				//buf.append("Getting group membership from consumer " + c.oauth_consumer_key + " at URL " + a.custom_context_memberships_url);
+					String json = new LTIMessage("text/html","application/vnd.ims.lis.v2.membershipcontainer+json","",a.custom_context_memberships_url,c.oauth_consumer_key,c.secret).send();
+				// application/vnd.ims.lis.v2.membershipcontainer+json
+				//	buf.append(json);
 					JsonObject context_memberships = new JsonParser().parse(json).getAsJsonObject();
 					JsonArray members = context_memberships.get("pageOf").getAsJsonObject().get("membershipSubject").getAsJsonObject().get("membership").getAsJsonArray();
 					Iterator<JsonElement> iterator = members.iterator();
@@ -771,11 +773,12 @@ public class Quiz extends HttpServlet {
 							+ "Please check back in a few minutes to ensure that the situation has been resolved.<p>");
 				}
 				else if (allScoresReported) buf.append("All scores for students have been reported to your LMS successfully.<p>");
-*/
+ */
 				buf.append("If you have any questions or need assistance, please contact <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.<p>");			
 				buf.append("<a href=/Quiz?Token=" + user.token + ">Return to this quiz</a>.<p>");
-				} catch (Exception e) {
-				buf.append(e.toString());
+			} catch (Exception e) {
+				buf.append("ChemVantage was unable to access the LISMembershipContainer REST service on your LMS, so a summary of scores cannot be provided "
+						+ "at this time, sorry. We are working to resolve this problem in the near future.<p>");
 			}
 		}
 		return buf.toString();
