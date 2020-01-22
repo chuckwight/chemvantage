@@ -120,10 +120,6 @@ public class LTILaunch extends HttpServlet {
 			try {
 				tc = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).safe();
 				if (tc.secret==null) throw new Exception("Shared secret was not found in the ChemVantage database.");
-				if (tc.lti_version==null || tc.lti_version.isEmpty() || !tc.lti_version.equals(lti_version)) {
-						tc.lti_version=lti_version;
-						ofy().save().entity(tc);
-				}
 			} catch (Exception e) {
 				throw new Exception("Invalid oauth_consumer_key. Please verify that the oauth_consumer_key is entered into your LMS exactly as you are registered with ChemVantage.");
 			}
@@ -159,7 +155,7 @@ public class LTILaunch extends HttpServlet {
 			String relaunch_url = request.getParameter("relaunch_url");
 			String platform_state = request.getParameter("platform_state");
 			String tool_state = request.getParameter("tool_state");
-			boolean securityAlert = false;
+			//boolean securityAlert = false;
 			
 			if (tool_state != null && platform_state != null) { // This is a LTIv1.1.2 relaunch response. Validate the tool_state value
 				try {
@@ -168,7 +164,10 @@ public class LTILaunch extends HttpServlet {
 				        .withIssuer("https://www.chemvantage.org")
 				        .withClaim("platform_state", platform_state)
 				        .build().verify(tool_state);
-				    lti_version = "LTI-1p1p2";
+					if (tc.lti_version==null || !tc.lti_version.equals("LTI-1p1p2")) {
+						tc.lti_version="LTI-1p1p2";
+						ofy().save().entity(tc);
+				}
 				} catch (Exception e) {
 					throw new Exception("Tool state could not be validated.");
 				}
@@ -187,20 +186,16 @@ public class LTILaunch extends HttpServlet {
 					throw new Exception("Tool state JWT could not be created.");
 				}
 			    return;  // wait for relaunch from platform
-			} else { // this is an basic LTIv1.1.1 launch not supported after Dec 31, 2010
+			} else { // this is an basic LTIv1.1.1 launch not supported after Dec 31, 2020
 				Date jan2021 = new Date(1609477200000L); // January 1, 2021
-				Date jul2020 = new Date(1593576000000L); // July 1, 2020
 				Date now = new Date();
 				if (now.after(jan2021)) throw new Exception("Due to potential internet security flaws, the version of LTI "
 						+ "supported by your LMS was <a href=https://www.imsglobal.org/lti-security-announcement-and-deprecation-schedule-july-2019> "
 						+ "deprecated by IMS Global Learning Solutions</a> effective 1 January 2021. We are therefore unable "
 						+ "to support this connection until you upgrade to an LMS that supports, at a minimum, the LTI version "
 						+ "1.1.2 security update. We apologize for this inconvenience.");
-				else if (now.after(jul2020)) securityAlert = true;
-				lti_version = "LTI-1p1p1";
 			}
 			// End of LTIv1p1p2 section. Continue with normal LTI launch sequence
-			debug.append("lti_version=" + lti_version + "...");
 			
 			// Gather some information about the user
 			String userId = request.getParameter("user_id");
@@ -317,7 +312,11 @@ public class LTILaunch extends HttpServlet {
 			// assignmentType or topicId(s). If so, show the the pickResource form:
 			if (myAssignment.assignmentType != null) {
 				redirectUrl = "/" + myAssignment.assignmentType + "?Token=" + user.token;
-				if (securityAlert && user.isInstructor()) redirectUrl += "&SecurityAlert=true";
+				
+				// Warn instructor of LTI-1p1p2 security patch requirement
+				boolean after1July2020 = new Date().after(new Date(1593576000000L)); // July 1, 2020
+				if (after1July2020 && tc.lti_version.contentEquals("LTI-1p0") && user.isInstructor()) redirectUrl += "&SecurityAlert=true";
+				
 				debug.append("Redirecting to: " + redirectUrl);
 				response.sendRedirect(redirectUrl);
 			} else response.getWriter().println(Home.header + pickResourceForm(user,myAssignment) + Home.footer);
