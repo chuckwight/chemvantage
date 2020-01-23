@@ -134,9 +134,13 @@ public class Quiz extends HttpServlet {
 			// Check to see if this user has any pending quizzes on this topic:
 			Date then = new Date(now.getTime()-timeLimit*60000);  // timeLimit minutes ago
 			QuizTransaction qt = ofy().load().type(QuizTransaction.class).filter("userId",user.id).filter("topicId",topic.id).filter("graded",null).filter("downloaded >",then).first().now();
+			String lis_result_sourcedid = user.getLisResultSourcedid();
 			if (qt == null || qt.graded != null) {
 				qt = new QuizTransaction(topic.id,topic.title,user.id,now,null,0,assignmentId,0,user.getLisResultSourcedid());
 				ofy().save().entity(qt).now();  // creates a long id value to use in random number generator
+			} else if (qt.lis_result_sourcedid == null && lis_result_sourcedid != null) {
+				qt.lis_result_sourcedid = lis_result_sourcedid;
+				ofy().save().entity(qt);
 			}
 			int secondsRemaining = (int) (timeLimit*60 - (now.getTime() - qt.downloaded.getTime())/1000);
 

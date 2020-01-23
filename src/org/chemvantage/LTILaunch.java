@@ -299,9 +299,6 @@ public class LTILaunch extends HttpServlet {
 				if (saveAssignment) ofy().save().entity(myAssignment); 
 			} catch (Exception e) {  // or create a new one with the available information (but no assignmentType or topicIds)
 				myAssignment = new Assignment(oauth_consumer_key,resource_link_id,lisOutcomeServiceUrl,customContextMembershipsUrl);
-				myAssignment.lis_outcome_service_url = lisOutcomeServiceUrl;
-				myAssignment.custom_context_memberships_url = customContextMembershipsUrl;
-				
 				ofy().save().entity(myAssignment).now(); // we'll need the new id value immediately
 				user.setToken(myAssignment.id,lis_result_sourcedid);
 				debug.append("User token set...");
