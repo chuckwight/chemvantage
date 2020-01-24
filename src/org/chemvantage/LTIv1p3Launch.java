@@ -121,6 +121,12 @@ public class LTIv1p3Launch extends HttpServlet {
 		    String platformDeploymentId = platform_id + "/" + deployment_id;
 		    debug.append("platformDeploymentId=" + platformDeploymentId + "...");
 					
+		    //debug.append("getting deployment " + platformDeploymentId + "...");
+			Deployment d = Deployment.getInstance(platformDeploymentId);
+			
+			//if (d == null) debug.append("failed...");
+			//else debug.append("scope=" + d.scope + "...");
+			
 			// Process User information:
 			String sub = id_token.getSubject();  // required
 			if (sub==null || sub.isEmpty()) throw new Exception("Missing or empty subject claim in the id_token.");
@@ -142,7 +148,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			Map<String,Object> lti_ags_claims = new HashMap<String,Object>();
 			Map<String,Object> lti_nrps_claims = new HashMap<String,Object>();
 			String scope = "";
-			String lti_ags_lineitems_url = null;
+			String lti_ags_lineitems_url = "";
 			try {  // Process information for LTI Assignment and Grade Services (AGS)
 				lti_ags_claims = id_token_claims.get("https://purl.imsglobal.org/spec/lti-ags/claim/endpoint").asMap();		
 
@@ -151,8 +157,9 @@ public class LTIv1p3Launch extends HttpServlet {
 				scope = scope.substring(1,scope.length()-1); // removes leading and trailing square brackets from the Json string
 				scope = scope.replaceAll(",", " "); // replace commas to make a space separated URL-safe list of scopes
 				scope = scope.replaceAll("  ", " "); // remove any leftover white space (tidying up)
-				if (scope.contains("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem")) lti_ags_lineitems_url = lti_ags_claims.get("lineitems").toString();
-				debug.append("supports AGS...");
+				
+				lti_ags_lineitems_url = lti_ags_claims.get("lineitems").toString();
+				//debug.append("supports AGS...");
 			} catch (Exception e) {				
 			}
 
@@ -165,14 +172,11 @@ public class LTIv1p3Launch extends HttpServlet {
 			} catch (Exception e) {
 			}
 			
-			debug.append("getting deployment " + platformDeploymentId + "...");
-			Deployment d = Deployment.getInstance(platformDeploymentId);
-			if (d == null) debug.append("failed...");
-			else debug.append("scope=" + d.scope + "...");
-			
-			if (scope != null && !scope.equals(d.scope)) {
+			// Update scope and lti_ags_lineitems_url in the Deployment entity, if necessary
+			if ((scope != null && !scope.equals(d.scope)) || lti_ags_lineitems_url != null && !lti_ags_lineitems_url.equals(d.lti_ags_lineitems_url)) {
 				d.scope = scope;
-				ofy().save().entity(d);
+				d.lti_ags_lineitems_url = lti_ags_lineitems_url;
+				ofy().save().entity(d).now();
 				debug.append("scope updated OK...");
 			}
 		
@@ -194,10 +198,10 @@ public class LTIv1p3Launch extends HttpServlet {
 			// Try to find the assignment using the platformDeploymentId and the resourceLinkId value
 			myAssignment = ofy().load().type(Assignment.class).filter("domain",platformDeploymentId).filter("resourceLinkId",resourceLinkId).first().now();
 			
-			// Next try to get the resourceId from the lineitem service
+			// If the lineitem was created by DeepLinking, try to get the resourceId from the lineitem service; that will be the assignmentId
 			if (myAssignment == null) {
 				try {					
-					myAssignment = ofy().load().type(Assignment.class).id(LTIMessage.getAssignmentId(lti_ags_lineitems_url,resourceLinkId)).safe();
+					myAssignment = ofy().load().type(Assignment.class).id(LTIMessage.getAssignmentId(d,resourceLinkId)).safe();
 					myAssignment.resourceLinkId = resourceLinkId;
 					saveAssignment = true;
 				} catch (Exception e) {}
@@ -211,17 +215,20 @@ public class LTIv1p3Launch extends HttpServlet {
 			debug.append("assignmentId=" + myAssignment.resourceLinkId + "...");
 			
 			// Update the AGS lineitem URL for this assignment, if necessary
-			if (myAssignment.lti_ags_lineitem_url==null) {
+			if (myAssignment.lti_ags_lineitem_url==null || myAssignment.lti_ags_lineitem_url.isEmpty()) {
 				if (lti_ags_claims.get("lineitem") != null) {  // get the lineitem from the id_token
 					myAssignment.lti_ags_lineitem_url = lti_ags_claims.get("lineitem").toString(); // cache the lineitem URL 
-				} else if (myAssignment.assignmentType != null && myAssignment.topicId>0) {  // create a new lineitem in the platform
-					myAssignment.lti_ags_lineitem_url = LTIMessage.createLineItem(myAssignment);
+				} else if (d.lti_ags_lineitems_url != null) { // try to query the lineitems URL or create a new lineitem
+					myAssignment.lti_ags_lineitem_url = LTIMessage.getLineItemUrl(d,resourceLinkId);
+					if (myAssignment.lti_ags_lineitem_url.contentEquals("Not found.")) {
+						myAssignment.lti_ags_lineitem_url = LTIMessage.createLineItem(myAssignment);
+					}
 				}
 				saveAssignment = true;
 			}
 			
 			// Update the NRPS endpoint for this context, if necessary
-			if (myAssignment.lti_nrps_context_memberships_url==null && nrps_context_memberships_url != null) {
+			if ((myAssignment.lti_nrps_context_memberships_url==null || myAssignment.lti_nrps_context_memberships_url.isEmpty()) && nrps_context_memberships_url != null) {
 				myAssignment.lti_nrps_context_memberships_url = nrps_context_memberships_url;
 				saveAssignment = true;
 			}
@@ -244,7 +251,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			}
 		
 		} catch (Exception e) {
-			doError(request,response,"",debug.toString(),e);
+			doError(request,response,"","",e);
 		}
 	}
 	

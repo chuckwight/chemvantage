@@ -59,12 +59,12 @@ public class ReportScore extends HttpServlet {
 			response.setContentType("text/html");
 			out.println(Home.header + "<h3>Unreported Scores</h3>");
 			out.println("For each of the scores below, click the link to report it manually.<p>");
-			List<Score> scores = ofy().load().type(Score.class).list(); //filter("lisReportComplete",false).list();
+			List<Score> scores = ofy().load().type(Score.class).filter("lisReportComplete",false).list();
 			for (Score s : scores) {
 				String userId = s.owner.getName();
 				String url = "/ReportScore?UserId=" + userId + "&AssignmentId=" + s.assignmentId;
 				if (s.lisReportComplete) out.println("Report is complete: " + url + "<br>");
-				else if (s.lis_result_sourcedid==null) out.println("No lisResultSourcedId: " + url + "<br>");
+				else if (s.lis_result_sourcedid==null) continue; //out.println("No lisResultSourcedId: " + url + "<br>");
 				else if (s.needsLisReporting()) out.println("Score needs reporting: <a href=" + url + ">" + url + "</a><br>");
 				else out.println("No reporting URL provided: " + url + "<br>");
 			}
@@ -88,7 +88,7 @@ public class ReportScore extends HttpServlet {
 			} catch (Exception e) {}
 
 			if (a.lti_ags_lineitem_url != null) {  // use LTIAdvantage reporting specs
-				postUserScore(userId,a,attempts);
+				out.println(postUserScore(userId,a,attempts));
 			} else if (a.lis_outcome_service_url != null) { // use LTI 1.1 reporting
 				out.println(postUserScore(userId,a,attempts,""));  // use LTI v1.1 specs
 			}
@@ -143,13 +143,15 @@ public class ReportScore extends HttpServlet {
 		return buf.toString();
 	}
 	
-	void postUserScore(String userId,Assignment a,int attempts) {
+	String postUserScore(String userId,Assignment a,int attempts) {
+		StringBuffer buf = new StringBuffer();
 		try {
 			Key<Score> k = Key.create(Key.create(User.class,userId),Score.class,a.id);
 			Score s = ofy().load().key(k).safe();
-			boolean success = LTIMessage.postUserScore(s);
-			if (!success) {
-				if (attempts < 10) {
+			String response = LTIMessage.postUserScore(s);
+			buf.append(response);
+			if (!response.contains("Success")) {			
+				if (attempts < 3) {
 					long countdownMillis = (long) Math.pow(2,attempts)*60000;
 					Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
 					queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",userId).param("Retry",Integer.toString(attempts)).countdownMillis(countdownMillis));			
@@ -160,6 +162,7 @@ public class ReportScore extends HttpServlet {
 			Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
 			sendEmailToLmsAdmin(userId,a,d,e.getMessage());
 		}
+		return buf.toString();
 	}
 	
 	void sendEmailToLmsAdmin(String userId,Assignment assignment,Deployment d,String errorMsg) {  // LTIAdvantage

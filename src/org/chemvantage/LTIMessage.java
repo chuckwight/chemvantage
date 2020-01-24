@@ -261,14 +261,14 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		}
     }
     
-	static String getLineItemUrl(Assignment a) {
+	static String getLineItemUrl(Deployment d,String resourceLinkId) {
 		try {
-			Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
-			JsonArray json = new JsonParser().parse(getLineItems(d.platform_deployment_id)).getAsJsonArray();
+			//Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
+			JsonArray json = new JsonParser().parse(getLineItems(d)).getAsJsonArray();
 			Iterator<JsonElement> iterator = json.iterator();
 			while(iterator.hasNext()){
 		        JsonObject lineitem = iterator.next().getAsJsonObject();
-		        if (a.resourceLinkId.equals(lineitem.get("resourceLinkId").getAsString())) {
+		        if (resourceLinkId.equals(lineitem.get("resourceLinkId").getAsString())) {
 		        	return lineitem.get("id").getAsString();
 		        }
 		    }
@@ -278,10 +278,10 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			}
 	}
 	
-	static long getAssignmentId(String lti_ags_lineitems_url, String resourceLinkId) {
+	static long getAssignmentId(Deployment d, String resourceLinkId) {
 		long assignmentId = 0;
 		try {
-			JsonArray json = new JsonParser().parse(getLineItems(lti_ags_lineitems_url)).getAsJsonArray();
+			JsonArray json = new JsonParser().parse(getLineItems(d)).getAsJsonArray();
 			Iterator<JsonElement> iterator = json.iterator();
 			while(iterator.hasNext()){
 		        JsonObject lineitem = iterator.next().getAsJsonObject();
@@ -294,10 +294,10 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		return assignmentId;
 	}
 	
-	static String getLineItems(String platformDeploymentId) {
+	static String getLineItems(Deployment d) {
 		try {
-			Deployment d = ofy().load().type(Deployment.class).id(platformDeploymentId).safe();
-			String bearerAuth = "Bearer " + getAccessToken(platformDeploymentId);
+			//Deployment d = ofy().load().type(Deployment.class).id(platformDeploymentId).safe();
+			String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id);
 			
 			URL u = new URL(d.lti_ags_lineitems_url);
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
@@ -395,7 +395,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	
 		Map<String,String> scores = new HashMap<String,String>();		
 		try {
-			String bearerAuth = "Bearer" + getAccessToken(a.domain);
+			String bearerAuth = "Bearer " + getAccessToken(a.domain);
 
 			if (a.lti_ags_lineitem_url==null) throw new Exception("the lineitem URL for this assignment is unknown");
 			URL u = new URL(a.lti_ags_lineitem_url + "/results");
@@ -433,7 +433,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		return scores;
 	}
 /*
-	static JsonArray readMembershipScores(Assignment a,String dummy) {
+	static JsonArray readMembershipScores(Assignment a) {
 		// This method uses the LTIv1p3 message protocol to retrieve a JSON containing all of
 		// the existing  scores for one assignment from the LMS. 
 		// The lineitem URL corresponds to the LMS grade book column fpr the Assignment entity.
@@ -441,8 +441,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		//Map<String,String> scores = new HashMap<String,String>();		
 		String bearerAuth = null;
 		try {
-			Group g = ofy().load().type(Group.class).id(a.groupId).safe();
-			if ((bearerAuth=getAccessToken(g)).startsWith("response")) throw new Exception("the LMS failed to issue an auth token: " + bearerAuth);
+			if ((bearerAuth=getAccessToken(a.domain)).startsWith("response")) throw new Exception("the LMS failed to issue an auth token: " + bearerAuth);
 			else bearerAuth = "Bearer " + bearerAuth;
 
 			if (a.lti_ags_lineitem_url==null) throw new Exception("the lineitem URL for this assignment is unknown");
@@ -478,7 +477,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		// The lineitem URL corresponds to the LMS grade book column fpr the Assignment entity,
 		// and the specific cell is identified by the user_id value defined by the LMS platform
 		try {
-			String bearerAuth=getAccessToken(a.domain);
+			String bearerAuth = "Bearer " + getAccessToken(a.domain);
 
 			String user_id = User.getRawId(userId); // stripped of the platform_id and "/"
 
@@ -511,21 +510,22 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 						return String.valueOf(Math.round(1000.*result.get("resultScore").getAsDouble()/result.get("resultMaximum").getAsDouble())/10.);
 					}
 				}
-				return "no score for this user was found";
-			} else return "the LMS issued response code: " + responseCode; 
+				return "no score found";
+			} else return "response code: " + responseCode; 
 		} catch (Exception e) {	
 			return e.toString();
 		}
 	}
 	
-	static boolean postUserScore(Score s) {
+	static String postUserScore(Score s) {
 		// This method uses the LTIv1p3 message protocol to post a user's score to the LMS grade book.
 		// The lineitem URL corresponds to the LMS grade book column for the Assignment entity,
 		// and the specific cell is identified by the user_id value defined by the LMS platform
+		StringBuffer buf = new StringBuffer();
 		try {
 			Assignment a = ofy().load().type(Assignment.class).id(s.assignmentId).safe();
 			String bearerAuth = getAccessToken(a.domain);
-			if (bearerAuth.startsWith("response")) return false;
+			if (bearerAuth.startsWith("response")) return "Failed: could not get access token.";
 			bearerAuth = "Bearer " + bearerAuth;
 			
 			String raw_id = User.getRawId(s.owner.getName());
@@ -539,6 +539,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			j.addProperty("gradingProgress", "FullyGraded");
 			j.addProperty("userId", raw_id);
 			String json = j.toString();
+			
+			buf.append("Submitting JSON:<br>" + json + "<p>");
 /*			
 			String json = "{"
 					+ "\"timestamp\":\"" + ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT) + "\","
@@ -564,14 +566,17 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			toTC.write(json);
 			toTC.flush();
 			int responseCode = uc.getResponseCode(); // success if 200-202
+			buf.append("Received response code: " + responseCode + "<p>");
 			boolean success = responseCode>199 && responseCode<203;
 			if (success) {  
 				s.lisReportComplete = true;
 				ofy().save().entity(s);
+				buf.append("Success");
 			}
 		} catch (Exception e) {
+			return "Score submission failed: " + e.getMessage() + "br>";
 		}
-		return false;
+		return buf.toString();
 	}
 	
 	static Map<String,String[]> getMembership(Assignment a) {

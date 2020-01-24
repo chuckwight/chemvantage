@@ -113,7 +113,7 @@ public class Score {    // this object represents a best score achieved by a use
 	public boolean needsLisReporting() {
 		try {
 			Assignment a = ofy().load().type(Assignment.class).id(this.assignmentId).safe();
-			if ((a.lis_outcome_service_url != null || a.lti_ags_lineitem_url != null) && !lisReportComplete) return true;
+			if (!lisReportComplete && (a.lis_outcome_service_url != null && this.lis_result_sourcedid != null) || a.lti_ags_lineitem_url != null) return true;
 		} catch (Exception e) {
 			ofy().delete().entity(this);
 		}

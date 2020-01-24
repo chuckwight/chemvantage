@@ -580,7 +580,7 @@ public class Quiz extends HttpServlet {
 					boolean gotScoreOK = false;
 					
 					if (a.lti_ags_lineitem_url!=null) {  // LTI version 1.3
-						lmsScore = LTIMessage.readUserScore(a, user.id);
+						lmsScore = LTIMessage.readUserScore(a,user.id);
 						try {
 							lmsPctScore = Double.parseDouble(lmsScore);
 							gotScoreOK = true;
@@ -596,7 +596,7 @@ public class Quiz extends HttpServlet {
 						if (replyBody.contains("success")) {
 							int beginIndex = replyBody.indexOf("<textString>") + 12;
 							int endIndex = replyBody.indexOf("</textString>");
-							replyBody = replyBody.substring(beginIndex,endIndex);
+							lmsScore = replyBody.substring(beginIndex,endIndex);
 							lmsPctScore = 100.*Double.parseDouble(replyBody);
 							gotScoreOK = true;
 						}
@@ -609,7 +609,7 @@ public class Quiz extends HttpServlet {
 								+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<br>"
 								+ "If you think this may be due to a stale score, you may submit this assignment for grading,<br>"
 								+ "even for a score of zero, and ChemVantage will try to refresh your best score to the LMS.<p>");
-					} else throw new Exception();
+					} else buf.append(lmsScore); //throw new Exception();
 				} catch (Exception e) {
 					buf.append("ChemVantage was unable to retrieve your score for this assignment from the LMS. ");
 					if (s.score==0 && s.numberOfAttempts<=1) buf.append("It appears that you may not have submitted a score for this quiz yet. ");
@@ -664,6 +664,8 @@ public class Quiz extends HttpServlet {
 
 				Map<String,String> scores = LTIMessage.readMembershipScores(a);
 				if (scores==null) scores = new HashMap<String,String>();  // in case service call fails
+				
+				buf.append("We downloaded " + scores.size() + " scores from your LMS.<br>");
 				
 				Map<String,String[]> membership = LTIMessage.getMembership(a);
 				if (membership==null) membership = new HashMap<String,String[]>(); // in case service call fails
