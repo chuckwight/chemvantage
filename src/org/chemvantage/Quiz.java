@@ -574,7 +574,6 @@ public class Quiz extends HttpServlet {
 
 				// try to validate the score with the LMS grade book entry
 				try {
-					//Group g = ofy().load().type(Group.class).id(user.myGroupId).safe();
 					double lmsPctScore = 0;
 					String lmsScore = null;
 					boolean gotScoreOK = false;
@@ -609,7 +608,7 @@ public class Quiz extends HttpServlet {
 								+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<br>"
 								+ "If you think this may be due to a stale score, you may submit this assignment for grading,<br>"
 								+ "even for a score of zero, and ChemVantage will try to refresh your best score to the LMS.<p>");
-					} else buf.append(lmsScore); //throw new Exception();
+					} else throw new Exception();
 				} catch (Exception e) {
 					buf.append("ChemVantage was unable to retrieve your score for this assignment from the LMS. ");
 					if (s.score==0 && s.numberOfAttempts<=1) buf.append("It appears that you may not have submitted a score for this quiz yet. ");
