@@ -432,46 +432,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		}
 		return scores;
 	}
-/*
-	static JsonArray readMembershipScores(Assignment a) {
-		// This method uses the LTIv1p3 message protocol to retrieve a JSON containing all of
-		// the existing  scores for one assignment from the LMS. 
-		// The lineitem URL corresponds to the LMS grade book column fpr the Assignment entity.
-		
-		//Map<String,String> scores = new HashMap<String,String>();		
-		String bearerAuth = null;
-		try {
-			if ((bearerAuth=getAccessToken(a.domain)).startsWith("response")) throw new Exception("the LMS failed to issue an auth token: " + bearerAuth);
-			else bearerAuth = "Bearer " + bearerAuth;
 
-			if (a.lti_ags_lineitem_url==null) throw new Exception("the lineitem URL for this assignment is unknown");
-			URL u = new URL(a.lti_ags_lineitem_url + "/results");
-
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			uc.setDoOutput(true);
-			uc.setDoInput(true);
-			uc.setRequestMethod("GET");
-			uc.setRequestProperty("Authorization", bearerAuth);
-			uc.setRequestProperty("Accept", "application/vnd.ims.lis.v2.resultcontainer+json");
-			uc.connect();
-			
-			StringBuffer res = new StringBuffer();
-			
-			int responseCode = uc.getResponseCode();
-			if (responseCode > 199 && responseCode < 203) {  // OK
-				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-				String line;
-				while ((line = reader.readLine()) != null) {
-					res.append(line);
-				}
-				reader.close();
-			}
-			return new JsonParser().parse(res.toString()).getAsJsonArray();
-		} catch (Exception e) {	
-			return null;
-		}
-	}
-*/	
 	static String readUserScore(Assignment a, String userId) {
 		// This method uses the LTIv1p3 message protocol to retrieve a user's score from the LMS.
 		// The lineitem URL corresponds to the LMS grade book column fpr the Assignment entity,
@@ -541,17 +502,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			String json = j.toString();
 			
 			buf.append("Submitting JSON:<br>" + json + "<p>");
-/*			
-			String json = "{"
-					+ "\"timestamp\":\"" + ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT) + "\","
-					+ "\"scoreGiven\":\"" + s.score + "\","
-					+ "\"scoreMaximum\":\"" + s.maxPossibleScore + "\","
-					+ "\"comment\":\"\","
-					+ "\"activityProgress\":\"Completed\","
-					+ "\"gradingProgress\":\"FullyGraded\","
-					+ "\"userId\":\"" + raw_id + "\""
-					+ "}";
-*/			
+		
 			URL u = new URL(a.lti_ags_lineitem_url + "/scores");
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setDoOutput(true);
