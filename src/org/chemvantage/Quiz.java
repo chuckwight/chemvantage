@@ -596,7 +596,7 @@ public class Quiz extends HttpServlet {
 							int beginIndex = replyBody.indexOf("<textString>") + 12;
 							int endIndex = replyBody.indexOf("</textString>");
 							lmsScore = replyBody.substring(beginIndex,endIndex);
-							lmsPctScore = 100.*Double.parseDouble(replyBody);
+							lmsPctScore = 100.*Double.parseDouble(lmsScore);
 							gotScoreOK = true;
 						}
 					}
