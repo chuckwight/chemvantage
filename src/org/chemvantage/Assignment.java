@@ -122,7 +122,7 @@ public class Assignment {
 		return buf.toString();
 	}
 
-	String selectExamQuestionsForm(User user,HttpServletRequest request) {
+	String selectExamQuestionsForm(User user) {
 		StringBuffer buf = new StringBuffer("<h3>Select Practice Exam Questions</h3>");
 		try {
 			Map<Long,Topic>topics = ofy().load().type(Topic.class).ids(this.topicIds);

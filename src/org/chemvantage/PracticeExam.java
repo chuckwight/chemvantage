@@ -72,17 +72,17 @@ public class PracticeExam extends HttpServlet {
 		try {
 			User user = User.getUser(request.getParameter("Token"));
 			if (user == null) throw new Exception();
-		/*
-			User user = null;
-			HttpSession session = request.getSession();
-			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
-			else user = User.getInstance(session);
-			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
-		*/
+		
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 
-			out.println(Home.header + printExam(user,request) + Home.footer);
+			String userRequest = request.getParameter("UserRequest");
+			if (userRequest==null) userRequest = "";
+			
+			if ("AssignExamQuestions".contentEquals(userRequest) && user.isInstructor()) {
+				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+				out.println(Home.header + a.selectExamQuestionsForm(user) + Home.footer);
+			} else out.println(Home.header + printExam(user,request) + Home.footer);
 		} catch (Exception e) {}
 	}
 
@@ -91,17 +91,19 @@ public class PracticeExam extends HttpServlet {
 		try {
 			User user = User.getUser(request.getParameter("Token"));
 			if (user == null) throw new Exception();
-		/*
-			User user = null;
-			HttpSession session = request.getSession();
-			if (session.isNew()) user = User.getUser(request.getParameter("CvsToken"));
-			else user = User.getInstance(session);
-			if (user==null) throw new Exception("Authentication failed, probably because your web session timed out.");
-		*/
+		
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 
-			out.println(Home.header + printScore(user,request) + Home.footer);
+
+			String userRequest = request.getParameter("UserRequest");
+			if (userRequest==null) userRequest = "";
+			
+			if ("UpdateAssignment".contentEquals(userRequest)) {
+				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+				a.updateQuestions(request);
+				out.println(Home.header + printExam(user,request) + Home.footer);
+			} else out.println(Home.header + printScore(user,request) + Home.footer);
 		} catch (Exception e) {}
 	}
 
@@ -234,7 +236,7 @@ public class PracticeExam extends HttpServlet {
 
 			if (user.isInstructor()) buf.append("<table style='border: 1px solid'><tr><td>"
 					//+ "Instructor: you may <a href=/Groups?UserRequest=AssignExamQuestions&AssignmentId=" + a.id + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">"
-					+ "Instructor: you may <a href=/Groups?UserRequest=AssignExamQuestions&Token=" + user.token + ">"
+					+ "Instructor: you may <a href=/PracticeExam?UserRequest=AssignExamQuestions&Token=" + user.token + ">"
 					+ "customize this practice exam</a> by selecting/deselecting the available question items."
 					+ "</td></tr></table><p>");
 			
