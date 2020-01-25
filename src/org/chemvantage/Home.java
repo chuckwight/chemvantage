@@ -84,7 +84,7 @@ public class Home extends HttpServlet {
 			+ "<TR><TD>\n";
 			
 		public static String footer = "\n<hr><span style='font-size:smaller'><table style='width:100%;border-spacing: 20px 0px'><tr>"
-			+ "<td>&copy; 2007-19 ChemVantage LLC. <a rel='license' href='https://creativecommons.org/licenses/by/3.0/'><img alt='Creative Commons License' style='border-width:0' src='https://i.creativecommons.org/l/by/3.0/80x15.png' /></a></td>"
+			+ "<td>&copy; 2007-20 ChemVantage LLC. <a rel='license' href='https://creativecommons.org/licenses/by/3.0/'><img alt='Creative Commons License' style='border-width:0' src='https://i.creativecommons.org/l/by/3.0/80x15.png' /></a></td>"
 			+ "<td align=center><a href=/About#terms>Terms and Conditions of Use</a> and <a href=/About#terms>Privacy Policy</a></td>"
 			+ "<td align=right><a href='http://code.google.com/appengine/'><img src=/images/GAE.gif border=0 "
 			+ "alt='Powered by Google App Engine'></a></td></tr></table>"
