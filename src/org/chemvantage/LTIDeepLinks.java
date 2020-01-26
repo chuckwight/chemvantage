@@ -283,7 +283,7 @@ public class LTIDeepLinks extends HttpServlet {
 			    JsonObject lineitem = new JsonObject();
 			    lineitem.addProperty("scoreMaximum", (assignmentType.contentEquals("PracticeExam")?100:10));
 			    lineitem.addProperty("label", assignmentType + " - " + title);
-			    lineitem.addProperty("resourceId", assignment.id);
+			    lineitem.addProperty("resourceId", String.valueOf(assignment.id));
 			  item.add("lineItem", lineitem);
 			content_items.add(item);
 			

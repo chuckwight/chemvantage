@@ -41,7 +41,7 @@ public class Token extends HttpServlet {
 			if (login_hint == null) throw new Exception("Missing required login_hint parameter.");
 			if (target_link_uri == null) throw new Exception("Missing required target_link_uri parameter.");
 			
-			if (!platform_id.startsWith("http")) platform_id = "https://" + platform_id;
+			//if (!platform_id.startsWith("http")) platform_id = "https://" + platform_id;
 			
 			String deployment_id = request.getParameter("lti_deployment_id");
 			if (deployment_id == null) deployment_id = "";

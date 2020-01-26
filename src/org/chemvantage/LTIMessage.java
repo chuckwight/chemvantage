@@ -388,11 +388,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		// The lineitem URL corresponds to the LMS grade book column fpr the Assignment entity.
 		
 		// Construct the deployment_id because we may need to strip this from the userId values
-		String deploymentId = "";
-		try {
-			deploymentId = new URI(a.domain).getPath().substring(1);
-		} catch (Exception e) {}
-	
+		
 		Map<String,String> scores = new HashMap<String,String>();		
 		try {
 			String bearerAuth = "Bearer " + getAccessToken(a.domain);
@@ -423,7 +419,6 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				while(iterator.hasNext()) {
 					JsonObject result = iterator.next().getAsJsonObject();
 					String userId = result.get("userId").getAsString();
-					if (userId.startsWith(deploymentId)) userId = userId.substring(deploymentId.length()+1);
 					scores.put(userId,String.valueOf(Math.round(1000.*result.get("resultScore").getAsDouble()/result.get("resultMaximum").getAsDouble())/10.));
 				}
 			}
