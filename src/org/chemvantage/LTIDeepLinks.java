@@ -233,7 +233,7 @@ public class LTIDeepLinks extends HttpServlet {
 			
 			String title = assignmentType + " - ";
 			for (String t : topicTitles) title += t + ", ";
-			title = title.substring(0, title.length()-1);  // strip off the last comma
+			title = title.substring(0, title.length()-2);  // strip off the last comma and space
 			
 			// Create the new Assignment entity and load the questionKeys
 			Assignment assignment = new Assignment(assignmentType,topicId,topicIds,d.platform_deployment_id);
