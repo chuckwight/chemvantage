@@ -96,7 +96,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				}
 			}
 		} catch (Exception e) {	
-			response.sendError(401, e.toString());
+			response.sendError(401, e.getMessage());
 		}
 	}
 
@@ -105,15 +105,22 @@ public class LTIv1p3Launch extends HttpServlet {
 		
 		validateStateToken(request); // ensures proper OIDC authorization flow completed			
 		
-		// Decode the JWT id_token as a JsonObject:
-		DecodedJWT id_token = JWT.decode(request.getParameter("id_token"));
-		JsonObject claims = new JsonParser().parse(Base64.getUrlDecoder().decode(id_token.getPayload()).toString()).getAsJsonObject();
-		
 		StringBuffer debug = new StringBuffer("Starting LTIv1.3 launch sequence...");
+		
+		// Decode the JWT id_token as a JsonObject:
+		DecodedJWT id_token = null;
+		JsonObject claims = null;
+		try {
+			id_token = JWT.decode(request.getParameter("id_token"));
+			String json = new String(Base64.getUrlDecoder().decode(id_token.getPayload()));
+			claims = new JsonParser().parse(json).getAsJsonObject();
+		} catch (Exception e) {
+			throw new Exception("id_token was not a valid JWT.");
+		}
 		
 		// get the platform_id and deployment_id to load the correct Deployment d
 		String platform_id = id_token.getIssuer();
-		String deployment_id = claims.get("https://purl.imsglobal.org/spec/lti/claim/deployment_id").getAsString();
+		String deployment_id = id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/deployment_id").asString();
 		if (deployment_id == null) throw new Exception("The deployment_id claim was not found in the id_token payload.");
 		String platformDeploymentId = platform_id + "/" + deployment_id;
 		Deployment d = Deployment.getInstance(platformDeploymentId);
@@ -139,14 +146,14 @@ public class LTIv1p3Launch extends HttpServlet {
 		JWT.require(algorithm).build().verify(id_token);  // throws JWTVerificationException if not valid
 
 		// verify LTI version 1.3.0
-		String lti_version = claims.get("https://purl.imsglobal.org/spec/lti/claim/version").getAsString();
+		JsonElement lti_version = claims.get("https://purl.imsglobal.org/spec/lti/claim/version");
 		if (lti_version == null) throw new Exception("LTI version claim was missing.");    
-		if (!"1.3.0".equals(lti_version)) throw new Exception("Incorrect LTI version claim");
+		if (!"1.3.0".equals(lti_version.getAsString())) throw new Exception("Incorrect LTI version claim");
 
 		// Validate the LTI message_type:
-		String message_type = claims.get("https://purl.imsglobal.org/spec/lti/claim/message_type").getAsString();
+		JsonElement message_type = claims.get("https://purl.imsglobal.org/spec/lti/claim/message_type");
 		if (message_type == null) throw new Exception("Missing LTI message_type.");
-		if (!"LtiResourceLinkRequest".equals(message_type)) throw new Exception("LTI message_type claim must be LtiResourceLink");
+		if (!"LtiResourceLinkRequest".equals(message_type.getAsString())) throw new Exception("LTI message_type claim must be LtiResourceLink");
 
 		// At this point we have a valid LTI launch; process the claims:
 		debug.append("state token and id_token validated...");
@@ -165,17 +172,15 @@ public class LTIv1p3Launch extends HttpServlet {
 		String userId = platform_id + "/" + sub;
 		User user = new User(userId);
 
-		try {
-			JsonElement roles_claim = claims.get("https://purl.imsglobal.org/spec/lti/claim/roles");
-			if (roles_claim == null || !roles_claim.isJsonArray()) throw new Exception("Required roles claim is missing from the id_token");
-			JsonArray roles = roles_claim.getAsJsonArray();
-			Iterator<JsonElement> iterator = roles.iterator();
-			while(iterator.hasNext()){
-				String role = iterator.next().getAsString().toLowerCase();
-				user.setIsInstructor(role.contains("instructor"));
-				user.setIsAdministrator(role.contains("administrator"));
-			}
-		} catch (Exception e) {}
+		JsonElement roles_claim = claims.get("https://purl.imsglobal.org/spec/lti/claim/roles");
+		if (roles_claim == null || !roles_claim.isJsonArray()) throw new Exception("Required roles claim is missing from the id_token");
+		JsonArray roles = roles_claim.getAsJsonArray();
+		Iterator<JsonElement> roles_iterator = roles.iterator();
+		while(roles_iterator.hasNext()){
+			String role = roles_iterator.next().getAsString().toLowerCase();
+			user.setIsInstructor(role.contains("instructor"));
+			user.setIsAdministrator(role.contains("administrator"));
+		}
 
 		debug.append("user info OK...");
 			
@@ -188,8 +193,8 @@ public class LTIv1p3Launch extends HttpServlet {
 			
 			// get the list of AGS capabilities allowed by the platform
 			JsonArray scope_claims = lti_ags_claims.get("scope").getAsJsonArray();
-			Iterator<JsonElement> iterator = scope_claims.iterator();
-			while (iterator.hasNext()) scope += iterator.next().getAsString() + " ";
+			Iterator<JsonElement> scopes_iterator = scope_claims.iterator();
+			while (scopes_iterator.hasNext()) scope += scopes_iterator.next().getAsString() + " ";
 		
 			lti_ags_lineitem_url = lti_ags_claims.get("lineitem").getAsString();
 			lti_ags_lineitems_url = lti_ags_claims.get("lineitems").getAsString();
@@ -220,9 +225,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		String resourceLinkId = null;
 		try {
 			JsonObject resource_link_claims = claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link").getAsJsonObject();
-			debug.append("resource_link_claims OK...");
 			resourceLinkId = resource_link_claims.get("id").toString();
-			debug.append("resourceLinkId is OK...");
 		} catch (Exception e) {
 			throw new Exception("Resource link id was missing from payload.");
 		}
