@@ -9,7 +9,7 @@ import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 
 @Entity
-public class Deployment {
+public class Deployment implements java.lang.Cloneable {
 	@Id 	String platform_deployment_id;
 	@Index	String client_id;
 			String oauth_access_token_url;
@@ -19,6 +19,7 @@ public class Deployment {
 			String contact_name;
 			String organization;
 			String org_url;
+			String lms_type;
 			String rsa_key_id;
 			String scope;
 			String lti_ags_lineitems_url;
@@ -63,6 +64,26 @@ public class Deployment {
 		} catch (Exception e) {
 			return null;
 		}
+	}
+	
+	boolean equivalentTo(Deployment d) {
+		return	d.platform_deployment_id.contentEquals(this.platform_deployment_id) &&
+				d.client_id.contentEquals(this.client_id) &&
+				d.oauth_access_token_url.contentEquals(this.oauth_access_token_url) &&
+				d.oidc_auth_url.contentEquals(this.oidc_auth_url) &&
+				d.well_known_jwks_url.contentEquals(this.well_known_jwks_url) &&
+				d.email.contentEquals(this.email) &&
+				d.contact_name.contentEquals(this.contact_name) &&
+				d.organization.contentEquals(this.organization) &&
+				d.org_url.contentEquals(this.org_url) &&
+				d.lms_type.contentEquals(this.lms_type) &&
+				d.rsa_key_id.contentEquals(this.rsa_key_id) &&
+				d.scope.contentEquals(this.scope) &&
+				d.lti_ags_lineitems_url.contentEquals(this.lti_ags_lineitems_url);				
+	}
+	
+	protected Deployment clone() throws CloneNotSupportedException {
+		return (Deployment) super.clone();
 	}
 }
 

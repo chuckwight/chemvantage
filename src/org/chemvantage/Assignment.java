@@ -32,7 +32,7 @@ import com.googlecode.objectify.annotation.Index;
 import com.googlecode.objectify.cmd.Query;
 
 @Entity
-public class Assignment {
+public class Assignment implements java.lang.Cloneable {
 	@Id 	Long id;
 	@Index	String domain;
 	@Index	String assignmentType;
@@ -233,6 +233,24 @@ public class Assignment {
 			if (questionIds != null) for (String id : questionIds) this.questionKeys.add(Key.create(Question.class,Long.parseLong(id)));
 			ofy().save().entity(this).now();	
 		} catch (Exception e) {}
+	}
+
+	boolean equivalentTo(Assignment a) {
+		return	a.id.equals(this.id) &&
+				a.domain.equals(this.domain) &&
+				a.assignmentType.equals(this.assignmentType) &&
+				a.topicId == this.topicId &&
+				a.resourceLinkId.contentEquals(this.resourceLinkId) &&
+				a.lis_outcome_service_url.equals(this.lis_outcome_service_url) &&
+				a.lti_ags_lineitem_url.equals(this.lti_ags_lineitem_url) &&
+				a.lti_nrps_context_memberships_url.equals(this.lti_nrps_context_memberships_url) &&
+				a.custom_context_memberships_url.equals(this.custom_context_memberships_url) &&
+				a.topicIds.equals(this.topicIds) &&
+				a.questionKeys.equals(this.questionKeys);				
+	}
+	
+	protected Assignment clone() throws CloneNotSupportedException {
+		return (Assignment) super.clone();
 	}
 
 }
