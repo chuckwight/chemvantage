@@ -278,8 +278,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			}
 	}
 	
-	static long getAssignmentId(Deployment d, String resourceLinkId) {
-		long assignmentId = 0;
+	static Long getAssignmentId(Deployment d, String resourceLinkId) {
+		Long assignmentId = null;
 		try {
 			JsonArray json = new JsonParser().parse(getLineItems(d)).getAsJsonArray();
 			Iterator<JsonElement> iterator = json.iterator();
@@ -289,14 +289,13 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		        	return lineitem.get("resourceId").getAsLong(); // this should be the assignmentId
 		        }  												// that was created during a DeepLinking work flow
 		    }
-		} catch (Exception e) {  // returns value of 0L if unable to find a 
-		}						 // lineitem with the correct resourceLinkId and valid resourceId
+		} catch (Exception e) {  // returns null if unable to find a lineitem
+		}						 // with the correct resourceLinkId and resourceId
 		return assignmentId;
 	}
 	
 	static String getLineItems(Deployment d) {
 		try {
-			//Deployment d = ofy().load().type(Deployment.class).id(platformDeploymentId).safe();
 			String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id);
 			
 			URL u = new URL(d.lti_ags_lineitems_url);
@@ -324,25 +323,24 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		}
 	}
 	
-	static String createLineItem(Assignment a) {
-		if (a==null) return null;
-		String lineItemUrl = null;
-		//StringBuffer debug = new StringBuffer();
+	static String createLineItem(Deployment d,Assignment a) throws Exception {
+		if (d==null || a==null) return null;
 		try {
+			String lineItemUrl = null;
 			Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
-			String bearerAuth = "Bearer " + getAccessToken(a.domain);
+			String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id);
 			int maxPossibleScore = a.assignmentType.equals("PracticeExam")?100:10;
 
-			String json = "{"
-					+ "\"scoreMaximum\":" + maxPossibleScore + ","
-					+ "\"label\":\"" + a.assignmentType + " - " + t.title + "\","
-					+ "\"resourceLinkId\":\"" + a.resourceLinkId + "\""
-					+ "}";
-			//debug.append("POSTed: " + json + "<br>");
-			Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
+			JsonObject j = new JsonObject();
+			j.addProperty("scoreMaximum", maxPossibleScore);
+			j.addProperty("label", a.assignmentType + " - " + t.title);
+			j.addProperty("resourceId", a.id);
+
+			String json = j.toString();
+
+			//Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
 			URL u = new URL(d.lti_ags_lineitems_url);
-			//debug.append("To the lineitems URL: " + g.lti_ags_lineitems_url + "<br>");
-			
+
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setDoOutput(true);
 			uc.setRequestMethod("POST");
@@ -358,7 +356,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			toTC.flush();
 			int responseCode = uc.getResponseCode(); // success if 200-202
 			//debug.append("Response code: " + responseCode + "<br>");
-			
+
 			boolean success = responseCode>199 && responseCode<203;
 			if (success) {
 				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
@@ -368,17 +366,12 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 					res.append(line);
 				}
 				reader.close();
-				//debug.append("Received: " + res + "<br>");
-				JsonObject lineItem = new JsonParser().parse(res.toString()).getAsJsonObject();
-				if (lineItem.isJsonObject()) {
-					lineItemUrl = lineItem.get("id").getAsString();
-					new URI(lineItemUrl);  // throws Exception if not a valid URL
-					return lineItemUrl;
-				}
+				lineItemUrl = new JsonParser().parse(res.toString()).getAsJsonObject().get("id").getAsString();
+				new URI(lineItemUrl);  // throws Exception if not a valid URL
+				return lineItemUrl;
 			}
 		} catch (Exception e) {
-			// return e.toString() + "<p>" + debug.toString();
-		}	
+		}
 		return null;
 	}
 

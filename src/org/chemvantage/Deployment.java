@@ -67,19 +67,19 @@ public class Deployment implements java.lang.Cloneable {
 	}
 	
 	boolean equivalentTo(Deployment d) {
-		return	d.platform_deployment_id.contentEquals(this.platform_deployment_id) &&
-				d.client_id.contentEquals(this.client_id) &&
-				d.oauth_access_token_url.contentEquals(this.oauth_access_token_url) &&
-				d.oidc_auth_url.contentEquals(this.oidc_auth_url) &&
-				d.well_known_jwks_url.contentEquals(this.well_known_jwks_url) &&
-				d.email.contentEquals(this.email) &&
-				d.contact_name.contentEquals(this.contact_name) &&
-				d.organization.contentEquals(this.organization) &&
-				d.org_url.contentEquals(this.org_url) &&
-				d.lms_type.contentEquals(this.lms_type) &&
-				d.rsa_key_id.contentEquals(this.rsa_key_id) &&
-				d.scope.contentEquals(this.scope) &&
-				d.lti_ags_lineitems_url.contentEquals(this.lti_ags_lineitems_url);				
+		return	((d.platform_deployment_id != null && d.platform_deployment_id.contentEquals(this.platform_deployment_id)) 	|| (d.platform_deployment_id == null && this.platform_deployment_id == null)) &&
+				((d.client_id != null && d.client_id.contentEquals(this.client_id)) 										|| (d.client_id == null && this.client_id == null)) &&
+				((d.oauth_access_token_url != null && d.oauth_access_token_url.contentEquals(this.oauth_access_token_url)) 	|| (d.oauth_access_token_url == null && this.oauth_access_token_url == null)) &&
+				((d.oidc_auth_url != null && d.oidc_auth_url.contentEquals(this.oidc_auth_url)) 							|| (d.oidc_auth_url == null && this.oidc_auth_url == null)) &&
+				((d.well_known_jwks_url != null && d.well_known_jwks_url.contentEquals(this.well_known_jwks_url)) 			|| (d.well_known_jwks_url == null && this.well_known_jwks_url == null)) &&
+				((d.email != null && d.email.contentEquals(this.email)) 													|| (d.email == null && this.email == null)) &&
+				((d.contact_name != null && d.contact_name.contentEquals(this.contact_name))								|| (d.contact_name == null && this.contact_name == null)) &&
+				((d.organization != null && d.organization.contentEquals(this.organization)) 								|| (d.organization == null && this.organization == null)) &&
+				((d.org_url != null && d.org_url.contentEquals(this.org_url)) 												|| (d.org_url == null && this.org_url == null)) &&
+				((d.lms_type != null && d.lms_type.contentEquals(this.lms_type)) 											|| (d.lms_type == null && this.lms_type == null)) &&
+				((d.rsa_key_id != null && d.rsa_key_id.contentEquals(this.rsa_key_id)) 										|| (d.rsa_key_id == null && this.rsa_key_id == null)) &&
+				((d.scope != null && d.scope.contentEquals(this.scope)) 													|| (d.scope == null && this.scope == null)) &&
+				((d.lti_ags_lineitems_url != null && d.lti_ags_lineitems_url.contentEquals(this.lti_ags_lineitems_url))		|| (d.lti_ags_lineitems_url == null && this.lti_ags_lineitems_url == null));				
 	}
 	
 	protected Deployment clone() throws CloneNotSupportedException {

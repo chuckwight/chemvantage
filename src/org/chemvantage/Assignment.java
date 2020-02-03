@@ -236,17 +236,17 @@ public class Assignment implements java.lang.Cloneable {
 	}
 
 	boolean equivalentTo(Assignment a) {
-		return	a.id.equals(this.id) &&
-				a.domain.equals(this.domain) &&
-				a.assignmentType.equals(this.assignmentType) &&
-				a.topicId == this.topicId &&
-				a.resourceLinkId.contentEquals(this.resourceLinkId) &&
-				a.lis_outcome_service_url.equals(this.lis_outcome_service_url) &&
-				a.lti_ags_lineitem_url.equals(this.lti_ags_lineitem_url) &&
-				a.lti_nrps_context_memberships_url.equals(this.lti_nrps_context_memberships_url) &&
-				a.custom_context_memberships_url.equals(this.custom_context_memberships_url) &&
-				a.topicIds.equals(this.topicIds) &&
-				a.questionKeys.equals(this.questionKeys);				
+		return	((a.id != null && a.id.equals(this.id)) 																							|| (a.id == null && this.id == null)) &&
+				((a.domain != null && a.domain.equals(this.domain)) 																				|| (a.domain == null && this.domain == null)) &&
+				((a.assignmentType != null && a.assignmentType.equals(this.assignmentType)) 														|| (a.assignmentType == null && this.assignmentType == null)) &&
+				(a.topicId == this.topicId) &&
+				((a.resourceLinkId != null && a.resourceLinkId.contentEquals(this.resourceLinkId)) 													|| (a.resourceLinkId == null && this.resourceLinkId == null)) &&
+				((a.lis_outcome_service_url != null && a.lis_outcome_service_url.equals(this.lis_outcome_service_url)) 								|| (a.lis_outcome_service_url == null && this.lis_outcome_service_url == null)) &&
+				((a.lti_ags_lineitem_url != null && a.lti_ags_lineitem_url.equals(this.lti_ags_lineitem_url)) 										|| (a.lti_ags_lineitem_url == null && this.lti_ags_lineitem_url == null)) &&
+				((a.lti_nrps_context_memberships_url != null && a.lti_nrps_context_memberships_url.equals(this.lti_nrps_context_memberships_url)) 	|| (a.lti_nrps_context_memberships_url == null && this.lti_nrps_context_memberships_url == null)) &&
+				((a.custom_context_memberships_url != null && a.custom_context_memberships_url.equals(this.custom_context_memberships_url)) 		|| (a.custom_context_memberships_url == null && this.custom_context_memberships_url == null)) &&
+				((a.topicIds != null && a.topicIds.equals(this.topicIds)) 																			|| (a.topicIds == null && this.topicIds == null)) &&
+				((a.questionKeys != null && a.questionKeys.equals(this.questionKeys)) 																|| (a.questionKeys == null && this.questionKeys == null));				
 	}
 	
 	protected Assignment clone() throws CloneNotSupportedException {
