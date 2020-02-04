@@ -48,13 +48,19 @@ public class Assignment implements java.lang.Cloneable {
 
 	Assignment() {}
 
-	Assignment(String platformDeploymentId,String resourceLinkId,String lisOutcomeServiceUrl,String customContextMembershipsUrl) {  // specific to Quiz and Homework assignments with a single topicId
-		this.domain = platformDeploymentId;
+	Assignment(String consumer_key,String resourceLinkId,String lisOutcomeServiceUrl,String customContextMembershipsUrl) {  // specific to Quiz and Homework assignments with a single topicId
+		this.domain = consumer_key;
 		this.resourceLinkId = resourceLinkId;
 		this.lis_outcome_service_url = lisOutcomeServiceUrl;
 		this.custom_context_memberships_url = customContextMembershipsUrl;
 	}
 
+	Assignment(String platformDeploymentId,String resourceLinkId,String lti_nrps_context_memberships_url) {
+		this.domain = platformDeploymentId;
+		this.resourceLinkId = resourceLinkId;
+		this.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
+	}
+	
 	Assignment(String assignmentType, long topicId, List<Long> topicIds, String platform_deployment_id) {
 		this.assignmentType = assignmentType;
 		this.topicId = topicId;

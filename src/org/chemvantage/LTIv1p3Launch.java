@@ -42,15 +42,12 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -63,7 +60,6 @@ import com.auth0.jwk.JwkProvider;
 import com.auth0.jwk.UrlJwkProvider;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
-import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.auth0.jwt.interfaces.JWTVerifier;
 import com.google.gson.JsonArray;
@@ -104,20 +100,151 @@ public class LTIv1p3Launch extends HttpServlet {
 	void ltiv1p3LaunchRequest(HttpServletRequest request,HttpServletResponse response) 
 			throws Exception {
 		StringBuffer debug = new StringBuffer();
-		
+
 		try {
-		validateStateToken(request); // ensures proper OIDC authorization flow completed			
+			validateStateToken(request); // ensures proper OIDC authorization flow completed			
+
+			Deployment d = validateIdToken(request);  // returns the validated Deployment
+			Deployment original_d = d.clone();  // make a copy to compare for updating later
+
+			// Decode the JWT id_token payload as a JsonObject:
+			JsonObject claims = null;
+			try {
+				DecodedJWT id_token = JWT.decode(request.getParameter("id_token"));
+				String json = new String(Base64.getUrlDecoder().decode(id_token.getPayload()));
+				claims = new JsonParser().parse(json).getAsJsonObject();
+			} catch (Exception e) {
+				throw new Exception("id_token was not a valid JWT.");
+			}
 		
-		// Decode the JWT id_token as a JsonObject:
-		DecodedJWT id_token = null;
-		JsonObject claims = null;
-		try {
-			id_token = JWT.decode(request.getParameter("id_token"));
-			String json = new String(Base64.getUrlDecoder().decode(id_token.getPayload()));
-			claims = new JsonParser().parse(json).getAsJsonObject();
+			String resourceLinkId = verifyLtiMessageClaims(claims);
+			
+			User user = getUserClaims(claims);
+			
+			// At this point we have all of the REQUIRED info for a valid LTI launch
+			// Process all remaining optional claims in try/catch structures to avoid
+			// throwing unnecessary Exceptions
+			
+			// Process deployment claims:
+			try {
+				JsonObject platform = claims.get("https://purl.imsglobal.org/spec/lti/claim/tool_platform").getAsJsonObject();
+				d.email = platform.get("email_contact").getAsString();
+				d.lms_type = platform.get("product_family_code").getAsString() + " version " + platform.get("version").getAsString();
+			} catch (Exception e) {}	
+
+			// Process information for LTI Assignment and Grade Services (AGS)
+			String lti_ags_lineitem_url = null;
+			try {  
+				JsonObject lti_ags_claims = claims.get("https://purl.imsglobal.org/spec/lti-ags/claim/endpoint").getAsJsonObject();
+
+				// get the list of AGS capabilities allowed by the platform
+				JsonArray scope_claims = lti_ags_claims.get("scope").getAsJsonArray();
+				Iterator<JsonElement> scopes_iterator = scope_claims.iterator();
+				d.scope = "";
+				while (scopes_iterator.hasNext()) d.scope += scopes_iterator.next().getAsString() + " ";
+
+				d.lti_ags_lineitems_url = lti_ags_claims.get("lineitems").getAsString();
+				lti_ags_lineitem_url = lti_ags_claims.get("lineitem").getAsString();
+			} catch (Exception e) {				
+			}
+
+			// Process information for LTI Advantage Names and Roles Provisioning (NRPS)
+			String lti_nrps_context_memberships_url = null;
+			try { 
+				JsonObject lti_nrps_claims = claims.get("https://purl.imsglobal.org/spec/lti-nrps/claim/namesroleservice").getAsJsonObject();
+				if (lti_nrps_claims != null) d.scope += " https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly";
+				lti_nrps_context_memberships_url = lti_nrps_claims.get("context_memberships_url").getAsString();
+				debug.append("supports NRPS...");
+			} catch (Exception e) {
+			}
+
+			// Save the updated Deployment entity, if necessary
+			try {
+				if (!d.equivalentTo(original_d)) {
+					ofy().save().entity(d).now();
+					debug.append("Deployment updated OK...");
+				} else debug.append("Deployment unchanged...");		
+			} catch (Exception e) {
+				throw new Exception("Update of the Deployment entity failed. " + e.getMessage());
+			}
+
+			/* Find or create the correct Assignment entity for this LtiResourceLinkRequest launch
+			 *  Note: every launch MUST be accompanied by the resourceLinkId value. This is a platform-generated 
+			 *  value that must be unique to a link in the LMS platform. On every launch, ChemVantage will  
+			 *  1) look for an Assignment entity associated with this LMS and this resourceLinkId value
+			 *  2) look for a lineitem created through the DeepLinking flow with a resourceId equal to the Assignment.id
+			 *  3) look for an Assignment entity associated with a resourceLinkId in the comma-separated list 
+			 *     of URL-encoded resource link ID values in the ResourceLink.id.history variable (not yet implemented)
+			 *  4) create a new Assignment and lineitem, if required   
+			 */
+
+			Assignment myAssignment = null;
+			debug.append("Starting to find assignment...");
+			// 1) Try to find the assignment using the platformDeploymentId and the resourceLinkId value
+			myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();
+			debug.append((myAssignment==null?"not ":"") + "found in the datastore...");
+
+			// 2) If the lineitem was created by DeepLinking, try to get the resourceId from the lineitem service; that will be the assignmentId
+			if (myAssignment == null) {
+				Long assignmentId = LTIMessage.getAssignmentId(original_d, resourceLinkId);
+				if (assignmentId != null) myAssignment = ofy().load().type(Assignment.class).id(assignmentId).now();
+				debug.append((myAssignment==null?"not ":"") + "found by deep linking...");
+			}
+
+			// 3) Look for an Assignment with a resourceLinkId value listed in the ResourceLink.id.history list for this launch
+			// Note: not yet implemented as of January 2020
+
+			// 4) If none of that worked, then the assignment probably doesn't exist, so make a new one:
+			if (myAssignment == null) {
+				myAssignment = new Assignment(d.platform_deployment_id,resourceLinkId,lti_nrps_context_memberships_url);
+				debug.append("Created new assignment with id=" + myAssignment.id + "...");
+			}
+
+			// Update the Assignment parameters:
+			debug.append("Cloning myAssignment...");
+			Assignment original_a = myAssignment.clone(); // make a copy to compare with for updating later
+			debug.append("Created assignment clone with id=" + original_a.id + "...");
+
+			myAssignment.resourceLinkId = resourceLinkId;			
+			if (lti_ags_lineitem_url != null && !lti_ags_lineitem_url.contentEquals(myAssignment.lti_ags_lineitem_url)) myAssignment.lti_ags_lineitem_url = lti_ags_lineitem_url;
+			else if (myAssignment.lti_ags_lineitem_url == null && myAssignment.assignmentType != null) myAssignment.lti_ags_lineitem_url = LTIMessage.getLineItemUrl(d, myAssignment);
+
+			myAssignment.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
+
+			// If required, save the updated Assignment entity now so its id will be accessible
+			if (myAssignment.id==null || !myAssignment.equivalentTo(original_a)) ofy().save().entity(myAssignment).now();
+			debug.append("assignment saved OK...");
+
+			// Create a cross-site request forgery (CSRF) token containing the Assignment.id
+			user.setToken(myAssignment.id);
+			debug.append("user token set OK...");
+
+			// If this is the first time this Assignment has been used, it may be missing the assignmentType and topicId(s)
+			if (myAssignment.assignmentType == null) {  //Show the the pickResource form:									
+				response.getWriter().println(Home.header + pickResourceForm(user,myAssignment) + Home.footer);
+				return;
+			} else {  // redirect the user's browser to the assignment
+				response.sendRedirect("/" + myAssignment.assignmentType + "?Token=" + user.token);
+				return;
+			}
 		} catch (Exception e) {
-			throw new Exception("id_token was not a valid JWT.");
+			throw new Exception(e.getMessage());
 		}
+	}
+	
+	protected void validateStateToken(HttpServletRequest request) throws Exception {
+		/* This method ensures that the state token required by LTI v1.3 standards is a
+		 * valid token issued by the tool provider (ChemVantage) as part of the LTI
+		 * launch request sequence. Otherwise throws a JWTVerificationException.
+		 */
+		String iss = "https://" + request.getServerName();
+		Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
+		JWTVerifier verifier = JWT.require(algorithm).withIssuer(iss).build();
+	    verifier.verify(request.getParameter("state"));
+	}
+
+	protected Deployment validateIdToken(HttpServletRequest request) throws Exception {
+		DecodedJWT id_token = JWT.decode(request.getParameter("id_token"));
 		
 		// get the platform_id and deployment_id to load the correct Deployment d
 		String platform_id = id_token.getIssuer();
@@ -125,13 +252,12 @@ public class LTIv1p3Launch extends HttpServlet {
 		if (deployment_id == null) throw new Exception("The deployment_id claim was not found in the id_token payload.");
 		String platformDeploymentId = platform_id + "/" + deployment_id;
 		Deployment d = Deployment.getInstance(platformDeploymentId);
-		Deployment original_d = d.clone();  // make a copy to compare for updating later
 		
 		// validate the id_token audience:
 		List<String> aud = id_token.getAudience();
 		if (aud.size()==1 && aud.get(0).contentEquals(d.client_id)); // OK, continue
 		else if (aud.size()>1 && aud.contains(d.client_id) && id_token.getClaim("azp").asString().contentEquals(d.client_id)); // OK, continue
-		else throw new Exception("The id_token audience is not authorized in ChemVantage.");
+		else throw new Exception("The id_token client_id claim is not authorized in ChemVantage.");
 
 		// validate the id_token signature:
 		// retrieve the public Java Web Key from the platform to verify the signature
@@ -145,7 +271,10 @@ public class LTIv1p3Launch extends HttpServlet {
 		Algorithm algorithm = Algorithm.RSA256(public_key,null);
 		if (!"RS256".contentEquals(id_token.getAlgorithm())) throw new Exception("JWT algorithm must be RS256");
 		JWT.require(algorithm).build().verify(id_token);  // throws JWTVerificationException if not valid
-
+		return d;
+	}
+	
+	String verifyLtiMessageClaims(JsonObject claims) throws Exception {
 		// verify LTI version 1.3.0
 		JsonElement lti_version = claims.get("https://purl.imsglobal.org/spec/lti/claim/version");
 		if (lti_version == null) throw new Exception("LTI version claim was missing.");    
@@ -160,11 +289,15 @@ public class LTIv1p3Launch extends HttpServlet {
 		JsonElement resource_link_claims = claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link");
 		if (resource_link_claims == null) throw new Exception("Resource link claims were missing from the id_token.");
 		String resourceLinkId = resource_link_claims.getAsJsonObject().get("id").getAsString();
-		
+
+		return resourceLinkId;
+	}
+	
+	User getUserClaims(JsonObject claims) throws Exception {
 		// Process User information:
-		String sub = id_token.getSubject();  // required
+		String sub = claims.get("sub").getAsString();  // required
 		if (sub==null || sub.isEmpty()) throw new Exception("Missing or empty subject claim in the id_token.");
-		String platformUserId = platform_id + "/" + sub;
+		String platformUserId = claims.get("iss").getAsString() + "/" + sub;
 		User user = new User(platformUserId);
 
 		JsonElement roles_claim = claims.get("https://purl.imsglobal.org/spec/lti/claim/roles");
@@ -176,192 +309,14 @@ public class LTIv1p3Launch extends HttpServlet {
 			user.setIsInstructor(role.contains("instructor"));
 			user.setIsAdministrator(role.contains("administrator"));
 		}
-		debug.append("user info OK...");
-
-		// At this point we have all of the REQUIRED info for a valid LTI launch
-		// Process all remaining optional claims in try/catch structures
-		debug.append("\nstate token and id_token validated...");
-
-		// Process deployment claims:
-		try {
-			JsonObject platform = claims.get("https://purl.imsglobal.org/spec/lti/claim/tool_platform").getAsJsonObject();
-			d.email = platform.get("email_contact").getAsString();
-			d.lms_type = platform.get("product_family_code").getAsString() + " version " + platform.get("version").getAsString();
-		} catch (Exception e) {}	
-					
-		// Process information for LTI Assignment and Grade Services (AGS)
-		String lti_ags_lineitem_url = null;
-		try {  
-			JsonObject lti_ags_claims = claims.get("https://purl.imsglobal.org/spec/lti-ags/claim/endpoint").getAsJsonObject();
-
-			// get the list of AGS capabilities allowed by the platform
-			JsonArray scope_claims = lti_ags_claims.get("scope").getAsJsonArray();
-			Iterator<JsonElement> scopes_iterator = scope_claims.iterator();
-			d.scope = "";
-			while (scopes_iterator.hasNext()) d.scope += scopes_iterator.next().getAsString() + " ";
-
-			d.lti_ags_lineitems_url = lti_ags_claims.get("lineitems").getAsString();
-			lti_ags_lineitem_url = lti_ags_claims.get("lineitem").getAsString();
-		} catch (Exception e) {				
-		}
-
-		// Process information for LTI Advantage Names and Roles Provisioning (NRPS)
-		String nrps_context_memberships_url = null;
-		try { 
-			JsonObject lti_nrps_claims = claims.get("https://purl.imsglobal.org/spec/lti-nrps/claim/namesroleservice").getAsJsonObject();
-			if (lti_nrps_claims != null) d.scope += " https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly";
-			nrps_context_memberships_url = lti_nrps_claims.get("context_memberships_url").getAsString();
-			debug.append("supports NRPS...");
-		} catch (Exception e) {
-		}
-
-		// Save the updated Deployment entity, if necessary
-		try {
-			if (!d.equivalentTo(original_d)) {
-				ofy().save().entity(d).now();
-				debug.append("Deployment updated OK...");
-			} else debug.append("Deployment unchanged...");		
-		} catch (Exception e) {
-			throw new Exception("Update of the Deployment entity failed. " + e.getMessage());
-		}
-		
-		/* Find or create the correct Assignment entity for this LtiResourceLinkRequest launch
-		*  Note: every launch MUST be accompanied by the resourceLinkId value. This is a platform-generated 
-		*  value that must be unique to a link in the LMS platform. On every launch, ChemVantage will  
-		*  1) look for an Assignment entity associated with this LMS and this resourceLinkId value
-		*  2) look for a lineitem created through the DeepLinking flow with a resourceId equal to the Assignment.id
-		*  3) look for an Assignment entity associated with a resourceLinkId in the comma-separated list 
-		*     of URL-encoded resource link ID values in the ResourceLink.id.history variable (not yet implemented)
-		*  4) create a new Assignment and lineitem, if required   
-		*/
-		 
-		Assignment myAssignment = null;
-		debug.append("Starting to find assignment...");
-		// 1) Try to find the assignment using the platformDeploymentId and the resourceLinkId value
-		myAssignment = ofy().load().type(Assignment.class).filter("domain",platformDeploymentId).filter("resourceLinkId",resourceLinkId).first().now();
-		debug.append((myAssignment==null?"not ":"") + "found in the datastore...");
-		
-//		2) If the lineitem was created by DeepLinking, try to get the resourceId from the lineitem service; that will be the assignmentId
-		if (myAssignment == null) {
-			Long assignmentId = LTIMessage.getAssignmentId(original_d, resourceLinkId);
-			if (assignmentId != null) myAssignment = ofy().load().type(Assignment.class).id(assignmentId).now();
-			debug.append((myAssignment==null?"not ":"") + "found by deep linking...");
-		}
-
-		// 3) Look for an Assignment with a resourceLinkId value listed in the ResourceLink.id.history list for this launch
-		// Note: not yet implemented as of January 2020
-
-		// 4) If none of that worked, then the assignment probably doesn't exist, so make a new one:
-		if (myAssignment == null) {
-			myAssignment = new Assignment(platformDeploymentId,null,null,null);
-			debug.append("Created new assignment with id=" + myAssignment.id + "...");
-		}
-
-		// Update the Assignment parameters:
-		debug.append("Cloning myAssignment...");
-		Assignment original_a = myAssignment.clone(); // make a copy to compare with for updating later
-		debug.append("Created assignment clone with id=" + original_a.id + "...");
-		
-		myAssignment.resourceLinkId = resourceLinkId;			
-		if (lti_ags_lineitem_url != null && !lti_ags_lineitem_url.contentEquals(myAssignment.lti_ags_lineitem_url)) myAssignment.lti_ags_lineitem_url = lti_ags_lineitem_url;
-		else if (myAssignment.lti_ags_lineitem_url == null && d.lti_ags_lineitems_url != null) {
-			lti_ags_lineitem_url = LTIMessage.getLineItemUrl(d,resourceLinkId);
-			debug.append("lti_ags_lineitem_url is " + lti_ags_lineitem_url + "...");
-			if (lti_ags_lineitem_url.contentEquals("Not found.")) myAssignment.lti_ags_lineitem_url = LTIMessage.createLineItem(d,myAssignment);
-		}						
-		myAssignment.lti_nrps_context_memberships_url = nrps_context_memberships_url;
-
-		// If required, save the updated Assignment entity now so its id will be accessible
-		if (!myAssignment.equivalentTo(original_a)) ofy().save().entity(myAssignment).now();
-		debug.append("assignment saved OK...");
-
-		// Create a cross-site request forgery (CSRF) token containing the Assignment.id
-		user.setToken(myAssignment.id);
-		debug.append("user token set OK...");
-
-		// If this is the first time this Assignment has been used, it may be missing the assignmentType and topicId(s)
-		if (myAssignment.assignmentType == null) {  //Show the the pickResource form:									
-			response.getWriter().println(Home.header + pickResourceForm(user,myAssignment) + Home.footer);
-			return;
-		} else {  // redirect the user's browser to the assignment
-			response.sendRedirect("/" + myAssignment.assignmentType + "?Token=" + user.token);
-			return;
-		}
-		} catch (Exception e) {
-			throw new Exception(e.getMessage() + "\n" + debug.toString());
-		}
+		return user;
 	}
-	
-	protected void validateStateToken(HttpServletRequest request) throws Exception {
-		/* This method ensures that the state token required by LTI v1.3 standards is a
-		 * valid token issued by the tool provider (ChemVantage) as part of the LTI
-		 * launch request sequence. Otherwise throws a JWTVerificationException.
-		 */
-		String iss = "https://" + request.getServerName();
-		Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
-		JWTVerifier verifier = JWT.require(algorithm).withIssuer(iss).build();
-	    verifier.verify(request.getParameter("state"));
-	}
-	
-	protected Map<String,Claim> validateIdToken(DecodedJWT id_token) throws Exception {
-		/* This method validates the id_token sent from the LMS platform, verifies that
-		 * the elements required by the LTI v1.3 standard are present for a valid 
-		 * ResourceLinkId launch request, and returns a set of Claims embedded in the JWT.
-		 */
-		// get the platform_id and deployment_id to load the correct Deployment d
-		String platform_id = id_token.getIssuer();
-	    if (!platform_id.startsWith("http")) platform_id = "http://" + platform_id;
-	    Map<String,Claim> id_token_claims = id_token.getClaims();
-	    // validate the id_token signature:
-	    // first get the correct Deployment entity for this platform to find the public key
-	    Claim deployment_id_claim = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/deployment_id");
-	    if (deployment_id_claim==null) throw new Exception("The deployment_id claim was not found in the id_token payload.");
-	    String deployment_id = deployment_id_claim.asString();
-	    Deployment d = Deployment.getInstance(platform_id + "/" + deployment_id);
-	    if (d==null) throw new Exception("Deployment not found in the datastore.");
 
-	    List<String> aud = id_token.getAudience();
-	    if (aud.size()==1 && aud.get(0).contentEquals(d.client_id)); // OK, continue
-	    else if (aud.size()>1 && aud.contains(d.client_id) && id_token.getClaim("azp").asString().contentEquals(d.client_id)); // OK, continue
-	    else throw new Exception("The id_token audience is not authorized in ChemVantage.");
-	    
-	    try {
-			String email = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/tool_platform").asMap().get("contact_email").toString();	
-			if (email != null && !email.contentEquals(d.email)) {
-				d.email = email;
-				ofy().save().entity(d);
-			}
-	    } catch (Exception e) {}
-		
-	    // retrieve the public Java Web Key from the platform to verify the signature
-		if (d.well_known_jwks_url==null) throw new Exception("The deployment does not have a valid JWKS URL.");
-		URL jwks_url = new URL(d.well_known_jwks_url);
-		JwkProvider provider = new UrlJwkProvider(jwks_url);
-		if (id_token.getKeyId() == null || id_token.getKeyId().isEmpty()) throw new Exception("No JWK id found.");
-	    Jwk jwk = provider.get(id_token.getKeyId()); //throws Exception when not found or can't get one
-	    RSAPublicKey public_key = (RSAPublicKey)jwk.getPublicKey();
-	    // verify the JWT signature
-		Algorithm algorithm = Algorithm.RSA256(public_key,null);
-		if (!"RS256".contentEquals(id_token.getAlgorithm())) throw new Exception("JWT algorithm must be RS256");
-		JWT.require(algorithm).build().verify(id_token);  // throws JWTVerificationException if not valid
-	    // verify LTI version 1.3.0
-	    Claim lti_version = id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/version");
-	    if (lti_version.isNull()) throw new Exception("LTI version claim was missing.");    
-	    if (!"1.3.0".equals(lti_version.asString())) throw new Exception("Incorrect LTI version claim");
-	    	
-	    // Validate the LTI message_type:
-	    Claim message_type = id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/message_type");
-	    if (message_type.isNull()) throw new Exception("Missing LTI message_type.");
-	    if (!"LtiResourceLinkRequest".equals(message_type.asString())) throw new Exception("LTI message_type claim must be LtiResourceLink");
-
-	    return id_token_claims;
-	}
-	
-	String updateAssignment(HttpServletRequest request, HttpServletResponse response) {
-		try {
+	String updateAssignment(HttpServletRequest request, HttpServletResponse response) throws Exception {
 			User user = User.getUser(request.getParameter("Token"));
-			if (!user.isInstructor()) throw new Exception();
+			if (!user.isInstructor()) throw new Exception("User must be instructor to choose the assignment.");
 			long assignmentId = user.getAssignmentId();
+			if (assignmentId==0L) throw new Exception("Assignment id was zero (forbidden)");
 			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			a.assignmentType = request.getParameter("AssignmentType");
 			if (a.assignmentType.contentEquals("Quiz") || a.assignmentType.contentEquals("Homework")) {
@@ -378,12 +333,12 @@ public class LTIv1p3Launch extends HttpServlet {
 					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tId).keys().list());
 				}
 			}
-
+			if (a.lti_ags_lineitem_url==null) {
+				Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
+				a.lti_ags_lineitem_url = LTIMessage.getLineItemUrl(d, a);
+			}
 			ofy().save().entity(a).now(); // going to need this is just a few milliseconds
 			return user.token;
-		} catch (Exception e) {
-		}
-		return null;
 	}
 
 	String pickResourceForm(User user,Assignment myAssignment) {
@@ -474,26 +429,5 @@ public class LTIv1p3Launch extends HttpServlet {
 			return e.getMessage();
 		}
 		return buf.toString();
-	}
-
-	public void doError(HttpServletRequest request, HttpServletResponse response, String s, String message, Exception e)
-	throws java.io.IOException {
-		String return_url = request.getParameter("launch_presentation_return_url");
-		if ( return_url != null && !return_url.isEmpty() ) {
-			if ( return_url.indexOf('?') > 1 ) {
-				return_url += "&lti_msg=" + URLEncoder.encode(s,"UTF-8");
-			} else {
-				return_url += "?lti_msg=" + URLEncoder.encode(s,"UTF-8");
-			}
-			response.sendRedirect(return_url);
-			return;
-		}
-		PrintWriter out = response.getWriter();
-		out.println(s + "<br>" + (e!=null?e.toString():"unknown error") + "<br>" + message);
-	}
-
-	@Override
-	public void destroy() {
-
 	}
 }

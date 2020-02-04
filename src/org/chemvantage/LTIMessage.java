@@ -261,32 +261,44 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		}
     }
     
-	static String getLineItemUrl(Deployment d,String resourceLinkId) {
-		try {
-			//Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
-			JsonArray json = new JsonParser().parse(getLineItems(d)).getAsJsonArray();
-			Iterator<JsonElement> iterator = json.iterator();
-			while(iterator.hasNext()){
-		        JsonObject lineitem = iterator.next().getAsJsonObject();
-		        if (resourceLinkId.equals(lineitem.get("resourceLinkId").getAsString())) {
-		        	return lineitem.get("id").getAsString();
-		        }
-		    }
-			return "Not found.";
-			} catch (Exception e) {
-				return "An unexpected error occurred: " + e.toString();
-			}
-	}
+    static String getLineItemUrl(Deployment d,Assignment a) throws Exception {
+    	if (a.resourceLinkId == null || d.lti_ags_lineitems_url==null) return "resourceLinkId or Deployment was null";
+    	String json = getLineItems(d);
+    	if (json == null) return "Lineitems json object was null.";
+    	JsonArray lineitems = null;
+    	try {
+    		lineitems = new JsonParser().parse(json).getAsJsonArray();        	
+    	} catch (Exception e) {
+    		return "Error: lineitems was not a valid JSON array:\n" + json;
+    	}
+    	Iterator<JsonElement> iterator = lineitems.iterator();
+    	while(iterator.hasNext()){
+    		JsonObject lineitem = iterator.next().getAsJsonObject();
+    		JsonElement rli = lineitem.get("resourceLinkId");
+    		if (rli != null && a.resourceLinkId.equals(rli.getAsString())) {
+    			return lineitem.get("id").getAsString();
+    		}
+    	}
+    	// If you get to here, the lineitem does not exist; create a new one:
+    	return createLineItem(d,a);
+    }
 	
 	static Long getAssignmentId(Deployment d, String resourceLinkId) {
 		Long assignmentId = null;
 		try {
-			JsonArray json = new JsonParser().parse(getLineItems(d)).getAsJsonArray();
-			Iterator<JsonElement> iterator = json.iterator();
+			String json = getLineItems(d);
+			JsonArray lineitems = null;
+	    	try {
+	    		lineitems = new JsonParser().parse(json).getAsJsonArray();        	
+	    	} catch (Exception e) {
+	    		return 0L;
+	    	}
+	    	
+			Iterator<JsonElement> iterator = lineitems.iterator();
 			while(iterator.hasNext()){
 		        JsonObject lineitem = iterator.next().getAsJsonObject();
 		        if (resourceLinkId.equals(lineitem.get("resourceLinkId").getAsString())) {
-		        	return lineitem.get("resourceId").getAsLong(); // this should be the assignmentId
+		        	return Long.parseLong(lineitem.get("resourceId").getAsString()); // this should be the assignmentId
 		        }  												// that was created during a DeepLinking work flow
 		    }
 		} catch (Exception e) {  // returns null if unable to find a lineitem
@@ -317,10 +329,10 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				}
 				reader.close();
 				return res.toString();
-			} else return "Response Code was " + responseCode;
+			} else return "Response code was " + responseCode;
 		} catch (Exception e) {
-			return e.toString();
 		}
+		return null;
 	}
 	
 	static String createLineItem(Deployment d,Assignment a) throws Exception {
@@ -334,11 +346,11 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			JsonObject j = new JsonObject();
 			j.addProperty("scoreMaximum", maxPossibleScore);
 			j.addProperty("label", a.assignmentType + " - " + t.title);
-			j.addProperty("resourceId", a.id);
+			j.addProperty("resourceLinkId", a.resourceLinkId);
+			j.addProperty("resourceId", String.valueOf(a.id));
 
 			String json = j.toString();
 
-			//Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
 			URL u = new URL(d.lti_ags_lineitems_url);
 
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
