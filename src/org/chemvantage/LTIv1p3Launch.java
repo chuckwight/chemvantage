@@ -283,7 +283,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		// Validate the LTI message_type:
 		JsonElement message_type = claims.get("https://purl.imsglobal.org/spec/lti/claim/message_type");
 		if (message_type == null) throw new Exception("Missing LTI message_type.");
-		if (!"LtiResourceLinkRequest".equals(message_type.getAsString())) throw new Exception("LTI message_type claim must be LtiResourceLink");
+		if (!"LtiResourceLinkRequest".equals(message_type.getAsString())) throw new Exception("LTI message_type claim must be LtiResourceLinkRequest");
 
 		// Process the ResourceLinkRequest information:
 		JsonElement resource_link_claims = claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link");

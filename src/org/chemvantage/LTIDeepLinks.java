@@ -30,7 +30,9 @@ import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.auth0.jwt.interfaces.JWTVerifier;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.googlecode.objectify.Key;
 
 @WebServlet(urlPatterns={"/lti/deeplinks","/lti/deeplinks/"})
@@ -52,47 +54,99 @@ public class LTIDeepLinks extends HttpServlet {
 			if ("Select assignment".equals(request.getParameter("UserRequest"))) {  // submitting desired links
 				out.println(deepLinkResponseMsg(request));
 				return;
-			} else { // This is probably a fresh Deep Links request. Check the required token:
-				DecodedJWT id_token = JWT.decode(request.getParameter("id_token"));
-				if (validDeepLinkRequest(id_token)) out.println(contentPickerForm(id_token,state));
+			} else if (request.getParameter("id_token") != null) { // This is a fresh Deep Links request.
+				validateDeepLinkRequest(request);
+				out.println(contentPickerForm(request));
 			}
 		} catch (Exception e) {	 
-			out.println(e.toString());
+			response.sendError(401,e.getMessage());
 		}
 	}
 
-	boolean validDeepLinkRequest(DecodedJWT id_token) {
-		try {
-			String platform_id = id_token.getIssuer();
-			if (!platform_id.startsWith("http")) platform_id = "http://" + platform_id;
-			Map<String,Claim> id_token_claims = id_token.getClaims();
-			String deployment_id = id_token_claims.get("https://purl.imsglobal.org/spec/lti/claim/deployment_id").asString();
+	void validateDeepLinkRequest(HttpServletRequest request) throws Exception {
+			validateStateToken(request); // ensures proper OIDC authorization flow completed			
+
+			validateIdToken(request);  // returns the validated Deployment
 			
-			Deployment d = Deployment.getInstance(platform_id + "/" + deployment_id);
-
-			// retrieve the public Java Web Key from the platform to verify the signature
-			URL jwks_url = new URL(d.well_known_jwks_url);
-			JwkProvider provider = new UrlJwkProvider(jwks_url);
-			Jwk jwk = provider.get(id_token.getKeyId()); //throws Exception when not found or can't get one
-			RSAPublicKey public_key = (RSAPublicKey)jwk.getPublicKey();
-			Algorithm algorithm = null;
-			if ("RS256".contentEquals(id_token.getAlgorithm())) algorithm = Algorithm.RSA256(public_key,null);
-			JWT.require(algorithm).build().verify(id_token);  // throws Exception if not valid
-			if (!id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/message_type").asString().equals("LtiDeepLinkingRequest"))
-				throw new Exception("Wrong LTI message type");
-			if (!id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/version").asString().equals("1.3.0"))
-				throw new Exception("Wrong LTI version");
-
-			// At this point the request token is valid.
-			return true;
-		} catch (Exception e) {
-			return false;
-		}
+			// Decode the JWT id_token payload as a JsonObject:
+			JsonObject claims = null;
+			try {
+				DecodedJWT id_token = JWT.decode(request.getParameter("id_token"));
+				String json = new String(Base64.getUrlDecoder().decode(id_token.getPayload()));
+				claims = new JsonParser().parse(json).getAsJsonObject();
+			} catch (Exception e) {
+				throw new Exception("id_token was not a valid JWT.");
+			}
+			
+			verifyLtiMessageClaims(claims);
 	}
 	
-	String contentPickerForm(DecodedJWT id_token,String state) {
+	protected void validateStateToken(HttpServletRequest request) throws Exception {
+		/* This method ensures that the state token required by LTI v1.3 standards is a
+		 * valid token issued by the tool provider (ChemVantage) as part of the LTI
+		 * launch request sequence. Otherwise throws a JWTVerificationException.
+		 */
+		String iss = "https://" + request.getServerName();
+		Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
+		JWTVerifier verifier = JWT.require(algorithm).withIssuer(iss).build();
+	    verifier.verify(request.getParameter("state"));
+	}
+
+	protected Deployment validateIdToken(HttpServletRequest request) throws Exception {
+		DecodedJWT id_token = JWT.decode(request.getParameter("id_token"));
+		
+		// get the platform_id and deployment_id to load the correct Deployment d
+		String platform_id = id_token.getIssuer();
+		String deployment_id = id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/deployment_id").asString();
+		if (deployment_id == null) throw new Exception("The deployment_id claim was not found in the id_token payload.");
+		String platformDeploymentId = platform_id + "/" + deployment_id;
+		Deployment d = Deployment.getInstance(platformDeploymentId);
+		
+		// validate the id_token audience:
+		List<String> aud = id_token.getAudience();
+		if (aud.size()==1 && aud.get(0).contentEquals(d.client_id)); // OK, continue
+		else if (aud.size()>1 && aud.contains(d.client_id) && id_token.getClaim("azp").asString().contentEquals(d.client_id)); // OK, continue
+		else throw new Exception("The id_token client_id claim is not authorized in ChemVantage.");
+
+		// validate the id_token signature:
+		// retrieve the public Java Web Key from the platform to verify the signature
+		if (d.well_known_jwks_url==null) throw new Exception("The deployment does not have a valid JWKS URL.");
+		URL jwks_url = new URL(d.well_known_jwks_url);
+		JwkProvider provider = new UrlJwkProvider(jwks_url);
+		if (id_token.getKeyId() == null || id_token.getKeyId().isEmpty()) throw new Exception("No JWK id found.");
+		Jwk jwk = provider.get(id_token.getKeyId()); //throws Exception when not found or can't get one
+		RSAPublicKey public_key = (RSAPublicKey)jwk.getPublicKey();
+		// verify the JWT signature
+		Algorithm algorithm = Algorithm.RSA256(public_key,null);
+		if (!"RS256".contentEquals(id_token.getAlgorithm())) throw new Exception("JWT algorithm must be RS256");
+		JWT.require(algorithm).build().verify(id_token);  // throws JWTVerificationException if not valid
+		return d;
+	}
+
+	void verifyLtiMessageClaims(JsonObject claims) throws Exception {
+		// verify LTI version 1.3.0
+		JsonElement lti_version = claims.get("https://purl.imsglobal.org/spec/lti/claim/version");
+		if (lti_version == null) throw new Exception("LTI version claim was missing.");    
+		if (!"1.3.0".equals(lti_version.getAsString())) throw new Exception("Incorrect LTI version claim");
+
+		// Validate the LTI message_type:
+		JsonElement message_type = claims.get("https://purl.imsglobal.org/spec/lti/claim/message_type");
+		if (message_type == null) throw new Exception("Missing LTI message_type.");
+		if (!"LtiDeepLinkingRequest".equals(message_type.getAsString())) throw new Exception("LTI message_type claim must be LtiDeepLinkingRequest");
+	
+		JsonElement deep_linking_settings = claims.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings");
+		if (deep_linking_settings == null) throw new Exception("Required settings claim was not found.");
+		
+		JsonElement userId_claim = claims.get("sub");
+		if (userId_claim == null) throw new Exception("The id_token was missing required subject claim");
+	}
+	
+	String contentPickerForm(HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer(Home.header);
 		try {
+			String state = request.getParameter("state");
+			DecodedJWT id_token = JWT.decode(request.getParameter("id_token"));
+			
 			String platform_id = id_token.getIssuer();
 			if (!platform_id.startsWith("http")) platform_id = "http://" + platform_id;
 			Map<String,Claim> claims = id_token.getClaims();			
@@ -103,15 +157,24 @@ public class LTIDeepLinks extends HttpServlet {
 			String deep_link_return_url = settings.get("deep_link_return_url").toString();
 			
 			// Use the id_token to verify that this user is an instructor or administrator:
-			String[] roles = claims.get("https://purl.imsglobal.org/spec/lti/claim/roles").asArray(String.class);
+			String[] roles;
 			boolean authorized = false;
-			for (int i=0;i<roles.length;i++) {
-				roles[i] = roles[i].toLowerCase();
-				if (roles[i].contains("instructor") || roles[i].contains("administrator")) authorized = true;
-			}			
+			try {
+				roles = claims.get("https://purl.imsglobal.org/spec/lti/claim/roles").asArray(String.class);
+				for (int i=0;i<roles.length;i++) {
+					roles[i] = roles[i].toLowerCase();
+					if (roles[i].contains("instructor") || roles[i].contains("administrator")) authorized = true;
+				}			
+			} catch (Exception e) {}
 			if (!authorized) throw new Exception("You must be logged into your LMS in an instructor "
 					+ "or administrator role in order to select assignment resources for this class.");
 
+			// Determine whether the LMS will allow creation of one lineitem or multiple lineitems with this request (optional)
+			boolean acceptMultiple = false;
+			try {
+				acceptMultiple = Boolean.parseBoolean(settings.get("accept_multiple").toString());
+			} catch (Exception e) {}
+			
 			buf.append("<TABLE><TR><TD VALIGN=TOP><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
 					+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
 					+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>");
@@ -119,6 +182,10 @@ public class LTIDeepLinks extends HttpServlet {
 			buf.append("<h2>Assignment Setup Page</h2>"
 					+ "Please select the ChemVantage resource that should be associated with this assignment. "
 					+ "ChemVantage will remember this choice and send students directly to the assignment.<p>");
+
+			if (acceptMultiple) buf.append("Your LMS has the capacity to accept the creation of multiple assignments in this "
+					+ "deep linking request. However, ChemVantage temporarily restricts you to a single choice, sorry. Repeat the "
+					+ "launch to create additional assignments.<p>");
 
 			// insert a script to show/hide the correct box
 			buf.append("<script>"
@@ -156,7 +223,7 @@ public class LTIDeepLinks extends HttpServlet {
 					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Homework>Homework</label><br>"
 					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=PracticeExam>Practice&nbsp;Exam</label>"
 					+ "</td>");
-			
+
 			// Display a select box for the choice of topics (initially hidden; visible if Quiz or Homework is the AssignmentType
 			buf.append("<td id=topicSelect style='visibility:hidden;vertical-align=top'>"
 					+ "<FONT COLOR=RED>Please select one topic for this quiz or homework assignment.</FONT><br>");
@@ -166,7 +233,7 @@ public class LTIDeepLinks extends HttpServlet {
 					+ "<OPTION Value='0'>Select a topic</OPTION>");			
 			for (Topic t : topics) if (!t.orderBy.equals("Hide")) buf.append("<OPTION VALUE='" + t.id + "'>" + t.title + "</OPTION>");			 			
 			buf.append("</SELECT><input type=submit name=start disabled=true></td></tr>");
-			
+
 			// Display a checkbox list for choice of multiple topics (initially hidden) if AssignmentType is PracticeExam
 			buf.append("<tr><td colspan=2 id=topicCheck style='visibility:hidden'>");
 			buf.append("<TABLE><TR><TD COLSPAN=3 style='color:red'>Please select at least 3 topics for this practice exam:<br></TD></TR>");
