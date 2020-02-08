@@ -465,7 +465,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 					}
 				}
 				return "no score found";
-			} else return "response code: " + responseCode; 
+			} else return "response code=" + responseCode; // + " for " + u.toString(); 
 		} catch (Exception e) {	
 			return e.toString();
 		}
