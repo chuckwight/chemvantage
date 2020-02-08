@@ -50,6 +50,23 @@ public class Nonce {
         return hash1 + hash2;
 	}
 
+	public static boolean isUnique(String nonce) {
+		Date now = new Date();
+		Date oldest = new Date(now.getTime()-interval); // 90 minutes ago
+
+		// delete all Nonce objects older than the interval
+		List<Key<Nonce>> expired = ofy().load().type(Nonce.class).filter("created <",oldest).keys().list();
+		if (expired.size() > 0) ofy().delete().keys(expired);
+		
+		// check to see if a Nonce with the specified id already exists in the database
+		if (ofy().load().type(Nonce.class).id(nonce).now() != null) return false; // if nonce exists
+		
+		// store a new Nonce object in the datastore with the unique nonce string
+		ofy().save().entity(new Nonce(nonce));
+		
+		return true;
+	}
+	
 	public static boolean isUnique(String nonce, String timestamp) {
 		// This method provides a level of security for OAuth launches for LTI
 		// by verifying that oauth_nonce strings are submitted only once

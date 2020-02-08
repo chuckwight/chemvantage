@@ -133,18 +133,18 @@ public class LTIv1p3Launch extends HttpServlet {
 			} catch (Exception e) {}	
 
 			// Process information for LTI Assignment and Grade Services (AGS)
+			String scope = "";
+			String lti_ags_lineitems_url = null;
 			String lti_ags_lineitem_url = null;
 			try {  
 				JsonObject lti_ags_claims = claims.get("https://purl.imsglobal.org/spec/lti-ags/claim/endpoint").getAsJsonObject();
 
 				// get the list of AGS capabilities allowed by the platform
-				JsonArray scope_claims = lti_ags_claims.get("scope").getAsJsonArray();
+				JsonArray scope_claims = lti_ags_claims.get("scope")==null?new JsonArray():lti_ags_claims.get("scope").getAsJsonArray();
 				Iterator<JsonElement> scopes_iterator = scope_claims.iterator();
-				d.scope = "";
-				while (scopes_iterator.hasNext()) d.scope += scopes_iterator.next().getAsString() + " ";
-
-				d.lti_ags_lineitems_url = lti_ags_claims.get("lineitems").getAsString();
-				lti_ags_lineitem_url = lti_ags_claims.get("lineitem").getAsString();
+				while (scopes_iterator.hasNext()) scope += scopes_iterator.next().getAsString() + " ";
+				lti_ags_lineitems_url = lti_ags_claims.get("lineitems")==null?null:lti_ags_claims.get("lineitems").getAsString();
+				lti_ags_lineitem_url = lti_ags_claims.get("lineitem")==null?null:lti_ags_claims.get("lineitem").getAsString();
 			} catch (Exception e) {				
 			}
 
@@ -152,12 +152,14 @@ public class LTIv1p3Launch extends HttpServlet {
 			String lti_nrps_context_memberships_url = null;
 			try { 
 				JsonObject lti_nrps_claims = claims.get("https://purl.imsglobal.org/spec/lti-nrps/claim/namesroleservice").getAsJsonObject();
-				if (lti_nrps_claims != null) d.scope += " https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly";
+				if (lti_nrps_claims != null) scope += " https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly";
 				lti_nrps_context_memberships_url = lti_nrps_claims.get("context_memberships_url").getAsString();
 				debug.append("supports NRPS...");
 			} catch (Exception e) {
 			}
-
+			
+			if (!scope.isEmpty()) d.scope = scope;
+			
 			// Save the updated Deployment entity, if necessary
 			try {
 				if (!d.equivalentTo(original_d)) {
@@ -185,8 +187,8 @@ public class LTIv1p3Launch extends HttpServlet {
 			debug.append((myAssignment==null?"not ":"") + "found in the datastore...");
 
 			// 2) If the lineitem was created by DeepLinking, try to get the resourceId from the lineitem service; that will be the assignmentId
-			if (myAssignment == null) {
-				Long assignmentId = LTIMessage.getAssignmentId(original_d, resourceLinkId);
+			if (myAssignment == null && lti_ags_lineitems_url != null) {
+				Long assignmentId = LTIMessage.getAssignmentId(d, resourceLinkId, lti_ags_lineitems_url);
 				if (assignmentId != null) myAssignment = ofy().load().type(Assignment.class).id(assignmentId).now();
 				debug.append((myAssignment==null?"not ":"") + "found by deep linking...");
 			}
@@ -206,8 +208,8 @@ public class LTIv1p3Launch extends HttpServlet {
 			debug.append("Created assignment clone with id=" + original_a.id + "...");
 
 			myAssignment.resourceLinkId = resourceLinkId;			
-			if (lti_ags_lineitem_url != null && !lti_ags_lineitem_url.contentEquals(myAssignment.lti_ags_lineitem_url)) myAssignment.lti_ags_lineitem_url = lti_ags_lineitem_url;
-			else if (myAssignment.lti_ags_lineitem_url == null && myAssignment.assignmentType != null) myAssignment.lti_ags_lineitem_url = LTIMessage.getLineItemUrl(d, myAssignment);
+			if (lti_ags_lineitem_url != null) myAssignment.lti_ags_lineitem_url = lti_ags_lineitem_url;
+			else if (myAssignment.lti_ags_lineitem_url == null && myAssignment.assignmentType != null) myAssignment.lti_ags_lineitem_url = LTIMessage.getLineItemUrl(d, myAssignment,lti_ags_lineitems_url);
 
 			myAssignment.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
 
@@ -221,7 +223,7 @@ public class LTIv1p3Launch extends HttpServlet {
 
 			// If this is the first time this Assignment has been used, it may be missing the assignmentType and topicId(s)
 			if (myAssignment.assignmentType == null) {  //Show the the pickResource form:									
-				response.getWriter().println(Home.header + pickResourceForm(user,myAssignment) + Home.footer);
+				response.getWriter().println(Home.header + pickResourceForm(user,myAssignment,lti_ags_lineitems_url) + Home.footer);
 				return;
 			} else {  // redirect the user's browser to the assignment
 				response.sendRedirect("/" + myAssignment.assignmentType + "?Token=" + user.token);
@@ -240,7 +242,11 @@ public class LTIv1p3Launch extends HttpServlet {
 		String iss = "https://" + request.getServerName();
 		Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
 		JWTVerifier verifier = JWT.require(algorithm).withIssuer(iss).build();
-	    verifier.verify(request.getParameter("state"));
+		String state = request.getParameter("state");
+	    verifier.verify(state);
+	    
+	    String nonce = JWT.decode(state).getClaim("nonce").asString();
+	    if (!Nonce.isUnique(nonce)) throw new Exception("Nonce was used previously.");	    
 	}
 
 	protected Deployment validateIdToken(HttpServletRequest request) throws Exception {
@@ -315,8 +321,8 @@ public class LTIv1p3Launch extends HttpServlet {
 	String updateAssignment(HttpServletRequest request, HttpServletResponse response) throws Exception {
 			User user = User.getUser(request.getParameter("Token"));
 			if (!user.isInstructor()) throw new Exception("User must be instructor to choose the assignment.");
-			long assignmentId = user.getAssignmentId();
-			if (assignmentId==0L) throw new Exception("Assignment id was zero (forbidden)");
+			Long assignmentId = user.getAssignmentId();
+			if (assignmentId==null) throw new Exception("Assignment not found.");
 			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			a.assignmentType = request.getParameter("AssignmentType");
 			if (a.assignmentType.contentEquals("Quiz") || a.assignmentType.contentEquals("Homework")) {
@@ -335,13 +341,14 @@ public class LTIv1p3Launch extends HttpServlet {
 			}
 			if (a.lti_ags_lineitem_url==null) {
 				Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
-				a.lti_ags_lineitem_url = LTIMessage.getLineItemUrl(d, a);
+				String lti_ags_lineitems_url = request.getParameter("LtiAgsLineitemsUrl");
+				a.lti_ags_lineitem_url = LTIMessage.getLineItemUrl(d, a, lti_ags_lineitems_url);
 			}
 			ofy().save().entity(a).now(); // going to need this is just a few milliseconds
 			return user.token;
 	}
 
-	String pickResourceForm(User user,Assignment myAssignment) {
+	String pickResourceForm(User user,Assignment myAssignment,String lti_ags_lineitems_url) {
 		StringBuffer buf = new StringBuffer();
 
 		try {			
@@ -386,6 +393,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			buf.append("<table><form name=AssignmentForm method=POST>");
 			buf.append("<input type=hidden name=UserRequest value=UpdateAssignment>");
 			buf.append("<input type=hidden name=Token value=" + user.token + ">");
+			buf.append("<input type=hidden name=LtiAgsLineitemsUrl value='" + lti_ags_lineitems_url + "'>");
 			buf.append("<tr><td>"
 					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Quiz" + ("Quiz".equals(assignmentType)?" CHECKED":"") + ">Quiz</label><br>"
 					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Homework" + ("Homework".equals(assignmentType)?" CHECKED":"") + ">Homework</label><br>"

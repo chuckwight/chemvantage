@@ -22,11 +22,10 @@ public class Deployment implements java.lang.Cloneable {
 			String lms_type;
 			String rsa_key_id;
 			String scope;
-			String lti_ags_lineitems_url;
-
+			
 	Deployment() {}
 	
-	Deployment(String platform_id,String deployment_id,String client_id,String oidc_auth_url,String oauth_access_token_url,String well_known_jwks_url,String contact_name,String email,String organization,String org_url) {
+	Deployment(String platform_id,String deployment_id,String client_id,String oidc_auth_url,String oauth_access_token_url,String well_known_jwks_url,String contact_name,String email,String organization,String org_url,String lms) {
 		this.platform_deployment_id = platform_id + "/" + deployment_id;
 		this.client_id = client_id;
 		this.oidc_auth_url = oidc_auth_url;
@@ -36,6 +35,7 @@ public class Deployment implements java.lang.Cloneable {
 		this.email = email;
 		this.organization = organization;
 		this.org_url = org_url;
+		this.lms_type = lms;
 		this.rsa_key_id = KeyStore.getAKeyId();
 	}
 			
@@ -78,8 +78,7 @@ public class Deployment implements java.lang.Cloneable {
 				((d.org_url != null && d.org_url.contentEquals(this.org_url)) 												|| (d.org_url == null && this.org_url == null)) &&
 				((d.lms_type != null && d.lms_type.contentEquals(this.lms_type)) 											|| (d.lms_type == null && this.lms_type == null)) &&
 				((d.rsa_key_id != null && d.rsa_key_id.contentEquals(this.rsa_key_id)) 										|| (d.rsa_key_id == null && this.rsa_key_id == null)) &&
-				((d.scope != null && d.scope.contentEquals(this.scope)) 													|| (d.scope == null && this.scope == null)) &&
-				((d.lti_ags_lineitems_url != null && d.lti_ags_lineitems_url.contentEquals(this.lti_ags_lineitems_url))		|| (d.lti_ags_lineitems_url == null && this.lti_ags_lineitems_url == null));				
+				((d.scope != null && d.scope.contentEquals(this.scope)) 													|| (d.scope == null && this.scope == null));
 	}
 	
 	protected Deployment clone() throws CloneNotSupportedException {

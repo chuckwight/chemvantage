@@ -578,7 +578,7 @@ public class Quiz extends HttpServlet {
 					String lmsScore = null;
 					boolean gotScoreOK = false;
 					
-					if (a.lti_ags_lineitem_url!=null) {  // LTI version 1.3
+					if (a.lti_ags_lineitem_url != null) {  // LTI version 1.3
 						lmsScore = LTIMessage.readUserScore(a,user.id);
 						try {
 							lmsPctScore = Double.parseDouble(lmsScore);

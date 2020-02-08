@@ -261,81 +261,74 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		}
     }
     
-    static String getLineItemUrl(Deployment d,Assignment a) throws Exception {
-    	if (a.resourceLinkId == null || d.lti_ags_lineitems_url==null) return "resourceLinkId or Deployment was null";
-    	String json = getLineItems(d);
-    	if (json == null) return "Lineitems json object was null.";
-    	JsonArray lineitems = null;
-    	try {
-    		lineitems = new JsonParser().parse(json).getAsJsonArray();        	
-    	} catch (Exception e) {
-    		return "Error: lineitems was not a valid JSON array:\n" + json;
-    	}
-    	Iterator<JsonElement> iterator = lineitems.iterator();
-    	while(iterator.hasNext()){
-    		JsonObject lineitem = iterator.next().getAsJsonObject();
-    		JsonElement rli = lineitem.get("resourceLinkId");
-    		if (rli != null && a.resourceLinkId.equals(rli.getAsString())) {
-    			return lineitem.get("id").getAsString();
+    static String getLineItemUrl(Deployment d,Assignment a,String lti_ags_lineitems_url) throws Exception {
+    	if (a.resourceLinkId == null || lti_ags_lineitems_url==null) return null;
+
+    	String reply = getLineItems(d,lti_ags_lineitems_url);
+    	if (reply==null) return null;
+
+    	JsonElement json = new JsonParser().parse(reply);
+    	if (json.isJsonArray()) {
+    		JsonArray lineitems = json.getAsJsonArray();        	
+    		Iterator<JsonElement> iterator = lineitems.iterator();
+    		while(iterator.hasNext()){
+    			JsonObject lineitem = iterator.next().getAsJsonObject();
+    			JsonElement rli = lineitem.get("resourceLinkId");
+    			if (rli != null && a.resourceLinkId.equals(rli.getAsString())) {
+    				return lineitem.get("id").getAsString();
+    			}
     		}
     	}
+    	
     	// If you get to here, the lineitem does not exist; create a new one:
-    	return createLineItem(d,a);
+    	return createLineItem(d,a,lti_ags_lineitems_url);
     }
 	
-	static Long getAssignmentId(Deployment d, String resourceLinkId) {
-		Long assignmentId = null;
-		try {
-			String json = getLineItems(d);
-			JsonArray lineitems = null;
-	    	try {
-	    		lineitems = new JsonParser().parse(json).getAsJsonArray();        	
-	    	} catch (Exception e) {
-	    		return 0L;
-	    	}
-	    	
-			Iterator<JsonElement> iterator = lineitems.iterator();
-			while(iterator.hasNext()){
-		        JsonObject lineitem = iterator.next().getAsJsonObject();
-		        if (resourceLinkId.equals(lineitem.get("resourceLinkId").getAsString())) {
-		        	return Long.parseLong(lineitem.get("resourceId").getAsString()); // this should be the assignmentId
-		        }  												// that was created during a DeepLinking work flow
-		    }
-		} catch (Exception e) {  // returns null if unable to find a lineitem
-		}						 // with the correct resourceLinkId and resourceId
-		return assignmentId;
-	}
-	
-	static String getLineItems(Deployment d) {
-		try {
-			String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id);
-			
-			URL u = new URL(d.lti_ags_lineitems_url);
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			uc.setDoOutput(true);
-			uc.setDoInput(true);
-			uc.setRequestMethod("GET");
-			uc.setRequestProperty("Authorization", bearerAuth);
-			uc.setRequestProperty("Accept", "application/vnd.ims.lis.v2.lineitemcontainer+json");
-			uc.connect();
+    static Long getAssignmentId(Deployment d, String resourceLinkId,String lti_ags_lineitems_url) throws Exception {
+    	JsonElement json = new JsonParser().parse(getLineItems(d,lti_ags_lineitems_url));
+    	if (json.isJsonArray()) {
+    		JsonArray lineitems = json.getAsJsonArray();
+    		Iterator<JsonElement> iterator = lineitems.iterator();
+    		while(iterator.hasNext()){
+    			JsonObject lineitem = iterator.next().getAsJsonObject();
+    			if (resourceLinkId.equals(lineitem.get("resourceLinkId").getAsString())) {
+    				return Long.parseLong(lineitem.get("resourceId").getAsString()); // this should be the assignmentId
+    			}  												// that was created during a DeepLinking work flow
+    		}
+    	}
+    	return null;
+    }
 
-			int responseCode = uc.getResponseCode();
-			if (HttpURLConnection.HTTP_OK == responseCode) { // 200
-				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-				StringBuffer res = new StringBuffer();
-				String line;
-				while ((line = reader.readLine()) != null) {
-					res.append(line);
-				}
-				reader.close();
-				return res.toString();
-			} else return "Response code was " + responseCode;
-		} catch (Exception e) {
-		}
+    static String getLineItems(Deployment d,String lti_ags_lineitems_url) {
+    	try {
+    		String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id);
+
+    		URL u = new URL(lti_ags_lineitems_url);
+    		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+    		uc.setDoOutput(true);
+    		uc.setDoInput(true);
+    		uc.setRequestMethod("GET");
+    		uc.setRequestProperty("Authorization", bearerAuth);
+    		uc.setRequestProperty("Accept", "application/vnd.ims.lis.v2.lineitemcontainer+json");
+    		uc.connect();
+
+    		int responseCode = uc.getResponseCode();
+    		if (HttpURLConnection.HTTP_OK == responseCode) { // 200
+    			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+    			StringBuffer res = new StringBuffer();
+    			String line;
+    			while ((line = reader.readLine()) != null) {
+    				res.append(line);
+    			}
+    			reader.close();
+    			return res.toString();
+    		} else return "Response code was " + responseCode;
+    	} catch (Exception e) {
+    	}
 		return null;
 	}
 	
-	static String createLineItem(Deployment d,Assignment a) throws Exception {
+	static String createLineItem(Deployment d,Assignment a,String lti_ags_lineitems_url) throws Exception {
 		if (d==null || a==null) return null;
 		try {
 			String lineItemUrl = null;
@@ -351,7 +344,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 
 			String json = j.toString();
 
-			URL u = new URL(d.lti_ags_lineitems_url);
+			URL u = new URL(lti_ags_lineitems_url);
 
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setDoOutput(true);

@@ -156,6 +156,7 @@ public class LTIRegistration extends HttpServlet {
 				String email = jwt.getClaim("email").asString();
 				String organization = jwt.getAudience().get(0);
 				String org_url = jwt.getClaim("url").asString();
+				String lms = jwt.getClaim("lms").asString();
 				String client_id = request.getParameter("ClientId");
 				if (client_id==null) throw new Exception("Client ID value is required.");
 				String deployment_id = request.getParameter("DeploymentId");
@@ -172,7 +173,7 @@ public class LTIRegistration extends HttpServlet {
 				new URL(oidc_auth_url);
 				new URL(oauth_access_token_url);
 				new URL(well_known_jwks_url);
-				Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url);
+				Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
 				ofy().save().entity(d).now();
 				out.println(Home.header + banner + "<h2>Congratulations. Registration is complete.</h2>" + Home.footer);
 			} catch (Exception e) {

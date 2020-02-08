@@ -345,11 +345,11 @@ public class User {
     	}
     }
 
-    long getAssignmentId() {
+    Long getAssignmentId() {
      	try {
     		return JWT.decode(this.token).getClaim("aId").asLong();  // assignmentId
     	} catch (Exception e) {    		
-    		return 0L;
+    		return null;
     	}
     }
     
