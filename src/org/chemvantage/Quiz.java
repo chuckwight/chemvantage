@@ -610,7 +610,7 @@ public class Quiz extends HttpServlet {
 								+ "even for a score of zero, and ChemVantage will try to refresh your best score to the LMS.<p>");
 					} else throw new Exception();
 				} catch (Exception e) {
-					buf.append("ChemVantage was unable to retrieve your score for this assignment from the LMS: " + lmsScore);
+					buf.append("ChemVantage was unable to retrieve your score for this assignment from the LMS.<br>");
 					if (s.score==0 && s.numberOfAttempts<=1) buf.append("It appears that you may not have submitted a score for this quiz yet. ");
 					if (user.isInstructor()) buf.append("Some LMS providers do not store scores for instructors.");
 					buf.append("<p>");
