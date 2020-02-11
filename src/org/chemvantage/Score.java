@@ -31,14 +31,13 @@ import com.googlecode.objectify.annotation.Parent;
 
 @Entity
 public class Score {    // this object represents a best score achieved by a user on a quiz or homework
-	@Id 	Long assignmentId;      // from the datastore.
+	@Id	Long assignmentId;      // from the datastore.
 	@Parent Key<User> owner;
-	//@Index	long groupId;
 	@Index	boolean lisReportComplete;
 			int score;
 			int maxPossibleScore;
 			int numberOfAttempts;
-			Date mostRecentAttempt;
+	@Index	Date mostRecentAttempt;
 			String lis_result_sourcedid;
 	
 	Score() {

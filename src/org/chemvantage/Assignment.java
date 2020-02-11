@@ -20,6 +20,7 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -38,6 +39,7 @@ public class Assignment implements java.lang.Cloneable {
 	@Index	String assignmentType;
 	@Index	long topicId;
 	@Index	String resourceLinkId;
+	@Index 	Date created;
 			String lis_outcome_service_url;
 			String lti_ags_lineitem_url;
 			String lti_nrps_context_memberships_url;
@@ -53,12 +55,14 @@ public class Assignment implements java.lang.Cloneable {
 		this.resourceLinkId = resourceLinkId;
 		this.lis_outcome_service_url = lisOutcomeServiceUrl;
 		this.custom_context_memberships_url = customContextMembershipsUrl;
+		this.created = new Date();
 	}
 
 	Assignment(String platformDeploymentId,String resourceLinkId,String lti_nrps_context_memberships_url) {
 		this.domain = platformDeploymentId;
 		this.resourceLinkId = resourceLinkId;
 		this.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
+		this.created = new Date();
 	}
 	
 	Assignment(String assignmentType, long topicId, List<Long> topicIds, String platform_deployment_id) {
@@ -67,6 +71,7 @@ public class Assignment implements java.lang.Cloneable {
 		this.topicIds = topicIds;
 		this.domain = platform_deployment_id;
 		this.questionKeys = ofy().load().type(Question.class).filter("assignmentType",this.assignmentType).filter("topicId",this.topicId).keys().list();
+		this.created = new Date();
 	}
 	
 	String selectQuestionsForm(User user) {

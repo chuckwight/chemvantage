@@ -3,6 +3,7 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.net.URI;
+import java.util.Date;
 
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
@@ -22,6 +23,7 @@ public class Deployment implements java.lang.Cloneable {
 			String lms_type;
 			String rsa_key_id;
 			String scope;
+	@Index	Date   created;
 			
 	Deployment() {}
 	
@@ -37,6 +39,7 @@ public class Deployment implements java.lang.Cloneable {
 		this.org_url = org_url;
 		this.lms_type = lms;
 		this.rsa_key_id = KeyStore.getAKeyId();
+		this.created = new Date();
 	}
 			
 	static Deployment getInstance(String platform_deployment_id) {
@@ -78,7 +81,8 @@ public class Deployment implements java.lang.Cloneable {
 				((d.org_url != null && d.org_url.contentEquals(this.org_url)) 												|| (d.org_url == null && this.org_url == null)) &&
 				((d.lms_type != null && d.lms_type.contentEquals(this.lms_type)) 											|| (d.lms_type == null && this.lms_type == null)) &&
 				((d.rsa_key_id != null && d.rsa_key_id.contentEquals(this.rsa_key_id)) 										|| (d.rsa_key_id == null && this.rsa_key_id == null)) &&
-				((d.scope != null && d.scope.contentEquals(this.scope)) 													|| (d.scope == null && this.scope == null));
+				((d.scope != null && d.scope.contentEquals(this.scope)) 													|| (d.scope == null && this.scope == null)) &&
+				((d.created != null && d.created.equals(this.created)));
 	}
 	
 	protected Deployment clone() throws CloneNotSupportedException {

@@ -156,7 +156,8 @@ public class ReportScore extends HttpServlet {
 					Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
 					queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",userId).param("Retry",Integer.toString(attempts)).countdownMillis(countdownMillis));			
 				} else throw new Exception("User " + userId + " earned a score of " + s.getPctScore() + "% on assignment "
-						+ a.id + "; however, the score could not be posted to the LMS grade book, even after " + attempts + " attempts.");
+						+ a.id + "; however, the score could not be posted to the LMS grade book, even after " + attempts + " attempts. "
+						+ "The response from your LMS was: " + response);
 			}
 		} catch (Exception e) {
 			Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
@@ -184,11 +185,7 @@ public class ReportScore extends HttpServlet {
 					+ "connection to the ChemVantage app using the client_id " + d.client_id + "<p>"
 					+ "The ChemVantage server encountered the following error while attempting to report a score to your LMS:<br>"
 					+ errorMsg + "<p>"
-					+ "Details:<br>"
-					+ "UserId: " + userId + "<br>"
-					+ "AssignmentId: " + assignment.id + "<br>"
-					+ "Assignment: " + assignment.assignmentType + (t==null?"":" - " + t.title) + "<br>"
-					+ "Current score= " + s.getPctScore() + "% after " + s.numberOfAttempts + " attempts<br>"
+					+ "Assignment = " + t.title + "<br>"
 					+ "ChemVantage domain = " + d.platform_deployment_id + "<br>"
 					+ "Domain contact = " + d.email + "<p>"
 					+ "If you are using moodle, a common error is that a configuration error on your server is blocking PHP from "
