@@ -55,50 +55,9 @@ public class DataStoreCleaner extends HttpServlet {
 	
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
-		// This servlet is called by the cron daemon once each month.
-		// For GET request, use /DataStoreCleaner?Task=CleanUsers&TestOnly=true (or similar).
-		// Default value of TestOnly is false;
-		// For POST request, no parameters runs all methods
-		
-		now = new Date();
-		oneMonthAgo = new Date(now.getTime()-2592000000L);
-		fiveMonthsAgo = new Date(now.getTime()-13140000000L);
-		sixMonthsAgo = new Date(now.getTime()-15768000000L);
-		oneYearAgo = new Date(now.getTime()-31536000000L);
-		
 		PrintWriter out = response.getWriter();
 		response.setContentType("text/html");
-		out.println(Home.header);
 		
-		String task = request.getParameter("Task");
-		boolean testOnly = true;
-		try {
-			testOnly = Boolean.parseBoolean(request.getParameter("TestOnly"));
-		} catch (Exception e) {}
-
-		if (task!=null) {  // must specify Task parameter
-			switch (task) {
-			case "CleanResponses": out.println(cleanResponses(testOnly)); break;
-			case "CleanQuizTransactions": out.println(cleanQuizTransactions(testOnly)); break;
-			case "CleanHWTransactions": out.println(cleanHWTransactions(testOnly)); break;
-			case "CleanPracticeExamTransactions": out.println(cleanPracticeExamTransactions(testOnly)); break;
-			case "CleanScores": out.println(cleanScores(testOnly)); break;
-			case "CleanAssignments": out.println(cleanAssignments(testOnly)); break;
-			case "CleanBLTIConsumers": out.println(cleanBLTIConsumers(testOnly)); break;
-			case "CleanDeployments": out.println(cleanDeployments(testOnly)); break;
-			case "CleanAll": doPost(request,response); return;
-			} 
-		} else if (Boolean.parseBoolean(request.getParameter("TestAll"))) {
-			out.println(cleanResponses(true)
-					+ cleanQuizTransactions(true)
-					+ cleanHWTransactions(true)
-					+ cleanPracticeExamTransactions(true)
-					+ cleanScores(true)
-					+ cleanAssignments(true)
-					+ cleanDeployments(true)
-					+ cleanBLTIConsumers(true));
-		}
-
 		out.println(interactiveMenu());
 		out.println(Home.footer);
 
@@ -106,31 +65,32 @@ public class DataStoreCleaner extends HttpServlet {
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
-		// This servlet is called by the cron daemon once each day.
+		// This servlet is called by the cron daemon once each month, or manually by this servlet.
 		now = new Date();
-		oneMonthAgo = new Date(now.getTime()-2592000000L);
-		fiveMonthsAgo = new Date(now.getTime()-13140000000L);
 		sixMonthsAgo = new Date(now.getTime()-15768000000L);
 		oneYearAgo = new Date(now.getTime()-31536000000L);
 
+		PrintWriter out = response.getWriter();
+		response.setContentType("text/html");
+		
+		StringBuffer buf = new StringBuffer(Home.header);
+		buf.append("<h2>Data Store Cleaner</h2>");
+		
 		// This section handles individual tasks executed from the Task Queue
 		String task = request.getParameter("Task");
 		if (task==null) return;
 		
-		boolean testOnly = true;
-		try {
-			testOnly = Boolean.parseBoolean(request.getParameter("TestOnly"));
-		} catch (Exception e) {}
-
+		boolean testOnly = Boolean.parseBoolean(request.getParameter("TestOnly"));
+		
 		switch (task) {
-		case "CleanResponses": cleanResponses(testOnly); break;
-		case "CleanQuizTransactions": cleanQuizTransactions(testOnly); break;
-		case "CleanHWTransactions": cleanHWTransactions(testOnly); break;
-		case "CleanPracticeExamTransactions": cleanPracticeExamTransactions(testOnly); break;
-		case "CleanScores": cleanScores(testOnly); break;
-		case "CleanAssignments": cleanAssignments(testOnly); break;
-		case "CleanBLTIConsumers": cleanBLTIConsumers(testOnly); break;
-		case "CleanDeployments": cleanDeployments(testOnly); break;
+		case "CleanResponses": buf.append(cleanResponses(testOnly)); break;
+		case "CleanQuizTransactions": buf.append(cleanQuizTransactions(testOnly)); break;
+		case "CleanHWTransactions": buf.append(cleanHWTransactions(testOnly)); break;
+		case "CleanPracticeExamTransactions": buf.append(cleanPracticeExamTransactions(testOnly)); break;
+		case "CleanScores": buf.append(cleanScores(testOnly)); break;
+		case "CleanAssignments": buf.append(cleanAssignments(testOnly)); break;
+		case "CleanBLTIConsumers": buf.append(cleanBLTIConsumers(testOnly)); break;
+		case "CleanDeployments": buf.append(cleanDeployments(testOnly)); break;
 		case "CleanAll":
 			// This section handles the parent case from the cron job
 			Queue queue = QueueFactory.getDefaultQueue();
@@ -143,25 +103,37 @@ public class DataStoreCleaner extends HttpServlet {
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanAssignments").param("TestOnly", testOnly?"true":"false"));
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanDeployments").param("TestOnly", testOnly?"true":"false"));
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanBLTIConsumers").param("TestOnly", testOnly?"true":"false"));
+			
+			buf.append("8 background tasks launched to scrub all entity types from the datastore.");
 			break;
 		}
+		buf.append("<br>" + Home.footer);
+		
+		out.println(buf.toString());
 	}
 	
 	String interactiveMenu() {
 		StringBuffer buf = new StringBuffer();
 		buf.append("<h2>Data Store Cleaner</h2>");
 		
-		buf.append("<a href=DataStoreCleaner?Task=CleanResponses&TestOnly=true>Test CleanResponses</a> (with no deletions)<br>");
-		buf.append("<a href=DataStoreCleaner?Task=CleanQuizTransactions&TestOnly=true>Test CleanQuizTransactions</a> (with no deletions)<br>");
-		buf.append("<a href=DataStoreCleaner?Task=CleanHWTransactions&TestOnly=true>Test CleanHWTransactions</a> (with no deletions)<br>");
-		buf.append("<a href=DataStoreCleaner?Task=CleanPracticeExamTransactions&TestOnly=true>Test CleanPracticeExamTransactions</a> (with no deletions)<br>");
-		buf.append("<a href=DataStoreCleaner?Task=CleanScores&TestOnly=true>Test CleanScores</a> (with no deletions)<br>");
-		buf.append("<a href=DataStoreCleaner?Task=CleanAssignments&TestOnly=true>Test CleanAssignments</a> (with no deletions)<br>");
-		buf.append("<a href=DataStoreCleaner?Task=CleanDeployments&TestOnly=true>Test CleanDeployments</a> (with no deletions)<br>");
-		buf.append("<a href=DataStoreCleaner?Task=CleanBLTIConsumers&TestOnly=true>Test CleanBLTIConsumers</a> (with no deletions)<br>");
+		buf.append("<form method=post action=/DataStoreCleaner>");
 		
-		buf.append("<a href=DataStoreCleaner?TestAll=true>Test all cleaners</a> (with no deletions)<p>");
-	
+		buf.append("<label><input type=radio name=TestOnly value=true checked> Test only (no deletions)</label><br>");
+		buf.append("<label><input type=radio name=TestOnly value=false> Delete entities (cannot be undone)</label><p>");
+		
+		buf.append("Entities to be scrubbed from the datastore:<br>");
+		buf.append("<label><input type=radio name=Task value=CleanResponses> Responses older than 1 year</label><br>");
+		buf.append("<label><input type=radio name=Task value=CleanQuizTransactions> Quiz transactions older than 1 year</label><br>");
+		buf.append("<label><input type=radio name=Task value=CleanHWTransactions> Homework transactions older than 1 year</label><br>");
+		buf.append("<label><input type=radio name=Task value=CleanPracticeExamTransactions> Practice Exam transactions older than 1 year</label><br>");
+		buf.append("<label><input type=radio name=Task value=CleanScores> Scores older than 1 year</label><br>");
+		buf.append("<label><input type=radio name=Task value=CleanAssignments> Assignments older than 6 months with no transactions</label><br>");
+		buf.append("<label><input type=radio name=Task value=CleanDeployments> Deployments older than 6 months with no assignments</label><br>");
+		buf.append("<label><input type=radio name=Task value=CleanBLTIConsumers> BLTIConsumers older than 6 months with no assignments</label><p>");
+		buf.append("<label><input type=radio name=Task value=CleanAll>All of the entities above (launches background job)</label><p>");
+		buf.append("<input type=submit><br>");
+		buf.append("</form>");
+
 		return buf.toString();
 	}
 
@@ -169,13 +141,13 @@ public class DataStoreCleaner extends HttpServlet {
 		// This method deletes all Response entities older than one year
 
 		StringBuffer buf = new StringBuffer();
-		buf.append("<h2>Clean Quiz Transactions</h2>");
+		buf.append("<h2>Clean Responses</h2>");
 		try {
 			List<Key<Response>> keys = ofy().load().type(Response.class).filter("submitted<",oneYearAgo).keys().list();
 			
-			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
+			//if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
-			buf.append(keys.size() + " entities, " + keys.size() + (testOnly?" identified":" deleted") + ".<br>");
+			buf.append(keys.size() + " Responses more then one year old" + (testOnly?" identified":" deleted") + ".<br>");
 			buf.append("Done.<br>");
 		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
@@ -191,9 +163,9 @@ public class DataStoreCleaner extends HttpServlet {
 		try {
 			List<Key<QuizTransaction>> keys = ofy().load().type(QuizTransaction.class).filter("downloaded<",oneYearAgo).keys().list();
 			
-			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
+			//if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
-		    buf.append(keys.size() + " entities, " + keys.size() + (testOnly?" identified":" deleted") + ".<br>");
+		    buf.append(keys.size() + " QuizTransactions more then one year old" + (testOnly?" identified":" deleted") + ".<br>");
 		    buf.append("Done.<br>");
 		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
@@ -209,9 +181,9 @@ public class DataStoreCleaner extends HttpServlet {
 		try {
 			List<Key<HWTransaction>> keys = ofy().load().type(HWTransaction.class).filter("graded<",oneYearAgo).keys().list();
 			
-			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
+			//if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
-		    buf.append(keys.size() + " entities, " + keys.size() + (testOnly?" identified":" deleted") + ".<br>");
+		    buf.append(keys.size() + " HWTransactions more then one year old" + (testOnly?" identified":" deleted") + ".<br>");
 		    buf.append("Done.<br>");
 		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
@@ -227,9 +199,9 @@ public class DataStoreCleaner extends HttpServlet {
 		try {
 			List<Key<PracticeExamTransaction>> keys = ofy().load().type(PracticeExamTransaction.class).filter("downloaded<",oneYearAgo).keys().list();
 			
-			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
+			//if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
-		    buf.append(keys.size() + " entities, " + keys.size() + (testOnly?" identified":" deleted") + ".<br>");
+		    buf.append(keys.size() + " PracticeExamTransactions more then one year old" + (testOnly?" identified":" deleted") + ".<br>");
 		    buf.append("Done.<br>");
 		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
@@ -245,9 +217,9 @@ public class DataStoreCleaner extends HttpServlet {
 		try {
 			List<Key<Score>> keys = ofy().load().type(Score.class).filter("mostRecentAttempt<",oneYearAgo).keys().list();
 			
-			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
+			//if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
-			buf.append(keys.size() + " entities, " + keys.size() + (testOnly?" identified":" deleted") + ".<br>");
+			buf.append(keys.size() + " Scores more then one year old" + (testOnly?" identified":" deleted") + ".<br>");
 			buf.append("Done.<br>");
 		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
@@ -259,7 +231,7 @@ public class DataStoreCleaner extends HttpServlet {
 		// This method searches for BLTIConsumers at least 6 months old with no Assignment entities
 
 		StringBuffer buf = new StringBuffer();
-		buf.append("<h2>Clean BLTIConsumers</h2>");
+		buf.append("<h2>Clean Assignments</h2>");
 		try {
 			List<Key<Assignment>> keys = new ArrayList<Key<Assignment>>();
 			List<Assignment> assignments = ofy().load().type(Assignment.class).filter("created<",sixMonthsAgo).list();
@@ -268,6 +240,12 @@ public class DataStoreCleaner extends HttpServlet {
 				else if ("Homework".equals(a.assignmentType) && ofy().load().type(HWTransaction.class).filter("assignmentId",a.id).count()==0) keys.add(Key.create(a));
 				else if ("PracticeExam".equals(a.assignmentType) && ofy().load().type(PracticeExamTransaction.class).filter("assignmentId",a.id).count()==0) keys.add(Key.create(a));
 			}
+
+			//if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
+
+			buf.append(keys.size() + " Assignments at least 6 months old with no transactions" + (testOnly?" identified":" deleted") + ".<br>");
+			buf.append("Done.<br>");
+
 		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
 		}
@@ -287,9 +265,9 @@ public class DataStoreCleaner extends HttpServlet {
 				if (n==0) keys.add(Key.create(c));
 			}
 			
-			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
+			//if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
-			buf.append(keys.size() + " entities, " + keys.size() + (testOnly?" identified":" deleted") + ".<br>");
+			buf.append(keys.size() + " BLTIConsumers at least 6 months old with no Assignments" + (testOnly?" identified":" deleted") + ".<br>");
 			buf.append("Done.<br>");
 
 		}catch (Exception e) {
@@ -311,9 +289,9 @@ public class DataStoreCleaner extends HttpServlet {
 				if (n==0) keys.add(Key.create(d));
 			}
 
-			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
+			//if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
-			buf.append(keys.size() + " entities, " + keys.size() + (testOnly?" identified":" deleted") + ".<br>");
+			buf.append(keys.size() + " Deployments at least 6 months old with no Assignments" + (testOnly?" identified":" deleted") + ".<br>");
 			buf.append("Done.<br>");
 
 		}catch (Exception e) {
