@@ -42,9 +42,6 @@ import com.googlecode.objectify.Key;
 @ServletSecurity(@HttpConstraint(rolesAllowed = {"admin"}))
 public class DataStoreCleaner extends HttpServlet {
 	private static final long serialVersionUID = 137L;
-	Date now;
-	Date oneMonthAgo;
-	Date fiveMonthsAgo;
 	Date sixMonthsAgo;
 	Date oneYearAgo;
 	int querySizeLimit = 100;
@@ -66,9 +63,9 @@ public class DataStoreCleaner extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		// This servlet is called by the cron daemon once each month, or manually by this servlet.
-		now = new Date();
-		sixMonthsAgo = new Date(now.getTime()-15768000000L);
-		oneYearAgo = new Date(now.getTime()-31536000000L);
+		Date now = new Date();
+		sixMonthsAgo = new Date(now.getTime()- 15768000000L);
+		oneYearAgo = new Date(now.getTime()- 31536000000L);
 
 		PrintWriter out = response.getWriter();
 		response.setContentType("text/html");
@@ -143,9 +140,9 @@ public class DataStoreCleaner extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		buf.append("<h2>Clean Responses</h2>");
 		try {
-			List<Key<Response>> keys = ofy().load().type(Response.class).filter("submitted<",oneYearAgo).keys().list();
+			List<Key<Response>> keys = ofy().load().type(Response.class).filter("submitted <",oneYearAgo).keys().list();
 			
-			//if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
+			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
 			buf.append(keys.size() + " Responses more then one year old" + (testOnly?" identified":" deleted") + ".<br>");
 			buf.append("Done.<br>");
@@ -161,9 +158,9 @@ public class DataStoreCleaner extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		buf.append("<h2>Clean Quiz Transactions</h2>");
 		try {
-			List<Key<QuizTransaction>> keys = ofy().load().type(QuizTransaction.class).filter("downloaded<",oneYearAgo).keys().list();
+			List<Key<QuizTransaction>> keys = ofy().load().type(QuizTransaction.class).filter("downloaded <",oneYearAgo).keys().list();
 			
-			//if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
+			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
 		    buf.append(keys.size() + " QuizTransactions more then one year old" + (testOnly?" identified":" deleted") + ".<br>");
 		    buf.append("Done.<br>");
@@ -179,9 +176,9 @@ public class DataStoreCleaner extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		buf.append("<h2>Clean Homework Transactions</h2>");
 		try {
-			List<Key<HWTransaction>> keys = ofy().load().type(HWTransaction.class).filter("graded<",oneYearAgo).keys().list();
+			List<Key<HWTransaction>> keys = ofy().load().type(HWTransaction.class).filter("graded <",oneYearAgo).keys().list();
 			
-			//if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
+			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
 		    buf.append(keys.size() + " HWTransactions more then one year old" + (testOnly?" identified":" deleted") + ".<br>");
 		    buf.append("Done.<br>");
@@ -197,9 +194,9 @@ public class DataStoreCleaner extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		buf.append("<h2>Clean Practice Exam Transactions</h2>");
 		try {
-			List<Key<PracticeExamTransaction>> keys = ofy().load().type(PracticeExamTransaction.class).filter("downloaded<",oneYearAgo).keys().list();
+			List<Key<PracticeExamTransaction>> keys = ofy().load().type(PracticeExamTransaction.class).filter("downloaded <",oneYearAgo).keys().list();
 			
-			//if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
+			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
 		    buf.append(keys.size() + " PracticeExamTransactions more then one year old" + (testOnly?" identified":" deleted") + ".<br>");
 		    buf.append("Done.<br>");
@@ -215,9 +212,9 @@ public class DataStoreCleaner extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		buf.append("<h2>Clean Scores</h2>");
 		try {
-			List<Key<Score>> keys = ofy().load().type(Score.class).filter("mostRecentAttempt<",oneYearAgo).keys().list();
+			List<Key<Score>> keys = ofy().load().type(Score.class).filter("mostRecentAttempt <",oneYearAgo).keys().list();
 			
-			//if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
+			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
 			buf.append(keys.size() + " Scores more then one year old" + (testOnly?" identified":" deleted") + ".<br>");
 			buf.append("Done.<br>");
@@ -234,14 +231,14 @@ public class DataStoreCleaner extends HttpServlet {
 		buf.append("<h2>Clean Assignments</h2>");
 		try {
 			List<Key<Assignment>> keys = new ArrayList<Key<Assignment>>();
-			List<Assignment> assignments = ofy().load().type(Assignment.class).filter("created<",sixMonthsAgo).list();
+			List<Assignment> assignments = ofy().load().type(Assignment.class).filter("created <",sixMonthsAgo).list();
 			for (Assignment a : assignments) {
 				if ("Quiz".equals(a.assignmentType) && ofy().load().type(QuizTransaction.class).filter("assignmentId",a.id).count()==0) keys.add(Key.create(a));
 				else if ("Homework".equals(a.assignmentType) && ofy().load().type(HWTransaction.class).filter("assignmentId",a.id).count()==0) keys.add(Key.create(a));
 				else if ("PracticeExam".equals(a.assignmentType) && ofy().load().type(PracticeExamTransaction.class).filter("assignmentId",a.id).count()==0) keys.add(Key.create(a));
 			}
 
-			//if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
+			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
 			buf.append(keys.size() + " Assignments at least 6 months old with no transactions" + (testOnly?" identified":" deleted") + ".<br>");
 			buf.append("Done.<br>");
@@ -259,13 +256,13 @@ public class DataStoreCleaner extends HttpServlet {
 		buf.append("<h2>Clean BLTIConsumers</h2>");
 		try {
 			List<Key<BLTIConsumer>> keys = new ArrayList<Key<BLTIConsumer>>();
-			List<BLTIConsumer> consumers = ofy().load().type(BLTIConsumer.class).filter("created<",sixMonthsAgo).list();					
+			List<BLTIConsumer> consumers = ofy().load().type(BLTIConsumer.class).filter("created <",sixMonthsAgo).list();					
 			for (BLTIConsumer c : consumers) {
 				int n = ofy().load().type(Assignment.class).filter("domain",c.oauth_consumer_key).chunk(Integer.MAX_VALUE).count();
 				if (n==0) keys.add(Key.create(c));
 			}
 			
-			//if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
+			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
 			buf.append(keys.size() + " BLTIConsumers at least 6 months old with no Assignments" + (testOnly?" identified":" deleted") + ".<br>");
 			buf.append("Done.<br>");
@@ -283,13 +280,13 @@ public class DataStoreCleaner extends HttpServlet {
 		buf.append("<h2>Clean Deployments</h2>");
 		try {
 			List<Key<Deployment>> keys = new ArrayList<Key<Deployment>>();
-			List<Deployment> deployments = ofy().load().type(Deployment.class).filter("created<",sixMonthsAgo).list();					
+			List<Deployment> deployments = ofy().load().type(Deployment.class).filter("created <",sixMonthsAgo).list();					
 			for (Deployment d : deployments) {
 				int n = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).chunk(Integer.MAX_VALUE).count();
 				if (n==0) keys.add(Key.create(d));
 			}
 
-			//if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
+			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
 
 			buf.append(keys.size() + " Deployments at least 6 months old with no Assignments" + (testOnly?" identified":" deleted") + ".<br>");
 			buf.append("Done.<br>");
