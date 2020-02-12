@@ -55,9 +55,9 @@ public class DataStoreCleaner extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		response.setContentType("text/html");
 		
-		out.println(interactiveMenu());
-		out.println(Home.footer);
-
+		String task = request.getParameter("Task");		
+		if (task != null) doPost(request,response);
+		else out.println(Home.header + interactiveMenu() + Home.footer);		
 	} 
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
@@ -101,7 +101,7 @@ public class DataStoreCleaner extends HttpServlet {
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanDeployments").param("TestOnly", testOnly?"true":"false"));
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanBLTIConsumers").param("TestOnly", testOnly?"true":"false"));
 			
-			buf.append("8 background tasks launched to scrub all entity types from the datastore.");
+			buf.append("8 background tasks launched to scrub all obsolete entity types from the datastore.");
 			break;
 		}
 		buf.append("<br>" + Home.footer);
