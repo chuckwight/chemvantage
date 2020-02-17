@@ -306,13 +306,17 @@ public class Homework extends HttpServlet {
 			Date minutesAgo = new Date(now.getTime()-retryDelayMinutes*60000);  // about 2 minutes ago
 			List<HWTransaction> recentTransactions = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).filter("graded >",minutesAgo).list();
 			long secondsRemaining = 0;
+			boolean solvedRecently = false;
 			if (recentTransactions.size()>0) {  // may be more than one if multiple browser sessions are active for one user!
 				Date lastSubmission = new Date(0L);
-				for (HWTransaction ht : recentTransactions) if (ht.graded.after(lastSubmission)) lastSubmission = ht.graded;
+				for (HWTransaction ht : recentTransactions) {
+					if (ht.graded.after(lastSubmission)) lastSubmission = ht.graded;
+					if (ht.score>0) solvedRecently=true;
+				}
 				secondsRemaining = retryDelayMinutes*60 - (now.getTime()-lastSubmission.getTime())/1000;
 			}
 			debug.append("recent transactions = "+recentTransactions.size() + "...");
-			if (secondsRemaining > 0) {  
+			if (secondsRemaining > 0 && !solvedRecently) {  
 				buf.append("<h2>Please Wait For The Retry Delay To Complete</h2>");
 				buf.append(df.format(now));
 				buf.append("<p>The retry delay for this homework problem is <span id=delay style='color: red'></span><p>");
