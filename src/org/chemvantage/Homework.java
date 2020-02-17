@@ -264,7 +264,7 @@ public class Homework extends HttpServlet {
 
 	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		
+		StringBuffer debug = new StringBuffer("Start...");
 		try {
 			long questionId = Long.parseLong(request.getParameter("QuestionId"));
 			Key<Question> k = Key.create(Question.class,questionId);
@@ -273,8 +273,13 @@ public class Homework extends HttpServlet {
 				q = ofy().load().key(k).safe();
 				hwQuestions.put(k,q);
 			}
+			
 			Topic topic = ofy().load().type(Topic.class).id(q.topicId).safe();
+			debug.append("topic:"+topic.title+"...");
+			
 			String lis_result_sourcedid = user.getLisResultSourcedid();
+			debug.append("lis_result_sourcedid="+lis_result_sourcedid+"...");
+			
 			long assignmentId = 0;
 			Assignment hwa = null;
 			try {
@@ -282,6 +287,9 @@ public class Homework extends HttpServlet {
 				assignmentId = user.getAssignmentId();
 				hwa = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			} catch (Exception e) {}
+			
+			if (hwa==null) debug.append("hwa=null...");
+			else debug.append("assignmentId="+hwa.id+"...");
 			
 			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
@@ -293,6 +301,8 @@ public class Homework extends HttpServlet {
 			}
 			else for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
 			
+			debug.append("student answer:"+studentAnswer[0]+"...");
+			
 			Date minutesAgo = new Date(now.getTime()-retryDelayMinutes*60000);  // about 2 minutes ago
 			List<HWTransaction> recentTransactions = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).filter("graded >",minutesAgo).list();
 			long secondsRemaining = 0;
@@ -301,9 +311,9 @@ public class Homework extends HttpServlet {
 				for (HWTransaction ht : recentTransactions) if (ht.graded.after(lastSubmission)) lastSubmission = ht.graded;
 				secondsRemaining = retryDelayMinutes*60 - (now.getTime()-lastSubmission.getTime())/1000;
 			}
+			debug.append("recent transactions = "+recentTransactions.size() + "...");
 			if (secondsRemaining > 0) {  
 				buf.append("<h2>Please Wait For The Retry Delay To Complete</h2>");
-				//buf.append("<b>" + user.getBothNames() + "</b><br>\n");
 				buf.append(df.format(now));
 				buf.append("<p>The retry delay for this homework problem is <span id=delay style='color: red'></span><p>");
 				buf.append("Please take these few moments to check your work carefully.  You can sometimes find alternate routes to the<br>"
@@ -349,8 +359,12 @@ public class Homework extends HttpServlet {
 			
 			String hashMe = user.id + (hwa==null?"":hwa.id);
 			q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
+			debug.append("question parameters set with "+hashMe.hashCode()+"...");
+			
 			int studentScore = q.isCorrect(studentAnswer[0])?q.pointValue:0;
 			int possibleScore = q.pointValue;
+			
+			debug.append("score is " + studentScore + " out of " + possibleScore + " points...");
 			HWTransaction ht = null;
 			
 			if (studentAnswer[0].length() > 0) { // an answer was submitted
@@ -370,9 +384,12 @@ public class Homework extends HttpServlet {
 				if (lis_result_sourcedid != null) ht.lis_result_sourcedid = lis_result_sourcedid;
 				ofy().save().entity(ht).now();
 
+				debug.append("HW transaction id="+ht.id+"...");
+				
 				// create/update/store a HomeworkScore object
-				boolean reportScoreToLms = hwa.lti_ags_lineitem_url != null || (hwa.lis_outcome_service_url != null && user.getLisResultSourcedid() != null);
 				try {  // throws exception if hwa==null
+					boolean reportScoreToLms = hwa.lti_ags_lineitem_url != null || (hwa.lis_outcome_service_url != null && user.getLisResultSourcedid() != null);
+					debug.append("score " + (reportScoreToLms?"will ":"will not ") + "be reported to the LMS...");
 					if (hwa.questionKeys.contains(k)) {
 						Score s = Score.getInstance(user.id,hwa);
 						ofy().save().entity(s).now();
@@ -436,7 +453,7 @@ public class Homework extends HttpServlet {
 			if (user.isAnonymous()) buf.append(" or go back to the <a href=/>ChemVantage home page</a>.");
 			}
 		catch (Exception e) {
-			buf.append("Sorry, we were unable to score this question.<br>" + e.toString());
+			buf.append("<p>Sorry, we were unable to score this question: " + e.toString() + "<p>" + debug.toString());
 		}
 		return buf.toString();
 	}
