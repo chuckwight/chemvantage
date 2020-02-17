@@ -21,7 +21,11 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.HttpConstraint;
@@ -39,54 +43,130 @@ public class EraseEntity extends HttpServlet {
 	private static final long serialVersionUID = 1L;
        
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    	response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
 		
-    	response.getWriter().println(Home.header + menu() + Home.footer);
+		String domain = request.getParameter("Domain");
+		
+		if (domain == null) out.println(Home.header + menu() + Home.footer);
+		else out.println(Home.header + options(domain) + Home.footer);
 	}
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		// This method gets an array of assignmentId values (initially as a Sting[] array
+		// and deletes the assignments along all of the associated transactions
+		
+		// Create containers for all Assignments and their Keys (to be deleted)
+		List<Assignment> assignments = new ArrayList<Assignment>();
+		List<Key<Assignment>> assignmentKeys = new ArrayList<Key<Assignment>>();
+		
+		// If selected, erase the domain:		
+		if (Boolean.parseBoolean(request.getParameter("EraseDomain"))) {
+			String domain = request.getParameter("Domain");
+			try {
+				new URL(domain);  // throws Exception if this is a BLTIConsumer
+				ofy().delete().key(Key.create(Deployment.class,domain));
+			} catch (Exception e) {
+				ofy().delete().key(Key.create(BLTIConsumer.class,domain));
+			}
+			// Load all of this domain's assignments Keys into the List of assignmentKeys:
+			assignmentKeys = ofy().load().type(Assignment.class).filter("domain",domain).keys().list();
+		} else { // otherwise, delete only selected assignments and all associated transactions
+			String[] assignmentIds = request.getParameterValues("AssignmentId");
+			if (assignmentIds != null) { 
+				for (String id : assignmentIds) assignmentKeys.add(Key.create(Assignment.class,Long.parseLong(id)));
+				assignments = new ArrayList<Assignment>(ofy().load().keys(assignmentKeys).values());
+			}
+		}
+		
+		// Delete all of the transactions associated with each assignment
+		for (Assignment a : assignments) {
+			if (a.assignmentType != null) {
+				switch (a.assignmentType) {
+					case "Quiz": ofy().delete().keys(ofy().load().type(QuizTransaction.class).filter("assignmentId", a.id).keys().iterable()); break;				
+					case "Homework": ofy().delete().keys(ofy().load().type(HWTransaction.class).filter("assignmentId", a.id).keys().iterable()); break;
+					case "PracticeExam": ofy().delete().keys(ofy().load().type(PracticeExamTransaction.class).filter("assignmentId", a.id).keys().iterable()); break;
+				}
+			}
+		}
+		
+		// Now delete the assignments
+		if (assignmentKeys.size()>0) ofy().delete().keys(assignmentKeys);
+			
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		out.println(Home.header);
 		
-		try {
-			String entityType = request.getParameter("EntityType");
-			String id = request.getParameter("Id");
-			assert(entityType!=null && !entityType.isEmpty());
-			assert(id!=null && !id.isEmpty());
-			
-			switch(entityType) {
-				case("User"): deleteUser(id); break;
-				//case("Group"): deleteGroup(id); break;
-				//case("Domain"): deleteDomain(id); break;
-				default: throw new Exception();
-			}
-			out.println("Done.<p>");
-		} catch (Exception e) {
-			out.println("You must select an entity type and provide an id.<p>");
-		}
-		out.println(menu() + Home.footer);
+		out.println(Home.header + menu() + Home.footer);
 	}
 
 	String menu() {
 		StringBuffer buf = new StringBuffer("<h3>Database Utility for Permanent Erasure</h3>");
 		buf.append("The ChemVantage administrator can use this utility to permanently delete the following from the datastore:"
 				+ "<ul>"
-				+ "<li>An individual user, along with all quiz, homework and practice exam transactions and Score objects"
-				+ "<li>A group of users, including all associated users and assignments"
-				+ "<li>A domain, includig all associated groups, users and BLTI credentials"
+				+ "<li>Selected assignments and associated transactions"
+				+ "<li>All assignments and transactions associated with a domain (complete reset)"
+				+ "<li>A domain and all associated assignments and transactions (complete delete)"
 				+ "</ul>");
-		buf.append("<font color=red>Warning: This action cannot be undone.</font><p>");
-		buf.append("Select the type of entity to be deleted and the associated, userId, groupId or consumer_key:<br>"
-				+ "<form method=post>"
-				+ "<select name=EntityType>"
-				+ "<option value='' SELECTED>Select an etity type</option>"
-				+ "<option value='User'>User (including transactions and scores)</option>"
-				+ "<option value='Group'>Group (including users and assignments)</option>"
-				+ "<option value='Domain'>Domain (including groups and BLTI credentials)</option>"
-				+ "</select> "
-				+ "ID (case-sensitive): <input name=Id type=text size=12>"
-				+ "<input type=submit name=UserRequest value='Delete Entity'>"
-				+ "</form>");
+		List<BLTIConsumer> consumers = ofy().load().type(BLTIConsumer.class).list();
+		List<Deployment> deployments = ofy().load().type(Deployment.class).list();
+		
+		buf.append("Select the domain of interest by its Consumer Key or Deployment ID:<br>"
+				+ "<form method=get action=/EraseEntity>"
+				+ "<select name=Domain>"
+				+ "<option value='' SELECTED>Select a domain</option>");
+		for (BLTIConsumer c : consumers) buf.append("<option value='" + c.oauth_consumer_key + "'>" + c.oauth_consumer_key + "</option>");		
+		for (Deployment d : deployments) buf.append("<option value='" + d.platform_deployment_id + "'>" + d.platform_deployment_id + "</option>");		
+		
+		buf.append("</select>&nbsp;&nbsp;");
+		buf.append("<input type=submit value='Select' onClick=this.value='working...'></form><p>");
+		
+		return buf.toString();
+	}
+	
+	String options(String domain) {
+		StringBuffer buf = new StringBuffer("<h3>Database Utility for Permanent Erasure</h3>");
+		
+		buf.append(("Domain: ") + "<b>" + domain + "</b><p>");
+		
+		buf.append("<form method=post action=/EraseEntity>");
+		buf.append("<input type=hidden name=Domain value='" + domain + "'>");
+		buf.append("<label><input type=radio name=EraseDomain value=true>Delete everything including the domain entity</label><br>");
+		buf.append("<label><input type=radio name=EraseDomain value=false checked>Delete only the assignments selected below and their associated transactions and scores</label><p>");
+		
+		List<Assignment> assignments = ofy().load().type(Assignment.class).filter("domain",domain).list();
+		if (assignments.size()==0) buf.append("This domain does not have any associated assignments.<p>");
+		else {
+			Map<Long,String> titles = new HashMap<Long,String>();
+			List<Topic> topics = ofy().load().type(Topic.class).list();
+			for (Topic t : topics) titles.put(t.id, t.title);
+			
+			// Create a checkbox for selecting all assignments
+			if (assignments.size()>1) buf.append("<label><input type=checkbox name=SelectAll value=true onClick='for(var i=0;i<this.form.AssignmentId.length;i++)this.form.AssignmentId[i].checked=this.form.SelectAll.checked;'>Select/Unselect All Assignments</label><p>");
+			
+			// Make a list of assignments with checkboxes, assignment titles and created dates
+			for (Assignment a : assignments) {
+				buf.append("<label><input type=checkbox name=AssignmentId value=" + a.id + " onClick=this.form.SelectAll.indeterminate=true>" + a.assignmentType + " - ");
+				if ("PracticeExam".equals(a.assignmentType)) {
+					String topicTitles = "";
+					for (Long id : a.topicIds) topicTitles += titles.get(id) + ", ";
+					buf.append(topicTitles.substring(0,topicTitles.length()-2));
+				} else buf.append(titles.get(a.topicId));
+					
+				buf.append(a.created==null?"":" created " + a.created);
+				buf.append("</label><br>");
+				// Count the numbe4r of transactions associated with each assignment (to be deleted, if selected)
+				int nTransactions = 0;
+				if (a.assignmentType != null) {
+					switch (a.assignmentType) {
+						case "Quiz": nTransactions = ofy().load().type(QuizTransaction.class).filter("assignmentId",a.id).count(); break;
+						case "Homework": nTransactions = ofy().load().type(HWTransaction.class).filter("assignmentId",a.id).count(); break;
+						case "PracticeExam": nTransactions = ofy().load().type(PracticeExamTransaction.class).filter("assignmentId",a.id).count(); break;
+					}
+				}
+				buf.append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" + nTransactions + " transactions are associated with this assignment<br>");
+			}
+			buf.append("<br><input type=submit value='Permanently delete the selected entities (cannot be undone)'></form>");
+		}
 		return buf.toString();
 	}
 	
