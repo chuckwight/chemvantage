@@ -42,6 +42,7 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.URL;
 import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
@@ -116,7 +117,8 @@ public class LTIv1p3Launch extends HttpServlet {
 			} catch (Exception e) {
 				throw new Exception("id_token was not a valid JWT.");
 			}
-		
+			debug.append("id_token OK...");
+			
 			String resourceLinkId = verifyLtiMessageClaims(claims);
 			
 			User user = getUserClaims(claims);
@@ -131,7 +133,8 @@ public class LTIv1p3Launch extends HttpServlet {
 				d.email = platform.get("email_contact").getAsString();
 				d.lms_type = platform.get("product_family_code").getAsString() + " version " + platform.get("version").getAsString();
 			} catch (Exception e) {}	
-
+			debug.append("deployment claims OK...");
+			
 			// Process information for LTI Assignment and Grade Services (AGS)
 			String scope = "";
 			String lti_ags_lineitems_url = null;
@@ -147,7 +150,8 @@ public class LTIv1p3Launch extends HttpServlet {
 				lti_ags_lineitem_url = lti_ags_claims.get("lineitem")==null?null:lti_ags_claims.get("lineitem").getAsString();
 			} catch (Exception e) {				
 			}
-
+			debug.append("Assignment & Grade Services claims OK...");
+			
 			// Process information for LTI Advantage Names and Roles Provisioning (NRPS)
 			String lti_nrps_context_memberships_url = null;
 			try { 
@@ -157,6 +161,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				debug.append("supports NRPS...");
 			} catch (Exception e) {
 			}
+			debug.append("Roles and Membership Services claims OK...");		
 			
 			if (!scope.isEmpty()) d.scope = scope;
 			
@@ -201,7 +206,8 @@ public class LTIv1p3Launch extends HttpServlet {
 				myAssignment = new Assignment(d.platform_deployment_id,resourceLinkId,lti_nrps_context_memberships_url);
 				debug.append("Created new assignment with id=" + myAssignment.id + "...");
 			}
-
+			debug.append("assignment OK...");
+			
 			// Update the Assignment parameters:
 			debug.append("Cloning myAssignment...");
 			Assignment original_a = myAssignment.clone(); // make a copy to compare with for updating later
@@ -230,7 +236,11 @@ public class LTIv1p3Launch extends HttpServlet {
 				return;
 			}
 		} catch (Exception e) {
-			throw new Exception(e.getMessage());
+			PrintWriter out = response.getWriter();
+			response.setContentType("text/html");
+			out.println(Home.header + debug.toString() + Home.footer);
+			
+			//throw new Exception(e.getMessage());
 		}
 	}
 	

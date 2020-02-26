@@ -285,16 +285,19 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     }
 	
     static Long getAssignmentId(Deployment d, String resourceLinkId,String lti_ags_lineitems_url) throws Exception {
-    	JsonElement json = new JsonParser().parse(getLineItems(d,lti_ags_lineitems_url));
-    	if (json.isJsonArray()) {
-    		JsonArray lineitems = json.getAsJsonArray();
-    		Iterator<JsonElement> iterator = lineitems.iterator();
-    		while(iterator.hasNext()){
-    			JsonObject lineitem = iterator.next().getAsJsonObject();
-    			if (resourceLinkId.equals(lineitem.get("resourceLinkId").getAsString())) {
-    				return Long.parseLong(lineitem.get("resourceId").getAsString()); // this should be the assignmentId
-    			}  												// that was created during a DeepLinking work flow
+    	try {
+    		JsonElement json = new JsonParser().parse(getLineItems(d,lti_ags_lineitems_url));
+    		if (json.isJsonArray()) {
+    			JsonArray lineitems = json.getAsJsonArray();
+    			Iterator<JsonElement> iterator = lineitems.iterator();
+    			while(iterator.hasNext()){
+    				JsonObject lineitem = iterator.next().getAsJsonObject();
+    				if (resourceLinkId.equals(lineitem.get("resourceLinkId").getAsString())) {
+    					return Long.parseLong(lineitem.get("resourceId").getAsString()); // this should be the assignmentId
+    				}  												// that was created during a DeepLinking work flow
+    			}
     		}
+    	} catch (Exception e) {
     	}
     	return null;
     }
