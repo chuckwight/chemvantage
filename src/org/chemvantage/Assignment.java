@@ -43,18 +43,16 @@ public class Assignment implements java.lang.Cloneable {
 			String lis_outcome_service_url;
 			String lti_ags_lineitem_url;
 			String lti_nrps_context_memberships_url;
-			String custom_context_memberships_url;
 			List<Long> topicIds; // used for practice exams which have multiple topicIds
 			List<String> resourceLinkIds = new ArrayList<String>();  // deprecated
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 
 	Assignment() {}
 
-	Assignment(String consumer_key,String resourceLinkId,String lisOutcomeServiceUrl,String customContextMembershipsUrl) {  // specific to Quiz and Homework assignments with a single topicId
+	Assignment(String consumer_key,String resourceLinkId,String lisOutcomeServiceUrl,boolean isLTIv1p1) {  // specific to Quiz and Homework assignments with a single topicId
 		this.domain = consumer_key;
 		this.resourceLinkId = resourceLinkId;
 		this.lis_outcome_service_url = lisOutcomeServiceUrl;
-		this.custom_context_memberships_url = customContextMembershipsUrl;
 		this.created = new Date();
 	}
 
@@ -255,7 +253,6 @@ public class Assignment implements java.lang.Cloneable {
 				((a.lis_outcome_service_url != null && a.lis_outcome_service_url.equals(this.lis_outcome_service_url)) 								|| (a.lis_outcome_service_url == null && this.lis_outcome_service_url == null)) &&
 				((a.lti_ags_lineitem_url != null && a.lti_ags_lineitem_url.equals(this.lti_ags_lineitem_url)) 										|| (a.lti_ags_lineitem_url == null && this.lti_ags_lineitem_url == null)) &&
 				((a.lti_nrps_context_memberships_url != null && a.lti_nrps_context_memberships_url.equals(this.lti_nrps_context_memberships_url)) 	|| (a.lti_nrps_context_memberships_url == null && this.lti_nrps_context_memberships_url == null)) &&
-				((a.custom_context_memberships_url != null && a.custom_context_memberships_url.equals(this.custom_context_memberships_url)) 		|| (a.custom_context_memberships_url == null && this.custom_context_memberships_url == null)) &&
 				((a.topicIds != null && a.topicIds.equals(this.topicIds)) 																			|| (a.topicIds == null && this.topicIds == null)) &&
 				((a.questionKeys != null && a.questionKeys.equals(this.questionKeys)) 																|| (a.questionKeys == null && this.questionKeys == null));				
 	}

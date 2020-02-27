@@ -276,8 +276,6 @@ public class LTILaunch extends HttpServlet {
 			debug.append("lis_result_sourcedid=" + lis_result_sourcedid + "...");
 			String lisOutcomeServiceUrl = request.getParameter("lis_outcome_service_url");
 			debug.append("lis_outcome_service_url=" + lisOutcomeServiceUrl + "...");
-			String customContextMembershipsUrl = request.getParameter("custom_context_memberships_url");
-			debug.append("custom_context_memberships_url=" + customContextMembershipsUrl + "...");
 			
 			// Use the resourceLinkId to find the assignment or create a new one:
 			Assignment myAssignment = null;
@@ -292,13 +290,9 @@ public class LTILaunch extends HttpServlet {
 					myAssignment.lis_outcome_service_url = lisOutcomeServiceUrl;
 					saveAssignment = true;
 				}
-				if (customContextMembershipsUrl != null && !customContextMembershipsUrl.equals(myAssignment.custom_context_memberships_url) ) {
-					myAssignment.custom_context_memberships_url = customContextMembershipsUrl;
-					saveAssignment = true;
-				}
 				if (saveAssignment) ofy().save().entity(myAssignment); 
 			} catch (Exception e) {  // or create a new one with the available information (but no assignmentType or topicIds)
-				myAssignment = new Assignment(oauth_consumer_key,resource_link_id,lisOutcomeServiceUrl,customContextMembershipsUrl);
+				myAssignment = new Assignment(oauth_consumer_key,resource_link_id,lisOutcomeServiceUrl,true);
 				ofy().save().entity(myAssignment).now(); // we'll need the new id value immediately
 				user.setToken(myAssignment.id,lis_result_sourcedid);
 				debug.append("User token set...");

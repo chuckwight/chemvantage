@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -41,10 +40,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.googlecode.objectify.Key;
 
 @WebServlet("/Quiz")
@@ -634,20 +629,14 @@ public class Quiz extends HttpServlet {
 	
 	String showSummary(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		String lti_version = null;
 		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 		if (a==null) return "No assignment was specified for this request.";
-		if (a.lis_outcome_service_url!=null) lti_version = "1p1";
-		else if (a.lti_ags_lineitem_url != null) lti_version = "1p3";
-		else return "Could not determine the LTI version for this request.";
 		
 		if (!user.isInstructor()) return "You must be logged in as the instructor to view this page.";
 
-		if ("1p3".equals(lti_version)) {
+		if (a.lti_ags_lineitem_url != null && a.lti_nrps_context_memberships_url != null) {
 			try { // code for LTI version 1.3
 				Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
-
-				if (a.lti_nrps_context_memberships_url==null) throw new Exception("No Names and Roles Provisioning support.");
 
 				buf.append("<h3>" + a.assignmentType + " - " + t.title + "</h3>");
 				//buf.append("Group: " + g.description + "<br>");
@@ -698,93 +687,9 @@ public class Quiz extends HttpServlet {
 			} catch (Exception e) {
 				buf.append(e.toString());
 			}
-		} else if ("1p1".equals(lti_version)) {
-			try {  // code for LTI version 1.1
-				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
-				buf.append("<h3>" + a.assignmentType + " - " + t.title + "</h3>");
-
-				DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-				buf.append(df.format(new Date()) + "<p>");
-				
-				if (a.custom_context_memberships_url == null) buf.append("Memberships service is not available from your LMS, sorry.<p>");
-				else {
-					BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(a.domain).safe();
-				//buf.append("Getting group membership from consumer " + c.oauth_consumer_key + " at URL " + a.custom_context_memberships_url);
-					String json = new LTIMessage("text/html","application/vnd.ims.lis.v2.membershipcontainer+json","",a.custom_context_memberships_url,c.oauth_consumer_key,c.secret).send();
-				// application/vnd.ims.lis.v2.membershipcontainer+json
-				//	buf.append(json);
-					JsonObject context_memberships = new JsonParser().parse(json).getAsJsonObject();
-					JsonArray members = context_memberships.get("pageOf").getAsJsonObject().get("membershipSubject").getAsJsonObject().get("membership").getAsJsonArray();
-					Iterator<JsonElement> iterator = members.iterator();
-					buf.append("<table><tr><th>User ID</th><th>Role</th><th>Name</th><th>Email</th><th>LMS Score</th><th>CV Score</th></tr>");
-					while(iterator.hasNext()){
-						JsonObject member = iterator.next().getAsJsonObject();
-						String roles = member.get("roles").getAsString().toLowerCase();
-						String role = roles.contains("administrator")?"Administrator":roles.contains("instructor")?"Instructor":"Learner";
-						JsonObject person = member.get("member").getAsJsonObject();
-						String userId = c.oauth_consumer_key + ":" + person.get("userId").getAsString();
-						String email = person.get("email").getAsString();
-						String name = person.get("name").getAsString();
-						
-						String s = null;
-						Key<Score> scoreKey = Key.create(Key.create(User.class,userId),Score.class,a.id);
-						Score cvScore = ofy().load().key(scoreKey).now();
-						buf.append("<tr><td>" + userId + "</td>"
-								+ "<td>" + role + "</td>"
-								+ "<td>" + name + "</td>"
-								+ "<td>" + email + "</td>"
-								+ "<td align=center>" + (s == null?" - ":s + "%") + "</td>"
-								+ "<td align=center>" + (cvScore == null?" - ":String.valueOf(cvScore.getPctScore()) + "%") + "</td></tr>");
-					}
-					buf.append("</table>");		
-				}
-/*
-				buf.append("To protect the privacy of our users, ChemVantage does not collect any personally identifiable information. "
-						+ "Therefore, we are unable to display a traditional grade book with names and scores. Instead, we rely on a "
-						+ "robust system of reporting scores back to the grade book inside your LMS.<p>");
-
-				List<Score> scores = ofy().load().type(Score.class).filter("id", a.id).list();
-				int count = scores.size();
-				Date mostRecent = new Date(0);
-				boolean allScoresReported = true;
-				double pctScoreSum = 0;
-				int scoresNotReported = 0;
-				Queue queue = QueueFactory.getDefaultQueue();  // default task queue
-				int attempts = 0;
-				for (Score s : scores) {
-					if (s.numberOfAttempts==0) continue;  // skip the averaging for those who have not attempted the quiz yet
-					attempts += s.numberOfAttempts;
-					if (s.mostRecentAttempt.after(mostRecent)) mostRecent = s.mostRecentAttempt;
-					if (s.needsLisReporting()) {
-						scoresNotReported++;
-						allScoresReported = false;
-						pctScoreSum += s.getPctScore();
-						queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",s.owner.getName()));
-					}
-					
-				}
-				
-				buf.append("<p>There " + (count==1?"is ":"are ") + count + " score" + (count==1?"":"s") + " for this assignment in the ChemVantage database.<br>");
-				if (count>0) {
-					buf.append("The average score is " + pctScoreSum/count + "%.<br>");
-					buf.append("The average number of attempts (including downloads not submitted for scoring) is " + Math.round(10.*attempts/count)/10. + ".<br>");
-					buf.append("The most recent attempt of this assignment was on " + df.format(mostRecent) + ".<p>");
-				} else buf.append("<br>");
-
-				if (a.lis_outcome_service_url==null) buf.append("Your LMS is not configured for ChemVantage to report scores to the LMS grade book.<p>");
-				else if (scoresNotReported>0) {
-					buf.append("It appears that " + scoresNotReported + (scoresNotReported==1?" score":" scores") + " may not have been reported to your LMS correctly. "
-							+ "We have automatically initiated a programmed task to correct this. "
-							+ "Please check back in a few minutes to ensure that the situation has been resolved.<p>");
-				}
-				else if (allScoresReported) buf.append("All scores for students have been reported to your LMS successfully.<p>");
- */
-				buf.append("If you have any questions or need assistance, please contact <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.<p>");			
-				buf.append("<a href=/Quiz?Token=" + user.token + ">Return to this quiz</a>.<p>");
-			} catch (Exception e) {
-				buf.append("ChemVantage was unable to access the LISMembershipContainer REST service on your LMS, so a summary of scores cannot be provided "
-						+ "at this time, sorry. We are working to resolve this problem in the near future.<p>");
-			}
+		} else {
+			buf.append("Sorry, there is not enough information available from your LMS to support this request.<p>");			
+			buf.append("<a href=/Quiz?Token=" + user.token + ">Return to this quiz</a>.<p>");
 		}
 		return buf.toString();
 	}
