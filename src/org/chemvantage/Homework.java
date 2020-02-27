@@ -142,14 +142,16 @@ public class Homework extends HttpServlet {
 			
 			if (user.isInstructor() && hwa != null) {
 				buf.append("<table style='border: 1px solid black'><tr><td>");
-				buf.append("As the course instructor you may<ul>"
-						+ "<li><a href=/Homework?UserRequest=AssignHomeworkQuestions&Token=" + user.token + ">"
-						+ "customize this homework assignment</a> by selecting/deselecting the available question items."
-						+ "<li>view a <a href=/Homework?UserRequest=ShowSummary&Token=" + user.token + ">summary of scores</a> for this assignment"
-						+ "</ul></td></tr></table><p>");
+				buf.append("As the course instructor you may "
+						+ "<a href=/Homework?UserRequest=AssignHomeworkQuestions&Token=" + user.token + ">"
+						+ "customize this assignment</a> by selecting/deselecting the required question items. ");
+				if (hwa.lti_nrps_context_memberships_url != null && hwa.lti_ags_lineitem_url != null) 
+					buf.append("You may also view a <a href=/Homework?UserRequest=ShowSummary&Token=" 
+							+ user.token + ">summary of student scores</a> for this assignment.");
+				buf.append("</td></tr></table><p>");
 			} else if (user.isAnonymous()) {
 				buf.append("<h3><font color=red>Anonymous User</font></h3>");
-			}
+			}	
 			
 			if (!user.isAnonymous()) {
 				buf.append("\nHomework Rules<UL>");
