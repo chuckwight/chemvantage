@@ -42,7 +42,6 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.URL;
 import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
@@ -236,11 +235,12 @@ public class LTIv1p3Launch extends HttpServlet {
 				return;
 			}
 		} catch (Exception e) {
+			/*
 			PrintWriter out = response.getWriter();
 			response.setContentType("text/html");
 			out.println(Home.header + debug.toString() + Home.footer);
-			
-			//throw new Exception(e.getMessage());
+			*/
+			throw new Exception(e.getMessage());
 		}
 	}
 	
