@@ -86,7 +86,8 @@ public class LTIRegistration extends HttpServlet {
 		
 		if ("config".contentEquals(userRequest)) {
 			response.setContentType("text/json");
-			out.println(getConfigurationJson(request.getParameter("iss")));
+			String iss = "https://" + request.getServerName();
+			out.println(getConfigurationJson(iss,request.getParameter("lms")));
 		} else if ("final".contentEquals(userRequest)) {
 			String token = request.getParameter("token");
 			out.println(Home.header + clientIdForm(token) + Home.footer);
@@ -338,8 +339,18 @@ public class LTIRegistration extends HttpServlet {
 			buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
 					+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><p>");
 			
+			if ("moodle".contentEquals(lms)) {
+				buf.append("Please note: Several Moodle users have experienced difficulty getting "
+						+ "scores returned to the Moodle grade book using LTI. We believe that this is due to the Moodle server being "
+						+ "configured in a way that refuses this type of LTI connection. You can rectify the situation by adding the "
+						+ "following rewrite rule into the .htaccess file on the Moodle server:<br>"
+						+ "RewriteCond %{HTTP:Authorization} ^(.+)" 
+						+ "RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]<p>");
+			}
+			
 			buf.append("If you  need assistance, please contact me at admin@chemvantage.org. <p>"
 					+ "-Chuck Wight");		
+		
 		} else { // LTIAdvantage registration
 			buf.append("Thank you for your ChemVantage registration request.<p> "
 					+ "The next step is to enter the ChemVantage configuration details into your LMS. "
@@ -347,7 +358,7 @@ public class LTIRegistration extends HttpServlet {
 					+ "you must have administrator privileges in your LMS in order to do this. "
 					+ "If you are NOT the LMS administrator, please stop here and forward this message "
 					+ "to an administrator with a request to complete the registration process. The "
-					+ "registration link below will be active for 3 days.<p>"
+					+ "registration link below will be active for 3 days and expires at " + jwt.getExpiresAt() + ".<p>"
 					+ (iss.equals("https://dev-vantage-hrd.appspot.com")?"You indicated that your initial "
 							+ "use case is testing, so we are granting access to our development server "
 							+ "for this purpose. If and when you get to the point of offering ChemVantage to "
@@ -358,42 +369,67 @@ public class LTIRegistration extends HttpServlet {
 					+ "<br>To the LMS Administrator:<p>"
 					+ "ChemVantage is a free Open Education Resource for teaching and learning college-"
 					+ "level General Chemistry. Learn more about ChemVantage "
-					+ "<a href=https://www.chemvantage.org/About>here</a>.<p>"
-					+ "This registration request uses the LTI Advantage (version 1.3.0) specifications. "
-					+ "Use the information below to register ChemVantage in your LMS:<br>"
-					+ "Tool Domain URL: " + iss + "<br>"
-					+ "Tool Redirect URL: " + iss + "/lti/launch<br>"
-					+ "Tool Deep Linking URL: " + iss + "/lti/deeplinks<br>"
-					+ "OIDC Login Initiation URL: " + iss + "/auth/token<br>"
-					+ "JSON Web Key Set Endpoint: " + iss + "/jwks<p>");
+					+ "<a href=https://www.chemvantage.org/About>here</a>.<p>");
 			if ("canvas".contentEquals(lms)) {
-				buf.append("You are using the cloud-based Instructure Canvas LMS, so you will need to configure "
-						+ "the developer key using the following configuration JSON URL:<br>" 
-						+ iss + "/lti/registration?UserRequest=config&iss=" + iss + "<p>");
-			} else if ("moodle".contentEquals(lms)) {
-				buf.append("Please note: Several Moodle users have experienced difficulty getting "
-						+ "scores returned to the Moodle grade book using LTI. We believe that this is due to the Moodle server being "
-						+ "configured in a way that refuses this type of LTI connection. You can rectify the situation by adding the "
-						+ "following rewrite rule into the .htaccess file on the Moodle server:<br>"
-						+ "RewriteCond %{HTTP:Authorization} ^(.+)" 
-						+ "RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]<p>");
-				}			 
-			buf.append("When you have finished the configuration, " + ("canvas".equals(lms)?"Canvas ":"your LMS ") 
-					+ "should generate a client_id value to identify the ChemVantage tool. "
-					+ ("canvas".equals(lms)?"Canvas also calls this the developer key. ":"")
-					+ "In addition, your LMS should generate a "
-					+ "deployment_id value to identify a specific account in your LMS for this tool. "
-					+ "When you have these values in hand, please click the following link to complete the "
-					+ "LTI registration. ");
-			if (!"canvas".contentEquals(lms)) {
-				buf.append("You will also need to provide the URLs for service endpoints on your LMS platform.<p>");
-			} else buf.append("<p>");
-			buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
-					+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><p>"
-					+ "If you  need additional assistance, please contact me at admin@chemvantage.org. <p>"
-					+ "-Chuck Wight");
+				buf.append("This request indicates that you are using the cloud-based Instructure Canvas LMS. "
+						+ "To configure ChemVantage in Canvas please perform the following steps:<ol>"
+						+ "<li>Configure a new LTI Developer Key for your Canvas Account "
+						+ "(<a href=https://community.canvaslms.com/docs/DOC-16729-42141110178>see detailed instuctions here</a>)"
+						+ "<br>Use the following Key Settings:<ul>"
+						+   "<li>Key Name: ChemVantage" + (iss.contains("dev")?" Development":"")
+						+   "<li>Owner Email: admin@chemvantage.org"
+						+   "<li>Redirect URIs:<br>" + iss + "/lti/launch<br>" + iss + "/lti/deeplinks"
+						+   "<li>Configure Method: Enter URL"
+						+   "<li>JSON URL: " + iss + "/lti/registration?UserRequest=config&lms=canvas"
+						+   "</ul>"
+						+ "<li>Copy or write down the client_id and deployment_id created in step 1. "
+						+ "Canvas uses the developer key as the client_id, so it can be viewed from the list of "
+						+ "developer keys. It is a numeric value that looks something like 32570000000000041. "
+						+ "The deployment_id can be found in Settings | Apps | App Configurations by opening the "
+						+ "settings menu for ChemVantage."
+						+ "<li>Add ChemVantage as an External App to your account using the client_id created in step 1 "
+						+ "(<a href=https://community.canvaslms.com/docs/DOC-16730-42141110273>see detailed instructions here</a>)"
+						+ "<li>Click <a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">this link</a> " 
+						+ "to register the new client_id and deployment_id created in step 1 with ChemVantage"
+						+ "<li>To use ChemVantage, create an assignment in Canvas. Under Submission Type, choose External Tool, "
+						+ "then click Find and select ChemVantage" + (iss.contains("dev")?" Development":"") + ". You will be "
+						+ "redirected to ChemVantage to select a Quiz, Homework, or Practice Exam for students in the course. "
+						+ "Student scores are returned directly to the Canvas grade book. You should test this functionality "
+						+ "using Settings | Test Student."
+						+ "</ol>"
+						+ "If you  need additional assistance, please contact me at admin@chemvantage.org. <p>"
+						+ "-Chuck Wight");
+			} else {
+				buf.append("This registration request uses the LTI Advantage (version 1.3) specifications. "
+						+ "Use the information below to register ChemVantage in your LMS:<br>"
+						+ "Tool Domain URL: " + iss + "<br>"
+						+ "Tool Redirect URL: " + iss + "/lti/launch<br>"
+						+ "Tool Deep Linking URL: " + iss + "/lti/deeplinks<br>"
+						+ "OIDC Login Initiation URL: " + iss + "/auth/token<br>"
+						+ "JSON Web Key Set Endpoint: " + iss + "/jwks<p>");
+
+				if ("moodle".contentEquals(lms)) {
+					buf.append("Please note: Several Moodle users have experienced difficulty getting "
+							+ "scores returned to the Moodle grade book using LTI. We believe that this is due to the Moodle server being "
+							+ "configured in a way that refuses this type of LTI connection. You can rectify the situation by adding the "
+							+ "following rewrite rule into the .htaccess file on the Moodle server:<br>"
+							+ "RewriteCond %{HTTP:Authorization} ^(.+)" 
+							+ "RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]<p>");
+				}
+				
+				buf.append("When you have finished the configuration, " + ("canvas".equals(lms)?"Canvas ":"your LMS ") 
+						+ "should generate a client_id value to identify the ChemVantage tool. "
+						+ ("canvas".equals(lms)?"Canvas also calls this the developer key. ":"")
+						+ "In addition, your LMS should generate a "
+						+ "deployment_id value to identify a specific account in your LMS for this tool. "
+						+ "When you have these values in hand, please click the following link to complete the "
+						+ "LTI registration.<p>");
+				buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
+						+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><p>"
+						+ "If you  need additional assistance, please contact me at admin@chemvantage.org. <p>"
+						+ "-Chuck Wight");
+			}
 		}
-		
 		Properties props = new Properties();
 		Session session = Session.getDefaultInstance(props, null);
 
@@ -439,11 +475,20 @@ public class LTIRegistration extends HttpServlet {
 		}
 	}
 	
-	String getConfigurationJson(String iss) {
-		if (iss==null || iss.isEmpty()) return "Missing required parameter.";
+	String getConfigurationJson(String iss,String lms) {
+		String domain = null;
+		try {
+			domain = new URL(iss).getHost();
+		} catch (Exception e) { 
+			return "Domain was not valid."; 
+		}
 		
 		JsonObject config = new JsonObject();
-		config.addProperty("title","ChemVantage Configuration JSON file for LTI Advantage");
+		config.addProperty("title","ChemVantage" + (iss.contains("dev")?" Development":""));
+		config.addProperty("description", "ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry");;
+		config.addProperty("public_jwk_url", iss + "/jwks");
+		config.addProperty("target_link_uri", iss + "/lti/launch");
+		config.addProperty("oidc_initiation_url", iss + "/auth/token");
 		  JsonArray scopes = new JsonArray();
 		  scopes.add("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem");
 		  scopes.add("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly");
@@ -453,9 +498,10 @@ public class LTIRegistration extends HttpServlet {
 		config.add("scopes", scopes);
 		  JsonArray extensions = new JsonArray();
 		    JsonObject ext = new JsonObject();
-		    ext.addProperty("domain", iss);
+		    ext.addProperty("domain", domain);
 		    ext.addProperty("platform", "canvas.instructure.com");
-		      JsonObject settings = new JsonObject();
+		    ext.addProperty("privacy_level", "public");
+			  JsonObject settings = new JsonObject();
 		      settings.addProperty("text", "ChemVantage" + (iss.contains("dev")?" Development":""));
 		      settings.addProperty("icon_url", iss + "/images/CVLogo_thumb.jpg");
 		        JsonArray placements = new JsonArray();
@@ -463,29 +509,14 @@ public class LTIRegistration extends HttpServlet {
 		          plcmnt.addProperty("text", "ChemVantage" + (iss.contains("dev")?" Development":""));
 		          plcmnt.addProperty("enabled", true);
 		          plcmnt.addProperty("icon_url", iss + "/images/CVLogo_thumb.jpg");
-		          plcmnt.addProperty("placement", "course_navigation");
-		          plcmnt.addProperty("message_type", "LtiResourceLinkRequest");
-		          plcmnt.addProperty("target_link_uri", iss + "/lti/launch");
-		        placements.add(plcmnt);
-		        plcmnt = new JsonObject();
-		          plcmnt.addProperty("text", "ChemVantage" + (iss.contains("dev")?" Development":""));
-		          plcmnt.addProperty("enabled", true);
-		          plcmnt.addProperty("icon_url", iss + "/images/CVLogo_thumb.jpg");
 		          plcmnt.addProperty("placement", "assignment_selection");
 		          plcmnt.addProperty("message_type", "LtiDeepLinkingRequest");
 		          plcmnt.addProperty("target_link_uri", iss + "/lti/deeplinks");
-		        placements.add(plcmnt);		       
+		        placements.add(plcmnt);
 		      settings.add("placements", placements);
-		      settings.addProperty("selection_width", "1000");
-		      settings.addProperty("selection_height", "1000");
-		      ext.add("settings", settings);
-		      ext.addProperty("privacy_level", "public");
+		    ext.add("settings", settings);
 		  extensions.add(ext);
 		config.add("extensions", extensions);
-		config.add("public_jwk", KeyStore.getJwk());
-		config.addProperty("description", "ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry");;
-		config.addProperty("target_link_uri", iss + "/lti/launch");
-		config.addProperty("oidc_initiation_url", iss + "/auth/token");
 		
 		return config.toString();
 	}
