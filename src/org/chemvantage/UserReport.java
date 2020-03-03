@@ -33,6 +33,7 @@ public class UserReport implements Serializable {
 	@Id 	Long id;
 	@Index 	Date submitted;
 			String userId;
+			String email;
 			int stars;
 			long questionId;
 			String comments = "";

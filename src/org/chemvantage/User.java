@@ -70,44 +70,7 @@ public class User {
 		}
 		return null;
 	}
-/*	
-	static User getInstance(HttpSession session) {
-		User user = null;
-		String userId = null;
-		try {
-			userId = (String)session.getAttribute("UserId");
-			user = ofy().load().type(User.class).id(userId).safe();
-			if (user.alias != null) { // follow the alias chain to the end
-				List<String> userIds = new ArrayList<String>();
-				userIds.add(userId);
-				userIds.add(0,user.alias);
-				user = User.getInstance(userIds);
-				session.setAttribute("UserId",user.id);
-				Domain d = ofy().load().type(Domain.class).filter("domainName", user.domain).first().now();
-				if (d!=null) {
-					d.setLastLogin(new Date());
-					ofy().save().entity(d);
-				}
-			}
-			Date now = new Date();
-			Date eightHoursAgo = new Date(now.getTime()-28800000L);
-			if (user.lastLogin.before(eightHoursAgo)) {
-				user.lastLogin = now;
-				user.alias = null;  // in case alias is set to "" or to invalid userId
-				ofy().save().entity(user);
-			}
-			return user;
-		} catch (Exception e) {
-			if (User.isAnonymous(session)) {
-				user = new User(userId);
-				user.lastLogin = new Date(); // now
-				ofy().save().entity(user).now();
-				return user;
-			}
-		}
-		return null;
-	}
-*/
+
 	static User getInstance(List<String> userIds) {
 		try {
 			User user = ofy().load().type(User.class).id(userIds.get(0)).safe();			
@@ -196,18 +159,7 @@ public class User {
 	public String getIdHash() {
 		return Hashing.sha256().hashString(this.id, StandardCharsets.UTF_8).toString().substring(0,15);
 	}
-/*
-	void setDomain(String d) {
-		this.domain = null;
-		try {
-			if (d!=null && !d.isEmpty()) {
-				Domain newDomain = ofy().load().type(Domain.class).filter("domainName",d).first().now();
-				this.domain = newDomain.domainName;
-			}
-		}catch (Exception e) {
-		}
-	}
-*/
+
 	public void setLastLogin() {
 		this.lastLogin = new Date();
 	}
@@ -351,6 +303,14 @@ public class User {
     	} catch (Exception e) {    		
     		return null;
     	}
+    }
+    
+    String getEmail() {
+       	try {
+    		return JWT.decode(this.token).getClaim("email").asString();
+    	} catch (Exception e) {    		
+    		return null;
+    	} 	
     }
     
     String getLisResultSourcedid() {

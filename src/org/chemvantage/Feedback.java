@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Date;
 import java.util.Properties;
+import java.util.Random;
 
 import javax.mail.Message;
 import javax.mail.Session;
@@ -56,7 +57,10 @@ public class Feedback extends HttpServlet {
 		
 		try {
 			User user = User.getUser(request.getParameter("Token"));
-			if (user == null) throw new Exception();
+			if (user == null) {
+				user = new User("anonymous"+new Random().nextInt());
+				user.setToken(0);				
+			}
 		
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
@@ -71,7 +75,7 @@ public class Feedback extends HttpServlet {
 				recordAjaxRating(request);
 			} else out.println(Home.header + feedbackForm(user) + Home.footer);    
 		} catch (Exception e) {
-			out.println(Home.header + anonymousFeedbackForm() + Home.footer);
+			//out.println(Home.header + anonymousFeedbackForm() + Home.footer);
 		}
 	}
 
@@ -153,12 +157,24 @@ public class Feedback extends HttpServlet {
 				+ "Comments or kudos: <FONT SIZE=-1>(160 characters max.)</FONT><br>"
 				+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback>"
 				+ "<INPUT TYPE=HIDDEN NAME=Stars>"
-				//+ "<INPUT TYPE=HIDDEN NAME=CvsToken VALUE='" + cvsToken + "'>"
 				+ "<INPUT TYPE=HIDDEN NAME=Token VALUE='" + user.token + "'>"
 				+ "<TEXTAREA NAME=Comments ROWS=5 COLS=40 WRAP=SOFT "				
-				+ "onKeyUp=javascript:document.FeedbackForm.Comments.value=document.FeedbackForm.Comments.value.substring(0,160)>"
+				+ "onKeyUp=javascript:{document.FeedbackForm.Comments.value=document.FeedbackForm.Comments.value.substring(0,160);document.getElementById('cbox').style.visibility='visible';}>"
 				+ "</TEXTAREA><br>");
 
+		buf.append("<script type='text/javascript'>"
+				+ "function selectResponse(email) {"
+				+ "  document.FeedbackForm.style.visibility='visible';"
+				+ "  if (document.FeedbackForm.SelectResponse.checked) {"
+				+ "    if (email=='null') document.getElementById('resp'.innerHTML='Send the response to <input type=text name=Email>';"
+				+ "    else document.getElementById('resp').innerHTML='Response will be sent to ' + email + '.<input type=hidden name=Email value=' + email + '>';"
+				+ "  } else {"
+				+ "    document.getElementById('resp').innerHTML='Send me a response to this comment.';"
+				+ "  }"
+				+ "}"
+				+ "</script>");
+		buf.append("<label id=cbox style='visibility:hidden'><input type=checkbox name=SendResponse value=True onChange=javascript:selectResponse(" + user.getEmail() + ");><span id=resp>Send me a response to this comment.</span></label><br>");
+		
 		buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Submit Feedback'>"
 				+ "<INPUT TYPE=RESET VALUE='Clear Form' "
 				+ "onClick=\"javascript: document.FeedbackForm.Stars.value='';"
@@ -172,7 +188,7 @@ public class Feedback extends HttpServlet {
 		buf.append(viewUserFeedback(user));
 		return buf.toString(); 
 	}
-	
+/*	
 	String anonymousFeedbackForm() {
 		StringBuffer buf = new StringBuffer();
 
@@ -223,6 +239,7 @@ public class Feedback extends HttpServlet {
 				+ "('+(160-document.FeedbackForm.Comments.value.length)+' characters remaining)</FONT>';"
 				+ "\">"
 	*/
+	/*
 				+ "</TEXTAREA><br>");
 
 		buf.append("<INPUT TYPE=SUBMIT VALUE='Submit Feedback'>"
@@ -237,7 +254,7 @@ public class Feedback extends HttpServlet {
 				+ "</FORM>");
 		return buf.toString(); 
 	}
-
+*/
 	String submitFeedback(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		int stars = 0;
@@ -247,7 +264,7 @@ public class Feedback extends HttpServlet {
 		} catch (Exception e) {
 		}
 		String comments = request.getParameter("Comments");
-		if (stars == 0 && comments.length() == 0) return (user==null?anonymousFeedbackForm():feedbackForm(user));
+		if (stars == 0 && comments.length() == 0) return feedbackForm(user);   //(user==null?anonymousFeedbackForm():feedbackForm(user));
 		
 		if (comments.length() > 0) {
 			UserReport r = new UserReport(user==null?null:user.id,stars,comments);
