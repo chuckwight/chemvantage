@@ -2,7 +2,6 @@ package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.util.Date;
@@ -34,7 +33,7 @@ public class Deployment implements java.lang.Cloneable {
 		// Ensure that the platform_id is secure and does not end in a slash:
 		URL platform = new URL(platform_id);
 		if (!platform.getProtocol().equals("https")) throw new Exception("All URLs must be secure (https)");
-		this.platform_deployment_id = new URL(platform.getProtocol(),platform.getHost(),platform.getPort(),deployment_id).toString();
+		this.platform_deployment_id = new URL(platform.getProtocol(),platform.getHost(),platform.getPort(),"/"+deployment_id).toString();
 		
 		URL auth = new URL(oidc_auth_url);
 		if (!auth.getProtocol().equals("https")) throw new Exception("All URLs must be secure (https)");
