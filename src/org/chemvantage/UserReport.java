@@ -33,7 +33,6 @@ public class UserReport implements Serializable {
 	@Id 	Long id;
 	@Index 	Date submitted;
 			String userId;
-			String email;
 			int stars;
 			long questionId;
 			String comments = "";
@@ -61,19 +60,17 @@ public class UserReport implements Serializable {
 		if (adminUser == null || !adminUser.isChemVantageAdmin()) return "";  
 
 		try {
-			User user = ofy().load().type(User.class).id(this.userId).now();  // author of the report
-			
 			buf.append("On " + submitted + " a user said:<br>");
 			
 			if (stars>0) buf.append(" (" + stars + " stars)<br>");
 			buf.append("<FONT COLOR=RED>" + comments + "</FONT><br>");
 			try {
 				Question q = ofy().load().type(Question.class).id(this.questionId).safe();
-				q.setParameters(userId!=null?userId.hashCode():-1); // -1 randomizes the question
+				q.setParameters(-1); // -1 randomizes the question
 				Topic topic = ofy().load().type(Topic.class).id(q.topicId).now();
 				buf.append("Topic: " + topic.title + " (" + q.assignmentType + " question)<br>");
 				buf.append(q.printAll());
-				if (user!=null) {
+				if (this.userId!=null) {
 					List<Response> responses = ofy().load().type(Response.class).filter("userId",userId).filter("questionId",questionId).list();
 					if (responses.size() > 0) {
 						buf.append("<table><tr><td>Date/Time (UTC)</td><td>Student Response</td><td>Correct Response</td><td>Score</td></tr>");
@@ -104,21 +101,24 @@ public class UserReport implements Serializable {
 		buf.append("On " + submitted + " " + "a user said:<br>\n");
 		if (stars>0) buf.append("(" + stars + " stars)<br>\n");
 		buf.append("<FONT COLOR=RED>" + comments + "</FONT><p>\n\n");
-		try {
-			Question q = ofy().load().type(Question.class).id(this.questionId).safe();
-			q.setParameters(userId!=null?userId.hashCode():-1);
-			Topic topic = ofy().load().type(Topic.class).id(q.topicId).now();
-			buf.append("Topic: " + topic.title + " (" + q.assignmentType + " question)<br>");
-			buf.append(q.printAll());
-			if (user!=null) {
-				buf.append("<table><tr><td>Date/Time (UTC)</td><td>Student Response</td><td>Correct Response</td><td>Score</td></tr>");
-				List<Response> responses = ofy().load().type(Response.class).filter("userId",userId).filter("questionId",questionId).list();
-				for (Response r : responses) buf.append("<tr><td>" + r.submitted.toString() + "</td><td align=center>" + r.studentResponse 
-						+ "</td><td align=center>" + r.correctAnswer + "</td><td align=center>" + r.score + "</td></tr>");
-				buf.append("</table>");
+		
+		if (this.questionId>0) {
+			try {
+				Question q = ofy().load().type(Question.class).id(this.questionId).safe();
+				q.setParameters(userId!=null?userId.hashCode():-1);
+				Topic topic = ofy().load().type(Topic.class).id(q.topicId).now();
+				buf.append("Topic: " + topic.title + " (" + q.assignmentType + " question)<br>");
+				buf.append(q.printAll());
+				if (user!=null) {
+					buf.append("<table><tr><td>Date/Time (UTC)</td><td>Student Response</td><td>Correct Response</td><td>Score</td></tr>");
+					List<Response> responses = ofy().load().type(Response.class).filter("userId",userId).filter("questionId",questionId).list();
+					for (Response r : responses) buf.append("<tr><td>" + r.submitted.toString() + "</td><td align=center>" + r.studentResponse 
+							+ "</td><td align=center>" + r.correctAnswer + "</td><td align=center>" + r.score + "</td></tr>");
+					buf.append("</table>");
+				}
+			} catch (Exception e) {
+				buf.append("<br>" + e.getMessage());
 			}
-		} catch (Exception e) {
-			buf.append("<br>" + e.getMessage());
 		}
 		return buf.toString();
 	}

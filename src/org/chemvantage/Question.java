@@ -459,7 +459,7 @@ public class Question implements Serializable {
 
 		buf.append("<div id='feedback" + this.id + "'>"
 				+ "<FORM NAME=suggest" + this.id 
-				+ " onSubmit=\" return ajaxSubmit('Feedback?UserRequest=ReportAProblem','" + this.id + "',document.suggest" + this.id + ".Notes.value);\">"
+				+ " onSubmit=\" return ajaxSubmit('/Feedback?UserRequest=ReportAProblem','" + this.id + "',document.suggest" + this.id + ".Notes.value);\">"
 				+ "<INPUT TYPE=BUTTON VALUE='Report a problem with this question' "
 				+ "onClick=javascript:getElementById('form" + this.id + "').style.display='';this.style.display='none'>"
 				+ "<div id='form" + this.id + "' style='display: none'><div style=color:red>");

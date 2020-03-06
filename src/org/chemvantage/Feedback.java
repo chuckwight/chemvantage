@@ -69,8 +69,9 @@ public class Feedback extends HttpServlet {
 				String userId = user==null?"":user.id;
 				long questionId = Long.parseLong(request.getParameter("QuestionId"));
 				String notes = request.getParameter("Notes");
-				ofy().save().entity(new UserReport(userId,questionId,notes));
-				sendEmailToAdmin();
+				UserReport r = new UserReport(userId,questionId,notes);
+				ofy().save().entity(r);
+				sendEmailToAdmin(r,null);
 			} else if (userRequest.equals("AjaxRating")) {
 				recordAjaxRating(request);
 			} else out.println(Home.header + feedbackForm(user) + Home.footer);    
@@ -93,7 +94,6 @@ public class Feedback extends HttpServlet {
 
 			if (userRequest.equals("SubmitFeedback")) {
 				out.println(Home.header + submitFeedback(user,request) + Home.footer);
-				sendEmailToAdmin();
 			} else if (user.isAdministrator() && userRequest.equals("Delete Report")) {
 				removeReport(request);
 				out.println(Home.header + feedbackForm(user) + Home.footer);	
@@ -158,22 +158,11 @@ public class Feedback extends HttpServlet {
 				+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback>"
 				+ "<INPUT TYPE=HIDDEN NAME=Stars>"
 				+ "<INPUT TYPE=HIDDEN NAME=Token VALUE='" + user.token + "'>"
-				+ "<TEXTAREA NAME=Comments ROWS=5 COLS=40 WRAP=SOFT "				
+				+ "<TEXTAREA NAME=Comments ROWS=5 COLS=60 WRAP=SOFT "				
 				+ "onKeyUp=javascript:{document.FeedbackForm.Comments.value=document.FeedbackForm.Comments.value.substring(0,160);document.getElementById('cbox').style.visibility='visible';}>"
 				+ "</TEXTAREA><br>");
 
-		buf.append("<script type='text/javascript'>"
-				+ "function selectResponse(email) {"
-				+ "  document.FeedbackForm.style.visibility='visible';"
-				+ "  if (document.FeedbackForm.SelectResponse.checked) {"
-				+ "    if (email=='null') document.getElementById('resp'.innerHTML='Send the response to <input type=text name=Email>';"
-				+ "    else document.getElementById('resp').innerHTML='Response will be sent to ' + email + '.<input type=hidden name=Email value=' + email + '>';"
-				+ "  } else {"
-				+ "    document.getElementById('resp').innerHTML='Send me a response to this comment.';"
-				+ "  }"
-				+ "}"
-				+ "</script>");
-		buf.append("<label id=cbox style='visibility:hidden'><input type=checkbox name=SendResponse value=True onChange=javascript:selectResponse(" + user.getEmail() + ");><span id=resp>Send me a response to this comment.</span></label><br>");
+		buf.append("<label id=cbox style='visibility:hidden'>Email: <input type=text size=30 name=Email> (optional)</label><p>");
 		
 		buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Submit Feedback'>"
 				+ "<INPUT TYPE=RESET VALUE='Clear Form' "
@@ -181,80 +170,13 @@ public class Feedback extends HttpServlet {
 				+ "setStars(0);"
 				+ "for (i=1;i<6;i++) document.getElementById(i).src=star1.src;"
 				+ "document.getElementById('vote').innerHTML='(click a star):';"
-				+ "document.getElementById('count').innerHTML="
-				+ "'Comments or kudos: <FONT SIZE=-1>(160 characters max.)</FONT>';"
+				+ "document.getElementById('cbox').style.visibility='hidden';"
 				+ "\">"
 				+ "</FORM>");
 		buf.append(viewUserFeedback(user));
 		return buf.toString(); 
 	}
-/*	
-	String anonymousFeedbackForm() {
-		StringBuffer buf = new StringBuffer();
 
-		buf.append("<h2>Feedback Page</h2>");
-		buf.append(new Date().toString() + "<p>");
-
-		buf.append("Your comments and opinions are important to us.  We use this<br>"
-				+ "information to improve the functionality of the site for our users.<p>"
-				+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><p><hr>");
-
-		buf.append("<script type='text/javascript'>\n"
-				+ "<!--\n"
-				+ "var star1 = new Image(); star1.src='images/star1.gif';\n"
-				+ "var star2 = new Image(); star2.src='images/star2.gif';\n"
-				+ "var set = false;\n"
-				+ "function showStars(n) {"
-				+ "  if (!set) {"
-				+ "    document.getElementById('vote').innerHTML=(n==0?'(click a star)':''+n+(n>1?' stars':' star'));"
-				+ "    for (i=1;i<6;i++) document.getElementById(i).src=(i<=n?star2.src:star1.src);"
-				+ "  }"
-				+ "}\n"
-				+ "function setStars(n) {"
-				+ "  set = (n>0?true:false);"
-				+ "  document.FeedbackForm.Stars.value = n;"
-				+ "}\n"
-				+ "// -->\n"
-				+ "</script>\n");
-
-		buf.append("Please rate your overall experience with ChemVantage:\n");
-
-		buf.append("<div id='vote' style='color:red;'>(click a star):</div>\n");
-		for (int istar=1;istar<6;istar++) {
-			buf.append("<img src='images/star1.gif' id='" + istar + "' style='width:30px; height:30px; float:left;'"
-					+ "onmouseover=showStars(this.id) onClick=setStars(this.id) onmouseout=showStars(0) />");
-		}
-		buf.append("<br clear='all'><FONT SIZE=-1>(" + subject.nStarReports + " user ratings; avg = " + subject.getAvgStars() + " stars)</FONT><p>\n");
-
-		buf.append("<FORM NAME=FeedbackForm METHOD=POST>\n"
-				+ "<div id='count'>Comments or kudos: <FONT SIZE=-1>(160 characters max.)</FONT></div>"
-				+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback>"
-				+ "<INPUT TYPE=HIDDEN NAME=Stars>"
-				+ "<INPUT TYPE=HIDDEN NAME=Save VALUE=Yes>"
-				+ "<TEXTAREA NAME=Comments ROWS=5 COLS=40 WRAP=SOFT> "
-	/*
-				+ "onKeyUp=\"javascript: "
-				+ "document.FeedbackForm.Comments.value=document.FeedbackForm.Comments.value.substring(0,160);"
-				+ "document.getElementById('count').innerHTML='Comments or kudos: <FONT SIZE=-1 COLOR=RED>"
-				+ "('+(160-document.FeedbackForm.Comments.value.length)+' characters remaining)</FONT>';"
-				+ "\">"
-	*/
-	/*
-				+ "</TEXTAREA><br>");
-
-		buf.append("<INPUT TYPE=SUBMIT VALUE='Submit Feedback'>"
-				+ "<INPUT TYPE=RESET VALUE='Clear Form' "
-				+ "onClick=\"javascript: document.FeedbackForm.Stars.value='';"
-				+ "setStars(0);"
-				+ "for (i=1;i<6;i++) document.getElementById(i).src=star1.src;"
-				+ "document.getElementById('vote').innerHTML='(click a star):';"
-				+ "document.getElementById('count').innerHTML="
-				+ "'Comments or kudos: <FONT SIZE=-1>(160 characters max.)</FONT>';"
-				+ "\">"
-				+ "</FORM>");
-		return buf.toString(); 
-	}
-*/
 	String submitFeedback(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		int stars = 0;
@@ -266,19 +188,34 @@ public class Feedback extends HttpServlet {
 		String comments = request.getParameter("Comments");
 		if (stars == 0 && comments.length() == 0) return feedbackForm(user);   //(user==null?anonymousFeedbackForm():feedbackForm(user));
 		
+		String userId = user==null?null:user.id;
+		String email = request.getParameter("Email");
+		try {
+			String regex = "^[\\w-_\\.+]*[\\w-_\\.]\\@([\\w]+\\.)+[\\w]+[\\w]$";
+			if (!email.matches(regex)) email = null;
+		} catch (Exception e) {
+			email = null;
+		}
+	
 		if (comments.length() > 0) {
-			UserReport r = new UserReport(user==null?null:user.id,stars,comments);
+			UserReport r = new UserReport(userId,stars,comments);
 			ofy().save().entity(r);
+			sendEmailToAdmin(r,email);
 		}
 
 		buf.append("<h2>Feedback Page</h2>");
-		//if (user!=null) buf.append("<b>" + user.getBothNames() + "</b><br />");
 		buf.append(new Date().toString() + "<p>");
 		buf.append("Thank you for your feedback" + (stars>0?" (" + stars + " stars" + (stars==5?"!":"") + ").":"."));
 		if (stars > 0) buf.append("<br>The average user rating for ChemVantage is " + subject.getAvgStars() + " stars (" + subject.nStarReports + " user ratings).");
 		if (comments.length() > 0) {
 			buf.append("<p>Your comment: <font color=red>" + comments + "</font><p>");
 		}
+
+		
+		if (email==null) buf.append("You will not receive a response because you did not provide a valid email address.<p>");
+		else buf.append("Any response to your comment will be sent to " + email + ".<p>");
+		
+		
 		if (user.isAnonymous()) buf.append("<p><a href=Home>Return to the Home page</a><br>");
 		return buf.toString();
 	}
@@ -304,11 +241,13 @@ public class Feedback extends HttpServlet {
 		ofy().delete().key(Key.create(UserReport.class,reportId)).now();
 	}
 	
-	private void sendEmailToAdmin() {
+	private void sendEmailToAdmin(UserReport r,String email) {
 		Properties props = new Properties();
 		Session session = Session.getDefaultInstance(props, null);
 
-		String msgBody = ofy().load().type(UserReport.class).order("-submitted").first().now().view();
+		String msgBody = r.view();
+		if (email != null) msgBody += "Respond to " + email;
+		
 		if (msgBody.length()==0) return;  // no reports exist
 		
 		try {
