@@ -170,10 +170,6 @@ public class LTIRegistration extends HttpServlet {
 				if (oauth_access_token_url==null) throw new Exception("OAuth Access Token URL is required.");
 				String well_known_jwks_url = request.getParameter("JWKSUrl");
 				if (well_known_jwks_url==null) throw new Exception("JSON Web Key Set URL is required.");
-				new URL(platform_id);
-				new URL(oidc_auth_url);
-				new URL(oauth_access_token_url);
-				new URL(well_known_jwks_url);
 				Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
 				ofy().save().entity(d).now();
 				out.println(Home.header + banner + "<h2>Congratulations. Registration is complete.</h2>" + Home.footer);

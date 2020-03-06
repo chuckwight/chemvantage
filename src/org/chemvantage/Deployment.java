@@ -2,7 +2,9 @@ package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
+import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
 import java.util.Date;
 
 import com.googlecode.objectify.annotation.Entity;
@@ -27,12 +29,26 @@ public class Deployment implements java.lang.Cloneable {
 			
 	Deployment() {}
 	
-	Deployment(String platform_id,String deployment_id,String client_id,String oidc_auth_url,String oauth_access_token_url,String well_known_jwks_url,String contact_name,String email,String organization,String org_url,String lms) {
-		this.platform_deployment_id = platform_id + "/" + deployment_id;
+	Deployment(String platform_id,String deployment_id,String client_id,String oidc_auth_url,String oauth_access_token_url,String well_known_jwks_url,String contact_name,String email,String organization,String org_url,String lms) 
+			throws Exception {
+		// Ensure that the platform_id is secure and does not end in a slash:
+		URL platform = new URL(platform_id);
+		if (!platform.getProtocol().equals("https")) throw new Exception("All URLs must be secure (https)");
+		this.platform_deployment_id = new URL(platform.getProtocol(),platform.getHost(),platform.getPort(),deployment_id).toString();
+		
+		URL auth = new URL(oidc_auth_url);
+		if (!auth.getProtocol().equals("https")) throw new Exception("All URLs must be secure (https)");
+		this.oidc_auth_url = auth.toString();
+		
+		URL token = new URL(oauth_access_token_url);
+		if (!token.getProtocol().equals("https")) throw new Exception("All URLs must be secure (https)");
+		this.oauth_access_token_url = token.toString();		
+		
+		URL jwks = new URL(well_known_jwks_url);
+		if (!jwks.getProtocol().equals("https")) throw new Exception("All URLs must be secure (https)");
+		this.well_known_jwks_url = jwks.toString();
+		
 		this.client_id = client_id;
-		this.oidc_auth_url = oidc_auth_url;
-		this.oauth_access_token_url = oauth_access_token_url;		
-		this.well_known_jwks_url = well_known_jwks_url;
 		this.contact_name = contact_name;
 		this.email = email;
 		this.organization = organization;
