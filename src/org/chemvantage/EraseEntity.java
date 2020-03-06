@@ -131,11 +131,11 @@ public class EraseEntity extends HttpServlet {
 		buf.append("<form method=post action=/EraseEntity>");
 		buf.append("<input type=hidden name=Domain value='" + domain + "'>");
 		buf.append("<label><input type=radio name=EraseDomain value=true>Delete everything including the domain entity</label><br>");
-		buf.append("<label><input type=radio name=EraseDomain value=false checked>Delete only the assignments selected below and their associated transactions and scores</label><p>");
 		
 		List<Assignment> assignments = ofy().load().type(Assignment.class).filter("domain",domain).list();
 		if (assignments.size()==0) buf.append("This domain does not have any associated assignments.<p>");
 		else {
+			buf.append("<label><input type=radio name=EraseDomain value=false checked>Delete only the assignments selected below and their associated transactions and scores</label><p>");
 			Map<Long,String> titles = new HashMap<Long,String>();
 			List<Topic> topics = ofy().load().type(Topic.class).list();
 			for (Topic t : topics) titles.put(t.id, t.title);
@@ -165,8 +165,8 @@ public class EraseEntity extends HttpServlet {
 				}
 				buf.append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" + nTransactions + " transactions are associated with this assignment<br>");
 			}
-			buf.append("<br><input type=submit value='Permanently delete the selected entities (cannot be undone)'></form>");
 		}
+		buf.append("<br><input type=submit value='Permanently delete the selected entities (cannot be undone)'></form>");
 		return buf.toString();
 	}
 	
