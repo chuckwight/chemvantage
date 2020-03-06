@@ -106,17 +106,19 @@ public class Token extends HttpServlet {
 		// However, this is not technically required by the specifications. Hmm.
 		
 		if (deployment_id==null) deployment_id = "";  // may be empty String for 1-deployment platforms
+		else deployment_id = "/" + deployment_id;
 		
 		URL platform = new URL(platform_id);
-		String platform_deployment_id = new URL("https",platform.getHost(),platform.getPort(),"/"+deployment_id).toString();	
+		String platform_deployment_id = new URL("https",platform.getHost(),platform.getPort(),deployment_id).toString();
+		if (platform_deployment_id.lastIndexOf("/") == platform_deployment_id.length()+1) platform_deployment_id = platform_deployment_id.substring(0, platform_deployment_id.length()-1);
 		
 		// Optimistic route first:
 		Deployment d = ofy().load().type(Deployment.class).id(platform_deployment_id).now();
 		if (d != null) return d;
 	
 		// OK, that didn't work; try a range of Deployments all with the matching platform_id and client_id
-		Key<Deployment> kstart = Key.create(Deployment.class, platform_id);
-		Key<Deployment> kend = Key.create(Deployment.class, platform_id + "~");			
+		Key<Deployment> kstart = Key.create(Deployment.class, platform.toString());
+		Key<Deployment> kend = Key.create(Deployment.class, platform.toString() + "~");			
 		
 		if (client_id != null) { // try matching the client_id to any Deployment with matching platform_id
 			d = ofy().load().type(Deployment.class).filterKey(">",kstart).filterKey("<",kend).filter("client_id",client_id).first().now();
@@ -124,7 +126,7 @@ public class Token extends HttpServlet {
 		}
 		
 		// At this point the Deployment does not exist in the datastore
-		throw new Exception("ChemVantage was unable to identify this platform as a registered entity, sorry.");
+		throw new Exception("ChemVantage was unable to identify " + platform_deployment_id + " as a registered entity, sorry.");
 	}
 	
 
