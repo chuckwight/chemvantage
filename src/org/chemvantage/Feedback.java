@@ -169,7 +169,10 @@ public class Feedback extends HttpServlet {
 				+ "document.getElementById('cbox').style.visibility='hidden';"
 				+ "\">"
 				+ "</FORM>");
-		if (!user.isAnonymous()) buf.append(viewUserFeedback(user));
+		
+		String reports = viewUserFeedback(user);
+		if (!reports.isEmpty()) buf.append("<hr><h3>" + (user.isChemVantageAdmin()?"User":"Your") + " Feedback</h3>" + reports);
+		
 		return buf.toString(); 
 	}
 
@@ -215,19 +218,13 @@ public class Feedback extends HttpServlet {
 	}
 
 	String viewUserFeedback(User user) {
-		StringBuffer buf = new StringBuffer("<hr><h3>User Feedback</h3>");
-		boolean showFeedback = false;  // show feedback only if reports are available
-		
-		Query<UserReport> reports = ofy().load().type(UserReport.class).order("-submitted");
-		
+		StringBuffer buf = new StringBuffer();
+		Query<UserReport> reports = ofy().load().type(UserReport.class).order("-submitted");		
 		for (UserReport r : reports) {
 			String report = r.view(user);  // returns report only for ChemVantage admins, domainAdmins and report author
-			if (report.length()>0) {
-				showFeedback = true;
-				buf.append(report + "<hr>");
-			}
+			if (report != null) buf.append(report + "<hr>");
 		}
-		return showFeedback?buf.toString():"";
+		return buf.toString();
 	}
 	
 	private void sendEmailToAdmin(UserReport r,User user,String email) {

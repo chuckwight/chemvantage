@@ -55,13 +55,12 @@ public class UserReport implements Serializable {
 	
 	public String view(User user) {
 		StringBuffer buf = new StringBuffer();
-		// User must be identified to see the report
-		if (user==null) return null;
+		
 		// User must be author of the report or the ChemVantage administrator
-		if (!(user.id.equals(this.userId) || user.isChemVantageAdmin())) return null;  
+		if (user==null || !(user.id.equals(this.userId) || user.isChemVantageAdmin())) return null;  
 
 		try {
-			buf.append("On " + submitted + " a user said:<br>");
+			buf.append("On " + submitted + (user.id.equals(this.userId)?" you":" a user") + " said:<br>");
 			
 			if (stars>0) buf.append(" (" + stars + " stars)<br>");
 			buf.append("<FONT COLOR=RED>" + comments + "</FONT><br>");
