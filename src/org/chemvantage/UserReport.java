@@ -53,11 +53,12 @@ public class UserReport implements Serializable {
 		this.submitted = new Date();
 	}
 	
-	public String adminView(User adminUser) {
+	public String view(User user) {
 		StringBuffer buf = new StringBuffer();
-		// this statement permits viewing the userReport only if the viewer is the ChemVantage administrator
-		
-		if (adminUser == null || !adminUser.isChemVantageAdmin()) return "";  
+		// User must be identified to see the report
+		if (user==null) return null;
+		// User must be author of the report or the ChemVantage administrator
+		if (!(user.id.equals(this.userId) || user.isChemVantageAdmin())) return null;  
 
 		try {
 			buf.append("On " + submitted + " a user said:<br>");
@@ -79,18 +80,20 @@ public class UserReport implements Serializable {
 						buf.append("</table>");
 					}
 				}
-				if (adminUser.isEditor()) buf.append("<a href=Edit?UserRequest=Edit&QuestionId=" + this.questionId + "&TopicId=" + topic.id + "&AssignmentType=" + q.assignmentType + ">Edit Question</a> ");
+				if (user.isEditor()) buf.append("<a href=Edit?UserRequest=Edit&QuestionId=" + this.questionId + "&TopicId=" + topic.id + "&AssignmentType=" + q.assignmentType + ">Edit Question</a> ");
 			} catch (Exception e2) {}
-			buf.append("<FORM METHOD=POST ACTION=Feedback>"
+			if (user.isChemVantageAdmin()) // Create a form for deleting the report
+				buf.append("<FORM METHOD=POST ACTION=Feedback>"
 					+ "<INPUT TYPE=HIDDEN NAME=ReportId VALUE=" + this.id + ">"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Report'>"
+					+ "<INPUT TYPE=HIDDEN NAME=Token VALUE='" + user.token + "'>"
 					+ "</FORM><p>");
 		} catch (Exception e) {
 			buf.append("<br>" + e.toString());
 		}
 		return buf.toString();
 	}
-
+/*
 	public String view() {
 		StringBuffer buf = new StringBuffer();
 		User user = null;
@@ -122,4 +125,5 @@ public class UserReport implements Serializable {
 		}
 		return buf.toString();
 	}
+	*/
 }

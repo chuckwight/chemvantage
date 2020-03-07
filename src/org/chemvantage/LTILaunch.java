@@ -204,10 +204,6 @@ public class LTILaunch extends HttpServlet {
 			// Process user information, provision a new user account if necessary, and store the userId in the user's session
 			User user = new User(userId);
 
-			// ensure the proper authDomain and domain values
-			user.authDomain = "BLTI";
-			user.domain = oauth_consumer_key;
-
 			// check if user has Instructor or Administrator role
 			String roles = request.getParameter("roles");
 			if (roles != null) {
@@ -216,62 +212,10 @@ public class LTILaunch extends HttpServlet {
 				user.setIsAdministrator(roles.contains("administrator"));
 				user.setIsTeachingAssistant(roles.contains("teachingassistant"));
 			}
-			// user information OK; save user after processing context info
+			// user information OK;
 			debug.append("userId=" + userId + " and role=" + (user.isInstructor()?"Instructor":"Learner") + "...");
-/*			
-			// Create the domain if it doesn't already exist
-			Domain domain = ofy().load().type(Domain.class).filter("domainName",oauth_consumer_key).first().now();
-			if (domain==null) domain = new Domain(oauth_consumer_key);
-			domain.setLastLogin(new Date());
-			domain.ltiv1p1p2 = ltiv1p1p2;
-			
-			String lisOutcomeServiceURL = request.getParameter("lis_outcome_service_url");
-			if (lisOutcomeServiceURL!=null) {
-				domain.resultServiceEndpoint = lisOutcomeServiceURL;
-				domain.resultServiceFormat = "application/xml";
-				domain.supportsResultService = true;
-			}
-			
-			if (user.isAdministrator()) domain.addAdmin(user.id);
-			
-			ofy().save().entity(domain);
-			//Domain info processed successfully
-			
-			// Process context (group) information
-			String context_id = request.getParameter("context_id");
-			String context_title = request.getParameter("context_title");
-			
-			if (context_id==null) {
-				context_id = oauth_consumer_key + ":defaultGroup";
-				context_title = "default group";
-			}
-			if (context_title==null) context_title = context_id; // missing course title
-/*
-			// Find the user's group, and if necessary create a new one and put the user in it
-			Group myGroup = ofy().load().type(Group.class).filter("domain",oauth_consumer_key).filter("context_id",context_id).first().now();
-			if (myGroup == null) { // create a new group
-				String instructorId = user.isInstructor()?user.id:"unknown";
-				myGroup = new Group(oauth_consumer_key,context_id,context_title,instructorId);
-			}
-*/			
-			/*
-			// update the LIS result outcome service URL, if necessary
-			if (domain.supportsResultService && domain.resultServiceEndpoint!=null && !domain.resultServiceEndpoint.equals(myGroup.lis_outcome_service_url)) {  // update the URL and format as Group properties
-				myGroup.lis_outcome_service_url=domain.resultServiceEndpoint;
-				myGroup.lis_outcome_service_format = domain.resultServiceFormat;
-				myGroup.isUsingLisOutcomeService = true;
-			}							
-*/			
-/*
-			if (user.isInstructor()) myGroup.instructorId = user.id;
-			myGroup.addMember(user.id);
-			ofy().save().entity(myGroup).now();
-			user.myGroupId = myGroup.id;
-			ofy().save().entity(user);			
-*/			
-			// Context info OK
 
-			// Gather information that may be needed to return a score to the LMS or get context membership info:
+			// Gather information that may be needed to return a score to the LMS:
 			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
 			debug.append("lis_result_sourcedid=" + lis_result_sourcedid + "...");
 			String lisOutcomeServiceUrl = request.getParameter("lis_outcome_service_url");

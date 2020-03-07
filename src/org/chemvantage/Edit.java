@@ -62,8 +62,9 @@ public class Edit extends HttpServlet {
 		try {
 			UserService userService = UserServiceFactory.getUserService();
 			String userId = userService.getCurrentUser().getUserId();
-			User user = ofy().load().type(User.class).id(userId).safe(); 
-			user.setToken(0);
+			User user = new User(userId);
+			user.setIsChemVantageAdmin(true);
+			user.setToken();
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
@@ -111,9 +112,10 @@ public class Edit extends HttpServlet {
 		try {
 			UserService userService = UserServiceFactory.getUserService();
 			String userId = userService.getCurrentUser().getUserId();
-			User user = ofy().load().type(User.class).id(userId).safe(); 
-			user.setToken(0);
-
+			User user = new User(userId);
+			user.setIsChemVantageAdmin(true);
+			user.setToken();
+			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 

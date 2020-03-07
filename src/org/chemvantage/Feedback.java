@@ -59,7 +59,7 @@ public class Feedback extends HttpServlet {
 			User user = User.getUser(request.getParameter("Token"));
 			if (user == null) {
 				user = new User("anonymous"+new Random().nextInt());
-				user.setToken(0);				
+				user.setToken();				
 			}
 		
 			String userRequest = request.getParameter("UserRequest");
@@ -71,12 +71,11 @@ public class Feedback extends HttpServlet {
 				String notes = request.getParameter("Notes");
 				UserReport r = new UserReport(userId,questionId,notes);
 				ofy().save().entity(r);
-				sendEmailToAdmin(r,null);
+				sendEmailToAdmin(r,new User(userId),null);
 			} else if (userRequest.equals("AjaxRating")) {
 				recordAjaxRating(request);
 			} else out.println(Home.header + feedbackForm(user) + Home.footer);    
 		} catch (Exception e) {
-			//out.println(Home.header + anonymousFeedbackForm() + Home.footer);
 		}
 	}
 
@@ -94,12 +93,10 @@ public class Feedback extends HttpServlet {
 
 			if (userRequest.equals("SubmitFeedback")) {
 				out.println(Home.header + submitFeedback(user,request) + Home.footer);
-			} else if (user.isAdministrator() && userRequest.equals("Delete Report")) {
-				removeReport(request);
-				out.println(Home.header + feedbackForm(user) + Home.footer);	
-			} else if (user.isAdministrator() && userRequest.equals("Reply")) {
-				out.println(Home.header + replyForm(user,request) + Home.footer);
-			} else out.println(Home.header + feedbackForm(user) + Home.footer);
+			} else if (userRequest.equals("Delete Report")) {
+				ofy().delete().key(Key.create(UserReport.class,Long.parseLong(request.getParameter("ReportId")))).now();
+				out.println(Home.header + feedbackForm(user) + Home.footer);
+			} else 	out.println(Home.header + feedbackForm(user) + Home.footer);			
 		} catch (Exception e) {
 		}
 	}
@@ -118,7 +115,6 @@ public class Feedback extends HttpServlet {
 
 	String feedbackForm(User user) {
 		StringBuffer buf = new StringBuffer();
-		//String cvsToken = user.getCvsToken();
 		
 		buf.append("<h2>Feedback Page</h2>");
 
@@ -173,7 +169,7 @@ public class Feedback extends HttpServlet {
 				+ "document.getElementById('cbox').style.visibility='hidden';"
 				+ "\">"
 				+ "</FORM>");
-		buf.append(viewUserFeedback(user));
+		if (!user.isAnonymous()) buf.append(viewUserFeedback(user));
 		return buf.toString(); 
 	}
 
@@ -186,7 +182,7 @@ public class Feedback extends HttpServlet {
 		} catch (Exception e) {
 		}
 		String comments = request.getParameter("Comments");
-		if (stars == 0 && comments.length() == 0) return feedbackForm(user);   //(user==null?anonymousFeedbackForm():feedbackForm(user));
+		if (stars == 0 && (comments == null || comments.isEmpty())) return feedbackForm(user);   //(user==null?anonymousFeedbackForm():feedbackForm(user));
 		
 		String userId = user==null?null:user.id;
 		String email = request.getParameter("Email");
@@ -200,22 +196,20 @@ public class Feedback extends HttpServlet {
 		if (comments.length() > 0) {
 			UserReport r = new UserReport(userId,stars,comments);
 			ofy().save().entity(r);
-			sendEmailToAdmin(r,email);
+			sendEmailToAdmin(r,user,email);
 		}
 
 		buf.append("<h2>Feedback Page</h2>");
 		buf.append(new Date().toString() + "<p>");
 		buf.append("Thank you for your feedback" + (stars>0?" (" + stars + " stars" + (stars==5?"!":"") + ").":"."));
-		if (stars > 0) buf.append("<br>The average user rating for ChemVantage is " + subject.getAvgStars() + " stars (" + subject.nStarReports + " user ratings).");
+		if (stars > 0) buf.append("<br>The average user rating for ChemVantage is " + subject.getAvgStars() + " stars (" + subject.nStarReports + " user ratings).<p>");
 		if (comments.length() > 0) {
-			buf.append("<p>Your comment: <font color=red>" + comments + "</font><p>");
+			buf.append("Your comment: <font color=red>" + comments + "</font><p>");
+		
+			if (email==null) buf.append("You will not receive a response because you did not provide a valid email address.<p>");
+			else buf.append("Any response to your comment will be sent to " + email + ".<p>");
 		}
-
-		
-		if (email==null) buf.append("You will not receive a response because you did not provide a valid email address.<p>");
-		else buf.append("Any response to your comment will be sent to " + email + ".<p>");
-		
-		
+	
 		if (user.isAnonymous()) buf.append("<p><a href=Home>Return to the Home page</a><br>");
 		return buf.toString();
 	}
@@ -227,7 +221,7 @@ public class Feedback extends HttpServlet {
 		Query<UserReport> reports = ofy().load().type(UserReport.class).order("-submitted");
 		
 		for (UserReport r : reports) {
-			String report = r.adminView(user);  // returns report only for ChemVantage admins, domainAdmins and report author
+			String report = r.view(user);  // returns report only for ChemVantage admins, domainAdmins and report author
 			if (report.length()>0) {
 				showFeedback = true;
 				buf.append(report + "<hr>");
@@ -236,16 +230,11 @@ public class Feedback extends HttpServlet {
 		return showFeedback?buf.toString():"";
 	}
 	
-	private void removeReport(HttpServletRequest request) {
-		long reportId = Long.parseLong(request.getParameter("ReportId"));
-		ofy().delete().key(Key.create(UserReport.class,reportId)).now();
-	}
-	
-	private void sendEmailToAdmin(UserReport r,String email) {
+	private void sendEmailToAdmin(UserReport r,User user,String email) {
 		Properties props = new Properties();
 		Session session = Session.getDefaultInstance(props, null);
 
-		String msgBody = r.view();
+		String msgBody = r.view(user);
 		if (email != null) msgBody += "Respond to " + email;
 		
 		if (msgBody.length()==0) return;  // no reports exist
@@ -261,7 +250,7 @@ public class Feedback extends HttpServlet {
 		} catch (Exception e) {
 		}
 	}
-	
+/*	
 	String replyForm(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		//String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
@@ -286,5 +275,6 @@ public class Feedback extends HttpServlet {
 		}
 		return buf.toString();
 	}
+	*/
 }
 

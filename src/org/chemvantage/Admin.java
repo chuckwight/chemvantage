@@ -54,7 +54,8 @@ public class Admin extends HttpServlet {
 		try {
 			UserService userService = UserServiceFactory.getUserService();
 			String userId = userService.getCurrentUser().getUserId();
-			User user = ofy().load().type(User.class).id(userId).safe(); 
+			User user = new User(userId);
+			user.setIsChemVantageAdmin(true);
 			user.setToken(0);
 			
 			response.setContentType("text/html");
@@ -73,10 +74,8 @@ public class Admin extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			UserService userService = UserServiceFactory.getUserService();
-			String userId = userService.getCurrentUser().getUserId();
-			User user = ofy().load().type(User.class).id(userId).safe(); 
-			user.setToken(0);
+			User user = User.getUser(request.getParameter("Token")); 
+			user.setToken();
 
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
@@ -93,10 +92,6 @@ public class Admin extends HttpServlet {
 				createBLTIConsumer(request);
 			} else if (userRequest.equals("Delete BLTI Consumer")) {
 				deleteBLTIConsumer(request);
-			} else if (userRequest.equals("Login As This User")) {
-				request.getSession(true).setAttribute("UserId",request.getParameter("UserId"));
-				response.sendRedirect("/Home");
-				return;
 			}
 			out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Home.footer);
 		} catch (Exception e) {
@@ -114,73 +109,16 @@ public class Admin extends HttpServlet {
 					+ "<INPUT TYPE=TEXT SIZE=80 NAME=Announcement VALUE='" + Home.announcement + "'><BR>"
 					+ " site to prevent logins except by site administrators<br>"
 					+ "<INPUT TYPE=SUBMIT VALUE='Post this message now'></FORM>");
-			
-			// Start user search section for editing user properties
-			if ("(show all)".equals(searchString)) searchString = "";
-			Query<User> results = null;
-			if ("Search for users".equals(userRequest)) {
-				searchString = searchString.toLowerCase().trim();
-				int i = searchString.indexOf('*');
-				if (i == 0) searchString = "";
-				else if (i > 0) searchString = searchString.substring(0,i);
-				results = searchString.isEmpty()?ofy().load().type(User.class).order("email").limit(this.queryLimit):ofy().load().type(User.class).filter("email >=",searchString).filter("email <",(searchString+'\ufffd')).limit(this.queryLimit);
+
+			buf.append("<h3>User Feedback</h3>");
+			Query<UserReport> reports = ofy().load().type(UserReport.class).order("-submitted");
+			if (reports.count()==0) buf.append("There are no user reports at this time.");
+			else {
+				for (UserReport r : reports) {
+					buf.append(r.view(user) + "<hr>");  // returns report only for ChemVantage admin
+				}
 			}
-			
-			buf.append("\n<h3>User Search</h3>");
-			int nUsers = ofy().load().type(User.class).count();
-			buf.append("\n<FORM NAME=UsrSearch METHOD=GET>To search for a user, enter a portion of the user's email address.<br/>");
 
-			buf.append("\n<INPUT NAME=SearchString VALUE='" + ("Search for users".equals(userRequest) && searchString!=null?Question.quot2html(searchString):"(show all)") + "' onFocus=UsrSearch.SearchString.value=''>"
-					+ "\n<INPUT TYPE=SUBMIT NAME='UserRequest' VALUE='Search for users'></FORM>");
-
-			if(results != null) {
-				QueryResults<User> iterator = cursor==null?results.iterator():results.startAt(Cursor.fromUrlSafe(cursor)).iterator();
-				int nResults = results.count();
-				buf.append("<FONT SIZE=-1>Showing " + nResults + " users matching the search criteria. "
-						+ (nResults==this.queryLimit?"You can narrow this search by entering more of the user's email address.":"") + "</FONT><br>");
-				buf.append("\n<TABLE CELLSPACING=5><TR><TD><b>Email</b></TD><TD><b>Last Name</b></TD><TD><b>First Name</b></TD>"
-						+ "<TD><b>Role</b></TD><TD><b>UserId</b></TD><TD><b>Last Login</b></TD><TD><b>Action</b></TD></TR>");
-				while (iterator.hasNext()) {
-					User u = iterator.next();
-					buf.append("\n<FORM METHOD=GET>"
-							+ "<TR style=color:" + (u.alias==null?"black":"grey") + ">"
-							+ "<TD>" + u.id + "</TD>"
-							+ "<TD>" + u.getPrincipalRole() + "</TD>" 
-							+ "<TD>" + u.lastLogin + "</TD>"
-							+ "<TD><INPUT TYPE=HIDDEN NAME=UserId VALUE='" + u.id + "'>"
-							+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Edit User'></TD></TR></FORM>");
-				}
-				buf.append("\n</TABLE>");
-				if (nResults==this.queryLimit) buf.append("<a href=/Admin?UserRequest=Search+for+users&SearchString=" + searchString + "&Cursor=" + iterator.getCursorAfter().toUrlSafe() + "><FONT SIZE=-1>show more users</FONT></a>"); 
-			} else buf.append("<FONT SIZE=-1>There are currently " + nUsers + " active ChemVantage accounts.</FONT><p>");
-/*			
-			// This section provides information about domains
-			buf.append("<h3>Most Active ChemVantage Domains</h3>");
-			List<Domain> domains = ofy().load().type(Domain.class).order("-dailyLoginsAvg").limit(10).list();
-			if (domains.size()>0) {
-				buf.append("<table><tr><td>Domain Name</td><td>Last Login</td><td>Users</td><td style='text-align:center'>Administrator</td><td>Avg Daily Logins</td></tr>");
-				for (Domain d : domains) {
-					nUsers = ofy().load().type(User.class).filter("domain",d.domainName).count();
-					if (d.activeUsers!=nUsers) {
-						d.activeUsers = nUsers;
-						ofy().save().entity(d);
-					}
-					buf.append("<tr><td>" + d.domainName + "</a></td>"
-							+ "<td>" + d.lastLogin.toString() + "</td>"
-							+ "<td style='text-align:center'>" + d.activeUsers + "</td>"
-							+ "<td style='text-align:center'>");
-					try {
-						List<String> domainAdmins = d.getDomainAdmins();
-						if (domainAdmins.isEmpty()) buf.append("(not assigned)");
-						for (String uId : domainAdmins) buf.append(uId + (domainAdmins.size()>1?"<br>":""));
-					} catch (Exception e) {
-						buf.append ("(not assigned)");
-					}
-					buf.append("</td><td style='text-align:center'>" + d.getDailyLoginsAvg() + "</td></tr>");
-				}
-				buf.append("</table>");
-			} else buf.append("No domains are currently active.");
-*/
 			buf.append("<h3>Basic LTI Consumer</h3>");
 			int nConsumers = ofy().load().type(BLTIConsumer.class).count();
 			String defKey = "Search for Consumer".equals(userRequest) && (searchString!=null&&!searchString.isEmpty())?searchString:"(show all)";
@@ -190,7 +128,7 @@ public class Admin extends HttpServlet {
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Generate New Shared Secret'> "
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete LTI Consumer'>"
 					+ "</FORM>");
-
+			
 			if ("Search for Consumer".equals(userRequest)) {
 				Key<BLTIConsumer> keyFirst = Key.create(BLTIConsumer.class,(searchString.isEmpty()?"\u0000":searchString));
 				Key<BLTIConsumer> keyLast = Key.create(BLTIConsumer.class,(searchString.isEmpty()?"\ufffd":searchString+"\ufffd"));					

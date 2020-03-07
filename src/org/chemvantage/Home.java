@@ -74,16 +74,15 @@ public class Home extends HttpServlet {
 			+ "<meta namew='Keywords' content='chemistry,learning,online,quiz,homework,video,textbook,open,education'>\n"
 			+ "<meta name='msapplication-config' content='none'/>"
 			+ "<link rel='icon' type='image/png' href='/favicon.png'>"
-			//+ "<link rel='icon' type='image/gif' href='/image.gif'>"
-			//+ "<link rel='icon' type='image/jpeg' href='/favicon.jpg'>"
 			+ "<link rel='icon' type='image/vnd.microsoft.icon' href='/favicon.ico'>"
 			+ "<title>ChemVantage</title>\n"
 			+ "</head>\n"
 			+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
+			+ (announcement.isEmpty()?"":"<FONT COLOR=RED>" + announcement + "</FONT>")
 			+ "<TABLE>"
 			+ "<TR><TD>\n";
-			
-		public static String footer = "\n<hr><span style='font-size:smaller'><table style='width:100%;border-spacing: 20px 0px'><tr>"
+	
+	public static String footer = "\n<hr><span style='font-size:smaller'><table style='width:100%;border-spacing: 20px 0px'><tr>"
 			+ "<td>&copy; 2007-20 ChemVantage LLC. <a rel='license' href='https://creativecommons.org/licenses/by/3.0/'><img alt='Creative Commons License' style='border-width:0' src='https://i.creativecommons.org/l/by/3.0/80x15.png' /></a></td>"
 			+ "<td align=center><a href=/About#terms>Terms and Conditions of Use</a> and <a href=/About#terms>Privacy Policy</a></td>"
 			+ "<td align=right><a href='http://code.google.com/appengine/'><img src=/images/GAE.gif border=0 "
@@ -129,11 +128,10 @@ public class Home extends HttpServlet {
 					+ "<div class=pz1>ChemVantage.org</div>"
 					+ " <div class=pz1><a href=/Home>Home</a></div>"
 					+ " <div class=pz1><a href=/About>About Us</a></div>"
-					+ "<div class=pz1><a href=/Feedback>Feedback</a></div>");
+					+ "<div class=pz1><a href=/Feedback?Token=" + user.token + ">Feedback</a></div>");
 
-			buf.append("<div class=pz1><a href=/Contribute>Authors</a></div>");
+			buf.append("<div class=pz1><a href=/Contribute?Token=" + user.token + ">Authors</a></div>");
 			if (user.isEditor()) buf.append("<div class=pz1><a href=/Edit>Editors</a></div>");
-			if (user.isInstructor() || user.isTeachingAssistant()) buf.append("<div class=pz1><a href=/Groups>Instructors</a></div>\n");
 			if (user.isAdministrator()) buf.append("<div class=pz1><a href=/Admin>Admin</a></div>");
 
 			buf.append("</nobr></div>\n");
