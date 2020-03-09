@@ -48,6 +48,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -362,8 +363,6 @@ public class LTIv1p3Launch extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 
 		try {			
-			String assignmentType = myAssignment.assignmentType;
-
 			buf.append("<TABLE><TR><TD VALIGN=TOP><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
 					+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
 					+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>");
@@ -379,72 +378,97 @@ public class LTIv1p3Launch extends HttpServlet {
 				return buf.toString();
 			}
 
-			// insert a script to show/hide the correct box
+			// insert javascript to show/hide the correct table and enable/disable submit buttons
 			buf.append("<script>"
 					+ "function inspectRadios() { "
-					+ "var radios = document.getElementsByName('AssignmentType');"
-					+ "  if(radios[0].checked) {"
-					+ "    document.getElementById('topicSelect').style.visibility='visible';"
-					+ "    document.getElementById('topicSelect').style.valign='top';"
-					+ "    document.getElementById('topicCheck').style.visibility='hidden';"
-					+ "  }"
-					+ "  else if(radios[1].checked) {"
-					+ "    document.getElementById('topicSelect').style.visibility='visible';"
-					+ "    document.getElementById('topicSelect').style.valign='middle';"
-					+ "    document.getElementById('topicCheck').style.visibility='hidden';"
+					+ "  var radios = document.getElementsByName('AssignmentType');"
+					+ "  if(radios[0].checked || radios[1].checked) {"
+					+ "    document.getElementById('tableRadio').style.visibility='visible';"
+					+ "    document.getElementById('tableCheck').style.visibility='hidden';"
 					+ "  }"
 					+ "  else if(radios[2].checked) {"
-					+ "    document.getElementById('topicSelect').style.visibility='hidden';"
-					+ "    document.getElementById('topicCheck').style.visibility='visible';"
+					+ "    document.getElementById('tableRadio').style.visibility='hidden';"
+					+ "    document.getElementById('tableCheck').style.visibility='visible';"
 					+ "  }"
+					+ "}"
+					+ "function enableCheckSubmit() {"
+					+ "  var checked=0;"
+					+ "  for (i=0;i<document.AssignmentForm.TopicIds.length;i++) if(document.AssignmentForm.TopicIds[i].checked) checked++;"
+					+ "  document.AssignmentForm.begin.disabled=(checked<3);"
+					+ "  if (document.AssignmentForm.begin.disabled) document.AssignmentForm.begin.value='Select at least 3 topics';"
+					+ "  else document.AssignmentForm.begin.value='Create this Practice Exam';"
+					+ "}"
+					+ "function enableRadioSubmit() {"
+					+ "  document.AssignmentForm.begin.disabled=false;"
+					+ "  document.AssignmentForm.begin.value='Create this assignment';"
 					+ "}"
 					+ "</script>");
 
-			buf.append("<table><form name=AssignmentForm method=POST>");
+			buf.append("<form name=AssignmentForm method=POST>");
 			buf.append("<input type=hidden name=UserRequest value=UpdateAssignment>");
 			buf.append("<input type=hidden name=Token value=" + user.token + ">");
 			buf.append("<input type=hidden name=LtiAgsLineitemsUrl value='" + lti_ags_lineitems_url + "'>");
-			buf.append("<tr><td>"
-					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Quiz" + ("Quiz".equals(assignmentType)?" CHECKED":"") + ">Quiz</label><br>"
-					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Homework" + ("Homework".equals(assignmentType)?" CHECKED":"") + ">Homework</label><br>"
-					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=PracticeExam" + ("PracticeExam".equals(assignmentType)?" CHECKED":"") + ">Practice&nbsp;Exam</label>"
-					+ "</td><td id=topicSelect style='visibility:hidden;vertical-align=top'>"
-					+ "<FONT COLOR=RED>Please select one topic for this quiz or homework assignment.</FONT><br>");
 			
-			buf.append("<SELECT NAME=TopicId onChange=document.AssignmentForm.start.disabled=(document.AssignmentForm.TopicId.selectedIndex==0);>"
-					+ "<OPTION Value='0'" + (myAssignment.topicId==0L?" SELECTED":"") + ">Select a topic</OPTION>");			
+			// Create first row of table to select the assignmentype
+			buf.append("<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Quiz>Quiz</label><br>"
+					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Homework>Homework</label><br>"
+					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=PracticeExam>Practice&nbsp;Exam</label>"
+					+ "<p>");
 			
-			List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
-			for (Topic t : topics) if (!t.orderBy.equals("Hide")) {
-				buf.append("<OPTION VALUE='" + t.id + "'" + (t.id==myAssignment.topicId?" SELECTED":"") + ">" + t.title + "</OPTION>");			 
+			List<Topic> topics1 = ofy().load().type(Topic.class).order("orderBy").list();
+			buf.append("There are " + topics1.size() + " topics.<br>");
+			List<Topic> topics2 = new ArrayList<>(topics1);
+			buf.append("Cloned list OK.<br>");
+			ListIterator<Topic> semester1 = topics1.listIterator();
+			ListIterator<Topic> semester2 = topics2.listIterator();
+			buf.append("Iterators OK<br>");
+			Topic t0 = null;
+			Topic t1 = null;
+			Topic t2 = null;
+			
+			// Using the topics List above, create 2 tables. Each has first-semester topics in the left column and second-semester
+			// topics in the right column. The tables are identical except one has radio buttons and the other checkboxes.
+			StringBuffer tableRadio = new StringBuffer();
+			StringBuffer tableCheck = new StringBuffer();
+			buf.append("Starting tables.");
+			tableRadio.append("<table id=topicRadio style='visibility:hidden'>");
+			tableCheck.append("<table id=topicCheck style='visibility:hidden'>");
+			int i=0;
+			while (semester1.hasNext() || semester2.hasNext()) {
+				t0 = t1==null?null:t1;
+				while (semester1.hasNext() && (t1==null || !t1.orderBy.startsWith("1"))) {t1 = semester1.next();}
+				if (t1 == t0) t1 = null; // reached the end of the list
+				t0 = t2==null?null:t2;
+				while (semester1.hasNext() && (t2==null || !t2.orderBy.startsWith("2"))) {t2 = semester2.next();}
+				if (t2 == t0) t2 = null; // reached the end of the list
+				
+				tableRadio.append("<tr><td>"); // column 1 has first-semester topics
+				tableCheck.append("<tr><td>"); // column 1 has first-semester topics
+				if (t1 != null) {
+					tableRadio.append("<label><input type=radio name=TopicId onClick=enableRadioSubmit(); value=" + t1.id + ">" + t1.title + "</label>");
+					tableCheck.append("<label><input type=checkbox name=TopicIds onClick=enableRadioSubmit(); value=" + t1.id + ">" + t1.title + "</label>");
+				}
+				tableRadio.append("</td><td>"); // column 2 has second-semester topics
+				tableCheck.append("</td><td>"); // column 2 has second-semester topics
+				if (t2 != null) {
+					tableRadio.append("<label><input type=radio name=TopicId onClick=enableRadioSubmit(); value=" + t2.id + ">" + t2.title + "</label>");
+					tableCheck.append("<label><input type=checkbox name=TopicIds onClick=enableRadioSubmit(); value=" + t2.id + ">" + t2.title + "</label>");
+				}
+				tableRadio.append("</td></tr>"); // end of row
+				tableCheck.append("</td></tr>"); // end of row
+				i++; buf.append("row"+i+": "+(t1==null?"null":t1.title)+" "+(t2==null?"null":t2.title)+"<br>");
 			}
-			buf.append("</SELECT><input type=submit name=start disabled=true>"
-					+ "</td></tr>"
-					+ "<tr><td colspan=2 id=topicCheck style='visibility:hidden'>"
-					+ "<TABLE>");
-			buf.append("<TR><TD COLSPAN=3 style='color:red'>Please select at least 3 topics for this practice exam:<br></TD></TR>");
-			int i = 0;
-			for (Topic t : topics) {
-				if ("Hide".equals(t.orderBy)) continue;
-				buf.append(i%3==0?"<TR><TD>":"<TD>");
-				buf.append("<INPUT TYPE=CHECKBOX NAME=TopicIds VALUE='" + t.id + "' "
-						+ "onClick=\"javascript: var checked=0; "
-						+ "for(i=0;i<document.AssignmentForm.TopicIds.length;i++) if(document.AssignmentForm.TopicIds[i].checked) checked++;"
-						+ "document.AssignmentForm.begin.disabled=(checked<3);"
-						+ "if(document.AssignmentForm.begin.disabled) document.AssignmentForm.begin.value='Select at least 3 topics';"
-						+ "else document.AssignmentForm.begin.value='Submit';\">" 
-						+ t.title + "<br>\n");
-				buf.append(i%3==2?"</TD></TR>\n":"</TD>");
-				i++;
-			}
-			buf.append("</TABLE>"
-					+"<br>The practice exam is designed to be completed in 60 minutes. "
-					+"<INPUT TYPE=SUBMIT NAME=begin DISABLED=true VALUE='Select at least 3 topics'>"
-					+ "</td></tr>"
-					+ "</form></table>");
-			buf.append("<script>inspectRadios()</script>");
+			tableRadio.append("<tr><td colspan=2><input type=submit name=start disabled=true value='Select one topic'></td></tr>");
+			tableCheck.append("<tr><td colspan=2>The practice exam is designed to be completed in 60 minutes. <input type=submit name=begin disabled=true value='Select at least 3 topics'></td></tr>");
+			
+			tableRadio.append("</table>");
+			tableCheck.append("</table>");
+			
+			buf.append(tableRadio);
+			buf.append(tableCheck);
+			buf.append("</form>");
 		} catch (Exception e) {
-			return e.getMessage();
+			return e.getMessage() + "<hr>" + buf.toString();
 		}
 		return buf.toString();
 	}

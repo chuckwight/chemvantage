@@ -52,8 +52,7 @@ public class Contribute extends HttpServlet {
 				user = new User(userId);
 				user.setToken();				
 			}
-			if (user == null) throw new Exception();
-			
+
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			out.println(Home.header + newQuestionForm(user,request) + Home.footer);		

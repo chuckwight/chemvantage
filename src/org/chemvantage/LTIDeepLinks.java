@@ -12,8 +12,8 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Base64.Encoder;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -26,13 +26,13 @@ import com.auth0.jwk.JwkProvider;
 import com.auth0.jwk.UrlJwkProvider;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
-import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.auth0.jwt.interfaces.JWTVerifier;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
 import com.googlecode.objectify.Key;
 
 @WebServlet(urlPatterns={"/lti/deeplinks","/lti/deeplinks/"})
@@ -55,15 +55,15 @@ public class LTIDeepLinks extends HttpServlet {
 				out.println(deepLinkResponseMsg(request));
 				return;
 			} else if (request.getParameter("id_token") != null) { // This is a fresh Deep Links request.
-				validateDeepLinkRequest(request);
-				out.println(contentPickerForm(request));
+				JsonObject claims = validateDeepLinkRequest(request);
+				out.println(contentPickerForm(request.getParameter("state"),claims));
 			}
 		} catch (Exception e) {	 
 			response.sendError(401,e.getMessage());
 		}
 	}
 
-	void validateDeepLinkRequest(HttpServletRequest request) throws Exception {
+	JsonObject validateDeepLinkRequest(HttpServletRequest request) throws Exception {
 			validateStateToken(request); // ensures proper OIDC authorization flow completed			
 
 			validateIdToken(request);  // returns the validated Deployment
@@ -79,6 +79,7 @@ public class LTIDeepLinks extends HttpServlet {
 			}
 			
 			verifyLtiMessageClaims(claims);
+			return claims;
 	}
 	
 	protected void validateStateToken(HttpServletRequest request) throws Exception {
@@ -141,52 +142,39 @@ public class LTIDeepLinks extends HttpServlet {
 		if (userId_claim == null) throw new Exception("The id_token was missing required subject claim");
 	}
 	
-	String contentPickerForm(HttpServletRequest request) {
+	String contentPickerForm(String state,JsonObject claims) {
 		StringBuffer buf = new StringBuffer(Home.header);
 		try {
-			String state = request.getParameter("state");
-			DecodedJWT id_token = JWT.decode(request.getParameter("id_token"));
+			String platform_id = claims.get("iss").getAsString();
+			String deployment_id = claims.get("https://purl.imsglobal.org/spec/lti/claim/deployment_id").getAsString();
 			
-			String platform_id = id_token.getIssuer();
-			if (!platform_id.startsWith("http")) platform_id = "http://" + platform_id;
-			Map<String,Claim> claims = id_token.getClaims();			
-			String deployment_id = claims.get("https://purl.imsglobal.org/spec/lti/claim/deployment_id").asString();
-			Map<String,Object> settings = claims.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings").asMap();
-			String data = settings.get("data").toString();
-			String subject = id_token.getSubject();
-			String deep_link_return_url = settings.get("deep_link_return_url").toString();
+			JsonObject settings = claims.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings").getAsJsonObject();
+			boolean acceptsLtiResourceLink = settings.get("accept_types").getAsJsonArray().contains(new JsonPrimitive("ltiResourceLink"));
+			if (!acceptsLtiResourceLink) throw new Exception("Deep Link request failed because platform does not accept new LtiResourceLinks.");
 			
-			// Use the id_token to verify that this user is an instructor or administrator:
-			String[] roles;
+			boolean acceptMultiple = settings.get("accept_multiple").getAsBoolean();
+			String data = settings.get("data").getAsString();
+			
+			String subject = claims.get("sub").getAsString();
+			String deep_link_return_url = settings.get("deep_link_return_url").getAsString();
+
+			// use the roles claim to verify that the requester is an instructor or administrator
 			boolean authorized = false;
-			try {
-				roles = claims.get("https://purl.imsglobal.org/spec/lti/claim/roles").asArray(String.class);
-				for (int i=0;i<roles.length;i++) {
-					roles[i] = roles[i].toLowerCase();
-					if (roles[i].contains("instructor") || roles[i].contains("administrator")) authorized = true;
-				}			
-			} catch (Exception e) {}
+			JsonElement roles_claim = claims.get("https://purl.imsglobal.org/spec/lti/claim/roles");
+			if (roles_claim == null || !roles_claim.isJsonArray()) throw new Exception("Required roles claim is missing from the id_token");
+			JsonArray roles = roles_claim.getAsJsonArray();
+			Iterator<JsonElement> roles_iterator = roles.iterator();
+			while(roles_iterator.hasNext()){
+				String role = roles_iterator.next().getAsString().toLowerCase();
+				if (role.contains("instrictor") || role.contains("administrator")) authorized = true;
+			}
 			if (!authorized) throw new Exception("You must be logged into your LMS in an instructor "
 					+ "or administrator role in order to select assignment resources for this class.");
-
-			// Determine whether the LMS will allow creation of one lineitem or multiple lineitems with this request (optional)
-			boolean acceptMultiple = false;
-			try {
-				acceptMultiple = Boolean.parseBoolean(settings.get("accept_multiple").toString());
-			} catch (Exception e) {}
-			
+	
 			buf.append("<TABLE><TR><TD VALIGN=TOP><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
 					+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
 					+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>");
-
-			buf.append("<h2>Assignment Setup Page</h2>"
-					+ "Please select the ChemVantage resource that should be associated with this assignment. "
-					+ "ChemVantage will remember this choice and send students directly to the assignment.<p>");
-
-			if (acceptMultiple) buf.append("Your LMS has the capacity to accept the creation of multiple assignments in this "
-					+ "deep linking request. However, ChemVantage temporarily restricts you to a single choice, sorry. Repeat the "
-					+ "launch to create additional assignments.<p>");
-
+			
 			// insert a script to show/hide the correct box
 			buf.append("<script>"
 					+ "function inspectRadios() { "
@@ -207,56 +195,116 @@ public class LTIDeepLinks extends HttpServlet {
 					+ "  }"
 					+ "}"
 					+ "</script>");
+		
+			if (acceptMultiple) {
+				buf.append("<h2>Assignment Selections</h2>"
+						+ "Please select the ChemVantage resources that should be used to create new assignments. "
+						+ "You may select multiple quizzes or multiple homework assignments or multiple topics for "
+						+ "a single practice exam. Additional assignments may be selected in separate launch<p>");
+				
+				buf.append("<form name=AssignmentForm action=/lti/deeplinks method=POST>"
+						+ "<input type=hidden name=PlatformId value='" + platform_id + "'>"
+						+ "<input type=hidden name=DeploymentId value='" + deployment_id + "'>"
+						+ "<input type=hidden name=Subject value='" + subject + "'>"
+						+ "<input type=hidden name=state value=" + state + ">"
+						+ "<input type=hidden name=deep_link_return_url value=" + deep_link_return_url + ">"
+						+ "<input type=hidden name=UserRequest value='Select assignment'>"
+						+ (data==null?"":"<input type=hidden name=data value='" + data + "'>"));
 
-			buf.append("<form name=AssignmentForm action=/lti/deeplinks method=POST>"
-					+ "<input type=hidden name=PlatformId value='" + id_token.getIssuer() + "'>"
-					+ "<input type=hidden name=DeploymentId value='" + deployment_id + "'>"
-					+ "<input type=hidden name=Subject value='" + subject + "'>"
-					+ "<input type=hidden name=state value=" + state + ">"
-					+ "<input type=hidden name=deep_link_return_url value=" + deep_link_return_url + ">"
-					+ "<input type=hidden name=UserRequest value='Select assignment'>"
-					+ (data==null?"":"<input type=hidden name=data value='" + data + "'>"));
+				// Display radio buttons for the choice of assignment type:
+				buf.append("<table><tr><td>"
+						+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Quiz>Quiz</label><br>"
+						+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Homework>Homework</label><br>"
+						+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=PracticeExam>Practice&nbsp;Exam</label>"
+						+ "</td>");
 
-			// Display radio buttons for the choice of assignment type:
-			buf.append("<table><tr><td>"
-					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Quiz>Quiz</label><br>"
-					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Homework>Homework</label><br>"
-					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=PracticeExam>Practice&nbsp;Exam</label>"
-					+ "</td>");
+				// Display a list of topics (initially hidden; visible if Quiz or Homework is the AssignmentType
+				buf.append("<td id=topicSelect style='visibility:hidden;vertical-align=top'>"
+						+ "<FONT COLOR=RED>Please select the desired topics.</FONT><br>");
 
-			// Display a select box for the choice of topics (initially hidden; visible if Quiz or Homework is the AssignmentType
-			buf.append("<td id=topicSelect style='visibility:hidden;vertical-align=top'>"
-					+ "<FONT COLOR=RED>Please select one topic for this quiz or homework assignment.</FONT><br>");
+				List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
+				for (Topic t : topics) if (!t.orderBy.equals("Hide")) 
+					buf.append("<label><INPUT TYPE=CHECKBOX NAME=TopicId VALUE='" + t.id + "'>" + t.title + "</label><br>");			 			
+				buf.append("<input type=submit name=start value='Create the selected assignments'></td></tr>");
 
-			List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
-			buf.append("<SELECT NAME=TopicId onChange=document.AssignmentForm.start.disabled=(document.AssignmentForm.TopicId.selectedIndex==0);>"
-					+ "<OPTION Value='0'>Select a topic</OPTION>");			
-			for (Topic t : topics) if (!t.orderBy.equals("Hide")) buf.append("<OPTION VALUE='" + t.id + "'>" + t.title + "</OPTION>");			 			
-			buf.append("</SELECT><input type=submit name=start disabled=true></td></tr>");
+				// Display a checkbox list for choice of multiple topics (initially hidden) if AssignmentType is PracticeExam
+				buf.append("<tr><td colspan=2 id=topicCheck style='visibility:hidden'>");
+				buf.append("<TABLE><TR><TD COLSPAN=3 style='color:red'>Please select at least 3 topics for this practice exam:<br></TD></TR>");
+				int i = 0;
+				for (Topic t : topics) {
+					if ("Hide".equals(t.orderBy)) continue;
+					buf.append(i%3==0?"<TR><TD>":"<TD>");
+					buf.append("<INPUT TYPE=CHECKBOX NAME=TopicIds VALUE='" + t.id + "' "
+							+ "onClick=\"javascript: var checked=0; "
+							+ "for(i=0;i<document.AssignmentForm.TopicIds.length;i++) if(document.AssignmentForm.TopicIds[i].checked) checked++;"
+							+ "document.AssignmentForm.begin.disabled=(checked<3);"
+							+ "if(document.AssignmentForm.begin.disabled) document.AssignmentForm.begin.value='Select at least 3 topics';"
+							+ "else document.AssignmentForm.begin.value='Create this Practice Exam assignment';\">" 
+							+ t.title + "<br>\n");
+					buf.append(i%3==2?"</TD></TR>\n":"</TD>");
+					i++;
+				}
+				buf.append("</TABLE><br>");
+				buf.append("The practice exam is designed to be completed in 60 minutes. "
+						+"<INPUT TYPE=SUBMIT NAME=begin DISABLED=true VALUE='Select at least 3 topics'>"
+						+ "</td></tr></table>");
+				buf.append("</form>");
+				buf.append("<script>inspectRadios()</script>");
 
-			// Display a checkbox list for choice of multiple topics (initially hidden) if AssignmentType is PracticeExam
-			buf.append("<tr><td colspan=2 id=topicCheck style='visibility:hidden'>");
-			buf.append("<TABLE><TR><TD COLSPAN=3 style='color:red'>Please select at least 3 topics for this practice exam:<br></TD></TR>");
-			int i = 0;
-			for (Topic t : topics) {
-				if ("Hide".equals(t.orderBy)) continue;
-				buf.append(i%3==0?"<TR><TD>":"<TD>");
-				buf.append("<INPUT TYPE=CHECKBOX NAME=TopicIds VALUE='" + t.id + "' "
-						+ "onClick=\"javascript: var checked=0; "
-						+ "for(i=0;i<document.AssignmentForm.TopicIds.length;i++) if(document.AssignmentForm.TopicIds[i].checked) checked++;"
-						+ "document.AssignmentForm.begin.disabled=(checked<3);"
-						+ "if(document.AssignmentForm.begin.disabled) document.AssignmentForm.begin.value='Select at least 3 topics';"
-						+ "else document.AssignmentForm.begin.value='Submit';\">" 
-						+ t.title + "<br>\n");
-				buf.append(i%3==2?"</TD></TR>\n":"</TD>");
-				i++;
+			} else {
+				buf.append("<h2>Assignment Setup Page</h2>"
+						+ "Please select the ChemVantage resource that should be associated with this new assignment.<p>");
+
+				buf.append("<form name=AssignmentForm action=/lti/deeplinks method=POST>"
+						+ "<input type=hidden name=PlatformId value='" + platform_id + "'>"
+						+ "<input type=hidden name=DeploymentId value='" + deployment_id + "'>"
+						+ "<input type=hidden name=Subject value='" + subject + "'>"
+						+ "<input type=hidden name=state value=" + state + ">"
+						+ "<input type=hidden name=deep_link_return_url value=" + deep_link_return_url + ">"
+						+ "<input type=hidden name=UserRequest value='Select assignment'>"
+						+ (data==null?"":"<input type=hidden name=data value='" + data + "'>"));
+
+				// Display radio buttons for the choice of assignment type:
+				buf.append("<table><tr><td>"
+						+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Quiz>Quiz</label><br>"
+						+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Homework>Homework</label><br>"
+						+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=PracticeExam>Practice&nbsp;Exam</label>"
+						+ "</td>");
+
+				// Display a select box for the choice of topics (initially hidden; visible if Quiz or Homework is the AssignmentType
+				buf.append("<td id=topicSelect style='visibility:hidden;vertical-align=top'>"
+						+ "<FONT COLOR=RED>Please select one topic for this quiz or homework assignment.</FONT><br>");
+
+				List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
+				buf.append("<SELECT NAME=TopicId onChange=document.AssignmentForm.start.disabled=(document.AssignmentForm.TopicId.selectedIndex==0);>"
+						+ "<OPTION Value='0'>Select a topic</OPTION>");			
+				for (Topic t : topics) if (!t.orderBy.equals("Hide")) buf.append("<OPTION VALUE='" + t.id + "'>" + t.title + "</OPTION>");			 			
+				buf.append("</SELECT><input type=submit name=start disabled=true></td></tr>");
+
+				// Display a checkbox list for choice of multiple topics (initially hidden) if AssignmentType is PracticeExam
+				buf.append("<tr><td colspan=2 id=topicCheck style='visibility:hidden'>");
+				buf.append("<TABLE><TR><TD COLSPAN=3 style='color:red'>Please select at least 3 topics for this practice exam:<br></TD></TR>");
+				int i = 0;
+				for (Topic t : topics) {
+					if ("Hide".equals(t.orderBy)) continue;
+					buf.append(i%3==0?"<TR><TD>":"<TD>");
+					buf.append("<INPUT TYPE=CHECKBOX NAME=TopicIds VALUE='" + t.id + "' "
+							+ "onClick=\"javascript: var checked=0; "
+							+ "for(i=0;i<document.AssignmentForm.TopicIds.length;i++) if(document.AssignmentForm.TopicIds[i].checked) checked++;"
+							+ "document.AssignmentForm.begin.disabled=(checked<3);"
+							+ "if(document.AssignmentForm.begin.disabled) document.AssignmentForm.begin.value='Select at least 3 topics';"
+							+ "else document.AssignmentForm.begin.value='Create this Practice Exam assignment';\">" 
+							+ t.title + "<br>\n");
+					buf.append(i%3==2?"</TD></TR>\n":"</TD>");
+					i++;
+				}
+				buf.append("</TABLE><br>");
+				buf.append("The practice exam is designed to be completed in 60 minutes. "
+						+"<INPUT TYPE=SUBMIT NAME=begin DISABLED=true VALUE='Select at least 3 topics'>"
+						+ "</td></tr></table>");
+				buf.append("</form>");
+				buf.append("<script>inspectRadios()</script>");
 			}
-			buf.append("</TABLE><br>");
-			buf.append("The practice exam is designed to be completed in 60 minutes. "
-					+"<INPUT TYPE=SUBMIT NAME=begin DISABLED=true VALUE='Select at least 3 topics'>"
-					+ "</td></tr></table>");
-			buf.append("</form>");
-			buf.append("<script>inspectRadios()</script>");
 			return buf.toString();
 
 		} catch (Exception e) {
@@ -265,6 +313,25 @@ public class LTIDeepLinks extends HttpServlet {
 		return buf.toString() + Home.footer;
 	}
 	
+	User getUserClaims(JsonObject claims) throws Exception {
+		// Process User information:
+		String sub = claims.get("sub").getAsString();  // required
+		if (sub==null || sub.isEmpty()) throw new Exception("Missing or empty subject claim in the id_token.");
+		String platformUserId = claims.get("iss").getAsString() + "/" + sub;
+		User user = new User(platformUserId);
+
+		JsonElement roles_claim = claims.get("https://purl.imsglobal.org/spec/lti/claim/roles");
+		if (roles_claim == null || !roles_claim.isJsonArray()) throw new Exception("Required roles claim is missing from the id_token");
+		JsonArray roles = roles_claim.getAsJsonArray();
+		Iterator<JsonElement> roles_iterator = roles.iterator();
+		while(roles_iterator.hasNext()){
+			String role = roles_iterator.next().getAsString().toLowerCase();
+			if (!user.isInstructor()) user.setIsInstructor(role.contains("instructor"));
+			if (!user.isAdministrator()) user.setIsAdministrator(role.contains("administrator"));
+		}
+		return user;
+	}
+
 	String deepLinkResponseMsg(HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<html><head></head><body onLoad=document.forms['selections'].submit()>");
 		String platform_id = request.getParameter("PlatformId");
