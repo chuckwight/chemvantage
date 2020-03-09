@@ -382,13 +382,19 @@ public class LTIv1p3Launch extends HttpServlet {
 			buf.append("<script>"
 					+ "function inspectRadios() { "
 					+ "  var radios = document.getElementsByName('AssignmentType');"
-					+ "  if(radios[0].checked || radios[1].checked) {"
-					+ "    document.getElementById('tableRadio').style.visibility='visible';"
-					+ "    document.getElementById('tableCheck').style.visibility='hidden';"
+					+ "  if(radios[0].checked) {"
+					+ "    document.getElementById('tableRadio').style.display='block';"
+					+ "    document.getElementById('tableCheck').style.display='none';"
+					+ "    document.getElementById('QHinstruct').innerHTML='The quiz is designed to be completed in 15 minutes. ';"
+					+ "  }"
+					+ "  if(radios[1].checked) {"
+					+ "    document.getElementById('tableRadio').style.display='block';"
+					+ "    document.getElementById('tableCheck').style.display='none';"
+					+ "    document.getElementById('QHinstruct').innerHTML='Each homework assignment has about 10 numeric problems. ';"
 					+ "  }"
 					+ "  else if(radios[2].checked) {"
-					+ "    document.getElementById('tableRadio').style.visibility='hidden';"
-					+ "    document.getElementById('tableCheck').style.visibility='visible';"
+					+ "    document.getElementById('tableRadio').style.display='none';"
+					+ "    document.getElementById('tableCheck').style.display='block';"
 					+ "  }"
 					+ "}"
 					+ "function enableCheckSubmit() {"
@@ -399,8 +405,8 @@ public class LTIv1p3Launch extends HttpServlet {
 					+ "  else document.AssignmentForm.begin.value='Create this Practice Exam';"
 					+ "}"
 					+ "function enableRadioSubmit() {"
-					+ "  document.AssignmentForm.begin.disabled=false;"
-					+ "  document.AssignmentForm.begin.value='Create this assignment';"
+					+ "  document.AssignmentForm.start.disabled=false;"
+					+ "  document.AssignmentForm.start.value='Create this assignment';"
 					+ "}"
 					+ "</script>");
 
@@ -409,56 +415,53 @@ public class LTIv1p3Launch extends HttpServlet {
 			buf.append("<input type=hidden name=Token value=" + user.token + ">");
 			buf.append("<input type=hidden name=LtiAgsLineitemsUrl value='" + lti_ags_lineitems_url + "'>");
 			
-			// Create first row of table to select the assignmentype
+			// Create the top of the form to select the assignmentype
 			buf.append("<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Quiz>Quiz</label><br>"
 					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Homework>Homework</label><br>"
 					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=PracticeExam>Practice&nbsp;Exam</label>"
 					+ "<p>");
 			
-			List<Topic> topics1 = ofy().load().type(Topic.class).order("orderBy").list();
-			buf.append("There are " + topics1.size() + " topics.<br>");
-			List<Topic> topics2 = new ArrayList<>(topics1);
-			buf.append("Cloned list OK.<br>");
+			List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
+			
+			// Sort the list of topics by semester using the first character of the orderBy attribute
+			List<Topic> topics1 = new ArrayList<Topic>();
+			List<Topic> topics2 = new ArrayList<Topic>();
+			for (Topic t : topics) {
+				if (t.orderBy.startsWith("1")) topics1.add(t);
+				else if (t.orderBy.startsWith("2")) topics2.add(t);
+			}
+			
 			ListIterator<Topic> semester1 = topics1.listIterator();
 			ListIterator<Topic> semester2 = topics2.listIterator();
-			buf.append("Iterators OK<br>");
-			Topic t0 = null;
-			Topic t1 = null;
-			Topic t2 = null;
-			
+		
 			// Using the topics List above, create 2 tables. Each has first-semester topics in the left column and second-semester
 			// topics in the right column. The tables are identical except one has radio buttons and the other checkboxes.
 			StringBuffer tableRadio = new StringBuffer();
 			StringBuffer tableCheck = new StringBuffer();
-			buf.append("Starting tables.");
-			tableRadio.append("<table id=topicRadio style='visibility:hidden'>");
-			tableCheck.append("<table id=topicCheck style='visibility:hidden'>");
-			int i=0;
+			
+			tableRadio.append("<table id=tableRadio style='display:none'>");
+			tableCheck.append("<table id=tableCheck style='display:none'>");
+			tableRadio.append("<tr><td colspan=2><font color=red>Select one of the following topics for this assignment:</font></td></tr>");
+			tableCheck.append("<tr><td colspan=2><font color=red>Select at least three topics for this practice exam:</font></td></tr>");
 			while (semester1.hasNext() || semester2.hasNext()) {
-				t0 = t1==null?null:t1;
-				while (semester1.hasNext() && (t1==null || !t1.orderBy.startsWith("1"))) {t1 = semester1.next();}
-				if (t1 == t0) t1 = null; // reached the end of the list
-				t0 = t2==null?null:t2;
-				while (semester1.hasNext() && (t2==null || !t2.orderBy.startsWith("2"))) {t2 = semester2.next();}
-				if (t2 == t0) t2 = null; // reached the end of the list
-				
 				tableRadio.append("<tr><td>"); // column 1 has first-semester topics
 				tableCheck.append("<tr><td>"); // column 1 has first-semester topics
-				if (t1 != null) {
-					tableRadio.append("<label><input type=radio name=TopicId onClick=enableRadioSubmit(); value=" + t1.id + ">" + t1.title + "</label>");
-					tableCheck.append("<label><input type=checkbox name=TopicIds onClick=enableRadioSubmit(); value=" + t1.id + ">" + t1.title + "</label>");
+				if (semester1.hasNext()) {
+					Topic t = semester1.next();
+					tableRadio.append("<label><input type=radio name=TopicId onClick=enableRadioSubmit(); value=" + t.id + ">" + t.title + "</label>");
+					tableCheck.append("<label><input type=checkbox name=TopicIds onClick=enableCheckSubmit(); value=" + t.id + ">" + t.title + "</label>");
 				}
 				tableRadio.append("</td><td>"); // column 2 has second-semester topics
 				tableCheck.append("</td><td>"); // column 2 has second-semester topics
-				if (t2 != null) {
-					tableRadio.append("<label><input type=radio name=TopicId onClick=enableRadioSubmit(); value=" + t2.id + ">" + t2.title + "</label>");
-					tableCheck.append("<label><input type=checkbox name=TopicIds onClick=enableRadioSubmit(); value=" + t2.id + ">" + t2.title + "</label>");
+				if (semester2.hasNext()) {
+					Topic t = semester2.next();
+					tableRadio.append("<label><input type=radio name=TopicId onClick=enableRadioSubmit(); value=" + t.id + ">" + t.title + "</label>");
+					tableCheck.append("<label><input type=checkbox name=TopicIds onClick=enableCheckSubmit(); value=" + t.id + ">" + t.title + "</label>");
 				}
 				tableRadio.append("</td></tr>"); // end of row
 				tableCheck.append("</td></tr>"); // end of row
-				i++; buf.append("row"+i+": "+(t1==null?"null":t1.title)+" "+(t2==null?"null":t2.title)+"<br>");
 			}
-			tableRadio.append("<tr><td colspan=2><input type=submit name=start disabled=true value='Select one topic'></td></tr>");
+			tableRadio.append("<tr><td colspan=2><span id=QHinstruct></span><input type=submit name=start disabled=true value='Select one topic'></td></tr>");
 			tableCheck.append("<tr><td colspan=2>The practice exam is designed to be completed in 60 minutes. <input type=submit name=begin disabled=true value='Select at least 3 topics'></td></tr>");
 			
 			tableRadio.append("</table>");
