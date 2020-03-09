@@ -61,8 +61,8 @@ public class EraseEntity extends HttpServlet {
 		List<Key<Assignment>> assignmentKeys = new ArrayList<Key<Assignment>>();
 		
 		// If selected, erase the domain:		
+		String domain = request.getParameter("Domain");
 		if (Boolean.parseBoolean(request.getParameter("EraseDomain"))) {
-			String domain = request.getParameter("Domain");
 			try {
 				new URL(domain);  // throws Exception if this is a BLTIConsumer
 				ofy().delete().key(Key.create(Deployment.class,domain));
@@ -96,10 +96,14 @@ public class EraseEntity extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
-		out.println(Home.header + menu() + Home.footer);
+		out.println(Home.header + menu(domain) + Home.footer);
 	}
 
 	String menu() {
+		return menu(null);
+	}
+	
+	String menu(String domain) {
 		StringBuffer buf = new StringBuffer("<h3>Database Utility for Permanent Erasure</h3>");
 		buf.append("The ChemVantage administrator can use this utility to permanently delete the following from the datastore:"
 				+ "<ul>"
@@ -113,9 +117,9 @@ public class EraseEntity extends HttpServlet {
 		buf.append("Select the domain of interest by its Consumer Key or Deployment ID:<br>"
 				+ "<form method=get action=/EraseEntity>"
 				+ "<select name=Domain>"
-				+ "<option value='' SELECTED>Select a domain</option>");
-		for (BLTIConsumer c : consumers) buf.append("<option value='" + c.oauth_consumer_key + "'>" + c.oauth_consumer_key + "</option>");		
-		for (Deployment d : deployments) buf.append("<option value='" + d.platform_deployment_id + "'>" + d.platform_deployment_id + "</option>");		
+				+ "<option value=''" + (domain==null?" SELECTED":"") + ">Select a domain</option>");
+		for (BLTIConsumer c : consumers) buf.append("<option value='" + c.oauth_consumer_key + "'" + (c.oauth_consumer_key.equals(domain)?" SELECTED>":">") + c.oauth_consumer_key + "</option>");		
+		for (Deployment d : deployments) buf.append("<option value='" + d.platform_deployment_id + "'" + (d.platform_deployment_id.equals(domain)?" SELECTED>":">") + d.platform_deployment_id + "</option>");		
 		
 		buf.append("</select>&nbsp;&nbsp;");
 		buf.append("<input type=submit value='Select' onClick=this.value='working...'></form><p>");
@@ -127,6 +131,12 @@ public class EraseEntity extends HttpServlet {
 		StringBuffer buf = new StringBuffer("<h3>Database Utility for Permanent Erasure</h3>");
 		
 		buf.append(("Domain: ") + "<b>" + domain + "</b><p>");
+		
+		boolean domainExists = ofy().load().type(BLTIConsumer.class).id(domain).now()!=null || ofy().load().type(Deployment.class).id(domain).now() != null;
+		if (!domainExists) {
+			buf.append("This domain is not currently registered in ChemVantage.");
+			return buf.toString();
+		}
 		
 		buf.append("<form method=post action=/EraseEntity>");
 		buf.append("<input type=hidden name=Domain value='" + domain + "'>");
