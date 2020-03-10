@@ -360,6 +360,12 @@ public class LTIv1p3Launch extends HttpServlet {
 	}
 
 	String pickResourceForm(User user,Assignment myAssignment,String lti_ags_lineitems_url) {
+		// This method is launched when the creation of a new assignment in a platform results in an
+		// LtiResourceLink launch request, and the user (instructor) is asked to identify a ChemVantage
+		// resource to be associate with the LtiResourceLink. This form allows the instructor to 
+		// select one Quiz topic or one Homework topic or multiple topics to be associated with one 
+		// Practice Exam.
+		
 		StringBuffer buf = new StringBuffer();
 
 		try {			
@@ -372,7 +378,7 @@ public class LTIv1p3Launch extends HttpServlet {
 					
 			if (user.isInstructor()) buf.append("Please select the ChemVantage assignment that should be associated with this link. "
 					+ "ChemVantage will remember this choice and send students directly to the assignment.<p>");
-			else {
+			else { // in case a student activates the link prior to the instructor
 				buf.append("<b>Please ask your instructor to click the LMS assignment link to make this missing association.</b> "
 						+ "You will not be able to complete this assignment until after this has been done.");
 				return buf.toString();
