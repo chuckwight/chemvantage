@@ -21,6 +21,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.HttpConstraint;
@@ -32,8 +33,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
-import com.google.cloud.datastore.Cursor;
-import com.google.cloud.datastore.QueryResults;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
 
@@ -65,8 +64,7 @@ public class Admin extends HttpServlet {
 			if (userRequest == null) userRequest = "";
 
 			String searchString = request.getParameter("SearchString");
-			String cursor = request.getParameter("Cursor");
-			out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Home.footer);
+			out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString) + Home.footer);
 		} catch (Exception e) {
 		}
 	}
@@ -79,35 +77,30 @@ public class Admin extends HttpServlet {
 
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
+			String searchString = null;
 			
-			String searchString = request.getParameter("SearchString");
-			String cursor = request.getParameter("Cursor");
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 			if (userRequest.equals("Announce")) {
 				Home.announcement = request.getParameter("Announcement");
 			} else if (userRequest.equals("Search for Consumer")) {
-				searchString = request.getParameter("oauth_consumer_key");
-			} else if (userRequest.equals("Generate New Shared Secret")) {
-				createBLTIConsumer(request);
-			} else if (userRequest.equals("Delete BLTI Consumer")) {
-				deleteBLTIConsumer(request);
+				searchString = request.getParameter("SearchString");
 			}
-			out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Home.footer);
+			out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString) + Home.footer);
 		} catch (Exception e) {
 			response.getWriter().println(e.toString());
 		}
 	}
 
-	String mainAdminForm(User user,String userRequest,String searchString,String cursor) {
+	String mainAdminForm(User user,String userRequest,String searchString) {
 		StringBuffer buf = new StringBuffer("\n\n<h2>Administration</h2>");
 		try {
 			buf.append("<h3>Announcements</h3>");
 			buf.append("The following message will be posted in red font at the top of each page for authenticated users: ");
+			
 			buf.append("<FORM ACTION=Admin METHOD=POST>"
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=Announce>"
 					+ "<INPUT TYPE=TEXT SIZE=80 NAME=Announcement VALUE='" + Home.announcement + "'><BR>"
-					+ " site to prevent logins except by site administrators<br>"
 					+ "<INPUT TYPE=SUBMIT VALUE='Post this message now'></FORM>");
 
 			buf.append("<h3>User Feedback</h3>");
@@ -122,33 +115,31 @@ public class Admin extends HttpServlet {
 			buf.append("<h3>Basic LTI Consumer</h3>");
 			int nConsumers = ofy().load().type(BLTIConsumer.class).count();
 			String defKey = "Search for Consumer".equals(userRequest) && (searchString!=null&&!searchString.isEmpty())?searchString:"(show all)";
-			buf.append("<FORM NAME=ConsKey ACTION=Admin METHOD=POST>Use this form below to search for, create or delete specific LTI consumers.<br>"
-					+ "Consumer Key: <INPUT TYPE=TEXT NAME=oauth_consumer_key VALUE='" + defKey + "' onFocus=ConsKey.oauth_consumer_key.value=''>"
+			buf.append("<FORM NAME=ConsKey ACTION=/Admin METHOD=POST>Use this form below to search for, create or delete specific LTI consumers.<br>"
+					+ "Consumer Key: <INPUT TYPE=TEXT NAME=SearchString VALUE='" + defKey + "' onFocus=ConsKey.oauth_consumer_key.value=''>"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Search for Consumer'> "
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Generate New Shared Secret'> "
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete LTI Consumer'>"
+					+ "<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">"
 					+ "</FORM>");
 			
 			if ("Search for Consumer".equals(userRequest)) {
 				Key<BLTIConsumer> keyFirst = Key.create(BLTIConsumer.class,(searchString.isEmpty()?"\u0000":searchString));
 				Key<BLTIConsumer> keyLast = Key.create(BLTIConsumer.class,(searchString.isEmpty()?"\ufffd":searchString+"\ufffd"));					
-				Query<BLTIConsumer> consumerResults = ofy().load().type(BLTIConsumer.class).filterKey(">=",keyFirst).filterKey("<",keyLast).limit(this.queryLimit);
-				QueryResults<BLTIConsumer> consumers = cursor==null?consumerResults.iterator():consumerResults.startAt(Cursor.fromUrlSafe(cursor)).iterator();
+				List<BLTIConsumer> consumers = ofy().load().type(BLTIConsumer.class).filterKey(">=",keyFirst).filterKey("<",keyLast).limit(this.queryLimit).list();
+				//QueryResults<BLTIConsumer> consumers = cursor==null?consumerResults.iterator():consumerResults.startAt(Cursor.fromUrlSafe(cursor)).iterator();
 				
-				int nResults = consumerResults.count();
+				int nResults = consumers.size();
 				if (nResults==0) buf.append("<FONT SIZE=-1>No LTI consumers matched the search criteria.</FONT><p>");
 				else buf.append("<FONT SIZE=-1>Showing " + nResults + " LTI consumers matching the search criteria.</FONT><p>");
 				
 				buf.append("<TABLE><TR><TH>Consumer Key</TH><TH>Secret</TH></TR>");
-				while (consumers.hasNext()) {
-					BLTIConsumer cons = consumers.next();
-					buf.append("<TR><TD>" + cons.oauth_consumer_key + "</TD>");
+				for(BLTIConsumer c : consumers) {
+					buf.append("<TR><TD>" + c.oauth_consumer_key + "</TD>");
 					buf.append("<TD><INPUT TYPE=BUTTON VALUE='Reveal secret' "
-							+ "onClick=javascript:getElementById('" + cons.oauth_consumer_key + "').style.display='';this.style.display='none'>"
-							+ "<div id='"+ cons.oauth_consumer_key + "' style='display: none'>" + cons.secret + "</div></TD></TR>");
+							+ "onClick=javascript:getElementById('" + c.oauth_consumer_key + "').style.display='';this.style.display='none'>"
+							+ "<div id='"+ c.oauth_consumer_key + "' style='display: none'>" + c.secret + "</div></TD></TR>");
 				}
 				buf.append("</TABLE>");
-				if (nResults==this.queryLimit) buf.append("<FONT SIZE=-1><a href='/Admin?UserRequest=Search for Consumer&SearchString=(show all)&Cursor=" + consumers.getCursorAfter().toUrlSafe() + "'><FONT SIZE=-1>show more consumers</FONT></a><p>");
+				//if (nResults==this.queryLimit) buf.append("<FONT SIZE=-1><a href='/Admin?UserRequest=Search for Consumer&SearchString=(show all)&Cursor=" + consumers.getCursorAfter().toUrlSafe() + "'><FONT SIZE=-1>show more consumers</FONT></a><p>");
 			} else {
 				buf.append("<FONT SIZE=-1>There are currently " + nConsumers + " registered LTI consumers.</FONT><p>");
 			}
@@ -175,7 +166,7 @@ public class Admin extends HttpServlet {
 		}
 		return buf.toString();
 	}
-*/
+
 	
 	String BLTIConsumerForm() {
 		StringBuffer buf = new StringBuffer();
@@ -204,22 +195,6 @@ public class Admin extends HttpServlet {
 		}
 		return buf.toString();
 	}
-	
-	void createBLTIConsumer(HttpServletRequest request) {
-		String oauth_consumer_key = request.getParameter("oauth_consumer_key");
-		// prevent over-writing an existing BLTIConsumer
-		BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).now(); 
-		if (c==null) {
-			c = new BLTIConsumer(oauth_consumer_key); 
-			ofy().save().entity(c);
-		}
-	}
-		
-	void deleteBLTIConsumer(HttpServletRequest request) {
-		String oauth_consumer_key = request.getParameter("oauth_consumer_key");
-		BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).now(); 
-		if (c!=null) ofy().delete().entity(c);
-	}
-	
+*/	
 }
 
