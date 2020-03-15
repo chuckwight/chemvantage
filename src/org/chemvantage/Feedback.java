@@ -209,8 +209,8 @@ public class Feedback extends HttpServlet {
 		if (comments.length() > 0) {
 			buf.append("Your comment: <font color=red>" + comments + "</font><p>");
 		
-			if (email==null) buf.append("You will not receive a response because you did not provide a valid email address.<p>");
-			else buf.append("Any response to your comment will be sent to " + email + ".<p>");
+			if (email==null) buf.append("We will review your comment, but you will not receive a response because you did not provide an email address.<p>");
+			else buf.append("We will review your comment. Any response will be sent to " + email + ".<p>");
 		}
 	
 		if (user.isAnonymous()) buf.append("<p><a href=Home>Return to the Home page</a><br>");
