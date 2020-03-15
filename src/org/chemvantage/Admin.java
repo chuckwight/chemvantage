@@ -21,7 +21,6 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.HttpConstraint;
@@ -33,6 +32,8 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
+import com.google.cloud.datastore.Cursor;
+import com.google.cloud.datastore.QueryResults;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
 
@@ -59,12 +60,13 @@ public class Admin extends HttpServlet {
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
-
+			String searchString = request.getParameter("SearchString");
+			String cursor = request.getParameter("Cursor");
+			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 
-			String searchString = request.getParameter("SearchString");
-			out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString) + Home.footer);
+			out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Home.footer);
 		} catch (Exception e) {
 		}
 	}
@@ -77,22 +79,21 @@ public class Admin extends HttpServlet {
 
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
-			String searchString = null;
+			String searchString = request.getParameter("SearchString");
+			String cursor = request.getParameter("Cursor");
 			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 			if (userRequest.equals("Announce")) {
 				Home.announcement = request.getParameter("Announcement");
-			} else if (userRequest.equals("Search for Consumer")) {
-				searchString = request.getParameter("SearchString");
-			}
-			out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString) + Home.footer);
+			} 
+			out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Home.footer);
 		} catch (Exception e) {
 			response.getWriter().println(e.toString());
 		}
 	}
 
-	String mainAdminForm(User user,String userRequest,String searchString) {
+	String mainAdminForm(User user,String userRequest,String searchString,String cursor) {
 		StringBuffer buf = new StringBuffer("\n\n<h2>Administration</h2>");
 		try {
 			buf.append("<h3>Announcements</h3>");
@@ -105,7 +106,7 @@ public class Admin extends HttpServlet {
 
 			buf.append("<h3>User Feedback</h3>");
 			Query<UserReport> reports = ofy().load().type(UserReport.class).order("-submitted");
-			if (reports.count()==0) buf.append("There are no user reports at this time.");
+			if (reports.count()==0) buf.append("There are no new user reports at this time.");
 			else {
 				for (UserReport r : reports) {
 					buf.append(r.view(user) + "<hr>");  // returns report only for ChemVantage admin
@@ -114,33 +115,46 @@ public class Admin extends HttpServlet {
 
 			buf.append("<h3>Basic LTI Consumer</h3>");
 			int nConsumers = ofy().load().type(BLTIConsumer.class).count();
-			String defKey = "Search for Consumer".equals(userRequest) && (searchString!=null&&!searchString.isEmpty())?searchString:"(show all)";
-			buf.append("<FORM NAME=ConsKey ACTION=/Admin METHOD=POST>Use this form below to search for, create or delete specific LTI consumers.<br>"
-					+ "Consumer Key: <INPUT TYPE=TEXT NAME=SearchString VALUE='" + defKey + "' onFocus=ConsKey.oauth_consumer_key.value=''>"
+			
+			if (searchString==null || searchString.isEmpty()) searchString = "(show all)";  // default search
+			else if (searchString.endsWith("*")) searchString = searchString.substring(0,searchString.length()-1);
+			
+			buf.append("<FORM NAME=ConsKey ACTION=/Admin METHOD=GET>Use this form below to search for specific LTI consumers.<br>"
+					+ "Consumer Key: <INPUT TYPE=TEXT NAME=SearchString VALUE='" + searchString + "' onFocus=ConsKey.oauth_consumer_key.value=''>"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Search for Consumer'> "
 					+ "<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">"
 					+ "</FORM>");
 			
 			if ("Search for Consumer".equals(userRequest)) {
-				Key<BLTIConsumer> keyFirst = Key.create(BLTIConsumer.class,(searchString.isEmpty()?"\u0000":searchString));
-				Key<BLTIConsumer> keyLast = Key.create(BLTIConsumer.class,(searchString.isEmpty()?"\ufffd":searchString+"\ufffd"));					
-				List<BLTIConsumer> consumers = ofy().load().type(BLTIConsumer.class).filterKey(">=",keyFirst).filterKey("<",keyLast).limit(this.queryLimit).list();
-				//QueryResults<BLTIConsumer> consumers = cursor==null?consumerResults.iterator():consumerResults.startAt(Cursor.fromUrlSafe(cursor)).iterator();
-				
-				int nResults = consumers.size();
+				// BLTIConsumers use the oauth_consumer_key as the id value, so we can use a filterKey search
+				// To do this, calculate the values of the lowest possible Key and the highest possible Key for the search
+				// Note that \u0000 is the lowest value UTF-8 character, and \ufffd is the highest
+				Key<BLTIConsumer> keyFirst = Key.create(BLTIConsumer.class,("(show all)".equals(searchString)?"\u0000":searchString));
+				Key<BLTIConsumer> keyLast = Key.create(BLTIConsumer.class,("(show all)".equals(searchString)?"\ufffd":searchString+"\ufffd"));					
+				Query<BLTIConsumer> consumers = ofy().load().type(BLTIConsumer.class).filterKey(">=",keyFirst).filterKey("<",keyLast).limit(this.queryLimit);				
+				if (cursor != null) consumers = consumers.startAt(Cursor.fromUrlSafe(cursor));
+
+				// Determine the number of results to see if we need a cursor to continue the search later
+				int nResults = consumers.count();				
 				if (nResults==0) buf.append("<FONT SIZE=-1>No LTI consumers matched the search criteria.</FONT><p>");
-				else buf.append("<FONT SIZE=-1>Showing " + nResults + " LTI consumers matching the search criteria.</FONT><p>");
-				
-				buf.append("<TABLE><TR><TH>Consumer Key</TH><TH>Secret</TH></TR>");
-				for(BLTIConsumer c : consumers) {
-					buf.append("<TR><TD>" + c.oauth_consumer_key + "</TD>");
-					buf.append("<TD><INPUT TYPE=BUTTON VALUE='Reveal secret' "
-							+ "onClick=javascript:getElementById('" + c.oauth_consumer_key + "').style.display='';this.style.display='none'>"
-							+ "<div id='"+ c.oauth_consumer_key + "' style='display: none'>" + c.secret + "</div></TD></TR>");
+				else {
+					buf.append("<FONT SIZE=-1>Showing " + nResults + " LTI consumers matching the search criteria.</FONT><p>");
+
+					buf.append("<TABLE><TR><TH>Consumer Key</TH><TH>Secret</TH></TR>");
+					
+					QueryResults<BLTIConsumer> iter = consumers.iterator();
+					while (iter.hasNext()) {
+					//for (BLTIConsumer c : consumers) {
+						BLTIConsumer c = iter.next();
+						buf.append("<TR><TD>" + c.oauth_consumer_key + "</TD>");
+						buf.append("<TD><INPUT TYPE=BUTTON VALUE='Reveal secret' "
+								+ "onClick=javascript:getElementById('" + c.oauth_consumer_key + "').style.display='';this.style.display='none'>"
+								+ "<div id='"+ c.oauth_consumer_key + "' style='display: none'>" + c.secret + "</div></TD></TR>");
+					}
+					buf.append("</TABLE>");
+					if (nResults==this.queryLimit) buf.append("<FONT SIZE=-1><a href='/Admin?UserRequest=Search for Consumer&SearchString=" + searchString + "&Cursor=" + iter.getCursorAfter().toUrlSafe() + "'><FONT SIZE=-1>show more consumers</FONT></a><p>");
 				}
-				buf.append("</TABLE>");
-				//if (nResults==this.queryLimit) buf.append("<FONT SIZE=-1><a href='/Admin?UserRequest=Search for Consumer&SearchString=(show all)&Cursor=" + consumers.getCursorAfter().toUrlSafe() + "'><FONT SIZE=-1>show more consumers</FONT></a><p>");
-			} else {
+			} else { // no search is being conducted, so just list the current total number of consumers
 				buf.append("<FONT SIZE=-1>There are currently " + nConsumers + " registered LTI consumers.</FONT><p>");
 			}
 		}
