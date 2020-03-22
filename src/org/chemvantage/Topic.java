@@ -16,7 +16,16 @@
 */
 
 package org.chemvantage;
-
+/*
+ * This entity represents a topic, which is roughly equivalent to a textbook chapter.
+ * The topicGroup attribute indicates if a topic is aligned with a particular text, i.
+ * The topic is aligned if topicGroup%(i+1)/i==1. Thus, if OpenStax = 1 and LibreTexts = 2,
+ * then topicGroup is interpreted as
+ * 0 = no affiliation
+ * 1 = OpenStax
+ * 2 = LibreTexts
+ * 3 = both
+ */
 import java.io.Serializable;
 
 import com.googlecode.objectify.annotation.Entity;
@@ -28,14 +37,23 @@ public class Topic implements Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id 	Long id;
 	@Index 	String orderBy;
+	@Index	int topicGroup;
 	 		String title;
 	
 	Topic() {}
-	
+/*	
 	Topic(String title,String orderBy) {
 		this.title = title;
 		this.orderBy = orderBy;
 	}
+*/	
+	Topic(String title,String orderBy,int topicGroup) {
+		this.title = title;
+		this.orderBy = orderBy;
+		this.topicGroup = topicGroup;
+	}
+	
+	
 /*
 	public List<Key<Question>> getQuestionKeys(String assignmentType) {
 		return  ofy().load().type(Question.class).filter("topicId",this.id).filter("assignmentType",assignmentType).keys().list();

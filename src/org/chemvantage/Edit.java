@@ -340,7 +340,7 @@ public class Edit extends HttpServlet {
 			buf.append("<b>" + subject.title + "</b>\n");
 			buf.append("<TABLE BORDER=0 CELLSPACING=3>"
 					+ "<TR><TH COLSPAN=3>&nbsp;</TH><TH COLSPAN=2>View/Add/Edit Questions</TH></TR>"
-					+ "<TR><TH>Order</TH><TH>Title</TH><TH>Action</TH><TH>Quiz</TH><TH>HW</TH></TR>\n");
+					+ "<TR><TH>Order</TH><TH>Title</TH><TH>Action</TH><TH>Quiz</TH><TH>HW</TH><TH>OpenStax</TH></TR>\n");
 			Query<Topic> topics = ofy().load().type(Topic.class).order("orderBy");
 				for (Topic t : topics) { // one row for each topic
 					int nQuiz = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",t.id).count();
@@ -354,11 +354,12 @@ public class Edit extends HttpServlet {
 							+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE=Update>"
 							+ ((nQuiz==0 && nHW==0)?"<INPUT TYPE=SUBMIT VALUE='Delete' "
 									+ "onClick=\"javascript: document.TopicsForm" + t.id + ".UserRequest.value='DeleteTopic';\">":"")
-									+ "</TD></FORM>");
+									+ "</TD>");
 					buf.append("<TD ALIGN=CENTER><a href=Edit?AssignmentType=Quiz&TopicId=" + t.id + "><b>" + nQuiz + "</b></a></TD>");
 					buf.append("<TD ALIGN=CENTER><a href=Edit?AssignmentType=Homework&TopicId=" + t.id + "><b>" + nHW + "</b></a></TD>");
-
-					buf.append("</TR>");
+					// The next column is a checkbox to indicate if the topic is aligned with OpenStax textbook
+					buf.append("<TD ALIGN=CENTER><INPUT TYPE=CHECKBOX NAME=TopicGroup VALUE=1" + (t.topicGroup%2/1==1?" CHECKED":"") + "></TD>");
+					buf.append("</FORM></TR>");
 				}
 			//}
 			// print one-row form to add a new topic (quiz):
@@ -366,7 +367,7 @@ public class Edit extends HttpServlet {
 			buf.append("<TR>"
 					+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4></TD>"
 					+ "<TD ALIGN=CENTER><INPUT NAME=Title></TD>"
-					+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE='Create New Topic'></TD><TD>&nbsp;</TD><TD>&nbsp;</TD></TR></FORM>");
+					+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE='Create New Topic'></TD><TD ALIGN=CENTER>0</TD><TD ALIGN=CENTER>0</TD><TD ALIGN=CENTER><INPUT TYPE=CHECKBOX NAME=TopicGroup VALUE=1></TD></TR></FORM>");
 			buf.append("</TABLE>");
 			buf.append("<FONT SIZE=-1 COLOR=RED>Notes:<OL>"
 					+ "<LI>The alphanumeric value of Order controls the order that topics are arranged.</LI>"
@@ -380,7 +381,18 @@ public class Edit extends HttpServlet {
 	}
 	
 	void createTopic(User user,HttpServletRequest request) {
-		Topic t = new Topic(request.getParameter("Title"),request.getParameter("OrderBy"));
+		String title = request.getParameter("Title");
+		if (title==null) title = "";
+		String orderBy = request.getParameter("OrderBy");
+		if (orderBy==null) orderBy = "";
+		int topicGroup = 0;
+		String[] alignments = request.getParameterValues("TopicGroup");
+		if (alignments != null) {
+			for (String text : alignments) topicGroup += Integer.parseInt(text);
+		}
+		
+		Topic t = new Topic(title,orderBy,topicGroup);
+		
 		ofy().save().entity(t).now();
 	}
 
@@ -390,7 +402,15 @@ public class Edit extends HttpServlet {
 			topicId = Long.parseLong(request.getParameter("TopicId"));
 			Topic t = ofy().load().type(Topic.class).id(topicId).safe();
 			t.title = request.getParameter("Title");
+			if (t.title == null) t.title = "";
 			t.orderBy = request.getParameter("OrderBy");
+			if (t.orderBy == null) t.orderBy = "";
+			t.topicGroup = 0;
+			String[] alignments = request.getParameterValues("TopicGroup");
+			if (alignments != null) {
+				for (String text : alignments) t.topicGroup += Integer.parseInt(text);
+			}
+			
 			ofy().save().entity(t).now();
 		} catch (Exception e) {}
 	}
