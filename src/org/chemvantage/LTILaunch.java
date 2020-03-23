@@ -65,15 +65,24 @@ public class LTILaunch extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 			throws ServletException, IOException {
-		try {
-			User user = User.getUser(request.getParameter("Token"));  // may be null for LTI launch request
-			
+		try {			
 			if ("UpdateAssignment".equals(request.getParameter("UserRequest"))) {
-				updateAssignment(request,response); // POST the assignmentType and topicIds
-				// construct a redirectUrl to the new assignment
-				String redirectUrl = "/" + request.getParameter("AssignmentType") + "?Token=" + user.token;
-				response.sendRedirect(redirectUrl);
-				return;
+				User user = User.getUser(request.getParameter("Token"));  // may be null for LTI launch request
+				if (user==null) throw new Exception("Invalid user. Token may have expired.");
+				
+				Assignment myAssignment = updateAssignment(request,response);
+				boolean refreshTopics = Boolean.parseBoolean(request.getParameter("RefreshTopics"));
+				
+				if (refreshTopics || !myAssignment.isValid()) {
+					int topicKey = 0;
+					try {topicKey = Integer.parseInt(request.getParameter("TopicKey"));} catch (Exception e) {}
+					response.getWriter().println(Home.header + pickResourceForm(user,myAssignment,topicKey) + Home.footer);
+				} else {
+					ofy().save().entity(myAssignment).now();
+					// construct a redirectUrl to the new assignment
+					String redirectUrl = "/" + request.getParameter("AssignmentType") + "?Token=" + user.token;
+					response.sendRedirect(redirectUrl);
+				}
 			} else if (request.getParameter("lti_message_type")!=null) { // handle LTI launch request for LTIv1p0 and LTIv1p1
 				basicLtiLaunchRequest(request,response);
 			} else if (request.getParameter("id_token")!=null) {  // handle LTI v1p3 launch request
@@ -245,7 +254,7 @@ public class LTILaunch extends HttpServlet {
 			
 			// At this point we should have a valid Assignment, but it may not have an 
 			// assignmentType or topicId(s). If so, show the the pickResource form:
-			if (myAssignment.assignmentType != null) {
+			if (myAssignment.isValid()) {
 				redirectUrl = "/" + myAssignment.assignmentType + "?Token=" + user.token;
 				
 				// Warn instructor of LTI-1p1p2 security patch requirement
@@ -262,19 +271,22 @@ public class LTILaunch extends HttpServlet {
 		}		
 	}
 	
-	void updateAssignment(HttpServletRequest request, HttpServletResponse response) throws Exception {
-			
+	Assignment updateAssignment(HttpServletRequest request, HttpServletResponse response) throws Exception {			
 		User user = User.getUser(request.getParameter("Token"));
-			if (user==null) throw new Exception("Unable to identify user because the token was expired or invalid.");
-			if (!user.isInstructor()) throw new Exception("User must be instructor to update thisd assignment.");
-			long assignmentId = user.getAssignmentId();
-			if (assignmentId == 0L) throw new Exception("Assignment ID was 0L.");
-			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
-			a.assignmentType = request.getParameter("AssignmentType");
-			if (a.assignmentType.contentEquals("Quiz") || a.assignmentType.contentEquals("Homework")) {
+		if (user==null) throw new Exception("Unable to identify user because the token was expired or invalid.");
+		if (!user.isInstructor()) throw new Exception("User must be instructor to update thisd assignment.");
+		long assignmentId = user.getAssignmentId();
+		if (assignmentId == 0L) throw new Exception("Assignment ID was 0L.");
+		Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+		a.assignmentType = request.getParameter("AssignmentType");
+		
+		if (a.assignmentType.contentEquals("Quiz") || a.assignmentType.contentEquals("Homework")) {
+			try {
 				a.topicId = Long.parseLong(request.getParameter("TopicId"));
-			 	a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
-			} else if (a.assignmentType.contentEquals("PracticeExam")) {
+				if (a.topicId>0) a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
+			} catch (Exception e) {}
+		} else if (a.assignmentType.contentEquals("PracticeExam")) {
+			try {
 				String[] topicIds = request.getParameterValues("TopicIds");
 				if (topicIds==null || topicIds.length<3) throw new Exception("You must choose at least three topics for thisd practice exam.");
 				a.topicIds = new ArrayList<Long>();
@@ -284,11 +296,17 @@ public class LTILaunch extends HttpServlet {
 					a.topicIds.add(tId);
 					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tId).keys().list());
 				}
-			} else throw new Exception("Assignment type is undefined.");	
-			ofy().save().entity(a).now(); // going to need this is just a few milliseconds
+			} catch (Exception e) {}
+		}
+		//if (a.assignmentType != null) ofy().save().entity(a).now(); // going to need this is just a few milliseconds
+		return a;		
 	}
 
 	String pickResourceForm(User user,Assignment myAssignment) throws Exception {
+		return pickResourceForm(user,myAssignment,0);
+	}
+	
+	String pickResourceForm(User user,Assignment myAssignment,int topicKey) throws Exception {
 		StringBuffer buf = new StringBuffer();
 
 		String assignmentType = myAssignment.assignmentType;
@@ -312,48 +330,63 @@ public class LTILaunch extends HttpServlet {
 		buf.append("<script>"
 				+ "function inspectRadios() { "
 				+ "var radios = document.getElementsByName('AssignmentType');"
-				+ "  if(radios[0].checked) {"
-				+ "    document.getElementById('topicSelect').style.visibility='visible';"
-				+ "    document.getElementById('topicSelect').style.valign='top';"
-				+ "    document.getElementById('topicCheck').style.visibility='hidden';"
-				+ "  }"
-				+ "  else if(radios[1].checked) {"
-				+ "    document.getElementById('topicSelect').style.visibility='visible';"
-				+ "    document.getElementById('topicSelect').style.valign='middle';"
-				+ "    document.getElementById('topicCheck').style.visibility='hidden';"
+				+ "  if(radios[0].checked || radios[1].checked) {"
+				+ "    document.getElementById('topicKeySelect').style.visibility='visible';"
+				+ "    document.getElementById('topicSelect').style.display='';"
+				+ "    document.getElementById('topicCheck').style.display='none';"
 				+ "  }"
 				+ "  else if(radios[2].checked) {"
-				+ "    document.getElementById('topicSelect').style.visibility='hidden';"
-				+ "    document.getElementById('topicCheck').style.visibility='visible';"
+				+ "    document.getElementById('topicKeySelect').style.visibility='visible';"
+				+ "    document.getElementById('topicSelect').style.display='none';"
+				+ "    document.getElementById('topicCheck').style.display='';"
 				+ "  }"
 				+ "}"
 				+ "</script>");
 
+		List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
+		// Print a table containing the following main sections:
+		// Top left (always visible) radio buttons to select the assignment type
+		// Top right (always visible) radio buttons to select topicGroup (topics that align with a particular textbook)
+		// Top right (below topicsGroupo, initially display=none) select box for Quiz/Homework topics (choose one)
+		// Separate row (below, initially hidden) table of topics to choose from for PracticeExam
+		// All (unhidden) topics should be loaded into the page, but visibility should be controlled through JavaScript
+		
 		buf.append("<table><form name=AssignmentForm method=POST>");
 		buf.append("<input type=hidden name=UserRequest value=UpdateAssignment>");
 		buf.append("<input type=hidden name=Token value='" + user.token + "'>");
+		
+		// Radio buttons to select the AssignmentType:
 		buf.append("<tr><td>"
 				+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Quiz" + ("Quiz".equals(assignmentType)?" CHECKED":"") + ">Quiz</label><br>"
 				+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Homework" + ("Homework".equals(assignmentType)?" CHECKED":"") + ">Homework</label><br>"
 				+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=PracticeExam" + ("PracticeExam".equals(assignmentType)?" CHECKED":"") + ">Practice&nbsp;Exam</label>"
-				+ "</td><td id=topicSelect style='visibility:hidden;vertical-align=top'>"
-				+ "<FONT COLOR=RED>Please select one topic for this quiz or homework assignment.</FONT><br>");
-
-		buf.append("<SELECT NAME=TopicId onChange=document.AssignmentForm.start.disabled=(document.AssignmentForm.TopicId.selectedIndex==0);>"
+				+ "</td>");
+		
+		// Radio buttons to select TopicGroup
+		buf.append("<td id=topicKeySelect style='visibility:hidden'>"
+				+ "<label><input type=radio name=TopicKey value=0" + (topicKey==0?" checked":"") + " onClick=this.form.RefreshTopics.value='true';this.form.submit();>Show all topics</label><br>"
+				+ "<label><input type=radio name=TopicKey value=1" + (topicKey==1?" checked":"") + " onClick=this.form.RefreshTopics.value='true';this.form.submit();>Show topics aligned with OpenStax Chemistry 2e text</label><br>"
+				+ "<input type=hidden name=RefreshTopics value=false></td></tr>");
+		
+		// Select box to select the Quiz or Homework topic
+		buf.append("<tr id=topicSelect style='display:none'><td colspan=2>"
+				+ "<p><FONT COLOR=RED>Please select one topic for this quiz or homework assignment.</FONT><br>"
+				+"<SELECT NAME=TopicId onChange=document.AssignmentForm.start.disabled=(document.AssignmentForm.TopicId.selectedIndex==0);>"
 				+ "<OPTION Value='0'" + (myAssignment.topicId==0L?" SELECTED":"") + ">Select a topic</OPTION>");			
 
-		List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
-		for (Topic t : topics) if (!t.orderBy.equals("Hide")) {
+		for (Topic t : topics) { //if (!t.orderBy.equals("Hide") && (topicGroup==0 || t.topicGroup%(topicGroup+1)/topicGroup==1)) {
+			if ("Hide".equals(t.orderBy) || (topicKey>0 && t.topicGroup%(topicKey*2)/topicKey==0)) continue;
 			buf.append("<OPTION VALUE='" + t.id + "'" + (t.id==myAssignment.topicId?" SELECTED":"") + ">" + t.title + "</OPTION>");			 
 		}
-		buf.append("</SELECT><input type=submit name=start disabled=true>"
-				+ "</td></tr>"
-				+ "<tr><td colspan=2 id=topicCheck style='visibility:hidden'>"
+		buf.append("</SELECT><input type=submit name=start disabled=true></td></tr>");
+				
+		// Table of PracticExam topics
+		buf.append("<tr id=topicCheck style='display:none'><td colspan=2>"
 				+ "<TABLE>");
-		buf.append("<TR><TD COLSPAN=3 style='color:red'>Please select at least 3 topics for this practice exam:<br></TD></TR>");
+		buf.append("<TR><TD COLSPAN=3 style='color:red'><p>Please select at least 3 topics for this practice exam:<br></TD></TR>");
 		int i = 0;
 		for (Topic t : topics) {
-			if ("Hide".equals(t.orderBy)) continue;
+			if ("Hide".equals(t.orderBy) || (topicKey>0 && t.topicGroup%(topicKey*2)/topicKey==0 )) continue;
 			buf.append(i%3==0?"<TR><TD>":"<TD>");
 			buf.append("<INPUT TYPE=CHECKBOX NAME=TopicIds VALUE='" + t.id + "' "
 					+ "onClick=\"javascript: var checked=0; "
