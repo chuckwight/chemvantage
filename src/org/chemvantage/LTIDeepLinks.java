@@ -166,7 +166,7 @@ public class LTIDeepLinks extends HttpServlet {
 			Iterator<JsonElement> roles_iterator = roles.iterator();
 			while(roles_iterator.hasNext()){
 				String role = roles_iterator.next().getAsString().toLowerCase();
-				if (role.contains("instrictor") || role.contains("administrator")) authorized = true;
+				if (role.contains("instructor") || role.contains("administrator")) authorized = true;
 			}
 			if (!authorized) throw new Exception("You must be logged into your LMS in an instructor "
 					+ "or administrator role in order to select assignment resources for this class.");
