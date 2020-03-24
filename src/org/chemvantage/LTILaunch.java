@@ -357,9 +357,9 @@ public class LTILaunch extends HttpServlet {
 		
 		// Radio buttons to select the AssignmentType:
 		buf.append("<tr><td>"
-				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('topicKeySelect').style.visibility=visible; value=Quiz>Quiz</label><br>"
-				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('topicKeySelect').style.visibility=visible; value=Homework>Homework</label><br>"
-				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('topicKeySelect').style.visibility=visible; value=PracticeExam>Practice&nbsp;Exam</label><br>"
+				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('topicKeySelect').style.visibility='visible'; value=Quiz>Quiz</label><br>"
+				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('topicKeySelect').style.visibility='visible'; value=Homework>Homework</label><br>"
+				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('topicKeySelect').style.visibility='visible'; value=PracticeExam>Practice&nbsp;Exam</label><br>"
 				+ "</td>");
 		//========================== MODIFIED CODE ===========================
 		// Radio buttons to select TopicKey
