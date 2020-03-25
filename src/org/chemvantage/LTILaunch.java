@@ -67,15 +67,22 @@ public class LTILaunch extends HttpServlet {
 			throws ServletException, IOException {
 		try {			
 			if ("UpdateAssignment".equals(request.getParameter("UserRequest"))) {
-				User user = User.getUser(request.getParameter("Token"));  // may be null for LTI launch request
-				if (user==null) throw new Exception("Invalid user. Token may have expired.");
+				User user = User.getUser(request.getParameter("Token"));
+				if (user==null) throw new Exception("Unable to identify user because the token was expired or invalid.");
+				if (!user.isInstructor()) throw new Exception("User must be instructor to update thisd assignment.");
 				
-				Assignment myAssignment = updateAssignment(request,response);
-				ofy().save().entity(myAssignment).now();  // we will need this in a few milliseconds
+				Assignment myAssignment = updateAssignment(request,user);
+				boolean refresh = Boolean.parseBoolean(request.getParameter("Refresh"));
 				
-				// construct a redirectUrl to the new assignment
-				String redirectUrl = "/" + request.getParameter("AssignmentType") + "?Token=" + user.token;
-				response.sendRedirect(redirectUrl);
+				if (!refresh && myAssignment.isValid()) {
+					ofy().save().entity(myAssignment).now();  // we will need this in a few milliseconds					
+					String redirectUrl = "/" + request.getParameter("AssignmentType") + "?Token=" + user.token;
+					response.sendRedirect(redirectUrl);	
+				} else {  // send the user back to the resourcePickerForm
+					int topicKey = -1;
+					try {topicKey = Integer.parseInt(request.getParameter("TopicKey"));} catch (Exception e) {}
+					response.getWriter().println(Home.header + pickResourceForm(user,myAssignment,topicKey) + Home.footer);
+				}
 			} else if (request.getParameter("lti_message_type")!=null) { // handle LTI launch request for LTIv1p0 and LTIv1p1
 				basicLtiLaunchRequest(request,response);
 			} else if (request.getParameter("id_token")!=null) throw new Exception("Launch URL was incorrect.");
@@ -255,7 +262,7 @@ public class LTILaunch extends HttpServlet {
 				
 				debug.append("Redirecting to: " + redirectUrl);
 				response.sendRedirect(redirectUrl);
-			} else response.getWriter().println(Home.header + pickResourceForm(user,myAssignment) + Home.footer);
+			} else response.getWriter().println(Home.header + pickResourceForm(user,myAssignment,-1) + Home.footer);
 			return;
 
 		} catch (Exception e) {
@@ -263,12 +270,10 @@ public class LTILaunch extends HttpServlet {
 		}		
 	}
 	
-	Assignment updateAssignment(HttpServletRequest request, HttpServletResponse response) throws Exception {			
-		User user = User.getUser(request.getParameter("Token"));
-		if (user==null) throw new Exception("Unable to identify user because the token was expired or invalid.");
-		if (!user.isInstructor()) throw new Exception("User must be instructor to update thisd assignment.");
+	Assignment updateAssignment(HttpServletRequest request, User user) throws Exception {			
 		long assignmentId = user.getAssignmentId();
 		if (assignmentId == 0L) throw new Exception("Assignment ID was 0L.");
+		
 		Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 		a.assignmentType = request.getParameter("AssignmentType");
 		
@@ -290,20 +295,16 @@ public class LTILaunch extends HttpServlet {
 				}
 			} catch (Exception e) {}
 		}
-		//if (a.assignmentType != null) ofy().save().entity(a).now(); // going to need this is just a few milliseconds
 		return a;		
 	}
 
-	String pickResourceForm(User user,Assignment myAssignment) throws Exception {
-		return pickResourceForm(user,myAssignment,0);
-	}
-	
 	String pickResourceForm(User user,Assignment myAssignment,int topicKey) throws Exception {
 		StringBuffer buf = new StringBuffer();
 
+		// Print a nice banner
 		buf.append("<TABLE><TR><TD VALIGN=TOP><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
 				+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
-				+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>");
+				+ "<br><div align=right>An Open Education Resource</div></TD></TR></TABLE>");
 
 		buf.append("<h2>Assignment Setup Page</h2>"
 				+ "The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<p>");
@@ -315,88 +316,88 @@ public class LTILaunch extends HttpServlet {
 					+ "You will not be able to complete this assignment until after this has been done.");
 			return buf.toString();
 		}
-
-		// insert a script to show/hide the correct box
-		buf.append("<script>"
-				+ "function refreshTopics() {"
-				+ "  var asstyp = document.getElementByName('AssignmentType').value;"
-				+ "  var inpts = document.getElementsByName('TopicId');"
-				+ "  var cls = document.getElementByName('Cls').value;"
-				+ "  var labls=document.querySelectorAll('0');"
-				+ "  for (i=0;i<inpts.length;i++) {"
-				+ "    if (asstyp=='Quiz' || asstyp=='Homework') inpts[i].type=radio;"
-				+ "    else if (asstyp=='Practice Exam') inpts[i].type=checkbox;"
-				+ "  }"
-				+ "  for (i=0;i<labls.length;i++) {"
-				+ "    if (labls[i].hasClass(cls)) labls[i].style.display='';"
-				+ "    else labls[i].style.display='none';"
-				+ "  }"
-				+ "}"
-				+ "</script>");
-
-		List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
-		// Split the topics List into two separate lists corresponding to first-semester and second-semester topics (traditional)
-		// The orderBy attribute starts with a 1 or 2, except pre-semester assessments and hidden topics
-		List<Topic> sem1 = new ArrayList<Topic>();
-		List<Topic> sem2 = new ArrayList<Topic>();
-		for (Topic t : topics) {
-			if (t.orderBy.startsWith("1")) sem1.add(t);
-			else if (t.orderBy.startsWith("2")) sem2.add(t);
-		}
 		
-		// Print a table containing the following main sections:
-		// Top left (always visible) radio buttons to select the AssignmentType
-		// Top right (visible after selecting AssignmentType) radio buttons to select topicGroup (topics that align with a particular textbook)
-		// Below (visible after selecting topicGroup), a 2-column table of topics (semesters 1 & 2) with radio buttons or check boxes 
-		// appropriate to the AssignmentType. When changing topicGroup or AssignmentType, the topic inputs must be refreshed for the correct
-		// input type and visibility.
-		
-		buf.append("<table><form name=AssignmentForm method=POST>");
+		// Start building a form to select the assignment attributes:
+		buf.append("<form name=AssignmentForm method=POST>");
 		buf.append("<input type=hidden name=UserRequest value=UpdateAssignment>");
 		buf.append("<input type=hidden name=Token value='" + user.token + "'>");
+		buf.append("<input type=hidden name=Refresh value=false>");
 		
-		// Radio buttons to select the AssignmentType:
-		buf.append("<tr><td>"
-				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('topicKeySelect').style.visibility='visible'; value=Quiz>Quiz</label><br>"
-				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('topicKeySelect').style.visibility='visible'; value=Homework>Homework</label><br>"
-				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('topicKeySelect').style.visibility='visible'; value=PracticeExam>Practice&nbsp;Exam</label><br>"
-				+ "</td>");
-		//========================== MODIFIED CODE ===========================
-		// Radio buttons to select TopicKey
-		int maxClasses = 1;  // number of textbooks from which aligned topics can be selected. "class" refers to the CSS attribute of the input labels below
-		// Each textbook is associated with a class integer (text1 has class=1, text2 has class=2, etc.
-		// The topicKey for each class is equal to 2^(class-1), so the topicKey for text1 is 1, for text2 is 2, for text3 is 4, text4 is 8, etc.
-		// Each topic may be aligned with one or more textbooks and has a topicGroup attribute, which is an integer from 0 to 2^(maxClasses)-1;
-		// The topicGroup value is equal to the sum of the topicKey values for the texts with which it is aligned
-		// Examples: topicGroup=0 means no alignment, topicGroup=1 means alignment with text1 topicGroup=2 means alignment with text2
-		// topicGroup=3 means alignment with both text1 and text2, topicGroup=4 means alignment with text3
-		// In general, the topicGroup value includes a class iff topicGroup % (2^class) / 2^(class-1) == 1 where % and / are the integer modulus and div operators
-		// Alternatively, topicGroup includes a class if topicGroup % (2*topicKey) / topicKey == 1
-		// A topicKey value of 0 is special, and means "include all topics"
+		String assignmentType = myAssignment.assignmentType; // convenience variable
 		
-		// Create a set of radio buttons to select a topic group (by class value):
-		buf.append("<td id=topicKeySelect style='visibility:hidden'>"
-				+ "Select a topic group:<br>"
-				+ "<label><input type=radio name=Cls value=0 onClick=refreshTopics();>Show all topics</label><br>"
-				+ "<label><input type=radio name=Cls value=1 onClick=refreshTopics();>Show only topics for the OpenStax Chemistry 2e text</label><br>"
-				+ "</td></tr>");
+		buf.append("<div style='display:table'><div style='display:table-row'><div style='display:table-cell'>");
+		
+		buf.append("Select the type of assignment to create...<br>");
+		buf.append("<label><input type=radio name=AssignmentType " + ("Quiz".equals(assignmentType)?"checked ":" ") 
+				+ "onClick=document.getElementById('topicKeySelect').style.visibility='visible';this.form.submit(); value='Quiz'>Quiz</label><br>"
+				+ "<label><input type=radio name=AssignmentType " + ("Homework".equals(assignmentType)?"checked ":" ") 
+				+ "onClick=document.getElementById('topicKeySelect').style.visibility='visible';this.form.submit(); value='Homework'>Homework</label><br>"
+				+ "<label><input type=radio name=AssignmentType " + ("Practice Exam".equals(assignmentType)?"checked ":" ") 
+				+ "onClick=document.getElementById('topicKeySelect').style.visibility='visible';this.form.submit(); value='Practice Exam'>Practice&nbsp;Exam</label><p>");
+		buf.append("</div>");
+		
+		buf.append("<div id=topicKeySelect style='display:table-cell;visibility:" + (topicKey<0?"hidden":"visible") + "'>");
+		buf.append("and a group of topics to choose from:<br>");
+		buf.append("<label><input type=radio name=TopicKey value=0 " + (topicKey==0?"checked ":"")
+				+ "onClick=this.form.Refresh.value=true;this.form.submit();>Show all topics</label><br>"
+				+ "<label><input type=radio name=TopicKey value=1 "+ (topicKey==1?"checked ":"")
+				+ "onClick=this.form.Refresh.value=true;this.form.submit();>Show only topics for the OpenStax Chemistry 2e text</label><br>");
+		buf.append("</div></div></div>");
+		
+		// Load a javascript function to count the selected check boxes
+		buf.append("<script>"
+				+ "function countChecks() {"
+				+ "  var boxes = getElementsByName('TopicIds');"
+				+ "  var count=0;"
+				+ "  for (i=0;i<boxes.length;i++) if (boxes[i].checked==true) count++;"
+				+ "  document.getElementById('checksub').disabled=count<3;"
+				+ "  document.getElementById('checksub').value=count<3?'Select at least 3 topics for this assignment':'Select these topics';"
+				+ "}"
+				+ "</script>");	
+		
+		if (assignmentType != null && topicKey >= 0) { // present a list of topics
+			// Each textbook is associated with an integer topicKey in sequence of powers of 2 (text i has topicKey value of 2^(i-1)
+			// Each topic has a topicGroup attribute which is the sum of the sum of topicKeys for aligned texts, so topicGroup ranges from 0 to 2^(maxTKeys)-1;
+			// topicGroup=3 means alignment with both text1 and text2, topicGroup=4 means alignment with text3, and so on.
+			// In general, the topicGroup value includes a topicKey iff topicGroup % 2*topicKey / topicKey == 1 where % and / are the integer modulus and div operators
+			// A topicKey value of 0 is special, and means "include all topics"
 
-		// Create a second row of the table with two columns, one for each traditional semester topics
-		buf.append("<tr><td>");   // left column Chem1 topics		
-		for (Topic t : sem1) {
-			String cls = "0";
-			for (int c=1; c<maxClasses; c++) cls += t.topicGroup % (int)Math.pow(2,c) / (int)Math.pow(2,c-1) == 1?" " + c:"";
-			buf.append("<label class='" + cls + "' style='display:none'><input type=radio name=TopicId value=" + t.id + "></label><br>");
+			// Retrieve the entire list of topics from the datastore
+			List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
+			// Split the topics List into two separate lists corresponding to first-semester and second-semester topics (traditional)
+			// The orderBy attribute starts with a 1 or 2, except pre-semester assessments and hidden topics
+			List<Topic> sem1 = new ArrayList<Topic>();
+			List<Topic> sem2 = new ArrayList<Topic>();
+			for (Topic t : topics) {
+				if (t.orderBy.startsWith("1") && (topicKey==0 || t.topicGroup%(2*topicKey)/topicKey==1)) sem1.add(t);
+				else if (t.orderBy.startsWith("2") && (topicKey==0 || t.topicGroup%(2*topicKey)/topicKey==1)) sem2.add(t);
+			}
+			
+			switch (assignmentType) { // Create a table with two columns, one for each traditional semester topics
+			  case ("Practice Exam"): 
+				buf.append("Please select 3 or more topics for this exam:<br>");
+			  	buf.append("<table><tr><td>");   // left column Chem1 topics		
+			  	for (Topic t : sem1) buf.append("<label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks();>" + t.title + "</label><br>");
+			  	buf.append("</td><td>");  // right column Chem2 topics
+			  	for (Topic t : sem2) buf.append("<label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks();>" + t.title + "</label><br>");
+			  	buf.append("</td></tr></table>");
+			  	buf.append("<input type=submit id=checksub disabled=true value='Select at least 3 topics for this assignment'></form>");
+			  	break;
+
+			  default: // for Quiz and Homework assignments
+				buf.append("Please select one topic for this assignment:<br>");
+				buf.append("<table><tr><td>");   // left column Chem1 topics		
+				for (Topic t : sem1) buf.append("<label><input type=radio name=TopicId value=" + t.id + " onClick=this.form.radsub.disabled=false;>" + t.title + "</label><br>");
+				buf.append("</td><td>");  // right column Chem2 topics
+				for (Topic t : sem2) buf.append("<label><input type=radio name=TopicId value=" + t.id + " onClick=this.form.radsub.disabled=false;>" + t.title + "</label><br>");
+				buf.append("</td></tr></table>");
+				buf.append("<input type=submit name=radsub disabled=true value='Select this topic'></form>");			
+			}
 		}
-		buf.append("</td><td>");  // right column Chem2 topics
-		for (Topic t : sem2) {
-			String cls = "0";
-			for (int c=1; c<maxClasses; c++) cls += t.topicGroup % (int)Math.pow(2,c) / (int)Math.pow(2,c-1) == 1?" " + c:"";
-			buf.append("<label class='" + cls + "' style='display:none'><input type=radio name=TopicId value=" + t.id + "></label><br>");
-		}
-		buf.append("</td></tr></table>");
-		
-		
+		buf.append("</form>");
+		return buf.toString();
+	}
+
 /*		
 		//=========================== ORIGINAL CODE ==========================
 		// Radio buttons to select TopicGroup
@@ -443,9 +444,7 @@ public class LTILaunch extends HttpServlet {
 		buf.append("<script>inspectRadios()</script>");
 		//===================================================================
 */
-		return buf.toString();
-	}
-
+	
 	public void doError(HttpServletRequest request, HttpServletResponse response, String s, String message, Exception e)
 	throws java.io.IOException {
 		String return_url = request.getParameter("launch_presentation_return_url");
