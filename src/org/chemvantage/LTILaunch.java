@@ -302,11 +302,17 @@ public class LTILaunch extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 
 		// Print a nice banner
-		buf.append("<div style='display:table'><div style='display:table-row'><div syle='display:table-cell;vertical-align=top'>"
+		buf.append("<img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo' align=left>"
+				+ "<span>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
+				+ "<br>An Open Education Resource</span>");
+		
+		
+/*	
+		buf.append("<div style='display:table'><div style='display:table-row'><div syle='display:table-cell'>"
 				+ "<img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></div>"
-				+ "<div style='display:table-cell'>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
+				+ "<div style='display:table-cell;padding:25px'>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
 				+ "<br><div align=right>An Open Education Resource</div></div></div></div>");
-
+*/
 		buf.append("<h2>Assignment Setup Page</h2>"
 				+ "The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<p>");
 
