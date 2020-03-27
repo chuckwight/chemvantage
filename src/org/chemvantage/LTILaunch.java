@@ -306,14 +306,7 @@ public class LTILaunch extends HttpServlet {
 				+ "<span>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
 				+ "<br>An Open Education Resource</span>");
 		
-		
-/*	
-		buf.append("<div style='display:table'><div style='display:table-row'><div syle='display:table-cell'>"
-				+ "<img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></div>"
-				+ "<div style='display:table-cell;padding:25px'>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
-				+ "<br><div align=right>An Open Education Resource</div></div></div></div>");
-*/
-		buf.append("<h2>Assignment Setup Page</h2>"
+				buf.append("<h2>Assignment Setup Page</h2>"
 				+ "The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<p>");
 
 		if (user.isInstructor()) buf.append("Please select the ChemVantage assignment that should be associated with this link. "
@@ -443,53 +436,6 @@ public class LTILaunch extends HttpServlet {
 		buf.append("</form>");
 		return buf.toString();
 	}
-
-	/*		
-		//=========================== ORIGINAL CODE ==========================
-		// Radio buttons to select TopicGroup
-		buf.append("<td id=topicKeySelect style='visibility:hidden'>"
-				+ "<label><input type=radio name=TopicKey value=0" + (topicKey==0?" checked":"") + " onClick=this.form.RefreshTopics.value='true';this.form.submit();>Show all topics</label><br>"
-				+ "<label><input type=radio name=TopicKey value=1" + (topicKey==1?" checked":"") + " onClick=this.form.RefreshTopics.value='true';this.form.submit();>Show topics aligned with OpenStax Chemistry 2e text</label><br>"
-				+ "<input type=hidden name=RefreshTopics value=false></td></tr>");
-		
-		// Select box to select the Quiz or Homework topic
-		buf.append("<tr id=topicSelect style='display:none'><td colspan=2>"
-				+ "<p><FONT COLOR=RED>Please select one topic for this quiz or homework assignment.</FONT><br>"
-				+"<SELECT NAME=TopicId onChange=document.AssignmentForm.start.disabled=(document.AssignmentForm.TopicId.selectedIndex==0);>"
-				+ "<OPTION Value='0'" + (myAssignment.topicId==0L?" SELECTED":"") + ">Select a topic</OPTION>");			
-
-		for (Topic t : topics) { //if (!t.orderBy.equals("Hide") && (topicGroup==0 || t.topicGroup%(topicGroup+1)/topicGroup==1)) {
-			if ("Hide".equals(t.orderBy) || (topicKey>0 && t.topicGroup%(topicKey*2)/topicKey==0)) continue;
-			buf.append("<OPTION VALUE='" + t.id + "'" + (t.id==myAssignment.topicId?" SELECTED":"") + ">" + t.title + "</OPTION>");			 
-		}
-		buf.append("</SELECT><input type=submit name=start disabled=true></td></tr>");
-				
-		// Table of PracticExam topics
-		buf.append("<tr id=topicCheck style='display:none'><td colspan=2>"
-				+ "<TABLE>");
-		buf.append("<TR><TD COLSPAN=3 style='color:red'><p>Please select at least 3 topics for this practice exam:<br></TD></TR>");
-		int i = 0;
-		for (Topic t : topics) {
-			if ("Hide".equals(t.orderBy) || (topicKey>0 && t.topicGroup%(topicKey*2)/topicKey==0 )) continue;
-			buf.append(i%3==0?"<TR><TD>":"<TD>");
-			buf.append("<INPUT TYPE=CHECKBOX NAME=TopicIds VALUE='" + t.id + "' "
-					+ "onClick=\"javascript: var checked=0; "
-					+ "for(i=0;i<document.AssignmentForm.TopicIds.length;i++) if(document.AssignmentForm.TopicIds[i].checked) checked++;"
-					+ "document.AssignmentForm.begin.disabled=(checked<3);"
-					+ "if(document.AssignmentForm.begin.disabled) document.AssignmentForm.begin.value='Select at least 3 topics';"
-					+ "else document.AssignmentForm.begin.value='Submit';\">" 
-					+ t.title + "<br>\n");
-			buf.append(i%3==2?"</TD></TR>\n":"</TD>");
-			i++;
-		}
-		buf.append("</TABLE>"
-				+"<br>The practice exam is designed to be completed in 60 minutes. "
-				+"<INPUT TYPE=SUBMIT NAME=begin DISABLED=true VALUE='Select at least 3 topics'>"
-				+ "</td></tr>"
-				+ "</form></table>");
-		buf.append("<script>inspectRadios()</script>");
-		//===================================================================
-*/
 	
 	public void doError(HttpServletRequest request, HttpServletResponse response, String s, String message, Exception e)
 	throws java.io.IOException {

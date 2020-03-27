@@ -48,7 +48,6 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -85,14 +84,24 @@ public class LTIv1p3Launch extends HttpServlet {
 			throws ServletException, IOException {
 		try {
 			if (request.getParameter("id_token") != null) ltiv1p3LaunchRequest(request,response);  // handle LTI v1p3 launch request			
-			else { // POST the assignmentType and topicIds			
-				String token = updateAssignment(request,response);   
-				if (token == null) throw new Exception("Assignment update failed.");
-				else {
-					String redirectUrl = "/" + request.getParameter("AssignmentType") + "?Token=" + token;
-					response.sendRedirect(redirectUrl);
+			else if ("UpdateAssignment".equals(request.getParameter("UserRequest"))) { // POST the assignmentType and topicIds			
+				User user = User.getUser(request.getParameter("Token"));
+				if (user==null) throw new Exception("Unable to identify user because the token was expired or invalid.");
+				if (!user.isInstructor()) throw new Exception("User must be instructor to update thisd assignment.");
+
+				Assignment myAssignment = updateAssignment(request,user);
+				boolean refresh = Boolean.parseBoolean(request.getParameter("Refresh"));
+
+				if (!refresh && myAssignment.isValid()) {
+					ofy().save().entity(myAssignment).now();  // we will need this in a few milliseconds					
+					String redirectUrl = "/" + request.getParameter("AssignmentType") + "?Token=" + user.token;
+					response.sendRedirect(redirectUrl);	
+				} else {  // send the user back to the resourcePickerForm
+					int topicKey = -1;
+					try {topicKey = Integer.parseInt(request.getParameter("TopicKey"));} catch (Exception e) {}
+					response.getWriter().println(Home.header + pickResourceForm(user,myAssignment,topicKey) + Home.footer);
 				}
-			}
+			}		
 		} catch (Exception e) {	
 			response.sendError(401, e.getMessage());
 		}
@@ -219,6 +228,9 @@ public class LTIv1p3Launch extends HttpServlet {
 
 			myAssignment.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
 
+			// Try to retrieve the lti_ags_lineiten_url from the platform and cache it in myAssignment
+			if (myAssignment.lti_ags_lineitem_url==null) myAssignment.lti_ags_lineitem_url = LTIMessage.getLineItemUrl(d, myAssignment, lti_ags_lineitems_url);
+			
 			// If required, save the updated Assignment entity now so its id will be accessible
 			if (myAssignment.id==null || !myAssignment.equivalentTo(original_a)) ofy().save().entity(myAssignment).now();
 			debug.append("assignment saved OK...");
@@ -229,7 +241,7 @@ public class LTIv1p3Launch extends HttpServlet {
 
 			// If this is the first time this Assignment has been used, it may be missing the assignmentType and topicId(s)
 			if (myAssignment.assignmentType == null) {  //Show the the pickResource form:									
-				response.getWriter().println(Home.header + pickResourceForm(user,myAssignment,lti_ags_lineitems_url) + Home.footer);
+				response.getWriter().println(Home.header + pickResourceForm(user,myAssignment,0) + Home.footer);
 				return;
 			} else {  // redirect the user's browser to the assignment
 				response.sendRedirect("/" + myAssignment.assignmentType + "?Token=" + user.token);
@@ -328,20 +340,23 @@ public class LTIv1p3Launch extends HttpServlet {
 		}
 		return user;
 	}
-
-	String updateAssignment(HttpServletRequest request, HttpServletResponse response) throws Exception {
-			User user = User.getUser(request.getParameter("Token"));
-			if (!user.isInstructor()) throw new Exception("User must be instructor to choose the assignment.");
-			Long assignmentId = user.getAssignmentId();
-			if (assignmentId==null) throw new Exception("Assignment not found.");
-			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
-			a.assignmentType = request.getParameter("AssignmentType");
-			if (a.assignmentType.contentEquals("Quiz") || a.assignmentType.contentEquals("Homework")) {
+	
+	Assignment updateAssignment(HttpServletRequest request, User user) throws Exception {			
+		long assignmentId = user.getAssignmentId();
+		if (assignmentId == 0L) throw new Exception("Assignment ID was 0L.");
+		
+		Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+		a.assignmentType = request.getParameter("AssignmentType");
+		
+		if (a.assignmentType.contentEquals("Quiz") || a.assignmentType.contentEquals("Homework")) {
+			try {
 				a.topicId = Long.parseLong(request.getParameter("TopicId"));
-			 	a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
-			} else if (a.assignmentType.contentEquals("PracticeExam")) {
+				if (a.topicId>0) a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
+			} catch (Exception e) {}
+		} else if (a.assignmentType.contentEquals("PracticeExam")) {
+			try {
 				String[] topicIds = request.getParameterValues("TopicIds");
-				if (topicIds==null || topicIds.length<3) throw new Exception();
+				if (topicIds==null || topicIds.length<3) throw new Exception("You must choose at least three topics for this practice exam.");
 				a.topicIds = new ArrayList<Long>();
 				a.questionKeys = new ArrayList<Key<Question>>();
 				for (int i=0;i<topicIds.length;i++) {
@@ -349,136 +364,147 @@ public class LTIv1p3Launch extends HttpServlet {
 					a.topicIds.add(tId);
 					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tId).keys().list());
 				}
-			}
-			if (a.lti_ags_lineitem_url==null) {
-				Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
-				String lti_ags_lineitems_url = request.getParameter("LtiAgsLineitemsUrl");
-				a.lti_ags_lineitem_url = LTIMessage.getLineItemUrl(d, a, lti_ags_lineitems_url);
-			}
-			ofy().save().entity(a).now(); // going to need this is just a few milliseconds
-			return user.token;
+			} catch (Exception e) {}
+		}
+		return a;		
 	}
-
-	String pickResourceForm(User user,Assignment myAssignment,String lti_ags_lineitems_url) {
-		// This method is launched when the creation of a new assignment in a platform results in an
-		// LtiResourceLink launch request, and the user (instructor) is asked to identify a ChemVantage
-		// resource to be associate with the LtiResourceLink. This form allows the instructor to 
-		// select one Quiz topic or one Homework topic or multiple topics to be associated with one 
-		// Practice Exam.
-		
+	
+	String pickResourceForm(User user,Assignment myAssignment,int topicKey) throws Exception {
 		StringBuffer buf = new StringBuffer();
 
-		try {			
-			buf.append("<TABLE><TR><TD VALIGN=TOP><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
-					+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
-					+ "<br><div align=right>An Open Education Resource</TD></TR></TABLE>");
-			
-			buf.append("<h2>Assignment Setup Page</h2>"
-					+ "The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<p>");
-					
-			if (user.isInstructor()) buf.append("Please select the ChemVantage assignment that should be associated with this link. "
-					+ "ChemVantage will remember this choice and send students directly to the assignment.<p>");
-			else { // in case a student activates the link prior to the instructor
-				buf.append("<b>Please ask your instructor to click the LMS assignment link to make this missing association.</b> "
-						+ "You will not be able to complete this assignment until after this has been done.");
-				return buf.toString();
-			}
+		// Print a nice banner
+		buf.append("<img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo' align=left>"
+				+ "<span>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
+				+ "<br>An Open Education Resource</span>");
 
-			// insert javascript to show/hide the correct table and enable/disable submit buttons
-			buf.append("<script>"
-					+ "function inspectRadios() { "
-					+ "  var radios = document.getElementsByName('AssignmentType');"
-					+ "  if(radios[0].checked) {"
-					+ "    document.getElementById('tableRadio').style.display='block';"
-					+ "    document.getElementById('tableCheck').style.display='none';"
-					+ "    document.getElementById('QHinstruct').innerHTML='The quiz is designed to be completed in 15 minutes. ';"
-					+ "  }"
-					+ "  if(radios[1].checked) {"
-					+ "    document.getElementById('tableRadio').style.display='block';"
-					+ "    document.getElementById('tableCheck').style.display='none';"
-					+ "    document.getElementById('QHinstruct').innerHTML='Each homework assignment has about 10 numeric problems. ';"
-					+ "  }"
-					+ "  else if(radios[2].checked) {"
-					+ "    document.getElementById('tableRadio').style.display='none';"
-					+ "    document.getElementById('tableCheck').style.display='block';"
-					+ "  }"
-					+ "}"
-					+ "function enableCheckSubmit() {"
-					+ "  var checked=0;"
-					+ "  for (i=0;i<document.AssignmentForm.TopicIds.length;i++) if(document.AssignmentForm.TopicIds[i].checked) checked++;"
-					+ "  document.AssignmentForm.begin.disabled=(checked<3);"
-					+ "  if (document.AssignmentForm.begin.disabled) document.AssignmentForm.begin.value='Select at least 3 topics';"
-					+ "  else document.AssignmentForm.begin.value='Create this Practice Exam';"
-					+ "}"
-					+ "function enableRadioSubmit() {"
-					+ "  document.AssignmentForm.start.disabled=false;"
-					+ "  document.AssignmentForm.start.value='Create this assignment';"
-					+ "}"
-					+ "</script>");
+		buf.append("<h2>Assignment Setup Page</h2>"
+				+ "The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<p>");
 
-			buf.append("<form name=AssignmentForm method=POST>");
-			buf.append("<input type=hidden name=UserRequest value=UpdateAssignment>");
-			buf.append("<input type=hidden name=Token value=" + user.token + ">");
-			buf.append("<input type=hidden name=LtiAgsLineitemsUrl value='" + lti_ags_lineitems_url + "'>");
-			
-			// Create the top of the form to select the assignmentype
-			buf.append("<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Quiz>Quiz</label><br>"
-					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=Homework>Homework</label><br>"
-					+ "<label><input type=radio name=AssignmentType onClick='inspectRadios();' value=PracticeExam>Practice&nbsp;Exam</label>"
-					+ "<p>");
-			
-			List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
-			
-			// Sort the list of topics by semester using the first character of the orderBy attribute
-			List<Topic> topics1 = new ArrayList<Topic>();
-			List<Topic> topics2 = new ArrayList<Topic>();
-			for (Topic t : topics) {
-				if (t.orderBy.startsWith("1")) topics1.add(t);
-				else if (t.orderBy.startsWith("2")) topics2.add(t);
-			}
-			
-			ListIterator<Topic> semester1 = topics1.listIterator();
-			ListIterator<Topic> semester2 = topics2.listIterator();
-		
-			// Using the topics List above, create 2 tables. Each has first-semester topics in the left column and second-semester
-			// topics in the right column. The tables are identical except one has radio buttons and the other checkboxes.
-			StringBuffer tableRadio = new StringBuffer();
-			StringBuffer tableCheck = new StringBuffer();
-			
-			tableRadio.append("<table id=tableRadio style='display:none'>");
-			tableCheck.append("<table id=tableCheck style='display:none'>");
-			tableRadio.append("<tr><td colspan=2><font color=red>Select one of the following topics for this assignment:</font></td></tr>");
-			tableCheck.append("<tr><td colspan=2><font color=red>Select at least three topics for this practice exam:</font></td></tr>");
-			while (semester1.hasNext() || semester2.hasNext()) {
-				tableRadio.append("<tr><td>"); // column 1 has first-semester topics
-				tableCheck.append("<tr><td>"); // column 1 has first-semester topics
-				if (semester1.hasNext()) {
-					Topic t = semester1.next();
-					tableRadio.append("<label><input type=radio name=TopicId onClick=enableRadioSubmit(); value=" + t.id + ">" + t.title + "</label>");
-					tableCheck.append("<label><input type=checkbox name=TopicIds onClick=enableCheckSubmit(); value=" + t.id + ">" + t.title + "</label>");
-				}
-				tableRadio.append("</td><td>"); // column 2 has second-semester topics
-				tableCheck.append("</td><td>"); // column 2 has second-semester topics
-				if (semester2.hasNext()) {
-					Topic t = semester2.next();
-					tableRadio.append("<label><input type=radio name=TopicId onClick=enableRadioSubmit(); value=" + t.id + ">" + t.title + "</label>");
-					tableCheck.append("<label><input type=checkbox name=TopicIds onClick=enableCheckSubmit(); value=" + t.id + ">" + t.title + "</label>");
-				}
-				tableRadio.append("</td></tr>"); // end of row
-				tableCheck.append("</td></tr>"); // end of row
-			}
-			tableRadio.append("<tr><td colspan=2><span id=QHinstruct></span><input type=submit name=start disabled=true value='Select one topic'></td></tr>");
-			tableCheck.append("<tr><td colspan=2>The practice exam is designed to be completed in 60 minutes. <input type=submit name=begin disabled=true value='Select at least 3 topics'></td></tr>");
-			
-			tableRadio.append("</table>");
-			tableCheck.append("</table>");
-			
-			buf.append(tableRadio);
-			buf.append(tableCheck);
-			buf.append("</form>");
-		} catch (Exception e) {
-			return e.getMessage() + "<hr>" + buf.toString();
+		if (user.isInstructor()) buf.append("Please select the ChemVantage assignment that should be associated with this link. "
+				+ "ChemVantage will remember this choice and send students directly to the assignment.<p>");
+		else {
+			buf.append("<b>Please ask your instructor to click the LMS assignment link to make this missing association.</b> "
+					+ "You will not be able to complete this assignment until after this has been done.");
+			return buf.toString();
 		}
+
+		// Start building a form to select the assignment attributes:
+		// The form has 4 sections:
+		// 1. A group of radio buttons to specify the AssignmentType (always visible)
+		// 2. A group of radio buttons (or drop-down selector) to specify the TopicKey (visible when AssignmentType is selected)
+		// 3. A group of radio buttons to select a single topic for Quiz or Homework assignment (visible when AssignmentType is Quiz or Homework)
+		// 4. A group of checkboxes to select 3 or more topics for a Practice Exam (visible when AssignmentType is PracticeExam)
+		// Clicking any AssignmentType button or loading the page with a valid AssignmentType makes the TopicKey set (2) visible
+		// and makes the relevant table of radio buttons (3) or checkboxes (4) visible (and clears and hides the opposite one).
+		// Clicking any TopicKey button reloads the page from the server with a modified set of topics
+		
+		buf.append("<form name=AssignmentForm method=POST>");
+		buf.append("<input type=hidden name=UserRequest value=UpdateAssignment>");
+		buf.append("<input type=hidden name=Token value='" + user.token + "'>");
+		buf.append("<input type=hidden name=Refresh value=false>");
+		
+		String assignmentType = myAssignment.assignmentType; // convenience variable; may be null for new Assignment
+		
+		// Build a table for Parts 1 and 2 (side by side in 1 row)
+		buf.append("<div style='display:table'><div style='display:table-row'><div style='display:table-cell'>");
+		buf.append("Select the type of assignment to create...<br>");
+		buf.append("<label><input type=radio name=AssignmentType " + ("Quiz".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='Quiz'>Quiz</label><br>"
+				+ "<label><input type=radio name=AssignmentType " + ("Homework".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='Homework'>Homework</label><br>"
+				+ "<label><input type=radio name=AssignmentType " + ("PracticeExam".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='PracticeExam'>Practice&nbsp;Exam</label><p>");
+		buf.append("</div>");
+		
+		// Put Part 2 in a cell on the right side of the first row
+		buf.append("<div id=topicKeySelect style='display:table-cell;visibility:" + (assignmentType==null?"hidden":"visible") + "'>");
+		buf.append("and a group of topics to choose from:<br>");
+		buf.append("<label><input type=radio name=TopicKey value=0 " + (topicKey==0?"checked ":"") + "onClick=this.form.Refresh.value=true;this.form.submit();>Show all topics</label><br>"
+				+ "<label><input type=radio name=TopicKey value=1 "+ (topicKey==1?"checked ":"") + "onClick=this.form.Refresh.value=true;this.form.submit();>Show topics for the OpenStax Chemistry 2e</label><br>");
+		buf.append("</div></div></div>");
+		// End of top table
+		
+		// Load a javascript function to count or clear the selected check boxes and radio buttons
+		buf.append("<script>"
+				+ "function countChecks() {"
+				+ "  var boxes = document.getElementsByName('TopicIds');"
+				+ "  var count=0;"
+				+ "  for (i=0;i<boxes.length;i++) if (boxes[i].checked==true) count++;"
+				+ "  if (count<3) {"
+				+ "    document.getElementById('checksub').disabled=true;"
+				+ "    document.getElementById('checksub').value='Select at least 3 topics for this assignment';"
+				+ "  } else {"
+				+ "    document.getElementById('checksub').disabled=false;"
+				+ "    document.getElementById('checksub').value='Create the exam from the selected topics';"
+				+ "  }"
+				+ "}"
+				+ "function showTopics(type) {"
+				+ "  document.getElementById('topicKeySelect').style.visibility='visible';"
+				+ "  var aTypes = document.getElementsByName('AssignmentType');"
+				+ "  for (i=0;i<aTypes.length;i++) if (aTypes[i].checked) type = (aTypes[i].value=='PracticeExam'?'check':'radio');"
+				+ "  if (type == 'radio') {"
+				+ "    document.getElementById('radioSelect').style.display='block';"
+				+ "    document.getElementById('checkSelect').style.display='none';"
+				+ "    clearChecks();"
+				+ "  } else if (type = 'check') {"
+				+ "    document.getElementById('radioSelect').style.display='none';"
+				+ "    document.getElementById('checkSelect').style.display='block';"
+				+ "    clearRadios();"
+				+ "  }"
+				+ "}"
+				+ "function clearChecks() {"
+				+ "  var boxes = document.getElementsByName('TopicIds');"
+				+ "  for (i=0;i<boxes.length;i++) boxes[i].checked=false;"
+				+ "}"
+				+ "function clearRadios() {"
+				+ "  var boxes = document.getElementsByName('TopicId');"
+				+ "  for (i=0;i<boxes.length;i++) boxes[i].checked=false;"
+				+ "}"
+				+ "</script>");	
+
+		// Each textbook is associated with an integer topicKey in sequence of powers of 2 so that for each text i, topicKey[i] = 2^(i-1) where i=1,2,3,...,N
+		// Each topic has a topicGroup attribute which is the sum of the sum of topicKeys for aligned texts, so topicGroup ranges from 0 to 2^(N)-1
+		// topicGroup=3 means alignment with both text1 and text2, topicGroup=4 means alignment only with text3, and so on.
+		// In general, the topicGroup value includes a topicKey iff topicGroup % 2*topicKey / topicKey == 1 where % and / are the integer modulus and div operators
+		// A topic having topicGroup = 0 means that the topic does not align with any particular text, but can be viewed if topicKey = 0 (meaning view all topics).
+
+		// Retrieve the entire list of topics from the datastore
+		List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
+		// Split the topics List into two separate lists corresponding to first-semester and second-semester topics (traditional)
+		// The orderBy attribute starts with a 1 or 2, except pre-semester assessments and hidden topics
+		List<Topic> sem1 = new ArrayList<Topic>();
+		List<Topic> sem2 = new ArrayList<Topic>();
+		for (Topic t : topics) {
+			if (t.orderBy.startsWith("1") && (topicKey==0 || t.topicGroup%(2*topicKey)/topicKey==1)) sem1.add(t);
+			else if (t.orderBy.startsWith("2") && (topicKey==0 || t.topicGroup%(2*topicKey)/topicKey==1)) sem2.add(t);
+		}
+
+		String selectorType = "";
+		if ("Quiz".equals(assignmentType) || "Homework".equals(assignmentType)) selectorType = "radio";
+		else if ("PracticeExam".equals(assignmentType)) selectorType = "check";
+		
+		// Create a table with radio buttons for Quiz or Homework assignments
+		buf.append("<div id=radioSelect style='display:" + (selectorType.equals("radio")?"block":"none") + "'>");  // big box containing radio buttons
+		buf.append("<font color=red>Please select one topic for this assignment:</font><br>");
+		buf.append("<div style='display:table'>"); // start table of radio buttons
+		buf.append("<div style='display:table-row'><div style='display:table-cell'>");   // left column Chem1 topics		
+		for (Topic t : sem1) buf.append("<label><input type=radio name=TopicId value=" + t.id + " onClick=this.form.radsub.disabled=false;>" + t.title + "</label><br>");
+		buf.append("</div><div style='display:table-cell'>");  // right column Chem2 topics
+		for (Topic t : sem2) buf.append("<label><input type=radio name=TopicId value=" + t.id + " onClick=this.form.radsub.disabled=false;>" + t.title + "</label><br>");
+		buf.append("</div></div></div>");  // end of cell, row, table
+		buf.append("<input type=submit name=radsub disabled=true value='Select this topic'>"); // submit button for radios
+		buf.append("</div>"); // end of big box with radio buttons
+
+		// Create a table with check boxes for Practice Exam assignments
+		buf.append("<div id=checkSelect style='display:" + (selectorType.equals("check")?"block":"none") + "'>"); // big box containing check boxes
+		buf.append("<font color=red>Please select 3 or more topics for this exam:</font><br>");
+		buf.append("<div style='display:table'>"); // start table of check boxes
+		buf.append("<div style='display:table-row'><div style='display:table-cell'>");   // left column Chem1 topics		
+		for (Topic t : sem1) buf.append("<label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks();>" + t.title + "</label><br>");
+		buf.append("</div><div style='display:table-cell'>");  // right column Chem2 topics
+		for (Topic t : sem2) buf.append("<label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks();>" + t.title + "</label><br>");
+		buf.append("</div></div></div>");  // end of cell, row, table
+		buf.append("<input type=submit id=checksub disabled=true value='Select at least 3 topics for this assignment'><br>");
+		buf.append("</div>"); // end of big box with check boxes
+		
+		buf.append("</form>");
 		return buf.toString();
 	}
-}
+}	
