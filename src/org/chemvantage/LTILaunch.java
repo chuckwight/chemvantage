@@ -128,6 +128,12 @@ public class LTILaunch extends HttpServlet {
 			try {
 				tc = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).safe();
 				if (tc.secret==null) throw new Exception("Shared secret was not found in the ChemVantage database.");
+				Date now = new Date();
+				Date yesterday = new Date(now.getTime()-86400000L);  // 24 hrs ago
+				if (tc.lastLogin==null || tc.lastLogin.before(yesterday)) {
+					tc.lastLogin = now;
+					ofy().save().entity(tc);  // update the lastLogin value
+				}
 			} catch (Exception e) {
 				throw new Exception("Invalid oauth_consumer_key. Please verify that the oauth_consumer_key is entered into your LMS exactly as you are registered with ChemVantage.");
 			}
@@ -174,7 +180,7 @@ public class LTILaunch extends HttpServlet {
 				        .build().verify(tool_state);
 					if (tc.lti_version==null || !tc.lti_version.equals("LTI-1p1p2")) {
 						tc.lti_version="LTI-1p1p2";
-						ofy().save().entity(tc);
+						ofy().save().entity(tc);  // should have to do this only once
 				}
 				} catch (Exception e) {
 					throw new Exception("Tool state could not be validated.");

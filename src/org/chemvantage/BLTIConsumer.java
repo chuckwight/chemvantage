@@ -24,6 +24,7 @@ import java.util.Random;
 
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
 
 @Entity
 public class BLTIConsumer {
@@ -36,6 +37,7 @@ public class BLTIConsumer {
 	String org_url;
 	String lms;
 	Date created;
+	@Index Date lastLogin;
 
 	BLTIConsumer() {}
 
@@ -52,21 +54,7 @@ public class BLTIConsumer {
 		this.email = email;
 		this.created = new Date();
 	}
-/*	
-	BLTIConsumer(String key,String secret,String tool_consumer_guid,String version) {
-		this.oauth_consumer_key = key;
-		this.secret = secret;
-		this.tool_consumer_guid = tool_consumer_guid;
-		this.lti_version = version;
-		this.created = new Date();
-		this.capabilities_enabled = new ArrayList<String>();
-		this.tool_service = new ArrayList<String>();
-		}
 	
-	static void create(String oauth_consumer_key) {
-		ofy().save().entity(new BLTIConsumer(oauth_consumer_key)).now();
-	}
-*/	
 	static void delete(String oauth_consumer_key) {
 		ofy().delete().type(BLTIConsumer.class).id(oauth_consumer_key);
 	}
@@ -97,61 +85,4 @@ public class BLTIConsumer {
 		}
 		return c.secret;
 	}
-/*	
-	void putToolProxyURL(String url) {
-		this.toolProxyURL = url;
-	}
-	
-	String getToolProxyURL() {
-		return this.toolProxyURL;
-	}
-	
-	void putToolSettingsURL(String url) {
-		this.toolSettingsURL = url;
-	}
-
-	String getToolSettingsURL() {
-		return this.toolSettingsURL;
-	}
-
-	void putResultServiceFormat(String format) {
-		this.resultServiceFormat = format;
-	}
-	
-	String getResultServiceFormat() {
-		return this.resultServiceFormat;
-	}
-
-	static String getResultServiceFormat(String oauth_consumer_key) {
-		BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).now();
-		return c==null?null:c.resultServiceFormat;
-	}
-	
-	void putResultServiceEndpoint(String endpoint) {
-		this.resultServiceEndpoint= endpoint;
-	}
-	
-	String getResultServiceEndpoint() {
-		return this.resultServiceEndpoint;
-	}
-		
-	boolean supportsResultService() {
-		if (this.resultServiceEndpoint !=null && this.resultServiceFormat != null) return true;
-		return false;
-	}
-	
-	List<String> getToolService() {
-		if (this.tool_service == null) tool_service = new ArrayList<String>();
-		return this.tool_service;
-	}
-	
-	void putCapabilities(List<String>capabilities_enabled) {
-		this.capabilities_enabled = capabilities_enabled;
-	}
-	
-	List<String> getCapabilities() {
-		if (this.capabilities_enabled == null) capabilities_enabled = new ArrayList<String>();
-		return this.capabilities_enabled;
-	}
-*/
 }

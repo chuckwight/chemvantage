@@ -21,6 +21,8 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Date;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.HttpConstraint;
@@ -113,7 +115,18 @@ public class Admin extends HttpServlet {
 				}
 			}
 
-			buf.append("<h3>Basic LTI Consumer</h3>");
+			buf.append("<h3>Active Domains (past 30 days)</h3>");
+			Date lastMonth = new Date(new Date().getTime()-2592000000L);
+			List<BLTIConsumer> cons = ofy().load().type(BLTIConsumer.class).filter("lastLogin >",lastMonth).list();
+			for (BLTIConsumer c : cons) {
+				buf.append(c.oauth_consumer_key + " (created " + c.created + ")<br>");
+			}
+			List<Deployment> deps = ofy().load().type(Deployment.class).filter("lastLogin >",lastMonth).list();
+			for (Deployment d : deps) {
+				buf.append(d.platform_deployment_id + " (created " + d.created + ")<br>");
+			}
+			
+			buf.append("<h3>Basic LTI Consumer Search</h3>");
 			int nConsumers = ofy().load().type(BLTIConsumer.class).count();
 			
 			if (searchString==null || searchString.isEmpty()) searchString = "(show all)";  // default search

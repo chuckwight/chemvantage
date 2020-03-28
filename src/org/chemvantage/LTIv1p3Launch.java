@@ -46,6 +46,7 @@ import java.net.URL;
 import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
@@ -138,6 +139,9 @@ public class LTIv1p3Launch extends HttpServlet {
 			
 			// Process deployment claims:
 			try {
+				Date now = new Date();
+				Date yesterday = new Date(now.getTime()-86400000L); // 24 hrs ago
+				if (d.lastLogin==null || d.lastLogin.before(yesterday)) d.lastLogin = now;
 				JsonObject platform = claims.get("https://purl.imsglobal.org/spec/lti/claim/tool_platform").getAsJsonObject();
 				d.email = platform.get("email_contact").getAsString();
 				d.lms_type = platform.get("product_family_code").getAsString() + " version " + platform.get("version").getAsString();
