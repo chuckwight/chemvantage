@@ -264,6 +264,8 @@ public class LTIRegistration extends HttpServlet {
 				}
 				
 				buf.append("Here are your LTI registration credentials:<p>"
+						+ "Tool Name: ChemVantage<br>"
+						+ "Description: ChemVantage is an Open Education Resource for teachig and learning college-level General Chemistry.<br>"
 						+ "Launch URL: " + jwt.getIssuer() + "/lti<br>"
 						+ "Consumer Key: " + con.oauth_consumer_key + "<br>"
 						+ "Shared Secret: " + con.secret + "<p>");
@@ -276,6 +278,8 @@ public class LTIRegistration extends HttpServlet {
 						+ "<a href=https://www.imsglobal.org/lti-security-announcement-and-deprecation-schedule-july-2019>deprecation schedule</a> "
 						+ "for this version of LTI registrations. At a minimum, your LMS must support "
 						+ "LTI v1.1.2 for this connection to work after December 31, 2020."
+						+ "<li>After registering ChemVantage in your LMS, simply create an assignment in the LMS and configure the submission to be "
+						+ "from a third-party app (ChemVantage). Suggested point values are 10 for each quiz or homework set, 100 for practice exams."
 						+ "</ol>");
 				buf.append("If you need assistance for this registration, please contact me at admin@chemvantage.org<p>- Chuck Wight");
 			
