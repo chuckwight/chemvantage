@@ -115,7 +115,7 @@ public class Admin extends HttpServlet {
 				}
 			}
 
-			buf.append("<h3>Active Domains (past 30 days)</h3>");
+			buf.append("<h3>Recent Activity (past 30 days)</h3>");
 			Date lastMonth = new Date(new Date().getTime()-2592000000L);
 			List<BLTIConsumer> cons = ofy().load().type(BLTIConsumer.class).filter("lastLogin >",lastMonth).list();
 			for (BLTIConsumer c : cons) {
@@ -125,6 +125,7 @@ public class Admin extends HttpServlet {
 			for (Deployment d : deps) {
 				buf.append(d.platform_deployment_id + " (created " + d.created + ")<br>");
 			}
+			buf.append("<br>Total number of Response entities: " + ofy().load().type(Response.class).filter("submitted >",lastMonth).count());
 			
 			buf.append("<h3>Basic LTI Consumer Search</h3>");
 			int nConsumers = ofy().load().type(BLTIConsumer.class).count();
