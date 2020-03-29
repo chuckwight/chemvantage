@@ -105,7 +105,6 @@ public class LTIRegistration extends HttpServlet {
 
 		if ("Send Me The Registration Email".contentEquals(userRequest)) {
 			try {
-				if (!reCaptchaOK(request)) throw new Exception("ReCaptcha tool unverified. Please try again.");
 				String sub = request.getParameter("sub");
 				String email = request.getParameter("email");
 				String aud = request.getParameter("aud");
@@ -128,6 +127,9 @@ public class LTIRegistration extends HttpServlet {
 				if (lms==null) throw new Exception("Please select the type of LMS that you are connecting to ChemVantage.");
 				if ("other".contentEquals(lms)) lms = request.getParameter("lms_other");
 				if (lms==null || lms.isEmpty()) throw new Exception("Please describe the type of LMS that you are connecting to ChemVantage.");
+				
+				if (!"true".equals(request.getParameter("AcceptReCaptchaTOS"))) throw new Exception("You must accept the reCAPTCHA Terms of Service. Please go back and try again.");
+				if (!reCaptchaOK(request)) throw new Exception("ReCaptcha tool unverified. Please try again.");
 				
 				String iss = use.equals("test")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
 				Date now = new Date();
@@ -195,7 +197,7 @@ public class LTIRegistration extends HttpServlet {
 				+ "Your Name: <input type=text name=sub>&nbsp;"
 				+ "and Email: <input type=text name=email><br>"
 				+ "Your Organization: <input type=text name=aud>&nbsp;"
-				+ "and Home Page: <input type=text name=url><br>"
+				+ "and Home Page: <input type=text name=url placeholder='https://example.org'><br>"
 				+ "Select your initial use case:<br>"
 				+ "<label><input type=radio name=use value=test checked>Testing the LTI connection (development environment)</label><br>"
 				+ "<label><input type=radio name=use value=prod>Teaching a chemistry class (production environment)</label><p>"
@@ -209,8 +211,21 @@ public class LTIRegistration extends HttpServlet {
 				+ "<label><input type=radio name=lms value=moodle>Moodle</label><br>"
 				+ "<label><input type=radio name=lms value=sakai>Sakai</label><br>"
 				+ "<label><input type=radio name=lms value=schoology>Schoology</label><br>"
-				+ "<label><input type=radio name=lms value=other>Other: </label><input type=text name=lms_other><p>"
-				+ "<div class='g-recaptcha' data-sitekey='6LcB3skUAAAAAFUnRPxnlYsQGkJyiJXDnROLoz0o'></div><p>"
+				+ "<label><input type=radio name=lms value=other>Other: </label><input type=text name=lms_other><p>");
+		
+		// Insert a checkbox confirming acceptance of the Google reCaptcha Terms of Service
+		buf.append("<label><input type=checkbox name=AcceptReCaptchaTOS value=true>Accept the reCAPTCHA Terms of Service. </label>"
+				+ "<span><a href=#terms onClick=javascript:getElementById('recaptchaterms').style.display='';this.style.display='none'>"
+				+ "Click here for details.</a></span>"
+				+ "<div id='recaptchaterms' style='display:none'>"
+				+ "ChemVantage uses the Google reCAPTCHA API to distinguish humans from bots and protect against spam and abuse. "
+				+ "By accessing or using the Google reCAPTCHA API below, you agree to the <a href=https://policies.google.com/terms>Google APIs Terms of Service</a>. "
+				+ "You acknowledge and understand that the reCAPTCHA API collects hardware and software information from your computer, such as "
+				+ "device and application data and the results of integrity checks, and sends those data to Google for analysis."
+				+ "</div>");
+				
+		// Insert the Google reCaptcha tool (version 2) on the page
+		buf.append("<div class='g-recaptcha' data-sitekey='6LcB3skUAAAAAFUnRPxnlYsQGkJyiJXDnROLoz0o'></div><p>"
 				+ "<input type=submit name=UserRequest value='Send Me The Registration Email'>"
 				+ "</form>");
 		return buf.toString();
