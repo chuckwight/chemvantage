@@ -55,10 +55,21 @@ public class LTIRegistration extends HttpServlet {
 
 	/* This servlet class is used to apply for and grant access to LTI connections between client
 	 * LMS platforms and the ChemVantage tool. The user will complete a short form with name, role,
-	 * email, organization, home page and use case (testing or production). Those wanting to test
+	 * email, organization, home page, LMS type and use case (testing or production). Those wanting to test
 	 * will get access to dev-vantage.appspot.com, while production users will see chemvantage.org.
-	 * The user will get an email with a tokenized link to a page containing the ChemVantage 
-	 * end point URLs and a form for submitting the client_id and deployment_id values.
+	 * There are 2 main workflow paths (for LTIv1.1 and LTIv1.3):
+	 *   1) All users complete a basic form giving information about their org and the LTI request
+	 *   2) ChemVantage responds by validating the fields and sending a registration email 
+	 * For LTIv1.1:
+	 *   3) After receiving the registration email, the user clicks a tokenized link. The clientIdForm
+	 *      method creates a new BLTIConsumer and presents the credentials to the user
+	 *   4) The user enters the credentials into their LMS and is ready to go. 
+	 * For LTIv1.3:
+	 *   3) The registration email contains the ChemVantage endpoints and configuration JSON to
+	 *      complete the registration in the LMS. 
+	 *   4) The user then clicks a tokenized link, and the clientIdForm generates a form for 
+	 *      entering the client_id value and LMS endpoints, if necessary.
+	 *   5) Submission of the form creates the new Deployment entity and completes the registration process.
 	 * */
 	
 	private static final long serialVersionUID = 137L;
@@ -240,7 +251,7 @@ public class LTIRegistration extends HttpServlet {
 		String lms = null;
 		String ver = null;
 		try {
-			DecodedJWT jwt = validateToken(token);
+			DecodedJWT jwt = validateToken(token);  // registration token is valid for only 3 days
 			
 			sub = jwt.getSubject();
 			email = jwt.getClaim("email").asString();
@@ -251,9 +262,9 @@ public class LTIRegistration extends HttpServlet {
 			
 			if ("1p1".contentEquals(ver)) { // older LTIv1.1.2 registration request
 				BLTIConsumer con = null;
-				try {
+				try {  // this section succeeds if the BLTIConsumer was already created (repeat visit within 3 days)
 					con = ofy().load().type(BLTIConsumer.class).id(jwt.getClaim("con").asString()).safe();
-				} catch (Exception e) {
+				} catch (Exception e) {  // create a new BLTIConsumer from the info in the token (first visit)
 					con = new BLTIConsumer(jwt.getClaim("con").asString());
 					con.email = email;
 					con.contact_name = sub;
