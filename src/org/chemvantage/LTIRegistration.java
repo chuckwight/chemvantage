@@ -49,6 +49,7 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 @WebServlet(urlPatterns = {"/lti/registration","/lti/registration/"})
 public class LTIRegistration extends HttpServlet {
@@ -236,7 +237,7 @@ public class LTIRegistration extends HttpServlet {
 				+ "</div>");
 				
 		// Insert the Google reCaptcha tool (version 2) on the page
-		buf.append("<div class='g-recaptcha' data-sitekey='6LcB3skUAAAAAFUnRPxnlYsQGkJyiJXDnROLoz0o'></div><p>"
+		buf.append("<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div><p>"
 				+ "<input type=submit name=UserRequest value='Send Me The Registration Email'>"
 				+ "</form>");
 		return buf.toString();
@@ -469,8 +470,7 @@ public class LTIRegistration extends HttpServlet {
 		Transport.send(msg);
 	}
 
-	boolean reCaptchaOK(HttpServletRequest request) {
-		try {
+	boolean reCaptchaOK(HttpServletRequest request) throws Exception {
 			String queryString = "secret=6Ld_GAcTAAAAAD2k2iFF7Ywl8lyk9LY2v_yRh3Ci&response=" 
 					+ request.getParameter("g-recaptcha-response") + "&remoteip=" + request.getRemoteAddr();
 			URL u = new URL("https://www.google.com/recaptcha/api/siteverify");
@@ -494,11 +494,8 @@ public class LTIRegistration extends HttpServlet {
 			}
 			reader.close();
 			
-			return res.toString().contains("success");  // should really parse a JSON object here
-			
-		} catch (Exception e) {
-			return false;
-		}
+			JsonObject captchaResp = new JsonParser().parse(res.toString()).getAsJsonObject();
+			return captchaResp.get("success").getAsBoolean();
 	}
 	
 	String getConfigurationJson(String iss,String lms) {
