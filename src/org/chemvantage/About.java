@@ -245,7 +245,7 @@ public class About extends HttpServlet {
 		+ "<li><b>Google reCaptcha</b> - ChemVantage uses the Google reCaptcha tool on its LTI registration page to detect bots and "
 		+ "prevent spam and abuse. To register your LMS with ChemVantage you must accept the Google reCaptcha Terms of Service "
 		+ "and the Google API Terms of service. This is not required of users who are accessing ChemVantage resources through the LTI "
-		+ "interface (i.e., students and instuctors) or users who enter ChemVantage through the home page anonymously."
+		+ "interface (i.e., students and instructors) or users who enter ChemVantage through the home page anonymously."
 		+ "</ul></div>"
 		+ "</LI>"
 		+ "<LI>YOUR ACCEPTANCE OF THESE TERMS<br>"
