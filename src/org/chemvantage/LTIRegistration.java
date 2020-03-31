@@ -29,6 +29,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.interfaces.RSAPublicKey;
 import java.util.Date;
 import java.util.Properties;
 
@@ -44,6 +45,9 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.auth0.jwk.Jwk;
+import com.auth0.jwk.JwkProvider;
+import com.auth0.jwk.UrlJwkProvider;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
@@ -509,9 +513,11 @@ public class LTIRegistration extends HttpServlet {
 		JsonObject config = new JsonObject();
 		config.addProperty("title","ChemVantage" + (iss.contains("dev")?" Development":""));
 		config.addProperty("description", "ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry");;
-		config.addProperty("public_jwk_url", iss + "/jwks");
+		config.addProperty("privacy_level", "public");
 		config.addProperty("target_link_uri", iss + "/lti/launch");
 		config.addProperty("oidc_initiation_url", iss + "/auth/token");
+		config.addProperty("public_jwk_url", iss + "/jwks");
+		config.add("public_jwk", KeyStore.getJwk());
 		  JsonArray scopes = new JsonArray();
 		  scopes.add("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem");
 		  scopes.add("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly");
@@ -523,8 +529,7 @@ public class LTIRegistration extends HttpServlet {
 		    JsonObject ext = new JsonObject();
 		    ext.addProperty("domain", domain);
 		    ext.addProperty("platform", "canvas.instructure.com");
-		    ext.addProperty("privacy_level", "public");
-			  JsonObject settings = new JsonObject();
+		      JsonObject settings = new JsonObject();
 		      settings.addProperty("text", "ChemVantage" + (iss.contains("dev")?" Development":""));
 		      settings.addProperty("icon_url", iss + "/images/CVLogo_thumb.jpg");
 		        JsonArray placements = new JsonArray();
