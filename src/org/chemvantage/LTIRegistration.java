@@ -281,7 +281,7 @@ public class LTIRegistration extends HttpServlet {
 				
 				buf.append("Here are your LTI registration credentials:<p>"
 						+ "Tool Name: ChemVantage<br>"
-						+ "Description: ChemVantage is an Open Education Resource for teachig and learning college-level General Chemistry.<br>"
+						+ "Description: ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry.<br>"
 						+ "Launch URL: " + jwt.getIssuer() + "/lti<br>"
 						+ "Consumer Key: " + con.oauth_consumer_key + "<br>"
 						+ "Shared Secret: " + con.secret + "<p>");
