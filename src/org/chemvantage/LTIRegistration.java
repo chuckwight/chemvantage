@@ -29,7 +29,6 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.security.interfaces.RSAPublicKey;
 import java.util.Date;
 import java.util.Properties;
 
@@ -45,9 +44,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.auth0.jwk.Jwk;
-import com.auth0.jwk.JwkProvider;
-import com.auth0.jwk.UrlJwkProvider;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
