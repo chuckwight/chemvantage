@@ -263,17 +263,20 @@ public class LTIRegistration extends HttpServlet {
 			
 			if ("1p1".contentEquals(ver)) { // older LTIv1.1.2 registration request
 				BLTIConsumer con = null;
-				try {  // this section succeeds if the BLTIConsumer was already created (repeat visit within 3 days)
+				try {  // retrieve the BLTIConsumer that was saved when the original registration form was submitted
 					con = ofy().load().type(BLTIConsumer.class).id(jwt.getClaim("con").asString()).safe();
-				} catch (Exception e) {  // create a new BLTIConsumer from the info in the token (first visit)
-					con = new BLTIConsumer(jwt.getClaim("con").asString());
-					con.email = email;
-					con.contact_name = sub;
-					con.lms = lms;
-					con.organization = aud;
-					con.org_url = url;
-					ofy().save().entity(con).now();
+				} catch (Exception e) {  
+					con = new BLTIConsumer(jwt.getClaim("con").asString()); // TEMPORARY fix; delete this line after April 4, 2020
+					// throw new Exception("Registration failed because the BLTIConsumer was not found.");
 				}
+				con.email = email;
+				con.contact_name = sub;
+				con.lms = lms;
+				con.organization = aud;
+				con.org_url = url;
+				ofy().save().entity(con).now();
+				
+				buf.append("<h3>Thank you for registering your LMS with ChemVantage</h3>");
 				
 				buf.append("Here are your LTI registration credentials:<p>"
 						+ "Tool Name: ChemVantage<br>"

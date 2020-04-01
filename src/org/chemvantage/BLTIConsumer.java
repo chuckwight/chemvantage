@@ -63,7 +63,11 @@ public class BLTIConsumer {
 		int random = new Random().nextInt(899999) + 100000;
 		String key = "CK" + String.valueOf(random);
 		BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(key).now();
-		if (c==null) return key;  // this is a new unique key
+		if (c==null) {
+			c = new BLTIConsumer(key);
+			ofy().save().entity(c);   // save the entity to reserve the key for final registration step
+			return key;  // this is a new unique key
+		}
 		else return getNewConsumerKey();  // key is in use; get another
 	}
 	
