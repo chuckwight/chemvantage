@@ -103,7 +103,10 @@ public class LTIRegistration extends HttpServlet {
 		} else if ("final".contentEquals(userRequest)) {
 			String token = request.getParameter("token");
 			out.println(Home.header + clientIdForm(token) + Home.footer);
-		} else out.println(Home.header + applicationForm() + Home.footer);		
+		} else {
+			String use = request.getParameter("use");
+			out.println(Home.header + applicationForm(use) + Home.footer);		
+		}
 	}
 	
 	@Override
@@ -125,7 +128,7 @@ public class LTIRegistration extends HttpServlet {
 				String ver = request.getParameter("ver");
 				String lms = request.getParameter("lms");
 				
-				if (sub.isEmpty() || email.isEmpty() || aud.isEmpty() || url.isEmpty() || use.isEmpty() || ver.isEmpty()) throw new Exception("All form fields are required.");
+				if (sub.isEmpty() || email.isEmpty() || aud.isEmpty() || url.isEmpty() || use==null ||use.isEmpty() || ver==null || ver.isEmpty()) throw new Exception("All form fields are required.");
 				
 				String regex = "^[\\w-_\\.+]*[\\w-_\\.]\\@([\\w]+\\.)+[\\w]+[\\w]$";
 				if (!email.matches(regex)) throw new Exception("Your email address was not formatted correctly.");
@@ -204,7 +207,8 @@ public class LTIRegistration extends HttpServlet {
 		} else out.println(Home.header + "<h2>Registration Failed</h2>POST was missing a required parameter." + Home.footer);
 	}	
 
-	String applicationForm() {
+	String applicationForm(String use) {
+		if (use==null) use = "";
 		StringBuffer buf = new StringBuffer(banner + "<p>");
 		buf.append("ChemVantage is an Open Education Resource for teaching and learning college-level General "
 				+ "Chemistry. We offer this service at no charge for nonprofit educational purposes.");
@@ -220,10 +224,10 @@ public class LTIRegistration extends HttpServlet {
 				+ "Your Name: <input type=text name=sub>&nbsp;"
 				+ "and Email: <input type=text name=email><br>"
 				+ "Your Organization: <input type=text name=aud>&nbsp;"
-				+ "and Home Page: <input type=text name=url placeholder='https://example.org'><br>"
+				+ "and Home Page: <input type=text name=url placeholder='https://example.org'><p>"
 				+ "Select your initial use case:<br>"
-				+ "<label><input type=radio name=use value=test checked>Testing the LTI connection (development environment)</label><br>"
-				+ "<label><input type=radio name=use value=prod>Teaching a chemistry class (production environment)</label><p>"
+				+ "<label><input type=radio name=use value=test" + (use.equals("test")?" checked":"") + ">Testing the LTI connection (development environment)</label><br>"
+				+ "<label><input type=radio name=use value=prod" + (use.equals("prod")?" checked":"") + ">Teaching a chemistry class (production environment)</label><p>"
 				+ "Type of LTI registration:<br>"
 				+ "<label><input type=radio name=ver value=1p1 checked>LTI version 1.1.2 (preferred)</label><br>"
 				+ "<label><input type=radio name=ver value=1p3>LTI Advantage (certified but still clunky)</label><p>"
@@ -256,6 +260,7 @@ public class LTIRegistration extends HttpServlet {
 	
 	String clientIdForm(String token) {
 		StringBuffer buf = new StringBuffer(banner);
+		String iss = null;
 		String sub = null;
 		String email = null;
 		String aud = null;
@@ -264,7 +269,7 @@ public class LTIRegistration extends HttpServlet {
 		String ver = null;
 		try {
 			DecodedJWT jwt = validateToken(token);  // registration token is valid for only 3 days
-			
+			iss = jwt.getIssuer();
 			sub = jwt.getSubject();
 			email = jwt.getClaim("email").asString();
 			aud = jwt.getAudience().get(0);
@@ -292,7 +297,7 @@ public class LTIRegistration extends HttpServlet {
 				buf.append("Here are your LTI registration credentials:<p>"
 						+ "Tool Name: ChemVantage<br>"
 						+ "Description: ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry.<br>"
-						+ "Launch URL: " + jwt.getIssuer() + "/lti<br>"
+						+ "Launch URL: " + iss + "/lti<br>"
 						+ "Consumer Key: " + con.oauth_consumer_key + "<br>"
 						+ "Shared Secret: " + con.secret + "<p>");
 				buf.append("Important notes:<ol>"
@@ -303,10 +308,18 @@ public class LTIRegistration extends HttpServlet {
 						+ "<li>IMS Global Learning Solutions has published a "
 						+ "<a href=https://www.imsglobal.org/lti-security-announcement-and-deprecation-schedule-july-2019>deprecation schedule</a> "
 						+ "for this version of LTI registrations. At a minimum, your LMS must support "
-						+ "LTI v1.1.2 for this connection to work after December 31, 2020."
-						+ "<li>After registering ChemVantage in your LMS, simply create an assignment in the LMS and configure the submission to be "
-						+ "from a third-party app (ChemVantage). Suggested point values are 10 for each quiz or homework set, 100 for practice exams."
-						+ "</ol>");
+						+ "LTI v1.1.2 for this connection to work after December 31, 2020.");
+				
+				if (iss.contains("dev")) {
+					buf.append("<li>You indicated on the registration form that your initial use case is checking the LTI connection. So we granted accoess "
+							+ "to the ChemVantage Development server. When you are ready to use ChemVantage for instruction, please "
+							+ "<a href=https://www.chemvantage.org/lti/registration?use=prod>register again here</a> to access the production server. Do not use "
+							+ "the Development server for live instruction.<p>");
+				} else {
+					buf.append("<li>After registering ChemVantage in your LMS, simply create an assignment in the LMS and configure the submission to be "
+							+ "from a third-party app (ChemVantage). Suggested point values are 10 for each quiz or homework set, 100 for practice exams.");
+				}
+				buf.append("</ol>");
 				buf.append("If you need assistance for this registration, please contact me at admin@chemvantage.org<p>- Chuck Wight");
 			
 			} else {  // LTIAdvantage (version 1.3.0) registration request
@@ -387,6 +400,12 @@ public class LTIRegistration extends HttpServlet {
 						+ "following rewrite rule into the .htaccess file on the Moodle server:<br>"
 						+ "RewriteCond %{HTTP:Authorization} ^(.+)" 
 						+ "RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]<p>");
+			} else if ("canvas".equals(lms)) {
+				buf.append("To use ChemVantage, create an assignment in Canvas. Under Submission Type, choose External Tool, "
+						+ "then click Find and select ChemVantage" + (iss.contains("dev")?" Development":"") + ". You will be "
+						+ "redirected to ChemVantage to select a Quiz, Homework, or Practice Exam for students in the course. "
+						+ "Student scores are returned directly to the Canvas grade book. You should test this functionality "
+						+ "using Settings | Test Student. Take the quiz and verify that the score is returned to the grade book.<p>");
 			}
 			
 			buf.append("If you  need assistance, please contact me at admin@chemvantage.org. <p>"
