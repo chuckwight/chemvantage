@@ -176,14 +176,25 @@ public class LTIRegistration extends HttpServlet {
 				if (client_id==null) throw new Exception("Client ID value is required.");
 				String deployment_id = request.getParameter("DeploymentId");
 				if (deployment_id==null) throw new Exception("Deployment ID value is required.");
-				String platform_id = request.getParameter("PlatformId");
-				if (platform_id==null) throw new Exception("Platform ID value is required.");
-				String oidc_auth_url = request.getParameter("OIDCAuthUrl");
-				if (oidc_auth_url==null) throw new Exception("OIDC Auth URL is required.");
-				String oauth_access_token_url = request.getParameter("OauthAccessTokenUrl");
-				if (oauth_access_token_url==null) throw new Exception("OAuth Access Token URL is required.");
-				String well_known_jwks_url = request.getParameter("JWKSUrl");
-				if (well_known_jwks_url==null) throw new Exception("JSON Web Key Set URL is required.");
+				String platform_id;
+				String oidc_auth_url;
+				String oauth_access_token_url;
+				String well_known_jwks_url;
+				if ("canvas".equals(lms)) {
+					platform_id = "https://canvas.instructure.com";
+					oidc_auth_url = "https://canvas.instructure.com/api/lti/authorize_redirect";
+					oauth_access_token_url = "https://canvas.instructure.com/login/oauth2/token";	
+					well_known_jwks_url = "https://canvas.instructure.com/api/lti/security/jwks";
+				} else {
+					platform_id = request.getParameter("PlatformId");
+					if (platform_id==null) throw new Exception("Platform ID value is required.");
+					oidc_auth_url = request.getParameter("OIDCAuthUrl");
+					if (oidc_auth_url==null) throw new Exception("OIDC Auth URL is required.");
+					oauth_access_token_url = request.getParameter("OauthAccessTokenUrl");
+					if (oauth_access_token_url==null) throw new Exception("OAuth Access Token URL is required.");
+					well_known_jwks_url = request.getParameter("JWKSUrl");
+					if (well_known_jwks_url==null) throw new Exception("JSON Web Key Set URL is required.");
+				}
 				Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
 				ofy().save().entity(d).now();
 				out.println(Home.header + banner + "<h2>Congratulations. Registration is complete.</h2>" + Home.footer);
@@ -412,6 +423,7 @@ public class LTIRegistration extends HttpServlet {
 						+   "<li>Configure Method: Enter URL"
 						+   "<li>JSON URL: " + iss + "/lti/registration?UserRequest=config&lms=canvas"
 						+   "</ul>"
+						+ "<li>Click Save."
 						+ "<li>Copy or write down the client_id and deployment_id created in step 1. "
 						+ "Canvas uses the developer key as the client_id, so it can be viewed from the list of "
 						+ "developer keys. It is a numeric value that looks something like 32570000000000041. "
@@ -516,7 +528,7 @@ public class LTIRegistration extends HttpServlet {
 		config.addProperty("target_link_uri", iss + "/lti/launch");
 		config.addProperty("oidc_initiation_url", iss + "/auth/token");
 		config.addProperty("public_jwk_url", iss + "/jwks");
-		config.add("public_jwk", KeyStore.getJwk());
+		config.add("public_jwk", KeyStore.getJwk(lms));
 		  JsonArray scopes = new JsonArray();
 		  scopes.add("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem");
 		  scopes.add("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly");

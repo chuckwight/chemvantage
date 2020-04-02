@@ -42,11 +42,7 @@ public class KeyStore extends HttpServlet {
 		if (jwks == null) return buildJwks();
 		else return jwks;
 	}
-	
-	protected static JsonObject getJwk() {
-		return getJwk(getAKeyId());  // gets a Jwk JsonObject with an existing randomly selected kid
-	}
-	
+
 	protected static JsonObject getJwk(String rsa_key_id) {
 		try {
 			RSAPublicKey pk = getRSAPublicKey(rsa_key_id);
@@ -116,14 +112,16 @@ public class KeyStore extends HttpServlet {
 			return null;
 		}
 	}
-	
-	protected static String getAKeyId() {
-		// this method retrieves one of the available ChemVantage rsa_key_id values (randomly)
+
+	protected static String getAKeyId(String lms) {
+		// this method retrieves a specific key for a shared cloud LMS (e.g., canvas)
 		if (rsaKeys.isEmpty()) createNewKeyMap();
-		int n = new Random().nextInt(rsaKeys.size());
 		List<RSAKeyPair> keys = new ArrayList<RSAKeyPair>(rsaKeys.values());
-		RSAKeyPair k = keys.get(n);
-		return k.kid;
+		if ("canvas".equals(lms)) return keys.get(0).kid;
+		else {
+			int n = new Random().nextInt(rsaKeys.size());
+			return 	keys.get(n).kid;
+		}
 	}
 	
 	protected static String getRSAPublicKeyX509(String rsa_key_id) {

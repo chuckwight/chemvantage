@@ -54,7 +54,7 @@ public class Deployment implements java.lang.Cloneable {
 		this.organization = organization;
 		this.org_url = org_url;
 		this.lms_type = lms;
-		this.rsa_key_id = KeyStore.getAKeyId();
+		this.rsa_key_id = KeyStore.getAKeyId(lms);
 		this.created = new Date();
 	}
 			
