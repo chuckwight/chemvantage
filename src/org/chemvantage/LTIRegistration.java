@@ -97,7 +97,7 @@ public class LTIRegistration extends HttpServlet {
 		// To register by version 1.3.0 select this option in the applicationForm
 		
 		if ("config".contentEquals(userRequest)) {
-			response.setContentType("text/json");
+			response.setContentType("application/json");
 			String iss = "https://" + request.getServerName();
 			out.println(getConfigurationJson(iss,request.getParameter("lms")));
 		} else if ("final".contentEquals(userRequest)) {
