@@ -51,7 +51,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-@WebServlet(urlPatterns = {"/lti/registration","/lti/registration/"})
+@WebServlet(urlPatterns = {"/lti/registration","/lti/registration/","/lti_config.xml"})
 public class LTIRegistration extends HttpServlet {
 
 	/* This servlet class is used to apply for and grant access to LTI connections between client
@@ -88,22 +88,26 @@ public class LTIRegistration extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
-		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		String userRequest = request.getParameter("UserRequest");
 		if (userRequest==null) userRequest = "";
 		
-		// For now, we will support LTI version 1.1 registration by default.
-		// To register by version 1.3.0 select this option in the applicationForm
+		String iss = "https://" + request.getServerName();
+		String path = request.getServletPath();
 		
-		if ("config".contentEquals(userRequest)) {
+		if (path.contentEquals("/lti_config.xml")) {
+			response.setContentType("application/xml");
+			out.println(getConfigurationXml(iss));
+		}
+		else if ("config".contentEquals(userRequest)) {
 			response.setContentType("application/json");
-			String iss = "https://" + request.getServerName();
 			out.println(getConfigurationJson(iss,request.getParameter("lms")));
 		} else if ("final".contentEquals(userRequest)) {
+			response.setContentType("text/html");
 			String token = request.getParameter("token");
 			out.println(Home.header + clientIdForm(token) + Home.footer);
 		} else {
+			response.setContentType("text/html");
 			String use = request.getParameter("use");
 			out.println(Home.header + applicationForm(use) + Home.footer);		
 		}
@@ -577,5 +581,39 @@ public class LTIRegistration extends HttpServlet {
 		config.add("extensions", extensions);
 		
 		return config.toString();
+	}
+	
+	String getConfigurationXml(String iss) {
+		boolean dev = iss.contains("dev");
+		return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" + 
+				"<cartridge_basiclti_link xmlns=\"http://www.imsglobal.org/xsd/imslticc_v1p0\"\n" + 
+				"    xmlns:blti = \"http://www.imsglobal.org/xsd/imsbasiclti_v1p0\"\n" + 
+				"    xmlns:lticm =\"http://www.imsglobal.org/xsd/imslticm_v1p0\"\n" + 
+				"    xmlns:lticp =\"http://www.imsglobal.org/xsd/imslticp_v1p0\"\n" + 
+				"    xmlns:xsi = \"http://www.w3.org/2001/XMLSchema-instance\"\n" + 
+				"    xsi:schemaLocation = \"http://www.imsglobal.org/xsd/imslticc_v1p0 http://www.imsglobal.org/xsd/lti/ltiv1p0/imslticc_v1p0.xsd\n" + 
+				"    http://www.imsglobal.org/xsd/imsbasiclti_v1p0 http://www.imsglobal.org/xsd/lti/ltiv1p0/imsbasiclti_v1p0.xsd\n" + 
+				"    http://www.imsglobal.org/xsd/imslticm_v1p0 http://www.imsglobal.org/xsd/lti/ltiv1p0/imslticm_v1p0.xsd\n" + 
+				"    http://www.imsglobal.org/xsd/imslticp_v1p0 http://www.imsglobal.org/xsd/lti/ltiv1p0/imslticp_v1p0.xsd\">\n" + 
+				"    <blti:title>ChemVantage" + (dev?" Development":"") + "</blti:title>\n" + 
+				"    <blti:description>ChemVantage is an Open Education Resource for teaching and learning college level General Chemistry.</blti:description>\n" + 
+				"    <blti:extensions platform=\"canvas.instructure.com\">\n" + 
+				"      <lticm:property name=\"tool_id\">chemvantage.org</lticm:property>\n" + 
+				"      <lticm:property name=\"privacy_level\">anonymous</lticm:property>\n" + 
+				"    </blti:extensions>\n" + 
+				"    <blti:secure_launch_url>" + iss + "/lti</blti:secure_launch_url>\n" + 
+				"    <blti:secure_icon>" + iss + "/favicon.png</blti:secure_icon>\n" + 
+				"    <blti:vendor>\n" + 
+				"        <lticp:code>www.chemvantage.org</lticp:code>\n" + 
+				"        <lticp:name>ChemVantage LLC</lticp:name>\n" + 
+				"        <lticp:description>ChemVantage provides Open Education learning tools for chemistry.</lticp:description>\n" + 
+				"        <lticp:url>http://www.chemvantage.org/</lticp:url>\n" + 
+				"        <lticp:contact>\n" + 
+				"            <lticp:email>admin@chemvantage.org</lticp:email>\n" + 
+				"        </lticp:contact>\n" + 
+				"    </blti:vendor>\n" + 
+				"    <cartridge_bundle identifierref=\"BLTI001_Bundle\"/>\n" + 
+				"    <cartridge_icon identifierref=\"BLTI001_Icon\"/>\n" + 
+				"</cartridge_basiclti_link>";
 	}
 }
