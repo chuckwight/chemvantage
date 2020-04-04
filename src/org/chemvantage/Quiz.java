@@ -485,7 +485,7 @@ public class Quiz extends HttpServlet {
 		+ "</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
-		+ "  url += '&QuestionId=' + id + '&Notes=' + note;\n"
+		+ "  url += '&QuestionId=' + id + '&Token=" + token + "&Notes=' + note;\n"
 		+ "  xmlhttp.open('GET',url,true);\n"
 		+ "  xmlhttp.send(null);\n"
 		+ "  return false;\n"

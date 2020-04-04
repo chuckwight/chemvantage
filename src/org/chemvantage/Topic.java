@@ -41,38 +41,11 @@ public class Topic implements Serializable {
 	 		String title;
 	
 	Topic() {}
-/*	
-	Topic(String title,String orderBy) {
-		this.title = title;
-		this.orderBy = orderBy;
-	}
-*/	
+
 	Topic(String title,String orderBy,int topicGroup) {
 		this.title = title;
 		this.orderBy = orderBy;
 		this.topicGroup = topicGroup;
 	}
 	
-	
-/*
-	public List<Key<Question>> getQuestionKeys(String assignmentType) {
-		return  ofy().load().type(Question.class).filter("topicId",this.id).filter("assignmentType",assignmentType).keys().list();
-	}
-	
-	public Query<Question> getQuestions(String assignmentType) {
-		return ofy().load().type(Question.class).filter("topicId", this.id).filter("assignmentType",assignmentType).order("pointValue");
-	}
-	
-	public int getQuestionCount(String assignmentType) {
-		return this.getQuestions(assignmentType).count();
-	}
-	
-	public Question getQuestion(Key<Question> key) {
-		return ofy().load().key(key).now();
-	}
-
-	public Question getQuestion(long id) {
-		return ofy().load().type(Question.class).id(id).now();
-	}
-	*/
 }

@@ -71,7 +71,7 @@ public class Feedback extends HttpServlet {
 				String notes = request.getParameter("Notes");
 				UserReport r = new UserReport(userId,questionId,notes);
 				ofy().save().entity(r);
-				sendEmailToAdmin(r,new User(userId),null);
+				sendEmailToAdmin(r,user,null);
 			} else if (userRequest.equals("AjaxRating")) {
 				recordAjaxRating(request);
 			} else out.println(Home.header + feedbackForm(user) + Home.footer);    

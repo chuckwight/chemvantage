@@ -491,7 +491,7 @@ public class PracticeExam extends HttpServlet {
 				else buf.append("Some questions were left blank.");
 			}
 			// embed ajax code to provide feedback
-			buf.append(ajaxScoreJavaScript());
+			buf.append(ajaxScoreJavaScript(user.token));
 		}
 		catch (Exception e) {
 			buf.append(e.getMessage());
@@ -543,7 +543,7 @@ public class PracticeExam extends HttpServlet {
 		+ "</SCRIPT>";			
 	}
 
-	String ajaxScoreJavaScript() {
+	String ajaxScoreJavaScript(String token) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note) {\n"
 		+ "  var xmlhttp;\n"
@@ -559,7 +559,7 @@ public class PracticeExam extends HttpServlet {
 		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
-		+ "  url += '&QuestionId=' + id + '&Notes=' + note;\n"
+		+ "  url += '&QuestionId=' + id + '&Token=" + token + "&Notes=' + note;\n"
 		+ "  xmlhttp.open('GET',url,true);\n"
 		+ "  xmlhttp.send(null);\n"
 		+ "  return false;\n"

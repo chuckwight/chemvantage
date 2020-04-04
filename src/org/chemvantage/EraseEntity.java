@@ -198,40 +198,4 @@ public class EraseEntity extends HttpServlet {
 		} catch(Exception e) {			
 		}
 	}
-/*		
-	void deleteGroup(String id) {
-		deleteGroup(Long.parseLong(id));
-	}
-	
-	void deleteGroup(long id) {
-		try {
-			Group group = ofy().load().key(Key.create(Group.class,id)).safe();
-			List<String> members = new ArrayList<String>();  // list of group members to be deleted
-			members.addAll(group.memberIds); // can't use memberIds directly because it will be changed in the loop
-			
-			for (String uId : members) deleteUser(uId);
-			
-			List<Key<Score>> scoreKeys = ofy().load().type(Score.class).filter("groupId",group.id).keys().list();
-		 	if (!scoreKeys.isEmpty()) ofy().delete().keys(scoreKeys);  // catches any stray scores from prior Users
-		 	
-		 	List<Key<Assignment>> assignmentKeys = ofy().load().type(Assignment.class).filter("groupId",group.id).keys().list();
-	    	if (!assignmentKeys.isEmpty()) ofy().delete().keys(assignmentKeys);	   
-		
-			ofy().delete().entity(group);
-		} catch(Exception e) {			
-		}
-	}
-	
-	void deleteDomain(String dname) {
-		try {
-			Domain domain = ofy().load().type(Domain.class).filter("domainName",dname).first().safe();
-			
-			//List<Key<Group>> groupKeys = ofy().load().type(Group.class).filter("domain",dname).keys().list();
-			//for (Key<Group> k : groupKeys) deleteGroup(k.getId());
-			
-		 	ofy().delete().entity(domain);
-		} catch(Exception e) {		
-		}
-	}
-	*/
 }

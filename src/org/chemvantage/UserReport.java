@@ -60,7 +60,7 @@ public class UserReport implements Serializable {
 		if (user==null || !(user.id.equals(this.userId) || user.isChemVantageAdmin())) return null;  
 
 		try {
-			buf.append("On " + submitted + (user.id.equals(this.userId)?" you":" a user") + " said:<br>");
+			buf.append("On " + submitted + (user.id.equals(this.userId)?" you":" " + this.userId) + " said:<br>");
 			
 			if (stars>0) buf.append(" (" + stars + " stars)<br>");
 			buf.append("<FONT COLOR=RED>" + comments + "</FONT><br>");
@@ -70,8 +70,8 @@ public class UserReport implements Serializable {
 				Topic topic = ofy().load().type(Topic.class).id(q.topicId).now();
 				buf.append("Topic: " + topic.title + " (" + q.assignmentType + " question)<br>");
 				buf.append(q.printAll());
-				if (this.userId!=null) {
-					List<Response> responses = ofy().load().type(Response.class).filter("userId",userId).filter("questionId",questionId).list();
+				if (this.userId != null) {
+					List<Response> responses = ofy().load().type(Response.class).filter("userId",this.userId).filter("questionId",this.questionId).list();
 					if (responses.size() > 0) {
 						buf.append("<table><tr><td>Date/Time (UTC)</td><td>Student Response</td><td>Correct Response</td><td>Score</td></tr>");
 						for (Response r : responses) buf.append("<tr><td>" + r.submitted.toString() + "</td><td align=center>" + r.studentResponse 
