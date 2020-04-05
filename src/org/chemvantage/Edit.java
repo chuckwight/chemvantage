@@ -188,6 +188,14 @@ public class Edit extends HttpServlet {
 				} catch (Exception e) {}
 				out.println(Home.getHeader(user) + reviewProposedQuestion(user,request) + Home.footer);
 			}
+			else if (userRequest.equals("CopyAllQuestions")) {
+				copyQuestionsToPracticeExam(user,request);
+				out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
+			}
+			else if (userRequest.equals("DeleteAllQuestions")) {
+				deleteAllQuestions(user,request);
+				out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
+			}
 			else { // show the default Editors page
 				out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
 			}
@@ -234,10 +242,28 @@ public class Edit extends HttpServlet {
 				Topic t = ofy().load().type(Topic.class).id(topicId).safe();
 				Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId", t.id).order("pointValue");
 				
-				buf.append("<h4>Current Questions</h4>");
-				
+				buf.append("<a href=# onClick=document.getElementById('bulkform').style.display='';><h4>Current Questions</h4></a>");				
+				buf.append("<div id=bulkform style='display:none'>");
+				if (assignmentType.equals("Quiz") || assignmentType.equals("Homework")) {
+					buf.append("<form method=post action=/Edit onSubmit=\"return alert('Copy all questions; are you sure?');\">"
+							+ "<input type=hidden name=AssignmentType value=" + assignmentType + ">"
+							+ "<input type=hidden name=TopicId value=" + topicId + ">"
+							+ "<input type=hidden name=UserRequest value=CopyAllQuestions>"
+							+ "Copy all of the questions below to " + (assignmentType.equals("Quiz")?"2-point":"10-point") + " Exam questions: "
+							+ "<input type=submit value='Copy All Questions'>"
+							+ "</form>");
+				}
+				buf.append("<form method=post action=/Edit onSubmit=\"return alert('Delete all questions; are you sure?');\">"
+						+ "<input type=hidden name=AssignmentType value=" + assignmentType + ">"
+						+ "<input type=hidden name=TopicId value=" + topicId + ">"
+						+ "<input type=hidden name=UserRequest value=DeleteAllQuestions>"
+						+ "Delete all of the questions below (cannot be undone): "
+						+ "<input type=submit value='Delete All Questions'>"
+						+ "</form><br>"
+						+ "</div>");
+
 				buf.append("This assignment draws from the following " + questions.count() + " questions:");
-				
+
 				buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
 				int i=0;
 				for (Question q : questions) {
@@ -903,6 +929,30 @@ public class Edit extends HttpServlet {
 		}
 	}
 
+	private void deleteAllQuestions(User user, HttpServletRequest request) throws Exception {
+		if (!user.isChemVantageAdmin()) return;
+		String assignmentType = request.getParameter("AssignmentType");
+		if (assignmentType==null) return;
+		long topicId = Long.parseLong(request.getParameter("TopicId"));
+		List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).keys().list();
+		if (questionKeys.size()>0) ofy().delete().keys(questionKeys);
+	}
+	
+	private void copyQuestionsToPracticeExam(User user,HttpServletRequest request) {
+		if (!user.isChemVantageAdmin()) return;
+		String assignmentType = request.getParameter("AssignmentType");
+		if (assignmentType==null || !(assignmentType.equals("Quiz") || assignmentType.equals("Homework"))) return;
+		long topicId = Long.parseLong(request.getParameter("TopicId"));
+		List<Question> questions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).list();
+		for (Question q : questions) {
+			q.id = null;
+			if (q.assignmentType.equals("Quiz")) q.pointValue = 2;
+			else q.pointValue = 10;
+			q.assignmentType = "Exam";		
+		}
+		ofy().save().entities(questions);
+	}
+	
 	public String getTopicSelectBox(long id) {
 		StringBuffer buf = new StringBuffer();
 		Query<Topic> topics = ofy().load().type(Topic.class);
