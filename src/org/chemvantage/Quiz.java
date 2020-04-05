@@ -111,17 +111,17 @@ public class Quiz extends HttpServlet {
 			Assignment qa = null;
 			long topicId = 0L;
 			long assignmentId = 0L;
-			try {  // normal process for LTI assignment launch
-				assignmentId = user.getAssignmentId();
-				qa = ofy().load().type(Assignment.class).id(assignmentId).now();
-				topicId = qa.topicId;
-			} catch (Exception e) {  // alternative process for anonymous user
-				try {
+			try { 
+				assignmentId = user.getAssignmentId();  // should be non-zero for LTI user
+				if (assignmentId > 0) {
+					qa = ofy().load().type(Assignment.class).id(assignmentId).now();
+					topicId = qa.topicId;
+				} else {  // get the requested topicId for anonymous user
 					topicId = Long.parseLong(request.getParameter("TopicId"));
-				} catch (Exception e2) {
-					return "<h2>No Quiz Selected</h2>You must return to the <a href=/>Home Page</a> "
-							+ "and select a topic for this quiz using the drop-down box.";
 				}
+			} catch (Exception e) {  // alternative process for anonymous user
+				return "<h2>No Quiz Selected</h2>You must return to the <a href=/>Home Page</a> "
+					+ "and select a topic for this quiz using the drop-down box.";
 			}
 			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
 			Date now = new Date();

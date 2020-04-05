@@ -184,7 +184,8 @@ public class Home extends HttpServlet {
 			
 			// make every user anonymous
 			User user = new User("anonymous"+new Random().nextInt());
-			user.setToken(0);
+			user.setToken(); // sets the CSRF token with assignmentId=0L;
+			
 			buf.append("<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">");
 			
 			buf.append("<SELECT NAME='TopicId'><OPTION Value='0' SELECTED>Select a topic</OPTION>");
