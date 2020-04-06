@@ -397,7 +397,7 @@ public class LTIDeepLinks extends HttpServlet {
 			}
 			
 			// Now save the assignments to the datastore:
-			ofy().save().entities(assignments);
+			ofy().save().entities(assignments).now();  // need the new assignmentId values right away
 				
 			String serverUrl = "https://" + request.getServerName();
 			String client_id = d.client_id;
