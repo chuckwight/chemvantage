@@ -187,6 +187,9 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "of assignment (e.g., Quiz) and then the topic covered by that assignment. Each Quiz or Homework assignment is limited to "
 				+ "a single topic, but each Practice Exams covers a minimum of three topics.<p>Revisit this page to create additional "
 				+ "assignments for your course.<p>");
+		
+		buf.append("Please note: If you already have a ChemVantage assignment on one or more of these topics, this page will create a separate "
+				+ "(duplicate) assignment that will NOT be linked to the previous assignment. Scores will be sent to a different column in the grade book.<p>");
 
 		// Start building a form to select the assignment attributes:
 		// The form has 4 sections:
