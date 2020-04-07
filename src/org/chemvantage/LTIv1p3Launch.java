@@ -204,10 +204,19 @@ public class LTIv1p3Launch extends HttpServlet {
 			myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();
 			debug.append((myAssignment==null?"not ":"") + "found in the datastore...");
 
-			// 2) If the lineitem was created by DeepLinking, try to get the resourceId from the lineitem service; that will be the assignmentId
-			if (myAssignment == null && lti_ags_lineitems_url != null) {
-				Long assignmentId = LTIMessage.getAssignmentId(d, resourceLinkId, lti_ags_lineitems_url);
-				if (assignmentId != null) myAssignment = ofy().load().type(Assignment.class).id(assignmentId).now();
+			// 2) If the lineitem was created by DeepLinking, try link any assignments to linetiems where the resourceId matches an assignmentId
+			if (myAssignment == null && lti_ags_lineitem_url != null) {
+				JsonObject lineitem = LTIMessage.getLineItem(d, lti_ags_lineitem_url);
+				if (lineitem != null) {
+					try {  // the Deep Linking process creates lineitems and stores the assignmentId value as a Sting in the resourceId field
+						JsonElement resourceId = lineitem.get("resourceId");
+						if (resourceId==null) resourceId = lineitem.get("resourceid");  // particular to lti-ri platform; UGH!
+						long assignmentId = Long.parseLong(resourceId.getAsString());
+						myAssignment = ofy().load().type(Assignment.class).id(assignmentId).now();						
+					} catch (Exception e) {
+						throw new Exception(lineitem.toString());
+					}
+				}
 				debug.append((myAssignment==null?"not ":"") + "found by deep linking...");
 			}
 

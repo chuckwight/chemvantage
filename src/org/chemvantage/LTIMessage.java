@@ -283,26 +283,41 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     	// If you get to here, the lineitem does not exist; create a new one:
     	return createLineItem(d,a,lti_ags_lineitems_url);
     }
-	
-    static Long getAssignmentId(Deployment d, String resourceLinkId,String lti_ags_lineitems_url) throws Exception {
-    	try {
-    		JsonElement json = new JsonParser().parse(getLineItems(d,lti_ags_lineitems_url));
-    		if (json.isJsonArray()) {
-    			JsonArray lineitems = json.getAsJsonArray();
-    			Iterator<JsonElement> iterator = lineitems.iterator();
-    			while(iterator.hasNext()){
-    				JsonObject lineitem = iterator.next().getAsJsonObject();
-    				if (resourceLinkId.equals(lineitem.get("resourceLinkId").getAsString())) {
-    					return Long.parseLong(lineitem.get("resourceId").getAsString()); // this should be the assignmentId
-    				}  												// that was created during a DeepLinking work flow
+
+    static JsonObject getLineItem(Deployment d, String lti_ags_lineitem_url) {
+    	// This method returns a single lineitem from the platform
+      	try {
+    		String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id);
+
+    		URL u = new URL(lti_ags_lineitem_url);
+    		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+    		uc.setDoOutput(true);
+    		uc.setDoInput(true);
+    		uc.setRequestMethod("GET");
+    		uc.setRequestProperty("Authorization", bearerAuth);
+    		uc.setRequestProperty("Accept", "application/vnd.ims.lis.v2.lineitem+json");
+    		uc.connect();
+
+    		int responseCode = uc.getResponseCode();
+    		if (HttpURLConnection.HTTP_OK == responseCode) { // 200
+    			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+    			StringBuffer res = new StringBuffer();
+    			String line;
+    			while ((line = reader.readLine()) != null) {
+    				res.append(line);
     			}
+    			reader.close();
+    			
+    			JsonObject lineitem_json = new JsonParser().parse(res.toString()).getAsJsonObject();
+    			return lineitem_json;
     		}
     	} catch (Exception e) {
     	}
-    	return null;
+		return null;
     }
-
+    
     static String getLineItems(Deployment d,String lti_ags_lineitems_url) {
+    	// This method asks the platform to return ALL of the lineitems for the context as a JSON string
     	try {
     		String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id);
 
