@@ -8,26 +8,6 @@
         <property name="resourceLinkId" direction="asc"/>
     </datastore-index>
 
-     <datastore-index kind="Assignment" ancestor="false" source="auto">
-        <property name="assignmentType" direction="asc"/>
-        <property name="topicId" direction="asc"/>
-    </datastore-index>
-
-    <datastore-index kind="Assignment" ancestor="false" source="auto">
-		<property name="groupId" direction="asc" />
-		<property name="assignmentType" direction="asc" />
-    </datastore-index>
-
-    <datastore-index kind="Assignment" ancestor="false" source="auto">
-        <property name="groupId" direction="asc"/>
-        <property name="deadline" direction="asc"/>
-    </datastore-index>
-
-    <datastore-index kind="Group" ancestor="false" source="auto">
-        <property name="domain" direction="asc"/>
-        <property name="context_id" direction="asc"/>
-    </datastore-index>
-
      <datastore-index kind="HWTransaction" ancestor="false" source="auto">
         <property name="userId" direction="asc"/>
         <property name="assignmentId" direction="asc"/>
