@@ -545,7 +545,7 @@ public class PracticeExam extends HttpServlet {
 
 	String ajaxScoreJavaScript(String token) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
-		+ "function ajaxSubmit(url,id,note) {\n"
+		+ "function ajaxSubmit(url,id,note,email) {\n"
 		+ "  var xmlhttp;\n"
 		+ "  if (url.length==0) return false;\n"
 		+ "  xmlhttp=GetXmlHttpObject();\n"
@@ -559,7 +559,7 @@ public class PracticeExam extends HttpServlet {
 		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
-		+ "  url += '&QuestionId=' + id + '&Token=" + token + "&Notes=' + note;\n"
+		+ "  url += '&QuestionId=' + id + '&Token=" + token + "&Notes=' + note + '&Email=' + email;\n"
 		+ "  xmlhttp.open('GET',url,true);\n"
 		+ "  xmlhttp.send(null);\n"
 		+ "  return false;\n"

@@ -69,9 +69,10 @@ public class Feedback extends HttpServlet {
 				String userId = user==null?"":user.id;
 				long questionId = Long.parseLong(request.getParameter("QuestionId"));
 				String notes = request.getParameter("Notes");
+				String email = request.getParameter("Email");
 				UserReport r = new UserReport(userId,questionId,notes);
 				ofy().save().entity(r);
-				sendEmailToAdmin(r,user,null);
+				sendEmailToAdmin(r,user,email);
 			} else if (userRequest.equals("AjaxRating")) {
 				recordAjaxRating(request);
 			} else out.println(Home.header + feedbackForm(user) + Home.footer);    
@@ -158,7 +159,7 @@ public class Feedback extends HttpServlet {
 				+ "onKeyUp=javascript:{document.FeedbackForm.Comments.value=document.FeedbackForm.Comments.value.substring(0,160);document.getElementById('cbox').style.visibility='visible';}>"
 				+ "</TEXTAREA><br>");
 
-		buf.append("<label id=cbox style='visibility:hidden'>Email: <input type=text size=30 name=Email> (optional)</label><p>");
+		buf.append("<label id=cbox style='visibility:hidden'>Email: <input type=text size=50 placeholder=' optional, if you want a response to your comment' name=Email></label><p>");
 		
 		buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Submit Feedback'>"
 				+ "<INPUT TYPE=RESET VALUE='Clear Form' "

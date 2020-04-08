@@ -459,10 +459,10 @@ public class Question implements Serializable {
 
 		buf.append("<div id='feedback" + this.id + "'>"
 				+ "<FORM NAME=suggest" + this.id 
-				+ " onSubmit=\" return ajaxSubmit('/Feedback?UserRequest=ReportAProblem','" + this.id + "',document.suggest" + this.id + ".Notes.value);\">"
+				+ " onSubmit=\" return ajaxSubmit('/Feedback?UserRequest=ReportAProblem','" + this.id + "',document.suggest" + this.id + ".Notes.value,document.suggest" + this.id + ".Email.value);\">"
 				+ "<INPUT TYPE=BUTTON VALUE='Report a problem with this question' "
 				+ "onClick=javascript:getElementById('form" + this.id + "').style.display='';this.style.display='none'>"
-				+ "<div id='form" + this.id + "' style='display: none'><div style=color:red>");
+				+ "<div id='form" + this.id + "' style='display: none'><div style=color:red><br>");
 		switch (getQuestionType()) {
 			case 1: buf.append("Reminder: The correct answer is shown in bold print above."); break; // MULTIPLE_CHOICE
 			case 2: buf.append("Reminder: The correct answer is shown in bold print above."); break; // TRUE_FALSE
@@ -478,7 +478,9 @@ public class Question implements Serializable {
 				}
 			default:
 		}		
-		buf.append("</div>Comment:<INPUT TYPE=TEXT SIZE=80 NAME=Notes><INPUT TYPE=SUBMIT NAME=SubmitButton VALUE=Send></div></FORM></div>");
+		buf.append("</div>Your Comment: <INPUT TYPE=TEXT SIZE=80 NAME=Notes><br>");
+		buf.append("Your Email: <INPUT TYPE=TEXT SIZE=50 PLACEHOLDER=' optional, if you want a response' NAME=Email><br>");
+		buf.append("<INPUT TYPE=SUBMIT NAME=SubmitButton VALUE='Submit Feedback'></div></FORM></div>");
 		buf.append("<br/>");
 		return buf.toString(); 
 	}
