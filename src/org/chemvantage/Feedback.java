@@ -233,7 +233,7 @@ public class Feedback extends HttpServlet {
 		Session session = Session.getDefaultInstance(props, null);
 
 		String msgBody = r.view(user);
-		if (email != null) msgBody += "Respond to " + email;
+		if (email != null && !email.isEmpty()) msgBody += "Respond to " + email;
 		
 		if (msgBody.length()==0) return;  // no reports exist
 		
@@ -248,31 +248,5 @@ public class Feedback extends HttpServlet {
 		} catch (Exception e) {
 		}
 	}
-/*	
-	String replyForm(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer();
-		//String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
-		try {
-			buf.append("<h2>Reply to User Feedback</h2>");
-			long reportId = Long.parseLong(request.getParameter("ReportId"));
-			UserReport report = ofy().load().type(UserReport.class).id(reportId).safe();
-			buf.append(report.adminView(user) + "<hr>");
-			buf.append("<FORM ACTION=Feedback METHOD=POST>");
-			buf.append("<TEXTAREA NAME=MessageText ROWS=25 COLS=60 WRAP=SOFT>");
-			buf.append("Thank you for your feedback to ChemVantage. We value your comments and we use "
-					+ "your feedback to improve the functionality of the site for our users.<p>\n\n"
-					+ "<p>\n\nadmin@chemvantage.org<p>\n\n--<br>\n");
-			buf.append(report.view());
-			buf.append("</TEXTAREA><br>");
-			buf.append("<INPUT TYPE=HIDDEN NAME=ReportId VALUE=" + reportId + ">"
-					//+ (cvsToken==null?"":"<INPUT TYPE=HIDDEN NAME=CvsToken VALUE=" + cvsToken + ">")
-					+ "<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">"
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Send Reply'></FORM>");
-		} catch (Exception e) {
-			buf.append(e.toString());
-		}
-		return buf.toString();
-	}
-	*/
 }
 
