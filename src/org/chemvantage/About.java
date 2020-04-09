@@ -36,9 +36,7 @@ public class About extends HttpServlet {
 		return "This servlet provides information, terms and conditions for using ChemVantage.org.";
 	}
 
-	public static String about = "<TABLE><TR><TD><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
-		+ "<TD>Welcome to<br><b><FONT SIZE=+3>ChemVantage.org</FONT></b></TD></TR></TABLE>"
-		
+	public static String about = Home.banner
 		+ "<h3>Who we are</h3>"
 		+ "ChemVantage LLC was founded in 2010 to provide Open Education " 
 		+ "Resources for teaching and learning General Chemistry. The founder and chief software architect of "

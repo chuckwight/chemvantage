@@ -116,7 +116,7 @@ public class Feedback extends HttpServlet {
 
 	String feedbackForm(User user) {
 		StringBuffer buf = new StringBuffer();
-		
+		buf.append(Home.banner);
 		buf.append("<h2>Feedback Page</h2>");
 
 		buf.append("Your comments and opinions are important to us.  We use this<br>"
@@ -203,6 +203,7 @@ public class Feedback extends HttpServlet {
 			sendEmailToAdmin(r,user,email);
 		}
 
+		buf.append(Home.banner);
 		buf.append("<h2>Feedback Page</h2>");
 		buf.append(new Date().toString() + "<p>");
 		buf.append("Thank you for your feedback" + (stars>0?" (" + stars + " stars" + (stars==5?"!":"") + ").":"."));

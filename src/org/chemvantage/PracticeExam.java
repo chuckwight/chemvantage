@@ -116,14 +116,14 @@ public class PracticeExam extends HttpServlet {
 
 			buf.append("Please select <b>at least 3 topics</b> below to be covered on this practice exam.<p>");
 			buf.append("<FORM NAME=TopicForm METHOD=GET>");
-			//if (cvsToken!=null) buf.append("<input type=hidden name=CvsToken value=" + cvsToken + ">");
 			buf.append("<input type=hidden name=Token value=" + user.token + ">");
-			buf.append("\n<TABLE>");
+			
+			buf.append("<div style='display:table'>");
 			List<Topic> topics = ofy().load().type(Topic.class).list();
 			int i = 0;
 			for (Topic t : topics) {
 				if ("Hide".equals(t.orderBy)) continue;
-				buf.append(i%3==0?"<TR><TD>":"<TD>");
+				buf.append((i%3==0?"<div style='display:table-row'>":"") + "<div style='display:table-cell'>");
 				buf.append("<label><INPUT TYPE=CHECKBOX NAME=TopicId VALUE='" + t.id + "' "
 						+ "onClick=\"javascript: var checked=0; "
 						+ "for(i=0;i<document.TopicForm.TopicId.length;i++) if(document.TopicForm.TopicId[i].checked) checked++;"
@@ -131,10 +131,11 @@ public class PracticeExam extends HttpServlet {
 						+ "if(document.TopicForm.begin.disabled) document.TopicForm.begin.value='Select at least 3 topics';"
 						+ "else document.TopicForm.begin.value='Begin the exam';\">" 
 						+ t.title + "</label><br>\n");
-				buf.append(i%3==2?"</TD></TR>\n":"</TD>");
+				buf.append(i%3==2?"</div></div>":"</div>");
 				i++;
 			}
-			buf.append("</TABLE><p>");
+			buf.append("</div><p>");
+			
 			buf.append("You will have " + timeLimit + " minutes to submit this exam for scoring.<br>");
 			buf.append("<INPUT TYPE=SUBMIT NAME=begin DISABLED=true VALUE='Select at least 3 topics'>");
 			buf.append("</FORM></div>");
@@ -234,11 +235,10 @@ public class PracticeExam extends HttpServlet {
 			}
 			buf.append("</OL>");
 
-			if (user.isInstructor()) buf.append("<table style='border: 1px solid'><tr><td>"
-					//+ "Instructor: you may <a href=/Groups?UserRequest=AssignExamQuestions&AssignmentId=" + a.id + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">"
+			if (user.isInstructor()) buf.append("<div style='border: 1px solid black'>"
 					+ "Instructor: you may <a href=/PracticeExam?UserRequest=AssignExamQuestions&Token=" + user.token + ">"
 					+ "customize this practice exam</a> by selecting/deselecting the available question items."
-					+ "</td></tr></table><p>");
+					+ "</div><p>");
 			
 			buf.append("This exam must be submitted for grading within " + timeLimit + " minutes of when it is first downloaded.");
 
