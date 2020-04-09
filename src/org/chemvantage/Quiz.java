@@ -416,7 +416,7 @@ public class Quiz extends HttpServlet {
 				buf.append("<div id='vote' style='font-family:tahoma; color:red;'>(click a star):</div>\n");
 				for (int iStar=1;iStar<6;iStar++) {
 					buf.append("<img src='images/star1.gif' id='" + iStar + "' "
-							+ "style='width:30px; height:30px; float:left;' "
+							+ "style='width:30px; height:30px; float:left;' alt=star" + iStar + " "
 							+ "onmouseover=showStars(this.id); onClick=setStars(this.id); onmouseout=showStars(0);>");
 				}
 				buf.append("<p>");

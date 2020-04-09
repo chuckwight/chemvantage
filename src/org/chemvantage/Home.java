@@ -82,15 +82,22 @@ public class Home extends HttpServlet {
 			//+ "<TABLE>"
 			//+ "<TR><TD>\n";
 	
-	public static String footer = "\n<hr><span style='font-size:smaller'><table style='width:100%;border-spacing: 20px 0px'><tr>"
-			+ "<td>&copy; 2007-20 ChemVantage LLC. <a rel='license' href='https://creativecommons.org/licenses/by/3.0/'><img alt='Creative Commons License' style='border-width:0' src='https://i.creativecommons.org/l/by/3.0/80x15.png' /></a></td>"
-			+ "<td align=center><a href=/About#terms>Terms and Conditions of Use</a> and <a href=/About#terms>Privacy Policy</a></td>"
-			+ "<td align=right><a href='http://code.google.com/appengine/'><img src=/images/GAE.gif border=0 "
-			+ "alt='Powered by Google App Engine'></a></td></tr></table>"
-			+ "</span>"
+	public static String footer = "\n<hr><div style='font-size:smaller; width:100%; text-align:center'>"
+			+ "<span style='float:left'>&copy; 2007-20 ChemVantage LLC. <a rel='license' href='https://creativecommons.org/licenses/by/3.0/'><img alt='Creative Commons License' style='border-width:0' src='https://i.creativecommons.org/l/by/3.0/80x15.png' /></a></span>"
+			+ "<span><a href=/About#terms>Terms and Conditions of Use</a> and <a href=/About#terms>Privacy Policy</a></span>"
+			+ "<span style='float:right'><a href='http://code.google.com/appengine/'><img src=/images/GAE.gif border=0 "
+			+ "alt='Powered by Google App Engine'></a></span>"
+			+ "</div>"
 			//+ "</TD></TR></TABLE>\n"
 			+ "</body></html>";
-			
+	
+	public static String banner = "<div style='display:table'><div style='display:table-row'>"
+			+ "<div style='display:table-cell'><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo' align=middle></div>"
+			+ "<div style='display:table-cell'>Welcome to<br>"
+			+ "<FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT><br>"
+			+ "An Open Education Resource</div>"
+			+ "</div></div><p>";
+
 	static String getHeader(User user) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -152,13 +159,18 @@ public class Home extends HttpServlet {
 	String homePage(HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {			
+			
 			buf.append("<TABLE><TR ALIGN=LEFT><TD COLSPAN=2>");
+			buf.append(banner);
+
+/*
 			buf.append("<TABLE><TR><TD VALIGN=TOP>");
 			buf.append("<img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
 					+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage"     + " - " + subject.title);
 			buf.append("</b></FONT><br><div align=right>An OpenEducation Resource</div></TD></TR></TABLE>");      
+			*/
 			buf.append("</TD></TR><TR><TD VALIGN=TOP>");
-
+			
 			if (request.getRequestURL().toString().contains("dev-vantage")) 
 				buf.append("This is a development server used for code testing. Please do not<br>"
 						+ "use this server for serious educational purposes.<p><hr>");
