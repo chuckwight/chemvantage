@@ -79,23 +79,18 @@ public class Home extends HttpServlet {
 			+ "</head>\n"
 			+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
 			+ (announcement.isEmpty()?"":"<FONT COLOR=RED>" + announcement + "</FONT>");
-			//+ "<TABLE>"
-			//+ "<TR><TD>\n";
-	
+			
 	public static String footer = "\n<hr><div style='font-size:smaller; width:100%; text-align:center'>"
 			+ "<span style='float:left'>&copy; 2007-20 ChemVantage LLC. <a rel='license' href='https://creativecommons.org/licenses/by/3.0/'><img alt='Creative Commons License' style='border-width:0' src='https://i.creativecommons.org/l/by/3.0/80x15.png' /></a></span>"
 			+ "<span><a href=/About#terms>Terms and Conditions of Use</a> and <a href=/About#terms>Privacy Policy</a></span>"
 			+ "<span style='float:right'><a href='http://code.google.com/appengine/'><img src=/images/GAE.gif border=0 "
 			+ "alt='Powered by Google App Engine'></a></span>"
 			+ "</div>"
-			//+ "</TD></TR></TABLE>\n"
 			+ "</body></html>";
 	
 	public static String banner = "<div style='display:table'><div style='display:table-row'>"
-			+ "<div style='display:table-cell'><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo' align=middle></div>"
-			+ "<div style='display:table-cell'>Welcome to<br>"
-			+ "<FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT><br>"
-			+ "An Open Education Resource</div>"
+			+ "<div style='display:table-cell'><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo' align=top></div>"
+			+ "<div style='display:table-cell'><br>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT><br>An Open Education Resource</div>"
 			+ "</div></div><p>";
 
 	static String getHeader(User user) {
@@ -130,7 +125,6 @@ public class Home extends HttpServlet {
 					+ "--> </style>\n"
 					+ "</head>\n"
 					+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
-					//+ "<TABLE><TR><TD>\n"
 					+ "<div id=pzon><nobr>"
 					+ "<div class=pz1>ChemVantage.org</div>"
 					+ " <div class=pz1><a href=/Home>Home</a></div>"
@@ -159,17 +153,10 @@ public class Home extends HttpServlet {
 	String homePage(HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {			
-			
-			buf.append("<TABLE><TR ALIGN=LEFT><TD COLSPAN=2>");
 			buf.append(banner);
-
-/*
-			buf.append("<TABLE><TR><TD VALIGN=TOP>");
-			buf.append("<img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'></TD>"
-					+ "<TD>Welcome to<br><FONT SIZE=+3><b>ChemVantage"     + " - " + subject.title);
-			buf.append("</b></FONT><br><div align=right>An OpenEducation Resource</div></TD></TR></TABLE>");      
-			*/
-			buf.append("</TD></TR><TR><TD VALIGN=TOP>");
+			
+			// Create a table-like cell for the left side of the home page:
+			buf.append("<div style='display:table'><div style='dispay:table-row'><div style='display:table-cell;vertical-align:top'>");
 			
 			if (request.getRequestURL().toString().contains("dev-vantage")) 
 				buf.append("This is a development server used for code testing. Please do not<br>"
@@ -187,7 +174,7 @@ public class Home extends HttpServlet {
 					+ "ChemVantage is always free to use. <a href=/About>Read more about us here</a>.<p>");
 			
 			// Add quiz/homework select box to the page
-			buf.append("<TABLE><TR><TD>");
+			buf.append("<div>");
 			buf.append("<b>Quizzes and Homework Exercises</b>");
 			buf.append("<div id=selectReminder style='display: none'>"
 					+ "<b><FONT COLOR=RED>Please select a topic:</FONT></b><br></div>");
@@ -216,31 +203,29 @@ public class Home extends HttpServlet {
 					+ "onClick=\"javascript: "
 					+ "if(document.HQSelectForm.elements['TopicId'].value=='0'){document.getElementById('selectReminder').style.display='';} "
 					+ "else {document.HQSelectForm.action='Homework';document.HQSelectForm.submit()}\">");
-			buf.append("</FORM></TD></TR></TABLE><p>\n");
-
+			buf.append("</FORM></div><p>");
+			
 			// Add a box for taking practice exams
-			buf.append("<TABLE><TR><TD>");
+			buf.append("<div>");
 			buf.append("<b>Practice Exams</b>");
 			buf.append("<FORM METHOD=GET ACTION=PracticeExam>");
 			buf.append("<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">");
 			buf.append("<INPUT TYPE=SUBMIT VALUE='Take A Practice Exam Now'>");
-			buf.append("</FORM></TD></TR></TABLE><p>\n");
-
+			buf.append("</FORM></div>");
+			
 			// Add text resources table to the page
-			//List<Text> texts = ofy.query(Text.class).list();
 			if (texts == null) texts = ofy().load().type(Text.class).list();
-			buf.append("<TABLE><TR><TD NOWRAP>"
-					+ "<p><b>" + texts.size() + " Free Textbook Resources</b><br>");
+			buf.append("<div>");
+			buf.append("<p><b>" + texts.size() + " Free Textbook Resources</b><br>");
 			for (Text t : texts) {
 				buf.append("<a href=" + t.URL + ">" + t.title + "</a><br>");
 			}
-			buf.append("</TD></TR></TABLE>");
-
-			buf.append("</TD>");  // end left column of home page
-
+			buf.append("</div>");
+			
+			// End of left column of home page, start of right column
+			buf.append("</div><div style='display:table-cell;vertical-align:top'>");
+			
 			// Show embedded video lectures in the right column of the page
-			buf.append("<TD VALIGN=TOP>");   // start right column of home page
-
 			if (videos == null) videos = ofy().load().type(Video.class).order("orderBy").list();
 			Video video = null;
 			Long i = null;
@@ -259,7 +244,7 @@ public class Home extends HttpServlet {
 						+ video.serialNumber + (i==null?"":"?autoplay=1")
 						+ " frameborder='0' allowfullscreen></iframe>\n");
 
-				buf.append("<TABLE><TR><TD>");
+				buf.append("<div>");
 				buf.append("<b>Video Lectures</b>");
 				buf.append("<FORM NAME=VideoSelectForm METHOD=GET><SELECT NAME=Video onChange=submit()>");
 
@@ -267,9 +252,10 @@ public class Home extends HttpServlet {
 					buf.append("<OPTION VALUE=" + v.id + (v.id.equals(video.id)?" SELECTED":"") + ">" + v.title + "</OPTION>");
 				}
 				buf.append("</SELECT></FORM>");
-				buf.append("</TD></TR></TABLE><p>");
+				buf.append("</div>");
 			}
-			buf.append("</TD></TR></TABLE>\n");
+			// Complete the large two-column table for the Home page (divs for cell, row, table):
+			buf.append("</div></div></div>");
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}

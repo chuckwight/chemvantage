@@ -81,10 +81,6 @@ public class LTIRegistration extends HttpServlet {
 		super.init(config);
 	}
 
-	String banner = "<div><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo'>"
-			+ "Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
-			+ "<br>An Open Education Resource</div>";
-				
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
@@ -167,9 +163,9 @@ public class LTIRegistration extends HttpServlet {
 						.withClaim("con", con)  // this is specific to LTI1.1 registrations
 						.sign(algorithm);
 				sendRegistrationEmail(token);
-				out.println(Home.header + banner + "<h3>Registration Success</h3>Thank you. A registration email has been sent to your address.<p>" + Home.footer);
+				out.println(Home.header + Home.banner + "<h3>Registration Success</h3>Thank you. A registration email has been sent to your address.<p>" + Home.footer);
 			} catch (Exception e) {
-				out.println(Home.header + banner + "<h3>Registration Failure</h3>" + e.getMessage() + "<p>" + Home.footer);
+				out.println(Home.header + Home.banner + "<h3>Registration Failure</h3>" + e.getMessage() + "<p>" + Home.footer);
 			}
 		} else if ("finalize".contentEquals(userRequest)) {
 			try {
@@ -204,7 +200,7 @@ public class LTIRegistration extends HttpServlet {
 				}
 				Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
 				ofy().save().entity(d).now();
-				out.println(Home.header + banner + "<h2>Congratulations. Registration is complete.</h2>" + Home.footer);
+				out.println(Home.header + Home.banner + "<h2>Congratulations. Registration is complete.</h2>" + Home.footer);
 			} catch (Exception e) {
 				out.println(Home.header + "<h2>Registration Failed</h2>" + e.getMessage() + Home.footer);
 			}
@@ -213,7 +209,7 @@ public class LTIRegistration extends HttpServlet {
 
 	String applicationForm(String use) {
 		if (use==null) use = "";
-		StringBuffer buf = new StringBuffer(banner + "<p>");
+		StringBuffer buf = new StringBuffer(Home.banner + "<p>");
 		buf.append("ChemVantage is an Open Education Resource for teaching and learning college-level General "
 				+ "Chemistry. We offer this service at no charge for nonprofit educational purposes.");
 		buf.append("<h4>ChemVantage LTI Registration</h4>");
@@ -263,7 +259,7 @@ public class LTIRegistration extends HttpServlet {
 	}
 	
 	String clientIdForm(String token) {
-		StringBuffer buf = new StringBuffer(banner);
+		StringBuffer buf = new StringBuffer(Home.banner);
 		String iss = null;
 		String sub = null;
 		String email = null;
