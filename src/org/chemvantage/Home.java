@@ -78,9 +78,9 @@ public class Home extends HttpServlet {
 			+ "<title>ChemVantage</title>\n"
 			+ "</head>\n"
 			+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
-			+ (announcement.isEmpty()?"":"<FONT COLOR=RED>" + announcement + "</FONT>")
-			+ "<TABLE>"
-			+ "<TR><TD>\n";
+			+ (announcement.isEmpty()?"":"<FONT COLOR=RED>" + announcement + "</FONT>");
+			//+ "<TABLE>"
+			//+ "<TR><TD>\n";
 	
 	public static String footer = "\n<hr><span style='font-size:smaller'><table style='width:100%;border-spacing: 20px 0px'><tr>"
 			+ "<td>&copy; 2007-20 ChemVantage LLC. <a rel='license' href='https://creativecommons.org/licenses/by/3.0/'><img alt='Creative Commons License' style='border-width:0' src='https://i.creativecommons.org/l/by/3.0/80x15.png' /></a></td>"
@@ -88,7 +88,7 @@ public class Home extends HttpServlet {
 			+ "<td align=right><a href='http://code.google.com/appengine/'><img src=/images/GAE.gif border=0 "
 			+ "alt='Powered by Google App Engine'></a></td></tr></table>"
 			+ "</span>"
-			+ "</TD></TR></TABLE>\n"
+			//+ "</TD></TR></TABLE>\n"
 			+ "</body></html>";
 			
 	static String getHeader(User user) {
@@ -123,7 +123,7 @@ public class Home extends HttpServlet {
 					+ "--> </style>\n"
 					+ "</head>\n"
 					+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
-					+ "<TABLE><TR><TD>\n"
+					//+ "<TABLE><TR><TD>\n"
 					+ "<div id=pzon><nobr>"
 					+ "<div class=pz1>ChemVantage.org</div>"
 					+ " <div class=pz1><a href=/Home>Home</a></div>"

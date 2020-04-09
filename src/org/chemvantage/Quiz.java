@@ -151,14 +151,14 @@ public class Quiz extends HttpServlet {
 					+ "supports, at a minimum, LTI version 1.1.2</font><p>");
 			
 			if (user.isInstructor() && qa != null) {
-				buf.append("<table style='border: 1px solid black'><tr><td>");
+				buf.append("<div style='border: 1px solid black'>");
 				buf.append("As the course instructor you may "
 						+ "<a href=/Quiz?UserRequest=AssignQuizQuestions&Token=" + user.token + ">"
 						+ "customize this quiz</a> by selecting/deselecting the available question items. ");
 				if (qa.lti_nrps_context_memberships_url != null && qa.lti_ags_lineitem_url != null) 
 					buf.append("You may also view a <a href=/Quiz?UserRequest=ShowSummary&Token=" 
 							+ user.token + ">summary of student scores</a> for this assignment.");
-				buf.append("</td></tr></table><p>");
+				buf.append("</div><p>");
 			} else if (user.isAnonymous()) {
 				buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			}
@@ -391,8 +391,7 @@ public class Quiz extends HttpServlet {
 			if (studentScore == qt.possibleScore) {
 				buf.append("<H2>Congratulations on a perfect score! Good job.</H2>\n");
 
-				buf.append("<TABLE><TR><TD><div id='FiveStars'>\n"
-						+ "<script type='text/javascript'>\n"
+				buf.append("<script type='text/javascript'>\n"
 						+ "<!--\n"
 						+ "  var star1 = new Image(); star1.src='images/star1.gif';"
 						+ "  var star2 = new Image(); star2.src='images/star2.gif';"
@@ -413,14 +412,14 @@ public class Quiz extends HttpServlet {
 						+ "</script>\n");
 
 				// Insert a 5-star clickable user rating tool:
-				buf.append("Please rate your overall experience with ChemVantage:<br />\n");
+				buf.append("Please rate your overall experience with ChemVantage:<br>\n");
 				buf.append("<div id='vote' style='font-family:tahoma; color:red;'>(click a star):</div>\n");
 				for (int iStar=1;iStar<6;iStar++) {
 					buf.append("<img src='images/star1.gif' id='" + iStar + "' "
 							+ "style='width:30px; height:30px; float:left;' "
-							+ "onmouseover=showStars(this.id); onClick=setStars(this.id); onmouseout=showStars(0); />");
+							+ "onmouseover=showStars(this.id); onClick=setStars(this.id); onmouseout=showStars(0);>");
 				}
-				buf.append("</div></TD></TR></TABLE><p>");
+				buf.append("<p>");
 			}
 			else {
 				int leftBlank = qt.possibleScore - studentScore - wrongAnswers;
@@ -447,8 +446,8 @@ public class Quiz extends HttpServlet {
 				}
 			}
 			
-			if (!reportScoreToLms) {
-				buf.append("<b>Please note: </b> Your score was not reported back to the grade book of your class "
+			if (!reportScoreToLms && !user.isAnonymous()) {
+				buf.append("<br><b>Please note:</b> Your score was not reported back to the grade book of your class "
 						+ "LMS because the LTI launch request did not contain enough information to do this. "
 						+ (user.isInstructor()?"For instructors this is common.":"") + "<p>");				
 			}
