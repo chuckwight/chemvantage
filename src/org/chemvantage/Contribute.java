@@ -55,7 +55,7 @@ public class Contribute extends HttpServlet {
 
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
-			out.println(Home.header + newQuestionForm(user,request) + Home.footer);		
+			out.println(Home.header("Contribute a ChemVantage Question Item") + newQuestionForm(user,request) + Home.footer);		
 		} catch (Exception e) {}
 	}
 
@@ -71,8 +71,8 @@ public class Contribute extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 			if (userRequest.equals("Save")) {
-				out.println(Home.header + submitQuestion(user,request) + Home.footer);
-			} else out.println(Home.header + newQuestionForm(user,request) + Home.footer);
+				out.println(Home.header("Thank you for the ChemVantage Question Item") + submitQuestion(user,request) + Home.footer);
+			} else out.println(Home.header("Contribute a ChemVantage Question Item") + newQuestionForm(user,request) + Home.footer);
 		} catch (Exception e) {
 		}
 	}

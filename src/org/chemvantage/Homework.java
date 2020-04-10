@@ -64,13 +64,13 @@ public class Homework extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 			
-			if ("ShowScores".contentEquals(userRequest)) out.println(Home.header + showScores(user,request) + Home.footer);
-			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header + showSummary(user,request) + Home.footer);
+			if ("ShowScores".contentEquals(userRequest)) out.println(Home.header("Your ChemVantage Scores") + showScores(user,request) + Home.footer);
+			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header("Your Class ChemVantage Scores") + showSummary(user,request) + Home.footer);
 			else if ("AssignHomeworkQuestions".contentEquals(userRequest) && user.isInstructor()) {
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-				out.println(Home.header + a.selectQuestionsForm(user) + Home.footer);
+				out.println(Home.header("Customize ChemVantage Homework Assignment") + a.selectQuestionsForm(user) + Home.footer);
 			}
-			else out.println(Home.header + printHomework(user,request) + Home.footer);
+			else out.println(Home.header("ChemVantage Homework") + printHomework(user,request) + Home.footer);
 		} catch (Exception e) {
 			//response.sendRedirect("/Logout?CvsToken=" + request.getParameter("CvsToken"));
 			response.sendRedirect("/Logout");
@@ -93,8 +93,8 @@ public class Homework extends HttpServlet {
 			if ("UpdateAssignment".contentEquals(userRequest)) {
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 				a.updateQuestions(request);
-				out.println(Home.header + printHomework(user,request) + Home.footer);
-			} else out.println(Home.header + printScore(user,request) + Home.footer);
+				out.println(Home.header("ChemVantage Homework") + printHomework(user,request) + Home.footer);
+			} else out.println(Home.header("ChemVantage Homework Grading Results") + printScore(user,request) + Home.footer);
 		} catch (Exception e) {
 			response.sendRedirect("/Logout");
 		}

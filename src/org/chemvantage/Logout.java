@@ -46,7 +46,7 @@ public class Logout extends HttpServlet {
 			User.getUser(request.getParameter("CvsToken")).destroyCvsToken();
 		} catch (Exception e) {}
 */		
-		out.println(Home.header 
+		out.println(Home.header("ChemVantage Logout Successful") 
 				+ "<h3>You have successfully signed out of ChemVantage</h3>" 
 				+ "If this happened unexpectedly, it is likely that your browser's web "
 				+ "session timed out after a period of inactivity, or the access token "

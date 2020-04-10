@@ -55,7 +55,7 @@ public class Home extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 
-		out.println(header + homePage(request) + footer);
+		out.println(header() + homePage(request) + footer);
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
@@ -63,23 +63,29 @@ public class Home extends HttpServlet {
 		doGet(request,response);
 	}
 
-	public static String header = "<!DOCTYPE html>"
-			+"<html>\n"
-			+ "<head>"
-			+ "<meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />"
-			+ "<meta http-equiv='Pragma' content='no-cache' />"
-			+ "<meta http-equiv='Expires' content='0' />"
-			+ "<meta http-equiv='Content-type' content='text/html;charset=iso-8859-1'>"
-			+ "<meta name='Description' content='An online quiz and homework site'>\n"
-			+ "<meta namew='Keywords' content='chemistry,learning,online,quiz,homework,video,textbook,open,education'>\n"
-			+ "<meta name='msapplication-config' content='none'/>"
-			+ "<link rel='icon' type='image/png' href='/favicon.png'>"
-			+ "<link rel='icon' type='image/vnd.microsoft.icon' href='/favicon.ico'>"
-			+ "<title>ChemVantage</title>\n"
-			+ "</head>\n"
-			+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
-			+ (announcement.isEmpty()?"":"<FONT COLOR=RED>" + announcement + "</FONT>");
-			
+	public static String header(String title) {
+		return "<!DOCTYPE html>"
+				+"<html>\n"
+				+ "<head>"
+				+ "<meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />"
+				+ "<meta http-equiv='Pragma' content='no-cache' />"
+				+ "<meta http-equiv='Expires' content='0' />"
+				+ "<meta http-equiv='Content-type' content='text/html;charset=iso-8859-1'>"
+				+ "<meta name='Description' content='An online quiz and homework site'>\n"
+				+ "<meta namew='Keywords' content='chemistry,learning,online,quiz,homework,video,textbook,open,education'>\n"
+				+ "<meta name='msapplication-config' content='none'/>"
+				+ "<link rel='icon' type='image/png' href='/favicon.png'>"
+				+ "<link rel='icon' type='image/vnd.microsoft.icon' href='/favicon.ico'>"
+				+ "<title>" + (title==null || title.isEmpty()?"ChemVantage":title) + "</title>\n"
+				+ "</head>\n"
+				+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
+				+ (announcement.isEmpty()?"":"<FONT COLOR=RED>" + announcement + "</FONT>");
+	}
+	
+	public static String header() {
+		return header("ChemVantage");
+	}
+	
 	public static String footer = "\n<hr><div style='font-size:smaller; width:100%; text-align:center'>"
 			+ "<span style='float:left'>&copy; 2007-20 ChemVantage LLC. <a rel='license' href='https://creativecommons.org/licenses/by/3.0/'><img alt='Creative Commons License' style='border-width:0' src='https://i.creativecommons.org/l/by/3.0/80x15.png' /></a></span>"
 			+ "<span><a href=/About#terms>Terms and Conditions of Use</a> and <a href=/About#terms>Privacy Policy</a></span>"

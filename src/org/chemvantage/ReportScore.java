@@ -60,7 +60,7 @@ public class ReportScore extends HttpServlet {
 		if (request.getParameter("AssignmentId") == null || request.getParameter("UserId") == null) {
 			PrintWriter out = response.getWriter();
 			response.setContentType("text/html");
-			out.println(Home.header + "<h3>Unreported Scores</h3>");
+			out.println(Home.header("ChemVantage Unreported Scores") + "<h3>Unreported Scores</h3>");
 			out.println("For each of the scores below, click the link to report it manually.<p>");
 			List<Score> scores = ofy().load().type(Score.class).filter("lisReportComplete",false).list();
 			for (Score s : scores) {

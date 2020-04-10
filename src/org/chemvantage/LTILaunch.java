@@ -81,7 +81,7 @@ public class LTILaunch extends HttpServlet {
 				} else {  // send the user back to the resourcePickerForm
 					int topicKey = -1;
 					try {topicKey = Integer.parseInt(request.getParameter("TopicKey"));} catch (Exception e) {}
-					response.getWriter().println(Home.header + pickResourceForm(user,myAssignment,topicKey) + Home.footer);
+					response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,topicKey) + Home.footer);
 				}
 			} else if (request.getParameter("lti_message_type")!=null) { // handle LTI launch request for LTIv1p0 and LTIv1p1
 				basicLtiLaunchRequest(request,response);
@@ -268,7 +268,7 @@ public class LTILaunch extends HttpServlet {
 				
 				debug.append("Redirecting to: " + redirectUrl);
 				response.sendRedirect(redirectUrl);
-			} else response.getWriter().println(Home.header + pickResourceForm(user,myAssignment,0) + Home.footer);
+			} else response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,0) + Home.footer);
 			return;
 
 		} catch (Exception e) {

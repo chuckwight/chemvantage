@@ -100,7 +100,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				} else {  // send the user back to the resourcePickerForm
 					int topicKey = -1;
 					try {topicKey = Integer.parseInt(request.getParameter("TopicKey"));} catch (Exception e) {}
-					response.getWriter().println(Home.header + pickResourceForm(user,myAssignment,topicKey) + Home.footer);
+					response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,topicKey) + Home.footer);
 				}
 			}		
 		} catch (Exception e) {	
@@ -254,7 +254,7 @@ public class LTIv1p3Launch extends HttpServlet {
 
 			// If this is the first time this Assignment has been used, it may be missing the assignmentType and topicId(s)
 			if (myAssignment.assignmentType == null) {  //Show the the pickResource form:									
-				response.getWriter().println(Home.header + pickResourceForm(user,myAssignment,0) + Home.footer);
+				response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,0) + Home.footer);
 				return;
 			} else {  // redirect the user's browser to the assignment
 				response.sendRedirect("/" + myAssignment.assignmentType + "?Token=" + user.token);

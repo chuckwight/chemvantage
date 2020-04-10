@@ -75,7 +75,7 @@ public class Feedback extends HttpServlet {
 				sendEmailToAdmin(r,user,email);
 			} else if (userRequest.equals("AjaxRating")) {
 				recordAjaxRating(request);
-			} else out.println(Home.header + feedbackForm(user) + Home.footer);    
+			} else out.println(Home.header("ChemVantage Feedback Form") + feedbackForm(user) + Home.footer);    
 		} catch (Exception e) {
 		}
 	}
@@ -93,11 +93,11 @@ public class Feedback extends HttpServlet {
 			if (userRequest == null) userRequest = "";
 
 			if (userRequest.equals("SubmitFeedback")) {
-				out.println(Home.header + submitFeedback(user,request) + Home.footer);
+				out.println(Home.header("Thank you for Feedback to ChemVantage") + submitFeedback(user,request) + Home.footer);
 			} else if (userRequest.equals("Delete Report")) {
 				ofy().delete().key(Key.create(UserReport.class,Long.parseLong(request.getParameter("ReportId")))).now();
-				out.println(Home.header + feedbackForm(user) + Home.footer);
-			} else 	out.println(Home.header + feedbackForm(user) + Home.footer);			
+				out.println(Home.header("ChemVantage Feedback Form") + feedbackForm(user) + Home.footer);
+			} else 	out.println(Home.header("ChemVantage Feedback Form") + feedbackForm(user) + Home.footer);			
 		} catch (Exception e) {
 		}
 	}

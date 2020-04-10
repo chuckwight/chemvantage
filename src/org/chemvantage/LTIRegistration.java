@@ -101,11 +101,11 @@ public class LTIRegistration extends HttpServlet {
 		} else if ("final".contentEquals(userRequest)) {
 			response.setContentType("text/html");
 			String token = request.getParameter("token");
-			out.println(Home.header + clientIdForm(token) + Home.footer);
+			out.println(Home.header("Finalize ChemVantage LTI Registration") + clientIdForm(token) + Home.footer);
 		} else {
 			response.setContentType("text/html");
 			String use = request.getParameter("use");
-			out.println(Home.header + applicationForm(use) + Home.footer);		
+			out.println(Home.header("ChemVantage LTI Registration Form") + applicationForm(use) + Home.footer);		
 		}
 	}
 	
@@ -163,9 +163,9 @@ public class LTIRegistration extends HttpServlet {
 						.withClaim("con", con)  // this is specific to LTI1.1 registrations
 						.sign(algorithm);
 				sendRegistrationEmail(token);
-				out.println(Home.header + Home.banner + "<h3>Registration Success</h3>Thank you. A registration email has been sent to your address.<p>" + Home.footer);
+				out.println(Home.header("ChemVantage LTI Registration Success") + Home.banner + "<h3>Registration Success</h3>Thank you. A registration email has been sent to your address.<p>" + Home.footer);
 			} catch (Exception e) {
-				out.println(Home.header + Home.banner + "<h3>Registration Failure</h3>" + e.getMessage() + "<p>" + Home.footer);
+				out.println(Home.header("ChemVantage LTI Registration Failure") + Home.banner + "<h3>Registration Failure</h3>" + e.getMessage() + "<p>" + Home.footer);
 			}
 		} else if ("finalize".contentEquals(userRequest)) {
 			try {
@@ -200,11 +200,11 @@ public class LTIRegistration extends HttpServlet {
 				}
 				Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
 				ofy().save().entity(d).now();
-				out.println(Home.header + Home.banner + "<h2>Congratulations. Registration is complete.</h2>" + Home.footer);
+				out.println(Home.header("ChemVantage LTI Registration Complete") + Home.banner + "<h2>Congratulations. Registration is complete.</h2>" + Home.footer);
 			} catch (Exception e) {
-				out.println(Home.header + "<h2>Registration Failed</h2>" + e.getMessage() + Home.footer);
+				out.println(Home.header("ChemVantage LTI Registration Failed") + "<h2>Registration Failed</h2>" + e.getMessage() + Home.footer);
 			}
-		} else out.println(Home.header + "<h2>Registration Failed</h2>POST was missing a required parameter." + Home.footer);
+		} else out.println(Home.header("ChemVantage LTI Registration Failed") + "<h2>Registration Failed</h2>POST was missing a required parameter." + Home.footer);
 	}	
 
 	String applicationForm(String use) {

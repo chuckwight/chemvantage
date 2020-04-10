@@ -261,6 +261,6 @@ public class About extends HttpServlet {
 	throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		out.println(Home.header + about + premium + accounts + certification + copyright + terms + Home.footer);
+		out.println(Home.header("About ChemVantage") + about + premium + accounts + certification + copyright + terms + Home.footer);
 	}
 }

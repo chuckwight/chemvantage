@@ -165,7 +165,7 @@ public class LTIDeepLinks extends HttpServlet {
 	}
 	
 	String contentPickerForm(User user, HttpServletRequest request,JsonObject claims,int topicKey) throws Exception {
-		StringBuffer buf = new StringBuffer(Home.header);
+		StringBuffer buf = new StringBuffer(Home.header("Select ChemVantage Assignment"));
 		
 		JsonObject settings = claims.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings").getAsJsonObject();
 		boolean acceptsLtiResourceLink = settings.get("accept_types").getAsJsonArray().contains(new JsonPrimitive("ltiResourceLink"));

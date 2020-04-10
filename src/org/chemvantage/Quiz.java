@@ -71,13 +71,13 @@ public class Quiz extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 			
-			if ("ShowScores".contentEquals(userRequest)) out.println(Home.header + showScores(user,request) + Home.footer);
-			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header + showSummary(user,request) + Home.footer);
+			if ("ShowScores".contentEquals(userRequest)) out.println(Home.header("Your ChemVantage Scores") + showScores(user,request) + Home.footer);
+			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header("Your Class ChemVantage Scores") + showSummary(user,request) + Home.footer);
 			else if ("AssignQuizQuestions".contentEquals(userRequest) && user.isInstructor()) {
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-				out.println(Home.header + a.selectQuestionsForm(user) + Home.footer);
+				out.println(Home.header("Customize ChemVantage Quiz Assignment") + a.selectQuestionsForm(user) + Home.footer);
 			}
-			else out.println(Home.header + printQuiz(user,request) + Home.footer);
+			else out.println(Home.header("ChemVantage Quiz") + printQuiz(user,request) + Home.footer);
 		} catch (Exception e) {
 			response.sendRedirect("/Logout");
 		}
@@ -98,8 +98,8 @@ public class Quiz extends HttpServlet {
 			if ("UpdateAssignment".contentEquals(userRequest)) {
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 				a.updateQuestions(request);
-				out.println(Home.header + printQuiz(user,request) + Home.footer);
-			} else out.println(Home.header + printScore(user,request) + Home.footer);
+				out.println(Home.header("ChemVantage Quiz") + printQuiz(user,request) + Home.footer);
+			} else out.println(Home.header("ChemVantage Quiz Results") + printScore(user,request) + Home.footer);
 		} catch (Exception e) {
 			response.sendRedirect("/Logout");
 		}

@@ -57,7 +57,7 @@ public class DataStoreCleaner extends HttpServlet {
 		
 		String task = request.getParameter("Task");		
 		if (task != null) doPost(request,response);
-		else out.println(Home.header + interactiveMenu() + Home.footer);		
+		else out.println(Home.header("Datastore Cleaner") + interactiveMenu() + Home.footer);		
 	} 
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
@@ -70,7 +70,7 @@ public class DataStoreCleaner extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		response.setContentType("text/html");
 		
-		StringBuffer buf = new StringBuffer(Home.header);
+		StringBuffer buf = new StringBuffer(Home.header("Datastore Cleaner"));
 		buf.append("<h2>Data Store Cleaner</h2>");
 		
 		// This section handles individual tasks executed from the Task Queue
