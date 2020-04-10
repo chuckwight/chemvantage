@@ -452,10 +452,12 @@ public class Homework extends HttpServlet {
 			}
 			
 			boolean offerHint = studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id);
+			
 			// if the user response was correct, seek five-star feedback:
 			if (studentScore > 0) buf.append(fiveStars());
 			
-			buf.append("<p>We welcome comments about your ChemVantage experience <a href=/Feedback?Token=" + user.token + ">here</a>.<p>");
+			buf.append("<div>We welcome comments about your ChemVantage experience <a href=/Feedback?Token=" + user.token + ">here</a>.<p></div>");
+			
 			buf.append("<a href=/Homework?"
 					+ (assignmentId>0?"AssignmentId=" + assignmentId : "TopicId=" + topic.id)
 					+ "&Token=" + user.token  
@@ -541,9 +543,7 @@ public class Homework extends HttpServlet {
 	String fiveStars() {
 		StringBuffer buf = new StringBuffer();
 
-		buf.append("<TABLE><TR><TD><div id='FiveStars'>\n"
-				+ "<script type='text/javascript'>\n"
-				+ "<!--\n"
+		buf.append("<script type='text/javascript'>\n"
 				+ "  var star1 = new Image(); star1.src='images/star1.gif';"
 				+ "  var star2 = new Image(); star2.src='images/star2.gif';"
 				+ "  var set = false;\n"
@@ -559,20 +559,18 @@ public class Homework extends HttpServlet {
 				+ "      set = true;"
 				+ "    }"
 				+ "  }\n"
-				+ "// -->\n"
 				+ "</script>\n");
 
-		buf.append("Please rate your overall experience with ChemVantage:<br />\n"
-				+ "<div id='vote' style='font-family:tahoma; color:red;'>(click a star):</div>\n");
+		buf.append("Please rate your overall experience with ChemVantage:<br>\n"
+				+ "<span id='vote' style='color:red;'>(click a star):</span><br>");
 
 		for (int iStar=1;iStar<6;iStar++) {
-			buf.append("<img src='images/star1.gif' id='" + iStar + "' "
-					+ "style='width:30px; height:30px; float:left;' "
-					+ "onmouseover=showStars(this.id); onClick=setStars(this.id); onmouseout=showStars(0); />");
+			buf.append("<img src='images/star1.gif' id='" + iStar + "' alt='star" + iStar + "'"
+					+ "style='width:30px; height:30px;' "
+					+ "onmouseover=showStars('" + iStar + "'); onFocus=showStars('" + iStar + "');"
+					+ "onClick=setStars('" + iStar + "'); onmouseout=showStars('0');>");
 		}
-
-		buf.append("</div></TD></TR></TABLE><p>");
-
+		buf.append("<br>");
 		return buf.toString(); 
 	}
 

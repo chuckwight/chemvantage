@@ -390,36 +390,7 @@ public class Quiz extends HttpServlet {
 
 			if (studentScore == qt.possibleScore) {
 				buf.append("<H2>Congratulations on a perfect score! Good job.</H2>\n");
-
-				buf.append("<script type='text/javascript'>\n"
-						+ "<!--\n"
-						+ "  var star1 = new Image(); star1.src='images/star1.gif';"
-						+ "  var star2 = new Image(); star2.src='images/star2.gif';"
-						+ "  var set = false;\n"
-						+ "  function showStars(n) {"
-						+ "    if (!set) {"
-						+ "      document.getElementById('vote').innerHTML=(n==0?'(click a star)':''+n+(n>1?' stars':' star'));"
-						+ "      for (i=1;i<6;i++) {document.getElementById(i).src=(i<=n?star2.src:star1.src)}"
-						+ "    }"
-						+ "  }\n"
-						+ "  function setStars(n) {"
-						+ "    if (!set) {"
-						+ "      ajaxStars(n);"
-						+ "      set = true;"
-						+ "    }"
-						+ "  }\n"
-						+ "// -->\n"
-						+ "</script>\n");
-
-				// Insert a 5-star clickable user rating tool:
-				buf.append("Please rate your overall experience with ChemVantage:<br>\n");
-				buf.append("<div id='vote' style='font-family:tahoma; color:red;'>(click a star):</div>\n");
-				for (int iStar=1;iStar<6;iStar++) {
-					buf.append("<img src='images/star1.gif' id='" + iStar + "' "
-							+ "style='width:30px; height:30px; float:left;' alt=star" + iStar + " "
-							+ "onmouseover=showStars(this.id); onClick=setStars(this.id); onmouseout=showStars(0);>");
-				}
-				buf.append("<p>");
+				buf.append(fiveStars());
 			}
 			else {
 				int leftBlank = qt.possibleScore - studentScore - wrongAnswers;
@@ -467,7 +438,41 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String ajaxScoreJavaScript(String token) {
+	String fiveStars() {
+		StringBuffer buf = new StringBuffer();
+
+		buf.append("<script type='text/javascript'>\n"
+				+ "  var star1 = new Image(); star1.src='images/star1.gif';"
+				+ "  var star2 = new Image(); star2.src='images/star2.gif';"
+				+ "  var set = false;\n"
+				+ "  function showStars(n) {"
+				+ "    if (!set) {"
+				+ "      document.getElementById('vote').innerHTML=(n==0?'(click a star)':''+n+(n>1?' stars':' star'));"
+				+ "      for (i=1;i<6;i++) {document.getElementById(i).src=(i<=n?star2.src:star1.src)}"
+				+ "    }"
+				+ "  }\n"
+				+ "  function setStars(n) {"
+				+ "    if (!set) {"
+				+ "      ajaxStars(n);"
+				+ "      set = true;"
+				+ "    }"
+				+ "  }\n"
+				+ "</script>\n");
+
+		buf.append("Please rate your overall experience with ChemVantage:<br>\n"
+				+ "<span id='vote' style='color:red;'>(click a star):</span><br>");
+
+		for (int iStar=1;iStar<6;iStar++) {
+			buf.append("<img src='images/star1.gif' id='" + iStar + "' alt='star" + iStar + "'"
+					+ "style='width:30px; height:30px;' "
+					+ "onmouseover=showStars('" + iStar + "'); onFocus=showStars('" + iStar + "');"
+					+ "onClick=setStars('" + iStar + "'); onmouseout=showStars('0');>");
+		}
+		buf.append("<br>");
+		return buf.toString(); 
+	}
+
+String ajaxScoreJavaScript(String token) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note,email) {\n"
 		+ "  var xmlhttp;\n"
