@@ -255,7 +255,6 @@ public class Homework extends HttpServlet {
 						+ "<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">"
 						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
-						+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>"
 						+ "<div style='display:table-cell'><b>" + i + ".&nbsp;</b></div>"
 						+ "<div style='display:table-cell'>" + q.print() 
 						+ (Long.toString(q.id).equals(request.getParameter("Q"))?"Hint:<br>" + q.getHint():"")
