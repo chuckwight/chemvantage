@@ -350,7 +350,7 @@ public class Question implements Serializable {
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br>");
 			buf.append("<span style='border: 1px solid black'>"
 					+ "<b>" + quot2html(correctAnswer) + "</b>"
-					+ "</span");
+					+ "</span>");
 			buf.append("&nbsp;" + tag + "<p><p>");
 			break;
 		case 5: // Numeric Answer
@@ -362,7 +362,7 @@ public class Question implements Serializable {
 			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
 			default:
 			}
-			buf.append("<div style='border: 1px solid black'>"
+			buf.append("<span style='border: 1px solid black'>"
 					+ "<b>" + getCorrectAnswer() + "</b>"
 					+ "</span>");
 			buf.append(parseString(tag) + "<p>");
@@ -444,25 +444,26 @@ public class Question implements Serializable {
 			buf.append("<span style='border: 1px solid black'>"
 					+ "<b>" + getCorrectAnswer() + "</b>"
 					+ "</span>");
-			buf.append(parseString(tag) + "<p>");
+			buf.append(parseString(tag) + "<br>");
 			if (hint.length()>0) {
-				buf.append("Hint:<br>" + parseString(hint) + "<p>");
+				buf.append("<br>Hint:<br>" + parseString(hint) + "<br>");
 			}
 			if (showDetails && solution.length()>0) {
-				buf.append("Solution:<br>" + parseString(solution));
-				buf.append("<br>");
+				buf.append("<br>Solution:<br>" + parseString(solution) + "<br>");
 			}
 			break;        
 		}
 
 		if (studentAnswer.length() > 0) buf.append("Your answer was: " + studentAnswer + "<br>");
 
-		buf.append("<div id='feedback" + this.id + "'>"
-				+ "<FORM NAME=suggest" + this.id 
+		//buf.append("<div id='feedback" + this.id + "'>"
+		buf.append("<FORM NAME=suggest" + this.id 
 				+ " onSubmit=\" return ajaxSubmit('/Feedback?UserRequest=ReportAProblem','" + this.id + "',document.suggest" + this.id + ".Notes.value,document.suggest" + this.id + ".Email.value);\">"
 				+ "<INPUT TYPE=BUTTON VALUE='Report a problem with this question' "
 				+ "onClick=javascript:getElementById('form" + this.id + "').style.display='';this.style.display='none'>"
-				+ "<div id='form" + this.id + "' style='display: none'><div style=color:red><br>");
+				+ "<div id='form" + this.id + "' style='display: none'>");
+		
+		buf.append("<span style=color:red><br>");
 		switch (getQuestionType()) {
 			case 1: buf.append("Reminder: The correct answer is shown in bold print above."); break; // MULTIPLE_CHOICE
 			case 2: buf.append("Reminder: The correct answer is shown in bold print above."); break; // TRUE_FALSE
@@ -478,9 +479,11 @@ public class Question implements Serializable {
 				}
 			default:
 		}		
-		buf.append("</div>Your Comment: <INPUT TYPE=TEXT SIZE=80 NAME=Notes><br>");
+		buf.append("</span><br>");
+		
+		buf.append("Your Comment: <INPUT TYPE=TEXT SIZE=80 NAME=Notes><br>");
 		buf.append("Your Email: <INPUT TYPE=TEXT SIZE=50 PLACEHOLDER=' optional, if you want a response' NAME=Email><br>");
-		buf.append("<INPUT TYPE=SUBMIT NAME=SubmitButton VALUE='Submit Feedback'></div></FORM></div>");
+		buf.append("<INPUT TYPE=SUBMIT NAME=SubmitButton VALUE='Submit Feedback'></div></FORM>");
 		buf.append("<br/>");
 		return buf.toString(); 
 	}
