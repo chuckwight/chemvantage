@@ -12,7 +12,7 @@
 *   GNU General Public License for more details.
 *
 *   You should have received a copy of the GNU General Public License
-*   along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*   along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 package org.chemvantage;
@@ -134,24 +134,24 @@ public class About extends HttpServlet {
 		+ "to avoid paying royalties to textbook publishers.  Therefore, all contributors of ChemVantage question "
 		+ "items are asked to certify that all contributed items are original works, and that the author assigns the "
 		+ "copyrights to ChemVantage LLC to be shared freely under the terms of a "
-		+ "<a href='http://creativecommons.org/licenses/by/3.0/us/'>Creative Commons Attribution 3.0 License.</a>";
+		+ "<a href='https://creativecommons.org/licenses/by/3.0/us/'>Creative Commons Attribution 3.0 License.</a>";
 
-	public static String certification = "<a NAME=certification></a>"
+	public static String certification = "<a NAME=certification></a><div>"
 		+ "<h3>Learning Management System Integration</h3>"
-		+ "<a href=http://imscert.org><img alt='IMS Global Certified' style='border-width:0' align=left hspace=10 vspace=5 "
+		+ "<a href=https://imscert.org><img alt='IMS Global Certified' style='border-width:0' align=left hspace=10 vspace=5 "
 		+ "src='/images/imscertifiedfinalsmall.png'/></a> ChemVantage is certified by the "
-		+ "<a href=http://imsglobal.org>IMS Global Learning Consortium</a> to be conformant with the "
+		+ "<a href=https://imsglobal.org>IMS Global Learning Consortium</a> to be conformant with the "
 		+ "LTI v1.0, v1.1 and Outcomes Service 1.X standards for learning tools interoperability. The IMS registration "
 		+ "number for ChemVantage is <a href=https://site.imsglobal.org/certifications/chemvantage/36981/chemvantage>IMSB2C2C3B2ce2019W1</a>.<p>"
 		+ "This means that you can configure <a href=https://site.imsglobal.org/certifications/chemvantage/36981/chemvantage/180501/compatibility>"
 		+ "compatible learning management systems</a> with an LTI link to ChemVantage.  This allows your LMS to establish "
 		+ "and maintain ChemVantage accounts automatically, without having to maintain separate usernames and "
 		+ "passwords. If your LMS supports the LTI Outcomes Service, ChemVantage will report the assignment scores back to the "
-		+ "LMS grade book. You can get a free set of ChemVantage LTI credentials at <a href=/lti/registration/>our LTI registration page</a>.";
+		+ "LMS grade book. You can get a free set of ChemVantage LTI credentials at <a href=/lti/registration/>our LTI registration page</a>.</div>";
 			
 	public static String accessibility = "<a NAME=accessibility></a>"
 		+ "<h3>Web Site Accessibility</h3>"
-		+ "ChemVantahge is committed to providing accessible content to its users. The site is in substantial compliance with "
+		+ "ChemVantage is committed to providing accessible content to its users. The site is in substantial compliance with "
 		+ "The Americans with Disabilities Act (ADA) as measured by conformance to Level AA of the "
 		+ "<a href=https://www.w3.org/TR/WCAG20/>Web Content Accessibility Guidelines (WCAG) 2.0</a>, which is our target level of "
 		+ "compliance. If you experience difficulty accessing any ChemVantage resource or if you have questions or suggestions regarding "
@@ -160,12 +160,12 @@ public class About extends HttpServlet {
 			
 	public static String copyright = "<a NAME=copyright></a>"
 		+ "<h3>Copyright &copy; 2007-2020 ChemVantage LLC</h3>"
-		+ "<a rel='license' href=http://creativecommons.org/licenses/by/3.0/us/>"
+		+ "<a rel='license' href=https://creativecommons.org/licenses/by/3.0/us/>"
 		+ "<img alt='Creative Commons License' style='border-width:0' align=left hspace=10 vspace=5 "
-		+ "src='http://i.creativecommons.org/l/by/3.0/us/88x31.png'/></a>"
+		+ "src='https://i.creativecommons.org/l/by/3.0/us/88x31.png'/></a>"
 		+ "Except where otherwise noted, the copyright to all content displayed on this site is owned by ChemVantage LLC, "
 		+ "and is licensed freely under a "
-		+ "<a href='http://creativecommons.org/licenses/by/3.0/us/'>Creative Commons Attribution 3.0 License</a>. "
+		+ "<a href='https://creativecommons.org/licenses/by/3.0/us/'>Creative Commons Attribution 3.0 License</a>. "
 		+ "Any use of this content must acknowledge ownership by ChemVantage LLC and must contain appropriate "
 		+ "notice of this CC-BY licence. Permissions beyond the scope of this license may be available by contacting "
 		+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><p>"
