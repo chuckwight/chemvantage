@@ -281,7 +281,7 @@ public class Question implements Serializable {
 			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br>");
 			buf.append("<input id=" + this.id + " type=text name=" + this.id + " value='" + quot2html(studentAnswer) + "'>");
-			buf.append(tag + "<br>");
+			buf.append("&nbsp;" + tag + "<br>");
 			break;
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br />");
@@ -348,10 +348,10 @@ public class Question implements Serializable {
 		case 4: // Fill-in-the-Word
 			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br>");
-			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TD>"
+			buf.append("<span style='border: 1px solid black'>"
 					+ "<b>" + quot2html(correctAnswer) + "</b>"
-					+ "</TD></TR></TABLE>");
-			buf.append(tag + "<p><p>");
+					+ "</span");
+			buf.append("&nbsp;" + tag + "<p><p>");
 			break;
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br />");
@@ -362,10 +362,10 @@ public class Question implements Serializable {
 			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
 			default:
 			}
-			buf.append("<TABLE><TR><TD><TABLE BORDER=1 CELLSPACING=0><TR><TD>"
+			buf.append("<div style='border: 1px solid black'>"
 					+ "<b>" + getCorrectAnswer() + "</b>"
-					+ "</TD></TR></TABLE></TD><TD>");
-			buf.append(parseString(tag) + "</TD></TR></TABLE>");
+					+ "</span>");
+			buf.append(parseString(tag) + "<p>");
 			if (hint.length()>0) {
 				buf.append("Hint:<br>" + parseString(hint) + "<p>");
 			}
@@ -427,10 +427,10 @@ public class Question implements Serializable {
 			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br>");
 			String[] answers = correctAnswer.split(",");
-			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TD>"
+			buf.append("<span style='border: 1px solid black'>"
 					+ "<b>" + quot2html(answers[0]) + "</b>"
-					+ "</TD></TR></TABLE>");
-			if (tag.length() > 0) buf.append(tag + "<br />");
+					+ "</span>");
+			if (tag.length() > 0) buf.append("&nbsp;" + tag + "<br>");
 			break;
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br />");
@@ -441,16 +441,16 @@ public class Question implements Serializable {
 			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
 			default:
 			}
-			buf.append("<TABLE><TR><TD><TABLE BORDER=1 CELLSPACING=0><TR><TD>"
+			buf.append("<span style='border: 1px solid black'>"
 					+ "<b>" + getCorrectAnswer() + "</b>"
-					+ "</TD></TR></TABLE></TD><TD>");
-			buf.append(parseString(tag) + "</TD></TR></TABLE>");
+					+ "</span>");
+			buf.append(parseString(tag) + "<p>");
 			if (hint.length()>0) {
 				buf.append("Hint:<br>" + parseString(hint) + "<p>");
 			}
 			if (showDetails && solution.length()>0) {
 				buf.append("Solution:<br>" + parseString(solution));
-				buf.append("<p>");
+				buf.append("<br>");
 			}
 			break;        
 		}
