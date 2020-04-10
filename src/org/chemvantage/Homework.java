@@ -127,8 +127,6 @@ public class Homework extends HttpServlet {
 			}
 			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
 			
-			//Group myGroup = user.myGroupId>0?ofy().load().type(Group.class).id(user.myGroupId).now():null;
-			
 			buf.append("\n<h2>Homework Exercises - " + topic.title + " (" + subject.title + ")</h2>");
 			
 			if (request.getServerName().contains("dev-vantage")) buf.append("<font color=red>This is a development server that should be used for testing only.<br>"
@@ -141,14 +139,14 @@ public class Homework extends HttpServlet {
 					+ "supports, at a minimum, LTI version 1.1.2</font><p>");
 			
 			if (user.isInstructor() && hwa != null) {
-				buf.append("<table style='border: 1px solid black'><tr><td>");
+				buf.append("<div style='border: 1px solid black'>");
 				buf.append("As the course instructor you may "
 						+ "<a href=/Homework?UserRequest=AssignHomeworkQuestions&Token=" + user.token + ">"
 						+ "customize this assignment</a> by selecting/deselecting the required question items. ");
 				if (hwa.lti_nrps_context_memberships_url != null && hwa.lti_ags_lineitem_url != null) 
 					buf.append("You may also view a <a href=/Homework?UserRequest=ShowSummary&Token=" 
 							+ user.token + ">summary of student scores</a> for this assignment.");
-				buf.append("</td></tr></table><p>");
+				buf.append("</div><p>");
 			} else if (user.isAnonymous()) {
 				buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			}	
@@ -174,7 +172,8 @@ public class Homework extends HttpServlet {
 				
 				buf.append("\nAssigned Exercises<br>");
 				int i = 1;
-				buf.append("<TABLE>");
+				
+				buf.append("<div style='display:table'>");
 				for (Key<Question> k : hwa.questionKeys) {
 					try {
 						Question q = hwQuestions.get(k);
@@ -188,28 +187,32 @@ public class Homework extends HttpServlet {
 						}
 						String hashMe = user.id + hwa.id;
 						q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
-						buf.append("\n<TR VALIGN=TOP><TD>");
+						buf.append("<div style='display:table-row'>");
 						
+						buf.append("<div style='display:table-cell'>");
 						boolean solved = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("assignmentId",hwa.id).filter("questionId",q.id).filter("score >",0).count() > 0;					
 						if (solved) {
-							buf.append("<IMG SRC=/images/checkmark.gif ALT='This problem was solved previously.'>");
+							buf.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");
 							score++;
 						}
-						
-						buf.append("&nbsp;<a id=" + q.id + " /></TD>"
-								+ "<FORM METHOD=POST ACTION=Homework>"
+						buf.append("</div>");
+
+						buf.append("<FORM METHOD=POST ACTION=Homework>"
 								+ "<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">"
 								+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 								+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 								+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>"
-								+ "<TD><b>" + i + ". </b></TD><TD>" + q.print() 
+								+ "<div style='display:table-cell'><b>" + i + ".&nbsp;</b></div>"
+								+ "<div style='display:table-cell'>" + q.print() 
 								+ (Long.toString(q.id).equals(request.getParameter("Q"))?"Hint:<br>" + q.getHint():"")
-								+ "<br><INPUT TYPE=SUBMIT VALUE='Grade This Exercise'><p>&nbsp;</FORM></TD></TR>\n");
+								+ "<br><INPUT TYPE=SUBMIT VALUE='Grade This Exercise'><p>&nbsp;</FORM></div>"
+								+ "</div>\n");
 						i++;
 					} catch (Exception e) {
 					}
 				}
-				buf.append("</TABLE>");
+				buf.append("</div>");
+				
 				if (i == 1) buf.append("(none)<p>");
 				
 				// Check to see if the database has the correct score for this assignment
@@ -227,7 +230,8 @@ public class Homework extends HttpServlet {
 
 			// Print the table of optional problems (the whole set if none are assigned)
 			int i = 1;
-			buf.append("<TABLE>");
+			
+			buf.append("<div style='display:table'>");
 			for (Key<Question> k : optionalQuestionKeys) {
 				Question q = hwQuestions.get(k);
 				if (q==null) {
@@ -240,24 +244,26 @@ public class Homework extends HttpServlet {
 				}
 				String hashMe = user.id + (hwa==null?"":hwa.id);
 				q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
-				buf.append("\n<TR VALIGN=TOP><TD>");
+				buf.append("<div style='display:table-row'>");
 				
+				buf.append("<div style='display:table-cell'>");
 				boolean solved = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).filter("score >",0).count() > 0;					
-				if (solved) buf.append("<IMG SRC=/images/checkmark.gif ALT='This problem was solved previously.'>");
+				if (solved) buf.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");				
+				buf.append("</div>");
 				
-				buf.append("&nbsp;<a id=" + q.id + " /></TD>"
-						+ "<FORM METHOD=POST ACTION=Homework>"
-						//+ (cvsToken==null?"":"<INPUT TYPE=HIDDEN NAME=CvsToken VALUE=" + cvsToken + ">")
+				buf.append("<FORM METHOD=POST ACTION=Homework>"
 						+ "<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">"
 						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
-						+ (hwa==null?"" : "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>")
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
-						+ "<TD><b>" + i + ". </b></TD><TD>" + q.print() 
-						+ (Long.toString(q.id).equals(request.getParameter("Q"))?"Hint:<br>" + q.hint:"")
-						+ "<br><INPUT TYPE=SUBMIT VALUE='Grade This Exercise'><p>&nbsp;</FORM></TD></TR>\n");
-					i++;
+						+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>"
+						+ "<div style='display:table-cell'><b>" + i + ".&nbsp;</b></div>"
+						+ "<div style='display:table-cell'>" + q.print() 
+						+ (Long.toString(q.id).equals(request.getParameter("Q"))?"Hint:<br>" + q.getHint():"")
+						+ "<br><INPUT TYPE=SUBMIT VALUE='Grade This Exercise'><p>&nbsp;</FORM></div>"
+						+ "</div>\n");
+				i++;
 			}
-			buf.append("</TABLE>");
+			buf.append("</div>");
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}
