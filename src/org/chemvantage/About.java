@@ -136,7 +136,7 @@ public class About extends HttpServlet {
 		+ "copyrights to ChemVantage LLC to be shared freely under the terms of a "
 		+ "<a href='https://creativecommons.org/licenses/by/3.0/us/'>Creative Commons Attribution 3.0 License.</a>";
 
-	public static String certification = "<a NAME=certification></a><div>"
+	public static String certification = "<a NAME=certification></a>"
 		+ "<h3>Learning Management System Integration</h3>"
 		+ "<a href=https://imscert.org><img alt='IMS Global Certified' style='border-width:0' align=left hspace=10 vspace=5 "
 		+ "src='/images/imscertifiedfinalsmall.png'/></a> ChemVantage is certified by the "
@@ -147,12 +147,12 @@ public class About extends HttpServlet {
 		+ "compatible learning management systems</a> with an LTI link to ChemVantage.  This allows your LMS to establish "
 		+ "and maintain ChemVantage accounts automatically, without having to maintain separate usernames and "
 		+ "passwords. If your LMS supports the LTI Outcomes Service, ChemVantage will report the assignment scores back to the "
-		+ "LMS grade book. You can get a free set of ChemVantage LTI credentials at <a href=/lti/registration/>our LTI registration page</a>.</div>";
+		+ "LMS grade book. You can get a free set of ChemVantage LTI credentials at <a href=/lti/registration/>our LTI registration page</a>.";
 			
 	public static String accessibility = "<a NAME=accessibility></a>"
 		+ "<h3>Web Site Accessibility</h3>"
-		+ "ChemVantage is committed to providing accessible content to its users. The site is in substantial compliance with "
-		+ "The Americans with Disabilities Act (ADA) as measured by conformance to Level AA of the "
+		+ "ChemVantage is committed to providing accessible content for its users. The site is in substantial compliance with "
+		+ "The Americans with Disabilities Act (ADA) as measured by Level AA of the "
 		+ "<a href=https://www.w3.org/TR/WCAG20/>Web Content Accessibility Guidelines (WCAG) 2.0</a>, which is our target level of "
 		+ "compliance. If you experience difficulty accessing any ChemVantage resource or if you have questions or suggestions regarding "
 		+ "accessibility of our site, please let us know through the <a href=/Feedback>ChemVantage Feedback Page</a> or by using the "
