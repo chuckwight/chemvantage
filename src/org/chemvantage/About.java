@@ -149,6 +149,15 @@ public class About extends HttpServlet {
 		+ "passwords. If your LMS supports the LTI Outcomes Service, ChemVantage will report the assignment scores back to the "
 		+ "LMS grade book. You can get a free set of ChemVantage LTI credentials at <a href=/lti/registration/>our LTI registration page</a>.";
 			
+	public static String accessibility = "<a NAME=accessibility></a>"
+		+ "<h3>Web Site Accessibility</h3>"
+		+ "ChemVantahge is committed to providing accessible content to its users. The site is in substantial compliance with "
+		+ "The Americans with Disabilities Act (ADA) as measured by conformance to Level AA of the "
+		+ "<a href=https://www.w3.org/TR/WCAG20/>Web Content Accessibility Guidelines (WCAG) 2.0</a>, which is our target level of "
+		+ "compliance. If you experience difficulty accessing any ChemVantage resource or if you have questions or suggestions regarding "
+		+ "accessibility of our site, please let us know through the <a href=/Feedback>ChemVantage Feedback Page</a> or by using the "
+		+ "contact information at the bottom of this page.";
+			
 	public static String copyright = "<a NAME=copyright></a>"
 		+ "<h3>Copyright &copy; 2007-2020 ChemVantage LLC</h3>"
 		+ "<a rel='license' href=http://creativecommons.org/licenses/by/3.0/us/>"
@@ -261,6 +270,6 @@ public class About extends HttpServlet {
 	throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		out.println(Home.header("About ChemVantage") + about + premium + accounts + certification + copyright + terms + Home.footer);
+		out.println(Home.header("About ChemVantage") + about + premium + accounts + certification + accessibility + copyright + terms + Home.footer);
 	}
 }
