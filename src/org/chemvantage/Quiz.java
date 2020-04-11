@@ -163,8 +163,8 @@ public class Quiz extends HttpServlet {
 				buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			}
 			
-			buf.append("\n<FORM NAME=Quiz METHOD=POST ACTION=Quiz onSubmit=\"javascript: return confirmSubmission()\">");
-			//buf.append("<INPUT TYPE=HIDDEN NAME=CvsToken VALUE=" + cvsToken + ">");
+			buf.append("\n<FORM NAME=Quiz METHOD=POST ACTION=Quiz onSubmit='return confirmSubmission()'>");
+			
 			buf.append("<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">");
 			if (qa!=null) buf.append("<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + qa.id + "'>");
 			if (!user.isAnonymous()) {
@@ -253,23 +253,23 @@ public class Quiz extends HttpServlet {
 				+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
 				+ "  }"
 				+ "}"
-				+ "function confirmSubmission() {"
-				+ "if (seconds>0) return confirm('Submit this quiz for scoring now?');"
-				+ "}"
 				+ "var seconds;var minutes;var oddSeconds;"
 				+ "var endTime = new Date().getTime() + " + secondsRemaining + "*1000;"
 				+ "function countdown() {"
-				+ "var now = new Date().getTime();"
-				+ "seconds=Math.round((endTime-now)/1000);"
-				+ "minutes = seconds<0?Math.ceil(seconds/60):Math.floor(seconds/60);"
-				+ "oddSeconds = seconds%60;"
-				+ "for(i=0;i<2;i++)"
-				+ "document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ' minutes ' + oddSeconds + ' seconds.';"
-				+ "if (seconds==30) alert('30 seconds remaining');"
-				+ "if (seconds < 0) document.Quiz.submit();"
-				+ "setTimeout('countdown()',1000);"
+				+ "  var now = new Date().getTime();"
+				+ "  seconds=Math.round((endTime-now)/1000);"
+				+ "  minutes = seconds<0?Math.ceil(seconds/60):Math.floor(seconds/60);"
+				+ "  oddSeconds = seconds%60;"
+				+ "  for(i=0;i<2;i++)"
+				+ "    document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ' minutes ' + oddSeconds + ' seconds.';"
+				+ "  if (seconds==30) alert('30 seconds remaining');"
+				+ "  if (seconds < 0) document.Quiz.submit();"
+				+ "  setTimeout('countdown()',1000);"
 				+ "}"
 				+ "countdown();"
+				+ "function confirmSubmission() {"
+				+ "  return confirm('Submit this quiz for scoring now?');"
+				+ "}"
 				+ "</SCRIPT>"; 
 	}
 	
@@ -305,7 +305,7 @@ public class Quiz extends HttpServlet {
 			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			buf.append(df.format(now));
 			
-			buf.append(ajaxScoreJavaScript(user.token)); // load javascript for AJAX problem reporting form
+			buf.append(ajaxJavaScript(user.token)); // load javascript for AJAX problem reporting form
 			
 			// Create a StringBuffer to contain correct answers to questions answered correctly
 			StringBuffer missedQuestions = new StringBuffer();			
@@ -456,20 +456,20 @@ public class Quiz extends HttpServlet {
 				+ "  }\n"
 				+ "</script>\n");
 
-		buf.append("Please rate your overall experience with ChemVantage:<br>\n"
-				+ "<span id='vote' style='color:red;'>(click a star):</span><br>");
+		buf.append("Please rate your overall experience with ChemVantage:<br />\n"
+				+ "<span id='vote' style='font-family:tahoma; color:red;'>(click a star):</span><br>");
 
 		for (int iStar=1;iStar<6;iStar++) {
-			buf.append("<img src='images/star1.gif' id='" + iStar + "' alt='star" + iStar + "'"
+			buf.append("<img src='images/star1.gif' id='" + iStar + "' "
 					+ "style='width:30px; height:30px;' "
-					+ "onmouseover=showStars('" + iStar + "'); onFocus=showStars('" + iStar + "');"
-					+ "onClick=setStars(this.id); onmouseout=showStars('0');>");
+					+ "onmouseover=showStars(this.id); onClick=setStars(this.id); onmouseout=showStars(0); />");
 		}
 		buf.append("<p>");
+
 		return buf.toString(); 
 	}
 
-String ajaxScoreJavaScript(String token) {
+	String ajaxJavaScript(String token) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note,email) {\n"
 		+ "  var xmlhttp;\n"
@@ -482,7 +482,8 @@ String ajaxScoreJavaScript(String token) {
 		+ "  xmlhttp.onreadystatechange=function() {\n"
 		+ "    if (xmlhttp.readyState==4) {\n"
 		+ "      document.getElementById('feedback' + id).innerHTML="
-		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
+		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment. "
+		+ "</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
 		+ "  url += '&QuestionId=' + id + '&Token=" + token + "&Notes=' + note + '&Email=' + email;\n"
@@ -520,7 +521,7 @@ String ajaxScoreJavaScript(String token) {
 		+ "      document.getElementById('vote').innerHTML=msg;\n"
 		+ "    }\n"
 		+ "  }\n"
-		+ "  xmlhttp.open('GET','/Feedback?UserRequest=AjaxRating&NStars='+nStars,true);\n"
+		+ "  xmlhttp.open('GET','Feedback?UserRequest=AjaxRating&NStars='+nStars,true);\n"
 		+ "  xmlhttp.send(null);\n"
 		+ "  return false;\n"
 		+ "}\n"
@@ -535,7 +536,7 @@ String ajaxScoreJavaScript(String token) {
 		+ "}\n"
 		+ "</SCRIPT>";
 	}
-	
+
 	String showScores (User user, HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h2>Your Quiz Transactions</h2>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);

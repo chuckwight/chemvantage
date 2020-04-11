@@ -252,30 +252,24 @@ public class Question implements Serializable {
 		case 1: // Multiple Choice
 			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best answer:</FONT><br>");
-			buf.append("<UL>");
 			for (int i = 0; i < nChoices; i++) {
 				buf.append("<label><input type=radio name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED>":">") + choices.get(i) + "</label><br>");
 				choice++;
 			}
-			buf.append("</UL>");
 			break;
 		case 2: // True/False
 			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select true or false:</FONT><br>");
-			buf.append("<UL>");
 			buf.append("<label><input type=radio name=" + this.id + " value='true'" + (studentAnswer.equals("true")?" CHECKED>":">") + " True</label><br>");
 			buf.append("<label><input type=radio name=" + this.id + " value='false'" + (studentAnswer.equals("false")?" CHECKED>":">") + " False</label><br>");
-			buf.append("</UL>");
 			break;
 		case 3: // Select Multiple
 			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><br>");
-			buf.append("<UL>");
 			for (int i = 0; i < nChoices; i++) {
 				buf.append("<label><input type=checkbox name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED>":">") + choices.get(i) + "</label><br>");
 				choice++;
 			}
-			buf.append("</UL>");
 			break;
 		case 4: // Fill-in-the-Word
 			buf.append(text + "<br />");
@@ -544,7 +538,6 @@ public class Question implements Serializable {
 				buf.append("Question Text:<br><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
 						+ amp2html(text) + "</TEXTAREA><br>");
 				buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best choice:</FONT><br>");
-				buf.append("<UL>");
 				for (int i=0;i<5;i++) { 
 					if (i < nChoices) {
 						buf.append("<input type=radio name=CorrectAnswer value=" + choice + "");
@@ -557,7 +550,6 @@ public class Question implements Serializable {
 							+ "<input size=30 name=" + choiceNames[i] + "><br>");
 					choice++;
 				}
-				buf.append("</UL>");
 				break;
 			case 2: // True/False
 				buf.append("Question Text:<br><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
@@ -574,7 +566,6 @@ public class Question implements Serializable {
 				buf.append("Question Text:<br><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
 						+ amp2html(text) + "</TEXTAREA><br>");
 				buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><br>");
-				buf.append("<UL>");
 				for (int i=0;i<5;i++){
 					if (i < nChoices) {
 						buf.append("<input type=checkbox name=CorrectAnswer value=" + choice);
@@ -587,7 +578,6 @@ public class Question implements Serializable {
 							+ "<input size=30 name=" + choiceNames[i] + "><br>");
 					choice++;
 				}
-				buf.append("</UL>");
 				break;
 			case 4: // Fill-in-the-Word
 				buf.append("Question Text:<br><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
