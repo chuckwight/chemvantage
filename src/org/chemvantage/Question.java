@@ -456,7 +456,7 @@ public class Question implements Serializable {
 
 		if (studentAnswer.length() > 0) buf.append("Your answer was: " + studentAnswer + "<br>");
 
-		//buf.append("<div id='feedback" + this.id + "'>"
+		buf.append("<div id='feedback" + this.id + "'>");
 		buf.append("<FORM NAME=suggest" + this.id 
 				+ " onSubmit=\" return ajaxSubmit('/Feedback?UserRequest=ReportAProblem','" + this.id + "',document.suggest" + this.id + ".Notes.value,document.suggest" + this.id + ".Email.value);\">"
 				+ "<INPUT TYPE=BUTTON VALUE='Report a problem with this question' "
@@ -483,8 +483,8 @@ public class Question implements Serializable {
 		
 		buf.append("Your Comment: <INPUT TYPE=TEXT SIZE=80 NAME=Notes><br>");
 		buf.append("Your Email: <INPUT TYPE=TEXT SIZE=50 PLACEHOLDER=' optional, if you want a response' NAME=Email><br>");
-		buf.append("<INPUT TYPE=SUBMIT NAME=SubmitButton VALUE='Submit Feedback'></div></FORM>");
-		buf.append("<br/>");
+		buf.append("<INPUT TYPE=SUBMIT NAME=SubmitButton VALUE='Submit Feedback'></div></FORM><br>");
+		buf.append("</div>");
 		return buf.toString(); 
 	}
 

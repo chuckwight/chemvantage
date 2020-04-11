@@ -139,14 +139,14 @@ public class Homework extends HttpServlet {
 					+ "supports, at a minimum, LTI version 1.1.2</font><p>");
 			
 			if (user.isInstructor() && hwa != null) {
-				buf.append("<div style='border: 1px solid black'>");
+				buf.append("<span style='border: 1px solid black'>");
 				buf.append("As the course instructor you may "
 						+ "<a href=/Homework?UserRequest=AssignHomeworkQuestions&Token=" + user.token + ">"
 						+ "customize this assignment</a> by selecting/deselecting the required question items. ");
 				if (hwa.lti_nrps_context_memberships_url != null && hwa.lti_ags_lineitem_url != null) 
 					buf.append("You may also view a <a href=/Homework?UserRequest=ShowSummary&Token=" 
 							+ user.token + ">summary of student scores</a> for this assignment.");
-				buf.append("</div><p>");
+				buf.append("</span><p>");
 			} else if (user.isAnonymous()) {
 				buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			}	
@@ -156,10 +156,7 @@ public class Homework extends HttpServlet {
 				buf.append("\n<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
 				buf.append("\n<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question.</LI>");
 				buf.append("\n<LI>Most questions are customized, so the correct answers are different for each student.</LI>");
-				buf.append("\n<LI>A checkmark will appear to the left of each correctly solved problem. "
-						+ (hwa==null?"":"<a href=/Homework?UserRequest=ShowScores&Token=" + user.token)
-						+ ">View the details here</a>."
-						+ "</LI>");
+				buf.append("\n<LI>A checkmark will appear to the left of each correctly solved problem.</LI>");
 				buf.append("</UL>");
 			}
 			
@@ -439,8 +436,9 @@ public class Homework extends HttpServlet {
 				buf.append("<h3>The answer to the question was left blank.</h3>");
 			}
 
-			// embed the detailed solution or hint to the exercise in the response, if appropriate
 			buf.append(ajaxJavaScript(user.token));
+			
+			// embed the detailed solution or hint to the exercise in the response, if appropriate
 			if (user.isInstructor() || user.isTeachingAssistant() || (studentScore > 0)) {
 				buf.append("<p><div id=exampleLink>"
 						+ "<a href=# onClick=javascript:document.getElementById('example').style.display='';"
@@ -454,9 +452,10 @@ public class Homework extends HttpServlet {
 			
 			// if the user response was correct, seek five-star feedback:
 			if (studentScore > 0) buf.append(fiveStars());
+			else buf.append("Please take a moment to <a href=/Feedback?Token=" + user.token + ">tell us about your ChemVantage experience</a>.<p>");
 			
-			buf.append("<div>We welcome comments about your ChemVantage experience <a href=/Feedback?Token=" + user.token + ">here</a>.<p></div>");
-			
+			if (hwa != null) buf.append("You may <a href=/Homework?UserRequest=ShowScores&Token=" + user.token + ">review your scores on this assignment</a>.<p>");
+
 			buf.append("<a href=/Homework?"
 					+ (assignmentId>0?"AssignmentId=" + assignmentId : "TopicId=" + topic.id)
 					+ "&Token=" + user.token  
@@ -473,60 +472,58 @@ public class Homework extends HttpServlet {
 
 	String ajaxJavaScript(String token) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
-		+ "function ajaxSubmit(url,id,note,email) {\n"
-		+ "  var xmlhttp;\n"
-		+ "  if (url.length==0) return false;\n"
-		+ "  xmlhttp=GetXmlHttpObject();\n"
-		+ "  if (xmlhttp==null) {\n"
-		+ "    alert ('Sorry, your browser does not support AJAX!');\n"
-		+ "    return false;\n"
-		+ "  }\n"
-		+ "  xmlhttp.onreadystatechange=function() {\n"
-		+ "    if (xmlhttp.readyState==4) {\n"
-		+ "      document.getElementById('feedback' + id).innerHTML="
-		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment. "
-		+ "</b></FONT><p>';\n"
-		+ "    }\n"
-		+ "  }\n"
-		+ "  url += '&QuestionId=' + id + '&Token=" + token + "&Notes=' + note + '&Email=' + email;\n"
-		+ "  xmlhttp.open('GET',url,true);\n"
-		+ "  xmlhttp.send(null);\n"
-		+ "  return false;\n"
-		+ "}\n"
-		+ "function ajaxStars(nStars) {\n"
-		+ "  var xmlhttp;\n"
-		+ "  if (nStars==0) return false;\n"
-		+ "  xmlhttp=GetXmlHttpObject();\n"
-		+ "  if (xmlhttp==null) {\n"
-		+ "    alert ('Sorry, your browser does not support AJAX!');\n"
-		+ "    return false;\n"
-		+ "  }\n"
-		+ "  xmlhttp.onreadystatechange=function() {\n"
-		+ "    var msg;\n"
-		+ "    switch (nStars) {\n"
-		+ "      case '1': msg='1 star - If you are dissatisfied with ChemVantage, '"
+		+ "function ajaxSubmit(url,id,note,email) {"
+		+ "  var xmlhttp;"
+		+ "  if (url.length==0) return false;"
+		+ "  xmlhttp=GetXmlHttpObject();"
+		+ "  if (xmlhttp==null) {"
+		+ "    alert ('Sorry, your browser does not support AJAX!');"
+		+ "    return false;"
+		+ "  }"
+		+ "  xmlhttp.onreadystatechange=function() {"
+		+ "    if (xmlhttp.readyState==4) {"
+		+ "      document.getElementById('feedback' + id).innerHTML='<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';"
+		+ "    }"
+		+ "  }"
+		+ "  url += '&QuestionId=' + id + '&Token=" + token + "&Notes=' + note + '&Email=' + email;"
+		+ "  xmlhttp.open('GET',url,true);"
+		+ "  xmlhttp.send(null);"
+		+ "  return false;"
+		+ "}"
+		+ "function ajaxStars(nStars) {"
+		+ "  var xmlhttp;"
+		+ "  if (nStars==0) return false;"
+		+ "  xmlhttp=GetXmlHttpObject();"
+		+ "  if (xmlhttp==null) {"
+		+ "    alert('Sorry, your browser does not support AJAX!');"
+		+ "    return false;"
+		+ "  }"
+		+ "  xmlhttp.onreadystatechange=function() {"
+		+ "    var msg;"
+		+ "    switch (nStars) {"
+		+ "      case 1: msg='1 star - If you are dissatisfied with ChemVantage, '"
 		+ "                + 'please take a moment to <a href=/Feedback?Token=" + token + ">tell us why</a>.';"
 		+ "                break;\n"
-		+ "      case '2': msg='2 stars - If you are dissatisfied with ChemVantage, '"
+		+ "      case 2: msg='2 stars - If you are dissatisfied with ChemVantage, '"
 		+ "                + 'please take a moment to <a href=/Feedback?Token=" + token + ">tell us why</a>.';"
 		+ "                break;\n"
-		+ "      case '3': msg='3 stars - Thank you. <a href=/Feedback?Token=" + token + ">Click here</a> '"
+		+ "      case 3: msg='3 stars - Thank you. <a href=/Feedback?Token=" + token + ">Click here</a> '"
 		+ "                + 'to provide additional feedback.';"
 		+ "                break;\n"
-		+ "      case '4': msg='4 stars - Thank you';"
+		+ "      case 4: msg='4 stars - Thank you';"
 		+ "                break;\n"
-		+ "      case '5': msg='5 stars - Thank you!';"
+		+ "      case 5: msg='5 stars - Thank you!';"
 		+ "                break;\n"
 		+ "      default: msg='You clicked ' + nStars + ' stars.';\n"
-		+ "    }\n"
-		+ "    if (xmlhttp.readyState==4) {\n"
-		+ "      document.getElementById('vote').innerHTML=msg;\n"
-		+ "    }\n"
-		+ "  }\n"
-		+ "  xmlhttp.open('GET','Feedback?UserRequest=AjaxRating&NStars='+nStars,true);\n"
-		+ "  xmlhttp.send(null);\n"
-		+ "  return false;\n"
-		+ "}\n"
+		+ "    }"
+		+ "    if (xmlhttp.readyState==4) {"
+		+ "      document.getElementById('vote').innerHTML=msg;"
+		+ "    }"
+		+ "  }"
+		+ "  xmlhttp.open('GET','Feedback?UserRequest=AjaxRating&NStars='+nStars,true);"
+		+ "  xmlhttp.send(null);"
+		+ "  return false;"
+		+ "}"
 		+ "function GetXmlHttpObject() {\n"
 		+ "  if (window.XMLHttpRequest) { // code for IE7+, Firefox, Chrome, Opera, Safari\n"
 		+ "    return new XMLHttpRequest();\n"
@@ -542,34 +539,34 @@ public class Homework extends HttpServlet {
 	String fiveStars() {
 		StringBuffer buf = new StringBuffer();
 
-		buf.append("<script type='text/javascript'>\n"
+		buf.append("\n<script type='text/javascript'>"
 				+ "  var star1 = new Image(); star1.src='images/star1.gif';"
 				+ "  var star2 = new Image(); star2.src='images/star2.gif';"
-				+ "  var set = false;\n"
+				+ "  var set = false;"
 				+ "  function showStars(n) {"
 				+ "    if (!set) {"
 				+ "      document.getElementById('vote').innerHTML=(n==0?'(click a star)':''+n+(n>1?' stars':' star'));"
 				+ "      for (i=1;i<6;i++) {document.getElementById(i).src=(i<=n?star2.src:star1.src)}"
 				+ "    }"
-				+ "  }\n"
+				+ "  }"
 				+ "  function setStars(n) {"
 				+ "    if (!set) {"
-				+ "      ajaxStars(n);"
 				+ "      set = true;"
+				+ "      ajaxStars(n);"
 				+ "    }"
-				+ "  }\n"
-				+ "</script>\n");
+				+ "  }"
+				+ "</script>");
 
 		buf.append("Please rate your overall experience with ChemVantage:<br>\n"
-				+ "<span id='vote' style='color:red;'>(click a star):</span><br>");
+				+ "<div id='vote' style='color:red;'>(click a star):</div><br>");
 
 		for (int iStar=1;iStar<6;iStar++) {
 			buf.append("<img src='images/star1.gif' id='" + iStar + "' alt='star" + iStar + "'"
 					+ "style='width:30px; height:30px;' "
-					+ "onmouseover=showStars('" + iStar + "'); onFocus=showStars('" + iStar + "');"
-					+ "onClick=setStars('" + iStar + "'); onmouseout=showStars('0');>");
+					+ "onmouseover=showStars(this.id); onFocus=showStars(this.id);"
+					+ "onClick=setStars(this.id); onmouseout=showStars(0);>");
 		}
-		buf.append("<br>");
+		buf.append("<p>");
 		return buf.toString(); 
 	}
 

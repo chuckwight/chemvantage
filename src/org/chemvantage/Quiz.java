@@ -151,14 +151,14 @@ public class Quiz extends HttpServlet {
 					+ "supports, at a minimum, LTI version 1.1.2</font><p>");
 			
 			if (user.isInstructor() && qa != null) {
-				buf.append("<div style='border: 1px solid black'>");
+				buf.append("<span style='border: 1px solid black'>");
 				buf.append("As the course instructor you may "
 						+ "<a href=/Quiz?UserRequest=AssignQuizQuestions&Token=" + user.token + ">"
 						+ "customize this quiz</a> by selecting/deselecting the available question items. ");
 				if (qa.lti_nrps_context_memberships_url != null && qa.lti_ags_lineitem_url != null) 
 					buf.append("You may also view a <a href=/Quiz?UserRequest=ShowSummary&Token=" 
 							+ user.token + ">summary of student scores</a> for this assignment.");
-				buf.append("</div><p>");
+				buf.append("</span><p>");
 			} else if (user.isAnonymous()) {
 				buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			}
@@ -171,10 +171,7 @@ public class Quiz extends HttpServlet {
 				buf.append("\nQuiz Rules<OL>");
 				buf.append("\n<LI>Each quiz must be completed within " + timeLimit + " minutes of the time when it is first downloaded.</LI>");
 				buf.append("\n<LI>You may repeat quizzes as many times as you wish, to improve your score.</LI>");
-				buf.append("\n<LI>For each quiz topic, the server reports your best quiz score. "
-						//+ (qa==null?"":"<a href=/Quiz?UserRequest=ShowScores&AssignmentId=" + qa.id + (cvsToken==null?"":"&CvsToken=" + cvsToken) + ">View the details here</a>.") 
-						+ (qa==null?"":"<a href=/Quiz?UserRequest=ShowScores&Token=" + user.token + ">View the details here</a>.") 
-						+ "</LI>");
+				buf.append("\n<LI>ChemVantage always reports your best score on this assignment to your class LMS.</LI> ");
 				buf.append("</OL>");
 			}
 			buf.append("<div id='timer0' style='color: red'></div><div id=ctrl0 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
@@ -390,9 +387,7 @@ public class Quiz extends HttpServlet {
 
 			if (studentScore == qt.possibleScore) {
 				buf.append("<H2>Congratulations on a perfect score! Good job.</H2>\n");
-				buf.append(fiveStars());
-			}
-			else {
+			} else {
 				int leftBlank = qt.possibleScore - studentScore - wrongAnswers;
 				if (leftBlank>0) buf.append(leftBlank + " question" 
 						+ (leftBlank>1?"s were":" was") + " left unanswered (blank).<p>");
@@ -417,15 +412,17 @@ public class Quiz extends HttpServlet {
 				}
 			}
 			
+			// if the user response was correct, seek five-star feedback:
+			if (studentScore == qt.possibleScore) buf.append(fiveStars());
+			else buf.append("Please take a moment to <a href=/Feedback?Token=" + user.token + ">tell us about your ChemVantage experience</a>.<p>");
+
+			if (qa != null) buf.append("You may <a href=/Quiz?UserRequest=ShowScores&Token=" + user.token + ">review all your scores on this assignment.</a>.<p>") ;
+
 			if (!reportScoreToLms && !user.isAnonymous()) {
-				buf.append("<br><b>Please note:</b> Your score was not reported back to the grade book of your class "
+				buf.append("<b>Please note:</b> Your score was not reported back to the grade book of your class "
 						+ "LMS because the LTI launch request did not contain enough information to do this. "
 						+ (user.isInstructor()?"For instructors this is common.":"") + "<p>");				
 			}
-			
-			buf.append("We welcome comments about your ChemVantage experience <a href=/Feedback?Token=" + user.token + ">here</a>.<p>");
-			
-			buf.append("<p>");
 			
 			// If qa==null this is an anonymous user, otherwise is an LTI user:
 			buf.append((qa==null?"<a href=/Quiz?TopicId=" + qt.topicId + "&Token=" + user.token + ">Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a> " :
@@ -466,9 +463,9 @@ public class Quiz extends HttpServlet {
 			buf.append("<img src='images/star1.gif' id='" + iStar + "' alt='star" + iStar + "'"
 					+ "style='width:30px; height:30px;' "
 					+ "onmouseover=showStars('" + iStar + "'); onFocus=showStars('" + iStar + "');"
-					+ "onClick=setStars('" + iStar + "'); onmouseout=showStars('0');>");
+					+ "onClick=setStars(this.id); onmouseout=showStars('0');>");
 		}
-		buf.append("<br>");
+		buf.append("<p>");
 		return buf.toString(); 
 	}
 
@@ -485,8 +482,7 @@ String ajaxScoreJavaScript(String token) {
 		+ "  xmlhttp.onreadystatechange=function() {\n"
 		+ "    if (xmlhttp.readyState==4) {\n"
 		+ "      document.getElementById('feedback' + id).innerHTML="
-		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment. "
-		+ "</b></FONT><p>';\n"
+		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
 		+ "  url += '&QuestionId=' + id + '&Token=" + token + "&Notes=' + note + '&Email=' + email;\n"
@@ -617,10 +613,6 @@ String ajaxScoreJavaScript(String token) {
 					buf.append("<p>");
 				}
 
-				buf.append("<a href=Quiz?AssignmentId=" + a.id 
-						+ "&Token=" + user.token 
-						+ ">Take me back to the quiz now.</a><p>");
-			
 				buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Quiz Score</th></tr>");
 				for (QuizTransaction qt : qts) {
 					buf.append("<tr><td>" + qt.id + "</td><td>" + df.format(qt.downloaded) + "</td><td align=center>" + (qt.graded==null?"-":100.*qt.score/qt.possibleScore + "%") +  "</td></tr>");
