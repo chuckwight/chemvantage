@@ -235,10 +235,10 @@ public class PracticeExam extends HttpServlet {
 			}
 			buf.append("</OL>");
 
-			if (user.isInstructor()) buf.append("<div style='border: 1px solid black'>"
+			if (user.isInstructor()) buf.append("<span style='border: 1px solid black'>"
 					+ "Instructor: you may <a href=/PracticeExam?UserRequest=AssignExamQuestions&Token=" + user.token + ">"
 					+ "customize this practice exam</a> by selecting/deselecting the available question items."
-					+ "</div><p>");
+					+ "</span><p>");
 			
 			buf.append("This exam must be submitted for grading within " + timeLimit + " minutes of when it is first downloaded.");
 
