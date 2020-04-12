@@ -241,15 +241,14 @@ public class LTIRegistration extends HttpServlet {
 				+ "<label><input type=radio name=lms value=other>Other: </label><input type=text name=lms_other><p>");
 		
 		// Insert a checkbox confirming acceptance of the Google reCaptcha Terms of Service
-		buf.append("<label><input type=checkbox name=AcceptReCaptchaTOS value=true>Accept the reCAPTCHA Terms of Service. </label>"
-				+ "<span><a href=#terms onClick=javascript:getElementById('recaptchaterms').style.display='';this.style.display='none'>"
-				+ "Click here for details.</a></span>"
-				+ "<div id='recaptchaterms' style='display:none'>"
+		buf.append("<label><input type=checkbox name=AcceptReCaptchaTOS value=true>Accept the reCAPTCHA "
+				+ "<a href=#terms onClick=javascript:getElementById('recaptchaterms').style.display='';>Terms of Service</a>.</span></label><br>"
+				+ "<span id='recaptchaterms' style='display:none'>"
 				+ "ChemVantage uses the Google reCAPTCHA API to distinguish humans from bots and protect against spam and abuse. "
 				+ "By accessing or using the Google reCAPTCHA API below, you agree to the <a href=https://policies.google.com/terms>Google APIs Terms of Service</a>. "
 				+ "You acknowledge and understand that the reCAPTCHA API collects hardware and software information from your computer, such as "
 				+ "device and application data and the results of integrity checks, and sends those data to Google for analysis."
-				+ "</div>");
+				+ "</span>");
 				
 		// Insert the Google reCaptcha tool (version 2) on the page
 		buf.append("<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div><p>"
