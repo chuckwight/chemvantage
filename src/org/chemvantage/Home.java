@@ -93,12 +93,10 @@ public class Home extends HttpServlet {
 			+ "alt='Powered by Google App Engine'></a></span>"
 			+ "</div>"
 			+ "</body></html>";
-	
-	public static String banner = "<div style='display:table'><div style='display:table-row'>"
-			+ "<div style='display:table-cell'><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo' align=top></div>"
-			+ "<div style='display:table-cell'><br>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT><br>An Open Education Resource</div>"
-			+ "</div></div><p>";
 
+	public static String banner = "<div><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo' align=left>"
+			+ "<br>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT><br>An Open Education Resource</div><p>";
+	
 	static String getHeader(User user) {
 		StringBuffer buf = new StringBuffer();
 		try {
