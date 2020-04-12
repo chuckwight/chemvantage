@@ -120,9 +120,8 @@ public class Feedback extends HttpServlet {
 		buf.append("<h2>Feedback Page</h2>");
 
 		buf.append("Your comments and opinions are important to us.  We use this<br>"
-				+ "information to improve the functionality of the site for our users.<p>"
-				+ "<a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><p><hr>");
-
+				+ "information to improve the functionality of the site for our users.<p>");
+				
 		buf.append("<script type='text/javascript'>\n"
 				+ "<!--\n"
 				+ "var star1 = new Image(); star1.src='images/star1.gif';\n"
@@ -145,10 +144,12 @@ public class Feedback extends HttpServlet {
 
 		buf.append("<div id='vote' style='color:red;'>(click a star):</div>\n");
 		for (int istar=1;istar<6;istar++) {
-			buf.append("<img src='images/star1.gif' id='" + istar + "' style='width:30px; height:30px; float:left;'"
-					+ "onmouseover=showStars(this.id) onClick=setStars(this.id) onmouseout=showStars(0) />");
+			buf.append("<img src='images/star1.gif' id='" + istar + "' style='width:30px; height:30px;' "        // properties
+					+ "onmouseover=showStars(this.id) onmouseout=showStars('0') onClick='set=false;showStars(this.id);setStars(this.id)' />" ); // mouse actions
 		}
-		buf.append("<br clear='all'><FONT SIZE=-1>(" + subject.nStarReports + " user ratings; avg = " + subject.getAvgStars() + " stars)</FONT><p>\n");
+		buf.append("&nbsp;&nbsp;&nbsp;&nbsp;<input type=range min=1 max=5 style='opacity:0' onfocus=this.style='opacity:1' oninput='set=false;showStars(this.value);setStars(this.value)'>");
+		buf.append("<br clear='all'>");
+		buf.append("<FONT SIZE=-1>(" + subject.nStarReports + " user ratings; avg = " + subject.getAvgStars() + " stars)</FONT><p>\n");
 
 		buf.append("<FORM NAME=FeedbackForm ACTION=Feedback METHOD=POST>\n"
 				+ "Comments or kudos: <FONT SIZE=-1>(160 characters max.)</FONT><br>"
@@ -207,14 +208,17 @@ public class Feedback extends HttpServlet {
 		buf.append("<h2>Feedback Page</h2>");
 		buf.append(new Date().toString() + "<p>");
 		buf.append("Thank you for your feedback" + (stars>0?" (" + stars + " stars" + (stars==5?"!":"") + ").":"."));
+		
 		if (stars > 0) buf.append("<br>The average user rating for ChemVantage is " + subject.getAvgStars() + " stars (" + subject.nStarReports + " user ratings).<p>");
+		
 		if (comments.length() > 0) {
 			buf.append("Your comment: <font color=red>" + comments + "</font><p>");
 		
 			if (email==null) buf.append("We will review your comment, but you will not receive a response because you did not provide an email address.<p>");
 			else buf.append("We will review your comment. Any response will be sent to " + email + ".<p>");
+			buf.append("Feel free to email any additional comments to + <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><p>");
 		}
-	
+		
 		if (user.isAnonymous()) buf.append("<p><a href=Home>Return to the Home page</a><br>");
 		return buf.toString();
 	}

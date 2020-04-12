@@ -452,6 +452,7 @@ public class Quiz extends HttpServlet {
 				+ "    if (!set) {"
 				+ "      ajaxStars(n);"
 				+ "      set = true;"
+				+ "      document.getElementById('sliderspan').style='display:none';"
 				+ "    }"
 				+ "  }\n"
 				+ "</script>\n");
@@ -464,6 +465,10 @@ public class Quiz extends HttpServlet {
 					+ "style='width:30px; height:30px;' "
 					+ "onmouseover=showStars(this.id); onClick=setStars(this.id); onmouseout=showStars(0); />");
 		}
+		buf.append("<span id=sliderspan style='opacity:0'>"
+				+ "<input type=range id=slider min=1 max=5 value=3 onfocus=document.getElementById('sliderspan').style='opacity:1';showStars(this.value); oninput=showStars(this.value);>"
+				+ "<button onClick=setStars(document.getElementById('slider').value);>submit</button>"
+				+ "</span>");
 		buf.append("<p>");
 
 		return buf.toString(); 
