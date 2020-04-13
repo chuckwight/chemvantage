@@ -139,14 +139,13 @@ public class Homework extends HttpServlet {
 					+ "supports, at a minimum, LTI version 1.1.2</font><p>");
 			
 			if (user.isInstructor() && hwa != null) {
-				buf.append("<span style='border: 1px solid black'>");
-				buf.append("As the course instructor you may "
+				buf.append("<mark>As the course instructor you may "
 						+ "<a href=/Homework?UserRequest=AssignHomeworkQuestions&Token=" + user.token + ">"
 						+ "customize this assignment</a> by selecting/deselecting the required question items. ");
 				if (hwa.lti_nrps_context_memberships_url != null && hwa.lti_ags_lineitem_url != null) 
 					buf.append("You may also view a <a href=/Homework?UserRequest=ShowSummary&Token=" 
 							+ user.token + ">summary of student scores</a> for this assignment.");
-				buf.append("</span><p>");
+				buf.append("</mark><p>");
 			} else if (user.isAnonymous()) {
 				buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			}	

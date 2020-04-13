@@ -151,14 +151,13 @@ public class Quiz extends HttpServlet {
 					+ "supports, at a minimum, LTI version 1.1.2</font><p>");
 			
 			if (user.isInstructor() && qa != null) {
-				buf.append("<span style='border: 1px solid black'>");
-				buf.append("As the course instructor you may "
+				buf.append("<mark>As the course instructor you may "
 						+ "<a href=/Quiz?UserRequest=AssignQuizQuestions&Token=" + user.token + ">"
 						+ "customize this quiz</a> by selecting/deselecting the available question items. ");
 				if (qa.lti_nrps_context_memberships_url != null && qa.lti_ags_lineitem_url != null) 
 					buf.append("You may also view a <a href=/Quiz?UserRequest=ShowSummary&Token=" 
 							+ user.token + ">summary of student scores</a> for this assignment.");
-				buf.append("</span><p>");
+				buf.append("</mark><p>");
 			} else if (user.isAnonymous()) {
 				buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			}
