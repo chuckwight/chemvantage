@@ -268,7 +268,7 @@ public class LTILaunch extends HttpServlet {
 				
 				debug.append("Redirecting to: " + redirectUrl);
 				response.sendRedirect(redirectUrl);
-			} else response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,0) + Home.footer);
+			} else response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,1) + Home.footer);
 			return;
 
 		} catch (Exception e) {
@@ -352,7 +352,7 @@ public class LTILaunch extends HttpServlet {
 		buf.append("<div id=topicKeySelect style='display:table-cell;visibility:" + (assignmentType==null?"hidden":"visible") + "'>");
 		buf.append("and a group of topics to choose from:<br>");
 		buf.append("<label><input type=radio name=TopicKey value=0 " + (topicKey==0?"checked ":"") + "onClick=this.form.Refresh.value=true;this.form.submit();>Show all topics</label><br>"
-				+ "<label><input type=radio name=TopicKey value=1 "+ (topicKey==1?"checked ":"") + "onClick=this.form.Refresh.value=true;this.form.submit();>Show topics for the OpenStax Chemistry 2e</label><br>");
+				+ "<label><input type=radio name=TopicKey value=1 "+ (topicKey==1?"checked ":"") + "onClick=this.form.Refresh.value=true;this.form.submit();>Topics for OpenStax Chemistry 2e (recommended)</label><br>");
 		buf.append("</div></div></div>");
 		// End of top table
 		
