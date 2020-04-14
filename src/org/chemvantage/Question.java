@@ -242,10 +242,10 @@ public class Question implements Serializable {
 	}
 	
 	String print() {
-		return print("");
+		return print("","");
 	}
 	
-	String print(String studentAnswer) {
+	String print(String showWork,String studentAnswer) {
 		StringBuffer buf = new StringBuffer();
 		char choice = 'a';
 		switch (getQuestionType()) {
@@ -279,6 +279,8 @@ public class Question implements Serializable {
 			break;
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br />");
+			buf.append("<TEXTAREA NAME=ShowWork ROWS=5 COLS=50 WRAP=SOFT id=showWork" + this.id + " style='display:none' "
+					+ "onkeyup=this.value=this.value.substring(0,500); placeholder='Show your work here'>" + showWork + "</TEXTAREA><br>");
 			switch (getNumericItemType()) {
 			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>"); break;
 			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
@@ -286,7 +288,7 @@ public class Question implements Serializable {
 			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
 			default:
 			}			
-			buf.append("<input type=text name=" + this.id + " value='" + studentAnswer + "'>");
+			buf.append("<input size=30 type=text name=" + this.id + " id=answer" + this.id + " value='" + studentAnswer + "' onFocus=showWorkBox('" + this.id + "');>");
 			buf.append(parseString(tag) + "<br />");
 			break;        
 		}

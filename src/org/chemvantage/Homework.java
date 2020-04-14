@@ -166,6 +166,14 @@ public class Homework extends HttpServlet {
 				optionalQuestionKeys.removeAll(hwa.questionKeys);
 				int score = 0;
 				
+				// this script displays a box for the user to show their work
+				buf.append("<script>"
+						+ "function showWorkBox(qid) {"
+						+ "document.getElementById('showWork'+qid).style.display='';"
+						+ "document.getElementById('answer'+qid).placeholder='Enter your answer here';"
+						+ "}"
+						+ "</script>");
+				
 				buf.append("\nAssigned Exercises<br>");
 				int i = 1;
 				
@@ -192,20 +200,23 @@ public class Homework extends HttpServlet {
 							score++;
 						}
 						buf.append("</div>");
-
+						
+						// pull all of this user's Homework transactions, find the most recent one, and copy the showWork field to this form
+						List<HWTransaction> hwtransactions = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).order("graded").list();
+						HWTransaction latest = hwtransactions.size()>0?hwtransactions.get(hwtransactions.size()-1):null;
+						String showWork = (latest==null || latest.showWork==null?"":latest.showWork);
+						
 						buf.append("<FORM METHOD=POST ACTION=Homework>"
 								+ "<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">"
 								+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 								+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 								+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>"
 								+ "<div style='display:table-cell'><b>" + i + ".&nbsp;</b></div>"
-								+ "<div style='display:table-cell'>" + q.print() 
-								+ "<span id=showWork" + q.id + " style='display:none'><TEXTAREA NAME=ShowWork ROWS=7 COLS=60 WRAP=SOFT "				
-								+ "onKeyUp=this.value=this.value.substring(0,256); placeholder='Show your work here'>"
-								+ "</TEXTAREA></span><p>"
+								+ "<div style='display:table-cell'>" + q.print(showWork,"") 
 								+ (Long.toString(q.id).equals(request.getParameter("Q"))?"Hint:<br>" + q.getHint():"")
-								+ "<br><INPUT TYPE=SUBMIT VALUE='Grade This Exercise' onFocus=document.getElementById('showWork" + q.id + "').style.display='';><p>"
+								+ "<INPUT TYPE=SUBMIT VALUE='Grade This Exercise'><p>"
 								+ "</div></div></FORM>\n");
+						
 						i++;
 					} catch (Exception e) {
 					}
@@ -250,12 +261,17 @@ public class Homework extends HttpServlet {
 				if (solved) buf.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");				
 				buf.append("</div>");
 				
+				// pull all of this user's Homework transactions, find the most recent one, and copy the showWork field to this form
+				List<HWTransaction> hwtransactions = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).order("graded").list();
+				HWTransaction latest = hwtransactions.size()>0?hwtransactions.get(hwtransactions.size()-1):null;
+				String showWork = (latest==null || latest.showWork==null?"":latest.showWork);
+				
 				buf.append("<FORM METHOD=POST ACTION=Homework>"
 						+ "<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">"
 						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ "<div style='display:table-cell'><b>" + i + ".&nbsp;</b></div>"
-						+ "<div style='display:table-cell'>" + q.print() 
+						+ "<div style='display:table-cell'>" + q.print(showWork,"") 
 						+ (Long.toString(q.id).equals(request.getParameter("Q"))?"Hint:<br>" + q.getHint():"")
 						+ "<br><INPUT TYPE=SUBMIT VALUE='Grade This Exercise'><p>&nbsp;</FORM></div>"
 						+ "</div>\n");
@@ -313,10 +329,14 @@ public class Homework extends HttpServlet {
 			List<HWTransaction> recentTransactions = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).filter("graded >",minutesAgo).list();
 			long secondsRemaining = 0;
 			boolean solvedRecently = false;
+			String showWork = "";
 			if (recentTransactions.size()>0) {  // may be more than one if multiple browser sessions are active for one user!
 				Date lastSubmission = new Date(0L);
 				for (HWTransaction ht : recentTransactions) {
-					if (ht.graded.after(lastSubmission)) lastSubmission = ht.graded;
+					if (ht.graded.after(lastSubmission)) {
+						lastSubmission = ht.graded;
+						showWork = ht.showWork==null?"":ht.showWork;
+					}
 					if (ht.score>0) solvedRecently=true;
 				}
 				secondsRemaining = retryDelayMinutes*60 - (now.getTime()-lastSubmission.getTime())/1000;
@@ -337,7 +357,7 @@ public class Homework extends HttpServlet {
 						+ (hwa==null?"<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>":"<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>")
 						+ "<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
-						+ q.print(studentAnswer[0]) + "<br>");
+						+ q.print(showWork,studentAnswer[0]) + "<br>");
 				
 				buf.append("<INPUT TYPE=SUBMIT id='RetryButton' DISABLED=true VALUE='Grade This Exercise'></FORM>");
 				buf.append("<SCRIPT language='JavaScript'>"
@@ -376,7 +396,7 @@ public class Homework extends HttpServlet {
 			
 			debug.append("score is " + studentScore + " out of " + possibleScore + " points...");
 			HWTransaction ht = null;
-			String showWork = request.getParameter("ShowWork");
+			showWork = request.getParameter("ShowWork");
 			
 			if (studentAnswer[0].length() > 0) { // an answer was submitted
 				// record the response in the Responses table for question debugging:
