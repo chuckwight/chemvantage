@@ -200,9 +200,12 @@ public class Homework extends HttpServlet {
 								+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>"
 								+ "<div style='display:table-cell'><b>" + i + ".&nbsp;</b></div>"
 								+ "<div style='display:table-cell'>" + q.print() 
+								+ "<span id=showWork" + q.id + " style='display:none'><TEXTAREA NAME=ShowWork ROWS=7 COLS=60 WRAP=SOFT "				
+								+ "onKeyUp=this.value=this.value.substring(0,256); placeholder='Show your work here'>"
+								+ "</TEXTAREA></span><p>"
 								+ (Long.toString(q.id).equals(request.getParameter("Q"))?"Hint:<br>" + q.getHint():"")
-								+ "<br><INPUT TYPE=SUBMIT VALUE='Grade This Exercise'><p>&nbsp;</FORM></div>"
-								+ "</div>\n");
+								+ "<br><INPUT TYPE=SUBMIT VALUE='Grade This Exercise' onFocus=document.getElementById('showWork" + q.id + "').style.display='';><p>"
+								+ "</div></div></FORM>\n");
 						i++;
 					} catch (Exception e) {
 					}
@@ -373,6 +376,7 @@ public class Homework extends HttpServlet {
 			
 			debug.append("score is " + studentScore + " out of " + possibleScore + " points...");
 			HWTransaction ht = null;
+			String showWork = request.getParameter("ShowWork");
 			
 			if (studentAnswer[0].length() > 0) { // an answer was submitted
 				// record the response in the Responses table for question debugging:
@@ -387,7 +391,7 @@ public class Homework extends HttpServlet {
 						.param("PossibleScore", Integer.toString(possibleScore))
 						.param("UserId", user.id));
 
-				ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,studentScore,assignmentId,possibleScore);
+				ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,studentScore,assignmentId,possibleScore,showWork);
 				if (lis_result_sourcedid != null) ht.lis_result_sourcedid = lis_result_sourcedid;
 				ofy().save().entity(ht).now();
 

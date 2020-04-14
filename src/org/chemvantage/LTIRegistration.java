@@ -224,7 +224,7 @@ public class LTIRegistration extends HttpServlet {
 				+ "Your Name: <input type=text name=sub>&nbsp;"
 				+ "and Email: <input type=text name=email><br>"
 				+ "Your Organization: <input type=text name=aud>&nbsp;"
-				+ "and Home Page: <input type=text name=url placeholder='https://example.org'><p>"
+				+ "and Home Page: <input type=text name=url placeholder='https://'><p>"
 				+ "Select your initial use case:<br>"
 				+ "<label><input type=radio name=use value=test" + (use.equals("test")?" checked":"") + ">Testing the LTI connection (development environment)</label><br>"
 				+ "<label><input type=radio name=use value=prod" + (use.equals("prod")?" checked":"") + ">Teaching a chemistry class (production environment)</label><p>"

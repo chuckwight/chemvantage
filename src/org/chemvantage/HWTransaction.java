@@ -36,12 +36,12 @@ public class HWTransaction implements Serializable {
 	@Index	long assignmentId;
 			String lis_result_sourcedid;
 			int possibleScore;
-			//long responseId;
 			String topicTitle;
+			String showWork;
 	
     HWTransaction() {}
     
-    HWTransaction(long questionId,long topicId,String topicTitle,String userID,Date graded,int score,long assignmentId,int possibleScore) {
+    HWTransaction(long questionId,long topicId,String topicTitle,String userID,Date graded,int score,long assignmentId,int possibleScore,String showWork) {
     	this.questionId = questionId;
     	this.topicId = topicId;
     	this.topicTitle = topicTitle;
@@ -50,11 +50,12 @@ public class HWTransaction implements Serializable {
         this.score = score;
         this.assignmentId = assignmentId;
         this.possibleScore = possibleScore;
+        this.showWork = showWork;
     }
-
+/*
     public String tableRow() {
     	return "<tr><td>" + topicTitle + "</td><td>" + questionId + "</td><td>" + graded + "</td><td>" + score + "/" + possibleScore
     	    	+ (lis_result_sourcedid==null?"":" reported to LMS.") + "</td></tr>";
     }
-    
+ */   
 }
