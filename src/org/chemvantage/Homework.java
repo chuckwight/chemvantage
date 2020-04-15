@@ -129,8 +129,8 @@ public class Homework extends HttpServlet {
 			
 			buf.append("\n<h2>Homework Exercises - " + topic.title + " (" + subject.title + ")</h2>");
 			
-			if (request.getServerName().contains("dev-vantage")) buf.append("<font color=red>This is a development server that should be used for testing only.<br>"
-					+ "Please DO NOT use this server for serious instruction.<br>See the <a href=/lti/registration>LTI registration page</a> if your need "
+			if (request.getServerName().contains("dev-vantage")) buf.append("<font color=red>This is a development server that should be used for testing only. "
+					+ "Please DO NOT use this server for serious instruction. See the <a href=/lti/registration>LTI registration page</a> if your need "
 					+ "access to the ChemVantage production server.</font><p>");
 			
 			if (Boolean.parseBoolean(request.getParameter("SecurityAlert"))) buf.append("<font color=red>Notice:<br>"
@@ -323,20 +323,20 @@ public class Homework extends HttpServlet {
 			}
 			else for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
 			
+			String showWork = request.getParameter("ShowWork");
+			if (showWork==null) showWork="";
+			
 			debug.append("student answer:"+studentAnswer[0]+"...");
 			
 			Date minutesAgo = new Date(now.getTime()-retryDelayMinutes*60000);  // about 2 minutes ago
 			List<HWTransaction> recentTransactions = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).filter("graded >",minutesAgo).list();
 			long secondsRemaining = 0;
 			boolean solvedRecently = false;
-			String showWork = "";
+			
 			if (recentTransactions.size()>0) {  // may be more than one if multiple browser sessions are active for one user!
 				Date lastSubmission = new Date(0L);
 				for (HWTransaction ht : recentTransactions) {
-					if (ht.graded.after(lastSubmission)) {
-						lastSubmission = ht.graded;
-						showWork = ht.showWork==null?"":ht.showWork;
-					}
+					if (ht.graded.after(lastSubmission)) lastSubmission = ht.graded;
 					if (ht.score>0) solvedRecently=true;
 				}
 				secondsRemaining = retryDelayMinutes*60 - (now.getTime()-lastSubmission.getTime())/1000;
@@ -346,7 +346,7 @@ public class Homework extends HttpServlet {
 				buf.append("<h2>Please Wait For The Retry Delay To Complete</h2>");
 				buf.append(df.format(now));
 				buf.append("<p>The retry delay for this homework problem is <span id=delay style='color: red'></span><p>");
-				buf.append("Please take these few moments to check your work carefully.  You can sometimes find alternate routes to the<br>"
+				buf.append("Please take these few moments to check your work carefully.  You can sometimes find alternate routes to the "
 						+ "same solution, or it may be possible to use your answer to back-calculate the data given in the problem.<p>"
 						+ "Alternatively, you may wish to "
 						+ "<a href=/Homework?" + (hwa==null?"TopicId=" + topic.id : "AssignmentId=" + hwa.id)
@@ -378,6 +378,11 @@ public class Homework extends HttpServlet {
 						+ " }"
 						+ "}"
 						+ "countdown();"
+						+ "function showWorkBox(qid) {"  // this script displays a box for the user to show their work
+						+ "document.getElementById('showWork'+qid).style.display='';"
+						+ "document.getElementById('answer'+qid).placeholder='Enter your answer here';"
+						+ "}"
+						+ "showWorkBox(" + q.id + ");"
 						+ "</SCRIPT>"); 
 				return buf.toString();
 			}
