@@ -193,7 +193,7 @@ public class Help extends HttpServlet {
 		buf.append("<hr><p>");
 		
 		buf.append("To the instructor:<br>"
-				+ "The student sending this message is having difficulties solving a problem in ChemVantage. Please click the URL"
+				+ "The student sending this message is having difficulties solving a problem in ChemVantage. Please click the URL "
 				+ "below to view the question item and the student's responses. The link is dynamic will always give current "
 				+ "information, so if the student solved the issue on their own or another way, you will see that in the page.<p>"
 				+ "The token provided in the link is only valid for 3 days and expires at " + exp + ".<p>");
