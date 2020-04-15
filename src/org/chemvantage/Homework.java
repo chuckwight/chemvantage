@@ -324,7 +324,7 @@ public class Homework extends HttpServlet {
 			else for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
 			
 			String showWork = request.getParameter("ShowWork");
-			if (showWork==null) showWork="";
+			if (showWork==null) showWork="";  // required because later we check to see if showWork.isEmpty()
 			
 			debug.append("student answer:"+studentAnswer[0]+"...");
 			
@@ -377,13 +377,13 @@ public class Homework extends HttpServlet {
 						+ "  document.getElementById('RetryButton').disabled=false;"
 						+ " }"
 						+ "}"
-						+ "countdown();"
-						+ "function showWorkBox(qid) {"  // this script displays a box for the user to show their work
+						+ "countdown();");
+				if (!showWork.isEmpty()) buf.append("function showWorkBox(qid) {"  // this script displays a box for the user to show their work
 						+ "document.getElementById('showWork'+qid).style.display='';"
 						+ "document.getElementById('answer'+qid).placeholder='Enter your answer here';"
 						+ "}"
-						+ "showWorkBox(" + q.id + ");"
-						+ "</SCRIPT>"); 
+						+ "showWorkBox(" + q.id + ");");
+				buf.append("</SCRIPT>"); 
 				return buf.toString();
 			}
 			
