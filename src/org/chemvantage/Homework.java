@@ -436,39 +436,49 @@ public class Homework extends HttpServlet {
 			}
 			// Send response to the user:
 			if (studentScore > 0) {
-				buf.append("<h3>Congratulations. You answered the question correctly.</h3>");
+				buf.append("<h3>Congratulations. You answered the question correctly.</h3><p>");
 			}
 			else if (studentAnswer[0].length() > 0) {
 				switch (q.getQuestionType()) {
-				case 5:  // Numeric question
-					try {
-						@SuppressWarnings("unused")
-						double dAnswer = Double.parseDouble(q.parseString(studentAnswer[0]));  // throws exception for non-numeric answer
-						buf.append("<h3>Incorrect Answer</h3>");
-						if (!q.hasCorrectSigFigs(studentAnswer[0])) buf.append("Your answer does not have the number of significant figures appropriate for the data given in the question. ");
-						if (!q.agreesToRequiredPrecision(studentAnswer[0])) buf.append("Your answer does not " + (q.requiredPrecision==0?"exactly match the answer in the database.":"agree with the answer in the database to within the required precision (" + q.requiredPrecision + "%)"));
-					}
-					catch (Exception e2) {
-						buf.append("<h3>Wrong Format</h3>This question requires a numeric response expressed as an integer, decimal number, "
-								+ "or number in scientific notation. Your answer was scored incorrect because the program was unable to recognize "
-								+ "your answer as one of these types.");
-					}
-					break;
-				default:  // All other types of questions
-					buf.append("<h3>Incorrect Answer</h3>Your answer was scored incorrect because it does not agree with the "
-							+ "answer in the database.");
+					case 5:  // Numeric question
+						try {
+							@SuppressWarnings("unused")
+							double dAnswer = Double.parseDouble(q.parseString(studentAnswer[0]));  // throws exception for non-numeric answer
+							buf.append("<h3>Incorrect Answer</h3>");
+							if (!q.hasCorrectSigFigs(studentAnswer[0])) buf.append("Your answer does not have the number of significant figures appropriate for the data given in the question.<p>");
+							if (!q.agreesToRequiredPrecision(studentAnswer[0])) buf.append("Your answer does not " + (q.requiredPrecision==0?"exactly match the answer in the database.":"agree with the answer in the database to within the required precision (" + q.requiredPrecision + "%).<p>"));
+						}
+						catch (Exception e2) {
+							buf.append("<h3>Wrong Format</h3>This question requires a numeric response expressed as an integer, decimal number, "
+									+ "or number in scientific notation. Your answer was scored incorrect because the program was unable to recognize "
+									+ "your answer as one of these types.<p>");
+						}
+						break;
+					default:  // All other types of questions
+						buf.append("<h3>Incorrect Answer</h3>Your answer was scored incorrect because it does not agree with the "
+							+ "answer in the database.<p>");
 				}
-				buf.append("<p>The retry delay for this question is " + retryDelayMinutes + (retryDelayMinutes>1?" minutes. ":" minute. "));
+				
+				if (user.isEligibleForHints(q.id)) {
+					buf.append("<form method=post action=Help>"
+							+ "<input type=hidden name=Token value=" + user.token + ">"
+							+ "<input type=hidden name=AssignmentType value=Homework>"
+							+ "<input type=hidden name=TransactionId value=" + ht.id + ">");
+					buf.append("<font color=red>Do you need some help from your instructor or teaching assistant?</font>");
+					buf.append("<input type=submit value='Get Some Help Here'></form><p>");
+				}
+			
+				buf.append("The retry delay for this question is " + retryDelayMinutes + (retryDelayMinutes>1?" minutes. ":" minute. ") + "<p>");
 			}  
 			else {
-				buf.append("<h3>The answer to the question was left blank.</h3>");
+				buf.append("<h3>The answer to the question was left blank.</h3><p>");
 			}
 
 			buf.append(ajaxJavaScript(user.token));
 			
 			// embed the detailed solution or hint to the exercise in the response, if appropriate
 			if (user.isInstructor() || user.isTeachingAssistant() || (studentScore > 0)) {
-				buf.append("<p><div id=exampleLink>"
+				buf.append("<div id=exampleLink>"
 						+ "<a href=# onClick=javascript:document.getElementById('example').style.display='';"
 						+ "document.getElementById('exampleLink').style.display='none';>"
 						+ "<FONT COLOR=RED>View the detailed solution for this homework exercise</FONT></a><p></div>");

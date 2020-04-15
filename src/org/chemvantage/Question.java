@@ -296,7 +296,7 @@ public class Question implements Serializable {
 	}
 
 	String getHint() {
-		return parseString(hint);
+		return parseString(hint) + "<br>";
 	}
 	
 	String printAll() {

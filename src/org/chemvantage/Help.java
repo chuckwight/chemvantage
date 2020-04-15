@@ -21,6 +21,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 
@@ -94,15 +95,15 @@ public class Help extends HttpServlet {
 		// This method verifies that the token is properly signed and has not expired
 		DecodedJWT token = JWT.decode(jwt);            // throws JWTDecodeException if not a valid JWT
 		JWT.require(algorithm).build().verify(token);  // throws JWTVerificationException if not valid		
-		JsonObject payload = new JsonParser().parse(token.getPayload()).getAsJsonObject();
+		JsonObject payload = new JsonParser().parse(new String(Base64.getUrlDecoder().decode(token.getPayload()))).getAsJsonObject();
 		return payload;
 	}
 
 	protected String showStudentSubmission(JsonObject payload) throws Exception {
 		StringBuffer buf = new StringBuffer(Home.header("ChemVantage Help Page") + Home.banner);
-		Date exp = new Date(payload.get("exp").getAsLong());
+		Date exp = new Date(payload.get("exp").getAsLong()*1000L);
 		
-		buf.append("<h3>A Student is seeking your help with a ChemVantage assignment</h3>");
+		buf.append("<h3>A student is seeking your help with a ChemVantage assignment.</h3>");
 		buf.append("The information below may help to illuminate the problem. This information may contain updates since "
 				+ "the student made this request (i.e., they may have solved the problem on their own).<p>"
 				+ "The token contained in the URL you just entered is only valid for 3 days, and will expire at "
@@ -114,34 +115,37 @@ public class Help extends HttpServlet {
 		 *  3) exp (Expires: 3 days after issuance)
 		 */
 		switch (payload.get("aty").getAsString()) {
-			case "Q": throw new Exception("Not implemented yet, sorry");
-			case "P": throw new Exception("Not implemented yet, sorry");
+			case "Q": throw new Exception("Not implemented yet, sorry"); 
+			case "P": throw new Exception("Not implemented yet, sorry"); 
 			case "H":
 				HWTransaction hwt = ofy().load().type(HWTransaction.class).id(payload.get("tid").getAsLong()).safe();
 				List<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",hwt.userId).filter("questionId",hwt.questionId).order("graded").list();
 				hwt = hwTransactions.get(hwTransactions.size()-1); // loads the most recent transaction, regardless of the one in the token
 				
 				Topic topic = ofy().load().type(Topic.class).id(hwt.topicId).safe();
-				buf.append("Assignment: Homework - " + topic.title + "<br>");
+				buf.append("<h4>Assignment: Homework - " + topic.title + "</h4>");
 				
 				Question q = ofy().load().type(Question.class).id(hwt.questionId).safe();
 				String hashMe = hwt.userId + hwt.assignmentId;
 				q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
 				buf.append(q.print(hwt.showWork,""));
 				
+				buf.append("<script>document.getElementById('showWork" + q.id + "').style.display='';</script>");
+				
 				List<Response> responses = ofy().load().type(Response.class).filter("userId",hwt.userId).filter("questionId",q.id).list();
-				String message = "";
+				Date solved = null;
+				StringBuffer tablebuf = new StringBuffer();
 				if (responses.size() > 0) {
-					buf.append("<table><tr><td>Date/Time (UTC)</td><td>Student Response</td><td>Correct Response</td><td>Score</td></tr>");
+					tablebuf.append("<table><tr><td>Date/Time (UTC)</td><td>Student Response</td><td>Score</td></tr>");
 					for (Response r : responses) {
-						if (r.score>0) message = "This question was solved correctly on " + r.submitted;
-						buf.append("<tr><td>" + r.submitted.toString() + "</td><td align=center>" + r.studentResponse 
-							+ "</td><td align=center>" + r.correctAnswer + "</td><td align=center>" + r.score + "</td></tr>");
-						
+						if (r.score>0 && (solved==null || solved.after(r.submitted))) solved = r.submitted;
+						tablebuf.append("<tr><td>" + r.submitted.toString() + "</td><td align=center>" + r.studentResponse 
+							+ "</td><td align=center>" + r.score + "</td></tr>");	
 					}
-					buf.append("</table>");
+					tablebuf.append("</table><br>");
 				}
-				buf.append(message);
+				if (solved != null) buf.append("<font color=red><b>Note: This question was answered correctly on " + solved + "</b></font><p>");
+				buf.append(tablebuf);
 				break;
 			default: throw new Exception("The assignment type was not valid.");
 		}
@@ -154,15 +158,16 @@ public class Help extends HttpServlet {
 		String aty = request.getParameter("AssignmentType");
 		if (aty==null) throw new Exception("Missing assignment type");
 		switch (aty) {
-			case "Quiz": aty = "Q";
-			case "Homework": aty = "H";
-			case "PracticeExam": aty = "P";
+			case "Quiz": aty = "Q"; break;
+			case "Homework": aty = "H"; break;
+			case "PracticeExam": aty = "P"; break;
 			default: aty = null;
 		}
 		
 		long tid = Long.parseLong(request.getParameter("TransactionId"));
+		
 		Date now = new Date();
-		Date in3Days = new Date(now.getTime() + 259200000L);
+		Date in3Days = new Date(now.getTime() + 2592000000L);
 		
 		String token = JWT.create()
 				.withClaim("aty", aty)
@@ -175,7 +180,7 @@ public class Help extends HttpServlet {
 	
 	protected String displayHelpUrl(String jwt, String server) {
 		StringBuffer buf = new StringBuffer();
-		Date exp = JWT.decode(jwt).getExpiresAt();
+		Date exp = new Date(JWT.decode(jwt).getExpiresAt().getTime());
 		
 		buf.append("<h3>Need Some Help?</h3>");
 		buf.append("Here's what to do: Copy the message below, including the entire URL, and send it with your question via email "
@@ -193,7 +198,9 @@ public class Help extends HttpServlet {
 				+ "information, so if the student solved the issue on their own or another way, you will see that in the page.<p>"
 				+ "The token provided in the link is only valid for 3 days and expires at " + exp + ".<p>");
 		
-		buf.append(server + "/help?JWT=" + jwt);
+		String url = server + "/help?JWT=" + jwt;
+		
+		buf.append("<a href=" + url + ">" + url + "</a>");
 		
 		buf.append("<p>Thank you.");
 		return buf.toString();
