@@ -459,7 +459,7 @@ public class Homework extends HttpServlet {
 							+ "answer in the database.<p>");
 				}
 				
-				if (user.isEligibleForHints(q.id)) {
+				if (!user.isAnonymous() && user.isEligibleForHints(q.id)) {
 					buf.append("<form method=post action=Help>"
 							+ "<input type=hidden name=Token value=" + user.token + ">"
 							+ "<input type=hidden name=AssignmentType value=Homework>"

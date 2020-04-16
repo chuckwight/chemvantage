@@ -58,8 +58,12 @@ public class Help extends HttpServlet {
     	PrintWriter out = response.getWriter();
     	response.setContentType("text/html");
     	response.setCharacterEncoding("UTF-8");
-    	try {
-    		String jwt = request.getParameter("JWT");
+    	String jwt = request.getParameter("JWT");
+    	
+    	if (jwt==null) out.println(Home.header("ChemVantage Help Page") + Home.banner + "The ChemVantage Help Page is only "
+    			+ "accessible to users through our LTI interface. To use this service, please login through your school "
+    			+ "learning management system." + Home.footer);
+		try {
     		JsonObject payload = validateJWT(jwt); // throws exception if expired or otherwise invalid
     		out.println(showStudentSubmission(payload));
     	} catch (Exception e) {
