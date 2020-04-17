@@ -281,8 +281,7 @@ public class LTIRegistration extends HttpServlet {
 				try {  // retrieve the BLTIConsumer that was saved when the original registration form was submitted
 					con = ofy().load().type(BLTIConsumer.class).id(jwt.getClaim("con").asString()).safe();
 				} catch (Exception e) {  
-					con = new BLTIConsumer(jwt.getClaim("con").asString()); // TEMPORARY fix; delete this line after April 4, 2020
-					// throw new Exception("Registration failed because the BLTIConsumer was not found.");
+					throw new Exception("Registration failed because the BLTIConsumer was not found.");
 				}
 				con.email = email;
 				con.contact_name = sub;
