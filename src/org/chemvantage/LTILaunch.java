@@ -132,6 +132,7 @@ public class LTILaunch extends HttpServlet {
 				Date yesterday = new Date(now.getTime()-86400000L);  // 24 hrs ago
 				if (tc.lastLogin==null || tc.lastLogin.before(yesterday)) {
 					tc.lastLogin = now;
+					tc.launchParameters = request.getParameterMap();
 					ofy().save().entity(tc);  // update the lastLogin value
 				}
 			} catch (Exception e) {

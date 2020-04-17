@@ -24,6 +24,7 @@ public class Deployment implements java.lang.Cloneable {
 			String lms_type;
 			String rsa_key_id;
 			String scope;
+			String claims;
 	@Index	Date   created;
 	@Index	Date   lastLogin;
 			
@@ -98,6 +99,7 @@ public class Deployment implements java.lang.Cloneable {
 				((d.lms_type != null && d.lms_type.contentEquals(this.lms_type)) 											|| (d.lms_type == null && this.lms_type == null)) &&
 				((d.rsa_key_id != null && d.rsa_key_id.contentEquals(this.rsa_key_id)) 										|| (d.rsa_key_id == null && this.rsa_key_id == null)) &&
 				((d.scope != null && d.scope.contentEquals(this.scope)) 													|| (d.scope == null && this.scope == null)) &&
+				//((d.claims != null && d.scope.contentEquals(this.scope)) 													|| (d.claims == null && this.scope == null)) &&
 				(d.created != null && d.created.equals(this.created)) &&
 				(d.lastLogin != null && d.lastLogin.equals(this.lastLogin));
 	}

@@ -20,6 +20,7 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.util.Date;
+import java.util.Map;
 import java.util.Random;
 
 import com.googlecode.objectify.annotation.Entity;
@@ -37,6 +38,7 @@ public class BLTIConsumer {
 	String org_url;
 	String lms;
 	Date created;
+	Map<String,String[]> launchParameters;
 	@Index Date lastLogin;
 
 	BLTIConsumer() {}
