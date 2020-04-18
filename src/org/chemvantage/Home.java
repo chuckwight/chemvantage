@@ -94,8 +94,8 @@ public class Home extends HttpServlet {
 			+ "</div>"
 			+ "</body></html>";
 
-	public static String banner = "<div><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo' align=left>"
-			+ "<br>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT><br>An Open Education Resource</div><p>";
+	public static String banner = "<a href=https://www.chemvantage.org><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo' align=left></a>"
+			+ "<br>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT><br>An Open Education Resource<br><br>";
 	
 	static String getHeader(User user) {
 		StringBuffer buf = new StringBuffer();
