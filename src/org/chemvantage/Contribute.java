@@ -29,8 +29,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.appengine.api.users.UserService;
-import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.cmd.Query;
 
 @WebServlet("/Contribute")
@@ -46,13 +44,8 @@ public class Contribute extends HttpServlet {
 			throws ServletException, IOException {
 		try {
 			User user = User.getUser(request.getParameter("Token"));
-			if (user==null) {
-				UserService userService = UserServiceFactory.getUserService();
-				String userId = userService.getCurrentUser().getUserId();
-				user = new User(userId);
-				user.setToken();				
-			}
-
+			if (user == null) throw new Exception();
+			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			out.println(Home.header("Contribute a ChemVantage Question Item") + newQuestionForm(user,request) + Home.footer);		

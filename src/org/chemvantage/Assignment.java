@@ -260,7 +260,7 @@ public class Assignment implements java.lang.Cloneable {
 	boolean isValid() {
 		// this method verifies that the Assignment has a valid assignmentType and appropriate topicId(s)
 		if (this.assignmentType==null) return false;
-		if (this.assignmentType.equals("Quiz") || this.assignmentType.equals("Homework")) return this.topicId>0;
+		if (this.assignmentType.equals("Quiz") || this.assignmentType.equals("Homework")) return this.topicId>0L;
 		else if (this.assignmentType.equals("PracticeExam")) return topicIds.size()>2;
 		else return false;
 	}

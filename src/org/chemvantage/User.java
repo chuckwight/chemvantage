@@ -23,29 +23,38 @@ import java.net.URI;
 import java.util.Date;
 
 import com.auth0.jwt.JWT;
+import com.auth0.jwt.JWTCreator.Builder;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.cmd.Query;
 
 
 public class User {
-	@Id 	String id;
-	String 	token;
-	int 	roles;
+	String 	id;                    // stored with transactions, responses, userReports
+	String 	email;                 // optional
+	String 	lis_result_sourcedid;  // used only by LTIv1p1 users
+	long	assignmentId = 0L;     // used only for LTI users
+	int 	roles = 0;             // student
+	String 	token = null;          // cross-site request fraud (CSRF) token
 	
 	User() {}
-
+	
 	User(String id) {
 		this.id = id;
-		this.roles = 0; // student
 	}
 
-	User(String id, int roles) {
+	User(String id, String email, String lis_result_sourcedid, long assignmentId, int roles) {
 		this.id = id;
+		this.email = email;
+		this.lis_result_sourcedid = lis_result_sourcedid;
+		this.assignmentId = assignmentId;
 		this.roles = roles;
-	}	
-
+		try {
+			setToken();
+		} catch (Exception e) {
+		}		
+	}
+	
 	static String getRawId(String userId) {
 		try {  // v1p3: strip the platform_id and "/" from the front of the userId
 			return new URI(userId).getRawPath().substring(1);
@@ -130,62 +139,72 @@ public class User {
 		}
 	}
 
+	/*
+	 * Every user is identified by a Java Web Token (JWT), which is cryptographically signed but not stored, and must be passed from page to page
+	 * in order to authenticate and authorize the user. The token stores the following information:
+	 * 1) userId - combination of the oauth_consumer_key (or platform_id) and the ID provided by the LMS; or anonymousXXXXXX issued by ChemVantage
+	 * 2) assignmentId - only for LTI users (requires new launch to migrate to a different assignment)
+	 * 3) roles - used to identify LTI instructors, teaching assistants and administrators
+	 * 4) lis_result_sourcedid - LTIv1.1 pointer to a LMS grade book cell
+	 * 5) email - not implemented yet, used to provide response to feedback
+	 */
+	
 	static User getUser(String token) {
     	if (token==null) return null;
     	try {
     		Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
     		JWT.require(algorithm).build().verify(token);  // checks validity of token
     		DecodedJWT t = JWT.decode(token);
-    		User u = new User(t.getSubject(),t.getClaim("roles").asInt());
+    		User u = new User();
+    		u.id = t.getSubject();
+    		if (!t.getClaim("email").isNull()) u.email = t.getClaim("email").asString();    		
+    		if (!t.getClaim("roles").isNull()) u.roles = t.getClaim("roles").asInt();
+    		if (!t.getClaim("aid").isNull()) u.assignmentId = t.getClaim("aid").asLong();
+    		if (!t.getClaim("lrs").isNull()) u.lis_result_sourcedid = t.getClaim("lrs").asString();
+    		
     		Date in15Min = new Date(new Date().getTime()+900000L);  
-    		if (t.getExpiresAt().before(in15Min)) { // refresh the token if it will expire within 15 minutes
-    			if (t.getClaim("lrs")!=null) u.setToken(t.getClaim("aId").asLong(),t.getClaim("lrs").asString());
-    			else u.setToken(t.getClaim("aId").asLong()); 
-    		}
+    		if (t.getExpiresAt().before(in15Min)) u.setToken();  // refresh the token for 90 min expiration
     		else u.token = token;  // no refresh required
+    		
     		return u;
     	} catch (Exception e) {
     	}
     	return null;
     }
   
-	void setToken() throws Exception {
-		setToken(0L);	
+	void setToken() {
+		Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
+		Date now = new Date();
+    	Date exp = new Date(now.getTime() + 5400000L);  // 90 minutes from now
+    	
+    	Builder b = JWT.create()
+    			.withSubject(this.id)   // required
+    			.withExpiresAt(exp);    // required
+    			
+    	if (this.roles>0) b = b.withClaim("roles", this.roles);
+    	if (this.assignmentId>0L) b = b.withClaim("aid", this.assignmentId);
+    	if (this.email != null) b = b.withClaim("email", this.email);
+    	if (this.lis_result_sourcedid != null) b = b.withClaim("lrs", this.lis_result_sourcedid);
+    	
+    	this.token = b.sign(algorithm);
+	}
+
+	void setAssignment(long assignmentId,String lis_result_sourcedid) {  // LTI v1.1
+		this.assignmentId = assignmentId;
+		this.lis_result_sourcedid = lis_result_sourcedid;
+		setToken();
 	}
 	
-    void setToken(long assignmentId) throws Exception {  // stores a CRSF JWT token in the field User.token
-    	Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
-    	Date now = new Date();
-    	Date exp = new Date(now.getTime() + 5400000L);  // 90 minutes from now
-    	this.token =  JWT.create()
-    			.withSubject(this.id)
-    			.withExpiresAt(exp)
-    			.withClaim("roles", this.roles)
-    			.withClaim("aId", assignmentId)
-    			.sign(algorithm); 				
-    }
-
-    void setToken(long assignmentId,String lis_result_sourcedid) throws Exception {  // stores a CRSF JWT token in the field User.token
-    	if (lis_result_sourcedid == null) setToken(assignmentId);
-    	else {
-    		Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
-    		Date now = new Date();
-    		Date exp = new Date(now.getTime() + 5400000L);  // 90 minutes from now
-    		this.token =  JWT.create()
-    				.withSubject(this.id)
-    				.withExpiresAt(exp)
-    				.withClaim("roles", this.roles)
-    				.withClaim("aId", assignmentId)
-    				.withClaim("lrs", lis_result_sourcedid)
-    				.sign(algorithm); 				
-    	}
-    }
-
-    Long getAssignmentId() {
+	void setAssignment(long assignmentId) {  // LTI Advantage
+		this.assignmentId = assignmentId;
+		setToken();
+	}
+	
+    long getAssignmentId() {
      	try {
-    		return JWT.decode(this.token).getClaim("aId").asLong();  // assignmentId
+    		return JWT.decode(this.token).getClaim("aid").asLong();  // assignmentId
     	} catch (Exception e) {    		
-    		return null;
+    		return 0L;
     	}
     }
 

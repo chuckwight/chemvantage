@@ -98,7 +98,7 @@ public class LTIv1p3Launch extends HttpServlet {
 					String redirectUrl = "/" + request.getParameter("AssignmentType") + "?Token=" + user.token;
 					response.sendRedirect(redirectUrl);	
 				} else {  // send the user back to the resourcePickerForm
-					int topicKey = -1;
+					int topicKey = 1;
 					try {topicKey = Integer.parseInt(request.getParameter("TopicKey"));} catch (Exception e) {}
 					response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,topicKey) + Home.footer);
 				}
@@ -252,12 +252,12 @@ public class LTIv1p3Launch extends HttpServlet {
 			debug.append("assignment saved OK...");
 
 			// Create a cross-site request forgery (CSRF) token containing the Assignment.id
-			user.setToken(myAssignment.id);
+			user.setAssignment(myAssignment.id);
 			debug.append("user token set OK...");
 
 			// If this is the first time this Assignment has been used, it may be missing the assignmentType and topicId(s)
-			if (myAssignment.assignmentType == null) {  //Show the the pickResource form:									
-				response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,0) + Home.footer);
+			if (!myAssignment.isValid()) {  //Show the the pickResource form:									
+				response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,1) + Home.footer);
 				return;
 			} else {  // redirect the user's browser to the assignment
 				response.sendRedirect("/" + myAssignment.assignmentType + "?Token=" + user.token);
@@ -344,7 +344,9 @@ public class LTIv1p3Launch extends HttpServlet {
 		if (sub==null || sub.isEmpty()) throw new Exception("Missing or empty subject claim in the id_token.");
 		String platformUserId = claims.get("iss").getAsString() + "/" + sub;
 		User user = new User(platformUserId);
-
+		
+		if (claims.has("email")) user.email = claims.get("email").getAsString();
+		
 		JsonElement roles_claim = claims.get("https://purl.imsglobal.org/spec/lti/claim/roles");
 		if (roles_claim == null || !roles_claim.isJsonArray()) throw new Exception("Required roles claim is missing from the id_token");
 		JsonArray roles = roles_claim.getAsJsonArray();
