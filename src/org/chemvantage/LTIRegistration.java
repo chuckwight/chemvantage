@@ -31,6 +31,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Date;
 import java.util.Properties;
+import java.util.Random;
 
 import javax.mail.Message;
 import javax.mail.Session;
@@ -60,17 +61,19 @@ public class LTIRegistration extends HttpServlet {
 	 * will get access to dev-vantage.appspot.com, while production users will see chemvantage.org.
 	 * There are 2 main workflow paths (for LTIv1.1 and LTIv1.3):
 	 *   1) All users complete a basic form giving information about their org and the LTI request
-	 *   2) ChemVantage responds by validating the fields and sending a registration email 
+	 *   2) ChemVantage responds by validating the fields and sending a registration email containing a link
+	 *      with the tokenized information
 	 * For LTIv1.1:
-	 *   3) After receiving the registration email, the user clicks a tokenized link. The clientIdForm
-	 *      method creates a new BLTIConsumer and presents the credentials to the user
+	 *   3) After receiving the registration email, the user clicks a tokenized link. The createBLTIConsumer
+	 *      method creates a new BLTIConsumer and presents the credentials to the user with instructions
 	 *   4) The user enters the credentials into their LMS and is ready to go. 
 	 * For LTIv1.3:
 	 *   3) The registration email contains the ChemVantage endpoints and configuration JSON to
 	 *      complete the registration in the LMS. 
-	 *   4) The user then clicks a tokenized link, and the clientIdForm generates a form for 
-	 *      entering the client_id value and LMS endpoints, if necessary.
-	 *   5) Submission of the form creates the new Deployment entity and completes the registration process.
+	 *   4) The user then clicks the tokenized link, and the clientIdForm method generates a form for 
+	 *      entering the client_id and deployment_id values and LMS endpoints, if necessary.
+	 *   5) The LMS admin submits the form, and the createDeployment method creates the new Deployment entity 
+	 *      and completes the registration process.
 	 * */
 	
 	private static final long serialVersionUID = 137L;
@@ -84,6 +87,7 @@ public class LTIRegistration extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
+		try {
 		PrintWriter out = response.getWriter();
 		String userRequest = request.getParameter("UserRequest");
 		if (userRequest==null) userRequest = "";
@@ -98,14 +102,20 @@ public class LTIRegistration extends HttpServlet {
 		else if ("config".contentEquals(userRequest)) {
 			response.setContentType("application/json");
 			out.println(getConfigurationJson(iss,request.getParameter("lms")));
-		} else if ("final".contentEquals(userRequest)) {
+		} else if (request.getParameter("token")!=null) {
 			response.setContentType("text/html");
 			String token = request.getParameter("token");
-			out.println(Home.header("Finalize ChemVantage LTI Registration") + clientIdForm(token) + Home.footer);
+			String ltiVersion = JWT.require(algorithm).withIssuer(iss).build().verify(token).getClaim("ver").asString();
+			if (ltiVersion.equals("1p1")) out.println(Home.header("LTI Registration") + createBLTIConsumer(token) + Home.footer);
+			else if (ltiVersion.equals("1p3")) out.println(Home.header("LTI Registration") + clientIdForm(token) + Home.footer);
+			else throw new Exception("LTI version was missing or invalid.");
 		} else {
 			response.setContentType("text/html");
 			String use = request.getParameter("use");
 			out.println(Home.header("ChemVantage LTI Registration Form") + applicationForm(use) + Home.footer);		
+		}
+		} catch (Exception e) {
+			response.sendError(401, e.getMessage());
 		}
 	}
 	
@@ -118,95 +128,23 @@ public class LTIRegistration extends HttpServlet {
 		String userRequest = request.getParameter("UserRequest");
 		if (userRequest==null) userRequest = "";
 
-		if ("Send Me The Registration Email".contentEquals(userRequest)) {
-			try {
-				String sub = request.getParameter("sub");
-				String email = request.getParameter("email");
-				String aud = request.getParameter("aud");
-				String url = request.getParameter("url");
-				String use = request.getParameter("use");
-				String ver = request.getParameter("ver");
-				String lms = request.getParameter("lms");
-				
-				if (sub.isEmpty() || email.isEmpty() || aud.isEmpty() || url.isEmpty() || use==null ||use.isEmpty() || ver==null || ver.isEmpty()) throw new Exception("All form fields are required.");
-				
-				String regex = "^[\\w-_\\.+]*[\\w-_\\.]\\@([\\w]+\\.)+[\\w]+[\\w]$";
-				if (!email.matches(regex)) throw new Exception("Your email address was not formatted correctly.");
-				
-				try {
-					new URL(url);   // throws Exception if URL is not formatted correctly
-				} catch (Exception e) {
-					throw new Exception("Badly formatted home page URL (" + e.getMessage() + ")");
-				}
-				
-				if (lms==null) throw new Exception("Please select the type of LMS that you are connecting to ChemVantage.");
-				if ("other".contentEquals(lms)) lms = request.getParameter("lms_other");
-				if (lms==null || lms.isEmpty()) throw new Exception("Please describe the type of LMS that you are connecting to ChemVantage.");
-				
-				if (!"true".equals(request.getParameter("AcceptReCaptchaTOS"))) throw new Exception("You must accept the reCAPTCHA Terms of Service. Please go back and try again.");
-				if (!reCaptchaOK(request)) throw new Exception("ReCaptcha tool unverified. Please try again.");
-				
-				String iss = use.equals("test")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
-				Date now = new Date();
-				Date exp = new Date(now.getTime() + 259200000L); // three days from now
-				String con = BLTIConsumer.getNewConsumerKey();
-				String token = JWT.create()
-						.withIssuer(iss)
-						.withSubject(sub)
-						.withAudience(aud)
-						.withExpiresAt(exp)
-						.withIssuedAt(now)
-						.withClaim("email",email)
-						.withClaim("url", url)
-						.withClaim("lms", lms)
-						.withClaim("ver", ver)
-						.withClaim("con", con)  // this is specific to LTI1.1 registrations
-						.sign(algorithm);
+		String iss = "https://" + request.getServerName();
+		
+		try {
+			if ("Send Me The Registration Email".contentEquals(userRequest)) {			
+				String token = validateApplicationFormContents(request);
 				sendRegistrationEmail(token);
-				out.println(Home.header("ChemVantage LTI Registration Success") + Home.banner + "<h3>Registration Success</h3>Thank you. A registration email has been sent to your address.<p>" + Home.footer);
-			} catch (Exception e) {
-				out.println(Home.header("ChemVantage LTI Registration Failure") + Home.banner + "<h3>Registration Failure</h3>" + e.getMessage() + "<p>" + Home.footer);
+				out.println(Home.header("ChemVantage LTI Registration") + Home.banner + "<h3>Registration Success</h3>Thank you. A registration email has been sent to your address.<p>" + Home.footer);			
+			} else if ("finalize".contentEquals(userRequest)) {				
+				String token = request.getParameter("Token");
+				JWT.require(algorithm).withIssuer(iss).build().verify(token);
+				out.println(Home.header("ChemVantage LTI Registration") + Home.banner + createDeployment(request) + Home.footer);			
 			}
-		} else if ("finalize".contentEquals(userRequest)) {
-			try {
-				DecodedJWT jwt = validateToken(request.getParameter("Token"));
-				String client_name = jwt.getSubject();
-				String email = jwt.getClaim("email").asString();
-				String organization = jwt.getAudience().get(0);
-				String org_url = jwt.getClaim("url").asString();
-				String lms = jwt.getClaim("lms").asString();
-				String client_id = request.getParameter("ClientId");
-				if (client_id==null) throw new Exception("Client ID value is required.");
-				String deployment_id = request.getParameter("DeploymentId");
-				if (deployment_id==null) throw new Exception("Deployment ID value is required.");
-				String platform_id;
-				String oidc_auth_url;
-				String oauth_access_token_url;
-				String well_known_jwks_url;
-				if ("canvas".equals(lms)) {
-					platform_id = "https://canvas.instructure.com";
-					oidc_auth_url = "https://canvas.instructure.com/api/lti/authorize_redirect";
-					oauth_access_token_url = "https://canvas.instructure.com/login/oauth2/token";	
-					well_known_jwks_url = "https://canvas.instructure.com/api/lti/security/jwks";
-				} else {
-					platform_id = request.getParameter("PlatformId");
-					if (platform_id==null) throw new Exception("Platform ID value is required.");
-					oidc_auth_url = request.getParameter("OIDCAuthUrl");
-					if (oidc_auth_url==null) throw new Exception("OIDC Auth URL is required.");
-					oauth_access_token_url = request.getParameter("OauthAccessTokenUrl");
-					if (oauth_access_token_url==null) throw new Exception("OAuth Access Token URL is required.");
-					well_known_jwks_url = request.getParameter("JWKSUrl");
-					if (well_known_jwks_url==null) throw new Exception("JSON Web Key Set URL is required.");
-				}
-				Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
-				ofy().save().entity(d).now();
-				out.println(Home.header("ChemVantage LTI Registration Complete") + Home.banner + "<h2>Congratulations. Registration is complete.</h2>" + Home.footer);
-			} catch (Exception e) {
-				out.println(Home.header("ChemVantage LTI Registration Failed") + "<h2>Registration Failed</h2>" + e.getMessage() + Home.footer);
-			}
-		} else out.println(Home.header("ChemVantage LTI Registration Failed") + "<h2>Registration Failed</h2>POST was missing a required parameter." + Home.footer);
-	}	
-
+		} catch (Exception e) {
+			response.sendError(401,e.getMessage() + " \nPlease go BACK and try again or contact admin@chemvantage.org for assistance.");
+		}
+	}
+	
 	String applicationForm(String use) {
 		if (use==null) use = "";
 		StringBuffer buf = new StringBuffer(Home.banner + "<p>");
@@ -257,117 +195,82 @@ public class LTIRegistration extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String clientIdForm(String token) {
-		StringBuffer buf = new StringBuffer(Home.banner);
-		String iss = null;
-		String sub = null;
-		String email = null;
-		String aud = null;
-		String url = null;
-		String lms = null;
-		String ver = null;
+	String validateApplicationFormContents(HttpServletRequest request) throws Exception {
+		String sub = request.getParameter("sub");
+		String email = request.getParameter("email");
+		String aud = request.getParameter("aud");
+		String url = request.getParameter("url");
+		String use = request.getParameter("use");
+		String ver = request.getParameter("ver");
+		String lms = request.getParameter("lms");
+		
+		if (sub.isEmpty() || email.isEmpty() || aud.isEmpty() || url.isEmpty() || use==null ||use.isEmpty() || ver==null || ver.isEmpty()) throw new Exception("All form fields are required.");
+		
+		String regex = "^[\\w-_\\.+]*[\\w-_\\.]\\@([\\w]+\\.)+[\\w]+[\\w]$";
+		if (!email.matches(regex)) throw new Exception("Your email address was not formatted correctly.");
+		
 		try {
-			DecodedJWT jwt = validateToken(token);  // registration token is valid for only 3 days
-			iss = jwt.getIssuer();
-			sub = jwt.getSubject();
-			email = jwt.getClaim("email").asString();
-			aud = jwt.getAudience().get(0);
-			url = jwt.getClaim("url").asString();
-			lms = jwt.getClaim("lms").asString();
-			ver = jwt.getClaim("ver").asString();
-			
-			if ("1p1".contentEquals(ver)) { // older LTIv1.1.2 registration request
-				BLTIConsumer con = null;
-				try {  // retrieve the BLTIConsumer that was saved when the original registration form was submitted
-					con = ofy().load().type(BLTIConsumer.class).id(jwt.getClaim("con").asString()).safe();
-				} catch (Exception e) {  
-					throw new Exception("Registration failed because the BLTIConsumer was not found.");
-				}
-				con.email = email;
-				con.contact_name = sub;
-				con.lms = lms;
-				con.organization = aud;
-				con.org_url = url;
-				ofy().save().entity(con).now();
-				
-				buf.append("<h3>Thank you for registering your LMS with ChemVantage</h3>");
-				
-				buf.append("Here are your LTI registration credentials:<p>"
-						+ "Tool Name: ChemVantage<br>"
-						+ "Description: ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry.<br>"
-						+ "Launch URL: " + iss + "/lti<br>"
-						+ "Consumer Key: " + con.oauth_consumer_key + "<br>"
-						+ "Shared Secret: " + con.secret + "<p>");
-				buf.append("Important notes:<ol>"
-						+ "<li>When entering this information into your LMS, be sure to use the "
-						+ "Launch URL method, not the domain method (leave the domain field blank)."
-						+ "<li>Enter the key and secret values carefully, being sure not to include "
-						+ "any leading or trailing blank spaces. This is the most common error."
-						+ "<li>IMS Global Learning Solutions has published a "
-						+ "<a href=https://www.imsglobal.org/lti-security-announcement-and-deprecation-schedule-july-2019>deprecation schedule</a> "
-						+ "for this version of LTI registrations. At a minimum, your LMS must support "
-						+ "LTI v1.1.2 for this connection to work after December 31, 2020.");
-				
-				if (iss.contains("dev")) {
-					buf.append("<li>You indicated on the registration form that your initial use case is checking the LTI connection. So we granted accoess "
-							+ "to the ChemVantage Development server. When you are ready to use ChemVantage for instruction, please "
-							+ "<a href=https://www.chemvantage.org/lti/registration?use=prod>register again here</a> to access the production server. Do not use "
-							+ "the Development server for live instruction.<p>");
-				} else {
-					buf.append("<li>After registering ChemVantage in your LMS, simply create an assignment in the LMS and configure the submission to be "
-							+ "from a third-party app (ChemVantage). Suggested point values are 10 for each quiz or homework set, 100 for practice exams.");
-				}
-				buf.append("</ol>");
-				buf.append("If you need assistance for this registration, please contact me at admin@chemvantage.org<p>- Chuck Wight");
-			
-			} else {  // LTIAdvantage (version 1.3.0) registration request
-				buf.append("<h4>To the LMS Administrator:</h4>"
-						+ "By now you should have configured your LMS to connect with ChemVantage, and you should have "
-						+ "received a client_id from your LMS that identifies the ChemVantage tool and a deployment_id "
-						+ "that identifies your account in your LMS. Please enter these values here:<p>"
-						+ "<form method=post action=/lti/registration>"
-						+ "<input type=hidden name=UserRequest value='finalize'>"
-						+ "<input type=hidden name=Token value='" + token + "'>"
-						+ "Client ID: <input type=text size=40 name=ClientId><br>"
-						+ "Deployment ID: <input type=text size=40 name=DeploymentId><p>");
-				if ("canvas".contentEquals(lms)) {
-					buf.append("Canvas uses the developer key as the client_id, so enter that value from the list of "
-							+ "developer keys. It is a numeric value that looks something like 32570000000000041.<p>"
-							+ "The deployment_id can be found in Settings | Apps | App Configurations by opening the "
-							+ "settings menu for ChemVantage.<br>");
-				} else {
-					buf.append("In addition, ChemVantage needs URLs for the end points on your LMS in order to access services "
-							+ "(e.g., Assignment and Grade Services) provided by your LMS platform. All fields are required, "
-							+ "and all URLs should be secure (i.e., begin with https):<br>"
-							+ "Platform ID: <input type=text size=40 name=PlatformId> (base URL for your LMS)<br>"
-							+ "Platform OIDC Auth URL: <input type=text name=OIDCAuthUrl><br>"
-							+ "Platform OAuth Access Token URL: <input type=text name=OauthAccessTokenUrl><br>"
-							+ "Platform JSON Web Key Set URL: <input type=text name=JWKSUrl><br>");
-				}
-				buf.append("<input type=submit value='Complete the LTI Registration'></form>");	
-			}
+			new URL(url);   // throws Exception if URL is not formatted correctly
 		} catch (Exception e) {
-			buf.append("<h3>Registration Failed</h3>"
-					+ e.getMessage() + "<p>"
-					+ "Name: " + sub + "<br>"
-					+ "Email: " + email + "<br>"
-					+ "Organization: " + aud + "<br>"
-					+ "Home Page: " + url + "<p>"
-					+ "The token provided with this link could not be validated. It may have expired (after 3 days) "
-					+ "or it may not have contained enough information to complete the registration request. You "
-					+ "may <a href=/lti/registration>start the registration process again</a> or contact "
-					+ "Chuck Wight (admin@chemvantage.org) for assistance.");
-		}		
-		return buf.toString();
-	}
+			throw new Exception("Badly formatted home page URL (" + e.getMessage() + ")");
+		}
+		
+		if (lms==null) throw new Exception("Please select the type of LMS that you are connecting to ChemVantage.");
+		if ("other".contentEquals(lms)) lms = request.getParameter("lms_other");
+		if (lms==null || lms.isEmpty()) throw new Exception("Please describe the type of LMS that you are connecting to ChemVantage.");
+		
+		if (!"true".equals(request.getParameter("AcceptReCaptchaTOS"))) throw new Exception("You must accept the reCAPTCHA Terms of Service. Please go back and try again.");
+		if (!reCaptchaOK(request)) throw new Exception("ReCaptcha tool unverified. ");
 	
-	DecodedJWT validateToken(String token) throws Exception {
-		DecodedJWT jwt = JWT.require(algorithm).build().verify(token);
-		return jwt;
+		// Construct a new registration token
+		String iss = use.equals("test")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
+		Date now = new Date();
+		Date exp = new Date(now.getTime() + 259200000L); // three days from now
+		String token = JWT.create()
+				.withIssuer(iss)
+				.withSubject(sub)
+				.withAudience(aud)
+				.withExpiresAt(exp)
+				.withIssuedAt(now)
+				.withClaim("email",email)
+				.withClaim("url", url)
+				.withClaim("lms", lms)
+				.withClaim("ver", ver)
+				.sign(algorithm);
+		
+		return token;
+	}
+		
+	boolean reCaptchaOK(HttpServletRequest request) throws Exception {
+		String queryString = "secret=6Ld_GAcTAAAAAD2k2iFF7Ywl8lyk9LY2v_yRh3Ci&response=" 
+				+ request.getParameter("g-recaptcha-response") + "&remoteip=" + request.getRemoteAddr();
+		URL u = new URL("https://www.google.com/recaptcha/api/siteverify");
+    	HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+    	uc.setDoOutput(true);
+    	uc.setRequestMethod("POST");
+    	uc.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
+    	uc.setRequestProperty("Content-Length", String.valueOf(queryString.length()));
+    	
+    	OutputStreamWriter writer = new OutputStreamWriter(uc.getOutputStream());
+		writer.write(queryString);
+    	writer.flush();
+    	writer.close();
+		
+		// read & interpret the JSON response from Google
+    	BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+		StringBuffer res = new StringBuffer();
+		String line;
+		while ((line = reader.readLine()) != null) {
+			res.append(line);
+		}
+		reader.close();
+		
+		JsonObject captchaResp = new JsonParser().parse(res.toString()).getAsJsonObject();
+		return captchaResp.get("success").getAsBoolean();
 	}
 
 	void sendRegistrationEmail(String token) throws Exception {
-		DecodedJWT jwt = validateToken(token);
+		DecodedJWT jwt = JWT.decode(token);
 		String name = jwt.getSubject();
 		String email = jwt.getClaim("email").asString();
 		String org = jwt.getAudience().get(0);
@@ -502,34 +405,157 @@ public class LTIRegistration extends HttpServlet {
 		Transport.send(msg);
 	}
 
-	boolean reCaptchaOK(HttpServletRequest request) throws Exception {
-			String queryString = "secret=6Ld_GAcTAAAAAD2k2iFF7Ywl8lyk9LY2v_yRh3Ci&response=" 
-					+ request.getParameter("g-recaptcha-response") + "&remoteip=" + request.getRemoteAddr();
-			URL u = new URL("https://www.google.com/recaptcha/api/siteverify");
-	    	HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-	    	uc.setDoOutput(true);
-	    	uc.setRequestMethod("POST");
-	    	uc.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
-	    	uc.setRequestProperty("Content-Length", String.valueOf(queryString.length()));
-	    	
-	    	OutputStreamWriter writer = new OutputStreamWriter(uc.getOutputStream());
-			writer.write(queryString);
-	    	writer.flush();
-	    	writer.close();
-			
-			// read & interpret the JSON response from Google
-	    	BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-			StringBuffer res = new StringBuffer();
-			String line;
-			while ((line = reader.readLine()) != null) {
-				res.append(line);
-			}
-			reader.close();
-			
-			JsonObject captchaResp = new JsonParser().parse(res.toString()).getAsJsonObject();
-			return captchaResp.get("success").getAsBoolean();
+	String createBLTIConsumer(String token) {
+		DecodedJWT jwt = JWT.decode(token); 
+		String iss = jwt.getIssuer();          // alrady ve4rified to be this ChemVantage server (dev or production)
+		String sub = jwt.getSubject();         // name of registering person
+		String email = jwt.getClaim("email").asString();  // email of registering person
+		String aud = jwt.getAudience().get(0);            // name of applicant organization
+		String url = jwt.getClaim("url").asString();      // home page of applicant organization
+		String lms = jwt.getClaim("lms").asString();      // type of LMS platform
+		
+		// the consumer key is "CK" plus a random 6-digit number based on the token value
+		String oauth_consumer_key = "CK" + (new Random(token.hashCode()).nextInt(899999) + 100000);
+
+		BLTIConsumer con = null;
+		try {  // retrieve the BLTIConsumer that was saved when the original registration form was submitted
+			con = ofy().load().type(BLTIConsumer.class).id(jwt.getClaim("con").asString()).safe();
+			if (!"email".equals(con.email)) throw new Exception("Failed: This consumer key is already in use. Please register again.");
+		} catch (Exception e) {  
+			con = new BLTIConsumer(oauth_consumer_key);
+			con.email = email;
+			con.contact_name = sub;
+			con.lms = lms;
+			con.organization = aud;
+			con.org_url = url;
+			ofy().save().entity(con).now();
+		}
+		StringBuffer buf = new StringBuffer();
+
+		buf.append("<h3>Thank you for registering your LMS with ChemVantage</h3>");
+
+		buf.append("Here are your LTI registration credentials:<p>"
+				+ "Tool Name: ChemVantage<br>"
+				+ "Description: ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry.<br>"
+				+ "Launch URL: " + iss + "/lti<br>"
+				+ "Consumer Key: " + con.oauth_consumer_key + "<br>"
+				+ "Shared Secret: " + con.secret + "<p>");
+		buf.append("Important notes:<ol>"
+				+ "<li>When entering this information into your LMS, be sure to use the "
+				+ "Launch URL method, not the domain method (leave the domain field blank)."
+				+ "<li>Enter the key and secret values carefully, being sure not to include "
+				+ "any leading or trailing blank spaces. This is the most common error."
+				+ "<li>IMS Global Learning Solutions has published a "
+				+ "<a href=https://www.imsglobal.org/lti-security-announcement-and-deprecation-schedule-july-2019>deprecation schedule</a> "
+				+ "for this version of LTI registrations. At a minimum, your LMS must support "
+				+ "LTI v1.1.2 for this connection to work after December 31, 2020.");
+		
+		if (iss.contains("dev")) {
+			buf.append("<li>You indicated on the registration form that your initial use case is checking the LTI connection. So we granted accoess "
+					+ "to the ChemVantage Development server. When you are ready to use ChemVantage for instruction, please "
+					+ "<a href=https://www.chemvantage.org/lti/registration?use=prod>register again here</a> to access the production server. Do not use "
+					+ "the Development server for live instruction.<p>");
+		} else {
+			buf.append("<li>After registering ChemVantage in your LMS, simply create an assignment in the LMS and configure the submission to be "
+					+ "from a third-party app (ChemVantage). Suggested point values are 10 for each quiz or homework set, 100 for practice exams.");
+		}
+		buf.append("</ol>");
+		buf.append("If you need assistance for this registration, please contact me at admin@chemvantage.org<p>- Chuck Wight");
+		
+		return buf.toString();
 	}
 	
+	String clientIdForm(String token) {
+		StringBuffer buf = new StringBuffer(Home.banner);
+		String sub = null;
+		String email = null;
+		String aud = null;
+		String url = null;
+		String lms = null;
+		
+		try {
+			DecodedJWT jwt = JWT.decode(token);  // registration token is valid for only 3 days
+			sub = jwt.getSubject();
+			email = jwt.getClaim("email").asString();
+			aud = jwt.getAudience().get(0);
+			url = jwt.getClaim("url").asString();
+			lms = jwt.getClaim("lms").asString();
+			buf.append("<h4>To the LMS Administrator:</h4>"
+					+ "By now you should have configured your LMS to connect with ChemVantage, and you should have "
+					+ "received a client_id from your LMS that identifies the ChemVantage tool and a deployment_id "
+					+ "that identifies your account in your LMS. Please enter these values here:<p>"
+					+ "<form method=post action=/lti/registration>"
+					+ "<input type=hidden name=UserRequest value='finalize'>"
+					+ "<input type=hidden name=Token value='" + token + "'>"
+					+ "Client ID: <input type=text size=40 name=ClientId><br>"
+					+ "Deployment ID: <input type=text size=40 name=DeploymentId><p>");
+			if ("canvas".contentEquals(lms)) {
+				buf.append("Canvas uses the developer key as the client_id, so enter that value from the list of "
+						+ "developer keys. It is a numeric value that looks something like 32570000000000041.<p>"
+						+ "The deployment_id can be found in Settings | Apps | App Configurations by opening the "
+						+ "settings menu for ChemVantage.<br>");
+			} else {
+				buf.append("In addition, ChemVantage needs URLs for the end points on your LMS in order to access services "
+						+ "(e.g., Assignment and Grade Services) provided by your LMS platform. All fields are required, "
+						+ "and all URLs should begin with https://<br>"
+						+ "Platform ID: <input type=text size=40 name=PlatformId> (base URL for your LMS)<br>"
+						+ "Platform OIDC Auth URL: <input type=text name=OIDCAuthUrl><br>"
+						+ "Platform OAuth Access Token URL: <input type=text name=OauthAccessTokenUrl><br>"
+						+ "Platform JSON Web Key Set URL: <input type=text name=JWKSUrl><br>");
+			}
+			buf.append("<input type=submit value='Complete the LTI Registration'></form>");	
+		} catch (Exception e) {
+			buf.append("<h3>Registration Failed</h3>"
+					+ e.getMessage() + "<p>"
+					+ "Name: " + sub + "<br>"
+					+ "Email: " + email + "<br>"
+					+ "Organization: " + aud + "<br>"
+					+ "Home Page: " + url + "<p>"
+					+ "The token provided with this link could not be validated. It may have expired (after 3 days) "
+					+ "or it may not have contained enough information to complete the registration request. You "
+					+ "may <a href=/lti/registration>start the registration process again</a> or contact "
+					+ "Chuck Wight (admin@chemvantage.org) for assistance.");
+		}		
+		return buf.toString();
+	}
+	
+	String createDeployment(HttpServletRequest request) throws Exception {
+		DecodedJWT jwt = JWT.decode(request.getParameter("Token"));
+		String client_name = jwt.getSubject();
+		String email = jwt.getClaim("email").asString();
+		String organization = jwt.getAudience().get(0);
+		String org_url = jwt.getClaim("url").asString();
+		String lms = jwt.getClaim("lms").asString();
+		String client_id = request.getParameter("ClientId");
+		if (client_id==null) throw new Exception("Client ID value is required.");
+		String deployment_id = request.getParameter("DeploymentId");
+		if (deployment_id==null) throw new Exception("Deployment ID value is required.");
+		String platform_id;
+		String oidc_auth_url;
+		String oauth_access_token_url;
+		String well_known_jwks_url;
+		if ("canvas".equals(lms)) {
+			platform_id = "https://canvas.instructure.com";
+			oidc_auth_url = "https://canvas.instructure.com/api/lti/authorize_redirect";
+			oauth_access_token_url = "https://canvas.instructure.com/login/oauth2/token";	
+			well_known_jwks_url = "https://canvas.instructure.com/api/lti/security/jwks";
+		} else {
+			platform_id = request.getParameter("PlatformId");
+			if (platform_id==null) throw new Exception("Platform ID value is required.");
+			oidc_auth_url = request.getParameter("OIDCAuthUrl");
+			if (oidc_auth_url==null) throw new Exception("OIDC Auth URL is required.");
+			oauth_access_token_url = request.getParameter("OauthAccessTokenUrl");
+			if (oauth_access_token_url==null) throw new Exception("OAuth Access Token URL is required.");
+			well_known_jwks_url = request.getParameter("JWKSUrl");
+			if (well_known_jwks_url==null) throw new Exception("JSON Web Key Set URL is required.");
+		}
+		
+		Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
+		ofy().save().entity(d).now();
+		
+		return "<h2>Congratulations. Registration is complete.</h2>";
+	}	
+
 	String getConfigurationJson(String iss,String lms) {
 		String domain = null;
 		try {
