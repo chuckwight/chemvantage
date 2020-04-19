@@ -176,7 +176,7 @@ public class LTIRegistration extends HttpServlet {
 				+ "<label><input type=radio name=lms value=moodle>Moodle</label><br>"
 				+ "<label><input type=radio name=lms value=sakai>Sakai</label><br>"
 				+ "<label><input type=radio name=lms value=schoology>Schoology</label><br>"
-				+ "<label><input type=radio name=lms value=other>Other: </label><input type=text name=lms_other><p>");
+				+ "<label><input type=radio name=lms id=other value=other>Other: </label><input type=text name=lms_other onFocus=document.getElementById('other').checked=true;><p>");
 		
 		// Insert a checkbox confirming acceptance of the Google reCaptcha Terms of Service
 		buf.append("<label><input type=checkbox name=AcceptReCaptchaTOS value=true>Accept the reCAPTCHA "
@@ -212,7 +212,7 @@ public class LTIRegistration extends HttpServlet {
 		try {
 			new URL(url);   // throws Exception if URL is not formatted correctly
 		} catch (Exception e) {
-			throw new Exception("Badly formatted home page URL (" + e.getMessage() + ")");
+			throw new Exception("Invalid home page URL (" + e.getMessage() + "). Must start with https://");
 		}
 		
 		if (lms==null) throw new Exception("Please select the type of LMS that you are connecting to ChemVantage.");
@@ -419,7 +419,7 @@ public class LTIRegistration extends HttpServlet {
 
 		BLTIConsumer con = null;
 		try {  // retrieve the BLTIConsumer that was saved when the original registration form was submitted
-			con = ofy().load().type(BLTIConsumer.class).id(jwt.getClaim("con").asString()).safe();
+			con = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).safe();
 			if (!"email".equals(con.email)) throw new Exception("Failed: This consumer key is already in use. Please register again.");
 		} catch (Exception e) {  
 			con = new BLTIConsumer(oauth_consumer_key);
