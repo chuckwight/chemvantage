@@ -246,13 +246,11 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			
 			if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED) { // 200m or 201
 				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
-				StringBuffer res = new StringBuffer();
-				String line;
-				while ((line = reader.readLine()) != null) res.append(line);
+				JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
 				reader.close();
 				
 				// decode the Json response object. Fields include access_token, token-type, expires_in, scope
-				JsonObject json = new JsonParser().parse(res.toString()).getAsJsonObject();
+				//JsonObject json = new JsonParser().parse(res.toString()).getAsJsonObject();
 				// return the access_token only
 				return json.get("access_token").getAsString();
 			} else throw new Exception("response code " + responseCode);
@@ -267,7 +265,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     	String reply = getLineItems(d,lti_ags_lineitems_url);
     	if (reply==null) return null;
 
-    	JsonElement json = new JsonParser().parse(reply);
+    	JsonElement json = JsonParser.parseString(reply);
     	if (json.isJsonArray()) {
     		JsonArray lineitems = json.getAsJsonArray();        	
     		Iterator<JsonElement> iterator = lineitems.iterator();
@@ -301,14 +299,9 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     		int responseCode = uc.getResponseCode();
     		if (HttpURLConnection.HTTP_OK == responseCode) { // 200
     			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-    			StringBuffer res = new StringBuffer();
-    			String line;
-    			while ((line = reader.readLine()) != null) {
-    				res.append(line);
-    			}
+    			JsonObject lineitem_json = JsonParser.parseReader(reader).getAsJsonObject();
     			reader.close();
     			
-    			JsonObject lineitem_json = new JsonParser().parse(res.toString()).getAsJsonObject();
     			return lineitem_json;
     		}
     	} catch (Exception e) {
@@ -383,13 +376,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			boolean success = responseCode>199 && responseCode<203;
 			if (success) {
 				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-				StringBuffer res = new StringBuffer();
-				String line;
-				while ((line = reader.readLine()) != null) {
-					res.append(line);
-				}
+				lineItemUrl = JsonParser.parseReader(reader).getAsJsonObject().get("id").getAsString();
 				reader.close();
-				lineItemUrl = new JsonParser().parse(res.toString()).getAsJsonObject().get("id").getAsString();
 				new URI(lineItemUrl);  // throws Exception if not a valid URL
 				return lineItemUrl;
 			}
@@ -423,14 +411,9 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			int responseCode = uc.getResponseCode();
 			if (responseCode > 199 && responseCode < 203) {  // OK
 				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-				StringBuffer res = new StringBuffer();
-				String line;
-				while ((line = reader.readLine()) != null) {
-					res.append(line);
-				}
+				JsonArray json = JsonParser.parseReader(reader).getAsJsonArray();
 				reader.close();
 
-				JsonArray json = new JsonParser().parse(res.toString()).getAsJsonArray();
 				Iterator<JsonElement> iterator = json.iterator();
 				while(iterator.hasNext()) {
 					JsonObject result = iterator.next().getAsJsonObject();
@@ -467,14 +450,9 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			int responseCode = uc.getResponseCode();
 			if (responseCode == HttpURLConnection.HTTP_OK) { // 200
 				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-				StringBuffer res = new StringBuffer();
-				String line;
-				while ((line = reader.readLine()) != null) {
-					res.append(line);
-				}
+				JsonArray json = JsonParser.parseReader(reader).getAsJsonArray();
 				reader.close();
 
-				JsonArray json = new JsonParser().parse(res.toString()).getAsJsonArray();
 				Iterator<JsonElement> iterator = json.iterator();
 				while(iterator.hasNext()){
 					JsonObject result = iterator.next().getAsJsonObject();
@@ -566,14 +544,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			int responseCode = uc.getResponseCode();
 			if (responseCode > 199 && responseCode < 203) { // OK
 				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-				StringBuffer res = new StringBuffer();
-				String line;
-				while ((line = reader.readLine()) != null) {
-					res.append(line);
-				}
+				JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
 				reader.close();
-
-				JsonObject json = new JsonParser().parse(res.toString()).getAsJsonObject();
 				
 				// check to ensure that the context_id matches the group
 				//JsonObject context = json.get("context").getAsJsonObject();
