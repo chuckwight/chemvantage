@@ -280,12 +280,12 @@ public class Question implements Serializable {
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br />");
 			buf.append("<TEXTAREA NAME=ShowWork ROWS=5 COLS=50 WRAP=SOFT id=showWork" + this.id + " style='display:none' "
-					+ "onkeyup=this.value=this.value.substring(0,500); placeholder='Show your work here'>" + showWork + "</TEXTAREA><br>");
+					+ "onkeyup=this.value=this.value.substring(0,500); placeholder='Show your work here'>" + showWork + "</TEXTAREA>");
 			switch (getNumericItemType()) {
-			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>"); break;
-			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
-			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br>"); break;
-			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
+			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numeric value.</FONT><br>"); break;
+			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
+			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br>"); break;
+			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
 			default:
 			}			
 			buf.append("<input size=30 type=text name=" + this.id + " id=answer" + this.id + " value='" + studentAnswer + "' onFocus=showWorkBox('" + this.id + "');>");
@@ -352,10 +352,10 @@ public class Question implements Serializable {
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br />");
 			switch (getNumericItemType()) {
-			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>"); break;
-			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
-			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br>"); break;
-			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
+			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numeric value.</FONT><br>"); break;
+			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
+			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br>"); break;
+			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
 			default:
 			}
 			buf.append("<span style='border: 1px solid black'>"
@@ -431,10 +431,10 @@ public class Question implements Serializable {
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br />");
 			switch (getNumericItemType()) {
-			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>"); break;
-			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
-			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br>"); break;
-			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
+			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numeric value.</FONT><br>"); break;
+			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
+			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br>"); break;
+			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
 			default:
 			}
 			buf.append("<span style='border: 1px solid black'>"
@@ -596,10 +596,10 @@ public class Question implements Serializable {
 						+ amp2html(text) + "</TEXTAREA><br>");
 				buf.append("<FONT SIZE=-2>Significant figures: <input size=5 name=SignificantFigures value='" + significantFigures + "'> Required precision: <input size=5 name=RequiredPrecision value='" + requiredPrecision + "'> (set to zero to require exact answer)</FONT><br/>");
 				switch (getNumericItemType()) {
-				case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numerical value.</FONT><br>"); break;
-				case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
-				case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br>"); break;
-				case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numerical value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
+				case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numeric value.</FONT><br>"); break;
+				case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
+				case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br>"); break;
+				case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
 				default:
 				}
 				buf.append("Correct answer:");
