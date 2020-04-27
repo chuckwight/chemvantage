@@ -91,7 +91,7 @@ public class Help extends HttpServlet {
 			out.println(Home.header("ChemVantage Help Page") + Home.banner + displayHelpUrl(jwt,iss) + Home.footer);
 			
 		} catch (Exception e) {
-			response.sendError(401, e.getMessage());	
+			response.sendRedirect("/Logout");
 		}
 	}
 	
@@ -171,7 +171,7 @@ public class Help extends HttpServlet {
 		long tid = Long.parseLong(request.getParameter("TransactionId"));
 		
 		Date now = new Date();
-		Date in3Days = new Date(now.getTime() + 2592000000L);
+		Date in3Days = new Date(now.getTime() + 259200000L);
 		
 		String token = JWT.create()
 				.withClaim("aty", aty)
@@ -188,15 +188,15 @@ public class Help extends HttpServlet {
 		
 		buf.append("<h3>Need Some Help?</h3>");
 		buf.append("Here's what to do: Copy the message below, including the entire URL, and send it with your question via email "
-				+ " to your instructor. This will enable your instructor to view your responses to the question, including "
+				+ " to your instructor and/or teaching assistant. They will be able to view your responses to the question, including "
 				+ "anything that you may have written in the box the was labeled: 'Show your work here'. You can use the link "
 				+ "yourself to verify exactly what information your instructor will see.<p>"
 				+ "Your email should try to explain why you're stuck, if possible. When solving homework problems, it is important "
-				+ "to show your work in the box provided, because that often can illuminate the issue for your instructor.<p>");
+				+ "to show your work in the box provided, because that's helpful to the instructor for diagnosing the issue.<p>");
 		
 		buf.append("<hr><p>");
 		
-		buf.append("To the instructor:<br>"
+		buf.append("From ChemVantage to the instructor:<br>"
 				+ "The student sending this message is having difficulties solving a problem in ChemVantage. Please click the URL "
 				+ "below to view the question item and the student's responses. The link is dynamic will always give current "
 				+ "information, so if the student solved the issue on their own or another way, you will see that in the page.<p>"
