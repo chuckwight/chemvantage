@@ -99,7 +99,7 @@ public class Help extends HttpServlet {
 		// This method verifies that the token is properly signed and has not expired
 		DecodedJWT token = JWT.decode(jwt);            // throws JWTDecodeException if not a valid JWT
 		JWT.require(algorithm).build().verify(token);  // throws JWTVerificationException if not valid		
-		JsonObject payload = new JsonParser().parse(new String(Base64.getUrlDecoder().decode(token.getPayload()))).getAsJsonObject();
+		JsonObject payload = JsonParser.parseString(new String(Base64.getUrlDecoder().decode(token.getPayload()))).getAsJsonObject();
 		return payload;
 	}
 

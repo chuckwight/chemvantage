@@ -78,7 +78,7 @@ public class LTIDeepLinks extends HttpServlet {
 			try {
 				DecodedJWT id_token = JWT.decode(request.getParameter("id_token"));
 				String json = new String(Base64.getUrlDecoder().decode(id_token.getPayload()));
-				claims = new JsonParser().parse(json).getAsJsonObject();
+				claims = JsonParser.parseString(json).getAsJsonObject();
 			} catch (Exception e) {
 				throw new Exception("id_token was not a valid JWT.");
 			}
@@ -335,7 +335,7 @@ public class LTIDeepLinks extends HttpServlet {
 		JsonObject claims = null;
 		DecodedJWT id_token = JWT.decode(request.getParameter("id_token"));
 		String json = new String(Base64.getUrlDecoder().decode(id_token.getPayload()));
-		claims = new JsonParser().parse(json).getAsJsonObject();
+		claims = JsonParser.parseString(json).getAsJsonObject();
 		
 		String platform_id = claims.get("iss").getAsString();
 		String deployment_id = claims.get("https://purl.imsglobal.org/spec/lti/claim/deployment_id").getAsString();

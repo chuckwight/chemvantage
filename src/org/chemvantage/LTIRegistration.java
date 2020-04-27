@@ -258,15 +258,11 @@ public class LTIRegistration extends HttpServlet {
 		
 		// read & interpret the JSON response from Google
     	BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-		StringBuffer res = new StringBuffer();
-		String line;
-		while ((line = reader.readLine()) != null) {
-			res.append(line);
-		}
-		reader.close();
+		JsonObject captchaResponse = JsonParser.parseReader(reader).getAsJsonObject();
+    	reader.close();
 		
-		JsonObject captchaResp = new JsonParser().parse(res.toString()).getAsJsonObject();
-		return captchaResp.get("success").getAsBoolean();
+		//JsonObject captchaResp = JsonParser.parseString(res.toString()).getAsJsonObject();
+		return captchaResponse.get("success").getAsBoolean();
 	}
 
 	void sendRegistrationEmail(String token) throws Exception {
