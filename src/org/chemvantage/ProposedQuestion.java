@@ -13,9 +13,9 @@ public class ProposedQuestion extends Question {
 	ProposedQuestion(int t) {
 		super(t);
 	}
-	ProposedQuestion (long topicId,String text,String type,int nChoices,List<String> choices,
+	ProposedQuestion (long topicId,long videoId,String text,String type,int nChoices,List<String> choices,
 			double requiredPrecision,int significantFigures,String correctAnswer,String tag,int pointValue,String parameterString,
 			String hint,String solution,String authorId,String contributorId,String editorId,String notes) {
-		super(topicId,text,type,nChoices,choices,requiredPrecision,significantFigures,correctAnswer,tag,pointValue,parameterString,hint,solution,authorId,contributorId,editorId,notes);
+		super(topicId,videoId,text,type,nChoices,choices,requiredPrecision,significantFigures,correctAnswer,tag,pointValue,parameterString,hint,solution,authorId,contributorId,editorId,notes);
 	}
 }

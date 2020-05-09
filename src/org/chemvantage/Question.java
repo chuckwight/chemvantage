@@ -36,7 +36,7 @@ public class Question implements Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id 	Long id;
 	@Index	long topicId;
-	@Index	String assignmentType;
+			String assignmentType;
 			String text;
 			String type;
 			int nChoices=0;
@@ -84,7 +84,7 @@ public class Question implements Serializable {
 		this.isActive = false;
 	}
 
-	Question (long topicId,String text,String type,int nChoices,List<String> choices,
+	Question (long topicId,long videoId,String text,String type,int nChoices,List<String> choices,
 			double requiredPrecision,int significantFigures,String correctAnswer,String tag,int pointValue,String parameterString,
 			String hint,String solution,String authorId,String contributorId,String editorId,String notes) {
 		this.topicId = topicId;

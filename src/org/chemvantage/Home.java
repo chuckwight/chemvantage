@@ -147,7 +147,7 @@ public class Home extends HttpServlet {
 			
 			buf.append("</nobr></div>");
 
-			buf.append("<FONT COLOR=RED>" + announcement + "</FONT>");
+			buf.append("<FONT COLOR=RED>" + announcement + "</FONT><br>");
 		} catch (Exception e) {
 			return e.toString();
 		}

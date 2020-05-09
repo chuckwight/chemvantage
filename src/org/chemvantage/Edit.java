@@ -59,6 +59,9 @@ public class Edit extends HttpServlet {
 	
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+		
 		try {
 			UserService userService = UserServiceFactory.getUserService();
 			String userId = userService.getCurrentUser().getUserId();
@@ -66,49 +69,57 @@ public class Edit extends HttpServlet {
 			user.setIsChemVantageAdmin(true);
 			user.setToken();
 			
-			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
+			out.println(Home.getHeader(user));
 			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 
-			if (userRequest.equals("ManageTopics")) {
-				out.println(Home.getHeader(user) + topicsForm(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("ManageVideos")) {
-				out.println(Home.getHeader(user) + videosForm(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("ManageTexts")) {
-				out.println(Home.getHeader(user) + textsForm(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("Preview")) {
-				out.println(Home.getHeader(user) + previewQuestion(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("NewQuestionForm")) {
-				out.println(Home.getHeader(user) + newQuestionForm(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("Review") || userRequest.equals("Skip")) { // review a pending question (problem or contribution)
-				out.println(Home.getHeader(user) + reviewProposedQuestion(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("Edit")) {  // edit a current question in the database
-				out.println(Home.getHeader(user) + editCurrentQuestion(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("Discard Question")) {
+			switch (userRequest) {
+			case "ManageTopics": 
+				out.println(topicsForm(request)); 
+				break;
+			case "ManageVideos": 
+				out.println(videosForm()); 
+				break;
+			case "EditVideo": 
+				out.println(editVideoForm(request)); 
+				break;
+			case "ManageTexts": 
+				out.println(textsForm(user,request)); 
+				break;
+			case "Preview": 
+				out.println(previewQuestion(user,request)); 
+				break;
+			case "NewQuestionForm": 
+				out.println(newQuestionForm(user,request)); 
+				break;
+			case "Review": 
+				out.println(reviewProposedQuestion(user,request)); 
+				break;
+			case "Edit": 
+				out.println(editCurrentQuestion(user,request));
+				break;
+			case "Discard Question":
 				try {
 					long proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
 					ofy().delete().key(Key.create(ProposedQuestion.class,proposedQuestionId));
 				} catch (Exception e) {}
 				out.println(Home.getHeader(user) + reviewProposedQuestion(user,request) + Home.footer);
+				break;
+			default: out.println(editorsPage(user,request));
 			}
-			else { // show the default Editors page
-				out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
-			}
+			
 		} catch (Exception e) {
+			out.println(e.getMessage());
 		}
+		out.println(Home.footer);
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+		
 		try {
 			UserService userService = UserServiceFactory.getUserService();
 			String userId = userService.getCurrentUser().getUserId();
@@ -116,89 +127,98 @@ public class Edit extends HttpServlet {
 			user.setIsChemVantageAdmin(true);
 			user.setToken();
 			
-			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
-
+			out.println(Home.getHeader(user));
+			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 
-			if (userRequest.equals("CreateTopic")) {
+			switch (userRequest) {
+			case "CreateTopic":
 				createTopic(user,request);
-				out.println(Home.getHeader(user) + topicsForm(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("UpdateTopic")) {
+				out.println(topicsForm(request));
+				break;
+			case "UpdateTopic": 
 				updateTopic(user,request); 
-				out.println(Home.getHeader(user) + topicsForm(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("DeleteTopic")) {
+				out.println(topicsForm(request));
+				break;
+			case "DeleteTopic": 
 				deleteTopic(user,request);
-				out.println(Home.getHeader(user) + topicsForm(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("Create Video")) {
+				out.println(topicsForm(request));
+				break;
+			case "Create Video":
 				createVideo(user,request);
-				out.println(Home.getHeader(user) + videosForm(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("Update Video")) {
-				updateVideo(user,request);
-				out.println(Home.getHeader(user) + videosForm(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("Delete Video")) {
+				out.println(videosForm()); 
+				break;
+			case "Update Video":
+				updateVideo(request);
+				out.println(videosForm()); 
+				break;
+			case "Delete Video":
 				deleteVideo(user,request);
-				out.println(Home.getHeader(user) + videosForm(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("Create Text")) {
+				out.println(videosForm()); 
+				break;
+			case "Create Quizlet":
+				out.println(updateQuizlet(request)); 
+				break;
+			case "Update Quizlet":
+				out.println(updateQuizlet(request)); 
+				break;
+			case "Delete Quizlet":
+				out.println(deleteQuizlet(request)); 
+				break;
+			case "Create Text":
 				createText(user,request);
-				out.println(Home.getHeader(user) + textsForm(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("Update Text")) {
+				out.println(textsForm(user,request));
+				break;
+			case "Update Text":
 				updateText(user,request);
-				out.println(Home.getHeader(user) + textsForm(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("Delete Text")) {
+				out.println(textsForm(user,request));
+				break;
+			case "Delete Text":
 				deleteText(user,request);
-				out.println(Home.getHeader(user) + textsForm(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("Preview")) {
-				out.println(Home.getHeader(user) + previewQuestion(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("Save New Question")) {
+				out.println(textsForm(user,request));
+				break;
+			case "Preview": 
+				out.println(previewQuestion(user,request)); 
+				break;
+			case "Save New Question":
 				createQuestion(user,request);
-				out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("Update Question")) {
-				try {updateQuestion(user,request);} catch (Exception e) {out.println(e.toString());};
-				out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("Delete Question")) {
+				out.println(editorsPage(user,request)); 
+				break;
+			case "Update Question":
+				updateQuestion(user,request);
+				out.println(editorsPage(user,request)); 
+				break;
+			case "Delete Question":
 				deleteQuestion(user,request);
-				out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("Activate This Question")) {
+				out.println(editorsPage(user,request)); 
+				break;
+			case "Activate This Question":
 				createQuestion(user,request);
 				try {
 					long proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
 					ofy().delete().key(Key.create(ProposedQuestion.class,proposedQuestionId)).now();
 				} catch (Exception e) {}
-				out.println(Home.getHeader(user) + reviewProposedQuestion(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("Discard Question")) {
+				out.println(reviewProposedQuestion(user,request));
+				break;
+			case "Discard Question":
 				try {
 					long proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
 					ofy().delete().key(Key.create(ProposedQuestion.class,proposedQuestionId)).now();
 				} catch (Exception e) {}
-				out.println(Home.getHeader(user) + reviewProposedQuestion(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("CopyAllQuestions")) {
+				out.println(reviewProposedQuestion(user,request));
+				break;
+			case "CopyAllQuestions":
 				copyQuestionsToPracticeExam(user,request);
-				out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
-			}
-			else if (userRequest.equals("DeleteAllQuestions")) {
+				out.println(editorsPage(user,request));
+				break;
+			case "DeleteAllQuestions":
 				deleteAllQuestions(user,request);
-				out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
+				out.println(editorsPage(user,request));
+				break;
+			default: out.println(editorsPage(user,request));
 			}
-			else { // show the default Editors page
-				out.println(Home.getHeader(user) + editorsPage(user,request) + Home.footer);
-			}
+
 		} catch (Exception e) {
 		}
 	}
@@ -327,6 +347,7 @@ public class Edit extends HttpServlet {
 		buf.append("<OPTION" + (defaultType.equals("Quiz")?" SELECTED":"") + ">Quiz</OPTION>"
 		+ "<OPTION" + (defaultType.equals("Homework")?" SELECTED":"") + ">Homework</OPTION>"
 		+ "<OPTION" + (defaultType.equals("Exam")?" SELECTED":"") + ">Exam</OPTION>"
+		+ "<OPTION" + (defaultType.equals("Video")?" SELECTED":"") + ">Video</OPTION>"
 		+ "</SELECT>");
 		return buf.toString();
 	}
@@ -346,7 +367,7 @@ public class Edit extends HttpServlet {
 		buf.append("</SELECT>");
 		return buf.toString();
 	}
-
+	
 	String questionTypeDropDownBox(int questionType) {
 		StringBuffer buf = new StringBuffer();
 		buf.append("\n<SELECT NAME=QuestionType>"
@@ -359,7 +380,7 @@ public class Edit extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String topicsForm(User user,HttpServletRequest request) {
+	String topicsForm(HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h3>Manage Quiz/Homework/Exam Topics</h3>");
 		try {
 			// print the table of topics for this subject:
@@ -450,18 +471,22 @@ public class Edit extends HttpServlet {
 		} catch (Exception e) {}
 	}
 
-	String videosForm(User user,HttpServletRequest request) {
+	String videosForm() {
 		StringBuffer buf = new StringBuffer("<h3>Manage Videos for " + subject.title + "</h3>");
 		try {
-			Query<Video> videos = ofy().load().type(Video.class);
-			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TH>OrderBy</TH><TH>Title</TH><TH>Serial #</TH><TH>Action</TH></TR>");
+			List<Video> videos = ofy().load().type(Video.class).order("orderBy").list();
+			
+			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TH>OrderBy</TH><TH>Title</TH><TH>Serial No.</TH><TH>Breaks</TH><TH>Questions</TH><TH>Action</TH></TR>");
 			for (Video v : videos) {
 				buf.append("<FORM ACTION=Edit METHOD=POST>"
-						+ "<INPUT TYPE=HIDDEN NAME=VideoId VALUE=" + v.id + ">"
-						+ "<TR><TD><INPUT TYPE=TEXT NAME=OrderBy VALUE=" + v.orderBy + "></TD>"
+						+ "<INPUT TYPE=HIDDEN NAME=VideoId VALUE='" + v.id + "'>"
+						+ "<TR><TD><INPUT TYPE=TEXT NAME=OrderBy VALUE='" + v.orderBy + "'></TD>"
 						+ "<TD><INPUT TYPE=TEXT NAME=Title VALUE='" + Question.quot2html(v.title) + "'></TD>"
 						+ "<TD>" + v.serialNumber + "</TD>"
-						+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Update Video'>"
+						+ "<TD>" + (v.breaks==null?"0":v.breaks.length) + "</TD>"
+						+ "<TD>" + (v.questionKeys==null?0:v.questionKeys.size()) + "</TD>"
+						+ "<TD><a href=/Edit?UserRequest=EditVideo&VideoId=" + v.id +">Select Questions</a> "
+						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Update Video'> "
 						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Video'></TD></TR>"
 						+ "</FORM>");
 			}
@@ -469,6 +494,8 @@ public class Edit extends HttpServlet {
 					+ "<TR><TD><INPUT TYPE=TEXT NAME=OrderBy></TD>"
 					+ "<TD><INPUT TYPE=TEXT NAME=Title></TD>"
 					+ "<TD><INPUT TYPE=TEXT NAME=SerialNumber></TD>"
+					+ "<TD></TD>"
+					+ "<TD></TD>"
 					+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Create Video'></TD></TR>"
 					+ "</FORM>");
 			buf.append("</TABLE>");
@@ -481,16 +508,100 @@ public class Edit extends HttpServlet {
 	void createVideo(User user,HttpServletRequest request) {
 		Video v = new Video(request.getParameter("SerialNumber"),request.getParameter("Title"));
 		v.orderBy = (request.getParameter("OrderBy"));
+		v.breaks = new int[0];
+		v.questionKeys = new ArrayList<Key<Question>>();
 		ofy().save().entity(v).now();
 	}
 	
-	void updateVideo(User user,HttpServletRequest request) {
-		try {	
-			Video v = ofy().load().type(Video.class).id(Long.parseLong(request.getParameter("VideoId"))).safe();
-			v.title = request.getParameter("Title");
-			v.orderBy = request.getParameter("OrderBy");
+	void updateVideo(HttpServletRequest request) {
+		Video v = ofy().load().type(Video.class).id(Long.parseLong(request.getParameter("VideoId"))).safe();
+		v.title = request.getParameter("Title");
+		v.orderBy = request.getParameter("OrderBy");
+		ofy().save().entity(v).now();
+	}
+	
+	String updateQuizlet(HttpServletRequest request) { 		
+		StringBuffer buf = new StringBuffer();
+		Video v = null; 
+		int segment = 0;
+		
+		try {
+			v= ofy().load().type(Video.class).id(Long.parseLong(request.getParameter("VideoId"))).safe();
+			buf.append("Video: " + v.title + "<br>");
+
+			try {
+				segment = Integer.parseInt(request.getParameter("Segment"));
+			} catch (Exception e) {}
+
+			int time=-1; // negative value indicates "end of video" (unreachable time)
+			try {
+				time = Integer.parseInt(request.getParameter("Seconds")); // position of the new breakpoint for this segment
+			} catch (Exception e) {}
+
+			buf.append("Creating/updating quizlet " + segment + " at t=" + time + " seconds.");
+
+			// Determine the number of breaks: 1) first break (1), revised break (v.breaks.length), or new break (v.breaks.length+1)
+			String[] questionIds = request.getParameterValues("QuestionId");			
+			if (questionIds==null) questionIds = new String[0];
+
+			int nBreaks = (v.breaks==null?1:(segment<v.breaks.length?v.breaks.length:v.breaks.length+1));
+			int[] breaks = new int[nBreaks];
+			int[] nQuestions = new int[nBreaks];
+
+			// Copy the breakpoints from the current video, insert or append the new breakpoint, and copy back to the video:
+			for (int i=0;i<breaks.length;i++) {
+				breaks[i] = (i==segment?time:v.breaks[i]);
+				nQuestions[i] = (i==segment?questionIds.length:v.nQuestions[i]);
+			}
+
+			buf.append("Created/updated the breakpoint.<br>");
+
+			// Create a new List of questionKeys for the video
+			ArrayList<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
+			int counter = 0;
+			for (int i = 0;i<nBreaks;i++) {
+				if (i==segment) {
+					for (String id : questionIds) questionKeys.add(Key.create(Question.class,Long.parseLong(id)));
+					counter += (v.nQuestions==null || i==v.nQuestions.length)?0:v.nQuestions[i];  // skip this many keys that are being replaced
+				} else {
+					for (int j=counter;j<counter+v.nQuestions[i];j++) questionKeys.add(v.questionKeys.get(j));
+					counter += v.nQuestions[i];
+				}
+			}
+			buf.append("Created/updated the List of question keys.<br>");
+
+			// Update the video parameters to the new values:
+			v.breaks = breaks;
+			v.nQuestions = nQuestions;
+			v.questionKeys = questionKeys;
+
 			ofy().save().entity(v).now();
-		} catch (Exception e) {}
+		} catch (Exception e) {
+			return buf.toString() + e.getMessage();
+		}
+		return editVideoForm(v,v.breaks[segment]<0?segment:segment+1);
+	}
+
+	String deleteQuizlet(HttpServletRequest request) {
+		Video v = null; 
+		int segment = 0;
+		
+		try {
+			v= ofy().load().type(Video.class).id(Long.parseLong(request.getParameter("VideoId"))).safe();
+			segment = Integer.parseInt(request.getParameter("Segment"));
+			int[] breaks = new int[v.breaks.length-1];
+			int[] nQuestions = new int[v.breaks.length-1];
+			for (int i=0;i<breaks.length;i++) {
+				if (i==segment) continue;
+				breaks[i] = i<segment?v.breaks[i]:v.breaks[i+1];
+				nQuestions[i] = i<segment?v.nQuestions[i]:v.nQuestions[i+1];
+			}
+			v.breaks = breaks;
+			v.nQuestions = nQuestions;
+			ofy().save().entity(v).now();
+		} catch (Exception e) {			
+		}
+		return editVideoForm(v,segment);
 	}
 	
 	void deleteVideo(User user,HttpServletRequest request) {
@@ -554,6 +665,7 @@ public class Edit extends HttpServlet {
 		try {
 			topicId = Long.parseLong(request.getParameter("TopicId"));
 		} catch (Exception e) {}
+		
 		String assignmentType = request.getParameter("AssignmentType");
 
 		int questionType = 0;
@@ -590,8 +702,10 @@ public class Edit extends HttpServlet {
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + user.id + "'>");
 			buf.append("<INPUT TYPE=HIDDEN NAME=QuestionType VALUE=" + questionType + ">");
-			buf.append(getTopicSelectBox(topicId));
-			buf.append(assignmentType.equals("Exam")?"Point Value: " + pointValueSelectBox() + "<br>":"<INPUT TYPE=HIDDEN NAME=PointValue VALUE=1>");
+			
+			buf.append("Topic: " + topicSelectBox(topicId) + "<br>");
+			
+			buf.append("Point Value: " + pointValueSelectBox(assignmentType) + "<br>");
 			buf.append(question.edit());
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Preview'></FORM>");
 		} catch (Exception e) {
@@ -602,6 +716,16 @@ public class Edit extends HttpServlet {
 
 	String pointValueSelectBox() {
 		return pointValueSelectBox(0);
+	}
+	
+	String pointValueSelectBox(String assignmentType) {
+		switch (assignmentType) {
+		  case "Quiz": return pointValueSelectBox(1);
+		  case "Homework": return pointValueSelectBox(1);
+		  case "Exam": return pointValueSelectBox(2); 
+		  case "Video": return pointValueSelectBox(1);
+		  default: return null;
+		}		
 	}
 	
 	String pointValueSelectBox(int points) {
@@ -639,7 +763,7 @@ public class Edit extends HttpServlet {
 			
 			buf.append("<h3>Preview Question</h3>");
 			buf.append("Subject: " + subject.title + "<br>");
-			buf.append("Topic: " + ofy().load().type(Topic.class).id(topicId).safe().title + "<br>");
+			
 			q.assignmentType = request.getParameter("AssignmentType");
 			if (q.assignmentType==null || q.assignmentType.isEmpty()) q.assignmentType = "Quiz";
 			buf.append("Assignment Type: " + q.assignmentType);
@@ -650,6 +774,9 @@ public class Edit extends HttpServlet {
 				q.pointValue = 1;
 				buf.append(" (1 point)<br>");
 			}
+			
+			buf.append("Topic: " + ofy().load().type(Topic.class).id(topicId).safe().title + "<br>");
+			
 			buf.append("Author: " + q.authorId + "<br>");
 			buf.append("Editor: " + user.id + "<p>");
 			
@@ -674,8 +801,10 @@ public class Edit extends HttpServlet {
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit'>");
 			
 			buf.append("<hr><h3>Continue Editing</h3>");
-			buf.append("Topic:" + topicSelectBox(q.topicId));
-			buf.append(" Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
+			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
+			buf.append("Topic:" + topicSelectBox(q.topicId) + "<br>");
+			
+			buf.append("<br>");
 			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
 			
 			if (q.assignmentType.equals("Exam")) {
@@ -708,11 +837,13 @@ public class Edit extends HttpServlet {
 		try {
 			long questionId = q.id;
 			Topic t = ofy().load().type(Topic.class).id(q.topicId).safe();
+			Video v = null;
 			if (q.requiresParser()) q.setParameters();
 			buf.append("<h3>Current Question</h3>");
 			buf.append("Subject: " + subject.title + "<br>");
-			buf.append("Topic: " + t.title + "<br>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
+			buf.append("Topic: " + t.title + "<br>");
+			if ("Video".equals(q.assignmentType)) buf.append("Video: " + (v==null?"Not selected":v.title) + "<br>");
 			buf.append("Author: " + q.authorId + "<br>");
 			buf.append("Editor: " + q.editorId + "<br>");
 			
@@ -736,8 +867,10 @@ public class Edit extends HttpServlet {
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit'>");
 			
 			buf.append("<hr><h3>Edit This Question</h3>");
-			buf.append("Topic:" + topicSelectBox(t.id));
-			buf.append(" Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
+			
+			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
+			buf.append("Topic:" + topicSelectBox(t.id) + "<br>");
+			
 			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
 			buf.append(" Point Value: " + pointValueSelectBox(q.pointValue) + "<br>");
 			
@@ -794,8 +927,9 @@ public class Edit extends HttpServlet {
 			buf.append("<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + q.authorId + "'>");
 			
 			buf.append("<hr><h3>Edit This Question</h3>");
-			buf.append("Topic:" + topicSelectBox(t.id));
-			buf.append(" Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
+			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
+			buf.append("Topic:" + topicSelectBox(t.id) + "<br>");
+			
 			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
 			buf.append(" Point Value: " + pointValueSelectBox(q.pointValue) + "<br>");
 			
@@ -955,17 +1089,102 @@ public class Edit extends HttpServlet {
 		ofy().save().entities(questions);
 	}
 	
-	public String getTopicSelectBox(long id) {
-		StringBuffer buf = new StringBuffer();
-		Query<Topic> topics = ofy().load().type(Topic.class);
-		buf.append("Topic: <SELECT NAME=TopicId>");
-		if (id == 0) buf.append("<OPTION VALUE=0>Select a topic:</OPTION>");
-		for (Topic t : topics) {
-			buf.append("<OPTION " + ((t.id == id)?"SELECTED ":"")
-					+ "VALUE='" + t.id + "'>" + t.title + "</OPTION>");
+	String editVideoForm(HttpServletRequest request) {
+		Video v = null;
+		try {
+			v = ofy().load().type(Video.class).id(Long.parseLong(request.getParameter("VideoId"))).safe();
+			if (v.breaks == null) {
+				v.breaks = new int[0];
+				v.nQuestions = new int[0];
+				v.questionKeys = new ArrayList<Key<Question>>();
+			}
+		} catch (Exception e) {
+			return "Video was not found, sorry.";
 		}
-		buf.append("</SELECT><br>");
+		int segment = 0;		
+		try {
+			segment = Integer.parseInt(request.getParameter("Segment"));
+		}catch (Exception e) {
+			segment = v.breaks.length;  // default to create a new breakpoint and segment
+		}
+		return editVideoForm(v,segment);
+	}
+	
+	String editVideoForm(Video v, int segment) {
+		StringBuffer buf = new StringBuffer();
+		try {
+			buf.append("<h3>Embed quiz questions in a video</h3>");
+
+			buf.append("Video: " + v.title + "<p>");
+
+			buf.append("Use the form below to create or edit breakpoints in this video where 2-question quizlets will be "
+					+ "presented to the viewer. Each segment must be edited separately, and breakpoints must be created in "
+					+ "increasing order of seconds from the start of the video. You may (optionally) create a quiz at the "
+					+ "end of the video by entering 'end' or by leaving the breakpoint time blank.<ol>"
+					+ "<li>Select one of the existing video segments or create a new one</li>"
+					+ "<li>If you selected an existing segment, wait for the page to reload</li>"
+					+ "<li>Enter the breakpoint (in seconds from the start of the video) or 'end'</li>"
+					+ "<li>Select several questions from below to be drawn at random for the quizlet</li>"
+					+ "<li>Click the 'Update Video' button to submit the breakpoint value and question items</li>"
+					+ "</ol>");
+
+			buf.append("<form method=post action=/Edit>");  // This starts the master form for editing a single break point for hte video
+			//buf.append("<input type=hidden name=UserRequest value=UpdateVideoQuestions>");
+			buf.append("<input type=hidden name=VideoId value=" + v.id + ">");
+			buf.append("<input type=hidden name=Segment value=" + segment + ">");
+
+			// Print a table of existing segments/breakpoints, and add one row at the end to create a new one unless the end has already been specified
+			// The number of table rows should be v.breaks.length if the last break is at the end of the video
+			// Otherwise, it should be v.breaks.length +1 to allow for creating a new segment (default)
+			int nRows = v.breaks.length;
+			boolean addNew = (segment==v.breaks.length && v.breaks[v.breaks.length-1]>0);
+			if (addNew) nRows++;
+
+			buf.append("<table><tr><th>Select</th><th>Segment</th><th>Start</th><th>End</th><th>#Questions</th><th>Action</th></tr>");
+
+			for (int i=0;i<nRows;i++) {
+				buf.append("<tr style='text-align:center'>"
+						+ "<td>" + (i==segment?"edit&rarr;":"<a href=/Edit?UserRequest=EditVideo&VideoId=" + v.id + "&Segment=" + i + ">select</a>") + "</td>"
+						+ "<td>" + (i==v.breaks.length && i==segment?"new":i) + "</td>"
+						+ "<td>" + (i==0?0:v.breaks[i-1]) + "</td>"
+						+ "<td>" + (i==segment?("<input type=text name=Seconds size=5 value=" + (segment==v.breaks.length?"":(v.breaks[i]<0?"end":v.breaks[i])) + ">"):(v.breaks[i]<0?"end":v.breaks[i])) + "</td>"
+						+ "<td>" + (v.nQuestions.length>i?v.nQuestions[i]:0) + "</td>"
+						+ "<td>" + (i==segment?"<input type=submit name=UserRequest value=" + (addNew?"'Create Quizlet'> ":"'Update Quizlet'> <input type=submit name=UserRequest value='Delete Quizlet'> ") + "<a href=/Edit?UserRequest=ManageVideos>Done</a>":"") + "</td>"
+						+ "</tr>");
+			}
+			buf.append("</table><p>");
+
+			if (segment==v.breaks.length) buf.append("Select several questions below to be selected at random for the new quizlet:<p>");
+			else buf.append("Select several questions below to be selected at random for the quizlet at " + (v.breaks[segment]<0?"the end of the video:":"t = " + v.breaks[segment] + " seconds:") + "<p>");
+
+			// Make a List of all of the available video questions
+			List<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Video").list();
+
+			// Now make a list of all the current questions for this quizlet, if any:
+			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();		
+			int nPriorQuestions = 0;
+			if (v.nQuestions.length>segment) {
+				for (int j=0;j<segment;j++) nPriorQuestions += v.nQuestions[j];  // add up the number of questions in preceding quizlets
+				for (int j=nPriorQuestions;j<nPriorQuestions+v.nQuestions[segment];j++) questionKeys.add(v.questionKeys.get(j));
+			}
+
+			// Make a table of available questions, marking the current questions as already selected
+			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
+			int k=0;
+			for (Question q : questions) {
+				k++;
+				q.setParameters();
+				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
+						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE=" + q.id + (questionKeys.contains(Key.create(Question.class,q.id))?" CHECKED>":">"));
+				buf.append("<b>&nbsp;" + k + ".</b></TD>");
+				buf.append("\n<TD>" + q.printAll() + "</TD>");
+				buf.append("</TR>");
+			}
+			buf.append("</TABLE>");
+			buf.append("</form>");
+		} catch (Exception e) {
+			return buf.toString() + e.getMessage();
+		}
 		return buf.toString();
 	}
-
 }

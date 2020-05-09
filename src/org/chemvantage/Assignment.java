@@ -40,6 +40,7 @@ public class Assignment implements java.lang.Cloneable {
 	@Index	long topicId;
 	@Index	String resourceLinkId;
 	@Index 	Date created;
+			long videoId;    // used only for video assignments
 			String lis_outcome_service_url;
 			String lti_ags_lineitem_url;
 			String lti_nrps_context_memberships_url;
