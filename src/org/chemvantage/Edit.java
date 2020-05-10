@@ -589,19 +589,31 @@ public class Edit extends HttpServlet {
 		try {
 			v= ofy().load().type(Video.class).id(Long.parseLong(request.getParameter("VideoId"))).safe();
 			segment = Integer.parseInt(request.getParameter("Segment"));
-			int[] breaks = new int[v.breaks.length-1];
-			int[] nQuestions = new int[v.breaks.length-1];
-			for (int i=0;i<breaks.length;i++) {
-				if (i==segment) continue;
-				breaks[i] = i<segment?v.breaks[i]:v.breaks[i+1];
-				nQuestions[i] = i<segment?v.nQuestions[i]:v.nQuestions[i+1];
+			if (segment==0 && v.breaks.length==1) { // deleting the only segment
+				v.breaks = null;
+				v.nQuestions = null;
+				v.questionKeys = null;
+			} else {  // copy breaks and nQuestions arrays except for current segment
+				int[] breaks = new int[v.breaks.length-1];
+				int[] nQuestions = new int[v.breaks.length-1];
+				for (int i=0;i<breaks.length;i++) {
+					if (i==segment) continue;
+					breaks[i] = i<segment?v.breaks[i]:v.breaks[i+1];
+					nQuestions[i] = i<segment?v.nQuestions[i]:v.nQuestions[i+1];
+				}
+				// delete the appropriate questionKeys
+				int count = 0;
+				for (int i=0;i<segment;i++) count += nQuestions[i];
+				for (int j=count;j<count+v.nQuestions[segment];j++) v.questionKeys.remove(count);
+				
+				// replace the arrays with the modified ones
+				v.breaks = breaks;
+				v.nQuestions = nQuestions;
 			}
-			v.breaks = breaks;
-			v.nQuestions = nQuestions;
 			ofy().save().entity(v).now();
 		} catch (Exception e) {			
 		}
-		return editVideoForm(v,segment);
+		return editVideoForm(v,segment==0?0:segment-1);
 	}
 	
 	void deleteVideo(User user,HttpServletRequest request) {
@@ -837,13 +849,11 @@ public class Edit extends HttpServlet {
 		try {
 			long questionId = q.id;
 			Topic t = ofy().load().type(Topic.class).id(q.topicId).safe();
-			Video v = null;
 			if (q.requiresParser()) q.setParameters();
 			buf.append("<h3>Current Question</h3>");
 			buf.append("Subject: " + subject.title + "<br>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
 			buf.append("Topic: " + t.title + "<br>");
-			if ("Video".equals(q.assignmentType)) buf.append("Video: " + (v==null?"Not selected":v.title) + "<br>");
 			buf.append("Author: " + q.authorId + "<br>");
 			buf.append("Editor: " + q.editorId + "<br>");
 			
@@ -1093,11 +1103,6 @@ public class Edit extends HttpServlet {
 		Video v = null;
 		try {
 			v = ofy().load().type(Video.class).id(Long.parseLong(request.getParameter("VideoId"))).safe();
-			if (v.breaks == null) {
-				v.breaks = new int[0];
-				v.nQuestions = new int[0];
-				v.questionKeys = new ArrayList<Key<Question>>();
-			}
 		} catch (Exception e) {
 			return "Video was not found, sorry.";
 		}
@@ -1105,13 +1110,19 @@ public class Edit extends HttpServlet {
 		try {
 			segment = Integer.parseInt(request.getParameter("Segment"));
 		}catch (Exception e) {
-			segment = v.breaks.length;  // default to create a new breakpoint and segment
+			segment = v.breaks==null?0:v.breaks.length;  // default to create a new breakpoint and segment
 		}
 		return editVideoForm(v,segment);
 	}
 	
 	String editVideoForm(Video v, int segment) {
 		StringBuffer buf = new StringBuffer();
+		if (v.breaks == null) {
+			v.breaks = new int[0];
+			v.nQuestions = new int[0];
+			v.questionKeys = new ArrayList<Key<Question>>();
+		}
+		
 		try {
 			buf.append("<h3>Embed quiz questions in a video</h3>");
 
@@ -1129,7 +1140,6 @@ public class Edit extends HttpServlet {
 					+ "</ol>");
 
 			buf.append("<form method=post action=/Edit>");  // This starts the master form for editing a single break point for hte video
-			//buf.append("<input type=hidden name=UserRequest value=UpdateVideoQuestions>");
 			buf.append("<input type=hidden name=VideoId value=" + v.id + ">");
 			buf.append("<input type=hidden name=Segment value=" + segment + ">");
 
@@ -1137,7 +1147,7 @@ public class Edit extends HttpServlet {
 			// The number of table rows should be v.breaks.length if the last break is at the end of the video
 			// Otherwise, it should be v.breaks.length +1 to allow for creating a new segment (default)
 			int nRows = v.breaks.length;
-			boolean addNew = (segment==v.breaks.length && v.breaks[v.breaks.length-1]>0);
+			boolean addNew = (segment==v.breaks.length && (segment==0 || v.breaks[v.breaks.length-1]>0));
 			if (addNew) nRows++;
 
 			buf.append("<table><tr><th>Select</th><th>Segment</th><th>Start</th><th>End</th><th>#Questions</th><th>Action</th></tr>");
@@ -1149,7 +1159,7 @@ public class Edit extends HttpServlet {
 						+ "<td>" + (i==0?0:v.breaks[i-1]) + "</td>"
 						+ "<td>" + (i==segment?("<input type=text name=Seconds size=5 value=" + (segment==v.breaks.length?"":(v.breaks[i]<0?"end":v.breaks[i])) + ">"):(v.breaks[i]<0?"end":v.breaks[i])) + "</td>"
 						+ "<td>" + (v.nQuestions.length>i?v.nQuestions[i]:0) + "</td>"
-						+ "<td>" + (i==segment?"<input type=submit name=UserRequest value=" + (addNew?"'Create Quizlet'> ":"'Update Quizlet'> <input type=submit name=UserRequest value='Delete Quizlet'> ") + "<a href=/Edit?UserRequest=ManageVideos>Done</a>":"") + "</td>"
+						+ "<td>" + (i==segment?"<input type=submit name=UserRequest value=" + (addNew?"'Create Quizlet'> ":"'Update Quizlet'> ") + (i==v.breaks.length-1?"<input type=submit name=UserRequest value='Delete Quizlet'> ":"") + "<a href=/Edit?UserRequest=ManageVideos>Done</a>":"") + "</td>"
 						+ "</tr>");
 			}
 			buf.append("</table><p>");
