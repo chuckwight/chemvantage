@@ -105,7 +105,8 @@ public class LTIRegistration extends HttpServlet {
 		} else if (request.getParameter("token")!=null) {
 			response.setContentType("text/html");
 			String token = request.getParameter("token");
-			String ltiVersion = JWT.require(algorithm).withIssuer(iss).build().verify(token).getClaim("ver").asString();
+			DecodedJWT decoded = JWT.require(algorithm).withIssuer(iss).build().verify(token);
+			String ltiVersion = decoded.getClaim("ver").asString();
 			if (ltiVersion.equals("1p1")) out.println(Home.header("LTI Registration") + createBLTIConsumer(token) + Home.footer);
 			else if (ltiVersion.equals("1p3")) out.println(Home.header("LTI Registration") + clientIdForm(token) + Home.footer);
 			else throw new Exception("LTI version was missing or invalid.");
@@ -401,23 +402,22 @@ public class LTIRegistration extends HttpServlet {
 		Transport.send(msg);
 	}
 
-	String createBLTIConsumer(String token) {
+	String createBLTIConsumer(String token) throws Exception {
 		DecodedJWT jwt = JWT.decode(token); 
-		String iss = jwt.getIssuer();          // alrady ve4rified to be this ChemVantage server (dev or production)
+		String iss = jwt.getIssuer();          // already ve4rified to be this ChemVantage server (dev or production)
 		String sub = jwt.getSubject();         // name of registering person
 		String email = jwt.getClaim("email").asString();  // email of registering person
 		String aud = jwt.getAudience().get(0);            // name of applicant organization
 		String url = jwt.getClaim("url").asString();      // home page of applicant organization
 		String lms = jwt.getClaim("lms").asString();      // type of LMS platform
 		
-		// the consumer key is "CK" plus a random 6-digit number based on the token value
+		// the consumer key is "CK" plus a random 7-digit number based on the token value
 		String oauth_consumer_key = "CK" + (new Random(token.hashCode()).nextInt(899999) + 100000);
 
 		BLTIConsumer con = null;
-		try {  // retrieve the BLTIConsumer that was saved when the original registration form was submitted
+		try {  // retrieve the BLTIConsumer that was saved when the token was used
 			con = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).safe();
-			if (!"email".equals(con.email)) throw new Exception("Failed: This consumer key is already in use. Please register again.");
-		} catch (Exception e) {  
+		} catch (Exception e) {  // this is the first-time use of this token; save the BLTIConsumr
 			con = new BLTIConsumer(oauth_consumer_key);
 			con.email = email;
 			con.contact_name = sub;
@@ -426,6 +426,11 @@ public class LTIRegistration extends HttpServlet {
 			con.org_url = url;
 			ofy().save().entity(con).now();
 		}
+		// The next line checks to see if the email for BLTIConsumr retrieved matches the email in the token
+		// This catches the (unlikely) case where the same CK is issued to 2 different people, but also catches the
+		// (more likely) case where a valid login changed the email contact. Either way protects the CK from being revealed.
+		if (!email.equals(con.email)) throw new Exception("This consumer key was successfully registered and is already in use. Please register again, if necessary.");
+		
 		StringBuffer buf = new StringBuffer();
 
 		buf.append("<h3>Thank you for registering your LMS with ChemVantage</h3>");
@@ -447,7 +452,7 @@ public class LTIRegistration extends HttpServlet {
 				+ "LTI v1.1.2 for this connection to work after December 31, 2020.");
 		
 		if (iss.contains("dev")) {
-			buf.append("<li>You indicated on the registration form that your initial use case is checking the LTI connection. So we granted accoess "
+			buf.append("<li>You indicated on the registration form that your initial use case is checking the LTI connection. So we granted access "
 					+ "to the ChemVantage Development server. When you are ready to use ChemVantage for instruction, please "
 					+ "<a href=https://www.chemvantage.org/lti/registration?use=prod>register again here</a> to access the production server. Do not use "
 					+ "the Development server for live instruction.<p>");
