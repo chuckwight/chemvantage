@@ -29,10 +29,10 @@ import com.googlecode.objectify.annotation.Index;
 public class Video implements Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id 	Long id;
-    		String serialNumber;
-    		String title;
+    public	String serialNumber;
+    public	String title;
     @Index	String orderBy;
-    		int[]  breaks;  // break points for quizzes in seconds,including at the end (-1) if applicable
+    public	int[]  breaks;  // break points for quizzes in seconds,including at the end (-1) if applicable
     		int[]  nQuestions; // number of questions available for each quizlet
     		List<Key<Question>> questionKeys; // List of all question keys (size = sum of nQuestions values)
 

@@ -53,134 +53,46 @@ public class VideoQuiz extends HttpServlet {
 	}
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
-	throws ServletException, IOException {
+			throws ServletException, IOException {
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+		
 		try {
 			User user = User.getUser(request.getParameter("Token"));
-			if (user == null) throw new Exception();
-			
-			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
-			
-			String userRequest = request.getParameter("UserRequest");
-			if (userRequest == null) userRequest = "";
+			if (user == null) throw new Exception("User token invalid or expired.");
 			
 			int segment = 0;
 			try {
 				segment = Integer.parseInt(request.getParameter("Segment"));
 			} catch (Exception e) {}
-			
 			long videoId = 0L;
 			try {
 				videoId = Long.parseLong(request.getParameter("VideoId"));
 			} catch (Exception e) {}
-			
-			if ("Quiz".equals(userRequest)) out.println(Home.header("ChemVantage Video") + showQuizlet(user,videoId,segment) + Home.footer);
-			else out.println(Home.header("ChemVantage Video") + startVideo(user,videoId,segment) + Home.footer);			
+		out.println(showQuizlet(user,videoId,segment));
 		} catch (Exception e) {
 			response.sendRedirect("/Logout");
 		}
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
-	throws ServletException, IOException {
+			throws ServletException, IOException {
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+		
 		try {
 			User user = User.getUser(request.getParameter("Token"));
-			if (user == null) throw new Exception();
-		
-			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
-			
-			out.println(Home.header("ChemVantage Video") + scoreQuizlet(user,request) + Home.footer);
+			if (user == null) throw new Exception("Token was invalid or expired.");
+
+			out.println(scoreQuizlet(user,request));
 		} catch (Exception e) {
 			response.sendRedirect("/Logout");
 		}
 	}
-	
-	public String startVideo(User user,long videoId,int segment) {
-		StringBuffer buf = new StringBuffer(Home.banner);
-		
-		Assignment a = null;
-		long assignmentId = user.getAssignmentId();
-		if (assignmentId > 0) {  // this is an LTI assignment
-			a = ofy().load().type(Assignment.class).id(assignmentId).now();
-			videoId = a.videoId;
-		}
-		
-		// At this point the videoId should be known
-		if (videoId==0L) return "Unable to display the selected video, sorry.";
-		
-		Video v = ofy().load().type(Video.class).id(videoId).now();
-		buf.append("<h2>ChemVantage Video - " + v.title + "</h2>");
-		
-		// Check to see if this user has any pending videos on this topic in the last 90 minutes.
-		// Normally, a new VideoTransaction is created when the LTILaunchRequest is made, but sometimes things happen...
-		Date now = new Date();
-		Date then = new Date(now.getTime()-90*60000);  // 90 minutes ago
-		VideoTransaction vt = ofy().load().type(VideoTransaction.class).filter("userId",user.id).filter("videoId",v.id).filter("graded",null).filter("downloaded >",then).first().now();
-		if (vt == null) {  // this should be rare because the vt is created at launch time
-			vt = new VideoTransaction(v.id,v.title,v.breaks.length,user.id,assignmentId,calculatePossibleScore(v),user.getLisResultSourcedid());
-			ofy().save().entity(vt);
-		}
 
-		buf.append(showVideo(user,v,segment));
-		
-		return buf.toString();
-	}
-	
-	public String showVideo(User user, Video v, int segment) {
-		StringBuffer buf = new StringBuffer();
-		
-		int start = 0;
-		if (segment > 0 && v.breaks != null && v.breaks.length >= segment) start = v.breaks[segment-1];
-		int end = -1;  // play to the end of the video
-		if (v.breaks != null && v.breaks.length > segment) end = v.breaks[segment];  // play to this value and stop
-		
-		// Embed a YouTube Player. See https://developers.google.com/youtube/iframe_api_reference
-		buf.append("<iframe id=videoiframe width=560 height=315 src=https://www.youtube-nocookie.com/embed/" + v.serialNumber + "?enablejsapi=1"
-				+ (start>0 || end>0?"&start=" + start + (end>0?"&end=" + end:""):"") + " "
-				+ "frameborder=0 allow='accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture' "
-				+ "allowfullscreen></iframe>");
-		
-		// Include the YouTube IFrame API to allow the player and Javascript to talk with each other
-		buf.append("<script type=text/javascript>"
-				+ "var tag = document.createElement('script');"
-				+ "tag.src='https://www.youtube.com/iframe_api';"
-				+ "var firstScriptTag = document.getElementsByTagName('script')[0];"
-				+ "firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);"
-				+ "var player;"
-				+ "function onYouTubeIframeAPIReady() {"
-				+ "  player = new YT.Player('videoiframe', {"
-				+ "    events: {"
-				+ "      'onReady': onPlayerReady,"
-				+ "      'onStateChange': onPlayerStateChange"
-				+ "    }"
-				+ "  });"
-				+ "}"
-				// automatically play the video when ready, if available
-				+ "function onPlayerReady(event) {"
-				+ "event.target.playVideo();"
-				+ "}"
-				// detect when the video ends or pauses programmatically or by user. If ended or near the break point, load the quizlet for that segment
-				+ "function onPlayerStateChange(event) {"
-				+ "  switch (event.data) {"
-				+ "    case YT.PlayerState.ENDED:"
-				+ "      window.location.href='/VideoQuiz?UserRequest=Quiz&Segment=" + segment + "&VideoId=" + v.id + "&Token=" + user.token + "';"
-				+ "      break;"
-				+ "    case YT.PlayerState.PAUSED:"
-				+ "      if (player.getCurrentTime() >= " + (v.breaks[segment]-1) + ") {"
-				+ "        window.location.href='/VideoQuiz?UserRequest=Quiz&Segment=" + segment + "&VideoId=" + v.id + "&Token=" + user.token + "';"
-				+ "      }"
-				+ "      break;"
-				+ "  }"
-				+ "}"
-				+ "</script>");		
-		
-		return buf.toString();
-	}
-		
 	public String showQuizlet(User user,long videoId,int segment) {
-		StringBuffer buf = new StringBuffer(Home.banner);
-		
+		StringBuffer buf = new StringBuffer();
+		try {
 		Assignment a = null;
 		long assignmentId = user.getAssignmentId();  // should be non-zero for LTI user
 		if (assignmentId>0) {
@@ -189,6 +101,26 @@ public class VideoQuiz extends HttpServlet {
 		}
 		
 		Video v = ofy().load().type(Video.class).id(videoId).now();
+		if (v.breaks==null) v.breaks = new int[0];
+		if (v.nQuestions==null) v.nQuestions = new int[0];
+		if (v.questionKeys==null) v.questionKeys = new ArrayList<Key<Question>>();
+		
+		buf.append("<h3>Video Quiz - " + v.title + "</h3>\n");
+		
+		// Check to see if this user has any pending videos on this topic in the last 90 minutes.
+		// Normally, a new VideoTransaction is created when the LTILaunchRequest is made, but sometimes things happen...
+		Date now = new Date();
+		Date then = new Date(now.getTime()-90*60000);  // 90 minutes ago
+		VideoTransaction vt = ofy().load().type(VideoTransaction.class).filter("userId",user.id).filter("videoId",v.id).order("-downloaded").first().now();
+		
+		if (vt == null || vt.graded != null || vt.downloaded.before(then)) {  // create a new VideoTransaction
+			int possibleScore = 0;
+			for (int i=0;i<v.breaks.length;i++) possibleScore += (v.nQuestions[i]<this.nQuestions?v.nQuestions[i]:this.nQuestions);
+			vt = new VideoTransaction(v.id,v.title,v.breaks.length,user.id,assignmentId,possibleScore,user.getLisResultSourcedid());
+			ofy().save().entity(vt).now();
+		}
+		
+		if (segment == v.breaks.length) return finishQuizlet(user,vt); // we are at the end of video; no more quizlets; shortcut to show results
 		
 		// get a List of available Question keys for this segment of this video
 		int counter = 0; // skip over this many questions to the ones in the current quizlet
@@ -196,27 +128,15 @@ public class VideoQuiz extends HttpServlet {
 		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 		for (int j=counter;j<counter+v.nQuestions[segment];j++) questionKeys.add(v.questionKeys.get(j));
 		
-		// Check to see if this user has any pending videos on this topic in the last 90 minutes.
-		// Normally, a new VideoTransaction is created when the LTILaunchRequest is made, but sometimes things happen...
-		Date now = new Date();
-		Date then = new Date(now.getTime()-90*60000);  // 90 minutes ago
-		VideoTransaction vt = ofy().load().type(VideoTransaction.class).filter("userId",user.id).filter("videoId",v.id).filter("graded",null).filter("downloaded >",then).first().now();
-		if (vt == null) {  // this should be rare because the vt is created at launch time
-			vt = new VideoTransaction(v.id,v.title,v.breaks.length,user.id,assignmentId,calculatePossibleScore(v),user.getLisResultSourcedid());
-			ofy().save().entity(vt);
-		}
+		if (questionKeys.size()==0) return "Sorry, there are no questions at this point. <a href='/Video.jsp?VideoId=" + videoId + "&Segment=" + segment+1 + "&Token=" + user.token + "'>Continue the video</a><p>";
 		
-		if (questionKeys.size()==0) {  // no questions for this quiz segment! If we're at the end, present the score. else go to the next video segment
-			boolean completed = v.breaks==null || segment == v.breaks.length;
-			if (completed) return finishQuizlet(user,vt);
-			else return startVideo(user,v.id,segment+1);
-		}
-
-		// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
+		// Randomly select the questions to be presented, eliminating each from questionKeys as they are printed
 		Random rand = new Random();  // create random number generator to select quiz questions
 		nQuestions = (nQuestions < questionKeys.size()?nQuestions:questionKeys.size());
-
-		buf.append("<form method=post>");
+		
+		//buf.append("Questions to be presented="+nQuestions+".<hr>");
+		
+		buf.append("<form id=quizlet method=post action='/VideoQuiz' onSubmit='return ajaxSubmitQuiz()'>");
 				
 		int i = 0;
 		buf.append("<OL>\n");
@@ -237,43 +157,39 @@ public class VideoQuiz extends HttpServlet {
 
 		if (a!=null) buf.append("<input type=hidden name=AssignmentId value='" + a.id + "'>");
 		
-		buf.append("<input type=hidden name==Token value=" + user.token + ">");
-		buf.append("<input type=hidden name='VideoTransactionId' value=" + vt.id + ">");
-		buf.append("<input type=hidden name='Segment' value=" + segment + ">");
-		buf.append("<input type=submit value='Submit and Continue'>");
-		buf.append("</form> or <button onclick=window.location.href=/VideoQuiz?Segment=" + segment + "&VideoId=" + v.id + "&Token=" + user.token + ">Replay This Segment</button>");
-
+		buf.append("<input type=hidden name=Token value=" + user.token + ">");
+		buf.append("<input type=hidden name=VideoId value=" + v.id + ">");
+		buf.append("<input type=hidden name=VideoTransactionId value=" + vt.id + ">");
+		buf.append("<input type=hidden name=Segment value=" + segment + ">");
+		buf.append("<input type=submit value='Submit and Continue'>  or <a href=/Video.jsp?Segment=" + segment + "&VideoId=" + v.id + "&Token=" + user.token + ">Replay This Segment</a>");
+		buf.append("</form>");
+		} catch (Exception e) {
+			buf.append(e.getMessage());
+		}
 		return buf.toString();
 	}
-	
-	public int calculatePossibleScore(Video v) {
-		// each video has v.breaks.length pauses built into it. Each pause is associated with 
-		// a quizlet comprised of 0, 1 or 2 questions. The default is 2, but is subject to the 
-		// availability of questions. In addition, there may be a quizlet at the end of the video
-		// if such questions exist. Therefore, the total number of quizlets is v.breaks.length + 1 
-		// and the total number of questions is possibleScore <= 2(v.breaks.length + 1)
-		int possibleScore = 0;
-		for (int segment=0;segment<v.breaks.length+1;segment++) {
-			int segmentScore = ofy().load().type(Question.class).filter("assignmentType","Video").filter("videoId", v.id).filter("segment",segment).count();
-			possibleScore += (segmentScore<nQuestions?segmentScore:nQuestions);
-		}
-		return possibleScore;
-	}
-	
-	public String scoreQuizlet(User user, HttpServletRequest request) {
-		
-		// Retrieve the videoTransaction and segment
+
+	public String scoreQuizlet(User user, HttpServletRequest request) throws Exception {
+		StringBuffer debug = new StringBuffer("starting...");
 		VideoTransaction vt = null;
 		int segment = 0;
 		try {
+		// Retrieve the videoTransaction and segment
+		try {
 			segment = Integer.parseInt(request.getParameter("Segment"));
+			debug.append("segment.");
 			vt = ofy().load().type(VideoTransaction.class).id(Long.parseLong(request.getParameter("VideoTransactionId"))).safe();
+			debug.append("vt.");
 		} catch (Exception e) {  // this section is reached if a quizlet is not included at the end (no questions)
+			debug.append("caught.");
 			Date now = new Date();
 			Date then = new Date(now.getTime()-90*60000);  // 90 minutes ago
 			long videoId = Long.parseLong(request.getParameter("VideoId"));
+			debug.append("vId.");
 			vt = ofy().load().type(VideoTransaction.class).filter("userId",user.id).filter("videoId",videoId).filter("graded",null).filter("downloaded >",then).first().now();
+			debug.append("vt.");
 		}
+		
 		// Make a list of the question keys. Non-numeric inputs are ignored (catch and continue).
 		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 		for (Enumeration<?> e = request.getParameterNames();e.hasMoreElements();) {
@@ -281,7 +197,8 @@ public class VideoQuiz extends HttpServlet {
 				questionKeys.add(Key.create(Question.class,Long.parseLong((String) e.nextElement())));
 			} catch (Exception e2) {}
 		}
-
+		debug.append("qkeys.");
+		
 		Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
 		StringBuffer missedQuestions = new StringBuffer();	// contains solutions to questions answered incorrectly		
 
@@ -319,18 +236,19 @@ public class VideoQuiz extends HttpServlet {
 					continue;  // this parameter does not correspond to a questionId
 				}
 			}
-
+			debug.append("scoring done.");
 			if (quizletScore > vt.quizletScores.get(segment)) {
-				vt.quizletScores.add(segment,quizletScore);
-				vt.missedQuestions.add(segment,missedQuestions.toString());
+				vt.quizletScores.set(segment,quizletScore);
+				vt.missedQuestions.set(segment,missedQuestions.toString());
 			}
 		}
-		ofy().save().entity(vt);
-
-		boolean completed = segment == vt.quizletScores.size();		
-		
-		if (completed) return finishQuizlet(user,vt);
-		else return startVideo(user,vt.videoId,segment+1);
+		ofy().save().entity(vt).now();
+		debug.append("done.");
+		} catch (Exception e) {
+			debug.append(e.getMessage());
+			return debug.toString();
+		}
+		return showQuizlet(user,vt.videoId,segment+1);  // return the next quizlet
 	}
 	
 	String finishQuizlet(User user, VideoTransaction vt) {
@@ -338,7 +256,8 @@ public class VideoQuiz extends HttpServlet {
 		vt.score = 0;
 		for (int s : vt.quizletScores) vt.score += s;
 		vt.graded = new Date();
-
+		ofy().save().entity(vt);
+		
 		// Try to post the score to the student's LMS:
 		// Retrieve the assignment, if it exists (may be null for anonymous users)
 		boolean reportScoreToLms = false;
@@ -358,9 +277,9 @@ public class VideoQuiz extends HttpServlet {
 		} catch (Exception e) {}
 
 		StringBuffer buf = new StringBuffer();  // prepare a summary of the quizlet scores and missed questions
-		buf.append("<h2>Video Quiz Results - " + vt.videoTitle + " (" + subject.title + ")</h2>\n");
+		buf.append("<h3>Video Quiz Results - " + vt.videoTitle + "</h3>\n");
 		
-		if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
+		if (user.isAnonymous()) buf.append("<font color=red>Anonymous User</font><br>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		buf.append(df.format(new Date()));
 		
@@ -369,15 +288,29 @@ public class VideoQuiz extends HttpServlet {
 		// Seek some feedback for ChemVantage:
 		if (vt.possibleScore > 0 && vt.score == vt.possibleScore) {
 			buf.append("<H2>Congratulations on a perfect score! Good job.</H2>\n");
-			buf.append(fiveStars());
+			buf.append("Please rate your overall experience with ChemVantage:<br />\n"
+					+ "<span id='vote' style='font-family:tahoma; color:red;'>(click a star):</span><br>");
+
+			for (int iStar=1;iStar<6;iStar++) {
+				buf.append("<img src='images/star1.gif' id='" + iStar + "' "
+						+ "style='width:30px; height:30px;' "
+						+ "onmouseover=showStars(this.id); onClick=setStars(this.id); onmouseout=showStars(0); />");
+			}
+			buf.append("<span id=sliderspan style='opacity:0'>"
+					+ "<input type=range id=slider min=1 max=5 value=3 onfocus=document.getElementById('sliderspan').style='opacity:1';showStars(this.value); oninput=showStars(this.value);>"
+					+ "<button onClick=setStars(document.getElementById('slider').value);>submit</button>"
+					+ "</span>");
+			buf.append("<p>");
+
 		} else {
 			buf.append("Please take a moment to <a href=/Feedback?Token=" + user.token + ">tell us about your ChemVantage experience</a>.<p>");
 		
-			// Give the correct answers to missed questions:
-			buf.append(ajaxJavaScript(user.token)); // load javascript for AJAX problem reporting form
-			buf.append("The following questions were answered incorrectly:<ol>");
-			for (String s : vt.missedQuestions) buf.append(s);
-			buf.append("</ol>");
+			String missedQuestions = "";
+			for (String s : vt.missedQuestions) missedQuestions += s;
+			
+			if (!missedQuestions.isEmpty()) { // Give the correct answers to missed questions:
+				buf.append("The following questions were answered incorrectly:<ol>" + missedQuestions + "</ol>");
+			}
 		}
 		
 		
@@ -388,7 +321,7 @@ public class VideoQuiz extends HttpServlet {
 		}
 
 		// If a==null this is an anonymous user, otherwise is an LTI user:
-		buf.append((a==null?"<a href=/VideoQuiz?VideoId=" + vt.videoId + "&Token=" + user.token + ">Watch this video again</a> or go back to the <a href=/>ChemVantage home page</a> " :
+		buf.append((a==null?"<a href=/Video.jsp?VideoId=" + vt.videoId + "&Segment=0&Token=" + user.token + ">Watch this video again</a> or go back to the <a href=/>ChemVantage home page</a> " :
 				"You may take this quiz again by clicking the assignment link in your learning management system ")			
 				+ "or <a href=/Logout>logout of ChemVantage</a>.");
 
@@ -398,25 +331,6 @@ public class VideoQuiz extends HttpServlet {
 	
 	String fiveStars() {
 		StringBuffer buf = new StringBuffer();
-
-		buf.append("<script type='text/javascript'>\n"
-				+ "  var star1 = new Image(); star1.src='images/star1.gif';"
-				+ "  var star2 = new Image(); star2.src='images/star2.gif';"
-				+ "  var set = false;\n"
-				+ "  function showStars(n) {"
-				+ "    if (!set) {"
-				+ "      document.getElementById('vote').innerHTML=(n==0?'(click a star)':''+n+(n>1?' stars':' star'));"
-				+ "      for (i=1;i<6;i++) {document.getElementById(i).src=(i<=n?star2.src:star1.src)}"
-				+ "    }"
-				+ "  }\n"
-				+ "  function setStars(n) {"
-				+ "    if (!set) {"
-				+ "      ajaxStars(n);"
-				+ "      set = true;"
-				+ "      document.getElementById('sliderspan').style='display:none';"
-				+ "    }"
-				+ "  }\n"
-				+ "</script>\n");
 
 		buf.append("Please rate your overall experience with ChemVantage:<br />\n"
 				+ "<span id='vote' style='font-family:tahoma; color:red;'>(click a star):</span><br>");
@@ -434,7 +348,7 @@ public class VideoQuiz extends HttpServlet {
 
 		return buf.toString(); 
 	}
-
+	/*
 	String ajaxJavaScript(String token) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note,email) {\n"
@@ -504,7 +418,7 @@ public class VideoQuiz extends HttpServlet {
 	}
 
 
-/*	
+	
 	public String printQuiz(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {

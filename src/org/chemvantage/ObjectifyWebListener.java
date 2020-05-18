@@ -16,7 +16,6 @@ public class ObjectifyWebListener implements ServletContextListener {
     ObjectifyService.register(Assignment.class);
     ObjectifyService.register(BLTIConsumer.class);
     ObjectifyService.register(Deployment.class);
-    //ObjectifyService.register(Domain.class);
     ObjectifyService.register(HWTransaction.class);
     ObjectifyService.register(Nonce.class);
     ObjectifyService.register(PracticeExamTransaction.class);
@@ -29,7 +28,6 @@ public class ObjectifyWebListener implements ServletContextListener {
     ObjectifyService.register(Subject.class);
     ObjectifyService.register(Text.class);
     ObjectifyService.register(Topic.class);
-    //ObjectifyService.register(User.class);
     ObjectifyService.register(UserReport.class);
     ObjectifyService.register(Video.class);
     ObjectifyService.register(VideoTransaction.class);

@@ -35,7 +35,7 @@ public class User {
 	String 	lis_result_sourcedid;  // used only by LTIv1p1 users
 	long	assignmentId = 0L;     // used only for LTI users
 	int 	roles = 0;             // student
-	String 	token = null;          // cross-site request fraud (CSRF) token
+	public String 	token = null;          // cross-site request fraud (CSRF) token
 	
 	User() {}
 	
@@ -149,7 +149,7 @@ public class User {
 	 * 5) email - not implemented yet, used to provide response to feedback
 	 */
 	
-	static User getUser(String token) {
+	public static User getUser(String token) {
     	if (token==null) return null;
     	try {
     		Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
@@ -200,7 +200,7 @@ public class User {
 		setToken();
 	}
 	
-    long getAssignmentId() {
+    public long getAssignmentId() {
      	try {
     		return JWT.decode(this.token).getClaim("aid").asLong();  // assignmentId
     	} catch (Exception e) {    		
@@ -214,7 +214,7 @@ public class User {
     		if (lis_result_sourcedid == null || lis_result_sourcedid.isEmpty()) return null;
     		return lis_result_sourcedid;
     	} catch (Exception e) {
-    		return null;
     	}
+    	return null;
     }
 }

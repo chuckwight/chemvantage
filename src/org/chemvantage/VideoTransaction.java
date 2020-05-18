@@ -24,15 +24,17 @@ import java.util.List;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
+import com.googlecode.objectify.condition.IfNotZero;
 
 @Entity
 public class VideoTransaction {
 	@Id		Long id;
 	@Index	long videoId;
 	@Index	String userId;
-	@Index	Date graded;
-	@Index	int score;
-	@Index	long assignmentId;
+	@Index	Date downloaded;
+			Date graded;
+			int score;
+	@Index(IfNotZero.class)	long assignmentId;
 			List<Integer> quizletScores;
 			List<String> missedQuestions;
 			String lis_result_sourcedid;
@@ -50,8 +52,10 @@ public class VideoTransaction {
         this.assignmentId = assignmentId;
         this.possibleScore = possibleScore;
         this.lis_result_sourcedid = lis_result_sourcedid;
+        this.downloaded = new Date();
         this.quizletScores = new ArrayList<Integer>();
-        for (int i=0;i<nBreaks+1;i++) {
+        this.missedQuestions = new ArrayList<String>();
+        for (int i=0;i<nBreaks;i++) {
         	quizletScores.add(0);
         	missedQuestions.add("");
         }

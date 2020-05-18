@@ -258,6 +258,10 @@ public class Home extends HttpServlet {
 				buf.append("</SELECT></FORM>");
 				buf.append("</div>");
 			}
+			// =============EXPERIMENTAL =============
+			 if (request.getServerName().contains("dev-vantage")) buf.append("<p><a href=Video.jsp?VideoId=5749645665894400&Token=" + user.token + ">Experimental video quiz</a><p>");
+			// =============EXPERIMENTAL =============
+			
 			// Complete the large two-column table for the Home page (divs for cell, row, table):
 			buf.append("</div></div></div>");
 		} catch (Exception e) {
