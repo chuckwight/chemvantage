@@ -61,15 +61,18 @@ public class VideoQuiz extends HttpServlet {
 			User user = User.getUser(request.getParameter("Token"));
 			if (user == null) throw new Exception("User token invalid or expired.");
 			
-			int segment = 0;
-			try {
-				segment = Integer.parseInt(request.getParameter("Segment"));
-			} catch (Exception e) {}
 			long videoId = 0L;
 			try {
 				videoId = Long.parseLong(request.getParameter("VideoId"));
 			} catch (Exception e) {}
-		out.println(showQuizlet(user,videoId,segment));
+			int segment = 0;
+			try {
+				segment = Integer.parseInt(request.getParameter("Segment"));
+			} catch (Exception e) {
+				response.sendRedirect("/Video.jsp?VideoId=" + videoId + "&Token=" + user.token);
+			}
+			
+			out.println(showQuizlet(user,videoId,segment));
 		} catch (Exception e) {
 			response.sendRedirect("/Logout");
 		}
@@ -93,46 +96,46 @@ public class VideoQuiz extends HttpServlet {
 	public String showQuizlet(User user,long videoId,int segment) {
 		StringBuffer buf = new StringBuffer();
 		try {
-		Assignment a = null;
-		long assignmentId = user.getAssignmentId();  // should be non-zero for LTI user
-		if (assignmentId>0) {
-			a = ofy().load().type(Assignment.class).id(assignmentId).now();
-			videoId = a.videoId;
-		}
+			Assignment a = null;
+			long assignmentId = user.getAssignmentId();  // should be non-zero for LTI user
+			if (assignmentId>0) {
+				a = ofy().load().type(Assignment.class).id(assignmentId).now();
+				videoId = a.videoId;
+			}
 		
-		Video v = ofy().load().type(Video.class).id(videoId).now();
-		if (v.breaks==null) v.breaks = new int[0];
-		if (v.nQuestions==null) v.nQuestions = new int[0];
-		if (v.questionKeys==null) v.questionKeys = new ArrayList<Key<Question>>();
-		
-		buf.append("<h3>Video Quiz - " + v.title + "</h3>\n");
-		
-		// Check to see if this user has any pending videos on this topic in the last 90 minutes.
-		// Normally, a new VideoTransaction is created when the LTILaunchRequest is made, but sometimes things happen...
-		Date now = new Date();
-		Date then = new Date(now.getTime()-90*60000);  // 90 minutes ago
-		VideoTransaction vt = ofy().load().type(VideoTransaction.class).filter("userId",user.id).filter("videoId",v.id).order("-downloaded").first().now();
-		
-		if (vt == null || vt.graded != null || vt.downloaded.before(then)) {  // create a new VideoTransaction
-			int possibleScore = 0;
-			for (int i=0;i<v.breaks.length;i++) possibleScore += (v.nQuestions[i]<this.nQuestions?v.nQuestions[i]:this.nQuestions);
-			vt = new VideoTransaction(v.id,v.title,v.breaks.length,user.id,assignmentId,possibleScore,user.getLisResultSourcedid());
-			ofy().save().entity(vt).now();
-		}
-		
-		if (segment == v.breaks.length) return finishQuizlet(user,vt); // we are at the end of video; no more quizlets; shortcut to show results
-		
-		// get a List of available Question keys for this segment of this video
-		int counter = 0; // skip over this many questions to the ones in the current quizlet
-		for (int i=0;i<segment;i++) counter += v.nQuestions[i];
-		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
-		for (int j=counter;j<counter+v.nQuestions[segment];j++) questionKeys.add(v.questionKeys.get(j));
-		
-		if (questionKeys.size()==0) return "Sorry, there are no questions at this point. <a href='/Video.jsp?VideoId=" + videoId + "&Segment=" + segment+1 + "&Token=" + user.token + "'>Continue the video</a><p>";
-		
-		// Randomly select the questions to be presented, eliminating each from questionKeys as they are printed
-		Random rand = new Random();  // create random number generator to select quiz questions
-		nQuestions = (nQuestions < questionKeys.size()?nQuestions:questionKeys.size());
+			Video v = ofy().load().type(Video.class).id(videoId).now();
+			if (v.breaks==null) v.breaks = new int[0];
+			if (v.nQuestions==null) v.nQuestions = new int[0];
+			if (v.questionKeys==null) v.questionKeys = new ArrayList<Key<Question>>();
+
+			buf.append("<h3>Video Quiz - " + v.title + "</h3>\n");
+
+			// Check to see if this user has any pending videos on this topic in the last 90 minutes.
+			// Normally, a new VideoTransaction is created when the LTILaunchRequest is made, but sometimes things happen...
+			Date now = new Date();
+			Date then = new Date(now.getTime()-90*60000);  // 90 minutes ago
+			VideoTransaction vt = ofy().load().type(VideoTransaction.class).filter("userId",user.id).filter("videoId",v.id).order("-downloaded").first().now();
+
+			if (vt == null || vt.graded != null || vt.downloaded.before(then)) {  // create a new VideoTransaction
+				int possibleScore = 0;
+				for (int i=0;i<v.breaks.length;i++) possibleScore += (v.nQuestions[i]<this.nQuestions?v.nQuestions[i]:this.nQuestions);
+				vt = new VideoTransaction(v.id,v.title,v.breaks.length,user.id,assignmentId,possibleScore,user.getLisResultSourcedid());
+				ofy().save().entity(vt).now();
+			}
+
+			if (segment == v.breaks.length) return finishQuizlet(user,vt); // we are at the end of video; no more quizlets; shortcut to show results
+
+			// get a List of available Question keys for this segment of this video
+			int counter = 0; // skip over this many questions to the ones in the current quizlet
+			for (int i=0;i<segment;i++) counter += v.nQuestions[i];
+			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
+			for (int j=counter;j<counter+v.nQuestions[segment];j++) questionKeys.add(v.questionKeys.get(j));
+
+			if (questionKeys.size()==0) return "Sorry, there are no questions at this point. <a href='/Video.jsp?VideoId=" + videoId + "&Segment=" + segment+1 + "&Token=" + user.token + "'>Continue the video</a><p>";
+
+			// Randomly select the questions to be presented, eliminating each from questionKeys as they are printed
+			Random rand = new Random();  // create random number generator to select quiz questions
+			nQuestions = (nQuestions < questionKeys.size()?nQuestions:questionKeys.size());
 		
 		//buf.append("Questions to be presented="+nQuestions+".<hr>");
 		
@@ -252,9 +255,18 @@ public class VideoQuiz extends HttpServlet {
 	}
 	
 	String finishQuizlet(User user, VideoTransaction vt) {
-		// Add up the scores on the various quizlets for a total score pn this VideoQuiz
-		vt.score = 0;
-		for (int s : vt.quizletScores) vt.score += s;
+		StringBuffer buf = new StringBuffer();  // prepare a summary of the quizlet scores and missed questions
+		
+		boolean noQuizlets = vt.possibleScore==0;
+		
+		if (noQuizlets && vt.assignmentId>0) {  // give 1 pt credit for watching the assignment
+			vt.score = 1;
+			vt.possibleScore = 1;
+		} else {
+			vt.score = 0;
+			for (int s : vt.quizletScores) vt.score += s;
+		}		
+		
 		vt.graded = new Date();
 		ofy().save().entity(vt);
 		
@@ -276,7 +288,12 @@ public class VideoQuiz extends HttpServlet {
 			}
 		} catch (Exception e) {}
 
-		StringBuffer buf = new StringBuffer();  // prepare a summary of the quizlet scores and missed questions
+		if (noQuizlets) {
+			buf.append("<h4>Thanks for watching</h4>");
+			buf.append("Please take a moment to <a href=/Feedback?Token=" + user.token + ">tell us about your ChemVantage experience</a>.<p>");
+			return buf.toString();
+		}
+		
 		buf.append("<h3>Video Quiz Results - " + vt.videoTitle + "</h3>\n");
 		
 		if (user.isAnonymous()) buf.append("<font color=red>Anonymous User</font><br>");
@@ -329,25 +346,6 @@ public class VideoQuiz extends HttpServlet {
 		
 	}
 	
-	String fiveStars() {
-		StringBuffer buf = new StringBuffer();
-
-		buf.append("Please rate your overall experience with ChemVantage:<br />\n"
-				+ "<span id='vote' style='font-family:tahoma; color:red;'>(click a star):</span><br>");
-
-		for (int iStar=1;iStar<6;iStar++) {
-			buf.append("<img src='images/star1.gif' id='" + iStar + "' "
-					+ "style='width:30px; height:30px;' "
-					+ "onmouseover=showStars(this.id); onClick=setStars(this.id); onmouseout=showStars(0); />");
-		}
-		buf.append("<span id=sliderspan style='opacity:0'>"
-				+ "<input type=range id=slider min=1 max=5 value=3 onfocus=document.getElementById('sliderspan').style='opacity:1';showStars(this.value); oninput=showStars(this.value);>"
-				+ "<button onClick=setStars(document.getElementById('slider').value);>submit</button>"
-				+ "</span>");
-		buf.append("<p>");
-
-		return buf.toString(); 
-	}
 	/*
 	String ajaxJavaScript(String token) {
 		return "<SCRIPT TYPE='text/javascript'>\n"

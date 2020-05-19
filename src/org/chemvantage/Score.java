@@ -77,6 +77,18 @@ public class Score {    // this object represents a best score achieved by a use
 				if (ht.lis_result_sourcedid != null) s.lis_result_sourcedid = ht.lis_result_sourcedid;  // record any available sourcedid value for reporting score to the LMS				
 				if (s.mostRecentAttempt == null || ht.graded.after(s.mostRecentAttempt)) s.mostRecentAttempt = ht.graded;  // most recent transaction
 			}
+		} else if (a.assignmentType.equals("VideoQuiz")) {
+			List<VideoTransaction> videoTransactions = ofy().load().type(VideoTransaction.class).filter("userId",userId).filter("assignmentId",a.id).list();
+			for (VideoTransaction vt : videoTransactions) {
+				s.numberOfAttempts++;  // number of pre-deadline quiz attempts
+				s.score = (vt.score>s.score?vt.score:s.score);  // keep the best (max) score
+				if (s.lis_result_sourcedid == null || s.lis_result_sourcedid.isEmpty()) s.lis_result_sourcedid = vt.lis_result_sourcedid;  // record any available sourcedid value for reporting score to the LMS
+				if (s.mostRecentAttempt==null || vt.downloaded.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far
+					s.mostRecentAttempt = vt.downloaded;
+					s.maxPossibleScore = vt.possibleScore;
+				}
+				if (vt.lis_result_sourcedid != null && !vt.lis_result_sourcedid.contentEquals(s.lis_result_sourcedid)) s.lis_result_sourcedid = vt.lis_result_sourcedid;				
+			}		
 		} else if (a.assignmentType.equals("PracticeExam")) {
 			List<PracticeExamTransaction> practiceExamTransactions = ofy().load().type(PracticeExamTransaction.class).filter("userId",userId).list();
 			int score = 0;

@@ -24,6 +24,7 @@ import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
+import com.googlecode.objectify.condition.IfNotNull;
 
 @Entity
 public class Video implements Serializable {
@@ -32,8 +33,8 @@ public class Video implements Serializable {
     public	String serialNumber;
     public	String title;
     @Index	String orderBy;
-    public	int[]  breaks;  // break points for quizzes in seconds,including at the end (-1) if applicable
-    		int[]  nQuestions; // number of questions available for each quizlet
+    @Index(IfNotNull.class) public	int[]  breaks;  // break points for quizzes in seconds,including at the end (-1) if applicable
+    public	int[]  nQuestions; // number of questions available for each quizlet
     		List<Key<Question>> questionKeys; // List of all question keys (size = sum of nQuestions values)
 
     Video() {}

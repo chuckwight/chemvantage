@@ -290,6 +290,10 @@ public class LTILaunch extends HttpServlet {
 				a.topicId = Long.parseLong(request.getParameter("TopicId"));
 				if (a.topicId>0) a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
 			} catch (Exception e) {}
+		} else if (a.assignmentType.contentEquals("VideoQuiz")) {
+			try {
+				a.videoId = Long.parseLong(request.getParameter("VideoId"));
+			} catch (Exception e) {}
 		} else if (a.assignmentType.contentEquals("PracticeExam")) {
 			try {
 				String[] topicIds = request.getParameterValues("TopicIds");
@@ -347,11 +351,12 @@ public class LTILaunch extends HttpServlet {
 		buf.append("Select the type of assignment to create...<br>");
 		buf.append("<label><input type=radio name=AssignmentType " + ("Quiz".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='Quiz'>Quiz</label><br>"
 				+ "<label><input type=radio name=AssignmentType " + ("Homework".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='Homework'>Homework</label><br>"
+				+ "<label><input type=radio name=AssignmentType " + ("VideoQuiz".equals(assignmentType)?"checked ":" ") + "onClick=showVideos(); value='VideoQuiz'>Video&nbsp;Quiz</label><br>"
 				+ "<label><input type=radio name=AssignmentType " + ("PracticeExam".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='PracticeExam'>Practice&nbsp;Exam</label><p>");
 		buf.append("</div>");
 		
 		// Put Part 2 in a cell on the right side of the first row
-		buf.append("<div id=topicKeySelect style='display:table-cell;visibility:" + (assignmentType==null?"hidden":"visible") + "'>");
+		buf.append("<div id=topicKeySelect style='display:table-cell;visibility:" + (assignmentType==null || assignmentType.equals("VideoQuiz")?"hidden":"visible") + "'>");
 		buf.append("and a group of topics to choose from:<br>");
 		buf.append("<label><input type=radio name=TopicKey value=0 " + (topicKey==0?"checked ":"") + "onClick=this.form.Refresh.value=true;this.form.submit();>Show all topics</label><br>"
 				+ "<label><input type=radio name=TopicKey value=1 "+ (topicKey==1?"checked ":"") + "onClick=this.form.Refresh.value=true;this.form.submit();>Topics for OpenStax Chemistry 2e (recommended)</label><br>");
@@ -380,12 +385,22 @@ public class LTILaunch extends HttpServlet {
 				+ "  if (type == 'radio') {"
 				+ "    document.getElementById('radioSelect').style.display='block';"
 				+ "    document.getElementById('checkSelect').style.display='none';"
+				+ "    document.getElementById('dropdownSelect').style.display='none';"
 				+ "    clearChecks();"
 				+ "  } else if (type = 'check') {"
 				+ "    document.getElementById('radioSelect').style.display='none';"
 				+ "    document.getElementById('checkSelect').style.display='block';"
+				+ "    document.getElementById('dropdownSelect').style.display='none';"
 				+ "    clearRadios();"
 				+ "  }"
+				+ "}"
+				+ "function showVideos() {"
+				+ "  document.getElementById('topicKeySelect').style.visibility='hidden';"
+				+ "  document.getElementById('radioSelect').style.display='none';"
+				+ "  document.getElementById('checkSelect').style.display='none';"
+				+ "  document.getElementById('dropdownSelect').style.display='block';"
+				+ "  clearChecks();"
+				+ "  clearRadios();"
 				+ "}"
 				+ "function clearChecks() {"
 				+ "  var boxes = document.getElementsByName('TopicIds');"
@@ -413,11 +428,24 @@ public class LTILaunch extends HttpServlet {
 			if (t.orderBy.startsWith("1") && (topicKey==0 || t.topicGroup%(2*topicKey)/topicKey==1)) sem1.add(t);
 			else if (t.orderBy.startsWith("2") && (topicKey==0 || t.topicGroup%(2*topicKey)/topicKey==1)) sem2.add(t);
 		}
+		
+		// Make a separate list of videos with embedded quizzes to display in a dropdown selector
+		List<Video> videos = ofy().load().type(Video.class).list();
 
 		String selectorType = "";
 		if ("Quiz".equals(assignmentType) || "Homework".equals(assignmentType)) selectorType = "radio";
+		else if ("VideoQuiz".equals(assignmentType)) selectorType = "dropdown";
 		else if ("PracticeExam".equals(assignmentType)) selectorType = "check";
 		
+		// Create a dropdown selector for video quiz assignments
+		buf.append("<div id=dropdownSelect style='display:" + (selectorType.equals("dropdown")?"block":"none") + "'>");
+		buf.append("<font color=red>Please select a video for this assignment:</font> ");
+		buf.append("<select name=VideoId onchange=this.form.vidsub.disabled=false;>");
+		for (Video v : videos) buf.append("<option value=" + v.id + ">" + v.title + (v.breaks==null?"":" *") + "</option>");
+		buf.append("</select> ");
+		buf.append("<input type=submit name=vidsub disabled=true value='Select this video'>");
+		buf.append("<br>Video titles marked with an asterisk (*) have embedded quizzes.<p></div>"); // end of video dropdown selector
+
 		// Create a table with radio buttons for Quiz or Homework assignments
 		buf.append("<div id=radioSelect style='display:" + (selectorType.equals("radio")?"block":"none") + "'>");  // big box containing radio buttons
 		buf.append("<font color=red>Please select one topic for this assignment:</font><br>");

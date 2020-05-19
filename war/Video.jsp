@@ -24,38 +24,38 @@
 
 <%
 	try {
-	token = request.getParameter("Token");
-	User user = User.getUser(token);
-	if (user == null) throw new Exception();
-	
-	String userRequest = request.getParameter("UserRequest");
-	if (userRequest == null) userRequest = "";
-	
-	try {
-		segment = Integer.parseInt(request.getParameter("Segment"));
-	} catch (Exception e) {
-		segment = 0;
-	}
-	
-	try {
-		videoId = Long.parseLong(request.getParameter("VideoId"));
-	} catch (Exception e) {}
-	
-	long assignmentId = user.getAssignmentId();
-	if (assignmentId > 0L)  try {
-	videoId = ofy().load().type(Assignment.class).id(assignmentId).now().videoId;
-		} catch (Exception e) {}
-	
-	Video v = ofy().load().type(Video.class).id(videoId).now();
-	title = v.title;
-	breaks = v.breaks;
-	videoSerialNumber = v.serialNumber;
-	if (segment > 0) start = v.breaks[segment-1];  // start at the end of the last segment
-	if (v.breaks.length > segment) end = v.breaks[segment];  // play to this value and stop
-	  
-	url = "https://www.youtube.com/embed/" + v.serialNumber
-		+ "?enablejsapi=1&autoplay=1&origin=https://" + request.getServerName()
-		+ (start > 0 || end > 0 ? "&start=" + start + (end > 0 ? "&end=" + end : "") : "");
+		token = request.getParameter("Token");
+		User user = User.getUser(token);
+		if (user == null)
+			throw new Exception();
+
+		try {
+			segment = Integer.parseInt(request.getParameter("Segment"));
+		} catch (Exception e) {
+			segment = 0;
+		}
+
+		try {
+			videoId = Long.parseLong(request.getParameter("VideoId"));
+		} catch (Exception e) {
+		}
+
+		long assignmentId = user.getAssignmentId();
+		if (assignmentId > 0L)
+			try {
+				videoId = ofy().load().type(Assignment.class).id(assignmentId).now().videoId;
+			} catch (Exception e) {
+			}
+
+		Video v = ofy().load().type(Video.class).id(videoId).now();
+		if (v.breaks==null) v.breaks = new int[0];
+		
+		title = v.title;
+		breaks = v.breaks;
+		videoSerialNumber = v.serialNumber;
+		
+		if (segment > 0) start = v.breaks[segment - 1]; // start at the end of the last segment
+		if (v.breaks.length > segment) end = v.breaks[segment]; // play to this value and stop
 
 	} catch (Exception e) {
 		response.sendRedirect("/Logout");
@@ -67,7 +67,9 @@
 Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT><br>An Open Education Resource<br><br>
 
 <div id=videoiframe></div>
-<br>Brief quizzes will appear at intervals during the video playback.<p>
+<br>
+<div id=quiz_info></div>
+<p>
 <div id=quiz_div style='width:560px;display:none'></div>
 
 <hr>
@@ -109,8 +111,12 @@ function onYouTubeIframeAPIReady() {
 
 function onPlayerReady(event) {
 	if (segment==0) {
-	  start = segment>0?breaks[segment-1]:0;
-	  end = (breaks.length > segment?breaks[segment]:-1);  // play to this value or stop at end
+	  start = 0;
+	  if (breaks.length==0) end = -1;
+	  else {
+		  end = breaks[0];
+		  document.getElementById('quiz_info').innerHTML = 'Brief quizzes will appear below at intervals during the video.';
+	  }
 	  player.loadVideoById({'videoId':videoSerialNumber,'startSeconds':start,'endSeconds':end});
 	  ajaxLoadQuiz();
 	}
