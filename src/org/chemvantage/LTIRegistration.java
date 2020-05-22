@@ -365,8 +365,12 @@ public class LTIRegistration extends HttpServlet {
 						+ "Tool Redirect URL: " + iss + "/lti/launch<br>"
 						+ "Tool Deep Linking URL: " + iss + "/lti/deeplinks<br>"
 						+ "OIDC Login Initiation URL: " + iss + "/auth/token<br>"
-						+ "JSON Web Key Set Endpoint: " + iss + "/jwks<p>");
-
+						+ "JSON Web Key Set URL: " + iss + "/jwks<p>");
+				
+				buf.append("If your LMS requires you to enter a specific public RSA key instead of the JSON Web Key Set URL, you can "
+						+ " get it here:<br>"
+						+ "<a href=" + iss + "/jwks?kid=public&fmt=x509>PEM key in X509 format</a> or <a href=" + iss + "/jwks?kid=public>JSON Web Key</a>");
+				
 				if ("moodle".contentEquals(lms)) {
 					buf.append("Please note: Several Moodle users have experienced difficulty getting "
 							+ "scores returned to the Moodle grade book using LTI. We believe that this is due to the Moodle server being "
@@ -571,8 +575,8 @@ public class LTIRegistration extends HttpServlet {
 		config.addProperty("privacy_level", "public");
 		config.addProperty("target_link_uri", iss + "/lti/launch");
 		config.addProperty("oidc_initiation_url", iss + "/auth/token");
-		config.addProperty("public_jwk_url", iss + "/jwks");
-		//config.add("public_jwk", KeyStore.getJwk(KeyStore.getAKeyId(lms)));
+		//config.addProperty("public_jwk_url", iss + "/jwks");
+		config.add("public_jwk", KeyStore.getJwk(KeyStore.getAKeyId(lms)));
 		  JsonArray scopes = new JsonArray();
 		  scopes.add("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem");
 		  scopes.add("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly");
