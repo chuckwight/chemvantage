@@ -3,6 +3,7 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
@@ -30,8 +31,17 @@ public class KeyStore extends HttpServlet {
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		response.setContentType("text/html;charset=UTF-8");
+		PrintWriter out = response.getWriter();
+		
 		if (jwks == null) buildJwks();
-		response.getWriter().println(jwks);
+		String kid = request.getParameter("kid");
+		String fmt = request.getParameter("fmt");
+		if (fmt != null && kid != null) out.println(getRSAPublicKeyX509(getAKeyId(kid)));
+		else if (kid != null) {
+			JsonObject jwk = getJwk(getAKeyId(kid));
+			out.println(jwk==null?"Key not found.":jwk.toString());
+		}
+		else out.println(jwks);
 	}
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -135,7 +145,7 @@ public class KeyStore extends HttpServlet {
 	        }
 	        key.append("-----END PUBLIC KEY-----" + "<p>");
 		} catch (Exception e) {
-			return e.toString();
+			return "Key not found";
 		}
 		return key.toString();
 	}
