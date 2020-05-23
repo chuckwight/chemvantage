@@ -88,6 +88,12 @@ Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT><br>An 
 var tag = document.createElement('script'); tag.src='https://www.youtube.com/iframe_api';
 var firstScriptTag = document.getElementsByTagName('script')[0]; firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 var player;
+var quiz_div = document.getElementById('quiz_div');
+var segment = <%= segment %>;
+var breaks = <%= Arrays.toString(breaks) %>;
+var videoSerialNumber = '<%= videoSerialNumber %>';
+var start = 0;
+var end = -1;
 
 function onYouTubeIframeAPIReady() {
   player = new YT.Player('videoiframe', {
@@ -134,13 +140,6 @@ function onPlayerStateChange(event) {
     }
 }
 
-var quiz_div = document.getElementById('quiz_div');
-var segment = <%= segment %>;
-var breaks = <%= Arrays.toString(breaks) %>;
-var videoSerialNumber = '<%= videoSerialNumber %>';
-var start = 0;
-var end = -1;
-
 function ajaxLoadQuiz() {
   var xmlhttp=GetXmlHttpObject();
   quiz_div.innerHTML = "Loading questions...";
@@ -163,7 +162,7 @@ function ajaxSubmitQuiz() {
 	var xmlhttp=GetXmlHttpObject();
 	xmlhttp.onreadystatechange=function() {
 	  if (xmlhttp.readyState==4) {
-		quiz_div.style.display = 'none';
+		quiz_div.style.display = start>=0?'none':'';
 		quiz_div.innerHTML = xmlhttp.responseText;
 	  }
 	}
@@ -179,7 +178,7 @@ function ajaxSubmitQuiz() {
   start = breaks[segment-1];
   end = (breaks.length > segment?breaks[segment]:-1);  // play to this value or stop at end
   try {
-  player.loadVideoById({'videoId':videoSerialNumber,'startSeconds':start,'endSeconds':end});
+	if (start>=0) player.loadVideoById({'videoId':videoSerialNumber,'startSeconds':start,'endSeconds':end});
   } catch (e) {}
   
   return false;

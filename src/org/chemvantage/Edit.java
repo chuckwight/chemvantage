@@ -528,7 +528,10 @@ public class Edit extends HttpServlet {
 		try {
 			v= ofy().load().type(Video.class).id(Long.parseLong(request.getParameter("VideoId"))).safe();
 			buf.append("Video: " + v.title + "<br>");
-
+			
+			String stringTopicId = request.getParameter("TopicId");
+			if (stringTopicId != null) v.topicId = Long.parseLong(stringTopicId);
+			
 			try {
 				segment = Integer.parseInt(request.getParameter("Segment"));
 			} catch (Exception e) {}
@@ -1127,11 +1130,12 @@ public class Edit extends HttpServlet {
 			buf.append("<h3>Embed quiz questions in a video</h3>");
 
 			buf.append("Video: " + v.title + "<p>");
-
+			
 			buf.append("Use the form below to create or edit breakpoints in this video where 2-question quizlets will be "
 					+ "presented to the viewer. Each segment must be edited separately, and breakpoints must be created in "
 					+ "increasing order of seconds from the start of the video. You may (optionally) create a quiz at the "
 					+ "end of the video by entering 'end' or by leaving the breakpoint time blank.<ol>"
+					+ "<li>Select a topic appropriate to the subject of the video (for selecting the questions)</li>"
 					+ "<li>Select one of the existing video segments or create a new one</li>"
 					+ "<li>If you selected an existing segment, wait for the page to reload</li>"
 					+ "<li>Enter the breakpoint (in seconds from the start of the video) or 'end'</li>"
@@ -1142,6 +1146,8 @@ public class Edit extends HttpServlet {
 			buf.append("<form method=post action=/Edit>");  // This starts the master form for editing a single break point for hte video
 			buf.append("<input type=hidden name=VideoId value=" + v.id + ">");
 			buf.append("<input type=hidden name=Segment value=" + segment + ">");
+
+			buf.append("Topic: " + topicSelectBox(v.topicId) + "<p>");				
 
 			// Print a table of existing segments/breakpoints, and add one row at the end to create a new one unless the end has already been specified
 			// The number of table rows should be v.breaks.length if the last break is at the end of the video
@@ -1167,8 +1173,10 @@ public class Edit extends HttpServlet {
 			if (segment==v.breaks.length) buf.append("Select several questions below to be selected at random for the new quizlet:<p>");
 			else buf.append("Select several questions below to be selected at random for the quizlet at " + (v.breaks[segment]<0?"the end of the video:":"t = " + v.breaks[segment] + " seconds:") + "<p>");
 
+			buf.append("You may create/edit questions <a href=Edit?TopicId=" + v.topicId + "&AssignmentType=Video>here</a>.<p>");
+			
 			// Make a List of all of the available video questions
-			List<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Video").list();
+			List<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Video").filter("topicId",v.topicId).list();
 
 			// Now make a list of all the current questions for this quizlet, if any:
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();		
