@@ -351,7 +351,7 @@ public class LTILaunch extends HttpServlet {
 		buf.append("Select the type of assignment to create...<br>");
 		buf.append("<label><input type=radio name=AssignmentType " + ("Quiz".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='Quiz'>Quiz</label><br>"
 				+ "<label><input type=radio name=AssignmentType " + ("Homework".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='Homework'>Homework</label><br>"
-				+ "<label><input type=radio name=AssignmentType " + ("VideoQuiz".equals(assignmentType)?"checked ":" ") + "onClick=showVideos(); value='VideoQuiz'>Video&nbsp;Quiz</label><br>"
+				+ "<label><input type=radio name=AssignmentType " + ("VideoQuiz".equals(assignmentType)?"checked ":" ") + "onClick=showVideos(); value='VideoQuiz'>Video</label><br>"
 				+ "<label><input type=radio name=AssignmentType " + ("PracticeExam".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='PracticeExam'>Practice&nbsp;Exam</label><p>");
 		buf.append("</div>");
 		
