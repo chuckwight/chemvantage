@@ -55,16 +55,16 @@ public class LTIDeepLinks extends HttpServlet {
 			User user = getUserClaims(claims);
 			
 			if ("Select assignment".equals(request.getParameter("UserRequest"))) {  // submitting desired links
-				if (request.getParameter("Refresh").equals("true")) {
+				if (Boolean.parseBoolean(request.getParameter("Refresh"))) {
 					int topicKey = 0;
 					try {topicKey = Integer.parseInt(request.getParameter("TopicKey"));} catch (Exception e) {}
 					out.println(contentPickerForm(user,request,claims,topicKey));
 				} else out.println(deepLinkResponseMsg(request));
 			} else if (request.getParameter("id_token") != null) { // This is a fresh Deep Links request.
-				out.println(contentPickerForm(user,request,claims,0));
+				out.println(contentPickerForm(user,request,claims,1));
 			}
 		} catch (Exception e) {	 
-			response.sendError(401,e.getMessage());
+			response.sendError(401,e.toString() + " " + e.getMessage());
 		}
 	}
 
@@ -183,14 +183,8 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "Select the assignment type (e.g., Quiz) and then select the topics of all the different quizzes to create "
 				+ "(one quiz per topic). Return to this page to create multiple Homework assignments, if needed. For Practice Exam "
 				+ "assignents, each exam covers multiple topics, so you can create only one Practice Exam for each visit to this page.<p>");
-		else buf.append("Use this page to create a ChemVantage assignment in your learning management system (LMS). First select the type "
-				+ "of assignment (e.g., Quiz) and then the topic covered by that assignment. Each Quiz or Homework assignment is limited to "
-				+ "a single topic, but each Practice Exams covers a minimum of three topics.<p>Revisit this page to create additional "
-				+ "assignments for your course.<p>");
+		else buf.append("Select a new assignment:<p>");
 		
-		buf.append("Please note: If you already have a ChemVantage assignment on one or more of these topics, this page will create a separate "
-				+ "(duplicate) assignment that will NOT be linked to the previous assignment. Scores will be sent to a different column in the grade book.<p>");
-
 		// Start building a form to select the assignment attributes:
 		// The form has 4 sections:
 		// 1. A group of radio buttons to specify the AssignmentType (always visible)
@@ -201,22 +195,24 @@ public class LTIDeepLinks extends HttpServlet {
 		// and makes the relevant table of radio buttons (3) or checkboxes (4) visible (and clears and hides the opposite one).
 		// Clicking any TopicKey button reloads the page from the server with a modified set of topics
 
-		buf.append("<form name=AssignmentForm method=POST>");
+		buf.append("<form name=AssignmentForm action=/lti/deeplinks method=POST>");
 		buf.append("<input type=hidden name=id_token value='" + request.getParameter("id_token") + "'>");
 		buf.append("<input type=hidden name=state value='" + request.getParameter("state") + "'>");
 		buf.append("<input type=hidden name=UserRequest value='Select assignment'>");
 		buf.append("<input type=hidden name=Refresh value=false>");
 
 		// Build a table for Parts 1 and 2 (side by side in 1 row)
+		String assignmentType = request.getParameter("AssignmentType");
+		if (assignmentType==null) assignmentType = "";
 		buf.append("<div style='display:table'><div style='display:table-row'><div style='display:table-cell'>");
 		buf.append("Select the type of assignment to create...<br>");
-		buf.append("<label><input type=radio name=AssignmentType onClick=showTopics(" + (acceptsMultiple?"'check'":"'radio'") + "); value='Quiz'>Quiz</label><br>"
-				+ "<label><input type=radio name=AssignmentType onClick=showTopics(" + (acceptsMultiple?"'check'":"'radio'") + "); value='Homework'>Homework</label><br>"
-				+ "<label><input type=radio name=AssignmentType onClick=showTopics('check'); value='PracticeExam'>Practice&nbsp;Exam</label><p>");
+		buf.append("<label><input type=radio name=AssignmentType onClick=showTopics(" + (acceptsMultiple?"'check'":"'radio'") + "); value='Quiz'" + (assignmentType.equals("Quiz")?" CHECKED>":">") + "Quiz</label><br>"
+				+ "<label><input type=radio name=AssignmentType onClick=showTopics(" + (acceptsMultiple?"'check'":"'radio'") + "); value='Homework'" + (assignmentType.equals("Homework")?" CHECKED>":">") + "Homework</label><br>"
+				+ "<label><input type=radio name=AssignmentType onClick=showTopics('check'); value='PracticeExam'" + (assignmentType.equals("Exam")?" CHECKED>":">") + "Practice&nbsp;Exam</label><p>");
 		buf.append("</div>");
 
 		// Put Part 2 in a cell on the right side of the first row
-		buf.append("<div id=topicKeySelect style='display:table-cell;visibility:hidden'>");
+		buf.append("<div id=topicKeySelect style='display:table-cell;visibility:" + (assignmentType.equals("")?"hidden":"visible") + "'>");
 		buf.append("and a group of topics to choose from:<br>");
 		buf.append("<label><input type=radio name=TopicKey value=0 " + (topicKey==0?"checked ":"") + "onClick=this.form.Refresh.value=true;this.form.submit();>Show all topics</label><br>"
 				+ "<label><input type=radio name=TopicKey value=1 "+ (topicKey==1?"checked ":"") + "onClick=this.form.Refresh.value=true;this.form.submit();>Show topics for the OpenStax Chemistry 2e</label><br>");
@@ -271,6 +267,9 @@ public class LTIDeepLinks extends HttpServlet {
 		// In general, the topicGroup value includes a topicKey iff topicGroup % 2*topicKey / topicKey == 1 where % and / are the integer modulus and div operators
 		// A topic having topicGroup = 0 means that the topic does not align with any particular text, but can be viewed if topicKey = 0 (meaning view all topics).
 
+		String selectorType = (assignmentType.isEmpty()?"":"radio");
+		if (acceptsMultiple || "PracticeExam".equals(assignmentType)) selectorType = "checkbox";
+		
 		// Retrieve the entire list of topics from the datastore
 		List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
 		// Split the topics List into two separate lists corresponding to first-semester and second-semester topics (traditional)
@@ -283,7 +282,7 @@ public class LTIDeepLinks extends HttpServlet {
 		}
 
 		// Create a table with radio buttons for a single Quiz or Homework assignment
-		buf.append("<div id=radioSelect style='display:none'>");  // big box containing radio buttons
+		buf.append("<div id=radioSelect style='display:" + ("radio".equals(selectorType)?"block":"none") + "'>");  // big box containing radio buttons
 		buf.append("<font color=red>Please select one topic for this assignment:</font><br>");
 		buf.append("<div style='display:table'>"); // start table of radio buttons
 		buf.append("<div style='display:table-row'><div style='display:table-cell'>");   // left column Chem1 topics		
@@ -295,7 +294,7 @@ public class LTIDeepLinks extends HttpServlet {
 		buf.append("</div>"); // end of big box with radio buttons
 
 		// Create a table with check boxes for a Practice Exam or multiple Quiz/Homework assignments
-		buf.append("<div id=checkSelect style='display:none'>"); // big box containing check boxes
+		buf.append("<div id=checkSelect style='display:" + ("checkbox".equals(selectorType)?"block":"none") + "'>"); // big box containing check boxes
 		buf.append("<font color=red>Please select the desired topics:</font><br>");
 		buf.append("<div style='display:table'>"); // start table of check boxes
 		buf.append("<div style='display:table-row'><div style='display:table-cell'>");   // left column Chem1 topics		
@@ -330,21 +329,21 @@ public class LTIDeepLinks extends HttpServlet {
 	}
 
 	String deepLinkResponseMsg(HttpServletRequest request) throws Exception {
-		StringBuffer buf = new StringBuffer("<html><head></head><body onLoad=document.forms['selections'].submit()>");
-		
-		JsonObject claims = null;
-		DecodedJWT id_token = JWT.decode(request.getParameter("id_token"));
-		String json = new String(Base64.getUrlDecoder().decode(id_token.getPayload()));
-		claims = JsonParser.parseString(json).getAsJsonObject();
-		
-		String platform_id = claims.get("iss").getAsString();
-		String deployment_id = claims.get("https://purl.imsglobal.org/spec/lti/claim/deployment_id").getAsString();
-		JsonObject settings = claims.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings").getAsJsonObject();		
-		String deep_link_return_url = settings.get("deep_link_return_url").getAsString();
-		String data = settings.get("data").getAsString();
-		boolean acceptsMultiple = settings.get("accept_multiple").getAsBoolean();
-		
+		StringBuffer buf = new StringBuffer();
+		String deep_link_return_url = null;
 		try {
+			JsonObject claims = null;
+			DecodedJWT id_token = JWT.decode(request.getParameter("id_token"));
+			String json = new String(Base64.getUrlDecoder().decode(id_token.getPayload()));
+			claims = JsonParser.parseString(json).getAsJsonObject();
+			
+			String platform_id = claims.get("iss").getAsString();
+			String deployment_id = claims.get("https://purl.imsglobal.org/spec/lti/claim/deployment_id").getAsString();
+			JsonObject settings = claims.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings").getAsJsonObject();		
+			deep_link_return_url = settings.get("deep_link_return_url").getAsString();
+			String data = settings.get("data")==null?"":settings.get("data").getAsString();
+			boolean acceptsMultiple = settings.get("accept_multiple")==null?false:settings.get("accept_multiple").getAsBoolean();
+			
 			Date now = new Date();
 			Date exp = new Date(now.getTime() + 5400000L); // 90 minutes from now
 			Deployment d = Deployment.getInstance(platform_id + "/" + deployment_id);
@@ -412,7 +411,7 @@ public class LTIDeepLinks extends HttpServlet {
 			header.addProperty("alg", "RS256");
 			header.addProperty("kid", d.rsa_key_id);
 			byte[] hdr = enc.encode(header.toString().getBytes("UTF-8"));
-		
+			
 			// Create a JSON payload for the JWT to send as DeepLinkingResponse:
 			JsonObject payload = new JsonObject();
 			payload.addProperty("iss",client_id);
@@ -424,7 +423,7 @@ public class LTIDeepLinks extends HttpServlet {
 			payload.addProperty("https://purl.imsglobal.org/spec/lti/claim/message_type", "LtiDeepLinkingResponse");
 			payload.addProperty("https://purl.imsglobal.org/spec/lti/claim/version", "1.3.0");
 			payload.addProperty("https://purl.imsglobal.org/spec/lti/claim/deployment_id", deployment_id);
-			payload.addProperty("https://purl.imsglobal.org/spec/lti-dl/claim/data", data);
+			if (!data.isEmpty()) payload.addProperty("https://purl.imsglobal.org/spec/lti-dl/claim/data", data);
 		
 			//Add the user-selected assignments to the payload as an array of content_items:
 			JsonArray content_items = new JsonArray();
@@ -452,7 +451,7 @@ public class LTIDeepLinks extends HttpServlet {
 				content_items.add(item);
 			}
 			payload.add("https://purl.imsglobal.org/spec/lti-dl/claim/content_items", content_items);
-		
+			
 			byte[] pld = enc.encode(payload.toString().getBytes("UTF-8"));
 			
 			// Join the header and payload together with a period separator:
@@ -466,19 +465,14 @@ public class LTIDeepLinks extends HttpServlet {
 			jwt = String.format("%s.%s", jwt, sig);
 					
 			// Create a form to be auto-submitted to the platform by the user_agent browser
-			buf.append("<form name=selections method=POST action='" + deep_link_return_url + "'>"
+			buf.append("<form id=selections method=POST action='" + deep_link_return_url + "'>"
 					+ "<input type=hidden name=JWT value='" + jwt + "'>"
-					+ "<input type=submit>"
-					+ "</form></body></html>");
-		
+					+ "Assignment selection OK. Please click the Submit button &rarr; <input type=submit>"
+					+ "</form>");
+			buf.append("<script>document.getElementById('selections').submit();</script>");
+			
 		} catch (Exception e) {
-			buf.append("<html><head><meta http-equiv='Refresh' content='5; url=" + deep_link_return_url + "' />"
-					+ "</head><body>"
-					+ "Sorry, an unexpected error occurred: " + e.toString() + "<p>"
-					+ "Please try again later. If this page does not close automatically "
-					+ "in 5 seconds, please follow this link to return to your LMS:<br>"
-					+ "<a href=" + deep_link_return_url + ">" + deep_link_return_url + "</a>" + Home.footer
-					+ "</body></html>");
+			buf.append(e.toString() + " " + e.getMessage());
 		}
 		return buf.toString();
 	}
