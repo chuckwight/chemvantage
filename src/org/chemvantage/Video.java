@@ -30,7 +30,8 @@ import com.googlecode.objectify.condition.IfNotNull;
 public class Video implements Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id 	Long id;
-    public	String serialNumber;
+    long	topicId;
+	public	String serialNumber;
     public	String title;
     @Index	String orderBy;
     @Index(IfNotNull.class) public	int[]  breaks;  // break points for quizzes in seconds,including at the end (-1) if applicable
