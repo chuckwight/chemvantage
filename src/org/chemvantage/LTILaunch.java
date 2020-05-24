@@ -430,7 +430,7 @@ public class LTILaunch extends HttpServlet {
 		}
 		
 		// Make a separate list of videos with embedded quizzes to display in a dropdown selector
-		List<Video> videos = ofy().load().type(Video.class).list();
+		List<Video> videos = ofy().load().type(Video.class).order("orderBy").list();
 
 		String selectorType = "";
 		if ("Quiz".equals(assignmentType) || "Homework".equals(assignmentType)) selectorType = "radio";
