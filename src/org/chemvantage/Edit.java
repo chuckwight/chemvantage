@@ -523,7 +523,7 @@ public class Edit extends HttpServlet {
 	String updateQuizlet(HttpServletRequest request) { 		
 		StringBuffer buf = new StringBuffer();
 		Video v = null; 
-		int segment = 0;
+		int segment = -1;
 		
 		try {
 			v= ofy().load().type(Video.class).id(Long.parseLong(request.getParameter("VideoId"))).safe();
@@ -541,43 +541,42 @@ public class Edit extends HttpServlet {
 				time = Integer.parseInt(request.getParameter("Seconds")); // position of the new breakpoint for this segment
 			} catch (Exception e) {}
 
-			buf.append("Creating/updating quizlet " + segment + " at t=" + time + " seconds.");
+			if (segment>=0) {
+				// Determine the number of breaks: 1) first break (1), revised break (v.breaks.length), or new break (v.breaks.length+1)
+				String[] questionIds = request.getParameterValues("QuestionId");			
+				if (questionIds==null) questionIds = new String[0];
 
-			// Determine the number of breaks: 1) first break (1), revised break (v.breaks.length), or new break (v.breaks.length+1)
-			String[] questionIds = request.getParameterValues("QuestionId");			
-			if (questionIds==null) questionIds = new String[0];
+				int nBreaks = (v.breaks==null?1:(segment<v.breaks.length?v.breaks.length:v.breaks.length+1));
+				int[] breaks = new int[nBreaks];
+				int[] nQuestions = new int[nBreaks];
 
-			int nBreaks = (v.breaks==null?1:(segment<v.breaks.length?v.breaks.length:v.breaks.length+1));
-			int[] breaks = new int[nBreaks];
-			int[] nQuestions = new int[nBreaks];
-
-			// Copy the breakpoints from the current video, insert or append the new breakpoint, and copy back to the video:
-			for (int i=0;i<breaks.length;i++) {
-				breaks[i] = (i==segment?time:v.breaks[i]);
-				nQuestions[i] = (i==segment?questionIds.length:v.nQuestions[i]);
-			}
-
-			buf.append("Created/updated the breakpoint.<br>");
-
-			// Create a new List of questionKeys for the video
-			ArrayList<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
-			int counter = 0;
-			for (int i = 0;i<nBreaks;i++) {
-				if (i==segment) {
-					for (String id : questionIds) questionKeys.add(Key.create(Question.class,Long.parseLong(id)));
-					counter += (v.nQuestions==null || i==v.nQuestions.length)?0:v.nQuestions[i];  // skip this many keys that are being replaced
-				} else {
-					for (int j=counter;j<counter+v.nQuestions[i];j++) questionKeys.add(v.questionKeys.get(j));
-					counter += v.nQuestions[i];
+				// Copy the breakpoints from the current video, insert or append the new breakpoint, and copy back to the video:
+				for (int i=0;i<breaks.length;i++) {
+					breaks[i] = (i==segment?time:v.breaks[i]);
+					nQuestions[i] = (i==segment?questionIds.length:v.nQuestions[i]);
 				}
+
+				buf.append("Created/updated the breakpoint.<br>");
+
+				// Create a new List of questionKeys for the video
+				ArrayList<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
+				int counter = 0;
+				for (int i = 0;i<nBreaks;i++) {
+					if (i==segment) {
+						for (String id : questionIds) questionKeys.add(Key.create(Question.class,Long.parseLong(id)));
+						counter += (v.nQuestions==null || i==v.nQuestions.length)?0:v.nQuestions[i];  // skip this many keys that are being replaced
+					} else {
+						for (int j=counter;j<counter+v.nQuestions[i];j++) questionKeys.add(v.questionKeys.get(j));
+						counter += v.nQuestions[i];
+					}
+				}
+				buf.append("Created/updated the List of question keys.<br>");
+
+				// Update the video parameters to the new values:
+				v.breaks = breaks;
+				v.nQuestions = nQuestions;
+				v.questionKeys = questionKeys;
 			}
-			buf.append("Created/updated the List of question keys.<br>");
-
-			// Update the video parameters to the new values:
-			v.breaks = breaks;
-			v.nQuestions = nQuestions;
-			v.questionKeys = questionKeys;
-
 			ofy().save().entity(v).now();
 		} catch (Exception e) {
 			return buf.toString() + e.getMessage();
@@ -1147,58 +1146,62 @@ public class Edit extends HttpServlet {
 			buf.append("<input type=hidden name=VideoId value=" + v.id + ">");
 			buf.append("<input type=hidden name=Segment value=" + segment + ">");
 
-			buf.append("Topic: " + topicSelectBox(v.topicId) + "<p>");				
+			buf.append("Topic: " + topicSelectBox(v.topicId,true) + "<p>");				
 
-			// Print a table of existing segments/breakpoints, and add one row at the end to create a new one unless the end has already been specified
-			// The number of table rows should be v.breaks.length if the last break is at the end of the video
-			// Otherwise, it should be v.breaks.length +1 to allow for creating a new segment (default)
-			int nRows = v.breaks.length;
-			boolean addNew = (segment==v.breaks.length && (segment==0 || v.breaks[v.breaks.length-1]>0));
-			if (addNew) nRows++;
+			if (v.topicId == 0L) {
+				buf.append("<input type=hidden name=UserRequest value='Update Quizlet'>");
+			} else {
+				// Print a table of existing segments/breakpoints, and add one row at the end to create a new one unless the end has already been specified
+				// The number of table rows should be v.breaks.length if the last break is at the end of the video
+				// Otherwise, it should be v.breaks.length +1 to allow for creating a new segment (default)
+				int nRows = v.breaks.length;
+				boolean addNew = (segment==v.breaks.length && (segment==0 || v.breaks[v.breaks.length-1]>0));
+				if (addNew) nRows++;
 
-			buf.append("<table><tr><th>Select</th><th>Segment</th><th>Start</th><th>End</th><th>#Questions</th><th>Action</th></tr>");
+				buf.append("<table><tr><th>Select</th><th>Segment</th><th>Start</th><th>End</th><th>#Questions</th><th>Action</th></tr>");
 
-			for (int i=0;i<nRows;i++) {
-				buf.append("<tr style='text-align:center'>"
-						+ "<td>" + (i==segment?"edit&rarr;":"<a href=/Edit?UserRequest=EditVideo&VideoId=" + v.id + "&Segment=" + i + ">select</a>") + "</td>"
-						+ "<td>" + (i==v.breaks.length && i==segment?"new":i) + "</td>"
-						+ "<td>" + (i==0?0:v.breaks[i-1]) + "</td>"
-						+ "<td>" + (i==segment?("<input type=text name=Seconds size=5 value=" + (segment==v.breaks.length?"":(v.breaks[i]<0?"end":v.breaks[i])) + ">"):(v.breaks[i]<0?"end":v.breaks[i])) + "</td>"
-						+ "<td>" + (v.nQuestions.length>i?v.nQuestions[i]:0) + "</td>"
-						+ "<td>" + (i==segment?"<input type=submit name=UserRequest value=" + (addNew?"'Create Quizlet'> ":"'Update Quizlet'> ") + (i==v.breaks.length-1?"<input type=submit name=UserRequest value='Delete Quizlet'> ":"") + "<a href=/Edit?UserRequest=ManageVideos>Done</a>":"") + "</td>"
-						+ "</tr>");
+				for (int i=0;i<nRows;i++) {
+					buf.append("<tr style='text-align:center'>"
+							+ "<td>" + (i==segment?"edit&rarr;":"<a href=/Edit?UserRequest=EditVideo&VideoId=" + v.id + "&Segment=" + i + ">select</a>") + "</td>"
+							+ "<td>" + (i==v.breaks.length && i==segment?"new":i) + "</td>"
+							+ "<td>" + (i==0?0:v.breaks[i-1]) + "</td>"
+							+ "<td>" + (i==segment?("<input type=text name=Seconds size=5 value=" + (segment==v.breaks.length?"":(v.breaks[i]<0?"end":v.breaks[i])) + ">"):(v.breaks[i]<0?"end":v.breaks[i])) + "</td>"
+							+ "<td>" + (v.nQuestions.length>i?v.nQuestions[i]:0) + "</td>"
+							+ "<td>" + (i==segment?"<input type=submit name=UserRequest value=" + (addNew?"'Create Quizlet'> ":"'Update Quizlet'> ") + (i==v.breaks.length-1?"<input type=submit name=UserRequest value='Delete Quizlet'> ":"") + "<a href=/Edit?UserRequest=ManageVideos>Done</a>":"") + "</td>"
+							+ "</tr>");
+				}
+				buf.append("</table><p>");
+
+				if (segment==v.breaks.length) buf.append("Select several questions below to be selected at random for the new quizlet:<p>");
+				else buf.append("Select several questions below to be selected at random for the quizlet at " + (v.breaks[segment]<0?"the end of the video:":"t = " + v.breaks[segment] + " seconds:") + "<p>");
+
+				buf.append("You may create/edit questions <a href=Edit?TopicId=" + v.topicId + "&AssignmentType=Video>here</a>.<p>");
+
+				// Make a List of all of the available video questions
+				List<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Video").filter("topicId",v.topicId).list();
+
+				// Now make a list of all the current questions for this quizlet, if any:
+				List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();		
+				int nPriorQuestions = 0;
+				if (v.nQuestions.length>segment) {
+					for (int j=0;j<segment;j++) nPriorQuestions += v.nQuestions[j];  // add up the number of questions in preceding quizlets
+					for (int j=nPriorQuestions;j<nPriorQuestions+v.nQuestions[segment];j++) questionKeys.add(v.questionKeys.get(j));
+				}
+
+				// Make a table of available questions, marking the current questions as already selected
+				buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
+				int k=0;
+				for (Question q : questions) {
+					k++;
+					q.setParameters();
+					buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
+							+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE=" + q.id + (questionKeys.contains(Key.create(Question.class,q.id))?" CHECKED>":">"));
+					buf.append("<b>&nbsp;" + k + ".</b></TD>");
+					buf.append("\n<TD>" + q.printAll() + "</TD>");
+					buf.append("</TR>");
+				}
+				buf.append("</TABLE>");
 			}
-			buf.append("</table><p>");
-
-			if (segment==v.breaks.length) buf.append("Select several questions below to be selected at random for the new quizlet:<p>");
-			else buf.append("Select several questions below to be selected at random for the quizlet at " + (v.breaks[segment]<0?"the end of the video:":"t = " + v.breaks[segment] + " seconds:") + "<p>");
-
-			buf.append("You may create/edit questions <a href=Edit?TopicId=" + v.topicId + "&AssignmentType=Video>here</a>.<p>");
-			
-			// Make a List of all of the available video questions
-			List<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Video").filter("topicId",v.topicId).list();
-
-			// Now make a list of all the current questions for this quizlet, if any:
-			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();		
-			int nPriorQuestions = 0;
-			if (v.nQuestions.length>segment) {
-				for (int j=0;j<segment;j++) nPriorQuestions += v.nQuestions[j];  // add up the number of questions in preceding quizlets
-				for (int j=nPriorQuestions;j<nPriorQuestions+v.nQuestions[segment];j++) questionKeys.add(v.questionKeys.get(j));
-			}
-
-			// Make a table of available questions, marking the current questions as already selected
-			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
-			int k=0;
-			for (Question q : questions) {
-				k++;
-				q.setParameters();
-				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
-						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE=" + q.id + (questionKeys.contains(Key.create(Question.class,q.id))?" CHECKED>":">"));
-				buf.append("<b>&nbsp;" + k + ".</b></TD>");
-				buf.append("\n<TD>" + q.printAll() + "</TD>");
-				buf.append("</TR>");
-			}
-			buf.append("</TABLE>");
 			buf.append("</form>");
 		} catch (Exception e) {
 			return buf.toString() + e.getMessage();

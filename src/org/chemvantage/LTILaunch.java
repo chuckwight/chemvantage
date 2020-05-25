@@ -351,7 +351,7 @@ public class LTILaunch extends HttpServlet {
 		buf.append("Select the type of assignment to create...<br>");
 		buf.append("<label><input type=radio name=AssignmentType " + ("Quiz".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='Quiz'>Quiz</label><br>"
 				+ "<label><input type=radio name=AssignmentType " + ("Homework".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='Homework'>Homework</label><br>"
-				+ "<label><input type=radio name=AssignmentType " + ("VideoQuiz".equals(assignmentType)?"checked ":" ") + "onClick=showVideos(); value='VideoQuiz'>Video&nbsp;Quiz</label><br>"
+				+ "<label><input type=radio name=AssignmentType " + ("VideoQuiz".equals(assignmentType)?"checked ":" ") + "onClick=showVideos(); value='VideoQuiz'>Video</label><br>"
 				+ "<label><input type=radio name=AssignmentType " + ("PracticeExam".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='PracticeExam'>Practice&nbsp;Exam</label><p>");
 		buf.append("</div>");
 		
@@ -385,12 +385,12 @@ public class LTILaunch extends HttpServlet {
 				+ "  if (type == 'radio') {"
 				+ "    document.getElementById('radioSelect').style.display='block';"
 				+ "    document.getElementById('checkSelect').style.display='none';"
-				+ "    document.getElementById('dropdownSelect').style.display='none';"
+				+ "    document.getElementById('videoSelect').style.display='none';"
 				+ "    clearChecks();"
 				+ "  } else if (type = 'check') {"
 				+ "    document.getElementById('radioSelect').style.display='none';"
 				+ "    document.getElementById('checkSelect').style.display='block';"
-				+ "    document.getElementById('dropdownSelect').style.display='none';"
+				+ "    document.getElementById('videoSelect').style.display='none';"
 				+ "    clearRadios();"
 				+ "  }"
 				+ "}"
@@ -398,7 +398,7 @@ public class LTILaunch extends HttpServlet {
 				+ "  document.getElementById('topicKeySelect').style.visibility='hidden';"
 				+ "  document.getElementById('radioSelect').style.display='none';"
 				+ "  document.getElementById('checkSelect').style.display='none';"
-				+ "  document.getElementById('dropdownSelect').style.display='block';"
+				+ "  document.getElementById('videoSelect').style.display='block';"
 				+ "  clearChecks();"
 				+ "  clearRadios();"
 				+ "}"
@@ -422,38 +422,50 @@ public class LTILaunch extends HttpServlet {
 		List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
 		// Split the topics List into two separate lists corresponding to first-semester and second-semester topics (traditional)
 		// The orderBy attribute starts with a 1 or 2, except pre-semester assessments and hidden topics
-		List<Topic> sem1 = new ArrayList<Topic>();
-		List<Topic> sem2 = new ArrayList<Topic>();
+		List<Topic> sem1Topics = new ArrayList<Topic>();
+		List<Topic> sem2Topics = new ArrayList<Topic>();
 		for (Topic t : topics) {
-			if (t.orderBy.startsWith("1") && (topicKey==0 || t.topicGroup%(2*topicKey)/topicKey==1)) sem1.add(t);
-			else if (t.orderBy.startsWith("2") && (topicKey==0 || t.topicGroup%(2*topicKey)/topicKey==1)) sem2.add(t);
+			if (t.orderBy.startsWith("1") && (topicKey==0 || t.topicGroup%(2*topicKey)/topicKey==1)) sem1Topics.add(t);
+			else if (t.orderBy.startsWith("2") && (topicKey==0 || t.topicGroup%(2*topicKey)/topicKey==1)) sem2Topics.add(t);
 		}
 		
-		// Make a separate list of videos with embedded quizzes to display in a dropdown selector
+		// Make a separate list of videos with embedded quizzes to display in a radio-type video selector
 		List<Video> videos = ofy().load().type(Video.class).order("orderBy").list();
+		// Split the topics List into two separate lists corresponding to first-semester and second-semester topics (traditional)
+		// The orderBy attribute starts with a 1 or 2, except pre-semester assessments and hidden topics
+		List<Video> sem1Videos = new ArrayList<Video>();
+		List<Video> sem2Videos = new ArrayList<Video>();
+		for (Video v : videos) {
+			if (v.orderBy.startsWith("1")) sem1Videos.add(v);
+			else if (v.orderBy.startsWith("2") ) sem2Videos.add(v);
+		}
 
 		String selectorType = "";
 		if ("Quiz".equals(assignmentType) || "Homework".equals(assignmentType)) selectorType = "radio";
-		else if ("VideoQuiz".equals(assignmentType)) selectorType = "dropdown";
+		else if ("VideoQuiz".equals(assignmentType)) selectorType = "video";
 		else if ("PracticeExam".equals(assignmentType)) selectorType = "check";
 		
-		// Create a dropdown selector for video quiz assignments
-		buf.append("<div id=dropdownSelect style='display:" + (selectorType.equals("dropdown")?"block":"none") + "'>");
-		buf.append("<font color=red>Please select a video for this assignment:</font> ");
-		buf.append("<select name=VideoId onchange=this.form.vidsub.disabled=false;>");
-		for (Video v : videos) buf.append("<option value=" + v.id + ">" + v.title + (v.breaks==null?"":" *") + "</option>");
-		buf.append("</select> ");
-		buf.append("<input type=submit name=vidsub disabled=true value='Select this video'>");
-		buf.append("<br>Video titles marked with an asterisk (*) have embedded quizzes.<p></div>"); // end of video dropdown selector
+		// Create a radio-type selector for video quiz assignments
+		buf.append("<div id=videoSelect style='display:" + (selectorType.equals("video")?"block":"none") + "'>");
+		buf.append("<font color=red>Please assign one video to watch:</font><br>");
+		buf.append("<div style='display:table'>"); // start table of radio buttons
+		buf.append("<div style='display:table-row'><div style='display:table-cell'>");   // left column Chem1 topics		
+		for (Video v : sem1Videos) buf.append("<label><input type=radio name=VideoId value=" + v.id + " onClick=this.form.vidsub.disabled=false;>" + v.title + (v.breaks==null?"":" *") + "</label><br>");
+		buf.append("</div><div style='display:table-cell'>");  // right column Chem2 topics
+		for (Video v : sem2Videos) buf.append("<label><input type=radio name=VideoId value=" + v.id + " onClick=this.form.vidsub.disabled=false;>" + v.title + (v.breaks==null?"":" *") + "</label><br>");
+		buf.append("</div></div></div><br>");  // end of cell, row, table
+		buf.append("Video marked with an asterisk (*) have embedded quizzes; others will give full credit for watching to the end.<br>");
+		buf.append("<input type=submit name=vidsub disabled=true value='Select this video'>"); // submit button for radios
+		buf.append("</div>"); // end of big box with radio buttons for video selection
 
 		// Create a table with radio buttons for Quiz or Homework assignments
 		buf.append("<div id=radioSelect style='display:" + (selectorType.equals("radio")?"block":"none") + "'>");  // big box containing radio buttons
 		buf.append("<font color=red>Please select one topic for this assignment:</font><br>");
 		buf.append("<div style='display:table'>"); // start table of radio buttons
 		buf.append("<div style='display:table-row'><div style='display:table-cell'>");   // left column Chem1 topics		
-		for (Topic t : sem1) buf.append("<label><input type=radio name=TopicId value=" + t.id + " onClick=this.form.radsub.disabled=false;>" + t.title + "</label><br>");
+		for (Topic t : sem1Topics) buf.append("<label><input type=radio name=TopicId value=" + t.id + " onClick=this.form.radsub.disabled=false;>" + t.title + "</label><br>");
 		buf.append("</div><div style='display:table-cell'>");  // right column Chem2 topics
-		for (Topic t : sem2) buf.append("<label><input type=radio name=TopicId value=" + t.id + " onClick=this.form.radsub.disabled=false;>" + t.title + "</label><br>");
+		for (Topic t : sem2Topics) buf.append("<label><input type=radio name=TopicId value=" + t.id + " onClick=this.form.radsub.disabled=false;>" + t.title + "</label><br>");
 		buf.append("</div></div></div>");  // end of cell, row, table
 		buf.append("<input type=submit name=radsub disabled=true value='Select this topic'>"); // submit button for radios
 		buf.append("</div>"); // end of big box with radio buttons
@@ -463,9 +475,9 @@ public class LTILaunch extends HttpServlet {
 		buf.append("<font color=red>Please select 3 or more topics for this exam:</font><br>");
 		buf.append("<div style='display:table'>"); // start table of check boxes
 		buf.append("<div style='display:table-row'><div style='display:table-cell'>");   // left column Chem1 topics		
-		for (Topic t : sem1) buf.append("<label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks();>" + t.title + "</label><br>");
+		for (Topic t : sem1Topics) buf.append("<label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks();>" + t.title + "</label><br>");
 		buf.append("</div><div style='display:table-cell'>");  // right column Chem2 topics
-		for (Topic t : sem2) buf.append("<label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks();>" + t.title + "</label><br>");
+		for (Topic t : sem2Topics) buf.append("<label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks();>" + t.title + "</label><br>");
 		buf.append("</div></div></div>");  // end of cell, row, table
 		buf.append("<input type=submit id=checksub disabled=true value='Select at least 3 topics for this assignment'><br>");
 		buf.append("</div>"); // end of big box with check boxes
