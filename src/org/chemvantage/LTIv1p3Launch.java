@@ -235,7 +235,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			} 
 			
 			// 4) Look for an Assignment with a resourceLinkId value listed in the ResourceLink.id.history list for this launch
-			// Note: not yet implemented as of January 2020
+			// Note: not yet implemented as of June 2020
 
 			// 5) If none of that worked, then the assignment probably doesn't exist, so make a new one:
 			if (myAssignment == null) {
