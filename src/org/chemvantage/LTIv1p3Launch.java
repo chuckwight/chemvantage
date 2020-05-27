@@ -42,6 +42,7 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.URL;
 import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
@@ -207,26 +208,36 @@ public class LTIv1p3Launch extends HttpServlet {
 			myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();
 			debug.append((myAssignment==null?"not ":"") + "found in the datastore...");
 
-			// 2) If the lineitem was created by DeepLinking, try link any assignments to linetiems where the resourceId matches an assignmentId
+			// 2) See if the assignmerntId is included in the launch URL. This is the Canvas way...
+			try {
+				long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+				myAssignment = ofy().load().type(Assignment.class).id(assignmentId).now();
+			    debug.append("found assignmentId in the launch URL");
+			} catch(Exception e) {}
+			
+			// 3) If the lineitem URL is available, try to get the assignmentId from the resourceId parameter (set in Deep Linking)
 			if (myAssignment == null && lti_ags_lineitem_url != null) {
+				debug.append("looking for lineitem...");
 				JsonObject lineitem = LTIMessage.getLineItem(d, lti_ags_lineitem_url);
 				if (lineitem != null) {
+					debug.append("found lineitem: " + lineitem.toString() + "...");
 					try {  // the Deep Linking process creates lineitems and stores the assignmentId value as a Sting in the resourceId field
 						JsonElement resourceId = lineitem.get("resourceId");
 						if (resourceId==null) resourceId = lineitem.get("resourceid");  // particular to lti-ri platform; UGH!
 						long assignmentId = Long.parseLong(resourceId.getAsString());
-						myAssignment = ofy().load().type(Assignment.class).id(assignmentId).now();						
+							myAssignment = ofy().load().type(Assignment.class).id(assignmentId).now();						
+							debug.append("matched assignmentId by resourceId: " + resourceId);
 					} catch (Exception e) {
 						throw new Exception(lineitem.toString());
-					}
+					}					
 				}
 				debug.append((myAssignment==null?"not ":"") + "found by deep linking...");
-			}
-
-			// 3) Look for an Assignment with a resourceLinkId value listed in the ResourceLink.id.history list for this launch
+			} 
+			
+			// 4) Look for an Assignment with a resourceLinkId value listed in the ResourceLink.id.history list for this launch
 			// Note: not yet implemented as of January 2020
 
-			// 4) If none of that worked, then the assignment probably doesn't exist, so make a new one:
+			// 5) If none of that worked, then the assignment probably doesn't exist, so make a new one:
 			if (myAssignment == null) {
 				myAssignment = new Assignment(d.platform_deployment_id,resourceLinkId,lti_nrps_context_memberships_url);
 				debug.append("Created new assignment with id=" + myAssignment.id + "...");
@@ -264,12 +275,12 @@ public class LTIv1p3Launch extends HttpServlet {
 				return;
 			}
 		} catch (Exception e) {
-			/*
+			
 			PrintWriter out = response.getWriter();
 			response.setContentType("text/html");
-			out.println(Home.header + debug.toString() + Home.footer);
-			*/
-			throw new Exception(e.getMessage());
+			out.println(Home.header() + debug.toString() + Home.footer);
+			
+			//throw new Exception(e.getMessage());
 		}
 	}
 	

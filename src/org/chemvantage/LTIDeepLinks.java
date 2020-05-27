@@ -167,10 +167,12 @@ public class LTIDeepLinks extends HttpServlet {
 	String contentPickerForm(User user, HttpServletRequest request,JsonObject claims,int topicKey) throws Exception {
 		StringBuffer buf = new StringBuffer(Home.header("Select ChemVantage Assignment"));
 		
+		// Debug:
+		//buf.append("Claims:<br>" + claims.toString() + "<p>");
 		JsonObject settings = claims.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings").getAsJsonObject();
 		boolean acceptsLtiResourceLink = settings.get("accept_types").getAsJsonArray().contains(new JsonPrimitive("ltiResourceLink"));
 		if (!acceptsLtiResourceLink) throw new Exception("Deep Link request failed because platform does not accept new LtiResourceLinks.");
-		boolean acceptsMultiple = settings.get("accept_multiple").getAsBoolean();
+		boolean acceptsMultiple = false;  //settings.get("accept_multiple").getAsBoolean();
 		
 		// Print a nice banner
 		buf.append("<img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo' align=left>"
@@ -342,7 +344,7 @@ public class LTIDeepLinks extends HttpServlet {
 			JsonObject settings = claims.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings").getAsJsonObject();		
 			deep_link_return_url = settings.get("deep_link_return_url").getAsString();
 			String data = settings.get("data")==null?"":settings.get("data").getAsString();
-			boolean acceptsMultiple = settings.get("accept_multiple")==null?false:settings.get("accept_multiple").getAsBoolean();
+			boolean acceptsMultiple = false;  //settings.get("accept_multiple")==null?false:settings.get("accept_multiple").getAsBoolean();
 			
 			Date now = new Date();
 			Date exp = new Date(now.getTime() + 5400000L); // 90 minutes from now
@@ -372,32 +374,35 @@ public class LTIDeepLinks extends HttpServlet {
 				}
 			}
 			
-			List<Assignment> assignments = new ArrayList<Assignment>(); // List of assignments to be created in this deep linking response
+			//List<Assignment> assignments = new ArrayList<Assignment>(); // List of assignments to be created in this deep linking response
+			Assignment a = null;
 			
 			if ("PracticeExam".equals(assignmentType)) { // Create the new Assignment entity and load the questionKeys				
-				Assignment assignment = new Assignment(assignmentType,topicId,topicIds,d.platform_deployment_id);
-				assignment.questionKeys = new ArrayList<Key<Question>>();
-				for (int i=0;i<assignment.topicIds.size();i++) {
-					assignment.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",assignment.topicIds.get(i)).keys().list());
+				a = new Assignment(assignmentType,topicId,topicIds,d.platform_deployment_id);
+				a.questionKeys = new ArrayList<Key<Question>>();
+				for (int i=0;i<a.topicIds.size();i++) {
+					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",a.topicIds.get(i)).keys().list());
 				}
-				assignments.add(assignment);
+				//assignments.add(assignment);
 			} else {  // create Quiz or Homework assignment(s)
 				if (acceptsMultiple) {
 					for (int i=0;i<topicIds.size();i++) {
 						Assignment assignment = new Assignment(assignmentType,topicIds.get(i),null,d.platform_deployment_id);
 						assignment.questionKeys = ofy().load().type(Question.class).filter("assignmentType",assignment.assignmentType).filter("topicId",topicIds.get(i)).keys().list();
-						assignments.add(assignment);	
+						//assignments.add(assignment);	
 					}
 				} else {
-					Assignment assignment = new Assignment(assignmentType,topicId,topicIds,d.platform_deployment_id);
-					assignment.questionKeys = ofy().load().type(Question.class).filter("assignmentType",assignment.assignmentType).filter("topicId",assignment.topicId).keys().list();
-					assignments.add(assignment);
+					a = new Assignment(assignmentType,topicId,topicIds,d.platform_deployment_id);
+					a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
+					//assignments.add(assignment);
 				}
 			}
 			
 			// Now save the assignments to the datastore:
-			ofy().save().entities(assignments).now();  // need the new assignmentId values right away
-				
+			//for (Assignment a : assignments) ofy().save().entity(a).now();
+			//ofy().save().entities(assignments).now();  // need the new assignmentId values right away
+			ofy().save().entity(a).now();
+			
 			String serverUrl = "https://" + request.getServerName();
 			String client_id = d.client_id;
 			String subject = request.getParameter("Subject");
@@ -427,10 +432,10 @@ public class LTIDeepLinks extends HttpServlet {
 		
 			//Add the user-selected assignments to the payload as an array of content_items:
 			JsonArray content_items = new JsonArray();
-			for (Assignment a : assignments) {
+			//for (Assignment a : assignments) {
 				JsonObject item = new JsonObject();
 				item.addProperty("type", "ltiResourceLink");
-				item.addProperty("url", serverUrl + "/lti/launch");
+				item.addProperty("url", serverUrl + "/lti/launch?AssignmentId=" + a.id);
 				
 				String title = "";
 				if (a.assignmentType.equals("Quiz") || a.assignmentType.equals("Homework")) {
@@ -449,7 +454,7 @@ public class LTIDeepLinks extends HttpServlet {
 				item.add("lineItem", lineitem);
 			
 				content_items.add(item);
-			}
+			//}
 			payload.add("https://purl.imsglobal.org/spec/lti-dl/claim/content_items", content_items);
 			
 			byte[] pld = enc.encode(payload.toString().getBytes("UTF-8"));
@@ -470,7 +475,7 @@ public class LTIDeepLinks extends HttpServlet {
 					+ "Assignment selection OK. Please click the Submit button &rarr; <input type=submit>"
 					+ "</form>");
 			buf.append("<script>document.getElementById('selections').submit();</script>");
-			
+			//buf.append("The new content items are: " + content_items.toString());
 		} catch (Exception e) {
 			buf.append(e.toString() + " " + e.getMessage());
 		}

@@ -261,13 +261,12 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     
     static String getLineItemUrl(Deployment d,Assignment a,String lti_ags_lineitems_url) throws Exception {
     	if (a.resourceLinkId == null || lti_ags_lineitems_url==null) return null;
+    	
+    	JsonObject lineitems_json = getLineItems(d,lti_ags_lineitems_url);
+    	if (lineitems_json==null) return null;
 
-    	String reply = getLineItems(d,lti_ags_lineitems_url);
-    	if (reply==null) return null;
-
-    	JsonElement json = JsonParser.parseString(reply);
-    	if (json.isJsonArray()) {
-    		JsonArray lineitems = json.getAsJsonArray();        	
+    	if (lineitems_json.isJsonArray()) {
+    		JsonArray lineitems = lineitems_json.getAsJsonArray();        	
     		Iterator<JsonElement> iterator = lineitems.iterator();
     		while(iterator.hasNext()){
     			JsonObject lineitem = iterator.next().getAsJsonObject();
@@ -309,7 +308,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		return null;
     }
     
-    static String getLineItems(Deployment d,String lti_ags_lineitems_url) {
+    static JsonObject getLineItems(Deployment d,String lti_ags_lineitems_url) {
     	// This method asks the platform to return ALL of the lineitems for the context as a JSON string
     	try {
     		String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id);
@@ -326,17 +325,13 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     		int responseCode = uc.getResponseCode();
     		if (HttpURLConnection.HTTP_OK == responseCode) { // 200
     			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-    			StringBuffer res = new StringBuffer();
-    			String line;
-    			while ((line = reader.readLine()) != null) {
-    				res.append(line);
-    			}
+    			JsonObject lineitems_json = JsonParser.parseReader(reader).getAsJsonObject();
     			reader.close();
-    			return res.toString();
-    		} else return "Response code was " + responseCode;
+    			return lineitems_json;
+    		} else return null;
     	} catch (Exception e) {
+    		return null;
     	}
-		return null;
 	}
 	
 	static String createLineItem(Deployment d,Assignment a,String lti_ags_lineitems_url) throws Exception {
