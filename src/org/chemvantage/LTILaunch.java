@@ -155,6 +155,7 @@ public class LTILaunch extends HttpServlet {
 			}
 			// BLTI Launch message was validated successfully at this point
 			debug.append("Basic LTI launch message validated...");
+			
 			// Detect whether this is an anonymous LTI launch request per LTIv1p1p2. This is a security patch that
 			// prevents a cross-site request forgery threat applicable to versions of LTI released prior to v1.3.
 			// The launch procedure is for the TC to issue an anonymous BLTI launch request with no user information.
@@ -170,7 +171,6 @@ public class LTILaunch extends HttpServlet {
 			String relaunch_url = request.getParameter("relaunch_url");
 			String platform_state = request.getParameter("platform_state");
 			String tool_state = request.getParameter("tool_state");
-			//boolean securityAlert = false;
 			
 			if (tool_state != null && platform_state != null) { // This is a LTIv1.1.2 relaunch response. Validate the tool_state value
 				try {
@@ -201,17 +201,9 @@ public class LTILaunch extends HttpServlet {
 					throw new Exception("Tool state JWT could not be created.");
 				}
 			    return;  // wait for relaunch from platform
-			} else { // this is an basic LTIv1.1.1 launch not supported after Dec 31, 2020
-				Date jan2021 = new Date(1609477200000L); // January 1, 2021
-				Date now = new Date();
-				if (now.after(jan2021)) throw new Exception("Due to potential internet security flaws, the version of LTI "
-						+ "supported by your LMS was <a href=https://www.imsglobal.org/lti-security-announcement-and-deprecation-schedule-july-2019> "
-						+ "deprecated by IMS Global Learning Solutions</a> effective 1 January 2021. We are therefore unable "
-						+ "to support this connection until you upgrade to an LMS that supports, at a minimum, the LTI version "
-						+ "1.1.2 security update. We apologize for this inconvenience.");
-			}
+			} 
 			// End of LTIv1p1p2 section. Continue with normal LTI launch sequence
-			
+						
 			// Gather some information about the user
 			String userId = request.getParameter("user_id");
 			userId = oauth_consumer_key + ":" + (userId==null?"":userId);
@@ -264,10 +256,6 @@ public class LTILaunch extends HttpServlet {
 			if (myAssignment.isValid()) {
 				redirectUrl = "/" + myAssignment.assignmentType + "?Token=" + user.token;
 				
-				// Warn instructor of LTI-1p1p2 security patch requirement
-				boolean after1July2020 = new Date().after(new Date(1593576000000L)); // July 1, 2020
-				if (after1July2020 && tc.lti_version.contentEquals("LTI-1p0") && user.isInstructor()) redirectUrl += "&SecurityAlert=true";
-				
 				debug.append("Redirecting to: " + redirectUrl);
 				response.sendRedirect(redirectUrl);
 			} else response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,1) + Home.footer);
@@ -317,13 +305,29 @@ public class LTILaunch extends HttpServlet {
 		buf.append("<img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo' align=left>"
 				+ "<span>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
 				+ "<br>An Open Education Resource</span>");
-		
-				buf.append("<h2>Assignment Setup Page</h2>"
-				+ "The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<p>");
 
-		if (user.isInstructor()) buf.append("Please select the ChemVantage assignment that should be associated with this link. "
-				+ "ChemVantage will remember this choice and send students directly to the assignment.<p>");
-		else {
+		buf.append("<h2>Assignment Setup Page</h2>"
+				+ "The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<p>");
+		
+		if (user.isInstructor()) {
+			buf.append("Please select the ChemVantage assignment that should be associated with this link. "
+					+ "ChemVantage will remember this choice and send students directly to the assignment.<p>");
+			/*
+			 *   THIS SECTION IS TO WARN INSTUCTORS OF IMPENDING CHANGES TO THE CHEMVANTAGE SERVICE:
+			 *   01JAN2021: LTI VERSION 1.1 IS DEPRECATED
+			 */
+			Date now = new Date();
+			Date Jan2021 = new Date(1609477200000L);
+			if (now.after(Jan2021)) {
+				String message = "You are currently using LTI version 1.1 to connect to ChemVantage. This version of LTI was deprecated by the IMS Global "
+						+ "Learning Corsortium on December 31, 2020. We highly recommend that you register ChemVantage in your LMS using the current "
+						+ "LTI version 1.3. Your LMS and/or ChemVantage may discontinue support for version 1.1 at any time.";
+				buf.append("<SCRIPT>alert('" + message + "');</SCRIPT>");
+			}
+			// ============ END OF WARNING SECTION ==================================
+			// ======================================================================
+
+		} else {
 			buf.append("<b>Please ask your instructor to click the LMS assignment link to make this missing association.</b> "
 					+ "You will not be able to complete this assignment until after this has been done.");
 			return buf.toString();
