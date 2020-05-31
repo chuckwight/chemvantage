@@ -369,7 +369,7 @@ public class LTIRegistration extends HttpServlet {
 				
 				buf.append("If your LMS requires you to enter a specific public RSA key instead of the JSON Web Key Set URL, you can "
 						+ " get it here:<br>"
-						+ "<a href=" + iss + "/jwks?kid=public&fmt=x509>PEM key in X509 format</a> or <a href=" + iss + "/jwks?kid=public>JSON Web Key</a>");
+						+ "<a href=" + iss + "/jwks?kid=public&fmt=x509>PEM key in X509 format</a> or <a href=" + iss + "/jwks?kid=public>JSON Web Key</a><p>");
 				
 				if ("moodle".contentEquals(lms)) {
 					buf.append("Please note: Several Moodle users have experienced difficulty getting "

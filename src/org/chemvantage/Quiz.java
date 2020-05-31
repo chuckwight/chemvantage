@@ -138,7 +138,15 @@ public class Quiz extends HttpServlet {
 				ofy().save().entity(qt);
 			}
 			int secondsRemaining = (int) (timeLimit*60 - (now.getTime() - qt.downloaded.getTime())/1000);
-
+			/*
+			//=================== TEMPORARY DEBUGGING SECTION =======================
+			try {  
+				Deployment d = ofy().load().type(Deployment.class).id(qa.domain).safe();
+				String lineitem = LTIMessage.getLineItem(d, qa.lti_ags_lineitem_url).toString();
+				buf.append("Debug lineitem: " + lineitem);
+			} catch (Exception e) {}
+			// ======================================================================
+			*/
 			buf.append("\n<h2>Quiz - " + topic.title + " (" + subject.title + ")</h2>");
 
 			if (request.getServerName().contains("dev-vantage")) buf.append("<font color=red>This is a development server that should only be used for testing LTI connections.<br>"

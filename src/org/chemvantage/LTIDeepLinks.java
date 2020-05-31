@@ -185,7 +185,7 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "Select the assignment type (e.g., Quiz) and then select the topics of all the different quizzes to create "
 				+ "(one quiz per topic). Return to this page to create multiple Homework assignments, if needed. For Practice Exam "
 				+ "assignents, each exam covers multiple topics, so you can create only one Practice Exam for each visit to this page.<p>");
-		else buf.append("Select a new assignment:<p>");
+		//else buf.append("Select a new assignment:<p>");
 		
 		// Start building a form to select the assignment attributes:
 		// The form has 4 sections:

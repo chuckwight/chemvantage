@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -34,7 +35,9 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.UUID;
 
 import com.auth0.jwt.JWT;
@@ -207,11 +210,13 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		+ "</imsx_POXEnvelopeRequest>\n";		
 	}
 
-    static String getAccessToken(String platformDeploymentId) {
+    static String getAccessToken(String platformDeploymentId,String scope) {
     	// First, construct a request token to send to the platform
     	Date now = new Date();
     	try {
 			Deployment d = Deployment.getInstance(platformDeploymentId);
+			if (!d.scope.contains(scope)) return null;  // must be authorized
+			
 			Date exp = new Date(now.getTime() + 300000L);
 			String token = JWT.create()
 					.withIssuer(d.client_id)
@@ -226,7 +231,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			String body = "grant_type=client_credentials"
 					+ "&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 					+ "&client_assertion=" + token
-					+ "&scope=" + d.scope;
+					+ "&scope=" + d.scope.replace(" ", "+");
 			
 			URL u = new URL(d.oauth_access_token_url);
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
@@ -262,7 +267,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     static String getLineItemUrl(Deployment d,Assignment a,String lti_ags_lineitems_url) throws Exception {
     	if (a.resourceLinkId == null || lti_ags_lineitems_url==null) return null;
     	
-    	JsonObject lineitems_json = getLineItems(d,lti_ags_lineitems_url);
+    	String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly";
+    	JsonObject lineitems_json = getLineItems(d,lti_ags_lineitems_url,scope);
     	if (lineitems_json==null) return null;
 
     	if (lineitems_json.isJsonArray()) {
@@ -284,7 +290,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     static JsonObject getLineItem(Deployment d, String lti_ags_lineitem_url) {
     	// This method returns a single lineitem from the platform
       	try {
-    		String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id);
+      		String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly";
+        	String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id,scope);
 
     		URL u = new URL(lti_ags_lineitem_url);
     		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
@@ -308,10 +315,10 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		return null;
     }
     
-    static JsonObject getLineItems(Deployment d,String lti_ags_lineitems_url) {
+    static JsonObject getLineItems(Deployment d,String lti_ags_lineitems_url,String scope) {
     	// This method asks the platform to return ALL of the lineitems for the context as a JSON string
     	try {
-    		String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id);
+    		String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id,scope);
 
     		URL u = new URL(lti_ags_lineitems_url);
     		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
@@ -337,9 +344,10 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	static String createLineItem(Deployment d,Assignment a,String lti_ags_lineitems_url) throws Exception {
 		if (d==null || a==null) return null;
 		try {
+			String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem";
 			String lineItemUrl = null;
 			Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
-			String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id);
+			String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id,scope);
 			int maxPossibleScore = a.assignmentType.equals("PracticeExam")?100:10;
 
 			JsonObject j = new JsonObject();
@@ -390,7 +398,9 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		
 		Map<String,String> scores = new HashMap<String,String>();		
 		try {
-			String bearerAuth = "Bearer " + getAccessToken(a.domain);
+			
+			String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly";
+			String bearerAuth = "Bearer " + getAccessToken(a.domain,scope);
 
 			if (a.lti_ags_lineitem_url==null) throw new Exception("the lineitem URL for this assignment is unknown");
 			URL u = new URL(a.lti_ags_lineitem_url + "/results");
@@ -427,7 +437,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		// The lineitem URL corresponds to the LMS grade book column fpr the Assignment entity,
 		// and the specific cell is identified by the user_id value defined by the LMS platform
 		try {
-			String bearerAuth = "Bearer " + getAccessToken(a.domain);
+			String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly";
+			String bearerAuth = "Bearer " + getAccessToken(a.domain,scope);
 
 			String user_id = User.getRawId(userId); // stripped of the platform_id and "/"
 
@@ -469,47 +480,80 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		StringBuffer buf = new StringBuffer();
 		try {
 			Assignment a = ofy().load().type(Assignment.class).id(s.assignmentId).safe();
-			String bearerAuth = getAccessToken(a.domain);
-			if (bearerAuth.startsWith("response")) return "Failed: could not get access token.";
-			bearerAuth = "Bearer " + bearerAuth;
+			String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/score";
+			
+			String authToken = getAccessToken(a.domain,scope);
+			
+			if (authToken.startsWith("response")) return "Failed: could not get access token.";
+			String bearerAuth = "Bearer " + authToken;
+			//buf.append("Authorization: " + bearerAuth + "<br>");
 			
 			String raw_id = User.getRawId(s.owner.getName());
+			String timestamp = ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT);
 			
 			JsonObject j = new JsonObject();
-			j.addProperty("timestamp", ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
-			j.addProperty("scoreGiven", String.valueOf(s.score));
-			j.addProperty("scoreMaximum", String.valueOf(s.maxPossibleScore));
-			j.addProperty("comment",  "");
+			j.addProperty("timestamp", timestamp);
+			j.addProperty("scoreGiven", Double.valueOf(s.score));
+			j.addProperty("scoreMaximum", Double.valueOf(s.maxPossibleScore));
+			//j.addProperty("comment", "Number of attempts="+s.numberOfAttempts);
 			j.addProperty("activityProgress", "Completed");
 			j.addProperty("gradingProgress", "FullyGraded");
 			j.addProperty("userId", raw_id);
+			//j.addProperty("user_id", raw_id);       // temporary addition
 			String json = j.toString();
 			
-			buf.append("Submitting JSON:<br>" + json + "<p>");
+			//buf.append("JSON request body:<br>" + json + "<p>");
 		
 			URL u = new URL(a.lti_ags_lineitem_url + "/scores");
+			//buf.append("URL: " + u.toString() + "<br>");
+			
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			uc.setDoOutput(true);
 			uc.setRequestMethod("POST");
 			uc.setRequestProperty("Authorization", bearerAuth);
 			uc.setRequestProperty("Content-Type", "application/vnd.ims.lis.v1.score+json");
-			uc.setRequestProperty("Content-Length", String.valueOf(json.length()));
-			uc.connect();
-
+			uc.setDoOutput(true);
+			
 			// send the message
-			OutputStreamWriter toTC = new OutputStreamWriter(uc.getOutputStream());
-			toTC.write(json);
-			toTC.flush();
+			//OutputStreamWriter toTC = new OutputStreamWriter(uc.getOutputStream());
+		    OutputStream os = uc.getOutputStream();
+		    byte[] json_bytes = json.getBytes("utf-8");
+			os.write(json_bytes, 0, json_bytes.length);           
+
+			//toTC.write(json);
+			//toTC.flush();
 			int responseCode = uc.getResponseCode(); // success if 200-202
-			buf.append("Received response code: " + responseCode + "<p>");
 			boolean success = responseCode>199 && responseCode<203;
 			if (success) {  
 				s.lisReportComplete = true;
 				ofy().save().entity(s);
 				buf.append("Success");
+			} else {
+				buf.append(uc.getRequestMethod() + " " + u.toString() + "<br>"
+						+ "Content-Type: application/vnd.ims.lis.v1.score+json<br>"
+						+ "Authorization: " + bearerAuth + "<p>"
+						+ json + "<p>");
+				Map<String,List<String>> headers = uc.getHeaderFields();
+				for (Entry<String,List<String>> e : headers.entrySet()) {
+					buf.append(e.getKey() + ": ");
+					for (String es : e.getValue()) buf.append(es + " ");
+					buf.append("<br>");
+				}
+				// buf.append("Request failed: received response code: " + responseCode + "<p>");
 			}
+			
+			//BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+			//JsonObject response = JsonParser.parseReader(reader).getAsJsonObject();
+			//StringBuffer res = new StringBuffer();
+    		//String line;
+    		//while ((line = reader.readLine()) != null) {
+    		//	res.append(line);
+    		//}
+    		
+			////reader.close();
+			//buf.append(res.toString());
+			//toTC.close();
 		} catch (Exception e) {
-			return "Score submission failed: " + e.getMessage() + "br>";
+			return "Score submission failed: " + e.toString() + e.getMessage() + "<br>" + buf.toString();
 		}
 		return buf.toString();
 	}
@@ -522,7 +566,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		String bearerAuth = null;
 		
 		try {
-			if ((bearerAuth=getAccessToken(a.domain)).startsWith("response")) throw new Exception("the LMS failed to issue an auth token: " + bearerAuth);
+			String scope = "https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly";
+			if ((bearerAuth=getAccessToken(a.domain,scope)).startsWith("response")) throw new Exception("the LMS failed to issue an auth token: " + bearerAuth);
 			else bearerAuth = "Bearer " + bearerAuth;
 			
 			if (a.lti_nrps_context_memberships_url==null) throw new Exception("the service endpoint URL for this group is unknown");

@@ -146,7 +146,7 @@ public class ReportScore extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String postUserScore(String userId,Assignment a,int attempts) {
+	String postUserScore(String userId,Assignment a,int attempts) {  // LTI v1.3 only
 		StringBuffer buf = new StringBuffer();
 		try {
 			Key<Score> k = Key.create(Key.create(User.class,userId),Score.class,a.id);
