@@ -87,21 +87,22 @@ public class Deployment implements java.lang.Cloneable {
 	}
 	
 	boolean equivalentTo(Deployment d) {
-		return	((d.platform_deployment_id != null && d.platform_deployment_id.contentEquals(this.platform_deployment_id)) 	|| (d.platform_deployment_id == null && this.platform_deployment_id == null)) &&
-				((d.client_id != null && d.client_id.contentEquals(this.client_id)) 										|| (d.client_id == null && this.client_id == null)) &&
-				((d.oauth_access_token_url != null && d.oauth_access_token_url.contentEquals(this.oauth_access_token_url)) 	|| (d.oauth_access_token_url == null && this.oauth_access_token_url == null)) &&
-				((d.oidc_auth_url != null && d.oidc_auth_url.contentEquals(this.oidc_auth_url)) 							|| (d.oidc_auth_url == null && this.oidc_auth_url == null)) &&
-				((d.well_known_jwks_url != null && d.well_known_jwks_url.contentEquals(this.well_known_jwks_url)) 			|| (d.well_known_jwks_url == null && this.well_known_jwks_url == null)) &&
-				((d.email != null && d.email.contentEquals(this.email)) 													|| (d.email == null && this.email == null)) &&
-				((d.contact_name != null && d.contact_name.contentEquals(this.contact_name))								|| (d.contact_name == null && this.contact_name == null)) &&
-				((d.organization != null && d.organization.contentEquals(this.organization)) 								|| (d.organization == null && this.organization == null)) &&
-				((d.org_url != null && d.org_url.contentEquals(this.org_url)) 												|| (d.org_url == null && this.org_url == null)) &&
-				((d.lms_type != null && d.lms_type.contentEquals(this.lms_type)) 											|| (d.lms_type == null && this.lms_type == null)) &&
-				((d.rsa_key_id != null && d.rsa_key_id.contentEquals(this.rsa_key_id)) 										|| (d.rsa_key_id == null && this.rsa_key_id == null)) &&
-				((d.scope != null && d.scope.contentEquals(this.scope)) 													|| (d.scope == null && this.scope == null)) &&
-				//((d.claims != null && d.scope.contentEquals(this.scope)) 													|| (d.claims == null && this.scope == null)) &&
-				(d.created != null && d.created.equals(this.created)) &&
-				(d.lastLogin != null && d.lastLogin.equals(this.lastLogin));
+		if (d==null) return false;
+		
+		return	((this.platform_deployment_id != null && this.platform_deployment_id.contentEquals(d.platform_deployment_id)) 	|| (d.platform_deployment_id == null && this.platform_deployment_id == null)) &&
+				((this.client_id != null && this.client_id.contentEquals(d.client_id)) 											|| (d.client_id == null && this.client_id == null)) &&
+				((this.oauth_access_token_url != null && this.oauth_access_token_url.contentEquals(d.oauth_access_token_url)) 	|| (d.oauth_access_token_url == null && this.oauth_access_token_url == null)) &&
+				((this.oidc_auth_url != null && this.oidc_auth_url.contentEquals(d.oidc_auth_url)) 								|| (d.oidc_auth_url == null && this.oidc_auth_url == null)) &&
+				((this.well_known_jwks_url != null && this.well_known_jwks_url.contentEquals(d.well_known_jwks_url)) 			|| (d.well_known_jwks_url == null && this.well_known_jwks_url == null)) &&
+				((this.email != null && this.email.contentEquals(d.email)) 														|| (d.email == null && this.email == null)) &&
+				((this.contact_name != null && this.contact_name.contentEquals(d.contact_name))									|| (d.contact_name == null && this.contact_name == null)) &&
+				((this.organization != null && this.organization.contentEquals(d.organization)) 								|| (d.organization == null && this.organization == null)) &&
+				((this.org_url != null && this.org_url.contentEquals(d.org_url)) 												|| (d.org_url == null && this.org_url == null)) &&
+				((this.lms_type != null && this.lms_type.contentEquals(d.lms_type)) 											|| (d.lms_type == null && this.lms_type == null)) &&
+				((this.rsa_key_id != null && this.rsa_key_id.contentEquals(d.rsa_key_id)) 										|| (d.rsa_key_id == null && this.rsa_key_id == null)) &&
+				((this.scope != null && this.scope.contentEquals(d.scope)) 														|| (d.scope == null && this.scope == null)) &&
+				(this.created != null && this.created.equals(d.created)) &&
+				(this.lastLogin != null && this.lastLogin.equals(d.lastLogin));
 	}
 	
 	protected Deployment clone() throws CloneNotSupportedException {

@@ -246,16 +246,21 @@ public class Assignment implements java.lang.Cloneable {
 	}
 
 	boolean equivalentTo(Assignment a) {
-		return	((a.id != null && a.id.equals(this.id)) 																							|| (a.id == null && this.id == null)) &&
-				((a.domain != null && a.domain.equals(this.domain)) 																				|| (a.domain == null && this.domain == null)) &&
-				((a.assignmentType != null && a.assignmentType.equals(this.assignmentType)) 														|| (a.assignmentType == null && this.assignmentType == null)) &&
-				(a.topicId == this.topicId) &&
-				((a.resourceLinkId != null && a.resourceLinkId.contentEquals(this.resourceLinkId)) 													|| (a.resourceLinkId == null && this.resourceLinkId == null)) &&
-				((a.lis_outcome_service_url != null && a.lis_outcome_service_url.equals(this.lis_outcome_service_url)) 								|| (a.lis_outcome_service_url == null && this.lis_outcome_service_url == null)) &&
-				((a.lti_ags_lineitem_url != null && a.lti_ags_lineitem_url.equals(this.lti_ags_lineitem_url)) 										|| (a.lti_ags_lineitem_url == null && this.lti_ags_lineitem_url == null)) &&
-				((a.lti_nrps_context_memberships_url != null && a.lti_nrps_context_memberships_url.equals(this.lti_nrps_context_memberships_url)) 	|| (a.lti_nrps_context_memberships_url == null && this.lti_nrps_context_memberships_url == null)) &&
-				((a.topicIds != null && a.topicIds.equals(this.topicIds)) 																			|| (a.topicIds == null && this.topicIds == null)) &&
-				((a.questionKeys != null && a.questionKeys.equals(this.questionKeys)) 																|| (a.questionKeys == null && this.questionKeys == null));				
+		// This method compares another Assignment to this one and ensures that all fields are either the same or both null
+		// except for primitive (long) fields, which may not be null and must be equal (possibly 0L).
+		if (a==null) return false;
+		
+		return	((this.id != null && this.id.equals(a.id)) 																								|| (a.id == null && this.id == null)) &&
+				((this.domain != null && this.domain.equals(a.domain)) 																					|| (a.domain == null && this.domain == null)) &&
+				((this.assignmentType != null && this.assignmentType.equals(a.assignmentType)) 															|| (a.assignmentType == null && this.assignmentType == null)) &&
+				(this.topicId == a.topicId) &&
+				(this.videoId == a.videoId) &&
+				((this.resourceLinkId != null && this.resourceLinkId.equals(a.resourceLinkId)) 															|| (a.resourceLinkId == null && this.resourceLinkId == null)) &&
+				((this.lis_outcome_service_url != null && this.lis_outcome_service_url.equals(a.lis_outcome_service_url)) 								|| (a.lis_outcome_service_url == null && this.lis_outcome_service_url == null)) &&
+				((this.lti_ags_lineitem_url != null && this.lti_ags_lineitem_url.equals(a.lti_ags_lineitem_url)) 										|| (a.lti_ags_lineitem_url == null && this.lti_ags_lineitem_url == null)) &&
+				((this.lti_nrps_context_memberships_url != null && this.lti_nrps_context_memberships_url.equals(a.lti_nrps_context_memberships_url)) 	|| (a.lti_nrps_context_memberships_url == null && this.lti_nrps_context_memberships_url == null)) &&
+				((this.topicIds != null && this.topicIds.equals(a.topicIds)) 																			|| (a.topicIds == null && this.topicIds == null)) &&
+				((this.questionKeys != null && this.questionKeys.equals(a.questionKeys)) 																|| (a.questionKeys == null && this.questionKeys == null));				
 	}
 	
 	boolean isValid() {

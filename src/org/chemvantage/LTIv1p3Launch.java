@@ -152,7 +152,7 @@ public class LTIv1p3Launch extends HttpServlet {
 
 		// Process information for LTI Assignment and Grade Services (AGS)
 		String scope = "";
-		//String lti_ags_lineitems_url = null;
+		String lti_ags_lineitems_url = null;
 		String lti_ags_lineitem_url = null;
 		try {  
 			JsonObject lti_ags_claims = claims.get("https://purl.imsglobal.org/spec/lti-ags/claim/endpoint").getAsJsonObject();
@@ -160,8 +160,8 @@ public class LTIv1p3Launch extends HttpServlet {
 			// get the list of AGS capabilities allowed by the platform
 			JsonArray scope_claims = lti_ags_claims.get("scope")==null?new JsonArray():lti_ags_claims.get("scope").getAsJsonArray();
 			Iterator<JsonElement> scopes_iterator = scope_claims.iterator();
-			while (scopes_iterator.hasNext()) scope += scopes_iterator.next().getAsString() + " ";
-			//lti_ags_lineitems_url = lti_ags_claims.get("lineitems")==null?null:lti_ags_claims.get("lineitems").getAsString();
+			while (scopes_iterator.hasNext()) scope += scopes_iterator.next().getAsString() + (scopes_iterator.hasNext()?" ":"");
+			lti_ags_lineitems_url = lti_ags_claims.get("lineitems")==null?null:lti_ags_claims.get("lineitems").getAsString();
 			lti_ags_lineitem_url = lti_ags_claims.get("lineitem")==null?null:lti_ags_claims.get("lineitem").getAsString();
 		} catch (Exception e) {				
 		}
@@ -171,7 +171,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		String lti_nrps_context_memberships_url = null;
 		try { 
 			JsonObject lti_nrps_claims = claims.get("https://purl.imsglobal.org/spec/lti-nrps/claim/namesroleservice").getAsJsonObject();
-			if (lti_nrps_claims != null) scope += " https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly";
+			if (lti_nrps_claims != null) scope += (scope.length()>0?" ":"") + "https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly";
 			lti_nrps_context_memberships_url = lti_nrps_claims.get("context_memberships_url").getAsString();
 			debug.append("supports NRPS...");
 		} catch (Exception e) {
@@ -248,8 +248,8 @@ public class LTIv1p3Launch extends HttpServlet {
 
 		myAssignment.resourceLinkId = resourceLinkId;			
 		if (lti_ags_lineitem_url != null) myAssignment.lti_ags_lineitem_url = lti_ags_lineitem_url;
-		//else if (myAssignment.lti_ags_lineitem_url == null && myAssignment.assignmentType != null) myAssignment.lti_ags_lineitem_url = LTIMessage.getLineItemUrl(d, myAssignment,lti_ags_lineitems_url);
-
+		else  myAssignment.lti_ags_lineitem_url = LTIMessage.getLineItemUrl(d, myAssignment,lti_ags_lineitems_url);
+		
 		myAssignment.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
 
 		// If required, save the updated Assignment entity now so its id will be accessible

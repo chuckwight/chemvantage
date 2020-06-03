@@ -27,6 +27,7 @@ import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -231,7 +232,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			String body = "grant_type=client_credentials"
 					+ "&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 					+ "&client_assertion=" + token
-					+ "&scope=" + d.scope.replace(" ", "+");
+					+ "&scope=" + URLEncoder.encode(scope, "utf-8");
 			
 			URL u = new URL(d.oauth_access_token_url);
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
@@ -265,15 +266,16 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     }
     
     static String getLineItemUrl(Deployment d,Assignment a,String lti_ags_lineitems_url) throws Exception {
-    	if (a.resourceLinkId == null || lti_ags_lineitems_url==null) return null;
+    	if (a.resourceLinkId == null) return "Missing resourceLinkId value.";
+    	if (lti_ags_lineitems_url==null) return "Missing lti_ags_lineitems_url value.";
     	
-    	String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly";
-    	JsonObject lineitems_json = getLineItems(d,lti_ags_lineitems_url,scope);
-    	if (lineitems_json==null) return null;
-
-    	if (lineitems_json.isJsonArray()) {
-    		JsonArray lineitems = lineitems_json.getAsJsonArray();        	
-    		Iterator<JsonElement> iterator = lineitems.iterator();
+    	String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem";
+    	
+    	String lineitems = getLineItems(d,lti_ags_lineitems_url,scope);
+    	
+    	try {
+    		JsonArray lineitems_json_array = JsonParser.parseString(lineitems).getAsJsonArray();
+        	Iterator<JsonElement> iterator = lineitems_json_array.iterator();
     		while(iterator.hasNext()){
     			JsonObject lineitem = iterator.next().getAsJsonObject();
     			JsonElement rli = lineitem.get("resourceLinkId");
@@ -281,8 +283,10 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     				return lineitem.get("id").getAsString();
     			}
     		}
+    	} catch (Exception e) {
+    		return lineitems;
     	}
-    	
+   	
     	// If you get to here, the lineitem does not exist; create a new one:
     	return createLineItem(d,a,lti_ags_lineitems_url);
     }
@@ -290,7 +294,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     static JsonObject getLineItem(Deployment d, String lti_ags_lineitem_url) {
     	// This method returns a single lineitem from the platform
       	try {
-      		String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly";
+      		String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem";
         	String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id,scope);
 
     		URL u = new URL(lti_ags_lineitem_url);
@@ -315,14 +319,13 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		return null;
     }
     
-    static JsonObject getLineItems(Deployment d,String lti_ags_lineitems_url,String scope) {
+    static String getLineItems(Deployment d,String lti_ags_lineitems_url,String scope) {
     	// This method asks the platform to return ALL of the lineitems for the context as a JSON string
     	try {
     		String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id,scope);
 
     		URL u = new URL(lti_ags_lineitems_url);
     		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-    		uc.setDoOutput(true);
     		uc.setDoInput(true);
     		uc.setRequestMethod("GET");
     		uc.setRequestProperty("Authorization", bearerAuth);
@@ -330,25 +333,31 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     		uc.connect();
 
     		int responseCode = uc.getResponseCode();
-    		if (HttpURLConnection.HTTP_OK == responseCode) { // 200
-    			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-    			JsonObject lineitems_json = JsonParser.parseReader(reader).getAsJsonObject();
-    			reader.close();
-    			return lineitems_json;
-    		} else return null;
+    		JsonObject lineitems_json = null;
+    		BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+			lineitems_json = JsonParser.parseReader(reader).getAsJsonObject();
+			reader.close();
+		if (responseCode > 199 && responseCode < 300) { // OK
+			return lineitems_json.toString();
+		} else {
+			return "Status " + responseCode + lineitems_json.toString();
+		}
     	} catch (Exception e) {
-    		return null;
+    		return e.toString() + " " + e.getMessage();
     	}
 	}
 	
 	static String createLineItem(Deployment d,Assignment a,String lti_ags_lineitems_url) throws Exception {
-		if (d==null || a==null) return null;
+		if (d==null) return "CreateLineItem: Deployment not fond.";
+		if (a==null) return "CreateLineItem: Assignment was null.";
+		if (!a.isValid()) return "CreateLineItem: Assignment was not valid.";
+		StringBuffer debug = new StringBuffer("Failed to create lineitem: ");
 		try {
 			String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem";
 			String lineItemUrl = null;
 			Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
 			String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id,scope);
-			int maxPossibleScore = a.assignmentType.equals("PracticeExam")?100:10;
+			int maxPossibleScore = a.assignmentType.equals("PracticeExam")?100:(a.assignmentType.equals("VideoQuiz")?5:10);
 
 			JsonObject j = new JsonObject();
 			j.addProperty("scoreMaximum", maxPossibleScore);
@@ -362,6 +371,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setDoOutput(true);
+			uc.setDoInput(true);
 			uc.setRequestMethod("POST");
 			uc.setRequestProperty("Authorization", bearerAuth);
 			uc.setRequestProperty("Content-Type", "application/vnd.ims.lis.v2.lineitem+json");
@@ -377,16 +387,22 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			//debug.append("Response code: " + responseCode + "<br>");
 
 			boolean success = responseCode>199 && responseCode<203;
+			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+			JsonObject lineitem = JsonParser.parseReader(reader).getAsJsonObject();
+			lineItemUrl = lineitem.get("id").getAsString();
+			reader.close();
+			toTC.close();
+			
 			if (success) {
-				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-				lineItemUrl = JsonParser.parseReader(reader).getAsJsonObject().get("id").getAsString();
-				reader.close();
 				new URI(lineItemUrl);  // throws Exception if not a valid URL
-				return lineItemUrl;
+			} else {
+				lineitem.addProperty("status", responseCode);
+				return lineitem.toString();
 			}
+			return lineItemUrl;			
 		} catch (Exception e) {
+			return e.toString() + " " + e.getMessage() + "<br>" + debug.toString();
 		}
-		return null;
 	}
 
 	static Map<String,String> readMembershipScores(Assignment a) {
