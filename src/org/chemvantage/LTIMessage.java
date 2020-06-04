@@ -274,7 +274,9 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     	String lineitems = getLineItems(d,lti_ags_lineitems_url,scope);
     	
     	try {
-    		JsonArray lineitems_json_array = JsonParser.parseString(lineitems).getAsJsonArray();
+    		JsonElement parsed = JsonParser.parseString(lineitems);
+    		if (!parsed.isJsonArray()) return null;
+    		JsonArray lineitems_json_array = parsed.getAsJsonArray();
         	Iterator<JsonElement> iterator = lineitems_json_array.iterator();
     		while(iterator.hasNext()){
     			JsonObject lineitem = iterator.next().getAsJsonObject();
@@ -333,24 +335,25 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     		uc.connect();
 
     		int responseCode = uc.getResponseCode();
-    		JsonObject lineitems_json = null;
-    		BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-			lineitems_json = JsonParser.parseReader(reader).getAsJsonObject();
-			reader.close();
-		if (responseCode > 199 && responseCode < 300) { // OK
-			return lineitems_json.toString();
-		} else {
-			return "Status " + responseCode + lineitems_json.toString();
-		}
+    		if (responseCode > 199 && responseCode < 300) { // OK
+    			JsonArray lineitems_json = null;
+        		BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+    			lineitems_json = JsonParser.parseReader(reader).getAsJsonArray();
+    			reader.close();
+    			return lineitems_json.toString();
+    		} else {
+    			return "Status " + responseCode;
+    		}
     	} catch (Exception e) {
     		return e.toString() + " " + e.getMessage();
     	}
 	}
 	
 	static String createLineItem(Deployment d,Assignment a,String lti_ags_lineitems_url) throws Exception {
-		if (d==null) return "CreateLineItem: Deployment not fond.";
-		if (a==null) return "CreateLineItem: Assignment was null.";
-		if (!a.isValid()) return "CreateLineItem: Assignment was not valid.";
+		if (d==null || a==null || !a.isValid()) return null;
+		//if (d==null) return "CreateLineItem: Deployment not fond.";
+		//if (a==null) return "CreateLineItem: Assignment was null.";
+		//if (!a.isValid()) return "CreateLineItem: Assignment was not valid.";
 		StringBuffer debug = new StringBuffer("Failed to create lineitem: ");
 		try {
 			String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem";
