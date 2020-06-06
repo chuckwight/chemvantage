@@ -211,18 +211,27 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		+ "</imsx_POXEnvelopeRequest>\n";		
 	}
 
-    static String getAccessToken(String platformDeploymentId,String scope) {
+	static String getAccessToken(String platformDeploymentId,String scope) {
     	// First, construct a request token to send to the platform
     	Date now = new Date();
     	try {
 			Deployment d = Deployment.getInstance(platformDeploymentId);
 			if (!d.scope.contains(scope)) return null;  // must be authorized
 			
+			// get the correct audience for the access token:
+			String aud = null;
+			switch (d.lms_type) {
+			case "canvas":
+				aud = d.getPlatformId() + "/login/oauth2/token";
+				break;
+			default: aud = d.oauth_access_token_url;
+			}
+			
 			Date exp = new Date(now.getTime() + 300000L);
 			String token = JWT.create()
 					.withIssuer(d.client_id)
 					.withSubject(d.client_id)
-					.withAudience(d.oauth_access_token_url)
+					.withAudience(aud)
 					.withKeyId(d.rsa_key_id)
 					.withExpiresAt(exp)
 					.withIssuedAt(now)
