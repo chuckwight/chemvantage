@@ -142,7 +142,7 @@ public class LTIRegistration extends HttpServlet {
 				out.println(Home.header("ChemVantage LTI Registration") + Home.banner + createDeployment(request) + Home.footer);			
 			}
 		} catch (Exception e) {
-			response.sendError(401,e.getMessage() + " \nPlease go BACK and try again or contact admin@chemvantage.org for assistance.");
+			response.sendError(401,e.getMessage() + "Please go BACK and try again or contact admin@chemvantage.org for assistance.");
 		}
 	}
 	
@@ -163,12 +163,12 @@ public class LTIRegistration extends HttpServlet {
 				+ "Your Name: <input type=text name=sub>&nbsp;"
 				+ "and Email: <input type=text name=email><br>"
 				+ "Your Organization: <input type=text name=aud>&nbsp;"
-				+ "and Home Page: <input type=text name=url placeholder='https://'><p>"
-				+ "Select your initial use case:<br>"
-				+ "<label><input type=radio name=use value=test" + (use.equals("test")?" checked":"") + ">Testing the LTI connection (development environment)</label><br>"
-				+ "<label><input type=radio name=use value=prod" + (use.equals("prod")?" checked":"") + ">Teaching a chemistry class (production environment)</label><p>"
+				+ "and Home Page: <input type=text name=url placeholder='https://myschool.edu'><p>"
+				+ "Select your use case:<br>"
+				+ "<label><input type=radio name=use value=prod" + (use.equals("prod")?" checked":"") + ">Teaching a chemistry class (production environment)</label><br>"
+				+ "<label><input type=radio name=use value=test" + (use.equals("test")?" checked":"") + ">Dev server (for software developers only, please)</label><p>"
 				+ "Type of LTI registration:<br>"
-				+ "<label><input type=radio name=ver value=1p1 checked>LTI version 1.1.2 (preferred)</label><br>"
+				+ "<label><input type=radio name=ver value=1p1 checked>LTI version 1.1 (preferred)</label><br>"
 				+ "<label><input type=radio name=ver value=1p3>LTI Advantage (certified but still clunky)</label><p>"
 				+ "Type of Learning Management System:<br>"
 				+ "<label><input type=radio name=lms value=blackboard>Blackboard</label><br>"
@@ -499,6 +499,7 @@ public class LTIRegistration extends HttpServlet {
 						+ "developer keys. It is a numeric value that looks something like 32570000000000041.<p>"
 						+ "The deployment_id can be found in Settings | Apps | App Configurations by opening the "
 						+ "settings menu for ChemVantage.<br>");
+				buf.append("Canvas account URL: <input type=text size=40 name=AccountUrl placeholder=https://myschool.instructure.com><br>");
 			} else {
 				buf.append("In addition, ChemVantage needs URLs for the end points on your LMS in order to access services "
 						+ "(e.g., Assignment and Grade Services) provided by your LMS platform. All fields are required, "
@@ -542,17 +543,19 @@ public class LTIRegistration extends HttpServlet {
 		if ("canvas".equals(lms)) {
 			platform_id = "https://canvas.instructure.com";
 			oidc_auth_url = "https://canvas.instructure.com/api/lti/authorize_redirect";
-			oauth_access_token_url = "https://canvas.instructure.com/login/oauth2/token";	
 			well_known_jwks_url = "https://canvas.instructure.com/api/lti/security/jwks";
+			oauth_access_token_url = request.getParameter("AccountUrl");
+			if (oauth_access_token_url==null || oauth_access_token_url.isEmpty()) throw new Exception("Canvas account URL is required.");
+			oauth_access_token_url += "/login/oauth2/token";
 		} else {
 			platform_id = request.getParameter("PlatformId");
-			if (platform_id==null) throw new Exception("Platform ID value is required.");
+			if (platform_id==null || platform_id.isEmpty()) throw new Exception("Platform ID value is required.");
 			oidc_auth_url = request.getParameter("OIDCAuthUrl");
-			if (oidc_auth_url==null) throw new Exception("OIDC Auth URL is required.");
+			if (oidc_auth_url==null || oidc_auth_url.isEmpty()) throw new Exception("OIDC Auth URL is required.");
 			oauth_access_token_url = request.getParameter("OauthAccessTokenUrl");
-			if (oauth_access_token_url==null) throw new Exception("OAuth Access Token URL is required.");
+			if (oauth_access_token_url==null || oauth_access_token_url.isEmpty()) throw new Exception("OAuth Access Token URL is required.");
 			well_known_jwks_url = request.getParameter("JWKSUrl");
-			if (well_known_jwks_url==null) throw new Exception("JSON Web Key Set URL is required.");
+			if (well_known_jwks_url==null || well_known_jwks_url.isEmpty()) throw new Exception("JSON Web Key Set URL is required.");
 		}
 		
 		Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);

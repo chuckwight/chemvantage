@@ -218,20 +218,12 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			Deployment d = Deployment.getInstance(platformDeploymentId);
 			if (!d.scope.contains(scope)) return null;  // must be authorized
 			
-			// get the correct audience for the access token:
-			String aud = null;
-			switch (d.lms_type) {
-			case "canvas":
-				aud = d.getPlatformId() + "/login/oauth2/token";
-				break;
-			default: aud = d.oauth_access_token_url;
-			}
-			
+			String iss = System.getProperty("com.google.appengine.application.id").contains("dev-vantage")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
 			Date exp = new Date(now.getTime() + 300000L);
 			String token = JWT.create()
-					.withIssuer(d.client_id)
+					.withIssuer(iss)
 					.withSubject(d.client_id)
-					.withAudience(aud)
+					.withAudience(d.oauth_access_token_url)
 					.withKeyId(d.rsa_key_id)
 					.withExpiresAt(exp)
 					.withIssuedAt(now)
@@ -241,7 +233,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			String body = "grant_type=client_credentials"
 					+ "&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 					+ "&client_assertion=" + token
-					+ "&scope=" + URLEncoder.encode(scope, "utf-8");
+					+ "&scope=" + URLEncoder.encode(d.scope, "utf-8").replace("%20", "+");
 			
 			URL u = new URL(d.oauth_access_token_url);
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
@@ -523,7 +515,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			j.addProperty("timestamp", timestamp);
 			j.addProperty("scoreGiven", Double.valueOf(s.score));
 			j.addProperty("scoreMaximum", Double.valueOf(s.maxPossibleScore));
-			//j.addProperty("comment", "Number of attempts="+s.numberOfAttempts);
+			j.addProperty("comment", "Number of attempts="+s.numberOfAttempts);
 			j.addProperty("activityProgress", "Completed");
 			j.addProperty("gradingProgress", "FullyGraded");
 			j.addProperty("userId", raw_id);
