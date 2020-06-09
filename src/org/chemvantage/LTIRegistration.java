@@ -564,7 +564,7 @@ public class LTIRegistration extends HttpServlet {
 		if (Deployment.getInstance(d.platform_deployment_id) == null) {
 			ofy().save().entity(d).now();
 			return "<h2>Congratulations. Registration is complete.</h2>";
-		} else return "This deployment is already registered with ChemVantage.";
+		} else return "Registration Failed: This deployment is already registered with ChemVantage.";
 		
 	}	
 
