@@ -87,20 +87,18 @@ public class Deployment implements java.lang.Cloneable {
 	}
 	
 	boolean equivalentTo(Deployment d) {
-		if (d==null) return false;
-		
-		return	((this.platform_deployment_id != null && this.platform_deployment_id.contentEquals(d.platform_deployment_id)) 	|| (d.platform_deployment_id == null && this.platform_deployment_id == null)) &&
-				((this.client_id != null && this.client_id.contentEquals(d.client_id)) 											|| (d.client_id == null && this.client_id == null)) &&
-				((this.oauth_access_token_url != null && this.oauth_access_token_url.contentEquals(d.oauth_access_token_url)) 	|| (d.oauth_access_token_url == null && this.oauth_access_token_url == null)) &&
-				((this.oidc_auth_url != null && this.oidc_auth_url.contentEquals(d.oidc_auth_url)) 								|| (d.oidc_auth_url == null && this.oidc_auth_url == null)) &&
-				((this.well_known_jwks_url != null && this.well_known_jwks_url.contentEquals(d.well_known_jwks_url)) 			|| (d.well_known_jwks_url == null && this.well_known_jwks_url == null)) &&
-				((this.email != null && this.email.contentEquals(d.email)) 														|| (d.email == null && this.email == null)) &&
-				((this.contact_name != null && this.contact_name.contentEquals(d.contact_name))									|| (d.contact_name == null && this.contact_name == null)) &&
-				((this.organization != null && this.organization.contentEquals(d.organization)) 								|| (d.organization == null && this.organization == null)) &&
-				((this.org_url != null && this.org_url.contentEquals(d.org_url)) 												|| (d.org_url == null && this.org_url == null)) &&
-				((this.lms_type != null && this.lms_type.contentEquals(d.lms_type)) 											|| (d.lms_type == null && this.lms_type == null)) &&
-				((this.rsa_key_id != null && this.rsa_key_id.contentEquals(d.rsa_key_id)) 										|| (d.rsa_key_id == null && this.rsa_key_id == null)) &&
-				((this.scope != null && this.scope.contentEquals(d.scope)) 														|| (d.scope == null && this.scope == null)) &&
+		return	((this.platform_deployment_id != null && this.platform_deployment_id.equals(d.platform_deployment_id)) 	|| (d.platform_deployment_id == null && this.platform_deployment_id == null)) &&
+				((this.client_id != null && this.client_id.equals(d.client_id)) 										|| (d.client_id == null && this.client_id == null)) &&
+				((this.oauth_access_token_url != null && this.oauth_access_token_url.equals(d.oauth_access_token_url)) 	|| (d.oauth_access_token_url == null && this.oauth_access_token_url == null)) &&
+				((this.oidc_auth_url != null && this.oidc_auth_url.equals(d.oidc_auth_url)) 							|| (d.oidc_auth_url == null && this.oidc_auth_url == null)) &&
+				((this.well_known_jwks_url != null && this.well_known_jwks_url.equals(d.well_known_jwks_url)) 			|| (d.well_known_jwks_url == null && this.well_known_jwks_url == null)) &&
+				((this.email != null && this.email.equals(d.email)) 													|| (d.email == null && this.email == null)) &&
+				((this.contact_name != null && this.contact_name.equals(d.contact_name))								|| (d.contact_name == null && this.contact_name == null)) &&
+				((this.organization != null && this.organization.equals(d.organization)) 								|| (d.organization == null && this.organization == null)) &&
+				((this.org_url != null && this.org_url.equals(d.org_url)) 												|| (d.org_url == null && this.org_url == null)) &&
+				((this.lms_type != null && this.lms_type.equals(d.lms_type)) 											|| (d.lms_type == null && this.lms_type == null)) &&
+				((this.rsa_key_id != null && this.rsa_key_id.equals(d.rsa_key_id)) 										|| (d.rsa_key_id == null && this.rsa_key_id == null)) &&
+				((this.scope != null && this.scope.equals(d.scope)) 													|| (d.scope == null && this.scope == null)) &&
 				(this.created != null && this.created.equals(d.created)) &&
 				(this.lastLogin != null && this.lastLogin.equals(d.lastLogin));
 	}

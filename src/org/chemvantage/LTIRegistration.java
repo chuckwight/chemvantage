@@ -559,9 +559,13 @@ public class LTIRegistration extends HttpServlet {
 		}
 		
 		Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
-		ofy().save().entity(d).now();
 		
-		return "<h2>Congratulations. Registration is complete.</h2>";
+		// check to ensure that this is not a duplicate registration:
+		if (Deployment.getInstance(d.platform_deployment_id) == null) {
+			ofy().save().entity(d).now();
+			return "<h2>Congratulations. Registration is complete.</h2>";
+		} else return "This deployment is already registered with ChemVantage.";
+		
 	}	
 
 	String getConfigurationJson(String iss,String lms) {
