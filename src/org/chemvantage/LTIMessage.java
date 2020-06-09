@@ -36,9 +36,7 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.UUID;
 
 import com.auth0.jwt.JWT;
@@ -548,6 +546,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				ofy().save().entity(s);
 				buf.append("Success");
 			} else {
+			/*
 				buf.append(uc.getRequestMethod() + " " + u.toString() + "<br>"
 						+ "Content-Type: application/vnd.ims.lis.v1.score+json<br>"
 						+ "Authorization: " + bearerAuth + "<p>"
@@ -558,20 +557,9 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 					for (String es : e.getValue()) buf.append(es + " ");
 					buf.append("<br>");
 				}
-				// buf.append("Request failed: received response code: " + responseCode + "<p>");
-			}
-			
-			//BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-			//JsonObject response = JsonParser.parseReader(reader).getAsJsonObject();
-			//StringBuffer res = new StringBuffer();
-    		//String line;
-    		//while ((line = reader.readLine()) != null) {
-    		//	res.append(line);
-    		//}
-    		
-			////reader.close();
-			//buf.append(res.toString());
-			//toTC.close();
+				*/
+				buf.append(String.valueOf(responseCode));
+			}		
 		} catch (Exception e) {
 			return "Score submission failed: " + e.toString() + e.getMessage() + "<br>" + buf.toString();
 		}
