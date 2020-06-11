@@ -20,6 +20,7 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import com.auth0.jwk.Jwk;
 import com.auth0.jwk.JwkProvider;
@@ -108,7 +109,9 @@ public class LTIDeepLinks extends HttpServlet {
 		String deployment_id = id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/deployment_id").asString();
 		if (deployment_id == null) throw new Exception("The deployment_id claim was not found in the id_token payload.");
 		String platformDeploymentId = platform_id + "/" + deployment_id;
+		
 		Deployment d = Deployment.getInstance(platformDeploymentId);
+		if (d==null) throw new Exception("Deployment not found: " + platformDeploymentId);
 		
 		// validate the id_token audience:
 		List<String> aud = id_token.getAudience();
@@ -308,6 +311,7 @@ public class LTIDeepLinks extends HttpServlet {
 		buf.append("</div>"); // end of big box with check boxes
 
 		buf.append("</form>");
+		buf.append(Home.footer);
 		return buf.toString();
 	}
 
@@ -435,7 +439,7 @@ public class LTIDeepLinks extends HttpServlet {
 			//for (Assignment a : assignments) {
 				JsonObject item = new JsonObject();
 				item.addProperty("type", "ltiResourceLink");
-				item.addProperty("url", serverUrl + "/lti/launch?AssignmentId=" + a.id);
+				item.addProperty("url", serverUrl + "/lti/launch");
 				
 				String title = "";
 				if (a.assignmentType.equals("Quiz") || a.assignmentType.equals("Homework")) {
@@ -468,7 +472,11 @@ public class LTIDeepLinks extends HttpServlet {
 			signature.update(jwt.getBytes("UTF-8"));
 			String sig = new String(enc.encode(signature.sign()));
 			jwt = String.format("%s.%s", jwt, sig);
-					
+			
+			// Put the new assignmentId into the user's session in case it is not passed by the DeepLinking methods
+			HttpSession session = request.getSession();
+			session.setAttribute("AssignmentId", String.valueOf(a.id));
+			
 			// Create a form to be auto-submitted to the platform by the user_agent browser
 			buf.append("<form id=selections method=POST action='" + deep_link_return_url + "'>"
 					+ "<input type=hidden name=JWT value='" + jwt + "'>"

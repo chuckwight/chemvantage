@@ -300,25 +300,33 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 
     		URL u = new URL(lti_ags_lineitem_url);
     		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-    		uc.setDoOutput(true);
     		uc.setDoInput(true);
     		uc.setRequestMethod("GET");
     		uc.setRequestProperty("Authorization", bearerAuth);
     		uc.setRequestProperty("Accept", "application/vnd.ims.lis.v2.lineitem+json");
     		uc.connect();
-
+    		
     		int responseCode = uc.getResponseCode();
-    		if (HttpURLConnection.HTTP_OK == responseCode) { // 200
+    		if (responseCode == 200) {
     			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
     			JsonObject lineitem_json = JsonParser.parseReader(reader).getAsJsonObject();
     			reader.close();
-    			
     			return lineitem_json;
+    		} else {
+    			JsonObject error = new JsonObject();
+    			error.addProperty("response_code", responseCode);
+    			error.addProperty("lineitem_url", lti_ags_lineitem_url);
+    			error.addProperty("Authorization", bearerAuth);
+    			return error;
     		}
     	} catch (Exception e) {
+    	 	JsonObject error = new JsonObject();
+    		error.addProperty("deployment", d.toString());
+    		error.addProperty("lineitem_url", lti_ags_lineitem_url);
+    		error.addProperty("error", e.toString() + " " + e.getMessage());
+    		return error;
     	}
-		return null;
-    }
+     }
     
     static String getLineItems(Deployment d,String lti_ags_lineitems_url,String scope) {
     	// This method asks the platform to return ALL of the lineitems for the context as a JSON string

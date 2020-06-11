@@ -55,6 +55,7 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import com.auth0.jwk.Jwk;
 import com.auth0.jwk.JwkProvider;
@@ -219,15 +220,18 @@ public class LTIv1p3Launch extends HttpServlet {
 				long assignmentId = Long.parseLong(lineitem.get("resourceId").getAsString());
 				myAssignment = ofy().load().type(Assignment.class).id(assignmentId).now();						
 				debug.append((myAssignment==null?"not ":"") + "found in the lineitem...");
-			} catch (Exception e) {}
+			} catch (Exception e) {
+			}
 		}
 
-		// 2b) See if the assignmerntId is included in the launch URL from DeepLinking flow. This is the Canvas way...
-		if (myAssignment == null && request.getParameter("AssignmentId") != null) {
+		// 2b) See if the assignmerntId is included in the user's Session from DeepLinking flow. This is the Canvas way...
+		if (myAssignment == null) {
 			try {
-				long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
-				myAssignment = ofy().load().type(Assignment.class).id(assignmentId).now();
-				debug.append("found assignmentId in the launch URL");
+				HttpSession session = request.getSession();
+				long assignmentId = Long.parseLong((String)session.getAttribute("AssignmentId"));
+				myAssignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
+				session.removeAttribute("AssignmentId");
+				debug.append("found assignmentId in the user's session");
 			} catch(Exception e) {}
 		}
 
