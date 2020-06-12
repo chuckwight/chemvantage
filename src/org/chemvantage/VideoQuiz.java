@@ -58,8 +58,8 @@ public class VideoQuiz extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		try {
-			User user = User.getUser(request.getParameter("Token"));
-			if (user == null) throw new Exception("User token invalid or expired.");
+			User user = User.getUser((String)request.getSession().getAttribute("Token"));
+			if (!user.signatureIsValid(request.getParameter("sig"))) throw new Exception();
 			
 			long videoId = 0L;
 			try {
@@ -69,13 +69,12 @@ public class VideoQuiz extends HttpServlet {
 			try {
 				segment = Integer.parseInt(request.getParameter("Segment"));
 			} catch (Exception e) {
-				response.sendRedirect("/Video.jsp?VideoId=" + videoId + "&Token=" + user.token);
+				response.sendRedirect("/Video.jsp?VideoId=" + videoId + "&sig=" + user.getTokenSignature());
 			}
 			
 			out.println(showQuizlet(user,videoId,segment));
 		} catch (Exception e) {
-			out.println(e.toString() + " " + e.getMessage());
-			//response.sendRedirect("/Logout");
+			response.sendRedirect("/Logout");
 		}
 	}
 
@@ -85,9 +84,9 @@ public class VideoQuiz extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		try {
-			User user = User.getUser(request.getParameter("Token"));
-			if (user == null) throw new Exception("Token was invalid or expired.");
-
+			User user = User.getUser((String)request.getSession().getAttribute("Token"));
+			if (!user.signatureIsValid(request.getParameter("sig"))) throw new Exception();
+			
 			out.println(scoreQuizlet(user,request));
 		} catch (Exception e) {
 			response.sendRedirect("/Logout");
@@ -132,7 +131,7 @@ public class VideoQuiz extends HttpServlet {
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 			for (int j=counter;j<counter+v.nQuestions[segment];j++) questionKeys.add(v.questionKeys.get(j));
 
-			if (questionKeys.size()==0) return "Sorry, there are no questions at this point. <a href='/Video.jsp?VideoId=" + videoId + "&Segment=" + segment+1 + "&Token=" + user.token + "'>Continue the video</a><p>";
+			if (questionKeys.size()==0) return "Sorry, there are no questions at this point. <a href='/Video.jsp?VideoId=" + videoId + "&Segment=" + segment+1 + "&sig=" + user.getTokenSignature() + "'>Continue the video</a><p>";
 
 			// Randomly select the questions to be presented, eliminating each from questionKeys as they are printed
 			Random rand = new Random();  // create random number generator to select quiz questions
@@ -161,11 +160,11 @@ public class VideoQuiz extends HttpServlet {
 
 		if (a!=null) buf.append("<input type=hidden name=AssignmentId value='" + a.id + "'>");
 		
-		buf.append("<input type=hidden name=Token value=" + user.token + ">");
+		buf.append("<input type=hidden name=sig value=" + user.getTokenSignature() + ">");
 		buf.append("<input type=hidden name=VideoId value=" + v.id + ">");
 		buf.append("<input type=hidden name=VideoTransactionId value=" + vt.id + ">");
 		buf.append("<input type=hidden name=Segment value=" + segment + ">");
-		buf.append("<input type=submit value='Submit and Continue'>  or <a href=/Video.jsp?Segment=" + segment + "&VideoId=" + v.id + "&Token=" + user.token + ">Replay This Segment</a>");
+		buf.append("<input type=submit value='Submit and Continue'>  or <a href=/Video.jsp?Segment=" + segment + "&VideoId=" + v.id + "&sig=" + user.getTokenSignature() + ">Replay This Segment</a>");
 		buf.append("</form>");
 		} catch (Exception e) {
 			buf.append(e.getMessage());
@@ -291,7 +290,7 @@ public class VideoQuiz extends HttpServlet {
 
 		if (noQuizlets) {
 			buf.append("<h4>Thanks for watching</h4>");
-			buf.append("Please take a moment to <a href=/Feedback?Token=" + user.token + ">tell us about your ChemVantage experience</a>.<p>");
+			buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
 			return buf.toString();
 		}
 		
@@ -321,7 +320,7 @@ public class VideoQuiz extends HttpServlet {
 			buf.append("<p>");
 
 		} else {
-			buf.append("Please take a moment to <a href=/Feedback?Token=" + user.token + ">tell us about your ChemVantage experience</a>.<p>");
+			buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
 		
 			String missedQuestions = "";
 			for (String s : vt.missedQuestions) missedQuestions += s;
@@ -339,7 +338,7 @@ public class VideoQuiz extends HttpServlet {
 		}
 
 		// If a==null this is an anonymous user, otherwise is an LTI user:
-		buf.append((a==null?"<a href=/Video.jsp?VideoId=" + vt.videoId + "&Segment=0&Token=" + user.token + ">Watch this video again</a> or go back to the <a href=/>ChemVantage home page</a> " :
+		buf.append((a==null?"<a href=/Video.jsp?VideoId=" + vt.videoId + "&Segment=0&sig=" + user.getTokenSignature() + ">Watch this video again</a> or go back to the <a href=/>ChemVantage home page</a> " :
 				"You may take this quiz again by clicking the assignment link in your learning management system ")			
 				+ "or <a href=/Logout>logout of ChemVantage</a>.");
 
@@ -772,7 +771,7 @@ public class VideoQuiz extends HttpServlet {
 			if (qts.size()==0) {
 				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>"
 						+ "<a href=Quiz?AssignmentId=" + a.id 
-						+ "&Token=" + user.token 
+						+ "&sig=" + user.getTokenSignature() 
 						+ ">Take me back to the quiz now.</a>");
 			} else {
 				// create a fresh Score entity to calculate the best score on this assignment
@@ -898,7 +897,7 @@ public class VideoQuiz extends HttpServlet {
 			}
 		} else {
 			buf.append("Sorry, there is not enough information available from your LMS to support this request.<p>");			
-			buf.append("<a href=/Quiz?Token=" + user.token + ">Return to this quiz</a>.<p>");
+			buf.append("<a href=/Quiz?sig=" + user.getTokenSignature() + ">Return to this quiz</a>.<p>");
 		}
 		return buf.toString();
 	}

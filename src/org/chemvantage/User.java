@@ -161,11 +161,12 @@ public class User {
     		if (!t.getClaim("roles").isNull()) u.roles = t.getClaim("roles").asInt();
     		if (!t.getClaim("aid").isNull()) u.assignmentId = t.getClaim("aid").asLong();
     		if (!t.getClaim("lrs").isNull()) u.lis_result_sourcedid = t.getClaim("lrs").asString();
-    		
+    		/*
     		Date in15Min = new Date(new Date().getTime()+900000L);  
     		if (t.getExpiresAt().before(in15Min)) u.setToken();  // refresh the token for 90 min expiration
     		else u.token = token;  // no refresh required
-    		
+    		*/
+    		u.token = token;
     		return u;
     	} catch (Exception e) {
     	}
@@ -216,5 +217,26 @@ public class User {
     	} catch (Exception e) {
     	}
     	return null;
+    }
+    
+    boolean validToken() {
+    	if (this.token== null) return false;
+    	try {
+    		Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
+    		JWT.require(algorithm).build().verify(this.token);
+    		return true;
+    	} catch (Exception e) {}
+    	return false;
+    }
+    
+    String getTokenSignature() {
+    	if (this.token == null) return "unavailable";
+    	DecodedJWT t = JWT.decode(token);
+		return t.getSignature();
+     }
+    
+    boolean signatureIsValid(String sig) {
+    	if (this.token==null || sig==null) return false;
+    	return validToken() && token.contains(sig);
     }
 }

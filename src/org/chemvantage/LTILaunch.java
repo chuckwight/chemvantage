@@ -34,6 +34,7 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
@@ -67,8 +68,9 @@ public class LTILaunch extends HttpServlet {
 			throws ServletException, IOException {
 		try {			
 			if ("UpdateAssignment".equals(request.getParameter("UserRequest"))) {
-				User user = User.getUser(request.getParameter("Token"));
-				if (user==null) throw new Exception("Unable to identify user because the token was expired or invalid.");
+				User user = User.getUser((String)request.getSession().getAttribute("Token"));
+				if (!user.signatureIsValid(request.getParameter("sig"))) throw new Exception("Unable to validate user token.");
+				
 				if (!user.isInstructor()) throw new Exception("User must be instructor to update this assignment.");
 				
 				Assignment myAssignment = updateAssignment(request,user);
@@ -76,7 +78,7 @@ public class LTILaunch extends HttpServlet {
 				
 				if (!refresh && myAssignment.isValid()) {
 					ofy().save().entity(myAssignment).now();  // we will need this in a few milliseconds					
-					String redirectUrl = "/" + request.getParameter("AssignmentType") + "?Token=" + user.token;
+					String redirectUrl = "/" + request.getParameter("AssignmentType") + "?sig=" + user.getTokenSignature();
 					response.sendRedirect(redirectUrl);	
 				} else {  // send the user back to the resourcePickerForm
 					int topicKey = -1;
@@ -251,10 +253,14 @@ public class LTILaunch extends HttpServlet {
 			}
 			debug.append("assignmentId=" + myAssignment.id + "...");
 			
+			HttpSession session = request.getSession();
+			session.setAttribute("Token",user.token);
+			if (user.getTokenSignature()==null) throw new Exception("User token signature was null.");
+			
 			// At this point we should have a valid Assignment, but it may not have an 
 			// assignmentType or topicId(s). If so, show the the pickResource form:
 			if (myAssignment.isValid()) {
-				redirectUrl = "/" + myAssignment.assignmentType + "?Token=" + user.token;
+				redirectUrl = "/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature();
 				
 				debug.append("Redirecting to: " + redirectUrl);
 				response.sendRedirect(redirectUrl);
@@ -345,7 +351,7 @@ public class LTILaunch extends HttpServlet {
 		
 		buf.append("<form name=AssignmentForm method=POST>");
 		buf.append("<input type=hidden name=UserRequest value=UpdateAssignment>");
-		buf.append("<input type=hidden name=Token value='" + user.token + "'>");
+		buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "'>");
 		buf.append("<input type=hidden name=Refresh value=false>");
 		
 		String assignmentType = myAssignment.assignmentType; // convenience variable; may be null for new Assignment

@@ -85,7 +85,7 @@ public class UserReport implements Serializable {
 				buf.append("<FORM METHOD=POST ACTION=Feedback>"
 					+ "<INPUT TYPE=HIDDEN NAME=ReportId VALUE=" + this.id + ">"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Report'>"
-					+ "<INPUT TYPE=HIDDEN NAME=Token VALUE='" + user.token + "'>"
+					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "'>"
 					+ "</FORM><p>");
 		} catch (Exception e) {
 			buf.append("<br>" + e.toString());

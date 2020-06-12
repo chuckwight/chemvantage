@@ -70,9 +70,9 @@ public class PracticeExam extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
 		try {
-			User user = User.getUser(request.getParameter("Token"));
-			if (user == null) throw new Exception();
-		
+			User user = User.getUser((String)request.getSession().getAttribute("Token"));
+			if (!user.signatureIsValid(request.getParameter("sig"))) throw new Exception();
+			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 
@@ -89,9 +89,9 @@ public class PracticeExam extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
 		try {
-			User user = User.getUser(request.getParameter("Token"));
-			if (user == null) throw new Exception();
-		
+			User user = User.getUser((String)request.getSession().getAttribute("Token"));
+			if (!user.signatureIsValid(request.getParameter("sig"))) throw new Exception();
+			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 
@@ -116,7 +116,7 @@ public class PracticeExam extends HttpServlet {
 
 			buf.append("Please select <b>at least 3 topics</b> below to be covered on this practice exam.<p>");
 			buf.append("<FORM NAME=TopicForm METHOD=GET>");
-			buf.append("<input type=hidden name=Token value=" + user.token + ">");
+			buf.append("<input type=hidden name=sig value=" + user.getTokenSignature() + ">");
 			
 			buf.append("<div style='display:table'>");
 			List<Topic> topics = ofy().load().type(Topic.class).list();
@@ -236,7 +236,7 @@ public class PracticeExam extends HttpServlet {
 			buf.append("</OL>");
 
 			if (user.isInstructor()) buf.append("<mark>"
-					+ "Instructor: you may <a href=/PracticeExam?UserRequest=AssignExamQuestions&Token=" + user.token + ">"
+					+ "Instructor: you may <a href=/PracticeExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + ">"
 					+ "customize this practice exam</a> by selecting/deselecting the available question items."
 					+ "</mark><p>");
 			
@@ -246,7 +246,7 @@ public class PracticeExam extends HttpServlet {
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
 			rand.setSeed(pt.id);  // random number generator seeded with PracticeExamTransaction id value
 
-			buf.append(ajaxExamJavaScript());  // this code allows users to use the Google SOAP search spell checking function
+			//buf.append(ajaxExamJavaScript());  // this code allows users to use the Google SOAP search spell checking function
 			
 			buf.append("\n<FORM METHOD=POST ACTION=PracticeExam "
 					+ "onSubmit=\"return confirm('Submit this exam for grading now. Are you sure?')\">");
@@ -256,7 +256,7 @@ public class PracticeExam extends HttpServlet {
 
 			// Include a nonce reference as a hedge in case the session is not maintained by the user's browser
 			//buf.append(cvsToken!=null?"\n<input type=hidden name=CvsToken value='" + cvsToken + "'>":"");
-			buf.append("<input type=hidden name=Token value='" + user.token + "'>");
+			buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "'>");
 			if (a!=null) buf.append("\n<input type=hidden name=AssignmentId value='" + a.id + "'>");
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
 			int[] possibleScores = new int[topicIds.size()];
@@ -491,14 +491,14 @@ public class PracticeExam extends HttpServlet {
 				else buf.append("Some questions were left blank.");
 			}
 			// embed ajax code to provide feedback
-			buf.append(ajaxScoreJavaScript(user.token));
+			buf.append(ajaxScoreJavaScript(user.getTokenSignature()));
 		}
 		catch (Exception e) {
 			buf.append(e.getMessage());
 		}
 		return buf.toString();
 	}
-	
+/*	
 	String ajaxExamJavaScript() {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSpellCheck(id) {\n"
@@ -542,8 +542,8 @@ public class PracticeExam extends HttpServlet {
 		+ "}\n"
 		+ "</SCRIPT>";			
 	}
-
-	String ajaxScoreJavaScript(String token) {
+*/
+	String ajaxScoreJavaScript(String signature) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note,email) {\n"
 		+ "  var xmlhttp;\n"
@@ -559,7 +559,7 @@ public class PracticeExam extends HttpServlet {
 		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
-		+ "  url += '&QuestionId=' + id + '&Token=" + token + "&Notes=' + note + '&Email=' + email;\n"
+		+ "  url += '&QuestionId=' + id + '&Token=" + signature + "&Notes=' + note + '&Email=' + email;\n"
 		+ "  xmlhttp.open('GET',url,true);\n"
 		+ "  xmlhttp.send(null);\n"
 		+ "  return false;\n"

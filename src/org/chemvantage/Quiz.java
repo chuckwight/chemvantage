@@ -61,8 +61,8 @@ public class Quiz extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			User user = User.getUser(request.getParameter("Token"));
-			if (user == null) throw new Exception();
+			User user = User.getUser((String)request.getSession().getAttribute("Token"));
+			if (!user.signatureIsValid(request.getParameter("sig"))) throw new Exception();
 			
 			response.setContentType("text/html");
 			response.setCharacterEncoding("UTF-8");
@@ -86,9 +86,9 @@ public class Quiz extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			User user = User.getUser(request.getParameter("Token"));
-			if (user == null) throw new Exception();
-		
+			User user = User.getUser((String)request.getSession().getAttribute("Token"));
+			if (!user.signatureIsValid(request.getParameter("sig"))) throw new Exception();
+			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
@@ -155,11 +155,11 @@ public class Quiz extends HttpServlet {
 			
 			if (user.isInstructor() && qa != null) {
 				buf.append("<mark>As the course instructor you may "
-						+ "<a href=/Quiz?UserRequest=AssignQuizQuestions&Token=" + user.token + ">"
+						+ "<a href=/Quiz?UserRequest=AssignQuizQuestions&sig=" + user.getTokenSignature() + ">"
 						+ "customize this quiz</a> by selecting/deselecting the available question items. ");
 				if (qa.lti_nrps_context_memberships_url != null && qa.lti_ags_lineitem_url != null) 
-					buf.append("You may also view a <a href=/Quiz?UserRequest=ShowSummary&Token=" 
-							+ user.token + ">summary of student scores</a> for this assignment.");
+					buf.append("You may also view a <a href=/Quiz?UserRequest=ShowSummary&sig=" 
+							+ user.getTokenSignature() + ">summary of student scores</a> for this assignment.");
 				buf.append("</mark><p>");
 			} else if (user.isAnonymous()) {
 				buf.append("<h3><font color=red>Anonymous User</font></h3>");
@@ -167,7 +167,7 @@ public class Quiz extends HttpServlet {
 			
 			buf.append("\n<FORM NAME=Quiz METHOD=POST ACTION=Quiz onSubmit='return confirmSubmission()'>");
 			
-			buf.append("<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">");
+			buf.append("<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">");
 			if (qa!=null) buf.append("<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + qa.id + "'>");
 			if (!user.isAnonymous()) {
 				buf.append("\nQuiz Rules<OL>");
@@ -291,7 +291,7 @@ public class Quiz extends HttpServlet {
 				return "<h2>No Score</h2>"
 						+ "Sorry, this quiz was graded on " + df.format(qt.graded) + " and cannot be regraded.<p>"
 						+ "Your score on this quiz was " + qt.score + " out of a possible " + qt.possibleScore + " points.<p>"
-						+ (user.isAnonymous()?"<p><a href=/Quiz?TopicId=" + qt.topicId + "&Token=" + user.token + ">"
+						+ (user.isAnonymous()?"<p><a href=/Quiz?TopicId=" + qt.topicId + "&sig=" + user.getTokenSignature() + ">"
 						+ "Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a>.":"");
 			}
 
@@ -307,7 +307,7 @@ public class Quiz extends HttpServlet {
 			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			buf.append(df.format(now));
 			
-			buf.append(ajaxJavaScript(user.token)); // load javascript for AJAX problem reporting form
+			buf.append(ajaxJavaScript(user.getTokenSignature())); // load javascript for AJAX problem reporting form
 			
 			// Create a StringBuffer to contain correct answers to questions answered correctly
 			StringBuffer missedQuestions = new StringBuffer();			
@@ -416,9 +416,9 @@ public class Quiz extends HttpServlet {
 			
 			// if the user response was correct, seek five-star feedback:
 			if (studentScore == qt.possibleScore) buf.append(fiveStars());
-			else buf.append("Please take a moment to <a href=/Feedback?Token=" + user.token + ">tell us about your ChemVantage experience</a>.<p>");
+			else buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
 
-			if (qa != null) buf.append("You may <a href=/Quiz?UserRequest=ShowScores&Token=" + user.token + ">review all your scores on this assignment.</a>.<p>") ;
+			if (qa != null) buf.append("You may <a href=/Quiz?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review all your scores on this assignment.</a>.<p>") ;
 
 			if (!reportScoreToLms && !user.isAnonymous()) {
 				buf.append("<b>Please note:</b> Your score was not reported back to the grade book of your class "
@@ -427,7 +427,7 @@ public class Quiz extends HttpServlet {
 			}
 			
 			// If qa==null this is an anonymous user, otherwise is an LTI user:
-			buf.append((qa==null?"<a href=/Quiz?TopicId=" + qt.topicId + "&Token=" + user.token + ">Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a> " :
+			buf.append((qa==null?"<a href=/Quiz?TopicId=" + qt.topicId + "&sig=" + user.getTokenSignature() + ">Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a> " :
 			"You may take this quiz again by clicking the assignment link in your learning management system ")			
 			+ "or <a href=/Logout>logout of ChemVantage</a>.");
 
@@ -476,7 +476,7 @@ public class Quiz extends HttpServlet {
 		return buf.toString(); 
 	}
 
-	String ajaxJavaScript(String token) {
+	String ajaxJavaScript(String signature) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note,email) {\n"
 		+ "  var xmlhttp;\n"
@@ -493,7 +493,7 @@ public class Quiz extends HttpServlet {
 		+ "</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
-		+ "  url += '&QuestionId=' + id + '&Token=" + token + "&Notes=' + note + '&Email=' + email;\n"
+		+ "  url += '&QuestionId=' + id + '&sig=" + signature + "&Notes=' + note + '&Email=' + email;\n"
 		+ "  xmlhttp.open('GET',url,true);\n"
 		+ "  xmlhttp.send(null);\n"
 		+ "  return false;\n"
@@ -510,12 +510,12 @@ public class Quiz extends HttpServlet {
 		+ "    var msg;\n"
 		+ "    switch (nStars) {\n"
 		+ "      case '1': msg='1 star - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to <a href=/Feedback?Token=" + token + ">tell us why</a>.';"
+		+ "                + 'please take a moment to <a href=/Feedback?sig=" + signature + ">tell us why</a>.';"
 		+ "                break;\n"
 		+ "      case '2': msg='2 stars - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to <a href=/Feedback?Token=" + token + ">tell us why</a>.';"
+		+ "                + 'please take a moment to <a href=/Feedback?sig=" + signature + ">tell us why</a>.';"
 		+ "                break;\n"
-		+ "      case '3': msg='3 stars - Thank you. <a href=/Feedback?Token=" + token + ">Click here</a> '"
+		+ "      case '3': msg='3 stars - Thank you. <a href=/Feedback?sig=" + signature + ">Click here</a> '"
 		+ "                + 'to provide additional feedback.';"
 		+ "                break;\n"
 		+ "      case '4': msg='4 stars - Thank you';"
@@ -569,7 +569,7 @@ public class Quiz extends HttpServlet {
 			if (qts.size()==0) {
 				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>"
 						+ "<a href=Quiz?AssignmentId=" + a.id 
-						+ "&Token=" + user.token 
+						+ "&sig=" + user.getTokenSignature() 
 						+ ">Take me back to the quiz now.</a>");
 			} else {
 				// create a fresh Score entity to calculate the best score on this assignment
@@ -695,7 +695,7 @@ public class Quiz extends HttpServlet {
 			}
 		} else {
 			buf.append("Sorry, there is not enough information available from your LMS to support this request.<p>");			
-			buf.append("<a href=/Quiz?Token=" + user.token + ">Return to this quiz</a>.<p>");
+			buf.append("<a href=/Quiz?sig=" + user.getTokenSignature() + ">Return to this quiz</a>.<p>");
 		}
 		return buf.toString();
 	}

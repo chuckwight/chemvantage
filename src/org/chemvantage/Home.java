@@ -30,6 +30,7 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 @WebServlet(urlPatterns={"/","/Home"})
 public class Home extends HttpServlet {
@@ -133,9 +134,9 @@ public class Home extends HttpServlet {
 					+ "<div class=pz1>ChemVantage.org</div>"
 					+ " <div class=pz1><a href=/Home>Home</a></div>"
 					+ " <div class=pz1><a href=/About>About Us</a></div>"
-					+ "<div class=pz1><a href=/Feedback?Token=" + user.token + ">Feedback</a></div>");
+					+ "<div class=pz1><a href=/Feedback?sig=" + user.getTokenSignature() + ">Feedback</a></div>");
 
-			buf.append("<div class=pz1><a href=/Contribute?Token=" + user.token + ">Authors</a></div>");
+			buf.append("<div class=pz1><a href=/Contribute?sig=" + user.getTokenSignature() + ">Authors</a></div>");
 			if (user.isEditor()) buf.append("<div class=pz1><a href=/Edit>Editors</a></div>");
 			if (user.isAdministrator()) buf.append("<div class=pz1><a href=/Admin>Admin</a></div>");
 
@@ -188,8 +189,10 @@ public class Home extends HttpServlet {
 			// make every user anonymous
 			User user = new User("anonymous"+new Random().nextInt());
 			user.setToken(); // sets the CSRF token with assignmentId=0L;
+			HttpSession session = request.getSession();
+			session.setAttribute("Token", user.token);
 			
-			buf.append("<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">");
+			buf.append("<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">");
 			
 			buf.append("<SELECT NAME='TopicId'><OPTION Value='0' SELECTED>Select a topic</OPTION>");
 			
@@ -213,7 +216,7 @@ public class Home extends HttpServlet {
 			buf.append("<div>");
 			buf.append("<b>Practice Exams</b>");
 			buf.append("<FORM METHOD=GET ACTION=PracticeExam>");
-			buf.append("<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">");
+			buf.append("<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">");
 			buf.append("<INPUT TYPE=SUBMIT VALUE='Take A Practice Exam Now'>");
 			buf.append("</FORM></div>");
 			
@@ -259,7 +262,7 @@ public class Home extends HttpServlet {
 				buf.append("</div>");
 			}
 			// =============EXPERIMENTAL =============
-			 if (request.getServerName().contains("dev-vantage")) buf.append("<p><a href=Video.jsp?VideoId=5749645665894400&Token=" + user.token + ">Experimental video quiz</a><p>");
+			 if (request.getServerName().contains("dev-vantage")) buf.append("<p><a href=Video.jsp?VideoId=5749645665894400&sig=" + user.getTokenSignature() + ">Experimental video quiz</a><p>");
 			// =============EXPERIMENTAL =============
 			
 			// Complete the large two-column table for the Home page (divs for cell, row, table):

@@ -87,8 +87,9 @@ public class LTIv1p3Launch extends HttpServlet {
 		try {
 			if (request.getParameter("id_token") != null) ltiv1p3LaunchRequest(request,response);  // handle LTI v1p3 launch request			
 			else if ("UpdateAssignment".equals(request.getParameter("UserRequest"))) { // POST the assignmentType and topicIds			
-				User user = User.getUser(request.getParameter("Token"));
-				if (user==null) throw new Exception("Unable to identify user because the token was expired or invalid.");
+				User user = User.getUser((String)request.getSession().getAttribute("Token"));
+				if (!user.signatureIsValid(request.getParameter("sig"))) throw new Exception();
+				
 				if (!user.isInstructor()) throw new Exception("User must be instructor to update thisd assignment.");
 
 				Assignment myAssignment = updateAssignment(request,user);
@@ -96,7 +97,7 @@ public class LTIv1p3Launch extends HttpServlet {
 
 				if (!refresh && myAssignment.isValid()) {
 					ofy().save().entity(myAssignment).now();  // we will need this in a few milliseconds					
-					String redirectUrl = "/" + request.getParameter("AssignmentType") + "?Token=" + user.token;
+					String redirectUrl = "/" + request.getParameter("AssignmentType") + "?sig=" + user.getTokenSignature();
 					response.sendRedirect(redirectUrl);	
 				} else {  // send the user back to the resourcePickerForm
 					int topicKey = 1;
@@ -207,7 +208,8 @@ public class LTIv1p3Launch extends HttpServlet {
 
 		Assignment myAssignment = null;
 		debug.append("Starting to find assignment...");
-
+		HttpSession session = request.getSession();
+		
 		// 1) Try to find the assignment using the platformDeploymentId and the resourceLinkId value
 		myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();
 		debug.append((myAssignment==null?"not ":"") + "found in the datastore...");
@@ -227,7 +229,6 @@ public class LTIv1p3Launch extends HttpServlet {
 		// 2b) See if the assignmerntId is included in the user's Session from DeepLinking flow. This is the Canvas way...
 		if (myAssignment == null) {
 			try {
-				HttpSession session = request.getSession();
 				long assignmentId = Long.parseLong((String)session.getAttribute("AssignmentId"));
 				myAssignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
 				session.removeAttribute("AssignmentId");
@@ -262,6 +263,7 @@ public class LTIv1p3Launch extends HttpServlet {
 
 		// Create a cross-site request forgery (CSRF) token containing the Assignment.id
 		user.setAssignment(myAssignment.id);
+		session.setAttribute("Token",user.token);
 		debug.append("user token set OK...");
 
 		// If this is the first time this Assignment has been used, it may be missing the assignmentType and topicId(s)
@@ -269,7 +271,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,1) + Home.footer);
 			return;
 		} else {  // redirect the user's browser to the assignment
-			response.sendRedirect("/" + myAssignment.assignmentType + "?Token=" + user.token);
+			response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
 			return;
 		}
 	}
@@ -420,7 +422,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		
 		buf.append("<form name=AssignmentForm method=POST>");
 		buf.append("<input type=hidden name=UserRequest value=UpdateAssignment>");
-		buf.append("<input type=hidden name=Token value='" + user.token + "'>");
+		buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "'>");
 		buf.append("<input type=hidden name=Refresh value=false>");
 		
 		String assignmentType = myAssignment.assignmentType; // convenience variable; may be null for new Assignment

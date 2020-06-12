@@ -59,6 +59,7 @@ public class Admin extends HttpServlet {
 			User user = new User(userId);
 			user.setIsChemVantageAdmin(true);
 			user.setToken();
+			request.getSession().setAttribute("Token", user.token);
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
@@ -76,9 +77,10 @@ public class Admin extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			User user = User.getUser(request.getParameter("Token")); 
-			user.setToken();
-
+			User user = User.getUser((String)request.getSession().getAttribute("Token"));
+			if (!user.signatureIsValid(request.getParameter("sig"))) throw new Exception();
+			if (!user.isChemVantageAdmin()) throw new Exception();
+			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			String searchString = request.getParameter("SearchString");
@@ -136,7 +138,7 @@ public class Admin extends HttpServlet {
 			buf.append("<FORM NAME=ConsKey ACTION=/Admin METHOD=GET>Use this form below to search for specific LTI consumers.<br>"
 					+ "Consumer Key: <INPUT TYPE=TEXT NAME=SearchString VALUE='" + searchString + "' onFocus=ConsKey.oauth_consumer_key.value=''>"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Search for Consumer'> "
-					+ "<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">"
+					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
 					+ "</FORM>");
 			
 			if ("Search for Consumer".equals(userRequest)) {

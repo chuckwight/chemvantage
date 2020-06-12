@@ -43,8 +43,8 @@ public class Contribute extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
 		try {
-			User user = User.getUser(request.getParameter("Token"));
-			if (user == null) throw new Exception();
+			User user = User.getUser((String)request.getSession().getAttribute("Token"));
+			if (!user.signatureIsValid(request.getParameter("sig"))) throw new Exception();
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
@@ -55,9 +55,9 @@ public class Contribute extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			User user = User.getUser(request.getParameter("Token"));
-			if (user == null) throw new Exception();
-		
+			User user = User.getUser((String)request.getSession().getAttribute("Token"));
+			if (!user.signatureIsValid(request.getParameter("sig"))) throw new Exception();
+			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			

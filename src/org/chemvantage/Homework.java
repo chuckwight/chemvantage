@@ -55,9 +55,9 @@ public class Homework extends HttpServlet {
 	throws ServletException, IOException {
 		
 		try {
-			User user = User.getUser(request.getParameter("Token"));
-			if (user == null) throw new Exception();
-		
+			User user = User.getUser((String)request.getSession().getAttribute("Token"));
+			if (!user.signatureIsValid(request.getParameter("sig"))) throw new Exception();
+			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
@@ -81,8 +81,8 @@ public class Homework extends HttpServlet {
 	throws ServletException, IOException {
 		
 		try {
-			User user = User.getUser(request.getParameter("Token"));
-			if (user == null) throw new Exception();
+			User user = User.getUser((String)request.getSession().getAttribute("Token"));
+			if (!user.signatureIsValid(request.getParameter("sig"))) throw new Exception();
 				
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
@@ -135,11 +135,11 @@ public class Homework extends HttpServlet {
 			
 			if (user.isInstructor() && hwa != null) {
 				buf.append("<mark>As the course instructor you may "
-						+ "<a href=/Homework?UserRequest=AssignHomeworkQuestions&Token=" + user.token + ">"
+						+ "<a href=/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + ">"
 						+ "customize this assignment</a> by selecting/deselecting the required question items. ");
 				if (hwa.lti_nrps_context_memberships_url != null && hwa.lti_ags_lineitem_url != null) 
-					buf.append("You may also view a <a href=/Homework?UserRequest=ShowSummary&Token=" 
-							+ user.token + ">summary of student scores</a> for this assignment.");
+					buf.append("You may also view a <a href=/Homework?UserRequest=ShowSummary&sig=" 
+							+ user.getTokenSignature() + ">summary of student scores</a> for this assignment.");
 				buf.append("</mark><p>");
 			} else if (user.isAnonymous()) {
 				buf.append("<h3><font color=red>Anonymous User</font></h3>");
@@ -202,7 +202,7 @@ public class Homework extends HttpServlet {
 						String showWork = (latest==null || latest.showWork==null?"":latest.showWork);
 						
 						buf.append("<FORM METHOD=POST ACTION=Homework>"
-								+ "<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">"
+								+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
 								+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 								+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 								+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>"
@@ -262,7 +262,7 @@ public class Homework extends HttpServlet {
 				String showWork = (latest==null || latest.showWork==null?"":latest.showWork);
 				
 				buf.append("<FORM METHOD=POST ACTION=Homework>"
-						+ "<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">"
+						+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
 						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ "<div style='display:table-cell'><b>" + i + ".&nbsp;</b></div>"
@@ -345,12 +345,12 @@ public class Homework extends HttpServlet {
 						+ "same solution, or it may be possible to use your answer to back-calculate the data given in the problem.<p>"
 						+ "Alternatively, you may wish to "
 						+ "<a href=/Homework?" + (hwa==null?"TopicId=" + topic.id : "AssignmentId=" + hwa.id)
-						+ "&Token=" + user.token + ">" 
+						+ "&sig=" + user.getTokenSignature() + ">" 
 						+ "return to this homework assignment</a> to work on another problem.<p>");
 		
 				buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework>"
 						+ (hwa==null?"<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>":"<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>")
-						+ "<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">"
+						+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ q.print(showWork,studentAnswer[0]) + "<br>");
 				
@@ -456,7 +456,7 @@ public class Homework extends HttpServlet {
 				
 				if (!user.isAnonymous() && user.isEligibleForHints(q.id)) {
 					buf.append("<form method=post action=Help>"
-							+ "<input type=hidden name=Token value=" + user.token + ">"
+							+ "<input type=hidden name=sig value=" + user.getTokenSignature() + ">"
 							+ "<input type=hidden name=AssignmentType value=Homework>"
 							+ "<input type=hidden name=TransactionId value=" + ht.id + ">");
 					buf.append("<font color=red>Do you need some help from your instructor or teaching assistant?</font>");
@@ -469,7 +469,7 @@ public class Homework extends HttpServlet {
 				buf.append("<h3>The answer to the question was left blank.</h3><p>");
 			}
 
-			buf.append(ajaxJavaScript(user.token));
+			buf.append(ajaxJavaScript(user.getTokenSignature()));
 			
 			// embed the detailed solution or hint to the exercise in the response, if appropriate
 			if (user.isInstructor() || user.isTeachingAssistant() || (studentScore > 0)) {
@@ -485,13 +485,13 @@ public class Homework extends HttpServlet {
 			
 			// if the user response was correct, seek five-star feedback:
 			if (studentScore > 0) buf.append(fiveStars());
-			else buf.append("Please take a moment to <a href=/Feedback?Token=" + user.token + ">tell us about your ChemVantage experience</a>.<p>");
+			else buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
 			
-			if (hwa != null) buf.append("You may <a href=/Homework?UserRequest=ShowScores&Token=" + user.token + ">review your scores on this assignment</a>.<p>");
+			if (hwa != null) buf.append("You may <a href=/Homework?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review your scores on this assignment</a>.<p>");
 
 			buf.append("<a href=/Homework?"
 					+ (assignmentId>0?"AssignmentId=" + assignmentId : "TopicId=" + topic.id)
-					+ "&Token=" + user.token  
+					+ "&sig=" + user.getTokenSignature()  
 					+ (offerHint?"&Q=" + q.id + "><span style='color:red'>Please give me a hint</span>":">Return to this homework assignment") + "</a> or "
 					+ "<a href=/Logout>logout of ChemVantage</a> ");
 			
@@ -503,7 +503,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	String ajaxJavaScript(String token) {
+	String ajaxJavaScript(String signature) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note,email) {\n"
 		+ "  var xmlhttp;\n"
@@ -520,7 +520,7 @@ public class Homework extends HttpServlet {
 		+ "</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
-		+ "  url += '&QuestionId=' + id + '&Token=" + token + "&Notes=' + note + '&Email=' + email;\n"
+		+ "  url += '&QuestionId=' + id + '&sig=" + signature + "&Notes=' + note + '&Email=' + email;\n"
 		+ "  xmlhttp.open('GET',url,true);\n"
 		+ "  xmlhttp.send(null);\n"
 		+ "  return false;\n"
@@ -537,12 +537,12 @@ public class Homework extends HttpServlet {
 		+ "    var msg;\n"
 		+ "    switch (nStars) {\n"
 		+ "      case '1': msg='1 star - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to <a href=/Feedback?Token=" + token + ">tell us why</a>.';"
+		+ "                + 'please take a moment to <a href=/Feedback?sig=" + signature + ">tell us why</a>.';"
 		+ "                break;\n"
 		+ "      case '2': msg='2 stars - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to <a href=/Feedback?Token=" + token + ">tell us why</a>.';"
+		+ "                + 'please take a moment to <a href=/Feedback?sig=" + signature + ">tell us why</a>.';"
 		+ "                break;\n"
-		+ "      case '3': msg='3 stars - Thank you. <a href=/Feedback?Token=" + token + ">Click here</a> '"
+		+ "      case '3': msg='3 stars - Thank you. <a href=/Feedback?sig=" + signature + ">Click here</a> '"
 		+ "                + 'to provide additional feedback.';"
 		+ "                break;\n"
 		+ "      case '4': msg='4 stars - Thank you';"
@@ -637,7 +637,7 @@ public class Homework extends HttpServlet {
 			if (hwts.size()==0) {
 				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>");
 				buf.append("<a href=Homework?AssignmentId=" + a.id 
-						+ "&Token=" + user.token
+						+ "&sig=" + user.getTokenSignature()
 						+ ">Take me back to the homework assignment.</a><p>");
 				return buf.toString();
 			} else {
@@ -694,7 +694,7 @@ public class Homework extends HttpServlet {
 					buf.append("<br>");
 				}
 
-				buf.append("<a href=Homework?Token=" + user.token 
+				buf.append("<a href=Homework?sig=" + user.getTokenSignature() 
 						+ ">Take me back to the homework assignment.</a><p>");
 
 				buf.append("<table><tr><th>Transaction Number</th><th>QuestionID</th><th>Graded</th><th>Score</th></tr>");
@@ -815,7 +815,7 @@ public class Homework extends HttpServlet {
 				else if (allScoresReported) buf.append("All scores for students have been reported to your LMS successfully.<p>");
 
 				buf.append("If you have any questions or need assistance, please contact <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.<p>");			
-				buf.append("<a href=/Homework?Token=" + user.token + ">Return to this homework assignment</a>.<p>");
+				buf.append("<a href=/Homework?sig=" + user.getTokenSignature() + ">Return to this homework assignment</a>.<p>");
 			} catch (Exception e) {
 				buf.append("ChemVantage was unable to access the LISMembershipContainer REST service on your LMS, so a summary of scores cannot be provided "
 						+ "at this time, sorry. We are working to resolve this problem in the near future.<p>");

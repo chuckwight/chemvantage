@@ -89,14 +89,14 @@ public class Assignment implements java.lang.Cloneable {
 						+ "answers to the items that they answer incorrectly. Therefore, the total number of questions should be "
 						+ "larger than 10, but not much larger than 50.  Experience shows that 30 items is about right in most cases.<p>"
 						+ "If you don't see a question you want to include, you may "
-						+ "<a href=/Contribute?Token=" + user.token + ">contribute a new question item</a> to the database.<p>");
+						+ "<a href=/Contribute?sig=" + user.getTokenSignature() + ">contribute a new question item</a> to the database.<p>");
 			} else if (assignmentType.contentEquals("Homework")) {
 				buf.append("Select the homework questions to be assigned to students in this group, then click the "
 						+ "'Use Selected Items' button. Each question is worth 1 point, so the maximum possible score on the "
 						+ "assignment is equal to the number of questions selected. Students may work unassigned problems; "
 						+ "however, these are not included in the scores reported to the class LMS.<p>"
 						+ "If you don't see a question you want to include, you may "
-						+ "<a href=/Contribute?Token=" + user.token + ">contribute a new question item</a> to the database.<p>");
+						+ "<a href=/Contribute?sig=" + user.getTokenSignature() + ">contribute a new question item</a> to the database.<p>");
 			}
 			
 			Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topic.id).filter("isActive",true);
@@ -108,7 +108,7 @@ public class Assignment implements java.lang.Cloneable {
 
 			// Make a list of individual questions that can be selected or deselected for this assignment
 			buf.append("<FORM NAME=Questions METHOD=POST ACTION=/" + this.assignmentType + ">"
-					+ "<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">"
+					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment'>"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + this.id + "'>"
 					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items'>");
@@ -165,7 +165,7 @@ public class Assignment implements java.lang.Cloneable {
 
 			buf.append("<FORM NAME=Questions METHOD=POST ACTION=PracticeExam>"
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment'>"
-					+ "<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">"
+					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + this.id + "'>"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=PracticeExam>"
 					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items'>");

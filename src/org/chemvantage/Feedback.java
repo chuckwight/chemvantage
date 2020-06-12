@@ -56,8 +56,8 @@ public class Feedback extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		try {
-			User user = User.getUser(request.getParameter("Token"));
-			if (user == null) {
+			User user = User.getUser((String)request.getSession().getAttribute("Token"));
+			if (user == null || !user.signatureIsValid(request.getParameter("sig"))) {
 				user = new User("anonymous"+new Random().nextInt());
 				user.setToken();				
 			}
@@ -83,9 +83,9 @@ public class Feedback extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			User user = User.getUser(request.getParameter("Token"));
-			if (user == null) throw new Exception();
-		
+			User user = User.getUser((String)request.getSession().getAttribute("Token"));
+			if (!user.signatureIsValid(request.getParameter("sig"))) throw new Exception();
+			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 			
@@ -155,7 +155,7 @@ public class Feedback extends HttpServlet {
 				+ "Comments or kudos: <FONT SIZE=-1>(160 characters max.)</FONT><br>"
 				+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback>"
 				+ "<INPUT TYPE=HIDDEN NAME=Stars>"
-				+ "<INPUT TYPE=HIDDEN NAME=Token VALUE='" + user.token + "'>"
+				+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "'>"
 				+ "<TEXTAREA NAME=Comments ROWS=5 COLS=60 WRAP=SOFT "				
 				+ "onKeyUp=javascript:{document.FeedbackForm.Comments.value=document.FeedbackForm.Comments.value.substring(0,160);document.getElementById('cbox').style.visibility='visible';}>"
 				+ "</TEXTAREA><br>");
@@ -216,7 +216,7 @@ public class Feedback extends HttpServlet {
 		
 			if (email==null) buf.append("We will review your comment, but you will not receive a response because you did not provide an email address.<p>");
 			else buf.append("We will review your comment. Any response will be sent to " + email + ".<p>");
-			buf.append("Feel free to email any additional comments to + <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><p>");
+			buf.append("Feel free to email any additional comments to <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><p>");
 		}
 		
 		if (user.isAnonymous()) buf.append("<p><a href=Home>Return to the Home page</a><br>");
