@@ -274,8 +274,9 @@ try {
 		debug.append("Lineitem: " + LTIMessage.getLineItem(d, lti_ags_lineitem_url));
 		// Update the lineitem, if necessary:
 		if (resourceId == null && lti_ags_lineitem_url != null) {
-			
-			LTIMessage.updateLineItem(d, lti_ags_lineitem_url, myAssignment.id);
+			try {
+				LTIMessage.updateLineItem(d, lti_ags_lineitem_url, myAssignment.id);
+			} catch (Exception e) {}
 		}
 		
 		// Create a cross-site request forgery (CSRF) token containing the Assignment.id
