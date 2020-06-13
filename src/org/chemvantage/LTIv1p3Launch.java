@@ -113,7 +113,7 @@ public class LTIv1p3Launch extends HttpServlet {
 	void ltiv1p3LaunchRequest(HttpServletRequest request,HttpServletResponse response) 
 			throws Exception {
 		StringBuffer debug = new StringBuffer();
-
+try {
 		validateStateToken(request); // ensures proper OIDC authorization flow completed			
 
 		Deployment d = validateIdToken(request);  // returns the validated Deployment
@@ -195,10 +195,10 @@ public class LTIv1p3Launch extends HttpServlet {
 		/* Find or create the correct Assignment entity for this LtiResourceLinkRequest launch
 		 *  Note: every launch MUST be accompanied by the resourceLinkId value. This is a platform-generated 
 		 *  value that must be unique to a link in the LMS platform. On every launch, ChemVantage will  
-		 *  1) look for an Assignment entity associated with this LMS and this resourceLinkId value
-		 *  2) look for a lineitem created through the DeepLinking flow:
-		 *     a) or it may have a lineitem with a resourceId equal to the Assignment.id
-		 *     b) it may have an AssignmentId parameter in the URL (Canvas works this way)
+		 *  1) look for a lineitem created through the DeepLinking flow:
+		 *     a) it should have a resourceId property equal to the String value of Assignment.id
+		 *     b) if not, it may be found in the user's session (Canvas works this way) -> update the lineitem
+		 *  2) look for an Assignment entity associated with this LMS and this resourceLinkId value (last resort for uncooperative lineitems)
 		 *  3) look for an Assignment entity associated with a resourceLinkId in the comma-separated list 
 		 *     of URL-encoded resource link ID values in the ResourceLink.id.history variable. (not yet implemented)  
 		 *     This would be the case of a course being copied to another course. We should clone the Assignment 
@@ -209,24 +209,20 @@ public class LTIv1p3Launch extends HttpServlet {
 		Assignment myAssignment = null;
 		debug.append("Starting to find assignment...");
 		HttpSession session = request.getSession();
+		String resourceId = null;
 		
-		// 1) Try to find the assignment using the platformDeploymentId and the resourceLinkId value
-		myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();
-		debug.append((myAssignment==null?"not ":"") + "found in the datastore...");
-
-		// 2a) If the lineitem URL is available, try to get the assignmentId from the resourceId parameter (set in Deep Linking)
-		if (myAssignment == null && lti_ags_lineitem_url != null) {
+		// 1) If the lineitem URL is available, try to get the assignmentId from the resourceId parameter (set in Deep Linking)
+		if (lti_ags_lineitem_url != null) {
 			try {
 				debug.append("looking for lineitem...");
-				JsonObject lineitem = LTIMessage.getLineItem(d, lti_ags_lineitem_url);
-				long assignmentId = Long.parseLong(lineitem.get("resourceId").getAsString());
-				myAssignment = ofy().load().type(Assignment.class).id(assignmentId).now();						
-				debug.append((myAssignment==null?"not ":"") + "found in the lineitem...");
+				resourceId = LTIMessage.getLineItem(d, lti_ags_lineitem_url).get("resourceId").getAsString();
+				long assignmentId = Long.parseLong(resourceId);
+				myAssignment = ofy().load().type(Assignment.class).id(assignmentId).safe();						
 			} catch (Exception e) {
 			}
 		}
 
-		// 2b) See if the assignmerntId is included in the user's Session from DeepLinking flow. This is the Canvas way...
+		// 2) See if the assignmerntId is included in the user's Session from DeepLinking flow. This is the Canvas way...
 		if (myAssignment == null) {
 			try {
 				long assignmentId = Long.parseLong((String)session.getAttribute("AssignmentId"));
@@ -236,10 +232,18 @@ public class LTIv1p3Launch extends HttpServlet {
 			} catch(Exception e) {}
 		}
 
-		// 3) Look for an Assignment with a resourceLinkId value listed in the ResourceLink.id.history list for this launch
+		// 3) Try to find the assignment using the platformDeploymentId and the resourceLinkId value
+		if (myAssignment == null) {
+			try {
+			myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().safe();
+			debug.append("assignment was found in the datastore...");
+			} catch (Exception e) {}
+		}
+		
+		// 4) Look for an Assignment with a resourceLinkId value listed in the ResourceLink.id.history list for this launch
 		// Note: not yet implemented as of June 2020
 
-		// 4) If none of that worked, then the assignment and lineitem probably don't exist, so make a new Assignment:
+		// 5) If none of that worked, then the assignment and lineitem probably don't exist, so make a new Assignment:
 		if (myAssignment == null) {
 			myAssignment = new Assignment(d.platform_deployment_id,resourceLinkId,lti_nrps_context_memberships_url);
 			debug.append("Created new assignment with id=" + myAssignment.id + "...");
@@ -253,14 +257,27 @@ public class LTIv1p3Launch extends HttpServlet {
 
 		myAssignment.resourceLinkId = resourceLinkId;			
 		if (lti_ags_lineitem_url != null) myAssignment.lti_ags_lineitem_url = lti_ags_lineitem_url;
-		else  myAssignment.lti_ags_lineitem_url = LTIMessage.getLineItemUrl(d, myAssignment,lti_ags_lineitems_url);
+		else  {
+			try {
+				lti_ags_lineitem_url = LTIMessage.getLineItemUrl(d, myAssignment,lti_ags_lineitems_url);
+				//new URL(lti_ags_lineitem_url); // throws Exception if not valid
+				myAssignment.lti_ags_lineitem_url = lti_ags_lineitem_url;
+			} catch (Exception e) {}
+		}
 		
 		myAssignment.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
 
 		// If required, save the updated Assignment entity now so its id will be accessible
 		if (myAssignment.id==null || !myAssignment.equivalentTo(original_a)) ofy().save().entity(myAssignment).now();
-		debug.append("assignment saved OK...");
+		debug.append("assignment " + myAssignment.id + " saved OK...");
 
+		debug.append("Lineitem: " + LTIMessage.getLineItem(d, lti_ags_lineitem_url));
+		// Update the lineitem, if necessary:
+		if (resourceId == null && lti_ags_lineitem_url != null) {
+			
+			LTIMessage.updateLineItem(d, lti_ags_lineitem_url, myAssignment.id);
+		}
+		
 		// Create a cross-site request forgery (CSRF) token containing the Assignment.id
 		user.setAssignment(myAssignment.id);
 		session.setAttribute("Token",user.token);
@@ -274,6 +291,9 @@ public class LTIv1p3Launch extends HttpServlet {
 			response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
 			return;
 		}
+} catch (Exception e) {
+	response.getWriter().println("Launch failed: " + e.toString() + " " + e.getMessage() + "<br>" + debug.toString());
+}
 	}
 	
 	protected void validateStateToken(HttpServletRequest request) throws Exception {

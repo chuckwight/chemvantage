@@ -348,7 +348,7 @@ public class LTIDeepLinks extends HttpServlet {
 			JsonObject settings = claims.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings").getAsJsonObject();		
 			deep_link_return_url = settings.get("deep_link_return_url").getAsString();
 			String data = settings.get("data")==null?"":settings.get("data").getAsString();
-			boolean acceptsMultiple = false;  //settings.get("accept_multiple")==null?false:settings.get("accept_multiple").getAsBoolean();
+			//boolean acceptsMultiple = false;  //settings.get("accept_multiple")==null?false:settings.get("accept_multiple").getAsBoolean();
 			
 			Date now = new Date();
 			Date exp = new Date(now.getTime() + 5400000L); // 90 minutes from now
@@ -359,26 +359,20 @@ public class LTIDeepLinks extends HttpServlet {
 			if (assignmentType == null || assignmentType.isEmpty()) throw new Exception("Assignment type is missing.");
 			
 			// Determine the topicId or topicIds for this selection
-			// Store a list of topic titles in a List<String>
 			long topicId = 0L;
 			List<Long> topicIds = new ArrayList<Long>();
-			//List<String> topicTitles = new ArrayList<String>();
 			
-			if (!acceptsMultiple && (assignmentType.contentEquals("Quiz") || assignmentType.contentEquals("Homework"))) {
+			if (assignmentType.contentEquals("Quiz") || assignmentType.contentEquals("Homework")) {
 				topicId = Long.parseLong(request.getParameter("TopicId"));
-				//topicTitles.add(ofy().load().type(Topic.class).id(topicId).now().title);
-			} else {
+			} else if (assignmentType.contentEquals("PracticeExam")) {
 				String[] topicIdArray = request.getParameterValues("TopicIds");
-				if (topicIdArray==null || topicIdArray.length==0) throw new Exception("At least 3 topics must be selected for a practice exam.");
-				if (assignmentType.contentEquals("PracticeExam") && topicIdArray.length<3) throw new Exception("At least 3 topics must be selected for a practice exam.");
+				if (topicIdArray==null || topicIdArray.length<3) throw new Exception("At least 3 topics must be selected for a practice exam.");
 				for (int i=0;i<topicIdArray.length;i++) {
 					long tId = Long.parseLong(topicIdArray[i]);
 					topicIds.add(tId);
-					//topicTitles.add(ofy().load().type(Topic.class).id(tId).now().title);
 				}
 			}
 			
-			//List<Assignment> assignments = new ArrayList<Assignment>(); // List of assignments to be created in this deep linking response
 			Assignment a = null;
 			
 			if ("PracticeExam".equals(assignmentType)) { // Create the new Assignment entity and load the questionKeys				
@@ -387,24 +381,11 @@ public class LTIDeepLinks extends HttpServlet {
 				for (int i=0;i<a.topicIds.size();i++) {
 					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",a.topicIds.get(i)).keys().list());
 				}
-				//assignments.add(assignment);
 			} else {  // create Quiz or Homework assignment(s)
-				if (acceptsMultiple) {
-					for (int i=0;i<topicIds.size();i++) {
-						Assignment assignment = new Assignment(assignmentType,topicIds.get(i),null,d.platform_deployment_id);
-						assignment.questionKeys = ofy().load().type(Question.class).filter("assignmentType",assignment.assignmentType).filter("topicId",topicIds.get(i)).keys().list();
-						//assignments.add(assignment);	
-					}
-				} else {
-					a = new Assignment(assignmentType,topicId,topicIds,d.platform_deployment_id);
-					a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
-					//assignments.add(assignment);
-				}
+				a = new Assignment(assignmentType,topicId,topicIds,d.platform_deployment_id);
+				a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
 			}
-			
-			// Now save the assignments to the datastore:
-			//for (Assignment a : assignments) ofy().save().entity(a).now();
-			//ofy().save().entities(assignments).now();  // need the new assignmentId values right away
+
 			ofy().save().entity(a).now();
 			
 			String serverUrl = "https://" + request.getServerName();
@@ -478,10 +459,13 @@ public class LTIDeepLinks extends HttpServlet {
 			session.setAttribute("AssignmentId", String.valueOf(a.id));
 			
 			// Create a form to be auto-submitted to the platform by the user_agent browser
-			buf.append("<form id=selections method=POST action='" + deep_link_return_url + "'>"
+			
+			buf.append("Submitting your selection back to your LMS...");
+			buf.append("<div style='visibility: hidden'>"
+					+ "<form id=selections method=POST action='" + deep_link_return_url + "'>"
 					+ "<input type=hidden name=JWT value='" + jwt + "'>"
 					+ "Assignment selection OK. Please click the Submit button &rarr; <input type=submit>"
-					+ "</form>");
+					+ "</form></div>");
 			buf.append("<script>document.getElementById('selections').submit();</script>");
 			//buf.append("The new content items are: " + content_items.toString());
 		} catch (Exception e) {
