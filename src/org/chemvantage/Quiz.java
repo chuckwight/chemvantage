@@ -418,7 +418,7 @@ public class Quiz extends HttpServlet {
 			if (studentScore == qt.possibleScore) buf.append(fiveStars());
 			else buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
 
-			if (qa != null) buf.append("You may <a href=/Quiz?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review all your scores on this assignment.</a>.<p>") ;
+			if (qa != null) buf.append("You may <a href=/Quiz?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review all your scores on this assignment</a>.<p>") ;
 
 			if (!reportScoreToLms && !user.isAnonymous()) {
 				buf.append("<b>Please note:</b> Your score was not reported back to the grade book of your class "
