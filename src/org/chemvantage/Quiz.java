@@ -156,9 +156,9 @@ public class Quiz extends HttpServlet {
 			if (user.isInstructor() && qa != null) {
 				buf.append("<mark>As the course instructor you may "
 						+ "<a href=/Quiz?UserRequest=AssignQuizQuestions&sig=" + user.getTokenSignature() + ">"
-						+ "customize this quiz</a> by selecting/deselecting the available question items. ");
+						+ "customize this quiz</a> by selecting/deselecting the available question items.");
 				if (qa.lti_nrps_context_memberships_url != null && qa.lti_ags_lineitem_url != null) 
-					buf.append("You may also view a <a href=/Quiz?UserRequest=ShowSummary&sig=" 
+					buf.append("<br>You may also view a <a href=/Quiz?UserRequest=ShowSummary&sig=" 
 							+ user.getTokenSignature() + ">summary of student scores</a> for this assignment.");
 				buf.append("</mark><p>");
 			} else if (user.isAnonymous()) {
@@ -615,7 +615,8 @@ public class Quiz extends HttpServlet {
 								+ "even for a score of zero, and ChemVantage will try to refresh your best score to the LMS.<p>");
 					} else throw new Exception();
 				} catch (Exception e) {
-					buf.append("ChemVantage was unable to retrieve your score for this assignment from the LMS.<br>");
+					buf.append("ChemVantage was unable to retrieve your score for this assignment from the LMS.<br>"
+							+ "Sometimes it takes several seconds for the score to be posted in the LMS grade book.<br>");
 					if (s.score==0 && s.numberOfAttempts<=1) buf.append("It appears that you may not have submitted a score for this quiz yet. ");
 					if (user.isInstructor()) buf.append("Some LMS providers do not store scores for instructors.");
 					buf.append("<p>");

@@ -138,7 +138,7 @@ public class Homework extends HttpServlet {
 						+ "<a href=/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + ">"
 						+ "customize this assignment</a> by selecting/deselecting the required question items. ");
 				if (hwa.lti_nrps_context_memberships_url != null && hwa.lti_ags_lineitem_url != null) 
-					buf.append("You may also view a <a href=/Homework?UserRequest=ShowSummary&sig=" 
+					buf.append("<br>You may also view a <a href=/Homework?UserRequest=ShowSummary&sig=" 
 							+ user.getTokenSignature() + ">summary of student scores</a> for this assignment.");
 				buf.append("</mark><p>");
 			} else if (user.isAnonymous()) {
@@ -688,7 +688,8 @@ public class Homework extends HttpServlet {
 								+ "even for a score of zero, and ChemVantage will try to refresh your best score to the LMS.<p>");
 					} else throw new Exception();
 				} catch (Exception e) {
-					buf.append("ChemVantage was unable to retrieve your score for this assignment from the LMS.<br>");
+					buf.append("ChemVantage was unable to retrieve your score for this assignment from the LMS.<br>"
+							+ "Sometimes it takes several seconds for the score to be posted in the LMS grade book.<br>");
 					if (s.score==0 && s.numberOfAttempts==0) buf.append("It appears that you may not have submitted a score for this quiz yet.<br>");
 					if (user.isInstructor()) buf.append("Some LMS providers do not store scores for instructors.<br>");
 					buf.append("<br>");
