@@ -113,7 +113,6 @@ public class LTIv1p3Launch extends HttpServlet {
 	void ltiv1p3LaunchRequest(HttpServletRequest request,HttpServletResponse response) 
 			throws Exception {
 		StringBuffer debug = new StringBuffer();
-try {
 		validateStateToken(request); // ensures proper OIDC authorization flow completed			
 
 		Deployment d = validateIdToken(request);  // returns the validated Deployment
@@ -292,9 +291,6 @@ try {
 			response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
 			return;
 		}
-} catch (Exception e) {
-	response.getWriter().println("Launch failed: " + e.toString() + " " + e.getMessage() + "<br>" + debug.toString());
-}
 	}
 	
 	protected void validateStateToken(HttpServletRequest request) throws Exception {
