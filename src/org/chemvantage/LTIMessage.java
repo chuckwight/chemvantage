@@ -41,6 +41,7 @@ import java.util.UUID;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -59,6 +60,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	String oauth_consumer_key;
 	String oauth_shared_secret;
 	String destinationURL;
+	static Map<String,String> authTokens = new HashMap<String,String>();
 	
 	LTIMessage() {}
 
@@ -208,9 +210,22 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		+ "  </imsx_POXBody>\n"
 		+ "</imsx_POXEnvelopeRequest>\n";		
 	}
-
+	
 	static String getAccessToken(String platformDeploymentId,String scope) {
-    	// First, construct a request token to send to the platform
+		String token;
+		if (authTokens.containsKey(platformDeploymentId)) {
+			token = authTokens.get(platformDeploymentId);
+			DecodedJWT decoded = JWT.decode(token);
+			if (decoded.getExpiresAt().after(new Date())) return token;  // token still OK
+		}
+		// at this point we must compute and store a new token
+		token = refreshAccessToken(platformDeploymentId,scope);
+		authTokens.put(platformDeploymentId, token);
+		return token;
+	}
+	
+	static String refreshAccessToken(String platformDeploymentId,String scope) {
+		// First, construct a request token to send to the platform
     	Date now = new Date();
     	StringBuffer debug = new StringBuffer("getAccessToken: ");
     	try {
