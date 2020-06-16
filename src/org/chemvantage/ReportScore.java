@@ -163,8 +163,8 @@ public class ReportScore extends HttpServlet {
 						+ "The response from your LMS was: " + response);
 			}
 		} catch (Exception e) {
-			//Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
-			//sendEmailToLmsAdmin(userId,a,d,e.getMessage());
+			Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
+			sendEmailToLmsAdmin(userId,a,d,e.getMessage());
 		}
 		return buf.toString();
 	}
