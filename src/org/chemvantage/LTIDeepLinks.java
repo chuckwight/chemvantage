@@ -20,7 +20,6 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 import com.auth0.jwk.Jwk;
 import com.auth0.jwk.JwkProvider;
@@ -385,10 +384,18 @@ public class LTIDeepLinks extends HttpServlet {
 				a = new Assignment(assignmentType,topicId,topicIds,d.platform_deployment_id);
 				a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
 			}
-
+			
+			//a.resourceLinkId = UUID.randomUUID().toString();
 			ofy().save().entity(a).now();
 			
-			String serverUrl = "https://" + request.getServerName();
+			String serverUrl = "https://" + request.getServerName() + "/lti/launch";
+			switch (d.lms_type) {
+			case "canvas":
+				serverUrl += "?resourceId=" + a.id;
+			default:
+			}
+			
+			
 			String client_id = d.client_id;
 			String subject = request.getParameter("Subject");
 			String nonce = Nonce.generateNonce();
@@ -420,7 +427,7 @@ public class LTIDeepLinks extends HttpServlet {
 			//for (Assignment a : assignments) {
 				JsonObject item = new JsonObject();
 				item.addProperty("type", "ltiResourceLink");
-				item.addProperty("url", serverUrl + "/lti/launch");
+				item.addProperty("url", serverUrl);
 				
 				String title = "";
 				if (a.assignmentType.equals("Quiz") || a.assignmentType.equals("Homework")) {
@@ -436,6 +443,7 @@ public class LTIDeepLinks extends HttpServlet {
 				lineitem.addProperty("scoreMaximum", (assignmentType.contentEquals("PracticeExam")?100:10));
 				lineitem.addProperty("label", title);
 				lineitem.addProperty("resourceId", String.valueOf(a.id));
+				//lineitem.addProperty("resourceLinkId", a.resourceLinkId);
 				item.add("lineItem", lineitem);
 			
 				content_items.add(item);
@@ -454,12 +462,7 @@ public class LTIDeepLinks extends HttpServlet {
 			String sig = new String(enc.encode(signature.sign()));
 			jwt = String.format("%s.%s", jwt, sig);
 			
-			// Put the new assignmentId into the user's session in case it is not passed by the DeepLinking methods
-			HttpSession session = request.getSession();
-			session.setAttribute("AssignmentId", String.valueOf(a.id));
-			
 			// Create a form to be auto-submitted to the platform by the user_agent browser
-			
 			buf.append("Submitting your selection back to your LMS...");
 			buf.append("<div style='visibility: hidden'>"
 					+ "<form id=selections method=POST action='" + deep_link_return_url + "'>"

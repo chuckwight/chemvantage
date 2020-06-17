@@ -41,7 +41,6 @@ import java.util.UUID;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
-import com.auth0.jwt.interfaces.DecodedJWT;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -210,7 +209,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		+ "  </imsx_POXBody>\n"
 		+ "</imsx_POXEnvelopeRequest>\n";		
 	}
-	
+/*	
 	static String getAccessToken(String platformDeploymentId,String scope) {
 		String token;
 		if (authTokens.containsKey(platformDeploymentId)) {
@@ -223,8 +222,9 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		authTokens.put(platformDeploymentId, token);
 		return token;
 	}
-	
-	static String refreshAccessToken(String platformDeploymentId,String scope) {
+*/	
+	//static String refreshAccessToken(String platformDeploymentId,String scope) {
+	static String getAccessToken(String platformDeploymentId,String scope) {
 		// First, construct a request token to send to the platform
     	Date now = new Date();
     	StringBuffer debug = new StringBuffer("getAccessToken: ");
@@ -283,14 +283,14 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			return e.toString() + " " + e.getMessage() + debug.toString();
 		}
     }
-    
-    static String getLineItemUrl(Deployment d,Assignment a,String lti_ags_lineitems_url) throws Exception {
-    	if (a.resourceLinkId == null) return "Missing resourceLinkId value.";
+   
+    static String getLineItemUrl(Deployment d,String resourceLinkId,String lti_ags_lineitems_url) throws Exception {
+    	if (resourceLinkId == null) return "Missing resourceLinkId value.";
     	if (lti_ags_lineitems_url==null) return "Missing lti_ags_lineitems_url value.";
     	
     	String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem";
     	
-    	String lineitems = getLineItemContainer(d,lti_ags_lineitems_url,a.resourceLinkId,scope);
+    	String lineitems = getLineItemContainer(d,lti_ags_lineitems_url,resourceLinkId,scope);
     	
     	// Check for errors (Status code or null)
     	if (lineitems == null) return null; // an error occurred; wait to try this another time
@@ -303,9 +303,9 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     		// We submitted the request including the resourceLinkId query, so there are only two possible valid responses:
     		// 0 - if the array is empty, we need to create a new lineitem and return its URL
     		// 1 - if there is exactly one loneitem, we need to return its id property (URL)
-    		if (lineitems_json_array.size() == 0) return createLineItem(d,a,lti_ags_lineitems_url);
+    		if (lineitems_json_array.size() == 0) return null;  // lineitem does not exist
     		if (lineitems_json_array.size() == 1) return lineitems_json_array.get(0).getAsJsonObject().get("id").getAsString();
-     	} catch (Exception e) {
+    	} catch (Exception e) {
      		//return "getLineItemUrl: " + e.toString() + " " + e.getMessage() + " " + lineitems;
     	}
     	return null;
@@ -313,9 +313,9 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 
     static JsonObject getLineItem(Deployment d, String lti_ags_lineitem_url) {
     	// This method returns a single lineitem from the platform
-      	try {
-      		String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem";
-        	String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id,scope);
+    	try {
+    		String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem";
+    		String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id,scope);
 
     		URL u = new URL(lti_ags_lineitem_url);
     		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
@@ -324,28 +324,17 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     		uc.setRequestProperty("Authorization", bearerAuth);
     		uc.setRequestProperty("Accept", "application/vnd.ims.lis.v2.lineitem+json");
     		uc.connect();
-    		
+
     		int responseCode = uc.getResponseCode();
     		if (responseCode == 200) {
     			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
     			JsonObject lineitem_json = JsonParser.parseReader(reader).getAsJsonObject();
     			reader.close();
     			return lineitem_json;
-    		} else {
-    			JsonObject error = new JsonObject();
-    			error.addProperty("response_code", responseCode);
-    			error.addProperty("lineitem_url", lti_ags_lineitem_url);
-    			error.addProperty("Authorization", bearerAuth);
-    			return error;
-    		}
-    	} catch (Exception e) {
-    	 	JsonObject error = new JsonObject();
-    		error.addProperty("deployment", d.toString());
-    		error.addProperty("lineitem_url", lti_ags_lineitem_url);
-    		error.addProperty("error", e.toString() + " " + e.getMessage());
-    		return error;
-    	}
-     }
+    		} 
+    	} catch (Exception e) {}
+    	return null;
+    }
     
     static String getLineItemContainer(Deployment d,String lti_ags_lineitems_url,String resourceLinkId,String scope) {
     	// This method asks the platform to return ALL of the lineitems for the context as a JSON string
