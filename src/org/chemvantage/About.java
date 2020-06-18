@@ -215,7 +215,8 @@ public class About extends HttpServlet {
 		+ "<li><b>Data and Information Collected</b> - ChemVantage collects and stores data and information about the quizzes, homework "
 		+ "assignments and practice exams that are downloaded by our users, including customized assignments, individual responses "
 		+ "to question items, assignment scores and timestamps. All data and information transmitted to or from ChemVantage are "
-		+ "protected by TLS/SSL encryption while in transit, and are stored in encrypted form on Google Cloud Datastore servers while at rest.</li>"
+		+ "protected by TLS/SSL encryption while in transit, and are stored in encrypted form on Google Cloud Datastore servers while at rest. "
+		+ "All user data are solely owned by the user and may be deleted upon request to <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.</li>"
 		+ "<li><b>How We Use Data and Information that We Collect</b> - For LTI users, individual user scores, data and information are "
 		+ "available to the user, the instructor (as identified by the LMS) and to the LMS administrators. User scores may "
 		+ "be reported by ChemVantage directly back to the LMS grade book via the LTI Outcomes Service if this service is "
@@ -260,7 +261,7 @@ public class About extends HttpServlet {
 		+ "or your dealings with this site, please contact us at:<br>"
 		+ "Phone: +1 (801)243-8242<br>"
 		+ "Email: <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a></LI>"
-		+ "<LI>These terms and conditions were last updated on April 18, 2020</LI>"
+		+ "<LI>These terms and conditions were last updated on June 18, 2020</LI>"
 		+ "</UL>";
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
