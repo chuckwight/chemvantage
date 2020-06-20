@@ -285,25 +285,50 @@ public class LTIRegistration extends HttpServlet {
 		
 		if (ver.contentEquals("1p1")) { // older LTIv1p1 registration process; deprecated 12/31/2020
 			buf.append("Thank you for your ChemVantage registration request. Click the link below "
-					+ "to view your free LTI credentials for connecting to ChemVantage. The link "
-					+ "is valid for three days and expires at " + jwt.getExpiresAt() + "<p>");
+					+ "to view your free LTI credentials for connecting to ChemVantage. "
+					+ "<b>Please write these down and keep them in a safe place.</b> "
+					+ "The link is valid for only three days and expires at " + jwt.getExpiresAt() + "<p>");
 			
 			buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
 					+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><p>");
 			
-			if ("moodle".contentEquals(lms)) {
+			switch (lms) {
+			case "moodle":
 				buf.append("Please note: Several Moodle users have experienced difficulty getting "
 						+ "scores returned to the Moodle grade book using LTI. We believe that this is due to the Moodle server being "
 						+ "configured in a way that refuses this type of LTI connection. You can rectify the situation by adding the "
 						+ "following rewrite rule into the .htaccess file on the Moodle server:<br>"
 						+ "RewriteCond %{HTTP:Authorization} ^(.+)" 
 						+ "RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]<p>");
-			} else if ("canvas".equals(lms)) {
-				buf.append("To use ChemVantage, create an assignment in Canvas. Under Submission Type, choose External Tool, "
-						+ "then click Find and select ChemVantage" + (iss.contains("dev")?" Development":"") + ". You will be "
-						+ "redirected to ChemVantage to select a Quiz, Homework, or Practice Exam for students in the course. "
-						+ "Student scores are returned directly to the Canvas grade book. You should test this functionality "
-						+ "using Settings | Test Student. Take the quiz and verify that the score is returned to the grade book.<p>");
+				break;
+			case "canvas":
+				buf.append("<b>Detailed instructions for connecting ChemVantage to a Canvas course:</b>");
+				buf.append("<ol><li>Write down your <a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">LTI credentials</a></li>"
+						+ "<li>Login to Canvas as a course Instructor, navigate to Settings, select the Apps tab, and click View App Configurations. "
+						+ "Then click the red +App button and complete the following fields to create a new External Tool:" 
+						+ "<ul><li>Configuration Type: By URL</li>"
+						+ " <li>Name: ChemVantage</li>"
+						+ " <li>Consumer Key and Shared Secret: (cut/paste values from step 1; do not include any blank spaces)</li>" 
+						+ " <li>Config URL: " + iss + "/lti_config.xml</li>" 
+						+ " <li>Submit</li>"
+						+ "</ul></li>"
+						+ "<li>Create a new Canvas assignment with the following recommended parameters:" 
+						+ "<ul><li>Name: (as appropriate, e.g. Quiz - Heat and Enthalpy)</li>"
+						+ " <li>Points: 10 for quiz or homework; 5 for video; 100 for practice exam</li>"
+						+ " <li>Submission Type: External Tool</li>"
+						+ "<li>External Tool URL: Find ChemVantage or enter " + iss + "/lti</li>"
+						+ " <li>Save or Save and Publish</li>"
+						+ "</ul></li>"
+						+ "<li>After you Save the assignment, you should see the ChemVantage Assignment Setup Page. "
+						+ "Select the appropriate ChemVantage assignment (e.g., Quiz on Heat & Enthalpy). ChemVantage will remember this choice.</li>"
+						+ "<li>When the assignment appears, you may use the highlighted link to customize it for your class.</li>"
+						+ "<li>After you Publish the assignment, you should navigate to Settings, Student View and submit the assignment "
+						+ "to ensure that the score is posted correctly in the Canvas grade book. ChemVantage does not collect any personally "
+						+ "identifiable information (PII) from students, so returning scores to the Canvas grade book is the ONLY way to ensure "
+						+ "that students get credit for their work.</li>"
+						+ "</ol>");
+				break;
+			default:
 			}
 			
 			buf.append("If you  need assistance, please contact me at admin@chemvantage.org. <p>"
@@ -393,19 +418,20 @@ public class LTIRegistration extends HttpServlet {
 						+ "-Chuck Wight");
 			}
 		}
-		Properties props = new Properties();
-		Session session = Session.getDefaultInstance(props, null);
-
-		Message msg = new MimeMessage(session);
-		InternetAddress from = new InternetAddress("admin@chemvantage.org", "ChemVantage");
-		msg.setFrom(from);
-		msg.addRecipient(Message.RecipientType.TO,new InternetAddress(email,name));
-		msg.addRecipient(Message.RecipientType.CC,from);
-		msg.setSubject("ChemVantage LTI Registration");
-		msg.setContent(buf.toString(),"text/html");
-		Transport.send(msg);
+		sendEmail(name,email,"ChemVantage LTI Registration",buf.toString());
 	}
 
+	protected void sendEmail(String recipientName, String recipientEmail, String subject, String messageBody) throws Exception {
+		Message msg = new MimeMessage(Session.getDefaultInstance(new Properties()));
+		InternetAddress from = new InternetAddress("admin@chemvantage.org", "ChemVantage");
+		msg.setFrom(from);
+		msg.addRecipient(Message.RecipientType.TO,new InternetAddress(recipientEmail,recipientName));
+		msg.addRecipient(Message.RecipientType.CC,from);
+		msg.setSubject(subject);
+		msg.setContent(messageBody,"text/html");
+		Transport.send(msg);
+	}
+	
 	String createBLTIConsumer(String token) throws Exception {
 		DecodedJWT jwt = JWT.decode(token); 
 		String iss = jwt.getIssuer();          // already ve4rified to be this ChemVantage server (dev or production)
@@ -452,8 +478,8 @@ public class LTIRegistration extends HttpServlet {
 				+ "any leading or trailing blank spaces. This is the most common error."
 				+ "<li>IMS Global Learning Solutions has published a "
 				+ "<a href=https://www.imsglobal.org/lti-security-announcement-and-deprecation-schedule-july-2019>deprecation schedule</a> "
-				+ "for this version of LTI registrations. At a minimum, your LMS must support "
-				+ "LTI v1.1.2 for this connection to work after December 31, 2020.");
+				+ "for this version of LTI registrations. Most LMS platforms have agreed to support this version of LTI through at least "
+				+ "the 2021 calendar year. After that you should upgrade to LTI Advantage (version 1.3).");
 		
 		if (iss.contains("dev")) {
 			buf.append("<li>You indicated on the registration form that your initial use case is checking the LTI connection. So we granted access "
