@@ -293,14 +293,48 @@ public class LTIRegistration extends HttpServlet {
 					+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><p>");
 			
 			switch (lms) {
-			case "moodle":
-				buf.append("Please note: Several Moodle users have experienced difficulty getting "
-						+ "scores returned to the Moodle grade book using LTI. We believe that this is due to the Moodle server being "
-						+ "configured in a way that refuses this type of LTI connection. You can rectify the situation by adding the "
-						+ "following rewrite rule into the .htaccess file on the Moodle server:<br>"
-						+ "RewriteCond %{HTTP:Authorization} ^(.+)" 
-						+ "RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]<p>");
-				break;
+			case "blackboard":
+				String providerDomain = iss.replaceFirst("https://", "");
+				buf.append("<b>Detailed instructions for connecting ChemVantage to a Blackboard course:</b><p>");
+				buf.append("<u>For the Blackboard Account System Administrator:</u>");
+				buf.append("<ol><li>Go to System Admin | Integrations: LTI Tool Providers | Register Provider Domain"
+						+ "<ul><li>Provider Domain: " + providerDomain + "</li>"
+						+ " <li>Provider Domain Status: Approved</li>"
+						+ " <li>Secondary Hostnames (leave blank)</li>"
+						+ " <li>Default configuration: Set globally</li>" 
+						+ " <li>Tool Provider Key and Tool Provider Secret: (cut/paste values from LTI credentials)</li>" 
+						+ " <li>Tool Provider Custom Parameters: (leave blank)</li>" 
+						+ " <li>Send user data only over SSL</li>"
+						+ " <li>User fields: check Role, Name, Email</li>"
+						+ " <li>Allow Membership Service Access: Yes</li>"
+						+ " <li>Submit</li>"
+						+ "</ul></li>"
+						+ "<li>Go back to the LTI Tool Providers Page, and select the ChemVantage provider domain | Manage Placements | Create Placement" 
+						+ "<ul><li>Label: ChemVantage</li>"
+						+ " <li>Description: ChemVantage is a free Open Education Resource for teaching and learning college-level General Chemistry.</li>"
+						+ " <li>Handle: (any unique string like Handle: chemvantage_lti_v1p1)</li>"
+						+ " <li>Availability: Yes</li>"
+						+ " <li>Select Course content tool, allows grading (no deep linking)</li>"
+						+ " <li>Tool Provider URL: " + iss + "/lti</li>"
+						+ " <li>Tool Provider Key: (oauth_consumer_key)</li>"
+						+ " <li>Tool Provider Secret: (shared_secret)</li>"
+						+ " <li>Custom Parameters (leave blank)</li>"
+						+ " <li>Submit</li>"
+						+ "</ul></li></ol>");
+				buf.append("<u>For the Blackboard Instructor:</u>");
+				buf.append("<ol><li>Go to the course | Content | Build Content | ChemVantage</li>"
+						+ "<li>Name: as appropriate (e.g., Quiz - Heat & Enthalpy)</li>"
+						+ "<li>Grading:"
+						+ "<ul><li>Enable Evaluation - Yes</li>"
+						+ " <li>Points - 10 for quiz or homework; 5 for video; 100 for practice exam</li>"
+						+ " <li>Visible to Students - Yes</li>"
+						+ "</ul></li>"
+						+ "<li>Submit</li>"
+						+ "<li>Click the new assignment link to launch ChemVantage</li>"
+						+ "<li>Choose the relevant assignment (e.g., Quiz on Heat & Enthalpy)</li>"
+						+ "<li>Customize the assignment, if desired, using the highlighted link</li>"
+						+ "</ol>");
+				break;		
 			case "canvas":
 				buf.append("<b>Detailed instructions for connecting ChemVantage to a Canvas course:</b>");
 				buf.append("<ol><li>Write down your <a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">LTI credentials</a></li>"
@@ -327,6 +361,14 @@ public class LTIRegistration extends HttpServlet {
 						+ "identifiable information (PII) from students, so returning scores to the Canvas grade book is the ONLY way to ensure "
 						+ "that students get credit for their work.</li>"
 						+ "</ol>");
+				break;
+			case "moodle":
+				buf.append("Please note: Several Moodle users have experienced difficulty getting "
+						+ "scores returned to the Moodle grade book using LTI. We believe that this is due to the Moodle server being "
+						+ "configured in a way that refuses this type of LTI connection. You can rectify the situation by adding the "
+						+ "following rewrite rule into the .htaccess file on the Moodle server:<br>"
+						+ "RewriteCond %{HTTP:Authorization} ^(.+)" 
+						+ "RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]<p>");
 				break;
 			default:
 			}
@@ -434,20 +476,24 @@ public class LTIRegistration extends HttpServlet {
 	
 	String createBLTIConsumer(String token) throws Exception {
 		DecodedJWT jwt = JWT.decode(token); 
-		String iss = jwt.getIssuer();          // already ve4rified to be this ChemVantage server (dev or production)
+		String iss = jwt.getIssuer();          // already verified to be this ChemVantage server (dev or production)
 		String sub = jwt.getSubject();         // name of registering person
 		String email = jwt.getClaim("email").asString();  // email of registering person
 		String aud = jwt.getAudience().get(0);            // name of applicant organization
 		String url = jwt.getClaim("url").asString();      // home page of applicant organization
 		String lms = jwt.getClaim("lms").asString();      // type of LMS platform
 		
-		// the consumer key is "CK" plus a random 7-digit number based on the token value
-		String oauth_consumer_key = "CK" + (new Random(token.hashCode()).nextInt(899999) + 100000);
-
+		String oauth_consumer_key = null;
+		if (lms.equals("blackboard")) {  // issue the global blackboard key
+			oauth_consumer_key = iss.contains("dev-vantage")?"12fbeed9-eabf-414b-9aea-80f2cba3772e":"1001bea7-e99e-49a7-bd0e-5d596b1455e0";
+		} else { // issue a key: "CK" plus a random 6-digit number based on the token value
+			oauth_consumer_key = "CK" + (new Random(token.hashCode()).nextInt(899999) + 100000);
+		}
+		
 		BLTIConsumer con = null;
 		try {  // retrieve the BLTIConsumer that was saved when the token was used
 			con = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).safe();
-		} catch (Exception e) {  // this is the first-time use of this token; save the BLTIConsumr
+		} catch (Exception e) {  // this is the first-time use of this token; save the BLTIConsumer
 			con = new BLTIConsumer(oauth_consumer_key);
 			con.email = email;
 			con.contact_name = sub;
