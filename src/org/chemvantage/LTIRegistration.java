@@ -350,7 +350,7 @@ public class LTIRegistration extends HttpServlet {
 						+ "<ul><li>Name: (as appropriate, e.g. Quiz - Heat and Enthalpy)</li>"
 						+ " <li>Points: 10 for quiz or homework; 5 for video; 100 for practice exam</li>"
 						+ " <li>Submission Type: External Tool</li>"
-						+ "<li>External Tool URL: Find ChemVantage or enter " + iss + "/lti</li>"
+						+ " <li>External Tool URL: Find ChemVantage or enter " + iss + "/lti</li>"
 						+ " <li>Save or Save and Publish</li>"
 						+ "</ul></li>"
 						+ "<li>After you Save the assignment, you should see the ChemVantage Assignment Setup Page. "
@@ -395,7 +395,42 @@ public class LTIRegistration extends HttpServlet {
 					+ "ChemVantage is a free Open Education Resource for teaching and learning college-"
 					+ "level General Chemistry. Learn more about ChemVantage "
 					+ "<a href=https://www.chemvantage.org/About>here</a>.<p>");
-			if ("canvas".contentEquals(lms)) {
+			switch (lms) {
+			case "blackboard":
+				buf.append("This request indicates that you are using the cloud-based Blackboard Learn LMS. "
+						+ "To configure ChemVantage in Blackboard please perform the following steps:<ol>"
+						+ "<li>Go to System Admin | Integrations: LTI Tool Providers | Register LTI 1.3 Tool"
+						+ "<li>Enter the Client ID: " + (iss.equals("https://dev-vantage-hrd.appspot.com")?"ec076e8c-b90f-4ecf-9b5d-a9eff03976be":"be1004de-6f8e-45b9-aae4-2c1370c24e1e")
+						+ "<li>Make a copy of the deployment_id and set Tool status: Approved"
+						+ "<li>Institution Policies: Send Role, Name, Email; Allow Grade Service and Membership Service"
+						+ "<li>Submit"
+						+ "<li>Click <a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">this link</a> " 
+						+ "to register the deployment_id with ChemVantage"
+						+ "<li>Go back to the LTI Tool Providers page, and from the dropdown menu on the ChemVantage app select Manage Placements"
+						+ "<li>Click Create Placement"
+						+ "<ul><li>Label: ChemVantage</li>"
+						+ " <li>Description: ChemVantage is a free Open Educational Resource for teaching and learning college-level General Chemistry"
+						+ " <li>Handle: (any unique string)"
+						+ " <li>Availability: Yes"
+						+ " <li>Course Content Tool (supports deep linking)"
+						+ " <li>Tool Provider URL: " + iss + "/lti/deeplinks"
+						+ " <li>Custom Parameters (leave blank)"
+						+ " <li>Submit</li></ul></ol>");
+				buf.append("<hr><br>To the Course Instructor:");
+				buf.append("<ol><li>Go to the course | Content | Build Content | ChemVantage</li>"
+						+ "<li>Name: as appropriate (e.g., Quiz - Heat & Enthalpy)</li>"
+						+ "<li>Grading:"
+						+ "<ul><li>Enable Evaluation - Yes</li>"
+						+ " <li>Points - 10 for quiz or homework; 5 for video; 100 for practice exam</li>"
+						+ " <li>Visible to Students - Yes</li>"
+						+ "</ul></li>"
+						+ "<li>Submit</li>"
+						+ "<li>Click the new assignment link to launch ChemVantage</li>"
+						+ "<li>Choose the relevant assignment (e.g., Quiz on Heat & Enthalpy)</li>"
+						+ "<li>Customize the assignment, if desired, using the highlighted link</li>"
+						+ "</ol>");
+				break;
+			case "canvas":
 				buf.append("This request indicates that you are using the cloud-based Instructure Canvas LMS. "
 						+ "To configure ChemVantage in Canvas please perform the following steps:<ol>"
 						+ "<li>Configure a new LTI Developer Key for your Canvas Account "
@@ -416,16 +451,19 @@ public class LTIRegistration extends HttpServlet {
 						+ "<li>Add ChemVantage as an External App to your account using the client_id created in step 1 "
 						+ "(<a href=https://community.canvaslms.com/docs/DOC-16730-42141110273>see detailed instructions here</a>)"
 						+ "<li>Click <a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">this link</a> " 
-						+ "to register the new client_id and deployment_id created in step 1 with ChemVantage"
-						+ "<li>To use ChemVantage, create an assignment in Canvas. Under Submission Type, choose External Tool, "
-						+ "then click Find and select ChemVantage" + (iss.contains("dev")?" Development":"") + ". You will be "
-						+ "redirected to ChemVantage to select a Quiz, Homework, or Practice Exam for students in the course. "
-						+ "Student scores are returned directly to the Canvas grade book. You should test this functionality "
-						+ "using Settings | Test Student."
-						+ "</ol>"
-						+ "If you  need additional assistance, please contact me at admin@chemvantage.org. <p>"
-						+ "-Chuck Wight");
-			} else {
+						+ "to register the new client_id and deployment_id created in step 1 with ChemVantage</ol>");
+				buf.append("<hr><br>To the Course Instructor:<ol>"
+						+ "<li>Create a new Canvas assignment with the following recommended parameters:" 
+						+ "<ul><li>Name: (as appropriate, e.g. Quiz - Heat and Enthalpy)</li>"
+						+ " <li>Points: 10 for quiz or homework; 5 for video; 100 for practice exam</li>"
+						+ " <li>Submission Type: External Tool</li>"
+						+ " <li>External Tool URL: Find ChemVantage or enter " + iss + "/lti</li>"
+						+ " <li>Save or Save and Publish</li>"
+						+ "</ul></li>"
+						+ "<li>When you launch the assignment, you may use the highlighted link to customize it for your class.</li>"
+						+ "</ol>");
+			break;
+			default:
 				buf.append("This registration request uses the LTI Advantage (version 1.3) specifications. "
 						+ "Use the information below to register ChemVantage in your LMS:<br>"
 						+ "Tool Domain URL: " + iss + "<br>"
@@ -438,27 +476,19 @@ public class LTIRegistration extends HttpServlet {
 						+ " get it here:<br>"
 						+ "<a href=" + iss + "/jwks?kid=public&fmt=x509>PEM key in X509 format</a> or <a href=" + iss + "/jwks?kid=public>JSON Web Key</a><p>");
 				
-				if ("moodle".contentEquals(lms)) {
-					buf.append("Please note: Several Moodle users have experienced difficulty getting "
-							+ "scores returned to the Moodle grade book using LTI. We believe that this is due to the Moodle server being "
-							+ "configured in a way that refuses this type of LTI connection. You can rectify the situation by adding the "
-							+ "following rewrite rule into the .htaccess file on the Moodle server:<br>"
-							+ "RewriteCond %{HTTP:Authorization} ^(.+)" 
-							+ "RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]<p>");
-				}
-				
-				buf.append("When you have finished the configuration, " + ("canvas".equals(lms)?"Canvas ":"your LMS ") 
+				buf.append("When you have finished the configuration, your LMS "
 						+ "should generate a client_id value to identify the ChemVantage tool. "
-						+ ("canvas".equals(lms)?"Canvas also calls this the developer key. ":"")
 						+ "In addition, your LMS should generate a "
 						+ "deployment_id value to identify a specific account in your LMS for this tool. "
 						+ "When you have these values in hand, please click the following link to complete the "
 						+ "LTI registration.<p>");
 				buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
-						+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><p>"
-						+ "If you  need additional assistance, please contact me at admin@chemvantage.org. <p>"
-						+ "-Chuck Wight");
+						+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><p>");
 			}
+			
+			buf.append("If you  need additional assistance, please contact me at admin@chemvantage.org. <p>"
+					+ "-Chuck Wight");
+
 		}
 		sendEmail(name,email,"ChemVantage LTI Registration",buf.toString());
 	}
@@ -544,6 +574,7 @@ public class LTIRegistration extends HttpServlet {
 	
 	String clientIdForm(String token) {
 		StringBuffer buf = new StringBuffer(Home.banner);
+		String iss = null;
 		String sub = null;
 		String email = null;
 		String aud = null;
@@ -552,6 +583,7 @@ public class LTIRegistration extends HttpServlet {
 		
 		try {
 			DecodedJWT jwt = JWT.decode(token);  // registration token is valid for only 3 days
+			iss = jwt.getIssuer();
 			sub = jwt.getSubject();
 			email = jwt.getClaim("email").asString();
 			aud = jwt.getAudience().get(0);
@@ -563,16 +595,27 @@ public class LTIRegistration extends HttpServlet {
 					+ "that identifies your account in your LMS. Please enter these values here:<p>"
 					+ "<form method=post action=/lti/registration>"
 					+ "<input type=hidden name=UserRequest value='finalize'>"
-					+ "<input type=hidden name=Token value='" + token + "'>"
-					+ "Client ID: <input type=text size=40 name=ClientId><br>"
-					+ "Deployment ID: <input type=text size=40 name=DeploymentId><p>");
-			if ("canvas".contentEquals(lms)) {
+					+ "<input type=hidden name=Token value='" + token + "'>");
+			
+			switch (lms) {
+			case "blackboard":
+				String clientId = (iss.equals("https://dev-vantage-hrd.appspot.com")?"ec076e8c-b90f-4ecf-9b5d-a9eff03976be":"be1004de-6f8e-45b9-aae4-2c1370c24e1e");
+				buf.append("<input type=hidden name=ClientId value=" + clientId + ">");
+				buf.append("Client ID: " + clientId + "<br>"
+						+ "Deployment ID: <input type=text size=40 name=DeploymentId><p>");
+				break;
+			case "canvas":
+				buf.append("Canvas account URL: <input type=text size=40 name=AccountUrl placeholder=https://myschool.instructure.com><br>");
 				buf.append("Canvas uses the developer key as the client_id, so enter that value from the list of "
 						+ "developer keys. It is a numeric value that looks something like 32570000000000041.<p>"
 						+ "The deployment_id can be found in Settings | Apps | App Configurations by opening the "
 						+ "settings menu for ChemVantage.<br>");
-				buf.append("Canvas account URL: <input type=text size=40 name=AccountUrl placeholder=https://myschool.instructure.com><br>");
-			} else {
+				buf.append("Client ID: <input type=text size=40 name=ClientId><br>"
+						+ "Deployment ID: <input type=text size=40 name=DeploymentId><p>");
+				break;
+			default:
+				buf.append("Client ID: <input type=text size=40 name=ClientId><br>"
+						+ "Deployment ID: <input type=text size=40 name=DeploymentId><p>");
 				buf.append("In addition, ChemVantage needs URLs for the end points on your LMS in order to access services "
 						+ "(e.g., Assignment and Grade Services) provided by your LMS platform. All fields are required, "
 						+ "and all URLs should begin with https://<br>"
@@ -612,14 +655,22 @@ public class LTIRegistration extends HttpServlet {
 		String oidc_auth_url;
 		String oauth_access_token_url;
 		String well_known_jwks_url;
-		if ("canvas".equals(lms)) {
+		switch (lms) {
+		case "blackboard":
+			platform_id = "https://blackboard.com";
+			oidc_auth_url = "https://developer.blackboard.com/api/v1/gateway/oidcauth";
+			well_known_jwks_url = "https://developer.blackboard.com/api/v1/management/applications/" + client_id + "/jwks.json";
+			oauth_access_token_url = "https://developer.blackboard.com/api/v1/gateway/oauth2/jwttoken";
+			break;
+		case "canvas":
 			platform_id = "https://canvas.instructure.com";
 			oidc_auth_url = "https://canvas.instructure.com/api/lti/authorize_redirect";
 			well_known_jwks_url = "https://canvas.instructure.com/api/lti/security/jwks";
 			oauth_access_token_url = request.getParameter("AccountUrl");
 			if (oauth_access_token_url==null || oauth_access_token_url.isEmpty()) throw new Exception("Canvas account URL is required.");
 			oauth_access_token_url += "/login/oauth2/token";
-		} else {
+			break;
+		default:
 			platform_id = request.getParameter("PlatformId");
 			if (platform_id==null || platform_id.isEmpty()) throw new Exception("Platform ID value is required.");
 			oidc_auth_url = request.getParameter("OIDCAuthUrl");
@@ -629,7 +680,7 @@ public class LTIRegistration extends HttpServlet {
 			well_known_jwks_url = request.getParameter("JWKSUrl");
 			if (well_known_jwks_url==null || well_known_jwks_url.isEmpty()) throw new Exception("JSON Web Key Set URL is required.");
 		}
-		
+			
 		Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
 		
 		// check to ensure that this is not a duplicate registration:
