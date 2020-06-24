@@ -302,7 +302,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     		
     		// We submitted the request including the resourceLinkId query, so there are only two possible valid responses:
     		// 0 - if the array is empty, we need to create a new lineitem and return its URL
-    		// 1 - if there is exactly one loneitem, we need to return its id property (URL)
+    		// 1 - if there is exactly one lineitem, we need to return its id property (URL)
     		if (lineitems_json_array.size() == 0) return null;  // lineitem does not exist
     		if (lineitems_json_array.size() == 1) return lineitems_json_array.get(0).getAsJsonObject().get("id").getAsString();
     	} catch (Exception e) {

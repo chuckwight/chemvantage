@@ -462,7 +462,7 @@ public class LTIRegistration extends HttpServlet {
 						+ "</ul></li>"
 						+ "<li>When you launch the assignment, you may use the highlighted link to customize it for your class.</li>"
 						+ "</ol>");
-			break;
+				break;
 			default:
 				buf.append("This registration request uses the LTI Advantage (version 1.3) specifications. "
 						+ "Use the information below to register ChemVantage in your LMS:<br>"
