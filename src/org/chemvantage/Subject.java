@@ -30,6 +30,7 @@ public class Subject {
 	@Id Long id;
 	String title;
 	String HMAC256Secret;
+	String announcement;
 	int nStarReports;
 	double avgStars;
 	
@@ -62,5 +63,4 @@ public class Subject {
 		DecimalFormat df2 = new DecimalFormat("#.#");
 		return Double.valueOf(df2.format(avgStars));
 	}
-	
 }

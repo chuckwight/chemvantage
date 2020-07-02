@@ -89,7 +89,8 @@ public class Admin extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 			if (userRequest.equals("Announce")) {
-				Home.announcement = request.getParameter("Announcement");
+				subject.announcement = request.getParameter("Announcement");
+				ofy().save().entity(subject);
 			} 
 			out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Home.footer);
 		} catch (Exception e) {
@@ -101,11 +102,12 @@ public class Admin extends HttpServlet {
 		StringBuffer buf = new StringBuffer("\n\n<h2>Administration</h2>");
 		try {
 			buf.append("<h3>Announcements</h3>");
-			buf.append("The following message will be posted in red font at the top of each page for authenticated users: ");
+			buf.append("The following message will be posted in red font at the top of each main page: ");
 			
 			buf.append("<FORM ACTION=Admin METHOD=POST>"
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=Announce>"
-					+ "<INPUT TYPE=TEXT SIZE=80 NAME=Announcement VALUE='" + Home.announcement + "'><BR>"
+					+ "<INPUT TYPE=TEXT SIZE=80 NAME=Announcement VALUE='" + subject.announcement + "'><BR>"
+					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
 					+ "<INPUT TYPE=SUBMIT VALUE='Post this message now'></FORM>");
 
 			buf.append("<h3>User Feedback</h3>");

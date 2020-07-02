@@ -36,7 +36,6 @@ import javax.servlet.http.HttpSession;
 public class Home extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
-	static String announcement = "";
 	String servername;
 	Subject subject = Subject.getSubject();	
 	List<Video> videos; 
@@ -65,6 +64,7 @@ public class Home extends HttpServlet {
 	}
 
 	public static String header(String title) {
+		String announcement = Subject.getSubject().announcement;
 		return "<!DOCTYPE html>"
 				+"<html>\n"
 				+ "<head>"
@@ -80,7 +80,7 @@ public class Home extends HttpServlet {
 				+ "<title>" + (title==null || title.isEmpty()?"ChemVantage":title) + "</title>\n"
 				+ "</head>\n"
 				+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
-				+ (announcement.isEmpty()?"":"<FONT COLOR=RED>" + announcement + "</FONT>");
+				+ ((announcement==null || announcement.isEmpty())?"":"<FONT COLOR=RED>" + announcement + "</FONT><br>");
 	}
 	
 	public static String header() {
@@ -130,25 +130,22 @@ public class Home extends HttpServlet {
 					+ "--> </style>\n"
 					+ "</head>\n"
 					+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
-					+ "<div id=pzon><nobr>"
-					+ "<div class=pz1>ChemVantage.org</div>"
+					+ "<div id=pzon>"
+					+ " <div class=pz1>ChemVantage.org</div>"
 					+ " <div class=pz1><a href=/Home>Home</a></div>"
 					+ " <div class=pz1><a href=/About>About Us</a></div>"
-					+ "<div class=pz1><a href=/Feedback?sig=" + user.getTokenSignature() + ">Feedback</a></div>");
-
-			buf.append("<div class=pz1><a href=/Contribute?sig=" + user.getTokenSignature() + ">Authors</a></div>");
+					+ " <div class=pz1><a href='/Feedback?sig=" + user.getTokenSignature() + "'>Feedback</a></div>"
+					+ " <div class=pz1><a href='/Contribute?sig=" + user.getTokenSignature() + "'>Authors</a></div>");
 			if (user.isEditor()) buf.append("<div class=pz1><a href=/Edit>Editors</a></div>");
 			if (user.isAdministrator()) buf.append("<div class=pz1><a href=/Admin>Admin</a></div>");
-
-			buf.append("</nobr></div>\n");
-
-			buf.append("&nbsp;&nbsp;");
+			buf.append("<div class=pz1><a href=/Logout>Sign out</a></div>");
 			
-			buf.append("<a href=/Logout>Sign out</a>");
-			
-			buf.append("</nobr></div>");
+			//buf.append("</div>\n");
 
-			buf.append("<FONT COLOR=RED>" + announcement + "</FONT><br>");
+			buf.append("</div>&nbsp;");
+			String announcement = Subject.getSubject().announcement;
+			if (announcement==null) announcement = "";
+			buf.append("<div style='color:red'><br>" + announcement + "</div>");
 		} catch (Exception e) {
 			return e.toString();
 		}
@@ -163,10 +160,6 @@ public class Home extends HttpServlet {
 			// Create a table-like cell for the left side of the home page:
 			buf.append("<div style='display:table'><div style='dispay:table-row'><div style='display:table-cell;vertical-align:top'>");
 			
-			if (request.getRequestURL().toString().contains("dev-vantage")) 
-				buf.append("This is a development server used for code testing. Please do not<br>"
-						+ "use this server for serious educational purposes.<p><hr>");
-
 			buf.append("<p><h3><font color=red>Anonymous User</font></h3>");
 
 			buf.append("Select a topic from the dropdown box below and then take a quiz<br>"
