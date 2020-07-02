@@ -38,7 +38,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
 
@@ -452,13 +451,13 @@ public class PracticeExam extends HttpServlet {
 			try {
 				//a = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
 				a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-				Queue queue = QueueFactory.getDefaultQueue();  // used for computing Score objects offline by Task queue
+				//Queue queue = QueueFactory.getDefaultQueue();  // used for computing Score objects offline by Task queue
 				Score s = Score.getInstance(user.id,a);
 				ofy().save().entity(s).now();
 				if (a.lti_ags_lineitem_url != null) { // LTI v1.3
 					LTIMessage.postUserScore(s);
 				} else if (a.lis_outcome_service_url != null) { // LTI v1.1 put report into the Task Queue
-					queue.add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  
+					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  
 				}
 			} catch (Exception e) {}
 

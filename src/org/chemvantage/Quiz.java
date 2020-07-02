@@ -38,7 +38,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
 
@@ -318,7 +317,8 @@ public class Quiz extends HttpServlet {
 				} catch (Exception e2) {}
 			}
 			
-			Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
+			//Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
+			List<Response> responses = new ArrayList<Response>();
 			
 			// This is the main scoring loop:
 			for (Key<Question> k : questionKeys) {
@@ -340,6 +340,10 @@ public class Quiz extends HttpServlet {
 							if (seed==-1) seed--;  // -1 is a special value for randomly seeded Random generator; avoid this (unlikely) situation
 							q.setParameters(seed);
 							int score = q.isCorrect(studentAnswer[0])?q.pointValue:0;
+							
+							responses.add(new Response("Quiz",qt.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now));
+							
+/*							
 							queue.add(withUrl("/ResponseServlet")
 									.param("AssignmentType","Quiz")
 									.param("TopicId", Long.toString(qt.topicId))
@@ -349,6 +353,7 @@ public class Quiz extends HttpServlet {
 									.param("Score", Integer.toString(score))
 									.param("PossibleScore", Integer.toString(q.pointValue))
 									.param("UserId", user.id));
+*/
 							studentScore += score;
 							if (score == 0) {  
 								// include question in list of incorrectly answered questions
@@ -361,6 +366,7 @@ public class Quiz extends HttpServlet {
 					continue;  // this parameter does not correspond to a questionId
 				}
 			}
+			if (responses.size()>0) ofy().save().entities(responses);  // batch save of Response entities
 			missedQuestions.append("</OL>\n");
 			qt.graded = now;
 			qt.score = studentScore;
@@ -376,7 +382,7 @@ public class Quiz extends HttpServlet {
 				ofy().save().entity(s).now();
 				reportScoreToLms = qa.lti_ags_lineitem_url != null || (qa.lis_outcome_service_url != null && user.getLisResultSourcedid() != null);
 				if (reportScoreToLms) {
-					queue.add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(qa.id)).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
+					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(qa.id)).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
 				}
 			} catch (Exception e) {}
 

@@ -395,18 +395,12 @@ public class Homework extends HttpServlet {
 			showWork = request.getParameter("ShowWork");
 			
 			if (studentAnswer[0].length() > 0) { // an answer was submitted
-				// record the response in the Responses table for question debugging:
-				Queue queue = QueueFactory.getDefaultQueue();
-				queue.add(withUrl("/ResponseServlet")
-						.param("AssignmentType","Homework")
-						.param("TopicId", Long.toString(topic.id))
-						.param("QuestionId", Long.toString(q.id))
-						.param("StudentResponse", studentAnswer[0])
-						.param("CorrectAnswer", q.getCorrectAnswer())
-						.param("Score", Integer.toString(studentScore))
-						.param("PossibleScore", Integer.toString(possibleScore))
-						.param("UserId", user.id));
-
+				
+				// create and store a Response entity:
+				Response r = new Response("Homework",topic.id,q.id,studentAnswer[0],q.getCorrectAnswer(),studentScore,possibleScore,user.id,now);
+				ofy().save().entity(r);
+				
+				// create a new HWTransaction entity:
 				ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,studentScore,assignmentId,possibleScore,showWork);
 				if (lis_result_sourcedid != null) ht.lis_result_sourcedid = lis_result_sourcedid;
 				ofy().save().entity(ht).now();
@@ -420,7 +414,7 @@ public class Homework extends HttpServlet {
 					if (hwa.questionKeys.contains(k)) {
 						Score s = Score.getInstance(user.id,hwa);
 						ofy().save().entity(s).now();
-						if (reportScoreToLms) queue.add(withUrl("/ReportScore").param("AssignmentId",hwa.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue	
+						if (reportScoreToLms) QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",hwa.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue	
 					}
 				} catch (Exception e2) {
 				}
