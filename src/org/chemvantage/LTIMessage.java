@@ -41,6 +41,7 @@ import java.util.UUID;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -209,22 +210,22 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		+ "  </imsx_POXBody>\n"
 		+ "</imsx_POXEnvelopeRequest>\n";		
 	}
-/*	
+	
 	static String getAccessToken(String platformDeploymentId,String scope) {
-		String token;
-		if (authTokens.containsKey(platformDeploymentId)) {
-			token = authTokens.get(platformDeploymentId);
-			DecodedJWT decoded = JWT.decode(token);
-			if (decoded.getExpiresAt().after(new Date())) return token;  // token still OK
+		Date in5Minutes = new Date(new Date().getTime() + 300000L);
+		try {
+			int length = platformDeploymentId.length() - new URI(platformDeploymentId).getPath().length();
+			String platformId = platformDeploymentId.substring(0,length);
+			
+			JsonObject authToken = JsonParser.parseString(authTokens.get(platformId)).getAsJsonObject();
+			if (in5Minutes.before(new Date(authToken.get("exp").getAsLong()))) return authToken.get("access_token").getAsString();			
+		} catch (Exception e) {
 		}
-		// at this point we must compute and store a new token
-		token = refreshAccessToken(platformDeploymentId,scope);
-		authTokens.put(platformDeploymentId, token);
-		return token;
+		return refreshAccessToken(platformDeploymentId,scope);
 	}
-*/	
-	//static String refreshAccessToken(String platformDeploymentId,String scope) {
-	static String getAccessToken(String platformDeploymentId,String scope) {
+			
+	static String refreshAccessToken(String platformDeploymentId,String scope) {
+	//static String getAccessToken(String platformDeploymentId,String scope) {
 		// First, construct a request token to send to the platform
     	Date now = new Date();
     	StringBuffer debug = new StringBuffer("getAccessToken: ");
@@ -234,13 +235,13 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			debug.append("scope OK.");
 			
 			String iss = System.getProperty("com.google.appengine.application.id").contains("dev-vantage")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
-			Date exp = new Date(now.getTime() + 300000L);
+			Date in5Minutes = new Date(now.getTime() + 300000L);
 			String token = JWT.create()
 					.withIssuer(iss)
 					.withSubject(d.client_id)
 					.withAudience(d.oauth_access_token_url)
 					.withKeyId(d.rsa_key_id)
-					.withExpiresAt(exp)
+					.withExpiresAt(in5Minutes)
 					.withIssuedAt(now)
 					.withJWTId(Nonce.generateNonce())
 					.sign(Algorithm.RSA256(null,KeyStore.getRSAPrivateKey(d.rsa_key_id)));
@@ -249,7 +250,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			String body = "grant_type=client_credentials"
 					+ "&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 					+ "&client_assertion=" + token
-					+ "&scope=" + URLEncoder.encode(d.scope, "utf-8").replace("%20", "+");
+					+ "&scope=" + URLEncoder.encode(d.scope, "utf-8").replaceAll("%20", "+");
 			debug.append("Body: " + body);
 			
 			URL u = new URL(d.oauth_access_token_url);
@@ -275,9 +276,18 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				reader.close();
 				
 				// decode the Json response object. Fields include access_token, token-type, expires_in, scope
-				//JsonObject json = new JsonParser().parse(res.toString()).getAsJsonObject();
+				String access_token = json.get("access_token").getAsString();
+				long expires_in = json.get("expires_in").getAsLong();  // number of seconds from now, typically 3600
+				long exp = new Date().getTime() + expires_in*1000L;
+						
+				// cache the token in the authTokens Map:
+				JsonObject cached_token = new JsonObject();
+				cached_token.addProperty("access_token", access_token);
+				cached_token.addProperty("exp", exp);
+				authTokens.put(d.getPlatformId(), cached_token.toString());
+				
 				// return the access_token only
-				return json.get("access_token").getAsString();
+				return access_token;
 			} else throw new Exception("response code " + responseCode);
 		} catch (Exception e) {
 			return e.toString() + " " + e.getMessage() + debug.toString();
