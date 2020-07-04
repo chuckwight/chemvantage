@@ -637,7 +637,9 @@ public class Question implements Serializable {
 			studentAnswer = studentAnswer.replaceAll("\\W", "");
 			String[] correctAnswers = correctAnswer.split(","); // break comma-separated list into array
 			for (int i=0;i<correctAnswers.length;i++) {
-				if (compare.equals(studentAnswer,correctAnswers[i].replaceAll("\\W",""))) return true;
+				correctAnswers[i] = correctAnswers[i].replaceAll("\\W","");
+				if (compare.equals(studentAnswer,correctAnswers[i])) return true;
+				else if (closeEnough(studentAnswer,correctAnswers[i])) return true;
 			}
 			return false;
 		case 5: // Numeric Answer
@@ -647,6 +649,35 @@ public class Question implements Serializable {
 		}
 	}
 	
+	boolean closeEnough(String studentAnswer,String correctAnswer) {
+		if (correctAnswer.length() < 4) return false;  			// exact answer needed for 3-char answers
+		int maxEditDistance = correctAnswer.length()<6?1:2;		// 1 error allowed for 4,5-char answers; otherwise 2 errors allowed
+
+		if (Math.abs(correctAnswer.length()-studentAnswer.length())>maxEditDistance) return false;   // trivial estimate of min edit distance
+
+		if (editDist(studentAnswer,correctAnswer,studentAnswer.length(),correctAnswer.length()) > maxEditDistance) return false;
+
+		return true;
+	}
+	
+	static int editDist(String str1, String str2, int m, int n) { 
+		if (m == 0) return n; 	  
+		if (n == 0) return m; 
+
+		if (str1.charAt(m - 1) == str2.charAt(n - 1)) return editDist(str1, str2, m - 1, n - 1); 
+
+		return 1 + min(editDist(str1, str2, m, n - 1), // Insert 
+				editDist(str1, str2, m - 1, n), // Remove 
+				editDist(str1, str2, m - 1, n - 1) // Replace 
+				); 
+	}
+
+	static int min(int x, int y, int z) { 
+		if (x <= y && x <= z) return x; 
+		if (y <= x && y <= z) return y; 
+		else return z; 
+	} 
+	  
 	boolean hasCorrectSigFigs(String studentAnswer) {
 		// This method check the value to ensure that it has a number of significant figures that is consistent with Question.significantFigures
 		// Actually, it only ensures that value does not have more sig figs, because there may be an ambiguity in the number of sig figs if the 
