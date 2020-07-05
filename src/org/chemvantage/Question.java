@@ -660,7 +660,7 @@ public class Question implements Serializable {
 		return true;
 	}
 	
-	static int editDist(String str1, String str2, int m, int n) { 
+	static int editDist(String str1, String str2, int m, int n) { /*This code is contributed by Rajat Mishra*/
 		if (m == 0) return n; 	  
 		if (n == 0) return m; 
 
@@ -672,7 +672,7 @@ public class Question implements Serializable {
 				); 
 	}
 
-	static int min(int x, int y, int z) { 
+	static int min(int x, int y, int z) { /*This code is contributed by Rajat Mishra*/
 		if (x <= y && x <= z) return x; 
 		if (y <= x && y <= z) return y; 
 		else return z; 
