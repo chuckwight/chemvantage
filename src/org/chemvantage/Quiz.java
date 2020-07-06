@@ -277,7 +277,6 @@ public class Quiz extends HttpServlet {
 			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			
-			Assignment qa = null;
 			long transactionId = Long.parseLong(request.getParameter("QuizTransactionId"));
 			QuizTransaction qt = ofy().load().type(QuizTransaction.class).id(transactionId).safe();
 			
@@ -342,18 +341,7 @@ public class Quiz extends HttpServlet {
 							int score = q.isCorrect(studentAnswer[0])?q.pointValue:0;
 							
 							responses.add(new Response("Quiz",qt.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now));
-							
-/*							
-							queue.add(withUrl("/ResponseServlet")
-									.param("AssignmentType","Quiz")
-									.param("TopicId", Long.toString(qt.topicId))
-									.param("QuestionId", Long.toString(q.id))
-									.param("StudentResponse", studentAnswer[0])
-									.param("CorrectAnswer", q.getCorrectAnswer())
-									.param("Score", Integer.toString(score))
-									.param("PossibleScore", Integer.toString(q.pointValue))
-									.param("UserId", user.id));
-*/
+
 							studentScore += score;
 							if (score == 0) {  
 								// include question in list of incorrectly answered questions
@@ -373,13 +361,12 @@ public class Quiz extends HttpServlet {
 			ofy().save().entity(qt);
 			
 			// Try to post the score to the student's LMS:
+			Assignment qa = null;
 			boolean reportScoreToLms = false;
 			try {
 				if (user.isAnonymous()) throw new Exception();  // don't save Scores for anonymous users
-				long assignmentId = user.getAssignmentId();
-				qa = ofy().load().type(Assignment.class).id(assignmentId).safe();
-				Score s = Score.getInstance(user.id,qa);
-				ofy().save().entity(s).now();
+				qa = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+				Score.updateQuizScore(user.id,qt);
 				reportScoreToLms = qa.lti_ags_lineitem_url != null || (qa.lis_outcome_service_url != null && user.getLisResultSourcedid() != null);
 				if (reportScoreToLms) {
 					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(qa.id)).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
@@ -573,10 +560,16 @@ public class Quiz extends HttpServlet {
 						+ "<a href=Quiz?AssignmentId=" + a.id 
 						+ "&sig=" + user.getTokenSignature() 
 						+ ">Take me back to the quiz now.</a>");
-			} else {
-				// create a fresh Score entity to calculate the best score on this assignment
-				Score s = Score.getInstance(user.id, a);
-
+			} else {				
+				Score s = null;
+				try { // retrieve the score and ensure that it is up to date
+					s = ofy().load().key(Key.create(Key.create(User.class,user.id),Score.class,a.id)).safe();
+					if (s.numberOfAttempts != qts.size()) throw new Exception();
+				} catch (Exception e) { // create a fresh Score entity from scratch
+					s = Score.getInstance(user.id, a);
+					ofy().save().entity(s);
+				}
+				
 				buf.append("Your best score on this assignment is " + Math.round(10*s.getPctScore())/10. + "%.<br>");
 
 				// try to validate the score with the LMS grade book entry

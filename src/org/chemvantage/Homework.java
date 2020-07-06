@@ -220,7 +220,7 @@ public class Homework extends HttpServlet {
 				Score s = null;
 				Key<Score> k = Key.create(Key.create(User.class, user.id),Score.class,hwa.id);
 				s = ofy().load().key(k).now();
-				if (score>0 && score != s.score) {
+				if (score>0 && (s==null || score != s.score)) {
 					s = Score.getInstance(user.id, hwa);
 					ofy().save().entity(s).now();
 					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",hwa.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));
@@ -631,9 +631,15 @@ public class Homework extends HttpServlet {
 						+ ">Take me back to the homework assignment.</a><p>");
 				return buf.toString();
 			} else {
-				// create a fresh Score entity to calculate the best score on this assignment
-				Score s = Score.getInstance(user.id, a);
-
+				Score s = null;
+				try { // retrieve the score and ensure that it is up to date
+					s = ofy().load().key(Key.create(Key.create(User.class,user.id),Score.class,a.id)).safe();
+					if (s.numberOfAttempts != hwts.size()) throw new Exception();
+				} catch (Exception e) { // create a fresh Score entity from scratch
+					s = Score.getInstance(user.id, a);
+					ofy().save().entity(s);
+				}
+				
 				buf.append("Your overall score on this assignment is " + 10.*Math.round(s.getPctScore())/10. + "%.<br>");
 
 				// try to validate the score with the LMS grade book entry

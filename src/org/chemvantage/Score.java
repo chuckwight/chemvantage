@@ -112,6 +112,31 @@ public class Score {    // this object represents a best score achieved by a use
 		return s;
 	}
 		
+	public static Score updateQuizScore(String userId,QuizTransaction qt) {
+		Score s = null;
+		try {
+			Key<Score> k = Key.create(Key.create(User.class,userId),Score.class,qt.assignmentId);
+			s = ofy().load().key(k).safe();
+			if (s.mostRecentAttempt.equals(qt.downloaded)) return s; // everything is up to date
+			else if (s.mostRecentAttempt.before(qt.downloaded)) {  // update the Score with this new QuizTransaction
+				s.numberOfAttempts = ofy().load().type(QuizTransaction.class).filter("userId",userId).filter("assignmentId",qt.assignmentId).count();
+				s.score = (qt.score>s.score?qt.score:s.score);  // keep the best (max) score
+				if (s.lis_result_sourcedid == null || s.lis_result_sourcedid.isEmpty()) s.lis_result_sourcedid = qt.lis_result_sourcedid;  // record any available sourcedid value for reporting score to the LMS
+				if (s.mostRecentAttempt==null || qt.downloaded.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far
+					s.mostRecentAttempt = qt.downloaded;
+					s.maxPossibleScore = qt.possibleScore;
+				}
+				if (qt.lis_result_sourcedid != null && !qt.lis_result_sourcedid.contentEquals(s.lis_result_sourcedid)) s.lis_result_sourcedid = qt.lis_result_sourcedid;
+				s.lisReportComplete = false;
+			} else throw new Exception(); // this is not the newest QuizTransaction, so recalculate the Score from scratch
+		} catch (Exception e) {
+			Assignment a = ofy().load().type(Assignment.class).id(qt.assignmentId).safe();
+			s = Score.getInstance(userId, a);
+		}
+		ofy().save().entity(s);
+		return s;
+	}
+	
 	public String getScore() {
 		return numberOfAttempts>0?Integer.toString(score):"-";
 	}
