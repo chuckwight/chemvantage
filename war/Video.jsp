@@ -12,7 +12,7 @@
 <body>
 <%! 
 	String url = null;
-	String token = null;
+	String sig = null;
 	int segment = 0;
 	long videoId = 0L;
 	String videoSerialNumber = "";
@@ -24,11 +24,10 @@
 
 <%
 	try {
-		token = request.getParameter("Token");
-		User user = User.getUser(token);
-		if (user == null)
-			throw new Exception();
-
+		User user = User.getUser((String)request.getSession().getAttribute("Token"));
+		sig = request.getParameter("sig");
+		if (!user.signatureIsValid(sig)) throw new Exception();
+		
 		try {
 			segment = Integer.parseInt(request.getParameter("Segment"));
 		} catch (Exception e) {
@@ -152,7 +151,7 @@ function ajaxLoadQuiz() {
 	  quiz_div.innerHTML=xmlhttp.responseText;
 	}
   }
-  xmlhttp.open('GET','/VideoQuiz?VideoId='+'<%= videoId %>'+'&Segment='+segment+'&Token='+'<%= token %>',true);
+  xmlhttp.open('GET','/VideoQuiz?VideoId='+'<%= videoId %>'+'&Segment='+segment+'&sig='+'<%= sig %>',true);
   xmlhttp.send(null);
   return true;
 }

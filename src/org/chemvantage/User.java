@@ -235,7 +235,7 @@ public class User {
 		return t.getSignature();
      }
     
-    boolean signatureIsValid(String sig) {
+    public boolean signatureIsValid(String sig) {
     	if (this.token==null || sig==null) return false;
     	return validToken() && token.contains(sig);
     }
