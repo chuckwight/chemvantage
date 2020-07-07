@@ -147,7 +147,7 @@ public class LTIRegistration extends HttpServlet {
 	}
 	
 	String applicationForm(String use) {
-		if (use==null) use = "";
+		if (use==null) use = "prod";
 		StringBuffer buf = new StringBuffer(Home.banner + "<p>");
 		buf.append("ChemVantage is an Open Education Resource for teaching and learning college-level General "
 				+ "Chemistry. We offer this service at no charge for nonprofit educational purposes.");
@@ -166,7 +166,7 @@ public class LTIRegistration extends HttpServlet {
 				+ "and Home Page: <input type=text name=url placeholder='https://myschool.edu'><p>"
 				+ "Select your use case:<br>"
 				+ "<label><input type=radio name=use value=prod" + (use.equals("prod")?" checked":"") + ">Teaching a chemistry class (production environment)</label><br>"
-				+ "<label><input type=radio name=use value=test" + (use.equals("test")?" checked":"") + ">Dev server (for software developers only, please)</label><p>"
+				+ "<label><input type=radio name=use value=test" + (use.equals("test")?" checked":"") + ">Dev server (for debugging LTI connections)</label><p>"
 				+ "Type of LTI registration:<br>"
 				+ "<label><input type=radio name=ver value=1p1 checked>LTI version 1.1 (preferred)</label><br>"
 				+ "<label><input type=radio name=ver value=1p3>LTI Advantage (certified but still clunky)</label><p>"

@@ -238,19 +238,21 @@ public class ReportScore extends HttpServlet {
 					+ "Assignment: " + assignment.assignmentType + (t==null?"":" - " + t.title) + "<br>"
 					+ "Current score= " + s.getPctScore() + "% after " + s.numberOfAttempts + " attempts<br>"
 					+ "ChemVantage domain = " + oauth_consumer_key + "<br>"
-					+ "Domain contact = " + c.email + "<p>"
+					+ "Domain contact = " + c.email + "<br>"
+					+ "Service URL = " + assignment.lis_outcome_service_url + "<br>"
+					+ "POST message = " + LTIMessage.xmlReplaceResult(s.lis_result_sourcedid,String.valueOf(s.score)) + "<p>"
 					
-					+ ("moodle".contentEquals(c.lms)?"<b>Please note</b>: Several Moodle users have experienced difficulty getting "
-							+ "scores returned to the Moodle grade book using LTI. We believe that this is due to the Moodle server being "
-							+ "configured in a way that refuses this type of LTI connection. You may rectify the situation by adding the "
-							+ "following rewrite rule into the .htaccess file on the Moodle server:<p>"
-							+ "RewriteCond %{HTTP:Authorization} ^(.+)" 
-							+ "RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]<p>":"")
+					+ "Please note</b>: Several Moodle users have experienced difficulty getting "
+					+ "scores returned to the Moodle grade book using LTI. We believe that this is due to the Moodle server being "
+					+ "configured in a way that refuses this type of LTI connection. You may rectify the situation by adding the "
+					+ "following rewrite rule into the .htaccess file on the Moodle server:<p>"
+					+ "RewriteCond %{HTTP:Authorization} ^(.+)" 
+					+ "RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]<p>"
 
 					+ "This message was generated automatically to make you aware of a potential problem with the connection to "
-					+ "your LMS. If you need help, please contact Chuck Wight (admin@chemvantage.org) for assistance.<p>"
+					+ "your LMS. If you need help, please contact me for assistance.<p>"
 					+ "Thank you,<p>"
-					+ "Chuck Wight<br>ChemVantage LLC";
+					+ "Chuck Wight<br>ChemVantage LLC<br>admin@chemvantage.org";
 			
 			Message msg = new MimeMessage(session);
 			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
