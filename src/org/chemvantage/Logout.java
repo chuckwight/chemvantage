@@ -55,6 +55,13 @@ public class Logout extends HttpServlet {
 				+ "<p>"
 				+ "You can activate a new session and token by returning to your learning "
 				+ "management system (LMS) and clicking the link for any assignment there."
+				+ "<p>"
+				+ "If you are seeing this page on every launch to ChemVantage, it's likely "
+				+ "that your browser is preventing cross-site tracking. There are 2 ways to "
+				+ "fix this:<ol><li>Allow this in your browser, e.g. in Safari go to "
+				+ "Safari | Preferences | Privacy | uncheck Website Tracking<li>Ask your "
+				+ "instructor to configure the assignment in your LMS to launch the assignment "
+				+ "in a new browser tab or window</ol>"
 				+ Home.footer);
 	}
 }
