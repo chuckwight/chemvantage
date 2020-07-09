@@ -137,15 +137,7 @@ public class Quiz extends HttpServlet {
 				ofy().save().entity(qt);
 			}
 			int secondsRemaining = (int) (timeLimit*60 - (now.getTime() - qt.downloaded.getTime())/1000);
-			/*
-			//=================== TEMPORARY DEBUGGING SECTION =======================
-			try {  
-				Deployment d = ofy().load().type(Deployment.class).id(qa.domain).safe();
-				String lineitem = LTIMessage.getLineItem(d, qa.lti_ags_lineitem_url).toString();
-				buf.append("Debug lineitem: " + lineitem);
-			} catch (Exception e) {}
-			// ======================================================================
-			*/
+			
 			buf.append("\n<h2>Quiz - " + topic.title + " (" + subject.title + ")</h2>");
 
 			if (user.isInstructor() && qa != null) {
@@ -160,7 +152,7 @@ public class Quiz extends HttpServlet {
 				buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			}
 			
-			buf.append("\n<FORM NAME=Quiz METHOD=POST ACTION=Quiz onSubmit='return confirmSubmission()'>");
+			buf.append("\n<FORM NAME=Quiz id=quizForm METHOD=POST ACTION=Quiz onSubmit='return confirmSubmission()'>");
 			
 			buf.append("<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">");
 			if (qa!=null) buf.append("<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + qa.id + "'>");
@@ -265,8 +257,30 @@ public class Quiz extends HttpServlet {
 				+ "}"
 				+ "countdown();"
 				+ "function confirmSubmission() {"
-				+ "  return confirm('Submit this quiz for scoring now?');"
+				+ "  var elements = document.getElementById('quizForm').elements;"
+				+ "  var nAnswers;"
+				+ "  var i;"
+				+ "  var checkboxes;"
+				+ "  var lastCheckboxIndex;"
+				+ "  nAnswers = 0;"
+				+ "  for (i=0;i<elements.length;i++) {"
+				+ "    if (isNaN(elements[i].name)) continue;"
+				+ "    if (elements[i].type=='text' && elements[i].value.length>0) nAnswers++;"
+				+ "    else if (elements[i].type=='radio' && elements[i].checked) nAnswers++;"
+				+ "    else if (elements[i].type=='checkbox') {"
+				+ "      checkboxes = document.getElementsByName(elements[i].name);"
+				+ "      lastCheckboxIndex = i + checkboxes.length - 1;"
+				+ "      for (j=0;j<checkboxes.length;j++) if (checkboxes[j].checked==true) {"
+				+ "        nAnswers++;"
+				+ "        i = lastCheckboxIndex;"
+				+ "        break;"
+				+ "      }"
+				+ "    }"
+				+ "  }"
+				+ "  if (nAnswers<10) return confirm('Submit this quiz for scoring now? ' + (10-nAnswers) + ' answers may be left blank.');"
+				+ "  else return true;"
 				+ "}"
+				+ "function showWorkBox(qid) {}" 
 				+ "</SCRIPT>"; 
 	}
 	
