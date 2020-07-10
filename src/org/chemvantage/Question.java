@@ -639,7 +639,7 @@ public class Question implements Serializable {
 			for (int i=0;i<correctAnswers.length;i++) {
 				correctAnswers[i] = correctAnswers[i].replaceAll("\\W","");
 				if (compare.equals(studentAnswer,correctAnswers[i])) return true;
-				else if (closeEnough(studentAnswer,correctAnswers[i])) return true;
+				else if (closeEnough(studentAnswer.toLowerCase(),correctAnswers[i].toLowerCase())) return true;
 			}
 			return false;
 		case 5: // Numeric Answer
