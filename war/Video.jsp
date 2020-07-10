@@ -24,9 +24,8 @@
 
 <%
 	try {
-		User user = User.getUser((String)request.getSession().getAttribute("Token"));
-		sig = request.getParameter("sig");
-		if (!user.signatureIsValid(sig)) throw new Exception();
+		User user = User.getUser(request.getParameter("sig"));
+		if (user==null) throw new Exception();
 		
 		try {
 			segment = Integer.parseInt(request.getParameter("Segment"));

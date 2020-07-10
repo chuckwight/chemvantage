@@ -58,8 +58,8 @@ public class VideoQuiz extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		try {
-			User user = User.getUser((String)request.getSession().getAttribute("Token"));
-			if (!user.signatureIsValid(request.getParameter("sig"))) throw new Exception();
+			User user = User.getUser(request.getParameter("sig"));
+			if (user==null) throw new Exception();
 			
 			long videoId = 0L;
 			try {
@@ -84,8 +84,8 @@ public class VideoQuiz extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		try {
-			User user = User.getUser((String)request.getSession().getAttribute("Token"));
-			if (!user.signatureIsValid(request.getParameter("sig"))) throw new Exception();
+			User user = User.getUser(request.getParameter("sig"));
+			if (user==null) throw new Exception();
 			
 			out.println(scoreQuizlet(user,request));
 		} catch (Exception e) {

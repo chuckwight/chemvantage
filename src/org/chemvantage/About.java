@@ -204,7 +204,7 @@ public class About extends HttpServlet {
 		+ "<li><b>Digital Tracking</b> - ChemVantage does not use cookies, web analytics, web beacons, pixel tags or any other type "
 		+ "of digital tracking devices. We do not store information about IP addresses, locations, or browser information of "
 		+ "our users. We do not display any advertisements or enter into any service agreements with third party advertisers.</li>"
-		+ "<li><b>User IDs</b> - During each user's session, ChemVantage issues a cryptographically signed token containing an "
+		+ "<li><b>User IDs</b> - During each user's session, ChemVantage issues a secure token that is linked to an "
 		+ "opaque user ID to ensure both privacy and security. For LTI users, this ID is provided by the learning "
 		+ "management system (LMS). LTI is a secure messaging and communications standard developed by the "
 		+ "<a href=https://www.imsglobal.org>IMS Global Learning Consortium</a>. LTI connects students and instructors with "

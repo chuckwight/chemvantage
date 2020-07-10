@@ -55,8 +55,8 @@ public class Homework extends HttpServlet {
 	throws ServletException, IOException {
 		
 		try {
-			User user = User.getUser((String)request.getSession().getAttribute("Token"));
-			if (!user.signatureIsValid(request.getParameter("sig"))) throw new Exception();
+			User user = User.getUser(request.getParameter("sig"));
+			if (user==null) throw new Exception();
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
@@ -81,8 +81,8 @@ public class Homework extends HttpServlet {
 	throws ServletException, IOException {
 		
 		try {
-			User user = User.getUser((String)request.getSession().getAttribute("Token"));
-			if (!user.signatureIsValid(request.getParameter("sig"))) throw new Exception();
+			User user = User.getUser(request.getParameter("sig"));
+			if (user==null) throw new Exception();
 				
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();

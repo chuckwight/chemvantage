@@ -86,8 +86,8 @@ public class LTIv1p3Launch extends HttpServlet {
 		try {
 			if (request.getParameter("id_token") != null) ltiv1p3LaunchRequest(request,response);  // handle LTI v1p3 launch request			
 			else if ("UpdateAssignment".equals(request.getParameter("UserRequest"))) { // POST the assignmentType and topicIds			
-				User user = User.getUser((String)request.getSession().getAttribute("Token"));
-				if (!user.signatureIsValid(request.getParameter("sig"))) throw new Exception();
+				User user = User.getUser(request.getParameter("sig"));
+				if (user==null) throw new Exception();
 				
 				if (!user.isInstructor()) throw new Exception("User must be instructor to update thisd assignment.");
 
@@ -257,19 +257,10 @@ public class LTIv1p3Launch extends HttpServlet {
 		debug.append("assignment " + myAssignment.id + " saved OK...");
 
 		debug.append("Lineitem: " + LTIMessage.getLineItem(d, lti_ags_lineitem_url));
-/*		
-		// Update the lineitem, if necessary:
-		if (resourceId == null && lti_ags_lineitem_url != null) {
-			try {
-				LTIMessage.updateLineItem(d, lti_ags_lineitem_url, myAssignment.id);
-			} catch (Exception e) {}
-		}
-*/		
+
 		// Create a cross-site request forgery (CSRF) token containing the Assignment.id
 		user.setAssignment(myAssignment.id);
-		request.getSession().setAttribute("Token",user.token);
-		debug.append("user token set OK...");
-
+		
 		// If this is the first time this Assignment has been used, it may be missing the assignmentType and topicId(s)
 		if (!myAssignment.isValid()) {  //Show the the pickResource form:									
 			response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,1) + Home.footer);
@@ -352,7 +343,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		String platformUserId = claims.get("iss").getAsString() + "/" + sub;
 		User user = new User(platformUserId);
 		
-		if (claims.has("email")) user.email = claims.get("email").getAsString();
+		//if (claims.has("email")) user.email = claims.get("email").getAsString();
 		
 		JsonElement roles_claim = claims.get("https://purl.imsglobal.org/spec/lti/claim/roles");
 		if (roles_claim == null || !roles_claim.isJsonArray()) throw new Exception("Required roles claim is missing from the id_token");

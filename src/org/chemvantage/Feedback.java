@@ -56,12 +56,9 @@ public class Feedback extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		try {
-			User user = User.getUser((String)request.getSession().getAttribute("Token"));
-			if (user == null || !user.signatureIsValid(request.getParameter("sig"))) {
-				user = new User("anonymous"+new Random().nextInt());
-				user.setToken();				
-			}
-		
+			User user = User.getUser(request.getParameter("sig"));
+			if (user == null) user = new User("anonymous"+new Random().nextInt());
+			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 
@@ -83,8 +80,8 @@ public class Feedback extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			User user = User.getUser((String)request.getSession().getAttribute("Token"));
-			if (!user.signatureIsValid(request.getParameter("sig"))) throw new Exception();
+			User user = User.getUser(request.getParameter("sig"));
+			if (user==null) throw new Exception();
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();

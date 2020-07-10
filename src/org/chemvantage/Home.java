@@ -30,7 +30,6 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 @WebServlet(urlPatterns={"/","/Home"})
 public class Home extends HttpServlet {
@@ -179,11 +178,7 @@ public class Home extends HttpServlet {
 			
 			buf.append("<FORM NAME='HQSelectForm' ACTION=Quiz METHOD=GET>");
 			
-			// make every user anonymous
-			User user = new User("anonymous"+new Random().nextInt());
-			user.setToken(); // sets the CSRF token with assignmentId=0L;
-			HttpSession session = request.getSession();
-			session.setAttribute("Token", user.token);
+			User user = new User(); // anonymous User constructor
 			
 			buf.append("<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">");
 			

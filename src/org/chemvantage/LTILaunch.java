@@ -34,7 +34,6 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
@@ -68,8 +67,8 @@ public class LTILaunch extends HttpServlet {
 			throws ServletException, IOException {
 		try {			
 			if ("UpdateAssignment".equals(request.getParameter("UserRequest"))) {
-				User user = User.getUser((String)request.getSession().getAttribute("Token"));
-				if (!user.signatureIsValid(request.getParameter("sig"))) throw new Exception("Unable to validate user token.");
+				User user = User.getUser(request.getParameter("sig"));
+				if (user==null) throw new Exception();
 				
 				if (!user.isInstructor()) throw new Exception("User must be instructor to update this assignment.");
 				
@@ -212,7 +211,7 @@ public class LTILaunch extends HttpServlet {
 
 			// Process user information, provision a new user account if necessary, and store the userId in the user's session
 			User user = new User(userId);
-			user.email = request.getParameter("lis_person_contact_email_primary");
+			//user.email = request.getParameter("lis_person_contact_email_primary");
 			
 			// check if user has Instructor or Administrator role
 			String roles = request.getParameter("roles");
@@ -251,11 +250,7 @@ public class LTILaunch extends HttpServlet {
 				user.setAssignment(myAssignment.id,lis_result_sourcedid);
 				debug.append("User token set...");
 			}
-			debug.append("assignmentId=" + myAssignment.id + "...");
-			
-			HttpSession session = request.getSession();
-			session.setAttribute("Token",user.token);
-			if (user.getTokenSignature()==null) throw new Exception("User token signature was null.");
+			debug.append("assignmentId=" + myAssignment.id + "...");			
 			
 			// At this point we should have a valid Assignment, but it may not have an 
 			// assignmentType or topicId(s). If so, show the the pickResource form:
