@@ -86,6 +86,7 @@ public class EraseEntity extends HttpServlet {
 					case "Quiz": ofy().delete().keys(ofy().load().type(QuizTransaction.class).filter("assignmentId", a.id).keys().iterable()); break;				
 					case "Homework": ofy().delete().keys(ofy().load().type(HWTransaction.class).filter("assignmentId", a.id).keys().iterable()); break;
 					case "PracticeExam": ofy().delete().keys(ofy().load().type(PracticeExamTransaction.class).filter("assignmentId", a.id).keys().iterable()); break;
+					case "VideoQuiz": ofy().delete().keys(ofy().load().type(VideoTransaction.class).filter("assignmentId", a.id).keys().iterable()); break;
 				}
 			}
 		}
@@ -164,13 +165,14 @@ public class EraseEntity extends HttpServlet {
 					
 				buf.append(a.created==null?"":" created " + a.created);
 				buf.append("</label><br>");
-				// Count the numbe4r of transactions associated with each assignment (to be deleted, if selected)
+				// Count the number of transactions associated with each assignment (to be deleted, if selected)
 				int nTransactions = 0;
 				if (a.assignmentType != null) {
 					switch (a.assignmentType) {
 						case "Quiz": nTransactions = ofy().load().type(QuizTransaction.class).filter("assignmentId",a.id).count(); break;
 						case "Homework": nTransactions = ofy().load().type(HWTransaction.class).filter("assignmentId",a.id).count(); break;
 						case "PracticeExam": nTransactions = ofy().load().type(PracticeExamTransaction.class).filter("assignmentId",a.id).count(); break;
+						case "VideoQuiz": nTransactions = ofy().load().type(VideoTransaction.class).filter("assignmentId",a.id).count(); break;
 					}
 				}
 				buf.append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" + nTransactions + " transactions are associated with this assignment<br>");
