@@ -57,7 +57,10 @@ public class Logout extends HttpServlet {
 				+ "has expired (after a period of typically 90 minutes)."
 				+ "<p>"
 				+ "You can activate a new session and token by returning to your learning "
-				+ "management system (LMS) and clicking the link for any assignment there."
+				+ "management system (LMS) and clicking the link for any assignment there.<p>"
+				+ "If you are having technical difficulty using ChemVantage, <a href=Feedback>"
+				+ "please tell us</a> so we can fix the problem."
+		
 				+ Home.footer);
 	}
 }
