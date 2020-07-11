@@ -172,12 +172,9 @@ public class Homework extends HttpServlet {
 					try {
 						Question q = hwQuestions.get(k);
 						if (q==null) {
-							try {
-								q = ofy().load().key(k).safe();
-								hwQuestions.put(k,q);
-							} catch (Exception e) {
-								continue;  // this catches cases where an assigned question no longer exists
-							}
+							hwQuestions.putAll(ofy().load().keys(hwa.questionKeys));  // loads (or possibly reloads) all questions for this assignment
+							q = hwQuestions.get(k);
+							if (q==null) continue;  // this catches cases where an assigned question no longer exists
 						}
 						String hashMe = user.id + hwa.id;
 						q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
@@ -235,12 +232,9 @@ public class Homework extends HttpServlet {
 			for (Key<Question> k : optionalQuestionKeys) {
 				Question q = hwQuestions.get(k);
 				if (q==null) {
-					try {
-						q = ofy().load().key(k).safe();
-						hwQuestions.put(k,q);
-					} catch (Exception e) {
-						continue;  // this catches cases where an assigned question no longer exists
-					}
+					hwQuestions.putAll(ofy().load().keys(optionalQuestionKeys));  // loads (or possibly reloads) all optional questions for this assignment
+					q = hwQuestions.get(k);
+					if (q==null) continue;  // this catches cases where an assigned question no longer exists
 				}
 				String hashMe = user.id + (hwa==null?"":hwa.id);
 				q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
@@ -295,7 +289,6 @@ public class Homework extends HttpServlet {
 			long assignmentId = 0;
 			Assignment hwa = null;
 			try {
-				//assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
 				assignmentId = user.getAssignmentId();
 				hwa = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			} catch (Exception e) {}

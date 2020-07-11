@@ -187,12 +187,9 @@ public class Quiz extends HttpServlet {
 				Key<Question> k = questionKeys.remove(rand.nextInt(questionKeys.size()));
 				Question q = quizQuestions.get(k);
 				if (q==null) {
-					try {
-						q = ofy().load().key(k).safe();
-						quizQuestions.put(k,q);
-					} catch (Exception e) {
-						continue;  // this catches cases where an assigned question no longer exists
-					}
+					quizQuestions.putAll(ofy().load().keys(questionKeys));  // loads (or possibly reloads) all questions for this assignment
+					q = quizQuestions.get(k);
+					if (q==null) continue;  // this catches cases where an assigned question no longer exists
 				}
 				// by this point we should have a valid question
 				i++;  // this counter keeps track of the number of questions presented so far
@@ -329,6 +326,7 @@ public class Quiz extends HttpServlet {
 					questionKeys.add(Key.create(Question.class,Long.parseLong((String) e.nextElement())));
 				} catch (Exception e2) {}
 			}
+			Map<Key<Question>,Question> quizQuestions = ofy().load().keys(questionKeys);
 			
 			//Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
 			List<Response> responses = new ArrayList<Response>();
@@ -341,14 +339,6 @@ public class Quiz extends HttpServlet {
 						for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
 						if (studentAnswer[0].length() > 0) { // an answer was submitted
 							Question q = quizQuestions.get(k);
-							if (q==null) {
-								try {
-									q = ofy().load().key(k).safe();
-									quizQuestions.put(k,q);
-								} catch (Exception e) {
-									continue;
-								}
-							}
 							long seed = Math.abs(qt.id - q.id);
 							if (seed==-1) seed--;  // -1 is a special value for randomly seeded Random generator; avoid this (unlikely) situation
 							q.setParameters(seed);
