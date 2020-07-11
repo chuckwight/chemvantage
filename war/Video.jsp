@@ -24,9 +24,10 @@
 
 <%
 	try {
-		User user = User.getUser(request.getParameter("sig"));
+		sig = request.getParameter("sig");
+		User user = User.getUser(sig);
 		if (user==null) throw new Exception();
-		
+	
 		try {
 			segment = Integer.parseInt(request.getParameter("Segment"));
 		} catch (Exception e) {
@@ -39,24 +40,28 @@
 		}
 
 		long assignmentId = user.getAssignmentId();
-		if (assignmentId > 0L)
+		if (assignmentId > 0L) {
 			try {
 				videoId = ofy().load().type(Assignment.class).id(assignmentId).now().videoId;
 			} catch (Exception e) {
 			}
-
+		}
 		Video v = ofy().load().type(Video.class).id(videoId).now();
-		if (v.breaks==null) v.breaks = new int[0];
-		
+		if (v.breaks == null)
+			v.breaks = new int[0];
+
 		title = v.title;
 		breaks = v.breaks;
 		videoSerialNumber = v.serialNumber;
-		
-		if (segment > 0) start = v.breaks[segment - 1]; // start at the end of the last segment
-		if (v.breaks.length > segment) end = v.breaks[segment]; // play to this value and stop
+
+		if (segment > 0)
+			start = v.breaks[segment - 1]; // start at the end of the last segment
+		if (v.breaks.length > segment)
+			end = v.breaks[segment]; // play to this value and stop
 
 	} catch (Exception e) {
-		response.sendRedirect("/Logout");
+		out.println(e.getMessage());
+		//response.sendRedirect("/Logout");
 	}
 %>
 
@@ -87,6 +92,7 @@ var tag = document.createElement('script'); tag.src='https://www.youtube.com/ifr
 var firstScriptTag = document.getElementsByTagName('script')[0]; firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 var player;
 var quiz_div = document.getElementById('quiz_div');
+var sig = <%= sig %>;
 var segment = <%= segment %>;
 var breaks = <%= Arrays.toString(breaks) %>;
 var videoSerialNumber = '<%= videoSerialNumber %>';
@@ -150,7 +156,7 @@ function ajaxLoadQuiz() {
 	  quiz_div.innerHTML=xmlhttp.responseText;
 	}
   }
-  xmlhttp.open('GET','/VideoQuiz?VideoId='+'<%= videoId %>'+'&Segment='+segment+'&sig='+'<%= sig %>',true);
+  xmlhttp.open('GET','/VideoQuiz?VideoId='+'<%= videoId %>'+'&Segment='+segment+'&sig='+sig,true);
   xmlhttp.send(null);
   return true;
 }
@@ -223,7 +229,7 @@ function ajaxSubmit(url,id,note,email) {
       document.getElementById('feedback' + id).innerHTML='<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';
     }
   }
-  url += '&QuestionId=' + id + '&Token=" + token &Notes=' + note + '&Email=' + email;
+  url += '&QuestionId=' + id + '&sig=' + sig + '&Notes=' + note + '&Email=' + email;
   xmlhttp.open('GET',url,true);
   xmlhttp.send(null);
   return false;
@@ -241,13 +247,13 @@ function ajaxStars(nStars) {
     var msg;
     switch (nStars) {
       case '1': msg='1 star - If you are dissatisfied with ChemVantage, '
-                + 'please take a moment to <a href=/Feedback?Token=" + token + ">tell us why</a>.';
+                + 'please take a moment to <a href=/Feedback?sig=' + sig + '>tell us why.</a>.';
                 break;
       case '2': msg='2 stars - If you are dissatisfied with ChemVantage, '
-                + 'please take a moment to <a href=/Feedback?Token=" + token + ">tell us why</a>.';
+                + 'please take a moment to <a href=/Feedback?sig=' + sig + '>tell us why.</a>.';
                 break;
-      case '3': msg='3 stars - Thank you. <a href=/Feedback?Token=" + token + ">Click here</a> '
-                + 'to provide additional feedback.';
+      case '3': msg='3 stars - Thank you. <a href=/Feedback?sig=' + sig + '>Click here</a> '
+                + ' to provide additional feedback.';
                 break;
       case '4': msg='4 stars - Thank you';
                 break;
@@ -275,130 +281,6 @@ function GetXmlHttpObject() {
 }
 
 </script>
-
-<%--  
-<script type=text/javascript>
-var tag = document.createElement('script'); tag.src='https://www.youtube.com/iframe_api';
-var firstScriptTag = document.getElementsByTagName('script')[0]; firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-var player;
-
-function onYouTubeIframeAPIReady() {
-  player = new YT.Player('videoiframe', {
-	height: '315',
-	width: '560',
-	videoId: '<%= videoSerialNumber %>',
-	playerVars: {
-	  'enablejsapi': 1,
-	  'autoplay': 1,
-	  'start': <%= start %>,
-	  'end': <%= end %>
-	},
-	events: {
-      'onStateChange': onPlayerStateChange
-    }
-  });
-}
-
-var quiz_div = document.getElementById('quiz_div');
-function onPlayerStateChange(event) {
-	switch (event.data) {
-	case YT.PlayerState.ENDED:
-		quiz_div.style.display = '';
-		ajaxLoadQuiz();
-	default:
-    }
-}
-var segment = <%= segment %>;
-var breaks = <%= Arrays.toString(breaks) %>;
-var start = 0;
-var end = = -1;
-var quiz_url = '/VideoQuiz';
-
-function ajaxLoadQuiz() {
-  quiz_div.innerHTML = "Loading questions...";
-  var xmlhttp=GetXmlHttpObject();
-  if (xmlhttp==null) {
-	    alert ('Sorry, your browser does not support AJAX. To access the video quiz, switch to a supported browser like Chrome or Safari.');
-	    return false;
-  }
-  xmlhttp.onreadystatechange=function() {
-	if (xmlhttp.readyState==4) {
-	  quiz_div.innerHTML=xmlhttp.responseText;
-	}
-  }
-  xmlhttp.open('GET',quiz_url+'?VideoId='+'<%= videoId %>'+'&Segment='+segment+'&Token='+'<%= token %>',true);
-  xmlhttp.send(null);
-}
-
-function ajaxSubmit() {
-  var quiz_url = '/VideoQuiz';
-  var xmlhttp=GetXmlHttpObject();
-  xmlhttp.onreadystatechange=function() {
-  if (xmlhttp.readyState==4) {
-	  quiz_div.innerHTML = response.statusText;
-	}
-  }
-  xmlhttp.open('POST',quiz_url,true);
-  xmlhttp.setRequestHeader('Content-Type','application/x-www-form-urlencoded' );
-  var formData = new FormData(document.getElementById('quizlet'));
-  xmlhttp.send(formData);
-  
-  segment++;
-  start = breaks[segment-1];
-  end = (breaks.length >= segment?breaks[segment]:-1);  // play to this value or stop at end
-  player.loadVideoById({'videoId':videoSerialNumber,'startSeconds':start,'endSeconds':end});
-  
-  return false;
-}
-
-function showWorkBox(qid) {}
-
-function ajaxStars(nStars) {
-  var xmlhttp;
-  if (nStars==0) return false;
-  xmlhttp=GetXmlHttpObject();
-  if (xmlhttp==null) {
-    alert ('Sorry, your browser does not support AJAX!');
-    return false;
-  }
-  xmlhttp.onreadystatechange=function() {
-    var msg;
-    switch (nStars) {
-      case '1': msg='1 star - If you are dissatisfied with ChemVantage, '
-                + 'please take a moment to <a href=/Feedback?Token=" + token + ">tell us why</a>.';
-                break;
-      case '2': msg='2 stars - If you are dissatisfied with ChemVantage, '
-                + 'please take a moment to <a href=/Feedback?Token=" + token + ">tell us why</a>.';
-                break;
-      case '3': msg='3 stars - Thank you. <a href=/Feedback?Token=" + token + ">Click here</a> '
-                + 'to provide additional feedback.';
-                break;
-      case '4': msg='4 stars - Thank you';
-                break;
-      case '5': msg='5 stars - Thank you!';
-                break;
-      default: msg='You clicked ' + nStars + ' stars.';
-    }
-    if (xmlhttp.readyState==4) {
-      document.getElementById('vote').innerHTML=msg;
-    }
-  }
-  xmlhttp.open('GET','Feedback?UserRequest=AjaxRating&NStars='+nStars,true);
-  xmlhttp.send(null);
-  return false;
-}
-function GetXmlHttpObject() {
-  if (window.XMLHttpRequest) { // code for IE7+, Firefox, Chrome, Opera, Safari
-    return new XMLHttpRequest();
-  }
-  if (window.ActiveXObject) { // code for IE6, IE5
-    return new ActiveXObject('Microsoft.XMLHTTP');
-  }
-  return null;
-}
-</script>
-   --%>
-
 
 </body>
 </html>

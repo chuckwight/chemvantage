@@ -58,6 +58,7 @@ public class Admin extends HttpServlet {
 			String userId = userService.getCurrentUser().getUserId();
 			User user = new User(userId);
 			user.setIsChemVantageAdmin(true);
+			user.setToken();
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();

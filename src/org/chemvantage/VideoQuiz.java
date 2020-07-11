@@ -74,7 +74,8 @@ public class VideoQuiz extends HttpServlet {
 			
 			out.println(showQuizlet(user,videoId,segment));
 		} catch (Exception e) {
-			response.sendRedirect("/Logout");
+			out.println(request.getParameter("sig") + request.getParameter("VideoId") + request.getParameter("Segment"));
+			//response.sendRedirect("/Logout");
 		}
 	}
 

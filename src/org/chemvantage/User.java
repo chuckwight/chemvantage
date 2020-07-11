@@ -172,17 +172,15 @@ public class User {
 	void setAssignment(long assignmentId,String lis_result_sourcedid) {  // LTI v1.1
 		this.assignmentId = assignmentId;
 		this.lis_result_sourcedid = lis_result_sourcedid;
-		try {
-			User u = ofy().load().type(User.class).filter("id",this.id).first().safe();
-			if (u.exp.after(new Date())) this.sig = u.sig;
-			else ofy().delete().entity(u);
-		} catch (Exception e) {			
-		}
-		ofy().save().entity(this).now();
+		setToken();
 	}
 	
 	void setAssignment(long assignmentId) {  // LTI Advantage
 		this.assignmentId = assignmentId;
+		setToken();
+	}
+	
+	void setToken() {
 		try {
 			User u = ofy().load().type(User.class).filter("id",this.id).first().safe();
 			if (u.exp.after(new Date())) this.sig = u.sig;
