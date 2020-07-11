@@ -74,6 +74,7 @@ public class Feedback extends HttpServlet {
 				recordAjaxRating(request);
 			} else out.println(Home.header("ChemVantage Feedback Form") + feedbackForm(user) + Home.footer);    
 		} catch (Exception e) {
+			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
 	}
 
@@ -96,6 +97,7 @@ public class Feedback extends HttpServlet {
 				out.println(Home.header("ChemVantage Feedback Form") + feedbackForm(user) + Home.footer);
 			} else 	out.println(Home.header("ChemVantage Feedback Form") + feedbackForm(user) + Home.footer);			
 		} catch (Exception e) {
+			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
 	}
 

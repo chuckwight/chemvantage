@@ -29,39 +29,38 @@
 		if (user==null) throw new Exception();
 	
 		try {
-			segment = Integer.parseInt(request.getParameter("Segment"));
+	segment = Integer.parseInt(request.getParameter("Segment"));
 		} catch (Exception e) {
-			segment = 0;
+	segment = 0;
 		}
 
 		try {
-			videoId = Long.parseLong(request.getParameter("VideoId"));
+	videoId = Long.parseLong(request.getParameter("VideoId"));
 		} catch (Exception e) {
 		}
 
 		long assignmentId = user.getAssignmentId();
 		if (assignmentId > 0L) {
-			try {
-				videoId = ofy().load().type(Assignment.class).id(assignmentId).now().videoId;
-			} catch (Exception e) {
-			}
+	try {
+		videoId = ofy().load().type(Assignment.class).id(assignmentId).now().videoId;
+	} catch (Exception e) {
+	}
 		}
 		Video v = ofy().load().type(Video.class).id(videoId).now();
 		if (v.breaks == null)
-			v.breaks = new int[0];
+	v.breaks = new int[0];
 
 		title = v.title;
 		breaks = v.breaks;
 		videoSerialNumber = v.serialNumber;
 
 		if (segment > 0)
-			start = v.breaks[segment - 1]; // start at the end of the last segment
+	start = v.breaks[segment - 1]; // start at the end of the last segment
 		if (v.breaks.length > segment)
-			end = v.breaks[segment]; // play to this value and stop
+	end = v.breaks[segment]; // play to this value and stop
 
 	} catch (Exception e) {
-		out.println(e.getMessage());
-		//response.sendRedirect("/Logout");
+		response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 	}
 %>
 

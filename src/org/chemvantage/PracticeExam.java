@@ -82,7 +82,9 @@ public class PracticeExam extends HttpServlet {
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 				out.println(Home.header("Select ChemVantage Practice Exam Topicss") + a.selectExamQuestionsForm(user) + Home.footer);
 			} else out.println(Home.header("ChemVantage Practice Exam") + printExam(user,request) + Home.footer);
-		} catch (Exception e) {}
+		} catch (Exception e) {
+			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
+		}
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
@@ -103,7 +105,9 @@ public class PracticeExam extends HttpServlet {
 				a.updateQuestions(request);
 				out.println(Home.header("ChemVantage Practice Exam") + printExam(user,request) + Home.footer);
 			} else out.println(Home.header("ChemVantage Practice Exam Results") + printScore(user,request) + Home.footer);
-		} catch (Exception e) {}
+		} catch (Exception e) {
+			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
+		}
 	}
 
 	String designExam(User user,HttpServletRequest request) {

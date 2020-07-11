@@ -17,6 +17,7 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.io.IOException;
 import java.io.PrintWriter;
 
@@ -25,6 +26,8 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import com.googlecode.objectify.Key;
 
 @WebServlet("/Logout")
 public class Logout extends HttpServlet {
@@ -37,6 +40,11 @@ public class Logout extends HttpServlet {
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
+		
+		String sig = request.getParameter("sig");
+		if (sig!=null) try {
+			ofy().delete().key(Key.create(User.class, Long.parseLong(sig))).now();
+		} catch (Exception e) {}
 		
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();

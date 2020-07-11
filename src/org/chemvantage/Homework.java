@@ -72,8 +72,7 @@ public class Homework extends HttpServlet {
 			}
 			else out.println(Home.header("ChemVantage Homework") + printHomework(user,request) + Home.footer);
 		} catch (Exception e) {
-			//response.sendRedirect("/Logout?CvsToken=" + request.getParameter("CvsToken"));
-			response.sendRedirect("/Logout");
+			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
 	}
 
@@ -96,7 +95,7 @@ public class Homework extends HttpServlet {
 				out.println(Home.header("ChemVantage Homework") + printHomework(user,request) + Home.footer);
 			} else out.println(Home.header("ChemVantage Homework Grading Results") + printScore(user,request) + Home.footer);
 		} catch (Exception e) {
-			response.sendRedirect("/Logout");
+			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
 	}
 
@@ -483,7 +482,7 @@ public class Homework extends HttpServlet {
 					+ (assignmentId>0?"AssignmentId=" + assignmentId : "TopicId=" + topic.id)
 					+ "&sig=" + user.getTokenSignature()  
 					+ (offerHint?"&Q=" + q.id + "><span style='color:red'>Please give me a hint</span>":">Return to this homework assignment") + "</a> or "
-					+ "<a href=/Logout>logout of ChemVantage</a> ");
+					+ "<a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a> ");
 			
 			if (user.isAnonymous()) buf.append(" or go back to the <a href=/>ChemVantage home page</a>.");
 			}

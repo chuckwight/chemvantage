@@ -78,7 +78,7 @@ public class Quiz extends HttpServlet {
 			}
 			else out.println(Home.header("ChemVantage Quiz") + printQuiz(user,request) + Home.footer);
 		} catch (Exception e) {
-			response.sendRedirect("/Logout");
+			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
 	}
 
@@ -100,7 +100,7 @@ public class Quiz extends HttpServlet {
 				out.println(Home.header("ChemVantage Quiz") + printQuiz(user,request) + Home.footer);
 			} else out.println(Home.header("ChemVantage Quiz Results") + printScore(user,request) + Home.footer);
 		} catch (Exception e) {
-			response.sendRedirect("/Logout");
+			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
 	}
 
@@ -432,7 +432,7 @@ public class Quiz extends HttpServlet {
 			// If qa==null this is an anonymous user, otherwise is an LTI user:
 			buf.append((qa==null?"<a href=/Quiz?TopicId=" + qt.topicId + "&sig=" + user.getTokenSignature() + ">Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a> " :
 			"You may take this quiz again by clicking the assignment link in your learning management system ")			
-			+ "or <a href=/Logout>logout of ChemVantage</a>.");
+			+ "or <a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a>.");
 
 		} catch (Exception e) {
 			buf.append("Sorry, this quiz could not be scored.<br>" + e.getMessage());
