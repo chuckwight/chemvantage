@@ -655,24 +655,23 @@ public class Question implements Serializable {
 
 		if (Math.abs(correctAnswer.length()-studentAnswer.length())>maxEditDistance) return false;   // trivial estimate of min edit distance
 
-		if (editDist(studentAnswer,correctAnswer,studentAnswer.length(),correctAnswer.length(),0) > maxEditDistance) return false;
+		if (editDist(studentAnswer,correctAnswer,studentAnswer.length(),correctAnswer.length(),0,maxEditDistance) > maxEditDistance) return false;
 
 		return true;
 	}
 	
-	static int editDist(String str1, String str2, int m, int n, int d) { /*This code is contributed by Rajat Mishra*/
-		/* Mishra's original code has been modified to track the current edit distance (as d) so that if the max value is 
+	static int editDist(String str1, String str2, int m, int n, int d, int maxEditDistance) { /*This code is contributed by Rajat Mishra*/
+		/* Mishra's original code has been modified to track the current edit distance, d, and the maxEditDistance so that if the max value is 
 		 * surpassed at any point, the recursive algorithm terminates, greatly shortening the calculation.
 		 */
-		if (d>2) return d;  // 2 is the maximum allowable edit distance
 		if (m == 0) return n; 	  
 		if (n == 0) return m; 
 
-		if (str1.charAt(m - 1) == str2.charAt(n - 1)) return editDist(str1, str2, m - 1, n - 1, d); 
-
-		return 1 + min(editDist(str1, str2, m, n - 1, d+1), // Insert 
-				editDist(str1, str2, m - 1, n, d+1), // Remove 
-				editDist(str1, str2, m - 1, n - 1, d+1) // Replace 
+		if (str1.charAt(m - 1) == str2.charAt(n - 1)) return editDist(str1, str2, m - 1, n - 1, d, maxEditDistance); 
+		else if (d >= maxEditDistance) return d+1;
+		else return 1 + min(editDist(str1, str2, m, n - 1, d+1, maxEditDistance), // Insert 
+				editDist(str1, str2, m - 1, n, d+1, maxEditDistance), // Remove 
+				editDist(str1, str2, m - 1, n - 1, d+1, maxEditDistance) // Replace 
 				); 
 	}
 
