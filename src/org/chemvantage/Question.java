@@ -660,19 +660,19 @@ public class Question implements Serializable {
 		return true;
 	}
 	
-	static int editDist(String str1, String str2, int m, int n, int d, int maxEditDistance) { /*This code is contributed by Rajat Mishra*/
-		/* Mishra's original code has been modified to track the current edit distance, d, and the maxEditDistance so that if the max value is 
-		 * surpassed at any point, the recursive algorithm terminates, greatly shortening the calculation.
+	static int editDist(String str1, String str2, int m, int n, int d, int maxEditDistance) {
+		/* 
+		 * Modified Levenshtein algorithm for computing the edit distance between 2 strings of length m and n, and comparing it to a
+		 * maxEditDistance, keeping in mind that insertions or deletions that increase the distance from the m=n diagonal incur extra cost.
 		 */
 		if (m == 0) return n; 	  
 		if (n == 0) return m; 
 
 		if (str1.charAt(m - 1) == str2.charAt(n - 1)) return editDist(str1, str2, m - 1, n - 1, d, maxEditDistance); 
 		else if (d >= maxEditDistance) return d+1;
-		else return 1 + min(editDist(str1, str2, m, n - 1, d+1, maxEditDistance), // Insert 
-				editDist(str1, str2, m - 1, n, d+1, maxEditDistance), // Remove 
-				editDist(str1, str2, m - 1, n - 1, d+1, maxEditDistance) // Replace 
-				); 
+		else return 1 + min(d+1+Math.abs(n-1-m)>maxEditDistance?maxEditDistance:editDist(str1, str2, m, n-1, d+1, maxEditDistance),  // Insert 
+							d+1+Math.abs(n-m+1)>maxEditDistance?maxEditDistance:editDist(str1, str2, m-1, n, d+1, maxEditDistance),  // Remove 
+							d+1+Math.abs(n-m)>maxEditDistance?maxEditDistance:editDist(str1, str2, m-1, n-1, d+1, maxEditDistance)); // Replace 
 	}
 
 	static int min(int x, int y, int z) { /*This code is contributed by Rajat Mishra*/
