@@ -79,8 +79,8 @@ public class Help extends HttpServlet {
 		// 2) assignmentType (AssignmentType)
 		// 3) transactionId  (TransactionId)
 		try {
-			User user = User.getUser(request.getParameter("Token"));
-			if (user == null) throw new Exception("Invalid id_token");
+			User user = User.getUser(request.getParameter("sig"));
+			if (user==null) throw new Exception();
 			
 			String jwt = createJWT(request);
 			
@@ -188,7 +188,7 @@ public class Help extends HttpServlet {
 		
 		buf.append("<h3>Need Some Help?</h3>");
 		buf.append("Here's what to do: Copy the message below, including the entire URL, and send it with your question via email "
-				+ " to your instructor and/or teaching assistant. They will be able to view your responses to the question, including "
+				+ " to your instructor or teaching assistant, or even a friend. They will be able to view your responses to the question, including "
 				+ "anything that you may have written in the box the was labeled: 'Show your work here'. You can use the link "
 				+ "yourself to verify exactly what information your instructor will see.<p>"
 				+ "Your email should try to explain why you're stuck, if possible. When solving homework problems, it is important "
@@ -197,10 +197,8 @@ public class Help extends HttpServlet {
 		buf.append("<hr><p>");
 		
 		buf.append("From ChemVantage to the instructor:<br>"
-				+ "The student sending this message is having difficulties solving a problem in ChemVantage. Please click the URL "
-				+ "below to view the question item and the student's responses. The link is dynamic will always give current "
-				+ "information, so if the student solved the issue on their own or another way, you will see that in the page.<p>"
-				+ "The token provided in the link is only valid for 3 days and expires at " + exp + ".<p>");
+				+ "The student sending this message is having difficulties solving a problem in ChemVantage. Please click the link "
+				+ "below to view the question item and the student's responses. The link is only valid for 3 days and expires at " + exp + ".<p>");
 		
 		String url = server + "/help?JWT=" + jwt;
 		

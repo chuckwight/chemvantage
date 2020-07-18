@@ -441,7 +441,7 @@ public class Homework extends HttpServlet {
 							+ "<input type=hidden name=sig value=" + user.getTokenSignature() + ">"
 							+ "<input type=hidden name=AssignmentType value=Homework>"
 							+ "<input type=hidden name=TransactionId value=" + ht.id + ">");
-					buf.append("<font color=red>Do you need some help from your instructor or teaching assistant?</font>");
+					buf.append("<font color=red>Do you need some help from your instructor or teaching assistant? </font>");
 					buf.append("<input type=submit value='Get Some Help Here'></form><p>");
 				}
 			
