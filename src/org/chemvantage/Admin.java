@@ -118,6 +118,12 @@ public class Admin extends HttpServlet {
 				}
 			}
 
+			buf.append("<h3>Contributed Questions</h3>");
+			int nPending = ofy().load().type(ProposedQuestion.class).count();
+			if (nPending == 0) buf.append("No questions are pending editorial review.");
+			else buf.append("<a href=Edit?UserRequest=Review>"
+					+ nPending + " items are currently pending editorial review.</a>");
+			
 			buf.append("<h3>Recent Activity (past 30 days)</h3>");
 			Date lastMonth = new Date(new Date().getTime()-2592000000L);
 			List<BLTIConsumer> cons = ofy().load().type(BLTIConsumer.class).filter("lastLogin >",lastMonth).list();
