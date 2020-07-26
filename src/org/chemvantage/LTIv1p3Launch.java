@@ -87,7 +87,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			if (request.getParameter("id_token") != null) ltiv1p3LaunchRequest(request,response);  // handle LTI v1p3 launch request			
 			else if ("UpdateAssignment".equals(request.getParameter("UserRequest"))) { // POST the assignmentType and topicIds			
 				User user = User.getUser(request.getParameter("sig"));
-				if (user==null) throw new Exception();
+				if (user==null) throw new Exception("User token was missing or invalid.");
 				
 				if (!user.isInstructor()) throw new Exception("User must be instructor to update thisd assignment.");
 
