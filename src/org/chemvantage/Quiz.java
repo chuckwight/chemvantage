@@ -30,7 +30,6 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -76,7 +75,8 @@ public class Quiz extends HttpServlet {
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 				out.println(Home.header("Customize ChemVantage Quiz Assignment") + a.selectQuestionsForm(user) + Home.footer);
 			}
-			else out.println(Home.header("ChemVantage Quiz") + printQuiz(user,request) + Home.footer);
+			else response.sendRedirect("/Quiz.jsp?sig=" + user.getTokenSignature());
+			//else out.println(Home.header("ChemVantage Quiz") + printQuiz(user,request) + Home.footer);
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
@@ -97,13 +97,13 @@ public class Quiz extends HttpServlet {
 			if ("UpdateAssignment".contentEquals(userRequest)) {
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 				a.updateQuestions(request);
-				out.println(Home.header("ChemVantage Quiz") + printQuiz(user,request) + Home.footer);
+				response.sendRedirect("/Quiz.jsp?sig=" + user.getTokenSignature());
 			} else out.println(Home.header("ChemVantage Quiz Results") + printScore(user,request) + Home.footer);
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
 	}
-
+/*
 	public String printQuiz(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -280,7 +280,7 @@ public class Quiz extends HttpServlet {
 				+ "function showWorkBox(qid) {}" 
 				+ "</SCRIPT>"; 
 	}
-	
+*/	
 	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		
@@ -420,7 +420,7 @@ public class Quiz extends HttpServlet {
 			}
 			
 			// If qa==null this is an anonymous user, otherwise is an LTI user:
-			buf.append((qa==null?"<a href=/Quiz?TopicId=" + qt.topicId + "&sig=" + user.getTokenSignature() + ">Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a> " :
+			buf.append((qa==null?"<a href=/Quiz.jsp?TopicId=" + qt.topicId + "&sig=" + user.getTokenSignature() + ">Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a> " :
 			"You may take this quiz again by clicking the assignment link in your learning management system ")			
 			+ "or <a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a>.");
 

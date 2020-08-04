@@ -73,6 +73,14 @@ public class Assignment implements java.lang.Cloneable {
 		this.created = new Date();
 	}
 	
+	public long getTopicId() {
+		return topicId;
+	}
+	
+	public List<Key<Question>> getQuestionKeys() {
+		return this.questionKeys;
+	}
+	
 	String selectQuestionsForm(User user) {
 		StringBuffer buf = new StringBuffer();
 		try {

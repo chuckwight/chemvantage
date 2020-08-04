@@ -68,7 +68,11 @@ public class User {
 		}
 	}
 	
-	boolean isAnonymous() {
+	public String getId() {
+		return id;
+	}
+	
+	public boolean isAnonymous() {
 		try {
 			return id.startsWith("anonymous");
 		} catch (Exception e) {
@@ -84,7 +88,7 @@ public class User {
 		return ((roles%32)/16 == 1 || this.isChemVantageAdmin());
 	}
 
-	boolean isInstructor() {
+	public boolean isInstructor() {
 		return ((roles%16)/8 == 1 || this.isAdministrator());
 	}
 
@@ -194,7 +198,7 @@ public class User {
     	return assignmentId;
     }
 
-    String getLisResultSourcedid() {
+    public String getLisResultSourcedid() {
    		return lis_result_sourcedid;
     }
 }

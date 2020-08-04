@@ -48,4 +48,7 @@ public class Topic implements Serializable {
 		this.topicGroup = topicGroup;
 	}
 	
+	public String getTitle() {
+		return this.title;
+	}
 }

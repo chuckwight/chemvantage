@@ -121,6 +121,13 @@ public class Question implements Serializable {
 		if (editorId==null) editorId="";
 		if (notes==null) notes="";
 	}
+	public Long getId() {
+		return this.id;
+	}
+	
+	public int getPointValue() {
+		return this.pointValue;
+	}
 	
 	public String getCorrectAnswer() {
 		switch (getQuestionType()) {
@@ -241,11 +248,11 @@ public class Question implements Serializable {
 		return buf.toString();
 	}
 	
-	String print() {
+	public String print() {
 		return print("","");
 	}
 	
-	String print(String showWork,String studentAnswer) {
+	public String print(String showWork,String studentAnswer) {
 		StringBuffer buf = new StringBuffer();
 		char choice = 'a';
 		switch (getQuestionType()) {

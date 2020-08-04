@@ -255,9 +255,12 @@ public class LTILaunch extends HttpServlet {
 			// At this point we should have a valid Assignment, but it may not have an 
 			// assignmentType or topicId(s). If so, show the the pickResource form:
 			if (myAssignment.isValid()) {
-				redirectUrl = "/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature();
-				
-				debug.append("Redirecting to: " + redirectUrl);
+				switch (myAssignment.assignmentType) {
+				case "Quiz":
+					redirectUrl = "/Quiz.jsp" + "?sig=" + user.getTokenSignature();
+				default:
+					redirectUrl = "/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature();
+				}
 				response.sendRedirect(redirectUrl);
 			} else response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,1) + Home.footer);
 			return;

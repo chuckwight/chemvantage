@@ -63,4 +63,8 @@ public class Subject {
 		DecimalFormat df2 = new DecimalFormat("#.#");
 		return Double.valueOf(df2.format(avgStars));
 	}
+	
+	public String getAnnouncement() {
+		return this.announcement;
+	}
 }
