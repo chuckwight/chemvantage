@@ -89,7 +89,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				User user = User.getUser(request.getParameter("sig"));
 				if (user==null) throw new Exception("User token was missing or invalid.");
 				
-				if (!user.isInstructor()) throw new Exception("User must be instructor to update thisd assignment.");
+				if (!user.isInstructor()) throw new Exception("User must be instructor to update this assignment.");
 
 				Assignment myAssignment = updateAssignment(request,user);
 				boolean refresh = Boolean.parseBoolean(request.getParameter("Refresh"));
