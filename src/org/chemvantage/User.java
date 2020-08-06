@@ -60,7 +60,30 @@ public class User {
 		this.exp = new Date(new Date().getTime() + 5400000L);  // value expires 90 minutes from now
 	}
 	
-	static String getRawId(String userId) {
+	public static User getUser(String sig) {
+    	if (sig==null) return null;
+    	User user = null;
+    		
+		try {  // try to find the User entity in the datastore
+    		user = ofy().load().type(User.class).id(Long.parseLong(sig)).safe();
+    		Date now = new Date();
+        	Date in15min = new Date(now.getTime() + 900000L);
+    		if (user.exp.before(now)) return null; // entity has expired
+    		if (user.exp.before(in15min)) { // extend the exp time
+    			Date in90min = new Date(now.getTime() + 5400000L);
+    			user.exp = in90min;
+    			ofy().save().entity(user);
+    		}
+    		return user;
+    	} catch (Exception e) { // retrieve an anonymous User entity
+    		if (Long.parseLong(sig) <= Integer.MAX_VALUE) { // all legitimate anonymous users have a random Integer sig value
+    			user = new User("anonymous" + sig);
+    			return user;
+    		} else return null;
+    	}
+    }
+  
+static String getRawId(String userId) {
 		try {  // v1p3: strip the platform_id and "/" from the front of the userId
 			return new URI(userId).getRawPath().substring(1);
 		} catch (Exception e) {
@@ -148,27 +171,6 @@ public class User {
 		}
 	}
 
-	public static User getUser(String sig) {
-    	if (sig==null) return null;
-    	User user = null;
-    	Date now = new Date();
-    	Date in15min = new Date(now.getTime() + 900000L);
-			
-		try {  // try to find the User entity in the datastore
-    		user = ofy().load().type(User.class).id(Long.parseLong(sig)).safe();
-    		if (user.exp.before(now)) return null; // entity has expired
-    		if (user.exp.before(in15min)) { // extend the exp time
-    			Date in90min = new Date(now.getTime() + 5400000L);
-    			user.exp = in90min;
-    			ofy().save().entity(user);
-    		}
-    		return user;
-    	} catch (Exception e) { // retrieve an anonymous User entity
-    		user = new User("anonymous" + sig);
-    		return user;
-    	}
-    }
-  
 	public String getTokenSignature() {
 		return String.valueOf(sig);
 	}

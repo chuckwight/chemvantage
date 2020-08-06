@@ -193,7 +193,7 @@ public class Home extends HttpServlet {
 					+ "<INPUT TYPE=BUTTON VALUE='Take This Quiz' "
 					+ "onClick=\"javascript: "
 					+ "if(document.HQSelectForm.elements['TopicId'].value=='0'){document.getElementById('selectReminder').style.display='';} "
-					+ "else {document.HQSelectForm.action='Quiz';document.HQSelectForm.submit();}\">" 
+					+ "else {document.HQSelectForm.action='Quiz.jsp';document.HQSelectForm.submit();}\">" 
 					+ "<INPUT TYPE=BUTTON VALUE='Homework Exercises' "
 					+ "onClick=\"javascript: "
 					+ "if(document.HQSelectForm.elements['TopicId'].value=='0'){document.getElementById('selectReminder').style.display='';} "
