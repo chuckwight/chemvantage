@@ -26,55 +26,49 @@
 	try {
 		sig = request.getParameter("sig");
 		User user = User.getUser(sig);
-		if (user==null) throw new Exception();
-	
+		if (user == null)
+			throw new Exception();
+
 		try {
-	segment = Integer.parseInt(request.getParameter("Segment"));
+			segment = Integer.parseInt(request.getParameter("Segment"));
 		} catch (Exception e) {
-	segment = 0;
+			segment = 0;
 		}
 
 		try {
-	videoId = Long.parseLong(request.getParameter("VideoId"));
+			videoId = Long.parseLong(request.getParameter("VideoId"));
 		} catch (Exception e) {
 		}
 
 		long assignmentId = user.getAssignmentId();
 		if (assignmentId > 0L) {
-	try {
-		videoId = ofy().load().type(Assignment.class).id(assignmentId).now().videoId;
-	} catch (Exception e) {
-	}
+			try {
+				videoId = ofy().load().type(Assignment.class).id(assignmentId).now().videoId;
+			} catch (Exception e) {
+			}
 		}
 		Video v = ofy().load().type(Video.class).id(videoId).now();
 		if (v.breaks == null)
-	v.breaks = new int[0];
+			v.breaks = new int[0];
 
 		title = v.title;
 		breaks = v.breaks;
 		videoSerialNumber = v.serialNumber;
 
 		if (segment > 0)
-	start = v.breaks[segment - 1]; // start at the end of the last segment
+			start = v.breaks[segment - 1]; // start at the end of the last segment
 		if (v.breaks.length > segment)
-	end = v.breaks[segment]; // play to this value and stop
+			end = v.breaks[segment]; // play to this value and stop
 
 	} catch (Exception e) {
 		response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 	}
 %>
 
-<a href=https://www.chemvantage.org><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo' align=left></a>
+<div id=video_div></div>
 <br>
-Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT><br>An Open Education Resource<br><br>
-
-<div id=videoiframe></div>
-<br>
-<div id=quiz_info></div>
-<p>
 <div id=quiz_div style='width:560px;display:none'></div>
-
-<hr>
+<p><hr>
 <div style='font-size:smaller; width:100%; text-align:center'>
   <span style='float:left'>
     &copy; 2007-20 ChemVantage LLC. 
@@ -99,7 +93,7 @@ var start = 0;
 var end = -1;
 
 function onYouTubeIframeAPIReady() {
-  player = new YT.Player('videoiframe', {
+  player = new YT.Player('video_div', {
 	height: '315',
 	width: '560',
 	videoId: '<%= videoSerialNumber %>',
@@ -124,7 +118,6 @@ function onPlayerReady(event) {
 	  if (breaks.length==0) end = -1;
 	  else {
 		  end = breaks[0];
-		  document.getElementById('quiz_info').innerHTML = 'Brief quizzes will appear below at intervals during the video.';
 	  }
 	  player.loadVideoById({'videoId':videoSerialNumber,'startSeconds':start,'endSeconds':end});
 	  ajaxLoadQuiz();
@@ -134,9 +127,11 @@ function onPlayerReady(event) {
 function onPlayerStateChange(event) {
 	switch (event.data) {
 	  case YT.PlayerState.ENDED:
+		video_div.style.display = 'none';
 		quiz_div.style.display = '';
 		break;
 	  case YT.PlayerState.PLAYING:
+		video_div.style.display = '';
 		quiz_div.style.display = 'none';
 		break;
 	  default:
