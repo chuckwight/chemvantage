@@ -68,17 +68,7 @@
 <div id=video_div></div>
 <br>
 <div id=quiz_div style='width:560px;display:none'></div>
-<p><hr>
-<div style='font-size:smaller; width:100%; text-align:center'>
-  <span style='float:left'>
-    &copy; 2007-20 ChemVantage LLC. 
-    <a rel='license' href='https://creativecommons.org/licenses/by/3.0/'>
-    <img alt='Creative Commons License' style='border-width:0' src='https://i.creativecommons.org/l/by/3.0/80x15.png' /></a>
-  </span>
-  <span><a href=/About#terms>Terms and Conditions of Use</a> and <a href=/About#privacy>Privacy Policy</a></span>
-  <span style='float:right'><a href='http://code.google.com/appengine/'><img src=/images/GAE.gif border=0 alt='Powered by Google App Engine'></a></span>
-</div>
-
+<p>
 <script type=text/javascript>
 
 var tag = document.createElement('script'); tag.src='https://www.youtube.com/iframe_api';
@@ -276,5 +266,4 @@ function GetXmlHttpObject() {
 
 </script>
 
-</body>
-</html>
+<%= Home.footer %>
