@@ -65,9 +65,9 @@
 	}
 %>
 
-<div id=video_div></div>
+<div id=video_div style='width:560px;height=315px'></div>
 <br>
-<div id=quiz_div style='width:560px;display:none'></div>
+<div id=quiz_div style='width:560px;height=315px;display:none'></div>
 <p>
 <script type=text/javascript>
 
