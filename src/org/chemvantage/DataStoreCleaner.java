@@ -88,6 +88,7 @@ public class DataStoreCleaner extends HttpServlet {
 		case "CleanAssignments": buf.append(cleanAssignments(testOnly)); break;
 		case "CleanBLTIConsumers": buf.append(cleanBLTIConsumers(testOnly)); break;
 		case "CleanDeployments": buf.append(cleanDeployments(testOnly)); break;
+		case "CleanUsers": buf.append(cleanUsers(testOnly)); break;
 		case "CleanAll":
 			// This section handles the parent case from the cron job
 			Queue queue = QueueFactory.getDefaultQueue();
@@ -100,6 +101,7 @@ public class DataStoreCleaner extends HttpServlet {
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanAssignments").param("TestOnly", testOnly?"true":"false"));
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanDeployments").param("TestOnly", testOnly?"true":"false"));
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanBLTIConsumers").param("TestOnly", testOnly?"true":"false"));
+			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanUsers").param("TestOnly", testOnly?"true":"false"));
 			
 			buf.append("8 background tasks launched to scrub all obsolete entity types from the datastore.");
 			break;
@@ -126,7 +128,8 @@ public class DataStoreCleaner extends HttpServlet {
 		buf.append("<label><input type=radio name=Task value=CleanScores> Scores older than 1 year</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanAssignments> Assignments older than 6 months with no transactions</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanDeployments> Deployments older than 6 months with no assignments</label><br>");
-		buf.append("<label><input type=radio name=Task value=CleanBLTIConsumers> BLTIConsumers older than 6 months with no assignments</label><p>");
+		buf.append("<label><input type=radio name=Task value=CleanBLTIConsumers> BLTIConsumers older than 6 months with no assignments</label><br>");
+		buf.append("<label><input type=radio name=Task value=CleanUsers> Users whose tokens have expired</label><p>");
 		buf.append("<label><input type=radio name=Task value=CleanAll>All of the entities above (launches background job)</label><p>");
 		buf.append("<input type=submit><br>");
 		buf.append("</form>");
@@ -291,6 +294,26 @@ public class DataStoreCleaner extends HttpServlet {
 			buf.append("Done.<br>");
 
 		}catch (Exception e) {
+			buf.append("Error: " + e.toString());
+		}
+		return buf.toString();
+	}
+	
+	private String cleanUsers(boolean testOnly) {
+		// This method clears all User entity tokens that have expired
+		
+		StringBuffer buf = new StringBuffer();
+		buf.append("<h2>Clean Users</h2>");
+		try {
+			Date now = new Date();
+			List<Key<User>> keys = ofy().load().type(User.class).filter("exp <", now).keys().list();
+			
+			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
+
+			buf.append(keys.size() + " Expired user tokens" + (testOnly?" identified":" deleted") + ".<br>");
+			buf.append("Done.<br>");
+		
+		} catch (Exception e) {
 			buf.append("Error: " + e.toString());
 		}
 		return buf.toString();

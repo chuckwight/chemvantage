@@ -30,12 +30,12 @@ import com.googlecode.objectify.cmd.Query;
 
 @Entity
 public class User {
-	@Id Long sig;
-	@Index String 	id;                    // stored with transactions, responses, userReports
-	String 	lis_result_sourcedid = null;  // used only by LTIv1p1 users
-	long	assignmentId = 0L;     // used only for LTI users
-	int 	roles = 0;             // student
-	Date 	exp;
+	@Id 	Long 	sig;
+	@Index 	String 	id;                    // stored with transactions, responses, userReports
+	@Index	Date 	exp;				   // max 90 minutes from now
+			String 	lis_result_sourcedid = null;  // used only by LTIv1p1 users
+			long	assignmentId = 0L;     // used only for LTI users
+			int 	roles = 0;             // student
 	
 	User() {
 		do {
