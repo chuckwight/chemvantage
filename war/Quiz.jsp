@@ -119,7 +119,7 @@ function showWorkBox(qid) {}
 <h2>Quiz - <%= topic.getTitle() %></h2>
 
 <% if (user.isInstructor()) { %>
-<mark>As the course instructor you may <a href=/Quiz?UserRequest=AssignQuizQuestions&sig='<%= user.getTokenSignature() %>'>customize this quiz</a> by selecting/deselecting the available question items.</mark>
+<mark>As the course instructor you may <a href='/Quiz?UserRequest=AssignQuizQuestions&sig=<%= user.getTokenSignature() %>'>customize this quiz</a> by selecting/deselecting the available question items.</mark>
 <p>
 <% } %>
 

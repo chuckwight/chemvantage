@@ -108,7 +108,7 @@ public class VideoQuiz extends HttpServlet {
 			if (v.nQuestions==null) v.nQuestions = new int[0];
 			if (v.questionKeys==null) v.questionKeys = new ArrayList<Key<Question>>();
 
-			buf.append("<h3>Video Quiz - " + v.title + "</h3>\n");
+			buf.append("<h4>Please answer these questions before resuming the video:</h4>\n");
 
 			// Check to see if this user has any pending videos on this topic in the last 90 minutes.
 			// Normally, a new VideoTransaction is created when the LTILaunchRequest is made, but sometimes things happen...
@@ -164,7 +164,7 @@ public class VideoQuiz extends HttpServlet {
 		buf.append("<input type=hidden name=VideoId value=" + v.id + ">");
 		buf.append("<input type=hidden name=VideoTransactionId value=" + vt.id + ">");
 		buf.append("<input type=hidden name=Segment value=" + segment + ">");
-		buf.append("<input type=submit value='Submit and Continue'>  or <a href=/Video.jsp?Segment=" + segment + "&VideoId=" + v.id + "&sig=" + user.getTokenSignature() + ">Replay This Segment</a>");
+		buf.append("<input type=submit value='Submit and Resume the Video'>  or <a href=/Video.jsp?Segment=" + segment + "&VideoId=" + v.id + "&sig=" + user.getTokenSignature() + ">Replay This Segment</a>");
 		buf.append("</form>");
 		} catch (Exception e) {
 			buf.append(e.getMessage());
