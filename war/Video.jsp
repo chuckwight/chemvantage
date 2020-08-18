@@ -117,6 +117,10 @@ function onPlayerReady(event) {
 function onPlayerStateChange(event) {
 	switch (event.data) {
 	  case YT.PlayerState.ENDED:
+		if (document.exitFullscreen) document.exitFullscreen();
+		else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+	    else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
+	    else if (document.msExitFullscreen) document.msExitFullscreen();
 		video_div.style.display = 'none';
 		quiz_div.style.display = '';
 		break;
