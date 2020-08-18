@@ -561,7 +561,7 @@ public class Quiz extends HttpServlet {
 			
 			if (qts.size()==0) {
 				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>"
-						+ "<a href=Quiz?AssignmentId=" + a.id 
+						+ "<a href=/Quiz.jsp?AssignmentId=" + a.id 
 						+ "&sig=" + user.getTokenSignature() 
 						+ ">Take me back to the quiz now.</a>");
 			} else {				
@@ -695,7 +695,7 @@ public class Quiz extends HttpServlet {
 			}
 		} else {
 			buf.append("Sorry, there is not enough information available from your LMS to support this request.<p>");			
-			buf.append("<a href=/Quiz?sig=" + user.getTokenSignature() + ">Return to this quiz</a>.<p>");
+			buf.append("<a href=/Quiz.jsp?sig=" + user.getTokenSignature() + ">Return to this quiz</a>.<p>");
 		}
 		return buf.toString();
 	}
