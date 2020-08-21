@@ -32,6 +32,7 @@ import java.net.URL;
 import java.util.Date;
 import java.util.Properties;
 import java.util.Random;
+import java.util.regex.Pattern;
 
 import javax.mail.Message;
 import javax.mail.Session;
@@ -207,20 +208,21 @@ public class LTIRegistration extends HttpServlet {
 		
 		if (sub.isEmpty() || email.isEmpty() || aud.isEmpty() || url.isEmpty() || use==null ||use.isEmpty() || ver==null || ver.isEmpty()) throw new Exception("All form fields are required.");
 		
-		String regex = "^[\\w-_\\.+]*[\\w-_\\.]\\@([\\w]+\\.)+[\\w]+[\\w]$";
-		if (!email.matches(regex)) throw new Exception("Your email address was not formatted correctly.");
+		String regex = "^[A-Za-z0-9+_.-]+@(.+)$";		 
+		Pattern pattern = Pattern.compile(regex);
+		if (!pattern.matcher(email).matches()) throw new Exception("Your email address was not formatted correctly. ");
 		
 		try {
 			new URL(url);   // throws Exception if URL is not formatted correctly
 		} catch (Exception e) {
-			throw new Exception("Invalid home page URL (" + e.getMessage() + "). Must start with https://");
+			throw new Exception("Invalid home page URL (" + e.getMessage() + "). Must start with https:// ");
 		}
 		
-		if (lms==null) throw new Exception("Please select the type of LMS that you are connecting to ChemVantage.");
+		if (lms==null) throw new Exception("Please select the type of LMS that you are connecting to ChemVantage. ");
 		if ("other".contentEquals(lms)) lms = request.getParameter("lms_other");
-		if (lms==null || lms.isEmpty()) throw new Exception("Please describe the type of LMS that you are connecting to ChemVantage.");
+		if (lms==null || lms.isEmpty()) throw new Exception("Please describe the type of LMS that you are connecting to ChemVantage. ");
 		
-		if (!"true".equals(request.getParameter("AcceptReCaptchaTOS"))) throw new Exception("You must accept the reCAPTCHA Terms of Service. Please go back and try again.");
+		if (!"true".equals(request.getParameter("AcceptReCaptchaTOS"))) throw new Exception("You must accept the reCAPTCHA Terms of Service. Please go back and try again. ");
 		if (!reCaptchaOK(request)) throw new Exception("ReCaptcha tool unverified. ");
 	
 		// Construct a new registration token
