@@ -125,8 +125,8 @@ public class Admin extends HttpServlet {
 			
 			buf.append("<h3>Recent Activity (past 30 days)</h3>");
 			Date lastMonth = new Date(new Date().getTime()-2592000000L);
-			buf.append("New Basic LTI Consumer accounts: " + ofy().load().type(BLTIConsumer.class).filter("lastLogin >",lastMonth).count() + "<br>");
-			buf.append("New LTI Advantage deployments: " + ofy().load().type(Deployment.class).filter("lastLogin >",lastMonth).count() + "<br>");
+			buf.append("Active Basic LTI Consumer accounts: " + ofy().load().type(BLTIConsumer.class).filter("lastLogin >",lastMonth).count() + "<br>");
+			buf.append("Active LTI Advantage deployments: " + ofy().load().type(Deployment.class).filter("lastLogin >",lastMonth).count() + "<br>");
 			buf.append("Total number of Response entities: " + ofy().load().type(Response.class).filter("submitted >",lastMonth).count());
 			
 			buf.append("<h3>Basic LTI Consumer Search</h3>");
