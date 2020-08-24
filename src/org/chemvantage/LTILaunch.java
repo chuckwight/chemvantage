@@ -95,7 +95,7 @@ public class LTILaunch extends HttpServlet {
 
 	void basicLtiLaunchRequest(HttpServletRequest request,HttpServletResponse response) 
 			throws IOException {
-		StringBuffer debug = new StringBuffer();
+		//StringBuffer debug = new StringBuffer();
 		// check for required LTI launch parameters:
 		try {
 			String lti_message_type = request.getParameter("lti_message_type");
@@ -155,7 +155,7 @@ public class LTILaunch extends HttpServlet {
 				throw new Exception("OAuth validation failed, most likely due to an invalid shared_secret value in your LMS. Check carefully to eliminate leading or trailing blank spaces.");
 			}
 			// BLTI Launch message was validated successfully at this point
-			debug.append("Basic LTI launch message validated...");
+			//debug.append("Basic LTI launch message validated...");
 			
 			// Detect whether this is an anonymous LTI launch request per LTIv1p1p2. This is a security patch that
 			// prevents a cross-site request forgery threat applicable to versions of LTI released prior to v1.3.
@@ -222,13 +222,13 @@ public class LTILaunch extends HttpServlet {
 				user.setIsTeachingAssistant(roles.contains("teachingassistant"));
 			}
 			// user information OK;
-			debug.append("userId=" + userId + " and role=" + (user.isInstructor()?"Instructor":"Learner") + "...");
+			//debug.append("userId=" + userId + " and role=" + (user.isInstructor()?"Instructor":"Learner") + "...");
 
 			// Gather information that may be needed to return a score to the LMS:
 			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
-			debug.append("lis_result_sourcedid=" + lis_result_sourcedid + "...");
+			//debug.append("lis_result_sourcedid=" + lis_result_sourcedid + "...");
 			String lisOutcomeServiceUrl = request.getParameter("lis_outcome_service_url");
-			debug.append("lis_outcome_service_url=" + lisOutcomeServiceUrl + "...");
+			//debug.append("lis_outcome_service_url=" + lisOutcomeServiceUrl + "...");
 			
 			// Use the resourceLinkId to find the assignment or create a new one:
 			Assignment myAssignment = null;
@@ -236,9 +236,9 @@ public class LTILaunch extends HttpServlet {
 			boolean saveAssignment = false;
 			try {  // load the requested Assignment entity if it exists
 				myAssignment = ofy().load().type(Assignment.class).filter("domain",oauth_consumer_key).filter("resourceLinkId", resource_link_id).first().safe();
-				debug.append("Found assignment: ");
+				//debug.append("Found assignment: ");
 				user.setAssignment(myAssignment.id,lis_result_sourcedid);
-				debug.append("User token set...");
+				//debug.append("User token set...");
 				if (lisOutcomeServiceUrl != null && !lisOutcomeServiceUrl.equals(myAssignment.lis_outcome_service_url)) {
 					myAssignment.lis_outcome_service_url = lisOutcomeServiceUrl;
 					saveAssignment = true;
@@ -248,9 +248,9 @@ public class LTILaunch extends HttpServlet {
 				myAssignment = new Assignment(oauth_consumer_key,resource_link_id,lisOutcomeServiceUrl,true);
 				ofy().save().entity(myAssignment).now(); // we'll need the new id value immediately
 				user.setAssignment(myAssignment.id,lis_result_sourcedid);
-				debug.append("User token set...");
+				//debug.append("User token set...");
 			}
-			debug.append("assignmentId=" + myAssignment.id + "...");			
+			//debug.append("assignmentId=" + myAssignment.id + "...");			
 			
 			// At this point we should have a valid Assignment, but it may not have an 
 			// assignmentType or topicId(s). If so, show the the pickResource form:
@@ -266,7 +266,7 @@ public class LTILaunch extends HttpServlet {
 			return;
 
 		} catch (Exception e) {
-			doError(request, response,"LTI Launch failed. " + e.getMessage() + "<br>" + debug.toString(),null, e);
+			doError(request, response,"LTI Launch failed. " + e.getMessage(),null, e);
 		}		
 	}
 	
