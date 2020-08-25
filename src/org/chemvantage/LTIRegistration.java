@@ -288,8 +288,8 @@ public class LTIRegistration extends HttpServlet {
 		if (ver.contentEquals("1p1")) { // older LTIv1p1 registration process; deprecated 12/31/2020
 			buf.append("Thank you for your ChemVantage registration request. Click the link below "
 					+ "to view your free LTI credentials for connecting to ChemVantage. "
-					+ "<b>Please write these down and keep them in a safe place.</b> "
-					+ "The link is valid for only three days and expires at " + jwt.getExpiresAt() + "<p>");
+					+ "<b>Please print or save the credentials in a safe place.</b> "
+					+ "For your security, the link is valid for only three days and expires at " + jwt.getExpiresAt() + "<p>");
 			
 			buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
 					+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><p>");
@@ -339,7 +339,7 @@ public class LTIRegistration extends HttpServlet {
 				break;		
 			case "canvas":
 				buf.append("<b>Detailed instructions for connecting ChemVantage to a Canvas course:</b>");
-				buf.append("<ol><li>Write down your <a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">LTI credentials</a></li>"
+				buf.append("<ol><li>Print or Save your <a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">LTI credentials</a></li>"
 						+ "<li>Login to Canvas as a course Instructor, navigate to Settings, select the Apps tab, and click View App Configurations. "
 						+ "Then click the red +App button and complete the following fields to create a new External Tool:" 
 						+ "<ul><li>Configuration Type: By URL</li>"
