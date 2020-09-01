@@ -287,7 +287,7 @@ public class Question implements Serializable {
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br />");
 			buf.append("<div id=showWork" + this.id + " style='display:none'><TEXTAREA NAME=ShowWork ROWS=5 COLS=50 WRAP=SOFT "
-					+ "onkeyup=this.value=this.value.substring(0,500); placeholder='Show your work here'>" + showWork + "</TEXTAREA><br></div>");
+					+ "onkeyup=this.value=this.value.substring(0,500); placeholder='Show your work here'>" + (showWork==null?"":showWork) + "</TEXTAREA><br></div>");
 			switch (getNumericItemType()) {
 			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numeric value.</FONT><br>"); break;
 			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;

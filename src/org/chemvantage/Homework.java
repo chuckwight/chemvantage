@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URLEncoder;
 import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -101,21 +102,13 @@ public class Homework extends HttpServlet {
 
 	String printHomework(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		//String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
+		
 		try {
 			Assignment hwa = null;
-			long topicId = 0;
+			long topicId = 0L;
 			try {  // normal process for LTI assignment launch
-				//long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
-				long assignmentId = user.getAssignmentId();
-				hwa = ofy().load().type(Assignment.class).id(assignmentId).now();
-				if (hwa==null) { // assignment has been deleted
-					return "<h2>Assignment Reset</h2>"
-						+ "This ChemVantage assignment was deleted, probably because all of the "
-						+ "question items were deselected. The course instructor may return to the Learning Management "
-						+ "System (LMS) and click on the assignment link there to reassociate the class assignment "
-						+ "with a new ChemVantage homework set.";
-				} else topicId = hwa.topicId;
+				hwa = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+				topicId = hwa.topicId;
 			} catch (Exception e) {  // alternative process for anonymous user
 				try {
 					topicId = Long.parseLong(request.getParameter("TopicId"));
@@ -149,6 +142,19 @@ public class Homework extends HttpServlet {
 				buf.append("</UL>");
 			}
 			
+			// Review the HWTransactions for this user to record which problems have been solved and retrieve the current showWork strings:
+			List<Long> solvedQuestions = new ArrayList<Long>();
+			Map<Long,String> workStrings = new HashMap<Long,String>();
+			List<HWTransaction> hwTransactions = new ArrayList<HWTransaction>();
+			if (hwa!=null) hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("assignmentId",hwa.id).order("-graded").list();
+			
+			for (HWTransaction ht : hwTransactions) {
+				if (solvedQuestions.contains(ht.questionId)) continue;
+				if (ht.score > 0) solvedQuestions.add(ht.questionId);
+				if (workStrings.containsKey(ht.questionId)) continue;
+				workStrings.put(ht.questionId,ht.showWork);
+			}
+			
 			List<Key<Question>> optionalQuestionKeys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topicId).filter("isActive",true).keys().list();
 			if (optionalQuestionKeys.size()==0) buf.append("<h2>Sorry, there are no homework questions for this topic.</h2>");
 			
@@ -164,7 +170,7 @@ public class Homework extends HttpServlet {
 						+ "}"
 						+ "</script>");
 				
-				buf.append("\nAssigned Exercises<br>");
+				buf.append("Assigned Exercises<p>");
 				int i = 1;
 				
 				buf.append("<div style='display:table'>");
@@ -181,17 +187,12 @@ public class Homework extends HttpServlet {
 						buf.append("<div style='display:table-row'>");
 						
 						buf.append("<div style='display:table-cell'>");
-						boolean solved = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("assignmentId",hwa.id).filter("questionId",q.id).filter("score >",0).count() > 0;					
-						if (solved) {
+						
+						if (solvedQuestions.contains(q.id)) {
 							buf.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");
 							score++;
 						}
 						buf.append("</div>");
-						
-						// pull all of this user's Homework transactions, find the most recent one, and copy the showWork field to this form
-						List<HWTransaction> hwtransactions = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).order("graded").list();
-						HWTransaction latest = hwtransactions.size()>0?hwtransactions.get(hwtransactions.size()-1):null;
-						String showWork = (latest==null || latest.showWork==null?"":latest.showWork);
 						
 						buf.append("<FORM METHOD=POST ACTION=Homework>"
 								+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
@@ -199,7 +200,7 @@ public class Homework extends HttpServlet {
 								+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 								+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>"
 								+ "<div style='display:table-cell'><b>" + i + ".&nbsp;</b></div>"
-								+ "<div style='display:table-cell'>" + q.print(showWork,"") 
+								+ "<div style='display:table-cell'>" + q.print(workStrings.get(q.id),"") 
 								+ (Long.toString(q.id).equals(request.getParameter("Q"))?"Hint:<br>" + q.getHint():"")
 								+ "<INPUT TYPE=SUBMIT VALUE='Grade This Exercise'><p>"
 								+ "</div></div></FORM>\n");
@@ -222,7 +223,7 @@ public class Homework extends HttpServlet {
 					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",hwa.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));
 				}
 
-				if (optionalQuestionKeys.size() > 0) buf.append("\nOptional Exercises<br>");
+				if (optionalQuestionKeys.size() > 0) buf.append("Optional Exercises<p>");
 			}
 
 			// Print the table of optional problems (the whole set if none are assigned)
@@ -234,28 +235,23 @@ public class Homework extends HttpServlet {
 				if (q==null) {
 					hwQuestions.putAll(ofy().load().keys(optionalQuestionKeys));  // loads (or possibly reloads) all optional questions for this assignment
 					q = hwQuestions.get(k);
-					if (q==null) continue;  // this catches cases where an assigned question no longer exists
+					//if (q==null) continue;  // this catches cases where an assigned question no longer exists
 				}
 				String hashMe = user.id + (hwa==null?"":hwa.id);
 				q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
 				buf.append("<div style='display:table-row'>");
 				
 				buf.append("<div style='display:table-cell'>");
-				boolean solved = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).filter("score >",0).count() > 0;					
-				if (solved) buf.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");				
+				//boolean solved = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).filter("score >",0).count() > 0;					
+				if (solvedQuestions.contains(q.id)) buf.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");				
 				buf.append("</div>");
-				
-				// pull all of this user's Homework transactions, find the most recent one, and copy the showWork field to this form
-				List<HWTransaction> hwtransactions = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).order("graded").list();
-				HWTransaction latest = hwtransactions.size()>0?hwtransactions.get(hwtransactions.size()-1):null;
-				String showWork = (latest==null || latest.showWork==null?"":latest.showWork);
 				
 				buf.append("<FORM METHOD=POST ACTION=Homework>"
 						+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
 						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ "<div style='display:table-cell'><b>" + i + ".&nbsp;</b></div>"
-						+ "<div style='display:table-cell'>" + q.print(showWork,"") 
+						+ "<div style='display:table-cell'>" + q.print(workStrings.get(q.id),"") 
 						+ (Long.toString(q.id).equals(request.getParameter("Q"))?"Hint:<br>" + q.getHint():"")
 						+ "<br><INPUT TYPE=SUBMIT VALUE='Grade This Exercise'><p>&nbsp;</FORM></div>"
 						+ "</div>\n");
