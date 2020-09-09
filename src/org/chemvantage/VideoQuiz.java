@@ -164,7 +164,7 @@ public class VideoQuiz extends HttpServlet {
 		buf.append("<input type=hidden name=VideoId value=" + v.id + ">");
 		buf.append("<input type=hidden name=VideoTransactionId value=" + vt.id + ">");
 		buf.append("<input type=hidden name=Segment value=" + segment + ">");
-		buf.append("<input type=submit value='Submit and Resume the Video'>  or <a href=/Video.jsp?Segment=" + segment + "&VideoId=" + v.id + "&sig=" + user.getTokenSignature() + ">Replay This Segment</a>");
+		buf.append("<input type=submit value='Submit and Resume the Video'>");  //  or <a href=/Video.jsp?Segment=" + segment + "&VideoId=" + v.id + "&sig=" + user.getTokenSignature() + ">Replay This Segment</a>");
 		buf.append("</form>");
 		} catch (Exception e) {
 			buf.append(e.getMessage());
