@@ -134,7 +134,7 @@ public class VideoQuiz extends HttpServlet {
 			if (questionKeys.size()==0) return "Sorry, there are no questions at this point. <a href='/Video.jsp?VideoId=" + videoId + "&Segment=" + segment+1 + "&sig=" + user.getTokenSignature() + "'>Continue the video</a><p>";
 
 			// Randomly select the questions to be presented, eliminating each from questionKeys as they are printed
-			Random rand = new Random();  // create random number generator to select quiz questions
+			Random rand = new Random(vt.id % Integer.MAX_VALUE);  // create random number generator to select quiz questions
 			nQuestions = (nQuestions < questionKeys.size()?nQuestions:questionKeys.size());
 		
 		//buf.append("Questions to be presented="+nQuestions+".<hr>");
@@ -164,7 +164,7 @@ public class VideoQuiz extends HttpServlet {
 		buf.append("<input type=hidden name=VideoId value=" + v.id + ">");
 		buf.append("<input type=hidden name=VideoTransactionId value=" + vt.id + ">");
 		buf.append("<input type=hidden name=Segment value=" + segment + ">");
-		buf.append("<input type=submit value='Submit and Resume the Video'>");  //  or <a href=/Video.jsp?Segment=" + segment + "&VideoId=" + v.id + "&sig=" + user.getTokenSignature() + ">Replay This Segment</a>");
+		buf.append("<input type=submit value='Submit and Resume the Video'> or <a href=/Video.jsp?Segment=" + segment + "&VideoId=" + v.id + "&sig=" + user.getTokenSignature() + ">Replay This Segment</a>");
 		buf.append("</form>");
 		} catch (Exception e) {
 			buf.append(e.getMessage());
@@ -240,10 +240,8 @@ public class VideoQuiz extends HttpServlet {
 				}
 			}
 			debug.append("scoring done.");
-			if (quizletScore > vt.quizletScores.get(segment)) {
-				vt.quizletScores.set(segment,quizletScore);
-				vt.missedQuestions.set(segment,missedQuestions.toString());
-			}
+			vt.quizletScores.set(segment,quizletScore);
+			vt.missedQuestions.set(segment,missedQuestions.toString());
 		}
 		ofy().save().entity(vt).now();
 		debug.append("done.");

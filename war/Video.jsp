@@ -79,8 +79,8 @@ var sig = <%= sig %>;
 var segment = <%= segment %>;
 var breaks = <%= Arrays.toString(breaks) %>;
 var videoSerialNumber = '<%= videoSerialNumber %>';
-var start = 0;
-var end = -1;
+var start = <%= start %>;
+var end = <%= end %>;
 
 function onYouTubeIframeAPIReady() {
   player = new YT.Player('video_div', {
@@ -103,15 +103,10 @@ function onYouTubeIframeAPIReady() {
 }
 
 function onPlayerReady(event) {
-	if (segment==0) {
-	  start = 0;
-	  if (breaks.length==0) end = -1;
-	  else {
-		  end = breaks[0];
-	  }
-	  player.loadVideoById({'videoId':videoSerialNumber,'startSeconds':start,'endSeconds':end});
-	  ajaxLoadQuiz();
-	}
+	start = segment == 0?0:breaks[segment-1];
+	end = breaks.length <= segment?-1:breaks[segment];
+	player.loadVideoById({'videoId':videoSerialNumber,'startSeconds':start,'endSeconds':end});
+	ajaxLoadQuiz();
 }
 
 function onPlayerStateChange(event) {
