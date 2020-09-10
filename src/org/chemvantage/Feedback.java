@@ -19,8 +19,13 @@ package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Date;
 import java.util.Properties;
 import java.util.Random;
@@ -36,6 +41,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
 
@@ -150,6 +157,8 @@ public class Feedback extends HttpServlet {
 		buf.append("<br clear='all'>");
 		buf.append("<FONT SIZE=-1>(" + subject.nStarReports + " user ratings; avg = " + subject.getAvgStars() + " stars)</FONT><p>\n");
 
+		if (user.isAnonymous()) buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");				
+		
 		buf.append("<FORM NAME=FeedbackForm ACTION=Feedback METHOD=POST>\n"
 				+ "Comments or kudos: <FONT SIZE=-1>(160 characters max.)</FONT><br>"
 				+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback>"
@@ -160,6 +169,9 @@ public class Feedback extends HttpServlet {
 				+ "</TEXTAREA><br>");
 
 		buf.append("<label id=cbox style='visibility:hidden'>Email: <input type=text size=50 placeholder=' optional, if you want a response to your comment' name=Email></label><p>");
+		
+		// If the user is anonymous, insert the Google reCaptcha tool (version 2) on the page
+		if (user.isAnonymous()) buf.append("<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div><p>");				
 		
 		buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Submit Feedback'>"
 				+ "<INPUT TYPE=RESET VALUE='Clear Form' "
@@ -179,6 +191,13 @@ public class Feedback extends HttpServlet {
 
 	String submitFeedback(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
+		
+		try { 
+			if (user.isAnonymous() && !reCaptchaOK(request)) throw new Exception();
+		} catch (Exception e) {
+			return Home.banner + "<h3>The ReCAPTCHA failed, sorry. Please click the BACK button on your browser and try again.</h3>";
+		}
+		
 		int stars = 0;
 		try {
 			stars = Integer.parseInt(request.getParameter("Stars"));
@@ -213,13 +232,37 @@ public class Feedback extends HttpServlet {
 		if (comments.length() > 0) {
 			buf.append("Your comment: <font color=red>" + comments + "</font><p>");
 		
-			if (email==null) buf.append("We will review your comment, but you will not receive a response because you did not provide an email address.<p>");
+			if (email==null) buf.append("We will review your comment, but we're unable to provide a response because you did not provide an email address.<p>");
 			else buf.append("We will review your comment. Any response will be sent to " + email + ".<p>");
 			buf.append("Feel free to email any additional comments to <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><p>");
 		}
 		
 		if (user.isAnonymous()) buf.append("<p><a href=Home>Return to the Home page</a><br>");
 		return buf.toString();
+	}
+
+	boolean reCaptchaOK(HttpServletRequest request) throws Exception {
+		String queryString = "secret=6Ld_GAcTAAAAAD2k2iFF7Ywl8lyk9LY2v_yRh3Ci&response=" 
+				+ request.getParameter("g-recaptcha-response") + "&remoteip=" + request.getRemoteAddr();
+		URL u = new URL("https://www.google.com/recaptcha/api/siteverify");
+    	HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+    	uc.setDoOutput(true);
+    	uc.setRequestMethod("POST");
+    	uc.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
+    	uc.setRequestProperty("Content-Length", String.valueOf(queryString.length()));
+    	
+    	OutputStreamWriter writer = new OutputStreamWriter(uc.getOutputStream());
+		writer.write(queryString);
+    	writer.flush();
+    	writer.close();
+		
+		// read & interpret the JSON response from Google
+    	BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+		JsonObject captchaResponse = JsonParser.parseReader(reader).getAsJsonObject();
+    	reader.close();
+		
+		//JsonObject captchaResp = JsonParser.parseString(res.toString()).getAsJsonObject();
+		return captchaResponse.get("success").getAsBoolean();
 	}
 
 	String viewUserFeedback(User user) {
