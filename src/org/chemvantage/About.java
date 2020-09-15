@@ -74,7 +74,10 @@ public class About extends HttpServlet {
 		
 		+ "<h3>Video Lectures</h3>"
 		+ "A series of 10-minute video lectures on a variety of General Chemistry topics is avialable from the "
-		+ "<a href=/>Home Page</a>.  The videos are designed to reinforce the main points presented in many textbooks." 
+		+ "<a href=/>Home Page</a>.  The videos are designed to reinforce the main points presented in many textbooks. "
+		+ "Instructors can create LTI video assignments in the LMS; many of the videos used in this way contain embedded "
+		+ "quizzes, and these scores are returned to the LMS grade book. Videos that do not have embedded quizzes "
+		+ "will award full credit for watching to the end."
 		
 		+ "<h3>Homework</h3>"
 		+ "The homework assignments are designed to give students practice in solving quantitative problems having "
