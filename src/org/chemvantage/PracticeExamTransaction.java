@@ -17,11 +17,10 @@
 
 package org.chemvantage;
 
-import static com.googlecode.objectify.ObjectifyService.ofy;
-
 import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
@@ -35,11 +34,12 @@ public class PracticeExamTransaction implements Serializable {
 	@Index	String userId;
 	@Index	Date downloaded;
 	@Index	Date graded;
+	@Index	Long assignmentId;
 			List<Long> topicIds;
 			int[] scores;
 			int[] possibleScores;
 			String lis_result_sourcedid;
-			List<Key<Response>> responseKeys;
+			Map<Key<Question>,String> showWork;
 
 	PracticeExamTransaction() {}
 
@@ -51,10 +51,6 @@ public class PracticeExamTransaction implements Serializable {
 		this.scores = scores;
 		this.possibleScores = possibleScores;
 		this.lis_result_sourcedid = lis_result_sourcedid;
-	}
-
-	public List<Response> getResponses() {
-		return (List<Response>) ofy().load().type(Response.class).ids(responseKeys).values();
 	}
 
     boolean topicsMatch(List<Long> topicIds) {  // matches if both Lists have identical members but not necessarily in the same order
