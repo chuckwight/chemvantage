@@ -125,8 +125,9 @@ function showWorkBox(qid) {}
 
 <% if (!user.isAnonymous()) { %>
 Quiz Rules<OL>
-  <LI>Each quiz must be completed within 15 minutes of the time when it is first downloaded.</LI>
-  <LI>You may repeat quizzes as many times as you wish, to improve your score.</LI>
+  <LI>Each quiz must be completed within 15 minutes of the time when it is first downloaded.<br> 
+  Click <a href=Quiz?UserRequest=ExtraTime&qt=<%= qt.getId() %>&sig=<%= user.getTokenSignature() %>>here</a> if you have been granted extra time.</LI>
+  <LI>You may repeat quizzes as many times as you wish, to improve your score, if your class LMS allows.</LI>
   <LI>ChemVantage always reports your best score on this assignment to your class LMS.</LI> 
 </OL>
 <% } %>
@@ -191,7 +192,7 @@ Quiz Rules<OL>
 </FORM>
 
 <SCRIPT>
-startTimers(<%= new Date(qt.getDownloaded().getTime() + 900000).getTime() %>);
+startTimers(<%= new Date(qt.getDownloaded().getTime() + 900000 + qt.extraMillis).getTime() %>);
 </SCRIPT>
 
 <%= Home.footer %>
