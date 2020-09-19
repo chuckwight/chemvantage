@@ -119,7 +119,7 @@ function showWorkBox(qid) {}
 <h2>Quiz - <%= topic.getTitle() %></h2>
 
 <% if (user.isInstructor()) { %>
-<mark>As the course instructor you may <a href='/Quiz?UserRequest=AssignQuizQuestions&sig=<%= user.getTokenSignature() %>'>customize this quiz</a> by selecting/deselecting the available question items.</mark>
+<mark>As the course instructor you may <a href='/Quiz?UserRequest=AssignQuizQuestions&sig=<%= user.getTokenSignature() %>'>customize this assignment</a>.</mark>
 <p>
 <% } %>
 
@@ -191,7 +191,7 @@ Quiz Rules<OL>
 </FORM>
 
 <SCRIPT>
-startTimers(<%= new Date(qt.getDownloaded().getTime() + 900000).getTime() %>);
+startTimers(<%= new Date(qt.getDownloaded().getTime() + (qa==null?900000:qa.timeAllowed*1000)).getTime() %>);
 </SCRIPT>
 
 <%= Home.footer %>

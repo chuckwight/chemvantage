@@ -74,8 +74,7 @@ public class Quiz extends HttpServlet {
 			else if ("AssignQuizQuestions".contentEquals(userRequest) && user.isInstructor()) {
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 				out.println(Home.header("Customize ChemVantage Quiz Assignment") + a.selectQuestionsForm(user) + Home.footer);
-			}
-			else response.sendRedirect("/Quiz.jsp?sig=" + user.getTokenSignature());
+			} else response.sendRedirect("/Quiz.jsp?sig=" + user.getTokenSignature());
 			//else out.println(Home.header("ChemVantage Quiz") + printQuiz(user,request) + Home.footer);
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
@@ -98,6 +97,16 @@ public class Quiz extends HttpServlet {
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 				a.updateQuestions(request);
 				response.sendRedirect("/Quiz.jsp?sig=" + user.getTokenSignature());
+			} else if ("Set Allowed Time".contentEquals(userRequest)) {
+				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+				try {
+					double minutes = Double.parseDouble(request.getParameter("TimeAllowed"));
+					a.timeAllowed = minutes<1.0?60:(int)(minutes*60);
+				} catch (Exception e) {
+					a.timeAllowed = 900;
+				}
+				ofy().save().entity(a).now();
+				response.sendRedirect("/Quiz.jsp?sig=" + user.getTokenSignature());	
 			} else out.println(Home.header("ChemVantage Quiz Results") + printScore(user,request) + Home.footer);
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));

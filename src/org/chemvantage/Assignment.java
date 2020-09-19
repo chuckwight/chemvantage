@@ -41,6 +41,7 @@ public class Assignment implements java.lang.Cloneable {
 	@Index	String resourceLinkId;
 	@Index 	Date created;
 	public	long videoId;    // used only for video assignments
+	public	int timeAllowed = 900; // to complete Quiz assignment, in seconds
 			String lis_outcome_service_url;
 			String lti_ags_lineitem_url;
 			String lti_nrps_context_memberships_url;
@@ -86,13 +87,19 @@ public class Assignment implements java.lang.Cloneable {
 		try {
 			Topic topic = ofy().load().type(Topic.class).id(this.topicId).safe();
 			
-			buf.append("<h3>Select " + assignmentType + " Questions</h3>");
-			buf.append("<b>Subject: " + Subject.getSubject().title + "<br>"
-					+ "Topic: " + topic.title + "</b><p>");
+			buf.append("<h3>Customize " + assignmentType + " Assignment</h3>");
+			buf.append("<b>Topic: " + topic.title + "</b><p>");
 					
 			// Allow instructor to pick individual question items from all active questions:
 			if (assignmentType.contentEquals("Quiz")) {
-				buf.append("Each quiz consists of 10 questions selected at random from the items below. You may select "
+				buf.append("Each quiz consists of 10 questions selected at random from the items below. The default time allowed "
+						+ "to complete each quiz is 15 minutes, but you may change this (e.g., to create a special assignment for "
+						+ "a student requiring extended time).<br>"
+						+ "<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + ">"
+						+ "Time allowed for this assignment: <input type=text size=5 name=TimeAllowed value=" + this.timeAllowed/60. + "> minutes. "
+						+ "<input type=submit name=UserRequest value='Set Allowed Time'><br>"
+						+ "</form><p>"
+						+ "You may select "
 						+ "the items that will be used for this group by checking the boxes in the left column. Students are provided "
 						+ "answers to the items that they answer incorrectly. Therefore, the total number of questions should be "
 						+ "larger than 10, but not much larger than 50.  Experience shows that 30 items is about right in most cases.<p>"

@@ -124,7 +124,7 @@ public class Homework extends HttpServlet {
 			if (user.isInstructor() && hwa != null) {
 				buf.append("<mark>As the course instructor you may "
 						+ "<a href=/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + ">"
-						+ "customize this assignment</a> by selecting/deselecting the required question items. ");
+						+ "customize this assignment</a>.");
 				if (hwa.lti_nrps_context_memberships_url != null && hwa.lti_ags_lineitem_url != null) 
 					buf.append("<br>You may also view a <a href=/Homework?UserRequest=ShowSummary&sig=" 
 							+ user.getTokenSignature() + ">summary of student scores</a> for this assignment.");
