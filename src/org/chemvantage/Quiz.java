@@ -75,7 +75,6 @@ public class Quiz extends HttpServlet {
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 				out.println(Home.header("Customize ChemVantage Quiz Assignment") + a.selectQuestionsForm(user) + Home.footer);
 			}
-			else if ("ExtraTime".contentEquals(userRequest)) out.print(Home.header("ADA Accommodation") + extraTimeRequest(user,request) + Home.footer);
 			else response.sendRedirect("/Quiz.jsp?sig=" + user.getTokenSignature());
 			//else out.println(Home.header("ChemVantage Quiz") + printQuiz(user,request) + Home.footer);
 		} catch (Exception e) {
@@ -98,13 +97,6 @@ public class Quiz extends HttpServlet {
 			if ("UpdateAssignment".contentEquals(userRequest)) {
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 				a.updateQuestions(request);
-				response.sendRedirect("/Quiz.jsp?sig=" + user.getTokenSignature());
-			} else if ("Accommodation".contentEquals(userRequest)) {
-				try {
-					QuizTransaction qt = ofy().load().type(QuizTransaction.class).id(Long.parseLong(request.getParameter("QuizTransactionId"))).safe();
-					qt.extraMillis = (int) (Double.parseDouble(request.getParameter("ExtraMinutes"))*60*1000);
-					ofy().save().entity(qt).now();
-				} catch (Exception e) {}
 				response.sendRedirect("/Quiz.jsp?sig=" + user.getTokenSignature());
 			} else out.println(Home.header("ChemVantage Quiz Results") + printScore(user,request) + Home.footer);
 		} catch (Exception e) {
@@ -309,8 +301,8 @@ public class Quiz extends HttpServlet {
 			}
 
 			// Check to see if the time limit (15 minutes) for taking the Quiz has expired:
-			if (now.getTime() - qt.downloaded.getTime() > (timeLimit*60000+10000+qt.extraMillis)) // includes 10 second grace period
-				return "Sorry, the " + (timeLimit + qt.extraMillis/60000) +" minute time limit for this quiz has expired.";
+			if (now.getTime() - qt.downloaded.getTime() > (timeLimit*60000+10000)) // includes 10 second grace period
+				return "Sorry, the " + timeLimit + " minute time limit for this quiz has expired.";
 			
 			int studentScore = 0;
 			int wrongAnswers = 0;
@@ -705,26 +697,6 @@ public class Quiz extends HttpServlet {
 			buf.append("Sorry, there is not enough information available from your LMS to support this request.<p>");			
 			buf.append("<a href=/Quiz.jsp?sig=" + user.getTokenSignature() + ">Return to this quiz</a>.<p>");
 		}
-		return buf.toString();
-	}
-	
-	String extraTimeRequest(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer();
-			buf.append("<h3>Request Extra Time</h3>"
-					+ "The Americans with Disabilities Act (ADA) protects the rights of individuals with physical or mental "
-					+ "impairments to ensure that they have access to the same educational opportunities as every other student.<p>"
-					+ "If you have already been granted an official accommodation for extended time on this quiz, please enter the "
-					+ "extra time allowed (in minutes) and your name below. Your instuctor will be notified of this request. "
-					+ "You must complete this form for each quiz in order to be granted the extra time.<p>");
-			
-			buf.append("<form action=Quiz method=post>"
-					+ "By signing my name below, I certify that I am authorized to request this accomodation:<br>"
-					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + ">"
-					+ "<input type=hidden name=QuizTransactionId value=" + request.getParameter("qt") + ">"
-					+ "<input type=hidden name=UserRequest value='Accommodation'>"
-					+ "Extra time allowed (beyond the normal 15 minutes): <input type=text name=ExtraMinutes>minutes<br>"
-					+ "Type your full name here: <input type=text size=40 name=StudentName><input type=submit><p>"
-					+ "</form>");
 		return buf.toString();
 	}
 }

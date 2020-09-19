@@ -35,7 +35,6 @@ public class QuizTransaction implements Serializable {
 	@Index	int score;
 	@Index  long assignmentId;
 			int possibleScore;
-	public	int extraMillis; // extra time accommodation to complete the quiz in milliseconds
 			String topicTitle;
 			String lis_result_sourcedid;
 	
