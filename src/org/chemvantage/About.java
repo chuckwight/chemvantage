@@ -44,7 +44,7 @@ public class About extends HttpServlet {
 		+ "University and now Salisbury University."
 		
 		+ "<h3>Subject material</h3>"
-		+ "The database is currently populated with more than 4000 quiz, homework and exam questions in General Chemistry. "
+		+ "The database is currently populated with about 5000 quiz, homework, exam and video quiz questions in General Chemistry. "
 		
 		+ "<h3>Why we created this site</h3>"
 		+ "Chemistry and many other technical disciplines are taught from a problem-solving approach. Lots of "
