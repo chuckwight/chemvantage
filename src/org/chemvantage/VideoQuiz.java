@@ -174,6 +174,7 @@ public class VideoQuiz extends HttpServlet {
 
 	public String scoreQuizlet(User user, HttpServletRequest request) throws Exception {
 		StringBuffer debug = new StringBuffer("starting...");
+		Date now = new Date();
 		VideoTransaction vt = null;
 		int segment = 0;
 		try {
@@ -185,7 +186,6 @@ public class VideoQuiz extends HttpServlet {
 			debug.append("vt.");
 		} catch (Exception e) {  // this section is reached if a quizlet is not included at the end (no questions)
 			debug.append("caught.");
-			Date now = new Date();
 			Date then = new Date(now.getTime()-90*60000);  // 90 minutes ago
 			long videoId = Long.parseLong(request.getParameter("VideoId"));
 			debug.append("vId.");
@@ -202,9 +202,9 @@ public class VideoQuiz extends HttpServlet {
 		}
 		debug.append("qkeys.");
 		
-		Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
 		StringBuffer missedQuestions = new StringBuffer();	// contains solutions to questions answered incorrectly		
-
+		List<Response> responses = new ArrayList<Response>();
+		
 		if (questionKeys.size()>0) {  // This is the main scoring loop:			
 			int quizletScore = 0;
 			Map<Key<Question>,Question> quizQuestions = ofy().load().keys(questionKeys);
@@ -219,15 +219,7 @@ public class VideoQuiz extends HttpServlet {
 							if (seed==-1) seed--;  // -1 is a special value for randomly seeded Random generator; avoid this (unlikely) situation
 							q.setParameters(seed);
 							int score = q.isCorrect(studentAnswer[0])?q.pointValue:0;
-							queue.add(withUrl("/ResponseServlet")
-									.param("AssignmentType","VideoQuiz")
-									.param("VideoId", Long.toString(vt.videoId))
-									.param("QuestionId", Long.toString(q.id))
-									.param("StudentResponse", studentAnswer[0])
-									.param("CorrectAnswer", q.getCorrectAnswer())
-									.param("Score", Integer.toString(score))
-									.param("PossibleScore", Integer.toString(q.pointValue))
-									.param("UserId", user.id));
+							responses.add(new Response("VideoQuiz",0,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now));
 							quizletScore += score;
 							if (score == 0) {  
 								// include question in list of incorrectly answered questions
@@ -240,6 +232,7 @@ public class VideoQuiz extends HttpServlet {
 				}
 			}
 			debug.append("scoring done.");
+			ofy().save().entities(responses);
 			vt.quizletScores.set(segment,quizletScore);
 			vt.missedQuestions.set(segment,missedQuestions.toString());
 		}
@@ -263,10 +256,8 @@ public class VideoQuiz extends HttpServlet {
 		} else {
 			vt.score = 0;
 			for (int s : vt.quizletScores) vt.score += s;
-		}		
-		
-		vt.graded = new Date();
-		ofy().save().entity(vt);
+		}				
+		vt.graded = new Date();  // vt will be saved after missed Questions List is printed later (line 322)
 		
 		// Try to post the score to the student's LMS:
 		// Retrieve the assignment, if it exists (may be null for anonymous users)
@@ -280,7 +271,7 @@ public class VideoQuiz extends HttpServlet {
 				ofy().save().entity(s).now();
 				reportScoreToLms = a.lti_ags_lineitem_url != null || (a.lis_outcome_service_url != null && user.getLisResultSourcedid() != null);
 				if (reportScoreToLms) {
-					Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
+					Queue queue = QueueFactory.getDefaultQueue();  // Task queue used for reporting scores to the LMS
 					queue.add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
 				}		
 			}
@@ -327,7 +318,8 @@ public class VideoQuiz extends HttpServlet {
 				buf.append("The following questions were answered incorrectly:<ol>" + missedQuestions + "</ol>");
 			}
 		}
-		
+		vt.missedQuestions.clear();
+		ofy().save().entity(vt);
 		
 		if (!reportScoreToLms && !user.isAnonymous()) {
 			buf.append("<b>Please note:</b> Your score was not reported back to the grade book of your class "
@@ -344,406 +336,6 @@ public class VideoQuiz extends HttpServlet {
 		
 	}
 	
-	/*
-	String ajaxJavaScript(String token) {
-		return "<SCRIPT TYPE='text/javascript'>\n"
-		+ "function ajaxSubmit(url,id,note,email) {\n"
-		+ "  var xmlhttp;\n"
-		+ "  if (url.length==0) return false;\n"
-		+ "  xmlhttp=GetXmlHttpObject();\n"
-		+ "  if (xmlhttp==null) {\n"
-		+ "    alert ('Sorry, your browser does not support AJAX!');\n"
-		+ "    return false;\n"
-		+ "  }\n"
-		+ "  xmlhttp.onreadystatechange=function() {\n"
-		+ "    if (xmlhttp.readyState==4) {\n"
-		+ "      document.getElementById('feedback' + id).innerHTML="
-		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment. "
-		+ "</b></FONT><p>';\n"
-		+ "    }\n"
-		+ "  }\n"
-		+ "  url += '&QuestionId=' + id + '&Token=" + token + "&Notes=' + note + '&Email=' + email;\n"
-		+ "  xmlhttp.open('GET',url,true);\n"
-		+ "  xmlhttp.send(null);\n"
-		+ "  return false;\n"
-		+ "}\n"
-		+ "function ajaxStars(nStars) {\n"
-		+ "  var xmlhttp;\n"
-		+ "  if (nStars==0) return false;\n"
-		+ "  xmlhttp=GetXmlHttpObject();\n"
-		+ "  if (xmlhttp==null) {\n"
-		+ "    alert ('Sorry, your browser does not support AJAX!');\n"
-		+ "    return false;\n"
-		+ "  }\n"
-		+ "  xmlhttp.onreadystatechange=function() {\n"
-		+ "    var msg;\n"
-		+ "    switch (nStars) {\n"
-		+ "      case '1': msg='1 star - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to <a href=/Feedback?Token=" + token + ">tell us why</a>.';"
-		+ "                break;\n"
-		+ "      case '2': msg='2 stars - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to <a href=/Feedback?Token=" + token + ">tell us why</a>.';"
-		+ "                break;\n"
-		+ "      case '3': msg='3 stars - Thank you. <a href=/Feedback?Token=" + token + ">Click here</a> '"
-		+ "                + 'to provide additional feedback.';"
-		+ "                break;\n"
-		+ "      case '4': msg='4 stars - Thank you';"
-		+ "                break;\n"
-		+ "      case '5': msg='5 stars - Thank you!';"
-		+ "                break;\n"
-		+ "      default: msg='You clicked ' + nStars + ' stars.';\n"
-		+ "    }\n"
-		+ "    if (xmlhttp.readyState==4) {\n"
-		+ "      document.getElementById('vote').innerHTML=msg;\n"
-		+ "    }\n"
-		+ "  }\n"
-		+ "  xmlhttp.open('GET','Feedback?UserRequest=AjaxRating&NStars='+nStars,true);\n"
-		+ "  xmlhttp.send(null);\n"
-		+ "  return false;\n"
-		+ "}\n"
-		+ "function GetXmlHttpObject() {\n"
-		+ "  if (window.XMLHttpRequest) { // code for IE7+, Firefox, Chrome, Opera, Safari\n"
-		+ "    return new XMLHttpRequest();\n"
-		+ "  }\n"
-		+ "  if (window.ActiveXObject) { // code for IE6, IE5\n"
-		+ "    return new ActiveXObject('Microsoft.XMLHTTP');\n"
-		+ "  }\n"
-		+ "  return null;\n"
-		+ "}\n"
-		+ "</SCRIPT>";
-	}
-
-
-	
-	public String printQuiz(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer();
-		try {
-			Assignment qa = null;
-			long topicId = 0L;
-			long assignmentId = 0L;
-			try { 
-				assignmentId = user.getAssignmentId();  // should be non-zero for LTI user
-				if (assignmentId > 0) {
-					qa = ofy().load().type(Assignment.class).id(assignmentId).now();
-					topicId = qa.topicId;
-				} else {  // get the requested topicId for anonymous user
-					topicId = Long.parseLong(request.getParameter("TopicId"));
-				}
-			} catch (Exception e) {  // alternative process for anonymous user
-				return "<h2>No Quiz Selected</h2>You must return to the <a href=/>Home Page</a> "
-					+ "and select a topic for this quiz using the drop-down box.";
-			}
-			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
-			Date now = new Date();
-
-			// Check to see if this user has any pending quizzes on this topic:
-			Date then = new Date(now.getTime()-timeLimit*60000);  // timeLimit minutes ago
-			QuizTransaction qt = ofy().load().type(QuizTransaction.class).filter("userId",user.id).filter("topicId",topic.id).filter("graded",null).filter("downloaded >",then).first().now();
-			String lis_result_sourcedid = user.getLisResultSourcedid();
-			if (qt == null || qt.graded != null) {
-				qt = new QuizTransaction(topic.id,topic.title,user.id,now,null,0,assignmentId,0,user.getLisResultSourcedid());
-				ofy().save().entity(qt).now();  // creates a long id value to use in random number generator
-			} else if (qt.lis_result_sourcedid == null && lis_result_sourcedid != null) {
-				qt.lis_result_sourcedid = lis_result_sourcedid;
-				ofy().save().entity(qt);
-			}
-			int secondsRemaining = (int) (timeLimit*60 - (now.getTime() - qt.downloaded.getTime())/1000);
-
-			buf.append("\n<h2>Quiz - " + topic.title + " (" + subject.title + ")</h2>");
-
-			if (request.getServerName().contains("dev-vantage")) buf.append("<font color=red>This is a development server that should be used for testing only.<br>"
-					+ "Please DO NOT use this server for serious instruction.<br>See the <a href=/lti/registration>LTI registration page</a> if your need "
-					+ "access to the ChemVantage production server.</font><p>");
-			
-			if (Boolean.parseBoolean(request.getParameter("SecurityAlert"))) buf.append("<font color=red>Notice:<br>"
-					+ "Due to potential internet security flaws, this LTI connection cannot be supported "
-					+ "after December 31, 2020. Please ask your LMS administrator to upgrade to a version that "
-					+ "supports, at a minimum, LTI version 1.1.2</font><p>");
-			
-			if (user.isInstructor() && qa != null) {
-				buf.append("<mark>As the course instructor you may "
-						+ "<a href=/Quiz?UserRequest=AssignQuizQuestions&Token=" + user.token + ">"
-						+ "customize this quiz</a> by selecting/deselecting the available question items. ");
-				if (qa.lti_nrps_context_memberships_url != null && qa.lti_ags_lineitem_url != null) 
-					buf.append("You may also view a <a href=/Quiz?UserRequest=ShowSummary&Token=" 
-							+ user.token + ">summary of student scores</a> for this assignment.");
-				buf.append("</mark><p>");
-			} else if (user.isAnonymous()) {
-				buf.append("<h3><font color=red>Anonymous User</font></h3>");
-			}
-			
-			buf.append("\n<FORM NAME=Quiz METHOD=POST ACTION=Quiz onSubmit='return confirmSubmission()'>");
-			
-			buf.append("<INPUT TYPE=HIDDEN NAME=Token VALUE=" + user.token + ">");
-			if (qa!=null) buf.append("<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + qa.id + "'>");
-			if (!user.isAnonymous()) {
-				buf.append("\nQuiz Rules<OL>");
-				buf.append("\n<LI>Each quiz must be completed within " + timeLimit + " minutes of the time when it is first downloaded.</LI>");
-				buf.append("\n<LI>You may repeat quizzes as many times as you wish, to improve your score.</LI>");
-				buf.append("\n<LI>ChemVantage always reports your best score on this assignment to your class LMS.</LI> ");
-				buf.append("</OL>");
-			}
-			buf.append("<div id='timer0' style='color: red'></div><div id=ctrl0 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
-
-			buf.append("\n<input type=submit value='Grade This Quiz'>");
-
-			// create a set of available questionIds either from the group assignment or from the datastore
-			List<Key<Question>> questionKeys = null;
-			try {  // check for assigned questions
-				questionKeys = qa.questionKeys;
-			} catch (Exception e) {  // no assignment exists
-				questionKeys = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId", topicId).filter("isActive",true).keys().list();
-			}
-
-			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
-			Random rand = new Random();  // create random number generator to select quiz questions
-			rand.setSeed(qt.id);  // random number generator seeded with QuizTransaction id value
-			int possibleScore = 0;
-			int nQuestions = (nQuestionsPerSubjectArea < questionKeys.size()?nQuestionsPerSubjectArea:questionKeys.size());
-
-			int i = 0;
-			buf.append("<OL>\n");
-			while (i<nQuestions && questionKeys.size()>0) {
-				Key<Question> k = questionKeys.remove(rand.nextInt(questionKeys.size()));
-				Question q = quizQuestions.get(k);
-				if (q==null) {
-					try {
-						q = ofy().load().key(k).safe();
-						quizQuestions.put(k,q);
-					} catch (Exception e) {
-						continue;  // this catches cases where an assigned question no longer exists
-					}
-				}
-				// by this point we should have a valid question
-				i++;  // this counter keeps track of the number of questions presented so far
-				possibleScore += q.pointValue;
-				// the parameterized questions are seeded with a value based on the ids for the quizTransaction and the question
-				// in order to make the value reproducible for grading but variable for each quiz and from one question to the next
-				long seed = Math.abs(qt.id - q.id);
-				if (seed==-1) seed--;  // -1 is a special value for randomly seeded Random generator; avoid this (unlikely) situation
-				q.setParameters(seed); // the values are subtracted to prevent (unlikely) overflow
-
-				buf.append("\n<li>" + q.print() + "<br></li>\n");
-			}
-			buf.append("</OL>");
-
-			qt.possibleScore = possibleScore;
-			ofy().save().entity(qt);
-			
-			buf.append("\n<input type=hidden name='QuizTransactionId' value=" + qt.id + ">");
-			buf.append("\n<input type=hidden name='TopicId' value=" + topic.id + ">");
-			buf.append("<div id='timer1' style='color: red'></div><div id=ctrl1 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
-			buf.append("\n<input type=submit value='Grade This Quiz'>");
-			buf.append("\n</form>");
-
-			// this code for displaying/hiding timers and a quiz submit confirmation box
-			buf.append(timerScripts(secondsRemaining)); 
-
-		} catch (Exception e) {
-			buf.append(e.getMessage());
-		}
-		return buf.toString();
-	}
-
-	String timerScripts(int secondsRemaining) {
-		return "<SCRIPT language='JavaScript'>"
-				+ "function toggleTimers() {"
-				+ "  var timer0 = document.getElementById('timer0');"
-				+ "  var timer1 = document.getElementById('timer1');"
-				+ "  var ctrl0 = document.getElementById('ctrl0');"
-				+ "  var ctrl1 = document.getElementById('ctrl1');"
-				+ "  if (timer0.style.display=='') {" 
-				+ "    timer0.style.display='none';timer1.style.display='none';"
-				+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
-				+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
-				+ "  } else {"
-				+ "    timer0.style.display='';timer1.style.display='';"
-				+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
-				+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
-				+ "  }"
-				+ "}"
-				+ "var seconds;var minutes;var oddSeconds;"
-				+ "var endTime = new Date().getTime() + " + secondsRemaining + "*1000;"
-				+ "function countdown() {"
-				+ "  var now = new Date().getTime();"
-				+ "  seconds=Math.round((endTime-now)/1000);"
-				+ "  minutes = seconds<0?Math.ceil(seconds/60):Math.floor(seconds/60);"
-				+ "  oddSeconds = seconds%60;"
-				+ "  for(i=0;i<2;i++)"
-				+ "    document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ' minutes ' + oddSeconds + ' seconds.';"
-				+ "  if (seconds==30) alert('30 seconds remaining');"
-				+ "  if (seconds < 0) document.Quiz.submit();"
-				+ "  setTimeout('countdown()',1000);"
-				+ "}"
-				+ "countdown();"
-				+ "function confirmSubmission() {"
-				+ "  return confirm('Submit this quiz for scoring now?');"
-				+ "}"
-				+ "</SCRIPT>"; 
-	}
-	
-	String printScore(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer();
-		
-		try {
-			Date now = new Date();
-			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			
-			Assignment qa = null;
-			long transactionId = Long.parseLong(request.getParameter("QuizTransactionId"));
-			QuizTransaction qt = ofy().load().type(QuizTransaction.class).id(transactionId).safe();
-			
-			// if this Quiz has already been graded, stop here.
-			if (qt.graded != null) {
-				return "<h2>No Score</h2>"
-						+ "Sorry, this quiz was graded on " + df.format(qt.graded) + " and cannot be regraded.<p>"
-						+ "Your score on this quiz was " + qt.score + " out of a possible " + qt.possibleScore + " points.<p>"
-						+ (user.isAnonymous()?"<p><a href=/Quiz?TopicId=" + qt.topicId + "&Token=" + user.token + ">"
-						+ "Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a>.":"");
-			}
-
-			// Check to see if the time limit (15 minutes) for taking the Quiz has expired:
-			if (now.getTime() - qt.downloaded.getTime() > (timeLimit*60000+10000)) // includes 10 second grace period
-				return "Sorry, the " + timeLimit + " minute time limit for this quiz has expired.";
-			
-			int studentScore = 0;
-			int wrongAnswers = 0;
-
-			buf.append("<h2>Quiz Results - " + qt.topicTitle + " (" + subject.title + ")</h2>\n");
-			
-			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
-			buf.append(df.format(now));
-			
-			buf.append(ajaxJavaScript(user.token)); // load javascript for AJAX problem reporting form
-			
-			// Create a StringBuffer to contain correct answers to questions answered correctly
-			StringBuffer missedQuestions = new StringBuffer();			
-			missedQuestions.append("<OL>");
-			
-			// For each question the form contains a parameter: (questionId,studentAnswer)
-			// Make a list of the question keys. Non-numeric inputs are ignored (catch and continue).
-			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
-			for (Enumeration<?> e = request.getParameterNames();e.hasMoreElements();) {
-				try {
-					questionKeys.add(Key.create(Question.class,Long.parseLong((String) e.nextElement())));
-				} catch (Exception e2) {}
-			}
-			
-			Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
-			
-			// This is the main scoring loop:
-			for (Key<Question> k : questionKeys) {
-				try {
-					String studentAnswer[] = request.getParameterValues(Long.toString(k.getId()));
-					if (studentAnswer != null) {
-						for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
-						if (studentAnswer[0].length() > 0) { // an answer was submitted
-							Question q = quizQuestions.get(k);
-							if (q==null) {
-								try {
-									q = ofy().load().key(k).safe();
-									quizQuestions.put(k,q);
-								} catch (Exception e) {
-									continue;
-								}
-							}
-							long seed = Math.abs(qt.id - q.id);
-							if (seed==-1) seed--;  // -1 is a special value for randomly seeded Random generator; avoid this (unlikely) situation
-							q.setParameters(seed);
-							int score = q.isCorrect(studentAnswer[0])?q.pointValue:0;
-							queue.add(withUrl("/ResponseServlet")
-									.param("AssignmentType","Quiz")
-									.param("TopicId", Long.toString(qt.topicId))
-									.param("QuestionId", Long.toString(q.id))
-									.param("StudentResponse", studentAnswer[0])
-									.param("CorrectAnswer", q.getCorrectAnswer())
-									.param("Score", Integer.toString(score))
-									.param("PossibleScore", Integer.toString(q.pointValue))
-									.param("UserId", user.id));
-							studentScore += score;
-							if (score == 0) {  
-								// include question in list of incorrectly answered questions
-								wrongAnswers++;
-								missedQuestions.append("\n<LI>" + q.printAllToStudents(studentAnswer[0]) + "</LI>\n");
-							}
-						}
-					}
-				} catch (Exception e2) {
-					continue;  // this parameter does not correspond to a questionId
-				}
-			}
-			missedQuestions.append("</OL>\n");
-			qt.graded = now;
-			qt.score = studentScore;
-			ofy().save().entity(qt);
-			
-			// Try to post the score to the student's LMS:
-			boolean reportScoreToLms = false;
-			try {
-				if (user.isAnonymous()) throw new Exception();  // don't save Scores for anonymous users
-				long assignmentId = user.getAssignmentId();
-				qa = ofy().load().type(Assignment.class).id(assignmentId).safe();
-				Score s = Score.getInstance(user.id,qa);
-				ofy().save().entity(s).now();
-				reportScoreToLms = qa.lti_ags_lineitem_url != null || (qa.lis_outcome_service_url != null && user.getLisResultSourcedid() != null);
-				if (reportScoreToLms) {
-					queue.add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(qa.id)).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
-				}
-			} catch (Exception e) {}
-
-			buf.append("<h4>Your score on this quiz is " + studentScore 
-					+ " point" + (studentScore==1?"":"s") + " out of a possible " + qt.possibleScore + " points.</h4>\n");
-
-			if (studentScore == qt.possibleScore) {
-				buf.append("<H2>Congratulations on a perfect score! Good job.</H2>\n");
-			} else {
-				int leftBlank = qt.possibleScore - studentScore - wrongAnswers;
-				if (leftBlank>0) buf.append(leftBlank + " question" 
-						+ (leftBlank>1?"s were":" was") + " left unanswered (blank).<p>");
-				if (wrongAnswers>0) buf.append(wrongAnswers + " question" 
-						+ (wrongAnswers>1?"s were":" was") + " answered incorrectly:<p>" + missedQuestions.toString());
-			
-				// print some words of encouragement:
-				buf.append("<h4>Improve Your Score</h4>\n");
-				if (studentScore<6) {
-					buf.append("If you get stuck on a difficult question, "
-							+ "you may refer to your textbook during the quiz. Please keep the " + timeLimit
-							+ " minute time limit in mind, though. Hard work and persistence will produce "
-							+ "higher scores and better grades.<p>");
-				}
-				else {
-					buf.append("You're working hard and making great progress.  ");
-					if (wrongAnswers > 0) buf.append("Be sure to read and understand the "
-							+ "correct answers to the problems that you missed (above) so that you can get them "
-							+ "right the next time.<p>");
-					else buf.append("Be sure to attempt all the questions so that we can show you "
-							+ "the correct answers to problems that you missed.<p>");
-				}
-			}
-			
-			// if the user response was correct, seek five-star feedback:
-			if (studentScore == qt.possibleScore) buf.append(fiveStars());
-			else buf.append("Please take a moment to <a href=/Feedback?Token=" + user.token + ">tell us about your ChemVantage experience</a>.<p>");
-
-			if (qa != null) buf.append("You may <a href=/Quiz?UserRequest=ShowScores&Token=" + user.token + ">review all your scores on this assignment.</a>.<p>") ;
-
-			if (!reportScoreToLms && !user.isAnonymous()) {
-				buf.append("<b>Please note:</b> Your score was not reported back to the grade book of your class "
-						+ "LMS because the LTI launch request did not contain enough information to do this. "
-						+ (user.isInstructor()?"For instructors this is common.":"") + "<p>");				
-			}
-			
-			// If qa==null this is an anonymous user, otherwise is an LTI user:
-			buf.append((qa==null?"<a href=/Quiz?TopicId=" + qt.topicId + "&Token=" + user.token + ">Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a> " :
-			"You may take this quiz again by clicking the assignment link in your learning management system ")			
-			+ "or <a href=/Logout>logout of ChemVantage</a>.");
-
-		} catch (Exception e) {
-			buf.append("Sorry, this quiz could not be scored.<br>" + e.getMessage());
-		}
-		return buf.toString();
-	}
-*/	
 	String showScores (User user, HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h2>Your Quiz Transactions</h2>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
