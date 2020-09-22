@@ -33,7 +33,7 @@ public class About extends HttpServlet {
 	public static String announcement = "";
 
 	public String getServletInfo() {
-		return "This servlet provides information, terms and conditions for using ChemVantage.org.";
+		return "This servlet provides information, terms and conditions for using ChemVantage.";
 	}
 
 	public static String about = Home.banner
