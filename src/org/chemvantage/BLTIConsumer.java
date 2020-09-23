@@ -36,8 +36,10 @@ public class BLTIConsumer {
 	String contact_name;
 	String organization;
 	String org_url;
+	String org_type;
 	String lms;
 	Date created;
+	Date expires;  // subscription expiration date (null = never)
 	Map<String,String[]> launchParameters;
 	@Index Date lastLogin;
 

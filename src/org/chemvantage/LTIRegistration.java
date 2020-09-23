@@ -202,6 +202,7 @@ public class LTIRegistration extends HttpServlet {
 		String email = request.getParameter("email");
 		String aud = request.getParameter("aud");
 		String url = request.getParameter("url");
+		String typ = request.getParameter("typ");
 		String use = request.getParameter("use");
 		String ver = request.getParameter("ver");
 		String lms = request.getParameter("lms");
@@ -217,6 +218,8 @@ public class LTIRegistration extends HttpServlet {
 		} catch (Exception e) {
 			throw new Exception("Invalid home page URL (" + e.getMessage() + "). Must start with https:// ");
 		}
+		
+		if (typ==null) typ = ""; //throw new Exception("Please specify the type of organization connecting to ChemVantage. ");
 		
 		if (lms==null) throw new Exception("Please select the type of LMS that you are connecting to ChemVantage. ");
 		if ("other".contentEquals(lms)) lms = request.getParameter("lms_other");
@@ -237,6 +240,7 @@ public class LTIRegistration extends HttpServlet {
 				.withIssuedAt(now)
 				.withClaim("email",email)
 				.withClaim("url", url)
+				.withClaim("typ", typ)
 				.withClaim("lms", lms)
 				.withClaim("ver", ver)
 				.sign(algorithm);
@@ -277,6 +281,7 @@ public class LTIRegistration extends HttpServlet {
 		String iss = jwt.getIssuer();
 		String lms = jwt.getClaim("lms").asString();
 		String ver = jwt.getClaim("ver").asString();
+		String typ = jwt.getClaim("typ").asString();
 		
 		StringBuffer buf = new StringBuffer();
 		
@@ -285,10 +290,28 @@ public class LTIRegistration extends HttpServlet {
 				+ "Org: " + org + " (" + url + ")<br>"
 				+ "LMS: " + lms + "<p>");
 		
+		buf.append("Thank you for your ChemVantage registration request. ");
+		
+		switch (typ) {
+			case "nonprofit":
+				buf.append("You indicated on your application that " + org + " is a public or non-profit institution. As such, ChemVantage "
+						+ "services are provided free for up to 1000 users. To exceed this limit you will need to convert to a commercial "
+						+ "(for-profit) subscription type, which costs $5000/yr for up to 10,000 users.<p>"); break;
+			case "forprofit":
+				buf.append("You indicated on your application that " + org + " is a for-profit school or company. ChemVantage will send you "
+						+ "an invoice in the next few days for payment of the $5000 annual subscription charge. This subscription allows up "
+						+ "to 10,000 users. To exceed this limit, please contact us for pricing at admin@chemvantage.org<p>"); break;
+			case "personal":
+				buf.append("You indicated on your application that your ChemVantage registration is for your own personal use. ChemVantage will send you "
+						+ "an invoice in the next few days for payment of the $20 monthly subscription charge. This subscription allows up " 
+						+ "to 10 users. To exceed this limit, please contact us for pricing at admin@chemvantage.org<p>"); break;
+			default: 
+		}
+		
 		if (ver.contentEquals("1p1")) { // older LTIv1p1 registration process; deprecated 12/31/2020
-			buf.append("Thank you for your ChemVantage registration request. Click the link below "
-					+ "to view your free LTI credentials for connecting to ChemVantage. "
-					+ "<b>Please print or save the credentials in a safe place.</b> "
+			buf.append("Please click the link below "
+					+ "to obtain your LTI credentials for connecting to ChemVantage. "
+					+ "<b>Print or save the credentials in a safe place.</b> "
 					+ "For your security, the link is valid for only three days and expires at " + jwt.getExpiresAt() + "<p>");
 			
 			buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
@@ -379,8 +402,7 @@ public class LTIRegistration extends HttpServlet {
 					+ "-Chuck Wight");		
 		
 		} else { // LTIAdvantage registration
-			buf.append("Thank you for your ChemVantage registration request.<p> "
-					+ "The next step is to enter the ChemVantage configuration details into your LMS. "
+			buf.append("The next step is to enter the ChemVantage configuration details into your LMS. "
 					+ "This will enable your LMS to communicate securely with ChemVantage. Normally, "
 					+ "you must have administrator privileges in your LMS in order to do this. "
 					+ "If you are NOT the LMS administrator, please stop here and forward this message "
@@ -513,6 +535,7 @@ public class LTIRegistration extends HttpServlet {
 		String email = jwt.getClaim("email").asString();  // email of registering person
 		String aud = jwt.getAudience().get(0);            // name of applicant organization
 		String url = jwt.getClaim("url").asString();      // home page of applicant organization
+		String typ = jwt.getClaim("typ").asString();      // type of org (nonprofit, forprofit, personal)
 		String lms = jwt.getClaim("lms").asString();      // type of LMS platform
 		
 		String oauth_consumer_key = null;
@@ -532,8 +555,11 @@ public class LTIRegistration extends HttpServlet {
 			con.lms = lms;
 			con.organization = aud;
 			con.org_url = url;
+			con.org_type = typ;
+			if ("forprofit".equals(typ) || "personal".contentEquals(typ)) con.expires = new Date(new Date().getTime() + 604800000L);  // 1 week from now
 			ofy().save().entity(con).now();
 		}
+		
 		// The next line checks to see if the email for BLTIConsumr retrieved matches the email in the token
 		// This catches the (unlikely) case where the same CK is issued to 2 different people, but also catches the
 		// (more likely) case where a valid login changed the email contact. Either way protects the CK from being revealed.
