@@ -565,6 +565,13 @@ public class LTIRegistration extends HttpServlet {
 			oauth_consumer_key = "CK" + (new Random(token.hashCode()).nextInt(899999) + 100000);
 		}
 		
+		boolean instant = false;	
+		try {
+			String emailDomain = email.substring(email.indexOf("@")+1);
+			String homePageDomain = new URL(url).getHost();
+			instant = InternetDomainName.from(homePageDomain).topPrivateDomain().equals(InternetDomainName.from(emailDomain).topPrivateDomain());
+		} catch (Exception e) {}
+		
 		BLTIConsumer con = null;
 		try {  // retrieve the BLTIConsumer that was saved when the token was used
 			con = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).safe();
@@ -576,7 +583,11 @@ public class LTIRegistration extends HttpServlet {
 			con.organization = aud;
 			con.org_url = url;
 			con.org_type = typ;
-			if ("forprofit".equals(typ) || "personal".contentEquals(typ)) con.expires = new Date(new Date().getTime() + 604800000L);  // 1 week from now
+			con.created = new Date();
+			if (instant) {
+				if ("forprofit".equals(typ) || "nonprofit".contentEquals(typ)) con.expires = new Date(new Date().getTime() + 2592000000L);  // 30 days from now	
+				else con.expires = new Date(new Date().getTime() + 864000000L);  // 10 days from now for personal accounts
+			} else con.expires = new Date();
 			ofy().save().entity(con).now();
 		}
 		
