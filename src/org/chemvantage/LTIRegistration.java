@@ -49,6 +49,7 @@ import javax.servlet.http.HttpServletResponse;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.google.common.net.InternetDomainName;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -112,9 +113,12 @@ public class LTIRegistration extends HttpServlet {
 			else if (ltiVersion.equals("1p3")) out.println(Home.header("LTI Registration") + clientIdForm(token) + Home.footer);
 			else throw new Exception("LTI version was missing or invalid.");
 		} else {
+			response.sendRedirect("/Registration.jsp");
+			/*
 			response.setContentType("text/html");
 			String use = request.getParameter("use");
-			out.println(Home.header("ChemVantage LTI Registration Form") + applicationForm(use) + Home.footer);		
+			out.println(Home.header("ChemVantage LTI Registration Form") + applicationForm(use) + Home.footer);
+			*/
 		}
 		} catch (Exception e) {
 			response.sendError(401, e.getMessage());
@@ -180,19 +184,13 @@ public class LTIRegistration extends HttpServlet {
 				+ "<label><input type=radio name=lms value=schoology>Schoology</label><br>"
 				+ "<label><input type=radio name=lms id=other value=other>Other: </label><input type=text name=lms_other onFocus=document.getElementById('other').checked=true;><p>");
 		
-		// Insert a checkbox confirming acceptance of the Google reCaptcha Terms of Service
-		buf.append("<label><input type=checkbox name=AcceptReCaptchaTOS value=true>Accept the reCAPTCHA "
-				+ "<a href=#terms onClick=javascript:getElementById('recaptchaterms').style.display='';>Terms of Service</a>.</span></label><br>"
-				+ "<span id='recaptchaterms' style='display:none'>"
-				+ "ChemVantage uses the Google reCAPTCHA API to distinguish humans from bots and protect against spam and abuse. "
-				+ "By accessing or using the Google reCAPTCHA API below, you agree to the <a href=https://policies.google.com/terms>Google APIs Terms of Service</a>. "
-				+ "You acknowledge and understand that the reCAPTCHA API collects hardware and software information from your computer, such as "
-				+ "device and application data and the results of integrity checks, and sends those data to Google for analysis."
-				+ "</span>");
-				
+		// Insert a checkbox confirming acceptance of the ChemVantage Terms of Service
+		buf.append("<label><input type=checkbox name=AcceptChemVantageTOS value=true>I accept the <a href=/About#terms target=_blank>ChemVantage Terms of Service</a>.</label><br><br>");
+		
 		// Insert the Google reCaptcha tool (version 2) on the page
-		buf.append("<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div><p>"
-				+ "<input type=submit name=UserRequest value='Send Me The Registration Email'>"
+		buf.append("<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div><p>");
+		
+		buf.append("<input type=submit name=UserRequest value='Send Me The Registration Email'>"
 				+ "</form>");
 		return buf.toString();
 	}
@@ -207,25 +205,31 @@ public class LTIRegistration extends HttpServlet {
 		String ver = request.getParameter("ver");
 		String lms = request.getParameter("lms");
 		
-		if (sub.isEmpty() || email.isEmpty() || aud.isEmpty() || url.isEmpty() || use==null ||use.isEmpty() || ver==null || ver.isEmpty()) throw new Exception("All form fields are required.");
+		if (sub.isEmpty() || email.isEmpty() || use==null ||use.isEmpty() || ver==null || ver.isEmpty()) throw new Exception("All form fields are required. ");
+		if (aud.isEmpty() || url.isEmpty()) throw new Exception("You must enter your organization name and home page. ");
+		else {
+			aud = (aud==null?"":aud);
+			url = (url==null?"":url);
+		}
 		
 		String regex = "^[A-Za-z0-9+_.-]+@(.+)$";		 
 		Pattern pattern = Pattern.compile(regex);
 		if (!pattern.matcher(email).matches()) throw new Exception("Your email address was not formatted correctly. ");
 		
 		try {
-			new URL(url);   // throws Exception if URL is not formatted correctly
+			if (!"personal".contentEquals(typ)) new URL(url);   // throws Exception if URL is not formatted correctly
 		} catch (Exception e) {
-			throw new Exception("Invalid home page URL (" + e.getMessage() + "). Must start with https:// ");
+			throw new Exception("Invalid domain name (" + e.getMessage() + ").");
 		}
 		
-		if (typ==null) typ = ""; //throw new Exception("Please specify the type of organization connecting to ChemVantage. ");
+		if (typ==null) throw new Exception("Please specify the type of organization connecting to ChemVantage. ");
 		
 		if (lms==null) throw new Exception("Please select the type of LMS that you are connecting to ChemVantage. ");
 		if ("other".contentEquals(lms)) lms = request.getParameter("lms_other");
 		if (lms==null || lms.isEmpty()) throw new Exception("Please describe the type of LMS that you are connecting to ChemVantage. ");
 		
-		if (!"true".equals(request.getParameter("AcceptReCaptchaTOS"))) throw new Exception("You must accept the reCAPTCHA Terms of Service. Please go back and try again. ");
+		if (!"true".equals(request.getParameter("AcceptChemVantageTOS"))) throw new Exception("You must accept the ChemVantage Terms of Service. ");
+		
 		if (!reCaptchaOK(request)) throw new Exception("ReCaptcha tool unverified. ");
 	
 		// Construct a new registration token
@@ -285,9 +289,16 @@ public class LTIRegistration extends HttpServlet {
 		
 		StringBuffer buf = new StringBuffer();
 		
+		boolean instant = false;	
+		try {
+			String emailDomain = email.substring(email.indexOf("@")+1);
+			String homePageDomain = new URL(url).getHost();
+			instant = InternetDomainName.from(homePageDomain).topPrivateDomain().equals(InternetDomainName.from(emailDomain).topPrivateDomain());
+		} catch (Exception e) {}
+		
 		buf.append("<h2>ChemVantage Registration</h2>");
 		buf.append("Name: " + name + " (" + email + ")<br>"
-				+ "Org: " + org + " (" + url + ")<br>"
+				+ (org.isEmpty()?"":"Org: " + org + " (" + url + ")<br>")
 				+ "LMS: " + lms + "<p>");
 		
 		buf.append("Thank you for your ChemVantage registration request. ");
@@ -295,22 +306,31 @@ public class LTIRegistration extends HttpServlet {
 		switch (typ) {
 			case "nonprofit":
 				buf.append("You indicated on your application that " + org + " is a public or non-profit institution. As such, ChemVantage "
-						+ "services are provided free for up to 1000 users. To exceed this limit you will need to convert to a commercial "
-						+ "(for-profit) subscription type, which costs $5000/yr for up to 10,000 users.<p>"); break;
+						+ "services are provided free for up to 1000 users. Please contact us for pricing beyond this limit.<p>"
+						+ "Your free subscription " + (instant?"has been activated while we verify your organization's nonprofit "
+						+ "status.":"is suspended pending verification of your account because your email domain does not match "
+						+ "your organization's domain.") + "<p>"); break;
 			case "forprofit":
 				buf.append("You indicated on your application that " + org + " is a for-profit school or company. ChemVantage will send you "
 						+ "an invoice in the next few days for payment of the $5000 annual subscription charge. This subscription allows up "
-						+ "to 10,000 users. To exceed this limit, please contact us for pricing at admin@chemvantage.org<p>"); break;
+						+ "to 10,000 users. To exceed this limit, please contact us for pricing at admin@chemvantage.org<p>");
+				buf.append("Your subscription " + (instant?"has been activated for 30 days pending payment of your subscription.":"is suspended "
+						+ "until payment is received because your email domain does not match your organization's domain.") + "<p>"); break;
 			case "personal":
 				buf.append("You indicated on your application that your ChemVantage registration is for your own personal use. ChemVantage will send you "
 						+ "an invoice in the next few days for payment of the $20 monthly subscription charge. This subscription allows up " 
-						+ "to 10 users. To exceed this limit, please contact us for pricing at admin@chemvantage.org<p>"); break;
+						+ "to 10 users. To exceed this limit, please contact us for pricing at admin@chemvantage.org<p>"); 
+				buf.append("Your subscription " + (instant?"has been activated for 10 days pending payment of your subscription.":"is suspended "
+						+ "until payment is received because your email domain does not match a recognized organizational home page domain.") + "<p>"); break;
 			default: 
 		}
 		
 		if (ver.contentEquals("1p1")) { // older LTIv1p1 registration process; deprecated 12/31/2020
-			buf.append("Please click the link below "
-					+ "to obtain your LTI credentials for connecting to ChemVantage. "
+			
+			if (!instant) buf.append("Although your ChemVantage account is suspended pending " + ("nonprofit".contentEquals(typ)?"verification, ":"payment, ") 
+					+ "you may continue at this point to establish the LTI connection between your LMS and ChemVantage. ");
+			
+			buf.append("Click the link below to obtain your LTI credentials for connecting to ChemVantage. "
 					+ "<b>Print or save the credentials in a safe place.</b> "
 					+ "For your security, the link is valid for only three days and expires at " + jwt.getExpiresAt() + "<p>");
 			

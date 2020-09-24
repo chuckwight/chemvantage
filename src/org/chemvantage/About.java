@@ -243,7 +243,7 @@ public class About extends HttpServlet {
 		+ "</ul>";				
 	
 	public static String terms = "<a NAME=terms></a>"
-		+ "<h3>Terms and Conditions of Use</h3>"
+		+ "<h3>ChemVantage Terms and Conditions of Use</h3>"
 		+ "<UL>"
 		+ "<LI>LIMITED LIABILITY.<br>" 
 		+ "CHEMVANTAGE LLC IS WITHOUT LIABILITY FOR DAMAGES CAUSED OR ALLEGEDLY CAUSED BY ANY FAILURE "
@@ -255,7 +255,7 @@ public class About extends HttpServlet {
 		+ "We are committed to providing the best possible online learning environment for General Chemistry. "
 		+ "If you have a question or problem using the site, please let us know immediately, and we will do our "
 		+ "best to correct any errors or software bugs. However, ChemVantage software as a service is provided "
-		+ "without any warrantee whatsoever.</LI>"
+		+ "without any warrantee whatsoever. All ChemVantage subscription fees are non-refunable.</LI>"
 		+ "<LI>GOVERNING LAW<br>"
 		+ "These Terms and Conditions of Use and any dispute arising between ChemVantage and its users shall be "
 		+ "governed by the laws of the State of Maryland, U.S.A.</LI>"
@@ -268,7 +268,7 @@ public class About extends HttpServlet {
 		+ "or your dealings with this site, please contact us at:<br>"
 		+ "Phone: +1 (801)243-8242<br>"
 		+ "Email: <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a></LI>"
-		+ "<LI>These terms and conditions were last updated on June 18, 2020</LI>"
+		+ "<LI>These terms and conditions were last updated on September 23, 2020</LI>"
 		+ "</UL>";
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
