@@ -380,7 +380,7 @@ public class Homework extends HttpServlet {
 			
 			debug.append("score is " + studentScore + " out of " + possibleScore + " points...");
 			HWTransaction ht = null;
-			showWork = request.getParameter("ShowWork");
+			showWork = request.getParameter("ShowWork"+questionId);
 			
 			if (studentAnswer[0].length() > 0) { // an answer was submitted
 				

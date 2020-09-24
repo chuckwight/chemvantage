@@ -307,8 +307,9 @@ public class PracticeExam extends HttpServlet {
 				possibleScores[topicIds.indexOf(q.topicId)] += q.pointValue;
 				q.setParameters((int)(pt.id - q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
+				buf.append("<SCRIPT>document.getElementById('showWork" + q.id + "').style.display='';</SCRIPT>");
 			}
-						buf.append("</OL>");
+			buf.append("</OL>");
 
 			// 15-point questions
 			buf.append("<U>15 point questions:</U>");
@@ -330,6 +331,7 @@ public class PracticeExam extends HttpServlet {
 				possibleScores[topicIds.indexOf(q.topicId)] += q.pointValue;
 				q.setParameters((int)(pt.id - q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
+				buf.append("<SCRIPT>document.getElementById('showWork" + q.id + "').style.display='';</SCRIPT>");
 			}
 			buf.append("</OL>");
 
