@@ -325,10 +325,10 @@ public class LTIRegistration extends HttpServlet {
 			default: 
 		}
 		
+		if (!instant) buf.append("Although your ChemVantage account is suspended pending " + ("nonprofit".contentEquals(typ)?"verification, ":"payment, ") 
+				+ "you may continue at this point to establish the LTI connection between your LMS and ChemVantage. ");
+		
 		if (ver.contentEquals("1p1")) { // older LTIv1p1 registration process; deprecated 12/31/2020
-			
-			if (!instant) buf.append("Although your ChemVantage account is suspended pending " + ("nonprofit".contentEquals(typ)?"verification, ":"payment, ") 
-					+ "you may continue at this point to establish the LTI connection between your LMS and ChemVantage. ");
 			
 			buf.append("Click the link below to obtain your LTI credentials for connecting to ChemVantage. "
 					+ "<b>Print or save the credentials in a safe place.</b> "
