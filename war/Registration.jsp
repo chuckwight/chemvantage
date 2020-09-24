@@ -57,6 +57,7 @@ Type of Learning Management System:<br>
 <label><input type=radio name=lms value=blackboard>Blackboard</label><br>
 <label><input type=radio name=lms value=brightspace>Brightspace</label><br>
 <label><input type=radio name=lms value=canvas>Canvas</label><br>
+<label><input type=radio name=lms value=moodle>Moodle</label><br>
 <label><input type=radio name=lms value=sakai>Sakai</label><br>
 <label><input type=radio name=lms value=schoology>Schoology</label><br>
 <label><input type=radio name=lms id=other value=other>Other: </label>
