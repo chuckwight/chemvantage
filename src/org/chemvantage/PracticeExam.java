@@ -356,7 +356,6 @@ public class PracticeExam extends HttpServlet {
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
 				if (assignmentId>0) buf.append("<SCRIPT>"
 						+ "document.getElementById('showWork" + q.id + "').style.display='';"
-						+ "document.getElementById('showWork" + q.id + "').placeholder='Show your work here. If your instructor reviews this assignment, you might receive partial credit for evidence of sound thinking.';"
 						+ "</SCRIPT>");
 				pt.questionKeys.add(k);
 			}
