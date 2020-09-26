@@ -23,6 +23,7 @@ import java.util.Date;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
+import com.googlecode.objectify.condition.IfNotZero;
 
 @Entity
 public class Response implements Serializable {
@@ -37,7 +38,8 @@ public class Response implements Serializable {
 			String correctAnswer;
 	@Index	int score;
 			int possibleScore;
-	
+	@Index(IfNotZero.class)  long transactionId;
+			
 	Response() {}
     
 	Response(String assignmentType, long topicId, long questionId, String studentResponse, String correctAnswer, int score, int possibleScore, String userId, Date submitted) {

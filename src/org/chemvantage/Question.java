@@ -386,6 +386,10 @@ public class Question implements Serializable {
 	}
 	
 	String printAllToStudents(String studentAnswer,boolean showDetails) {
+		return printAllToStudents(studentAnswer,true,"");
+	}
+	
+	String printAllToStudents(String studentAnswer,boolean showDetails,String showWork) {
 		// use this method to display an example of the question, correct answer and solution
 		// this differs from printAll() because only the first of several 
 		// correct fill-in-word answers is presented
@@ -456,9 +460,12 @@ public class Question implements Serializable {
 			}
 			break;        
 		}
-
-		if (studentAnswer.length() > 0) buf.append("Your answer was: " + studentAnswer + "<br>");
-
+		
+		buf.append("<br>");
+		if (showWork != null && !showWork.isEmpty()) buf.append("<b>Student work:</b><br><div style='border-style: solid; border-width: thin; white-space: pre-wrap;'>" + showWork + "</div>");	
+		if (studentAnswer==null || studentAnswer.isEmpty()) buf.append("<b>No answer was submitted for this question item.</b><p>");
+		else buf.append("<b>The answer submitted was: " + studentAnswer + "</b><p>");
+		
 		buf.append("<div id='feedback" + this.id + "'>");
 		buf.append("<FORM NAME=suggest" + this.id 
 				+ " onSubmit=\" return ajaxSubmit('/Feedback?UserRequest=ReportAProblem','" + this.id + "',document.suggest" + this.id + ".Notes.value,document.suggest" + this.id + ".Email.value);\">"

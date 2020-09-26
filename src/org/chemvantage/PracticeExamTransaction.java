@@ -18,7 +18,9 @@
 package org.chemvantage;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -35,11 +37,14 @@ public class PracticeExamTransaction implements Serializable {
 	@Index	Date downloaded;
 	@Index	Date graded;
 	@Index	Long assignmentId;
+			Date reviewed;
 			List<Long> topicIds;
 			int[] scores;
 			int[] possibleScores;
 			String lis_result_sourcedid;
-			Map<Key<Question>,String> showWork;
+			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
+			Map<Key<Question>,String> questionShowWork = new HashMap<Key<Question>,String>();
+			Map<Key<Question>,Integer> questionScores = new HashMap<Key<Question>,Integer>();
 
 	PracticeExamTransaction() {}
 

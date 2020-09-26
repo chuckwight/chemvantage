@@ -78,10 +78,21 @@ public class PracticeExam extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 			
-			if ("AssignExamQuestions".contentEquals(userRequest) && user.isInstructor()) {
-				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-				out.println(Home.header("Select ChemVantage Practice Exam Topicss") + a.selectExamQuestionsForm(user) + Home.footer);
-			} else out.println(Home.header("ChemVantage Practice Exam") + printExam(user,request) + Home.footer);
+			switch (userRequest) {
+				case "AssignExamQuestions":
+					if (!user.isInstructor()) throw new Exception();
+					Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+					out.println(Home.header("Select ChemVantage Practice Exam Topics") + a.selectExamQuestionsForm(user) + Home.footer);
+					break;
+				case "ReviewExamScores":
+					out.println(Home.header("Review ChemVantage Practice Exam Scores") + reviewExamScores(user) + Home.footer);
+					break;
+				case "ReviewExam":
+					long practiceExamTransactionId = Long.parseLong(request.getParameter("PracticeExamTransactionId"));
+					out.println(Home.header("Review ChemVantage Practice Exam") + reviewExam(user,practiceExamTransactionId) + Home.footer);
+					break;
+				default: out.println(Home.header("ChemVantage Practice Exam") + printExam(user,request) + Home.footer);
+			}
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
@@ -100,13 +111,21 @@ public class PracticeExam extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 			
-			if ("UpdateAssignment".contentEquals(userRequest)) {
-				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-				a.updateQuestions(request);
-				out.println(Home.header("ChemVantage Practice Exam") + printExam(user,request) + Home.footer);
-			} else out.println(Home.header("ChemVantage Practice Exam Results") + printScore(user,request) + Home.footer);
+			switch(userRequest) {
+				case "UpdateAssignment":
+					Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+					a.updateQuestions(request);
+					out.println(Home.header("ChemVantage Practice Exam") + printExam(user,request) + Home.footer);
+					break;
+				case "Submit Revised Exam Score":
+					if (submitRevisedExamScore(user,request)) out.println(Home.header("Review ChemVantage Practice Exam Scores") + reviewExamScores(user) + Home.footer);
+					else out.println("Sorry, an unexpected error occurred. Please go BACK and try again.");
+					break;
+				default: out.println(Home.header("ChemVantage Practice Exam Results") + printScore(user,request) + Home.footer);
+			}
 		} catch (Exception e) {
-			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
+			response.getWriter().println(e.toString() + " " + e.getMessage());
+			//response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
 	}
 
@@ -150,7 +169,7 @@ public class PracticeExam extends HttpServlet {
 
 	String printExam(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		//String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
+		
 		try {
 			// Get requested topic ids for this exam
 			List<Long> topicIds = new ArrayList<Long>();
@@ -196,6 +215,7 @@ public class PracticeExam extends HttpServlet {
 			
 			if (pt == null) {  // this is a valid request for a new exam with at least 3 topicIds; create a new transaction
 				pt = new PracticeExamTransaction(topicIds,user.id,now,null,new int[topicIds.size()],new int[topicIds.size()],user.getLisResultSourcedid());
+				pt.assignmentId = assignmentId;
 				ofy().save().entity(pt).now();	
 			}
 			
@@ -221,11 +241,9 @@ public class PracticeExam extends HttpServlet {
 				questionKeys_15pt.removeAll(remove); remove.clear();
 			}
 
-			buf.append("\n<h2>" + subject.title + " Exam</h2>");
-
-			if (request.getServerName().contains("dev-vantage")) buf.append("<font color=red>This is a development server that should be used for testing only.<br>"
-					+ "Please DO NOT use this server for serious instruction.<br>See the <a href=/lti/registration>LTI registration page</a> if your need "
-					+ "access to the ChemVantage production server.</font><p>");
+			buf.append("<script>function showWorkBox(qid){}</script>");  // prevents javascript error from Question.print()
+			
+			buf.append("<h2>General Chemistry Exam</h2>");
 			
 			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			
@@ -240,7 +258,8 @@ public class PracticeExam extends HttpServlet {
 
 			if (user.isInstructor()) buf.append("<mark>"
 					+ "Instructor: you may <a href=/PracticeExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + ">"
-					+ "customize this practice exam</a> by selecting/deselecting the available question items."
+					+ "customize this practice exam</a>. You may also <a href=/PracticeExam?UserRequest=ReviewExamScores&sig=" + user.getTokenSignature() 
+					+ ">review the scores</a> on this assignment."
 					+ "</mark><p>");
 			
 			buf.append("This exam must be submitted for grading within " + timeLimit + " minutes of when it is first downloaded.");
@@ -284,6 +303,7 @@ public class PracticeExam extends HttpServlet {
 				possibleScores[topicIds.indexOf(q.topicId)] += q.pointValue;
 				q.setParameters((int)(pt.id - q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
+				pt.questionKeys.add(k);
 			}
 			buf.append("</OL>");
 
@@ -307,7 +327,10 @@ public class PracticeExam extends HttpServlet {
 				possibleScores[topicIds.indexOf(q.topicId)] += q.pointValue;
 				q.setParameters((int)(pt.id - q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
-				buf.append("<SCRIPT>document.getElementById('showWork" + q.id + "').style.display='';</SCRIPT>");
+				if (assignmentId>0) buf.append("<SCRIPT>"
+						+ "document.getElementById('showWork" + q.id + "').style.display='';"
+						+ "</SCRIPT>");
+				pt.questionKeys.add(k);
 			}
 			buf.append("</OL>");
 
@@ -331,7 +354,11 @@ public class PracticeExam extends HttpServlet {
 				possibleScores[topicIds.indexOf(q.topicId)] += q.pointValue;
 				q.setParameters((int)(pt.id - q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
-				buf.append("<SCRIPT>document.getElementById('showWork" + q.id + "').style.display='';</SCRIPT>");
+				if (assignmentId>0) buf.append("<SCRIPT>"
+						+ "document.getElementById('showWork" + q.id + "').style.display='';"
+						+ "document.getElementById('showWork" + q.id + "').placeholder='Show your work here. If your instructor reviews this assignment, you might receive partial credit for evidence of sound thinking.';"
+						+ "</SCRIPT>");
+				pt.questionKeys.add(k);
 			}
 			buf.append("</OL>");
 
@@ -421,14 +448,18 @@ public class PracticeExam extends HttpServlet {
 				} catch (Exception e2) {}
 			}
 			
+			// find the Assignment object for this Practice Exam, if it exists
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
+			  
+			List<Response> responses = new ArrayList<Response>();
 			// begin the main scoring loop:
 			for (Key<Question> k : questionKeys) {
-
+				Question q=null;
 				String studentAnswer[] = request.getParameterValues(Long.toString(k.getId()));
 				if (studentAnswer != null) for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
 				else studentAnswer = new String[] {""};
 				if (studentAnswer[0].length() > 0) { // an answer was submitted
-					Question q = examQuestions.get(k);
+					q = examQuestions.get(k);
 					if (q==null) {
 						try {
 							q = ofy().load().key(k).safe();
@@ -440,24 +471,26 @@ public class PracticeExam extends HttpServlet {
 					q.setParameters((int)(pt.id - q.id));
 					int score = studentAnswer[0].length()==0?0:q.isCorrect(studentAnswer[0])?q.pointValue:0;
 					if (score > 0) studentScores[topicIds.indexOf(q.topicId)] += score;
-					if (studentAnswer[0].length() > 0) ofy().save().entity(new Response("PracticeExam",q.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now));
+					if (studentAnswer[0].length() > 0) {
+						Response r = new Response("PracticeExam",q.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now);
+						r.transactionId = pt.id;
+						responses.add(r);
+					}
 					if (score == 0) {
 						// include question in list of incorrectly answered questions
 						wrongAnswers++;
 						missedQuestions.append("\n<LI>" + q.printAllToStudents(studentAnswer[0],false) + "</LI>\n");
 					}
 				}
+				if (q!=null && q.pointValue > 2) pt.questionShowWork.put(k, request.getParameter("ShowWork" + k.getId()));
 			}
 			missedQuestions.append("</OL>\n");
 			pt.scores = studentScores;
 			pt.graded = now;
-			ofy().save().entity(pt);
+			ofy().save().entity(pt).now();
+			ofy().save().entities(responses);
 			
-			Assignment a = null;  // find the Assignment object for this Practice Exam, if it exists
 			try {
-				//a = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
-				a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-				//Queue queue = QueueFactory.getDefaultQueue();  // used for computing Score objects offline by Task queue
 				Score s = Score.getInstance(user.id,a);
 				ofy().save().entity(s).now();
 				if (a.lti_ags_lineitem_url != null) { // LTI v1.3
@@ -503,51 +536,8 @@ public class PracticeExam extends HttpServlet {
 		}
 		return buf.toString();
 	}
-/*	
-	String ajaxExamJavaScript() {
-		return "<SCRIPT TYPE='text/javascript'>\n"
-		+ "function ajaxSpellCheck(id) {\n"
-		+ "  var xmlhttp;\n"
-		+ "  var answer = document.getElementById(id).value.trim();\n"
-		+ "  if (answer.length==0) {\n"
-		+ "    document.getElementById('status').innerHTML='Nothing to check';\n"
-		+ "    return false;\n"
-		+ "  }\n"
-		+ "  xmlhttp=GetXmlHttpObject();\n"
-		+ "  if (xmlhttp==null) {\n"
-		+ "    alert ('Sorry, your browser does not support AJAX!');\n"
-		+ "    return false;\n"
-		+ "  }\n"
-		+ "  xmlhttp.onreadystatechange=function() {\n"
-		+ "  var correctedAnswer;\n"
-		+ "  var status=document.getElementById('status'+id);\n"
-		+ "  var answerField=document.getElementById(id);\n"
-		+ "    if (xmlhttp.readyState==4) {\n"
-		+ "      correctedAnswer = xmlhttp.responseText.trim();\n"
-		+ "      if (correctedAnswer=='Spell checker is offline, sorry') {\n"
-		+ "      status.innerHTML=correctedAnswer; return false;\n"
-		+ "    }\n"
-		+ "    answerField.value=correctedAnswer;\n"
-		+ "    if (correctedAnswer==answer) status.innerHTML='Spelling is OK';\n"
-		+ "    else status.innerHTML='Did you mean this instead?';\n"
-		+ "    }\n"
-		+ "  }\n"
-		+ "  xmlhttp.open('GET','SpellingChecker?UserRequest=SpellCheck&Answer='+answer,true);\n"
-		+ "  xmlhttp.send(null);\n"  
-		+ "  return false;\n"
-		+ "}\n"
-		+ "function GetXmlHttpObject() {\n"
-		+ "  if (window.XMLHttpRequest) { // code for IE7+, Firefox, Chrome, Opera, Safari\n"
-		+ "    return new XMLHttpRequest();\n"
-		+ "  }\n"
-		+ "  if (window.ActiveXObject) { // code for IE6, IE5\n"
-		+ "    return new ActiveXObject('Microsoft.XMLHTTP');\n"
-		+ "  }\n"
-		+ "  return null;\n"
-		+ "}\n"
-		+ "</SCRIPT>";			
-	}
-*/
+
+
 	String ajaxScoreJavaScript(String signature) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note,email) {\n"
@@ -616,5 +606,246 @@ public class PracticeExam extends HttpServlet {
 		+ "  return null;\n"
 		+ "}\n"
 		+ "</SCRIPT>";
+	}
+	
+	String reviewExamScores(User user) {
+		StringBuffer buf = new StringBuffer();
+		try {
+			if (!user.isInstructor()) return "<h2>Access Denied</h2>You must be an instructor to view this page.";
+
+			long assignmentId = user.getAssignmentId();
+
+			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).now();
+			if (a == null) return "Sorry, we did not find an assignment associated with this practice exam.";
+
+			List<Topic> topics = new ArrayList<Topic>(ofy().load().type(Topic.class).ids(a.topicIds).values());
+
+			buf.append("<h2>Practice Exam Assignment Results</h2>"
+					+ "Assignment ID: " + assignmentId + "<br>"
+					+ "Created: " + a.created + "<br>"
+					+ "Topics covered:<ol>");
+			for (Topic t : topics) buf.append("<li>" + t.title + "</li>");
+			buf.append("</ol>");
+
+			// Get all of the PracticeExamTransactions associated with this assignment:
+			List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("assignmentId",assignmentId).list();			
+			List<PracticeExamTransaction> abandoned = new ArrayList<PracticeExamTransaction>();
+			for (PracticeExamTransaction pet : pets) if (pet.graded==null) abandoned.add(pet);
+			pets.removeAll(abandoned);
+			
+			if (pets.size()==0) {
+				buf.append("There are no submissions of this practice exam assignment yet.<p>");
+				return buf.toString();
+			}
+
+			int i=0;
+			buf.append("<table>");
+			buf.append("<tr><th>Exam</th><th>Downloaded</th><th>Elapsed Time</th>");
+			for (int j=1;j<=topics.size();j++) buf.append("<th>Topic " + j + "</th>");
+			buf.append("<th>Total Score</th><th>Reviewed</th><th></th></tr>");
+			for (PracticeExamTransaction pet : pets) {
+				i++;
+				buf.append("<tr style='text-align: center'>");
+				buf.append("<td>" + i + "</td><td>" + pet.downloaded + "</td><td>" + ((pet.graded.getTime()-pet.downloaded.getTime())/60000) + " min.</td>");
+
+				int score = 0;
+				int possibleScore = 0;
+				for (int j=0;j<a.topicIds.size();j++) {
+					score += pet.scores[j];
+					possibleScore += pet.possibleScores[j];
+					if (pet.possibleScores[j] == 0) buf.append("<td>0%</td>");
+					else buf.append("<td>" + String.valueOf(100*pet.scores[j]/pet.possibleScores[j]) + "%" + "</td>");
+				}
+				if (pet.graded==null) buf.append("<td> - </td><td> - </td><td></td>");
+				else {
+					buf.append("<td>" + String.valueOf(100*score/possibleScore) + "%</td><td>" 
+							+ (pet.graded==null?" - ":(pet.reviewed==null?"no":pet.reviewed)) + "</td><td>"
+							+ "<a href=PracticeExam?UserRequest=ReviewExam&PracticeExamTransactionId=" + pet.id 
+							+ "&sig=" + user.getTokenSignature() + ">Review</a></td>");
+				}
+				buf.append("</tr>");
+			}
+			buf.append("</table><p>");
+			
+			buf.append("In addition, " + abandoned.size() + " exams were downloaded but not submitted for grading.<p>");
+		} catch (Exception e) {
+			buf.append(e.toString());
+		}
+		return buf.toString();
+	}
+	
+	String reviewExam(User user, long practiceExamTransactionId) {
+		StringBuffer buf = new StringBuffer();
+		try {
+			if (!user.isInstructor()) return "<h2>Access Denied</h2>You must be an instructor to view this page.";
+
+			PracticeExamTransaction pet = ofy().load().type(PracticeExamTransaction.class).id(practiceExamTransactionId).safe();
+			if (pet.assignmentId != user.getAssignmentId()) return "<h2>Access Denied</h2>Go back and relaunch this assignment from your LMS.";
+			
+			// Get the question keys from the PracticeExamTransaction and sort them into 3 lists by point value
+			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
+			List<Key<Question>> questionKeys_10pt = new ArrayList<Key<Question>>();
+			List<Key<Question>> questionKeys_15pt = new ArrayList<Key<Question>>();
+			
+			for (Key<Question> k : pet.questionKeys) {
+				Question q = examQuestions.get(k);
+				if (q==null) {
+					try {
+						q = ofy().load().key(k).safe();
+						examQuestions.put(k,q);
+					} catch (Exception e) {
+						continue;  // this catches cases where an assigned question no longer exists
+					}
+				}
+				switch (q.pointValue) {
+					case (2): questionKeys_02pt.add(k); break;
+					case (10): questionKeys_10pt.add(k); break;
+					case (15): questionKeys_15pt.add(k); break;
+				}
+			}
+			
+			// create a HashMap of all the questionIds and student's responses for all items submitted
+			List<Response> responses = ofy().load().type(Response.class).filter("transactionId",pet.id).list();
+			Map<Long,String> studentAnswers = new HashMap<Long,String>();
+			for (Response r : responses) studentAnswers.put(r.questionId,r.studentResponse);
+			
+			buf.append("<h2>General Chemistry Exam</h2>");
+		
+			
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+			List<Topic> topics = new ArrayList<Topic>(ofy().load().type(Topic.class).ids(a.topicIds).values());
+			buf.append("Topics covered:<ol>");
+			for (Topic t : topics) buf.append("<li>" + t.title + "</li>");
+			buf.append("</ol>");
+
+			buf.append("<form action=/PracticeExam method=post>"
+					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + ">"
+					+ "<input type=hidden name=PracticeExamTransactionId value=" + String.valueOf(practiceExamTransactionId) + ">");
+			
+			buf.append("Please review the student responses to the exam questions below. Use the sliders on the right to award "
+					+ "partial credit or otherwise edit the scores as appropriate. When you are finished, click the button to "
+					+ "<input type=submit name=UserRequest value='Submit Revised Exam Score'> to your LMS grade book.");
+			
+			int i=0; // counter for the question items
+			
+			// Two-point questions
+			buf.append("<h3>2 point questions:</h3>");
+			buf.append("<table>");
+			for(Key<Question> k : questionKeys_02pt) {
+				i++;
+				Question q = examQuestions.get(k);
+				q.setParameters((int)(pet.id - q.id));
+				buf.append("<tr style='vertical-align:middle'><td><b>" + i + ". </b>" 
+						+ q.printAllToStudents(studentAnswers.get(q.id),false) + "</td>");
+
+				// Try to get the question score from the PracticeExamTransaction. If null, recompute it from the student's response
+				int score = pet.questionScores.get(k)==null?(q.isCorrect(studentAnswers.get(q.id))?q.pointValue:0):pet.questionScores.get(k);
+				
+				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"
+						+ "<input type=range name=Range" + q.id + " value=" + score + " min=0 max=" + q.pointValue 
+						+ " onchange=document.getElementById('score" + q.id + "').innerHTML=this.value;></td>");
+				buf.append("</tr>");
+			}
+			buf.append("</table>");
+
+			i=0;
+			
+			// Ten-point questions
+			buf.append("<h3>10 point questions:</h3>");
+			buf.append("<table>");
+			for(Key<Question> k : questionKeys_10pt) {
+				i++;
+				Question q = examQuestions.get(k);
+				q.setParameters((int)(pet.id - q.id));
+				buf.append("<tr style='vertical-align:middle'><td><b>" + i + ". </b>" 
+						+ q.printAllToStudents(studentAnswers.get(q.id),true,pet.questionShowWork.get(k)) + "</td>");
+
+				// Try to get the question score from the PracticeExamTransaction. If null, recompute it from the student's response
+				int score = pet.questionScores.get(k)==null?(q.isCorrect(studentAnswers.get(q.id))?q.pointValue:0):pet.questionScores.get(k);
+				
+				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"
+						+ "<input type=range name=Range" + q.id + " value=" + score + " min=0 max=" + q.pointValue 
+						+ " onchange=document.getElementById('score" + q.id + "').innerHTML=this.value;></td>");
+				buf.append("</tr>");
+			}
+			buf.append("</table>");
+
+			i=0;
+			
+			// Fifteen-point questions
+			buf.append("<h3>15 point questions:</h3>");
+			buf.append("<table>");
+			for(Key<Question> k : questionKeys_15pt) {
+				i++;
+				Question q = examQuestions.get(k);
+				q.setParameters((int)(pet.id - q.id));
+				buf.append("<tr style='vertical-align:middle'><td><b>" + i + ". </b>" 
+						+ q.printAllToStudents(studentAnswers.get(q.id),true,pet.questionShowWork.get(k)) + "</td>");
+
+				// Try to get the question score from the PracticeExamTransaction. If null, recompute it from the student's response
+				int score = pet.questionScores.get(k)==null?(q.isCorrect(studentAnswers.get(q.id))?q.pointValue:0):pet.questionScores.get(k);
+				
+				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"
+						+ "<input type=range name=Range" + q.id + " value=" + score + " min=0 max=" + q.pointValue 
+						+ " onchange=document.getElementById('score" + q.id + "').innerHTML=this.value;></td>");
+				buf.append("</tr>");
+			}
+			buf.append("</table>");
+			
+			buf.append("<h3>When You Have Finished Reviewing This Exam</h3>"
+					+ "Please click the button to <input type=submit name=UserRequest value='Submit Revised Exam Score'> to your LMS grade book.");
+
+			buf.append("</form>");
+		} catch (Exception e) {
+			buf.append(e.toString());
+		}
+		return buf.toString();
+	}
+	
+	boolean submitRevisedExamScore(User user,HttpServletRequest request) throws Exception {
+		try {
+			// First do some validation to make sure that the user is the instructor for this assignment and the transaction is for this assignment:
+			if (!user.isInstructor()) throw new Exception("You must be the instructor for this course.");
+			long practiceExamTransactionId = Long.parseLong(request.getParameter("PracticeExamTransactionId"));
+			PracticeExamTransaction pet = ofy().load().type(PracticeExamTransaction.class).id(practiceExamTransactionId).safe();
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+			if (!pet.assignmentId.equals(a.id)) throw new Exception("Mismatched assignment ID values");
+			
+			// reset the transaction scores arrays
+			pet.scores = new int[pet.topicIds.size()];
+			pet.possibleScores = new int[pet.topicIds.size()];
+			
+			// Iterate through all of the questions for this exam, getting scores from the range inputs on the review form and compiling the scores
+			for (Key<Question> k : pet.questionKeys) {
+				Question q = examQuestions.get(k);
+				if (q==null) try {
+					q = ofy().load().key(k).safe();
+					examQuestions.put(k,q);
+				} catch (Exception e) {}  // might fail if the question is deleted from the database (too bad, sorry)
+				int score = Integer.parseInt(request.getParameter("Range" + k.getId()));
+				pet.questionScores.put(k, score);
+				pet.scores[pet.topicIds.indexOf(q.topicId)] += score;
+				pet.possibleScores[pet.topicIds.indexOf(q.topicId)] += q.pointValue; 
+			}
+			
+			// Record the timestamp for the exam review and save the revised transaction entity
+			pet.reviewed = new Date();
+			ofy().save().entity(pet).now();
+			
+			// Create/store a new Score entity and submit it to the LMS grade book
+			try {
+				Score s = Score.getInstance(user.id,a);
+				ofy().save().entity(s).now();
+				if (a.lti_ags_lineitem_url != null) { // LTI v1.3
+					LTIMessage.postUserScore(s);
+				} else if (a.lis_outcome_service_url != null) { // LTI v1.1 put report into the Task Queue
+					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  
+				}
+			} catch (Exception e) {}
+
+		} catch (Exception e) {
+			throw e;
+		}
+		return true;
 	}
 }
