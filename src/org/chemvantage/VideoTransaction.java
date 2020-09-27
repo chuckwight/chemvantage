@@ -32,7 +32,7 @@ public class VideoTransaction {
 	@Index	long videoId;
 	@Index	String userId;
 	@Index	Date downloaded;
-			Date graded;
+	@Index	Date graded;
 			int score;
 	@Index(IfNotZero.class)	long assignmentId;
 			List<Integer> quizletScores;
