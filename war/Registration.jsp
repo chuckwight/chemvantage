@@ -35,12 +35,9 @@ complete the configuration of your LMS as well as a link to finalize the registr
 Your Name: <input type=text name=sub> and Email: <input type=text name=email><br><br>
 
 Type of organization and subscription pricing:<br>
-<label><input type=radio name=typ value=nonprofit checked>
-	Public or nonprofit institution (free for up to 1000 users)</label><br>
-<label><input type=radio name=typ value=forprofit>
-	For-profit school or company ($5000/yr for up to 10000 users)</label><br>
-<label><input type=radio name=typ value=personal>
-	Personal subscription ($20/month for up to 10 users)</label><br><br>
+<label><input type=radio name=typ value=nonprofit checked> Public school or nonprofit institution</label><br>
+<label><input type=radio name=typ value=forprofit> Commercial company or for-profit school</label><br>
+<label><input type=radio name=typ value=personal> Personal account (up to 5 users)</label><br><br>
 
 <span id=orginfo>Your Organization: <input type=text name=aud> and Home Page: <input type=text name=url placeholder='https://myschool.edu'><br>
 	For immediate access, your Email domain (above) should match the Home Page domain.<br><br></span>

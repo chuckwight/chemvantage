@@ -114,11 +114,6 @@ public class LTIRegistration extends HttpServlet {
 			else throw new Exception("LTI version was missing or invalid.");
 		} else {
 			response.sendRedirect("/Registration.jsp");
-			/*
-			response.setContentType("text/html");
-			String use = request.getParameter("use");
-			out.println(Home.header("ChemVantage LTI Registration Form") + applicationForm(use) + Home.footer);
-			*/
 		}
 		} catch (Exception e) {
 			response.sendError(401, e.getMessage());
@@ -150,51 +145,7 @@ public class LTIRegistration extends HttpServlet {
 			response.sendError(401,e.getMessage() + "Please go BACK and try again or contact admin@chemvantage.org for assistance.");
 		}
 	}
-	
-	String applicationForm(String use) {
-		if (use==null) use = "prod";
-		StringBuffer buf = new StringBuffer(Home.banner + "<p>");
-		buf.append("ChemVantage is an Open Education Resource for teaching and learning college-level General "
-				+ "Chemistry. We offer this service at no charge for nonprofit educational purposes.");
-		buf.append("<h4>ChemVantage LTI Registration</h4>");
-		buf.append("Please complete the form below to obtain a free set of LTI credentials. The information you "
-				+ "provide will help us to create a connection between your learning management system (LMS) and "
-				+ "ChemVantage that is convenient, secure and "
-				+ "<a href=https://site.imsglobal.org/certifications?query=chemvantage>certified by IMS</a>. "
-				+ "When you submit the form, you will receive an email containing the information you need to "
-				+ "complete the configuration of your LMS as well as a link to finalize the registration.<p>");
-		buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");				
-		buf.append("<form method=post action=/lti/registration>"
-				+ "Your Name: <input type=text name=sub>&nbsp;"
-				+ "and Email: <input type=text name=email><br>"
-				+ "Your Organization: <input type=text name=aud>&nbsp;"
-				+ "and Home Page: <input type=text name=url placeholder='https://myschool.edu'><p>"
-				+ "Select your use case:<br>"
-				+ "<label><input type=radio name=use value=prod" + (use.equals("prod")?" checked":"") + ">Teaching a chemistry class (production environment)</label><br>"
-				+ "<label><input type=radio name=use value=test" + (use.equals("test")?" checked":"") + ">Dev server (for debugging LTI connections)</label><p>"
-				+ "Type of LTI registration:<br>"
-				+ "<label><input type=radio name=ver value=1p1 checked>LTI version 1.1 (preferred)</label><br>"
-				+ "<label><input type=radio name=ver value=1p3>LTI Advantage (certified but still clunky)</label><p>"
-				+ "Type of Learning Management System:<br>"
-				+ "<label><input type=radio name=lms value=blackboard>Blackboard</label><br>"
-				+ "<label><input type=radio name=lms value=brightspace>Brightspace</label><br>"
-				+ "<label><input type=radio name=lms value=canvas>Canvas</label><br>"
-				+ "<label><input type=radio name=lms value=moodle>Moodle</label><br>"
-				+ "<label><input type=radio name=lms value=sakai>Sakai</label><br>"
-				+ "<label><input type=radio name=lms value=schoology>Schoology</label><br>"
-				+ "<label><input type=radio name=lms id=other value=other>Other: </label><input type=text name=lms_other onFocus=document.getElementById('other').checked=true;><p>");
 		
-		// Insert a checkbox confirming acceptance of the ChemVantage Terms of Service
-		buf.append("<label><input type=checkbox name=AcceptChemVantageTOS value=true>I accept the <a href=/About#terms target=_blank>ChemVantage Terms of Service</a>.</label><br><br>");
-		
-		// Insert the Google reCaptcha tool (version 2) on the page
-		buf.append("<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div><p>");
-		
-		buf.append("<input type=submit name=UserRequest value='Send Me The Registration Email'>"
-				+ "</form>");
-		return buf.toString();
-	}
-	
 	String validateApplicationFormContents(HttpServletRequest request) throws Exception {
 		String sub = request.getParameter("sub");
 		String email = request.getParameter("email");
@@ -319,7 +270,7 @@ public class LTIRegistration extends HttpServlet {
 			case "personal":
 				buf.append("You indicated on your application that your ChemVantage registration is for your own personal use. ChemVantage will send you "
 						+ "an invoice in the next few days for payment of the $20 monthly subscription charge. This subscription allows up " 
-						+ "to 10 users. To exceed this limit, please contact us for pricing at admin@chemvantage.org<p>"); 
+						+ "to 5 users. To exceed this limit, please contact us for pricing at admin@chemvantage.org<p>"); 
 				buf.append("Your subscription " + (instant?"has been activated for 10 days pending payment of your subscription.":"is suspended "
 						+ "until payment is received because your email domain does not match a recognized organizational home page domain.") + "<p>"); break;
 			default: 
