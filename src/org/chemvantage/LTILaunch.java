@@ -125,11 +125,11 @@ public class LTILaunch extends HttpServlet {
 				return;
 			}
 			
+			Date now = new Date();
 			BLTIConsumer tc;
 			try {
 				tc = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).safe();
 				if (tc.secret==null) throw new Exception("Shared secret was not found in the ChemVantage database.");
-				Date now = new Date();
 				Date yesterday = new Date(now.getTime()-86400000L);  // 24 hrs ago
 				if (tc.lastLogin==null || tc.lastLogin.before(yesterday)) {
 					tc.lastLogin = now;
@@ -223,7 +223,7 @@ public class LTILaunch extends HttpServlet {
 			}
 			// user information OK;
 			//debug.append("userId=" + userId + " and role=" + (user.isInstructor()?"Instructor":"Learner") + "...");
-
+			
 			// Gather information that may be needed to return a score to the LMS:
 			String lis_result_sourcedid = request.getParameter("lis_result_sourcedid");
 			//debug.append("lis_result_sourcedid=" + lis_result_sourcedid + "...");
@@ -254,7 +254,9 @@ public class LTILaunch extends HttpServlet {
 			
 			// At this point we should have a valid Assignment, but it may not have an 
 			// assignmentType or topicId(s). If so, show the the pickResource form:
-			if (myAssignment.isValid()) {
+			
+			if (tc.expires.before(now)) response.getWriter().println(Home.header("ChemVantage Account Management") + expiredAccount(tc,request.getServerName()) + Home.footer);			
+			else if (myAssignment.isValid()) {
 				switch (myAssignment.assignmentType) {
 				case "Quiz":
 					redirectUrl = "/Quiz.jsp" + "?sig=" + user.getTokenSignature();
@@ -511,6 +513,38 @@ public class LTILaunch extends HttpServlet {
 		out.println(s + (e==null?"":"<br>" + e.toString()) + message);
 	}
 
+	public String expiredAccount(BLTIConsumer tc, String serverName) {
+		StringBuffer buf = new StringBuffer();
+		
+		buf.append(Home.banner + "<h3>Your ChemVantage Account Has Expired</h3>");
+		
+		buf.append("The ChemVantage LTI account using these credentials expired automatically at " + tc.expires + ".<p>"
+				+ "The most likely reason for this is ");
+		
+		if (serverName.contains("dev")) {
+			buf.append("your 10 day free trial period has expired, and we have not yet received payment for your "
+					+ "annual subscription for access to the ChemVantage Development Server.<p>");
+		} else {	
+			switch(tc.org_type) {
+			case "nonprofit": 
+				buf.append("we were unable to verify that your organization is a public (government run) or non-profit institution.<p>");
+				break;
+			case "forprofit": 
+				buf.append("we have not yet received payment for your annual subscription (or renewal) within 30 days.<p>");
+				break;
+			case "personal": 
+				buf.append("we have not yet received payment for your monthly subscription renewal.<p>");
+				break;
+			}
+		}
+		
+		buf.append("Please contact us at <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a> to help us get you connected again.<p>");
+		
+		buf.append("Thank you for your interest in ChemVantage,<p> - Chuck Wight<p>");
+		
+		return buf.toString();
+	}
+	
 	@Override
 	public void destroy() {
 

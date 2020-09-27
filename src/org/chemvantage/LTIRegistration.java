@@ -252,32 +252,42 @@ public class LTIRegistration extends HttpServlet {
 				+ (org.isEmpty()?"":"Org: " + org + " (" + url + ")<br>")
 				+ "LMS: " + lms + "<p>");
 		
-		buf.append("Thank you for your ChemVantage registration request. ");
+		buf.append("Thank you for your ChemVantage registration request.<p>");
 		
-		switch (typ) {
+		if (iss.contains("dev")) {
+			buf.append("You indicated on the registration form that your use case is testing LTI connections. ChemVantage is pleased to support "
+					+ "the LTI community by offering access to our code development server for this purpose. When you complete the registration "
+					+ "steps below, your account will be activated for a free 10 day trial period for up to 5 users in your LMS.<p>"
+					+ "Please do not use the development server for serious instructional purposes.<p>"
+					+ "ChemVantage will send you an invoice in the next few days for payment of the $5000 annual subscription fee to be a "
+					+ "ChemVantage code development partner. However, if you do not require access to our development server past the 10 day free "
+					+ "trial period, simply ignore the invoice and your account will be deactivated automatically.<p>");
+		} else {
+			switch (typ) {
 			case "nonprofit":
-				buf.append("You indicated on your application that " + org + " is a public or non-profit institution. As such, ChemVantage "
-						+ "services are provided free for up to 1000 users. Please contact us for pricing beyond this limit.<p>"
-						+ "Your free subscription " + (instant?"has been activated while we verify your organization's nonprofit "
-						+ "status.":"is suspended pending verification of your account because your email domain does not match "
-						+ "your organization's domain.") + "<p>"); break;
+				buf.append("You indicated on the registration form that " + org + " is a public or non-profit institution. As such, ChemVantage "
+						+ "services are provided free for up to 1000 users in your LMS. Please contact us for pricing beyond this limit.<p>"
+						+ "Your account will be activated when you complete the registration steps below. " 
+						+ (instant?"":"However, full access to ChemVantage resources will be delayed pending verification of your account "
+								+ "because your email domain does not match your organization's domain.") + "<p>"); 
+				break;
 			case "forprofit":
-				buf.append("You indicated on your application that " + org + " is a for-profit school or company. ChemVantage will send you "
+				buf.append("You indicated on the registration form that " + org + " is a for-profit school or company. ChemVantage will send you "
 						+ "an invoice in the next few days for payment of the $5000 annual subscription charge. This subscription allows up "
-						+ "to 10,000 users. To exceed this limit, please contact us for pricing at admin@chemvantage.org<p>");
-				buf.append("Your subscription " + (instant?"has been activated for 30 days pending payment of your subscription.":"is suspended "
-						+ "until payment is received because your email domain does not match your organization's domain.") + "<p>"); break;
+						+ "to 10,000 users from your LMS. To exceed this limit, please contact us for pricing at admin@chemvantage.org. "
+						+ "Your account has been activated for 30 days pending payment of your subscription. " 
+						+ (instant?"":"However, full access to ChemVantage resources will be delayed pending verification of your account "
+						+ "because your email domain does not match your organization's domain.") + "<p>"); 
+				break;
 			case "personal":
-				buf.append("You indicated on your application that your ChemVantage registration is for your own personal use. ChemVantage will send you "
+				buf.append("You indicated the registration form that your ChemVantage registration is for your own personal use. ChemVantage will send you "
 						+ "an invoice in the next few days for payment of the $20 monthly subscription charge. This subscription allows up " 
-						+ "to 5 users. To exceed this limit, please contact us for pricing at admin@chemvantage.org<p>"); 
-				buf.append("Your subscription " + (instant?"has been activated for 10 days pending payment of your subscription.":"is suspended "
-						+ "until payment is received because your email domain does not match a recognized organizational home page domain.") + "<p>"); break;
+						+ "to 5 users from your LMS. To exceed this limit, please contact us for pricing at admin@chemvantage.org."
+						+ "Your account has been activated for 10 days pending payment of your subscription.<p>");
+				break;
 			default: 
+			}
 		}
-		
-		if (!instant) buf.append("Although your ChemVantage account is suspended pending " + ("nonprofit".contentEquals(typ)?"verification, ":"payment, ") 
-				+ "you may continue at this point to establish the LTI connection between your LMS and ChemVantage. ");
 		
 		if (ver.contentEquals("1p1")) { // older LTIv1p1 registration process; deprecated 12/31/2020
 			
@@ -535,10 +545,17 @@ public class LTIRegistration extends HttpServlet {
 			con.org_url = url;
 			con.org_type = typ;
 			con.created = new Date();
-			if (instant) {
-				if ("forprofit".equals(typ) || "nonprofit".contentEquals(typ)) con.expires = new Date(new Date().getTime() + 2592000000L);  // 30 days from now	
-				else con.expires = new Date(new Date().getTime() + 864000000L);  // 10 days from now for personal accounts
-			} else con.expires = new Date();
+			
+			if (iss.contains("dev")) con.expires = new Date(new Date().getTime() + 864000000L);  // dev server free trial period of 10 days
+			else {  // request id for access to the production server
+				switch (typ) {
+				case "nonprofit": con.expires = instant? null:new Date(new Date().getTime() + 2592000000L); break;  // forever or 30 days
+				case "forprofit": con.expires = new Date(new Date().getTime() + 2592000000L); break;  				// 30 days to pay invoice
+				case "personal": con.expires = new Date(new Date().getTime() + 864000000L); break;  				// 10 days
+				default: con.expires = new Date();
+				}
+			}
+			
 			ofy().save().entity(con).now();
 		}
 		
