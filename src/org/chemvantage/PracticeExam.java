@@ -362,7 +362,7 @@ public class PracticeExam extends HttpServlet {
 			buf.append("</OL>");
 
 			pt.possibleScores = possibleScores;
-			ofy().save().entity(pt);
+			ofy().save().entity(pt).now();
 
 			buf.append("\n<input type=hidden name='ExamId' value=" + pt.id + ">");
 			buf.append("\n<input type=hidden name='UserRequest' value='GradeExam'>");
@@ -448,7 +448,9 @@ public class PracticeExam extends HttpServlet {
 			}
 			
 			// find the Assignment object for this Practice Exam, if it exists
-			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
+			
+			Assignment a = null;
+			if (!user.isAnonymous()) a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 			  
 			List<Response> responses = new ArrayList<Response>();
 			// begin the main scoring loop:

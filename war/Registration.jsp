@@ -34,7 +34,7 @@ complete the configuration of your LMS as well as a link to finalize the registr
 
 Your Name: <input type=text name=sub> and Email: <input type=text name=email><br><br>
 
-Type of organization and subscription pricing:<br>
+Type of organization:<br>
 <label><input type=radio name=typ value=nonprofit checked> Public school or nonprofit institution</label><br>
 <label><input type=radio name=typ value=forprofit> Commercial company or for-profit school</label><br>
 <label><input type=radio name=typ value=personal> Personal account (up to 5 users)</label><br><br>

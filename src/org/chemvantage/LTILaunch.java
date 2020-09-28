@@ -255,7 +255,7 @@ public class LTILaunch extends HttpServlet {
 			// At this point we should have a valid Assignment, but it may not have an 
 			// assignmentType or topicId(s). If so, show the the pickResource form:
 			
-			if (tc.expires.before(now)) response.getWriter().println(Home.header("ChemVantage Account Management") + expiredAccount(tc,request.getServerName()) + Home.footer);			
+			if (tc.expires != null && tc.expires.before(now)) response.getWriter().println(Home.header("ChemVantage Account Management") + expiredAccount(tc,request.getServerName()) + Home.footer);			
 			else if (myAssignment.isValid()) {
 				switch (myAssignment.assignmentType) {
 				case "Quiz":
