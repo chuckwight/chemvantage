@@ -203,7 +203,7 @@ public class PracticeExam extends HttpServlet {
 							+ "</script>");
 				} else {  // the request is for an exam corresponding to an assignment
 					for (PracticeExamTransaction t : qpt) {
-						if (t.topicIds.equals(a.topicIds)) {
+						if (t.assignmentId==a.id || t.topicIds.equals(a.topicIds)) {
 							pt = t;  // found the correct pending exam for this assignment
 							break;
 						}
@@ -230,17 +230,26 @@ public class PracticeExam extends HttpServlet {
 				questionKeys_10pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",10).keys().list());
 				questionKeys_15pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",15).keys().list());
 			}
-			
+
 			List<Key<Question>> remove = new ArrayList<Key<Question>>();
-			if (a != null) {  // eliminate any questionKeys not listed in the assignment
-				for (Key<Question> k : questionKeys_02pt) if (!a.questionKeys.contains(k)) remove.add(k);
+			if (pt.questionKeys==null || pt.questionKeys.isEmpty()) {  // create a new set of questions
+				if (a != null) {  // eliminate any questionKeys not listed in the assignment
+					for (Key<Question> k : questionKeys_02pt) if (!a.questionKeys.contains(k)) remove.add(k);
+					questionKeys_02pt.removeAll(remove); remove.clear();
+					for (Key<Question> k : questionKeys_10pt) if (!a.questionKeys.contains(k)) remove.add(k);
+					questionKeys_10pt.removeAll(remove); remove.clear();
+					for (Key<Question> k : questionKeys_15pt) if (!a.questionKeys.contains(k)) remove.add(k);
+					questionKeys_15pt.removeAll(remove); remove.clear();
+				}
+			} else {  // eliminate all but the prior selected questions for this transaction
+				for (Key<Question> k : questionKeys_02pt) if (!pt.questionKeys.contains(k)) remove.add(k);
 				questionKeys_02pt.removeAll(remove); remove.clear();
-				for (Key<Question> k : questionKeys_10pt) if (!a.questionKeys.contains(k)) remove.add(k);
+				for (Key<Question> k : questionKeys_10pt) if (!pt.questionKeys.contains(k)) remove.add(k);
 				questionKeys_10pt.removeAll(remove); remove.clear();
-				for (Key<Question> k : questionKeys_15pt) if (!a.questionKeys.contains(k)) remove.add(k);
+				for (Key<Question> k : questionKeys_15pt) if (!pt.questionKeys.contains(k)) remove.add(k);
 				questionKeys_15pt.removeAll(remove); remove.clear();
 			}
-
+			
 			buf.append("<script>function showWorkBox(qid){}</script>");  // prevents javascript error from Question.print()
 			
 			buf.append("<h2>General Chemistry Exam</h2>");
@@ -307,6 +316,8 @@ public class PracticeExam extends HttpServlet {
 			}
 			buf.append("</OL>");
 
+			if (pt.questionShowWork==null) pt.questionShowWork = new HashMap<Key<Question>,String>();  // initialize this, if necessary
+			
 			// 10-point questions
 			buf.append("<U>10 point questions:</U>");
 			buf.append("<OL>\n");
@@ -835,12 +846,12 @@ public class PracticeExam extends HttpServlet {
 			
 			// Create/store a new Score entity and submit it to the LMS grade book
 			try {
-				Score s = Score.getInstance(user.id,a);
+				Score s = Score.getInstance(pet.userId,a);
 				ofy().save().entity(s).now();
 				if (a.lti_ags_lineitem_url != null) { // LTI v1.3
 					LTIMessage.postUserScore(s);
 				} else if (a.lis_outcome_service_url != null) { // LTI v1.1 put report into the Task Queue
-					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  
+					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(pet.userId,"UTF-8")));  
 				}
 			} catch (Exception e) {}
 
