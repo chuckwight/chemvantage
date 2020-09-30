@@ -60,18 +60,23 @@ public class User {
 		this.exp = new Date(new Date().getTime() + 5400000L);  // value expires 90 minutes from now
 	}
 	
-	public static User getUser(String sig) {
-    	if (sig==null) return null;
+	public static User getUser(String sig) {  // default token expiration of 90 minutes
+    	return getUser(sig,90);
+	}
+		
+	public static User getUser(String sig,int minutesRequired) {   // allows custom expiration for long assignments
+		if (sig==null) return null;
     	User user = null;
     		
+    	minutesRequired += 2;  // grace period for session expiration
+    	
 		try {  // try to find the User entity in the datastore
     		user = ofy().load().type(User.class).id(Long.parseLong(sig)).safe();
     		Date now = new Date();
-        	Date in15min = new Date(now.getTime() + 900000L);
+        	Date expires = new Date(now.getTime() + minutesRequired*60000L);
     		if (user.exp.before(now)) return null; // entity has expired
-    		if (user.exp.before(in15min)) { // extend the exp time
-    			Date in90min = new Date(now.getTime() + 5400000L);
-    			user.exp = in90min;
+    		if (user.exp.before(expires)) { // extend the exp time
+    			user.exp = expires;
     			ofy().save().entity(user);
     		}
     		return user;

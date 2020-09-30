@@ -88,10 +88,10 @@ function showWorkBox(qid) {}
 	try {
 		assignmentId = user.getAssignmentId(); // should be non-zero for LTI user
 		if (assignmentId > 0) {
-			qa = ofy().load().type(Assignment.class).id(assignmentId).now();
-			topicId = qa.getTopicId();
+	qa = ofy().load().type(Assignment.class).id(assignmentId).now();
+	topicId = qa.getTopicId();
 		} else { // get the requested topicId for anonymous user
-			topicId = Long.parseLong(request.getParameter("TopicId"));
+	topicId = Long.parseLong(request.getParameter("TopicId"));
 		}
 	} catch (Exception e) { // alternative process for anonymous user
 		response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
@@ -99,13 +99,22 @@ function showWorkBox(qid) {}
 	Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
 	Date now = new Date();
 	
+	// Check to see if the timeAllowed has been modified by the instructor:
+	int timeAllowed = 900; // default value in seconds
+	if (qa != null && qa.timeAllowed != null) {
+		timeAllowed = qa.timeAllowed; // instructor option, e.g. for student disability accommodations
+		user = User.getUser(user.getTokenSignature(), timeAllowed / 60);
+	}
+
 	// Check to see if this user has any pending quizzes on this topic:
-	Date t15minAgo = new Date(now.getTime()-15*60000);  // 15 minutes ago
-	QuizTransaction qt = ofy().load().type(QuizTransaction.class).filter("userId",user.getId()).filter("topicId",topicId).filter("graded",null).filter("downloaded >",t15minAgo).first().now();
+	Date t15minAgo = new Date(now.getTime() - 15 * 60000); // 15 minutes ago
+	QuizTransaction qt = ofy().load().type(QuizTransaction.class).filter("userId", user.getId())
+			.filter("topicId", topicId).filter("graded", null).filter("downloaded >", t15minAgo).first().now();
 	String lis_result_sourcedid = user.getLisResultSourcedid();
 	if (qt == null || qt.getGraded() != null) {
-		qt = new QuizTransaction(topicId,topic.getTitle(),user.getId(),now,null,0,assignmentId,0,user.getLisResultSourcedid());
-		ofy().save().entity(qt).now();  // creates a long id value to use in random number generator
+		qt = new QuizTransaction(topicId, topic.getTitle(), user.getId(), now, null, 0, assignmentId, 0,
+				user.getLisResultSourcedid());
+		ofy().save().entity(qt).now(); // creates a long id value to use in random number generator
 	} else if (qt.getLisResultSourcedid() == null && lis_result_sourcedid != null) {
 		qt.putLisResultSourcedid(lis_result_sourcedid);
 		ofy().save().entity(qt);
@@ -191,7 +200,7 @@ Quiz Rules<OL>
 </FORM>
 
 <SCRIPT>
-startTimers(<%= new Date(qt.getDownloaded().getTime() + (qa==null || qa.timeAllowed==null?900000:qa.timeAllowed*1000)).getTime() %>);
+startTimers(<%= new Date(qt.getDownloaded().getTime() + timeAllowed*1000).getTime() %>);
 </SCRIPT>
 
 <%= Home.footer %>

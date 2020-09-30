@@ -201,7 +201,10 @@ public class PracticeExam extends HttpServlet {
 
 			// Check to see if the timeAllowed has been modified by the instructor:
 			int timeAllowed = 3600;  // default value in seconds
-			if (a != null && a.timeAllowed!=null) timeAllowed = a.timeAllowed;  // instructor option, e.g. for student disability accommodations
+			if (a != null && a.timeAllowed!=null) {
+				timeAllowed = a.timeAllowed;  // instructor option, e.g. for student disability accommodations
+				user = User.getUser(user.getTokenSignature(),timeAllowed/60);
+			}
 			
 			// Check to see if this user has any pending exams:
 			Date now = new Date();
