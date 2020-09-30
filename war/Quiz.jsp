@@ -191,7 +191,7 @@ Quiz Rules<OL>
 </FORM>
 
 <SCRIPT>
-startTimers(<%= new Date(qt.getDownloaded().getTime() + (qa==null?900000:qa.timeAllowed*1000)).getTime() %>);
+startTimers(<%= new Date(qt.getDownloaded().getTime() + (qa==null || qa.timeAllowed==null?900000:qa.timeAllowed*1000)).getTime() %>);
 </SCRIPT>
 
 <%= Home.footer %>

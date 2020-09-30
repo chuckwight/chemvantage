@@ -41,7 +41,7 @@ public class Assignment implements java.lang.Cloneable {
 	@Index	String resourceLinkId;
 	@Index 	Date created;
 	public	long videoId;    // used only for video assignments
-	public	int timeAllowed = 900; // to complete Quiz assignment, in seconds
+	public	Integer timeAllowed; // to complete assignment, in seconds default = 900 for Quiz, 3600 for PracticeExam
 			String lis_outcome_service_url;
 			String lti_ags_lineitem_url;
 			String lti_nrps_context_memberships_url;
@@ -90,18 +90,20 @@ public class Assignment implements java.lang.Cloneable {
 			buf.append("<h3>Customize " + assignmentType + " Assignment</h3>");
 			buf.append("<b>Topic: " + topic.title + "</b><p>");
 					
+			if (this.timeAllowed==null) this.timeAllowed = 900; // default time for completing the exam
+			
 			// Allow instructor to pick individual question items from all active questions:
 			if (assignmentType.contentEquals("Quiz")) {
 				buf.append("Each quiz consists of 10 questions selected at random from the items below. The default time allowed "
 						+ "to complete each quiz is 15 minutes, but you may change this (e.g., to create a special assignment for "
-						+ "a student requiring extended time).<br>"
-						+ "<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + ">"
+						+ "a student requiring extended time).<br>");
+				buf.append("<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + ">"
 						+ "Time allowed for this assignment: <input type=text size=5 name=TimeAllowed value=" + this.timeAllowed/60. + "> minutes. "
 						+ "<input type=submit name=UserRequest value='Set Allowed Time'><br>"
-						+ "</form><p>"
-						+ "You may select "
-						+ "the items that will be used for this group by checking the boxes in the left column. Students are provided "
-						+ "answers to the items that they answer incorrectly. Therefore, the total number of questions should be "
+						+ "</form><p>");
+				buf.append("You may select the items that will be used for this group by checking the boxes in the left column. "
+						+ "Students are provided answers to the items that they answer incorrectly. "
+						+ "Therefore, the total number of questions should be "
 						+ "larger than 10, but not much larger than 50.  Experience shows that 30 items is about right in most cases.<p>"
 						+ "If you don't see a question you want to include, you may "
 						+ "<a href=/Contribute?sig=" + user.getTokenSignature() + ">contribute a new question item</a> to the database.<p>");
@@ -142,7 +144,7 @@ public class Assignment implements java.lang.Cloneable {
 			}
 			buf.append("</TABLE><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM>");
 		} catch (Exception e) {
-			buf.append(e.getMessage());
+			buf.append(e.toString() + " " + e.getMessage());
 		}
 		return buf.toString();
 	}
@@ -156,13 +158,21 @@ public class Assignment implements java.lang.Cloneable {
 			for (Topic t:topics.values()) buf.append("<LI>" + t.title + "</LI>");
 			buf.append("</OL>");
 			
+			if (this.timeAllowed==null) this.timeAllowed = 3600; // default time for completing the exam
+			
 			buf.append("Each practice exam consists of items selected at random from the items below:<ul>"
 					+ "<li>10 quiz questions worth 2 points each</li>"
 					+ "<li> 5 homework questions worth 10 points each</li>"
 					+ "<li> 2 more challenging homework questions worth 15 points each</li></ul>"
-					+ "for a total of 100 points. Each exam must be completed within 60 minutes to be scored.<p>"
+					+ "for a total of 100 points.<p>");
+			buf.append("The default time allowed to complete the exam is 60 minutes, but you may change this "
+					+ "(e.g., to create a special assignment for a student requiring extended time).<br>");
+			buf.append("<form action=/PracticeExam method=post><input type=hidden name=sig value=" + user.getTokenSignature() + ">" 
+					+ "Time allowed for this assignment: <input type=text size=5 name=TimeAllowed value=" + this.timeAllowed/60. + "> minutes. "
+					+ "<input type=submit name=UserRequest value='Set Allowed Time'><br>"
+					+ "</form><p>"
 					+ "Select the items to be included in exams assigned to your class.<p>");
-			
+
 			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> questionKeys_10pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> questionKeys_15pt = new ArrayList<Key<Question>>();

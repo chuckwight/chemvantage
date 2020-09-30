@@ -48,7 +48,7 @@ public class PracticeExam extends HttpServlet {
 
 	int nSubjectAreas = 1;               // default number of subject areas for exam overridden by values read from AssignmentInfo database
 	int nQuestionsPerSubjectArea = 10;   // number of questions presented in each area also overridden in method printExam()
-	int timeLimit = 60;                  // minutes; set to zero for no time limit to complete the exam
+	//int timeAllowed = 3600;              // seconds; set to zero for no time limit to complete the exam
 	int waitForNewDownload = 0;          // minutes; set to zero for unlimited rate of exam downloads
 	boolean enforceDeadlines = true;     // true means that exam score is not recorded after the deadline
 	boolean allowMultipleTries = true;   // false allows only one attempt at each exam; true is recommended
@@ -111,9 +111,10 @@ public class PracticeExam extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 			
+			Assignment a = null;
 			switch(userRequest) {
 				case "UpdateAssignment":
-					Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+					a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 					a.updateQuestions(request);
 					out.println(Home.header("ChemVantage Practice Exam") + printExam(user,request) + Home.footer);
 					break;
@@ -121,11 +122,22 @@ public class PracticeExam extends HttpServlet {
 					if (submitRevisedExamScore(user,request)) out.println(Home.header("Review ChemVantage Practice Exam Scores") + reviewExamScores(user) + Home.footer);
 					else out.println("Sorry, an unexpected error occurred. Please go BACK and try again.");
 					break;
+				case "Set Allowed Time":
+					a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+					try {
+						double minutes = Double.parseDouble(request.getParameter("TimeAllowed"));
+						a.timeAllowed = minutes<1.0?60:(int)(minutes*60);
+					} catch (Exception e) {
+						a.timeAllowed = 3600;
+					}
+					ofy().save().entity(a).now();
+					out.println(Home.header("ChemVantage Practice Exam") + printExam(user,request) + Home.footer);					
+					break;
 				default: out.println(Home.header("ChemVantage Practice Exam Results") + printScore(user,request) + Home.footer);
 			}
 		} catch (Exception e) {
-			response.getWriter().println(e.toString() + " " + e.getMessage());
-			//response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
+			//response.getWriter().println(e.toString() + " " + e.getMessage());
+			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
 	}
 
@@ -158,7 +170,7 @@ public class PracticeExam extends HttpServlet {
 			}
 			buf.append("</div><p>");
 			
-			buf.append("You will have " + timeLimit + " minutes to submit this exam for scoring.<br>");
+			buf.append("You will have 60 minutes to submit this exam for scoring.<br>");
 			buf.append("<INPUT TYPE=SUBMIT NAME=begin DISABLED=true VALUE='Select at least 3 topics'>");
 			buf.append("</FORM></div>");
 		} catch (Exception e) {
@@ -187,9 +199,13 @@ public class PracticeExam extends HttpServlet {
 				}
 			}
 
+			// Check to see if the timeAllowed has been modified by the instructor:
+			int timeAllowed = 3600;  // default value in seconds
+			if (a != null && a.timeAllowed!=null) timeAllowed = a.timeAllowed;  // instructor option, e.g. for student disability accommodations
+			
 			// Check to see if this user has any pending exams:
 			Date now = new Date();
-			Date oneHourAgo = new Date(now.getTime()-timeLimit*60000);  // timeLimit minutes ago
+			Date oneHourAgo = new Date(now.getTime()-timeAllowed*1000);  // timeAllowed seconds ago 
 			
 			List<PracticeExamTransaction> qpt = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.id).filter("graded",null).filter("downloaded >",oneHourAgo).list();
 			PracticeExamTransaction pt = null;  // placeholder for recovery of one of the pending exam transactions
@@ -257,7 +273,8 @@ public class PracticeExam extends HttpServlet {
 			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			
 			Date downloaded = pt.downloaded;
-			int secondsRemaining = (int) (timeLimit*60 - (now.getTime() - downloaded.getTime())/1000);
+			
+			int secondsRemaining = (int) (timeAllowed - (now.getTime() - downloaded.getTime())/1000);
 
 			buf.append("Topics covered on this exam:<OL>");
 			for (long topicId : topicIds) {
@@ -271,7 +288,7 @@ public class PracticeExam extends HttpServlet {
 					+ ">review the scores</a> on this assignment."
 					+ "</mark><p>");
 			
-			buf.append("This exam must be submitted for grading within " + timeLimit + " minutes of when it is first downloaded.");
+			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded.");
 
 			Random rand = new Random();  // create random number generator to select exam questions
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
@@ -427,7 +444,11 @@ public class PracticeExam extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		try {
 			buf.append("<h2>Practice Exam Results</h2>");
+			
+			Assignment a = null;
+			
 			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
+			else a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();  // find the Assignment object for this Practice Exam, if it exists
 			
 			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
@@ -436,7 +457,13 @@ public class PracticeExam extends HttpServlet {
 			long examId = Long.parseLong(request.getParameter("ExamId"));
 			PracticeExamTransaction pt = ofy().load().type(PracticeExamTransaction.class).id(examId).safe();
 			if (pt.graded != null) return "Sorry, this exam has been graded already.";
-			if (now.getTime() - pt.downloaded.getTime() > 60000*(this.timeLimit+1)) return "Sorry, the grading period for this exam has expired.";
+			
+			int timeAllowed = 3600;
+			try {
+				timeAllowed = a.timeAllowed;
+			} catch (Exception e) {} // catches eException if exam timeAllowed has not been customized
+			
+			if (now.getTime() - pt.downloaded.getTime() > 1000*(timeAllowed+60)) return "Sorry, the grading period for this exam has expired.";  // 60-second grace period
 
 			// if everything is still OK, score the exam:
 			List<Long> topicIds = pt.topicIds;			
@@ -457,11 +484,6 @@ public class PracticeExam extends HttpServlet {
 					questionKeys.add(Key.create(Question.class,Long.parseLong((String) e.nextElement())));
 				} catch (Exception e2) {}
 			}
-			
-			// find the Assignment object for this Practice Exam, if it exists
-			
-			Assignment a = null;
-			if (!user.isAnonymous()) a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 			  
 			List<Response> responses = new ArrayList<Response>();
 			// begin the main scoring loop:

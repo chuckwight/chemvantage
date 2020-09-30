@@ -47,7 +47,7 @@ public class Quiz extends HttpServlet {
 
 	int nSubjectAreas = 1;               // default number of subject areas for quiz overridden by values read from AssignmentInfo database
 	int nQuestionsPerSubjectArea = 10;   // number of questions presented in each area also overridden in method printQuiz()
-	static int timeLimit = 15;                  // minutes; set to zero for no time limit to complete the quiz
+	//static int timeLimit = 15;                  // minutes; set to zero for no time limit to complete the quiz
 	private static final long serialVersionUID = 137L;
 	Subject subject = Subject.getSubject();
 	static Map<Key<Question>,Question> quizQuestions = new HashMap<Key<Question>,Question>();
@@ -311,8 +311,15 @@ public class Quiz extends HttpServlet {
 			}
 
 			// Check to see if the time limit (15 minutes) for taking the Quiz has expired:
-			if (now.getTime() - qt.downloaded.getTime() > (timeLimit*60000+10000)) // includes 10 second grace period
-				return "Sorry, the " + timeLimit + " minute time limit for this quiz has expired.";
+			Assignment qa = null;
+			qa = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+			int timeAllowed = 900;  // default time to complete the quiz, in seconds
+			try {
+				timeAllowed = qa.timeAllowed;
+			} catch (Exception e) {}
+			
+			if (now.getTime() - qt.downloaded.getTime() > (timeAllowed*1000+10000)) // includes 10 second grace period
+				return "Sorry, the " + timeAllowed/60 + " minute time limit for this quiz has expired.";
 			
 			int studentScore = 0;
 			int wrongAnswers = 0;
@@ -375,11 +382,9 @@ public class Quiz extends HttpServlet {
 			ofy().save().entity(qt);
 			
 			// Try to post the score to the student's LMS:
-			Assignment qa = null;
 			boolean reportScoreToLms = false;
 			try {
 				if (user.isAnonymous()) throw new Exception();  // don't save Scores for anonymous users
-				qa = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 				Score.updateQuizScore(user.id,qt);
 				reportScoreToLms = qa.lti_ags_lineitem_url != null || (qa.lis_outcome_service_url != null && user.getLisResultSourcedid() != null);
 				if (reportScoreToLms) {
@@ -403,7 +408,7 @@ public class Quiz extends HttpServlet {
 				buf.append("<h4>Improve Your Score</h4>\n");
 				if (studentScore<6) {
 					buf.append("If you get stuck on a difficult question, "
-							+ "you may refer to your textbook during the quiz. Please keep the " + timeLimit
+							+ "you may refer to your textbook during the quiz. Please keep the " + timeAllowed/60
 							+ " minute time limit in mind, though. Hard work and persistence will produce "
 							+ "higher scores and better grades.<p>");
 				}
