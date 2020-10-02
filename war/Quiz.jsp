@@ -134,7 +134,7 @@ function showWorkBox(qid) {}
 
 <% if (!user.isAnonymous()) { %>
 Quiz Rules<OL>
-  <LI>Each quiz must be completed within 15 minutes of the time when it is first downloaded.</LI>
+  <LI>Each quiz must be completed within <%= timeAllowed/60 %> minutes of the time when it is first downloaded.</LI>
   <LI>You may repeat quizzes as many times as you wish, to improve your score.</LI>
   <LI>ChemVantage always reports your best score on this assignment to your class LMS.</LI> 
 </OL>
