@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Date;
+import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.HttpConstraint;
@@ -86,13 +87,23 @@ public class Admin extends HttpServlet {
 			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
-			if (userRequest.equals("Announce")) {
+			
+			switch (userRequest) {
+			case "Announce": 
 				subject.announcement = request.getParameter("Announcement");
 				ofy().save().entity(subject);
-			} 
+				break;
+			case "Update Account":
+				out.println("Fetching " + request.getParameter("ConsumerKey") + "...");
+				BLTIConsumer tc = ofy().load().type(BLTIConsumer.class).id(request.getParameter("ConsumerKey")).safe();
+				out.println("Setting status and org_type: " + request.getParameter("Status") + " " + request.getParameter("OrgType") + "...");
+				tc.status = request.getParameter("Status");
+				tc.org_type = request.getParameter("OrgType");
+				ofy().save().entity(tc).now();
+			}
 			out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Home.footer);
 		} catch (Exception e) {
-			response.getWriter().println(e.toString());
+			response.getWriter().println("Unexpected error: " + e.toString() + e.getMessage());
 		}
 	}
 
@@ -124,11 +135,40 @@ public class Admin extends HttpServlet {
 					+ nPending + " items are currently pending editorial review.</a>");
 			
 			buf.append("<h3>Recent Activity (past 30 days)</h3>");
+			
 			Date lastMonth = new Date(new Date().getTime()-2592000000L);
 			buf.append("Active Basic LTI Consumer accounts: " + ofy().load().type(BLTIConsumer.class).filter("lastLogin >",lastMonth).count() + "<br>");
 			buf.append("Active LTI Advantage deployments: " + ofy().load().type(Deployment.class).filter("lastLogin >",lastMonth).count() + "<br>");
 			buf.append("Total number of Response entities: " + ofy().load().type(Response.class).filter("submitted >",lastMonth).count());
 			
+			buf.append("<h3>New and Expiring Accounts</h3>");
+			
+			Date now = new Date();
+			Date twoMonthsAgo = new Date(now.getTime()-5184000000L);
+			Date twoMonthsFromNow = new Date(now.getTime()+5184000000L);
+			List<BLTIConsumer> consumers = ofy().load().type(BLTIConsumer.class).limit(10).filter("status",null).list();
+			consumers.addAll(ofy().load().type(BLTIConsumer.class).filter("expires >",twoMonthsAgo).filter("expires <",twoMonthsFromNow).list());
+			
+			if (consumers.size()==0) buf.append("none");
+			for (BLTIConsumer nc : consumers) {	
+				buf.append("<form method=post>"
+						+ "<input type=hidden name=ConsumerKey value='" + nc.oauth_consumer_key + "'>"
+						+ "<input type=hidden name=sig value=" + user.getTokenSignature() + ">");
+				if (nc.status==null) buf.append("<input type=checkbox name=Status value=approved checked>Approve ");
+				else buf.append("<select name=Status><option value=''>unknown</option>"
+						+ "<option value=approved" + ("approved".equals(nc.status)?" selected>":">") + "approved</option>"
+						+ "<option value=invoiced" + ("invoiced".equals(nc.status)?" selected>":">") + "invoiced</option>"
+						+ "<option value=expired" + (nc.expires != null && nc.expires.before(now)?" selected>":">") + "expired</option></select> ");
+				buf.append("Key: " + nc.oauth_consumer_key + " Contact: " + nc.contact_name + " (" + nc.email + ") "
+						+ "Org: " + nc.organization + " (<a href='" + nc.org_url + "' target=_blank>" + nc.org_url + "</a>)<br>");
+				buf.append("Org Type: <select name=OrgType><option value=''>unknown</option>"
+						+ "<option value=nonprofit" + ("nonprofit".equals(nc.org_type)?" selected>":">") + "nonprofit</option>"
+						+ "<option value=forprofit" + ("forprofit".equals(nc.org_type)?" selected>":">") + "forprofit</option>"
+						+ "<option value=personal" + ("personal".equals(nc.org_type)?" selected>":">") + "personal</option></select> ");
+				buf.append("LMSDomain: " + nc.domain + " Created: " + nc.created+ " Expires: " + (nc.expires==null?"never":nc.expires) + "<br>"
+						+ "<input type=submit name=UserRequest value='Update Account'></form><br>");
+			}
+
 			buf.append("<h3>Basic LTI Consumer Search</h3>");
 			int nConsumers = ofy().load().type(BLTIConsumer.class).count();
 			
@@ -147,18 +187,18 @@ public class Admin extends HttpServlet {
 				// Note that \u0000 is the lowest value UTF-8 character, and \ufffd is the highest
 				Key<BLTIConsumer> keyFirst = Key.create(BLTIConsumer.class,("(show all)".equals(searchString)?"\u0000":searchString));
 				Key<BLTIConsumer> keyLast = Key.create(BLTIConsumer.class,("(show all)".equals(searchString)?"\ufffd":searchString+"\ufffd"));					
-				Query<BLTIConsumer> consumers = ofy().load().type(BLTIConsumer.class).filterKey(">=",keyFirst).filterKey("<",keyLast).limit(this.queryLimit);				
-				if (cursor != null) consumers = consumers.startAt(Cursor.fromUrlSafe(cursor));
+				Query<BLTIConsumer> qConsumers = ofy().load().type(BLTIConsumer.class).filterKey(">=",keyFirst).filterKey("<",keyLast).limit(this.queryLimit);				
+				if (cursor != null) qConsumers = qConsumers.startAt(Cursor.fromUrlSafe(cursor));
 
 				// Determine the number of results to see if we need a cursor to continue the search later
-				int nResults = consumers.count();				
+				int nResults = qConsumers.count();				
 				if (nResults==0) buf.append("<FONT SIZE=-1>No LTI consumers matched the search criteria.</FONT><p>");
 				else {
 					buf.append("<FONT SIZE=-1>Showing " + nResults + " LTI consumers matching the search criteria.</FONT><p>");
 
 					buf.append("<TABLE><TR><TH>Consumer Key</TH><TH>Secret</TH></TR>");
 					
-					QueryResults<BLTIConsumer> iter = consumers.iterator();
+					QueryResults<BLTIConsumer> iter = qConsumers.iterator();
 					while (iter.hasNext()) {
 					//for (BLTIConsumer c : consumers) {
 						BLTIConsumer c = iter.next();

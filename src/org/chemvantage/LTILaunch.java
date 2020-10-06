@@ -24,6 +24,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Date;
@@ -37,6 +38,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.google.common.net.InternetDomainName;
 import com.googlecode.objectify.Key;
 
 import net.oauth.OAuthAccessor;
@@ -134,6 +136,14 @@ public class LTILaunch extends HttpServlet {
 				if (tc.lastLogin==null || tc.lastLogin.before(yesterday)) {
 					tc.lastLogin = now;
 					tc.launchParameters = request.getParameterMap();
+					try {
+						tc.domain = InternetDomainName.from(new URL(tc.launchParameters.get("lis_outcome_service_url")[0]).toString()).topPrivateDomain().toString();
+						List<BLTIConsumer> companions = ofy().load().type(BLTIConsumer.class).filter("domain",tc.domain).list();
+						companions.remove(tc);
+						for (BLTIConsumer tcc : companions) {
+							if (tcc.expires!=null && (tc.expires==null || tcc.expires.before(tc.expires))) tc.expires = tcc.expires; // assign the shortest expiration time found for this domain
+						}
+					} catch (Exception e) {}
 					ofy().save().entity(tc);  // update the lastLogin value
 				}
 			} catch (Exception e) {

@@ -38,11 +38,13 @@ public class BLTIConsumer {
 	String org_url;
 	String org_type;
 	String lms;
-	Date created;
-	Date expires;  // subscription expiration date (null = never)
-	Map<String,String[]> launchParameters;
+	@Index String domain;
+	@Index Date created;
+	@Index Date expires;  // subscription expiration date (null = never)
 	@Index Date lastLogin;
-
+	@Index String status;  // null(new), approved, invoiced, expired
+	Map<String,String[]> launchParameters;
+	
 	BLTIConsumer() {}
 
 	BLTIConsumer(String oauth_consumer_key) {
