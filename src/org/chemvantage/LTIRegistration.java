@@ -279,7 +279,6 @@ public class LTIRegistration extends HttpServlet {
 						+ "Your account has been activated for 30 days pending payment of your subscription. " 
 						+ (instant?"":"However, full access to ChemVantage resources will be delayed pending verification of your account "
 						+ "because your email domain does not match your organization's domain.") + "<p>"); 
-				buf.append("<b>By clicking the link below, you authorize this purchase on behalf of your organization.</b><p>");
 				break;
 			case "personal":
 				buf.append("You indicated the registration form that your ChemVantage registration is for your own personal use. You may use "
@@ -287,7 +286,6 @@ public class LTIRegistration extends HttpServlet {
 						+ "To exceed this limit, please contact us for pricing at admin@chemvantage.org. ChemVantage will send you "
 						+ "an invoice in the next few days for payment of the $20 monthly subscription charge. "
 						+ "Your account has been activated for 10 days pending payment of your subscription.<p>");
-				buf.append("<b>By clicking the link below, you agree to pay the monthly subscription charge.</b><p>");
 				break;
 			default: 
 			}
