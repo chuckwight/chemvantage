@@ -49,7 +49,6 @@ import javax.servlet.http.HttpServletResponse;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.google.common.net.InternetDomainName;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -240,13 +239,6 @@ public class LTIRegistration extends HttpServlet {
 		
 		StringBuffer buf = new StringBuffer();
 		
-		boolean instant = false;	
-		try {
-			String emailDomain = email.substring(email.indexOf("@")+1);
-			String homePageDomain = new URL(url).getHost();
-			instant = InternetDomainName.from(homePageDomain).topPrivateDomain().equals(InternetDomainName.from(emailDomain).topPrivateDomain());
-		} catch (Exception e) {}
-		
 		buf.append("<h2>ChemVantage Registration</h2>");
 		buf.append("Name: " + name + " (" + email + ")<br>"
 				+ (org.isEmpty()?"":"Org: " + org + " (" + url + ")<br>")
@@ -257,35 +249,29 @@ public class LTIRegistration extends HttpServlet {
 		if (iss.contains("dev")) {
 			buf.append("You indicated on the registration form that your use case is testing LTI connections. ChemVantage is pleased to support "
 					+ "the LTI community by offering access to our code development server for this purpose. When you complete the registration "
-					+ "steps below, your account will be activated for a free 10 day trial period for up to 5 users in your LMS.<p>"
-					+ "Please do not use the development server for serious instructional purposes.<p>"
-					+ "ChemVantage will send you an invoice in the next few days for payment of the $5000 annual subscription fee to be a "
-					+ "ChemVantage code development partner. However, if you do not require access to our development server past the 10 day free "
-					+ "trial period, simply ignore the invoice and your account will be deactivated automatically.<p>");
+					+ "steps below, your account will be activated for a free 10 day trial period for up to 5 users in your LMS. If you requre "
+					+ "access to this server for more than 10 days and/or 5 users, please contact us at admin@chemvantage.org.<p>"
+					+ "Please do not use the development server for serious instructional purposes.<p>");
 		} else {
 			switch (typ) {
 			case "nonprofit":
-				buf.append("You indicated on the registration form that " + org + " is a public or non-profit institution. As such, ChemVantage "
+				buf.append("You indicated on the registration form that " + org + " is a public or non-profit educational institution. As such, ChemVantage "
 						+ "services are provided free for up to 1000 users in your LMS. Please contact us for pricing beyond this limit.<p>"
-						+ "Your account will be activated when you complete the registration steps below. " 
-						+ (instant?"":"However, full access to ChemVantage resources will be delayed pending verification of your account "
-								+ "because your email domain does not match your organization's domain.") + "<p>"); 
-				buf.append("<b>By clicking the link below, you certify that your organization is a public or non-profit institution.</b><p>");
-				break;
-			case "forprofit":
-				buf.append("You indicated on the registration form that " + org + " is a for-profit school or company. ChemVantage will send you "
-						+ "an invoice in the next few days for payment of the $5000 annual subscription charge. This subscription allows up "
-						+ "to 10,000 users from your LMS. To exceed this limit, please contact us for pricing at admin@chemvantage.org. "
-						+ "Your account has been activated for 30 days pending payment of your subscription. " 
-						+ (instant?"":"However, full access to ChemVantage resources will be delayed pending verification of your account "
-						+ "because your email domain does not match your organization's domain.") + "<p>"); 
+						+ "<b>By clicking the link below, you certify that your organization is a public or non-profit institution.</b><p>");
 				break;
 			case "personal":
-				buf.append("You indicated the registration form that your ChemVantage registration is for your own personal use. You may use "
-						+ "this account for offering instuction in General Chemistry. This subscription allows up to 5 users from your LMS. " 
-						+ "To exceed this limit, please contact us for pricing at admin@chemvantage.org. ChemVantage will send you "
-						+ "an invoice in the next few days for payment of the $20 monthly subscription charge. "
-						+ "Your account has been activated for 10 days pending payment of your subscription.<p>");
+				buf.append("You indicated the registration form that you intend to use ChemVantage for a small business or personal use. You may use "
+						+ "this account for offering instuction in General Chemistry for up to 5 users from your LMS. " 
+						+ "To exceed this limit, please contact us for pricing at admin@chemvantage.org.<p>"
+						+ "Your account has been fully activated for 10 days pending payment of the $20 monthly subscription fee. You should receive an "
+						+ "invoice from PayPal via email within the next 2 days.<p>");
+				break;			
+			case "forprofit":
+				buf.append("You indicated on the registration form that " + org + " desires to establish a corporate parnership account. ChemVantage will "
+						+ "send you an invoice in the next few days for payment of the $5000 annual subscription charge. This subscription allows you to "
+						+ "provide ChemVantage services for up to 10,000 users from your LMS. To exceed this limit, please contact us for pricing.<p>"
+						+ "Your account has been fully activated for 10 days pending payment of the $5000 annual subscription fee. You should receive an " 
+						+ "invoice from PayPal via email within the next 2 days.<p>");
 				break;
 			default: 
 			}
@@ -528,13 +514,6 @@ public class LTIRegistration extends HttpServlet {
 			oauth_consumer_key = "CK" + (new Random(token.hashCode()).nextInt(899999) + 100000);
 		}
 		
-		boolean instant = false;	
-		try {
-			String emailDomain = email.substring(email.indexOf("@")+1);
-			String homePageDomain = new URL(url).getHost();
-			instant = InternetDomainName.from(homePageDomain).topPrivateDomain().equals(InternetDomainName.from(emailDomain).topPrivateDomain());
-		} catch (Exception e) {}
-		
 		BLTIConsumer con = null;
 		try {  // retrieve the BLTIConsumer that was saved when the token was used
 			con = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).safe();
@@ -551,9 +530,9 @@ public class LTIRegistration extends HttpServlet {
 			if (iss.contains("dev")) con.expires = new Date(new Date().getTime() + 864000000L);  // dev server free trial period of 10 days
 			else {  // request id for access to the production server
 				switch (typ) {
-				case "nonprofit": con.expires = instant? null:new Date(new Date().getTime() + 2592000000L); break;  // forever or 30 days
-				case "forprofit": con.expires = new Date(new Date().getTime() + 2592000000L); break;  				// 30 days to pay invoice
-				case "personal": con.expires = new Date(new Date().getTime() + 864000000L); break;  				// 10 days
+				case "nonprofit": con.expires = new Date(new Date().getTime() + 864000000L); break;  // 10 days
+				case "forprofit": con.expires = new Date(new Date().getTime() + 864000000L); break;  // 10 days
+				case "personal": con.expires = new Date(new Date().getTime() + 864000000L); break;  // 10 days
 				default: con.expires = new Date();
 				}
 			}

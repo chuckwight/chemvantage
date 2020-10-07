@@ -94,11 +94,18 @@ public class Admin extends HttpServlet {
 				ofy().save().entity(subject);
 				break;
 			case "Update Account":
-				out.println("Fetching " + request.getParameter("ConsumerKey") + "...");
 				BLTIConsumer tc = ofy().load().type(BLTIConsumer.class).id(request.getParameter("ConsumerKey")).safe();
-				out.println("Setting status and org_type: " + request.getParameter("Status") + " " + request.getParameter("OrgType") + "...");
 				tc.status = request.getParameter("Status");
 				tc.org_type = request.getParameter("OrgType");
+				switch (tc.org_type) {
+				case "nonprofit": 
+					tc.expires = null; 
+					break;
+				default:
+					Date now = new Date();
+					Date in10Days = new Date(now.getTime() + 864000000L);
+					if (tc.expires==null || tc.expires.after(in10Days)) tc.expires = in10Days;
+				}
 				ofy().save().entity(tc).now();
 			}
 			out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Home.footer);

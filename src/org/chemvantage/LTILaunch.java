@@ -38,7 +38,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
-import com.google.common.net.InternetDomainName;
 import com.googlecode.objectify.Key;
 
 import net.oauth.OAuthAccessor;
@@ -136,15 +135,18 @@ public class LTILaunch extends HttpServlet {
 				if (tc.lastLogin==null || tc.lastLogin.before(yesterday)) {
 					tc.lastLogin = now;
 					tc.launchParameters = request.getParameterMap();
-					try {
-						tc.domain = InternetDomainName.from(new URL(tc.launchParameters.get("lis_outcome_service_url")[0]).toString()).topPrivateDomain().toString();
-						List<BLTIConsumer> companions = ofy().load().type(BLTIConsumer.class).filter("domain",tc.domain).list();
-						companions.remove(tc);
-						for (BLTIConsumer tcc : companions) {
-							if (tcc.expires!=null && (tc.expires==null || tcc.expires.before(tc.expires))) tc.expires = tcc.expires; // assign the shortest expiration time found for this domain
+					try {  // this section synchronizes expiration dates from a single domain
+						String domain = new URL(tc.launchParameters.get("lis_outcome_service_url")[0]).getHost();
+						if (domain!=null) tc.domain = domain;  // domain may be null for instuctors
+						if (tc.domain != null) {  // tc.domain may be null if grades are never returned to the LMS					
+							List<BLTIConsumer> companions = ofy().load().type(BLTIConsumer.class).filter("domain",tc.domain).list();
+							companions.remove(tc);
+							for (BLTIConsumer tcc : companions) {  // assign the shortest expiration time found for this domain
+								if (tcc.expires!=null && (tc.expires==null || tcc.expires.before(tc.expires))) tc.expires = tcc.expires; 
+							}
 						}
 					} catch (Exception e) {}
-					ofy().save().entity(tc);  // update the lastLogin value
+					ofy().save().entity(tc);  // update the lastLogin value and possibly the domain and expires fields
 				}
 			} catch (Exception e) {
 				throw new Exception("Invalid oauth_consumer_key. Please verify that the oauth_consumer_key is entered into your LMS exactly as you are registered with ChemVantage.");

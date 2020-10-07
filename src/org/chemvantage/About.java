@@ -101,14 +101,14 @@ public class About extends HttpServlet {
 		+ "extremely unlikely that a student will ever get two identical practice exams.";
 		
 	public static String premium = "<a NAME=accounts></a>"
-		+ "<h3>ChemVantage Pricing</h3>"
+		+ "<h3>ChemVantage Accounts and Pricing</h3>"
 		+ "For most users, ChemVantage is FREE. Anyone can use ChemVantage anonymously by simply browsing to "
 		+ "<a href=https://www.chemvantage.org>www.chemvantage.org</a>. Chemistry instructors can also make ChemVantage "
 		+ "assignments available to their classes using <a href=/lti/registration>our LTI interface</a>, which automatically "
 		+ "returns assignment scores to the class LMS grade book. Subscription prices for this LTI service are:<ul>"
 		+ "<li>Public and nonprofit schools and universities: FREE for up to 1000 active LTI users</li>"
-		+ "<li>Commercial and for-profit institutions: $5000/yr for up to 10000 active LTI users</li>"
-		+ "<li>Personal subsciptions: $20/month for up to 5 active LTI users</li>"
+		+ "<li>Small business and personal subsciptions: $20/month for up to 5 active LTI users</li>"
+		+ "<li>Corporate partnerships: $5000/yr for up to 10000 active LTI users</li>"
 		+ "<li>Development server access (to check LTI connections): 10-day free trial</li>"
 		+ "</ul>"
 		+ "ChemVantage uses business income to defray the cost of providing free service to the vast majority of our users. "
