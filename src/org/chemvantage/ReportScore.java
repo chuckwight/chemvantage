@@ -92,7 +92,7 @@ public class ReportScore extends HttpServlet {
 
 			if (a.lti_ags_lineitem_url != null) {  // use LTIAdvantage reporting specs
 				out.println(postUserScore(userId,a,attempts));
-			} else if (a.lis_outcome_service_url != null) { // use LTI 1.1 reporting
+			} else if (a.lis_outcome_service_url != null && !a.lis_outcome_service_url.contains("localhost")) { // use LTI 1.1 reporting
 				out.println(postUserScore(userId,a,attempts,""));  // use LTI v1.1 specs
 			}
 		} catch (Exception e) {
