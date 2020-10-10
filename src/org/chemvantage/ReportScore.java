@@ -90,7 +90,7 @@ public class ReportScore extends HttpServlet {
 				attempts = Integer.parseInt(request.getParameter("Retry")) + 1;
 			} catch (Exception e) {}
 
-			if (a.lti_ags_lineitem_url != null) {  // use LTIAdvantage reporting specs
+			if (a.lti_ags_lineitem_url != null && !a.lti_ags_lineitem_url.contains("localhost")) {  // use LTIAdvantage reporting specs
 				out.println(postUserScore(userId,a,attempts));
 			} else if (a.lis_outcome_service_url != null && !a.lis_outcome_service_url.contains("localhost")) { // use LTI 1.1 reporting
 				out.println(postUserScore(userId,a,attempts,""));  // use LTI v1.1 specs
