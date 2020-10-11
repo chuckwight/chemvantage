@@ -219,7 +219,7 @@ public class Feedback extends HttpServlet {
 		if (comments.length() > 0) {
 			UserReport r = new UserReport(userId,stars,comments);
 			ofy().save().entity(r);
-			sendEmailToAdmin(r,user,email);
+			if (email!=null && !email.isEmpty()) sendEmailToAdmin(r,user,email);
 		}
 
 		buf.append(Home.banner);
