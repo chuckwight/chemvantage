@@ -312,7 +312,10 @@ public class Quiz extends HttpServlet {
 
 			// Check to see if the time limit (15 minutes) for taking the Quiz has expired:
 			Assignment qa = null;
-			qa = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+			try {
+				qa = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+			} catch (Exception e) {}
+			
 			int timeAllowed = 900;  // default time to complete the quiz, in seconds
 			try {
 				timeAllowed = qa.timeAllowed;
