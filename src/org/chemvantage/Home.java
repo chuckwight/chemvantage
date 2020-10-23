@@ -86,23 +86,15 @@ public class Home extends HttpServlet {
 		return header("ChemVantage");
 	}
 
-	public static String footer = "\n<hr><img src=/images/CVLogo_tiny.png alt='ChemVantage logo' align=middle>"
+	public static String footer = "\n<hr><img src=/images/CVLogo_tiny.png alt='ChemVantage logo' style='vertical-align:middle'> "
 			+ "<a href=/About>About ChemVantage</a> | "
 			+ "<a href=/About#terms>Terms and Conditions of Use</a> | "
 			+ "<a href=/About#privacy>Privacy Policy</a> | "
 			+ "<a href=/About#copyright>Copyright"
 			+ "</body></html>";
-/*
-	public static String footer = "\n<hr><div style='font-size:smaller; width:100%; text-align:center'>"
-			+ "<span style='float:left'>&copy; 2007-20 ChemVantage LLC. <a rel='license' href='https://creativecommons.org/licenses/by/3.0/'><img alt='Creative Commons License' style='border-width:0' src='https://i.creativecommons.org/l/by/3.0/80x15.png' /></a></span>"
-			+ "<span><a href=/About#terms>Terms and Conditions of Use</a> and <a href=/About#privacy>Privacy Policy</a></span>"
-			+ "<span style='float:right'><a href='http://code.google.com/appengine/'><img src=/images/GAE.gif border=0 "
-			+ "alt='Powered by Google App Engine'></a></span>"
-			+ "</div>"
-			+ "</body></html>";
-*/
-	public static String banner = "<a href=https://www.chemvantage.org><img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo' align=left></a>"
-			+ "<br>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT><br>An Open Education Resource<br><br>";
+
+	public static String banner = "<a href=https://www.chemvantage.org><img src=/images/CVLogo_thumb.png alt='ChemVantage Logo' align=left></a>"
+			+ "Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT><br>An Open Education Resource<br><br>";
 	
 	static String getHeader(User user) {
 		StringBuffer buf = new StringBuffer();
