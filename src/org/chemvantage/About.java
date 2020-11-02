@@ -257,7 +257,7 @@ public class About extends HttpServlet {
 		+ "We are committed to providing the best possible online learning environment for General Chemistry. "
 		+ "If you have a question or problem using the site, please let us know immediately, and we will do our "
 		+ "best to correct any errors or software bugs. However, ChemVantage software as a service is provided "
-		+ "without any warrantee whatsoever. All ChemVantage subscription fees are non-refunable.</LI>"
+		+ "without any warrantee whatsoever. All ChemVantage subscription fees are non-refundable.</LI>"
 		+ "<LI>GOVERNING LAW<br>"
 		+ "These Terms and Conditions of Use and any dispute arising between ChemVantage and its users shall be "
 		+ "governed by the laws of the State of Maryland, U.S.A.</LI>"
