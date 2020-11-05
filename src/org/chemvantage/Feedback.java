@@ -76,7 +76,7 @@ public class Feedback extends HttpServlet {
 				String email = request.getParameter("Email");
 				UserReport r = new UserReport(userId,questionId,notes);
 				ofy().save().entity(r);
-				sendEmailToAdmin(r,user,email);
+				if (email !=null && !email.isEmpty()) sendEmailToAdmin(r,user,email);
 			} else if (userRequest.equals("AjaxRating")) {
 				recordAjaxRating(request);
 			} else out.println(Home.header("ChemVantage Feedback Form") + feedbackForm(user) + Home.footer);    
