@@ -332,7 +332,7 @@ public class PracticeExam extends HttpServlet {
 				possibleScores[topicIds.indexOf(q.topicId)] += q.pointValue;
 				q.setParameters((int)(pt.id - q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
-				pt.questionKeys.add(k);
+				if (!pt.questionKeys.contains(k)) pt.questionKeys.add(k);
 			}
 			buf.append("</OL>");
 
