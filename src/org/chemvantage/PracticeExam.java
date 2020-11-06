@@ -203,7 +203,7 @@ public class PracticeExam extends HttpServlet {
 			int timeAllowed = 3600;  // default value in seconds
 			if (a != null && a.timeAllowed!=null) {
 				timeAllowed = a.timeAllowed;  // instructor option, e.g. for student disability accommodations
-				user = User.getUser(user.getTokenSignature(),timeAllowed/60);
+				user = User.getUser(user.getTokenSignature(),timeAllowed/60+30);
 			}
 			
 			// Check to see if this user has any pending exams:
@@ -222,7 +222,7 @@ public class PracticeExam extends HttpServlet {
 							+ "</script>");
 				} else {  // the request is for an exam corresponding to an assignment
 					for (PracticeExamTransaction t : qpt) {
-						if (t.assignmentId==a.id || t.topicIds.equals(a.topicIds)) {
+						if (t.assignmentId==a.id) {
 							pt = t;  // found the correct pending exam for this assignment
 							break;
 						}
