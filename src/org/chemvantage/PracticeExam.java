@@ -216,9 +216,7 @@ public class PracticeExam extends HttpServlet {
 				if (a == null) {  // entered by manual topic selection (no assignment)
 					pt = qpt.get(0);  // gets the first pending practice exam transaction in the list
 					topicIds = pt.topicIds;
-					buf.append("<script language=javascript>"
-							+ "onload=alert('You are resuming a previously downloaded exam.')"
-							+ "</script>");
+					newExam = false;
 				} else {  // the request is for an exam corresponding to an assignment
 					for (PracticeExamTransaction t : qpt) {
 						if (t.assignmentId==assignmentId) {
@@ -230,7 +228,6 @@ public class PracticeExam extends HttpServlet {
 				}
 			}
 			else if (topicIds.size() < 3) return designExam(user,request);  // redirect to get a valid set of 3+ topic keys
-			
 			
 			if (pt == null) {  // this is a valid request for a new exam with at least 3 topicIds; create a new transaction
 				pt = new PracticeExamTransaction(topicIds,user.id,now,null,new int[topicIds.size()],new int[topicIds.size()],user.getLisResultSourcedid());
