@@ -188,7 +188,6 @@ public class PracticeExam extends HttpServlet {
 			long assignmentId = 0;
 			Assignment a = null;
 			try {  // this branch works if the practice exam is assigned
-				//assignmentId=Long.parseLong(request.getParameter("AssignmentId"));
 				assignmentId=user.getAssignmentId();
 				a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 				topicIds = a.topicIds;
@@ -212,7 +211,7 @@ public class PracticeExam extends HttpServlet {
 			
 			List<PracticeExamTransaction> qpt = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.id).filter("graded",null).filter("downloaded >",oneHourAgo).list();
 			PracticeExamTransaction pt = null;  // placeholder for recovery of one of the pending exam transactions
-			
+			boolean newExam = true;
 			if (qpt.size()>0) {  // there is at least one pending practice exam
 				if (a == null) {  // entered by manual topic selection (no assignment)
 					pt = qpt.get(0);  // gets the first pending practice exam transaction in the list
@@ -222,8 +221,9 @@ public class PracticeExam extends HttpServlet {
 							+ "</script>");
 				} else {  // the request is for an exam corresponding to an assignment
 					for (PracticeExamTransaction t : qpt) {
-						if (t.assignmentId==a.id) {
+						if (t.assignmentId==assignmentId) {
 							pt = t;  // found the correct pending exam for this assignment
+							newExam = false;
 							break;
 						}
 					}  // if the for-loop expires without finding a corresponding transaction, pt remains null and a new exam is created below
@@ -250,6 +250,8 @@ public class PracticeExam extends HttpServlet {
 				questionKeys_15pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",15).keys().list());
 			}
 
+			// Reduce the size of questionKeys Lists to the number of questions needed, either by using the previously
+			// selected questions in the PracticExamTransaction or by random elimination
 			List<Key<Question>> remove = new ArrayList<Key<Question>>();
 			if (pt.questionKeys==null || pt.questionKeys.isEmpty()) {  // create a new set of questions
 				if (a != null) {  // eliminate any questionKeys not listed in the assignment
@@ -260,6 +262,11 @@ public class PracticeExam extends HttpServlet {
 					for (Key<Question> k : questionKeys_15pt) if (!a.questionKeys.contains(k)) remove.add(k);
 					questionKeys_15pt.removeAll(remove); remove.clear();
 				}
+				Random rand = new Random();  // create random number generator to select exam questions
+				rand.setSeed(pt.id);  // random number generator seeded with PracticeExamTransaction id value
+				while (questionKeys_02pt.size()>10) questionKeys_02pt.remove(rand.nextInt(questionKeys_02pt.size()));
+				while (questionKeys_10pt.size()> 5) questionKeys_10pt.remove(rand.nextInt(questionKeys_10pt.size()));
+				while (questionKeys_15pt.size()> 2) questionKeys_15pt.remove(rand.nextInt(questionKeys_15pt.size()));
 			} else {  // eliminate all but the prior selected questions for this transaction
 				for (Key<Question> k : questionKeys_02pt) if (!pt.questionKeys.contains(k)) remove.add(k);
 				questionKeys_02pt.removeAll(remove); remove.clear();
@@ -268,6 +275,13 @@ public class PracticeExam extends HttpServlet {
 				for (Key<Question> k : questionKeys_15pt) if (!pt.questionKeys.contains(k)) remove.add(k);
 				questionKeys_15pt.removeAll(remove); remove.clear();
 			}
+			
+			// Ensure that all selected questions are in the Map of examQuestions:
+			List<Key<Question>> addQuestions = new ArrayList<Key<Question>>();
+			for (Key<Question> k : questionKeys_02pt) if (!examQuestions.containsKey(k)) addQuestions.add(k);
+			for (Key<Question> k : questionKeys_10pt) if (!examQuestions.containsKey(k)) addQuestions.add(k);
+			for (Key<Question> k : questionKeys_15pt) if (!examQuestions.containsKey(k)) addQuestions.add(k);
+			if (addQuestions.size()>0) examQuestions.putAll(ofy().load().keys(addQuestions));
 			
 			buf.append("<script>function showWorkBox(qid){}</script>");  // prevents javascript error from Question.print()
 			
@@ -291,13 +305,8 @@ public class PracticeExam extends HttpServlet {
 					+ ">review the scores</a> on this assignment."
 					+ "</mark><p>");
 			
-			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded.");
-
-			Random rand = new Random();  // create random number generator to select exam questions
-			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
-			rand.setSeed(pt.id);  // random number generator seeded with PracticeExamTransaction id value
-
-			//buf.append(ajaxExamJavaScript());  // this code allows users to use the Google SOAP search spell checking function
+			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded. ");
+			if (!newExam) buf.append("You are resuming an exam originally downloaded at " + pt.downloaded);
 			
 			buf.append("\n<FORM METHOD=POST ACTION=PracticeExam "
 					+ "onSubmit=\"return confirm('Submit this exam for grading now. Are you sure?')\">");
@@ -318,21 +327,13 @@ public class PracticeExam extends HttpServlet {
 			int nQuestions = 10;
 			int i = 0;
 			while (i<nQuestions && questionKeys_02pt.size()>0) {
-				Key<Question> k = questionKeys_02pt.remove(rand.nextInt(questionKeys_02pt.size()));
+				Key<Question> k = questionKeys_02pt.remove(0);
 				Question q = examQuestions.get(k);
-				if (q==null) {
-					try {
-						q = ofy().load().key(k).safe();
-						examQuestions.put(k,q);
-					} catch (Exception e) {
-						continue;  // this catches cases where an assigned question no longer exists
-					}
-				}
 				i++;
 				possibleScores[topicIds.indexOf(q.topicId)] += q.pointValue;
 				q.setParameters((int)(pt.id - q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
-				if (!pt.questionKeys.contains(k)) pt.questionKeys.add(k);
+				if (newExam) pt.questionKeys.add(k);
 			}
 			buf.append("</OL>");
 
@@ -344,16 +345,8 @@ public class PracticeExam extends HttpServlet {
 			nQuestions = 5;
 			i=0;
 			while (i<nQuestions && questionKeys_10pt.size()>0) {
-				Key<Question> k = questionKeys_10pt.remove(rand.nextInt(questionKeys_10pt.size()));
+				Key<Question> k = questionKeys_10pt.remove(0);
 				Question q = examQuestions.get(k);
-				if (q==null) {
-					try {
-						q = ofy().load().key(k).safe();
-						examQuestions.put(k,q);
-					} catch (Exception e) {
-						continue;  // this catches cases where an assigned question no longer exists
-					}
-				}
 				i++;
 				possibleScores[topicIds.indexOf(q.topicId)] += q.pointValue;
 				q.setParameters((int)(pt.id - q.id));
@@ -361,7 +354,7 @@ public class PracticeExam extends HttpServlet {
 				if (assignmentId>0) buf.append("<SCRIPT>"
 						+ "document.getElementById('showWork" + q.id + "').style.display='';"
 						+ "</SCRIPT>");
-				pt.questionKeys.add(k);
+				if (newExam) pt.questionKeys.add(k);
 			}
 			buf.append("</OL>");
 
@@ -371,16 +364,8 @@ public class PracticeExam extends HttpServlet {
 			nQuestions = 2;
 			i = 0;
 			while (i<nQuestions && questionKeys_15pt.size()>0) {
-				Key<Question> k = questionKeys_15pt.remove(rand.nextInt(questionKeys_15pt.size()));
+				Key<Question> k = questionKeys_15pt.remove(0);
 				Question q = examQuestions.get(k);
-				if (q==null) {
-					try {
-						q = ofy().load().key(k).safe();
-						examQuestions.put(k,q);
-					} catch (Exception e) {
-						continue;  // this catches cases where an assigned question no longer exists
-					}
-				}
 				i++;
 				possibleScores[topicIds.indexOf(q.topicId)] += q.pointValue;
 				q.setParameters((int)(pt.id - q.id));
@@ -388,7 +373,7 @@ public class PracticeExam extends HttpServlet {
 				if (assignmentId>0) buf.append("<SCRIPT>"
 						+ "document.getElementById('showWork" + q.id + "').style.display='';"
 						+ "</SCRIPT>");
-				pt.questionKeys.add(k);
+				if (newExam) pt.questionKeys.add(k);
 			}
 			buf.append("</OL>");
 
