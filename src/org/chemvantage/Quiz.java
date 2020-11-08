@@ -305,7 +305,7 @@ public class Quiz extends HttpServlet {
 				return "<h2>No Score</h2>"
 						+ "Sorry, this quiz was graded on " + df.format(qt.graded) + " and cannot be regraded.<p>"
 						+ "Your score on this quiz was " + qt.score + " out of a possible " + qt.possibleScore + " points.<p>"
-						+ (user.isAnonymous()?"<p><a href=/Quiz?TopicId=" + qt.topicId + "&sig=" + user.getTokenSignature() + ">"
+						+ (user.isAnonymous()?"<p><a href=/Quiz.jsp?TopicId=" + qt.topicId + "&sig=" + user.getTokenSignature() + ">"
 						+ "Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a>.":"You may repeat this "
 							+ "assignment by launching it from your class learning management system.");
 			}
