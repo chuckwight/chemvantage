@@ -320,9 +320,7 @@ public class LTILaunch extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 
 		// Print a nice banner
-		buf.append("<img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo' align=left>"
-				+ "<span>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
-				+ "<br>An Open Education Resource</span>");
+		buf.append(Home.banner);
 
 		buf.append("<h2>Assignment Setup Page</h2>"
 				+ "The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<p>");
@@ -338,7 +336,8 @@ public class LTILaunch extends HttpServlet {
 			Date Jan2021 = new Date(1609477200000L);
 			if (now.after(Jan2021)) {
 				String message = "You are currently using LTI version 1.1 to connect to ChemVantage. This version of LTI was deprecated by the IMS Global "
-						+ "Learning Corsortium on December 31, 2020. We highly recommend that you register ChemVantage in your LMS using the current "
+						+ "Learning Corsortium on December 31, 2020. Most LMS providers will continue to support LTI version 1.1 through at least the 2021 "
+						+ "calendar year. However, we recommend that you register ChemVantage in your LMS using the current "
 						+ "LTI version 1.3. Your LMS and/or ChemVantage may discontinue support for version 1.1 at any time.";
 				buf.append("<SCRIPT>alert('" + message + "');</SCRIPT>");
 			}
