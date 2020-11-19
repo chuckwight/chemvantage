@@ -318,7 +318,7 @@ public class Quiz extends HttpServlet {
 			
 			int timeAllowed = 900;  // default time to complete the quiz, in seconds
 			try {
-				timeAllowed = qa.timeAllowed;
+				timeAllowed = qa.timeAllowed>0?qa.timeAllowed:900;  // override the default timeAllowed if qa.tinmeAllowed exists
 			} catch (Exception e) {}
 			
 			if (now.getTime() - qt.downloaded.getTime() > (timeAllowed*1000+10000)) // includes 10 second grace period
