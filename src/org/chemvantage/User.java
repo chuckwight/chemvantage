@@ -67,15 +67,14 @@ public class User {
 	public static User getUser(String sig,int minutesRequired) {   // allows custom expiration for long assignments
 		if (sig==null) return null;
     	User user = null;
-    		
-    	minutesRequired += 2;  // grace period for session expiration
-    	
+    	Date now = new Date();
+    	Date grace = new Date(now.getTime() + minutesRequired*60000L);  // start of grace period
+    	Date expires = new Date(now.getTime() + (minutesRequired+5)*60000L);   // includes 5-minute grace period
+			
 		try {  // try to find the User entity in the datastore
     		user = ofy().load().type(User.class).id(Long.parseLong(sig)).safe();
-    		Date now = new Date();
-        	Date expires = new Date(now.getTime() + minutesRequired*60000L);
     		if (user.exp.before(now)) return null; // entity has expired
-    		if (user.exp.before(expires)) { // extend the exp time
+    		if (user.exp.before(grace)) { // extend the exp time
     			user.exp = expires;
     			ofy().save().entity(user);
     		}
