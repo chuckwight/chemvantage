@@ -48,7 +48,6 @@ public class PracticeExam extends HttpServlet {
 
 	int nSubjectAreas = 1;               // default number of subject areas for exam overridden by values read from AssignmentInfo database
 	int nQuestionsPerSubjectArea = 10;   // number of questions presented in each area also overridden in method printExam()
-	//int timeAllowed = 3600;              // seconds; set to zero for no time limit to complete the exam
 	int waitForNewDownload = 0;          // minutes; set to zero for unlimited rate of exam downloads
 	boolean enforceDeadlines = true;     // true means that exam score is not recorded after the deadline
 	boolean allowMultipleTries = true;   // false allows only one attempt at each exam; true is recommended
@@ -528,27 +527,103 @@ public class PracticeExam extends HttpServlet {
 			buf.append("<b>Your score on this exam is " + score + " out of a possible " + possibleScore + " points.</b><p>");
 			if (score > 0 && score == possibleScore) buf.append ("<b>Congratulations on a perfect score!</b>");
 			else {
-				if (wrongAnswers > 0) {
-					buf.append("<TABLE><TR><TD><b>Topic</b></TD><TD><b>Score</b></TD>"
-							+ "<TD><b>Possible</b></TD><TD><b>Percent</b></TD><TD></TD></TR>");
-					for (int i=0;i<topicIds.size();i++) {
-						int pct = (pt.possibleScores[i]>0?pt.scores[i]*100/pt.possibleScores[i]:0);
-						String color = (pct>84?"#00FF00":(pct<50?"#FF0000":"#FFFF00"));
-						buf.append("<TR>"
-								+ "<TD>" + topicTitles.get(i) + "</TD>"
-								+ "<TD ALIGN=RIGHT>" + pt.scores[i] + "</TD>"
-								+ "<TD ALIGN=RIGHT>" + pt.possibleScores[i] + "</TD>"
-								+ "<TD ALIGN=RIGHT>" + pct + "%</TD>"
-								+ "<TD><div style='background-color:" + color + ";width:" + pct 
-								+ "px;'/>&nbsp;</TD></TR>");
-					}
-					buf.append("</TABLE><p>");
-					buf.append(missedQuestions); // list of missed questions with correct answers
+				buf.append("<TABLE><TR><TD><b>Topic</b></TD><TD><b>Score</b></TD>"
+						+ "<TD><b>Possible</b></TD><TD><b>Percent</b></TD><TD></TD></TR>");
+				for (int i=0;i<topicIds.size();i++) {
+					int pct = (pt.possibleScores[i]>0?pt.scores[i]*100/pt.possibleScores[i]:0);
+					String color = (pct>84?"#00FF00":(pct<50?"#FF0000":"#FFFF00"));
+					buf.append("<TR>"
+							+ "<TD>" + topicTitles.get(i) + "</TD>"
+							+ "<TD ALIGN=RIGHT>" + pt.scores[i] + "</TD>"
+							+ "<TD ALIGN=RIGHT>" + pt.possibleScores[i] + "</TD>"
+							+ "<TD ALIGN=RIGHT>" + pct + "%</TD>"
+							+ "<TD><div style='background-color:" + color + ";width:" + pct 
+							+ "px;'/>&nbsp;</TD></TR>");
 				}
+				buf.append("</TABLE><p>");
+				if (wrongAnswers > 0) buf.append(missedQuestions); // list of missed questions with correct answers
 				else buf.append("Some questions were left blank.");
 			}
 			// embed ajax code to provide feedback
 			buf.append(ajaxScoreJavaScript(user.getTokenSignature()));
+		
+			List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.id).filter("assignmentId",a.id).order("downloaded").list();
+			if (pets.size()==0) {
+				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>");
+			} else {				
+				Score s = null;
+				try { // retrieve the score and ensure that it is up to date
+					s = ofy().load().key(Key.create(Key.create(User.class,user.id),Score.class,a.id)).safe();
+					if (s.numberOfAttempts != pets.size()) throw new Exception();
+				} catch (Exception e) { // create a fresh Score entity from scratch
+					s = Score.getInstance(user.id, a);
+					ofy().save().entity(s);
+				}
+				
+				buf.append("<h3>Your Scores for This Practice Exam Assignment</h3>");
+				
+				buf.append("Your best score on this assignment is " + Math.round(s.getPctScore()) + "%.<br>");
+
+				// try to validate the score with the LMS grade book entry
+				String lmsScore = null;
+				try {
+					double lmsPctScore = 0;
+					boolean gotScoreOK = false;
+					
+					if (a.lti_ags_lineitem_url != null) {  // LTI version 1.3
+						lmsScore = LTIMessage.readUserScore(a,user.id);
+						try {
+							lmsPctScore = Double.parseDouble(lmsScore);
+							gotScoreOK = true;
+						} catch (Exception e) {
+						}
+					}
+					else if (a.lis_outcome_service_url != null && s.lis_result_sourcedid != null) {  // LTI version 1.1
+						String messageFormat = "application/xml";
+						String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
+						String oauth_consumer_key = user.id.substring(0, user.id.indexOf(":"));
+						String replyBody = new LTIMessage(messageFormat,body,a.lis_outcome_service_url,oauth_consumer_key).send();
+
+						if (replyBody.contains("success")) {
+							int beginIndex = replyBody.indexOf("<textString>") + 12;
+							int endIndex = replyBody.indexOf("</textString>");
+							lmsScore = replyBody.substring(beginIndex,endIndex);
+							lmsPctScore = 100.*Double.parseDouble(lmsScore);
+							gotScoreOK = true;
+						}
+					}
+					
+					if (gotScoreOK && Math.abs(lmsPctScore-s.getPctScore())<1.0) { // LMS readResult agrees to within 1%
+						buf.append("This score is accurately recorded in the grade book of your class learning management system.<p>");
+					} else if (gotScoreOK) { // there is a significant difference between LMS and ChemVantage scores. Please explain:
+						buf.append("The score recorded in your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%. The difference may be due to<br>"
+								+ "enforcement of assignment deadlines, grading policies, a delay in posting the score and/or instructor discretion.<br>"
+								+ "If you think this may be due to a stale score, you may submit this assignment for grading,<br>"
+								+ "even for a score of zero, and ChemVantage will try to refresh your best score to the LMS.<p>");
+					} else throw new Exception();
+				} catch (Exception e) {
+					buf.append("ChemVantage was unable to retrieve your score for this assignment from the LMS.<br>"
+							+ "Sometimes it takes several seconds for the score to be posted in the LMS grade book.<br>");
+					if (s.score==0 && s.numberOfAttempts<=1) buf.append("It appears that you may not have submitted a score for this quiz yet. ");
+					if (user.isInstructor()) buf.append("Some LMS providers do not store scores for instructors.");
+					buf.append("<p>");
+				}
+			}
+			
+			buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Practice Exam Score (percent)</th></tr>");
+			for (PracticeExamTransaction pet : pets) {
+				score = 0;
+				possibleScore = 0;
+				for (int i=0;i<topicIds.size();i++) {
+					score += pet.scores[i];
+					possibleScore += pet.possibleScores[i];
+				}
+				int pct = (possibleScore>0?score*100/possibleScore:0);
+				
+				buf.append("<tr><td>" + pet.id + "</td><td>" + df.format(pet.downloaded) + "</td><td align=center>" + (pet.graded==null?"-":pct + "%") +  "</td></tr>");
+			}
+			buf.append("</table><br>Missing scores indicate quizzes that were downloaded but not submitted for scoring.<p>");
+		
 		}
 		catch (Exception e) {
 			buf.append(e.getMessage());
