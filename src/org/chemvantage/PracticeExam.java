@@ -25,6 +25,8 @@ import java.io.PrintWriter;
 import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -723,15 +725,59 @@ public class PracticeExam extends HttpServlet {
 
 			// Get all of the PracticeExamTransactions associated with this assignment:
 			List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("assignmentId",assignmentId).list();			
+			/*
 			List<PracticeExamTransaction> abandoned = new ArrayList<PracticeExamTransaction>();
 			for (PracticeExamTransaction pet : pets) if (pet.graded==null) abandoned.add(pet);
 			pets.removeAll(abandoned);
-			
+			*/
 			if (pets.size()==0) {
-				buf.append("There are no submissions of this practice exam assignment yet.<p>");
+				buf.append("There are no transactions for this practice exam assignment yet.<p>");
 				return buf.toString();
 			}
+			Collections.sort(pets, new SortExams()); 
+			  
+			int i = 0;
+			buf.append("<table>");
+			buf.append("<tr><th>User</th><th>Attempt</th><th>Downloaded</th><th>Elapsed Time</th>");
+			for (int j=1;j<=topics.size();j++) buf.append("<th>Topic " + j + "</th>");
+			buf.append("<th>Total Score</th><th>Reviewed</th><th></th></tr>");
+			
+			while (pets.size()>0) {
+				i++; // increment the user number
+				// make a short list of each user's PracticeExamTransactions
+				List<PracticeExamTransaction> userpets = new ArrayList<PracticeExamTransaction>();
+				String userId = pets.get(0).userId;
+				while (pets.size()>0 && pets.get(0).userId.equals(userId)) userpets.add(pets.remove(0));
+				
+				for (int k=userpets.size();k>0;k--) {  // enter the user's transactions into the table
+					PracticeExamTransaction p = userpets.get(k-1);
+					buf.append("<tr style='text-align: center;background-color: " + (i%2==0?"yellow":"cyan") + "'>");
+					buf.append("<td>" + (p.userId.equals(user.id)?"(you)":i) + "</td><td>" + k + "</td><td>" + p.downloaded + "</td>");
 
+					if (p.graded==null) buf.append("<td colspan=" + 4+a.topicIds.size() + ">(exam was not submitted for scoring)</td>");
+					else {
+						buf.append("<td>" + (p.graded==null?"-":(p.graded.getTime()-p.downloaded.getTime())/60000 + " min.") + "</td>");
+
+						int score = 0;
+						int possibleScore = 0;
+						for (int j=0;j<a.topicIds.size();j++) {
+							score += p.scores[j];
+							possibleScore += p.possibleScores[j];
+							if (p.possibleScores[j] == 0) buf.append("<td>0%</td>");
+							else buf.append("<td>" + String.valueOf(100*p.scores[j]/p.possibleScores[j]) + "%" + "</td>");
+						}
+
+						buf.append("<td>" + String.valueOf(100*score/possibleScore) + "%</td><td>" 
+								+ (p.graded==null?" - ":(p.reviewed==null?"no":p.reviewed)) + "</td><td>"
+								+ "<a href=PracticeExam?UserRequest=ReviewExam&PracticeExamTransactionId=" + p.id 
+								+ "&sig=" + user.getTokenSignature() + ">Review</a></td>");
+					}
+					buf.append("</tr>");					
+				}
+			}			
+			buf.append("</table><p>");
+			
+/*
 			int i=0;
 			buf.append("<table>");
 			buf.append("<tr><th>Exam</th><th>Downloaded</th><th>Elapsed Time</th>");
@@ -760,8 +806,9 @@ public class PracticeExam extends HttpServlet {
 				buf.append("</tr>");
 			}
 			buf.append("</table><p>");
-			
-			buf.append("In addition, " + abandoned.size() + " exams were downloaded but not submitted for grading.<p>");
+			*/
+			//buf.append("In addition, " + abandoned.size() + " exams were downloaded but not submitted for grading.<p>");
+			buf.append("<p>");
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}
@@ -942,4 +989,12 @@ public class PracticeExam extends HttpServlet {
 		}
 		return true;
 	}
+}
+
+class SortExams implements Comparator<PracticeExamTransaction> { 
+    // Used for sorting exams in ascending order of userId, then descending order downloaded 
+    public int compare(PracticeExamTransaction a, PracticeExamTransaction b) {
+    	if (a.userId.equals(b.userId)) return a.downloaded.compareTo(b.downloaded);
+    	else return a.userId.compareTo(b.userId); 
+    } 
 }
