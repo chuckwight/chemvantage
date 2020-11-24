@@ -221,11 +221,11 @@ public class LTIv1p3Launch extends HttpServlet {
 			try {
 				String domain = d.getPlatformId();
 				List<BLTIConsumer> cons = ofy().load().type(BLTIConsumer.class).filter("domain",domain).list();
-				List<Assignment> matchingAssignments = new ArrayList<Assignment>();
+				Key<Assignment> assignmentKey = null;
 				for (BLTIConsumer c : cons) {  // there may be more than 1 BLTIConsumer for any given domain; search until you find a match
-					matchingAssignments.addAll(ofy().load().type(Assignment.class).filter("domain",c.domain).filter("resourceLinkId",resourceLinkId).list());
-					if (matchingAssignments.size()>0) {
-						myAssignment = matchingAssignments.get(0);  // might be null
+					assignmentKey = ofy().load().type(Assignment.class).filter("domain",c.oauth_consumer_key).filter("resourceLinkId",resourceLinkId).keys().first().now();
+					if (assignmentKey != null) {
+						myAssignment = ofy().load().key(assignmentKey).safe();
 						break;
 					}
 				}
