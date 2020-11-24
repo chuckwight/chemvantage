@@ -211,11 +211,24 @@ public class LTIv1p3Launch extends HttpServlet {
 			}
 		}
 
-		// Try to find the assignment using the platformDeploymentId and the resourceLinkId value
-		if (myAssignment == null) {
+		if (myAssignment == null) {  // Try to find the assignment using the resourceLinkId value and platform_deployment_id
 			try {
 				myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().safe();
-				debug.append("assignment was found in the datastore...");
+			} catch (Exception e) {}
+		}
+		
+		if (myAssignment == null) {  // Try to find the assignment under a LTIv1p1 BLTIConsumer with a matching domain value
+			try {
+				String domain = d.getPlatformId();
+				List<BLTIConsumer> cons = ofy().load().type(BLTIConsumer.class).filter("domain",domain).list();
+				List<Assignment> matchingAssignments = new ArrayList<Assignment>();
+				for (BLTIConsumer c : cons) {  // there may be more than 1 BLTIConsumer for any given domain; search until you find a match
+					matchingAssignments.addAll(ofy().load().type(Assignment.class).filter("domain",c.domain).filter("resourceLinkId",resourceLinkId).list());
+					if (matchingAssignments.size()>0) {
+						myAssignment = matchingAssignments.get(0);  // might be null
+						break;
+					}
+				}
 			} catch (Exception e) {}
 		}
 
