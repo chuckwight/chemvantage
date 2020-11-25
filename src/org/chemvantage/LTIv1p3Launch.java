@@ -140,10 +140,10 @@ public class LTIv1p3Launch extends HttpServlet {
 		try {
 			Date now = new Date();
 			Date yesterday = new Date(now.getTime()-86400000L); // 24 hrs ago
-			if (d.lastLogin==null || d.lastLogin.before(yesterday)) {
+			//if (d.lastLogin==null || d.lastLogin.before(yesterday)) {
 				d.lastLogin = now;
 				d.claims = claims.toString();
-			}
+			//}
 			JsonObject platform = claims.get("https://purl.imsglobal.org/spec/lti/claim/tool_platform").getAsJsonObject();
 			d.email = platform.get("email_contact").getAsString();
 			d.lms_type = platform.get("product_family_code").getAsString() + " version " + platform.get("version").getAsString();
