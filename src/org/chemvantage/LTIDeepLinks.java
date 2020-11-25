@@ -177,9 +177,7 @@ public class LTIDeepLinks extends HttpServlet {
 		boolean acceptsMultiple = false;  //settings.get("accept_multiple").getAsBoolean();
 		
 		// Print a nice banner
-		buf.append("<img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo' align=left>"
-				+ "<span>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
-				+ "<br>An Open Education Resource</span>");
+		buf.append(Home.banner);
 
 		buf.append("<h2>Assignment Setup Page</h2>");
 
@@ -212,7 +210,7 @@ public class LTIDeepLinks extends HttpServlet {
 		buf.append("Select the type of assignment to create...<br>");
 		buf.append("<label><input type=radio name=AssignmentType onClick=showTopics(" + (acceptsMultiple?"'check'":"'radio'") + "); value='Quiz'" + (assignmentType.equals("Quiz")?" CHECKED>":">") + "Quiz</label><br>"
 				+ "<label><input type=radio name=AssignmentType onClick=showTopics(" + (acceptsMultiple?"'check'":"'radio'") + "); value='Homework'" + (assignmentType.equals("Homework")?" CHECKED>":">") + "Homework</label><br>"
-				+ "<label><input type=radio name=AssignmentType onClick=showTopics('check'); value='PracticeExam'" + (assignmentType.equals("Exam")?" CHECKED>":">") + "Practice&nbsp;Exam</label><p>");
+				+ "<label><input type=radio name=AssignmentType onClick=showTopics('check'); value='PracticeExam'" + (assignmentType.equals("PracticeExam")?" CHECKED>":">") + "Practice&nbsp;Exam</label><p>");
 		buf.append("</div>");
 
 		// Put Part 2 in a cell on the right side of the first row

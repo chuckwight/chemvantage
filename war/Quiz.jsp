@@ -128,8 +128,11 @@ function showWorkBox(qid) {}
 <h2>Quiz - <%= topic.getTitle() %></h2>
 
 <% if (user.isInstructor()) { %>
-<mark>As the course instructor you may <a href='/Quiz?UserRequest=AssignQuizQuestions&sig=<%= user.getTokenSignature() %>'>customize this assignment</a>.</mark>
-<p>
+  <mark>As the course instructor you may <a href='/Quiz?UserRequest=AssignQuizQuestions&sig=<%= user.getTokenSignature() %>'>customize this assignment</a>.
+  <% if (qa.lti_nrps_context_memberships_url != null && qa.lti_ags_lineitem_url != null) { %>
+	 <br>You may also view a <a href='/Quiz?UserRequest=ShowSummary&sig=<%= user.getTokenSignature() %>'>summary of student scores</a> for this assignment.
+  <% } %>
+  </mark><p>
 <% } %>
 
 <% if (!user.isAnonymous()) { %>

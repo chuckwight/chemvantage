@@ -140,10 +140,10 @@ public class LTIv1p3Launch extends HttpServlet {
 		try {
 			Date now = new Date();
 			Date yesterday = new Date(now.getTime()-86400000L); // 24 hrs ago
-			//if (d.lastLogin==null || d.lastLogin.before(yesterday)) {
+			if (d.lastLogin==null || d.lastLogin.before(yesterday)) {
 				d.lastLogin = now;
 				d.claims = claims.toString();
-			//}
+			}
 			JsonObject platform = claims.get("https://purl.imsglobal.org/spec/lti/claim/tool_platform").getAsJsonObject();
 			d.email = platform.get("email_contact").getAsString();
 			d.lms_type = platform.get("product_family_code").getAsString() + " version " + platform.get("version").getAsString();
@@ -403,9 +403,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 
 		// Print a nice banner
-		buf.append("<img src=/images/CVLogo_thumb.jpg alt='ChemVantage Logo' align=left>"
-				+ "<span>Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT>"
-				+ "<br>An Open Education Resource</span>");
+		buf.append(Home.banner);
 
 		buf.append("<h2>Assignment Setup Page</h2>"
 				+ "The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<p>");
