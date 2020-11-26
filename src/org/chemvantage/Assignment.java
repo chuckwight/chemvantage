@@ -43,7 +43,7 @@ public class Assignment implements java.lang.Cloneable {
 	public	long videoId;    // used only for video assignments
 	public	Integer timeAllowed; // to complete assignment, in seconds default = 900 for Quiz, 3600 for PracticeExam
 	public	String lis_outcome_service_url;
-	public	String lti_ags_lineitem_url;
+	@Index	public	String lti_ags_lineitem_url;
 	public	String lti_nrps_context_memberships_url;
 			List<Long> topicIds; // used for practice exams which have multiple topicIds
 			List<String> resourceLinkIds = new ArrayList<String>();  // deprecated

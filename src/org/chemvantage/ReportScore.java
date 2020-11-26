@@ -153,7 +153,8 @@ public class ReportScore extends HttpServlet {
 			Score s = ofy().load().key(k).safe();
 			String response = LTIMessage.postUserScore(s);
 			buf.append(response);
-			if (!response.contains("Success")) {			
+			if (response.contains("Success") || response.contains("422"));
+			else {			
 				if (attempts < 3) {
 					long countdownMillis = (long) Math.pow(2,attempts)*60000;
 					Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
