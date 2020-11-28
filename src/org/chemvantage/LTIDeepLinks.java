@@ -169,12 +169,10 @@ public class LTIDeepLinks extends HttpServlet {
 	String contentPickerForm(User user, HttpServletRequest request,JsonObject claims,int topicKey) throws Exception {
 		StringBuffer buf = new StringBuffer(Home.header("Select ChemVantage Assignment"));
 		
-		// Debug:
-		//buf.append("Claims:<br>" + claims.toString() + "<p>");
 		JsonObject settings = claims.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings").getAsJsonObject();
 		boolean acceptsLtiResourceLink = settings.get("accept_types").getAsJsonArray().contains(new JsonPrimitive("ltiResourceLink"));
 		if (!acceptsLtiResourceLink) throw new Exception("Deep Link request failed because platform does not accept new LtiResourceLinks.");
-		boolean acceptsMultiple = false;  //settings.get("accept_multiple").getAsBoolean();
+		boolean acceptsMultiple = settings.get("accept_multiple").getAsBoolean();
 		
 		// Print a nice banner
 		buf.append(Home.banner);
@@ -183,9 +181,8 @@ public class LTIDeepLinks extends HttpServlet {
 
 		if (acceptsMultiple) buf.append("Use this page to create multiple ChemVantage assignments in your learning management system (LMS). "
 				+ "Select the assignment type (e.g., Quiz) and then select the topics of all the different quizzes to create "
-				+ "(one quiz per topic). Return to this page to create multiple Homework assignments, if needed. For Practice Exam "
+				+ "(one quiz per topic). Return to this page to create multiple Video or Homework assignments, if needed. For Practice Exam "
 				+ "assignents, each exam covers multiple topics, so you can create only one Practice Exam for each visit to this page.<p>");
-		//else buf.append("Select a new assignment:<p>");
 		
 		// Start building a form to select the assignment attributes:
 		// The form has 4 sections:
@@ -208,11 +205,17 @@ public class LTIDeepLinks extends HttpServlet {
 		if (assignmentType==null) assignmentType = "";
 		buf.append("<div style='display:table'><div style='display:table-row'><div style='display:table-cell'>");
 		buf.append("Select the type of assignment to create...<br>");
-		buf.append("<label><input type=radio name=AssignmentType onClick=showTopics('Quiz'); value='Quiz'" + (assignmentType.equals("Quiz")?" CHECKED>":">") + "Quiz</label><br>"
-				+ "<label><input type=radio name=AssignmentType onClick=showTopics('Homework'); value='Homework'" + (assignmentType.equals("Homework")?" CHECKED>":">") + "Homework</label><br>"
-				+ "<label><input type=radio name=AssignmentType onClick=showTopics('VideoQuiz'); value='VideoQuiz'" + (assignmentType.equals("VideoQuiz")?" CHECKED>":">") + "Video</label><br>"
-				+ "<label><input type=radio name=AssignmentType onClick=showTopics('PracticeExam'); value='PracticeExam'" + (assignmentType.equals("PracticeExam")?" CHECKED>":">") + "Practice&nbsp;Exam</label><p>");
+		buf.append("<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('Quiz'); value='Quiz'" + (assignmentType.equals("Quiz")?" CHECKED>":">") + "Quiz</label><br>"
+				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('Homework'); value='Homework'" + (assignmentType.equals("Homework")?" CHECKED>":">") + "Homework</label><br>"
+				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('VideoQuiz'); value='VideoQuiz'" + (assignmentType.equals("VideoQuiz")?" CHECKED>":">") + "Video</label><br>"
+				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('PracticeExam'); value='PracticeExam'" + (assignmentType.equals("PracticeExam")?" CHECKED>":">") + "Practice&nbsp;Exam</label><p>");
 		buf.append("</div>");
+
+		// Each textbook is associated with an integer topicKey in sequence of powers of 2 so that for each text i, topicKey[i] = 2^(i-1) where i=1,2,3,...,N
+		// Each topic has a topicGroup attribute which is the sum of the sum of topicKeys for aligned texts, so topicGroup ranges from 0 to 2^(N)-1
+		// topicGroup=3 means alignment with both text1 and text2, topicGroup=4 means alignment only with text3, and so on.
+		// In general, the topicGroup value includes a topicKey iff topicGroup % 2*topicKey / topicKey == 1 where % and / are the integer modulus and div operators
+		// A topic having topicGroup = 0 means that the topic does not align with any particular text, but can be viewed if topicKey = 0 (meaning view all topics).
 
 		// Put Part 2 in a cell on the right side of the first row
 		buf.append("<div id=topicKeySelect style='display:table-cell;visibility:" + (assignmentType.equals("")?"hidden":"visible") + "'>");
@@ -222,62 +225,65 @@ public class LTIDeepLinks extends HttpServlet {
 		buf.append("</div></div></div>");
 		// End of top table
 
-		// Load a javascript function to count or clear the selected check boxes and radio buttons
 		buf.append("<script>"
-				+ "function countChecks() {"
-				+ "  var boxes = document.getElementsByName('TopicIds');"
-				+ "  var count=0;"
-				+ "  var assignmentType;"
-				+ "  var types = document.getElementsByName('AssignmentType');"
-				+ "  for (i=0;i<types.length;i++) if (types[i].checked) assignmentType=types[i].value;"
-				+ "  for (i=0;i<boxes.length;i++) if (boxes[i].checked) count++;"
-				+ "  if (assignmentType=='PracticeExam' && count<3) {"
-				+ "    document.getElementById('checksub').disabled=true;"
-				+ "    document.getElementById('checksub').value='Select at least 3 topics for this assignment';"
-				+ "  } else if (count<1) {"
-				+ "    document.getElementById('checksub').disabled=true;"
-				+ "    document.getElementById('checksub').value='Select at least one topic';"
-				+ "  } else {"
-				+ "    document.getElementById('checksub').disabled=false;"
-				+ "    document.getElementById('checksub').value='Select these topics';"
+				+ "function showAssignmentTopics(type){"
+				+ "  document.getElementById('topicKeySelect').style.visibility='visible';"
+				+ "  switch (type) {"
+				+ "    case 'PracticeExam': document.getElementById('examSelect').style.display='block';document.getElementById('videoSelect').style.display='none';document.getElementById('quizSelect').style.display='none';break;"
+				+ "    case 'VideoQuiz': document.getElementById('examSelect').style.display='none';document.getElementById('videoSelect').style.display='block';document.getElementById('quizSelect').style.display='none';break;"
+				+ "    default: document.getElementById('examSelect').style.display='none';document.getElementById('videoSelect').style.display='none';document.getElementById('quizSelect').style.display='block';"
 				+ "  }"
 				+ "}"
-				+ "function showTopics(assignmentType) {"
-				+ "  document.getElementById('topicKeySelect').style.visibility='visible';"
-				+ "  switch (assignmentType) {"
+				+ "function countChecks(type) {"
+				+ "  var examArray=document.getElementsByName('TopicIds');"
+				+ "  var videoArray=document.getElementsByName('VideoId');"
+				+ "  var quizArray=document.getElementsByName('TopicId');"
+				+ "  var checkSubmit = document.getElementById('checksub');"
+				+ "  var videoSubmit = document.getElementById('vidsub');"
+				+ "  var radioSubmit = document.getElementById('radsub');"
+				+ "  var count=0;"
+				+ "  switch (type) {"
 				+ "    case 'PracticeExam':"
-				+ "      document.getElementById('quizSelect').style.display='none';"
-				+ "      document.getElementById('videoSelect').style.display='none';"
-				+ "      document.getElementById('examSelect').style.display='block';"
+				+ "      for (var i=0;i<examArray.length;i++) if (examArray[i].checked) count++;"
+				+ "      if (count==1) {"
+				+ "        for (var i=0;i<videoArray.length;i++) videoArray[i].checked=false;"
+				+ "        videoSubmit.disabled = true;"
+				+ "        videoSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one topic for this assignment';"
+				+ "        for (var i=0;i<quizArray.length;i++) quizArray[i].checked=false;"
+				+ "        radioSubmit.disabled = true;"
+				+ "        radioSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one topic for this assignment';"
+				+ "      }"
+				+ "      checkSubmit.disabled=(count<3);"
+				+ "      if (count<3) checkSubmit.value='Select at least 3 topics';"
+				+ "      else checkSubmit.value='Create this exam';"
 				+ "      break;"
 				+ "    case 'VideoQuiz':"
-				+ "      document.getElementById('quizSelect').style.display='none';"
-				+ "      document.getElementById('videoSelect').style.display='block';"
-				+ "      document.getElementById('examSelect').style.display='none';"
+				+ "      for (var i=0;i<examArray.length;i++) examArray[i].checked=false;"
+				+ "      checkSubmit.disabled = true;"
+				+ "      checkSubmit.value = 'Select at least 3 topics for this exam';"
+				+ "      for (var i=0;i<quizArray.length;i++) quizArray[i].checked=false;"
+				+ "      radioSubmit.disabled = true;"
+				+ "      radioSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one topic for this assignment';"
+				+ "      for (var i=0;i<videoArray.length;i++) count++;"
+				+ "      videoSubmit.disabled = (count<1);"
+				+ "      if (count<1) videoSubmit.value='Select" + (acceptsMultiple?" at least":"") + " one topic for this assignment';"
+				+ "      else videoSubmit.value='Create " + (acceptsMultiple?"these assignments":"this assignment") + "';"
 				+ "      break;"
 				+ "    default:"
-				+ "      document.getElementById('quizSelect').style.display='block';"
-				+ "      document.getElementById('videoSelect').style.display='none';"
-				+ "      document.getElementById('examSelect').style.display='none';"
-				+ "      break;"
+				+ "      for (var i=0;i<examArray.length;i++) examArray[i].checked=false;"
+				+ "      checkSubmit.disabled = true;"
+				+ "      checkSubmit.value = 'Select at least 3 topics for this exam';"
+				+ "      for (var i=0;i<videoArray.length;i++) videoArray[i].checked=false;"
+				+ "      videoSubmit.disabled = true;"
+				+ "      videoSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one topic for this assignment';"
+				+ "      for (var i=0;i<quizArray.length;i++) count++;"
+				+ "      radioSubmit.disabled = (count<1);"
+				+ "      if (count<1) radioSubmit.value='Select" + (acceptsMultiple?" at least":"") + " one topic for this assignment';"
+				+ "      else radioSubmit.value='Create " + (acceptsMultiple?"these assignments":"this assignment") + "';"
 				+ "  }"
 				+ "}"
-				+ "function clearChecks() {"
-				+ "  var boxes = document.getElementsByName('TopicIds');"
-				+ "  for (i=0;i<boxes.length;i++) boxes[i].checked=false;"
-				+ "}"
-				+ "function clearRadios() {"
-				+ "  var boxes = document.getElementsByName('TopicId');"
-				+ "  for (i=0;i<boxes.length;i++) boxes[i].checked=false;"
-				+ "}"
-				+ "</script>");	
-
-		// Each textbook is associated with an integer topicKey in sequence of powers of 2 so that for each text i, topicKey[i] = 2^(i-1) where i=1,2,3,...,N
-		// Each topic has a topicGroup attribute which is the sum of the sum of topicKeys for aligned texts, so topicGroup ranges from 0 to 2^(N)-1
-		// topicGroup=3 means alignment with both text1 and text2, topicGroup=4 means alignment only with text3, and so on.
-		// In general, the topicGroup value includes a topicKey iff topicGroup % 2*topicKey / topicKey == 1 where % and / are the integer modulus and div operators
-		// A topic having topicGroup = 0 means that the topic does not align with any particular text, but can be viewed if topicKey = 0 (meaning view all topics).
-
+				+ "</script>");
+		
 		String selectorType = (acceptsMultiple?"checkbox":"radio");
 		
 		// Retrieve the entire list of topics from the datastore
@@ -307,12 +313,12 @@ public class LTIDeepLinks extends HttpServlet {
 		buf.append("<font color=red>Please select " + (acceptsMultiple?"at least":"") + " one video:</font><br>");
 		buf.append("<div style='display:table'>"); // start table of radio buttons
 		buf.append("<div style='display:table-row'><div style='display:table-cell'>");   // left column Chem1 topics		
-		for (Video v : sem1Videos) buf.append("<label><input type=" + selectorType + " name=VideoId value=" + v.id + " onClick=this.form.vidsub.disabled=false;>" + v.title + (v.breaks==null?"":" *") + "</label><br>");
+		for (Video v : sem1Videos) buf.append("<label><input type=" + selectorType + " name=VideoId value=" + v.id + " onClick=countChecks('VideoQuiz');>" + v.title + (v.breaks==null?"":" *") + "</label><br>");
 		buf.append("</div><div style='display:table-cell'>");  // right column Chem2 topics
-		for (Video v : sem2Videos) buf.append("<label><input type=" + selectorType + " name=VideoId value=" + v.id + " onClick=this.form.vidsub.disabled=false;>" + v.title + (v.breaks==null?"":" *") + "</label><br>");
+		for (Video v : sem2Videos) buf.append("<label><input type=" + selectorType + " name=VideoId value=" + v.id + " onClick=countChecks('VideoQuiz');>" + v.title + (v.breaks==null?"":" *") + "</label><br>");
 		buf.append("</div></div></div><br>");  // end of cell, row, table
 		buf.append("Video marked with an asterisk (*) have embedded quizzes; others will give full credit for watching to the end.<br>");
-		buf.append("<input type=submit name=vidsub disabled=true value='Submit'>"); // submit button for videos
+		buf.append("<input type=submit id=vidsub disabled=true value='Select" + (selectorType.equals("checkbox")?" at least":"") + " one topic'>"); // submit button for videos
 		buf.append("</div>"); // end of big box for VideoQuiz selection
 
 		// Create a selector table for Quiz or Homework assignments
@@ -320,11 +326,11 @@ public class LTIDeepLinks extends HttpServlet {
 		buf.append("<font color=red>Please select " + (acceptsMultiple?"at least":"") + " one topic:</font><br>");
 		buf.append("<div style='display:table'>"); // start table of radio buttons
 		buf.append("<div style='display:table-row'><div style='display:table-cell'>");   // left column Chem1 topics		
-		for (Topic t : sem1Topics) buf.append("<label><input type=" + selectorType + " name=TopicId" + (selectorType.equals("checkbox")?"s":"") + " value=" + t.id + " onClick=this.form.radsub.disabled=false;>" + t.title + "</label><br>");
+		for (Topic t : sem1Topics) buf.append("<label><input type=" + selectorType + " name=TopicId" + (selectorType.equals("checkbox")?"s":"") + " value=" + t.id + " onClick=countChecks('Quiz');>" + t.title + "</label><br>");
 		buf.append("</div><div style='display:table-cell'>");  // right column Chem2 topics
-		for (Topic t : sem2Topics) buf.append("<label><input type=" + selectorType + " name=TopicId" + (selectorType.equals("checkbox")?"s":"") + " value=" + t.id + " onClick=this.form.radsub.disabled=false;>" + t.title + "</label><br>");
+		for (Topic t : sem2Topics) buf.append("<label><input type=" + selectorType + " name=TopicId" + (selectorType.equals("checkbox")?"s":"") + " value=" + t.id + " onClick=countChecks('Quiz');>" + t.title + "</label><br>");
 		buf.append("</div></div></div>");  // end of cell, row, table
-		buf.append("<input type=submit name=radsub disabled=true value='Submit'>"); // submit button for radios
+		buf.append("<input type=submit id=radsub disabled=true value='Select" + (selectorType.equals("checkbox")?" at least":"") + " one topic'>"); // submit button for radios
 		buf.append("</div>"); // end of big box for Quiz/Homework selection
 
 		// Create a table with check boxes for Practice Exam assignments
@@ -332,9 +338,9 @@ public class LTIDeepLinks extends HttpServlet {
 		buf.append("<font color=red>Please select 3 or more topics for this exam:</font><br>");
 		buf.append("<div style='display:table'>"); // start table of check boxes
 		buf.append("<div style='display:table-row'><div style='display:table-cell'>");   // left column Chem1 topics		
-		for (Topic t : sem1Topics) buf.append("<label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks();>" + t.title + "</label><br>");
+		for (Topic t : sem1Topics) buf.append("<label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks('PracticeExam');>" + t.title + "</label><br>");
 		buf.append("</div><div style='display:table-cell'>");  // right column Chem2 topics
-		for (Topic t : sem2Topics) buf.append("<label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks();>" + t.title + "</label><br>");
+		for (Topic t : sem2Topics) buf.append("<label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks('PracticeExam');>" + t.title + "</label><br>");
 		buf.append("</div></div></div>");  // end of cell, row, table
 		buf.append("<input type=submit id=checksub disabled=true value='Select at least 3 topics for this assignment'><br>");
 		buf.append("</div>"); // end of big box for PracticeExam selection
@@ -380,13 +386,13 @@ public class LTIDeepLinks extends HttpServlet {
 		buf.append("</form>");
 		
 		// TEMPORARY section to display DeepLinking request claims
-		buf.append("<hr>");
-		buf.append(claims.toString());
+		//buf.append("<hr>");
+		//buf.append(claims.toString());
 		
 		buf.append(Home.footer);
 		return buf.toString();
 	}
-
+	
 	User getUserClaims(JsonObject claims) throws Exception {
 		// Process User information:
 		String sub = claims.get("sub").getAsString();  // required
@@ -420,7 +426,7 @@ public class LTIDeepLinks extends HttpServlet {
 			JsonObject settings = claims.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings").getAsJsonObject();		
 			deep_link_return_url = settings.get("deep_link_return_url").getAsString();
 			String data = settings.get("data")==null?"":settings.get("data").getAsString();
-			//boolean acceptsMultiple = false;  //settings.get("accept_multiple")==null?false:settings.get("accept_multiple").getAsBoolean();
+			boolean acceptsMultiple = settings.get("accept_multiple")==null?false:settings.get("accept_multiple").getAsBoolean();
 			
 			Date now = new Date();
 			Date exp = new Date(now.getTime() + 5400000L); // 90 minutes from now
@@ -430,45 +436,58 @@ public class LTIDeepLinks extends HttpServlet {
 			String assignmentType = request.getParameter("AssignmentType");
 			if (assignmentType == null || assignmentType.isEmpty()) throw new Exception("Assignment type is missing.");
 			
-			// Determine the topicId or topicIds for this selection
-			long topicId = 0L;
-			List<Long> topicIds = new ArrayList<Long>();
+			// Make a List of topicIds for this selection (may be VideoIds instead)
+			// PracticeExam assignments always transmit as TopicIds in checkboxes
+			// VideoQuiz assignments transmit as VideoId (checkboxes if acceptsMultiple; otherwise radio)
+			// Quiz or Homework assignments transmit as TopicId (checkboxes if acceptsMultiple; otherwise radio)
 			
-			if (assignmentType.contentEquals("Quiz") || assignmentType.contentEquals("Homework")) {
-				topicId = Long.parseLong(request.getParameter("TopicId"));
-			} else if (assignmentType.contentEquals("PracticeExam")) {
-				String[] topicIdArray = request.getParameterValues("TopicIds");
-				if (topicIdArray==null || topicIdArray.length<3) throw new Exception("At least 3 topics must be selected for a practice exam.");
-				for (int i=0;i<topicIdArray.length;i++) {
-					long tId = Long.parseLong(topicIdArray[i]);
-					topicIds.add(tId);
-				}
+			String[] topicIdArray;
+			List<Long> topicIds = new ArrayList<Long>();
+			switch (assignmentType) {
+			case "PracticeExam":
+				topicIdArray = request.getParameterValues("TopicIds");
+				for (int i=0;i<topicIdArray.length;i++) topicIds.add(Long.parseLong(topicIdArray[i]));			
+				break;
+			case "VideoQuiz":
+				if (acceptsMultiple) {
+					topicIdArray = request.getParameterValues("VideoId");
+					for (int i=0;i<topicIdArray.length;i++) topicIds.add(Long.parseLong(topicIdArray[i]));			
+				} else topicIds.add(Long.parseLong(request.getParameter("VideoId")));
+				break;
+			default:  // Quiz or Homework Assignment
+				if (acceptsMultiple) {
+					topicIdArray = request.getParameterValues("TopicId");
+					for (int i=0;i<topicIdArray.length;i++) topicIds.add(Long.parseLong(topicIdArray[i]));			
+				} else topicIds.add(Long.parseLong(request.getParameter("TopicId")));
 			}
+	
+			// At this point all of the topicIds or VideoIds are in the List topicIds
+			// If the assignmentType is PracticeExam, make a single Assignment, otherwise one per topic
 			
 			Assignment a = null;
-			
-			if ("PracticeExam".equals(assignmentType)) { // Create the new Assignment entity and load the questionKeys				
-				a = new Assignment(assignmentType,topicId,topicIds,d.platform_deployment_id);
+			List<Assignment> assignments = new ArrayList<Assignment>();
+			if (assignmentType.equals("PracticeExam")) {
+				a = new Assignment("PracticeExam",0L,topicIds,d.platform_deployment_id);
 				a.questionKeys = new ArrayList<Key<Question>>();
 				for (int i=0;i<a.topicIds.size();i++) {
 					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",a.topicIds.get(i)).keys().list());
 				}
-			} else {  // create Quiz or Homework assignment(s)
-				a = new Assignment(assignmentType,topicId,topicIds,d.platform_deployment_id);
-				a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
+				assignments.add(a);
+			} else {  // Quiz, Homework or VideoQuiz
+				for (Long tid : topicIds) {
+					a = new Assignment(assignmentType,0L,null,d.platform_deployment_id);
+					if (assignmentType.equals("VideoQuiz")) a.videoId = tid;
+					else {  // Quiz or Homework
+						a.topicId = tid;
+						a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
+					}
+					assignments.add(a);
+				}
 			}
-			
-			//a.resourceLinkId = UUID.randomUUID().toString();
-			ofy().save().entity(a).now();
-			
+						
+			ofy().save().entities(assignments).now();
+				
 			String serverUrl = "https://" + request.getServerName() + "/lti/launch";
-			switch (d.lms_type) {
-			case "canvas":
-				serverUrl += "?resourceId=" + a.id;
-			default:
-			}
-			
-			
 			String client_id = d.client_id;
 			String subject = request.getParameter("Subject");
 			String nonce = Nonce.generateNonce();
@@ -497,30 +516,35 @@ public class LTIDeepLinks extends HttpServlet {
 		
 			//Add the user-selected assignments to the payload as an array of content_items:
 			JsonArray content_items = new JsonArray();
-			//for (Assignment a : assignments) {
+			
+			for (Assignment a1 : assignments) {
 				JsonObject item = new JsonObject();
 				item.addProperty("type", "ltiResourceLink");
-				item.addProperty("url", serverUrl);
+				item.addProperty("url", serverUrl + ("canvas".equals(d.lms_type)?"?resourceId=" + a1.id:""));
 				
 				String title = "";
-				if (a.assignmentType.equals("Quiz") || a.assignmentType.equals("Homework")) {
-					title = a.assignmentType + " - " + ofy().load().type(Topic.class).id(a.topicId).now().title;
-				} else if (a.assignmentType.contentEquals("PracticeExam")) {
-					title = "Practice Exam - ";
-					for (long tId : topicIds) title += ofy().load().type(Topic.class).id(tId).now().title + ", ";
-					title.substring(0, title.length()-2);  // strip off the last comma and space
+				switch (assignmentType) {
+					case "PracticeExam":
+						title = "Practice Exam - ";
+						for (long tId : topicIds) title += ofy().load().type(Topic.class).id(tId).now().title + ", ";
+						title.substring(0, title.length()-2);  // strip off the last comma and space
+						break;
+					case "VideoQuiz":
+						title = "Video - " + ofy().load().type(Video.class).id(a1.videoId).now().title;
+						break;
+					default:
+						title = a1.assignmentType + " - " + ofy().load().type(Topic.class).id(a1.topicId).now().title;	
 				}
-				else item.addProperty("title",title);
+				item.addProperty("title", title);
 
 				JsonObject lineitem = new JsonObject();
 				lineitem.addProperty("scoreMaximum", (assignmentType.contentEquals("PracticeExam")?100:10));
 				lineitem.addProperty("label", title);
-				lineitem.addProperty("resourceId", String.valueOf(a.id));
-				//lineitem.addProperty("resourceLinkId", a.resourceLinkId);
+				lineitem.addProperty("resourceId", String.valueOf(a1.id));
 				item.add("lineItem", lineitem);
 			
 				content_items.add(item);
-			//}
+			}
 			payload.add("https://purl.imsglobal.org/spec/lti-dl/claim/content_items", content_items);
 			
 			byte[] pld = enc.encode(payload.toString().getBytes("UTF-8"));
