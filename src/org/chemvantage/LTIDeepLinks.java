@@ -248,10 +248,10 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "      if (count==1) {"
 				+ "        for (var i=0;i<videoArray.length;i++) videoArray[i].checked=false;"
 				+ "        videoSubmit.disabled = true;"
-				+ "        videoSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one topic for this assignment';"
+				+ "        videoSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one video topic';"
 				+ "        for (var i=0;i<quizArray.length;i++) quizArray[i].checked=false;"
 				+ "        radioSubmit.disabled = true;"
-				+ "        radioSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one topic for this assignment';"
+				+ "        radioSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one topic';"
 				+ "      }"
 				+ "      checkSubmit.disabled=(count<3);"
 				+ "      if (count<3) checkSubmit.value='Select at least 3 topics';"
@@ -263,10 +263,10 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "      checkSubmit.value = 'Select at least 3 topics for this exam';"
 				+ "      for (var i=0;i<quizArray.length;i++) quizArray[i].checked=false;"
 				+ "      radioSubmit.disabled = true;"
-				+ "      radioSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one topic for this assignment';"
-				+ "      for (var i=0;i<videoArray.length;i++) count++;"
+				+ "      radioSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one topic';"
+				+ "      for (var i=0;i<videoArray.length;i++) if (videoArray[i].checked) count++;"
 				+ "      videoSubmit.disabled = (count<1);"
-				+ "      if (count<1) videoSubmit.value='Select" + (acceptsMultiple?" at least":"") + " one topic for this assignment';"
+				+ "      if (count<1) videoSubmit.value='Select" + (acceptsMultiple?" at least":"") + " one video topic';"
 				+ "      else videoSubmit.value='Create " + (acceptsMultiple?"these assignments":"this assignment") + "';"
 				+ "      break;"
 				+ "    default:"
@@ -275,10 +275,10 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "      checkSubmit.value = 'Select at least 3 topics for this exam';"
 				+ "      for (var i=0;i<videoArray.length;i++) videoArray[i].checked=false;"
 				+ "      videoSubmit.disabled = true;"
-				+ "      videoSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one topic for this assignment';"
-				+ "      for (var i=0;i<quizArray.length;i++) count++;"
+				+ "      videoSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one video topic';"
+				+ "      for (var i=0;i<quizArray.length;i++) if (quizArray[i].checked) count++;"
 				+ "      radioSubmit.disabled = (count<1);"
-				+ "      if (count<1) radioSubmit.value='Select" + (acceptsMultiple?" at least":"") + " one topic for this assignment';"
+				+ "      if (count<1) radioSubmit.value='Select" + (acceptsMultiple?" at least":"") + " one topic';"
 				+ "      else radioSubmit.value='Create " + (acceptsMultiple?"these assignments":"this assignment") + "';"
 				+ "  }"
 				+ "}"
@@ -318,7 +318,7 @@ public class LTIDeepLinks extends HttpServlet {
 		for (Video v : sem2Videos) buf.append("<label><input type=" + selectorType + " name=VideoId value=" + v.id + " onClick=countChecks('VideoQuiz');>" + v.title + (v.breaks==null?"":" *") + "</label><br>");
 		buf.append("</div></div></div><br>");  // end of cell, row, table
 		buf.append("Video marked with an asterisk (*) have embedded quizzes; others will give full credit for watching to the end.<br>");
-		buf.append("<input type=submit id=vidsub disabled=true value='Select" + (selectorType.equals("checkbox")?" at least":"") + " one topic'>"); // submit button for videos
+		buf.append("<input type=submit id=vidsub disabled=true value='Select" + (selectorType.equals("checkbox")?" at least":"") + " one video topic'>"); // submit button for videos
 		buf.append("</div>"); // end of big box for VideoQuiz selection
 
 		// Create a selector table for Quiz or Homework assignments
@@ -326,9 +326,9 @@ public class LTIDeepLinks extends HttpServlet {
 		buf.append("<font color=red>Please select " + (acceptsMultiple?"at least":"") + " one topic:</font><br>");
 		buf.append("<div style='display:table'>"); // start table of radio buttons
 		buf.append("<div style='display:table-row'><div style='display:table-cell'>");   // left column Chem1 topics		
-		for (Topic t : sem1Topics) buf.append("<label><input type=" + selectorType + " name=TopicId" + (selectorType.equals("checkbox")?"s":"") + " value=" + t.id + " onClick=countChecks('Quiz');>" + t.title + "</label><br>");
+		for (Topic t : sem1Topics) buf.append("<label><input type=" + selectorType + " name=TopicId value=" + t.id + " onClick=countChecks('Quiz');>" + t.title + "</label><br>");
 		buf.append("</div><div style='display:table-cell'>");  // right column Chem2 topics
-		for (Topic t : sem2Topics) buf.append("<label><input type=" + selectorType + " name=TopicId" + (selectorType.equals("checkbox")?"s":"") + " value=" + t.id + " onClick=countChecks('Quiz');>" + t.title + "</label><br>");
+		for (Topic t : sem2Topics) buf.append("<label><input type=" + selectorType + " name=TopicId value=" + t.id + " onClick=countChecks('Quiz');>" + t.title + "</label><br>");
 		buf.append("</div></div></div>");  // end of cell, row, table
 		buf.append("<input type=submit id=radsub disabled=true value='Select" + (selectorType.equals("checkbox")?" at least":"") + " one topic'>"); // submit button for radios
 		buf.append("</div>"); // end of big box for Quiz/Homework selection
@@ -342,52 +342,10 @@ public class LTIDeepLinks extends HttpServlet {
 		buf.append("</div><div style='display:table-cell'>");  // right column Chem2 topics
 		for (Topic t : sem2Topics) buf.append("<label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks('PracticeExam');>" + t.title + "</label><br>");
 		buf.append("</div></div></div>");  // end of cell, row, table
-		buf.append("<input type=submit id=checksub disabled=true value='Select at least 3 topics for this assignment'><br>");
+		buf.append("<input type=submit id=checksub disabled=true value='Select at least 3 topics for this exam'><br>");
 		buf.append("</div>"); // end of big box for PracticeExam selection
 	
-		/*
-		// Create a table with radio buttons for a single Quiz or Homework assignment
-		buf.append("<div id=radioSelect style='display:" + ("radio".equals(selectorType)?"block":"none") + "'>");  // big box containing radio buttons
-		buf.append("<font color=red>Please select one topic for this assignment:</font><br>");
-		buf.append("<div style='display:table'>"); // start table of radio buttons
-		buf.append("<div style='display:table-row'><div style='display:table-cell'>");   // left column Chem1 topics		
-		for (Topic t : sem1Topics) buf.append("<label><input type=radio name=TopicId value=" + t.id + " onClick=this.form.radsub.disabled=false;>" + t.title + "</label><br>");
-		buf.append("</div><div style='display:table-cell'>");  // right column Chem2 topics
-		for (Topic t : sem2Topics) buf.append("<label><input type=radio name=TopicId value=" + t.id + " onClick=this.form.radsub.disabled=false;>" + t.title + "</label><br>");
-		buf.append("</div></div></div>");  // end of cell, row, table
-		buf.append("<input type=submit name=radsub disabled=true value='Select'>"); // submit button for radios
-		buf.append("</div>"); // end of big box with radio buttons
-
-		// Create a table with check boxes for a Practice Exam or multiple Quiz/Homework assignments
-		buf.append("<div id=checkSelect style='display:" + ("checkbox".equals(selectorType)?"block":"none") + "'>"); // big box containing check boxes
-		buf.append("<font color=red>Please select the desired topics:</font><br>");
-		buf.append("<div style='display:table'>"); // start table of check boxes
-		buf.append("<div style='display:table-row'><div style='display:table-cell'>");   // left column Chem1 topics		
-		for (Topic t : sem1Topics) buf.append("<label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks();>" + t.title + "</label><br>");
-		buf.append("</div><div style='display:table-cell'>");  // right column Chem2 topics
-		for (Topic t : sem2Topics) buf.append("<label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks();>" + t.title + "</label><br>");
-		buf.append("</div></div></div>");  // end of cell, row, table
-		buf.append("<input type=submit id=checksub disabled=true><br>");
-		buf.append("</div>"); // end of big box with check boxes
-
-		// Create a table with radio buttons or check boxes (for selectMultiple) for video quiz assignments
-		buf.append("<div id=videoSelect style='display:" + ("VideoQuiz".equals(assignmentType)?"block":"none") + "'>");
-		buf.append("<font color=red>Please select " + ("radio".equals(selectorType)?"one video":"the desired videos") + ":</font><br>");
-		buf.append("<div style='display:table'>"); // start table of radio buttons
-		buf.append("<div style='display:table-row'><div style='display:table-cell'>");   // left column Chem1 topics		
-		for (Video v : sem1Videos) buf.append("<label><input type=" + ("radio".equals(selectorType)?"radio":"checkbox") + " name=VideoId value=" + v.id + " onClick=this.form.vidsub.disabled=false;>" + v.title + (v.breaks==null?"":" *") + "</label><br>");
-		buf.append("</div><div style='display:table-cell'>");  // right column Chem2 topics
-		for (Video v : sem2Videos) buf.append("<label><input type=" + ("radio".equals(selectorType)?"radio":"checkbox") + " name=VideoId value=" + v.id + " onClick=this.form.vidsub.disabled=false;>" + v.title + (v.breaks==null?"":" *") + "</label><br>");
-		buf.append("</div></div></div><br>");  // end of cell, row, table
-		buf.append("Video marked with an asterisk (*) have embedded quizzes; others will give full credit for watching to the end.<br>");
-		buf.append("<input type=submit name=vidsub disabled=true value='Select'>"); // submit button for radios
-		buf.append("</div>"); // end of big box with radio buttons for video selection
-*/
 		buf.append("</form>");
-		
-		// TEMPORARY section to display DeepLinking request claims
-		//buf.append("<hr>");
-		//buf.append(claims.toString());
 		
 		buf.append(Home.footer);
 		return buf.toString();
