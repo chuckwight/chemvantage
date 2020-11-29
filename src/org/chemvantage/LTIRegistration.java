@@ -691,12 +691,22 @@ public class LTIRegistration extends HttpServlet {
 			
 		Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
 		
+		Deployment prior = Deployment.getInstance(d.platform_deployment_id);
+		
+		ofy().save().entity(d).now();  // registration is now complete
+		
+		String msg = "<h2>Congratulations. Registration is complete.</h2>";
+		
+		if (prior==null) return msg;
+		else if (prior.client_id.equals(d.client_id)) return msg + "Note: this platform deployment was registered previously. The registration data have now been updated.<p>";
+		else return msg + "Note: This platform deployment was registered previously. The client_id and registration data have now been updated.<p>";
+		/*
 		// check to ensure that this is not a duplicate registration:
 		if (Deployment.getInstance(d.platform_deployment_id) == null) {
-			ofy().save().entity(d).now();
+			
 			return "<h2>Congratulations. Registration is complete.</h2>";
 		} else return "Registration Failed: This deployment is already registered with ChemVantage.";
-		
+		*/
 	}	
 
 	String getConfigurationJson(String iss,String lms) {
