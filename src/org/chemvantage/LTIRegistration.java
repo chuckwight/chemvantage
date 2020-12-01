@@ -699,7 +699,7 @@ public class LTIRegistration extends HttpServlet {
 		
 		if (prior==null) return msg;
 		else if (prior.client_id.equals(d.client_id)) return msg + "Note: this platform deployment was registered previously. The registration data have now been updated.<p>";
-		else return msg + "Note: This platform deployment was registered previously. The client_id and registration data have now been updated.<p>";
+		else return msg + "Note: This platform deployment was registered previously. The client_id and registration data have now been updated. If this is not correct, you should contact admin@chemvantage.org immediately.<p>";
 		/*
 		// check to ensure that this is not a duplicate registration:
 		if (Deployment.getInstance(d.platform_deployment_id) == null) {
