@@ -126,10 +126,8 @@ public class LTIv1p3Launch extends HttpServlet {
 		} catch (Exception e) {
 			throw new Exception("id_token was not a valid JWT.");
 		}
-		//debug.append("id_token OK...");
-
+		
 		String resourceLinkId = verifyLtiMessageClaims(claims);
-
 		User user = getUserClaims(claims);
 
 		// At this point we have all of the REQUIRED info for a valid LTI launch
@@ -146,13 +144,11 @@ public class LTIv1p3Launch extends HttpServlet {
 			}
 			JsonObject platform = claims.get("https://purl.imsglobal.org/spec/lti/claim/tool_platform").getAsJsonObject();
 			d.email = platform.get("email_contact").getAsString();
-			d.lms_type = platform.get("product_family_code").getAsString() + " version " + platform.get("version").getAsString();
+			d.lms_type = platform.get("product_family_code").getAsString();
 		} catch (Exception e) {}	
-		//debug.append("deployment claims OK...");
-
+		
 		// Process information for LTI Assignment and Grade Services (AGS)
 		String scope = "";
-		String lti_ags_lineitems_url = null;
 		String lti_ags_lineitem_url = null;
 		try {  
 			JsonObject lti_ags_claims = claims.get("https://purl.imsglobal.org/spec/lti-ags/claim/endpoint").getAsJsonObject();
@@ -161,125 +157,74 @@ public class LTIv1p3Launch extends HttpServlet {
 			JsonArray scope_claims = lti_ags_claims.get("scope")==null?new JsonArray():lti_ags_claims.get("scope").getAsJsonArray();
 			Iterator<JsonElement> scopes_iterator = scope_claims.iterator();
 			while (scopes_iterator.hasNext()) scope += scopes_iterator.next().getAsString() + (scopes_iterator.hasNext()?" ":"");
-			lti_ags_lineitems_url = lti_ags_claims.get("lineitems")==null?null:lti_ags_claims.get("lineitems").getAsString();
 			lti_ags_lineitem_url = lti_ags_claims.get("lineitem")==null?null:lti_ags_claims.get("lineitem").getAsString();
 		} catch (Exception e) {				
 		}
-		//debug.append("Assignment & Grade Services claims OK...");
-
+		
 		// Process information for LTI Advantage Names and Roles Provisioning (NRPS)
 		String lti_nrps_context_memberships_url = null;
 		try { 
 			JsonObject lti_nrps_claims = claims.get("https://purl.imsglobal.org/spec/lti-nrps/claim/namesroleservice").getAsJsonObject();
 			if (lti_nrps_claims != null) scope += (scope.length()>0?" ":"") + "https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly";
 			lti_nrps_context_memberships_url = lti_nrps_claims.get("context_memberships_url").getAsString();
-			//debug.append("supports NRPS...");
 		} catch (Exception e) {
 		}
-		//debug.append("Roles and Membership Services claims OK...");		
-
+		
 		if (!scope.isEmpty()) d.scope = scope;
 
 		// Save the updated Deployment entity, if necessary
-		try {
-			if (!d.equivalentTo(original_d)) {
-				ofy().save().entity(d).now();
-				//debug.append("Deployment updated OK...");
-			} //else debug.append("Deployment unchanged...");		
-		} catch (Exception e) {
-			throw new Exception("Update of the Deployment entity failed. " + e.getMessage());
-		}
-
+		if (!d.equivalentTo(original_d)) ofy().save().entity(d).now();
+		
+		/* Find assignment (try the following, in order, until an assignment is found):
+		 *   1. Find an assignment in the datastore with a matching lti_ags_lineitem_url (should work for all established graded assignments)
+		 *   2. Find an assignment with matching domain and resourceLinkId (should work for all established ungraded assignments)
+		 *   3. Find an assignment with matching resourceId value (tool-defined assignmentId set during Deep Linking)
+		 *   4. Create a new assignment and send the user to the resourcePicker page
+		 */
+		
 		Assignment myAssignment = null;
 		
-		//debug.append("Starting to find assignment...");
-		String resourceId = null;
-		
-		if (lti_ags_lineitem_url == null) lti_ags_lineitem_url = LTIMessage.getLineItemUrl(d,resourceLinkId,lti_ags_lineitems_url);
-		
-		if (lti_ags_lineitem_url != null) {  // try to get the Assignment directly; this should be the usual path
-			myAssignment = ofy().load().type(Assignment.class).filter("lti_ags_lineitem_url",lti_ags_lineitem_url).first().now();	
-		} else {  // Get the lineitem URL if you can
-			lti_ags_lineitem_url = LTIMessage.getLineItemUrl(d,resourceLinkId,lti_ags_lineitems_url);
-			if (lti_ags_lineitem_url != null) {
-				try {
-					//debug.append("looking for lineitem...");
-					resourceId = LTIMessage.getLineItem(d, lti_ags_lineitem_url).get("resourceId").getAsString();
-					long assignmentId = Long.parseLong(resourceId);
-					myAssignment = ofy().load().type(Assignment.class).id(assignmentId).safe();						
-				} catch (Exception e) {
-				}
-			}
-		} 
-		
-		if (myAssignment == null) {  // Try to find the assignment using the resourceLinkId value and platform_deployment_id or BLTIConsumer domain
-			try {
-				myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().safe();
-			} catch (Exception e) {  // Try to find the assignment under a LTIv1p1 BLTIConsumer with a matching domain value
-				List<BLTIConsumer> cons = ofy().load().type(BLTIConsumer.class).filter("domain",d.getPlatformId()).list();
-				Key<Assignment> assignmentKey = null;
-				for (BLTIConsumer c : cons) {  // there may be more than 1 BLTIConsumer for any given domain; search until you find a match
-					assignmentKey = ofy().load().type(Assignment.class).filter("domain",c.oauth_consumer_key).filter("resourceLinkId",resourceLinkId).keys().first().now();
-					if (assignmentKey != null) {
-						myAssignment = ofy().load().key(assignmentKey).now();
-						break;
-					}
-				}
-			}
-		}
-		
-		// See if the resourceId is included in the URL from DeepLinking flow. This is the Canvas way...
-		if (myAssignment == null && "canvas".equals(d.lms_type)) {
-			try {
-				long assignmentId = Long.parseLong(request.getParameter("resourceId"));
-				myAssignment = ofy().load().type(Assignment.class).id(assignmentId).safe();
-				//debug.append("found assignmentId in the URL");
-			} catch(Exception e) {}
-		}
+		if (lti_ags_lineitem_url != null) myAssignment = ofy().load().type(Assignment.class).filter("lti_ags_lineitem_url",lti_ags_lineitem_url).first().now();	
 
-		// If none of that worked, then the assignment and lineitem probably don't exist, so make a new Assignment:
+		if (myAssignment == null) myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();
+		
 		if (myAssignment == null) {
-			myAssignment = new Assignment(d.platform_deployment_id,resourceLinkId,lti_nrps_context_memberships_url);
-			//debug.append("Created new assignment with id=" + myAssignment.id + "...");
+			String resourceId = null;
+			switch (d.lms_type) {
+			case "canvas":
+				resourceId = request.getParameter("resourceId");
+				break;
+			default:
+				try {
+					resourceId = claims.get("https://purl.imsglobal.org/spec/lti/claim/custom").getAsJsonObject().get("resourceId").getAsString();
+				} catch (Exception e) {}
+			}
+			if (resourceId != null) myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).safe();
 		}
-		//debug.append("assignment " + (myAssignment == null?"still missing.":"OK..."));
 
+		if (myAssignment == null) myAssignment = new Assignment(d.platform_deployment_id,resourceLinkId,lti_nrps_context_memberships_url);
+		// At this point we should have a valid (but possibly incomplete) Assignment entity
+		
 		// Update the Assignment parameters:
-		//debug.append("Cloning myAssignment...");
 		Assignment original_a = myAssignment.clone(); // make a copy to compare with for updating later
-		//debug.append("Created assignment clone with id=" + original_a.id + "...");
-
-		// Store the resourceLinkId value
-		myAssignment.resourceLinkId = resourceLinkId;
-		
-		// Store the lti_ags_lineitem_url (creating a new lineitem, if necessary
-		if (lti_ags_lineitem_url == null && myAssignment.isValid()) {
-			try {
-				String url = LTIMessage.createLineItem(d, myAssignment,lti_ags_lineitems_url);
-				new URL(url); // throws Exception if not valid
-				lti_ags_lineitem_url = url;
-			} catch (Exception e) {}
-		}
-		if (lti_ags_lineitem_url != null) {
-			myAssignment.lti_ags_lineitem_url = lti_ags_lineitem_url;
-			myAssignment.lis_outcome_service_url = null; // erase this in case of conversion from LTIv1p1
-		}
-		
-		// Store the lti_nrps_context_memberships_url
-		myAssignment.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
+		myAssignment.resourceLinkId = resourceLinkId;		
+		if (lti_ags_lineitem_url != null) myAssignment.lti_ags_lineitem_url = lti_ags_lineitem_url;
+		if (lti_nrps_context_memberships_url != null) myAssignment.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
 
 		// If required, save the updated Assignment entity now so its id will be accessible
 		if (myAssignment.id==null || !myAssignment.equivalentTo(original_a)) ofy().save().entity(myAssignment).now();
-		//debug.append("assignment " + myAssignment.id + " saved OK...");
-
-		//debug.append("Lineitem: " + LTIMessage.getLineItem(d, lti_ags_lineitem_url));
-
+		
 		// Create a cross-site request forgery (CSRF) token containing the Assignment.id
 		user.setAssignment(myAssignment.id);
 		
 		// If this is the first time this Assignment has been used, it may be missing the assignmentType and topicId(s)
-		if (!myAssignment.isValid()) {  //Show the the pickResource form:									
-			response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,1) + Home.footer);
+		if (!myAssignment.isValid()) {  //Show the the pickResource form:
+			response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,1) 
+			//+ "<P>Lineitem URL: " + lti_ags_lineitem_url
+			//+ "<p>Lineitem: " + LTIMessage.getLineItem(d, lti_ags_lineitem_url).toString()
+			//+ "<p>State: " + JsonParser.parseString(new String(Base64.getUrlDecoder().decode(JWT.decode(request.getParameter("state")).getPayload()))).getAsJsonObject().toString()
+			//+ "<p>Id_token Claims: " + claims.toString()
+			+ Home.footer);
 			return;
 		} else {  // redirect the user's browser to the assignment
 			response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());

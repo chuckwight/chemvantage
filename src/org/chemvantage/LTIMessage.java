@@ -322,6 +322,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 
     static JsonObject getLineItem(Deployment d, String lti_ags_lineitem_url) {
     	// This method returns a single lineitem from the platform
+    	int responseCode = 0;
     	try {
     		String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem";
     		String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id,scope);
@@ -334,14 +335,19 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     		uc.setRequestProperty("Accept", "application/vnd.ims.lis.v2.lineitem+json");
     		uc.connect();
 
-    		int responseCode = uc.getResponseCode();
+    		responseCode = uc.getResponseCode();
     		if (responseCode == 200) {
     			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
     			JsonObject lineitem_json = JsonParser.parseReader(reader).getAsJsonObject();
     			reader.close();
     			return lineitem_json;
     		} 
-    	} catch (Exception e) {}
+    	} catch (Exception e) {
+    		JsonObject response = new JsonObject();
+    		response.addProperty("responseCode", responseCode);
+    		response.addProperty("errorMessage", e.getMessage());
+    		return response;
+    	}
     	return null;
     }
     

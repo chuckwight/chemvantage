@@ -478,9 +478,23 @@ public class LTIDeepLinks extends HttpServlet {
 			for (Assignment a1 : assignments) {
 				JsonObject item = new JsonObject();
 				item.addProperty("type", "ltiResourceLink");
-				item.addProperty("url", serverUrl + ("canvas".equals(d.lms_type)?"?resourceId=" + a1.id:""));
 				
-				String title = "";
+				// In this section we insert the resourceId (id value of the Assignment entity
+				// This should be returned in the resourceLink launch id_token payload
+				// Unfortunately, Canvas does not support custom parameters, but allows a request parameter instead
+				
+				switch (d.lms_type) {
+					case "canvas": serverUrl += "?resourceId=" + a1.id;
+						break;
+					default:	// all LMS types except canvas				
+						JsonObject custom = new JsonObject();
+						custom.addProperty("resourceId", String.valueOf(a1.id));
+						item.add("custom", custom);
+				}
+				
+				item.addProperty("url", serverUrl);
+				
+				String title = null;
 				switch (assignmentType) {
 					case "PracticeExam":
 						title = "Practice Exam - ";
