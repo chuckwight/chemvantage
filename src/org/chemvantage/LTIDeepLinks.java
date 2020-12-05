@@ -484,12 +484,15 @@ public class LTIDeepLinks extends HttpServlet {
 				// Unfortunately, Canvas does not support custom parameters, but allows a request parameter instead
 				
 				switch (d.lms_type) {
-					case "canvas": serverUrl += "?resourceId=" + a1.id;
+					case "canvas": 
+						serverUrl += "?resourceId=" + a1.id;
 						break;
-					default:	// all LMS types except canvas				
+					case "blackboard":			
 						JsonObject custom = new JsonObject();
 						custom.addProperty("resourceId", String.valueOf(a1.id));
 						item.add("custom", custom);
+						break;
+					default:
 				}
 				
 				item.addProperty("url", serverUrl);

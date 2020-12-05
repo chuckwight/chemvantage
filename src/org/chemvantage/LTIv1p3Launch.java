@@ -150,6 +150,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		// Process information for LTI Assignment and Grade Services (AGS)
 		String scope = "";
 		String lti_ags_lineitem_url = null;
+		String lti_ags_lineitems_url = null;
 		try {  
 			JsonObject lti_ags_claims = claims.get("https://purl.imsglobal.org/spec/lti-ags/claim/endpoint").getAsJsonObject();
 
@@ -158,6 +159,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			Iterator<JsonElement> scopes_iterator = scope_claims.iterator();
 			while (scopes_iterator.hasNext()) scope += scopes_iterator.next().getAsString() + (scopes_iterator.hasNext()?" ":"");
 			lti_ags_lineitem_url = lti_ags_claims.get("lineitem")==null?null:lti_ags_claims.get("lineitem").getAsString();
+			lti_ags_lineitems_url = lti_ags_claims.get("lineitems")==null?null:lti_ags_claims.get("lineitems").getAsString();
 		} catch (Exception e) {				
 		}
 		
@@ -189,17 +191,22 @@ public class LTIv1p3Launch extends HttpServlet {
 		if (myAssignment == null) myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();
 		
 		if (myAssignment == null) {
-			String resourceId = null;
+			String assignmentId = null;
 			switch (d.lms_type) {
-			case "canvas":
-				resourceId = request.getParameter("resourceId");
-				break;
-			default:
-				try {
-					resourceId = claims.get("https://purl.imsglobal.org/spec/lti/claim/custom").getAsJsonObject().get("resourceId").getAsString();
-				} catch (Exception e) {}
+				case "canvas":
+					assignmentId = request.getParameter("resourceId");
+					break;
+				case "blackboard":
+					try {
+						assignmentId = claims.get("https://purl.imsglobal.org/spec/lti/claim/custom").getAsJsonObject().get("resourceId").getAsString();
+					} catch (Exception e) {}
+					break;
+				default:
+					try {
+						assignmentId = LTIMessage.getLineItem(d, lti_ags_lineitems_url).get("resourceId").getAsString();
+					} catch (Exception e) {}
 			}
-			if (resourceId != null) myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).safe();
+			if (assignmentId != null) myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(assignmentId)).safe();
 		}
 
 		if (myAssignment == null) myAssignment = new Assignment(d.platform_deployment_id,resourceLinkId,lti_nrps_context_memberships_url);
