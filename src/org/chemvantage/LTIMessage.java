@@ -293,31 +293,20 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		}
     }
    
-    static String getLineItemUrl(Deployment d,String resourceLinkId,String lti_ags_lineitems_url) throws Exception {
-    	if (resourceLinkId == null) return "Missing resourceLinkId value.";
-    	if (lti_ags_lineitems_url==null) return "Missing lti_ags_lineitems_url value.";
-    	
-    	String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem";
-    	
-    	String lineitems = getLineItemContainer(d,lti_ags_lineitems_url,resourceLinkId,scope);
-    	
-    	// Check for errors (Status code or null)
-    	if (lineitems == null) return null; // an error occurred; wait to try this another time
-    	
+    static JsonObject getLineItem(Deployment d,String resourceLinkId,String lti_ags_lineitems_url) throws Exception {   	
+    	String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem";    	
     	try {
-    		JsonElement parsed = JsonParser.parseString(lineitems);
-    		if (!parsed.isJsonArray()) return null;
-    		JsonArray lineitems_json_array = parsed.getAsJsonArray();
-    		
+    		String lineitems = getLineItemContainer(d,lti_ags_lineitems_url,resourceLinkId,scope);
+    		JsonArray lineitems_json_array = JsonParser.parseString(lineitems).getAsJsonArray();
+
     		// We submitted the request including the resourceLinkId query, so there are only two possible valid responses:
-    		// 0 - if the array is empty, we need to create a new lineitem and return its URL
-    		// 1 - if there is exactly one lineitem, we need to return its id property (URL)
-    		if (lineitems_json_array.size() == 0) return null;  // lineitem does not exist
-    		if (lineitems_json_array.size() == 1) return lineitems_json_array.get(0).getAsJsonObject().get("id").getAsString();
+    		// 0 - if the array is empty, we need to return null
+    		// 1 - if there is exactly one lineitem, we need to return it
+
+    		return lineitems_json_array.get(0).getAsJsonObject();
     	} catch (Exception e) {
-     		//return "getLineItemUrl: " + e.toString() + " " + e.getMessage() + " " + lineitems;
+    		return null;
     	}
-    	return null;
     }
 
     static JsonObject getLineItem(Deployment d, String lti_ags_lineitem_url) {
