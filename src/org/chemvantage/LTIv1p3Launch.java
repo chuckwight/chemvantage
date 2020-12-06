@@ -185,39 +185,28 @@ public class LTIv1p3Launch extends HttpServlet {
 		 */
 		
 		Assignment myAssignment = null;
-		String resourceId = null;
-		JsonObject lineitem = null;
 		
 		if (lti_ags_lineitem_url != null) myAssignment = ofy().load().type(Assignment.class).filter("lti_ags_lineitem_url",lti_ags_lineitem_url).first().now();	
 
-		if (myAssignment == null) {
+		if (myAssignment == null) {  // This section searches for the resourceId parameter, which is a String version of the ChemVantage assigmentId
+			String resourceId = null;
 			switch (d.lms_type) {
-			case "canvas":
+			case "canvas":           // Canvas does not support setting the resourceId in the lineitem, but allows this to be sent as a request parameter
 				resourceId = request.getParameter("resourceId");
 				break;
-			case "blackboard":
+			default:     // all other LMS platforms should put the resourceId from DeepLinking flow into the lineitem
+				JsonObject lineitem = null;
 				try {
-					resourceId = claims.get("https://purl.imsglobal.org/spec/lti/claim/custom").getAsJsonObject().get("resourceId").getAsString();
-				} catch (Exception e) {}
-				break;
-			default:
-				try {
-					if (lti_ags_lineitem_url == null) {
+					if (lti_ags_lineitem_url == null) {  // the launch id_token may or may not specify the lineitem URL
 						lineitem = LTIMessage.getLineItem(original_d, resourceLinkId, lti_ags_lineitems_url);
 						lti_ags_lineitem_url = lineitem.get("id").getAsString();
 					} else lineitem = LTIMessage.getLineItem(d, lti_ags_lineitem_url);
-					try {
-						resourceId = lineitem.get("resourceId").getAsString();
-					} catch (Exception e) {
-						resourceId = lineitem.get("resourceid").getAsString(); // special for LTI Reference Implementation
-					}
+					JsonElement rId = lineitem.get("resourceId");
+					if (rId != null) resourceId = rId.getAsString();
+					else resourceId = lineitem.get("resourceid").getAsString();  // special case for LTI Reference Implementation
 				} catch (Exception e) {}
 			}
-			if (resourceId != null) {							
-				try {
-					myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).now();
-				} catch (Exception e) {}
-			}
+			if (resourceId != null) myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).now();
 		}
 
 		if (myAssignment == null) myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();
@@ -240,10 +229,10 @@ public class LTIv1p3Launch extends HttpServlet {
 		// If this is the first time this Assignment has been used, it may be missing the assignmentType and topicId(s)
 		if (!myAssignment.isValid()) {  //Show the the pickResource form:
 			response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,1) 
-			+ "<p>ResourceId: " + resourceId
-			+ "<p>Lineitem URL: " + lti_ags_lineitem_url
-			+ "<p>Lineitem: " + (lineitem==null?"null":lineitem.toString())
-			+ "<p>Id_token Claims: " + claims.toString()
+			//+ "<p>ResourceId: " + resourceId
+			//+ "<p>Lineitem URL: " + lti_ags_lineitem_url
+			//+ "<p>Lineitem: " + (lineitem==null?"null":lineitem.toString())
+			//+ "<p>Id_token Claims: " + claims.toString()
 			+ Home.footer);
 			return;
 		} else {  // redirect the user's browser to the assignment

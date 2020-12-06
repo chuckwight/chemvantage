@@ -478,25 +478,7 @@ public class LTIDeepLinks extends HttpServlet {
 			for (Assignment a1 : assignments) {
 				JsonObject item = new JsonObject();
 				item.addProperty("type", "ltiResourceLink");
-				
-				// In this section we insert the resourceId (id value of the Assignment entity
-				// This should be returned in the resourceLink launch id_token payload
-				// Unfortunately, Canvas does not support custom parameters, but allows a request parameter instead
-				
-				switch (d.lms_type) {
-					case "canvas": 
-						serverUrl += "?resourceId=" + a1.id;
-						break;
-					case "blackboard":			
-						JsonObject custom = new JsonObject();
-						custom.addProperty("resourceId", String.valueOf(a1.id));
-						item.add("custom", custom);
-						break;
-					default:
-				}
-				
-				item.addProperty("url", serverUrl);
-				
+					
 				String title = null;
 				switch (assignmentType) {
 					case "PracticeExam":
@@ -515,9 +497,18 @@ public class LTIDeepLinks extends HttpServlet {
 				JsonObject lineitem = new JsonObject();
 				lineitem.addProperty("scoreMaximum", (assignmentType.contentEquals("PracticeExam")?100:10));
 				lineitem.addProperty("label", title);
-				lineitem.addProperty("resourceId", String.valueOf(a1.id));
+				
+				switch (d.lms_type) { // this section binds a resourceId (String version of assignmentId) to the lineitem
+				case "canvas":        // Unfortunately, canvas does not support this, so we have to bind it as a request parameter instead
+					serverUrl += "?resourceId=" + a1.id;
+					break;
+				default:
+					lineitem.addProperty("resourceId", String.valueOf(a1.id));
+				}
+				
 				item.add("lineItem", lineitem);
-			
+				item.addProperty("url", serverUrl);
+				
 				content_items.add(item);
 			}
 			payload.add("https://purl.imsglobal.org/spec/lti-dl/claim/content_items", content_items);
