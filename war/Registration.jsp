@@ -47,8 +47,8 @@ Select your use case:<br>
 <label><input type=radio name=use value=test>Testing LTI connections (development environment)</label><br><br>
 
 Type of LTI registration:<br>
-<label><input type=radio name=ver value=1p1 checked>LTI version 1.1 (preferred)</label><br>
-<label><input type=radio name=ver value=1p3>LTI Advantage (certified but still clunky)</label><br><br>
+<label><input type=radio name=ver value=1p3 checked>LTI Advantage</label><br><br>
+<label><input type=radio name=ver value=1p1>LTI version 1.1</label><br>
 
 Type of Learning Management System:<br>
 <label><input type=radio name=lms value=blackboard>Blackboard</label><br>
