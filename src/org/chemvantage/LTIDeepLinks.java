@@ -445,7 +445,9 @@ public class LTIDeepLinks extends HttpServlet {
 						
 			ofy().save().entities(assignments).now();
 				
-			String serverUrl = "https://" + request.getServerName() + "/lti/launch";
+			String serverUrl = "https://" + request.getServerName();
+			String launchUrl = serverUrl + "/lti/launch";
+			String iconUrl = serverUrl + "/images/CVLogo_thumb.png";
 			String client_id = d.client_id;
 			String subject = request.getParameter("Subject");
 			String nonce = Nonce.generateNonce();
@@ -500,14 +502,20 @@ public class LTIDeepLinks extends HttpServlet {
 				
 				switch (d.lms_type) { // this section binds a resourceId (String version of assignmentId) to the lineitem
 				case "canvas":        // Unfortunately, canvas does not support this, so we have to bind it as a request parameter instead
-					serverUrl += "?resourceId=" + a1.id;
+					launchUrl = serverUrl + "/lti/launch?resourceId=" + a1.id;
 					break;
 				default:
+					launchUrl = serverUrl + "/lti/launch";
 					lineitem.addProperty("resourceId", String.valueOf(a1.id));
-				}
-				
+				}				
 				item.add("lineItem", lineitem);
-				item.addProperty("url", serverUrl);
+				item.addProperty("url", launchUrl);
+				
+				JsonObject icon = new JsonObject();
+				icon.addProperty("url", iconUrl);
+				icon.addProperty("width", 75);
+				icon.addProperty("height", 70);
+				item.add("icon", icon);
 				
 				content_items.add(item);
 			}
