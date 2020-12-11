@@ -450,7 +450,7 @@ public class LTIRegistration extends HttpServlet {
 						+ "<ul><li>Name: (as appropriate, e.g. Quiz - Heat and Enthalpy)</li>"
 						+ " <li>Points: 10 for quiz or homework; 5 for video; 100 for practice exam</li>"
 						+ " <li>Submission Type: External Tool</li>"
-						+ " <li>External Tool URL: Find ChemVantage or enter " + iss + "/lti</li>"
+						+ " <li>External Tool URL: Find ChemVantage or enter " + iss + "/lti/launch</li>"
 						+ " <li>Save or Save and Publish</li>"
 						+ "</ul></li>"
 						+ "<li>When you launch the assignment, you may use the highlighted link to customize it for your class.</li>"
