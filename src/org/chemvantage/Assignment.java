@@ -79,7 +79,7 @@ public class Assignment implements java.lang.Cloneable {
 	}
 	
 	public List<Key<Question>> getQuestionKeys() {
-		return this.questionKeys;
+		return questionKeys==null?new ArrayList<Key<Question>>():this.questionKeys;
 	}
 	
 	String selectQuestionsForm(User user) {
