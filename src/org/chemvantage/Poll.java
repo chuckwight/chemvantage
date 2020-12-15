@@ -121,7 +121,8 @@ public class Poll extends HttpServlet {
 		
 		buf.append("<h2>Welcome to the Class Poll</h2>");
 		if (user.isInstructor()) {
-			if (p.a != null && !p.a.isValid()) return editPage(user);
+			if (p.a == null) p.a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
+			if (p.a.questionKeys.size()==0) return editPage(user);
 			else {
 				buf.append("You may review and edit the questions for this poll by <a href=/Poll?UserRequest=EditPoll&sig=" + user.getTokenSignature() + ">clicking this link</a>.<p>");
 				
@@ -144,18 +145,24 @@ public class Poll extends HttpServlet {
 	}
 			
 	String showPollQuestions(User user,PollRepo p) {
-		StringBuffer buf = new StringBuffer();
 		/*
-		 * The only way to reach this point is by redirection from the Welcome Page and ONLY
-		 * if the poll has been launched by the instructor. The assignment is therefore valid.
+		 * This method is reached by Learners or Instructors who launch the correct LTI Resource Link in the LMS, thereby binding
+		 * the assignmentId to their User entity. The GET request lands here if and only if the PollRepo parameter state == 1.
 		 */
+		StringBuffer buf = new StringBuffer();
 		
 		buf.append("<h2>Class Poll</h2>");
+		
+		if (user.isInstructor()) {
+			buf.append("Please tell your students that the poll is now open. "
+				+ "They will have to refresh their browsers to view the questions.<br>"
+				+ "<div id=timer0></div>");
+		}
+		
 		buf.append("<OL>");
 		int possibleScore = 0;
 		buf.append("<form id=pollForm method=post onSubmit='return confirmSubmission(" + p.a.questionKeys.size() + ")'>"
 				+ "<input type=hidden name=sig value=" + user.getTokenSignature() + ">");
-		//buf.append("<div id='timer0' style='color: red'></div><div id=ctrl0 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
 		
 		for (Key<Question> k : p.a.questionKeys) {  // main loop to present questions
 			Question q = pollQuestions.get(k); // this should nearly always work
@@ -168,8 +175,7 @@ public class Poll extends HttpServlet {
 			possibleScore += q.correctAnswer==null || q.correctAnswer.isEmpty()?0:q.pointValue;
 		}
 		buf.append("</OL>");
-		//buf.append("<div id='timer1' style='color: red'></div><div id=ctrl1 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
-		//buf.append(timerScripts(timeRemaining)); 
+		buf.append(javaScripts()); 
 
 		buf.append("<input type=hidden name=PossibleScore value=" + possibleScore + ">");
 		buf.append("<input type=hidden name=UserRequest value=SubmitResponses>");
@@ -179,37 +185,18 @@ public class Poll extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String timerScripts(int secondsRemaining) {
+	String javaScripts() {
 		return "<SCRIPT language='JavaScript'>"
-				+ "function toggleTimers() {"
-				+ "  var timer0 = document.getElementById('timer0');"
-				+ "  var timer1 = document.getElementById('timer1');"
-				+ "  var ctrl0 = document.getElementById('ctrl0');"
-				+ "  var ctrl1 = document.getElementById('ctrl1');"
-				+ "  if (timer0.style.display=='') {" 
-				+ "    timer0.style.display='none';timer1.style.display='none';"
-				+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
-				+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
-				+ "  } else {"
-				+ "    timer0.style.display='';timer1.style.display='';"
-				+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
-				+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
-				+ "  }"
+				+ "var start = new Date();"
+				+ "function countup() {"
+				+ "  var now = new Date();"
+				+ "  var elapsedSeconds = (now.getTime() - start.getTime())/1000;"
+				+ "  var minutes = elapsedSeconds/60;"
+				+ "  var oddSeconds = elapsedSeconds % 60;"
+				+ "  document.getElementById('timer0').innerHTML='Elapsed Time: ' + minutes + ':' + oddSeconds;"
+				+ "  setTimeout('countup()',1000);"
 				+ "}"
-				+ "var seconds;var minutes;var oddSeconds;"
-				+ "var endTime = new Date().getTime() + " + secondsRemaining + "*1000;"
-				+ "function countdown() {"
-				+ "  var now = new Date().getTime();"
-				+ "  seconds=Math.round((endTime-now)/1000);"
-				+ "  minutes = seconds<0?Math.ceil(seconds/60):Math.floor(seconds/60);"
-				+ "  oddSeconds = seconds%60;"
-				+ "  for(i=0;i<2;i++)"
-				+ "    document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ' minutes ' + oddSeconds + ' seconds.';"
-				+ "  if (seconds==30) alert('30 seconds remaining');"
-				+ "  if (seconds < 0) document.Quiz.submit();"
-				+ "  setTimeout('countdown()',1000);"
-				+ "}"
-				+ "countdown();"
+				+ "countup();"
 				+ "function confirmSubmission(nQuestions) {"
 				+ "  var elements = document.getElementById('pollForm').elements;"
 				+ "  var nAnswers;"
@@ -255,7 +242,32 @@ public class Poll extends HttpServlet {
 	
 	String resultsPage(User user,PollRepo p) {
 		StringBuffer buf = new StringBuffer();
+		buf.append("<h2>Poll Results</h2>");
 		
+		buf.append("<OL>");
+		for (Key<Question> k : p.a.questionKeys) {
+			try {
+				Question q = pollQuestions.get(k);  // this should almost always work
+				if (q == null) {  // but just in case...
+					q = ofy().load().key(k).now();
+					pollQuestions.put(k,q);
+				}
+				q.setParameters(p.a.id % Integer.MAX_VALUE);
+				if (q.correctAnswer==null) q.correctAnswer = "";
+
+				buf.append("<li><div style='display: table-row'>");
+				buf.append("<div style='display: table-cell'>");
+				buf.append(q.correctAnswer.isEmpty()?q.print():q.printAll());
+				buf.append("</div><div style='display: table-cell'>");
+				buf.append(p.resultsGraph);
+				buf.append("</div></div><br></li>");
+
+
+			} catch (Exception e) {
+			}
+		}
+		buf.append("</OL>");
+
 		return buf.toString();
 	}
 	
@@ -265,7 +277,7 @@ public class Poll extends HttpServlet {
 		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 		if (a == null) return "Assignment could not be fund.";
 		
-		if (a.getQuestionKeys().size() == 0) buf.append("<h2>Create a Ne Class Poll</h2>");
+		if (a.getQuestionKeys().size() == 0) buf.append("<h2>Create a New Class Poll</h2>");
 		else buf.append("<h2>Edit Class Poll</h2>");
 		
 		
@@ -284,8 +296,9 @@ class PollRepo {
 	int state = 0;
 	Assignment a = null;
 	List<String> userIds = new ArrayList<String>();
-	Map<Key<Question>,List<String>> pollResults = new HashMap<Key<Question>,List<String>>();;
+	Map<Key<Question>,List<String>> pollResults = new HashMap<Key<Question>,List<String>>();
 	Date expires = null;
+	Map<Key<Question>,String> resultsGraph = new HashMap<Key<Question>,String>();
 	
 	PollRepo() {}
 }

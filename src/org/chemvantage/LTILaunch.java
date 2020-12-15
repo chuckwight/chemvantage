@@ -291,16 +291,20 @@ public class LTILaunch extends HttpServlet {
 		Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 		a.assignmentType = request.getParameter("AssignmentType");
 		
-		if (a.assignmentType.contentEquals("Quiz") || a.assignmentType.contentEquals("Homework")) {
+		switch (a.assignmentType) {
+		case "Quiz":
 			try {
 				a.topicId = Long.parseLong(request.getParameter("TopicId"));
-				if (a.topicId>0) a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
+				if (a.topicId>0) a.questionKeys = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",a.topicId).keys().list();
 			} catch (Exception e) {}
-		} else if (a.assignmentType.contentEquals("VideoQuiz")) {
+			break;
+		case "Homework":
 			try {
-				a.videoId = Long.parseLong(request.getParameter("VideoId"));
+				a.topicId = Long.parseLong(request.getParameter("TopicId"));
+				if (a.topicId>0) a.questionKeys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",a.topicId).keys().list();
 			} catch (Exception e) {}
-		} else if (a.assignmentType.contentEquals("PracticeExam")) {
+			break;
+		case "PracticeExam":
 			try {
 				String[] topicIds = request.getParameterValues("TopicIds");
 				if (topicIds==null || topicIds.length<3) throw new Exception("You must choose at least three topics for this practice exam.");
@@ -312,8 +316,17 @@ public class LTILaunch extends HttpServlet {
 					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tId).keys().list());
 				}
 			} catch (Exception e) {}
+			break;
+		case "VideoQuiz":
+			try {
+				a.videoId = Long.parseLong(request.getParameter("VideoId"));
+			} catch (Exception e) {}
+			break;
+		case "Poll":
+			break;
+		default:
 		}
-		return a;		
+		return a;
 	}
 
 	String pickResourceForm(User user,Assignment myAssignment,int topicKey) throws Exception {
@@ -373,7 +386,9 @@ public class LTILaunch extends HttpServlet {
 		buf.append("<label><input type=radio name=AssignmentType " + ("Quiz".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='Quiz'>Quiz</label><br>"
 				+ "<label><input type=radio name=AssignmentType " + ("Homework".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='Homework'>Homework</label><br>"
 				+ "<label><input type=radio name=AssignmentType " + ("VideoQuiz".equals(assignmentType)?"checked ":" ") + "onClick=showVideos(); value='VideoQuiz'>Video</label><br>"
+				+ "<label><input type=radio name=AssignmentType " + ("Poll".equals(assignmentType)?"checked ":" ") + "onClick=hideTopics(); value='Poll'>In-class&nbsp;Poll</label> (under construction)<br>"
 				+ "<label><input type=radio name=AssignmentType " + ("PracticeExam".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='PracticeExam'>Practice&nbsp;Exam</label><p>");
+		
 		buf.append("</div>");
 		
 		// Put Part 2 in a cell on the right side of the first row
@@ -403,15 +418,15 @@ public class LTILaunch extends HttpServlet {
 				+ "  var aTypes = document.getElementsByName('AssignmentType');"
 				+ "  var type;"
 				+ "  for (i=0;i<aTypes.length;i++) if (aTypes[i].checked) type = (aTypes[i].value=='PracticeExam'?'check':'radio');"
+				+ "  document.getElementById('pollNotice').style.display='none';"
+				+ "  document.getElementById('videoSelect').style.display='none';"
 				+ "  if (type == 'radio') {"
 				+ "    document.getElementById('radioSelect').style.display='block';"
 				+ "    document.getElementById('checkSelect').style.display='none';"
-				+ "    document.getElementById('videoSelect').style.display='none';"
 				+ "    clearChecks();"
 				+ "  } else if (type = 'check') {"
 				+ "    document.getElementById('radioSelect').style.display='none';"
 				+ "    document.getElementById('checkSelect').style.display='block';"
-				+ "    document.getElementById('videoSelect').style.display='none';"
 				+ "    clearRadios();"
 				+ "  }"
 				+ "}"
@@ -420,6 +435,16 @@ public class LTILaunch extends HttpServlet {
 				+ "  document.getElementById('radioSelect').style.display='none';"
 				+ "  document.getElementById('checkSelect').style.display='none';"
 				+ "  document.getElementById('videoSelect').style.display='block';"
+				+ "  document.getElementById('pollNotice').style.display='none';"
+				+ "  clearChecks();"
+				+ "  clearRadios();"
+				+ "}"
+				+ "function hideTopics() {"
+				+ "  document.getElementById('pollNotice').style.display='block';"
+				+ "  document.getElementById('topicKeySelect').style.visibility='hidden';"
+				+ "  document.getElementById('radioSelect').style.display='none';"
+				+ "  document.getElementById('checkSelect').style.display='none';"
+				+ "  document.getElementById('videoSelect').style.display='none';"
 				+ "  clearChecks();"
 				+ "  clearRadios();"
 				+ "}"
@@ -465,6 +490,10 @@ public class LTILaunch extends HttpServlet {
 		if ("Quiz".equals(assignmentType) || "Homework".equals(assignmentType)) selectorType = "radio";
 		else if ("VideoQuiz".equals(assignmentType)) selectorType = "video";
 		else if ("PracticeExam".equals(assignmentType)) selectorType = "check";
+		
+		// Create instructions for the Poll assignmentType:
+		buf.append("<div id=pollNotice style='display:none'><input type=submit value='Create an in-class poll'><br>"
+				+ "Poll questions will be selected or created when the assignment is launched by the instructor.</div>");
 		
 		// Create a radio-type selector for video quiz assignments
 		buf.append("<div id=videoSelect style='display:" + (selectorType.equals("video")?"block":"none") + "'>");

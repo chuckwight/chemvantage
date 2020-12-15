@@ -291,10 +291,15 @@ public class Assignment implements java.lang.Cloneable {
 	boolean isValid() {
 		// this method verifies that the Assignment has a valid assignmentType and appropriate topicId(s)
 		if (this.assignmentType==null) return false;
-		if (this.assignmentType.equals("Quiz") || this.assignmentType.equals("Homework")) return this.topicId>0L;
-		else if (this.assignmentType.equals("VideoQuiz")) return this.videoId>0;
-		else if (this.assignmentType.equals("PracticeExam")) return topicIds.size()>2;
-		else return false;
+		
+		switch (this.assignmentType) {
+		case "Quiz": return this.topicId>0L;
+		case "Homework": return this.topicId>0L;
+		case "PracticeExam": return topicIds.size()>2;
+		case "VideoQuiz": return this.videoId>0;
+		case "Poll": return true;
+		default: return false;
+		}
 	}
 	
 	protected Assignment clone() throws CloneNotSupportedException {
