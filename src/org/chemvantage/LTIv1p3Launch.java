@@ -396,6 +396,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		buf.append("<label><input type=radio name=AssignmentType " + ("Quiz".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='Quiz'>Quiz</label><br>"
 				+ "<label><input type=radio name=AssignmentType " + ("Homework".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='Homework'>Homework</label><br>"
 				+ "<label><input type=radio name=AssignmentType " + ("VideoQuiz".equals(assignmentType)?"checked ":" ") + "onClick=showVideos(); value='VideoQuiz'>Video</label><br>"
+				+ "<label><input type=radio name=AssignmentType " + ("Poll".equals(assignmentType)?"checked ":" ") + "onClick=hideTopics(); value='Poll'>In-class&nbsp;Poll</label> (under construction)<br>"
 				+ "<label><input type=radio name=AssignmentType " + ("PracticeExam".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='PracticeExam'>Practice&nbsp;Exam</label><p>");
 		buf.append("</div>");
 		
@@ -430,11 +431,13 @@ public class LTIv1p3Launch extends HttpServlet {
 				+ "    document.getElementById('radioSelect').style.display='block';"
 				+ "    document.getElementById('checkSelect').style.display='none';"
 				+ "    document.getElementById('videoSelect').style.display='none';"
+				+ "    document.getElementById('pollNotice').style.display='none';"
 				+ "    clearChecks();"
 				+ "  } else if (type = 'check') {"
 				+ "    document.getElementById('radioSelect').style.display='none';"
 				+ "    document.getElementById('checkSelect').style.display='block';"
 				+ "    document.getElementById('videoSelect').style.display='none';"
+				+ "    document.getElementById('pollNotice').style.display='none';"
 				+ "    clearRadios();"
 				+ "  }"
 				+ "}"
@@ -443,6 +446,16 @@ public class LTIv1p3Launch extends HttpServlet {
 				+ "  document.getElementById('radioSelect').style.display='none';"
 				+ "  document.getElementById('checkSelect').style.display='none';"
 				+ "  document.getElementById('videoSelect').style.display='block';"
+				+ "  document.getElementById('pollNotice').style.display='none';"
+				+ "  clearChecks();"
+				+ "  clearRadios();"
+				+ "}"
+				+ "function hideTopics() {"
+				+ "  document.getElementById('pollNotice').style.display='block';"
+				+ "  document.getElementById('topicKeySelect').style.visibility='hidden';"
+				+ "  document.getElementById('radioSelect').style.display='none';"
+				+ "  document.getElementById('checkSelect').style.display='none';"
+				+ "  document.getElementById('videoSelect').style.display='none';"
 				+ "  clearChecks();"
 				+ "  clearRadios();"
 				+ "}"
@@ -488,6 +501,10 @@ public class LTIv1p3Launch extends HttpServlet {
 		if ("Quiz".equals(assignmentType) || "Homework".equals(assignmentType)) selectorType = "radio";
 		else if ("VideoQuiz".equals(assignmentType)) selectorType = "video";
 		else if ("PracticeExam".equals(assignmentType)) selectorType = "check";
+
+		// Create instructions for the Poll assignmentType:
+		buf.append("<div id=pollNotice style='display:none'><input type=submit value='Create an in-class poll'><br>"
+				+ "Poll questions will be selected or created when the assignment is launched by the instructor.</div>");
 
 		// Create a radio-type selector for video quiz assignments
 		buf.append("<div id=videoSelect style='display:" + (selectorType.equals("video")?"block":"none") + "'>");

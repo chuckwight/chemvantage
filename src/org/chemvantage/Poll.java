@@ -328,7 +328,7 @@ public class Poll extends HttpServlet {
 		
 		buf.append("<h2>Poll Results</h2>");
 		if (user.isInstructor()) {
-			buf.append("Be sure to tell your students that the poll is now closed and to refresh their browsers to view these results. ");
+			buf.append("<b>Be sure to tell your students that the poll is now closed</b> and to refresh their browsers to view these results. ");
 			buf.append("<form method=post>"
 					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + ">"
 					+ "<input type=hidden name=UserRequest value=ResetPoll>"
@@ -426,7 +426,8 @@ public class Poll extends HttpServlet {
 				possibleScore += q.correctAnswer==null || q.correctAnswer.isEmpty()?0:q.pointValue;
 			}
 			buf.append("</OL>");
-			buf.append("This poll is worth a possible " + possibleScore + " points.<br><hr>");
+			
+			if (a.questionKeys.size()>0) buf.append("This poll is worth a possible " + possibleScore + " points.<br><hr>");
 		
 			// Click here when done editing:
 			buf.append("<form method=get><input type=hidden name=sig value=" + user.getTokenSignature() + ">"
