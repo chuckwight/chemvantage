@@ -90,7 +90,7 @@ public class Home extends HttpServlet {
 			+ "<a href=/About>About ChemVantage</a> | "
 			+ "<a href=/About#terms>Terms and Conditions of Use</a> | "
 			+ "<a href=/About#privacy>Privacy Policy</a> | "
-			+ "<a href=/About#copyright>Copyright"
+			+ "<a href=/About#copyright>Copyright</a>"
 			+ "</body></html>";
 
 	public static String banner = "<a href=https://www.chemvantage.org><img src=/images/CVLogo_thumb.png alt='ChemVantage Logo' align=left></a>"
