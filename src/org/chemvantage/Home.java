@@ -45,8 +45,8 @@ public class Home extends HttpServlet {
 		return "Default servlet for user's home page.";
 	}
 
-	public static String maintenanceAnnouncement = "Due to a problem with the Google AppEngine servers, ChemVantage is temporarily unavailable.<br>"
-		+ "You can monitor the status Google AppEngine at <a href=http://code.google.com/status/appengine>http://code.google.com/status/appengine</a><br>"
+	public static String maintenanceAnnouncement = "Due to a problem with the Google AppEngine servers, ChemVantage is temporarily unavailable.<br/>"
+		+ "You can monitor the status Google AppEngine at <a href=http://code.google.com/status/appengine>http://code.google.com/status/appengine</a><br/>"
 		+ "Please try again later. We apologize for the inconvenience. -ChemVantage";
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
@@ -66,35 +66,35 @@ public class Home extends HttpServlet {
 		String announcement = Subject.getSubject().announcement;
 		return "<!DOCTYPE html>"
 				+"<html>\n"
-				+ "<head>"
+				+ "<head>\n"
 				+ "<meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />"
 				+ "<meta http-equiv='Pragma' content='no-cache' />"
 				+ "<meta http-equiv='Expires' content='0' />"
-				+ "<meta http-equiv='Content-type' content='text/html;charset=iso-8859-1'>"
-				+ "<meta name='Description' content='An online quiz and homework site'>\n"
-				+ "<meta namew='Keywords' content='chemistry,learning,online,quiz,homework,video,textbook,open,education'>\n"
-				+ "<meta name='msapplication-config' content='none'/>"
-				+ "<link rel='icon' type='image/png' href='/favicon.png'>"
-				+ "<link rel='icon' type='image/vnd.microsoft.icon' href='/favicon.ico'>"
+				+ "<meta http-equiv='Content-type' content='text/html;charset=iso-8859-1' />"
+				+ "<meta name='Description' content='An online quiz and homework site' />\n"
+				+ "<meta namew='Keywords' content='chemistry,learning,online,quiz,homework,video,textbook,open,education' />"
+				+ "<meta name='msapplication-config' content='none'/>\n"
+				+ "<link rel='icon' type='image/png' href='/favicon.png' />\n"
+				+ "<link rel='icon' type='image/vnd.microsoft.icon' href='/favicon.ico' />\n"
 				+ "<title>" + (title==null || title.isEmpty()?"ChemVantage":title) + "</title>\n"
 				+ "</head>\n"
 				+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
-				+ ((announcement==null || announcement.isEmpty())?"":"<FONT COLOR=RED>" + announcement + "</FONT><br>");
+				+ ((announcement==null || announcement.isEmpty())?"":"<FONT COLOR=RED>" + announcement + "</FONT><br/>\n");
 	}
 	
 	public static String header() {
 		return header("ChemVantage");
 	}
 
-	public static String footer = "\n<hr><img src=/images/CVLogo_tiny.png alt='ChemVantage logo' style='vertical-align:middle'> "
+	public static String footer = "\n<hr/><img src=/images/CVLogo_tiny.png alt='ChemVantage logo' style='vertical-align:middle' /> "
 			+ "<a href=/About>About ChemVantage</a> | "
 			+ "<a href=/About#terms>Terms and Conditions of Use</a> | "
 			+ "<a href=/About#privacy>Privacy Policy</a> | "
-			+ "<a href=/About#copyright>Copyright</a>"
-			+ "</body></html>";
+			+ "<a href=/About#copyright>Copyright</a>\n"
+			+ "</body>\n</html>";
 
-	public static String banner = "<a href=https://www.chemvantage.org><img src=/images/CVLogo_thumb.png alt='ChemVantage Logo' align=left></a>"
-			+ "Welcome to<br><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT><br>An Open Education Resource<br><br>";
+	public static String banner = "<a href=https://www.chemvantage.org><img src=/images/CVLogo_thumb.png alt='ChemVantage Logo' align=left></a>\n"
+			+ "Welcome to<br/><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT><br/>An Open Education Resource<br/><br/>";
 	
 	static String getHeader(User user) {
 		StringBuffer buf = new StringBuffer();
@@ -143,7 +143,7 @@ public class Home extends HttpServlet {
 			buf.append("</div>&nbsp;");
 			String announcement = Subject.getSubject().announcement;
 			if (announcement==null) announcement = "";
-			buf.append("<div style='color:red'><br>" + announcement + "</div>");
+			buf.append("<div style='color:red'><br/>" + announcement + "</div>");
 		} catch (Exception e) {
 			return e.toString();
 		}
@@ -160,12 +160,12 @@ public class Home extends HttpServlet {
 			
 			buf.append("<p><h3><font color=red>Anonymous User</font></h3>");
 
-			buf.append("Select a topic from the dropdown box below and then take a quiz<br>"
-					+ "or solve some homework problems on that topic. You can also test<br>"
+			buf.append("Select a topic from the dropdown box below and then take a quiz<br/>"
+					+ "or solve some homework problems on that topic. You can also test<br/>"
 					+ "yourself by taking a 1 hour practice exam on any three (or more) topics.<p>"
-					+ "If you are a chemistry teacher or professor, you can use<br>"
-					+ "ChemVantage in your class by using an LTI connection to return<br>"
-					+ "student scores to your class learning management system. Learn<br>"
+					+ "If you are a chemistry teacher or professor, you can use<br/>"
+					+ "ChemVantage in your class by using an LTI connection to return<br/>"
+					+ "student scores to your class learning management system. Learn<br/>"
 					+ "more about <a href='/lti/registration/'>how to connect using LTI</a>.<p>"
 					+ "ChemVantage is always free to use. <a href=/About>Read more about us here</a>.<p>");
 			
@@ -173,7 +173,7 @@ public class Home extends HttpServlet {
 			buf.append("<div>");
 			buf.append("<b>Quizzes and Homework Exercises</b>");
 			buf.append("<div id=selectReminder style='display: none'>"
-					+ "<b><FONT COLOR=RED>Please select a topic:</FONT></b><br></div>");
+					+ "<b><FONT COLOR=RED>Please select a topic:</FONT></b><br/></div>");
 			
 			buf.append("<FORM NAME='HQSelectForm' ACTION=Quiz METHOD=GET>");
 			
@@ -188,7 +188,7 @@ public class Home extends HttpServlet {
 				if (!t.orderBy.equals("Hide"))
 				buf.append("<OPTION VALUE='" + t.id + "'>" + t.title + "</OPTION>");
 			}
-			buf.append("</SELECT><br>"
+			buf.append("</SELECT><br/>"
 					+ "<INPUT TYPE=BUTTON VALUE='Take This Quiz' "
 					+ "onClick=\"javascript: "
 					+ "if(document.HQSelectForm.elements['TopicId'].value=='0'){document.getElementById('selectReminder').style.display='';} "
@@ -210,9 +210,9 @@ public class Home extends HttpServlet {
 			// Add text resources table to the page
 			if (texts == null) texts = ofy().load().type(Text.class).list();
 			buf.append("<div>");
-			buf.append("<p><b>" + texts.size() + " Free Textbook Resources</b><br>");
+			buf.append("<p><b>" + texts.size() + " Free Textbook Resources</b><br/>");
 			for (Text t : texts) {
-				buf.append("<a href=" + t.URL + ">" + t.title + "</a><br>");
+				buf.append("<a href=" + t.URL + ">" + t.title + "</a><br/>");
 			}
 			buf.append("</div>");
 			
