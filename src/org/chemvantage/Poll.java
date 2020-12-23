@@ -68,7 +68,7 @@ public class Poll extends HttpServlet {
 					out.println(Home.header() + welcomePage(user,request) + Home.footer);
 					break;
 				case 1:
-					if (responsesRecorded(user.id)) out.println(Home.header() + waitPage(user) + Home.footer);
+					if (responsesRecorded(user)) out.println(Home.header() + waitPage(user) + Home.footer);
 					else out.println(Home.header() + showPollQuestions(user) + Home.footer);
 					break;
 				case 2:
@@ -130,8 +130,8 @@ public class Poll extends HttpServlet {
 		}
 	}
 
-	boolean responsesRecorded(String userId) {
-		return ofy().load().type(PollTransaction.class).filter("userId",userId).count() > 0;
+	boolean responsesRecorded(User user) {
+		return getPollTransaction(user).completed != null;
 	}
 	
 	String welcomePage(User user,HttpServletRequest request) {
