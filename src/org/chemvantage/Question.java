@@ -258,41 +258,41 @@ public class Question implements Serializable {
 		switch (getQuestionType()) {
 		case 1: // Multiple Choice
 			buf.append(text + "<br />");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best answer:</FONT><br>");
+			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best answer:</FONT><br />");
 			for (int i = 0; i < nChoices; i++) {
-				buf.append("<label><input type=radio name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED>":">") + choices.get(i) + "</label><br>");
+				buf.append("<label><input type=radio name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED>":">") + choices.get(i) + "</label><br />");
 				choice++;
 			}
 			break;
 		case 2: // True/False
 			buf.append(text + "<br />");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select true or false:</FONT><br>");
-			buf.append("<label><input type=radio name=" + this.id + " value='true'" + (studentAnswer.equals("true")?" CHECKED>":">") + " True</label><br>");
-			buf.append("<label><input type=radio name=" + this.id + " value='false'" + (studentAnswer.equals("false")?" CHECKED>":">") + " False</label><br>");
+			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select true or false:</FONT><br />");
+			buf.append("<label><input type=radio name=" + this.id + " value='true'" + (studentAnswer.equals("true")?" CHECKED>":">") + " True</label><br />");
+			buf.append("<label><input type=radio name=" + this.id + " value='false'" + (studentAnswer.equals("false")?" CHECKED>":">") + " False</label><br />");
 			break;
 		case 3: // Select Multiple
 			buf.append(text + "<br />");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><br>");
+			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><br />");
 			for (int i = 0; i < nChoices; i++) {
-				buf.append("<label><input type=checkbox name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED>":">") + choices.get(i) + "</label><br>");
+				buf.append("<label><input type=checkbox name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED>":">") + choices.get(i) + "</label><br />");
 				choice++;
 			}
 			break;
 		case 4: // Fill-in-the-Word
 			buf.append(text + "<br />");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br>");
+			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br />");
 			buf.append("<input id=" + this.id + " type=text name=" + this.id + " value='" + quot2html(studentAnswer) + "'>");
-			buf.append("&nbsp;" + tag + "<br>");
+			buf.append("&nbsp;" + tag + "<br />");
 			break;
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br />");
 			buf.append("<div id=showWork" + this.id + " style='display:none'><TEXTAREA NAME=ShowWork" + this.id + " ROWS=5 COLS=50 WRAP=SOFT "
-					+ "onkeyup=this.value=this.value.substring(0,500); placeholder='Show your work here'>" + (showWork==null?"":showWork) + "</TEXTAREA><br></div>");
+					+ "onkeyup=this.value=this.value.substring(0,500); placeholder='Show your work here'>" + (showWork==null?"":showWork) + "</TEXTAREA><br /></div>");
 			switch (getNumericItemType()) {
-			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numeric value.</FONT><br>"); break;
-			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
-			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br>"); break;
-			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
+			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numeric value.</FONT><br />"); break;
+			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br />"); break;
+			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br />"); break;
+			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br />"); break;
 			default:
 			}			
 			buf.append("<input size=30 type=text name=" + this.id + " id=answer" + this.id + " value='" + studentAnswer + "' onFocus=showWorkBox('" + this.id + "');>");
@@ -303,7 +303,7 @@ public class Question implements Serializable {
 	}
 
 	String getHint() {
-		return parseString(hint) + "<br>";
+		return parseString(hint) + "<br />";
 	}
 	
 	String printAll() {
@@ -350,32 +350,32 @@ public class Question implements Serializable {
 			break;
 		case 4: // Fill-in-the-Word
 			buf.append(text + "<br />");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br>");
+			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br />");
 			buf.append("<span style='border: 1px solid black'>"
 					+ "<b>" + quot2html(correctAnswer) + "</b>"
 					+ "</span>");
-			buf.append("&nbsp;" + tag + "<p><p>");
+			buf.append("&nbsp;" + tag + "<p></p><p></p>");
 			break;
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br />");
 			switch (getNumericItemType()) {
-			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numeric value.</FONT><br>"); break;
-			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
-			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br>"); break;
-			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
+			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numeric value.</FONT><br />"); break;
+			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br />"); break;
+			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br />"); break;
+			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br />"); break;
 			default:
 			}
 			buf.append("<span style='border: 1px solid black'>"
 					+ "<b>" + getCorrectAnswer() + "</b>"
 					+ "</span>");
-			buf.append(parseString(tag) + "<p>");
+			buf.append(parseString(tag) + "<p></p>");
 			if (hint.length()>0) {
-				buf.append("Hint:<br>" + parseString(hint) + "<p>");
+				buf.append("Hint:<br />" + parseString(hint) + "<p></p>");
 			}
 			if (solution.length()>0) {
-				buf.append("Solution:<br>" + parseString(solution));
+				buf.append("Solution:<br />" + parseString(solution));
 			}
-			buf.append("<p>");
+			buf.append("<p></p>");
 			break;        
 		}
 		return buf.toString();
@@ -394,17 +394,17 @@ public class Question implements Serializable {
 		// this differs from printAll() because only the first of several 
 		// correct fill-in-word answers is presented
 		// showDetails enables display of Solution to numeric problems (default = true)
-		StringBuffer buf = new StringBuffer("<a name=" + this.id + ">");
+		StringBuffer buf = new StringBuffer("<a name=" + this.id + "></a>");
 		char choice = 'a';
 		switch (getQuestionType()) {
 		case 1: // Multiple Choice
 			buf.append(text + "<br />");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best answer:</FONT><br>");
+			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best answer:</FONT><br />");
 			for (int i = 0; i < nChoices; i++) {
 				buf.append("&nbsp;" + choice + ". "
 						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
 						+ quot2html(choices.get(i))
-						+ (correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>") + "<br>");
+						+ (correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>") + "<br />");
 				choice++;
 			}
 			break;
@@ -421,59 +421,59 @@ public class Question implements Serializable {
 			break;
 		case 3: // Select Multiple
 			buf.append(text + "<br />");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><BR>");
+			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><br />");
 			for (int i = 0; i < nChoices; i++) {
 				buf.append("&nbsp;" + choice + ". "
 						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
 						+ quot2html(choices.get(i))
-						+ (correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>") + "<br>");
+						+ (correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>") + "<br />");
 				choice++;
 			}
 			break;
 		case 4: // Fill-in-the-Word
 			buf.append(text + "<br />");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br>");
+			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br />");
 			String[] answers = correctAnswer.split(",");
 			buf.append("<span style='border: 1px solid black'>"
 					+ "<b>" + quot2html(answers[0]) + "</b>"
 					+ "</span>");
-			if (tag.length() > 0) buf.append("&nbsp;" + tag + "<br>");
+			if (tag.length() > 0) buf.append("&nbsp;" + tag + "<br />");
 			break;
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br />");
 			switch (getNumericItemType()) {
-			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numeric value.</FONT><br>"); break;
-			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
-			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br>"); break;
-			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
+			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numeric value.</FONT><br />"); break;
+			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br />"); break;
+			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br />"); break;
+			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br />"); break;
 			default:
 			}
 			buf.append("<span style='border: 1px solid black'>"
 					+ "<b>" + getCorrectAnswer() + "</b>"
 					+ "</span>");
-			buf.append(parseString(tag) + "<br>");
+			buf.append("&nbsp;" + parseString(tag) + "<br />");
 			if (hint.length()>0) {
-				buf.append("<br>Hint:<br>" + parseString(hint) + "<br>");
+				buf.append("<br />Hint:<br />" + parseString(hint) + "<br />");
 			}
 			if (showDetails && solution.length()>0) {
-				buf.append("<br>Solution:<br>" + parseString(solution) + "<br>");
+				buf.append("<br />Solution:<br />" + parseString(solution) + "<br />");
 			}
 			break;        
 		}
 		
-		buf.append("<br>");
-		if (showWork != null && !showWork.isEmpty()) buf.append("<b>Student work:</b><br><div style='border-style: solid; border-width: thin; white-space: pre-wrap;'>" + showWork + "</div>");	
-		if (studentAnswer==null || studentAnswer.isEmpty()) buf.append("<b>No answer was submitted for this question item.</b><p>");
-		else buf.append("<b>The answer submitted was: " + studentAnswer + "</b><p>");
+		buf.append("<br />");
+		if (showWork != null && !showWork.isEmpty()) buf.append("<b>Student work:</b><br /><div style='border-style: solid; border-width: thin; white-space: pre-wrap;'>" + showWork + "</div>");	
+		if (studentAnswer==null || studentAnswer.isEmpty()) buf.append("<b>No answer was submitted for this question item.</b><p></p>");
+		else buf.append("<b>The answer submitted was: " + studentAnswer + "</b><p></p>");
 		
 		buf.append("<div id='feedback" + this.id + "'>");
 		buf.append("<FORM NAME=suggest" + this.id 
 				+ " onSubmit=\" return ajaxSubmit('/Feedback?UserRequest=ReportAProblem','" + this.id + "',document.suggest" + this.id + ".Notes.value,document.suggest" + this.id + ".Email.value);\">"
 				+ "<INPUT TYPE=BUTTON VALUE='Report a problem with this question' "
-				+ "onClick=javascript:getElementById('form" + this.id + "').style.display='';this.style.display='none'>"
+				+ "onClick=\"javascript:getElementById('form" + this.id + "').style.display='';this.style.display='none'\" />"
 				+ "<div id='form" + this.id + "' style='display: none'>");
 		
-		buf.append("<span style=color:red><br>");
+		buf.append("<span style=color:red><br />");
 		switch (getQuestionType()) {
 			case 1: buf.append("Reminder: The correct answer is shown in bold print above."); break; // MULTIPLE_CHOICE
 			case 2: buf.append("Reminder: The correct answer is shown in bold print above."); break; // TRUE_FALSE
@@ -489,11 +489,11 @@ public class Question implements Serializable {
 				}
 			default:
 		}		
-		buf.append("</span><br>");
+		buf.append("</span><br />");
 		
-		buf.append("Your Comment: <INPUT TYPE=TEXT SIZE=80 NAME=Notes><br>");
-		buf.append("Your Email: <INPUT TYPE=TEXT SIZE=50 PLACEHOLDER=' optional, if you want a response' NAME=Email><br>");
-		buf.append("<INPUT TYPE=SUBMIT NAME=SubmitButton VALUE='Submit Feedback'></div></FORM><br>");
+		buf.append("Your Comment: <INPUT TYPE=TEXT SIZE=80 NAME=Notes /><br />");
+		buf.append("Your Email: <INPUT TYPE=TEXT SIZE=50 PLACEHOLDER=' optional, if you want a response' NAME=Email /><br />");
+		buf.append("<INPUT TYPE=SUBMIT NAME=SubmitButton VALUE='Submit Feedback' /></div></FORM><br />");
 		buf.append("</div>");
 		return buf.toString(); 
 	}
@@ -551,88 +551,88 @@ public class Question implements Serializable {
 			char choice = 'a';
 			switch (this.getQuestionType()) {
 			case 1: // Multiple Choice
-				buf.append("Question Text:<br><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
-						+ amp2html(text) + "</TEXTAREA><br>");
-				buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best choice:</FONT><br>");
+				buf.append("Question Text:<br /><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
+						+ amp2html(text) + "</TEXTAREA><br />");
+				buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best choice:</FONT><br />");
 				for (int i=0;i<5;i++) { 
 					if (i < nChoices) {
 						buf.append("<input type=radio name=CorrectAnswer value=" + choice + "");
 						if (correctAnswer.indexOf(choice) >= 0) buf.append(" CHECKED");
 						buf.append("><input size=30 name=" + choiceNames[i] + " value='"); 
 						if (choices.size() > i) buf.append(quot2html(amp2html(choices.get(i))));
-						buf.append("'><br>");
+						buf.append("'><br />");
 					}
 					else buf.append("<input type=radio name=CorrectAnswer value='" + choice + "'>"
-							+ "<input size=30 name=" + choiceNames[i] + "><br>");
+							+ "<input size=30 name=" + choiceNames[i] + "><br />");
 					choice++;
 				}
 				break;
 			case 2: // True/False
-				buf.append("Question Text:<br><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
-						+ amp2html(text) + "</TEXTAREA><br>");
-				buf.append("<FONT SIZE=-2 COLOR=FF0000>Select true or false:</FONT><br>");
+				buf.append("Question Text:<br /><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
+						+ amp2html(text) + "</TEXTAREA><br />");
+				buf.append("<FONT SIZE=-2 COLOR=FF0000>Select true or false:</FONT><br />");
 				buf.append("<input type=radio name=CorrectAnswer value='true'");
 					if (correctAnswer.equals("true")) buf.append(" CHECKED");
-				buf.append("> True<br>");
+				buf.append("> True<br />");
 				buf.append("<input type=radio name=CorrectAnswer value='false'");
 				if (correctAnswer.equals("false")) buf.append(" CHECKED");
-				buf.append("> False<br>");
+				buf.append("> False<br />");
 				break;
 			case 3: // Select Multiple
-				buf.append("Question Text:<br><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
-						+ amp2html(text) + "</TEXTAREA><br>");
-				buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><br>");
+				buf.append("Question Text:<br /><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
+						+ amp2html(text) + "</TEXTAREA><br />");
+				buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><br />");
 				for (int i=0;i<5;i++){
 					if (i < nChoices) {
 						buf.append("<input type=checkbox name=CorrectAnswer value=" + choice);
 						if (correctAnswer.indexOf(choice) >= 0) buf.append(" CHECKED");
 						buf.append("><input size=30 name=" + choiceNames[i] + " value='"); 
 						if (choices.size() > i) buf.append(quot2html(amp2html(choices.get(i))));
-						buf.append("'><br>");
+						buf.append("'><br />");
 					}
 					else buf.append("<input type=checkbox name=CorrectAnswer value=" + choice + ">"
-							+ "<input size=30 name=" + choiceNames[i] + "><br>");
+							+ "<input size=30 name=" + choiceNames[i] + "><br />");
 					choice++;
 				}
 				break;
 			case 4: // Fill-in-the-Word
-				buf.append("Question Text:<br><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
-						+ amp2html(text) + "</TEXTAREA><br>");
-				buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase.<br>"
-						+ "Multiple correct answers can be entered as a comma-separated list.</FONT><br>");
+				buf.append("Question Text:<br /><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
+						+ amp2html(text) + "</TEXTAREA><br />");
+				buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase.<br />"
+						+ "Multiple correct answers can be entered as a comma-separated list.</FONT><br />");
 				buf.append("<input type=text name=CorrectAnswer value=\"" 
-						+ quot2html(amp2html(correctAnswer)) + "\"'><br>");
+						+ quot2html(amp2html(correctAnswer)) + "\"'><br />");
 				buf.append("<TEXTAREA name=QuestionTag rows=5 cols=60 wrap=soft>" 
-						+ amp2html(tag) + "</TEXTAREA><br>");
+						+ amp2html(tag) + "</TEXTAREA><br />");
 				break;
 			case 5: // Numeric Answer
-				buf.append("Question Text:<br><TEXTAREA name=QuestionText rows=5 cols=60 wrap=soft>" 
-						+ amp2html(text) + "</TEXTAREA><br>");
+				buf.append("Question Text:<br /><TEXTAREA name=QuestionText rows=5 cols=60 wrap=soft>" 
+						+ amp2html(text) + "</TEXTAREA><br />");
 				buf.append("<FONT SIZE=-2>Significant figures: <input size=5 name=SignificantFigures value='" + significantFigures + "'> Required precision: <input size=5 name=RequiredPrecision value='" + requiredPrecision + "'> (set to zero to require exact answer)</FONT><br/>");
 				switch (getNumericItemType()) {
-				case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numeric value.</FONT><br>"); break;
-				case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
-				case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br>"); break;
-				case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br>"); break;
+				case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numeric value.</FONT><br />"); break;
+				case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br />"); break;
+				case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br />"); break;
+				case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br />"); break;
 				default:
 				}
 				buf.append("Correct answer:");
 				buf.append("<INPUT TYPE=TEXT NAME=CorrectAnswer VALUE='" + correctAnswer + "'> ");
 				buf.append(" Units:<INPUT TYPE=TEXT NAME=QuestionTag SIZE=8 VALUE='" 
-						+ quot2html(amp2html(tag)) + "'><br>");
+						+ quot2html(amp2html(tag)) + "'><br />");
 				buf.append("Parameters:<input name=ParameterString value='" 
 						+ parameterString + "'><FONT SIZE=-2><a href=# onClick=\"javascript:document.getElementById('detail1').innerHTML="
-						+ "'You may embed up to 4 parameters (a b c d) in a question using a parameter string like<br>"
-						+ "a 111:434 b 7:39<br>"
-						+ "This will randomly select integers for variables a and b from the specified ranges.<br>"
-						+ "Use these in math expressions with the pound sign delimeter (#) to create randomized data.<br>"
-						+ "Example: Compute the mass of sodium in #a# mL of aqueous #b/10# M NaCl solution.<br>"
-						+ "Correct answer: #22.9898*a/1000*b/10# g<p>'\";>What's This?</a></FONT>");
+						+ "'You may embed up to 4 parameters (a b c d) in a question using a parameter string like<br />"
+						+ "a 111:434 b 7:39<br />"
+						+ "This will randomly select integers for variables a and b from the specified ranges.<br />"
+						+ "Use these in math expressions with the pound sign delimeter (#) to create randomized data.<br />"
+						+ "Example: Compute the mass of sodium in #a# mL of aqueous #b/10# M NaCl solution.<br />"
+						+ "Correct answer: #22.9898*a/1000*b/10# g<p></p>'\";>What's This?</a></FONT>");
 				buf.append("<div id=detail1></div>");
-				buf.append("Hint:<br><TEXTAREA NAME=Hint ROWS=3 COLS=60 WRAP=SOFT>"
-						+ amp2html(hint) + "</TEXTAREA><br>");
-				buf.append("Solution:<br><TEXTAREA NAME=Solution ROWS=10 COLS=60 WRAP=SOFT>" 
-						+ amp2html(solution) + "</TEXTAREA><br>");
+				buf.append("Hint:<br /><TEXTAREA NAME=Hint ROWS=3 COLS=60 WRAP=SOFT>"
+						+ amp2html(hint) + "</TEXTAREA><br />");
+				buf.append("Solution:<br /><TEXTAREA NAME=Solution ROWS=10 COLS=60 WRAP=SOFT>" 
+						+ amp2html(solution) + "</TEXTAREA><br />");
 				break;
 			}
 		}

@@ -26,6 +26,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -67,7 +68,7 @@ public class Poll extends HttpServlet {
 					out.println(Home.header() + welcomePage(user,request) + Home.footer);
 					break;
 				case 1:
-					if (!user.isInstructor() && responsesRecorded(user.id)) out.println(Home.header() + waitPage(user) + Home.footer);
+					if (responsesRecorded(user.id)) out.println(Home.header() + waitPage(user) + Home.footer);
 					else out.println(Home.header() + showPollQuestions(user) + Home.footer);
 					break;
 				case 2:
@@ -103,7 +104,7 @@ public class Poll extends HttpServlet {
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 				PollTransaction pt = getPollTransaction(user);
 				pt.downloaded = new Date();
-				ofy().save().entity(new PollTransaction(user.id,new Date(),a.id));  // essential for purgeActivePolls to work properly			
+				ofy().save().entity(pt);  // essential for purgeActivePolls to work properly			
 				pollQuestions.putAll(ofy().load().keys(a.questionKeys));
 				activePolls.put(a.id, 1);
 				break;
@@ -141,22 +142,22 @@ public class Poll extends HttpServlet {
 			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 			if (a.questionKeys.size()==0) return editPage(user,request);
 			else {
-				buf.append("You may review and edit the questions for this poll by <a href=/Poll?UserRequest=EditPoll&sig=" + user.getTokenSignature() + ">clicking this link</a>.<p>");
+				buf.append("You may review and edit the questions for this poll by <a href=/Poll?UserRequest=EditPoll&sig=" + user.getTokenSignature() + ">clicking this link</a>.<p></p>");
 				
 				buf.append("When your class is ready for this poll, launch it by pressing the button below. "
 						+ "You must then tell your students that the poll is open so they can click the link "
-						+ "to view the poll question items.<br>");
+						+ "to view the poll question items.<br/>");
 				buf.append("<form method=post>"
-						+ "<input type=hidden name=sig value=" + user.getTokenSignature() + ">"
-						+ "<input type=hidden name=UserRequest value=LaunchPoll>"
-						+ "<input type=submit value='Launch This Poll Now'>");
+						+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+						+ "<input type=hidden name=UserRequest value='LaunchPoll' />"
+						+ "<input type=submit value='Launch This Poll Now' />");
 			}
 		} else {
-			buf.append("This poll is currently closed. Please wait until your instructor tells you that the poll is open.<br>"
-					+ "Then click the button below to view the poll question items.<br>"
+			buf.append("This poll is currently closed. Please wait until your instructor tells you that the poll is open.<br/>"
+					+ "Then click the button below to view the poll question items.<br/>"
 					+ "<form method=get>"
-					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + ">"
-					+ "<input type=submit value='View the Poll'></form><p>");
+					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+					+ "<input type=submit value='View the Poll' /></form><p></p>");
 		}
 		return buf.toString();
 	}
@@ -192,11 +193,11 @@ public class Poll extends HttpServlet {
 		
 		if (user.isInstructor()) {
 			buf.append("<b>Please tell your students that the poll is now open.</b> "
-				+ "They will have to refresh their browsers to view the questions.<br>");
+				+ "They will have to refresh their browsers to view the questions.<br/>");
 			buf.append("<form method=post><div id=timer0 style='display: inline'></div>&nbsp;When you are ready, please&nbsp;"
-					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + ">"
-					+ "<input type=hidden name=UserRequest value=ClosePoll>"
-					+ "<input type=submit value='click here to close the poll and view the results'>"
+					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+					+ "<input type=hidden name=UserRequest value='ClosePoll' />"
+					+ "<input type=submit value='click here to close the poll and view the results' />"
 					+ "</form>"
 					+ "You must then instruct your students to refresh their browsers to see the results.");
 		}
@@ -206,20 +207,20 @@ public class Poll extends HttpServlet {
 		buf.append("<OL>");
 		int possibleScore = 0;
 		buf.append("<form id=pollForm method=post onSubmit='return confirmSubmission(" + a.questionKeys.size() + ")'>"
-				+ "<input type=hidden name=sig value=" + user.getTokenSignature() + ">");
+				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
 		
 		for (Key<Question> k : a.questionKeys) {  // main loop to present questions
 			Question q = getQuestion(k); // this should nearly always work
 			q.setParameters(a.id % Integer.MAX_VALUE);
-			buf.append("<li>" + q.print() + "<br></li>");
+			buf.append("<li>" + q.print() + "<br/></li>");
 			possibleScore += q.correctAnswer==null || q.correctAnswer.isEmpty()?0:q.pointValue;
 		}
 		buf.append("</OL>");
 		buf.append(javaScripts()); 
 
-		buf.append("<input type=hidden name=PossibleScore value=" + possibleScore + ">");
-		buf.append("<input type=hidden name=UserRequest value=SubmitResponses>");
-		buf.append("<input type=submit id=pollSubmit value='Submit My Responses Now'>");
+		buf.append("<input type=hidden name=PossibleScore value='" + possibleScore + "' />");
+		buf.append("<input type=hidden name=UserRequest value='SubmitResponses' />");
+		buf.append("<input type=submit id=pollSubmit value='Submit My Responses Now' />");
 		buf.append("</form>");
 		
 		return buf.toString();
@@ -292,7 +293,7 @@ public class Poll extends HttpServlet {
 	}
 	
 	PollTransaction getPollTransaction(User user) {
-		PollTransaction pt = ofy().load().type(PollTransaction.class).filter("assignmentId",user.getAssignmentId()).filter("userId",user.id).first().now();
+		PollTransaction pt = ofy().load().type(PollTransaction.class).filter("assignmentId =",user.getAssignmentId()).filter("userId =",user.id).first().now();
 		if (pt == null) pt = new PollTransaction(user.id,new Date(),user.getAssignmentId());
 		return pt;
 	}
@@ -313,34 +314,91 @@ public class Poll extends HttpServlet {
 			buf.append("<h3>Thank you for submitting your responses to this class poll</h3>");
 			buf.append("Your score was " + pt.score + " points out a possible " + pt.possibleScore + " points.");
 		}
-		buf.append("<h3>Please wait until the poll closes</h3>Your instructor will tell you "
-				+ "when you can click the button below to view the class results for the poll.<br>"
-				+ "<form method=get>"
-				+ "<input type=hidden name=sig value=" + user.getTokenSignature() + ">"
-				+ "<input type=submit value='View the Poll Results'>"
-				+ "</form>");
+		
+		if (user.isInstructor()) {
+			buf.append("<h3>The poll is still open</h3>"
+					+ "<form method=post><div id=timer0 style='display: inline'></div>&nbsp;When you are ready, please&nbsp;"
+					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+					+ "<input type=hidden name=UserRequest value='ClosePoll' />"
+					+ "<input type=submit value='click here to close the poll and view the results' />"
+					+ "</form>"
+					+ "You must then instruct your students to refresh their browsers to see the results.");
+		} else {
+			buf.append("<h3>Please wait until the poll closes</h3>Your instructor will tell you "
+					+ "when you can click the button below to view the class results for the poll.<br/>"
+					+ "<form method=get>"
+					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+					+ "<input type=submit value='View the Poll Results' />"
+					+ "</form>");
+		}
 		return buf.toString();	
 	}
 	
 	String resultsPage(User user) {
 		StringBuffer buf = new StringBuffer();
+		StringBuffer debug = new StringBuffer("Debug:");
 		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+		debug.append("a.");
 		
 		buf.append("<h2>Poll Results</h2>");
 		if (user.isInstructor()) {
 			buf.append("<b>Be sure to tell your students that the poll is now closed</b> and to refresh their browsers to view these results. ");
 			buf.append("<form method=post>"
-					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + ">"
-					+ "<input type=hidden name=UserRequest value=ResetPoll>"
-					+ "When you have finished viewing the results, please<input type=submit value='click here to reset the poll'>"
-					+ "</form><p>");
+					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+					+ "<input type=hidden name=UserRequest value='ResetPoll' />"
+					+ "When you have finished viewing the results, please<input type=submit value='click here to reset the poll' />"
+					+ "</form><p></p>");
 		}
 		
-		PollTransaction pt = getPollTransaction(user);
+		debug.append("b.");
+		
+		PollTransaction pt = getPollTransaction(user);	
+		List<PollTransaction> pts = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).list();
+		buf.append("\n");
+		buf.append("<script>"
+				+ "function ajaxSubmit(url,id,note,email) {\n"
+				+ "  var xmlhttp;\n"
+				+ "  if (url.length==0) return false;\n"
+				+ "  xmlhttp=GetXmlHttpObject();\n"
+				+ "  if (xmlhttp==null) {\n"
+				+ "    alert ('Sorry, your browser does not support AJAX!');\n"
+				+ "    return false;\n"
+				+ "  }\n"
+				+ "  xmlhttp.onreadystatechange=function() {\n"
+				+ "    if (xmlhttp.readyState==4) {\n"
+				+ "      document.getElementById('feedback' + id).innerHTML="
+				+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment. "
+				+ "</b></FONT><p></p>';\n"
+				+ "    }\n"
+				+ "  }\n"
+				+ "  url += '&QuestionId=' + id + '&sig=" + user.getTokenSignature() + "&Notes=' + note + '&Email=' + email;\n"
+				+ "  xmlhttp.open('GET',url,true);\n"
+				+ "  xmlhttp.send(null);\n"
+				+ "  return false;\n"
+				+ "}\n"
+				+ "function GetXmlHttpObject() {\n"
+				+ "  if (window.XMLHttpRequest) { // code for IE7+, Firefox, Chrome, Opera, Safari\n"
+				+ "    return new XMLHttpRequest();\n"
+				+ "  }\n"
+				+ "  if (window.ActiveXObject) { // code for IE6, IE5\n"
+				+ "    return new ActiveXObject('Microsoft.XMLHTTP');\n"
+				+ "  }\n"
+				+ "  return null;\n"
+				+ "}\n"
+				+ "</script>");	
+		buf.append("\n");
 		
 		int i=0;
-		buf.append("<div style='display: table'>");
+		buf.append("<div style='display: table'>"); // big-table
+		buf.append("<div style='display: table-row;'>"
+				+ "<div style='display: table-cell'></div>"
+				+ "<div style='display: table-cell'><h3>Questions</h3></div>"
+				+ "<div style='display: table-cell'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>"  // horizontal buffer
+				+ "<div style='display: table-cell'><h3>Responses</h3></div>"
+				+ "</div>");  // end of header row
+		debug.append("c.");
 		for (Key<Question> k : a.questionKeys) {
+			buf.append("\n");
 			try {
 				Question q = pollQuestions.get(k);  // this should almost always work
 				if (q == null) {  // but just in case...
@@ -350,23 +408,158 @@ public class Poll extends HttpServlet {
 				q.setParameters(a.id % Integer.MAX_VALUE);
 				if (q.correctAnswer==null) q.correctAnswer = "";
 				i++;
-				buf.append("<div style='display: table-row'>");
-				buf.append("<div style='display: table-cell'>" + i + ".&nbsp;</div>");
+				buf.append("<div style='display: table-row;vertical-align: top;'>");
+				buf.append("<div style='display: table-cell;vertical-align: top;'>" + i + ".&nbsp;</div>"); // number cell
 				
-				buf.append("<div style='display: table-cell'>");
-				String studentResponse = pt.responses.get(k);
-				if (studentResponse==null) studentResponse = "";
+				buf.append("<div style='display: table-cell;vertical-align: top;'>"); // question cell
 				
-				buf.append(q.correctAnswer.isEmpty()?q.print():q.printAllToStudents(studentResponse));
-				buf.append("</div><div style='display: table-cell'>");
-				buf.append("Some sort of graph of the poll results goes here.");
-				buf.append("</div></div><br>");
-
-
+				String userResponse = pt.responses==null?"":(pt.responses.get(k)==null?"":pt.responses.get(k));
+				
+				buf.append(q.correctAnswer.isEmpty()?q.print():q.printAllToStudents(userResponse));
+				//buf.append(q.printAll());
+				
+				buf.append("</div>"   // end of question cell
+						+ "<div style='display: table-cell;vertical-align: top;'></div>");  // horizontal buffer
+				
+				// This is where we will construct a histogram showing the distribution of responses
+				debug.append("start.");
+				
+				Map<String,Integer> histogram = new HashMap<String,Integer>();
+				//String correctResponse = q.getCorrectAnswer();
+				String otherResponses = null;
+				char choice = 'a';
+				//int chart_height = 150;
+				debug.append("1.");
+				
+				switch (q.getQuestionType()) {
+				case Question.MULTIPLE_CHOICE:
+					for (int j = 0; j < q.nChoices; j++) {
+						histogram.put(String.valueOf(choice),0);
+						choice++;
+					}
+					debug.append("2a.");
+					for (PollTransaction t : pts) {
+						if (t.completed==null || t.responses==null || t.responses.get(k)==null) continue;
+						histogram.put(t.responses.get(k),histogram.get(t.responses.get(k))+1);
+					}
+					break;
+				case Question.TRUE_FALSE:
+					histogram.put("true", 0);
+					histogram.put("false", 0);
+					//chart_height = 100;
+					debug.append("2b.");
+					for (PollTransaction t : pts) {
+						if (t.completed==null || t.responses==null || t.responses.get(k)==null) continue;
+						histogram.put(t.responses.get(k),histogram.get(t.responses.get(k))+1);
+					}
+					break;
+				case Question.SELECT_MULTIPLE:
+					for (int j = 0; j < q.nChoices; j++) {
+						histogram.put(String.valueOf(choice),0);
+						choice++;
+					}
+					debug.append("2c.");
+					for (PollTransaction t : pts) {
+						if (t.completed==null || t.responses==null || t.responses.get(k)==null) continue;
+						String response = t.responses.get(k);
+						debug.append(response + ".");
+						for (int m=0; m<response.length();m++) {
+							debug.append("4.");
+							histogram.put(String.valueOf(response.charAt(m)),histogram.get(String.valueOf(response.charAt(m)))+1);
+						}
+					}
+				break;
+				case Question.FILL_IN_WORD:
+					histogram.put("correct", 0);
+					histogram.put("incorrect", 0);
+					//chart_height = 100;
+					debug.append("2d.");
+					for (PollTransaction t : pts) {
+						if (t.completed==null || t.responses==null || t.responses.get(k)==null) continue;
+						if (q.isCorrect(t.responses.get(k))) histogram.put("correct",histogram.get("correct")+1);
+						else {
+							histogram.put("incorrect", histogram.get("incorrect") + 1);
+							if (otherResponses==null) otherResponses = t.responses.get(k);
+							else if (otherResponses.length()<500 && t.responses.get(k) != null) otherResponses += "; " + t.responses.get(k);
+						}
+					}
+					break;
+				case Question.NUMERIC:
+					histogram.put("correct", 0);
+					histogram.put("incorrect", 0);
+					//chart_height = 100;
+					debug.append("2e.");
+					for (PollTransaction t : pts) {
+						if (t.completed==null || t.responses==null || t.responses.get(k)==null) continue;
+						if (q.isCorrect(t.responses.get(k))) histogram.put("correct",histogram.get("correct")+1);
+						else {
+							histogram.put("incorrect", histogram.get("incorrect") + 1);
+							if (otherResponses==null) otherResponses = t.responses.get(k);
+							else if (otherResponses.length()<500 && t.responses.get(k) != null) otherResponses += "; " + t.responses.get(k);
+							}
+					}
+					break;
+				default:
+				}
+				debug.append("histogram initialized.");
+				
+				// Calculate a scale factor for the maximum width of the graph bars based on the max % response
+				
+				int maxValue = 0;
+				int totalValues = 0;
+				for (Entry<String,Integer> e : histogram.entrySet()) {
+					totalValues += e.getValue();
+					if (e.getValue() > maxValue) maxValue = e.getValue();
+				}
+				debug.append("maxValue="+maxValue+".totalValues="+totalValues+".");
+				buf.append("\n");
+				
+				buf.append("<div id=chart_div" + i + " style='display: table-cell;vertical-align: top;'>");  // histogram cell
+				if (totalValues>0) {
+					// Print a histogram as a table containing a horizontal bar graph:
+					switch (q.getQuestionType()) {
+					case Question.MULTIPLE_CHOICE:
+					case Question.TRUE_FALSE:
+					case Question.SELECT_MULTIPLE:
+						buf.append("Summary of responses received for this question:<p></p>");
+						buf.append("<table>");
+						for (Entry<String,Integer> e : histogram.entrySet()) {
+							buf.append("<tr><td>");
+							buf.append(e.getKey() + "&nbsp;");
+							buf.append("</td><td>");
+							buf.append("<div style='background-color: blue;display: inline-block; width: " + 150*e.getValue()/(totalValues+1) + "px;'>&nbsp;</div>");
+							buf.append("&nbsp;" + e.getValue() + "</td></tr>");
+						}
+						buf.append("</table>");
+						break;
+					case Question.FILL_IN_WORD:
+					case Question.NUMERIC:
+						buf.append("Summary of responses received for this question:<p></p>");
+						buf.append("<table>");
+							buf.append("<tr><td>");
+							buf.append("correct" + "&nbsp;");
+							buf.append("</td><td>");
+							buf.append("<div style='background-color: blue;display: inline-block; width: " + 150*histogram.get("correct")/(totalValues+1) + "px;'>&nbsp;</div>");
+							buf.append("&nbsp;" + histogram.get("correct") + "</td></tr>");
+							buf.append("<tr><td>");
+							buf.append("incorrect" + "&nbsp;");
+							buf.append("</td><td>");
+							buf.append("<div style='background-color: blue;display: inline-block; width: " + 150*histogram.get("incorrect")/(totalValues+1) + "px;'>&nbsp;</div>");
+							buf.append("&nbsp;" + histogram.get("incorrect") + "</td></tr>");
+							if (otherResponses != null) buf.append("<tr><td colspan=2>Incorrect Responses: " + otherResponses + "</td></tr>");							
+						buf.append("</table>");
+						break;	
+					}
+				} else buf.append("No responses were submitted for this question.");
+				
+				buf.append("</div></div>"); // end of table cell and row
+				debug.append("endOfHistogram.");
+			
 			} catch (Exception e) {
+				buf.append(e.toString() + " " + e.getMessage() + "" + debug.toString() + "</div>");
 			}
 		}
-		buf.append("</div>");
+		buf.append("</div>");  // end of table
 		
 		return buf.toString();
 	}
@@ -388,29 +581,29 @@ public class Poll extends HttpServlet {
 		if (assignmentType == null) assignmentType = "";
 		
 		// Display a selector to display candidate questions by topic and assignmentType
-		buf.append("Select poll questions from among existing question items:<br>");
+		buf.append("Select poll questions from among existing question items:");
 
-		buf.append("<FORM NAME=TopicSelect METHOD=GET><INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">");
-		buf.append("<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=EditPoll>");
+		buf.append("<FORM NAME=TopicSelect METHOD=GET><INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "' />");
+		buf.append("<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='EditPoll' />");
 		buf.append("Topic:" + topicSelectBox(topicId) + " Assignment Type:" + assignmentTypeDropDownBox(assignmentType));
-		buf.append(" <INPUT TYPE=SUBMIT VALUE='Display Questions'>");
-		buf.append("</FORM><p>");
+		buf.append(" <INPUT TYPE=SUBMIT VALUE='Display Questions' />");
+		buf.append("</FORM><p></p>");
 
 		boolean selecting = (topicId>0 && !assignmentType.isEmpty());
 		
 		if (selecting) {  // show a list of existing question items
 			List<Question> questions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId", topicId).order("pointValue").list();
-			buf.append("<form method=post action=/Poll><input type=hidden name=sig value=" + user.getTokenSignature() + ">");
-			buf.append("<input type=hidden name=UserRequest value=SubmitEdits>");
-			buf.append("<input type=submit value='Include the selected items below in the poll'><p>");
+			buf.append("<form method=post action=/Poll><input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
+			buf.append("<input type=hidden name=UserRequest value='SubmitEdits' />");
+			buf.append("<input type=submit value='Include the selected items below in the poll' /><p></p>");
 			for (Question q : questions) {
 				q.setParameters(a.id % Integer.MAX_VALUE);
 				buf.append("<div style='display: table-row'>");
-				buf.append("<div style='display: table-cell'><input type=checkbox name=QuestionId value=" + q.id + ">&nbsp;</div>");
+				buf.append("<div style='display: table-cell'><input type=checkbox name=QuestionId value='" + q.id + "' />&nbsp;</div>");
 				buf.append("<div style='display: table-cell'>" + q.printAll() + "</div>");
 				buf.append("</div>");
 			}
-			buf.append("<input type=submit value='Include the selected items below in the poll'><p>");
+			buf.append("<input type=submit value='Include the selected items below in the poll' /><p></p>");
 			buf.append("</form>");
 		} else {  // Print a copy of the current poll questions here:
 			buf.append("<OL>");
@@ -422,16 +615,16 @@ public class Poll extends HttpServlet {
 					pollQuestions.put(k,q);
 				}
 				q.setParameters(a.id % Integer.MAX_VALUE);
-				buf.append("<li>" + q.print() + "<br></li>");
+				buf.append("<li>" + q.print() + "</li>");
 				possibleScore += q.correctAnswer==null || q.correctAnswer.isEmpty()?0:q.pointValue;
 			}
 			buf.append("</OL>");
 			
-			if (a.questionKeys.size()>0) buf.append("This poll is worth a possible " + possibleScore + " points.<br><hr>");
+			if (a.questionKeys.size()>0) buf.append("This poll is worth a possible " + possibleScore + " points.<hr>");
 		
 			// Click here when done editing:
-			buf.append("<form method=get><input type=hidden name=sig value=" + user.getTokenSignature() + ">"
-					+ "<input type=submit value='Click here when you are finished editing this poll'></form>");
+			buf.append("<form method=get><input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+					+ "<input type=submit value='Click here when you are finished editing this poll' /></form>");
 		}
 
 		// If a topicId and assignmentType have been selected, display the question items:
@@ -455,7 +648,7 @@ public class Poll extends HttpServlet {
 		StringBuffer buf = new StringBuffer("<SELECT NAME=TopicId>");
 		if (topicId == 0) buf.append("<OPTION VALUE=''>Select a topic</OPTION>");
 		Query<Topic> topics = ofy().load().type(Topic.class).order("orderBy");
-		for (Topic t : topics) buf.append("<OPTION VALUE=" + t.id + (t.id.equals(topicId)?" SELECTED>":">") + t.title + "</OPTION>\n");
+		for (Topic t : topics) buf.append("<OPTION VALUE=" + t.id + (t.id.equals(topicId)?" SELECTED>":">") + t.title + "</OPTION>");
 		buf.append("</SELECT>");
 		return buf.toString();
 	}
