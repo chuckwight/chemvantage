@@ -441,7 +441,7 @@ public class Poll extends HttpServlet {
 				buf.append("<div style='display: table-row;vertical-align: top;'>");
 				buf.append("<div style='display: table-cell;vertical-align: top;'>" + i + ".&nbsp;</div>"); // number cell
 				
-				buf.append("<div style='display: table-cell;vertical-align: top;'>"); // question cell
+				buf.append("<div style='display: table-cell;vertical-align: top;width: 400px;'>"); // question cell
 				
 				String userResponse = pt.responses==null?"":(pt.responses.get(k)==null?"":pt.responses.get(k));
 				
