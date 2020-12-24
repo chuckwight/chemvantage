@@ -85,6 +85,7 @@ public class ReportScore extends HttpServlet {
 			String userId = URLDecoder.decode(request.getParameter("UserId"),"UTF-8");
 			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
 			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+			ofy().save().entity(Score.getInstance(userId, a)).now();
 			int attempts = 1;
 			try {
 				attempts = Integer.parseInt(request.getParameter("Retry")) + 1;

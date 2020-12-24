@@ -54,7 +54,8 @@ public class Score {    // this object represents a best score achieved by a use
 		s.assignmentId = a.id;
 		s.owner = Key.create(User.class,userId);
 		
-		if (a.assignmentType.equals("Quiz")) {
+		switch (a.assignmentType) {
+		case "Quiz":
 			List<QuizTransaction> quizTransactions = ofy().load().type(QuizTransaction.class).filter("userId",userId).filter("assignmentId",a.id).list();
 			for (QuizTransaction qt : quizTransactions) {
 				s.numberOfAttempts++;  // number of pre-deadline quiz attempts
@@ -66,7 +67,8 @@ public class Score {    // this object represents a best score achieved by a use
 				}
 				if (qt.lis_result_sourcedid != null && !qt.lis_result_sourcedid.contentEquals(s.lis_result_sourcedid)) s.lis_result_sourcedid = qt.lis_result_sourcedid;				
 			}
-		} else if (a.assignmentType.equals("Homework")) {
+			break;
+		case "Homework":
 			List<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",userId).filter("assignmentId",a.id).list();
 			List<Key<Question>> assignmentQuestionKeys = new ArrayList<Key<Question>>();
 			assignmentQuestionKeys.addAll(a.questionKeys);  // clones the assignment List of question keys
@@ -77,19 +79,8 @@ public class Score {    // this object represents a best score achieved by a use
 				if (ht.lis_result_sourcedid != null) s.lis_result_sourcedid = ht.lis_result_sourcedid;  // record any available sourcedid value for reporting score to the LMS				
 				if (s.mostRecentAttempt == null || ht.graded.after(s.mostRecentAttempt)) s.mostRecentAttempt = ht.graded;  // most recent transaction
 			}
-		} else if (a.assignmentType.equals("VideoQuiz")) {
-			List<VideoTransaction> videoTransactions = ofy().load().type(VideoTransaction.class).filter("userId",userId).filter("assignmentId",a.id).list();
-			for (VideoTransaction vt : videoTransactions) {
-				s.numberOfAttempts++;  // number of pre-deadline quiz attempts
-				s.score = (vt.score>s.score?vt.score:s.score);  // keep the best (max) score
-				if (s.mostRecentAttempt==null || vt.downloaded.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far
-					s.mostRecentAttempt = vt.downloaded;
-					s.maxPossibleScore = vt.possibleScore;
-					if (s.lis_result_sourcedid == null || s.lis_result_sourcedid.isEmpty()) s.lis_result_sourcedid = vt.lis_result_sourcedid;  // record any available sourcedid value for reporting score to the LMS
-				}
-				if (vt.lis_result_sourcedid != null && !vt.lis_result_sourcedid.contentEquals(s.lis_result_sourcedid)) s.lis_result_sourcedid = vt.lis_result_sourcedid;				
-			}		
-		} else if (a.assignmentType.equals("PracticeExam")) {
+			break;
+		case "PracticeExam":
 			List<PracticeExamTransaction> practiceExamTransactions = ofy().load().type(PracticeExamTransaction.class).filter("userId",userId).filter("assignmentId",a.id).list();
 			for (PracticeExamTransaction pt : practiceExamTransactions) {
 				if (pt.graded==null || !pt.topicsMatch(a.topicIds)) continue;
@@ -105,7 +96,34 @@ public class Score {    // this object represents a best score achieved by a use
 					s.maxPossibleScore = possibleScore;
 				}				
 			}			
+			break;
+		case "VideoQuiz":
+			List<VideoTransaction> videoTransactions = ofy().load().type(VideoTransaction.class).filter("userId",userId).filter("assignmentId",a.id).list();
+			for (VideoTransaction vt : videoTransactions) {
+				s.numberOfAttempts++;  // number of pre-deadline quiz attempts
+				s.score = (vt.score>s.score?vt.score:s.score);  // keep the best (max) score
+				if (s.mostRecentAttempt==null || vt.downloaded.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far
+					s.mostRecentAttempt = vt.downloaded;
+					s.maxPossibleScore = vt.possibleScore;
+					if (s.lis_result_sourcedid == null || s.lis_result_sourcedid.isEmpty()) s.lis_result_sourcedid = vt.lis_result_sourcedid;  // record any available sourcedid value for reporting score to the LMS
+				}
+				if (vt.lis_result_sourcedid != null && !vt.lis_result_sourcedid.contentEquals(s.lis_result_sourcedid)) s.lis_result_sourcedid = vt.lis_result_sourcedid;				
+			}		
+			break;
+		case "Poll":
+			List<PollTransaction> pollTransactions = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).filter("userId",userId).list();
+			for (PollTransaction pt : pollTransactions) {
+				s.numberOfAttempts++;  // number of pre-deadline quiz attempts
+				s.score = (pt.score>s.score?pt.score:s.score);  // keep the best (max) score
+				if (s.mostRecentAttempt==null || pt.downloaded.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far
+					s.mostRecentAttempt = pt.downloaded;
+					s.maxPossibleScore = pt.possibleScore;
+					if (s.lis_result_sourcedid == null || s.lis_result_sourcedid.isEmpty()) s.lis_result_sourcedid = pt.lis_result_sourcedid;  // record any available sourcedid value for reporting score to the LMS
+				}
+				if (pt.lis_result_sourcedid != null && !pt.lis_result_sourcedid.contentEquals(s.lis_result_sourcedid)) s.lis_result_sourcedid = pt.lis_result_sourcedid;				
+			}		
 		}
+		
 		if (s.score > s.maxPossibleScore) s.score = s.maxPossibleScore;  // max really is the limit for LTI reporting
 		return s;
 	}
