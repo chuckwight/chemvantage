@@ -128,9 +128,14 @@ public class Poll extends HttpServlet {
 				pt = submitResponses(user,request);
 				out.println(Home.header() + waitPage(user,pt) + Home.footer);
 				return;
-			case "SubmitEdits":
+			case "AddQuestions":
 				if (!user.isInstructor()) break;
-				submitEdits(user,request);
+				addQuestions(user,request);
+				out.println(Home.header() + editPage(user,request) + Home.footer);
+				return;
+			case "DeleteQuestions":
+				if (!user.isInstructor()) break;
+				deleteQuestions(user,request);
 				out.println(Home.header() + editPage(user,request) + Home.footer);
 				return;
 			}
@@ -227,7 +232,7 @@ public class Poll extends HttpServlet {
 		for (Key<Question> k : a.questionKeys) {  // main loop to present questions
 			Question q = getQuestion(k); // this should nearly always work
 			q.setParameters(a.id % Integer.MAX_VALUE);
-			buf.append("<li>" + q.print() + "<br/></li>");
+			buf.append("<li>" + q.print() + "<br /></li>");
 			possibleScore += q.correctAnswer==null || q.correctAnswer.isEmpty()?0:q.pointValue;
 		}
 		buf.append("</OL>");
@@ -320,6 +325,11 @@ public class Poll extends HttpServlet {
 	Assignment getAssignment(Long assignmentId) {
 		if (assignments.containsKey(assignmentId)) return assignments.get(assignmentId);
 		else return ofy().load().type(Assignment.class).id(assignmentId).safe();
+	}
+	
+	void saveAssignment(Assignment a) {
+		assignments.put(a.id,a);
+		ofy().save().entity(a);
 	}
 	
 	PollTransaction getPollTransaction(User user) {
@@ -611,48 +621,61 @@ public class Poll extends HttpServlet {
 		if (assignmentType == null) assignmentType = "";
 		
 		// Display a selector to display candidate questions by topic and assignmentType
-		buf.append("Select poll questions from among existing question items:");
+		buf.append("Add questions to this poll by selecting from existing question items:");
 
 		buf.append("<FORM NAME=TopicSelect METHOD=GET><INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "' />");
 		buf.append("<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='EditPoll' />");
 		buf.append("Topic:" + topicSelectBox(topicId) + " Assignment Type:" + assignmentTypeDropDownBox(assignmentType));
 		buf.append(" <INPUT TYPE=SUBMIT VALUE='Display Questions' />");
-		buf.append("</FORM><p></p>");
+		buf.append("</FORM><br />");
+		buf.append("or remove current questions by selecting them below:<p></p>");
 
 		boolean selecting = (topicId>0 && !assignmentType.isEmpty());
+		int i = 0;
 		
 		if (selecting) {  // show a list of existing question items
 			List<Question> questions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId", topicId).order("pointValue").list();
-			buf.append("<form method=post action=/Poll><input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
-			buf.append("<input type=hidden name=UserRequest value='SubmitEdits' />");
+			buf.append("<form method=post action='/Poll'><input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
+			//buf.append("<div style='display: table'>");
+			buf.append("<input type=hidden name=UserRequest value='AddQuestions' />");
 			buf.append("<input type=submit value='Include the selected items below in the poll' /><p></p>");
 			for (Question q : questions) {
+				i++;
 				q.setParameters(a.id % Integer.MAX_VALUE);
 				buf.append("<div style='display: table-row'>");
-				buf.append("<div style='display: table-cell'><input type=checkbox name=QuestionId value='" + q.id + "' />&nbsp;</div>");
+				buf.append("<div style='display: table-cell;width: 55px;'><input type=checkbox name=QuestionId value='" + q.id + "' />&nbsp;" + i + ".</div>");
 				buf.append("<div style='display: table-cell'>" + q.printAll() + "</div>");
-				buf.append("</div>");
+				buf.append("</div>");  // end of row
 			}
 			buf.append("<input type=submit value='Include the selected items below in the poll' /><p></p>");
+			//buf.append("</div>");  // end of table
 			buf.append("</form>");
 		} else {  // Print a copy of the current poll questions here:
-			buf.append("<OL>");
+			buf.append("<form method=post action='/Poll'><input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+					+ "<input type=hidden name=UserRequest value='DeleteQuestions' />");
+			//buf.append("<div style='display: table'>");
 			int possibleScore = 0;
 			for (Key<Question> k : a.questionKeys) {  // main loop to present questions
+				i++;
 				Question q = getQuestion(k);
 				q.setParameters(a.id % Integer.MAX_VALUE);
-				buf.append("<li>" + q.print() + "</li>");
+				buf.append("<div style='display: table-row'>");
+				buf.append("<div style='display: table-cell;width: 55px;'><input type=checkbox name=QuestionId value='" + q.id + "' />&nbsp;" + i + ".</div>");
+				buf.append("<div style='display: table-cell'>" + q.print() + "</div>");
+				buf.append("</div><br />"); // end of row
 				possibleScore += q.correctAnswer==null || q.correctAnswer.isEmpty()?0:q.pointValue;
 			}
-			buf.append("</OL>");
+			buf.append("<p></p><input type=submit value='Remove the selected items from the poll' />");
+			//buf.append("<div><p></p>"); // end of table
+			buf.append("</form>");
 			
-			if (a.questionKeys.size()>0) buf.append("This poll is worth a possible " + possibleScore + " points.<hr>");
+			if (a.questionKeys.size()>0) buf.append("<hr />This poll is worth a possible " + possibleScore + " points.");
 		
 			// Click here when done editing:
 			buf.append("<form method=get><input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 					+ "<input type=submit value='Click here when you are finished editing this poll' /></form>");
 		}
-
+		
 		// If a topicId and assignmentType have been selected, display the question items:
 		
 		return buf.toString();
@@ -680,7 +703,7 @@ public class Poll extends HttpServlet {
 	}
 	
 
-	void submitEdits(User user,HttpServletRequest request) {
+	void addQuestions(User user,HttpServletRequest request) {
 		String[] qids = request.getParameterValues("QuestionId");
 		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 		for (String qid : qids) questionKeys.add(Key.create(Question.class,Long.parseLong(qid)));
@@ -688,8 +711,18 @@ public class Poll extends HttpServlet {
 			Assignment a = getAssignment(user.getAssignmentId());
 			if (a.questionKeys == null) a.questionKeys = questionKeys;
 			else a.questionKeys.addAll(questionKeys);
-			ofy().save().entity(a).now();
+			saveAssignment(a);
 		}
 	}
 	
+	void deleteQuestions(User user,HttpServletRequest request) {
+		String[] qids = request.getParameterValues("QuestionId");
+		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
+		for (String qid : qids) questionKeys.add(Key.create(Question.class,Long.parseLong(qid)));
+		if (questionKeys.size()>0) {
+			Assignment a = getAssignment(user.getAssignmentId());
+			a.questionKeys.removeAll(questionKeys);
+			saveAssignment(a);
+		}
+	}
 }
