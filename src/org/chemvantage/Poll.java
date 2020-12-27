@@ -66,6 +66,12 @@ public class Poll extends HttpServlet {
 			case "EditPoll":
 				out.println(Home.header() + editPage(user,request) + Home.footer);
 				break;
+			case "NewQuestion":
+				out.println(Home.header() + newQuestionForm(user,request) + Home.footer);
+				break;
+			case "Preview":
+				out.println(Home.header() + previewQuestion(user,request) + Home.footer);
+				break;
 			default:
 				switch (state) {
 				case 0:
@@ -123,6 +129,15 @@ public class Poll extends HttpServlet {
 				assignments.remove(a.id);
 				activePolls.remove(a.id);
 				out.println(Home.header() + welcomePage(user,request) + Home.footer);
+				return;
+			case "Save New Question":
+				long qid = createQuestion(user,request);
+				if (qid > 0) {
+					a = getAssignment(user.getAssignmentId());
+					a.questionKeys.add(Key.create(Question.class,qid));
+					saveAssignment(a);
+				}
+				out.println(Home.header() + editPage(user,request) + Home.footer);
 				return;
 			case "SubmitResponses":
 				pt = submitResponses(user,request);
@@ -628,15 +643,21 @@ public class Poll extends HttpServlet {
 		buf.append("Topic:" + topicSelectBox(topicId) + " Assignment Type:" + assignmentTypeDropDownBox(assignmentType));
 		buf.append(" <INPUT TYPE=SUBMIT VALUE='Display Questions' />");
 		buf.append("</FORM><br />");
-		buf.append("or remove current questions by selecting them below:<p></p>");
-
-		boolean selecting = (topicId>0 && !assignmentType.isEmpty());
-		int i = 0;
 		
+		boolean selecting = (topicId>0 && !assignmentType.isEmpty());
+		
+		if (!selecting) buf.append("<form method=get action='/Poll'>"
+				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+				+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='NewQuestion' />"
+				+ "or <input type=submit value='Create a custom question of your own' />"
+				+ "</form><p></p>");
+
+		int i = 0;		
 		if (selecting) {  // show a list of existing question items
+			buf.append("<h3>Available Questions for this Topic</h3>");
+			
 			List<Question> questions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId", topicId).order("pointValue").list();
 			buf.append("<form method=post action='/Poll'><input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
-			//buf.append("<div style='display: table'>");
 			buf.append("<input type=hidden name=UserRequest value='AddQuestions' />");
 			buf.append("<input type=submit value='Include the selected items below in the poll' /><p></p>");
 			for (Question q : questions) {
@@ -648,12 +669,13 @@ public class Poll extends HttpServlet {
 				buf.append("</div>");  // end of row
 			}
 			buf.append("<input type=submit value='Include the selected items below in the poll' /><p></p>");
-			//buf.append("</div>");  // end of table
 			buf.append("</form>");
-		} else {  // Print a copy of the current poll questions here:
+		} else if (a.getQuestionKeys().size() > 0) {  // Print a copy of the current poll questions here:
 			buf.append("<form method=post action='/Poll'><input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-					+ "<input type=hidden name=UserRequest value='DeleteQuestions' />");
-			//buf.append("<div style='display: table'>");
+					+ "<input type=hidden name=UserRequest value='DeleteQuestions' />"
+					+ "or <input type=submit value='Remove the selected items below from this poll' />");
+			
+			buf.append("<h3>Current Questions For This Poll</h3>");
 			int possibleScore = 0;
 			for (Key<Question> k : a.questionKeys) {  // main loop to present questions
 				i++;
@@ -665,8 +687,6 @@ public class Poll extends HttpServlet {
 				buf.append("</div><br />"); // end of row
 				possibleScore += q.correctAnswer==null || q.correctAnswer.isEmpty()?0:q.pointValue;
 			}
-			buf.append("<p></p><input type=submit value='Remove the selected items from the poll' />");
-			//buf.append("<div><p></p>"); // end of table
 			buf.append("</form>");
 			
 			if (a.questionKeys.size()>0) buf.append("<hr />This poll is worth a possible " + possibleScore + " points.");
@@ -675,9 +695,6 @@ public class Poll extends HttpServlet {
 			buf.append("<form method=get><input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 					+ "<input type=submit value='Click here when you are finished editing this poll' /></form>");
 		}
-		
-		// If a topicId and assignmentType have been selected, display the question items:
-		
 		return buf.toString();
 	}
 
@@ -718,11 +735,247 @@ public class Poll extends HttpServlet {
 	void deleteQuestions(User user,HttpServletRequest request) {
 		String[] qids = request.getParameterValues("QuestionId");
 		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
-		for (String qid : qids) questionKeys.add(Key.create(Question.class,Long.parseLong(qid)));
+		for (String qid : qids) {
+			Key<Question> k = Key.create(Question.class,Long.parseLong(qid));
+			questionKeys.add(k);
+			pollQuestions.remove(k);
+		}
 		if (questionKeys.size()>0) {
 			Assignment a = getAssignment(user.getAssignmentId());
 			a.questionKeys.removeAll(questionKeys);
 			saveAssignment(a);
 		}
 	}
+	
+	String newQuestionForm(User user,HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer();
+		String assignmentType = "Poll";
+		int questionType = 0;
+		try {
+			questionType = Integer.parseInt(request.getParameter("QuestionType"));
+			switch (questionType) {
+			case (1): buf.append("<h3>New Multiple-Choice " + assignmentType + " Question</h3>");
+			buf.append("Fill in the question text and the possible answers "
+					+ "(up to a maximum of 5). Be sure to select the single best "
+					+ "answer to the question."); break;
+			case (2): buf.append("<h3>New True-False " + assignmentType + " Question</h3>");
+			buf.append("Write the question as an affirmative statement. Then "
+					+ "indicate below whether the statement is true or false."); break;
+			case (3): buf.append("<h3>New Select-Multiple " + assignmentType + " Question</h3>");
+			buf.append("Fill in the question text and the possible answers "
+					+ "(up to a maximum of 5). Be sure to "
+					+ "select all of the correct answers to the question."); break;
+			case (4): buf.append("<h3>New Fill-in-Word " + assignmentType + " Question</h3>");
+			buf.append("Start the question text in the upper textarea box. Indicate "
+					+ "the correct answer (and optionally, an alternative correct answer) in "
+					+ "the middle boxes, and the end of the question text below that.  The answers "
+					+ "are not case-sensitive or punctuation-sensitive, but spelling must "
+					+ "be exact."); break;
+			case (5): buf.append("<h3>New Numeric " + assignmentType + " Question</h3>");
+			buf.append("Fill in the question text in the upper textarea box and "
+					+ "the correct numeric answer below. Also indicate the required precision "
+					+ "of the student's response in percent (default = 2%). Use the bottom "
+					+ "textarea box to finish the question text and/or to indicate the "
+					+ "expected dimensions or units of the student's answer."); break;
+			default: buf.append("An unexpected error occurred. Please try again.");
+			}
+			Question question = new Question(questionType);
+			buf.append("<p><FORM METHOD=GET ACTION='/Poll'>"
+					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "' />"
+					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "' />"
+					+ "<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + user.id + "' />");
+			buf.append("<INPUT TYPE=HIDDEN NAME=QuestionType VALUE=" + questionType + " />");
+			
+			buf.append("Point Value: <input type=text size=2 name=PointValue /><br />");
+			buf.append(question.edit());
+			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Preview' />"
+					+ "</FORM>");
+		} catch (Exception e) {
+			buf.append("<h2>Create a Custom Question</h2>");
+			buf.append("<FORM NAME=NewQuestion METHOD=GET ACTION='/Poll'>");
+			buf.append("Select one of the following question types:<br />"
+					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "' />"
+					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=NewQuestion />"
+					+ "<INPUT TYPE=HIDDEN NAME=QuestionType />"
+					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=1;submit()\" VALUE='Multiple Choice' /> "
+					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=2;submit()\" VALUE='True/False' /> "
+					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=3;submit()\" VALUE='Select Multiple' /> "
+					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=4;submit()\" VALUE='Fill in Word' /> "
+					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=5;submit()\" VALUE='Numeric' />"
+					+ "</FORM>");
+		}
+		return buf.toString();
+	}
+
+	String previewQuestion(User user,HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer();
+		try {
+			long questionId = 0;
+			boolean current = false;
+			boolean proposed = false;
+			try {
+				questionId = Long.parseLong(request.getParameter("QuestionId"));
+				current = true;
+			} catch (Exception e2) {}
+			long proposedQuestionId = 0;
+			try {
+				proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
+				proposed = true;
+				current = false;
+			} catch (Exception e2) {}
+			
+			Question q = assembleQuestion(request);
+			if (q.requiresParser()) q.setParameters();
+			
+			buf.append("<h3>Preview Custom Poll Question</h3>");
+			
+			q.assignmentType = "Poll";
+				
+			buf.append("Author: " + q.authorId + "<br />");
+			buf.append("Editor: " + user.id + "<p>");
+			
+			buf.append("<FORM Action='/Poll' METHOD=POST>"
+					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "' />");
+			
+			buf.append(q.printAll());
+			
+			if (q.authorId==null) q.authorId="";
+			buf.append("<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + q.authorId + "' />");
+			buf.append("<INPUT TYPE=HIDDEN NAME=EditorId VALUE='" + user.id + "' />");
+			
+			
+			if (current) {
+				buf.append("<INPUT TYPE=HIDDEN NAME=QuestionId VALUE=" + questionId + " />");
+				buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Update Question' />");
+			}
+			if (proposed) {
+				buf.append("<INPUT TYPE=HIDDEN NAME=ProposedQuestionId VALUE=" + proposedQuestionId + " />");
+				buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Activate This Question' />");
+			} else buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save New Question' />");
+			
+			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit' />");
+			
+			buf.append("<hr><h3>Continue Editing</h3>");
+			buf.append("Assignment Type: Poll<br />");
+			
+			buf.append("<br />");
+			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
+			
+			if (q.assignmentType.equals("Exam")) {
+				if (q.pointValue!=2 && q.pointValue!=10 && q.pointValue!=15) q.pointValue = 2;
+			} else q.pointValue = 1;
+			buf.append(" Point Value: <input type=text size=2 name=PointValue value='" + q.pointValue + "' /><br />");
+			
+			buf.append(q.edit());
+			
+			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Preview />");
+			buf.append("</FORM>");
+		} catch (Exception e) {
+			buf.append(e.toString());
+		}
+		return buf.toString();
+	}
+
+	private Question assembleQuestion(HttpServletRequest request) {
+		try {
+			int questionType = Integer.parseInt(request.getParameter("QuestionType"));
+			return assembleQuestion(request,new Question(questionType)); 
+		} catch (Exception e) {
+			return null;
+		}
+	}
+	
+	private Question assembleQuestion(HttpServletRequest request,Question q) {
+		String assignmentType = request.getParameter("AssignmentType");
+		long topicId = 0;
+		try {
+			topicId = Long.parseLong(request.getParameter("TopicId"));
+		} catch (Exception e) {}
+		int type = q.getQuestionType();
+		try {
+			type = Integer.parseInt(request.getParameter("QuestionType"));
+		}catch (Exception e) {}
+		String questionText = request.getParameter("QuestionText");
+		ArrayList<String> choices = new ArrayList<String>();
+		int nChoices = 0;
+		char choice = 'A';
+		for (int i=0;i<5;i++) {
+			String choiceText = request.getParameter("Choice"+ choice +"Text");
+			if (choiceText==null) choiceText = "";
+			if (choiceText.length() > 0) {
+				choices.add(choiceText);
+				nChoices++;
+			}
+			choice++;
+		}
+		double requiredPrecision = 0.; // percent
+		int significantFigures = 0;
+		int pointValue = 1;
+		try {
+			pointValue = Integer.parseInt(request.getParameter("PointValue"));
+		} catch (Exception e) {
+		}
+		try {
+			requiredPrecision = Double.parseDouble(request.getParameter("RequiredPrecision"));
+		} catch (Exception e) {
+		}
+		try {
+			significantFigures = Integer.parseInt(request.getParameter("SignificantFigures"));
+		} catch (Exception e) {
+		}
+		String correctAnswer = "";
+		try {
+			String[] allAnswers = request.getParameterValues("CorrectAnswer");
+			for (int i = 0; i < allAnswers.length; i++) correctAnswer += allAnswers[i];
+		} catch (Exception e) {
+			correctAnswer = request.getParameter("CorrectAnswer");
+		}
+		String parameterString = request.getParameter("ParameterString");
+		if (parameterString == null) parameterString = "";
+		
+		q.assignmentType = assignmentType;
+		q.topicId = topicId;
+		q.setQuestionType(type);
+		q.text = questionText;
+		q.nChoices = nChoices;
+		q.choices = choices;
+		q.requiredPrecision = requiredPrecision;
+		q.significantFigures = significantFigures;
+		q.correctAnswer = correctAnswer;
+		q.tag = request.getParameter("QuestionTag");
+		q.pointValue = pointValue;
+		q.parameterString = parameterString;
+		q.hint = request.getParameter("Hint");
+		q.solution = request.getParameter("Solution");
+		q.notes = "";
+		q.authorId = request.getParameter("AuthorId");
+		q.editorId = request.getParameter("EditorId");
+		q.validateFields();
+		return q;
+	}
+	
+	String questionTypeDropDownBox(int questionType) {
+		StringBuffer buf = new StringBuffer();
+		buf.append("\n<SELECT NAME=QuestionType>"
+				+ "<OPTION VALUE=1" + (questionType==1?" SELECTED>":">") + "Multiple Choice</OPTION>"
+				+ "<OPTION VALUE=2" + (questionType==2?" SELECTED>":">") + "True/False</OPTION>"
+				+ "<OPTION VALUE=3" + (questionType==3?" SELECTED>":">") + "Select Multiple</OPTION>"
+				+ "<OPTION VALUE=4" + (questionType==4?" SELECTED>":">") + "Fill in word/phrase</OPTION>"
+				+ "<OPTION VALUE=5" + (questionType==5?" SELECTED>":">") + "Numeric</OPTION>"
+				+ "</SELECT>");
+		return buf.toString();
+	}
+	
+	long createQuestion(User user,HttpServletRequest request) { //previously type long
+		try {
+			Question q = assembleQuestion(request);
+			q.isActive = true;
+			ofy().save().entity(q).now();
+			return q.id;
+		} catch (Exception e) {
+			return 0;
+		}
+	}
+
+
 }
