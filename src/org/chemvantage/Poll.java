@@ -131,6 +131,7 @@ public class Poll extends HttpServlet {
 				out.println(Home.header() + welcomePage(user,request) + Home.footer);
 				return;
 			case "Save New Question":
+				if (!user.isInstructor()) break;
 				long qid = createQuestion(user,request);
 				if (qid > 0) {
 					a = getAssignment(user.getAssignmentId());
@@ -551,7 +552,7 @@ public class Poll extends HttpServlet {
 							histogram.put("incorrect", histogram.get("incorrect") + 1);
 							if (otherResponses==null) otherResponses = t.responses.get(k);
 							else if (otherResponses.length()<500 && t.responses.get(k) != null) otherResponses += "; " + t.responses.get(k);
-							}
+						}
 					}
 					break;
 				default:
@@ -590,7 +591,8 @@ public class Poll extends HttpServlet {
 					case Question.FILL_IN_WORD:
 					case Question.NUMERIC:
 						buf.append("Summary of responses received for this question:<p></p>");
-						buf.append("<table>");
+						if (q.hasACorrectAnswer()) {
+							buf.append("<table>");
 							buf.append("<tr><td>");
 							buf.append("correct" + "&nbsp;");
 							buf.append("</td><td>");
@@ -601,8 +603,9 @@ public class Poll extends HttpServlet {
 							buf.append("</td><td>");
 							buf.append("<div style='background-color: blue;display: inline-block; width: " + 150*histogram.get("incorrect")/(totalValues+1) + "px;'>&nbsp;</div>");
 							buf.append("&nbsp;" + histogram.get("incorrect") + "</td></tr>");
-							if (otherResponses != null) buf.append("<tr><td colspan=2>Incorrect Responses: " + otherResponses + "</td></tr>");							
-						buf.append("</table>");
+							if (otherResponses != null) buf.append("<tr><td colspan=2><br />Incorrect Responses: " + otherResponses + "</td></tr>");							
+							buf.append("</table>");
+						} else buf.append(otherResponses);
 						break;	
 					}
 				} else buf.append("No responses were submitted for this question.");
@@ -683,7 +686,7 @@ public class Poll extends HttpServlet {
 				q.setParameters(a.id % Integer.MAX_VALUE);
 				buf.append("<div style='display: table-row'>");
 				buf.append("<div style='display: table-cell;width: 55px;'><input type=checkbox name=QuestionId value='" + q.id + "' />&nbsp;" + i + ".</div>");
-				buf.append("<div style='display: table-cell'>" + q.print() + "</div>");
+				buf.append("<div style='display: table-cell'>" + q.printAll() + "</div>");
 				buf.append("</div><br />"); // end of row
 				possibleScore += q.correctAnswer==null || q.correctAnswer.isEmpty()?0:q.pointValue;
 			}
@@ -786,7 +789,8 @@ public class Poll extends HttpServlet {
 					+ "<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + user.id + "' />");
 			buf.append("<INPUT TYPE=HIDDEN NAME=QuestionType VALUE=" + questionType + " />");
 			
-			buf.append("Point Value: <input type=text size=2 name=PointValue /><br />");
+			buf.append("Assignment Type: Poll<br />");
+			buf.append("Point Value: <input type=text size=2 name=PointValue value=1 /><br />");
 			buf.append(question.edit());
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Preview' />"
 					+ "</FORM>");
@@ -861,9 +865,6 @@ public class Poll extends HttpServlet {
 			buf.append("<br />");
 			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
 			
-			if (q.assignmentType.equals("Exam")) {
-				if (q.pointValue!=2 && q.pointValue!=10 && q.pointValue!=15) q.pointValue = 2;
-			} else q.pointValue = 1;
 			buf.append(" Point Value: <input type=text size=2 name=PointValue value='" + q.pointValue + "' /><br />");
 			
 			buf.append(q.edit());
@@ -886,11 +887,7 @@ public class Poll extends HttpServlet {
 	}
 	
 	private Question assembleQuestion(HttpServletRequest request,Question q) {
-		String assignmentType = request.getParameter("AssignmentType");
-		long topicId = 0;
-		try {
-			topicId = Long.parseLong(request.getParameter("TopicId"));
-		} catch (Exception e) {}
+		String assignmentType = "Poll";
 		int type = q.getQuestionType();
 		try {
 			type = Integer.parseInt(request.getParameter("QuestionType"));
@@ -934,7 +931,6 @@ public class Poll extends HttpServlet {
 		if (parameterString == null) parameterString = "";
 		
 		q.assignmentType = assignmentType;
-		q.topicId = topicId;
 		q.setQuestionType(type);
 		q.text = questionText;
 		q.nChoices = nChoices;

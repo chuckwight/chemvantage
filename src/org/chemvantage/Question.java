@@ -352,7 +352,7 @@ public class Question implements Serializable {
 			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br />");
 			buf.append("<span style='border: 1px solid black'>"
-					+ "<b>" + quot2html(correctAnswer) + "</b>"
+					+ "<b>" + (this.hasACorrectAnswer()?quot2html(correctAnswer):"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;") + "</b>"
 					+ "</span>");
 			buf.append("&nbsp;" + tag + "<p></p><p></p>");
 			break;
@@ -366,7 +366,7 @@ public class Question implements Serializable {
 			default:
 			}
 			buf.append("<span style='border: 1px solid black'>"
-					+ "<b>" + getCorrectAnswer() + "</b>"
+					+ "<b>" + (this.hasACorrectAnswer()?getCorrectAnswer():"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;") + "</b>"
 					+ "</span>");
 			buf.append(parseString(tag) + "<p></p>");
 			if (hint.length()>0) {
@@ -642,8 +642,16 @@ public class Question implements Serializable {
 		return buf.toString();
 	}
 
+	boolean hasNoCorrectAnswer() {
+		return this.correctAnswer == null || this.correctAnswer.isEmpty();
+	}
+	
+	boolean hasACorrectAnswer() {
+		return !hasNoCorrectAnswer();
+	}
+	
 	boolean isCorrect(String studentAnswer){
-		if (studentAnswer == null || studentAnswer.isEmpty()) return false;
+		if (studentAnswer == null || studentAnswer.isEmpty() || hasNoCorrectAnswer()) return false;
 		switch (getQuestionType()) {
 		case 4:  // Fill-in-the-word
 			Collator compare = Collator.getInstance();
