@@ -282,7 +282,7 @@ public class Question implements Serializable {
 			buf.append(text + "<br />");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br />");
 			buf.append("<input id=" + this.id + " type=text name=" + this.id + " value='" + quot2html(studentAnswer) + "'>");
-			buf.append("&nbsp;" + tag + "<br />");
+			buf.append("&nbsp;" + tag + "<br /><br />");
 			break;
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br />");
@@ -296,7 +296,7 @@ public class Question implements Serializable {
 			default:
 			}			
 			buf.append("<input size=30 type=text name=" + this.id + " id=answer" + this.id + " value='" + studentAnswer + "' onFocus=showWorkBox('" + this.id + "');>");
-			buf.append(parseString(tag) + "<br />");
+			buf.append(parseString(tag) + "<br /><br />");
 			break;        
 		}
 		return buf.toString();
