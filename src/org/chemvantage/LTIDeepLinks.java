@@ -44,12 +44,6 @@ public class LTIDeepLinks extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		try { // All requests to this servlet must contain a valid ChemVantage "state" parameter
-			String state = request.getParameter("state");			
-			Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
-			String iss = "https://" + request.getServerName();
-			JWTVerifier verifier = JWT.require(algorithm).withIssuer(iss).build();
-			verifier.verify(state);  // throws Exception if invalid or expired
-			// At this point, the state parameter is valid
 			
 			JsonObject claims = validateDeepLinkRequest(request);
 			User user = getUserClaims(claims);
@@ -80,11 +74,18 @@ public class LTIDeepLinks extends HttpServlet {
 				String json = new String(Base64.getUrlDecoder().decode(id_token.getPayload()));
 				claims = JsonParser.parseString(json).getAsJsonObject();
 			} catch (Exception e) {
-				throw new Exception("id_token was not a valid JWT.");
+				throw new Exception("The id_token was not a valid JWT.");
 			}
-			
-			verifyLtiMessageClaims(claims);
-			verifyIsInstructor(claims);
+			try {
+				verifyLtiMessageClaims(claims);	
+			} catch (Exception e) {
+				throw new Exception("LTI message claims were invalid. " + e.getMessage());
+			}
+			try {
+				verifyIsInstructor(claims);
+			} catch (Exception e) {
+				throw new Exception("The user could not be identified as a valid instructor. " + e.getMessage());
+			}
 			
 			return claims;
 	}
@@ -94,10 +95,14 @@ public class LTIDeepLinks extends HttpServlet {
 		 * valid token issued by the tool provider (ChemVantage) as part of the LTI
 		 * launch request sequence. Otherwise throws a JWTVerificationException.
 		 */
-		String iss = "https://" + request.getServerName();
-		Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
-		JWTVerifier verifier = JWT.require(algorithm).withIssuer(iss).build();
-	    verifier.verify(request.getParameter("state"));
+		try {
+			String iss = "https://" + request.getServerName();
+			Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
+			JWTVerifier verifier = JWT.require(algorithm).withIssuer(iss).build();
+		    verifier.verify(request.getParameter("state"));
+		} catch (Exception e) {
+			throw new Exception("state token was invalid.");
+		}
 	}
 
 	protected Deployment validateIdToken(HttpServletRequest request) throws Exception {
@@ -168,7 +173,7 @@ public class LTIDeepLinks extends HttpServlet {
 	
 	String contentPickerForm(User user, HttpServletRequest request,JsonObject claims,int topicKey) throws Exception {
 		StringBuffer buf = new StringBuffer(Home.header("Select ChemVantage Assignment"));
-		
+		try {
 		JsonObject settings = claims.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings").getAsJsonObject();
 		boolean acceptsLtiResourceLink = settings.get("accept_types").getAsJsonArray().contains(new JsonPrimitive("ltiResourceLink"));
 		if (!acceptsLtiResourceLink) throw new Exception("Deep Link request failed because platform does not accept new LtiResourceLinks.");
@@ -376,6 +381,9 @@ public class LTIDeepLinks extends HttpServlet {
 		buf.append("</form>");
 		
 		buf.append(Home.footer);
+		} catch (Exception e) {
+			buf.append(e.toString() + " " + e.getMessage());
+		}
 		return buf.toString();
 	}
 	
