@@ -65,7 +65,7 @@ public class LTIDeepLinks extends HttpServlet {
 	JsonObject validateDeepLinkRequest(HttpServletRequest request) throws Exception {
 			validateStateToken(request); // ensures proper OIDC authorization flow completed			
 
-			validateIdToken(request);  // returns the validated Deployment
+			Deployment d = validateIdToken(request);  // returns the validated Deployment
 			
 			// Decode the JWT id_token payload as a JsonObject:
 			JsonObject claims = null;
@@ -73,6 +73,8 @@ public class LTIDeepLinks extends HttpServlet {
 				DecodedJWT id_token = JWT.decode(request.getParameter("id_token"));
 				String json = new String(Base64.getUrlDecoder().decode(id_token.getPayload()));
 				claims = JsonParser.parseString(json).getAsJsonObject();
+				d.claims = claims.toString();
+				ofy().save().entity(d);
 			} catch (Exception e) {
 				throw new Exception("The id_token was not a valid JWT.");
 			}
@@ -107,34 +109,39 @@ public class LTIDeepLinks extends HttpServlet {
 
 	protected Deployment validateIdToken(HttpServletRequest request) throws Exception {
 		DecodedJWT id_token = JWT.decode(request.getParameter("id_token"));
+		Deployment d = null;
 		
-		// get the platform_id and deployment_id to load the correct Deployment d
-		String platform_id = id_token.getIssuer();
-		String deployment_id = id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/deployment_id").asString();
-		if (deployment_id == null) throw new Exception("The deployment_id claim was not found in the id_token payload.");
-		String platformDeploymentId = platform_id + "/" + deployment_id;
-		
-		Deployment d = Deployment.getInstance(platformDeploymentId);
-		if (d==null) throw new Exception("Deployment not found: " + platformDeploymentId);
-		
-		// validate the id_token audience:
-		List<String> aud = id_token.getAudience();
-		if (aud.size()==1 && aud.get(0).contentEquals(d.client_id)); // OK, continue
-		else if (aud.size()>1 && aud.contains(d.client_id) && id_token.getClaim("azp").asString().contentEquals(d.client_id)); // OK, continue
-		else throw new Exception("The id_token client_id claim is not authorized in ChemVantage.");
+		try {
+			// get the platform_id and deployment_id to load the correct Deployment d
+			String platform_id = id_token.getIssuer();
+			String deployment_id = id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/deployment_id").asString();
+			if (deployment_id == null) throw new Exception("The deployment_id claim was not found in the id_token payload.");
+			String platformDeploymentId = platform_id + "/" + deployment_id;
 
-		// validate the id_token signature:
-		// retrieve the public Java Web Key from the platform to verify the signature
-		if (d.well_known_jwks_url==null) throw new Exception("The deployment does not have a valid JWKS URL.");
-		URL jwks_url = new URL(d.well_known_jwks_url);
-		JwkProvider provider = new UrlJwkProvider(jwks_url);
-		if (id_token.getKeyId() == null || id_token.getKeyId().isEmpty()) throw new Exception("No JWK id found.");
-		Jwk jwk = provider.get(id_token.getKeyId()); //throws Exception when not found or can't get one
-		RSAPublicKey public_key = (RSAPublicKey)jwk.getPublicKey();
-		// verify the JWT signature
-		Algorithm algorithm = Algorithm.RSA256(public_key,null);
-		if (!"RS256".contentEquals(id_token.getAlgorithm())) throw new Exception("JWT algorithm must be RS256");
-		JWT.require(algorithm).build().verify(id_token);  // throws JWTVerificationException if not valid
+			d = Deployment.getInstance(platformDeploymentId);
+			if (d==null) throw new Exception("Deployment not found: " + platformDeploymentId);
+
+			// validate the id_token audience:
+			List<String> aud = id_token.getAudience();
+			if (aud.size()==1 && aud.get(0).contentEquals(d.client_id)); // OK, continue
+			else if (aud.size()>1 && aud.contains(d.client_id) && id_token.getClaim("azp").asString().contentEquals(d.client_id)); // OK, continue
+			else throw new Exception("The id_token client_id claim is not authorized in ChemVantage.");
+
+			// validate the id_token signature:
+			// retrieve the public Java Web Key from the platform to verify the signature
+			if (d.well_known_jwks_url==null) throw new Exception("The deployment does not have a valid JWKS URL.");
+			URL jwks_url = new URL(d.well_known_jwks_url);
+			JwkProvider provider = new UrlJwkProvider(jwks_url);
+			if (id_token.getKeyId() == null || id_token.getKeyId().isEmpty()) throw new Exception("No JWK id found.");
+			Jwk jwk = provider.get(id_token.getKeyId()); //throws Exception when not found or can't get one
+			RSAPublicKey public_key = (RSAPublicKey)jwk.getPublicKey();
+			// verify the JWT signature
+			Algorithm algorithm = Algorithm.RSA256(public_key,null);
+			if (!"RS256".contentEquals(id_token.getAlgorithm())) throw new Exception("JWT algorithm must be RS256");
+			JWT.require(algorithm).build().verify(id_token);  // throws JWTVerificationException if not valid
+		} catch (Exception e) {
+			throw new Exception("The id_token could not be validated" + e.getMessage());
+		}
 		return d;
 	}
 
