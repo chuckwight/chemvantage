@@ -247,6 +247,7 @@ public class Poll extends HttpServlet {
 		
 		for (Key<Question> k : a.questionKeys) {  // main loop to present questions
 			Question q = getQuestion(k); // this should nearly always work
+			if (q==null) continue;
 			q.setParameters(a.id % Integer.MAX_VALUE);
 			buf.append("<li>" + q.print() + "<br /></li>");
 			possibleScore += q.correctAnswer==null || q.correctAnswer.isEmpty()?0:q.pointValue;
@@ -356,10 +357,9 @@ public class Poll extends HttpServlet {
 	
 	Question getQuestion(Key<Question> k) {
 		Question q = pollQuestions.get(k);
-		if (q==null) {
-			q = ofy().load().key(k).now();
-			pollQuestions.put(k,q);
-		}
+		if (q != null) return q;
+		q = ofy().load().key(k).now();
+		if (q != null) pollQuestions.put(k,q);
 		return q;
 	}
 	
@@ -461,6 +461,7 @@ public class Poll extends HttpServlet {
 			buf.append("\n");
 			try {
 				Question q = getQuestion(k);
+				if (q==null) continue;
 				q.setParameters(a.id % Integer.MAX_VALUE);
 				if (q.correctAnswer==null) q.correctAnswer = "";
 				i++;

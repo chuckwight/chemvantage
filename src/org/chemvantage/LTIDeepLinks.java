@@ -14,7 +14,13 @@ import java.util.Base64.Encoder;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Properties;
 
+import javax.mail.Message;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -43,8 +49,7 @@ public class LTIDeepLinks extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
-		try { // All requests to this servlet must contain a valid ChemVantage "state" parameter
-			
+		try { 
 			JsonObject claims = validateDeepLinkRequest(request);
 			User user = getUserClaims(claims);
 			
@@ -58,7 +63,9 @@ public class LTIDeepLinks extends HttpServlet {
 				out.println(contentPickerForm(user,request,claims,1));
 			}
 		} catch (Exception e) {	 
-			response.sendError(401,e.toString() + " " + e.getMessage());
+			String message = "id_token: " + request.getParameter("id_token") + "<br />state: " + request.getParameter("state");
+			sendEmailToAdmin(message);
+			response.sendError(401,e.toString() + " " + e.getMessage() + "<br />" + message);
 		}
 	}
 
@@ -604,4 +611,19 @@ public class LTIDeepLinks extends HttpServlet {
 		return buf.toString();
 	}
 	
+	private void sendEmailToAdmin(String message) {
+		Properties props = new Properties();
+		Session session = Session.getDefaultInstance(props, null);
+
+		try {
+			Message msg = new MimeMessage(session);
+			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
+			msg.addRecipient(Message.RecipientType.TO,
+					new InternetAddress("admin@chemvantage.org", "ChemVantage"));
+			msg.setSubject("DeepLinking Error");
+			msg.setContent(message,"text/html");
+			Transport.send(msg);
+		} catch (Exception e) {
+		}
+	}
 }
