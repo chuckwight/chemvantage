@@ -49,6 +49,7 @@ public class Token extends HttpServlet {
 			debug.append("client_id: " + client_id + "<br>");
 			
 			Deployment d = getDeployment(platform_id,deployment_id,client_id);
+			if (d==null) throw new Exception("This deployment was not found in the ChemVantage database. Please check the registration or contact admin@chemvantage.org for assistance.");
 			
 			String redirect_uri = target_link_uri;
 			

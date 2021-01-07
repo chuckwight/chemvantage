@@ -30,12 +30,13 @@ import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Ignore;
 import com.googlecode.objectify.annotation.Index;
+import com.googlecode.objectify.condition.IfNotZero;
 
 @Entity
 public class Question implements Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id 	Long id;
-	@Index	long topicId;
+	@Index(IfNotZero.class)	long topicId;
 	@Index	String assignmentType;
 			String text;
 			String type;

@@ -322,7 +322,7 @@ public class Poll extends HttpServlet {
 					if (studentAnswer[0].length() > 0) { // an answer was submitted
 						pt.responses.put(k, studentAnswer[0]);
 						q.setParameters(a.id % Integer.MAX_VALUE);
-						pt.score += q.isCorrect(studentAnswer[0])?q.pointValue:0;
+						pt.score += q.isCorrect(studentAnswer[0]) || !q.hasACorrectAnswer()?q.pointValue:0;
 					}
 				}
 			} catch (Exception e) {}
@@ -682,21 +682,26 @@ public class Poll extends HttpServlet {
 			buf.append("<h3>Current Questions For This Poll</h3>");
 			int possibleScore = 0;
 			for (Key<Question> k : a.questionKeys) {  // main loop to present questions
-				i++;
 				Question q = getQuestion(k);
+				if (q==null) { // somehow the question has been deleted from the database
+					a.questionKeys.remove(k);
+					ofy().save().entity(a);
+					continue;
+				}
 				q.setParameters(a.id % Integer.MAX_VALUE);
+				i++;
 				buf.append("<div style='display: table-row'>");
 				buf.append("<div style='display: table-cell;width: 55px;'><input type=checkbox name=QuestionId value='" + q.id + "' />&nbsp;" + i + ".</div>");
 				buf.append("<div style='display: table-cell'>" + q.printAll() + "</div>");
 				buf.append("</div><br />"); // end of row
-				possibleScore += q.correctAnswer==null || q.correctAnswer.isEmpty()?0:q.pointValue;
+				possibleScore += q.pointValue;
 			}
 			buf.append("</form>");
 			
 			if (a.questionKeys.size()>0) buf.append("<hr />This poll is worth a possible " + possibleScore + " points.");
 		
 			// Click here when done editing:
-			buf.append("<form method=get><input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+			buf.append("<form method=get action='/Poll'><input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 					+ "<input type=submit value='Click here when you are finished editing this poll' /></form>");
 		}
 		return buf.toString();
