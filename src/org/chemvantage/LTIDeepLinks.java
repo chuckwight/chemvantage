@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Base64.Encoder;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
@@ -63,7 +64,12 @@ public class LTIDeepLinks extends HttpServlet {
 				out.println(contentPickerForm(user,request,claims,1));
 			}
 		} catch (Exception e) {	 
-			String message = "id_token: " + request.getParameter("id_token") + "<br />state: " + request.getParameter("state");
+			Enumeration<String> parameterNames = request.getParameterNames();
+			String message = "";
+			while (parameterNames.hasMoreElements()) {
+				String name = parameterNames.nextElement();
+				message += "<br />" + name + ": " + request.getParameter(name);
+			}
 			sendEmailToAdmin(message);
 			response.sendError(401,e.toString() + " " + e.getMessage() + "<br />" + message);
 		}
