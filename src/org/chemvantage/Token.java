@@ -70,8 +70,8 @@ public class Token extends HttpServlet {
 					.withExpiresAt(exp)
 					.withIssuedAt(now)
 					.withClaim("nonce", nonce)
-					.withClaim("deployment_id",deployment_id)
-					.withClaim("client_id", client_id)
+					.withClaim("deployment_id",d.getDeploymentId())
+					.withClaim("client_id", d.client_id)
 					.withClaim("redirect_uri", redirect_uri)
 					.sign(algorithm);
 			
@@ -124,12 +124,15 @@ public class Token extends HttpServlet {
 		
 		// Check to see if any Deployment matches the platform_id
 		List<Deployment> deployments = ofy().load().type(Deployment.class).filterKey(">=",kstart).filterKey("<",kend).list();
-		if (deployments.size()>0) return deployments.get(0);		
-
+		if (deployments.size()==1) return deployments.get(0);
+		
+		for(Deployment dep : deployments) if (dep.client_id != null && dep.client_id.equals(client_id)) return dep;
+		
 		// At this point the Deployment does not exist in the datastore
-		throw new Exception("ChemVantage was unable to identify " + platform_deployment_id + " as a registered entity, sorry.<br>"
+		throw new Exception("ChemVantage was unable to identify the deployment as a registered entity, sorry.<br>"
 				+ "platform: " + platform.toString() + "<br>"
-				+ "start/end: " + kstart.getName() + " / " + kend.getName() + "<br>");
+				+ "deployment_id: " + deployment_id + "<br>"
+				+ "Please check the registration and contact admin@chemvantage.org for assistance.");
 	}
 	
 

@@ -346,12 +346,12 @@ public class LTILaunch extends HttpServlet {
 			 *   01JAN2021: LTI VERSION 1.1 IS DEPRECATED
 			 */
 			Date now = new Date();
-			Date Jan2021 = new Date(1609477200000L);
-			if (now.after(Jan2021)) {
-				String message = "You are currently using LTI version 1.1 to connect to ChemVantage. This version of LTI was deprecated by the IMS Global "
-						+ "Learning Corsortium on December 31, 2020. Most LMS providers will continue to support LTI version 1.1 through at least the 2021 "
-						+ "calendar year. However, we recommend that you register ChemVantage in your LMS using the current "
-						+ "LTI version 1.3. Your LMS and/or ChemVantage may discontinue support for version 1.1 at any time.";
+			Date Jul2021 = new Date(1625112000000L);
+			if (now.after(Jul2021)) {
+				String message = "You are currently using LTI version 1.1 to connect to ChemVantage. This version of LTI has been deprecated by the IMS Global "
+						+ "Learning Corsortium. IMS and most LMS providers will continue to support LTI version 1.1 through at least June 2022. However, "
+						+ "we recommend that you re-register ChemVantage in your LMS using the current LTI Advantage (version 1.3) during a semester break at "
+						+ "<a href=https://www.chemvantage.org/lti/registration>https://www.chemvantage.org/lti/registration</a>. ";
 				buf.append("<SCRIPT>alert('" + message + "');</SCRIPT>");
 			}
 			// ============ END OF WARNING SECTION ==================================

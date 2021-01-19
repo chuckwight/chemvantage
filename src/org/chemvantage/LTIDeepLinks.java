@@ -65,13 +65,13 @@ public class LTIDeepLinks extends HttpServlet {
 			}
 		} catch (Exception e) {	 
 			Enumeration<String> parameterNames = request.getParameterNames();
-			String message = "";
+			String message = e.toString() + " " + e.getMessage();
 			while (parameterNames.hasMoreElements()) {
 				String name = parameterNames.nextElement();
 				message += "<br />" + name + ": " + request.getParameter(name);
 			}
 			sendEmailToAdmin(message);
-			response.sendError(401,e.toString() + " " + e.getMessage() + "<br />" + message);
+			response.sendError(401,e.toString() + " " + e.getMessage());
 		}
 	}
 
@@ -99,7 +99,7 @@ public class LTIDeepLinks extends HttpServlet {
 			try {
 				verifyIsInstructor(claims);
 			} catch (Exception e) {
-				throw new Exception("The user could not be identified as a valid instructor. " + e.getMessage());
+				throw new Exception("You must be logged into your LMS as an instructor to access this link. " + e.getMessage());
 			}
 			
 			return claims;
