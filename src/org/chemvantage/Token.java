@@ -76,6 +76,7 @@ public class Token extends HttpServlet {
 					.sign(algorithm);
 			
 			debug.append("JWT constructed and signed OK<br>");
+			String lti_message_hint = request.getParameter("lti_message_hint");
 			
 			String oidc_auth_url = d.oidc_auth_url
 					+ "?response_type=id_token"
@@ -84,17 +85,19 @@ public class Token extends HttpServlet {
 					+ "&prompt=none"
 					+ "&login_hint=" + login_hint
 					+ "&redirect_uri=" + redirect_uri
-					+ "&lti_message_hint=" + request.getParameter("lti_message_hint")
+					+ (lti_message_hint==null?"":"&lti_message_hint=" + lti_message_hint)
 					+ "&client_id=" + d.client_id
+					//+ "&state=" + d.platform_deployment_id.hashCode()
 					+ "&state=" + token
 					+ "&nonce=" + nonce;
 			
 			debug.append("Sending token: " + oidc_auth_url + "<p>");
 			
 			response.sendRedirect(oidc_auth_url);
-
+			d.claims = oidc_auth_url;
+			ofy().save().entity(d);
 		} catch (Exception e) {
-			response.getWriter().println("Failed token: " + e.toString()); // + "<br>" + debug.toString());
+			response.getWriter().println("Failed token: " + e.toString() + "<br>" + debug.toString());
 		}
 	}
 
