@@ -674,9 +674,9 @@ public class LTIRegistration extends HttpServlet {
 			platform_id = "https://canvas.instructure.com";
 			oidc_auth_url = "https://canvas.instructure.com/api/lti/authorize_redirect";
 			well_known_jwks_url = "https://canvas.instructure.com/api/lti/security/jwks";
-			oauth_access_token_url = "https://canvas.instructure.com/login/oauth2/token";
-			//if (oauth_access_token_url==null || oauth_access_token_url.isEmpty()) throw new Exception("Canvas account URL is required.");
-			//oauth_access_token_url += "/login/oauth2/token";
+			oauth_access_token_url = request.getParameter("AccountUrl");        //https://canvas.instructure.com/login/oauth2/token";
+			if (oauth_access_token_url==null || oauth_access_token_url.isEmpty()) throw new Exception("Canvas account URL is required.");
+			oauth_access_token_url += "/login/oauth2/token";
 			break;
 		default:
 			platform_id = request.getParameter("PlatformId");

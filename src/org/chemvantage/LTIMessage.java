@@ -36,7 +36,17 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Properties;
+import java.util.Map.Entry;
+
+import javax.mail.Message;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
+
 import java.util.UUID;
 
 import com.auth0.jwt.JWT;
@@ -211,15 +221,14 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	}
 	
 	static String getAccessToken(String platformDeploymentId,String scope) {
+	
 		Date in5Minutes = new Date(new Date().getTime() + 300000L);
 		try {
-			int length = platformDeploymentId.length() - new URI(platformDeploymentId).getPath().length();
-			String platformId = platformDeploymentId.substring(0,length);
-			
-			JsonObject authToken = JsonParser.parseString(authTokens.get(platformId)).getAsJsonObject();
+			JsonObject authToken = JsonParser.parseString(authTokens.get(platformDeploymentId)).getAsJsonObject();
 			if (in5Minutes.before(new Date(authToken.get("exp").getAsLong()))) return authToken.get("access_token").getAsString();			
 		} catch (Exception e) {
 		}
+		
 		return refreshAccessToken(platformDeploymentId,scope);
 	}
 			
@@ -283,7 +292,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				JsonObject cached_token = new JsonObject();
 				cached_token.addProperty("access_token", access_token);
 				cached_token.addProperty("exp", exp);
-				authTokens.put(d.getPlatformId(), cached_token.toString());
+				authTokens.put(d.platform_deployment_id, cached_token.toString());
 				
 				// return the access_token only
 				return access_token;
@@ -627,9 +636,12 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			if (success) {  
 				s.lisReportComplete = true;
 				ofy().save().entity(s);
-				buf.append("Success");
-			} else {
-			/*
+				buf.append("Success<br/>AuthToken: " + authToken);
+				sendEmailToAdmin("Score submission success",buf.toString());
+			} else if (responseCode==422) {
+				buf.append("Response 422 - Could not post score for instructor or test student<br/>AuthToken: " + authToken);
+				sendEmailToAdmin("Score submission rejected",buf.toString());
+			} else {			
 				buf.append(uc.getRequestMethod() + " " + u.toString() + "<br>"
 						+ "Content-Type: application/vnd.ims.lis.v1.score+json<br>"
 						+ "Authorization: " + bearerAuth + "<p>"
@@ -640,11 +652,19 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 					for (String es : e.getValue()) buf.append(es + " ");
 					buf.append("<br>");
 				}
-				*/
-				buf.append(String.valueOf(responseCode));
-			}		
+				
+				buf.append(String.valueOf(responseCode) + "<br />");
+				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+				String line;
+	    		while ((line = reader.readLine()) != null) {
+	    			buf.append(line);
+	    		}
+	    		reader.close();
+	    		sendEmailToAdmin("Score submission failed",buf.toString());
+			}
 		} catch (Exception e) {
-			return "Score submission failed: " + e.toString() + e.getMessage() + "<br>" + buf.toString();
+			sendEmailToAdmin("Score submission failed",buf.toString());
+			return "Score submission error: " + e.toString() + e.getMessage() + "<br>" + buf.toString();
 		}
 		return buf.toString();
 	}
@@ -710,6 +730,22 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		} catch (Exception e) {	
 		}
 		return membership;
+	}
+
+	private static void sendEmailToAdmin(String subject,String message) {
+		Properties props = new Properties();
+		Session session = Session.getDefaultInstance(props, null);
+
+		try {
+			Message msg = new MimeMessage(session);
+			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
+			msg.addRecipient(Message.RecipientType.TO,
+					new InternetAddress("admin@chemvantage.org", "ChemVantage"));
+			msg.setSubject(subject);
+			msg.setContent(message,"text/html");
+			Transport.send(msg);
+		} catch (Exception e) {
+		}
 	}
 
 }
