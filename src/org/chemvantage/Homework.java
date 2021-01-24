@@ -675,7 +675,7 @@ public class Homework extends HttpServlet {
 					buf.append("ChemVantage was unable to retrieve your score for this assignment from the LMS.<br>"
 							+ "Sometimes it takes several seconds for the score to be posted in the LMS grade book.<br>");
 					if (s.score==0 && s.numberOfAttempts==0) buf.append("It appears that you may not have submitted a score for this quiz yet.<br>");
-					if (user.isInstructor()) buf.append("Some LMS providers do not store scores for instructors.<br>");
+					if (user.isInstructor()) buf.append("Some LMS providers do not accept score submissions for instructors or test students.<br>");
 					buf.append("<br>");
 				}
 
