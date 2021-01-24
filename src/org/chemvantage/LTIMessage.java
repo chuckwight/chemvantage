@@ -544,7 +544,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			String user_id = User.getRawId(userId); // stripped of the platform_id and "/"
 
 			if (a.lti_ags_lineitem_url==null) throw new Exception("the lineitem URL for this assignment is unknown");
-			URL u = new URL(a.lti_ags_lineitem_url + "/results?user_id=" + user_id);
+			URL u = new URL(a.lti_ags_lineitem_url + "/results?userId=" + user_id);
 			
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			//uc.setDoOutput(true);
@@ -567,8 +567,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 						return String.valueOf(Math.round(1000.*result.get("resultScore").getAsDouble()/result.get("resultMaximum").getAsDouble())/10.);
 					}
 				}
-				return "no score found";
-			} else return "response code=" + responseCode; // + " for " + u.toString(); 
+				return "no score found: " + json.toString();
+			} else return "response code=" + responseCode + " for " + u.toString(); 
 		} catch (Exception e) {	
 			return e.toString();
 		}
