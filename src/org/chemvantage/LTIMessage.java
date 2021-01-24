@@ -636,11 +636,11 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			if (success) {  
 				s.lisReportComplete = true;
 				ofy().save().entity(s);
-				buf.append("Success<br/>AuthToken: " + authToken);
-				sendEmailToAdmin("Score submission success",buf.toString());
+				buf.append("Success"); //<br/>AuthToken: " + authToken);
+				//sendEmailToAdmin("Score submission success",buf.toString());
 			} else if (responseCode==422) {
-				buf.append("Response 422 - Could not post score for instructor or test student<br/>AuthToken: " + authToken);
-				sendEmailToAdmin("Score submission rejected",buf.toString());
+				buf.append("Response code 422: This LMS does not allow LTI score submissions for instructors or test students.<br/>");
+				//sendEmailToAdmin("Score submission rejected",buf.toString());
 			} else {			
 				buf.append(uc.getRequestMethod() + " " + u.toString() + "<br>"
 						+ "Content-Type: application/vnd.ims.lis.v1.score+json<br>"
