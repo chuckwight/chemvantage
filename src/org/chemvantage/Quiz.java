@@ -695,15 +695,17 @@ public class Quiz extends HttpServlet {
 				}
 				Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
 				
-				buf.append("<table><tr><th>User ID</th><th>Role</th><th>Name</th><th>Email</th><th>LMS Score</th><th>CV Score</th></tr>");
+				buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th></tr>");
+				int i=0;
 				for (Map.Entry<String,String[]> entry : membership.entrySet()) {
 					if (entry == null) continue;
 					String s = scores.get(entry.getKey());
 					Score cvScore = cvScores.get(keys.get(entry.getKey()));
-					buf.append("<tr><td>" + entry.getKey() + "</td>"
-							+ "<td>" + entry.getValue()[0] + "</td>"
+					i++;
+					buf.append("<tr><td>" + i + ".&nbsp;</td>"
 							+ "<td>" + entry.getValue()[1] + "</td>"
 							+ "<td>" + entry.getValue()[2] + "</td>"
+							+ "<td>" + entry.getValue()[0] + "</td>"
 							+ "<td align=center>" + (s == null?" - ":s + "%") + "</td>"
 							+ "<td align=center>" + (cvScore == null?" - ":String.valueOf(cvScore.getPctScore()) + "%") + "</td></tr>");
 				}
