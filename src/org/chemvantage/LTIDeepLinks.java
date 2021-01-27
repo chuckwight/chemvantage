@@ -100,7 +100,7 @@ public class LTIDeepLinks extends HttpServlet {
 			try {
 				verifyIsInstructor(claims);
 			} catch (Exception e) {
-				throw new Exception("You must be logged into your LMS as an instructor to access this link. " + e.getMessage());
+				throw new Exception("Unauthorized: " + e.getMessage());
 			}
 			
 			return claims;
