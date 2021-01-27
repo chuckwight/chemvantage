@@ -66,12 +66,13 @@ public class LTIDeepLinks extends HttpServlet {
 		} catch (Exception e) {	 
 			Enumeration<String> parameterNames = request.getParameterNames();
 			String message = e.toString() + " " + e.getMessage();
+			message += "<br/>From: " + request.getRemoteHost();
 			while (parameterNames.hasMoreElements()) {
 				String name = parameterNames.nextElement();
 				message += "<br />" + name + ": " + request.getParameter(name);
 			}
 			sendEmailToAdmin(message);
-			response.sendError(401,e.toString() + " " + e.getMessage());
+			response.sendError(401,e.toString());
 		}
 	}
 
