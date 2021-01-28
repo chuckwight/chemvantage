@@ -66,6 +66,7 @@ public class LTIDeepLinks extends HttpServlet {
 		} catch (Exception e) {	 
 			Enumeration<String> parameterNames = request.getParameterNames();
 			String message = e.toString() + " " + e.getMessage();
+			message += "<br/>To: " + request.getServerName();
 			message += "<br/>From: " + request.getRemoteHost();
 			while (parameterNames.hasMoreElements()) {
 				String name = parameterNames.nextElement();
