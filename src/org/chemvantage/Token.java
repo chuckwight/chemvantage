@@ -87,7 +87,6 @@ public class Token extends HttpServlet {
 					+ "&redirect_uri=" + redirect_uri
 					+ (lti_message_hint==null?"":"&lti_message_hint=" + lti_message_hint)
 					+ "&client_id=" + d.client_id
-					//+ "&state=" + d.platform_deployment_id.hashCode()
 					+ "&state=" + token
 					+ "&nonce=" + nonce;
 			
@@ -118,21 +117,20 @@ public class Token extends HttpServlet {
 		Deployment d = ofy().load().type(Deployment.class).id(platform_deployment_id).now();
 		if (d != null) return d;
 	
-		// OK, that didn't work; try a range of Deployments all with the matching platform_id and client_id
+		// OK, that didn't work; try a range of Deployments all with the matching platform_id
 		Key<Deployment> kstart = Key.create(Deployment.class, platform.toString());
 		Key<Deployment> kend = Key.create(Deployment.class, platform.toString() + "~");			
-		
-		// Check to see if any Deployment matches the platform_id
 		List<Deployment> deployments = ofy().load().type(Deployment.class).filterKey(">=",kstart).filterKey("<",kend).list();
-		if (deployments.size()==1) return deployments.get(0);
 		
-		for(Deployment dep : deployments) if (dep.client_id != null && dep.client_id.equals(client_id)) return dep;
-		
-		// At this point the Deployment does not exist in the datastore
-		throw new Exception("ChemVantage was unable to identify the deployment as a registered entity, sorry.<br>"
-				+ "platform: " + platform.toString() + "<br>"
-				+ "deployment_id: " + deployment_id + "<br>"
-				+ "Please check the registration and contact admin@chemvantage.org for assistance.");
+		switch (deployments.size()) {
+		case 0:
+			throw new Exception("Deployment not found.");
+		case 1:
+			return deployments.get(0);
+		default:
+			if (deployment_id.isEmpty()) throw new Exception("Required deployment_id parameter was not included in the token request.");
+			else throw new Exception("This deployment is not registered in ChemVantage");
+		}
 	}
 	
 
