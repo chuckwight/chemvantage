@@ -118,8 +118,6 @@ public class LTIDeepLinks extends HttpServlet {
 		JWTVerifier verifier = JWT.require(algorithm).withIssuer(iss).build();
 		String state = request.getParameter("state");
 		verifier.verify(state);
-		String nonce = JWT.decode(state).getClaim("nonce").asString();
-		if (!Nonce.isUnique(nonce)) throw new Exception("Nonce was used previously.");	 
 	}
 
 	protected Deployment validateIdToken(HttpServletRequest request) throws Exception {
@@ -185,10 +183,12 @@ public class LTIDeepLinks extends HttpServlet {
 		if (roles_claim == null || !roles_claim.isJsonArray()) throw new Exception("Required roles claim is missing from the id_token");
 		JsonArray roles = roles_claim.getAsJsonArray();
 		Iterator<JsonElement> roles_iterator = roles.iterator();
-		while(roles_iterator.hasNext()){
+		while(!authorized && roles_iterator.hasNext()){
 			String role = roles_iterator.next().getAsString().toLowerCase();
-			if (role.contains("instructor") || role.contains("administrator")) authorized = true;
-		}
+			if (role.contains("instructor")) authorized = true;
+			if (role.contains("administrator")) authorized = true;
+			if (role.contains("contentdeveloper")) authorized = true;
+			}
 		if (!authorized) throw new Exception("You must be logged into your LMS in an instructor "
 				+ "or administrator role in order to select assignment resources for this class.");
 	}
