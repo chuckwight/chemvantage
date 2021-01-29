@@ -112,17 +112,14 @@ public class LTIDeepLinks extends HttpServlet {
 		 * valid token issued by the tool provider (ChemVantage) as part of the LTI
 		 * launch request sequence. Otherwise throws a JWTVerificationException.
 		 */
-		
-		try {
-			String iss = "https://" + request.getServerName();
-			Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
-			JWTVerifier verifier = JWT.require(algorithm).withIssuer(iss).build();
-		    verifier.verify(request.getParameter("state"));
-		} catch (Exception e) {
-			throw new Exception("state token was invalid.");
-		}
-		
-		//Integer.parseInt(request.getParameter("state"));
+
+		String iss = "https://" + request.getServerName();
+		Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
+		JWTVerifier verifier = JWT.require(algorithm).withIssuer(iss).build();
+		String state = request.getParameter("state");
+		verifier.verify(state);
+		String nonce = JWT.decode(state).getClaim("nonce").asString();
+		if (!Nonce.isUnique(nonce)) throw new Exception("Nonce was used previously.");	 
 	}
 
 	protected Deployment validateIdToken(HttpServletRequest request) throws Exception {

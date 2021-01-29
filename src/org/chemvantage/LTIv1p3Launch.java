@@ -249,8 +249,6 @@ public class LTIv1p3Launch extends HttpServlet {
 	    verifier.verify(state);
 	    String nonce = JWT.decode(state).getClaim("nonce").asString();
 	    if (!Nonce.isUnique(nonce)) throw new Exception("Nonce was used previously.");	 
-	    
-		//Integer.parseInt(request.getParameter("state"));
 	}
 
 	protected Deployment validateIdToken(HttpServletRequest request) throws Exception {
