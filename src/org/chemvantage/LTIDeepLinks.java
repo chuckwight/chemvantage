@@ -50,9 +50,17 @@ public class LTIDeepLinks extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
-		try { 
+		try {
 			JsonObject claims = validateDeepLinkRequest(request);
-			User user = getUserClaims(claims);
+			User user = null;
+			if (request.getParameter("state") != null) {
+				validateStateToken(request); // ensures proper OIDC authorization flow completed							
+				user = getUserClaims(claims);
+				user.setToken();
+			} else {
+				user = User.getUser(request.getParameter("sig"));
+				if (user==null) throw new Exception("Invalid or expired User entity.");
+			}
 			
 			if ("Select assignment".equals(request.getParameter("UserRequest"))) {  // submitting desired links
 				if (Boolean.parseBoolean(request.getParameter("Refresh"))) {
@@ -78,8 +86,7 @@ public class LTIDeepLinks extends HttpServlet {
 	}
 
 	JsonObject validateDeepLinkRequest(HttpServletRequest request) throws Exception {
-			validateStateToken(request); // ensures proper OIDC authorization flow completed			
-
+			
 			Deployment d = validateIdToken(request);  // returns the validated Deployment
 			
 			// Decode the JWT id_token payload as a JsonObject:
@@ -118,6 +125,12 @@ public class LTIDeepLinks extends HttpServlet {
 		JWTVerifier verifier = JWT.require(algorithm).withIssuer(iss).build();
 		String state = request.getParameter("state");
 		verifier.verify(state);
+	    String nonce = JWT.decode(state).getClaim("nonce").asString();
+	    if (!Nonce.isUnique(nonce)) throw new Exception("Nonce was used previously.");
+	    
+	    // return the state token payload as a JSON
+	    JsonObject state_json = JsonParser.parseString(new String(Base64.getUrlDecoder().decode(JWT.decode(state).getPayload()))).getAsJsonObject();
+	    if (!state_json.get("redirect_uri").getAsString().contains("https://" + request.getServerName() + "/lti/deeplinks")) throw new Exception("Invalid redirect_uri.");
 	}
 
 	protected Deployment validateIdToken(HttpServletRequest request) throws Exception {
@@ -223,7 +236,7 @@ public class LTIDeepLinks extends HttpServlet {
 
 		buf.append("<form name=AssignmentForm action=/lti/deeplinks method=POST>");
 		buf.append("<input type=hidden name=id_token value='" + request.getParameter("id_token") + "' />");
-		buf.append("<input type=hidden name=state value='" + request.getParameter("state") + "' />");
+		buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
 		buf.append("<input type=hidden name=UserRequest value='Select assignment' />");
 		buf.append("<input type=hidden name=Refresh value=false /");
 
