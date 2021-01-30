@@ -112,7 +112,7 @@ public class LTIv1p3Launch extends HttpServlet {
 	void ltiv1p3LaunchRequest(HttpServletRequest request,HttpServletResponse response) 
 			throws Exception {
 		//StringBuffer debug = new StringBuffer();
-		validateStateToken(request); // ensures proper OIDC authorization flow completed			
+		JsonObject state = validateStateToken(request); // ensures proper OIDC authorization flow completed			
 
 		Deployment d = validateIdToken(request);  // returns the validated Deployment
 		Deployment original_d = d.clone();  // make a copy to compare for updating later
@@ -127,7 +127,10 @@ public class LTIv1p3Launch extends HttpServlet {
 			throw new Exception("id_token was not a valid JWT.");
 		}
 		
-		String resourceLinkId = verifyLtiMessageClaims(claims);
+		// verify that the redirect_uri are consistent with the state token:
+		if (!state.get("redirect_uri").getAsString().contains("https://" + request.getServerName() + "/lti/launch")) throw new Exception("Invalid redirect_uri.");
+		
+		String resourceLinkId = verifyLtiMessageClaims(claims); // required
 		User user = getUserClaims(claims);
 
 		// At this point we have all of the REQUIRED info for a valid LTI launch
@@ -236,7 +239,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		}
 	}
 	
-	protected void validateStateToken(HttpServletRequest request) throws Exception {
+	protected JsonObject validateStateToken(HttpServletRequest request) throws Exception {
 		/* This method ensures that the state token required by LTI v1.3 standards is a
 		 * valid token issued by the tool provider (ChemVantage) as part of the LTI
 		 * launch request sequence. Otherwise throws a JWTVerificationException.
@@ -248,7 +251,10 @@ public class LTIv1p3Launch extends HttpServlet {
 		String state = request.getParameter("state");
 	    verifier.verify(state);
 	    String nonce = JWT.decode(state).getClaim("nonce").asString();
-	    if (!Nonce.isUnique(nonce)) throw new Exception("Nonce was used previously.");	 
+	    if (!Nonce.isUnique(nonce)) throw new Exception("Nonce was used previously.");
+	    
+	    // return the state token payload as a JSON
+	    return JsonParser.parseString(new String(Base64.getUrlDecoder().decode(JWT.decode(state).getPayload()))).getAsJsonObject();
 	}
 
 	protected Deployment validateIdToken(HttpServletRequest request) throws Exception {
