@@ -51,6 +51,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
@@ -94,15 +95,18 @@ public class LTIRegistration extends HttpServlet {
 		// This section implements the LTI Dynamic Registration Specification version 1.0
 		String openIdConfigurationURL = request.getParameter("openid_configuration");
 		if (openIdConfigurationURL != null) { // LTIDRSv1p0 section 3.3
+			JsonObject openIdConfiguration = null;
+			JsonObject registrationResponse = null;
 			try {
-				JsonObject openIdConfiguration = getOpenIdConfiguration(request);  // LTIDRSv1p0 section 3.4
+				openIdConfiguration = getOpenIdConfiguration(request);  // LTIDRSv1p0 section 3.4
 				validateOpenIdConfigurationURL(openIdConfigurationURL,openIdConfiguration);  // LTIDRSv1p0 section 3.5.1
-				JsonObject registrationResponse = sendRegistrationRequest(openIdConfiguration,request.getParameter("registration_token"));  // LTIDRSv1p0 section 3.5.2 & 3.6
+				registrationResponse = sendRegistrationRequest(openIdConfiguration,request.getParameter("registration_token"));  // LTIDRSv1p0 section 3.5.2 & 3.6
 				createNewDeployment(openIdConfiguration,registrationResponse);
 				response.setContentType("text/html");
 				out.println(successfulRegistrationPage(request,registrationResponse));
 			} catch (Exception e) {
 				response.sendError(400,e.getMessage());
+				sendEmailToAdmin("Dynamic Registration Error", e.getMessage() + "<br/>OpenIdConfiguration: " + openIdConfiguration + "<br/>RegistrationReponse: " + registrationResponse);
 			}
 			return;
 		}
@@ -851,9 +855,9 @@ public class LTIRegistration extends HttpServlet {
 			if (!issuer.getProtocol().equals("https://")) throw new Exception("Issuer protocol must be https:// ");
 			if (!config.getProtocol().equals("https://")) throw new Exception("OpenID configuration URL protocol must be https:// ");
 			if (!issuer.getHost().equals(config.getHost())) throw new Exception("Host names of issuer and openid_configuration URL must match. ");
-			if (config.getRef() != null) throw new Exception("OpenID coinfiguration URL must not contain any fragmant parameter. ");
+			if (config.getRef() != null) throw new Exception("OpenID configuration URL must not contain any fragmant parameter. ");
 		} catch (Exception e) {
-			throw new Exception("Invalid openid_configuration URL (" + openIdConfigurationURL + "): ");
+			throw new Exception("Invalid openid_configuration from " + openIdConfigurationURL + ": ");
 		}		
 	}
 	
@@ -955,12 +959,47 @@ public class LTIRegistration extends HttpServlet {
 		return registrationResponse;
 	}
 	
-	void createNewDeployment(JsonObject openIdConfiguration, JsonObject registrationResponse) {
-		
+	Deployment createNewDeployment(JsonObject openIdConfiguration, JsonObject registrationResponse) throws Exception {
+		try {
+			String platformId = openIdConfiguration.get("issuer").getAsString();
+			String clientId = registrationResponse.get("client_id").getAsString();
+			String oidc_auth_url = openIdConfiguration.get("authorization_endpoint").getAsString();
+			String oauth_access_token_url = openIdConfiguration.get("token_endpoint").getAsString();
+			String well_known_jwks_url = openIdConfiguration.get("jwks_uri").getAsString();
+			String lms = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_name").getAsString();
+
+			JsonElement deploymentId = registrationResponse.get("https://purl.imsglobal.org/spec/lti-tool-configuration").getAsJsonObject().get("deployment_id");
+			if (deploymentId == null) throw new Exception("ChemVantage requires that the deployment_id must be included in the registration response. ");
+					
+			Deployment d = new Deployment(platformId,deploymentId.getAsString(),clientId,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,null,null,null,null,lms);
+			if (ofy().load().type(Deployment.class).id(d.platform_deployment_id).now() == null) ofy().save().entity(d);  // ensures only new Deployments
+			else d = null;
+			
+			return d;
+		} catch (Exception e) {
+			throw new Exception("Failed to create new deployment in ChemVantage: " + e.getMessage());
+		}
 	}
 	
 	String successfulRegistrationPage(HttpServletRequest request, JsonObject registrationResponse) {
 		StringBuffer buf = new StringBuffer();
 		return buf.toString();
 	}
+	
+	private void sendEmailToAdmin(String subject, String message) {
+		Properties props = new Properties();
+		Session session = Session.getDefaultInstance(props, null);
+
+		try {
+			Message msg = new MimeMessage(session);
+			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
+			msg.addRecipient(Message.RecipientType.TO,
+					new InternetAddress("admin@chemvantage.org", "ChemVantage"));
+			msg.setSubject(subject);
+			msg.setContent(message,"text/html");
+			Transport.send(msg);
+		} catch (Exception e) {
+		}
+	}
+
 }
