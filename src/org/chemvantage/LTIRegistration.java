@@ -25,6 +25,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
@@ -88,8 +89,25 @@ public class LTIRegistration extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
-		try {
 		PrintWriter out = response.getWriter();
+		
+		// This section implements the LTI Dynamic Registration Specification version 1.0
+		String openIdConfigurationURL = request.getParameter("openid_configuration");
+		if (openIdConfigurationURL != null) { // LTIDRSv1p0 section 3.3
+			try {
+				JsonObject openIdConfiguration = getOpenIdConfiguration(request);  // LTIDRSv1p0 section 3.4
+				validateOpenIdConfigurationURL(openIdConfigurationURL,openIdConfiguration);  // LTIDRSv1p0 section 3.5.1
+				JsonObject registrationResponse = sendRegistrationRequest(openIdConfiguration,request.getParameter("registration_token"));  // LTIDRSv1p0 section 3.5.2 & 3.6
+				createNewDeployment(openIdConfiguration,registrationResponse);
+				response.setContentType("text/html");
+				out.println(successfulRegistrationPage(request,registrationResponse));
+			} catch (Exception e) {
+				response.sendError(400,e.getMessage());
+			}
+			return;
+		}
+		
+		try {
 		String userRequest = request.getParameter("UserRequest");
 		if (userRequest==null) userRequest = "";
 		
@@ -804,5 +822,145 @@ public class LTIRegistration extends HttpServlet {
 				"    <cartridge_bundle identifierref=\"BLTI001_Bundle\"/>\n" + 
 				"    <cartridge_icon identifierref=\"BLTI001_Icon\"/>\n" + 
 				"</cartridge_basiclti_link>";
+	}
+	
+	JsonObject getOpenIdConfiguration(HttpServletRequest request) throws Exception {
+	 	// This method retrieves the OpenID Configuration from the platform for Dynamic Registration
+    	try {
+    		URL u = new URL(request.getParameter("openid_configuration"));
+    		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+    		uc.setDoInput(true);
+    		uc.setRequestMethod("GET");
+    		uc.connect();
+    		int responseCode = uc.getResponseCode();
+    		if (responseCode == 200) {
+    			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+    			JsonObject openIdConfiguration = JsonParser.parseReader(reader).getAsJsonObject();
+    			reader.close();
+    			return openIdConfiguration;
+    		} else throw new Exception("Platform returned response code " + responseCode);
+    	} catch (Exception e) {
+    		throw new Exception("Failed to retrieve OpenID Configuration from platform: " + e.getMessage());
+    	}
+    }
+	
+	void validateOpenIdConfigurationURL(String openIdConfigurationURL, JsonObject openIdConfiguration) throws Exception {
+		try {
+			URL issuer = new URL(openIdConfiguration.get("issuer").getAsString());
+			URL config = new URL(openIdConfigurationURL);
+			if (!issuer.getProtocol().equals("https://")) throw new Exception("Issuer protocol must be https:// ");
+			if (!config.getProtocol().equals("https://")) throw new Exception("OpenID configuration URL protocol must be https:// ");
+			if (!issuer.getHost().equals(config.getHost())) throw new Exception("Host names of issuer and openid_configuration URL must match. ");
+			if (config.getRef() != null) throw new Exception("OpenID coinfiguration URL must not contain any fragmant parameter. ");
+		} catch (Exception e) {
+			throw new Exception("Invalid openid_configuration URL (" + openIdConfigurationURL + "): ");
+		}		
+	}
+	
+	JsonObject sendRegistrationRequest(JsonObject openIdConfiguration,String registrationToken) {
+		JsonObject registrationResponse = null;
+		try {
+			JsonObject regJson = new JsonObject();
+			regJson.addProperty("application_type","web");
+			JsonArray responseTypes = new JsonArray();
+				responseTypes.add("id_token");
+				regJson.add("response_types", responseTypes);
+			JsonArray grantTypes = new JsonArray();
+				grantTypes.add("implicit");
+				grantTypes.add("client_credentials");
+				regJson.add("grant_types", grantTypes);
+			String iss = null;
+			String project_id = System.getProperty("com.google.appengine.application.id");
+			switch (project_id) {
+			case "dev-vantage-hrd":
+				iss = "https://dev-vantage-hrd.appspot.com";
+				break;
+			case "chemvantage-hrd":
+				iss = "https://www.chemvantage.org";
+			}
+			regJson.addProperty("initiate_login_uri", iss + "/auth/token");
+			JsonArray redirectUris = new JsonArray();
+			redirectUris.add(iss + "/lti/launch");
+			redirectUris.add(iss + "/lti/deeplinks");
+			regJson.add("redirect_uris", redirectUris);
+			regJson.addProperty("client_name", "ChemVantage");
+			regJson.addProperty("jwks_uri", iss + "/jwks");
+			regJson.addProperty("logo_uri", iss + "/images/CVLogo_thumb.png");
+			regJson.addProperty("client_uri", iss);
+			regJson.addProperty("policy_uri", iss + "/About#privacy");
+			regJson.addProperty("tos_uri", iss + "/About#terms");
+			regJson.addProperty("token_endpoint_auth_method", iss + "private_key_jwt");
+			regJson.addProperty("policy_uri", iss + "/About#privacy");
+			JsonArray contactEmails = new JsonArray();
+				responseTypes.add("admin@chemvantage.org");
+				regJson.add("contacts", contactEmails);
+			regJson.addProperty("scope", "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly https://purl.imsglobal.org/spec/lti-ags/scope/score https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly");
+			JsonObject ltiToolConfig = new JsonObject();
+				ltiToolConfig.addProperty("domain", iss.substring(8));
+				ltiToolConfig.addProperty("description",  "ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry.");
+				ltiToolConfig.addProperty("target_link_uri", iss + "/lti/launch");
+				JsonArray idTokenClaims = new JsonArray();
+					idTokenClaims.add("iss");
+					idTokenClaims.add("sub");
+					idTokenClaims.add("email");
+					idTokenClaims.add("name");
+					idTokenClaims.add("given_name");
+					idTokenClaims.add("family_name");
+				ltiToolConfig.add("claims", idTokenClaims);
+				JsonArray ltiMessages = new JsonArray();
+					JsonObject deepLinking = new JsonObject();
+						deepLinking.addProperty("type",  "LtiDeepLinkingRequest");
+						deepLinking.addProperty("target_link_uri", iss + "/lti/deeplinks");
+						deepLinking.addProperty("label", "ChemVantage");
+						switch (openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString()) {
+						default: // add LMS=specific placements for deep linking here
+						}
+					ltiMessages.add(deepLinking);
+					JsonObject resourceLaunch = new JsonObject();
+						resourceLaunch.addProperty("type",  "LtiResourceLinkRequest");
+						resourceLaunch.addProperty("target_link_uri", iss + "/lti/launch");
+						resourceLaunch.addProperty("label", "ChemVantage");
+						switch (openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString()) {
+						case "canvas":
+							break;
+						default: // add LMS=specific placements for ResourceLinks here
+						}
+					ltiMessages.add(resourceLaunch);
+				ltiToolConfig.add("messages", ltiMessages);
+			regJson.add("https://purl.imsglobal.org/spec/lti-tool-configuration", ltiToolConfig);
+			
+			URL u = new URL(openIdConfiguration.get("registration_endpoint").getAsString());
+			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+			uc.setRequestMethod("POST");
+			if (registrationToken != null) uc.setRequestProperty("Authorization", "Bearer " + registrationToken);
+			uc.setRequestProperty("Content-Type", "application/json");
+			uc.setRequestProperty("Accept", "application/json");
+			uc.setDoOutput(true);
+			uc.setDoInput(true);
+			
+			// send the message
+			OutputStream os = uc.getOutputStream();
+		    byte[] json_bytes = regJson.toString().getBytes("utf-8");
+			os.write(json_bytes, 0, json_bytes.length);           
+			os.close();
+		
+			if (uc.getResponseCode() == 400) throw new Exception("Platform refused registration request with code 400. ");
+			
+			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
+			registrationResponse = JsonParser.parseReader(reader).getAsJsonObject();
+			reader.close();
+		} catch (Exception e) {
+			registrationResponse.addProperty("error", e.getMessage());
+		}
+		return registrationResponse;
+	}
+	
+	void createNewDeployment(JsonObject openIdConfiguration, JsonObject registrationResponse) {
+		
+	}
+	
+	String successfulRegistrationPage(HttpServletRequest request, JsonObject registrationResponse) {
+		StringBuffer buf = new StringBuffer();
+		return buf.toString();
 	}
 }
