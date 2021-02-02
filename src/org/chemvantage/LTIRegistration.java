@@ -77,6 +77,16 @@ public class LTIRegistration extends HttpServlet {
 	 *      entering the client_id and deployment_id values and LMS endpoints, if necessary.
 	 *   5) The LMS admin submits the form, and the createDeployment method creates the new Deployment entity 
 	 *      and completes the registration process.
+	 *      
+	 * For LTI Dynamic Registration, the ChemVantage endpoint is the same, and the form still applies, but
+	 * some information is automatically received (e.g., LMS product name, LTIAdvantage) so does not appear 
+	 * as an option on the form. When submitted, the response will be either to send the registration email
+	 * immediately (e.g. for Canvas or Blackboard registration) or provide a message that the account request 
+	 * is under review.
+	 * 
+	 * Consider including a request for donation at this point via PayPal. Leverage is greatest while folks are 
+	 * waiting for a free service.  https://www.paypal.com/biz/fund?id=UJ5PH3XGYNPEL
+	 * 
 	 * */
 	
 	private static final long serialVersionUID = 137L;
@@ -100,7 +110,7 @@ public class LTIRegistration extends HttpServlet {
 			try {
 				openIdConfiguration = getOpenIdConfiguration(request);  // LTIDRSv1p0 section 3.4
 				validateOpenIdConfigurationURL(openIdConfigurationURL,openIdConfiguration);  // LTIDRSv1p0 section 3.5.1
-				registrationResponse = sendRegistrationRequest(openIdConfiguration,request.getParameter("registration_token"));  // LTIDRSv1p0 section 3.5.2 & 3.6
+				registrationResponse = postRegistrationRequest(openIdConfiguration,request.getParameter("registration_token"));  // LTIDRSv1p0 section 3.5.2 & 3.6
 				createNewDeployment(openIdConfiguration,registrationResponse);
 				response.setContentType("text/html");
 				out.println(successfulRegistrationPage(request,registrationResponse));
@@ -861,7 +871,7 @@ public class LTIRegistration extends HttpServlet {
 		}		
 	}
 	
-	JsonObject sendRegistrationRequest(JsonObject openIdConfiguration,String registrationToken) {
+	JsonObject postRegistrationRequest(JsonObject openIdConfiguration,String registrationToken) {
 		JsonObject registrationResponse = null;
 		try {
 			JsonObject regJson = new JsonObject();
