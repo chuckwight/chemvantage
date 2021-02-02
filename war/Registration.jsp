@@ -2,6 +2,21 @@
 <%@ page import="static com.googlecode.objectify.ObjectifyService.ofy" %>
 <%@ page import="java.util.*,com.googlecode.objectify.*,org.chemvantage.*"%>
 
+<%  String message = request.getParameter("message");
+	String sub = request.getParameter("sub");
+	String email = request.getParameter("email");
+	String typ = request.getParameter("typ");
+	String aud = request.getParameter("aud");
+	String url = request.getParameter("url");
+	String use = request.getParameter("use");
+	String ver = request.getParameter("ver");
+	String lms = request.getParameter("lms");
+	String lms_other = request.getParameter("lms_other");
+	String AcceptChemVantageTOS = request.getParameter("AcceptChemVantageTOS");
+	String openid_configuration = request.getParameter("openid_configuration");
+	String registration_token = request.getParameter("registration_token");
+%>
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -18,10 +33,11 @@
 </head>
 
 <body>
-<%= Home.banner %><br><br>
+<%= Home.banner %><br>
 
-ChemVantage is an Open Education Resource for teaching and learning college-level General
-Chemistry.
+<% if (message != null) { %>
+<span style='color: red; border: 2px solid red'>&nbsp;<%= message %> &nbsp;</span>
+<% } %>
 
 <h4>ChemVantage LTI Registration</h4>
 Please complete the form below to obtain a set of LTI credentials. The information you 
@@ -32,35 +48,42 @@ complete the configuration of your LMS as well as a link to finalize the registr
 
 <form method=post action=/lti/registration>
 
-Your Name: <input type=text name=sub> and Email: <input type=text name=email><br><br>
+Your Name: <input type=text name=sub size=40 value='<%= (sub==null?"":sub) %>'><br/>
+Your Email: <input type=text name=email size=40 value='<%= (email==null?"":email) %>'><br><br>
 
 Type of organization:<br>
 <label><input type=radio name=typ value=nonprofit checked> Public or nonprofit educational institution (up to 1000 users)</label><br>
 <label><input type=radio name=typ value=personal> Small business or Personal account (up to 5 users)</label><br>
 <label><input type=radio name=typ value=forprofit> Commercial partnership (up to 10000 users)</label><br><br>
 
-<span id=orginfo>Your Organization: <input type=text name=aud> and Home Page: <input type=text name=url placeholder='https://myschool.edu'><br>
-	For immediate access, your Email domain (above) should match the Home Page domain.<br><br></span>
+<span id=orginfo>Your Organization Name: <input type=text name=aud  value='<%= (aud==null?"":aud) %>'> 
+and Org Home Page: <input type=text name=url placeholder='https://myschool.edu' value='<%= (url==null?"":url) %>'><br>
+	For faster account approval, your Email domain (above) should match the Home Page domain.<br><br></span>
 
 Select your use case:<br>
-<label><input type=radio name=use value=prod checked>Teaching a chemistry class (production environment)</label><br>
-<label><input type=radio name=use value=test>Testing LTI connections (development environment)</label><br><br>
+<label><input type=radio name=use value=prod <%= ((use==null || use.equals("prod"))?"checked":"") %>>Teaching a chemistry class (production server)</label><br>
+<label><input type=radio name=use value=test <%= ((use!=null && use.equals("test"))?"checked":"") %>>Testing LTI connections (code development server)</label><br><br>
 
+<% if (openid_configuration == null) { %>
 Type of LTI registration:<br>
-<label><input type=radio name=ver value=1p3 checked>LTI Advantage (preferred)</label><br>
-<label><input type=radio name=ver value=1p1>LTI version 1.1 (exp. 31-DEC-2021)</label><br><br>
+<label><input type=radio name=ver value=1p3 <%= ((ver==null || ver.equals("1p3"))?"checked":"") %>>LTI Advantage (preferred)</label><br>
+<label><input type=radio name=ver value=1p1 <%= ((ver!=null && ver.equals("1p1"))?"checked":"") %>>LTI version 1.1 (expires 31-DEC-2021)</label><br><br>
 
 Type of Learning Management System:<br>
-<label><input type=radio name=lms value=blackboard>Blackboard</label><br>
-<label><input type=radio name=lms value=brightspace>Brightspace</label><br>
-<label><input type=radio name=lms value=canvas>Canvas</label><br>
-<label><input type=radio name=lms value=moodle>Moodle</label><br>
-<label><input type=radio name=lms value=sakai>Sakai</label><br>
-<label><input type=radio name=lms value=schoology>Schoology</label><br>
-<label><input type=radio name=lms id=other value=other>Other: </label>
-<input type=text name=lms_other onFocus="document.getElementById('other').checked=true;"><br><br>	
+<label><input type=radio name=lms value=blackboard <%= ((lms!=null && lms.equals("blackboard"))?"checked":"") %>>Blackboard</label><br>
+<label><input type=radio name=lms value=brightspace <%= ((lms!=null && lms.equals("brightspace"))?"checked":"") %>>Brightspace</label><br>
+<label><input type=radio name=lms value=canvas <%= ((lms!=null && lms.equals("canvas"))?"checked":"") %>>Canvas</label><br>
+<label><input type=radio name=lms value=moodle <%= ((lms!=null && lms.equals("moodle"))?"checked":"") %>>Moodle</label><br>
+<label><input type=radio name=lms value=sakai <%= ((lms!=null && lms.equals("sakai"))?"checked":"") %>>Sakai</label><br>
+<label><input type=radio name=lms value=schoology <%= ((lms!=null && lms.equals("schoology"))?"checked":"") %>>Schoology</label><br>
+<label><input type=radio name=lms id=other value=other <%= ((lms!=null && lms.equals("other"))?"checked":"") %>>Other: </label>
+<input type=text name=lms_other value='<%= (lms_other==null?"":lms_other) %>' onFocus="document.getElementById('other').checked=true;"><br><br>	
+<% } else {%>
+<input type=hidden name=openid_configuration value='<%= openid_configuration %>'>
+<% if (registration_token!=null) { %> <input type=hidden name=registration_token value='<%= registration_token %>'> <% } %>
+<% } %>
 
-<label><input type=checkbox name=AcceptChemVantageTOS value=true>Accept the <a href=/About#terms target=_blank>ChemVantage Terms of Service</a></label><br><br>
+<label><input type=checkbox name=AcceptChemVantageTOS value=true <%= ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") %>>Accept the <a href=/About#terms target=_blank>ChemVantage Terms of Service</a></label><br><br>
 
 <div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div><br><br>
 <input type=submit name=UserRequest value='Send Me The Registration Email'>
