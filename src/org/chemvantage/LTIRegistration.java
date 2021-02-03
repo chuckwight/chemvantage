@@ -30,7 +30,9 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.Properties;
 import java.util.Random;
 import java.util.regex.Pattern;
@@ -110,40 +112,21 @@ public class LTIRegistration extends HttpServlet {
 	throws ServletException, IOException {
 		PrintWriter out = response.getWriter();
 		
-		// This section implements the LTI Dynamic Registration Specification version 1.0
-		String openIdConfigurationURL = request.getParameter("openid_configuration");
-		if (openIdConfigurationURL != null) { // LTIDRSv1p0 section 3.3
-			JsonObject openIdConfiguration = null;
-			JsonObject registrationResponse = null;
-			try {
-				openIdConfiguration = getOpenIdConfiguration(request);  // LTIDRSv1p0 section 3.4
-				validateOpenIdConfigurationURL(openIdConfigurationURL,openIdConfiguration);  // LTIDRSv1p0 section 3.5.1
-				registrationResponse = postRegistrationRequest(openIdConfiguration,request.getParameter("registration_token"));  // LTIDRSv1p0 section 3.5.2 & 3.6
-				createNewDeployment(openIdConfiguration,registrationResponse);
-				response.setContentType("text/html");
-				out.println(successfulRegistrationPage(request,registrationResponse));
-			} catch (Exception e) {
-				response.sendError(400,e.getMessage());
-				sendEmailToAdmin("Dynamic Registration Error", e.getMessage() + "<br/>OpenIdConfiguration: " + openIdConfiguration + "<br/>RegistrationReponse: " + registrationResponse);
-			}
-			return;
-		}
-		
 		try {
-		String userRequest = request.getParameter("UserRequest");
-		if (userRequest==null) userRequest = "";
-		
-		String iss = "https://" + request.getServerName();
-		String path = request.getServletPath();
-		
-		if (path.contentEquals("/lti_config.xml")) {
-			response.setContentType("application/xml");
-			out.println(getConfigurationXml(iss));
-		}
-		else if ("config".contentEquals(userRequest)) {
-			response.setContentType("application/json");
-			out.println(getConfigurationJson(iss,request.getParameter("lms")));
-		} else if (request.getParameter("token")!=null) {
+			String userRequest = request.getParameter("UserRequest");
+			if (userRequest==null) userRequest = "";
+
+			String iss = "https://" + request.getServerName();
+			String path = request.getServletPath();
+
+			if (path.contentEquals("/lti_config.xml")) {
+				response.setContentType("application/xml");
+				out.println(getConfigurationXml(iss));
+			}
+			else if ("config".contentEquals(userRequest)) {
+				response.setContentType("application/json");
+				out.println(getConfigurationJson(iss,request.getParameter("lms")));
+			} else if (request.getParameter("token")!=null) {
 			response.setContentType("text/html");
 			String token = request.getParameter("token");
 			DecodedJWT decoded = JWT.require(algorithm).withIssuer(iss).build().verify(token);
@@ -152,7 +135,15 @@ public class LTIRegistration extends HttpServlet {
 			else if (ltiVersion.equals("1p3")) out.println(Home.header("LTI Registration") + clientIdForm(token) + Home.footer);
 			else throw new Exception("LTI version was missing or invalid.");
 		} else {
-			response.sendRedirect("/Registration.jsp");
+			String registrationURL = "/Registration.jsp";
+			Enumeration<String> enumeration = request.getParameterNames();
+	        int i=0;
+			while(enumeration.hasMoreElements()){
+	            String parameterName = enumeration.nextElement();
+	            String parameterValue = request.getParameter(parameterName);
+	            registrationURL += (i==0?"?":"&") + parameterName + "=" + URLEncoder.encode(parameterValue,"utf-8");
+	        }	        
+			response.sendRedirect(registrationURL);
 		}
 		} catch (Exception e) {
 			response.sendError(401, e.getMessage());
@@ -173,15 +164,32 @@ public class LTIRegistration extends HttpServlet {
 		try {
 			if ("Send Me The Registration Email".contentEquals(userRequest)) {			
 				String token = validateApplicationFormContents(request);
-				sendRegistrationEmail(token);
-				out.println(Home.header("ChemVantage LTI Registration") + Home.banner + "<h3>Registration Success</h3>Thank you. A registration email has been sent to your address.<p>" + Home.footer);			
+				if ("dynamic_registration".equals(request.getParameter("ver"))) {
+					JsonObject openIdConfiguration = getOpenIdConfiguration(request);  // LTIDRSv1p0 section 3.4
+					validateOpenIdConfigurationURL(request.getParameter("openid_configuration"),openIdConfiguration);  // LTIDRSv1p0 section 3.5.1
+					JsonObject registrationResponse = postRegistrationRequest(openIdConfiguration,request.getParameter("registration_token"));  // LTIDRSv1p0 section 3.5.2 & 3.6
+					createNewDeployment(openIdConfiguration,registrationResponse);
+					response.setContentType("text/html");
+					out.println(successfulRegistrationPage(request,registrationResponse));
+				} else {
+					sendRegistrationEmail(token);
+					out.println(Home.header("ChemVantage LTI Registration") + Home.banner + "<h3>Registration Success</h3>Thank you. A registration email has been sent to your address.<p>" + Home.footer);			
+				} 
 			} else if ("finalize".contentEquals(userRequest)) {				
 				String token = request.getParameter("Token");
 				JWT.require(algorithm).withIssuer(iss).build().verify(token);
 				out.println(Home.header("ChemVantage LTI Registration") + Home.banner + createDeployment(request) + Home.footer);			
 			}
 		} catch (Exception e) {
-			response.sendError(401,e.getMessage() + "Please go BACK and try again or contact admin@chemvantage.org for assistance.");
+			String message = e.getMessage();
+			String registrationURL = "/Registration.jsp?message=" + URLEncoder.encode(message,"utf-8");
+			Enumeration<String> enumeration = request.getParameterNames();
+			while(enumeration.hasMoreElements()){
+	            String parameterName = enumeration.nextElement();
+	            String parameterValue = request.getParameter(parameterName);
+	            registrationURL += "&" + parameterName + "=" + URLEncoder.encode(parameterValue,"utf-8");
+	        }	        
+			response.sendRedirect(registrationURL);
 		}
 	}
 		
@@ -194,6 +202,8 @@ public class LTIRegistration extends HttpServlet {
 		String use = request.getParameter("use");
 		String ver = request.getParameter("ver");
 		String lms = request.getParameter("lms");
+		String lms_other = request.getParameter("lms_other");
+		String openid_configuration = request.getParameter("openid_configuration");
 		
 		if (sub.isEmpty() || email.isEmpty() || use==null ||use.isEmpty() || ver==null || ver.isEmpty()) throw new Exception("All form fields are required. ");
 		if (aud.isEmpty() || url.isEmpty()) throw new Exception("You must enter your organization name and home page. ");
@@ -201,26 +211,26 @@ public class LTIRegistration extends HttpServlet {
 			aud = (aud==null?"":aud);
 			url = (url==null?"":url);
 		}
-		
+
 		String regex = "^[A-Za-z0-9+_.-]+@(.+)$";		 
 		Pattern pattern = Pattern.compile(regex);
 		if (!pattern.matcher(email).matches()) throw new Exception("Your email address was not formatted correctly. ");
-		
+
 		try {
 			if (!"personal".contentEquals(typ)) new URL(url);   // throws Exception if URL is not formatted correctly
 		} catch (Exception e) {
 			throw new Exception("Invalid domain name (" + e.getMessage() + ").");
 		}
-		
+
 		if (typ==null) throw new Exception("Please specify the type of organization connecting to ChemVantage. ");
-		
-		if (lms==null) throw new Exception("Please select the type of LMS that you are connecting to ChemVantage. ");
-		if ("other".contentEquals(lms)) lms = request.getParameter("lms_other");
-		if (lms==null || lms.isEmpty()) throw new Exception("Please describe the type of LMS that you are connecting to ChemVantage. ");
-		
+
+		if (openid_configuration==null) {
+			if (lms==null) throw new Exception("Please select the type of LMS that you are connecting to ChemVantage. ");
+			if ("other".contentEquals(lms) && (lms_other==null || lms_other.isEmpty())) throw new Exception("Please describe the type of LMS that you are connecting to ChemVantage. ");
+		}
 		if (!"true".equals(request.getParameter("AcceptChemVantageTOS"))) throw new Exception("You must accept the ChemVantage Terms of Service. ");
-		
-		if (!reCaptchaOK(request)) throw new Exception("ReCaptcha tool unverified. ");
+
+		if (!reCaptchaOK(request)) throw new Exception("ReCaptcha tool was unverified. Please try again. ");
 	
 		// Construct a new registration token
 		String iss = use.equals("test")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
@@ -879,7 +889,7 @@ public class LTIRegistration extends HttpServlet {
 		}		
 	}
 	
-	JsonObject postRegistrationRequest(JsonObject openIdConfiguration,String registrationToken) {
+	JsonObject postRegistrationRequest(JsonObject openIdConfiguration,String registrationToken) throws Exception {
 		JsonObject registrationResponse = null;
 		try {
 			JsonObject regJson = new JsonObject();
@@ -972,7 +982,7 @@ public class LTIRegistration extends HttpServlet {
 			registrationResponse = JsonParser.parseReader(reader).getAsJsonObject();
 			reader.close();
 		} catch (Exception e) {
-			registrationResponse.addProperty("error", e.getMessage());
+			throw new Exception("Posting registration request to the LMS platform failed: " + e.getMessage());
 		}
 		return registrationResponse;
 	}
@@ -990,8 +1000,7 @@ public class LTIRegistration extends HttpServlet {
 			if (deploymentId == null) throw new Exception("ChemVantage requires that the deployment_id must be included in the registration response. ");
 					
 			Deployment d = new Deployment(platformId,deploymentId.getAsString(),clientId,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,null,null,null,null,lms);
-			if (ofy().load().type(Deployment.class).id(d.platform_deployment_id).now() == null) ofy().save().entity(d);  // ensures only new Deployments
-			else d = null;
+			d.status = "review";
 			
 			return d;
 		} catch (Exception e) {
@@ -1001,6 +1010,19 @@ public class LTIRegistration extends HttpServlet {
 	
 	String successfulRegistrationPage(HttpServletRequest request, JsonObject registrationResponse) {
 		StringBuffer buf = new StringBuffer();
+		buf.append(Home.header() + Home.banner);
+		buf.append("<h3>Your Registration Request Was Successful</h3>"
+				+ "The LTI Advantage deployment was created in ChemVantage and in your LMS. Your LMS administrator must now activate it. <br/>"
+				+ "The new deployment must also be reviewed and activated by ChemVantage. You will receive an activation link by email "
+				+ "to " + request.getParameter("email") + " when this is done.<br/><br/>");
+		buf.append("ChemVantage provides free OER services to thousands of students. The cost of this service is paid entirely by generous donations "
+				+ "from people like you. Please consider making a donation to support ChemVantage and keep the good karma flowing.<br/>");
+		buf.append("<form action=\"https://www.paypal.com/donate\" method=\"post\" target=\"_top\">\n"
+				+ "<input type=\"hidden\" name=\"hosted_button_id\" value=\"4DYCV6EG2HPB2\" />\n"
+				+ "<input type=\"image\" src=\"https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif\" border=\"0\" name=\"submit\" title=\"PayPal - The safer, easier way to pay online!\" alt=\"Donate with PayPal button\" />\n"
+				+ "<img alt=\"\" border=\"0\" src=\"https://www.paypal.com/en_US/i/scr/pixel.gif\" width=\"1\" height=\"1\" />\n"
+				+ "</form>");
+		buf.append(Home.footer);
 		return buf.toString();
 	}
 	

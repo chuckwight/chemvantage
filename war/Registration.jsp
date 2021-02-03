@@ -79,6 +79,8 @@ Type of Learning Management System:<br>
 <label><input type=radio name=lms id=other value=other <%= ((lms!=null && lms.equals("other"))?"checked":"") %>>Other: </label>
 <input type=text name=lms_other value='<%= (lms_other==null?"":lms_other) %>' onFocus="document.getElementById('other').checked=true;"><br><br>	
 <% } else {%>
+<input type=hidden name=ver value=dynamic_registration>
+<input type=hidden name=lms value=dynamic_registration>
 <input type=hidden name=openid_configuration value='<%= openid_configuration %>'>
 <% if (registration_token!=null) { %> <input type=hidden name=registration_token value='<%= registration_token %>'> <% } %>
 <% } %>
