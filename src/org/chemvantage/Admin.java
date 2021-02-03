@@ -107,6 +107,18 @@ public class Admin extends HttpServlet {
 					if (tc.expires==null || tc.expires.after(in10Days)) tc.expires = in10Days;
 				}
 				ofy().save().entity(tc).now();
+				break;
+			case "Submit Review":
+				Deployment d = ofy().load().type(Deployment.class).id(request.getParameter("platform_deployment_id")).safe();
+				switch(request.getParameter("action")) {
+				case "Approve":
+					d.status = "active";
+					ofy().save().entity(d);
+					break;
+				case "Delete":
+					ofy().delete().entity(d);
+				}
+				break;
 			}
 			out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Home.footer);
 		} catch (Exception e) {
@@ -148,8 +160,15 @@ public class Admin extends HttpServlet {
 			buf.append("Active LTI Advantage deployments: " + ofy().load().type(Deployment.class).filter("lastLogin >",lastMonth).count() + "<br>");
 			buf.append("Total number of Response entities: " + ofy().load().type(Response.class).filter("submitted >",lastMonth).count());
 			
-			buf.append("<h3>New and Expiring Accounts</h3>");
+			buf.append("<h3>Accounts Needing Review and Approval</h3>");
+			List<Deployment> review = ofy().load().type(Deployment.class).filter("status", "review").list();
+			for (Deployment d : review) {
+				buf.append("<form method=post><input type=hidden name=platform_deployment_id value='" + d.platform_deployment_id + "'><input type=hidden name=UserRequest value='Submit Review'>"
+						+ d.getPlatformId() + " (" + d.lms_type + ") at " + d.organization + " by " + d.contact_name + " (" + d.email + ") "
+						+ "<input type=submit name=action value='Approve'>&nbsp;<input type=submit name=action value='Delete'></form><br/>");
+			}
 			
+			buf.append("<h3>New and Expiring Accounts</h3>");			
 			Date now = new Date();
 			Date twoMonthsAgo = new Date(now.getTime()-5184000000L);
 			Date twoMonthsFromNow = new Date(now.getTime()+5184000000L);

@@ -127,12 +127,16 @@ public class LTIRegistration extends HttpServlet {
 				response.setContentType("application/json");
 				out.println(getConfigurationJson(iss,request.getParameter("lms")));
 			} else if (request.getParameter("token")!=null) {
-			response.setContentType("text/html");
-			String token = request.getParameter("token");
-			DecodedJWT decoded = JWT.require(algorithm).withIssuer(iss).build().verify(token);
-			String ltiVersion = decoded.getClaim("ver").asString();
-			if (ltiVersion.equals("1p1")) out.println(Home.header("LTI Registration") + createBLTIConsumer(token) + Home.footer);
-			else if (ltiVersion.equals("1p3")) out.println(Home.header("LTI Registration") + clientIdForm(token) + Home.footer);
+				response.setContentType("text/html");
+				String token = request.getParameter("token");
+				DecodedJWT decoded = JWT.require(algorithm).withIssuer(iss).build().verify(token);
+				String ltiVersion = decoded.getClaim("ver").asString();
+				if (ltiVersion.equals("1p1")) out.println(Home.header("LTI Registration") + createBLTIConsumer(token) + Home.footer);
+				else if (ltiVersion.equals("1p3")) out.println(Home.header("LTI Registration") + clientIdForm(token) + Home.footer);
+				else if (ltiVersion.equals("dynamicregistration")) {
+					Deployment d = activateDeployment(iss,token);
+					out.println(Home.header("LTI Registration") + dynamicRegistrationSuccessPage(d) + Home.footer);
+				}
 			else throw new Exception("LTI version was missing or invalid.");
 		} else {
 			String registrationURL = "/Registration.jsp";
@@ -170,7 +174,7 @@ public class LTIRegistration extends HttpServlet {
 					JsonObject registrationResponse = postRegistrationRequest(openIdConfiguration,request.getParameter("registration_token"));  // LTIDRSv1p0 section 3.5.2 & 3.6
 					createNewDeployment(openIdConfiguration,registrationResponse);
 					response.setContentType("text/html");
-					out.println(successfulRegistrationPage(request,registrationResponse));
+					out.println(successfulRegistrationRequestPage(request,registrationResponse));
 				} else {
 					sendRegistrationEmail(token);
 					out.println(Home.header("ChemVantage LTI Registration") + Home.banner + "<h3>Registration Success</h3>Thank you. A registration email has been sent to your address.<p>" + Home.footer);			
@@ -1008,38 +1012,54 @@ public class LTIRegistration extends HttpServlet {
 		}
 	}
 	
-	String successfulRegistrationPage(HttpServletRequest request, JsonObject registrationResponse) {
+	String successfulRegistrationRequestPage(HttpServletRequest request, JsonObject registrationResponse) {
 		StringBuffer buf = new StringBuffer();
 		buf.append(Home.header() + Home.banner);
 		buf.append("<h3>Your Registration Request Was Successful</h3>"
-				+ "The LTI Advantage deployment was created in ChemVantage and in your LMS. Your LMS administrator must now activate it. <br/>"
-				+ "The new deployment must also be reviewed and activated by ChemVantage. You will receive an activation link by email "
-				+ "to " + request.getParameter("email") + " when this is done.<br/><br/>");
-		buf.append("ChemVantage provides free OER services to thousands of students. The cost of this service is paid entirely by generous donations "
+				+ "The LTI Advantage deployment was created in ChemVantage and in your LMS. There are three more steps required to activate the "
+				+ "deployment: <ol>"
+				+ "<li>Your LMS administrator must now activate the deployment in your LMS.</li>"
+				+ "<li>ChemVantage will review the deployment and send an activation link via email to " + request.getParameter("email") + "</li>"
+				+ "<li>You must click the activation link in the email to complete the activation process.</li>"
+				+ " </ol>");
+		buf.append("<h3>Keep ChemVantage Free</h3>"
+				+ "ChemVantage provides free OER services to thousands of students. The cost of this service is paid entirely by generous donations "
 				+ "from people like you. Please consider making a donation to support ChemVantage and keep the good karma flowing.<br/>");
 		buf.append("<form action=\"https://www.paypal.com/donate\" method=\"post\" target=\"_top\">\n"
 				+ "<input type=\"hidden\" name=\"hosted_button_id\" value=\"4DYCV6EG2HPB2\" />\n"
-				+ "<input type=\"image\" src=\"https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif\" border=\"0\" name=\"submit\" title=\"PayPal - The safer, easier way to pay online!\" alt=\"Donate with PayPal button\" />\n"
+				+ "<input type=\"image\" src=\"https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif\" border=\"0\" name=\"submit\" "
+				+ "title=\"PayPal - The safer, easier way to pay online!\" alt=\"Donate with PayPal button\" />\n"
 				+ "<img alt=\"\" border=\"0\" src=\"https://www.paypal.com/en_US/i/scr/pixel.gif\" width=\"1\" height=\"1\" />\n"
 				+ "</form>");
 		buf.append(Home.footer);
 		return buf.toString();
 	}
 	
-	private void sendEmailToAdmin(String subject, String message) {
-		Properties props = new Properties();
-		Session session = Session.getDefaultInstance(props, null);
-
-		try {
-			Message msg = new MimeMessage(session);
-			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-			msg.addRecipient(Message.RecipientType.TO,
-					new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-			msg.setSubject(subject);
-			msg.setContent(message,"text/html");
-			Transport.send(msg);
-		} catch (Exception e) {
-		}
+	String dynamicRegistrationSuccessPage(Deployment d) {
+		StringBuffer buf = new StringBuffer();
+		buf.append(Home.banner + "<h2>Registration Success</h2>");
+		buf.append("The LTI registration process in ChemVantage is now complete, and your account should be active if the ChemVantage deployment "
+				+ "has been activated in your LMS by your LMS administrator. You should be able to create assignments where the submission is handled "
+				+ "by ChemVantage as an external LTI tool.<br/><br/>"
+				+ "If you have any difficulty, please contact us at admin@chemvantage.org");
+		buf.append("<h3>Keep ChemVantage Free</h3>"
+				+ "ChemVantage provides free OER services to thousands of students. The cost of this service is paid entirely by generous donations "
+				+ "from people like you. Please consider making a donation to support ChemVantage and keep the good karma flowing.<br/>");
+		buf.append("<form action=\"https://www.paypal.com/donate\" method=\"post\" target=\"_top\">\n"
+				+ "<input type=\"hidden\" name=\"hosted_button_id\" value=\"4DYCV6EG2HPB2\" />\n"
+				+ "<input type=\"image\" src=\"https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif\" border=\"0\" name=\"submit\" "
+				+ "title=\"PayPal - The safer, easier way to pay online!\" alt=\"Donate with PayPal button\" />\n"
+				+ "<img alt=\"\" border=\"0\" src=\"https://www.paypal.com/en_US/i/scr/pixel.gif\" width=\"1\" height=\"1\" />\n"
+				+ "</form>");
+		return buf.toString();
 	}
-
+	
+	Deployment activateDeployment(String iss, String token) throws Exception {
+		DecodedJWT decoded = JWT.require(algorithm).withIssuer(iss).build().verify(token);
+		String platformDeploymentId = decoded.getClaim("platform_deployment_id").asString();
+		Deployment d = ofy().load().type(Deployment.class).id(platformDeploymentId).safe();
+		if ("pending".equals(d.status)) d.status = "active";
+		ofy().save().entity(d);
+		return d;
+	}
 }
