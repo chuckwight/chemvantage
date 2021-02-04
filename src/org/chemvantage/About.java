@@ -202,6 +202,15 @@ public class About extends HttpServlet {
 		+ "FEES INCURRED BY US, BY ANY COPYRIGHT OWNER, OR BY ANY COPYRIGHT OWNER'S LICENSEE THAT IS INJURED AS A "
 		+ "RESULT OF OUR RELYING UPON YOUR MISREPRESENTATION. YOU MAY ALSO BE SUBJECT TO CRIMINAL PROSECUTION FOR PERJURY.";
 
+	public static String ferpa = "<a NAME=ferpa></a>"
+		+ "<h3>FERPA Compliance</h3>"
+		+ "The services provided by ChemVantage are fully compliant with all applicable provisions of the Family Educational "
+		+ "Rights and Privacy Act (FERPA) (20 U.S.C. § 1232g; 34 CFR Part 99). We receive user data as a School Official "
+		+ "under FERPA, either directly from students as a result of completing ChemVantage assignments or from the school "
+		+ "or educational institution through the LTI connection to the school's learning management system (LMS). User data "
+		+ "are processed solely for educational purposes and are shared back to the school LMS through the LTI connection. "
+		+ "ChemVantage does not otherwise process, store, sell or share any student personally identifiable information.";
+	
 	public static String privacy = "<a NAME=privacy></a>"
 		+ "<h3>Privacy Policy</h3>"
 		+ "ChemVantage protects its users' privacy to the maximum extent that allows the site to function as designed."
@@ -277,6 +286,6 @@ public class About extends HttpServlet {
 	throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		out.println(Home.header("About ChemVantage") + about + premium + accounts + certification + accessibility + copyright + privacy + terms + Home.footer);
+		out.println(Home.header("About ChemVantage") + about + premium + accounts + certification + accessibility + copyright + ferpa + privacy + terms + Home.footer);
 	}
 }
