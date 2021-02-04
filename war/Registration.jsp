@@ -9,6 +9,7 @@
 	String aud = request.getParameter("aud");
 	String url = request.getParameter("url");
 	String use = request.getParameter("use");
+	if (use==null) use = request.getServerName().contains("dev-vantage")?"test":"prod";
 	String ver = request.getParameter("ver");
 	String lms = request.getParameter("lms");
 	String lms_other = request.getParameter("lms_other");
@@ -61,8 +62,8 @@ and Org Home Page: <input type=text name=url placeholder='https://myschool.edu' 
 	For faster account approval, your Email domain (above) should match the Home Page domain.<br><br></span>
 
 Select your use case:<br>
-<label><input type=radio name=use value=prod <%= ((use==null || use.equals("prod"))?"checked":"") %>>Teaching a chemistry class (production server)</label><br>
-<label><input type=radio name=use value=test <%= ((use!=null && use.equals("test"))?"checked":"") %>>Testing LTI connections (code development server)</label><br><br>
+<label><input type=radio name=use value=prod <%= (use.equals("prod")?"checked":"") %>>Teaching a chemistry class (production server)</label><br>
+<label><input type=radio name=use value=test <%= (use.equals("test")?"checked":"") %>>Testing LTI connections (code development server)</label><br><br>
 
 <% if (openid_configuration == null) { %>
 Type of LTI registration:<br>
