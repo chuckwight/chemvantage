@@ -131,13 +131,20 @@ public class LTIRegistration extends HttpServlet {
 				String token = request.getParameter("token");
 				DecodedJWT decoded = JWT.require(algorithm).withIssuer(iss).build().verify(token);
 				String ltiVersion = decoded.getClaim("ver").asString();
-				if (ltiVersion.equals("1p1")) out.println(Home.header("LTI Registration") + createBLTIConsumer(token) + Home.footer);
-				else if (ltiVersion.equals("1p3")) out.println(Home.header("LTI Registration") + clientIdForm(token) + Home.footer);
-				else if (ltiVersion.equals("dynamicregistration")) {
-					Deployment d = activateDeployment(iss,token);
+				switch (ltiVersion) {
+				case "1p1":
+					out.println(Home.header("LTI Registration") + createBLTIConsumer(token) + Home.footer);
+					break;
+				case "1p3":
+					out.println(Home.header("LTI Registration") + clientIdForm(token) + Home.footer);
+					break;
+				case "dynamicregistration":
+					String platformDeploymentId = decoded.getClaim("platform_deployment_id").asString();
+					Deployment d = activateDeployment(platformDeploymentId);
 					out.println(Home.header("LTI Registration") + dynamicRegistrationSuccessPage(d) + Home.footer);
+					break;
+				default: throw new Exception("LTI version was missing or invalid.");
 				}
-				else throw new Exception("LTI version was missing or invalid.");
 			} else {
 				String registrationURL = "/Registration.jsp";
 				Enumeration<String> enumeration = request.getParameterNames();
@@ -1038,31 +1045,104 @@ public class LTIRegistration extends HttpServlet {
 		return buf.toString();
 	}
 	
+	static void sendApprovalEmail(Deployment d) {
+		StringBuffer buf = new StringBuffer();
+		String project_id = System.getProperty("com.google.appengine.application.id");
+		String iss = null;
+		switch (project_id) {
+		case "dev-vantage-hrd":
+			iss = "https://dev-vantage-hrd.appspot.com";
+			break;
+		case "chemvantage-hrd":
+			iss = "https://www.chemvantage.org";
+		}
+		Date now = new Date();
+		Date exp = new Date(now.getTime() + 604800000L); // seven days from now
+		String token = JWT.create()
+				.withIssuer(iss)
+				.withExpiresAt(exp)
+				.withIssuedAt(now)
+				.withClaim("platform_deployment_id",d.platform_deployment_id)
+				.sign(Algorithm.HMAC256(Subject.getSubject().HMAC256Secret));
+
+		String activationURL = iss + "/lti/registration?token=" + token;
+
+		buf.append("<h2>Activate Your ChemVantage Registration</h2>"
+				+ "Congratulations! Your LTI registration request has been approved:<br/>"
+				+ "LMS Platform: " + d.getPlatformId() + "<br/>"
+				+ "Deployment ID: " + d.getDeploymentId() + "<br/>"
+				+ "Client ID: " + d.client_id + "<br/><br/>"
+				+ "If this is correct, please click the following link to complete the activation of your ChemVantage account:<br/>"
+				+ "<a href=" + activationURL + ">" + activationURL + "</a><br/><br/>"
+				+ "For your security, this link is active for only 7 days and expires at " + exp + ".<br/><br/>");
+
+		buf.append("<h3>Helpful Hints</h3>"
+				+ "ChemVantage supports two types of LTI launches from your LMS:<ol>"
+				+ "<li>Deep Linking - used by the instructor, course designer or administrator to select ChemVantage assignments.</li>"
+				+ "<li>Resource Link - used by students to start an existing assignment or by an instructor to create a new one.</li>"
+				+ "</ol>"
+				+ "You should configure the ChemVantage placements in your LMS with the appropriate locations and permissions.<br/><br/>");
+		
+		switch (d.lms_type) {
+		case "canvas":
+			buf.append("To the Course Instructor:<ol>"
+					+ "<li>Create a new Canvas assignment with the following recommended parameters:" 
+					+ "<ul><li>Name: (as appropriate, e.g. Quiz - Heat and Enthalpy)</li>"
+					+ " <li>Points: 10 for quiz or homework; 5 for video; 100 for practice exam</li>"
+					+ " <li>Submission Type: External Tool</li>"
+					+ " <li>External Tool URL: Find ChemVantage or enter " + iss + "/lti/launch</li>"
+					+ " <li>Save or Save and Publish</li>"
+					+ "</ul></li>"
+					+ "<li>When you launch the assignment, you may use the highlighted link to customize it for your class.</li>"
+					+ "</ol>");
+			break;
+		case "blackboard":
+			buf.append("To the Course Instructor:");
+			buf.append("<ol><li>Go to the course | Content | Build Content | ChemVantage</li>"
+					+ "<li>Name: as appropriate (e.g., Quiz - Heat & Enthalpy)</li>"
+					+ "<li>Grading:"
+					+ "<ul><li>Enable Evaluation - Yes</li>"
+					+ " <li>Points - 10 for quiz or homework; 5 for video; 100 for practice exam</li>"
+					+ " <li>Visible to Students - Yes</li>"
+					+ "</ul></li>"
+					+ "<li>Submit</li>"
+					+ "<li>Click the new assignment link to launch ChemVantage</li>"
+					+ "<li>Choose the relevant assignment (e.g., Quiz on Heat & Enthalpy)</li>"
+					+ "<li>Customize the assignment, if desired, using the highlighted link</li>"
+					+ "</ol>");
+			break;
+		default: buf.append("If you need additional assistance, please contact us at admin@chemvantage.org</br>Thank you.");
+		}
+		
+	}
+	
 	String dynamicRegistrationSuccessPage(Deployment d) {
 		StringBuffer buf = new StringBuffer();
-		buf.append(Home.banner + "<h2>Registration Success</h2>");
-		buf.append("The LTI registration process in ChemVantage is now complete, and your account should be active if the ChemVantage deployment "
-				+ "has been activated in your LMS by your LMS administrator. You should be able to create assignments where the submission is handled "
-				+ "by ChemVantage as an external LTI tool.<br/><br/>"
-				+ "If you have any difficulty, please contact us at admin@chemvantage.org");
-		buf.append("<h3>Keep ChemVantage Free</h3>"
-				+ "ChemVantage provides free OER services to thousands of students. The cost of this service is paid entirely by generous donations "
-				+ "from people like you. Please consider making a donation to support ChemVantage and keep the good karma flowing.<br/>");
-		buf.append("<form action=\"https://www.paypal.com/donate\" method=\"post\" target=\"_top\">\n"
-				+ "<input type=\"hidden\" name=\"hosted_button_id\" value=\"4DYCV6EG2HPB2\" />\n"
-				+ "<input type=\"image\" src=\"https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif\" border=\"0\" name=\"submit\" "
-				+ "title=\"PayPal - The safer, easier way to pay online!\" alt=\"Donate with PayPal button\" />\n"
-				+ "<img alt=\"\" border=\"0\" src=\"https://www.paypal.com/en_US/i/scr/pixel.gif\" width=\"1\" height=\"1\" />\n"
-				+ "</form>");
+		if ("active".equals(d.status) ) {
+			buf.append(Home.banner + "<h2>Registration Success</h2>");
+			buf.append("The LTI registration process in ChemVantage is now complete, and your account should be active if the ChemVantage deployment "
+					+ "has been activated in your LMS by your LMS administrator. You should be able to create assignments where the submission is handled "
+					+ "by ChemVantage as an external LTI tool.<br/><br/>"
+					+ "If you have any difficulty, please contact us at admin@chemvantage.org");
+			buf.append("<h3>Keep ChemVantage Free</h3>"
+					+ "ChemVantage provides free OER services to thousands of students. The cost of this service is paid entirely by generous donations "
+					+ "from people like you. Please consider making a donation to support ChemVantage and keep the good karma flowing.<br/>");
+			buf.append("<form action=\"https://www.paypal.com/donate\" method=\"post\" target=\"_top\">\n"
+					+ "<input type=\"hidden\" name=\"hosted_button_id\" value=\"4DYCV6EG2HPB2\" />\n"
+					+ "<input type=\"image\" src=\"https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif\" border=\"0\" name=\"submit\" "
+					+ "title=\"PayPal - The safer, easier way to pay online!\" alt=\"Donate with PayPal button\" />\n"
+					+ "<img alt=\"\" border=\"0\" src=\"https://www.paypal.com/en_US/i/scr/pixel.gif\" width=\"1\" height=\"1\" />\n"
+					+ "</form>");
+		} else buf.append("An unexpected error occurred. Please contact admin@chemvantage.org for assistance.");
 		return buf.toString();
 	}
 	
-	Deployment activateDeployment(String iss, String token) throws Exception {
-		DecodedJWT decoded = JWT.require(algorithm).withIssuer(iss).build().verify(token);
-		String platformDeploymentId = decoded.getClaim("platform_deployment_id").asString();
+	Deployment activateDeployment(String platformDeploymentId) throws Exception {
 		Deployment d = ofy().load().type(Deployment.class).id(platformDeploymentId).safe();
-		if ("pending".equals(d.status)) d.status = "active";
-		ofy().save().entity(d);
+		if ("pending".equals(d.status)) {
+			d.status = "active";
+			ofy().save().entity(d);
+		}
 		return d;
 	}
 }
