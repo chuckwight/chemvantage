@@ -209,7 +209,7 @@ public class About extends HttpServlet {
 		+ "under FERPA, either directly from students as a result of completing ChemVantage assignments or from the school "
 		+ "or educational institution through the LTI connection to the school's learning management system (LMS). User data "
 		+ "are processed solely for educational purposes and are shared back to the school LMS through the LTI connection. "
-		+ "ChemVantage does not otherwise process, store, sell or share any student personally identifiable information.";
+		+ "ChemVantage does not otherwise process, store, sell or share any student records or personally identifiable information.";
 	
 	public static String privacy = "<a NAME=privacy></a>"
 		+ "<h3>Privacy Policy</h3>"
