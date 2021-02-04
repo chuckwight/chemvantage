@@ -137,18 +137,18 @@ public class LTIRegistration extends HttpServlet {
 					Deployment d = activateDeployment(iss,token);
 					out.println(Home.header("LTI Registration") + dynamicRegistrationSuccessPage(d) + Home.footer);
 				}
-			else throw new Exception("LTI version was missing or invalid.");
-		} else {
-			String registrationURL = "/Registration.jsp";
-			Enumeration<String> enumeration = request.getParameterNames();
-	        int i=0;
-			while(enumeration.hasMoreElements()){
-	            String parameterName = enumeration.nextElement();
-	            String parameterValue = request.getParameter(parameterName);
-	            registrationURL += (i==0?"?":"&") + parameterName + "=" + URLEncoder.encode(parameterValue,"utf-8");
-	        }	        
-			response.sendRedirect(registrationURL);
-		}
+				else throw new Exception("LTI version was missing or invalid.");
+			} else {
+				String registrationURL = "/Registration.jsp";
+				Enumeration<String> enumeration = request.getParameterNames();
+				int i=0;
+				while(enumeration.hasMoreElements()){
+					String parameterName = enumeration.nextElement();
+					String parameterValue = request.getParameter(parameterName);
+					registrationURL += (i==0?"?":"&") + parameterName + "=" + URLEncoder.encode(parameterValue,"utf-8");
+				}	        
+				response.sendRedirect(registrationURL);
+			}
 		} catch (Exception e) {
 			response.sendError(401, e.getMessage());
 		}
@@ -186,7 +186,8 @@ public class LTIRegistration extends HttpServlet {
 			}
 		} catch (Exception e) {
 			String message = e.getMessage();
-			String registrationURL = "/Registration.jsp?message=" + URLEncoder.encode(message,"utf-8");
+			String registrationURL = request.getParameter("use").equals("prod")?"https://www.chemvantage.org":"https://dev-vantage-hrd.appspot.com";
+			registrationURL += "/Registration.jsp?message=" + URLEncoder.encode(message,"utf-8");
 			Enumeration<String> enumeration = request.getParameterNames();
 			while(enumeration.hasMoreElements()){
 	            String parameterName = enumeration.nextElement();
@@ -235,9 +236,11 @@ public class LTIRegistration extends HttpServlet {
 		if (!"true".equals(request.getParameter("AcceptChemVantageTOS"))) throw new Exception("You must accept the ChemVantage Terms of Service. ");
 
 		if (!reCaptchaOK(request)) throw new Exception("ReCaptcha tool was unverified. Please try again. ");
-	
-		// Construct a new registration token
+		
 		String iss = use.equals("test")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
+		if (!iss.contains(request.getServerName())) throw new Exception("Redirected to the requested server. Please submit again. ");
+		
+		// Construct a new registration token
 		Date now = new Date();
 		Date exp = new Date(now.getTime() + 259200000L); // three days from now
 		String token = JWT.create()

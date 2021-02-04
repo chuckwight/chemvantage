@@ -52,9 +52,9 @@ Your Name: <input type=text name=sub size=40 value='<%= (sub==null?"":sub) %>'><
 Your Email: <input type=text name=email size=40 value='<%= (email==null?"":email) %>'><br><br>
 
 Type of organization:<br>
-<label><input type=radio name=typ value=nonprofit checked> Public or nonprofit educational institution (up to 1000 users)</label><br>
-<label><input type=radio name=typ value=personal> Small business or Personal account (up to 5 users)</label><br>
-<label><input type=radio name=typ value=forprofit> Commercial partnership (up to 10000 users)</label><br><br>
+<label><input type=radio name=typ value=nonprofit <%= ((typ==null || typ.equals("nonprofit"))?"checked":"") %>> Public or nonprofit educational institution (up to 1000 users)</label><br>
+<label><input type=radio name=typ value=personal <%= ((typ!=null && typ.equals("personal"))?"checked":"") %>> Small business or Personal account (up to 5 users)</label><br>
+<label><input type=radio name=typ value=forprofit <%= ((typ!=null && typ.equals("forprofit"))?"checked":"") %>> Commercial partnership (up to 10000 users)</label><br><br>
 
 <span id=orginfo>Your Organization Name: <input type=text name=aud  value='<%= (aud==null?"":aud) %>'> 
 and Org Home Page: <input type=text name=url placeholder='https://myschool.edu' value='<%= (url==null?"":url) %>'><br>
