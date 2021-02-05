@@ -1026,7 +1026,10 @@ public class LTIRegistration extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		buf.append(Home.header() + Home.banner);
 		buf.append("<h3>Your Registration Request Was Successful</h3>"
-				+ "The LTI Advantage deployment was created in ChemVantage and in your LMS. There are three more steps required to activate the "
+				+ "The LTI Advantage deployment was created in ChemVantage and in your LMS. ");
+	
+		/*		
+		buf.append("There are three more steps required to activate the "
 				+ "deployment: <ol>"
 				+ "<li>Your LMS administrator must now activate the deployment in your LMS.</li>"
 				+ "<li>ChemVantage will review the deployment and send an activation link via email to " + request.getParameter("email") + "</li>"
@@ -1044,6 +1047,8 @@ public class LTIRegistration extends HttpServlet {
 				+ "title=\"PayPal - The safer, easier way to pay online!\" alt=\"Donate with PayPal button\" />\n"
 				+ "<img alt=\"\" border=\"0\" src=\"https://www.paypal.com/en_US/i/scr/pixel.gif\" width=\"1\" height=\"1\" />\n"
 				+ "</form>");
+				
+		*/
 		buf.append(Home.footer);
 		return buf.toString();
 	}
@@ -1140,7 +1145,7 @@ public class LTIRegistration extends HttpServlet {
 		return buf.toString();
 	}
 	
-	Deployment activateDeployment(String platformDeploymentId) throws Exception {
+	static Deployment activateDeployment(String platformDeploymentId) throws Exception {
 		Deployment d = ofy().load().type(Deployment.class).id(platformDeploymentId).safe();
 		if ("pending".equals(d.status)) {
 			d.status = "active";

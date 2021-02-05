@@ -40,7 +40,9 @@
 <span style='color: red; border: 2px solid red'>&nbsp;<%= message %> &nbsp;</span>
 <% } %>
 
-<h4>ChemVantage LTI Registration</h4>
+
+<h4>ChemVantage LTI <%= openid_configuration==null?"":"Dynamic" %> Registration</h4>
+
 Please complete the form below to obtain a set of LTI credentials. The information you 
 provide will help us to create a trusted connection between your learning management system (LMS) and
 ChemVantage that is convenient, secure and <a href=https://site.imsglobal.org/certifications?query=chemvantage>certified by IMS</a>.

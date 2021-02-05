@@ -112,9 +112,9 @@ public class Admin extends HttpServlet {
 				Deployment d = ofy().load().type(Deployment.class).id(request.getParameter("platform_deployment_id")).safe();
 				switch(request.getParameter("action")) {
 				case "Approve":
-					d.status = "pending";
+					d.status = "approved";  //"pending";
 					ofy().save().entity(d);
-					LTIRegistration.sendApprovalEmail(d);
+					// LTIRegistration.sendApprovalEmail(d);
 					break;
 				case "Delete":
 					ofy().delete().entity(d);
