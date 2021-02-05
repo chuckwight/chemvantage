@@ -40,14 +40,25 @@
 <span style='color: red; border: 2px solid red'>&nbsp;<%= message %> &nbsp;</span>
 <% } %>
 
-
-<h4>ChemVantage LTI <%= openid_configuration==null?"":"Dynamic" %> Registration</h4>
+<% if (openid_configuration == null) { %>
+<h4>ChemVantage LTI Registration</h4>
 
 Please complete the form below to obtain a set of LTI credentials. The information you 
 provide will help us to create a trusted connection between your learning management system (LMS) and
 ChemVantage that is convenient, secure and <a href=https://site.imsglobal.org/certifications?query=chemvantage>certified by IMS</a>.
 When you submit the form, you will receive an email containing the information you need to
 complete the configuration of your LMS as well as a link to finalize the registration.<br><br>
+
+<%} else { %>
+
+<h4>ChemVantage LTI Advantage Dynamic Registration</h4>
+
+Please complete the form below to create a trusted LTI Advantage connection between your LMS and ChemVantage 
+that is convenient, secure and <a href=https://site.imsglobal.org/certifications?query=chemvantage>certified by IMS</a>.
+When you submit the form, ChemVantage will send a registration request to your LMS. If successful, your LMS administrator 
+will need to activate the deployment in your LMS before a launch to ChemVantage can take place.<br><br>
+
+<% } %>
 
 <form method=post action=/lti/registration>
 
@@ -89,8 +100,9 @@ Type of Learning Management System:<br>
 <% } %>
 
 <label><input type=checkbox name=AcceptChemVantageTOS value=true <%= ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") %>>Accept the <a href=/About#terms target=_blank>ChemVantage Terms of Service</a></label><br><br>
+<input type=hidden name=UserRequest value='Send Me the Registration Email'>
 
 <div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div><br><br>
-<input type=submit name=UserRequest value='Send Me The Registration Email'>
+<input type=submit value='Submit Registration'>
 </form>
 <%= Home.footer %>
