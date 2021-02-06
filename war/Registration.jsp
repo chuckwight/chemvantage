@@ -2,14 +2,16 @@
 <%@ page import="static com.googlecode.objectify.ObjectifyService.ofy" %>
 <%@ page import="java.util.*,com.googlecode.objectify.*,org.chemvantage.*"%>
 
-<%  String message = request.getParameter("message");
+<%
+	String thisURL = "https://" + request.getServerName() + "/lti/registration";
+	String message = request.getParameter("message");
 	String sub = request.getParameter("sub");
 	String email = request.getParameter("email");
 	String typ = request.getParameter("typ");
 	String aud = request.getParameter("aud");
 	String url = request.getParameter("url");
 	String use = request.getParameter("use");
-	if (use==null) use = request.getServerName().contains("dev-vantage")?"test":"prod";
+	if (use == null) use = thisURL.contains("dev-vantage") ? "test" : "prod";
 	String ver = request.getParameter("ver");
 	String lms = request.getParameter("lms");
 	String lms_other = request.getParameter("lms_other");
@@ -43,7 +45,10 @@
 <% if (openid_configuration == null) { %>
 <h4>ChemVantage LTI Registration</h4>
 
-Please complete the form below to obtain a set of LTI credentials. The information you 
+ChemVantage supports LTI Advantage Dynamic Registration at <a href=<%= thisURL %>><%= thisURL %></a><br/>
+If your LMS supports this, the registration process will be fast and easy!<br/><br/>
+
+Otherwise, you may proceed with manual registration by completing the form below to obtain a set of LTI credentials. The information you 
 provide will help us to create a trusted connection between your learning management system (LMS) and
 ChemVantage that is convenient, secure and <a href=https://site.imsglobal.org/certifications?query=chemvantage>certified by IMS</a>.
 When you submit the form, you will receive an email containing the information you need to

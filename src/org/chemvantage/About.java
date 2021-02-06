@@ -168,7 +168,7 @@ public class About extends HttpServlet {
 		+ "contact information at the bottom of this page.";
 			
 	public static String copyright = "<a NAME=copyright></a>"
-		+ "<h3>Copyright &copy; 2007-2020 ChemVantage LLC</h3>"
+		+ "<h3>Copyright &copy; 2007-2021 ChemVantage LLC</h3>"
 		+ "<a rel='license' href=https://creativecommons.org/licenses/by/3.0/us target=_blank>"
 		+ "<img alt='Creative Commons License' style='border-width:0' align=left hspace=10 vspace=5 "
 		+ "src='https://i.creativecommons.org/l/by/3.0/us/88x31.png'/></a>"
