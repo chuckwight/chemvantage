@@ -173,7 +173,12 @@ public class LTIRegistration extends HttpServlet {
 		String iss = "https://" + request.getServerName();
 		
 		try {
-			if ("Send Me The Registration Email".contentEquals(userRequest)) {			
+			if ("finalize".contentEquals(userRequest)) {				
+				String token = request.getParameter("Token");
+				JWT.require(algorithm).withIssuer(iss).build().verify(token);
+				out.println(Home.header("ChemVantage LTI Registration") + Home.banner + createDeployment(request) + Home.footer);			
+			} else {
+				if (request.getParameter("email")==null) throw new Exception("Email was not given.");
 				String token = validateApplicationFormContents(request);
 				if ("dynamic_registration".equals(request.getParameter("ver"))) {
 					JsonObject openIdConfiguration = getOpenIdConfiguration(request);  // LTIDRSv1p0 section 3.4
@@ -185,11 +190,7 @@ public class LTIRegistration extends HttpServlet {
 				} else {
 					sendRegistrationEmail(token);
 					out.println(Home.header("ChemVantage LTI Registration") + Home.banner + "<h3>Registration Success</h3>Thank you. A registration email has been sent to your address.<p>" + Home.footer);			
-				} 
-			} else if ("finalize".contentEquals(userRequest)) {				
-				String token = request.getParameter("Token");
-				JWT.require(algorithm).withIssuer(iss).build().verify(token);
-				out.println(Home.header("ChemVantage LTI Registration") + Home.banner + createDeployment(request) + Home.footer);			
+				}
 			}
 		} catch (Exception e) {
 			String message = e.getMessage();
