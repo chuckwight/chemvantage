@@ -259,7 +259,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 					+ "&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 					+ "&client_assertion=" + token
 					+ "&scope=" + URLEncoder.encode(d.scope, "utf-8").replaceAll("%20", "+");
-			debug.append("Body: " + body);
+			debug.append("Body: " + body + ".");
 			
 			URL u = new URL(d.oauth_access_token_url);
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
@@ -276,12 +276,13 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			wr.writeBytes(body);
 
 			int responseCode = uc.getResponseCode();
-			debug.append("ResponseCode: " + responseCode);
+			debug.append("ResponseCode: " + responseCode + ".");
 			
 			if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED || responseCode == HttpURLConnection.HTTP_ACCEPTED) { // 200m or 201 or 202
 				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
 				JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
 				reader.close();
+				debug.append("Response: " + json.toString() + ">");
 				
 				// decode the Json response object. Fields include access_token, token-type, expires_in, scope
 				String access_token = json.get("access_token").getAsString();
