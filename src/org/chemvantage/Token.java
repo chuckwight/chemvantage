@@ -128,9 +128,11 @@ public class Token extends HttpServlet {
 		case 1:
 			return deployments.get(0);
 		default:
-			if (deployment_id.isEmpty()) throw new Exception("Required deployment_id parameter was not included in the token request.");
-			else throw new Exception("This deployment is not registered in ChemVantage");
+			if (deployment_id.isEmpty()) {
+				for (Deployment dep : deployments) if (client_id.equals(dep.client_id)) return dep;
+			}
 		}
+		throw new Exception("This deployment is not registered in ChemVantage");
 	}
 	
 
