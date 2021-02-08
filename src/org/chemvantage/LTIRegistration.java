@@ -939,7 +939,7 @@ public class LTIRegistration extends HttpServlet {
 			regJson.addProperty("token_endpoint_auth_method", iss + "private_key_jwt");
 			regJson.addProperty("policy_uri", iss + "/About#privacy");
 			JsonArray contactEmails = new JsonArray();
-				responseTypes.add("admin@chemvantage.org");
+				contactEmails.add("admin@chemvantage.org");
 				regJson.add("contacts", contactEmails);
 			regJson.addProperty("scope", "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly https://purl.imsglobal.org/spec/lti-ags/scope/score https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly");
 			JsonObject ltiToolConfig = new JsonObject();
