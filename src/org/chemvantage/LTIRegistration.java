@@ -895,12 +895,12 @@ public class LTIRegistration extends HttpServlet {
 		try {
 			URL issuer = new URL(openIdConfiguration.get("issuer").getAsString());
 			URL config = new URL(openIdConfigurationURL);
-			if (!issuer.getProtocol().equals("https://")) throw new Exception("Issuer protocol must be https:// ");
-			if (!config.getProtocol().equals("https://")) throw new Exception("OpenID configuration URL protocol must be https:// ");
+			if (!issuer.getProtocol().contains("https")) throw new Exception("Issuer protocol must be https:// ");
+			if (!config.getProtocol().contains("https")) throw new Exception("OpenID configuration URL protocol must be https:// ");
 			if (!issuer.getHost().equals(config.getHost())) throw new Exception("Host names of issuer and openid_configuration URL must match. ");
 			if (config.getRef() != null) throw new Exception("OpenID configuration URL must not contain any fragmant parameter. ");
 		} catch (Exception e) {
-			throw new Exception("Invalid openid_configuration from " + openIdConfigurationURL + ": ");
+			throw new Exception("Invalid openid_configuration from " + openIdConfigurationURL + ": " + e.getMessage());
 		}		
 	}
 	
@@ -976,7 +976,8 @@ public class LTIRegistration extends HttpServlet {
 				ltiToolConfig.add("messages", ltiMessages);
 			regJson.add("https://purl.imsglobal.org/spec/lti-tool-configuration", ltiToolConfig);
 			
-			URL u = new URL(openIdConfiguration.get("registration_endpoint").getAsString());
+			String reg_endpoint = openIdConfiguration.get("registration_endpoint").getAsString();
+			URL u = new URL(reg_endpoint);
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setRequestMethod("POST");
 			if (registrationToken != null) uc.setRequestProperty("Authorization", "Bearer " + registrationToken);
@@ -991,12 +992,12 @@ public class LTIRegistration extends HttpServlet {
 			os.write(json_bytes, 0, json_bytes.length);           
 			os.close();
 		
-			if (uc.getResponseCode() == 400) throw new Exception("Platform refused registration request with code 400. ");
-			
 			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
 			registrationResponse = JsonParser.parseReader(reader).getAsJsonObject();
 			reader.close();
-		} catch (Exception e) {
+
+			if (uc.getResponseCode() == 401) throw new Exception("Platform refused registration request with code 401:<br/>" + registrationResponse.toString());
+			} catch (Exception e) {
 			throw new Exception("Posting registration request to the LMS platform failed: " + e.getMessage());
 		}
 		return registrationResponse;
