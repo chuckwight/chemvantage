@@ -106,33 +106,28 @@ public class Token extends HttpServlet {
 		// be used in case the platform supports multiple deployments with different client_id values for the tool.
 		// However, this is not technically required by the specifications. Hmm.
 		
-		if (deployment_id==null) deployment_id = "";  // may be empty String for 1-deployment platforms
-		else deployment_id = "/" + deployment_id;
-		
 		URL platform = new URL(platform_id);
-		String platform_deployment_id = new URL("https",platform.getHost(),platform.getPort(),deployment_id).toString();
-		if (platform_deployment_id.lastIndexOf("/") == platform_deployment_id.length()-1) platform_deployment_id = platform_deployment_id.substring(0, platform_deployment_id.length()-1);
 		
-		// Optimistic route first:
-		Deployment d = ofy().load().type(Deployment.class).id(platform_deployment_id).now();
-		if (d != null) return d;
-	
-		// OK, that didn't work; try a range of Deployments all with the matching platform_id
+		// Take the optimistic route first; this should always work if the deploymdent_id has been provided, else return null;
+		if (deployment_id != null) {
+			String platform_deployment_id = new URL("https",platform.getHost(),platform.getPort(),deployment_id).toString();
+			if (platform_deployment_id.lastIndexOf("/") == platform_deployment_id.length()-1) platform_deployment_id = platform_deployment_id.substring(0, platform_deployment_id.length()-1);
+			return ofy().load().type(Deployment.class).id(platform_deployment_id).now();
+		}
+		
+		// Prepare to search for all deployments from this platform:
 		Key<Deployment> kstart = Key.create(Deployment.class, platform.toString());
 		Key<Deployment> kend = Key.create(Deployment.class, platform.toString() + "~");			
-		List<Deployment> deployments = ofy().load().type(Deployment.class).filterKey(">=",kstart).filterKey("<",kend).list();
+		List<Deployment> deployments = null;
 		
-		switch (deployments.size()) {
-		case 0:
-			throw new Exception("Deployment not found.");
-		case 1:
-			return deployments.get(0);
-		default:
-			if (deployment_id.isEmpty()) {
-				for (Deployment dep : deployments) if (client_id.equals(dep.client_id)) return dep;
-			}
+		if (client_id != null) {
+			// Find all deployments from this platform with the specified client_id; there SHOULD be only one if the deployment_id was not provided.
+			deployments = ofy().load().type(Deployment.class).filterKey(">=",kstart).filterKey("<",kend).filter("client_id",client_id).list();
+		} else {
+			// Find all of the deployments from this platform; there SHOULD be only one if neither deployment_id nor client_id was provided.
+			deployments = ofy().load().type(Deployment.class).filterKey(">=",kstart).filterKey("<",kend).list();
 		}
-		throw new Exception("This deployment is not registered in ChemVantage");
+		return deployments.size()==1?deployments.get(0):null;  // fails if there are no deployments or multiple deployments in the List
 	}
 	
 
