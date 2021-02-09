@@ -110,7 +110,7 @@ public class Token extends HttpServlet {
 		
 		// Take the optimistic route first; this should always work if the deploymdent_id has been provided, else return null;
 		if (deployment_id != null) {
-			String platform_deployment_id = new URL("https",platform.getHost(),platform.getPort(),deployment_id).toString();
+			String platform_deployment_id = new URL("https",platform.getHost(),platform.getPort(),"/"+deployment_id).toString();
 			if (platform_deployment_id.lastIndexOf("/") == platform_deployment_id.length()-1) platform_deployment_id = platform_deployment_id.substring(0, platform_deployment_id.length()-1);
 			return ofy().load().type(Deployment.class).id(platform_deployment_id).now();
 		}
