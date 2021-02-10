@@ -108,7 +108,7 @@ public class Token extends HttpServlet {
 		
 		URL platform = new URL(platform_id);
 		
-		// Take the optimistic route first; this should always work if the deploymdent_id has been provided, else return null;
+		// Take the optimistic route first; this should always work if the deployment_id has been provided, else return null;
 		if (deployment_id != null) {
 			String platform_deployment_id = new URL("https",platform.getHost(),platform.getPort(),"/"+deployment_id).toString();
 			if (platform_deployment_id.lastIndexOf("/") == platform_deployment_id.length()-1) platform_deployment_id = platform_deployment_id.substring(0, platform_deployment_id.length()-1);
@@ -127,7 +127,11 @@ public class Token extends HttpServlet {
 			// Find all of the deployments from this platform; there SHOULD be only one if neither deployment_id nor client_id was provided.
 			deployments = ofy().load().type(Deployment.class).filterKey(">=",kstart).filterKey("<",kend).list();
 		}
-		return deployments.size()==1?deployments.get(0):null;  // fails if there are no deployments or multiple deployments in the List
+		switch (deployments.size()) {
+		case 0: throw new Exception("A search of deployments from this platform returned no matching entities from the database.");
+		case 1: return deployments.get(0);
+		default: throw new Exception("A search of deployments from this platform returned multiple matching entities. The deployment_id must be included in the auth token request.");
+		}
 	}
 	
 
