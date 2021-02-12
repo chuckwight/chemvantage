@@ -69,7 +69,7 @@ public class Quiz extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 			
-			if ("ShowScores".contentEquals(userRequest)) out.println(Home.header("Your ChemVantage Scores") + showScores(user,request) + Home.footer);
+			if ("ShowScores".contentEquals(userRequest)) out.println(Home.header("Your ChemVantage Scores") + showScores(user) + Home.footer);
 			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header("Your Class ChemVantage Scores") + showSummary(user,request) + Home.footer);
 			else if ("AssignQuizQuestions".contentEquals(userRequest) && user.isInstructor()) {
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
@@ -555,8 +555,8 @@ public class Quiz extends HttpServlet {
 		+ "</SCRIPT>";
 	}
 
-	String showScores (User user, HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer("<h2>Your Quiz Transactions</h2>");
+	protected static String showScores (User user) {
+		StringBuffer buf = new StringBuffer("<h2>Quiz Transactions</h2>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
 		
@@ -578,10 +578,7 @@ public class Quiz extends HttpServlet {
 			List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).filter("userId",user.id).filter("assignmentId",a.id).order("downloaded").list();
 			
 			if (qts.size()==0) {
-				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>"
-						+ "<a href=/Quiz.jsp?AssignmentId=" + a.id 
-						+ "&sig=" + user.getTokenSignature() 
-						+ ">Take me back to the quiz now.</a>");
+				buf.append("Sorry, we did not find any records for this user on this assignment.<p>");
 			} else {				
 				Score s = null;
 				try { // retrieve the score and ensure that it is up to date
@@ -592,7 +589,7 @@ public class Quiz extends HttpServlet {
 					ofy().save().entity(s);
 				}
 				
-				buf.append("Your best score on this assignment is " + Math.round(10*s.getPctScore())/10. + "%.<br>");
+				buf.append("This user's best score on the assignment is " + Math.round(10*s.getPctScore())/10. + "%.<br>");
 
 				// try to validate the score with the LMS grade book entry
 				String lmsScore = null;
@@ -629,13 +626,13 @@ public class Quiz extends HttpServlet {
 					} else if (gotScoreOK) { // there is a significant difference between LMS and ChemVantage scores. Please explain:
 						buf.append("The score recorded in your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%. The difference may be due to<br>"
 								+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<br>"
-								+ "If you think this may be due to a stale score, you may submit this assignment for grading,<br>"
-								+ "even for a score of zero, and ChemVantage will try to refresh your best score to the LMS.<p>");
+								+ "If you think this may be due to a stale score, the user may submit this assignment for grading,<br>"
+								+ "even for a score of zero, and ChemVantage will try to refresh the best score to the LMS.<p>");
 					} else throw new Exception();
 				} catch (Exception e) {
-					buf.append("ChemVantage was unable to retrieve your score for this assignment from the LMS.<br>"
-							+ "Sometimes it takes several seconds for the score to be posted in the LMS grade book.<br>");
-					if (s.score==0 && s.numberOfAttempts<=1) buf.append("It appears that you may not have submitted a score for this quiz yet. ");
+					buf.append("ChemVantage was unable to retrieve the score for this assignment from the LMS.<br>"
+							+ "Sometimes it takes several seconds for a score to be posted in the LMS grade book.<br>");
+					if (s.score==0 && s.numberOfAttempts<=1) buf.append("It appears that the assignment may not have been submitted for a score yet. ");
 					if (user.isInstructor()) buf.append("Some LMS providers do not accept score submissions for instructors or test students.");
 					buf.append("<p>");
 				}

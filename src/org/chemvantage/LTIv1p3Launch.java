@@ -42,6 +42,7 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.URL;
 import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
@@ -141,6 +142,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			launchResourceLink(request,response,d,user,claims);
 			break;
 		case "LtiSubmissionReviewRequest":
+			launchSubmissionReview(response, claims, d, user);
 			break;
 		}
 	}
@@ -249,6 +251,30 @@ public class LTIv1p3Launch extends HttpServlet {
 			response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
 			return;
 		}
+	}
+	
+	void launchSubmissionReview(HttpServletResponse response, JsonObject claims, Deployment d, User u) throws Exception {
+				
+		String for_user_id = claims.get("https://purl.imsglobal.org/spec/lti/claim/for_user").getAsJsonObject().get("user_id").getAsString();  // required
+		String platformForUserId = claims.get("iss").getAsString() + "/" + for_user_id;
+		User forUser = new User(platformForUserId);
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+		
+		if (u.id.equals(forUser.id) || u.isInstructor()) { // viewing the submission record is approved
+			String resourceLinkId = claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link").getAsJsonObject().get("id").getAsString();
+			Assignment a = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();
+			switch (a.assignmentType) {
+			case "Quiz":
+				out.println(Home.header() + Home.banner + Quiz.showScores(forUser) + Home.footer);
+				break;
+			case "Homework":
+				out.println(Home.header() + Home.banner + Homework.showScores(forUser) + Home.footer);
+				break;
+			default:
+				out.println(Home.header() + Home.banner + "<h2>Sorry, this action is not currently supported in ChemVantage.</h2>" + Home.footer);
+			}
+		} else throw new Exception("You must be logged into your LMS ");
 	}
 	
 	protected JsonObject validateStateToken(HttpServletRequest request) throws Exception {

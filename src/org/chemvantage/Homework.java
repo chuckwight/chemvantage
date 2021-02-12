@@ -65,7 +65,7 @@ public class Homework extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 			
-			if ("ShowScores".contentEquals(userRequest)) out.println(Home.header("Your ChemVantage Scores") + showScores(user,request) + Home.footer);
+			if ("ShowScores".contentEquals(userRequest)) out.println(Home.header("Your ChemVantage Scores") + showScores(user) + Home.footer);
 			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header("Your Class ChemVantage Scores") + showSummary(user,request) + Home.footer);
 			else if ("AssignHomeworkQuestions".contentEquals(userRequest) && user.isInstructor()) {
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
@@ -590,7 +590,7 @@ public class Homework extends HttpServlet {
 		return buf.toString(); 
 	}
 
-	protected String showScores(User user,HttpServletRequest request) {
+	protected static String showScores(User user) {
 		StringBuffer buf = new StringBuffer("<h2>Your Homework Transactions</h2>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
@@ -613,10 +613,7 @@ public class Homework extends HttpServlet {
 			List<HWTransaction> hwts = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("assignmentId",a.id).order("graded").list();
 			
 			if (hwts.size()==0) {
-				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>");
-				buf.append("<a href=Homework?AssignmentId=" + a.id 
-						+ "&sig=" + user.getTokenSignature()
-						+ ">Take me back to the homework assignment.</a><p>");
+				buf.append("Sorry, we did not find any records for this user in the database for this assignment.<p>");
 				return buf.toString();
 			} else {
 				Score s = null;
@@ -628,7 +625,7 @@ public class Homework extends HttpServlet {
 					ofy().save().entity(s);
 				}
 				
-				buf.append("Your overall score on this assignment is " + 10.*Math.round(s.getPctScore())/10. + "%.<br>");
+				buf.append("This user's overall score on the assignment is " + 10.*Math.round(s.getPctScore())/10. + "%.<br>");
 
 				// try to validate the score with the LMS grade book entry
 				try {
@@ -661,26 +658,21 @@ public class Homework extends HttpServlet {
 						}
 					}
 					
-					//buf.append((gotScoreOK?"Got score OK.":lmsScore) + "<br>");
-					
 					if (gotScoreOK && Math.abs(lmsPctScore-s.getPctScore())<1.0) { // LMS readResult agrees to within 1%
 						buf.append("This score is accurately recorded in the grade book of your class learning management system.<p>");
 					} else if (gotScoreOK) { // there is a significant difference between LMS and ChemVantage scores. Please explain:
 						buf.append("The score recorded in your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%. The difference may be due to<br>"
 								+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<br>"
-								+ "If you think this may be due to a stale score, you may submit this assignment for grading,<br>"
-								+ "even for a score of zero, and ChemVantage will try to refresh your best score to the LMS.<p>");
+								+ "If you think this may be due to a stale score, th3e user may submit this assignment for grading,<br>"
+								+ "even for a score of zero, and ChemVantage will try to refresh the best score to the LMS.<p>");
 					} else throw new Exception();
 				} catch (Exception e) {
-					buf.append("ChemVantage was unable to retrieve your score for this assignment from the LMS.<br>"
+					buf.append("ChemVantage was unable to retrieve the score for this assignment from the LMS.<br>"
 							+ "Sometimes it takes several seconds for the score to be posted in the LMS grade book.<br>");
-					if (s.score==0 && s.numberOfAttempts==0) buf.append("It appears that you may not have submitted a score for this quiz yet.<br>");
+					if (s.score==0 && s.numberOfAttempts==0) buf.append("It appears that this assignment may not have been submitted for a score yet.<br>");
 					if (user.isInstructor()) buf.append("Some LMS providers do not accept score submissions for instructors or test students.<br>");
 					buf.append("<br>");
 				}
-
-				buf.append("<a href=Homework?sig=" + user.getTokenSignature() 
-						+ ">Take me back to the homework assignment.</a><p>");
 
 				buf.append("<table><tr><th>Transaction Number</th><th>QuestionID</th><th>Graded</th><th>Score</th></tr>");
 				for (HWTransaction hwt : hwts) {
