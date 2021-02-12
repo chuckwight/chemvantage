@@ -115,8 +115,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		JsonObject state = validateStateToken(request); // ensures proper OIDC authorization flow completed			
 
 		Deployment d = validateIdToken(request);  // returns the validated Deployment
-		Deployment original_d = d.clone();  // make a copy to compare for updating later
-
+		
 		// Decode the JWT id_token payload as a JsonObject:
 		JsonObject claims = null;
 		try {
@@ -130,14 +129,26 @@ public class LTIv1p3Launch extends HttpServlet {
 		// verify that the redirect_uri are consistent with the state token:
 		if (!state.get("redirect_uri").getAsString().contains("https://" + request.getServerName() + "/lti/launch")) throw new Exception("Invalid redirect_uri.");
 		
-		String resourceLinkId = verifyLtiMessageClaims(claims); // required
+		verifyLtiMessageClaims(claims); // required
 		User user = getUserClaims(claims);
 
 		// At this point we have all of the REQUIRED info for a valid LTI launch
 		// Process all remaining optional claims in try/catch structures to avoid
 		// throwing unnecessary Exceptions
 
+		switch (claims.get("https://purl.imsglobal.org/spec/lti/claim/message_type").getAsString()) {
+		case "LtiResourceLinkRequest":
+			launchResourceLink(request,response,d,user,claims);
+			break;
+		case "LtiSubmissionReviewRequest":
+			break;
+		}
+	}
+	
+	void launchResourceLink(HttpServletRequest request, HttpServletResponse response, Deployment d, User user, JsonObject claims) throws Exception {
 		// Process deployment claims:
+		Deployment original_d = d.clone();  // make a copy to compare for updating later
+
 		try {
 			Date now = new Date();
 			Date yesterday = new Date(now.getTime()-86400000L); // 24 hrs ago
@@ -188,6 +199,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		 */
 		
 		Assignment myAssignment = null;
+		String resourceLinkId = claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link").getAsJsonObject().get("id").getAsString();
 		
 		if (lti_ags_lineitem_url != null) myAssignment = ofy().load().type(Assignment.class).filter("lti_ags_lineitem_url",lti_ags_lineitem_url).first().now();	
 
@@ -288,7 +300,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		return d;
 	}
 	
-	String verifyLtiMessageClaims(JsonObject claims) throws Exception {
+	void verifyLtiMessageClaims(JsonObject claims) throws Exception {
 		// verify LTI version 1.3.0
 		JsonElement lti_version = claims.get("https://purl.imsglobal.org/spec/lti/claim/version");
 		if (lti_version == null) throw new Exception("LTI version claim was missing.");    
@@ -297,14 +309,19 @@ public class LTIv1p3Launch extends HttpServlet {
 		// Validate the LTI message_type:
 		JsonElement message_type = claims.get("https://purl.imsglobal.org/spec/lti/claim/message_type");
 		if (message_type == null) throw new Exception("Missing LTI message_type.");
-		if (!"LtiResourceLinkRequest".equals(message_type.getAsString())) throw new Exception("LTI message_type claim must be LtiResourceLinkRequest");
+		switch (message_type.getAsString()) {
+		case "LtiResourceLinkRequest": break;
+		case "LtiSubmissionReviewRequest": break;
+		default: throw new Exception("The LTI message_type claim " + message_type.getAsString() + " is not suppported.");
+		}
+		//if (!"LtiResourceLinkRequest".equals(message_type.getAsString())) throw new Exception("LTI message_type claim must be LtiResourceLinkRequest");
 
-		// Process the ResourceLinkRequest information:
+		// Process the ResourceLink claim information:
 		JsonElement resource_link_claims = claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link");
 		if (resource_link_claims == null) throw new Exception("Resource link claims were missing from the id_token.");
-		String resourceLinkId = resource_link_claims.getAsJsonObject().get("id").getAsString();
+		if (resource_link_claims.getAsJsonObject().get("id").getAsString()==null) throw new Exception("Resource link ID value missing from id_token claims. ");
 
-		return resourceLinkId;
+		return;
 	}
 	
 	User getUserClaims(JsonObject claims) throws Exception {
