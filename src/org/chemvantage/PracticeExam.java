@@ -704,6 +704,74 @@ public class PracticeExam extends HttpServlet {
 		+ "</SCRIPT>";
 	}
 	
+	protected static String submissionReview(User user,User forUser) {
+		StringBuffer buf = new StringBuffer();
+
+		if (!user.id.equals(forUser.id) && !user.isInstructor()) return "Access denied.";
+
+		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
+
+		List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("userId",forUser.id).filter("assignmentId",a.id).order("downloaded").list();
+		if (pets.size()==0) {
+			buf.append("Sorry, we did not find any records for " + (user.id.equals(forUser.id)?"you":"this user") + " in the database for this assignment.<p>");
+		} else {				
+			Score s = null;
+			try { // retrieve the score and ensure that it is up to date
+				s = ofy().load().key(Key.create(Key.create(User.class,user.id),Score.class,a.id)).safe();
+				if (s.numberOfAttempts != pets.size()) throw new Exception();
+			} catch (Exception e) { // create a fresh Score entity from scratch
+				s = Score.getInstance(user.id, a);
+				ofy().save().entity(s);
+			}
+
+			buf.append("<h3>Your Scores for This Practice Exam Assignment</h3>");
+
+			buf.append("The best score for this user on this assignment is " + Math.round(s.getPctScore()) + "%.<br>");
+
+			buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Practice Exam Score (percent)</th></tr>");
+
+			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+			int score = 0;
+			int possibleScore = 0;
+			PracticeExamTransaction bestPt = null;
+			int bestPct = 0;
+			for (PracticeExamTransaction pet : pets) {
+				score = 0;
+				possibleScore = 0;
+				for (int i=0;i<pet.topicIds.size();i++) {
+					score += pet.scores[i];
+					possibleScore += pet.possibleScores[i];
+				}
+				int pct = (possibleScore>0?score*100/possibleScore:0);
+				if (pct >= bestPct) bestPt = pet;
+
+				buf.append("<tr><td>" + pet.id + "</td><td>" + df.format(pet.downloaded) + "</td><td align=center>" + (pet.graded==null?"-":pct + "%") +  "</td></tr>");
+			}
+			buf.append("</table><br>Missing scores indicate quizzes that were downloaded but not submitted for scoring.<p>");
+			
+			List<String> topicTitles = new ArrayList<String>();
+			for (int i=0;i<bestPt.topicIds.size();i++) topicTitles.add(ofy().load().type(Topic.class).id(bestPt.topicIds.get(i)).safe().title);
+			
+			buf.append("<h3>Detailed Scores for the Best Practice Exam</h3>");
+			buf.append("<TABLE><TR><TD><b>Topic</b></TD><TD><b>Score</b></TD>"
+					+ "<TD><b>Possible</b></TD><TD><b>Percent</b></TD><TD></TD></TR>");
+			for (int i=0;i<bestPt.topicIds.size();i++) {
+				int pct = (bestPt.possibleScores[i]>0?bestPt.scores[i]*100/bestPt.possibleScores[i]:0);
+				String color = (pct>84?"#00FF00":(pct<50?"#FF0000":"#FFFF00"));
+				buf.append("<TR>"
+						+ "<TD>" + topicTitles.get(i) + "</TD>"
+						+ "<TD ALIGN=RIGHT>" + bestPt.scores[i] + "</TD>"
+						+ "<TD ALIGN=RIGHT>" + bestPt.possibleScores[i] + "</TD>"
+						+ "<TD ALIGN=RIGHT>" + pct + "%</TD>"
+						+ "<TD><div style='background-color:" + color + ";width:" + pct 
+						+ "px;'/>&nbsp;</TD></TR>");
+			}
+			buf.append("</TABLE><p>");
+	
+		}
+		return buf.toString();
+	}
+
 	String reviewExamScores(User user) {
 		StringBuffer buf = new StringBuffer();
 		try {

@@ -271,8 +271,11 @@ public class LTIv1p3Launch extends HttpServlet {
 			case "Homework":
 				out.println(Home.header() + Home.banner + Homework.showScores(forUser) + Home.footer);
 				break;
+			case "PracticeExam":
+				out.println(Home.header() + Home.banner + PracticeExam.submissionReview(u, forUser) + Home.footer);
+				break;
 			default:
-				out.println(Home.header() + Home.banner + "<h2>Sorry, this action is not currently supported in ChemVantage.</h2>" + Home.footer);
+				out.println(Home.header() + Home.banner + "<h2>Sorry, submission review is not currently available for this type of ChemVantage assignment.</h2>" + Home.footer);
 			}
 		} else throw new Exception("You must be logged into your LMS ");
 	}
