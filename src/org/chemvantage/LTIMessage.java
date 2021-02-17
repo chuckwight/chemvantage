@@ -222,18 +222,16 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	
 	static String getAccessToken(String platformDeploymentId,String scope) {
 	
+		// First, try to retrieve an appropriate authToken from the class variable HashMap authTokens
+		// If the token expires more than 5 minutes from now, use it. Otherwise, request a new one.
 		Date in5Minutes = new Date(new Date().getTime() + 300000L);
 		try {
-			JsonObject authToken = JsonParser.parseString(authTokens.get(platformDeploymentId)).getAsJsonObject();
+			JsonObject authToken = JsonParser.parseString(authTokens.get(platformDeploymentId + scope)).getAsJsonObject();
 			if (in5Minutes.before(new Date(authToken.get("exp").getAsLong()))) return authToken.get("access_token").getAsString();			
 		} catch (Exception e) {
 		}
 		
-		return refreshAccessToken(platformDeploymentId,scope);
-	}
-			
-	static String refreshAccessToken(String platformDeploymentId,String scope) {
-	//static String getAccessToken(String platformDeploymentId,String scope) {
+		// At this point we are to request an authToken from the LMS platform:
 		// First, construct a request token to send to the platform
     	Date now = new Date();
     	StringBuffer debug = new StringBuffer("getAccessToken: ");
@@ -243,7 +241,6 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			debug.append("scope OK.");
 			
 			String iss = System.getProperty("com.google.appengine.application.id").contains("dev-vantage")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
-			Date in5Minutes = new Date(now.getTime() + 300000L);
 			String token = JWT.create()
 					.withIssuer(iss)
 					.withSubject(d.client_id)
@@ -258,7 +255,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			String body = "grant_type=client_credentials"
 					+ "&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 					+ "&client_assertion=" + token
-					+ "&scope=" + URLEncoder.encode(d.scope, "utf-8").replaceAll("%20", "+");
+					+ "&scope=" + URLEncoder.encode(scope, "utf-8").replaceAll("%20", "+");
 			debug.append("Body: " + body + ".");
 			
 			URL u = new URL(d.oauth_access_token_url);
@@ -293,7 +290,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				JsonObject cached_token = new JsonObject();
 				cached_token.addProperty("access_token", access_token);
 				cached_token.addProperty("exp", exp);
-				authTokens.put(d.platform_deployment_id, cached_token.toString());
+				authTokens.put(d.platform_deployment_id + scope, cached_token.toString());
 				
 				// return the access_token only
 				return access_token;
