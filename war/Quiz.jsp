@@ -138,7 +138,7 @@ function showWorkBox(qid) {}
 	%>
 	<FONT COLOR=RED> <%=announcement%>
 	</FONT>
-	<br>
+	<br/>
 	<%
 		}
 	%>
@@ -157,7 +157,7 @@ function showWorkBox(qid) {}
 		<%
 		if (qa.lti_nrps_context_memberships_url != null && qa.lti_ags_lineitem_url != null) {
 	%>
-		<br>You may also view a <a
+		<br/>You may also view a <a
 			href='/Quiz?UserRequest=ShowSummary&sig=<%=user.getTokenSignature()%>'>summary
 			of student scores</a> for this assignment.
 		<%
@@ -194,11 +194,11 @@ function showWorkBox(qid) {}
 
 	<FORM NAME=Quiz id=quizForm METHOD=POST ACTION=Quiz
 		onSubmit='return confirmSubmission()'>
-		<INPUT TYPE=HIDDEN NAME='sig' VALUE='<%=user.getTokenSignature()%>'>
-		<INPUT TYPE=HIDDEN NAME='AssignmentId' VALUE='<%=assignmentId%>'>
-		<input type=hidden name='QuizTransactionId' value='<%=qt.getId()%>'>
-		<input type=hidden name='TopicId' value='<%=topicId%>'> <input
-			type=submit value='Grade This Quiz'>
+		<INPUT TYPE=HIDDEN NAME='sig' VALUE='<%=user.getTokenSignature()%>'/>
+		<INPUT TYPE=HIDDEN NAME='AssignmentId' VALUE='<%=assignmentId%>'/>
+		<input type=hidden name='QuizTransactionId' value='<%=qt.getId()%>'/>
+		<input type=hidden name='TopicId' value='<%=topicId%>'/> 
+		<input type=submit value='Grade This Quiz'/>
 
 		<%
 			//create a set of available questionIds either from the group assignment or from the datastore
@@ -239,7 +239,7 @@ function showWorkBox(qid) {}
 						seed--; // -1 is a special value for randomly seeded Random generator; avoid this (unlikely) situation
 					q.setParameters(seed); // the values are subtracted to prevent (unlikely) overflow
 			%>
-			<li><%=q.print()%> <br></li>
+			<li><%=q.print()%> <br/></li>
 			<%
 				}
 				qt.putPossibleScore(possibleScore);
@@ -253,7 +253,7 @@ function showWorkBox(qid) {}
 			<p>
 		</div>
 
-		<input type=submit value='Grade This Quiz'>
+		<input type=submit value='Grade This Quiz'/>
 	</FORM>
 
 	<SCRIPT>
