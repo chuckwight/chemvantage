@@ -563,25 +563,30 @@ public class LTIDeepLinks extends HttpServlet {
 				item.addProperty("type", "ltiResourceLink");
 					
 				String title = null;
+				int maxScore = 10;
 				switch (assignmentType) {
 					case "PracticeExam":
 						title = "Practice Exam - ";
 						for (long tId : topicIds) title += ofy().load().type(Topic.class).id(tId).now().title + ", ";
 						title.substring(0, title.length()-2);  // strip off the last comma and space
+						maxScore = 100;
 						break;
 					case "VideoQuiz":
 						title = "Video - " + ofy().load().type(Video.class).id(a1.videoId).now().title;
+						maxScore = 10;
 						break;
 					case "Poll":
 						title = "Class Poll";
+						maxScore = 5;
 						break;
-					default:
-						title = a1.assignmentType + " - " + ofy().load().type(Topic.class).id(a1.topicId).now().title;	
+					default:  // Quiz or Homework
+						title = a1.assignmentType + " - " + ofy().load().type(Topic.class).id(a1.topicId).now().title;
+						maxScore = 10;
 				}
 				item.addProperty("title", title);
 
 				JsonObject lineitem = new JsonObject();
-				lineitem.addProperty("scoreMaximum", (assignmentType.contentEquals("PracticeExam")?100:10));
+				lineitem.addProperty("scoreMaximum", maxScore);
 				lineitem.addProperty("label", title);
 				
 				switch (d.lms_type) { // this section binds a resourceId (String version of assignmentId) to the lineitem
@@ -591,7 +596,11 @@ public class LTIDeepLinks extends HttpServlet {
 				default:
 					launchUrl = serverUrl + "/lti/launch";
 					lineitem.addProperty("resourceId", String.valueOf(a1.id));
-				}				
+				}
+				JsonObject submissionReview = new JsonObject();
+				submissionReview.add("reviewableStatus", new JsonArray());
+				lineitem.add("submissionReview", submissionReview);
+				
 				item.add("lineItem", lineitem);
 				item.addProperty("url", launchUrl);
 				
