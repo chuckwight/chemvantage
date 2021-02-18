@@ -224,22 +224,23 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	
 		// First, try to retrieve an appropriate authToken from the class variable HashMap authTokens
 		// If the token expires more than 5 minutes from now, use it. Otherwise, request a new one.
+		Deployment d = null;
 		Date in5Minutes = new Date(new Date().getTime() + 300000L);
-		try {
-			JsonObject authToken = JsonParser.parseString(authTokens.get(platformDeploymentId + scope)).getAsJsonObject();
-			if (in5Minutes.before(new Date(authToken.get("exp").getAsLong()))) return authToken.get("access_token").getAsString();			
-		} catch (Exception e) {
-		}
+		StringBuffer debug = new StringBuffer("getAccessToken: ");
 		
-		// At this point we are to request an authToken from the LMS platform:
-		// First, construct a request token to send to the platform
-    	Date now = new Date();
-    	StringBuffer debug = new StringBuffer("getAccessToken: ");
-    	try {
-			Deployment d = Deployment.getInstance(platformDeploymentId);
+		try {
+			d = Deployment.getInstance(platformDeploymentId);
 			if (!d.scope.contains(scope)) return null;  // must be authorized
-			debug.append("scope OK.");
-			
+
+			String authToken = authTokens.get(platformDeploymentId);
+			if (authToken != null) {  //found a cached authToken; check the expiration and use it
+				JsonObject jAuthToken = JsonParser.parseString(authToken).getAsJsonObject();
+				if (in5Minutes.before(new Date(jAuthToken.get("exp").getAsLong()))) return jAuthToken.get("access_token").getAsString();			
+			}
+
+			// At this point no valid cached authToken was found, so we request a new authToken from the LMS platform:
+			// First, construct a request token to send to the platform
+			Date now = new Date();
 			String iss = System.getProperty("com.google.appengine.application.id").contains("dev-vantage")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
 			String token = JWT.create()
 					.withIssuer(iss)
@@ -255,7 +256,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			String body = "grant_type=client_credentials"
 					+ "&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 					+ "&client_assertion=" + token
-					+ "&scope=" + URLEncoder.encode(scope, "utf-8").replaceAll("%20", "+");
+					+ "&scope=" + URLEncoder.encode(d.scope, "utf-8").replaceAll("%20", "+");
 			debug.append("Body: " + body + ".");
 			
 			URL u = new URL(d.oauth_access_token_url);
@@ -290,7 +291,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				JsonObject cached_token = new JsonObject();
 				cached_token.addProperty("access_token", access_token);
 				cached_token.addProperty("exp", exp);
-				authTokens.put(d.platform_deployment_id + scope, cached_token.toString());
+				authTokens.put(d.platform_deployment_id, cached_token.toString());
 				
 				// return the access_token only
 				return access_token;
