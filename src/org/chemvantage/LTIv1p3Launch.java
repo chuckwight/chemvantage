@@ -215,7 +215,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				JsonObject lineitem = null;
 				try {
 					if (lti_ags_lineitem_url == null) {  // the launch id_token may or may not specify the lineitem URL
-						lineitem = LTIMessage.getLineItem(original_d, resourceLinkId, lti_ags_lineitems_url);
+						lineitem = LTIMessage.getLineItem(d, resourceLinkId, lti_ags_lineitems_url);
 						lti_ags_lineitem_url = lineitem.get("id").getAsString();
 					} else lineitem = LTIMessage.getLineItem(d, lti_ags_lineitem_url);
 					JsonElement rId = lineitem.get("resourceId");
