@@ -382,23 +382,31 @@ public class LTIv1p3Launch extends HttpServlet {
 		Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 		a.assignmentType = request.getParameter("AssignmentType");
 		
-		if (a.assignmentType.contentEquals("Quiz") || a.assignmentType.contentEquals("Homework")) {
-			try {
-				a.topicId = Long.parseLong(request.getParameter("TopicId"));
-				if (a.topicId>0) a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
-			} catch (Exception e) {}
-		} else if (a.assignmentType.contentEquals("PracticeExam")) {
-			try {
-				String[] topicIds = request.getParameterValues("TopicIds");
-				if (topicIds==null || topicIds.length<3) throw new Exception("You must choose at least three topics for this practice exam.");
-				a.topicIds = new ArrayList<Long>();
-				a.questionKeys = new ArrayList<Key<Question>>();
-				for (int i=0;i<topicIds.length;i++) {
-					long tId = Long.parseLong(topicIds[i]);
-					a.topicIds.add(tId);
-					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tId).keys().list());
-				}
-			} catch (Exception e) {}
+		switch (a.assignmentType) {
+		case "Quiz":
+			a.topicId = Long.parseLong(request.getParameter("TopicId"));
+			if (a.topicId>0) a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
+			break;
+		case "Homework":
+			a.topicId = Long.parseLong(request.getParameter("TopicId"));
+			if (a.topicId>0) a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
+			break;
+		case "PracticeExam":
+			String[] topicIds = request.getParameterValues("TopicIds");
+			if (topicIds==null || topicIds.length<3) throw new Exception("You must choose at least three topics for this practice exam.");
+			a.topicIds = new ArrayList<Long>();
+			a.questionKeys = new ArrayList<Key<Question>>();
+			for (int i=0;i<topicIds.length;i++) {
+				long tId = Long.parseLong(topicIds[i]);
+				a.topicIds.add(tId);
+				a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tId).keys().list());
+			}
+			break;
+		case "VideoQuiz":
+			a.videoId = Long.parseLong(request.getParameter("VideoId"));
+			break;
+		case "Poll":
+			break;
 		}
 		return a;		
 	}
