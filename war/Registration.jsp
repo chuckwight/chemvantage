@@ -70,14 +70,14 @@ will need to activate the deployment in your LMS before a launch to ChemVantage 
 Your Name: <input type=text name=sub size=40 value='<%= (sub==null?"":sub) %>'><br/>
 Your Email: <input type=text name=email size=40 value='<%= (email==null?"":email) %>'><br/><br/>
 
-Type of organization:<br/>
-<label><input type=radio name=typ value=nonprofit <%= ((typ==null || typ.equals("nonprofit"))?"checked":"") %>> Public or nonprofit educational institution (up to 1000 users)</label><br/>
-<label><input type=radio name=typ value=personal <%= ((typ!=null && typ.equals("personal"))?"checked":"") %>> Small business or Personal account (up to 5 users)</label><br/>
-<label><input type=radio name=typ value=forprofit <%= ((typ!=null && typ.equals("forprofit"))?"checked":"") %>> Commercial partnership (up to 10000 users)</label><br/><br/>
-
 <span id=orginfo>Your Organization Name: <input type=text name=aud  value='<%= (aud==null?"":aud) %>'> 
 and Org Home Page: <input type=text name=url placeholder='https://myschool.edu' value='<%= (url==null?"":url) %>'><br/>
 	For faster account approval, your Email domain (above) should match the Home Page domain.<br/><br/></span>
+
+Type of organization:<br/>
+<label><input type=radio name=typ value=nonprofit <%= ((typ!=null && typ.equals("nonprofit"))?"checked":"") %>> Public or nonprofit educational institution (up to 1000 users)</label><br/>
+<label><input type=radio name=typ value=personal <%= ((typ!=null && typ.equals("personal"))?"checked":"") %>> Small business or Personal account (up to 5 users)</label><br/>
+<label><input type=radio name=typ value=forprofit <%= ((typ!=null && typ.equals("forprofit"))?"checked":"") %>> Commercial partnership (up to 10000 users)</label><br/><br/>
 
 Select your use case:<br/>
 <label><input type=radio name=use value=prod <%= (use.equals("prod")?"checked":"") %>>Teaching a chemistry class (production server)</label><br/>

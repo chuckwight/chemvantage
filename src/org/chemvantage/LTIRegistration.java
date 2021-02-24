@@ -229,13 +229,13 @@ public class LTIRegistration extends HttpServlet {
 		Pattern pattern = Pattern.compile(regex);
 		if (!pattern.matcher(email).matches()) throw new Exception("Your email address was not formatted correctly. ");
 
+		if (typ==null) throw new Exception("Please specify the type of organization connecting to ChemVantage. ");
+
 		try {
 			if (!"personal".contentEquals(typ)) new URL(url);   // throws Exception if URL is not formatted correctly
 		} catch (Exception e) {
 			throw new Exception("Invalid domain name (" + e.getMessage() + ").");
 		}
-
-		if (typ==null) throw new Exception("Please specify the type of organization connecting to ChemVantage. ");
 
 		if (openid_configuration==null) {
 			if (lms==null) throw new Exception("Please select the type of LMS that you are connecting to ChemVantage. ");
