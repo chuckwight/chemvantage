@@ -308,6 +308,22 @@ public class LTIv1p3Launch extends HttpServlet {
 		String platformDeploymentId = platform_id + "/" + deployment_id;
 		Deployment d = Deployment.getInstance(platformDeploymentId);
 		
+		if (d==null) {  // consider creating a new deployment on this first ltiResourceLinkRequest
+			switch (platform_id) {
+			case "https://canvas.instructure.com": // new Canvas cloud account
+				String client_id = id_token.getAudience().get(0);
+				String oidc_auth_url = "https://canvas.instructure.com/api/lti/authorize_redirect";
+				String oauth_access_token_url = "https://" + new URL(JsonParser.parseString(id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/launch_presentation").asString()).getAsJsonObject().get("return_url").getAsString()).getHost() + "/login/oauth2/token";
+				String well_known_jwks_url = "https://canvas.instructure.com/api/lti/security/jwks";
+				d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,"","","","","canvas");
+				break;
+			case "https://blackboard.com":  // new Blackboard Learn cloud account
+				break;
+			default:
+				throw new Exception("The deployment was not found in the ChemVantage database.");
+			}
+		}
+		
 		// validate the id_token audience:
 		List<String> aud = id_token.getAudience();
 		if (aud.size()==1 && aud.get(0).contentEquals(d.client_id)); // OK, continue

@@ -49,7 +49,13 @@ public class Token extends HttpServlet {
 			debug.append("client_id: " + client_id + "<br>");
 			
 			Deployment d = getDeployment(platform_id,deployment_id,client_id);
-			if (d==null) throw new Exception("This deployment was not found in the ChemVantage database. Please check the registration or contact admin@chemvantage.org for assistance.");
+			if (d!=null) {
+				deployment_id = d.getDeploymentId();
+				client_id = d.client_id;
+			} else {
+				deployment_id = "";
+				client_id = "";
+			}
 			
 			String redirect_uri = target_link_uri;
 			
@@ -70,8 +76,8 @@ public class Token extends HttpServlet {
 					.withExpiresAt(exp)
 					.withIssuedAt(now)
 					.withClaim("nonce", nonce)
-					.withClaim("deployment_id",d.getDeploymentId())
-					.withClaim("client_id", d.client_id)
+					.withClaim("deployment_id",deployment_id)
+					.withClaim("client_id", client_id)
 					.withClaim("redirect_uri", redirect_uri)
 					.sign(algorithm);
 			
@@ -130,7 +136,7 @@ public class Token extends HttpServlet {
 		switch (deployments.size()) {
 		case 0: throw new Exception("A search of deployments from this platform returned no matching entities from the database.");
 		case 1: return deployments.get(0);
-		default: throw new Exception("A search of deployments from this platform returned multiple matching entities. The deployment_id must be included in the auth token request.");
+		default: return null; //throw new Exception("A search of deployments from this platform returned multiple matching entities. The deployment_id must be included in the auth token request.");
 		}
 	}
 	
