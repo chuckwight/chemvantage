@@ -309,15 +309,26 @@ public class LTIv1p3Launch extends HttpServlet {
 		Deployment d = Deployment.getInstance(platformDeploymentId);
 		
 		if (d==null) {  // consider creating a new deployment on this first ltiResourceLinkRequest
+			String client_id = null;
+			String oidc_auth_url = null;
+			String oauth_access_token_url = null;
+			String well_known_jwks_url = null;
 			switch (platform_id) {
 			case "https://canvas.instructure.com": // new Canvas cloud account
-				String client_id = id_token.getAudience().get(0);
-				String oidc_auth_url = "https://canvas.instructure.com/api/lti/authorize_redirect";
-				String oauth_access_token_url = "https://" + new URL(JsonParser.parseString(id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/launch_presentation").asString()).getAsJsonObject().get("return_url").getAsString()).getHost() + "/login/oauth2/token";
-				String well_known_jwks_url = "https://canvas.instructure.com/api/lti/security/jwks";
+				client_id = id_token.getAudience().get(0);
+				oidc_auth_url = "https://canvas.instructure.com/api/lti/authorize_redirect";
+				oauth_access_token_url = "https://" + new URL(JsonParser.parseString(id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/launch_presentation").asString()).getAsJsonObject().get("return_url").getAsString()).getHost() + "/login/oauth2/token";
+				well_known_jwks_url = "https://canvas.instructure.com/api/lti/security/jwks";
 				d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,"","","","","canvas");
+				ofy().save().entity(d);
 				break;
 			case "https://blackboard.com":  // new Blackboard Learn cloud account
+				client_id = (request.getServerName().contains("dev-vantage")?"ec076e8c-b90f-4ecf-9b5d-a9eff03976be":"be1004de-6f8e-45b9-aae4-2c1370c24e1e");
+				oidc_auth_url = "https://developer.blackboard.com/api/v1/gateway/oidcauth";
+				oauth_access_token_url = "https://developer.blackboard.com/api/v1/gateway/oauth2/jwttoken";
+				well_known_jwks_url = "https://developer.blackboard.com/api/v1/management/applications/" + client_id + "/jwks.json";
+				d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,"","","","","blackboard");
+				ofy().save().entity(d);
 				break;
 			default:
 				throw new Exception("The deployment was not found in the ChemVantage database.");
