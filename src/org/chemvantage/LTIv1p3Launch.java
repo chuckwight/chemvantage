@@ -106,7 +106,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				}
 			}		
 		} catch (Exception e) {	
-			response.sendError(401, e.getMessage());
+			response.sendError(401, e.toString() + e.getMessage());
 		}
 	}
 
@@ -382,16 +382,23 @@ public class LTIv1p3Launch extends HttpServlet {
 		if (assignmentId == 0L) throw new Exception("Assignment ID was 0L.");
 		
 		Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+		String topicId = null;
 		a.assignmentType = request.getParameter("AssignmentType");
 		
 		switch (a.assignmentType) {
 		case "Quiz":
-			a.topicId = Long.parseLong(request.getParameter("TopicId"));
-			if (a.topicId>0) a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
+			topicId = request.getParameter("TopicId");
+			if (topicId != null) {
+				a.topicId = Long.parseLong(topicId);
+				a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
+			}
 			break;
 		case "Homework":
-			a.topicId = Long.parseLong(request.getParameter("TopicId"));
-			if (a.topicId>0) a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
+			topicId = request.getParameter("TopicId");
+			if (topicId != null) {
+				a.topicId = Long.parseLong(topicId);
+				a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
+			}
 			break;
 		case "PracticeExam":
 			String[] topicIds = request.getParameterValues("TopicIds");
@@ -405,7 +412,8 @@ public class LTIv1p3Launch extends HttpServlet {
 			}
 			break;
 		case "VideoQuiz":
-			a.videoId = Long.parseLong(request.getParameter("VideoId"));
+			String videoId = request.getParameter("VideoId");
+			if (videoId != null) a.videoId = Long.parseLong(videoId);
 			break;
 		case "Poll":
 			break;
