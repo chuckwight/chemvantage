@@ -760,18 +760,24 @@ public class LTIRegistration extends HttpServlet {
 		
 		ofy().save().entity(d).now();  // registration is now complete
 		
-		String msg = "<h2>Congratulations. Registration is complete.</h2>";
+		int count = ofy().load().type(Response.class).count();
 		
+		String msg = "<h2>Congratulations. Registration is complete.</h2>"
+				+ "ChemVantage provides free OER services to thousands of students. During the past year alone, "
+				+ "ChemVantage presented and scored " + count + " quiz, homework and exam questions at no cost to students. "
+				+ "Financial support to provide these services is provided entirely by generous donations "
+				+ "from people like you. Please consider making a donation to support ChemVantage and keep the good karma flowing.<br/>"
+				+"<form action=\"https://www.paypal.com/donate\" method=\"post\" target=\"_top\">\n"
+				+ "<input type=\"hidden\" name=\"hosted_button_id\" value=\"4DYCV6EG2HPB2\" />\n"
+				+ "<input type=\"image\" src=\"https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif\" border=\"0\" name=\"submit\" "
+				+ "title=\"PayPal - The safer, easier way to pay online!\" alt=\"Donate with PayPal button\" />\n"
+				+ "<img alt=\"\" border=\"0\" src=\"https://www.paypal.com/en_US/i/scr/pixel.gif\" width=\"1\" height=\"1\" />\n"
+				+ "</form><br/><br/>";
+
+
 		if (prior==null) return msg;
 		else if (prior.client_id.equals(d.client_id)) return msg + "Note: this platform deployment was registered previously. The registration data have now been updated.<p>";
 		else return msg + "Note: This platform deployment was registered previously. The client_id and registration data have now been updated. If this is not correct, you should contact admin@chemvantage.org immediately.<p>";
-		/*
-		// check to ensure that this is not a duplicate registration:
-		if (Deployment.getInstance(d.platform_deployment_id) == null) {
-			
-			return "<h2>Congratulations. Registration is complete.</h2>";
-		} else return "Registration Failed: This deployment is already registered with ChemVantage.";
-		*/
 	}	
 
 	String getConfigurationJson(String iss,String lms) {
