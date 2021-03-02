@@ -145,8 +145,9 @@ public class LTIDeepLinks extends HttpServlet {
 			String platformDeploymentId = platform_id + "/" + deployment_id;
 
 			d = Deployment.getInstance(platformDeploymentId);
-			if (d==null) throw new Exception("Deployment not found: " + platformDeploymentId);
-
+			
+			if (d==null) throw new Exception("The deployment was not found in the ChemVantage database.");
+			
 			// validate the id_token audience:
 			List<String> aud = id_token.getAudience();
 			if (aud.size()==1 && aud.get(0).contentEquals(d.client_id)); // OK, continue

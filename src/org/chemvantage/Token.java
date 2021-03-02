@@ -49,13 +49,9 @@ public class Token extends HttpServlet {
 			debug.append("client_id: " + client_id + "<br>");
 			
 			Deployment d = getDeployment(platform_id,deployment_id,client_id);
-			if (d!=null) {
-				deployment_id = d.getDeploymentId();
-				client_id = d.client_id;
-			} else {
-				deployment_id = "";
-				client_id = "";
-			}
+			if (d==null) throw new Exception("ChemVantage was unable to identify the deployment from your LMS. "
+					+ "Please check the registration to ensure the correct deployment_id and client_id. "
+					+ "Contact admin@chemvantage.org for assistance.");
 			
 			String redirect_uri = target_link_uri;
 			
@@ -76,8 +72,8 @@ public class Token extends HttpServlet {
 					.withExpiresAt(exp)
 					.withIssuedAt(now)
 					.withClaim("nonce", nonce)
-					.withClaim("deployment_id",deployment_id)
-					.withClaim("client_id", client_id)
+					.withClaim("deployment_id",d.getDeploymentId())
+					.withClaim("client_id", d.client_id)
 					.withClaim("redirect_uri", redirect_uri)
 					.sign(algorithm);
 			
@@ -102,7 +98,7 @@ public class Token extends HttpServlet {
 			d.claims = oidc_auth_url;
 			ofy().save().entity(d);
 		} catch (Exception e) {
-			response.getWriter().println("Failed token: " + e.toString() + "<br>" + debug.toString());
+			response.getWriter().println("<h3>Failed Auth Token</h3>" + e.toString()); // + "<br>" + debug.toString());
 		}
 	}
 
@@ -134,9 +130,8 @@ public class Token extends HttpServlet {
 			deployments = ofy().load().type(Deployment.class).filterKey(">=",kstart).filterKey("<",kend).list();
 		}
 		switch (deployments.size()) {
-		case 0: throw new Exception("A search of deployments from this platform returned no matching entities from the database.");
 		case 1: return deployments.get(0);
-		default: return null; //throw new Exception("A search of deployments from this platform returned multiple matching entities. The deployment_id must be included in the auth token request.");
+		default: return null; 
 		}
 	}
 	
