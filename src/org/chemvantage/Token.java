@@ -50,7 +50,9 @@ public class Token extends HttpServlet {
 			
 			Deployment d = getDeployment(platform_id,deployment_id,client_id);
 			if (d==null) throw new Exception("ChemVantage was unable to identify the deployment from your LMS. "
-					+ "Please check the registration to ensure the correct deployment_id and client_id. "
+					+ "Please check the registration to ensure the correct deployment_id and client_id. If your "
+					+ "platform registered multiple deployments with ChemVantage, it must provide the client_id "
+					+ "and/or deployment_id to uniquely identify one of them with each auth token request.<br/>"
 					+ "Contact admin@chemvantage.org for assistance.");
 			
 			String redirect_uri = target_link_uri;
