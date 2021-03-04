@@ -357,12 +357,11 @@ public class LTIv1p3Launch extends HttpServlet {
 	
 	User getUserClaims(JsonObject claims) throws Exception {
 		// Process User information:
-		String sub = claims.get("sub").getAsString();  // required
-		if (sub==null || sub.isEmpty()) throw new Exception("Missing or empty subject claim in the id_token.");
-		String platformUserId = claims.get("iss").getAsString() + "/" + sub;
-		User user = new User(platformUserId);
 		
-		//if (claims.has("email")) user.email = claims.get("email").getAsString();
+		User user = null;
+		JsonElement sub = claims.get("sub");
+		if (sub==null || sub.getAsString().isEmpty()) user = new User();  // special provision to allow anonymous user via LTI launch
+		else user = new User(claims.get("iss").getAsString() + "/" + sub.getAsString());
 		
 		JsonElement roles_claim = claims.get("https://purl.imsglobal.org/spec/lti/claim/roles");
 		if (roles_claim == null || !roles_claim.isJsonArray()) throw new Exception("Required roles claim is missing from the id_token");
@@ -402,13 +401,14 @@ public class LTIv1p3Launch extends HttpServlet {
 			break;
 		case "PracticeExam":
 			String[] topicIds = request.getParameterValues("TopicIds");
-			if (topicIds==null || topicIds.length<3) throw new Exception("You must choose at least three topics for this practice exam.");
-			a.topicIds = new ArrayList<Long>();
-			a.questionKeys = new ArrayList<Key<Question>>();
-			for (int i=0;i<topicIds.length;i++) {
-				long tId = Long.parseLong(topicIds[i]);
-				a.topicIds.add(tId);
-				a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tId).keys().list());
+			if (topicIds!=null) {
+				a.topicIds = new ArrayList<Long>();
+				a.questionKeys = new ArrayList<Key<Question>>();
+				for (int i=0;i<topicIds.length;i++) {
+					long tId = Long.parseLong(topicIds[i]);
+					a.topicIds.add(tId);
+					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tId).keys().list());
+				}
 			}
 			break;
 		case "VideoQuiz":

@@ -425,10 +425,11 @@ public class LTIDeepLinks extends HttpServlet {
 	
 	User getUserClaims(JsonObject claims) throws Exception {
 		// Process User information:
-		String sub = claims.get("sub").getAsString();  // required
-		if (sub==null || sub.isEmpty()) throw new Exception("Missing or empty subject claim in the id_token.");
-		String platformUserId = claims.get("iss").getAsString() + "/" + sub;
-		User user = new User(platformUserId);
+
+		User user = null;
+		JsonElement sub = claims.get("sub");
+		if (sub==null || sub.getAsString().isEmpty()) user = new User();  // special provision to allow anonymous user via LTI launch
+		else user = new User(claims.get("iss").getAsString() + "/" + sub.getAsString());
 
 		JsonElement roles_claim = claims.get("https://purl.imsglobal.org/spec/lti/claim/roles");
 		if (roles_claim == null || !roles_claim.isJsonArray()) throw new Exception("Required roles claim is missing from the id_token");
@@ -436,6 +437,7 @@ public class LTIDeepLinks extends HttpServlet {
 		Iterator<JsonElement> roles_iterator = roles.iterator();
 		while(roles_iterator.hasNext()){
 			String role = roles_iterator.next().getAsString().toLowerCase();
+			if (!user.isTeachingAssistant()) user.setIsTeachingAssistant(role.contains("teachingassistant"));
 			if (!user.isInstructor()) user.setIsInstructor(role.contains("instructor"));
 			if (!user.isAdministrator()) user.setIsAdministrator(role.contains("administrator"));
 		}
