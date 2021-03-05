@@ -285,8 +285,6 @@ public class PracticeExam extends HttpServlet {
 			
 			buf.append("<h2>General Chemistry Exam</h2>");
 			
-			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
-			
 			Date downloaded = pt.downloaded;
 			
 			int secondsRemaining = (int) (timeAllowed - (now.getTime() - downloaded.getTime())/1000);
@@ -433,8 +431,9 @@ public class PracticeExam extends HttpServlet {
 			
 			Assignment a = null;
 			
-			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
-			else a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();  // find the Assignment object for this Practice Exam, if it exists
+			try {
+				a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+			} catch (Exception e) {}
 			
 			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
@@ -548,9 +547,9 @@ public class PracticeExam extends HttpServlet {
 			}
 			// embed ajax code to provide feedback
 			buf.append(ajaxScoreJavaScript(user.getTokenSignature()));
-		
+			
 			List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.id).filter("assignmentId",a.id).order("downloaded").list();
-			if (pets.size()==0) {
+			if (pets==null || pets.size()==0) {
 				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>");
 			} else {				
 				Score s = null;
@@ -612,7 +611,7 @@ public class PracticeExam extends HttpServlet {
 					}
 				}
 			}
-
+			
 			buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Practice Exam Score (percent)</th></tr>");
 			for (PracticeExamTransaction pet : pets) {
 				score = 0;
@@ -629,7 +628,7 @@ public class PracticeExam extends HttpServlet {
 		
 		}
 		catch (Exception e) {
-			buf.append(e.getMessage());
+			buf.append(e.toString() + ": " + e.getMessage());
 		}
 		return buf.toString();
 	}
