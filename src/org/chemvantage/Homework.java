@@ -25,10 +25,12 @@ import java.io.PrintWriter;
 import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -45,7 +47,8 @@ public class Homework extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	Subject subject = Subject.getSubject();
-	static Map<Key<Question>,Question> hwQuestions = new HashMap<Key<Question>,Question>();
+	static Map<Long,Map<Key<Question>,Question>> hwQuestions = new HashMap<Long,Map<Key<Question>,Question>>();
+	static Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
 	int retryDelayMinutes = 2;  // minimum time between answer submissions for any single question
 
 	public String getServletInfo() {
@@ -73,7 +76,7 @@ public class Homework extends HttpServlet {
 			}
 			else out.println(Home.header("ChemVantage Homework") + printHomework(user,request) + Home.footer);
 		} catch (Exception e) {
-			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
+			response.sendRedirect("/Logout?sig=" + request.getParameter("sig") + "&e=" + e.toString());
 		}
 	}
 
@@ -102,8 +105,7 @@ public class Homework extends HttpServlet {
 
 	String printHomework(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		
-		try {
+		try{
 			Assignment hwa = null;
 			long topicId = 0L;
 			try {  // normal process for LTI assignment launch
@@ -118,9 +120,16 @@ public class Homework extends HttpServlet {
 				}
 			}
 			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
-			
+			// Load the Question items for this topic, if necessary:
+			if (hwQuestions.get(topic.id) == null) { // load all of the Question items for this topic
+				List<Key<Question>> topicQuestionKeys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topic.id).keys().list();
+				TreeMap<Key<Question>,Question> topicQuestions = new TreeMap<Key<Question>,Question>(new SortBySuccessPct());
+				topicQuestions.putAll(ofy().load().keys(topicQuestionKeys));
+				if (topicQuestions.size()>0) hwQuestions.put(topic.id,topicQuestions);
+			}
+
 			buf.append("\n<h2>Homework Exercises - " + topic.title + " (" + subject.title + ")</h2>");
-			
+
 			if (user.isInstructor() && hwa != null) {
 				buf.append("<mark>As the course instructor you may "
 						+ "<a href=/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + ">"
@@ -132,7 +141,7 @@ public class Homework extends HttpServlet {
 			} else if (user.isAnonymous()) {
 				buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			}	
-			
+
 			if (!user.isAnonymous()) {
 				buf.append("\nHomework Rules<UL>");
 				buf.append("\n<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
@@ -141,7 +150,7 @@ public class Homework extends HttpServlet {
 				buf.append("\n<LI>A checkmark will appear to the left of each correctly solved problem.</LI>");
 				buf.append("</UL>");
 			}
-			
+
 			// Review the HWTransactions for this user to record which problems have been solved and retrieve the current showWork strings:
 			List<Long> solvedQuestions = new ArrayList<Long>();
 			Map<Long,String> workStrings = new HashMap<Long,String>();
@@ -155,111 +164,57 @@ public class Homework extends HttpServlet {
 				workStrings.put(ht.questionId,ht.showWork);
 			}
 			
-			List<Key<Question>> optionalQuestionKeys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topicId).filter("isActive",true).keys().list();
-			if (optionalQuestionKeys.size()==0) buf.append("<h2>Sorry, there are no homework questions for this topic.</h2>");
-			
-			if (hwa != null) { // use hwa.questionIds to move assigned questions to the other list
-				optionalQuestionKeys.removeAll(hwa.questionKeys);
-				int score = 0;
-				
-				// this script displays a box for the user to show their work
-				buf.append("<script>"
-						+ "function showWorkBox(qid) {"
-						+ "document.getElementById('showWork'+qid).style.display='';"
-						+ "document.getElementById('answer'+qid).placeholder='Enter your answer here';"
-						+ "}"
-						+ "</script>");
-				
-				buf.append("Assigned Exercises<p>");
-				int i = 1;
-				
-				buf.append("<div style='display:table'>");
-				for (Key<Question> k : hwa.questionKeys) {
-					try {
-						Question q = hwQuestions.get(k);
-						if (q==null) {
-							hwQuestions.putAll(ofy().load().keys(hwa.questionKeys));  // loads (or possibly reloads) all questions for this assignment
-							q = hwQuestions.get(k);
-							if (q==null) continue;  // this catches cases where an assigned question no longer exists
-						}
-						String hashMe = user.id + hwa.id;
-						q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
-						buf.append("<div style='display:table-row'>");
-						
-						buf.append("<div style='display:table-cell'>");
-						
-						if (solvedQuestions.contains(q.id)) {
-							buf.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");
-							score++;
-						}
-						buf.append("</div>");
-						
-						buf.append("<FORM METHOD=POST ACTION=Homework>"
-								+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
-								+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
-								+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
-								+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>"
-								+ "<div style='display:table-cell'><b>" + i + ".&nbsp;</b></div>"
-								+ "<div style='display:table-cell'>" + q.print(workStrings.get(q.id),"") 
-								+ (Long.toString(q.id).equals(request.getParameter("Q"))?"Hint:<br>" + q.getHint():"")
-								+ "<INPUT TYPE=SUBMIT VALUE='Grade This Exercise'><p>"
-								+ "</div></div></FORM>\n");
-						
-						i++;
-					} catch (Exception e) {
-					}
-				}
-				buf.append("</div>");
-				
-				if (i == 1) buf.append("(none)<p>");
-				
-				// Check to see if the database has the correct score for this assignment
-				Score s = null;
-				Key<Score> k = Key.create(Key.create(User.class, user.id),Score.class,hwa.id);
-				s = ofy().load().key(k).now();
-				if (score>0 && (s==null || score != s.score)) {
-					s = Score.getInstance(user.id, hwa);
-					ofy().save().entity(s).now();
-					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",hwa.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));
-				}
+			if (hwQuestions.get(topic.id)==null) buf.append("<h2>Sorry, there are no homework questions for this topic.</h2>");
 
-				if (optionalQuestionKeys.size() > 0) buf.append("Optional Exercises<p>");
-			}
-
-			// Print the table of optional problems (the whole set if none are assigned)
-			int i = 1;
+			StringBuffer assignedQuestions = new StringBuffer("<h4>Assigned Exercises:</h4>");
+			assignedQuestions.append("<div style='display:table'>");
+			StringBuffer optionalQuestions = new StringBuffer("<h4>Optional Exercises:</h4>");
+			optionalQuestions.append("<div style='display:table'>");
 			
-			buf.append("<div style='display:table'>");
-			for (Key<Question> k : optionalQuestionKeys) {
-				Question q = hwQuestions.get(k);
-				if (q==null) {
-					hwQuestions.putAll(ofy().load().keys(optionalQuestionKeys));  // loads (or possibly reloads) all optional questions for this assignment
-					q = hwQuestions.get(k);
-					//if (q==null) continue;  // this catches cases where an assigned question no longer exists
-				}
+			// this script displays a box for the user to show their work
+			buf.append("<script>"
+					+ "function showWorkBox(qid) {"
+					+ "document.getElementById('showWork'+qid).style.display='';"
+					+ "document.getElementById('answer'+qid).placeholder='Enter your answer here';"
+					+ "}"
+					+ "</script>");
+			
+			// This is the main loop for presenting assigned and optional questions in order of increasing difficulty:
+			int i=1;
+			int j=1;
+			for (Map.Entry<Key<Question>,Question> entry : hwQuestions.get(topic.id).entrySet()) {
+				boolean assigned = (hwa != null) && (hwa.questionKeys.contains(entry.getKey()));
+				StringBuffer questionBuffer = new StringBuffer("<div style='display:table-row'><div style='display:table-cell'>");
 				String hashMe = user.id + (hwa==null?"":hwa.id);
+				Question q = entry.getValue().clone();
+				q.id = entry.getValue().id;
 				q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
-				buf.append("<div style='display:table-row'>");
 				
-				buf.append("<div style='display:table-cell'>");
-				//boolean solved = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).filter("score >",0).count() > 0;					
-				if (solvedQuestions.contains(q.id)) buf.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");				
-				buf.append("</div>");
-				
-				buf.append("<FORM METHOD=POST ACTION=Homework>"
+				if (solvedQuestions.contains(q.id)) questionBuffer.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");					
+				//questionBuffer.append(successPct.get(entry.getKey()) + "%<br/>");
+				questionBuffer.append("</div>");
+
+				questionBuffer.append("<FORM METHOD=POST ACTION=Homework>"
 						+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
 						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
-						+ "<div style='display:table-cell'><b>" + i + ".&nbsp;</b></div>"
+						+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>"
+						+ "<div style='display:table-cell'><b>" + (assigned?i:j) + ".&nbsp;</b></div>"
 						+ "<div style='display:table-cell'>" + q.print(workStrings.get(q.id),"") 
 						+ (Long.toString(q.id).equals(request.getParameter("Q"))?"Hint:<br>" + q.getHint():"")
-						+ "<br><INPUT TYPE=SUBMIT VALUE='Grade This Exercise'><p>&nbsp;</FORM></div>"
-						+ "</div>\n");
-				i++;
+						+ "<INPUT TYPE=SUBMIT VALUE='Grade This Exercise'><p>"
+						+ "</div></div></FORM>\n");
+				if (assigned) {
+					assignedQuestions.append(questionBuffer);
+					i++; 
+				} else {
+					optionalQuestions.append(questionBuffer);
+					j++;
+				}
 			}
-			buf.append("</div>");
+			buf.append(assignedQuestions + "</div>" + optionalQuestions + "</div>");
 		} catch (Exception e) {
-			buf.append(e.toString());
+			buf.append(e.toString() + " " + e.getMessage());
 		}
 		return buf.toString();
 	}
@@ -270,14 +225,17 @@ public class Homework extends HttpServlet {
 		try {
 			long questionId = Long.parseLong(request.getParameter("QuestionId"));
 			Key<Question> k = Key.create(Question.class,questionId);
-			Question q = hwQuestions.get(k);
-			if (q==null) {
-				q = ofy().load().key(k).safe();
-				hwQuestions.put(k,q);
-			}
-			
-			Topic topic = ofy().load().type(Topic.class).id(q.topicId).safe();
+			Question q = null;
+			long topicId = Long.parseLong(request.getParameter("TopicId"));
+			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
 			debug.append("topic:"+topic.title+"...");
+			
+			try {
+				q = hwQuestions.get(topicId).get(k).clone();
+				q.id = questionId;
+			} catch (Exception e) {
+				q = ofy().load().key(k).now();
+			}
 			
 			String lis_result_sourcedid = user.getLisResultSourcedid();
 			debug.append("lis_result_sourcedid="+lis_result_sourcedid+"...");
@@ -289,8 +247,9 @@ public class Homework extends HttpServlet {
 				hwa = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			} catch (Exception e) {}
 			
-			if (hwa==null) debug.append("hwa=null...");
-			else debug.append("assignmentId="+hwa.id+"...");
+			String hashMe = user.id + (hwa==null?"":hwa.id);
+			q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
+			debug.append("question parameters set with "+hashMe.hashCode()+"...");
 			
 			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
@@ -302,7 +261,7 @@ public class Homework extends HttpServlet {
 			}
 			else for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
 			
-			String showWork = request.getParameter("ShowWork");
+			String showWork = request.getParameter("ShowWork"+q.id);
 			if (showWork==null) showWork="";  // required because later we check to see if showWork.isEmpty()
 			
 			debug.append("student answer:"+studentAnswer[0]+"...");
@@ -333,7 +292,8 @@ public class Homework extends HttpServlet {
 						+ "return to this homework assignment</a> to work on another problem.<p>");
 		
 				buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework>"
-						+ (hwa==null?"<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>":"<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>")
+						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
+						+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + assignmentId + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ q.print(showWork,studentAnswer[0]) + "<br>");
@@ -357,7 +317,7 @@ public class Homework extends HttpServlet {
 						+ " }"
 						+ "}"
 						+ "countdown();");
-				if (!showWork.isEmpty()) buf.append("function showWorkBox(qid) {"  // this script displays a box for the user to show their work
+				buf.append("function showWorkBox(qid) {"  // this script displays a box for the user to show their work
 						+ "document.getElementById('showWork'+qid).style.display='';"
 						+ "document.getElementById('answer'+qid).placeholder='Enter your answer here';"
 						+ "}"
@@ -370,10 +330,6 @@ public class Homework extends HttpServlet {
 			
 			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			buf.append(df.format(now));
-			
-			String hashMe = user.id + (hwa==null?"":hwa.id);
-			q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
-			debug.append("question parameters set with "+hashMe.hashCode()+"...");
 			
 			int studentScore = q.isCorrect(studentAnswer[0])?q.pointValue:0;
 			int possibleScore = q.pointValue;
@@ -801,4 +757,33 @@ public class Homework extends HttpServlet {
 		}
 		return buf.toString();
 	}
+
+	public class SortBySuccessPct implements Comparator<Key<Question>> {
+		public int compare(Key<Question> k1,Key<Question> k2) {
+			Integer success1 = successPct.get(k1);
+			if (success1==null) {
+				int totalResponses = ofy().load().type(Response.class).filter("questionId",k1.getId()).count();
+				if (totalResponses==0) success1 = 100;
+				else {
+					int successResponses = ofy().load().type(Response.class).filter("questionId",k1.getId()).filter("score >",0).count();
+					success1 = successResponses*100/totalResponses;
+				}
+				successPct.put(k1,success1);
+			}
+			Integer success2 = successPct.get(k2);
+			if (success2==null) {
+				int totalResponses = ofy().load().type(Response.class).filter("questionId",k2.getId()).count();
+				if (totalResponses==0) success2 = 100;
+				else {
+					int successResponses = ofy().load().type(Response.class).filter("questionId",k2.getId()).filter("score >",0).count();
+					success2 = successResponses*100/totalResponses;
+				}
+				successPct.put(k2,success2);
+			}
+			int rank = success2-success1; // this reverses the normal Comparator to give higher rank to lower successPct
+			if (rank==0) rank = k1.compareTo(k2); // tie breaker required else TreeMap will overwrite existing entry
+			return rank;  
+		}
+	}
 }
+
