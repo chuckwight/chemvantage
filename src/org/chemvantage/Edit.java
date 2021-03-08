@@ -1054,7 +1054,7 @@ public class Edit extends HttpServlet {
 			ofy().save().entity(q).now();
 			Key<Question> k = Key.create(Question.class,questionId);
 			if ("Quiz".equals(q.assignmentType)) Quiz.quizQuestions.remove(k);
-			else if ("Homework".equals(q.assignmentType)) Homework.hwQuestions.remove(k);
+			else if ("Homework".equals(q.assignmentType)) Homework.hwQuestions.get(q.topicId).remove(k);
 		} catch (Exception e) {
 			return;
 		}
@@ -1062,14 +1062,13 @@ public class Edit extends HttpServlet {
 
 	private void deleteQuestion(User user,HttpServletRequest request) {
 		long questionId = 0;
-		String assignmentType;
 		try {
-			questionId = Long.parseLong(request.getParameter("QuestionId"));	
-			ofy().delete().key(Key.create(Question.class,questionId)).now();
-			assignmentType = ofy().load().type(Question.class).id(questionId).safe().assignmentType;
+			questionId = Long.parseLong(request.getParameter("QuestionId"));
+			Question q = ofy().load().type(Question.class).id(questionId).safe();
 			Key<Question> k = Key.create(Question.class,questionId);
-			if ("Quiz".equals(assignmentType)) Quiz.quizQuestions.remove(k);
-			else if ("Homework".equals(assignmentType)) Homework.hwQuestions.remove(k);
+			ofy().delete().key(k).now();
+			if ("Quiz".equals(q.assignmentType)) Quiz.quizQuestions.remove(k);
+			else if ("Homework".equals(q.assignmentType)) Homework.hwQuestions.get(q.topicId).remove(k);
 		} catch (Exception e) {
 			return;
 		}
