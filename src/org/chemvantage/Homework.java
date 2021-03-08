@@ -241,6 +241,7 @@ public class Homework extends HttpServlet {
 				q.id = questionId;
 			} catch (Exception e) {
 				q = ofy().load().key(k).now(); // a fresh copy is only needed if the servlet restarted while the user was working on it
+				if (q==null) return "<h3>Sorry, this question has been deleted from the ChemVantage database.</h3>";
 			}
 			
 			String lis_result_sourcedid = user.getLisResultSourcedid();
