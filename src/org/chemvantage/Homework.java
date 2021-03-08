@@ -106,6 +106,7 @@ public class Homework extends HttpServlet {
 	String printHomework(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try{
+			// FIRST, determine the user's Assignment and Topic, then ensure that all the questions are loaded and sorted by difficulty
 			Assignment hwa = null;
 			long topicId = 0L;
 			try {  // normal process for LTI assignment launch
@@ -128,7 +129,13 @@ public class Homework extends HttpServlet {
 				if (topicQuestions.size()>0) hwQuestions.put(topic.id,topicQuestions);
 			}
 
+			// START the presentation of the Homework assignment
 			buf.append("\n<h2>Homework Exercises - " + topic.title + " (" + subject.title + ")</h2>");
+
+			if (hwQuestions.get(topic.id)==null) {
+				buf.append("<h3>Sorry, there are no homework questions for this topic.</h3>");
+				return buf.toString();
+			}
 
 			if (user.isInstructor() && hwa != null) {
 				buf.append("<mark>As the course instructor you may "
@@ -151,7 +158,7 @@ public class Homework extends HttpServlet {
 				buf.append("</UL>");
 			}
 
-			// Review the HWTransactions for this user to record which problems have been solved and retrieve the current showWork strings:
+			// Review the HWTransactions for this user to record which problems have been solved for this assignment and retrieve the current showWork strings:
 			List<Long> solvedQuestions = new ArrayList<Long>();
 			Map<Long,String> workStrings = new HashMap<Long,String>();
 			List<HWTransaction> hwTransactions = new ArrayList<HWTransaction>();
@@ -164,8 +171,6 @@ public class Homework extends HttpServlet {
 				workStrings.put(ht.questionId,ht.showWork);
 			}
 			
-			if (hwQuestions.get(topic.id)==null) buf.append("<h2>Sorry, there are no homework questions for this topic.</h2>");
-
 			StringBuffer assignedQuestions = new StringBuffer("<h4>Assigned Exercises:</h4>");
 			assignedQuestions.append("<div style='display:table'>");
 			StringBuffer optionalQuestions = new StringBuffer("<h4>Optional Exercises:</h4>");
@@ -223,6 +228,7 @@ public class Homework extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Start...");
 		try {
+			// The Homework grader scores only one Question at a time, so first identify and load it
 			long questionId = Long.parseLong(request.getParameter("QuestionId"));
 			Key<Question> k = Key.create(Question.class,questionId);
 			Question q = null;
@@ -231,10 +237,10 @@ public class Homework extends HttpServlet {
 			debug.append("topic:"+topic.title+"...");
 			
 			try {
-				q = hwQuestions.get(topicId).get(k).clone();
+				q = hwQuestions.get(topicId).get(k).clone(); // make a copy of the question so we can parameterize it
 				q.id = questionId;
 			} catch (Exception e) {
-				q = ofy().load().key(k).now();
+				q = ofy().load().key(k).now(); // a fresh copy is only needed if the servlet restarted while the user was working on it
 			}
 			
 			String lis_result_sourcedid = user.getLisResultSourcedid();
@@ -247,12 +253,10 @@ public class Homework extends HttpServlet {
 				hwa = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			} catch (Exception e) {}
 			
+			// Set the Question parameters for this user (this is why we made a copy, to prevent thread collisions with a class variable)
 			String hashMe = user.id + (hwa==null?"":hwa.id);
 			q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
 			debug.append("question parameters set with "+hashMe.hashCode()+"...");
-			
-			Date now = new Date();
-			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			
 			String studentAnswer[] = request.getParameterValues(Long.toString(questionId));
 			if (studentAnswer == null || studentAnswer.length==0) {
@@ -266,6 +270,9 @@ public class Homework extends HttpServlet {
 			
 			debug.append("student answer:"+studentAnswer[0]+"...");
 			
+			// This section checks for recent submissions to enforce the retry delay (discourages guessing)
+			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+			Date now = new Date();
 			Date minutesAgo = new Date(now.getTime()-retryDelayMinutes*60000);  // about 2 minutes ago
 			List<HWTransaction> recentTransactions = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).filter("graded >",minutesAgo).list();
 			long secondsRemaining = 0;
