@@ -106,7 +106,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				}
 			}		
 		} catch (Exception e) {	
-			response.sendError(401, e.toString() + e.getMessage());
+			response.sendError(401, e.getMessage());
 		}
 	}
 
