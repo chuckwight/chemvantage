@@ -72,7 +72,7 @@ public class Homework extends HttpServlet {
 			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header("Your Class ChemVantage Scores") + showSummary(user,request) + Home.footer);
 			else if ("AssignHomeworkQuestions".contentEquals(userRequest) && user.isInstructor()) {
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-				out.println(Home.header("Customize ChemVantage Homework Assignment") + a.selectQuestionsForm(user) + Home.footer);
+				out.println(Home.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user,a) + Home.footer);
 			}
 			else out.println(Home.header("ChemVantage Homework") + printHomework(user,request) + Home.footer);
 		} catch (Exception e) {
@@ -793,5 +793,68 @@ public class Homework extends HttpServlet {
 			return rank;  
 		}
 	}
+	
+	String selectQuestionsForm(User user,Assignment a) {
+		StringBuffer buf = new StringBuffer();
+		try {
+			Topic topic = ofy().load().type(Topic.class).id(a.topicId).safe();
+			
+			buf.append("<h3>Customize Homework Assignment</h3>");
+			buf.append("<b>Topic: " + topic.title + "</b><p>");
+					
+			if (a.timeAllowed==null) a.timeAllowed = 900; // default time for completing the exam
+			
+			// Allow instructor to pick individual question items from all active questions:
+			buf.append("Select the homework questions to be assigned for grading. The questions are presented below in "
+					+ "approximate order of increasing difficuly, as measured by the percentage of correct submissions. "
+					+ "Then click the 'Use Selected Items' button. Each question is worth 1 point, so the maximum possible "
+					+ "score is equal to the number of questions selected. Students may work the optional problems; "
+					+ "however, these are not included in the scores reported to the class LMS.<p>"
+					+ "If you don't see a question you want to include, you may "
+					+ "<a href=/Contribute?sig=" + user.getTokenSignature() 
+					+ ">contribute a new question item</a> to the database.<p>");
+
+			if (hwQuestions.get(topic.id) == null) { // load all of the Question items for this topic
+				List<Key<Question>> topicQuestionKeys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topic.id).keys().list();
+				TreeMap<Key<Question>,Question> topicQuestions = new TreeMap<Key<Question>,Question>(new SortBySuccessPct());
+				topicQuestions.putAll(ofy().load().keys(topicQuestionKeys));
+				if (topicQuestions.size()>0) hwQuestions.put(topic.id,topicQuestions);
+			}
+
+			// This dummy form uses javascript to select/deselect all questions
+			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
+					+ "onClick='for (var i=0;i<document.Questions.QuestionId.length;i++)"
+					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}'"
+					+ "> Select/Unselect All</FORM>");
+
+			// Make a list of individual questions that can be selected or deselected for this assignment
+			buf.append("<FORM NAME=Questions METHOD=POST ACTION=/Homework>"
+					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
+					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment'>"
+					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + a.id + "'>"
+					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items'>");
+			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
+
+			
+			int i=0;
+			for (Map.Entry<Key<Question>,Question> entry : hwQuestions.get(topic.id).entrySet()) {
+				Question q = entry.getValue().clone();
+				q.id = entry.getValue().id;
+				q.setParameters();  // creates randomly selected parameters
+				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
+						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
+				buf.append(a.questionKeys.contains(Key.create(Question.class,q.id))?" CHECKED>":">");
+				i++;
+				buf.append("<b>&nbsp;" + i + ".</b></TD>");
+				buf.append("\n<TD>" + q.printAll() + "</TD>");
+				buf.append("</TR>");
+			}
+			buf.append("</TABLE><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM>");
+		} catch (Exception e) {
+			buf.append(e.toString() + " " + e.getMessage());
+		}
+		return buf.toString();
+	}
+
 }
 
