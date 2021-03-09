@@ -71,8 +71,7 @@ public class Homework extends HttpServlet {
 			if ("ShowScores".contentEquals(userRequest)) out.println(Home.header("Your ChemVantage Scores") + showScores(user) + Home.footer);
 			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header("Your Class ChemVantage Scores") + showSummary(user,request) + Home.footer);
 			else if ("AssignHomeworkQuestions".contentEquals(userRequest) && user.isInstructor()) {
-				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-				out.println(Home.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user,a) + Home.footer);
+				out.println(Home.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user) + Home.footer);
 			}
 			else out.println(Home.header("ChemVantage Homework") + printHomework(user,request) + Home.footer);
 		} catch (Exception e) {
@@ -794,9 +793,10 @@ public class Homework extends HttpServlet {
 		}
 	}
 	
-	String selectQuestionsForm(User user,Assignment a) {
+	String selectQuestionsForm(User user) {
 		StringBuffer buf = new StringBuffer();
 		try {
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 			Topic topic = ofy().load().type(Topic.class).id(a.topicId).safe();
 			
 			buf.append("<h3>Customize Homework Assignment</h3>");

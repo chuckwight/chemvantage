@@ -82,8 +82,7 @@ public class PracticeExam extends HttpServlet {
 			switch (userRequest) {
 				case "AssignExamQuestions":
 					if (!user.isInstructor()) throw new Exception();
-					Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-					out.println(Home.header("Select ChemVantage Practice Exam Topics") + a.selectExamQuestionsForm(user) + Home.footer);
+					out.println(Home.header("Select ChemVantage Practice Exam Topics") + selectExamQuestionsForm(user) + Home.footer);
 					break;
 				case "ReviewExamScores":
 					out.println(Home.header("Review ChemVantage Practice Exam Scores") + reviewExamScores(user) + Home.footer);
@@ -1056,6 +1055,118 @@ public class PracticeExam extends HttpServlet {
 			throw e;
 		}
 		return true;
+	}
+
+	String selectExamQuestionsForm(User user) {
+		StringBuffer buf = new StringBuffer("<h3>Select Practice Exam Questions</h3>");
+		try {
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+			Map<Long,Topic>topics = ofy().load().type(Topic.class).ids(a.topicIds);
+			buf.append("<b>Subject: " + Subject.getSubject().title + "</b><br/>Topics:<OL>");
+			for (Topic t:topics.values()) buf.append("<LI>" + t.title + "</LI>");
+			buf.append("</OL>");
+
+			if (a.timeAllowed==null) a.timeAllowed = 3600; // default time for completing the exam
+
+			buf.append("Each practice exam consists of items selected at random from the items below:<ul>"
+					+ "<li>10 quiz questions worth 2 points each</li>"
+					+ "<li> 5 homework questions worth 10 points each</li>"
+					+ "<li> 2 more challenging homework questions worth 15 points each</li></ul>"
+					+ "for a total of 100 points.<p>");
+			buf.append("The default time allowed to complete the exam is 60 minutes, but you may change this "
+					+ "(e.g., to create a special assignment for a student requiring extended time).<br>");
+			buf.append("<form action=/PracticeExam method=post><input type=hidden name=sig value=" + user.getTokenSignature() + ">" 
+					+ "Time allowed for this assignment: <input type=text size=5 name=TimeAllowed value=" + a.timeAllowed/60. + "> minutes. "
+					+ "<input type=submit name=UserRequest value='Set Allowed Time'><br>"
+					+ "</form><p>"
+					+ "Select the items to be included in exams assigned to your class.<p>");
+
+			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
+			List<Key<Question>> questionKeys_10pt = new ArrayList<Key<Question>>();
+			List<Key<Question>> questionKeys_15pt = new ArrayList<Key<Question>>();
+
+			for (long tid : a.topicIds) {  // Sort and collect the question keys
+				questionKeys_02pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",2).keys().list());
+				questionKeys_10pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",10).keys().list());
+				questionKeys_15pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",15).keys().list());
+			}
+
+			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
+					+ "onClick=\"for (var i=0;i<document.Questions.QuestionId.length;i++)"
+					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}\""
+					+ "> Select/Unselect All</FORM>");
+
+			buf.append("<FORM NAME=Questions METHOD=POST ACTION=PracticeExam>"
+					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment'>"
+					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
+					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + a.id + "'>"
+					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE=PracticeExam>"
+					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items'>");
+			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
+
+			Question q = null;
+			int i = 0;
+
+			// 2-point questions:
+			buf.append("<TR><TD COLSPAN=2><U>2-point Questions: (select at least 10)</U></TD></TR>");
+			i=0;
+			for (Key<Question> k : questionKeys_02pt) {
+				i++;
+				try {
+					q = ofy().load().key(k).safe();
+				} catch (Exception e) {
+					continue;
+				}
+				q.setParameters();
+				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
+						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
+				buf.append(a.questionKeys.contains(Key.create(Question.class,q.id))?" CHECKED>":">");
+				buf.append("<b>&nbsp;" + i + ".</b></TD>");
+				buf.append("\n<TD>" + q.printAll() + "</TD>");
+				buf.append("</TR>");
+			}
+			// 10-point questions:
+			buf.append("<TR><TD COLSPAN=2><U>10-point Questions: (select at least 5)</U></TD></TR>");
+			i=0;
+			for (Key<Question> k : questionKeys_10pt) {
+				i++;
+				try {
+					q = ofy().load().key(k).safe();
+				} catch (Exception e) {
+					continue;
+				}
+				q.setParameters();
+				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
+						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
+				buf.append(a.questionKeys.contains(Key.create(Question.class,q.id))?" CHECKED>":">");
+				buf.append("<b>&nbsp;" + i + ".</b></TD>");
+				buf.append("\n<TD>" + q.printAll() + "</TD>");
+				buf.append("</TR>");
+			}
+			// 15-point questions:
+			buf.append("<TR><TD COLSPAN=2><U>15-point Questions: (select at least 2)</U></TD></TR>");
+			i=0;
+			for (Key<Question> k : questionKeys_15pt) {
+				i++;
+				try {
+					q = ofy().load().key(k).safe();
+				} catch (Exception e) {
+					continue;
+				}
+				q.setParameters();
+				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
+						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
+				buf.append(a.questionKeys.contains(Key.create(Question.class,q.id))?" CHECKED>":">");
+				buf.append("<b>&nbsp;" + i + ".</b></TD>");
+				buf.append("\n<TD>" + q.printAll() + "</TD>");
+				buf.append("</TR>");
+			}
+
+			buf.append("</TABLE><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM>");
+		} catch (Exception e) {
+			buf.append("Sorry, the assignment could not be found. " + e.getMessage());
+		}
+		return buf.toString();
 	}
 }
 

@@ -39,6 +39,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
+import com.googlecode.objectify.cmd.Query;
 
 @WebServlet("/Quiz")
 public class Quiz extends HttpServlet {
@@ -72,8 +73,7 @@ public class Quiz extends HttpServlet {
 			if ("ShowScores".contentEquals(userRequest)) out.println(Home.header("Your ChemVantage Scores") + showScores(user) + Home.footer);
 			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header("Your Class ChemVantage Scores") + showSummary(user,request) + Home.footer);
 			else if ("AssignQuizQuestions".contentEquals(userRequest) && user.isInstructor()) {
-				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-				out.println(Home.header("Customize ChemVantage Quiz Assignment") + a.selectQuestionsForm(user) + Home.footer);
+				out.println(Home.header("Customize ChemVantage Quiz Assignment") + selectQuestionsForm(user) + Home.footer);
 			} else response.sendRedirect("/Quiz.jsp?sig=" + user.getTokenSignature());
 			//else out.println(Home.header("ChemVantage Quiz") + printQuiz(user,request) + Home.footer);
 		} catch (Exception e) {
@@ -112,184 +112,7 @@ public class Quiz extends HttpServlet {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
 	}
-/*
-	public String printQuiz(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer();
-		try {
-			Assignment qa = null;
-			long topicId = 0L;
-			long assignmentId = 0L;
-			try { 
-				assignmentId = user.getAssignmentId();  // should be non-zero for LTI user
-				if (assignmentId > 0) {
-					qa = ofy().load().type(Assignment.class).id(assignmentId).now();
-					topicId = qa.topicId;
-				} else {  // get the requested topicId for anonymous user
-					topicId = Long.parseLong(request.getParameter("TopicId"));
-				}
-			} catch (Exception e) {  // alternative process for anonymous user
-				return "<h2>No Quiz Selected</h2>You must return to the <a href=/>Home Page</a> "
-					+ "and select a topic for this quiz using the drop-down box.";
-			}
-			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
-			Date now = new Date();
 
-			// Check to see if this user has any pending quizzes on this topic:
-			Date then = new Date(now.getTime()-timeLimit*60000);  // timeLimit minutes ago
-			QuizTransaction qt = ofy().load().type(QuizTransaction.class).filter("userId",user.id).filter("topicId",topic.id).filter("graded",null).filter("downloaded >",then).first().now();
-			String lis_result_sourcedid = user.getLisResultSourcedid();
-			if (qt == null || qt.graded != null) {
-				qt = new QuizTransaction(topic.id,topic.title,user.id,now,null,0,assignmentId,0,user.getLisResultSourcedid());
-				ofy().save().entity(qt).now();  // creates a long id value to use in random number generator
-			} else if (qt.lis_result_sourcedid == null && lis_result_sourcedid != null) {
-				qt.lis_result_sourcedid = lis_result_sourcedid;
-				ofy().save().entity(qt);
-			}
-			int secondsRemaining = (int) (timeLimit*60 - (now.getTime() - qt.downloaded.getTime())/1000);
-			
-			buf.append("\n<h2>Quiz - " + topic.title + " (" + subject.title + ")</h2>");
-
-			if (user.isInstructor() && qa != null) {
-				buf.append("<mark>As the course instructor you may "
-						+ "<a href=/Quiz?UserRequest=AssignQuizQuestions&sig=" + user.getTokenSignature() + ">"
-						+ "customize this quiz</a> by selecting/deselecting the available question items.");
-				if (qa.lti_nrps_context_memberships_url != null && qa.lti_ags_lineitem_url != null) 
-					buf.append("<br>You may also view a <a href=/Quiz?UserRequest=ShowSummary&sig=" 
-							+ user.getTokenSignature() + ">summary of student scores</a> for this assignment.");
-				buf.append("</mark><p>");
-			} else if (user.isAnonymous()) {
-				buf.append("<h3><font color=red>Anonymous User</font></h3>");
-			}
-			
-			buf.append("\n<FORM NAME=Quiz id=quizForm METHOD=POST ACTION=Quiz onSubmit='return confirmSubmission()'>");
-			
-			buf.append("<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">");
-			if (qa!=null) buf.append("<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + qa.id + "'>");
-			if (!user.isAnonymous()) {
-				buf.append("\nQuiz Rules<OL>");
-				buf.append("\n<LI>Each quiz must be completed within " + timeLimit + " minutes of the time when it is first downloaded.</LI>");
-				buf.append("\n<LI>You may repeat quizzes as many times as you wish, to improve your score.</LI>");
-				buf.append("\n<LI>ChemVantage always reports your best score on this assignment to your class LMS.</LI> ");
-				buf.append("</OL>");
-			}
-			buf.append("<div id='timer0' style='color: red'></div><div id=ctrl0 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
-
-			buf.append("\n<input type=submit value='Grade This Quiz'>");
-
-			// create a set of available questionIds either from the group assignment or from the datastore
-			List<Key<Question>> questionKeys = null;
-			try {  // check for assigned questions
-				questionKeys = qa.questionKeys;
-			} catch (Exception e) {  // no assignment exists
-				questionKeys = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId", topicId).filter("isActive",true).keys().list();
-			}
-
-			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
-			Random rand = new Random();  // create random number generator to select quiz questions
-			rand.setSeed(qt.id);  // random number generator seeded with QuizTransaction id value
-			int possibleScore = 0;
-			int nQuestions = (nQuestionsPerSubjectArea < questionKeys.size()?nQuestionsPerSubjectArea:questionKeys.size());
-
-			int i = 0;
-			buf.append("<OL>\n");
-			while (i<nQuestions && questionKeys.size()>0) {
-				Key<Question> k = questionKeys.remove(rand.nextInt(questionKeys.size()));
-				Question q = quizQuestions.get(k);
-				if (q==null) {
-					quizQuestions.putAll(ofy().load().keys(questionKeys));  // loads (or possibly reloads) all questions for this assignment
-					q = quizQuestions.get(k);
-					if (q==null) continue;  // this catches cases where an assigned question no longer exists
-				}
-				// by this point we should have a valid question
-				i++;  // this counter keeps track of the number of questions presented so far
-				possibleScore += q.pointValue;
-				// the parameterized questions are seeded with a value based on the ids for the quizTransaction and the question
-				// in order to make the value reproducible for grading but variable for each quiz and from one question to the next
-				long seed = Math.abs(qt.id - q.id);
-				if (seed==-1) seed--;  // -1 is a special value for randomly seeded Random generator; avoid this (unlikely) situation
-				q.setParameters(seed); // the values are subtracted to prevent (unlikely) overflow
-
-				buf.append("\n<li>" + q.print() + "<br></li>\n");
-			}
-			buf.append("</OL>");
-
-			qt.possibleScore = possibleScore;
-			ofy().save().entity(qt);
-			
-			buf.append("\n<input type=hidden name='QuizTransactionId' value=" + qt.id + ">");
-			buf.append("\n<input type=hidden name='TopicId' value=" + topic.id + ">");
-			buf.append("<div id='timer1' style='color: red'></div><div id=ctrl1 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
-			buf.append("\n<input type=submit value='Grade This Quiz'>");
-			buf.append("\n</form>");
-
-			// this code for displaying/hiding timers and a quiz submit confirmation box
-			buf.append(timerScripts(secondsRemaining)); 
-
-		} catch (Exception e) {
-			buf.append(e.getMessage());
-		}
-		return buf.toString();
-	}
-
-	String timerScripts(int secondsRemaining) {
-		return "<SCRIPT language='JavaScript'>"
-				+ "function toggleTimers() {"
-				+ "  var timer0 = document.getElementById('timer0');"
-				+ "  var timer1 = document.getElementById('timer1');"
-				+ "  var ctrl0 = document.getElementById('ctrl0');"
-				+ "  var ctrl1 = document.getElementById('ctrl1');"
-				+ "  if (timer0.style.display=='') {" 
-				+ "    timer0.style.display='none';timer1.style.display='none';"
-				+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
-				+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
-				+ "  } else {"
-				+ "    timer0.style.display='';timer1.style.display='';"
-				+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
-				+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
-				+ "  }"
-				+ "}"
-				+ "var seconds;var minutes;var oddSeconds;"
-				+ "var endTime = new Date().getTime() + " + secondsRemaining + "*1000;"
-				+ "function countdown() {"
-				+ "  var now = new Date().getTime();"
-				+ "  seconds=Math.round((endTime-now)/1000);"
-				+ "  minutes = seconds<0?Math.ceil(seconds/60):Math.floor(seconds/60);"
-				+ "  oddSeconds = seconds%60;"
-				+ "  for(i=0;i<2;i++)"
-				+ "    document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ' minutes ' + oddSeconds + ' seconds.';"
-				+ "  if (seconds==30) alert('30 seconds remaining');"
-				+ "  if (seconds < 0) document.Quiz.submit();"
-				+ "  setTimeout('countdown()',1000);"
-				+ "}"
-				+ "countdown();"
-				+ "function confirmSubmission() {"
-				+ "  var elements = document.getElementById('quizForm').elements;"
-				+ "  var nAnswers;"
-				+ "  var i;"
-				+ "  var checkboxes;"
-				+ "  var lastCheckboxIndex;"
-				+ "  nAnswers = 0;"
-				+ "  for (i=0;i<elements.length;i++) {"
-				+ "    if (isNaN(elements[i].name)) continue;"
-				+ "    if (elements[i].type=='text' && elements[i].value.length>0) nAnswers++;"
-				+ "    else if (elements[i].type=='radio' && elements[i].checked) nAnswers++;"
-				+ "    else if (elements[i].type=='checkbox') {"
-				+ "      checkboxes = document.getElementsByName(elements[i].name);"
-				+ "      lastCheckboxIndex = i + checkboxes.length - 1;"
-				+ "      for (j=0;j<checkboxes.length;j++) if (checkboxes[j].checked==true) {"
-				+ "        nAnswers++;"
-				+ "        i = lastCheckboxIndex;"
-				+ "        break;"
-				+ "      }"
-				+ "    }"
-				+ "  }"
-				+ "  if (nAnswers<10) return confirm('Submit this quiz for scoring now? ' + (10-nAnswers) + ' answers may be left blank.');"
-				+ "  else return true;"
-				+ "}"
-				+ "function showWorkBox(qid) {}" 
-				+ "</SCRIPT>"; 
-	}
-*/	
 	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		
@@ -717,4 +540,65 @@ public class Quiz extends HttpServlet {
 		}
 		return buf.toString();
 	}
+	
+	String selectQuestionsForm(User user) {
+		StringBuffer buf = new StringBuffer();
+		try {
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+			Topic topic = ofy().load().type(Topic.class).id(a.topicId).safe();
+			
+			buf.append("<h3>Customize Quiz Assignment</h3>");
+			buf.append("<b>Topic: " + topic.title + "</b><p>");
+					
+			if (a.timeAllowed==null) a.timeAllowed = 900; // default time for completing the exam
+			
+			// Allow instructor to pick individual question items from all active questions:
+			buf.append("Each quiz consists of 10 questions selected at random from the items below. The default time allowed "
+					+ "to complete each quiz is 15 minutes, but you may change this (e.g., to create a special assignment for "
+					+ "a student requiring extended time).<br>");
+			buf.append("<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + ">"
+					+ "Time allowed for this assignment: <input type=text size=5 name=TimeAllowed value=" + a.timeAllowed/60. + "> minutes. "
+					+ "<input type=submit name=UserRequest value='Set Allowed Time'><br>"
+					+ "</form><p>");
+			buf.append("You may select the items that will be used for this group by checking the boxes in the left column. "
+					+ "Students are provided answers to the items that they answer incorrectly. "
+					+ "Therefore, the total number of questions should be "
+					+ "larger than 10, but not much larger than 50.  Experience shows that 30 items is about right in most cases.<p>"
+					+ "If you don't see a question you want to include, you may "
+					+ "<a href=/Contribute?sig=" + user.getTokenSignature() + ">contribute a new question item</a> to the database.<p>");
+
+			Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",topic.id).filter("isActive",true);
+			
+			// This dummy form uses javascript to select/deselect all questions
+			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
+					+ "onClick=\"for (var i=0;i<document.Questions.QuestionId.length;i++)"
+					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}\""
+					+ "> Select/Unselect All</FORM>");
+
+			// Make a list of individual questions that can be selected or deselected for this assignment
+			buf.append("<FORM NAME=Questions METHOD=POST ACTION=/Quiz>"
+					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
+					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment'>"
+					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + a.id + "'>"
+					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items'>");
+			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
+
+			int i=0;
+			for (Question q : questions) {
+				i++;
+				q.setParameters();
+				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
+						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
+				buf.append(a.questionKeys.contains(Key.create(Question.class,q.id))?" CHECKED>":">");
+				buf.append("<b>&nbsp;" + i + ".</b></TD>");
+				buf.append("\n<TD>" + q.printAll() + "</TD>");
+				buf.append("</TR>");
+			}
+			buf.append("</TABLE><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM>");
+		} catch (Exception e) {
+			buf.append(e.toString() + " " + e.getMessage());
+		}
+		return buf.toString();
+	}
+
 }
