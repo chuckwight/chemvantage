@@ -146,8 +146,14 @@ function showWorkBox(qid) {}
 	<h2>
 		Quiz -
 		<%=topic.getTitle()%></h2>
-
-	<%
+	
+	<% 	
+		if (user.isAnonymous()) {
+	%>
+		<h3 style='color:red'>Anonymous User</h3>
+	<% 
+		}
+	
 		if (user.isInstructor()) {
 	%>
 	<mark>
