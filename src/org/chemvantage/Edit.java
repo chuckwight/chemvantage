@@ -1037,10 +1037,7 @@ public class Edit extends HttpServlet {
 			Question q = assembleQuestion(request);
 			q.isActive = true;
 			ofy().save().entity(q).now();
-//			return q.id;
-		} catch (Exception e) {
-//			return 0;
-		}
+		} catch (Exception e) {}
 	}
 
 	private void updateQuestion(User user,HttpServletRequest request) {
@@ -1053,8 +1050,7 @@ public class Edit extends HttpServlet {
 			q.isActive = true;
 			ofy().save().entity(q).now();
 			Key<Question> k = Key.create(Question.class,questionId);
-			if ("Quiz".equals(q.assignmentType)) Quiz.quizQuestions.remove(k);
-			else if ("Homework".equals(q.assignmentType)) Homework.hwQuestions.get(q.topicId).remove(k);
+			if ("Homework".equals(q.assignmentType)) Homework.hwQuestions.get(q.topicId).put(k,q);
 		} catch (Exception e) {
 			return;
 		}
@@ -1067,8 +1063,7 @@ public class Edit extends HttpServlet {
 			Question q = ofy().load().type(Question.class).id(questionId).safe();
 			Key<Question> k = Key.create(Question.class,questionId);
 			ofy().delete().key(k).now();
-			if ("Quiz".equals(q.assignmentType)) Quiz.quizQuestions.remove(k);
-			else if ("Homework".equals(q.assignmentType)) Homework.hwQuestions.get(q.topicId).remove(k);
+			if ("Homework".equals(q.assignmentType)) Homework.hwQuestions.get(q.topicId).remove(k);
 		} catch (Exception e) {
 			return;
 		}

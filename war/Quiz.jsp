@@ -221,13 +221,15 @@ function showWorkBox(qid) {}
 		<OL>
 			<!-- insert questions here -->
 			<%
+				// Randomly reduce the size of questionKeys to the required number of questions	
+				while (questionKeys.size()>nQuestions) questionKeys.remove(rand.nextInt(questionKeys.size()));
+			
 				Map<Key<Question>, Question> quizQuestions = new HashMap<Key<Question>, Question>();
 				quizQuestions.putAll(ofy().load().keys(questionKeys));
 				while (i < nQuestions && questionKeys.size() > 0) {
 					Key<Question> k = questionKeys.remove(rand.nextInt(questionKeys.size()));
 					Question q = quizQuestions.get(k);
-					if (q == null)
-						continue; // this catches cases where an assigned question no longer exists
+					if (q == null) continue; // this catches cases where an assigned question no longer exists
 
 					// by this point we should have a valid question
 					i++; // this counter keeps track of the number of questions presented so far

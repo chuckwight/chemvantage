@@ -33,7 +33,7 @@ import com.googlecode.objectify.annotation.Index;
 import com.googlecode.objectify.condition.IfNotZero;
 
 @Entity
-public class Question implements Serializable {
+public class Question implements Serializable, Cloneable {
 	private static final long serialVersionUID = 137L;
 	@Id 	Long id;
 	@Index(IfNotZero.class)	long topicId;
@@ -735,25 +735,11 @@ public class Question implements Serializable {
 	}
 	
 	public Question clone() {
-		Question q = new Question(this.getQuestionType());
-		q.assignmentType = this.assignmentType;
-		q.topicId = this.topicId;
-		q.text = this.text;
-		q.nChoices = this.nChoices;
-		q.choices = this.choices;
-		q.requiredPrecision = this.requiredPrecision;
-		q.significantFigures = this.significantFigures;
-		q.correctAnswer = this.correctAnswer;
-		q.tag = this.tag;
-		q.pointValue = this.pointValue;
-		q.parameterString = this.parameterString;
-		q.hint = this.hint;
-		q.solution = this.solution;
-		q.authorId = this.authorId;
-		q.contributorId = this.contributorId;
-		q.editorId = this.editorId;
-		q.notes = this.notes;
-		return q;
+		try {
+			return (Question) super.clone();
+		} catch (Exception e) {
+			return null;
+		}
 	}
 	
 	// The following methods are from the original CharHider class to guard against

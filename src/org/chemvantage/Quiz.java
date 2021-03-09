@@ -48,11 +48,9 @@ public class Quiz extends HttpServlet {
 
 	int nSubjectAreas = 1;               // default number of subject areas for quiz overridden by values read from AssignmentInfo database
 	int nQuestionsPerSubjectArea = 10;   // number of questions presented in each area also overridden in method printQuiz()
-	//static int timeLimit = 15;                  // minutes; set to zero for no time limit to complete the quiz
 	private static final long serialVersionUID = 137L;
 	Subject subject = Subject.getSubject();
-	static Map<Key<Question>,Question> quizQuestions = new HashMap<Key<Question>,Question>();
-
+	
 	public String getServletInfo() {
 		return "This servlet presents a quiz for the user.";
 	}
