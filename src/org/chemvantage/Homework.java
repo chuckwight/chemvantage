@@ -136,6 +136,8 @@ public class Homework extends HttpServlet {
 				return buf.toString();
 			}
 
+			if (user.isAnonymous())	buf.append("<h3><font color=red>Anonymous User</font></h3>");
+			
 			if (user.isInstructor() && hwa != null) {
 				buf.append("<mark>As the course instructor you may "
 						+ "<a href=/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + ">"
@@ -144,18 +146,14 @@ public class Homework extends HttpServlet {
 					buf.append("<br>You may also view a <a href=/Homework?UserRequest=ShowSummary&sig=" 
 							+ user.getTokenSignature() + ">summary of student scores</a> for this assignment.");
 				buf.append("</mark><p>");
-			} else if (user.isAnonymous()) {
-				buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			}	
 
-			if (!user.isAnonymous()) {
-				buf.append("\nHomework Rules<UL>");
-				buf.append("\n<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
-				buf.append("\n<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question.</LI>");
-				buf.append("\n<LI>Most questions are customized, so the correct answers are different for each student.</LI>");
-				buf.append("\n<LI>A checkmark will appear to the left of each correctly solved problem.</LI>");
-				buf.append("</UL>");
-			}
+			buf.append("\nHomework Rules<UL>");
+			buf.append("\n<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
+			buf.append("\n<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question.</LI>");
+			buf.append("\n<LI>Most questions are customized, so the correct answers are different for each student.</LI>");
+			buf.append("\n<LI>A checkmark will appear to the left of each correctly solved problem.</LI>");
+			buf.append("</UL>");
 
 			// Review the HWTransactions for this user to record which problems have been solved for this assignment and retrieve the current showWork strings:
 			List<Long> solvedQuestions = new ArrayList<Long>();
@@ -170,9 +168,9 @@ public class Homework extends HttpServlet {
 				workStrings.put(ht.questionId,ht.showWork);
 			}
 			
-			StringBuffer assignedQuestions = new StringBuffer("<h4>Assigned Exercises:</h4>");
+			StringBuffer assignedQuestions = new StringBuffer();
 			assignedQuestions.append("<div style='display:table'>");
-			StringBuffer optionalQuestions = new StringBuffer("<h4>Optional Exercises:</h4>");
+			StringBuffer optionalQuestions = new StringBuffer();
 			optionalQuestions.append("<div style='display:table'>");
 			
 			// this script displays a box for the user to show their work
@@ -191,7 +189,6 @@ public class Homework extends HttpServlet {
 				StringBuffer questionBuffer = new StringBuffer("<div style='display:table-row'><div style='display:table-cell'>");
 				String hashMe = user.id + (hwa==null?"":hwa.id);
 				Question q = entry.getValue().clone();
-				q.id = entry.getValue().id;
 				q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
 				
 				if (solvedQuestions.contains(q.id)) questionBuffer.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");					
@@ -202,7 +199,7 @@ public class Homework extends HttpServlet {
 						+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
 						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
-						+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>"
+						+ (hwa==null?"":"<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>")
 						+ "<div style='display:table-cell'><b>" + (assigned?i:j) + ".&nbsp;</b></div>"
 						+ "<div style='display:table-cell'>" + q.print(workStrings.get(q.id),"") 
 						+ (Long.toString(q.id).equals(request.getParameter("Q"))?"Hint:<br>" + q.getHint():"")
@@ -216,7 +213,7 @@ public class Homework extends HttpServlet {
 					j++;
 				}
 			}
-			buf.append(assignedQuestions + "</div>" + optionalQuestions + "</div>");
+			buf.append((i>1?"<h4>Assigned Exercises</h4>":"") + assignedQuestions + "</div>" + (hwa!=null && j>1?"<h4>Optional Exercises</h4>":"") + optionalQuestions + "</div>");
 		} catch (Exception e) {
 			buf.append(e.toString() + " " + e.getMessage());
 		}
