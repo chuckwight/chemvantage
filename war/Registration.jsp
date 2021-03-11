@@ -92,8 +92,9 @@ uses such as testing LTI connections and LTI software development for LMS platfo
 </span>
 
 <script>
-if(document.getElementById('use').value=='prod') document.getElementById('orgtype').style.display='inline';
-if(document.getElementById('use').value=='test') document.getElementById('testing').style.display='inline';
+var usebuttons = document.getElementsByName('use');
+if(usebuttons[0].checked) document.getElementById('orgtype').style.display='inline';
+if(usebuttons[1].checked) document.getElementById('testing').style.display='inline';
 </script>
 
 Please tell us about your school, business or organization:<br/>

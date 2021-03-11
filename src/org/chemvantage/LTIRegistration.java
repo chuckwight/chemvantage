@@ -219,22 +219,20 @@ public class LTIRegistration extends HttpServlet {
 		String openid_configuration = request.getParameter("openid_configuration");
 		
 		if (sub.isEmpty() || email.isEmpty() || use==null ||use.isEmpty() || ver==null || ver.isEmpty()) throw new Exception("All form fields are required. ");
-		if (aud.isEmpty() || url.isEmpty()) throw new Exception("You must enter your organization name and home page. ");
-		else {
-			aud = (aud==null?"":aud);
-			url = (url==null?"":url);
-		}
-
+		if (aud.isEmpty()) throw new Exception("Please enter your organization name.");
+		if (url.isEmpty() && !"personal".equals(typ)) throw new Exception("Please enter the URL for your organization's home page.");
+		
 		String regex = "^[A-Za-z0-9+_.-]+@(.+)$";		 
 		Pattern pattern = Pattern.compile(regex);
 		if (!pattern.matcher(email).matches()) throw new Exception("Your email address was not formatted correctly. ");
 
 		if ("prod".equals(use) && typ==null) throw new Exception("Please specify the type of organization connecting to ChemVantage. ");
 
+		if (!url.isEmpty() && !url.startsWith("http")) url = "http://" + url;
 		try {
-			if (!"personal".contentEquals(typ)) new URL(url);   // throws Exception if URL is not formatted correctly
+			if (!"personal".equals(typ)) new URL(url);   // throws Exception if URL is not formatted correctly
 		} catch (Exception e) {
-			throw new Exception("Invalid domain name (" + e.getMessage() + ").");
+			throw new Exception("Invalid domain name (" + url + "). " + e.toString());
 		}
 
 		if (openid_configuration==null) {
@@ -313,8 +311,10 @@ public class LTIRegistration extends HttpServlet {
 		
 		if (iss.contains("dev")) {
 			buf.append("You indicated on the registration form that your use case is testing LTI connections. ChemVantage is pleased to support "
-					+ "the LTI community by offering access to our code development server for this purpose. When you complete the registration "
-					+ "steps below, your account will be activated for a free 10 day trial period for up to 5 users in your LMS. If you requre "
+					+ "the LTI community by offering access to our code development server for non-instructional purposes. ");
+			
+			buf.append("When you complete the registration "
+					+ "steps below, your account will be activated. Accounts are purged from time to time, but reregistration is free.  for a free 10 day trial period for up to 5 users in your LMS. If you requre "
 					+ "access to this server for more than 10 days and/or 5 users, please contact us at admin@chemvantage.org.<p>"
 					+ "Please do not use the development server for serious instructional purposes.<p>");
 		} else {
