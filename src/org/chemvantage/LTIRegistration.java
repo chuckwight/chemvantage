@@ -194,7 +194,7 @@ public class LTIRegistration extends HttpServlet {
 			}
 		} catch (Exception e) {
 			String message = e.getMessage();
-			String registrationURL = request.getParameter("use").equals("prod")?"https://www.chemvantage.org":"https://dev-vantage-hrd.appspot.com";
+			String registrationURL = "https://" + request.getServerName();
 			registrationURL += "/Registration.jsp?message=" + URLEncoder.encode(message,"utf-8");
 			Enumeration<String> enumeration = request.getParameterNames();
 			while(enumeration.hasMoreElements()){
@@ -229,7 +229,7 @@ public class LTIRegistration extends HttpServlet {
 		Pattern pattern = Pattern.compile(regex);
 		if (!pattern.matcher(email).matches()) throw new Exception("Your email address was not formatted correctly. ");
 
-		if (typ==null) throw new Exception("Please specify the type of organization connecting to ChemVantage. ");
+		if ("prod".equals(use) && typ==null) throw new Exception("Please specify the type of organization connecting to ChemVantage. ");
 
 		try {
 			if (!"personal".contentEquals(typ)) new URL(url);   // throws Exception if URL is not formatted correctly
