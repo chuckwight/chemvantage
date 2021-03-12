@@ -11,7 +11,6 @@
 	String aud = request.getParameter("aud");
 	String url = request.getParameter("url");
 	String use = request.getParameter("use");
-	//if (use == null) use = thisURL.contains("dev-vantage") ? "test" : "prod";
 	String ver = request.getParameter("ver");
 	String lms = request.getParameter("lms");
 	String lms_other = request.getParameter("lms_other");

@@ -52,6 +52,7 @@ import javax.servlet.http.HttpServletResponse;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.google.common.net.InternetDomainName;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -226,7 +227,7 @@ public class LTIRegistration extends HttpServlet {
 		Pattern pattern = Pattern.compile(regex);
 		if (!pattern.matcher(email).matches()) throw new Exception("Your email address was not formatted correctly. ");
 
-		if ("prod".equals(use) && typ==null) throw new Exception("Please specify the type of organization connecting to ChemVantage. ");
+		if ("prod".equals(use) && typ==null) throw new Exception("Please select the type of organization connecting to ChemVantage. ");
 
 		if (!url.isEmpty() && !url.startsWith("http")) url = "http://" + url;
 		try {
@@ -244,7 +245,6 @@ public class LTIRegistration extends HttpServlet {
 		if (!reCaptchaOK(request)) throw new Exception("ReCaptcha tool was unverified. Please try again. ");
 		
 		String iss = use.equals("test")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
-		if (!iss.contains(request.getServerName())) throw new Exception("Redirected to the requested server. Please submit again. ");
 		
 		// Construct a new registration token
 		Date now = new Date();
@@ -300,43 +300,51 @@ public class LTIRegistration extends HttpServlet {
 		String ver = jwt.getClaim("ver").asString();
 		String typ = jwt.getClaim("typ").asString();
 		
+		String urlDomain = InternetDomainName.from(url).toString();
+		boolean instant = email.contains(urlDomain);
+		
 		StringBuffer buf = new StringBuffer();
 		
 		buf.append("<h2>ChemVantage Registration</h2>");
-		buf.append("Name: " + name + " (" + email + ")<br>"
-				+ (org.isEmpty()?"":"Org: " + org + " (" + url + ")<br>")
-				+ "LMS: " + lms + "<p>");
+		buf.append("Name: " + name + " (" + email + ")<br>");
+		buf.append("Organization: " + org + (url.isEmpty()?"":"(" + url + ")"));
+		buf.append("LMS: " + lms + "<br/><br/>");
 		
 		buf.append("Thank you for your ChemVantage registration request.<p>");
 		
 		if (iss.contains("dev")) {
-			buf.append("You indicated on the registration form that your use case is testing LTI connections. ChemVantage is pleased to support "
-					+ "the LTI community by offering access to our code development server for non-instructional purposes. ");
+			buf.append("You indicated on the registration form that your use case is LTI software development or testing LTI connections. "
+					+ "ChemVantage is pleased to support the LTI community by offering access to our code development server for "
+					+ "non-instructional purposes. The development server is occasionally unstable while we are testing our own code, and "
+					+ "accounts are purged from time to time, but reregistration is free.<br/><br/>");
 			
-			buf.append("When you complete the registration "
-					+ "steps below, your account will be activated. Accounts are purged from time to time, but reregistration is free.  for a free 10 day trial period for up to 5 users in your LMS. If you requre "
-					+ "access to this server for more than 10 days and/or 5 users, please contact us at admin@chemvantage.org.<p>"
-					+ "Please do not use the development server for serious instructional purposes.<p>");
+			buf.append("When you complete the registration steps below, your account " 
+					+ (instant?"will be activated immediately. ":"application will be submitted for approval. You should expect a response within 24 hours. "));
+			
+			buf.append("If you have questions or require assistance, please contact us at admin@chemvantage.org.");
+			
 		} else {
 			switch (typ) {
 			case "nonprofit":
 				buf.append("You indicated on the registration form that " + org + " is a public or non-profit educational institution. As such, ChemVantage "
 						+ "services are provided free for up to 1000 users in your LMS. Please contact us for pricing beyond this limit.<p>"
 						+ "<b>By clicking the link below, you certify that your organization is a public or non-profit institution.</b><p>");
+				buf.append("Your account " 
+						+ (instant?"will be activated immediately. ":"application will then be submitted for approval. You should expect a response within 24 hours. "));
 				break;
 			case "personal":
 				buf.append("You indicated the registration form that you intend to use ChemVantage for a small business or personal use. You may use "
-						+ "this account for offering instuction in General Chemistry for up to 5 users from your LMS. " 
-						+ "To exceed this limit, please contact us for pricing at admin@chemvantage.org.<p>"
-						+ "Your account has been fully activated for 10 days pending payment of the $20 monthly subscription fee. You should receive an "
-						+ "invoice from PayPal via email within the next 2 days.<p>");
+						+ "this account for offering instuction in General Chemistry for up to 5 users from your LMS. To exceed this limit, "
+						+ "please contact us for pricing at admin@chemvantage.org.<p>");
+				buf.append("When you complete the registration steps below, your account " 
+						+ (instant?"will be activated immediately. ":"application will be submitted for approval. You should expect a response within 24 hours. "));
 				break;			
 			case "forprofit":
-				buf.append("You indicated on the registration form that " + org + " desires to establish a corporate parnership account. ChemVantage will "
+				buf.append("You indicated on the registration form that " + org + " desires to establish a commercial account. ChemVantage will "
 						+ "send you an invoice in the next few days for payment of the $5000 annual subscription charge. This subscription allows you to "
-						+ "provide ChemVantage services for up to 10,000 users from your LMS. To exceed this limit, please contact us for pricing.<p>"
-						+ "Your account has been fully activated for 10 days pending payment of the $5000 annual subscription fee. You should receive an " 
-						+ "invoice from PayPal via email within the next 2 days.<p>");
+						+ "provide ChemVantage services for up to 10,000 users from your LMS. To exceed this limit, please contact us for pricing.<p>");
+				buf.append("When you complete the registration steps below, your account " 
+						+ (instant?"will be activated immediately. ":"application will be submitted for approval. You should expect a response within 24 hours. "));
 				break;
 			default: 
 			}
@@ -436,18 +444,13 @@ public class LTIRegistration extends HttpServlet {
 					+ "-Chuck Wight");		
 		
 		} else { // LTIAdvantage registration
+			buf.append("<h3>Complete the LTI Advantage Registration Process</h3>");
 			buf.append("The next step is to enter the ChemVantage configuration details into your LMS. "
 					+ "This will enable your LMS to communicate securely with ChemVantage. Normally, "
 					+ "you must have administrator privileges in your LMS in order to do this. "
 					+ "If you are NOT the LMS administrator, please stop here and forward this message "
 					+ "to an administrator with a request to complete the registration process. The "
 					+ "registration link below will be active for 3 days and expires at " + jwt.getExpiresAt() + ".<p>"
-					+ (iss.equals("https://dev-vantage-hrd.appspot.com")?"You indicated that your initial "
-							+ "use case is testing, so we are granting access to our development server "
-							+ "for this purpose. If and when you get to the point of offering ChemVantage to "
-							+ "students in a class, please reregister your LMS with ChemVantage to connect "
-							+ "with our production server. Do not use the development server for live "
-							+ "instruction.<p>":"")
 					+ "<hr>"
 					+ "<br>To the LMS Administrator:<p>"
 					+ "ChemVantage is a free Open Education Resource for teaching and learning college-"
