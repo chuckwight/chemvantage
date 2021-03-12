@@ -229,7 +229,7 @@ public class LTIRegistration extends HttpServlet {
 
 		if ("prod".equals(use) && typ==null) throw new Exception("Please select the type of organization connecting to ChemVantage. ");
 
-		if (!url.isEmpty() && !url.startsWith("http")) url = "http://" + url;
+		if (!url.isEmpty() && !url.startsWith("http")) url = "https://" + url;
 		try {
 			if (!"personal".equals(typ)) new URL(url);   // throws Exception if URL is not formatted correctly
 		} catch (Exception e) {
@@ -300,14 +300,14 @@ public class LTIRegistration extends HttpServlet {
 		String ver = jwt.getClaim("ver").asString();
 		String typ = jwt.getClaim("typ").asString();
 		
-		String urlDomain = InternetDomainName.from(url).toString();
+		String urlDomain = InternetDomainName.from(new URL(url).getHost()).topPrivateDomain().toString();
 		boolean instant = email.contains(urlDomain);
 		
 		StringBuffer buf = new StringBuffer();
 		
 		buf.append("<h2>ChemVantage Registration</h2>");
-		buf.append("Name: " + name + " (" + email + ")<br>");
-		buf.append("Organization: " + org + (url.isEmpty()?"":"(" + url + ")"));
+		buf.append("Name: " + name + " (" + email + ")<br/>");
+		buf.append("Organization: " + org + (url.isEmpty()?"":" (" + url + ")") + "<br/>");
 		buf.append("LMS: " + lms + "<br/><br/>");
 		
 		buf.append("Thank you for your ChemVantage registration request.<p>");

@@ -1,6 +1,6 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ page import="static com.googlecode.objectify.ObjectifyService.ofy" %>
-<%@ page import="java.util.*,com.googlecode.objectify.*,org.chemvantage.*"%>
+<%@ page import="java.util.*,com.googlecode.objectify.*,org.chemvantage.*,com.google.common.net.InternetDomainName"%>
 
 <%
 	String thisURL = "https://" + request.getServerName() + "/lti/registration";
@@ -74,8 +74,8 @@ Your Name: <input type=text name=sub size=40 value='<%= (sub==null?"":sub) %>'><
 Your Email: <input type=text name=email size=40 value='<%= (email==null?"":email) %>'><br/><br/>
 
 Please select your use case:<br/>
-<label><input type=radio name=use value=prod <%= ("prod".equals(use)?"checked":"") %> onclick="document.getElementById('orgtype').style.display='';document.getElementById('testing').style.display='none'">Teaching a chemistry class (production server)</label><br/>
-<label><input type=radio name=use value=test <%= ("test".equals(use)?"checked":"") %> onclick="document.getElementById('testing').style.display='';document.getElementById('orgtype').style.display='none'">Testing LTI connections (code development server)</label><br/><br/>
+<label><input type=radio name=use value=prod <%= ("prod".equals(use)?"checked":"") %> onclick=changeTyp()>Teaching a chemistry class (production server)</label><br/>
+<label><input type=radio name=use value=test <%= ("test".equals(use)?"checked":"") %> onclick=changeTyp()>Testing LTI connections (code development server)</label><br/><br/>
 
 <span id=orgtype style="display:none">
 Type of organization:<br/>
@@ -90,12 +90,7 @@ ChemVantage LLC is pleased to support the LTI community by permitting free acces
 uses such as testing LTI connections and LTI software development for LMS platforms. The development server may become unstable at times. Accounts are purged every month or two, but reregistration is free.<br/><br/>
 </span>
 
-<script>
-var usebuttons = document.getElementsByName('use');
-if(usebuttons[0].checked) document.getElementById('orgtype').style.display='inline';
-if(usebuttons[1].checked) document.getElementById('testing').style.display='inline';
-</script>
-
+<div id=orgInfo style='display:none'>
 Please tell us about your school, business or organization:<br/>
 Org Name: <input type=text name=aud  value='<%= (aud==null?"":aud) %>'> <br/>
 Home Page: <input type=text name=url placeholder='https://myschool.edu' value='<%= (url==null?"":url) %>'><br/>
@@ -127,10 +122,34 @@ For instant account approval, your Email domain (above) should match the Home Pa
 <div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div><br/><br/>
 <input type=submit value='Submit Registration'>
 </form><br/><br/>
+</div>
+
+<script>
+function changeTyp() {
+	var usebuttons = document.getElementsByName('use');
+	var orgTypeSpan = document.getElementById('orgtype');
+	var testingSpan = document.getElementById('testing');
+	var orgInfoDiv = document.getElementById('orgInfo');
+	if(usebuttons[0].checked) {
+		orgTypeSpan.style.display='inline';
+		testingSpan.style.display='none';
+		orgInfoDiv.style.display='inline';
+	}
+	if(usebuttons[1].checked) {
+		testingSpan.style.display='inline';
+		orgTypeSpan.style.display='none';
+		orgInfoDiv.style.display='inline';
+		var ele = document.getElementsByName("typ");
+		for (var i = 0; i < ele.length; i++) ele[i].checked = false;
+	}
+}
+changeTyp();
+</script>
 
 If you find ChemVantage to be useful, please consider making a corporate or personal donation to help us support Open Education Resources for teaching and learning. Thank you!<br/>
+The "Donate button button below will open a PayPal page in a new browser window.<br/>
 
-<form action="https://www.paypal.com/donate" method="post" target="_top">
+<form action="https://www.paypal.com/donate" method="post" target="_blank">
 <input type="hidden" name="hosted_button_id" value="4DYCV6EG2HPB2" />
 <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
 <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
