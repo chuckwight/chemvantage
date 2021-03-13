@@ -239,7 +239,8 @@ public class LTIRegistration extends HttpServlet {
 
 		if (openid_configuration==null) {
 			if (lms==null) throw new Exception("Please select the type of LMS that you are connecting to ChemVantage. ");
-			if ("other".contentEquals(lms) && (lms_other==null || lms_other.isEmpty())) throw new Exception("Please describe the type of LMS that you are connecting to ChemVantage. ");
+			if ("other".equals(lms) && (lms_other==null || lms_other.isEmpty())) throw new Exception("Please describe the type of LMS that you are connecting to ChemVantage. ");
+			if ("other".equals(lms)) lms = lms_other;
 		}
 		if (!"true".equals(request.getParameter("AcceptChemVantageTOS"))) throw new Exception("You must accept the ChemVantage Terms of Service. ");
 
@@ -430,6 +431,10 @@ public class LTIRegistration extends HttpServlet {
 						+ "that students get credit for their work.</li>"
 						+ "</ol>");
 				break;
+			case "LTI Certification":
+				buf.append("Your registration will connect ChemVantage to the IMS ltiadvantagevalidator platform to perform "
+						+ "the tests required for certification.<p>");
+				break;
 			case "moodle":
 				buf.append("Please note: Several Moodle users have experienced difficulty getting "
 						+ "scores returned to the Moodle grade book using LTI. We believe that this is due to the Moodle server being "
@@ -524,6 +529,11 @@ public class LTIRegistration extends HttpServlet {
 						+ "</ul></li>"
 						+ "<li>When you launch the assignment, you may use the highlighted link to customize it for your class.</li>"
 						+ "</ol>");
+				break;
+			case "LTI Certification":
+				buf.append("The deployment_id will be recorded automatically. Please click <a href=" + iss 
+						+ "/lti/registration?UserRequest=final&token=" + token + ">this link</a> " 
+						+ "to register the new client_id with ChemVantage.<br/><br/>");
 				break;
 			default:
 				buf.append("This registration request uses the LTI Advantage (version 1.3) specifications. "
@@ -690,6 +700,11 @@ public class LTIRegistration extends HttpServlet {
 				buf.append("Client ID: <input type=text size=40 name=ClientId><br>"
 						+ "Deployment ID: <input type=text size=40 name=DeploymentId><p>");
 				break;
+			case "LTI Certification":
+				buf.append("<input type=hidden name=DeploymentId value=testdeploy />");
+				buf.append("Deployment ID: testdeploy<br>"
+						+ "Client ID: <input type=text size=40 name=ClientId><p>");
+				break;
 			default:
 				buf.append("Client ID: <input type=text size=40 name=ClientId><br>"
 						+ "Deployment ID: <input type=text size=40 name=DeploymentId><p>");
@@ -750,6 +765,12 @@ public class LTIRegistration extends HttpServlet {
 			if (oauth_access_token_url==null || oauth_access_token_url.isEmpty()) throw new Exception("Canvas account URL is required.");
 			oauth_access_token_url += "/login/oauth2/token";
 			break;
+		case "LTI Certification":
+			platform_id = "https://ltiadvantagevalidator.imsglobal.org";
+			oidc_auth_url = "https://ltiadvantagevalidator.imsglobal.org/ltitool/oidcauthurl.html";
+			well_known_jwks_url = "https://oauth2server.imsglobal.org/jwks";
+			oauth_access_token_url = "https://ltiadvantagevalidator.imsglobal.org/ltitool/authcodejwt.html";
+			break;
 		default:
 			platform_id = request.getParameter("PlatformId");
 			if (platform_id==null || platform_id.isEmpty()) throw new Exception("Platform ID value is required.");
@@ -766,8 +787,6 @@ public class LTIRegistration extends HttpServlet {
 		
 		Deployment prior = Deployment.getInstance(d.platform_deployment_id);
 		
-		ofy().save().entity(d).now();  // registration is now complete
-		
 		int count = ofy().load().type(Response.class).count();
 		
 		String msg = "<h2>Congratulations. Registration is complete.</h2>"
@@ -783,9 +802,14 @@ public class LTIRegistration extends HttpServlet {
 				+ "</form><br/><br/>";
 
 
-		if (prior==null) return msg;
-		else if (prior.client_id.equals(d.client_id)) return msg + "Note: this platform deployment was registered previously. The registration data have now been updated.<p>";
-		else return msg + "Note: This platform deployment was registered previously. The client_id and registration data have now been updated. If this is not correct, you should contact admin@chemvantage.org immediately.<p>";
+		if (prior!=null) {  // this is a repeat registration
+			d.status = prior.status;
+			if (prior.client_id.equals(d.client_id)) msg += "Note: this platform deployment was registered previously. The registration data have now been updated.<p>";
+			else msg += "Note: This platform deployment was registered previously. The client_id and registration data have now been updated. If this is not correct, you should contact admin@chemvantage.org immediately.<p>";
+		}
+		
+		ofy().save().entity(d).now();  // registration is now complete
+		return msg;
 	}	
 
 	String getConfigurationJson(String iss,String lms) {

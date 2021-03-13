@@ -3,7 +3,6 @@
 <%@ page import="java.util.*,com.googlecode.objectify.*,org.chemvantage.*,com.google.common.net.InternetDomainName"%>
 
 <%
-	String thisURL = "https://" + request.getServerName() + "/lti/registration";
 	String message = request.getParameter("message");
 	String sub = request.getParameter("sub");
 	String email = request.getParameter("email");
@@ -42,11 +41,9 @@
 <span style='color: red; border: 2px solid red'>&nbsp;<%= message %> &nbsp;</span>
 <% } %>
 
-<h2>This page is currently under construction. Please use the <a href=https://www.chemvantage.org/lti/registration>main ChemVantage registration page</a> instead.</h2>
-
 <% if (dynamic) { %>
 
-<h4>ChemVantage LTI Advantage Dynamic Registration</h4>
+<h3>ChemVantage LTI Advantage Dynamic Registration</h3>
 
 Please complete the form below to create a trusted LTI Advantage connection between your LMS and ChemVantage 
 that is convenient, secure and <a href=https://site.imsglobal.org/certifications?query=chemvantage>certified by IMS</a>.
@@ -55,10 +52,11 @@ will need to activate the deployment in your LMS before a launch to ChemVantage 
 
 <% } else { %>
 
-<h4>ChemVantage LTI Registration</h4>
+<h3>ChemVantage LTI Registration</h3>
 
-ChemVantage supports LTI Advantage Dynamic Registration at <a href=<%= thisURL %>><%= thisURL %></a><br/>
-If your LMS supports this, the registration process will be fast and easy!<br/><br/>
+ChemVantage now supports LTI Advantage Dynamic Registration. <br/>
+If your LMS supports this, use the URL: https://www.chemvantage.org/lti/registration<br/>
+The process should be fast and easy!<br/><br/>
 
 Otherwise, you may proceed with manual registration by completing the form below to obtain a set of LTI credentials. The information you 
 provide will help us to create a trusted connection between your learning management system (LMS) and
@@ -73,12 +71,12 @@ Please tell us how to contact you if there is ever a problem with your account (
 Your Name: <input type=text name=sub size=40 value='<%= (sub==null?"":sub) %>'/><br/>
 Your Email: <input type=text name=email size=40 value='<%= (email==null?"":email) %>'/><br/><br/>
 
-Please select your use case:<br/>
+To continue, please select your use case:<br/>
 <label><input type=radio name=use value=prod <%= ("prod".equals(use)?"checked":"") %> onclick=changeTyp(); />Teaching a chemistry class (production server)</label><br/>
 <label><input type=radio name=use value=test <%= ("test".equals(use)?"checked":"") %> onclick=changeTyp(); />Testing LTI connections (code development server)</label><br/><br/>
 
 <span id=orgtype style="display:none">
-Type of organization:<br/>
+Select the type of organization:<br/>
 <label><input type=radio name=typ value=nonprofit <%= ("nonprofit".equals(typ)?"checked":"") %> /> Public or nonprofit educational institution (free for up to 1000 users)</label><br/>
 <label><input type=radio name=typ value=personal <%= ("personal".equals(typ)?"checked":"") %> /> Small business or Personal account ($20/month for up to 5 users)</label><br/>
 <label><input type=radio name=typ value=forprofit <%= ("forprofit".equals(typ)?"checked":"") %> /> Commercial account ($5000/year for up to 10000 users)</label><br/>
@@ -121,9 +119,12 @@ For instant account approval, your Email domain (above) should match the Home Pa
 <label><input type=checkbox name=AcceptChemVantageTOS value=true <%= ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") %>/>Accept the <a href=/About#terms target=_blank>ChemVantage Terms of Service</a></label><br/><br/>
 
 <div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div><br/><br/>
-<input type=submit value='Submit Registration'/>
-</form><br/><br/>
 </div>
+
+<input type=submit value='Submit Registration'/>
+
+</form><br/><br/>
+
 
 
 <script>
@@ -151,14 +152,4 @@ function changeTyp() {
 changeTyp();
 </script>
 
-If you find ChemVantage to be useful, please consider making a corporate or personal donation to help us support Open Education Resources for teaching and learning. Thank you!<br/>
-<br/>
-
-<form action="https://www.paypal.com/donate" method="post" target="_blank">
-<input type="hidden" name="hosted_button_id" value="4DYCV6EG2HPB2" />
-<input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
-<img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
-</form> This will open a PayPal page in a new browser window.
-
-<br/>
 <%= Home.footer %>
