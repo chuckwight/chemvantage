@@ -164,9 +164,11 @@ public class Admin extends HttpServlet {
 			buf.append("<h3>Accounts Needing Review and Approval</h3>");
 			List<Deployment> review = ofy().load().type(Deployment.class).filter("status", "review").list();
 			for (Deployment d : review) {
-				buf.append("<form method=post><input type=hidden name=platform_deployment_id value='" + d.platform_deployment_id + "'><input type=hidden name=UserRequest value='Submit Review'>"
-						+ d.getPlatformId() + " (" + d.lms_type + ") at " + d.organization + " by " + d.contact_name + " (" + d.email + ") "
-						+ "<input type=submit name=action value='Approve'>&nbsp;<input type=submit name=action value='Delete'></form><br/>");
+				buf.append("<form method=post><input type=hidden name=UserRequest value='Submit Review'/><input type=hidden name=sig value='" + user.getTokenSignature() + "'/>"
+						+ "<input type=hidden name=platform_deployment_id value='" + d.platform_deployment_id + "'/>"
+						+ d.platform_deployment_id + " (" + d.lms_type + ")<br/>"
+						+ "by " + d.contact_name + " (" + d.email + ") at " + d.organization + " (" + d.org_url + ")<br/>"
+						+ "<input type=submit name=action value='Approve'/>&nbsp;<input type=submit name=action value='Delete'/></form><br/>");
 			}
 			
 			buf.append("<h3>New and Expiring Accounts</h3>");			
