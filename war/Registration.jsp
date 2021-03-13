@@ -68,20 +68,20 @@ complete the configuration of your LMS as well as a link to finalize the registr
 
 <% } %>
 
-<form method=post action=/lti/registration>
+<form id=regform method=post action='/lti/registration'>
 Please tell us how to contact you if there is ever a problem with your account (see our <a href=https://www.chemvantage.org/About#privacy>Privacy Policy</a>):<br/>
-Your Name: <input type=text name=sub size=40 value='<%= (sub==null?"":sub) %>'><br/>
-Your Email: <input type=text name=email size=40 value='<%= (email==null?"":email) %>'><br/><br/>
+Your Name: <input type=text name=sub size=40 value='<%= (sub==null?"":sub) %>'/><br/>
+Your Email: <input type=text name=email size=40 value='<%= (email==null?"":email) %>'/><br/><br/>
 
 Please select your use case:<br/>
-<label><input type=radio name=use value=prod <%= ("prod".equals(use)?"checked":"") %> onclick=changeTyp()>Teaching a chemistry class (production server)</label><br/>
-<label><input type=radio name=use value=test <%= ("test".equals(use)?"checked":"") %> onclick=changeTyp()>Testing LTI connections (code development server)</label><br/><br/>
+<label><input type=radio name=use value=prod <%= ("prod".equals(use)?"checked":"") %> onclick=changeTyp(); />Teaching a chemistry class (production server)</label><br/>
+<label><input type=radio name=use value=test <%= ("test".equals(use)?"checked":"") %> onclick=changeTyp(); />Testing LTI connections (code development server)</label><br/><br/>
 
 <span id=orgtype style="display:none">
 Type of organization:<br/>
-<label><input type=radio name=typ value=nonprofit <%= ("nonprofit".equals(typ)?"checked":"") %> > Public or nonprofit educational institution (free for up to 1000 users)</label><br/>
-<label><input type=radio name=typ value=personal <%= ("personal".equals(typ)?"checked":"") %> > Small business or Personal account ($20/month for up to 5 users)</label><br/>
-<label><input type=radio name=typ value=forprofit <%= ("forprofit".equals(typ)?"checked":"") %> > Commercial account ($5000/year for up to 10000 users)</label><br/>
+<label><input type=radio name=typ value=nonprofit <%= ("nonprofit".equals(typ)?"checked":"") %> /> Public or nonprofit educational institution (free for up to 1000 users)</label><br/>
+<label><input type=radio name=typ value=personal <%= ("personal".equals(typ)?"checked":"") %> /> Small business or Personal account ($20/month for up to 5 users)</label><br/>
+<label><input type=radio name=typ value=forprofit <%= ("forprofit".equals(typ)?"checked":"") %> /> Commercial account ($5000/year for up to 10000 users)</label><br/>
 If your need exceeds the user limits above, please contact us at admin@chemvantage.org for pricing options.<br/><br/>
 </span>
 
@@ -92,37 +92,39 @@ uses such as testing LTI connections and LTI software development for LMS platfo
 
 <div id=orgInfo style='display:none'>
 Please tell us about your school, business or organization:<br/>
-Org Name: <input type=text name=aud  value='<%= (aud==null?"":aud) %>'> <br/>
-Home Page: <input type=text name=url placeholder='https://myschool.edu' value='<%= (url==null?"":url) %>'><br/>
+Org Name: <input type=text name=aud  value='<%= (aud==null?"":aud) %>'/> <br/>
+Home Page: <input type=text name=url placeholder='https://myschool.edu' value='<%= (url==null?"":url) %>'/><br/>
 For instant account approval, your Email domain (above) should match the Home Page domain.<br/><br/>
 
 <% if (!dynamic) { %>
 	Type of LTI registration:<br/>
-	<label><input type=radio name=ver value=1p3 <%= ((ver==null || ver.equals("1p3"))?"checked":"") %>>LTI Advantage (preferred)</label><br/>
-	<label><input type=radio name=ver value=1p1 <%= ((ver!=null && ver.equals("1p1"))?"checked":"") %>>LTI version 1.1 (expires 31-DEC-2021)</label><br/><br/>
+	<label><input type=radio name=ver value=1p3 <%= ((ver==null || ver.equals("1p3"))?"checked":"") %>/>LTI Advantage (preferred)</label><br/>
+	<label><input type=radio name=ver value=1p1 <%= ((ver!=null && ver.equals("1p1"))?"checked":"") %>/>LTI version 1.1 (expires 31-DEC-2021)</label><br/><br/>
 
 	Type of Learning Management System:<br/>
-	<label><input type=radio name=lms value=blackboard <%= ((lms!=null && lms.equals("blackboard"))?"checked":"") %>>Blackboard</label><br/>
-	<label><input type=radio name=lms value=brightspace <%= ((lms!=null && lms.equals("brightspace"))?"checked":"") %>>Brightspace</label><br/>
-	<label><input type=radio name=lms value=canvas <%= ((lms!=null && lms.equals("canvas"))?"checked":"") %>>Canvas</label><br/>
-	<label><input type=radio name=lms value=moodle <%= ((lms!=null && lms.equals("moodle"))?"checked":"") %>>Moodle</label><br/>
-	<label><input type=radio name=lms value=sakai <%= ((lms!=null && lms.equals("sakai"))?"checked":"") %>>Sakai</label><br/>
-	<label><input type=radio name=lms value=schoology <%= ((lms!=null && lms.equals("schoology"))?"checked":"") %>>Schoology</label><br/>
-	<label><input type=radio name=lms id=other value=other <%= ((lms!=null && lms.equals("other"))?"checked":"") %>>Other: </label>
-	<input type=text name=lms_other value='<%= (lms_other==null?"":lms_other) %>' onFocus="document.getElementById('other').checked=true;"><br/><br/>	
+	<label><input type=radio name=lms value=blackboard <%= ((lms!=null && lms.equals("blackboard"))?"checked":"") %>/>Blackboard</label><br/>
+	<label><input type=radio name=lms value=brightspace <%= ((lms!=null && lms.equals("brightspace"))?"checked":"") %>/>Brightspace</label><br/>
+	<label><input type=radio name=lms value=canvas <%= ((lms!=null && lms.equals("canvas"))?"checked":"") %>/>Canvas</label><br/>
+	<label><input type=radio name=lms value=moodle <%= ((lms!=null && lms.equals("moodle"))?"checked":"") %>/>Moodle</label><br/>
+	<label><input type=radio name=lms value=sakai <%= ((lms!=null && lms.equals("sakai"))?"checked":"") %>/>Sakai</label><br/>
+	<label><input type=radio name=lms value=schoology <%= ((lms!=null && lms.equals("schoology"))?"checked":"") %>/>Schoology</label><br/>
+	<label><input type=radio name=lms id=other value=other <%= ((lms!=null && lms.equals("other"))?"checked":"") %>/>Other: </label>
+	<input type=text name=lms_other value='<%= (lms_other==null?"":lms_other) %>' onFocus="document.getElementById('other').checked=true;"/><br/><br/>	
 <% } else {%>
-	<input type=hidden name=ver value=dynamic_registration>
-	<input type=hidden name=lms value=dynamic_registration>
-	<input type=hidden name=openid_configuration value='<%= openid_configuration %>'>
-	<% if (registration_token!=null) { %> <input type=hidden name=registration_token value='<%= registration_token %>'> <% } %>
-<% }  %>
+	<input type=hidden name=ver value=dynamic_registration/>
+	<input type=hidden name=lms value=dynamic_registration/>
+	<input type=hidden name=openid_configuration value='<%= openid_configuration %>'/>
+	<% if (registration_token!=null) { %> <input type=hidden name=registration_token value='<%= registration_token %>'/> <% }
+ 	}  
+%>
 
-<label><input type=checkbox name=AcceptChemVantageTOS value=true <%= ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") %>>Accept the <a href=/About#terms target=_blank>ChemVantage Terms of Service</a></label><br/><br/>
+<label><input type=checkbox name=AcceptChemVantageTOS value=true <%= ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") %>/>Accept the <a href=/About#terms target=_blank>ChemVantage Terms of Service</a></label><br/><br/>
 
 <div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div><br/><br/>
-<input type=submit value='Submit Registration'>
+<input type=submit value='Submit Registration'/>
 </form><br/><br/>
 </div>
+
 
 <script>
 function changeTyp() {
@@ -130,10 +132,12 @@ function changeTyp() {
 	var orgTypeSpan = document.getElementById('orgtype');
 	var testingSpan = document.getElementById('testing');
 	var orgInfoDiv = document.getElementById('orgInfo');
+	var registrationForm = document.getElementById('regform');
 	if(usebuttons[0].checked) {
 		orgTypeSpan.style.display='inline';
 		testingSpan.style.display='none';
 		orgInfoDiv.style.display='inline';
+		registrationForm.action='https://www.chemvantage.org/lti/registration';
 	}
 	if(usebuttons[1].checked) {
 		testingSpan.style.display='inline';
@@ -141,18 +145,20 @@ function changeTyp() {
 		orgInfoDiv.style.display='inline';
 		var ele = document.getElementsByName("typ");
 		for (var i = 0; i < ele.length; i++) ele[i].checked = false;
+		registrationForm.action='https://dev-vantage-hrd.appspot.com/lti/registration';
 	}
 }
 changeTyp();
 </script>
 
 If you find ChemVantage to be useful, please consider making a corporate or personal donation to help us support Open Education Resources for teaching and learning. Thank you!<br/>
-The "Donate button button below will open a PayPal page in a new browser window.<br/>
+<br/>
 
 <form action="https://www.paypal.com/donate" method="post" target="_blank">
 <input type="hidden" name="hosted_button_id" value="4DYCV6EG2HPB2" />
 <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
 <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
-</form>
+</form> This will open a PayPal page in a new browser window.
+
 <br/>
 <%= Home.footer %>

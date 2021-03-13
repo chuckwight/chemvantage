@@ -219,7 +219,8 @@ public class LTIRegistration extends HttpServlet {
 		String lms_other = request.getParameter("lms_other");
 		String openid_configuration = request.getParameter("openid_configuration");
 		
-		if (sub.isEmpty() || email.isEmpty() || use==null ||use.isEmpty() || ver==null || ver.isEmpty()) throw new Exception("All form fields are required. ");
+		if (sub.isEmpty() || email.isEmpty() || ver==null || ver.isEmpty()) throw new Exception("All form fields are required. ");
+		if (use == null) throw new Exception("Please select your use case.");
 		if (aud.isEmpty()) throw new Exception("Please enter your organization name.");
 		if (url.isEmpty() && !"personal".equals(typ)) throw new Exception("Please enter the URL for your organization's home page.");
 		
@@ -300,8 +301,8 @@ public class LTIRegistration extends HttpServlet {
 		String ver = jwt.getClaim("ver").asString();
 		String typ = jwt.getClaim("typ").asString();
 		
-		String urlDomain = InternetDomainName.from(new URL(url).getHost()).topPrivateDomain().toString();
-		boolean instant = email.contains(urlDomain);
+		String urlTopPrivateDomain = InternetDomainName.from(new URL(url).getHost()).topPrivateDomain().toString();
+		boolean instant = email.contains(urlTopPrivateDomain);
 		
 		StringBuffer buf = new StringBuffer();
 		
@@ -328,12 +329,12 @@ public class LTIRegistration extends HttpServlet {
 			case "nonprofit":
 				buf.append("You indicated on the registration form that " + org + " is a public or non-profit educational institution. As such, ChemVantage "
 						+ "services are provided free for up to 1000 users in your LMS. Please contact us for pricing beyond this limit.<p>"
-						+ "<b>By clicking the link below, you certify that your organization is a public or non-profit institution.</b><p>");
+						+ "<b>By completing the registration steps below, you certify that your organization is a public or non-profit institution.</b><p>");
 				buf.append("Your account " 
 						+ (instant?"will be activated immediately. ":"application will then be submitted for approval. You should expect a response within 24 hours. "));
 				break;
 			case "personal":
-				buf.append("You indicated the registration form that you intend to use ChemVantage for a small business or personal use. You may use "
+				buf.append("You indicated on the registration form that you intend to use ChemVantage for a small business or personal use. You may use "
 						+ "this account for offering instuction in General Chemistry for up to 5 users from your LMS. To exceed this limit, "
 						+ "please contact us for pricing at admin@chemvantage.org.<p>");
 				buf.append("When you complete the registration steps below, your account " 
@@ -731,6 +732,9 @@ public class LTIRegistration extends HttpServlet {
 		String oidc_auth_url;
 		String oauth_access_token_url;
 		String well_known_jwks_url;
+		String urlTopPrivateDomain = InternetDomainName.from(new URL(org_url).getHost()).topPrivateDomain().toString();
+		boolean instant = email.contains(urlTopPrivateDomain);
+		
 		switch (lms) {
 		case "blackboard":
 			platform_id = "https://blackboard.com";
@@ -758,6 +762,7 @@ public class LTIRegistration extends HttpServlet {
 		}
 			
 		Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
+		d.status = instant?null:"review";
 		
 		Deployment prior = Deployment.getInstance(d.platform_deployment_id);
 		
@@ -1025,7 +1030,7 @@ public class LTIRegistration extends HttpServlet {
 			if (deploymentId == null) throw new Exception("ChemVantage requires that the deployment_id must be included in the registration response. ");
 					
 			Deployment d = new Deployment(platformId,deploymentId.getAsString(),clientId,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,null,null,null,null,lms);
-			d.status = "review";
+			//d.status = "review";
 			
 			return d;
 		} catch (Exception e) {
