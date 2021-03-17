@@ -22,7 +22,11 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.HttpConstraint;
@@ -43,6 +47,8 @@ public class Edit extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	Subject subject = Subject.getSubject();
+	TreeMap<Key<Question>,Question> questions = new TreeMap<Key<Question>,Question>(new SortBySuccessPct());
+	Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
 	
 	public String getServletInfo() {
 		return "This servlet is used by editors and admins to create, review, edit and delete question items.";
@@ -257,8 +263,7 @@ public class Edit extends HttpServlet {
 						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=5;submit()\" VALUE='Numeric'>"
 						+ "</FORM>");
 
-				Topic t = ofy().load().type(Topic.class).id(topicId).safe();
-				Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId", t.id).order("pointValue");
+				List<Key<Question>> questionKeys = loadQuestions(assignmentType,topicId);
 				
 				buf.append("<a href=# onClick=document.getElementById('bulkform').style.display='';><h4>Current Questions</h4></a>");				
 				buf.append("<div id=bulkform style='display:none'>");
@@ -280,23 +285,21 @@ public class Edit extends HttpServlet {
 						+ "</form><br>"
 						+ "</div>");
 
-				buf.append("This assignment draws from the following " + questions.count() + " questions:");
+				buf.append("This assignment draws from the following " + questionKeys.size() + " questions:");
 
 				buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
 				int i=0;
-				for (Question q : questions) {
+				for (Key<Question> k : questionKeys) {
+					Question q = questions.get(k);
 					q.setParameters();
 					i++;
-					int nSuccessful = ofy().load().type(Response.class).filter("questionId",q.id).filter("score >",0).count();
-					int nTotalAttmp = ofy().load().type(Response.class).filter("questionId",q.id).count();
-					int successPct = nTotalAttmp>0?100*nSuccessful/nTotalAttmp:0;
 					
 					buf.append("<FORM METHOD=GET ACTION=Edit>"
 							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topicId + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>"
 							+ "<TR ID=" + q.id + " VALIGN=TOP>"
-							+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit><p><FONT SIZE=-2>" + successPct + "%&nbsp;avg&nbsp;score</FONT></TD><TD ALIGN=RIGHT NOWRAP> " + i + ".</TD><TD>");
+							+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit><p><FONT SIZE=-2>" + successPct.get(k) + "%&nbsp;avg&nbsp;score</FONT></TD><TD ALIGN=RIGHT NOWRAP> " + i + ".</TD><TD>");
 							//+ "<TD ALIGN=RIGHT NOWRAP><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit> " + i + ".</TD><TD>");
 					buf.append("\n" + q.printAll() + "</TD>");
 					
@@ -376,6 +379,14 @@ public class Edit extends HttpServlet {
 				+ "<OPTION VALUE=5" + (questionType==5?" SELECTED>":">") + "Numeric</OPTION>"
 				+ "</SELECT>");
 		return buf.toString();
+	}
+	
+	List<Key<Question>> loadQuestions(String assignmentType,long topicId) {
+		List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).keys().list();
+		List<Key<Question>> fetchKeys = new ArrayList<Key<Question>>();
+		for (Key<Question> k : questionKeys) if (!questions.containsKey(k)) fetchKeys.add(k);
+		questions.putAll(ofy().load().keys(fetchKeys));
+		return questionKeys;
 	}
 	
 	String topicsForm(HttpServletRequest request) {
@@ -1200,4 +1211,38 @@ public class Edit extends HttpServlet {
 		}
 		return buf.toString();
 	}
+	
+	class SortBySuccessPct implements Comparator<Key<Question>> {
+		public int compare(Key<Question> k1,Key<Question> k2) {
+			Question q1 = ofy().load().key(k1).now();
+			Question q2 = ofy().load().key(k2).now();
+			
+			if (q1.pointValue != q2.pointValue) return q1.pointValue-q2.pointValue;  // primary sort by pointValue for Exam questions
+			
+			Integer success1 = successPct.get(k1);
+			if (success1==null) {
+				int totalResponses = ofy().load().type(Response.class).filter("questionId",k1.getId()).count();
+				if (totalResponses==0) success1 = 100;
+				else {
+					int successResponses = ofy().load().type(Response.class).filter("questionId",k1.getId()).filter("score >",0).count();
+					success1 = successResponses*100/totalResponses;
+				}
+				successPct.put(k1,success1);
+			}
+			Integer success2 = successPct.get(k2);
+			if (success2==null) {
+				int totalResponses = ofy().load().type(Response.class).filter("questionId",k2.getId()).count();
+				if (totalResponses==0) success2 = 100;
+				else {
+					int successResponses = ofy().load().type(Response.class).filter("questionId",k2.getId()).filter("score >",0).count();
+					success2 = successResponses*100/totalResponses;
+				}
+				successPct.put(k2,success2);
+			}
+			int rank = success2-success1; // this reverses the normal Comparator to give higher rank to lower successPct
+			if (rank==0) rank = k1.compareTo(k2); // tie breaker required else TreeMap will overwrite existing entry
+			return rank;  
+		}
+	}
+
 }
