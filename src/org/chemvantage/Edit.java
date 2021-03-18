@@ -47,8 +47,11 @@ public class Edit extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	Subject subject = Subject.getSubject();
-	TreeMap<Key<Question>,Question> questions = new TreeMap<Key<Question>,Question>(new SortBySuccessPct());
+	Map<String,Map<Key<Question>,Question>> questions = new HashMap<String,Map<Key<Question>,Question>>();
+	
+	//TreeMap<Key<Question>,Question> questions = new TreeMap<Key<Question>,Question>(new SortBySuccessPct());
 	Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
+	Map<Key<Question>,Integer> pointValue = new HashMap<Key<Question>,Integer>();
 	
 	public String getServletInfo() {
 		return "This servlet is used by editors and admins to create, review, edit and delete question items.";
@@ -263,7 +266,8 @@ public class Edit extends HttpServlet {
 						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=5;submit()\" VALUE='Numeric'>"
 						+ "</FORM>");
 
-				List<Key<Question>> questionKeys = loadQuestions(assignmentType,topicId);
+				loadQuestions(assignmentType,topicId);
+				//List<Key<Question>> questionKeys = loadQuestions(assignmentType,topicId);
 				
 				buf.append("<a href=# onClick=document.getElementById('bulkform').style.display='';><h4>Current Questions</h4></a>");				
 				buf.append("<div id=bulkform style='display:none'>");
@@ -285,28 +289,29 @@ public class Edit extends HttpServlet {
 						+ "</form><br>"
 						+ "</div>");
 
-				buf.append("This assignment draws from the following " + questionKeys.size() + " questions:");
+				String key1 = assignmentType + String.valueOf(topicId);
+				buf.append("This assignment draws from the following " + questions.get(key1).size() + " questions:");
 
 				buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
 				int i=0;
-				for (Key<Question> k : questionKeys) {
-					Question q = questions.get(k);
+				//for (Key<Question> k : questionKeys) {
+				for (Map.Entry<Key<Question>,Question> entry : questions.get(key1).entrySet()) {
+					Question q = entry.getValue().clone();
 					q.setParameters();
 					i++;
-					
+
 					buf.append("<FORM METHOD=GET ACTION=Edit>"
 							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topicId + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>"
 							+ "<TR ID=" + q.id + " VALIGN=TOP>"
-							+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit><p><FONT SIZE=-2>" + successPct.get(k) + "%&nbsp;avg&nbsp;score</FONT></TD><TD ALIGN=RIGHT NOWRAP> " + i + ".</TD><TD>");
-							//+ "<TD ALIGN=RIGHT NOWRAP><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit> " + i + ".</TD><TD>");
+							+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit><p><FONT SIZE=-2>" + successPct.get(Key.create(q)) + "%&nbsp;avg&nbsp;score</FONT></TD><TD ALIGN=RIGHT NOWRAP> " + i + ".</TD><TD>");
 					buf.append("\n" + q.printAll() + "</TD>");
-					
-				if (assignmentType.equals("Exam")) {
-					buf.append("<TD><FONT SIZE=-2>(" + q.pointValue + "&nbsp;pts)</FONT></TD>");
-				}
-					 
+
+					if (assignmentType.equals("Exam")) {
+						buf.append("<TD><FONT SIZE=-2>(" + q.pointValue + "&nbsp;pts)</FONT></TD>");
+					}
+
 					buf.append("</TR></FORM>");
 				}
 				buf.append("</TABLE>");	
@@ -381,12 +386,15 @@ public class Edit extends HttpServlet {
 		return buf.toString();
 	}
 	
-	List<Key<Question>> loadQuestions(String assignmentType,long topicId) {
-		List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).keys().list();
-		List<Key<Question>> fetchKeys = new ArrayList<Key<Question>>();
-		for (Key<Question> k : questionKeys) if (!questions.containsKey(k)) fetchKeys.add(k);
-		questions.putAll(ofy().load().keys(fetchKeys));
-		return questionKeys;
+	void loadQuestions(String assignmentType,long topicId) {
+		String key1 = assignmentType + String.valueOf(topicId);
+		if (questions.get(key1) != null) return; // questions are already loaded
+		
+		List<Key<Question>> topicQuestionKeys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).keys().list();
+		TreeMap<Key<Question>,Question> topicQuestions = new TreeMap<Key<Question>,Question>(new SortBySuccessPct());
+		topicQuestions.putAll(ofy().load().keys(topicQuestionKeys));
+		questions.put(key1,topicQuestions);
+		return;
 	}
 	
 	String topicsForm(HttpServletRequest request) {
@@ -1048,6 +1056,8 @@ public class Edit extends HttpServlet {
 			Question q = assembleQuestion(request);
 			q.isActive = true;
 			ofy().save().entity(q).now();
+			String key1 = q.assignmentType + String.valueOf(q.topicId);
+			questions.get(key1).put(Key.create(q), q);
 		} catch (Exception e) {}
 	}
 
@@ -1060,6 +1070,8 @@ public class Edit extends HttpServlet {
 			q.editorId = user.id;
 			q.isActive = true;
 			ofy().save().entity(q).now();
+			String key1 = q.assignmentType + String.valueOf(q.topicId);
+			questions.get(key1).put(Key.create(q), q);
 		} catch (Exception e) {
 			return;
 		}
@@ -1070,7 +1082,10 @@ public class Edit extends HttpServlet {
 		try {
 			questionId = Long.parseLong(request.getParameter("QuestionId"));
 			Key<Question> k = Key.create(Question.class,questionId);
-			ofy().delete().key(k).now();
+			Question q = ofy().load().key(k).now();
+			String key1 = q.assignmentType + String.valueOf(q.topicId);
+			questions.get(key1).remove(Key.create(q), q);
+			ofy().delete().key(k);
 		} catch (Exception e) {
 			return;
 		}
@@ -1083,6 +1098,8 @@ public class Edit extends HttpServlet {
 		long topicId = Long.parseLong(request.getParameter("TopicId"));
 		List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).keys().list();
 		if (questionKeys.size()>0) ofy().delete().keys(questionKeys);
+		String key1 = assignmentType + String.valueOf(topicId);
+		questions.remove(key1);
 	}
 	
 	private void copyQuestionsToPracticeExam(User user,HttpServletRequest request) {
@@ -1210,10 +1227,18 @@ public class Edit extends HttpServlet {
 	
 	class SortBySuccessPct implements Comparator<Key<Question>> {
 		public int compare(Key<Question> k1,Key<Question> k2) {
-			Question q1 = ofy().load().key(k1).now();
-			Question q2 = ofy().load().key(k2).now();
 			
-			if (q1.pointValue != q2.pointValue) return q1.pointValue-q2.pointValue;  // primary sort by pointValue for Exam questions
+			Integer pointValue1 = pointValue.get(k1);
+			if (pointValue1==null) {
+				pointValue1 = ofy().load().key(k1).now().pointValue;
+				pointValue.put(k1, pointValue1);
+			}
+			Integer pointValue2 = pointValue.get(k2);
+			if (pointValue2==null) {
+				pointValue2 = ofy().load().key(k2).now().pointValue;
+				pointValue.put(k2, pointValue2);
+			}
+			if (pointValue1 != pointValue2) return pointValue1 - pointValue2;  // primary sort by pointValue for Exam questions
 			
 			Integer success1 = successPct.get(k1);
 			if (success1==null) {

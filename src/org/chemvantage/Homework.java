@@ -47,7 +47,7 @@ public class Homework extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	Subject subject = Subject.getSubject();
-	public Map<Long,Map<Key<Question>,Question>> hwQuestions = new HashMap<Long,Map<Key<Question>,Question>>();
+	Map<Long,Map<Key<Question>,Question>> hwQuestions = new HashMap<Long,Map<Key<Question>,Question>>();
 	Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
 	int retryDelayMinutes = 2;  // minimum time between answer submissions for any single question
 
@@ -131,7 +131,7 @@ public class Homework extends HttpServlet {
 			// START the presentation of the Homework assignment
 			buf.append("\n<h2>Homework Exercises - " + topic.title + " (" + subject.title + ")</h2>");
 
-			if (hwQuestions.get(topic.id)==null) {
+			if (hwQuestions.get(topic.id)==null || hwQuestions.get(topic.id).isEmpty()) {
 				buf.append("<h3>Sorry, there are no homework questions for this topic.</h3>");
 				return buf.toString();
 			}
