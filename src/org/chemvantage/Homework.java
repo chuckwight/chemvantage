@@ -47,8 +47,8 @@ public class Homework extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	Subject subject = Subject.getSubject();
-	static Map<Long,Map<Key<Question>,Question>> hwQuestions = new HashMap<Long,Map<Key<Question>,Question>>();
-	static Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
+	public Map<Long,Map<Key<Question>,Question>> hwQuestions = new HashMap<Long,Map<Key<Question>,Question>>();
+	Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
 	int retryDelayMinutes = 2;  // minimum time between answer submissions for any single question
 
 	public String getServletInfo() {
@@ -377,9 +377,8 @@ public class Homework extends HttpServlet {
 						try {
 							@SuppressWarnings("unused")
 							double dAnswer = Double.parseDouble(q.parseString(studentAnswer[0]));  // throws exception for non-numeric answer
-							buf.append("<h3>Incorrect Answer</h3>");
-							if (!q.hasCorrectSigFigs(studentAnswer[0])) buf.append("Your answer does not have the number of significant figures appropriate for the data given in the question.<p>");
-							if (!q.agreesToRequiredPrecision(studentAnswer[0])) buf.append("Your answer does not " + (q.requiredPrecision==0?"exactly match the answer in the database.":"agree with the answer in the database to within the required precision (" + q.requiredPrecision + "%).<p>"));
+							if (!q.agreesToRequiredPrecision(studentAnswer[0])) buf.append("<h3>Incorrect Answer</h3>Your answer does not " + (q.requiredPrecision==0?"exactly match the answer in the database.":"agree with the answer in the database to within the required precision (" + q.requiredPrecision + "%).<p>"));
+							else if (!q.hasCorrectSigFigs(studentAnswer[0])) buf.append("<h3>Almost there!</h3>It appears that you've done the calculation correctly, but your answer does not have the correct number of significant figures appropriate for the data given in the question.<p>");
 						}
 						catch (Exception e2) {
 							buf.append("<h3>Wrong Format</h3>This question requires a numeric response expressed as an integer, decimal number, "
@@ -762,7 +761,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	public class SortBySuccessPct implements Comparator<Key<Question>> {
+	class SortBySuccessPct implements Comparator<Key<Question>> {
 		public int compare(Key<Question> k1,Key<Question> k2) {
 			Integer success1 = successPct.get(k1);
 			if (success1==null) {

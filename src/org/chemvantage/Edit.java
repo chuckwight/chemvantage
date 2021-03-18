@@ -1049,8 +1049,6 @@ public class Edit extends HttpServlet {
 			q.editorId = user.id;
 			q.isActive = true;
 			ofy().save().entity(q).now();
-			Key<Question> k = Key.create(Question.class,questionId);
-			if ("Homework".equals(q.assignmentType)) Homework.hwQuestions.get(q.topicId).put(k,q);
 		} catch (Exception e) {
 			return;
 		}
@@ -1060,10 +1058,8 @@ public class Edit extends HttpServlet {
 		long questionId = 0;
 		try {
 			questionId = Long.parseLong(request.getParameter("QuestionId"));
-			Question q = ofy().load().type(Question.class).id(questionId).safe();
 			Key<Question> k = Key.create(Question.class,questionId);
 			ofy().delete().key(k).now();
-			if ("Homework".equals(q.assignmentType)) Homework.hwQuestions.get(q.topicId).remove(k);
 		} catch (Exception e) {
 			return;
 		}
