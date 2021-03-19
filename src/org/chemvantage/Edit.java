@@ -1238,30 +1238,33 @@ public class Edit extends HttpServlet {
 				pointValue2 = ofy().load().key(k2).now().pointValue;
 				pointValue.put(k2, pointValue2);
 			}
-			if (pointValue1 != pointValue2) return pointValue1 - pointValue2;  // primary sort by pointValue for Exam questions
+			int rank = pointValue1 - pointValue2; // primary sort by pointValue for Exam questions
 			
-			Integer success1 = successPct.get(k1);
-			if (success1==null) {
-				int totalResponses = ofy().load().type(Response.class).filter("questionId",k1.getId()).count();
-				if (totalResponses==0) success1 = 100;
-				else {
-					int successResponses = ofy().load().type(Response.class).filter("questionId",k1.getId()).filter("score >",0).count();
-					success1 = successResponses*100/totalResponses;
+			if (rank == 0) { // for Question items with same point value, sort by successPct (high to low)
+				Integer success1 = successPct.get(k1);
+				if (success1==null) {
+					int totalResponses = ofy().load().type(Response.class).filter("questionId",k1.getId()).count();
+					if (totalResponses==0) success1 = 100;  // put new questions first
+					else {
+						int successResponses = ofy().load().type(Response.class).filter("questionId",k1.getId()).filter("score >",0).count();
+						success1 = successResponses*100/totalResponses;
+					}
+					successPct.put(k1,success1);
 				}
-				successPct.put(k1,success1);
-			}
-			Integer success2 = successPct.get(k2);
-			if (success2==null) {
-				int totalResponses = ofy().load().type(Response.class).filter("questionId",k2.getId()).count();
-				if (totalResponses==0) success2 = 100;
-				else {
-					int successResponses = ofy().load().type(Response.class).filter("questionId",k2.getId()).filter("score >",0).count();
-					success2 = successResponses*100/totalResponses;
+				Integer success2 = successPct.get(k2);
+				if (success2==null) {
+					int totalResponses = ofy().load().type(Response.class).filter("questionId",k2.getId()).count();
+					if (totalResponses==0) success2 = 100;
+					else {
+						int successResponses = ofy().load().type(Response.class).filter("questionId",k2.getId()).filter("score >",0).count();
+						success2 = successResponses*100/totalResponses;
+					}
+					successPct.put(k2,success2);
 				}
-				successPct.put(k2,success2);
+				rank = success2-success1; // this reverses the normal Comparator to give higher rank to lower successPct
 			}
-			int rank = success2-success1; // this reverses the normal Comparator to give higher rank to lower successPct
 			if (rank==0) rank = k1.compareTo(k2); // tie breaker required else TreeMap will overwrite existing entry
+			
 			return rank;  
 		}
 	}
