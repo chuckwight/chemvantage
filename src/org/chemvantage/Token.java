@@ -116,7 +116,8 @@ public class Token extends HttpServlet {
 		if (deployment_id != null) {
 			String platform_deployment_id = new URL("https",platform.getHost(),platform.getPort(),"/"+deployment_id).toString();
 			if (platform_deployment_id.lastIndexOf("/") == platform_deployment_id.length()-1) platform_deployment_id = platform_deployment_id.substring(0, platform_deployment_id.length()-1);
-			return ofy().load().type(Deployment.class).id(platform_deployment_id).now();
+			Deployment d = ofy().load().type(Deployment.class).id(platform_deployment_id).now();
+			if (d==null) throw new Exception("The deployment_id is not known.");
 		}
 		
 		// Prepare to search for all deployments from this platform:
