@@ -28,7 +28,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Date;
 import java.util.Properties;
-import java.util.Random;
 
 import javax.mail.Message;
 import javax.mail.Session;
@@ -64,7 +63,7 @@ public class Feedback extends HttpServlet {
 		
 		try {
 			User user = User.getUser(request.getParameter("sig"));
-			if (user == null) user = new User("anonymous"+new Random().nextInt());
+			if (user == null) user = new User();
 			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";

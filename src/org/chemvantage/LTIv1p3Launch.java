@@ -258,8 +258,7 @@ public class LTIv1p3Launch extends HttpServlet {
 	void launchSubmissionReview(HttpServletResponse response, JsonObject claims, Deployment d, User u) throws Exception {
 				
 		String for_user_id = claims.get("https://purl.imsglobal.org/spec/lti/claim/for_user").getAsJsonObject().get("user_id").getAsString();  // required
-		String platformForUserId = claims.get("iss").getAsString() + "/" + for_user_id;
-		User forUser = new User(platformForUserId);
+		User forUser = new User(claims.get("iss").getAsString(), for_user_id);
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
@@ -363,7 +362,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		User user = null;
 		JsonElement sub = claims.get("sub");
 		if (sub==null || sub.getAsString().isEmpty()) user = new User();  // special provision to allow anonymous user via LTI launch
-		else user = new User(claims.get("iss").getAsString() + "/" + sub.getAsString());
+		else user = new User(claims.get("iss").getAsString(), sub.getAsString());
 		
 		JsonElement roles_claim = claims.get("https://purl.imsglobal.org/spec/lti/claim/roles");
 		if (roles_claim == null || !roles_claim.isJsonArray()) throw new Exception("Required roles claim is missing from the id_token");

@@ -429,7 +429,7 @@ public class LTIDeepLinks extends HttpServlet {
 		User user = null;
 		JsonElement sub = claims.get("sub");
 		if (sub==null || sub.getAsString().isEmpty()) user = new User();  // special provision to allow anonymous user via LTI launch
-		else user = new User(claims.get("iss").getAsString() + "/" + sub.getAsString());
+		else user = new User(claims.get("iss").getAsString(), sub.getAsString());
 
 		JsonElement roles_claim = claims.get("https://purl.imsglobal.org/spec/lti/claim/roles");
 		if (roles_claim == null || !roles_claim.isJsonArray()) throw new Exception("Required roles claim is missing from the id_token");

@@ -74,7 +74,7 @@ public class Edit extends HttpServlet {
 		try {
 			UserService userService = UserServiceFactory.getUserService();
 			String userId = userService.getCurrentUser().getUserId();
-			User user = new User(userId);
+			User user = new User("https://"+request.getServerName(), userId);
 			user.setIsChemVantageAdmin(true);
 			
 			out.println(Home.getHeader(user));
@@ -131,7 +131,7 @@ public class Edit extends HttpServlet {
 		try {
 			UserService userService = UserServiceFactory.getUserService();
 			String userId = userService.getCurrentUser().getUserId();
-			User user = new User(userId);
+			User user = new User("https://"+request.getServerName(), userId);
 			user.setIsChemVantageAdmin(true);
 			
 			out.println(Home.getHeader(user));

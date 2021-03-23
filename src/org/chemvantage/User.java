@@ -32,6 +32,7 @@ public class User {
 	@Id 	Long 	sig;
 	@Index 	String 	id;                    // stored with transactions, responses, userReports
 	@Index	Date 	exp;				   // max 90 minutes from now
+			String	platformId;			   // URL of the LMS
 			String 	lis_result_sourcedid = null;  // used only by LTIv1p1 users
 			long	assignmentId = 0L;     // used only for LTI users
 			int 	roles = 0;             // student
@@ -44,8 +45,15 @@ public class User {
 		this.exp = new Date(new Date().getTime() + 5400000L);  // value expires 90 minutes from now			
 	}
 	
-	User(String id) {
+	User(String id) {  // used only for LTIv1.1
 		this.id = id;
+		if (this.isAnonymous()) this.sig = Long.parseLong(id.substring(9));		
+		this.exp = new Date(new Date().getTime() + 5400000L);  // value expires 90 minutes from now
+	}
+	
+	User(String platformId, String id) {
+		this.platformId = platformId;
+		this.id = platformId + "/" + id;
 		if (this.isAnonymous()) this.sig = Long.parseLong(id.substring(9));
 		
 		this.exp = new Date(new Date().getTime() + 5400000L);  // value expires 90 minutes from now
@@ -87,7 +95,11 @@ public class User {
 	}
 
 	static String getRawId(String userId) {
-		return userId.substring(userId.lastIndexOf("/")+1);
+		try {
+			User user = ofy().load().type(User.class).filter("id",userId).first().safe();
+			if (user.platformId != null) return user.id.substring(user.platformId.length()+1);  // preferred method
+		} catch (Exception e) {}
+		return userId.substring(userId.lastIndexOf("/")+1);  // should work OK except if raw userId contains "/" character
 	}
 	
 	public String getId() {

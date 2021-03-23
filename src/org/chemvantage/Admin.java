@@ -56,7 +56,7 @@ public class Admin extends HttpServlet {
 		try {
 			UserService userService = UserServiceFactory.getUserService();
 			String userId = userService.getCurrentUser().getUserId();
-			User user = new User(userId);
+			User user = new User("https://"+request.getServerName(), userId);
 			user.setIsChemVantageAdmin(true);
 			user.setToken();
 			
