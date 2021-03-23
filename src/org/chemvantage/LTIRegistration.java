@@ -29,6 +29,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.Date;
@@ -184,7 +185,17 @@ public class LTIRegistration extends HttpServlet {
 				if ("dynamic_registration".equals(request.getParameter("ver"))) {
 					JsonObject openIdConfiguration = getOpenIdConfiguration(request);  // LTIDRSv1p0 section 3.4
 					validateOpenIdConfigurationURL(request.getParameter("openid_configuration"),openIdConfiguration);  // LTIDRSv1p0 section 3.5.1
-					JsonObject registrationResponse = postRegistrationRequest(openIdConfiguration,request.getParameter("registration_token"));  // LTIDRSv1p0 section 3.5.2 & 3.6
+		/*
+					if (request.getParameter("registration_token")==null) {
+			Enumeration<String> paramNames = request.getParameterNames();
+			while (paramNames.hasMoreElements()) {
+				String name = (String) paramNames.nextElement();
+				out.println(name + ": " + request.getParameter(name) + "<br/>");
+			}
+			return;	
+		}
+		*/
+					JsonObject registrationResponse = postRegistrationRequest(openIdConfiguration,request);  // LTIDRSv1p0 section 3.5.2 & 3.6
 					createNewDeployment(openIdConfiguration,registrationResponse);
 					response.setContentType("text/html");
 					out.println(successfulRegistrationRequestPage(request,registrationResponse));
@@ -942,8 +953,9 @@ public class LTIRegistration extends HttpServlet {
 		}		
 	}
 	
-	JsonObject postRegistrationRequest(JsonObject openIdConfiguration,String registrationToken) throws Exception {
+	JsonObject postRegistrationRequest(JsonObject openIdConfiguration,HttpServletRequest request) throws Exception {
 		JsonObject registrationResponse = null;
+		String registrationToken = null;
 		try {
 			JsonObject regJson = new JsonObject();
 			regJson.addProperty("application_type","web");
@@ -1014,6 +1026,13 @@ public class LTIRegistration extends HttpServlet {
 				ltiToolConfig.add("messages", ltiMessages);
 			regJson.add("https://purl.imsglobal.org/spec/lti-tool-configuration", ltiToolConfig);
 			
+			registrationToken = request.getParameter("registration_token");
+			if (registrationToken == null) {
+				String query = new URI(request.getParameter("openid_configuration")).getQuery();
+				registrationToken = query.substring(query.indexOf("registration_token=")+19);
+				if (registrationToken.contains("&")) registrationToken = registrationToken.substring(0,registrationToken.indexOf("&"));
+			}
+			
 			String reg_endpoint = openIdConfiguration.get("registration_endpoint").getAsString();
 			URL u = new URL(reg_endpoint);
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
@@ -1035,8 +1054,8 @@ public class LTIRegistration extends HttpServlet {
 			reader.close();
 
 			if (uc.getResponseCode() == 401) throw new Exception("Platform refused registration request with code 401:<br/>" + registrationResponse.toString());
-			} catch (Exception e) {
-			throw new Exception("Posting registration request to the LMS platform failed: " + e.getMessage());
+		} catch (Exception e) {
+			throw new Exception("Posting registration request to the LMS platform failed: " + e.getMessage() + "<br/>Registration token: " + registrationToken);
 		}
 		return registrationResponse;
 	}
