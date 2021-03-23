@@ -106,7 +106,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				}
 			}		
 		} catch (Exception e) {	
-			response.sendError(401, e.getMessage());
+			response.sendError(401, "Status 401: " + e.toString());
 		}
 	}
 
@@ -223,7 +223,9 @@ public class LTIv1p3Launch extends HttpServlet {
 					else resourceId = lineitem.get("resourceid").getAsString();  // special case for LTI Reference Implementation
 				} catch (Exception e) {}
 			}
-			if (resourceId != null) myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).now();
+			try {
+				myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).safe();
+			} catch (Exception e) {}
 		}
 
 		if (myAssignment == null) myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();

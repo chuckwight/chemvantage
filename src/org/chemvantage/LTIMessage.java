@@ -550,9 +550,17 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			String bearerAuth = "Bearer " + getAccessToken(a.domain,scope);
 
 			String user_id = User.getRawId(userId); // stripped of the platform_id and "/"
-
+			
 			if (a.lti_ags_lineitem_url==null) throw new Exception("the lineitem URL for this assignment is unknown");
-			URL u = new URL(a.lti_ags_lineitem_url + "/results?user_id=" + user_id + "&userId=" + user_id);
+			
+			URL u = null;
+			if (a.lti_ags_lineitem_url.contains("?")) { // the lineitem already has a query part
+				String base_url = a.lti_ags_lineitem_url.substring(0,a.lti_ags_lineitem_url.lastIndexOf("?")) + "/results";
+				String query = a.lti_ags_lineitem_url.substring(a.lti_ags_lineitem_url.lastIndexOf("?"));
+				u = new URL(base_url + query + "&user_id=" + user_id + "&userId=" + user_id);
+			} else {
+				u = new URL(a.lti_ags_lineitem_url + "/results?user_id=" + user_id + "&userId=" + user_id);
+			}
 			
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			//uc.setDoOutput(true);

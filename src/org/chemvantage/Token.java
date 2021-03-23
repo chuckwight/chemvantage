@@ -111,18 +111,19 @@ public class Token extends HttpServlet {
 		// However, this is not technically required by the specifications. Hmm.
 		
 		URL platform = new URL(platform_id);
+		if (!platform.getProtocol().equals("https")) throw new Exception("The platform_id must be a secure URL.");
 		
 		// Take the optimistic route first; this should always work if the deployment_id has been provided, else return null;
 		if (deployment_id != null) {
-			String platform_deployment_id = new URL("https",platform.getHost(),platform.getPort(),"/"+deployment_id).toString();
-			if (platform_deployment_id.lastIndexOf("/") == platform_deployment_id.length()-1) platform_deployment_id = platform_deployment_id.substring(0, platform_deployment_id.length()-1);
+			String platform_deployment_id = platform_id + "/" + deployment_id;
+			//if (platform_deployment_id.lastIndexOf("/") == platform_deployment_id.length()-1) platform_deployment_id = platform_deployment_id.substring(0, platform_deployment_id.length()-1);
 			Deployment d = ofy().load().type(Deployment.class).id(platform_deployment_id).now();
 			if (d==null) throw new Exception("The deployment_id is not known.");
 		}
 		
 		// Prepare to search for all deployments from this platform:
-		Key<Deployment> kstart = Key.create(Deployment.class, platform.toString());
-		Key<Deployment> kend = Key.create(Deployment.class, platform.toString() + "~");			
+		Key<Deployment> kstart = Key.create(Deployment.class, platform_id);
+		Key<Deployment> kend = Key.create(Deployment.class, platform_id + "~");			
 		List<Deployment> deployments = null;
 		
 		if (client_id != null) {

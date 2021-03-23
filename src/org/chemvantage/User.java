@@ -19,7 +19,6 @@ package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
-import java.net.URI;
 import java.util.Date;
 import java.util.Random;
 
@@ -85,14 +84,10 @@ public class User {
     			return user;
     		} else return null;
     	}
-    }
-  
-static String getRawId(String userId) {
-		try {  // v1p3: strip the platform_id and "/" from the front of the userId
-			return new URI(userId).getRawPath().substring(1);
-		} catch (Exception e) {
-			return null;
-		}
+	}
+
+	static String getRawId(String userId) {
+		return userId.substring(userId.lastIndexOf("/")+1);
 	}
 	
 	public String getId() {

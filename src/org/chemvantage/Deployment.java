@@ -14,6 +14,7 @@ import com.googlecode.objectify.annotation.Index;
 public class Deployment implements java.lang.Cloneable {
 	@Id 	String platform_deployment_id;
 	@Index	String client_id;
+			String platformId;
 			String oauth_access_token_url;
 			String oidc_auth_url;
 			String well_known_jwks_url;
@@ -36,7 +37,8 @@ public class Deployment implements java.lang.Cloneable {
 		// Ensure that the platform_id is secure and does not end in a slash:
 		URL platform = new URL(platform_id);
 		if (!platform.getProtocol().equals("https")) throw new Exception("All URLs must be secure (https)");
-		this.platform_deployment_id = new URL(platform.getProtocol(),platform.getHost(),platform.getPort(),"/"+deployment_id).toString();
+		this.platformId = platform_id;
+		this.platform_deployment_id = platform_id + "/" + deployment_id;
 		
 		URL auth = new URL(oidc_auth_url);
 		if (!auth.getProtocol().equals("https")) throw new Exception("All URLs must be secure (https)");
@@ -69,19 +71,17 @@ public class Deployment implements java.lang.Cloneable {
 	}
 	
 	String getDeploymentId() {
-		try {
-			String path = new URI(platform_deployment_id).getPath();
-			return path.substring(1);  // removes the leading slash character, if any
-		} catch (Exception e) {
-			return "";
-		}
+		return this.platform_deployment_id.substring(getPlatformId().length()+1);
 	}
 	
 	String getPlatformId() {
 		try {
+			if (this.platformId != null) return this.platformId;
 			String path = new URI(platform_deployment_id).getPath();
 			int j = platform_deployment_id.length()-path.length();
-			return platform_deployment_id.substring(0,j);
+			this.platformId = platform_deployment_id.substring(0,j);
+			ofy().save().entity(this);
+			return this.platformId;
 		} catch (Exception e) {
 			return null;
 		}
