@@ -185,16 +185,6 @@ public class LTIRegistration extends HttpServlet {
 				if ("dynamic_registration".equals(request.getParameter("ver"))) {
 					JsonObject openIdConfiguration = getOpenIdConfiguration(request);  // LTIDRSv1p0 section 3.4
 					validateOpenIdConfigurationURL(request.getParameter("openid_configuration"),openIdConfiguration);  // LTIDRSv1p0 section 3.5.1
-		/*
-					if (request.getParameter("registration_token")==null) {
-			Enumeration<String> paramNames = request.getParameterNames();
-			while (paramNames.hasMoreElements()) {
-				String name = (String) paramNames.nextElement();
-				out.println(name + ": " + request.getParameter(name) + "<br/>");
-			}
-			return;	
-		}
-		*/
 					JsonObject registrationResponse = postRegistrationRequest(openIdConfiguration,request);  // LTIDRSv1p0 section 3.5.2 & 3.6
 					createNewDeployment(openIdConfiguration,registrationResponse);
 					response.setContentType("text/html");
@@ -956,16 +946,17 @@ public class LTIRegistration extends HttpServlet {
 	JsonObject postRegistrationRequest(JsonObject openIdConfiguration,HttpServletRequest request) throws Exception {
 		JsonObject registrationResponse = null;
 		String registrationToken = null;
+		JsonObject regJson = new JsonObject();
+		
 		try {
-			JsonObject regJson = new JsonObject();
 			regJson.addProperty("application_type","web");
-			JsonArray responseTypes = new JsonArray();
-				responseTypes.add("id_token");
-				regJson.add("response_types", responseTypes);
 			JsonArray grantTypes = new JsonArray();
 				grantTypes.add("implicit");
 				grantTypes.add("client_credentials");
 				regJson.add("grant_types", grantTypes);
+			JsonArray responseTypes = new JsonArray();
+				responseTypes.add("id_token");
+				regJson.add("response_types", responseTypes);
 			String iss = null;
 			String project_id = System.getProperty("com.google.appengine.application.id");
 			switch (project_id) {
@@ -975,22 +966,21 @@ public class LTIRegistration extends HttpServlet {
 			case "chemvantage-hrd":
 				iss = "https://www.chemvantage.org";
 			}
-			regJson.addProperty("initiate_login_uri", iss + "/auth/token");
 			JsonArray redirectUris = new JsonArray();
-			redirectUris.add(iss + "/lti/launch");
-			redirectUris.add(iss + "/lti/deeplinks");
-			regJson.add("redirect_uris", redirectUris);
-			regJson.addProperty("client_name", "ChemVantage");
+				redirectUris.add(iss + "/lti/launch");
+				redirectUris.add(iss + "/lti/deeplinks");
+				regJson.add("redirect_uris", redirectUris);
+			regJson.addProperty("initiate_login_uri", iss + "/auth/token");
+			regJson.addProperty("client_name", "ChemVantage" + (iss.contains("dev-vantage")?" Development":""));
 			regJson.addProperty("jwks_uri", iss + "/jwks");
 			regJson.addProperty("logo_uri", iss + "/images/CVLogo_thumb.png");
-			regJson.addProperty("client_uri", iss);
-			regJson.addProperty("policy_uri", iss + "/About#privacy");
-			regJson.addProperty("tos_uri", iss + "/About#terms");
-			regJson.addProperty("token_endpoint_auth_method", iss + "private_key_jwt");
-			regJson.addProperty("policy_uri", iss + "/About#privacy");
+			regJson.addProperty("token_endpoint_auth_method", "private_key_jwt");
 			JsonArray contactEmails = new JsonArray();
 				contactEmails.add("admin@chemvantage.org");
-				regJson.add("contacts", contactEmails);
+				regJson.add("contacts", contactEmails);		
+			regJson.addProperty("client_uri", iss);
+			regJson.addProperty("tos_uri", iss + "/About#terms");
+			regJson.addProperty("policy_uri", iss + "/About#privacy");
 			regJson.addProperty("scope", "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly https://purl.imsglobal.org/spec/lti-ags/scope/score https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly");
 			JsonObject ltiToolConfig = new JsonObject();
 				ltiToolConfig.addProperty("domain", iss.substring(8));
@@ -1010,6 +1000,9 @@ public class LTIRegistration extends HttpServlet {
 						deepLinking.addProperty("target_link_uri", iss + "/lti/deeplinks");
 						deepLinking.addProperty("label", "ChemVantage");
 						switch (openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString()) {
+						case "moodle":
+							deepLinking.add("placements", openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("placements").getAsJsonArray());
+							break;
 						default: // add LMS=specific placements for deep linking here
 						}
 					ltiMessages.add(deepLinking);
@@ -1020,7 +1013,10 @@ public class LTIRegistration extends HttpServlet {
 						switch (openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString()) {
 						case "canvas":
 							break;
-						default: // add LMS=specific placements for ResourceLinks here
+						case "moodle":
+							resourceLaunch.add("placements", openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("placements").getAsJsonArray());
+							break;
+						default: // add LMS-specific placements for ResourceLinks here
 						}
 					ltiMessages.add(resourceLaunch);
 				ltiToolConfig.add("messages", ltiMessages);
@@ -1031,6 +1027,7 @@ public class LTIRegistration extends HttpServlet {
 				String query = new URI(request.getParameter("openid_configuration")).getQuery();
 				registrationToken = query.substring(query.indexOf("registration_token=")+19);
 				if (registrationToken.contains("&")) registrationToken = registrationToken.substring(0,registrationToken.indexOf("&"));
+				registrationToken = registrationToken.trim();
 			}
 			
 			String reg_endpoint = openIdConfiguration.get("registration_endpoint").getAsString();
@@ -1055,7 +1052,7 @@ public class LTIRegistration extends HttpServlet {
 
 			if (uc.getResponseCode() == 401) throw new Exception("Platform refused registration request with code 401:<br/>" + registrationResponse.toString());
 		} catch (Exception e) {
-			throw new Exception("Posting registration request to the LMS platform failed: " + e.getMessage() + "<br/>Registration token: " + registrationToken);
+			throw new Exception("Posting registration request to the LMS platform failed: " + e.getMessage()); // + "<br/>Registration token: " + registrationToken + "<br/>Registration JSON: " + regJson.toString());
 		}
 		return registrationResponse;
 	}
@@ -1067,7 +1064,7 @@ public class LTIRegistration extends HttpServlet {
 			String oidc_auth_url = openIdConfiguration.get("authorization_endpoint").getAsString();
 			String oauth_access_token_url = openIdConfiguration.get("token_endpoint").getAsString();
 			String well_known_jwks_url = openIdConfiguration.get("jwks_uri").getAsString();
-			String lms = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_name").getAsString();
+			String lms = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString();
 
 			JsonElement deploymentId = registrationResponse.get("https://purl.imsglobal.org/spec/lti-tool-configuration").getAsJsonObject().get("deployment_id");
 			if (deploymentId == null) throw new Exception("ChemVantage requires that the deployment_id must be included in the registration response. ");
@@ -1077,7 +1074,7 @@ public class LTIRegistration extends HttpServlet {
 			
 			return d;
 		} catch (Exception e) {
-			throw new Exception("Failed to create new deployment in ChemVantage: " + e.getMessage());
+			throw new Exception("Failed to create new deployment in ChemVantage: " + e.toString()); // + "<br/>OpenId Configuration: " + openIdConfiguration.toString() + "<br/>Registration Response: " + registrationResponse.toString());
 		}
 	}
 	
@@ -1095,7 +1092,7 @@ public class LTIRegistration extends HttpServlet {
 				+ "<li>You must click the activation link in the email to complete the activation process.</li>"
 				+ " </ol>");
 		*/
-		buf.append("<a href=# onclick=\"(window.opener || window.parent).postMessage({subject:'org.imsglobal.lti.close'})\">Click here to close this window.</a>");
+		buf.append("<a href=# onclick=\"parent.postMessage({subject:'org.imsglobal.lti.close'})\">Click here to close this window.</a>");
 		/*
 		buf.append("<h3>Keep ChemVantage Free</h3>"
 				+ "ChemVantage provides free OER services to thousands of students. The cost of this service is paid entirely by generous donations "
