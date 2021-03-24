@@ -512,7 +512,11 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			String bearerAuth = "Bearer " + getAccessToken(a.domain,scope);
 
 			if (a.lti_ags_lineitem_url==null) throw new Exception("the lineitem URL for this assignment is unknown");
-			URL u = new URL(a.lti_ags_lineitem_url + "/results");
+			//URL u = new URL(a.lti_ags_lineitem_url + "/results");
+			// append "/scores" to the lineitem URL, taking into account that the URL may have a query part (thank you, Moodle)
+			URL u = null;
+			int i = a.lti_ags_lineitem_url.indexOf("?")==-1?a.lti_ags_lineitem_url.length():a.lti_ags_lineitem_url.indexOf("?");
+			u = new URL(a.lti_ags_lineitem_url.substring(0,i) + "/results" + a.lti_ags_lineitem_url.substring(i));
 
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			//uc.setDoOutput(true);
@@ -554,9 +558,9 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			if (a.lti_ags_lineitem_url==null) throw new Exception("the lineitem URL for this assignment is unknown");
 			
 			URL u = null;
-			if (a.lti_ags_lineitem_url.contains("?")) { // the lineitem already has a query part
-				String base_url = a.lti_ags_lineitem_url.substring(0,a.lti_ags_lineitem_url.lastIndexOf("?")) + "/results";
-				String query = a.lti_ags_lineitem_url.substring(a.lti_ags_lineitem_url.lastIndexOf("?"));
+			if (a.lti_ags_lineitem_url.contains("?")) { // the lineitem URL already has a query part
+				String base_url = a.lti_ags_lineitem_url.substring(0,a.lti_ags_lineitem_url.indexOf("?")) + "/results";
+				String query = a.lti_ags_lineitem_url.substring(a.lti_ags_lineitem_url.indexOf("?"));
 				u = new URL(base_url + query + "&user_id=" + user_id + "&userId=" + user_id);
 			} else {
 				u = new URL(a.lti_ags_lineitem_url + "/results?user_id=" + user_id + "&userId=" + user_id);
@@ -616,13 +620,12 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			j.addProperty("activityProgress", "Completed");
 			j.addProperty("gradingProgress", "FullyGraded");
 			j.addProperty("userId", raw_id);
-			//j.addProperty("user_id", raw_id);       // temporary addition
 			String json = j.toString();
 			
-			//buf.append("JSON request body:<br>" + json + "<p>");
-		
-			URL u = new URL(a.lti_ags_lineitem_url + "/scores");
-			//buf.append("URL: " + u.toString() + "<br>");
+			// append "/scores" to the lineitem URL, taking into account that the URL may have a query part (thank you, Moodle)
+			URL u = null;
+			int i = a.lti_ags_lineitem_url.indexOf("?")==-1?a.lti_ags_lineitem_url.length():a.lti_ags_lineitem_url.indexOf("?");
+			u = new URL(a.lti_ags_lineitem_url.substring(0,i) + "/scores" + a.lti_ags_lineitem_url.substring(i));
 			
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setRequestMethod("POST");

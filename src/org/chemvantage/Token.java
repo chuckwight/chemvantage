@@ -118,7 +118,8 @@ public class Token extends HttpServlet {
 			String platform_deployment_id = platform_id + "/" + deployment_id;
 			//if (platform_deployment_id.lastIndexOf("/") == platform_deployment_id.length()-1) platform_deployment_id = platform_deployment_id.substring(0, platform_deployment_id.length()-1);
 			Deployment d = ofy().load().type(Deployment.class).id(platform_deployment_id).now();
-			if (d==null) throw new Exception("The deployment_id is not known.");
+			if (d==null) throw new Exception("The deployment_id " + deployment_id + " is not known.");
+			else return d;
 		}
 		
 		// Prepare to search for all deployments from this platform:
@@ -133,10 +134,8 @@ public class Token extends HttpServlet {
 			// Find all of the deployments from this platform; there SHOULD be only one if neither deployment_id nor client_id was provided.
 			deployments = ofy().load().type(Deployment.class).filterKey(">=",kstart).filterKey("<",kend).list();
 		}
-		switch (deployments.size()) {
-		case 1: return deployments.get(0);
-		default: return null; 
-		}
+		if (deployments==null) return null;
+		else return deployments.get(0);
 	}
 	
 

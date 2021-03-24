@@ -1070,8 +1070,8 @@ public class LTIRegistration extends HttpServlet {
 			if (deploymentId == null) throw new Exception("ChemVantage requires that the deployment_id must be included in the registration response. ");
 					
 			Deployment d = new Deployment(platformId,deploymentId.getAsString(),clientId,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,null,null,null,null,lms);
-			//d.status = "review";
-			
+			d.status = "review";
+			ofy().save().entity(d);
 			return d;
 		} catch (Exception e) {
 			throw new Exception("Failed to create new deployment in ChemVantage: " + e.toString()); // + "<br/>OpenId Configuration: " + openIdConfiguration.toString() + "<br/>Registration Response: " + registrationResponse.toString());
