@@ -29,7 +29,6 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
-import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.Date;
@@ -140,22 +139,11 @@ public class LTIRegistration extends HttpServlet {
 				case "1p3":
 					out.println(Home.header("LTI Registration") + clientIdForm(token) + Home.footer);
 					break;
-				case "dynamicregistration":
-					String platformDeploymentId = decoded.getClaim("platform_deployment_id").asString();
-					Deployment d = activateDeployment(platformDeploymentId);
-					out.println(Home.header("LTI Registration") + dynamicRegistrationSuccessPage(d) + Home.footer);
-					break;
 				default: throw new Exception("LTI version was missing or invalid.");
 				}
 			} else {
-				String registrationURL = "/Registration.jsp";
-				Enumeration<String> enumeration = request.getParameterNames();
-				int i=0;
-				while(enumeration.hasMoreElements()){
-					String parameterName = enumeration.nextElement();
-					String parameterValue = request.getParameter(parameterName);
-					registrationURL += (i==0?"?":"&") + parameterName + "=" + URLEncoder.encode(parameterValue,"utf-8");
-				}	        
+				String queryString = request.getQueryString();
+				String registrationURL = "/Registration.jsp" + (queryString==null?"":"?" + queryString);
 				response.sendRedirect(registrationURL);
 			}
 		} catch (Exception e) {
@@ -196,8 +184,7 @@ public class LTIRegistration extends HttpServlet {
 			}
 		} catch (Exception e) {
 			String message = e.getMessage();
-			String registrationURL = "https://" + request.getServerName();
-			registrationURL += "/Registration.jsp?message=" + URLEncoder.encode(message,"utf-8");
+			String registrationURL = "/Registration.jsp?message=" + URLEncoder.encode(message,"utf-8");
 			Enumeration<String> enumeration = request.getParameterNames();
 			while(enumeration.hasMoreElements()){
 	            String parameterName = enumeration.nextElement();
@@ -945,7 +932,6 @@ public class LTIRegistration extends HttpServlet {
 	
 	JsonObject postRegistrationRequest(JsonObject openIdConfiguration,HttpServletRequest request) throws Exception {
 		JsonObject registrationResponse = null;
-		String registrationToken = null;
 		JsonObject regJson = new JsonObject();
 		
 		try {
@@ -1022,15 +1008,9 @@ public class LTIRegistration extends HttpServlet {
 				ltiToolConfig.add("messages", ltiMessages);
 			regJson.add("https://purl.imsglobal.org/spec/lti-tool-configuration", ltiToolConfig);
 			
-			registrationToken = request.getParameter("registration_token");
-			if (registrationToken == null) {
-				String query = new URI(request.getParameter("openid_configuration")).getQuery();
-				registrationToken = query.substring(query.indexOf("registration_token=")+19);
-				if (registrationToken.contains("&")) registrationToken = registrationToken.substring(0,registrationToken.indexOf("&"));
-				registrationToken = registrationToken.trim();
-			}
-			
 			String reg_endpoint = openIdConfiguration.get("registration_endpoint").getAsString();
+			String registrationToken = request.getParameter("registration_token");
+			
 			URL u = new URL(reg_endpoint);
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setRequestMethod("POST");
@@ -1082,7 +1062,7 @@ public class LTIRegistration extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		buf.append(Home.header() + Home.banner);
 		buf.append("<h3>Your Registration Request Was Successful</h3>"
-				+ "The LTI Advantage deployment was created in ChemVantage and in your LMS. <br/><br/>");
+				+ "The LTI Advantage deployment was created in ChemVantage and in your LMS.<br/><br/>");
 	
 		/*		
 		buf.append("There are three more steps required to activate the "
@@ -1092,8 +1072,8 @@ public class LTIRegistration extends HttpServlet {
 				+ "<li>You must click the activation link in the email to complete the activation process.</li>"
 				+ " </ol>");
 		*/
-		buf.append("<a href=# onclick=\"parent.postMessage({subject:'org.imsglobal.lti.close'})\">Click here to close this window.</a>");
-		/*
+		buf.append("<a href=# onclick=\"(window.opener || window.parent).postMessage({subject:'org.imsglobal.lti.close'},'*');\">Click here to close this window.</a>");
+		
 		buf.append("<h3>Keep ChemVantage Free</h3>"
 				+ "ChemVantage provides free OER services to thousands of students. The cost of this service is paid entirely by generous donations "
 				+ "from people like you. Please consider making a donation to support ChemVantage and keep the good karma flowing.<br/>");
@@ -1104,7 +1084,7 @@ public class LTIRegistration extends HttpServlet {
 				+ "<img alt=\"\" border=\"0\" src=\"https://www.paypal.com/en_US/i/scr/pixel.gif\" width=\"1\" height=\"1\" />\n"
 				+ "</form>");
 				
-		*/
+		
 		buf.append(Home.footer);
 		return buf.toString();
 	}
@@ -1178,27 +1158,6 @@ public class LTIRegistration extends HttpServlet {
 		default: buf.append("If you need additional assistance, please contact us at admin@chemvantage.org</br>Thank you.");
 		}
 		
-	}
-	
-	String dynamicRegistrationSuccessPage(Deployment d) {
-		StringBuffer buf = new StringBuffer();
-		if ("active".equals(d.status) ) {
-			buf.append(Home.banner + "<h2>Registration Success</h2>");
-			buf.append("The LTI registration process in ChemVantage is now complete, and your account should be active if the ChemVantage deployment "
-					+ "has been activated in your LMS by your LMS administrator. You should be able to create assignments where the submission is handled "
-					+ "by ChemVantage as an external LTI tool.<br/><br/>"
-					+ "If you have any difficulty, please contact us at admin@chemvantage.org");
-			buf.append("<h3>Keep ChemVantage Free</h3>"
-					+ "ChemVantage provides free OER services to thousands of students. The cost of this service is paid entirely by generous donations "
-					+ "from people like you. Please consider making a donation to support ChemVantage and keep the good karma flowing.<br/>");
-			buf.append("<form action=\"https://www.paypal.com/donate\" method=\"post\" target=\"_top\">\n"
-					+ "<input type=\"hidden\" name=\"hosted_button_id\" value=\"4DYCV6EG2HPB2\" />\n"
-					+ "<input type=\"image\" src=\"https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif\" border=\"0\" name=\"submit\" "
-					+ "title=\"PayPal - The safer, easier way to pay online!\" alt=\"Donate with PayPal button\" />\n"
-					+ "<img alt=\"\" border=\"0\" src=\"https://www.paypal.com/en_US/i/scr/pixel.gif\" width=\"1\" height=\"1\" />\n"
-					+ "</form>");
-		} else buf.append("An unexpected error occurred. Please contact admin@chemvantage.org for assistance.");
-		return buf.toString();
 	}
 	
 	static Deployment activateDeployment(String platformDeploymentId) throws Exception {
