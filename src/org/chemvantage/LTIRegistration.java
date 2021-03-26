@@ -174,7 +174,7 @@ public class LTIRegistration extends HttpServlet {
 					JsonObject openIdConfiguration = getOpenIdConfiguration(request);  // LTIDRSv1p0 section 3.4
 					validateOpenIdConfigurationURL(request.getParameter("openid_configuration"),openIdConfiguration);  // LTIDRSv1p0 section 3.5.1
 					JsonObject registrationResponse = postRegistrationRequest(openIdConfiguration,request);  // LTIDRSv1p0 section 3.5.2 & 3.6
-					createNewDeployment(openIdConfiguration,registrationResponse);
+					createNewDeployment(openIdConfiguration,registrationResponse,request);
 					response.setContentType("text/html");
 					out.println(successfulRegistrationRequestPage(request,registrationResponse));
 				} else {
@@ -1037,7 +1037,7 @@ public class LTIRegistration extends HttpServlet {
 		return registrationResponse;
 	}
 	
-	Deployment createNewDeployment(JsonObject openIdConfiguration, JsonObject registrationResponse) throws Exception {
+	Deployment createNewDeployment(JsonObject openIdConfiguration, JsonObject registrationResponse, HttpServletRequest request) throws Exception {
 		try {
 			String platformId = openIdConfiguration.get("issuer").getAsString();
 			String clientId = registrationResponse.get("client_id").getAsString();
@@ -1046,10 +1046,15 @@ public class LTIRegistration extends HttpServlet {
 			String well_known_jwks_url = openIdConfiguration.get("jwks_uri").getAsString();
 			String lms = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString();
 
+			String contact_name = request.getParameter("sub");
+			String contact_email = request.getParameter("email");
+			String organization = request.getParameter("aud");
+			String org_url = request.getParameter("url");
+			
 			JsonElement deploymentId = registrationResponse.get("https://purl.imsglobal.org/spec/lti-tool-configuration").getAsJsonObject().get("deployment_id");
 			if (deploymentId == null) throw new Exception("ChemVantage requires that the deployment_id must be included in the registration response. ");
 					
-			Deployment d = new Deployment(platformId,deploymentId.getAsString(),clientId,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,null,null,null,null,lms);
+			Deployment d = new Deployment(platformId,deploymentId.getAsString(),clientId,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,contact_name,contact_email,organization,org_url,lms);
 			d.status = "review";
 			ofy().save().entity(d);
 			return d;
