@@ -1067,16 +1067,9 @@ public class LTIRegistration extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		buf.append(Home.header() + Home.banner);
 		buf.append("<h3>Your Registration Request Was Successful</h3>"
-				+ "The LTI Advantage deployment was created in ChemVantage and in your LMS.<br/><br/>");
+				+ "The LTI Advantage deployment was created in ChemVantage and in your LMS.<br/>"
+				+ "Please be sure to activate the deployment in your LMS.<br/><br/>");
 	
-		/*		
-		buf.append("There are three more steps required to activate the "
-				+ "deployment: <ol>"
-				+ "<li>Your LMS administrator must now activate the deployment in your LMS.</li>"
-				+ "<li>ChemVantage will review the deployment and send an activation link via email to " + request.getParameter("email") + "</li>"
-				+ "<li>You must click the activation link in the email to complete the activation process.</li>"
-				+ " </ol>");
-		*/
 		buf.append("<a href=# onclick=\"(window.opener || window.parent).postMessage({subject:'org.imsglobal.lti.close'},'*');\">Click here to close this window.</a>");
 		
 		buf.append("<h3>Keep ChemVantage Free</h3>"
