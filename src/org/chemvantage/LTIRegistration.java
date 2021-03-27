@@ -207,15 +207,15 @@ public class LTIRegistration extends HttpServlet {
 		String lms_other = request.getParameter("lms_other");
 		String openid_configuration = request.getParameter("openid_configuration");
 		
-		if (sub.isEmpty() || email.isEmpty() || ver==null || ver.isEmpty()) throw new Exception("All form fields are required. ");
-		if (use == null) throw new Exception("Please select your use case.");
-		if (aud.isEmpty()) throw new Exception("Please enter your organization name.");
-		if (url.isEmpty() && !"personal".equals(typ)) throw new Exception("Please enter the URL for your organization's home page.");
-		
+		if (sub.isEmpty() || email.isEmpty()) throw new Exception("All form fields are required. ");
 		String regex = "^[A-Za-z0-9+_.-]+@(.+)$";		 
 		Pattern pattern = Pattern.compile(regex);
 		if (!pattern.matcher(email).matches()) throw new Exception("Your email address was not formatted correctly. ");
-
+		if (aud.isEmpty()) throw new Exception("Please enter your organization name.");
+		if (url.isEmpty() && !"personal".equals(typ)) throw new Exception("Please enter the URL for your organization's home page.");
+		if (use == null) throw new Exception("Please select your use case.");
+		if (ver==null || ver.isEmpty()) throw new Exception("Please select LTI Advantage or LTI v1.1 registration.");
+		
 		if ("prod".equals(use) && typ==null) throw new Exception("Please select the type of organization connecting to ChemVantage. ");
 
 		if (!url.isEmpty() && !url.startsWith("http")) url = "https://" + url;
@@ -229,6 +229,8 @@ public class LTIRegistration extends HttpServlet {
 			if (lms==null) throw new Exception("Please select the type of LMS that you are connecting to ChemVantage. ");
 			if ("other".equals(lms) && (lms_other==null || lms_other.isEmpty())) throw new Exception("Please describe the type of LMS that you are connecting to ChemVantage. ");
 			if ("other".equals(lms)) lms = lms_other;
+		} else {
+			if (!"true".equals(request.getParameter("verify_use"))) throw new Exception("Please verify your use case.");
 		}
 		if (!"true".equals(request.getParameter("AcceptChemVantageTOS"))) throw new Exception("You must accept the ChemVantage Terms of Service. ");
 
