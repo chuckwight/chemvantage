@@ -126,7 +126,7 @@ uses such as testing LTI connections and LTI software development for LMS platfo
 <form id=regform method=post action='/lti/registration'>
 
 ChemVantage now supports LTI Advantage Dynamic Registration. <br/>
-If your LMS supports this, use the URL: https://www.chemvantage.org/lti/registration<br/>
+If your LMS supports this, use the URL: https://<%= request.getServerName() %>/lti/registration<br/>
 The process should be fast and easy!<br/><br/>
 
 Otherwise, you may proceed with manual registration by completing the form below to obtain a set of LTI credentials. The information you 
