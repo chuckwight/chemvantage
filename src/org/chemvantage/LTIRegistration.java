@@ -174,7 +174,8 @@ public class LTIRegistration extends HttpServlet {
 					JsonObject openIdConfiguration = getOpenIdConfiguration(request);  // LTIDRSv1p0 section 3.4
 					validateOpenIdConfigurationURL(request.getParameter("openid_configuration"),openIdConfiguration);  // LTIDRSv1p0 section 3.5.1
 					JsonObject registrationResponse = postRegistrationRequest(openIdConfiguration,request);  // LTIDRSv1p0 section 3.5.2 & 3.6
-					createNewDeployment(openIdConfiguration,registrationResponse,request);
+					Deployment d = createNewDeployment(openIdConfiguration,registrationResponse,request);
+					sendApprovalEmail(d);
 					response.setContentType("text/html");
 					out.println(successfulRegistrationRequestPage(request,registrationResponse));
 				} else {
@@ -1072,6 +1073,19 @@ public class LTIRegistration extends HttpServlet {
 	
 		buf.append("<a href=# onclick=\"(window.opener || window.parent).postMessage({subject:'org.imsglobal.lti.close'},'*');\">Click here to close this window.</a>");
 		
+		switch (request.getParameter("lms")) {
+		case "moodle":
+			buf.append("<h3>For the Instructor</h3>"
+					+ "To add ChemVantage assignments to your course:<ol>"
+					+ "<li>Click 'Add an activity or resource'</li>"
+					+ "<li>Click 'External Tool'</li>"
+					+ "<li>Select ChemVantage from preconfigured tools and click 'Select content'</li>"
+					+ "<li>Choose one or more ChemVantage assignments, click 'Submit' and then 'Continue'</li>"
+					+ "</ol>"
+					+ "If you need assistance, contact us at admin@chemvantage.org");
+			break;
+		}
+		
 		buf.append("<h3>Keep ChemVantage Free</h3>"
 				+ "ChemVantage provides free OER services to thousands of students. The cost of this service is paid entirely by generous donations "
 				+ "from people like you. Please consider making a donation to support ChemVantage and keep the good karma flowing.<br/>");
@@ -1153,9 +1167,25 @@ public class LTIRegistration extends HttpServlet {
 					+ "<li>Customize the assignment, if desired, using the highlighted link</li>"
 					+ "</ol>");
 			break;
-		default: buf.append("If you need additional assistance, please contact us at admin@chemvantage.org</br>Thank you.");
+		case "moodle":
+			buf.append("To the Course Instructor:<ol>"
+					+ "<li>On your course page, turn editing on and click 'Add an activity or resource'</li>"
+					+ "<li>Click 'External Tool'</li>"
+					+ "<li>Select ChemVantage from preconfigured tools and click 'Select content'</li>"
+					+ "<li>Choose one or more ChemVantage assignments, click 'Submit' and then 'Continue'</li>"
+					+ "</ol>");
+			break;
+		default:
+			buf.append("To the Course Instructor:<br>"
+					+ "Although we do not have specific instuctions for how to add a ChemVantage assignment to your course in " + d.lms_type + ", "
+					+ "in general you should navigate to your course page and<ol>"
+					+ "<li>Add a new assignment, content or resource</li>"
+					+ "<li>Select ChemVantage from a list of preconfigured tools</li>"
+					+ "<li>Select one or more ChemVantage assignments to add</li>"
+					+ "<li>Enable grading. Recommended points is 10 for quizzes or homework, 100 for practice exams.</li>"
+					+ "</ol>");	
 		}
-		
+		buf.append("If you need additional assistance, please contact us at admin@chemvantage.org</br>Thank you.");
 	}
 	
 	static Deployment activateDeployment(String platformDeploymentId) throws Exception {
