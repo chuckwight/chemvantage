@@ -177,14 +177,14 @@ public class LTIRegistration extends HttpServlet {
 					Deployment d = createNewDeployment(openIdConfiguration,registrationResponse,request);
 					sendApprovalEmail(d);
 					response.setContentType("text/html");
-					out.println(successfulRegistrationRequestPage(request,registrationResponse));
+					out.println(successfulRegistrationRequestPage(openIdConfiguration));
 				} else {
 					sendRegistrationEmail(token);
 					out.println(Home.header("ChemVantage LTI Registration") + Home.banner + "<h3>Registration Success</h3>Thank you. A registration email has been sent to your address.<p>" + Home.footer);			
 				}
 			}
 		} catch (Exception e) {
-			String message = e.getMessage();
+			String message = e.toString() + e.getMessage();
 			String registrationURL = "/Registration.jsp?message=" + URLEncoder.encode(message,"utf-8");
 			Enumeration<String> enumeration = request.getParameterNames();
 			while(enumeration.hasMoreElements()){
@@ -467,7 +467,7 @@ public class LTIRegistration extends HttpServlet {
 						+ "<li>Go back to the LTI Tool Providers page, and from the dropdown menu on the ChemVantage app select Manage Placements"
 						+ "<li>Click Create Placement"
 						+ "<ul><li>Label: ChemVantage</li>"
-						+ " <li>Description: ChemVantage is a free Open Educational Resource for teaching and learning college-level General Chemistry"
+						+ " <li>Description: ChemVantage is an Open Educational Resource for teaching and learning college-level General Chemistry"
 						+ " <li>Handle: (any unique string)"
 						+ " <li>Availability: Yes"
 						+ " <li>Course Content Tool (supports deep linking)"
@@ -521,6 +521,34 @@ public class LTIRegistration extends HttpServlet {
 						+ "<li>When you launch the assignment, you may use the highlighted link to customize it for your class.</li>"
 						+ "</ol>");
 				break;
+			case "moodle":
+				buf.append("This request indicates that you are using the open-source Moodle LMS. "
+						+ "To configure ChemVantage in Moodle v3.10 please go to Site Administration | Plugins | Manage Tools<br/>"
+						+ "Enter the URL: " + iss + "/lti/registration, complete the form and activate the tool (easy).<br/><br/>"
+						+ "Otherwise, you can configure the tool manually:<ul>"
+						+ "<li>Tool Name: ChemVantage" + (iss.contains("dev-vantage")?" Development":"") + "</li>"
+						+ "<li>Tool URL: " + iss + "/lti/launch" + "</li>"
+						+ "<li>Tool Description: ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry</li>"
+						+ "<li>LTI version: LTI 1.3</li>"
+						+ "<li>Public Key Type: Keyset URL</li>"
+						+ "<li>Public Keyset: " + iss + "/jwks" + "</li>"
+						+ "<li>Initiate Login URL: " + iss + "/auth/token" + "</li>"
+						+ "<li>Redirection URIs: " + iss + "/lti/launch " + iss + "/lti/deeplinks" + "</li>"
+						+ "<li>Check 'Supports Deep Linking'</li>"
+						+ "<li>Content Selection URL: " + iss + "/lti/deeplinks" + "</li>"
+						+ "<li>Services | IMS LTI Assignment and Grade Services: select Use for grade sync only</li>"
+						+ "<li>Services | IMS LTI Names and Role Provisioning: select Use this service</li>"
+						+ "<li>Privacy | check Force SSL</li>"
+						+ "</ul>");
+						
+				buf.append("<hr><br>To the Course Instructor:<br/>"
+						+ "To add ChemVantage assignments to your course:<ol>"
+						+ "<li>Click 'Add an activity or resource'</li>"
+						+ "<li>Click 'External Tool'</li>"
+						+ "<li>Select ChemVantage from preconfigured tools and click 'Select content'</li>"
+						+ "<li>Choose one or more ChemVantage assignments, click 'Submit' and then 'Continue'</li>"
+						+ "</ol>");
+				break;
 			case "LTI Certification":
 				buf.append("The deployment_id will be recorded automatically. Please click <a href=" + iss 
 						+ "/lti/registration?UserRequest=final&token=" + token + ">this link</a> " 
@@ -556,7 +584,7 @@ public class LTIRegistration extends HttpServlet {
 		sendEmail(name,email,"ChemVantage LTI Registration",buf.toString());
 	}
 
-	protected void sendEmail(String recipientName, String recipientEmail, String subject, String messageBody) throws Exception {
+	protected static void sendEmail(String recipientName, String recipientEmail, String subject, String messageBody) throws Exception {
 		Message msg = new MimeMessage(Session.getDefaultInstance(new Properties()));
 		InternetAddress from = new InternetAddress("admin@chemvantage.org", "ChemVantage");
 		msg.setFrom(from);
@@ -1066,7 +1094,7 @@ public class LTIRegistration extends HttpServlet {
 		}
 	}
 	
-	String successfulRegistrationRequestPage(HttpServletRequest request, JsonObject registrationResponse) {
+	String successfulRegistrationRequestPage(JsonObject openid_configuration) {
 		StringBuffer buf = new StringBuffer();
 		buf.append(Home.header() + Home.banner);
 		buf.append("<h3>Your Registration Request Was Successful</h3>"
@@ -1075,7 +1103,12 @@ public class LTIRegistration extends HttpServlet {
 	
 		buf.append("<a href=# onclick=\"(window.opener || window.parent).postMessage({subject:'org.imsglobal.lti.close'},'*');\">Click here to close this window.</a>");
 		
-		switch (request.getParameter("lms")) {
+		String lms = null;
+		try {
+			lms = openid_configuration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString();
+		} catch (Exception e) {}
+		
+		switch (lms) {
 		case "moodle":
 			buf.append("<h3>For the Instructor</h3>"
 					+ "To add ChemVantage assignments to your course:<ol>"
@@ -1083,10 +1116,19 @@ public class LTIRegistration extends HttpServlet {
 					+ "<li>Click 'External Tool'</li>"
 					+ "<li>Select ChemVantage from preconfigured tools and click 'Select content'</li>"
 					+ "<li>Choose one or more ChemVantage assignments, click 'Submit' and then 'Continue'</li>"
-					+ "</ol>"
-					+ "If you need assistance, contact us at admin@chemvantage.org");
+					+ "</ol>");
 			break;
+		default:
+			buf.append("<h3>For the Course Instructor:</h3>"
+					+ "Although we do not have specific instuctions for how to add a ChemVantage assignment to your course in " + lms + ", "
+					+ "in general you should navigate to your course page and<ol>"
+					+ "<li>Add a new assignment, content or resource</li>"
+					+ "<li>Select ChemVantage from a list of preconfigured tools</li>"
+					+ "<li>Select one or more ChemVantage assignments to add</li>"
+					+ "<li>Enable grading. Recommended points is 10 for quizzes or homework, 100 for practice exams.</li>"
+					+ "</ol>");	
 		}
+		buf.append(	"If you need assistance, contact us at admin@chemvantage.org");
 		
 		buf.append("<h3>Keep ChemVantage Free</h3>"
 				+ "ChemVantage provides free OER services to thousands of students. The cost of this service is paid entirely by generous donations "
@@ -1114,25 +1156,12 @@ public class LTIRegistration extends HttpServlet {
 		case "chemvantage-hrd":
 			iss = "https://www.chemvantage.org";
 		}
-		Date now = new Date();
-		Date exp = new Date(now.getTime() + 604800000L); // seven days from now
-		String token = JWT.create()
-				.withIssuer(iss)
-				.withExpiresAt(exp)
-				.withIssuedAt(now)
-				.withClaim("platform_deployment_id",d.platform_deployment_id)
-				.sign(Algorithm.HMAC256(Subject.getSubject().HMAC256Secret));
-
-		String activationURL = iss + "/lti/registration?token=" + token;
-
-		buf.append("<h2>Activate Your ChemVantage Registration</h2>"
-				+ "Congratulations! Your LTI registration request has been approved:<br/>"
+		
+		buf.append("<h2>ChemVantage Registration Success</h2>"
+				+ "Congratulations! Your LTI registration has been completed:<br/>"
 				+ "LMS Platform: " + d.getPlatformId() + "<br/>"
 				+ "Deployment ID: " + d.getDeploymentId() + "<br/>"
-				+ "Client ID: " + d.client_id + "<br/><br/>"
-				+ "If this is correct, please click the following link to complete the activation of your ChemVantage account:<br/>"
-				+ "<a href=" + activationURL + ">" + activationURL + "</a><br/><br/>"
-				+ "For your security, this link is active for only 7 days and expires at " + exp + ".<br/><br/>");
+				+ "Client ID: " + d.client_id + "<br/><br/>");
 
 		buf.append("<h3>Helpful Hints</h3>"
 				+ "ChemVantage supports two types of LTI launches from your LMS:<ol>"
@@ -1187,7 +1216,12 @@ public class LTIRegistration extends HttpServlet {
 					+ "<li>Enable grading. Recommended points is 10 for quizzes or homework, 100 for practice exams.</li>"
 					+ "</ol>");	
 		}
-		buf.append("If you need additional assistance, please contact us at admin@chemvantage.org</br>Thank you.");
+		buf.append("If you need additional assistance, please contact us at admin@chemvantage.org<br/>Thank you.");
+		
+		try {
+			sendEmail(d.contact_name,d.email,"ChemVantage Registration",buf.toString());
+		} catch (Exception e) {
+		}
 	}
 	
 	static Deployment activateDeployment(String platformDeploymentId) throws Exception {
