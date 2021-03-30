@@ -100,7 +100,7 @@ public class Token extends HttpServlet {
 			d.claims = oidc_auth_url;
 			ofy().save().entity(d);
 		} catch (Exception e) {
-			response.getWriter().println("<h3>Failed Auth Token</h3>" + e.toString()); // + "<br>" + debug.toString());
+			response.getWriter().println("<h3>Failed Auth Token</h3>" + e.getMessage()); // + "<br>" + debug.toString());
 		}
 	}
 
@@ -118,10 +118,24 @@ public class Token extends HttpServlet {
 			String platform_deployment_id = platform_id + "/" + deployment_id;
 			//if (platform_deployment_id.lastIndexOf("/") == platform_deployment_id.length()-1) platform_deployment_id = platform_deployment_id.substring(0, platform_deployment_id.length()-1);
 			Deployment d = ofy().load().type(Deployment.class).id(platform_deployment_id).now();
-			if (d==null) throw new Exception("The deployment_id " + deployment_id + " is not known.");
+			if (d==null) {
+				String reg = null;
+				String project_id = System.getProperty("com.google.appengine.application.id");
+				switch (project_id) {
+				case "dev-vantage-hrd":
+					reg = "https://dev-vantage-hrd.appspot.com/lti/registration";
+					break;
+				case "chemvantage-hrd":
+					reg = "https://www.chemvantage.org/lti/registration";
+				}
+				throw new Exception("The deployment_id " + deployment_id + " is not known.<br/>"
+						+ "Please check that your LMS has been registered properly with ChemVantage.<br/>"
+						+ "Deployments are deleted automatically after 6 months of inactivity.<br/>"
+						+ "You may register again at <a href='" + reg + "'>" + reg + "</a>");
+			}
 			else return d;
 		}
-		
+
 		// Prepare to search for all deployments from this platform:
 		Key<Deployment> kstart = Key.create(Deployment.class, platform_id);
 		Key<Deployment> kend = Key.create(Deployment.class, platform_id + "~");			
