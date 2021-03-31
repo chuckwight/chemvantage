@@ -22,6 +22,7 @@ public class Deployment implements java.lang.Cloneable {
 			String contact_name;
 			String organization;
 			String org_url;
+			String org_typ;
 			String lms_type;
 			String rsa_key_id;
 			String scope;
@@ -32,7 +33,7 @@ public class Deployment implements java.lang.Cloneable {
 			
 	Deployment() {}
 	
-	Deployment(String platform_id,String deployment_id,String client_id,String oidc_auth_url,String oauth_access_token_url,String well_known_jwks_url,String contact_name,String email,String organization,String org_url,String lms) 
+	Deployment(String platform_id,String deployment_id,String client_id,String oidc_auth_url,String oauth_access_token_url,String well_known_jwks_url,String contact_name,String email,String organization,String org_url,String org_typ,String lms) 
 			throws Exception {
 		// Ensure that the platform_id is secure and does not end in a slash:
 		URL platform = new URL(platform_id);
@@ -57,6 +58,7 @@ public class Deployment implements java.lang.Cloneable {
 		this.email = email;
 		this.organization = organization;
 		this.org_url = org_url;
+		this.org_typ = org_typ;
 		this.lms_type = lms;
 		this.rsa_key_id = KeyStore.getAKeyId(lms);
 		this.created = new Date();

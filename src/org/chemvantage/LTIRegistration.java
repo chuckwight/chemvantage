@@ -218,7 +218,8 @@ public class LTIRegistration extends HttpServlet {
 		if (ver==null || ver.isEmpty()) throw new Exception("Please select LTI Advantage or LTI v1.1 registration.");
 		
 		if ("prod".equals(use) && typ==null) throw new Exception("Please select the type of organization connecting to ChemVantage. ");
-
+		else typ = "";
+		
 		if (!url.isEmpty() && !url.startsWith("http")) url = "https://" + url;
 		try {
 			if (!"personal".equals(typ)) new URL(url);   // throws Exception if URL is not formatted correctly
@@ -540,7 +541,14 @@ public class LTIRegistration extends HttpServlet {
 						+ "<li>Services | IMS LTI Names and Role Provisioning: select Use this service</li>"
 						+ "<li>Privacy | check Force SSL</li>"
 						+ "</ul>");
-						
+				
+				buf.append("When you have finished the configuration, Moodle generates a preconfigured tool. You must activate it and "
+						+ "then click 'View configuration details'. When you have these in hand, including the client_id and deployment_id, click "
+						+ "the link below to enter these into ChemVantage.<br/><br/>");
+			
+				buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
+						+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><p>");
+					
 				buf.append("<hr><br>To the Course Instructor:<br/>"
 						+ "To add ChemVantage assignments to your course:<ol>"
 						+ "<li>Click 'Add an activity or resource'</li>"
@@ -757,6 +765,7 @@ public class LTIRegistration extends HttpServlet {
 		String email = jwt.getClaim("email").asString();
 		String organization = jwt.getAudience().get(0);
 		String org_url = jwt.getClaim("url").asString();
+		String org_typ = jwt.getClaim("typ").asString();
 		String lms = jwt.getClaim("lms").asString();
 		String client_id = request.getParameter("ClientId");
 		if (client_id==null) throw new Exception("Client ID value is required.");
@@ -801,7 +810,7 @@ public class LTIRegistration extends HttpServlet {
 			if (well_known_jwks_url==null || well_known_jwks_url.isEmpty()) throw new Exception("JSON Web Key Set URL is required.");
 		}
 			
-		Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
+		Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,org_typ,lms);
 		d.status = instant?null:"review";
 		
 		Deployment prior = Deployment.getInstance(d.platform_deployment_id);
@@ -1081,11 +1090,13 @@ public class LTIRegistration extends HttpServlet {
 			String contact_email = request.getParameter("email");
 			String organization = request.getParameter("aud");
 			String org_url = request.getParameter("url");
+			String org_typ = request.getParameter("typ");
+			if (org_typ==null) org_typ = "";
 			
 			JsonElement deploymentId = registrationResponse.get("https://purl.imsglobal.org/spec/lti-tool-configuration").getAsJsonObject().get("deployment_id");
 			if (deploymentId == null) throw new Exception("ChemVantage requires that the deployment_id must be included in the registration response. ");
 					
-			Deployment d = new Deployment(platformId,deploymentId.getAsString(),clientId,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,contact_name,contact_email,organization,org_url,lms);
+			Deployment d = new Deployment(platformId,deploymentId.getAsString(),clientId,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,contact_name,contact_email,organization,org_url,org_typ,lms);
 			d.status = "review";
 			ofy().save().entity(d);
 			return d;
