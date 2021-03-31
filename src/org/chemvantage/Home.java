@@ -21,7 +21,6 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Date;
 import java.util.List;
 import java.util.Random;
 
@@ -97,59 +96,35 @@ public class Home extends HttpServlet {
 			+ "Welcome to<br/><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT><br/>An Open Education Resource<br/><br/>";
 	
 	static String getHeader(User user) {
-		StringBuffer buf = new StringBuffer();
-		try {
-			String now = new Date().toString();
+		String announcement = Subject.getSubject().announcement;
 
-			buf.append("<!DOCTYPE html>"
-					+"<html >"
-					+ "<head>"
-					+ "<meta HTTP-EQUIV='Content-type' CONTENT='text/html;charset=iso-8859-1'>"
-					+ "<meta HTTP-EQUIV='Expires' CONTENT='" + now + "'>\n"
-					+ "<meta HTTP-EQUIV='P3P' CONTENT='policyref=\"http://www.chemvantage.org/w3c/p3p.xml\",CP=\"CURa ADMa DEVa OUR IND DSP OTI COR\"'>\n"
-					+ "<meta NAME='Description' CONTENT='An online quiz and homework site'>\n"
-					+ "<meta NAME='Keywords' CONTENT='learning,online,quiz,homework,video,textbook,open,education'>\n"
-					+ "<meta name='msapplication-config' content='none'/>"
-					+ "<link rel='P3Pv1' href='/w3c/p3p.xml'>\n"
-					+ "<title>ChemVantage</title>\n"
-					+ "<style><!-- body,td,a,p,.h {font-family:arial,sans-serif}"
-					+ "#pzon{float:left;font-weight:bold;height:22px;padding-left:2px}"
-					+ "#phzl{border-top:1px solid#c9d7f1;font-size:0;height:0;position:absolute;right:0;top:24px;width:200%}"
-					+ "#pzbg{background:#fff;border:1px solid;border-color:#c9d7f1 #36c #36c#a2bae7;font-size:13px;top:24px;z-index:1000}"
-					+ "#puzr{padding-bottom:7px !important}"
-					+ "#pzon,#puzr{font-size:13px;padding-top:1px!important}"
-					+ ".pz1,.pz2{display:inline;height:22px;margin-right:1em;vertical-align:top}"
-					+ "#pzbg,.pz3{display:none;position:absolute;width:7em}"
-					+ ".pz3{z-index:1001}"
-					+ "#pzon a,#pzon a:active,#pzon a:visited{color:#00c;font-weight:normal}"
-					+ ".pz3 a,.pz2 a{text-decoration:none}"
-					+ ".pz3 a{display:block;padding:.2em .5em}"
-					+ "#pzon .pz3 a:hover{background:#36c;color:#fff}"
-					+ "--> </style>\n"
-					+ "</head>\n"
-					+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
-					+ "<div id=pzon>"
-					+ " <div class=pz1>ChemVantage.org</div>"
-					+ " <div class=pz1><a href=/Home>Home</a></div>"
-					+ " <div class=pz1><a href=/About>About Us</a></div>"
-					+ " <div class=pz1><a href='/Feedback?sig=" + user.getTokenSignature() + "'>Feedback</a></div>"
-					+ " <div class=pz1><a href='/Contribute?sig=" + user.getTokenSignature() + "'>Authors</a></div>");
-			if (user.isEditor()) buf.append("<div class=pz1><a href=/Edit>Editors</a></div>");
-			if (user.isAdministrator()) buf.append("<div class=pz1><a href=/Admin>Admin</a></div><br/>");
-			buf.append("<div class=pz1><a href=/Logout>Sign out</a></div>");
-			
-			//buf.append("</div>\n");
-
-			buf.append("</div>&nbsp;");
-			String announcement = Subject.getSubject().announcement;
-			if (announcement==null) announcement = "";
-			buf.append("<div style='color:red'><br/>" + announcement + "</div>");
-		} catch (Exception e) {
-			return e.toString();
-		}
-		return buf.toString();
+		return "<!DOCTYPE html>"
+		+"<html>\n"
+		+ "<head>\n"
+		+ "<meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />"
+		+ "<meta http-equiv='Pragma' content='no-cache' />"
+		+ "<meta http-equiv='Expires' content='0' />"
+		+ "<meta http-equiv='Content-type' content='text/html;charset=iso-8859-1' />"
+		+ "<meta name='Description' content='An online quiz and homework site' />"
+		+ "<meta namew='Keywords' content='chemistry,learning,online,quiz,homework,video,textbook,open,education' />"
+		+ "<meta name='msapplication-config' content='none'/>\n"
+		+ "<link rel='icon' type='image/png' href='/favicon.png' />"
+		+ "<link rel='icon' type='image/vnd.microsoft.icon' href='/favicon.ico' />\n"
+		+ "<title>ChemVantage Administrator</title>\n"
+		+ "</head>\n"
+		+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
+		+ "<div>"
+		+ "<a href=/Home>Home</a> "
+		+ "<a href=/About>About Us</a> "
+		+ "<a href='/Feedback?sig=" + user.getTokenSignature() + "'>Feedback</a> "
+		+ "<a href='/Contribute?sig=" + user.getTokenSignature() + "'>Authors</a> "
+		+ "<a href='/Edit?sig=" + user.getTokenSignature() + "'>Editors</a> "
+		+ "<a href='/Admin?sig=" + user.getTokenSignature() + "'>Admin</a> "
+		+ "<a href=/Logout>Sign out</a>"
+		+ "</div><br/>"
+		+ ((announcement==null || announcement.isEmpty())?"":"<FONT COLOR=RED>" + announcement + "</FONT><br/>\n");
 	}
-	
+
 	String homePage(HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {			
