@@ -67,7 +67,25 @@ public class Feedback extends HttpServlet {
 			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
-
+			
+			switch (userRequest) {
+			case "ReportAProblem":
+				String userId = user==null?"":user.id;
+				long questionId = Long.parseLong(request.getParameter("QuestionId"));
+				String notes = request.getParameter("Notes");
+				String email = request.getParameter("Email");
+				UserReport r = new UserReport(userId,questionId,notes);
+				ofy().save().entity(r);
+				if (email !=null && !email.isEmpty()) sendEmailToAdmin(r,user,email);
+				break;
+			case "AjaxRating":
+				recordAjaxRating(request);
+				break;
+			default:
+				out.println((user.isChemVantageAdmin()?Home.getHeader(user):Home.header("ChemVantage Feedback Form")) + feedbackForm(user) + Home.footer);
+			}
+			
+			/*
 			if (userRequest.equals("ReportAProblem")) {
 				String userId = user==null?"":user.id;
 				long questionId = Long.parseLong(request.getParameter("QuestionId"));
@@ -78,7 +96,8 @@ public class Feedback extends HttpServlet {
 				if (email !=null && !email.isEmpty()) sendEmailToAdmin(r,user,email);
 			} else if (userRequest.equals("AjaxRating")) {
 				recordAjaxRating(request);
-			} else out.println(Home.header("ChemVantage Feedback Form") + feedbackForm(user) + Home.footer);    
+			} else out.println(Home.header("ChemVantage Feedback Form") + feedbackForm(user) + Home.footer);
+			*/
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
@@ -96,12 +115,25 @@ public class Feedback extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 
+			out.println(user.isChemVantageAdmin()?Home.getHeader(user):Home.header("ChemVantage Feedback"));
+			switch (userRequest) {
+			case "SubmitFeedback":
+				out.println(submitFeedback(user,request));
+				break;
+			case "Delete Report":
+				ofy().delete().key(Key.create(UserReport.class,Long.parseLong(request.getParameter("ReportId")))).now();
+			default:
+				out.println(feedbackForm(user));
+			}
+			out.println(Home.footer);
+			/*
 			if (userRequest.equals("SubmitFeedback")) {
 				out.println(Home.header("Thank you for Feedback to ChemVantage") + submitFeedback(user,request) + Home.footer);
 			} else if (userRequest.equals("Delete Report")) {
 				ofy().delete().key(Key.create(UserReport.class,Long.parseLong(request.getParameter("ReportId")))).now();
 				out.println(Home.header("ChemVantage Feedback Form") + feedbackForm(user) + Home.footer);
 			} else 	out.println(Home.header("ChemVantage Feedback Form") + feedbackForm(user) + Home.footer);			
+			 */
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}

@@ -135,7 +135,7 @@ public class Home extends HttpServlet {
 					+ " <div class=pz1><a href='/Feedback?sig=" + user.getTokenSignature() + "'>Feedback</a></div>"
 					+ " <div class=pz1><a href='/Contribute?sig=" + user.getTokenSignature() + "'>Authors</a></div>");
 			if (user.isEditor()) buf.append("<div class=pz1><a href=/Edit>Editors</a></div>");
-			if (user.isAdministrator()) buf.append("<div class=pz1><a href=/Admin>Admin</a></div>");
+			if (user.isAdministrator()) buf.append("<div class=pz1><a href=/Admin>Admin</a></div><br/>");
 			buf.append("<div class=pz1><a href=/Logout>Sign out</a></div>");
 			
 			//buf.append("</div>\n");
