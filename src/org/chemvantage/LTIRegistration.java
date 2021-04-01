@@ -540,11 +540,12 @@ public class LTIRegistration extends HttpServlet {
 						+ "<li>Services | IMS LTI Assignment and Grade Services: select Use for grade sync only</li>"
 						+ "<li>Services | IMS LTI Names and Role Provisioning: select Use this service</li>"
 						+ "<li>Privacy | check Force SSL</li>"
+						+ "<li>Save Changes</li>"
 						+ "</ul>");
 				
 				buf.append("When you have finished the configuration, Moodle generates a preconfigured tool. You must activate it and "
-						+ "then click 'View configuration details'. When you have these in hand, including the client_id and deployment_id, click "
-						+ "the link below to enter these into ChemVantage.<br/><br/>");
+						+ "then click 'View configuration details'. When you have these details in hand, including the client_id and deployment_id, "
+						+ "click the link below to enter them into ChemVantage.<br/><br/>");
 			
 				buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
 						+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><p>");
