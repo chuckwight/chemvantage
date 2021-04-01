@@ -320,11 +320,12 @@ public class Edit extends HttpServlet {
 			} else {  // show the number of questions in each topic and assignment type
 				buf.append("<h4>Numbers of Questions By Topic and Assignment Type</h4>");
 				
-				buf.append("<TABLE><TR><TH>Topic</><TH>Quiz</TH><TH>Homework</TH><TH>Exam</TH><TH>OpenStax</TH></TR>");
+				buf.append("<TABLE><TR><TH>Topic</><TH>Quiz</TH><TH>Homework</TH><TH>Exam</TH><TH>Video</TH><TH>OpenStax</TH></TR>");
 				Query<Topic> topics = ofy().load().type(Topic.class).order("orderBy");
 				int nqt = 0;
 				int nht = 0;
 				int net = 0;
+				int nvt = 0;
 				for (Topic t:topics) {
 					buf.append("<TR><TD>" + t.title + "</TD>");
 					int nq = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",t.id).count();
@@ -333,9 +334,11 @@ public class Edit extends HttpServlet {
 					nht += nh; // running total
 					int ne = ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",t.id).count();
 					net += ne; // running total					
-					buf.append("<TD style='text-align:center'>" + nq + "</TD><TD style='text-align:center'>" + nh + "</TD><TD style='text-align:center'>" + ne + "</TD><TD style='text-align:center'>" + (t.topicGroup%2/1==1?"&#10025;":"") + "</TD></TR>");
+					int nv = ofy().load().type(Question.class).filter("assignmentType","Video").filter("topicId",t.id).count();
+					nvt += nv; // running total					
+					buf.append("<TD style='text-align:center'>" + nq + "</TD><TD style='text-align:center'>" + nh + "</TD><TD style='text-align:center'>" + ne + "</TD><TD style='text-align:center'>" + nv + "</TD><TD style='text-align:center'>" + (t.topicGroup%2/1==1?"&#10025;":"") + "</TD></TR>");
 				}
-				buf.append("<TR style='font-weight:bold'><TD>Totals</TD><TD style='text-align:center'>" + nqt + "</TD><TD style='text-align:center'>" + nht + "</TD><TD style='text-align:center'>" + net + "</TD></TR>");
+				buf.append("<TR style='font-weight:bold'><TD>Totals</TD><TD style='text-align:center'>" + nqt + "</TD><TD style='text-align:center'>" + nht + "</TD><TD style='text-align:center'>" + net + "</TD><TD style='text-align:center'>" + nvt + "</TD></TR>");
 				buf.append("</TABLE>");
 			}
 		} catch (Exception e) {
@@ -406,12 +409,13 @@ public class Edit extends HttpServlet {
 			buf.append("<b>" + subject.title + "</b>\n");
 			buf.append("<TABLE BORDER=0 CELLSPACING=3>"
 					+ "<TR><TH COLSPAN=3>&nbsp;</TH><TH COLSPAN=2>View/Add/Edit Questions</TH></TR>"
-					+ "<TR><TH>Order</TH><TH>Title</TH><TH>Action</TH><TH>Quiz</TH><TH>HW</TH><TH>Exam</TH><TH>OpenStax</TH></TR>\n");
+					+ "<TR><TH>Order</TH><TH>Title</TH><TH>Action</TH><TH>Quiz</TH><TH>HW</TH><TH>Exam</TH><TH>Video</TH><TH>OpenStax</TH></TR>\n");
 			Query<Topic> topics = ofy().load().type(Topic.class).order("orderBy");
 				for (Topic t : topics) { // one row for each topic
 					int nQuiz = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",t.id).count();
 					int nHW = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",t.id).count();
 					int nExam = ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",t.id).count();
+					int nVideo = ofy().load().type(Question.class).filter("assignmentType","Video").filter("topicId",t.id).count();
 					buf.append("\n<FORM NAME=TopicsForm" + t.id + " METHOD=POST ACTION=Edit>"
 							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateTopic>"
 							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + t.id + "'>");
@@ -419,12 +423,13 @@ public class Edit extends HttpServlet {
 							+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4 VALUE='" + t.orderBy + "'></TD>"
 							+ "<TD ALIGN=CENTER><INPUT NAME=Title VALUE='" + Question.quot2html(t.title) + "'></TD>"
 							+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE=Update>"
-							+ ((nQuiz==0 && nHW==0 && nExam==0)?"<INPUT TYPE=SUBMIT VALUE='Delete' "
+							+ ((nQuiz==0 && nHW==0 && nExam==0 && nVideo==0)?"<INPUT TYPE=SUBMIT VALUE='Delete' "
 									+ "onClick=\"javascript: document.TopicsForm" + t.id + ".UserRequest.value='DeleteTopic';\">":"")
 									+ "</TD>");
 					buf.append("<TD ALIGN=CENTER><a href=Edit?AssignmentType=Quiz&TopicId=" + t.id + "><b>" + nQuiz + "</b></a></TD>");
 					buf.append("<TD ALIGN=CENTER><a href=Edit?AssignmentType=Homework&TopicId=" + t.id + "><b>" + nHW + "</b></a></TD>");
 					buf.append("<TD ALIGN=CENTER><a href=Edit?AssignmentType=Exam&TopicId=" + t.id + "><b>" + nExam + "</b></a></TD>");
+					buf.append("<TD ALIGN=CENTER><a href=Edit?AssignmentType=Exam&TopicId=" + t.id + "><b>" + nVideo + "</b></a></TD>");
 					// The next column is a checkbox to indicate if the topic is aligned with OpenStax textbook
 					buf.append("<TD ALIGN=CENTER><INPUT TYPE=CHECKBOX NAME=TopicGroup VALUE=1" + (t.topicGroup%2/1==1?" CHECKED":"") + "></TD>");
 					buf.append("</FORM></TR>");
@@ -435,12 +440,12 @@ public class Edit extends HttpServlet {
 			buf.append("<TR>"
 					+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4></TD>"
 					+ "<TD ALIGN=CENTER><INPUT NAME=Title></TD>"
-					+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE='Create New Topic'></TD><TD ALIGN=CENTER>0</TD><TD ALIGN=CENTER>0</TD><TD ALIGN=CENTER><INPUT TYPE=CHECKBOX NAME=TopicGroup VALUE=1></TD></TR></FORM>");
+					+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE='Create New Topic'></TD><TD ALIGN=CENTER>0</TD><TD ALIGN=CENTER>0</TD><TD ALIGN=CENTER>0</TD><TD ALIGN=CENTER>0</TD><TD ALIGN=CENTER><INPUT TYPE=CHECKBOX NAME=TopicGroup VALUE=1></TD></TR></FORM>");
 			buf.append("</TABLE>");
 			buf.append("<FONT SIZE=-1 COLOR=RED>Notes:<OL>"
 					+ "<LI>The alphanumeric value of Order controls the order that topics are arranged.</LI>"
 					+ "<LI>To hide a topic from students, change the value of Order to 'Hide'.</LI>"
-					+ "<LI>A topic can be deleted only if all its Quiz and Homework questions have been deleted or moved.</LI>"
+					+ "<LI>A topic can be deleted only if all its questions have been deleted or moved.</LI>"
 					+ "</OL></FONT>");
 		} catch (Exception e) {
 			buf.append(e.getMessage());
