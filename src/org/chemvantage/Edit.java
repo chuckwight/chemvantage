@@ -1101,7 +1101,7 @@ public class Edit extends HttpServlet {
 		List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).keys().list();
 		if (questionKeys.size()>0) ofy().delete().keys(questionKeys);
 		String key1 = assignmentType + String.valueOf(topicId);
-		questions.remove(key1);
+		this.questions.remove(key1);
 	}
 	
 	private void copyQuestionsToPracticeExam(User user,HttpServletRequest request) {
@@ -1117,6 +1117,8 @@ public class Edit extends HttpServlet {
 			q.assignmentType = "Exam";		
 		}
 		ofy().save().entities(questions);
+		String key1 = "Exam" + String.valueOf(topicId);
+		this.questions.remove(key1);
 	}
 	
 	String editVideoForm(HttpServletRequest request) {
