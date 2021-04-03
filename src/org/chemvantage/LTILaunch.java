@@ -130,6 +130,14 @@ public class LTILaunch extends HttpServlet {
 			BLTIConsumer tc;
 			try {
 				tc = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).safe();
+				if ("suspended".equals(tc.status)) {
+					response.getWriter().println(Home.header("ChemVantage Account Management") + suspendedAccount(tc) + Home.footer);
+					return;
+				} else if (tc.expires != null && tc.expires.before(now)) {
+					response.getWriter().println(Home.header("ChemVantage Account Management") + expiredAccount(tc,request.getServerName()) + Home.footer);			
+					return;
+				}
+				
 				if (tc.secret==null) throw new Exception("Shared secret was not found in the ChemVantage database.");
 				Date yesterday = new Date(now.getTime()-86400000L);  // 24 hrs ago
 				if (tc.lastLogin==null || tc.lastLogin.before(yesterday)) {
@@ -137,7 +145,7 @@ public class LTILaunch extends HttpServlet {
 					tc.launchParameters = request.getParameterMap();
 					try {  // this section synchronizes expiration dates from a single domain
 						String domain = new URL(tc.launchParameters.get("lis_outcome_service_url")[0]).getHost();
-						if (domain!=null) tc.domain = domain;  // domain may be null for instuctors
+						if (domain!=null) tc.domain = domain;  // domain may be null for instructors
 						if (tc.domain != null) {  // tc.domain may be null if grades are never returned to the LMS					
 							List<BLTIConsumer> companions = ofy().load().type(BLTIConsumer.class).filter("domain",tc.domain).list();
 							companions.remove(tc);
@@ -149,7 +157,10 @@ public class LTILaunch extends HttpServlet {
 					ofy().save().entity(tc);  // update the lastLogin value and possibly the domain and expires fields
 				}
 			} catch (Exception e) {
-				throw new Exception("Invalid oauth_consumer_key. Please verify that the oauth_consumer_key is entered into your LMS exactly as you are registered with ChemVantage.");
+				throw new Exception("Invalid oauth_consumer_key. "
+						+ "Please verify that the oauth_consumer_key is entered into your LMS exactly as you are registered with ChemVantage. "
+						+ "If your account has been inactive for more than one year, it may have been deleted in accordance with our "
+						+ "<a href=/About#privacy target=_blank>privacy policy</a>.");
 			}
 
 			OAuthMessage oam = OAuthServlet.getMessage(request, null);
@@ -267,8 +278,7 @@ public class LTILaunch extends HttpServlet {
 			// At this point we should have a valid Assignment, but it may not have an 
 			// assignmentType or topicId(s). If so, show the the pickResource form:
 			
-			if (tc.expires != null && tc.expires.before(now)) response.getWriter().println(Home.header("ChemVantage Account Management") + expiredAccount(tc,request.getServerName()) + Home.footer);			
-			else if (myAssignment.isValid()) {
+			if (myAssignment.isValid()) {
 				switch (myAssignment.assignmentType) {
 				case "Quiz":
 					redirectUrl = "/Quiz.jsp" + "?sig=" + user.getTokenSignature();
@@ -581,6 +591,23 @@ public class LTILaunch extends HttpServlet {
 		buf.append("Please contact us at <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a> to help us get you connected again.<p></p>");
 		
 		buf.append("Thank you for your interest in ChemVantage,<p></p> - Chuck Wight<p></p>");
+		
+		return buf.toString();
+	}
+	
+	public String suspendedAccount(BLTIConsumer tc) {
+		StringBuffer buf = new StringBuffer();
+		
+		buf.append(Home.banner + "<h3>Your ChemVantage Account Has Been Suspended</h3>");
+		
+		buf.append("The ChemVantage LTI account using these credentials has been suspended pending deletion due to long period of inactivity. "
+				+ "The last prior login for this account was " + (tc.lastLogin==null?"more than one year ago. ":tc.lastLogin) + "<br/><br/>"
+				+ "Please visit our <a href=/lti/registration target=_blank>registration page</a> to create a new account.<br/><br/>");
+		
+		
+		buf.append("If you need assistance, please contact us at <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><br/><br/>");
+		
+		buf.append("- Chuck Wight<br/><br/>");
 		
 		return buf.toString();
 	}

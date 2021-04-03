@@ -262,6 +262,10 @@ public class DataStoreCleaner extends HttpServlet {
 			for (BLTIConsumer c : consumers) {
 				int n = ofy().load().type(Assignment.class).filter("domain",c.oauth_consumer_key).chunk(Integer.MAX_VALUE).count();
 				if (n==0) keys.add(Key.create(c));
+				else if (c.lastLogin==null || c.lastLogin.before(oneYearAgo)) {
+					c.status = "suspended";
+					ofy().save().entity(c);
+				}
 			}
 			
 			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
