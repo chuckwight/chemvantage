@@ -157,7 +157,13 @@ public class Admin extends HttpServlet {
 			buf.append("<h3>Recent Activity (past 30 days)</h3>");
 			
 			Date lastMonth = new Date(new Date().getTime()-2592000000L);
-			buf.append("Active Basic LTI Consumer accounts: " + ofy().load().type(BLTIConsumer.class).filter("lastLogin >",lastMonth).count() + "<br>");
+			buf.append("Active Basic LTI Consumer accounts: " + ofy().load().type(BLTIConsumer.class).filter("lastLogin >",lastMonth).count() + "<ul>");
+			List<BLTIConsumer> recentTCs = ofy().load().type(BLTIConsumer.class).filter("lastLogin >",lastMonth).list();
+			for (BLTIConsumer c : recentTCs) {
+				int resp = ofy().load().type(Response.class).filter("userId >",c.oauth_consumer_key).filter("userId <",c.oauth_consumer_key+"~").count();
+				buf.append("<li>" + c.oauth_consumer_key + " generated "+ resp + " responses. Contact: " + c.contact_name + " (" + c.email + ")</li>");
+			}
+			buf.append("</ul>");
 			buf.append("Active LTI Advantage deployments: " + ofy().load().type(Deployment.class).filter("lastLogin >",lastMonth).count() + "<br>");
 			buf.append("Total number of Response entities: " + ofy().load().type(Response.class).filter("submitted >",lastMonth).count());
 			
