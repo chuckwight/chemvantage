@@ -161,9 +161,14 @@ ChemVantage LLC is pleased to support the LTI community by permitting free acces
 uses such as testing LTI connections and LTI software development for LMS platforms. The development server may become unstable at times. Accounts are purged every month or two, but reregistration is free.<br/><br/>
 </span>
 
-Type of LTI registration:<br/> 
-<label><input type=radio name=ver value=1p3 <%= ((ver==null || ver.equals("1p3"))?"checked":"") %>/>LTI Advantage (preferred)</label><br/>
-<label><input type=radio name=ver value=1p1 <%= ((ver!=null && ver.equals("1p1"))?"checked":"") %>/>LTI version 1.1 (expires 31-DEC-2021)</label><br/><br/>
+Type of LTI registration: 
+<% if (ver==null || ver.equals("1p3")) { %>
+LTI Advantage Complete, including Deep Linking, Assignment and Grade Services, Names and Role Provisioning Services
+<% } else { %>
+LTI v1.1
+<% } %>
+<br/><br/>
+<input type=hidden name=ver value='<%= ver==null?"1p3":ver%>' />
 
 Type of Learning Management System:<br/>
 <label><input type=radio name=lms value=blackboard <%= ((lms!=null && lms.equals("blackboard"))?"checked":"") %> />Blackboard</label><br/>
