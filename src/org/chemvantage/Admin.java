@@ -116,6 +116,9 @@ public class Admin extends HttpServlet {
 					ofy().save().entity(d);
 					LTIRegistration.sendApprovalEmail(d);
 					break;
+				case "Block":
+					d.status = "blocked";
+					ofy().save().entity(d);
 				case "Delete":
 					ofy().delete().entity(d);
 				}

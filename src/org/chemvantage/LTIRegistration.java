@@ -52,7 +52,6 @@ import javax.servlet.http.HttpServletResponse;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.google.common.net.InternetDomainName;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -71,7 +70,7 @@ public class LTIRegistration extends HttpServlet {
 	 *      present, the OpenID Configuration URL and Registration Token are included in the POST to ChemVantage.
 	 *   2) ChemVantage validates the registration parameters, and if necessary, redirects to Registration.jsp
 	 *      to correct any errors.
-	 * For LTIv1.1:
+	 * For LTIv1.1:  ==== NOTE: v1.1 registrations not allowed after 4/10/2021 =====
 	 *   3) After validation, ChemVantage sends a registration email containing a link with the tokenized information.
 	 *   4) After receiving the registration email, the user clicks a tokenized link. The createBLTIConsumer
 	 *      method creates a new BLTIConsumer and presents the credentials to the user with instructions
@@ -294,9 +293,6 @@ public class LTIRegistration extends HttpServlet {
 		String ver = jwt.getClaim("ver").asString();
 		String typ = jwt.getClaim("typ").asString();
 		
-		String urlTopPrivateDomain = InternetDomainName.from(new URL(url).getHost()).topPrivateDomain().toString();
-		boolean instant = email.contains(urlTopPrivateDomain);
-		
 		StringBuffer buf = new StringBuffer();
 		
 		buf.append("<h2>ChemVantage Registration</h2>");
@@ -312,40 +308,35 @@ public class LTIRegistration extends HttpServlet {
 					+ "non-instructional purposes. The development server is occasionally unstable while we are testing our own code, and "
 					+ "accounts are purged from time to time, but reregistration is free.<br/><br/>");
 			
-			buf.append("When you complete the registration steps below, your account " 
-					+ (instant?"will be activated immediately. ":"application will be submitted for approval. You should expect a response within 24 hours. "));
-			
-			buf.append("If you have questions or require assistance, please contact us at admin@chemvantage.org.");
-			
 		} else {
 			switch (typ) {
 			case "nonprofit":
 				buf.append("You indicated on the registration form that " + org + " is a public or non-profit educational institution. As such, ChemVantage "
 						+ "services are provided free for up to 1000 users in your LMS. Please contact us for pricing beyond this limit.<p>"
-						+ "<b>By completing the registration steps below, you certify that your organization is a public or non-profit institution.</b><p>");
-				buf.append("Your account " 
-						+ (instant?"will be activated immediately. ":"application will then be submitted for approval. You should expect a response within 24 hours. "));
-				break;
+						+ "<b>By completing the registration steps below, you certify that your organization is a public or non-profit institution.</b><br/><br/>");
+			break;
 			case "personal":
 				buf.append("You indicated on the registration form that you intend to use ChemVantage for a small business or personal use. You may use "
 						+ "this account for offering instuction in General Chemistry for up to 5 users from your LMS. To exceed this limit, "
-						+ "please contact us for pricing at admin@chemvantage.org.<p>");
-				buf.append("When you complete the registration steps below, your account " 
-						+ (instant?"will be activated immediately. ":"application will be submitted for approval. You should expect a response within 24 hours. "));
-				break;			
+						+ "please contact us for pricing at admin@chemvantage.org.<br/><br/>");
+			break;			
 			case "forprofit":
 				buf.append("You indicated on the registration form that " + org + " desires to establish a commercial account. ChemVantage will "
 						+ "send you an invoice in the next few days for payment of the $5000 annual subscription charge. This subscription allows you to "
-						+ "provide ChemVantage services for up to 10,000 users from your LMS. To exceed this limit, please contact us for pricing.<p>");
-				buf.append("When you complete the registration steps below, your account " 
-						+ (instant?"will be activated immediately. ":"application will be submitted for approval. You should expect a response within 24 hours. "));
+						+ "provide ChemVantage services for up to 10,000 users from your LMS. To exceed this limit, please contact us for pricing.<br/><br/>");
 				break;
 			default: 
 			}
 		}
+		buf.append("When you complete the registration steps below, your account will be activated immediately while your registration is under review. ");
+		
+		buf.append("If you have questions or require assistance, please contact us at admin@chemvantage.org.");
+		
+	
 		
 		if (ver.contentEquals("1p1")) { // older LTIv1p1 registration process; deprecated 12/31/2020
 			
+			buf.append("<h3>Complete the LTI Registration Process</h3>");
 			buf.append("Click the link below to obtain your LTI credentials for connecting to ChemVantage. "
 					+ "<b>Print or save the credentials in a safe place.</b> "
 					+ "For your security, the link is valid for only three days and expires at " + jwt.getExpiresAt() + "<p>");
@@ -463,8 +454,8 @@ public class LTIRegistration extends HttpServlet {
 						+ "<li>Make a copy of the deployment_id and set Tool status: Approved"
 						+ "<li>Institution Policies: Send Role, Name, Email; Allow Grade Service and Membership Service"
 						+ "<li>Submit"
-						+ "<li>Click <a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">this link</a> " 
-						+ "to register the deployment_id with ChemVantage"
+						+ "<li>Click the link below to register the deployment_id with ChemVantage<br/>"
+						+ "<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a></li>"
 						+ "<li>Go back to the LTI Tool Providers page, and from the dropdown menu on the ChemVantage app select Manage Placements"
 						+ "<li>Click Create Placement"
 						+ "<ul><li>Label: ChemVantage</li>"
@@ -509,8 +500,11 @@ public class LTIRegistration extends HttpServlet {
 						+ "settings menu for ChemVantage."
 						+ "<li>Add ChemVantage as an External App to your account using the client_id created in step 1 "
 						+ "(<a href=https://community.canvaslms.com/docs/DOC-16730-42141110273>see detailed instructions here</a>)"
-						+ "<li>Click <a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">this link</a> " 
-						+ "to register the new client_id and deployment_id created in step 1 with ChemVantage</ol>");
+						+ "<li>Click the link below to register the new client_id and deployment_id created in step 1 with ChemVantage</ol>");
+				
+				buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
+						+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><br/><br/>");
+				
 				buf.append("<hr><br>To the Course Instructor:<ol>"
 						+ "<li>Create a new Canvas assignment with the following recommended parameters:" 
 						+ "<ul><li>Name: (as appropriate, e.g. Quiz - Heat and Enthalpy)</li>"
@@ -548,7 +542,7 @@ public class LTIRegistration extends HttpServlet {
 						+ "click the link below to enter them into ChemVantage.<br/><br/>");
 			
 				buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
-						+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><p>");
+						+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><br/><br/>");
 					
 				buf.append("<hr><br>To the Course Instructor:<br/>"
 						+ "To add ChemVantage assignments to your course:<ol>"
@@ -559,9 +553,9 @@ public class LTIRegistration extends HttpServlet {
 						+ "</ol>");
 				break;
 			case "LTI Certification":
-				buf.append("The deployment_id will be recorded automatically. Please click <a href=" + iss 
-						+ "/lti/registration?UserRequest=final&token=" + token + ">this link</a> " 
-						+ "to register the new client_id with ChemVantage.<br/><br/>");
+				buf.append("The deployment_id will be recorded automatically. Please click the link below to register the new client_id with ChemVantage:<br>"
+						+ "<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
+						+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><br/><br/>");
 				break;
 			default:
 				buf.append("This registration request uses the LTI Advantage (version 1.3) specifications. "
@@ -776,8 +770,6 @@ public class LTIRegistration extends HttpServlet {
 		String oidc_auth_url;
 		String oauth_access_token_url;
 		String well_known_jwks_url;
-		String urlTopPrivateDomain = InternetDomainName.from(new URL(org_url).getHost()).topPrivateDomain().toString();
-		boolean instant = email.contains(urlTopPrivateDomain);
 		
 		switch (lms) {
 		case "blackboard":
@@ -812,7 +804,7 @@ public class LTIRegistration extends HttpServlet {
 		}
 			
 		Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,org_typ,lms);
-		d.status = instant?null:"review";
+		d.status = "pending";
 		
 		Deployment prior = Deployment.getInstance(d.platform_deployment_id);
 		
@@ -1098,7 +1090,7 @@ public class LTIRegistration extends HttpServlet {
 			if (deploymentId == null) throw new Exception("ChemVantage requires that the deployment_id must be included in the registration response. ");
 					
 			Deployment d = new Deployment(platformId,deploymentId.getAsString(),clientId,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,contact_name,contact_email,organization,org_url,org_typ,lms);
-			d.status = "review";
+			d.status = "pending";
 			ofy().save().entity(d);
 			return d;
 		} catch (Exception e) {
@@ -1234,14 +1226,5 @@ public class LTIRegistration extends HttpServlet {
 			sendEmail(d.contact_name,d.email,"ChemVantage Registration",buf.toString());
 		} catch (Exception e) {
 		}
-	}
-	
-	static Deployment activateDeployment(String platformDeploymentId) throws Exception {
-		Deployment d = ofy().load().type(Deployment.class).id(platformDeploymentId).safe();
-		if ("pending".equals(d.status)) {
-			d.status = "active";
-			ofy().save().entity(d);
-		}
-		return d;
 	}
 }
