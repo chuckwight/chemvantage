@@ -787,6 +787,7 @@ public class LTIRegistration extends HttpServlet {
 			oauth_access_token_url += "/login/oauth2/token";
 			break;
 		case "LTI Certification":
+		case "IMS Certification":
 			platform_id = "https://ltiadvantagevalidator.imsglobal.org";
 			oidc_auth_url = "https://ltiadvantagevalidator.imsglobal.org/ltitool/oidcauthurl.html";
 			well_known_jwks_url = "https://oauth2server.imsglobal.org/jwks";
@@ -824,7 +825,7 @@ public class LTIRegistration extends HttpServlet {
 
 
 		if (prior!=null) {  // this is a repeat registration
-			d.status = prior.status;
+			d.status = prior.status==null?"pending":prior.status;
 			if (prior.client_id.equals(d.client_id)) msg += "Note: this platform deployment was registered previously. The registration data have now been updated.<p>";
 			else msg += "Note: This platform deployment was registered previously. The client_id and registration data have now been updated. If this is not correct, you should contact admin@chemvantage.org immediately.<p>";
 		}
