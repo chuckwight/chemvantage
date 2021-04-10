@@ -183,7 +183,7 @@ public class LTIRegistration extends HttpServlet {
 				}
 			}
 		} catch (Exception e) {
-			String message = e.toString() + e.getMessage();
+			String message = e.getMessage();
 			String registrationURL = "/Registration.jsp?message=" + URLEncoder.encode(message,"utf-8");
 			Enumeration<String> enumeration = request.getParameterNames();
 			while(enumeration.hasMoreElements()){
