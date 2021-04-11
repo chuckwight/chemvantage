@@ -112,7 +112,7 @@ public class Admin extends HttpServlet {
 				Deployment d = ofy().load().type(Deployment.class).id(request.getParameter("platform_deployment_id")).safe();
 				switch(request.getParameter("action")) {
 				case "Approve":
-					d.status = "approved";  //"pending";
+					d.status = "approved";
 					ofy().save().entity(d);
 					LTIRegistration.sendApprovalEmail(d);
 					break;
@@ -181,7 +181,7 @@ public class Admin extends HttpServlet {
 						+ "<input type=hidden name=platform_deployment_id value='" + d.platform_deployment_id + "'/>"
 						+ d.platform_deployment_id + " (" + d.lms_type + ")<br/>"
 						+ "by " + d.contact_name + " (" + d.email + ") at " + d.organization + " (" + d.org_url + ") " + (d.org_typ==null?"":d.org_typ) + "<br/>"
-						+ "<input type=submit name=action value='Approve'/>&nbsp;<input type=submit name=action value='Delete'/></form><br/>");
+						+ "<input type=submit name=action value='Approve'/>&nbsp;<input type=submit name=action value='Block'/>&nbsp;<input type=submit name=action value='Delete'/></form><br/>");
 			}
 			
 			buf.append("<h3>New and Expiring Accounts</h3>");			

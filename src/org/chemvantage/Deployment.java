@@ -30,6 +30,7 @@ public class Deployment implements java.lang.Cloneable {
 	@Index	String status;
 	@Index	Date   created;
 	@Index	Date   lastLogin;
+			Date   expires;
 			
 	Deployment() {}
 	
