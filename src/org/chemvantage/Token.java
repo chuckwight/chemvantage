@@ -125,7 +125,7 @@ public class Token extends HttpServlet {
 				case "dev-vantage-hrd":
 					reg = "https://dev-vantage-hrd.appspot.com/lti/registration";
 					break;
-				case "chemvantage-hrd":
+				case "chem-vantage-hrd":
 					reg = "https://www.chemvantage.org/lti/registration";
 				}
 				throw new Exception("The deployment_id " + deployment_id + " is not known.<br/>"

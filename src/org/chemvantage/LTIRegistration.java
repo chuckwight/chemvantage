@@ -983,7 +983,7 @@ public class LTIRegistration extends HttpServlet {
 			case "dev-vantage-hrd":
 				iss = "https://dev-vantage-hrd.appspot.com";
 				break;
-			case "chemvantage-hrd":
+			case "chem-vantage-hrd":
 				iss = "https://www.chemvantage.org";
 			}
 			JsonArray redirectUris = new JsonArray();
@@ -1158,7 +1158,7 @@ public class LTIRegistration extends HttpServlet {
 		case "dev-vantage-hrd":
 			iss = "https://dev-vantage-hrd.appspot.com";
 			break;
-		case "chemvantage-hrd":
+		case "chem-vantage-hrd":
 			iss = "https://www.chemvantage.org";
 		}
 		
