@@ -984,8 +984,8 @@ public class LTIRegistration extends HttpServlet {
 				iss = "https://dev-vantage-hrd.appspot.com";
 				break;
 			case "chem-vantage-hrd":
-				iss = "https://chem-vantage-hrd.appspot.com";
-				//iss = "https://www.chemvantage.org";
+				//iss = "https://chem-vantage-hrd.appspot.com";
+				iss = "https://www.chemvantage.org";
 			}
 			JsonArray redirectUris = new JsonArray();
 				redirectUris.add(iss + "/lti/launch");
@@ -1004,7 +1004,8 @@ public class LTIRegistration extends HttpServlet {
 			regJson.addProperty("policy_uri", iss + "/About#privacy");
 			regJson.addProperty("scope", "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly https://purl.imsglobal.org/spec/lti-ags/scope/score https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly");
 			JsonObject ltiToolConfig = new JsonObject();
-				ltiToolConfig.addProperty("domain", iss.substring(8));
+				String domain = iss.equals("dev-vantage-hrd.appspot.com")?"dev-vantage-hrd.appspot.com":"chemvantage.org";
+				ltiToolConfig.addProperty("domain", domain);
 				ltiToolConfig.addProperty("description",  "ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry.");
 				ltiToolConfig.addProperty("target_link_uri", iss + "/lti/launch");
 				JsonArray idTokenClaims = new JsonArray();
@@ -1052,6 +1053,7 @@ public class LTIRegistration extends HttpServlet {
 			if (registrationToken != null) uc.setRequestProperty("Authorization", "Bearer " + registrationToken);
 			uc.setRequestProperty("Content-Type", "application/json");
 			uc.setRequestProperty("Accept", "application/json");
+			if (iss.equals("https://www.chemvantage.org")) uc.setRequestProperty("Host", "www.chemvantage.org"); // prevents code 400 failure in Moodle due to getRemoteHost()->chem-vantage-hrd.appspot.com
 			uc.setDoOutput(true);
 			uc.setDoInput(true);
 			
