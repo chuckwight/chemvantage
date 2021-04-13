@@ -984,7 +984,6 @@ public class LTIRegistration extends HttpServlet {
 				iss = "https://dev-vantage-hrd.appspot.com";
 				break;
 			case "chem-vantage-hrd":
-				//iss = "https://chem-vantage-hrd.appspot.com";
 				iss = "https://www.chemvantage.org";
 			}
 			JsonArray redirectUris = new JsonArray();
@@ -1004,7 +1003,7 @@ public class LTIRegistration extends HttpServlet {
 			regJson.addProperty("policy_uri", iss + "/About#privacy");
 			regJson.addProperty("scope", "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly https://purl.imsglobal.org/spec/lti-ags/scope/score https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly");
 			JsonObject ltiToolConfig = new JsonObject();
-				String domain = iss.equals("dev-vantage-hrd.appspot.com")?"dev-vantage-hrd.appspot.com":"chemvantage.org";
+				String domain = iss.substring(8);
 				ltiToolConfig.addProperty("domain", domain);
 				ltiToolConfig.addProperty("description",  "ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry.");
 				ltiToolConfig.addProperty("target_link_uri", iss + "/lti/launch");
