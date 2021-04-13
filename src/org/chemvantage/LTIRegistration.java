@@ -984,7 +984,8 @@ public class LTIRegistration extends HttpServlet {
 				iss = "https://dev-vantage-hrd.appspot.com";
 				break;
 			case "chem-vantage-hrd":
-				iss = "https://www.chemvantage.org";
+				iss = "https://chem-vantage-hrd.appspot.com";
+				//iss = "https://www.chemvantage.org";
 			}
 			JsonArray redirectUris = new JsonArray();
 				redirectUris.add(iss + "/lti/launch");
