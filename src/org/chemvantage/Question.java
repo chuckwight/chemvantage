@@ -557,14 +557,14 @@ public class Question implements Serializable, Cloneable {
 				buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best choice:</FONT><br/>");
 				for (int i=0;i<5;i++) { 
 					if (i < nChoices) {
-						buf.append("<input type=radio name=CorrectAnswer value=" + choice + "");
+						buf.append("<input type=radio name=CorrectAnswer value='" + choice + "'");
 						if (correctAnswer.indexOf(choice) >= 0) buf.append(" CHECKED");
-						buf.append("><input size=30 name=" + choiceNames[i] + " value='"); 
+						buf.append("/><input size=30 name=" + choiceNames[i] + " value='"); 
 						if (choices.size() > i) buf.append(quot2html(amp2html(choices.get(i))));
 						buf.append("'/><br/>");
 					}
-					else buf.append("<input type=radio name=CorrectAnswer value='" + choice + "'/>"
-							+ "<input size=30 name=" + choiceNames[i] + "/><br/>");
+					else buf.append("<input type=radio name=CorrectAnswer value=" + choice + " />"
+							+ "<input size=30 name=" + choiceNames[i] + " /><br/>");
 					choice++;
 				}
 				break;
@@ -585,14 +585,14 @@ public class Question implements Serializable, Cloneable {
 				buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><br/>");
 				for (int i=0;i<5;i++){
 					if (i < nChoices) {
-						buf.append("<input type=checkbox name=CorrectAnswer value=" + choice);
+						buf.append("<input type=checkbox name=CorrectAnswer value='" + choice + "'");
 						if (correctAnswer.indexOf(choice) >= 0) buf.append(" CHECKED");
 						buf.append("/><input size=30 name=" + choiceNames[i] + " value='"); 
 						if (choices.size() > i) buf.append(quot2html(amp2html(choices.get(i))));
 						buf.append("'/><br/>");
 					}
-					else buf.append("<input type=checkbox name=CorrectAnswer value=" + choice + ">"
-							+ "<input size=30 name=" + choiceNames[i] + "/><br/>");
+					else buf.append("<input type=checkbox name=CorrectAnswer value=" + choice + " />"
+							+ "<input size=30 name=" + choiceNames[i] + " /><br/>");
 					choice++;
 				}
 				break;
