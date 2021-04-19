@@ -537,7 +537,7 @@ public class Poll extends HttpServlet {
 						else {
 							histogram.put("incorrect", histogram.get("incorrect") + 1);
 							if (otherResponses==null) otherResponses = t.responses.get(k);
-							else if (otherResponses.length()<500 && t.responses.get(k) != null) otherResponses += "; " + t.responses.get(k);
+							else if (otherResponses.length()<500 && t.responses.get(k) != null && !otherResponses.toLowerCase().contains(t.responses.get(k).toLowerCase())) otherResponses += "; " + t.responses.get(k);
 						}
 					}
 					break;
@@ -552,7 +552,7 @@ public class Poll extends HttpServlet {
 						else {
 							histogram.put("incorrect", histogram.get("incorrect") + 1);
 							if (otherResponses==null) otherResponses = t.responses.get(k);
-							else if (otherResponses.length()<500 && t.responses.get(k) != null) otherResponses += "; " + t.responses.get(k);
+							else if (otherResponses.length()<500 && t.responses.get(k) != null && !otherResponses.toLowerCase().contains(t.responses.get(k).toLowerCase())) otherResponses += "; " + t.responses.get(k);
 						}
 					}
 					break;
