@@ -631,7 +631,8 @@ public class Question implements Serializable, Cloneable {
 						+ "This will randomly select integers for variables a and b from the specified ranges.<br/>"
 						+ "Use these in math expressions with the pound sign delimeter (#) to create randomized data.<br/>"
 						+ "Example: Compute the mass of sodium in #a# mL of aqueous #b/10# M NaCl solution.<br/>"
-						+ "Correct answer: #22.9898*a/1000*b/10# g<p></p>'\";>What's This?</a></FONT>");
+						+ "Correct answer: #22.9898*a/1000*b/10# g<p></p>"
+						+ "You can also display fractions in vertical format using encoding like (|numerator|denominator|)<br/><br/>'\";>What's This?</a></FONT>");
 				buf.append("<div id=detail1></div>");
 				buf.append("Hint:<br/><TEXTAREA NAME=Hint ROWS=3 COLS=60 WRAP=SOFT>"
 						+ amp2html(hint) + "</TEXTAREA><br/>");
