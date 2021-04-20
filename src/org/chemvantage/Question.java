@@ -787,7 +787,7 @@ public class Question implements Serializable, Cloneable {
 		int j = expression.indexOf("|",i+2);  	// marks the separator at the beginning of the denominator
 		int k = expression.indexOf("|)",j+1);  	// marks the separator at the end of the denominator
 		while (i>=0 && j>i && k>j) { 	// ensures that all separators have been found (none are -1)
-			expression = expression.replaceFirst(Pattern.quote("(|"),num); // double backslash needed to escape pipe character in Java regular expressions
+			expression = expression.replaceFirst(Pattern.quote("(|"),num); // Pattern.quote converts to String literal
 			expression = expression.replaceFirst(Pattern.quote("|"),pip);
 			expression = expression.replaceFirst(Pattern.quote("|)"),den);
 			i = expression.indexOf("(|");
