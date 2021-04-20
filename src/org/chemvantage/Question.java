@@ -23,6 +23,7 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.regex.Pattern;
 
 import com.bestcode.mathparser.IMathParser;
 import com.bestcode.mathparser.MathParserFactory;
@@ -202,6 +203,8 @@ public class Question implements Serializable, Cloneable {
 		// this section uses a fully licensed version of the Jbc Math Parser
 		// from bestcode.com (license purchased by C. Wight on Nov 18, 2007)
 
+		raw = parseFractions(raw);
+		
 		IMathParser parser = MathParserFactory.create();
 		try {
 			parser.setVariable("a",parameters[0]);
@@ -772,4 +775,25 @@ public class Question implements Serializable, Cloneable {
 		return i<0?oldString:amp2html(new StringBuffer(oldString).replace(i,i+1,"&amp;").toString(),i+1);
 	}
 
+	String parseFractions(String expression) {
+		// This method uses parentheses and the pipe character (|) to identify numerator and denominator of a fraction
+		// to be displayed in a vertical format. The encoding is like (|numerator|denominator|)
+		final String num = "<span style='display: inline-block;vertical-align: middle;'><div style='text-align: center;border-bottom: 1px solid black;'>";
+		final String pip = "</div><div style='text-align: center;'>";
+		final String den = "</div></span>";
+		
+		int i = expression.indexOf("(|");  	// marks the separator at the beginning if a numerator
+		if (i<0) return expression;			// quick return if no fractions found
+		int j = expression.indexOf("|",i+2);  	// marks the separator at the beginning of the denominator
+		int k = expression.indexOf("|)",j+1);  	// marks the separator at the end of the denominator
+		while (i>=0 && j>i && k>j) { 	// ensures that all separators have been found (none are -1)
+			expression = expression.replaceFirst(Pattern.quote("(|"),num); // double backslash needed to escape pipe character in Java regular expressions
+			expression = expression.replaceFirst(Pattern.quote("|"),pip);
+			expression = expression.replaceFirst(Pattern.quote("|)"),den);
+			i = expression.indexOf("(|");
+			j = expression.indexOf("|",i+2);
+			k = expression.indexOf("|)",j+1);
+		}
+		return expression;
+	}
 }
