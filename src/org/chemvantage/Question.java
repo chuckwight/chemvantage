@@ -775,23 +775,29 @@ public class Question implements Serializable, Cloneable {
 		int i = oldString.indexOf('&',fromIndex);
 		return i<0?oldString:amp2html(new StringBuffer(oldString).replace(i,i+1,"&amp;").toString(),i+1);
 	}
-
+	
 	String parseFractions(String expression) {
+		return parseFractions(expression,0);
+	}
+	
+	String parseFractions(String expression, int startIndex) {
 		// This method uses parentheses and the pipe character (|) to identify numerator and denominator of a fraction
 		// to be displayed in a vertical format. The encoding is like (|numerator|denominator|)
-		final String num = "<span style='display: inline-block;vertical-align: middle;'><div style='text-align: center;border-bottom: 1px solid black;'>";
+		final String num = "<span style='display: inline-block;vertical-align: middle;font-size: smaller'><div style='text-align: center;border-bottom: 1px solid black;'>";
 		final String pip = "</div><div style='text-align: center;'>";
 		final String den = "</div></span>";
 		
-		int i = expression.indexOf("(|");  	// marks the separator at the beginning if a numerator
+		int i = expression.indexOf("(|",startIndex);  	// marks the separator at the beginning if a numerator
 		if (i<0) return expression;			// quick return if no fractions found
+		expression = parseFractions(expression,i+2);  // parse fractions embedded in the numerator
 		int j = expression.indexOf("|",i+2);  	// marks the separator at the beginning of the denominator
+		expression = parseFractions(expression,j+2);  // parse fractions embedded in the denominator
 		int k = expression.indexOf("|)",j+1);  	// marks the separator at the end of the denominator
-		while (i>=0 && j>i && k>j) { 	// ensures that all separators have been found (none are -1)
+		while (i>=startIndex && j>i && k>j) { 	// ensures that all separators have been found (none are -1)
 			expression = expression.replaceFirst(Pattern.quote("(|"),num); // Pattern.quote converts to String literal
 			expression = expression.replaceFirst(Pattern.quote("|"),pip);
 			expression = expression.replaceFirst(Pattern.quote("|)"),den);
-			i = expression.indexOf("(|");
+			i = expression.indexOf("(|",k+2);
 			j = expression.indexOf("|",i+2);
 			k = expression.indexOf("|)",j+1);
 		}
