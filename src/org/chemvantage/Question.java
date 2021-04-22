@@ -782,26 +782,30 @@ public class Question implements Serializable, Cloneable {
 	
 	String parseFractions(String expression, int startIndex) {
 		// This method uses parentheses and the pipe character (|) to identify numerator and denominator of a fraction
-		// to be displayed in a vertical format. The encoding is like (|numerator|denominator|)
+		// to be displayed in a vertical format. The encoding is like (| numerator | denominator |)
 		final String num = "<span style='display: inline-block;vertical-align: middle;font-size: smaller'><div style='text-align: center;border-bottom: 1px solid black;'>";
 		final String pip = "</div><div style='text-align: center;'>";
 		final String den = "</div></span>";
 		
-		int i = expression.indexOf("(|",startIndex);  	// marks the separator at the beginning if a numerator
-		if (i<0) return expression;			// quick return if no fractions found
-		int i2 = expression.indexOf("(|",i+2);
-		int k = expression.indexOf("|)");
-		if (i2>0 && i2<k) {
+		int i = expression.indexOf("(|",startIndex);  	// marks the first start of a numerator
+		if (i<0) return expression;						// quick return if no fractions found
+		
+		int i2 = expression.indexOf("(|",i+2);			// marks the second start of a numerator
+		int k = expression.indexOf("|)",i+2);			// marks the end of a denominator
+		if (i2>0 && i2<k) {								// second start is before first end; start recursion
 			expression = parseFractions(expression,i2);
-			k = expression.indexOf("|)");
-			i2 = -1;
+			k = expression.indexOf("|)",i+2);			// recalculate the end due to substitutions made
+			i2 = -1;									// delete 2nd marker because substitutions were made
 		}
-		int j = expression.indexOf("|",i+2);
+		int j = expression.indexOf("|",i+2);			// marks separator between numerator and denominator
+		
+		// Replace the markers with CSS style tags:
 		if (j>0 && j<k) {
-			expression = expression.replaceFirst(Pattern.quote("(|"),num); // Pattern.quote converts to String literal
-			expression = expression.replaceFirst(Pattern.quote("|"),pip);
-			expression = expression.replaceFirst(Pattern.quote("|)"),den);
+			expression = expression.substring(0,i) + num + expression.substring(i+2,j) + pip + expression.substring(j+1,k) + den + expression.substring(k+2);
+			k = k - 5 + num.length() + pip.length() + den.length();
 		}
+		
+		// Test to see if there is another fraction at this level:
 		return parseFractions(expression,k+1);
 	}
 }
