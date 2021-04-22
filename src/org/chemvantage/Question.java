@@ -789,18 +789,19 @@ public class Question implements Serializable, Cloneable {
 		
 		int i = expression.indexOf("(|",startIndex);  	// marks the separator at the beginning if a numerator
 		if (i<0) return expression;			// quick return if no fractions found
-		expression = parseFractions(expression,i+2);  // parse fractions embedded in the numerator
-		int j = expression.indexOf("|",i+2);  	// marks the separator at the beginning of the denominator
-		expression = parseFractions(expression,j+2);  // parse fractions embedded in the denominator
-		int k = expression.indexOf("|)",j+1);  	// marks the separator at the end of the denominator
-		while (i>=startIndex && j>i && k>j) { 	// ensures that all separators have been found (none are -1)
+		int i2 = expression.indexOf("(|",i+2);
+		int k = expression.indexOf("|)");
+		if (i2>0 && i2<k) {
+			expression = parseFractions(expression,i2);
+			k = expression.indexOf("|)");
+			i2 = -1;
+		}
+		int j = expression.indexOf("|",i+2);
+		if (j>0 && j<k) {
 			expression = expression.replaceFirst(Pattern.quote("(|"),num); // Pattern.quote converts to String literal
 			expression = expression.replaceFirst(Pattern.quote("|"),pip);
 			expression = expression.replaceFirst(Pattern.quote("|)"),den);
-			i = expression.indexOf("(|",k+2);
-			j = expression.indexOf("|",i+2);
-			k = expression.indexOf("|)",j+1);
 		}
-		return expression;
+		return parseFractions(expression,k+1);
 	}
 }
