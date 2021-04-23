@@ -23,7 +23,6 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.regex.Pattern;
 
 import com.bestcode.mathparser.IMathParser;
 import com.bestcode.mathparser.MathParserFactory;
@@ -795,8 +794,9 @@ public class Question implements Serializable, Cloneable {
 		if (i2>0 && i2<k) {								// second start is before first end; start recursion
 			expression = parseFractions(expression,i2);
 			k = expression.indexOf("|)",i+2);			// recalculate the end due to substitutions made
-			i2 = -1;									// delete 2nd marker because substitutions were made
 		}
+		if (k<0) return expression; 					// there must be and end-of-fraction marker to proceed
+		
 		int j = expression.indexOf("|",i+2);			// marks separator between numerator and denominator
 		
 		// Replace the markers with CSS style tags:
