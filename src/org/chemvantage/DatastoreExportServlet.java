@@ -61,7 +61,7 @@ public class DatastoreExportServlet extends HttpServlet {
 			// Send error response if outputURL not set or not a Cloud Storage bucket
 			response.setStatus(HttpServletResponse.SC_CONFLICT);
 			response.setContentType("text/plain");
-			response.getWriter().println("Error: Must provide a valid output_url_prefix.");
+			response.getWriter().println("Useage: https://" + PROJECT_ID + "/cloud-datastore-export?output_url_prefix=gs://" + PROJECT_ID + "-backups");
 
 		} else {
 
