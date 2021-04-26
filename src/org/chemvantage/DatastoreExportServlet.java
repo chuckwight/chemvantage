@@ -57,7 +57,7 @@ public class DatastoreExportServlet extends HttpServlet {
 		// Validate outputURL parameter
 		String outputUrlPrefix = request.getParameter("output_url_prefix");
 
-		if (outputUrlPrefix == null || !outputUrlPrefix.matches("^gs://.*")) {
+		if (outputUrlPrefix == null || !outputUrlPrefix.equals("gs://" + PROJECT_ID + "-backups")) {
 			// Send error response if outputURL not set or not a Cloud Storage bucket
 			response.setStatus(HttpServletResponse.SC_CONFLICT);
 			response.setContentType("text/plain");
@@ -75,7 +75,6 @@ public class DatastoreExportServlet extends HttpServlet {
 			// Get an access token to authorize export request
 			ArrayList<String> scopes = new ArrayList<String>();
 			scopes.add("https://www.googleapis.com/auth/datastore");
-			//final AppIdentityService appIdentity = AppIdentityServiceFactory.getAppIdentityService();
 			final AppIdentityService.GetAccessTokenResult accessToken =
 					AppIdentityServiceFactory.getAppIdentityService().getAccessToken(scopes);
 			connection.addRequestProperty("Authorization", "Bearer " + accessToken.getAccessToken());
