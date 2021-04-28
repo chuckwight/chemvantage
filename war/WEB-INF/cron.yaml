@@ -1,6 +1,6 @@
 cron:
-- url: '/cloud-datastore-export?output_url_prefix=g://chem-vantage-hrd-backups'
-  schedule: every day 07:00
+- url: '/cloud-datastore-export?output_url_prefix=gs://chem-vantage-hrd-backups'
+  schedule: '1 of month 07:00'
   timezone: 'America/New_York'
   description: 'Regularly scheduled backup to Google Cloud Datastore bucket'
 - url: '/DataStoreCleaner?Task=CleanResponses'
