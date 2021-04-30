@@ -92,37 +92,4 @@ public class UserReport implements Serializable {
 		}
 		return buf.toString();
 	}
-/*
-	public String view() {
-		StringBuffer buf = new StringBuffer();
-		User user = null;
-		try {
-			user = ofy().load().type(User.class).id(this.userId).safe();
-		} catch (Exception e2) {				
-		}
-		buf.append("On " + submitted + " " + "a user said:<br>\n");
-		if (stars>0) buf.append("(" + stars + " stars)<br>\n");
-		buf.append("<FONT COLOR=RED>" + comments + "</FONT><p>\n\n");
-		
-		if (this.questionId>0) {
-			try {
-				Question q = ofy().load().type(Question.class).id(this.questionId).safe();
-				q.setParameters(userId!=null?userId.hashCode():-1);
-				Topic topic = ofy().load().type(Topic.class).id(q.topicId).now();
-				buf.append("Topic: " + topic.title + " (" + q.assignmentType + " question)<br>");
-				buf.append(q.printAll());
-				if (user!=null) {
-					buf.append("<table><tr><td>Date/Time (UTC)</td><td>Student Response</td><td>Correct Response</td><td>Score</td></tr>");
-					List<Response> responses = ofy().load().type(Response.class).filter("userId",userId).filter("questionId",questionId).list();
-					for (Response r : responses) buf.append("<tr><td>" + r.submitted.toString() + "</td><td align=center>" + r.studentResponse 
-							+ "</td><td align=center>" + r.correctAnswer + "</td><td align=center>" + r.score + "</td></tr>");
-					buf.append("</table>");
-				}
-			} catch (Exception e) {
-				buf.append("<br>" + e.getMessage());
-			}
-		}
-		return buf.toString();
-	}
-	*/
 }
