@@ -19,6 +19,7 @@ package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
+import java.security.MessageDigest;
 import java.util.Date;
 import java.util.Random;
 
@@ -101,11 +102,11 @@ public class User {
 		} catch (Exception e) {}
 		return userId.substring(userId.lastIndexOf("/")+1);  // should work OK except if raw userId contains "/" character
 	}
-	
+/*	
 	public String getId() {
 		return id;
 	}
-	
+*/	
 	public boolean isAnonymous() {
 		try {
 			return id.startsWith("anonymous");
@@ -213,5 +214,15 @@ public class User {
 
     public String getLisResultSourcedid() {
    		return lis_result_sourcedid;
+    }
+    
+    static String hashedId(String id) {
+    	try {
+    		MessageDigest md = MessageDigest.getInstance("SHA-256");
+    		md.update(Subject.getSubject().HMAC256Secret.getBytes()); 	// prepends secret to avoid rainbow table attack on simple ids
+    		return String.valueOf(md.digest(id.getBytes())); 			// digests the id and converts result to String
+    	} catch (Exception e) {
+    		return null;
+    	}
     }
 }

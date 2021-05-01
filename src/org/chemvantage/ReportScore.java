@@ -183,8 +183,6 @@ public class ReportScore extends HttpServlet {
 			if (s==null) s=Score.getInstance(userId,assignment);
 			if (!s.needsLisReporting()) return;  // everything is OK and the situation is resolved
 			
-			userId = User.getRawId(userId); // strips the platform_deployment_id from the front of the userId
-			
 			String msgBody = "<h3>ChemVantage LIS ReportScore Failure</h3>"
 					+ "You are receiving this message because you are listed as the LMS administrator for an LTI "
 					+ "connection to the ChemVantage app using the client_id " + d.client_id + "<p>"
