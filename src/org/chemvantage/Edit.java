@@ -17,6 +17,7 @@
 
 package org.chemvantage;
 
+import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
@@ -36,6 +37,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.appengine.api.taskqueue.Queue;
+import com.google.appengine.api.taskqueue.QueueFactory;
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
@@ -1065,6 +1068,11 @@ public class Edit extends HttpServlet {
 			ofy().save().entity(q).now();
 			String key1 = q.assignmentType + String.valueOf(q.topicId);
 			questions.get(key1).put(Key.create(q), q);
+			switch (q.assignmentType) {
+			case "Homework":
+				Queue queue = QueueFactory.getDefaultQueue();
+				queue.add(withUrl("/Homework").param("UserRequest","AddQuestion").param("QuestionId",Long.toString(q.id)));			
+			}
 		} catch (Exception e) {}
 	}
 
@@ -1079,6 +1087,11 @@ public class Edit extends HttpServlet {
 			ofy().save().entity(q).now();
 			String key1 = q.assignmentType + String.valueOf(q.topicId);
 			questions.get(key1).put(Key.create(q), q);
+			switch (q.assignmentType) {
+			case "Homework":
+				Queue queue = QueueFactory.getDefaultQueue();
+				queue.add(withUrl("/Homework").param("UserRequest","UpdateQuestion").param("QuestionId",Long.toString(q.id)));			
+			}
 		} catch (Exception e) {
 			return;
 		}
@@ -1091,8 +1104,13 @@ public class Edit extends HttpServlet {
 			Key<Question> k = Key.create(Question.class,questionId);
 			Question q = ofy().load().key(k).now();
 			String key1 = q.assignmentType + String.valueOf(q.topicId);
-			questions.get(key1).remove(Key.create(q), q);
+			questions.get(key1).remove(Key.create(q));
 			ofy().delete().key(k);
+			switch (q.assignmentType) {
+			case "Homework":
+				Queue queue = QueueFactory.getDefaultQueue();
+				queue.add(withUrl("/Homework").param("UserRequest","DeleteQuestion").param("QuestionId",Long.toString(q.id)));			
+			}
 		} catch (Exception e) {
 			return;
 		}

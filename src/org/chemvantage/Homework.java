@@ -68,12 +68,40 @@ public class Homework extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 			
+			switch (userRequest) {
+			case "ShowScores":
+				out.println(Home.header("Your ChemVantage Scores") + showScores(user) + Home.footer);
+				break;
+			case "ShowSummary":
+				out.println(Home.header("Your Class ChemVantage Scores") + showSummary(user,request) + Home.footer);
+				break;
+			case "AssignHomeworkQuestions":
+				if (user.isInstructor()) out.println(Home.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user) + Home.footer);
+				else out.println(Home.header("Customize ChemVantage Homework Assignment") + "<h2>Forbidden</h2>You must be signed in as the instructor to perform this functuon." + Home.footer);
+				break;
+			case "AddQuestion":
+			case "UpdateQuestion":
+				if (user.isEditor()) {
+					Key<Question> key = Key.create(Question.class,Long.parseLong(request.getParameter("QuestionId")));
+					Question q = ofy().load().key(key).safe();
+					if (hwQuestions.containsKey(q.topicId)) hwQuestions.get(q.topicId).put(key, q);
+				}
+			case "DeleteQuestion":
+				if (user.isEditor()) {
+					Key<Question> key = Key.create(Question.class,Long.parseLong(request.getParameter("QuestionId")));
+					Question q = ofy().load().key(key).safe();
+					if (hwQuestions.containsKey(q.topicId)) hwQuestions.get(q.topicId).remove(key);
+				}
+			default: out.println(Home.header("ChemVantage Homework") + printHomework(user,request) + Home.footer);
+			}
+/*
 			if ("ShowScores".contentEquals(userRequest)) out.println(Home.header("Your ChemVantage Scores") + showScores(user) + Home.footer);
 			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header("Your Class ChemVantage Scores") + showSummary(user,request) + Home.footer);
 			else if ("AssignHomeworkQuestions".contentEquals(userRequest) && user.isInstructor()) {
 				out.println(Home.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user) + Home.footer);
 			}
 			else out.println(Home.header("ChemVantage Homework") + printHomework(user,request) + Home.footer);
+*/
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig") + "&e=" + e.toString());
 		}
