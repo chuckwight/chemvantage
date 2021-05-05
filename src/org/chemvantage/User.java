@@ -102,11 +102,11 @@ public class User {
 		} catch (Exception e) {}
 		return userId.substring(userId.lastIndexOf("/")+1);  // should work OK except if raw userId contains "/" character
 	}
-/*	
-	public String getId() {
+	
+	public String getId() {  // public method to support JSP files
 		return id;
 	}
-*/	
+	
 	public boolean isAnonymous() {
 		try {
 			return id.startsWith("anonymous");
