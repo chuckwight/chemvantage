@@ -133,6 +133,20 @@ public class PracticeExam extends HttpServlet {
 					ofy().save().entity(a).now();
 					out.println(Home.header("ChemVantage Practice Exam") + printExam(user,request) + Home.footer);					
 					break;
+				case "AddQuestion":
+				case "UpdateQuestion":
+					if (user.isEditor()) {
+						Key<Question> key = Key.create(Question.class,Long.parseLong(request.getParameter("QuestionId")));
+						Question q = ofy().load().key(key).safe();
+						if (examQuestions.containsKey(key)) examQuestions.put(key, q);
+					}
+					break;
+				case "DeleteQuestion":
+					if (user.isEditor()) {
+						Key<Question> key = Key.create(Question.class,Long.parseLong(request.getParameter("QuestionId")));
+						examQuestions.remove(key);
+					}
+					break;
 				default: out.println(Home.header("ChemVantage Practice Exam Results") + printScore(user,request) + Home.footer);
 			}
 		} catch (Exception e) {

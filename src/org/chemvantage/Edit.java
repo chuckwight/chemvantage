@@ -1068,10 +1068,16 @@ public class Edit extends HttpServlet {
 			ofy().save().entity(q).now();
 			String key1 = q.assignmentType + String.valueOf(q.topicId);
 			questions.get(key1).put(Key.create(q), q);
+		
+			Queue queue = QueueFactory.getDefaultQueue();
+			String sig = user.getTokenSignature();
 			switch (q.assignmentType) {
 			case "Homework":
-				Queue queue = QueueFactory.getDefaultQueue();
-				queue.add(withUrl("/Homework").param("UserRequest","AddQuestion").param("QuestionId",Long.toString(q.id)));			
+				queue.add(withUrl("/Homework").param("UserRequest","UpdateQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
+				break;
+			case "Exam":
+				queue.add(withUrl("/PracticeExam").param("UserRequest","UpdateQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
+				break;
 			}
 		} catch (Exception e) {}
 	}
@@ -1087,10 +1093,16 @@ public class Edit extends HttpServlet {
 			ofy().save().entity(q).now();
 			String key1 = q.assignmentType + String.valueOf(q.topicId);
 			questions.get(key1).put(Key.create(q), q);
+			
+			Queue queue = QueueFactory.getDefaultQueue();
+			String sig = user.getTokenSignature();
 			switch (q.assignmentType) {
 			case "Homework":
-				Queue queue = QueueFactory.getDefaultQueue();
-				queue.add(withUrl("/Homework").param("UserRequest","UpdateQuestion").param("QuestionId",Long.toString(q.id)));			
+				queue.add(withUrl("/Homework").param("UserRequest","UpdateQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
+				break;
+			case "Exam":
+				queue.add(withUrl("/PracticeExam").param("UserRequest","UpdateQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
+				break;
 			}
 		} catch (Exception e) {
 			return;
@@ -1106,10 +1118,16 @@ public class Edit extends HttpServlet {
 			String key1 = q.assignmentType + String.valueOf(q.topicId);
 			questions.get(key1).remove(Key.create(q));
 			ofy().delete().key(k);
+			
+			Queue queue = QueueFactory.getDefaultQueue();
+			String sig = user.getTokenSignature();
 			switch (q.assignmentType) {
 			case "Homework":
-				Queue queue = QueueFactory.getDefaultQueue();
-				queue.add(withUrl("/Homework").param("UserRequest","DeleteQuestion").param("QuestionId",Long.toString(q.id)));			
+				queue.add(withUrl("/Homework").param("UserRequest","DeleteQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
+				break;
+			case "Exam":
+				queue.add(withUrl("/PracticeExam").param("UserRequest","DeleteQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
+			break;
 			}
 		} catch (Exception e) {
 			return;
