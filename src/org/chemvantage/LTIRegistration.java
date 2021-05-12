@@ -863,12 +863,12 @@ public class LTIRegistration extends HttpServlet {
 		    ext.addProperty("platform", "canvas.instructure.com");
 		      JsonObject settings = new JsonObject();
 		      settings.addProperty("text", "ChemVantage" + (iss.contains("dev")?" Development":""));
-		      settings.addProperty("icon_url", iss + "/images/CVLogo_thumb.jpg");
+		      settings.addProperty("icon_url", iss + "/images/CVLogo_thumb.png");
 		        JsonArray placements = new JsonArray();
 		         JsonObject plcmnt1 = new JsonObject();
 		          plcmnt1.addProperty("text", "ChemVantage" + (iss.contains("dev")?" Development":""));
 		          plcmnt1.addProperty("enabled", true);
-		          plcmnt1.addProperty("icon_url", iss + "/images/CVLogo_thumb.jpg");
+		          plcmnt1.addProperty("icon_url", iss + "/images/CVLogo_thumb.png");
 		          plcmnt1.addProperty("placement", "assignment_selection");
 		          plcmnt1.addProperty("message_type", "LtiDeepLinkingRequest");
 		          plcmnt1.addProperty("target_link_uri", iss + "/lti/deeplinks");
@@ -876,7 +876,7 @@ public class LTIRegistration extends HttpServlet {
 		         JsonObject plcmnt2 = new JsonObject();
 		          plcmnt2.addProperty("text", "ChemVantage" + (iss.contains("dev")?" Development":""));
 		          plcmnt2.addProperty("enabled", true);
-		          plcmnt2.addProperty("icon_url", iss + "/images/CVLogo_thumb.jpg");
+		          plcmnt2.addProperty("icon_url", iss + "/images/CVLogo_thumb.png");
 		          plcmnt2.addProperty("placement", "editor_button");
 		          plcmnt2.addProperty("message_type", "LtiDeepLinkingRequest");
 		          plcmnt2.addProperty("target_link_uri", iss + "/lti/deeplinks");
@@ -884,7 +884,7 @@ public class LTIRegistration extends HttpServlet {
 		         JsonObject plcmnt3 = new JsonObject();
 		          plcmnt3.addProperty("text", "ChemVantage" + (iss.contains("dev")?" Development":""));
 		          plcmnt3.addProperty("enabled", true);
-		          plcmnt3.addProperty("icon_url", iss + "/images/CVLogo_thumb.jpg");
+		          plcmnt3.addProperty("icon_url", iss + "/images/CVLogo_thumb.png");
 		          plcmnt3.addProperty("placement", "link_selection");
 		          plcmnt3.addProperty("message_type", "LtiDeepLinkingRequest");
 		          plcmnt3.addProperty("target_link_uri", iss + "/lti/deeplinks");
