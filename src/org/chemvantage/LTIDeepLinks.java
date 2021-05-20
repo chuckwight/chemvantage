@@ -57,9 +57,12 @@ public class LTIDeepLinks extends HttpServlet {
 				validateStateToken(request); // ensures proper OIDC authorization flow completed							
 				user = getUserClaims(claims);
 				user.setToken();
-			} else {
+			} else if (request.getParameter("sig") != null) {  // return of authenticated user
 				user = User.getUser(request.getParameter("sig"));
 				if (user==null) throw new Exception("Invalid or expired User entity.");
+			} else { // wrong URL or bad request
+				throw new Exception("Wrong URL or Bad Request. This URL only receives LTI Advantage (v1.3) Deep Linking requests for ChemVantage. "
+						+ "Please check to ensure that your LMS is registered properly. Contact admin@chemvantage.org for assistance.");
 			}
 			
 			if ("Select assignment".equals(request.getParameter("UserRequest"))) {  // submitting desired links

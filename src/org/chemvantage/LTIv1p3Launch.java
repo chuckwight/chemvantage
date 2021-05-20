@@ -104,7 +104,10 @@ public class LTIv1p3Launch extends HttpServlet {
 					try {topicKey = Integer.parseInt(request.getParameter("TopicKey"));} catch (Exception e) {}
 					response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,topicKey) + Home.footer);
 				}
-			}		
+			} else {
+				throw new Exception("Wrong URL or Bad Request. This URL only receives LTI Advantage (v1.3) Resource Link and Submission Review launch requests for ChemVantage. "
+						+ "Please check to ensure that your LMS is registered properly. Contact admin@chemvantage.org for assistance.");
+			}
 		} catch (Exception e) {	
 			response.sendError(401, "Status 401: " + e.toString());
 		}
