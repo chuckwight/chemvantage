@@ -99,6 +99,7 @@ public class Quiz extends HttpServlet {
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 				try {
 					double minutes = Double.parseDouble(request.getParameter("TimeAllowed"));
+					if (minutes > 60.) minutes = 60.;
 					a.timeAllowed = minutes<1.0?60:(int)(minutes*60);
 				} catch (Exception e) {
 					a.timeAllowed = 900;
@@ -553,7 +554,7 @@ public class Quiz extends HttpServlet {
 			// Allow instructor to pick individual question items from all active questions:
 			buf.append("Each quiz consists of 10 questions selected at random from the items below. The default time allowed "
 					+ "to complete each quiz is 15 minutes, but you may change this (e.g., to create a special assignment for "
-					+ "a student requiring extended time).<br>");
+					+ "a student requiring extended time up to 60 minutes).<br>");
 			buf.append("<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + ">"
 					+ "Time allowed for this assignment: <input type=text size=5 name=TimeAllowed value=" + a.timeAllowed/60. + "> minutes. "
 					+ "<input type=submit name=UserRequest value='Set Allowed Time'><br>"

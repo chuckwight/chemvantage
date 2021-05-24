@@ -126,6 +126,7 @@ public class PracticeExam extends HttpServlet {
 					a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 					try {
 						double minutes = Double.parseDouble(request.getParameter("TimeAllowed"));
+						if (minutes > 300.) minutes = 300.;
 						a.timeAllowed = minutes<1.0?60:(int)(minutes*60);
 					} catch (Exception e) {
 						a.timeAllowed = 3600;
@@ -1088,7 +1089,7 @@ public class PracticeExam extends HttpServlet {
 					+ "<li> 2 more challenging homework questions worth 15 points each</li></ul>"
 					+ "for a total of 100 points.<p>");
 			buf.append("The default time allowed to complete the exam is 60 minutes, but you may change this "
-					+ "(e.g., to create a special assignment for a student requiring extended time).<br>");
+					+ "(e.g., to create a special assignment for a student requiring extended time up to 300 minutes).<br>");
 			buf.append("<form action=/PracticeExam method=post><input type=hidden name=sig value=" + user.getTokenSignature() + ">" 
 					+ "Time allowed for this assignment: <input type=text size=5 name=TimeAllowed value=" + a.timeAllowed/60. + "> minutes. "
 					+ "<input type=submit name=UserRequest value='Set Allowed Time'><br>"
