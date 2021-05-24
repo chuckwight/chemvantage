@@ -310,10 +310,9 @@ public class DataStoreCleaner extends HttpServlet {
 		buf.append("<h2>Clean Users</h2>");
 		try {
 			Date now = new Date();
-			List<Key<User>> keys = ofy().load().type(User.class).filter("exp <", now).keys().list();
-			
+			List<Key<User>> keys = ofy().load().type(User.class).filter("exp <", now).limit(500).keys().list();
 			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
-
+			
 			buf.append(keys.size() + " Expired user tokens" + (testOnly?" identified":" deleted") + ".<br>");
 			buf.append("Done.<br>");
 		
