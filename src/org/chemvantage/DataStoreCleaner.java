@@ -145,8 +145,12 @@ public class DataStoreCleaner extends HttpServlet {
 		try {
 			List<Key<Response>> keys = ofy().load().type(Response.class).filter("submitted <",oneYearAgo).limit(500).keys().list();
 			
-			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
-
+			if (keys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
+				int nBatches = keys.size()/500;
+				for (int i=0;i<nBatches;i++) ofy().delete().keys(keys.subList(i*500, (i+1)*500));
+				ofy().delete().keys(keys.subList(nBatches*500, keys.size()));
+			}
+			
 			buf.append(keys.size() + " Responses more then one year old" + (testOnly?" identified":" deleted") + ".<br>");
 			buf.append("Done.<br>");
 		} catch (Exception e) {
@@ -311,7 +315,11 @@ public class DataStoreCleaner extends HttpServlet {
 		try {
 			Date now = new Date();
 			List<Key<User>> keys = ofy().load().type(User.class).filter("exp <", now).limit(500).keys().list();
-			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
+			if (keys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
+				int nBatches = keys.size()/500;
+				for (int i=0;i<nBatches;i++) ofy().delete().keys(keys.subList(i*500, (i+1)*500));
+				ofy().delete().keys(keys.subList(nBatches*500, keys.size()));
+			}
 			
 			buf.append(keys.size() + " Expired user tokens" + (testOnly?" identified":" deleted") + ".<br>");
 			buf.append("Done.<br>");
