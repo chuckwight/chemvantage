@@ -44,6 +44,7 @@ public class DataStoreCleaner extends HttpServlet {
 	private static final long serialVersionUID = 137L;
 	Date sixMonthsAgo;
 	Date oneYearAgo;
+	Date threeYearsAgo;
 	int querySizeLimit = 100;
 	
 	public String getServletInfo() {
@@ -66,6 +67,7 @@ public class DataStoreCleaner extends HttpServlet {
 		Date now = new Date();
 		sixMonthsAgo = new Date(now.getTime()- 15768000000L);
 		oneYearAgo = new Date(now.getTime()- 31536000000L);
+		threeYearsAgo = new Date(now.getTime()- 94608000000L);
 
 		PrintWriter out = response.getWriter();
 		response.setContentType("text/html");
@@ -138,13 +140,12 @@ public class DataStoreCleaner extends HttpServlet {
 	}
 
 	private String cleanResponses(boolean testOnly) {
-		// This method deletes all Response entities older than one year
+		// This method deletes all Response entities older than 3 years
 
 		StringBuffer buf = new StringBuffer();
 		buf.append("<h2>Clean Responses</h2>");
 		try {
-			List<Key<Response>> keys = ofy().load().type(Response.class).filter("submitted <",oneYearAgo).limit(500).keys().list();
-			
+			List<Key<Response>> keys = ofy().load().type(Response.class).filter("submitted <",threeYearsAgo).limit(500).keys().list();			
 			if (keys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
 				int nBatches = keys.size()/500;
 				for (int i=0;i<nBatches;i++) ofy().delete().keys(keys.subList(i*500, (i+1)*500));
@@ -166,9 +167,12 @@ public class DataStoreCleaner extends HttpServlet {
 		buf.append("<h2>Clean Quiz Transactions</h2>");
 		try {
 			List<Key<QuizTransaction>> keys = ofy().load().type(QuizTransaction.class).filter("downloaded <",oneYearAgo).limit(500).keys().list();
+			if (keys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
+				int nBatches = keys.size()/500;
+				for (int i=0;i<nBatches;i++) ofy().delete().keys(keys.subList(i*500, (i+1)*500));
+				ofy().delete().keys(keys.subList(nBatches*500, keys.size()));
+			}
 			
-			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
-
 		    buf.append(keys.size() + " QuizTransactions more then one year old" + (testOnly?" identified":" deleted") + ".<br>");
 		    buf.append("Done.<br>");
 		} catch (Exception e) {
@@ -184,9 +188,12 @@ public class DataStoreCleaner extends HttpServlet {
 		buf.append("<h2>Clean Homework Transactions</h2>");
 		try {
 			List<Key<HWTransaction>> keys = ofy().load().type(HWTransaction.class).filter("graded <",oneYearAgo).limit(500).keys().list();
+			if (keys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
+				int nBatches = keys.size()/500;
+				for (int i=0;i<nBatches;i++) ofy().delete().keys(keys.subList(i*500, (i+1)*500));
+				ofy().delete().keys(keys.subList(nBatches*500, keys.size()));
+			}
 			
-			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
-
 		    buf.append(keys.size() + " HWTransactions more then one year old" + (testOnly?" identified":" deleted") + ".<br>");
 		    buf.append("Done.<br>");
 		} catch (Exception e) {
@@ -202,9 +209,12 @@ public class DataStoreCleaner extends HttpServlet {
 		buf.append("<h2>Clean Practice Exam Transactions</h2>");
 		try {
 			List<Key<PracticeExamTransaction>> keys = ofy().load().type(PracticeExamTransaction.class).filter("downloaded <",oneYearAgo).limit(500).keys().list();
+			if (keys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
+				int nBatches = keys.size()/500;
+				for (int i=0;i<nBatches;i++) ofy().delete().keys(keys.subList(i*500, (i+1)*500));
+				ofy().delete().keys(keys.subList(nBatches*500, keys.size()));
+			}
 			
-			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
-
 		    buf.append(keys.size() + " PracticeExamTransactions more then one year old" + (testOnly?" identified":" deleted") + ".<br>");
 		    buf.append("Done.<br>");
 		} catch (Exception e) {
@@ -220,9 +230,12 @@ public class DataStoreCleaner extends HttpServlet {
 		buf.append("<h2>Clean Scores</h2>");
 		try {
 			List<Key<Score>> keys = ofy().load().type(Score.class).filter("mostRecentAttempt <",oneYearAgo).limit(500).keys().list();
+			if (keys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
+				int nBatches = keys.size()/500;
+				for (int i=0;i<nBatches;i++) ofy().delete().keys(keys.subList(i*500, (i+1)*500));
+				ofy().delete().keys(keys.subList(nBatches*500, keys.size()));
+			}
 			
-			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
-
 			buf.append(keys.size() + " Scores more then one year old" + (testOnly?" identified":" deleted") + ".<br>");
 			buf.append("Done.<br>");
 		} catch (Exception e) {
@@ -243,9 +256,12 @@ public class DataStoreCleaner extends HttpServlet {
 				else if ("Homework".equals(a.assignmentType) && ofy().load().type(HWTransaction.class).filter("assignmentId",a.id).count()==0) keys.add(Key.create(a));
 				else if ("PracticeExam".equals(a.assignmentType) && ofy().load().type(PracticeExamTransaction.class).filter("assignmentId",a.id).count()==0) keys.add(Key.create(a));
 			}
-
-			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
-
+			if (keys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
+				int nBatches = keys.size()/500;
+				for (int i=0;i<nBatches;i++) ofy().delete().keys(keys.subList(i*500, (i+1)*500));
+				ofy().delete().keys(keys.subList(nBatches*500, keys.size()));
+			}
+			
 			buf.append(keys.size() + " Assignments at least 6 months old with no transactions" + (testOnly?" identified":" deleted") + ".<br>");
 			buf.append("Done.<br>");
 
@@ -271,9 +287,12 @@ public class DataStoreCleaner extends HttpServlet {
 					ofy().save().entity(c);
 				}
 			}
+			if (keys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
+				int nBatches = keys.size()/500;
+				for (int i=0;i<nBatches;i++) ofy().delete().keys(keys.subList(i*500, (i+1)*500));
+				ofy().delete().keys(keys.subList(nBatches*500, keys.size()));
+			}
 			
-			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
-
 			buf.append(keys.size() + " BLTIConsumers at least 6 months old with no Assignments" + (testOnly?" identified":" deleted") + ".<br>");
 			buf.append("Done.<br>");
 
@@ -295,9 +314,12 @@ public class DataStoreCleaner extends HttpServlet {
 				int n = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).chunk(Integer.MAX_VALUE).count();
 				if (n==0) keys.add(Key.create(d));
 			}
-
-			if (keys.size() > 0 && !testOnly) ofy().delete().keys(keys);
-
+			if (keys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
+				int nBatches = keys.size()/500;
+				for (int i=0;i<nBatches;i++) ofy().delete().keys(keys.subList(i*500, (i+1)*500));
+				ofy().delete().keys(keys.subList(nBatches*500, keys.size()));
+			}
+			
 			buf.append(keys.size() + " Deployments at least 6 months old with no Assignments" + (testOnly?" identified":" deleted") + ".<br>");
 			buf.append("Done.<br>");
 
