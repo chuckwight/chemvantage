@@ -157,8 +157,8 @@ public class Quiz extends HttpServlet {
 			buf.append(ajaxJavaScript(user.getTokenSignature())); // load javascript for AJAX problem reporting form
 			
 			// Create a StringBuffer to contain correct answers to questions answered correctly
-			StringBuffer missedQuestions = new StringBuffer();			
-			missedQuestions.append("<OL>");
+			List<String> missedQuestions = new ArrayList<String>();			
+			//missedQuestions.append("<OL>");
 			
 			// For each question the form contains a parameter: (questionId,studentAnswer)
 			// Make a list of the question keys. Non-numeric inputs are ignored (catch and continue).
@@ -192,7 +192,7 @@ public class Quiz extends HttpServlet {
 							if (score == 0) {  
 								// include question in list of incorrectly answered questions
 								wrongAnswers++;
-								missedQuestions.append("\n<LI>" + q.printAllToStudents(studentAnswer[0]) + "</LI>\n");
+								missedQuestions.add("<LI>" + q.printAllToStudents(studentAnswer[0]) + "</LI>");
 							}
 						}
 					}
@@ -201,7 +201,7 @@ public class Quiz extends HttpServlet {
 				}
 			}
 			if (responses.size()>0) ofy().save().entities(responses);  // batch save of Response entities
-			missedQuestions.append("</OL>\n");
+			//missedQuestions.append("</OL>\n");
 			qt.graded = now;
 			qt.score = studentScore;
 			ofy().save().entity(qt);
@@ -225,10 +225,25 @@ public class Quiz extends HttpServlet {
 			} else {
 				int leftBlank = qt.possibleScore - studentScore - wrongAnswers;
 				if (leftBlank>0) buf.append(leftBlank + " question" 
-						+ (leftBlank>1?"s were":" was") + " left unanswered (blank).<p>");
-				if (wrongAnswers>0) buf.append(wrongAnswers + " question" 
-						+ (wrongAnswers>1?"s were":" was") + " answered incorrectly:<p>" + missedQuestions.toString());
-			
+						+ (leftBlank>1?"s were":" was") + " left unanswered (blank).<br/>");
+				if (wrongAnswers>0) {
+					buf.append(wrongAnswers + " question" + (wrongAnswers>1?"s were":" was") + " answered incorrectly.<br/>");
+					
+					// Display the correct answers to missed problems. However, discourage submission of empty or deliberately wrong answers:
+					// If no answers were correct, give no correct answers.
+					// If 1 answer was correct, give up to 2 correct answers.
+					// If 2 answers were correct, give up to 4 correct answers.
+					// If 3 answers were correct, give up to 6 correct answers.
+					int nAnswersEligible = 2 * studentScore;
+					if (nAnswersEligible > wrongAnswers) nAnswersEligible = wrongAnswers;
+					if (nAnswersEligible > 0) {
+						buf.append("<OL>");
+						for (int i=0;i<nAnswersEligible;i++) buf.append(missedQuestions.get(i));
+						buf.append("</OL>");
+					} else buf.append("You must answer at least one question correctly to view the correct answers to questions that you missed. ");
+					if (wrongAnswers > nAnswersEligible) buf.append("The more questions you answer correctly, the more correct answers to missed questions will be displayed.");
+				}
+				
 				// print some words of encouragement:
 				buf.append("<h4>Improve Your Score</h4>\n");
 				if (studentScore<6) {
