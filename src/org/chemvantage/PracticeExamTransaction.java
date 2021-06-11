@@ -50,7 +50,7 @@ public class PracticeExamTransaction implements Serializable {
 
 	PracticeExamTransaction(List<Long> topicIds,String userId,Date downloaded,Date graded,int[] scores,int[] possibleScores,String lis_result_sourcedid) {
 		this.topicIds = topicIds;
-		this.userId = userId;
+		this.userId = Subject.hashId(userId);
 		this.downloaded = downloaded;
 		this.graded = graded;
 		this.scores = scores;

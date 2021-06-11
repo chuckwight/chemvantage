@@ -42,7 +42,7 @@ public class PollTransaction implements Serializable {
     PollTransaction() {}
     
     public PollTransaction(String userId,Date downloaded,long assignmentId) {
-    	this.userId = userId;
+    	this.userId = Subject.hashId(userId);
         this.downloaded = downloaded;
         this.assignmentId = assignmentId;
     }    

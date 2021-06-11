@@ -71,8 +71,8 @@ public class ResponseServlet extends HttpServlet {
 				List<HashMap<Long,Integer>> results5 = new ArrayList<HashMap<Long,Integer>>();
 				
 				Query<Response> responses;
-				if (topicId==0L) responses = ofy().load().type(Response.class).order("submitted");
-				else responses = ofy().load().type(Response.class).filter("topicId", topicId).order("submitted");
+				if (topicId==0L) responses = ofy().load().type(Response.class).limit(75000).order("submitted");
+				else responses = ofy().load().type(Response.class).filter("topicId", topicId).limit(75000).order("submitted");
 				
 				// process and organize the collection of responses
 				int totalResponses = responses.count();
@@ -81,9 +81,6 @@ public class ResponseServlet extends HttpServlet {
 				for (Response r : responses) {
 					if (nResponsesUsed > 75000) break;
 					if (r.possibleScore>1) continue;
-					if (r.userId.contains("wight")) continue;
-					//out.println(r.userId + "," + r.assignmentType + "," + r.topicId + "," + r.questionId + "," + r.score + "," + r.submitted);
-					if (topicId > 0L && r.topicId != topicId) continue;
 					if (!questionIds.contains(r.questionId)) questionIds.add(r.questionId);
 					nResponsesUsed++;
 					if (!userIds1.contains(r.userId)) {

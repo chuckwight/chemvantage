@@ -50,6 +50,7 @@ public class Score {    // this object represents a best score achieved by a use
 	}	
 	
 	public static Score getInstance(String userId,Assignment a) {
+		userId = Subject.hashId(userId);
 		Score s = new Score();
 		s.assignmentId = a.id;
 		s.owner = Key.create(User.class,userId);
@@ -130,6 +131,7 @@ public class Score {    // this object represents a best score achieved by a use
 		
 	public static Score updateQuizScore(String userId,QuizTransaction qt) {
 		Score s = null;
+		userId = Subject.hashId(userId);
 		try {
 			Key<Score> k = Key.create(Key.create(User.class,userId),Score.class,qt.assignmentId);
 			s = ofy().load().key(k).safe();
@@ -177,7 +179,6 @@ public class Score {    // this object represents a best score achieved by a use
     	return s.score == this.score
     			&& s.assignmentId == this.assignmentId
     			&& s.owner.equals(this.owner)
-    			//&& s.groupId == this.groupId
     			&& s.score == this.score
     			&& s.maxPossibleScore == this.maxPossibleScore
     			&& s.numberOfAttempts == this.numberOfAttempts

@@ -350,7 +350,7 @@ public class Poll extends HttpServlet {
 	}
 	
 	PollTransaction getPollTransaction(User user) {
-		PollTransaction pt = ofy().load().type(PollTransaction.class).filter("assignmentId =",user.getAssignmentId()).filter("userId =",user.id).first().now();
+		PollTransaction pt = ofy().load().type(PollTransaction.class).filter("assignmentId",user.getAssignmentId()).filter("userId",user.getHashedId()).first().now();
 		if (pt == null) pt = new PollTransaction(user.id,new Date(),user.getAssignmentId());
 		return pt;
 	}

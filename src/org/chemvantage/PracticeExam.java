@@ -485,6 +485,7 @@ public class PracticeExam extends HttpServlet {
 			}
 			  
 			List<Response> responses = new ArrayList<Response>();
+			
 			// begin the main scoring loop:
 			for (Key<Question> k : questionKeys) {
 				Question q=null;
@@ -505,7 +506,7 @@ public class PracticeExam extends HttpServlet {
 					int score = studentAnswer[0].length()==0?0:q.isCorrect(studentAnswer[0])?q.pointValue:0;
 					if (score > 0) studentScores[topicIds.indexOf(q.topicId)] += score;
 					if (studentAnswer[0].length() > 0) {
-						Response r = new Response("PracticeExam",q.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now);
+						Response r = new Response("PracticeExam",q.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,Subject.hashId(user.id),now);
 						r.transactionId = pt.id;
 						responses.add(r);
 					}
@@ -544,8 +545,10 @@ public class PracticeExam extends HttpServlet {
 			else {
 				buf.append("<TABLE><TR><TD><b>Topic</b></TD><TD><b>Score</b></TD>"
 						+ "<TD><b>Possible</b></TD><TD><b>Percent</b></TD><TD></TD></TR>");
+				int pct = 0;
 				for (int i=0;i<topicIds.size();i++) {
-					int pct = (pt.possibleScores[i]>0?pt.scores[i]*100/pt.possibleScores[i]:0);
+					if (pt.possibleScores[i]>0) pct = (int)Math.round(pt.scores[i]*100./pt.possibleScores[i]);
+					else pct = 0;
 					String color = (pct>84?"#00FF00":(pct<50?"#FF0000":"#FFFF00"));
 					buf.append("<TR>"
 							+ "<TD>" + topicTitles.get(i) + "</TD>"
@@ -562,7 +565,7 @@ public class PracticeExam extends HttpServlet {
 			// embed ajax code to provide feedback
 			buf.append(ajaxScoreJavaScript(user.getTokenSignature()));
 			
-			List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.id).filter("assignmentId",a.id).order("downloaded").list();
+			List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
 			if (pets==null || pets.size()==0) {
 				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>");
 			} else {				
@@ -725,7 +728,7 @@ public class PracticeExam extends HttpServlet {
 
 		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 
-		List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("userId",forUser.id).filter("assignmentId",a.id).order("downloaded").list();
+		List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("userId",forUser.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
 		if (pets.size()==0) {
 			buf.append("Sorry, we did not find any records for " + (user.id.equals(forUser.id)?"you":"this user") + " in the database for this assignment.<p>");
 		} else {				
@@ -807,11 +810,6 @@ public class PracticeExam extends HttpServlet {
 
 			// Get all of the PracticeExamTransactions associated with this assignment:
 			List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("assignmentId",assignmentId).list();			
-			/*
-			List<PracticeExamTransaction> abandoned = new ArrayList<PracticeExamTransaction>();
-			for (PracticeExamTransaction pet : pets) if (pet.graded==null) abandoned.add(pet);
-			pets.removeAll(abandoned);
-			*/
 			if (pets.size()==0) {
 				buf.append("There are no transactions for this practice exam assignment yet.<p>");
 				return buf.toString();

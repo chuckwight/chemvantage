@@ -27,7 +27,6 @@ import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -114,7 +113,7 @@ public class VideoQuiz extends HttpServlet {
 			// Normally, a new VideoTransaction is created when the LTILaunchRequest is made, but sometimes things happen...
 			Date now = new Date();
 			Date then = new Date(now.getTime()-90*60000);  // 90 minutes ago
-			VideoTransaction vt = ofy().load().type(VideoTransaction.class).filter("userId",user.id).filter("videoId",v.id).order("-downloaded").first().now();
+			VideoTransaction vt = ofy().load().type(VideoTransaction.class).filter("userId",user.getHashedId()).filter("videoId",v.id).order("-downloaded").first().now();
 
 			if (vt == null || vt.graded != null || vt.downloaded.before(then)) {  // create a new VideoTransaction
 				int possibleScore = 0;
@@ -189,7 +188,7 @@ public class VideoQuiz extends HttpServlet {
 			Date then = new Date(now.getTime()-90*60000);  // 90 minutes ago
 			long videoId = Long.parseLong(request.getParameter("VideoId"));
 			debug.append("vId.");
-			vt = ofy().load().type(VideoTransaction.class).filter("userId",user.id).filter("videoId",videoId).filter("graded",null).filter("downloaded >",then).first().now();
+			vt = ofy().load().type(VideoTransaction.class).filter("userId",user.getHashedId()).filter("videoId",videoId).filter("graded",null).filter("downloaded >",then).first().now();
 			debug.append("vt.");
 		}
 		
@@ -335,7 +334,7 @@ public class VideoQuiz extends HttpServlet {
 		return buf.toString();	
 		
 	}
-	
+/*	
 	String showScores (User user, HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h2>Your Quiz Transactions</h2>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
@@ -491,4 +490,5 @@ public class VideoQuiz extends HttpServlet {
 		}
 		return buf.toString();
 	}
+	*/
 }

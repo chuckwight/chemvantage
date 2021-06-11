@@ -41,21 +41,16 @@ public class HWTransaction implements Serializable {
 	
     HWTransaction() {}
     
-    HWTransaction(long questionId,long topicId,String topicTitle,String userID,Date graded,int score,long assignmentId,int possibleScore,String showWork) {
+    HWTransaction(long questionId,long topicId,String topicTitle,String userId,Date graded,int score,long assignmentId,int possibleScore,String showWork) {
     	this.questionId = questionId;
     	this.topicId = topicId;
     	this.topicTitle = topicTitle;
-    	this.userId = userID;
+    	this.userId = Subject.hashId(userId);
         this.graded = graded;
         this.score = score;
         this.assignmentId = assignmentId;
         this.possibleScore = possibleScore;
         this.showWork = showWork;
     }
-/*
-    public String tableRow() {
-    	return "<tr><td>" + topicTitle + "</td><td>" + questionId + "</td><td>" + graded + "</td><td>" + score + "/" + possibleScore
-    	    	+ (lis_result_sourcedid==null?"":" reported to LMS.") + "</td></tr>";
-    }
- */   
+
 }

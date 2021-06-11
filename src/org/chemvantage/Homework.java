@@ -184,7 +184,7 @@ public class Homework extends HttpServlet {
 			List<Long> solvedQuestions = new ArrayList<Long>();
 			Map<Long,String> workStrings = new HashMap<Long,String>();
 			List<HWTransaction> hwTransactions = new ArrayList<HWTransaction>();
-			if (hwa!=null) hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("assignmentId",hwa.id).order("-graded").list();
+			if (hwa!=null) hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",hwa.id).order("-graded").list();
 			
 			for (HWTransaction ht : hwTransactions) {
 				if (solvedQuestions.contains(ht.questionId)) continue;
@@ -296,7 +296,7 @@ public class Homework extends HttpServlet {
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			Date now = new Date();
 			Date minutesAgo = new Date(now.getTime()-retryDelayMinutes*60000);  // about 2 minutes ago
-			List<HWTransaction> recentTransactions = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("questionId",q.id).filter("graded >",minutesAgo).list();
+			List<HWTransaction> recentTransactions = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("questionId",q.id).filter("graded >",minutesAgo).list();
 			long secondsRemaining = 0;
 			boolean solvedRecently = false;
 			
@@ -594,7 +594,7 @@ public class Homework extends HttpServlet {
 			buf.append("Topic: "+ t.title + "<br>");
 			buf.append("Valid: " + df.format(now) + "<p>");
 			
-			List<HWTransaction> hwts = ofy().load().type(HWTransaction.class).filter("userId",user.id).filter("assignmentId",a.id).order("graded").list();
+			List<HWTransaction> hwts = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).order("graded").list();
 			
 			if (hwts.size()==0) {
 				buf.append("Sorry, we did not find any records for this user in the database for this assignment.<p>");

@@ -117,10 +117,10 @@ function showWorkBox(qid) {}
 		Date t15minAgo = new Date(now.getTime() - 15 * 60000); // 15 minutes ago
 		QuizTransaction qt = null;
 		if (qa == null)
-			qt = ofy().load().type(QuizTransaction.class).filter("userId", user.getId()).filter("topicId", topicId)
+			qt = ofy().load().type(QuizTransaction.class).filter("userId", user.getHashedId()).filter("topicId", topicId)
 					.filter("graded", null).filter("downloaded >", t15minAgo).first().now();
 		else
-			qt = ofy().load().type(QuizTransaction.class).filter("userId", user.getId())
+			qt = ofy().load().type(QuizTransaction.class).filter("userId", user.getHashedId())
 					.filter("assignmentId", assignmentId).filter("graded", null).filter("downloaded >", t15minAgo)
 					.first().now();
 

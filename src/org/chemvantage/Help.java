@@ -136,7 +136,8 @@ public class Help extends HttpServlet {
 				
 				buf.append("<script>document.getElementById('showWork" + q.id + "').style.display='';</script>");
 				
-				List<Response> responses = ofy().load().type(Response.class).filter("userId",hwt.userId).filter("questionId",q.id).list();
+				List<Response> responses = ofy().load().type(Response.class).filter("userId",Subject.hashId(hwt.userId)).filter("questionId",q.id).list();
+				
 				Date solved = null;
 				StringBuffer tablebuf = new StringBuffer();
 				if (responses.size() > 0) {

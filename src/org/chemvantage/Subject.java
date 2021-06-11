@@ -19,6 +19,8 @@ package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.text.DecimalFormat;
 
 import com.googlecode.objectify.annotation.Entity;
@@ -30,6 +32,7 @@ public class Subject {
 	@Id Long id;
 	String title;
 	String HMAC256Secret;
+	String salt;
 	String announcement;
 	int nStarReports;
 	double avgStars;
@@ -48,6 +51,7 @@ public class Subject {
 			s.id = 1L;
 			s.title = "General Chemistry";
 			s.HMAC256Secret = "ChangeMeInTheDataStoreManuallyForYourProtection";
+			s.salt = "ChangeMeInTheDataStoreManuallyToKeepStoredUsedIdValuesSecure";
 			ofy().save().entity(s).now();
 			return s;
 		}
@@ -66,5 +70,19 @@ public class Subject {
 	
 	public String getAnnouncement() {
 		return this.announcement;
+	}
+	
+	static String hashId(String userId) {
+		try {
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
+        	byte[] bytes = md.digest((userId + Subject.getSubject().salt).getBytes(StandardCharsets.UTF_8));
+        	StringBuilder sb = new StringBuilder();
+            for (byte b : bytes) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+		} catch (Exception e) {
+        	return null;
+        }
 	}
 }

@@ -165,8 +165,9 @@ public class Admin extends HttpServlet {
 				buf.append("<ul>");
 				List<BLTIConsumer> recentTCs = ofy().load().type(BLTIConsumer.class).filter("lastLogin >",lastMonth).list();
 				for (BLTIConsumer c : recentTCs) {
-					int resp = ofy().load().type(Response.class).filter("userId >",c.oauth_consumer_key).filter("userId <",c.oauth_consumer_key+"~").count();
-					buf.append("<li>" + c.oauth_consumer_key + " generated "+ resp + " responses. Contact: " + c.contact_name + " (" + c.email + ")</li>");
+					//int resp = ofy().load().type(Response.class).filter("userId >",c.oauth_consumer_key).filter("userId <",c.oauth_consumer_key+"~").count();
+					//buf.append("<li>" + c.oauth_consumer_key + " generated "+ resp + " responses. Contact: " + c.contact_name + " (" + c.email + ")</li>");
+					buf.append("<li>" + c.oauth_consumer_key + ": Contact: " + c.contact_name + " (" + c.email + ")</li>");
 				}
 				buf.append("</ul>");
 			} else buf.append(" <a href=/Admin?UserRequest=showBLTI>show details</a><br/>");

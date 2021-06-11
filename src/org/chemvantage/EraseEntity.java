@@ -87,6 +87,7 @@ public class EraseEntity extends HttpServlet {
 					case "Homework": ofy().delete().keys(ofy().load().type(HWTransaction.class).filter("assignmentId", a.id).keys().iterable()); break;
 					case "PracticeExam": ofy().delete().keys(ofy().load().type(PracticeExamTransaction.class).filter("assignmentId", a.id).keys().iterable()); break;
 					case "VideoQuiz": ofy().delete().keys(ofy().load().type(VideoTransaction.class).filter("assignmentId", a.id).keys().iterable()); break;
+					case "Poll": ofy().delete().keys(ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).keys().iterable());break;
 				}
 			}
 		}
@@ -180,24 +181,5 @@ public class EraseEntity extends HttpServlet {
 		}
 		buf.append("<br><input type=submit value='Permanently delete the selected entities (cannot be undone)'></form>");
 		return buf.toString();
-	}
-	
-	void deleteUser(String id) {
-		try {
-			User user = ofy().load().type(User.class).id(id).safe();
-			
-			List<Key<QuizTransaction>> qtkeys = ofy().load().type(QuizTransaction.class).filter("userId",id).keys().list();
-			if (!qtkeys.isEmpty()) ofy().delete().keys(qtkeys);
-			List<Key<HWTransaction>> htkeys = ofy().load().type(HWTransaction.class).filter("userId",id).keys().list();
-			if (!htkeys.isEmpty()) ofy().delete().entities(htkeys);
-			List<Key<PracticeExamTransaction>> ptkeys = ofy().load().type(PracticeExamTransaction.class).filter("userId",id).keys().list();
-			if (!ptkeys.isEmpty()) ofy().delete().keys(ptkeys);
-			
-			List<Key<Score>> skeys = ofy().load().type(Score.class).ancestor(user).keys().list();
-			if (skeys != null && skeys.size()>0) ofy().delete().keys(skeys);
-			
-			ofy().delete().entity(user);
-		} catch(Exception e) {			
-		}
 	}
 }

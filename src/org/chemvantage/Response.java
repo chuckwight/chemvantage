@@ -39,6 +39,13 @@ public class Response implements Serializable {
 	@Index	int score;
 			int possibleScore;
 	@Index(IfNotZero.class)  long transactionId;
+	
+	/*
+	 * We can store and retrieve the userId as a SHA-256 hash using the following scheme:
+	 * hashedId = new String(MessageDigest.getInstance("SHA-256").digest(userId.getBytes(StandardCharsets.UTF_8)),StandardCharsets.UTF_8);
+	 * To store, calculate the hashedId and include it as the userId in the ofy().save() command
+	 * To retrieve, calculate the hashedId and use it in the ofy().load() filter
+	 */
 			
 	Response() {}
     
@@ -50,7 +57,7 @@ public class Response implements Serializable {
         this.correctAnswer = correctAnswer;
         this.score = score;
         this.possibleScore = possibleScore;
-        this.userId = userId;
+        this.userId = Subject.hashId(userId);
         this.submitted = submitted;
     }
 }

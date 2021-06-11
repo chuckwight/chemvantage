@@ -43,7 +43,7 @@ public class QuizTransaction implements Serializable {
     public QuizTransaction(long topicId,String topicTitle,String userId,Date downloaded,Date graded,int score,long assignmentId,int possibleScore,String lis_result_sourcedid) {
     	this.topicId = topicId;
     	this.topicTitle = topicTitle;
-    	this.userId = userId;
+    	this.userId = Subject.hashId(userId);
         this.downloaded = downloaded;
         this.graded = graded;
         this.score = score;
@@ -51,7 +51,7 @@ public class QuizTransaction implements Serializable {
         this.possibleScore = possibleScore;
         this.lis_result_sourcedid = lis_result_sourcedid;
    }
-    
+   
     public Long getId() {
     	return this.id;
     }

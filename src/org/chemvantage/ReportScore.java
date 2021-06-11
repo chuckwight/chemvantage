@@ -106,7 +106,7 @@ public class ReportScore extends HttpServlet {
 		String oauth_consumer_key = null;
 		StringBuffer buf = new StringBuffer();
 		try {		
-			Key<Score> k = Key.create(Key.create(User.class, userId),Score.class,a.id);
+			Key<Score> k = Key.create(Key.create(User.class, Subject.hashId(userId)),Score.class,a.id);
 			Score s = ofy().load().key(k).now();
 			if (s == null || !s.needsLisReporting()) return "Score does not need to be reported";
 			buf.append("LisResultSourcedId:<br>" + s.lis_result_sourcedid + "<p>");
@@ -150,7 +150,7 @@ public class ReportScore extends HttpServlet {
 	String postUserScore(String userId,Assignment a,int attempts) {  // LTI v1.3 only
 		StringBuffer buf = new StringBuffer();
 		try {
-			Key<Score> k = Key.create(Key.create(User.class,userId),Score.class,a.id);
+			Key<Score> k = Key.create(Key.create(User.class,Subject.hashId(userId)),Score.class,a.id);
 			Score s = ofy().load().key(k).safe();
 			String response = LTIMessage.postUserScore(s);
 			buf.append(response);

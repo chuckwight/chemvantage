@@ -19,7 +19,6 @@ package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
-import java.security.MessageDigest;
 import java.util.Date;
 import java.util.Random;
 
@@ -104,8 +103,12 @@ public class User {
 		return userId.substring(userId.lastIndexOf("/")+1);  // should work OK except if raw userId contains "/" character
 	}
 	
-	public String getId() {  // public method to support JSP files
+	public String getId() {   // public method to support JSP files to receive unhashed userId value
 		return id;
+	}
+	
+	public String getHashedId() {  // public method to support JSP files to retrieve hashed userId value
+		return Subject.hashId(id);
 	}
 	
 	public boolean isAnonymous() {
@@ -177,7 +180,7 @@ public class User {
 		// more than 2 answers more than 15 minutes ago
 		try {
 			Date FifteenMinutesAgo = new Date(new Date().getTime()-900000);
-			Query<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",this.id).filter("questionId",questionId).filter("graded <",FifteenMinutesAgo);
+			Query<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",Subject.hashId(this.id)).filter("questionId",questionId).filter("graded <",FifteenMinutesAgo);
 			return (hwTransactions.count() > 2?true:false);
 		} catch (Exception e) {
 			return false;
@@ -216,14 +219,5 @@ public class User {
     public String getLisResultSourcedid() {
    		return lis_result_sourcedid;
     }
-    
-    static String hashedId(String id) {
-    	try {
-    		MessageDigest md = MessageDigest.getInstance("SHA-256");
-    		md.update(Subject.getSubject().HMAC256Secret.getBytes()); 	// prepends secret to avoid rainbow table attack on simple ids
-    		return String.valueOf(md.digest(id.getBytes())); 			// digests the id and converts result to String
-    	} catch (Exception e) {
-    		return null;
-    	}
-    }
+ 
 }

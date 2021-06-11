@@ -43,10 +43,10 @@ public class VideoTransaction {
 	
     VideoTransaction() {}
     
-    VideoTransaction(long videoId,String videoTitle,int nBreaks, String userID,long assignmentId,int possibleScore,String lis_result_sourcedid) {
+    VideoTransaction(long videoId,String videoTitle,int nBreaks, String userId,long assignmentId,int possibleScore,String lis_result_sourcedid) {
     	this.videoId = videoId;
     	this.videoTitle = videoTitle;
-    	this.userId = userID;
+    	this.userId = Subject.hashId(userId);
         this.graded = null;
         this.score = 0;
         this.assignmentId = assignmentId;

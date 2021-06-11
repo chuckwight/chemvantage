@@ -412,7 +412,8 @@ public class Quiz extends HttpServlet {
 			buf.append("Topic: "+ t.title + "<br>");
 			buf.append("Valid: " + df.format(now) + "<p>");
 			
-			List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).filter("userId",user.id).filter("assignmentId",a.id).order("downloaded").list();
+			
+			List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
 			
 			if (qts.size()==0) {
 				buf.append("Sorry, we did not find any records for this user on this assignment.<p>");
