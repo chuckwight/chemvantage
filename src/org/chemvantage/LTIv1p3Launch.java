@@ -260,7 +260,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		} else {  // redirect the user's browser to the assignment
 			response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
 			Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
-			queue.add(withUrl("/HashUserIds").param("UserId",URLEncoder.encode(user.id, "UTF-8")));			
+			queue.add(withUrl("/HashUserIds").param("sig",user.getTokenSignature()));			
 			return;
 		}
 	}
