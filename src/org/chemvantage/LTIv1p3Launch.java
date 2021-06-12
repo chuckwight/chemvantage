@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
+
 /* This servlet executes a valid LTI ResourceLink launch request using LTI v1.3 specifications
  * The basic requesting entity is a Deployment. Although a single LMS platform may host several
  * Deployments (e.g., as separate accounts), each Deployment will designate a client_id that identifies
@@ -44,6 +46,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -64,6 +67,8 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.auth0.jwt.interfaces.JWTVerifier;
+import com.google.appengine.api.taskqueue.Queue;
+import com.google.appengine.api.taskqueue.QueueFactory;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -254,6 +259,8 @@ public class LTIv1p3Launch extends HttpServlet {
 			return;
 		} else {  // redirect the user's browser to the assignment
 			response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
+			Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
+			queue.add(withUrl("/HashUserIds").param("UserId",URLEncoder.encode(user.id, "UTF-8")));			
 			return;
 		}
 	}
@@ -621,4 +628,5 @@ public class LTIv1p3Launch extends HttpServlet {
 		buf.append("</form>");
 		return buf.toString();
 	}
+	
 }	
