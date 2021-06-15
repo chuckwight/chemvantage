@@ -525,8 +525,8 @@ public class Quiz extends HttpServlet {
 				String platform_id = d.getPlatformId() + "/";
 				
 				for (String id : membership.keySet()) {
-					String userId = platform_id + id;
-					keys.put(id,Key.create(Key.create(User.class,userId),Score.class,a.id));
+					String hashedUserId = Subject.hashId(platform_id + id);
+					keys.put(id,Key.create(Key.create(User.class,hashedUserId),Score.class,a.id));
 				}
 				Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
 				

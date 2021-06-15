@@ -706,7 +706,7 @@ public class Homework extends HttpServlet {
 				Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
 				String platform_id = d.getPlatformId() + "/";
 				for (String id : membership.keySet()) {
-					keys.put(id,Key.create(Key.create(User.class,platform_id+id),Score.class,a.id));
+					keys.put(id,Key.create(Key.create(User.class,Subject.hashId(platform_id+id)),Score.class,a.id));
 				}
 				Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
 				buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th></tr>");
