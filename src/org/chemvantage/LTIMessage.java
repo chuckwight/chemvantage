@@ -594,7 +594,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		}
 	}
 	
-	static String postUserScore(Score s) {
+	static String postUserScore(Score s, String userId) {
 		// This method uses the LTIv1p3 message protocol to post a user's score to the LMS grade book.
 		// The lineitem URL corresponds to the LMS grade book column for the Assignment entity,
 		// and the specific cell is identified by the user_id value defined by the LMS platform
@@ -609,7 +609,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			String bearerAuth = "Bearer " + authToken;
 			//buf.append("Authorization: " + bearerAuth + "<br>");
 			
-			String raw_id = User.getRawId(s.owner.getName());
+			String raw_id = User.getRawId(userId);
 			String timestamp = ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT);
 			
 			JsonObject j = new JsonObject();

@@ -50,14 +50,14 @@ public class Score {    // this object represents a best score achieved by a use
 	}	
 	
 	public static Score getInstance(String userId,Assignment a) {
-		userId = Subject.hashId(userId);
+		String hashedId = Subject.hashId(userId);
 		Score s = new Score();
 		s.assignmentId = a.id;
-		s.owner = Key.create(User.class,userId);
+		s.owner = Key.create(User.class,hashedId);
 		
 		switch (a.assignmentType) {
 		case "Quiz":
-			List<QuizTransaction> quizTransactions = ofy().load().type(QuizTransaction.class).filter("userId",userId).filter("assignmentId",a.id).list();
+			List<QuizTransaction> quizTransactions = ofy().load().type(QuizTransaction.class).filter("userId",hashedId).filter("assignmentId",a.id).list();
 			for (QuizTransaction qt : quizTransactions) {
 				s.numberOfAttempts++;  // number of pre-deadline quiz attempts
 				s.score = (qt.score>s.score?qt.score:s.score);  // keep the best (max) score
@@ -70,7 +70,7 @@ public class Score {    // this object represents a best score achieved by a use
 			}
 			break;
 		case "Homework":
-			List<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",userId).filter("assignmentId",a.id).list();
+			List<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",hashedId).filter("assignmentId",a.id).list();
 			List<Key<Question>> assignmentQuestionKeys = new ArrayList<Key<Question>>();
 			assignmentQuestionKeys.addAll(a.questionKeys);  // clones the assignment List of question keys
 			s.maxPossibleScore = a.questionKeys.size();
@@ -82,7 +82,7 @@ public class Score {    // this object represents a best score achieved by a use
 			}
 			break;
 		case "PracticeExam":
-			List<PracticeExamTransaction> practiceExamTransactions = ofy().load().type(PracticeExamTransaction.class).filter("userId",userId).filter("assignmentId",a.id).list();
+			List<PracticeExamTransaction> practiceExamTransactions = ofy().load().type(PracticeExamTransaction.class).filter("userId",hashedId).filter("assignmentId",a.id).list();
 			for (PracticeExamTransaction pt : practiceExamTransactions) {
 				if (pt.graded==null || !pt.topicsMatch(a.topicIds)) continue;
 				s.numberOfAttempts++;  // number of pre-deadline quiz attempts
@@ -99,7 +99,7 @@ public class Score {    // this object represents a best score achieved by a use
 			}			
 			break;
 		case "VideoQuiz":
-			List<VideoTransaction> videoTransactions = ofy().load().type(VideoTransaction.class).filter("userId",userId).filter("assignmentId",a.id).list();
+			List<VideoTransaction> videoTransactions = ofy().load().type(VideoTransaction.class).filter("userId",hashedId).filter("assignmentId",a.id).list();
 			for (VideoTransaction vt : videoTransactions) {
 				s.numberOfAttempts++;  // number of pre-deadline quiz attempts
 				s.score = (vt.score>s.score?vt.score:s.score);  // keep the best (max) score
@@ -112,7 +112,7 @@ public class Score {    // this object represents a best score achieved by a use
 			}		
 			break;
 		case "Poll":
-			List<PollTransaction> pollTransactions = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).filter("userId",userId).list();
+			List<PollTransaction> pollTransactions = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).filter("userId",hashedId).list();
 			for (PollTransaction pt : pollTransactions) {
 				s.numberOfAttempts++;  // number of pre-deadline quiz attempts
 				s.score = (pt.score>s.score?pt.score:s.score);  // keep the best (max) score

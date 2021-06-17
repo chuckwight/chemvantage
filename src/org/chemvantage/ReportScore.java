@@ -152,7 +152,7 @@ public class ReportScore extends HttpServlet {
 		try {
 			Key<Score> k = Key.create(Key.create(User.class,Subject.hashId(userId)),Score.class,a.id);
 			Score s = ofy().load().key(k).safe();
-			String response = LTIMessage.postUserScore(s);
+			String response = LTIMessage.postUserScore(s,userId);
 			buf.append(response);
 			if (response.contains("Success") || response.contains("422"));
 			else {			

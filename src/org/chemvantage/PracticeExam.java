@@ -528,7 +528,7 @@ public class PracticeExam extends HttpServlet {
 				Score s = Score.getInstance(user.id,a);
 				ofy().save().entity(s).now();
 				if (a.lti_ags_lineitem_url != null) { // LTI v1.3
-					LTIMessage.postUserScore(s);
+					LTIMessage.postUserScore(s,user.id);
 				} else if (a.lis_outcome_service_url != null) { // LTI v1.1 put report into the Task Queue
 					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  
 				}
@@ -1058,7 +1058,9 @@ public class PracticeExam extends HttpServlet {
 				Score s = Score.getInstance(pet.userId,a);
 				ofy().save().entity(s).now();
 				if (a.lti_ags_lineitem_url != null) { // LTI v1.3
-					LTIMessage.postUserScore(s);
+//========================================================================================================================================================================			
+					LTIMessage.postUserScore(s,pet.userId);  // BUG HERE!!!! pet.userId is hashed, but we actually need the unhashed version to post a Score to the LMS
+//========================================================================================================================================================================			
 				} else if (a.lis_outcome_service_url != null) { // LTI v1.1 put report into the Task Queue
 					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(pet.userId,"UTF-8")));  
 				}
