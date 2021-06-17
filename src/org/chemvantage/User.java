@@ -180,7 +180,7 @@ public class User {
 		// more than 2 answers more than 15 minutes ago
 		try {
 			Date FifteenMinutesAgo = new Date(new Date().getTime()-900000);
-			Query<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",Subject.hashId(this.id)).filter("questionId",questionId).filter("graded <",FifteenMinutesAgo);
+			Query<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",this.getHashedId()).filter("questionId",questionId).filter("graded <",FifteenMinutesAgo);
 			return (hwTransactions.count() > 2?true:false);
 		} catch (Exception e) {
 			return false;
