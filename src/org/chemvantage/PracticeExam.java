@@ -25,7 +25,6 @@ import java.io.PrintWriter;
 import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.Enumeration;
@@ -89,7 +88,8 @@ public class PracticeExam extends HttpServlet {
 					break;
 				case "ReviewExam":
 					long practiceExamTransactionId = Long.parseLong(request.getParameter("PracticeExamTransactionId"));
-					out.println(Home.header("Review ChemVantage Practice Exam") + reviewExam(user,practiceExamTransactionId) + Home.footer);
+					String studentUserId = request.getParameter("UserId");
+					out.println(Home.header("Review ChemVantage Practice Exam") + reviewExam(user,practiceExamTransactionId,studentUserId) + Home.footer);
 					break;
 				default: out.println(Home.header("ChemVantage Practice Exam") + printExam(user,request) + Home.footer);
 			}
@@ -309,11 +309,14 @@ public class PracticeExam extends HttpServlet {
 			}
 			buf.append("</OL>");
 
-			if (user.isInstructor()) buf.append("<mark>"
-					+ "Instructor: you may <a href=/PracticeExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + ">"
-					+ "customize this practice exam</a>. You may also <a href=/PracticeExam?UserRequest=ReviewExamScores&sig=" + user.getTokenSignature() 
-					+ ">review the scores</a> on this assignment."
-					+ "</mark><p>");
+			if (user.isInstructor()) {
+				buf.append("<mark>Instructor: you may <a href=/PracticeExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + ">customize this practice exam</a>. ");
+					
+				if (a.lti_nrps_context_memberships_url != null) buf.append("You may also <a href=/PracticeExam?UserRequest=ReviewExamScores&sig=" + user.getTokenSignature() 
+					+ ">review the scores</a> on this assignment.");
+				
+				buf.append("</mark><p>");
+			}
 			
 			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded. ");
 			if (!newExam) buf.append("You are resuming an exam originally downloaded at " + pt.downloaded);
@@ -790,6 +793,9 @@ public class PracticeExam extends HttpServlet {
 	}
 
 	String reviewExamScores(User user) {
+		//=================================================================================================================================
+		// NOTE: This section must be rewritten to use userId values from the NRPS Memberships service due to userId hashing in ChemVantage
+		//=================================================================================================================================
 		StringBuffer buf = new StringBuffer();
 		try {
 			if (!user.isInstructor()) return "<h2>Access Denied</h2>You must be an instructor to view this page.";
@@ -798,6 +804,10 @@ public class PracticeExam extends HttpServlet {
 
 			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).now();
 			if (a == null) return "Sorry, we did not find an assignment associated with this practice exam.";
+			
+			if (a.lti_nrps_context_memberships_url == null || a.lti_nrps_context_memberships_url.isEmpty()) {
+				return "Sorry, your LMS does not support the Memberships service, so exams cannot be reviewed.";
+			}
 
 			List<Topic> topics = new ArrayList<Topic>(ofy().load().type(Topic.class).ids(a.topicIds).values());
 
@@ -814,20 +824,28 @@ public class PracticeExam extends HttpServlet {
 				buf.append("There are no transactions for this practice exam assignment yet.<p>");
 				return buf.toString();
 			}
-			Collections.sort(pets, new SortExams()); 
+			
+			Map<String,String[]> membership = LTIMessage.getMembership(a);
+			
+			if (membership.size() == 0) {
+				buf.append("The LMS returned 0 members of this group.");
+				return buf.toString();
+			}
+			
+			//Collections.sort(pets, new SortExams()); 
 			  
 			int i = 0;
-			buf.append("<table>");
-			buf.append("<tr><th>User</th><th>Attempt</th><th>Downloaded</th><th>Elapsed Time</th>");
+			buf.append("<table><tr><th>User</th><th>Attempt</th><th>Downloaded</th><th>Elapsed Time</th>");
 			for (int j=1;j<=topics.size();j++) buf.append("<th>Topic " + j + "</th>");
 			buf.append("<th>Total Score</th><th>Reviewed</th><th></th></tr>");
 			
-			while (pets.size()>0) {
+			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
 				i++; // increment the user number
 				// make a short list of each user's PracticeExamTransactions
 				List<PracticeExamTransaction> userpets = new ArrayList<PracticeExamTransaction>();
-				String userId = pets.get(0).userId;
-				while (pets.size()>0 && pets.get(0).userId.equals(userId)) userpets.add(pets.remove(0));
+				String hashedUserId = Subject.hashId(user.platformId + "/" + entry.getKey());
+				for (PracticeExamTransaction pet : pets) if (hashedUserId.equals(pet.userId)) userpets.add(pet);
+				pets.removeAll(userpets);
 				
 				for (int k=userpets.size();k>0;k--) {  // enter the user's transactions into the table
 					PracticeExamTransaction p = userpets.get(k-1);
@@ -850,7 +868,7 @@ public class PracticeExam extends HttpServlet {
 						buf.append("<td>" + String.valueOf(100*score/possibleScore) + "%</td><td>" 
 								+ (p.graded==null?" - ":(p.reviewed==null?"no":p.reviewed)) + "</td><td>"
 								+ "<a href=PracticeExam?UserRequest=ReviewExam&PracticeExamTransactionId=" + p.id 
-								+ "&sig=" + user.getTokenSignature() + ">Review</a></td>");
+								+ "&sig=" + user.getTokenSignature() + "&UserId=" + user.platformId + "/" + entry.getKey() + ">Review</a></td>");
 					}
 					buf.append("</tr>");					
 				}
@@ -895,7 +913,7 @@ public class PracticeExam extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String reviewExam(User user, long practiceExamTransactionId) {
+	String reviewExam(User user, long practiceExamTransactionId, String studentUserId) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			if (!user.isInstructor()) return "<h2>Access Denied</h2>You must be an instructor to view this page.";
@@ -940,8 +958,9 @@ public class PracticeExam extends HttpServlet {
 			buf.append("</ol>");
 
 			buf.append("<form action=/PracticeExam method=post>"
-					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + ">"
-					+ "<input type=hidden name=PracticeExamTransactionId value=" + String.valueOf(practiceExamTransactionId) + ">");
+					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + "/>"
+					+ "<input type=hidden name=StudentUserId value=" + studentUserId + "/>"
+					+ "<input type=hidden name=PracticeExamTransactionId value=" + String.valueOf(practiceExamTransactionId) + "/>");
 			
 			buf.append("Please review the student responses to the exam questions below. Use the sliders on the right to award "
 					+ "partial credit or otherwise edit the scores as appropriate. When you are finished, click the button to "
@@ -1023,13 +1042,13 @@ public class PracticeExam extends HttpServlet {
 		return buf.toString();
 	}
 	
-	boolean submitRevisedExamScore(User user,HttpServletRequest request) throws Exception {
+	boolean submitRevisedExamScore(User instructor,HttpServletRequest request) throws Exception {
 		try {
 			// First do some validation to make sure that the user is the instructor for this assignment and the transaction is for this assignment:
-			if (!user.isInstructor()) throw new Exception("You must be the instructor for this course.");
+			if (!instructor.isInstructor()) throw new Exception("You must be the instructor for this course.");
 			long practiceExamTransactionId = Long.parseLong(request.getParameter("PracticeExamTransactionId"));
 			PracticeExamTransaction pet = ofy().load().type(PracticeExamTransaction.class).id(practiceExamTransactionId).safe();
-			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+			Assignment a = ofy().load().type(Assignment.class).id(instructor.getAssignmentId()).safe();
 			if (!pet.assignmentId.equals(a.id)) throw new Exception("Mismatched assignment ID values");
 			
 			// reset the transaction scores arrays
@@ -1053,14 +1072,14 @@ public class PracticeExam extends HttpServlet {
 			pet.reviewed = new Date();
 			ofy().save().entity(pet).now();
 			
+			String studentUserId = request.getParameter("StudentUserId");
+			
 			// Create/store a new Score entity and submit it to the LMS grade book
 			try {
-				Score s = Score.getInstance(pet.userId,a);
+				Score s = Score.getInstance(studentUserId,a);
 				ofy().save().entity(s).now();
 				if (a.lti_ags_lineitem_url != null) { // LTI v1.3
-//========================================================================================================================================================================			
-					LTIMessage.postUserScore(s,pet.userId);  // BUG HERE!!!! pet.userId is hashed, but we actually need the unhashed version to post a Score to the LMS
-//========================================================================================================================================================================			
+					LTIMessage.postUserScore(s,studentUserId);
 				} else if (a.lis_outcome_service_url != null) { // LTI v1.1 put report into the Task Queue
 					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(pet.userId,"UTF-8")));  
 				}
