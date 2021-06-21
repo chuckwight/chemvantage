@@ -151,8 +151,8 @@ public class PracticeExam extends HttpServlet {
 				default: out.println(Home.header("ChemVantage Practice Exam Results") + printScore(user,request) + Home.footer);
 			}
 		} catch (Exception e) {
-			//response.getWriter().println(e.toString() + " " + e.getMessage());
-			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
+			response.getWriter().println(e.toString() + " " + e.getMessage());
+			//response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
 	}
 
@@ -793,9 +793,6 @@ public class PracticeExam extends HttpServlet {
 	}
 
 	String reviewExamScores(User user) {
-		//=================================================================================================================================
-		// NOTE: This section must be rewritten to use userId values from the NRPS Memberships service due to userId hashing in ChemVantage
-		//=================================================================================================================================
 		StringBuffer buf = new StringBuffer();
 		try {
 			if (!user.isInstructor()) return "<h2>Access Denied</h2>You must be an instructor to view this page.";
@@ -831,8 +828,6 @@ public class PracticeExam extends HttpServlet {
 				buf.append("The LMS returned 0 members of this group.");
 				return buf.toString();
 			}
-			
-			//Collections.sort(pets, new SortExams()); 
 			  
 			int i = 0;
 			buf.append("<table><tr><th>User</th><th>Attempt</th><th>Downloaded</th><th>Elapsed Time</th>");
@@ -875,37 +870,6 @@ public class PracticeExam extends HttpServlet {
 			}			
 			buf.append("</table><p>");
 			
-/*
-			int i=0;
-			buf.append("<table>");
-			buf.append("<tr><th>Exam</th><th>Downloaded</th><th>Elapsed Time</th>");
-			for (int j=1;j<=topics.size();j++) buf.append("<th>Topic " + j + "</th>");
-			buf.append("<th>Total Score</th><th>Reviewed</th><th></th></tr>");
-			for (PracticeExamTransaction pet : pets) {
-				i++;
-				buf.append("<tr style='text-align: center'>");
-				buf.append("<td>" + i + "</td><td>" + pet.downloaded + "</td><td>" + ((pet.graded.getTime()-pet.downloaded.getTime())/60000) + " min.</td>");
-
-				int score = 0;
-				int possibleScore = 0;
-				for (int j=0;j<a.topicIds.size();j++) {
-					score += pet.scores[j];
-					possibleScore += pet.possibleScores[j];
-					if (pet.possibleScores[j] == 0) buf.append("<td>0%</td>");
-					else buf.append("<td>" + String.valueOf(100*pet.scores[j]/pet.possibleScores[j]) + "%" + "</td>");
-				}
-				if (pet.graded==null) buf.append("<td> - </td><td> - </td><td></td>");
-				else {
-					buf.append("<td>" + String.valueOf(100*score/possibleScore) + "%</td><td>" 
-							+ (pet.graded==null?" - ":(pet.reviewed==null?"no":pet.reviewed)) + "</td><td>"
-							+ "<a href=PracticeExam?UserRequest=ReviewExam&PracticeExamTransactionId=" + pet.id 
-							+ "&sig=" + user.getTokenSignature() + ">Review</a></td>");
-				}
-				buf.append("</tr>");
-			}
-			buf.append("</table><p>");
-			*/
-			//buf.append("In addition, " + abandoned.size() + " exams were downloaded but not submitted for grading.<p>");
 			buf.append("<p>");
 		} catch (Exception e) {
 			buf.append(e.toString());
@@ -958,9 +922,9 @@ public class PracticeExam extends HttpServlet {
 			buf.append("</ol>");
 
 			buf.append("<form action=/PracticeExam method=post>"
-					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + "/>"
-					+ "<input type=hidden name=StudentUserId value=" + studentUserId + "/>"
-					+ "<input type=hidden name=PracticeExamTransactionId value=" + String.valueOf(practiceExamTransactionId) + "/>");
+					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "<input type=hidden name=StudentUserId value=" + studentUserId + " />"
+					+ "<input type=hidden name=PracticeExamTransactionId value=" + String.valueOf(practiceExamTransactionId) + " />");
 			
 			buf.append("Please review the student responses to the exam questions below. Use the sliders on the right to award "
 					+ "partial credit or otherwise edit the scores as appropriate. When you are finished, click the button to "

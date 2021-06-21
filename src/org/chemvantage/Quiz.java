@@ -500,7 +500,6 @@ public class Quiz extends HttpServlet {
 				Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
 
 				buf.append("<h3>" + a.assignmentType + " - " + t.title + "</h3>");
-				//buf.append("Group: " + g.description + "<br>");
 				buf.append("Assignment ID: " + a.id + "<br>");
 				buf.append("Valid: " + new Date() + "<p>");
 				buf.append("The roster below is obtained using the Names and Role Provisioning service offered by your learning management system, "
