@@ -60,17 +60,21 @@ public class HashUserIds extends HttpServlet {
 			ofy().save().entities(pts);
 			break;
 		}
+	
+		try {
 			Score s = Score.getInstance(u.id, a);
 			ofy().delete().entity(s);
 			s.owner = Key.create(User.class,hashedId);
 			ofy().save().entity(s);
-			
-			List<Response> responses = new ArrayList<Response>();
-			do {
-				responses = ofy().load().type(Response.class).filter("userId",u.id).limit(500).list();
-				for (Response r : responses) r.userId = hashedId;
-				ofy().save().entities(responses);
-			} while (responses.size() == 500);
-		}
+		} catch (Exception e) {}
+
+		
+		List<Response> responses = new ArrayList<Response>();
+		do {
+			responses = ofy().load().type(Response.class).filter("userId",u.id).limit(500).list();
+			for (Response r : responses) r.userId = hashedId;
+			if (responses.size() > 0) ofy().save().entities(responses);
+		} while (responses.size() == 500);
 	}
+}
 

@@ -20,6 +20,7 @@
 
 package org.chemvantage;
 
+import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
@@ -38,6 +39,8 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.google.appengine.api.taskqueue.Queue;
+import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
 
 import net.oauth.OAuthAccessor;
@@ -285,6 +288,8 @@ public class LTILaunch extends HttpServlet {
 				default:
 					redirectUrl = "/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature();
 				}
+				Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
+				queue.add(withUrl("/HashUserIds").param("sig",user.getTokenSignature()));			
 				response.sendRedirect(redirectUrl);
 			} else response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,1) + Home.footer);
 			return;
