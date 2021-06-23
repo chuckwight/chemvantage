@@ -97,8 +97,8 @@ public class Token extends HttpServlet {
 			debug.append("Sending token: " + oidc_auth_url + "<p>");
 			
 			response.sendRedirect(oidc_auth_url);
-			d.claims = oidc_auth_url;
-			ofy().save().entity(d);
+			//d.claims = oidc_auth_url;
+			//ofy().save().entity(d);
 		} catch (Exception e) {
 			response.getWriter().println("<h3>Failed Auth Token</h3>" + e.getMessage()); // + "<br>" + debug.toString());
 		}

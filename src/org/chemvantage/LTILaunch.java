@@ -288,7 +288,7 @@ public class LTILaunch extends HttpServlet {
 				default:
 					redirectUrl = "/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature();
 				}
-				Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
+				Queue queue = QueueFactory.getDefaultQueue();  // used for hashing userIds by Task queue
 				queue.add(withUrl("/HashUserIds").param("sig",user.getTokenSignature()));			
 				response.sendRedirect(redirectUrl);
 			} else response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,1) + Home.footer);
