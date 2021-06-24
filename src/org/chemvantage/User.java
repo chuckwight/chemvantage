@@ -53,6 +53,7 @@ public class User {
 	
 	User(String platformId, String id) {
 		this.platformId = platformId;
+		if (id == null) id = "";
 		this.id = platformId + "/" + id;
 		if (this.isAnonymous()) this.sig = Long.parseLong(id.substring(9));
 		
