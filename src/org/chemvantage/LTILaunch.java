@@ -160,10 +160,13 @@ public class LTILaunch extends HttpServlet {
 					ofy().save().entity(tc);  // update the lastLogin value and possibly the domain and expires fields
 				}
 			} catch (Exception e) {
+				String use = request.getServerName().contains("dev-vantage")?"dev":"prod";
 				throw new Exception("Invalid oauth_consumer_key. "
 						+ "Please verify that the oauth_consumer_key is entered into your LMS exactly as you are registered with ChemVantage. "
-						+ "If your account has been inactive for more than one year, it may have been deleted in accordance with our "
-						+ "<a href=/About#privacy target=_blank>privacy policy</a>.");
+						+ "If your account has been inactive for more than " + ("dev".equals(use)?"30 days":"six months") + ", it may have been "
+						+ "deleted in accordance with our <a href=https://www.chemvantage.org/About#privacy target=_blank>privacy policy</a>.<br/>"
+						+ "Please use the <a href=https://www.chemvantage.org/lti/registration target=_blank>ChemVantage Registration Page</a> "
+						+ "to reregister your LMS.");
 			}
 
 			OAuthMessage oam = OAuthServlet.getMessage(request, null);
