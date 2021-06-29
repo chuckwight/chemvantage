@@ -94,9 +94,6 @@ public class LTIRegistration extends HttpServlet {
 	 * immediately (e.g. for Canvas or Blackboard registration) or provide a message that the account request 
 	 * is under review.
 	 * 
-	 * Consider including a request for donation at this point via PayPal. Leverage is greatest while folks are 
-	 * waiting for a free service.  https://www.paypal.com/biz/fund?id=UJ5PH3XGYNPEL
-	 * 
 	 * */
 	
 	private static final long serialVersionUID = 137L;
@@ -814,14 +811,7 @@ public class LTIRegistration extends HttpServlet {
 		String msg = "<h2>Congratulations. Registration is complete.</h2>"
 				+ "ChemVantage provides free OER services to thousands of students. During the past year alone, "
 				+ "ChemVantage presented and scored " + count + " quiz, homework and exam questions at no cost to students. "
-				+ "Financial support to provide these services is provided entirely by generous donations "
-				+ "from people like you. Please consider making a donation to support ChemVantage and keep the good karma flowing.<br/>"
-				+"<form action=\"https://www.paypal.com/donate\" method=\"post\" target=\"_top\">\n"
-				+ "<input type=\"hidden\" name=\"hosted_button_id\" value=\"4DYCV6EG2HPB2\" />\n"
-				+ "<input type=\"image\" src=\"https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif\" border=\"0\" name=\"submit\" "
-				+ "title=\"PayPal - The safer, easier way to pay online!\" alt=\"Donate with PayPal button\" />\n"
-				+ "<img alt=\"\" border=\"0\" src=\"https://www.paypal.com/en_US/i/scr/pixel.gif\" width=\"1\" height=\"1\" />\n"
-				+ "</form><br/><br/>";
+				+ "<br/><br/>Contact Chuck Wight at admin@chemvantage.org for information on how to do this.<br/><br/>Thank you.";
 
 
 		if (prior!=null) {  // this is a repeat registration
@@ -1141,15 +1131,9 @@ public class LTIRegistration extends HttpServlet {
 		
 		buf.append("<h3>Keep ChemVantage Free</h3>"
 				+ "ChemVantage provides free OER services to thousands of students. The cost of this service is paid entirely by generous donations "
-				+ "from people like you. Please consider making a donation to support ChemVantage and keep the good karma flowing.<br/>");
-		buf.append("<form action=\"https://www.paypal.com/donate\" method=\"post\" target=\"_top\">\n"
-				+ "<input type=\"hidden\" name=\"hosted_button_id\" value=\"4DYCV6EG2HPB2\" />\n"
-				+ "<input type=\"image\" src=\"https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif\" border=\"0\" name=\"submit\" "
-				+ "title=\"PayPal - The safer, easier way to pay online!\" alt=\"Donate with PayPal button\" />\n"
-				+ "<img alt=\"\" border=\"0\" src=\"https://www.paypal.com/en_US/i/scr/pixel.gif\" width=\"1\" height=\"1\" />\n"
-				+ "</form>");
-				
-		
+				+ "from people like you. Please consider making a donation to support ChemVantage and keep the good karma flowing.<br/><br/>"
+				+ "Contact Chuck Wight at admin@chemvantage.org for information on how to do this.<br/><br/>Thank you.");
+
 		buf.append(Home.footer);
 		return buf.toString();
 	}

@@ -111,16 +111,6 @@ public class About extends HttpServlet {
 		+ "<li>Corporate partnerships: $5000/yr for up to 10000 active LTI users</li>"
 		+ "<li>Development server access (to check LTI connections): 10-day free trial</li>"
 		+ "</ul>"
-		+ "ChemVantage uses business income and donations to defray the cost of providing free service to the vast majority of our users. "
-		
-		+ "<h3>Please Help Support ChemVantage</h3>"
-		+ "We rely on the generous donations of a small number of donors to support the free services that we offer to "
-		+ "thousands of students each year. Please consider making a donation of any amount to help keep us going.<br/>"
-		+ "<form action='https://www.paypal.com/donate' method='post' target='_top'>"
-		+ "<input type='hidden' name='hosted_button_id' value='4DYCV6EG2HPB2' />"
-		+ "<input type='image' src='https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif' border='0' name='submit' title='PayPal - The safer, easier way to pay online!' alt='Donate with PayPal button' />"
-		+ "<img alt='' border='0' src='https://www.paypal.com/en_US/i/scr/pixel.gif' width='1' height='1' />"
-		+ "</form>"
 		
 		+ "<h3>Powered by Google Cloud</h3>"
 		+ "<a href=https://cloud.google.com target=_blank><img alt='Google Cloud Logo' style='border-width:0' align=left hspace=10 vspace=5 "
