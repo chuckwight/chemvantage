@@ -91,7 +91,7 @@ public class LTILaunch extends HttpServlet {
 			} else if (request.getParameter("lti_message_type")!=null) { // handle LTI launch request for LTIv1p0 and LTIv1p1
 				basicLtiLaunchRequest(request,response);
 			} else if (request.getParameter("id_token")!=null) throw new Exception("Launch URL was incorrect.");
-				else doError(request,response,"Invalid LTI launch request. Missing lti_message_type.",null,null); 
+			else doError(request,response,"Invalid LTI launch request. Missing lti_message_type.",null,null); 
 		} catch (Exception e) {
 			doError(request,response,"","",e);
 		}
@@ -364,12 +364,14 @@ public class LTILaunch extends HttpServlet {
 			 *   01JAN2021: LTI VERSION 1.1 IS DEPRECATED
 			 */
 			Date now = new Date();
-			Date Jul2021 = new Date(1625112000000L);
+			//Date Jul2021 = new Date(1625112000000L);
+			Date Jul2021 = new Date(1624112000000L);
 			if (now.after(Jul2021)) {
-				String message = "You are currently using LTI version 1.1 to connect to ChemVantage. This version of LTI has been deprecated by the IMS Global "
-						+ "Learning Corsortium. IMS and most LMS providers will continue to support LTI version 1.1 through at least June 2022. However, "
-						+ "we recommend that you re-register ChemVantage in your LMS using the current LTI Advantage (version 1.3) during a semester break at "
-						+ "<a href=https://www.chemvantage.org/lti/registration>https://www.chemvantage.org/lti/registration</a>. ";
+				String message = "You are currently using LTI version 1.1 which has been deprecated by the IMS Global Learning Corsortium. "
+						+ "ChemVantage and most LMS providers will continue to support LTI version 1.1 until June 30, 2022. However, to "
+						+ "maintain a secure LTI connection we recommend that you re-register your ChemVantage account using the current "
+						+ "LTI Advantage (version 1.3) at https://www.chemvantage.org/lti/registration. We recommend doing this during a "
+						+ "semester break because the ChemVantage assignments must be recreated.";
 				buf.append("<SCRIPT>alert('" + message + "');</SCRIPT>");
 			}
 			// ============ END OF WARNING SECTION ==================================
