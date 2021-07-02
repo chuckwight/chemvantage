@@ -367,7 +367,19 @@ public class LTILaunch extends HttpServlet {
 		buf.append("<input type=hidden name=UserRequest value=UpdateAssignment />");
 		buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
 		
-		if (topicKey < 0) {  // present a deprecation warning
+		Date now = new Date();
+		Date sept21 = new Date(1630468800000L);
+		
+		if (now.after(sept21)) {	// refuse assignment creation request
+			StringBuffer blocked = new StringBuffer();
+			blocked.append("<h2>LTIv1.1 Assignment Creation Failed</h2>"
+					+ "LTI version 1.1 has been deprecated by IMS Global Learning Solutions and is no longer supported by ChemVantage for creation of new "
+					+ "assignments. Please register your LMS with ChemVantage at https://www.chemvantage.org/lti/registration to create new assignments "
+					+ "using LTI Advantage, which has updated security features.<br/><br/>"
+					+ "Existing LTIv1.1 assignments will be accessible for students and instuctors until June 30, 2022. We apologize for the inconvenience "
+					+ "caused by this mandatory upgrade.");
+			return blocked.toString();
+		} else if (topicKey < 0) {  // present a deprecation warning
 			buf.append("<font color=red>"
 					+ "WARNING! You are creating an assignment link using LTI version 1.1, which <a href=https://www.imsglobal.org/lti-security-announcement-and-deprecation-schedule target=_blank>has been deprecated</a>. "
 					+ "Please re-register your LMS with ChemVantage using LTI Advantage (version 1.3) <a href=https://www.chemvantage.org/lti/registration target=_blank>here</a>."
@@ -381,6 +393,7 @@ public class LTILaunch extends HttpServlet {
 					+ "<input type=hidden name=TopicKey value=1 />"
 					+ "<input type=submit value='I understand the limitations and want to proceed anyway' />"
 					+ "</form><br/>");
+			return buf.toString();
 		} else {
 			buf.append("Please select the ChemVantage assignment that should be associated with this link. "
 					+ "ChemVantage will remember this choice and send students directly to the assignment.<br/><br/>");
