@@ -357,8 +357,6 @@ public class LTILaunch extends HttpServlet {
 		buf.append("<h2>Assignment Setup Page</h2>"
 				+ "The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<br/><br/>");
 		
-		//buf.append(myAssignment.assignmentType + " " + topicKey);
-		
 		if (!user.isInstructor()) {
 			buf.append("<b>Please ask your instructor to click the LMS assignment link to make this missing association.</b> "
 					+ "You will not be able to complete this assignment until after this has been done.");
@@ -371,11 +369,10 @@ public class LTILaunch extends HttpServlet {
 		
 		if (topicKey < 0) {  // present a deprecation warning
 			buf.append("<font color=red>"
-					+ "WARNING! You have started to create an assignment link using LTI version 1.1, which has been deprecated "
-					+ "by IMS Global Learning Solutions and will soon be discontinued by ChemVantage due to potential security vulnerabilities. "
-					+ "Please re-register your LMS with ChemVantage using LTI Advantage (version 1.3) at https://www.chemvantage.org/lti/registration<br/><br/>"
-					+ "Beginning September 1, 2021 ChemVantage will not support the creation of any new assignments using LTI version 1.1<br/>"
-					+ "Beginning June 30, 2022 ChemVantage will not support student or instructor launches of existing LTIv1.1 assignments.<br/>"
+					+ "WARNING! You are creating an assignment link using LTI version 1.1, which <a href=https://www.imsglobal.org/lti-security-announcement-and-deprecation-schedule>has been deprecated</a>. "
+					+ "Please re-register your LMS with ChemVantage using LTI Advantage (version 1.3) <a href=https://www.chemvantage.org/lti/registration>here</a>.<br/><br/>"
+					+ "After September 1, 2021 all new assignments must use LTI Advantage.<br/>"
+					+ "After June 30, 2022 all old LTIv1.1 assignments will be inaccessible.<br/>"
 					+ "We apologize for the inconvenience."
 					+ "</font><br/><br/>");
 			buf.append("<input type=hidden name=Refresh value=true />"
