@@ -369,16 +369,18 @@ public class LTILaunch extends HttpServlet {
 		
 		if (topicKey < 0) {  // present a deprecation warning
 			buf.append("<font color=red>"
-					+ "WARNING! You are creating an assignment link using LTI version 1.1, which <a href=https://www.imsglobal.org/lti-security-announcement-and-deprecation-schedule>has been deprecated</a>. "
-					+ "Please re-register your LMS with ChemVantage using LTI Advantage (version 1.3) <a href=https://www.chemvantage.org/lti/registration>here</a>.<br/><br/>"
-					+ "After September 1, 2021 all new assignments must use LTI Advantage.<br/>"
-					+ "After June 30, 2022 all old LTIv1.1 assignments will be inaccessible.<br/>"
+					+ "WARNING! You are creating an assignment link using LTI version 1.1, which <a href=https://www.imsglobal.org/lti-security-announcement-and-deprecation-schedule target=_blank>has been deprecated</a>. "
+					+ "Please re-register your LMS with ChemVantage using LTI Advantage (version 1.3) <a href=https://www.chemvantage.org/lti/registration target=_blank>here</a>."
+					+ "<ul>"
+					+ "<li>After September 1, 2021 all new assignments must be created using LTI Advantage.</li>"
+					+ "<li>After June 30, 2022 all old LTIv1.1 assignments will be inaccessible to students and instuctors.</li>"
+					+ "</ul>"
 					+ "We apologize for the inconvenience."
 					+ "</font><br/><br/>");
 			buf.append("<input type=hidden name=Refresh value=true />"
 					+ "<input type=hidden name=TopicKey value=1 />"
 					+ "<input type=submit value='I understand the limitations and want to proceed anyway' />"
-					+ "</form>");
+					+ "</form><br/>");
 		} else {
 			buf.append("Please select the ChemVantage assignment that should be associated with this link. "
 					+ "ChemVantage will remember this choice and send students directly to the assignment.<br/><br/>");
