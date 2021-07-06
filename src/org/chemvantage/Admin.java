@@ -119,6 +119,7 @@ public class Admin extends HttpServlet {
 				case "Block":
 					d.status = "blocked";
 					ofy().save().entity(d);
+					break;
 				case "Delete":
 					ofy().delete().entity(d);
 				}
