@@ -264,5 +264,5 @@ function GetXmlHttpObject() {
 }
 
 </script>
-
+<div style='font-size:small'>If the YouTube screen is black, try using the player controls to show full screen.</div>
 <%= Home.footer %>
