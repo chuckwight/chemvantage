@@ -806,12 +806,9 @@ public class LTIRegistration extends HttpServlet {
 		
 		Deployment prior = Deployment.getInstance(d.platform_deployment_id);
 		
-		int count = ofy().load().type(Response.class).count();
-		
 		String msg = "<h2>Congratulations. Registration is complete.</h2>"
-				+ "ChemVantage provides free OER services to thousands of students. During the past year alone, "
-				+ "ChemVantage presented and scored " + count + " quiz, homework and exam questions at no cost to students. "
-				+ "<br/><br/>Contact Chuck Wight at admin@chemvantage.org for information on how to do this.<br/><br/>Thank you.";
+				+ "ChemVantage provides free OER services to thousands of students by scoring quiz, homework and exam questions at no cost. "
+				+ "<br/><br/>Contact Chuck Wight at admin@chemvantage.org for information on how you can support this project.<br/><br/>Thank you.";
 
 
 		if (prior!=null) {  // this is a repeat registration
