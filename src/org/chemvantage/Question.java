@@ -54,6 +54,7 @@ public class Question implements Serializable, Cloneable {
 			String contributorId;
 			String editorId;
 			String notes;
+			String learn_more_url;
 			// Note: the parameters array formerly had the attribute @Transient javax.persistence.Transient
 	@Ignore		int[] parameters = {0,0,0,0};
 	@Index		boolean isActive = false;
@@ -260,7 +261,9 @@ public class Question implements Serializable, Cloneable {
 		char choice = 'a';
 		switch (getQuestionType()) {
 		case 1: // Multiple Choice
-			buf.append(text + "<br/>");
+			buf.append(text);
+			if (learn_more_url != null) buf.append(" <a href='" + learn_more_url + "' target=_blank><img src=/images/learn_more.png alt='learn more here' /></a>");
+			buf.append("<br/>");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best answer:</FONT><br/>");
 			for (int i = 0; i < nChoices; i++) {
 				buf.append("<label><input type=radio name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED />":" />") + choices.get(i) + "</label><br/>");
@@ -268,13 +271,17 @@ public class Question implements Serializable, Cloneable {
 			}
 			break;
 		case 2: // True/False
-			buf.append(text + "<br/>");
+			buf.append(text);
+			if (learn_more_url != null) buf.append(" <a href='" + learn_more_url + "' target=_blank><img src=/images/learn_more.png alt='learn more here' /></a>");
+			buf.append("<br/>");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select true or false:</FONT><br/>");
 			buf.append("<label><input type=radio name=" + this.id + " value='true'" + (studentAnswer.equals("true")?" CHECKED />":" />") + " True</label><br/>");
 			buf.append("<label><input type=radio name=" + this.id + " value='false'" + (studentAnswer.equals("false")?" CHECKED />":" />") + " False</label><br/>");
 			break;
 		case 3: // Select Multiple
-			buf.append(text + "<br/>");
+			buf.append(text);
+			if (learn_more_url != null) buf.append(" <a href='" + learn_more_url + "' target=_blank><img src=/images/learn_more.png alt='learn more here' /></a>");
+			buf.append("<br/>");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><br/>");
 			for (int i = 0; i < nChoices; i++) {
 				buf.append("<label><input type=checkbox name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED />":" />") + choices.get(i) + "</label><br/>");
@@ -282,13 +289,17 @@ public class Question implements Serializable, Cloneable {
 			}
 			break;
 		case 4: // Fill-in-the-Word
-			buf.append(text + "<br/>");
+			buf.append(text);
+			if (learn_more_url != null) buf.append(" <a href='" + learn_more_url + "' target=_blank><img src=/images/learn_more.png alt='learn more here' /></a>");
+			buf.append("<br/>");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br/>");
 			buf.append("<label><input id=" + this.id + " type=text name=" + this.id + " value='" + quot2html(studentAnswer) + "' />");
 			buf.append("&nbsp;" + tag + "</label><br/><br/>");
 			break;
 		case 5: // Numeric Answer
-			buf.append(parseString(text) + "<br/>");
+			buf.append(parseString(text));
+			if (learn_more_url != null) buf.append(" <a href='" + learn_more_url + "' target=_blank><img src=/images/learn_more.png alt='learn more here' /></a>");
+			buf.append("<br/>");
 			buf.append("<div id=showWork" + this.id + " style='display:none'><TEXTAREA NAME=ShowWork" + this.id + " ROWS=5 COLS=50 WRAP=SOFT "
 					+ "onkeyup=this.value=this.value.substring(0,500); placeholder='Show your work here'>" + (showWork==null?"":showWork) + "</TEXTAREA><br/></div>");
 			switch (getNumericItemType()) {
