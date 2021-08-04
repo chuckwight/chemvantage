@@ -211,13 +211,14 @@ public class Homework extends HttpServlet {
 			int j=1;
 			for (Map.Entry<Key<Question>,Question> entry : hwQuestions.get(topic.id).entrySet()) {
 				boolean assigned = (hwa != null) && (hwa.questionKeys.contains(entry.getKey()));
-				StringBuffer questionBuffer = new StringBuffer("<div style='display:table-row'><div style='display:table-cell'>");
+				StringBuffer questionBuffer = new StringBuffer("<div style='display:table-row'><div style='display:table-cell;font-size:small'>");
 				String hashMe = user.id + (hwa==null?"":hwa.id);
 				Question q = entry.getValue().clone();
 				q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
 				
-				if (solvedQuestions.contains(q.id)) questionBuffer.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");					
-				//questionBuffer.append(successPct.get(entry.getKey()) + "%<br/>");
+				if (solvedQuestions.contains(q.id)) questionBuffer.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");
+				else if (q.learn_more_url != null) questionBuffer.append("<br/><a href='" + q.learn_more_url + "' target=_blank><img src=/images/learn_more.png alt='learn more here' align=top /><br/>learn</a>&nbsp;");
+				
 				questionBuffer.append("</div>");
 
 				questionBuffer.append("<FORM METHOD=POST ACTION=Homework>"
