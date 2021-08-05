@@ -306,7 +306,7 @@ public class Question implements Serializable, Cloneable {
 			default:
 			}			
 			buf.append("<label><input size=30 type=text name=" + this.id + " id=answer" + this.id + " value='" + studentAnswer + "' onFocus=showWorkBox('" + this.id + "'); />");
-			buf.append(parseString(tag) + "</abel><br/><br/>");
+			buf.append("&nbsp;" + parseString(tag) + "</abel><br/><br/>");
 			break;        
 		}
 		return buf.toString();
