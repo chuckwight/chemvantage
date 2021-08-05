@@ -364,7 +364,7 @@ public class Question implements Serializable, Cloneable {
 			buf.append("<span style='border: 1px solid black'>"
 					+ "<b>" + (this.hasACorrectAnswer()?quot2html(correctAnswer):"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;") + "</b>"
 					+ "</span>");
-			buf.append("&nbsp;" + tag + "<p></p><p></p>");
+			buf.append("&nbsp;" + tag + "<br/><br/>");
 			break;
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br/>");
@@ -378,14 +378,14 @@ public class Question implements Serializable, Cloneable {
 			buf.append("<span style='border: 1px solid black'>"
 					+ "<b>" + (this.hasACorrectAnswer()?getCorrectAnswer():"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;") + "</b>"
 					+ "</span>");
-			buf.append(parseString(tag) + "<p></p>");
+			buf.append("&nbsp;" + parseString(tag) + "<br/><br/>");
 			if (hint.length()>0) {
-				buf.append("Hint:<br/>" + parseString(hint) + "<p></p>");
+				buf.append("Hint: " + parseString(hint) + "<br/><br/>");
 			}
 			if (solution.length()>0) {
 				buf.append("Solution:<br/>" + parseString(solution));
 			}
-			buf.append("<p></p>");
+			buf.append("<br/><br/>");
 			break;        
 		}
 		return buf.toString();

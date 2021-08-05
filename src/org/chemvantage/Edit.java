@@ -272,7 +272,6 @@ public class Edit extends HttpServlet {
 						+ "</FORM>");
 
 				loadQuestions(assignmentType,topicId);
-				//List<Key<Question>> questionKeys = loadQuestions(assignmentType,topicId);
 				
 				buf.append("<a href=# onClick=document.getElementById('bulkform').style.display='';><h4>Current Questions</h4></a>");				
 				buf.append("<div id=bulkform style='display:none'>");
@@ -299,7 +298,6 @@ public class Edit extends HttpServlet {
 
 				buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
 				int i=0;
-				//for (Key<Question> k : questionKeys) {
 				for (Map.Entry<Key<Question>,Question> entry : questions.get(key1).entrySet()) {
 					Question q = entry.getValue().clone();
 					q.setParameters();
@@ -818,6 +816,8 @@ public class Edit extends HttpServlet {
 			
 			buf.append("Topic: " + ofy().load().type(Topic.class).id(topicId).safe().title + "<br>");
 			
+			if (q.learn_more_url != null) buf.append("Learn more at: " + q.learn_more_url + "</br>");
+			
 			buf.append("Author: " + q.authorId + "<br>");
 			buf.append("Editor: " + user.id + "<p>");
 			
@@ -845,7 +845,7 @@ public class Edit extends HttpServlet {
 			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
 			buf.append("Topic:" + topicSelectBox(q.topicId) + "<br>");
 			
-			buf.append("<br>");
+			buf.append("Learn More URL: <input type=text size=40 name=LearnMoreURL value='" + (q.learn_more_url == null?"":q.learn_more_url) + "' /><br/>");
 			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
 			
 			if (q.assignmentType.equals("Exam")) {
@@ -883,6 +883,7 @@ public class Edit extends HttpServlet {
 			buf.append("Subject: " + subject.title + "<br>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
 			buf.append("Topic: " + t.title + "<br>");
+			if (q.learn_more_url != null) buf.append("Learn more at: " + q.learn_more_url + "</br>");
 			buf.append("Author: " + q.authorId + "<br>");
 			buf.append("Editor: " + q.editorId + "<br>");
 			
@@ -909,6 +910,7 @@ public class Edit extends HttpServlet {
 			
 			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
 			buf.append("Topic:" + topicSelectBox(t.id) + "<br>");
+			buf.append("Learn More URL: <input type=text size=40 name=LearnMoreURL value='" + (q.learn_more_url == null?"":q.learn_more_url) + "' /><br/>");
 			
 			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
 			buf.append(" Point Value: " + pointValueSelectBox(q.pointValue) + "<br>");
@@ -998,6 +1000,7 @@ public class Edit extends HttpServlet {
 		try {
 			topicId = Long.parseLong(request.getParameter("TopicId"));
 		} catch (Exception e) {}
+		String learn_more_url = request.getParameter("LearnMoreURL");
 		int type = q.getQuestionType();
 		try {
 			type = Integer.parseInt(request.getParameter("QuestionType"));
@@ -1042,6 +1045,7 @@ public class Edit extends HttpServlet {
 		
 		q.assignmentType = assignmentType;
 		q.topicId = topicId;
+		q.learn_more_url = learn_more_url;
 		q.setQuestionType(type);
 		q.text = questionText;
 		q.nChoices = nChoices;

@@ -409,12 +409,12 @@ public class Homework extends HttpServlet {
 						catch (Exception e2) {
 							buf.append("<h3>Wrong Format</h3>This question requires a numeric response expressed as an integer, decimal number, "
 									+ "or number in scientific notation. Your answer was scored incorrect because the program was unable to recognize "
-									+ "your answer as one of these types.<p>");
+									+ "your answer as one of these types.<br/>");
 						}
 						break;
 					default:  // All other types of questions
 						buf.append("<h3>Incorrect Answer</h3>Your answer was scored incorrect because it does not agree with the "
-							+ "answer in the database.<p>");
+							+ "answer in the database.<br/>");
 				}
 				
 				if (!user.isAnonymous() && user.isEligibleForHints(q.id)) {
@@ -423,15 +423,16 @@ public class Homework extends HttpServlet {
 							+ "<input type=hidden name=AssignmentType value=Homework>"
 							+ "<input type=hidden name=TransactionId value=" + ht.id + ">");
 					buf.append("<font color=red>Do you need some help from your instructor or teaching assistant? </font>");
-					buf.append("<input type=submit value='Get Some Help Here'></form><p>");
+					buf.append("<input type=submit value='Get Some Help Here'></form><br/>");
 				}
 			
-				buf.append("The retry delay for this question is " + retryDelayMinutes + (retryDelayMinutes>1?" minutes. ":" minute. ") + "<p>");
+				buf.append("The retry delay for this question is " + retryDelayMinutes + (retryDelayMinutes>1?" minutes. ":" minute. ") + "<br/><br/>");
 			}  
 			else {
-				buf.append("<h3>The answer to the question was left blank.</h3><p>");
+				buf.append("<h3>The answer to the question was left blank.</h3><br/>");
 			}
 
+			buf.append("You can learn more about this topic at <a href='" + q.learn_more_url + "' target=_blank>" + q.learn_more_url + "</a><br/>");
 			buf.append(ajaxJavaScript(user.getTokenSignature()));
 			
 			// embed the detailed solution or hint to the exercise in the response, if appropriate
