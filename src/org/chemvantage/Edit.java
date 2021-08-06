@@ -308,7 +308,10 @@ public class Edit extends HttpServlet {
 							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>"
 							+ "<TR ID=" + q.id + " VALIGN=TOP>"
-							+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit><p><FONT SIZE=-2>" + successPct.get(Key.create(q)) + "%&nbsp;avg&nbsp;score</FONT></TD><TD ALIGN=RIGHT NOWRAP> " + i + ".</TD><TD>");
+							+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit><p><FONT SIZE=-2>" + successPct.get(Key.create(q)) + "%&nbsp;avg&nbsp;score</FONT>"
+							+ (q.learn_more_url != null && !q.learn_more_url.isEmpty()?"<br/><a href='" + q.learn_more_url + "' target=_blank><img src=/images/learn_more.png /></a>":"")
+							+ "</TD>"
+							+ "<TD ALIGN=RIGHT NOWRAP> " + i + ".</TD><TD>");
 					buf.append("\n" + q.printAll() + "</TD>");
 
 					if (assignmentType.equals("Exam")) {
@@ -816,7 +819,7 @@ public class Edit extends HttpServlet {
 			
 			buf.append("Topic: " + ofy().load().type(Topic.class).id(topicId).safe().title + "<br>");
 			
-			if (q.learn_more_url != null) buf.append("Learn more at: " + q.learn_more_url + "</br>");
+			if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) buf.append("Learn more at: " + q.learn_more_url + "</br>");
 			
 			buf.append("Author: " + q.authorId + "<br>");
 			buf.append("Editor: " + user.id + "<p>");
@@ -883,7 +886,7 @@ public class Edit extends HttpServlet {
 			buf.append("Subject: " + subject.title + "<br>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
 			buf.append("Topic: " + t.title + "<br>");
-			if (q.learn_more_url != null) buf.append("Learn more at: " + q.learn_more_url + "</br>");
+			if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) buf.append("Learn more at: " + q.learn_more_url + "</br>");
 			buf.append("Author: " + q.authorId + "<br>");
 			buf.append("Editor: " + q.editorId + "<br>");
 			

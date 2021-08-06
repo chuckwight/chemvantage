@@ -217,7 +217,7 @@ public class Homework extends HttpServlet {
 				q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
 				
 				if (solvedQuestions.contains(q.id)) questionBuffer.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");
-				else if (q.learn_more_url != null) questionBuffer.append("<br/><a href='" + q.learn_more_url + "' target=_blank><img src=/images/learn_more.png alt='learn more here' align=top /><br/>learn</a>&nbsp;");
+				else if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) questionBuffer.append("<br/><a href='" + q.learn_more_url + "' target=_blank><img src=/images/learn_more.png alt='learn more here' align=top /><br/>learn</a>&nbsp;");
 				
 				questionBuffer.append("</div>");
 
@@ -315,9 +315,11 @@ public class Homework extends HttpServlet {
 				buf.append(df.format(now));
 				buf.append("<p>The retry delay for this homework problem is <span id=delay style='color: red'></span><p>");
 				buf.append("Please take these few moments to check your work carefully.  You can sometimes find alternate routes to the "
-						+ "same solution, or it may be possible to use your answer to back-calculate the data given in the problem.<br/>"
-						+ "<img src=/images/learn_more.png alt='learn more here' /> You can learn more about this topic at <a href='" + q.learn_more_url + "' target=_blank>" + q.learn_more_url + "</a><br/><br/>"
-						+ "Alternatively, you may wish to "
+						+ "same solution, or it may be possible to use your answer to back-calculate the data given in the problem.<br/><br/>");
+				if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) 
+					buf.append("<img src=/images/learn_more.png alt='learn more here' /> You can learn more about this topic at <a href='" 
+					+ q.learn_more_url + "' target=_blank>" + q.learn_more_url + "</a><br/><br/>");
+				buf.append("Alternatively, you may wish to "
 						+ "<a href=/Homework?" + (hwa==null?"TopicId=" + topic.id : "AssignmentId=" + hwa.id)
 						+ "&sig=" + user.getTokenSignature() + ">" 
 						+ "return to this homework assignment</a> to work on another problem.<p>");
@@ -433,7 +435,9 @@ public class Homework extends HttpServlet {
 				buf.append("<h3>The answer to the question was left blank.</h3>");
 			}
 
-			buf.append("<img src=/images/learn_more.png alt='learn more here' /> You can learn more about this topic at <a href='" + q.learn_more_url + "' target=_blank>" + q.learn_more_url + "</a><br/><br/>");
+			if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) 
+				buf.append("<img src=/images/learn_more.png alt='learn more here' /> You can learn more about this topic at <a href='" + q.learn_more_url + "' target=_blank>" + q.learn_more_url + "</a><br/><br/>");
+			
 			buf.append(ajaxJavaScript(user.getTokenSignature()));
 			
 			// embed the detailed solution or hint to the exercise in the response, if appropriate
