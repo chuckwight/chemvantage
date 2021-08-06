@@ -177,7 +177,7 @@ public class Homework extends HttpServlet {
 			buf.append("\n<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
 			buf.append("\n<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question.</LI>");
 			buf.append("\n<LI>Most questions are customized, so the correct answers are different for each student.</LI>");
-			buf.append("\n<LI>A checkmark will appear to the left of each correctly solved problem.</LI>");
+			if (!user.isAnonymous()) buf.append("\n<LI>A checkmark will appear to the left of each correctly solved problem.</LI>");
 			buf.append("</UL>");
 
 			// Review the HWTransactions for this user to record which problems have been solved for this assignment and retrieve the current showWork strings:
@@ -315,7 +315,8 @@ public class Homework extends HttpServlet {
 				buf.append(df.format(now));
 				buf.append("<p>The retry delay for this homework problem is <span id=delay style='color: red'></span><p>");
 				buf.append("Please take these few moments to check your work carefully.  You can sometimes find alternate routes to the "
-						+ "same solution, or it may be possible to use your answer to back-calculate the data given in the problem.<p>"
+						+ "same solution, or it may be possible to use your answer to back-calculate the data given in the problem.<br/>"
+						+ "<img src=/images/learn_more.png alt='learn more here' /> You can learn more about this topic at <a href='" + q.learn_more_url + "' target=_blank>" + q.learn_more_url + "</a><br/><br/>"
 						+ "Alternatively, you may wish to "
 						+ "<a href=/Homework?" + (hwa==null?"TopicId=" + topic.id : "AssignmentId=" + hwa.id)
 						+ "&sig=" + user.getTokenSignature() + ">" 
@@ -426,13 +427,13 @@ public class Homework extends HttpServlet {
 					buf.append("<input type=submit value='Get Some Help Here'></form><br/>");
 				}
 			
-				buf.append("The retry delay for this question is " + retryDelayMinutes + (retryDelayMinutes>1?" minutes. ":" minute. ") + "<br/><br/>");
+				buf.append("The retry delay for this question is " + retryDelayMinutes + (retryDelayMinutes>1?" minutes. ":" minute. ") + "<br/>");
 			}  
 			else {
-				buf.append("<h3>The answer to the question was left blank.</h3><br/>");
+				buf.append("<h3>The answer to the question was left blank.</h3>");
 			}
 
-			buf.append("You can learn more about this topic at <a href='" + q.learn_more_url + "' target=_blank>" + q.learn_more_url + "</a><br/>");
+			buf.append("<img src=/images/learn_more.png alt='learn more here' /> You can learn more about this topic at <a href='" + q.learn_more_url + "' target=_blank>" + q.learn_more_url + "</a><br/><br/>");
 			buf.append(ajaxJavaScript(user.getTokenSignature()));
 			
 			// embed the detailed solution or hint to the exercise in the response, if appropriate
