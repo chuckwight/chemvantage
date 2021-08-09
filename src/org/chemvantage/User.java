@@ -20,7 +20,6 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.util.Date;
-import java.util.Random;
 
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
@@ -37,12 +36,18 @@ public class User {
 			long	assignmentId = 0L;     // used only for LTI users
 			int 	roles = 0;             // student
 	
-	User() {
+	User() {  // constructor for anonymous user
+		sig = 0L; // this entity may not be stored in the database
+		Date now = new Date();
+		exp = new Date(now.getTime() + 5400000L); // 90 minutes from now
+		id = "anonymous" + String.valueOf(sig);
+	/*	
 		do {
 			sig = Long.valueOf(Math.abs(new Random().nextInt()));
 		} while (ofy().load().type(User.class).id(sig).now() != null);  // guarantees that sig is unique
 		id = "anonymous" + sig;
 		this.exp = new Date(new Date().getTime() + 5400000L);  // value expires 90 minutes from now			
+	*/
 	}
 	
 	User(String id) {  // used only for LTIv1.1
@@ -89,13 +94,60 @@ public class User {
     		}
     		return user;
     	} catch (Exception e) { // retrieve an anonymous User entity
+    		Date exp = decode(sig);
+    		if (exp == null) return null;
+    		if (exp.before(now) || exp.after(grace)) return null;
+    		return new User();
+    		/*
     		if (Long.parseLong(sig) <= Integer.MAX_VALUE) { // all legitimate anonymous users have a random Integer sig value
     			user = new User("anonymous" + sig);
     			return user;
     		} else return null;
+    		*/
     	}
 	}
 
+	static String encode(long encrypt) {
+		long mask = 0xffffL;
+		long code;
+		for (int i=0;i<3;i++) {
+			code = (mask & encrypt) << 16;
+			encrypt = encrypt ^ code;
+			mask = mask << 16;
+		}
+		long encryp2 = encrypt;
+		for (int i=0;i<3;i++) {
+			code = (mask & encryp2) << 16;
+			encrypt = encrypt ^ code;
+			mask = mask << 16;
+		}
+		mask = 0xffffL;
+		return Long.toHexString(encrypt);
+	}
+	
+	static Date decode(String sig) {
+		try {
+			long decrypt = Long.parseLong(sig,16);
+			long mask = 0xffffL;
+			long code;
+			for (int i=0;i<3;i++) {
+				code = (mask ^ decrypt) << 16;
+				decrypt = decrypt ^ code;
+				mask = mask << 16;
+			}
+			mask = 0xffffL;
+			long decryp2 = decrypt;
+			for (int i=0;i<3;i++) {
+				code = (mask & decryp2) << 16;
+				decrypt = decrypt ^ code;
+				mask = mask << 16;
+			}
+			return new Date(decrypt);
+		} catch (Exception e) {
+			return null;
+		}
+	}
+	
 	static String getRawId(String userId) {
 		try {
 			User user = ofy().load().type(User.class).filter("id",userId).first().safe();
@@ -189,7 +241,8 @@ public class User {
 	}
 
 	public String getTokenSignature() {
-		return String.valueOf(sig);
+		if (this.isAnonymous()) return encode(exp.getTime());  // weakly-encrypted hexadecimal exp Date
+		else return String.valueOf(sig);     // String version of @Id value of User in the datastore
 	}
 	
 	void setAssignment(long assignmentId,String lis_result_sourcedid) {  // LTI v1.1
