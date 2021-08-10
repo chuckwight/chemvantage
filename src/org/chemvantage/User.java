@@ -20,6 +20,7 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.util.Date;
+import java.util.Random;
 
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
@@ -37,22 +38,21 @@ public class User {
 			int 	roles = 0;             // student
 	
 	User() {  // constructor for anonymous user
-		sig = 0L; // this entity may not be stored in the database
 		Date now = new Date();
 		exp = new Date(now.getTime() + 5400000L); // 90 minutes from now
-		id = "anonymous" + String.valueOf(sig);
-	/*	
-		do {
-			sig = Long.valueOf(Math.abs(new Random().nextInt()));
-		} while (ofy().load().type(User.class).id(sig).now() != null);  // guarantees that sig is unique
-		id = "anonymous" + sig;
-		this.exp = new Date(new Date().getTime() + 5400000L);  // value expires 90 minutes from now			
-	*/
+		sig = encode(exp.getTime());
+		id = "anonymous" + String.valueOf(exp.getTime()).hashCode();
 	}
 	
-	User(String id) {  // used only for LTIv1.1
+	User(String id, Date exp) {  // used only to renew anonymous users
 		this.id = id;
-		if (this.isAnonymous()) this.sig = Long.parseLong(id.substring(9));		
+		this.exp = exp;
+		sig = encode(exp.getTime());
+	}
+	
+	User(String id) {  // used only for LTIv1.1 launches
+		this.id = id;
+		if (this.isAnonymous()) this.sig = 0L;		
 		this.exp = new Date(new Date().getTime() + 5400000L);  // value expires 90 minutes from now
 	}
 	
@@ -94,60 +94,41 @@ public class User {
     		}
     		return user;
     	} catch (Exception e) { // retrieve an anonymous User entity
-    		Date exp = decode(sig);
-    		if (exp == null) return null;
-    		if (exp.before(now) || exp.after(grace)) return null;
-    		return new User();
-    		/*
-    		if (Long.parseLong(sig) <= Integer.MAX_VALUE) { // all legitimate anonymous users have a random Integer sig value
-    			user = new User("anonymous" + sig);
-    			return user;
-    		} else return null;
-    		*/
+    		Date exp = new Date(encode(Long.parseLong(sig,16)));
+    		if (exp.before(now) || exp.after(expires)) return null;
+    		if (exp.after(grace)) exp = new Date(now.getTime() + 5400000L);
+    		return new User("anonymous" + String.valueOf(exp.getTime()).hashCode(),exp); // keeps old id and exp unless token is about to expire
     	}
 	}
 
-	static String encode(long encrypt) {
-		long mask = 0xffffL;
-		long code;
-		for (int i=0;i<3;i++) {
-			code = (mask & encrypt) << 16;
-			encrypt = encrypt ^ code;
-			mask = mask << 16;
-		}
-		long encryp2 = encrypt;
-		for (int i=0;i<3;i++) {
-			code = (mask & encryp2) << 16;
-			encrypt = encrypt ^ code;
-			mask = mask << 16;
-		}
-		mask = 0xffffL;
-		return Long.toHexString(encrypt);
-	}
-	
-	static Date decode(String sig) {
+	static long encode(long encrypt) {
+		/*
+		 * Weak encoding of the expiration Date takes place in 3 steps using 4 groups of 3 hexdigits (each hexdigit represents 4 bits):
+		 * 1 - using the last 4 hex digits as an initialization vector (iv), each group is XORed with the group to its right (after modification). The iv is unmodified.
+		 * 2 - the modified long integer is XORed with hexdigits 4-12 of a long resulting from new Random(iv)
+		 * 3 - the resulting long is XORed with itself after shifting to the left by 3 hexdigits (12 bits) and masking all but 12 digits
+		 * Decoding is done by repeating the exact same operation as encoding
+		 */
 		try {
-			long decrypt = Long.parseLong(sig,16);
-			long mask = 0xffffL;
+			long mask = 0xfffL;
+			long iv = encrypt & mask;
 			long code;
-			for (int i=0;i<3;i++) {
-				code = (mask ^ decrypt) << 16;
-				decrypt = decrypt ^ code;
-				mask = mask << 16;
+			for (int i=0;i<3;i++) {  // step 1
+				code = (mask & encrypt) << 12;
+				encrypt = encrypt ^ code;
+				mask = mask << 12;
 			}
-			mask = 0xffffL;
-			long decryp2 = decrypt;
-			for (int i=0;i<3;i++) {
-				code = (mask & decryp2) << 16;
-				decrypt = decrypt ^ code;
-				mask = mask << 16;
-			}
-			return new Date(decrypt);
+			mask = 0xfffffffff000L;
+			encrypt = encrypt ^ (new Random(iv).nextLong() & mask); // step 2
+			mask = 0xfffffffffL;
+			code = (encrypt & mask) << 12;
+			encrypt = encrypt ^ code;  // step 3
 		} catch (Exception e) {
-			return null;
+			return 0;
 		}
+		return encrypt;
 	}
-	
+
 	static String getRawId(String userId) {
 		try {
 			User user = ofy().load().type(User.class).filter("id",userId).first().safe();
@@ -241,7 +222,7 @@ public class User {
 	}
 
 	public String getTokenSignature() {
-		if (this.isAnonymous()) return encode(exp.getTime());  // weakly-encrypted hexadecimal exp Date
+		if (this.isAnonymous()) return Long.toHexString(sig);  // weakly-encrypted hexadecimal exp Date
 		else return String.valueOf(sig);     // String version of @Id value of User in the datastore
 	}
 	
@@ -257,6 +238,7 @@ public class User {
 	}
 	
 	void setToken() {
+		if (this.isAnonymous()) return;
 		try {
 			User u = ofy().load().type(User.class).filter("id",this.id).first().safe();
 			if (u.exp.after(new Date())) this.sig = u.sig;
