@@ -30,6 +30,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -43,13 +44,9 @@ import com.googlecode.objectify.cmd.Query;
 
 @WebServlet("/Quiz")
 public class Quiz extends HttpServlet {
-	// parameters that determine the properties of the quiz program:
-	// Warning! do not use any user-specific variables here. Not thread-safe!
-
-	int nSubjectAreas = 1;               // default number of subject areas for quiz overridden by values read from AssignmentInfo database
-	int nQuestionsPerSubjectArea = 10;   // number of questions presented in each area also overridden in method printQuiz()
 	private static final long serialVersionUID = 137L;
-	Subject subject = Subject.getSubject();
+	static Map<Long,Topic> topics = new HashMap<Long,Topic>();
+	static Map<Long,Assignment> assignments = new HashMap<Long,Assignment>();
 	
 	public String getServletInfo() {
 		return "This servlet presents a quiz for the user.";
@@ -112,7 +109,156 @@ public class Quiz extends HttpServlet {
 		}
 	}
 
-	String printScore(User user,HttpServletRequest request) {
+	static String printQuiz(User user, long topicId) {
+		if (user == null) return "<h2>Launch failed because user was not authorized.";
+		
+		StringBuffer buf = new StringBuffer();
+		try {
+			Assignment qa = null;
+			long assignmentId = user.getAssignmentId(); // should be non-zero for LTI user
+			if (assignmentId > 0) {
+				qa = assignments.get(assignmentId);
+				if (qa == null) {
+					qa = ofy().load().type(Assignment.class).id(assignmentId).now();
+					assignments.put(qa.id, qa);
+				}
+				topicId = qa.getTopicId();
+			}
+
+			Topic topic = topics.get(topicId);
+			if (topic == null) {
+				topic = ofy().load().type(Topic.class).id(topicId).safe();
+				topics.put(topic.id,topic);
+			}
+
+			// Check to see if the timeAllowed has been modified by the instructor:
+			int timeAllowed = 900; // default value in seconds
+			if (qa != null && qa.timeAllowed != null) {
+				timeAllowed = qa.timeAllowed; // instructor option, e.g. for student disability accommodations
+				user = User.getUser(user.getTokenSignature(), timeAllowed / 60);
+			}
+
+			// Check to see if this user has any pending quizzes on this topic:
+			Date now = new Date();
+			Date t15minAgo = new Date(now.getTime() - timeAllowed * 1000); // 15 minutes ago or whatever time was allowed
+			QuizTransaction qt = null;
+			if (qa == null)
+				qt = ofy().load().type(QuizTransaction.class).filter("userId", user.getHashedId()).filter("topicId", topicId)
+						.filter("graded", null).filter("downloaded >", t15minAgo).first().now();
+			else
+				qt = ofy().load().type(QuizTransaction.class).filter("userId", user.getHashedId())
+						.filter("assignmentId", assignmentId).filter("graded", null).filter("downloaded >", t15minAgo)
+						.first().now();
+
+			String lis_result_sourcedid = user.getLisResultSourcedid();
+			if (qt == null || qt.getGraded() != null) {
+				qt = new QuizTransaction(topicId, topic.getTitle(), user.getId(), now, null, 0, assignmentId, 0,
+						user.getLisResultSourcedid());
+				ofy().save().entity(qt).now(); // creates a long id value to use in random number generator
+			} else if (qt.getLisResultSourcedid() == null && lis_result_sourcedid != null) {
+				qt.putLisResultSourcedid(lis_result_sourcedid);
+				ofy().save().entity(qt);
+			}
+			
+			String announcement = Subject.getSubject().getAnnouncement();
+			if (announcement != null && !announcement.isEmpty()) {
+				buf.append("<div style='color:red'>" + announcement + "</div>");
+			}
+			
+			// Insert javascript code for timers and form submission
+			buf.append(timers());
+			
+			buf.append("<h2>Quiz - " + topic.title + "</h2");
+			
+			if (user.isAnonymous()) buf.append("<h3 style='color:red'>Anonymous User</h3>");
+			
+			if (user.isInstructor()) {
+				buf.append("<mark>As the course instructor you may <a href='/Quiz?UserRequest=AssignQuizQuestions&sig=" + user.getTokenSignature() + "'>customize this assignment</a>.");
+				if (qa.lti_nrps_context_memberships_url != null && qa.lti_ags_lineitem_url != null) {
+					buf.append("<br/>You may also view a <a href='/Quiz?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>summary of student scores</a> for this assignment.");
+				}
+				buf.append("</mark><br/><br/>");
+			}
+	
+			if (!user.isAnonymous()) {
+				buf.append("Quiz Rules"
+						+ "	<OL>"
+						+ "	<LI>Each quiz must be completed within " + (timeAllowed / 60) + "minutes of the time when it is first downloaded.</LI>"
+						+ "	<LI>You may repeat quizzes as many times as you wish, to improve your score.</LI>"
+						+ "	<LI>ChemVantage always reports your best score on this assignment to your class LMS.</LI>"
+						+ "	</OL>");
+			}
+			
+			buf.append("<div id='timer0' style='color: red'></div>"
+					+ "	<div id=ctrl0 style='font-size: 50%; color: red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
+			
+			buf.append("<FORM NAME=Quiz id=quizForm METHOD=POST ACTION=Quiz onSubmit='return confirmSubmission()'>"
+					+ "<INPUT TYPE=HIDDEN NAME='sig' VALUE='" + user.getTokenSignature() + "'/>"
+					+ "<INPUT TYPE=HIDDEN NAME='AssignmentId' VALUE='" + assignmentId + "'/>"
+					+ "<input type=hidden name='QuizTransactionId' value='" + qt.getId() + "'/>"
+					+ "<input type=hidden name='TopicId' value='" + topicId + "/>"
+					+ "<input type=submit value='Grade This Quiz'/>");
+			
+			//create a set of available questionIds either from the group assignment or from the datastore
+			List<Key<Question>> questionKeys = null;
+			try { // check for assigned questions
+				questionKeys = qa.getQuestionKeys();
+			} catch (Exception e) { // no assignment exists
+				questionKeys = ofy().load().type(Question.class).filter("assignmentType", "Quiz")
+						.filter("topicId", topicId).filter("isActive", true).keys().list();
+			}
+
+			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
+			Random rand = new Random(); // create random number generator to select quiz questions
+			rand.setSeed(qt.getId()); // random number generator seeded with QuizTransaction id value
+			int possibleScore = 0;
+			int nQuestions = questionKeys.size() > 10 ? 10 : questionKeys.size();
+
+			int i = 0;
+	
+			buf.append("<OL>");
+			// Randomly reduce the size of questionKeys to the required number of questions	
+			while (questionKeys.size()>nQuestions) questionKeys.remove(rand.nextInt(questionKeys.size()));
+		
+			Map<Key<Question>, Question> quizQuestions = new HashMap<Key<Question>, Question>();
+			quizQuestions.putAll(ofy().load().keys(questionKeys));
+			while (i < nQuestions && questionKeys.size() > 0) {
+				Key<Question> k = questionKeys.remove(rand.nextInt(questionKeys.size()));
+				Question q = quizQuestions.get(k);
+				if (q == null) continue; // this catches cases where an assigned question no longer exists
+
+				// by this point we should have a valid question
+				i++; // this counter keeps track of the number of questions presented so far
+				possibleScore += q.getPointValue();
+				// the parameterized questions are seeded with a value based on the ids for the quizTransaction and the question
+				// in order to make the value reproducible for grading but variable for each quiz and from one question to the next
+				long seed = Math.abs(qt.getId() - q.getId());
+				if (seed == -1)
+					seed--; // -1 is a special value for randomly seeded Random generator; avoid this (unlikely) situation
+				q.setParameters(seed); // the values are subtracted to prevent (unlikely) overflow
+				
+				buf.append("<li>" + q.print() +  "<br/></li>");
+			}
+			qt.putPossibleScore(possibleScore);
+			ofy().save().entity(qt);
+			buf.append("</OL>");
+		
+			buf.append("<div id='timer1' style='color: red'></div>"
+					+ "	<div id=ctrl1 style='font-size: 50%; color: red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
+			
+			buf.append("<input type=submit value='Grade This Quiz'/>"
+					+ "</FORM>");
+			
+			buf.append("<script>startTimers(" + new Date(qt.getDownloaded().getTime() + timeAllowed * 1000).getTime() + ");</scipt>");
+			
+		} catch (Exception e) {
+			return "<h2>Launch failed because to topic ID was specified."; 
+		}
+		
+		return buf.toString();
+	}
+	
+	static String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		
 		try {
@@ -149,7 +295,7 @@ public class Quiz extends HttpServlet {
 			int studentScore = 0;
 			int wrongAnswers = 0;
 
-			buf.append("<h2>Quiz Results - " + qt.topicTitle + " (" + subject.title + ")</h2>\n");
+			buf.append("<h2>Quiz Results - " + qt.topicTitle + "</h2>");
 			
 			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			buf.append(df.format(now));
@@ -201,7 +347,7 @@ public class Quiz extends HttpServlet {
 				}
 			}
 			if (responses.size()>0) ofy().save().entities(responses);  // batch save of Response entities
-			//missedQuestions.append("</OL>\n");
+			//missedQuestions.append("</OL>");
 			qt.graded = now;
 			qt.score = studentScore;
 			ofy().save().entity(qt);
@@ -218,10 +364,10 @@ public class Quiz extends HttpServlet {
 			} catch (Exception e) {}
 
 			buf.append("<h4>Your score on this quiz is " + studentScore 
-					+ " point" + (studentScore==1?"":"s") + " out of a possible " + qt.possibleScore + " points.</h4>\n");
+					+ " point" + (studentScore==1?"":"s") + " out of a possible " + qt.possibleScore + " points.</h4>");
 
 			if (studentScore == qt.possibleScore) {
-				buf.append("<H2>Congratulations on a perfect score! Good job.</H2>\n");
+				buf.append("<H2>Congratulations on a perfect score! Good job.</H2>");
 			} else {
 				int leftBlank = qt.possibleScore - studentScore - wrongAnswers;
 				if (leftBlank>0) buf.append(leftBlank + " question" 
@@ -245,7 +391,7 @@ public class Quiz extends HttpServlet {
 				}
 				
 				// print some words of encouragement:
-				buf.append("<h4>Improve Your Score</h4>\n");
+				buf.append("<h4>Improve Your Score</h4>");
 				if (studentScore<6) {
 					buf.append("If you get stuck on a difficult question, "
 							+ "you may refer to your textbook during the quiz. Please keep the " + timeAllowed/60
@@ -285,29 +431,94 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String fiveStars() {
+	static String timers() {
+		return "<SCRIPT>"
+				+ "function toggleTimers() {"
+				+ "	var timer0 = document.getElementById('timer0');"
+				+ "	var timer1 = document.getElementById('timer1');"
+				+ "	var ctrl0 = document.getElementById('ctrl0');"
+				+ "	var ctrl1 = document.getElementById('ctrl1');"
+				+ "	if (timer0.style.display=='') {"
+				+ "		timer0.style.display='none';timer1.style.display='none';"
+				+ "		ctrl0.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
+				+ "		ctrl1.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
+				+ "	} else {"
+				+ "		timer0.style.display='';"
+				+ "		timer1.style.display='';"
+				+ "		ctrl0.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
+				+ "		ctrl1.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
+				+ "	}"
+				+ "}"
+				+ "var seconds;"
+				+ "var minutes;"
+				+ "var oddSeconds;"
+				+ "var endMillis;"
+				+ "function countdown() {"
+				+ "	var nowMillis = new Date().getTime();"
+				+ "	var seconds=Math.round((endMillis-nowMillis)/1000);"
+				+ "	var minutes = seconds<0?Math.ceil(seconds/60.):Math.floor(seconds/60.);"
+				+ "	var oddSeconds = seconds%60;"
+				+ "	for (i=0;i<2;i++) document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ' minutes ' + oddSeconds + ' seconds.';"
+				+ "	if (seconds==30) alert('30 seconds remaining');"
+				+ "	if (seconds < 0) document.Quiz.submit();"
+				+ "	setTimeout('countdown()',1000);"
+				+ "}"
+				+ "function startTimers(m) {"
+				+ "	endMillis = m;"
+				+ "	countdown();"
+				+ "}"
+				+ "function confirmSubmission() {"
+				+ "	var elements = document.getElementById('quizForm').elements;"
+				+ "	var nAnswers;"
+				+ "	var i;"
+				+ "	var checkboxes;"
+				+ "	var lastCheckboxIndex;"
+				+ "	nAnswers = 0;"
+				+ "	for (i=0;i<elements.length;i++) {"
+				+ "		if (isNaN(elements[i].name)) continue;"
+				+ "		if (elements[i].type=='text' && elements[i].value.length>0) nAnswers++;"
+				+ "		else if (elements[i].type=='radio' && elements[i].checked) nAnswers++;"
+				+ "		else if (elements[i].type=='checkbox') {"
+				+ "			checkboxes = document.getElementsByName(elements[i].name);"
+				+ "			lastCheckboxIndex = i + checkboxes.length - 1;"
+				+ "			for (j=0;j<checkboxes.length;j++) if (checkboxes[j].checked==true) {"
+				+ "				nAnswers++;"
+				+ "				i = lastCheckboxIndex;"
+				+ "				break;"
+				+ "			}    "
+				+ "		}  "
+				+ "	}  "
+				+ "	if (nAnswers<10) return confirm('Submit this quiz for scoring now? ' + (10-nAnswers) + ' answers may be left blank.');"
+				+ "	else return true;"
+				+ "}"
+				+ "function showWorkBox(qid) {}"
+				+ "</SCRIPT>"
+				+ "";
+	}
+	
+	static String fiveStars() {
 		StringBuffer buf = new StringBuffer();
 
-		buf.append("<script type='text/javascript'>\n"
+		buf.append("<script type='text/javascript'>"
 				+ "  var star1 = new Image(); star1.src='images/star1.gif';"
 				+ "  var star2 = new Image(); star2.src='images/star2.gif';"
-				+ "  var set = false;\n"
+				+ "  var set = false;"
 				+ "  function showStars(n) {"
 				+ "    if (!set) {"
 				+ "      document.getElementById('vote').innerHTML=(n==0?'(click a star)':''+n+(n>1?' stars':' star'));"
 				+ "      for (i=1;i<6;i++) {document.getElementById(i).src=(i<=n?star2.src:star1.src)}"
 				+ "    }"
-				+ "  }\n"
+				+ "  }"
 				+ "  function setStars(n) {"
 				+ "    if (!set) {"
 				+ "      ajaxStars(n);"
 				+ "      set = true;"
 				+ "      document.getElementById('sliderspan').style='display:none';"
 				+ "    }"
-				+ "  }\n"
-				+ "</script>\n");
+				+ "  }"
+				+ "</script>");
 
-		buf.append("Please rate your overall experience with ChemVantage:<br />\n"
+		buf.append("Please rate your overall experience with ChemVantage:<br />"
 				+ "<span id='vote' style='font-family:tahoma; color:red;'>(click a star):</span><br>");
 
 		for (int iStar=1;iStar<6;iStar++) {
@@ -324,75 +535,75 @@ public class Quiz extends HttpServlet {
 		return buf.toString(); 
 	}
 
-	String ajaxJavaScript(String signature) {
-		return "<SCRIPT TYPE='text/javascript'>\n"
-		+ "function ajaxSubmit(url,id,note,email) {\n"
-		+ "  var xmlhttp;\n"
-		+ "  if (url.length==0) return false;\n"
-		+ "  xmlhttp=GetXmlHttpObject();\n"
-		+ "  if (xmlhttp==null) {\n"
-		+ "    alert ('Sorry, your browser does not support AJAX!');\n"
-		+ "    return false;\n"
-		+ "  }\n"
-		+ "  xmlhttp.onreadystatechange=function() {\n"
-		+ "    if (xmlhttp.readyState==4) {\n"
+	static String ajaxJavaScript(String signature) {
+		return "<SCRIPT TYPE='text/javascript'>"
+		+ "function ajaxSubmit(url,id,note,email) {"
+		+ "  var xmlhttp;"
+		+ "  if (url.length==0) return false;"
+		+ "  xmlhttp=GetXmlHttpObject();"
+		+ "  if (xmlhttp==null) {"
+		+ "    alert ('Sorry, your browser does not support AJAX!');"
+		+ "    return false;"
+		+ "  }"
+		+ "  xmlhttp.onreadystatechange=function() {"
+		+ "    if (xmlhttp.readyState==4) {"
 		+ "      document.getElementById('feedback' + id).innerHTML="
 		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment. "
-		+ "</b></FONT><p>';\n"
-		+ "    }\n"
-		+ "  }\n"
-		+ "  url += '&QuestionId=' + id + '&sig=" + signature + "&Notes=' + note + '&Email=' + email;\n"
-		+ "  xmlhttp.open('GET',url,true);\n"
-		+ "  xmlhttp.send(null);\n"
-		+ "  return false;\n"
-		+ "}\n"
-		+ "function ajaxStars(nStars) {\n"
-		+ "  var xmlhttp;\n"
-		+ "  if (nStars==0) return false;\n"
-		+ "  xmlhttp=GetXmlHttpObject();\n"
-		+ "  if (xmlhttp==null) {\n"
-		+ "    alert ('Sorry, your browser does not support AJAX!');\n"
-		+ "    return false;\n"
-		+ "  }\n"
-		+ "  xmlhttp.onreadystatechange=function() {\n"
-		+ "    var msg;\n"
-		+ "    switch (nStars) {\n"
+		+ "</b></FONT><p>';"
+		+ "    }"
+		+ "  }"
+		+ "  url += '&QuestionId=' + id + '&sig=" + signature + "&Notes=' + note + '&Email=' + email;"
+		+ "  xmlhttp.open('GET',url,true);"
+		+ "  xmlhttp.send(null);"
+		+ "  return false;"
+		+ "}"
+		+ "function ajaxStars(nStars) {"
+		+ "  var xmlhttp;"
+		+ "  if (nStars==0) return false;"
+		+ "  xmlhttp=GetXmlHttpObject();"
+		+ "  if (xmlhttp==null) {"
+		+ "    alert ('Sorry, your browser does not support AJAX!');"
+		+ "    return false;"
+		+ "  }"
+		+ "  xmlhttp.onreadystatechange=function() {"
+		+ "    var msg;"
+		+ "    switch (nStars) {"
 		+ "      case '1': msg='1 star - If you are dissatisfied with ChemVantage, '"
 		+ "                + 'please take a moment to <a href=/Feedback?sig=" + signature + ">tell us why</a>.';"
-		+ "                break;\n"
+		+ "                break;"
 		+ "      case '2': msg='2 stars - If you are dissatisfied with ChemVantage, '"
 		+ "                + 'please take a moment to <a href=/Feedback?sig=" + signature + ">tell us why</a>.';"
-		+ "                break;\n"
+		+ "                break;"
 		+ "      case '3': msg='3 stars - Thank you. <a href=/Feedback?sig=" + signature + ">Click here</a> '"
 		+ "                + 'to provide additional feedback.';"
-		+ "                break;\n"
+		+ "                break;"
 		+ "      case '4': msg='4 stars - Thank you';"
-		+ "                break;\n"
+		+ "                break;"
 		+ "      case '5': msg='5 stars - Thank you!';"
-		+ "                break;\n"
-		+ "      default: msg='You clicked ' + nStars + ' stars.';\n"
-		+ "    }\n"
-		+ "    if (xmlhttp.readyState==4) {\n"
-		+ "      document.getElementById('vote').innerHTML=msg;\n"
-		+ "    }\n"
-		+ "  }\n"
-		+ "  xmlhttp.open('GET','Feedback?UserRequest=AjaxRating&NStars='+nStars,true);\n"
-		+ "  xmlhttp.send(null);\n"
-		+ "  return false;\n"
-		+ "}\n"
-		+ "function GetXmlHttpObject() {\n"
-		+ "  if (window.XMLHttpRequest) { // code for IE7+, Firefox, Chrome, Opera, Safari\n"
-		+ "    return new XMLHttpRequest();\n"
-		+ "  }\n"
-		+ "  if (window.ActiveXObject) { // code for IE6, IE5\n"
-		+ "    return new ActiveXObject('Microsoft.XMLHTTP');\n"
-		+ "  }\n"
-		+ "  return null;\n"
-		+ "}\n"
+		+ "                break;"
+		+ "      default: msg='You clicked ' + nStars + ' stars.';"
+		+ "    }"
+		+ "    if (xmlhttp.readyState==4) {"
+		+ "      document.getElementById('vote').innerHTML=msg;"
+		+ "    }"
+		+ "  }"
+		+ "  xmlhttp.open('GET','Feedback?UserRequest=AjaxRating&NStars='+nStars,true);"
+		+ "  xmlhttp.send(null);"
+		+ "  return false;"
+		+ "}"
+		+ "function GetXmlHttpObject() {"
+		+ "  if (window.XMLHttpRequest) { // code for IE7+, Firefox, Chrome, Opera, Safari"
+		+ "    return new XMLHttpRequest();"
+		+ "  }"
+		+ "  if (window.ActiveXObject) { // code for IE6, IE5"
+		+ "    return new ActiveXObject('Microsoft.XMLHTTP');"
+		+ "  }"
+		+ "  return null;"
+		+ "}"
 		+ "</SCRIPT>";
 	}
 
-	protected static String showScores (User user) {
+	static String showScores (User user) {
 		StringBuffer buf = new StringBuffer("<h2>Quiz Transactions</h2>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
@@ -488,7 +699,7 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String showSummary(User user,HttpServletRequest request) {
+	static String showSummary(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 		if (a==null) return "No assignment was specified for this request.";
@@ -556,7 +767,7 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String selectQuestionsForm(User user) {
+	static String selectQuestionsForm(User user) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
@@ -602,11 +813,11 @@ public class Quiz extends HttpServlet {
 			for (Question q : questions) {
 				i++;
 				q.setParameters();
-				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
+				buf.append("<TR><TD VALIGN=TOP NOWRAP>"
 						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
 				buf.append(a.questionKeys.contains(Key.create(Question.class,q.id))?" CHECKED>":">");
 				buf.append("<b>&nbsp;" + i + ".</b></TD>");
-				buf.append("\n<TD>" + q.printAll() + "</TD>");
+				buf.append("<TD>" + q.printAll() + "</TD>");
 				buf.append("</TR>");
 			}
 			buf.append("</TABLE><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM>");

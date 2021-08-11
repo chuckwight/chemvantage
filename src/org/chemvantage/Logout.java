@@ -20,7 +20,6 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
-import java.io.PrintWriter;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -39,29 +38,28 @@ public class Logout extends HttpServlet {
 		return "Servlet for confirming logout from ChemVantage.";
 	}
 
+	static String message = Home.header("ChemVantage Logout Successful") 
+			+ "<h3>You have successfully signed out of ChemVantage</h3>" 
+			+ "If this happened unexpectedly, it is likely that your browser's web "
+			+ "session timed out after a period of inactivity, or the access token "
+			+ "exchanged between your learning management system (LMS) and ChemVantage "
+			+ "has expired (after a period of typically 90 minutes)."
+			+ "<p>"
+			+ "You can activate a new session and token by returning to your learning "
+			+ "management system (LMS) and clicking the link for any assignment there.<p>"
+			+ "If you are having technical difficulty using ChemVantage, <a href=Feedback>"
+			+ "please tell us</a> so we can fix the problem."	
+			+ Home.footer;
+
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		
 		String sig = request.getParameter("sig");
-		if (sig!=null) try {
+		if (sig != null) try {
 			ofy().delete().key(Key.create(User.class, Long.parseLong(sig))).now();
 		} catch (Exception e) {}
 		
 		response.setContentType("text/html");
-		PrintWriter out = response.getWriter();
-
-		out.println(Home.header("ChemVantage Logout Successful") 
-				+ "<h3>You have successfully signed out of ChemVantage</h3>" 
-				+ "If this happened unexpectedly, it is likely that your browser's web "
-				+ "session timed out after a period of inactivity, or the access token "
-				+ "exchanged between your learning management system (LMS) and ChemVantage "
-				+ "has expired (after a period of typically 90 minutes)."
-				+ "<p>"
-				+ "You can activate a new session and token by returning to your learning "
-				+ "management system (LMS) and clicking the link for any assignment there.<p>"
-				+ "If you are having technical difficulty using ChemVantage, <a href=Feedback>"
-				+ "please tell us</a> so we can fix the problem."
-		
-				+ Home.footer);
+		response.getWriter().println(message);
 	}
 }

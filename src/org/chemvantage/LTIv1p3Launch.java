@@ -50,8 +50,10 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -78,6 +80,8 @@ import com.googlecode.objectify.Key;
 public class LTIv1p3Launch extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
+	Map<String,Deployment> deployments = new HashMap<String,Deployment>();  // local cache of recently launched deployments
+	Map<String,Assignment> assignments = new HashMap<String,Assignment>();  // local cache of recently launched assignments
 	
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) 
@@ -129,8 +133,6 @@ public class LTIv1p3Launch extends HttpServlet {
 		try {
 			DecodedJWT id_token = JWT.decode(request.getParameter("id_token"));
 			String json = new String(Base64.getUrlDecoder().decode(id_token.getPayload()));
-			//d.claims = json;
-			//ofy().save().entity(d);
 			claims = JsonParser.parseString(json).getAsJsonObject();
 		} catch (Exception e) {
 			throw new Exception("id_token was not a valid JWT.");
@@ -200,7 +202,10 @@ public class LTIv1p3Launch extends HttpServlet {
 		if (!scope.isEmpty()) d.scope = scope;
 
 		// Save the updated Deployment entity, if necessary
-		if (!d.equivalentTo(original_d)) ofy().save().entity(d).now();
+		if (!d.equivalentTo(original_d)) {
+			deployments.put(d.platform_deployment_id, d);
+			ofy().save().entity(d);
+		}
 		
 		/* Find assignment (try the following, in order, until an assignment is found):
 		 *   1. Find an assignment in the datastore with a matching lti_ags_lineitem_url (should work for all established graded assignments)
@@ -212,7 +217,11 @@ public class LTIv1p3Launch extends HttpServlet {
 		Assignment myAssignment = null;
 		String resourceLinkId = claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link").getAsJsonObject().get("id").getAsString();
 		
-		if (lti_ags_lineitem_url != null) myAssignment = ofy().load().type(Assignment.class).filter("lti_ags_lineitem_url",lti_ags_lineitem_url).first().now();	
+		if (lti_ags_lineitem_url != null) {  // this is the default, most common way of retrieving the Assignment; uses local Map for fast retrieval
+			myAssignment = assignments.get(lti_ags_lineitem_url);
+			if (myAssignment == null) myAssignment = ofy().load().type(Assignment.class).filter("lti_ags_lineitem_url",lti_ags_lineitem_url).first().now();
+			if (myAssignment != null) assignments.put(lti_ags_lineitem_url,myAssignment);
+		}
 
 		if (myAssignment == null) {  // This section searches for the resourceId parameter, which is a String version of the ChemVantage assigmentId
 			String resourceId = null;
@@ -321,7 +330,13 @@ public class LTIv1p3Launch extends HttpServlet {
 		String deployment_id = id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/deployment_id").asString();
 		if (deployment_id == null) throw new Exception("The deployment_id claim was not found in the id_token payload.");
 		String platformDeploymentId = platform_id + "/" + deployment_id;
-		Deployment d = Deployment.getInstance(platformDeploymentId);
+		
+		// This section pulls a deployment from the datastore and puts it into a local Map for fast retrieval
+		Deployment d = deployments.get(platformDeploymentId);
+		if (d == null) {
+			d = Deployment.getInstance(platformDeploymentId);
+			deployments.put(platformDeploymentId, d);
+		}
 		
 		if (d==null) throw new Exception("The deployment was not found in the ChemVantage database. You "
 				+ "can register your LMS with ChemVantage at https://www.chemvantage.org/lti/registration");
@@ -366,8 +381,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		case "LtiSubmissionReviewRequest": break;
 		default: throw new Exception("The LTI message_type claim " + message_type.getAsString() + " is not suppported.");
 		}
-		//if (!"LtiResourceLinkRequest".equals(message_type.getAsString())) throw new Exception("LTI message_type claim must be LtiResourceLinkRequest");
-
+		
 		// Process the ResourceLink claim information:
 		JsonElement resource_link_claims = claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link");
 		if (resource_link_claims == null) throw new Exception("Resource link claims were missing from the id_token.");
