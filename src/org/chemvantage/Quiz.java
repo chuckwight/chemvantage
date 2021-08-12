@@ -69,8 +69,8 @@ public class Quiz extends HttpServlet {
 			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header("Your Class ChemVantage Scores") + showSummary(user,request) + Home.footer);
 			else if ("AssignQuizQuestions".contentEquals(userRequest) && user.isInstructor()) {
 				out.println(Home.header("Customize ChemVantage Quiz Assignment") + selectQuestionsForm(user) + Home.footer);
-			} else response.sendRedirect("/Quiz.jsp?sig=" + user.getTokenSignature());
-			//else out.println(Home.header("ChemVantage Quiz") + printQuiz(user,request) + Home.footer);
+			} //else response.sendRedirect("/Quiz.jsp?sig=" + user.getTokenSignature());
+			else out.println(Home.header("ChemVantage Quiz") + printQuiz(user,request) + Home.footer);
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
@@ -108,9 +108,18 @@ public class Quiz extends HttpServlet {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
 	}
+	
+	static String printQuiz(User user, HttpServletRequest request) { // for anonymous users accessing Quiz servlet directly
+		try {
+			long topicId = Long.parseLong(request.getParameter("TopicId"));
+			return printQuiz(user,topicId);
+		} catch (Exception e) {
+			return "<h2>Launch failed because no quiz topic was specified.</h2>";
+		}
+	}
 
 	static String printQuiz(User user, long topicId) {
-		if (user == null) return "<h2>Launch failed because user was not authorized.";
+		if (user == null) return "<h2>Launch failed because user was not authorized.</h2>";
 		
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -160,15 +169,10 @@ public class Quiz extends HttpServlet {
 				ofy().save().entity(qt);
 			}
 			
-			String announcement = Subject.getSubject().getAnnouncement();
-			if (announcement != null && !announcement.isEmpty()) {
-				buf.append("<div style='color:red'>" + announcement + "</div>");
-			}
-			
 			// Insert javascript code for timers and form submission
 			buf.append(timers());
 			
-			buf.append("<h2>Quiz - " + topic.title + "</h2");
+			buf.append("<h2>Quiz - " + topic.title + "</h2>");
 			
 			if (user.isAnonymous()) buf.append("<h3 style='color:red'>Anonymous User</h3>");
 			
@@ -249,10 +253,10 @@ public class Quiz extends HttpServlet {
 			buf.append("<input type=submit value='Grade This Quiz'/>"
 					+ "</FORM>");
 			
-			buf.append("<script>startTimers(" + new Date(qt.getDownloaded().getTime() + timeAllowed * 1000).getTime() + ");</scipt>");
+			buf.append("<script>startTimers(" + new Date(qt.getDownloaded().getTime() + timeAllowed * 1000).getTime() + ");</script>");
 			
 		} catch (Exception e) {
-			return "<h2>Launch failed because to topic ID was specified."; 
+			return "<h2>Launch failed because no topic ID was specified.</h2>"; 
 		}
 		
 		return buf.toString();

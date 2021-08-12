@@ -268,7 +268,15 @@ public class LTIv1p3Launch extends HttpServlet {
 			response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,1) + Home.footer);
 			return;
 		} else {  // redirect the user's browser to the assignment
-			response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
+			switch (myAssignment.assignmentType) {
+			case "Quiz": 
+				response.setContentType("text/html");
+				response.setCharacterEncoding("UTF-8");
+				PrintWriter out = response.getWriter();	
+				out.println(Home.header("ChemVantage Quiz Direct") + Quiz.printQuiz(user, 0L) + Home.footer);
+				break;
+			default: response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
+			}
 			Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
 			queue.add(withUrl("/HashUserIds").param("sig",user.getTokenSignature()));			
 			return;
