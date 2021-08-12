@@ -241,8 +241,8 @@ public class Homework extends HttpServlet {
 				
 				questionBuffer.append("</div>");
 
-				questionBuffer.append("<FORM METHOD=POST ACTION=Homework>"
-						+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
+				questionBuffer.append("<FORM METHOD=POST ACTION=/Homework>"
+						+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ (hwa==null?"":"<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>")
