@@ -69,7 +69,7 @@ public class Quiz extends HttpServlet {
 			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header("Your Class ChemVantage Scores") + showSummary(user,request) + Home.footer);
 			else if ("AssignQuizQuestions".contentEquals(userRequest) && user.isInstructor()) {
 				out.println(Home.header("Customize ChemVantage Quiz Assignment") + selectQuestionsForm(user) + Home.footer);
-			} //else response.sendRedirect("/Quiz.jsp?sig=" + user.getTokenSignature());
+			}
 			else out.println(Home.header("ChemVantage Quiz") + printQuiz(user,request) + Home.footer);
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
@@ -194,24 +194,23 @@ public class Quiz extends HttpServlet {
 			}
 			
 			buf.append("<div id='timer0' style='color: red'></div>"
-					+ "	<div id=ctrl0 style='font-size: 50%; color: red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
+					+ "	<div id='ctrl0' style='font-size: 50%; color: red'><a href=javascript:toggleTimers() >hide timers</a><p></div>");
 			
-			buf.append("<FORM NAME=Quiz id=quizForm METHOD=POST ACTION=Quiz onSubmit='return confirmSubmission()'>"
-					+ "<INPUT TYPE=HIDDEN NAME='sig' VALUE='" + user.getTokenSignature() + "'/>"
-					+ "<INPUT TYPE=HIDDEN NAME='AssignmentId' VALUE='" + assignmentId + "'/>"
-					+ "<input type=hidden name='QuizTransactionId' value='" + qt.getId() + "'/>"
-					+ "<input type=hidden name='TopicId' value='" + topicId + "/>"
-					+ "<input type=submit value='Grade This Quiz'/>");
+			buf.append("<FORM NAME=Quiz id=quizForm METHOD=POST ACTION='/Quiz' onSubmit='return confirmSubmission()' >"
+					+ "<INPUT TYPE=HIDDEN NAME='sig' VALUE='" + user.getTokenSignature() + "' />"
+					+ "<INPUT TYPE=HIDDEN NAME='AssignmentId' VALUE='" + assignmentId + "' />"
+					+ "<input type=hidden name='QuizTransactionId' value='" + qt.getId() + "' />"
+					+ "<input type=hidden name='TopicId' value='" + topicId + "' />"
+					+ "<input type=submit value='Grade This Quiz' />");
 			
 			//create a set of available questionIds either from the group assignment or from the datastore
 			List<Key<Question>> questionKeys = null;
 			try { // check for assigned questions
-				questionKeys = qa.getQuestionKeys();
+				questionKeys = new ArrayList<Key<Question>>(qa.getQuestionKeys());  // clone the list of questions for the assignment
 			} catch (Exception e) { // no assignment exists
-				questionKeys = ofy().load().type(Question.class).filter("assignmentType", "Quiz")
-						.filter("topicId", topicId).filter("isActive", true).keys().list();
+				questionKeys = ofy().load().type(Question.class).filter("assignmentType", "Quiz").filter("topicId", topicId).filter("isActive", true).keys().list();
 			}
-
+			
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
 			Random rand = new Random(); // create random number generator to select quiz questions
 			rand.setSeed(qt.getId()); // random number generator seeded with QuizTransaction id value
@@ -226,6 +225,7 @@ public class Quiz extends HttpServlet {
 		
 			Map<Key<Question>, Question> quizQuestions = new HashMap<Key<Question>, Question>();
 			quizQuestions.putAll(ofy().load().keys(questionKeys));
+			
 			while (i < nQuestions && questionKeys.size() > 0) {
 				Key<Question> k = questionKeys.remove(rand.nextInt(questionKeys.size()));
 				Question q = quizQuestions.get(k);
@@ -248,7 +248,7 @@ public class Quiz extends HttpServlet {
 			buf.append("</OL>");
 		
 			buf.append("<div id='timer1' style='color: red'></div>"
-					+ "	<div id=ctrl1 style='font-size: 50%; color: red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
+					+ "	<div id='ctrl1' style='font-size: 50%; color: red'><a href=javascript:toggleTimers() >hide timers</a><p></div>");
 			
 			buf.append("<input type=submit value='Grade This Quiz'/>"
 					+ "</FORM>");
@@ -626,7 +626,6 @@ public class Quiz extends HttpServlet {
 			Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
 			buf.append("Topic: "+ t.title + "<br>");
 			buf.append("Valid: " + df.format(now) + "<p>");
-			
 			
 			List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
 			
