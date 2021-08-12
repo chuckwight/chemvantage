@@ -91,7 +91,7 @@ public class Quiz extends HttpServlet {
 			if ("UpdateAssignment".contentEquals(userRequest)) {
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 				a.updateQuestions(request);
-				response.sendRedirect("/Quiz.jsp?sig=" + user.getTokenSignature());
+				out.println(Home.header("ChemVantage Quiz") + printQuiz(user,0L) + Home.footer);
 			} else if ("Set Allowed Time".contentEquals(userRequest)) {
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 				try {
@@ -102,7 +102,7 @@ public class Quiz extends HttpServlet {
 					a.timeAllowed = 900;
 				}
 				ofy().save().entity(a).now();
-				response.sendRedirect("/Quiz.jsp?sig=" + user.getTokenSignature());	
+				out.println(Home.header("ChemVantage Quiz") + printQuiz(user,0L) + Home.footer);
 			} else out.println(Home.header("ChemVantage Quiz Results") + printScore(user,request) + Home.footer);
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
@@ -277,7 +277,7 @@ public class Quiz extends HttpServlet {
 				return "<h2>No Score</h2>"
 						+ "Sorry, this quiz was graded on " + df.format(qt.graded) + " and cannot be regraded.<p>"
 						+ "Your score on this quiz was " + qt.score + " out of a possible " + qt.possibleScore + " points.<p>"
-						+ (user.isAnonymous()?"<p><a href=/Quiz.jsp?TopicId=" + qt.topicId + "&sig=" + user.getTokenSignature() + ">"
+						+ (user.isAnonymous()?"<p><a href=/Quiz?TopicId=" + qt.topicId + "&sig=" + user.getTokenSignature() + ">"
 						+ "Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a>.":"You may repeat this "
 							+ "assignment by launching it from your class learning management system.");
 			}
@@ -425,7 +425,7 @@ public class Quiz extends HttpServlet {
 			}
 			
 			// If qa==null this is an anonymous user, otherwise is an LTI user:
-			buf.append((qa==null?"<a href=/Quiz.jsp?TopicId=" + qt.topicId + "&sig=" + user.getTokenSignature() + ">Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a> " :
+			buf.append((qa==null?"<a href=/Quiz?TopicId=" + qt.topicId + "&sig=" + user.getTokenSignature() + ">Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a> " :
 			"You may take this quiz again by clicking the assignment link in your learning management system ")			
 			+ "or <a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a>.");
 
@@ -765,7 +765,6 @@ public class Quiz extends HttpServlet {
 			}
 		} else {
 			buf.append("Sorry, there is not enough information available from your LMS to support this request.<p>");			
-			buf.append("<a href=/Quiz.jsp?sig=" + user.getTokenSignature() + ">Return to this quiz</a>.<p>");
 		}
 		return buf.toString();
 	}

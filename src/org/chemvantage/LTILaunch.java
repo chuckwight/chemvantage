@@ -285,12 +285,7 @@ public class LTILaunch extends HttpServlet {
 			// assignmentType or topicId(s). If so, show the the pickResource form:
 			
 			if (myAssignment.isValid()) {
-				switch (myAssignment.assignmentType) {
-				case "Quiz":
-					redirectUrl = "/Quiz.jsp" + "?sig=" + user.getTokenSignature();
-				default:
-					redirectUrl = "/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature();
-				}
+				redirectUrl = "/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature();
 				Queue queue = QueueFactory.getDefaultQueue();  // used for hashing userIds by Task queue
 				queue.add(withUrl("/HashUserIds").param("sig",user.getTokenSignature()));			
 				response.sendRedirect(redirectUrl);
