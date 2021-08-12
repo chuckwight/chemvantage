@@ -25,12 +25,14 @@ import java.io.PrintWriter;
 import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -47,9 +49,12 @@ public class Homework extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	Subject subject = Subject.getSubject();
-	Map<Long,Map<Key<Question>,Question>> hwQuestions = new HashMap<Long,Map<Key<Question>,Question>>();
-	Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
-	int retryDelayMinutes = 2;  // minimum time between answer submissions for any single question
+	static Map<Long,Topic> topics = new HashMap<Long,Topic>();
+	static Map<Long,Assignment> assignments = new HashMap<Long,Assignment>();
+	static Map<Long,Map<Key<Question>,Question>> hwQuestions = new HashMap<Long,Map<Key<Question>,Question>>();
+	static Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
+	
+	static int retryDelayMinutes = 2;  // minimum time between answer submissions for any single question
 
 	public String getServletInfo() {
 		return "This servlet presents a homework assignment for the user.";
@@ -127,34 +132,49 @@ public class Homework extends HttpServlet {
 		}
 	}
 
-	String printHomework(User user,HttpServletRequest request) {
+	static String printHomework(User user, HttpServletRequest request) {
+		try {
+			long topicId = Long.parseLong(request.getParameter("TopicId"));
+			long hintQuestionId = 0L;
+			String hqi = request.getParameter("Q"); // questionId for offering a hint
+			if (hqi != null) hintQuestionId = Long.parseLong(hqi);
+			
+			return printHomework(user,topicId,hintQuestionId);
+		} catch (Exception e) {
+			return "<h2>Launch failed because no quiz topic was specified.</h2>";
+		}
+	}
+
+	static String printHomework(User user, long topicId, long hintQuestionId) {
 		StringBuffer buf = new StringBuffer();
-		try{
-			// FIRST, determine the user's Assignment and Topic, then ensure that all the questions are loaded and sorted by difficulty
+		try {
 			Assignment hwa = null;
-			long topicId = 0L;
-			try {  // normal process for LTI assignment launch
-				hwa = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-				topicId = hwa.topicId;
-			} catch (Exception e) {  // alternative process for anonymous user
-				try {
-					topicId = Long.parseLong(request.getParameter("TopicId"));
-				} catch (Exception e2) {
-					return "<h2>No Homework Assignment Selected</h2>You must return to the <a href=Home>Home Page</a> "
-							+ "and select a topic for this quiz using the drop-down box.";
+			long assignmentId = user.getAssignmentId(); // should be non-zero for LTI user
+			if (assignmentId > 0) {
+				hwa = assignments.get(assignmentId);
+				if (hwa == null) {
+					hwa = ofy().load().type(Assignment.class).id(assignmentId).now();
+					assignments.put(hwa.id, hwa);
 				}
+				topicId = hwa.getTopicId();
 			}
-			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
-			// Load the Question items for this topic, if necessary:
+
+			Topic topic = topics.get(topicId);
+			if (topic == null) {
+				topic = ofy().load().type(Topic.class).id(topicId).safe();
+				topics.put(topic.id,topic);
+			}
+
+			//  Load the Question items for this topic, if necessary:
 			if (hwQuestions.get(topic.id) == null) { // load all of the Question items for this topic
 				List<Key<Question>> topicQuestionKeys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topic.id).keys().list();
-				TreeMap<Key<Question>,Question> topicQuestions = new TreeMap<Key<Question>,Question>(new SortBySuccessPct());
-				topicQuestions.putAll(ofy().load().keys(topicQuestionKeys));
+				Map<Key<Question>,Question> topicQuestions = new HashMap<Key<Question>,Question>();
+				topicQuestions.putAll(sortByValue(ofy().load().keys(topicQuestionKeys)));
 				if (topicQuestions.size()>0) hwQuestions.put(topic.id,topicQuestions);
 			}
 
 			// START the presentation of the Homework assignment
-			buf.append("\n<h2>Homework Exercises - " + topic.title + " (" + subject.title + ")</h2>");
+			buf.append("\n<h2>Homework Exercises - " + topic.title + "</h2>");
 
 			if (hwQuestions.get(topic.id)==null || hwQuestions.get(topic.id).isEmpty()) {
 				buf.append("<h3>Sorry, there are no homework questions for this topic.</h3>");
@@ -228,7 +248,7 @@ public class Homework extends HttpServlet {
 						+ (hwa==null?"":"<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>")
 						+ "<div style='display:table-cell'><b>" + (assigned?i:j) + ".&nbsp;</b></div>"
 						+ "<div style='display:table-cell'>" + q.print(workStrings.get(q.id),"") 
-						+ (Long.toString(q.id).equals(request.getParameter("Q"))?"Hint:<br>" + q.getHint():"")
+						+ (q.id == hintQuestionId?"Hint:<br>" + q.getHint():"")
 						+ "<INPUT TYPE=SUBMIT VALUE='Grade This Exercise'><p>"
 						+ "</div></div></FORM>\n");
 				if (assigned) {
@@ -246,7 +266,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	String printScore(User user,HttpServletRequest request) {
+	static String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Start...");
 		try {
@@ -359,7 +379,7 @@ public class Homework extends HttpServlet {
 				return buf.toString();
 			}
 			
-			buf.append("<h2>Homework Results - " + topic.title + " (" + subject.title + ")</h2>\n");
+			buf.append("<h2>Homework Results - " + topic.title + "</h2>\n");
 			
 			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			buf.append(df.format(now));
@@ -472,7 +492,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	String ajaxJavaScript(String signature) {
+	static String ajaxJavaScript(String signature) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note,email) {\n"
 		+ "  var xmlhttp;\n"
@@ -540,7 +560,7 @@ public class Homework extends HttpServlet {
 		+ "</SCRIPT>";
 	}
 
-	String fiveStars() {
+	static String fiveStars() {
 		StringBuffer buf = new StringBuffer();
 
 		buf.append("<script type='text/javascript'>\n"
@@ -581,7 +601,7 @@ public class Homework extends HttpServlet {
 		return buf.toString(); 
 	}
 
-	protected static String showScores(User user) {
+	static String showScores(User user) {
 		StringBuffer buf = new StringBuffer("<h2>Your Homework Transactions</h2>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
@@ -676,7 +696,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String showSummary(User user,HttpServletRequest request) {
+	static String showSummary(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		String lti_version = null;
 		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
@@ -792,36 +812,47 @@ public class Homework extends HttpServlet {
 		}
 		return buf.toString();
 	}
-
-	class SortBySuccessPct implements Comparator<Key<Question>> {
-		public int compare(Key<Question> k1,Key<Question> k2) {
-			Integer success1 = successPct.get(k1);
-			if (success1==null) {
-				int totalResponses = ofy().load().type(Response.class).filter("questionId",k1.getId()).count();
-				if (totalResponses==0) success1 = 100;
-				else {
-					int successResponses = ofy().load().type(Response.class).filter("questionId",k1.getId()).filter("score >",0).count();
-					success1 = successResponses*100/totalResponses;
-				}
-				successPct.put(k1,success1);
-			}
-			Integer success2 = successPct.get(k2);
-			if (success2==null) {
-				int totalResponses = ofy().load().type(Response.class).filter("questionId",k2.getId()).count();
-				if (totalResponses==0) success2 = 100;
-				else {
-					int successResponses = ofy().load().type(Response.class).filter("questionId",k2.getId()).filter("score >",0).count();
-					success2 = successResponses*100/totalResponses;
-				}
-				successPct.put(k2,success2);
-			}
-			int rank = success2-success1; // this reverses the normal Comparator to give higher rank to lower successPct
-			if (rank==0) rank = k1.compareTo(k2); // tie breaker required else TreeMap will overwrite existing entry
-			return rank;  
-		}
-	}
 	
-	String selectQuestionsForm(User user) {
+	static Map<Key<Question>, Question> sortByValue(Map<Key<Question>, Question> unsortMap) {
+		List<Map.Entry<Key<Question>, Question>> list = new LinkedList<Map.Entry<Key<Question>, Question>>(unsortMap.entrySet());
+
+		Collections.sort(list, new Comparator<Map.Entry<Key<Question>, Question>>() {
+			public int compare(Map.Entry<Key<Question>, Question> o1, Map.Entry<Key<Question>, Question> o2) {
+				Integer success1 = successPct.get(o1.getKey());
+				if (success1==null) {
+					int totalResponses = ofy().load().type(Response.class).filter("questionId",o1.getKey().getId()).count();
+					if (totalResponses==0) success1 = 100;
+					else {
+						int successResponses = ofy().load().type(Response.class).filter("questionId",o1.getKey().getId()).filter("score >",0).count();
+						success1 = successResponses*100/totalResponses;
+					}
+					successPct.put(o1.getKey(),success1);
+				}
+				Integer success2 = successPct.get(o2.getKey());
+				if (success2==null) {
+					int totalResponses = ofy().load().type(Response.class).filter("questionId",o2.getKey().getId()).count();
+					if (totalResponses==0) success2 = 100;
+					else {
+						int successResponses = ofy().load().type(Response.class).filter("questionId",o2.getKey().getId()).filter("score >",0).count();
+						success2 = successResponses*100/totalResponses;
+					}
+					successPct.put(o2.getKey(),success2);
+				}
+				int rank = success2-success1; // this reverses the normal Comparator to give higher rank to lower successPct
+				if (rank==0) rank = o1.getKey().compareTo(o2.getKey()); // tie breaker required
+				return rank;  
+			}
+		});
+
+		Map<Key<Question>, Question> result = new LinkedHashMap<Key<Question>, Question>();
+		for (Map.Entry<Key<Question>, Question> entry : list) {
+			result.put(entry.getKey(), entry.getValue());
+		}
+
+		return result;
+	}
+
+	static String selectQuestionsForm(User user) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
@@ -844,8 +875,8 @@ public class Homework extends HttpServlet {
 
 			if (hwQuestions.get(topic.id) == null) { // load all of the Question items for this topic
 				List<Key<Question>> topicQuestionKeys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topic.id).keys().list();
-				TreeMap<Key<Question>,Question> topicQuestions = new TreeMap<Key<Question>,Question>(new SortBySuccessPct());
-				topicQuestions.putAll(ofy().load().keys(topicQuestionKeys));
+				Map<Key<Question>,Question> topicQuestions = new HashMap<Key<Question>,Question>();
+				topicQuestions.putAll(sortByValue(ofy().load().keys(topicQuestionKeys)));
 				if (topicQuestions.size()>0) hwQuestions.put(topic.id,topicQuestions);
 			}
 
