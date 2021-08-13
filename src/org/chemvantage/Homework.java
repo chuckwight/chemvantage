@@ -134,8 +134,9 @@ public class Homework extends HttpServlet {
 
 	static String printHomework(User user, HttpServletRequest request) {
 		try {
-			long topicId = Long.parseLong(request.getParameter("TopicId"));
+			long topicId = 0L;;
 			long hintQuestionId = 0L;
+			if (user.getAssignmentId() == 0L) topicId = Long.parseLong(request.getParameter("TopicId"));
 			String hqi = request.getParameter("Q"); // questionId for offering a hint
 			if (hqi != null) hintQuestionId = Long.parseLong(hqi);
 			
