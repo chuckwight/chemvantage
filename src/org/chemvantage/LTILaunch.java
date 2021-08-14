@@ -261,7 +261,7 @@ public class LTILaunch extends HttpServlet {
 			
 			// Use the resourceLinkId to find the assignment or create a new one:
 			Assignment myAssignment = null;
-			String redirectUrl = null;
+			//String redirectUrl = null;
 			boolean saveAssignment = false;
 			try {  // load the requested Assignment entity if it exists
 				myAssignment = ofy().load().type(Assignment.class).filter("domain",oauth_consumer_key).filter("resourceLinkId", resource_link_id).first().safe();
@@ -285,10 +285,22 @@ public class LTILaunch extends HttpServlet {
 			// assignmentType or topicId(s). If so, show the the pickResource form:
 			
 			if (myAssignment.isValid()) {
-				redirectUrl = "/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature();
+				response.setContentType("text/html");
+				response.setCharacterEncoding("UTF-8");
+				PrintWriter out = response.getWriter();	
+				switch (myAssignment.assignmentType) {
+				case "Quiz": 
+					out.println(Home.header("ChemVantage Quiz") + Quiz.printQuiz(user, 0L) + Home.footer);
+					break;
+				case "Homework":
+					out.println(Home.header("ChemVantage Homework") + Homework.printHomework(user, 0L, 0L) + Home.footer);
+					break;
+				default: response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
+				}
+				//redirectUrl = "/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature();
 				Queue queue = QueueFactory.getDefaultQueue();  // used for hashing userIds by Task queue
 				queue.add(withUrl("/HashUserIds").param("sig",user.getTokenSignature()));			
-				response.sendRedirect(redirectUrl);
+				//response.sendRedirect(redirectUrl);
 			} else response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,-1) + Home.footer);
 			return;
 
