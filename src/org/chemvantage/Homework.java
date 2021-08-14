@@ -48,7 +48,6 @@ import com.googlecode.objectify.Key;
 public class Homework extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
-	Subject subject = Subject.getSubject();
 	static Map<Long,Topic> topics = new HashMap<Long,Topic>();
 	static Map<Long,Assignment> assignments = new HashMap<Long,Assignment>();
 	static Map<Long,Map<Key<Question>,Question>> hwQuestions = new HashMap<Long,Map<Key<Question>,Question>>();

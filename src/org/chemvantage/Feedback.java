@@ -50,7 +50,6 @@ import com.googlecode.objectify.cmd.Query;
 public class Feedback extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
-	Subject subject = Subject.getSubject();
 	
 	public String getServletInfo() {
 		return "This servlet is used by contributors to suggest new and revised Quiz and Homework questions.";
@@ -143,12 +142,12 @@ public class Feedback extends HttpServlet {
 		int stars = 0;
 		try {
 			stars = Integer.parseInt(request.getParameter("NStars"));
-			subject.addStarReport(stars);
+			Subject.addStarReport(stars);
 		}
 		catch (Exception e) {
 			return e.toString();
 		}
-		return "Your rating was " + stars + " stars. The average user rating is " + subject.getAvgStars() + " stars.";
+		return "Your rating was " + stars + " stars. The average user rating is " + Subject.getAvgStars() + " stars.";
 	}
 
 	String feedbackForm(User user) {
@@ -186,7 +185,7 @@ public class Feedback extends HttpServlet {
 		}
 		buf.append("&nbsp;&nbsp;&nbsp;&nbsp;<input type=range min=1 max=5 style='opacity:0' onfocus=this.style='opacity:1' oninput='set=false;showStars(this.value);setStars(this.value)'>");
 		buf.append("<br clear='all'>");
-		buf.append("<FONT SIZE=-1>(" + subject.nStarReports + " user ratings; avg = " + subject.getAvgStars() + " stars)</FONT><p>\n");
+		buf.append("<FONT SIZE=-1>(" + Subject.getNStarReports() + " user ratings; avg = " + Subject.getAvgStars() + " stars)</FONT><p>\n");
 
 		if (user.isAnonymous()) buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");				
 		
@@ -232,7 +231,7 @@ public class Feedback extends HttpServlet {
 		int stars = 0;
 		try {
 			stars = Integer.parseInt(request.getParameter("Stars"));
-			if (stars>0) subject.addStarReport(stars);
+			if (stars>0) Subject.addStarReport(stars);
 		} catch (Exception e) {
 		}
 		String comments = request.getParameter("Comments");
@@ -258,7 +257,7 @@ public class Feedback extends HttpServlet {
 		buf.append(new Date().toString() + "<p>");
 		buf.append("Thank you for your feedback" + (stars>0?" (" + stars + " stars" + (stars==5?"!":"") + ").":"."));
 		
-		if (stars > 0) buf.append("<br>The average user rating for ChemVantage is " + subject.getAvgStars() + " stars (" + subject.nStarReports + " user ratings).<p>");
+		if (stars > 0) buf.append("<br>The average user rating for ChemVantage is " + Subject.getAvgStars() + " stars (" + Subject.getNStarReports() + " user ratings).<p>");
 		
 		if (comments.length() > 0) {
 			buf.append("Your comment: <font color=red>" + comments + "</font><p>");

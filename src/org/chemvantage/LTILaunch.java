@@ -58,7 +58,7 @@ public class LTILaunch extends HttpServlet {
 	// only. For LTI v1p3 launches, use the URL pattern /lti/launch handled by LTIv1p3Launch.java
 	
 	private static final long serialVersionUID = 137L;
-	private static String jwtSecret = Subject.getSubject().HMAC256Secret;
+	//private static String jwtSecret = Subject.getSubject().HMAC256Secret;
 	
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) 
@@ -202,9 +202,9 @@ public class LTILaunch extends HttpServlet {
 			String platform_state = request.getParameter("platform_state");
 			String tool_state = request.getParameter("tool_state");
 			
+			Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
 			if (tool_state != null && platform_state != null) { // This is a LTIv1.1.2 relaunch response. Validate the tool_state value
 				try {
-				    Algorithm algorithm = Algorithm.HMAC256(jwtSecret);
 				    JWT.require(algorithm)
 				        .withIssuer("https://www.chemvantage.org")
 				        .withClaim("platform_state", platform_state)
@@ -219,7 +219,6 @@ public class LTILaunch extends HttpServlet {
 			} else if (relaunch_url != null && platform_state != null) {  // Anonymous LRTIv1p1p2 launch request. Execute relaunch sequence:
 				try {
 					Date expires = new Date(new Date().getTime() + 600000); // 10 minutes from now
-				    Algorithm algorithm = Algorithm.HMAC256(jwtSecret);
 				    tool_state = JWT.create()
 				        .withIssuer("https://www.chemvantage.org")
 				        .withClaim("platform_state", platform_state)

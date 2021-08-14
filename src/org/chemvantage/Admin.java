@@ -45,8 +45,7 @@ public class Admin extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	private int queryLimit = 20;
-	Subject subject = Subject.getSubject();
-
+	
 	public String getServletInfo() {
 		return "This servlet is used by ChemVantage admins to manage user properties and roles.";
 	}
@@ -90,8 +89,7 @@ public class Admin extends HttpServlet {
 			
 			switch (userRequest) {
 			case "Announce": 
-				subject.announcement = request.getParameter("Announcement");
-				ofy().save().entity(subject);
+				Subject.setAnnouncement(request.getParameter("Announcement"));
 				break;
 			case "Update Account":
 				BLTIConsumer tc = ofy().load().type(BLTIConsumer.class).id(request.getParameter("ConsumerKey")).safe();
@@ -139,7 +137,7 @@ public class Admin extends HttpServlet {
 			
 			buf.append("<FORM ACTION=Admin METHOD=POST>"
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=Announce>"
-					+ "<INPUT TYPE=TEXT SIZE=80 NAME=Announcement VALUE='" + subject.announcement + "'><BR>"
+					+ "<INPUT TYPE=TEXT SIZE=80 NAME=Announcement VALUE='" + Subject.getAnnouncement() + "'><BR>"
 					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
 					+ "<INPUT TYPE=SUBMIT VALUE='Post this message now'></FORM>");
 

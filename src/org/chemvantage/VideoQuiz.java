@@ -44,7 +44,6 @@ import com.googlecode.objectify.Key;
 @WebServlet("/VideoQuiz")
 public class VideoQuiz extends HttpServlet {
 	private static final long serialVersionUID = 137L;
-	Subject subject = Subject.getSubject();
 	int nQuestions = 2;  // this is the default number of questions per quizlet at the video breaks
 	
 	public String getServletInfo() {

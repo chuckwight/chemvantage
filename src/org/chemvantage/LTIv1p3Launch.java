@@ -321,7 +321,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		 */
 		try {
 			String iss = "https://" + request.getServerName();
-			Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
+			Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
 			JWTVerifier verifier = JWT.require(algorithm).withIssuer(iss).build();
 			String state = request.getParameter("state");
 			verifier.verify(state);

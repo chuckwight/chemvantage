@@ -30,52 +30,58 @@ import com.googlecode.objectify.annotation.Id;
 public class Subject {
 	static Subject subject;
 	@Id Long id;
-	String title;
-	String HMAC256Secret;
-	String salt;
-	String announcement;
-	int nStarReports;
-	double avgStars;
+	private String title;
+	private String HMAC256Secret;
+	private String salt;
+	private String announcement;
+	private int nStarReports;
+	private double avgStars;
 	
 	Subject() {}
+	static { refresh(); }
 	
-	static public Subject getSubject() {
+	static void refresh() {
 		try {
-			if (subject == null) {
-				subject = ofy().load().type(Subject.class).first().safe();
-				return subject;
-			}
-			else return subject;
-		} catch (Exception e) { // this should be run only once at setup
-			Subject s = new Subject();
-			s.id = 1L;
-			s.title = "General Chemistry";
-			s.HMAC256Secret = "ChangeMeInTheDataStoreManuallyForYourProtection";
-			s.salt = "ChangeMeInTheDataStoreManuallyToKeepStoredUsedIdValuesSecure";
-			ofy().save().entity(s).now();
-			return s;
+		subject = ofy().load().type(Subject.class).first().safe();
+		} catch (Exception e) {
+			subject = new Subject();
+			subject.id = 1L;
+			subject.title = "General Chemistry";
+			subject.HMAC256Secret = "ChangeMeInTheDataStoreManuallyForYourProtection";
+			subject.salt = "ChangeMeInTheDataStoreManuallyToKeepStoredUsedIdValuesSecure";
+			ofy().save().entity(subject);
 		}
 	}
-
-	public void addStarReport(int stars) {
-		avgStars = (avgStars*nStarReports + stars)/(nStarReports+1);
-		nStarReports++;
-		ofy().save().entity(this);
+	
+	static String getTitle() { return subject.title; }
+	static String getHMAC256Secret() { return subject.HMAC256Secret; }
+	static String getSalt() { return subject.salt; }
+	static String getAnnouncement() { return subject.announcement; }
+	static int getNStarReports() { return subject.nStarReports; }
+	
+	static void setAnnouncement(String msg) {
+		refresh();
+		subject.announcement = msg;
+		ofy().save().entity(subject);
 	}
-
-	public double getAvgStars() {
+	
+	static double getAvgStars() {
 		DecimalFormat df2 = new DecimalFormat("#.#");
-		return Double.valueOf(df2.format(avgStars));
+		return Double.valueOf(df2.format(subject.avgStars));
 	}
 	
-	public String getAnnouncement() {
-		return this.announcement;
-	}
+	static void addStarReport(int stars) {
+		refresh();
+		subject.avgStars = (subject.avgStars*subject.nStarReports + stars)/(subject.nStarReports+1);
+		subject.nStarReports++;
+		ofy().save().entity(subject);
 	
+	}
+		
 	static String hashId(String userId) {
 		try {
 			MessageDigest md = MessageDigest.getInstance("SHA-256");
-        	byte[] bytes = md.digest((userId + Subject.getSubject().salt).getBytes(StandardCharsets.UTF_8));
+        	byte[] bytes = md.digest((userId + subject.salt).getBytes(StandardCharsets.UTF_8));
         	StringBuilder sb = new StringBuilder();
             for (byte b : bytes) {
                 sb.append(String.format("%02x", b));

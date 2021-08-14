@@ -40,7 +40,7 @@ import com.google.gson.JsonParser;
 @WebServlet(urlPatterns = {"/Help","/help"})
 public class Help extends HttpServlet {
 	private static final long serialVersionUID = 137L;
-	Algorithm algorithm = Algorithm.HMAC256(Subject.getSubject().HMAC256Secret);
+	Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
    
     /**
      * This servlet allows students to seek help on a Homework assignment by obtaining a Java Web Token (JWT)

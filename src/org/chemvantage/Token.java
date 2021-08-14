@@ -60,8 +60,7 @@ public class Token extends HttpServlet {
 			Date now = new Date();
 			Date exp = new Date(now.getTime() + 300000L); // 5 minutes from now
 			String nonce = Nonce.generateNonce();
-			String jwtSecret = Subject.getSubject().HMAC256Secret;
-			Algorithm algorithm = Algorithm.HMAC256(jwtSecret);
+			Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
 			
 			debug.append("JWT algorithm loaded OK.<br>");
 			

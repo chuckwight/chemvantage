@@ -49,7 +49,6 @@ import com.googlecode.objectify.cmd.Query;
 public class Edit extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
-	Subject subject = Subject.getSubject();
 	Map<String,Map<Key<Question>,Question>> questions = new HashMap<String,Map<Key<Question>,Question>>();
 	
 	//TreeMap<Key<Question>,Question> questions = new TreeMap<Key<Question>,Question>(new SortBySuccessPct());
@@ -236,7 +235,7 @@ public class Edit extends HttpServlet {
 	}
 
 	String editorsPage(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer("<h3>Editors' Page for " + Subject.getSubject().title + "</h3>");
+		StringBuffer buf = new StringBuffer("<h3>Editors' Page</h3>");
 		try {
 			int nPending = ofy().load().type(ProposedQuestion.class).count();
 			buf.append("<a href=Edit?UserRequest=Review>"
@@ -410,7 +409,7 @@ public class Edit extends HttpServlet {
 		StringBuffer buf = new StringBuffer("<h3>Manage Quiz/Homework/Exam Topics</h3>");
 		try {
 			// print the table of topics for this subject:
-			buf.append("<b>" + subject.title + "</b>\n");
+			buf.append("<b>" + Subject.getTitle() + "</b>\n");
 			buf.append("<TABLE BORDER=0 CELLSPACING=3>"
 					+ "<TR><TH COLSPAN=3>&nbsp;</TH><TH COLSPAN=2>View/Add/Edit Questions</TH></TR>"
 					+ "<TR><TH>Order</TH><TH>Title</TH><TH>Action</TH><TH>Quiz</TH><TH>HW</TH><TH>Exam</TH><TH>Video</TH><TH>OpenStax</TH></TR>\n");
@@ -500,7 +499,7 @@ public class Edit extends HttpServlet {
 	}
 
 	String videosForm() {
-		StringBuffer buf = new StringBuffer("<h3>Manage Videos for " + subject.title + "</h3>");
+		StringBuffer buf = new StringBuffer("<h3>Manage Videos</h3>");
 		try {
 			List<Video> videos = ofy().load().type(Video.class).order("orderBy").list();
 			
@@ -651,7 +650,7 @@ public class Edit extends HttpServlet {
 	}
 	
 	String textsForm(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer("<h3>Manage Texts for " + subject.title + "</h3>");
+		StringBuffer buf = new StringBuffer("<h3>Manage Texts</h3>");
 		buf.append("This is a list of open source textbooks shown on the Home page.");
 		try {
 			Query<Text> texts = ofy().load().type(Text.class);
@@ -804,7 +803,6 @@ public class Edit extends HttpServlet {
 			if (q.requiresParser()) q.setParameters();
 			
 			buf.append("<h3>Preview Question</h3>");
-			buf.append("Subject: " + subject.title + "<br>");
 			
 			q.assignmentType = request.getParameter("AssignmentType");
 			if (q.assignmentType==null || q.assignmentType.isEmpty()) q.assignmentType = "Quiz";
@@ -883,7 +881,6 @@ public class Edit extends HttpServlet {
 			Topic t = ofy().load().type(Topic.class).id(q.topicId).safe();
 			if (q.requiresParser()) q.setParameters();
 			buf.append("<h3>Current Question</h3>");
-			buf.append("Subject: " + subject.title + "<br>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
 			buf.append("Topic: " + t.title + "<br>");
 			if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) buf.append("Learn more at: " + q.learn_more_url + "</br>");
@@ -953,7 +950,6 @@ public class Edit extends HttpServlet {
 			}
 			
 			Topic t = ofy().load().type(Topic.class).id(q.topicId).safe();
-			buf.append("Subject: " + subject.title + "<br>");
 			buf.append("Topic: " + t.title + "<br>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
 			buf.append("Author: " + q.authorId + "<p>");

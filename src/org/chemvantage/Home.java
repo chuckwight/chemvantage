@@ -35,7 +35,6 @@ public class Home extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	String servername;
-	Subject subject = Subject.getSubject();	
 	List<Video> videos; 
 	List<Topic> topics; 
 	List<Text> texts; 
@@ -62,7 +61,7 @@ public class Home extends HttpServlet {
 	}
 
 	public static String header(String title) {
-		String announcement = Subject.getSubject().announcement;
+		String announcement = Subject.getAnnouncement();
 		return "<!DOCTYPE html>"
 				+"<html>\n"
 				+ "<head>\n"
@@ -96,7 +95,7 @@ public class Home extends HttpServlet {
 			+ "Welcome to<br/><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT><br/>An Open Education Resource<br/><br/>";
 	
 	static String getHeader(User user) {
-		String announcement = Subject.getSubject().announcement;
+		String announcement = Subject.getAnnouncement();
 
 		return "<!DOCTYPE html>"
 		+"<html>\n"

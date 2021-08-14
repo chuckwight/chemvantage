@@ -59,7 +59,6 @@ public class PracticeExam extends HttpServlet {
 	int numberOfSections = 1;            // 
 	boolean trackAnswers= false;         // true keeps track of missed questions for students
 	private static final long serialVersionUID = 137L;
-	Subject subject = Subject.getSubject();
 	static Map<Key<Question>,Question> examQuestions = new HashMap<Key<Question>,Question>();
 
 	public String getServletInfo() {
@@ -160,7 +159,7 @@ public class PracticeExam extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		//String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		try {
-			buf.append("<h2>Practice " + subject.title + " Exam</h2>");
+			buf.append("<h2>Practice Exam</h2>");
 			buf.append("<div id=topicsForm>");
 
 			buf.append("Please select <b>at least 3 topics</b> below to be covered on this practice exam.<p>");
@@ -1061,7 +1060,7 @@ public class PracticeExam extends HttpServlet {
 		try {
 			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 			Map<Long,Topic>topics = ofy().load().type(Topic.class).ids(a.topicIds);
-			buf.append("<b>Subject: " + Subject.getSubject().title + "</b><br/>Topics:<OL>");
+			buf.append("Topics:<OL>");
 			for (Topic t:topics.values()) buf.append("<LI>" + t.title + "</LI>");
 			buf.append("</OL>");
 
