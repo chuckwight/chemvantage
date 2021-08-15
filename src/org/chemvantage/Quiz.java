@@ -199,6 +199,7 @@ public class Quiz extends HttpServlet {
 			} catch (Exception e) { // no assignment exists
 				questionKeys = new ArrayList<Key<Question>>(qcache.getQuizQuestionKeys(topicId));
 			}
+			qcache.loadQuizQuestions(topicId);
 			
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
 			Random rand = new Random(); // create random number generator to select quiz questions
@@ -217,8 +218,12 @@ public class Quiz extends HttpServlet {
 			while (i < nQuestions && questionKeys.size() > 0) {
 				Key<Question> k = questionKeys.remove(rand.nextInt(questionKeys.size()));
 				Question q = quizQuestions.get(k);
-				if (q == null) continue; // this catches cases where an assigned question no longer exists
-
+				if (q == null) { // this catches cases where an assigned question no longer exists (rare)
+					qa.questionKeys.remove(k);
+					ofy().save().entity(qa);
+					continue;
+				}
+				
 				// by this point we should have a valid question
 				i++; // this counter keeps track of the number of questions presented so far
 				possibleScore += q.getPointValue();
