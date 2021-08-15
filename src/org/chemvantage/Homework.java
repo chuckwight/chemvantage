@@ -48,9 +48,8 @@ import com.googlecode.objectify.Key;
 public class Homework extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
-	static Map<Long,Topic> topics = new HashMap<Long,Topic>();
-	static Map<Long,Assignment> assignments = new HashMap<Long,Assignment>();
-	static Map<Long,Map<Key<Question>,Question>> hwQuestions = new HashMap<Long,Map<Key<Question>,Question>>();
+	static QuestionCache qcache = new QuestionCache();
+	
 	static Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
 	
 	static int retryDelayMinutes = 2;  // minimum time between answer submissions for any single question
@@ -105,8 +104,9 @@ public class Homework extends HttpServlet {
 
 			switch (userRequest) {
 			case "UpdateAssignment":
-				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+				Assignment a = qcache.getAssignment(user.getAssignmentId());
 				a.updateQuestions(request);
+				qcache.putAssignment(a);
 				out.println(Home.header("ChemVantage Homework") + printHomework(user,request) + Home.footer);
 				break;
 			case "AddQuestion":
@@ -114,14 +114,13 @@ public class Homework extends HttpServlet {
 				if (user.isEditor()) {
 					Key<Question> key = Key.create(Question.class,Long.parseLong(request.getParameter("QuestionId")));
 					Question q = ofy().load().key(key).safe();
-					if (hwQuestions.containsKey(q.topicId)) hwQuestions.get(q.topicId).put(key, q);
+					qcache.putQuestion(q);
 				}
 				break;
 			case "DeleteQuestion":
 				if (user.isEditor()) {
 					Key<Question> key = Key.create(Question.class,Long.parseLong(request.getParameter("QuestionId")));
-					Question q = ofy().load().key(key).safe();
-					if (hwQuestions.containsKey(q.topicId)) hwQuestions.get(q.topicId).remove(key);
+					qcache.removeQuestion(key);
 				}
 				break;
 			default: out.println(Home.header("ChemVantage Homework Grading Results") + printScore(user,request) + Home.footer);
@@ -145,38 +144,21 @@ public class Homework extends HttpServlet {
 		}
 	}
 
-	static String printHomework(User user, long topicId, long hintQuestionId) {
+	static String printHomework(User user, long tId, long hintQuestionId) {
 		StringBuffer buf = new StringBuffer();
 		try {
-			Assignment hwa = null;
 			long assignmentId = user.getAssignmentId(); // should be non-zero for LTI user
-			if (assignmentId > 0) {
-				hwa = assignments.get(assignmentId);
-				if (hwa == null) {
-					hwa = ofy().load().type(Assignment.class).id(assignmentId).now();
-					assignments.put(hwa.id, hwa);
-				}
-				topicId = hwa.getTopicId();
-			}
-
-			Topic topic = topics.get(topicId);
-			if (topic == null) {
-				topic = ofy().load().type(Topic.class).id(topicId).safe();
-				topics.put(topic.id,topic);
-			}
-
-			//  Load the Question items for this topic, if necessary:
-			if (hwQuestions.get(topic.id) == null) { // load all of the Question items for this topic
-				List<Key<Question>> topicQuestionKeys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topic.id).keys().list();
-				Map<Key<Question>,Question> topicQuestions = new HashMap<Key<Question>,Question>();
-				topicQuestions.putAll(sortByValue(ofy().load().keys(topicQuestionKeys)));
-				if (topicQuestions.size()>0) hwQuestions.put(topic.id,topicQuestions);
-			}
-
+			Assignment hwa = qcache.getAssignment(assignmentId);
+			long topicId = hwa==null?tId:hwa.getTopicId();
+			Topic topic = qcache.getTopic(topicId);
+			
+			//  Load the Question items for this topic:
+			Map<Key<Question>,Question> hwQuestions = qcache.getHWQuestions(topicId);
+			
 			// START the presentation of the Homework assignment
 			buf.append("\n<h2>Homework Exercises - " + topic.title + "</h2>");
 
-			if (hwQuestions.get(topic.id)==null || hwQuestions.get(topic.id).isEmpty()) {
+			if (hwQuestions.isEmpty()) {
 				buf.append("<h3>Sorry, there are no homework questions for this topic.</h3>");
 				return buf.toString();
 			}
@@ -229,7 +211,7 @@ public class Homework extends HttpServlet {
 			// This is the main loop for presenting assigned and optional questions in order of increasing difficulty:
 			int i=1;
 			int j=1;
-			for (Map.Entry<Key<Question>,Question> entry : hwQuestions.get(topic.id).entrySet()) {
+			for (Map.Entry<Key<Question>,Question> entry : hwQuestions.entrySet()) {
 				boolean assigned = (hwa != null) && (hwa.questionKeys.contains(entry.getKey()));
 				StringBuffer questionBuffer = new StringBuffer("<div style='display:table-row'><div style='display:table-cell;font-size:small'>");
 				String hashMe = user.id + (hwa==null?"":hwa.id);
@@ -278,13 +260,8 @@ public class Homework extends HttpServlet {
 			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
 			debug.append("topic:"+topic.title+"...");
 			
-			try {
-				q = hwQuestions.get(topicId).get(k).clone(); // make a copy of the question so we can parameterize it
-				q.id = questionId;
-			} catch (Exception e) {
-				q = ofy().load().key(k).now(); // a fresh copy is only needed if the servlet restarted while the user was working on it
-				if (q==null) return "<h3>Sorry, this question has been deleted from the ChemVantage database.</h3>";
-			}
+			q = qcache.getQuestion(k).clone(); // make a copy of the question so we can parameterize it
+			q.id = questionId;
 			
 			String lis_result_sourcedid = user.getLisResultSourcedid();
 			debug.append("lis_result_sourcedid="+lis_result_sourcedid+"...");
@@ -855,9 +832,13 @@ public class Homework extends HttpServlet {
 	static String selectQuestionsForm(User user) {
 		StringBuffer buf = new StringBuffer();
 		try {
-			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-			Topic topic = ofy().load().type(Topic.class).id(a.topicId).safe();
+			Assignment a = qcache.getAssignment(user.getAssignmentId());
+			Topic topic = qcache.getTopic(a.topicId);
 			
+			//  Load the Question items for this topic, if necessary:
+			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>(qcache.getHWQuestionKeys(topic.id));
+			Map<Key<Question>,Question> hwQuestions = qcache.getQuestions(questionKeys);
+					
 			buf.append("<h3>Customize Homework Assignment</h3>");
 			buf.append("<b>Topic: " + topic.title + "</b><p>");
 					
@@ -872,14 +853,17 @@ public class Homework extends HttpServlet {
 					+ "If you don't see a question you want to include, you may "
 					+ "<a href=/Contribute?sig=" + user.getTokenSignature() 
 					+ ">contribute a new question item</a> to the database.<p>");
-
+/*
 			if (hwQuestions.get(topic.id) == null) { // load all of the Question items for this topic
 				List<Key<Question>> topicQuestionKeys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topic.id).keys().list();
 				Map<Key<Question>,Question> topicQuestions = new HashMap<Key<Question>,Question>();
 				topicQuestions.putAll(sortByValue(ofy().load().keys(topicQuestionKeys)));
 				if (topicQuestions.size()>0) hwQuestions.put(topic.id,topicQuestions);
 			}
-
+*/
+			Map<Key<Question>,Question> sortedQuestions = new HashMap<Key<Question>,Question>();
+			sortedQuestions.putAll(sortByValue(qcache.getHWQuestions(topic.id)));
+			
 			// This dummy form uses javascript to select/deselect all questions
 			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
 					+ "onClick='for (var i=0;i<document.Questions.QuestionId.length;i++)"
@@ -896,7 +880,7 @@ public class Homework extends HttpServlet {
 
 			
 			int i=0;
-			for (Map.Entry<Key<Question>,Question> entry : hwQuestions.get(topic.id).entrySet()) {
+			for (Map.Entry<Key<Question>,Question> entry : hwQuestions.entrySet()) {
 				Question q = entry.getValue().clone();
 				q.id = entry.getValue().id;
 				q.setParameters();  // creates randomly selected parameters

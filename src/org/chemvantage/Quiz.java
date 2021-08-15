@@ -45,8 +45,7 @@ import com.googlecode.objectify.cmd.Query;
 @WebServlet("/Quiz")
 public class Quiz extends HttpServlet {
 	private static final long serialVersionUID = 137L;
-	static Map<Long,Topic> topics = new HashMap<Long,Topic>();
-	static Map<Long,Assignment> assignments = new HashMap<Long,Assignment>();
+	static QuestionCache qcache = new QuestionCache();
 	
 	public String getServletInfo() {
 		return "This servlet presents a quiz for the user.";
@@ -89,11 +88,12 @@ public class Quiz extends HttpServlet {
 			if (userRequest==null) userRequest = "";
 			
 			if ("UpdateAssignment".contentEquals(userRequest)) {
-				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+				Assignment a = qcache.getAssignment(user.getAssignmentId());
 				a.updateQuestions(request);
+				qcache.putAssignment(a);
 				out.println(Home.header("ChemVantage Quiz") + printQuiz(user,0L) + Home.footer);
 			} else if ("Set Allowed Time".contentEquals(userRequest)) {
-				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+				Assignment a = qcache.getAssignment(user.getAssignmentId());
 				try {
 					double minutes = Double.parseDouble(request.getParameter("TimeAllowed"));
 					if (minutes > 60.) minutes = 60.;
@@ -101,6 +101,7 @@ public class Quiz extends HttpServlet {
 				} catch (Exception e) {
 					a.timeAllowed = 900;
 				}
+				qcache.putAssignment(a);
 				ofy().save().entity(a).now();
 				out.println(Home.header("ChemVantage Quiz") + printQuiz(user,0L) + Home.footer);
 			} else out.println(Home.header("ChemVantage Quiz Results") + printScore(user,request) + Home.footer);
@@ -118,28 +119,16 @@ public class Quiz extends HttpServlet {
 		}
 	}
 
-	static String printQuiz(User user, long topicId) {
+	static String printQuiz(User user, long tId) {
 		if (user == null) return "<h2>Launch failed because user was not authorized.</h2>";
 		
 		StringBuffer buf = new StringBuffer();
 		try {
-			Assignment qa = null;
-			long assignmentId = user.getAssignmentId(); // should be non-zero for LTI user
-			if (assignmentId > 0) {
-				qa = assignments.get(assignmentId);
-				if (qa == null) {
-					qa = ofy().load().type(Assignment.class).id(assignmentId).now();
-					assignments.put(qa.id, qa);
-				}
-				topicId = qa.getTopicId();
-			}
-
-			Topic topic = topics.get(topicId);
-			if (topic == null) {
-				topic = ofy().load().type(Topic.class).id(topicId).safe();
-				topics.put(topic.id,topic);
-			}
-
+			Assignment qa = qcache.getAssignment(user.getAssignmentId());
+			long assignmentId = qa==null?0L:qa.id;
+			long topicId = qa==null?tId:qa.topicId;
+			Topic topic = qcache.getTopic(topicId);
+			
 			// Check to see if the timeAllowed has been modified by the instructor:
 			int timeAllowed = 900; // default value in seconds
 			if (qa != null && qa.timeAllowed != null) {
@@ -208,7 +197,7 @@ public class Quiz extends HttpServlet {
 			try { // check for assigned questions
 				questionKeys = new ArrayList<Key<Question>>(qa.getQuestionKeys());  // clone the list of questions for the assignment
 			} catch (Exception e) { // no assignment exists
-				questionKeys = ofy().load().type(Question.class).filter("assignmentType", "Quiz").filter("topicId", topicId).filter("isActive", true).keys().list();
+				questionKeys = new ArrayList<Key<Question>>(qcache.getQuizQuestionKeys(topicId));
 			}
 			
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
@@ -223,8 +212,7 @@ public class Quiz extends HttpServlet {
 			// Randomly reduce the size of questionKeys to the required number of questions	
 			while (questionKeys.size()>nQuestions) questionKeys.remove(rand.nextInt(questionKeys.size()));
 		
-			Map<Key<Question>, Question> quizQuestions = new HashMap<Key<Question>, Question>();
-			quizQuestions.putAll(ofy().load().keys(questionKeys));
+			Map<Key<Question>, Question> quizQuestions = qcache.getQuestions(questionKeys);
 			
 			while (i < nQuestions && questionKeys.size() > 0) {
 				Key<Question> k = questionKeys.remove(rand.nextInt(questionKeys.size()));
@@ -283,10 +271,8 @@ public class Quiz extends HttpServlet {
 			}
 
 			// Check to see if the time limit (15 minutes) for taking the Quiz has expired:
-			Assignment qa = null;
-			try {
-				qa = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-			} catch (Exception e) {}
+			Assignment qa = qcache.getAssignment(user.getAssignmentId());
+			long assignmentId = qa==null?0L:qa.id;
 			
 			int timeAllowed = 900;  // default time to complete the quiz, in seconds
 			try {
@@ -318,9 +304,8 @@ public class Quiz extends HttpServlet {
 					questionKeys.add(Key.create(Question.class,Long.parseLong((String) e.nextElement())));
 				} catch (Exception e2) {}
 			}
-			Map<Key<Question>,Question> quizQuestions = ofy().load().keys(questionKeys);
+			Map<Key<Question>,Question> quizQuestions = qcache.getQuestions(questionKeys);
 			
-			//Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
 			List<Response> responses = new ArrayList<Response>();
 			
 			// This is the main scoring loop:
@@ -351,7 +336,6 @@ public class Quiz extends HttpServlet {
 				}
 			}
 			if (responses.size()>0) ofy().save().entities(responses);  // batch save of Response entities
-			//missedQuestions.append("</OL>");
 			qt.graded = now;
 			qt.score = studentScore;
 			ofy().save().entity(qt);
@@ -363,7 +347,7 @@ public class Quiz extends HttpServlet {
 				Score.updateQuizScore(user.id,qt);
 				reportScoreToLms = qa.lti_ags_lineitem_url != null || (qa.lis_outcome_service_url != null && user.getLisResultSourcedid() != null);
 				if (reportScoreToLms) {
-					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(qa.id)).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
+					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
 				}
 			} catch (Exception e) {}
 
@@ -612,18 +596,10 @@ public class Quiz extends HttpServlet {
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
 		
-		Assignment a = null;
-		try {
-			long assignmentId = user.getAssignmentId();
-			a = ofy().load().type(Assignment.class).id(assignmentId).safe();
-		} catch (Exception e) {
-			buf.append("Invalid assignment.");
-			return buf.toString();
-		}
-
+		Assignment a = qcache.getAssignment(user.getAssignmentId());
+		Topic t = qcache.getTopic(a.getTopicId());
 		try {
 			buf.append("Assignment Number: " + a.id + "<br>");
-			Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
 			buf.append("Topic: "+ t.title + "<br>");
 			buf.append("Valid: " + df.format(now) + "<p>");
 			
