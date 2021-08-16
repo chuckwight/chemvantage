@@ -112,7 +112,10 @@ public class Quiz extends HttpServlet {
 	
 	static String printQuiz(User user, HttpServletRequest request) { // for anonymous users accessing Quiz servlet directly
 		try {
-			long topicId = Long.parseLong(request.getParameter("TopicId"));
+			long assignmentId = user.getAssignmentId();
+			long topicId = 0L;
+			if (assignmentId > 0) topicId = ofy().load().type(Assignment.class).id(assignmentId).now().topicId;
+			else topicId = Long.parseLong(request.getParameter("TopicId"));
 			return printQuiz(user,topicId);
 		} catch (Exception e) {
 			return "<h2>Launch failed because no quiz topic was specified.</h2>";

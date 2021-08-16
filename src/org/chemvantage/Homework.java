@@ -132,15 +132,16 @@ public class Homework extends HttpServlet {
 
 	static String printHomework(User user, HttpServletRequest request) {
 		try {
-			long topicId = 0L;;
+			long assignmentId = user.getAssignmentId();
+			long topicId = 0L;
+			if (assignmentId > 0) topicId = ofy().load().type(Assignment.class).id(assignmentId).now().topicId;
+			else topicId = Long.parseLong(request.getParameter("TopicId"));
 			long hintQuestionId = 0L;
-			if (user.getAssignmentId() == 0L) topicId = Long.parseLong(request.getParameter("TopicId"));
 			String hqi = request.getParameter("Q"); // questionId for offering a hint
-			if (hqi != null) hintQuestionId = Long.parseLong(hqi);
-			
+			if (hqi != null) hintQuestionId = Long.parseLong(hqi);			
 			return printHomework(user,topicId,hintQuestionId);
 		} catch (Exception e) {
-			return "<h2>Launch failed because no quiz topic was specified.</h2>";
+			return "<h2>Launch failed because no homework topic was specified.</h2>";
 		}
 	}
 
