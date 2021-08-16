@@ -116,51 +116,57 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 
     	final OAuthConsumer consumer = new OAuthConsumer(null, oauth_consumer_key, oauth_shared_secret, null);
     	final OAuthAccessor accessor = new OAuthAccessor(consumer);
-    	try
-    	{
+    	try {
     		message.sign(accessor);
-    	}
-    	catch( Exception e )
-    	{
+    	} catch( Exception e ) {
     		throw new RuntimeException(e);
     	}
 
     	// construct the signed message in the required format
-    	URL u = new URL(destinationURL);
-    	HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-    	uc.setDoOutput(true);
-    	uc.setDoInput(true);
-    	uc.setRequestMethod(httpMethod);
-    	uc.setConnectTimeout(5000);
-    	//if (httpMethod.equals("GET")) acceptType = "application/vnd.ims.lti.v2.ToolSettings+json";
-    	uc.setRequestProperty("Content-Type",contentType);
-    	if (!acceptType.isEmpty()) uc.setRequestProperty("Accept", acceptType);
-    	uc.setRequestProperty("Content-Length",Integer.toString(messageText.length()));
-    	uc.setRequestProperty("Authorization",message.getAuthorizationHeader(""));
-    	
-    	if (!messageAppearsValid()) return "Error: Message parameters were invalid.";
-    	else uc.connect();
+    	OutputStreamWriter toTC = null;
+    	BufferedReader reader = null;
+    	StringBuffer res = null;
+    	try {
+    		URL u = new URL(destinationURL);
+    		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+    		uc.setDoOutput(true);
+    		uc.setDoInput(true);
+    		uc.setRequestMethod(httpMethod);
+    		uc.setConnectTimeout(5000);
+    		//if (httpMethod.equals("GET")) acceptType = "application/vnd.ims.lti.v2.ToolSettings+json";
+    		uc.setRequestProperty("Content-Type",contentType);
+    		if (!acceptType.isEmpty()) uc.setRequestProperty("Accept", acceptType);
+    		uc.setRequestProperty("Content-Length",Integer.toString(messageText.length()));
+    		uc.setRequestProperty("Authorization",message.getAuthorizationHeader(""));
 
-    	// send the message
-    	OutputStreamWriter toTC = new OutputStreamWriter(uc.getOutputStream());
-    	toTC.write(messageText);
-    	toTC.flush();
-    	
-    	int responseCode = uc.getResponseCode();
-    	if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED) { // 200 or 201
-    		BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-    		StringBuffer res = new StringBuffer();
-    		String line;
-    		while ((line = reader.readLine()) != null) {
-    			res.append(line);
+    		if (!messageAppearsValid()) return "Error: Message parameters were invalid.";
+    		else uc.connect();
+
+    		// send the message
+    		toTC = new OutputStreamWriter(uc.getOutputStream());
+    		toTC.write(messageText);
+    		toTC.flush();
+
+    		int responseCode = uc.getResponseCode();
+    		if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED) { // 200 or 201
+    			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+    			res = new StringBuffer();
+    			String line;
+    			while ((line = reader.readLine()) != null) {
+    				res.append(line);
+    			}
+    			reader.close();
+    			toTC.close();
+    		} else {
+    			toTC.close();
+    			throw new Exception("Server returned status code: " + responseCode);  
     		}
+    	} catch (Exception e) {
+    	} finally {
     		reader.close();
     		toTC.close();
-    		return res.toString();
-    	} else {
-    	 	toTC.close();
-    	 	throw new Exception("Server returned status code: " + responseCode);  
     	}
+    	return res.toString();
     }
 
     private boolean messageAppearsValid() {
@@ -228,6 +234,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		Date in5Minutes = new Date(new Date().getTime() + 300000L);
 		StringBuffer debug = new StringBuffer("getAccessToken: ");
 		
+		DataOutputStream wr = null;
+		BufferedReader reader = null;
 		try {
 			d = Deployment.getInstance(platformDeploymentId);
 			if (!d.scope.contains(scope)) return null;  // must be authorized
@@ -270,14 +278,15 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			uc.setUseCaches(false);
 			
 			// send the message
-			DataOutputStream wr = new DataOutputStream(uc.getOutputStream());
+			wr = new DataOutputStream(uc.getOutputStream());
 			wr.writeBytes(body);
-
+			wr.close();
+			
 			int responseCode = uc.getResponseCode();
 			debug.append("ResponseCode: " + responseCode + ".");
 			
 			if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED || responseCode == HttpURLConnection.HTTP_ACCEPTED) { // 200m or 201 or 202
-				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
+				reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
 				JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
 				reader.close();
 				debug.append("Response: " + json.toString() + ">");
@@ -298,8 +307,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			} else throw new Exception("response code " + responseCode);
 		} catch (Exception e) {
 			return e.toString() + " " + e.getMessage() + debug.toString();
-		}
-    }
+		}    
+	}
    
     static JsonObject getLineItem(Deployment d,String resourceLinkId,String lti_ags_lineitems_url) throws Exception {   	
     	String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem";    	
@@ -506,8 +515,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		// Construct the deployment_id because we may need to strip this from the userId values
 		
 		Map<String,String> scores = new HashMap<String,String>();		
-		try {
-			
+		
+		try {		
 			String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly";
 			String bearerAuth = "Bearer " + getAccessToken(a.domain,scope);
 
@@ -519,7 +528,6 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			u = new URL(a.lti_ags_lineitem_url.substring(0,i) + "/results" + a.lti_ags_lineitem_url.substring(i));
 
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			//uc.setDoOutput(true);
 			uc.setDoInput(true);
 			uc.setRequestMethod("GET");
 			uc.setRequestProperty("Authorization", bearerAuth);
@@ -540,7 +548,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				}
 			}
 		} catch (Exception e) {	
-			return null;
+			scores = null;
 		}
 		return scores;
 	}
@@ -638,9 +646,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		    OutputStream os = uc.getOutputStream();
 		    byte[] json_bytes = json.getBytes("utf-8");
 			os.write(json_bytes, 0, json_bytes.length);           
-
-			//toTC.write(json);
-			//toTC.flush();
+			os.close();
+			
 			int responseCode = uc.getResponseCode(); // success if 200-202
 			boolean success = responseCode>199 && responseCode<203;
 			if (success) {  
@@ -650,7 +657,6 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				//sendEmailToAdmin("Score submission success",buf.toString());
 			} else if (responseCode==422) {
 				buf.append("Response code 422: This LMS does not allow LTI score submissions for instructors or test students.<br/>");
-				//sendEmailToAdmin("Score submission rejected",buf.toString());
 			} else {			
 				buf.append(uc.getRequestMethod() + " " + u.toString() + "<br>"
 						+ "Content-Type: application/vnd.ims.lis.v1.score+json<br>"
@@ -695,7 +701,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			URL u = new URL(a.lti_nrps_context_memberships_url);
 
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			uc.setDoOutput(true);
+			//uc.setDoOutput(true);
 			uc.setDoInput(true);
 			uc.setRequestMethod("GET");
 			uc.setRequestProperty("Authorization", bearerAuth);

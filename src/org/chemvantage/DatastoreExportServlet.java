@@ -64,89 +64,98 @@ public class DatastoreExportServlet extends HttpServlet {
 			response.getWriter().println("Useage: https://" + PROJECT_ID + ".appspot.com/cloud-datastore-export?output_url_prefix=gs://" + PROJECT_ID + "-backups");
 
 		} else {
+			OutputStreamWriter writer = null;
+			InputStream s = null;
+			InputStreamReader r = null;
+			try {
+				// Put together export request headers
+				URL url = new URL("https://datastore.googleapis.com/v1/projects/" + PROJECT_ID + ":export");
+				HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+				connection.setDoOutput(true);
+				connection.setRequestMethod("POST");
+				connection.addRequestProperty("Content-Type", "application/json");
 
-			// Put together export request headers
-			URL url = new URL("https://datastore.googleapis.com/v1/projects/" + PROJECT_ID + ":export");
-			HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-			connection.setDoOutput(true);
-			connection.setRequestMethod("POST");
-			connection.addRequestProperty("Content-Type", "application/json");
+				// Get an access token to authorize export request
+				ArrayList<String> scopes = new ArrayList<String>();
+				scopes.add("https://www.googleapis.com/auth/datastore");
+				final AppIdentityService.GetAccessTokenResult accessToken =
+						AppIdentityServiceFactory.getAppIdentityService().getAccessToken(scopes);
+				connection.addRequestProperty("Authorization", "Bearer " + accessToken.getAccessToken());
 
-			// Get an access token to authorize export request
-			ArrayList<String> scopes = new ArrayList<String>();
-			scopes.add("https://www.googleapis.com/auth/datastore");
-			final AppIdentityService.GetAccessTokenResult accessToken =
-					AppIdentityServiceFactory.getAppIdentityService().getAccessToken(scopes);
-			connection.addRequestProperty("Authorization", "Bearer " + accessToken.getAccessToken());
+				// Build export request payload based on URL parameters
+				// Required: output_url_prefix
+				// Optional: entity filter
+				JsonObject exportRequest = new JsonObject();
 
-			// Build export request payload based on URL parameters
-			// Required: output_url_prefix
-			// Optional: entity filter
-			JsonObject exportRequest = new JsonObject();
+				// If output prefix ends with a slash, use as-is
+				// Otherwise, add a timestamp to form unique output url
+				if (!outputUrlPrefix.endsWith("/")) {
+					String timeStamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+					outputUrlPrefix = outputUrlPrefix + "/" + timeStamp + "/";
+				}
 
-			// If output prefix ends with a slash, use as-is
-			// Otherwise, add a timestamp to form unique output url
-			if (!outputUrlPrefix.endsWith("/")) {
-				String timeStamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
-				outputUrlPrefix = outputUrlPrefix + "/" + timeStamp + "/";
-			}
+				// Add outputUrl to payload
+				exportRequest.addProperty("output_url_prefix", outputUrlPrefix);
 
-			// Add outputUrl to payload
-			exportRequest.addProperty("output_url_prefix", outputUrlPrefix);
+				// Build optional entity filter to export subset of
+				// kinds or namespaces
+				JsonObject entityFilter = new JsonObject();
 
-			// Build optional entity filter to export subset of
-			// kinds or namespaces
-			JsonObject entityFilter = new JsonObject();
+				// Read kind parameters and add to export request if not null
+				String[] kinds = request.getParameterValues("kind");
+				if (kinds != null) {
+					JsonArray kindsJson = new JsonArray();
+					for (String k : kinds) kindsJson.add(k);
+					entityFilter.add("kinds", kindsJson);
+				}
 
-			// Read kind parameters and add to export request if not null
-			String[] kinds = request.getParameterValues("kind");
-			if (kinds != null) {
-				JsonArray kindsJson = new JsonArray();
-				for (String k : kinds) kindsJson.add(k);
-				entityFilter.add("kinds", kindsJson);
-			}
+				// Read namespace parameters and add to export request if not null
+				String[] namespaces = request.getParameterValues("namespace_id");
+				if (namespaces != null) {
+					JsonArray namespacesJson = new JsonArray();
+					for (String n : namespaces) namespacesJson.add(n);
+					entityFilter.add("namespaceIds", namespacesJson);
+				}
 
-			// Read namespace parameters and add to export request if not null
-			String[] namespaces = request.getParameterValues("namespace_id");
-			if (namespaces != null) {
-				JsonArray namespacesJson = new JsonArray();
-				for (String n : namespaces) namespacesJson.add(n);
-				entityFilter.add("namespaceIds", namespacesJson);
-			}
+				// Add entity filter to payload
+				// Finish export request payload
+				exportRequest.add("entityFilter", entityFilter);
 
-			// Add entity filter to payload
-			// Finish export request payload
-			exportRequest.add("entityFilter", entityFilter);
+				// Send export request
+				writer = new OutputStreamWriter(connection.getOutputStream());
+				writer.write(exportRequest.toString());
+				writer.close();
+				// Examine server's response
+				if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+					// Request failed, log errors and return
+					s = connection.getErrorStream();
+					r = new InputStreamReader(s, StandardCharsets.UTF_8);
+					String errorMessage =
+							String.format(
+									"got error (%d) response %s from %s",
+									connection.getResponseCode(), CharStreams.toString(r), connection.toString());
+					log.warning(errorMessage);
+					r.close();
+					response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+					response.setContentType("text/plain");
+					response.getWriter().println(
+							"Failed to initiate export.");
+					return;   
+				}
 
-			// Send export request
-			OutputStreamWriter writer = new OutputStreamWriter(connection.getOutputStream());
-			writer.write(exportRequest.toString());
-			writer.close();
-
-			// Examine server's response
-			if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
-				// Request failed, log errors and return
-				InputStream s = connection.getErrorStream();
-				InputStreamReader r = new InputStreamReader(s, StandardCharsets.UTF_8);
-				String errorMessage =
-						String.format(
-								"got error (%d) response %s from %s",
-								connection.getResponseCode(), CharStreams.toString(r), connection.toString());
-				log.warning(errorMessage);
-				response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+				// Success, print export operation information
+				r = new InputStreamReader(connection.getInputStream(),StandardCharsets.UTF_8);
+				JsonObject exportResponse = JsonParser.parseReader(r).getAsJsonObject();
+				r.close();
 				response.setContentType("text/plain");
 				response.getWriter().println(
-						"Failed to initiate export.");
-				return;   
+						"Export started:\n" + exportResponse.toString());    
+			} catch (Exception e) {
+			} finally {
+				writer.close();
+				r.close();
+				s.close();
 			}
-
-			// Success, print export operation information
-			InputStreamReader r = new InputStreamReader(connection.getInputStream(),StandardCharsets.UTF_8);
-			JsonObject exportResponse = JsonParser.parseReader(r).getAsJsonObject();
-			
-			response.setContentType("text/plain");
-			response.getWriter().println(
-					"Export started:\n" + exportResponse.toString());    
 		}
 	}
 }

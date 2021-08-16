@@ -83,20 +83,6 @@ public class Feedback extends HttpServlet {
 			default:
 				out.println((user.isChemVantageAdmin()?Home.getHeader(user):Home.header("ChemVantage Feedback Form")) + feedbackForm(user) + Home.footer);
 			}
-			
-			/*
-			if (userRequest.equals("ReportAProblem")) {
-				String userId = user==null?"":user.id;
-				long questionId = Long.parseLong(request.getParameter("QuestionId"));
-				String notes = request.getParameter("Notes");
-				String email = request.getParameter("Email");
-				UserReport r = new UserReport(userId,questionId,notes);
-				ofy().save().entity(r);
-				if (email !=null && !email.isEmpty()) sendEmailToAdmin(r,user,email);
-			} else if (userRequest.equals("AjaxRating")) {
-				recordAjaxRating(request);
-			} else out.println(Home.header("ChemVantage Feedback Form") + feedbackForm(user) + Home.footer);
-			*/
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
@@ -125,14 +111,6 @@ public class Feedback extends HttpServlet {
 				out.println(feedbackForm(user));
 			}
 			out.println(Home.footer);
-			/*
-			if (userRequest.equals("SubmitFeedback")) {
-				out.println(Home.header("Thank you for Feedback to ChemVantage") + submitFeedback(user,request) + Home.footer);
-			} else if (userRequest.equals("Delete Report")) {
-				ofy().delete().key(Key.create(UserReport.class,Long.parseLong(request.getParameter("ReportId")))).now();
-				out.println(Home.header("ChemVantage Feedback Form") + feedbackForm(user) + Home.footer);
-			} else 	out.println(Home.header("ChemVantage Feedback Form") + feedbackForm(user) + Home.footer);			
-			 */
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
@@ -272,26 +250,33 @@ public class Feedback extends HttpServlet {
 	}
 
 	boolean reCaptchaOK(HttpServletRequest request) throws Exception {
-		String queryString = "secret=6Ld_GAcTAAAAAD2k2iFF7Ywl8lyk9LY2v_yRh3Ci&response=" 
-				+ request.getParameter("g-recaptcha-response") + "&remoteip=" + request.getRemoteAddr();
-		URL u = new URL("https://www.google.com/recaptcha/api/siteverify");
-    	HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-    	uc.setDoOutput(true);
-    	uc.setRequestMethod("POST");
-    	uc.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
-    	uc.setRequestProperty("Content-Length", String.valueOf(queryString.length()));
-    	
-    	OutputStreamWriter writer = new OutputStreamWriter(uc.getOutputStream());
-		writer.write(queryString);
-    	writer.flush();
-    	writer.close();
-		
-		// read & interpret the JSON response from Google
-    	BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-		JsonObject captchaResponse = JsonParser.parseReader(reader).getAsJsonObject();
-    	reader.close();
-		
-		//JsonObject captchaResp = JsonParser.parseString(res.toString()).getAsJsonObject();
+		OutputStreamWriter writer = null;
+		BufferedReader reader = null;
+		JsonObject captchaResponse = null;
+		try {
+			String queryString = "secret=6Ld_GAcTAAAAAD2k2iFF7Ywl8lyk9LY2v_yRh3Ci&response=" 
+					+ request.getParameter("g-recaptcha-response") + "&remoteip=" + request.getRemoteAddr();
+			URL u = new URL("https://www.google.com/recaptcha/api/siteverify");
+			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+			uc.setDoOutput(true);
+			uc.setRequestMethod("POST");
+			uc.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
+			uc.setRequestProperty("Content-Length", String.valueOf(queryString.length()));
+
+			writer = new OutputStreamWriter(uc.getOutputStream());
+			writer.write(queryString);
+			writer.flush();
+			writer.close();
+
+			// read & interpret the JSON response from Google
+			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+			captchaResponse = JsonParser.parseReader(reader).getAsJsonObject();
+			reader.close();
+		} catch (Exception e) {
+		} finally {
+			writer.close();
+			reader.close();
+		}
 		return captchaResponse.get("success").getAsBoolean();
 	}
 
