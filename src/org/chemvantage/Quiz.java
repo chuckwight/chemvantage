@@ -40,7 +40,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.cmd.Query;
 
 @WebServlet("/Quiz")
 public class Quiz extends HttpServlet {
@@ -114,7 +113,7 @@ public class Quiz extends HttpServlet {
 		try {
 			long assignmentId = user.getAssignmentId();
 			long topicId = 0L;
-			if (assignmentId > 0) topicId = ofy().load().type(Assignment.class).id(assignmentId).now().topicId;
+			if (assignmentId > 0) topicId = qcache.getAssignment(assignmentId).topicId;
 			else topicId = Long.parseLong(request.getParameter("TopicId"));
 			return printQuiz(user,topicId);
 		} catch (Exception e) {
@@ -223,6 +222,7 @@ public class Quiz extends HttpServlet {
 				Question q = quizQuestions.get(k);
 				if (q == null) { // this catches cases where an assigned question no longer exists (rare)
 					qa.questionKeys.remove(k);
+					qcache.putAssignment(qa);
 					ofy().save().entity(qa);
 					continue;
 				}
@@ -688,14 +688,14 @@ public class Quiz extends HttpServlet {
 	
 	static String showSummary(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
+		Assignment a = qcache.getAssignment(user.getAssignmentId());
 		if (a==null) return "No assignment was specified for this request.";
 		
 		if (!user.isInstructor()) return "You must be logged in as the instructor to view this page.";
 
 		if (a.lti_ags_lineitem_url != null && a.lti_nrps_context_memberships_url != null) {
 			try { // code for LTI version 1.3
-				Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
+				Topic t = qcache.getTopic(a.topicId);
 
 				buf.append("<h3>" + a.assignmentType + " - " + t.title + "</h3>");
 				buf.append("Assignment ID: " + a.id + "<br>");
@@ -756,8 +756,8 @@ public class Quiz extends HttpServlet {
 	static String selectQuestionsForm(User user) {
 		StringBuffer buf = new StringBuffer();
 		try {
-			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-			Topic topic = ofy().load().type(Topic.class).id(a.topicId).safe();
+			Assignment a = qcache.getAssignment(user.getAssignmentId());
+			Topic topic = qcache.getTopic(a.topicId);
 			
 			buf.append("<h3>Customize Quiz Assignment</h3>");
 			buf.append("<b>Topic: " + topic.title + "</b><p>");
@@ -779,7 +779,8 @@ public class Quiz extends HttpServlet {
 					+ "If you don't see a question you want to include, you may "
 					+ "<a href=/Contribute?sig=" + user.getTokenSignature() + ">contribute a new question item</a> to the database.<p>");
 
-			Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",topic.id).filter("isActive",true);
+			List<Question> questions = (List<Question>) qcache.getQuestions(qcache.getQuizQuestionKeys(topic.id)).values();
+			//Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",topic.id).filter("isActive",true);
 			
 			// This dummy form uses javascript to select/deselect all questions
 			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
