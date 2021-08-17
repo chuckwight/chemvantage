@@ -25,12 +25,8 @@ import java.io.PrintWriter;
 import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -49,8 +45,6 @@ public class Homework extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	static QuestionCache qcache = new QuestionCache();
-	
-	static Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
 	
 	static int retryDelayMinutes = 2;  // minimum time between answer submissions for any single question
 
@@ -154,7 +148,7 @@ public class Homework extends HttpServlet {
 			Topic topic = qcache.getTopic(topicId);
 			
 			//  Load the Question items for this topic:
-			Map<Key<Question>,Question> hwQuestions = qcache.getHWQuestions(topicId);
+			Map<Key<Question>,Question> hwQuestions = qcache.getSortedHWQuestions(topicId);
 			
 			// START the presentation of the Homework assignment
 			buf.append("\n<h2>Homework Exercises - " + topic.title + "</h2>");
@@ -791,45 +785,6 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	static Map<Key<Question>, Question> sortByValue(Map<Key<Question>, Question> unsortMap) {
-		List<Map.Entry<Key<Question>, Question>> list = new LinkedList<Map.Entry<Key<Question>, Question>>(unsortMap.entrySet());
-
-		Collections.sort(list, new Comparator<Map.Entry<Key<Question>, Question>>() {
-			public int compare(Map.Entry<Key<Question>, Question> o1, Map.Entry<Key<Question>, Question> o2) {
-				Integer success1 = successPct.get(o1.getKey());
-				if (success1==null) {
-					int totalResponses = ofy().load().type(Response.class).filter("questionId",o1.getKey().getId()).count();
-					if (totalResponses==0) success1 = 100;
-					else {
-						int successResponses = ofy().load().type(Response.class).filter("questionId",o1.getKey().getId()).filter("score >",0).count();
-						success1 = successResponses*100/totalResponses;
-					}
-					successPct.put(o1.getKey(),success1);
-				}
-				Integer success2 = successPct.get(o2.getKey());
-				if (success2==null) {
-					int totalResponses = ofy().load().type(Response.class).filter("questionId",o2.getKey().getId()).count();
-					if (totalResponses==0) success2 = 100;
-					else {
-						int successResponses = ofy().load().type(Response.class).filter("questionId",o2.getKey().getId()).filter("score >",0).count();
-						success2 = successResponses*100/totalResponses;
-					}
-					successPct.put(o2.getKey(),success2);
-				}
-				int rank = success2-success1; // this reverses the normal Comparator to give higher rank to lower successPct
-				if (rank==0) rank = o1.getKey().compareTo(o2.getKey()); // tie breaker required
-				return rank;  
-			}
-		});
-
-		Map<Key<Question>, Question> result = new LinkedHashMap<Key<Question>, Question>();
-		for (Map.Entry<Key<Question>, Question> entry : list) {
-			result.put(entry.getKey(), entry.getValue());
-		}
-
-		return result;
-	}
-
 	static String selectQuestionsForm(User user) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -862,8 +817,8 @@ public class Homework extends HttpServlet {
 				if (topicQuestions.size()>0) hwQuestions.put(topic.id,topicQuestions);
 			}
 */
-			Map<Key<Question>,Question> sortedQuestions = new HashMap<Key<Question>,Question>();
-			sortedQuestions.putAll(sortByValue(qcache.getHWQuestions(topic.id)));
+			//Map<Key<Question>,Question> sortedQuestions = new HashMap<Key<Question>,Question>();
+			//sortedQuestions.putAll(sortByValue(qcache.getHWQuestions(topic.id)));
 			
 			// This dummy form uses javascript to select/deselect all questions
 			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "

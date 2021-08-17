@@ -20,6 +20,8 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -124,8 +126,10 @@ public class QuestionCache {
 		return keys;
 	}
 
-	Map<Key<Question>,Question> getHWQuestions(long topicId) {
-		return getQuestions(getHWQuestionKeys(topicId));
+	Map<Key<Question>,Question> getSortedHWQuestions(long topicId) {
+		List<Key<Question>> keys = getHWQuestionKeys(topicId);
+		Collections.sort(keys, new sortBySuccessPct());
+		return getQuestions(keys);
 	}
 	
 	List<Key<Question>> getExamQuestionKeys(long topicId) {
@@ -136,4 +140,66 @@ public class QuestionCache {
 		}
 		return keys;
 	}
+	
+	static Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
+	
+	class sortBySuccessPct implements Comparator<Key<Question>> {
+		public int compare(Key<Question> o1, Key<Question> o2) {
+			Integer success1 = successPct.get(o1);
+			if (success1==null) {
+				int totalResponses = ofy().load().type(Response.class).filter("questionId",o1.getId()).count();
+				if (totalResponses==0) success1 = 100;
+				else {
+					int successResponses = ofy().load().type(Response.class).filter("questionId",o1.getId()).filter("score >",0).count();
+					success1 = successResponses*100/totalResponses;
+				}
+				successPct.put(o1,success1);
+			}
+			Integer success2 = successPct.get(o2);
+			if (success2==null) {
+				int totalResponses = ofy().load().type(Response.class).filter("questionId",o2.getId()).count();
+				if (totalResponses==0) success2 = 100;
+				else {
+					int successResponses = ofy().load().type(Response.class).filter("questionId",o2.getId()).filter("score >",0).count();
+					success2 = successResponses*100/totalResponses;
+				}
+				successPct.put(o2,success2);
+			}
+			int rank = success2-success1; // this reverses the normal Comparator to give higher rank to lower successPct
+			if (rank==0) rank = o1.compareTo(o2); // tie breaker required
+			return rank;  
+		}
+	}
+/*	static List<Key<Question>> sortByValue(List<Key<Question>> list) {
+		
+		Collections.sort(list, new Comparator<Key<Question>>() {
+			public int compare(Key<Question> o1, Key<Question> o2) {
+				Integer success1 = successPct.get(o1);
+				if (success1==null) {
+					int totalResponses = ofy().load().type(Response.class).filter("questionId",o1.getId()).count();
+					if (totalResponses==0) success1 = 100;
+					else {
+						int successResponses = ofy().load().type(Response.class).filter("questionId",o1.getId()).filter("score >",0).count();
+						success1 = successResponses*100/totalResponses;
+					}
+					successPct.put(o1,success1);
+				}
+				Integer success2 = successPct.get(o2);
+				if (success2==null) {
+					int totalResponses = ofy().load().type(Response.class).filter("questionId",o2.getId()).count();
+					if (totalResponses==0) success2 = 100;
+					else {
+						int successResponses = ofy().load().type(Response.class).filter("questionId",o2.getId()).filter("score >",0).count();
+						success2 = successResponses*100/totalResponses;
+					}
+					successPct.put(o2,success2);
+				}
+				int rank = success2-success1; // this reverses the normal Comparator to give higher rank to lower successPct
+				if (rank==0) rank = o1.compareTo(o2); // tie breaker required
+				return rank;  
+			}
+		});
+		return list;
+	}
+	*/
 }
