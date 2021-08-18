@@ -250,10 +250,13 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			// First, construct a request token to send to the platform
 			Date now = new Date();
 			String iss = System.getProperty("com.google.appengine.application.id").contains("dev-vantage")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
+			String aud = d.oauth_access_token_url;
+			if ("brightspace".equals(d.lms_type)) aud = "https://api.brightspace.com/auth/token";
+			
 			String token = JWT.create()
 					.withIssuer(iss)
 					.withSubject(d.client_id)
-					.withAudience(d.oauth_access_token_url)
+					.withAudience(aud)
 					.withKeyId(d.rsa_key_id)
 					.withExpiresAt(in5Minutes)
 					.withIssuedAt(now)
