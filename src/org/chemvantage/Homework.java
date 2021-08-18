@@ -215,6 +215,7 @@ public class Homework extends HttpServlet {
 				
 				if (solvedQuestions.contains(q.id)) questionBuffer.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");
 				else if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) questionBuffer.append("<br/><a href='" + q.learn_more_url + "' target=_blank><img src=/images/learn_more.png alt='learn more here' align=top /><br/>learn</a>&nbsp;");
+				questionBuffer.append("<br/>" + QuestionCache.successPct.get(entry.getKey()));
 				
 				questionBuffer.append("</div>");
 
