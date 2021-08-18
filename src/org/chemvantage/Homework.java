@@ -148,7 +148,7 @@ public class Homework extends HttpServlet {
 			Topic topic = qcache.getTopic(topicId);
 			
 			//  Load the Question items for this topic:
-			Map<Key<Question>,Question> hwQuestions = qcache.getSortedHWQuestions(topicId);
+			List<Question> hwQuestions = qcache.getSortedHWQuestions(topicId);
 			
 			// START the presentation of the Homework assignment
 			buf.append("\n<h2>Homework Exercises - " + topic.title + "</h2>");
@@ -206,16 +206,16 @@ public class Homework extends HttpServlet {
 			// This is the main loop for presenting assigned and optional questions in order of increasing difficulty:
 			int i=1;
 			int j=1;
-			for (Map.Entry<Key<Question>,Question> entry : hwQuestions.entrySet()) {
-				boolean assigned = (hwa != null) && (hwa.questionKeys.contains(entry.getKey()));
+			for (Question q : hwQuestions) {
+				Key<Question> k = Key.create(Question.class,q.id);
+				boolean assigned = (hwa != null) && (hwa.questionKeys.contains(k));
 				StringBuffer questionBuffer = new StringBuffer("<div style='display:table-row'><div style='display:table-cell;font-size:small'>");
 				String hashMe = user.id + (hwa==null?"":hwa.id);
-				Question q = entry.getValue().clone();
 				q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
 				
 				if (solvedQuestions.contains(q.id)) questionBuffer.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");
 				else if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) questionBuffer.append("<br/><a href='" + q.learn_more_url + "' target=_blank><img src=/images/learn_more.png alt='learn more here' align=top /><br/>learn</a>&nbsp;");
-				questionBuffer.append("<br/>" + QuestionCache.successPct.get(entry.getKey()));
+				//questionBuffer.append("<br/>" + qcache.getSuccessPct(k));
 				
 				questionBuffer.append("</div>");
 
@@ -793,8 +793,7 @@ public class Homework extends HttpServlet {
 			Topic topic = qcache.getTopic(a.topicId);
 			
 			//  Load the Question items for this topic, if necessary:
-			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>(qcache.getHWQuestionKeys(topic.id));
-			Map<Key<Question>,Question> hwQuestions = qcache.getQuestions(questionKeys);
+			List<Question> hwQuestions = qcache.getSortedHWQuestions(topic.id);
 					
 			buf.append("<h3>Customize Homework Assignment</h3>");
 			buf.append("<b>Topic: " + topic.title + "</b><p>");
@@ -837,9 +836,7 @@ public class Homework extends HttpServlet {
 
 			
 			int i=0;
-			for (Map.Entry<Key<Question>,Question> entry : hwQuestions.entrySet()) {
-				Question q = entry.getValue().clone();
-				q.id = entry.getValue().id;
+			for (Question q : hwQuestions) {
 				q.setParameters();  // creates randomly selected parameters
 				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
 						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");

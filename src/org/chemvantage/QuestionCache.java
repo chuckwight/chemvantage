@@ -35,6 +35,7 @@ public class QuestionCache {
 	private Map<Long,List<Key<Question>>> quizQuestionKeys = new HashMap<Long,List<Key<Question>>>();
 	private Map<Long,List<Key<Question>>> hwQuestionKeys = new HashMap<Long,List<Key<Question>>>();
 	private Map<Long,List<Key<Question>>> examQuestionKeys = new HashMap<Long,List<Key<Question>>>();
+	private Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
 	
 	Topic getTopic(long topicId) {
 		Topic t = topics.get(topicId);
@@ -66,7 +67,7 @@ public class QuestionCache {
 		Map<Key<Question>,Question> qs = new HashMap<Key<Question>,Question>();
 		List<Key<Question>> needed = new ArrayList<Key<Question>>();
 		for (Key<Question> k : list) {
-			Question q = questions.get(k);
+			Question q = getQuestion(k);
 			if (q == null) needed.add(k);
 			else qs.put(k,q);
 		}
@@ -80,13 +81,17 @@ public class QuestionCache {
 	
 	Question getQuestion(Key<Question> k) {
 		Question q = questions.get(k);
-		try {
-			if (q==null) {
+		if (q==null) {
+			try {
 				q = ofy().load().key(k).safe();
 				questions.put(k, q);
+				return q.clone();
 			}
-		}  catch (Exception e) {}
-		return q;
+			catch (Exception e) {
+				return null;
+			}
+		}
+		return q.clone();
 	}
 	
 	void putQuestion(Question q) {
@@ -117,21 +122,20 @@ public class QuestionCache {
 		if (needed.size() > 0) questions.putAll(ofy().load().keys(needed));
 	}
 	
-	List<Key<Question>> getHWQuestionKeys(long topicId) {
+	List<Question> getSortedHWQuestions(long topicId) {
 		List<Key<Question>> keys = hwQuestionKeys.get(topicId);
 		if (keys == null) {
 			keys = ofy().load().type(Question.class).filter("assignmentType", "Homework").filter("topicId", topicId).filter("isActive", true).keys().list();
-			if (keys.size() > 0) hwQuestionKeys.put(topicId, keys);
+			if (keys.size() > 0) {
+				Collections.sort(keys, new SortBySuccessPct());
+				hwQuestionKeys.put(topicId, keys);
+			}
 		}
-		return keys;
+		List<Question> hwQuestions = new ArrayList<Question>();
+		for (Key<Question> k : keys) hwQuestions.add(getQuestion(k));
+		return hwQuestions;
 	}
 
-	Map<Key<Question>,Question> getSortedHWQuestions(long topicId) {
-		List<Key<Question>> keys = getHWQuestionKeys(topicId);
-		Collections.sort(keys, new sortBySuccessPct());
-		return getQuestions(keys);
-	}
-	
 	List<Key<Question>> getExamQuestionKeys(long topicId) {
 		List<Key<Question>> keys = examQuestionKeys.get(topicId);
 		if (keys.isEmpty()) {
@@ -141,9 +145,15 @@ public class QuestionCache {
 		return keys;
 	}
 	
-	static Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
+	int getSuccessPct(Key<Question> k) {
+		Integer s = successPct.get(k);
+		return s==null?0:s;
+	}
 	
-	class sortBySuccessPct implements Comparator<Key<Question>> {
+	class SortBySuccessPct implements Comparator<Key<Question>> {
+		
+		SortBySuccessPct() {}
+		
 		public int compare(Key<Question> o1, Key<Question> o2) {
 			Integer success1 = successPct.get(o1);
 			if (success1==null) {
@@ -170,36 +180,5 @@ public class QuestionCache {
 			return rank;  
 		}
 	}
-/*	static List<Key<Question>> sortByValue(List<Key<Question>> list) {
-		
-		Collections.sort(list, new Comparator<Key<Question>>() {
-			public int compare(Key<Question> o1, Key<Question> o2) {
-				Integer success1 = successPct.get(o1);
-				if (success1==null) {
-					int totalResponses = ofy().load().type(Response.class).filter("questionId",o1.getId()).count();
-					if (totalResponses==0) success1 = 100;
-					else {
-						int successResponses = ofy().load().type(Response.class).filter("questionId",o1.getId()).filter("score >",0).count();
-						success1 = successResponses*100/totalResponses;
-					}
-					successPct.put(o1,success1);
-				}
-				Integer success2 = successPct.get(o2);
-				if (success2==null) {
-					int totalResponses = ofy().load().type(Response.class).filter("questionId",o2.getId()).count();
-					if (totalResponses==0) success2 = 100;
-					else {
-						int successResponses = ofy().load().type(Response.class).filter("questionId",o2.getId()).filter("score >",0).count();
-						success2 = successResponses*100/totalResponses;
-					}
-					successPct.put(o2,success2);
-				}
-				int rank = success2-success1; // this reverses the normal Comparator to give higher rank to lower successPct
-				if (rank==0) rank = o1.compareTo(o2); // tie breaker required
-				return rank;  
-			}
-		});
-		return list;
-	}
-	*/
+
 }
