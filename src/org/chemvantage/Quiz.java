@@ -639,7 +639,7 @@ public class Quiz extends HttpServlet {
 								lmsPctScore = Double.parseDouble(lmsScore);
 								gotScoreOK = true;
 							} catch (Exception e) {
-								buf.append("LMS returned: " + lmsScore + " for user " + user.id + "<br/>");
+								buf.append("LMS returned: " + lmsScore + "<br/>");
 							}
 						}
 						else if (a.lis_outcome_service_url != null && s.lis_result_sourcedid != null) {  // LTI version 1.1
