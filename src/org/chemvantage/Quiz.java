@@ -667,7 +667,7 @@ public class Quiz extends HttpServlet {
 						} else throw new Exception();
 					} catch (Exception e) {
 						buf.append("ChemVantage was unable to retrieve the score for this assignment from the LMS.<br>"
-								+ e.toString() + ": " + e.getMessage() + "<br/>"
+								//+ e.toString() + ": " + e.getMessage() + "<br/>"
 								+ "Sometimes it takes several seconds for a score to be posted in the LMS grade book.<br>");
 						if (s.score==0 && s.numberOfAttempts<=1) buf.append("It appears that the assignment may not have been submitted for a score yet. ");
 						if (user.isInstructor()) buf.append("Some LMS providers do not accept score submissions for instructors or test students.");

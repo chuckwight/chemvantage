@@ -171,8 +171,10 @@ public class LTIv1p3Launch extends HttpServlet {
 				d.claims = claims.toString();
 			}
 			JsonObject platform = claims.get("https://purl.imsglobal.org/spec/lti/claim/tool_platform").getAsJsonObject();
-			d.email = platform.get("email_contact").getAsString();
-			d.lms_type = platform.get("product_family_code").getAsString();
+			JsonElement je = platform.get("email_contact");
+			if (je != null) d.email = je.getAsString();
+			//je = platform.get("product_family_code");
+			//if (je != null) d.lms_type = je.getAsString();
 		} catch (Exception e) {}	
 		
 		// Process information for LTI Assignment and Grade Services (AGS)
@@ -256,6 +258,8 @@ public class LTIv1p3Launch extends HttpServlet {
 		Assignment original_a = myAssignment.clone(); // make a copy to compare with for updating later
 		myAssignment.resourceLinkId = resourceLinkId;		
 		if (lti_ags_lineitem_url != null) myAssignment.lti_ags_lineitem_url = lti_ags_lineitem_url;
+		else if (scope.contains("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem")) myAssignment.lti_ags_lineitem_url =LTIMessage.createLineItem(d, myAssignment, lti_ags_lineitems_url);
+		
 		if (lti_nrps_context_memberships_url != null) myAssignment.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
 
 		// If required, save the updated Assignment entity now so its id will be accessible
