@@ -459,7 +459,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			}
 			return lineItemUrl;			
 		} catch (Exception e) {
-			return e.toString() + " " + e.getMessage() + "<br>" + debug.toString();
+			return null;  //e.toString() + " " + e.getMessage() + "<br>" + debug.toString();
 		}
 	}
 
