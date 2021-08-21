@@ -84,8 +84,8 @@ public class LTIDeepLinks extends HttpServlet {
 				String name = parameterNames.nextElement();
 				message += "<br />" + name + ": " + request.getParameter(name);
 			}
-			sendEmailToAdmin(message);
-			response.sendError(401,e.toString());
+			if (!e.getMessage().contains("Unauthorized")) sendEmailToAdmin(message);
+			response.sendError(401,e.getMessage());
 		}
 	}
 
@@ -207,8 +207,7 @@ public class LTIDeepLinks extends HttpServlet {
 			if (role.contains("administrator")) authorized = true;
 			if (role.contains("contentdeveloper")) authorized = true;
 			}
-		if (!authorized) throw new Exception("You must be logged into your LMS in an instructor "
-				+ "or administrator role in order to select assignment resources for this class.");
+		if (!authorized) throw new Exception("Sorry, this link works only for the course instructor.");
 	}
 	
 	String contentPickerForm(User user, HttpServletRequest request,JsonObject claims,int topicKey) throws Exception {
@@ -244,7 +243,8 @@ public class LTIDeepLinks extends HttpServlet {
 		buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
 		buf.append("<input type=hidden name=UserRequest value='Select assignment' />");
 		buf.append("<input type=hidden name=Refresh value=false /");
-
+		buf.append("<input type=hidden name=Subject value='" + claims.get("sub") + "' />");
+		
 		// Build a table for Parts 1 and 2 (side by side in 1 row)
 		String assignmentType = request.getParameter("AssignmentType");
 		if (assignmentType==null) assignmentType = "";
