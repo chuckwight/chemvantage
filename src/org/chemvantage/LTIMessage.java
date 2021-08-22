@@ -232,12 +232,15 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		// If the token expires more than 5 minutes from now, use it. Otherwise, request a new one.
 		Deployment d = null;
 		Date in5Minutes = new Date(new Date().getTime() + 300000L);
-		StringBuffer debug = new StringBuffer("getAccessToken: ");
+		StringBuffer debug = new StringBuffer("Failed getAccessToken for ");
+		String iss = System.getProperty("com.google.appengine.application.id").contains("dev-vantage")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
+		debug.append(iss + "<br/>");
 		
 		DataOutputStream wr = null;
 		BufferedReader reader = null;
 		try {
 			d = Deployment.getInstance(platformDeploymentId);
+			debug.append("Deployment: " + d.platform_deployment_id + "<br/>");
 			if (!d.scope.contains(scope)) return null;  // must be authorized
 
 			String authToken = authTokens.get(platformDeploymentId);
@@ -249,7 +252,6 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			// At this point no valid cached authToken was found, so we request a new authToken from the LMS platform:
 			// First, construct a request token to send to the platform
 			Date now = new Date();
-			String iss = System.getProperty("com.google.appengine.application.id").contains("dev-vantage")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
 			String aud = d.oauth_access_token_url;
 			if ("brightspace".equals(d.lms_type)) aud = "https://api.brightspace.com/auth/token";
 			
@@ -262,13 +264,12 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 					.withIssuedAt(now)
 					.withJWTId(Nonce.generateNonce())
 					.sign(Algorithm.RSA256(null,KeyStore.getRSAPrivateKey(d.rsa_key_id)));
-			debug.append("outgoing token OK.");
 			
 			String body = "grant_type=client_credentials"
 					+ "&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 					+ "&client_assertion=" + token
 					+ "&scope=" + URLEncoder.encode(d.scope, "utf-8").replaceAll("%20", "+");
-			debug.append("Body: " + body + ".");
+			debug.append("Query: " + body + "<br/>");
 			
 			URL u = new URL(d.oauth_access_token_url);
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
@@ -286,13 +287,13 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			wr.close();
 			
 			int responseCode = uc.getResponseCode();
-			debug.append("ResponseCode: " + responseCode + ".");
+			debug.append("ResponseCode: " + responseCode + "<br/>");
 			
 			if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED || responseCode == HttpURLConnection.HTTP_ACCEPTED) { // 200m or 201 or 202
 				reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
 				JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
 				reader.close();
-				debug.append("Response: " + json.toString() + ">");
+				debug.append("Response: " + json.toString() + "<br/>");
 				
 				// decode the Json response object. Fields include access_token, token-type, expires_in, scope
 				String access_token = json.get("access_token").getAsString();
@@ -309,6 +310,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				return access_token;
 			} else throw new Exception("response code " + responseCode);
 		} catch (Exception e) {
+			sendEmailToAdmin("Failed Auth Token",debug.toString());
 			return e.toString() + " " + e.getMessage() + debug.toString();
 		}    
 	}
