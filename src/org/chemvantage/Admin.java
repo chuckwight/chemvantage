@@ -164,14 +164,22 @@ public class Admin extends HttpServlet {
 				buf.append("<ul>");
 				List<BLTIConsumer> recentTCs = ofy().load().type(BLTIConsumer.class).filter("lastLogin >",lastMonth).list();
 				for (BLTIConsumer c : recentTCs) {
-					//int resp = ofy().load().type(Response.class).filter("userId >",c.oauth_consumer_key).filter("userId <",c.oauth_consumer_key+"~").count();
-					//buf.append("<li>" + c.oauth_consumer_key + " generated "+ resp + " responses. Contact: " + c.contact_name + " (" + c.email + ")</li>");
-					buf.append("<li>" + c.oauth_consumer_key + ": Contact: " + c.contact_name + " (" + c.email + ")</li>");
+					buf.append("<li>" + c.oauth_consumer_key + ": Contact: - " + c.contact_name + " (" + c.email + ")</li>");
 				}
 				buf.append("</ul>");
 			} else buf.append(" <a href=/Admin?UserRequest=showBLTI>show details</a><br/>");
 			
-			buf.append("Active LTI Advantage deployments: " + ofy().load().type(Deployment.class).filter("lastLogin >",lastMonth).count() + "<br>");
+			buf.append("Active LTI Advantage deployments: " + ofy().load().type(Deployment.class).filter("lastLogin >",lastMonth).count());
+			if ("showDEPL".equals(userRequest)) {
+				buf.append("<ul>");
+				List<Deployment> recentDEPLs = ofy().load().type(Deployment.class).filter("lastLogin >",lastMonth).list();
+				for (Deployment d : recentDEPLs) {
+					buf.append("<li>" + d.organization + ": Contact: - " + d.contact_name + " (" + d.email + ")</li>");
+				}
+				buf.append("</ul>");
+			} else buf.append(" <a href=/Admin?UserRequest=showDEPL>show details</a><br/>");
+			
+			
 			buf.append("Total number of Response entities: " + ofy().load().type(Response.class).filter("submitted >",lastMonth).count());
 			
 			buf.append("<h3>Accounts Needing Review and Approval</h3>");
