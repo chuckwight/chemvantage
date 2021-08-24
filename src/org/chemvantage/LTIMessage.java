@@ -253,7 +253,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			debug.append("Requested by: " + iss + "<br/>Denied by: " + d.oauth_access_token_url + "<br/>");
 			
 			String aud = d.oauth_access_token_url;
-			if ("brightspace".equals(d.lms_type)) aud = "https://api.brightspace.com/auth/token";
+			if ("brightspace".equals(d.lms_type) || "desire2learn".equals(d.lms_type)) aud = "https://api.brightspace.com/auth/token";
 			
 			String token = JWT.create()
 					.withIssuer(iss)
