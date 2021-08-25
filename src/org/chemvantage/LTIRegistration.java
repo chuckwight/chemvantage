@@ -1107,16 +1107,26 @@ public class LTIRegistration extends HttpServlet {
 		switch (lms) {
 		case "moodle":
 			buf.append("<h3>For the Instructor</h3>"
-					+ "To add ChemVantage assignments to your course:<ol>"
+					+ "To add ChemVantage assignments to your course, turn editing ON and:<ol>"
 					+ "<li>Click 'Add an activity or resource'</li>"
 					+ "<li>Click 'External Tool'</li>"
 					+ "<li>Select ChemVantage from preconfigured tools and click 'Select content'</li>"
 					+ "<li>Choose one or more ChemVantage assignments, click 'Submit' and then 'Continue'</li>"
 					+ "</ol>");
 			break;
+		case "canvas":
+			buf.append("<h3>For the Instructor</h3>"
+					+ "To add ChemVantage assignments to your course, go to the Assignments page:<ol>"
+					+ "<li>Click the red '+ Assignment' button</li>"
+					+ "<li>For Submission Type select 'External Tool'</li>"
+					+ "<li>Click Find and select ChemVantage from preconfigured tools</li>"
+					+ "<li>Choose a ChemVantage assignment and topic, then click 'Create this assignment' and then 'Select'</li>"
+					+ "<li>Click 'Save' or 'Save and Publish'</li>"
+					+ "</ol>");
+			break;
 		default:
 			buf.append("<h3>For the Course Instructor:</h3>"
-					+ "Although we do not have specific instuctions for how to add a ChemVantage assignment to your course in " + lms + ", "
+					+ "Although we do not have specific instructions for how to add a ChemVantage assignment to your course in " + lms + ", "
 					+ "in general you should navigate to your course page and<ol>"
 					+ "<li>Add a new assignment, content or resource</li>"
 					+ "<li>Select ChemVantage from a list of preconfigured tools</li>"
@@ -1149,6 +1159,7 @@ public class LTIRegistration extends HttpServlet {
 		
 		buf.append("<h2>ChemVantage Registration Success</h2>"
 				+ "Congratulations! Your LTI registration has been completed:<br/>"
+				+ "Tool URL: " + iss + "<br/>"
 				+ "LMS Platform: " + d.getPlatformId() + "<br/>"
 				+ "Deployment ID: " + d.getDeploymentId() + "<br/>"
 				+ "Client ID: " + d.client_id + "<br/><br/>");
@@ -1198,7 +1209,7 @@ public class LTIRegistration extends HttpServlet {
 			break;
 		default:
 			buf.append("To the Course Instructor:<br>"
-					+ "Although we do not have specific instuctions for how to add a ChemVantage assignment to your course in " + d.lms_type + ", "
+					+ "Although we do not have specific instructions for how to add a ChemVantage assignment to your course in " + d.lms_type + ", "
 					+ "in general you should navigate to your course page and<ol>"
 					+ "<li>Add a new assignment, content or resource</li>"
 					+ "<li>Select ChemVantage from a list of preconfigured tools</li>"

@@ -176,7 +176,7 @@ public class ReportScore extends HttpServlet {
 			Properties props = new Properties();
 			Session session = Session.getDefaultInstance(props, null);
 
-			String recipient = d.email;
+			//String recipient = d.email;
 			Topic t = ofy().load().type(Topic.class).id(assignment.topicId).safe();
 			Key<Score> k = Key.create(Key.create(User.class, userId),Score.class,assignment.id);
 			Score s = ofy().load().key(k).now();
@@ -204,7 +204,7 @@ public class ReportScore extends HttpServlet {
 					
 			Message msg = new MimeMessage(session);
 			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-			msg.addRecipient(Message.RecipientType.TO,new InternetAddress(recipient, ""));
+			//msg.addRecipient(Message.RecipientType.TO,new InternetAddress(recipient, ""));
 			msg.addRecipient(Message.RecipientType.CC,new InternetAddress("admin@chemvantage.org", "ChemVantage"));
 			msg.setSubject("ChemVantage LIS Reporting Error");
 			msg.setContent(msgBody,"text/html");
