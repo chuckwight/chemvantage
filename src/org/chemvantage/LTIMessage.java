@@ -238,6 +238,9 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		BufferedReader reader = null;
 		try {
 			d = Deployment.getInstance(platformDeploymentId);
+			if (d==null) debug.append("Deployment unknown<br/>");
+			else debug.append("Deployment: " + d.platform_deployment_id + " (" + d.org_url + ")<br/>");
+			
 			if (!d.scope.contains(scope)) return null;  // must be authorized
 
 			String authToken = authTokens.get(platformDeploymentId);
@@ -264,7 +267,6 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 					.withIssuedAt(now)
 					.withJWTId(Nonce.generateNonce())
 					.sign(Algorithm.RSA256(null,KeyStore.getRSAPrivateKey(d.rsa_key_id)));
-			//debug.append("outgoing token OK.");
 			
 			String body = "grant_type=client_credentials"
 					+ "&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
