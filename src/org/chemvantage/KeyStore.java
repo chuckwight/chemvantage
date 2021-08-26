@@ -79,22 +79,9 @@ public class KeyStore extends HttpServlet {
 	protected static String buildJwks() {
 		if (rsaKeys.isEmpty()) createNewKeyMap();
 		
-		JsonObject json = new JsonObject();
 		JsonArray keys = new JsonArray();
-		for (RSAKeyPair k : rsaKeys.values()) {
-			try {		
-				JsonObject jwk = new JsonObject();
-				jwk.addProperty("kty", "RSA");
-				jwk.addProperty("kid", k.kid);
-				RSAPublicKey pub = k.getRSAPublicKey();
-				jwk.addProperty("n", Base64.getUrlEncoder().encodeToString(pub.getModulus().toByteArray()));
-				jwk.addProperty("e", Base64.getUrlEncoder().encodeToString(pub.getPublicExponent().toByteArray()));
-				jwk.addProperty("alg", "RS256");
-				jwk.addProperty("use", "sig");
-				keys.add(jwk);
-			} catch (Exception e) {
-			}			
-		}
+		for (String kid : rsaKeys.keySet()) keys.add(getJwk(kid));
+		JsonObject json = new JsonObject();
 		json.add("keys", keys);
 		jwks = json.toString();
 		return jwks;
