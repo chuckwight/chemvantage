@@ -17,8 +17,6 @@
 
 package org.chemvantage;
 
-import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
-
 /* This servlet executes a valid LTI ResourceLink launch request using LTI v1.3 specifications
  * The basic requesting entity is a Deployment. Although a single LMS platform may host several
  * Deployments (e.g., as separate accounts), each Deployment will designate a client_id that identifies
@@ -68,8 +66,6 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.auth0.jwt.interfaces.JWTVerifier;
-import com.google.appengine.api.taskqueue.Queue;
-import com.google.appengine.api.taskqueue.QueueFactory;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -106,8 +102,18 @@ public class LTIv1p3Launch extends HttpServlet {
 
 				if (!refresh && myAssignment.isValid()) {
 					ofy().save().entity(myAssignment).now();  // we will need this in a few milliseconds					
-					String redirectUrl = "/" + request.getParameter("AssignmentType") + "?sig=" + user.getTokenSignature();
-					response.sendRedirect(redirectUrl);	
+					response.setContentType("text/html");
+					response.setCharacterEncoding("UTF-8");
+					PrintWriter out = response.getWriter();	
+					switch (myAssignment.assignmentType) {
+					case "Quiz": 
+						out.println(Home.header("ChemVantage Quiz") + Quiz.printQuiz(user, 0L) + Home.footer);
+						break;
+					case "Homework":
+						out.println(Home.header("ChemVantage Homework") + Homework.printHomework(user, 0L, 0L) + Home.footer);
+						break;
+					default: response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
+					}
 				} else {  // send the user back to the resourcePickerForm
 					int topicKey = 1;
 					try {topicKey = Integer.parseInt(request.getParameter("TopicKey"));} catch (Exception e) {}
@@ -226,7 +232,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			if (myAssignment != null) assignments.put(lti_ags_lineitem_url,myAssignment);
 		}
 
-		if (myAssignment == null) {  // This section searches for the resourceId parameter, which is a String version of the ChemVantage assigmentId
+		if (myAssignment == null && d.scope.contains("lineitem")) {  // This section searches for the resourceId parameter, which is a String version of the ChemVantage assigmentId
 			String resourceId = null;
 			switch (d.lms_type) {
 			case "canvas":           // Canvas does not support setting the resourceId in the lineitem, but allows this to be sent as a request parameter
@@ -286,8 +292,6 @@ public class LTIv1p3Launch extends HttpServlet {
 				break;
 			default: response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
 			}
-			Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
-			queue.add(withUrl("/HashUserIds").param("sig",user.getTokenSignature()));			
 			return;
 		}
 	}
