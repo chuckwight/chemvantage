@@ -778,7 +778,7 @@ public class Quiz extends HttpServlet {
 					+ "If you don't see a question you want to include, you may "
 					+ "<a href=/Contribute?sig=" + user.getTokenSignature() + ">contribute a new question item</a> to the database.<p>");
 
-			List<Question> questions = (List<Question>) qcache.getQuestions(qcache.getQuizQuestionKeys(topic.id)).values();
+			List<Question> questions = new ArrayList<Question>(qcache.getQuestions(qcache.getQuizQuestionKeys(topic.id)).values());
 			//Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",topic.id).filter("isActive",true);
 			
 			// This dummy form uses javascript to select/deselect all questions
