@@ -223,7 +223,7 @@ public class PracticeExam extends HttpServlet {
 			Date now = new Date();
 			Date startTime = new Date(now.getTime()-timeAllowed*1000);  // about 1 hour ago depending on timeAllowed ago 
 			
-			List<PracticeExamTransaction> qpt = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.id).filter("graded",null).filter("downloaded >",startTime).list();
+			List<PracticeExamTransaction> qpt = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.getHashedId()).filter("graded",null).filter("downloaded >",startTime).list();
 			PracticeExamTransaction pt = null;  // placeholder for recovery of one of the pending exam transactions
 			boolean newExam = true;
 			if (qpt.size()>0) {  // there is at least one pending practice exam
