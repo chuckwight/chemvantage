@@ -117,6 +117,7 @@ public class Help extends HttpServlet {
 		 *  1) aty (AssignmentType: Q, H, or P)
 		 *  2) tid (Transaction ID: long)
 		 *  3) exp (Expires: 3 days after issuance)
+		 *  4) hsh (int hashcode for question parameters)
 		 */
 		switch (payload.get("aty").getAsString()) {
 			case "Q": throw new Exception("Not implemented yet, sorry"); 
@@ -130,13 +131,16 @@ public class Help extends HttpServlet {
 				buf.append("<h4>Assignment: Homework - " + topic.title + "</h4>");
 				
 				Question q = ofy().load().type(Question.class).id(hwt.questionId).safe();
-				String hashMe = hwt.userId + hwt.assignmentId;
-				q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
+				int hashCode = -1;
+				try {
+					hashCode = payload.get("hsh").getAsInt();
+				} catch (Exception e) {}
+				q.setParameters(hashCode);  // creates different parameters for different assignments
 				buf.append(q.print(hwt.showWork,""));
 				
 				buf.append("<script>document.getElementById('showWork" + q.id + "').style.display='';</script>");
 				
-				List<Response> responses = ofy().load().type(Response.class).filter("userId",Subject.hashId(hwt.userId)).filter("questionId",q.id).list();
+				List<Response> responses = ofy().load().type(Response.class).filter("userId",hwt.userId).filter("questionId",q.id).list();
 				
 				Date solved = null;
 				StringBuffer tablebuf = new StringBuffer();
@@ -170,6 +174,7 @@ public class Help extends HttpServlet {
 		}
 		
 		long tid = Long.parseLong(request.getParameter("TransactionId"));
+		int hsh = Integer.parseInt(request.getParameter("HashCode"));
 		
 		Date now = new Date();
 		Date in3Days = new Date(now.getTime() + 259200000L);
@@ -177,6 +182,7 @@ public class Help extends HttpServlet {
 		String token = JWT.create()
 				.withClaim("aty", aty)
 				.withClaim("tid", tid)
+				.withClaim("hsh", hsh)
 				.withExpiresAt(in3Days)
 				.sign(algorithm);
 		

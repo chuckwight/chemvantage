@@ -25,7 +25,6 @@ import java.util.Random;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
-import com.googlecode.objectify.cmd.Query;
 
 @Entity
 public class User {
@@ -214,8 +213,8 @@ public class User {
 		// more than 2 answers more than 15 minutes ago
 		try {
 			Date FifteenMinutesAgo = new Date(new Date().getTime()-900000);
-			Query<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",this.getHashedId()).filter("questionId",questionId).filter("graded <",FifteenMinutesAgo);
-			return (hwTransactions.count() > 2?true:false);
+			int nAttempts = ofy().load().type(HWTransaction.class).filter("userId",this.getHashedId()).filter("questionId",questionId).filter("graded <",FifteenMinutesAgo).count();
+			return (nAttempts > 2?true:false);
 		} catch (Exception e) {
 			return false;
 		}

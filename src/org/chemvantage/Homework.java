@@ -415,9 +415,10 @@ public class Homework extends HttpServlet {
 				
 				if (!user.isAnonymous() && user.isEligibleForHints(q.id)) {
 					buf.append("<form method=post action=Help>"
-							+ "<input type=hidden name=sig value=" + user.getTokenSignature() + ">"
-							+ "<input type=hidden name=AssignmentType value=Homework>"
-							+ "<input type=hidden name=TransactionId value=" + ht.id + ">");
+							+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+							+ "<input type=hidden name=AssignmentType value=Homework />"
+							+ "<input type=hidden name=TransactionId value=" + ht.id + " />"
+							+ "<input type=hidden name=HashCode value=" + hashMe.hashCode() + " />");
 					buf.append("<font color=red>Do you need some help from your instructor or teaching assistant? </font>");
 					buf.append("<input type=submit value='Get Some Help Here'></form><br/>");
 				}
@@ -809,16 +810,6 @@ public class Homework extends HttpServlet {
 					+ "If you don't see a question you want to include, you may "
 					+ "<a href=/Contribute?sig=" + user.getTokenSignature() 
 					+ ">contribute a new question item</a> to the database.<p>");
-/*
-			if (hwQuestions.get(topic.id) == null) { // load all of the Question items for this topic
-				List<Key<Question>> topicQuestionKeys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topic.id).keys().list();
-				Map<Key<Question>,Question> topicQuestions = new HashMap<Key<Question>,Question>();
-				topicQuestions.putAll(sortByValue(ofy().load().keys(topicQuestionKeys)));
-				if (topicQuestions.size()>0) hwQuestions.put(topic.id,topicQuestions);
-			}
-*/
-			//Map<Key<Question>,Question> sortedQuestions = new HashMap<Key<Question>,Question>();
-			//sortedQuestions.putAll(sortByValue(qcache.getHWQuestions(topic.id)));
 			
 			// This dummy form uses javascript to select/deselect all questions
 			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
