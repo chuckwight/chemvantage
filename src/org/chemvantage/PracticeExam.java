@@ -464,7 +464,7 @@ public class PracticeExam extends HttpServlet {
 				timeAllowed = a.timeAllowed;
 			} catch (Exception e) {} // catches eException if exam timeAllowed has not been customized
 			
-			if (now.getTime() - pt.downloaded.getTime() > 1000*(timeAllowed+60)) return "Sorry, the grading period for this exam has expired.";  // 60-second grace period
+			if (now.getTime() - pt.downloaded.getTime() > 1000*(timeAllowed+300)) return "Sorry, the grading period for this exam has expired.";  // 5-minute grace period
 
 			// if everything is still OK, score the exam:
 			List<Long> topicIds = pt.topicIds;			
