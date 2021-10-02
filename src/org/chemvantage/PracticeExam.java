@@ -25,6 +25,7 @@ import java.io.PrintWriter;
 import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.Enumeration;
@@ -836,40 +837,48 @@ public class PracticeExam extends HttpServlet {
 			
 			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
 				i++; // increment the user number
+				String name = entry.getValue()[1];  // user's given and family name
+				if (name==null) name = "";  // LMS does not provide names
 				// make a short list of each user's PracticeExamTransactions
 				List<PracticeExamTransaction> userpets = new ArrayList<PracticeExamTransaction>();
 				String hashedUserId = Subject.hashId(user.platformId + "/" + entry.getKey());
 				for (PracticeExamTransaction pet : pets) if (hashedUserId.equals(pet.userId)) userpets.add(pet);
 				pets.removeAll(userpets);
-				
-				for (int k=userpets.size();k>0;k--) {  // enter the user's transactions into the table
-					PracticeExamTransaction p = userpets.get(k-1);
-					buf.append("<tr style='text-align: center;background-color: " + (i%2==0?"yellow":"cyan") + "'>");
-					buf.append("<td>" + (p.userId.equals(user.id)?"(you)":i) + "</td><td>" + k + "</td><td>" + p.downloaded + "</td>");
-
-					if (p.graded==null) buf.append("<td colspan=" + 4+a.topicIds.size() + ">(exam was not submitted for scoring)</td>");
-					else {
-						buf.append("<td>" + (p.graded==null?"-":(p.graded.getTime()-p.downloaded.getTime())/60000 + " min.") + "</td>");
-
-						int score = 0;
-						int possibleScore = 0;
-						for (int j=0;j<a.topicIds.size();j++) {
-							score += p.scores[j];
-							possibleScore += p.possibleScores[j];
-							if (p.possibleScores[j] == 0) buf.append("<td>0%</td>");
-							else buf.append("<td>" + String.valueOf(100*p.scores[j]/p.possibleScores[j]) + "%" + "</td>");
-						}
-
-						buf.append("<td>" + String.valueOf(100*score/possibleScore) + "%</td><td>" 
-								+ (p.graded==null?" - ":(p.reviewed==null?"no":p.reviewed)) + "</td><td>"
-								+ "<a href=PracticeExam?UserRequest=ReviewExam&PracticeExamTransactionId=" + p.id 
-								+ "&sig=" + user.getTokenSignature() + "&UserId=" + user.platformId + "/" + entry.getKey() + ">Review</a></td>");
-					}
+				// put the user's transactions in order of decreasing download time:
+				Collections.sort(userpets,new SortExams());
+				if (userpets.isEmpty()) {  // place a blank line in the table with the user's name
+					buf.append("<tr style='text-align: center;background-color: " + (i%2==0?"yellow":"cyan") + "'>"
+							+ "<td>" + i + ".&nbsp;" + name + "</td>" + "<td colspan=" + 6+a.topicIds.size() + ">(exam was not attempted)</td>");
 					buf.append("</tr>");					
+				} else {
+					for (int k=userpets.size();k>0;k--) {  // enter the user's transactions into the table
+						PracticeExamTransaction p = userpets.get(k-1);
+						buf.append("<tr style='text-align: center;background-color: " + (i%2==0?"yellow":"cyan") + "'>");
+						buf.append("<td>" + (p.userId.equals(user.getHashedId())?"(you)":i + ".&nbsp;" + name) + "</td><td>" + k + "</td><td>" + p.downloaded + "</td>");
+
+						if (p.graded==null) buf.append("<td colspan=" + 4+a.topicIds.size() + ">(exam was not submitted for scoring)</td>");
+						else {
+							buf.append("<td>" + (p.graded==null?"-":(p.graded.getTime()-p.downloaded.getTime())/60000 + " min.") + "</td>");
+
+							int score = 0;
+							int possibleScore = 0;
+							for (int j=0;j<a.topicIds.size();j++) {
+								score += p.scores[j];
+								possibleScore += p.possibleScores[j];
+								if (p.possibleScores[j] == 0) buf.append("<td>0%</td>");
+								else buf.append("<td>" + String.valueOf(100*p.scores[j]/p.possibleScores[j]) + "%" + "</td>");
+							}
+
+							buf.append("<td>" + String.valueOf(100*score/possibleScore) + "%</td><td>" 
+									+ (p.graded==null?" - ":(p.reviewed==null?"no":p.reviewed)) + "</td><td>"
+									+ "<a href=PracticeExam?UserRequest=ReviewExam&PracticeExamTransactionId=" + p.id 
+									+ "&sig=" + user.getTokenSignature() + "&UserId=" + user.platformId + "/" + entry.getKey() + ">Review</a></td>");
+						}
+						buf.append("</tr>");					
+					}
 				}
-			}			
+			}
 			buf.append("</table><p>");
-			
 			buf.append("<p>");
 		} catch (Exception e) {
 			buf.append(e.toString());
