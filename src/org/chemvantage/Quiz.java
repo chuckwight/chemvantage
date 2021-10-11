@@ -457,7 +457,7 @@ public class Quiz extends HttpServlet {
 				+ "	for (i=0;i<2;i++) document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ' minutes ' + oddSeconds + ' seconds.';"
 				+ "	if (seconds==30) alert('30 seconds remaining');"
 				+ "	if (seconds < 0) document.Quiz.submit();"
-				+ "	setTimeout('countdown()',1000);"
+				+ "	else setTimeout('countdown()',1000);"
 				+ "}"
 				+ "function startTimers(m) {"
 				+ "	endMillis = m;"
