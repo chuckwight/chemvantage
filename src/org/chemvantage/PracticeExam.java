@@ -91,7 +91,12 @@ public class PracticeExam extends HttpServlet {
 					String studentUserId = request.getParameter("UserId");
 					out.println(Home.header("Review ChemVantage Practice Exam") + reviewExam(user,practiceExamTransactionId,studentUserId) + Home.footer);
 					break;
-				default: out.println(Home.header("ChemVantage Practice Exam") + printExam(user,request) + Home.footer);
+				case "PrintExam":
+					out.println(Home.header("ChemVantage Practice Exam") + printExam(user,request) + Home.footer);
+					break;
+				default: 
+					if (user.isInstructor()) out.println(Home.header("ChemVantage Practice Exam") + instructorPage(user,request) + Home.footer);
+					else out.println(Home.header("ChemVantage Practice Exam") + printExam(user,request) + Home.footer);
 			}
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
@@ -194,6 +199,42 @@ public class PracticeExam extends HttpServlet {
 		return buf.toString();
 	}
 
+	String instructorPage(User user,HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer();		
+		try {
+			// Get requested topic ids for this exam
+			List<Long> topicIds = new ArrayList<Long>();
+			long assignmentId = 0;
+			Assignment a = null;
+			try {  // this branch works if the practice exam is assigned
+				assignmentId=user.getAssignmentId();
+				a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+				topicIds = a.topicIds;
+			} catch (Exception e) {  // otherwise this is a student-designed exam
+				String[] topicStringIds = request.getParameterValues("TopicId");
+				if (topicStringIds != null) {
+					for (int i=0;i<topicStringIds.length;i++) topicIds.add(Long.parseLong(topicStringIds[i]));
+				}
+			}
+			buf.append("<h2>General Chemistry Exam - Instructor Page</h2>");
+			Map<Long,Topic> topics = ofy().load().type(Topic.class).ids(topicIds);			
+			buf.append("Topics covered on this exam:<OL>");
+			for (long topicId : topicIds) {
+				buf.append("<LI>" + topics.get(topicId).title + "</LI>");
+			}
+			buf.append("</OL>");
+			
+			buf.append("From here, you may<UL>"
+					+ "<LI><a href='/PracticeExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + "'>Customize this exam</a> to set the time allowed and select the available question items.</LI>"
+					+ "<LI><a href='/PracticeExam?UserRequest=ReviewExamScores&sig=" + user.getTokenSignature() + "'>Review the exam results</a> and (optionally) assign partial credit for answers</LI>"
+					+ "<LI><a href='/PracticeExam?UserRequest=PrintExam&sig=" + user.getTokenSignature() + "'>Take the exam yourself</a> (recommended)</LI>"
+					+ "</UL>");
+		} catch (Exception e) {
+			buf.append("<br/>Instructor page error: " + e.getMessage());
+		}
+		return buf.toString();
+	}
+	
 	String printExam(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		
@@ -303,12 +344,15 @@ public class PracticeExam extends HttpServlet {
 			
 			int secondsRemaining = (int) (timeAllowed - (now.getTime() - downloaded.getTime())/1000);
 
+			Map<Long,Topic> topics = ofy().load().type(Topic.class).ids(topicIds);
+			
 			buf.append("Topics covered on this exam:<OL>");
 			for (long topicId : topicIds) {
-				buf.append("<LI>" + ofy().load().type(Topic.class).id(topicId).safe().title + "</LI>");
+				buf.append("<LI>" + topics.get(topicId).title + "</LI>");
 			}
 			buf.append("</OL>");
 
+			/* ===== This section has been replaced by a separate instructor page =========
 			if (user.isInstructor()) {
 				buf.append("<mark>Instructor: you may <a href=/PracticeExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + ">customize this practice exam</a>. ");
 					
@@ -317,7 +361,8 @@ public class PracticeExam extends HttpServlet {
 				
 				buf.append("</mark><p>");
 			}
-			
+			 ==============================================================================
+			 */			
 			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded. ");
 			if (!newExam) buf.append("You are resuming an exam originally downloaded at " + pt.downloaded);
 			
