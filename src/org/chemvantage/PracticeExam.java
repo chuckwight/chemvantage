@@ -340,10 +340,6 @@ public class PracticeExam extends HttpServlet {
 			
 			buf.append("<h2>General Chemistry Exam</h2>");
 			
-			Date downloaded = pt.downloaded;
-			
-			int secondsRemaining = (int) (timeAllowed - (now.getTime() - downloaded.getTime())/1000);
-
 			Map<Long,Topic> topics = ofy().load().type(Topic.class).ids(topicIds);
 			
 			buf.append("Topics covered on this exam:<OL>");
@@ -366,7 +362,7 @@ public class PracticeExam extends HttpServlet {
 			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded. ");
 			if (!newExam) buf.append("You are resuming an exam originally downloaded at " + pt.downloaded);
 			
-			buf.append("\n<FORM METHOD=POST ACTION=PracticeExam "
+			buf.append("\n<FORM NAME=PracticeExamForm METHOD=POST ACTION=PracticeExam "
 					+ "onSubmit=\"return confirm('Submit this exam for grading now. Are you sure?')\">");
 
 			buf.append("<div id='timer0' style='color: red'></div><div id=ctrl0 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
@@ -443,17 +439,17 @@ public class PracticeExam extends HttpServlet {
 			buf.append("<div id='timer1' style='color: red'></div><div id=ctrl1 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
 			buf.append("\n<input type=submit value='Grade This Practice Exam'>");
 			buf.append("\n</form>");
-
-			// this code for displaying/hiding timers and a 30-seconds-remaining alert box
-			buf.append(timerScripts(secondsRemaining)); 
 			
+			long endMillis = pt.downloaded.getTime() + timeAllowed*1000L;
+			// this code for displaying/hiding timers and a 30-seconds-remaining alert box
+			buf.append(timerScripts(endMillis)); 
 		} catch (Exception e) {
 			buf.append("printExam: " + e.toString());
 		}
 		return buf.toString();
 	}
 
-	String timerScripts(int secondsRemaining) {
+	String timerScripts(long endMillis) {
 		return "<SCRIPT language='JavaScript'>"
 				+ "function toggleTimers() {"
 				+ "  var timer0 = document.getElementById('timer0');"
@@ -471,16 +467,16 @@ public class PracticeExam extends HttpServlet {
 				+ "  }"
 				+ "}"
 				+ "var seconds;var minutes;var oddSeconds;"
-				+ "var endTime = new Date().getTime() + " + secondsRemaining + "*1000;"
+				+ "var endTime = " + endMillis + ";"
 				+ "function countdown() {"
 				+ "var now = new Date().getTime();"
 				+ "seconds=Math.round((endTime-now)/1000);"
 				+ "minutes = seconds<0?Math.ceil(seconds/60):Math.floor(seconds/60);"
 				+ "oddSeconds = seconds%60;"
-				+ "for(i=0;i<2;i++)"
-				+ "document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ' minutes ' + oddSeconds + ' seconds.';"
+				+ "for(i=0;i<2;i++) document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ' minutes ' + oddSeconds + ' seconds.';"
 				+ "if (seconds==30) alert('30 seconds remaining');"
-				+ "setTimeout('countdown()',1000);"
+				+ "if (seconds < 0) document.PracticeExamForm.submit();"
+				+ "else setTimeout('countdown()',1000);"
 				+ "}"
 				+ "countdown();"
 				+ "</SCRIPT>"; 
