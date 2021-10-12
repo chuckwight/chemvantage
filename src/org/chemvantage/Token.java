@@ -155,8 +155,19 @@ public class Token extends HttpServlet {
 			Deployment d = deployments.get(0);
 			if ("canvas".equals(d.lms_type) && platform_id.contains("instructure.com") && d.lastLogin==null) {
 				// create new Deployment with the correct platform_id and access points
-				ofy().save().entity(d).now();
-				return d;
+				String oidc_auth_url = platform_id + "/api/lti/authorize_redirect";
+				String oauth_access_token_url = platform_id + "/login/oauth2/token";
+				String well_known_jwks_url = platform_id + "/api/lti/security/jwks";
+				String client_name = d.contact_name;
+				String email = d.email;
+				String organization = d.organization;
+				String org_url = d.org_url;
+				String org_typ = d.org_typ;
+				String lms = d.lms_type;
+				Deployment d2 = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,org_typ,lms);				
+				ofy().save().entity(d2).now();
+				ofy().delete().entity(d);
+				return d2;
 			}
 		}
 		return null;
