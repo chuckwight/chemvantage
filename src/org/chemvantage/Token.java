@@ -149,7 +149,7 @@ public class Token extends HttpServlet {
 		}
 		if (deployments.size()>0) return deployments.get(0);
 		
-		// Still no joy. Check to see if there might be an error in the platform_id or iss value:
+		// Still no joy. Check to see if there might be an error in the platform_id or iss value (e.g., using an instructure test platform)
 		deployments = ofy().load().type(Deployment.class).filter("client_id",client_id).list();
 		if (deployments.size()==1) {
 			Deployment d = deployments.get(0);
@@ -164,7 +164,7 @@ public class Token extends HttpServlet {
 				String org_url = d.org_url;
 				String org_typ = d.org_typ;
 				String lms = d.lms_type;
-				Deployment d2 = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,org_typ,lms);				
+				Deployment d2 = new Deployment(platform_id,d.getDeploymentId(),client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,org_typ,lms);				
 				ofy().save().entity(d2).now();
 				ofy().delete().entity(d);
 				return d2;
