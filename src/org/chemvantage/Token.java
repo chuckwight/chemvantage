@@ -99,7 +99,7 @@ public class Token extends HttpServlet {
 			//d.claims = oidc_auth_url;
 			//ofy().save().entity(d);
 		} catch (Exception e) {
-			response.getWriter().println("<h3>Failed Auth Token</h3>" + e.getMessage()); // + "<br>" + debug.toString());
+			response.getWriter().println("<h3>Failed Auth Token</h3>" + e.toString() + " " + e.getMessage() + "<br>" + debug.toString());
 		}
 	}
 
@@ -147,8 +147,19 @@ public class Token extends HttpServlet {
 			// Find all of the deployments from this platform; there SHOULD be only one if neither deployment_id nor client_id was provided.
 			deployments = ofy().load().type(Deployment.class).filterKey(">=",kstart).filterKey("<",kend).list();
 		}
-		if (deployments==null) return null;
-		else return deployments.get(0);
+		if (deployments.size()>0) return deployments.get(0);
+		
+		// Still no joy. Check to see if there might be an error in the platform_id or iss value:
+		deployments = ofy().load().type(Deployment.class).filter("client_id",client_id).list();
+		if (deployments.size()==1) {
+			Deployment d = deployments.get(0);
+			if ("canvas".equals(d.lms_type) && platform_id.contains("instructure.com") && d.lastLogin==null) {
+				// create new Deployment with the correct platform_id and access points
+				ofy().save().entity(d).now();
+				return d;
+			}
+		}
+		return null;
 	}
 	
 
