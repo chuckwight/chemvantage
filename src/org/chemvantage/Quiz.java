@@ -63,12 +63,23 @@ public class Quiz extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 			
-			if ("ShowScores".contentEquals(userRequest)) out.println(Home.header("Your ChemVantage Scores") + showScores(user) + Home.footer);
-			else if ("ShowSummary".contentEquals(userRequest)) out.println(Home.header("Your Class ChemVantage Scores") + showSummary(user,request) + Home.footer);
-			else if ("AssignQuizQuestions".contentEquals(userRequest) && user.isInstructor()) {
-				out.println(Home.header("Customize ChemVantage Quiz Assignment") + selectQuestionsForm(user) + Home.footer);
+			switch (userRequest) {
+			case "ShowScores":
+				out.println(Home.header("Your ChemVantage Scores") + showScores(user) + Home.footer);
+				break;
+			case "ShowSummary":
+				out.println(Home.header("Your Class ChemVantage Scores") + showSummary(user,request) + Home.footer);
+				break;
+			case "AssignQuizQuestions":
+				if (user.isInstructor()) out.println(Home.header("Customize ChemVantage Quiz Assignment") + selectQuestionsForm(user) + Home.footer);
+				break;
+			case "PrintQuiz":
+				out.println(Home.header("ChemVantage Quiz") + printQuiz(user,request) + Home.footer);
+				break;
+			default: 
+				if (user.isInstructor()) out.println(Home.header("ChemVantage Instructor Page") + instructorPage(user,request) + Home.footer);
+				else out.println(Home.header("ChemVantage Quiz") + printQuiz(user,request) + Home.footer);
 			}
-			else out.println(Home.header("ChemVantage Quiz") + printQuiz(user,request) + Home.footer);
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
@@ -107,6 +118,29 @@ public class Quiz extends HttpServlet {
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
+	}
+	
+	static String instructorPage(User user,HttpServletRequest request) {
+		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
+		
+		StringBuffer buf = new StringBuffer();		
+		try {
+			long assignmentId=user.getAssignmentId();
+			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+			Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
+			
+			buf.append("<h2>General Chemistry Quiz - Instructor Page</h2>");
+			buf.append("Topic covered on this quiz: " + t.getTitle() + "<br/>");
+			
+			buf.append("From here, you may<UL>"
+					+ "<LI><a href='/Quiz?UserRequest=AssignQuizQuestions&sig=" + user.getTokenSignature() + "'>Customize this quiz</a> to set the time allowed and select the available question items.</LI>"
+					+ "<LI><a href='/Quiz?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' quiz scores</a></LI>"
+					+ "<LI><a href='/Quiz?UserRequest=PrintQuiz&sig=" + user.getTokenSignature() + "'>Take the quiz yourself</a> (recommended)</LI>"
+					+ "</UL>");
+		} catch (Exception e) {
+			buf.append("<br/>Instructor page error: " + e.getMessage());
+		}
+		return buf.toString();
 	}
 	
 	static String printQuiz(User user, HttpServletRequest request) { // for anonymous users accessing Quiz servlet directly
@@ -165,20 +199,11 @@ public class Quiz extends HttpServlet {
 			
 			buf.append("<h2>Quiz - " + topic.title + "</h2>");
 			
-			if (user.isAnonymous()) buf.append("<h3 style='color:red'>Anonymous User</h3>");
-			
-			if (user.isInstructor()) {
-				buf.append("<mark>As the course instructor you may <a href='/Quiz?UserRequest=AssignQuizQuestions&sig=" + user.getTokenSignature() + "'>customize this assignment</a>.");
-				if (qa.lti_nrps_context_memberships_url != null && qa.lti_ags_lineitem_url != null) {
-					buf.append("<br/>You may also view a <a href='/Quiz?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>summary of student scores</a> for this assignment.");
-				}
-				buf.append("</mark><br/><br/>");
-			}
-	
-			if (!user.isAnonymous()) {
+			if (user.isAnonymous()) buf.append("<h3 style='color:red'>Anonymous User</h3>");			
+			else {
 				buf.append("Quiz Rules"
 						+ "	<OL>"
-						+ "	<LI>Each quiz must be completed within " + (timeAllowed / 60) + "minutes of the time when it is first downloaded.</LI>"
+						+ "	<LI>Each quiz must be completed within " + (timeAllowed / 60) + " minutes of the time when it is first downloaded.</LI>"
 						+ "	<LI>You may repeat quizzes as many times as you wish, to improve your score.</LI>"
 						+ "	<LI>ChemVantage always reports your best score on this assignment to your class LMS.</LI>"
 						+ "	</OL>");
@@ -686,6 +711,8 @@ public class Quiz extends HttpServlet {
 	}
 	
 	static String showSummary(User user,HttpServletRequest request) {
+		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
+		
 		StringBuffer buf = new StringBuffer();
 		Assignment a = qcache.getAssignment(user.getAssignmentId());
 		if (a==null) return "No assignment was specified for this request.";
@@ -753,6 +780,8 @@ public class Quiz extends HttpServlet {
 	}
 	
 	static String selectQuestionsForm(User user) {
+		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
+		
 		StringBuffer buf = new StringBuffer();
 		try {
 			Assignment a = qcache.getAssignment(user.getAssignmentId());

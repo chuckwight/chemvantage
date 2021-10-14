@@ -76,7 +76,12 @@ public class Homework extends HttpServlet {
 				if (user.isInstructor()) out.println(Home.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user) + Home.footer);
 				else out.println(Home.header("Customize ChemVantage Homework Assignment") + "<h2>Forbidden</h2>You must be signed in as the instructor to perform this functuon." + Home.footer);
 				break;
-			default: out.println(Home.header("ChemVantage Homework") + printHomework(user,request) + Home.footer);
+			case "PrintHomework":
+				out.println(Home.header("ChemVantage Homework") + printHomework(user,request) + Home.footer);
+				break;
+			default:
+				if (user.isInstructor()) out.println(Home.header("ChemVantage Instructor Page") + instructorPage(user,request) + Home.footer);
+				else out.println(Home.header("ChemVantage Homework") + printHomework(user,request) + Home.footer);
 			}
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig") + "&e=" + e.toString());
@@ -124,6 +129,29 @@ public class Homework extends HttpServlet {
 		}
 	}
 
+	static String instructorPage(User user,HttpServletRequest request) {
+		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
+		
+		StringBuffer buf = new StringBuffer();		
+		try {
+			long assignmentId=user.getAssignmentId();
+			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+			Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
+			
+			buf.append("<h2>General Chemistry Homework - Instructor Page</h2>");
+			buf.append("Topic covered on this assignment: " + t.getTitle() + "<br/>");
+			
+			buf.append("From here, you may<UL>"
+					+ "<LI><a href='/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + "'>Customize this assignment</a> by selecting the assigned question items.</LI>"
+					+ "<LI><a href='/Homework?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' homework scores</a></LI>"
+					+ "<LI><a href='/Homework?UserRequest=PrintHomework&sig=" + user.getTokenSignature() + "'>Complete the assignment yourself</a> (recommended)</LI>"
+					+ "</UL>");
+		} catch (Exception e) {
+			buf.append("<br/>Instructor page error: " + e.getMessage());
+		}
+		return buf.toString();
+	}
+	
 	static String printHomework(User user, HttpServletRequest request) {
 		try {
 			long assignmentId = user.getAssignmentId();
@@ -160,16 +188,6 @@ public class Homework extends HttpServlet {
 
 			if (user.isAnonymous())	buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			
-			if (user.isInstructor() && hwa != null) {
-				buf.append("<mark>As the course instructor you may "
-						+ "<a href=/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + ">"
-						+ "customize this assignment</a>.");
-				if (hwa.lti_nrps_context_memberships_url != null && hwa.lti_ags_lineitem_url != null) 
-					buf.append("<br>You may also view a <a href=/Homework?UserRequest=ShowSummary&sig=" 
-							+ user.getTokenSignature() + ">summary of student scores</a> for this assignment.");
-				buf.append("</mark><p>");
-			}	
-
 			buf.append("\nHomework Rules<UL>");
 			buf.append("\n<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
 			buf.append("\n<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question.</LI>");

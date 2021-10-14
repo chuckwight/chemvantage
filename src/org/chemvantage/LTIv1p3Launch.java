@@ -279,21 +279,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		if (!myAssignment.isValid()) {  //Show the the pickResource form:
 			response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,1) + Home.footer);
 			return;
-		} else {  // redirect the user's browser to the assignment
-			response.setContentType("text/html");
-			response.setCharacterEncoding("UTF-8");
-			PrintWriter out = response.getWriter();	
-			switch (myAssignment.assignmentType) {
-			case "Quiz": 
-				out.println(Home.header("ChemVantage Quiz") + Quiz.printQuiz(user, 0L) + Home.footer);
-				break;
-			case "Homework":
-				out.println(Home.header("ChemVantage Homework") + Homework.printHomework(user, 0L, 0L) + Home.footer);
-				break;
-			default: response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
-			}
-			return;
-		}
+		} else response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
 	}
 	
 	void launchSubmissionReview(HttpServletResponse response, JsonObject claims, Deployment d, User u) throws Exception {

@@ -95,7 +95,7 @@ public class PracticeExam extends HttpServlet {
 					out.println(Home.header("ChemVantage Practice Exam") + printExam(user,request) + Home.footer);
 					break;
 				default: 
-					if (user.isInstructor()) out.println(Home.header("ChemVantage Practice Exam") + instructorPage(user,request) + Home.footer);
+					if (user.isInstructor()) out.println(Home.header("ChemVantage Instructor Page") + instructorPage(user,request) + Home.footer);
 					else out.println(Home.header("ChemVantage Practice Exam") + printExam(user,request) + Home.footer);
 			}
 		} catch (Exception e) {
