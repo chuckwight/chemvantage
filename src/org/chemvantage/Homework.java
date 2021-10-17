@@ -137,13 +137,14 @@ public class Homework extends HttpServlet {
 			long assignmentId=user.getAssignmentId();
 			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
+			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
 			
 			buf.append("<h2>General Chemistry Homework - Instructor Page</h2>");
 			buf.append("Topic covered on this assignment: " + t.getTitle() + "<br/>");
 			
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + "'>Customize this assignment</a> by selecting the assigned question items.</LI>"
-					+ "<LI><a href='/Homework?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' homework scores</a></LI>"
+					+ (supportsMembership?"<LI><a href='/Homework?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' homework scores</a></LI>":"")
 					+ "<LI><a href='/Homework?UserRequest=PrintHomework&sig=" + user.getTokenSignature() + "'>Complete the assignment yourself</a> (recommended)</LI>"
 					+ "</UL>");
 		} catch (Exception e) {

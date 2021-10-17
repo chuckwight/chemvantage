@@ -128,13 +128,14 @@ public class Quiz extends HttpServlet {
 			long assignmentId=user.getAssignmentId();
 			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
+			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
 			
 			buf.append("<h2>General Chemistry Quiz - Instructor Page</h2>");
 			buf.append("Topic covered on this quiz: " + t.getTitle() + "<br/>");
 			
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/Quiz?UserRequest=AssignQuizQuestions&sig=" + user.getTokenSignature() + "'>Customize this quiz</a> to set the time allowed and select the available question items.</LI>"
-					+ "<LI><a href='/Quiz?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' quiz scores</a></LI>"
+					+ (supportsMembership?"<LI><a href='/Quiz?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' quiz scores</a></LI>":"")
 					+ "<LI><a href='/Quiz?UserRequest=PrintQuiz&sig=" + user.getTokenSignature() + "'>Take the quiz yourself</a> (recommended)</LI>"
 					+ "</UL>");
 		} catch (Exception e) {

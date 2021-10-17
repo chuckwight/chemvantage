@@ -216,6 +216,8 @@ public class PracticeExam extends HttpServlet {
 					for (int i=0;i<topicStringIds.length;i++) topicIds.add(Long.parseLong(topicStringIds[i]));
 				}
 			}
+			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
+			
 			buf.append("<h2>General Chemistry Exam - Instructor Page</h2>");
 			Map<Long,Topic> topics = ofy().load().type(Topic.class).ids(topicIds);			
 			buf.append("Topics covered on this exam:<OL>");
@@ -226,7 +228,7 @@ public class PracticeExam extends HttpServlet {
 			
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/PracticeExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + "'>Customize this exam</a> to set the time allowed and select the available question items.</LI>"
-					+ "<LI><a href='/PracticeExam?UserRequest=ReviewExamScores&sig=" + user.getTokenSignature() + "'>Review the exam results</a> and (optionally) assign partial credit for answers</LI>"
+					+ (supportsMembership?"<LI><a href='/PracticeExam?UserRequest=ReviewExamScores&sig=" + user.getTokenSignature() + "'>Review the exam results</a> and (optionally) assign partial credit for answers</LI>":"")
 					+ "<LI><a href='/PracticeExam?UserRequest=PrintExam&sig=" + user.getTokenSignature() + "'>Take the exam yourself</a> (recommended)</LI>"
 					+ "</UL>");
 		} catch (Exception e) {
