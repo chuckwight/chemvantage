@@ -689,7 +689,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	    			buf.append(line);
 	    		}
 	    		reader.close();
-	    		sendEmailToAdmin("Score submission failed",buf.toString());
+	    		//sendEmailToAdmin("Score submission failed",buf.toString());
 			}
 		} catch (Exception e) {
 			sendEmailToAdmin("Score submission failed",buf.toString());
