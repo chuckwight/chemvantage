@@ -97,13 +97,15 @@ public class Quiz extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 			
-			if ("UpdateAssignment".contentEquals(userRequest)) {
-				Assignment a = qcache.getAssignment(user.getAssignmentId());
+			Assignment a = qcache.getAssignment(user.getAssignmentId());
+			
+			switch (userRequest) {
+			case "UpdateAssignment":
 				a.updateQuestions(request);
 				qcache.putAssignment(a);
-				out.println(Home.header("ChemVantage Quiz") + printQuiz(user,0L) + Home.footer);
-			} else if ("Set Allowed Time".contentEquals(userRequest)) {
-				Assignment a = qcache.getAssignment(user.getAssignmentId());
+				doGet(request,response);
+				break;
+			case "Set Allowed Time":
 				try {
 					double minutes = Double.parseDouble(request.getParameter("TimeAllowed"));
 					if (minutes > 60.) minutes = 60.;
@@ -113,8 +115,11 @@ public class Quiz extends HttpServlet {
 				}
 				qcache.putAssignment(a);
 				ofy().save().entity(a).now();
-				out.println(Home.header("ChemVantage Quiz") + printQuiz(user,0L) + Home.footer);
-			} else out.println(Home.header("ChemVantage Quiz Results") + printScore(user,request) + Home.footer);
+				doGet(request,response);
+				break;
+			default:
+				out.println(Home.header("ChemVantage Quiz Results") + printScore(user,request) + Home.footer);
+			}
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}

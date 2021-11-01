@@ -106,7 +106,7 @@ public class Homework extends HttpServlet {
 				Assignment a = qcache.getAssignment(user.getAssignmentId());
 				a.updateQuestions(request);
 				qcache.putAssignment(a);
-				out.println(Home.header("ChemVantage Homework") + printHomework(user,request) + Home.footer);
+				response.sendRedirect("/Homework?sig=" + user.getTokenSignature());
 				break;
 			case "AddQuestion":
 			case "UpdateQuestion":

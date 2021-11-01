@@ -102,18 +102,7 @@ public class LTIv1p3Launch extends HttpServlet {
 
 				if (!refresh && myAssignment.isValid()) {
 					ofy().save().entity(myAssignment).now();  // we will need this in a few milliseconds					
-					response.setContentType("text/html");
-					response.setCharacterEncoding("UTF-8");
-					PrintWriter out = response.getWriter();	
-					switch (myAssignment.assignmentType) {
-					case "Quiz": 
-						out.println(Home.header("ChemVantage Quiz") + Quiz.printQuiz(user, 0L) + Home.footer);
-						break;
-					case "Homework":
-						out.println(Home.header("ChemVantage Homework") + Homework.printHomework(user, 0L, 0L) + Home.footer);
-						break;
-					default: response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
-					}
+					response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
 				} else {  // send the user back to the resourcePickerForm
 					int topicKey = 1;
 					try {topicKey = Integer.parseInt(request.getParameter("TopicKey"));} catch (Exception e) {}
