@@ -145,8 +145,11 @@ public class Homework extends HttpServlet {
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + "'>Customize this assignment</a> by selecting the assigned question items.</LI>"
 					+ (supportsMembership?"<LI><a href='/Homework?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' homework scores</a></LI>":"")
-					+ "<LI><a href='/Homework?UserRequest=PrintHomework&sig=" + user.getTokenSignature() + "'>Complete the assignment yourself</a> (recommended)</LI>"
+					//+ "<LI><a href='/Homework?UserRequest=PrintHomework&sig=" + user.getTokenSignature() + "'>Complete the assignment yourself</a> (recommended)</LI>"
 					+ "</UL>");
+			buf.append("<a style='text-decoration: none' href='/Homework?UserRequest=PrintHomework&sig=" + user.getTokenSignature() + "'>"
+					+ "<button style='display: block; width: 500px; border: 1 px; background-color: #00FFFF; color: black; padding: 14px 28px; font-size: 18px; text-align: center; cursor: pointer'>"
+					+ "Show This Assignment (recommended)</button></a>");
 		} catch (Exception e) {
 			buf.append("<br/>Instructor page error: " + e.getMessage());
 		}

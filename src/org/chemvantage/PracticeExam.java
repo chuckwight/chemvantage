@@ -121,7 +121,7 @@ public class PracticeExam extends HttpServlet {
 				case "UpdateAssignment":
 					a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 					a.updateQuestions(request);
-					out.println(Home.header("ChemVantage Practice Exam") + printExam(user,request) + Home.footer);
+					response.sendRedirect("/PracticeExam?sig=" + user.getTokenSignature());
 					break;
 				case "Submit Revised Exam Score":
 					if (submitRevisedExamScore(user,request)) out.println(Home.header("Review ChemVantage Practice Exam Scores") + reviewExamScores(user) + Home.footer);
@@ -137,7 +137,7 @@ public class PracticeExam extends HttpServlet {
 						a.timeAllowed = 3600;
 					}
 					ofy().save().entity(a).now();
-					out.println(Home.header("ChemVantage Practice Exam") + printExam(user,request) + Home.footer);					
+					response.sendRedirect("/PracticeExam?sig=" + user.getTokenSignature());
 					break;
 				case "AddQuestion":
 				case "UpdateQuestion":
@@ -156,8 +156,8 @@ public class PracticeExam extends HttpServlet {
 				default: out.println(Home.header("ChemVantage Practice Exam Results") + printScore(user,request) + Home.footer);
 			}
 		} catch (Exception e) {
-			response.getWriter().println(e.toString() + " " + e.getMessage());
-			//response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
+			//response.getWriter().println(e.toString() + " " + e.getMessage());
+			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
 	}
 
@@ -229,8 +229,11 @@ public class PracticeExam extends HttpServlet {
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/PracticeExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + "'>Customize this exam</a> to set the time allowed and select the available question items.</LI>"
 					+ (supportsMembership?"<LI><a href='/PracticeExam?UserRequest=ReviewExamScores&sig=" + user.getTokenSignature() + "'>Review the exam results</a> and (optionally) assign partial credit for answers</LI>":"")
-					+ "<LI><a href='/PracticeExam?UserRequest=PrintExam&sig=" + user.getTokenSignature() + "'>Take the exam yourself</a> (recommended)</LI>"
+					//+ "<LI><a href='/PracticeExam?UserRequest=PrintExam&sig=" + user.getTokenSignature() + "'>Take the exam yourself</a> (recommended)</LI>"
 					+ "</UL>");
+			buf.append("<a style='text-decoration: none' href='/PracticeExam?UserRequest=PrintExam&sig=" + user.getTokenSignature() + "'>"
+					+ "<button style='display: block; width: 500px; border: 1 px; background-color: #00FFFF; color: black; padding: 14px 28px; font-size: 18px; text-align: center; cursor: pointer;'>"
+					+ "Show This Assignment (recommended)</button></a>");
 		} catch (Exception e) {
 			buf.append("<br/>Instructor page error: " + e.getMessage());
 		}
