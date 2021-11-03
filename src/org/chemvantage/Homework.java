@@ -474,7 +474,7 @@ public class Homework extends HttpServlet {
 			
 			if (hwa != null) buf.append("You may <a href=/Homework?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review your scores on this assignment</a>.<p>");
 
-			buf.append("<a href=/Homework?"
+			buf.append("<a href=/Homework?UserRequest=PrintHomework&"
 					+ (assignmentId>0?"AssignmentId=" + assignmentId : "TopicId=" + topic.id)
 					+ "&sig=" + user.getTokenSignature()  
 					+ (offerHint?"&Q=" + q.id + "><span style='color:red'>Please give me a hint</span>":">Return to this homework assignment") + "</a> or "
