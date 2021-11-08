@@ -139,17 +139,16 @@ public class Homework extends HttpServlet {
 			Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
 			
-			buf.append("<h2>General Chemistry Homework - Instructor Page</h2>");
-			buf.append("Topic covered on this assignment: " + t.getTitle() + "<br/>");
+			buf.append("<h2>Homework - " + t.title + "</h2>");
+			buf.append("<h3>Instructor Page</h3>");
 			
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + "'>Customize this assignment</a> by selecting the assigned question items.</LI>"
 					+ (supportsMembership?"<LI><a href='/Homework?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' homework scores</a></LI>":"")
-					//+ "<LI><a href='/Homework?UserRequest=PrintHomework&sig=" + user.getTokenSignature() + "'>Complete the assignment yourself</a> (recommended)</LI>"
 					+ "</UL>");
 			buf.append("<a style='text-decoration: none' href='/Homework?UserRequest=PrintHomework&sig=" + user.getTokenSignature() + "'>"
 					+ "<button style='display: block; width: 500px; border: 1 px; background-color: #00FFFF; color: black; padding: 14px 28px; font-size: 18px; text-align: center; cursor: pointer'>"
-					+ "Show This Assignment (recommended)</button></a>");
+					+ "Show This Assignment (recommended)</button></a><br/>");
 		} catch (Exception e) {
 			buf.append("<br/>Instructor page error: " + e.getMessage());
 		}

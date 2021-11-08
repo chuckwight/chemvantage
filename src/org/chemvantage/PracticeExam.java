@@ -229,7 +229,6 @@ public class PracticeExam extends HttpServlet {
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/PracticeExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + "'>Customize this exam</a> to set the time allowed and select the available question items.</LI>"
 					+ (supportsMembership?"<LI><a href='/PracticeExam?UserRequest=ReviewExamScores&sig=" + user.getTokenSignature() + "'>Review the exam results</a> and (optionally) assign partial credit for answers</LI>":"")
-					//+ "<LI><a href='/PracticeExam?UserRequest=PrintExam&sig=" + user.getTokenSignature() + "'>Take the exam yourself</a> (recommended)</LI>"
 					+ "</UL>");
 			buf.append("<a style='text-decoration: none' href='/PracticeExam?UserRequest=PrintExam&sig=" + user.getTokenSignature() + "'>"
 					+ "<button style='display: block; width: 500px; border: 1 px; background-color: #00FFFF; color: black; padding: 14px 28px; font-size: 18px; text-align: center; cursor: pointer;'>"

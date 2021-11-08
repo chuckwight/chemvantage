@@ -141,7 +141,6 @@ public class Quiz extends HttpServlet {
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/Quiz?UserRequest=AssignQuizQuestions&sig=" + user.getTokenSignature() + "'>Customize this quiz</a> to set the time allowed and select the available question items.</LI>"
 					+ (supportsMembership?"<LI><a href='/Quiz?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' quiz scores</a></LI>":"")
-					//+ "<LI><a href='/Quiz?UserRequest=PrintQuiz&sig=" + user.getTokenSignature() + "'>Take the quiz yourself</a> (recommended)</LI>"
 					+ "</UL>");
 			buf.append("<a style='text-decoration: none' href='/Quiz?UserRequest=PrintQuiz&sig=" + user.getTokenSignature() + "'>"
 					+ "<button style='display: block; width: 500px; border: 1 px; background-color: #00FFFF; color: black; padding: 14px 28px; font-size: 18px; text-align: center; cursor: pointer;'>"
