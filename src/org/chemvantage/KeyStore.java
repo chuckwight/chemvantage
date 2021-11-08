@@ -38,6 +38,7 @@ public class KeyStore extends HttpServlet {
 		String fmt = request.getParameter("fmt");
 		if (fmt != null && kid != null) out.println(getRSAPublicKeyX509(kid));
 		else if (kid != null) {
+			if ("public".equals(kid)) kid = getAKeyId(null); // get a random valid key_id
 			JsonObject jwk = getJwk(kid);
 			out.println(jwk==null?"Key not found.":jwk.toString());
 		}
@@ -130,6 +131,8 @@ public class KeyStore extends HttpServlet {
 	
 	protected static String getRSAPublicKeyX509(String rsa_key_id) {
 		// This method converts the RSA Public Key to X.509 so that it can be printed and shared
+		if ("public".equals(rsa_key_id)) rsa_key_id = getAKeyId(null); // get a random valid key_id
+		
 		StringBuffer key = new StringBuffer("-----BEGIN PUBLIC KEY-----" + "\n");
         try {
         	RSAPublicKey pubkey = getRSAPublicKey(rsa_key_id);

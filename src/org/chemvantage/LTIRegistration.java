@@ -563,9 +563,8 @@ public class LTIRegistration extends HttpServlet {
 						+ "OIDC Login Initiation URL: " + iss + "/auth/token<br>"
 						+ "JSON Web Key Set URL: " + iss + "/jwks<p>");
 				
-				buf.append("If your LMS requires you to enter a specific public RSA key instead of the JSON Web Key Set URL, you can "
-						+ " get it here:<br>"
-						+ "<a href=" + iss + "/jwks?kid=public&fmt=x509>PEM key in X509 format</a> or <a href=" + iss + "/jwks?kid=public>JSON Web Key</a><p>");
+				buf.append("If your LMS requires you to enter a specific public RSA key instead of the JSON Web Key Set URL, you can get it here:<br>"
+						+ "<a href=" + iss + "/jwks?kid=" + KeyStore.getAKeyId(lms) + "&fmt=x509>PEM key in X509 format</a> or <a href=" + iss + "/jwks?kid=" + KeyStore.getAKeyId(lms) + ">JSON Web Key</a><p>");
 				
 				buf.append("When you have finished the configuration, your LMS "
 						+ "should generate a client_id value to identify the ChemVantage tool. "
