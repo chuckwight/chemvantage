@@ -56,7 +56,7 @@ public class Subject {
 	static String getTitle() { return subject.title; }
 	static String getHMAC256Secret() { return subject.HMAC256Secret; }
 	static String getSalt() { return subject.salt; }
-	static String getAnnouncement() { return subject.announcement; }
+	public static String getAnnouncement() { return subject.announcement; }
 	static int getNStarReports() { return subject.nStarReports; }
 	
 	static void setAnnouncement(String msg) {

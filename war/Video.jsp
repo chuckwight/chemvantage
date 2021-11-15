@@ -2,14 +2,7 @@
 <%@ page import="static com.googlecode.objectify.ObjectifyService.ofy" %>
 <%@ page import="java.util.Arrays,java.util.Date,org.chemvantage.*"%>
 
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>ChemVantage Video</title>
-</head>
 
-<body>
 <%! 
 	String url = null;
 	String sig = null;
@@ -21,7 +14,7 @@
 	int end = -1;
 	String title = null;
 %>
-
+	<%= Home.header("ChemVantage Video") %>
 <%
 	try {
 		sig = request.getParameter("sig");
@@ -139,7 +132,7 @@ function ajaxLoadQuiz() {
 	  quiz_div.innerHTML=xmlhttp.responseText;
 	}
   }
-  xmlhttp.open('GET','/VideoQuiz?VideoId='+'<%= videoId %>'+'&Segment='+segment+'&sig='+sig,true);
+  xmlhttp.open('GET','/VideoQuiz?VideoId='+'<%= videoId %>'+'&UserRequest=ShowQuizlet&Segment='+segment+'&sig='+sig,true);
   xmlhttp.send(null);
   return true;
 }

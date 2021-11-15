@@ -54,9 +54,10 @@ public class VideoQuiz extends HttpServlet {
 			throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
+		User user = null;
 		
 		try {
-			User user = User.getUser(request.getParameter("sig"));
+			user = User.getUser(request.getParameter("sig"));
 			if (user==null) throw new Exception();
 			
 			long videoId = 0L;
@@ -67,10 +68,25 @@ public class VideoQuiz extends HttpServlet {
 			try {
 				segment = Integer.parseInt(request.getParameter("Segment"));
 			} catch (Exception e) {
-				response.sendRedirect("/Video.jsp?VideoId=" + videoId + "&sig=" + user.getTokenSignature());
 			}
 			
-			out.println(showQuizlet(user,videoId,segment));
+			String userRequest = request.getParameter("UserRequest");		
+			if (userRequest==null) userRequest = "";
+			
+			switch (userRequest) {
+			case "ShowVideo":
+				response.sendRedirect("/Video.jsp?VideoId=" + videoId + "&sig=" + user.getTokenSignature());
+				break;
+			case "ShowQuizlet":
+				out.println(showQuizlet(user,videoId,segment));
+				break;
+			case "ShowSummary":
+				out.println(Home.header("Class video scores") + showSummary(user,request) + Home.footer);
+			break;
+			default:
+				if (user.isInstructor()) out.println(Home.header("ChemVantage Instructor Page") + instructorPage(user,request) + Home.footer);
+				else response.sendRedirect("/Video.jsp?VideoId=" + videoId + "&sig=" + user.getTokenSignature());
+			}			
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
@@ -91,6 +107,32 @@ public class VideoQuiz extends HttpServlet {
 		}
 	}
 
+	static String instructorPage(User user,HttpServletRequest request) {
+		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
+		
+		StringBuffer buf = new StringBuffer();		
+		try {
+			long assignmentId=user.getAssignmentId();
+			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+			Video v = ofy().load().type(Video.class).id(a.videoId).safe();
+			
+			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
+			
+			buf.append("<h2>General Chemistry Video - Instructor Page</h2>");
+			buf.append("Topic covered in this video: " + v.title + "<br/>");
+			
+			if (supportsMembership) buf.append("From here, you may<UL>"
+					+ "<LI><a href='/VideoQuiz?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' video scores</a></LI>"
+					+ "</UL>");
+			buf.append("<a style='text-decoration: none' href='/VideoQuiz?UserRequest=ShowVideo&sig=" + user.getTokenSignature() + "'>"
+					+ "<button style='display: block; width: 500px; border: 1 px; background-color: #00FFFF; color: black; padding: 14px 28px; font-size: 18px; text-align: center; cursor: pointer;'>"
+					+ "Show This Assignment (recommended)</button></a><br/>");
+		} catch (Exception e) {
+			buf.append("<br/>Instructor page error: " + e.getMessage());
+		}
+		return buf.toString();
+	}
+	
 	public String showQuizlet(User user,long videoId,int segment) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -332,6 +374,10 @@ public class VideoQuiz extends HttpServlet {
 
 		return buf.toString();	
 		
+	}
+	
+	String showSummary(User user,HttpServletRequest request) {
+		return "<h2>This page is currently under construction</h2>";
 	}
 /*	
 	String showScores (User user, HttpServletRequest request) {
