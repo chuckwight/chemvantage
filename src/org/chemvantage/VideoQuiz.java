@@ -317,7 +317,7 @@ public class VideoQuiz extends HttpServlet {
 			}
 		}
 		vt.missedQuestions.clear();
-		ofy().save().entity(vt);
+		ofy().save().entity(vt).now();
 		
 		if (!reportScoreToLms && !user.isAnonymous()) {
 			buf.append("<b>Please note:</b> Your score was not reported back to the grade book of your class "

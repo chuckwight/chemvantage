@@ -205,7 +205,7 @@ public class ReportScore extends HttpServlet {
 			Message msg = new MimeMessage(session);
 			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
 			//msg.addRecipient(Message.RecipientType.TO,new InternetAddress(recipient, ""));
-			msg.addRecipient(Message.RecipientType.CC,new InternetAddress("admin@chemvantage.org", "ChemVantage"));
+			msg.addRecipient(Message.RecipientType.TO,new InternetAddress("admin@chemvantage.org", "ChemVantage"));
 			msg.setSubject("ChemVantage LIS Reporting Error");
 			msg.setContent(msgBody,"text/html");
 			Transport.send(msg);
