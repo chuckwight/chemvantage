@@ -474,7 +474,7 @@ public class Question implements Serializable, Cloneable {
 		buf.append("<br/>");
 		if (showWork != null && !showWork.isEmpty()) buf.append("<b>Student work:</b><br/><div style='border-style: solid; border-width: thin; white-space: pre-wrap;'>" + showWork + "</div>");	
 		if (studentAnswer==null || studentAnswer.isEmpty()) buf.append("<b>No answer was submitted for this question item.</b><p></p>");
-		else buf.append("<b>The answer submitted was: " + studentAnswer + "</b><p></p>");
+		else buf.append("<b>The answer submitted was: " + studentAnswer + "</b>&nbsp;" + (this.isCorrect(studentAnswer)?"<IMG SRC=/images/checkmark.gif ALT='Check mark' align=middle>":"<IMG SRC=/images/xmark.png ALT='X mark' align=middle>") + "<p></p>");
 		
 		buf.append("<div id='feedback" + this.id + "'>");
 		buf.append("<FORM NAME=suggest" + this.id 
