@@ -392,11 +392,11 @@ public class Question implements Serializable, Cloneable {
 	}
 
 	String printAllToStudents(String studentAnswer) {
-		return printAllToStudents(studentAnswer,true);
+		return printAllToStudents(studentAnswer,true,"");
 	}
 	
 	String printAllToStudents(String studentAnswer,boolean showDetails) {
-		return printAllToStudents(studentAnswer,true,"");
+		return printAllToStudents(studentAnswer,showDetails,"");
 	}
 	
 	String printAllToStudents(String studentAnswer,boolean showDetails,String showWork) {
@@ -412,9 +412,9 @@ public class Question implements Serializable, Cloneable {
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best answer:</FONT><br/>");
 			for (int i = 0; i < nChoices; i++) {
 				buf.append("&nbsp;" + choice + ". "
-						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
+						+ (showDetails && correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
 						+ quot2html(choices.get(i))
-						+ (correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>") + "<br/>");
+						+ (showDetails && correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>") + "<br/>");
 				choice++;
 			}
 			break;
@@ -422,10 +422,10 @@ public class Question implements Serializable, Cloneable {
 			buf.append(text + "<br/>");
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select true or false:</FONT><UL>");
 			buf.append("<LI>" 
-					+ (correctAnswer.equals("true")?"<B>True</B>":"<FONT COLOR=#888888>True</FONT>") 
+					+ (showDetails && correctAnswer.equals("true")?"<B>True</B>":"<FONT COLOR=#888888>True</FONT>") 
 					+ "</LI>");
 			buf.append("<LI>" 
-					+ (correctAnswer.equals("false")?"<B>False</B>":"<FONT COLOR=#888888>False</FONT>")
+					+ (showDetails && correctAnswer.equals("false")?"<B>False</B>":"<FONT COLOR=#888888>False</FONT>")
 					+ "</LI>");
 			buf.append("</UL>");
 			break;
@@ -434,9 +434,9 @@ public class Question implements Serializable, Cloneable {
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><br/>");
 			for (int i = 0; i < nChoices; i++) {
 				buf.append("&nbsp;" + choice + ". "
-						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
+						+ (showDetails && correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
 						+ quot2html(choices.get(i))
-						+ (correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>") + "<br/>");
+						+ (showDetails && correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>") + "<br/>");
 				choice++;
 			}
 			break;
@@ -445,7 +445,7 @@ public class Question implements Serializable, Cloneable {
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br/>");
 			String[] answers = correctAnswer.split(",");
 			buf.append("<span style='border: 1px solid black'>"
-					+ "<b>" + quot2html(answers[0]) + "</b>"
+					+ (showDetails?"<b>" + quot2html(answers[0]) + "</b>":"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")
 					+ "</span>");
 			if (tag.length() > 0) buf.append("&nbsp;" + tag + "<br/>");
 			break;
@@ -459,10 +459,10 @@ public class Question implements Serializable, Cloneable {
 			default:
 			}
 			buf.append("<span style='border: 1px solid black'>"
-					+ "<b>" + getCorrectAnswer() + "</b>"
+					+ (showDetails?"<b>" + getCorrectAnswer() + "</b>":"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")
 					+ "</span>");
 			buf.append("&nbsp;" + parseString(tag) + "<br/>");
-			if (hint.length()>0) {
+			if (showDetails && hint.length()>0) {
 				buf.append("<br/>Hint:<br/>" + parseString(hint) + "<br/>");
 			}
 			if (showDetails && solution.length()>0) {
@@ -476,35 +476,37 @@ public class Question implements Serializable, Cloneable {
 		if (studentAnswer==null || studentAnswer.isEmpty()) buf.append("<b>No answer was submitted for this question item.</b><p></p>");
 		else buf.append("<b>The answer submitted was: " + studentAnswer + "</b>&nbsp;" + (this.isCorrect(studentAnswer)?"&nbsp;<IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom>":"<IMG SRC=/images/xmark.png ALT='X mark' align=middle>") + "<p></p>");
 		
-		buf.append("<div id='feedback" + this.id + "'>");
-		buf.append("<FORM NAME=suggest" + this.id 
-				+ " onSubmit=\" return ajaxSubmit('/Feedback?UserRequest=ReportAProblem','" + this.id + "',document.suggest" + this.id + ".Notes.value,document.suggest" + this.id + ".Email.value);\">"
-				+ "<INPUT TYPE=BUTTON VALUE='Report a problem with this question' "
-				+ "onClick=\"javascript:getElementById('form" + this.id + "').style.display='';this.style.display='none'\" />"
-				+ "<div id='form" + this.id + "' style='display: none'>");
-		
-		buf.append("<span style=color:red><br/>");
-		switch (getQuestionType()) {
+		if (showDetails) {
+			buf.append("<div id='feedback" + this.id + "'>");
+			buf.append("<FORM NAME=suggest" + this.id 
+					+ " onSubmit=\" return ajaxSubmit('/Feedback?UserRequest=ReportAProblem','" + this.id + "',document.suggest" + this.id + ".Notes.value,document.suggest" + this.id + ".Email.value);\">"
+					+ "<INPUT TYPE=BUTTON VALUE='Report a problem with this question' "
+					+ "onClick=\"javascript:getElementById('form" + this.id + "').style.display='';this.style.display='none'\" />"
+					+ "<div id='form" + this.id + "' style='display: none'>");
+
+			buf.append("<span style=color:red><br/>");
+			switch (getQuestionType()) {
 			case 1: buf.append("Reminder: The correct answer is shown in bold print above."); break; // MULTIPLE_CHOICE
 			case 2: buf.append("Reminder: The correct answer is shown in bold print above."); break; // TRUE_FALSE
 			case 3: buf.append("Reminder: The correct answers are shown in bold print above. You must select all of them."); break; // SELECT_MULTIPLE
 			case 4: buf.append("Reminder: The correct answer will always form a complete, grammatically correct sentence."); break; // FILL_IN_WORD
 			case 5: // NUMERIC
 				switch (getNumericItemType()) {
-					case 0: buf.append("Reminder: Your answer must have exactly the same value as the correct answer."); break;
-					case 1: buf.append("Reminder: Your answer must have exactly the same value as the correct answer and must have " + significantFigures + " significant figures."); break;
-					case 2: buf.append("Reminder: Your answer must be within " + requiredPrecision + "% of the correct answer."); break;
-					case 3: buf.append("Reminder: Your answer must have " + significantFigures + " significant figures and be within " + requiredPrecision + "% of the correct answer."); break;
-					default:
+				case 0: buf.append("Reminder: Your answer must have exactly the same value as the correct answer."); break;
+				case 1: buf.append("Reminder: Your answer must have exactly the same value as the correct answer and must have " + significantFigures + " significant figures."); break;
+				case 2: buf.append("Reminder: Your answer must be within " + requiredPrecision + "% of the correct answer."); break;
+				case 3: buf.append("Reminder: Your answer must have " + significantFigures + " significant figures and be within " + requiredPrecision + "% of the correct answer."); break;
+				default:
 				}
 			default:
-		}		
-		buf.append("</span><br/>");
-		
-		buf.append("Your Comment: <INPUT TYPE=TEXT SIZE=80 NAME=Notes /><br/>");
-		buf.append("Your Email: <INPUT TYPE=TEXT SIZE=50 PLACEHOLDER=' optional, if you want a response' NAME=Email /><br/>");
-		buf.append("<INPUT TYPE=SUBMIT NAME=SubmitButton VALUE='Submit Feedback' /></div></FORM><br/>");
-		buf.append("</div>");
+			}		
+			buf.append("</span><br/>");
+
+			buf.append("Your Comment: <INPUT TYPE=TEXT SIZE=80 NAME=Notes /><br/>");
+			buf.append("Your Email: <INPUT TYPE=TEXT SIZE=50 PLACEHOLDER=' optional, if you want a response' NAME=Email /><br/>");
+			buf.append("<INPUT TYPE=SUBMIT NAME=SubmitButton VALUE='Submit Feedback' /></div></FORM><br/>");
+			buf.append("</div>");
+		}
 		return buf.toString(); 
 	}
 
