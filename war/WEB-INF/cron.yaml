@@ -108,7 +108,7 @@ cron:
   timezone: 'America/Los_Angeles'
   description: 'Provides monthly routine maintenance for Deployment entities'
 - url: '/DataStoreCleaner?Task=CleanUsers'
-  schedule: '28 of month 04:00'
+  schedule: 'every day 04:00'
   timezone: 'America/Los_Angeles'
-  description: 'Provides monthly routine maintenance for User entities'
+  description: 'Provides daily routine maintenance for User entities'
   
