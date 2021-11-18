@@ -409,17 +409,24 @@ public class Quiz extends HttpServlet {
 					// If no answers were correct, give no correct answers.
 					// If 1 answer was correct, give up to 2 correct answers.
 					// If 2 answers were correct, give up to 4 correct answers.
-					// If 3 answers were correct, give up to 6 correct answers.
-					int nAnswersEligible = 2 * studentScore;
-					if (nAnswersEligible > wrongAnswers) nAnswersEligible = wrongAnswers;
-
+					// If 3 answers were correct, give up to 5 correct answers.
+					// If 4 answers were correct, give up to 6 correct answers.
+					int nAnswersEligible = 0;
+					switch (studentScore) {
+					case 0: nAnswersEligible = 0; break;
+					case 1: nAnswersEligible = Math.min(wrongAnswers,2); break;
+					case 2: nAnswersEligible = Math.min(wrongAnswers,4); break;
+					case 3: nAnswersEligible = Math.min(wrongAnswers,5); break;
+					default: nAnswersEligible = wrongAnswers;
+					}
+					
 					if (nAnswersEligible > 0) {
 						buf.append("The correct answer" + (nAnswersEligible>1?"s ":" ") + (nAnswersEligible<wrongAnswers?"to " + nAnswersEligible + " of these ":"") + (nAnswersEligible==1?"is":"are") + " shown below. ");
 						if (nAnswersEligible < wrongAnswers) buf.append("<br/>The more questions you answer correctly, the more correct answers to missed questions will be displayed.");
 						buf.append("<OL>");
 						for (int i=0;i<wrongAnswers;i++) {
 							if (nAnswersEligible > 0) buf.append(solvedQuestions.get(i));
-							else buf.append(missedQuestions.get(i));	
+							//else buf.append(missedQuestions.get(i));	
 							nAnswersEligible --;
 						}
 						buf.append("</OL>");
