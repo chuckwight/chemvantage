@@ -456,7 +456,7 @@ public class Homework extends HttpServlet {
 			buf.append(ajaxJavaScript(user.getTokenSignature()));
 			
 			// embed the detailed solution or hint to the exercise in the response, if appropriate
-			if (user.isInstructor() || user.isTeachingAssistant() || (studentScore > 0)) {
+			if (user.isInstructor() || user.isTeachingAssistant() || (studentScore > 0  && !user.isAnonymous())) {
 				buf.append("<div id=exampleLink>"
 						+ "<a href=# onClick=javascript:document.getElementById('example').style.display='';"
 						+ "document.getElementById('exampleLink').style.display='none';>"

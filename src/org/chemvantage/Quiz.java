@@ -420,7 +420,7 @@ public class Quiz extends HttpServlet {
 					default: nAnswersEligible = wrongAnswers;
 					}
 					
-					if (nAnswersEligible > 0) {
+					if (nAnswersEligible > 0 && !user.isAnonymous()) {
 						buf.append("The correct answer" + (nAnswersEligible>1?"s ":" ") + (nAnswersEligible<wrongAnswers?"to " + nAnswersEligible + " of these ":"") + (nAnswersEligible==1?"is":"are") + " shown below. ");
 						if (nAnswersEligible < wrongAnswers) buf.append("<br/>The more questions you answer correctly, the more correct answers to missed questions will be displayed.");
 						buf.append("<OL>");
