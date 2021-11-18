@@ -402,9 +402,9 @@ public class Quiz extends HttpServlet {
 				int leftBlank = qt.possibleScore - studentScore - wrongAnswers;
 				if (leftBlank>0) buf.append(leftBlank + " question" 
 						+ (leftBlank>1?"s were":" was") + " left unanswered (blank).<br/>");
-				if (wrongAnswers>0) {
-					buf.append(wrongAnswers + " question" + (wrongAnswers>1?"s were":" was") + " answered incorrectly. ");
+				if (wrongAnswers>0) buf.append(wrongAnswers + " question" + (wrongAnswers>1?"s were":" was") + " answered incorrectly. ");
 
+				if (wrongAnswers>0 && !user.isAnonymous()) {
 					// Display the correct answers to missed problems. However, discourage submission of empty or deliberately wrong answers:
 					// If no answers were correct, give no correct answers.
 					// If 1 answer was correct, give up to 2 correct answers.
@@ -420,7 +420,7 @@ public class Quiz extends HttpServlet {
 					default: nAnswersEligible = wrongAnswers;
 					}
 					
-					if (nAnswersEligible > 0 && !user.isAnonymous()) {
+					if (nAnswersEligible > 0) {
 						buf.append("The correct answer" + (nAnswersEligible>1?"s ":" ") + (nAnswersEligible<wrongAnswers?"to " + nAnswersEligible + " of these ":"") + (nAnswersEligible==1?"is":"are") + " shown below. ");
 						if (nAnswersEligible < wrongAnswers) buf.append("<br/>The more questions you answer correctly, the more correct answers to missed questions will be displayed.");
 						buf.append("<OL>");
