@@ -334,7 +334,7 @@ public class Quiz extends HttpServlet {
 			buf.append(ajaxJavaScript(user.getTokenSignature())); // load javascript for AJAX problem reporting form
 			
 			// Create a StringBuffer to contain correct answers to questions answered correctly
-			List<String> missedQuestions = new ArrayList<String>();	 // questions without solutions	
+			//List<String> missedQuestions = new ArrayList<String>();	 // questions without solutions	
 			List<String> solvedQuestions = new ArrayList<String>();	 // questions with correct answers
 			
 			// For each question the form contains a parameter: (questionId,studentAnswer)
@@ -368,7 +368,7 @@ public class Quiz extends HttpServlet {
 							if (score == 0) {  
 								// include question in list of incorrectly answered questions
 								wrongAnswers++;
-								missedQuestions.add("<LI>" + q.printAllToStudents(studentAnswer[0],false) + "</LI>");
+								//missedQuestions.add("<LI>" + q.printAllToStudents(studentAnswer[0],false) + "</LI>");
 								solvedQuestions.add("<LI>" + q.printAllToStudents(studentAnswer[0],true) + "</LI>");
 							}
 						}
