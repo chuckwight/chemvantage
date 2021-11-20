@@ -113,15 +113,6 @@ public class QuestionCache {
 		return keys;
 	}
 
-	void loadQuizQuestions(long topicId) {
-		List<Key<Question>> keys = getQuizQuestionKeys(topicId);
-		List<Key<Question>> needed = new ArrayList<Key<Question>>();
-		for (Key<Question> k : keys) {
-			if (!questions.containsKey(k)) needed.add(k);
-		}
-		if (needed.size() > 0) questions.putAll(ofy().load().keys(needed));
-	}
-	
 	List<Question> getSortedHWQuestions(long topicId) {
 		List<Key<Question>> keys = hwQuestionKeys.get(topicId);
 		if (keys == null) {
