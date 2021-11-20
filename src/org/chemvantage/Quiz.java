@@ -234,7 +234,7 @@ public class Quiz extends HttpServlet {
 			} catch (Exception e) { // no assignment exists
 				questionKeys = new ArrayList<Key<Question>>(qcache.getQuizQuestionKeys(topicId));
 			}
-			qcache.loadQuizQuestions(topicId);
+			//qcache.loadQuizQuestions(topicId);
 			
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
 			Random rand = new Random(); // create random number generator to select quiz questions

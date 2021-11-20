@@ -67,9 +67,9 @@ public class QuestionCache {
 		Map<Key<Question>,Question> qs = new HashMap<Key<Question>,Question>();
 		List<Key<Question>> needed = new ArrayList<Key<Question>>();
 		for (Key<Question> k : list) {
-			Question q = questions.get(k).clone();
+			Question q = questions.get(k);
 			if (q == null) needed.add(k);
-			else qs.put(k,q);
+			else qs.put(k,q.clone());
 		}
 		if (needed.size() > 0) {
 			Map<Key<Question>,Question> gotem = ofy().load().keys(needed);
@@ -133,7 +133,7 @@ public class QuestionCache {
 		}
 		Map<Key<Question>,Question> map = getQuestionMap(keys);
 		List<Question> hwQuestions = new ArrayList<Question>();
-		for (Key<Question> k : hwQuestionKeys.get(topicId)) hwQuestions.add(map.get(k));
+		for (Key<Question> k : keys) hwQuestions.add(map.get(k));
 		return hwQuestions;
 	}
 
