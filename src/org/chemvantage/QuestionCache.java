@@ -63,11 +63,11 @@ public class QuestionCache {
 		assignments.put(a.id, a);
 	}
 	
-	Map<Key<Question>,Question> getQuestions(List<Key<Question>> list) {
+	Map<Key<Question>,Question> getQuestionMap(List<Key<Question>> list) {
 		Map<Key<Question>,Question> qs = new HashMap<Key<Question>,Question>();
 		List<Key<Question>> needed = new ArrayList<Key<Question>>();
 		for (Key<Question> k : list) {
-			Question q = getQuestion(k);
+			Question q = questions.get(k).clone();
 			if (q == null) needed.add(k);
 			else qs.put(k,q);
 		}
@@ -77,7 +77,7 @@ public class QuestionCache {
 			qs.putAll(gotem);
 		}
 		return qs;
-	}
+	}	
 	
 	Question getQuestion(Key<Question> k) {
 		Question q = questions.get(k);
@@ -131,8 +131,9 @@ public class QuestionCache {
 				hwQuestionKeys.put(topicId, keys);
 			}
 		}
+		Map<Key<Question>,Question> map = getQuestionMap(keys);
 		List<Question> hwQuestions = new ArrayList<Question>();
-		for (Key<Question> k : keys) hwQuestions.add(getQuestion(k));
+		for (Key<Question> k : hwQuestionKeys.get(topicId)) hwQuestions.add(map.get(k));
 		return hwQuestions;
 	}
 

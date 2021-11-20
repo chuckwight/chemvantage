@@ -248,7 +248,7 @@ public class Quiz extends HttpServlet {
 			// Randomly reduce the size of questionKeys to the required number of questions	
 			while (questionKeys.size()>nQuestions) questionKeys.remove(rand.nextInt(questionKeys.size()));
 		
-			Map<Key<Question>, Question> quizQuestions = qcache.getQuestions(questionKeys);
+			Map<Key<Question>, Question> quizQuestions = qcache.getQuestionMap(questionKeys);
 			
 			while (i < nQuestions && questionKeys.size() > 0) {
 				Key<Question> k = questionKeys.remove(rand.nextInt(questionKeys.size()));
@@ -345,7 +345,7 @@ public class Quiz extends HttpServlet {
 					questionKeys.add(Key.create(Question.class,Long.parseLong((String) e.nextElement())));
 				} catch (Exception e2) {}
 			}
-			Map<Key<Question>,Question> quizQuestions = qcache.getQuestions(questionKeys);
+			Map<Key<Question>,Question> quizQuestions = qcache.getQuestionMap(questionKeys);
 			
 			List<Response> responses = new ArrayList<Response>();
 			
@@ -829,7 +829,7 @@ public class Quiz extends HttpServlet {
 					+ "If you don't see a question you want to include, you may "
 					+ "<a href=/Contribute?sig=" + user.getTokenSignature() + ">contribute a new question item</a> to the database.<p>");
 
-			List<Question> questions = new ArrayList<Question>(qcache.getQuestions(qcache.getQuizQuestionKeys(topic.id)).values());
+			List<Question> questions = new ArrayList<Question>(qcache.getQuestionMap(qcache.getQuizQuestionKeys(topic.id)).values());
 			//Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",topic.id).filter("isActive",true);
 			
 			// This dummy form uses javascript to select/deselect all questions
