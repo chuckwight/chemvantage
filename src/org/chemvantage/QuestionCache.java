@@ -121,10 +121,11 @@ public class QuestionCache {
 				Collections.sort(keys, new SortBySuccessPct());
 				hwQuestionKeys.put(topicId, keys);
 			}
+			Map<Key<Question>,Question> unsorted = ofy().load().keys(keys);
+			questions.putAll(unsorted);
 		}
-		Map<Key<Question>,Question> map = getQuestionMap(keys);
 		List<Question> hwQuestions = new ArrayList<Question>();
-		for (Key<Question> k : keys) hwQuestions.add(map.get(k));
+		for (Key<Question> k : keys) hwQuestions.add(questions.get(k));
 		return hwQuestions;
 	}
 
