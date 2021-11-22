@@ -283,17 +283,15 @@ public class LTIv1p3Launch extends HttpServlet {
 			Assignment a = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();
 			
 			switch (a.assignmentType) {
-			/*
 			case "Quiz":
-				out.println(Home.header() + Home.banner + Quiz.showScores(forUser) + Home.footer);
+				response.sendRedirect("/Quiz?sig=" + u.getTokenSignature() + "&ForUserId=" + forUser.getId());
 				break;
 			case "Homework":
-				out.println(Home.header() + Home.banner + Homework.showScores(forUser) + Home.footer);
+				response.sendRedirect("/Homework?sig=" + u.getTokenSignature() + "&ForUserId=" + forUser.getId());
 				break;
 			case "PracticeExam":
-				out.println(Home.header() + Home.banner + PracticeExam.submissionReview(u, forUser) + Home.footer);
+				response.sendRedirect("/PracticeExam?sig=" + u.getTokenSignature() + "&ForUserId=" + forUser.getId());
 				break;
-			*/
 			default:
 				out.println(Home.header() + Home.banner + "<h2>Sorry, submission review is not currently available for this type of ChemVantage assignment.</h2>" + Home.footer);
 			}

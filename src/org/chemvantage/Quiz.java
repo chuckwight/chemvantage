@@ -65,7 +65,9 @@ public class Quiz extends HttpServlet {
 			
 			switch (userRequest) {
 			case "ShowScores":
-				out.println(Home.header("Your ChemVantage Scores") + showScores(user) + Home.footer);
+				String forUserId = request.getParameter("ForUserId");
+				User forUser = forUserId==null?user:new User(user.platformId, forUserId);
+				out.println(Home.header("ChemVantage Scores") + showScores(user,forUser) + Home.footer);
 				break;
 			case "ShowSummary":
 				out.println(Home.header("Your Class ChemVantage Scores") + showSummary(user,request) + Home.footer);
@@ -646,7 +648,9 @@ public class Quiz extends HttpServlet {
 		+ "</SCRIPT>";
 	}
 
-	String showScores (User user) {
+	String showScores (User user,User forUser) {
+		if (!user.isInstructor() && !user.id.equals(forUser.id)) return "<H1>Access denied.</H1>";
+		
 		StringBuffer buf = new StringBuffer("<h2>Quiz Transactions</h2>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
@@ -658,30 +662,30 @@ public class Quiz extends HttpServlet {
 			buf.append("Topic: "+ t.title + "<br>");
 			buf.append("Valid: " + df.format(now) + "<p>");
 			
-			List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
+			List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).filter("userId",forUser.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
 			
 			if (qts.size()==0) {
 				buf.append("Sorry, we did not find any records for this user on this assignment.<p>");
 			} else {				
 				Score s = null;
 				try { // retrieve the score and ensure that it is up to date
-					s = ofy().load().key(Key.create(Key.create(User.class,user.getHashedId()),Score.class,a.id)).safe();
+					s = ofy().load().key(Key.create(Key.create(User.class,forUser.getHashedId()),Score.class,a.id)).safe();
 					if (s.numberOfAttempts != qts.size()) throw new Exception();
 				} catch (Exception e) { // create a fresh Score entity from scratch
-					s = Score.getInstance(user.id, a);
+					s = Score.getInstance(forUser.id, a);
 					ofy().save().entity(s);
 				}
 				
 				buf.append("This user's best score on the assignment is " + Math.round(10*s.getPctScore())/10. + "%.<br>");
 
-				if (!user.isAnonymous()) {  // try to validate the score with the LMS grade book entry
+				if (!forUser.isAnonymous()) {  // try to validate the score with the LMS grade book entry
 					String lmsScore = null;
 					try {
 						double lmsPctScore = 0;
 						boolean gotScoreOK = false;
 
 						if (a.lti_ags_lineitem_url != null) {  // LTI version 1.3
-							lmsScore = LTIMessage.readUserScore(a,user.id);
+							lmsScore = LTIMessage.readUserScore(a,forUser.id);
 							try {
 								lmsPctScore = Double.parseDouble(lmsScore);
 								gotScoreOK = true;
@@ -692,7 +696,7 @@ public class Quiz extends HttpServlet {
 						else if (a.lis_outcome_service_url != null && s.lis_result_sourcedid != null) {  // LTI version 1.1
 							String messageFormat = "application/xml";
 							String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
-							String oauth_consumer_key = user.id.substring(0, user.id.indexOf(":"));
+							String oauth_consumer_key = forUser.id.substring(0, forUser.id.indexOf(":"));
 							String replyBody = new LTIMessage(messageFormat,body,a.lis_outcome_service_url,oauth_consumer_key).send();
 
 							if (replyBody.contains("success")) {
@@ -716,7 +720,7 @@ public class Quiz extends HttpServlet {
 						buf.append("ChemVantage was unable to retrieve the score for this assignment from the LMS.<br>"
 								+ "Sometimes it takes several seconds for a score to be posted in the LMS grade book.<br>");
 						if (s.score==0 && s.numberOfAttempts<=1) buf.append("It appears that the assignment may not have been submitted for a score yet. ");
-						if (user.isInstructor()) buf.append("Some LMS providers do not accept score submissions for instructors or test students.");
+						if (forUser.isInstructor()) buf.append("Some LMS providers do not accept score submissions for instructors or test students.");
 						buf.append("<p>");
 					}
 				}

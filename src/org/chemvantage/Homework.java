@@ -67,7 +67,9 @@ public class Homework extends HttpServlet {
 			
 			switch (userRequest) {
 			case "ShowScores":
-				out.println(Home.header("Your ChemVantage Scores") + showScores(user) + Home.footer);
+				String forUserId = request.getParameter("ForUserId");
+				User forUser = forUserId==null?user:new User(user.platformId, forUserId);
+				out.println(Home.header("ChemVantage Scores") + showScores(user,forUser) + Home.footer);
 				break;
 			case "ShowSummary":
 				out.println(Home.header("Your Class ChemVantage Scores") + showSummary(user,request) + Home.footer);
@@ -596,7 +598,9 @@ public class Homework extends HttpServlet {
 		return buf.toString(); 
 	}
 
-	String showScores(User user) {
+	String showScores(User user, User forUser) {
+		if (!user.isInstructor() && !user.id.equals(forUser.id)) return "<H1>Access denied.</H1>";
+		
 		StringBuffer buf = new StringBuffer("<h2>Your Homework Transactions</h2>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
@@ -616,7 +620,7 @@ public class Homework extends HttpServlet {
 			buf.append("Topic: "+ t.title + "<br>");
 			buf.append("Valid: " + df.format(now) + "<p>");
 			
-			List<HWTransaction> hwts = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).order("graded").list();
+			List<HWTransaction> hwts = ofy().load().type(HWTransaction.class).filter("userId",forUser.getHashedId()).filter("assignmentId",a.id).order("graded").list();
 			
 			if (hwts.size()==0) {
 				buf.append("Sorry, we did not find any records for this user in the database for this assignment.<p>");
@@ -624,16 +628,16 @@ public class Homework extends HttpServlet {
 			} else {
 				Score s = null;
 				try { // retrieve the score and ensure that it is up to date
-					s = ofy().load().key(Key.create(Key.create(User.class,user.id),Score.class,a.id)).safe();
+					s = ofy().load().key(Key.create(Key.create(User.class,forUser.id),Score.class,a.id)).safe();
 					if (s.numberOfAttempts != hwts.size()) throw new Exception();
 				} catch (Exception e) { // create a fresh Score entity from scratch
-					s = Score.getInstance(user.id, a);
+					s = Score.getInstance(forUser.id, a);
 					ofy().save().entity(s);
 				}
 				
 				buf.append("This user's overall score on the assignment is " + 10.*Math.round(s.getPctScore())/10. + "%.<br>");
 
-				if (!user.isAnonymous()) {  // try to validate the score with the LMS grade book entry
+				if (!forUser.isAnonymous()) {  // try to validate the score with the LMS grade book entry
 					try {
 						double lmsPctScore = 0;
 						String lmsScore = null;
@@ -641,7 +645,7 @@ public class Homework extends HttpServlet {
 
 						//buf.append("Retrieving score for user " + User.getRawId(user.id) + " in group " + user.myGroupId + " for this " + a.assignmentType + " assignment " + a.id + "<p>");
 						if (a.lti_ags_lineitem_url != null) {  // LTI version 1p3
-							lmsScore = LTIMessage.readUserScore(a, user.id);
+							lmsScore = LTIMessage.readUserScore(a, forUser.id);
 							try {
 								lmsPctScore = Double.parseDouble(lmsScore);
 								gotScoreOK = true;
@@ -675,7 +679,7 @@ public class Homework extends HttpServlet {
 						buf.append("ChemVantage was unable to retrieve the score for this assignment from the LMS.<br>"
 								+ "Sometimes it takes several seconds for the score to be posted in the LMS grade book.<br>");
 						if (s.score==0 && s.numberOfAttempts==0) buf.append("It appears that this assignment may not have been submitted for a score yet.<br>");
-						if (user.isInstructor()) buf.append("Some LMS providers do not accept score submissions for instructors or test students.<br>");
+						if (forUser.isInstructor()) buf.append("Some LMS providers do not accept score submissions for instructors or test students.<br>");
 						buf.append("<br>");
 					}
 				}
