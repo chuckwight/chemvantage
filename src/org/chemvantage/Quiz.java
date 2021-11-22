@@ -236,7 +236,6 @@ public class Quiz extends HttpServlet {
 			} catch (Exception e) { // no assignment exists
 				questionKeys = new ArrayList<Key<Question>>(qcache.getQuizQuestionKeys(topicId));
 			}
-			//qcache.loadQuizQuestions(topicId);
 			
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
 			Random rand = new Random(); // create random number generator to select quiz questions
@@ -336,8 +335,7 @@ public class Quiz extends HttpServlet {
 			buf.append(ajaxJavaScript(user.getTokenSignature())); // load javascript for AJAX problem reporting form
 			
 			// Create a StringBuffer to contain correct answers to questions answered correctly
-			//List<String> missedQuestions = new ArrayList<String>();	 // questions without solutions	
-			List<String> solvedQuestions = new ArrayList<String>();	 // questions with correct answers
+			List<String> missedQuestions = new ArrayList<String>();	 // questions with correct answers
 			
 			// For each question the form contains a parameter: (questionId,studentAnswer)
 			// Make a list of the question keys. Non-numeric inputs are ignored (catch and continue).
@@ -370,8 +368,7 @@ public class Quiz extends HttpServlet {
 							if (score == 0) {  
 								// include question in list of incorrectly answered questions
 								wrongAnswers++;
-								//missedQuestions.add("<LI>" + q.printAllToStudents(studentAnswer[0],false) + "</LI>");
-								solvedQuestions.add("<LI>" + q.printAllToStudents(studentAnswer[0],true) + "</LI>");
+								missedQuestions.add("<LI>" + q.printAllToStudents(studentAnswer[0],true) + "</LI>");
 							}
 						}
 					}
@@ -427,8 +424,7 @@ public class Quiz extends HttpServlet {
 						if (nAnswersEligible < wrongAnswers) buf.append("<br/>The more questions you answer correctly, the more correct answers to missed questions will be displayed.");
 						buf.append("<OL>");
 						for (int i=0;i<wrongAnswers;i++) {
-							if (nAnswersEligible > 0) buf.append(solvedQuestions.get(i));
-							//else buf.append(missedQuestions.get(i));	
+							if (nAnswersEligible > 0) buf.append(missedQuestions.get(i));
 							nAnswersEligible --;
 						}
 						buf.append("</OL>");
