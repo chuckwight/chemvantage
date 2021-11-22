@@ -44,7 +44,7 @@ import com.googlecode.objectify.Key;
 @WebServlet("/Quiz")
 public class Quiz extends HttpServlet {
 	private static final long serialVersionUID = 137L;
-	static QuestionCache qcache = new QuestionCache();
+	QuestionCache qcache = new QuestionCache();
 	
 	public String getServletInfo() {
 		return "This servlet presents a quiz for the user.";
@@ -125,7 +125,7 @@ public class Quiz extends HttpServlet {
 		}
 	}
 	
-	static String instructorPage(User user,HttpServletRequest request) {
+	String instructorPage(User user,HttpServletRequest request) {
 		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
 		
 		StringBuffer buf = new StringBuffer();		
@@ -151,7 +151,7 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	static String printQuiz(User user, HttpServletRequest request) { // for anonymous users accessing Quiz servlet directly
+	String printQuiz(User user, HttpServletRequest request) { // for anonymous users accessing Quiz servlet directly
 		try {
 			long assignmentId = user.getAssignmentId();
 			long topicId = 0L;
@@ -163,7 +163,7 @@ public class Quiz extends HttpServlet {
 		}
 	}
 
-	static String printQuiz(User user, long tId) {
+	String printQuiz(User user, long tId) {
 		if (user == null) return "<h2>Launch failed because user was not authorized.</h2>";
 		
 		StringBuffer buf = new StringBuffer();
@@ -291,7 +291,7 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	static String printScore(User user,HttpServletRequest request) {
+	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		
 		try {
@@ -474,7 +474,7 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	static String timers() {
+	String timers() {
 		return "<SCRIPT>"
 				+ "function toggleTimers() {"
 				+ "	var timer0 = document.getElementById('timer0');"
@@ -539,7 +539,7 @@ public class Quiz extends HttpServlet {
 				+ "";
 	}
 	
-	static String fiveStars() {
+	String fiveStars() {
 		StringBuffer buf = new StringBuffer();
 
 		buf.append("<script type='text/javascript'>"
@@ -578,7 +578,7 @@ public class Quiz extends HttpServlet {
 		return buf.toString(); 
 	}
 
-	static String ajaxJavaScript(String signature) {
+	String ajaxJavaScript(String signature) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note,email) {\n"
 		+ "  var xmlhttp;\n"
@@ -646,7 +646,7 @@ public class Quiz extends HttpServlet {
 		+ "</SCRIPT>";
 	}
 
-	static String showScores (User user) {
+	String showScores (User user) {
 		StringBuffer buf = new StringBuffer("<h2>Quiz Transactions</h2>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
@@ -732,7 +732,7 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	static String showSummary(User user,HttpServletRequest request) {
+	String showSummary(User user,HttpServletRequest request) {
 		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
 		
 		StringBuffer buf = new StringBuffer();
@@ -801,7 +801,7 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	static String selectQuestionsForm(User user) {
+	String selectQuestionsForm(User user) {
 		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
 		
 		StringBuffer buf = new StringBuffer();

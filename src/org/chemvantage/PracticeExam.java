@@ -60,7 +60,7 @@ public class PracticeExam extends HttpServlet {
 	int numberOfSections = 1;            // 
 	boolean trackAnswers= false;         // true keeps track of missed questions for students
 	private static final long serialVersionUID = 137L;
-	static Map<Key<Question>,Question> examQuestions = new HashMap<Key<Question>,Question>();
+	Map<Key<Question>,Question> examQuestions = new HashMap<Key<Question>,Question>();
 
 	public String getServletInfo() {
 		return "This servlet presents and scores an exam for the user.";
@@ -770,7 +770,7 @@ public class PracticeExam extends HttpServlet {
 		+ "</SCRIPT>";
 	}
 	
-	protected static String submissionReview(User user,User forUser) {
+	String submissionReview(User user,User forUser) {
 		StringBuffer buf = new StringBuffer();
 
 		if (!user.id.equals(forUser.id) && !user.isInstructor()) return "Access denied.";

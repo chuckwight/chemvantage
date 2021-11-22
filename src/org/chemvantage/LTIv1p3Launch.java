@@ -281,7 +281,9 @@ public class LTIv1p3Launch extends HttpServlet {
 		if (u.id.equals(forUser.id) || u.isInstructor()) { // viewing the submission record is approved
 			String resourceLinkId = claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link").getAsJsonObject().get("id").getAsString();
 			Assignment a = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();
+			
 			switch (a.assignmentType) {
+			/*
 			case "Quiz":
 				out.println(Home.header() + Home.banner + Quiz.showScores(forUser) + Home.footer);
 				break;
@@ -291,6 +293,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			case "PracticeExam":
 				out.println(Home.header() + Home.banner + PracticeExam.submissionReview(u, forUser) + Home.footer);
 				break;
+			*/
 			default:
 				out.println(Home.header() + Home.banner + "<h2>Sorry, submission review is not currently available for this type of ChemVantage assignment.</h2>" + Home.footer);
 			}

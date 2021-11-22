@@ -44,9 +44,9 @@ import com.googlecode.objectify.Key;
 public class Homework extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
-	static QuestionCache qcache = new QuestionCache();
+	QuestionCache qcache = new QuestionCache();
 	
-	static int retryDelayMinutes = 2;  // minimum time between answer submissions for any single question
+	int retryDelayMinutes = 2;  // minimum time between answer submissions for any single question
 
 	public String getServletInfo() {
 		return "This servlet presents a homework assignment for the user.";
@@ -129,7 +129,7 @@ public class Homework extends HttpServlet {
 		}
 	}
 
-	static String instructorPage(User user,HttpServletRequest request) {
+	String instructorPage(User user,HttpServletRequest request) {
 		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
 		
 		StringBuffer buf = new StringBuffer();		
@@ -155,7 +155,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	static String printHomework(User user, HttpServletRequest request) {
+	String printHomework(User user, HttpServletRequest request) {
 		try {
 			long assignmentId = user.getAssignmentId();
 			long topicId = 0L;
@@ -170,7 +170,7 @@ public class Homework extends HttpServlet {
 		}
 	}
 
-	static String printHomework(User user, long tId, long hintQuestionId) {
+	String printHomework(User user, long tId, long hintQuestionId) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			long assignmentId = user.getAssignmentId(); // should be non-zero for LTI user
@@ -265,7 +265,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	static String printScore(User user,HttpServletRequest request) {
+	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Start...");
 		try {
@@ -487,7 +487,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	static String ajaxJavaScript(String signature) {
+	String ajaxJavaScript(String signature) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note,email) {\n"
 		+ "  var xmlhttp;\n"
@@ -555,7 +555,7 @@ public class Homework extends HttpServlet {
 		+ "</SCRIPT>";
 	}
 
-	static String fiveStars() {
+	String fiveStars() {
 		StringBuffer buf = new StringBuffer();
 
 		buf.append("<script type='text/javascript'>\n"
@@ -596,7 +596,7 @@ public class Homework extends HttpServlet {
 		return buf.toString(); 
 	}
 
-	static String showScores(User user) {
+	String showScores(User user) {
 		StringBuffer buf = new StringBuffer("<h2>Your Homework Transactions</h2>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
@@ -691,7 +691,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	static String showSummary(User user,HttpServletRequest request) {
+	String showSummary(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		String lti_version = null;
 		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
@@ -808,7 +808,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	static String selectQuestionsForm(User user) {
+	String selectQuestionsForm(User user) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			Assignment a = qcache.getAssignment(user.getAssignmentId());
