@@ -510,6 +510,74 @@ public class Question implements Serializable, Cloneable {
 		return buf.toString(); 
 	}
 
+	String printAnswerToStudents() {
+		// use this method to display an example of the question and correct answer, but no detailed solution
+		
+		StringBuffer buf = new StringBuffer("<a name=" + this.id + "></a>");
+		char choice = 'a';
+		switch (getQuestionType()) {
+		case 1: // Multiple Choice
+			buf.append(text + "<br/>");
+			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best answer:</FONT><br/>");
+			for (int i = 0; i < nChoices; i++) {
+				buf.append("&nbsp;" + choice + ". "
+						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
+						+ quot2html(choices.get(i))
+						+ (correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>") + "<br/>");
+				choice++;
+			}
+			break;
+		case 2: // True/False
+			buf.append(text + "<br/>");
+			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select true or false:</FONT><UL>");
+			buf.append("<LI>" 
+					+ (correctAnswer.equals("true")?"<B>True</B>":"<FONT COLOR=#888888>True</FONT>") 
+					+ "</LI>");
+			buf.append("<LI>" 
+					+ (correctAnswer.equals("false")?"<B>False</B>":"<FONT COLOR=#888888>False</FONT>")
+					+ "</LI>");
+			buf.append("</UL>");
+			break;
+		case 3: // Select Multiple
+			buf.append(text + "<br/>");
+			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><br/>");
+			for (int i = 0; i < nChoices; i++) {
+				buf.append("&nbsp;" + choice + ". "
+						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
+						+ quot2html(choices.get(i))
+						+ (correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>") + "<br/>");
+				choice++;
+			}
+			break;
+		case 4: // Fill-in-the-Word
+			buf.append(text + "<br/>");
+			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br/>");
+			String[] answers = correctAnswer.split(",");
+			buf.append("<span style='border: 1px solid black'>"
+					+ "<b>" + quot2html(answers[0]) + "</b>"
+					+ "</span>");
+			if (tag.length() > 0) buf.append("&nbsp;" + tag + "<br/>");
+			break;
+		case 5: // Numeric Answer
+			buf.append(parseString(text) + "<br/>");
+			switch (getNumericItemType()) {
+			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numeric value.</FONT><br/>"); break;
+			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br/>"); break;
+			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br/>"); break;
+			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br/>"); break;
+			default:
+			}
+			buf.append("<span style='border: 1px solid black'>"
+					+ "<b>" + getCorrectAnswer() + "</b>"
+					+ "</span>");
+			buf.append("&nbsp;" + parseString(tag) + "<br/>");
+			break;        
+		}
+
+		buf.append("<br/>");
+		return buf.toString();
+	}
+	
 	public boolean hasSolution() {
 		if (solution == null) solution = "";
 		return solution.length()>0?true:false;

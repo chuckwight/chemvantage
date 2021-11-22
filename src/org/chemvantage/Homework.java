@@ -457,10 +457,18 @@ public class Homework extends HttpServlet {
 			
 			buf.append(ajaxJavaScript(user.getTokenSignature()));
 			
+			if (studentScore > 0) {
+				buf.append("<div id=correctAnswer>"
+						+ q.printAnswerToStudents()
+						+ "<b>The answer submitted was: " + studentAnswer[0] + "</b>&nbsp;" + (q.isCorrect(studentAnswer[0])?"&nbsp;<IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom>":"<IMG SRC=/images/xmark.png ALT='X mark' align=middle>") + "<p></p>"
+						+ "</div>");
+			}
+
 			// embed the detailed solution or hint to the exercise in the response, if appropriate
 			if (user.isInstructor() || user.isTeachingAssistant() || (studentScore > 0  && !user.isAnonymous())) {
 				buf.append("<div id=exampleLink>"
 						+ "<a href=# onClick=javascript:document.getElementById('example').style.display='';"
+						+ "document.getElementById('correctAnswer').style.display='none';"
 						+ "document.getElementById('exampleLink').style.display='none';>"
 						+ "<FONT COLOR=RED>View the detailed solution for this homework exercise</FONT></a><p></div>");
 				buf.append("<div id=example style='display: none'><b>Detailed Solution</b><p>" 
