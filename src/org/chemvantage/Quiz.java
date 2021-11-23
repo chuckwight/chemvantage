@@ -362,7 +362,7 @@ public class Quiz extends HttpServlet {
 							q.setParameters(seed);
 							int score = q.isCorrect(studentAnswer[0])?q.pointValue:0;
 							
-							responses.add(new Response("Quiz",qt.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now));
+							responses.add(new Response("Quiz",qt.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.getId(),now));
 
 							studentScore += score;
 							if (score == 0) {  
@@ -385,10 +385,10 @@ public class Quiz extends HttpServlet {
 			boolean reportScoreToLms = false;
 			try {
 				if (user.isAnonymous()) throw new Exception();  // don't save Scores for anonymous users
-				Score.updateQuizScore(user.id,qt);
+				Score.updateQuizScore(user.getId(),qt);
 				reportScoreToLms = qa.lti_ags_lineitem_url != null || (qa.lis_outcome_service_url != null && user.getLisResultSourcedid() != null);
 				if (reportScoreToLms) {
-					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
+					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue
 				}
 			} catch (Exception e) {}
 
@@ -645,7 +645,7 @@ public class Quiz extends HttpServlet {
 	}
 
 	String showScores (User user,User forUser) {
-		if (!user.isInstructor() && !user.id.equals(forUser.id)) return "<H1>Access denied.</H1>";
+		if (!user.isInstructor() && !user.getId().equals(forUser.getId())) return "<H1>Access denied.</H1>";
 		
 		StringBuffer buf = new StringBuffer("<h2>Quiz Transactions</h2>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
@@ -668,7 +668,7 @@ public class Quiz extends HttpServlet {
 					s = ofy().load().key(Key.create(Key.create(User.class,forUser.getHashedId()),Score.class,a.id)).safe();
 					if (s.numberOfAttempts != qts.size()) throw new Exception();
 				} catch (Exception e) { // create a fresh Score entity from scratch
-					s = Score.getInstance(forUser.id, a);
+					s = Score.getInstance(forUser.getId(), a);
 					ofy().save().entity(s);
 				}
 				
@@ -681,7 +681,7 @@ public class Quiz extends HttpServlet {
 						boolean gotScoreOK = false;
 
 						if (a.lti_ags_lineitem_url != null) {  // LTI version 1.3
-							lmsScore = LTIMessage.readUserScore(a,forUser.id);
+							lmsScore = LTIMessage.readUserScore(a,forUser.getId());
 							try {
 								lmsPctScore = Double.parseDouble(lmsScore);
 								gotScoreOK = true;
@@ -692,7 +692,7 @@ public class Quiz extends HttpServlet {
 						else if (a.lis_outcome_service_url != null && s.lis_result_sourcedid != null) {  // LTI version 1.1
 							String messageFormat = "application/xml";
 							String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
-							String oauth_consumer_key = forUser.id.substring(0, forUser.id.indexOf(":"));
+							String oauth_consumer_key = forUser.getId().substring(0, forUser.getId().indexOf(":"));
 							String replyBody = new LTIMessage(messageFormat,body,a.lis_outcome_service_url,oauth_consumer_key).send();
 
 							if (replyBody.contains("success")) {

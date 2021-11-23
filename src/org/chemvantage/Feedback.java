@@ -69,7 +69,7 @@ public class Feedback extends HttpServlet {
 			
 			switch (userRequest) {
 			case "ReportAProblem":
-				String userId = user==null?"":user.id;
+				String userId = user==null?"":user.getId();
 				long questionId = Long.parseLong(request.getParameter("QuestionId"));
 				String notes = request.getParameter("Notes");
 				String email = request.getParameter("Email");
@@ -215,7 +215,7 @@ public class Feedback extends HttpServlet {
 		String comments = request.getParameter("Comments");
 		if (stars == 0 && (comments == null || comments.isEmpty())) return feedbackForm(user);   //(user==null?anonymousFeedbackForm():feedbackForm(user));
 		
-		String userId = user==null?null:user.id;
+		String userId = user==null?null:user.getId();
 		String email = request.getParameter("Email");
 		try {
 			String regex = "^[\\w-_\\.+]*[\\w-_\\.]\\@([\\w]+\\.)+[\\w]+[\\w]$";

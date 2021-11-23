@@ -278,7 +278,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
-		if (u.id.equals(forUser.id) || u.isInstructor()) { // viewing the submission record is approved
+		if (u.getId().equals(forUser.getId()) || u.isInstructor()) { // viewing the submission record is approved
 			String resourceLinkId = claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link").getAsJsonObject().get("id").getAsString();
 			Assignment a = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();
 			

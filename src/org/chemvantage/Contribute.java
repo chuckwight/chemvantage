@@ -138,8 +138,8 @@ public class Contribute extends HttpServlet {
 				q.parameterString = parameterString;
 				q.hint = hint;
 				q.solution = solution;
-				q.authorId = user.id;
-				q.contributorId = user.id;
+				q.authorId = user.getId();
+				q.contributorId = user.getId();
 				q.editorId = "";
 				q.notes = "";
 				q.validateFields();
@@ -302,8 +302,8 @@ public class Contribute extends HttpServlet {
 			q.parameterString = parameterString;
 			q.hint = hint;
 			q.solution = solution;
-			q.authorId = user.id;
-			q.contributorId = user.id;
+			q.authorId = user.getId();
+			q.contributorId = user.getId();
 			q.editorId = "";
 			q.notes = "";
 			q.validateFields();

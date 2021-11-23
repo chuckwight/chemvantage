@@ -233,7 +233,7 @@ public class Homework extends HttpServlet {
 				Key<Question> k = Key.create(Question.class,q.id);
 				boolean assigned = (hwa != null) && (hwa.questionKeys.contains(k));
 				StringBuffer questionBuffer = new StringBuffer("<div style='display:table-row'><div style='display:table-cell;font-size:small'>");
-				String hashMe = user.id + (hwa==null?"":hwa.id);
+				String hashMe = user.getId() + (hwa==null?"":hwa.id);
 				q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
 				
 				if (solvedQuestions.contains(q.id)) questionBuffer.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");
@@ -293,7 +293,7 @@ public class Homework extends HttpServlet {
 			} catch (Exception e) {}
 			
 			// Set the Question parameters for this user (this is why we made a copy, to prevent thread collisions with a class variable)
-			String hashMe = user.id + (hwa==null?"":hwa.id);
+			String hashMe = user.getId() + (hwa==null?"":hwa.id);
 			q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
 			debug.append("question parameters set with "+hashMe.hashCode()+"...");
 			
@@ -390,11 +390,11 @@ public class Homework extends HttpServlet {
 			if (studentAnswer[0].length() > 0) { // an answer was submitted
 				
 				// create and store a Response entity:
-				Response r = new Response("Homework",topic.id,q.id,studentAnswer[0],q.getCorrectAnswer(),studentScore,possibleScore,user.id,now);
+				Response r = new Response("Homework",topic.id,q.id,studentAnswer[0],q.getCorrectAnswer(),studentScore,possibleScore,user.getId(),now);
 				ofy().save().entity(r);
 				
 				// create a new HWTransaction entity:
-				ht = new HWTransaction(q.id,topic.id,topic.title,user.id,now,studentScore,assignmentId,possibleScore,showWork);
+				ht = new HWTransaction(q.id,topic.id,topic.title,user.getId(),now,studentScore,assignmentId,possibleScore,showWork);
 				if (lis_result_sourcedid != null) ht.lis_result_sourcedid = lis_result_sourcedid;
 				ofy().save().entity(ht).now();
 
@@ -405,9 +405,9 @@ public class Homework extends HttpServlet {
 					boolean reportScoreToLms = hwa.lti_ags_lineitem_url != null || (hwa.lis_outcome_service_url != null && user.getLisResultSourcedid() != null);
 					debug.append("score " + (reportScoreToLms?"will ":"will not ") + "be reported to the LMS...");
 					if (hwa.questionKeys.contains(k)) {
-						Score s = Score.getInstance(user.id,hwa);
+						Score s = Score.getInstance(user.getId(),hwa);
 						ofy().save().entity(s).now();
-						if (reportScoreToLms) QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",hwa.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue	
+						if (reportScoreToLms) QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",hwa.id.toString()).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue	
 					}
 				} catch (Exception e2) {
 				}
@@ -607,7 +607,7 @@ public class Homework extends HttpServlet {
 	}
 
 	String showScores(User user, User forUser) {
-		if (!user.isInstructor() && !user.id.equals(forUser.id)) return "<H1>Access denied.</H1>";
+		if (!user.isInstructor() && !user.getId().equals(forUser.getId())) return "<H1>Access denied.</H1>";
 		
 		StringBuffer buf = new StringBuffer("<h2>Your Homework Transactions</h2>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
@@ -636,10 +636,10 @@ public class Homework extends HttpServlet {
 			} else {
 				Score s = null;
 				try { // retrieve the score and ensure that it is up to date
-					s = ofy().load().key(Key.create(Key.create(User.class,forUser.id),Score.class,a.id)).safe();
+					s = ofy().load().key(Key.create(Key.create(User.class,forUser.getId()),Score.class,a.id)).safe();
 					if (s.numberOfAttempts != hwts.size()) throw new Exception();
 				} catch (Exception e) { // create a fresh Score entity from scratch
-					s = Score.getInstance(forUser.id, a);
+					s = Score.getInstance(forUser.getId(), a);
 					ofy().save().entity(s);
 				}
 				
@@ -651,9 +651,9 @@ public class Homework extends HttpServlet {
 						String lmsScore = null;
 						boolean gotScoreOK = false;
 
-						//buf.append("Retrieving score for user " + User.getRawId(user.id) + " in group " + user.myGroupId + " for this " + a.assignmentType + " assignment " + a.id + "<p>");
+						//buf.append("Retrieving score for user " + User.getRawId(user.getId()) + " in group " + user.myGroupId + " for this " + a.assignmentType + " assignment " + a.id + "<p>");
 						if (a.lti_ags_lineitem_url != null) {  // LTI version 1p3
-							lmsScore = LTIMessage.readUserScore(a, forUser.id);
+							lmsScore = LTIMessage.readUserScore(a, forUser.getId());
 							try {
 								lmsPctScore = Double.parseDouble(lmsScore);
 								gotScoreOK = true;

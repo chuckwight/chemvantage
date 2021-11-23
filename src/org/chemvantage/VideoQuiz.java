@@ -159,7 +159,7 @@ public class VideoQuiz extends HttpServlet {
 			if (vt == null || vt.graded != null || vt.downloaded.before(then)) {  // create a new VideoTransaction
 				int possibleScore = 0;
 				for (int i=0;i<v.breaks.length;i++) possibleScore += (v.nQuestions[i]<this.nQuestions?v.nQuestions[i]:this.nQuestions);
-				vt = new VideoTransaction(v.id,v.title,v.breaks.length,user.id,assignmentId,possibleScore,user.getLisResultSourcedid());
+				vt = new VideoTransaction(v.id,v.title,v.breaks.length,user.getId(),assignmentId,possibleScore,user.getLisResultSourcedid());
 				ofy().save().entity(vt).now();
 			}
 
@@ -259,7 +259,7 @@ public class VideoQuiz extends HttpServlet {
 							if (seed==-1) seed--;  // -1 is a special value for randomly seeded Random generator; avoid this (unlikely) situation
 							q.setParameters(seed);
 							int score = q.isCorrect(studentAnswer[0])?q.pointValue:0;
-							responses.add(new Response("VideoQuiz",0,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.id,now));
+							responses.add(new Response("VideoQuiz",0,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.getId(),now));
 							quizletScore += score;
 							if (score == 0) {  
 								// include question in list of incorrectly answered questions
@@ -307,12 +307,12 @@ public class VideoQuiz extends HttpServlet {
 			long assignmentId = user.getAssignmentId();
 			if (assignmentId>0L) {
 				a = ofy().load().type(Assignment.class).id(assignmentId).now();
-				Score s = Score.getInstance(user.id,a);
+				Score s = Score.getInstance(user.getId(),a);
 				ofy().save().entity(s).now();
 				reportScoreToLms = a.lti_ags_lineitem_url != null || (a.lis_outcome_service_url != null && user.getLisResultSourcedid() != null);
 				if (reportScoreToLms) {
 					Queue queue = QueueFactory.getDefaultQueue();  // Task queue used for reporting scores to the LMS
-					queue.add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
+					queue.add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue
 				}		
 			}
 		} catch (Exception e) {}
@@ -400,7 +400,7 @@ public class VideoQuiz extends HttpServlet {
 			buf.append("Topic: "+ t.title + "<br>");
 			buf.append("Valid: " + df.format(now) + "<p>");
 			
-			List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).filter("userId",user.id).filter("assignmentId",a.id).order("downloaded").list();
+			List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).filter("userId",user.getId()).filter("assignmentId",a.id).order("downloaded").list();
 			
 			if (qts.size()==0) {
 				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>"
@@ -409,7 +409,7 @@ public class VideoQuiz extends HttpServlet {
 						+ ">Take me back to the quiz now.</a>");
 			} else {
 				// create a fresh Score entity to calculate the best score on this assignment
-				Score s = Score.getInstance(user.id, a);
+				Score s = Score.getInstance(user.getId(), a);
 
 				buf.append("Your best score on this assignment is " + Math.round(10*s.getPctScore())/10. + "%.<br>");
 
@@ -420,7 +420,7 @@ public class VideoQuiz extends HttpServlet {
 					boolean gotScoreOK = false;
 					
 					if (a.lti_ags_lineitem_url != null) {  // LTI version 1.3
-						lmsScore = LTIMessage.readUserScore(a,user.id);
+						lmsScore = LTIMessage.readUserScore(a,user.getId());
 						try {
 							lmsPctScore = Double.parseDouble(lmsScore);
 							gotScoreOK = true;
@@ -430,7 +430,7 @@ public class VideoQuiz extends HttpServlet {
 					else if (a.lis_outcome_service_url != null && s.lis_result_sourcedid != null) {  // LTI version 1.1
 						String messageFormat = "application/xml";
 						String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
-						String oauth_consumer_key = user.id.substring(0, user.id.indexOf(":"));
+						String oauth_consumer_key = user.getId().substring(0, user.getId().indexOf(":"));
 						String replyBody = new LTIMessage(messageFormat,body,a.lis_outcome_service_url,oauth_consumer_key).send();
 
 						if (replyBody.contains("success")) {

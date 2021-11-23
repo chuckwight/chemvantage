@@ -330,10 +330,10 @@ public class Poll extends HttpServlet {
 		ofy().save().entity(pt).now();
 		try {
 			if (user.isAnonymous()) throw new Exception();  // don't save Scores for anonymous users
-			//Score.getInstance(user.id, a);
+			//Score.getInstance(user.getId(), a);
 			boolean reportScoreToLms = a.lti_ags_lineitem_url != null || (a.lis_outcome_service_url != null && user.getLisResultSourcedid() != null);
 			if (reportScoreToLms) {
-				QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  // put report into the Task Queue
+				QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue
 			}
 		} catch (Exception e) {}
 		return pt;
@@ -351,7 +351,7 @@ public class Poll extends HttpServlet {
 	
 	PollTransaction getPollTransaction(User user) {
 		PollTransaction pt = ofy().load().type(PollTransaction.class).filter("assignmentId",user.getAssignmentId()).filter("userId",user.getHashedId()).first().now();
-		if (pt == null) pt = new PollTransaction(user.id,new Date(),user.getAssignmentId());
+		if (pt == null) pt = new PollTransaction(user.getId(),new Date(),user.getAssignmentId());
 		return pt;
 	}
 	
@@ -792,7 +792,7 @@ public class Poll extends HttpServlet {
 			buf.append("<p><FORM METHOD=GET ACTION='/Poll'>"
 					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "' />"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "' />"
-					+ "<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + user.id + "' />");
+					+ "<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + user.getId() + "' />");
 			buf.append("<INPUT TYPE=HIDDEN NAME=QuestionType VALUE=" + questionType + " />");
 			
 			buf.append("Assignment Type: Poll<br />");
@@ -842,7 +842,7 @@ public class Poll extends HttpServlet {
 			q.assignmentType = "Poll";
 				
 			buf.append("Author: " + q.authorId + "<br />");
-			buf.append("Editor: " + user.id + "<p>");
+			buf.append("Editor: " + user.getId() + "<p>");
 			
 			buf.append("<FORM Action='/Poll' METHOD=POST>"
 					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "' />");
@@ -851,7 +851,7 @@ public class Poll extends HttpServlet {
 			
 			if (q.authorId==null) q.authorId="";
 			buf.append("<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + q.authorId + "' />");
-			buf.append("<INPUT TYPE=HIDDEN NAME=EditorId VALUE='" + user.id + "' />");
+			buf.append("<INPUT TYPE=HIDDEN NAME=EditorId VALUE='" + user.getId() + "' />");
 			
 			
 			if (current) {

@@ -293,7 +293,7 @@ public class PracticeExam extends HttpServlet {
 			else if (topicIds.size() < 3) return designExam(user,request);  // redirect to get a valid set of 3+ topic keys
 			
 			if (pt == null) {  // this is a valid request for a new exam with at least 3 topicIds; create a new transaction
-				pt = new PracticeExamTransaction(topicIds,user.id,now,null,new int[topicIds.size()],new int[topicIds.size()],user.getLisResultSourcedid());
+				pt = new PracticeExamTransaction(topicIds,user.getId(),now,null,new int[topicIds.size()],new int[topicIds.size()],user.getLisResultSourcedid());
 				pt.assignmentId = assignmentId;
 				ofy().save().entity(pt).now();	
 			}
@@ -557,7 +557,7 @@ public class PracticeExam extends HttpServlet {
 					int score = studentAnswer[0].length()==0?0:q.isCorrect(studentAnswer[0])?q.pointValue:0;
 					if (score > 0) studentScores[topicIds.indexOf(q.topicId)] += score;
 					if (studentAnswer[0].length() > 0) {
-						Response r = new Response("PracticeExam",q.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,Subject.hashId(user.id),now);
+						Response r = new Response("PracticeExam",q.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,Subject.hashId(user.getId()),now);
 						r.transactionId = pt.id;
 						responses.add(r);
 					}
@@ -576,12 +576,12 @@ public class PracticeExam extends HttpServlet {
 			ofy().save().entities(responses);
 			
 			try {
-				Score s = Score.getInstance(user.id,a);
+				Score s = Score.getInstance(user.getId(),a);
 				ofy().save().entity(s).now();
 				if (a.lti_ags_lineitem_url != null) { // LTI v1.3
-					LTIMessage.postUserScore(s,user.id);
+					LTIMessage.postUserScore(s,user.getId());
 				} else if (a.lis_outcome_service_url != null) { // LTI v1.1 put report into the Task Queue
-					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.id,"UTF-8")));  
+					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  
 				}
 			} catch (Exception e) {}
 
@@ -623,10 +623,10 @@ public class PracticeExam extends HttpServlet {
 				} else {				
 					Score s = null;
 					try { // retrieve the score and ensure that it is up to date
-						s = ofy().load().key(Key.create(Key.create(User.class,user.id),Score.class,a.id)).safe();
+						s = ofy().load().key(Key.create(Key.create(User.class,user.getId()),Score.class,a.id)).safe();
 						if (s.numberOfAttempts != pets.size()) throw new Exception();
 					} catch (Exception e) { // create a fresh Score entity from scratch
-						s = Score.getInstance(user.id, a);
+						s = Score.getInstance(user.getId(), a);
 						ofy().save().entity(s);
 					}
 
@@ -641,7 +641,7 @@ public class PracticeExam extends HttpServlet {
 							boolean gotScoreOK = false;
 
 							if (a.lti_ags_lineitem_url != null) {  // LTI version 1.3
-								lmsScore = LTIMessage.readUserScore(a,user.id);
+								lmsScore = LTIMessage.readUserScore(a,user.getId());
 								try {
 									lmsPctScore = Double.parseDouble(lmsScore);
 									gotScoreOK = true;
@@ -651,7 +651,7 @@ public class PracticeExam extends HttpServlet {
 							else if (a.lis_outcome_service_url != null && s.lis_result_sourcedid != null) {  // LTI version 1.1
 								String messageFormat = "application/xml";
 								String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
-								String oauth_consumer_key = user.id.substring(0, user.id.indexOf(":"));
+								String oauth_consumer_key = user.getId().substring(0, user.getId().indexOf(":"));
 								String replyBody = new LTIMessage(messageFormat,body,a.lis_outcome_service_url,oauth_consumer_key).send();
 
 								if (replyBody.contains("success")) {
@@ -776,20 +776,20 @@ public class PracticeExam extends HttpServlet {
 	String submissionReview(User user,User forUser) {
 		StringBuffer buf = new StringBuffer();
 
-		if (!user.id.equals(forUser.id) && !user.isInstructor()) return "Access denied.";
+		if (!user.getId().equals(forUser.getId()) && !user.isInstructor()) return "Access denied.";
 
 		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 
 		List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("userId",forUser.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
 		if (pets.size()==0) {
-			buf.append("Sorry, we did not find any records for " + (user.id.equals(forUser.id)?"you":"this user") + " in the database for this assignment.<p>");
+			buf.append("Sorry, we did not find any records for " + (user.getId().equals(forUser.getId())?"you":"this user") + " in the database for this assignment.<p>");
 		} else {				
 			Score s = null;
 			try { // retrieve the score and ensure that it is up to date
-				s = ofy().load().key(Key.create(Key.create(User.class,user.id),Score.class,a.id)).safe();
+				s = ofy().load().key(Key.create(Key.create(User.class,user.getId()),Score.class,a.id)).safe();
 				if (s.numberOfAttempts != pets.size()) throw new Exception();
 			} catch (Exception e) { // create a fresh Score entity from scratch
-				s = Score.getInstance(user.id, a);
+				s = Score.getInstance(user.getId(), a);
 				ofy().save().entity(s);
 			}
 

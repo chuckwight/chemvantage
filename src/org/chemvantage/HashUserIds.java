@@ -32,37 +32,37 @@ public class HashUserIds extends HttpServlet {
 			return;
 		}
 
-		String hashedId = Subject.hashId(u.id);
+		String hashedId = Subject.hashId(u.getId());
 		switch (a.assignmentType) {
 		case "Quiz":
-			List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).filter("userId",u.id).limit(500).list();
+			List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).filter("userId",u.getId()).limit(500).list();
 			for (QuizTransaction t : qts) t.userId = hashedId;
 			ofy().save().entities(qts);
 			break;
 		case "Homework":
-			List<HWTransaction> hts = ofy().load().type(HWTransaction.class).filter("userId",u.id).limit(500).list();
+			List<HWTransaction> hts = ofy().load().type(HWTransaction.class).filter("userId",u.getId()).limit(500).list();
 			for (HWTransaction t : hts) t.userId = hashedId;
 			ofy().save().entities(hts);
 			break;
 		case "PracticeExam":	
-			List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("userId",u.id).limit(500).list();
+			List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("userId",u.getId()).limit(500).list();
 			for (PracticeExamTransaction t : pets) t.userId = hashedId;
 			ofy().save().entities(pets);
 			break;
 		case "VideoTransaction":
-			List<VideoTransaction> vts = ofy().load().type(VideoTransaction.class).filter("userId",u.id).limit(500).list();
+			List<VideoTransaction> vts = ofy().load().type(VideoTransaction.class).filter("userId",u.getId()).limit(500).list();
 			for (VideoTransaction t : vts) t.userId = hashedId;
 			ofy().save().entities(vts);
 			break;
 		case "Poll":
-			List<PollTransaction> pts = ofy().load().type(PollTransaction.class).filter("userId",u.id).limit(500).list();
+			List<PollTransaction> pts = ofy().load().type(PollTransaction.class).filter("userId",u.getId()).limit(500).list();
 			for (PollTransaction t : pts) t.userId = hashedId;
 			ofy().save().entities(pts);
 			break;
 		}
 	
 		try {
-			Score s = Score.getInstance(u.id, a);
+			Score s = Score.getInstance(u.getId(), a);
 			ofy().delete().entity(s);
 			s.owner = Key.create(User.class,hashedId);
 			ofy().save().entity(s);
@@ -71,7 +71,7 @@ public class HashUserIds extends HttpServlet {
 		
 		List<Response> responses = new ArrayList<Response>();
 		do {
-			responses = ofy().load().type(Response.class).filter("userId",u.id).limit(500).list();
+			responses = ofy().load().type(Response.class).filter("userId",u.getId()).limit(500).list();
 			for (Response r : responses) r.userId = hashedId;
 			if (responses.size() > 0) ofy().save().entities(responses);
 		} while (responses.size() == 500);

@@ -57,10 +57,10 @@ public class UserReport implements Serializable {
 		StringBuffer buf = new StringBuffer();
 		
 		// User must be author of the report or the ChemVantage administrator
-		if (user==null || !(Subject.hashId(user.id).equals(this.userId) || user.isChemVantageAdmin())) return null;  
+		if (user==null || !(Subject.hashId(user.getId()).equals(this.userId) || user.isChemVantageAdmin())) return null;  
 
 		try {
-			buf.append("On " + submitted + (user.id.equals(this.userId)?" you":" a user") + " said:<br>");
+			buf.append("On " + submitted + (user.getId().equals(this.userId)?" you":" a user") + " said:<br>");
 			
 			if (stars>0) buf.append(" (" + stars + " stars)<br>");
 			buf.append("<FONT COLOR=RED>" + comments + "</FONT><br>");

@@ -29,7 +29,7 @@ import com.googlecode.objectify.annotation.Index;
 @Entity
 public class User {
 	@Id 	Long 	sig;
-	@Index 	String 	id;                    // stored with transactions, responses, userReports
+	@Index 	private String id;   // stored temporarily in encrypted form
 	@Index	Date 	exp;				   // max 90 minutes from now
 			String	platformId;			   // URL of the LMS
 			String 	lis_result_sourcedid = null;  // used only by LTIv1p1 users
@@ -103,7 +103,7 @@ public class User {
 	static long encode(long encrypt) {
 		/*
 		 * Weak encoding of the expiration Date takes place in 3 steps using 4 groups of 3 hexdigits (each hexdigit represents 4 bits):
-		 * 1 - using the last 4 hex digits as an initialization vector (iv), each group is XORed with the group to its right (after modification). The iv is unmodified.
+		 * 1 - using the last 3 hex digits as an initialization vector (iv), each group is XORed with the group to its right (after modification). The iv is unmodified.
 		 * 2 - the modified long integer is XORed with hexdigits 4-12 of a long resulting from new Random(iv)
 		 * 3 - the resulting long is XORed with itself after shifting to the left by 3 hexdigits (12 bits) and masking all but 12 digits
 		 * Decoding is done by repeating the exact same operation as encoding
@@ -255,4 +255,22 @@ public class User {
    		return lis_result_sourcedid;
     }
  
+    String encryptId (String id, long sig) {
+    	/* This method uses the long integer sig to encrypt the userId value (weak encryption but different for every sig value)
+    	 * The original id String can be recovered by using exactly the same encryption method (symmetric and reversible)
+    	 */
+    	try {
+    		byte[] input = id.getBytes("UTF-8");
+    		byte[] output = new byte[input.length];
+    		Random rand = new Random(sig);
+    		for (int i=0;i<input.length;i++) {
+    			int a = rand.nextInt(128);
+    			int b = (int) input[i];
+    			output[i] = (byte)(0xff & (a ^ b));
+    		}
+    		return new String(output,"UTF-8");
+    	} catch (Exception e) {
+    		return null;
+    	}
+    }
 }

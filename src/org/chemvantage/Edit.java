@@ -741,7 +741,7 @@ public class Edit extends HttpServlet {
 			Question question = new Question(questionType);
 			buf.append("<p><FORM METHOD=POST ACTION=Edit>"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
-					+ "<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + user.id + "'>");
+					+ "<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + user.getId() + "'>");
 			buf.append("<INPUT TYPE=HIDDEN NAME=QuestionType VALUE=" + questionType + ">");
 			
 			buf.append("Topic: " + topicSelectBox(topicId) + "<br>");
@@ -820,7 +820,7 @@ public class Edit extends HttpServlet {
 			if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) buf.append("Learn more at: " + q.learn_more_url + "</br>");
 			
 			buf.append("Author: " + q.authorId + "<br>");
-			buf.append("Editor: " + user.id + "<p>");
+			buf.append("Editor: " + user.getId() + "<p>");
 			
 			buf.append("<FORM Action=Edit METHOD=POST>");
 			
@@ -828,7 +828,7 @@ public class Edit extends HttpServlet {
 			
 			if (q.authorId==null) q.authorId="";
 			buf.append("<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + q.authorId + "'>");
-			buf.append("<INPUT TYPE=HIDDEN NAME=EditorId VALUE='" + user.id + "'>");
+			buf.append("<INPUT TYPE=HIDDEN NAME=EditorId VALUE='" + user.getId() + "'>");
 			
 			
 			if (current) {
@@ -1091,7 +1091,7 @@ public class Edit extends HttpServlet {
 			questionId = Long.parseLong(request.getParameter("QuestionId"));	
 			Question q = ofy().load().type(Question.class).id(questionId).safe();
 			q = assembleQuestion(request,q);
-			q.editorId = user.id;
+			q.editorId = user.getId();
 			q.isActive = true;
 			ofy().save().entity(q).now();
 			String key1 = q.assignmentType + String.valueOf(q.topicId);
