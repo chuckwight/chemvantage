@@ -574,7 +574,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly";
 			String bearerAuth = "Bearer " + getAccessToken(a.domain,scope);
 
-			String user_id = User.getRawId(userId); // stripped of the platform_id and "/"
+			String user_id = userId.substring(userId.lastIndexOf("/")+1); // stripped of the platform_id and "/"
 			
 			if (a.lti_ags_lineitem_url==null) throw new Exception("the lineitem URL for this assignment is unknown");
 			
@@ -630,7 +630,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			String bearerAuth = "Bearer " + authToken;
 			//buf.append("Authorization: " + bearerAuth + "<br>");
 			
-			String raw_id = User.getRawId(userId);
+			String raw_id = userId.substring(userId.lastIndexOf("/")+1);
 			String timestamp = ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT);
 			
 			JsonObject j = new JsonObject();

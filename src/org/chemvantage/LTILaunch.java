@@ -238,8 +238,7 @@ public class LTILaunch extends HttpServlet {
 			userId = oauth_consumer_key + ":" + (userId==null?"":userId);
 
 			// Process user information, provision a new user account if necessary, and store the userId in the user's session
-			User user = new User(userId);
-			//user.email = request.getParameter("lis_person_contact_email_primary");
+			User user = new User(userId, null, 0L, 0);
 			
 			// check if user has Instructor or Administrator role
 			String roles = request.getParameter("roles");
@@ -260,13 +259,9 @@ public class LTILaunch extends HttpServlet {
 			
 			// Use the resourceLinkId to find the assignment or create a new one:
 			Assignment myAssignment = null;
-			//String redirectUrl = null;
 			boolean saveAssignment = false;
 			try {  // load the requested Assignment entity if it exists
 				myAssignment = ofy().load().type(Assignment.class).filter("domain",oauth_consumer_key).filter("resourceLinkId", resource_link_id).first().safe();
-				//debug.append("Found assignment: ");
-				user.setAssignment(myAssignment.id,lis_result_sourcedid);
-				//debug.append("User token set...");
 				if (lisOutcomeServiceUrl != null && !lisOutcomeServiceUrl.equals(myAssignment.lis_outcome_service_url)) {
 					myAssignment.lis_outcome_service_url = lisOutcomeServiceUrl;
 					saveAssignment = true;
@@ -275,10 +270,8 @@ public class LTILaunch extends HttpServlet {
 			} catch (Exception e) {  // or create a new one with the available information (but no assignmentType or topicIds)
 				myAssignment = new Assignment(oauth_consumer_key,resource_link_id,lisOutcomeServiceUrl,true);
 				ofy().save().entity(myAssignment).now(); // we'll need the new id value immediately
-				user.setAssignment(myAssignment.id,lis_result_sourcedid);
-				//debug.append("User token set...");
 			}
-			//debug.append("assignmentId=" + myAssignment.id + "...");			
+			user.setAssignment(myAssignment.id,lis_result_sourcedid);
 			
 			// At this point we should have a valid Assignment, but it may not have an 
 			// assignmentType or topicId(s). If so, show the the pickResource form:

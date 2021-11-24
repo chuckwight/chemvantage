@@ -29,7 +29,7 @@ import com.googlecode.objectify.annotation.Index;
 @Entity
 public class User {
 	@Id 	Long 	sig;
-	@Index 	private String id;   // stored temporarily in encrypted form
+	@Index 	private String encryptedId;   // stored temporarily in encrypted form
 	@Index	Date 	exp;				   // max 90 minutes from now
 			String	platformId;			   // URL of the LMS
 			String 	lis_result_sourcedid = null;  // used only by LTIv1p1 users
@@ -40,32 +40,20 @@ public class User {
 		Date now = new Date();
 		exp = new Date(now.getTime() + 5400000L); // 90 minutes from now
 		sig = encode(exp.getTime());
-		id = "anonymous" + String.valueOf(exp.getTime()).hashCode();
+		encryptedId = "anonymous" + String.valueOf(exp.getTime()).hashCode();
 	}
-	
-	User(String id, Date exp) {  // used only to renew anonymous users
-		this.id = id;
-		this.exp = exp;
-		sig = encode(exp.getTime());
-	}
-	
-	User(String id) {  // used only for LTIv1.1 launches
-		this.id = id;
-		if (this.isAnonymous()) this.sig = 0L;		
-		this.exp = new Date(new Date().getTime() + 5400000L);  // value expires 90 minutes from now
-	}
-	
-	User(String platformId, String id) {
+
+	User(String platformId, String id) {  // used for LTI 1.3 launches
 		this.platformId = platformId;
 		if (id == null) id = "";
-		this.id = platformId + "/" + id;
-		if (this.isAnonymous()) this.sig = Long.parseLong(id.substring(9));
-		
+		this.sig = ofy().factory().allocateId(User.class).getId();
+		this.encryptedId = encryptId(platformId + "/" + id,sig);
 		this.exp = new Date(new Date().getTime() + 5400000L);  // value expires 90 minutes from now
 	}
 
-	User(String id, String email, String lis_result_sourcedid, long assignmentId, int roles) {
-		this.id = id;
+	User(String id, String lis_result_sourcedid, long assignmentId, int roles) {
+		this.sig = ofy().factory().allocateId(User.class).getId();
+		this.encryptedId = encryptId(id,sig);
 		this.lis_result_sourcedid = lis_result_sourcedid;
 		this.assignmentId = assignmentId;
 		this.roles = roles;
@@ -92,11 +80,8 @@ public class User {
     			ofy().save().entity(user);
     		}
     		return user;
-    	} catch (Exception e) { // retrieve an anonymous User entity
-    		Date exp = new Date(encode(Long.parseLong(sig,16)));
-    		if (exp.before(now) || exp.after(expires)) return null;
-    		if (exp.after(grace)) exp = new Date(now.getTime() + 5400000L);
-    		return new User("anonymous" + String.valueOf(exp.getTime()).hashCode(),exp); // keeps old id and exp unless token is about to expire
+    	} catch (Exception e) { 
+    		return new User(); // retrieve an anonymous User entity
     	}
 	}
 
@@ -128,25 +113,17 @@ public class User {
 		return encrypt;
 	}
 
-	static String getRawId(String userId) {
-		try {
-			User user = ofy().load().type(User.class).filter("id",userId).first().safe();
-			if (user.platformId != null) return user.id.substring(user.platformId.length()+1);  // preferred method
-		} catch (Exception e) {}
-		return userId.substring(userId.lastIndexOf("/")+1);  // should work OK except if raw userId contains "/" character
-	}
-	
 	public String getId() {   // public method to support JSP files to receive unhashed userId value
-		return id;
+		return decryptId(encryptedId,sig);
 	}
 	
 	public String getHashedId() {  // public method to support JSP files to retrieve hashed userId value
-		return Subject.hashId(id);
+		return Subject.hashId(this.getId());
 	}
 	
 	public boolean isAnonymous() {
 		try {
-			return id.startsWith("anonymous");
+			return encryptedId.startsWith("anonymous");
 		} catch (Exception e) {
 			return false;
 		} 
@@ -238,13 +215,7 @@ public class User {
 	
 	void setToken() {
 		if (this.isAnonymous()) return;
-		try {
-			User u = ofy().load().type(User.class).filter("id",this.id).first().safe();
-			if (u.exp.after(new Date())) this.sig = u.sig;
-			else ofy().delete().entity(u);
-		} catch (Exception e) {			
-		}
-		ofy().save().entity(this).now();
+		else ofy().save().entity(this).now();
 	}
 	
     public long getAssignmentId() {
@@ -255,7 +226,11 @@ public class User {
    		return lis_result_sourcedid;
     }
  
-    String encryptId (String id, long sig) {
+    String decryptId(String id, long sig) {  // encryption and decryption use the same method
+    	return encryptId(id,sig);
+    }
+    
+    String encryptId(String id, long sig) {
     	/* This method uses the long integer sig to encrypt the userId value (weak encryption but different for every sig value)
     	 * The original id String can be recovered by using exactly the same encryption method (symmetric and reversible)
     	 */
