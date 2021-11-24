@@ -200,6 +200,8 @@ public class Homework extends HttpServlet {
 			if (!user.isAnonymous()) buf.append("\n<LI>A checkmark will appear to the left of each correctly solved problem.</LI>");
 			buf.append("</UL>");
 
+			buf.append("UserId: " + user.getId() + "<br/>");
+			
 			// Review the HWTransactions for this user to record which problems have been solved for this assignment and retrieve the current showWork strings:
 			List<Long> solvedQuestions = new ArrayList<Long>();
 			Map<Long,String> workStrings = new HashMap<Long,String>();

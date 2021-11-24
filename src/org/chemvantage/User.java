@@ -29,8 +29,9 @@ import com.googlecode.objectify.annotation.Index;
 @Entity
 public class User {
 	@Id 	Long 	sig;
-	@Index 	private String encryptedId;   // stored temporarily in encrypted form
+	@Index 	String  hashedId;   		   // used to check for duplicate stored values
 	@Index	Date 	exp;				   // max 90 minutes from now
+			String  encryptedId;		   // stored temporarily in encrypted form
 			String	platformId;			   // URL of the LMS
 			String 	lis_result_sourcedid = null;  // used only by LTIv1p1 users
 			long	assignmentId = 0L;     // used only for LTI users
@@ -44,19 +45,32 @@ public class User {
 	}
 
 	User(String platformId, String id) {  // used for LTI 1.3 launches
+		// First look for this user in the database to avoid creating a duplicate entry
+		// If not found, create a new one.
 		this.platformId = platformId;
 		if (id == null) id = "";
-		this.sig = ofy().factory().allocateId(User.class).getId();
-		this.encryptedId = encryptId(platformId + "/" + id,sig);
+		String user_id = platformId + "/" + id;
+		this.hashedId = Subject.hashId(user_id);
 		this.exp = new Date(new Date().getTime() + 5400000L);  // value expires 90 minutes from now
+		
+		try {
+			User u = ofy().load().type(User.class).filter("hashedId",hashedId).first().safe();
+			this.roles = u.roles;
+			this.assignmentId = u.assignmentId;
+			Date now = new Date();
+			if (u.exp.after(now)) this.sig = u.sig;  // this is a current user; just use it
+			else throw new Exception();
+		} catch (Exception e) {
+			this.sig = ofy().factory().allocateId(User.class).getId();
+		}
+		
+		this.encryptedId = encryptId(user_id,sig);
+		ofy().save().entity(this);
 	}
 
-	User(String id, String lis_result_sourcedid, long assignmentId, int roles) {
+	User(String id) {  // used only for LTIv1.1 launches
 		this.sig = ofy().factory().allocateId(User.class).getId();
 		this.encryptedId = encryptId(id,sig);
-		this.lis_result_sourcedid = lis_result_sourcedid;
-		this.assignmentId = assignmentId;
-		this.roles = roles;
 		this.exp = new Date(new Date().getTime() + 5400000L);  // value expires 90 minutes from now
 	}
 	
@@ -118,7 +132,7 @@ public class User {
 	}
 	
 	public String getHashedId() {  // public method to support JSP files to retrieve hashed userId value
-		return Subject.hashId(this.getId());
+		return hashedId.length()>0?hashedId:Subject.hashId(this.getId());
 	}
 	
 	public boolean isAnonymous() {
@@ -226,26 +240,47 @@ public class User {
    		return lis_result_sourcedid;
     }
  
-    String decryptId(String id, long sig) {  // encryption and decryption use the same method
-    	return encryptId(id,sig);
-    }
-    
     String encryptId(String id, long sig) {
-    	/* This method uses the long integer sig to encrypt the userId value (weak encryption but different for every sig value)
-    	 * The original id String can be recovered by using exactly the same encryption method (symmetric and reversible)
+    	/* This method uses a simple one-time pad to encrypt a userId value prior to storing inthe database.
+    	 * The uses sig as a seed for Random. Each 8-bit random integer (0 to 127) is XORed with one byte
+    	 * of the input String and converted to a two-character hexadecimal number for storage as a printable value.
+    	 * The final output should have 2 characters for every byte of input, so the encryption is weak.
     	 */
     	try {
     		byte[] input = id.getBytes("UTF-8");
-    		byte[] output = new byte[input.length];
+    		String output = "";
     		Random rand = new Random(sig);
     		for (int i=0;i<input.length;i++) {
     			int a = rand.nextInt(128);
     			int b = (int) input[i];
-    			output[i] = (byte)(0xff & (a ^ b));
+    			int xor = a^b;
+    			output += (xor<16?"0":"") + Integer.toHexString(a^b);  // retains leading zero, if present
     		}
-    		return new String(output,"UTF-8");
+    		return output;
     	} catch (Exception e) {
     		return null;
     	}
     }
+    
+    String decryptId(String enc, long sig) { 
+    	/* This method reverses the encrypt method above by converting each pair of hexadecimal characters in the input
+    	 * to an integer, XORing that with a pseudo-random integer based on sig, converting to a single byte and 
+    	 * finally to a String character, which is appended to the output for each pair of hexadecimal input characters.
+    	 */
+    	try {
+    		int length = enc.length()/2;
+    		byte[] output = new byte[length];
+    		Random rand = new Random(sig);
+    		for (int i=0;i<length;i++) {
+    			int a = rand.nextInt(128);
+    			int b = Integer.parseInt(enc.substring(2*i, 2*i+2),16);
+    			Integer xor = a^b;
+    			output[i] = xor.byteValue(); 
+    		}
+    		return new String(output,"UTF-8");	
+    	} catch (Exception e) {
+    		return e.toString() + " " + e.getMessage();
+    	}
+    }
+    
 }

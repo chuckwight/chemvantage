@@ -238,7 +238,7 @@ public class LTILaunch extends HttpServlet {
 			userId = oauth_consumer_key + ":" + (userId==null?"":userId);
 
 			// Process user information, provision a new user account if necessary, and store the userId in the user's session
-			User user = new User(userId, null, 0L, 0);
+			User user = new User(userId);
 			
 			// check if user has Instructor or Administrator role
 			String roles = request.getParameter("roles");
