@@ -44,12 +44,12 @@ public class User {
 		encryptedId = "anonymous" + String.valueOf(exp.getTime()).hashCode();
 	}
 
-	User(String platformId, String id) {  // used for LTI 1.3 launches
+	User(String platformId, String id) {  // used for LTI 1.3 and LTIv1.1 launches
 		// First look for this user in the database to avoid creating a duplicate entry
 		// If not found, create a new one.
 		this.platformId = platformId;
 		if (id == null) id = "";
-		String user_id = platformId + "/" + id;
+		String user_id = platformId==null?id:platformId + "/" + id;
 		this.hashedId = Subject.hashId(user_id);
 		this.exp = new Date(new Date().getTime() + 5400000L);  // value expires 90 minutes from now
 		
@@ -75,9 +75,7 @@ public class User {
 	}
 
 	User(String id) {  // used only for LTIv1.1 launches
-		this.sig = ofy().factory().allocateId(User.class).getId();
-		this.encryptedId = encryptId(id,sig);
-		this.exp = new Date(new Date().getTime() + 5400000L);  // value expires 90 minutes from now
+		this(null,id);
 	}
 	
 	public static User getUser(String sig) {  // default token expiration of 90 minutes
