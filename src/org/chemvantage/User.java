@@ -58,14 +58,20 @@ public class User {
 			this.roles = u.roles;
 			this.assignmentId = u.assignmentId;
 			Date now = new Date();
-			if (u.exp.after(now)) this.sig = u.sig;  // this is a current user; just use it
-			else throw new Exception();
-		} catch (Exception e) {
+			if (u.exp.after(now)) {
+				this.sig = u.sig;  // this is a current user; just use it
+				this.encryptedId = u.encryptedId;
+				ofy().save().entity(this);
+			}
+			else {
+				ofy().delete().entity(u);
+				throw new Exception();
+			}
+		} catch (Exception e) {			
 			this.sig = ofy().factory().allocateId(User.class).getId();
+			this.encryptedId = encryptId(user_id,sig);
+			ofy().save().entity(this).now();
 		}
-		
-		this.encryptedId = encryptId(user_id,sig);
-		ofy().save().entity(this);
 	}
 
 	User(String id) {  // used only for LTIv1.1 launches
