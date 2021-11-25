@@ -270,6 +270,7 @@ public class Homework extends HttpServlet {
 	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Start...");
+		boolean premiumUser = true;
 		try {
 			// The Homework grader scores only one Question at a time, so first identify and load it
 			long questionId = Long.parseLong(request.getParameter("QuestionId"));
@@ -465,7 +466,7 @@ public class Homework extends HttpServlet {
 			}
 
 			// embed the detailed solution or hint to the exercise in the response, if appropriate
-			if (user.isInstructor() || user.isTeachingAssistant() || (studentScore > 0  && !user.isAnonymous())) {
+			if (user.isInstructor() || user.isTeachingAssistant() || (studentScore > 0  && !user.isAnonymous() && premiumUser)) {
 				buf.append("<div id=exampleLink>"
 						+ "<a href=# onClick=javascript:document.getElementById('example').style.display='';"
 						+ "document.getElementById('correctAnswer').style.display='none';"

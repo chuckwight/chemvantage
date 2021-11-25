@@ -294,7 +294,7 @@ public class Quiz extends HttpServlet {
 	
 	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		
+		boolean premiumUser = true;
 		try {
 			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
@@ -368,7 +368,7 @@ public class Quiz extends HttpServlet {
 							if (score == 0) {  
 								// include question in list of incorrectly answered questions
 								wrongAnswers++;
-								missedQuestions.add("<LI>" + q.printAllToStudents(studentAnswer[0],true) + "</LI>");
+								missedQuestions.add("<LI>" + q.printAllToStudents(studentAnswer[0],premiumUser) + "</LI>");
 							}
 						}
 					}
@@ -417,6 +417,7 @@ public class Quiz extends HttpServlet {
 					case 2: nAnswersEligible = Math.min(wrongAnswers,4); break;
 					case 3: nAnswersEligible = Math.min(wrongAnswers,5); break;
 					default: nAnswersEligible = wrongAnswers;
+					if (!premiumUser) nAnswersEligible = wrongAnswers; // but correct answers are not displayed...
 					}
 					
 					if (nAnswersEligible > 0) {
