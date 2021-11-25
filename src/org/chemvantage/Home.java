@@ -51,8 +51,9 @@ public class Home extends HttpServlet {
 			throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-
-		out.println(header() + homePage(request) + footer);
+		
+		if (request.getRequestURI().length()>1) out.println("Visit us at <a href=/>https://www.chemvantage.org</a>");
+		else out.println(header() + homePage(request) + footer);
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
