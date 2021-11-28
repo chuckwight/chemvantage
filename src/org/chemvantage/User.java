@@ -37,11 +37,13 @@ public class User {
 			long	assignmentId = 0L;     // used only for LTI users
 			int 	roles = 0;             // student
 	
-	User() {  // constructor for anonymous user
-		Date now = new Date();
-		exp = new Date(now.getTime() + 5400000L); // 90 minutes from now
-		sig = encode(exp.getTime());
-		encryptedId = "anonymous" + String.valueOf(exp.getTime()).hashCode();
+	User() {  // constructor for new anonymous user; expires in 90 minutes
+		this(new Date().getTime() + 5400000L);
+	}
+	
+	User(long millis) {  // constructor for continuing anonymous user; expires at new Date(millis)
+		sig = encode(millis);
+		encryptedId = "anonymous" + String.valueOf(millis).hashCode();
 		hashedId = "";
 	}
 
@@ -86,13 +88,12 @@ public class User {
 	public static User getUser(String sig,int minutesRequired) {   // allows custom expiration for long assignments
 		if (sig==null) return null;
     	if (minutesRequired > 500) minutesRequired = 500;
-		User user = new User();
-    	Date now = new Date();
+		Date now = new Date();
     	Date grace = new Date(now.getTime() + minutesRequired*60000L);  // start of grace period
     	Date expires = new Date(now.getTime() + (minutesRequired+5)*60000L);   // includes 5-minute grace period
 		
     	try {  // try to find the LTI User entity in the datastore
-    		user = ofy().load().type(User.class).id(Long.parseLong(sig)).safe();
+    		User user = ofy().load().type(User.class).id(Long.parseLong(sig)).safe();
     		if (user.exp.before(now)) return null; // entity has expired
     		if (user.exp.before(grace)) { // extend the exp time
     			user.exp = expires;
@@ -103,13 +104,7 @@ public class User {
     	
     	try {  // try to validate an anonymous user
     		Date exp = new Date(encode(Long.parseLong(sig,16)));
-    		if (exp.after(now) && exp.before(expires)) {  // return the original anonymous user
-    			user.encryptedId = "anonymous" + String.valueOf(exp.getTime()).hashCode();
-    			user.exp = exp;
-    			user.sig = encode(exp.getTime());
-    			user.hashedId = "";
-    			return user;
-    		} 		
+    		if (exp.after(now) && exp.before(expires)) return new User(exp.getTime());		
     	} catch (Exception e) {}
 
     	return null;   	
