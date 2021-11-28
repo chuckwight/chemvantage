@@ -36,7 +36,26 @@ public class User {
 			String 	lis_result_sourcedid = null;  // used only by LTIv1p1 users
 			long	assignmentId = 0L;     // used only for LTI users
 			int 	roles = 0;             // student
-	
+
+/*
+ * 		A User entity represents either a qualified LTI User or an anonymous ChemVantage user entering through the web site.
+ * 		LTI User:
+ * 		We store the plain text platformId from the iss claim made by the LMS, plus
+ * 			- The entity's @Id (sig) value (to store in the datastore)
+ * 			- A hashed Id value stored with Transaction, Score and Response entities for later retrieval
+ * 			- An encrypted userId value used to send scores back tot he user's LMS
+ * 			- expiration Date object (typically 90 minutes after launch
+ * 			- user's assignmentId, if known
+ * 			- lis_result_sourcedid value (only for LTIv1.1 users
+ * 
+ * 		Anonymous User:
+ * 		For a new anonymous user, the constructor uses an expiration Date 90 minutes from now to create the values
+ * 		For a returning user (getUser()) the constructor uses the prior expiration Date to reconstruct the values
+ * 			- sig: a hexadecimal encoded value representing the original expiration Date
+ * 			- encryptedId = "anonymous" + hashCode of millis of original exp Date
+ * 			- hashedId 
+ */
+			
 	User() {  // constructor for new anonymous user; expires in 90 minutes
 		this(new Date().getTime() + 5400000L);
 	}
@@ -44,7 +63,7 @@ public class User {
 	User(long millis) {  // constructor for continuing anonymous user; expires at new Date(millis)
 		sig = encode(millis);
 		encryptedId = "anonymous" + String.valueOf(millis).hashCode();
-		hashedId = "";
+		hashedId = Subject.hashId(encryptedId);
 	}
 
 	User(String platformId, String id) {  // used for LTI 1.3 and LTIv1.1 launches
@@ -66,11 +85,11 @@ public class User {
 				this.encryptedId = u.encryptedId;
 				ofy().save().entity(this);
 			}
-			else {
+			else {  //this is an expired LTI user
 				ofy().delete().entity(u);
 				throw new Exception();
 			}
-		} catch (Exception e) {			
+		} catch (Exception e) {	 // this is an LTI user not found i the datastore
 			this.sig = ofy().factory().allocateId(User.class).getId();
 			this.encryptedId = encryptId(user_id,sig);
 			ofy().save().entity(this).now();
@@ -145,16 +164,11 @@ public class User {
 	}
 	
 	public String getHashedId() {  // public method to support JSP files to retrieve hashed userId value
-		if (this.isAnonymous()) return "";
-		else return hashedId.length()>0?hashedId:Subject.hashId(this.getId());
+		return (hashedId==null || hashedId.isEmpty())?Subject.hashId(encryptedId):hashedId;
 	}
 	
 	public boolean isAnonymous() {
-		try {
-			return encryptedId.startsWith("anonymous");
-		} catch (Exception e) {
-			return false;
-		} 
+		return encryptedId.startsWith("anonymous");
 	}
 
 	boolean isChemVantageAdmin() {
