@@ -42,6 +42,7 @@ public class User {
 		exp = new Date(now.getTime() + 5400000L); // 90 minutes from now
 		sig = encode(exp.getTime());
 		encryptedId = "anonymous" + String.valueOf(exp.getTime()).hashCode();
+		hashedId = "";
 	}
 
 	User(String platformId, String id) {  // used for LTI 1.3 and LTIv1.1 launches
@@ -85,12 +86,12 @@ public class User {
 	public static User getUser(String sig,int minutesRequired) {   // allows custom expiration for long assignments
 		if (sig==null) return null;
     	if (minutesRequired > 500) minutesRequired = 500;
-		User user = null;
+		User user = new User();
     	Date now = new Date();
     	Date grace = new Date(now.getTime() + minutesRequired*60000L);  // start of grace period
     	Date expires = new Date(now.getTime() + (minutesRequired+5)*60000L);   // includes 5-minute grace period
-			
-		try {  // try to find the User entity in the datastore
+		
+    	try {  // try to find the LTI User entity in the datastore
     		user = ofy().load().type(User.class).id(Long.parseLong(sig)).safe();
     		if (user.exp.before(now)) return null; // entity has expired
     		if (user.exp.before(grace)) { // extend the exp time
@@ -98,11 +99,22 @@ public class User {
     			ofy().save().entity(user);
     		}
     		return user;
-    	} catch (Exception e) { 
-    		return new User(); // retrieve an anonymous User entity
-    	}
-	}
+    	} catch (Exception e) {}
+    	
+    	try {  // try to validate an anonymous user
+    		Date exp = new Date(encode(Long.parseLong(sig,16)));
+    		if (exp.after(now) && exp.before(expires)) {  // return the original anonymous user
+    			user.encryptedId = "anonymous" + String.valueOf(exp.getTime()).hashCode();
+    			user.exp = exp;
+    			user.sig = encode(exp.getTime());
+    			user.hashedId = "";
+    			return user;
+    		} 		
+    	} catch (Exception e) {}
 
+    	return null;   	
+	}
+    
 	static long encode(long encrypt) {
 		/*
 		 * Weak encoding of the expiration Date takes place in 3 steps using 4 groups of 3 hexdigits (each hexdigit represents 4 bits):
@@ -111,6 +123,7 @@ public class User {
 		 * 3 - the resulting long is XORed with itself after shifting to the left by 3 hexdigits (12 bits) and masking all but 12 digits
 		 * Decoding is done by repeating the exact same operation as encoding
 		 */
+	
 		try {
 			long mask = 0xfffL;
 			long iv = encrypt & mask;
@@ -132,11 +145,13 @@ public class User {
 	}
 
 	public String getId() {   // public method to support JSP files to receive unhashed userId value
-		return decryptId(encryptedId,sig);
+		if (this.isAnonymous()) return encryptedId;
+		else return decryptId(encryptedId,sig);
 	}
 	
 	public String getHashedId() {  // public method to support JSP files to retrieve hashed userId value
-		return hashedId.length()>0?hashedId:Subject.hashId(this.getId());
+		if (this.isAnonymous()) return "";
+		else return hashedId.length()>0?hashedId:Subject.hashId(this.getId());
 	}
 	
 	public boolean isAnonymous() {
@@ -216,7 +231,7 @@ public class User {
 	}
 
 	public String getTokenSignature() {
-		if (this.isAnonymous()) return Long.toHexString(sig);  // weakly-encrypted hexadecimal exp Date
+		if (this.isAnonymous()) return Long.toHexString(sig);
 		else return String.valueOf(sig);     // String version of @Id value of User in the datastore
 	}
 	
@@ -244,7 +259,7 @@ public class User {
    		return lis_result_sourcedid;
     }
  
-    String encryptId(String id, long sig) {
+    static String encryptId(String id, long sig) {
     	/* This method uses a simple one-time pad to encrypt a userId value prior to storing inthe database.
     	 * The uses sig as a seed for Random. Each 8-bit random integer (0 to 127) is XORed with one byte
     	 * of the input String and converted to a two-character hexadecimal number for storage as a printable value.
