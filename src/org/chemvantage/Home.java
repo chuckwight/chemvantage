@@ -52,8 +52,8 @@ public class Home extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
-		if (request.getRequestURI().length()>1) response.sendError(404);
-		else out.println(header() + homePage(request) + footer);
+		//if (request.getRequestURI().length()>1) response.sendError(404);
+		out.println(header() + homePage(request) + footer);
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
@@ -73,8 +73,7 @@ public class Home extends HttpServlet {
 				+ "<meta name='Description' content='An online quiz and homework site' />\n"
 				+ "<meta namew='Keywords' content='chemistry,learning,online,quiz,homework,video,textbook,open,education' />"
 				+ "<meta name='msapplication-config' content='none'/>\n"
-				+ "<link rel='icon' type='image/png' href='/favicon.png' />\n"
-				+ "<link rel='icon' type='image/vnd.microsoft.icon' href='/favicon.ico' />\n"
+				+ "<link rel='icon' type='image/png' href='/images/favicon.png' />"
 				+ "<title>" + (title==null || title.isEmpty()?"ChemVantage":title) + "</title>\n"
 				+ "</head>\n"
 				+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
