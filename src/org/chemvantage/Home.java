@@ -30,7 +30,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-@WebServlet(urlPatterns={"/","/Home"})
+@WebServlet("/")
 public class Home extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
@@ -52,7 +52,7 @@ public class Home extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
-		if (request.getRequestURI().length()>1) out.println("Visit us at <a href=/>https://www.chemvantage.org</a>");
+		if (request.getRequestURI().length()>1) response.sendError(404);
 		else out.println(header() + homePage(request) + footer);
 	}
 
@@ -114,7 +114,7 @@ public class Home extends HttpServlet {
 		+ "</head>\n"
 		+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
 		+ "<div>"
-		+ "<a href=/Home style='padding-right:25px'>Home</a> "
+		+ "<a href=/ style='padding-right:25px'>Home</a> "
 		+ "<a href=/About style='padding-right:25px'>About Us</a> "
 		+ "<a href='/Feedback?sig=" + user.getTokenSignature() + "' style='padding-right:25px'>Feedback</a> "
 		+ "<a href='/Contribute?sig=" + user.getTokenSignature() + "' style='padding-right:25px'>Authors</a> "
