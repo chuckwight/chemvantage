@@ -293,15 +293,21 @@ public class Edit extends HttpServlet {
 						+ "</div>");
 
 				String key1 = assignmentType + String.valueOf(topicId);
-				buf.append("This assignment draws from the following " + questions.get(key1).size() + " questions:");
+				buf.append("<b>This assignment draws from the following " + questions.get(key1).size() + " questions:</b><br/><br/>");
 
 				buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
 				int i=0;
+				int pts = 0;
 				for (Map.Entry<Key<Question>,Question> entry : questions.get(key1).entrySet()) {
 					Question q = entry.getValue().clone();
 					q.setParameters();
 					i++;
 
+					if ("Exam".equals(assignmentType) && q.pointValue != pts) { // print a header for new section of questions
+						pts = q.pointValue;
+						buf.append("<tr><td colspan=4><u>" + pts + " point questions</u><br/><br/></td></tr>");
+					}
+					
 					buf.append("<FORM METHOD=GET ACTION=Edit>"
 							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topicId + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
