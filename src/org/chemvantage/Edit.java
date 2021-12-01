@@ -301,18 +301,19 @@ public class Edit extends HttpServlet {
 				for (Map.Entry<Key<Question>,Question> entry : questions.get(key1).entrySet()) {
 					Question q = entry.getValue().clone();
 					q.setParameters();
-					i++;
-
+					
 					if ("Exam".equals(assignmentType) && q.pointValue != pts) { // print a header for new section of questions
 						pts = q.pointValue;
-						buf.append("<tr><td colspan=4><u>" + pts + " point questions</u><br/><br/></td></tr>");
+						i=0;
+						buf.append("<tr><td>" + q.pointValue + "&nbsp;point&nbsp;questions:<p></td></tr>");
 					}
-					
+					i++;
+
 					buf.append("<FORM METHOD=GET ACTION=Edit>"
 							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topicId + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>"
-							+ "<TR ID=" + q.id + " VALIGN=TOP>"
+							+ "<TR ID=" + q.id + " VALIGN=TOP>" //+ ("Exam".equals(assignmentType)?"class='questions" + q.pointValue + "' style='display:none'>":">")
 							+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit><p><FONT SIZE=-2>" + successPct.get(Key.create(q)) + "%&nbsp;avg&nbsp;score</FONT>"
 							+ (q.learn_more_url != null && !q.learn_more_url.isEmpty()?"<br/><a href='" + q.learn_more_url + "' target=_blank><img src=/images/learn_more.png /></a>":"")
 							+ "</TD>"
