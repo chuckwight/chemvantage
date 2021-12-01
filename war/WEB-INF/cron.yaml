@@ -1,8 +1,8 @@
 cron:
-- url: '/cloud-datastore-export?output_url_prefix=gs://chem-vantage-hrd-backups'
-  schedule: '1 of month 07:00'
-  timezone: 'America/New_York'
-  description: 'Regularly scheduled full backup to Google Cloud Datastore bucket'
+#- url: '/cloud-datastore-export?output_url_prefix=gs://chem-vantage-hrd-backups'
+#  schedule: '1 of month 07:00'
+#  timezone: 'America/New_York'
+#  description: 'Regularly scheduled full backup to Google Cloud Datastore bucket'
 - url: '/cloud-datastore-export?output_url_prefix=gs://dev-vantage-hrd-backups&kind=Assignment'
   schedule: '2 of month 07:00'
   timezone: 'America/New_York'
