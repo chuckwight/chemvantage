@@ -385,7 +385,7 @@ public class Question implements Serializable, Cloneable {
 			if (solution.length()>0) {
 				buf.append("Solution:<br/>" + parseString(solution));
 			}
-			buf.append("<br/><br/>");
+			buf.append("<br/>");
 			break;        
 		}
 		return buf.toString();
