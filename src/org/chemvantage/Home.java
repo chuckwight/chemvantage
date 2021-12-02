@@ -52,10 +52,6 @@ public class Home extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
-		switch (request.getRequestURI()) {
-		case "/images/CVLogo_thumb.jpg": response.sendError(404); return;
-		}
-		
 		out.println(header() + homePage(request) + footer);
 	}
 
