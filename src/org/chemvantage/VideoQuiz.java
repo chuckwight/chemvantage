@@ -27,6 +27,7 @@ import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -79,6 +80,9 @@ public class VideoQuiz extends HttpServlet {
 				break;
 			case "ShowQuizlet":
 				out.println(showQuizlet(user,videoId,segment));
+				break;
+			case "ShowScores":
+				out.println(Home.header("Video assignment scores") + showScores(user,request) + Home.footer);
 				break;
 			case "ShowSummary":
 				out.println(Home.header("Class video scores") + showSummary(user,request) + Home.footer);
@@ -367,18 +371,184 @@ public class VideoQuiz extends HttpServlet {
 					+ (user.isInstructor()?"For instructors this is common.":"") + "<p>");				
 		}
 
+		// Give a chance to review previous scores on this assignment
+		if (a != null) buf.append("You may <a href=/VideoQuiz?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review all your scores on this assignment</a>.<p>") ;
+
+		
 		// If a==null this is an anonymous user, otherwise is an LTI user:
 		buf.append((a==null?"<a href=/Video.jsp?VideoId=" + vt.videoId + "&Segment=0&sig=" + user.getTokenSignature() + ">Watch this video again</a> or go back to the <a href=/>ChemVantage home page</a> " :
-				"You may take this quiz again by clicking the assignment link in your learning management system ")			
+				"You may view this video again by clicking the assignment link in your learning management system ")			
 				+ "or <a href=/Logout>logout of ChemVantage</a>.");
 
 		return buf.toString();	
 		
 	}
 	
-	String showSummary(User user,HttpServletRequest request) {
-		return "<h2>This page is currently under construction</h2>";
+	String showScores (User user, HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer("<h2>Your Video Quiz Transactions</h2>");
+		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+		Date now = new Date();
+		
+		Assignment a = null;
+		try {
+			long assignmentId = user.getAssignmentId();
+			a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+		} catch (Exception e) {
+			buf.append("Invalid assignment.");
+			return buf.toString();
+		}
+
+		try {
+			buf.append("Assignment Number: " + a.id + "<br>");
+			Video v = ofy().load().type(Video.class).id(a.videoId).safe();
+			buf.append("Title: "+ v.title + "<br>");
+			buf.append("Valid: " + df.format(now) + "<p>");
+			
+			List<VideoTransaction> vts = ofy().load().type(VideoTransaction.class).filter("userId",user.getId()).filter("assignmentId",a.id).order("downloaded").list();
+			
+			if (vts.size()==0) {
+				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>"
+						+ "<a href=/VideoQuiz?AssignmentId=" + a.id 
+						+ "&sig=" + user.getTokenSignature() 
+						+ ">Take me back to the video now.</a>");
+			} else {
+				// create a fresh Score entity to calculate the best score on this assignment
+				Score s = Score.getInstance(user.getId(), a);
+
+				buf.append("Your best score on this assignment is " + Math.round(10*s.getPctScore())/10. + "%.<br>");
+
+				// try to validate the score with the LMS grade book entry
+				String lmsScore = null;
+				try {
+					double lmsPctScore = 0;
+					boolean gotScoreOK = false;
+					
+					if (a.lti_ags_lineitem_url != null) {  // LTI version 1.3
+						lmsScore = LTIMessage.readUserScore(a,user.getId());
+						try {
+							lmsPctScore = Double.parseDouble(lmsScore);
+							gotScoreOK = true;
+						} catch (Exception e) {
+						}
+					}
+					else if (a.lis_outcome_service_url != null && s.lis_result_sourcedid != null) {  // LTI version 1.1
+						String messageFormat = "application/xml";
+						String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
+						String oauth_consumer_key = user.getId().substring(0, user.getId().indexOf(":"));
+						String replyBody = new LTIMessage(messageFormat,body,a.lis_outcome_service_url,oauth_consumer_key).send();
+
+						if (replyBody.contains("success")) {
+							int beginIndex = replyBody.indexOf("<textString>") + 12;
+							int endIndex = replyBody.indexOf("</textString>");
+							lmsScore = replyBody.substring(beginIndex,endIndex);
+							lmsPctScore = 100.*Double.parseDouble(lmsScore);
+							gotScoreOK = true;
+						}
+					}
+					
+					if (gotScoreOK && Math.abs(lmsPctScore-s.getPctScore())<1.0) { // LMS readResult agrees to within 1%
+						buf.append("This score is accurately recorded in the grade book of your class learning management system.<p>");
+					} else if (gotScoreOK) { // there is a significant difference between LMS and ChemVantage scores. Please explain:
+						buf.append("The score recorded in your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%. The difference may be due to<br>"
+								+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<br>"
+								+ "If you think this may be due to a stale score, you may submit this assignment for grading,<br>"
+								+ "even for a score of zero, and ChemVantage will try to refresh your best score to the LMS.<p>");
+					} else throw new Exception();
+				} catch (Exception e) {
+					buf.append("ChemVantage was unable to retrieve your score for this assignment from the LMS.<br>");
+					if (s.score==0 && s.numberOfAttempts<=1) buf.append("It appears that you may not have submitted a score for this quiz yet. ");
+					if (user.isInstructor()) buf.append("Some LMS providers do not store scores for instructors.");
+					buf.append("<p>");
+				}
+
+				buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Quiz Score</th></tr>");
+				for (VideoTransaction vt : vts) {
+					buf.append("<tr><td>" + vt.id + "</td><td>" + df.format(vt.downloaded) + "</td><td align=center>" + (vt.graded==null?"-":100.*vt.score/vt.possibleScore + "%") +  "</td></tr>");
+				}
+				buf.append("</table><br>Missing scores indicate quizzes that were downloaded but not submitted for scoring.<p>");
+			}
+		} catch (Exception e) {
+			buf.append(e.toString());
+		}
+		return buf.toString();
 	}
+
+	String showSummary(User user,HttpServletRequest request) {
+		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
+		
+		StringBuffer buf = new StringBuffer();
+		
+		Assignment a = null;
+		try {
+			long assignmentId = user.getAssignmentId();
+			a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+		} catch (Exception e) {
+			buf.append("Invalid assignment.");
+			return buf.toString();
+		}
+		if (a==null) return "No assignment was specified for this request.";
+		
+		Video v = ofy().load().type(Video.class).id(a.videoId).now();
+		
+		if (!user.isInstructor()) return "You must be logged in as the instructor to view this page.";
+
+		if (a.lti_ags_lineitem_url != null && a.lti_nrps_context_memberships_url != null) {
+			try { // code for LTI version 1.3
+				buf.append("<h3>" + a.assignmentType + " - " + v.title + "</h3>");
+				buf.append("Assignment ID: " + a.id + "<br>");
+				buf.append("Valid: " + new Date() + "<p>");
+				buf.append("The roster below is obtained using the Names and Role Provisioning service offered by your learning management system, "
+						+ "and may or may not include user's names or emails, depending on the settings of your LMS. The easiest way to "
+						+ "resolve any discrepancies between scores reported by the LMS grade book and ChemVantage is for the user to "
+						+ "submit the assignment again (even for a score of zero). This causes ChemVantage to recalculate the "
+						+ "user's best score and report it to the LMS. However, some discrepancies are to be expected, for example "
+						+ "if the instructor adjusts a score in the LMS manually or if an assignment was submitted after the "
+						+ "deadline and was not accepted by the LMS.<p>");
+
+				Map<String,String> scores = LTIMessage.readMembershipScores(a);
+				if (scores==null) scores = new HashMap<String,String>();  // in case service call fails
+				
+				buf.append("We downloaded " + scores.size() + " scores from your LMS.<br>");
+				
+				Map<String,String[]> membership = LTIMessage.getMembership(a);
+				if (membership==null) membership = new HashMap<String,String[]>(); // in case service call fails
+				
+				buf.append("There are " + membership.size() + " members of this group.<p>");
+				
+				Map<String,Key<Score>> keys = new HashMap<String,Key<Score>>();
+				Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
+				String platform_id = d.getPlatformId() + "/";
+				
+				for (String id : membership.keySet()) {
+					String hashedUserId = Subject.hashId(platform_id + id);
+					keys.put(id,Key.create(Key.create(User.class,hashedUserId),Score.class,a.id));
+				}
+				Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
+				
+				buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th></tr>");
+				int i=0;
+				for (Map.Entry<String,String[]> entry : membership.entrySet()) {
+					if (entry == null) continue;
+					String s = scores.get(entry.getKey());
+					Score cvScore = cvScores.get(keys.get(entry.getKey()));
+					i++;
+					buf.append("<tr><td>" + i + ".&nbsp;</td>"
+							+ "<td>" + entry.getValue()[1] + "</td>"
+							+ "<td>" + entry.getValue()[2] + "</td>"
+							+ "<td>" + entry.getValue()[0] + "</td>"
+							+ "<td align=center>" + (s == null?" - ":s + "%") + "</td>"
+							+ "<td align=center>" + (cvScore == null?" - ":String.valueOf(cvScore.getPctScore()) + "%") + "</td></tr>");
+				}
+				buf.append("</table>");
+				return buf.toString();
+			} catch (Exception e) {
+				buf.append(e.toString());
+			}
+		} else {
+			buf.append("Sorry, there is not enough information available from your LMS to support this request.<p>");			
+		}
+		return buf.toString();
+}
 /*	
 	String showScores (User user, HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h2>Your Quiz Transactions</h2>");
