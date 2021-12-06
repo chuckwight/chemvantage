@@ -493,7 +493,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		buf.append("<label><input type=radio name=AssignmentType " + ("Quiz".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='Quiz' />Quiz</label><br />"
 				+ "<label><input type=radio name=AssignmentType " + ("Homework".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='Homework' />Homework</label><br />"
 				+ "<label><input type=radio name=AssignmentType " + ("VideoQuiz".equals(assignmentType)?"checked ":" ") + "onClick=showVideos(); value='VideoQuiz' '>Video</label><br />"
-				+ "<label><input type=radio name=AssignmentType " + ("Poll".equals(assignmentType)?"checked ":" ") + "onClick=hideTopics(); value='Poll' />In-class&nbsp;Poll</label><br />"
+				+ "<label><input type=radio name=AssignmentType " + ("Poll".equals(assignmentType)?"checked ":" ") + "onClick=showPolls(); value='Poll' />In-class&nbsp;Poll</label><br />"
 				+ "<label><input type=radio name=AssignmentType " + ("PracticeExam".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='PracticeExam' />Practice&nbsp;Exam</label><p></p>");
 		buf.append("</div>");
 		
@@ -529,12 +529,14 @@ public class LTIv1p3Launch extends HttpServlet {
 				+ "    document.getElementById('checkSelect').style.display='none';"
 				+ "    document.getElementById('videoSelect').style.display='none';"
 				+ "    document.getElementById('pollNotice').style.display='none';"
+				+ "    document.getElementById('placementNotice').style.display='none';"
 				+ "    clearChecks();"
 				+ "  } else if (type = 'check') {"
 				+ "    document.getElementById('radioSelect').style.display='none';"
 				+ "    document.getElementById('checkSelect').style.display='block';"
 				+ "    document.getElementById('videoSelect').style.display='none';"
 				+ "    document.getElementById('pollNotice').style.display='none';"
+				+ "    document.getElementById('placementNotice').style.display='none';"
 				+ "    clearRadios();"
 				+ "  }"
 				+ "}"
@@ -544,11 +546,23 @@ public class LTIv1p3Launch extends HttpServlet {
 				+ "  document.getElementById('checkSelect').style.display='none';"
 				+ "  document.getElementById('videoSelect').style.display='block';"
 				+ "  document.getElementById('pollNotice').style.display='none';"
+				+ "  document.getElementById('placementNotice').style.display='none';"
 				+ "  clearChecks();"
 				+ "  clearRadios();"
 				+ "}"
-				+ "function hideTopics() {"
+				+ "function showPolls() {"
 				+ "  document.getElementById('pollNotice').style.display='block';"
+				+ "  document.getElementById('topicKeySelect').style.visibility='hidden';"
+				+ "  document.getElementById('radioSelect').style.display='none';"
+				+ "  document.getElementById('checkSelect').style.display='none';"
+				+ "  document.getElementById('videoSelect').style.display='none';"
+				+ "  document.getElementById('placementNotice').style.display='none';"
+				+ "  clearChecks();"
+				+ "  clearRadios();"
+				+ "}"
+				+ "function showPlacementExams() {"
+				+ "  document.getElementById('placementNotice').style.display='block';"
+				+ "  document.getElementById('pollNotice').style.display='none';"
 				+ "  document.getElementById('topicKeySelect').style.visibility='hidden';"
 				+ "  document.getElementById('radioSelect').style.display='none';"
 				+ "  document.getElementById('checkSelect').style.display='none';"
@@ -602,6 +616,11 @@ public class LTIv1p3Launch extends HttpServlet {
 		// Create instructions for the Poll assignmentType:
 		buf.append("<div id=pollNotice style='display:none'><input type=submit value='Create an in-class poll' /><br />"
 				+ "Poll questions will be selected or created when the assignment is launched by the instructor.</div>");
+
+		// Create notice for Placement Exams
+		buf.append("<div id=placemenNoticeNotice style='display:none'>"
+				+ "<input type=submit value='Create a placement exam for General Chemistry' /><br />"
+				+ "This can be used to advise students whether they are prepared to take the course.</div>");
 
 		// Create a radio-type selector for video quiz assignments
 		buf.append("<div id=videoSelect style='display:" + (selectorType.equals("video")?"block":"none") + "'>");
