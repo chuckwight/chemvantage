@@ -895,7 +895,7 @@ public class Homework extends HttpServlet {
 					+ "score is equal to the number of questions selected. Students may work the optional problems; "
 					+ "however, these are not included in the scores reported to the class LMS.<p>"
 					+ "If you don't see a question you want to include, you may "
-					+ "<a href=/Contribute?sig=" + user.getTokenSignature() 
+					+ "<a href=/Contribute?TopicId=" + topic.id + "&AssignmentType=Homework&sig=" + user.getTokenSignature() 
 					+ ">contribute a new question item</a> to the database.<p>");
 			
 			// This dummy form uses javascript to select/deselect all questions

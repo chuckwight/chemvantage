@@ -881,7 +881,7 @@ public class Quiz extends HttpServlet {
 					+ "Therefore, the total number of questions should be "
 					+ "larger than 10, but not much larger than 50.  Experience shows that 30 items is about right in most cases.<p>"
 					+ "If you don't see a question you want to include, you may "
-					+ "<a href=/Contribute?sig=" + user.getTokenSignature() + ">contribute a new question item</a> to the database.<p>");
+					+ "<a href=/Contribute?TopicId=" + topic.id + "&AssignmentType=Quiz&sig=" + user.getTokenSignature() + ">contribute a new question item</a> to the database.<p>");
 
 			List<Question> questions = new ArrayList<Question>(qcache.getQuestionMap(qcache.getQuizQuestionKeys(topic.id)).values());
 			//Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",topic.id).filter("isActive",true);

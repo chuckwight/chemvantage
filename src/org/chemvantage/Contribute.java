@@ -121,7 +121,7 @@ public class Contribute extends HttpServlet {
 			ProposedQuestion q = null;
 			boolean preview = false;
 			buf.append("<FORM NAME=NewQuestion ACTION=Contribute METHOD=POST>");
-			//if (cvsToken!=null) buf.append("<INPUT TYPE=HIDDEN NAME=CvsToken VALUE=" + cvsToken + ">");
+			
 			buf.append("<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">");
 			
 			if (assignmentType.length()>0 && questionType>0 && topicId>0) { // create the question object
@@ -167,15 +167,19 @@ public class Contribute extends HttpServlet {
 						+ "For details, please see the <a href=About#copyright>About Us</a> page.<p>");
 			}
 
-			Query<Topic> topics = ofy().load().type(Topic.class);
-			buf.append("<b>Topic: </b><SELECT NAME=TopicId>");
-			if (topicId == 0) buf.append("<OPTION VALUE=0>Select a topic:</OPTION>");
-			for (Topic t : topics) {
-				buf.append("<OPTION " + ((t.id == topicId)?"SELECTED ":"")
-						+ "VALUE='" + t.id + "'>" + t.title + "</OPTION>");
+			buf.append("<b>Topic: </b>");
+			
+			if (topicId>0L) {
+				Topic t = ofy().load().type(Topic.class).id(topicId).now();
+				buf.append(t.title + "<input type=hidden name=TopicId value=" + t.id + " /><br/>");
+			} else {
+				Query<Topic> topics = ofy().load().type(Topic.class);
+				buf.append("<SELECT NAME=TopicId><OPTION VALUE=0>Select a topic:</OPTION>");
+				for (Topic t : topics) buf.append("<OPTION VALUE='" + t.id + "'>" + t.title + "</OPTION>");
+				buf.append("</SELECT><br/><br/>");
 			}
-			buf.append("</SELECT>" + (topicId>0?"<br>":"<p>"));
-
+			
+			
 			if (assignmentType.length()==0) {
 				buf.append("<b>Assignment Type: </b><br>"
 						+ "<INPUT TYPE=RADIO NAME=AssignmentType VALUE='Quiz'>Quiz<br>"
@@ -220,11 +224,11 @@ public class Contribute extends HttpServlet {
 			}
 			else {
 				buf.append("<b>Question Type: </b><br>"
-						+ "<INPUT TYPE=RADIO NAME=QuestionType VALUE=1>Multiple Choice<br />"
-						+ "<INPUT TYPE=RADIO NAME=QuestionType VALUE=2>True/False<br />"
-						+ "<INPUT TYPE=RADIO NAME=QuestionType VALUE=3>Select Multiple<br />"
-						+ "<INPUT TYPE=RADIO NAME=QuestionType VALUE=4>Fill in Word<br />"
-						+ "<INPUT TYPE=RADIO NAME=QuestionType VALUE=5>Numeric<br />");
+						+ "<label><INPUT TYPE=RADIO NAME=QuestionType VALUE=1>Multiple Choice</label><br />"
+						+ "<label><INPUT TYPE=RADIO NAME=QuestionType VALUE=2>True/False</label><br />"
+						+ "<label><INPUT TYPE=RADIO NAME=QuestionType VALUE=3>Select Multiple</label><br />"
+						+ "<label><INPUT TYPE=RADIO NAME=QuestionType VALUE=4>Fill in Word</label><br />"
+						+ "<label><INPUT TYPE=RADIO NAME=QuestionType VALUE=5>Numeric</label><br />");
 			}
 
 			if (q != null) buf.append(q.edit() 
