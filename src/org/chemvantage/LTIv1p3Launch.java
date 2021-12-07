@@ -443,6 +443,19 @@ public class LTIv1p3Launch extends HttpServlet {
 				}
 			}
 			break;
+		case "PlacementExam":
+			List<Topic> topics = ofy().load().type(Topic.class).list();
+			for (Topic t : topics) {
+				switch (t.title) {
+				case "Essential Chemistry":
+				case "Essential Math":
+				case "Word Problems":
+					a.topicIds.add(t.id);
+					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",t.id).keys().list());
+				default:
+				}
+			}
+			break;
 		case "VideoQuiz":
 			String videoId = request.getParameter("VideoId");
 			if (videoId != null) a.videoId = Long.parseLong(videoId);
