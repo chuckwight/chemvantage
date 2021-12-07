@@ -766,7 +766,7 @@ public class Homework extends HttpServlet {
 					// Ignore Instructor scores because the LMS often does not report them, and ignore null cvScore entities because they cannot be reported.
 					synched = synched && (!"Learner".equals(entry.getValue()[0]) || (cvScore!=null?String.valueOf(cvScore.getPctScore()).equals(s):true));
 				}
-				buf.append("</table>");
+				buf.append("</table><br/>");
 				if (!synched) {
 					buf.append("If any of the Learner scores above are not synchronized, you may use the button below to launch a background task " 
 						+ "where ChemVantage will resubmit them to your LMS. This can take several seconds to minutes depending on the "
