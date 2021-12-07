@@ -119,6 +119,10 @@ public class Quiz extends HttpServlet {
 				ofy().save().entity(a).now();
 				doGet(request,response);
 				break;
+			case "Synchronize Scores":
+				if (synchronizeScores(user,request)) doGet(request,response);
+				else out.println("Synchronization request failed.");
+				break;
 			default:
 				out.println(Home.header("ChemVantage Quiz Results") + printScore(user,request) + Home.footer);
 			}
@@ -791,7 +795,17 @@ public class Quiz extends HttpServlet {
 							+ "<td align=center>" + (s == null?" - ":s + "%") + "</td>"
 							+ "<td align=center>" + (cvScore == null?" - ":String.valueOf(cvScore.getPctScore()) + "%") + "</td></tr>");
 				}
-				buf.append("</table>");
+				buf.append("</table><br/>");
+				buf.append("If any of the scores above are not synchronized, you may use the button below to launch a background task " 
+						+ "where ChemVantage will resubmit them to your LMS. This can take several seconds to minutes depending on the "
+						+ "number of scores to process. Please note that you may have to adjust the settings in your LMS to accept the "
+						+ "revised scores. For example, in Canvas you may need to change the assignment settings to Unlimited Submissions. "
+						+ "This may also cause the submission to be counted as late if the deadline has passed.<br/>"
+						+ "<form method=post action=/Quiz >"
+						+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+						+ "<input type=hidden name=UserRequest value='Synchronize Scores' />"
+						+ "<input type=submit value='Synchronize Scores' />"
+						+ "</form>");
 				return buf.toString();
 			} catch (Exception e) {
 				buf.append(e.toString());
@@ -800,6 +814,39 @@ public class Quiz extends HttpServlet {
 			buf.append("Sorry, there is not enough information available from your LMS to support this request.<p>");			
 		}
 		return buf.toString();
+	}
+	
+	boolean synchronizeScores(User user,HttpServletRequest request) {
+		// This method looks for assignment scores that are different from the LMS scores and resubmits the score to the LMS
+		try {
+			if (!user.isInstructor()) throw new Exception();  // only instructors can use this function
+			Assignment a = qcache.getAssignment(user.getAssignmentId());
+			if (a==null) throw new Exception();  // can only do this for a known assignment
+			if (a.lti_ags_lineitem_url == null || a.lti_nrps_context_memberships_url == null) throw new Exception(); // need both of these to work
+			Map<String,String> scores = LTIMessage.readMembershipScores(a);
+			if (scores==null || scores.size()==0) throw new Exception();  // this only works if we can get info from the LMS
+			Map<String,String[]> membership = LTIMessage.getMembership(a);
+			if (membership==null || membership.size()==0) throw new Exception();  // there must be some members of this class
+			Map<String,Key<Score>> keys = new HashMap<String,Key<Score>>();
+			Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
+			String platform_id = d.getPlatformId() + "/";
+			for (String id : membership.keySet()) {
+				String hashedUserId = Subject.hashId(platform_id + id);
+				keys.put(id,Key.create(Key.create(User.class,hashedUserId),Score.class,a.id));
+			}
+			Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
+			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
+				if (entry == null) continue;
+				Score cvScore = cvScores.get(keys.get(entry.getKey()));
+				if (cvScore==null) continue;
+				String s = scores.get(entry.getKey());
+				if (String.valueOf(cvScore.getPctScore()).equals(s)) continue;  // the scores match (good!)
+				QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue
+			}
+		} catch (Exception e) {
+			return false;
+		}
+		return true;
 	}
 	
 	String selectQuestionsForm(User user) {
