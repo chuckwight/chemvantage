@@ -445,6 +445,8 @@ public class LTIv1p3Launch extends HttpServlet {
 			break;
 		case "PlacementExam":
 			List<Topic> topics = ofy().load().type(Topic.class).list();
+			a.topicIds = new ArrayList<Long>();
+			a.questionKeys = new ArrayList<Key<Question>>();
 			for (Topic t : topics) {
 				switch (t.title) {
 				case "Essential Chemistry":
@@ -452,7 +454,8 @@ public class LTIv1p3Launch extends HttpServlet {
 				case "Word Problems":
 					a.topicIds.add(t.id);
 					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",t.id).keys().list());
-				default:
+					break;
+				default: continue;
 				}
 			}
 			break;
@@ -507,7 +510,8 @@ public class LTIv1p3Launch extends HttpServlet {
 				+ "<label><input type=radio name=AssignmentType " + ("Homework".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='Homework' />Homework</label><br />"
 				+ "<label><input type=radio name=AssignmentType " + ("VideoQuiz".equals(assignmentType)?"checked ":" ") + "onClick=showVideos(); value='VideoQuiz' '>Video</label><br />"
 				+ "<label><input type=radio name=AssignmentType " + ("Poll".equals(assignmentType)?"checked ":" ") + "onClick=showPolls(); value='Poll' />In-class&nbsp;Poll</label><br />"
-				+ "<label><input type=radio name=AssignmentType " + ("PracticeExam".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='PracticeExam' />Practice&nbsp;Exam</label><p></p>");
+				+ "<label><input type=radio name=AssignmentType " + ("PracticeExam".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='PracticeExam' />Practice&nbsp;Exam</label><br/>"
+				+ "<label><input type=radio name=AssignmentType " + ("PlacementExam".equals(assignmentType)?"checked ":" ") + "onClick=showPlacementExams(); value='PlacementExam' />Placement&nbsp;Exam</label><p></p>");
 		buf.append("</div>");
 		
 		// Put Part 2 in a cell on the right side of the first row
@@ -631,9 +635,9 @@ public class LTIv1p3Launch extends HttpServlet {
 				+ "Poll questions will be selected or created when the assignment is launched by the instructor.</div>");
 
 		// Create notice for Placement Exams
-		buf.append("<div id=placemenNoticeNotice style='display:none'>"
+		buf.append("<div id=placementNotice style='display:none'>"
 				+ "<input type=submit value='Create a placement exam for General Chemistry' /><br />"
-				+ "This can be used to advise students whether they are prepared to take the course.</div>");
+				+ "This can be used to advise students about their level of preparation for a General Chemistry course.</div>");
 
 		// Create a radio-type selector for video quiz assignments
 		buf.append("<div id=videoSelect style='display:" + (selectorType.equals("video")?"block":"none") + "'>");

@@ -775,6 +775,7 @@ public class Edit extends HttpServlet {
 		return "<SELECT NAME=PointValue>"
 		+ "<OPTION" + (points==1?" SELECTED":"") + ">1</OPTION>"
 		+ "<OPTION" + (points==2?" SELECTED":"") + ">2</OPTION>"
+		+ "<OPTION" + (points==4?" SELECTED":"") + ">4</OPTION>"
 		+ "<OPTION" + (points==10?" SELECTED":"") + ">10</OPTION>"
 		+ "<OPTION" + (points==15?" SELECTED":"") + ">15</OPTION>"
 		+ "</SELECT>";
@@ -852,7 +853,7 @@ public class Edit extends HttpServlet {
 			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
 			
 			if (q.assignmentType.equals("Exam")) {
-				if (q.pointValue!=2 && q.pointValue!=10 && q.pointValue!=15) q.pointValue = 2;
+				if (q.pointValue!=2 && q.pointValue!=4 && q.pointValue!=10 && q.pointValue!=15) q.pointValue = 2;
 			} else q.pointValue = 1;
 			buf.append(" Point Value: " + pointValueSelectBox(q.pointValue) + "<br>");
 			

@@ -153,29 +153,38 @@ public class PlacementExam extends HttpServlet {
 	String instructorPage(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();		
 		try {
-			// Get requested topic ids for this exam
-			List<Long> topicIds = new ArrayList<Long>();
-			long assignmentId = 0;
-			Assignment a = null;
-			try {  // this branch works if the practice exam is assigned
-				assignmentId=user.getAssignmentId();
-				a = ofy().load().type(Assignment.class).id(assignmentId).safe();
-				topicIds = a.topicIds;
-			} catch (Exception e) {  // otherwise this is a student-designed exam
-				String[] topicStringIds = request.getParameterValues("TopicId");
-				if (topicStringIds != null) {
-					for (int i=0;i<topicStringIds.length;i++) topicIds.add(Long.parseLong(topicStringIds[i]));
-				}
-			}
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+			Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
+				
+			buf.append("<h2>General Chemistry Placement Exam - Instructor Page</h2>");
 			
-			buf.append("<h2>General Chemistry Exam - Instructor Page</h2>");
-			Map<Long,Topic> topics = ofy().load().type(Topic.class).ids(topicIds);			
-			buf.append("Topics covered on this exam:<OL>");
-			for (long topicId : topicIds) {
-				buf.append("<LI>" + topics.get(topicId).title + "</LI>");
-			}
-			buf.append("</OL>");
+			buf.append("Many chemistry departments are now using placement exams as a tool fpr advising students entering a General Chemistry course "
+					+ "in order to maximize the probability of success for students (and lower the D-F-W rate for the course). Depending on the score, "
+					+ "a student may be provided additional support (e.g., supplemental instruction or tutoring) or in some cases may be advised to "
+					+ "take a lower level course in order to ensure adequate preparation for General Chemistry.<p>"
+					+ "Some important considerations for selecting a placement exam are:<ul>"
+					+ "<li>the cost should be kept low to avoid creating financial barriers to the course</li>"
+					+ "<li>the tool should be capable of indicating why a student may be ill-prepared, so appropriate mitigation steps can be taken</li>"
+					+ "<li>the exam should be online in order to keep accessibility high and avoid scheduling headaches</li>"
+					+ "<li>the exam design should support multiple submissions by each student because if a student is willing to take an exam multiple "
+					+ "times and learn from it, there is a greater probability that the student will be successful in the course as well</li>"
+					+ "</ul>"
+					+ "The ChemVantage placement exam is an attractive option because it assesses:<ul>"
+					+ "<li>skills and knowledge of essential concepts in chemistry</li>"
+					+ "<li>skills and knowledge of essential concepts in mathematics</li>"
+					+ "<li>ability to interpret and solve word problems</li>"
+					+ "</ul>"
+					+ "Placement exams are offered at just $1/student. Scores in each area are returned to the institution's learning management "
+					+ "system (LMS) so the department has immediate and permanent access to the data. There is no charge for multiple submissions, "
+					+ "and this can be regulated by the assignment settings in the LMS.<p>"
+					+ "The majority of question items are parameterized so it is extremely unlikely that any two placement exams will be the same.<p>"
+					+ "ChemVantage does not store any student personal identifiable information (PII), so the results of your placement exams are secure.<p>");
+			
+			buf.append("At the moment, your institution has " + d.nPlacementExamsRemaining + " placement exams remaining. Each unique student who downloads "
+					+ "a placement exam will decrement this value by 1, but there is no charge for additional submissions by the same student. Exams may "
+					+ "be purchased for US$1/student in bundles of 100 students or more by contacting Chuck Wight <admin@chemvantage.org>. "
+					+ "You have connected to ChemVantage as an instructor or administrator; therefore, you have unlimited free access to this tool.<p>");
 			
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/PlacementExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + "'>Customize this exam</a> to set the time allowed and select the available question items.</LI>"
@@ -374,7 +383,7 @@ public class PlacementExam extends HttpServlet {
 			
 			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			buf.append(df.format(now) + "<br>");
+			buf.append(df.format(now) + "<br/><br/>");
 			
 			long examId = Long.parseLong(request.getParameter("ExamId"));
 			PlacementExamTransaction pt = ofy().load().type(PlacementExamTransaction.class).id(examId).safe();
@@ -468,7 +477,7 @@ public class PlacementExam extends HttpServlet {
 				possibleScore += pt.possibleScores[i];
 			}
 			buf.append("<b>Your score on this placement exam is " + score + " out of a possible " + possibleScore + " points.</b><p>");
-			if (score > 0 && score == possibleScore) buf.append ("<b>Congratulations on a perfect score!</b>");
+			if (score > 0 && score == possibleScore) buf.append ("<h2>Congratulations on a perfect score!</h2>");
 			else {
 				buf.append("<TABLE><TR><TD><b>Topic</b></TD><TD><b>Score</b></TD>"
 						+ "<TD><b>Possible</b></TD><TD><b>Percent</b></TD><TD></TD></TR>");

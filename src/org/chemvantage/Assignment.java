@@ -117,6 +117,7 @@ public class Assignment implements java.lang.Cloneable {
 		case "PracticeExam": return topicIds.size()>2;
 		case "VideoQuiz": return this.videoId>0;
 		case "Poll": return true;
+		case "PlacementExam": return this.topicIds.size()>0;
 		default: return false;
 		}
 	}

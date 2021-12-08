@@ -98,6 +98,23 @@ public class Score {    // this object represents a best score achieved by a use
 				}				
 			}			
 			break;
+		case "PlacementExam":
+			List<PlacementExamTransaction> placementExamTransactions = ofy().load().type(PlacementExamTransaction.class).filter("userId",hashedId).filter("assignmentId",a.id).list();
+			for (PlacementExamTransaction pt : placementExamTransactions) {
+				if (pt.graded==null || !pt.topicsMatch(a.topicIds)) continue;
+				s.numberOfAttempts++;  // number of pre-deadline quiz attempts
+				int score = 0;
+				for (int i=0;i<pt.scores.length;i++) score += pt.scores[i];
+				s.score = (score>s.score?score:s.score);  // keep the best (max) score
+				if (s.mostRecentAttempt==null || pt.downloaded.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far
+					s.mostRecentAttempt = pt.downloaded;
+					if (pt.lis_result_sourcedid!=null && !pt.lis_result_sourcedid.isEmpty()) s.lis_result_sourcedid = pt.lis_result_sourcedid;  // record any available sourcedid value for reporting score to the LMS
+					int possibleScore = 0;
+					for (int i=0;i<pt.possibleScores.length;i++) possibleScore += pt.possibleScores[i];
+					s.maxPossibleScore = possibleScore;
+				}				
+			}			
+			break;
 		case "VideoQuiz":
 			List<VideoTransaction> videoTransactions = ofy().load().type(VideoTransaction.class).filter("userId",hashedId).filter("assignmentId",a.id).list();
 			for (VideoTransaction vt : videoTransactions) {
