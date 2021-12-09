@@ -829,7 +829,6 @@ public class PlacementExam extends HttpServlet {
 			// Get the question keys from the PlacementExamTransaction and sort them into 3 lists by point value
 			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> questionKeys_04pt = new ArrayList<Key<Question>>();
-			List<Key<Question>> questionKeys_15pt = new ArrayList<Key<Question>>();
 			
 			for (Key<Question> k : pet.questionKeys) {
 				Question q = examQuestions.get(k);
@@ -843,8 +842,7 @@ public class PlacementExam extends HttpServlet {
 				}
 				switch (q.pointValue) {
 					case (2): questionKeys_02pt.add(k); break;
-					case (10): questionKeys_04pt.add(k); break;
-					case (15): questionKeys_15pt.add(k); break;
+					case (4): questionKeys_04pt.add(k); break;
 				}
 			}
 			
@@ -853,7 +851,7 @@ public class PlacementExam extends HttpServlet {
 			Map<Long,String> studentAnswers = new HashMap<Long,String>();
 			for (Response r : responses) studentAnswers.put(r.questionId,r.studentResponse);
 			
-			buf.append("<h2>General Chemistry Exam</h2>");
+			buf.append("<h2>General Chemistry Placement Exam</h2>");
 		
 			
 			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
@@ -896,7 +894,7 @@ public class PlacementExam extends HttpServlet {
 			i=0;
 			
 			// Ten-point questions
-			buf.append("<h3>10 point questions:</h3>");
+			buf.append("<h3>4 point questions:</h3>");
 			buf.append("<table>");
 			for(Key<Question> k : questionKeys_04pt) {
 				i++;
@@ -916,27 +914,7 @@ public class PlacementExam extends HttpServlet {
 			buf.append("</table>");
 
 			i=0;
-			
-			// Fifteen-point questions
-			buf.append("<h3>15 point questions:</h3>");
-			buf.append("<table>");
-			for(Key<Question> k : questionKeys_15pt) {
-				i++;
-				Question q = examQuestions.get(k);
-				q.setParameters((int)(pet.id - q.id));
-				buf.append("<tr style='vertical-align:middle'><td><b>" + i + ". </b>" 
-						+ q.printAllToStudents(studentAnswers.get(q.id),true,pet.questionShowWork.get(k)) + "</td>");
-
-				// Try to get the question score from the PlacementExamTransaction. If null, recompute it from the student's response
-				int score = pet.questionScores.get(k)==null?(q.isCorrect(studentAnswers.get(q.id))?q.pointValue:0):pet.questionScores.get(k);
 				
-				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"
-						+ "<input type=range name=Range" + q.id + " value=" + score + " min=0 max=" + q.pointValue 
-						+ " onchange=document.getElementById('score" + q.id + "').innerHTML=this.value;></td>");
-				buf.append("</tr>");
-			}
-			buf.append("</table>");
-			
 			buf.append("<h3>When You Have Finished Reviewing This Exam</h3>"
 					+ "Please click the button to <input type=submit name=UserRequest value='Submit Revised Exam Score'> to your LMS grade book.");
 
@@ -1007,12 +985,11 @@ public class PlacementExam extends HttpServlet {
 
 			if (a.timeAllowed==null) a.timeAllowed = 3600; // default time for completing the exam
 
-			buf.append("Each practice exam consists of items selected at random from the items below:<ul>"
-					+ "<li>10 quiz questions worth 2 points each</li>"
-					+ "<li> 5 homework questions worth 10 points each</li>"
-					+ "<li> 2 more challenging homework questions worth 15 points each</li></ul>"
+			buf.append("Each placement exam consists of items selected at random from the items below:<ul>"
+					+ "<li>30 questions worth 2 points each</li>"
+					+ "<li>10 questions worth 4 points each</li>"
 					+ "for a total of 100 points.<p>");
-			buf.append("The default time allowed to complete the exam is 60 minutes, but you may change this "
+			buf.append("The default time allowed to complete the exam is 45 minutes, but you may change this "
 					+ "(e.g., to create a special assignment for a student requiring extended time up to 300 minutes).<br>");
 			buf.append("<form action=/PlacementExam method=post><input type=hidden name=sig value=" + user.getTokenSignature() + ">" 
 					+ "Time allowed for this assignment: <input type=text size=5 name=TimeAllowed value=" + a.timeAllowed/60. + "> minutes. "
@@ -1022,12 +999,10 @@ public class PlacementExam extends HttpServlet {
 
 			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> questionKeys_04pt = new ArrayList<Key<Question>>();
-			List<Key<Question>> questionKeys_15pt = new ArrayList<Key<Question>>();
-
+			
 			for (long tid : a.topicIds) {  // Sort and collect the question keys
 				questionKeys_02pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",2).keys().list());
-				questionKeys_04pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",10).keys().list());
-				questionKeys_15pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",15).keys().list());
+				questionKeys_04pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",4).keys().list());
 			}
 
 			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
@@ -1047,7 +1022,7 @@ public class PlacementExam extends HttpServlet {
 			int i = 0;
 
 			// 2-point questions:
-			buf.append("<TR><TD COLSPAN=2><U>2-point Questions: (select at least 10)</U></TD></TR>");
+			buf.append("<TR><TD COLSPAN=2><U>2-point Questions: (select at least 30)</U></TD></TR>");
 			i=0;
 			for (Key<Question> k : questionKeys_02pt) {
 				i++;
@@ -1064,28 +1039,10 @@ public class PlacementExam extends HttpServlet {
 				buf.append("\n<TD>" + q.printAll() + "</TD>");
 				buf.append("</TR>");
 			}
-			// 10-point questions:
-			buf.append("<TR><TD COLSPAN=2><U>10-point Questions: (select at least 5)</U></TD></TR>");
+			// 4-point questions:
+			buf.append("<TR><TD COLSPAN=2><U>4-point Questions: (select at least 10)</U></TD></TR>");
 			i=0;
 			for (Key<Question> k : questionKeys_04pt) {
-				i++;
-				try {
-					q = ofy().load().key(k).safe();
-				} catch (Exception e) {
-					continue;
-				}
-				q.setParameters();
-				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
-						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
-				buf.append(a.questionKeys.contains(Key.create(Question.class,q.id))?" CHECKED>":">");
-				buf.append("<b>&nbsp;" + i + ".</b></TD>");
-				buf.append("\n<TD>" + q.printAll() + "</TD>");
-				buf.append("</TR>");
-			}
-			// 15-point questions:
-			buf.append("<TR><TD COLSPAN=2><U>15-point Questions: (select at least 2)</U></TD></TR>");
-			i=0;
-			for (Key<Question> k : questionKeys_15pt) {
 				i++;
 				try {
 					q = ofy().load().key(k).safe();
