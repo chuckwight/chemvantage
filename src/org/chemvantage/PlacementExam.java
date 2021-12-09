@@ -175,15 +175,14 @@ public class PlacementExam extends HttpServlet {
 					+ "<li>skills and knowledge of essential concepts in mathematics</li>"
 					+ "<li>ability to interpret and solve word problems</li>"
 					+ "</ul>"
-					+ "Placement exams are offered at just $1/student. Scores in each area are returned to the institution's learning management "
-					+ "system (LMS) so the department has immediate and permanent access to the data. There is no charge for multiple submissions, "
-					+ "and this can be regulated by the assignment settings in the LMS.<p>"
-					+ "The majority of question items are parameterized so it is extremely unlikely that any two placement exams will be the same.<p>"
+					+ "The scores for each area are returned to the institution's learning management system (LMS) so the department has immediate and permanent "
+					+ "access to the data. The number of times that students can repeat the placement exam is regulated by the assignment settings in the LMS. "
+					+ "Most of the question items are parameterized, so it is extremely unlikely that any two placement exams will be the same.<p>"
 					+ "ChemVantage does not store any student personal identifiable information (PII), so the results of your placement exams are secure.<p>");
 			
 			buf.append("At the moment, your institution has " + d.nPlacementExamsRemaining + " placement exams remaining. Each unique student who downloads "
-					+ "a placement exam will decrement this value by 1, but there is no charge for additional submissions by the same student. Exams may "
-					+ "be purchased for US$1/student in bundles of 100 students or more by contacting Chuck Wight <admin@chemvantage.org>. "
+					+ "a placement exam will decrement this value by 1, but repeated attempts by the same student are not counted. "
+					//+ "Placement exams may be purchased for US$1/student in bundles of 100 students or more by contacting Chuck Wight <admin@chemvantage.org>. "
 					+ "You have connected to ChemVantage as an instructor or administrator; therefore, you have unlimited free access to this tool.<p>");
 			
 			buf.append("From here, you may<UL>"
@@ -258,10 +257,14 @@ public class PlacementExam extends HttpServlet {
 				questionKeys_04pt.removeAll(remove); remove.clear();
 			}
 			
-			// Ensure that all selected questions are in the Map of examQuestions:
+			// Consolidate the two lists into a single list of questions
+			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
+			questionKeys.addAll(questionKeys_02pt);
+			questionKeys.addAll(questionKeys_04pt);
+			
+			// Ensure that all selected questions are in the Map of examQuestions:		
 			List<Key<Question>> addQuestions = new ArrayList<Key<Question>>();
-			for (Key<Question> k : questionKeys_02pt) if (!examQuestions.containsKey(k)) addQuestions.add(k);
-			for (Key<Question> k : questionKeys_04pt) if (!examQuestions.containsKey(k)) addQuestions.add(k);
+			for (Key<Question> k : questionKeys) if (!examQuestions.containsKey(k)) addQuestions.add(k);
 			if (addQuestions.size()>0) examQuestions.putAll(ofy().load().keys(addQuestions));
 			
 			buf.append("<script>function showWorkBox(qid){}</script>");  // prevents javascript error from Question.print()
@@ -282,39 +285,16 @@ public class PlacementExam extends HttpServlet {
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
 			int[] possibleScores = new int[a.topicIds.size()];
 
-			// Two-point questions
-			buf.append("<U>2 point questions:</U>");
 			buf.append("<OL>\n");
-			int nQuestions = 30;
+			int nQuestions = 40;
 			int i = 0;
-			while (i<nQuestions && questionKeys_02pt.size()>0) {
-				Key<Question> k = questionKeys_02pt.remove(0);
+			while (i<nQuestions && questionKeys.size()>0) {
+				Key<Question> k = questionKeys.remove(0);
 				Question q = examQuestions.get(k);
 				i++;
 				possibleScores[a.topicIds.indexOf(q.topicId)] += q.pointValue;
 				q.setParameters((int)(pt.id - q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
-				if (newExam) pt.questionKeys.add(k);
-			}
-			buf.append("</OL>");
-
-			if (pt.questionShowWork==null) pt.questionShowWork = new HashMap<Key<Question>,String>();  // initialize this, if necessary
-			
-			// Four-point questions
-			buf.append("<U>4 point questions:</U>");
-			buf.append("<OL>");
-			nQuestions = 10;
-			i=0;
-			while (i<nQuestions && questionKeys_04pt.size()>0) {
-				Key<Question> k = questionKeys_04pt.remove(0);
-				Question q = examQuestions.get(k);
-				i++;
-				possibleScores[a.topicIds.indexOf(q.topicId)] += q.pointValue;
-				q.setParameters((int)(pt.id - q.id));
-				buf.append("\n<li>" + q.print() + "<br></li>\n");
-				if (assignmentId>0) buf.append("<SCRIPT>"
-						+ "document.getElementById('showWork" + q.id + "').style.display='';"
-						+ "</SCRIPT>");
 				if (newExam) pt.questionKeys.add(k);
 			}
 			buf.append("</OL>");
