@@ -159,10 +159,11 @@ public class PlacementExam extends HttpServlet {
 				
 			buf.append("<h2>General Chemistry Placement Exam - Instructor Page</h2>");
 			
-			buf.append("Many chemistry departments are now using placement exams as a tool fpr advising students entering a General Chemistry course "
+			buf.append("Many chemistry departments are now using placement exams as a tool for advising students entering a General Chemistry course "
 					+ "in order to maximize the probability of success for students (and lower the D-F-W rate for the course). Depending on the score, "
-					+ "a student may be provided additional support (e.g., supplemental instruction or tutoring) or in some cases may be advised to "
-					+ "take a lower level course in order to ensure adequate preparation for General Chemistry.<p>"
+					+ "a student may be provided additional support (e.g., supplemental instruction or tutoring) or take a corequisite course designed to "
+					+ "support instruction in the main course, or in some cases the student may be advised to take a lower level course in order to "
+					+ "ensure adequate preparation for General Chemistry.<p>"
 					+ "Some important considerations for selecting a placement exam are:<ul>"
 					+ "<li>the cost should be kept low to avoid creating financial barriers to the course</li>"
 					+ "<li>the tool should be capable of indicating why a student may be ill-prepared, so appropriate mitigation steps can be taken</li>"
@@ -180,9 +181,8 @@ public class PlacementExam extends HttpServlet {
 					+ "Most of the question items are parameterized, so it is extremely unlikely that any two placement exams will be the same.<p>"
 					+ "ChemVantage does not store any student personal identifiable information (PII), so the results of your placement exams are secure.<p>");
 			
-			buf.append("At the moment, your institution has " + d.nPlacementExamsRemaining + " placement exams remaining. Each unique student who downloads "
-					+ "a placement exam will decrement this value by 1, but repeated attempts by the same student are not counted. "
-					//+ "Placement exams may be purchased for US$1/student in bundles of 100 students or more by contacting Chuck Wight <admin@chemvantage.org>. "
+			buf.append("<b>At the moment, your institution has " + d.nPlacementExamsRemaining + " placement exams remaining on account.</b>.<br/>"
+					+ "Each unique student who downloads a placement exam will decrement this value by 1, but repeated attempts by the same student are not counted. "
 					+ "You have connected to ChemVantage as an instructor or administrator; therefore, you have unlimited free access to this tool.<p>");
 			
 			buf.append("From here, you may<UL>"
@@ -429,7 +429,7 @@ public class PlacementExam extends HttpServlet {
 					if (score == 0) {
 						// include question in list of incorrectly answered questions
 						wrongAnswers++;
-						missedQuestions.append("\n<LI>" + q.printAllToStudents(studentAnswer[0],false) + "</LI>\n");
+						missedQuestions.append("\n<LI>" + q.printAllToStudents(studentAnswer[0],true) + "</LI>\n");
 					}
 				}
 				if (q!=null && q.pointValue > 2) pt.questionShowWork.put(k, request.getParameter("ShowWork" + k.getId()));
