@@ -181,7 +181,7 @@ public class PlacementExam extends HttpServlet {
 					+ "Most of the question items are parameterized, so it is extremely unlikely that any two placement exams will be the same.<p>"
 					+ "ChemVantage does not store any student personal identifiable information (PII), so the results of your placement exams are secure.<p>");
 			
-			buf.append("<b>At the moment, your institution has " + d.nPlacementExamsRemaining + " placement exams remaining on account.</b>.<br/>"
+			buf.append("<b>At the moment, your institution has " + d.nPlacementExamsRemaining + " placement exams remaining on account.</b><br/>"
 					+ "Each unique student who downloads a placement exam will decrement this value by 1, but repeated attempts by the same student are not counted. "
 					+ "You have connected to ChemVantage as an instructor or administrator; therefore, you have unlimited free access to this tool.<p>");
 			
@@ -238,6 +238,7 @@ public class PlacementExam extends HttpServlet {
 
 			// Reduce the size of questionKeys Lists to the number of questions needed, either by using the previously
 			// selected questions in the PracticExamTransaction or by random elimination
+			Random rand = new Random();  // create random number generator to select exam questions
 			List<Key<Question>> remove = new ArrayList<Key<Question>>();
 			if (pt.questionKeys==null || pt.questionKeys.isEmpty()) {  // create a new set of questions
 				if (a != null) {  // eliminate any questionKeys not listed in the assignment
@@ -246,7 +247,6 @@ public class PlacementExam extends HttpServlet {
 					for (Key<Question> k : questionKeys_04pt) if (!a.questionKeys.contains(k)) remove.add(k);
 					questionKeys_04pt.removeAll(remove); remove.clear();
 				}
-				Random rand = new Random();  // create random number generator to select exam questions
 				rand.setSeed(pt.id);  // random number generator seeded with PlacementExamTransaction id value
 				while (questionKeys_02pt.size()>30) questionKeys_02pt.remove(rand.nextInt(questionKeys_02pt.size()));
 				while (questionKeys_04pt.size()>10) questionKeys_04pt.remove(rand.nextInt(questionKeys_04pt.size()));
@@ -257,10 +257,10 @@ public class PlacementExam extends HttpServlet {
 				questionKeys_04pt.removeAll(remove); remove.clear();
 			}
 			
-			// Consolidate the two lists into a single list of questions
+			// Consolidate the two lists into a single list of questions, but randomize the order in each section
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
-			questionKeys.addAll(questionKeys_02pt);
-			questionKeys.addAll(questionKeys_04pt);
+			while (questionKeys_02pt.size()>0) questionKeys.add(questionKeys_02pt.remove(rand.nextInt(questionKeys_02pt.size())));
+			while (questionKeys_04pt.size()>0) questionKeys.add(questionKeys_04pt.remove(rand.nextInt(questionKeys_04pt.size())));
 			
 			// Ensure that all selected questions are in the Map of examQuestions:		
 			List<Key<Question>> addQuestions = new ArrayList<Key<Question>>();
