@@ -74,9 +74,9 @@ public class PlacementExam extends HttpServlet {
 					out.println(Home.header("Review ChemVantage Placement Exam Scores") + reviewExamScores(user) + Home.footer);
 					break;
 				case "ReviewExam":
-					long practiceExamTransactionId = Long.parseLong(request.getParameter("PlacementExamTransactionId"));
+					long placementExamTransactionId = Long.parseLong(request.getParameter("PlacementExamTransactionId"));
 					String studentUserId = request.getParameter("UserId");
-					out.println(Home.header("Review ChemVantage Placement Exam") + reviewExam(user,practiceExamTransactionId,studentUserId) + Home.footer);
+					out.println(Home.header("Review ChemVantage Placement Exam") + reviewExam(user,placementExamTransactionId,studentUserId) + Home.footer);
 					break;
 				case "PrintExam":
 					out.println(Home.header("ChemVantage Placement Exam") + printExam(user,request) + Home.footer);
@@ -718,7 +718,7 @@ public class PlacementExam extends HttpServlet {
 			long assignmentId = user.getAssignmentId();
 
 			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).now();
-			if (a == null) return "Sorry, we did not find an assignment associated with this practice exam.";
+			if (a == null) return "Sorry, we did not find an assignment associated with this placement exam.";
 			
 			if (a.lti_nrps_context_memberships_url == null || a.lti_nrps_context_memberships_url.isEmpty()) {
 				return "Sorry, your LMS does not support the Memberships service, so exams cannot be reviewed.";
@@ -736,7 +736,7 @@ public class PlacementExam extends HttpServlet {
 			// Get all of the PlacementExamTransactions associated with this assignment:
 			List<PlacementExamTransaction> pets = ofy().load().type(PlacementExamTransaction.class).filter("assignmentId",assignmentId).list();			
 			if (pets.size()==0) {
-				buf.append("There are no transactions for this practice exam assignment yet.<p>");
+				buf.append("There are no transactions for this placement exam yet.<p>");
 				return buf.toString();
 			}
 			
@@ -803,12 +803,12 @@ public class PlacementExam extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String reviewExam(User user, long practiceExamTransactionId, String studentUserId) {
+	String reviewExam(User user, long placementExamTransactionId, String studentUserId) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			if (!user.isInstructor()) return "<h2>Access Denied</h2>You must be an instructor to view this page.";
 
-			PlacementExamTransaction pet = ofy().load().type(PlacementExamTransaction.class).id(practiceExamTransactionId).safe();
+			PlacementExamTransaction pet = ofy().load().type(PlacementExamTransaction.class).id(placementExamTransactionId).safe();
 			if (pet.assignmentId != user.getAssignmentId()) return "<h2>Access Denied</h2>Go back and relaunch this assignment from your LMS.";
 			
 			// Get the question keys from the PlacementExamTransaction and sort them into 3 lists by point value
@@ -848,7 +848,7 @@ public class PlacementExam extends HttpServlet {
 			buf.append("<form action=/PlacementExam method=post>"
 					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "<input type=hidden name=StudentUserId value=" + studentUserId + " />"
-					+ "<input type=hidden name=PlacementExamTransactionId value=" + String.valueOf(practiceExamTransactionId) + " />");
+					+ "<input type=hidden name=PlacementExamTransactionId value=" + String.valueOf(placementExamTransactionId) + " />");
 			
 			buf.append("Please review the student responses to the exam questions below. Use the sliders on the right to award "
 					+ "partial credit or otherwise edit the scores as appropriate. When you are finished, click the button to "
@@ -914,8 +914,8 @@ public class PlacementExam extends HttpServlet {
 		try {
 			// First do some validation to make sure that the user is the instructor for this assignment and the transaction is for this assignment:
 			if (!instructor.isInstructor()) throw new Exception("You must be the instructor for this course.");
-			long practiceExamTransactionId = Long.parseLong(request.getParameter("PlacementExamTransactionId"));
-			PlacementExamTransaction pet = ofy().load().type(PlacementExamTransaction.class).id(practiceExamTransactionId).safe();
+			long placementExamTransactionId = Long.parseLong(request.getParameter("PlacementExamTransactionId"));
+			PlacementExamTransaction pet = ofy().load().type(PlacementExamTransaction.class).id(placementExamTransactionId).safe();
 			Assignment a = ofy().load().type(Assignment.class).id(instructor.getAssignmentId()).safe();
 			if (!pet.assignmentId.equals(a.id)) throw new Exception("Mismatched assignment ID values");
 			
