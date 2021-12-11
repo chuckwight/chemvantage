@@ -267,10 +267,15 @@ public class PlacementExam extends HttpServlet {
 			for (Key<Question> k : questionKeys) if (!examQuestions.containsKey(k)) addQuestions.add(k);
 			if (addQuestions.size()>0) examQuestions.putAll(ofy().load().keys(addQuestions));
 			
+			// Check to make sure that some questions exist:
+			if (questionKeys.size()==0) return "<h2>General Chemistry Placement Exam</h2>"
+					+ "Thanks for visiting. We are in the process of developing and validating the question items for "
+					+ "placement exams and expect to have a finished product ready for use by January 1, 2022.<p>";
+			
 			buf.append("<script>function showWorkBox(qid){}</script>");  // prevents javascript error from Question.print()
 			
 			buf.append("<h2>General Chemistry Placement Exam</h2>");
-					
+						
 			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded. ");
 			if (!newExam) buf.append("You are resuming a placement exam originally downloaded at " + pt.downloaded);
 			
