@@ -254,7 +254,8 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('Homework'); value='Homework'" + (assignmentType.equals("Homework")?" CHECKED />":" />") + "Homework</label><br />"
 				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('VideoQuiz'); value='VideoQuiz'" + (assignmentType.equals("VideoQuiz")?" CHECKED />":" />") + "Video</label><br />"
 				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('Poll'); value='Poll'" + (assignmentType.equals("Poll")?" CHECKED />":" />") + "In-class&nbsp;Poll</label><br />"
-				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('PracticeExam'); value='PracticeExam'" + (assignmentType.equals("PracticeExam")?" CHECKED />":" />") + "Practice&nbsp;Exam</label><p></p>");
+				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('PracticeExam'); value='PracticeExam'" + (assignmentType.equals("PracticeExam")?" CHECKED />":" />") + "Practice&nbsp;Exam</label><br/>"
+				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('PlacementExam'); value='PlacementExam'" + (assignmentType.equals("PlacementExam")?" CHECKED />":" />") + "Placement&nbsp;Exam</label><p></p>");
 		buf.append("</div>");
 
 		// Each textbook is associated with an integer topicKey in sequence of powers of 2 so that for each text i, topicKey[i] = 2^(i-1) where i=1,2,3,...,N
@@ -280,6 +281,7 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "      document.getElementById('videoSelect').style.display='none';"
 				+ "      document.getElementById('quizSelect').style.display='none';"
 				+ "      document.getElementById('pollNotice').style.display='none';"
+				+ "      document.getElementById('placementNotice').style.display='none';"
 				+ "      break;"
 				+ "    case 'VideoQuiz': "
 				+ "      document.getElementById('topicKeySelect').style.visibility='hidden';"
@@ -287,6 +289,7 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "      document.getElementById('videoSelect').style.display='block';"
 				+ "      document.getElementById('quizSelect').style.display='none';"
 				+ "      document.getElementById('pollNotice').style.display='none';"
+				+ "      document.getElementById('placementNotice').style.display='none';"
 				+ "      break;"
 				+ "    case 'Poll': "
 				+ "      document.getElementById('topicKeySelect').style.visibility='hidden';"
@@ -294,6 +297,15 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "      document.getElementById('pollNotice').style.display='block';"
 				+ "      document.getElementById('videoSelect').style.display='none';"
 				+ "      document.getElementById('quizSelect').style.display='none';"
+				+ "      document.getElementById('placementNotice').style.display='none';"
+				+ "      break;"
+				+ "    case 'PlacementExam': "
+				+ "      document.getElementById('topicKeySelect').style.visibility='hidden';"
+				+ "      document.getElementById('examSelect').style.display='none';"
+				+ "      document.getElementById('pollNotice').style.display='none';"
+				+ "      document.getElementById('videoSelect').style.display='none';"
+				+ "      document.getElementById('quizSelect').style.display='none';"
+				+ "      document.getElementById('placementNotice').style.display='block';"
 				+ "      break;"
 				+ "    default: "
 				+ "      document.getElementById('topicKeySelect').style.visibility='visible';"
@@ -301,6 +313,7 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "      document.getElementById('videoSelect').style.display='none';"
 				+ "      document.getElementById('quizSelect').style.display='block';"
 				+ "      document.getElementById('pollNotice').style.display='none';"
+				+ "      document.getElementById('placementNotice').style.display='none';"
 				+ "  }"
 				+ "}"
 				+ "function countChecks(type) {"
@@ -380,6 +393,11 @@ public class LTIDeepLinks extends HttpServlet {
 		// Create instructions for the Poll assignmentType:
 		buf.append("<div id=pollNotice style='display:none'><input type=submit value='Create an in-class poll' /><br />"
 				+ "Poll questions will be selected or created when the assignment is launched by the instructor.</div>");
+
+		// Create notice for Placement Exams
+		buf.append("<div id=placementNotice style='display:none'>"
+				+ "<input type=submit value='Create a placement exam for General Chemistry' /><br />"
+				+ "This can be used to advise students about their level of preparation for a General Chemistry course.</div>");
 
 		// Create a selector table for VideoQuiz assignments
 		buf.append("<div id=videoSelect style='display:" + (assignmentType.equals("VideoQuiz")?"block":"none") + "'>");
@@ -492,6 +510,19 @@ public class LTIDeepLinks extends HttpServlet {
 				break;
 			case "Poll":
 				break; // nothing to do here
+			case "PlacementExam":  // this assignment has fixed hidden topicIds
+				List<Topic> topics = ofy().load().type(Topic.class).list();
+				for (Topic t : topics) {
+					switch (t.title) {
+					case "Essential Chemistry":
+					case "Essential Math":
+					case "Word Problems":
+						topicIds.add(t.id);
+					break;
+					default: continue;
+					}
+				}
+			break;
 			default:  // Quiz or Homework Assignment
 				if (acceptsMultiple) {
 					topicIdArray = request.getParameterValues("TopicId");
@@ -517,6 +548,14 @@ public class LTIDeepLinks extends HttpServlet {
 				break;
 			case "Poll":
 				a = new Assignment(assignmentType,0L,null,d.platform_deployment_id);
+				assignments.add(a);
+				break;
+			case "PlacementExam":
+				a = new Assignment(assignmentType,0L,topicIds,d.platform_deployment_id);
+				a.questionKeys = new ArrayList<Key<Question>>();
+				for (int i=0;i<a.topicIds.size();i++) {
+					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",a.topicIds.get(i)).keys().list());
+				}
 				assignments.add(a);
 				break;
 			default:  // Quiz, Homework or VideoQuiz
@@ -580,11 +619,15 @@ public class LTIDeepLinks extends HttpServlet {
 						break;
 					case "VideoQuiz":
 						title = "Video - " + ofy().load().type(Video.class).id(a1.videoId).now().title;
-						maxScore = 10;
+						maxScore = 5;
 						break;
 					case "Poll":
 						title = "Class Poll";
 						maxScore = 5;
+						break;
+					case "PlacementExam":
+						title = "General Chemistry Placement Exam";
+						maxScore = 100;
 						break;
 					default:  // Quiz or Homework
 						title = a1.assignmentType + " - " + ofy().load().type(Topic.class).id(a1.topicId).now().title;
