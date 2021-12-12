@@ -159,19 +159,12 @@ public class PlacementExam extends HttpServlet {
 				
 			buf.append("<h2>General Chemistry Placement Exam - Instructor Page</h2>");
 			
-			buf.append("Many chemistry departments are now using placement exams as a tool for advising students entering a General Chemistry course "
-					+ "in order to maximize the probability of success for students (and lower the D-F-W rate for the course). Depending on the score, "
+			buf.append("Many chemistry departments are now using placement exams as an advising tool for students entering General Chemistry "
+					+ "in order to maximize the probability of student success and to lower the D-F-W rate for the course. Depending on the score, "
 					+ "a student may be provided additional support (e.g., supplemental instruction or tutoring) or take a corequisite course designed to "
 					+ "support instruction in the main course, or in some cases the student may be advised to take a lower level course in order to "
 					+ "ensure adequate preparation for General Chemistry.<p>"
-					+ "Some important considerations for selecting a placement exam are:<ul>"
-					+ "<li>the cost should be kept low to avoid creating financial barriers to the course</li>"
-					+ "<li>the tool should be capable of indicating why a student may be ill-prepared, so appropriate mitigation steps can be taken</li>"
-					+ "<li>the exam should be online in order to keep accessibility high and avoid scheduling headaches</li>"
-					+ "<li>the exam design should support multiple submissions by each student because if a student is willing to take an exam multiple "
-					+ "times and learn from it, there is a greater probability that the student will be successful in the course as well</li>"
-					+ "</ul>"
-					+ "The ChemVantage placement exam is an attractive option because it assesses:<ul>"
+					+ "This placement exam assesses the student's<ul>"
 					+ "<li>skills and knowledge of essential concepts in chemistry</li>"
 					+ "<li>skills and knowledge of essential concepts in mathematics</li>"
 					+ "<li>ability to interpret and solve word problems</li>"
