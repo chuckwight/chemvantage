@@ -238,7 +238,7 @@ public class PlacementExam extends HttpServlet {
 
 			// Reduce the size of questionKeys Lists to the number of questions needed, either by using the previously
 			// selected questions in the PracticExamTransaction or by random elimination
-			Random rand = new Random();  // create random number generator to select exam questions
+			Random rand = new Random(pt.id);  // create random number generator to select exam questions
 			List<Key<Question>> remove = new ArrayList<Key<Question>>();
 			if (pt.questionKeys==null || pt.questionKeys.isEmpty()) {  // create a new set of questions
 				if (a != null) {  // eliminate any questionKeys not listed in the assignment
@@ -247,7 +247,6 @@ public class PlacementExam extends HttpServlet {
 					for (Key<Question> k : questionKeys_04pt) if (!a.questionKeys.contains(k)) remove.add(k);
 					questionKeys_04pt.removeAll(remove); remove.clear();
 				}
-				rand.setSeed(pt.id);  // random number generator seeded with PlacementExamTransaction id value
 				while (questionKeys_02pt.size()>30) questionKeys_02pt.remove(rand.nextInt(questionKeys_02pt.size()));
 				while (questionKeys_04pt.size()>10) questionKeys_04pt.remove(rand.nextInt(questionKeys_04pt.size()));
 			} else {  // eliminate all but the prior selected questions for this transaction
@@ -256,7 +255,7 @@ public class PlacementExam extends HttpServlet {
 				for (Key<Question> k : questionKeys_04pt) if (!pt.questionKeys.contains(k)) remove.add(k);
 				questionKeys_04pt.removeAll(remove); remove.clear();
 			}
-			
+			rand.setSeed(pt.id);
 			// Consolidate the two lists into a single list of questions, but randomize the order in each section
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 			while (questionKeys_02pt.size()>0) questionKeys.add(questionKeys_02pt.remove(rand.nextInt(questionKeys_02pt.size())));
@@ -298,7 +297,7 @@ public class PlacementExam extends HttpServlet {
 				Question q = examQuestions.get(k);
 				i++;
 				possibleScores[a.topicIds.indexOf(q.topicId)] += q.pointValue;
-				q.setParameters((int)(pt.id - q.id));
+				q.setParameters((int)(pt.id ^ q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
 				if (newExam) pt.questionKeys.add(k);
 			}
@@ -423,7 +422,7 @@ public class PlacementExam extends HttpServlet {
 							continue;
 						}
 					}
-					q.setParameters((int)(pt.id - q.id));
+					q.setParameters((int)(pt.id ^ q.id));
 					int score = studentAnswer[0].length()==0?0:q.isCorrect(studentAnswer[0])?q.pointValue:0;
 					if (score > 0) studentScores[topicIds.indexOf(q.topicId)] += score;
 					if (studentAnswer[0].length() > 0) {
@@ -862,7 +861,7 @@ public class PlacementExam extends HttpServlet {
 			for(Key<Question> k : questionKeys_02pt) {
 				i++;
 				Question q = examQuestions.get(k);
-				q.setParameters((int)(pet.id - q.id));
+				q.setParameters((int)(pet.id ^ q.id));
 				buf.append("<tr style='vertical-align:middle'><td><b>" + i + ". </b>" 
 						+ q.printAllToStudents(studentAnswers.get(q.id),true) + "</td>");
 
@@ -878,13 +877,13 @@ public class PlacementExam extends HttpServlet {
 
 			i=0;
 			
-			// Ten-point questions
+			// Four-point questions
 			buf.append("<h3>4 point questions:</h3>");
 			buf.append("<table>");
 			for(Key<Question> k : questionKeys_04pt) {
 				i++;
 				Question q = examQuestions.get(k);
-				q.setParameters((int)(pet.id - q.id));
+				q.setParameters((int)(pet.id ^ q.id));
 				buf.append("<tr style='vertical-align:middle'><td><b>" + i + ". </b>" 
 						+ q.printAllToStudents(studentAnswers.get(q.id),true,pet.questionShowWork.get(k)) + "</td>");
 
