@@ -424,13 +424,14 @@ public class PlacementExam extends HttpServlet {
 					}
 					q.setParameters((int)(pt.id ^ q.id));
 					int score = studentAnswer[0].length()==0?0:q.isCorrect(studentAnswer[0])?q.pointValue:0;
+					if (score==0 && q.agreesToRequiredPrecision(studentAnswer[0])) score = q.pointValue - 1;  // partial credit for wrong sig figs
 					if (score > 0) studentScores[topicIds.indexOf(q.topicId)] += score;
 					if (studentAnswer[0].length() > 0) {
 						Response r = new Response("PlacementExam",q.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,Subject.hashId(user.getId()),now);
 						r.transactionId = pt.id;
 						responses.add(r);
 					}
-					if (score == 0) {
+					if (score < q.pointValue) {
 						// include question in list of incorrectly answered questions
 						wrongAnswers++;
 						missedQuestions.append("\n<LI>" + q.printAllToStudents(studentAnswer[0],true) + "</LI>\n");
@@ -866,7 +867,12 @@ public class PlacementExam extends HttpServlet {
 						+ q.printAllToStudents(studentAnswers.get(q.id),true) + "</td>");
 
 				// Try to get the question score from the PlacementExamTransaction. If null, recompute it from the student's response
-				int score = pet.questionScores.get(k)==null?(q.isCorrect(studentAnswers.get(q.id))?q.pointValue:0):pet.questionScores.get(k);
+				int score = 0;
+				if (pet.questionScores.get(k)!=null) score = pet.questionScores.get(k);
+				else if (studentAnswers.get(q.id)!=null && !studentAnswers.get(q.id).isEmpty()) {  // an answer was submitted
+					score = q.isCorrect(studentAnswers.get(q.id))?q.pointValue:0;
+					if (score==0 && q.agreesToRequiredPrecision(studentAnswers.get(q.id))) score = q.pointValue - 1;  // partial credit for wrong sig figs
+				}
 				
 				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"
 						+ "<input type=range name=Range" + q.id + " value=" + score + " min=0 max=" + q.pointValue 
@@ -888,7 +894,12 @@ public class PlacementExam extends HttpServlet {
 						+ q.printAllToStudents(studentAnswers.get(q.id),true,pet.questionShowWork.get(k)) + "</td>");
 
 				// Try to get the question score from the PlacementExamTransaction. If null, recompute it from the student's response
-				int score = pet.questionScores.get(k)==null?(q.isCorrect(studentAnswers.get(q.id))?q.pointValue:0):pet.questionScores.get(k);
+				int score = 0;
+				if (pet.questionScores.get(k)!=null) score = pet.questionScores.get(k);
+				else if (studentAnswers.get(q.id)!=null && !studentAnswers.get(q.id).isEmpty()) {  // an answer was submitted
+					score = q.isCorrect(studentAnswers.get(q.id))?q.pointValue:0;
+					if (score==0 && q.agreesToRequiredPrecision(studentAnswers.get(q.id))) score = q.pointValue - 1;  // partial credit for wrong sig figs
+				}
 				
 				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"
 						+ "<input type=range name=Range" + q.id + " value=" + score + " min=0 max=" + q.pointValue 

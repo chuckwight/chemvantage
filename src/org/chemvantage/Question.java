@@ -474,7 +474,13 @@ public class Question implements Serializable, Cloneable {
 		buf.append("<br/>");
 		if (showWork != null && !showWork.isEmpty()) buf.append("<b>Student work:</b><br/><div style='border-style: solid; border-width: thin; white-space: pre-wrap;'>" + showWork + "</div>");	
 		if (studentAnswer==null || studentAnswer.isEmpty()) buf.append("<b>No answer was submitted for this question item.</b><p></p>");
-		else buf.append("<b>The answer submitted was: " + studentAnswer + "</b>&nbsp;" + (this.isCorrect(studentAnswer)?"&nbsp;<IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom>":"<IMG SRC=/images/xmark.png ALT='X mark' align=middle>") + "<p></p>");
+		else {
+			buf.append("<b>The answer submitted was: " + studentAnswer + "</b>&nbsp;");
+			if (this.isCorrect(studentAnswer)) buf.append("&nbsp;<IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom>");
+			else if (this.agreesToRequiredPrecision(studentAnswer)) buf.append("<IMG SRC=/images/partCredit.png ALT='minus 1 sig figs' align=middle>");
+			else buf.append("<IMG SRC=/images/xmark.png ALT='X mark' align=middle>");
+			buf.append("<p></p>");
+		}
 		
 		if (showDetails) {
 			buf.append("<div id='feedback" + this.id + "'>");
@@ -802,6 +808,7 @@ public class Question implements Serializable, Cloneable {
 	
 	boolean agreesToRequiredPrecision(String studentAnswer) {
 		// This method is used for numeric questions to determine if the student's response agrees with the correct answer to within the required precision
+		if (!"NUMERIC".equals(type) || studentAnswer == null || studentAnswer.isEmpty() || hasNoCorrectAnswer()) return false;
 		try {
 			studentAnswer = studentAnswer.replaceAll(",", "").replaceAll("\\s", "").toUpperCase();  // removes comma separators and whitespace from numbers, turns e to E
 			double dStudentAnswer = Double.parseDouble(parseString(studentAnswer,0));
