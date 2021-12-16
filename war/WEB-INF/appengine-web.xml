@@ -12,6 +12,7 @@
   -->
   
   <static-files>
+    <include path="/**.html" ></include>
     <include path="/images/**.png" ></include>
     <include path="/images/**.jpg" ></include>
     <include path="/images/**.gif" ></include>
