@@ -2,24 +2,25 @@
 <%@ page import="java.util.*"%>
 
 <%
-long sig = new Date().getTime();
+long encrypt = new Date().getTime() + 5400000L;
 try {
 	long mask = 0xfffL;
-	long iv = sig & mask;
+	long iv = encrypt & mask;
 	long code;
 	for (int i=0;i<3;i++) { 
-		code = (mask & sig) << 12;
-		sig = sig ^ code;
+		code = (mask & encrypt) << 12;
+		encrypt = encrypt ^ code;
 		mask = mask << 12;
 	}
 	mask = 0xfffffffff000L;
-	sig = sig ^ (new Random(iv).nextLong() & mask); 
+	encrypt = encrypt ^ (new Random(iv).nextLong() & mask); 
 	mask = 0xfffffffffL;
-	code = (sig & mask) << 12;
-	sig = sig ^ code;  
+	code = (encrypt & mask) << 12;
+	encrypt = encrypt ^ code;  
 } catch (Exception e) {
-	sig = 0L;
+	encrypt = 0L;
 }
+String sig = Long.toHexString(encrypt);
 %>
 
 <!DOCTYPE html>
