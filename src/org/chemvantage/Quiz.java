@@ -173,7 +173,8 @@ public class Quiz extends HttpServlet {
 					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "<SELECT NAME='TopicId'><OPTION Value='0' SELECTED>Select one topic</OPTION>");
 			for (Topic t:topics) buf.append(t.topicGroup!=1 || t.orderBy.equals("Hide")?"":"<OPTION VALUE='" + t.id + "'>" + t.title + "</OPTION>");
-			buf.append("<br/><input type=submit value='Start this quiz' /></form>");
+			buf.append("</SELECT>");
+			buf.append("<input type=submit value='Start this quiz' /></form>");
 			return buf.toString();
 		}
 	}

@@ -165,7 +165,7 @@ public class PracticeExam extends HttpServlet {
 	}
 
 	String designExam(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer();
+		StringBuffer buf = new StringBuffer(Home.banner);
 		//String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		try {
 			buf.append("<h2>Practice Exam</h2>");

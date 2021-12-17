@@ -39,6 +39,7 @@ public class Logout extends HttpServlet {
 	}
 
 	static String message = Home.header("ChemVantage Logout Successful") 
+			+ Home.banner
 			+ "<h3>You have successfully signed out of ChemVantage</h3>" 
 			+ "If this happened unexpectedly, it is likely that your browser's web "
 			+ "session timed out after a period of inactivity, or the access token "

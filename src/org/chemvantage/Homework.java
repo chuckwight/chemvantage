@@ -175,12 +175,13 @@ public class Homework extends HttpServlet {
 			List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
 			StringBuffer buf = new StringBuffer();
 			buf.append(Home.banner);
-			buf.append("<h2>Please select a topic for this quiz</h2>"
+			buf.append("<h2>Please select a homework topic</h2>"
 					+ "<form method=get>"
 					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "<SELECT NAME='TopicId'><OPTION Value='0' SELECTED>Select one topic</OPTION>");
 			for (Topic t:topics) buf.append(t.topicGroup!=1 || t.orderBy.equals("Hide")?"":"<OPTION VALUE='" + t.id + "'>" + t.title + "</OPTION>");
-			buf.append("<br/><input type=submit value='Show the homework problem set' /></form>");
+			buf.append("</SELECT>");
+			buf.append("<input type=submit value='Show the homework problem set' /></form>");
 			return buf.toString();
 		}
 	}

@@ -137,7 +137,7 @@ Some of the more important lessons in the text have been captured as 10-minute i
 for 3-5 points. Even if the video has no embedded quizzes, ChemVantage will only award the points if the student finishes the video 
 to the end.<br/><br/>
 
-<div style='text-align: center;'><a href='/VideoQuiz.jsp?sig=<%= sig %>'>Try a sample video</a></div>
+<div style='text-align: center;'><a href='/VideoQuiz?sig=<%= sig %>'>Try a sample video</a></div>
 </div>
 
 <hr/><img style='padding-left: 15px; vertical-align: middle;' src=images/CVLogo_tiny.png alt='ChemVantage logo' />&nbsp;

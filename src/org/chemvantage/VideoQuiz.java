@@ -64,7 +64,20 @@ public class VideoQuiz extends HttpServlet {
 			long videoId = 0L;
 			try {
 				videoId = Long.parseLong(request.getParameter("VideoId"));
-			} catch (Exception e) {}
+			} catch (Exception e) {
+				StringBuffer buf = new StringBuffer();
+				buf.append(Home.banner
+						+ "<h2>Please select a video to play</h2>"
+						+ "<form method=get>"
+						+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+						+ "<SELECT NAME='VideoId'><OPTION Value='0' SELECTED>Select one topic</OPTION>");
+				List<Video> videos = ofy().load().type(Video.class).order("orderBy").list();
+				for (Video v:videos) buf.append(v.breaks==null?"":"<OPTION VALUE='" + v.id + "'>" + v.title + "</OPTION>");
+				buf.append("</SELECT>");
+				buf.append("<input type=submit value='Start this video' /></form>");
+				out.println(Home.header("ChemVantage Video") + buf.toString() + Home.footer);
+				return;
+			}
 			int segment = 0;
 			try {
 				segment = Integer.parseInt(request.getParameter("Segment"));

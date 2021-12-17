@@ -25,7 +25,6 @@
 		try {
 			segment = Integer.parseInt(request.getParameter("Segment"));
 		} catch (Exception e) {
-			segment = 0;
 		}
 
 		try {
