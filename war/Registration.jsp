@@ -36,7 +36,7 @@
 <script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>
 </head>
 
-<body>
+<body style='background-color: white; font-family: Calibri,Arial,sans-serif;'>
 <%= Home.banner %><br/>
 
 <% if (message != null) { %>
@@ -59,7 +59,7 @@ that is convenient, secure and <a href=https://site.imsglobal.org/certifications
 When you submit the form, ChemVantage will send a registration request to your LMS. If successful, your LMS administrator 
 will need to activate the deployment in your LMS before a launch to ChemVantage can take place.<br/><br/>
 
-Please tell us how to contact you if there is ever a problem with your account (see our <a href=https://www.chemvantage.org/About#privacy>Privacy Policy</a>):<br/>
+Please tell us how to contact you if there is ever a problem with your account (see our <a href=https://www.chemvantage.org/about.html#privacy>Privacy Policy</a>):<br/>
 Your Name: <input type=text name=sub size=40 value='<%= (sub==null?"":sub) %>'/><br/>
 Your Email: <input type=text name=email size=40 value='<%= (email==null?"":email) %>'/><br/><br/>
 
@@ -88,7 +88,7 @@ that is convenient, secure and <a href=https://site.imsglobal.org/certifications
 When you submit the form, ChemVantage will send a registration request to your LMS. If successful, your LMS administrator 
 will need to activate the deployment in your LMS before a launch to ChemVantage can take place.<br/><br/>
 
-Please tell us how to contact you if there is ever a problem with your account (see our <a href=https://www.chemvantage.org/About#privacy>Privacy Policy</a>):<br/>
+Please tell us how to contact you if there is ever a problem with your account (see our <a href=https://www.chemvantage.org/about.html#privacy>Privacy Policy</a>):<br/>
 Your Name: <input type=text name=sub size=40 value='<%= (sub==null?"":sub) %>'/><br/>
 Your Email: <input type=text name=email size=40 value='<%= (email==null?"":email) %>'/><br/><br/>
 
@@ -106,7 +106,7 @@ uses such as testing LTI connections and LTI software development for LMS platfo
 
   <% } %>
 
-<label><input type=checkbox name=AcceptChemVantageTOS value=true <%= ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") %>/>Accept the <a href=/About#terms target=_blank>ChemVantage Terms of Service</a></label><br/><br/>
+<label><input type=checkbox name=AcceptChemVantageTOS value=true <%= ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") %>/>Accept the <a href=/about.html#terms target=_blank>ChemVantage Terms of Service</a></label><br/><br/>
 
 <div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div><br/><br/>
 
@@ -135,7 +135,7 @@ ChemVantage that is convenient, secure and <a href=https://site.imsglobal.org/ce
 When you submit the form, you will receive an email containing the information you need to
 complete the configuration of your LMS as well as a link to finalize the registration.<br/><br/>
 
-Please tell us how to contact you if there is ever a problem with your account (see our <a href=https://www.chemvantage.org/About#privacy>Privacy Policy</a>):<br/>
+Please tell us how to contact you if there is ever a problem with your account (see our <a href=https://www.chemvantage.org/about.html#privacy>Privacy Policy</a>):<br/>
 Your Name: <input type=text name=sub size=40 value='<%= (sub==null?"":sub) %>'/><br/>
 Your Email: <input type=text name=email size=40 value='<%= (email==null?"":email) %>'/><br/><br/>
 
@@ -208,7 +208,7 @@ function changeTyp(use) {
 changeTyp('<%=use%>');
 </script>
 
-<label><input type=checkbox name=AcceptChemVantageTOS value=true <%= ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") %>/>Accept the <a href=/About#terms target=_blank>ChemVantage Terms of Service</a></label><br/><br/>
+<label><input type=checkbox name=AcceptChemVantageTOS value=true <%= ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") %>/>Accept the <a href=/about.html#terms target=_blank>ChemVantage Terms of Service</a></label><br/><br/>
 
 <div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div><br/><br/>
 

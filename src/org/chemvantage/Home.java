@@ -30,7 +30,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-@WebServlet("/")
+@WebServlet("/;oiwefr")
 public class Home extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
@@ -75,7 +75,7 @@ public class Home extends HttpServlet {
 				+ "<link rel='icon' type='image/png' href='/images/favicon.png' />"
 				+ "<title>" + (title==null || title.isEmpty()?"ChemVantage":title) + "</title>\n"
 				+ "</head>\n"
-				+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
+				+ "<body style='padding: 10px; font-family: Calibri,Arial,sans-serif; background-color: white; color: black;'>\n"
 				+ ((announcement==null || announcement.isEmpty())?"":"<FONT COLOR=RED>" + announcement + "</FONT><br/>\n");
 	}
 	
@@ -84,14 +84,17 @@ public class Home extends HttpServlet {
 	}
 
 	public static String footer = "\n<hr/><img src=/images/CVLogo_tiny.png alt='ChemVantage logo' style='vertical-align:middle' /> "
-			+ "<a href=/About>About ChemVantage</a> | "
-			+ "<a href=/About#terms>Terms and Conditions of Use</a> | "
-			+ "<a href=/About#privacy>Privacy Policy</a> | "
-			+ "<a href=/About#copyright>Copyright</a>\n"
+			+ "<a href=/about.html>About ChemVantage</a> | "
+			+ "<a href=/about.html#terms>Terms and Conditions of Use</a> | "
+			+ "<a href=/about.html#privacy>Privacy Policy</a> | "
+			+ "<a href=/about.html#copyright>Copyright</a>\n"
 			+ "</body>\n</html>";
 
-	public static String banner = "<a href=https://www.chemvantage.org><img src=/images/CVLogo_thumb.png alt='ChemVantage Logo' align=left></a>\n"
-			+ "Welcome to<br/><FONT SIZE=+3><b>ChemVantage - General Chemistry</b></FONT><br/>An Open Education Resource<br/><br/>";
+	public static String banner = "<div style='padding=30px; font-family: Calibri,Arial,sans-serif;'>\n"
+			+ "	<span style='color: blue; font-size: 2em; font-weight: bold;'>Chem</span>\n"
+			+ "	<span style='color: red; font-size: 2em; font-weight: bold;'>Vantage</span><br/>\n"
+			+ "	An Open Education Resource for General Chemistry<br/>\n"
+			+ "	</div>";
 	
 	static String getHeader(User user) {
 		String announcement = Subject.getAnnouncement();
@@ -110,7 +113,7 @@ public class Home extends HttpServlet {
 		+ "<link rel='icon' type='image/vnd.microsoft.icon' href='/favicon.ico' />\n"
 		+ "<title>ChemVantage Administrator</title>\n"
 		+ "</head>\n"
-		+ "<body bgcolor=#ffffff text=#000000 link=#0000cc vlink=#551a8b alink=#ff0000 topmargin=3 marginheight=3>\n"
+		+ "<body style='padding: 10px; font-family: Calibri,Arial,sans-serif; background-color: white; color: black;'>\n"
 		+ "<div>"
 		+ "<a href=/ style='padding-right:25px'>Home</a> "
 		+ "<a href=/About style='padding-right:25px'>About Us</a> "

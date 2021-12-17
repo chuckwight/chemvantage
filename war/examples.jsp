@@ -129,6 +129,17 @@ work really hard just to be admitted to the course and ultimately scored well on
 course anyway?
 </div>
 
+<div class='seg1'>
+<!--  <img class='float' src='images/img05.jpg' alt='student taking notes'/> -->
+<br/><b>Video lectures</b><br/><br/>
+Some of the more important lessons in the text have been captured as 10-minute instructional videos. Most of the videos have short 
+(two-question) quizzes embedded in the video to ensure that students are watching and comprehending. You can assign these to students 
+for 3-5 points. Even if the video has no embedded quizzes, ChemVantage will only award the points if the student finishes the video 
+to the end.<br/><br/>
+
+<div style='text-align: center;'><a href='/VideoQuiz.jsp?sig=<%= sig %>'>Try a sample video</a></div>
+</div>
+
 <hr/><img style='padding-left: 15px; vertical-align: middle;' src=images/CVLogo_tiny.png alt='ChemVantage logo' />&nbsp;
 <a href=/about.html>About ChemVantage</a> | 
 <a href=/about.html#terms>Terms and Conditions of Use</a> | 
