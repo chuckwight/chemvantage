@@ -64,7 +64,9 @@ public class VideoQuiz extends HttpServlet {
 			long videoId = 0L;
 			try {
 				videoId = Long.parseLong(request.getParameter("VideoId"));
-			} catch (Exception e) {
+			} catch (Exception e) {}
+			
+			if (user.getAssignmentId()==0L && videoId==0L) {  // anonymous user
 				StringBuffer buf = new StringBuffer();
 				buf.append(Home.banner
 						+ "<h2>Please select a video to play</h2>"
@@ -78,6 +80,7 @@ public class VideoQuiz extends HttpServlet {
 				out.println(Home.header("ChemVantage Video") + buf.toString() + Home.footer);
 				return;
 			}
+			
 			int segment = 0;
 			try {
 				segment = Integer.parseInt(request.getParameter("Segment"));

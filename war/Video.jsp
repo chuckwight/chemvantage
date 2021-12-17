@@ -20,7 +20,7 @@
 		sig = request.getParameter("sig");
 		User user = User.getUser(sig);
 		if (user == null)
-			throw new Exception();
+			throw new Exception("User could not be verified.");
 
 		try {
 			segment = Integer.parseInt(request.getParameter("Segment"));
@@ -59,7 +59,7 @@
 
 <div id=video_div style='width:560px;height:315px'></div>
 <br>
-<div id=quiz_div style='width:560px;background-color:white;display:none'></div>
+<div id=quiz_div style='width:560px;background-color:white;min-height:315;display:none'></div>
 <p>
 <script type=text/javascript>
 
@@ -67,7 +67,7 @@ var tag = document.createElement('script'); tag.src='https://www.youtube.com/ifr
 var firstScriptTag = document.getElementsByTagName('script')[0]; firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 var player;
 var quiz_div = document.getElementById('quiz_div');
-var sig = <%= sig %>;
+var sig = '<%= sig %>';
 var segment = <%= segment %>;
 var breaks = <%= Arrays.toString(breaks) %>;
 var videoSerialNumber = '<%= videoSerialNumber %>';
