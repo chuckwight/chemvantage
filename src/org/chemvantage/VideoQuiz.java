@@ -307,9 +307,9 @@ public class VideoQuiz extends HttpServlet {
 	
 	String finishQuizlet(User user, VideoTransaction vt) {
 		StringBuffer buf = new StringBuffer();  // prepare a summary of the quizlet scores and missed questions
-		
+
 		boolean noQuizlets = vt.possibleScore==0;
-		
+
 		if (noQuizlets && vt.assignmentId>0) {  // give 1 pt credit for watching the assignment
 			vt.score = 1;
 			vt.possibleScore = 1;
@@ -318,39 +318,33 @@ public class VideoQuiz extends HttpServlet {
 			for (int s : vt.quizletScores) vt.score += s;
 		}				
 		vt.graded = new Date();  // vt will be saved after missed Questions List is printed later (line 322)
-		
+
 		// Try to post the score to the student's LMS:
 		// Retrieve the assignment, if it exists (may be null for anonymous users)
 		boolean reportScoreToLms = false;
 		Assignment a = null;
-		try {
-			long assignmentId = user.getAssignmentId();
-			if (assignmentId>0L) {
-				a = ofy().load().type(Assignment.class).id(assignmentId).now();
-				Score s = Score.getInstance(user.getId(),a);
-				ofy().save().entity(s).now();
-				reportScoreToLms = a.lti_ags_lineitem_url != null || (a.lis_outcome_service_url != null && user.getLisResultSourcedid() != null);
-				if (reportScoreToLms) {
-					Queue queue = QueueFactory.getDefaultQueue();  // Task queue used for reporting scores to the LMS
-					queue.add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue
-				}		
-			}
-		} catch (Exception e) {}
+		long assignmentId = user.getAssignmentId();
 
+		if (assignmentId>0L) {
+			a = ofy().load().type(Assignment.class).id(assignmentId).now();
+			Score s = Score.getInstance(user.getId(),a);
+			ofy().save().entity(s).now();
+			reportScoreToLms = a.lti_ags_lineitem_url != null || (a.lis_outcome_service_url != null && user.getLisResultSourcedid() != null);
+		}
 		if (noQuizlets) {
 			buf.append("<h4>Thanks for watching</h4>");
 			buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
 			return buf.toString();
 		}
-		
+
 		buf.append("<h3>Video Quiz Results - " + vt.videoTitle + "</h3>\n");
-		
+
 		if (user.isAnonymous()) buf.append("<font color=red>Anonymous User</font><br>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		buf.append(df.format(new Date()));
-		
+
 		buf.append("<h4>Your score on this quiz is " + vt.score + " point" + (vt.score==1?"":"s") + " out of a possible " + vt.possibleScore + " points.</h4>\n");
-	
+
 		// Seek some feedback for ChemVantage:
 		if (vt.possibleScore > 0 && vt.score == vt.possibleScore) {
 			buf.append("<H2>Congratulations on a perfect score! Good job.</H2>\n");
@@ -370,18 +364,23 @@ public class VideoQuiz extends HttpServlet {
 
 		} else {
 			buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
-		
+
 			String missedQuestions = "";
-			for (String s : vt.missedQuestions) missedQuestions += s;
-			
+			for (String mq : vt.missedQuestions) missedQuestions += mq;
+
 			if (!missedQuestions.isEmpty()) { // Give the correct answers to missed questions:
 				buf.append("The following questions were answered incorrectly:<ol>" + missedQuestions + "</ol>");
 			}
 		}
 		vt.missedQuestions.clear();
 		ofy().save().entity(vt).now();
-		
-		if (!reportScoreToLms && !user.isAnonymous()) {
+
+		if (reportScoreToLms) {
+			try {
+				Queue queue = QueueFactory.getDefaultQueue();  // Task queue used for reporting scores to the LMS
+				queue.add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue
+			} catch (Exception e) {}
+		} else if (!user.isAnonymous()) {
 			buf.append("<b>Please note:</b> Your score was not reported back to the grade book of your class "
 					+ "LMS because the LTI launch request did not contain enough information to do this. "
 					+ (user.isInstructor()?"For instructors this is common.":"") + "<p>");				
@@ -390,14 +389,14 @@ public class VideoQuiz extends HttpServlet {
 		// Give a chance to review previous scores on this assignment
 		if (a != null) buf.append("You may <a href=/VideoQuiz?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review all your scores on this assignment</a>.<p>") ;
 
-		
+
 		// If a==null this is an anonymous user, otherwise is an LTI user:
 		buf.append((a==null?"<a href=/Video.jsp?VideoId=" + vt.videoId + "&Segment=0&sig=" + user.getTokenSignature() + ">Watch this video again</a> or go back to the <a href=/>ChemVantage home page</a> " :
 				"You may view this video again by clicking the assignment link in your learning management system ")			
 				+ "or <a href=/Logout>logout of ChemVantage</a>.");
 
 		return buf.toString();	
-		
+
 	}
 	
 	String showScores (User user, HttpServletRequest request) {
@@ -420,7 +419,7 @@ public class VideoQuiz extends HttpServlet {
 			buf.append("Title: "+ v.title + "<br>");
 			buf.append("Valid: " + df.format(now) + "<p>");
 			
-			List<VideoTransaction> vts = ofy().load().type(VideoTransaction.class).filter("userId",user.getId()).filter("assignmentId",a.id).order("downloaded").list();
+			List<VideoTransaction> vts = ofy().load().type(VideoTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
 			
 			if (vts.size()==0) {
 				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>"

@@ -52,21 +52,21 @@ String sig = Long.toHexString(encrypt);
 An Open Education Resource for General Chemistry<br/>
 </div>
 
-<div class='seg2'>
-<br/><b>Students don't do optional</b><br/><br/>
-It's true. Very few students will challenge themselves to complete homework assignments that are never graded. 
-But most students will complete assignments if
+<div class='seg1'>
+<br/><b>ChemVantage Assignments</b><br/><br/>
+Students don't do optional assignments, but most students will actually work hard on them if
 <ul>
-<li>the assignment counts for even a small portion of the course grade, and</li>
-<li>the student gets immediate feedback on the assignment.</li>
+<li>they receive immediate feedback on the assignment,</li>
+<li>they feel that they are progressing in their learning, and</li>
+<li>the assignment counts for even a small portion of the course grade,</li>
 </ul>
 Immediate feedback helps them to correct mistakes and guides their learning. That's where ChemVantage fits in. Our 
-assignments are designed to engage students for extended periods of time, allowing the correction of errors and 
+assignments are designed to challenge and engage students for extended periods of time, allowing the correction of errors and 
 repeated submissions to improve their score. ChemVantage assignments are designed to be learning tools, not assessment 
-tools. So a good practice is to make each quiz or homework assignment worth no more than about 1% of the overall course grade.
+tools, so a good practice is to make each quiz or homework assignment worth no more than about 1-2% of the overall course grade.
 </div>
 
-<div class='seg1'>
+<div class='seg2'>
 <img class='float' src='images/img04.jpg' alt='boys studying'/>
 <br/><b>Quizzes</b><br/><br/>
 Each ChemVantage quiz consists of 10 short-answer question items randomly selected from a bank of 60-80 items. Question types
@@ -81,7 +81,7 @@ of three students will have to take at least 3 quizzes together for everyone to 
 <div style='text-align: center;'><a href='/Quiz?sig=<%= sig %>'>Try a sample quiz</a></div>
 </div>
 
-<div class='seg2'>
+<div class='seg1'>
 <br/><b>Homework</b><br/><br/>
 Homework assignments give students practice in solving quantitative problems having numeric answers. Answers are scored correct 
 if the solution agrees with the solution found in the database to within a specified tolerance (indicated for each problem). 
@@ -95,7 +95,7 @@ shows their work and previous submissions.<br/><br/>
 <div style='text-align: center;'><a href='/Homework?sig=<%= sig %>'>Try a sample homework</a></div>
 </div>
 
-<div class='seg1'>
+<div class='seg2'>
 <img class='float' src='images/img05.jpg' alt='student taking notes'/>
 <br/><b>Practice Exams</b><br/><br/>
 Students can take timed practice exams that draw questions from any group of 3 or more topics.  Each exam is designed to take 60 minutes 
@@ -107,7 +107,7 @@ and the numeric questions are parameterized, making it extremely unlikely that a
 <div style='text-align: center;'><a href='/PracticeExam?sig=<%= sig %>'>Try a sample practice exam</a></div>
 </div>
 
-<div class='seg2'>
+<div class='seg1'>
 <br/><b>In-class polls</b><br/><br/>
 Clickers have become popular in recent years, but they increase the cost of the course for students and faculty. A ChemVantage polls 
 can be set up in a few minutes from inside your LMS. You may select any of the thousands of available quiz, homework or exam questions, 
@@ -129,7 +129,7 @@ work really hard just to be admitted to the course and ultimately scored well on
 course anyway?
 </div>
 
-<div class='seg1'>
+<div class='seg2'>
 <!--  <img class='float' src='images/img05.jpg' alt='student taking notes'/> -->
 <br/><b>Video lectures</b><br/><br/>
 Some of the more important lessons in the text have been captured as 10-minute instructional videos. Most of the videos have short 
