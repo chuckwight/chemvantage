@@ -228,7 +228,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				// get the resourceId if available from the URL or lineitem, and use it to retrieve the assignment
 				switch (d.lms_type) {
 				case "canvas": 
-					resourceId = request.getParameter("ResourceId");
+					resourceId = request.getParameter("resourceId");
 					break;
 				default:
 					if (lineitem==null) lineitem = LTIMessage.getLineItem(d, lti_ags_lineitem_url);
