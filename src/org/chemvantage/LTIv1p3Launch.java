@@ -214,39 +214,43 @@ public class LTIv1p3Launch extends HttpServlet {
 		
 		Assignment myAssignment = null;
 		String resourceLinkId = claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link").getAsJsonObject().get("id").getAsString();
+		String resourceId = null;  // this is a Sting representation of the assignmentId that is set during the DeepLinking flow
+		JsonObject lineitem = null;
+		
+		if (lti_ags_lineitem_url == null && d.scope.contains("lineitem")) {  // not common; the deployment should usually send the lineitem URL
+			lineitem = LTIMessage.getLineItem(d, resourceLinkId, lti_ags_lineitems_url);
+			lti_ags_lineitem_url = lineitem==null?null:lineitem.get("id").getAsString();
+		}
 		
 		if (lti_ags_lineitem_url != null) {  // this is the default, most common way of retrieving the Assignment; uses local Map for fast retrieval
 			myAssignment = assignments.get(lti_ags_lineitem_url);
-			if (myAssignment == null) myAssignment = ofy().load().type(Assignment.class).filter("lti_ags_lineitem_url",lti_ags_lineitem_url).first().now();
-			if (myAssignment != null) assignments.put(lti_ags_lineitem_url,myAssignment);
-		}
-
-		if (myAssignment == null && d.scope.contains("lineitem")) {  // This section searches for the resourceId parameter, which is a String version of the ChemVantage assigmentId
-			String resourceId = null;
-			switch (d.lms_type) {
-			case "canvas":           // Canvas does not support setting the resourceId in the lineitem, but allows this to be sent as a request parameter
-				resourceId = request.getParameter("resourceId");
-				break;
-			default:     // all other LMS platforms should put the resourceId from DeepLinking flow into the lineitem
-				JsonObject lineitem = null;
+			if (myAssignment == null) {
+				// get the resourceId if available from the URL or lineitem, and use it to retrieve the assignment
+				switch (d.lms_type) {
+				case "canvas": 
+					resourceId = request.getParameter("ResourceId");
+					break;
+				default:
+					if (lineitem==null) lineitem = LTIMessage.getLineItem(d, lti_ags_lineitem_url);
+					try {
+						resourceId = lineitem.get("resourceId").getAsString();
+					} catch (Exception e) {}					
+				}
 				try {
-					if (lti_ags_lineitem_url == null) {  // the launch id_token may or may not specify the lineitem URL
-						lineitem = LTIMessage.getLineItem(d, resourceLinkId, lti_ags_lineitems_url);
-						lti_ags_lineitem_url = lineitem.get("id").getAsString();
-					} else lineitem = LTIMessage.getLineItem(d, lti_ags_lineitem_url);
-					JsonElement rId = lineitem.get("resourceId");
-					if (rId != null) resourceId = rId.getAsString();
-					else resourceId = lineitem.get("resourceid").getAsString();  // special case for LTI Reference Implementation
-				} catch (Exception e) {}
+					myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).safe();
+				} catch (Exception e) {
+					myAssignment = ofy().load().type(Assignment.class).filter("lti_ags_lineitem_url",lti_ags_lineitem_url).first().now();
+				}
 			}
-			try {
-				myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).safe();
-			} catch (Exception e) {}
 		}
 
+		// It is still possible to create assignments without DeepLinking; in this case, retrieve the assignment via the ResourceLinkId value
 		if (myAssignment == null) myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();
 		
+		// After all that, if the assignment still cannot be found, create a new (incomplete) one. This will be updated after the ResourcePicker
 		if (myAssignment == null) myAssignment = new Assignment(d.platform_deployment_id,resourceLinkId,lti_nrps_context_memberships_url);
+		else assignments.put(lti_ags_lineitem_url,myAssignment);  // cache the assignment for next launch
+		
 		// At this point we should have a valid (but possibly incomplete) Assignment entity
 		
 		// Update the Assignment parameters:
