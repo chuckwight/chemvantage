@@ -480,7 +480,6 @@ public class LTIDeepLinks extends HttpServlet {
 			JsonObject settings = claims.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings").getAsJsonObject();		
 			deep_link_return_url = settings.get("deep_link_return_url").getAsString();
 			String data = settings.get("data")==null?"":settings.get("data").getAsString();
-			boolean acceptsMultiple = settings.get("accept_multiple")==null?false:settings.get("accept_multiple").getAsBoolean();
 			
 			Date now = new Date();
 			Date exp = new Date(now.getTime() + 5400000L); // 90 minutes from now
@@ -503,10 +502,8 @@ public class LTIDeepLinks extends HttpServlet {
 				for (int i=0;i<topicIdArray.length;i++) topicIds.add(Long.parseLong(topicIdArray[i]));			
 				break;
 			case "VideoQuiz":
-				if (acceptsMultiple) {
-					topicIdArray = request.getParameterValues("VideoId");
-					for (int i=0;i<topicIdArray.length;i++) topicIds.add(Long.parseLong(topicIdArray[i]));			
-				} else topicIds.add(Long.parseLong(request.getParameter("VideoId")));
+				topicIdArray = request.getParameterValues("VideoId");
+				for (int i=0;i<topicIdArray.length;i++) topicIds.add(Long.parseLong(topicIdArray[i]));			
 				break;
 			case "Poll":
 				break; // nothing to do here
@@ -524,10 +521,8 @@ public class LTIDeepLinks extends HttpServlet {
 				}
 			break;
 			default:  // Quiz or Homework Assignment
-				if (acceptsMultiple) {
-					topicIdArray = request.getParameterValues("TopicId");
-					for (int i=0;i<topicIdArray.length;i++) topicIds.add(Long.parseLong(topicIdArray[i]));			
-				} else topicIds.add(Long.parseLong(request.getParameter("TopicId")));
+				topicIdArray = request.getParameterValues("TopicId");
+				for (int i=0;i<topicIdArray.length;i++) topicIds.add(Long.parseLong(topicIdArray[i]));			
 			}
 	
 			// At this point all of the topicIds or VideoIds are in the List topicIds
@@ -561,10 +556,15 @@ public class LTIDeepLinks extends HttpServlet {
 			default:  // Quiz, Homework or VideoQuiz
 				for (Long tid : topicIds) {
 					a = new Assignment(assignmentType,0L,null,d.platform_deployment_id);
-					if (assignmentType.equals("VideoQuiz")) a.videoId = tid;
-					else {  // Quiz or Homework
+					switch (assignmentType) {
+					case "VideoQuiz":
+						a.videoId = tid;
+						break;
+					case "Quiz":
+					case "Homework":
 						a.topicId = tid;
 						a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
+						break;
 					}
 					assignments.add(a);
 				}
@@ -678,11 +678,11 @@ public class LTIDeepLinks extends HttpServlet {
 			
 			// Create a form to be auto-submitted to the platform by the user_agent browser
 			buf.append("Submitting your selection back to your LMS...");
-			buf.append("<div style='visibility: hidden'>"
+			buf.append("<div>"  // style='visibility: hidden'>"
 					+ "<form id=selections method=POST action='" + deep_link_return_url + "'>"
 					+ "<input type=hidden name=JWT value='" + jwt + "' />"
-					+ "Assignment selection OK. Please click the Submit button &rarr; <input type=submit />"
-					+ "</form></div>");
+					+ "Assignment selection OK. <input type=submit />"
+					+ "</form></div>lease click submit if this form is not submitted automatically.");
 			buf.append("<script>document.getElementById('selections').submit();</script>");
 			//buf.append("The new content items are: " + content_items.toString());
 		} catch (Exception e) {
