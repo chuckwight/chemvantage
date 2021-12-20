@@ -216,7 +216,7 @@ public class LTIDeepLinks extends HttpServlet {
 		JsonObject settings = claims.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings").getAsJsonObject();
 		boolean acceptsLtiResourceLink = settings.get("accept_types").getAsJsonArray().contains(new JsonPrimitive("ltiResourceLink"));
 		if (!acceptsLtiResourceLink) throw new Exception("Deep Link request failed because platform does not accept new LtiResourceLinks.");
-		boolean acceptsMultiple = settings.get("accept_multiple").getAsBoolean();
+		boolean acceptsMultiple = false; //settings.get("accept_multiple").getAsBoolean();
 		
 		// Print a nice banner
 		buf.append(Home.banner);
