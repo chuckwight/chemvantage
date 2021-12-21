@@ -86,7 +86,7 @@ public class LTILaunch extends HttpServlet {
 				} else {  // send the user back to the resourcePickerForm
 					int topicKey = -1;
 					try {topicKey = Integer.parseInt(request.getParameter("TopicKey"));} catch (Exception e) {}
-					response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,topicKey) + Home.footer);
+					response.getWriter().println(Subject.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,topicKey) + Subject.footer);
 				}
 			} else if (request.getParameter("lti_message_type")!=null) { // handle LTI launch request for LTIv1p0 and LTIv1p1
 				basicLtiLaunchRequest(request,response);
@@ -134,10 +134,10 @@ public class LTILaunch extends HttpServlet {
 			try {
 				tc = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).safe();
 				if ("suspended".equals(tc.status)) {
-					response.getWriter().println(Home.header("ChemVantage Account Management") + suspendedAccount(tc) + Home.footer);
+					response.getWriter().println(Subject.header("ChemVantage Account Management") + suspendedAccount(tc) + Subject.footer);
 					return;
 				} else if (tc.expires != null && tc.expires.before(now)) {
-					response.getWriter().println(Home.header("ChemVantage Account Management") + expiredAccount(tc,request.getServerName()) + Home.footer);			
+					response.getWriter().println(Subject.header("ChemVantage Account Management") + expiredAccount(tc,request.getServerName()) + Subject.footer);			
 					return;
 				}
 				
@@ -280,7 +280,7 @@ public class LTILaunch extends HttpServlet {
 				Queue queue = QueueFactory.getDefaultQueue();  // used for hashing userIds by Task queue
 				queue.add(withUrl("/HashUserIds").param("sig",user.getTokenSignature()));			
 				response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
-			} else response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,-1) + Home.footer);
+			} else response.getWriter().println(Subject.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,-1) + Subject.footer);
 			return;
 
 		} catch (Exception e) {
@@ -338,7 +338,7 @@ public class LTILaunch extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 
 		// Print a nice banner
-		buf.append(Home.banner);
+		buf.append(Subject.banner);
 		
 		buf.append("<h2>Assignment Setup Page</h2>"
 				+ "The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<br/><br/>");
@@ -574,7 +574,7 @@ public class LTILaunch extends HttpServlet {
 	public String expiredAccount(BLTIConsumer tc, String serverName) {
 		StringBuffer buf = new StringBuffer();
 		
-		buf.append(Home.banner + "<h3>Your ChemVantage Account Has Expired</h3>");
+		buf.append(Subject.banner + "<h3>Your ChemVantage Account Has Expired</h3>");
 		
 		buf.append("The ChemVantage LTI account using these credentials expired automatically at " + tc.expires + ".<p></p>"
 				+ "The most likely reason for this is ");
@@ -606,7 +606,7 @@ public class LTILaunch extends HttpServlet {
 	public String suspendedAccount(BLTIConsumer tc) {
 		StringBuffer buf = new StringBuffer();
 		
-		buf.append(Home.banner + "<h3>Your ChemVantage Account Has Been Suspended</h3>");
+		buf.append(Subject.banner + "<h3>Your ChemVantage Account Has Been Suspended</h3>");
 		
 		buf.append("The ChemVantage LTI account using these credentials has been suspended pending deletion due to long period of inactivity. "
 				+ "The last prior login for this account was " + (tc.lastLogin==null?"more than one year ago. ":tc.lastLogin) + "<br/><br/>"

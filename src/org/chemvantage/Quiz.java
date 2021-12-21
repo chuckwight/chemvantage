@@ -67,20 +67,20 @@ public class Quiz extends HttpServlet {
 			case "ShowScores":
 				String forUserId = request.getParameter("ForUserId");
 				User forUser = forUserId==null?user:new User(user.platformId, forUserId);
-				out.println(Home.header("ChemVantage Scores") + showScores(user,forUser) + Home.footer);
+				out.println(Subject.header("ChemVantage Scores") + showScores(user,forUser) + Subject.footer);
 				break;
 			case "ShowSummary":
-				out.println(Home.header("Your Class ChemVantage Scores") + showSummary(user,request) + Home.footer);
+				out.println(Subject.header("Your Class ChemVantage Scores") + showSummary(user,request) + Subject.footer);
 				break;
 			case "AssignQuizQuestions":
-				if (user.isInstructor()) out.println(Home.header("Customize ChemVantage Quiz Assignment") + selectQuestionsForm(user) + Home.footer);
+				if (user.isInstructor()) out.println(Subject.header("Customize ChemVantage Quiz Assignment") + selectQuestionsForm(user) + Subject.footer);
 				break;
 			case "PrintQuiz":
-				out.println(Home.header("ChemVantage Quiz") + printQuiz(user,request) + Home.footer);
+				out.println(Subject.header("ChemVantage Quiz") + printQuiz(user,request) + Subject.footer);
 				break;
 			default: 
-				if (user.isInstructor()) out.println(Home.header("ChemVantage Instructor Page") + instructorPage(user,request) + Home.footer);
-				else out.println(Home.header("ChemVantage Quiz") + printQuiz(user,request) + Home.footer);
+				if (user.isInstructor()) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,request) + Subject.footer);
+				else out.println(Subject.header("ChemVantage Quiz") + printQuiz(user,request) + Subject.footer);
 			}
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
@@ -124,7 +124,7 @@ public class Quiz extends HttpServlet {
 				else out.println("Synchronization request failed.");
 				break;
 			default:
-				out.println(Home.header("ChemVantage Quiz Results") + printScore(user,request) + Home.footer);
+				out.println(Subject.header("ChemVantage Quiz Results") + printScore(user,request) + Subject.footer);
 			}
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
@@ -167,7 +167,7 @@ public class Quiz extends HttpServlet {
 		} catch (Exception e) { // prompt the user to choose a topic
 			List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
 			StringBuffer buf = new StringBuffer();
-			buf.append(Home.banner);
+			buf.append(Subject.banner);
 			buf.append("<h2>Please select a topic for this quiz</h2>"
 					+ "<form method=get>"
 					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"

@@ -130,10 +130,10 @@ public class LTIRegistration extends HttpServlet {
 				String ltiVersion = decoded.getClaim("ver").asString();
 				switch (ltiVersion) {
 				case "1p1":
-					out.println(Home.header("LTI Registration") + createBLTIConsumer(token) + Home.footer);
+					out.println(Subject.header("LTI Registration") + createBLTIConsumer(token) + Subject.footer);
 					break;
 				case "1p3":
-					out.println(Home.header("LTI Registration") + clientIdForm(token) + Home.footer);
+					out.println(Subject.header("LTI Registration") + clientIdForm(token) + Subject.footer);
 					break;
 				default: throw new Exception("LTI version was missing or invalid.");
 				}
@@ -162,7 +162,7 @@ public class LTIRegistration extends HttpServlet {
 			if ("finalize".contentEquals(userRequest)) {				
 				String token = request.getParameter("Token");
 				JWT.require(algorithm).withIssuer(iss).build().verify(token);
-				out.println(Home.header("ChemVantage LTI Registration") + Home.banner + createDeployment(request) + Home.footer);			
+				out.println(Subject.header("ChemVantage LTI Registration") + Subject.banner + createDeployment(request) + Subject.footer);			
 			} else {
 				if (request.getParameter("email")==null) throw new Exception("Email was not given.");
 				String token = validateApplicationFormContents(request);
@@ -176,7 +176,7 @@ public class LTIRegistration extends HttpServlet {
 					out.println(successfulRegistrationRequestPage(openIdConfiguration));
 				} else {
 					sendRegistrationEmail(token);
-					out.println(Home.header("ChemVantage LTI Registration") + Home.banner + "<h3>Registration Success</h3>Thank you. A registration email has been sent to your address.<p>" + Home.footer);			
+					out.println(Subject.header("ChemVantage LTI Registration") + Subject.banner + "<h3>Registration Success</h3>Thank you. A registration email has been sent to your address.<p>" + Subject.footer);			
 				}
 			}
 		} catch (Exception e) {
@@ -678,7 +678,7 @@ public class LTIRegistration extends HttpServlet {
 	}
 	
 	String clientIdForm(String token) {
-		StringBuffer buf = new StringBuffer(Home.banner);
+		StringBuffer buf = new StringBuffer(Subject.banner);
 		String iss = null;
 		String sub = null;
 		String email = null;
@@ -1091,7 +1091,7 @@ public class LTIRegistration extends HttpServlet {
 	
 	String successfulRegistrationRequestPage(JsonObject openid_configuration) {
 		StringBuffer buf = new StringBuffer();
-		buf.append(Home.header() + Home.banner);
+		buf.append(Subject.header() + Subject.banner);
 		buf.append("<h3>Your Registration Request Was Successful</h3>"
 				+ "The LTI Advantage deployment was created in ChemVantage and in your LMS.<br/>"
 				+ "Please be sure to activate the deployment in your LMS.<br/><br/>");
@@ -1140,7 +1140,7 @@ public class LTIRegistration extends HttpServlet {
 				+ "from people like you. Please consider making a donation to support ChemVantage and keep the good karma flowing.<br/><br/>"
 				+ "Contact Chuck Wight at admin@chemvantage.org for information on how to do this.<br/><br/>Thank you.");
 
-		buf.append(Home.footer);
+		buf.append(Subject.footer);
 		return buf.toString();
 	}
 	

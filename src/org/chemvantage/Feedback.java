@@ -81,7 +81,7 @@ public class Feedback extends HttpServlet {
 				recordAjaxRating(request);
 				break;
 			default:
-				out.println((user.isChemVantageAdmin()?Home.getHeader(user):Home.header("ChemVantage Feedback Form")) + feedbackForm(user) + Home.footer);
+				out.println((user.isChemVantageAdmin()?Subject.getHeader(user):Subject.header("ChemVantage Feedback Form")) + feedbackForm(user) + Subject.footer);
 			}
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
@@ -100,7 +100,7 @@ public class Feedback extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 
-			out.println(user.isChemVantageAdmin()?Home.getHeader(user):Home.header("ChemVantage Feedback"));
+			out.println(user.isChemVantageAdmin()?Subject.getHeader(user):Subject.header("ChemVantage Feedback"));
 			switch (userRequest) {
 			case "SubmitFeedback":
 				out.println(submitFeedback(user,request));
@@ -110,7 +110,7 @@ public class Feedback extends HttpServlet {
 			default:
 				out.println(feedbackForm(user));
 			}
-			out.println(Home.footer);
+			out.println(Subject.footer);
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
@@ -130,7 +130,7 @@ public class Feedback extends HttpServlet {
 
 	String feedbackForm(User user) {
 		StringBuffer buf = new StringBuffer();
-		buf.append(Home.banner);
+		buf.append(Subject.banner);
 		buf.append("<h2>Feedback Page</h2>");
 
 		buf.append("Your comments and opinions are important to us.  We use this<br>"
@@ -203,7 +203,7 @@ public class Feedback extends HttpServlet {
 		try { 
 			if (user.isAnonymous() && !reCaptchaOK(request)) throw new Exception();
 		} catch (Exception e) {
-			return Home.banner + "<h3>The ReCAPTCHA failed, sorry. Please click the BACK button on your browser and try again.</h3>";
+			return Subject.banner + "<h3>The ReCAPTCHA failed, sorry. Please click the BACK button on your browser and try again.</h3>";
 		}
 		
 		int stars = 0;
@@ -230,7 +230,7 @@ public class Feedback extends HttpServlet {
 			if (email!=null && !email.isEmpty()) sendEmailToAdmin(r,user,email);
 		}
 
-		buf.append(Home.banner);
+		buf.append(Subject.banner);
 		buf.append("<h2>Feedback Page</h2>");
 		buf.append(new Date().toString() + "<p>");
 		buf.append("Thank you for your feedback" + (stars>0?" (" + stars + " stars" + (stars==5?"!":"") + ").":"."));

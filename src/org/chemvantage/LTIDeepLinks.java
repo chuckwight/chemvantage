@@ -211,7 +211,7 @@ public class LTIDeepLinks extends HttpServlet {
 	}
 	
 	String contentPickerForm(User user, HttpServletRequest request,JsonObject claims,int topicKey) throws Exception {
-		StringBuffer buf = new StringBuffer(Home.header("Select ChemVantage Assignment"));
+		StringBuffer buf = new StringBuffer(Subject.header("Select ChemVantage Assignment"));
 		try {
 		JsonObject settings = claims.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings").getAsJsonObject();
 		boolean acceptsLtiResourceLink = settings.get("accept_types").getAsJsonArray().contains(new JsonPrimitive("ltiResourceLink"));
@@ -219,7 +219,7 @@ public class LTIDeepLinks extends HttpServlet {
 		boolean acceptsMultiple = false; //settings.get("accept_multiple").getAsBoolean();
 		
 		// Print a nice banner
-		buf.append(Home.banner);
+		buf.append(Subject.banner);
 
 		buf.append("<h2>Assignment Setup Page</h2>");
 
@@ -438,7 +438,7 @@ public class LTIDeepLinks extends HttpServlet {
 	
 		buf.append("</form>");
 		
-		buf.append(Home.footer);
+		buf.append(Subject.footer);
 		} catch (Exception e) {
 			buf.append(e.toString() + " " + e.getMessage());
 		}

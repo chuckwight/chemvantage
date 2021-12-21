@@ -38,8 +38,8 @@ public class Logout extends HttpServlet {
 		return "Servlet for confirming logout from ChemVantage.";
 	}
 
-	static String message = Home.header("ChemVantage Logout Successful") 
-			+ Home.banner
+	static String message = Subject.header("ChemVantage Logout Successful") 
+			+ Subject.banner
 			+ "<h3>You have successfully signed out of ChemVantage</h3>" 
 			+ "If this happened unexpectedly, it is likely that your browser's web "
 			+ "session timed out after a period of inactivity, or the access token "
@@ -50,7 +50,7 @@ public class Logout extends HttpServlet {
 			+ "management system (LMS) and clicking the link for any assignment there.<p>"
 			+ "If you are having technical difficulty using ChemVantage, <a href=Feedback>"
 			+ "please tell us</a> so we can fix the problem."	
-			+ Home.footer;
+			+ Subject.footer;
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {

@@ -69,21 +69,21 @@ public class Homework extends HttpServlet {
 			case "ShowScores":
 				String forUserId = request.getParameter("ForUserId");
 				User forUser = forUserId==null?user:new User(user.platformId, forUserId);
-				out.println(Home.header("ChemVantage Scores") + showScores(user,forUser) + Home.footer);
+				out.println(Subject.header("ChemVantage Scores") + showScores(user,forUser) + Subject.footer);
 				break;
 			case "ShowSummary":
-				out.println(Home.header("Your Class ChemVantage Scores") + showSummary(user,request) + Home.footer);
+				out.println(Subject.header("Your Class ChemVantage Scores") + showSummary(user,request) + Subject.footer);
 				break;
 			case "AssignHomeworkQuestions":
-				if (user.isInstructor()) out.println(Home.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user) + Home.footer);
-				else out.println(Home.header("Customize ChemVantage Homework Assignment") + "<h2>Forbidden</h2>You must be signed in as the instructor to perform this functuon." + Home.footer);
+				if (user.isInstructor()) out.println(Subject.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user) + Subject.footer);
+				else out.println(Subject.header("Customize ChemVantage Homework Assignment") + "<h2>Forbidden</h2>You must be signed in as the instructor to perform this functuon." + Subject.footer);
 				break;
 			case "PrintHomework":
-				out.println(Home.header("ChemVantage Homework") + printHomework(user,request) + Home.footer);
+				out.println(Subject.header("ChemVantage Homework") + printHomework(user,request) + Subject.footer);
 				break;
 			default:
-				if (user.isInstructor()) out.println(Home.header("ChemVantage Instructor Page") + instructorPage(user,request) + Home.footer);
-				else out.println(Home.header("ChemVantage Homework") + printHomework(user,request) + Home.footer);
+				if (user.isInstructor()) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,request) + Subject.footer);
+				else out.println(Subject.header("ChemVantage Homework") + printHomework(user,request) + Subject.footer);
 			}
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig") + "&e=" + e.toString());
@@ -128,7 +128,7 @@ public class Homework extends HttpServlet {
 				if (synchronizeScores(user,request)) doGet(request,response);
 				else out.println("Synchronization request failed.");
 				break;
-			default: out.println(Home.header("ChemVantage Homework Grading Results") + printScore(user,request) + Home.footer);
+			default: out.println(Subject.header("ChemVantage Homework Grading Results") + printScore(user,request) + Subject.footer);
 			}
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
@@ -174,7 +174,7 @@ public class Homework extends HttpServlet {
 		} catch (Exception e) {
 			List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
 			StringBuffer buf = new StringBuffer();
-			buf.append(Home.banner);
+			buf.append(Subject.banner);
 			buf.append("<h2>Please select a homework topic</h2>"
 					+ "<form method=get>"
 					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"

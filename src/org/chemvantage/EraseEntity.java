@@ -48,8 +48,8 @@ public class EraseEntity extends HttpServlet {
 		
 		String domain = request.getParameter("Domain");
 		
-		if (domain == null) out.println(Home.header("Erase ChemVantage Entity") + menu() + Home.footer);
-		else out.println(Home.header("Erase ChemVantage Entity") + options(domain) + Home.footer);
+		if (domain == null) out.println(Subject.header("Erase ChemVantage Entity") + menu() + Subject.footer);
+		else out.println(Subject.header("Erase ChemVantage Entity") + options(domain) + Subject.footer);
 	}
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -98,7 +98,7 @@ public class EraseEntity extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
-		out.println(Home.header("Erase ChemVantage Entity") + menu(domain) + Home.footer);
+		out.println(Subject.header("Erase ChemVantage Entity") + menu(domain) + Subject.footer);
 	}
 
 	String menu() {

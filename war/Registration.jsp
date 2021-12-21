@@ -37,7 +37,7 @@
 </head>
 
 <body style='background-color: white; font-family: Calibri,Arial,sans-serif;'>
-<%= Home.banner %><br/>
+<%= Subject.banner %><br/>
 
 <% if (message != null) { %>
 <span style='color: red; border: 2px solid red'>&nbsp;<%= message %> &nbsp;</span>
@@ -218,4 +218,11 @@ changeTyp('<%=use%>');
 
 <% } %>
 
-<%= Home.footer %>
+<hr/><img style='padding-left: 15px; vertical-align: middle;' src=images/CVLogo_tiny.png alt='ChemVantage logo' />&nbsp;
+<a href=/about.html>About ChemVantage</a> | 
+<a href=/about.html#terms>Terms and Conditions of Use</a> | 
+<a href=/about.html#privacy>Privacy Policy</a> | 
+<a href=/about.html#copyright>Copyright</a>
+
+</body>
+</html>

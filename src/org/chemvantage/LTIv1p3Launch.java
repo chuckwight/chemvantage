@@ -106,7 +106,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				} else {  // send the user back to the resourcePickerForm
 					int topicKey = 1;
 					try {topicKey = Integer.parseInt(request.getParameter("TopicKey"));} catch (Exception e) {}
-					response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,topicKey) + Home.footer);
+					response.getWriter().println(Subject.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,topicKey) + Subject.footer);
 				}
 			} else {
 				throw new Exception("Wrong URL or Bad Request. This URL only receives LTI Advantage (v1.3) Resource Link and Submission Review launch requests for ChemVantage. "
@@ -270,7 +270,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		
 		// If this is the first time this Assignment has been used, it may be missing the assignmentType and topicId(s)
 		if (!myAssignment.isValid()) {  //Show the the pickResource form:
-			response.getWriter().println(Home.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,1) + Home.footer);
+			response.getWriter().println(Subject.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,1) + Subject.footer);
 			return;
 		} else response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
 	}
@@ -297,7 +297,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				response.sendRedirect("/PracticeExam?sig=" + u.getTokenSignature() + "&ForUserId=" + forUser.getId());
 				break;
 			default:
-				out.println(Home.header() + Home.banner + "<h2>Sorry, submission review is not currently available for this type of ChemVantage assignment.</h2>" + Home.footer);
+				out.println(Subject.header() + Subject.banner + "<h2>Sorry, submission review is not currently available for this type of ChemVantage assignment.</h2>" + Subject.footer);
 			}
 		} else throw new Exception("You must be logged into your LMS ");
 	}
@@ -477,7 +477,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 
 		// Print a nice banner
-		buf.append(Home.banner);
+		buf.append(Subject.banner);
 
 		buf.append("<h2>Assignment Setup Page</h2>"
 				+ "The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<p></p>");

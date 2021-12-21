@@ -14,7 +14,7 @@
 	int end = -1;
 	String title = null;
 %>
-	<%= Home.header("ChemVantage Video") %>
+	<%= Subject.header("ChemVantage Video") %>
 <%
 	try {
 		sig = request.getParameter("sig");
@@ -257,4 +257,11 @@ function GetXmlHttpObject() {
 
 </script>
 <div style='font-size:small'>If the YouTube screen is black, try using the player controls to show full screen.</div>
-<%= Home.footer %>
+<hr/><img style='padding-left: 15px; vertical-align: middle;' src=images/CVLogo_tiny.png alt='ChemVantage logo' />&nbsp;
+<a href=/about.html>About ChemVantage</a> | 
+<a href=/about.html#terms>Terms and Conditions of Use</a> | 
+<a href=/about.html#privacy>Privacy Policy</a> | 
+<a href=/about.html#copyright>Copyright</a>
+
+</body>
+</html>

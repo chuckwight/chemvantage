@@ -67,7 +67,7 @@ public class Admin extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 
-			out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Home.footer);
+			out.println(Subject.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Subject.footer);
 		} catch (Exception e) {
 		}
 	}
@@ -123,7 +123,7 @@ public class Admin extends HttpServlet {
 				}
 				break;
 			}
-			out.println(Home.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Home.footer);
+			out.println(Subject.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Subject.footer);
 		} catch (Exception e) {
 			response.getWriter().println("Unexpected error: " + e.toString() + e.getMessage());
 		}

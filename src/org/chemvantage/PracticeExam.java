@@ -81,25 +81,25 @@ public class PracticeExam extends HttpServlet {
 			switch (userRequest) {
 				case "AssignExamQuestions":
 					if (!user.isInstructor()) throw new Exception();
-					out.println(Home.header("Select ChemVantage Practice Exam Topics") + selectExamQuestionsForm(user) + Home.footer);
+					out.println(Subject.header("Select ChemVantage Practice Exam Topics") + selectExamQuestionsForm(user) + Subject.footer);
 					break;
 				case "ReviewExamScores":
-					out.println(Home.header("Review ChemVantage Practice Exam Scores") + reviewExamScores(user) + Home.footer);
+					out.println(Subject.header("Review ChemVantage Practice Exam Scores") + reviewExamScores(user) + Subject.footer);
 					break;
 				case "ReviewExam":
 					long practiceExamTransactionId = Long.parseLong(request.getParameter("PracticeExamTransactionId"));
 					String studentUserId = request.getParameter("UserId");
-					out.println(Home.header("Review ChemVantage Practice Exam") + reviewExam(user,practiceExamTransactionId,studentUserId) + Home.footer);
+					out.println(Subject.header("Review ChemVantage Practice Exam") + reviewExam(user,practiceExamTransactionId,studentUserId) + Subject.footer);
 					break;
 				case "PrintExam":
-					out.println(Home.header("ChemVantage Practice Exam") + printExam(user,request) + Home.footer);
+					out.println(Subject.header("ChemVantage Practice Exam") + printExam(user,request) + Subject.footer);
 					break;
 				case "SubmissionReview":
 					User forUser = new User(user.platformId,request.getParameter("ForUserId"));
-					out.println(Home.header("ChemVantage Practice Exam") + submissionReview(user,forUser) + Home.footer);
+					out.println(Subject.header("ChemVantage Practice Exam") + submissionReview(user,forUser) + Subject.footer);
 				default: 
-					if (user.isInstructor()) out.println(Home.header("ChemVantage Instructor Page") + instructorPage(user,request) + Home.footer);
-					else out.println(Home.header("ChemVantage Practice Exam") + printExam(user,request) + Home.footer);
+					if (user.isInstructor()) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,request) + Subject.footer);
+					else out.println(Subject.header("ChemVantage Practice Exam") + printExam(user,request) + Subject.footer);
 			}
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
@@ -127,7 +127,7 @@ public class PracticeExam extends HttpServlet {
 					response.sendRedirect("/PracticeExam?sig=" + user.getTokenSignature());
 					break;
 				case "Submit Revised Exam Score":
-					if (submitRevisedExamScore(user,request)) out.println(Home.header("Review ChemVantage Practice Exam Scores") + reviewExamScores(user) + Home.footer);
+					if (submitRevisedExamScore(user,request)) out.println(Subject.header("Review ChemVantage Practice Exam Scores") + reviewExamScores(user) + Subject.footer);
 					else out.println("Sorry, an unexpected error occurred. Please go BACK and try again.");
 					break;
 				case "Set Allowed Time":
@@ -156,7 +156,7 @@ public class PracticeExam extends HttpServlet {
 						examQuestions.remove(key);
 					}
 					break;
-				default: out.println(Home.header("ChemVantage Practice Exam Results") + printScore(user,request) + Home.footer);
+				default: out.println(Subject.header("ChemVantage Practice Exam Results") + printScore(user,request) + Subject.footer);
 			}
 		} catch (Exception e) {
 			//response.getWriter().println(e.toString() + " " + e.getMessage());
@@ -165,7 +165,7 @@ public class PracticeExam extends HttpServlet {
 	}
 
 	String designExam(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer(Home.banner);
+		StringBuffer buf = new StringBuffer(Subject.banner);
 		//String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		try {
 			buf.append("<h2>Practice Exam</h2>");

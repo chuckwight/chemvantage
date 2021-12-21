@@ -80,7 +80,7 @@ public class Edit extends HttpServlet {
 			user.setIsChemVantageAdmin(true);
 			user.setToken();
 			
-			out.println(Home.getHeader(user));
+			out.println(Subject.getHeader(user));
 			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
@@ -115,7 +115,7 @@ public class Edit extends HttpServlet {
 					long proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
 					ofy().delete().key(Key.create(ProposedQuestion.class,proposedQuestionId));
 				} catch (Exception e) {}
-				out.println(Home.getHeader(user) + reviewProposedQuestion(user,request) + Home.footer);
+				out.println(Subject.getHeader(user) + reviewProposedQuestion(user,request) + Subject.footer);
 				break;
 			default: out.println(editorsPage(user,request));
 			}
@@ -123,7 +123,7 @@ public class Edit extends HttpServlet {
 		} catch (Exception e) {
 			out.println(e.getMessage());
 		}
-		out.println(Home.footer);
+		out.println(Subject.footer);
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
@@ -138,7 +138,7 @@ public class Edit extends HttpServlet {
 			user.setIsChemVantageAdmin(true);
 			user.setToken();
 			
-			out.println(Home.getHeader(user));
+			out.println(Subject.getHeader(user));
 			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";

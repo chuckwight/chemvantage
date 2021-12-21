@@ -68,7 +68,7 @@ public class VideoQuiz extends HttpServlet {
 			
 			if (user.getAssignmentId()==0L && videoId==0L) {  // anonymous user
 				StringBuffer buf = new StringBuffer();
-				buf.append(Home.banner
+				buf.append(Subject.banner
 						+ "<h2>Please select a video to play</h2>"
 						+ "<form method=get>"
 						+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
@@ -77,7 +77,7 @@ public class VideoQuiz extends HttpServlet {
 				for (Video v:videos) buf.append(v.breaks==null?"":"<OPTION VALUE='" + v.id + "'>" + v.title + "</OPTION>");
 				buf.append("</SELECT>");
 				buf.append("<input type=submit value='Start this video' /></form>");
-				out.println(Home.header("ChemVantage Video") + buf.toString() + Home.footer);
+				out.println(Subject.header("ChemVantage Video") + buf.toString() + Subject.footer);
 				return;
 			}
 			
@@ -98,13 +98,13 @@ public class VideoQuiz extends HttpServlet {
 				out.println(showQuizlet(user,videoId,segment));
 				break;
 			case "ShowScores":
-				out.println(Home.header("Video assignment scores") + showScores(user,request) + Home.footer);
+				out.println(Subject.header("Video assignment scores") + showScores(user,request) + Subject.footer);
 				break;
 			case "ShowSummary":
-				out.println(Home.header("Class video scores") + showSummary(user,request) + Home.footer);
+				out.println(Subject.header("Class video scores") + showSummary(user,request) + Subject.footer);
 			break;
 			default:
-				if (user.isInstructor()) out.println(Home.header("ChemVantage Instructor Page") + instructorPage(user,request) + Home.footer);
+				if (user.isInstructor()) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,request) + Subject.footer);
 				else response.sendRedirect("/Video.jsp?VideoId=" + videoId + "&sig=" + user.getTokenSignature());
 			}			
 		} catch (Exception e) {

@@ -58,7 +58,7 @@ public class DataStoreCleaner extends HttpServlet {
 		
 		String task = request.getParameter("Task");		
 		if (task != null) doPost(request,response);
-		else out.println(Home.header("Datastore Cleaner") + interactiveMenu() + Home.footer);		
+		else out.println(Subject.header("Datastore Cleaner") + interactiveMenu() + Subject.footer);		
 	} 
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
@@ -72,7 +72,7 @@ public class DataStoreCleaner extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		response.setContentType("text/html");
 		
-		StringBuffer buf = new StringBuffer(Home.header("Datastore Cleaner"));
+		StringBuffer buf = new StringBuffer(Subject.header("Datastore Cleaner"));
 		buf.append("<h2>Data Store Cleaner</h2>");
 		
 		// This section handles individual tasks executed from the Task Queue
@@ -108,7 +108,7 @@ public class DataStoreCleaner extends HttpServlet {
 			buf.append("8 background tasks launched to scrub all obsolete entity types from the datastore.");
 			break;
 		}
-		buf.append("<br>" + Home.footer);
+		buf.append("<br>" + Subject.footer);
 		
 		out.println(buf.toString());
 	}

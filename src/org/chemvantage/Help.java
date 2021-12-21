@@ -60,9 +60,9 @@ public class Help extends HttpServlet {
     	response.setCharacterEncoding("UTF-8");
     	String jwt = request.getParameter("JWT");
     	
-    	if (jwt==null) out.println(Home.header("ChemVantage Help Page") + Home.banner + "The ChemVantage Help Page is only "
+    	if (jwt==null) out.println(Subject.header("ChemVantage Help Page") + Subject.banner + "The ChemVantage Help Page is only "
     			+ "accessible to users through our LTI interface. To use this service, please login through your school "
-    			+ "learning management system." + Home.footer);
+    			+ "learning management system." + Subject.footer);
 		try {
     		JsonObject payload = validateJWT(jwt); // throws exception if expired or otherwise invalid
     		out.println(showStudentSubmission(payload));
@@ -88,7 +88,7 @@ public class Help extends HttpServlet {
 			response.setContentType("text/html");
 			String iss = "https://" + request.getServerName();
 			
-			out.println(Home.header("ChemVantage Help Page") + Home.banner + displayHelpUrl(jwt,iss) + Home.footer);
+			out.println(Subject.header("ChemVantage Help Page") + Subject.banner + displayHelpUrl(jwt,iss) + Subject.footer);
 			
 		} catch (Exception e) {
 			response.sendRedirect("/Logout");
@@ -104,7 +104,7 @@ public class Help extends HttpServlet {
 	}
 
 	protected String showStudentSubmission(JsonObject payload) throws Exception {
-		StringBuffer buf = new StringBuffer(Home.header("ChemVantage Help Page") + Home.banner);
+		StringBuffer buf = new StringBuffer(Subject.header("ChemVantage Help Page") + Subject.banner);
 		Date exp = new Date(payload.get("exp").getAsLong()*1000L);
 		
 		buf.append("<h3>A student is seeking your help with a ChemVantage assignment.</h3>");
@@ -158,7 +158,7 @@ public class Help extends HttpServlet {
 				break;
 			default: throw new Exception("The assignment type was not valid.");
 		}
-		buf.append(Home.footer);
+		buf.append(Subject.footer);
 		
 		return buf.toString();
 	}

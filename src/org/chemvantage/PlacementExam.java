@@ -68,25 +68,25 @@ public class PlacementExam extends HttpServlet {
 			switch (userRequest) {
 				case "AssignExamQuestions":
 					if (!user.isInstructor()) throw new Exception();
-					out.println(Home.header("Select ChemVantage Placement Exam Topics") + selectExamQuestionsForm(user) + Home.footer);
+					out.println(Subject.header("Select ChemVantage Placement Exam Topics") + selectExamQuestionsForm(user) + Subject.footer);
 					break;
 				case "ReviewExamScores":
-					out.println(Home.header("Review ChemVantage Placement Exam Scores") + reviewExamScores(user) + Home.footer);
+					out.println(Subject.header("Review ChemVantage Placement Exam Scores") + reviewExamScores(user) + Subject.footer);
 					break;
 				case "ReviewExam":
 					long placementExamTransactionId = Long.parseLong(request.getParameter("PlacementExamTransactionId"));
 					String studentUserId = request.getParameter("UserId");
-					out.println(Home.header("Review ChemVantage Placement Exam") + reviewExam(user,placementExamTransactionId,studentUserId) + Home.footer);
+					out.println(Subject.header("Review ChemVantage Placement Exam") + reviewExam(user,placementExamTransactionId,studentUserId) + Subject.footer);
 					break;
 				case "PrintExam":
-					out.println(Home.header("ChemVantage Placement Exam") + printExam(user,request) + Home.footer);
+					out.println(Subject.header("ChemVantage Placement Exam") + printExam(user,request) + Subject.footer);
 					break;
 				case "SubmissionReview":
 					User forUser = new User(user.platformId,request.getParameter("ForUserId"));
-					out.println(Home.header("ChemVantage Placement Exam") + submissionReview(user,forUser) + Home.footer);
+					out.println(Subject.header("ChemVantage Placement Exam") + submissionReview(user,forUser) + Subject.footer);
 				default: 
-					if (user.isInstructor()) out.println(Home.header("ChemVantage Instructor Page") + instructorPage(user,request) + Home.footer);
-					else out.println(Home.header("ChemVantage Placement Exam") + printExam(user,request) + Home.footer);
+					if (user.isInstructor()) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,request) + Subject.footer);
+					else out.println(Subject.header("ChemVantage Placement Exam") + printExam(user,request) + Subject.footer);
 			}
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
@@ -114,7 +114,7 @@ public class PlacementExam extends HttpServlet {
 					response.sendRedirect("/PlacementExam?sig=" + user.getTokenSignature());
 					break;
 				case "Submit Revised Exam Score":
-					if (submitRevisedExamScore(user,request)) out.println(Home.header("Review ChemVantage Placement Exam Scores") + reviewExamScores(user) + Home.footer);
+					if (submitRevisedExamScore(user,request)) out.println(Subject.header("Review ChemVantage Placement Exam Scores") + reviewExamScores(user) + Subject.footer);
 					else out.println("Sorry, an unexpected error occurred. Please go BACK and try again.");
 					break;
 				case "Set Allowed Time":
@@ -143,7 +143,7 @@ public class PlacementExam extends HttpServlet {
 						examQuestions.remove(key);
 					}
 					break;
-				default: out.println(Home.header("ChemVantage Placement Exam Results") + printScore(user,request) + Home.footer);
+				default: out.println(Subject.header("ChemVantage Placement Exam Results") + printScore(user,request) + Subject.footer);
 			}
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
@@ -211,7 +211,7 @@ public class PlacementExam extends HttpServlet {
 						ofy().save().entity(d);
 					} // otherwise proceed with the exam at no charge
 				} else {  // WHOA! This is a student and no more exams are available
-					return (Home.banner 
+					return (Subject.banner 
 						+ "<h3>Placement Exam Not Authorized</h3>"
 						+ "There are no placement exams remaining on this account. "
 						+ "Please bring this to the attention of whoever is administering "

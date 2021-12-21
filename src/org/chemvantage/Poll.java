@@ -64,25 +64,25 @@ public class Poll extends HttpServlet {
 			
 			switch (userRequest) {
 			case "EditPoll":
-				out.println(Home.header() + editPage(user,request) + Home.footer);
+				out.println(Subject.header() + editPage(user,request) + Subject.footer);
 				break;
 			case "NewQuestion":
-				out.println(Home.header() + newQuestionForm(user,request) + Home.footer);
+				out.println(Subject.header() + newQuestionForm(user,request) + Subject.footer);
 				break;
 			case "Preview":
-				out.println(Home.header() + previewQuestion(user,request) + Home.footer);
+				out.println(Subject.header() + previewQuestion(user,request) + Subject.footer);
 				break;
 			default:
 				switch (state) {
 				case 0:
-					out.println(Home.header() + welcomePage(user,request) + Home.footer);
+					out.println(Subject.header() + welcomePage(user,request) + Subject.footer);
 					break;
 				case 1:
-					if (responsesRecorded(user)) out.println(Home.header() + waitPage(user) + Home.footer);
-					else out.println(Home.header() + showPollQuestions(user) + Home.footer);
+					if (responsesRecorded(user)) out.println(Subject.header() + waitPage(user) + Subject.footer);
+					else out.println(Subject.header() + showPollQuestions(user) + Subject.footer);
 					break;
 				case 2:
-					out.println(Home.header() + resultsPage(user) + Home.footer);
+					out.println(Subject.header() + resultsPage(user) + Subject.footer);
 					break;
 				}
 			}			
@@ -115,12 +115,12 @@ public class Poll extends HttpServlet {
 				ofy().save().entity(pt);  // essential for purgeActivePolls to work properly			
 				pollQuestions.putAll(ofy().load().keys(a.questionKeys));
 				activePolls.put(a.id, 1);
-				out.println(Home.header() + showPollQuestions(user) + Home.footer);
+				out.println(Subject.header() + showPollQuestions(user) + Subject.footer);
 				return;
 			case "ClosePoll":
 				if (!user.isInstructor()) break;
 				activePolls.put(user.getAssignmentId(), 2);
-				out.println(Home.header() + resultsPage(user) + Home.footer);
+				out.println(Subject.header() + resultsPage(user) + Subject.footer);
 				return;
 			case "ResetPoll":
 				if (!user.isInstructor()) break;
@@ -128,7 +128,7 @@ public class Poll extends HttpServlet {
 				for (Key<Question> k : a.questionKeys) pollQuestions.remove(k);
 				assignments.remove(a.id);
 				activePolls.remove(a.id);
-				out.println(Home.header() + welcomePage(user,request) + Home.footer);
+				out.println(Subject.header() + welcomePage(user,request) + Subject.footer);
 				return;
 			case "Save New Question":
 				if (!user.isInstructor()) break;
@@ -138,21 +138,21 @@ public class Poll extends HttpServlet {
 					a.questionKeys.add(Key.create(Question.class,qid));
 					saveAssignment(a);
 				}
-				out.println(Home.header() + editPage(user,request) + Home.footer);
+				out.println(Subject.header() + editPage(user,request) + Subject.footer);
 				return;
 			case "SubmitResponses":
 				pt = submitResponses(user,request);
-				out.println(Home.header() + waitPage(user,pt) + Home.footer);
+				out.println(Subject.header() + waitPage(user,pt) + Subject.footer);
 				return;
 			case "AddQuestions":
 				if (!user.isInstructor()) break;
 				addQuestions(user,request);
-				out.println(Home.header() + editPage(user,request) + Home.footer);
+				out.println(Subject.header() + editPage(user,request) + Subject.footer);
 				return;
 			case "DeleteQuestions":
 				if (!user.isInstructor()) break;
 				deleteQuestions(user,request);
-				out.println(Home.header() + editPage(user,request) + Home.footer);
+				out.println(Subject.header() + editPage(user,request) + Subject.footer);
 				return;
 			}
 			doGet(request,response);

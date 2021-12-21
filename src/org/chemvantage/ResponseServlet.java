@@ -175,7 +175,7 @@ public class ResponseServlet extends HttpServlet {
 				
 			} else {
 				response.setContentType("text/html");
-				out.println(Home.header("ChemVantage User Response Analysis") + responseForm(request) + Home.footer);
+				out.println(Subject.header("ChemVantage User Response Analysis") + responseForm(request) + Subject.footer);
 			}
 		} catch (Exception e) {
 			response.setContentType("text/html");
