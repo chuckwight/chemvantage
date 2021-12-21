@@ -199,6 +199,28 @@ public class PlacementExam extends HttpServlet {
 			long assignmentId = user.getAssignmentId();
 			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 
+			// Check to see if this user is authorized to take a placement exam:
+			if (user.isInstructor()); // show the exam
+			else { // check to see if a placement exam is available
+				Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
+				if (d.nPlacementExamsRemaining>0) {  // proceed
+					// check PlacementExamTransactions to see if this is the first exam for this user
+					boolean firstExam = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).count() == 0;
+					if (firstExam) { // decrement nPlacementExamsRemaining
+						d.nPlacementExamsRemaining--;
+						ofy().save().entity(d);
+					} // otherwise proceed with the exam at no charge
+				} else {  // WHOA! This is a student and no more exams are available
+					return (Home.banner 
+						+ "<h3>Placement Exam Not Authorized</h3>"
+						+ "There are no placement exams remaining on this account. "
+						+ "Please bring this to the attention of whoever is administering "
+						+ "this placement exam. Additional exams may be ordered by contacting "
+						+ "Chuck Wight by email at admin@chemvantage.org or by phone at "
+						+ "+1-801-243-8242.");
+				}
+			}
+			
 			// Check to see if the timeAllowed has been modified by the instructor:
 			int timeAllowed = 3600;  // default value in seconds
 			if (a != null && a.timeAllowed!=null) {
