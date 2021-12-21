@@ -32,7 +32,7 @@ public class Deployment implements java.lang.Cloneable {
 	@Index	Date   created;
 	@Index	Date   lastLogin;
 			Date   expires;
-			int    nPlacementExamsRemaining;
+			int    nPlacementExamsRemaining=5;
 			
 	Deployment() {}
 	

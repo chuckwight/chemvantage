@@ -174,7 +174,7 @@ public class PlacementExam extends HttpServlet {
 					+ "Most of the question items are parameterized, so it is extremely unlikely that any two placement exams will be the same.<p>"
 					+ "ChemVantage does not store any student personal identifiable information (PII), so the results of your placement exams are secure.<p>");
 			
-			buf.append("<b>At the moment, your institution has " + d.nPlacementExamsRemaining + " placement exams remaining on account.</b><br/>"
+			buf.append("<b>Your account has " + d.nPlacementExamsRemaining + " placement exams remaining.</b><br/><br/>"
 					+ "Each unique student who downloads a placement exam will decrement this value by 1, but repeated attempts by the same student are not counted. "
 					+ "You have connected to ChemVantage as an instructor or administrator; therefore, you have unlimited free access to this tool.<p>");
 			
