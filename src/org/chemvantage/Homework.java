@@ -284,7 +284,7 @@ public class Homework extends HttpServlet {
 	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Start...");
-		boolean premiumUser = true;
+		boolean premiumUser = true;  //!user.isAnonymous() && ofy().load().type(PremiumUser.class).id(user.getHashedId()).now()!=null;
 		try {
 			// The Homework grader scores only one Question at a time, so first identify and load it
 			long questionId = Long.parseLong(request.getParameter("QuestionId"));
@@ -480,7 +480,7 @@ public class Homework extends HttpServlet {
 			}
 
 			// embed the detailed solution or hint to the exercise in the response, if appropriate
-			if (user.isInstructor() || user.isTeachingAssistant() || (studentScore > 0  && !user.isAnonymous() && premiumUser)) {
+			if (user.isInstructor() || user.isTeachingAssistant() || (studentScore > 0 && premiumUser)) {
 				buf.append("<div id=exampleLink>"
 						+ "<a href=# onClick=javascript:document.getElementById('example').style.display='';"
 						+ "document.getElementById('correctAnswer').style.display='none';"
@@ -488,6 +488,8 @@ public class Homework extends HttpServlet {
 						+ "<FONT COLOR=RED>View the detailed solution for this homework exercise</FONT></a><p></div>");
 				buf.append("<div id=example style='display: none'><b>Detailed Solution</b><p>" 
 						+ q.printAllToStudents(studentAnswer[0]) + "</div>");
+			} else if (studentScore > 0 && !user.isAnonymous()) {
+				buf.append(""); // offer to purchase ChemVantage subscription
 			}
 			
 			boolean offerHint = studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id);
