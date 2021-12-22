@@ -492,6 +492,7 @@ public class Homework extends HttpServlet {
 				Date sixMonthsFromNow = new Date(now.getTime() + 15811200000L);
 				buf.append("<div id=offerLink>"
 						+ "<a href=# onClick=javascript:document.getElementById('subscriptionOffer').style.display='';"
+						+ "document.getElementById('paypal-button-container').style.display='';>"
 						+ "document.getElementById('offerLink').style.display='none';>"
 						+ "<FONT COLOR=RED>Would you like to see the detailed step-by-step solution for this homework exercise?</FONT></a><p></div>");
 				buf.append("<div id=subscriptionOffer style='display: none; max-width: 600px;'>"
@@ -503,10 +504,10 @@ public class Homework extends HttpServlet {
 						+ "the detailed step-by-step solutions to homework problems. You will also have the ability to send reports back to ChemVantage "
 						+ "in cases where there are mistakes or issues with problems that need to be clarified.<br/><br/>To accept this offer, please select your "
 						+ "preferred payment method below. When the transaction is completed, your subscription will be activated immediately. "
-						+ "Thank you for helping to support ChemVantage.<h2>$5.00 USD</h2>");
+						+ "Thank you for helping to support ChemVantage.<h2>$5.00 USD</h2></div>");
 				
 				buf.append("<script src='https://www.paypal.com/sdk/js?client-id=AVJ8NuVQnTBwTbmkouWCjZhUT_eHeTm9fjAKwXJO0-RK-9VZFBtWm4J6V8o-47DvbOoaVCUiEb4JMXz8&currency=USD'></script>"
-						+ "<div id='paypal-button-container'></div>"
+						+ "<div id='paypal-button-container' style='display: none;'></div>"
 						+ "<script>"
 						+ "  paypal.Buttons({"
 						+ "    createOrder: function(data, actions) {"
@@ -522,13 +523,12 @@ public class Homework extends HttpServlet {
 						+ "        console.log('Capture result', orderData, JSON.stringify(orderData, null, 2));"
 				//
 						+ "        document.getElementById('subscriptionOffer').style.display='none';"
-						+ "        document.getElementById('paypal-button-container').innerHTML='<h3>Thank you for your payment!</h3>Your subscription has been activated.';"
+						+ "        document.getElementById('paypal-button-container').innerHTML='<h3>Thank you for your payment!</h3>Your subscription has been activated.<p></p>';"
 				//	or	+ "        actions.redirect('thank_you.html');
 						+ "      });"
 						+ "    }"
 						+ "  }).render('#paypal-button-container');"
-						+ "</script>"
-						+ "</div>");
+						+ "</script>");
 			}
 			
 			boolean offerHint = studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id);
