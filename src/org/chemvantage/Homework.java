@@ -285,7 +285,7 @@ public class Homework extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Start...");
 		
-		boolean premiumUser = System.getProperty("com.google.appengine.application.id").contains("chem-vantage-hrd") || user.isPremium();
+		boolean premiumUser = user.isPremium();
 		
 		try {
 			// The Homework grader scores only one Question at a time, so first identify and load it

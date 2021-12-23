@@ -313,6 +313,7 @@ public class User {
     
     public boolean isPremium() {
     	try {
+    		if (isInstructor() || isTeachingAssistant()) return true;
     		ofy().load().type(PremiumUser.class).id(hashedId).safe();
     		return true;  // found it
     	} catch (Exception e) {

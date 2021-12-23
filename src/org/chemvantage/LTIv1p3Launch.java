@@ -139,6 +139,8 @@ public class LTIv1p3Launch extends HttpServlet {
 		
 		verifyLtiMessageClaims(claims); // required
 		User user = getUserClaims(claims);
+		
+		if (d.premiumUsers && !user.isPremium()) new PremiumUser(user.hashedId);
 
 		// At this point we have all of the REQUIRED info for a valid LTI launch
 		// Process all remaining optional claims in try/catch structures to avoid
@@ -346,6 +348,11 @@ public class LTIv1p3Launch extends HttpServlet {
 				+ "admin@chemvantage.org for assistance to reactivate the account. Thank you.");
 		if (d.expires != null && d.expires.before(new Date())) d.status = "pending";
 		if (d.status == null) d.status = "pending";
+		
+		// Every account that logs in before January 15 is all premium
+		Date now = new Date();
+		Date jan15 = new Date(1642222800000L);  //
+		if (!d.premiumUsers && now.before(jan15)) d.premiumUsers=true;
 		
 		// validate the id_token audience:
 		List<String> aud = id_token.getAudience();
