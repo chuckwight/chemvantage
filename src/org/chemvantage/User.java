@@ -311,4 +311,12 @@ public class User {
     	}
     }
     
+    public boolean isPremium() {
+    	try {
+    		ofy().load().type(PremiumUser.class).id(hashedId).safe();
+    		return true;  // found it
+    	} catch (Exception e) {
+    		return false; // not found
+    	}
+    }
 }

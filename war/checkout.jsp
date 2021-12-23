@@ -4,31 +4,66 @@
 
 <%
 	String sig = request.getParameter("sig");
+	User user = User.getUser(sig);
+	if (user == null || user.isAnonymous()) response.sendError(401, "You must be logged in through your LMS to see this page.");
+	String hashedId = request.getParameter("HashedId");
+	boolean premiumUser = user.isPremium();
+	
 	Date now = new Date();
 	Date exp = new Date(now.getTime() +  15811200000L); // six months from now
 	DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+	
+	if (!premiumUser && user.getHashedId().equals(hashedId)) {  // successful payment; process a user upgrade 
+		PremiumUser u = new PremiumUser(hashedId);  // constructor automatically saves new entity
+		premiumUser = true;
+		exp = u.exp;
+	}
 %>
 
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Insert title here</title>
+<meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />
+<meta http-equiv='Pragma' content='no-cache' />
+<meta http-equiv='Expires' content='0' /><meta http-equiv='Content-type' content='text/html;charset=iso-8859-1'>
+<meta name='Description' content='An online quiz and homework site'>
+<meta name='Keywords' content='chemistry,learning,online,quiz,homework,video,textbook,open,education'>
+<meta name='msapplication-config' content='none'/><link rel='icon' type='image/png' href='/favicon.png'>
+<link rel='icon' type='image/vnd.microsoft.icon' href='/favicon.ico'>
+<title>ChemVantage Subscription</title>
 </head>
-<body>
+
+<body style='background-color: white; font-family: Calibri,Arial,sans-serif; max-width: 600px;'>
 <%= Subject.banner %>
+
 <h3>Subscription Services</h3>
-As a ChemVantage subscriber, you will have access to the detailed step-by-step solutions to each homework 
-problem after you submit the correct answer. This service costs just $5.00 and lasts for 6 months.<br/><br/>
-Please select your preferred payment method below. Your subscription will activate immediately after payment. 
-Thank you for supporting ChemVantage.
+Most ChemVantage services are offered to students and educational institutions free of charge. You can help 
+support this Open Education Resource by becoming a ChemVantage subscriber. The cost is just $5.00 USD for a six-month 
+subscription that won't expire until <%= df.format(exp) %>. Subscribers can<ul>
+<li>view the detailed step-by-step solutions to homework problems</li>
+<li>report issues or mistakes in homework solutions to ChemVantage </li>
+</ul> 
+To accept this offer, please select your preferred payment method below. When the transaction is completed, 
+your subscription will be activated immediately.
+Thank you for helping to support ChemVantage.
+
+<h2>$5.00 USD</h2>
+
+<% if (premiumUser) { %>
+
+<h3>Thank you for your payment!</h3>
+Your subscription is active and expires on <%= df.format(exp) %>
+
+<% } else { %>
+
 <div id="smart-button-container">
       <div style="text-align: center;">
         <div id="paypal-button-container"></div>
       </div>
     </div>
-  <script src="https://www.paypal.com/sdk/js?client-id=sb&enable-funding=venmo&currency=USD" data-sdk-integration-source="button-factory"></script>
-  <script>
+  <script src='https://www.paypal.com/sdk/js?client-id=AYlUNqRJZXhJJ9z7pG7GRMOwC-Y_Ke58s8eacfl1R51833ISAqOUhR8To0Km297MPcShAqm9ffp5faun&enable-funding=venmo&currency=USD'></script>
+   <script>
     function initPayPalButton() {
       paypal.Buttons({
         style: {
@@ -41,7 +76,8 @@ Thank you for supporting ChemVantage.
 
         createOrder: function(data, actions) {
           return actions.order.create({
-            purchase_units: [{"description":"6-month ChemVantage subscription for user: " + <%= sig %> + " Expires: " + <%= df.format(exp) %>,"amount":{"currency_code":"USD","value":5}}]
+            purchase_units: [{"description":"6-month ChemVantage subscription invoice <%= user.getHashedId() %>",
+            	"amount":{"currency_code":"USD","value":5}}]
           });
         },
 
@@ -50,13 +86,10 @@ Thank you for supporting ChemVantage.
             
             // Full available details
             console.log('Capture result', orderData, JSON.stringify(orderData, null, 2));
-
-            // Show a success message within this page, e.g.
-            const element = document.getElementById('paypal-button-container');
-            element.innerHTML = '';
-            element.innerHTML = '<h3>Thank you for your payment!</h3>';
-
-            // Or go to another URL:  actions.redirect('thank_you.html');
+			
+            // Submit form
+            document.getElementById('activationForm').submit();
+           // actions.redirect('thank_you.html');
             
           });
         },
@@ -68,6 +101,12 @@ Thank you for supporting ChemVantage.
     }
     initPayPalButton();
   </script>
+  
+  <form id=activationForm method=post>
+  <input type=hidden name=sig value='<%= user.getTokenSignature() %>' />
+  <input type=hidden name=HashedId value='<%= user.getHashedId() %>' />
+  </form>
+<% } %>
 
 </body>
 </html>

@@ -284,7 +284,9 @@ public class Homework extends HttpServlet {
 	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Start...");
-		boolean premiumUser = System.getProperty("com.google.appengine.application.id").contains("chem-vantage-hrd") || (!user.isAnonymous() && ofy().load().type(PremiumUser.class).id(user.getHashedId()).now()!=null);
+		
+		boolean premiumUser = System.getProperty("com.google.appengine.application.id").contains("chem-vantage-hrd") || user.isPremium();
+		
 		try {
 			// The Homework grader scores only one Question at a time, so first identify and load it
 			long questionId = Long.parseLong(request.getParameter("QuestionId"));
@@ -489,46 +491,7 @@ public class Homework extends HttpServlet {
 				buf.append("<div id=example style='display: none'><b>Detailed Solution</b><p>" 
 						+ q.printAllToStudents(studentAnswer[0]) + "</div>");
 			} else if (studentScore > 0 && !user.isAnonymous()) {
-				Date sixMonthsFromNow = new Date(now.getTime() + 15811200000L);
-				buf.append("<div id=offerLink>"
-						+ "<a href=# onClick=javascript:document.getElementById('subscriptionOffer').style.display='';"
-						+ "document.getElementById('paypal-button-container').style.display='';>"
-						+ "document.getElementById('offerLink').style.display='none';>"
-						+ "<FONT COLOR=RED>Would you like to see the detailed step-by-step solution for this homework exercise?</FONT></a><p></div>");
-				buf.append("<div id=subscriptionOffer style='display: none; max-width: 600px;'>"
-						+ "<h2 style='color: red'>This page is currently under development. Don't click the PayPal buttons yet.</h2>"
-						+ "<b>See the detailed solutions to homework problems.</b><p>" 
-						+ "Most ChemVantage services are offered to students and educational institutions free of charge. You can help "
-						+ "support this Open Education Resource by becoming a ChemVantage subscriber. The cost is just $5.00 USD for a six-month "
-						+ "subscription that won't expire until " + df.format(sixMonthsFromNow) + ". Subscriber benefits include the ability to view "
-						+ "the detailed step-by-step solutions to homework problems. You will also have the ability to send reports back to ChemVantage "
-						+ "in cases where there are mistakes or issues with problems that need to be clarified.<br/><br/>To accept this offer, please select your "
-						+ "preferred payment method below. When the transaction is completed, your subscription will be activated immediately. "
-						+ "Thank you for helping to support ChemVantage.<h2>$5.00 USD</h2></div>");
-				
-				buf.append("<script src='https://www.paypal.com/sdk/js?client-id=AVJ8NuVQnTBwTbmkouWCjZhUT_eHeTm9fjAKwXJO0-RK-9VZFBtWm4J6V8o-47DvbOoaVCUiEb4JMXz8&currency=USD'></script>"
-						+ "<div id='paypal-button-container' style='display: none;'></div>"
-						+ "<script>"
-						+ "  paypal.Buttons({"
-						+ "    createOrder: function(data, actions) {"
-						+ "      return actions.order.create({"
-						+ "        purchase_units: [{"
-						+ "          amount: {value: '5.00'}"
-						+ "        }]"
-						+ "      });"
-						+ "    },"
-						+ "    onApprove: function(data, actions) {"
-						+ "      return actions.order.capture().then(function(orderData) {"
-				// demo code	
-						+ "        console.log('Capture result', orderData, JSON.stringify(orderData, null, 2));"
-				//
-						+ "        document.getElementById('subscriptionOffer').style.display='none';"
-						+ "        document.getElementById('paypal-button-container').innerHTML='<h3>Thank you for your payment!</h3>Your subscription has been activated.<p></p>';"
-				//	or	+ "        actions.redirect('thank_you.html');
-						+ "      });"
-						+ "    }"
-						+ "  }).render('#paypal-button-container');"
-						+ "</script>");
+				buf.append("<a href='/checkout.jsp?sig=" + user.getTokenSignature() + "' target=_blank style='color: red'>Would you like to see the detailed step-by-step solution to this problem?</a><p>");
 			}
 			
 			boolean offerHint = studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id);
