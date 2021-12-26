@@ -55,6 +55,7 @@ public class Question implements Serializable, Cloneable {
 			String editorId;
 			String notes;
 			String learn_more_url;
+			boolean scrambleChoices;
 			// Note: the parameters array formerly had the attribute @Transient javax.persistence.Transient
 	@Ignore		int[] parameters = {0,0,0,0};
 	@Index		boolean isActive = false;
@@ -259,15 +260,16 @@ public class Question implements Serializable, Cloneable {
 	public String print(String showWork,String studentAnswer) {
 		StringBuffer buf = new StringBuffer();
 		char choice = 'a';
+		List<Character> choice_keys = new ArrayList<Character>();
+		Random rand = new Random();
 		switch (getQuestionType()) {
 		case 1: // Multiple Choice
-			buf.append(text);
-			//if (learn_more_url != null) buf.append(" <a href='" + learn_more_url + "' target=_blank><img src=/images/learn_more.png alt='learn more here' /></a>");
-			buf.append("<br/>");
+			buf.append(text + "<br/>");
+			for (int i=0; i<nChoices; i++) choice_keys.add(Character.valueOf((char)('a'+i)));
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best answer:</FONT><br/>");
-			for (int i = 0; i < nChoices; i++) {
-				buf.append("<label><input type=radio name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED />":" />") + choices.get(i) + "</label><br/>");
-				choice++;
+			while (choice_keys.size()>0) {
+				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
+				buf.append("<label><input type=radio name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED />":" />") + choices.get(choice-'a') + "</label><br/>");
 			}
 			break;
 		case 2: // True/False
@@ -278,12 +280,12 @@ public class Question implements Serializable, Cloneable {
 			buf.append("<label><input type=radio name=" + this.id + " value='false'" + (studentAnswer.equals("false")?" CHECKED />":" />") + " False</label><br/>");
 			break;
 		case 3: // Select Multiple
-			buf.append(text);
-			buf.append("<br/>");
+			buf.append(text + "<br/>");
+			for (int i=0; i<nChoices; i++) choice_keys.add(Character.valueOf((char)('a'+i)));
 			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><br/>");
-			for (int i = 0; i < nChoices; i++) {
-				buf.append("<label><input type=checkbox name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED />":" />") + choices.get(i) + "</label><br/>");
-				choice++;
+			while (choice_keys.size()>0) {
+				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
+				buf.append("<label><input type=checkbox name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED />":" />") + choices.get(choice-'a') + "</label><br/>");
 			}
 			break;
 		case 4: // Fill-in-the-Word
@@ -652,6 +654,7 @@ public class Question implements Serializable, Cloneable {
 							+ "<input size=30 name=" + choiceNames[i] + " /><br/>");
 					choice++;
 				}
+				buf.append("<label>Check here to scramble the choices: <input type=checkbox name=ScrambleChoices value=true " + (this.scrambleChoices?"CHECKED":"") + " /></label><br/>");
 				break;
 			case 2: // True/False
 				buf.append("Question Text:<br/><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
@@ -680,6 +683,7 @@ public class Question implements Serializable, Cloneable {
 							+ "<input size=30 name=" + choiceNames[i] + " /><br/>");
 					choice++;
 				}
+				buf.append("<label>Check here to scramble the choices: <input type=checkbox name=ScrambleChoices value=true " + (this.scrambleChoices?"CHECKED":"") + " /></label><br/>");
 				break;
 			case 4: // Fill-in-the-Word
 				buf.append("Question Text:<br/><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 

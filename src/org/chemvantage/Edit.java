@@ -1063,6 +1063,7 @@ public class Edit extends HttpServlet {
 		q.notes = "";
 		q.authorId = request.getParameter("AuthorId");
 		q.editorId = request.getParameter("EditorId");
+		q.scrambleChoices = Boolean.parseBoolean(request.getParameter("ScrambleChoices"));
 		q.validateFields();
 		return q;
 	}

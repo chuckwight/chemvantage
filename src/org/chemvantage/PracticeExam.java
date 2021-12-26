@@ -542,7 +542,7 @@ public class PracticeExam extends HttpServlet {
 			for (Key<Question> k : questionKeys) {
 				Question q=null;
 				String studentAnswer[] = request.getParameterValues(Long.toString(k.getId()));
-				if (studentAnswer != null) for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
+				if (studentAnswer != null) for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] = studentAnswer[i].compareTo(studentAnswer[0])>0?studentAnswer[0]+studentAnswer[i]:studentAnswer[i]+studentAnswer[0];
 				else studentAnswer = new String[] {""};
 				if (studentAnswer[0].length() > 0) { // an answer was submitted
 					q = examQuestions.get(k);

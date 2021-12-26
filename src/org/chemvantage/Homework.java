@@ -319,7 +319,7 @@ public class Homework extends HttpServlet {
 				studentAnswer = new String[1];
 				studentAnswer[0] = "";
 			}
-			else for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] += studentAnswer[i];
+			else for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] = studentAnswer[i].compareTo(studentAnswer[0])>0?studentAnswer[0]+studentAnswer[i]:studentAnswer[i]+studentAnswer[0];
 			
 			String showWork = request.getParameter("ShowWork"+q.id);
 			if (showWork==null) showWork="";  // required because later we check to see if showWork.isEmpty()
