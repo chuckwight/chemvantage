@@ -125,7 +125,7 @@ The results are returned to the LMS to use as a tool for advising the student wh
 course to get the proper preparation. As with the other assignment types, students may be permitted to repeat the placement exam, depending 
 on the settings in the LMS. However, ChemVantage does not charge the institution for repeat exams. The advantage of allowing students to 
 repeat the placement exam is to get a sense of how determined the student is to get into the course. After all, if a student is willing to 
-work really hard just to be admitted to the course and ultimately scored well on the exam, wouldn't you want to have that student in your 
+worked really hard to be admitted to the course and ultimately scored well on the exam, wouldn't you want to have that student in your 
 course anyway?
 </div>
 
