@@ -491,7 +491,7 @@ public class Homework extends HttpServlet {
 				buf.append("<div id=example style='display: none'><b>Detailed Solution</b><p>" 
 						+ q.printAllToStudents(studentAnswer[0]) + "</div>");
 			} else if (studentScore > 0 && !user.isAnonymous()) {
-				buf.append("<a href='/checkout.jsp?sig=" + user.getTokenSignature() + "' target=_blank style='color: red'>Would you like to see the detailed step-by-step solution to this problem?</a><p>");
+				buf.append("<a href='/checkout0.jsp?sig=" + user.getTokenSignature() + "' target=_blank style='color: red'>Would you like to see the detailed step-by-step solution to this problem?</a><p>");
 			}
 			
 			boolean offerHint = studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id);
