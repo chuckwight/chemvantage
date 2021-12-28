@@ -200,24 +200,26 @@ public class PlacementExam extends HttpServlet {
 			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 
 			// Check to see if this user is authorized to take a placement exam:
-			if (user.isInstructor()); // show the exam
+			boolean repeatExam = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).count() > 0;
+			if (user.isInstructor() || repeatExam); // show the exam
 			else { // check to see if a placement exam is available
 				Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
-				if (d.nPlacementExamsRemaining>0) {  // proceed
-					// check PlacementExamTransactions to see if this is the first exam for this user
-					boolean firstExam = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).count() == 0;
-					if (firstExam) { // decrement nPlacementExamsRemaining
-						d.nPlacementExamsRemaining--;
-						ofy().save().entity(d);
-					} // otherwise proceed with the exam at no charge
+				if (d.nPlacementExamsRemaining>0) {  // decrement nPlacementExamsRemaining
+					d.nPlacementExamsRemaining--;
+					ofy().save().entity(d);
 				} else {  // WHOA! This is a student and no more exams are available
 					return (Subject.banner 
-						+ "<h3>Placement Exam Not Authorized</h3>"
-						+ "There are no placement exams remaining on this account. "
-						+ "Please bring this to the attention of whoever is administering "
-						+ "this placement exam. Additional exams may be ordered by contacting "
-						+ "Chuck Wight by email at admin@chemvantage.org or by phone at "
-						+ "+1-801-243-8242.");
+						+ "<h3>Purchase a ChemVantage Placement Exam</h3>"
+						+ "Your school or university has assigned you to complete a General Chemistry Placement Exam "
+						+ "to determine your level of preparation to take the course. "
+						+ "You may click the link below to purchase a placement exam now for $6.00 USD. "
+						+ "There is no additional charge for you to repeat the exam if allowed by the settings in "
+						+ "your school's learning management system. With your completed payment, ChemVantage is pleased to "
+						+ "provide a complimentary 6-month subscription that gives you enhanced access to the detailed "
+						+ "step-by-step solutions to ChemVantage homework problems.<br/><br/>"
+						+ "When the payment process is completed you may relaunch this assignment "
+						+ "from your LMS to start the exam.<br/><br/>"
+						+ "<a href='/checkout1.jsp?sig=" + user.getTokenSignature() + "' target=_blank >Purchase this exam</a><br/><br/>");
 				}
 			}
 			
@@ -228,18 +230,25 @@ public class PlacementExam extends HttpServlet {
 				user = User.getUser(user.getTokenSignature(),timeAllowed/60+30);
 			}
 			
+			// Now we will retrieve or create a PlacementExamTransaction entity:
+			PlacementExamTransaction pt = null;
+			
+			
 			// Check to see if this user has any pending exams:
+			// A blank transaction means a student has paid for an exam but not taken it yet
 			Date now = new Date();
 			Date startTime = new Date(now.getTime()-timeAllowed*1000);  // about 1 hour ago depending on timeAllowed ago 
-			boolean newExam = true;
-			
-			PlacementExamTransaction pt = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("graded",null).filter("downloaded >",startTime).first().now();
-			
-			if (pt == null) {  // this is a valid request for a new exam with at least 3 topicIds; create a new transaction
+			boolean resumingExam = false;
+			pt = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("graded",null).filter("downloaded >",startTime).first().now();
+			if (pt != null) resumingExam = true;
+			else {  // this is a new exam, either newly paid or authorized retake
+				pt = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("graded",null).filter("downloaded ",null).first().now(); // newly  paid
+				Long transactionId = pt==null?null:pt.id;  // use the same id if it exists
 				pt = new PlacementExamTransaction(a.topicIds,user.getId(),now,null,new int[a.topicIds.size()],new int[a.topicIds.size()],user.getLisResultSourcedid());
+				pt.id = transactionId;
 				pt.assignmentId = assignmentId;
 				ofy().save().entity(pt).now();	
-			} else newExam = false;
+			}
 			
 			// past this point we will present a practice exam to the student. 
 			
@@ -291,7 +300,7 @@ public class PlacementExam extends HttpServlet {
 			buf.append("<h2>General Chemistry Placement Exam</h2>");
 						
 			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded. ");
-			if (!newExam) buf.append("You are resuming a placement exam originally downloaded at " + pt.downloaded);
+			if (resumingExam) buf.append("You are resuming a placement exam originally downloaded at " + pt.downloaded);
 			
 			buf.append("\n<FORM NAME=PlacementExamForm METHOD=POST ACTION=PlacementExam "
 					+ "onSubmit=\"return confirm('Submit this placement exam for grading now. Are you sure?')\">");
@@ -314,7 +323,7 @@ public class PlacementExam extends HttpServlet {
 				possibleScores[a.topicIds.indexOf(q.topicId)] += q.pointValue;
 				q.setParameters((int)(pt.id ^ q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
-				if (newExam) pt.questionKeys.add(k);
+				if (resumingExam) pt.questionKeys.add(k);
 			}
 			buf.append("</OL>");
 

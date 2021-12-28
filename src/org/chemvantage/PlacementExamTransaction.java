@@ -46,7 +46,7 @@ public class PlacementExamTransaction implements Serializable {
 			Map<Key<Question>,String> questionShowWork = new HashMap<Key<Question>,String>();
 			Map<Key<Question>,Integer> questionScores = new HashMap<Key<Question>,Integer>();
 
-	PlacementExamTransaction() {}
+	public PlacementExamTransaction() {}
 
 	PlacementExamTransaction(List<Long> topicIds,String userId,Date downloaded,Date graded,int[] scores,int[] possibleScores,String lis_result_sourcedid) {
 		this.topicIds = topicIds;
@@ -57,7 +57,11 @@ public class PlacementExamTransaction implements Serializable {
 		this.possibleScores = possibleScores;
 		this.lis_result_sourcedid = lis_result_sourcedid;
 	}
-
+	
+	public void setUserId(String hashedId) {
+		this.userId = hashedId;
+	}
+	
     boolean topicsMatch(List<Long> topicIds) {  // matches if both Lists have identical members but not necessarily in the same order
     	if (this.topicIds.size() != topicIds.size()) return false;
     	for (Long tId : this.topicIds) if (!topicIds.contains(tId)) return false;
