@@ -174,11 +174,17 @@ public class PlacementExam extends HttpServlet {
 					+ "Most of the question items are parameterized, so it is extremely unlikely that any two placement exams will be the same.<p>"
 					+ "ChemVantage does not store any student personal identifiable information (PII), so the results of your placement exams are secure.<p>");
 			
+			buf.append("There are two ways to pay for placement exams:<ol>"
+					+ "<li>You can purchase 100 or more exams for this ChemVantage account for $1.00 USD each. Every unique student who downloads a placement exam "
+					+ "will use one exam, but repeated attempts by the same student are not counted.</li>"
+					+ "<li>When there are no exams remaining in your account, each student will be charged $6.00 USD to take the exam. Retakes are free.</li></ol>"
+					+ "You can use the settings in your LMS to restrict the number of retakes, if desired.<br/><br/>");
+			
 			buf.append("<b>Your account has " + d.nPlacementExamsRemaining + " placement exams remaining.</b><br/><br/>"
-					+ "Each unique student who downloads a placement exam will decrement this value by 1, but repeated attempts by the same student are not counted. "
 					+ "You have connected to ChemVantage as an instructor or administrator; therefore, you have unlimited free access to this tool.<p>");
 			
 			buf.append("From here, you may<UL>"
+					+ "<LI><a href='/checkout2.jsp?sig=" + user.getTokenSignature() + "' target=_blank >Purchase placement exams for your ChemVantage account</a></LI>"
 					+ "<LI><a href='/PlacementExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + "'>Customize this exam</a> to set the time allowed and select the available question items.</LI>"
 					+ (supportsMembership?"<LI><a href='/PlacementExam?UserRequest=ReviewExamScores&sig=" + user.getTokenSignature() + "'>Review the exam results</a> and (optionally) assign partial credit for answers</LI>":"")
 					+ "</UL>");

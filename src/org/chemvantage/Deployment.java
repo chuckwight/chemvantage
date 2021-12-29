@@ -91,6 +91,22 @@ public class Deployment implements java.lang.Cloneable {
 			return null;
 		}
 	}
+	public String getPlatformDeploymentId() {
+		return this.platform_deployment_id;
+	}
+	
+	public int getNPlacementExamsRemaining() {
+		return this.nPlacementExamsRemaining;
+	}
+	
+	public void putNPlacementExamsRemaining(int n) {
+		this.nPlacementExamsRemaining = n;
+		ofy().save().entity(this);
+	}
+	
+	public String getOrganization() {
+		return this.organization;
+	}
 	
 	boolean equivalentTo(Deployment d) {
 		return	((this.platform_deployment_id != null && this.platform_deployment_id.equals(d.platform_deployment_id)) 	|| (d.platform_deployment_id == null && this.platform_deployment_id == null)) &&

@@ -9,11 +9,10 @@
 	String hashedId = request.getParameter("HashedId");
 	boolean premiumUser = user.isPremium();
 	boolean paidExam = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).count()>0;
-	
-	//Date now = new Date();
-	//Date exp = new Date(now.getTime() +  15811200000L); // six months from now
-	DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-	
+	String client_id = System.getProperty("com.google.appengine.application.id").equals("dev-vantage-hrd")?
+			"AVJ8NuVQnTBwTbmkouWCjZhUT_eHeTm9fjAKwXJO0-RK-9VZFBtWm4J6V8o-47DvbOoaVCUiEb4JMXz8":  // Paypal sandbox client_id
+			"AYlUNqRJZXhJJ9z7pG7GRMOwC-Y_Ke58s8eacfl1R51833ISAqOUhR8To0Km297MPcShAqm9ffp5faun";  // Paypal live client_id
+
 	if (!paidExam && user.getHashedId().equals(hashedId)) {  // successful payment; process a user upgrade 
 		PlacementExamTransaction pt = new PlacementExamTransaction();
 		pt.setUserId(hashedId);
@@ -66,7 +65,7 @@ Please return to your school's LMS to launch the placement exam now.<br/><br/>
         <div id="paypal-button-container"></div>
       </div>
     </div>
-  <script src='https://www.paypal.com/sdk/js?client-id=AYlUNqRJZXhJJ9z7pG7GRMOwC-Y_Ke58s8eacfl1R51833ISAqOUhR8To0Km297MPcShAqm9ffp5faun&enable-funding=venmo&currency=USD'></script>
+  <script src='https://www.paypal.com/sdk/js?client-id=<%= client_id %>&enable-funding=venmo&currency=USD'></script>
    <script>
     function initPayPalButton() {
       paypal.Buttons({
@@ -111,6 +110,12 @@ Please return to your school's LMS to launch the placement exam now.<br/><br/>
   <input type=hidden name=HashedId value='<%= user.getHashedId() %>' />
   </form>
 <% } %>
+
+<hr/><img style='padding-left: 15px; vertical-align: middle;' src=images/CVLogo_tiny.png alt='ChemVantage logo' />&nbsp;
+<a href=/about.html>About ChemVantage</a> | 
+<a href=/about.html#terms>Terms and Conditions of Use</a> | 
+<a href=/about.html#privacy>Privacy Policy</a> | 
+<a href=/about.html#copyright>Copyright</a>
 
 </body>
 </html>

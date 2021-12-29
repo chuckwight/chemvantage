@@ -8,7 +8,10 @@
 	if (user == null || user.isAnonymous()) response.sendError(401, "You must be logged in through your LMS to see this page.");
 	String hashedId = request.getParameter("HashedId");
 	boolean premiumUser = user.isPremium();
-	
+	String client_id = System.getProperty("com.google.appengine.application.id").equals("dev-vantage-hrd")?
+			"AVJ8NuVQnTBwTbmkouWCjZhUT_eHeTm9fjAKwXJO0-RK-9VZFBtWm4J6V8o-47DvbOoaVCUiEb4JMXz8":  // Paypal sandbox client_id
+			"AYlUNqRJZXhJJ9z7pG7GRMOwC-Y_Ke58s8eacfl1R51833ISAqOUhR8To0Km297MPcShAqm9ffp5faun";  // Paypal live client_id
+
 	Date now = new Date();
 	Date exp = new Date(now.getTime() +  15811200000L); // six months from now
 	DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
@@ -40,7 +43,7 @@
 <h3>Subscription Services</h3>
 Most ChemVantage services are offered to students and educational institutions free of charge. You can help 
 support this Open Education Resource by becoming a ChemVantage subscriber. The cost is just $5.00 USD for a six-month 
-subscription that won't expire until <%= df.format(exp) %>. Subscribers can<ul>
+subscription that won't expire until <%= df.format(exp) %>. As a subscriber, you can<ul>
 <li>view the detailed step-by-step solutions to homework problems</li>
 <li>report issues or mistakes in homework solutions to ChemVantage </li>
 </ul> 
@@ -62,7 +65,7 @@ Your subscription is active and expires on <%= df.format(exp) %>
         <div id="paypal-button-container"></div>
       </div>
     </div>
-  <script src='https://www.paypal.com/sdk/js?client-id=AYlUNqRJZXhJJ9z7pG7GRMOwC-Y_Ke58s8eacfl1R51833ISAqOUhR8To0Km297MPcShAqm9ffp5faun&enable-funding=venmo&currency=USD'></script>
+  <script src='https://www.paypal.com/sdk/js?client-id=<%= client_id %>&enable-funding=venmo&currency=USD'></script>
    <script>
     function initPayPalButton() {
       paypal.Buttons({
@@ -107,6 +110,13 @@ Your subscription is active and expires on <%= df.format(exp) %>
   <input type=hidden name=HashedId value='<%= user.getHashedId() %>' />
   </form>
 <% } %>
+
+<hr/><img style='padding-left: 15px; vertical-align: middle;' src=images/CVLogo_tiny.png alt='ChemVantage logo' />&nbsp;
+<a href=/about.html>About ChemVantage</a> | 
+<a href=/about.html#terms>Terms and Conditions of Use</a> | 
+<a href=/about.html#privacy>Privacy Policy</a> | 
+<a href=/about.html#copyright>Copyright</a>
+
 
 </body>
 </html>
