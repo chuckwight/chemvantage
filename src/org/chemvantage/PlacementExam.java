@@ -329,7 +329,7 @@ public class PlacementExam extends HttpServlet {
 				possibleScores[a.topicIds.indexOf(q.topicId)] += q.pointValue;
 				q.setParameters((int)(pt.id ^ q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
-				if (resumingExam) pt.questionKeys.add(k);
+				if (!resumingExam) pt.questionKeys.add(k);
 			}
 			buf.append("</OL>");
 
