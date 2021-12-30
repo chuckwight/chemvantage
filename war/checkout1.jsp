@@ -38,7 +38,7 @@
 <title>ChemVantage Placement Exam</title>
 </head>
 
-<body style='background-color: white; font-family: Calibri,Arial,sans-serif; max-width: 600px;'>
+<body style='background-color: white; font-family: Calibri,Arial,sans-serif; max-width: 800px;'>
 <%= Subject.banner %>
 
 <h3>Purchase a ChemVantage Placement Exam</h3>

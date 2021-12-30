@@ -72,7 +72,7 @@ For instant account approval, your Email domain (above) should match the Home Pa
 
 <div id=remainder style="display:none">
 Select the type of organization:<br/>
-<label><input type=radio name=typ value=nonprofit <%= ("nonprofit".equals(typ)?"checked":"") %> /> Public or nonprofit educational institution (free for up to 1000 users)</label><br/>
+<label><input type=radio name=typ value=nonprofit <%= ("nonprofit".equals(typ)?"checked":"") %> /> Public or nonprofit educational institution (free for unlimited users)</label><br/>
 <label><input type=radio name=typ value=personal <%= ("personal".equals(typ)?"checked":"") %> /> Small business or Personal account ($20/month for up to 5 users)</label><br/>
 <label><input type=radio name=typ value=forprofit <%= ("forprofit".equals(typ)?"checked":"") %> /> Commercial account ($5000/year for up to 10000 users)</label><br/>
 If your need exceeds the user limits above, please contact us at admin@chemvantage.org for pricing options.<br/><br/>
