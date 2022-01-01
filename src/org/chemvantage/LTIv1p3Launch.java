@@ -349,11 +349,6 @@ public class LTIv1p3Launch extends HttpServlet {
 		if (d.expires != null && d.expires.before(new Date())) d.status = "pending";
 		if (d.status == null) d.status = "pending";
 		
-		// Every account that logs in before January 15 is all premium
-		Date now = new Date();
-		Date jan15 = new Date(1642222800000L);  //
-		if (!d.premiumUsers && now.before(jan15)) d.premiumUsers=true;
-		
 		// validate the id_token audience:
 		List<String> aud = id_token.getAudience();
 		if (aud.size()==1 && aud.get(0).contentEquals(d.client_id)); // OK, continue
