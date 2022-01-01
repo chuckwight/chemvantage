@@ -115,6 +115,11 @@ can be set up in a few minutes from inside your LMS. You may select any of the t
 or you can create your own question. Students log into the LMS using their phone or laptop in class to respond to the question items. 
 The responses are then displayed on the classroom computer so students can see how their response compared with the responses of others. 
 <br/>
+
+<div style='text-align: center;'><a href='mailto:admin@chemvantage.org'>Schedule a free demo in-class poll</a></div>
+</div>
+
+<div class='seg2'>
 <br/><b>Placement Exams</b><br/><br/>
 Each placement exam consists of 40 question items (30 two-point items plus 10 four-point items). Question items are randomly selected 
 from three different topic ares in order to assess the student's<ul>
@@ -128,9 +133,11 @@ on the settings in the LMS. However, ChemVantage does not charge for repeat exam
 repeat the placement exam is to get a sense of how determined the student is to get into the course. After all, if a student is willing to 
 worked really hard to be admitted to the course and ultimately scores well on the exam, wouldn't you want to have that student in your 
 course anyway?
+
+<div style='text-align: center;'><a href='mailto:admin@chemvantage.org'>Schedule a free demo placement exam</a></div>
 </div>
 
-<div class='seg2'>
+<div class='seg1'>
 <!--  <img class='float' src='images/img05.jpg' alt='student taking notes'/> -->
 <br/><b>Video lectures</b><br/><br/>
 Some of the more important lessons in the text have been captured as 10-minute instructional videos. Most of the videos have short 
