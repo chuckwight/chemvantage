@@ -70,7 +70,7 @@ tools, so a good practice is to make each quiz or homework assignment worth no m
 <img class='float' src='images/img04.jpg' alt='boys studying'/>
 <br/><b>Quizzes</b><br/><br/>
 Each ChemVantage quiz consists of 10 short-answer question items randomly selected from a bank of 60-80 items. Question types
-include multiple choice, true/false, checkbox, fill-in-the-blank, and numeric answers. The quizzes  are designed to 
+include multiple choice, true/false, checkbox, fill-in-the-blank, and numeric answers. The quizzes are designed to 
 ensure that students have completed the reading assignment before coming to class. Students are permitted to repeat the 
 quizzes (in the spirit of being a learning tool rather than an assessment). However, it is unlikely that any two quizzes 
 will contain exactly the same set of questions. Of course, you can configure your LMS to restrict the number of retries. 
@@ -102,14 +102,15 @@ Students can take timed practice exams that draw questions from any group of 3 o
 or less to complete, and includes a selection of 10 quiz questions worth 2 points each, 5 of the easier homework problems at 10 points each, 
 and 2 more challenging homework problems worth 15 points each. The scores on each exam are disaggregated by topic to reveal the student's 
 areas of strength and weakness.  Practice exams may be repeated as often as desired. Questions are drawn at random from the database, 
-and the numeric questions are parameterized, making it extremely unlikely that a student will ever get two identical practice exams.<br/><br/>
+and the numeric questions are parameterized, making it extremely unlikely that a student will ever get two identical practice exams. 
+Instructors may (optionally) review the exam results and award partial credit.<br/><br/>
 
 <div style='text-align: center;'><a href='/PracticeExam?sig=<%= sig %>'>Try a sample practice exam</a></div>
 </div>
 
 <div class='seg1'>
 <br/><b>In-class polls</b><br/><br/>
-Clickers have become popular in recent years, but they increase the cost of the course for students and faculty. A ChemVantage polls 
+Clickers have become popular in recent years, but they increase the cost of the course for students and faculty. A ChemVantage poll 
 can be set up in a few minutes from inside your LMS. You may select any of the thousands of available quiz, homework or exam questions, 
 or you can create your own question. Students log into the LMS using their phone or laptop in class to respond to the question items. 
 The responses are then displayed on the classroom computer so students can see how their response compared with the responses of others. 
@@ -123,9 +124,9 @@ from three different topic ares in order to assess the student's<ul>
 </ul>
 The results are returned to the LMS to use as a tool for advising the student whether to take General Chemistry or perhaps a lower-level 
 course to get the proper preparation. As with the other assignment types, students may be permitted to repeat the placement exam, depending 
-on the settings in the LMS. However, ChemVantage does not charge the institution for repeat exams. The advantage of allowing students to 
+on the settings in the LMS. However, ChemVantage does not charge for repeat exams. The advantage of allowing students to 
 repeat the placement exam is to get a sense of how determined the student is to get into the course. After all, if a student is willing to 
-worked really hard to be admitted to the course and ultimately scored well on the exam, wouldn't you want to have that student in your 
+worked really hard to be admitted to the course and ultimately scores well on the exam, wouldn't you want to have that student in your 
 course anyway?
 </div>
 
