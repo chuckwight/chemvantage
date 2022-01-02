@@ -148,6 +148,15 @@ public class Homework extends HttpServlet {
 			buf.append("<h2>Homework - " + t.title + "</h2>");
 			buf.append("<h3>Instructor Page</h3>");
 			
+			if (a.lis_outcome_service_url != null) { // give LTIv1.1 deprecation warning
+				buf.append("<div style='border: medium solid red;'>"
+						+ "<h4>Warning: This assignment uses LTI version 1.1, which is obsolete</h4>"
+						+ "This LTI specification has been deprecated due to security limitations, so this assignment will "
+						+ "not be accessible after June 30, 2022. You may re-register your LMS with ChemVantage using the "
+						+ "current LTI Advantage specification <a href=/lti/registration target=_blank>using this link</a>.<br/><br/>"
+						+ "</div><br/>");
+			}
+			
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + "'>Customize this assignment</a> by selecting the assigned question items.</LI>"
 					+ (supportsMembership?"<LI><a href='/Homework?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' homework scores</a></LI>":"")
@@ -188,6 +197,10 @@ public class Homework extends HttpServlet {
 
 	String printHomework(User user, long tId, long hintQuestionId) {
 		StringBuffer buf = new StringBuffer();
+		if (user.lis_result_sourcedid != null) {  // LTIv1.1 launch; show deprecation warning
+			buf.append("<script>alert('Alert! This assignment will not be accessible after June 30, 2022.');</script>");
+		}
+		
 		try {
 			long assignmentId = user.getAssignmentId(); // should be non-zero for LTI user
 			Assignment hwa = qcache.getAssignment(assignmentId);

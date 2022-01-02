@@ -343,10 +343,10 @@ public class LTIv1p3Launch extends HttpServlet {
 		
 		if (d==null) throw new Exception("The deployment was not found in the ChemVantage database. You "
 				+ "can register your LMS with ChemVantage at https://www.chemvantage.org/lti/registration");
+		if (d.expires != null && d.expires.before(new Date())) d.status = "blocked";
 		if ("blocked".equals(d.status)) throw new Exception("Sorry, we were unable to launch ChemVantage from this "
 				+ "account, most likely because the subscription has lapsed or is unpaid. Please contact "
 				+ "admin@chemvantage.org for assistance to reactivate the account. Thank you.");
-		if (d.expires != null && d.expires.before(new Date())) d.status = "pending";
 		if (d.status == null) d.status = "pending";
 		
 		// validate the id_token audience:

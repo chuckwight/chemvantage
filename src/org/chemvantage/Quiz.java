@@ -142,7 +142,16 @@ public class Quiz extends HttpServlet {
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
 			
 			buf.append("<h2>General Chemistry Quiz - Instructor Page</h2>");
-			buf.append("Topic covered on this quiz: " + t.getTitle() + "<br/>");
+			buf.append("Topic covered on this quiz: " + t.getTitle() + "<br/><br/>");
+			
+			if (a.lis_outcome_service_url != null) { // give LTIv1.1 deprecation warning
+				buf.append("<div style='border: medium solid red;'>"
+						+ "<h4>Warning: This assignment uses LTI version 1.1, which is obsolete</h4>"
+						+ "This LTI specification has been deprecated due to security limitations, so this assignment will "
+						+ "not be accessible after June 30, 2022. You may re-register your LMS with ChemVantage using the "
+						+ "current LTI Advantage specification <a href=/lti/registration target=_blank>using this link</a>.<br/><br/>"
+						+ "</div><br/>");
+			}
 			
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/Quiz?UserRequest=AssignQuizQuestions&sig=" + user.getTokenSignature() + "'>Customize this quiz</a> to set the time allowed and select the available question items.</LI>"
@@ -181,8 +190,12 @@ public class Quiz extends HttpServlet {
 
 	String printQuiz(User user, long tId) {
 		if (user == null) return "<h2>Launch failed because user was not authorized.</h2>";
-		
 		StringBuffer buf = new StringBuffer();
+		
+		if (user.lis_result_sourcedid != null) {  // LTIv1.1 launch; show deprecation warning
+			buf.append("<script>alert('Alert! This assignment will not be accessible after June 30, 2022.');</script>");
+		}
+		
 		try {
 			Assignment qa = qcache.getAssignment(user.getAssignmentId());
 			long assignmentId = qa==null?0L:qa.id;
