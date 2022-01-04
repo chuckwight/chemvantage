@@ -152,9 +152,10 @@ public class Subject {
 			+ "<a href=/about.html#copyright>Copyright</a>\n"
 			+ "</body>\n</html>";
 
-	public static String banner = "<div style='padding=30px; font-family: Calibri,Arial,sans-serif;'>\n"
-			+ "	<span style='color: blue; font-size: 2em; font-weight: bold;'>Chem</span>\n"
-			+ "	<span style='color: red; font-size: 2em; font-weight: bold;'>Vantage</span><br/>\n"
-			+ "	An Open Education Resource for General Chemistry<br/>\n"
-			+ "	</div>";
+	public static String banner = "<div style='padding=30px; font-family: Calibri,Arial,sans-serif;'>"
+			+ "<a href='/' style='text-decoration: none;'>"
+			+ "	<span style='color: blue; font-size: 2em; font-weight: bold;'>Chem</span><span style='color: red; font-size: 2em; font-weight: bold;'>Vantage</span><br/>\n"
+			+ "</a>"
+			+ "	An Open Education Resource for General Chemistry<br/>"
+			+ "	</div>\n";
 }
