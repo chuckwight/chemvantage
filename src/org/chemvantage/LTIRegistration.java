@@ -490,11 +490,13 @@ public class LTIRegistration extends HttpServlet {
 						+   "<li>JSON URL: " + iss + "/lti/registration?UserRequest=config&lms=canvas"
 						+   "</ul>"
 						+ "<li>Click Save."
-						+ "<li>Copy or write down the client_id and deployment_id created in step 1. "
-						+ "Canvas uses the developer key as the client_id, so it can be viewed from the list of "
-						+ "developer keys. It is a numeric value that looks something like 32570000000000041. "
-						+ "The deployment_id can be found in Settings | Apps | App Configurations by opening the "
-						+ "settings menu for ChemVantage."
+						+ "<li>Copy or write down the client_id and deployment_id created in step 1. This is the tricky part, "
+						+ "because Canvas doesn't make it easy:<ul>"
+						+ " <li>Canvas uses the developer key as the client_id, so it can be viewed from the list of "
+						+ "developer keys. It is a numeric value that looks something like <b>32570000000000041</b>.</li> "
+						+ " <li>The deployment_id can be found in Settings | Apps | App Configurations by opening the "
+						+ "settings menu for ChemVantage. It is a compound value that consists of a number and a hex string "
+						+ "separated by a colon and looks something like <b>10408:7db438070728c02373713c12c73869b3af470b68</b>.</li></ul>"
 						+ "<li>Add ChemVantage as an External App to your account using the client_id created in step 1 "
 						+ "(<a href=https://community.canvaslms.com/docs/DOC-16730-42141110273>see detailed instructions here</a>)"
 						+ "<li>Click the link below to register the new client_id and deployment_id created in step 1 with ChemVantage</ol>");
@@ -710,13 +712,14 @@ public class LTIRegistration extends HttpServlet {
 						+ "Deployment ID: <input type=text size=40 name=DeploymentId><p>");
 				break;
 			case "canvas":
-				buf.append("Canvas account URL: <input type=text size=40 name=AccountUrl placeholder=https://myschool.instructure.com><br>");
+				buf.append("Canvas account URL: <input type=text size=40 name=AccountUrl placeholder=https://myschool.instructure.com><p>");
 				buf.append("Canvas uses the developer key as the client_id, so enter that value from the list of "
-						+ "developer keys. It is a numeric value that looks something like 32570000000000041.<p>"
-						+ "The deployment_id can be found in Settings | Apps | App Configurations by opening the "
-						+ "settings menu for ChemVantage.<br>");
-				buf.append("Client ID: <input type=text size=40 name=ClientId><br>"
-						+ "Deployment ID: <input type=text size=40 name=DeploymentId><p>");
+						+ "developer keys. It is a numeric value that looks something like 32570000000000041.<br/>");
+				buf.append("client_id: <input type=text size=40 name=ClientId><p>");
+				buf.append("The deployment_id can be found in Settings | Apps | App Configurations by opening the "
+						+ "settings menu for ChemVantage. It is a compound value that consists of a number and a hex string "
+						+ "separated by a colon and looks something like 10408:7db438070728c02373713c12c73869b3af470b68.<br>");
+				buf.append("deployment_id: <input type=text size=50 name=DeploymentId><p>");
 				break;
 			case "LTI Certification":
 				buf.append("<input type=hidden name=DeploymentId value=testdeploy />");
