@@ -210,6 +210,8 @@ public class Homework extends HttpServlet {
 			//  Load the Question items for this topic:
 			List<Question> hwQuestions = qcache.getSortedHWQuestions(topicId);
 			
+			if (user.isAnonymous()) buf.append(Subject.banner);  // present the ChemVantage banner
+			
 			// START the presentation of the Homework assignment
 			buf.append("\n<h2>Homework Exercises - " + topic.title + "</h2>");
 

@@ -234,6 +234,8 @@ public class Quiz extends HttpServlet {
 			// Insert javascript code for timers and form submission
 			buf.append(timers());
 			
+			if (user.isAnonymous()) buf.append(Subject.banner);  // present the ChemVantage banner
+			
 			buf.append("<h2>Quiz - " + topic.title + "</h2>");
 			
 			if (user.isAnonymous()) buf.append("<h3 style='color:red'>Anonymous User</h3>");			
