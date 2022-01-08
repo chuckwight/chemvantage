@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -316,14 +317,11 @@ public class Poll extends HttpServlet {
 			try {
 				Question q = getQuestion(k);
 				pt.possibleScore += q.pointValue;
-				String studentAnswer[] = request.getParameterValues(Long.toString(k.getId()));
-				if (studentAnswer != null) {
-					for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] = studentAnswer[i].compareTo(studentAnswer[0])>0?studentAnswer[0]+studentAnswer[i]:studentAnswer[i]+studentAnswer[0];
-					if (studentAnswer[0].length() > 0) { // an answer was submitted
-						pt.responses.put(k, studentAnswer[0]);
-						q.setParameters(a.id % Integer.MAX_VALUE);
-						pt.score += q.isCorrect(studentAnswer[0]) || !q.hasACorrectAnswer()?q.pointValue:0;
-					}
+				String studentAnswer = orderResponses(request.getParameterValues(Long.toString(k.getId())));
+				if (!studentAnswer.isEmpty()) {
+					pt.responses.put(k, studentAnswer);
+					q.setParameters(a.id % Integer.MAX_VALUE);
+					pt.score += q.isCorrect(studentAnswer) || !q.hasACorrectAnswer()?q.pointValue:0;
 				}
 			} catch (Exception e) {}
 		}
@@ -977,6 +975,22 @@ public class Poll extends HttpServlet {
 		} catch (Exception e) {
 			return 0;
 		}
+	}
+	
+	String orderResponses(String[] studentAnswers) {
+		if (studentAnswers == null) return "";
+		if (studentAnswers.length<2) return studentAnswers[0];
+		String answer = "";
+		List<String> answers = new ArrayList<String>(Arrays.asList(studentAnswers));
+		while (answers.size()>1) {
+			int pos=0;
+			for (int i=1;i<answers.size();i++) {
+				pos = answers.get(i).compareTo(answers.get(pos))<0?i:pos;
+			}
+			answer += answers.remove(pos);		
+		}
+		answer += answers.get(0);  // append the last value from the List
+		return answer;
 	}
 
 

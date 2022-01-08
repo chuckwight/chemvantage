@@ -25,6 +25,7 @@ import java.io.PrintWriter;
 import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -439,10 +440,8 @@ public class PlacementExam extends HttpServlet {
 			// begin the main scoring loop:
 			for (Key<Question> k : questionKeys) {
 				Question q=null;
-				String studentAnswer[] = request.getParameterValues(Long.toString(k.getId()));
-				if (studentAnswer != null) for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] = studentAnswer[i].compareTo(studentAnswer[0])>0?studentAnswer[0]+studentAnswer[i]:studentAnswer[i]+studentAnswer[0];
-				else studentAnswer = new String[] {""};
-				if (studentAnswer[0].length() > 0) { // an answer was submitted
+				String studentAnswer = orderResponses(request.getParameterValues(Long.toString(k.getId())));
+				if (!studentAnswer.isEmpty()) { // an answer was submitted
 					q = examQuestions.get(k);
 					if (q==null) {
 						try {
@@ -453,18 +452,18 @@ public class PlacementExam extends HttpServlet {
 						}
 					}
 					q.setParameters((int)(pt.id ^ q.id));
-					int score = studentAnswer[0].length()==0?0:q.isCorrect(studentAnswer[0])?q.pointValue:0;
-					if (score==0 && q.agreesToRequiredPrecision(studentAnswer[0])) score = q.pointValue - 1;  // partial credit for wrong sig figs
+					int score = studentAnswer.length()==0?0:q.isCorrect(studentAnswer)?q.pointValue:0;
+					if (score==0 && q.agreesToRequiredPrecision(studentAnswer)) score = q.pointValue - 1;  // partial credit for wrong sig figs
 					if (score > 0) studentScores[topicIds.indexOf(q.topicId)] += score;
-					if (studentAnswer[0].length() > 0) {
-						Response r = new Response("PlacementExam",q.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,Subject.hashId(user.getId()),now);
+					if (studentAnswer.length() > 0) {
+						Response r = new Response("PlacementExam",q.topicId,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,Subject.hashId(user.getId()),now);
 						r.transactionId = pt.id;
 						responses.add(r);
 					}
 					if (score < q.pointValue) {
 						// include question in list of incorrectly answered questions
 						wrongAnswers++;
-						missedQuestions.append("\n<LI>" + q.printAllToStudents(studentAnswer[0],true) + "</LI>\n");
+						missedQuestions.append("\n<LI>" + q.printAllToStudents(studentAnswer,true) + "</LI>\n");
 					}
 				}
 				if (q!=null && q.pointValue > 2) pt.questionShowWork.put(k, request.getParameter("ShowWork" + k.getId()));
@@ -1088,6 +1087,22 @@ public class PlacementExam extends HttpServlet {
 			buf.append("Sorry, the assignment could not be found. " + e.getMessage());
 		}
 		return buf.toString();
+	}
+	
+	String orderResponses(String[] studentAnswers) {
+		if (studentAnswers == null) return "";
+		if (studentAnswers.length<2) return studentAnswers[0];
+		String answer = "";
+		List<String> answers = new ArrayList<String>(Arrays.asList(studentAnswers));
+		while (answers.size()>1) {
+			int pos=0;
+			for (int i=1;i<answers.size();i++) {
+				pos = answers.get(i).compareTo(answers.get(pos))<0?i:pos;
+			}
+			answer += answers.remove(pos);		
+		}
+		answer += answers.get(0);  // append the last value from the List
+		return answer;
 	}
 }
 

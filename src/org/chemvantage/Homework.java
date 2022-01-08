@@ -25,6 +25,7 @@ import java.io.PrintWriter;
 import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -329,17 +330,12 @@ public class Homework extends HttpServlet {
 			q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
 			debug.append("question parameters set with "+hashMe.hashCode()+"...");
 			
-			String studentAnswer[] = request.getParameterValues(Long.toString(questionId));
-			if (studentAnswer == null || studentAnswer.length==0) {
-				studentAnswer = new String[1];
-				studentAnswer[0] = "";
-			}
-			else for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] = studentAnswer[i].compareTo(studentAnswer[0])>0?studentAnswer[0]+studentAnswer[i]:studentAnswer[i]+studentAnswer[0];
+			String studentAnswer = orderResponses(request.getParameterValues(Long.toString(questionId)));
 			
 			String showWork = request.getParameter("ShowWork"+q.id);
 			if (showWork==null) showWork="";  // required because later we check to see if showWork.isEmpty()
 			
-			debug.append("student answer:"+studentAnswer[0]+"...");
+			debug.append("student answer:"+studentAnswer+"...");
 			
 			// This section checks for recent submissions to enforce the retry delay (discourages guessing)
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
@@ -377,7 +373,7 @@ public class Homework extends HttpServlet {
 						+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + assignmentId + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
-						+ q.print(showWork,studentAnswer[0]) + "<br>");
+						+ q.print(showWork,studentAnswer) + "<br>");
 				
 				buf.append("<INPUT TYPE=SUBMIT id='RetryButton' DISABLED=true VALUE='Grade This Exercise'></FORM>");
 				buf.append("<SCRIPT language='JavaScript'>"
@@ -412,17 +408,16 @@ public class Homework extends HttpServlet {
 			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
 			buf.append(df.format(now));
 			
-			int studentScore = q.isCorrect(studentAnswer[0])?q.pointValue:0;
+			int studentScore = q.isCorrect(studentAnswer)?q.pointValue:0;
 			int possibleScore = q.pointValue;
 			
 			debug.append("score is " + studentScore + " out of " + possibleScore + " points...");
 			HWTransaction ht = null;
 			showWork = request.getParameter("ShowWork"+questionId);
 			
-			if (studentAnswer[0].length() > 0) { // an answer was submitted
-				
+			if (!studentAnswer.isEmpty()) { // an answer was submitted
 				// create and store a Response entity:
-				Response r = new Response("Homework",topic.id,q.id,studentAnswer[0],q.getCorrectAnswer(),studentScore,possibleScore,user.getId(),now);
+				Response r = new Response("Homework",topic.id,q.id,studentAnswer,q.getCorrectAnswer(),studentScore,possibleScore,user.getId(),now);
 				ofy().save().entity(r);
 				
 				// create a new HWTransaction entity:
@@ -448,14 +443,14 @@ public class Homework extends HttpServlet {
 			if (studentScore > 0) {
 				buf.append("<h3>Congratulations. You answered the question correctly.</h3><p>");
 			}
-			else if (studentAnswer[0].length() > 0) {
+			else if (studentAnswer.length() > 0) {
 				switch (q.getQuestionType()) {
 					case 5:  // Numeric question
 						try {
 							@SuppressWarnings("unused")
-							double dAnswer = Double.parseDouble(q.parseString(studentAnswer[0]));  // throws exception for non-numeric answer
-							if (!q.agreesToRequiredPrecision(studentAnswer[0])) buf.append("<h3>Incorrect Answer</h3>Your answer does not " + (q.requiredPrecision==0?"exactly match the answer in the database.":"agree with the answer in the database to within the required precision (" + q.requiredPrecision + "%).<p>"));
-							else if (!q.hasCorrectSigFigs(studentAnswer[0])) buf.append("<h3>Almost there!</h3>It appears that you've done the calculation correctly, but your answer does not have the correct number of significant figures appropriate for the data given in the question.<p>");
+							double dAnswer = Double.parseDouble(q.parseString(studentAnswer));  // throws exception for non-numeric answer
+							if (!q.agreesToRequiredPrecision(studentAnswer)) buf.append("<h3>Incorrect Answer</h3>Your answer does not " + (q.requiredPrecision==0?"exactly match the answer in the database.":"agree with the answer in the database to within the required precision (" + q.requiredPrecision + "%).<p>"));
+							else if (!q.hasCorrectSigFigs(studentAnswer)) buf.append("<h3>Almost there!</h3>It appears that you've done the calculation correctly, but your answer does not have the correct number of significant figures appropriate for the data given in the question.<p>");
 						}
 						catch (Exception e2) {
 							buf.append("<h3>Wrong Format</h3>This question requires a numeric response expressed as an integer, decimal number, "
@@ -492,7 +487,7 @@ public class Homework extends HttpServlet {
 			if (studentScore > 0) {
 				buf.append("<div id=correctAnswer>"
 						+ q.printAnswerToStudents()
-						+ "<b>The answer submitted was: " + studentAnswer[0] + "</b>&nbsp;" + (q.isCorrect(studentAnswer[0])?"&nbsp;<IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom>":"<IMG SRC=/images/xmark.png ALT='X mark' align=middle>") + "<p></p>"
+						+ "<b>The answer submitted was: " + studentAnswer + "</b>&nbsp;" + (q.isCorrect(studentAnswer)?"&nbsp;<IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom>":"<IMG SRC=/images/xmark.png ALT='X mark' align=middle>") + "<p></p>"
 						+ "</div>");
 			}
 
@@ -504,7 +499,7 @@ public class Homework extends HttpServlet {
 						+ "document.getElementById('exampleLink').style.display='none';>"
 						+ "<FONT COLOR=RED>View the detailed solution for this homework exercise</FONT></a><p></div>");
 				buf.append("<div id=example style='display: none'><b>Detailed Solution</b><p>" 
-						+ q.printAllToStudents(studentAnswer[0]) + "</div>");
+						+ q.printAllToStudents(studentAnswer) + "</div>");
 			} else if (studentScore > 0 && !user.isAnonymous()) {
 				buf.append("<a href='/checkout0.jsp?sig=" + user.getTokenSignature() + "' target=_blank style='color: red'>Would you like to see the detailed step-by-step solution to this problem?</a><p>");
 			}
@@ -958,6 +953,22 @@ public class Homework extends HttpServlet {
 			buf.append(e.toString() + " " + e.getMessage());
 		}
 		return buf.toString();
+	}
+	
+	String orderResponses(String[] studentAnswers) {
+		if (studentAnswers == null) return "";
+		if (studentAnswers.length<2) return studentAnswers[0];
+		String answer = "";
+		List<String> answers = new ArrayList<String>(Arrays.asList(studentAnswers));
+		while (answers.size()>1) {
+			int pos=0;
+			for (int i=1;i<answers.size();i++) {
+				pos = answers.get(i).compareTo(answers.get(pos))<0?i:pos;
+			}
+			answer += answers.remove(pos);		
+		}
+		answer += answers.get(0);  // append the last value from the List
+		return answer;
 	}
 
 }

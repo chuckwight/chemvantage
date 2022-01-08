@@ -25,6 +25,7 @@ import java.io.PrintWriter;
 import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -381,24 +382,21 @@ public class Quiz extends HttpServlet {
 			// This is the main scoring loop:
 			for (Key<Question> k : questionKeys) {
 				try {
-					String studentAnswer[] = request.getParameterValues(Long.toString(k.getId()));
-					if (studentAnswer != null) {
-						for (int i = 1; i < studentAnswer.length; i++) studentAnswer[0] = studentAnswer[i].compareTo(studentAnswer[0])>0?studentAnswer[0]+studentAnswer[i]:studentAnswer[i]+studentAnswer[0];
-						if (studentAnswer[0].length() > 0) { // an answer was submitted
-							Question q = quizQuestions.get(k);
-							long seed = Math.abs(qt.id - q.id);
-							if (seed==-1) seed--;  // -1 is a special value for randomly seeded Random generator; avoid this (unlikely) situation
-							q.setParameters(seed);
-							int score = q.isCorrect(studentAnswer[0])?q.pointValue:0;
-							
-							responses.add(new Response("Quiz",qt.topicId,q.id,studentAnswer[0],q.getCorrectAnswer(),score,q.pointValue,user.getId(),now));
+					String studentAnswer = orderResponses(request.getParameterValues(Long.toString(k.getId())));
+					if (!studentAnswer.isEmpty()) {
+						Question q = quizQuestions.get(k);
+						long seed = Math.abs(qt.id - q.id);
+						if (seed==-1) seed--;  // -1 is a special value for randomly seeded Random generator; avoid this (unlikely) situation
+						q.setParameters(seed);
+						int score = q.isCorrect(studentAnswer)?q.pointValue:0;
 
-							studentScore += score;
-							if (score == 0) {  
-								// include question in list of incorrectly answered questions
-								wrongAnswers++;
-								missedQuestions.add("<LI>" + q.printAllToStudents(studentAnswer[0],premiumUser) + "</LI>");
-							}
+						responses.add(new Response("Quiz",qt.topicId,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,user.getId(),now));
+
+						studentScore += score;
+						if (score == 0) {  
+							// include question in list of incorrectly answered questions
+							wrongAnswers++;
+							missedQuestions.add("<LI>" + q.printAllToStudents(studentAnswer,premiumUser) + "</LI>");
 						}
 					}
 				} catch (Exception e2) {
@@ -941,6 +939,22 @@ public class Quiz extends HttpServlet {
 			buf.append(e.toString() + " " + e.getMessage());
 		}
 		return buf.toString();
+	}
+	
+	String orderResponses(String[] studentAnswers) {
+		if (studentAnswers == null) return "";
+		if (studentAnswers.length<2) return studentAnswers[0];
+		String answer = "";
+		List<String> answers = new ArrayList<String>(Arrays.asList(studentAnswers));
+		while (answers.size()>1) {
+			int pos=0;
+			for (int i=1;i<answers.size();i++) {
+				pos = answers.get(i).compareTo(answers.get(pos))<0?i:pos;
+			}
+			answer += answers.remove(pos);		
+		}
+		answer += answers.get(0);  // append the last value from the List
+		return answer;
 	}
 
 }
