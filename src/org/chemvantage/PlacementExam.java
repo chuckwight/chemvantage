@@ -1013,7 +1013,7 @@ public class PlacementExam extends HttpServlet {
 					+ "<li>30 questions worth 2 points each</li>"
 					+ "<li>10 questions worth 4 points each</li>"
 					+ "for a total of 100 points.<p>");
-			buf.append("The default time allowed to complete the exam is 45 minutes, but you may change this "
+			buf.append("The default time allowed to complete the exam is 60 minutes, but you may change this "
 					+ "(e.g., to create a special assignment for a student requiring extended time up to 300 minutes).<br>");
 			buf.append("<form action=/PlacementExam method=post><input type=hidden name=sig value=" + user.getTokenSignature() + ">" 
 					+ "Time allowed for this assignment: <input type=text size=5 name=TimeAllowed value=" + a.timeAllowed/60. + "> minutes. "
