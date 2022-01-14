@@ -140,7 +140,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		verifyLtiMessageClaims(claims); // required
 		User user = getUserClaims(claims);
 		
-		if (d.premiumUsers && !user.isPremium()) new PremiumUser(user.hashedId);
+		if (d.premiumUsers && !user.isPremium() && !user.isAnonymous()) new PremiumUser(user.hashedId);
 
 		// At this point we have all of the REQUIRED info for a valid LTI launch
 		// Process all remaining optional claims in try/catch structures to avoid
@@ -216,7 +216,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		
 		Assignment myAssignment = null;
 		String resourceLinkId = claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link").getAsJsonObject().get("id").getAsString();
-		String resourceId = null;  // this is a Sting representation of the assignmentId that is set during the DeepLinking flow
+		String resourceId = null;  // this is a String representation of the assignmentId that is set during the DeepLinking flow
 		JsonObject lineitem = null;
 		
 		if (lti_ags_lineitem_url == null && d.scope.contains("lineitem")) {  // not common; the deployment should usually send the lineitem URL
@@ -251,7 +251,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		
 		// After all that, if the assignment still cannot be found, create a new (incomplete) one. This will be updated after the ResourcePicker
 		if (myAssignment == null) myAssignment = new Assignment(d.platform_deployment_id,resourceLinkId,lti_nrps_context_memberships_url);
-		else assignments.put(lti_ags_lineitem_url,myAssignment);  // cache the assignment for next launch
+		else if (lti_ags_lineitem_url != null) assignments.put(lti_ags_lineitem_url,myAssignment);  // cache the assignment for next launch
 		
 		// At this point we should have a valid (but possibly incomplete) Assignment entity
 		
@@ -382,6 +382,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		switch (message_type.getAsString()) {
 		case "LtiResourceLinkRequest": break;
 		case "LtiSubmissionReviewRequest": break;
+		case "LtiDeepLinkingRequest": throw new Exception("Invalid launch. DeepLinking requests must use the target_link_uri /lti/deeplinks");
 		default: throw new Exception("The LTI message_type claim " + message_type.getAsString() + " is not suppported.");
 		}
 		
@@ -396,10 +397,8 @@ public class LTIv1p3Launch extends HttpServlet {
 	User getUserClaims(JsonObject claims) throws Exception {
 		// Process User information:
 		
-		User user = null;
-		JsonElement sub = claims.get("sub");
-		if (sub==null || sub.getAsString().isEmpty()) user = new User();  // special provision to allow anonymous user via LTI launch
-		else user = new User(claims.get("iss").getAsString(), sub.getAsString());
+		String userId = claims.get("sub")==null?"":claims.get("sub").getAsString();  // allows for anonymous user ""
+		User user = new User(claims.get("iss").getAsString(), userId);;
 		
 		JsonElement roles_claim = claims.get("https://purl.imsglobal.org/spec/lti/claim/roles");
 		if (roles_claim == null || !roles_claim.isJsonArray()) throw new Exception("Required roles claim is missing from the id_token");
