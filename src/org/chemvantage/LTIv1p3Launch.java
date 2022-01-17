@@ -219,7 +219,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		String resourceId = null;  // this is a String representation of the assignmentId that is set during the DeepLinking flow
 		JsonObject lineitem = null;
 		
-		if (lti_ags_lineitem_url == null && d.scope.contains("lineitem")) {  // not common; the deployment should usually send the lineitem URL
+		if (lti_ags_lineitem_url == null && scope.contains("lineitem")) {  // not common; the deployment should usually send the lineitem URL
 			lineitem = LTIMessage.getLineItem(d, resourceLinkId, lti_ags_lineitems_url);
 			lti_ags_lineitem_url = lineitem==null?null:lineitem.get("id").getAsString();
 		}
