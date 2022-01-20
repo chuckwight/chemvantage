@@ -221,6 +221,9 @@ public class Admin extends HttpServlet {
 						+ "<input type=submit name=UserRequest value='Update Account'></form><br>");
 			}
 
+			buf.append("<h3>Marketing</h3>"
+					+ "<a href=/contacts>Manage Contacts</a>&nbsp;&nbsp;&nbsp;<a href=/messages>Manage Messages</a>");
+			
 			buf.append("<h3>Basic LTI Consumer Search</h3>");
 			int nConsumers = ofy().load().type(BLTIConsumer.class).count();
 			

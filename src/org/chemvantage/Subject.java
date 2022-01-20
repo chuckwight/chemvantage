@@ -140,6 +140,8 @@ public class Subject {
 		+ "<a href='/Contribute?sig=" + user.getTokenSignature() + "' style='padding-right:25px'>Authors</a> "
 		+ "<a href='/Edit?sig=" + user.getTokenSignature() + "' style='padding-right:25px'>Editors</a> "
 		+ "<a href='/Admin?sig=" + user.getTokenSignature() + "' style='padding-right:25px'>Admin</a> "
+		+ "<a href='/contacts' style='padding-right:25px'>Contacts</a> "
+		+ "<a href='/messages' style='padding-right:25px'>Messages</a> "
 		+ "<a href=/Logout>Sign out</a>"
 		+ "</div><br/>"
 		+ ((announcement==null || announcement.isEmpty())?"":"<FONT COLOR=RED>" + announcement + "</FONT><br/>\n");
