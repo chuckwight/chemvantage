@@ -74,11 +74,11 @@ public class ManageContacts extends HttpServlet {
 	}
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		User user = User.getUser(request.getParameter("sig"));
-		if (user==null || !user.isChemVantageAdmin()) {
-			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
-			return;
-		}
+		UserService userService = UserServiceFactory.getUserService();
+		String userId = userService.getCurrentUser().getUserId();
+		User user = new User("https://"+request.getServerName(), userId);
+		user.setIsChemVantageAdmin(true);
+		user.setToken();
 		
 		String userRequest = request.getParameter("UserRequest");
 		
