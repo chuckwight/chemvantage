@@ -172,7 +172,7 @@ public class ManageMessages extends HttpServlet {
 				msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage LLC"));
 				msg.addRecipient(Message.RecipientType.TO, new InternetAddress(c.email, c.getFullName()));
 				msg.setSubject(m.subjectLine);
-				msg.setText(m.text);
+				msg.setContent(m.text,"text/html");
 				Transport.send(msg);
 				count++;
 			} catch (Exception e) {
