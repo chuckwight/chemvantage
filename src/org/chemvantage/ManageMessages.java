@@ -21,6 +21,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
@@ -138,10 +139,19 @@ public class ManageMessages extends HttpServlet {
 			text = m.text;
 			messageId = m.id;
 			break;
+		case "Send 1 Test Message":
+			try {
+				m = ofy().load().type(EmailMessage.class).id(messageId).safe();
+				int count = send50Messages(m,true);
+				msg = count + " test message was sent OK.";
+			} catch (Exception e) {
+				msg = "Send failed. " + e.toString() + " " + e.getMessage();
+			}
+			break;
 		case "Send 50 Messages":
 			try {
 				m = ofy().load().type(EmailMessage.class).id(messageId).safe();
-				int count = send50Messages(m);
+				int count = send50Messages(m,false);
 				msg = count + " messages were sent OK.";
 			} catch (Exception e) {
 				msg = "Send failed. " + e.toString() + " " + e.getMessage();
@@ -184,12 +194,18 @@ public class ManageMessages extends HttpServlet {
 			+ nAvailable + " more in batches of up to 50 per day.<br/>"
 			+ "<form method=post action=/messages>"
 			+ "<input type=hidden name=MessageId value=" + m.id + ">"
-			+ "<input type=submit name=UserRequest value='Send 50 Messages'>"
+			+ "<input type=submit name=UserRequest value='Send 50 Messages'>&nbsp;"
+			+ "<input type=submit name=UserRequest value='Send 1 Test Message'>"
 			+ "</form>";		
 	}
 	
-	int send50Messages(EmailMessage m) throws Exception {
-		List<Contact> contacts = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created >",m.lastRecipientCreated).limit(50).list();
+	int send50Messages(EmailMessage m, boolean testOnly) throws Exception {
+		List<Contact> contacts;
+		if (testOnly) {
+			contacts = new ArrayList<Contact>();
+			contacts.add(new Contact("Chuck","Wight","admin@chemvantage.org"));
+		}
+		else contacts = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created >",m.lastRecipientCreated).limit(50).list();
 		Properties props = new Properties();
 		Session session = Session.getDefaultInstance(props, null);
 		int count = 0;
