@@ -156,8 +156,8 @@ public class ReportScore extends HttpServlet {
 			buf.append(response);
 			if (response.contains("Success") || response.contains("422"));
 			else {			
-				if (attempts < 3) {
-					long countdownMillis = (long) Math.pow(2,attempts)*60000;
+				if (attempts < 4) {
+					long countdownMillis = (long) Math.pow(2,attempts)*10800000L;
 					Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
 					queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",userId).param("Retry",Integer.toString(attempts)).countdownMillis(countdownMillis));			
 				} else throw new Exception("User " + userId + " earned a score of " + s.getPctScore() + "% on assignment "
