@@ -40,6 +40,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
+import com.googlecode.objectify.Key;
 
 @WebServlet("/messages")
 @ServletSecurity(@HttpConstraint(rolesAllowed = {"admin"}))
@@ -198,7 +199,9 @@ public class ManageMessages extends HttpServlet {
 				msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage LLC"));
 				msg.addRecipient(Message.RecipientType.TO, new InternetAddress(c.email, c.getFullName()));
 				msg.setSubject(m.subjectLine);
-				msg.setContent(m.text,"text/html");
+				msg.setContent(m.text + "<br/><span style='font-size: small;'>"
+					+ "<a href=https://www.chemvantage.org/unsubscribe?k=" + Key.create(c).toLegacyUrlSafe() + ">unsubscribe</a>"
+					+ "</span>","text/html");
 				Transport.send(msg);
 				count++;
 			} catch (Exception e) {
