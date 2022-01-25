@@ -74,6 +74,10 @@ public class PlacementExam extends HttpServlet {
 				case "ReviewExamScores":
 					out.println(Subject.header("Review ChemVantage Placement Exam Scores") + reviewExamScores(user) + Subject.footer);
 					break;
+				case "Download CSV File":
+					response.setContentType("text/csv");
+					out.println(generateCSVFile(user));
+					break;
 				case "ReviewExam":
 					long placementExamTransactionId = Long.parseLong(request.getParameter("PlacementExamTransactionId"));
 					String studentUserId = request.getParameter("UserId");
@@ -826,6 +830,91 @@ public class PlacementExam extends HttpServlet {
 			}
 			buf.append("</table><p>");
 			buf.append("<p>");
+			buf.append("<a href=/PlacementExam?sig=" + user.getTokenSignature() + "&UserRequest=Download+CSV+File>Download CSV File</a><p>");
+		} catch (Exception e) {
+			buf.append(e.toString());
+		}
+		return buf.toString();
+	}
+	
+	String generateCSVFile(User user) {
+		StringBuffer buf = new StringBuffer();
+		try {
+			if (!user.isInstructor()) return "\"Access Denied. You must be an instructor to view this page.\"\n";
+
+			long assignmentId = user.getAssignmentId();
+
+			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).now();
+			if (a == null) return "\"Sorry, we did not find an assignment associated with this placement exam.\"\n";
+			
+			if (a.lti_nrps_context_memberships_url == null || a.lti_nrps_context_memberships_url.isEmpty()) {
+				return "\"Sorry, your LMS does not support the Memberships service, so exams cannot be reviewed.\"\n";
+			}
+
+			List<Topic> topics = new ArrayList<Topic>(ofy().load().type(Topic.class).ids(a.topicIds).values());
+
+			buf.append("\"Placement Exam Assignment Results\"\n"
+					+ "\"Assignment ID: " + assignmentId + "\"\n"
+					+ "\"Created: " + a.created + "\"\n"
+					+ "\"Topics covered:\"\n");
+			for (Topic t : topics) buf.append("\"" + t.title + "\"\n");
+			
+			// Get all of the PlacementExamTransactions associated with this assignment:
+			List<PlacementExamTransaction> pets = ofy().load().type(PlacementExamTransaction.class).filter("assignmentId",assignmentId).list();			
+			if (pets.size()==0) {
+				buf.append("\"There are no transactions for this placement exam yet.\"\n");
+				return buf.toString();
+			}
+			
+			Map<String,String[]> membership = LTIMessage.getMembership(a);
+			
+			if (membership.size() == 0) {
+				buf.append("\"The LMS returned 0 members of this group.\"\n");
+				return buf.toString();
+			}
+			  
+			int i = 0;
+			buf.append("\"User\",\"Name\",\"Attempt\",\"Downloaded\",\"Elapsed Time\",");
+			for (Topic t : topics) buf.append("\"" + t.title + "\",");
+			buf.append("\"Total Score\",\"Reviewed\"\n");
+			
+			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
+				i++; // increment the user number
+				String name = entry.getValue()[1];  // user's given and family name
+				if (name==null) name = "";  // LMS does not provide names
+				// make a short list of each user's PlacementExamTransactions
+				List<PlacementExamTransaction> userpets = new ArrayList<PlacementExamTransaction>();
+				String hashedUserId = Subject.hashId(user.platformId + "/" + entry.getKey());
+				for (PlacementExamTransaction pet : pets) if (hashedUserId.equals(pet.userId)) userpets.add(pet);
+				pets.removeAll(userpets);
+				// put the user's transactions in order of decreasing download time:
+				Collections.sort(userpets,new SortPlacementExams());
+				if (userpets.isEmpty()) {  // place a blank line in the table with the user's name
+					buf.append(i + ".," + "\"" + name + "\"\n");
+				} else {
+					for (int k=userpets.size();k>0;k--) {  // enter the user's transactions into the table
+						PlacementExamTransaction p = userpets.get(k-1);
+						buf.append(i + ".," + "\"" + name + "\"," + k + ",\"" + p.downloaded + "\",");
+						
+						if (p.graded==null) buf.append("\n");
+						else {
+							buf.append("\"" + (p.graded.getTime()-p.downloaded.getTime())/60000 + " min.\",");
+
+							int score = 0;
+							int possibleScore = 0;
+							for (int j=0;j<a.topicIds.size();j++) {
+								score += p.scores[j];
+								possibleScore += p.possibleScores[j];
+								if (p.possibleScores[j] == 0) buf.append("<td>0%</td>");
+								else buf.append("\"" + String.valueOf(100*p.scores[j]/p.possibleScores[j]) + "%\",");
+							}
+
+							buf.append("\"" + String.valueOf(100*score/possibleScore) + "%\"," 
+									+ "\"" + (p.reviewed==null?"no":p.reviewed) + "\"\n");
+						}			
+					}
+				}
+			}
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}
