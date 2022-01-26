@@ -351,8 +351,9 @@ public class Quiz extends HttpServlet {
 				timeAllowed = qa.timeAllowed>0?qa.timeAllowed:900;  // override the default timeAllowed if qa.tinmeAllowed exists
 			} catch (Exception e) {}
 			
-			if (now.getTime() - qt.downloaded.getTime() > (timeAllowed*1000+10000)) // includes 10 second grace period
-				return "Sorry, the " + timeAllowed/60 + " minute time limit for this quiz has expired.";
+			boolean timeExpired = now.getTime() - qt.downloaded.getTime() > (timeAllowed*1000+10000);
+			//if (now.getTime() - qt.downloaded.getTime() > (timeAllowed*1000+10000)) // includes 10 second grace period
+				//return "Sorry, the " + timeAllowed/60 + " minute time limit for this quiz has expired.";
 			
 			int studentScore = 0;
 			int wrongAnswers = 0;
@@ -405,7 +406,7 @@ public class Quiz extends HttpServlet {
 			}
 			if (responses.size()>0) ofy().save().entities(responses);  // batch save of Response entities
 			qt.graded = now;
-			qt.score = studentScore;
+			qt.score = timeExpired?0:studentScore;
 			ofy().save().entity(qt);
 			
 			// Try to post the score to the student's LMS:
@@ -419,16 +420,17 @@ public class Quiz extends HttpServlet {
 				}
 			} catch (Exception e) {}
 
-			buf.append("<h4>Your score on this quiz is " + studentScore 
+			if (timeExpired) buf.append("<h4>Your score on this quiz is 0 points because it was submitted after the allowed time of " + timeAllowed/60 + " minutes.</h4>");
+			else buf.append("<h4>Your score on this quiz is " + studentScore 
 					+ " point" + (studentScore==1?"":"s") + " out of a possible " + qt.possibleScore + " points.</h4>");
 
-			if (studentScore == qt.possibleScore) {
+			if (studentScore == qt.possibleScore && !timeExpired) {
 				buf.append("<H2>Congratulations on a perfect score! Good job.</H2>");
 			} else {
 				int leftBlank = qt.possibleScore - studentScore - wrongAnswers;
 				if (leftBlank>0) buf.append(leftBlank + " question" 
 						+ (leftBlank>1?"s were":" was") + " left unanswered (blank).<br/>");
-				if (wrongAnswers>0) buf.append(wrongAnswers + " question" + (wrongAnswers>1?"s were":" was") + " answered incorrectly. ");
+				buf.append(wrongAnswers + " question" + (wrongAnswers==1?" was":"s were") + " answered incorrectly. ");
 
 				if (wrongAnswers>0 && !user.isAnonymous()) {
 					// Display the correct answers to missed problems. However, discourage submission of empty or deliberately wrong answers:
@@ -478,7 +480,7 @@ public class Quiz extends HttpServlet {
 			}
 			
 			// if the user response was correct, seek five-star feedback:
-			if (studentScore == qt.possibleScore) buf.append(fiveStars());
+			if (studentScore == qt.possibleScore && !timeExpired) buf.append(fiveStars());
 			else buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
 
 			if (qa != null) buf.append("You may <a href=/Quiz?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review all your scores on this assignment</a>.<p>") ;
