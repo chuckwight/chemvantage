@@ -32,7 +32,7 @@
 <meta name='Keywords' content='chemistry,learning,online,quiz,homework,video,textbook,open,education'>
 <meta name='msapplication-config' content='none'/><link rel='icon' type='image/png' href='/favicon.png'>
 <link rel='icon' type='image/png' href='/images/favicon.png' />
-<link rel='icon' type='image/vnd.microsoft.icon' href='images/favicon.ico'>
+<link rel='icon' type='image/vnd.microsoft.icon' href='/images/favicon.ico'>
 <title>ChemVantage Registration Page</title>
 <script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>
 </head>
