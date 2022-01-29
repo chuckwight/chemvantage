@@ -215,8 +215,8 @@ public class ManageMessages extends HttpServlet {
 				msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage LLC"));
 				msg.addRecipient(Message.RecipientType.TO, new InternetAddress(c.email, c.getFullName()));
 				msg.setSubject(m.subjectLine);
-				msg.setContent(m.text + "<br/><span style='font-size: small;'>"
-					+ "<a href=https://www.chemvantage.org/unsubscribe?k=" + Key.create(c).toLegacyUrlSafe() + ">unsubscribe</a>"
+				msg.setContent(m.text + "<span style='font-size: small;'>"
+					+ "<a href=https://www.chemvantage.org/unsubscribe?k=" + Key.create(c).toLegacyUrlSafe() + ">Unsubscribe</a>"
 					+ "</span>","text/html");
 				Transport.send(msg);
 				count++;
