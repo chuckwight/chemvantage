@@ -23,7 +23,7 @@ public class OneQuestion extends HttpServlet {
 		
 		if (questionId==null) 
 			buf.append("<br/><br/><br/><form method=get>QuestionId: <input type=text size=10 name=q value='" + (questionId==null?"":questionId) + "' />"
-				+ "&nbsp;<input name=r type=submit value='Get HTML'/>&nbsp;<input type=submit value='Show Question'/></form>");
+				+ "&nbsp;<input type=submit /></form>");
 		else {  // retrieve the question and display the HTML code below
 			Question q = null;
 			try {
@@ -31,16 +31,13 @@ public class OneQuestion extends HttpServlet {
 				q = ofy().load().type(Question.class).id(Long.parseLong(questionId)).safe();
 				q.setParameters(p);
 				
-				if ("Get HTML".equals(request.getParameter("r"))) buf.append("<h4>Raw HTML</h4><xmp>" + q.print() + "</xmp><h4>Renders As:</h4>");
-				else buf.append("<br/><br/>");
-				
-				buf.append("<form method=post action=/item>"
+				buf.append("<br/><br/><form method=post action=/item>"
 						+ "<input type=hidden name=p value=" + p + " />"
 						+ q.print()
 						+ "<input type=submit />"
 						+ "</form>");
 			} catch (Exception e){
-				buf.append("<br/>Not found. " + e.getMessage());
+				buf.append("<br/><br/>Not found.");
 			}
 		}
 		buf.append("<br/><br/>");  // Put some space at the bottom
