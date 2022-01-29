@@ -22,7 +22,7 @@ public class OneQuestion extends HttpServlet {
 		String questionId = request.getParameter("q");
 		
 		if (questionId==null) 
-			buf.append("<h3>Get HTML Code for One Question</h3><form method=get>QuestionId: <input type=text size=10 name=q value='" + (questionId==null?"":questionId) + "' />"
+			buf.append("<br/><br/><br/><form method=get>QuestionId: <input type=text size=10 name=q value='" + (questionId==null?"":questionId) + "' />"
 				+ "&nbsp;<input name=r type=submit value='Get HTML'/>&nbsp;<input type=submit value='Show Question'/></form>");
 		else {  // retrieve the question and display the HTML code below
 			Question q = null;
