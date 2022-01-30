@@ -22,7 +22,6 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 
@@ -66,34 +65,25 @@ public class ManageMessages extends HttpServlet {
 		
 		StringBuffer buf = new StringBuffer("<h2>Manage Messages</h2>");
 		
-		String subjectLine = request.getParameter("SubjectLine");
-		String text = request.getParameter("Text");
-		long messageId = 0L;
-		try {
-			messageId = Long.parseLong(request.getParameter("MessageId"));
-		} catch (Exception e) {}
-		
-		boolean allowUpdate = false;
-		
 		EmailMessage m = null;
-		if (text==null) {
-			if (messageId==0L) m = ofy().load().type(EmailMessage.class).order("-created").first().now();
-			else m = ofy().load().type(EmailMessage.class).id(messageId).now();
-			text = m.text;
-			subjectLine = m.subjectLine;
-			messageId = m.id;
-		} else {
-			allowUpdate = true;
-			m = ofy().load().type(EmailMessage.class).id(messageId).safe();
+		try {  // load the current or requested message
+			m = ofy().load().type(EmailMessage.class).id(Long.parseLong(request.getParameter("MessageId"))).safe();
+		} catch (Exception e) {   // load the newest message (first load)
+			m = ofy().load().type(EmailMessage.class).order("-created").first().now();
 		}
-		
-		boolean allowDelete = m != null && m.lastRecipientCreated.equals(new Date(0L));
+		if (m==null) m = new EmailMessage("subject line","message body text");  // in case no messages exist yet
 		
 		String userRequest = request.getParameter("UserRequest");
 		if (userRequest==null) userRequest = "";
 		
 		String msg = "";
-		List<EmailMessage> messages;
+		String subjectLine = request.getParameter("SubjectLine");
+		if (subjectLine==null) subjectLine = m.subjectLine;
+		String text = request.getParameter("Text");
+		if (text == null) text = m.text;
+		
+		List<Key<EmailMessage>> msgKeys = new ArrayList<Key<EmailMessage>>();
+		Key<EmailMessage> mKey = Key.create(m);
 		
 		switch (userRequest) {
 		case "Save New Message":
@@ -102,46 +92,43 @@ public class ManageMessages extends HttpServlet {
 			msg = "The message was saved.";
 			break;
 		case "Update This Message":
-			if (m != null) {
-				m.subjectLine = subjectLine;
-				m.text = text;
-				ofy().save().entity(m).now();
-				msg = "The message was updated OK.";
-			}
+			m.subjectLine = subjectLine;
+			m.text = text;
+			ofy().save().entity(m).now();
+			msg = "The message was updated OK.";
 			break;
 		case "Delete This Message":
-			if (m != null && m.lastRecipientCreated.after(new Date(0L))) {
+			if (m.lastRecipientCreated.getTime()==0L) {  // message has never been sent
 				ofy().delete().entity(m).now();
 				msg = "The message was deleted OK.";
-			}
+			} else msg = "This message cannot be deleted because it has been sent already.";
 			break;
 		case "Previous Message":
-			messages = ofy().load().type(EmailMessage.class).order("created").list();
-			for (int i=0;i<messages.size();i++) {
-				if (messages.get(i).equals(m)) {
-					m = i==0?m:messages.get(i-1);
+			msgKeys = ofy().load().type(EmailMessage.class).order("created").keys().list();			
+			for (int i=0;i<msgKeys.size();i++) {
+				if (msgKeys.get(i).equals(mKey)) {
+					if (i==0) msg = "This is the oldest message.";  // don't change m
+					else m = ofy().load().key(msgKeys.get(i-1)).now();  // assign m to the following message
 					break;
 				}
 			}
 			subjectLine = m.subjectLine;
 			text = m.text;
-			messageId = m.id;
 			break;
 		case "Next Message":
-			messages = ofy().load().type(EmailMessage.class).order("created").list();
-			for (int i=0;i<messages.size();i++) {
-				if (messages.get(i).equals(m)) {
-					m = i==messages.size()-1?m:messages.get(i+1);
+			msgKeys = ofy().load().type(EmailMessage.class).order("created").keys().list();
+			for (int i=0;i<msgKeys.size();i++) {
+				if (msgKeys.get(i).equals(mKey)) {  // found the right spot in the list
+					if (i==msgKeys.size()-1) msg = "This is the newest message.";  // don't change m
+					else m = ofy().load().key(msgKeys.get(i+1)).now();  // assign m to the following message
 					break;
 				}
 			}
 			subjectLine = m.subjectLine;
 			text = m.text;
-			messageId = m.id;
 			break;
 		case "Send 1 Test Message":
 			try {
-				m = ofy().load().type(EmailMessage.class).id(messageId).safe();
 				int count = send50Messages(m,true);
 				msg = count + " test message was sent OK.";
 			} catch (Exception e) {
@@ -150,7 +137,6 @@ public class ManageMessages extends HttpServlet {
 			break;
 		case "Send 50 Messages":
 			try {
-				m = ofy().load().type(EmailMessage.class).id(messageId).safe();
 				int count = send50Messages(m,false);
 				msg = count + " messages were sent OK.";
 			} catch (Exception e) {
@@ -159,7 +145,7 @@ public class ManageMessages extends HttpServlet {
 		default:
 		}
 		
-		buf.append(createNewMessage(subjectLine,text,allowUpdate,allowDelete,messageId));
+		buf.append(editMessage(subjectLine,text,m.id));
 		if (!msg.isEmpty()) buf.append("<br/>" + msg + "<br/>");
 		if (m!=null) buf.append(sendMessage(m));
 			
@@ -168,19 +154,19 @@ public class ManageMessages extends HttpServlet {
 		out.println(Subject.getHeader(user) + buf.toString() + Subject.footer);
 	}
 
-	String createNewMessage(String subjectLine, String text, boolean allowUpdate, boolean allowDelete, long messageId) {
-		return "<div style='width: 250px;border-style:solid;border-width: 1px;padding-left:25px;'>" + subjectLine + "</div>"
-			+ "<div style='width: 600px;height: 300px;border-style: solid;border-width: 1px;padding: 25px;'>"
+	String editMessage(String subjectLine, String text, long messageId) {
+		return "<div style='width: 350px;border-style:solid;border-width: 1px;padding-left:25px;'>" + subjectLine + "</div>"
+			+ "<div style='width: 700px;height: 300px;border-style: solid;border-width: 1px;padding: 25px;'>"
 			+ (text.isEmpty()?"A preview of the message will be shown here.":text + unsubscribeText(null)) + "</div>"
 			+ "<br/>Edit HTML here:<br/>"
 			+ "<form method=post action=/messages>"
 			+ "<input type=text size=40 name=SubjectLine placeholder='Email subject line (plain text)' value='" + subjectLine + "'><br/>"
-			+ "<textarea name=Text rows=10 cols=80>" + text + "</textarea><br/>"
+			+ "<textarea name=Text rows=10 cols=95>" + text + "</textarea><br/>"
 			+ "<input type=hidden name=MessageId value=" + messageId + ">"
 			+ "<input type=submit name=UserRequest value='Preview Message'>&nbsp;"
 			+ "<input type=submit name=UserRequest value='Save New Message'>&nbsp;"
-			+ (allowUpdate?"<input type=submit name=UserRequest value='Update This Message'>&nbsp;":"")
-			+ (allowDelete?"<input type=submit name=UserRequest value='Delete This Message'>&nbsp;":"")
+			+ "<input type=submit name=UserRequest value='Update This Message'>&nbsp;"
+			+ "<input type=submit name=UserRequest value='Delete This Message'>&nbsp;"
 			+ "<input type=submit name=UserRequest value='Previous Message'>&nbsp;"
 			+ "<input type=submit name=UserRequest value='Next Message'>&nbsp;"
 			+ "</form>";
@@ -220,7 +206,7 @@ public class ManageMessages extends HttpServlet {
 				count++;
 			} catch (Exception e) {
 			}
-			m.lastRecipientCreated = c.created;
+			if (!testOnly) m.lastRecipientCreated = c.created;
 		}
 		ofy().save().entity(m).now();
 		return count;

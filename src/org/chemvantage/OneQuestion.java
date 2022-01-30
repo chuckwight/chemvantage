@@ -26,8 +26,13 @@ public class OneQuestion extends HttpServlet {
 				+ "&nbsp;<input type=submit /></form>");
 		else {  // retrieve the question and display the HTML code below
 			Question q = null;
+			Long p = null;
 			try {
-				long p = new Date().getTime();
+				try {
+					p = Long.parseLong(request.getParameter("p"));
+				}catch (Exception e) {
+					p = new Date().getTime();
+				}
 				q = ofy().load().type(Question.class).id(Long.parseLong(questionId)).safe();
 				q.setParameters(p);
 				
