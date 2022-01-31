@@ -36,11 +36,8 @@ public class OneQuestion extends HttpServlet {
 				q = ofy().load().type(Question.class).id(Long.parseLong(questionId)).safe();
 				q.setParameters(p);
 				
-				buf.append("<br/><br/><form method=post action=/item>"
-						+ "<input type=hidden name=p value=" + p + " />"
-						+ q.print()
-						+ "<input type=submit />"
-						+ "</form>");
+				buf.append("<br/><br/><form method=post action=/item><input type=hidden name=p value=" + p + " />"
+						+ q.print() + "<input type=submit />" + "</form>");
 			} catch (Exception e){
 				buf.append("<br/><br/>Not found.");
 			}
@@ -65,14 +62,39 @@ public class OneQuestion extends HttpServlet {
 			q.setParameters(p);
 			String answer = request.getParameter(String.valueOf(qid));
 			if (answer==null) answer = "";
-			if (q.isCorrect(answer)) buf.append("<h2>Congratulations! Your answer is correct.</h2>");
-			else buf.append("<h3>Sorry, your answer was not correct.</h3>");
-		
-			buf.append(q.printAllToStudents(answer,true));
+			
+			if (q.isCorrect(answer)) {
+				buf.append("<h2>Congratulations! Your answer is correct.</h2>" 
+						+ q.printAllToStudents(answer,true));
+			} else if (answer.isEmpty()) { 
+				buf.append("<h3>The answer to the question was left blank. Please try again.</h3>");
+				buf.append("<form method=post action=/item><input type=hidden name=p value=" + p + " />"
+						+ q.print() + "<input type=submit />" + "</form>");
+			} else {
+				switch (q.getQuestionType()) {
+				case 5:  // Numeric question
+					try {
+						Double.parseDouble(q.parseString(answer));  // throws exception for non-numeric answer
+						if (!q.agreesToRequiredPrecision(answer)) buf.append("<h3>Your answer was not correct. Please try again.</h3>");
+						else if (!q.hasCorrectSigFigs(answer)) buf.append("<h3>Oh, so close! Please try again.</h3>It appears that you've done the calculation correctly, but your answer does not have the correct number of significant figures appropriate for the data given in the question.<br/><br/>");
+					}
+					catch (Exception e2) {
+						buf.append("<h3>Your answer has the wrong format. Please try again.</h3>This question requires a numeric response expressed as an integer, decimal number, "
+								+ "or number in scientific notation. Your answer was scored incorrect because the program was unable to recognize "
+								+ "your answer as one of these types.<br/><br/>");
+					}
+					break;
+				default:  // All other types of questions
+					buf.append("<h3>Your answer was not correct. Please try again.</h3>");
+				}
+				buf.append("<form method=post action=/item><input type=hidden name=p value=" + p + " />"
+						+ q.print() + "<input type=submit />" + "</form><br/><br/>"
+						+ "<b>The answer submitted was " + answer + "</b>&nbsp;&nbsp;<IMG SRC=/images/xmark.png ALT='X mark' align=middle>");
+			}
 		} catch (Exception e) {
 			buf.append("<br/>Failed. " + e.getMessage());
 		}
-		buf.append("<a href=/>Learn more about ChemVantage here</a><br/><br/>");
+		buf.append("<br/><br/><a href=/>Learn more about ChemVantage here</a><br/><br/>");
 		response.setContentType("text/html");;
 		response.getWriter().println(buf.toString() + Subject.footer);
 	}
