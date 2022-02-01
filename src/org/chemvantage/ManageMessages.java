@@ -17,6 +17,7 @@
 
 package org.chemvantage;
 
+import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
@@ -38,6 +39,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.appengine.api.taskqueue.QueueFactory;
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
@@ -47,21 +49,21 @@ import com.googlecode.objectify.Key;
 public class ManageMessages extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 	
-	public ManageMessages() {
-        super();
-        // TODO Auto-generated constructor stub
-    }
-
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		doPost(request,response);
 	}
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		UserService userService = UserServiceFactory.getUserService();
-		String userId = userService.getCurrentUser().getUserId();
-		User user = new User("https://"+request.getServerName(), userId);
-		user.setIsChemVantageAdmin(true);
-		user.setToken();
+		User user = null;
+		try {
+			UserService userService = UserServiceFactory.getUserService();
+			String userId = userService.getCurrentUser().getUserId();
+			user = new User("https://"+request.getServerName(), userId);
+			user.setIsChemVantageAdmin(true);
+			user.setToken();
+		} catch (Exception e) {
+			user = new User();
+		}
 		
 		StringBuffer buf = new StringBuffer("<h2>Manage Messages</h2>");
 		
@@ -129,18 +131,32 @@ public class ManageMessages extends HttpServlet {
 			break;
 		case "Send 1 Test Message":
 			try {
-				int count = send50Messages(m,true);
+				int count = send10Messages(m,true);
 				msg = count + " test message was sent OK.";
 			} catch (Exception e) {
 				msg = "Send failed. " + e.toString() + " " + e.getMessage();
 			}
 			break;
-		case "Send 50 Messages":
+		case "Send 10 Messages":
 			try {
-				int count = send50Messages(m,false);
-				msg = count + " messages were sent OK.";
+				send10Messages(m,false);
+			} catch (Exception e) {}
+			return;
+		case "Send 50 Messages":
+			int nMessages = 50;
+			try {
+				int nAvailable = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created >",m.lastRecipientCreated).count();
+				int nSending = nAvailable > nMessages? nMessages:nAvailable;
+				int nTasks = nAvailable/10 + nAvailable%10==0?0:1;
+				int i = 0;
+				msg = "Sending " + nSending + " messages in " + nTasks + " tasks of 10 messages each at 1 task/minute. ";
+				for (i=0; i<nTasks;i++) {
+					long delayMillis = i * 60000L;
+					QueueFactory.getDefaultQueue().add(withUrl("/messages").param("UserRequest","Send 10 Messages").param("MessageId",String.valueOf(m.id)).countdownMillis(delayMillis));
+				}
+				msg += i + " tasks were launched OK.";
 			} catch (Exception e) {
-				msg = "Send failed. " + e.toString() + " " + e.getMessage();
+				msg += "Send failed. " + e.toString() + " " + e.getMessage();
 			}
 		default:
 		}
@@ -188,13 +204,13 @@ public class ManageMessages extends HttpServlet {
 			+ "</form>";		
 	}
 	
-	int send50Messages(EmailMessage m, boolean testOnly) throws Exception {
+	int send10Messages(EmailMessage m, boolean testOnly) throws Exception {
 		List<Contact> contacts;
 		if (testOnly) {
 			contacts = new ArrayList<Contact>();
 			contacts.add(new Contact("Chuck","Wight","admin@chemvantage.org"));
 		}
-		else contacts = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created >",m.lastRecipientCreated).limit(50).list();
+		else contacts = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created >",m.lastRecipientCreated).limit(10).list();
 		Properties props = new Properties();
 		Session session = Session.getDefaultInstance(props, null);
 		int count = 0;
@@ -206,10 +222,10 @@ public class ManageMessages extends HttpServlet {
 				msg.setSubject(m.subjectLine);
 				msg.setContent(m.text + unsubscribeText(c) ,"text/html");
 				Transport.send(msg);
-				count++;
 			} catch (Exception e) {
 			}
 			if (!testOnly) m.lastRecipientCreated = c.created;
+			count++;
 		}
 		ofy().save().entity(m).now();
 		return count;

@@ -45,7 +45,7 @@ public class Contact {
 	}
 	
 	String getFullName() {
-		return firstName + " " + lastName;
+		return "".concat(firstName).concat(" ").concat(lastName).trim();
 	}
 	
 	String getEmail() {
