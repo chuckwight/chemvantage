@@ -173,7 +173,7 @@ public class ManageMessages extends HttpServlet {
 	String editMessage(String subjectLine, String text, long messageId) {
 		return "<div style='width: 350px;border-style:solid;border-width: 1px;padding-left:25px;'>" + subjectLine + "</div>"
 			+ "<div style='width: 700px;height: 300px;border-style: solid;border-width: 1px;padding: 25px;'>"
-			+ (text.isEmpty()?"A preview of the message will be shown here.":text + unsubscribeText(null)) + "</div>"
+			+ salutationText(null) + (text.isEmpty()?"A preview of the message will be shown here.":text) + unsubscribeText(null) + "</div>"
 			+ "<br/>Edit HTML here:<br/>"
 			+ "<form method=post action=/messages>"
 			+ "<input type=text size=40 name=SubjectLine placeholder='Email subject line (plain text)' value='" + subjectLine + "'><br/>"
@@ -220,7 +220,7 @@ public class ManageMessages extends HttpServlet {
 				msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage LLC"));
 				msg.addRecipient(Message.RecipientType.TO, new InternetAddress(c.email, c.getFullName()));
 				msg.setSubject(m.subjectLine);
-				msg.setContent(m.text + unsubscribeText(c) ,"text/html");
+				msg.setContent(salutationText(c) + m.text + unsubscribeText(c) ,"text/html");
 				Transport.send(msg);
 			} catch (Exception e) {
 			}
@@ -235,5 +235,10 @@ public class ManageMessages extends HttpServlet {
 		return "<span style='font-size: small;'><a href=https://www.chemvantage.org/unsubscribe?k=" 
 				+ (c==null?"":Key.create(c).toLegacyUrlSafe()) 
 				+ ">Unsubscribe</a></span>";
+	}
+	
+	String salutationText(Contact c) {
+		if (c==null) c = new Contact("Edwin","Strangeglove","strange@example.com");
+		return c.lastName==null || c.lastName.isEmpty()? "" : ("Dr. " + c.lastName + ", ");
 	}
 }
