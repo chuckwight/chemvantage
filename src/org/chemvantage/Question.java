@@ -266,7 +266,7 @@ public class Question implements Serializable, Cloneable {
 		case 1: // Multiple Choice
 			buf.append(text + "<br/>");
 			for (int i=0; i<nChoices; i++) choice_keys.add(Character.valueOf((char)('a'+i)));
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best answer:</FONT><br/>");
+			buf.append("<span style='color:red;font-size: small;'>Select only the best answer:</span><br/>");
 			while (choice_keys.size()>0) {
 				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
 				buf.append("<label><input type=radio name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED />":" />") + choices.get(choice-'a') + "</label><br/>");
@@ -275,14 +275,14 @@ public class Question implements Serializable, Cloneable {
 		case 2: // True/False
 			buf.append(text);
 			buf.append("<br/>");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select true or false:</FONT><br/>");
+			buf.append("<span style='color:red;font-size: small;'>Select true or false:</span><br/>");
 			buf.append("<label><input type=radio name=" + this.id + " value='true'" + (studentAnswer.equals("true")?" CHECKED />":" />") + " True</label><br/>");
 			buf.append("<label><input type=radio name=" + this.id + " value='false'" + (studentAnswer.equals("false")?" CHECKED />":" />") + " False</label><br/>");
 			break;
 		case 3: // Select Multiple
 			buf.append(text + "<br/>");
 			for (int i=0; i<nChoices; i++) choice_keys.add(Character.valueOf((char)('a'+i)));
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><br/>");
+			buf.append("<span style='color:red;font-size: small;'>Select all of the correct answers:</span><br/>");
 			while (choice_keys.size()>0) {
 				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
 				buf.append("<label><input type=checkbox name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED />":" />") + choices.get(choice-'a') + "</label><br/>");
@@ -291,7 +291,7 @@ public class Question implements Serializable, Cloneable {
 		case 4: // Fill-in-the-Word
 			buf.append(text);
 			buf.append("<br/>");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br/>");
+			buf.append("<span style='color:red;font-size: small;'>Enter the correct word or phrase:</span><br/>");
 			buf.append("<label><input id=" + this.id + " type=text name=" + this.id + " value='" + quot2html(studentAnswer) + "' />");
 			buf.append("&nbsp;" + tag + "</label><br/><br/>");
 			break;
@@ -301,10 +301,10 @@ public class Question implements Serializable, Cloneable {
 			buf.append("<div id=showWork" + this.id + " style='display:none'><TEXTAREA NAME=ShowWork" + this.id + " ROWS=5 COLS=50 WRAP=SOFT "
 					+ "onkeyup=this.value=this.value.substring(0,500); placeholder='Show your work here'>" + (showWork==null?"":showWork) + "</TEXTAREA><br/></div>");
 			switch (getNumericItemType()) {
-			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numeric value.</FONT><br/>"); break;
-			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br/>"); break;
-			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br/>"); break;
-			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br/>"); break;
+			case 0: buf.append("<span style='color:red;font-size: small;'>Enter the exact numeric value.</span><br/>"); break;
+			case 1: buf.append("<span style='color:red;font-size: small;'>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+			case 2: buf.append("<span style='color:red;font-size: small;'>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</span><br/>"); break;
+			case 3: buf.append("<span style='color:red;font-size: small;'>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
 			default:
 			}			
 			buf.append("<label><input size=25 type=text name=" + this.id + " id=answer" + this.id + " value='" + studentAnswer + "' onFocus=showWorkBox('" + this.id + "'); />");
@@ -325,7 +325,7 @@ public class Question implements Serializable, Cloneable {
 		switch (getQuestionType()) {
 		case 1: // Multiple Choice
 			buf.append(text + "<br/>");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best answer:</FONT><UL>");
+			buf.append("<span style='color:red;font-size: small;'>Select only the best answer:</span><UL>");
 			for (int i = 0; i < nChoices && i < choices.size(); i++) {
 				buf.append("<LI>" 
 						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
@@ -338,7 +338,7 @@ public class Question implements Serializable, Cloneable {
 			break;
 		case 2: // True/False
 			buf.append(text + "<br/>");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select true or false:</FONT><UL>");
+			buf.append("<span style='color:red;font-size: small;'>Select true or false:</span><UL>");
 			buf.append("<LI>" 
 					+ (correctAnswer.equals("true")?"<B>True</B>":"<FONT COLOR=#888888>True</FONT>") 
 					+ "</LI>");
@@ -349,7 +349,7 @@ public class Question implements Serializable, Cloneable {
 			break;
 		case 3: // Select Multiple
 			buf.append(text + "<br/>");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><UL>");
+			buf.append("<span style='color:red;font-size: small;'>Select all of the correct answers:</span><UL>");
 			for (int i = 0; i < nChoices && i < choices.size(); i++) {
 				buf.append("<LI>"
 						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
@@ -362,7 +362,7 @@ public class Question implements Serializable, Cloneable {
 			break;
 		case 4: // Fill-in-the-Word
 			buf.append(text + "<br/>");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br/>");
+			buf.append("<span style='color:red;font-size: small;'>Enter the correct word or phrase:</span><br/>");
 			buf.append("<span style='border: 1px solid black'>"
 					+ "<b>" + (this.hasACorrectAnswer()?quot2html(correctAnswer):"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;") + "</b>"
 					+ "</span>");
@@ -371,10 +371,10 @@ public class Question implements Serializable, Cloneable {
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br/>");
 			switch (getNumericItemType()) {
-			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numeric value.</FONT><br/>"); break;
-			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br/>"); break;
-			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br/>"); break;
-			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br/>"); break;
+			case 0: buf.append("<span style='color:red;font-size: small;'>Enter the exact numeric value.</span><br/>"); break;
+			case 1: buf.append("<span style='color:red;font-size: small;'>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+			case 2: buf.append("<span style='color:red;font-size: small;'>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</span><br/>"); break;
+			case 3: buf.append("<span style='color:red;font-size: small;'>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
 			default:
 			}
 			buf.append("<span style='border: 1px solid black'>"
@@ -411,7 +411,7 @@ public class Question implements Serializable, Cloneable {
 		switch (getQuestionType()) {
 		case 1: // Multiple Choice
 			buf.append(text + "<br/>");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best answer:</FONT><br/>");
+			buf.append("<span style='color:red;font-size: small;'>Select only the best answer:</span><br/>");
 			for (int i = 0; i < nChoices; i++) {
 				buf.append("&nbsp;" + choice + ". "
 						+ (showDetails && correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
@@ -422,7 +422,7 @@ public class Question implements Serializable, Cloneable {
 			break;
 		case 2: // True/False
 			buf.append(text + "<br/>");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select true or false:</FONT><UL>");
+			buf.append("<span style='color:red;font-size: small;'>Select true or false:</span><UL>");
 			buf.append("<LI>" 
 					+ (showDetails && correctAnswer.equals("true")?"<B>True</B>":"<FONT COLOR=#888888>True</FONT>") 
 					+ "</LI>");
@@ -433,7 +433,7 @@ public class Question implements Serializable, Cloneable {
 			break;
 		case 3: // Select Multiple
 			buf.append(text + "<br/>");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><br/>");
+			buf.append("<span style='color:red;font-size: small;'>Select all of the correct answers:</span><br/>");
 			for (int i = 0; i < nChoices; i++) {
 				buf.append("&nbsp;" + choice + ". "
 						+ (showDetails && correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
@@ -444,7 +444,7 @@ public class Question implements Serializable, Cloneable {
 			break;
 		case 4: // Fill-in-the-Word
 			buf.append(text + "<br/>");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br/>");
+			buf.append("<span style='color:red;font-size: small;'>Enter the correct word or phrase:</span><br/>");
 			String[] answers = correctAnswer.split(",");
 			buf.append("<span style='border: 1px solid black'>"
 					+ (showDetails?"<b>" + quot2html(answers[0]) + "</b>":"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")
@@ -454,10 +454,10 @@ public class Question implements Serializable, Cloneable {
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br/>");
 			switch (getNumericItemType()) {
-			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numeric value.</FONT><br/>"); break;
-			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br/>"); break;
-			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br/>"); break;
-			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br/>"); break;
+			case 0: buf.append("<span style='color:red;font-size: small;'>Enter the exact numeric value.</span><br/>"); break;
+			case 1: buf.append("<span style='color:red;font-size: small;'>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+			case 2: buf.append("<span style='color:red;font-size: small;'>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</span><br/>"); break;
+			case 3: buf.append("<span style='color:red;font-size: small;'>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
 			default:
 			}
 			buf.append("<span style='border: 1px solid black'>"
@@ -526,7 +526,7 @@ public class Question implements Serializable, Cloneable {
 		switch (getQuestionType()) {
 		case 1: // Multiple Choice
 			buf.append(text + "<br/>");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best answer:</FONT><br/>");
+			buf.append("<span style='color:red;font-size: small;'>Select only the best answer:</span><br/>");
 			for (int i = 0; i < nChoices; i++) {
 				buf.append("&nbsp;" + choice + ". "
 						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
@@ -537,7 +537,7 @@ public class Question implements Serializable, Cloneable {
 			break;
 		case 2: // True/False
 			buf.append(text + "<br/>");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select true or false:</FONT><UL>");
+			buf.append("<span style='color:red;font-size: small;'>Select true or false:</span><UL>");
 			buf.append("<LI>" 
 					+ (correctAnswer.equals("true")?"<B>True</B>":"<FONT COLOR=#888888>True</FONT>") 
 					+ "</LI>");
@@ -548,7 +548,7 @@ public class Question implements Serializable, Cloneable {
 			break;
 		case 3: // Select Multiple
 			buf.append(text + "<br/>");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><br/>");
+			buf.append("<span style='color:red;font-size: small;'>Select all of the correct answers:</span><br/>");
 			for (int i = 0; i < nChoices; i++) {
 				buf.append("&nbsp;" + choice + ". "
 						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
@@ -559,7 +559,7 @@ public class Question implements Serializable, Cloneable {
 			break;
 		case 4: // Fill-in-the-Word
 			buf.append(text + "<br/>");
-			buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase:</FONT><br/>");
+			buf.append("<span style='color:red;font-size: small;'>Enter the correct word or phrase:</span><br/>");
 			String[] answers = correctAnswer.split(",");
 			buf.append("<span style='border: 1px solid black'>"
 					+ "<b>" + quot2html(answers[0]) + "</b>"
@@ -569,10 +569,10 @@ public class Question implements Serializable, Cloneable {
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br/>");
 			switch (getNumericItemType()) {
-			case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numeric value.</FONT><br/>"); break;
-			case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br/>"); break;
-			case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br/>"); break;
-			case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br/>"); break;
+			case 0: buf.append("<span style='color:red;font-size: small;'>Enter the exact numeric value.</span><br/>"); break;
+			case 1: buf.append("<span style='color:red;font-size: small;'>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+			case 2: buf.append("<span style='color:red;font-size: small;'>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</span><br/>"); break;
+			case 3: buf.append("<span style='color:red;font-size: small;'>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
 			default:
 			}
 			buf.append("<span style='border: 1px solid black'>"
@@ -641,7 +641,7 @@ public class Question implements Serializable, Cloneable {
 			case 1: // Multiple Choice
 				buf.append("Question Text:<br/><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
 						+ amp2html(text) + "</TEXTAREA><br/>");
-				buf.append("<FONT SIZE=-2 COLOR=FF0000>Select only the best choice:</FONT><br/>");
+				buf.append("<span style='color:red;font-size: small;'>Select only the best choice:</span><br/>");
 				for (int i=0;i<5;i++) { 
 					if (i < nChoices) {
 						buf.append("<input type=radio name=CorrectAnswer value='" + choice + "'");
@@ -659,7 +659,7 @@ public class Question implements Serializable, Cloneable {
 			case 2: // True/False
 				buf.append("Question Text:<br/><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
 						+ amp2html(text) + "</TEXTAREA><br/>");
-				buf.append("<FONT SIZE=-2 COLOR=FF0000>Select true or false:</FONT><br/>");
+				buf.append("<span style='color:red;font-size: small;'>Select true or false:</span><br/>");
 				buf.append("<input type=radio name=CorrectAnswer value='true'");
 					if (correctAnswer.equals("true")) buf.append(" CHECKED");
 				buf.append("/> True<br/>");
@@ -670,7 +670,7 @@ public class Question implements Serializable, Cloneable {
 			case 3: // Select Multiple
 				buf.append("Question Text:<br/><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
 						+ amp2html(text) + "</TEXTAREA><br/>");
-				buf.append("<FONT SIZE=-2 COLOR=FF0000>Select all of the correct answers:</FONT><br/>");
+				buf.append("<span style='color:red;font-size: small;'>Select all of the correct answers:</span><br/>");
 				for (int i=0;i<5;i++){
 					if (i < nChoices) {
 						buf.append("<input type=checkbox name=CorrectAnswer value='" + choice + "'");
@@ -688,8 +688,8 @@ public class Question implements Serializable, Cloneable {
 			case 4: // Fill-in-the-Word
 				buf.append("Question Text:<br/><TEXTAREA name=QuestionText rows=5 cols=50 wrap=soft>" 
 						+ amp2html(text) + "</TEXTAREA><br/>");
-				buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct word or phrase.<br/>"
-						+ "Multiple correct answers can be entered as a comma-separated list.</FONT><br/>");
+				buf.append("<span style='color:red;font-size: small;'>Enter the correct word or phrase.<br/>"
+						+ "Multiple correct answers can be entered as a comma-separated list.</span><br/>");
 				buf.append("<input type=text name=CorrectAnswer value=\"" 
 						+ quot2html(amp2html(correctAnswer)) + "\"'/><br/>");
 				buf.append("<TEXTAREA name=QuestionTag rows=5 cols=60 wrap=soft>" 
@@ -700,10 +700,10 @@ public class Question implements Serializable, Cloneable {
 						+ amp2html(text) + "</TEXTAREA><br/>");
 				buf.append("<FONT SIZE=-2>Significant figures: <input size=5 name=SignificantFigures value='" + significantFigures + "'/> Required precision: <input size=5 name=RequiredPrecision value='" + requiredPrecision + "'/> (set to zero to require exact answer)</FONT><br/>");
 				switch (getNumericItemType()) {
-				case 0: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the exact numeric value.</FONT><br/>"); break;
-				case 1: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br/>"); break;
-				case 2: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</FONT><br/>"); break;
-				case 3: buf.append("<FONT SIZE=-2 COLOR=FF0000>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</FONT><br/>"); break;
+				case 0: buf.append("<span style='color:red;font-size: small;'>Enter the exact numeric value.</span><br/>"); break;
+				case 1: buf.append("<span style='color:red;font-size: small;'>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+				case 2: buf.append("<span style='color:red;font-size: small;'>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</span><br/>"); break;
+				case 3: buf.append("<span style='color:red;font-size: small;'>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
 				default:
 				}
 				buf.append("Correct answer:");
