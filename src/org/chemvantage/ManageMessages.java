@@ -147,7 +147,7 @@ public class ManageMessages extends HttpServlet {
 			try {
 				int nAvailable = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created >",m.lastRecipientCreated).count();
 				int nSending = nAvailable > nMessages? nMessages:nAvailable;
-				int nTasks = nAvailable/10 + nAvailable%10==0?0:1;
+				int nTasks = nSending/10 + (nSending%10==0?0:1);
 				int i = 0;
 				msg = "Sending " + nSending + " messages in " + nTasks + " tasks of 10 messages each at 1 task/minute. ";
 				for (i=0; i<nTasks;i++) {
