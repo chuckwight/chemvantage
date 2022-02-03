@@ -172,12 +172,12 @@ public class ManageMessages extends HttpServlet {
 
 	String editMessage(String subjectLine, String text, long messageId) {
 		return "<div style='width: 350px;border-style:solid;border-width: 1px;padding-left:25px;'>" + subjectLine + "</div>"
-			+ "<div style='width: 700px;height: 300px;border-style: solid;border-width: 1px;padding: 25px;'>"
+			+ "<div style='width: 750px;height: 300px;border-style: solid;border-width: 1px;padding: 25px;'>"
 			+ salutationText(null) + (text.isEmpty()?"A preview of the message will be shown here.":text) + unsubscribeText(null) + "</div>"
 			+ "<br/>Edit HTML here:<br/>"
 			+ "<form method=post action=/messages>"
 			+ "<input type=text size=40 name=SubjectLine placeholder='Email subject line (plain text)' value='" + subjectLine + "'><br/>"
-			+ "<textarea name=Text rows=10 cols=95>" + text + "</textarea><br/>"
+			+ "<textarea name=Text rows=10 cols=100>" + text + "</textarea><br/>"
 			+ "<input type=hidden name=MessageId value=" + messageId + ">"
 			+ "<input type=submit name=UserRequest value='Preview Message'>&nbsp;"
 			+ "<input type=submit name=UserRequest value='Save New Message'>&nbsp;"
