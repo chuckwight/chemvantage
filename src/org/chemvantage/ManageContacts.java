@@ -53,7 +53,11 @@ public class ManageContacts extends HttpServlet {
 		user.setToken();
 		
 		StringBuffer buf = new StringBuffer("<h2>Manage Contacts</h2>");
+		int nContacts = ofy().load().type(Contact.class).count();
+		int nUnsubscribed = ofy().load().type(Contact.class).filter("unsubscribed",true).count();
 		
+		buf.append("There are " + nContacts + " contacts in the database, " + nUnsubscribed + " of whom are unsubscribed.");
+
 		String email = request.getParameter("Email");
 		Contact c = null;
 		if (email != null) c = ofy().load().type(Contact.class).id(email).now();
