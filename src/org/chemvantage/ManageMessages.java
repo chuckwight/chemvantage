@@ -86,6 +86,7 @@ public class ManageMessages extends HttpServlet {
 		
 		List<Key<EmailMessage>> msgKeys = new ArrayList<Key<EmailMessage>>();
 		Key<EmailMessage> mKey = Key.create(m);
+		List<Contact> contacts = new ArrayList<Contact>();
 		
 		switch (userRequest) {
 		case "Save New Message":
@@ -131,7 +132,12 @@ public class ManageMessages extends HttpServlet {
 			break;
 		case "Send 1 Test Message":
 			try {
-				int count = send10Messages(m,true);
+				boolean testOnly = true;
+				String firstName = request.getParameter("FirstName");
+				String lastName = request.getParameter("LastName");
+				String email = request.getParameter("Email");
+				contacts.add(new Contact(firstName,lastName,email));
+				int count = send10Messages(m,testOnly,contacts);
 				msg = count + " test message was sent OK.";
 			} catch (Exception e) {
 				msg = "Send failed. " + e.toString() + " " + e.getMessage();
@@ -139,7 +145,9 @@ public class ManageMessages extends HttpServlet {
 			break;
 		case "Send 10 Messages":
 			try {
-				send10Messages(m,false);
+				boolean testOnly = false;
+				contacts = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created >",m.lastRecipientCreated).limit(10).list();
+				send10Messages(m,testOnly,contacts);
 			} catch (Exception e) {}
 			return;
 		case "Send 50 Messages":
@@ -198,19 +206,16 @@ public class ManageMessages extends HttpServlet {
 			+ "This message has been sent to " + nRecipients + " contacts, and can be sent to as many as " 
 			+ nAvailable + " more in batches of up to 50 per day.<br/>"
 			+ "<form method=post action=/messages>"
-			+ "<input type=hidden name=MessageId value=" + m.id + ">"
-			+ "<input type=submit name=UserRequest value='Send 50 Messages'>&nbsp;"
-			+ "<input type=submit name=UserRequest value='Send 1 Test Message'>"
+			+ "<input type=hidden name=MessageId value=" + m.id + " />"
+			+ "<input type=submit name=UserRequest value='Send 50 Messages' />&nbsp;"
+			+ "<input type=submit name=UserRequest value='Send 1 Test Message' /> to "
+			+ "<input type=text size=7 name=FirstName value=Chuck /> "
+			+ "<input type=text size=7 name=LastName value=Wight /> "
+			+ "<input type=text name=Email value='chuck.wight@gmail.com' />"
 			+ "</form>";		
 	}
 	
-	int send10Messages(EmailMessage m, boolean testOnly) throws Exception {
-		List<Contact> contacts;
-		if (testOnly) {
-			contacts = new ArrayList<Contact>();
-			contacts.add(new Contact("Chuck","Wight","admin@chemvantage.org"));
-		}
-		else contacts = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created >",m.lastRecipientCreated).limit(10).list();
+	int send10Messages(EmailMessage m,boolean testOnly,List<Contact> contacts) throws Exception {
 		Properties props = new Properties();
 		Session session = Session.getDefaultInstance(props, null);
 		int count = 0;
