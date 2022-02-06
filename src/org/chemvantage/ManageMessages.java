@@ -199,12 +199,13 @@ public class ManageMessages extends HttpServlet {
 	String sendMessage(EmailMessage m) {
 		int nContacts = ofy().load().type(Contact.class).count();
 		int nUnsubscribed = ofy().load().type(Contact.class).filter("unsubscribed",true).count();
-		int nRecipients = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created <=",m.lastRecipientCreated).count();
-		int nAvailable = nContacts - nUnsubscribed - nRecipients;
+		int nAvailable = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created >",m.lastRecipientCreated).count();
+		boolean unsent = m.lastRecipientCreated == null || m.lastRecipientCreated.getTime() == 0L;
 		return "<h4>Send This Message</h4>"
 			+ "You have " + nContacts + " contacts in the database, " + nUnsubscribed + " of whom have unsubscribed from your messages.<br/>"
-			+ "This message has been sent to " + nRecipients + " contacts, and can be sent to as many as " 
-			+ nAvailable + " more in batches of up to 50 per day.<br/>"
+			+ "This message " 
+			+ (unsent?"has not yet been sent to any contacts.":"can be sent to as many as " + nAvailable + " more contacts in batches of up to 50 messages.") 
+			+ "<br/>"
 			+ "<form method=post action=/messages>"
 			+ "<input type=hidden name=MessageId value=" + m.id + " />"
 			+ "<input type=submit name=UserRequest value='Send 50 Messages' />&nbsp;"
