@@ -29,6 +29,7 @@ public class EmailMessage {
 	@Index	Date created;
 	String	subjectLine;
 			String text;
+			boolean isActive;
 			Date lastRecipientCreated = new Date(0L); 	// Each message is sent to recipients in the order that the
 													  	// recipients were created. This Date is used to  determine
 														// the last recipient, so messages can be sent in batches 
@@ -36,10 +37,11 @@ public class EmailMessage {
 			
 	EmailMessage() {}
 	
-	EmailMessage(String subjectLine, String text) {
+	EmailMessage(String subjectLine, String text, boolean isActive) {
 		this.created = new Date();
 		this.subjectLine = subjectLine;
 		this.text = text;
+		this.isActive = isActive;
 	}
 	
 	String getText() {

@@ -73,7 +73,7 @@ public class ManageMessages extends HttpServlet {
 		} catch (Exception e) {   // load the newest message (first load)
 			m = ofy().load().type(EmailMessage.class).order("-created").first().now();
 		}
-		if (m==null) m = new EmailMessage("subject line","message body text");  // in case no messages exist yet
+		if (m==null) m = new EmailMessage("subject line","message body text",false);  // in case no messages exist yet
 		
 		String userRequest = request.getParameter("UserRequest");
 		if (userRequest==null) userRequest = "";
@@ -83,6 +83,7 @@ public class ManageMessages extends HttpServlet {
 		if (subjectLine==null) subjectLine = m.subjectLine;
 		String text = request.getParameter("Text");
 		if (text == null) text = m.text;
+		boolean isActive = Boolean.parseBoolean(request.getParameter("IsActive"));
 		
 		List<Key<EmailMessage>> msgKeys = new ArrayList<Key<EmailMessage>>();
 		Key<EmailMessage> mKey = Key.create(m);
@@ -90,20 +91,22 @@ public class ManageMessages extends HttpServlet {
 		
 		switch (userRequest) {
 		case "Save New Message":
-			m = new EmailMessage(subjectLine,text);
+			m = new EmailMessage(subjectLine,text,isActive);
 			ofy().save().entity(m).now();
 			msg = "The message was saved.";
 			break;
 		case "Update This Message":
 			m.subjectLine = subjectLine;
 			m.text = text;
+			m.isActive = isActive;
 			ofy().save().entity(m).now();
 			msg = "The message was updated OK.";
 			break;
 		case "Delete This Message":
+			msgKeys = ofy().load().type(EmailMessage.class).order("created").keys().list();
 			if (m.lastRecipientCreated.getTime()==0L) {  // message has never been sent
 				ofy().delete().entity(m).now();
-				msg = "The message was deleted OK.";
+				msg = "The message was deleted OK. The text remains in case you want to save it again.";
 			} else msg = "This message cannot be deleted because it has been sent already.";
 			break;
 		case "Previous Message":
@@ -166,10 +169,37 @@ public class ManageMessages extends HttpServlet {
 			} catch (Exception e) {
 				msg += "Send failed. " + e.toString() + " " + e.getMessage();
 			}
+			break;
+		case "Send 100 Messages":  // this task is fully automated by cron.yaml
+			int nMessagesToSend = 100;
+			List<EmailMessage> messages = ofy().load().type(EmailMessage.class).filter("isActive",true).order("created").list();
+			for (EmailMessage message : messages) {
+				try {
+					int nAvailable = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created >",message.lastRecipientCreated).count();
+					int nSending = nAvailable > nMessagesToSend? nMessagesToSend:nAvailable;
+					int nTasks = nSending/10 + (nSending%10==0?0:1);
+					int i = 0;
+					for (i=0; i<nTasks;i++) {
+						long delayMillis = i * 60000L;
+						QueueFactory.getDefaultQueue().add(withUrl("/messages").param("UserRequest","Send 10 Messages").param("MessageId",String.valueOf(m.id)).countdownMillis(delayMillis));
+					}
+					nAvailable -= nSending;
+					if (nAvailable == 0) {  // deactivate the message if it has been sent to all eligible recipients
+						message.isActive = false;
+						ofy().save().entity(message);
+						continue;
+					}
+					
+					nMessagesToSend -= nSending;
+					if (nMessagesToSend == 0) break;  // end the loop through messages if all 100 messages have been sent
+				} catch (Exception e) {
+				}
+			}
+			break;
 		default:
 		}
 		
-		buf.append(editMessage(subjectLine,text,m.id));
+		buf.append(editMessage(subjectLine,text,m.id,m.isActive));
 		if (!msg.isEmpty()) buf.append("<br/>" + msg + "<br/>");
 		if (m!=null) buf.append(sendMessage(m));
 			
@@ -178,13 +208,14 @@ public class ManageMessages extends HttpServlet {
 		out.println(Subject.getHeader(user) + buf.toString() + Subject.footer);
 	}
 
-	String editMessage(String subjectLine, String text, long messageId) {
+	String editMessage(String subjectLine, String text, long messageId, boolean isActive) {
 		return "<div style='width: 350px;border-style:solid;border-width: 1px;padding-left:25px;'>" + subjectLine + "</div>"
 			+ "<div style='width: 750px;height: 300px;border-style: solid;border-width: 1px;padding: 25px;'>"
 			+ salutationText(null) + (text.isEmpty()?"A preview of the message will be shown here.":text) + unsubscribeText(null) + "</div>"
-			+ "<br/>Edit HTML here:<br/>"
+			+ "<h4>Edit the message here:</h4>"
 			+ "<form method=post action=/messages>"
-			+ "<input type=text size=40 name=SubjectLine placeholder='Email subject line (plain text)' value='" + subjectLine + "'><br/>"
+			+ "<input type=text size=40 name=SubjectLine placeholder='Email subject line (plain text)' value='" + subjectLine + "'>"
+			+ "<label><input type=checkbox name=IsActive value=true " + (isActive?"CHECKED":"") + " /> This message is active</label><br/>"
 			+ "<textarea name=Text rows=10 cols=100>" + text + "</textarea><br/>"
 			+ "<input type=hidden name=MessageId value=" + messageId + ">"
 			+ "<input type=submit name=UserRequest value='Preview Message'>&nbsp;"
@@ -232,6 +263,7 @@ public class ManageMessages extends HttpServlet {
 			}
 			if (!testOnly) m.lastRecipientCreated = c.created;
 			count++;
+			Thread.sleep(1000);  // slows execution to 1 message per second
 		}
 		ofy().save().entity(m).now();
 		return count;
