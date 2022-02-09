@@ -330,6 +330,8 @@ public class LTIv1p3Launch extends HttpServlet {
 		
 		// get the platform_id and deployment_id to load the correct Deployment d
 		String platform_id = id_token.getIssuer();
+		if (platform_id.endsWith("/")) platform_id = platform_id.substring(0,platform_id.length()-1);
+		
 		String deployment_id = id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/deployment_id").asString();
 		if (deployment_id == null) throw new Exception("The deployment_id claim was not found in the id_token payload.");
 		String platformDeploymentId = platform_id + "/" + deployment_id;

@@ -109,6 +109,8 @@ public class Token extends HttpServlet {
 		// be used in case the platform supports multiple deployments with different client_id values for the tool.
 		// However, this is not technically required by the specifications. Hmm.
 		
+		if (platform_id.endsWith("/")) platform_id = platform_id.substring(0,platform_id.length()-1);
+		
 		URL platform = new URL(platform_id);
 		if (!platform.getProtocol().equals("https")) throw new Exception("The platform_id must be a secure URL.");
 		
