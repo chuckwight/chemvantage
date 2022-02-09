@@ -171,8 +171,9 @@ public class ManageMessages extends HttpServlet {
 			}
 			break;
 		case "Send 100 Messages":  // this task is fully automated by cron.yaml
+			if (request.getServerName().contains("dev-vantage")) break;  // don't run this every day from the dev server
 			int nMessagesToSend = 100;
-			List<EmailMessage> messages = ofy().load().type(EmailMessage.class).filter("isActive",true).order("created").list();
+			List<EmailMessage> messages = ofy().load().type(EmailMessage.class).order("created").list();
 			for (EmailMessage message : messages) {
 				if (!message.isActive) continue;
 				try {
