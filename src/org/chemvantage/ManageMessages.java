@@ -174,8 +174,9 @@ public class ManageMessages extends HttpServlet {
 			int nMessagesToSend = 100;
 			List<EmailMessage> messages = ofy().load().type(EmailMessage.class).filter("isActive",true).order("created").list();
 			for (EmailMessage message : messages) {
+				if (!message.isActive) continue;
 				try {
-					int nAvailable = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created >",message.lastRecipientCreated).count();
+					int nAvailable = ofy().load().type(Contact.class).filter("created >",message.lastRecipientCreated).count();
 					int nSending = nAvailable > nMessagesToSend? nMessagesToSend:nAvailable;
 					int nTasks = nSending/10 + (nSending%10==0?0:1);
 					int i = 0;
