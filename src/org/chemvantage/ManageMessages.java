@@ -188,7 +188,7 @@ public class ManageMessages extends HttpServlet {
 					nAvailable -= nSending;
 					if (nAvailable == 0) {  // deactivate the message if it has been sent to all eligible recipients
 						message.isActive = false;
-						ofy().save().entity(message);
+						ofy().save().entity(message).now();
 						continue;
 					}
 					
