@@ -113,6 +113,6 @@ cron:
   description: 'Provides daily routine maintenance for User entities'
 - url: '/messages?UserRequest=Send+100+Messages'
   schedule: 'every day 03:30'
-  timezone: 'America/New York'
+  timezone: 'America/New_York'
   description: 'Sends 100 email marketing messages'
   
