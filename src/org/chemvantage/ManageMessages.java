@@ -186,10 +186,10 @@ public class ManageMessages extends HttpServlet {
 						QueueFactory.getDefaultQueue().add(withUrl("/messages").param("UserRequest","Send 10 Messages").param("MessageId",String.valueOf(message.id)).countdownMillis(delayMillis));
 					}
 					nAvailable -= nSending;
+					
 					if (nAvailable == 0) {  // deactivate the message if it has been sent to all eligible recipients
 						message.isActive = false;
 						ofy().save().entity(message).now();
-						continue;
 					}
 					
 					nMessagesToSend -= nSending;
