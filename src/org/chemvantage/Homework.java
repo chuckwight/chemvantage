@@ -487,7 +487,7 @@ public class Homework extends HttpServlet {
 			if (studentScore > 0) {
 				buf.append("<div id=correctAnswer>"
 						+ q.printAnswerToStudents()
-						+ "<b>The answer submitted was: " + studentAnswer + "</b>&nbsp;" + (q.isCorrect(studentAnswer)?"&nbsp;<IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom>":"<IMG SRC=/images/xmark.png ALT='X mark' align=middle>") + "<p></p>"
+						+ "<b>The answer submitted was: " + studentAnswer + "</b>&nbsp;" + (q.isCorrect(studentAnswer)?"&nbsp;<IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom>":"<IMG SRC=/images/xmark.png ALT='X mark' align=middle>") + "<br/><br/>"
 						+ "</div>");
 			}
 
@@ -498,7 +498,7 @@ public class Homework extends HttpServlet {
 						+ "document.getElementById('correctAnswer').style.display='none';"
 						+ "document.getElementById('exampleLink').style.display='none';>"
 						+ "<FONT COLOR=RED>View the detailed solution for this homework exercise</FONT></a><p></div>");
-				buf.append("<div id=example style='display: none'><b>Detailed Solution</b><p>" 
+				buf.append("<div id=example style='display: none'><b>Detailed Solution</b><br/><br/>" 
 						+ q.printAllToStudents(studentAnswer) + "</div>");
 			} else if (studentScore > 0 && !user.isAnonymous()) {
 				buf.append("<a href='/checkout0.jsp?sig=" + user.getTokenSignature() + "' target=_blank style='color: red'>Would you like to see the detailed step-by-step solution to this problem?</a><p>");
