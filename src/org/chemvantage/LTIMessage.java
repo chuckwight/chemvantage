@@ -296,24 +296,24 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			
 			int responseCode = uc.getResponseCode();
 			debug.append("ResponseCode: " + responseCode + "<br/>");
-			
+
+			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
+			JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+			reader.close();
+			debug.append("Response: " + json.toString() + "<br/>");
+
 			if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED || responseCode == HttpURLConnection.HTTP_ACCEPTED) { // 200m or 201 or 202
-				reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
-				JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
-				reader.close();
-				debug.append("Response: " + json.toString() + "<br/>");
-				
 				// decode the Json response object. Fields include access_token, token-type, expires_in, scope
 				String access_token = json.get("access_token").getAsString();
 				long expires_in = json.get("expires_in").getAsLong();  // number of seconds from now, typically 3600
 				long exp = new Date().getTime() + expires_in*1000L;
-						
+
 				// cache the token in the authTokens Map:
 				JsonObject cached_token = new JsonObject();
 				cached_token.addProperty("access_token", access_token);
 				cached_token.addProperty("exp", exp);
 				authTokens.put(d.platform_deployment_id, cached_token.toString());
-				
+
 				// return the access_token only
 				return access_token;
 			} else throw new Exception("response code " + responseCode);
