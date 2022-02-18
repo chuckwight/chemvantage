@@ -51,7 +51,7 @@ public class LTIDeepLinks extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		try {
-			if ("LTI_1p0".equals(request.getParameter("lti_version"))) throw new Exception("Sorry, deep linking is only available for connections using LTI Advantage.");
+			if ("LTI-1p0".equals(request.getParameter("lti_version"))) throw new Exception("Sorry, deep linking is only available for connections using LTI Advantage.");
 			JsonObject claims = validateDeepLinkRequest(request);
 			User user = null;
 			if (request.getParameter("state") != null) {
