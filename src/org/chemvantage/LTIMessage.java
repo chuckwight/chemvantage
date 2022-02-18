@@ -296,7 +296,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			
 			int responseCode = uc.getResponseCode();
 			debug.append("ResponseCode: " + responseCode + "<br/>");
-
+			debug.append("Content: " + uc.getContent().toString());
+			
 			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
 			JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
 			reader.close();
