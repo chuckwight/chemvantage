@@ -295,8 +295,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			wr.close();
 			
 			int responseCode = uc.getResponseCode();
-			debug.append("ResponseCode: " + responseCode + "<br/>");
-			debug.append("Content: " + uc.getContent().toString());
+			debug.append("ResponseCode: " + responseCode + "<br/>Content: ");
+			debug.append(uc.getContent().toString() + "<br/>");
 			
 			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
 			JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
@@ -319,7 +319,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				return access_token;
 			} else throw new Exception("response code " + responseCode);
 		} catch (Exception e) {
-			sendEmailToAdmin("Failed AuthToken Request",debug.toString());
+			sendEmailToAdmin("Failed AuthToken Request",debug.toString() + "<br/>" + e.toString() + e.getMessage());
 			return e.toString() + " " + e.getMessage() + debug.toString();
 		}    
 	}
