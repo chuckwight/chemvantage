@@ -262,6 +262,8 @@ public class ManageMessages extends HttpServlet {
 				msg.setContent(salutationText(c) + m.text + unsubscribeText(c) ,"text/html");
 				Transport.send(msg);
 			} catch (Exception e) {
+				c.role = "failed message";
+				ofy().save().entity(c);
 			}
 			if (!testOnly) m.lastRecipientCreated = c.created;
 			count++;
