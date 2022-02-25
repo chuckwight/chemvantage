@@ -67,19 +67,10 @@ public class VideoQuiz extends HttpServlet {
 				videoId = Long.parseLong(request.getParameter("VideoId"));
 			} catch (Exception e) {}
 			
-			if (user.getAssignmentId()==0L && videoId==0L) {  // anonymous user
-				StringBuffer buf = new StringBuffer();
-				buf.append(Subject.banner
-						+ "<h2>Please select a video to play</h2>"
-						+ "<form method=get>"
-						+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-						+ "<SELECT NAME='VideoId'><OPTION Value='0' SELECTED>Select one topic</OPTION>");
-				List<Video> videos = ofy().load().type(Video.class).order("orderBy").list();
-				for (Video v:videos) buf.append(v.breaks==null?"":"<OPTION VALUE='" + v.id + "'>" + v.title + "</OPTION>");
-				buf.append("</SELECT>");
-				buf.append("<input type=submit value='Start this video' /></form>");
-				out.println(Subject.header("ChemVantage Video") + buf.toString() + Subject.footer);
-				return;
+			if (user.getAssignmentId()==0L && videoId==0L) {  // anonymous user; select a random video with embedded quizlet
+				List<Video> videos = ofy().load().type(Video.class).filter("breaks >",0).list();
+				Random rand = new Random();
+				videoId = videos.get(rand.nextInt(videos.size())).id;
 			}
 			
 			int segment = 0;

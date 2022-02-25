@@ -174,18 +174,11 @@ public class Quiz extends HttpServlet {
 			if (assignmentId > 0) topicId = qcache.getAssignment(assignmentId).topicId;
 			else topicId = Long.parseLong(request.getParameter("TopicId"));
 			return printQuiz(user,topicId);
-		} catch (Exception e) { // prompt the user to choose a topic
-			List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
-			StringBuffer buf = new StringBuffer();
-			buf.append(Subject.banner);
-			buf.append("<h2>Please select a topic for this quiz</h2>"
-					+ "<form method=get>"
-					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-					+ "<SELECT NAME='TopicId'><OPTION Value='0' SELECTED>Select one topic</OPTION>");
-			for (Topic t:topics) buf.append(t.topicGroup!=1 || t.orderBy.equals("Hide")?"":"<OPTION VALUE='" + t.id + "'>" + t.title + "</OPTION>");
-			buf.append("</SELECT>");
-			buf.append("<input type=submit value='Start this quiz' /></form>");
-			return buf.toString();
+		} catch (Exception e) { // select a random Topic from the OpenStax group
+			List<Topic> topics = ofy().load().type(Topic.class).filter("topicGroup",1).list();
+			Random rand = new Random();
+			Topic t = topics.get(rand.nextInt(topics.size()));
+			return printQuiz(user,t.id);
 		}
 	}
 

@@ -30,6 +30,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -181,18 +182,11 @@ public class Homework extends HttpServlet {
 			String hqi = request.getParameter("Q"); // questionId for offering a hint
 			if (hqi != null) hintQuestionId = Long.parseLong(hqi);			
 			return printHomework(user,topicId,hintQuestionId);
-		} catch (Exception e) {
-			List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
-			StringBuffer buf = new StringBuffer();
-			buf.append(Subject.banner);
-			buf.append("<h2>Please select a homework topic</h2>"
-					+ "<form method=get>"
-					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-					+ "<SELECT NAME='TopicId'><OPTION Value='0' SELECTED>Select one topic</OPTION>");
-			for (Topic t:topics) buf.append(t.topicGroup!=1 || t.orderBy.equals("Hide")?"":"<OPTION VALUE='" + t.id + "'>" + t.title + "</OPTION>");
-			buf.append("</SELECT>");
-			buf.append("<input type=submit value='Show the homework problem set' /></form>");
-			return buf.toString();
+		} catch (Exception e) {  // select a random topic from the OpenStax group
+			List<Topic> topics = ofy().load().type(Topic.class).filter("topicGroup",1).list();
+			Random rand = new Random();
+			Topic t = topics.get(rand.nextInt(topics.size()));
+			return printHomework(user,t.id,0L);
 		}
 	}
 
