@@ -126,22 +126,22 @@ public class ReportScore extends HttpServlet {
 			if (replyBody.toLowerCase().contains("success")) {
 				s.lisReportComplete = true;
 				ofy().save().entity(s);
-			} else if (attempts < 10){
-				long countdownMillis = (long) Math.pow(2,attempts)*60000;
+			} else if (attempts < 4){
+				long countdownMillis = (long) Math.pow(2,attempts)*10800000L;
 				Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
 				queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",URLEncoder.encode(userId, "UTF-8")).param("Retry",Integer.toString(attempts)).countdownMillis(countdownMillis));			
 			} else throw new Exception("User " + userId + " earned a score of " + s.getPctScore() + "% on assignment "
-					+ a.id + "; however, the score could not be posted to the LMS grade book, even after " + attempts + " attempts.");
+					+ a.id + "; however, the score could not be posted to the LMS grade book, even after " + attempts + " attempts. The server reply was:<br/>" + replyBody);
 		} catch (Exception e) {
 			buf.append(e.toString());
-			if (attempts < 10){
+			if (attempts < 4){
 				try{
-					long countdownMillis = (long) Math.pow(2,attempts)*60000;
+					long countdownMillis = (long) Math.pow(2,attempts)*10800000L;
 					Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
 					queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",URLEncoder.encode(userId, "UTF-8")).param("Retry",Integer.toString(attempts)).countdownMillis(countdownMillis));			
 				} catch (Exception e2) {}
 			} else {
-				sendEmailToDomainAdmin(userId,a,oauth_consumer_key,e.getMessage());
+				sendEmailToDomainAdmin(userId,a,oauth_consumer_key,e.getMessage() + buf.toString());
 			}
 		}
 		return buf.toString();
@@ -191,12 +191,6 @@ public class ReportScore extends HttpServlet {
 					+ "Assignment = " + t.title + "<br>"
 					+ "ChemVantage domain = " + d.platform_deployment_id + "<br>"
 					+ "Domain contact = " + d.email + "<p>"
-					+ "If you are using moodle, a common error is that a configuration error on your server is blocking PHP from "
-					+ "accessing the Authorization header of incoming packets. The LTI grade posts were therefore rejected. You can "
-					+ "remedy this by editing your .htaccess file to add the following two commands:<p>"
-					+ "RewriteCond %{HTTP:Authorization} ^(.+) <br>"
-					+ "RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}] <p>"
-					+ "See <a href=https://moodle.org/mod/forum/discuss.php?d=323197#p1320091>this post in the Moodle Forum</a> for details.<p>"
 					+ "This message was generated automatically to make you aware of a potential problem with the connection to "
 					+ "your LMS. If you need help, please contact Chuck Wight (admin@chemvantage.org) for assistance.<p>"
 					+ "Thank you,<p>"
@@ -242,13 +236,6 @@ public class ReportScore extends HttpServlet {
 					+ "Service URL = " + assignment.lis_outcome_service_url + "<br>"
 					+ "POST message = " + LTIMessage.xmlReplaceResult(s.lis_result_sourcedid,String.valueOf(s.score)) + "<p>"
 					
-					+ "Please note</b>: Several Moodle users have experienced difficulty getting "
-					+ "scores returned to the Moodle grade book using LTI. We believe that this is due to the Moodle server being "
-					+ "configured in a way that refuses this type of LTI connection. You may rectify the situation by adding the "
-					+ "following rewrite rule into the .htaccess file on the Moodle server:<p>"
-					+ "RewriteCond %{HTTP:Authorization} ^(.+)" 
-					+ "RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]<p>"
-
 					+ "This message was generated automatically to make you aware of a potential problem with the connection to "
 					+ "your LMS. If you need help, please contact me for assistance.<p>"
 					+ "Thank you,<p>"

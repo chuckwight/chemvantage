@@ -150,7 +150,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     		int responseCode = uc.getResponseCode();
     		if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED) { // 200 or 201
     			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-    			res = new StringBuffer();
+    			res = new StringBuffer("Status code: " + responseCode + "<br/>");
     			String line;
     			while ((line = reader.readLine()) != null) {
     				res.append(line);
