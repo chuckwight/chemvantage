@@ -197,9 +197,6 @@ public class LTIRegistration extends HttpServlet {
 		String email = request.getParameter("email");
 		String aud = request.getParameter("aud");
 		String url = request.getParameter("url");
-		String typ = request.getParameter("typ");
-		String use = request.getParameter("use");
-		String ver = request.getParameter("ver");
 		String lms = request.getParameter("lms");
 		String lms_other = request.getParameter("lms_other");
 		String openid_configuration = request.getParameter("openid_configuration");
@@ -209,16 +206,11 @@ public class LTIRegistration extends HttpServlet {
 		Pattern pattern = Pattern.compile(regex);
 		if (!pattern.matcher(email).matches()) throw new Exception("Your email address was not formatted correctly. ");
 		if (aud.isEmpty()) throw new Exception("Please enter your organization name.");
-		if (url.isEmpty() && !"personal".equals(typ)) throw new Exception("Please enter the URL for your organization's home page.");
-		if (use == null) throw new Exception("Please select your use case.");
-		if (ver==null || ver.isEmpty()) throw new Exception("Please select LTI Advantage or LTI v1.1 registration.");
-		
-		if ("prod".equals(use) && typ==null) throw new Exception("Please select the type of organization connecting to ChemVantage. ");
-		else typ = "";
+		if (url.isEmpty()) throw new Exception("Please enter the URL for your organization's home page.");
 		
 		if (!url.isEmpty() && !url.startsWith("http")) url = "https://" + url;
 		try {
-			if (!"personal".equals(typ)) new URL(url);   // throws Exception if URL is not formatted correctly
+			new URL(url);   // throws Exception if URL is not formatted correctly
 		} catch (Exception e) {
 			throw new Exception("Invalid domain name (" + url + "). " + e.toString());
 		}
@@ -227,14 +219,13 @@ public class LTIRegistration extends HttpServlet {
 			if (lms==null) throw new Exception("Please select the type of LMS that you are connecting to ChemVantage. ");
 			if ("other".equals(lms) && (lms_other==null || lms_other.isEmpty())) throw new Exception("Please describe the type of LMS that you are connecting to ChemVantage. ");
 			if ("other".equals(lms)) lms = lms_other;
-		} else {
-			if (!"true".equals(request.getParameter("verify_use"))) throw new Exception("Please verify your use case.");
 		}
+		
 		if (!"true".equals(request.getParameter("AcceptChemVantageTOS"))) throw new Exception("You must accept the ChemVantage Terms of Service. ");
 
 		if (!reCaptchaOK(request)) throw new Exception("ReCaptcha tool was unverified. Please try again. ");
 		
-		String iss = use.equals("test")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
+		String iss = request.getServerName().contains("dev-vantage")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
 		
 		// Construct a new registration token
 		Date now = new Date();
@@ -247,9 +238,7 @@ public class LTIRegistration extends HttpServlet {
 				.withIssuedAt(now)
 				.withClaim("email",email)
 				.withClaim("url", url)
-				.withClaim("typ", typ)
 				.withClaim("lms", lms)
-				.withClaim("ver", ver)
 				.sign(algorithm);
 		
 		return token;
