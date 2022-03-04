@@ -126,17 +126,8 @@ public class LTIRegistration extends HttpServlet {
 			} else if (request.getParameter("token")!=null) {
 				response.setContentType("text/html");
 				String token = request.getParameter("token");
-				DecodedJWT decoded = JWT.require(algorithm).withIssuer(iss).build().verify(token);
-				String ltiVersion = decoded.getClaim("ver").asString();
-				switch (ltiVersion) {
-				case "1p1":
-					out.println(Subject.header("LTI Registration") + createBLTIConsumer(token) + Subject.footer);
-					break;
-				case "1p3":
-					out.println(Subject.header("LTI Registration") + clientIdForm(token) + Subject.footer);
-					break;
-				default: throw new Exception("LTI version was missing or invalid.");
-				}
+				JWT.require(algorithm).withIssuer(iss).build().verify(token);
+				out.println(Subject.header("LTI Registration") + clientIdForm(token) + Subject.footer);
 			} else {
 				String queryString = request.getQueryString();
 				String registrationURL = "/Registration.jsp" + (queryString==null?"":"?" + queryString);
@@ -157,6 +148,7 @@ public class LTIRegistration extends HttpServlet {
 		if (userRequest==null) userRequest = "";
 
 		String iss = "https://" + request.getServerName();
+		boolean dynamicRegistration = request.getParameter("registration_token")!=null;
 		
 		try {
 			if ("finalize".contentEquals(userRequest)) {				
@@ -166,7 +158,7 @@ public class LTIRegistration extends HttpServlet {
 			} else {
 				if (request.getParameter("email")==null) throw new Exception("Email was not given.");
 				String token = validateApplicationFormContents(request);
-				if ("dynamic_registration".equals(request.getParameter("ver"))) {
+				if (dynamicRegistration) {
 					JsonObject openIdConfiguration = getOpenIdConfiguration(request);  // LTIDRSv1p0 section 3.4
 					validateOpenIdConfigurationURL(request.getParameter("openid_configuration"),openIdConfiguration);  // LTIDRSv1p0 section 3.5.1
 					JsonObject registrationResponse = postRegistrationRequest(openIdConfiguration,request);  // LTIDRSv1p0 section 3.5.2 & 3.6
@@ -246,7 +238,7 @@ public class LTIRegistration extends HttpServlet {
 		
 		// Construct a new registration token
 		Date now = new Date();
-		Date exp = new Date(now.getTime() + 259200000L); // three days from now
+		Date exp = new Date(now.getTime() + 604800000L); // seven days from now
 		String token = JWT.create()
 				.withIssuer(iss)
 				.withSubject(sub)
@@ -294,8 +286,6 @@ public class LTIRegistration extends HttpServlet {
 		String url = jwt.getClaim("url").asString();
 		String iss = jwt.getIssuer();
 		String lms = jwt.getClaim("lms").asString();
-		String ver = jwt.getClaim("ver").asString();
-		String typ = jwt.getClaim("typ").asString();
 		
 		StringBuffer buf = new StringBuffer();
 		
@@ -306,289 +296,161 @@ public class LTIRegistration extends HttpServlet {
 		
 		buf.append("Thank you for your ChemVantage registration request.<p>");
 		
-		if (iss.contains("dev")) {
-			buf.append("You indicated on the registration form that your use case is LTI software development or testing LTI connections. "
-					+ "ChemVantage is pleased to support the LTI community by offering access to our code development server for "
-					+ "non-instructional purposes. The development server is occasionally unstable while we are testing our own code, and "
-					+ "accounts are purged from time to time, but reregistration is free.<br/><br/>");
-			
-		} else {
-			switch (typ) {
-			case "nonprofit":
-				buf.append("You indicated on the registration form that " + org + " is a public or non-profit educational institution. As such, ChemVantage "
-						+ "services are provided free for up to 1000 users in your LMS. Please contact us for pricing beyond this limit.<p>"
-						+ "<b>By completing the registration steps below, you certify that your organization is a public or non-profit institution.</b><br/><br/>");
-			break;
-			case "personal":
-				buf.append("You indicated on the registration form that you intend to use ChemVantage for a small business or personal use. You may use "
-						+ "this account for offering instuction in General Chemistry for up to 5 users from your LMS. To exceed this limit, "
-						+ "please contact us for pricing at admin@chemvantage.org.<br/><br/>");
-			break;			
-			case "forprofit":
-				buf.append("You indicated on the registration form that " + org + " desires to establish a commercial account. ChemVantage will "
-						+ "send you an invoice in the next few days for payment of the $5000 annual subscription charge. This subscription allows you to "
-						+ "provide ChemVantage services for up to 10,000 users from your LMS. To exceed this limit, please contact us for pricing.<br/><br/>");
-				break;
-			default: 
-			}
-		}
 		buf.append("When you complete the registration steps below, your account will be activated immediately while your registration is under review. ");
 		
 		buf.append("If you have questions or require assistance, please contact us at admin@chemvantage.org.");
-		
-	
-		
-		if (ver.contentEquals("1p1")) { // older LTIv1p1 registration process; deprecated 12/31/2020
-			
-			buf.append("<h3>Complete the LTI Registration Process</h3>");
-			buf.append("Click the link below to obtain your LTI credentials for connecting to ChemVantage. "
-					+ "<b>Print or save the credentials in a safe place.</b> "
-					+ "For your security, the link is valid for only three days and expires at " + jwt.getExpiresAt() + "<p>");
-			
+
+		buf.append("<h3>Complete the LTI Advantage Registration Process</h3>");
+		buf.append("The next step is to enter the ChemVantage configuration details into your LMS. "
+				+ "This will enable your LMS to communicate securely with ChemVantage. Normally, "
+				+ "you must have administrator privileges in your LMS in order to do this. "
+				+ "If you are NOT the LMS administrator, please stop here and forward this message "
+				+ "to an administrator with a request to complete the registration process. The "
+				+ "registration link below will be active for 7 days and expires at " + jwt.getExpiresAt() + ".<p>"
+				+ "<hr>"
+				+ "<br>To the LMS Administrator:<p>"
+				+ "ChemVantage is a free Open Education Resource for teaching and learning college-"
+				+ "level General Chemistry. Learn more about ChemVantage "
+				+ "<a href=https://www.chemvantage.org/about.html>here</a>.<p>");
+		switch (lms) {
+		case "blackboard":
+			buf.append("This request indicates that you are using the cloud-based Blackboard Learn LMS. "
+					+ "To configure ChemVantage in Blackboard please perform the following steps:<ol>"
+					+ "<li>Go to System Admin | Integrations: LTI Tool Providers | Register LTI 1.3 Tool"
+					+ "<li>Enter the Client ID: " + (iss.equals("https://dev-vantage-hrd.appspot.com")?"ec076e8c-b90f-4ecf-9b5d-a9eff03976be":"be1004de-6f8e-45b9-aae4-2c1370c24e1e")
+					+ "<li>Make a copy of the deployment_id and set Tool status: Approved"
+					+ "<li>Institution Policies: Send Role, Name, Email; Allow Grade Service and Membership Service"
+					+ "<li>Submit"
+					+ "<li>Click the link below to register the deployment_id with ChemVantage<br/>"
+					+ "<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a></li>"
+					+ "<li>Go back to the LTI Tool Providers page, and from the dropdown menu on the ChemVantage app select Manage Placements"
+					+ "<li>Click Create Placement"
+					+ "<ul><li>Label: ChemVantage</li>"
+					+ " <li>Description: ChemVantage is an Open Educational Resource for teaching and learning college-level General Chemistry"
+					+ " <li>Handle: (any unique string)"
+					+ " <li>Availability: Yes"
+					+ " <li>Course Content Tool (supports deep linking)"
+					+ " <li>Tool Provider URL: " + iss + "/lti/deeplinks"
+					+ " <li>Custom Parameters (leave blank)"
+					+ " <li>Submit</li></ul></ol>");
+			buf.append("<hr><br>To the Course Instructor:");
+			buf.append("<ol><li>Go to the course | Content | Build Content | ChemVantage</li>"
+					+ "<li>Name: as appropriate (e.g., Quiz - Heat & Enthalpy)</li>"
+					+ "<li>Grading:"
+					+ "<ul><li>Enable Evaluation - Yes</li>"
+					+ " <li>Points - 10 for quiz or homework; 5 for video; 100 for practice exam</li>"
+					+ " <li>Visible to Students - Yes</li>"
+					+ "</ul></li>"
+					+ "<li>Submit</li>"
+					+ "<li>Click the new assignment link to launch ChemVantage</li>"
+					+ "<li>Choose the relevant assignment (e.g., Quiz on Heat & Enthalpy)</li>"
+					+ "<li>Customize the assignment, if desired, using the highlighted link</li>"
+					+ "</ol>");
+			break;
+		case "canvas":
+			buf.append("This request indicates that you are using the cloud-based Instructure Canvas LMS. "
+					+ "To configure ChemVantage in Canvas please perform the following steps:<ol>"
+					+ "<li>Configure a new LTI Developer Key for your Canvas Account "
+					+ "(<a href=https://community.canvaslms.com/docs/DOC-16729-42141110178>see detailed instuctions here</a>)"
+					+ "<br>Use the following Key Settings:<ul>"
+					+   "<li>Key Name: ChemVantage" + (iss.contains("dev")?" Development":"")
+					+   "<li>Owner Email: admin@chemvantage.org"
+					+   "<li>Redirect URIs:<br>" + iss + "/lti/launch<br>" + iss + "/lti/deeplinks"
+					+   "<li>Configure Method: Enter URL"
+					+   "<li>JSON URL: " + iss + "/lti/registration?UserRequest=config&lms=canvas"
+					+   "</ul>"
+					+ "<li>Click Save."
+					+ "<li>Copy or write down the client_id and deployment_id created in step 1. This is the tricky part, "
+					+ "because Canvas doesn't make it easy:<ul>"
+					+ " <li>Canvas uses the developer key as the client_id, so it can be viewed from the list of "
+					+ "developer keys. It is a numeric value that looks something like <b>32570000000000041</b>.</li> "
+					+ " <li>The deployment_id can be found in Settings | Apps | App Configurations by opening the "
+					+ "settings menu for ChemVantage. It is a compound value that consists of a number and a hex string "
+					+ "separated by a colon and looks something like <b>10408:7db438070728c02373713c12c73869b3af470b68</b>.</li></ul>"
+					+ "<li>Add ChemVantage as an External App to your account using the client_id created in step 1 "
+					+ "(<a href=https://community.canvaslms.com/docs/DOC-16730-42141110273>see detailed instructions here</a>)"
+					+ "<li>Click the link below to register the new client_id and deployment_id created in step 1 with ChemVantage</ol>");
+
+			buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
+					+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><br/><br/>");
+
+			buf.append("<hr><br>To the Course Instructor:<ol>"
+					+ "<li>Create a new Canvas assignment with the following recommended parameters:" 
+					+ "<ul><li>Name: (as appropriate, e.g. Quiz - Heat and Enthalpy)</li>"
+					+ " <li>Points: 10 for quiz or homework; 5 for video; 100 for practice exam</li>"
+					+ " <li>Submission Type: External Tool</li>"
+					+ " <li>External Tool URL: Find ChemVantage or enter " + iss + "/lti/launch</li>"
+					+ " <li>Save or Save and Publish</li>"
+					+ "</ul></li>"
+					+ "<li>When you launch the assignment, you may use the highlighted link to customize it for your class.</li>"
+					+ "</ol>");
+			break;
+		case "moodle":
+			buf.append("This request indicates that you are using the open-source Moodle LMS. "
+					+ "To configure ChemVantage in Moodle v3.10 please go to Site Administration | Plugins | Manage Tools<br/>"
+					+ "Enter the URL: " + iss + "/lti/registration, complete the form and activate the tool (easy).<br/><br/>"
+					+ "Otherwise, you can configure the tool manually:<ul>"
+					+ "<li>Tool Name: ChemVantage" + (iss.contains("dev-vantage")?" Development":"") + "</li>"
+					+ "<li>Tool URL: " + iss + "/lti/launch" + "</li>"
+					+ "<li>Tool Description: ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry</li>"
+					+ "<li>LTI version: LTI 1.3</li>"
+					+ "<li>Public Key Type: Keyset URL</li>"
+					+ "<li>Public Keyset: " + iss + "/jwks" + "</li>"
+					+ "<li>Initiate Login URL: " + iss + "/auth/token" + "</li>"
+					+ "<li>Redirection URIs: " + iss + "/lti/launch " + iss + "/lti/deeplinks" + "</li>"
+					+ "<li>Check 'Supports Deep Linking'</li>"
+					+ "<li>Content Selection URL: " + iss + "/lti/deeplinks" + "</li>"
+					+ "<li>Services | IMS LTI Assignment and Grade Services: select Use for grade sync only</li>"
+					+ "<li>Services | IMS LTI Names and Role Provisioning: select Use this service</li>"
+					+ "<li>Privacy | check Force SSL</li>"
+					+ "<li>Save Changes</li>"
+					+ "</ul>");
+
+			buf.append("When you have finished the configuration, Moodle generates a preconfigured tool. You must activate it and "
+					+ "then click 'View configuration details'. When you have these details in hand, including the client_id and deployment_id, "
+					+ "click the link below to enter them into ChemVantage.<br/><br/>");
+
+			buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
+					+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><br/><br/>");
+
+			buf.append("<hr><br>To the Course Instructor:<br/>"
+					+ "To add ChemVantage assignments to your course:<ol>"
+					+ "<li>Click 'Add an activity or resource'</li>"
+					+ "<li>Click 'External Tool'</li>"
+					+ "<li>Select ChemVantage from preconfigured tools and click 'Select content'</li>"
+					+ "<li>Choose one or more ChemVantage assignments, click 'Submit' and then 'Continue'</li>"
+					+ "</ol>");
+			break;
+		case "LTI Certification":
+			buf.append("The deployment_id will be recorded automatically. Please click the link below to register the new client_id with ChemVantage:<br>"
+					+ "<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
+					+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><br/><br/>");
+			break;
+		default:
+			buf.append("This registration request uses the LTI Advantage (version 1.3) specifications. "
+					+ "Use the information below to register ChemVantage in your LMS:<br>"
+					+ "Tool Domain URL: " + iss + "<br>"
+					+ "Tool Redirect URL: " + iss + "/lti/launch<br>"
+					+ "Tool Deep Linking URL: " + iss + "/lti/deeplinks<br>"
+					+ "OIDC Login Initiation URL: " + iss + "/auth/token<br>"
+					+ "JSON Web Key Set URL: " + iss + "/jwks<p>");
+
+			buf.append("If your LMS requires you to enter a specific public RSA key instead of the JSON Web Key Set URL, you can get it here:<br>"
+					+ "<a href=" + iss + "/jwks?kid=" + KeyStore.getAKeyId(lms) + "&fmt=x509>PEM key in X509 format</a> or <a href=" + iss + "/jwks?kid=" + KeyStore.getAKeyId(lms) + ">JSON Web Key</a><p>");
+
+			buf.append("When you have finished the configuration, your LMS "
+					+ "should generate a client_id value to identify the ChemVantage tool. "
+					+ "In addition, your LMS should generate a "
+					+ "deployment_id value to identify a specific account in your LMS for this tool. "
+					+ "When you have these values in hand, please click the following link to complete the "
+					+ "LTI registration.<p>");
 			buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
 					+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><p>");
-			
-			switch (lms) {
-			case "blackboard":
-				String providerDomain = iss.replaceFirst("https://", "");
-				buf.append("<b>Detailed instructions for connecting ChemVantage to a Blackboard course:</b><p>");
-				buf.append("<u>For the Blackboard Account System Administrator:</u>");
-				buf.append("<ol><li>Go to System Admin | Integrations: LTI Tool Providers | Register Provider Domain"
-						+ "<ul><li>Provider Domain: " + providerDomain + "</li>"
-						+ " <li>Provider Domain Status: Approved</li>"
-						+ " <li>Secondary Hostnames (leave blank)</li>"
-						+ " <li>Default configuration: Set globally</li>" 
-						+ " <li>Tool Provider Key and Tool Provider Secret: (cut/paste values from LTI credentials)</li>" 
-						+ " <li>Tool Provider Custom Parameters: (leave blank)</li>" 
-						+ " <li>Send user data only over SSL</li>"
-						+ " <li>User fields: check Role, Name, Email</li>"
-						+ " <li>Allow Membership Service Access: Yes</li>"
-						+ " <li>Submit</li>"
-						+ "</ul></li>"
-						+ "<li>Go back to the LTI Tool Providers Page, and select the ChemVantage provider domain | Manage Placements | Create Placement" 
-						+ "<ul><li>Label: ChemVantage</li>"
-						+ " <li>Description: ChemVantage is a free Open Education Resource for teaching and learning college-level General Chemistry.</li>"
-						+ " <li>Handle: (any unique string like Handle: chemvantage_lti_v1p1)</li>"
-						+ " <li>Availability: Yes</li>"
-						+ " <li>Select Course content tool, allows grading (no deep linking)</li>"
-						+ " <li>Tool Provider URL: " + iss + "/lti</li>"
-						+ " <li>Tool Provider Key: (oauth_consumer_key)</li>"
-						+ " <li>Tool Provider Secret: (shared_secret)</li>"
-						+ " <li>Custom Parameters (leave blank)</li>"
-						+ " <li>Submit</li>"
-						+ "</ul></li></ol>");
-				buf.append("<u>For the Blackboard Instructor:</u>");
-				buf.append("<ol><li>Go to the course | Content | Build Content | ChemVantage</li>"
-						+ "<li>Name: as appropriate (e.g., Quiz - Heat & Enthalpy)</li>"
-						+ "<li>Grading:"
-						+ "<ul><li>Enable Evaluation - Yes</li>"
-						+ " <li>Points - 10 for quiz or homework; 5 for video; 100 for practice exam</li>"
-						+ " <li>Visible to Students - Yes</li>"
-						+ "</ul></li>"
-						+ "<li>Submit</li>"
-						+ "<li>Click the new assignment link to launch ChemVantage</li>"
-						+ "<li>Choose the relevant assignment (e.g., Quiz on Heat & Enthalpy)</li>"
-						+ "<li>Customize the assignment, if desired, using the highlighted link</li>"
-						+ "</ol>");
-				break;		
-			case "canvas":
-				buf.append("<b>Detailed instructions for connecting ChemVantage to a Canvas course:</b>");
-				buf.append("<ol><li>Print or Save your <a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">LTI credentials</a></li>"
-						+ "<li>Login to Canvas as a course Instructor, navigate to Settings, select the Apps tab, and click View App Configurations. "
-						+ "Then click the red +App button and complete the following fields to create a new External Tool:" 
-						+ "<ul><li>Configuration Type: By URL</li>"
-						+ " <li>Name: ChemVantage</li>"
-						+ " <li>Consumer Key and Shared Secret: (cut/paste values from step 1; do not include any blank spaces)</li>" 
-						+ " <li>Config URL: " + iss + "/lti_config.xml</li>" 
-						+ " <li>Submit</li>"
-						+ "</ul></li>"
-						+ "<li>Create a new Canvas assignment with the following recommended parameters:" 
-						+ "<ul><li>Name: (as appropriate, e.g. Quiz - Heat and Enthalpy)</li>"
-						+ " <li>Points: 10 for quiz or homework; 5 for video; 100 for practice exam</li>"
-						+ " <li>Submission Type: External Tool</li>"
-						+ " <li>External Tool URL: Find ChemVantage or enter " + iss + "/lti</li>"
-						+ " <li>Save or Save and Publish</li>"
-						+ "</ul></li>"
-						+ "<li>After you Save the assignment, you should see the ChemVantage Assignment Setup Page. "
-						+ "Select the appropriate ChemVantage assignment (e.g., Quiz on Heat & Enthalpy). ChemVantage will remember this choice.</li>"
-						+ "<li>When the assignment appears, you may use the highlighted link to customize it for your class.</li>"
-						+ "<li>After you Publish the assignment, you should navigate to Settings, Student View and submit the assignment "
-						+ "to ensure that the score is posted correctly in the Canvas grade book. ChemVantage does not collect any personally "
-						+ "identifiable information (PII) from students, so returning scores to the Canvas grade book is the ONLY way to ensure "
-						+ "that students get credit for their work.</li>"
-						+ "</ol>");
-				break;
-			case "LTI Certification":
-				buf.append("Your registration will connect ChemVantage to the IMS ltiadvantagevalidator platform to perform "
-						+ "the tests required for certification.<p>");
-				break;
-			case "moodle":
-				buf.append("Please note: Several Moodle users have experienced difficulty getting "
-						+ "scores returned to the Moodle grade book using LTI. We believe that this is due to the Moodle server being "
-						+ "configured in a way that refuses this type of LTI connection. You can rectify the situation by adding the "
-						+ "following rewrite rule into the .htaccess file on the Moodle server:<br>"
-						+ "RewriteCond %{HTTP:Authorization} ^(.+)" 
-						+ "RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]<p>");
-				break;
-			default:
-			}
-			
-			buf.append("If you  need assistance, please contact me at admin@chemvantage.org. <p>"
-					+ "-Chuck Wight");		
-		
-		} else { // LTIAdvantage registration
-			buf.append("<h3>Complete the LTI Advantage Registration Process</h3>");
-			buf.append("The next step is to enter the ChemVantage configuration details into your LMS. "
-					+ "This will enable your LMS to communicate securely with ChemVantage. Normally, "
-					+ "you must have administrator privileges in your LMS in order to do this. "
-					+ "If you are NOT the LMS administrator, please stop here and forward this message "
-					+ "to an administrator with a request to complete the registration process. The "
-					+ "registration link below will be active for 3 days and expires at " + jwt.getExpiresAt() + ".<p>"
-					+ "<hr>"
-					+ "<br>To the LMS Administrator:<p>"
-					+ "ChemVantage is a free Open Education Resource for teaching and learning college-"
-					+ "level General Chemistry. Learn more about ChemVantage "
-					+ "<a href=https://www.chemvantage.org/About>here</a>.<p>");
-			switch (lms) {
-			case "blackboard":
-				buf.append("This request indicates that you are using the cloud-based Blackboard Learn LMS. "
-						+ "To configure ChemVantage in Blackboard please perform the following steps:<ol>"
-						+ "<li>Go to System Admin | Integrations: LTI Tool Providers | Register LTI 1.3 Tool"
-						+ "<li>Enter the Client ID: " + (iss.equals("https://dev-vantage-hrd.appspot.com")?"ec076e8c-b90f-4ecf-9b5d-a9eff03976be":"be1004de-6f8e-45b9-aae4-2c1370c24e1e")
-						+ "<li>Make a copy of the deployment_id and set Tool status: Approved"
-						+ "<li>Institution Policies: Send Role, Name, Email; Allow Grade Service and Membership Service"
-						+ "<li>Submit"
-						+ "<li>Click the link below to register the deployment_id with ChemVantage<br/>"
-						+ "<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a></li>"
-						+ "<li>Go back to the LTI Tool Providers page, and from the dropdown menu on the ChemVantage app select Manage Placements"
-						+ "<li>Click Create Placement"
-						+ "<ul><li>Label: ChemVantage</li>"
-						+ " <li>Description: ChemVantage is an Open Educational Resource for teaching and learning college-level General Chemistry"
-						+ " <li>Handle: (any unique string)"
-						+ " <li>Availability: Yes"
-						+ " <li>Course Content Tool (supports deep linking)"
-						+ " <li>Tool Provider URL: " + iss + "/lti/deeplinks"
-						+ " <li>Custom Parameters (leave blank)"
-						+ " <li>Submit</li></ul></ol>");
-				buf.append("<hr><br>To the Course Instructor:");
-				buf.append("<ol><li>Go to the course | Content | Build Content | ChemVantage</li>"
-						+ "<li>Name: as appropriate (e.g., Quiz - Heat & Enthalpy)</li>"
-						+ "<li>Grading:"
-						+ "<ul><li>Enable Evaluation - Yes</li>"
-						+ " <li>Points - 10 for quiz or homework; 5 for video; 100 for practice exam</li>"
-						+ " <li>Visible to Students - Yes</li>"
-						+ "</ul></li>"
-						+ "<li>Submit</li>"
-						+ "<li>Click the new assignment link to launch ChemVantage</li>"
-						+ "<li>Choose the relevant assignment (e.g., Quiz on Heat & Enthalpy)</li>"
-						+ "<li>Customize the assignment, if desired, using the highlighted link</li>"
-						+ "</ol>");
-				break;
-			case "canvas":
-				buf.append("This request indicates that you are using the cloud-based Instructure Canvas LMS. "
-						+ "To configure ChemVantage in Canvas please perform the following steps:<ol>"
-						+ "<li>Configure a new LTI Developer Key for your Canvas Account "
-						+ "(<a href=https://community.canvaslms.com/docs/DOC-16729-42141110178>see detailed instuctions here</a>)"
-						+ "<br>Use the following Key Settings:<ul>"
-						+   "<li>Key Name: ChemVantage" + (iss.contains("dev")?" Development":"")
-						+   "<li>Owner Email: admin@chemvantage.org"
-						+   "<li>Redirect URIs:<br>" + iss + "/lti/launch<br>" + iss + "/lti/deeplinks"
-						+   "<li>Configure Method: Enter URL"
-						+   "<li>JSON URL: " + iss + "/lti/registration?UserRequest=config&lms=canvas"
-						+   "</ul>"
-						+ "<li>Click Save."
-						+ "<li>Copy or write down the client_id and deployment_id created in step 1. This is the tricky part, "
-						+ "because Canvas doesn't make it easy:<ul>"
-						+ " <li>Canvas uses the developer key as the client_id, so it can be viewed from the list of "
-						+ "developer keys. It is a numeric value that looks something like <b>32570000000000041</b>.</li> "
-						+ " <li>The deployment_id can be found in Settings | Apps | App Configurations by opening the "
-						+ "settings menu for ChemVantage. It is a compound value that consists of a number and a hex string "
-						+ "separated by a colon and looks something like <b>10408:7db438070728c02373713c12c73869b3af470b68</b>.</li></ul>"
-						+ "<li>Add ChemVantage as an External App to your account using the client_id created in step 1 "
-						+ "(<a href=https://community.canvaslms.com/docs/DOC-16730-42141110273>see detailed instructions here</a>)"
-						+ "<li>Click the link below to register the new client_id and deployment_id created in step 1 with ChemVantage</ol>");
-				
-				buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
-						+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><br/><br/>");
-				
-				buf.append("<hr><br>To the Course Instructor:<ol>"
-						+ "<li>Create a new Canvas assignment with the following recommended parameters:" 
-						+ "<ul><li>Name: (as appropriate, e.g. Quiz - Heat and Enthalpy)</li>"
-						+ " <li>Points: 10 for quiz or homework; 5 for video; 100 for practice exam</li>"
-						+ " <li>Submission Type: External Tool</li>"
-						+ " <li>External Tool URL: Find ChemVantage or enter " + iss + "/lti/launch</li>"
-						+ " <li>Save or Save and Publish</li>"
-						+ "</ul></li>"
-						+ "<li>When you launch the assignment, you may use the highlighted link to customize it for your class.</li>"
-						+ "</ol>");
-				break;
-			case "moodle":
-				buf.append("This request indicates that you are using the open-source Moodle LMS. "
-						+ "To configure ChemVantage in Moodle v3.10 please go to Site Administration | Plugins | Manage Tools<br/>"
-						+ "Enter the URL: " + iss + "/lti/registration, complete the form and activate the tool (easy).<br/><br/>"
-						+ "Otherwise, you can configure the tool manually:<ul>"
-						+ "<li>Tool Name: ChemVantage" + (iss.contains("dev-vantage")?" Development":"") + "</li>"
-						+ "<li>Tool URL: " + iss + "/lti/launch" + "</li>"
-						+ "<li>Tool Description: ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry</li>"
-						+ "<li>LTI version: LTI 1.3</li>"
-						+ "<li>Public Key Type: Keyset URL</li>"
-						+ "<li>Public Keyset: " + iss + "/jwks" + "</li>"
-						+ "<li>Initiate Login URL: " + iss + "/auth/token" + "</li>"
-						+ "<li>Redirection URIs: " + iss + "/lti/launch " + iss + "/lti/deeplinks" + "</li>"
-						+ "<li>Check 'Supports Deep Linking'</li>"
-						+ "<li>Content Selection URL: " + iss + "/lti/deeplinks" + "</li>"
-						+ "<li>Services | IMS LTI Assignment and Grade Services: select Use for grade sync only</li>"
-						+ "<li>Services | IMS LTI Names and Role Provisioning: select Use this service</li>"
-						+ "<li>Privacy | check Force SSL</li>"
-						+ "<li>Save Changes</li>"
-						+ "</ul>");
-				
-				buf.append("When you have finished the configuration, Moodle generates a preconfigured tool. You must activate it and "
-						+ "then click 'View configuration details'. When you have these details in hand, including the client_id and deployment_id, "
-						+ "click the link below to enter them into ChemVantage.<br/><br/>");
-			
-				buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
-						+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><br/><br/>");
-					
-				buf.append("<hr><br>To the Course Instructor:<br/>"
-						+ "To add ChemVantage assignments to your course:<ol>"
-						+ "<li>Click 'Add an activity or resource'</li>"
-						+ "<li>Click 'External Tool'</li>"
-						+ "<li>Select ChemVantage from preconfigured tools and click 'Select content'</li>"
-						+ "<li>Choose one or more ChemVantage assignments, click 'Submit' and then 'Continue'</li>"
-						+ "</ol>");
-				break;
-			case "LTI Certification":
-				buf.append("The deployment_id will be recorded automatically. Please click the link below to register the new client_id with ChemVantage:<br>"
-						+ "<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
-						+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><br/><br/>");
-				break;
-			default:
-				buf.append("This registration request uses the LTI Advantage (version 1.3) specifications. "
-						+ "Use the information below to register ChemVantage in your LMS:<br>"
-						+ "Tool Domain URL: " + iss + "<br>"
-						+ "Tool Redirect URL: " + iss + "/lti/launch<br>"
-						+ "Tool Deep Linking URL: " + iss + "/lti/deeplinks<br>"
-						+ "OIDC Login Initiation URL: " + iss + "/auth/token<br>"
-						+ "JSON Web Key Set URL: " + iss + "/jwks<p>");
-				
-				buf.append("If your LMS requires you to enter a specific public RSA key instead of the JSON Web Key Set URL, you can get it here:<br>"
-						+ "<a href=" + iss + "/jwks?kid=" + KeyStore.getAKeyId(lms) + "&fmt=x509>PEM key in X509 format</a> or <a href=" + iss + "/jwks?kid=" + KeyStore.getAKeyId(lms) + ">JSON Web Key</a><p>");
-				
-				buf.append("When you have finished the configuration, your LMS "
-						+ "should generate a client_id value to identify the ChemVantage tool. "
-						+ "In addition, your LMS should generate a "
-						+ "deployment_id value to identify a specific account in your LMS for this tool. "
-						+ "When you have these values in hand, please click the following link to complete the "
-						+ "LTI registration.<p>");
-				buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
-						+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><p>");
-			}
-			
-			buf.append("If you  need additional assistance, please contact me at admin@chemvantage.org. <p>"
-					+ "-Chuck Wight");
-
 		}
+
+		buf.append("If you  need additional assistance, please contact me at admin@chemvantage.org. <p>"
+				+ "-Chuck Wight");
+
 		sendEmail(name,email,"ChemVantage LTI Registration",buf.toString());
 	}
 
@@ -768,6 +630,7 @@ public class LTIRegistration extends HttpServlet {
 		String org_url = jwt.getClaim("url").asString();
 		String org_typ = jwt.getClaim("typ").asString();
 		String lms = jwt.getClaim("lms").asString();
+		String price = jwt.getClaim("price").asString();
 		String client_id = request.getParameter("ClientId");
 		if (client_id==null) throw new Exception("Client ID value is required.");
 		String deployment_id = request.getParameter("DeploymentId");
@@ -812,6 +675,7 @@ public class LTIRegistration extends HttpServlet {
 			
 		Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,org_typ,lms);
 		d.status = "pending";
+		d.price = Integer.parseInt(price);
 		
 		Deployment prior = Deployment.getInstance(d.platform_deployment_id);
 		
