@@ -12,7 +12,7 @@
 	String ver = request.getParameter("ver");
 	String lms = request.getParameter("lms");
 	String price = request.getParameter("price");
-	if (price==null) price="";
+	if (price==null) price="-1";
 	String lms_other = request.getParameter("lms_other");
 	String AcceptChemVantageTOS = request.getParameter("AcceptChemVantageTOS");
 	String openid_configuration = request.getParameter("openid_configuration");
@@ -74,26 +74,28 @@ Type of Learning Management System:<br/>
 <label><input type=radio name=lms id=other value=other <%= ((lms!=null && lms.equals("other"))?"checked":"") %> />Other: 
 <input type=text name=lms_other value='<%= (lms_other==null?"":lms_other) %>' onFocus="document.getElementById('other').checked=true;" /></label>
 
-<% } else {%>
+<% } else { %>
  <input type=hidden name=openid_configuration value='<%= openid_configuration %>' />
 <% } %>
 
 <script>
 function showPricingDetails() {
-	var price = document.getElementById('price').value;
+	var price = document.getElementById('nameit').value;
 	var pricingDetails = document.getElementById('pricingDetails');
-	if (price == "") pricingDetails.HTML = "";
+	if (price == "-1") pricingDetails.innerHTML = "";
 	else if (price=="0") {
 		pricingDetails.innerHTML = "You have selected a price of zero, and that is a valid choice. However, it changes the decision from one of price to a different decision about whether "
-			+ "ChemVantage LLC is willing to pay the full cost of providing this service to your students. To help us make this decision, please use the spaces below to summarize "
-			+ "briefly why you selected this price and why ChemVantage should be willing to pay the cost.<br/>"
-			+ "<textarea name=whyZeroPrice rows=7 cols=50 placeholder='Explain here why you selected a value of zero.'></textarea><br/><br/>"
-			+ "<textarea name=whyChemVPays rows=7 cols=50 placeholder='Explain here why ChemVantage should pay the cost.'></textarea><br/><br/>";
+			+ "ChemVantage LLC is willing to pay the full cost of providing this service to your students. To help us make this decision, please use the spaces below to make your case:<br/>"
+			+ "<textarea name=whyZeroPrice rows=4 cols=80 wrap=soft placeholder='Please explain here why you chose a price of zero.'></textarea><br/><br/>"
+			+ "<textarea name=whyChemVPays rows=4 cols=80 wrap=soft placeholder='Please explain here why ChemVantage should pay the full cost of providing this service to your students.'></textarea><br/><br/>";
 	} else {
-		pricingDetails.innerHTML = "Thank you. When you complete the LTI registration in your LMS, your ChemVantage account will be set up automatically to charge each student $" 
-			+ price + " USD before granting access to the first assignment. Upon successful payment, the student will have unlimited access to ChemVantage assignments through this "
-			+ "LTI account for a period of 10 months. We will also send you an email with a link that allows your institution to purchase student licenses in bulk at a discounted rate. <br/><br/>"
-			+ "Access to assignments by LMS users in an instructor or administrator role is always free and does not require a license. We will also provision your ChemVantage accuont 
+		pricingDetails.innerHTML = "Thank you. No payment is required now. When you complete the LTI registration in your LMS, your ChemVantage account will be set up automatically "
+			+ "to charge each student $" + price 
+			+ "&nbsp;USD before granting access to the first assignment. Upon successful payment, the student will have unlimited access to ChemVantage assignments through this "
+			+ "LTI account for a period of 10 months.<br/><br/>"
+			+ "Some institutions prefer to purchase licenses centrally on behalf of their students. ChemVantage allows this, and we will send you an email with a link to purchase student "
+			+ "licenses in bulk at a discounted rate. <br/><br/>"
+			+ "Access to ChemVantage by instructors or administrators is always free and does not require a license. We will also provision your ChemVantage account "
 			+ "with 5 complimentary student licenses to use for testing assignment creation and return of student scores to your LMS grade book.<br/><br/>";
 	}
 }
@@ -101,17 +103,15 @@ function showPricingDetails() {
 
 <h4>Pricing</h4>
 
-ChemVantage allows you to name your own price, in part because instructors use the tool in a variety of ways (e.g., homework only, required/optional/extra credit, etc.). 
-Please use the drop down box below to select a value for each student account at your institution: <br/>
-<select name=price onchange="showPricingDetails()">
-<option value="" disabled hidden=true <%= price.equals("")?"selected":"" %>>Select a value</option>
-<option value="50" <%= price.equals("50")?"selected":"" %> >$50 USD/student</option>
+ChemVantage allows you to name your own price, in part because instructors use the tool in a variety of ways (e.g., homework only, required/optional/extra credit, etc.).<br/>
+Please select your price: 
+<select id=nameit name=price onchange="showPricingDetails()">
+<option value="-1" hidden=true <%= price.equals("-1")?"selected":"" %>>Select a value</option>
 <option value="20" <%= price.equals("20")?"selected":"" %> >$20 USD/student</option>
 <option value="10" <%= price.equals("10")?"selected":"" %> >$10 USD/student</option>
 <option value="5" <%= price.equals("5")?"selected":"" %> >$5 USD/student</option>
-<option value="2" <%= price.equals("2")?"selected":"" %> >$2 USD/student</option>
 <option value="0" <%= price.equals("0")?"selected":"" %> >$0 USD/student</option>
-</select>
+</select> for a 10-month subscription to ChemVantage.
 
 <br/><br/>
 

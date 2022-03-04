@@ -200,6 +200,10 @@ public class LTIRegistration extends HttpServlet {
 		String lms = request.getParameter("lms");
 		String lms_other = request.getParameter("lms_other");
 		String openid_configuration = request.getParameter("openid_configuration");
+		String price = request.getParameter("price");
+		String whyZeroPrice = request.getParameter("whyZeroPrice");
+		String whyChemVPays = request.getParameter("whyChemVPays");
+		
 		
 		if (sub.isEmpty() || email.isEmpty()) throw new Exception("All form fields are required. ");
 		String regex = "^[A-Za-z0-9+_.-]+@(.+)$";		 
@@ -221,7 +225,20 @@ public class LTIRegistration extends HttpServlet {
 			if ("other".equals(lms)) lms = lms_other;
 		}
 		
-		if (!"true".equals(request.getParameter("AcceptChemVantageTOS"))) throw new Exception("You must accept the ChemVantage Terms of Service. ");
+		int proposedPrice = -1;
+		try {
+			proposedPrice = Integer.parseInt(price);
+		} catch (Exception e) {
+			throw new Exception("Please select your price from the drop-down box. ");
+		}
+		
+		if (proposedPrice < 0) throw new Exception("Please select your price from the drop-down box. ");
+		else if (proposedPrice == 0) {
+			if (whyZeroPrice==null || whyZeroPrice.isEmpty()) throw new Exception("Please explain why you chose a price of zero.");
+			if (whyChemVPays==null || whyChemVPays.isEmpty()) throw new Exception("Please explain why ChemVantage should pay the cost of this service.");
+		}
+		
+		if (!"true".equals(request.getParameter("AcceptChemVantageTOS"))) throw new Exception("Please read and accept the ChemVantage Terms of Service. ");
 
 		if (!reCaptchaOK(request)) throw new Exception("ReCaptcha tool was unverified. Please try again. ");
 		
@@ -239,6 +256,7 @@ public class LTIRegistration extends HttpServlet {
 				.withClaim("email",email)
 				.withClaim("url", url)
 				.withClaim("lms", lms)
+				.withClaim("price", price)
 				.sign(algorithm);
 		
 		return token;
