@@ -248,20 +248,23 @@ public class PracticeExam extends HttpServlet {
 		
 		try {
 			// Get requested topic ids for this exam
-			List<Long> topicIds = new ArrayList<Long>();
-			long assignmentId = 0;
 			Assignment a = null;
-			try {  // this branch works if the practice exam is assigned
-				assignmentId=user.getAssignmentId();
-				a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+			List<Long> topicIds = new ArrayList<Long>();
+			long assignmentId = user.getAssignmentId();
+			
+			if (assignmentId>0) {  // get topicIds from the assignment
+				a = ofy().load().type(Assignment.class).id(assignmentId).safe();  // throws Exception if assignmentId==0
 				topicIds = a.topicIds;
-			} catch (Exception e) {  // otherwise this is a student-designed exam
-				String[] topicStringIds = request.getParameterValues("TopicId");
-				if (topicStringIds != null) {
-					for (int i=0;i<topicStringIds.length;i++) topicIds.add(Long.parseLong(topicStringIds[i]));
+			} else {  // assign 3 random topicIds from the OpenStax group for demo exam
+				List<Key<Topic>> topicKeys = ofy().load().type(Topic.class).filter("topicGroup",1).keys().list();
+				Random rand = new Random();
+				for (int i=0;i<3;i++) {
+					int index = rand.nextInt(topicKeys.size());
+					long tid = topicKeys.remove(index).getId();
+					topicIds.add(tid);
 				}
 			}
-
+			
 			// Check to see if the timeAllowed has been modified by the instructor:
 			int timeAllowed = 3600;  // default value in seconds
 			if (a != null && a.timeAllowed!=null) {
