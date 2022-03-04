@@ -34,7 +34,6 @@ import java.net.URLEncoder;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.Properties;
-import java.util.Random;
 import java.util.regex.Pattern;
 
 import javax.mail.Message;
@@ -286,6 +285,7 @@ public class LTIRegistration extends HttpServlet {
 		String url = jwt.getClaim("url").asString();
 		String iss = jwt.getIssuer();
 		String lms = jwt.getClaim("lms").asString();
+		String price = jwt.getClaim("price").asString();
 		
 		StringBuffer buf = new StringBuffer();
 		
@@ -296,8 +296,22 @@ public class LTIRegistration extends HttpServlet {
 		
 		buf.append("Thank you for your ChemVantage registration request.<p>");
 		
-		buf.append("When you complete the registration steps below, your account will be activated immediately while your registration is under review. ");
-		
+		buf.append("<h3>Pricing</h3>"
+				+ "In your registration request, you selected a student subscription price of $" + price + " USD.<br/>");
+		if ("0".equals(price)) {
+			buf.append("This request is currently under review, and we will inform you of our decision at this email address. "
+					+ "In the meantime, when you complete the registration steps below, your account will be fully functional, "
+					+ "and we have provisioned 5 complimentary student accounts so you can begin exploring and testing "
+					+ "ChemVantage for use in your classes. As a reminder, access to ChemVantage by instructors and LMS account "
+					+ "administrators is always free.");
+		} else {
+			buf.append("When you complete the registration steps below, your account will be activated immediately. ChemVantage "
+					+ "will charge each student $" + price + " USD before granting access to the first assignment. Upon "
+					+ "successful payment, the student will have unlimited access to ChemVantage assignments through your LMS "
+					+ "for a period of 10 months. As a reminder, access to ChemVantage by instructors and LMS account "
+					+ "administrators is always free.");
+		}
+
 		buf.append("If you have questions or require assistance, please contact us at admin@chemvantage.org.");
 
 		buf.append("<h3>Complete the LTI Advantage Registration Process</h3>");
@@ -464,90 +478,7 @@ public class LTIRegistration extends HttpServlet {
 		msg.setContent(messageBody,"text/html");
 		Transport.send(msg);
 	}
-	
-	String createBLTIConsumer(String token) throws Exception {
-		DecodedJWT jwt = JWT.decode(token); 
-		String iss = jwt.getIssuer();          // already verified to be this ChemVantage server (dev or production)
-		String sub = jwt.getSubject();         // name of registering person
-		String email = jwt.getClaim("email").asString();  // email of registering person
-		String aud = jwt.getAudience().get(0);            // name of applicant organization
-		String url = jwt.getClaim("url").asString();      // home page of applicant organization
-		String typ = jwt.getClaim("typ").asString();      // type of org (nonprofit, forprofit, personal)
-		String lms = jwt.getClaim("lms").asString();      // type of LMS platform
 		
-		String oauth_consumer_key = null;
-		if (lms.equals("blackboard")) {  // issue the global blackboard key
-			oauth_consumer_key = iss.contains("dev-vantage")?"12fbeed9-eabf-414b-9aea-80f2cba3772e":"1001bea7-e99e-49a7-bd0e-5d596b1455e0";
-		} else { // issue a key: "CK" plus a random 6-digit number based on the token value
-			oauth_consumer_key = "CK" + (new Random(token.hashCode()).nextInt(899999) + 100000);
-		}
-		
-		BLTIConsumer con = null;
-		try {  // retrieve the BLTIConsumer that was saved when the token was used
-			con = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).safe();
-		} catch (Exception e) {  // this is the first-time use of this token; save the BLTIConsumer
-			con = new BLTIConsumer(oauth_consumer_key);
-			con.email = email;
-			con.contact_name = sub;
-			con.lms = lms;
-			con.organization = aud;
-			con.org_url = url;
-			con.org_type = typ;
-			con.created = new Date();
-			
-			if (iss.contains("dev")) con.expires = new Date(new Date().getTime() + 864000000L);  // dev server free trial period of 10 days
-			else {  // request id for access to the production server
-				switch (typ) {
-				case "nonprofit": con.expires = new Date(new Date().getTime() + 864000000L); break;  // 10 days
-				case "forprofit": con.expires = new Date(new Date().getTime() + 864000000L); break;  // 10 days
-				case "personal": con.expires = new Date(new Date().getTime() + 864000000L); break;  // 10 days
-				default: con.expires = new Date();
-				}
-			}
-			
-			ofy().save().entity(con).now();
-		}
-		
-		// The next line checks to see if the email for BLTIConsumr retrieved matches the email in the token
-		// This catches the (unlikely) case where the same CK is issued to 2 different people, but also catches the
-		// (more likely) case where a valid login changed the email contact. Either way protects the CK from being revealed.
-		if (!email.equals(con.email)) throw new Exception("This consumer key was successfully registered and is already in use. Please register again, if necessary.");
-		
-		StringBuffer buf = new StringBuffer();
-
-		buf.append("<h3>Thank you for registering your LMS with ChemVantage</h3>");
-
-		buf.append("Here are your LTI registration credentials:<p>"
-				+ "Tool Name: ChemVantage<br>"
-				+ "Description: ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry.<br>"
-				+ "Launch URL: " + iss + "/lti<br>"
-				+ "Consumer Key: " + con.oauth_consumer_key + "<br>"
-				+ "Shared Secret: " + con.secret + "<p>");
-		buf.append("Important notes:<ol>"
-				+ "<li>When entering this information into your LMS, be sure to use the "
-				+ "Launch URL method, not the domain method (leave the domain field blank)."
-				+ "<li>Enter the key and secret values carefully, being sure not to include "
-				+ "any leading or trailing blank spaces. This is the most common error."
-				+ "<li>IMS Global Learning Solutions has published a "
-				+ "<a href=https://www.imsglobal.org/lti-security-announcement-and-deprecation-schedule-july-2019>deprecation schedule</a> "
-				+ "for this version of LTI registrations. Most LMS platforms have agreed to support this version of LTI through at least "
-				+ "the 2021 calendar year. After that you should upgrade to LTI Advantage (version 1.3).");
-		
-		if (iss.contains("dev")) {
-			buf.append("<li>You indicated on the registration form that your initial use case is checking the LTI connection. So we granted access "
-					+ "to the ChemVantage Development server. When you are ready to use ChemVantage for instruction, please "
-					+ "<a href=https://www.chemvantage.org/lti/registration?use=prod>register again here</a> to access the production server. Do not use "
-					+ "the Development server for live instruction.<p>");
-		} else {
-			buf.append("<li>After registering ChemVantage in your LMS, simply create an assignment in the LMS and configure the submission to be "
-					+ "from a third-party app (ChemVantage). Suggested point values are 10 for each quiz or homework set, 100 for practice exams.");
-		}
-		buf.append("</ol>");
-		buf.append("If you need assistance for this registration, please contact me at admin@chemvantage.org<p>- Chuck Wight");
-		
-		return buf.toString();
-	}
-	
 	String clientIdForm(String token) {
 		StringBuffer buf = new StringBuffer(Subject.banner);
 		String iss = null;
@@ -680,8 +611,7 @@ public class LTIRegistration extends HttpServlet {
 		Deployment prior = Deployment.getInstance(d.platform_deployment_id);
 		
 		String msg = "<h2>Congratulations. Registration is complete.</h2>"
-				+ "ChemVantage provides free OER services to thousands of students by scoring quiz, homework and exam questions at no cost. "
-				+ "<br/><br/>Contact Chuck Wight at admin@chemvantage.org for information on how you can support this project.<br/><br/>Thank you.";
+				+ "<br/><br/>Contact Chuck Wight at admin@chemvantage.org for support with any questions or issues.<br/><br/>Thank you.";
 
 
 		if (prior!=null) {  // this is a repeat registration
@@ -1009,11 +939,6 @@ public class LTIRegistration extends HttpServlet {
 		}
 		buf.append(	"If you need assistance, contact us at admin@chemvantage.org");
 		
-		buf.append("<h3>Keep ChemVantage Free</h3>"
-				+ "ChemVantage provides free OER services to thousands of students. The cost of this service is paid entirely by generous donations "
-				+ "from people like you. Please consider making a donation to support ChemVantage and keep the good karma flowing.<br/><br/>"
-				+ "Contact Chuck Wight at admin@chemvantage.org for information on how to do this.<br/><br/>Thank you.");
-
 		buf.append(Subject.footer);
 		return buf.toString();
 	}
@@ -1036,6 +961,20 @@ public class LTIRegistration extends HttpServlet {
 				+ "LMS Platform: " + d.getPlatformId() + "<br/>"
 				+ "Deployment ID: " + d.getDeploymentId() + "<br/>"
 				+ "Client ID: " + d.client_id + "<br/><br/>");
+		
+		buf.append("<h3>Pricing</h3>"
+				+ "In your registration request, you selected a student subscription price of $" + d.price + " USD.<br/>");
+		if (d.price==0) {
+			buf.append("This request is currently under review, and we will inform you of our decision at this email address. "
+					+ "In the meantime, your account is fully functional, and we have provisioned 5 complimentary student "
+					+ "accounts so you can begin exploring and testing ChemVantage for use in your classes. As a reminder, "
+					+ "access to ChemVantage by instructors and LMS account administrators is always free.");
+		} else {
+			buf.append("ChemVantage will charge each student this amount before granting access to the first assignment. Upon "
+					+ "successful payment, the student will have unlimited access to ChemVantage assignments through your LMS "
+					+ "for a period of 10 months. As a reminder, access to ChemVantage by instructors and LMS account "
+					+ "administrators is always free.");
+		}
 
 		buf.append("<h3>Helpful Hints</h3>"
 				+ "ChemVantage supports two types of LTI launches from your LMS:<ol>"
