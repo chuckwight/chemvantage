@@ -180,13 +180,13 @@ public class PlacementExam extends HttpServlet {
 					+ "ChemVantage does not store any student personal identifiable information (PII), so the results of your placement exams are secure.<p>");
 			
 			buf.append("There are two ways to pay for placement exams:<ol>"
-					+ "<li>You can purchase 100 or more exams for this ChemVantage account for $1.00 USD each. Every unique student who downloads a placement exam "
-					+ "will use one exam, but repeated attempts by the same student are not counted.</li>"
-					+ "<li>When there are no exams remaining in your account, each student will be charged $6.00 USD to take the exam. Retakes are free.</li></ol>"
+					+ "<li>You can purchase 100 or more ChemVantage student licenses for this LTI account for $1.00 USD each. Every unique student who "
+					+ "downloads a placement exam will use one license, but after that, the student will have unlimited access to ChemVantage assignments.</li>"
+					+ "<li>When there are no exams remaining in your account, each student will be charged $5.00 USD for an individual license.</li></ol>"
 					+ "You can use the settings in your LMS to restrict the number of retakes, if desired.<br/><br/>");
 			
-			buf.append("<b>Your account has " + d.nPlacementExamsRemaining + " placement exams remaining.</b><br/><br/>"
-					+ "You have connected to ChemVantage as an instructor or administrator; therefore, you have unlimited free access to this tool.<p>");
+			buf.append("<b>Your account has " + d.nLicensesRemaining + " licenses remaining.</b><br/><br/>"
+					+ "You have connected to ChemVantage as an instructor or administrator; therefore, you have unlimited free access to this tool (no license required).<p>");
 			
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/checkout2.jsp?sig=" + user.getTokenSignature() + "' target=_blank >Purchase placement exams for your ChemVantage account</a></LI>"
@@ -215,19 +215,18 @@ public class PlacementExam extends HttpServlet {
 			if (user.isInstructor() || repeatExam); // show the exam
 			else { // check to see if a placement exam is available
 				Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
-				if (d.nPlacementExamsRemaining>0) {  // decrement nPlacementExamsRemaining
-					d.nPlacementExamsRemaining--;
+				if (d.nLicensesRemaining>0) {  // decrement nPlacementExamsRemaining
+					d.nLicensesRemaining--;
 					ofy().save().entity(d);
-				} else {  // WHOA! This is a student and no more exams are available
+				} else if (d.price > 0){  // WHOA! This is a student and no more exams are available
 					return (Subject.banner 
 						+ "<h3>Purchase a ChemVantage Placement Exam</h3>"
 						+ "Your school or university has assigned you to complete a General Chemistry Placement Exam "
 						+ "to determine your level of preparation to take the course. "
-						+ "You may click the link below to purchase a placement exam now for $6.00 USD. "
+						+ "You may click the link below to purchase a ChemVantage individual license now for $" + d.price + ".00 USD. "
 						+ "There is no additional charge for you to repeat the exam if allowed by the settings in "
 						+ "your school's learning management system. With your completed payment, ChemVantage is pleased to "
-						+ "provide a complimentary 6-month subscription that gives you enhanced access to the detailed "
-						+ "step-by-step solutions to ChemVantage homework problems.<br/><br/>"
+						+ "provide a complimentary 10-month license to all ChemVantage assignments through this LMS account.<br/><br/>"
 						+ "When the payment process is completed you may relaunch this assignment "
 						+ "from your LMS to start the exam.<br/><br/>"
 						+ "<a href='/checkout1.jsp?sig=" + user.getTokenSignature() + "' target=_blank >Purchase this exam</a><br/><br/>");

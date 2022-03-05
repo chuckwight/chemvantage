@@ -33,7 +33,7 @@ public class Deployment implements java.lang.Cloneable {
 	@Index	Date   lastLogin;
 			Date   expires;
 			int    price; // 10-month subscription price in $USD for individual student users
-			int    nPlacementExamsRemaining=5;
+			int    nLicensesRemaining=5;
 			
 	Deployment() {}
 	
@@ -99,11 +99,11 @@ public class Deployment implements java.lang.Cloneable {
 	}
 	
 	public int getNPlacementExamsRemaining() {
-		return this.nPlacementExamsRemaining;
+		return this.nLicensesRemaining;
 	}
 	
-	public void putNPlacementExamsRemaining(int n) {
-		this.nPlacementExamsRemaining = n;
+	public void putNLicensesRemaining(int n) {
+		this.nLicensesRemaining = n;
 		ofy().save().entity(this);
 	}
 	
