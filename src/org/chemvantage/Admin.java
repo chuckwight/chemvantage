@@ -111,8 +111,8 @@ public class Admin extends HttpServlet {
 				switch(request.getParameter("action")) {
 				case "Approve":
 					d.status = "approved";
+					d.price = Integer.parseInt(request.getParameter("price"));
 					ofy().save().entity(d);
-					//LTIRegistration.sendApprovalEmail(d);
 					break;
 				case "Block":
 					d.status = "blocked";
@@ -188,10 +188,15 @@ public class Admin extends HttpServlet {
 				buf.append("<form method=post><input type=hidden name=UserRequest value='Submit Review'/><input type=hidden name=sig value='" + user.getTokenSignature() + "'/>"
 						+ "<input type=hidden name=platform_deployment_id value='" + d.platform_deployment_id + "'/>"
 						+ d.platform_deployment_id + " (" + d.lms_type + ")<br/>"
-						+ "by " + d.contact_name + " (" + d.email + ") at " + d.organization + " (" + d.org_url + "). Requested price: $" + d.price + " USD.<br/>");
+						+ "by " + d.contact_name + " (" + d.email + ") at " + d.organization + " (" + d.org_url + ").<br/>");
 				int nAssignments = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).count();
-				buf.append("Assignments: " + nAssignments + "<br/>"	
-						+ "<input type=submit name=action value='Approve'/>&nbsp;<input type=submit name=action value='Block'/>&nbsp;<input type=submit name=action value='Delete'/></form><br/>");
+				buf.append("Assignments: " + nAssignments + ". Requested price: <select name=price>"
+						+ "<option value=20" + (d.price==20?"selected":"") + "</option>"	
+						+ "<option value=10" + (d.price==10?"selected":"") + "</option>"	
+						+ "<option value=5" + (d.price==5?"selected":"") + "</option>"	
+						+ "<option value=0" + (d.price==0?"selected":"") + "</option>"
+						+ "</select>"	
+						+ "<br/><input type=submit name=action value='Approve'/>&nbsp;<input type=submit name=action value='Block'/>&nbsp;<input type=submit name=action value='Delete'/></form><br/>");
 			}
 			
 			buf.append("<h3>New and Expiring Accounts</h3>");			
