@@ -3,21 +3,21 @@
 <%@ page import="java.util.Date,java.text.DateFormat,com.googlecode.objectify.*,org.chemvantage.*,com.google.common.net.InternetDomainName"%>
 
 <%
-	String sig = request.getParameter("sig");
+String sig = request.getParameter("sig");
 	User user = User.getUser(sig);
 	if (user == null || user.isAnonymous()) response.sendError(401, "You must be logged in through your LMS to see this page.");
 	String hashedId = request.getParameter("HashedId");
 	boolean premiumUser = user.isPremium();
 	String client_id = System.getProperty("com.google.appengine.application.id").equals("dev-vantage-hrd")?
-			"AVJ8NuVQnTBwTbmkouWCjZhUT_eHeTm9fjAKwXJO0-RK-9VZFBtWm4J6V8o-47DvbOoaVCUiEb4JMXz8":  // Paypal sandbox client_id
-			"AYlUNqRJZXhJJ9z7pG7GRMOwC-Y_Ke58s8eacfl1R51833ISAqOUhR8To0Km297MPcShAqm9ffp5faun";  // Paypal live client_id
+	"AVJ8NuVQnTBwTbmkouWCjZhUT_eHeTm9fjAKwXJO0-RK-9VZFBtWm4J6V8o-47DvbOoaVCUiEb4JMXz8":  // Paypal sandbox client_id
+	"AYlUNqRJZXhJJ9z7pG7GRMOwC-Y_Ke58s8eacfl1R51833ISAqOUhR8To0Km297MPcShAqm9ffp5faun";  // Paypal live client_id
 
 	Date now = new Date();
-	Date exp = new Date(now.getTime() +  15811200000L); // six months from now
-	DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-	
-	if (!premiumUser && user.getHashedId().equals(hashedId)) {  // successful payment; process a user upgrade 
-		PremiumUser u = new PremiumUser(hashedId);  // constructor automatically saves new entity
+	Date exp = new Date(now.getTime() + 26265600000L);  // 10 months from now
+	DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.FULL);
+
+	if (!premiumUser && user.getHashedId().equals(hashedId)) { // successful payment; process a user upgrade 
+		PremiumUser u = new PremiumUser(hashedId); // constructor automatically saves new entity
 		premiumUser = true;
 		exp = u.exp;
 	}
@@ -41,10 +41,10 @@
 <body style='background-color: white; font-family: Calibri,Arial,sans-serif; max-width: 800px;'>
 <%= Subject.banner %>
 
-<h3>Subscription Services</h3>
-Most ChemVantage services are offered to students and educational institutions free of charge. You can help 
-support this Open Education Resource by becoming a ChemVantage subscriber. The cost is just $5.00 USD for a six-month 
+<h3>ChemVantage Subscription</h3>
+A subscription is required to access ChemVantage assignments and services. The cost is just $5.00 USD for a 10-month 
 subscription that won't expire until <%= df.format(exp) %>. As a subscriber, you can<ul>
+<li>Access all ChemVantage quizzes, homework, videos and other assignments created by your instructor</li>
 <li>view the detailed step-by-step solutions to homework problems</li>
 <li>report issues or mistakes in homework solutions to ChemVantage </li>
 </ul> 
@@ -57,7 +57,8 @@ Thank you for helping to support ChemVantage.
 <% if (premiumUser) { %>
 
 <h3>Thank you for your payment!</h3>
-Your subscription is active and expires on <%= df.format(exp) %>
+Your subscription is active and expires on <%= df.format(exp) %><br/>
+Please return to your LMS and relaunch the assignment.
 
 <% } else { %>
 
@@ -80,7 +81,7 @@ Your subscription is active and expires on <%= df.format(exp) %>
 
         createOrder: function(data, actions) {
           return actions.order.create({
-            purchase_units: [{"description":"6-month ChemVantage subscription invoice <%= user.getHashedId() %>",
+            purchase_units: [{"description":"10-month ChemVantage subscription invoice <%= user.getHashedId() %>",
             	"amount":{"currency_code":"USD","value":5}}]
           });
         },

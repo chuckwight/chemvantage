@@ -98,7 +98,7 @@ public class Deployment implements java.lang.Cloneable {
 		return this.platform_deployment_id;
 	}
 	
-	public int getNPlacementExamsRemaining() {
+	public int getNLicensesRemaining() {
 		return this.nLicensesRemaining;
 	}
 	

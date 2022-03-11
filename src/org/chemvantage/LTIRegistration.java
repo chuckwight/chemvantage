@@ -162,11 +162,11 @@ public class LTIRegistration extends HttpServlet {
 					validateOpenIdConfigurationURL(request.getParameter("openid_configuration"),openIdConfiguration);  // LTIDRSv1p0 section 3.5.1
 					JsonObject registrationResponse = postRegistrationRequest(openIdConfiguration,request);  // LTIDRSv1p0 section 3.5.2 & 3.6
 					Deployment d = createNewDeployment(openIdConfiguration,registrationResponse,request);
-					sendApprovalEmail(d);
+					sendApprovalEmail(d,request);
 					response.setContentType("text/html");
 					out.println(successfulRegistrationRequestPage(openIdConfiguration));
 				} else {
-					sendRegistrationEmail(token);
+					sendRegistrationEmail(token,request);
 					out.println(Subject.header("ChemVantage LTI Registration") + Subject.banner + "<h3>Registration Success</h3>Thank you. A registration email has been sent to your address.<p>" + Subject.footer);			
 				}
 			}
@@ -277,7 +277,7 @@ public class LTIRegistration extends HttpServlet {
 		return captchaResponse.get("success").getAsBoolean();
 	}
 
-	void sendRegistrationEmail(String token) throws Exception {
+	void sendRegistrationEmail(String token, HttpServletRequest request) throws Exception {
 		DecodedJWT jwt = JWT.decode(token);
 		String name = jwt.getSubject();
 		String email = jwt.getClaim("email").asString();
@@ -297,8 +297,10 @@ public class LTIRegistration extends HttpServlet {
 		buf.append("Thank you for your ChemVantage registration request.<p>");
 		
 		buf.append("<h3>Pricing</h3>"
-				+ "In your registration request, you selected a student subscription price of $" + price + " USD.<br/>");
+				+ "In your registration request, you selected a student subscription price of $" + price + " USD.<br/><br/>");
 		if ("0".equals(price)) {
+			buf.append("You selected this price because:<br/>" + request.getParameter("whyZeroPrice") + "<br/><br/>");
+			buf.append("You said that ChemVantage should pay the cost of the service because:<br/>" + request.getParameter("whyChemVPays") + "<br/><br/>");
 			buf.append("This request is currently under review, and we will inform you of our decision at this email address. "
 					+ "In the meantime, when you complete the registration steps below, your account will be fully functional, "
 					+ "and we have provisioned 5 complimentary student accounts so you can begin exploring and testing "
@@ -943,7 +945,7 @@ public class LTIRegistration extends HttpServlet {
 		return buf.toString();
 	}
 	
-	static void sendApprovalEmail(Deployment d) {
+	static void sendApprovalEmail(Deployment d, HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		String project_id = System.getProperty("com.google.appengine.application.id");
 		String iss = null;
@@ -965,6 +967,8 @@ public class LTIRegistration extends HttpServlet {
 		buf.append("<h3>Pricing</h3>"
 				+ "In your registration request, you selected a student subscription price of $" + d.price + " USD.<br/>");
 		if (d.price==0) {
+			buf.append("You selected this price because:<br/>" + request.getParameter("whyZeroPrice") + "<br/><br/>");
+			buf.append("You said that ChemVantage should pay the cost of the service because:<br/>" + request.getParameter("whyChemVPays") + "<br/><br/>");
 			buf.append("This request is currently under review, and we will inform you of our decision at this email address. "
 					+ "In the meantime, your account is fully functional, and we have provisioned 5 complimentary student "
 					+ "accounts so you can begin exploring and testing ChemVantage for use in your classes. As a reminder, "

@@ -211,8 +211,7 @@ public class PlacementExam extends HttpServlet {
 			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 
 			// Check to see if this user is authorized to take a placement exam:
-			boolean repeatExam = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).count() > 0;
-			if (user.isInstructor() || repeatExam); // show the exam
+			if (user.isInstructor() || user.isPremium()); // show the exam
 			else { // check to see if a placement exam is available
 				Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
 				if (d.nLicensesRemaining>0) {  // decrement nPlacementExamsRemaining
@@ -223,7 +222,7 @@ public class PlacementExam extends HttpServlet {
 						+ "<h3>Purchase a ChemVantage Placement Exam</h3>"
 						+ "Your school or university has assigned you to complete a General Chemistry Placement Exam "
 						+ "to determine your level of preparation to take the course. "
-						+ "You may click the link below to purchase a ChemVantage individual license now for $" + d.price + ".00 USD. "
+						+ "You may click the link below to purchase a ChemVantage individual license now for $5.00 USD. "
 						+ "There is no additional charge for you to repeat the exam if allowed by the settings in "
 						+ "your school's learning management system. With your completed payment, ChemVantage is pleased to "
 						+ "provide a complimentary 10-month license to all ChemVantage assignments through this LMS account.<br/><br/>"

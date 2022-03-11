@@ -43,7 +43,7 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
 		nExamsPurchased = Integer.parseInt(request.getParameter("NExams"));
 		purchaseAmount = request.getParameter("PurchaseAmount");
 		orderDetails = request.getParameter("OrderDetails");
-		d.putNPlacementExamsRemaining(d.getNPlacementExamsRemaining() + nExamsPurchased);
+		d.putNLicensesRemaining(d.getNLicensesRemaining() + nExamsPurchased);
 %>
 		<h3>Success! Thank you for your purchase.</h3>
 		<h2>Receipt</h2>
@@ -67,7 +67,7 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
 		Organization: <%= d.getOrganization() %><br />
 		Number of exams purchased: <%= nExamsPurchased %><br /> 
 		Purchase amount: $<%= purchaseAmount %> USD<br /> 
-		Your account now has <%= d.getNPlacementExamsRemaining() %> placement exams available.<br /><br />
+		Your account now has <%= d.getNLicensesRemaining() %> placement exams available.<br /><br />
 		
 		Please print a copy of this receipt for your records.<br /><br /> 
 		
@@ -79,7 +79,7 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
 	<div id=offer>
 		<h3>Purchase Placement Exams for your ChemVantage Account</h3>
 		Your ChemVantage account currently has
-		<%= d.getNPlacementExamsRemaining() %> placement exams remaining.<br /><br />
+		<%= d.getNLicensesRemaining() %> placement exams remaining.<br /><br />
 		You may purchase more exams on behalf of students at your institution in the following quantities:
 		<ul>
 			<li>100 exams @ $1.00 USD/each = $100 USD</li>

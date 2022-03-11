@@ -201,6 +201,16 @@ public class LTIv1p3Launch extends HttpServlet {
 		
 		if (!scope.isEmpty()) d.scope = scope;
 
+		// Launch only premium users
+		if (!user.isPremium()) {
+			if (d.getNLicensesRemaining()>0) {
+				d.nLicensesRemaining--;
+				new PremiumUser(user.getHashedId());
+			}
+			else if (d.price == 0) new PremiumUser(user.getHashedId());
+			else response.sendRedirect("/checkout");
+		}
+
 		// Save the updated Deployment entity, if necessary
 		if (!d.equivalentTo(original_d)) {
 			deployments.put(d.platform_deployment_id, d);

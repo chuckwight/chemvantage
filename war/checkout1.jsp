@@ -45,15 +45,15 @@
 <h3>Purchase a ChemVantage Placement Exam</h3>
 Your school or university has assigned you to complete a General Chemistry Placement Exam 
 to determine your level of preparation to take the course. To purchase this exam, please select 
-your preferred payment option below. The cost is $6.00 USD and includes a complimentary 
-6-month subscription that gives you enhanced access to the detailed step-by-step solutions 
+your preferred payment option below. The cost is $5.00 USD and includes a complimentary 
+10-month subscription that gives you enhanced access to the detailed step-by-step solutions 
 to ChemVantage homework problems. There is no additional charge for you to repeat the exam 
 if this is allowed by the settings in your school's learning management system.<br/><br/>
 
 When the payment process is completed you should return to your learning management system 
 to relaunch this assignment and begin the exam. Thank you for helping to support ChemVantage.
 
-<h2>$6.00 USD</h2>
+<h2>$5.00 USD</h2>
 
 <% if (paidExam) { %>
 
@@ -81,7 +81,7 @@ Please return to your school's LMS to launch the placement exam now.<br/><br/>
         createOrder: function(data, actions) {
           return actions.order.create({
             purchase_units: [{"description":"ChemVantage Placement Exam invoice <%= user.getHashedId() %>",
-            	"amount":{"currency_code":"USD","value":6}}]
+            	"amount":{"currency_code":"USD","value":5}}]
           });
         },
 
