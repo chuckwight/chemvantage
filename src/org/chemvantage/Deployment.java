@@ -66,6 +66,9 @@ public class Deployment implements java.lang.Cloneable {
 		this.lms_type = lms;
 		this.rsa_key_id = KeyStore.getAKeyId(lms);
 		this.created = new Date();
+		
+		this.scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem "
+				+ "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly";
 	}
 			
 	static Deployment getInstance(String platform_deployment_id) {
