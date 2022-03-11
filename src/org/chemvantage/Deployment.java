@@ -128,6 +128,8 @@ public class Deployment implements java.lang.Cloneable {
 				((this.lms_type != null && this.lms_type.equals(d.lms_type)) 											|| (d.lms_type == null && this.lms_type == null)) &&
 				((this.rsa_key_id != null && this.rsa_key_id.equals(d.rsa_key_id)) 										|| (d.rsa_key_id == null && this.rsa_key_id == null)) &&
 				((this.scope != null && this.scope.equals(d.scope)) 													|| (d.scope == null && this.scope == null)) &&
+				(this.price == d.price) &&
+				(this.nLicensesRemaining == d.nLicensesRemaining) &&
 				(this.created != null && this.created.equals(d.created)) &&
 				(this.lastLogin != null && this.lastLogin.equals(d.lastLogin));
 	}

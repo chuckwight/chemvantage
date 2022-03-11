@@ -44,9 +44,9 @@ String sig = request.getParameter("sig");
 <h3>ChemVantage Subscription</h3>
 A subscription is required to access ChemVantage assignments and services. The cost is just $5.00 USD for a 10-month 
 subscription that won't expire until <%= df.format(exp) %>. As a subscriber, you can<ul>
-<li>Access all ChemVantage quizzes, homework, videos and other assignments created by your instructor</li>
-<li>view the detailed step-by-step solutions to homework problems</li>
-<li>report issues or mistakes in homework solutions to ChemVantage </li>
+<li>access all ChemVantage quizzes, homework, videos and other assignments created by your instructor;</li>
+<li>view the detailed step-by-step solutions to homework problems;</li>
+<li>report issues or mistakes in homework solutions to ChemVantage. </li>
 </ul> 
 To accept this offer, please select your preferred payment method below. When the transaction is completed, 
 your subscription will be activated immediately.
