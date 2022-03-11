@@ -190,11 +190,11 @@ public class Admin extends HttpServlet {
 						+ d.platform_deployment_id + " (" + d.lms_type + ")<br/>"
 						+ "by " + d.contact_name + " (" + d.email + ") at " + d.organization + " (" + d.org_url + ").<br/>");
 				int nAssignments = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).count();
-				buf.append("Assignments: " + nAssignments + ". Requested price: <select name=price>"
-						+ "<option value=20" + (d.price==20?"selected":"") + "</option>"	
-						+ "<option value=10" + (d.price==10?"selected":"") + "</option>"	
-						+ "<option value=5" + (d.price==5?"selected":"") + "</option>"	
-						+ "<option value=0" + (d.price==0?"selected":"") + "</option>"
+				buf.append("Assignments: " + nAssignments + ". Approve the requested price at: <select name=price>"
+						+ "<option value=20" + (d.price==20?" selected":"") + ">$20 USD</option>"	
+						+ "<option value=10" + (d.price==10?" selected":"") + ">$10 USD</option>"	
+						+ "<option value=5" + (d.price==5?" selected":"") + ">$5 USD</option>"	
+						+ "<option value=0" + (d.price==0?" selected":"") + ">free</option>"
 						+ "</select>"	
 						+ "<br/><input type=submit name=action value='Approve'/>&nbsp;<input type=submit name=action value='Block'/>&nbsp;<input type=submit name=action value='Delete'/></form><br/>");
 			}
