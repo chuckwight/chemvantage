@@ -31,7 +31,7 @@ public class Deployment implements java.lang.Cloneable {
 	@Index	Date   created;
 	@Index	Date   lastLogin;
 			Date   expires;
-			int    price = 5; // default 10-month subscription price in $USD for individual student users
+			int    price = 0; // default 10-month subscription price in $USD for individual student users
 			int    nLicensesRemaining=5;
 			
 	Deployment() {}
