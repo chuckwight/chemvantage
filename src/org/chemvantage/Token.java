@@ -164,9 +164,8 @@ public class Token extends HttpServlet {
 				String email = d.email;
 				String organization = d.organization;
 				String org_url = d.org_url;
-				String org_typ = d.org_typ;
 				String lms = d.lms_type;
-				Deployment d2 = new Deployment(platform_id,d.getDeploymentId(),client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,org_typ,lms);				
+				Deployment d2 = new Deployment(platform_id,d.getDeploymentId(),client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);				
 				ofy().save().entity(d2).now();
 				ofy().delete().entity(d);
 				return d2;

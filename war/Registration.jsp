@@ -6,7 +6,6 @@
 	String message = request.getParameter("message");
 	String sub = request.getParameter("sub");
 	String email = request.getParameter("email");
-	String typ = request.getParameter("typ");
 	String aud = request.getParameter("aud");
 	String url = request.getParameter("url");
 	String ver = request.getParameter("ver");

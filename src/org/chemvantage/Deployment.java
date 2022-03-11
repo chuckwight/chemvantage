@@ -22,7 +22,6 @@ public class Deployment implements java.lang.Cloneable {
 			String contact_name;
 			String organization;
 			String org_url;
-			String org_typ;
 			String lms_type;
 			String rsa_key_id;
 			String scope;
@@ -32,12 +31,12 @@ public class Deployment implements java.lang.Cloneable {
 	@Index	Date   created;
 	@Index	Date   lastLogin;
 			Date   expires;
-			int    price; // 10-month subscription price in $USD for individual student users
+			int    price = 5; // default 10-month subscription price in $USD for individual student users
 			int    nLicensesRemaining=5;
 			
 	Deployment() {}
 	
-	Deployment(String platform_id,String deployment_id,String client_id,String oidc_auth_url,String oauth_access_token_url,String well_known_jwks_url,String contact_name,String email,String organization,String org_url,String org_typ,String lms) 
+	Deployment(String platform_id,String deployment_id,String client_id,String oidc_auth_url,String oauth_access_token_url,String well_known_jwks_url,String contact_name,String email,String organization,String org_url,String lms) 
 			throws Exception {
 		// Ensure that the platform_id is secure and does not end in a slash:
 		if (platform_id.endsWith("/")) platform_id = platform_id.substring(0,platform_id.length()-1);
@@ -64,7 +63,6 @@ public class Deployment implements java.lang.Cloneable {
 		this.email = email;
 		this.organization = organization;
 		this.org_url = org_url;
-		this.org_typ = org_typ;
 		this.lms_type = lms;
 		this.rsa_key_id = KeyStore.getAKeyId(lms);
 		this.created = new Date();

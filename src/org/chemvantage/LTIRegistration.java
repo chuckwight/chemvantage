@@ -561,7 +561,6 @@ public class LTIRegistration extends HttpServlet {
 		String email = jwt.getClaim("email").asString();
 		String organization = jwt.getAudience().get(0);
 		String org_url = jwt.getClaim("url").asString();
-		String org_typ = jwt.getClaim("typ").asString();
 		String lms = jwt.getClaim("lms").asString();
 		String price = jwt.getClaim("price").asString();
 		String client_id = request.getParameter("ClientId");
@@ -606,9 +605,13 @@ public class LTIRegistration extends HttpServlet {
 			if (well_known_jwks_url==null || well_known_jwks_url.isEmpty()) throw new Exception("JSON Web Key Set URL is required.");
 		}
 			
-		Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,org_typ,lms);
+		Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
 		d.status = "pending";
-		d.price = Integer.parseInt(price);
+		try {
+			d.price = Integer.parseInt(price);
+		} catch (Exception e) {
+			d.price = 5;
+		}
 		
 		Deployment prior = Deployment.getInstance(d.platform_deployment_id);
 		
@@ -880,14 +883,18 @@ public class LTIRegistration extends HttpServlet {
 			String contact_email = request.getParameter("email");
 			String organization = request.getParameter("aud");
 			String org_url = request.getParameter("url");
-			String org_typ = request.getParameter("typ");
-			if (org_typ==null) org_typ = "";
+			String price = request.getParameter("price");
 			
 			JsonElement deploymentId = registrationResponse.get("https://purl.imsglobal.org/spec/lti-tool-configuration").getAsJsonObject().get("deployment_id");
 			if (deploymentId == null) throw new Exception("ChemVantage requires that the deployment_id must be included in the registration response. ");
 					
-			Deployment d = new Deployment(platformId,deploymentId.getAsString(),clientId,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,contact_name,contact_email,organization,org_url,org_typ,lms);
+			Deployment d = new Deployment(platformId,deploymentId.getAsString(),clientId,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,contact_name,contact_email,organization,org_url,lms);
 			d.status = "pending";
+			try {
+				d.price = Integer.parseInt(price);
+			} catch (Exception e) {
+				d.price = 5;
+			}
 			ofy().save().entity(d);
 			return d;
 		} catch (Exception e) {
@@ -983,7 +990,7 @@ public class LTIRegistration extends HttpServlet {
 		buf.append("<h3>Helpful Hints</h3>"
 				+ "ChemVantage supports two types of LTI launches from your LMS:<ol>"
 				+ "<li>Deep Linking - used by the instructor, course designer or administrator to select ChemVantage assignments.</li>"
-				+ "<li>Resource Link - used by students to start an existing assignment or by an instructor to create a new one.</li>"
+				+ "<li>Resource Link - used by students to launch an existing assignment.</li>"
 				+ "</ol>"
 				+ "You should configure the ChemVantage placements in your LMS with the appropriate locations and permissions.<br/><br/>");
 		

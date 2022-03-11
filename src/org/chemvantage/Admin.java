@@ -188,7 +188,7 @@ public class Admin extends HttpServlet {
 				buf.append("<form method=post><input type=hidden name=UserRequest value='Submit Review'/><input type=hidden name=sig value='" + user.getTokenSignature() + "'/>"
 						+ "<input type=hidden name=platform_deployment_id value='" + d.platform_deployment_id + "'/>"
 						+ d.platform_deployment_id + " (" + d.lms_type + ")<br/>"
-						+ "by " + d.contact_name + " (" + d.email + ") at " + d.organization + " (" + d.org_url + ") " + (d.org_typ==null?"":d.org_typ) + "<br/>");
+						+ "by " + d.contact_name + " (" + d.email + ") at " + d.organization + " (" + d.org_url + ")<br/>");
 				int nAssignments = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).count();
 				buf.append("Assignments: " + nAssignments + "<br/>"	
 						+ "<input type=submit name=action value='Approve'/>&nbsp;<input type=submit name=action value='Block'/>&nbsp;<input type=submit name=action value='Delete'/></form><br/>");
