@@ -295,8 +295,6 @@ public class Homework extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Start...");
 		
-		boolean premiumUser = user.isPremium();
-		
 		try {
 			// The Homework grader scores only one Question at a time, so first identify and load it
 			long questionId = Long.parseLong(request.getParameter("QuestionId"));
@@ -486,7 +484,7 @@ public class Homework extends HttpServlet {
 			}
 
 			// embed the detailed solution or hint to the exercise in the response, if appropriate
-			if (user.isInstructor() || user.isTeachingAssistant() || (studentScore > 0 && premiumUser)) {
+			if ((studentScore > 0 && !user.isAnonymous()) || user.isInstructor() || user.isTeachingAssistant()) {
 				buf.append("<div id=exampleLink>"
 						+ "<a href=# onClick=javascript:document.getElementById('example').style.display='';"
 						+ "document.getElementById('correctAnswer').style.display='none';"
@@ -494,8 +492,6 @@ public class Homework extends HttpServlet {
 						+ "<FONT COLOR=RED>View the detailed solution for this homework exercise</FONT></a><p></div>");
 				buf.append("<div id=example style='display: none'><b>Detailed Solution</b><br/><br/>" 
 						+ q.printAllToStudents(studentAnswer) + "</div>");
-			} else if (studentScore > 0 && !user.isAnonymous()) {
-				buf.append("<a href='/checkout0.jsp?sig=" + user.getTokenSignature() + "' target=_blank style='color: red'>Would you like to see the detailed step-by-step solution to this problem?</a><p>");
 			}
 			
 			boolean offerHint = studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id);

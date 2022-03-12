@@ -209,28 +209,6 @@ public class PlacementExam extends HttpServlet {
 			// Get requested topic ids for this exam
 			long assignmentId = user.getAssignmentId();
 			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
-
-			// Check to see if this user is authorized to take a placement exam:
-			if (user.isInstructor() || user.isPremium()); // show the exam
-			else { // check to see if a placement exam is available
-				Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
-				if (d.nLicensesRemaining>0) {  // decrement nPlacementExamsRemaining
-					d.nLicensesRemaining--;
-					ofy().save().entity(d);
-				} else if (d.price > 0){  // WHOA! This is a student and no more exams are available
-					return (Subject.banner 
-						+ "<h3>Purchase a ChemVantage Placement Exam</h3>"
-						+ "Your school or university has assigned you to complete a General Chemistry Placement Exam "
-						+ "to determine your level of preparation to take the course. "
-						+ "You may click the link below to purchase a ChemVantage individual license now for $5.00 USD. "
-						+ "There is no additional charge for you to repeat the exam if allowed by the settings in "
-						+ "your school's learning management system. With your completed payment, ChemVantage is pleased to "
-						+ "provide a complimentary 10-month license to all ChemVantage assignments through this LMS account.<br/><br/>"
-						+ "When the payment process is completed you may relaunch this assignment "
-						+ "from your LMS to start the exam.<br/><br/>"
-						+ "<a href='/checkout1.jsp?sig=" + user.getTokenSignature() + "' target=_blank >Purchase this exam</a><br/><br/>");
-				}
-			}
 			
 			// Check to see if the timeAllowed has been modified by the instructor:
 			int timeAllowed = 3600;  // default value in seconds

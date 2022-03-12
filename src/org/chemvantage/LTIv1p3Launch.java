@@ -140,8 +140,6 @@ public class LTIv1p3Launch extends HttpServlet {
 		verifyLtiMessageClaims(claims); // required
 		User user = getUserClaims(claims);
 		
-		if (d.premiumUsers && !user.isPremium() && !user.isAnonymous()) new PremiumUser(user.hashedId);
-
 		// At this point we have all of the REQUIRED info for a valid LTI launch
 		// Process all remaining optional claims in try/catch structures to avoid
 		// throwing unnecessary Exceptions
@@ -170,8 +168,6 @@ public class LTIv1p3Launch extends HttpServlet {
 			JsonObject platform = claims.get("https://purl.imsglobal.org/spec/lti/claim/tool_platform").getAsJsonObject();
 			JsonElement je = platform.get("email_contact");
 			if (je != null) d.email = je.getAsString();
-			//je = platform.get("product_family_code");
-			//if (je != null) d.lms_type = je.getAsString();
 		} catch (Exception e) {}	
 		
 		// Process information for LTI Assignment and Grade Services (AGS)
@@ -208,7 +204,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				new PremiumUser(user.getHashedId());
 			}
 			else if (d.price == 0) new PremiumUser(user.getHashedId());
-			else response.sendRedirect("/checkout0.jsp?sig=" + user.getTokenSignature());
+			else response.sendRedirect("/checkout0.jsp?sig=" + user.getTokenSignature() + "&price=" + d.price);
 		}
 
 		// Save the updated Deployment entity, if necessary

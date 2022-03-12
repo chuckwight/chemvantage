@@ -4,6 +4,14 @@
 
 <%
 String sig = request.getParameter("sig");
+String price = request.getParameter("price");
+	try {
+		int p = Integer.parseInt(price);
+		if (p<5) price = "5";
+		if (p>20) price = "20";
+	} catch (Exception e) {
+		price = "10";
+	}
 	User user = User.getUser(sig);
 	if (user == null || user.isAnonymous()) response.sendError(401, "You must be logged in through your LMS to see this page.");
 	String hashedId = request.getParameter("HashedId");
@@ -42,7 +50,7 @@ String sig = request.getParameter("sig");
 <%= Subject.banner %>
 
 <h3>ChemVantage Subscription</h3>
-A subscription is required to access ChemVantage assignments and services. The cost is just $5.00 USD for a 10-month 
+A subscription is required to access ChemVantage assignments and services. The cost is just $<%= price %>.00 USD for a 10-month 
 subscription that won't expire until <%= df.format(exp) %>. As a subscriber, you can<ul>
 <li>access all ChemVantage quizzes, homework, videos and other assignments created by your instructor;</li>
 <li>view the detailed step-by-step solutions to homework problems;</li>
@@ -52,7 +60,7 @@ To accept this offer, please select your preferred payment method below. When th
 your subscription will be activated immediately.
 Thank you for helping to support ChemVantage.
 
-<h2>$5.00 USD</h2>
+<h2>$<%= price %>.00 USD</h2>
 
 <% if (premiumUser) { %>
 
@@ -82,7 +90,7 @@ Please return to your LMS and relaunch the assignment.
         createOrder: function(data, actions) {
           return actions.order.create({
             purchase_units: [{"description":"10-month ChemVantage subscription invoice <%= user.getHashedId() %>",
-            	"amount":{"currency_code":"USD","value":5}}]
+            	"amount":{"currency_code":"USD","value":<%= price %>}}]
           });
         },
 

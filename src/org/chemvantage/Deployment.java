@@ -26,7 +26,6 @@ public class Deployment implements java.lang.Cloneable {
 			String rsa_key_id;
 			String scope;
 			String claims;
-			boolean premiumUsers;
 	@Index	String status;
 	@Index	Date   created;
 	@Index	Date   lastLogin;
