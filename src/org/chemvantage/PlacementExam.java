@@ -180,10 +180,11 @@ public class PlacementExam extends HttpServlet {
 					+ "ChemVantage does not store any student personal identifiable information (PII), so the results of your placement exams are secure.<p>");
 			
 			buf.append("There are two ways to pay for placement exams:<ol>"
-					+ "<li>You can purchase 100 or more ChemVantage student licenses for this LTI account for $1.00 USD each. Every unique student who "
-					+ "downloads a placement exam will use one license, but after that, the student will have unlimited access to ChemVantage assignments.</li>"
-					+ "<li>When there are no exams remaining in your account, each student will be charged $5.00 USD for an individual license.</li></ol>"
-					+ "You can use the settings in your LMS to restrict the number of retakes, if desired.<br/><br/>");
+					+ "<li>You can purchase 50 or more ChemVantage student licenses for this LTI account for $2.00 USD each. Every unique student who "
+					+ "downloads a placement exam will use one license.</li>"
+					+ "<li>When there are no licenses remaining in your account, each student will be charged $" + d.price + ".00 USD for an individual license.</li></ol>"
+					+ "Each license gives the student unlimited access to ChemVantage assignments for a period of 10 months.<br/><br/>"
+					+ "You can use the settings in your LMS to restrict the number of placement exam retakes, if desired.<br/><br/>");
 			
 			buf.append("<b>Your account has " + d.nLicensesRemaining + " licenses remaining.</b><br/><br/>"
 					+ "You have connected to ChemVantage as an instructor or administrator; therefore, you have unlimited free access to this tool (no license required).<p>");

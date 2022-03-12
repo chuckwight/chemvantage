@@ -10,10 +10,6 @@
 	String url = request.getParameter("url");
 	String ver = request.getParameter("ver");
 	String lms = request.getParameter("lms");
-	String price = request.getParameter("price");
-	if (price==null) price="-1";
-	String whyZeroPrice = request.getParameter("whyZeroPrice");
-	String whyChemVPays = request.getParameter("whyChemVPays");
 	String lms_other = request.getParameter("lms_other");
 	String AcceptChemVantageTOS = request.getParameter("AcceptChemVantageTOS");
 	String openid_configuration = request.getParameter("openid_configuration");
@@ -76,53 +72,20 @@ Type of Learning Management System:<br/>
 <label><input type=radio name=lms value=schoology <%= ((lms!=null && lms.equals("schoology"))?"checked":"") %> />Schoology</label><br/>
 <label><input type=radio name=lms id=other value=other <%= ((lms!=null && lms.equals("other"))?"checked":"") %> />Other: 
 <input type=text name=lms_other value='<%= (lms_other==null?"":lms_other) %>' onFocus="document.getElementById('other').checked=true;" /></label>
-
+<br/><br/>
 <% } else { %>
  <input type=hidden name=openid_configuration value='<%= openid_configuration %>' />
 <% } %>
 
-<script>
-function showPricingDetails() {
-	var price = document.getElementById('nameit').value;
-	var pricingDetails = document.getElementById('pricingDetails');
-	if (price == "-1") pricingDetails.innerHTML = "";
-	else if (price=="0") {
-		pricingDetails.innerHTML = "You have selected a price of zero, and that is a valid choice. However, it changes the decision from one of price to a different decision about whether "
-			+ "ChemVantage LLC is willing to pay the full cost of providing this service to your students. To help us make this decision, please use the spaces below to make your case:<br/>";
-		document.getElementById("whyBoxes").style.display='inline';	
-	} else {
-		pricingDetails.innerHTML = "Thank you. No payment is required now. When you complete the LTI registration in your LMS, your ChemVantage account will be set up automatically "
-			+ "to charge each student $" + price 
-			+ "&nbsp;USD before granting access to the first assignment. Upon successful payment, the student will have unlimited access to ChemVantage assignments through this "
-			+ "LTI account for a period of 10 months.<br/><br/>"
-			+ "Some institutions prefer to purchase licenses centrally on behalf of their students. ChemVantage allows this, and we will send you an email with a link to purchase student "
-			+ "licenses in bulk at a discounted rate. <br/><br/>"
-			+ "Access to ChemVantage by instructors or administrators is always free and does not require a license. We will also provision your ChemVantage account "
-			+ "with 5 complimentary student licenses to use for testing assignment creation and return of student scores to your LMS grade book.<br/><br/>";
-		document.getElementById("whyBoxes").style.display='none';	
-	}
-}
-</script>
-
-<h4>Pricing</h4>
-
-ChemVantage allows you to name your own price, in part because instructors use the tool in a variety of ways (e.g., homework only, required/optional/extra credit, etc.).<br/>
-Please select your price: 
-<select id=nameit name=price onchange="showPricingDetails()">
-<option value="-1" hidden=true <%= price.equals("-1")?"selected":"" %>>Select a value</option>
-<option value="20" <%= price.equals("20")?"selected":"" %> >$20 USD/student</option>
-<option value="10" <%= price.equals("10")?"selected":"" %> >$10 USD/student</option>
-<option value="5" <%= price.equals("5")?"selected":"" %> >$5 USD/student</option>
-<option value="0" <%= price.equals("0")?"selected":"" %> >$0 USD/student</option>
-</select> for each 10-month student subscription to ChemVantage. Instructor accounts are always free.
+Pricing:
+<ol>
+<li>LTI registration and setup are free.</li>
+<li>Instructor accounts are completely free.</li>
+<li>Each student account costs $20 USD for a 10-month all-access subscription.</li>
+</ol>
+If this pricing structure doesn't fit your needs, please contact Chuck Wight at admin@chemvantage.org for alternative pricing.
 
 <br/><br/>
-
-<div id=pricingDetails></div>
-<div id=whyBoxes style='display: none;'>
- <textarea name=whyZeroPrice rows=4 cols=80 wrap=soft placeholder='Please explain here why you chose a price of zero.'><%= whyZeroPrice==null?"":whyZeroPrice %></textarea><br/>
- <textarea name=whyChemVPays rows=4 cols=80 wrap=soft placeholder='Please explain here why ChemVantage should pay the full cost of providing this service to your students.'><%= whyChemVPays==null?"":whyChemVPays %></textarea><br/><br/>
-</div>
 
 <label><input type=checkbox name=AcceptChemVantageTOS value=true <%= ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") %>/>Accept the <a href=/about.html#terms target=_blank>ChemVantage Terms of Service</a></label><br/><br/>
 

@@ -76,7 +76,6 @@ import com.googlecode.objectify.Key;
 public class LTIv1p3Launch extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
-	Map<String,Deployment> deployments = new HashMap<String,Deployment>();  // local cache of recently launched deployments
 	Map<String,Assignment> assignments = new HashMap<String,Assignment>();  // local cache of recently launched assignments
 	Map<String,User> users = new HashMap<String,User>();                    // local cache of recently launched users
 	
@@ -208,10 +207,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		}
 
 		// Save the updated Deployment entity, if necessary
-		if (!d.equivalentTo(original_d)) {
-			deployments.put(d.platform_deployment_id, d);
-			ofy().save().entity(d);
-		}
+		if (!d.equivalentTo(original_d)) ofy().save().entity(d);
 		
 		/* Find assignment (try the following, in order, until an assignment is found):
 		 *   1. Find an assignment in the datastore with a matching lti_ags_lineitem_url (should work for all established graded assignments)
@@ -342,12 +338,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		if (deployment_id == null) throw new Exception("The deployment_id claim was not found in the id_token payload.");
 		String platformDeploymentId = platform_id + "/" + deployment_id;
 		
-		// This section pulls a deployment from the datastore and puts it into a local Map for fast retrieval
-		Deployment d = deployments.get(platformDeploymentId);
-		if (d == null) {
-			d = Deployment.getInstance(platformDeploymentId);
-			deployments.put(platformDeploymentId, d);
-		}
+		Deployment d = Deployment.getInstance(platformDeploymentId);
 		
 		if (d==null) throw new Exception("The deployment was not found in the ChemVantage database. You "
 				+ "can register your LMS with ChemVantage at https://www.chemvantage.org/lti/registration");

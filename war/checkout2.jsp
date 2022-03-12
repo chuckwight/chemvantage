@@ -90,10 +90,10 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
 
 		Please select the desired quantity to purchase: 
 		<select id=nexamschoice onChange=updateAmount();>
-			<option value=100>50</option>
-			<option value=200>100</option>
-			<option value=500>200</option>
-			<option value=1000>500</option>
+			<option value=50>50</option>
+			<option value=100>100</option>
+			<option value=200>200</option>
+			<option value=500>500</option>
 		</select><br /><br /> 
 		
 		Select your preferred payment option below. If your institution
@@ -104,7 +104,7 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
 		printable receipt on this page.<br /><br />
 
 		<h2>
-			Purchase: <span id=amt>50 exams - $100 USD</span> USD
+			Purchase: <span id=amt>50 exams - $100 USD</span>
 		</h2>
 	</div>
 
