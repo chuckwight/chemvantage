@@ -10,7 +10,7 @@ String price = request.getParameter("price");
 		if (p<5) price = "5";
 		if (p>20) price = "20";
 	} catch (Exception e) {
-		price = "10";
+		price = "20";
 	}
 	User user = User.getUser(sig);
 	if (user == null || user.isAnonymous()) response.sendError(401, "You must be logged in through your LMS to see this page.");
