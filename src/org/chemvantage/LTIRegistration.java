@@ -164,7 +164,7 @@ public class LTIRegistration extends HttpServlet {
 					Deployment d = createNewDeployment(openIdConfiguration,registrationResponse,request);
 					sendApprovalEmail(d,request);
 					response.setContentType("text/html");
-					out.println(successfulRegistrationRequestPage(openIdConfiguration));
+					out.println(successfulRegistrationRequestPage(openIdConfiguration,request));
 				} else {
 					sendRegistrationEmail(token,request);
 					out.println(Subject.header("ChemVantage LTI Registration") + Subject.banner + "<h3>Registration Success</h3>Thank you. A registration email has been sent to your address.<p>" + Subject.footer);			
@@ -902,12 +902,33 @@ public class LTIRegistration extends HttpServlet {
 		}
 	}
 	
-	String successfulRegistrationRequestPage(JsonObject openid_configuration) {
+	String successfulRegistrationRequestPage(JsonObject openid_configuration, HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		buf.append(Subject.header() + Subject.banner);
 		buf.append("<h3>Your Registration Request Was Successful</h3>"
 				+ "The LTI Advantage deployment was created in ChemVantage and in your LMS.<br/>"
 				+ "Please be sure to activate the deployment in your LMS.<br/><br/>");
+		
+		String price = request.getParameter("price");
+		buf.append("In your registration request, you selected a student subscription price of $" + price + " USD.<br/><br/>");
+		switch (price) {
+		case "0":
+			buf.append("You selected this price because:<br/>" + request.getParameter("whyZeroPrice") + "<br/><br/>");
+			buf.append("You said that ChemVantage should pay the cost of the service because:<br/>" + request.getParameter("whyChemVPays") + "<br/><br/>");
+			buf.append("This request is currently under review, and we will inform you of our decision at this email address. "
+					+ "In the meantime your ChemVantage account will be fully functional, "
+					+ "and we have provisioned 5 complimentary student accounts so you can begin exploring and testing "
+					+ "ChemVantage for use in your classes. As a reminder, access to ChemVantage by instructors and LMS account "
+					+ "administrators is always free.<br/><br/>");
+			break;
+		default:
+			buf.append("Your ChemVantage has been fully activated and provisioned with 5 free student licenses. Each unique student "
+					+ "login will use one license. You may purchase additional licenses in bulk directly from ChemVantage at a discount. "
+					+ "Otherwise, ChemVantage will charge each student $" + price + " USD before granting access to the first assignment. "
+					+ "Upon successful payment, the student will have unlimited access to ChemVantage assignments through your LMS "
+					+ "for a period of 10 months. As a reminder, access to ChemVantage by instructors and LMS account "
+					+ "administrators is always free.<br/><br/>");
+		}
 	
 		buf.append("<a href=# onclick=\"(window.opener || window.parent).postMessage({subject:'org.imsglobal.lti.close'},'*');\">Click here to close this window.</a>");
 		

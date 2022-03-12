@@ -208,7 +208,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				new PremiumUser(user.getHashedId());
 			}
 			else if (d.price == 0) new PremiumUser(user.getHashedId());
-			else response.sendRedirect("/checkout");
+			else response.sendRedirect("/checkout0.jsp?sig=" + user.getTokenSignature());
 		}
 
 		// Save the updated Deployment entity, if necessary

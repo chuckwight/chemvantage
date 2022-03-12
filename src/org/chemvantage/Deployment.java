@@ -31,7 +31,7 @@ public class Deployment implements java.lang.Cloneable {
 	@Index	Date   created;
 	@Index	Date   lastLogin;
 			Date   expires;
-			int    price = 5; // default 10-month subscription price in $USD for individual student users
+			int    price = 0; // default 10-month subscription price in $USD for individual student users
 			int    nLicensesRemaining=5;
 			
 	Deployment() {}
@@ -66,6 +66,12 @@ public class Deployment implements java.lang.Cloneable {
 		this.lms_type = lms;
 		this.rsa_key_id = KeyStore.getAKeyId(lms);
 		this.created = new Date();
+		
+		this.scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem "
+				+ "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly"
+				+ "https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly "
+				+ "https://purl.imsglobal.org/spec/lti-ags/scope/score "
+				+ "https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly";
 	}
 			
 	static Deployment getInstance(String platform_deployment_id) {
@@ -122,6 +128,8 @@ public class Deployment implements java.lang.Cloneable {
 				((this.lms_type != null && this.lms_type.equals(d.lms_type)) 											|| (d.lms_type == null && this.lms_type == null)) &&
 				((this.rsa_key_id != null && this.rsa_key_id.equals(d.rsa_key_id)) 										|| (d.rsa_key_id == null && this.rsa_key_id == null)) &&
 				((this.scope != null && this.scope.equals(d.scope)) 													|| (d.scope == null && this.scope == null)) &&
+				(this.price == d.price) &&
+				(this.nLicensesRemaining == d.nLicensesRemaining) &&
 				(this.created != null && this.created.equals(d.created)) &&
 				(this.lastLogin != null && this.lastLogin.equals(d.lastLogin));
 	}
