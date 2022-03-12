@@ -114,7 +114,7 @@ Please select your price:
 <option value="10" <%= price.equals("10")?"selected":"" %> >$10 USD/student</option>
 <option value="5" <%= price.equals("5")?"selected":"" %> >$5 USD/student</option>
 <option value="0" <%= price.equals("0")?"selected":"" %> >$0 USD/student</option>
-</select> for a 10-month subscription to ChemVantage.
+</select> for each 10-month student subscription to ChemVantage. Instructor accounts are always free.
 
 <br/><br/>
 
