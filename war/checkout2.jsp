@@ -27,7 +27,7 @@ if (user == null || user.isAnonymous())
 	response.sendError(401, "You must be logged in through your LMS to see this page.");
 String hashedId = request.getParameter("HashedId");
 DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-int nExamsPurchased = 0;
+int nLicensesPurchased = 0;
 String purchaseAmount = "0";
 String orderDetails = "";
 long assignmentId = user.getAssignmentId();
@@ -40,10 +40,10 @@ String client_id = System.getProperty("com.google.appengine.application.id").equ
 
 if (user.getHashedId().equals(hashedId)) { // successful payment; process a user upgrade 
 	try {
-		nExamsPurchased = Integer.parseInt(request.getParameter("NExams"));
+		nLicensesPurchased = Integer.parseInt(request.getParameter("NExams"));
 		purchaseAmount = request.getParameter("PurchaseAmount");
 		orderDetails = request.getParameter("OrderDetails");
-		d.putNLicensesRemaining(d.getNLicensesRemaining() + nExamsPurchased);
+		d.putNLicensesRemaining(d.getNLicensesRemaining() + nLicensesPurchased);
 %>
 		<h3>Success! Thank you for your purchase.</h3>
 		<h2>Receipt</h2>
@@ -65,11 +65,11 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
 		UserId: <%= user.getHashedId() %><br /> 
 		Deployment: <%= d.getPlatformDeploymentId() %><br /> 
 		Organization: <%= d.getOrganization() %><br />
-		Number of exams purchased: <%= nExamsPurchased %><br /> 
+		Number of licenses purchased: <%= nLicensesPurchased %><br /> 
 		Purchase amount: $<%= purchaseAmount %> USD<br /> 
-		Your account now has <%= d.getNLicensesRemaining() %> placement exams available.<br /><br />
+		Your account now has <%= d.getNLicensesRemaining() %> student licenses available.<br /><br />
 		
-		Please print a copy of this receipt for your records.<br /><br /> 
+		Please save a copy of this receipt for your records.<br /><br /> 
 		
 		Details: <%= orderDetails %>
 <%
@@ -77,23 +77,23 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
 %>
 
 	<div id=offer>
-		<h3>Purchase Placement Exams for your ChemVantage Account</h3>
+		<h3>Purchase Student Licenses for your ChemVantage Account</h3>
 		Your ChemVantage account currently has
-		<%= d.getNLicensesRemaining() %> placement exams remaining.<br /><br />
-		You may purchase more exams on behalf of students at your institution in the following quantities:
+		<%= d.getNLicensesRemaining() %> student licenses remaining.<br /><br />
+		You may purchase more licenses on behalf of students at your institution in the following quantities:
 		<ul>
-			<li>100 exams @ $1.00 USD/each = $100 USD</li>
-			<li>200 exams @ $0.75 USD/each = $150 USD</li>
-			<li>500 exams @ $0.50 USD/each = $250 USD</li>
-			<li>1000 exams @ $0.50 USD/each = $500 USD</li>
+			<li>50 exams @ $2.00 USD/each = $100 USD</li>
+			<li>100 exams @ $1.50 USD/each = $150 USD</li>
+			<li>200 exams @ $1.25 USD/each = $250 USD</li>
+			<li>500 exams @ $1.00 USD/each = $500 USD</li>
 		</ul>
 
 		Please select the desired quantity to purchase: 
 		<select id=nexamschoice onChange=updateAmount();>
-			<option value=100>100</option>
-			<option value=200>200</option>
-			<option value=500>500</option>
-			<option value=1000>1000</option>
+			<option value=100>50</option>
+			<option value=200>100</option>
+			<option value=500>200</option>
+			<option value=1000>500</option>
 		</select><br /><br /> 
 		
 		Select your preferred payment option below. If your institution
@@ -104,7 +104,7 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
 		printable receipt on this page.<br /><br />
 
 		<h2>
-			Purchase: <span id=amt>100 exams - $100 USD</span> USD
+			Purchase: <span id=amt>50 exams - $100 USD</span> USD
 		</h2>
 	</div>
 
@@ -121,10 +121,10 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
    function updateAmount() {
 	   nExams = document.getElementById("nexamschoice").value;
 	   switch (nExams) {
-	   case "100": value="100"; break;
-	   case "200": value="150"; break;
-	   case "500": value="250"; break;
-	   case "1000": value="500"; break;
+	   case "50": value="100"; break;
+	   case "100": value="150"; break;
+	   case "200": value="250"; break;
+	   case "500": value="500"; break;
 	   default: value="100";
 	   }
 	   document.getElementById("amt").innerHTML=nExams + ' exams - $' + value + ' USD';

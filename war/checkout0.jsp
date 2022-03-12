@@ -49,12 +49,13 @@ String price = request.getParameter("price");
 <body style='background-color: white; font-family: Calibri,Arial,sans-serif; max-width: 800px;'>
 <%= Subject.banner %>
 
-<h3>ChemVantage Subscription</h3>
-A subscription is required to access ChemVantage assignments and services. The cost is just $<%= price %>.00 USD for a 10-month 
-subscription that won't expire until <%= df.format(exp) %>. As a subscriber, you can<ul>
+<h3>Welcome to ChemVantage</h3>
+A subscription is required to access ChemVantage assignments and services through this learning management system. 
+The cost is just $<%= price %>.00 USD for a 10-month subscription that won't expire until <%= df.format(exp) %>. 
+As a subscriber, you can<ul>
 <li>access all ChemVantage quizzes, homework, videos and other assignments created by your instructor;</li>
 <li>view the detailed step-by-step solutions to homework problems;</li>
-<li>report issues or mistakes in homework solutions to ChemVantage. </li>
+<li>report issues or feedback to ChemVantage if you encounter any errors in the assignments. </li>
 </ul> 
 To accept this offer, please select your preferred payment method below. When the transaction is completed, 
 your subscription will be activated immediately.
