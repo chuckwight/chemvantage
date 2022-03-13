@@ -82,10 +82,10 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
 		<%= d.getNLicensesRemaining() %> student licenses remaining.<br /><br />
 		You may purchase more licenses on behalf of students at your institution in the following quantities:
 		<ul>
-			<li>50 exams @ $2.00 USD/each = $100 USD</li>
-			<li>100 exams @ $1.50 USD/each = $150 USD</li>
-			<li>200 exams @ $1.25 USD/each = $250 USD</li>
-			<li>500 exams @ $1.00 USD/each = $500 USD</li>
+			<li>50 licenses @ $5.00 USD/each = $250 USD</li>
+			<li>100 licenses @ $4.00 USD/each = $400 USD</li>
+			<li>200 licenses @ $3.00 USD/each = $600 USD</li>
+			<li>500 licenses @ $2.00 USD/each = $1000 USD</li>
 		</ul>
 
 		Please select the desired quantity to purchase: 
@@ -104,7 +104,7 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
 		printable receipt on this page.<br /><br />
 
 		<h2>
-			Purchase: <span id=amt>50 exams - $100 USD</span>
+			Purchase: <span id=amt>50 licenses - $250 USD</span>
 		</h2>
 	</div>
 
@@ -121,13 +121,13 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
    function updateAmount() {
 	   nExams = document.getElementById("nexamschoice").value;
 	   switch (nExams) {
-	   case "50": value="100"; break;
-	   case "100": value="150"; break;
-	   case "200": value="250"; break;
-	   case "500": value="500"; break;
-	   default: value="100";
+	   case "50": value="250"; break;
+	   case "100": value="400"; break;
+	   case "200": value="600"; break;
+	   case "500": value="1000"; break;
+	   default: value="250";
 	   }
-	   document.getElementById("amt").innerHTML=nExams + ' exams - $' + value + ' USD';
+	   document.getElementById("amt").innerHTML=nExams + ' licenses - $' + value + ' USD';
     }
     
     function initPayPalButton() {

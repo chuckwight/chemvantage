@@ -3,15 +3,8 @@
 <%@ page import="java.util.Date,java.text.DateFormat,com.googlecode.objectify.*,org.chemvantage.*,com.google.common.net.InternetDomainName"%>
 
 <%
-String sig = request.getParameter("sig");
-String price = request.getParameter("price");
-	try {
-		int p = Integer.parseInt(price);
-		if (p<5) price = "5";
-		if (p>20) price = "20";
-	} catch (Exception e) {
-		price = "20";
-	}
+	String sig = request.getParameter("sig");
+	String price = "19";
 	User user = User.getUser(sig);
 	if (user == null || user.isAnonymous()) response.sendError(401, "You must be logged in through your LMS to see this page.");
 	String hashedId = request.getParameter("HashedId");

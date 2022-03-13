@@ -180,7 +180,8 @@ public class PlacementExam extends HttpServlet {
 					+ "ChemVantage does not store any student personal identifiable information (PII), so the results of your placement exams are secure.<p>");
 			
 			buf.append("There are two ways to pay for placement exams:<ol>"
-					+ "<li>You can purchase 50 or more ChemVantage student licenses for this LTI account for $2.00 USD each. Every unique student who "
+					+ "<li>You can <a href='/checkout2.jsp?sig=" + user.getTokenSignature() + "' target=_blank >purchase ChemVantage student licenses</a> "
+					+ "for this LTI account in quantities of 50 or more for as little as $2.00 USD per license. Every unique student who "
 					+ "downloads a placement exam will use one license.</li>"
 					+ "<li>When there are no licenses remaining in your account, each student will be charged $" + d.price + ".00 USD for an individual license.</li></ol>"
 					+ "Each license gives the student unlimited access to ChemVantage assignments for a period of 10 months.<br/><br/>"
@@ -190,7 +191,7 @@ public class PlacementExam extends HttpServlet {
 					+ "You have connected to ChemVantage as an instructor or administrator; therefore, you have unlimited free access to this tool (no license required).<p>");
 			
 			buf.append("From here, you may<UL>"
-					+ "<LI><a href='/checkout2.jsp?sig=" + user.getTokenSignature() + "' target=_blank >Purchase placement exams for your ChemVantage account</a></LI>"
+					+ "<LI><a href='/checkout2.jsp?sig=" + user.getTokenSignature() + "' target=_blank >Purchase student licenses for your ChemVantage account</a></LI>"
 					+ "<LI><a href='/PlacementExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + "'>Customize this exam</a> to set the time allowed and select the available question items.</LI>"
 					+ (supportsMembership?"<LI><a href='/PlacementExam?UserRequest=ReviewExamScores&sig=" + user.getTokenSignature() + "'>Review the exam results</a> and (optionally) assign partial credit for answers</LI>":"")
 					+ "</UL>");

@@ -576,7 +576,7 @@ public class LTIRegistration extends HttpServlet {
 			
 		Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
 		d.status = "pending";
-		d.price = 20;
+		d.price = 19;
 		
 		Deployment prior = Deployment.getInstance(d.platform_deployment_id);
 		
@@ -854,7 +854,7 @@ public class LTIRegistration extends HttpServlet {
 					
 			Deployment d = new Deployment(platformId,deploymentId.getAsString(),clientId,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,contact_name,contact_email,organization,org_url,lms);
 			d.status = "pending";
-			d.price = 20;
+			d.price = 19;
 
 			ofy().save().entity(d);
 			return d;
