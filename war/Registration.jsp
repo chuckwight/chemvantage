@@ -3,6 +3,7 @@
 <%@ page import="java.util.*,com.googlecode.objectify.*,org.chemvantage.*,com.google.common.net.InternetDomainName"%>
 
 <%
+	String price = "19";
 	String message = request.getParameter("message");
 	String sub = request.getParameter("sub");
 	String email = request.getParameter("email");
@@ -81,7 +82,7 @@ Pricing:
 <ol>
 <li>LTI registration and setup are free.</li>
 <li>Instructor accounts are completely free.</li>
-<li>Each student account costs $20 USD for a 10-month all-access subscription.</li>
+<li>Each student account costs $<%= price %> USD for a 10-month all-access subscription.</li>
 </ol>
 If this pricing structure doesn't fit your needs, please contact Chuck Wight at admin@chemvantage.org for alternative pricing.
 
