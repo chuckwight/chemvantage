@@ -97,7 +97,8 @@ public class LTIRegistration extends HttpServlet {
 	
 	private static final long serialVersionUID = 137L;
 	Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
-
+	static String price = "19";
+	
 	@Override
 	public void init(ServletConfig config) throws ServletException {
 		super.init(config);
@@ -279,7 +280,7 @@ public class LTIRegistration extends HttpServlet {
 		
 		buf.append("<h3>Pricing</h3>"
 				+ "When you complete the registration steps below, your account will be activated immediately. ChemVantage "
-				+ "will charge each student $20 USD before granting access to the first assignment. Upon "
+				+ "will charge each student $" + price + " USD before granting access to the first assignment. Upon "
 				+ "successful payment, the student will have unlimited access to ChemVantage assignments through your LMS "
 				+ "for a period of 10 months. As a reminder, access to ChemVantage by instructors and LMS account "
 				+ "administrators is always free.");
@@ -871,7 +872,7 @@ public class LTIRegistration extends HttpServlet {
 				+ "Please be sure to activate the deployment in your LMS.<br/><br/>");
 		buf.append("Your ChemVantage has been fully activated and provisioned with 5 free student licenses. Each unique student "
 				+ "login will use one license. You may purchase additional licenses in bulk directly from ChemVantage at a discount. "
-				+ "Otherwise, ChemVantage will charge each student $20 USD before granting access to the first assignment. "
+				+ "Otherwise, ChemVantage will charge each student $" + price + " USD before granting access to the first assignment. "
 				+ "Upon successful payment, the student will have unlimited access to ChemVantage assignments through your LMS "
 				+ "for a period of 10 months. As a reminder, access to ChemVantage by instructors and LMS account "
 				+ "administrators is always free.<br/><br/>");
@@ -939,7 +940,7 @@ public class LTIRegistration extends HttpServlet {
 				+ "Client ID: " + d.client_id + "<br/><br/>");
 		
 		buf.append("<h3>Pricing</h3>"
-				+ "ChemVantage will charge each student $20 USD before granting access to the first assignment. Upon "
+				+ "ChemVantage will charge each student $" + price + " USD before granting access to the first assignment. Upon "
 				+ "successful payment, the student will have unlimited access to ChemVantage assignments through your LMS "
 				+ "for a period of 10 months. As a reminder, access to ChemVantage by instructors and LMS account "
 				+ "administrators is always free.");
