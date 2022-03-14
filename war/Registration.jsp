@@ -83,6 +83,7 @@ Pricing:
 <li>LTI registration and setup are free.</li>
 <li>Instructor accounts are completely free.</li>
 <li>Each student account costs $<%= price %> USD for a 10-month all-access subscription.</li>
+<li>Institutions have the option of purchasing student licenses in bulk at discounted rates.</li>
 </ol>
 If this pricing structure doesn't fit your needs, please contact Chuck Wight at admin@chemvantage.org for alternative pricing.
 
