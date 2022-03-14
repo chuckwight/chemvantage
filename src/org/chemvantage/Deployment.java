@@ -129,8 +129,7 @@ public class Deployment implements java.lang.Cloneable {
 				((this.scope != null && this.scope.equals(d.scope)) 													|| (d.scope == null && this.scope == null)) &&
 				(this.price == d.price) &&
 				(this.nLicensesRemaining == d.nLicensesRemaining) &&
-				(this.created != null && this.created.equals(d.created)) &&
-				(this.lastLogin != null && this.lastLogin.equals(d.lastLogin));
+				(this.created != null && this.created.equals(d.created));
 	}
 	
 	protected Deployment clone() throws CloneNotSupportedException {

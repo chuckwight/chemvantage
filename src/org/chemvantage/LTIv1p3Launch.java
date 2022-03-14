@@ -156,14 +156,13 @@ public class LTIv1p3Launch extends HttpServlet {
 	void launchResourceLink(HttpServletRequest request, HttpServletResponse response, Deployment d, User user, JsonObject claims) throws Exception {
 		// Process deployment claims:
 		Deployment original_d = d.clone();  // make a copy to compare for updating later
-
+		Date now = new Date();
+		Date yesterday = new Date(now.getTime()-86400000L); // 24 hrs ago
+		
 		try {
-			Date now = new Date();
-			Date yesterday = new Date(now.getTime()-86400000L); // 24 hrs ago
-			if (d.lastLogin==null || d.lastLogin.before(yesterday)) {
-				d.lastLogin = now;
-				d.claims = claims.toString();
-			}
+			d.lastLogin = now;
+			d.claims = claims.toString();
+
 			JsonObject platform = claims.get("https://purl.imsglobal.org/spec/lti/claim/tool_platform").getAsJsonObject();
 			JsonElement je = platform.get("email_contact");
 			if (je != null) d.email = je.getAsString();
@@ -207,7 +206,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		}
 
 		// Save the updated Deployment entity, if necessary
-		if (!d.equivalentTo(original_d)) ofy().save().entity(d);
+		if (!d.equivalentTo(original_d) || original_d.lastLogin.before(yesterday)) ofy().save().entity(d);
 		
 		/* Find assignment (try the following, in order, until an assignment is found):
 		 *   1. Find an assignment in the datastore with a matching lti_ags_lineitem_url (should work for all established graded assignments)
