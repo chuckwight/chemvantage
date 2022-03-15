@@ -16,6 +16,7 @@
 	String openid_configuration = request.getParameter("openid_configuration");
 	String registration_token = request.getParameter("registration_token");
 	boolean dynamic = openid_configuration != null;
+	boolean development = request.getServerName().contains("dev-vantage-hrd.appspot.com");
 %>
 
 <!DOCTYPE html>
@@ -76,8 +77,13 @@ Type of Learning Management System:<br/>
 <br/><br/>
 <% } else { %>
  <input type=hidden name=openid_configuration value='<%= openid_configuration %>' />
-<% } %>
+<% } 
 
+if (development) { %>
+This is a development server:
+ChemVantage is pleased to provide free access to our software development server for testing LTI connections. 
+Please note that the server is sometimes in an unstable state, and accounts may be reset or even deleted at any time.
+<% } else { %>
 Pricing:
 <ol>
 <li>LTI registration and setup are free.</li>
@@ -86,6 +92,7 @@ Pricing:
 <li>Institutions have the option of purchasing student licenses in bulk at discounted rates.</li>
 </ol>
 If this pricing structure doesn't fit your needs, please contact Chuck Wight at admin@chemvantage.org for alternative pricing.
+<% } %>
 
 <br/><br/>
 

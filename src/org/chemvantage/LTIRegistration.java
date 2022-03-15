@@ -278,13 +278,18 @@ public class LTIRegistration extends HttpServlet {
 		
 		buf.append("Thank you for your ChemVantage registration request.<p>");
 		
-		buf.append("<h3>Pricing</h3>"
-				+ "When you complete the registration steps below, your account will be activated immediately. ChemVantage "
-				+ "will charge each student $" + price + " USD before granting access to the first assignment. Upon "
-				+ "successful payment, the student will have unlimited access to ChemVantage assignments through your LMS "
-				+ "for a period of 10 months. As a reminder, access to ChemVantage by instructors and LMS account "
-				+ "administrators is always free.");
-
+		if (iss.contains("dev-vantage-hrd.appspot.com")) {
+			buf.append("ChemVantage is pleased to provide free access to our software development server for testing LTI connections. "
+					+ "Please note that the server is sometimes in an unstable state, and accounts may be reset or even deleted at any time. ");
+		} else {
+			buf.append("<h3>Pricing</h3>"
+					+ "When you complete the registration steps below, your account will be activated immediately. ChemVantage "
+					+ "will charge each student $" + price + " USD before granting access to the first assignment. Upon "
+					+ "successful payment, the student will have unlimited access to ChemVantage assignments through your LMS "
+					+ "for a period of 10 months. As a reminder, access to ChemVantage by instructors and LMS account "
+					+ "administrators is always free.");
+		}
+		
 		buf.append("If you have questions or require assistance, please contact us at admin@chemvantage.org.");
 
 		buf.append("<h3>Complete the LTI Advantage Registration Process</h3>");
@@ -577,7 +582,7 @@ public class LTIRegistration extends HttpServlet {
 			
 		Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
 		d.status = "pending";
-		d.price = 19;
+		d.price = Integer.parseInt(price);
 		
 		Deployment prior = Deployment.getInstance(d.platform_deployment_id);
 		
@@ -855,7 +860,7 @@ public class LTIRegistration extends HttpServlet {
 					
 			Deployment d = new Deployment(platformId,deploymentId.getAsString(),clientId,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,contact_name,contact_email,organization,org_url,lms);
 			d.status = "pending";
-			d.price = 19;
+			d.price = Integer.parseInt(price);
 
 			ofy().save().entity(d);
 			return d;
@@ -870,15 +875,21 @@ public class LTIRegistration extends HttpServlet {
 		buf.append("<h3>Your Registration Request Was Successful</h3>"
 				+ "The LTI Advantage deployment was created in ChemVantage and in your LMS.<br/>"
 				+ "Please be sure to activate the deployment in your LMS.<br/><br/>");
-		buf.append("Your ChemVantage has been fully activated and provisioned with 5 free student licenses. Each unique student "
-				+ "login will use one license. You may purchase additional licenses in bulk directly from ChemVantage at a discount. "
-				+ "Otherwise, ChemVantage will charge each student $" + price + " USD before granting access to the first assignment. "
-				+ "Upon successful payment, the student will have unlimited access to ChemVantage assignments through your LMS "
-				+ "for a period of 10 months. As a reminder, access to ChemVantage by instructors and LMS account "
-				+ "administrators is always free.<br/><br/>");
-	
-		buf.append("<a href=# onclick=\"(window.opener || window.parent).postMessage({subject:'org.imsglobal.lti.close'},'*');\">Click here to close this window.</a>");
+
+		if (request.getServerName().contains("dev-vantage-hrd.appspot.com")) {
+			buf.append("ChemVantage is pleased to provide free access to our software development server for testing LTI connections. "
+					+ "Please note that the server is sometimes in an unstable state, and accounts may be reset or even deleted at any time.");
+		} else {
+			buf.append("Your ChemVantage has been fully activated and provisioned with 5 free student licenses. Each unique student "
+					+ "login will use one license. You may purchase additional licenses in bulk directly from ChemVantage at a discount. "
+					+ "Otherwise, ChemVantage will charge each student $" + price + " USD before granting access to the first assignment. "
+					+ "Upon successful payment, the student will have unlimited access to ChemVantage assignments through your LMS "
+					+ "for a period of 10 months. As a reminder, access to ChemVantage by instructors and LMS account "
+					+ "administrators is always free.<br/><br/>");
+		}
 		
+		buf.append("<a href=# onclick=\"(window.opener || window.parent).postMessage({subject:'org.imsglobal.lti.close'},'*');\">Click here to close this window.</a>");
+
 		String lms = null;
 		try {
 			lms = openid_configuration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString();
@@ -939,12 +950,17 @@ public class LTIRegistration extends HttpServlet {
 				+ "Deployment ID: " + d.getDeploymentId() + "<br/>"
 				+ "Client ID: " + d.client_id + "<br/><br/>");
 		
-		buf.append("<h3>Pricing</h3>"
-				+ "ChemVantage will charge each student $" + price + " USD before granting access to the first assignment. Upon "
-				+ "successful payment, the student will have unlimited access to ChemVantage assignments through your LMS "
-				+ "for a period of 10 months. As a reminder, access to ChemVantage by instructors and LMS account "
-				+ "administrators is always free.");
-
+		if (iss.contains("dev-vantage-hrd.appspot.com")) {
+			buf.append("ChemVantage is pleased to provide free access to our software development server for testing LTI connections. "
+					+ "Please note that the server is sometimes in an unstable state, and accounts may be reset or even deleted at any time. ");
+		} else {
+			buf.append("<h3>Pricing</h3>"
+					+ "ChemVantage will charge each student $" + price + " USD before granting access to the first assignment. Upon "
+					+ "successful payment, the student will have unlimited access to ChemVantage assignments through your LMS "
+					+ "for a period of 10 months. As a reminder, access to ChemVantage by instructors and LMS account "
+					+ "administrators is always free.");
+		}
+		
 		buf.append("<h3>Helpful Hints</h3>"
 				+ "ChemVantage supports two types of LTI launches from your LMS:<ol>"
 				+ "<li>Deep Linking - used by the instructor, course designer or administrator to select ChemVantage assignments.</li>"
