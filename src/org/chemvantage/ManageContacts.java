@@ -70,6 +70,7 @@ public class ManageContacts extends HttpServlet {
 		}
 				
 		buf.append(addNewContact(email));
+		buf.append(pasteNewContact(email));
 			
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
@@ -92,6 +93,9 @@ public class ManageContacts extends HttpServlet {
 				addNewContact(request);
 				response.sendRedirect("/contacts?Email=" + request.getParameter("Email"));
 				break;
+			case "Paste New Contact":
+				String email = pasteNewContact(request);
+				response.sendRedirect("/contacts?Email=" + email);
 			case "Save Revised Contact":
 				saveRevisedContact(request);
 				response.sendRedirect("/contacts?Email=" + request.getParameter("Email"));
@@ -115,11 +119,24 @@ public class ManageContacts extends HttpServlet {
 				+ "<input type=text name=Email " + (email==null?"placeholder='Email'":"value='" + email + "'") + " /><br/>"
 				+ "Role: <select name=Role>"
 				+ "<option value=''>Unknown</option>"
-				+ "<option value=faculty>Faculty</option>"
+				+ "<option value=faculty selected>Faculty</option>"
 				+ "<option value=chair>Dept Chair</option>"
 				+ "</select><br/>"
 				+ "<input type=submit name=UserRequest value='Add New Contact' />"
 				+ "</form><br/><br/>";
+	}
+	
+	String pasteNewContact(String email) {
+		return "<h4>Paste New Contact</h4>"
+				+ "<form method=post action=/contacts>"
+				+ "<input type=text size=80 name=Paste placeholder='First Name [tab] Last Name [tab] Email' /> "
+				+ "Role: <select name=Role>"
+				+ "<option value=''>Unknown</option>"
+				+ "<option value=faculty selected>Faculty</option>"
+				+ "<option value=chair>Dept Chair</option>"
+				+ "</select><br/>"
+				+ "<input type=submit name=UserRequest value='Paste New Contact' />"
+				+ "</form><br/><br/>"; 
 	}
 	
 	void addNewContact(HttpServletRequest request) throws Exception {
@@ -131,6 +148,19 @@ public class ManageContacts extends HttpServlet {
 		}
 		c.role = request.getParameter("Role");
 		ofy().save().entity(c).now();
+	}
+	
+	String pasteNewContact(HttpServletRequest request) {
+		Contact c = null;
+		try {
+			String[] paste = request.getParameter("Paste").split("\t");
+			c = new Contact(paste[0],paste[1],paste[2]);
+			c.role = request.getParameter("Role");
+			ofy().save().entity(c).now();
+			return c.email;
+		} catch (Exception e) {
+			return null;
+		}
 	}
 	
 	String editExistingContact(Contact c) {
