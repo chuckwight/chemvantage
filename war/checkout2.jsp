@@ -116,8 +116,8 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
   
    <script src='https://www.paypal.com/sdk/js?client-id=<%= client_id %>&enable-funding=venmo&currency=USD'></script>
    <script>
-   var nExams = 100;
-   var value = "100";
+   var nExams = 50;
+   var value = "250";
    function updateAmount() {
 	   nExams = document.getElementById("nexamschoice").value;
 	   switch (nExams) {
