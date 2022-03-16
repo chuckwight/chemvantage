@@ -231,7 +231,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		// First, try to retrieve an appropriate authToken from the class variable HashMap authTokens
 		// If the token expires more than 5 minutes from now, use it. Otherwise, request a new one.
 		Deployment d = null;
-		Date in5Minutes = new Date(new Date().getTime() + 300000L);
+		Date in15Minutes = new Date(new Date().getTime() + 900000L);  // 15 minutes from now
 		StringBuffer debug = new StringBuffer("Failed LTIMessage.getAccessToken()<br/>");
 		
 		DataOutputStream wr = null;
@@ -246,7 +246,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			String authToken = authTokens.get(platformDeploymentId);
 			if (authToken != null) {  //found a cached authToken; check the expiration and use it
 				JsonObject jAuthToken = JsonParser.parseString(authToken).getAsJsonObject();
-				if (in5Minutes.before(new Date(jAuthToken.get("exp").getAsLong()))) return jAuthToken.get("access_token").getAsString();			
+				if (in15Minutes.before(new Date(jAuthToken.get("exp").getAsLong()))) return jAuthToken.get("access_token").getAsString();			
 			}
 
 			// At this point no valid cached authToken was found, so we request a new authToken from the LMS platform:
@@ -268,7 +268,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 					.withSubject(sub)
 					.withAudience(aud)
 					.withKeyId(d.rsa_key_id)
-					.withExpiresAt(in5Minutes)
+					.withExpiresAt(in15Minutes)
 					.withIssuedAt(now)
 					.withJWTId(Nonce.generateNonce())
 					.sign(Algorithm.RSA256(null,KeyStore.getRSAPrivateKey(d.rsa_key_id)));
