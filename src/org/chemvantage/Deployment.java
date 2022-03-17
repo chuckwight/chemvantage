@@ -67,7 +67,7 @@ public class Deployment implements java.lang.Cloneable {
 		this.created = new Date();
 		
 		this.scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem "
-				+ "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly"
+				+ "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly "
 				+ "https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly "
 				+ "https://purl.imsglobal.org/spec/lti-ags/scope/score "
 				+ "https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly";

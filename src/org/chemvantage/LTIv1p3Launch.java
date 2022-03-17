@@ -154,6 +154,7 @@ public class LTIv1p3Launch extends HttpServlet {
 	}
 	
 	void launchResourceLink(HttpServletRequest request, HttpServletResponse response, Deployment d, User user, JsonObject claims) throws Exception {
+		StringBuffer debug = new StringBuffer("Debug: ");
 		try {
 			// Process deployment claims:
 			Deployment original_d = d.clone();  // make a copy to compare for updating later
@@ -195,8 +196,9 @@ public class LTIv1p3Launch extends HttpServlet {
 			} catch (Exception e) {
 			}
 
-			if (!scope.isEmpty()) d.scope = scope;
-
+			d.scope = scope;
+			debug.append(scope.isEmpty()?"Scope is empty. ":"Scope is " + scope + ". ");
+			
 			// Launch only premium users
 			if (!user.isPremium()) {
 				if (d.getNLicensesRemaining()>0) {
@@ -206,10 +208,12 @@ public class LTIv1p3Launch extends HttpServlet {
 				else if (d.price == 0) new PremiumUser(user.getHashedId());
 				else response.sendRedirect("/checkout0.jsp?sig=" + user.getTokenSignature() + "&price=" + d.price);
 			}
-
+			
 			// Save the updated Deployment entity, if necessary
-			if (!d.equivalentTo(original_d) || original_d.lastLogin.before(yesterday)) ofy().save().entity(d);
-
+			if (!d.equivalentTo(original_d) || original_d.lastLogin.before(yesterday)) {
+				ofy().save().entity(d).now();
+				debug.append("Deployment saved. ");
+			}
 			/* Find assignment (try the following, in order, until an assignment is found):
 			 *   1. Find an assignment in the datastore with a matching lti_ags_lineitem_url (should work for all established graded assignments)
 			 *   2. Find an assignment with matching resourceId value (tool-defined assignmentId set during Deep Linking)
@@ -223,56 +227,72 @@ public class LTIv1p3Launch extends HttpServlet {
 			JsonObject lineitem = null;
 
 			if (lti_ags_lineitem_url == null && scope.contains("lineitem")) {  // not common; the deployment should usually send the lineitem URL
-				lineitem = LTIMessage.getLineItem(d, resourceLinkId, lti_ags_lineitems_url);
-				lti_ags_lineitem_url = lineitem==null?null:lineitem.get("id").getAsString();
+				debug.append("Fetching Lineitem.");
+				try {
+					lineitem = LTIMessage.getLineItem(d, resourceLinkId, lti_ags_lineitems_url);
+					lti_ags_lineitem_url = lineitem==null?null:lineitem.get("id").getAsString();
+				} catch (Exception e) {}
 			}
 
 			if (lti_ags_lineitem_url != null) {  // this is the default, most common way of retrieving the Assignment; uses local Map for fast retrieval
-				myAssignment = assignments.get(lti_ags_lineitem_url);
-				if (myAssignment == null) {
-					// get the resourceId if available from the URL or lineitem, and use it to retrieve the assignment
-					switch (d.lms_type) {
-					case "canvas": 
-						resourceId = request.getParameter("resourceId");
-						break;
-					default:
-						if (lineitem==null) lineitem = LTIMessage.getLineItem(d, lti_ags_lineitem_url);
+				debug.append("Retrieving assignment by lineitem. ");
+				try {
+					myAssignment = assignments.get(lti_ags_lineitem_url);
+					if (myAssignment == null) {
+						// get the resourceId if available from the URL or lineitem, and use it to retrieve the assignment
+						switch (d.lms_type) {
+						case "canvas": 
+							resourceId = request.getParameter("resourceId");
+							break;
+						default:
+							if (lineitem==null) lineitem = LTIMessage.getLineItem(d, lti_ags_lineitem_url);
+							try {
+								resourceId = lineitem.get("resourceId").getAsString();
+							} catch (Exception e) {}					
+						}
 						try {
-							resourceId = lineitem.get("resourceId").getAsString();
-						} catch (Exception e) {}					
+							myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).safe();
+						} catch (Exception e) {
+							myAssignment = ofy().load().type(Assignment.class).filter("lti_ags_lineitem_url",lti_ags_lineitem_url).first().now();
+						}
 					}
-					try {
-						myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).safe();
-					} catch (Exception e) {
-						myAssignment = ofy().load().type(Assignment.class).filter("lti_ags_lineitem_url",lti_ags_lineitem_url).first().now();
-					}
-				}
+				} catch (Exception e) {}
 			}
 
 			// It is still possible to create assignments without DeepLinking; in this case, retrieve the assignment via the ResourceLinkId value
-			if (myAssignment == null) myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();
+			if (myAssignment == null) {
+				debug.append("Retrieving assignment by resourceLinkId. ");
+				myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();
+			}
 
 			// After all that, if the assignment still cannot be found, create a new (incomplete) one. This will be updated after the ResourcePicker
-			if (myAssignment == null) myAssignment = new Assignment(d.platform_deployment_id,resourceLinkId,lti_nrps_context_memberships_url);
+			if (myAssignment == null) {
+				debug.append("Creating new assignment. ");
+				myAssignment = new Assignment(d.platform_deployment_id,resourceLinkId,lti_nrps_context_memberships_url);
+			}
 			else if (lti_ags_lineitem_url != null) assignments.put(lti_ags_lineitem_url,myAssignment);  // cache the assignment for next launch
 
 			// At this point we should have a valid (but possibly incomplete) Assignment entity
 
 			// Update the Assignment parameters:
-			Assignment original_a = myAssignment.clone(); // make a copy to compare with for updating later
-			myAssignment.resourceLinkId = resourceLinkId;		
-			if (lti_ags_lineitem_url != null) myAssignment.lti_ags_lineitem_url = lti_ags_lineitem_url;
-			else if (scope.contains("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem")) myAssignment.lti_ags_lineitem_url =LTIMessage.createLineItem(d, myAssignment, lti_ags_lineitems_url);
+			try {
+				Assignment original_a = myAssignment.clone(); // make a copy to compare with for updating later
+				myAssignment.resourceLinkId = resourceLinkId;		
+				if (lti_ags_lineitem_url != null) myAssignment.lti_ags_lineitem_url = lti_ags_lineitem_url;
+				else if (scope.contains("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem")) myAssignment.lti_ags_lineitem_url =LTIMessage.createLineItem(d, myAssignment, lti_ags_lineitems_url);
 
-			if (lti_nrps_context_memberships_url != null) myAssignment.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
+				if (lti_nrps_context_memberships_url != null) myAssignment.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
 
-			// If required, save the updated Assignment entity now so its id will be accessible
-			if (myAssignment.id==null || !myAssignment.equivalentTo(original_a)) ofy().save().entity(myAssignment).now();
-
+				// If required, save the updated Assignment entity now so its id will be accessible
+				if (myAssignment.id==null || !myAssignment.equivalentTo(original_a)) ofy().save().entity(myAssignment).now();
+			} catch (Exception e) {
+				throw new Exception("Assignment could not be updated during LTI launch sequence. " + e.getMessage());
+			}
 			// Create a cross-site request forgery (CSRF) token containing the Assignment.id
 			user.setAssignment(myAssignment.id);
 			users.put(user.getTokenSignature(), user);  // store in local cache for speedy launches
-
+			debug.append("User credentials set OK. ");
+			
 			// If this is the first time this Assignment has been used, it may be missing the assignmentType and topicId(s)
 			if (!myAssignment.isValid()) {  //Show the the pickResource form:
 				response.getWriter().println(Subject.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,1) + Subject.footer);
@@ -280,7 +300,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			} else response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
 		} catch (Exception e) {
 			ofy().save().entity(d);
-			throw new Exception("Resource Link Request Launch Failed: " + e.getMessage());
+			throw new Exception("Resource Link Request Launch Failed: " + e.getMessage() + " " + debug.toString());
 		}
 	}
 	
