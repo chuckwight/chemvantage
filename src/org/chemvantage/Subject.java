@@ -136,7 +136,7 @@ public class Subject {
 		+ "<body style='padding: 10px; font-family: Calibri,Arial,sans-serif; background-color: white; color: black;'>\n"
 		+ "<div>"
 		+ "<a href=/ style='padding-right:25px'>Home</a> "
-		+ "<a href=/About style='padding-right:25px'>About Us</a> "
+		+ "<a href=/about.html style='padding-right:25px'>About Us</a> "
 		+ "<a href='/Feedback?sig=" + user.getTokenSignature() + "' style='padding-right:25px'>Feedback</a> "
 		+ "<a href='/Contribute?sig=" + user.getTokenSignature() + "' style='padding-right:25px'>Authors</a> "
 		+ "<a href='/Edit?sig=" + user.getTokenSignature() + "' style='padding-right:25px'>Editors</a> "
