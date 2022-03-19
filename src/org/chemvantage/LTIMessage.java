@@ -231,7 +231,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		// First, try to retrieve an appropriate authToken from the class variable HashMap authTokens
 		// If the token expires more than 5 minutes from now, use it. Otherwise, request a new one.
 		Deployment d = null;
-		Date in15Minutes = new Date(new Date().getTime() + 900000L);  // 15 minutes from now
+		Date in15Minutes = new Date(new Date().getTime() + 300000L);  // 5 minutes from now
 		StringBuffer debug = new StringBuffer("Failed LTIMessage.getAccessToken()<br/>");
 		
 		DataOutputStream wr = null;
