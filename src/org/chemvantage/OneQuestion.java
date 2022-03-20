@@ -70,7 +70,8 @@ public class OneQuestion extends HttpServlet {
 			} else if (answer.isEmpty()) { 
 				buf.append("<h3>The answer to the question was left blank. Please try again.</h3>");
 				buf.append("<form method=post action=/item><input type=hidden name=p value=" + p + " />"
-						+ q.print() + "<input type=submit />" + "</form>");
+						+ q.print() + "<input type=submit />" + "</form><br/><br/>");
+				buf.append("<a href=/>Learn more about ChemVantage here</a><br/><br/>");
 			} else {
 				switch (q.getQuestionType()) {
 				case 5:  // Numeric question
