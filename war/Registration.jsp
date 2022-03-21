@@ -20,7 +20,7 @@
 %>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />
@@ -41,6 +41,8 @@
 <% if (message != null) { %>
 <span style='color: red; border: 2px solid red'>&nbsp;<%= message %> &nbsp;</span>
 <% } %>
+
+<main><h1 style='display: none'>Welcome to ChemVantage</h1>
 
 <h3>ChemVantage LTI Advantage <%= dynamic?"Dynamic":"" %> Registration</h3>
 
@@ -104,11 +106,12 @@ If this pricing structure doesn't fit your needs, please contact Chuck Wight at 
 
 </form><br/><br/>
 
-<hr/><img style='padding-left: 15px; vertical-align: middle;' src=images/CVLogo_tiny.png alt='ChemVantage logo' />&nbsp;
+</main>
+<footer><hr/><img style='padding-left: 15px; vertical-align: middle;' src=images/CVLogo_tiny.png alt='ChemVantage logo' />&nbsp;
 <a href=/about.html>About ChemVantage</a> | 
 <a href=/about.html#terms>Terms and Conditions of Use</a> | 
 <a href=/about.html#privacy>Privacy Policy</a> | 
-<a href=/about.html#copyright>Copyright</a>
+<a href=/about.html#copyright>Copyright</a></footer>
 
 </body>
 </html>

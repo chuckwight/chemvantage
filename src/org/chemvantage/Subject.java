@@ -95,7 +95,7 @@ public class Subject {
 	public static String header(String title) {
 		String announcement = Subject.getAnnouncement();
 		return "<!DOCTYPE html>"
-				+"<html>\n"
+				+"<html lang='en'>\n"
 				+ "<head>\n"
 				+ "<meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />"
 				+ "<meta http-equiv='Pragma' content='no-cache' />"
@@ -120,7 +120,7 @@ public class Subject {
 		String announcement = Subject.getAnnouncement();
 
 		return "<!DOCTYPE html>"
-		+"<html>\n"
+		+"<html lang='en'>\n"
 		+ "<head>\n"
 		+ "<meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />"
 		+ "<meta http-equiv='Pragma' content='no-cache' />"
@@ -148,11 +148,11 @@ public class Subject {
 		+ ((announcement==null || announcement.isEmpty())?"":"<FONT COLOR=RED>" + announcement + "</FONT><br/>\n");
 	}
 	
-	public static String footer = "\n<hr/><img src=/images/CVLogo_tiny.png alt='ChemVantage logo' style='vertical-align:middle' /> "
+	public static String footer = "<footer><hr/><img src=/images/CVLogo_tiny.png alt='ChemVantage logo' style='vertical-align:middle' /> "
 			+ "<a href=/about.html>About ChemVantage</a> | "
 			+ "<a href=/about.html#terms>Terms and Conditions of Use</a> | "
 			+ "<a href=/about.html#privacy>Privacy Policy</a> | "
-			+ "<a href=/about.html#copyright>Copyright</a>\n"
+			+ "<a href=/about.html#copyright>Copyright</a></footer>"
 			+ "</body>\n</html>";
 
 	public static String banner = "<div style='padding=30px; font-family: Calibri,Arial,sans-serif;'>"
