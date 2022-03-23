@@ -66,8 +66,8 @@ Please tell us about your school, business or organization:<br/>
 
 <% if (!dynamic) { %>
 
-Type of Learning Management System:<br/>
-<fieldset>
+
+<fieldset><legend>Type of Learning Management System:<br/></legend>
 <label><input type=radio name=lms value=blackboard <%= ((lms!=null && lms.equals("blackboard"))?"checked":"") %> />Blackboard</label><br/>
 <label><input type=radio name=lms value=brightspace <%= ((lms!=null && lms.equals("brightspace"))?"checked":"") %> />Brightspace</label><br/>
 <label><input type=radio name=lms value=canvas <%= ((lms!=null && lms.equals("canvas"))?"checked":"") %> />Canvas</label><br/>
@@ -101,7 +101,7 @@ If this pricing structure doesn't fit your needs, please contact Chuck Wight at 
 
 <label><input type=checkbox name=AcceptChemVantageTOS value=true <%= ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") %>/>Accept the <a href=/about.html#terms target=_blank aria-label='opens new tab'>ChemVantage Terms of Service</a></label><br/><br/>
 
-<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div><br/><br/>
+<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG' aria-label='Google Recaptcha'></div><br/><br/>
 
 <input type=submit value='Submit Registration'/>
 
