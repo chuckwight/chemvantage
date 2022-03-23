@@ -146,7 +146,7 @@ public class Quiz extends HttpServlet {
 			buf.append("Topic covered on this quiz: " + t.getTitle() + "<br/><br/>");
 			
 			if (a.lis_outcome_service_url != null) { // give LTIv1.1 deprecation warning
-				buf.append("<div style='border: medium solid red;'>"
+				buf.append("<div style='border: medium solid #EE0000;'>"
 						+ "<h4>Warning: This assignment uses LTI version 1.1, which is obsolete</h4>"
 						+ "This LTI specification has been deprecated due to security limitations, so this assignment will "
 						+ "not be accessible after June 30, 2022. You may re-register your LMS with ChemVantage using the "
@@ -232,7 +232,7 @@ public class Quiz extends HttpServlet {
 			
 			buf.append("<h2>Quiz - " + topic.title + "</h2>");
 			
-			if (user.isAnonymous()) buf.append("<h3 style='color:red'>Anonymous User</h3>");			
+			if (user.isAnonymous()) buf.append("<h3 style='color:#EE0000'>Anonymous User</h3>");			
 			else {
 				buf.append("Quiz Rules"
 						+ "	<OL>"
@@ -242,8 +242,8 @@ public class Quiz extends HttpServlet {
 						+ "	</OL>");
 			}
 			
-			buf.append("<div id='timer0' style='color: red'></div>"
-					+ "	<div id='ctrl0' style='font-size: 50%; color: red'><a href=javascript:toggleTimers() >hide timers</a><p></div>");
+			buf.append("<div id='timer0' style='color: #EE0000'></div>"
+					+ "	<div id='ctrl0' style='font-size: 50%; color: #EE0000'><a href=javascript:toggleTimers() >hide timers</a><p></div>");
 			
 			buf.append("<FORM NAME=Quiz id=quizForm METHOD=POST ACTION='/Quiz' onSubmit='return confirmSubmission()' >"
 					+ "<INPUT TYPE=HIDDEN NAME='sig' VALUE='" + user.getTokenSignature() + "' />"
@@ -300,8 +300,8 @@ public class Quiz extends HttpServlet {
 			ofy().save().entity(qt);
 			buf.append("</OL>");
 		
-			buf.append("<div id='timer1' style='color: red'></div>"
-					+ "	<div id='ctrl1' style='font-size: 50%; color: red'><a href=javascript:toggleTimers() >hide timers</a><p></div>");
+			buf.append("<div id='timer1' style='color: #EE0000'></div>"
+					+ "	<div id='ctrl1' style='font-size: 50%; color: #EE0000'><a href=javascript:toggleTimers() >hide timers</a><p></div>");
 			
 			buf.append("<input type=submit value='Grade This Quiz'/>"
 					+ "</FORM>");
@@ -353,7 +353,7 @@ public class Quiz extends HttpServlet {
 
 			buf.append("<h2>Quiz Results - " + qt.topicTitle + "</h2>");
 			
-			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
+			if (user.isAnonymous()) buf.append("<h3><font color=#EE0000>Anonymous User</font></h3>");
 			buf.append(df.format(now));
 			
 			buf.append(ajaxJavaScript(user.getTokenSignature())); // load javascript for AJAX problem reporting form
@@ -583,7 +583,7 @@ public class Quiz extends HttpServlet {
 				+ "</script>");
 
 		buf.append("Please rate your overall experience with ChemVantage:<br />"
-				+ "<span id='vote' style='font-family:tahoma; color:red;'>(click a star):</span><br>");
+				+ "<span id='vote' style='font-family:tahoma; color:#EE0000;'>(click a star):</span><br>");
 
 		for (int iStar=1;iStar<6;iStar++) {
 			buf.append("<img src='images/star1.gif' id='" + iStar + "' "
@@ -612,7 +612,7 @@ public class Quiz extends HttpServlet {
 		+ "  xmlhttp.onreadystatechange=function() {\n"
 		+ "    if (xmlhttp.readyState==4) {\n"
 		+ "      document.getElementById('feedback' + id).innerHTML="
-		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment. "
+		+ "      '<FONT style='color: #EE0000'><b>Thank you. An editor will review your comment. "
 		+ "</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
