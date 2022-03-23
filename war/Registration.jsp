@@ -39,11 +39,10 @@
 <%= Subject.banner %><br/>
 
 <% if (message != null) { %>
-<span style='color: red; border: 2px solid red'>&nbsp;<%= message %> &nbsp;</span>
+<span style='color: #EE0000; border: 2px solid red'>&nbsp;<%= message %> &nbsp;</span>
 <% } %>
 
-<main><h1 style='display: none'>Welcome to ChemVantage</h1>
-
+<main><h1 style="display:none">ChemVantage Registration</h1>
 <h3>ChemVantage LTI Advantage <%= dynamic?"Dynamic":"" %> Registration</h3>
 
 <form id=regform method=post action='/lti/registration'>
@@ -54,12 +53,12 @@ When you submit the form, ChemVantage will send a registration request to your L
 will need to activate the deployment in your LMS before a launch to ChemVantage can take place.<br/><br/>
 
 Please tell us how to contact you if there is ever a problem with your account (see our <a href=https://www.chemvantage.org/about.html#privacy>Privacy Policy</a>):<br/>
-Your Name: <input type=text name=sub size=40 value='<%= (sub==null?"":sub) %>'/><br/>
-Your Email: <input type=text name=email size=40 value='<%= (email==null?"":email) %>'/><br/><br/>
+<label>Your Name: <input type=text name=sub size=40 value='<%= (sub==null?"":sub) %>' /> </label><br/>
+<label>Your Email: <input type=text name=email size=40 value='<%= (email==null?"":email) %>' /> </label><br/><br/>
 
 Please tell us about your school, business or organization:<br/>
-Org Name: <input type=text name=aud  value='<%= (aud==null?"":aud) %>'/> <br/>
-Home Page: <input type=text name=url placeholder='https://myschool.edu' value='<%= (url==null?"":url) %>'/><br/><br/>
+<label>Org Name: <input type=text name=aud  value='<%= (aud==null?"":aud) %> '/> </label><br/>
+<label>Home Page: <input type=text name=url placeholder='https://myschool.edu' value='<%= (url==null?"":url) %>' /></label><br/><br/>
 
 <% if (registration_token!=null) { %> 
  <input type=hidden name=registration_token value='<%= registration_token %>'/> 
@@ -68,14 +67,16 @@ Home Page: <input type=text name=url placeholder='https://myschool.edu' value='<
 <% if (!dynamic) { %>
 
 Type of Learning Management System:<br/>
+<fieldset>
 <label><input type=radio name=lms value=blackboard <%= ((lms!=null && lms.equals("blackboard"))?"checked":"") %> />Blackboard</label><br/>
 <label><input type=radio name=lms value=brightspace <%= ((lms!=null && lms.equals("brightspace"))?"checked":"") %> />Brightspace</label><br/>
 <label><input type=radio name=lms value=canvas <%= ((lms!=null && lms.equals("canvas"))?"checked":"") %> />Canvas</label><br/>
 <label><input type=radio name=lms value=moodle <%= ((lms!=null && lms.equals("moodle"))?"checked":"") %> />Moodle</label><br/>
 <label><input type=radio name=lms value=sakai <%= ((lms!=null && lms.equals("sakai"))?"checked":"") %> />Sakai</label><br/>
 <label><input type=radio name=lms value=schoology <%= ((lms!=null && lms.equals("schoology"))?"checked":"") %> />Schoology</label><br/>
-<label><input type=radio name=lms id=other value=other <%= ((lms!=null && lms.equals("other"))?"checked":"") %> />Other: 
-<input type=text name=lms_other value='<%= (lms_other==null?"":lms_other) %>' onFocus="document.getElementById('other').checked=true;" /></label>
+<label><input type=radio name=lms id=other value=other <%= ((lms!=null && lms.equals("other"))?"checked":"") %> />Other:</label>
+<label><input type=text name=lms_other value='<%= (lms_other==null?"":lms_other) %>' onFocus="document.getElementById('other').checked=true;" />(specify)</label>
+</fieldset>
 <br/><br/>
 <% } else { %>
  <input type=hidden name=openid_configuration value='<%= openid_configuration %>' />
@@ -98,7 +99,7 @@ If this pricing structure doesn't fit your needs, please contact Chuck Wight at 
 
 <br/><br/>
 
-<label><input type=checkbox name=AcceptChemVantageTOS value=true <%= ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") %>/>Accept the <a href=/about.html#terms target=_blank>ChemVantage Terms of Service</a></label><br/><br/>
+<label><input type=checkbox name=AcceptChemVantageTOS value=true <%= ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") %>/>Accept the <a href=/about.html#terms target=_blank aria-label='opens new tab'>ChemVantage Terms of Service</a></label><br/><br/>
 
 <div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG'></div><br/><br/>
 
