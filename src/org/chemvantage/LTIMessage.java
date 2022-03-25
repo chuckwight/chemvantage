@@ -667,8 +667,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			if (success) {  
 				s.lisReportComplete = true;
 				ofy().save().entity(s);
-				buf.append("Success"); //<br/>AuthToken: " + authToken);
-				//sendEmailToAdmin("Score submission success",buf.toString());
+				buf.append("Success " + responseCode + "<br/>AuthToken: " + authToken + "<br/>JSON: " + json);
+				//if (a.domain.equals("https://canvas.instructure.com/10812:5d76708f19931de80763b1b539e8bb0233b99bbd")) sendEmailToAdmin("Score submission success",buf.toString());
 			} else if (responseCode==422) {
 				buf.append("Response code 422: This LMS does not allow LTI score submissions for instructors or test students.<br/>");
 			} else {			
@@ -690,10 +690,10 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	    			buf.append(line);
 	    		}
 	    		reader.close();
-	    		//sendEmailToAdmin("Score submission failed",buf.toString());
+	    		sendEmailToAdmin("Score submission failed",buf.toString());
 			}
 		} catch (Exception e) {
-			//sendEmailToAdmin("Score submission failed",buf.toString());
+			sendEmailToAdmin("Score submission failed",buf.toString());
 			return "Score submission error: " + e.toString() + e.getMessage() + "<br>" + buf.toString();
 		}
 		return buf.toString();
