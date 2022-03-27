@@ -627,7 +627,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			
 			String authToken = getAccessToken(a.domain,scope);
 			
-			if (authToken.startsWith("response")) return "Failed: could not get access token.";
+			if (authToken.startsWith("response")) throw new Exception("Failed: could not get access token. " + authToken);
 			String bearerAuth = "Bearer " + authToken;
 			//buf.append("Authorization: " + bearerAuth + "<br>");
 			
@@ -690,7 +690,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	    			buf.append(line);
 	    		}
 	    		reader.close();
-	    		sendEmailToAdmin("Score submission failed",buf.toString());
+	    		//sendEmailToAdmin("Score submission failed",buf.toString());
 			}
 		} catch (Exception e) {
 			sendEmailToAdmin("Score submission failed",buf.toString());

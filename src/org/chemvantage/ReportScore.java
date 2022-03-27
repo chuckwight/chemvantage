@@ -127,7 +127,7 @@ public class ReportScore extends HttpServlet {
 				s.lisReportComplete = true;
 				ofy().save().entity(s);
 			} else if (attempts < 4){
-				long countdownMillis = (long) Math.pow(2,attempts)*10800000L;
+				long countdownMillis = (long) Math.pow(2,attempts)*10800000L;  // retries at 6, 12, 24 hr intervals
 				Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
 				queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",URLEncoder.encode(userId, "UTF-8")).param("Retry",Integer.toString(attempts)).countdownMillis(countdownMillis));			
 			} else throw new Exception("User " + userId + " earned a score of " + s.getPctScore() + "% on assignment "
