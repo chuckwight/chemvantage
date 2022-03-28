@@ -282,9 +282,11 @@ public class LTIRegistration extends HttpServlet {
 			buf.append("ChemVantage is pleased to provide free access to our software development server for testing LTI connections. "
 					+ "Please note that the server is sometimes in an unstable state, and accounts may be reset or even deleted at any time. ");
 		} else {
-			buf.append("<h3>Pricing</h3>"
-					+ "When you complete the registration steps below, your account will be activated immediately. ChemVantage "
-					+ "will charge each student $" + price + " USD before granting access to the first assignment. Upon "
+			buf.append("<h3>Getting Started</h3>"
+					+ "When you complete the registration steps below, your account will be activated immediately. You may create ChemVantage "
+					+ "assignments using Deep Linking to explore and customize placement exams, quizzes, homework, practice exams, "
+					+ "video lectures, and in-class polls. "
+					+ "ChemVantage will charge each student $" + price + " USD before granting access to the first assignment. Upon "
 					+ "successful payment, the student will have unlimited access to ChemVantage assignments through your LMS "
 					+ "for a period of 10 months. As a reminder, access to ChemVantage by instructors and LMS account "
 					+ "administrators is always free.");
@@ -377,6 +379,35 @@ public class LTIRegistration extends HttpServlet {
 					+ "<li>When you launch the assignment, you may use the highlighted link to customize it for your class.</li>"
 					+ "</ol>");
 			break;
+		case "brightspace":
+			buf.append("This request indicates that you are using the D2L Brightspasce LMS. "
+					+ "See the <a href=https://documentation.brightspace.com/EN/integrations/ipsis/LTI%20Advantage/LTI_register_external_learning_tool.htm>Brightspace documentation here</a>. "
+					+ "To configure ChemVantage in Brightspace please use Dynamic Registration with the URL: "
+					+ iss + "/lti/registration, complete the form and activate the tool (easy).<br/><br/>"
+					+ "Otherwise, you can configure the tool manually:<ul>"
+					+ "<li>Tool Name: ChemVantage" + (iss.contains("dev-vantage")?" Development":"") + "</li>"
+					+ "<li>Description: ChemVantage is an Open Education Resource for college-level General Chemistry</li>"
+					+ "<li>Domain: " + iss + "</li>"
+					+ "<li>Redirect URIs: " + iss + "/lti/launch " + iss + "/lti/deeplinks" + "</li>"
+					+ "<li>OpenID Connect Login URL: " + iss + "/auth/token" + "</li>"
+					+ "<li>Target Link URI: " + iss + "/lti/launch" + "</li>"
+					+ "<li>LTI version: LTI 1.3</li>"
+					+ "<li>Keyset URL: " + iss + "/jwks" + "</li>"
+					+ "<li>Tool URL: " + iss + "/lti/launch" + "</li>"
+					+ "<li>Extensions: Deep Linking, Assignment and Grade Services, Names and Role Provisioning Services</li>"
+					+ "<li>Deep Linking Content Selection URL: " + iss + "/lti/deeplinks" + "</li>"
+					+ "<li>Substitution Parameters: none</li>"
+					+ "</ul>"
+					+ "You may configure Roles to send Institution and/or Context role information, at your option.<br/>"
+					+ "Setting the Deployment security to Anonymous will work; however, instructors will be unable to verify or synchronize "
+					+ "ChemVantage scores to the Brightspace grade book using this setting.<br/><br/>");
+
+			buf.append("When you have finished the configuration, review the configuration details to obtain the client_id and deployment_id, "
+					+ "and click the link below to enter them into ChemVantage. This step is NOT needed for Dynamic Registration.<br/><br/>");
+
+			buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
+					+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><br/><br/>");
+		break;
 		case "moodle":
 			buf.append("This request indicates that you are using the open-source Moodle LMS. "
 					+ "To configure ChemVantage in Moodle v3.10 please go to Site Administration | Plugins | Manage Tools<br/>"
