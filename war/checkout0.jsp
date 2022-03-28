@@ -25,7 +25,7 @@
 %>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />
@@ -41,8 +41,8 @@
 
 <body style='background-color: white; font-family: Calibri,Arial,sans-serif; max-width: 800px;'>
 <%= Subject.banner %>
-
-<h3>Welcome to ChemVantage</h3>
+<main><h1 style='display: none'>Welcome to ChemVantage</h1>
+<h3>Individual ChemVantage License</h3>
 A subscription is required to access ChemVantage assignments and services through this learning management system. 
 The cost is just $<%= price %>.00 USD for a 10-month subscription that won't expire until <%= df.format(exp) %>. 
 As a subscriber, you can<ul>
@@ -114,12 +114,12 @@ Please return to your LMS and relaunch the assignment.
   <input type=hidden name=HashedId value='<%= user.getHashedId() %>' />
   </form>
 <% } %>
-
-<hr/><img style='padding-left: 15px; vertical-align: middle;' src=images/CVLogo_tiny.png alt='ChemVantage logo' />&nbsp;
+</main>
+<footer><hr/><img style='padding-left: 15px; vertical-align: middle;' src=images/CVLogo_tiny.png alt='ChemVantage logo' />&nbsp;
 <a href=/about.html>About ChemVantage</a> | 
 <a href=/about.html#terms>Terms and Conditions of Use</a> | 
 <a href=/about.html#privacy>Privacy Policy</a> | 
-<a href=/about.html#copyright>Copyright</a>
+<a href=/about.html#copyright>Copyright</a></footer>
 
 
 </body>

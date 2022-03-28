@@ -3,7 +3,7 @@
 <%@ page import="java.util.Date,java.text.DateFormat,com.googlecode.objectify.*,org.chemvantage.*,com.google.common.net.InternetDomainName"%>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />
@@ -14,7 +14,7 @@
 <meta name='msapplication-config' content='none'/><link rel='icon' type='image/png' href='/favicon.png'>
 <link rel='icon' type='image/png' href='/images/favicon.png' />
 <link rel='icon' type='image/vnd.microsoft.icon' href='/images/favicon.ico'>
-<title>ChemVantage Placement Exam</title>
+<title>Purchase ChemVantage Licenses</title>
 </head>
 
 <body style='background-color: white; font-family: Calibri,Arial,sans-serif; max-width: 800px;'>
@@ -75,8 +75,9 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
 <%
 } else {    // first time here; present the offer to purchase exams
 %>
-
+<main><h1 style='display: none'>Purchase ChemVantage Student Licenses</h1>
 	<div id=offer>
+		
 		<h3>Purchase Student Licenses for your ChemVantage Account</h3>
 		Your ChemVantage account currently has
 		<%= d.getNLicensesRemaining() %> student licenses remaining.<br /><br />
@@ -185,12 +186,12 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
 <%
 }
 %>
-
-<hr/><img style='padding-left: 15px; vertical-align: middle;' src=images/CVLogo_tiny.png alt='ChemVantage logo' />&nbsp;
+</main>
+<footer><hr/><img style='padding-left: 15px; vertical-align: middle;' src=images/CVLogo_tiny.png alt='ChemVantage logo' />&nbsp;
 <a href=/about.html>About ChemVantage</a> | 
 <a href=/about.html#terms>Terms and Conditions of Use</a> | 
 <a href=/about.html#privacy>Privacy Policy</a> | 
-<a href=/about.html#copyright>Copyright</a>
+<a href=/about.html#copyright>Copyright</a></footer>
 
 </body>
 </html>

@@ -65,11 +65,13 @@ public class OneQuestion extends HttpServlet {
 			
 			if (q.isCorrect(answer)) {
 				buf.append("<h2>Congratulations! Your answer is correct.</h2>" 
-						+ q.printAllToStudents(answer,true));
+						+ q.printAllToStudents(answer,true) + "<br/>");
+				buf.append("<a href=/item?q=" + q.id + ">Try another version of this question</a><br/><br/>");
 			} else if (answer.isEmpty()) { 
 				buf.append("<h3>The answer to the question was left blank. Please try again.</h3>");
 				buf.append("<form method=post action=/item><input type=hidden name=p value=" + p + " />"
-						+ q.print() + "<input type=submit />" + "</form>");
+						+ q.print() + "<input type=submit />" + "</form><br/><br/>");
+				buf.append("<a href=/>Learn more about ChemVantage here</a><br/><br/>");
 			} else {
 				switch (q.getQuestionType()) {
 				case 5:  // Numeric question
@@ -89,12 +91,12 @@ public class OneQuestion extends HttpServlet {
 				}
 				buf.append("<form method=post action=/item><input type=hidden name=p value=" + p + " />"
 						+ q.print() + "<input type=submit />" + "</form><br/><br/>"
-						+ "<b>The answer submitted was " + answer + "</b>&nbsp;&nbsp;<IMG SRC=/images/xmark.png ALT='X mark' align=middle>");
+						+ "<b>The answer submitted was " + answer + "</b>&nbsp;&nbsp;<IMG SRC=/images/xmark.png ALT='X mark' align=middle><br/><br/>");
+				buf.append("<a href=/>Learn more about ChemVantage here</a><br/><br/>");
 			}
 		} catch (Exception e) {
 			buf.append("<br/>Failed. " + e.getMessage());
 		}
-		buf.append("<br/><br/><a href=/>Learn more about ChemVantage here</a><br/><br/>");
 		response.setContentType("text/html");;
 		response.getWriter().println(buf.toString() + Subject.footer);
 	}

@@ -231,7 +231,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		// First, try to retrieve an appropriate authToken from the class variable HashMap authTokens
 		// If the token expires more than 5 minutes from now, use it. Otherwise, request a new one.
 		Deployment d = null;
-		Date in15Minutes = new Date(new Date().getTime() + 900000L);  // 15 minutes from now
+		Date in15Minutes = new Date(new Date().getTime() + 300000L);  // 5 minutes from now
 		StringBuffer debug = new StringBuffer("Failed LTIMessage.getAccessToken()<br/>");
 		
 		DataOutputStream wr = null;
@@ -627,7 +627,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			
 			String authToken = getAccessToken(a.domain,scope);
 			
-			if (authToken.startsWith("response")) return "Failed: could not get access token.";
+			if (authToken.startsWith("response")) throw new Exception("Failed: could not get access token. " + authToken);
 			String bearerAuth = "Bearer " + authToken;
 			//buf.append("Authorization: " + bearerAuth + "<br>");
 			
@@ -667,8 +667,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			if (success) {  
 				s.lisReportComplete = true;
 				ofy().save().entity(s);
-				buf.append("Success"); //<br/>AuthToken: " + authToken);
-				//sendEmailToAdmin("Score submission success",buf.toString());
+				buf.append("Success " + responseCode + "<br/>AuthToken: " + authToken + "<br/>JSON: " + json);
+				//if (a.domain.equals("https://canvas.instructure.com/10812:5d76708f19931de80763b1b539e8bb0233b99bbd")) sendEmailToAdmin("Score submission success",buf.toString());
 			} else if (responseCode==422) {
 				buf.append("Response code 422: This LMS does not allow LTI score submissions for instructors or test students.<br/>");
 			} else {			
@@ -693,7 +693,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	    		//sendEmailToAdmin("Score submission failed",buf.toString());
 			}
 		} catch (Exception e) {
-			//sendEmailToAdmin("Score submission failed",buf.toString());
+			sendEmailToAdmin("Score submission failed",buf.toString());
 			return "Score submission error: " + e.toString() + e.getMessage() + "<br>" + buf.toString();
 		}
 		return buf.toString();

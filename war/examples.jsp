@@ -24,7 +24,7 @@ String sig = Long.toHexString(encrypt);
 %>
 
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />
@@ -54,6 +54,7 @@ String sig = Long.toHexString(encrypt);
 An Open Education Resource for General Chemistry<br/>
 </div>
 
+<main><h1 style='display: none'>About ChemVantage</h1>
 <div class='seg1'>
 <br/><b>ChemVantage Assignments</b><br/><br/>
 Students don't do optional assignments, but most students will actually work hard on them if
@@ -149,12 +150,13 @@ to the end.<br/><br/>
 
 <div style='text-align: center;'><a href='/VideoQuiz?sig=<%= sig %>'>Try a sample video</a></div>
 </div>
+</main>
 
-<hr/><img style='padding-left: 15px; vertical-align: middle;' src=images/CVLogo_tiny.png alt='ChemVantage logo' />&nbsp;
+<footer><hr/><img style='padding-left: 15px; vertical-align: middle;' src=images/CVLogo_tiny.png alt='ChemVantage logo' />&nbsp;
 <a href=/about.html>About ChemVantage</a> | 
 <a href=/about.html#terms>Terms and Conditions of Use</a> | 
 <a href=/about.html#privacy>Privacy Policy</a> | 
-<a href=/about.html#copyright>Copyright</a>
+<a href=/about.html#copyright>Copyright</a></footer>
 
 </body>
 </html>

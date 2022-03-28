@@ -95,7 +95,7 @@ public class Subject {
 	public static String header(String title) {
 		String announcement = Subject.getAnnouncement();
 		return "<!DOCTYPE html>"
-				+"<html>\n"
+				+"<html lang='en'>\n"
 				+ "<head>\n"
 				+ "<meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />"
 				+ "<meta http-equiv='Pragma' content='no-cache' />"
@@ -109,7 +109,7 @@ public class Subject {
 				+ "<title>" + (title==null || title.isEmpty()?"ChemVantage":title) + "</title>\n"
 				+ "</head>\n"
 				+ "<body style='padding: 10px; font-family: Calibri,Arial,sans-serif; background-color: white; color: black;'>\n"
-				+ ((announcement==null || announcement.isEmpty())?"":"<FONT COLOR=RED>" + announcement + "</FONT><br/>\n");
+				+ ((announcement==null || announcement.isEmpty())?"":"<FONT style='color: #EE0000'>" + announcement + "</FONT><br/>\n");
 	}
 	
 	public static String header() {
@@ -120,7 +120,7 @@ public class Subject {
 		String announcement = Subject.getAnnouncement();
 
 		return "<!DOCTYPE html>"
-		+"<html>\n"
+		+"<html lang='en'>\n"
 		+ "<head>\n"
 		+ "<meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />"
 		+ "<meta http-equiv='Pragma' content='no-cache' />"
@@ -136,7 +136,7 @@ public class Subject {
 		+ "<body style='padding: 10px; font-family: Calibri,Arial,sans-serif; background-color: white; color: black;'>\n"
 		+ "<div>"
 		+ "<a href=/ style='padding-right:25px'>Home</a> "
-		+ "<a href=/About style='padding-right:25px'>About Us</a> "
+		+ "<a href=/about.html style='padding-right:25px'>About Us</a> "
 		+ "<a href='/Feedback?sig=" + user.getTokenSignature() + "' style='padding-right:25px'>Feedback</a> "
 		+ "<a href='/Contribute?sig=" + user.getTokenSignature() + "' style='padding-right:25px'>Authors</a> "
 		+ "<a href='/Edit?sig=" + user.getTokenSignature() + "' style='padding-right:25px'>Editors</a> "
@@ -145,19 +145,19 @@ public class Subject {
 		+ "<a href='/messages' style='padding-right:25px'>Messages</a> "
 		+ "<a href=/Logout>Sign out</a>"
 		+ "</div><br/>"
-		+ ((announcement==null || announcement.isEmpty())?"":"<FONT COLOR=RED>" + announcement + "</FONT><br/>\n");
+		+ ((announcement==null || announcement.isEmpty())?"":"<FONT style='color: #EE0000'>" + announcement + "</FONT><br/>\n");
 	}
 	
-	public static String footer = "\n<hr/><img src=/images/CVLogo_tiny.png alt='ChemVantage logo' style='vertical-align:middle' /> "
+	public static String footer = "<footer><hr/><img src=/images/CVLogo_tiny.png alt='ChemVantage logo' style='vertical-align:middle' /> "
 			+ "<a href=/about.html>About ChemVantage</a> | "
 			+ "<a href=/about.html#terms>Terms and Conditions of Use</a> | "
 			+ "<a href=/about.html#privacy>Privacy Policy</a> | "
-			+ "<a href=/about.html#copyright>Copyright</a>\n"
+			+ "<a href=/about.html#copyright>Copyright</a></footer>"
 			+ "</body>\n</html>";
 
 	public static String banner = "<div style='padding=30px; font-family: Calibri,Arial,sans-serif;'>"
 			+ "<a href='/' style='text-decoration: none;'>"
-			+ "	<span style='color: blue; font-size: 2em; font-weight: bold;'>Chem</span><span style='color: red; font-size: 2em; font-weight: bold;'>Vantage</span><br/>\n"
+			+ "	<span style='color: blue; font-size: 2em; font-weight: bold;'>Chem</span><span style='color: #EE0000; font-size: 2em; font-weight: bold;'>Vantage</span><br/>\n"
 			+ "</a>"
 			+ "	An Open Education Resource for General Chemistry<br/>"
 			+ "	</div>\n";
