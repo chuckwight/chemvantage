@@ -143,14 +143,13 @@ public class LTIRegistration extends HttpServlet {
 	throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		StringBuffer debug = new StringBuffer("Debug: ");
+		StringBuffer debug = new StringBuffer(" Debug: ");
 		
 		String userRequest = request.getParameter("UserRequest");
 		if (userRequest==null) userRequest = "";
 
 		String iss = "https://" + request.getServerName();
-		boolean dynamicRegistration = request.getParameter("registration_token")!=null
-				|| request.getParameter("openid_configuration")!=null;
+		boolean dynamicRegistration = request.getParameter("openid_configuration")!=null;
 		
 		try {
 			if ("finalize".contentEquals(userRequest)) {				
