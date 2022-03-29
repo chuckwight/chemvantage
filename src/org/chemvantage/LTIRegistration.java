@@ -149,7 +149,8 @@ public class LTIRegistration extends HttpServlet {
 		if (userRequest==null) userRequest = "";
 
 		String iss = "https://" + request.getServerName();
-		boolean dynamicRegistration = request.getParameter("registration_token")!=null;
+		boolean dynamicRegistration = request.getParameter("registration_token")!=null
+				|| request.getParameter("openid_configuration")!=null;
 		
 		try {
 			if ("finalize".contentEquals(userRequest)) {				
