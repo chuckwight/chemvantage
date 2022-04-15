@@ -61,26 +61,14 @@ public class LTIRegistration extends HttpServlet {
 
 	/* This servlet class is used to apply for and grant access to LTI connections between client
 	 * LMS platforms and the ChemVantage tool. The user will complete a short form with name, role,
-	 * email, organization, home page, LMS type and use case (testing or production). Those wanting to test
-	 * will get access to dev-vantage.appspot.com, while production users will see chemvantage.org.
-	 * There are 2 main workflow paths (for LTIv1.1 and LTIv1.3):
+	 * email, organization, home page, and LMS type. and use case (testing or production).
+	 * Requests for LTIv1.1 credentials were discontinued in 2021.
+	 * The workflow path for LTIv1.3 requests is:
 	 *   1) All users complete a basic form giving information about their org and the LTI request. If the
 	 *      launch uses Dynamic Registration, this information is used to eliminate some of the fields. If
 	 *      present, the OpenID Configuration URL and Registration Token are included in the POST to ChemVantage.
 	 *   2) ChemVantage validates the registration parameters, and if necessary, redirects to Registration.jsp
 	 *      to correct any errors.
-	 * For LTIv1.1:  ==== NOTE: v1.1 registrations not allowed after 4/10/2021 =====
-	 *   3) After validation, ChemVantage sends a registration email containing a link with the tokenized information.
-	 *   4) After receiving the registration email, the user clicks a tokenized link. The createBLTIConsumer
-	 *      method creates a new BLTIConsumer and presents the credentials to the user with instructions
-	 *   5) The user enters the credentials into their LMS and is ready to go. 
-	 * For LTIv1.3:
-	 *   3) The new Deployment entity is created using the data from the form, possibly in conjunction with
-	 *      data from the Dynamic Registration process. The servlet response indicates that the registration 
-	 *      request was successful and is under review. When approved, the user will receive an email with 
-	 *      additional instructions and an account activation link. The user is invited to make a donation.
-	 *      This page contains a JavaScript link to close the window or frame. The new Deployment entity has a
-	 *      status of review (email not sent), pending (email sent), active (registration complete) or suspended.
 	 *   3) The registration email contains an activation token and, if necessary, the ChemVantage endpoints 
 	 *      and configuration JSON to complete the registration in the LMS. 
 	 *   4) The user then clicks the tokenized link, which contains the platformDeploymentId. If necessary, a form
@@ -89,9 +77,7 @@ public class LTIRegistration extends HttpServlet {
 	 *      
 	 * For LTI Dynamic Registration, the ChemVantage endpoint is the same, and the form still applies, but
 	 * some information is automatically received (e.g., LMS product name, LTIAdvantage) so does not appear 
-	 * as an option on the form. When submitted, the response will be either to send the registration email
-	 * immediately (e.g. for Canvas or Blackboard registration) or provide a message that the account request 
-	 * is under review.
+	 * as an option on the form. When submitted, the registration success email is sent immediately.
 	 * 
 	 * */
 	
@@ -143,7 +129,7 @@ public class LTIRegistration extends HttpServlet {
 	throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		StringBuffer debug = new StringBuffer(" Debug: ");
+		StringBuffer debug = new StringBuffer(" Debug:");
 		
 		String userRequest = request.getParameter("UserRequest");
 		if (userRequest==null) userRequest = "";
@@ -187,7 +173,12 @@ public class LTIRegistration extends HttpServlet {
 	            String parameterName = enumeration.nextElement();
 	            String parameterValue = request.getParameter(parameterName);
 	            registrationURL += "&" + parameterName + "=" + URLEncoder.encode(parameterValue,"utf-8");
-	        }	        
+	        }
+			try {
+				if (dynamicRegistration) sendEmail("ChemVantage Administrator","admin@chemvantage.org","Dynamic Registration Error",message);
+			} catch (Exception e1) {
+				e1.printStackTrace();
+			}
 			response.sendRedirect(registrationURL);
 		}
 	}
