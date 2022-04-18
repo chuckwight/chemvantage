@@ -147,11 +147,11 @@ public class LTIRegistration extends HttpServlet {
 				String token = validateApplicationFormContents(request);
 				debug.append("0");
 				if (dynamicRegistration) {
-					debug.append("1");
+					//debug.append("1");
 					JsonObject openIdConfiguration = getOpenIdConfiguration(request);  // LTIDRSv1p0 section 3.4
-					debug.append("2");
+					//debug.append("2");
 					validateOpenIdConfigurationURL(request.getParameter("openid_configuration"),openIdConfiguration);  // LTIDRSv1p0 section 3.5.1
-					debug.append("3");
+					//debug.append("3");
 					JsonObject registrationResponse = postRegistrationRequest(openIdConfiguration,request);  // LTIDRSv1p0 section 3.5.2 & 3.6
 					debug.append("4");
 					Deployment d = createNewDeployment(openIdConfiguration,registrationResponse,request);
@@ -761,6 +761,7 @@ public class LTIRegistration extends HttpServlet {
 	}
 	
 	JsonObject postRegistrationRequest(JsonObject openIdConfiguration,HttpServletRequest request) throws Exception {
+		String registrationToken = request.getParameter("registration_token");
 		JsonObject registrationResponse = null;
 		JsonObject regJson = new JsonObject();
 		
@@ -842,7 +843,6 @@ public class LTIRegistration extends HttpServlet {
 			regJson.add("https://purl.imsglobal.org/spec/lti-tool-configuration", ltiToolConfig);
 			
 			String reg_endpoint = openIdConfiguration.get("registration_endpoint").getAsString();
-			String registrationToken = request.getParameter("registration_token");
 			
 			URL u = new URL(reg_endpoint);
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
@@ -866,7 +866,7 @@ public class LTIRegistration extends HttpServlet {
 
 			if (uc.getResponseCode() == 401) throw new Exception("Platform refused registration request with code 401:<br/>" + registrationResponse.toString());
 		} catch (Exception e) {
-			throw new Exception("Posting registration request to the LMS platform failed: " + e.getMessage()); // + "<br/>Registration token: " + registrationToken + "<br/>Registration JSON: " + regJson.toString());
+			throw new Exception("Posting registration request to the LMS platform failed: " + e.getMessage() + "<br/>Registration token: " + registrationToken + "<br/>Registration JSON: " + regJson.toString() + "<br/>Registration Response: " + registrationResponse);
 		}
 		return registrationResponse;
 	}
