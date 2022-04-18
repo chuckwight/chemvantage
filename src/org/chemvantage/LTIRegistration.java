@@ -799,12 +799,12 @@ public class LTIRegistration extends HttpServlet {
 				contactEmails.add("admin@chemvantage.org");
 				regJson.add("contacts", contactEmails);		
 			regJson.addProperty("client_uri", iss);
-			regJson.addProperty("tos_uri", iss + "/About#terms");
-			regJson.addProperty("policy_uri", iss + "/About#privacy");
+			regJson.addProperty("tos_uri", iss + "/about.html#terms");
+			regJson.addProperty("policy_uri", iss + "/about.html#privacy");
 			regJson.addProperty("scope", "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly https://purl.imsglobal.org/spec/lti-ags/scope/score https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly");
 			JsonObject ltiToolConfig = new JsonObject();
 				ltiToolConfig.addProperty("domain", domain);
-				ltiToolConfig.addProperty("description",  "ChemVantage is an Open Education Resource for teaching and learning college-level General Chemistry.");
+				ltiToolConfig.addProperty("description",  "ChemVantage is an Open Education Resource for General Chemistry.");
 				ltiToolConfig.addProperty("target_link_uri", iss + "/lti/launch");
 				JsonArray idTokenClaims = new JsonArray();
 					idTokenClaims.add("iss");
@@ -818,7 +818,7 @@ public class LTIRegistration extends HttpServlet {
 					JsonObject deepLinking = new JsonObject();
 						deepLinking.addProperty("type",  "LtiDeepLinkingRequest");
 						deepLinking.addProperty("target_link_uri", iss + "/lti/deeplinks");
-						deepLinking.addProperty("label", "ChemVantage");
+						deepLinking.addProperty("label", "ChemVantage" + (iss.contains("dev-vantage")?" Development":""));
 						switch (openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString()) {
 						case "moodle":
 							deepLinking.add("placements", openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("placements").getAsJsonArray());
@@ -829,8 +829,9 @@ public class LTIRegistration extends HttpServlet {
 					JsonObject resourceLaunch = new JsonObject();
 						resourceLaunch.addProperty("type",  "LtiResourceLinkRequest");
 						resourceLaunch.addProperty("target_link_uri", iss + "/lti/launch");
-						resourceLaunch.addProperty("label", "ChemVantage");
-						switch (openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString()) {
+						resourceLaunch.addProperty("label", "ChemVantage" + (iss.contains("dev-vantage")?" Development":""));
+						String lms_type = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString();
+						switch (lms_type) {
 						case "canvas":
 							break;
 						case "moodle":
@@ -841,6 +842,7 @@ public class LTIRegistration extends HttpServlet {
 					ltiMessages.add(resourceLaunch);
 				ltiToolConfig.add("messages", ltiMessages);
 			regJson.add("https://purl.imsglobal.org/spec/lti-tool-configuration", ltiToolConfig);
+			byte[] json_bytes = regJson.toString().getBytes("utf-8");
 			
 			String reg_endpoint = openIdConfiguration.get("registration_endpoint").getAsString();
 			
@@ -849,6 +851,7 @@ public class LTIRegistration extends HttpServlet {
 			uc.setRequestMethod("POST");
 			if (registrationToken != null) uc.setRequestProperty("Authorization", "Bearer " + registrationToken);
 			uc.setRequestProperty("Content-Type", "application/json");
+			uc.setRequestProperty("Content-Length", String.valueOf(json_bytes.length));
 			uc.setRequestProperty("Accept", "application/json");
 			if (iss.equals("https://www.chemvantage.org")) uc.setRequestProperty("Host", "www.chemvantage.org"); // prevents code 400 failure in Moodle due to getRemoteHost()->chem-vantage-hrd.appspot.com
 			uc.setDoOutput(true);
@@ -856,17 +859,32 @@ public class LTIRegistration extends HttpServlet {
 			
 			// send the message
 			OutputStream os = uc.getOutputStream();
-		    byte[] json_bytes = regJson.toString().getBytes("utf-8");
-			os.write(json_bytes, 0, json_bytes.length);           
+		    os.write(json_bytes, 0, json_bytes.length);           
 			os.close();
 		
-			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
-			registrationResponse = JsonParser.parseReader(reader).getAsJsonObject();
+			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+			switch (lms_type) {
+			case "brightspace":  // argh! Brightspace doesn't send a JSON as required by the draft Dynamic Registration specification
+				String line = "";
+				StringBuffer registrationResponseBuffer = new StringBuffer();
+				while ((line = reader.readLine()) != null) {
+    				registrationResponseBuffer.append(line);
+    			}
+    			registrationResponse = JsonParser.parseString(registrationResponseBuffer.toString()).getAsJsonObject();
+    			break;
+    		default:
+    			registrationResponse = JsonParser.parseReader(reader).getAsJsonObject();
+			}
 			reader.close();
 
 			if (uc.getResponseCode() == 401) throw new Exception("Platform refused registration request with code 401:<br/>" + registrationResponse.toString());
 		} catch (Exception e) {
-			throw new Exception("Posting registration request to the LMS platform failed: " + e.getMessage() + "<br/>Registration token: " + registrationToken + "<br/>Registration JSON: " + regJson.toString() + "<br/>Registration Response: " + registrationResponse);
+			throw new Exception("Posting registration request to the LMS platform failed:<br/> " 
+					+ e.getMessage() + "<br/>"
+					+ "Registration token: " + registrationToken + "<br/>"
+					+ "OpenIdConfiguration: " + openIdConfiguration + "<br/>"
+					+ "Registration JSON: " + regJson + "<br/>"
+					+ "Registration Response: " + registrationResponse);
 		}
 		return registrationResponse;
 	}
