@@ -762,6 +762,7 @@ public class LTIRegistration extends HttpServlet {
 	
 	JsonObject postRegistrationRequest(JsonObject openIdConfiguration,HttpServletRequest request) throws Exception {
 		String registrationToken = request.getParameter("registration_token");
+		StringBuffer registrationResponseBuffer = new StringBuffer();
 		JsonObject registrationResponse = null;
 		JsonObject regJson = new JsonObject();
 		
@@ -863,28 +864,19 @@ public class LTIRegistration extends HttpServlet {
 			os.close();
 		
 			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-			switch (lms_type) {
-			case "brightspace":  // argh! Brightspace doesn't send a JSON as required by the draft Dynamic Registration specification
-				String line = "";
-				StringBuffer registrationResponseBuffer = new StringBuffer();
-				while ((line = reader.readLine()) != null) {
-    				registrationResponseBuffer.append(line);
-    			}
-    			registrationResponse = JsonParser.parseString(registrationResponseBuffer.toString()).getAsJsonObject();
-    			break;
-    		default:
-    			registrationResponse = JsonParser.parseReader(reader).getAsJsonObject();
-			}
+			String line = "";
+			while ((line = reader.readLine()) != null) registrationResponseBuffer.append(line);
+			registrationResponse = JsonParser.parseString(registrationResponseBuffer.toString()).getAsJsonObject();
 			reader.close();
 
 			if (uc.getResponseCode() == 401) throw new Exception("Platform refused registration request with code 401:<br/>" + registrationResponse.toString());
 		} catch (Exception e) {
 			throw new Exception("Posting registration request to the LMS platform failed:<br/> " 
-					+ e.getMessage() + "<br/>"
+					+ e.toString() + " " + e.getMessage() + "<br/>"
 					+ "Registration token: " + registrationToken + "<br/>"
 					+ "OpenIdConfiguration: " + openIdConfiguration + "<br/>"
 					+ "Registration JSON: " + regJson + "<br/>"
-					+ "Registration Response: " + registrationResponse);
+					+ "Registration Response: " + registrationResponseBuffer.toString());
 		}
 		return registrationResponse;
 	}
