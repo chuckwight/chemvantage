@@ -175,7 +175,7 @@ public class LTIRegistration extends HttpServlet {
 	            registrationURL += "&" + parameterName + "=" + URLEncoder.encode(parameterValue,"utf-8");
 	        }
 			try {
-				if (dynamicRegistration) sendEmail("ChemVantage Administrator","admin@chemvantage.org","Dynamic Registration Error",message);
+				if (dynamicRegistration && debug.length()>0) sendEmail("ChemVantage Administrator","admin@chemvantage.org","Dynamic Registration Error",message);
 			} catch (Exception e1) {
 				e1.printStackTrace();
 			}
