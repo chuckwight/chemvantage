@@ -201,16 +201,19 @@ public class LTIv1p3Launch extends HttpServlet {
 			
 			// Launch only premium users
 			if (!user.isPremium()) {
+				debug.append("t1");
 				if (d.getNLicensesRemaining()>0) {
+					debug.append("t2");
 					d.nLicensesRemaining--;
 					new PremiumUser(user.getHashedId());
+					debug.append("t3");
 				}
 				else if (d.price == 0) new PremiumUser(user.getHashedId());
 				else response.sendRedirect("/checkout0.jsp?sig=" + user.getTokenSignature() + "&price=" + d.price);
 			}
-			
+
 			// Save the updated Deployment entity, if necessary
-			if (!d.equivalentTo(original_d) || original_d.lastLogin.before(yesterday)) {
+			if (!d.equivalentTo(original_d) || original_d.lastLogin == null || original_d.lastLogin.before(yesterday)) {
 				ofy().save().entity(d).now();
 				debug.append("Deployment saved. ");
 			}

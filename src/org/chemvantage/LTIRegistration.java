@@ -129,7 +129,7 @@ public class LTIRegistration extends HttpServlet {
 	throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		StringBuffer debug = new StringBuffer(" Debug:");
+		StringBuffer debug = new StringBuffer();
 		
 		String userRequest = request.getParameter("UserRequest");
 		if (userRequest==null) userRequest = "";
@@ -145,7 +145,7 @@ public class LTIRegistration extends HttpServlet {
 			} else {
 				if (request.getParameter("email")==null) throw new Exception("Email was not given.");
 				String token = validateApplicationFormContents(request);
-				debug.append("0");
+				debug.append("Debug:0");
 				if (dynamicRegistration) {
 					debug.append("1");
 					JsonObject openIdConfiguration = getOpenIdConfiguration(request);  // LTIDRSv1p0 section 3.4
