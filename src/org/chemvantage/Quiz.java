@@ -612,7 +612,7 @@ public class Quiz extends HttpServlet {
 		+ "  xmlhttp.onreadystatechange=function() {\n"
 		+ "    if (xmlhttp.readyState==4) {\n"
 		+ "      document.getElementById('feedback' + id).innerHTML="
-		+ "      '<FONT style='color: #EE0000'><b>Thank you. An editor will review your comment. "
+		+ "      '<FONT COLOR=#EE0000><b>Thank you. An editor will review your comment. "
 		+ "</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"

@@ -215,7 +215,7 @@ public class Homework extends HttpServlet {
 				return buf.toString();
 			}
 
-			if (user.isAnonymous())	buf.append("<h3><font color=red>Anonymous User</font></h3>");
+			if (user.isAnonymous())	buf.append("<h3><font color=#EE0000>Anonymous User</font></h3>");
 			
 			buf.append("\nHomework Rules<UL>");
 			buf.append("\n<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
@@ -349,7 +349,7 @@ public class Homework extends HttpServlet {
 			if (secondsRemaining > 0 && !solvedRecently) {  
 				buf.append("<h2>Please Wait For The Retry Delay To Complete</h2>");
 				buf.append(df.format(now));
-				buf.append("<p>The retry delay for this homework problem is <span id=delay style='color: red'></span><p>");
+				buf.append("<p>The retry delay for this homework problem is <span id=delay style='color: #EE0000'></span><p>");
 				buf.append("Please take these few moments to check your work carefully.  You can sometimes find alternate routes to the "
 						+ "same solution, or it may be possible to use your answer to back-calculate the data given in the problem.<br/><br/>");
 				if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) 
@@ -397,7 +397,7 @@ public class Homework extends HttpServlet {
 			
 			buf.append("<h2>Homework Results - " + topic.title + "</h2>\n");
 			
-			if (user.isAnonymous()) buf.append("<h3><font color=red>Anonymous User</font></h3>");
+			if (user.isAnonymous()) buf.append("<h3><font color=#EE0000>Anonymous User</font></h3>");
 			buf.append(df.format(now));
 			
 			int studentScore = q.isCorrect(studentAnswer)?q.pointValue:0;
@@ -461,7 +461,7 @@ public class Homework extends HttpServlet {
 							+ "<input type=hidden name=AssignmentType value=Homework />"
 							+ "<input type=hidden name=TransactionId value=" + ht.id + " />"
 							+ "<input type=hidden name=HashCode value=" + hashMe.hashCode() + " />");
-					buf.append("<font color=red>Do you need some help from your instructor or teaching assistant? </font>");
+					buf.append("<font color=#EE0000>Do you need some help from your instructor or teaching assistant? </font>");
 					buf.append("<input type=submit value='Get Some Help Here'></form><br/>");
 				}
 			
@@ -489,7 +489,7 @@ public class Homework extends HttpServlet {
 						+ "<a href=# onClick=javascript:document.getElementById('example').style.display='';"
 						+ "document.getElementById('correctAnswer').style.display='none';"
 						+ "document.getElementById('exampleLink').style.display='none';>"
-						+ "<FONT COLOR=RED>View the detailed solution for this homework exercise</FONT></a><p></div>");
+						+ "<FONT COLOR=#EE0000>View the detailed solution for this homework exercise</FONT></a><p></div>");
 				buf.append("<div id=example style='display: none'><b>Detailed Solution</b><br/><br/>" 
 						+ q.printAllToStudents(studentAnswer) + "</div>");
 			}
@@ -505,7 +505,7 @@ public class Homework extends HttpServlet {
 			buf.append("<a href=/Homework?UserRequest=PrintHomework&"
 					+ (assignmentId>0?"AssignmentId=" + assignmentId : "TopicId=" + topic.id)
 					+ "&sig=" + user.getTokenSignature()  
-					+ (offerHint?"&Q=" + q.id + "><span style='color:red'>Please give me a hint</span>":">Return to this homework assignment") + "</a> or "
+					+ (offerHint?"&Q=" + q.id + "><span style='color:#EE0000'>Please give me a hint</span>":">Return to this homework assignment") + "</a> or "
 					+ "<a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a> ");
 			
 			if (user.isAnonymous()) buf.append(" or go back to the <a href=/>ChemVantage home page</a>.");
@@ -529,7 +529,7 @@ public class Homework extends HttpServlet {
 		+ "  xmlhttp.onreadystatechange=function() {\n"
 		+ "    if (xmlhttp.readyState==4) {\n"
 		+ "      document.getElementById('feedback' + id).innerHTML="
-		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment. "
+		+ "      '<FONT COLOR=#EE0000><b>Thank you. An editor will review your comment. "
 		+ "</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
@@ -609,7 +609,7 @@ public class Homework extends HttpServlet {
 				+ "</script>\n");
 
 		buf.append("Please rate your overall experience with ChemVantage:<br />\n"
-				+ "<span id='vote' style='font-family:tahoma; color:red;'>(click a star):</span><br>");
+				+ "<span id='vote' style='font-family:tahoma; color:#EE0000;'>(click a star):</span><br>");
 
 		for (int iStar=1;iStar<6;iStar++) {
 			buf.append("<img src='images/star1.gif' id='" + iStar + "' "
