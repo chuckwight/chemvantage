@@ -58,19 +58,20 @@ public class ManageContacts extends HttpServlet {
 		
 		buf.append("There are " + nContacts + " contacts in the database, " + nUnsubscribed + " of whom are unsubscribed.");
 
-		String email = request.getParameter("Email");
-		Contact c = null;
-		if (email != null) c = ofy().load().type(Contact.class).id(email).now();
-		
 		buf.append(searchContacts());
 		
-		if (c!=null) {
-			buf.append(editExistingContact(c));
-			email = null;
+		String[] email = request.getParameterValues("Email");
+		if (email!=null) {
+			for (int i=0;i<email.length;i++) {
+				try {
+					buf.append(editExistingContact(ofy().load().type(Contact.class).id(email[i]).safe()));
+				} catch (Exception e) {}
+				email[0] = null;
+			}
 		}
-				
-		buf.append(addNewContact(email));
-		buf.append(pasteNewContact(email));
+		
+		buf.append(addNewContact());
+		buf.append(pasteNewContact());
 			
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
@@ -111,12 +112,12 @@ public class ManageContacts extends HttpServlet {
 		}
 	}
 
-	String addNewContact(String email) {
+	String addNewContact() {
 		return "<h4>Add New Contact</h4>"
 				+ "<form method=post action=/contacts>"
 				+ "<input type=text name=FirstName placeholder='First Name' /> "
 				+ "<input type=text name=LastName placeholder='Last Name' />"
-				+ "<input type=text name=Email " + (email==null?"placeholder='Email'":"value='" + email + "'") + " /><br/>"
+				+ "<input type=text name=Email placeholder='Email' /><br/>"
 				+ "Role: <select name=Role>"
 				+ "<option value=''>Unknown</option>"
 				+ "<option value=faculty selected>Faculty</option>"
@@ -126,15 +127,12 @@ public class ManageContacts extends HttpServlet {
 				+ "</form><br/><br/>";
 	}
 	
-	String pasteNewContact(String email) {
-		return "<h4>Paste New Contact</h4>"
+	String pasteNewContact() {
+		return "<h4>Paste New Faculty Contacts</h4>"
 				+ "<form method=post action=/contacts>"
-				+ "<input type=text size=80 name=Paste placeholder='First Name [tab] Last Name [tab] Email' /> "
-				+ "Role: <select name=Role>"
-				+ "<option value=''>Unknown</option>"
-				+ "<option value=faculty selected>Faculty</option>"
-				+ "<option value=chair>Dept Chair</option>"
-				+ "</select><br/>"
+				+ "<textarea rows=10 cols=80 name=Paste placeholder='First Name [tab] Last Name [tab] Email\nFirst Name [tab] Last Name [tab] Email' ></textarea> "
+				+ "<br/>"
+				+ "<input type=hidden name=Role value=faculty />"
 				+ "<input type=submit name=UserRequest value='Paste New Contact' />"
 				+ "</form><br/><br/>"; 
 	}
@@ -151,16 +149,20 @@ public class ManageContacts extends HttpServlet {
 	}
 	
 	String pasteNewContact(HttpServletRequest request) {
+		String url = "";
 		Contact c = null;
 		try {
-			String[] paste = request.getParameter("Paste").split("\t");
-			c = new Contact(paste[0],paste[1],paste[2]);
-			c.role = request.getParameter("Role");
-			ofy().save().entity(c).now();
-			return c.email;
+			String[] lines = request.getParameter("Paste").split("\n");
+			for (int i=0;i<lines.length;i++) {
+				String[] paste = lines[i].split("\t");
+				c = new Contact(paste[0],paste[1],paste[2]);
+				c.role = request.getParameter("Role");
+				ofy().save().entity(c).now();
+				url += (i==0?c.email:"&Email=" + c.email);
+			}
 		} catch (Exception e) {
-			return null;
 		}
+		return url;
 	}
 	
 	String editExistingContact(Contact c) {
