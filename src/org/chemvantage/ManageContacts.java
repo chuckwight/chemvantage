@@ -155,7 +155,7 @@ public class ManageContacts extends HttpServlet {
 			String[] lines = request.getParameter("Paste").split("\n");
 			for (int i=0;i<lines.length;i++) {
 				String[] paste = lines[i].split("\t");
-				c = new Contact(paste[0],paste[1],paste[2]);
+				c = new Contact(paste[0].trim(),paste[1].trim(),paste[2].trim());
 				c.role = request.getParameter("Role");
 				ofy().save().entity(c).now();
 				url += (i==0?c.email:"&Email=" + c.email);
