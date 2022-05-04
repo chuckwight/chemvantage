@@ -34,9 +34,13 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.cloud.datastore.Cursor;
+import com.google.cloud.datastore.QueryResults;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
+import com.googlecode.objectify.cmd.Query;
+
 
 @WebServlet("/DataStoreCleaner")
 @ServletSecurity(@HttpConstraint(rolesAllowed = {"admin"}))
@@ -87,7 +91,7 @@ public class DataStoreCleaner extends HttpServlet {
 		case "CleanHWTransactions": buf.append(cleanHWTransactions(testOnly)); break;
 		case "CleanPracticeExamTransactions": buf.append(cleanPracticeExamTransactions(testOnly)); break;
 		case "CleanScores": buf.append(cleanScores(testOnly)); break;
-		case "CleanAssignments": buf.append(cleanAssignments(testOnly)); break;
+		case "CleanAssignments": buf.append(cleanAssignments(testOnly,request)); break;
 		case "CleanBLTIConsumers": buf.append(cleanBLTIConsumers(testOnly)); break;
 		case "CleanDeployments": buf.append(cleanDeployments(testOnly)); break;
 		case "CleanUsers": buf.append(cleanUsers(testOnly)); break;
@@ -128,8 +132,8 @@ public class DataStoreCleaner extends HttpServlet {
 		buf.append("<label><input type=radio name=Task value=CleanHWTransactions> Homework transactions older than 1 year</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanPracticeExamTransactions> Practice Exam transactions older than 1 year</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanScores> Scores older than 1 year</label><br>");
-		buf.append("<label><input type=radio name=Task value=CleanAssignments> Assignments older than 6 months with no transactions</label><br>");
-		buf.append("<label><input type=radio name=Task value=CleanDeployments> Deployments older than 6 months with no assignments</label><br>");
+		buf.append("<label><input type=radio name=Task value=CleanAssignments> Assignments with no Deployment</label><br>");
+		buf.append("<label><input type=radio name=Task value=CleanDeployments> Deployments with no logins for more than 1 year</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanBLTIConsumers> BLTIConsumers older than 6 months with no assignments</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanUsers> Users whose tokens have expired</label><p>");
 		buf.append("<label><input type=radio name=Task value=CleanAll>All of the entities above (launches background job)</label><p>");
@@ -244,25 +248,45 @@ public class DataStoreCleaner extends HttpServlet {
 		return buf.toString();
 	}
 
-	private String cleanAssignments(boolean testOnly) {
-		// This method searches for assignments more than six months old with no remaining transactions (deleted after 1 year)
+	private String cleanAssignments(boolean testOnly, HttpServletRequest request) {
+		// This method searches for assignments that do not belong to a Deployment and deletes them
 		StringBuffer buf = new StringBuffer();
 		buf.append("<h2>Clean Assignments</h2>");
 		try {
-			List<Key<Assignment>> keys = new ArrayList<Key<Assignment>>();
-			List<Assignment> assignments = ofy().load().type(Assignment.class).filter("created <",sixMonthsAgo).list();
-			for (Assignment a : assignments) {
-				if ("Quiz".equals(a.assignmentType) && ofy().load().type(QuizTransaction.class).filter("assignmentId",a.id).count()==0) keys.add(Key.create(a));
-				else if ("Homework".equals(a.assignmentType) && ofy().load().type(HWTransaction.class).filter("assignmentId",a.id).count()==0) keys.add(Key.create(a));
-				else if ("PracticeExam".equals(a.assignmentType) && ofy().load().type(PracticeExamTransaction.class).filter("assignmentId",a.id).count()==0) keys.add(Key.create(a));
+			Query<Assignment> query = ofy().load().type(Assignment.class).limit(1000);
+			String cursorStr = request.getParameter("cursor");
+			if (cursorStr != null)
+				query = query.startAt(Cursor.fromUrlSafe(cursorStr));
+
+			boolean continu = false;
+			List<Key<Assignment>> assignmentKeys = new ArrayList<Key<Assignment>>();
+			QueryResults<Assignment> iterator = query.iterator();
+
+			while (iterator.hasNext()) {
+				Assignment a = iterator.next();
+				if (a.domain==null) assignmentKeys.add(Key.create(Assignment.class,a.id));
+				else if (a.domain.contains("https://")) {
+					if (ofy().load().filterKey(Key.create(Deployment.class,a.domain)).count()==0) assignmentKeys.add(Key.create(Assignment.class,a.id));
+				}
+				else {
+					if (ofy().load().filterKey(Key.create(BLTIConsumer.class,a.domain)).count()==0) assignmentKeys.add(Key.create(Assignment.class,a.id));	
+				}
+				continu = true;
 			}
-			if (keys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
-				int nBatches = keys.size()/500;
-				for (int i=0;i<nBatches;i++) ofy().delete().keys(keys.subList(i*500, (i+1)*500));
-				ofy().delete().keys(keys.subList(nBatches*500, keys.size()));
+
+			if (continu) {
+				Cursor cursor = iterator.getCursorAfter();
+				Queue queue = QueueFactory.getDefaultQueue();
+				queue.add(withUrl("/DataStoreCleaner").param("cursor", cursor.toUrlSafe()));
+			}
+
+			if (assignmentKeys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
+				int nBatches = assignmentKeys.size()/500;
+				for (int i=0;i<nBatches;i++) ofy().delete().keys(assignmentKeys.subList(i*500, (i+1)*500));
+				ofy().delete().keys(assignmentKeys.subList(nBatches*500, assignmentKeys.size()));
 			}
 			
-			buf.append(keys.size() + " Assignments at least 6 months old with no transactions" + (testOnly?" identified":" deleted") + ".<br>");
+			buf.append(assignmentKeys.size() + " orphan Assignments" + (testOnly?" identified":" deleted") + ".<br>");
 			buf.append("Done.<br>");
 
 		} catch (Exception e) {
@@ -308,19 +332,14 @@ public class DataStoreCleaner extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		buf.append("<h2>Clean Deployments</h2>");
 		try {
-			List<Key<Deployment>> keys = new ArrayList<Key<Deployment>>();
-			List<Deployment> deployments = ofy().load().type(Deployment.class).filter("created <",sixMonthsAgo).list();					
-			for (Deployment d : deployments) {
-				int n = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).chunk(Integer.MAX_VALUE).count();
-				if (n==0) keys.add(Key.create(d));
-			}
-			if (keys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
-				int nBatches = keys.size()/500;
-				for (int i=0;i<nBatches;i++) ofy().delete().keys(keys.subList(i*500, (i+1)*500));
-				ofy().delete().keys(keys.subList(nBatches*500, keys.size()));
+			List<Key<Deployment>> deploymentKeys = ofy().load().type(Deployment.class).filter("lastLogin <",oneYearAgo).keys().list();					
+			if (deploymentKeys.size() > 0 && !testOnly) {  // delete all the old deployments in batches of 500 (max allowed by ofy().delete)
+				int nBatches = deploymentKeys.size()/500;
+				for (int i=0;i<nBatches;i++) ofy().delete().keys(deploymentKeys.subList(i*500, (i+1)*500));
+				ofy().delete().keys(deploymentKeys.subList(nBatches*500, deploymentKeys.size()));
 			}
 			
-			buf.append(keys.size() + " Deployments at least 6 months old with no Assignments" + (testOnly?" identified":" deleted") + ".<br>");
+			buf.append(deploymentKeys.size() + " Deployments unused for more than one year" + (testOnly?" identified":" deleted") + ".<br>");
 			buf.append("Done.<br>");
 
 		}catch (Exception e) {
