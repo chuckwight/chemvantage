@@ -87,9 +87,7 @@ public class DataStoreCleaner extends HttpServlet {
 		
 		switch (task) {
 		case "CleanResponses": buf.append(cleanResponses(testOnly)); break;
-		case "CleanQuizTransactions": buf.append(cleanQuizTransactions(testOnly)); break;
-		case "CleanHWTransactions": buf.append(cleanHWTransactions(testOnly)); break;
-		case "CleanPracticeExamTransactions": buf.append(cleanPracticeExamTransactions(testOnly)); break;
+		case "CleanTransactions": buf.append(cleanTransactions(testOnly)); break;
 		case "CleanScores": buf.append(cleanScores(testOnly)); break;
 		case "CleanAssignments": buf.append(cleanAssignments(testOnly,request)); break;
 		case "CleanBLTIConsumers": buf.append(cleanBLTIConsumers(testOnly)); break;
@@ -100,16 +98,14 @@ public class DataStoreCleaner extends HttpServlet {
 			Queue queue = QueueFactory.getDefaultQueue();
 
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanResponses").param("TestOnly", testOnly?"true":"false"));
-			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanQuizTransactions").param("TestOnly", testOnly?"true":"false"));
-			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanHWTransactions").param("TestOnly", testOnly?"true":"false"));
-			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanPracticeExamTransactions").param("TestOnly", testOnly?"true":"false"));
+			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanTransactions").param("TestOnly", testOnly?"true":"false"));
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanScores").param("TestOnly", testOnly?"true":"false"));
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanAssignments").param("TestOnly", testOnly?"true":"false"));
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanDeployments").param("TestOnly", testOnly?"true":"false"));
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanBLTIConsumers").param("TestOnly", testOnly?"true":"false"));
 			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanUsers").param("TestOnly", testOnly?"true":"false"));
 			
-			buf.append("8 background tasks launched to scrub all obsolete entity types from the datastore.");
+			buf.append("7 background tasks launched to scrub all obsolete entity types from the datastore.");
 			break;
 		}
 		buf.append("<br>" + Subject.footer);
@@ -128,13 +124,11 @@ public class DataStoreCleaner extends HttpServlet {
 		
 		buf.append("Entities to be scrubbed from the datastore:<br>");
 		buf.append("<label><input type=radio name=Task value=CleanResponses> Responses older than 3 years</label><br>");
-		buf.append("<label><input type=radio name=Task value=CleanQuizTransactions> Quiz transactions older than 1 year</label><br>");
-		buf.append("<label><input type=radio name=Task value=CleanHWTransactions> Homework transactions older than 1 year</label><br>");
-		buf.append("<label><input type=radio name=Task value=CleanPracticeExamTransactions> Practice Exam transactions older than 1 year</label><br>");
+		buf.append("<label><input type=radio name=Task value=CleanTransactions> Transactions with no existing Assignment entity</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanScores> Scores older than 1 year</label><br>");
-		buf.append("<label><input type=radio name=Task value=CleanAssignments> Assignments with no Deployment</label><br>");
+		buf.append("<label><input type=radio name=Task value=CleanAssignments> Assignments with no Deployment or BLTIConsumer</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanDeployments> Deployments with no logins for more than 1 year</label><br>");
-		buf.append("<label><input type=radio name=Task value=CleanBLTIConsumers> BLTIConsumers older than 6 months with no assignments</label><br>");
+		buf.append("<label><input type=radio name=Task value=CleanBLTIConsumers> BLTIConsumers with no logins for more than 1 year</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanUsers> Users whose tokens have expired</label><p>");
 		buf.append("<label><input type=radio name=Task value=CleanAll>All of the entities above (launches background job)</label><p>");
 		buf.append("<input type=submit><br>");
@@ -164,66 +158,91 @@ public class DataStoreCleaner extends HttpServlet {
 		return buf.toString();
 	}
 
-	private String cleanQuizTransactions(boolean testOnly) {
-		// This method deletes all QuizTransactions older than one year
+	private String cleanTransactions(boolean testOnly) {
+		// this method deletes all transactions that have no corresponding assignment and were not deleted by Clean Assignments
 		
 		StringBuffer buf = new StringBuffer();
-		buf.append("<h2>Clean Quiz Transactions</h2>");
-		try {
-			List<Key<QuizTransaction>> keys = ofy().load().type(QuizTransaction.class).filter("downloaded <",oneYearAgo).keys().list();
-			if (keys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
-				int nBatches = keys.size()/500;
-				for (int i=0;i<nBatches;i++) ofy().delete().keys(keys.subList(i*500, (i+1)*500));
-				ofy().delete().keys(keys.subList(nBatches*500, keys.size()));
-			}
-			
-		    buf.append(keys.size() + " QuizTransactions more than one year old" + (testOnly?" identified":" deleted") + ".<br>");
-		    buf.append("Done.<br>");
-		} catch (Exception e) {
-			buf.append("Error: " + e.toString());
-		}
-		return buf.toString();
-	}
-	
-	private String cleanHWTransactions(boolean testOnly) {
-	// This method deletes all HWTransactions older than one year
+		buf.append("<h2>Clean Transactions</h2>");
 		
-		StringBuffer buf = new StringBuffer();
-		buf.append("<h2>Clean Homework Transactions</h2>");
-		try {
-			List<Key<HWTransaction>> keys = ofy().load().type(HWTransaction.class).filter("graded <",oneYearAgo).keys().list();
-			if (keys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
-				int nBatches = keys.size()/500;
-				for (int i=0;i<nBatches;i++) ofy().delete().keys(keys.subList(i*500, (i+1)*500));
-				ofy().delete().keys(keys.subList(nBatches*500, keys.size()));
-			}
-			
-		    buf.append(keys.size() + " HWTransactions more than one year old" + (testOnly?" identified":" deleted") + ".<br>");
-		    buf.append("Done.<br>");
-		} catch (Exception e) {
-			buf.append("Error: " + e.toString());
+		// Clean QuizTransactions
+		List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).limit(1000).list();
+		List<Key<QuizTransaction>> qtKeys = new ArrayList<Key<QuizTransaction>>();
+		for (QuizTransaction qt :qts) {
+			if (qt.assignmentId==0 || ofy().load().filterKey(Key.create(Assignment.class,qt.assignmentId)).count()==0) qtKeys.add(Key.create(qt));
 		}
-		return buf.toString();
-	}
-	
-	private String cleanPracticeExamTransactions(boolean testOnly) {
-	// This method deletes all PracticeExamTransactions older than one year
+		if (!testOnly) {
+			int nBatches = qtKeys.size()/500;
+			for (int i=0;i<nBatches;i++) ofy().delete().keys(qtKeys.subList(i*500, (i+1)*500));
+			ofy().delete().keys(qtKeys.subList(nBatches*500, qtKeys.size()));
+		}
+		buf.append(qtKeys.size() + " orphan QuizTransactions" + (testOnly?" identified":" deleted") + ".<br>");
 		
-		StringBuffer buf = new StringBuffer();
-		buf.append("<h2>Clean Practice Exam Transactions</h2>");
-		try {
-			List<Key<PracticeExamTransaction>> keys = ofy().load().type(PracticeExamTransaction.class).filter("downloaded <",oneYearAgo).keys().list();
-			if (keys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
-				int nBatches = keys.size()/500;
-				for (int i=0;i<nBatches;i++) ofy().delete().keys(keys.subList(i*500, (i+1)*500));
-				ofy().delete().keys(keys.subList(nBatches*500, keys.size()));
-			}
-			
-		    buf.append(keys.size() + " PracticeExamTransactions more than one year old" + (testOnly?" identified":" deleted") + ".<br>");
-		    buf.append("Done.<br>");
-		} catch (Exception e) {
-			buf.append("Error: " + e.toString());
+		// Clean HWTransactions
+		List<HWTransaction> hwts = ofy().load().type(HWTransaction.class).limit(1000).list();
+		List<Key<HWTransaction>> hwtKeys = new ArrayList<Key<HWTransaction>>();
+		for (HWTransaction hwt :hwts) {
+			if (hwt.assignmentId==0 || ofy().load().filterKey(Key.create(Assignment.class,hwt.assignmentId)).count()==0) hwtKeys.add(Key.create(hwt));
 		}
+		if (!testOnly) {
+			int nBatches = hwtKeys.size()/500;
+			for (int i=0;i<nBatches;i++) ofy().delete().keys(hwtKeys.subList(i*500, (i+1)*500));
+			ofy().delete().keys(hwtKeys.subList(nBatches*500, hwtKeys.size()));
+		}
+		buf.append(hwtKeys.size() + " orphan HWTransactions" + (testOnly?" identified":" deleted") + ".<br>");
+		
+		// Clean PracticeExamTransactions
+		List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).limit(1000).list();
+		List<Key<PracticeExamTransaction>> petKeys = new ArrayList<Key<PracticeExamTransaction>>();
+		for (PracticeExamTransaction pet :pets) {
+			if (pet.assignmentId==0 || ofy().load().filterKey(Key.create(Assignment.class,pet.assignmentId)).count()==0) petKeys.add(Key.create(pet));
+		}
+		if (!testOnly) {
+			int nBatches = petKeys.size()/500;
+			for (int i=0;i<nBatches;i++) ofy().delete().keys(petKeys.subList(i*500, (i+1)*500));
+			ofy().delete().keys(petKeys.subList(nBatches*500, petKeys.size()));
+		}
+		buf.append(petKeys.size() + " orphan PracticeExamTransactions" + (testOnly?" identified":" deleted") + ".<br>");
+
+		// Clean VideoTransactions
+		List<VideoTransaction> vts = ofy().load().type(VideoTransaction.class).limit(1000).list();
+		List<Key<VideoTransaction>> vtKeys = new ArrayList<Key<VideoTransaction>>();
+		for (VideoTransaction vt :vts) {
+			if (vt.assignmentId==0 || ofy().load().filterKey(Key.create(Assignment.class,vt.assignmentId)).count()==0) vtKeys.add(Key.create(vt));
+		}
+		if (!testOnly) {
+			int nBatches = vtKeys.size()/500;
+			for (int i=0;i<nBatches;i++) ofy().delete().keys(vtKeys.subList(i*500, (i+1)*500));
+			ofy().delete().keys(vtKeys.subList(nBatches*500, vtKeys.size()));
+		}
+		buf.append(vtKeys.size() + " orphan VideoTransactions" + (testOnly?" identified":" deleted") + ".<br>");
+
+		// Clean PollTransactions
+		List<PollTransaction> pts = ofy().load().type(PollTransaction.class).limit(1000).list();
+		List<Key<PollTransaction>> ptKeys = new ArrayList<Key<PollTransaction>>();
+		for (PollTransaction pt :pts) {
+			if (pt.assignmentId==0 || ofy().load().filterKey(Key.create(Assignment.class,pt.assignmentId)).count()==0) ptKeys.add(Key.create(pt));
+		}
+		if (!testOnly) {
+			int nBatches = ptKeys.size()/500;
+			for (int i=0;i<nBatches;i++) ofy().delete().keys(ptKeys.subList(i*500, (i+1)*500));
+			ofy().delete().keys(ptKeys.subList(nBatches*500, ptKeys.size()));
+		}
+		buf.append(ptKeys.size() + " orphan PollTransactions" + (testOnly?" identified":" deleted") + ".<br>");
+
+		// Clean PlacementExamTransactions
+		List<PlacementExamTransaction> plts = ofy().load().type(PlacementExamTransaction.class).limit(1000).list();
+		List<Key<PlacementExamTransaction>> pltKeys = new ArrayList<Key<PlacementExamTransaction>>();
+		for (PlacementExamTransaction plt :plts) {
+			if (plt.assignmentId==0 || ofy().load().filterKey(Key.create(Assignment.class,plt.assignmentId)).count()==0) pltKeys.add(Key.create(plt));
+		}
+		if (!testOnly) {
+			int nBatches = pltKeys.size()/500;
+			for (int i=0;i<nBatches;i++) ofy().delete().keys(pltKeys.subList(i*500, (i+1)*500));
+			ofy().delete().keys(pltKeys.subList(nBatches*500, pltKeys.size()));
+		}
+		buf.append(pltKeys.size() + " orphan PlacementExamTransactions" + (testOnly?" identified":" deleted") + ".<br>");
+		buf.append("Done.<br>");
+
 		return buf.toString();
 	}
 	
@@ -261,10 +280,11 @@ public class DataStoreCleaner extends HttpServlet {
 			boolean continu = false;
 			List<Key<Assignment>> assignmentKeys = new ArrayList<Key<Assignment>>();
 			QueryResults<Assignment> iterator = query.iterator();
-
+			int nBatches = 0;
+			
 			while (iterator.hasNext()) {
 				Assignment a = iterator.next();
-				if (a.domain==null) assignmentKeys.add(Key.create(Assignment.class,a.id));
+				if (a.domain==null && a.created.before(sixMonthsAgo)) assignmentKeys.add(Key.create(Assignment.class,a.id));
 				else if (a.domain.contains("https://")) {
 					if (ofy().load().filterKey(Key.create(Deployment.class,a.domain)).count()==0) assignmentKeys.add(Key.create(Assignment.class,a.id));
 				}
@@ -272,6 +292,48 @@ public class DataStoreCleaner extends HttpServlet {
 					if (ofy().load().filterKey(Key.create(BLTIConsumer.class,a.domain)).count()==0) assignmentKeys.add(Key.create(Assignment.class,a.id));	
 				}
 				continu = true;
+				
+				if (testOnly || a.assignmentType==null) continue;
+				
+				switch (a.assignmentType) {  // delete all associated transactions
+				case "Quiz":
+					List<Key<QuizTransaction>> qtKeys = ofy().load().type(QuizTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
+					nBatches = qtKeys.size()/500;
+					for (int i=0;i<nBatches;i++) ofy().delete().keys(qtKeys.subList(i*500, (i+1)*500));
+					ofy().delete().keys(qtKeys.subList(nBatches*500, qtKeys.size()));
+					break;
+				case "Homework":
+					List<Key<HWTransaction>> hwtKeys = ofy().load().type(HWTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
+					nBatches = hwtKeys.size()/500;
+					for (int i=0;i<nBatches;i++) ofy().delete().keys(hwtKeys.subList(i*500, (i+1)*500));
+					ofy().delete().keys(hwtKeys.subList(nBatches*500, hwtKeys.size()));
+					break;
+				case "PracticeExam":
+					List<Key<PracticeExamTransaction>> peKeys = ofy().load().type(PracticeExamTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
+					nBatches = peKeys.size()/500;
+					for (int i=0;i<nBatches;i++) ofy().delete().keys(peKeys.subList(i*500, (i+1)*500));
+					ofy().delete().keys(peKeys.subList(nBatches*500, peKeys.size()));
+					break;
+				case "Poll":
+					List<Key<PollTransaction>> ptKeys = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
+					nBatches = ptKeys.size()/500;
+					for (int i=0;i<nBatches;i++) ofy().delete().keys(ptKeys.subList(i*500, (i+1)*500));
+					ofy().delete().keys(ptKeys.subList(nBatches*500, ptKeys.size()));
+					break;
+				case "PlacementExam":
+					List<Key<PlacementExamTransaction>> plKeys = ofy().load().type(PlacementExamTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
+					nBatches = plKeys.size()/500;
+					for (int i=0;i<nBatches;i++) ofy().delete().keys(plKeys.subList(i*500, (i+1)*500));
+					ofy().delete().keys(plKeys.subList(nBatches*500, plKeys.size()));
+					break;
+				case "Video":
+					List<Key<VideoTransaction>> vtKeys = ofy().load().type(VideoTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
+					nBatches = vtKeys.size()/500;
+					for (int i=0;i<nBatches;i++) ofy().delete().keys(vtKeys.subList(i*500, (i+1)*500));
+					ofy().delete().keys(vtKeys.subList(nBatches*500, vtKeys.size()));
+					break;
+				default:  // it is possible that assignmentType is empty - no transactions need to be deleted
+				}
 			}
 
 			if (continu) {
@@ -281,11 +343,11 @@ public class DataStoreCleaner extends HttpServlet {
 			}
 
 			if (assignmentKeys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
-				int nBatches = assignmentKeys.size()/500;
+				nBatches = assignmentKeys.size()/500;
 				for (int i=0;i<nBatches;i++) ofy().delete().keys(assignmentKeys.subList(i*500, (i+1)*500));
 				ofy().delete().keys(assignmentKeys.subList(nBatches*500, assignmentKeys.size()));
 			}
-			
+
 			buf.append(assignmentKeys.size() + " orphan Assignments" + (testOnly?" identified":" deleted") + ".<br>");
 			buf.append("Done.<br>");
 
@@ -296,28 +358,19 @@ public class DataStoreCleaner extends HttpServlet {
 	}
 
 	private String cleanBLTIConsumers(boolean testOnly) {
-		// This method searches for BLTIConsumers at least 6 months old with no Assignment entities
+		// This method searches for BLTIConsumers with no logins for at least 1 year
 		
 		StringBuffer buf = new StringBuffer();
 		buf.append("<h2>Clean BLTIConsumers</h2>");
 		try {
-			List<Key<BLTIConsumer>> keys = new ArrayList<Key<BLTIConsumer>>();
-			List<BLTIConsumer> consumers = ofy().load().type(BLTIConsumer.class).filter("created <",sixMonthsAgo).list();					
-			for (BLTIConsumer c : consumers) {
-				int n = ofy().load().type(Assignment.class).filter("domain",c.oauth_consumer_key).chunk(Integer.MAX_VALUE).count();
-				if (n==0) keys.add(Key.create(c));
-				else if (c.lastLogin==null || c.lastLogin.before(oneYearAgo)) {
-					c.status = "suspended";
-					ofy().save().entity(c);
-				}
-			}
-			if (keys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
-				int nBatches = keys.size()/500;
-				for (int i=0;i<nBatches;i++) ofy().delete().keys(keys.subList(i*500, (i+1)*500));
-				ofy().delete().keys(keys.subList(nBatches*500, keys.size()));
+			List<Key<BLTIConsumer>> consumerKeys = ofy().load().type(BLTIConsumer.class).filter("lastLogin <",oneYearAgo).keys().list();					
+			if (consumerKeys.size() > 0 && !testOnly) {  // delete all the old deployments in batches of 500 (max allowed by ofy().delete)
+				int nBatches = consumerKeys.size()/500;
+				for (int i=0;i<nBatches;i++) ofy().delete().keys(consumerKeys.subList(i*500, (i+1)*500));
+				ofy().delete().keys(consumerKeys.subList(nBatches*500, consumerKeys.size()));
 			}
 			
-			buf.append(keys.size() + " BLTIConsumers at least 6 months old with no Assignments" + (testOnly?" identified":" deleted") + ".<br>");
+			buf.append(consumerKeys.size() + " BLTIConsumers unused for more than one year" + (testOnly?" identified":" deleted") + ".<br>");
 			buf.append("Done.<br>");
 
 		}catch (Exception e) {
@@ -325,9 +378,9 @@ public class DataStoreCleaner extends HttpServlet {
 		}
 		return buf.toString();
 	}
-	
+
 	private String cleanDeployments(boolean testOnly) {
-		// This method searches for BLTIConsumers at least 6 months old with no Assignment entities
+		// This method searches for Deployment entities with no logins for at least 1 year
 		
 		StringBuffer buf = new StringBuffer();
 		buf.append("<h2>Clean Deployments</h2>");
