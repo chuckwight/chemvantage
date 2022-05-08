@@ -3,7 +3,7 @@
 <%@ page import="java.util.*,com.googlecode.objectify.*,org.chemvantage.*,com.google.common.net.InternetDomainName"%>
 
 <%
-	String price = "19";
+	String price = "2";
 	String message = request.getParameter("message");
 	String sub = request.getParameter("sub");
 	String email = request.getParameter("email");
@@ -88,12 +88,12 @@ ChemVantage is pleased to provide free access to our software development server
 Please note that the server is sometimes in an unstable state, and accounts may be reset or even deleted at any time.
 <% } else { %>
 Pricing:
-<ol>
+<ul>
 <li>LTI registration and setup are free.</li>
 <li>Instructor accounts are completely free.</li>
-<li>Each student account costs $<%= price %> USD for a 10-month all-access subscription.</li>
-<li>Institutions have the option of purchasing student licenses in bulk at discounted rates.</li>
-</ol>
+<li>Each student account costs $<%= price %>.00 USD per month for an all-access subscription.</li>
+<li>Institutions have the option of purchasing student licenses in bulk at deeply discounted rates.</li>
+</ul>
 If this pricing structure doesn't fit your needs, please contact Chuck Wight at admin@chemvantage.org for alternative pricing.
 <% } %>
 
