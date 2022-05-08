@@ -23,7 +23,7 @@ public class PremiumUser {
 	
 	public PremiumUser(String id, int months) {
 		hashedId = id;
-		exp = new Date(new Date().getTime() + 2628000000L * months); // months-long subscription
+		exp = new Date(new Date().getTime() + 2678400000L * months); // months-long subscription
 		ofy().save().entity(this).now();
 	}
 }
