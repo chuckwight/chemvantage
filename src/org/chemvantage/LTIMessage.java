@@ -728,16 +728,13 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
 				reader.close();
 				
-				// check to ensure that the context_id matches the group
-				//JsonObject context = json.get("context").getAsJsonObject();
-				//if (!g.context_id.contains(context.get("id").getAsString())) throw new Exception("incorrect context_id value");
-				
 				JsonArray members = json.get("members").getAsJsonArray();
 				Iterator<JsonElement> iterator = members.iterator();
 				while(iterator.hasNext()){
 					JsonObject member = iterator.next().getAsJsonObject();
 					String user_id = member.get("user_id").getAsString();
-					String roles = member.get("roles").getAsString().toLowerCase();
+					//String roles = member.get("roles").getAsString().toLowerCase();
+					String roles = member.get("roles").getAsJsonArray().toString().toLowerCase();
 					String role = roles.contains("administrator")?"Administrator":roles.contains("instructor")?"Instructor":"Learner";
 					String name = "";
 					try {
