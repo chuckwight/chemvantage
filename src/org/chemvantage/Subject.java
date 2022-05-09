@@ -37,18 +37,18 @@ public class Subject {
 	private int nStarReports;
 	private double avgStars;
 	
-	Subject() {}
+	private Subject() {}
 	static { refresh(); }
 	
-	static void refresh() {
+	private static synchronized void refresh() {
 		try {
-		subject = ofy().load().type(Subject.class).first().safe();
+			subject = ofy().load().type(Subject.class).id(1L).safe();
 		} catch (Exception e) {
 			subject = new Subject();
 			subject.id = 1L;
 			subject.title = "General Chemistry";
 			subject.HMAC256Secret = "ChangeMeInTheDataStoreManuallyForYourProtection";
-			subject.salt = "ChangeMeInTheDataStoreManuallyToKeepStoredUsedIdValuesSecure";
+			subject.salt = "null";
 			ofy().save().entity(subject);
 		}
 	}
@@ -60,7 +60,6 @@ public class Subject {
 	static int getNStarReports() { return subject.nStarReports; }
 	
 	static void setAnnouncement(String msg) {
-		refresh();
 		subject.announcement = msg;
 		ofy().save().entity(subject);
 	}
@@ -71,7 +70,6 @@ public class Subject {
 	}
 	
 	static void addStarReport(int stars) {
-		refresh();
 		subject.avgStars = (subject.avgStars*subject.nStarReports + stars)/(subject.nStarReports+1);
 		subject.nStarReports++;
 		ofy().save().entity(subject);
