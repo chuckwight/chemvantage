@@ -83,7 +83,7 @@ public class LTIRegistration extends HttpServlet {
 	
 	private static final long serialVersionUID = 137L;
 	Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
-	static String price = "19";
+	static String price = "2.00";
 	
 	@Override
 	public void init(ServletConfig config) throws ServletException {
