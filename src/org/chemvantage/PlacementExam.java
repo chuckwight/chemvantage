@@ -206,12 +206,28 @@ public class PlacementExam extends HttpServlet {
 	
 	String printExam(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		
+		StringBuffer debug = new StringBuffer("Debug:");
 		try {
 			// Get requested topic ids for this exam
 			long assignmentId = user.getAssignmentId();
-			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
-			
+			Assignment a = null;
+			if (assignmentId>0) a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+			else {  // create a dummy Assignment entity for anonymous user
+				a = new Assignment();
+				List<Topic> topics = ofy().load().type(Topic.class).list();
+				for (Topic t : topics) {
+					switch (t.title) {
+					case "Essential Chemistry":
+					case "Essential Math":
+					case "Word Problems":
+						a.topicIds.add(t.id);
+					break;
+					default: continue;
+					}
+					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",t.id).keys().list());
+				}
+			}
+			debug.append("1");
 			// Check to see if the timeAllowed has been modified by the instructor:
 			int timeAllowed = 3600;  // default value in seconds
 			if (a != null && a.timeAllowed!=null) {
@@ -238,6 +254,7 @@ public class PlacementExam extends HttpServlet {
 				pt.assignmentId = assignmentId;
 				ofy().save().entity(pt).now();	
 			}
+			debug.append("2");
 			
 			// past this point we will present a practice exam to the student. 
 			
@@ -248,7 +265,8 @@ public class PlacementExam extends HttpServlet {
 				questionKeys_02pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",2).keys().list());
 				questionKeys_04pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",4).keys().list());
 			}
-
+			debug.append("3");
+			
 			// Reduce the size of questionKeys Lists to the number of questions needed, either by using the previously
 			// selected questions in the PracticExamTransaction or by random elimination
 			Random rand = new Random(pt.id);  // create random number generator to select exam questions
@@ -268,6 +286,7 @@ public class PlacementExam extends HttpServlet {
 				for (Key<Question> k : questionKeys_04pt) if (!pt.questionKeys.contains(k)) remove.add(k);
 				questionKeys_04pt.removeAll(remove); remove.clear();
 			}
+			debug.append("4");
 			rand.setSeed(pt.id);
 			// Consolidate the two lists into a single list of questions, but randomize the order in each section
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
@@ -278,6 +297,8 @@ public class PlacementExam extends HttpServlet {
 			List<Key<Question>> addQuestions = new ArrayList<Key<Question>>();
 			for (Key<Question> k : questionKeys) if (!examQuestions.containsKey(k)) addQuestions.add(k);
 			if (addQuestions.size()>0) examQuestions.putAll(ofy().load().keys(addQuestions));
+			
+			debug.append("5");
 			
 			// Check to make sure that some questions exist:
 			if (questionKeys.size()==0) return "<h2>General Chemistry Placement Exam</h2>"
@@ -301,7 +322,8 @@ public class PlacementExam extends HttpServlet {
 			if (a!=null) buf.append("\n<input type=hidden name=AssignmentId value='" + a.id + "'>");
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
 			int[] possibleScores = new int[a.topicIds.size()];
-
+			debug.append("6");
+			
 			buf.append("<OL>\n");
 			int nQuestions = 40;
 			int i = 0;
@@ -316,6 +338,7 @@ public class PlacementExam extends HttpServlet {
 			}
 			buf.append("</OL>");
 
+			debug.append("7");
 			pt.possibleScores = possibleScores;
 			ofy().save().entity(pt).now();
 
@@ -329,7 +352,7 @@ public class PlacementExam extends HttpServlet {
 			// this code for displaying/hiding timers and a 30-seconds-remaining alert box
 			buf.append(timerScripts(endMillis)); 
 		} catch (Exception e) {
-			buf.append("printExam: " + e.toString());
+			buf.append("printExam: " + e.toString() + " " + debug.toString());
 		}
 		return buf.toString();
 	}

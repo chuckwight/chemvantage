@@ -89,7 +89,7 @@ public class User {
 				ofy().delete().entity(u);
 				throw new Exception();
 			}
-		} catch (Exception e) {	 // this is an LTI user not found i the datastore
+		} catch (Exception e) {	 // this is an LTI user not found in the datastore
 			this.sig = ofy().factory().allocateId(User.class).getId();
 			this.encryptedId = encryptId(user_id,sig);
 			ofy().save().entity(this).now();
@@ -123,7 +123,10 @@ public class User {
     	
     	try {  // try to validate an anonymous user
     		Date exp = new Date(encode(Long.parseLong(sig,16)));
-    		if (exp.after(now) && exp.before(expires)) return new User(exp.getTime());		
+    		Date aMonthFromNow = new Date(now.getTime() + 2678400000L);
+    		if (exp.after(now) && exp.before(expires)) return new User(exp.getTime());
+    		// the following line allows entry by a sig code up to a month in the future (email link)
+    		if (exp.after(now) && exp.before(aMonthFromNow)) return new User(expires.getTime());
     	} catch (Exception e) {}
 
     	return null;   	
