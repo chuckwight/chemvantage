@@ -183,7 +183,7 @@ public class PlacementExam extends HttpServlet {
 				buf.append("There are two ways to pay for placement exams:<ol>"
 						+ "<li>You can <a href='/checkout2.jsp?sig=" + user.getTokenSignature() + "' target=_blank >purchase ChemVantage student licenses</a> "
 						+ "for this LTI account in quantities of 50 or more for as little as $2.00 USD per license. Every unique student who "
-						+ "downloads a placement exam will use one license, whivh is valid for a period of 10 months.</li>"
+						+ "downloads a placement exam will use one license, which is valid for a period of 10 months.</li>"
 						+ "<li>When there are no licenses remaining in your account, each student will be charged $" + d.price + ".00 USD per month for an individual license.</li></ol>"
 						+ "You can use the settings in your LMS to restrict the number of placement exam retakes, if desired.<br/><br/>");
 
@@ -433,7 +433,18 @@ public class PlacementExam extends HttpServlet {
 							continue;
 						}
 					}
+					
+					try {
+						if ("NUMERIC".equals(q.type)) {  // this section converts ionic charge 2+ to +2 and 3- to -3
+							int length = studentAnswer.length();  // length of the trimmed String
+							int charge = Integer.parseInt(studentAnswer.substring(0,length-1));  // magnitude of the charge
+							char last = studentAnswer.charAt(length-1); // sign of the charge
+							if (last=='+' || last=='-') studentAnswer = last + String.valueOf(charge);  // move the sign to the front of the String
+						}
+					} catch (Exception e) {}
+
 					q.setParameters((int)(pt.id ^ q.id));
+					
 					int score = studentAnswer.length()==0?0:q.isCorrect(studentAnswer)?q.pointValue:0;
 					if (score==0 && q.agreesToRequiredPrecision(studentAnswer)) score = q.pointValue - 1;  // partial credit for wrong sig figs
 					if (score > 0) studentScores[topicIds.indexOf(q.topicId)] += score;
@@ -1169,7 +1180,7 @@ public class PlacementExam extends HttpServlet {
 			answer += answers.remove(pos);		
 		}
 		answer += answers.get(0);  // append the last value from the List
-		return answer;
+		return answer.trim();
 	}
 }
 
