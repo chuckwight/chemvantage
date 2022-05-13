@@ -307,6 +307,8 @@ public class PlacementExam extends HttpServlet {
 			
 			buf.append("<script>function showWorkBox(qid){}</script>");  // prevents javascript error from Question.print()
 			
+			if (user.isAnonymous()) buf.append(Subject.banner);
+			
 			buf.append("<h2>General Chemistry Placement Exam</h2>");
 			if (user.isAnonymous()) buf.append("Anonymous User<br/>");
 			
