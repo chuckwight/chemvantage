@@ -214,6 +214,7 @@ public class PlacementExam extends HttpServlet {
 			if (assignmentId>0) a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			else {  // create a dummy Assignment entity for anonymous user
 				a = new Assignment();
+				a.topicIds = new ArrayList<Long>();
 				List<Topic> topics = ofy().load().type(Topic.class).list();
 				for (Topic t : topics) {
 					switch (t.title) {
@@ -221,10 +222,9 @@ public class PlacementExam extends HttpServlet {
 					case "Essential Math":
 					case "Word Problems":
 						a.topicIds.add(t.id);
-					break;
-					default: continue;
+						a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",t.id).keys().list());
+					debug.append("t");
 					}
-					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",t.id).keys().list());
 				}
 			}
 			debug.append("1");
@@ -308,7 +308,8 @@ public class PlacementExam extends HttpServlet {
 			buf.append("<script>function showWorkBox(qid){}</script>");  // prevents javascript error from Question.print()
 			
 			buf.append("<h2>General Chemistry Placement Exam</h2>");
-						
+			if (user.isAnonymous()) buf.append("Anonymous User<br/>");
+			
 			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded. ");
 			if (resumingExam) buf.append("You are resuming a placement exam originally downloaded at " + pt.downloaded);
 			
@@ -394,6 +395,7 @@ public class PlacementExam extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		try {
 			buf.append("<h2>Placement Exam Results</h2>");
+			if (user.isAnonymous()) buf.append("Anonymous User<br/>");
 			
 			Assignment a = null;
 			
@@ -490,16 +492,18 @@ public class PlacementExam extends HttpServlet {
 			ofy().save().entity(pt).now();
 			ofy().save().entities(responses);
 			
-			try {
-				Score s = Score.getInstance(user.getId(),a);
-				ofy().save().entity(s).now();
-				if (a.lti_ags_lineitem_url != null) { // LTI v1.3
-					LTIMessage.postUserScore(s,user.getId());
-				} else if (a.lis_outcome_service_url != null) { // LTI v1.1 put report into the Task Queue
-					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  
-				}
-			} catch (Exception e) {}
-
+			if (!user.isAnonymous()) {
+				try {
+					Score s = Score.getInstance(user.getId(),a);
+					ofy().save().entity(s).now();
+					if (a.lti_ags_lineitem_url != null) { // LTI v1.3
+						LTIMessage.postUserScore(s,user.getId());
+					} else if (a.lis_outcome_service_url != null) { // LTI v1.1 put report into the Task Queue
+						QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  
+					}
+				} catch (Exception e) {}
+			}
+			
 			int score = 0;
 			int possibleScore = 0;
 			for (int i=0;i<topicIds.size();i++) {
@@ -531,6 +535,8 @@ public class PlacementExam extends HttpServlet {
 			// embed ajax code to provide feedback
 			buf.append(ajaxScoreJavaScript(user.getTokenSignature()));
 
+			if (user.isAnonymous()) return buf.toString();
+			
 			List<PlacementExamTransaction> pets = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
 			if (pets==null || pets.size()==0) {
 				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>");

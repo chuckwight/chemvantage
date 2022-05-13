@@ -23,7 +23,6 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 
@@ -205,7 +204,6 @@ public class ManageMessages extends HttpServlet {
 		buf.append(editMessage(subjectLine,text,m.id,m.isActive));
 		if (!msg.isEmpty()) buf.append("<br/>" + msg + "<br/>");
 		if (m!=null) buf.append(sendMessage(m));
-		buf.append("1 month from now sig=" + Long.toHexString(User.encode(new Date(new Date().getTime() + 2678400000L).getTime())));	
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		out.println(Subject.getHeader(user) + buf.toString() + Subject.footer);

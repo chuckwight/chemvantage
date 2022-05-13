@@ -195,6 +195,10 @@ public class Admin extends HttpServlet {
 						+ "<input type=submit name=action value='Delete'/></form><br/>");
 			}
 			
+			buf.append("<h3>Signature Code for 1 month Anonymous Access</h3>");
+			buf.append("sig=" + Long.toHexString(User.encode(new Date(new Date().getTime() + 2678400000L).getTime())) + "<br/>");	
+			
+			
 			buf.append("<h3>New and Expiring Accounts</h3>");			
 			Date now = new Date();
 			Date twoMonthsAgo = new Date(now.getTime()-5184000000L);
