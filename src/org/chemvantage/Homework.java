@@ -476,26 +476,12 @@ public class Homework extends HttpServlet {
 			
 			buf.append(ajaxJavaScript(user.getTokenSignature()));
 			
-			if (studentScore > 0) {
-				buf.append("<div id=correctAnswer>"
-						+ q.printAnswerToStudents()
-						+ "<b>The answer submitted was: " + studentAnswer + "</b>&nbsp;" + (q.isCorrect(studentAnswer)?"&nbsp;<IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom>":"<IMG SRC=/images/xmark.png ALT='X mark' align=middle>") + "<br/><br/>"
-						+ "</div>");
-			}
-
-			// embed the detailed solution or hint to the exercise in the response, if appropriate
-			if ((studentScore > 0 && !user.isAnonymous()) || user.isInstructor() || user.isTeachingAssistant()) {
-				buf.append("<div id=exampleLink>"
-						+ "<a href=# onClick=javascript:document.getElementById('example').style.display='';"
-						+ "document.getElementById('correctAnswer').style.display='none';"
-						+ "document.getElementById('exampleLink').style.display='none';>"
-						+ "<FONT COLOR=#EE0000>View the detailed solution for this homework exercise</FONT></a><p></div>");
-				buf.append("<div id=example style='display: none'><b>Detailed Solution</b><br/><br/>" 
-						+ q.printAllToStudents(studentAnswer) + "</div>");
+			if (studentScore>0) {
+				buf.append("<div>" + (user.isAnonymous()?q.printAnswerToStudents():q.printAllToStudents(studentAnswer)) + "</div><br/>");
 			}
 			
 			boolean offerHint = studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id);
-			
+
 			// if the user response was correct, seek five-star feedback:
 			if (studentScore > 0) buf.append(fiveStars());
 			else buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
