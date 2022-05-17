@@ -19,4 +19,8 @@ cron:
   schedule: 'every day 04:50'
   timezone: 'America/New_York'
   description: 'Sends 100 email marketing messages'
+- url: '/messages?UserRequest=Send+100+Messages'  # send 100 more messages
+  schedule: 'every day 05:00'
+  timezone: 'America/New_York'
+  description: 'Sends 100 email marketing messages'
   
