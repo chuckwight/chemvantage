@@ -35,7 +35,8 @@
 <script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>
 </head>
 
-<body style='background-color: white; font-family: Calibri,Arial,sans-serif;' onload=showPricingDetails() >
+<body style='background-color: white; font-family: Calibri,Arial,sans-serif; padding: 30px; max-width: 800px' >
+
 <%= Subject.banner %><br/>
 
 <% if (message != null) { %>
