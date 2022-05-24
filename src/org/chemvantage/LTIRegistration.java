@@ -407,7 +407,7 @@ public class LTIRegistration extends HttpServlet {
 		break;
 		case "moodle":
 			buf.append("This request indicates that you are using the open-source Moodle LMS. "
-					+ "To configure ChemVantage in Moodle v3.10 please go to Site Administration | Plugins | Manage Tools<br/>"
+					+ "To configure ChemVantage in Moodle v3.10 or higher, please go to Site Administration | Plugins | Manage Tools<br/>"
 					+ "Enter the URL: " + iss + "/lti/registration, complete the form and activate the tool (easy).<br/><br/>"
 					+ "Otherwise, you can configure the tool manually:<ul>"
 					+ "<li>Tool Name: ChemVantage" + (iss.contains("dev-vantage")?" Development":"") + "</li>"
