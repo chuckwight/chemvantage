@@ -83,7 +83,7 @@ public class LTIRegistration extends HttpServlet {
 	
 	private static final long serialVersionUID = 137L;
 	Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
-	static String price = "2.00";
+	static String price = "2";
 	
 	@Override
 	public void init(ServletConfig config) throws ServletException {
@@ -285,7 +285,7 @@ public class LTIRegistration extends HttpServlet {
 					+ "When you complete the registration steps below, your account will be activated immediately. You may create ChemVantage "
 					+ "assignments using Deep Linking to explore and customize placement exams, quizzes, homework, practice exams, "
 					+ "video lectures, and in-class polls. In order to access the assignments, students must subscribe to the ChemVantage service "
-					+ "for $" + price + " USD per month (1 month minimum). As a reminder, access to ChemVantage by instructors and LMS account "
+					+ "for $" + price + ".00 USD per month (1 month minimum). As a reminder, access to ChemVantage by instructors and LMS account "
 					+ "administrators is always free. ");
 		}
 		
@@ -934,7 +934,7 @@ public class LTIRegistration extends HttpServlet {
 		} else {
 			buf.append("Your ChemVantage has been fully activated and provisioned with 5 free student licenses. Each unique student "
 					+ "login will use one license. You may purchase additional licenses in bulk directly from ChemVantage at a discount. "
-					+ "Otherwise, ChemVantage will charge each student a subsciption price of $" + price + " USD per month to access the assignments. "
+					+ "Otherwise, ChemVantage will charge each student a subsciption price of $" + price + ".00 USD per month to access the assignments. "
 					+ "As a reminder, access to ChemVantage by instructors and LMS account administrators is always free.<br/><br/>");
 		}
 		
@@ -1007,7 +1007,7 @@ public class LTIRegistration extends HttpServlet {
 			buf.append("<h3>Getting Started</h3>"
 					+ "Your ChemVantage account is now active, and you may create new placement exams and assignments, or just expolore the "
 					+ "site without limitations. "
-					+ "Students must purchase a ChemVantage subscription for $" + price + " USD per month to access the assignments. "
+					+ "Students must purchase a ChemVantage subscription for $" + price + ".00 USD per month to access the assignments. "
 					+ "As a reminder, access to ChemVantage by instructors and LMS account administrators is always free.");
 		}
 		
