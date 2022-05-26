@@ -553,7 +553,7 @@ public class LTIRegistration extends HttpServlet {
 					+ "Home Page: " + url + "<p>"
 					+ "The token provided with this link could not be validated. It may have expired (after 3 days) "
 					+ "or it may not have contained enough information to complete the registration request. You "
-					+ "may <a href=/lti/registration>start the registration process again</a> or contact "
+					+ "may <a href=/lti/registration>get a new token</a> by restarting the registration, or contact "
 					+ "Chuck Wight (admin@chemvantage.org) for assistance.");
 		}		
 		return buf.toString();
