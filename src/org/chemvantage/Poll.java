@@ -911,6 +911,7 @@ public class Poll extends HttpServlet {
 		}
 		double requiredPrecision = 0.; // percent
 		int significantFigures = 0;
+		boolean scrambleChoices = false;
 		int pointValue = 1;
 		try {
 			pointValue = Integer.parseInt(request.getParameter("PointValue"));
@@ -922,6 +923,10 @@ public class Poll extends HttpServlet {
 		}
 		try {
 			significantFigures = Integer.parseInt(request.getParameter("SignificantFigures"));
+		} catch (Exception e) {
+		}
+		try {
+			scrambleChoices = Boolean.parseBoolean(request.getParameter("ScrambleChoices"));
 		} catch (Exception e) {
 		}
 		String correctAnswer = "";
@@ -948,6 +953,7 @@ public class Poll extends HttpServlet {
 		q.hint = request.getParameter("Hint");
 		q.solution = request.getParameter("Solution");
 		q.notes = "";
+		q.scrambleChoices = scrambleChoices;
 		q.authorId = request.getParameter("AuthorId");
 		q.editorId = request.getParameter("EditorId");
 		q.validateFields();
