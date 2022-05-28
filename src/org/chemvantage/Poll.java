@@ -45,7 +45,6 @@ import com.googlecode.objectify.cmd.Query;
 public class Poll extends HttpServlet {
 	private static final long serialVersionUID = 137L;
 	private static Map<Long,Integer> activePolls = new HashMap<Long,Integer>(); // key=assignmentId and value=state {0, 1, or 2}
-	private Map<Long,Assignment> assignments = new HashMap<Long,Assignment>();
 	private Map<Key<Question>,Question> pollQuestions = new HashMap<Key<Question>,Question>();
 	private Date nextPurge = new Date(new Date().getTime() + 3600000L); // 1 hour from now
    
@@ -110,7 +109,7 @@ public class Poll extends HttpServlet {
 			switch (userRequest) {
 			case "LaunchPoll":
 				if (!user.isInstructor()) break;
-				Assignment a = getAssignment(user.getAssignmentId());
+				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 				PollTransaction pt = getPollTransaction(user);
 				pt.downloaded = new Date();
 				ofy().save().entity(pt);  // essential for purgeActivePolls to work properly			
@@ -125,9 +124,7 @@ public class Poll extends HttpServlet {
 				return;
 			case "ResetPoll":
 				if (!user.isInstructor()) break;
-				a = getAssignment(user.getAssignmentId());
-				for (Key<Question> k : a.questionKeys) pollQuestions.remove(k);
-				assignments.remove(a.id);
+				a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 				activePolls.remove(a.id);
 				out.println(Subject.header() + welcomePage(user,request) + Subject.footer);
 				return;
@@ -135,9 +132,9 @@ public class Poll extends HttpServlet {
 				if (!user.isInstructor()) break;
 				long qid = createQuestion(user,request);
 				if (qid > 0) {
-					a = getAssignment(user.getAssignmentId());
+					a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 					a.questionKeys.add(Key.create(Question.class,qid));
-					saveAssignment(a);
+					ofy().save().entity(a).now();
 				}
 				out.println(Subject.header() + editPage(user,request) + Subject.footer);
 				return;
@@ -171,7 +168,7 @@ public class Poll extends HttpServlet {
 		
 		buf.append("<h2>Welcome to the Class Poll</h2>");
 		if (user.isInstructor()) {
-			Assignment a = getAssignment(user.getAssignmentId());
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 			if (a.questionKeys.size()==0) return editPage(user,request);
 			else {
 				buf.append("You may review and edit the questions for this poll by <a href=/Poll?UserRequest=EditPoll&sig=" + user.getTokenSignature() + ">clicking this link</a>.<p></p>");
@@ -211,9 +208,6 @@ public class Poll extends HttpServlet {
 			if (!isRecent) expiredAssignmentIds.add(entry.getKey());
 		}
 		for (Long exp : expiredAssignmentIds) {
-			Assignment a = getAssignment(exp);
-			for (Key<Question> k : a.questionKeys) pollQuestions.remove(k);
-			assignments.remove(exp);
 			activePolls.remove(exp);
 		}
 		nextPurge = new Date(new Date().getTime() + 86400000L);        // this time tomorrow
@@ -239,7 +233,7 @@ public class Poll extends HttpServlet {
 					+ "You must then instruct your students to refresh their browsers to see the results.");
 		}
 		
-		Assignment a = getAssignment(user.getAssignmentId());
+		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 		
 		buf.append("<OL>");
 		int possibleScore = 0;
@@ -312,7 +306,7 @@ public class Poll extends HttpServlet {
 		pt.responses = new HashMap<Key<Question>,String>();
 		pt.lis_result_sourcedid = user.getLisResultSourcedid();
 		
-		Assignment a = getAssignment(user.getAssignmentId());
+		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 		for (Key<Question> k : a.questionKeys) {
 			try {
 				Question q = getQuestion(k);
@@ -335,16 +329,6 @@ public class Poll extends HttpServlet {
 			}
 		} catch (Exception e) {}
 		return pt;
-	}
-	
-	Assignment getAssignment(Long assignmentId) {
-		if (assignments.containsKey(assignmentId)) return assignments.get(assignmentId);
-		else return ofy().load().type(Assignment.class).id(assignmentId).safe();
-	}
-	
-	void saveAssignment(Assignment a) {
-		assignments.put(a.id,a);
-		ofy().save().entity(a);
 	}
 	
 	PollTransaction getPollTransaction(User user) {
@@ -395,7 +379,7 @@ public class Poll extends HttpServlet {
 	String resultsPage(User user) {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Debug:");
-		Assignment a = getAssignment(user.getAssignmentId());
+		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 		debug.append("a.");
 		
 		buf.append("<h2>Poll Results</h2>");
@@ -624,7 +608,7 @@ public class Poll extends HttpServlet {
 	String editPage(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		if (!user.isInstructor()) return "Not Authorized";
-		Assignment a = getAssignment(user.getAssignmentId());
+		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 		if (a == null) return "Assignment could not be fund.";
 		
 		if (a.getQuestionKeys().size() == 0) buf.append("<h2>Create a New Class Poll</h2>");
@@ -732,10 +716,10 @@ public class Poll extends HttpServlet {
 		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 		for (String qid : qids) questionKeys.add(Key.create(Question.class,Long.parseLong(qid)));
 		if (questionKeys.size()>0) {
-			Assignment a = getAssignment(user.getAssignmentId());
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 			if (a.questionKeys == null) a.questionKeys = questionKeys;
 			else a.questionKeys.addAll(questionKeys);
-			saveAssignment(a);
+			ofy().save().entity(a).now();
 		}
 	}
 	
@@ -745,12 +729,11 @@ public class Poll extends HttpServlet {
 		for (String qid : qids) {
 			Key<Question> k = Key.create(Question.class,Long.parseLong(qid));
 			questionKeys.add(k);
-			pollQuestions.remove(k);
 		}
 		if (questionKeys.size()>0) {
-			Assignment a = getAssignment(user.getAssignmentId());
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 			a.questionKeys.removeAll(questionKeys);
-			saveAssignment(a);
+			ofy().save().entity(a).now();
 		}
 	}
 	

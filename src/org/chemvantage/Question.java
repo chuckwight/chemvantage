@@ -325,17 +325,20 @@ public class Question implements Serializable, Cloneable {
 		// use this method to display an example of the question, correct answer and solution
 		StringBuffer buf = new StringBuffer();
 		char choice = 'a';
+		List<Character> choice_keys = new ArrayList<Character>();
+		for (int i=0; i<nChoices; i++) choice_keys.add(Character.valueOf((char)('a'+i)));
+		Random rand = new Random();
 		switch (getQuestionType()) {
 		case 1: // Multiple Choice
 			buf.append(text + "<br/>");
 			buf.append("<span style='color:#EE0000;font-size: small;'>Select only the best answer:</span><UL>");
-			for (int i = 0; i < nChoices && i < choices.size(); i++) {
+			while (choice_keys.size()>0) {
+				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
 				buf.append("<LI>" 
 						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
-						+ quot2html(choices.get(i))
+						+ quot2html(choices.get(choice-'a'))
 						+ (correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>")
 						+ "</LI>");
-				choice++;
 			}
 			buf.append("</UL>");
 			break;
@@ -353,13 +356,13 @@ public class Question implements Serializable, Cloneable {
 		case 3: // Select Multiple
 			buf.append(text + "<br/>");
 			buf.append("<span style='color:#EE0000;font-size: small;'>Select all of the correct answers:</span><UL>");
-			for (int i = 0; i < nChoices && i < choices.size(); i++) {
+			while (choice_keys.size()>0) {
+				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
 				buf.append("<LI>"
 						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
-						+ quot2html(choices.get(i))
+						+ quot2html(choices.get(choice-'a'))
 						+ (correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>")
 						+ "</LI>");
-				choice++;
 			}
 			buf.append("</UL>");
 			break;
