@@ -69,7 +69,7 @@ public class UserReport implements Serializable {
 				q.setParameters(-1); // -1 randomizes the question
 				Topic topic = ofy().load().type(Topic.class).id(q.topicId).now();
 				buf.append("Topic: " + topic.title + " (" + q.assignmentType + " question)<br>");
-				buf.append(q.printAll());
+				buf.append(q.printAnswerToStudents());
 				if (this.userId != null) {
 					List<Response> responses = ofy().load().type(Response.class).filter("userId",this.userId).filter("questionId",this.questionId).list();
 					if (responses.size() > 0) {

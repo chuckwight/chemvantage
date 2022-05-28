@@ -410,7 +410,7 @@ public class Question implements Serializable, Cloneable {
 	String printAllToStudents(String studentAnswer,boolean showDetails,String showWork) {
 		// use this method to display an example of the question, correct answer and solution
 		// this differs from printAll() because only the first of several 
-		// correct fill-in-word answers is presented
+		// correct fill-in-word answers is presented, and choices are not scrambled
 		// showDetails enables display of Solution to numeric problems (default = true)
 		StringBuffer buf = new StringBuffer("<a name=" + this.id + "></a>");
 		char choice = 'a';
