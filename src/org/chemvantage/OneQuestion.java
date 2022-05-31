@@ -23,7 +23,7 @@ public class OneQuestion extends HttpServlet {
 		
 		if (questionId==null) 
 			buf.append("<br/><br/><br/><form method=get>QuestionId: <input type=text size=10 name=q value='" + (questionId==null?"":questionId) + "' />"
-				+ "&nbsp;<input type=submit /></form>");
+				+ "&nbsp;<input type=submit value='Submit' /></form>");
 		else {  // retrieve the question and display the HTML code below
 			Question q = null;
 			Long p = null;
@@ -37,7 +37,7 @@ public class OneQuestion extends HttpServlet {
 				q.setParameters(p);
 				
 				buf.append("<br/><br/><form method=post action=/item><input type=hidden name=p value=" + p + " />"
-						+ q.print() + "<input type=submit />" + "</form>");
+						+ q.print() + "<input type=submit value='Submit' />" + "</form>");
 			} catch (Exception e){
 				buf.append("<br/><br/>Not found.");
 			}
@@ -90,7 +90,7 @@ public class OneQuestion extends HttpServlet {
 					buf.append("<h3>Your answer was not correct. Please try again.</h3>");
 				}
 				buf.append("<form method=post action=/item><input type=hidden name=p value=" + p + " />"
-						+ q.print() + "<input type=submit />" + "</form><br/><br/>"
+						+ q.print() + "<input type=submit value='Submit' />" + "</form><br/><br/>"
 						+ "<b>The answer submitted was " + answer + "</b>&nbsp;&nbsp;<IMG SRC=/images/xmark.png ALT='X mark' align=middle><br/><br/>");
 				buf.append("<a href=/>Learn more about ChemVantage here</a><br/><br/>");
 			}
