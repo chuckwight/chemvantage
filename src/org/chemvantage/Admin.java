@@ -195,6 +195,9 @@ public class Admin extends HttpServlet {
 						+ "<input type=submit name=action value='Delete'/></form><br/>");
 			}
 			
+			buf.append("<h3>Initiate Full Datastore Backup</h3>");
+			buf.append("Do this manually about once a month by <a href='https://www.chemvantage.org/cloud-datastore-export?output_url_prefix=gs://chem-vantage-hrd-backups'>clicking this link</a>.");
+			
 			buf.append("<h3>Signature Code for 1 month Anonymous Access</h3>");
 			buf.append("sig=" + Long.toHexString(User.encode(new Date(new Date().getTime() + 2678400000L).getTime())) + "<br/>");	
 			
