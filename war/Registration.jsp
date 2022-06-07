@@ -58,7 +58,7 @@ Please tell us how to contact you if there is ever a problem with your account (
 <label>Your Email: <input type=text name=email size=40 value='<%= (email==null?"":email) %>' /> </label><br/><br/>
 
 Please tell us about your school, business or organization:<br/>
-<label>Org Name: <input type=text name=aud  value='<%= (aud==null?"":aud) %> '/> </label><br/>
+<label>Org Name: <input type=text name=aud  value='<%= (aud==null?"":aud) %>' /> </label><br/>
 <label>Home Page: <input type=text name=url placeholder='https://myschool.edu' value='<%= (url==null?"":url) %>' /></label><br/><br/>
 
 <% if (registration_token!=null) { %> 

@@ -69,6 +69,13 @@ public class LTILaunch extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 			throws ServletException, IOException {
+		Date now = new Date();
+		Date July2022 = new Date(1656561600000L);  
+		if (now.after(July2022)) {
+			response.getWriter().println("Sorry, Chemvantage does not accept LTIv1.1 launch requests after June 30, 2022. Please register your LMS using LTI Advantage at https://www.chemvantage.org/lti/registration");
+			return;
+		}
+		
 		try {			
 			if ("UpdateAssignment".equals(request.getParameter("UserRequest"))) {
 				User user = User.getUser(request.getParameter("sig"));
