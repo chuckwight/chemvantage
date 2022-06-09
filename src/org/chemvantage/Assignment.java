@@ -41,6 +41,7 @@ public class Assignment implements java.lang.Cloneable {
 	public	long videoId;    // used only for video assignments
 	public	Integer timeAllowed; // to complete assignment, in seconds default = 900 for Quiz, 3600 for PracticeExam
 	public	String lis_outcome_service_url;
+	@Index	public 	String lti_ags_lineitems_url;
 	@Index	public	String lti_ags_lineitem_url;
 	public	String lti_nrps_context_memberships_url;
 			List<Long> topicIds; // used for practice exams which have multiple topicIds
@@ -101,6 +102,7 @@ public class Assignment implements java.lang.Cloneable {
 				(this.videoId == a.videoId) &&
 				((this.resourceLinkId != null && this.resourceLinkId.equals(a.resourceLinkId)) 															|| (a.resourceLinkId == null && this.resourceLinkId == null)) &&
 				((this.lis_outcome_service_url != null && this.lis_outcome_service_url.equals(a.lis_outcome_service_url)) 								|| (a.lis_outcome_service_url == null && this.lis_outcome_service_url == null)) &&
+				((this.lti_ags_lineitems_url != null && this.lti_ags_lineitems_url.equals(a.lti_ags_lineitems_url)) 									|| (a.lti_ags_lineitems_url == null && this.lti_ags_lineitems_url == null)) &&
 				((this.lti_ags_lineitem_url != null && this.lti_ags_lineitem_url.equals(a.lti_ags_lineitem_url)) 										|| (a.lti_ags_lineitem_url == null && this.lti_ags_lineitem_url == null)) &&
 				((this.lti_nrps_context_memberships_url != null && this.lti_nrps_context_memberships_url.equals(a.lti_nrps_context_memberships_url)) 	|| (a.lti_nrps_context_memberships_url == null && this.lti_nrps_context_memberships_url == null)) &&
 				((this.topicIds != null && this.topicIds.equals(a.topicIds)) 																			|| (a.topicIds == null && this.topicIds == null)) &&

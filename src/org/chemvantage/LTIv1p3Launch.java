@@ -281,6 +281,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			try {
 				Assignment original_a = myAssignment.clone(); // make a copy to compare with for updating later
 				myAssignment.resourceLinkId = resourceLinkId;		
+				if (lti_ags_lineitems_url != null) myAssignment.lti_ags_lineitems_url = lti_ags_lineitems_url;
 				if (lti_ags_lineitem_url != null) myAssignment.lti_ags_lineitem_url = lti_ags_lineitem_url;
 				else if (scope.contains("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem")) myAssignment.lti_ags_lineitem_url =LTIMessage.createLineItem(d, myAssignment, lti_ags_lineitems_url);
 
