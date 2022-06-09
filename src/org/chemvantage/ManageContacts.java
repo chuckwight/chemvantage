@@ -21,6 +21,9 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.HttpConstraint;
@@ -32,10 +35,8 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
+import com.googlecode.objectify.Key;
 
-/**
- * Servlet implementation class ManageContacts
- */
 @WebServlet("/contacts")
 @ServletSecurity(@HttpConstraint(rolesAllowed = {"admin"}))
 public class ManageContacts extends HttpServlet {
@@ -58,6 +59,11 @@ public class ManageContacts extends HttpServlet {
 		
 		buf.append("There are " + nContacts + " contacts in the database, " + nUnsubscribed + " of whom are unsubscribed.");
 
+		boolean clean = Boolean.parseBoolean(request.getParameter("Clean"));
+		if (clean) {
+			buf.append(cleanContacts());
+		}
+		
 		buf.append(searchContacts());
 		
 		String[] email = request.getParameterValues("Email");
@@ -142,7 +148,7 @@ public class ManageContacts extends HttpServlet {
 		try {
 			c = ofy().load().type(Contact.class).id(request.getParameter("Email")).safe();
 		} catch (Exception e) {
-			c = new Contact(request.getParameter("FirstName"),request.getParameter("LastName"),request.getParameter("Email"));
+			c = new Contact(request.getParameter("FirstName"),request.getParameter("LastName"),request.getParameter("Email").trim().toLowerCase());
 		}
 		c.role = request.getParameter("Role");
 		ofy().save().entity(c).now();
@@ -155,7 +161,7 @@ public class ManageContacts extends HttpServlet {
 			String[] lines = request.getParameter("Paste").split("\n");
 			for (int i=0;i<lines.length;i++) {
 				String[] paste = lines[i].split("\t");
-				c = new Contact(paste[0].trim(),paste[1].trim(),paste[2].trim());
+				c = new Contact(paste[0].trim(),paste[1].trim(),paste[2].trim().toLowerCase());
 				c.role = request.getParameter("Role");
 				ofy().save().entity(c).now();
 				url += (i==0?c.email:"&Email=" + c.email);
@@ -204,5 +210,31 @@ public class ManageContacts extends HttpServlet {
 				+ "<form method=get action=/contacts>"
 				+ "Email: <input type=text name=Email />&nbsp;<input type=submit value='Search' />"
 				+ "</form><br/><br/>";
+	}
+	
+	String cleanContacts() {
+		StringBuffer buf = new StringBuffer("<h4>The following contacts were modified by trimming the ID value</h4>");
+		List<Key<Contact>> contactKeys = ofy().load().type(Contact.class).limit(500).keys().list();  // 500 is max allowed by ofy().delete()
+		while (contactKeys.size()>0) {
+			List<Key<Contact>> toDeleteKeys = new ArrayList<Key<Contact>>();
+			for (Key<Contact> k : contactKeys) {
+				String id = k.getName();
+				if (id.equals(id.trim())) continue;  // everything is OK
+				else toDeleteKeys.add(k);
+			}
+			Map<Key<Contact>,Contact> contacts = ofy().load().keys(toDeleteKeys);
+			List<Contact> toSaveContacts = new ArrayList<Contact>();
+			for (Map.Entry<Key<Contact>,Contact> entry : contacts.entrySet()) {
+				Contact c = entry.getValue();
+				c.email = c.email.trim().toLowerCase();
+				toSaveContacts.add(c);
+				buf.append(c.email + "<br/>");
+			}
+			ofy().save().entities(toSaveContacts);
+			ofy().delete().keys(toDeleteKeys);
+			Key<Contact> lastKey = contactKeys.get(contactKeys.size()-1);
+			contactKeys = ofy().load().type(Contact.class).filterKey(">", lastKey).limit(500).keys().list();
+		}
+		return buf.toString();
 	}
 }
