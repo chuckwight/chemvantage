@@ -164,7 +164,7 @@ public class Contribute extends HttpServlet {
 						+ "you assign the copyrights to ChemVantage LLC with the understanding that it will be "
 						+ "shared openly through a <a href=http://creativecommons.org/licenses/by/3.0/us/>"
 						+ "Creative Commons Attribution 3.0 License</a>. "
-						+ "For details, please see the <a href=About#copyright>About Us</a> page.<p>");
+						+ "For details, please see our <a href=/about.html#copyright>copyright policy</a>.<p>");
 			}
 
 			buf.append("<b>Topic: </b>");
