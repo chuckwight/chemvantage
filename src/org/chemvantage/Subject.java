@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.text.DecimalFormat;
 
+import com.googlecode.objectify.NotFoundException;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 
@@ -41,14 +42,19 @@ public class Subject {
 	
 	private static void refresh() {
 		try {
-			s = ofy().load().type(Subject.class).id(1L).safe();
-		} catch (Exception e) {
+			if (s==null) s = ofy().load().type(Subject.class).id(1L).safe();
+		} catch (NotFoundException e) {  // runs only once at inception of datastore
 			s = new Subject();
 			s.id = 1L;
 			s.title = "General Chemistry";
 			s.HMAC256Secret = "ChangeMeInTheDataStoreManuallyForYourProtection";
 			s.salt = "null";
 			ofy().save().entity(s);
+		} catch (Exception e) {  // ofy() not ready
+			try {
+				Thread.sleep(1000);
+				refresh();				// recursive wait for ofy() to be ready
+			} catch (Exception e2) {}
 		}
 	}
 	
