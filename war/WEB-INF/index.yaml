@@ -1,0 +1,173 @@
+indexes:
+
+- kind: Assignment
+  properties:
+  - name: domain
+  - name: resourceLinkId
+
+- kind: Contact
+  properties:
+  - name: unsubscribed
+  - name: created
+
+- kind: Contact
+  properties:
+  - name: unsubscribed
+  - name: created
+    direction: desc
+
+- kind: HWTransaction
+  properties:
+  - name: userId
+  - name: assignmentId
+  - name: graded
+    direction: asc
+
+- kind: HWTransaction
+  properties:
+  - name: userId
+  - name: assignmentId
+  - name: graded
+    direction: desc
+
+- kind: HWTransaction
+  properties:
+  - name: userId
+  - name: assignmentId
+  - name: questionId
+  - name: score
+
+- kind: HWTransaction
+  properties:
+  - name: userId
+  - name: assignmentId
+
+- kind: HWTransaction
+  properties:
+  - name: userId
+  - name: questionId
+  - name: graded
+
+- kind: HWTransaction
+  properties:
+  - name: userId
+  - name: questionId
+  - name: score
+
+- kind: PollTransaction
+  properties:
+  - name: assignmentId
+  - name: downloaded
+
+- kind: PollTransaction
+  properties:
+  - name: assignmentId
+  - name: userId
+
+- kind: PlacementExamTransaction
+  properties:
+  - name: userId
+  - name: assignmentId
+  - name: downloaded
+
+- kind: PlacementExamTransaction
+  properties:
+  - name: userId
+  - name: graded
+  - name: downloaded
+
+- kind: PracticeExamTransaction
+  properties:
+  - name: userId
+  - name: assignmentId
+  - name: downloaded
+
+- kind: PracticeExamTransaction
+  properties:
+  - name: userId
+  - name: graded
+  - name: downloaded
+
+- kind: Question
+  properties:
+  - name: assignmentType
+  - name: topicId
+  - name: isActive
+
+- kind: Question
+  properties:
+  - name: assignmentType
+  - name: topicId
+  - name: pointValue
+
+- kind: Question
+  properties:
+  - name: assignmentType
+  - name: topicId
+
+- kind: QuizTransaction
+  properties:
+  - name: userId
+  - name: assignmentId
+  - name: downloaded
+
+- kind: QuizTransaction
+  properties:
+  - name: userId
+  - name: assignmentId
+  - name: graded
+  - name: downloaded
+
+- kind: QuizTransaction
+  properties:
+  - name: userId
+  - name: assignmentId
+
+- kind: QuizTransaction
+  properties:
+  - name: userId
+  - name: topicId
+  - name: graded
+  - name: downloaded
+
+- kind: Response
+  properties:
+  - name: questionId
+  - name: score
+
+- kind: Response
+  properties:
+  - name: topicId
+  - name: submitted
+
+- kind: Response
+  properties:
+  - name: userId
+  - name: questionId
+
+- kind: VideoTransaction
+  properties:
+  - name: userId
+  - name: assignmentId
+
+- kind: VideoTransaction
+  properties:
+  - name: userId
+  - name: assignmentId
+  - name: downloaded
+
+- kind: VideoTransaction
+  properties:
+  - name: userId
+  - name: videoId
+  - name: downloaded
+    direction: desc
+
+- kind: VideoTransaction
+  properties:
+  - name: userId
+  - name: videoId
+  - name: graded
+  - name: downloaded
+
+
