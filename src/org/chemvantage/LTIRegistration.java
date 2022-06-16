@@ -822,57 +822,43 @@ public class LTIRegistration extends HttpServlet {
 						deepLinking.addProperty("target_link_uri", iss + "/lti/deeplinks");
 						deepLinking.addProperty("label", "ChemVantage" + (iss.contains("dev-vantage")?" Development":""));
 						debug.append("c");
-						switch (openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString()) {
-						case "moodle":
-							try {
-								deepLinking.add("placements", openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("placements").getAsJsonArray());
-							} catch (Exception e) {
-								JsonArray messagesSupported = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("messages_supported").getAsJsonArray();
-								Iterator<JsonElement> iterator = messagesSupported.iterator();
-								JsonObject message;
-								while (iterator.hasNext()) {
-									message = iterator.next().getAsJsonObject();
-									if ("LtiDeepLinkingRequest".equals(message.get("type").getAsString()) && message.get("placements")!=null) {
-										deepLinking.add("placements", message.get("placements").getAsJsonArray());
-										break;
-									};
-								}
+						try {
+							JsonArray messagesSupported = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("messages_supported").getAsJsonArray();
+							Iterator<JsonElement> iterator = messagesSupported.iterator();
+							JsonObject message;
+							while (iterator.hasNext()) {
+								message = iterator.next().getAsJsonObject();
+								if ("LtiDeepLinkingRequest".equals(message.get("type").getAsString()) && message.get("placements")!=null) {
+									deepLinking.add("placements", message.get("placements").getAsJsonArray());
+									break;
+								};
 							}
-							break;
-							default: // add LMS=specific placements for deep linking here
-						}
-					ltiMessages.add(deepLinking);
-					debug.append("d");
+						} catch (Exception e) {
+						}	
+						ltiMessages.add(deepLinking);
+						debug.append("d");
 					JsonObject resourceLaunch = new JsonObject();
 						resourceLaunch.addProperty("type",  "LtiResourceLinkRequest");
 						resourceLaunch.addProperty("target_link_uri", iss + "/lti/launch");
 						resourceLaunch.addProperty("label", "ChemVantage" + (iss.contains("dev-vantage")?" Development":""));
 						debug.append("e");
-						switch (openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString()) {
-						case "canvas":
-							break;
-						case "moodle":
-							try {
-								resourceLaunch.add("placements", openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("placements").getAsJsonArray());
-							} catch (Exception e) {
-								JsonArray messagesSupported = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("messages_supported").getAsJsonArray();
-								Iterator<JsonElement> iterator = messagesSupported.iterator();
-								JsonObject message;
-								while (iterator.hasNext()) {
-									message = iterator.next().getAsJsonObject();
-									if ("LtiResourceLinkRequest".equals(message.get("type").getAsString()) && message.get("placements")!=null) {
-										resourceLaunch.add("placements", message.get("placements").getAsJsonArray());
-										break;
-									};
-								}
+						try {
+							JsonArray messagesSupported = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("messages_supported").getAsJsonArray();
+							Iterator<JsonElement> iterator = messagesSupported.iterator();
+							JsonObject message;
+							while (iterator.hasNext()) {
+								message = iterator.next().getAsJsonObject();
+								if ("LtiResourceLinkRequest".equals(message.get("type").getAsString()) && message.get("placements")!=null) {
+									resourceLaunch.add("placements", message.get("placements").getAsJsonArray());
+									break;
+								};
 							}
-							break;
-						default: // add LMS-specific placements for ResourceLinks here
+						} catch (Exception e) {
 						}
-					ltiMessages.add(resourceLaunch);
-					debug.append("f");
-				ltiToolConfig.add("messages", ltiMessages);
-			regJson.add("https://purl.imsglobal.org/spec/lti-tool-configuration", ltiToolConfig);
+						ltiMessages.add(resourceLaunch);
+						debug.append("f");
+						ltiToolConfig.add("messages", ltiMessages);
+						regJson.add("https://purl.imsglobal.org/spec/lti-tool-configuration", ltiToolConfig);
 			byte[] json_bytes = regJson.toString().getBytes("utf-8");
 			
 			String reg_endpoint = openIdConfiguration.get("registration_endpoint").getAsString();
