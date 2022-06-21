@@ -171,7 +171,7 @@ public class LTILaunch extends HttpServlet {
 				throw new Exception("Invalid oauth_consumer_key. "
 						+ "Please verify that the oauth_consumer_key is entered into your LMS exactly as you are registered with ChemVantage. "
 						+ "If your account has been inactive for more than " + ("dev".equals(use)?"30 days":"six months") + ", it may have been "
-						+ "deleted in accordance with our <a href=https://www.chemvantage.org/About#privacy target=_blank>privacy policy</a>.<br/>"
+						+ "deleted in accordance with our <a href=https://www.chemvantage.org/about.html#privacy target=_blank>privacy policy</a>.<br/>"
 						+ "Please use the <a href=https://www.chemvantage.org/lti/registration target=_blank>ChemVantage Registration Page</a> "
 						+ "to reregister your LMS.");
 			}
