@@ -241,6 +241,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				debug.append("Retrieving assignment by lineitem. ");
 				try {
 					myAssignment = assignments.get(lti_ags_lineitem_url);
+					if (myAssignment == null) myAssignment = ofy().load().type(Assignment.class).filter("lti_ags_lineitem_url",lti_ags_lineitem_url).first().now();
 					if (myAssignment == null) {
 						// get the resourceId if available from the URL or lineitem, and use it to retrieve the assignment
 						switch (d.lms_type) {
@@ -255,9 +256,7 @@ public class LTIv1p3Launch extends HttpServlet {
 						}
 						try {
 							myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).safe();
-						} catch (Exception e) {
-							myAssignment = ofy().load().type(Assignment.class).filter("lti_ags_lineitem_url",lti_ags_lineitem_url).first().now();
-						}
+						} catch (Exception e) {}
 					}
 				} catch (Exception e) {}
 			}
