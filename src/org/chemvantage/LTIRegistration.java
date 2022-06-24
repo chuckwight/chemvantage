@@ -2,7 +2,7 @@
 *   Copyright (C) 2012 ChemVantage LLC
 *   
 *	This servlet file is adapted from an open-source Java servlet 
-*	LTIProviderServlet written by Charles Severance at imsglobal.org
+*	LTIProviderServlet written by Charles Severance at 1edtech.org
 *
 *    This program is free software: you can redistribute it and/or modify
 *   it under the terms of the GNU General Public License as published by
@@ -421,8 +421,8 @@ public class LTIRegistration extends HttpServlet {
 					+ "<li>Redirection URIs: " + iss + "/lti/launch " + iss + "/lti/deeplinks" + "</li>"
 					+ "<li>Check 'Supports Deep Linking'</li>"
 					+ "<li>Content Selection URL: " + iss + "/lti/deeplinks" + "</li>"
-					+ "<li>Services | IMS LTI Assignment and Grade Services: select Use for grade sync only</li>"
-					+ "<li>Services | IMS LTI Names and Role Provisioning: select Use this service</li>"
+					+ "<li>Services | LTI Assignment and Grade Services: select Use for grade sync only</li>"
+					+ "<li>Services | LTI Names and Role Provisioning: select Use this service</li>"
 					+ "<li>Privacy | check Force SSL</li>"
 					+ "<li>Save Changes</li>"
 					+ "</ul>");
@@ -592,7 +592,7 @@ public class LTIRegistration extends HttpServlet {
 			else oauth_access_token_url = "https://canvas.instructure.com/login/oauth2/token";
 			break;
 		case "LTI Certification":
-		case "IMS Certification":
+		case "1EdTech Certification":
 			platform_id = "https://ltiadvantagevalidator.imsglobal.org";
 			oidc_auth_url = "https://ltiadvantagevalidator.imsglobal.org/ltitool/oidcauthurl.html";
 			well_known_jwks_url = "https://oauth2server.imsglobal.org/jwks";

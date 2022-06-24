@@ -49,7 +49,7 @@
 <form id=regform method=post action='/lti/registration'>
 
 Please complete the form below to create a trusted LTI Advantage connection between your LMS and ChemVantage 
-that is convenient, secure and <a href=https://site.imsglobal.org/certifications?query=chemvantage>certified by IMS</a>.
+that is convenient, secure and <a href=https://site.imsglobal.org/certifications?query=chemvantage>certified by 1EdTech</a>.
 When you submit the form, ChemVantage will send a registration request to your LMS. If successful, you  
 will need to activate the deployment in your LMS before a launch to ChemVantage can take place.<br/><br/>
 

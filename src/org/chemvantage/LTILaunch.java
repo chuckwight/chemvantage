@@ -366,7 +366,7 @@ public class LTILaunch extends HttpServlet {
 		if (now.after(sept21)) {	// refuse assignment creation request
 			StringBuffer blocked = new StringBuffer();
 			blocked.append("<h2>LTIv1.1 Assignment Creation Failed</h2>"
-					+ "LTI version 1.1 has been deprecated by IMS Global Learning Solutions and is no longer supported by ChemVantage for creation of new "
+					+ "LTI version 1.1 has been deprecated by 1EdTech and is no longer supported by ChemVantage for creation of new "
 					+ "assignments. Please register your LMS with ChemVantage at https://www.chemvantage.org/lti/registration to create new assignments "
 					+ "using LTI Advantage, which has updated security features.<br/><br/>"
 					+ "Existing LTIv1.1 assignments will be accessible for students and instuctors until June 30, 2022. We apologize for the inconvenience "

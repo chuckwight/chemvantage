@@ -51,7 +51,7 @@ public class ReportScore extends HttpServlet {
 	
 	public String getServletInfo() {
 		return "ChemVantage servlet reports a single Score object back to a user's LMS as a Task "
-				+ "using the IMS LTI 1.1 Learning Information Services API or LTIAdvantage 1.3.0 API.";
+				+ "using the 1EdTech LTI 1.1 Learning Information Services API or LTIAdvantage 1.3.0 API.";
 	}
 	
 	@Override
