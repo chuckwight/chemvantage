@@ -917,7 +917,13 @@ public class LTIRegistration extends HttpServlet {
 			String oidc_auth_url = openIdConfiguration.get("authorization_endpoint").getAsString();
 			String oauth_access_token_url = openIdConfiguration.get("token_endpoint").getAsString();
 			String well_known_jwks_url = openIdConfiguration.get("jwks_uri").getAsString();
-			String lms = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString();
+			
+			String lms = "unknown";
+			try {
+				lms = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString();
+			} catch (Exception e) {	
+				sendEmail("ChemVantage Administrator","admin@chemvantage.org","Dynamic Registration Error: LMS Type Unknown",openIdConfiguration.toString());
+			}
 
 			String contact_name = request.getParameter("sub");
 			String contact_email = request.getParameter("email");
@@ -934,7 +940,7 @@ public class LTIRegistration extends HttpServlet {
 			ofy().save().entity(d);
 			return d;
 		} catch (Exception e) {
-			throw new Exception("Failed to create new deployment in ChemVantage: " + e.toString()); // + "<br/>OpenId Configuration: " + openIdConfiguration.toString() + "<br/>Registration Response: " + registrationResponse.toString());
+			throw new Exception("Failed to create new deployment in ChemVantage: " + e.toString() + "<br/>OpenId Configuration: " + openIdConfiguration.toString() + "<br/>Registration Response: " + registrationResponse.toString());
 		}
 	}
 	
