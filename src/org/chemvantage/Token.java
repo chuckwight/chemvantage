@@ -44,7 +44,7 @@ public class Token extends HttpServlet {
 			
 			String deployment_id = request.getParameter("lti_deployment_id");
 			debug.append("deployment_id: " + deployment_id + "<br>");
-			if (deployment_id == null) deployment_id = "";
+			//if (deployment_id == null) deployment_id = "";
 			
 			String client_id = request.getParameter("client_id");
 			debug.append("client_id: " + client_id + "<br>");
@@ -129,10 +129,10 @@ public class Token extends HttpServlet {
 			if (d == null) throw new Exception("The deployment_id " + deployment_id + " is not known.<br/>"
 					+ "Please check that your LMS has been registered properly with ChemVantage.<br/>"
 					+ "Deployments are deleted automatically after 6 months of inactivity.<br/>"
-					+ "You may register again at <a href='https://www.chgemvantage.org/lti/registration'>https://www.chgemvantage.org/lti/registration</a>");
+					+ "You may register again at <a href='https://www.chemvantage.org/lti/registration'>https://www.chemvantage.org/lti/registration</a>");
 			return d;
 		}
-		
+
 		// DeploymentId was not sent; prepare to search for all deployments from this platform:
 		Key<Deployment> kstart = Key.create(Deployment.class, platform_id);
 		Key<Deployment> kend = Key.create(Deployment.class, platform_id + "~");			
