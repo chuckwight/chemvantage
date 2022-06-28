@@ -96,8 +96,6 @@ public class Token extends HttpServlet {
 			debug.append("Sending token: " + oidc_auth_url + "<p>");
 			
 			response.sendRedirect(oidc_auth_url);
-			//d.claims = oidc_auth_url;
-			//ofy().save().entity(d);
 		} catch (Exception e) {
 			response.getWriter().println("<h3>Failed Auth Token</h3>" + e.toString() + " " + e.getMessage() + "<br>" + debug.toString());
 		}
@@ -121,6 +119,7 @@ public class Token extends HttpServlet {
 			if (d == null) {
 				try {  // look for a deployment with a blank deployment_id from this platform
 					d = ofy().load().type(Deployment.class).id(platform_id + "/").safe();
+					ofy().delete().entity(d);
 					d.platform_deployment_id = platform_id + "/" + deployment_id;
 					d.created = new Date();
 					ofy().save().entity(d).now();

@@ -52,7 +52,13 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
+import javax.mail.Message;
+import javax.mail.Session;
+import javax.mail.Transport;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -112,7 +118,9 @@ public class LTIv1p3Launch extends HttpServlet {
 						+ "Please check to ensure that your LMS is registered properly. Contact admin@chemvantage.org for assistance.");
 			}
 		} catch (Exception e) {	
-			response.sendError(401, "Status 401: " + e.toString());
+			String message = "LTI ResourceRequestLaunch Failure. Status 401: " + e.toString() + e.getMessage();
+			sendEmailToAdmin(message);
+			response.sendError(401, message);
 		}
 	}
 
@@ -740,5 +748,21 @@ public class LTIv1p3Launch extends HttpServlet {
 			users.put(sig, user);
 		}
 		return user;
+	}
+	
+	private void sendEmailToAdmin(String message) {
+		Properties props = new Properties();
+		Session session = Session.getDefaultInstance(props, null);
+
+		try {
+			Message msg = new MimeMessage(session);
+			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
+			msg.addRecipient(Message.RecipientType.TO,
+					new InternetAddress("admin@chemvantage.org", "ChemVantage"));
+			msg.setSubject("DeepLinking Error");
+			msg.setContent(message,"text/html");
+			Transport.send(msg);
+		} catch (Exception e) {
+		}
 	}
 }	
