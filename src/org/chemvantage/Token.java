@@ -44,6 +44,7 @@ public class Token extends HttpServlet {
 			
 			String deployment_id = request.getParameter("lti_deployment_id");
 			debug.append("deployment_id: " + deployment_id + "<br>");
+			if (deployment_id == null) deployment_id = "";
 			
 			String client_id = request.getParameter("client_id");
 			debug.append("client_id: " + client_id + "<br>");
@@ -116,27 +117,24 @@ public class Token extends HttpServlet {
 		// Take the optimistic route first; this should always work if the deployment_id has been provided, else return null;
 		if (deployment_id != null) {
 			String platform_deployment_id = platform_id + "/" + deployment_id;
-			//if (platform_deployment_id.lastIndexOf("/") == platform_deployment_id.length()-1) platform_deployment_id = platform_deployment_id.substring(0, platform_deployment_id.length()-1);
 			Deployment d = ofy().load().type(Deployment.class).id(platform_deployment_id).now();
-			if (d==null) {
-				String reg = null;
-				String project_id = System.getProperty("com.google.appengine.application.id");
-				switch (project_id) {
-				case "dev-vantage-hrd":
-					reg = "https://dev-vantage-hrd.appspot.com/lti/registration";
-					break;
-				case "chem-vantage-hrd":
-					reg = "https://www.chemvantage.org/lti/registration";
+			if (d == null) {
+				try {  // look for a deployment with a blank deployment_id from this platform
+					d = ofy().load().type(Deployment.class).id(platform_id + "/").safe();
+					d.platform_deployment_id = platform_id + "/" + deployment_id;
+					d.created = new Date();
+					ofy().save().entity(d).now();
+				} catch (Exception e) {
 				}
-				throw new Exception("The deployment_id " + deployment_id + " is not known.<br/>"
-						+ "Please check that your LMS has been registered properly with ChemVantage.<br/>"
-						+ "Deployments are deleted automatically after 6 months of inactivity.<br/>"
-						+ "You may register again at <a href='" + reg + "'>" + reg + "</a>");
 			}
-			else return d;
+			if (d == null) throw new Exception("The deployment_id " + deployment_id + " is not known.<br/>"
+					+ "Please check that your LMS has been registered properly with ChemVantage.<br/>"
+					+ "Deployments are deleted automatically after 6 months of inactivity.<br/>"
+					+ "You may register again at <a href='https://www.chgemvantage.org/lti/registration'>https://www.chgemvantage.org/lti/registration</a>");
+			return d;
 		}
-
-		// Prepare to search for all deployments from this platform:
+		
+		// DeploymentId was not sent; prepare to search for all deployments from this platform:
 		Key<Deployment> kstart = Key.create(Deployment.class, platform_id);
 		Key<Deployment> kend = Key.create(Deployment.class, platform_id + "~");			
 		List<Deployment> deployments = null;
