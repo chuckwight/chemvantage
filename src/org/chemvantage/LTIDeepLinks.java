@@ -53,7 +53,6 @@ public class LTIDeepLinks extends HttpServlet {
 		try {
 			if ("LTI-1p0".equals(request.getParameter("lti_version"))) throw new Exception("Sorry, deep linking is only available for connections using LTI Advantage.");
 			JsonObject claims = validateDeepLinkRequest(request);
-			if (claims.get("iss").getAsString().contains("partners.brightspace.com")) sendEmailToAdmin(claims.toString());
 			User user = null;
 			if (request.getParameter("state") != null) {
 				validateStateToken(request); // ensures proper OIDC authorization flow completed							
