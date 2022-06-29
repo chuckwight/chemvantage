@@ -148,13 +148,13 @@ public class LTIRegistration extends HttpServlet {
 				String token = validateApplicationFormContents(request);
 				debug.append("Debug:0");
 				if (dynamicRegistration) {
-					debug.append("1");
+					debug.append("1<br/>"+token);
 					JsonObject openIdConfiguration = getOpenIdConfiguration(request);  // LTIDRSv1p0 section 3.4
-					debug.append("2");
+					debug.append("2<br/>"+openIdConfiguration.toString());
 					validateOpenIdConfigurationURL(request.getParameter("openid_configuration"),openIdConfiguration);  // LTIDRSv1p0 section 3.5.1
 					debug.append("3");
 					JsonObject registrationResponse = postRegistrationRequest(openIdConfiguration,request);  // LTIDRSv1p0 section 3.5.2 & 3.6
-					debug.append("4");
+					debug.append("4</br/>"+registrationResponse.toString());
 					Deployment d = createNewDeployment(openIdConfiguration,registrationResponse,request);
 					debug.append("5");
 					sendApprovalEmail(d,request);
@@ -167,7 +167,7 @@ public class LTIRegistration extends HttpServlet {
 				}
 			}
 		} catch (Exception e) {
-			String message = (e.getMessage()==null?e.toString():e.getMessage()) + debug.toString();
+			String message = (e.getMessage()==null?e.toString():e.getMessage());
 			String registrationURL = "/Registration.jsp?message=" + URLEncoder.encode(message,"utf-8");
 			Enumeration<String> enumeration = request.getParameterNames();
 			while(enumeration.hasMoreElements()){
@@ -176,7 +176,7 @@ public class LTIRegistration extends HttpServlet {
 	            registrationURL += "&" + parameterName + "=" + URLEncoder.encode(parameterValue,"utf-8");
 	        }
 			try {
-				if (dynamicRegistration && debug.length()>0) sendEmail("ChemVantage Administrator","admin@chemvantage.org","Dynamic Registration Error",message);
+				if (dynamicRegistration && debug.length()>0) sendEmail("ChemVantage Administrator","admin@chemvantage.org","Dynamic Registration Error",message+"<br/>"+debug.toString());
 			} catch (Exception e1) {
 				e1.printStackTrace();
 			}
