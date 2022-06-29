@@ -39,6 +39,7 @@ public class Deployment implements java.lang.Cloneable {
 			throws Exception {
 		// Ensure that the platform_id is secure and does not end in a slash:
 		if (platform_id.endsWith("/")) platform_id = platform_id.substring(0,platform_id.length()-1);
+		if (deployment_id == null) deployment_id = "";
 		
 		URL platform = new URL(platform_id);
 		if (!platform.getProtocol().equals("https")) throw new Exception("All URLs must be secure (https)");

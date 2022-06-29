@@ -86,7 +86,7 @@ public class LTIDeepLinks extends HttpServlet {
 			}
 			sendEmailToAdmin(message);
 			//if (!message.contains("Unauthorized")) sendEmailToAdmin(message);
-			response.sendError(401,e.getMessage());
+			response.sendError(401,e.getMessage()==null?e.toString():e.getMessage());
 		}
 	}
 
