@@ -154,7 +154,7 @@ public class LTIRegistration extends HttpServlet {
 					validateOpenIdConfigurationURL(request.getParameter("openid_configuration"),openIdConfiguration);  // LTIDRSv1p0 section 3.5.1
 					debug.append("3");
 					JsonObject registrationResponse = postRegistrationRequest(openIdConfiguration,request);  // LTIDRSv1p0 section 3.5.2 & 3.6
-					debug.append("4</br/>"+registrationResponse.toString());
+					debug.append("4<br/>"+registrationResponse.toString());
 					Deployment d = createNewDeployment(openIdConfiguration,registrationResponse,request);
 					debug.append("5");
 					sendApprovalEmail(d,request);
@@ -762,7 +762,7 @@ public class LTIRegistration extends HttpServlet {
 	JsonObject postRegistrationRequest(JsonObject openIdConfiguration,HttpServletRequest request) throws Exception {
 		String registrationToken = request.getParameter("registration_token");
 		StringBuffer registrationResponseBuffer = new StringBuffer();
-		JsonObject registrationResponse = null;
+		JsonObject registrationResponse = new JsonObject();;
 		JsonObject regJson = new JsonObject();
 		StringBuffer debug = new StringBuffer("a");
 		
@@ -871,7 +871,16 @@ public class LTIRegistration extends HttpServlet {
 			uc.setRequestProperty("Content-Type", "application/json");
 			uc.setRequestProperty("Content-Length", String.valueOf(json_bytes.length));
 			uc.setRequestProperty("Accept", "application/json");
-			if (iss.equals("https://www.chemvantage.org")) uc.setRequestProperty("Host", "www.chemvantage.org"); // prevents code 400 failure in Moodle due to getRemoteHost()->chem-vantage-hrd.appspot.com
+			
+			try {
+				switch (openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString()) {
+				case "moodle": 
+					if (iss.equals("https://www.chemvantage.org")) uc.setRequestProperty("Host", "www.chemvantage.org"); // prevents code 400 failure in Moodle due to getRemoteHost()->chem-vantage-hrd.appspot.com
+					break;
+				default:
+				}
+			} catch (Exception e) {}
+			
 			uc.setDoOutput(true);
 			uc.setDoInput(true);
 			debug.append("c");
@@ -897,14 +906,14 @@ public class LTIRegistration extends HttpServlet {
 			}
 			if (reader != null) reader.close();
 			debug.append("i");
-			if (uc.getResponseCode() == 401) throw new Exception("Platform refused registration request with code 401:<br/>" + registrationResponse.toString());
+			if (uc.getResponseCode() >= 400) throw new Exception("Platform refused registration request with code " + uc.getResponseCode() + ":<br/>" + registrationResponse.toString());
 		} catch (Exception e) {
 			throw new Exception("Posting registration request to the LMS platform failed:<br/> " 
-					+ e.toString() + " " + e.getMessage() + "<br/>"
-					+ "Registration token: " + registrationToken + "<br/>"
-					+ "OpenIdConfiguration: " + openIdConfiguration + "<br/>"
-					+ "Registration JSON: " + regJson + "<br/>"
-					+ "Registration Response: " + registrationResponseBuffer.toString() + "<br/>"
+					+ (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>"
+					+ "Registration token: " + (registrationToken==null?"null":registrationToken) + "<br/>"
+					+ "OpenIdConfiguration: " + (openIdConfiguration==null?"null":openIdConfiguration.toString()) + "<br/>"
+					+ "Registration JSON: " + (regJson==null?"null":regJson.toString()) + "<br/>"
+					+ "Registration Response: " + (registrationResponseBuffer==null?"null":registrationResponseBuffer.toString()) + "<br/>"
 					+ debug.toString());
 		}
 		return registrationResponse;
