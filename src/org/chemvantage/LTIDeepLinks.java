@@ -77,15 +77,15 @@ public class LTIDeepLinks extends HttpServlet {
 			}
 		} catch (Exception e) {	 
 			Enumeration<String> parameterNames = request.getParameterNames();
-			String message = e.toString() + " " + e.getMessage();
+			String message = e.getMessage()==null?e.toString():e.getMessage();
 			message += "<br/>To: " + request.getServerName();
 			message += "<br/>From: " + request.getRemoteHost();
 			while (parameterNames.hasMoreElements()) {
 				String name = parameterNames.nextElement();
 				message += "<br />" + name + ": " + request.getParameter(name);
 			}
-			sendEmailToAdmin(message);
-			//if (!message.contains("Unauthorized")) sendEmailToAdmin(message);
+			//sendEmailToAdmin(message);
+			if (!message.contains("Unauthorized")) sendEmailToAdmin(message);
 			response.sendError(401,e.getMessage()==null?e.toString():e.getMessage());
 		}
 	}
