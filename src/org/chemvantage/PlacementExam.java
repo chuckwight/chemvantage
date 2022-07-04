@@ -134,6 +134,18 @@ public class PlacementExam extends HttpServlet {
 					ofy().save().entity(a).now();
 					response.sendRedirect("/PlacementExam?sig=" + user.getTokenSignature());
 					break;
+				case "Set Allowed Attempts":
+					a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+					try {
+						a.attemptsAllowed = Integer.parseInt(request.getParameter("AttemptsAllowed"));
+						if (a.attemptsAllowed<1) a.attemptsAllowed = 1;
+					} catch (Exception e) {
+						a.attemptsAllowed = null;
+					}
+					ofy().save().entity(a).now();
+					response.sendRedirect("/PlacementExam?sig=" + user.getTokenSignature());
+					break;
+				
 				case "AddQuestion":
 				case "UpdateQuestion":
 					if (user.isEditor()) {
@@ -192,7 +204,7 @@ public class PlacementExam extends HttpServlet {
 			}
 			
 			buf.append("From here, you may<UL>"
-					+ "<LI><a href='/PlacementExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + "'>Customize this exam</a> to set the time allowed and select the available question items.</LI>"
+					+ "<LI><a href='/PlacementExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + "'>Customize this exam</a> to set the time allowed, attempts allowed, and select the available question items.</LI>"
 					+ (supportsMembership?"<LI><a href='/PlacementExam?UserRequest=ReviewExamScores&sig=" + user.getTokenSignature() + "'>Review the exam results</a> and (optionally) assign partial credit for answers</LI>":"")
 					+ "</UL>");
 			buf.append("<a style='text-decoration: none' href='/PlacementExam?UserRequest=PrintExam&sig=" + user.getTokenSignature() + "'>"
@@ -238,7 +250,6 @@ public class PlacementExam extends HttpServlet {
 			// Now we will retrieve or create a PlacementExamTransaction entity:
 			PlacementExamTransaction pt = null;
 			
-			
 			// Check to see if this user has any pending exams:
 			// A blank transaction means a student has paid for an exam but not taken it yet
 			Date now = new Date();
@@ -247,6 +258,10 @@ public class PlacementExam extends HttpServlet {
 			pt = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("graded",null).filter("downloaded >",startTime).first().now();
 			if (pt != null) resumingExam = true;
 			else {  // this is a new exam, either newly paid or authorized retake
+				if (a.attemptsAllowed != null) {
+					int nAttempts = ofy().load().type(PlacementExamTransaction.class).filter("assignmentId",a.id).filter("userId",user.getHashedId()).count();
+					if (nAttempts >= a.attemptsAllowed) return "<h2>Sorry, you are only allowed " + a.attemptsAllowed + " attempt" + (a.attemptsAllowed==1?"":"s") + " on this assignment.</h2>";
+				}	
 				pt = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("graded",null).filter("downloaded ",null).first().now(); // newly  paid
 				Long transactionId = pt==null?null:pt.id;  // use the same id if it exists
 				pt = new PlacementExamTransaction(a.topicIds,user.getId(),now,null,new int[a.topicIds.size()],new int[a.topicIds.size()],user.getLisResultSourcedid());
@@ -615,8 +630,11 @@ public class PlacementExam extends HttpServlet {
 
 				buf.append("<tr><td>" + pet.id + "</td><td>" + df.format(pet.downloaded) + "</td><td align=center>" + (pet.graded==null?"-":pct + "%") +  "</td></tr>");
 			}
-			buf.append("</table><br>Missing scores indicate quizzes that were downloaded but not submitted for scoring.<p>");
+			buf.append("</table><br>Missing scores indicate quizzes that were downloaded but not submitted for scoring.<br/><br/>");
 
+			if (a.attemptsAllowed == null) buf.append("You may repeat this assignment to improve your score.");
+			else if (a.attemptsAllowed>pets.size()) buf.append("You may attempt this assignment as many as " + a.attemptsAllowed + " times to obtain a better score.");
+			else buf.append("The number of allowed attempts for this assignment (" + a.attemptsAllowed + ") has been reached.");
 		}
 		catch (Exception e) {
 			buf.append(e.toString() + ": " + e.getMessage());
@@ -1121,14 +1139,23 @@ public class PlacementExam extends HttpServlet {
 			buf.append("Each placement exam consists of items selected at random from the items below:<ul>"
 					+ "<li>30 questions worth 2 points each</li>"
 					+ "<li>10 questions worth 4 points each</li>"
-					+ "for a total of 100 points.<p>");
+					+ "for a total of 100 points.</ul>");
 			buf.append("The default time allowed to complete the exam is 60 minutes, but you may change this "
-					+ "(e.g., to create a special assignment for a student requiring extended time up to 300 minutes).<br>");
-			buf.append("<form action=/PlacementExam method=post><input type=hidden name=sig value=" + user.getTokenSignature() + ">" 
+					+ "(e.g., to create a special assignment for a student requiring extended time up to 300 minutes).<br/><br/>");
+			buf.append("<form action=/PlacementExam method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />" 
 					+ "Time allowed for this assignment: <input type=text size=5 name=TimeAllowed value=" + a.timeAllowed/60. + "> minutes. "
 					+ "<input type=submit name=UserRequest value='Set Allowed Time'><br>"
-					+ "</form><p>"
-					+ "Select the items to be included in exams assigned to your class.<p>");
+					+ "</form><br/><br/>");
+			
+			buf.append("By default, students may attempt this placement exam as many times as they wish. This rewards students who persist "
+					+ "to achieve a better score. However, you may limit the number of attempts here. Leave the field blank to permit unlimited attempts.<br/><br/>"
+					+ "<form action=/PlacementExam method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "Number of attempts allowed for this assignment: <input type=text size=10 name=AttemptsAllowed " 
+					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /> "
+					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' /><br/>"
+					+ "</form><br/><br/>");
+			
+			buf.append("Select the items to be included in exams assigned to your class.<br/><br/>");
 
 			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> questionKeys_04pt = new ArrayList<Key<Question>>();
