@@ -120,6 +120,17 @@ public class Quiz extends HttpServlet {
 				ofy().save().entity(a).now();
 				doGet(request,response);
 				break;
+			case "Set Allowed Attempts":
+				a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+				try {
+					a.attemptsAllowed = Integer.parseInt(request.getParameter("AttemptsAllowed"));
+					if (a.attemptsAllowed<1) a.attemptsAllowed = 1;
+				} catch (Exception e) {
+					a.attemptsAllowed = null;
+				}
+				ofy().save().entity(a).now();
+				response.sendRedirect("/Quiz?sig=" + user.getTokenSignature());
+				break;
 			case "Synchronize Scores":
 				if (synchronizeScores(user,request)) doGet(request,response);
 				else out.println("Synchronization request failed.");
@@ -155,7 +166,7 @@ public class Quiz extends HttpServlet {
 			}
 			
 			buf.append("From here, you may<UL>"
-					+ "<LI><a href='/Quiz?UserRequest=AssignQuizQuestions&sig=" + user.getTokenSignature() + "'>Customize this quiz</a> to set the time allowed and select the available question items.</LI>"
+					+ "<LI><a href='/Quiz?UserRequest=AssignQuizQuestions&sig=" + user.getTokenSignature() + "'>Customize this quiz</a> to set the time allowed, number of attempts allowed, and select the available question items.</LI>"
 					+ (supportsMembership?"<LI><a href='/Quiz?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' quiz scores</a></LI>":"")
 					+ "</UL>");
 			buf.append("<a style='text-decoration: none' href='/Quiz?UserRequest=PrintQuiz&sig=" + user.getTokenSignature() + "'>"
@@ -192,7 +203,7 @@ public class Quiz extends HttpServlet {
 		
 		try {
 			Assignment qa = qcache.getAssignment(user.getAssignmentId());
-			long assignmentId = qa==null?0L:qa.id;
+			long assignmentId = (qa==null?0L:qa.id);
 			long topicId = qa==null?tId:qa.topicId;
 			Topic topic = qcache.getTopic(topicId);
 			
@@ -217,6 +228,10 @@ public class Quiz extends HttpServlet {
 
 			String lis_result_sourcedid = user.getLisResultSourcedid();
 			if (qt == null || qt.getGraded() != null) {
+				if (qa.attemptsAllowed != null) {
+					int nAttempts = ofy().load().type(QuizTransaction.class).filter("assignmentId",assignmentId).filter("userId",user.getHashedId()).count();
+					if (nAttempts >= qa.attemptsAllowed) return "<h2>Sorry, you are only allowed " + qa.attemptsAllowed + " attempt" + (qa.attemptsAllowed==1?"":"s") + " on this assignment.</h2>";
+				}
 				qt = new QuizTransaction(topicId, topic.getTitle(), user.getId(), now, null, 0, assignmentId, 0,
 						user.getLisResultSourcedid());
 				ofy().save().entity(qt).now(); // creates a long id value to use in random number generator
@@ -485,10 +500,10 @@ public class Quiz extends HttpServlet {
 			}
 			
 			// If qa==null this is an anonymous user, otherwise is an LTI user:
-			buf.append((qa==null?"<a href=/Quiz?TopicId=" + qt.topicId + "&sig=" + user.getTokenSignature() + ">Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a> " :
-			"You may take this quiz again by clicking the assignment link in your learning management system ")			
-			+ "or <a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a>.");
-
+			if (user.isAnonymous()) buf.append("<a href=/Quiz?TopicId=" + qt.topicId + "&sig=" + user.getTokenSignature() + ">Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a> ");
+			else if (qa.attemptsAllowed==null) buf.append("You may take this quiz again by clicking the assignment link in your learning management system "		
+					+ "or <a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a>.");
+			else buf.append("This quiz may be attempted a total of " + qa.attemptsAllowed + " times to improve your score.");
 		} catch (Exception e) {
 			buf.append("Sorry, this quiz could not be scored.<br>" + e.getMessage());
 		}
@@ -894,6 +909,14 @@ public class Quiz extends HttpServlet {
 					+ "Time allowed for this assignment: <input type=text size=5 name=TimeAllowed value=" + a.timeAllowed/60. + "> minutes. "
 					+ "<input type=submit name=UserRequest value='Set Allowed Time'><br>"
 					+ "</form><p>");
+			buf.append("By default, students may attempt this quiz as many times as they wish. This rewards students who persist "
+					+ "to achieve a better score. However, you may limit the number of attempts here. Leave the field blank to permit unlimited attempts.<br/>"
+					+ "<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "Number of attempts allowed for this assignment: <input type=text size=10 name=AttemptsAllowed " 
+					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /> "
+					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' /><br/>"
+					+ "</form><br/><br/>");
+			
 			buf.append("You may select the items that will be used for this group by checking the boxes in the left column. "
 					+ "Students are provided answers to the items that they answer incorrectly. "
 					+ "Therefore, the total number of questions should be "
