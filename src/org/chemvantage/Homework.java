@@ -126,6 +126,17 @@ public class Homework extends HttpServlet {
 					qcache.removeQuestion(key);
 				}
 				break;
+			case "Set Allowed Attempts":
+				a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+				try {
+					a.attemptsAllowed = Integer.parseInt(request.getParameter("AttemptsAllowed"));
+					if (a.attemptsAllowed<1) a.attemptsAllowed = 1;
+				} catch (Exception e) {
+					a.attemptsAllowed = null;
+				}
+				ofy().save().entity(a).now();
+				response.sendRedirect("/Homework?sig=" + user.getTokenSignature());
+				break;
 			case "Synchronize Scores":
 				if (synchronizeScores(user,request)) doGet(request,response);
 				else out.println("Synchronization request failed.");
@@ -150,17 +161,8 @@ public class Homework extends HttpServlet {
 			buf.append("<h2>Homework - " + t.title + "</h2>");
 			buf.append("<h3>Instructor Page</h3>");
 			
-			if (a.lis_outcome_service_url != null) { // give LTIv1.1 deprecation warning
-				buf.append("<div style='border: medium solid red;'>"
-						+ "<h4>Warning: This assignment uses LTI version 1.1, which is obsolete</h4>"
-						+ "This LTI specification has been deprecated due to security limitations, so this assignment will "
-						+ "not be accessible after June 30, 2022. You may re-register your LMS with ChemVantage using the "
-						+ "current LTI Advantage specification <a href=/lti/registration target=_blank>using this link</a>.<br/><br/>"
-						+ "</div><br/>");
-			}
-			
 			buf.append("From here, you may<UL>"
-					+ "<LI><a href='/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + "'>Customize this assignment</a> by selecting the assigned question items.</LI>"
+					+ "<LI><a href='/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + "'>Customize this assignment</a> by selecting the assigned question items and selecting the number of submissions allowed for each question.</LI>"
 					+ (supportsMembership?"<LI><a href='/Homework?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' homework scores</a></LI>":"")
 					+ "</UL>");
 			buf.append("<a style='text-decoration: none' href='/Homework?UserRequest=PrintHomework&sig=" + user.getTokenSignature() + "'>"
@@ -192,14 +194,11 @@ public class Homework extends HttpServlet {
 
 	String printHomework(User user, long tId, long hintQuestionId) {
 		StringBuffer buf = new StringBuffer();
-		if (user.lis_result_sourcedid != null) {  // LTIv1.1 launch; show deprecation warning
-			buf.append("<script>alert('Alert! This assignment will not be accessible after June 30, 2022.');</script>");
-		}
 		
 		try {
 			long assignmentId = user.getAssignmentId(); // should be non-zero for LTI user
 			Assignment hwa = qcache.getAssignment(assignmentId);
-			long topicId = hwa==null?tId:hwa.getTopicId();
+			long topicId = (hwa==null?tId:hwa.getTopicId());
 			Topic topic = qcache.getTopic(topicId);
 			
 			//  Load the Question items for this topic:
@@ -304,9 +303,6 @@ public class Homework extends HttpServlet {
 			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
 			debug.append("topic:"+topic.title+"...");
 			
-			q = qcache.getQuestion(k).clone(); // make a copy of the question so we can parameterize it
-			q.id = questionId;
-			
 			String lis_result_sourcedid = user.getLisResultSourcedid();
 			debug.append("lis_result_sourcedid="+lis_result_sourcedid+"...");
 			
@@ -316,6 +312,14 @@ public class Homework extends HttpServlet {
 				assignmentId = user.getAssignmentId();
 				hwa = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			} catch (Exception e) {}
+			
+			if (hwa != null && hwa.attemptsAllowed != null) {
+				int nAttempts = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("questionId",questionId).count();
+				if (nAttempts >= hwa.attemptsAllowed) return "<h2>Sorry, you are only allowed " + hwa.attemptsAllowed + " attempt" + (hwa.attemptsAllowed==1?"":"s") + " for each question on this assignment.</h2>";
+			}
+			
+			q = qcache.getQuestion(k).clone(); // make a copy of the question so we can parameterize it
+			q.id = questionId;
 			
 			// Set the Question parameters for this user (this is why we made a copy, to prevent thread collisions with a class variable)
 			String hashMe = user.getId() + (hwa==null?"":hwa.id);
@@ -462,10 +466,15 @@ public class Homework extends HttpServlet {
 							+ "<input type=hidden name=TransactionId value=" + ht.id + " />"
 							+ "<input type=hidden name=HashCode value=" + hashMe.hashCode() + " />");
 					buf.append("<font color=#EE0000>Do you need some help from your instructor or teaching assistant? </font>");
-					buf.append("<input type=submit value='Get Some Help Here'></form><br/>");
+					buf.append("<input type=submit value='Get Some Help Here'></form><br/><br/>");
 				}
-			
-				buf.append("The retry delay for this question is " + retryDelayMinutes + (retryDelayMinutes>1?" minutes. ":" minute. ") + "<br/>");
+				
+				int nAttempts = 0;
+				if (hwa != null && hwa.attemptsAllowed != null) {
+					nAttempts = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",hwa.id).count();
+					buf.append("The maximum number of attempts for each question on this assignment is " + hwa.attemptsAllowed + "<br/>");
+					if (nAttempts<hwa.attemptsAllowed) buf.append("The retry delay for this question is " + retryDelayMinutes + (retryDelayMinutes>1?" minutes. ":" minute. ") + "<br/>");
+				} else buf.append("The retry delay for this question is " + retryDelayMinutes + (retryDelayMinutes>1?" minutes. ":" minute. ") + "<br/>");
 			}  
 			else {
 				buf.append("<h3>The answer to the question was left blank.</h3>");
@@ -700,7 +709,10 @@ public class Homework extends HttpServlet {
 				for (HWTransaction hwt : hwts) {
 					buf.append("<tr align=center><td>" + hwt.id + "</td><td>" + hwt.questionId + "</td><td>" + df.format(hwt.graded) + "</td><td>" + hwt.score +  "</td></tr>");
 				}
-				buf.append("</table><p>");
+				buf.append("</table><br/><br/>");
+				
+				if (a.attemptsAllowed != null) buf.append("The maximum number of submissions for each question on this assignment is " + a.attemptsAllowed + "<br/><br/>");
+				
 			}
 		} catch (Exception e) {
 			buf.append(e.toString());
@@ -884,9 +896,15 @@ public class Homework extends HttpServlet {
 			List<Question> hwQuestions = qcache.getSortedHWQuestions(topic.id);
 					
 			buf.append("<h3>Customize Homework Assignment</h3>");
-			buf.append("<b>Topic: " + topic.title + "</b><p>");
+			buf.append("<b>Topic: " + topic.title + "</b><br/><br/>");
 					
-			if (a.timeAllowed==null) a.timeAllowed = 900; // default time for completing the exam
+			buf.append("By default, students may submit answers to the homework problems as many times as they wish. This rewards students who persist "
+					+ "to achieve a better score. However, you may limit the number of attempts here. Leave the field blank to permit unlimited attempts.<br/>"
+					+ "<form action=/Homework method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "Number of submissions allowed for each question of this assignment: <input type=text size=10 name=AttemptsAllowed " 
+					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /> "
+					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' /><br/>"
+					+ "</form><br/><br/>");
 			
 			// Allow instructor to pick individual question items from all active questions:
 			buf.append("Select the homework questions to be assigned for grading. The questions are presented below in "

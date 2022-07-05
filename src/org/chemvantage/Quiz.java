@@ -197,10 +197,6 @@ public class Quiz extends HttpServlet {
 		if (user == null) return "<h2>Launch failed because user was not authorized.</h2>";
 		StringBuffer buf = new StringBuffer();
 		
-		if (user.lis_result_sourcedid != null) {  // LTIv1.1 launch; show deprecation warning
-			buf.append("<script>alert('Alert! This assignment will not be accessible after June 30, 2022.');</script>");
-		}
-		
 		try {
 			Assignment qa = qcache.getAssignment(user.getAssignmentId());
 			long assignmentId = (qa==null?0L:qa.id);
@@ -228,7 +224,7 @@ public class Quiz extends HttpServlet {
 
 			String lis_result_sourcedid = user.getLisResultSourcedid();
 			if (qt == null || qt.getGraded() != null) {
-				if (qa.attemptsAllowed != null) {
+				if (qa != null && qa.attemptsAllowed != null) {
 					int nAttempts = ofy().load().type(QuizTransaction.class).filter("assignmentId",assignmentId).filter("userId",user.getHashedId()).count();
 					if (nAttempts >= qa.attemptsAllowed) return "<h2>Sorry, you are only allowed " + qa.attemptsAllowed + " attempt" + (qa.attemptsAllowed==1?"":"s") + " on this assignment.</h2>";
 				}
@@ -762,7 +758,9 @@ public class Quiz extends HttpServlet {
 				for (QuizTransaction qt : qts) {
 					buf.append("<tr><td>" + qt.id + "</td><td>" + df.format(qt.downloaded) + "</td><td align=center>" + (qt.graded==null?"-":100.*qt.score/qt.possibleScore + "%") +  "</td></tr>");
 				}
-				buf.append("</table><br>Missing scores indicate quizzes that were downloaded but not submitted for scoring.<p>");
+				buf.append("</table><br>Missing scores indicate quizzes that were downloaded but not submitted for scoring.<br/><br/>");
+				
+				if (a.attemptsAllowed != null) buf.append("The maximum number of attempts on this assignment is " + a.attemptsAllowed + "<br/><br/>");
 			}
 		} catch (Exception e) {
 			buf.append(e.toString());
