@@ -78,7 +78,8 @@ public class OneQuestion extends HttpServlet {
 					try {
 						Double.parseDouble(q.parseString(answer));  // throws exception for non-numeric answer
 						if (!q.agreesToRequiredPrecision(answer)) buf.append("<h3>Your answer was not correct. Please try again.</h3>");
-						else if (!q.hasCorrectSigFigs(answer)) buf.append("<h3>Oh, so close! Please try again.</h3>It appears that you've done the calculation correctly, but your answer does not have the correct number of significant figures appropriate for the data given in the question.<br/><br/>");
+						else if (!q.hasCorrectSigFigs(answer)) buf.append("<h3>Oh, so close! Please try again.</h3>It appears that you've done the calculation correctly, but your answer does not have the correct number of significant figures appropriate for the data given in the question. "
+								+ "If your answer ends with a zero, be sure to include a decimal point to indicate which digits are significant.<br/><br/>");
 					}
 					catch (Exception e2) {
 						buf.append("<h3>Your answer has the wrong format. Please try again.</h3>This question requires a numeric response expressed as an integer, decimal number, "
