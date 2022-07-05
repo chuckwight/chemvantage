@@ -445,8 +445,9 @@ public class Homework extends HttpServlet {
 						try {
 							@SuppressWarnings("unused")
 							double dAnswer = Double.parseDouble(q.parseString(studentAnswer));  // throws exception for non-numeric answer
-							if (!q.agreesToRequiredPrecision(studentAnswer)) buf.append("<h3>Incorrect Answer</h3>Your answer does not " + (q.requiredPrecision==0?"exactly match the answer in the database.":"agree with the answer in the database to within the required precision (" + q.requiredPrecision + "%).<p>"));
-							else if (!q.hasCorrectSigFigs(studentAnswer)) buf.append("<h3>Almost there!</h3>It appears that you've done the calculation correctly, but your answer does not have the correct number of significant figures appropriate for the data given in the question.<p>");
+							if (!q.agreesToRequiredPrecision(studentAnswer)) buf.append("<h3>Incorrect Answer</h3>Your answer does not " + (q.requiredPrecision==0?"exactly match the answer in the database.":"agree with the answer in the database to within the required precision (" + q.requiredPrecision + "%).<br/><br/>"));
+							else if (!q.hasCorrectSigFigs(studentAnswer)) buf.append("<h3>Almost there!</h3>It appears that you've done the calculation correctly, but your answer does not have the correct number of significant figures appropriate for the data given in the question. "
+									+ "If your answer ends in a zero, be sure to include a decimal point to indicate which digits are significant.<br/><br/>");
 						}
 						catch (Exception e2) {
 							buf.append("<h3>Wrong Format</h3>This question requires a numeric response expressed as an integer, decimal number, "

@@ -799,7 +799,7 @@ public class Question implements Serializable, Cloneable {
 		if (y <= x && y <= z) return y; 
 		else return z; 
 	} 
-	  
+/*	  
 	boolean hasCorrectSigFigs(String studentAnswer) {
 		// This method check the value to ensure that it has a number of significant figures that is consistent with Question.significantFigures
 		// Actually, it only ensures that value does not have more sig figs, because there may be an ambiguity in the number of sig figs if the 
@@ -814,6 +814,28 @@ public class Question implements Serializable, Cloneable {
 		} catch (Exception e) {  // unexpected error
 			return false;
 		}
+	}
+*/	
+	boolean hasCorrectSigFigs(String studentAnswer) {
+		if (significantFigures==0) return true;  // no sig figs required
+		
+		int exponentPosition = studentAnswer.toUpperCase().indexOf("E");
+		String mantissa = exponentPosition>=0?studentAnswer.substring(0,exponentPosition):studentAnswer;
+		
+		// check to see if the value has a trailing zero before the decimal place
+		if (mantissa.indexOf(".")==-1 && mantissa.endsWith("0")) return false;
+		
+		// strip leading (non-significant) zeros and decimals
+		while (mantissa.startsWith("0") || mantissa.startsWith(".")) mantissa = mantissa.substring(1);
+		
+		// eliminate the decimal if it still exists
+		int decimalPlace = mantissa.indexOf(".");
+		if (decimalPlace>=0) mantissa = mantissa.substring(0,decimalPlace) + mantissa.substring(decimalPlace+1);
+		
+		// see if number of remaining digits matches this.significantFigures
+		if (mantissa.length()==this.significantFigures) return true;
+		
+		return false;
 	}
 	
 	boolean agreesToRequiredPrecision(String studentAnswer) {
