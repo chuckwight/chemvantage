@@ -118,8 +118,8 @@ public class LTIv1p3Launch extends HttpServlet {
 						+ "Please check to ensure that your LMS is registered properly. Contact admin@chemvantage.org for assistance.");
 			}
 		} catch (Exception e) {	
-			String message = "LTI ResourceRequestLaunch Failure. Status 401: " + e.toString() + e.getMessage();
-			sendEmailToAdmin(message);
+			String message = "LTI ResourceLinkRequest Failure. Status 401: " + (e.getMessage()==null?e.toString():e.getMessage());
+			//sendEmailToAdmin(message);
 			response.sendError(401, message);
 		}
 	}
