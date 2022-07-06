@@ -759,7 +759,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
 			msg.addRecipient(Message.RecipientType.TO,
 					new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-			msg.setSubject("DeepLinking Error");
+			msg.setSubject("ResourceLinkRequest Error");
 			msg.setContent(message,"text/html");
 			Transport.send(msg);
 		} catch (Exception e) {
