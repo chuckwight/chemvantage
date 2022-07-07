@@ -52,13 +52,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 
-import javax.mail.Message;
-import javax.mail.Session;
-import javax.mail.Transport;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeMessage;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -749,7 +743,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		}
 		return user;
 	}
-	
+/*	
 	private void sendEmailToAdmin(String message) {
 		Properties props = new Properties();
 		Session session = Session.getDefaultInstance(props, null);
@@ -765,4 +759,5 @@ public class LTIv1p3Launch extends HttpServlet {
 		} catch (Exception e) {
 		}
 	}
+*/
 }	

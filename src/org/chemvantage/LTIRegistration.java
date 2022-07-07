@@ -146,19 +146,18 @@ public class LTIRegistration extends HttpServlet {
 			} else {
 				if (request.getParameter("email")==null) throw new Exception("Email was not given.");
 				String token = validateApplicationFormContents(request);
-				debug.append("Debug:0");
+				debug.append("Debug:0<br/>");
 				if (dynamicRegistration) {
-					debug.append("1<br/>"+token);
+					debug.append("Token:<br/>"+token+"<br/>");
 					JsonObject openIdConfiguration = getOpenIdConfiguration(request);  // LTIDRSv1p0 section 3.4
-					debug.append("2<br/>"+openIdConfiguration.toString());
+					debug.append("OpenIdConfiguration:<br/>"+openIdConfiguration.toString()+"<br/>");
 					validateOpenIdConfigurationURL(request.getParameter("openid_configuration"),openIdConfiguration);  // LTIDRSv1p0 section 3.5.1
-					debug.append("3");
+					debug.append("Valid<br/>");
 					JsonObject registrationResponse = postRegistrationRequest(openIdConfiguration,request);  // LTIDRSv1p0 section 3.5.2 & 3.6
-					debug.append("4<br/>"+registrationResponse.toString());
+					debug.append("Registration Response:<br/>"+registrationResponse.toString()+"br/>");
 					Deployment d = createNewDeployment(openIdConfiguration,registrationResponse,request);
-					debug.append("5");
+					debug.append("Deployment created: " + d.platform_deployment_id);
 					sendApprovalEmail(d,request);
-					debug.append("6");
 					response.setContentType("text/html");
 					out.println(successfulRegistrationRequestPage(openIdConfiguration,request));
 				} else {
@@ -176,6 +175,13 @@ public class LTIRegistration extends HttpServlet {
 	            registrationURL += "&" + parameterName + "=" + URLEncoder.encode(parameterValue,"utf-8");
 	        }
 			try {
+				message += "<br/>"
+						+ "Name: " + request.getParameter("sub") + "<br/>"
+						+ "Email: " + request.getParameter("email") + "<br/>"
+						+ "Org: " + request.getParameter("aud") + "<br/>"
+						+ "URL: " + request.getParameter("url") + "<br/>"
+						+ "LMS: " + request.getParameter("lms") + "<br/>"
+						+ debug.toString();
 				if (dynamicRegistration && debug.length()>0) sendEmail("ChemVantage Administrator","admin@chemvantage.org","Dynamic Registration Error",message+"<br/>"+debug.toString());
 			} catch (Exception e1) {
 				e1.printStackTrace();
@@ -760,162 +766,154 @@ public class LTIRegistration extends HttpServlet {
 	}
 	
 	JsonObject postRegistrationRequest(JsonObject openIdConfiguration,HttpServletRequest request) throws Exception {
+		
 		String registrationToken = request.getParameter("registration_token");
 		StringBuffer registrationResponseBuffer = new StringBuffer();
 		JsonObject registrationResponse = new JsonObject();;
 		JsonObject regJson = new JsonObject();
 		StringBuffer debug = new StringBuffer("a");
-		
-		try {
-			regJson.addProperty("application_type","web");
-			JsonArray grantTypes = new JsonArray();
-				grantTypes.add("implicit");
-				grantTypes.add("client_credentials");
-				regJson.add("grant_types", grantTypes);
-			JsonArray responseTypes = new JsonArray();
-				responseTypes.add("id_token");
-				regJson.add("response_types", responseTypes);
-			String iss = null;
-			String project_id = System.getProperty("com.google.appengine.application.id");
-			String domain = null;
-			switch (project_id) {
-			case "dev-vantage-hrd":
-				iss = "https://dev-vantage-hrd.appspot.com";
-				domain = "dev-vantage-hrd.appspot.com";
-				break;
-			case "chem-vantage-hrd":
-				iss = "https://www.chemvantage.org";
-				domain = "chemvantage.org";
-			}
-			JsonArray redirectUris = new JsonArray();
-				redirectUris.add(iss + "/lti/launch");
-				redirectUris.add(iss + "/lti/deeplinks");
-				regJson.add("redirect_uris", redirectUris);
-			regJson.addProperty("initiate_login_uri", iss + "/auth/token");
-			regJson.addProperty("client_name", "ChemVantage" + (iss.contains("dev-vantage")?" Development":""));
-			regJson.addProperty("jwks_uri", iss + "/jwks");
-			regJson.addProperty("logo_uri", iss + "/images/CVLogo_thumb.png");
-			regJson.addProperty("token_endpoint_auth_method", "private_key_jwt");
-			JsonArray contactEmails = new JsonArray();
-				contactEmails.add("admin@chemvantage.org");
-				regJson.add("contacts", contactEmails);		
-			regJson.addProperty("client_uri", iss);
-			regJson.addProperty("tos_uri", iss + "/about.html#terms");
-			regJson.addProperty("policy_uri", iss + "/about.html#privacy");
-			regJson.addProperty("scope", "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly https://purl.imsglobal.org/spec/lti-ags/scope/score https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly");
-			JsonObject ltiToolConfig = new JsonObject();
-				ltiToolConfig.addProperty("domain", domain);
-				ltiToolConfig.addProperty("description",  "ChemVantage is an Open Education Resource for General Chemistry.");
-				ltiToolConfig.addProperty("target_link_uri", iss + "/lti/launch");
-				JsonArray idTokenClaims = new JsonArray();
-					idTokenClaims.add("iss");
-					idTokenClaims.add("sub");
-					idTokenClaims.add("email");
-					idTokenClaims.add("name");
-					idTokenClaims.add("given_name");
-					idTokenClaims.add("family_name");
-				ltiToolConfig.add("claims", idTokenClaims);
-				debug.append("b");
-				JsonArray ltiMessages = new JsonArray();
-					JsonObject deepLinking = new JsonObject();
-						deepLinking.addProperty("type",  "LtiDeepLinkingRequest");
-						deepLinking.addProperty("target_link_uri", iss + "/lti/deeplinks");
-						deepLinking.addProperty("label", "ChemVantage" + (iss.contains("dev-vantage")?" Development":""));
-						debug.append("c");
-						try {
-							JsonArray messagesSupported = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("messages_supported").getAsJsonArray();
-							Iterator<JsonElement> iterator = messagesSupported.iterator();
-							JsonObject message;
-							while (iterator.hasNext()) {
-								message = iterator.next().getAsJsonObject();
-								if ("LtiDeepLinkingRequest".equals(message.get("type").getAsString()) && message.get("placements")!=null) {
-									deepLinking.add("placements", message.get("placements").getAsJsonArray());
-									break;
-								};
-							}
-						} catch (Exception e) {
-						}	
-						ltiMessages.add(deepLinking);
-						debug.append("d");
-					JsonObject resourceLaunch = new JsonObject();
-						resourceLaunch.addProperty("type",  "LtiResourceLinkRequest");
-						resourceLaunch.addProperty("target_link_uri", iss + "/lti/launch");
-						resourceLaunch.addProperty("label", "ChemVantage" + (iss.contains("dev-vantage")?" Development":""));
-						debug.append("e");
-						try {
-							JsonArray messagesSupported = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("messages_supported").getAsJsonArray();
-							Iterator<JsonElement> iterator = messagesSupported.iterator();
-							JsonObject message;
-							while (iterator.hasNext()) {
-								message = iterator.next().getAsJsonObject();
-								if ("LtiResourceLinkRequest".equals(message.get("type").getAsString()) && message.get("placements")!=null) {
-									resourceLaunch.add("placements", message.get("placements").getAsJsonArray());
-									break;
-								};
-							}
-						} catch (Exception e) {
-						}
-						ltiMessages.add(resourceLaunch);
-						debug.append("f");
-						ltiToolConfig.add("messages", ltiMessages);
-						regJson.add("https://purl.imsglobal.org/spec/lti-tool-configuration", ltiToolConfig);
-			byte[] json_bytes = regJson.toString().getBytes("utf-8");
-			
-			String reg_endpoint = openIdConfiguration.get("registration_endpoint").getAsString();
-			debug.append("b");
-			
-			URL u = new URL(reg_endpoint);
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			uc.setRequestMethod("POST");
-			if (registrationToken != null) uc.setRequestProperty("Authorization", "Bearer " + registrationToken);
-			uc.setRequestProperty("Content-Type", "application/json");
-			uc.setRequestProperty("Content-Length", String.valueOf(json_bytes.length));
-			uc.setRequestProperty("Accept", "application/json");
-			
-			try {
-				switch (openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString()) {
-				case "moodle": 
-					if (iss.equals("https://www.chemvantage.org")) uc.setRequestProperty("Host", "www.chemvantage.org"); // prevents code 400 failure in Moodle due to getRemoteHost()->chem-vantage-hrd.appspot.com
-					break;
-				default:
-				}
-			} catch (Exception e) {}
-			
-			uc.setDoOutput(true);
-			uc.setDoInput(true);
-			debug.append("c");
-			
-			// send the message
-			OutputStream os = uc.getOutputStream();
-		    os.write(json_bytes, 0, json_bytes.length);           
-			os.close();
-			debug.append("d");
-			
-			BufferedReader reader = null;
-			try {
-				reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-				debug.append("e");
-				registrationResponse = JsonParser.parseReader(reader).getAsJsonObject();
-				debug.append("f");
-			} catch (Exception e) {
-				debug.append("g");
-				reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));
-				String line = "";
-				while ((line = reader.readLine()) != null) registrationResponseBuffer.append(line);
-				debug.append("h");
-			}
-			if (reader != null) reader.close();
-			debug.append("i");
-			if (uc.getResponseCode() >= 400) throw new Exception("Platform refused registration request with code " + uc.getResponseCode() + ":<br/>" + registrationResponse.toString());
-		} catch (Exception e) {
-			throw new Exception("Posting registration request to the LMS platform failed:<br/> " 
-					+ (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>"
-					+ "Registration token: " + (registrationToken==null?"null":registrationToken) + "<br/>"
-					+ "OpenIdConfiguration: " + (openIdConfiguration==null?"null":openIdConfiguration.toString()) + "<br/>"
-					+ "Registration JSON: " + (regJson==null?"null":regJson.toString()) + "<br/>"
-					+ "Registration Response: " + (registrationResponseBuffer==null?"null":registrationResponseBuffer.toString()) + "<br/>"
-					+ debug.toString());
+
+		regJson.addProperty("application_type","web");
+		JsonArray grantTypes = new JsonArray();
+		grantTypes.add("implicit");
+		grantTypes.add("client_credentials");
+		regJson.add("grant_types", grantTypes);
+		JsonArray responseTypes = new JsonArray();
+		responseTypes.add("id_token");
+		regJson.add("response_types", responseTypes);
+		String iss = null;
+		String project_id = System.getProperty("com.google.appengine.application.id");
+		String domain = null;
+		switch (project_id) {
+		case "dev-vantage-hrd":
+			iss = "https://dev-vantage-hrd.appspot.com";
+			domain = "dev-vantage-hrd.appspot.com";
+			break;
+		case "chem-vantage-hrd":
+			iss = "https://www.chemvantage.org";
+			domain = "chemvantage.org";
 		}
+		JsonArray redirectUris = new JsonArray();
+		redirectUris.add(iss + "/lti/launch");
+		redirectUris.add(iss + "/lti/deeplinks");
+		regJson.add("redirect_uris", redirectUris);
+		regJson.addProperty("initiate_login_uri", iss + "/auth/token");
+		regJson.addProperty("client_name", "ChemVantage" + (iss.contains("dev-vantage")?" Development":""));
+		regJson.addProperty("jwks_uri", iss + "/jwks");
+		regJson.addProperty("logo_uri", iss + "/images/CVLogo_thumb.png");
+		regJson.addProperty("token_endpoint_auth_method", "private_key_jwt");
+		JsonArray contactEmails = new JsonArray();
+		contactEmails.add("admin@chemvantage.org");
+		regJson.add("contacts", contactEmails);		
+		regJson.addProperty("client_uri", iss);
+		regJson.addProperty("tos_uri", iss + "/about.html#terms");
+		regJson.addProperty("policy_uri", iss + "/about.html#privacy");
+		regJson.addProperty("scope", "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly https://purl.imsglobal.org/spec/lti-ags/scope/score https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly");
+		JsonObject ltiToolConfig = new JsonObject();
+		ltiToolConfig.addProperty("domain", domain);
+		ltiToolConfig.addProperty("description",  "ChemVantage is an Open Education Resource for General Chemistry.");
+		ltiToolConfig.addProperty("target_link_uri", iss + "/lti/launch");
+		JsonArray idTokenClaims = new JsonArray();
+		idTokenClaims.add("iss");
+		idTokenClaims.add("sub");
+		idTokenClaims.add("email");
+		idTokenClaims.add("name");
+		idTokenClaims.add("given_name");
+		idTokenClaims.add("family_name");
+		ltiToolConfig.add("claims", idTokenClaims);
+		debug.append("b");
+		JsonArray ltiMessages = new JsonArray();
+		JsonObject deepLinking = new JsonObject();
+		deepLinking.addProperty("type",  "LtiDeepLinkingRequest");
+		deepLinking.addProperty("target_link_uri", iss + "/lti/deeplinks");
+		deepLinking.addProperty("label", "ChemVantage" + (iss.contains("dev-vantage")?" Development":""));
+		debug.append("c");
+		try {
+			JsonArray messagesSupported = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("messages_supported").getAsJsonArray();
+			Iterator<JsonElement> iterator = messagesSupported.iterator();
+			JsonObject message;
+			while (iterator.hasNext()) {
+				message = iterator.next().getAsJsonObject();
+				if ("LtiDeepLinkingRequest".equals(message.get("type").getAsString()) && message.get("placements")!=null) {
+					deepLinking.add("placements", message.get("placements").getAsJsonArray());
+					break;
+				};
+			}
+		} catch (Exception e) {
+		}	
+		ltiMessages.add(deepLinking);
+		debug.append("d");
+		JsonObject resourceLaunch = new JsonObject();
+		resourceLaunch.addProperty("type",  "LtiResourceLinkRequest");
+		resourceLaunch.addProperty("target_link_uri", iss + "/lti/launch");
+		resourceLaunch.addProperty("label", "ChemVantage" + (iss.contains("dev-vantage")?" Development":""));
+		debug.append("e");
+		try {
+			JsonArray messagesSupported = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("messages_supported").getAsJsonArray();
+			Iterator<JsonElement> iterator = messagesSupported.iterator();
+			JsonObject message;
+			while (iterator.hasNext()) {
+				message = iterator.next().getAsJsonObject();
+				if ("LtiResourceLinkRequest".equals(message.get("type").getAsString()) && message.get("placements")!=null) {
+					resourceLaunch.add("placements", message.get("placements").getAsJsonArray());
+					break;
+				};
+			}
+		} catch (Exception e) {
+		}
+		ltiMessages.add(resourceLaunch);
+		debug.append("f");
+		ltiToolConfig.add("messages", ltiMessages);
+		regJson.add("https://purl.imsglobal.org/spec/lti-tool-configuration", ltiToolConfig);
+		byte[] json_bytes = regJson.toString().getBytes("utf-8");
+
+		String reg_endpoint = openIdConfiguration.get("registration_endpoint").getAsString();
+		debug.append("b");
+
+		URL u = new URL(reg_endpoint);
+		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+		uc.setRequestMethod("POST");
+		if (registrationToken != null) uc.setRequestProperty("Authorization", "Bearer " + registrationToken);
+		uc.setRequestProperty("Content-Type", "application/json");
+		uc.setRequestProperty("Content-Length", String.valueOf(json_bytes.length));
+		uc.setRequestProperty("Accept", "application/json");
+
+		try {
+			switch (openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString()) {
+			case "moodle": 
+				if (iss.equals("https://www.chemvantage.org")) uc.setRequestProperty("Host", "www.chemvantage.org"); // prevents code 400 failure in Moodle due to getRemoteHost()->chem-vantage-hrd.appspot.com
+				break;
+			default:
+			}
+		} catch (Exception e) {}
+
+		uc.setDoOutput(true);
+		uc.setDoInput(true);
+		debug.append("c");
+
+		// send the message
+		OutputStream os = uc.getOutputStream();
+		os.write(json_bytes, 0, json_bytes.length);           
+		os.close();
+		debug.append("d");
+
+		BufferedReader reader = null;
+		try {
+			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+			debug.append("e");
+			registrationResponse = JsonParser.parseReader(reader).getAsJsonObject();
+			debug.append("f");
+		} catch (Exception e) {
+			debug.append("g");
+			reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));
+			String line = "";
+			while ((line = reader.readLine()) != null) registrationResponseBuffer.append(line);
+			debug.append("h");
+		}
+		if (reader != null) reader.close();
+		debug.append("i");
+		if (uc.getResponseCode() >= 400) throw new Exception("Platform refused registration request with code " + uc.getResponseCode() + ":<br/>" + registrationResponseBuffer.toString());
+
 		return registrationResponse;
 	}
 	
