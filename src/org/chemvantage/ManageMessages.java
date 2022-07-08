@@ -170,9 +170,9 @@ public class ManageMessages extends HttpServlet {
 				msg += "Send failed. " + e.toString() + " " + e.getMessage();
 			}
 			break;
-		case "Send 100 Messages":  // this task is fully automated by cron.yaml
+		case "SendMessages":  // this task is fully automated by cron.yaml
 			if (request.getServerName().contains("dev-vantage")) break;  // don't run this every day from the dev server
-			int nMessagesToSend = 100;
+			int nMessagesToSend = Integer.parseInt(request.getParameter("N"));
 			List<EmailMessage> messages = ofy().load().type(EmailMessage.class).order("created").list();
 			for (EmailMessage message : messages) {
 				if (!message.isActive) continue;
@@ -193,7 +193,7 @@ public class ManageMessages extends HttpServlet {
 					}
 					
 					nMessagesToSend -= nSending;
-					if (nMessagesToSend == 0) break;  // end the loop through messages if all 100 messages have been sent
+					if (nMessagesToSend == 0) break;  // end the loop through messages if all N messages have been sent
 				} catch (Exception e) {
 				}
 			}

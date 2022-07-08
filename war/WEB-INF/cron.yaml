@@ -1,4 +1,8 @@
 cron:
+- url: '/cloud-datastore-export?output_url_prefix=gs://chem-vantage-hrd-backups'
+  schedule: '1 of month 03:00'
+  timezone: 'America/New_York'
+  description: 'Monthly full backup of ChemVantage production datastore'
 - url: '/DataStoreCleaner?Task=CleanAll'
   schedule: '2 of month 03:00'
   timezone: 'America/New_York'
@@ -7,28 +11,7 @@ cron:
   schedule: 'every day 04:00'
   timezone: 'America/New_York'
   description: 'Provides daily routine maintenance for User entities'
-- url: '/messages?UserRequest=Send+100+Messages'  # send 100 messages
-  schedule: 'every day 04:30'
+- url: '/messages?UserRequest=SendMessages&N=600'
+  schedule: 'every day 04:15'
   timezone: 'America/New_York'
-  description: 'Sends 100 email marketing messages'
-- url: '/messages?UserRequest=Send+100+Messages'  # send 100 messages
-  schedule: 'every day 04:35'
-  timezone: 'America/New_York'
-  description: 'Sends 100 email marketing messages'
-- url: '/messages?UserRequest=Send+100+Messages'  # send 100 more messages
-  schedule: 'every day 04:40'
-  timezone: 'America/New_York'
-  description: 'Sends 100 email marketing messages'
-- url: '/messages?UserRequest=Send+100+Messages'  # send 100 more messages
-  schedule: 'every day 04:45'
-  timezone: 'America/New_York'
-  description: 'Sends 100 email marketing messages'
-- url: '/messages?UserRequest=Send+100+Messages'  # send 100 more messages
-  schedule: 'every day 04:50'
-  timezone: 'America/New_York'
-  description: 'Sends 100 email marketing messages'
-- url: '/messages?UserRequest=Send+100+Messages'  # send 100 more messages
-  schedule: 'every day 04:55'
-  timezone: 'America/New_York'
-  description: 'Sends 100 email marketing messages'
-  
+  description: 'Sends N email marketing messages'
