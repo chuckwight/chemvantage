@@ -34,9 +34,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
-import com.google.cloud.datastore.Cursor;
-import com.google.cloud.datastore.QueryResults;
-import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
 
 @WebServlet("/Admin")
@@ -44,7 +41,6 @@ import com.googlecode.objectify.cmd.Query;
 public class Admin extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
-	private int queryLimit = 20;
 	
 	public String getServletInfo() {
 		return "This servlet is used by ChemVantage admins to manage user properties and roles.";
@@ -158,6 +154,7 @@ public class Admin extends HttpServlet {
 			buf.append("<h3>Recent Activity (past 30 days)</h3>");
 			
 			Date lastMonth = new Date(new Date().getTime()-2592000000L);
+			/*
 			buf.append("Active Basic LTI Consumer accounts: " + ofy().load().type(BLTIConsumer.class).filter("lastLogin >",lastMonth).count());
 			if ("showBLTI".equals(userRequest)) {
 				buf.append("<ul>");
@@ -167,7 +164,7 @@ public class Admin extends HttpServlet {
 				}
 				buf.append("</ul>");
 			} else buf.append(" <a href=/Admin?UserRequest=showBLTI>show details</a><br/>");
-			
+			*/
 			buf.append("Active LTI Advantage deployments: " + ofy().load().type(Deployment.class).filter("lastLogin >",lastMonth).count());
 			if ("showDEPL".equals(userRequest)) {
 				buf.append("<ul>");
@@ -194,14 +191,14 @@ public class Admin extends HttpServlet {
 						+ "<input type=submit name=action value='Block'/>&nbsp;"
 						+ "<input type=submit name=action value='Delete'/></form><br/>");
 			}
-			
+			/*
 			buf.append("<h3>Initiate Full Datastore Backup</h3>");
 			buf.append("Do this manually about once a month by <a href='https://www.chemvantage.org/cloud-datastore-export?output_url_prefix=gs://chem-vantage-hrd-backups'>clicking this link</a>.");
-			
+			*/
 			buf.append("<h3>Signature Code for 1 month Anonymous Access</h3>");
 			buf.append("sig=" + Long.toHexString(User.encode(new Date(new Date().getTime() + 2678400000L).getTime())) + "<br/>");	
 			
-			
+			/*
 			buf.append("<h3>New and Expiring Accounts</h3>");			
 			Date now = new Date();
 			Date twoMonthsAgo = new Date(now.getTime()-5184000000L);
@@ -273,58 +270,12 @@ public class Admin extends HttpServlet {
 			} else { // no search is being conducted, so just list the current total number of consumers
 				buf.append("<FONT SIZE=-1>There are currently " + nConsumers + " registered LTI consumers.</FONT><p>");
 			}
+			*/
 		}
 		catch (Exception e) {
 			buf.append("<p>" + e.toString());
 		}
 		return buf.toString();
 	}
-
-/*
-	String groupSelectBox(long myGroupId) {
-		StringBuffer buf = new StringBuffer();
-		try {
-			Query<Group> groups = ofy().load().type(Group.class);
-			buf.append("\n<SELECT NAME=GroupId><OPTION VALUE=0>(none)</OPTION>");
-			for (Group g : groups) {
-				buf.append("\n<OPTION VALUE=" + g.id + (g.id==myGroupId?" SELECTED>":">") 
-						+ g.description + "</OPTION>");
-			}
-			buf.append("</SELECT>");
-		} catch (Exception e) {
-			buf.append(e.getMessage());
-		}
-		return buf.toString();
-	}
-
-	
-	String BLTIConsumerForm() {
-		StringBuffer buf = new StringBuffer();
-		try {
-			buf.append("<h3>Basic LTI Consumers</h3>");
-			buf.append("The following is a list of organizations that are permitted to make Basic LTI "
-					+ "connections to ChemVantage, usually from within a learning management system. "
-					+ "In order to authorize a new LMS to make BLTI launch requests, ChemVantage must provide "
-					+ "the LMS administrator with an oauth_consumer_key (a string similar to a domain name like "
-					+ "'webct.utah.edu' or 'webct,business.utah.edu') and a shared secret (random string).");
-			Query<BLTIConsumer> consumers = ofy().load().type(BLTIConsumer.class);
-			if (consumers.count() == 0) buf.append("(no BLTI consumers have been authorized yet)<p>");
-			for (BLTIConsumer c : consumers) {
-				buf.append(c.oauth_consumer_key);
-				buf.append(" <INPUT TYPE=BUTTON VALUE='Reveal secret' "
-				+ "onClick=javascript:getElementById('" + c.oauth_consumer_key + "').style.display='';this.style.display='none'>"
-				+ "<div id='"+ c.oauth_consumer_key + "' style='display: none'>" + c.secret + "</div><br>");
-			}
-			buf.append("<b>Create/Delete BLTI Consumer</b><br><FORM ACTION=Admin METHOD=POST>"
-					+ "BLTI oath_consumer_key: <INPUT TYPE=TEXT NAME=oath_consumer_key>"
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Generate New BLTI Secret'>"
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete BLTI Consumer'>"
-					+ "</FORM>");
-		} catch (Exception e) {
-			buf.append(e.getMessage());
-		}
-		return buf.toString();
-	}
-*/	
 }
 
