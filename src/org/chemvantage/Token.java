@@ -44,7 +44,6 @@ public class Token extends HttpServlet {
 			
 			String deployment_id = request.getParameter("lti_deployment_id");
 			debug.append("deployment_id: " + deployment_id + "<br>");
-			//if (deployment_id == null) deployment_id = "";
 			
 			String client_id = request.getParameter("client_id");
 			debug.append("client_id: " + client_id + "<br>");
@@ -111,7 +110,10 @@ public class Token extends HttpServlet {
 		
 		URL platform = new URL(platform_id);
 		if (!platform.getProtocol().equals("https")) throw new Exception("The platform_id must be a secure URL.");
-		
+		Key<Deployment> kstart = Key.create(Deployment.class, platform_id);
+		Key<Deployment> kend = Key.create(Deployment.class, platform_id + "~");			
+		List<Deployment> deployments = null;
+	
 		// Take the optimistic route first; this should always work if the deployment_id has been provided, else return null;
 		if (deployment_id != null) {
 			String platform_deployment_id = platform_id + "/" + deployment_id;
@@ -123,7 +125,12 @@ public class Token extends HttpServlet {
 					d.platform_deployment_id = platform_id + "/" + deployment_id;
 					d.created = new Date();
 					ofy().save().entity(d).now();
-				} catch (Exception e) {
+				} catch (Exception e) {   // if the platform is trusted, create a new deployment
+					d = ofy().load().type(Deployment.class).filterKey(">=",kstart).filterKey("<",kend).filter("client_id",client_id).first().now();
+					if (d!=null) {
+						d.platform_deployment_id = platform_deployment_id;
+						ofy().save().entity(d).now();
+					}
 				}
 			}
 			if (d == null) throw new Exception("The deployment_id " + deployment_id + " is not known.<br/>"
@@ -134,10 +141,6 @@ public class Token extends HttpServlet {
 		}
 
 		// DeploymentId was not sent; prepare to search for all deployments from this platform:
-		Key<Deployment> kstart = Key.create(Deployment.class, platform_id);
-		Key<Deployment> kend = Key.create(Deployment.class, platform_id + "~");			
-		List<Deployment> deployments = null;
-		
 		if (client_id != null) {
 			// Find all deployments from this platform with the specified client_id; there SHOULD be only one if the deployment_id was not provided.
 			deployments = ofy().load().type(Deployment.class).filterKey(">=",kstart).filterKey("<",kend).filter("client_id",client_id).list();
