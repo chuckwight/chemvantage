@@ -129,6 +129,7 @@ public class Quiz extends HttpServlet {
 					a.attemptsAllowed = null;
 				}
 				ofy().save().entity(a).now();
+				qcache.putAssignment(a);
 				response.sendRedirect("/Quiz?sig=" + user.getTokenSignature());
 				break;
 			case "Synchronize Scores":

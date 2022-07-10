@@ -135,6 +135,7 @@ public class Homework extends HttpServlet {
 					a.attemptsAllowed = null;
 				}
 				ofy().save().entity(a).now();
+				qcache.putAssignment(a);
 				response.sendRedirect("/Homework?sig=" + user.getTokenSignature());
 				break;
 			case "Synchronize Scores":
