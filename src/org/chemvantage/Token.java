@@ -27,7 +27,7 @@ public class Token extends HttpServlet {
 
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) 
 			throws ServletException, IOException {
-		StringBuffer debug = new StringBuffer("Issuing auth token:<br>");
+		StringBuffer debug = new StringBuffer("");
 		try {
 			// store parameters required by third-party initiated login procedure:
 			String platform_id = request.getParameter("iss");   // this should be the platform_id URL (aud)
@@ -39,16 +39,17 @@ public class Token extends HttpServlet {
 			if (target_link_uri == null) throw new Exception("Missing required target_link_uri parameter.");
 			
 			String deployment_id = request.getParameter("lti_deployment_id");
-			debug.append("deployment_id: " + deployment_id + "<br>");
+			//debug.append("deployment_id=" + deployment_id + " ");
 			
 			String client_id = request.getParameter("client_id");
-			debug.append("client_id: " + client_id + "<br>");
+			//debug.append("client_id=" + client_id);
 			
 			Deployment d = getDeployment(platform_id,deployment_id,client_id);
-			if (d==null) throw new Exception("ChemVantage was unable to identify the deployment from your LMS. "
-					+ "Please check that registration is complete, and that both the deployment_id and client_id "
-					+ "have been submitted to ChemVantage.<br/>"
-					+ "Contact admin@chemvantage.org for assistance.");
+			
+			if (d==null) throw new Exception("ChemVantage was unable to identify this deployment from your LMS. "
+					+ "If you received a registration email within the past 7 days, please use the tokenized link in that message to "
+					+ "submit (or resubmit) the deployment_id and other required parameters. Otherwise, you may "
+					+ "repeat the registration process at https://www.chemvantage.org/lti/registration");
 			
 			String redirect_uri = target_link_uri;
 			
@@ -92,7 +93,7 @@ public class Token extends HttpServlet {
 			
 			response.sendRedirect(oidc_auth_url);
 		} catch (Exception e) {
-			response.getWriter().println("<h3>Failed Auth Token</h3>" + (e.getMessage()==null?e.toString():e.getMessage()) + "<br>" + debug.toString());
+			response.sendError(401,"Failed Auth Token. " + (e.getMessage()==null?e.toString():e.getMessage()) + debug.toString());
 		}
 	}
 
@@ -123,10 +124,6 @@ public class Token extends HttpServlet {
 				} catch (Exception e) {
 				}
 			}
-			if (d == null) throw new Exception("The deployment_id " + deployment_id + " is not known.<br/>"
-					+ "Please check that your LMS has been registered properly with ChemVantage.<br/>"
-					+ "Deployments are deleted automatically after 6 months of inactivity.<br/>"
-					+ "You may register again at <a href='https://www.chemvantage.org/lti/registration'>https://www.chemvantage.org/lti/registration</a>");
 			return d;
 		}
 
