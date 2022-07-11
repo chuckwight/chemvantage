@@ -1074,19 +1074,8 @@ public class Edit extends HttpServlet {
 			q.isActive = true;
 			ofy().save().entity(q).now();
 			String key1 = q.assignmentType + String.valueOf(q.topicId);
-			questions.get(key1).put(Key.create(q), q);
-		
-			Queue queue = QueueFactory.getDefaultQueue();
-			String sig = user.getTokenSignature();
-			switch (q.assignmentType) {
-			case "Homework":
-				queue.add(withUrl("/Homework").param("UserRequest","UpdateQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
-				break;
-			case "Exam":
-				queue.add(withUrl("/PracticeExam").param("UserRequest","UpdateQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
-				break;
-			}
-		} catch (Exception e) {}
+			questions.get(key1).put(Key.create(q), q);		
+	} catch (Exception e) {}
 	}
 
 	private void updateQuestion(User user,HttpServletRequest request) {
@@ -1104,11 +1093,15 @@ public class Edit extends HttpServlet {
 			Queue queue = QueueFactory.getDefaultQueue();
 			String sig = user.getTokenSignature();
 			switch (q.assignmentType) {
+			case "Quiz":
+				queue.add(withUrl("/Quiz").param("UserRequest","UpdateQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
+				break;
 			case "Homework":
 				queue.add(withUrl("/Homework").param("UserRequest","UpdateQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
 				break;
 			case "Exam":
 				queue.add(withUrl("/PracticeExam").param("UserRequest","UpdateQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
+				queue.add(withUrl("/PlacementExam").param("UserRequest","UpdateQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
 				break;
 			}
 		} catch (Exception e) {
@@ -1129,12 +1122,16 @@ public class Edit extends HttpServlet {
 			Queue queue = QueueFactory.getDefaultQueue();
 			String sig = user.getTokenSignature();
 			switch (q.assignmentType) {
+			case "Quiz":
+				queue.add(withUrl("/Quiz").param("UserRequest","DeleteQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
+				break;
 			case "Homework":
 				queue.add(withUrl("/Homework").param("UserRequest","DeleteQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
 				break;
 			case "Exam":
 				queue.add(withUrl("/PracticeExam").param("UserRequest","DeleteQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
-			break;
+				queue.add(withUrl("/PlacementExam").param("UserRequest","DeleteQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
+				break;
 			}
 		} catch (Exception e) {
 			return;

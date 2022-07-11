@@ -108,6 +108,19 @@ public class Quiz extends HttpServlet {
 				qcache.putAssignment(a);
 				doGet(request,response);
 				break;
+			case "UpdateQuestion":
+				if (user.isEditor()) {
+					Key<Question> key = Key.create(Question.class,Long.parseLong(request.getParameter("QuestionId")));
+					Question q = ofy().load().key(key).safe();
+					qcache.putQuestion(q);
+				}
+				break;
+			case "DeleteQuestion":
+				if (user.isEditor()) {
+					Key<Question> key = Key.create(Question.class,Long.parseLong(request.getParameter("QuestionId")));
+					qcache.removeQuestion(key);
+				}
+				break;
 			case "Set Allowed Time":
 				try {
 					double minutes = Double.parseDouble(request.getParameter("TimeAllowed"));
