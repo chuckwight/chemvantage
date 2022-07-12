@@ -68,7 +68,7 @@ Please tell us about your school, business or organization:<br/>
 <% if (!dynamic) { %>
 
 
-<fieldset><legend>Type of Learning Management System:<br/></legend>
+<fieldset style='width:400px'><legend>Type of Learning Management System:<br/></legend>
 <label><input type=radio name=lms value=blackboard <%= ((lms!=null && lms.equals("blackboard"))?"checked":"") %> />Blackboard</label><br/>
 <label><input type=radio name=lms value=brightspace <%= ((lms!=null && lms.equals("brightspace"))?"checked":"") %> />Brightspace</label><br/>
 <label><input type=radio name=lms value=canvas <%= ((lms!=null && lms.equals("canvas"))?"checked":"") %> />Canvas</label><br/>
@@ -76,7 +76,7 @@ Please tell us about your school, business or organization:<br/>
 <label><input type=radio name=lms value=sakai <%= ((lms!=null && lms.equals("sakai"))?"checked":"") %> />Sakai</label><br/>
 <label><input type=radio name=lms value=schoology <%= ((lms!=null && lms.equals("schoology"))?"checked":"") %> />Schoology</label><br/>
 <label><input type=radio name=lms id=other value=other <%= ((lms!=null && lms.equals("other"))?"checked":"") %> />Other:</label>
-<label><input type=text name=lms_other value='<%= (lms_other==null?"":lms_other) %>' onFocus="document.getElementById('other').checked=true;" />(specify)</label>
+<label><input type=text name=lms_other value='<%= (lms_other==null?"":lms_other) %>' placeholder='(specify)' onFocus="document.getElementById('other').checked=true;" /></label>
 </fieldset>
 <br/><br/>
 <% } else { %>
@@ -86,19 +86,15 @@ Please tell us about your school, business or organization:<br/>
 if (development) { %>
 This is a development server:
 ChemVantage is pleased to provide free access to our software development server for testing LTI connections. 
-Please note that the server is sometimes in an unstable state, and accounts may be reset or even deleted at any time.
+Please note that the server is sometimes in an unstable state, and accounts may be reset or even deleted at any time.<br/><br/>
 <% } else { %>
 Pricing:
 <ul>
-<li>LTI registration and setup are free.</li>
-<li>Instructor accounts are completely free.</li>
+<li>LTI registration and instructor accounts are free.</li>
 <li>Each student account costs $<%= price %>.00 USD per month for an all-access subscription.</li>
 <li>Institutions have the option of purchasing student licenses in bulk at deeply discounted rates.</li>
 </ul>
-If this pricing structure doesn't fit your needs, please contact Chuck Wight at admin@chemvantage.org for alternative pricing.
 <% } %>
-
-<br/><br/>
 
 <label><input type=checkbox name=AcceptChemVantageTOS value=true <%= ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") %>/>Accept the <a href=/about.html#terms target=_blank aria-label='opens new tab'>ChemVantage Terms of Service</a></label><br/><br/>
 
