@@ -36,7 +36,6 @@ public class PollTransaction implements Serializable {
 			Date completed;
 			int score;
 			int possibleScore;
-			String lis_result_sourcedid;
 			Map<Key<Question>,String> responses;
 	
     PollTransaction() {}

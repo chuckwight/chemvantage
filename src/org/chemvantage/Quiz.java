@@ -170,15 +170,6 @@ public class Quiz extends HttpServlet {
 			buf.append("<h2>General Chemistry Quiz - Instructor Page</h2>");
 			buf.append("Topic covered on this quiz: " + t.getTitle() + "<br/><br/>");
 			
-			if (a.lis_outcome_service_url != null) { // give LTIv1.1 deprecation warning
-				buf.append("<div style='border: medium solid #EE0000;'>"
-						+ "<h4>Warning: This assignment uses LTI version 1.1, which is obsolete</h4>"
-						+ "This LTI specification has been deprecated due to security limitations, so this assignment will "
-						+ "not be accessible after June 30, 2022. You may re-register your LMS with ChemVantage using the "
-						+ "current LTI Advantage specification <a href=/lti/registration target=_blank>using this link</a>.<br/><br/>"
-						+ "</div><br/>");
-			}
-			
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/Quiz?UserRequest=AssignQuizQuestions&sig=" + user.getTokenSignature() + "'>Customize this quiz</a> to set the time allowed, number of attempts allowed, and select the available question items.</LI>"
 					+ (supportsMembership?"<LI><a href='/Quiz?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' quiz scores</a></LI>":"")
@@ -236,18 +227,13 @@ public class Quiz extends HttpServlet {
 						.filter("assignmentId", assignmentId).filter("graded", null).filter("downloaded >", t15minAgo)
 						.first().now();
 
-			String lis_result_sourcedid = user.getLisResultSourcedid();
 			if (qt == null || qt.getGraded() != null) {
 				if (qa != null && qa.attemptsAllowed != null) {
 					int nAttempts = ofy().load().type(QuizTransaction.class).filter("assignmentId",assignmentId).filter("userId",user.getHashedId()).count();
 					if (nAttempts >= qa.attemptsAllowed) return "<h2>Sorry, you are only allowed " + qa.attemptsAllowed + " attempt" + (qa.attemptsAllowed==1?"":"s") + " on this assignment.</h2>";
 				}
-				qt = new QuizTransaction(topicId, topic.getTitle(), user.getId(), now, null, 0, assignmentId, 0,
-						user.getLisResultSourcedid());
+				qt = new QuizTransaction(topicId, topic.getTitle(), user.getId(), now, null, 0, assignmentId, 0);
 				ofy().save().entity(qt).now(); // creates a long id value to use in random number generator
-			} else if (qt.getLisResultSourcedid() == null && lis_result_sourcedid != null) {
-				qt.putLisResultSourcedid(lis_result_sourcedid);
-				ofy().save().entity(qt);
 			}
 			
 			// Insert javascript code for timers and form submission
@@ -428,14 +414,10 @@ public class Quiz extends HttpServlet {
 			ofy().save().entity(qt);
 			
 			// Try to post the score to the student's LMS:
-			boolean reportScoreToLms = false;
 			try {
 				if (user.isAnonymous()) throw new Exception();  // don't save Scores for anonymous users
 				Score.updateQuizScore(user.getId(),qt);
-				reportScoreToLms = qa.lti_ags_lineitem_url != null || (qa.lis_outcome_service_url != null && user.getLisResultSourcedid() != null);
-				if (reportScoreToLms) {
-					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue
-				}
+				if (qa.lti_ags_lineitem_url != null) QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue
 			} catch (Exception e) {}
 
 			if (timeExpired) buf.append("<h4>Your score on this quiz is 0 points because it was submitted after the allowed time of " + timeAllowed/60 + " minutes.</h4>");
@@ -503,7 +485,7 @@ public class Quiz extends HttpServlet {
 
 			if (qa != null) buf.append("You may <a href=/Quiz?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review all your scores on this assignment</a>.<p>") ;
 
-			if (!reportScoreToLms && !user.isAnonymous()) {
+			if (!user.isAnonymous() && qa.lti_ags_lineitem_url == null) {
 				buf.append("<b>Please note:</b> Your score was not reported back to the grade book of your class "
 						+ "LMS because the LTI launch request did not contain enough information to do this. "
 						+ (user.isInstructor()?"For instructors this is common.":"") + "<p>");				
@@ -734,24 +716,9 @@ public class Quiz extends HttpServlet {
 								lmsPctScore = Double.parseDouble(lmsScore);
 								gotScoreOK = true;
 							} catch (Exception e) {
-								//buf.append("LMS returned: " + lmsScore + "<br/>");
 							}
 						}
-						else if (a.lis_outcome_service_url != null && s.lis_result_sourcedid != null) {  // LTI version 1.1
-							String messageFormat = "application/xml";
-							String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
-							String oauth_consumer_key = forUser.getId().substring(0, forUser.getId().indexOf(":"));
-							String replyBody = new LTIMessage(messageFormat,body,a.lis_outcome_service_url,oauth_consumer_key).send();
-
-							if (replyBody.contains("success")) {
-								int beginIndex = replyBody.indexOf("<textString>") + 12;
-								int endIndex = replyBody.indexOf("</textString>");
-								lmsScore = replyBody.substring(beginIndex,endIndex);
-								lmsPctScore = 100.*Double.parseDouble(lmsScore);
-								gotScoreOK = true;
-							}
-						}
-
+						
 						if (gotScoreOK && Math.abs(lmsPctScore-s.getPctScore())<1.0) { // LMS readResult agrees to within 1%
 							buf.append("This score is accurately recorded in the grade book of your class learning management system.<p>");
 						} else if (gotScoreOK) { // there is a significant difference between LMS and ChemVantage scores. Please explain:

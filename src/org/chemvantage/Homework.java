@@ -38,7 +38,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
 
@@ -304,9 +303,6 @@ public class Homework extends HttpServlet {
 			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
 			debug.append("topic:"+topic.title+"...");
 			
-			String lis_result_sourcedid = user.getLisResultSourcedid();
-			debug.append("lis_result_sourcedid="+lis_result_sourcedid+"...");
-			
 			long assignmentId = 0;
 			Assignment hwa = null;
 			try {
@@ -419,19 +415,16 @@ public class Homework extends HttpServlet {
 				
 				// create a new HWTransaction entity:
 				ht = new HWTransaction(q.id,topic.id,topic.title,user.getId(),now,studentScore,assignmentId,possibleScore,showWork);
-				if (lis_result_sourcedid != null) ht.lis_result_sourcedid = lis_result_sourcedid;
 				ofy().save().entity(ht).now();
 
 				debug.append("HW transaction id="+ht.id+"...");
 				
 				// create/update/store a HomeworkScore object
 				try {  // throws exception if hwa==null
-					boolean reportScoreToLms = hwa.lti_ags_lineitem_url != null || (hwa.lis_outcome_service_url != null && user.getLisResultSourcedid() != null);
-					debug.append("score " + (reportScoreToLms?"will ":"will not ") + "be reported to the LMS...");
-					if (hwa.questionKeys.contains(k)) {
+					if (hwa.questionKeys.contains(k) && hwa.lti_ags_lineitem_url != null) {
 						Score s = Score.getInstance(user.getId(),hwa);
 						ofy().save().entity(s).now();
-						if (reportScoreToLms) QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",hwa.id.toString()).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue	
+						QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",hwa.id.toString()).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue	
 					}
 				} catch (Exception e2) {
 				}
@@ -667,7 +660,6 @@ public class Homework extends HttpServlet {
 						String lmsScore = null;
 						boolean gotScoreOK = false;
 
-						//buf.append("Retrieving score for user " + User.getRawId(user.getId()) + " in group " + user.myGroupId + " for this " + a.assignmentType + " assignment " + a.id + "<p>");
 						if (a.lti_ags_lineitem_url != null) {  // LTI version 1p3
 							lmsScore = LTIMessage.readUserScore(a, forUser.getId());
 							try {
@@ -676,21 +668,7 @@ public class Homework extends HttpServlet {
 							} catch (Exception e) {
 							}
 						}
-						else if (a.lis_outcome_service_url != null && s.lis_result_sourcedid != null) { // LTI version 1p1
-							String messageFormat = "application/xml";
-							String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
-							String oauth_consumer_key = a.domain;
-							String replyBody = new LTIMessage(messageFormat,body,a.lis_outcome_service_url,oauth_consumer_key).send();
-
-							if (replyBody.contains("success")) {
-								int beginIndex = replyBody.indexOf("<textString>") + 12;
-								int endIndex = replyBody.indexOf("</textString>");
-								replyBody = replyBody.substring(beginIndex,endIndex);
-								lmsPctScore = 100.*Double.parseDouble(replyBody);
-								gotScoreOK = true;
-							}
-						}
-
+						
 						if (gotScoreOK && Math.abs(lmsPctScore-s.getPctScore())<1.0) { // LMS readResult agrees to within 1%
 							buf.append("This score is accurately recorded in the grade book of your class learning management system.<p>");
 						} else if (gotScoreOK) { // there is a significant difference between LMS and ChemVantage scores. Please explain:
@@ -724,65 +702,60 @@ public class Homework extends HttpServlet {
 	
 	String showSummary(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		String lti_version = null;
 		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 		if (a==null) return "No assignment was specified for this request.";
-		if (a.lis_outcome_service_url!=null) lti_version = "1p1";
-		else if (a.lti_ags_lineitem_url != null) lti_version = "1p3";
-		else return "Could not determine the LTI version for this request.";
-		
+
 		if (!user.isInstructor()) return "You must be logged in as the instructor to view this page.";
 
-		if ("1p3".equals(lti_version)) {
-			try { // code for LTI version 1.3
-				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
+		try { // code for LTI version 1.3
+			Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
 
-				if (a.lti_nrps_context_memberships_url==null) throw new Exception("No Names and Roles Provisioning support.");
+			if (a.lti_nrps_context_memberships_url==null) throw new Exception("No Names and Roles Provisioning support.");
 
-				buf.append("<h3>" + a.assignmentType + " - " + t.title + "</h3>");
-				buf.append("Valid: " + new Date() + "<p>");
-				buf.append("The roster below is obtained using the Names and Role Provisioning service offered by your learning management system, "
-						+ "and may or may not include user's names or emails, depending on the settings of your LMS. The easiest way to "
-						+ "resolve any discrepancies between scores reported by the LMS grade book and ChemVantage is for the user to "
-						+ "submit the assignment again (even for a score of zero). This causes ChemVantage to recalculate the "
-						+ "user's best score and report it to the LMS. However, some discrepancies are to be expected, for example "
-						+ "if the instructor adjusts a score in the LMS manually or if an assignment was submitted after the "
-						+ "deadline and was not accepted by the LMS.<p>");
+			buf.append("<h3>" + a.assignmentType + " - " + t.title + "</h3>");
+			buf.append("Valid: " + new Date() + "<p>");
+			buf.append("The roster below is obtained using the Names and Role Provisioning service offered by your learning management system, "
+					+ "and may or may not include user's names or emails, depending on the settings of your LMS. The easiest way to "
+					+ "resolve any discrepancies between scores reported by the LMS grade book and ChemVantage is for the user to "
+					+ "submit the assignment again (even for a score of zero). This causes ChemVantage to recalculate the "
+					+ "user's best score and report it to the LMS. However, some discrepancies are to be expected, for example "
+					+ "if the instructor adjusts a score in the LMS manually or if an assignment was submitted after the "
+					+ "deadline and was not accepted by the LMS.<p>");
 
-				Map<String,String> scores = LTIMessage.readMembershipScores(a);
-				if (scores==null) scores = new HashMap<String,String>();  // in case service call fails
-				
-				Map<String,String[]> membership = LTIMessage.getMembership(a);
-				if (membership==null) membership = new HashMap<String,String[]>(); // in case service call fails
-				
-				Map<String,Key<Score>> keys = new HashMap<String,Key<Score>>();
-				Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
-				String platform_id = d.getPlatformId() + "/";
-				for (String id : membership.keySet()) {
-					keys.put(id,Key.create(Key.create(User.class,Subject.hashId(platform_id+id)),Score.class,a.id));
-				}
-				Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
-				buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th></tr>");
-				int i=0;
-				boolean synched = true;
-				for (Map.Entry<String,String[]> entry : membership.entrySet()) {
-					if (entry == null) continue;
-					String s = scores.get(entry.getKey());
-					Score cvScore = cvScores.get(keys.get(entry.getKey()));
-					i++;
-					buf.append("<tr><td>" + i + ".&nbsp;</td>"
-							+ "<td>" + entry.getValue()[1] + "</td>"
-							+ "<td>" + entry.getValue()[2] + "</td>"
-							+ "<td>" + entry.getValue()[0] + "</td>"
-							+ "<td align=center>" + (s == null?" - ":s + "%") + "</td>"
-							+ "<td align=center>" + (cvScore == null?" - ":String.valueOf(cvScore.getPctScore()) + "%") + "</td></tr>");
-					// Flag this score set as unsynchronizde only if there is one or more non-null ChemVantage Learner score that is not equal to the LMS score
-					// Ignore Instructor scores because the LMS often does not report them, and ignore null cvScore entities because they cannot be reported.
-					synched = synched && (!"Learner".equals(entry.getValue()[0]) || (cvScore!=null?String.valueOf(cvScore.getPctScore()).equals(s):true));
-				}
-				buf.append("</table><br/>");
-				if (!synched) {
-					buf.append("If any of the Learner scores above are not synchronized, you may use the button below to launch a background task " 
+			Map<String,String> scores = LTIMessage.readMembershipScores(a);
+			if (scores==null) scores = new HashMap<String,String>();  // in case service call fails
+
+			Map<String,String[]> membership = LTIMessage.getMembership(a);
+			if (membership==null) membership = new HashMap<String,String[]>(); // in case service call fails
+
+			Map<String,Key<Score>> keys = new HashMap<String,Key<Score>>();
+			Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
+			String platform_id = d.getPlatformId() + "/";
+			for (String id : membership.keySet()) {
+				keys.put(id,Key.create(Key.create(User.class,Subject.hashId(platform_id+id)),Score.class,a.id));
+			}
+			Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
+			buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th></tr>");
+			int i=0;
+			boolean synched = true;
+			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
+				if (entry == null) continue;
+				String s = scores.get(entry.getKey());
+				Score cvScore = cvScores.get(keys.get(entry.getKey()));
+				i++;
+				buf.append("<tr><td>" + i + ".&nbsp;</td>"
+						+ "<td>" + entry.getValue()[1] + "</td>"
+						+ "<td>" + entry.getValue()[2] + "</td>"
+						+ "<td>" + entry.getValue()[0] + "</td>"
+						+ "<td align=center>" + (s == null?" - ":s + "%") + "</td>"
+						+ "<td align=center>" + (cvScore == null?" - ":String.valueOf(cvScore.getPctScore()) + "%") + "</td></tr>");
+				// Flag this score set as unsynchronizde only if there is one or more non-null ChemVantage Learner score that is not equal to the LMS score
+				// Ignore Instructor scores because the LMS often does not report them, and ignore null cvScore entities because they cannot be reported.
+				synched = synched && (!"Learner".equals(entry.getValue()[0]) || (cvScore!=null?String.valueOf(cvScore.getPctScore()).equals(s):true));
+			}
+			buf.append("</table><br/>");
+			if (!synched) {
+				buf.append("If any of the Learner scores above are not synchronized, you may use the button below to launch a background task " 
 						+ "where ChemVantage will resubmit them to your LMS. This can take several seconds to minutes depending on the "
 						+ "number of scores to process. Please note that you may have to adjust the settings in your LMS to accept the "
 						+ "revised scores. For example, in Canvas you may need to change the assignment settings to Unlimited Submissions. "
@@ -792,65 +765,10 @@ public class Homework extends HttpServlet {
 						+ "<input type=hidden name=UserRequest value='Synchronize Scores' />"
 						+ "<input type=submit value='Synchronize Scores' />"
 						+ "</form>");
-				}
-		return buf.toString();
-			} catch (Exception e) {
-				buf.append(e.toString());
 			}
-		} else if ("1p1".equals(lti_version)) {
-			try {  // code for LTI version 1.1
-				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
-				buf.append("<h3>" + a.assignmentType + " - " + t.title + "</h3>");
-
-				DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-				buf.append(df.format(new Date()) + "<p>");
-
-				buf.append("To protect the privacy of our users, ChemVantage does not collect any personally identifiable information. "
-						+ "Therefore, we are unable to display a traditional grade book with names and scores. Instead, we rely on a "
-						+ "robust system of reporting scores back to the grade book inside your LMS.<p>");
-				
-				List<Score> scores = ofy().load().type(Score.class).filterKey("=", a.id).list();
-				int count = scores.size();
-				Date mostRecent = new Date(0);
-				boolean allScoresReported = true;
-				double pctScoreSum = 0;
-				int scoresNotReported = 0;
-				Queue queue = QueueFactory.getDefaultQueue();  // default task queue
-				int attempts = 0;
-				for (Score s : scores) {
-					if (s.numberOfAttempts==0) continue;  // skip the averaging for those who have not attempted the quiz yet
-					attempts += s.numberOfAttempts;
-					if (s.mostRecentAttempt.after(mostRecent)) mostRecent = s.mostRecentAttempt;
-					if (s.needsLisReporting()) {
-						scoresNotReported++;
-						allScoresReported = false;
-						pctScoreSum += s.getPctScore();
-						queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",s.owner.getName()));
-					}
-					
-				}
-						
-				buf.append("<p>There " + (count==1?"is ":"are ") + count + " score" + (count==1?"":"s") + " for this assignment in the ChemVantage database.<br>");
-				if (count>0) {
-					buf.append("The average score is " + pctScoreSum/count + "%.<br>");
-					buf.append("The average number of attempts (including downloads not submitted for scoring) is " + Math.round(10.*attempts/count)/10. + ".<br>");
-					buf.append("The most recent attempt of this assignment was on " + df.format(mostRecent) + ".<p>");
-				} else buf.append("<br>");
-
-				if (a.lis_outcome_service_url==null) buf.append("Your LMS is not configured for ChemVantage to report scores to the LMS grade book.<p>");
-				else if (scoresNotReported>0) {
-					buf.append("It appears that " + scoresNotReported + (scoresNotReported==1?" score":" scores") + " may not have been reported to your LMS correctly. "
-							+ "We have automatically initiated a programmed task to correct this. "
-							+ "Please check back in a few minutes to ensure that the situation has been resolved.<p>");
-				}
-				else if (allScoresReported) buf.append("All scores for students have been reported to your LMS successfully.<p>");
-
-				buf.append("If you have any questions or need assistance, please contact <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a>.<p>");			
-				buf.append("<a href=/Homework?sig=" + user.getTokenSignature() + ">Return to this homework assignment</a>.<p>");
-			} catch (Exception e) {
-				buf.append("ChemVantage was unable to access the LISMembershipContainer REST service on your LMS, so a summary of scores cannot be provided "
-						+ "at this time, sorry. We are working to resolve this problem in the near future.<p>");
-			}
+			return buf.toString();
+		} catch (Exception e) {
+			buf.append(e.toString());
 		}
 		return buf.toString();
 	}

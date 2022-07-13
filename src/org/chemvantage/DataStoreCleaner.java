@@ -90,7 +90,6 @@ public class DataStoreCleaner extends HttpServlet {
 		case "CleanTransactions": buf.append(cleanTransactions(testOnly)); break;
 		case "CleanScores": buf.append(cleanScores(testOnly)); break;
 		case "CleanAssignments": buf.append(cleanAssignments(testOnly,request)); break;
-		case "CleanBLTIConsumers": buf.append(cleanBLTIConsumers(testOnly)); break;
 		case "CleanDeployments": buf.append(cleanDeployments(testOnly)); break;
 		case "CleanUsers": buf.append(cleanUsers(testOnly)); break;
 		case "CleanAll":
@@ -288,9 +287,6 @@ public class DataStoreCleaner extends HttpServlet {
 				else if (a.domain.contains("https://")) {
 					if (ofy().load().filterKey(Key.create(Deployment.class,a.domain)).count()==0) assignmentKeys.add(Key.create(Assignment.class,a.id));
 				}
-				else {
-					if (ofy().load().filterKey(Key.create(BLTIConsumer.class,a.domain)).count()==0) assignmentKeys.add(Key.create(Assignment.class,a.id));	
-				}
 				continu = true;
 				
 				if (testOnly || a.assignmentType==null) continue;
@@ -352,28 +348,6 @@ public class DataStoreCleaner extends HttpServlet {
 			buf.append("Done.<br>");
 
 		} catch (Exception e) {
-			buf.append("Error: " + e.toString());
-		}
-		return buf.toString();
-	}
-
-	private String cleanBLTIConsumers(boolean testOnly) {
-		// This method searches for BLTIConsumers with no logins for at least 1 year
-		
-		StringBuffer buf = new StringBuffer();
-		buf.append("<h2>Clean BLTIConsumers</h2>");
-		try {
-			List<Key<BLTIConsumer>> consumerKeys = ofy().load().type(BLTIConsumer.class).filter("lastLogin <",oneYearAgo).keys().list();					
-			if (consumerKeys.size() > 0 && !testOnly) {  // delete all the old deployments in batches of 500 (max allowed by ofy().delete)
-				int nBatches = consumerKeys.size()/500;
-				for (int i=0;i<nBatches;i++) ofy().delete().keys(consumerKeys.subList(i*500, (i+1)*500));
-				ofy().delete().keys(consumerKeys.subList(nBatches*500, consumerKeys.size()));
-			}
-			
-			buf.append(consumerKeys.size() + " BLTIConsumers unused for more than one year" + (testOnly?" identified":" deleted") + ".<br>");
-			buf.append("Done.<br>");
-
-		}catch (Exception e) {
 			buf.append("Error: " + e.toString());
 		}
 		return buf.toString();

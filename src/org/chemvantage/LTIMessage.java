@@ -28,26 +28,22 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.security.MessageDigest;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Map.Entry;
+import java.util.Properties;
 
 import javax.mail.Message;
 import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
-
-import java.util.UUID;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
@@ -56,175 +52,9 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import net.oauth.OAuth;
-import net.oauth.OAuthAccessor;
-import net.oauth.OAuthConsumer;
-import net.oauth.OAuthMessage;
-
 public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+JSON" messages to a Tool Consumer (LMS)
-	String contentType="text/html";
-	String acceptType = "application/xml";
-	String messageText="";
-	String httpMethod="POST";
-	String oauth_consumer_key;
-	String oauth_shared_secret;
-	String destinationURL;
-	static Map<String,String> authTokens = new HashMap<String,String>();
 	
-	LTIMessage() {}
-
-    LTIMessage(String msgType,String msgText,String destURL,String key) {
-    	this.contentType = msgType;
-    	this.messageText = msgText;
-    	this.destinationURL = destURL;
-    	this.oauth_consumer_key = key;
-    	this.oauth_shared_secret = BLTIConsumer.getSecret(oauth_consumer_key);
-    }
-    
-    LTIMessage(String contentType,String acceptType,String msgText,String destURL,String key,String secret) {
-    	this.contentType = contentType;
-    	this.acceptType = acceptType;
-    	this.messageText = msgText;
-    	this.destinationURL = destURL;
-    	this.oauth_consumer_key = key;
-    	this.oauth_shared_secret = secret;
-    }
-    
-    LTIMessage(String httpMethod,String acceptType,String destURL,BLTIConsumer c) {
-    	this.httpMethod = httpMethod;
-    	this.destinationURL = destURL;
-    	this.acceptType = acceptType;
-    	this.oauth_consumer_key = c.oauth_consumer_key;
-    	this.oauth_shared_secret = c.secret;
-    }
-    
-    protected String send() throws Exception {	
-    	// construct an oauth_body_hash of the message text to include as a custom parameter in the Authorization header
-    	String body_hash = Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-1").digest(messageText.getBytes()));
-    	
-    	final String nonce = UUID.randomUUID().toString();
-    	final String timestamp = Long.toString(new Date().getTime()/1000);  // current time in seconds
-
-    	final OAuthMessage message = new OAuthMessage(OAuthMessage.POST, destinationURL, null);
-    	message.addParameter(OAuth.OAUTH_CONSUMER_KEY, oauth_consumer_key);
-    	message.addParameter(OAuth.OAUTH_SIGNATURE_METHOD, OAuth.HMAC_SHA1);
-    	message.addParameter(OAuth.OAUTH_NONCE, nonce);
-    	message.addParameter(OAuth.OAUTH_TIMESTAMP, timestamp);
-    	message.addParameter(OAuth.OAUTH_CALLBACK, "about:blank");
-    	message.addParameter(OAuth.OAUTH_VERSION, "1.0");
-    	message.addParameter("oauth_body_hash", body_hash);
-
-    	final OAuthConsumer consumer = new OAuthConsumer(null, oauth_consumer_key, oauth_shared_secret, null);
-    	final OAuthAccessor accessor = new OAuthAccessor(consumer);
-    	try {
-    		message.sign(accessor);
-    	} catch( Exception e ) {
-    		throw new RuntimeException(e);
-    	}
-
-    	// construct the signed message in the required format
-    	OutputStreamWriter toTC = null;
-    	BufferedReader reader = null;
-    	StringBuffer res = null;
-    	try {
-    		URL u = new URL(destinationURL);
-    		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-    		uc.setDoOutput(true);
-    		uc.setDoInput(true);
-    		uc.setRequestMethod(httpMethod);
-    		uc.setConnectTimeout(5000);
-    		//if (httpMethod.equals("GET")) acceptType = "application/vnd.ims.lti.v2.ToolSettings+json";
-    		uc.setRequestProperty("Content-Type",contentType);
-    		if (!acceptType.isEmpty()) uc.setRequestProperty("Accept", acceptType);
-    		uc.setRequestProperty("Content-Length",Integer.toString(messageText.length()));
-    		uc.setRequestProperty("Authorization",message.getAuthorizationHeader(""));
-
-    		if (!messageAppearsValid()) return "Error: Message parameters were invalid.";
-    		else uc.connect();
-
-    		// send the message
-    		toTC = new OutputStreamWriter(uc.getOutputStream());
-    		toTC.write(messageText);
-    		toTC.flush();
-
-    		int responseCode = uc.getResponseCode();
-    		if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED) { // 200 or 201
-    			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-    			res = new StringBuffer("Status code: " + responseCode + "<br/>");
-    			String line;
-    			while ((line = reader.readLine()) != null) {
-    				res.append(line);
-    			}
-    			reader.close();
-    			toTC.close();
-    		} else {
-    			toTC.close();
-    			throw new Exception("Server returned status code: " + responseCode);  
-    		}
-    	} catch (Exception e) {
-    	} finally {
-    		reader.close();
-    		toTC.close();
-    	}
-    	return res.toString();
-    }
-
-    private boolean messageAppearsValid() {
-    	if (contentType == null) return false;
-    	if (messageText==null || (messageText.isEmpty() && !httpMethod.equals("GET"))) return false;
-    	if (oauth_consumer_key==null || oauth_consumer_key.isEmpty()) return false;
-    	if (oauth_shared_secret==null || oauth_shared_secret.isEmpty()) return false;
-    	if (destinationURL==null || destinationURL.isEmpty()) return false;
-    	return true;
-    }
-    
-	static String xmlReadResult(String lis_result_sourcedid) {
-		return "<?xml version = \"1.0\" encoding = \"UTF-8\"?>"
-		+ "<imsx_POXEnvelopeRequest xmlns = \"http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0\">"
-		+ "  <imsx_POXHeader>"
-		+ "    <imsx_POXRequestHeaderInfo>"
-		+ "      <imsx_version>V1.0</imsx_version>"
-		+ "      <imsx_messageIdentifier>1</imsx_messageIdentifier>"
-		+ "    </imsx_POXRequestHeaderInfo>"
-		+ "  </imsx_POXHeader>"
-		+ "  <imsx_POXBody>"
-		+ "    <readResultRequest>"
-		+ "      <resultRecord>"
-		+ "        <sourcedGUID>"
-		+ "          <sourcedId>" + lis_result_sourcedid + "</sourcedId>"
-		+ "        </sourcedGUID>"
-		+ "      </resultRecord>"
-		+ "    </readResultRequest>"
-		+ "  </imsx_POXBody>"
-		+ "</imsx_POXEnvelopeRequest>";
-	}
-
-	static String xmlReplaceResult(String lis_result_sourcedid, String score) {	
-		return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-		+ "<imsx_POXEnvelopeRequest xmlns = \"http://www.imsglobal.org/services/ltiv1p1/xsd/imsoms_v1p0\">\n"
-		+ "  <imsx_POXHeader>\n"
-		+ "    <imsx_POXRequestHeaderInfo>\n"
-		+ "      <imsx_version>V1.0</imsx_version>\n"
-		+ "      <imsx_messageIdentifier>1</imsx_messageIdentifier>\n"
-		+ "    </imsx_POXRequestHeaderInfo>\n"
-		+ "  </imsx_POXHeader>\n"
-		+ "  <imsx_POXBody>\n"
-		+ "    <replaceResultRequest>\n"
-		+ "      <resultRecord>\n"
-		+ "        <sourcedGUID>\n"
-		+ "          <sourcedId>" + lis_result_sourcedid + "</sourcedId>\n"
-		+ "        </sourcedGUID>\n"
-		+ "        <result>\n"
-		+ "          <resultScore>\n"
-		+ "            <language>en</language>\n"
-		+ "            <textString>" + score + "</textString>\n"
-		+ "          </resultScore>\n"
-		+ "        </result>\n"
-		+ "      </resultRecord>\n"
-		+ "    </replaceResultRequest>\n"
-		+ "  </imsx_POXBody>\n"
-		+ "</imsx_POXEnvelopeRequest>\n";		
-	}
+	static Map<String,String> authTokens = new HashMap<String,String>();
 	
 	static String getAccessToken(String platformDeploymentId,String scope) {
 		
@@ -759,7 +589,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		return membership;
 	}
 
-	private static void sendEmailToAdmin(String subject,String message) {
+	static void sendEmailToAdmin(String subject,String message) {
 		Properties props = new Properties();
 		Session session = Session.getDefaultInstance(props, null);
 

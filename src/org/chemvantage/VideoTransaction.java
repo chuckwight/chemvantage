@@ -37,13 +37,12 @@ public class VideoTransaction {
 	@Index(IfNotZero.class)	long assignmentId;
 			List<Integer> quizletScores;
 			List<String> missedQuestions;
-			String lis_result_sourcedid;
 			int possibleScore;
 			String videoTitle;
 	
     VideoTransaction() {}
     
-    VideoTransaction(long videoId,String videoTitle,int nBreaks, String userId,long assignmentId,int possibleScore,String lis_result_sourcedid) {
+    VideoTransaction(long videoId,String videoTitle,int nBreaks, String userId,long assignmentId,int possibleScore) {
     	this.videoId = videoId;
     	this.videoTitle = videoTitle;
     	this.userId = Subject.hashId(userId);
@@ -51,7 +50,6 @@ public class VideoTransaction {
         this.score = 0;
         this.assignmentId = assignmentId;
         this.possibleScore = possibleScore;
-        this.lis_result_sourcedid = lis_result_sourcedid;
         this.downloaded = new Date();
         this.quizletScores = new ArrayList<Integer>();
         this.missedQuestions = new ArrayList<String>();

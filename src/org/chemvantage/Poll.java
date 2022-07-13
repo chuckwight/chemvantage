@@ -304,7 +304,6 @@ public class Poll extends HttpServlet {
 		pt.score = 0;
 		pt.possibleScore = 0;
 		pt.responses = new HashMap<Key<Question>,String>();
-		pt.lis_result_sourcedid = user.getLisResultSourcedid();
 		
 		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 		for (Key<Question> k : a.questionKeys) {
@@ -322,9 +321,7 @@ public class Poll extends HttpServlet {
 		ofy().save().entity(pt).now();
 		try {
 			if (user.isAnonymous()) throw new Exception();  // don't save Scores for anonymous users
-			//Score.getInstance(user.getId(), a);
-			boolean reportScoreToLms = a.lti_ags_lineitem_url != null || (a.lis_outcome_service_url != null && user.getLisResultSourcedid() != null);
-			if (reportScoreToLms) {
+			if (a.lti_ags_lineitem_url != null) {
 				QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue
 			}
 		} catch (Exception e) {}

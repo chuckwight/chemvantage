@@ -34,7 +34,6 @@ public class HWTransaction implements Serializable {
 	@Index	Date graded;
 	@Index	int score;
 	@Index	long assignmentId;
-			String lis_result_sourcedid;
 			int possibleScore;
 			String topicTitle;
 			String showWork;

@@ -87,21 +87,6 @@ public class Admin extends HttpServlet {
 			case "Announce": 
 				Subject.setAnnouncement(request.getParameter("Announcement"));
 				break;
-			case "Update Account":
-				BLTIConsumer tc = ofy().load().type(BLTIConsumer.class).id(request.getParameter("ConsumerKey")).safe();
-				tc.status = request.getParameter("Status");
-				tc.org_type = request.getParameter("OrgType");
-				switch (tc.org_type) {
-				case "nonprofit": 
-					tc.expires = null; 
-					break;
-				default:
-					Date now = new Date();
-					Date in10Days = new Date(now.getTime() + 864000000L);
-					if (tc.expires==null || tc.expires.after(in10Days)) tc.expires = in10Days;
-				}
-				ofy().save().entity(tc).now();
-				break;
 			case "Submit Review":
 				Deployment d = ofy().load().type(Deployment.class).id(request.getParameter("platform_deployment_id")).safe();
 				switch(request.getParameter("action")) {
@@ -154,17 +139,7 @@ public class Admin extends HttpServlet {
 			buf.append("<h3>Recent Activity (past 30 days)</h3>");
 			
 			Date lastMonth = new Date(new Date().getTime()-2592000000L);
-			/*
-			buf.append("Active Basic LTI Consumer accounts: " + ofy().load().type(BLTIConsumer.class).filter("lastLogin >",lastMonth).count());
-			if ("showBLTI".equals(userRequest)) {
-				buf.append("<ul>");
-				List<BLTIConsumer> recentTCs = ofy().load().type(BLTIConsumer.class).filter("lastLogin >",lastMonth).list();
-				for (BLTIConsumer c : recentTCs) {
-					buf.append("<li>" + c.oauth_consumer_key + ": Contact: - " + c.contact_name + " (" + c.email + ")</li>");
-				}
-				buf.append("</ul>");
-			} else buf.append(" <a href=/Admin?UserRequest=showBLTI>show details</a><br/>");
-			*/
+			
 			buf.append("Active LTI Advantage deployments: " + ofy().load().type(Deployment.class).filter("lastLogin >",lastMonth).count());
 			if ("showDEPL".equals(userRequest)) {
 				buf.append("<ul>");
@@ -191,86 +166,9 @@ public class Admin extends HttpServlet {
 						+ "<input type=submit name=action value='Block'/>&nbsp;"
 						+ "<input type=submit name=action value='Delete'/></form><br/>");
 			}
-			/*
-			buf.append("<h3>Initiate Full Datastore Backup</h3>");
-			buf.append("Do this manually about once a month by <a href='https://www.chemvantage.org/cloud-datastore-export?output_url_prefix=gs://chem-vantage-hrd-backups'>clicking this link</a>.");
-			*/
+			
 			buf.append("<h3>Signature Code for 1 month Anonymous Access</h3>");
 			buf.append("sig=" + Long.toHexString(User.encode(new Date(new Date().getTime() + 2678400000L).getTime())) + "<br/>");	
-			
-			/*
-			buf.append("<h3>New and Expiring Accounts</h3>");			
-			Date now = new Date();
-			Date twoMonthsAgo = new Date(now.getTime()-5184000000L);
-			Date twoMonthsFromNow = new Date(now.getTime()+5184000000L);
-			List<BLTIConsumer> consumers = ofy().load().type(BLTIConsumer.class).limit(10).filter("status",null).list();
-			consumers.addAll(ofy().load().type(BLTIConsumer.class).filter("expires >",twoMonthsAgo).filter("expires <",twoMonthsFromNow).list());
-			
-			if (consumers.size()==0) buf.append("none");
-			for (BLTIConsumer nc : consumers) {	
-				buf.append("<form method=post>"
-						+ "<input type=hidden name=ConsumerKey value='" + nc.oauth_consumer_key + "'>"
-						+ "<input type=hidden name=sig value=" + user.getTokenSignature() + ">");
-				if (nc.status==null) buf.append("<input type=checkbox name=Status value=approved checked>Approve ");
-				else buf.append("<select name=Status><option value=''>unknown</option>"
-						+ "<option value=approved" + ("approved".equals(nc.status)?" selected>":">") + "approved</option>"
-						+ "<option value=invoiced" + ("invoiced".equals(nc.status)?" selected>":">") + "invoiced</option>"
-						+ "<option value=expired" + (nc.expires != null && nc.expires.before(now)?" selected>":">") + "expired</option></select> ");
-				buf.append("Key: " + nc.oauth_consumer_key + " Contact: " + nc.contact_name + " (" + nc.email + ") "
-						+ "Org: " + nc.organization + " (<a href='" + nc.org_url + "' target=_blank>" + nc.org_url + "</a>)<br>");
-				buf.append("Org Type: <select name=OrgType><option value=''>unknown</option>"
-						+ "<option value=nonprofit" + ("nonprofit".equals(nc.org_type)?" selected>":">") + "nonprofit</option>"
-						+ "<option value=forprofit" + ("forprofit".equals(nc.org_type)?" selected>":">") + "forprofit</option>"
-						+ "<option value=personal" + ("personal".equals(nc.org_type)?" selected>":">") + "personal</option></select> ");
-				buf.append("LMSDomain: " + nc.domain + " Created: " + nc.created+ " Expires: " + (nc.expires==null?"never":nc.expires) + "<br>"
-						+ "<input type=submit name=UserRequest value='Update Account'></form><br>");
-			}
-
-			buf.append("<h3>Basic LTI Consumer Search</h3>");
-			int nConsumers = ofy().load().type(BLTIConsumer.class).count();
-			
-			if (searchString==null || searchString.isEmpty()) searchString = "(show all)";  // default search
-			else if (searchString.endsWith("*")) searchString = searchString.substring(0,searchString.length()-1);
-			
-			buf.append("<FORM NAME=ConsKey ACTION=/Admin METHOD=GET>Use this form below to search for specific LTI consumers.<br>"
-					+ "Consumer Key: <INPUT TYPE=TEXT NAME=SearchString VALUE='" + searchString + "' onFocus=ConsKey.oauth_consumer_key.value=''>"
-					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Search for Consumer'> "
-					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
-					+ "</FORM>");
-			
-			if ("Search for Consumer".equals(userRequest)) {
-				// BLTIConsumers use the oauth_consumer_key as the id value, so we can use a filterKey search
-				// To do this, calculate the values of the lowest possible Key and the highest possible Key for the search
-				// Note that \u0000 is the lowest value UTF-8 character, and \ufffd is the highest
-				Key<BLTIConsumer> keyFirst = Key.create(BLTIConsumer.class,("(show all)".equals(searchString)?"\u0000":searchString));
-				Key<BLTIConsumer> keyLast = Key.create(BLTIConsumer.class,("(show all)".equals(searchString)?"\ufffd":searchString+"\ufffd"));					
-				Query<BLTIConsumer> qConsumers = ofy().load().type(BLTIConsumer.class).filterKey(">=",keyFirst).filterKey("<",keyLast).limit(this.queryLimit);				
-				if (cursor != null) qConsumers = qConsumers.startAt(Cursor.fromUrlSafe(cursor));
-
-				// Determine the number of results to see if we need a cursor to continue the search later
-				int nResults = qConsumers.count();				
-				if (nResults==0) buf.append("<FONT SIZE=-1>No LTI consumers matched the search criteria.</FONT><p>");
-				else {
-					buf.append("<FONT SIZE=-1>Showing " + nResults + " LTI consumers matching the search criteria.</FONT><p>");
-
-					buf.append("<TABLE><TR><TH>Consumer Key</TH><TH>Secret</TH></TR>");
-					
-					QueryResults<BLTIConsumer> iter = qConsumers.iterator();
-					while (iter.hasNext()) {
-					//for (BLTIConsumer c : consumers) {
-						BLTIConsumer c = iter.next();
-						buf.append("<TR><TD>" + c.oauth_consumer_key + "</TD>");
-						buf.append("<TD><INPUT TYPE=BUTTON VALUE='Reveal secret' "
-								+ "onClick=javascript:getElementById('" + c.oauth_consumer_key + "').style.display='';this.style.display='none'>"
-								+ "<div id='"+ c.oauth_consumer_key + "' style='display: none'>" + c.secret + "</div></TD></TR>");
-					}
-					buf.append("</TABLE>");
-					if (nResults==this.queryLimit) buf.append("<FONT SIZE=-1><a href='/Admin?UserRequest=Search for Consumer&SearchString=" + searchString + "&Cursor=" + iter.getCursorAfter().toUrlSafe() + "'><FONT SIZE=-1>show more consumers</FONT></a><p>");
-				}
-			} else { // no search is being conducted, so just list the current total number of consumers
-				buf.append("<FONT SIZE=-1>There are currently " + nConsumers + " registered LTI consumers.</FONT><p>");
-			}
-			*/
 		}
 		catch (Exception e) {
 			buf.append("<p>" + e.toString());

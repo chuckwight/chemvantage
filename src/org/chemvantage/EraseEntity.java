@@ -67,7 +67,6 @@ public class EraseEntity extends HttpServlet {
 				new URL(domain);  // throws Exception if this is a BLTIConsumer
 				ofy().delete().key(Key.create(Deployment.class,domain));
 			} catch (Exception e) {
-				ofy().delete().key(Key.create(BLTIConsumer.class,domain));
 			}
 			// Load all of this domain's assignments Keys into the List of assignmentKeys:
 			assignmentKeys = ofy().load().type(Assignment.class).filter("domain",domain).keys().list();
@@ -88,6 +87,7 @@ public class EraseEntity extends HttpServlet {
 					case "PracticeExam": ofy().delete().keys(ofy().load().type(PracticeExamTransaction.class).filter("assignmentId", a.id).keys().iterable()); break;
 					case "VideoQuiz": ofy().delete().keys(ofy().load().type(VideoTransaction.class).filter("assignmentId", a.id).keys().iterable()); break;
 					case "Poll": ofy().delete().keys(ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).keys().iterable());break;
+					case "PlacementExam": ofy().delete().keys(ofy().load().type(PlacementExamTransaction.class).filter("assignmentId",a.id).keys().iterable());break;
 				}
 			}
 		}
@@ -111,16 +111,14 @@ public class EraseEntity extends HttpServlet {
 				+ "<ul>"
 				+ "<li>Selected assignments and associated transactions"
 				+ "<li>All assignments and transactions associated with a domain (complete reset)"
-				+ "<li>A domain and all associated assignments and transactions (complete delete)"
+				+ "<li>A deployment and all associated assignments and transactions (complete delete)"
 				+ "</ul>");
-		List<BLTIConsumer> consumers = ofy().load().type(BLTIConsumer.class).list();
 		List<Deployment> deployments = ofy().load().type(Deployment.class).list();
 		
 		buf.append("Select the domain of interest by its Consumer Key or Deployment ID:<br>"
 				+ "<form method=get action=/EraseEntity>"
 				+ "<select name=Domain>"
 				+ "<option value=''" + (domain==null?" SELECTED":"") + ">Select a domain</option>");
-		for (BLTIConsumer c : consumers) buf.append("<option value='" + c.oauth_consumer_key + "'" + (c.oauth_consumer_key.equals(domain)?" SELECTED>":">") + c.oauth_consumer_key + "</option>");		
 		for (Deployment d : deployments) buf.append("<option value='" + d.platform_deployment_id + "'" + (d.platform_deployment_id.equals(domain)?" SELECTED>":">") + d.platform_deployment_id + "</option>");		
 		
 		buf.append("</select>&nbsp;&nbsp;");
@@ -134,7 +132,7 @@ public class EraseEntity extends HttpServlet {
 		
 		buf.append(("Domain: ") + "<b>" + domain + "</b><p>");
 		
-		boolean domainExists = ofy().load().type(BLTIConsumer.class).id(domain).now()!=null || ofy().load().type(Deployment.class).id(domain).now() != null;
+		boolean domainExists = ofy().load().type(Deployment.class).id(domain).now() != null;
 		if (!domainExists) {
 			buf.append("This domain is not currently registered in ChemVantage.");
 			return buf.toString();
@@ -174,6 +172,8 @@ public class EraseEntity extends HttpServlet {
 						case "Homework": nTransactions = ofy().load().type(HWTransaction.class).filter("assignmentId",a.id).count(); break;
 						case "PracticeExam": nTransactions = ofy().load().type(PracticeExamTransaction.class).filter("assignmentId",a.id).count(); break;
 						case "VideoQuiz": nTransactions = ofy().load().type(VideoTransaction.class).filter("assignmentId",a.id).count(); break;
+						case "PlacementExam": nTransactions = ofy().load().type(PlacementExamTransaction.class).filter("assignmentId",a.id).count(); break;
+						case "Poll": nTransactions = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).count(); break;
 					}
 				}
 				buf.append("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" + nTransactions + " transactions are associated with this assignment<br>");

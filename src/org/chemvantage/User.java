@@ -33,7 +33,6 @@ public class User {
 	@Index	Date 	exp;				   // max 90 minutes from now
 			String  encryptedId;		   // stored temporarily in encrypted form
 			String	platformId;			   // URL of the LMS
-			String 	lis_result_sourcedid = null;  // used only by LTIv1p1 users
 			long	assignmentId = 0L;     // used only for LTI users
 			int 	roles = 0;             // student
 
@@ -247,12 +246,6 @@ public class User {
 		else return String.valueOf(sig);     // String version of @Id value of User in the datastore
 	}
 	
-	void setAssignment(long assignmentId,String lis_result_sourcedid) {  // LTI v1.1
-		this.assignmentId = assignmentId;
-		this.lis_result_sourcedid = lis_result_sourcedid;
-		setToken();
-	}
-	
 	void setAssignment(long assignmentId) {  // LTI Advantage
 		this.assignmentId = assignmentId;
 		setToken();
@@ -267,11 +260,7 @@ public class User {
     	return assignmentId;
     }
 
-    public String getLisResultSourcedid() {
-   		return lis_result_sourcedid;
-    }
- 
-    static String encryptId(String id, long sig) {
+   static String encryptId(String id, long sig) {
     	/* This method uses a simple one-time pad to encrypt a userId value prior to storing inthe database.
     	 * The uses sig as a seed for Random. Each 8-bit random integer (0 to 127) is XORed with one byte
     	 * of the input String and converted to a two-character hexadecimal number for storage as a printable value.

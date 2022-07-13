@@ -23,7 +23,6 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.util.List;
 import java.util.Properties;
 
@@ -51,7 +50,7 @@ public class ReportScore extends HttpServlet {
 	
 	public String getServletInfo() {
 		return "ChemVantage servlet reports a single Score object back to a user's LMS as a Task "
-				+ "using the 1EdTech LTI 1.1 Learning Information Services API or LTIAdvantage 1.3.0 API.";
+				+ "using the 1EdTech LTI Advantage Assignment and Grade Services 2.0 Specification.";
 	}
 	
 	@Override
@@ -67,7 +66,6 @@ public class ReportScore extends HttpServlet {
 				String userId = s.owner.getName();
 				String url = "/ReportScore?UserId=" + userId + "&AssignmentId=" + s.assignmentId;
 				if (s.lisReportComplete) out.println("Report is complete: " + url + "<br>");
-				else if (s.lis_result_sourcedid==null) continue; //out.println("No lisResultSourcedId: " + url + "<br>");
 				else if (s.needsLisReporting()) out.println("Score needs reporting: <a href=" + url + ">" + url + "</a><br>");
 				else out.println("No reporting URL provided: " + url + "<br>");
 			}
@@ -93,58 +91,11 @@ public class ReportScore extends HttpServlet {
 
 			if (a.lti_ags_lineitem_url != null && !a.lti_ags_lineitem_url.contains("localhost")) {  // use LTIAdvantage reporting specs
 				out.println(postUserScore(userId,a,attempts));
-			} else if (a.lis_outcome_service_url != null && !a.lis_outcome_service_url.contains("localhost")) { // use LTI 1.1 reporting
-				out.println(postUserScore(userId,a,attempts,""));  // use LTI v1.1 specs
 			}
 		} catch (Exception e) {
 			out.println(e.getMessage());
 		}
 
-	}
-	
-	String postUserScore(String userId,Assignment a,int attempts,String dummy) { // LTIv1.1 only
-		String oauth_consumer_key = null;
-		StringBuffer buf = new StringBuffer();
-		try {		
-			Key<Score> k = Key.create(Key.create(User.class, Subject.hashId(userId)),Score.class,a.id);
-			Score s = ofy().load().key(k).now();
-			if (s == null || !s.needsLisReporting()) return "Score does not need to be reported";
-			buf.append("LisResultSourcedId:<br>" + s.lis_result_sourcedid + "<p>");
-			
-			// compute a scaled score in the range 0.0-1.0 for LIS services specification
-			double score = (double)s.score / (double)s.maxPossibleScore;
-			if (score < 0.0 || score > 1.0) throw new Exception();
-
-			oauth_consumer_key = a.domain;
-
-			String messageFormat = "application/xml";
-			String body = LTIMessage.xmlReplaceResult(s.lis_result_sourcedid,String.valueOf(score));
-			buf.append("XML file:<br><pre>" + body + "</pre><p>");
-			String replyBody = new LTIMessage(messageFormat,body,a.lis_outcome_service_url,oauth_consumer_key).send();
-			buf.append("LMS Replied:<br>" + replyBody);
-
-			if (replyBody.toLowerCase().contains("success")) {
-				s.lisReportComplete = true;
-				ofy().save().entity(s);
-			} else if (attempts < 4){
-				long countdownMillis = (long) Math.pow(2,attempts)*10800000L;  // retries at 6, 12, 24 hr intervals
-				Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
-				queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",URLEncoder.encode(userId, "UTF-8")).param("Retry",Integer.toString(attempts)).countdownMillis(countdownMillis));			
-			} else throw new Exception("User " + userId + " earned a score of " + s.getPctScore() + "% on assignment "
-					+ a.id + "; however, the score could not be posted to the LMS grade book, even after " + attempts + " attempts. The server reply was:<br/>" + replyBody);
-		} catch (Exception e) {
-			buf.append(e.toString());
-			if (attempts < 4){
-				try{
-					long countdownMillis = (long) Math.pow(2,attempts)*10800000L;
-					Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
-					queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",URLEncoder.encode(userId, "UTF-8")).param("Retry",Integer.toString(attempts)).countdownMillis(countdownMillis));			
-				} catch (Exception e2) {}
-			} else {
-				sendEmailToDomainAdmin(userId,a,oauth_consumer_key,e.getMessage() + buf.toString());
-			}
-		}
-		return buf.toString();
 	}
 	
 	String postUserScore(String userId,Assignment a,int attempts) {  // LTI v1.3 only
@@ -207,49 +158,4 @@ public class ReportScore extends HttpServlet {
 		}
 
 	}
-	
-	void sendEmailToDomainAdmin(String userId,Assignment assignment,String oauth_consumer_key,String errorMsg) {  // LTIv1p1
-		try {
-			Properties props = new Properties();
-			Session session = Session.getDefaultInstance(props, null);
-
-			BLTIConsumer c = ofy().load().type(BLTIConsumer.class).id(oauth_consumer_key).safe();
-			String recipient = c.email;
-			Topic t = ofy().load().type(Topic.class).id(assignment.topicId).safe();
-			Key<Score> k = Key.create(Key.create(User.class, userId),Score.class,assignment.id);
-			Score s = ofy().load().key(k).now();
-			if (s==null) s=Score.getInstance(userId,assignment);
-			if (!s.needsLisReporting()) return;  // everything is OK and the situation is resolved
-				
-			String msgBody = "<h3>ChemVantage LIS ReportScore Failure</h3>"
-					+ "You are receiving this message because you received LTI credentials at this address to "
-					+ "establish a connection to the ChemVantage app using the consumer_key " + c.oauth_consumer_key + "<p>"
-					+ "The ChemVantage server encountered the following error while attempting to report a score to your LMS:<br>"
-					+ errorMsg + "<p>"
-					+ "Details:<br>"
-					+ "UserId: " + userId + "<br>"
-					+ "AssignmentId: " + assignment.id + "<br>"
-					+ "Assignment: " + assignment.assignmentType + (t==null?"":" - " + t.title) + "<br>"
-					+ "Current score= " + s.getPctScore() + "% after " + s.numberOfAttempts + " attempts<br>"
-					+ "ChemVantage domain = " + oauth_consumer_key + "<br>"
-					+ "Domain contact = " + c.email + "<br>"
-					+ "Service URL = " + assignment.lis_outcome_service_url + "<br>"
-					+ "POST message = " + LTIMessage.xmlReplaceResult(s.lis_result_sourcedid,String.valueOf(s.score)) + "<p>"
-					
-					+ "This message was generated automatically to make you aware of a potential problem with the connection to "
-					+ "your LMS. If you need help, please contact me for assistance.<p>"
-					+ "Thank you,<p>"
-					+ "Chuck Wight<br>ChemVantage LLC<br>admin@chemvantage.org";
-			
-			Message msg = new MimeMessage(session);
-			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-			msg.addRecipient(Message.RecipientType.TO,new InternetAddress(recipient, ""));
-			msg.addRecipient(Message.RecipientType.CC,new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-			msg.setSubject("ChemVantage LIS Reporting Error");
-			msg.setContent(msgBody,"text/html");
-			Transport.send(msg);
-		} catch (Exception e) {
-		}
-	}
-
 }

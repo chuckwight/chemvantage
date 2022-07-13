@@ -264,7 +264,7 @@ public class PlacementExam extends HttpServlet {
 				}	
 				pt = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("graded",null).filter("downloaded ",null).first().now(); // newly  paid
 				Long transactionId = pt==null?null:pt.id;  // use the same id if it exists
-				pt = new PlacementExamTransaction(a.topicIds,user.getId(),now,null,new int[a.topicIds.size()],new int[a.topicIds.size()],user.getLisResultSourcedid());
+				pt = new PlacementExamTransaction(a.topicIds,user.getId(),now,null,new int[a.topicIds.size()],new int[a.topicIds.size()]);
 				pt.id = transactionId;
 				pt.assignmentId = assignmentId;
 				ofy().save().entity(pt).now();	
@@ -515,8 +515,6 @@ public class PlacementExam extends HttpServlet {
 					ofy().save().entity(s).now();
 					if (a.lti_ags_lineitem_url != null) { // LTI v1.3
 						LTIMessage.postUserScore(s,user.getId());
-					} else if (a.lis_outcome_service_url != null) { // LTI v1.1 put report into the Task Queue
-						QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  
 					}
 				} catch (Exception e) {}
 			}
@@ -583,20 +581,6 @@ public class PlacementExam extends HttpServlet {
 								lmsPctScore = Double.parseDouble(lmsScore);
 								gotScoreOK = true;
 							} catch (Exception e) {
-							}
-						}
-						else if (a.lis_outcome_service_url != null && s.lis_result_sourcedid != null) {  // LTI version 1.1
-							String messageFormat = "application/xml";
-							String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
-							String oauth_consumer_key = user.getId().substring(0, user.getId().indexOf(":"));
-							String replyBody = new LTIMessage(messageFormat,body,a.lis_outcome_service_url,oauth_consumer_key).send();
-
-							if (replyBody.contains("success")) {
-								int beginIndex = replyBody.indexOf("<textString>") + 12;
-								int endIndex = replyBody.indexOf("</textString>");
-								lmsScore = replyBody.substring(beginIndex,endIndex);
-								lmsPctScore = 100.*Double.parseDouble(lmsScore);
-								gotScoreOK = true;
 							}
 						}
 
@@ -1114,8 +1098,6 @@ public class PlacementExam extends HttpServlet {
 				ofy().save().entity(s).now();
 				if (a.lti_ags_lineitem_url != null) { // LTI v1.3
 					LTIMessage.postUserScore(s,studentUserId);
-				} else if (a.lis_outcome_service_url != null) { // LTI v1.1 put report into the Task Queue
-					QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",a.id.toString()).param("UserId",URLEncoder.encode(pet.userId,"UTF-8")));  
 				}
 			} catch (Exception e) {}
 

@@ -41,7 +41,6 @@ public class Assignment implements java.lang.Cloneable {
 	public	long videoId;    // used only for video assignments
 	public	Integer timeAllowed; // to complete assignment, in seconds default = 900 for Quiz, 3600 for PracticeExam
 	public 	Integer attemptsAllowed;
-	public	String lis_outcome_service_url;
 	@Index	public 	String lti_ags_lineitems_url;
 	@Index	public	String lti_ags_lineitem_url;
 	public	String lti_nrps_context_memberships_url;
@@ -50,13 +49,6 @@ public class Assignment implements java.lang.Cloneable {
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 
 	Assignment() {}
-
-	Assignment(String consumer_key,String resourceLinkId,String lisOutcomeServiceUrl,boolean isLTIv1p1) {  // specific to Quiz and Homework assignments with a single topicId
-		this.domain = consumer_key;
-		this.resourceLinkId = resourceLinkId;
-		this.lis_outcome_service_url = lisOutcomeServiceUrl;
-		this.created = new Date();
-	}
 
 	Assignment(String platformDeploymentId,String resourceLinkId,String lti_nrps_context_memberships_url) {
 		this.domain = platformDeploymentId;
@@ -102,7 +94,6 @@ public class Assignment implements java.lang.Cloneable {
 				(this.topicId == a.topicId) &&
 				(this.videoId == a.videoId) &&
 				((this.resourceLinkId != null && this.resourceLinkId.equals(a.resourceLinkId)) 															|| (a.resourceLinkId == null && this.resourceLinkId == null)) &&
-				((this.lis_outcome_service_url != null && this.lis_outcome_service_url.equals(a.lis_outcome_service_url)) 								|| (a.lis_outcome_service_url == null && this.lis_outcome_service_url == null)) &&
 				((this.lti_ags_lineitems_url != null && this.lti_ags_lineitems_url.equals(a.lti_ags_lineitems_url)) 									|| (a.lti_ags_lineitems_url == null && this.lti_ags_lineitems_url == null)) &&
 				((this.lti_ags_lineitem_url != null && this.lti_ags_lineitem_url.equals(a.lti_ags_lineitem_url)) 										|| (a.lti_ags_lineitem_url == null && this.lti_ags_lineitem_url == null)) &&
 				((this.lti_nrps_context_memberships_url != null && this.lti_nrps_context_memberships_url.equals(a.lti_nrps_context_memberships_url)) 	|| (a.lti_nrps_context_memberships_url == null && this.lti_nrps_context_memberships_url == null)) &&

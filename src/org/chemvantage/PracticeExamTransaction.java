@@ -41,21 +41,19 @@ public class PracticeExamTransaction implements Serializable {
 			List<Long> topicIds;
 			int[] scores;
 			int[] possibleScores;
-			String lis_result_sourcedid;
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 			Map<Key<Question>,String> questionShowWork = new HashMap<Key<Question>,String>();
 			Map<Key<Question>,Integer> questionScores = new HashMap<Key<Question>,Integer>();
 
 	PracticeExamTransaction() {}
 
-	PracticeExamTransaction(List<Long> topicIds,String userId,Date downloaded,Date graded,int[] scores,int[] possibleScores,String lis_result_sourcedid) {
+	PracticeExamTransaction(List<Long> topicIds,String userId,Date downloaded,Date graded,int[] scores,int[] possibleScores) {
 		this.topicIds = topicIds;
 		this.userId = Subject.hashId(userId);
 		this.downloaded = downloaded;
 		this.graded = graded;
 		this.scores = scores;
 		this.possibleScores = possibleScores;
-		this.lis_result_sourcedid = lis_result_sourcedid;
 	}
 
     boolean topicsMatch(List<Long> topicIds) {  // matches if both Lists have identical members but not necessarily in the same order

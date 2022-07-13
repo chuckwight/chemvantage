@@ -50,8 +50,6 @@ public class Edit extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	Map<String,Map<Key<Question>,Question>> questions = new HashMap<String,Map<Key<Question>,Question>>();
-	
-	//TreeMap<Key<Question>,Question> questions = new TreeMap<Key<Question>,Question>(new SortBySuccessPct());
 	Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
 	Map<Key<Question>,Integer> pointValue = new HashMap<Key<Question>,Integer>();
 	

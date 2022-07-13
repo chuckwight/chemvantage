@@ -171,7 +171,7 @@ public class VideoQuiz extends HttpServlet {
 			if (vt == null || vt.graded != null || vt.downloaded.before(then)) {  // create a new VideoTransaction
 				int possibleScore = 0;
 				for (int i=0;i<v.breaks.length;i++) possibleScore += (v.nQuestions[i]<this.nQuestions?v.nQuestions[i]:this.nQuestions);
-				vt = new VideoTransaction(v.id,v.title,v.breaks.length,user.getId(),assignmentId,possibleScore,user.getLisResultSourcedid());
+				vt = new VideoTransaction(v.id,v.title,v.breaks.length,user.getId(),assignmentId,possibleScore);
 				ofy().save().entity(vt).now();
 			}
 
@@ -318,7 +318,7 @@ public class VideoQuiz extends HttpServlet {
 			a = ofy().load().type(Assignment.class).id(assignmentId).now();
 			Score s = Score.getInstance(user.getId(),a);
 			ofy().save().entity(s).now();
-			reportScoreToLms = a.lti_ags_lineitem_url != null || (a.lis_outcome_service_url != null && user.getLisResultSourcedid() != null);
+			reportScoreToLms = a.lti_ags_lineitem_url != null;
 		}
 		if (noQuizlets) {
 			buf.append("<h4>Thanks for watching</h4>");
@@ -433,20 +433,6 @@ public class VideoQuiz extends HttpServlet {
 							lmsPctScore = Double.parseDouble(lmsScore);
 							gotScoreOK = true;
 						} catch (Exception e) {
-						}
-					}
-					else if (a.lis_outcome_service_url != null && s.lis_result_sourcedid != null) {  // LTI version 1.1
-						String messageFormat = "application/xml";
-						String body = LTIMessage.xmlReadResult(s.lis_result_sourcedid);
-						String oauth_consumer_key = user.getId().substring(0, user.getId().indexOf(":"));
-						String replyBody = new LTIMessage(messageFormat,body,a.lis_outcome_service_url,oauth_consumer_key).send();
-
-						if (replyBody.contains("success")) {
-							int beginIndex = replyBody.indexOf("<textString>") + 12;
-							int endIndex = replyBody.indexOf("</textString>");
-							lmsScore = replyBody.substring(beginIndex,endIndex);
-							lmsPctScore = 100.*Double.parseDouble(lmsScore);
-							gotScoreOK = true;
 						}
 					}
 					

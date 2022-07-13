@@ -36,11 +36,10 @@ public class QuizTransaction implements Serializable {
 	@Index  long assignmentId;
 			int possibleScore;
 			String topicTitle;
-			String lis_result_sourcedid;
-	
+			
     QuizTransaction() {}
     
-    public QuizTransaction(long topicId,String topicTitle,String userId,Date downloaded,Date graded,int score,long assignmentId,int possibleScore,String lis_result_sourcedid) {
+    public QuizTransaction(long topicId,String topicTitle,String userId,Date downloaded,Date graded,int score,long assignmentId,int possibleScore) {
     	this.topicId = topicId;
     	this.topicTitle = topicTitle;
     	this.userId = Subject.hashId(userId);
@@ -49,7 +48,6 @@ public class QuizTransaction implements Serializable {
         this.score = score;
         this.assignmentId = assignmentId;
         this.possibleScore = possibleScore;
-        this.lis_result_sourcedid = lis_result_sourcedid;
    }
    
     public Long getId() {
@@ -58,14 +56,6 @@ public class QuizTransaction implements Serializable {
     
     public Date getGraded() {
     	return graded;
-    }
-    
-    public String getLisResultSourcedid() {
-    	return this.lis_result_sourcedid;
-    }
-    
-    public void putLisResultSourcedid(String lrs) {
-    	this.lis_result_sourcedid = lrs;
     }
     
     public void putPossibleScore(int ps) {
@@ -77,8 +67,7 @@ public class QuizTransaction implements Serializable {
     }
     
     public String tableRow() {
-    	return "<tr><td>" + topicTitle + "</td><td>" + downloaded + "</td><td>" + graded + "</td><td>" + score + "/" + possibleScore
-    	    	+ (lis_result_sourcedid==null?"":" reported to LMS.") + "</td></tr>";
+    	return "<tr><td>" + topicTitle + "</td><td>" + downloaded + "</td><td>" + graded + "</td><td>" + score + "/" + possibleScore + "</td></tr>";
     }
     
 }
