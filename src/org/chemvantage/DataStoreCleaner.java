@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -270,6 +271,17 @@ public class DataStoreCleaner extends HttpServlet {
 		// This method searches for assignments that do not belong to a Deployment and deletes them
 		StringBuffer buf = new StringBuffer();
 		buf.append("<h2>Clean Assignments</h2>");
+		
+		List<Assignment> assignments = ofy().load().type(Assignment.class).limit(1000).list();
+		List<String> lineitems_urls = new ArrayList<String>();
+		
+		for (Assignment a : assignments) {
+			if (a.lti_ags_lineitems_url != null) lineitems_urls.add(a.lti_ags_lineitems_url);
+			else if (a.lti_ags_lineitem_url != null) a.lti_ags_lineitems_url = getLineitemsUrl(a.lti_ags_lineitem_url);
+		}
+		
+		return buf.toString();
+		/*
 		try {
 			Query<Assignment> query = ofy().load().type(Assignment.class).limit(1000);
 			String cursorStr = request.getParameter("cursor");
@@ -351,8 +363,22 @@ public class DataStoreCleaner extends HttpServlet {
 			buf.append("Error: " + e.toString());
 		}
 		return buf.toString();
+		*/
 	}
 
+	String getLineitemsUrl(String lineitem_url, String platformDeploymentId) {
+		try {
+			URL lineitemUrl = new URL(lineitem_url);
+			Deployment d = Deployment.getInstance(platformDeploymentId);
+			String path = lineitemUrl.getPath();
+			String query = lineitemUrl.getQuery();
+			if ("moodle".equals(d.lms_type)) path = path.substring(0,path.lastIndexOf("/")); /// strips "/lineitem"
+			path = path.substring(0,path.lastIndexOf("/"));  // strips lineitem identifier
+			
+		} catch (Exception e) {
+			return null;
+		}
+	}
 	private String cleanDeployments(boolean testOnly) {
 		// This method searches for Deployment entities with no logins for at least 1 year
 		
