@@ -272,12 +272,21 @@ public class DataStoreCleaner extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		buf.append("<h2>Clean Assignments</h2>");
 		
-		List<Assignment> assignments = ofy().load().type(Assignment.class).limit(1000).list();
+		List<Assignment> assignments = ofy().load().type(Assignment.class).limit(500).list();
 		List<String> lineitems_urls = new ArrayList<String>();
+		boolean saveAssignments = false;
 		
 		for (Assignment a : assignments) {
 			if (a.lti_ags_lineitems_url != null) lineitems_urls.add(a.lti_ags_lineitems_url);
-			else if (a.lti_ags_lineitem_url != null) a.lti_ags_lineitems_url = getLineitemsUrl(a.lti_ags_lineitem_url);
+			else if (a.lti_ags_lineitem_url != null) {
+				a.lti_ags_lineitems_url = getLineitemsUrl(a.lti_ags_lineitem_url,a.domain);
+				lineitems_urls.add(a.lti_ags_lineitems_url);
+				saveAssignments = true;
+			}
+		}
+		if (saveAssignments) ofy().save().entities(assignments).now();
+		for (String url : lineitems_urls) {
+			
 		}
 		
 		return buf.toString();
@@ -370,11 +379,10 @@ public class DataStoreCleaner extends HttpServlet {
 		try {
 			URL lineitemUrl = new URL(lineitem_url);
 			Deployment d = Deployment.getInstance(platformDeploymentId);
-			String path = lineitemUrl.getPath();
 			String query = lineitemUrl.getQuery();
-			if ("moodle".equals(d.lms_type)) path = path.substring(0,path.lastIndexOf("/")); /// strips "/lineitem"
-			path = path.substring(0,path.lastIndexOf("/"));  // strips lineitem identifier
-			
+			if ("moodle".equals(d.lms_type)) lineitem_url = lineitem_url.substring(0,lineitem_url.lastIndexOf("/")); /// strips "/lineitem"
+			lineitem_url = lineitem_url.substring(0,lineitem_url.lastIndexOf("/"));  // strips lineitem identifier
+			return lineitem_url + (query==null?"":query);
 		} catch (Exception e) {
 			return null;
 		}
