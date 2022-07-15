@@ -25,7 +25,9 @@ import java.io.PrintWriter;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.HttpConstraint;
@@ -126,7 +128,7 @@ public class DataStoreCleaner extends HttpServlet {
 		buf.append("<label><input type=radio name=Task value=CleanResponses> Responses older than 3 years</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanTransactions> Transactions with no existing Assignment entity</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanScores> Scores older than 1 year</label><br>");
-		buf.append("<label><input type=radio name=Task value=CleanAssignments> Assignments with no Deployment or BLTIConsumer</label><br>");
+		buf.append("<label><input type=radio name=Task value=CleanAssignments> Assignments older than 6 months with no lineitem_url</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanDeployments> Deployments with no logins for more than 1 year</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanBLTIConsumers> BLTIConsumers with no logins for more than 1 year</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanUsers> Users whose tokens have expired</label><p>");
@@ -273,22 +275,30 @@ public class DataStoreCleaner extends HttpServlet {
 		buf.append("<h2>Clean Assignments</h2>");
 		
 		List<Assignment> assignments = ofy().load().type(Assignment.class).limit(500).list();
-		List<String> lineitems_urls = new ArrayList<String>();
+		Map<String,Deployment> lineitems_urls = new HashMap<String,Deployment>();
 		boolean saveAssignments = false;
 		
 		for (Assignment a : assignments) {
-			if (a.lti_ags_lineitems_url != null) lineitems_urls.add(a.lti_ags_lineitems_url);
-			else if (a.lti_ags_lineitem_url != null) {
-				a.lti_ags_lineitems_url = getLineitemsUrl(a.lti_ags_lineitem_url,a.domain);
-				lineitems_urls.add(a.lti_ags_lineitems_url);
-				saveAssignments = true;
+			Deployment d = Deployment.getInstance(a.domain);
+			if (a.lti_ags_lineitems_url != null) lineitems_urls.put(a.lti_ags_lineitems_url,d);
+			else if (a.lti_ags_lineitem_url != null) { // try to find the lineitems_url from the lineitem_url
+				try {
+					URL lineitemUrl = new URL(a.lti_ags_lineitem_url);  // checks to see if this is really a URL
+					String query = lineitemUrl.getQuery();
+					if ("moodle".equals(d.lms_type)) a.lti_ags_lineitem_url = a.lti_ags_lineitem_url.substring(0,a.lti_ags_lineitem_url.lastIndexOf("/lineitem")); /// strips "/lineitem"
+					a.lti_ags_lineitem_url = a.lti_ags_lineitem_url.substring(0,a.lti_ags_lineitem_url.lastIndexOf("/")) + (query==null?"":"?"+query);  // strips lineitem identifier and restores query
+					lineitems_urls.put(a.lti_ags_lineitems_url,d);
+					saveAssignments = true;
+				} catch (Exception e) {}
 			}
 		}
-		if (saveAssignments) ofy().save().entities(assignments).now();
+		buf.append("Assignments processed: " + assignments.size() + "<br/>");
+		if (saveAssignments) buf.append("New lineitem_urls to be saved: " + lineitems_urls.size() + "<br/><br/>");  // ofy().save().entities(assignments).now();
+		/*
 		for (String url : lineitems_urls) {
-			
+			JsonArray container = LTIMessage.getLineItemContainer(null, url, url)
 		}
-		
+		*/
 		return buf.toString();
 		/*
 		try {
@@ -380,9 +390,9 @@ public class DataStoreCleaner extends HttpServlet {
 			URL lineitemUrl = new URL(lineitem_url);
 			Deployment d = Deployment.getInstance(platformDeploymentId);
 			String query = lineitemUrl.getQuery();
-			if ("moodle".equals(d.lms_type)) lineitem_url = lineitem_url.substring(0,lineitem_url.lastIndexOf("/")); /// strips "/lineitem"
+			if ("moodle".equals(d.lms_type)) lineitem_url = lineitem_url.substring(0,lineitem_url.lastIndexOf("/lineitem")); /// strips "/lineitem"
 			lineitem_url = lineitem_url.substring(0,lineitem_url.lastIndexOf("/"));  // strips lineitem identifier
-			return lineitem_url + (query==null?"":query);
+			return lineitem_url + (query==null?"":"?"+query);
 		} catch (Exception e) {
 			return null;
 		}

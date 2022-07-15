@@ -201,8 +201,32 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     	return null;
     }
     
+    static JsonArray getLineItemContainer(Deployment d,String lti_ags_lineitems_url,String scope) {
+    	// This method asks the platform to return one lineitems for the context having the specified resourceLinkId
+    	JsonArray lineitems_json = null;
+    	try {
+    		String accessToken = getAccessToken(d.platform_deployment_id,scope);
+    		if (accessToken == null) return null;
+    		String bearerAuth = "Bearer " + accessToken;
+
+    		URL u = new URL(lti_ags_lineitems_url);
+    		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+    		uc.setDoInput(true);
+    		uc.setRequestMethod("GET");
+    		uc.setRequestProperty("Authorization", bearerAuth);
+    		uc.setRequestProperty("Accept", "application/vnd.ims.lis.v2.lineitemcontainer+json");
+    		uc.connect();
+    		BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+    		lineitems_json = JsonParser.parseReader(reader).getAsJsonArray();
+    		reader.close();
+
+    	} catch (Exception e) {
+    	}
+    	return lineitems_json;
+    }
+
     static String getLineItemContainer(Deployment d,String lti_ags_lineitems_url,String resourceLinkId,String scope) {
-    	// This method asks the platform to return ALL of the lineitems for the context as a JSON string
+    	// This method asks the platform to return one lineitems for the context having the specified resourceLinkId
     	try {
     		String accessToken = getAccessToken(d.platform_deployment_id,scope);
     		if (accessToken == null) return "Access token not granted: " + accessToken;
