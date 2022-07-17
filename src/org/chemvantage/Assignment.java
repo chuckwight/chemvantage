@@ -44,6 +44,7 @@ public class Assignment implements java.lang.Cloneable {
 	@Index	public 	String lti_ags_lineitems_url;
 	@Index	public	String lti_ags_lineitem_url;
 	public	String lti_nrps_context_memberships_url;
+	@Index	Date valid;
 			List<Long> topicIds; // used for practice exams which have multiple topicIds
 			List<String> resourceLinkIds = new ArrayList<String>();  // deprecated
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
@@ -98,6 +99,7 @@ public class Assignment implements java.lang.Cloneable {
 				((this.lti_ags_lineitem_url != null && this.lti_ags_lineitem_url.equals(a.lti_ags_lineitem_url)) 										|| (a.lti_ags_lineitem_url == null && this.lti_ags_lineitem_url == null)) &&
 				((this.lti_nrps_context_memberships_url != null && this.lti_nrps_context_memberships_url.equals(a.lti_nrps_context_memberships_url)) 	|| (a.lti_nrps_context_memberships_url == null && this.lti_nrps_context_memberships_url == null)) &&
 				((this.topicIds != null && this.topicIds.equals(a.topicIds)) 																			|| (a.topicIds == null && this.topicIds == null)) &&
+				((this.valid != null && this.valid.equals(a.valid))																						|| (a.valid == null && this.valid == null)) &&
 				((this.questionKeys != null && this.questionKeys.equals(a.questionKeys)) 																|| (a.questionKeys == null && this.questionKeys == null));				
 	}
 	
