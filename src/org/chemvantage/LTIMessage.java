@@ -118,7 +118,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			uc.setRequestProperty("Accept", "application/json;charset=UTF-8");
 			uc.setRequestProperty("charset", "utf-8");
 			uc.setUseCaches(false);
-			
+			uc.setReadTimeout(5000);
 			// send the message
 			wr = new DataOutputStream(uc.getOutputStream());
 			wr.writeBytes(body);
@@ -150,7 +150,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			} else throw new Exception("response code " + responseCode);
 		} catch (Exception e) {
 			sendEmailToAdmin("Failed AuthToken Request",debug.toString() + "<br/>" + e.toString() + e.getMessage());
-			return e.toString() + " " + e.getMessage() + debug.toString();
+			return "Failed AuthToken Request <br/>" + debug.toString();
 		}    
 	}
    
@@ -201,14 +201,13 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     	return null;
     }
     
-    static JsonArray getLineItemContainer(Deployment d,String lti_ags_lineitems_url,String scope) {
+    static JsonArray getLineItemContainer(Deployment d,String lti_ags_lineitems_url) {
     	// This method asks the platform to return one lineitems for the context having the specified resourceLinkId
-    	JsonArray lineitems_json = null;
+    	JsonArray lineitems_json = new JsonArray();
     	try {
-    		String accessToken = getAccessToken(d.platform_deployment_id,scope);
-    		if (accessToken == null) return null;
+    		String accessToken = getAccessToken(d.platform_deployment_id,d.scope);
+    		if (accessToken.indexOf("Failed AuthToken Request")>=0) return null;
     		String bearerAuth = "Bearer " + accessToken;
-
     		URL u = new URL(lti_ags_lineitems_url);
     		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
     		uc.setDoInput(true);

@@ -25,9 +25,7 @@ import java.io.PrintWriter;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.HttpConstraint;
@@ -37,10 +35,10 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.cloud.datastore.Cursor;
-import com.google.cloud.datastore.QueryResults;
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
+import com.google.cloud.datastore.Cursor;
+import com.google.cloud.datastore.QueryResults;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
 
@@ -110,6 +108,7 @@ public class DataStoreCleaner extends HttpServlet {
 			buf.append("7 background tasks launched to scrub all obsolete entity types from the datastore.");
 			break;
 		}
+		
 		buf.append("<br>" + Subject.footer);
 		
 		out.println(buf.toString());
@@ -274,33 +273,6 @@ public class DataStoreCleaner extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		buf.append("<h2>Clean Assignments</h2>");
 		
-		List<Assignment> assignments = ofy().load().type(Assignment.class).limit(500).list();
-		Map<String,Deployment> lineitems_urls = new HashMap<String,Deployment>();
-		boolean saveAssignments = false;
-		
-		for (Assignment a : assignments) {
-			Deployment d = Deployment.getInstance(a.domain);
-			if (a.lti_ags_lineitems_url != null) lineitems_urls.put(a.lti_ags_lineitems_url,d);
-			else if (a.lti_ags_lineitem_url != null) { // try to find the lineitems_url from the lineitem_url
-				try {
-					URL lineitemUrl = new URL(a.lti_ags_lineitem_url);  // checks to see if this is really a URL
-					String query = lineitemUrl.getQuery();
-					if ("moodle".equals(d.lms_type)) a.lti_ags_lineitem_url = a.lti_ags_lineitem_url.substring(0,a.lti_ags_lineitem_url.lastIndexOf("/lineitem")); /// strips "/lineitem"
-					a.lti_ags_lineitem_url = a.lti_ags_lineitem_url.substring(0,a.lti_ags_lineitem_url.lastIndexOf("/")) + (query==null?"":"?"+query);  // strips lineitem identifier and restores query
-					lineitems_urls.put(a.lti_ags_lineitems_url,d);
-					saveAssignments = true;
-				} catch (Exception e) {}
-			}
-		}
-		buf.append("Assignments processed: " + assignments.size() + "<br/>");
-		if (saveAssignments) buf.append("New lineitem_urls to be saved: " + lineitems_urls.size() + "<br/><br/>");  // ofy().save().entities(assignments).now();
-		/*
-		for (String url : lineitems_urls) {
-			JsonArray container = LTIMessage.getLineItemContainer(null, url, url)
-		}
-		*/
-		return buf.toString();
-		/*
 		try {
 			Query<Assignment> query = ofy().load().type(Assignment.class).limit(1000);
 			String cursorStr = request.getParameter("cursor");
@@ -382,7 +354,6 @@ public class DataStoreCleaner extends HttpServlet {
 			buf.append("Error: " + e.toString());
 		}
 		return buf.toString();
-		*/
 	}
 
 	String getLineitemsUrl(String lineitem_url, String platformDeploymentId) {
