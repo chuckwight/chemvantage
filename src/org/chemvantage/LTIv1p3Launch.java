@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
+
 /* This servlet executes a valid LTI ResourceLink launch request using LTI v1.3 specifications
  * The basic requesting entity is a Deployment. Although a single LMS platform may host several
  * Deployments (e.g., as separate accounts), each Deployment will designate a client_id that identifies
@@ -66,6 +68,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.auth0.jwt.interfaces.JWTVerifier;
+import com.google.appengine.api.taskqueue.QueueFactory;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -162,7 +165,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			Deployment original_d = d.clone();  // make a copy to compare for updating later
 			Date now = new Date();
 			Date yesterday = new Date(now.getTime()-86400000L); // 24 hrs ago
-			
+			Date oneMonthAgo = new Date(now.getTime()-2635200000L); // 30.5 days ago
 			try {
 				d.lastLogin = now;
 				d.claims = claims.toString();
@@ -287,7 +290,10 @@ public class LTIv1p3Launch extends HttpServlet {
 				else if (scope.contains("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem")) myAssignment.lti_ags_lineitem_url =LTIMessage.createLineItem(d, myAssignment, lti_ags_lineitems_url);
 
 				if (lti_nrps_context_memberships_url != null) myAssignment.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
-
+				
+				if (myAssignment.valid==null || myAssignment.valid.before(oneMonthAgo)) {  // start a Task to update all lineitems for this Context (class)
+					QueueFactory.getDefaultQueue().add(withUrl("/DataStoreCleaner").param("Task","CleanAssignments").param("lti_ags_lineitems_url",lti_ags_lineitems_url).param("platform_deployment_id", d.platform_deployment_id));  // put report into the Task Queue
+				}
 				myAssignment.valid=now;
 				
 				// If required, save the updated Assignment entity now so its id will be accessible
