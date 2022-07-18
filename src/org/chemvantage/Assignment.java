@@ -99,8 +99,8 @@ public class Assignment implements java.lang.Cloneable {
 				((this.lti_ags_lineitem_url != null && this.lti_ags_lineitem_url.equals(a.lti_ags_lineitem_url)) 										|| (a.lti_ags_lineitem_url == null && this.lti_ags_lineitem_url == null)) &&
 				((this.lti_nrps_context_memberships_url != null && this.lti_nrps_context_memberships_url.equals(a.lti_nrps_context_memberships_url)) 	|| (a.lti_nrps_context_memberships_url == null && this.lti_nrps_context_memberships_url == null)) &&
 				((this.topicIds != null && this.topicIds.equals(a.topicIds)) 																			|| (a.topicIds == null && this.topicIds == null)) &&
-				((this.valid != null && this.valid.equals(a.valid))																						|| (a.valid == null && this.valid == null)) &&
-				((this.questionKeys != null && this.questionKeys.equals(a.questionKeys)) 																|| (a.questionKeys == null && this.questionKeys == null));				
+				((this.questionKeys != null && this.questionKeys.equals(a.questionKeys)) 																|| (a.questionKeys == null && this.questionKeys == null)) &&
+				(this.valid != null && a.valid != null && this.valid.getTime()-a.valid.getTime()<2635200000L);	// less than 1 month since last validation		
 	}
 	
 	boolean isValid() {

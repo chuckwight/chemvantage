@@ -162,7 +162,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			Deployment original_d = d.clone();  // make a copy to compare for updating later
 			Date now = new Date();
 			Date yesterday = new Date(now.getTime()-86400000L); // 24 hrs ago
-
+			
 			try {
 				d.lastLogin = now;
 				d.claims = claims.toString();
@@ -288,7 +288,7 @@ public class LTIv1p3Launch extends HttpServlet {
 
 				if (lti_nrps_context_memberships_url != null) myAssignment.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
 
-				if (myAssignment.valid==null || myAssignment.valid.before(yesterday)) myAssignment.valid=now;
+				myAssignment.valid=now;
 				
 				// If required, save the updated Assignment entity now so its id will be accessible
 				if (myAssignment.id==null || !myAssignment.equivalentTo(original_a)) ofy().save().entity(myAssignment).now();
