@@ -284,16 +284,17 @@ public class DataStoreCleaner extends HttpServlet {
 			Deployment d = Deployment.getInstance(platform_deployment_id);
 			
 			// initially put all assignments with matching lineitem_urls into the List for deletion
-			List<Assignment> assignmentsToBeDeleted = ofy().load().type(Assignment.class).filter("lti_ags_lineitems_url",lti_ags_lineitems_url).list();
+			List<Assignment> assignments = ofy().load().type(Assignment.class).filter("lti_ags_lineitems_url",lti_ags_lineitems_url).list();
 			
 			// make a Map of all assignments so they're easy to find by lineitem_url
 			Map<String,Assignment> assignmentMap = new HashMap<String,Assignment>();
-			for (Assignment a : assignmentsToBeDeleted) assignmentMap.put(a.lti_ags_lineitem_url, a);
+			for (Assignment a : assignments) assignmentMap.put(a.lti_ags_lineitem_url, a);
 				
 			buf.append("Identified " + assignmentMap.size() + " assignments for this class.<br/>");
 			
 			// get the lineitem container from the LMS
 			JsonArray lineitem_container = LTIMessage.getLineItemContainer(d, lti_ags_lineitems_url);
+			if (lineitem_container==null) throw new Exception("Could not retrieve lineitem container from " + d.platform_deployment_id);
 			buf.append("Retrieved lineitem container with " + lineitem_container.size() + " lineitems:<br/>");
 			
 			// iterate over the lineitem container, saving matching assignments and removing them from the deleteList
@@ -307,11 +308,11 @@ public class DataStoreCleaner extends HttpServlet {
 				a.lti_ags_lineitems_url = lti_ags_lineitems_url;
 				a.valid = now;
 				assignmentsToBeSaved.add(a);
-				assignmentsToBeDeleted.remove(a);
+				assignments.remove(a);
 			}
 			// final actions if no Exceptions have been thrown
 			if (!assignmentsToBeSaved.isEmpty()) ofy().save().entities(assignmentsToBeSaved);
-			if (!assignmentsToBeDeleted.isEmpty()) ofy().delete().entities(assignmentsToBeDeleted);
+			if (!assignments.isEmpty()) ofy().delete().entities(assignments);
 			buf.append("Updated " + assignmentsToBeSaved.size() + " assignments.<br/>");
 		} catch (Exception e) {
 			buf.append("Error: " + e.getMessage()==null?e.toString():e.getMessage());

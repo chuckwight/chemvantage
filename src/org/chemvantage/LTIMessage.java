@@ -218,8 +218,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     		BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
     		lineitems_json = JsonParser.parseReader(reader).getAsJsonArray();
     		reader.close();
-
     	} catch (Exception e) {
+    		return null;
     	}
     	return lineitems_json;
     }
