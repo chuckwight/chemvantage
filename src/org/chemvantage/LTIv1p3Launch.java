@@ -261,6 +261,11 @@ public class LTIv1p3Launch extends HttpServlet {
 						}
 						try {
 							myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).safe();
+							// Check the resourceLinkId to see if this launch is from a copied course; if so, save a copy of the original under a new id
+							if (!resourceLinkId.equals(myAssignment.resourceLinkId)) {
+								myAssignment.id = null;
+								ofy().save().entity(myAssignment);
+							}
 						} catch (Exception e) {}
 					}
 				} catch (Exception e) {}
@@ -280,7 +285,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			else if (lti_ags_lineitem_url != null) assignments.put(lti_ags_lineitem_url,myAssignment);  // cache the assignment for next launch
 
 			// At this point we should have a valid (but possibly incomplete) Assignment entity
-
+			
 			// Update the Assignment parameters:
 			try {
 				Assignment original_a = myAssignment.clone(); // make a copy to compare with for updating later
