@@ -261,11 +261,8 @@ public class LTIv1p3Launch extends HttpServlet {
 						}
 						try {
 							myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).safe();
-							// Check the resourceLinkId to see if this launch is from a copied course; if so, save a copy of the original under a new id
-							if (!resourceLinkId.equals(myAssignment.resourceLinkId)) {
-								myAssignment.id = null;
-								ofy().save().entity(myAssignment);
-							}
+							// Check the resourceLinkId to see if this launch is from a copied course; if so, set the id to null to make a new Assignment
+							if (!resourceLinkId.equals(myAssignment.resourceLinkId)) myAssignment.id = null;
 						} catch (Exception e) {}
 					}
 				} catch (Exception e) {}
