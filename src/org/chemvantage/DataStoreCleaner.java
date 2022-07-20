@@ -305,14 +305,17 @@ public class DataStoreCleaner extends HttpServlet {
 				String lineitem_id = lineitem.get("id").getAsString();
 				Assignment a = assignmentMap.get(lineitem_id);
 				if (a==null) continue;
-				a.lti_ags_lineitems_url = lti_ags_lineitems_url;
 				a.valid = now;
 				assignmentsToBeSaved.add(a);
 				assignments.remove(a);
 			}
 			// final actions if no Exceptions have been thrown
 			if (!assignmentsToBeSaved.isEmpty()) ofy().save().entities(assignmentsToBeSaved);
-			if (!assignments.isEmpty()) ofy().delete().entities(assignments);
+			if (!assignments.isEmpty()) {
+				for (Assignment a : assignments) a.valid = new Date(0); // ofy().delete().entities(assignments);
+				ofy().save().entities(assignments);
+			}
+			
 			buf.append("Updated " + assignmentsToBeSaved.size() + " assignments.<br/>");
 		} catch (Exception e) {
 			buf.append("Error: " + e.getMessage()==null?e.toString():e.getMessage());
