@@ -25,8 +25,10 @@ import java.io.PrintWriter;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.HttpConstraint;
@@ -270,33 +272,47 @@ public class DataStoreCleaner extends HttpServlet {
 	}
 
 	private String cleanAssignments(boolean testOnly, HttpServletRequest request) {
-		// This method searches for assignments having a specified lineitems_url and validates them
+		// This method matches assignments to the current lineitem container from the LMS; validates the good and deletes the missing
 		StringBuffer buf = new StringBuffer();
 		buf.append("<h2>Clean Assignments</h2>");
 		String lti_ags_lineitems_url = request.getParameter("lti_ags_lineitems_url");
 		String platform_deployment_id = request.getParameter("platform_deployment_id");
 		if (lti_ags_lineitems_url==null || platform_deployment_id==null) return "Error: Must specify lti_ags_lineitems_url and platform_deployment_id.";
 		Date now = new Date();
-		Date oneMonthAgo = new Date(now.getTime()-2635200000L);
 		try {
+			// find the deployment because we will need to get the lineitem container
 			Deployment d = Deployment.getInstance(platform_deployment_id);
+			
+			// initially put all assignments with matching lineitem_urls into the List for deletion
+			List<Assignment> assignmentsToBeDeleted = ofy().load().type(Assignment.class).filter("lti_ags_lineitems_url",lti_ags_lineitems_url).list();
+			
+			// make a Map of all assignments so they're easy to find by lineitem_url
+			Map<String,Assignment> assignmentMap = new HashMap<String,Assignment>();
+			for (Assignment a : assignmentsToBeDeleted) assignmentMap.put(a.lti_ags_lineitem_url, a);
+				
+			buf.append("Identified " + assignmentMap.size() + " assignments for this class.<br/>");
+			
+			// get the lineitem container from the LMS
 			JsonArray lineitem_container = LTIMessage.getLineItemContainer(d, lti_ags_lineitems_url);
 			buf.append("Retrieved lineitem container with " + lineitem_container.size() + " lineitems:<br/>");
+			
+			// iterate over the lineitem container, saving matching assignments and removing them from the deleteList
 			Iterator<JsonElement> iterator = lineitem_container.iterator();
 			List<Assignment> assignmentsToBeSaved = new ArrayList<Assignment>();
 			while (iterator.hasNext()) {
 				JsonObject lineitem = iterator.next().getAsJsonObject();
 				String lineitem_id = lineitem.get("id").getAsString();
-				Assignment a = ofy().load().type(Assignment.class).filter("lti_ags_lineitem_url",lineitem_id).first().now();
+				Assignment a = assignmentMap.get(lineitem_id);
 				if (a==null) continue;
-				if (a.valid==null || a.valid.before(oneMonthAgo)) {
-					a.lti_ags_lineitems_url = lti_ags_lineitems_url;
-					a.valid = now;
-					assignmentsToBeSaved.add(a);
-				}
-				buf.append(a.lti_ags_lineitem_url + "<br/>");
+				a.lti_ags_lineitems_url = lti_ags_lineitems_url;
+				a.valid = now;
+				assignmentsToBeSaved.add(a);
+				assignmentsToBeDeleted.remove(a);
 			}
+			// final actions if no Exceptions have been thrown
 			if (!assignmentsToBeSaved.isEmpty()) ofy().save().entities(assignmentsToBeSaved);
+			if (!assignmentsToBeDeleted.isEmpty()) ofy().delete().entities(assignmentsToBeDeleted);
+			buf.append("Updated " + assignmentsToBeSaved.size() + " assignments.<br/>");
 		} catch (Exception e) {
 			buf.append("Error: " + e.getMessage()==null?e.toString():e.getMessage());
 		}
