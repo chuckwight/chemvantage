@@ -293,8 +293,8 @@ public class LTIv1p3Launch extends HttpServlet {
 
 				if (lti_nrps_context_memberships_url != null) myAssignment.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
 				
-				if (myAssignment.valid==null || myAssignment.valid.before(oneMonthAgo)) {  // start a Task to update all lineitems for this Context (class)
-					QueueFactory.getDefaultQueue().add(withUrl("/DataStoreCleaner").param("Task","CleanAssignments").param("lti_ags_lineitems_url",lti_ags_lineitems_url).param("platform_deployment_id", d.platform_deployment_id));  // put report into the Task Queue
+				if (myAssignment.id!=null && (myAssignment.valid==null || myAssignment.valid.before(oneMonthAgo))) {  // start a Task to update all lineitems for this Context (class)
+					QueueFactory.getDefaultQueue().add(withUrl("/DataStoreCleaner").param("Task","CleanAssignments").param("AssignmentId",String.valueOf(myAssignment.id)));  // put report into the Task Queue
 				}
 				myAssignment.valid=now;
 				

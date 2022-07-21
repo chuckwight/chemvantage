@@ -202,26 +202,41 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     }
     
     static JsonArray getLineItemContainer(Deployment d,String lti_ags_lineitems_url) {
-    	// This method asks the platform to return one lineitems for the context having the specified resourceLinkId
-    	JsonArray lineitems_json = new JsonArray();
+    	// This method asks the platform to return all lineitems for the context as a JsonArray container
+    	// Note: this may require multiple calls to the platform to get batches of lineitems. If the container 
+    	// is incomplete, the platform MUST provide one or more Link objects in the response header. These have the form of a comma-sepated list
+    	// Link: <https://lms.example.com/sections/2923/lineitems/69?p=3>; rel="next",<https://lms.example.com/sections/2923/lineitems/69?p=1>; rel="prev"
+    	
+    	JsonArray container = new JsonArray();
     	try {
     		String accessToken = getAccessToken(d.platform_deployment_id,d.scope);
-    		if (accessToken.indexOf("Failed AuthToken Request")>=0) return null;
+    		if (accessToken.indexOf("Failed AuthToken Request")>=0) throw new Exception("Failed AuthToken request.");
     		String bearerAuth = "Bearer " + accessToken;
-    		URL u = new URL(lti_ags_lineitems_url);
-    		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-    		uc.setDoInput(true);
-    		uc.setRequestMethod("GET");
-    		uc.setRequestProperty("Authorization", bearerAuth);
-    		uc.setRequestProperty("Accept", "application/vnd.ims.lis.v2.lineitemcontainer+json");
-    		uc.connect();
-    		BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-    		lineitems_json = JsonParser.parseReader(reader).getAsJsonArray();
-    		reader.close();
+    		String next_url = lti_ags_lineitems_url;
+    		while (next_url != null) {
+    			URL u = new URL(next_url);
+    			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+    			uc.setDoInput(true);
+    			uc.setRequestMethod("GET");
+    			uc.setRequestProperty("Authorization", bearerAuth);
+    			uc.setRequestProperty("Accept", "application/vnd.ims.lis.v2.lineitemcontainer+json");
+    			uc.connect();
+    			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+    			container.addAll(JsonParser.parseReader(reader).getAsJsonArray());
+    			reader.close();
+    			
+    			next_url = null;
+    			String[] links = uc.getHeaderField("Link").split(",");
+    			for (String l : links) if (l.contains("next")) {
+    				next_url = l.trim().substring(1); // removes any leading/trailing white space and the first <
+    				next_url = next_url.substring(0,next_url.indexOf(">"));
+    			}
+    		}
     	} catch (Exception e) {
-    		return null;
+    		JsonArray error =  new JsonArray();
+    		error.add(e.getMessage()==null?e.toString():e.getMessage());
     	}
-    	return lineitems_json;
+    	return container;
     }
 
     static String getLineItemContainer(Deployment d,String lti_ags_lineitems_url,String resourceLinkId,String scope) {

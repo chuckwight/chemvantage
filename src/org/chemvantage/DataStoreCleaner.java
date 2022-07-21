@@ -275,28 +275,30 @@ public class DataStoreCleaner extends HttpServlet {
 		// This method matches assignments to the current lineitem container from the LMS; validates the good and deletes the missing
 		StringBuffer buf = new StringBuffer();
 		buf.append("<h2>Clean Assignments</h2>");
-		String lti_ags_lineitems_url = request.getParameter("lti_ags_lineitems_url");
-		String platform_deployment_id = request.getParameter("platform_deployment_id");
-		if (lti_ags_lineitems_url==null || platform_deployment_id==null) return "Error: Must specify lti_ags_lineitems_url and platform_deployment_id.";
 		Date now = new Date();
 		try {
+			Assignment member = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
+			String lti_ags_lineitems_url = member.lti_ags_lineitems_url;
+			String platform_deployment_id = member.domain;
+			if (lti_ags_lineitems_url==null || platform_deployment_id==null) return "Error: The Assignment must contain lti_ags_lineitems_url and domain.";
+
 			// find the deployment because we will need to get the lineitem container
 			Deployment d = Deployment.getInstance(platform_deployment_id);
 			
 			// initially put all assignments with matching lineitem_urls into the List for deletion
 			List<Assignment> assignments = ofy().load().type(Assignment.class).filter("lti_ags_lineitems_url",lti_ags_lineitems_url).list();
 			
-			// make a Map of all assignments so they're easy to find by lineitem_url
+			// make a Map of all assignments so they're easy to find by lineitem_url; don't replace any duplicate entries
 			Map<String,Assignment> assignmentMap = new HashMap<String,Assignment>();
-			for (Assignment a : assignments) assignmentMap.put(a.lti_ags_lineitem_url, a);
+			for (Assignment a : assignments) if (!assignmentMap.containsKey(a.lti_ags_lineitem_url)) assignmentMap.put(a.lti_ags_lineitem_url, a);
 				
-			buf.append("Identified " + assignmentMap.size() + " assignments for this class.<br/>");
+			buf.append("Identified " + assignments.size() + " assignments for this class.<br/>");
 			
 			// get the lineitem container from the LMS
 			JsonArray lineitem_container = LTIMessage.getLineItemContainer(d, lti_ags_lineitems_url);
 			if (lineitem_container==null) throw new Exception("Could not retrieve lineitem container from " + d.platform_deployment_id);
 			buf.append("Retrieved lineitem container with " + lineitem_container.size() + " lineitems:<br/>");
-			
+			buf.append(lineitem_container.toString() + "<br/>");
 			// iterate over the lineitem container, saving matching assignments and removing them from the deleteList
 			Iterator<JsonElement> iterator = lineitem_container.iterator();
 			List<Assignment> assignmentsToBeSaved = new ArrayList<Assignment>();
@@ -311,12 +313,13 @@ public class DataStoreCleaner extends HttpServlet {
 			}
 			// final actions if no Exceptions have been thrown
 			if (!assignmentsToBeSaved.isEmpty()) ofy().save().entities(assignmentsToBeSaved);
-			if (!assignments.isEmpty()) {
+			if (!assignments.isEmpty() & !testOnly) {
 				for (Assignment a : assignments) a.valid = new Date(0); // ofy().delete().entities(assignments);
 				ofy().save().entities(assignments);
 			}
 			
 			buf.append("Updated " + assignmentsToBeSaved.size() + " assignments.<br/>");
+			buf.append(assignments.size() + " assignments were " + (testOnly?"identified for deletion.":"deleted."));
 		} catch (Exception e) {
 			buf.append("Error: " + e.getMessage()==null?e.toString():e.getMessage());
 		}
