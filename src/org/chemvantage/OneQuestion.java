@@ -60,8 +60,11 @@ public class OneQuestion extends HttpServlet {
 			Question q = ofy().load().type(Question.class).id(qid).safe();
 			long p = Long.parseLong(request.getParameter("p"));
 			q.setParameters(p);
-			String answer = request.getParameter(String.valueOf(qid));
-			if (answer==null) answer = "";
+			String[] answers = request.getParameterValues(String.valueOf(qid));
+			String answer = "";
+			for (String a : answers) answer = answer + a;
+			//String answer = request.getParameter(String.valueOf(qid));
+			//if (answer==null) answer = "";
 			
 			if (q.isCorrect(answer)) {
 				buf.append("<h2>Congratulations! Your answer is correct.</h2>" 
