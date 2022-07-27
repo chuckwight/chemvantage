@@ -271,6 +271,7 @@ public class Question implements Serializable, Cloneable {
 				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
 				buf.append("<label><input type=radio name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED />":" />") + choices.get(choice-'a') + "</label><br/>");
 			}
+			buf.append("<br/>");
 			break;
 		case 2: // True/False
 			buf.append(text);
@@ -278,6 +279,7 @@ public class Question implements Serializable, Cloneable {
 			buf.append("<span style='color:#EE0000;font-size: small;'>Select true or false:</span><br/>");
 			buf.append("<label><input type=radio name=" + this.id + " value='true'" + (studentAnswer.equals("true")?" CHECKED />":" />") + " True</label><br/>");
 			buf.append("<label><input type=radio name=" + this.id + " value='false'" + (studentAnswer.equals("false")?" CHECKED />":" />") + " False</label><br/>");
+			buf.append("<br/>");
 			break;
 		case 3: // Select Multiple
 			buf.append(text + "<br/>");
@@ -287,6 +289,7 @@ public class Question implements Serializable, Cloneable {
 				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
 				buf.append("<label><input type=checkbox name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED />":" />") + choices.get(choice-'a') + "</label><br/>");
 			}
+			buf.append("<br/>");
 			break;
 		case 4: // Fill-in-the-Word
 			buf.append(text);
