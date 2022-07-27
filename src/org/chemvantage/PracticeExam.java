@@ -17,12 +17,10 @@
 
 package org.chemvantage;
 
-import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,7 +39,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
 
 @WebServlet("/PracticeExam")
@@ -1206,21 +1203,13 @@ public class PracticeExam extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String orderResponses(String[] studentAnswers) {
-		if (studentAnswers == null) return "";
-		if (studentAnswers.length<2) return studentAnswers[0];
-		String answer = "";
-		List<String> answers = new ArrayList<String>(Arrays.asList(studentAnswers));
-		while (answers.size()>1) {
-			int pos=0;
-			for (int i=1;i<answers.size();i++) {
-				pos = answers.get(i).compareTo(answers.get(pos))<0?i:pos;
-			}
-			answer += answers.remove(pos);		
-		}
-		answer += answers.get(0);  // append the last value from the List
-		return answer;
+	String orderResponses(String[] answers) {
+		Arrays.sort(answers);
+		String studentAnswer = "";
+		for (String a : answers) studentAnswer = studentAnswer + a;
+		return studentAnswer;
 	}
+
 }
 
 class SortExams implements Comparator<PracticeExamTransaction> { 

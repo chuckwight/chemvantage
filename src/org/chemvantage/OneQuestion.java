@@ -61,10 +61,7 @@ public class OneQuestion extends HttpServlet {
 			Question q = ofy().load().type(Question.class).id(qid).safe();
 			long p = Long.parseLong(request.getParameter("p"));
 			q.setParameters(p);
-			String[] answers = request.getParameterValues(String.valueOf(qid));
-			Arrays.sort(answers);
-			String answer = "";
-			for (String a : answers) answer = answer + a;
+			String answer = orderResponses(request.getParameterValues(String.valueOf(qid)));
 			
 			if (q.isCorrect(answer)) {
 				buf.append("<h2>Congratulations! Your answer is correct.</h2>" 
@@ -201,4 +198,12 @@ public class OneQuestion extends HttpServlet {
 		+ "}\n"
 		+ "</SCRIPT>";
 	}
+	
+	String orderResponses(String[] answers) {
+		Arrays.sort(answers);
+		String studentAnswer = "";
+		for (String a : answers) studentAnswer = studentAnswer + a;
+		return studentAnswer;
+	}
+
 }

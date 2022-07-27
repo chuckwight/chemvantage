@@ -869,20 +869,11 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String orderResponses(String[] studentAnswers) {
-		if (studentAnswers == null) return "";
-		if (studentAnswers.length<2) return studentAnswers[0];
-		String answer = "";
-		List<String> answers = new ArrayList<String>(Arrays.asList(studentAnswers));
-		while (answers.size()>1) {
-			int pos=0;
-			for (int i=1;i<answers.size();i++) {
-				pos = answers.get(i).compareTo(answers.get(pos))<0?i:pos;
-			}
-			answer += answers.remove(pos);		
-		}
-		answer += answers.get(0);  // append the last value from the List
-		return answer;
+	String orderResponses(String[] answers) {
+		Arrays.sort(answers);
+		String studentAnswer = "";
+		for (String a : answers) studentAnswer = studentAnswer + a;
+		return studentAnswer;
 	}
 
 }
