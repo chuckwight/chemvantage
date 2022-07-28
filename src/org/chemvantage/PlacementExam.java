@@ -251,13 +251,14 @@ public class PlacementExam extends HttpServlet {
 			// A blank transaction means a student has paid for an exam but not taken it yet
 			Date now = new Date();
 			Date startTime = new Date(now.getTime()-timeAllowed*1000);  // about 1 hour ago depending on timeAllowed ago 
+			
+			int nAttempts = ofy().load().type(PlacementExamTransaction.class).filter("assignmentId",a.id).filter("userId",user.getHashedId()).count();
 			boolean resumingExam = false;
 			pt = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("graded",null).filter("downloaded >",startTime).first().now();
 			if (pt != null) resumingExam = true;
 			else {  // this is a new exam, either newly paid or authorized retake
-				if (a.attemptsAllowed != null) {
-					int nAttempts = ofy().load().type(PlacementExamTransaction.class).filter("assignmentId",a.id).filter("userId",user.getHashedId()).count();
-					if (nAttempts >= a.attemptsAllowed) return "<h2>Sorry, you are only allowed " + a.attemptsAllowed + " attempt" + (a.attemptsAllowed==1?"":"s") + " on this assignment.</h2>";
+				if (a.attemptsAllowed != null && nAttempts >= a.attemptsAllowed) {
+					return "<h2>Sorry, you are only allowed " + a.attemptsAllowed + " attempt" + (a.attemptsAllowed==1?"":"s") + " on this assignment.</h2>";
 				}	
 				pt = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("graded",null).filter("downloaded ",null).first().now(); // newly  paid
 				Long transactionId = pt==null?null:pt.id;  // use the same id if it exists
@@ -314,8 +315,7 @@ public class PlacementExam extends HttpServlet {
 			
 			// Check to make sure that some questions exist:
 			if (questionKeys.size()==0) return "<h2>General Chemistry Placement Exam</h2>"
-					+ "Thanks for visiting. We are in the process of developing and validating the question items for "
-					+ "placement exams and expect to have a finished product ready for use by January 1, 2022.<p>";
+					+ "Thanks for visiting. We are in the process of developing and validating the question items for this exam.<br/><br/>";
 			
 			buf.append("<script>function showWorkBox(qid){}</script>");  // prevents javascript error from Question.print()
 			
@@ -324,8 +324,12 @@ public class PlacementExam extends HttpServlet {
 			buf.append("<h2>General Chemistry Placement Exam</h2>");
 			if (user.isAnonymous()) buf.append("Anonymous User<br/>");
 			
-			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded. ");
-			if (resumingExam) buf.append("You are resuming a placement exam originally downloaded at " + pt.downloaded);
+			if (a.attemptsAllowed==null) buf.append("You may repeat this exam as many times as you wish, to improve your score.<br/>");
+			else if (a.attemptsAllowed==1) buf.append("You are only allowed 1 attempt on this exam. Make it count!<br/>");
+			else buf.append("You are allowed a total of " + a.attemptsAllowed + " attempts on this exam. This is attempt #" + (nAttempts + (resumingExam?0:1)) + ".<br/>");
+			
+			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded.");
+			if (resumingExam) buf.append("<br/>You are resuming a placement exam originally downloaded at " + pt.downloaded);
 			
 			buf.append("\n<FORM NAME=PlacementExamForm METHOD=POST ACTION=PlacementExam "
 					+ "onSubmit=\"return confirm('Submit this placement exam for grading now. Are you sure?')\">");
