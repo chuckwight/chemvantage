@@ -324,9 +324,7 @@ public class PlacementExam extends HttpServlet {
 			buf.append("<h2>General Chemistry Placement Exam</h2>");
 			if (user.isAnonymous()) buf.append("Anonymous User<br/>");
 			
-			if (a.attemptsAllowed==null) buf.append("You may repeat this exam as many times as you wish, to improve your score.<br/>");
-			else if (a.attemptsAllowed==1) buf.append("You are only allowed 1 attempt on this exam. Make it count!<br/>");
-			else buf.append("You are allowed a total of " + a.attemptsAllowed + " attempts on this exam. This is attempt #" + (nAttempts + (resumingExam?0:1)) + ".<br/>");
+			if (a.attemptsAllowed!=null) buf.append("You are allowed " + a.attemptsAllowed + " attempt" + (a.attemptsAllowed==1?"":"s") + " on this exam. This is attempt #" + (nAttempts + (resumingExam?0:1)) + ".<br/>");
 			
 			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded.");
 			if (resumingExam) buf.append("<br/>You are resuming a placement exam originally downloaded at " + pt.downloaded);
