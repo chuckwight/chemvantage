@@ -657,7 +657,7 @@ public class PracticeExam extends HttpServlet {
 						} catch (Exception e) {
 							buf.append("ChemVantage was unable to retrieve your score for this assignment from the LMS.<br>"
 									+ "Sometimes it takes several seconds for the score to be posted in the LMS grade book.<br>");
-							if (s.score==0 && s.numberOfAttempts<=1) buf.append("It appears that you may not have submitted a score for this quiz yet. ");
+							if (s.score==0 && s.numberOfAttempts<=1) buf.append("It appears that you may not have submitted a score for this assignment yet. ");
 							if (user.isInstructor()) buf.append("Some LMS providers do not store scores for instructors.");
 							buf.append("<p>");
 						}
@@ -676,7 +676,7 @@ public class PracticeExam extends HttpServlet {
 
 					buf.append("<tr><td>" + pet.id + "</td><td>" + df.format(pet.downloaded) + "</td><td align=center>" + (pet.graded==null?"-":pct + "%") +  "</td></tr>");
 				}
-				buf.append("</table><br>Missing scores indicate quizzes that were downloaded but not submitted for scoring.<p>");
+				buf.append("</table><br>Missing scores indicate assignments that were downloaded but not submitted for scoring.<p>");
 			}
 		}
 		catch (Exception e) {
@@ -799,7 +799,7 @@ public class PracticeExam extends HttpServlet {
 
 				buf.append("<tr><td>" + pet.id + "</td><td>" + df.format(pet.downloaded) + "</td><td align=center>" + (pet.graded==null?"-":pct + "%") +  "</td></tr>");
 			}
-			buf.append("</table><br>Missing scores indicate quizzes that were downloaded but not submitted for scoring.<p>");
+			buf.append("</table><br>Missing scores indicate assignments that were downloaded but not submitted for scoring.<p>");
 			
 			List<String> topicTitles = new ArrayList<String>();
 			for (int i=0;i<bestPt.topicIds.size();i++) topicTitles.add(ofy().load().type(Topic.class).id(bestPt.topicIds.get(i)).safe().title);
