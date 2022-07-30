@@ -819,13 +819,13 @@ public class PlacementExam extends HttpServlet {
 				Collections.sort(userpets,new SortPlacementExams());
 				if (userpets.isEmpty()) {  // place a blank line in the table with the user's name
 					buf.append("<tr style='text-align: center;background-color: " + (i%2==0?"yellow":"cyan") + "'>"
-							+ "<td>" + i + ".&nbsp;" + name + "</td>" + "<td colspan=" + 6+a.topicIds.size() + ">(exam was not attempted)</td>");
+							+ "<td style='text-align: left'>" + i + ".&nbsp;" + name + "</td>" + "<td colspan=" + 6+a.topicIds.size() + ">(exam was not attempted)</td>");
 					buf.append("</tr>");					
 				} else {
 					for (int k=userpets.size();k>0;k--) {  // enter the user's transactions into the table
 						PlacementExamTransaction p = userpets.get(k-1);
 						buf.append("<tr style='text-align: center;background-color: " + (i%2==0?"yellow":"cyan") + "'>");
-						buf.append("<td>" + (p.userId.equals(user.getHashedId())?"(you)":i + ".&nbsp;" + name) + "</td><td>" + k + "</td><td>" + p.downloaded + "</td>");
+						buf.append("<td style='text-align: left'>" + i + ".&nbsp;" + name + "</td><td>" + k + "</td><td>" + p.downloaded + "</td>");
 
 						if (p.graded==null) buf.append("<td colspan=" + 4+a.topicIds.size() + ">(exam was not submitted for scoring)</td>");
 						else {
