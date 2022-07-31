@@ -174,19 +174,17 @@ public class PlacementExam extends HttpServlet {
 			buf.append("<h2>General Chemistry Placement Exam - Instructor Page</h2>");
 			
 			buf.append("Many chemistry departments are now using placement exams as an advising tool for students entering General Chemistry "
-					+ "in order to maximize the probability of student success and to lower the D-F-W rate for the course. Depending on the score, "
-					+ "a student may be provided additional support (e.g., supplemental instruction or tutoring) or take a corequisite course designed to "
-					+ "support instruction in the main course, or in some cases the student may be advised to take a lower level course in order to "
-					+ "ensure adequate preparation for General Chemistry.<p>"
+					+ "in order to maximize the probability of student success and to lower the D-F-W rate for the course. "
 					+ "This placement exam assesses the student's<ul>"
 					+ "<li>skills and knowledge of essential concepts in chemistry</li>"
 					+ "<li>skills and knowledge of essential concepts in mathematics</li>"
 					+ "<li>ability to interpret and solve word problems</li>"
 					+ "</ul>"
-					+ "The scores for each area are returned to the institution's learning management system (LMS) so the department has immediate and permanent "
-					+ "access to the data. The number of times that students can repeat the placement exam is regulated by the assignment settings in the LMS. "
-					+ "Most of the question items are parameterized, so it is extremely unlikely that any two placement exams will be the same.<p>"
-					+ "ChemVantage does not store any student personal identifiable information (PII), so the results of your placement exams are secure.<p>");
+					+ "The overall score is returned to the LMS grade book. ");
+			if (supportsMembership) buf.append("You can use the link below to review the scores on each section as well as the student responses to each question.");
+			
+			buf.append("<br/><br/>We recommend that students be given more than one attempt to complete the exam. Most of the question items are "
+					+ "parameterized, so it is extremely unlikely that any two placement exams will be the same.<br/><br/>");
 			
 			if (d.price > 0) {		
 				buf.append("There are two ways to pay for placement exams:<ol>"
