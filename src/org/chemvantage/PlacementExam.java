@@ -183,7 +183,7 @@ public class PlacementExam extends HttpServlet {
 					+ "The overall score is returned to the LMS grade book. ");
 			if (supportsMembership) buf.append("You can use the link below to review the scores on each section as well as the student responses to each question.");
 			
-			buf.append("<br/><br/>We recommend that students be given more than one attempt to complete the exam. Most of the question items are "
+			buf.append("<br/><br/>We recommend that students be allowed at least 2 attempts to complete the exam. Most of the question items are "
 					+ "parameterized, so it is extremely unlikely that any two placement exams will be the same.<br/><br/>");
 			
 			if (d.price > 0) {		
@@ -322,10 +322,10 @@ public class PlacementExam extends HttpServlet {
 			buf.append("<h2>General Chemistry Placement Exam</h2>");
 			if (user.isAnonymous()) buf.append("Anonymous User<br/>");
 			
-			if (a.attemptsAllowed!=null) buf.append("You are allowed " + a.attemptsAllowed + " attempt" + (a.attemptsAllowed==1?"":"s") + " on this exam. This is attempt #" + (nAttempts + (resumingExam?0:1)) + ".<br/>");
+			if (a.attemptsAllowed!=null) buf.append("You are allowed " + a.attemptsAllowed + (a.attemptsAllowed==1?"attempt":"attempts") + " on this exam. This is attempt #" + (nAttempts + (resumingExam?0:1)) + ".<br/>");
 			
-			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded.");
-			if (resumingExam) buf.append("<br/>You are resuming a placement exam originally downloaded at " + pt.downloaded);
+			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded. ");
+			if (resumingExam) buf.append("You are resuming a placement exam originally downloaded at " + pt.downloaded);
 			
 			buf.append("\n<FORM NAME=PlacementExamForm METHOD=POST ACTION=PlacementExam "
 					+ "onSubmit=\"return confirm('Submit this placement exam for grading now. Are you sure?')\">");
