@@ -226,10 +226,11 @@ public class Quiz extends HttpServlet {
 				qt = ofy().load().type(QuizTransaction.class).filter("userId", user.getHashedId())
 						.filter("assignmentId", assignmentId).filter("graded", null).filter("downloaded >", t15minAgo)
 						.first().now();
-
+			
+			int nAttempts = 1;
 			if (qt == null || qt.getGraded() != null) {
 				if (qa != null && qa.attemptsAllowed != null) {
-					int nAttempts = ofy().load().type(QuizTransaction.class).filter("assignmentId",assignmentId).filter("userId",user.getHashedId()).count();
+					nAttempts = ofy().load().type(QuizTransaction.class).filter("assignmentId",assignmentId).filter("userId",user.getHashedId()).count();
 					if (nAttempts >= qa.attemptsAllowed) return "<h2>Sorry, you are only allowed " + qa.attemptsAllowed + " attempt" + (qa.attemptsAllowed==1?"":"s") + " on this assignment.</h2>";
 				}
 				qt = new QuizTransaction(topicId, topic.getTitle(), user.getId(), now, null, 0, assignmentId, 0);
@@ -248,7 +249,7 @@ public class Quiz extends HttpServlet {
 				buf.append("Quiz Rules"
 						+ "	<OL>"
 						+ "	<LI>Each quiz must be completed within " + (timeAllowed / 60) + " minutes of the time when it is first downloaded.</LI>"
-						+ "	<LI>You may repeat quizzes as many times as you wish, to improve your score.</LI>"
+						+ (qa.attemptsAllowed==null?"<LI>You may repeat this quiz as many times as you wish, to improve your score.</LI>":"<LI>You are allowed " + qa.attemptsAllowed + " attempts of this quiz assignment. This is attempt #" + nAttempts + "</LI>")
 						+ "	<LI>ChemVantage always reports your best score on this assignment to your class LMS.</LI>"
 						+ "	</OL>");
 			}
