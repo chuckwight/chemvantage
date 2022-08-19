@@ -457,14 +457,17 @@ public class Quiz extends HttpServlet {
 					}
 					
 					if (nAnswersEligible > 0) {
+						buf.append("<a id=wrongAnsLink href=# onClick=document.getElementById('wrongAnsLink').style='display:none';document.getElementById('wrongAnsDiv').style='display:inline'>Show me</a>");
+						buf.append("<div id=wrongAnsDiv style='display:none'>");
 						buf.append("The correct answer" + (nAnswersEligible>1?"s ":" ") + (nAnswersEligible<wrongAnswers?"to " + nAnswersEligible + " of these ":"") + (nAnswersEligible==1?"is":"are") + " shown below. ");
-						if (nAnswersEligible < wrongAnswers) buf.append("<br/>The more questions you answer correctly, the more correct answers to missed questions will be displayed.");
+						if (nAnswersEligible < wrongAnswers) buf.append("The more questions you answer correctly, the more correct answers to missed questions will be displayed.");
 						buf.append("<OL>");
 						for (int i=0;i<wrongAnswers;i++) {
 							if (nAnswersEligible > 0) buf.append(missedQuestions.get(i));
 							nAnswersEligible --;
 						}
 						buf.append("</OL>");
+						buf.append("</div>");
 					}  else buf.append("You must answer at least one question correctly to view the correct answers to questions that you missed. ");
 				}
 
