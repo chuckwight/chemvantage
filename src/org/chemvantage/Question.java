@@ -823,11 +823,14 @@ public class Question implements Serializable, Cloneable {
 	boolean hasCorrectSigFigs(String studentAnswer) {
 		if (significantFigures==0) return true;  // no sig figs required
 		
-		int exponentPosition = studentAnswer.toUpperCase().indexOf("E");
+		studentAnswer = studentAnswer.replaceAll(",", "").replaceAll("\\s", "");  // removes comma separators and whitespace from numbers
+		
+		int exponentPosition = studentAnswer.toUpperCase().indexOf("E");  		// turns "e" to "E"
 		String mantissa = exponentPosition>=0?studentAnswer.substring(0,exponentPosition):studentAnswer;
 		
 		// check to see if the value has a trailing zero before the decimal place
-		if (mantissa.indexOf(".")==-1 && mantissa.endsWith("0")) return false;
+		// this check has been disabled to forgive lack of a trailing decimal
+		//if (mantissa.indexOf(".")==-1 && mantissa.endsWith("0")) return false;
 		
 		// strip leading (non-significant) zeros and decimals
 		while (mantissa.startsWith("0") || mantissa.startsWith(".")) mantissa = mantissa.substring(1);
