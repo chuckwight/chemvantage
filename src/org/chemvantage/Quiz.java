@@ -219,22 +219,29 @@ public class Quiz extends HttpServlet {
 			Date now = new Date();
 			Date t15minAgo = new Date(now.getTime() - timeAllowed * 1000); // 15 minutes ago or whatever time was allowed
 			QuizTransaction qt = null;
-			if (qa == null)
+			// try to resume a quiz in progress:
+			if (qa == null)  // anonymous user
 				qt = ofy().load().type(QuizTransaction.class).filter("userId", user.getHashedId()).filter("topicId", topicId)
 						.filter("graded", null).filter("downloaded >", t15minAgo).first().now();
-			else
+			else   // LTI user
 				qt = ofy().load().type(QuizTransaction.class).filter("userId", user.getHashedId())
 						.filter("assignmentId", assignmentId).filter("graded", null).filter("downloaded >", t15minAgo)
 						.first().now();
-
-			if (qt == null || qt.getGraded() != null) {
-				if (qa != null && qa.attemptsAllowed != null) {
-					int nAttempts = ofy().load().type(QuizTransaction.class).filter("assignmentId",assignmentId).filter("userId",user.getHashedId()).count();
-					if (nAttempts >= qa.attemptsAllowed) return "<h2>Sorry, you are only allowed " + qa.attemptsAllowed + " attempt" + (qa.attemptsAllowed==1?"":"s") + " on this assignment.</h2>";
-				}
+			// check to see if attemptsAllowed has been reached
+			int nAttempts = 1;
+			if (qa != null && qa.attemptsAllowed != null) {
+				nAttempts = ofy().load().type(QuizTransaction.class).filter("assignmentId",assignmentId).filter("userId",user.getHashedId()).count();
+				if (nAttempts >= qa.attemptsAllowed) 
+					return "<h2>Sorry, you are only allowed " + qa.attemptsAllowed + " attempt" + (qa.attemptsAllowed==1?"":"s") + " on this assignment.</h2>" 
+							+ "You may <a href=/Quiz?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review all your scores on this assignment</a>.<p>";
+;
+			}
+			
+			if (qt == null) {  // create a new quizTransation
 				qt = new QuizTransaction(topicId, topic.getTitle(), user.getId(), now, null, 0, assignmentId, 0);
 				ofy().save().entity(qt).now(); // creates a long id value to use in random number generator
-			}
+				nAttempts++;
+			}	
 			
 			// Insert javascript code for timers and form submission
 			buf.append(timers());
@@ -248,7 +255,7 @@ public class Quiz extends HttpServlet {
 				buf.append("Quiz Rules"
 						+ "	<OL>"
 						+ "	<LI>Each quiz must be completed within " + (timeAllowed / 60) + " minutes of the time when it is first downloaded.</LI>"
-						+ "	<LI>You may repeat quizzes as many times as you wish, to improve your score.</LI>"
+						+ (qa.attemptsAllowed==null?"<LI>You may repeat this quiz as many times as you wish, to improve your score.</LI>":"<LI>You are allowed " + qa.attemptsAllowed + " attempts of this quiz assignment. This is attempt #" + nAttempts + ".</LI>")
 						+ "	<LI>ChemVantage always reports your best score on this assignment to your class LMS.</LI>"
 						+ "	</OL>");
 			}
@@ -450,14 +457,17 @@ public class Quiz extends HttpServlet {
 					}
 					
 					if (nAnswersEligible > 0) {
+						buf.append("<a id=wrongAnsLink href=# onClick=document.getElementById('wrongAnsLink').style='display:none';document.getElementById('wrongAnsDiv').style='display:inline'>Show me</a>");
+						buf.append("<div id=wrongAnsDiv style='display:none'>");
 						buf.append("The correct answer" + (nAnswersEligible>1?"s ":" ") + (nAnswersEligible<wrongAnswers?"to " + nAnswersEligible + " of these ":"") + (nAnswersEligible==1?"is":"are") + " shown below. ");
-						if (nAnswersEligible < wrongAnswers) buf.append("<br/>The more questions you answer correctly, the more correct answers to missed questions will be displayed.");
+						if (nAnswersEligible < wrongAnswers) buf.append("The more questions you answer correctly, the more correct answers to missed questions will be displayed.");
 						buf.append("<OL>");
 						for (int i=0;i<wrongAnswers;i++) {
 							if (nAnswersEligible > 0) buf.append(missedQuestions.get(i));
 							nAnswersEligible --;
 						}
 						buf.append("</OL>");
+						buf.append("</div>");
 					}  else buf.append("You must answer at least one question correctly to view the correct answers to questions that you missed. ");
 				}
 
@@ -741,7 +751,7 @@ public class Quiz extends HttpServlet {
 				}
 				buf.append("</table><br>Missing scores indicate quizzes that were downloaded but not submitted for scoring.<br/><br/>");
 				
-				if (a.attemptsAllowed != null) buf.append("The maximum number of attempts on this assignment is " + a.attemptsAllowed + "<br/><br/>");
+				if (a.attemptsAllowed != null) buf.append("The maximum number of attempts on this assignment is " + a.attemptsAllowed + ".<br/><br/>");
 			}
 		} catch (Exception e) {
 			buf.append(e.toString());

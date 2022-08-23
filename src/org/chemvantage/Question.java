@@ -307,10 +307,10 @@ public class Question implements Serializable, Cloneable {
 					+ "</label><br/></div>");
 			buf.append("<label>");
 			switch (getNumericItemType()) {
-			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact numeric value.</span><br/>"); break;
-			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
-			case 2: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</span><br/>"); break;
-			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact answer as a number.</span><br/>"); break;
+			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the answer with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+			case 2: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct answer to within " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</span><br/>"); break;
+			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the answer with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
 			default:
 			}			
 			buf.append("<input size=25 type=text name=" + this.id + " id=answer" + this.id + " value='" + studentAnswer + "' onFocus=showWorkBox('" + this.id + "'); />");
@@ -380,10 +380,10 @@ public class Question implements Serializable, Cloneable {
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br/>");
 			switch (getNumericItemType()) {
-			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact numeric value.</span><br/>"); break;
-			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
-			case 2: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</span><br/>"); break;
-			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact answer as a number.</span><br/>"); break;
+			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the answer with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+			case 2: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct answer to within " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</span><br/>"); break;
+			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the answer with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
 			default:
 			}
 			buf.append("<span style='border: 1px solid black'>"
@@ -463,10 +463,10 @@ public class Question implements Serializable, Cloneable {
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br/>");
 			switch (getNumericItemType()) {
-			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact numeric value.</span><br/>"); break;
-			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
-			case 2: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</span><br/>"); break;
-			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact answer as a number.</span><br/>"); break;
+			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the answer with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+			case 2: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct answer to within " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</span><br/>"); break;
+			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the answer with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
 			default:
 			}
 			buf.append("<span style='border: 1px solid black'>"
@@ -579,10 +579,10 @@ public class Question implements Serializable, Cloneable {
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br/>");
 			switch (getNumericItemType()) {
-			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact numeric value.</span><br/>"); break;
-			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
-			case 2: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</span><br/>"); break;
-			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact answer as a number.</span><br/>"); break;
+			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the answer with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+			case 2: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct answer to within " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</span><br/>"); break;
+			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the answer with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
 			default:
 			}
 			buf.append("<span style='border: 1px solid black'>"
@@ -710,10 +710,10 @@ public class Question implements Serializable, Cloneable {
 						+ amp2html(text) + "</TEXTAREA><br/>");
 				buf.append("<FONT SIZE=-2>Significant figures: <input size=5 name=SignificantFigures value='" + significantFigures + "'/> Required precision: <input size=5 name=RequiredPrecision value='" + requiredPrecision + "'/> (set to zero to require exact answer)</FONT><br/>");
 				switch (getNumericItemType()) {
-				case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact numeric value.</span><br/>"); break;
-				case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
-				case 2: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct numeric value to " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</span><br/>"); break;
-				case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct numeric value with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+				case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact answer as a number.</span><br/>"); break;
+				case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the answer with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+				case 2: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct answer to within " + requiredPrecision + "% precision. Express scientific notation like 4.29E-15</span><br/>"); break;
+				case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the answer with the appropriate number of significant figures. Express scientific notation like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
 				default:
 				}
 				buf.append("Correct answer:");
@@ -823,11 +823,14 @@ public class Question implements Serializable, Cloneable {
 	boolean hasCorrectSigFigs(String studentAnswer) {
 		if (significantFigures==0) return true;  // no sig figs required
 		
-		int exponentPosition = studentAnswer.toUpperCase().indexOf("E");
+		studentAnswer = studentAnswer.replaceAll(",", "").replaceAll("\\s", "");  // removes comma separators and whitespace from numbers
+		
+		int exponentPosition = studentAnswer.toUpperCase().indexOf("E");  		// turns "e" to "E"
 		String mantissa = exponentPosition>=0?studentAnswer.substring(0,exponentPosition):studentAnswer;
 		
 		// check to see if the value has a trailing zero before the decimal place
-		if (mantissa.indexOf(".")==-1 && mantissa.endsWith("0")) return false;
+		// this check has been disabled to forgive lack of a trailing decimal
+		//if (mantissa.indexOf(".")==-1 && mantissa.endsWith("0")) return false;
 		
 		// strip leading (non-significant) zeros and decimals
 		while (mantissa.startsWith("0") || mantissa.startsWith(".")) mantissa = mantissa.substring(1);
