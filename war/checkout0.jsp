@@ -25,8 +25,6 @@
 <main><h1 style='display: none'>Welcome to ChemVantage</h1>
 
 <%
-	String price = request.getParameter("price");
-	if (price==null) price = "2"; // per month
 	String sig = request.getParameter("sig");
 	User user = User.getUser(sig);
 	String hashedId = request.getParameter("HashedId");
@@ -34,15 +32,20 @@
 	Date now = new Date();
 	Date exp = null;
 	DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.FULL);
+	Deployment d = null;
+	int nMonthsPurchased = 0;
+	int amountPaid = 0;
 	try {
-		int nMonthsPurchased = Integer.parseInt(request.getParameter("NMonthsPurchased"));
+		d = ofy().load().type(Deployment.class).id(request.getParameter("d")).now();
+		nMonthsPurchased = Integer.parseInt(request.getParameter("NMonthsPurchased"));
 		if (user.getHashedId().equals(hashedId)) { // successful purchase
-			PremiumUser u = new PremiumUser(hashedId, nMonthsPurchased); // constructor automatically saves new entity
+			amountPaid = Integer.parseInt(request.getParameter("AmountPaid"));
+			PremiumUser u = new PremiumUser(hashedId, nMonthsPurchased, amountPaid, d.getOrganization()); // constructor automatically saves new entity
 			exp = u.exp;
 %> 
 			<h2>Thank you for your payment!</h2>
 			Your ChemVantage subscription is now active and expires on <%= df.format(exp) %><br/>
-			Print this page as proof of purchase. Then return to your LMS and relaunch the assignment.<br/><br/>	
+			Print or save this page as proof of purchase. Then return to your LMS and relaunch the assignment.<br/><br/>	
 			Details: <%= request.getParameter("OrderDetails") %>
 <%
 		}
@@ -52,15 +55,13 @@
 		? "AVJ8NuVQnTBwTbmkouWCjZhUT_eHeTm9fjAKwXJO0-RK-9VZFBtWm4J6V8o-47DvbOoaVCUiEb4JMXz8": // Paypal sandbox client_id
 		"AYlUNqRJZXhJJ9z7pG7GRMOwC-Y_Ke58s8eacfl1R51833ISAqOUhR8To0Km297MPcShAqm9ffp5faun"; // Paypal live client_id
 %>
-		<h3>Individual ChemVantage License</h3>
-		A subscription is required to access ChemVantage assignments and services through this learning management system. 
-		The cost is just $<%= price %>.00 USD per month and gives you access to all ChemVantage quizzes, homework, videos 
-		and other assignments created by your instructor.<br/><br/>
+		<h3>Individual ChemVantage Subscription</h3>
+		A subscription is required to access ChemVantage assignments created by your instructor through this learning management system.<br/><br/>
 <% 
-		PremiumUser u = ofy().load().type(PremiumUser.class).id(user.getHashedId()).now();
+		PremiumUser u = ofy().load().type(PremiumUser.class).id(user.getHashedId()).now();		
 		if (u != null && u.exp.before(now)) {
 %>		
-		<h3>Your ChemVantage subscription expired: <%= df.format(u.exp) %></h3>
+			<h3>Your ChemVantage subscription expired: <%= df.format(u.exp) %></h3>
 <%	
 		}
 %>
@@ -69,14 +70,14 @@
 		<select id=nMonthsChoice onChange=updateAmount();>
 			<option value=1>1 month</option>
 			<option value=2>2 months</option>
-			<option value=5>5 months</option>
-			<option value=12>12 months</option>
+			<option value=5 selected>5 months</option>
+			<option value=10>10 months</option>
 		</select><br /><br /> 
 		
 		
 		Select your preferred payment method below. When the transaction is completed, your subscription will be activated immediately.
 
-		<h2>Purchase: <span id=amt>1 month - $2.00 USD</span></h2>
+		<h2>Purchase: <span id=amt>5 months - $<%= 4*d.price %>.00 USD</span></h2>
 
 		<div id="smart-button-container">
       	  <div style="text-align: center;">
@@ -85,18 +86,17 @@
         </div>
  		<script src='https://www.paypal.com/sdk/js?client-id=<%= client_id %>&enable-funding=venmo&currency=USD'></script>
    		<script>
-  		var nMonths = 1;
-   		var value = "2";
+  		var nMonths = 5;
+   		var amtPaid = <%= 4*d.price %>;
    		function updateAmount() {
 	   		nMonths = document.getElementById("nMonthsChoice").value;
 	   		switch (nMonths) {
-	   		case "1": value="2.00"; break;
-	   		case "2": value="4.00"; break;
-	   		case "5": value="9.00"; break;
-	   		case "12": value="20.00"; break;
-	   		default: value="2.00";
-	  		}
-	   		document.getElementById("amt").innerHTML=nMonths + ' months - $' + value + ' USD';
+	   		case "1": amtPaid="<%= d.price %>"; break;
+	   		case "2": amtPaid="<%= 2*d.price %>"; break;
+	   		case "5": amtPaid="<%= 4*d.price %>"; break;
+	   		case "10": amtPaid="<%= 7*d.price %>"; break;
+	   		}
+	   		document.getElementById("amt").innerHTML=nMonths + ' months - $' + amtPaid + '.00 USD';
     	}
     	function initPayPalButton() {
       		paypal.Buttons({
@@ -110,7 +110,7 @@
         createOrder: function(data, actions) {
           return actions.order.create({
             purchase_units: [{"description":nMonths + "-month ChemVantage subscription for user: <%=user.getHashedId()%>",
-            	"amount":{"currency_code":"USD","value":value}}]
+            	"amount":{"currency_code":"USD","value":amtPaid+".00"}}]
           });
         },
 
@@ -122,6 +122,7 @@
 			
             // Submit form
             document.getElementById('nmonths').value=nMonths;
+            document.getElementById('amtPaid').value=amtPaid;
             document.getElementById('orderdetails').value=JSON.stringify(orderData, null, 2);
             document.getElementById('activationForm').submit();
            // actions.redirect('thank_you.html');
@@ -139,7 +140,9 @@
   
   		<form id=activationForm method=post>
   		<input type=hidden name=sig value='<%= user.getTokenSignature() %>' />
+  		<input type=hidden name=d value='<%= d.getPlatformDeploymentId() %>' />
   		<input type=hidden name=NMonthsPurchased id=nmonths />
+  		<input type=hidden name=AmountPaid id=amtPaid />
  		<input type=hidden name=OrderDetails id=orderdetails />
   		<input type=hidden name=HashedId value='<%= user.getHashedId() %>' />
 		</form>

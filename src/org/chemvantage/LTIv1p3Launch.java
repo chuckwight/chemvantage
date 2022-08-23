@@ -210,11 +210,11 @@ public class LTIv1p3Launch extends HttpServlet {
 				if (d.getNLicensesRemaining()>0) {
 					debug.append("t2");
 					d.nLicensesRemaining--;
-					new PremiumUser(user.getHashedId());
+					new PremiumUser(user.getHashedId(),10,0,d.organization);
 					debug.append("t3");
 				}
-				else if (d.price == 0) new PremiumUser(user.getHashedId());
-				else response.sendRedirect("/checkout0.jsp?sig=" + user.getTokenSignature() + "&price=" + d.price);
+				else if (d.price == 0) new PremiumUser(user.getHashedId(),10,0,d.organization);
+				else response.sendRedirect("/checkout0.jsp?sig=" + user.getTokenSignature() + "&d=" + d.platform_deployment_id);
 			}
 
 			// Save the updated Deployment entity, if necessary
