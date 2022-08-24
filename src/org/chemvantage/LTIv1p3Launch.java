@@ -205,18 +205,20 @@ public class LTIv1p3Launch extends HttpServlet {
 			debug.append(scope.isEmpty()?"Scope is empty. ":"Scope is " + scope + ". ");
 			
 			// Launch only premium users
-			if (!user.isPremium()) {
+			boolean isPremiumUser = user.isPremium();
+			if (!isPremiumUser) {
 				debug.append("t1");
 				if (d.getNLicensesRemaining()>0) {
-					debug.append("t2");
 					d.nLicensesRemaining--;
 					new PremiumUser(user.getHashedId(),10,0,d.organization);
-					debug.append("t3");
+					isPremiumUser = true;
 				}
-				else if (d.price == 0) new PremiumUser(user.getHashedId(),10,0,d.organization);
-				else response.sendRedirect("/checkout0.jsp?sig=" + user.getTokenSignature() + "&d=" + d.platform_deployment_id);
+				else if (d.price == 0) {
+					new PremiumUser(user.getHashedId(),10,0,d.organization);
+					isPremiumUser = true;
+				}
 			}
-
+			
 			// Save the updated Deployment entity, if necessary
 			if (!d.equivalentTo(original_d) || original_d.lastLogin == null || original_d.lastLogin.before(yesterday)) {
 				ofy().save().entity(d).now();
@@ -312,7 +314,12 @@ public class LTIv1p3Launch extends HttpServlet {
 			if (!myAssignment.isValid()) {  //Show the the pickResource form:
 				response.getWriter().println(Subject.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,1) + Subject.footer);
 				return;
-			} else response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
+			} else if (!isPremiumUser) {
+				String url = "/checkout0.jsp?sig=" + user.getTokenSignature() + "&d=" + d.platform_deployment_id;
+				if ("PlacementExam".equals(myAssignment.assignmentType)) url += "&NMonthsPurchased=1";
+				response.sendRedirect(url);
+			}
+			else response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
 		} catch (Exception e) {
 			ofy().save().entity(d);
 			throw new Exception("Resource Link Request Launch Failed: " + e.getMessage() + " " + debug.toString());

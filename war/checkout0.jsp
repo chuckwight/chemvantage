@@ -33,12 +33,12 @@
 	Date exp = null;
 	DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.FULL);
 	Deployment d = null;
-	int nMonthsPurchased = 0;
+	int nMonthsPurchased = 5;
 	int amountPaid = 0;
 	try {
 		d = ofy().load().type(Deployment.class).id(request.getParameter("d")).now();
 		nMonthsPurchased = Integer.parseInt(request.getParameter("NMonthsPurchased"));
-		if (user.getHashedId().equals(hashedId)) { // successful purchase
+		if (hashedId.equals(user.getHashedId())) { // successful purchase; throws exception on first pass because hashedId==null
 			amountPaid = Integer.parseInt(request.getParameter("AmountPaid"));
 			PremiumUser u = new PremiumUser(hashedId, nMonthsPurchased, amountPaid, d.getOrganization()); // constructor automatically saves new entity
 			exp = u.exp;
@@ -68,16 +68,16 @@
 
 		Please select the desired number of months you wish to purchase: 
 		<select id=nMonthsChoice onChange=updateAmount();>
-			<option value=1>1 month</option>
+			<option value=1 <%= (nMonthsPurchased==1?"selected":"") %>>1 month</option>
 			<option value=2>2 months</option>
-			<option value=5 selected>5 months</option>
+			<option value=5 <%= (nMonthsPurchased==5?"selected":"") %>>5 months</option>
 			<option value=10>10 months</option>
 		</select><br /><br /> 
 		
 		
 		Select your preferred payment method below. When the transaction is completed, your subscription will be activated immediately.
 
-		<h2>Purchase: <span id=amt>5 months - $<%= 4*d.price %>.00 USD</span></h2>
+		<h2>Purchase: <span id=amt></span></h2>
 
 		<div id="smart-button-container">
       	  <div style="text-align: center;">
@@ -86,8 +86,8 @@
         </div>
  		<script src='https://www.paypal.com/sdk/js?client-id=<%= client_id %>&enable-funding=venmo&currency=USD'></script>
    		<script>
-  		var nMonths = 5;
-   		var amtPaid = <%= 4*d.price %>;
+  		var nMonths = <%= nMonthsPurchased %>;
+   		var amtPaid = "";
    		function updateAmount() {
 	   		nMonths = document.getElementById("nMonthsChoice").value;
 	   		switch (nMonths) {
@@ -96,8 +96,9 @@
 	   		case "5": amtPaid="<%= 4*d.price %>"; break;
 	   		case "10": amtPaid="<%= 7*d.price %>"; break;
 	   		}
-	   		document.getElementById("amt").innerHTML=nMonths + ' months - $' + amtPaid + '.00 USD';
+	   		document.getElementById("amt").innerHTML=nMonths + (nMonths=="1"?' month':' months') + ' - $' + amtPaid + '.00 USD';
     	}
+   		updateAmount();
     	function initPayPalButton() {
       		paypal.Buttons({
         	style: {
