@@ -316,7 +316,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				return;
 			} else if (!isPremiumUser) {
 				String url = "/checkout0.jsp?sig=" + user.getTokenSignature() + "&d=" + d.platform_deployment_id;
-				if ("PlacementExam".equals(myAssignment.assignmentType)) url += "&NMonthsPurchased=1";
+				if ("PlacementExam".equals(myAssignment.assignmentType)) url += "&n=1";
 				response.sendRedirect(url);
 			}
 			else response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());

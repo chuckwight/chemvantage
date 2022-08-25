@@ -34,10 +34,12 @@
 	DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.FULL);
 	Deployment d = null;
 	int nMonthsPurchased = 5;
+	try {
+		nMonthsPurchased = Integer.parseInt(request.getParameter("n"));
+	} catch (Exception e) {}
 	int amountPaid = 0;
 	try {
 		d = ofy().load().type(Deployment.class).id(request.getParameter("d")).now();
-		nMonthsPurchased = Integer.parseInt(request.getParameter("NMonthsPurchased"));
 		if (hashedId.equals(user.getHashedId())) { // successful purchase; throws exception on first pass because hashedId==null
 			amountPaid = Integer.parseInt(request.getParameter("AmountPaid"));
 			PremiumUser u = new PremiumUser(hashedId, nMonthsPurchased, amountPaid, d.getOrganization()); // constructor automatically saves new entity
@@ -46,7 +48,8 @@
 			<h2>Thank you for your payment!</h2>
 			Your ChemVantage subscription is now active and expires on <%= df.format(exp) %><br/>
 			Print or save this page as proof of purchase. Then return to your LMS and relaunch the assignment.<br/><br/>	
-			Details: <%= request.getParameter("OrderDetails") %>
+			Details: <%= request.getParameter("OrderDetails") %><br/>
+			Months Purchased: <%= request.getParameter("n") %>
 <%
 		}
 	} catch (Exception e) {  // the remainder of the JSP is devoted to presenting the purchase page
@@ -68,9 +71,9 @@
 
 		Please select the desired number of months you wish to purchase: 
 		<select id=nMonthsChoice onChange=updateAmount();>
-			<option value=1 <%= (nMonthsPurchased==1?"selected":"") %>>1 month</option>
+			<option value=1>1 month</option>
 			<option value=2>2 months</option>
-			<option value=5 <%= (nMonthsPurchased==5?"selected":"") %>>5 months</option>
+			<option value=5>5 months</option>
 			<option value=10>10 months</option>
 		</select><br /><br /> 
 		
@@ -88,8 +91,10 @@
    		<script>
   		var nMonths = <%= nMonthsPurchased %>;
    		var amtPaid = "";
+   		var nMonthsInp = document.getElementById("nMonthsChoice");
+   		if (nMonths==5) nMonthsInp.selectedIndex=2;
    		function updateAmount() {
-	   		nMonths = document.getElementById("nMonthsChoice").value;
+	   		nMonths = nMonthsInp.options[nMonthsInp.selectedIndex].value;
 	   		switch (nMonths) {
 	   		case "1": amtPaid="<%= d.price %>"; break;
 	   		case "2": amtPaid="<%= 2*d.price %>"; break;
@@ -139,10 +144,10 @@
     	initPayPalButton();
   		</script>
   
-  		<form id=activationForm method=post>
+  		<form id=activationForm method=post action='/checkout0.jsp'>
   		<input type=hidden name=sig value='<%= user.getTokenSignature() %>' />
   		<input type=hidden name=d value='<%= d.getPlatformDeploymentId() %>' />
-  		<input type=hidden name=NMonthsPurchased id=nmonths />
+  		<input type=hidden name=n id=nmonths />
   		<input type=hidden name=AmountPaid id=amtPaid />
  		<input type=hidden name=OrderDetails id=orderdetails />
   		<input type=hidden name=HashedId value='<%= user.getHashedId() %>' />

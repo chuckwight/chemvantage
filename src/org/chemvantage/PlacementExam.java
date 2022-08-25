@@ -256,7 +256,25 @@ public class PlacementExam extends HttpServlet {
 			if (pt != null) resumingExam = true;
 			else {  // this is a new exam, either newly paid or authorized retake
 				if (a.attemptsAllowed != null && nAttempts >= a.attemptsAllowed) {
-					return "<h2>Sorry, you are only allowed " + a.attemptsAllowed + " attempt" + (a.attemptsAllowed==1?"":"s") + " on this assignment.</h2>";
+					buf.append(Subject.banner);
+					buf.append("<h2>Sorry, you are only allowed " + a.attemptsAllowed + " attempt" + (a.attemptsAllowed==1?"":"s") + " on this assignment.</h2>");
+					
+					DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+					List<PlacementExamTransaction> pets = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
+					buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Placement Exam Score (percent)</th></tr>");
+					for (PlacementExamTransaction pet : pets) {
+						int score = 0;
+						int possibleScore = 0;
+						for (int i=0;i<a.topicIds.size();i++) {
+							score += pet.scores[i];
+							possibleScore += pet.possibleScores[i];
+						}
+						int pct = (possibleScore>0?score*100/possibleScore:0);
+
+						buf.append("<tr><td>" + pet.id + "</td><td>" + df.format(pet.downloaded) + "</td><td align=center>" + (pet.graded==null?"-":pct + "%") +  "</td></tr>");
+					}
+					buf.append("</table><br>Missing scores indicate assignments that were downloaded but not submitted for scoring.<br/><br/>");
+					return buf.toString();
 				}	
 				pt = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("graded",null).filter("downloaded ",null).first().now(); // newly  paid
 				Long transactionId = pt==null?null:pt.id;  // use the same id if it exists
