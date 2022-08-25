@@ -157,6 +157,15 @@ public class PlacementExam extends HttpServlet {
 						examQuestions.remove(key);
 					}
 					break;
+				case "DeleteSubmission":
+					if (user.isInstructor()) {
+						try {
+							Long tid = Long.parseLong(request.getParameter("tid"));
+							ofy().delete().key(Key.create(PlacementExamTransaction.class,tid)).now();
+						} catch (Exception e) {}
+						response.sendRedirect("/PlacementExam?UserRequest=ReviewExamScores&sig=" + user.getTokenSignature());
+					}
+					break;
 				default: out.println(Subject.header("ChemVantage Placement Exam Results") + printScore(user,request) + Subject.footer);
 			}
 		} catch (Exception e) {
@@ -340,7 +349,7 @@ public class PlacementExam extends HttpServlet {
 			buf.append("<h2>General Chemistry Placement Exam</h2>");
 			if (user.isAnonymous()) buf.append("Anonymous User<br/>");
 			
-			if (a.attemptsAllowed!=null) buf.append("You are allowed " + a.attemptsAllowed + (a.attemptsAllowed==1?"attempt":"attempts") + " on this exam. This is attempt #" + (nAttempts + (resumingExam?0:1)) + ".<br/>");
+			if (a.attemptsAllowed!=null) buf.append("You are allowed " + a.attemptsAllowed + (a.attemptsAllowed==1?" attempt":" attempts") + " on this exam. This is attempt #" + (nAttempts + (resumingExam?0:1)) + ".<br/>");
 			
 			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded. ");
 			if (resumingExam) buf.append("You are resuming a placement exam originally downloaded at " + pt.downloaded);
@@ -820,7 +829,7 @@ public class PlacementExam extends HttpServlet {
 			int i = 0;
 			buf.append("<table><tr><th>User</th><th>Attempt</th><th>Downloaded</th><th>Elapsed Time</th>");
 			for (int j=1;j<=topics.size();j++) buf.append("<th>Topic " + j + "</th>");
-			buf.append("<th>Total Score</th><th>Reviewed</th><th></th></tr>");
+			buf.append("<th>Total Score</th><th>Reviewed</th><th></th><th></th></tr>");
 			
 			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
 				i++; // increment the user number
@@ -835,7 +844,7 @@ public class PlacementExam extends HttpServlet {
 				Collections.sort(userpets,new SortPlacementExams());
 				if (userpets.isEmpty()) {  // place a blank line in the table with the user's name
 					buf.append("<tr style='text-align: center;background-color: " + (i%2==0?"yellow":"cyan") + "'>"
-							+ "<td style='text-align: left'>" + i + ".&nbsp;" + name + "</td>" + "<td colspan=" + 6+a.topicIds.size() + ">(exam was not attempted)</td>");
+							+ "<td style='text-align: left'>" + i + ".&nbsp;" + name + "</td>" + "<td colspan=" + (7+a.topicIds.size()) + ">(exam was not attempted)</td>");
 					buf.append("</tr>");					
 				} else {
 					for (int k=userpets.size();k>0;k--) {  // enter the user's transactions into the table
@@ -843,7 +852,7 @@ public class PlacementExam extends HttpServlet {
 						buf.append("<tr style='text-align: center;background-color: " + (i%2==0?"yellow":"cyan") + "'>");
 						buf.append("<td style='text-align: left'>" + i + ".&nbsp;" + name + "</td><td>" + k + "</td><td>" + p.downloaded + "</td>");
 
-						if (p.graded==null) buf.append("<td colspan=" + 4+a.topicIds.size() + ">(exam was not submitted for scoring)</td>");
+						if (p.graded==null) buf.append("<td colspan=" + (4+a.topicIds.size()) + ">(exam was not submitted for scoring)</td>");
 						else {
 							buf.append("<td>" + (p.graded==null?"-":(p.graded.getTime()-p.downloaded.getTime())/60000 + " min.") + "</td>");
 
@@ -861,6 +870,12 @@ public class PlacementExam extends HttpServlet {
 									+ "<a href=PlacementExam?UserRequest=ReviewExam&PlacementExamTransactionId=" + p.id 
 									+ "&sig=" + user.getTokenSignature() + "&UserId=" + user.platformId + "/" + entry.getKey() + ">Review</a></td>");
 						}
+						buf.append("<td><form method=post action=/PlacementExam onsubmit=\"return confirm('Permanentlky delete this submission? This action cannot be undone.');\">"
+								+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+								+ "<input type=hidden name=UserRequest value=DeleteSubmission />"
+								+ "<input type=hidden name=tid value='" + p.id + "' />"
+								+ "<input type=submit value=Delete />"
+								+ "</form></td>");
 						buf.append("</tr>");					
 					}
 				}
