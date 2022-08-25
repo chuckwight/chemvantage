@@ -68,7 +68,7 @@ public class Quiz extends HttpServlet {
 			case "ShowScores":
 				String forUserId = request.getParameter("ForUserId");
 				User forUser = forUserId==null?user:new User(user.platformId, forUserId);
-				out.println(Subject.header("ChemVantage Scores") + showScores(user,forUser) + Subject.footer);
+				out.println(Subject.header("ChemVantage Scores") + Subject.banner + showScores(user,forUser) + Subject.footer);
 				break;
 			case "ShowSummary":
 				out.println(Subject.header("Your Class ChemVantage Scores") + showSummary(user,request) + Subject.footer);
@@ -232,9 +232,8 @@ public class Quiz extends HttpServlet {
 			if (qa != null && qa.attemptsAllowed != null) {
 				nAttempts = ofy().load().type(QuizTransaction.class).filter("assignmentId",assignmentId).filter("userId",user.getHashedId()).count();
 				if (nAttempts >= qa.attemptsAllowed) 
-					return "<h2>Sorry, you are only allowed " + qa.attemptsAllowed + " attempt" + (qa.attemptsAllowed==1?"":"s") + " on this assignment.</h2>" 
-							+ "You may <a href=/Quiz?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review all your scores on this assignment</a>.<p>";
-;
+					return "<h2>Sorry, you are only allowed " + qa.attemptsAllowed + " attempt" + (qa.attemptsAllowed==1?"":"s") + " on this assignment.</h2>"
+							+ Subject.banner + showScores(user,user) + "<p>";
 			}
 			
 			if (qt == null) {  // create a new quizTransation
@@ -687,7 +686,7 @@ public class Quiz extends HttpServlet {
 	String showScores (User user,User forUser) {
 		if (!user.isInstructor() && !user.getId().equals(forUser.getId())) return "<H1>Access denied.</H1>";
 		
-		StringBuffer buf = new StringBuffer("<h2>Quiz Transactions</h2>");
+		StringBuffer buf = new StringBuffer("<h3>Quiz Transactions</h3>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
 		
