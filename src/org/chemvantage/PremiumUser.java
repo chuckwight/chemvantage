@@ -18,12 +18,6 @@ public class PremiumUser {
 	
 	public PremiumUser() {}
 	
-	public PremiumUser(String id) {
-		hashedId = id;
-		exp = new Date(new Date().getTime() + 26265600000L); // default 10-month subscription
-		ofy().save().entity(this).now();
-	}
-	
 	public PremiumUser(String id, int months, int paid, String org) {
 		hashedId = id;
 		exp = new Date(new Date().getTime() + 2678400000L * months); // months-long subscription
