@@ -31,6 +31,7 @@ public class Contact {
 		String lastName;
 		String institution;   // ucsb.edu
 		String role;          // faculty,chair
+		boolean itemLicensed;
 	@Index	boolean unsubscribed = false;
 		
 			
