@@ -136,7 +136,7 @@ public class Admin extends HttpServlet {
 			else {
 				buf.append("<ul>");
 				for (Contact c : contacts) {
-					buf.append("<li>" + c.getFullName() + " (" + c.getEmail() + ") "
+					buf.append("<li>" + c.getFullName() + " (" + c.getEmail() + ") at " + c.institution
 							+ "<form method=post action=/items>"
 							+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 							+ "<input type=hidden name=Email value='" + c.getEmail() + "' />"
