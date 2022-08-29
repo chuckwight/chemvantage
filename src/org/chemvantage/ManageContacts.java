@@ -151,6 +151,7 @@ public class ManageContacts extends HttpServlet {
 			c = new Contact(request.getParameter("FirstName"),request.getParameter("LastName"),request.getParameter("Email").trim().toLowerCase());
 		}
 		c.role = request.getParameter("Role");
+		c.vetted = true;
 		ofy().save().entity(c).now();
 	}
 	
@@ -163,6 +164,7 @@ public class ManageContacts extends HttpServlet {
 				String[] paste = lines[i].split("\t");
 				c = new Contact(paste[0].trim(),paste[1].trim(),paste[2].trim().toLowerCase());
 				c.role = request.getParameter("Role");
+				c.vetted = true;
 				ofy().save().entity(c).now();
 				url += (i==0?c.email:"&Email=" + c.email);
 			}
@@ -194,6 +196,7 @@ public class ManageContacts extends HttpServlet {
 			c.firstName = request.getParameter("FirstName");
 			c.lastName = request.getParameter("LastName");
 			c.role = request.getParameter("Role");
+			c.vetted = true;
 			c.unsubscribed = Boolean.parseBoolean(request.getParameter("Unsubscribed"));
 			ofy().save().entity(c).now();
 		} catch (Exception e) {

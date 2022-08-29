@@ -130,6 +130,23 @@ public class Admin extends HttpServlet {
 				}
 			}
 
+			buf.append("<h3>Requests for Access to the Item Bank</h3>");
+			List<Contact> contacts = ofy().load().type(Contact.class).filter("vetted",false).list();
+			if (contacts.size()==0) buf.append("(none)");
+			else {
+				buf.append("<ul>");
+				for (Contact c : contacts) {
+					buf.append("<li>" + c.getFullName() + " (" + c.getEmail() + ") "
+							+ "<form method=post action=/items>"
+							+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+							+ "<input type=hidden name=Email value='" + c.getEmail() + "' />"
+							+ "<input type=submit name=UserRequest value=Approve /> "
+							+ "<input type=submit name=UserRequest value=Deny />"
+							+ "</form>"
+							+ "</li>");
+				}
+				buf.append("</ul>");
+			}
 			buf.append("<h3>Contributed Questions</h3>");
 			int nPending = ofy().load().type(ProposedQuestion.class).count();
 			if (nPending == 0) buf.append("No questions are pending editorial review.");

@@ -88,14 +88,66 @@ public class ItemBank extends HttpServlet {
 		case "Register":
 			try {
 				c = registerContact(request);
-				sendEmail(c);
-				out.println(Subject.header("Success") + Subject.banner 
-						+ "<h3>Thank you</h3>"
-						+ "A personalized coded link has been sent to you at " + c.email + "<br/>"
-						+ Subject.footer);
+				if (c==null) throw new Exception();
+				if (c.vetted) {
+					String url = "https://www.chemvantage.org/items?code=" + encode(c.email); 
+					String messageBody = "Thank you for your interest in using ChemVantage question items for your teaching. "
+							+ "Please use the personalized coded link below to access the database of questions.<br/><br/>"
+							+ "<a href='" + url + "'>" + url + "</a>";
+					sendEmail(c,messageBody);
+					out.println(Subject.header("Success") + Subject.banner 
+							+ "<h3>Thank you</h3>"
+							+ "A personalized coded link has been sent to you at " + c.email + "<br/>"
+							+ Subject.footer);
+				} else {
+					String messageBody = "The person below has requested access to the ChemVantage question item bank:<br/>"
+							+ "Name: " + c.getFullName() + "<br/>"
+							+ "Email: " + c.getEmail() + "<br/>"
+							+ "Institution: " + c.institution + "<br/>";
+					Contact a = ofy().load().type(Contact.class).id("admin@chemvantage.org").now();
+					sendEmail(a,messageBody);
+					out.println(Subject.header("Success") + Subject.banner 
+							+ "<h3>Thank you</h3>"
+							+ "We will review your request and send a personalized coded access link to you at " + c.email + "<br/>"
+							+ Subject.footer);
+				}
 			} catch (Exception e) {
 				response.sendRedirect("/items?msg=Registration+failed.+Please+try+again.");
 			}
+			break;
+		case "Approve":
+			User user = User.getUser(request.getParameter("sig"));
+			if (user==null || !user.isChemVantageAdmin()) break;
+			c = ofy().load().type(Contact.class).id(request.getParameter("Email")).now();
+			if (c != null) {
+				c.vetted = true;
+				ofy().save().entity(c);
+				String url = "https://www.chemvantage.org/items?code=" + encode(c.email); 
+				String messageBody = Subject.banner + "<h3>Question Item Bank</h3>"
+						+ "Thank you for your interest in ChemVantage. Your request has been "
+						+ "approved, and you may now access our item bank using the personalized "
+						+ "coded link below. Please reply to this email if you have questions.<br/><br/>"
+						+ "<a href='" + url + "'>" + url + "</a>";
+				try {
+					sendEmail(c,messageBody);
+					out.println(Subject.header("Success") + Subject.banner 
+							+ "<h2>The approval email was sent to " + c.email + "</h2>" 
+							+ Subject.footer);
+				} catch (Exception e) {
+					out.println(Subject.header("Failure") + Subject.banner 
+							+ "<h2>Failed</h2>The approval email could not be sent to " + c.email + "<br/><br/>" 
+							+ Subject.footer);
+				}
+			}
+			break;
+		case "Deny":
+			user = User.getUser(request.getParameter("sig"));
+			if (user==null || !user.isChemVantageAdmin()) break;
+			c = ofy().load().type(Contact.class).id(request.getParameter("Email")).now();
+			if (c != null) ofy().delete().entity(c);
+			out.println(Subject.header("Item Bank") + Subject.banner 
+					+ "<h2>The contact " + c.getFullName() + " (" + c.email + ") was deleted.</h2>"
+					+ Subject.footer);
 			break;
 		case "ConfirmLicense":
 			try {
@@ -147,11 +199,18 @@ public class ItemBank extends HttpServlet {
 		String email = request.getParameter("Email");
 		if (!reCaptchaOK(request)) return null;
 		boolean licensed = Boolean.parseBoolean(request.getParameter("License"));
-		Contact c = null;
-		if (firstName!=null && lastName!=null && orgURL!=null && email!=null) {
-			c = new Contact(firstName,lastName,email);
-			c.institution = orgURL;
+		Contact c = ofy().load().type(Contact.class).id(email).now();
+		if (c==null) {
+			if (firstName!=null && lastName!=null && orgURL!=null && email!=null) {
+				c = new Contact(firstName,lastName,email);
+				c.institution = orgURL;
+				c.itemLicensed = licensed;
+				c.vetted = false;
+				ofy().save().entity(c).now();
+			}
+		} else {
 			c.itemLicensed = licensed;
+			c.vetted = true;
 			ofy().save().entity(c).now();
 		}
 		return c;
@@ -181,17 +240,13 @@ public class ItemBank extends HttpServlet {
 		return captchaResponse.get("success").getAsBoolean();
 	}
 
-	void sendEmail(Contact c) throws Exception {
+	void sendEmail(Contact c,String messageBody) throws Exception {
 		Message msg = new MimeMessage(Session.getDefaultInstance(new Properties()));
 		InternetAddress from = new InternetAddress("admin@chemvantage.org", "ChemVantage");
 		msg.setFrom(from);
 		msg.addRecipient(Message.RecipientType.TO,new InternetAddress(c.getEmail(),c.getFullName()));
 		msg.addRecipient(Message.RecipientType.CC,from);
 		msg.setSubject("ChemVantage Question Item Bank");
-		String url = "https://www.chemvantage.org/items?code=" + encode(c.email); 
-		String messageBody = "Thank you for your interest in using ChemVantage question items for your teaching. "
-				+ "Please use the personalized coded link below to access the database of questions.<br/><br/>"
-				+ "<a href='" + url + "'>" + url + "</a>";
 		msg.setContent(messageBody,"text/html");
 		Transport.send(msg);
 	}
