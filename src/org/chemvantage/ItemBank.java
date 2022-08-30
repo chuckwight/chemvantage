@@ -108,7 +108,7 @@ public class ItemBank extends HttpServlet {
 					sendEmail(a,messageBody);
 					out.println(Subject.header("Success") + Subject.banner 
 							+ "<h3>Thank you</h3>"
-							+ "We will review your request and send a personalized coded access link to you at " + c.email + "<br/>"
+							+ "We will validate your request and send a personalized coded access link to you at " + c.email + "<br/>"
 							+ Subject.footer);
 				}
 			} catch (Exception e) {
@@ -289,7 +289,7 @@ public class ItemBank extends HttpServlet {
 		if (!showQuestions) buf.append("ChemVantage LLC is pleased to share the quiz and homework question items in our database for your "
 				+ "private noncommercial use in teaching. In that context you are not required to provide attribution to ChemVantage. "
 				+ "Sharing items publicly <i>outside</i> of your teaching activities may only be done under the terms of the "
-				+ "<a href=https://creativecommons.org/licenses/by/3.0/us/>Creative Commons Attribution 3.0 License</a>.<br/>");
+				+ "<a href=https://creativecommons.org/licenses/by/3.0/us/>Creative Commons Attribution 3.0 License</a>.<br/><br/>");
 		
 		buf.append("<FORM NAME=TopicSelect METHOD=GET ACTION=/items>");
 		buf.append("<input type=hidden name=code value='" + code + "' />");
