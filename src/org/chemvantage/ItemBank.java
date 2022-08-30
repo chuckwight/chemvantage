@@ -262,7 +262,7 @@ public class ItemBank extends HttpServlet {
 				+ "I certify that I am a chemistry instructor and if approved, ChemVantage LLC will grant me a non-exclusive license to use ChemVantage question items "
 				+ "without attribution for private, non-commercial use in my teaching activities (e.g., lecture examples, class quizzes, "
 				+ "homework problem sets and exams. I agree not to share the items publicly outside of my teaching activities. "
-				+ "I also understand that the copyright to these materials belongs to ChemVantage LLC and "
+				+ "I also understand that the copyright to these materials belongs to ChemVantage LLC and they "
 				+ "may not be otherwise shared publicly except under the terms of a <a href=https://creativecommons.org/licenses/by/3.0/us/>"
 				+ "Creative Commons Attribution 3.0 License</a>.</label><br/>"
 				+ "<input type=submit value='I Agree' />"
@@ -285,6 +285,12 @@ public class ItemBank extends HttpServlet {
 		} catch (Exception e2) {}
 		String assignmentType = request.getParameter("AssignmentType");
 		boolean showQuestions = (topicId >0 && assignmentType != null && assignmentType.length()>0);
+		
+		if (!showQuestions) buf.append("ChemVantage LLC is pleased to share the quiz and homework question items in our database for your "
+				+ "private noncommercial use in teaching. In that context you are not required to provide attribution to ChemVantage. "
+				+ "Sharing items publicly <i>outside</i> of your teaching activities may only be done under the terms of the "
+				+ "<a href=https://creativecommons.org/licenses/by/3.0/us/>Creative Commons Attribution 3.0 License</a>.<br/>");
+		
 		buf.append("<FORM NAME=TopicSelect METHOD=GET ACTION=/items>");
 		buf.append("<input type=hidden name=code value='" + code + "' />");
 		buf.append("<FONT" + (request.getParameter("TopicId")!=null && topicId==0?" COLOR=RED>":">") + "<b>Topic:</b></FONT>" + topicSelectBox(topicId,true));
