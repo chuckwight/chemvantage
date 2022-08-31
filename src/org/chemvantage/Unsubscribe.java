@@ -33,6 +33,7 @@ public class Unsubscribe extends HttpServlet {
 				if (c.unsubscribed) buf.append("<h4>You remain unsubscribed from ChemVantage messages.</h4>");
 				else {
 					c.unsubscribed = true;
+					c.vetted = true;
 					ofy().save().entity(c);
 					buf.append("<h4>You have been successfully unsubscribed from ChemVantage messages.</h4>");
 				}
