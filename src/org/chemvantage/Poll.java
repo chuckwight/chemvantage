@@ -176,7 +176,7 @@ public class Poll extends HttpServlet {
 				buf.append("When your class is ready for this poll, launch it by pressing the button below. "
 						+ "You must then tell your students that the poll is open so they can click the link "
 						+ "to view the poll question items.<br/>");
-				buf.append("<form method=post>"
+				buf.append("<form method=post action='/Poll' >"
 						+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 						+ "<input type=hidden name=UserRequest value='LaunchPoll' />"
 						+ "<input type=submit value='Launch This Poll Now' />");
@@ -184,7 +184,7 @@ public class Poll extends HttpServlet {
 		} else {
 			buf.append("This poll is currently closed. Please wait until your instructor tells you that the poll is open.<br/>"
 					+ "Then click the button below to view the poll question items.<br/>"
-					+ "<form method=get>"
+					+ "<form method=get action='/Poll' >"
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 					+ "<input type=submit value='View the Poll' /></form><p></p>");
 		}
@@ -225,7 +225,7 @@ public class Poll extends HttpServlet {
 		if (user.isInstructor()) {
 			buf.append("<b>Please tell your students that the poll is now open.</b> "
 				+ "They will have to refresh their browsers to view the questions.<br/>");
-			buf.append("<form method=post><div id=timer0 style='display: inline'></div>&nbsp;When you are ready, please&nbsp;"
+			buf.append("<form method=post action='/Poll' ><div id=timer0 style='display: inline'></div>&nbsp;When you are ready, please&nbsp;"
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 					+ "<input type=hidden name=UserRequest value='ClosePoll' />"
 					+ "<input type=submit value='click here to close the poll and view the results' />"
@@ -237,7 +237,7 @@ public class Poll extends HttpServlet {
 		
 		buf.append("<OL>");
 		int possibleScore = 0;
-		buf.append("<form id=pollForm method=post onSubmit='return confirmSubmission(" + a.questionKeys.size() + ")'>"
+		buf.append("<form id=pollForm method=post action='/Poll' onSubmit='return confirmSubmission(" + a.questionKeys.size() + ")'>"
 				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
 		
 		for (Key<Question> k : a.questionKeys) {  // main loop to present questions
@@ -356,7 +356,7 @@ public class Poll extends HttpServlet {
 		
 		if (user.isInstructor()) {
 			buf.append("<h3>The poll is still open</h3>"
-					+ "<form method=post><div id=timer0 style='display: inline'></div>&nbsp;When you are ready, please&nbsp;"
+					+ "<form method=post action='/Poll' ><div id=timer0 style='display: inline'></div>&nbsp;When you are ready, please&nbsp;"
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 					+ "<input type=hidden name=UserRequest value='ClosePoll' />"
 					+ "<input type=submit value='click here to close the poll and view the results' />"
@@ -365,7 +365,7 @@ public class Poll extends HttpServlet {
 		} else {
 			buf.append("<h3>Please wait until the poll closes</h3>Your instructor will tell you "
 					+ "when you can click the button below to view the class results for the poll.<br/>"
-					+ "<form method=get>"
+					+ "<form method=get action='/Poll' >"
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 					+ "<input type=submit value='View the Poll Results' />"
 					+ "</form>");
@@ -382,7 +382,7 @@ public class Poll extends HttpServlet {
 		buf.append("<h2>Poll Results</h2>");
 		if (user.isInstructor()) {
 			buf.append("<b>Be sure to tell your students that the poll is now closed</b> and to refresh their browsers to view these results. ");
-			buf.append("<form method=post>"
+			buf.append("<form method=post action='/Poll' >"
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 					+ "<input type=hidden name=UserRequest value='ResetPoll' />"
 					+ "When you have finished viewing the results, please<input type=submit value='click here to reset the poll' />"
