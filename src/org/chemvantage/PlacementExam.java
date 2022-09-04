@@ -50,6 +50,20 @@ public class PlacementExam extends HttpServlet {
 	public String getServletInfo() {
 		return "This servlet presents and scores a General Chemistry placement exam for the user.";
 	}
+	
+	@Override public void init() {
+		List<Topic> topics = ofy().load().type(Topic.class).list();
+		List<Key<Question>> keys = new ArrayList<Key<Question>>();
+		for (Topic t : topics) {
+			switch (t.title) {
+			case "Essential Chemistry":
+			case "Essential Math":
+			case "Word Problems":
+				keys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",t.id).keys().list());
+			}
+		}
+		examQuestions.putAll(ofy().load().keys(keys));
+	}
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
