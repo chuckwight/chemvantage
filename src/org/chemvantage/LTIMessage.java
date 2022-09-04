@@ -580,52 +580,64 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			else bearerAuth = "Bearer " + bearerAuth;
 			
 			if (a.lti_nrps_context_memberships_url==null) throw new Exception("the service endpoint URL for this group is unknown");
-			URL u = new URL(a.lti_nrps_context_memberships_url);
+			
+			String next_url = a.lti_nrps_context_memberships_url;
+    		
+			while (next_url != null) {
+				URL u = new URL(next_url);
+				HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+				//uc.setDoOutput(true);
+				uc.setDoInput(true);
+				uc.setRequestMethod("GET");
+				uc.setRequestProperty("Authorization", bearerAuth);
+				uc.setRequestProperty("Accept", "application/vnd.ims.lti-nrps.v2.membershipcontainer+json");
+				uc.connect();
 
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			//uc.setDoOutput(true);
-			uc.setDoInput(true);
-			uc.setRequestMethod("GET");
-			uc.setRequestProperty("Authorization", bearerAuth);
-			uc.setRequestProperty("Accept", "application/vnd.ims.lti-nrps.v2.membershipcontainer+json");
-			uc.connect();
+				int responseCode = uc.getResponseCode();
+				if (responseCode > 199 && responseCode < 203) { // OK
+					BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+					JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+					reader.close();
 
-			int responseCode = uc.getResponseCode();
-			if (responseCode > 199 && responseCode < 203) { // OK
-				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-				JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
-				reader.close();
-				
-				JsonArray members = json.get("members").getAsJsonArray();
-				Iterator<JsonElement> iterator = members.iterator();
-				while(iterator.hasNext()){
-					JsonObject member = iterator.next().getAsJsonObject();
-					String user_id = member.get("user_id").getAsString();
-					//String roles = member.get("roles").getAsString().toLowerCase();
-					String roles = member.get("roles").getAsJsonArray().toString().toLowerCase();
-					String role = roles.contains("administrator")?"Administrator":roles.contains("instructor")?"Instructor":"Learner";
-					String name = "";
-					try {
-						name = member.get("name").getAsString();
-					} catch (Exception e) {
+					JsonArray members = json.get("members").getAsJsonArray();
+					Iterator<JsonElement> iterator = members.iterator();
+					while(iterator.hasNext()){
+						JsonObject member = iterator.next().getAsJsonObject();
+						String user_id = member.get("user_id").getAsString();
+						//String roles = member.get("roles").getAsString().toLowerCase();
+						String roles = member.get("roles").getAsJsonArray().toString().toLowerCase();
+						String role = roles.contains("administrator")?"Administrator":roles.contains("instructor")?"Instructor":"Learner";
+						String name = "";
 						try {
-							name = member.get("family_name").getAsString() + ", " + member.get("given_name").getAsString();
-						} catch (Exception e2) {
+							name = member.get("name").getAsString();
+						} catch (Exception e) {
+							try {
+								name = member.get("family_name").getAsString() + ", " + member.get("given_name").getAsString();
+							} catch (Exception e2) {
+							}
 						}
+						String email = "";
+						try {
+							email = member.get("email").getAsString();
+						} catch (Exception e) {
+						}
+						String[] properties = {role, name, email};
+						membership.put(user_id,properties);
 					}
-					String email = "";
-					try {
-						email = member.get("email").getAsString();
-					} catch (Exception e) {
+				} else return null; 
+				next_url = null;
+				String[] links = uc.getHeaderField("Link").split(",");
+				for (String l : links) {
+					if (l.contains("next")) {
+						next_url = l.trim().substring(1); // removes any leading/trailing white space and the first <
+						next_url = next_url.substring(0,next_url.indexOf(">"));
 					}
-					String[] properties = {role, name, email};
-					membership.put(user_id,properties);
 				}
-			} else return null; 
+			}
 		} catch (Exception e) {	
+			}
+			return membership;
 		}
-		return membership;
-	}
 
 	static void sendEmailToAdmin(String subject,String message) {
 		Properties props = new Properties();
