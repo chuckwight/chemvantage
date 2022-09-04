@@ -112,6 +112,7 @@ public class Admin extends HttpServlet {
 	String mainAdminForm(User user,String userRequest,String searchString,String cursor) {
 		StringBuffer buf = new StringBuffer("\n\n<h2>Administration</h2>");
 		try {
+			// Announcements
 			buf.append("<h3>Announcements</h3>");
 			buf.append("The following message will be posted in red font at the top of each main page: ");
 			
@@ -121,19 +122,19 @@ public class Admin extends HttpServlet {
 					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
 					+ "<INPUT TYPE=SUBMIT VALUE='Post this message now'></FORM>");
 
-			buf.append("<h3>User Feedback</h3>");
+			// User Feedback
 			Query<UserReport> reports = ofy().load().type(UserReport.class).order("-submitted");
-			if (reports.count()==0) buf.append("There are no new user reports at this time.");
-			else {
+			if (reports.count() > 0)  {
+				buf.append("<h3>User Feedback</h3>");
 				for (UserReport r : reports) {
 					buf.append(r.view(user) + "<hr>");  // returns report only for ChemVantage admin
 				}
 			}
 
-			buf.append("<h3>Requests for Access to the Item Bank</h3>");
+			// Item Bank Requests
 			List<Contact> contacts = ofy().load().type(Contact.class).filter("vetted",false).list();
-			if (contacts.size()==0) buf.append("(none)");
-			else {
+			if (contacts.size() > 0) {
+				buf.append("<h3>Requests for Access to the Item Bank</h3>");
 				buf.append("<ul>");
 				for (Contact c : contacts) {
 					buf.append("<li>" + c.getFullName() + " (" + c.getEmail() + ") at " + c.institution
@@ -147,16 +148,16 @@ public class Admin extends HttpServlet {
 				}
 				buf.append("</ul>");
 			}
-			buf.append("<h3>Contributed Questions</h3>");
+			
+			// Contributed Questions
 			int nPending = ofy().load().type(ProposedQuestion.class).count();
-			if (nPending == 0) buf.append("No questions are pending editorial review.");
-			else buf.append("<a href=Edit?UserRequest=Review>"
+			if (nPending > 0) buf.append("<h3>Contributed Questions</h3>"
+					+ "<a href=Edit?UserRequest=Review>"
 					+ nPending + " items are currently pending editorial review.</a>");
 			
-			buf.append("<h3>Recent Activity (past 30 days)</h3>");
-			
-			Date lastMonth = new Date(new Date().getTime()-2592000000L);
-			
+			// Recent Activity
+			buf.append("<h3>Recent Activity (past 30 days)</h3>");			
+			Date lastMonth = new Date(new Date().getTime()-2592000000L);			
 			buf.append("Active LTI Advantage deployments: " + ofy().load().type(Deployment.class).filter("lastLogin >",lastMonth).count());
 			if ("showDEPL".equals(userRequest)) {
 				buf.append("<ul>");
@@ -165,13 +166,12 @@ public class Admin extends HttpServlet {
 					buf.append("<li>" + d.organization + ": Contact: - " + d.contact_name + " (" + d.email + ")</li>");
 				}
 				buf.append("</ul>");
-			} else buf.append(" <a href=/Admin?UserRequest=showDEPL>show details</a><br/>");
-			
-			
+			} else buf.append(" <a href=/Admin?UserRequest=showDEPL>show details</a><br/>");			
 			buf.append("Total number of Response entities: " + ofy().load().type(Response.class).filter("submitted >",lastMonth).count());
 			
-			buf.append("<h3>Accounts Needing Review and Approval</h3>");
+			// New Accounts
 			List<Deployment> review = ofy().load().type(Deployment.class).filter("status", "pending").list();
+			if (review.size() > 0) buf.append("<h3>Accounts Needing Review and Approval</h3>");
 			for (Deployment d : review) {
 				buf.append("<form method=post><input type=hidden name=UserRequest value='Submit Review'/><input type=hidden name=sig value='" + user.getTokenSignature() + "'/>"
 						+ "<input type=hidden name=platform_deployment_id value='" + d.platform_deployment_id + "'/>"
@@ -184,8 +184,7 @@ public class Admin extends HttpServlet {
 						+ "<input type=submit name=action value='Delete'/></form><br/>");
 			}
 			
-			buf.append("<h3>Signature Code for 1 month Anonymous Access</h3>");
-			buf.append("sig=" + Long.toHexString(User.encode(new Date(new Date().getTime() + 2678400000L).getTime())) + "<br/>");	
+			buf.append("<h3>Signature Code for 1 month Anonymous Access: " + Long.toHexString(User.encode(new Date(new Date().getTime() + 2678400000L).getTime())) + "</h3>");	
 		}
 		catch (Exception e) {
 			buf.append("<p>" + e.toString());
