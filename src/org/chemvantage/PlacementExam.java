@@ -125,8 +125,10 @@ public class PlacementExam extends HttpServlet {
 			Assignment a = null;
 			switch(userRequest) {
 				case "UpdateAssignment":
-					a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-					a.updateQuestions(request);
+					if (user.isInstructor()) {
+						a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+						a.updateQuestions(request);
+					}
 					response.sendRedirect("/PlacementExam?sig=" + user.getTokenSignature());
 					break;
 				case "Submit Revised Exam Score":
@@ -134,29 +136,35 @@ public class PlacementExam extends HttpServlet {
 					else out.println("Sorry, an unexpected error occurred. Please go BACK and try again.");
 					break;
 				case "Set Allowed Time":
-					a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-					try {
-						double minutes = Double.parseDouble(request.getParameter("TimeAllowed"));
-						if (minutes > 300.) minutes = 300.;
-						a.timeAllowed = minutes<1.0?60:(int)(minutes*60);
-					} catch (Exception e) {
-						a.timeAllowed = 3600;
+					if (user.isInstructor()) {
+						a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+						try {
+							double minutes = Double.parseDouble(request.getParameter("TimeAllowed"));
+							if (minutes > 300.) minutes = 300.;
+							a.timeAllowed = minutes<1.0?60:(int)(minutes*60);
+						} catch (Exception e) {
+							a.timeAllowed = 3600;
+						}
+						ofy().save().entity(a).now();
 					}
-					ofy().save().entity(a).now();
 					response.sendRedirect("/PlacementExam?sig=" + user.getTokenSignature());
 					break;
 				case "Set Allowed Attempts":
-					a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-					try {
-						a.attemptsAllowed = Integer.parseInt(request.getParameter("AttemptsAllowed"));
-						if (a.attemptsAllowed<1) a.attemptsAllowed = 1;
-					} catch (Exception e) {
-						a.attemptsAllowed = null;
+					if (user.isInstructor()) {
+						a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+						try {
+							a.attemptsAllowed = Integer.parseInt(request.getParameter("AttemptsAllowed"));
+							if (a.attemptsAllowed<1) a.attemptsAllowed = 1;
+						} catch (Exception e) {
+							a.attemptsAllowed = null;
+						}
+						ofy().save().entity(a).now();
 					}
-					ofy().save().entity(a).now();
 					response.sendRedirect("/PlacementExam?sig=" + user.getTokenSignature());
 					break;
-				
+				case "PrintExam":
+					out.println(Subject.header("ChemVantage Placement Exam") + printExam(user,request) + Subject.footer);
+					break;
 				case "AddQuestion":
 				case "UpdateQuestion":
 					if (user.isEditor()) {
@@ -179,6 +187,15 @@ public class PlacementExam extends HttpServlet {
 						} catch (Exception e) {}
 						response.sendRedirect("/PlacementExam?UserRequest=ReviewExamScores&sig=" + user.getTokenSignature());
 					}
+					break;
+				case "Set Password":
+					if (user.isInstructor()) {
+						a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+						a.password = request.getParameter("ExamPassword");
+						if (a.password != null) a.password = a.password.trim();
+						ofy().save().entity(a).now();
+					}
+					response.sendRedirect("/PlacementExam?sig=" + user.getTokenSignature());
 					break;
 				default: out.println(Subject.header("ChemVantage Placement Exam Results") + printScore(user,request) + Subject.footer);
 			}
@@ -206,6 +223,7 @@ public class PlacementExam extends HttpServlet {
 					+ "The overall score is returned to the LMS grade book. ");
 			if (supportsMembership) buf.append("You can use the link below to review the scores on each section as well as the student responses to each question.");
 			
+			if (a.attemptsAllowed==null)
 			buf.append("<br/><br/>We recommend that students be allowed at least 2 attempts to complete the exam. Most of the question items are "
 					+ "parameterized, so it is extremely unlikely that any two placement exams will be the same.<br/><br/>");
 			
@@ -222,9 +240,15 @@ public class PlacementExam extends HttpServlet {
 			}
 			
 			buf.append("From here, you may<UL>"
-					+ "<LI><a href='/PlacementExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + "'>Customize this exam</a> to set the time allowed, attempts allowed, and select the available question items.</LI>"
+					+ "<LI><a href='/PlacementExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + "'>Customize this exam</a> "
+							+ "to set the time allowed, attempts allowed, optional password and select the available question items.</LI>"
 					+ (supportsMembership?"<LI><a href='/PlacementExam?UserRequest=ReviewExamScores&sig=" + user.getTokenSignature() + "'>Review the exam results</a> and (optionally) assign partial credit for answers</LI>":"")
 					+ "</UL>");
+			
+			if (a.password != null && !a.password.isEmpty()) {
+				buf.append("<h4>The password for this exam is: " + a.password + "</h4>");
+			}
+			
 			buf.append("<a style='text-decoration: none' href='/PlacementExam?UserRequest=PrintExam&sig=" + user.getTokenSignature() + "'>"
 					+ "<button style='display: block; width: 500px; border: 1 px; background-color: #00FFFF; color: black; padding: 14px 28px; font-size: 18px; text-align: center; cursor: pointer;'>"
 					+ "Show This Assignment (recommended)</button></a>");
@@ -234,7 +258,21 @@ public class PlacementExam extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String printExam(User user,HttpServletRequest request) {
+	String passwordPrompt(User user) {
+		StringBuffer buf = new StringBuffer();
+		buf.append(Subject.banner);
+		buf.append("<h3>Enter the password for this assignment</h3>"
+				+ "Your instructor should provide you with a password. Please enter it below:</br>"
+				+ "<form method=post action=/PlacementExam >"
+				+ "<input type=hidden name=sig value='" + user.getTokenSignature()  + "' />"
+				+ "<input type=hidden name=UserRequest value=PrintExam />"
+				+ "<input type=password size=30 name=ExamPassword />"
+				+ "<input type=submit value='Begin the exam' />"
+				+ "</form><br/><br/>");		
+		return buf.toString();
+	}
+	
+	String printExam(User user, HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Debug:");
 		try {
@@ -257,6 +295,11 @@ public class PlacementExam extends HttpServlet {
 					}
 				}
 			}
+			
+			// Check to see if a password is required to start the exam
+			if (a.password == null || a.password.isEmpty() || a.password.equals(request.getParameter("ExamPassword")));  // continue
+			else return passwordPrompt(user);
+			
 			debug.append("1");
 			// Check to see if the timeAllowed has been modified by the instructor:
 			int timeAllowed = 3600;  // default value in seconds
@@ -1180,6 +1223,12 @@ public class PlacementExam extends HttpServlet {
 					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /> "
 					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' /><br/>"
 					+ "</form><br/><br/>");
+			
+			buf.append("By default, students will view the exam immediately after clicking the assignment link in your LMS. However, "
+					+ "you may (optionally) set a password required to start the exam by entering it below:</br>"
+					+ "<form method=post action=/PlacementExam ><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "<input type=text name=Password value='" + (a.password==null || a.password.isEmpty()?"":a.password) + "' />"
+					+ "<input type=submit name=UserRequest value='Set Password' /></form><br/><br/>");
 			
 			buf.append("Select the items to be included in exams assigned to your class.<br/><br/>");
 
