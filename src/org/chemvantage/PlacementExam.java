@@ -100,6 +100,7 @@ public class PlacementExam extends HttpServlet {
 				case "SubmissionReview":
 					User forUser = new User(user.platformId,request.getParameter("ForUserId"));
 					out.println(Subject.header("ChemVantage Placement Exam") + submissionReview(user,forUser) + Subject.footer);
+					break;
 				default: 
 					if (user.isInstructor()) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,request) + Subject.footer);
 					else out.println(Subject.header("ChemVantage Placement Exam") + printExam(user,request) + Subject.footer);

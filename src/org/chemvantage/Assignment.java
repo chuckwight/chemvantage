@@ -45,6 +45,7 @@ public class Assignment implements java.lang.Cloneable {
 	@Index	public	String lti_ags_lineitem_url;
 	public	String lti_nrps_context_memberships_url;
 	@Index	Date valid;
+			boolean pollClosed=false;
 			String password;
 			List<Long> topicIds; // used for practice exams which have multiple topicIds
 			List<String> resourceLinkIds = new ArrayList<String>();  // deprecated
