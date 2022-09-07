@@ -258,11 +258,12 @@ public class PlacementExam extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String passwordPrompt(User user) {
+	String passwordPrompt(User user,String msg) {
 		StringBuffer buf = new StringBuffer();
 		buf.append(Subject.banner);
-		buf.append("<h3>Enter the password for this assignment</h3>"
-				+ "Your instructor should provide you with a password. Please enter it below:</br>"
+		buf.append("<h3>Enter the password for this assignment</h3>");
+		if (msg!=null && !msg.isEmpty()) buf.append("<span style='color:#EE0000'>" + msg + "</span><br/>");
+		buf.append("Your instructor should provide you with a password. Please enter it below:</br>"
 				+ "<form method=post action=/PlacementExam >"
 				+ "<input type=hidden name=sig value='" + user.getTokenSignature()  + "' />"
 				+ "<input type=hidden name=UserRequest value=PrintExam />"
@@ -298,7 +299,10 @@ public class PlacementExam extends HttpServlet {
 			
 			// Check to see if a password is required to start the exam
 			if (a.password == null || a.password.isEmpty() || a.password.equals(request.getParameter("ExamPassword")));  // continue
-			else return passwordPrompt(user);
+			else {
+				String msg = request.getParameter("ExamPassword")==null?"":"The password was not correct.";
+				return passwordPrompt(user,msg);
+			}
 			
 			debug.append("1");
 			// Check to see if the timeAllowed has been modified by the instructor:
@@ -1227,7 +1231,7 @@ public class PlacementExam extends HttpServlet {
 			buf.append("By default, students will view the exam immediately after clicking the assignment link in your LMS. However, "
 					+ "you may (optionally) set a password required to start the exam by entering it below:</br>"
 					+ "<form method=post action=/PlacementExam ><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-					+ "<input type=text name=Password value='" + (a.password==null || a.password.isEmpty()?"":a.password) + "' />"
+					+ "<input type=text name=ExamPassword value='" + (a.password==null || a.password.isEmpty()?"":a.password) + "' />"
 					+ "<input type=submit name=UserRequest value='Set Password' /></form><br/><br/>");
 			
 			buf.append("Select the items to be included in exams assigned to your class.<br/><br/>");
