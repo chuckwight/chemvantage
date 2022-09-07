@@ -262,14 +262,24 @@ public class PlacementExam extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		buf.append(Subject.banner);
 		buf.append("<h3>Enter the password for this assignment</h3>");
-		if (msg!=null && !msg.isEmpty()) buf.append("<span style='color:#EE0000'>" + msg + "</span><br/>");
+		if (msg==null) msg="";
+		buf.append("<div id='msgSpan' style='color:#EE0000'>" + msg + "</div><br/>");
 		buf.append("Your instructor should provide you with a password. Please enter it below:</br>"
 				+ "<form method=post action=/PlacementExam >"
 				+ "<input type=hidden name=sig value='" + user.getTokenSignature()  + "' />"
 				+ "<input type=hidden name=UserRequest value=PrintExam />"
-				+ "<input type=password size=30 name=ExamPassword />"
-				+ "<input type=submit value='Begin the exam' />"
-				+ "</form><br/><br/>");		
+				+ "<input type=password size=30 name='ExamPassword' /> "
+				+ "<input id=start type=submit value='Begin the exam' disabled />"
+				+ "</form><br/><br/>");	
+
+  		buf.append("<script>"
+ 				+ "function enableSubmission() {"
+  				+ "  document.getElementById('msgSpan').innerHTML = '';"
+				+ "  document.getElementById('start').disabled=false;"
+				+ "}"
+				+ "if (document.getElementById('msgSpan').innerHTML === '') enableSubmission();"
+				+ "else setTimeout(enableSubmission,5000);"
+				+ "</script>");
 		return buf.toString();
 	}
 	
@@ -300,7 +310,7 @@ public class PlacementExam extends HttpServlet {
 			// Check to see if a password is required to start the exam
 			if (a.password == null || a.password.isEmpty() || a.password.equals(request.getParameter("ExamPassword")));  // continue
 			else {
-				String msg = request.getParameter("ExamPassword")==null?"":"The password was not correct.";
+				String msg = (request.getParameter("ExamPassword")==null?"":"The password was not correct. Please wait...");
 				return passwordPrompt(user,msg);
 			}
 			
