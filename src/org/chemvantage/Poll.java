@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -79,13 +80,21 @@ public class Poll extends HttpServlet {
 				break;
 			default:
 				if (user.isInstructor()) out.println(Subject.header() + instructorPage(user,request) + Subject.footer);
-				else if (a.pollClosed) out.println(Subject.header() + resultsPage(user,a) + Subject.footer);
-				else out.println(Subject.header() + showPollQuestions(user,a,request) + Subject.footer);
-			}			
-		} catch (Exception e) {
-			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
+				else {
+					if (a.pollClosed) {
+
+						out.println(Subject.header() + Subject.banner 
+								+ "<h3>This poll is currently closed.</h3>"
+								+ "Your instructor will tell you when it opens. "
+								+ "<a href='/Poll?sig=" + user.getTokenSignature() + "&r=" + (new Random().nextInt(999)) + "'>Refresh</a><br/><br/>"
+								+ Subject.footer);
+					} else out.println(Subject.header() + showPollQuestions(user,a,request) + Subject.footer);
+				}
+			}
+			} catch (Exception e) {
+				response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
+			}
 		}
-	}
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		try {
@@ -113,8 +122,14 @@ public class Poll extends HttpServlet {
 			case "ClosePoll":
 				if (!user.isInstructor()) break;
 				a.pollClosed = true;
-				ofy().save().entity(a);
+				ofy().save().entity(a).now();
 				out.println(Subject.header() + resultsPage(user,a) + Subject.footer);
+				return;
+			case "OpenPoll":
+				if (!user.isInstructor()) break;
+				a.pollClosed = false;
+				ofy().save().entity(a).now();
+				out.println(Subject.header() + instructorPage(user,request) + Subject.footer);
 				return;
 			case "Save New Question":
 				if (!user.isInstructor()) break;
@@ -128,7 +143,10 @@ public class Poll extends HttpServlet {
 				return;
 			case "SubmitResponses":
 				pt = submitResponses(user,request);
-				out.println(Subject.header() + waitPage(user,pt) + Subject.footer);
+				if (pt.completed!=null) out.println(Subject.header() + waitPage(user,pt) + Subject.footer);
+				else out.println(Subject.header() + Subject.banner 
+						+ "<h3>Sorry, the poll closed before you submitted your responses.</h3>" 
+						+ waitPage(user,pt) + Subject.footer);
 				return;
 			case "AddQuestions":
 				if (!user.isInstructor()) break;
@@ -171,10 +189,17 @@ public class Poll extends HttpServlet {
 			buf.append("You may review and edit the questions for this poll by <a href=/Poll?UserRequest=EditPoll&sig=" + user.getTokenSignature() + ">clicking this link</a>.<br/><br/>");
 		}
 		
-		buf.append("There are two main ways to ensure that your students are in class when they complete the poll:<ul>"
+		buf.append("There are three main ways to ensure that your students are in class when they complete the poll:<ul>"
 				+ "<li>Use the LMS controls to publish or make the assignment visible to students while they are in class</li>"
+				+ "<li>Ensure that the poll is closed until all students are present in class</li>"
 				+ "<li>Optionally, set a password for this assignment and provide the password to students in class</li>"
 				+ "</ul>");
+		
+		buf.append("<form method=post action=/Poll >This class poll is currently " + (a.pollClosed?"closed. ":"open. ")
+				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+				+ "<input type=hidden name=UserRequest value='" + (a.pollClosed?"OpenPoll":"ClosePoll") + "' />"
+				+ "<input type=submit value='" + (a.pollClosed?"Open the Poll":"Close the Poll") + "' />"
+				+ "</form><br/><br/>");
 		
 		buf.append("<form method=post action=/Poll ><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 				+ "<input type=text name=ExamPassword value='" + (a.password==null || a.password.isEmpty()?"":a.password) + "' /> "
