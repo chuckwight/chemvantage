@@ -75,20 +75,14 @@ public class Poll extends HttpServlet {
 			case "PrintPoll":
 				out.println(Subject.header() + showPollQuestions(user,a,request) + Subject.footer);
 				break;
-			case "ShowResults":
+			case "ViewResults":
 				out.println(Subject.header() + resultsPage(user,a) + Subject.footer);
 				break;
 			default:
 				if (user.isInstructor()) out.println(Subject.header() + instructorPage(user,request) + Subject.footer);
 				else {
-					if (a.pollClosed) {
-
-						out.println(Subject.header() + Subject.banner 
-								+ "<h3>This poll is currently closed.</h3>"
-								+ "Your instructor will tell you when it opens. "
-								+ "<a href='/Poll?sig=" + user.getTokenSignature() + "&r=" + (new Random().nextInt(999)) + "'>Refresh</a><br/><br/>"
-								+ Subject.footer);
-					} else out.println(Subject.header() + showPollQuestions(user,a,request) + Subject.footer);
+					if (a.pollClosed) out.println(Subject.header() + waitForPoll(user) + Subject.footer);
+					else out.println(Subject.header() + showPollQuestions(user,a,request) + Subject.footer);
 				}
 			}
 			} catch (Exception e) {
@@ -123,14 +117,12 @@ public class Poll extends HttpServlet {
 				if (!user.isInstructor()) break;
 				a.pollClosed = true;
 				ofy().save().entity(a).now();
-				out.println(Subject.header() + resultsPage(user,a) + Subject.footer);
-				return;
+				break;
 			case "OpenPoll":
 				if (!user.isInstructor()) break;
 				a.pollClosed = false;
 				ofy().save().entity(a).now();
-				out.println(Subject.header() + instructorPage(user,request) + Subject.footer);
-				return;
+				break;
 			case "Save New Question":
 				if (!user.isInstructor()) break;
 				long qid = createQuestion(user,request);
@@ -143,10 +135,10 @@ public class Poll extends HttpServlet {
 				return;
 			case "SubmitResponses":
 				pt = submitResponses(user,request);
-				if (pt.completed!=null) out.println(Subject.header() + waitPage(user,pt) + Subject.footer);
+				if (pt.completed!=null) out.println(Subject.header() + waitForResults(user,pt) + Subject.footer);
 				else out.println(Subject.header() + Subject.banner 
 						+ "<h3>Sorry, the poll closed before you submitted your responses.</h3>" 
-						+ waitPage(user,pt) + Subject.footer);
+						+ Subject.footer);
 				return;
 			case "AddQuestions":
 				if (!user.isInstructor()) break;
@@ -158,14 +150,6 @@ public class Poll extends HttpServlet {
 				deleteQuestions(user,request);
 				out.println(Subject.header() + editPage(user,request) + Subject.footer);
 				return;
-			case "Set Password":
-				if (user.isInstructor()) {
-					a.password = request.getParameter("ExamPassword");
-					if (a.password != null) a.password = a.password.trim();
-					ofy().save().entity(a).now();
-				}
-				response.sendRedirect("/Poll?sig=" + user.getTokenSignature());
-				break;
 			}
 			doGet(request,response);
 		} catch (Exception e) {
@@ -189,21 +173,21 @@ public class Poll extends HttpServlet {
 			buf.append("You may review and edit the questions for this poll by <a href=/Poll?UserRequest=EditPoll&sig=" + user.getTokenSignature() + ">clicking this link</a>.<br/><br/>");
 		}
 		
-		buf.append("There are three main ways to ensure that your students are in class when they complete the poll:<ul>"
-				+ "<li>Use the LMS controls to publish or make the assignment visible to students while they are in class</li>"
-				+ "<li>Ensure that the poll is closed until all students are present in class</li>"
-				+ "<li>Optionally, set a password for this assignment and provide the password to students in class</li>"
-				+ "</ul>");
+		buf.append("This Poll assignment allows you to pose questions to your class and get real-time responses without the use of clicker devices. "
+				+ "Students will need a laptop, tablet or smartphone that is logged into your course LMS. The poll is useful for<ul>"
+				+ "<li>posing quiz questions to verify students' mastery of content knowledge</li>"
+				+ "<li>posing open-ended questions to gauge students' opinions</li>"
+				+ "<li>show students how their answers compare to their classmates</li>"
+				+ "<li>take class attendance and discourage tardiness</li>"
+				+ "</ul>"
+				+ "When the poll is open, students can view the poll questions and submit responses.<br/>"
+				+ "When the poll is closed, responses are not accepted and students are provided a link to view the poll results.<br/><br/>");
 		
-		buf.append("<form method=post action=/Poll >This class poll is currently " + (a.pollClosed?"closed. ":"open. ")
+		buf.append("<form method=post action=/Poll ><b>This class poll is currently " + (a.pollClosed?"closed":"open") + ".</b> "
 				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 				+ "<input type=hidden name=UserRequest value='" + (a.pollClosed?"OpenPoll":"ClosePoll") + "' />"
 				+ "<input type=submit value='" + (a.pollClosed?"Open the Poll":"Close the Poll") + "' />"
 				+ "</form><br/><br/>");
-		
-		buf.append("<form method=post action=/Poll ><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-				+ "<input type=text name=ExamPassword value='" + (a.password==null || a.password.isEmpty()?"":a.password) + "' /> "
-				+ "<input type=submit name=UserRequest value='Set Password' /></form><br/><br/>");
 		
 		buf.append("<a style='text-decoration: none' href='/Poll?UserRequest=PrintPoll&sig=" + user.getTokenSignature() + "'>"
 				+ "<button style='display: block; width: 500px; border: 1 px; background-color: #00FFFF; color: black; padding: 14px 28px; font-size: 18px; text-align: center; cursor: pointer;'>"
@@ -211,60 +195,52 @@ public class Poll extends HttpServlet {
 	
 		return buf.toString();
 	}
-			
-	String passwordPrompt(User user,String msg) {
+	
+	String waitForPoll(User user) {
 		StringBuffer buf = new StringBuffer();
-		buf.append(Subject.banner);
-		buf.append("<h3>Enter the password for this assignment</h3>");
-		if (msg==null) msg="";
-		buf.append("<div id='msgSpan' style='color:#EE0000'>" + msg + "</div><br/>");
-		buf.append("Your instructor should provide you with a password. Please enter it below:</br>"
-				+ "<form method=post action=/Poll >"
-				+ "<input type=hidden name=sig value='" + user.getTokenSignature()  + "' />"
-				+ "<input type=hidden name=UserRequest value=PrintPoll />"
-				+ "<input type=password size=30 name='ExamPassword' /> "
-				+ "<input id=start type=submit value='Begin the exam' disabled />"
-				+ "</form><br/><br/>");	
-
-  		buf.append("<script>"
- 				+ "function enableSubmission() {"
-  				+ "  document.getElementById('msgSpan').innerHTML = '';"
-				+ "  document.getElementById('start').disabled=false;"
-				+ "}"
-				+ "if (document.getElementById('msgSpan').innerHTML === '') enableSubmission();"
-				+ "else setTimeout(enableSubmission,5000);"
-				+ "</script>");
+		buf.append(Subject.banner + "<h3>The poll is now closed.</h3>");
+		
+		if (user.isInstructor()) {
+			buf.append("When you are ready, please click the button below to open the poll and view the questions.<br/>"
+					+ "You should inform your students that the poll is open so they can view the poll questions, too.<br/><br/>");
+		} else {
+			buf.append("Please wait. Your instructor should inform you when the poll is open.<br/>"
+					+ "At that time you can click the button below to view the poll questions.<br/><br/>");
+		}
+		
+		int r = new Random().nextInt(999);
+		
+		buf.append("<form method=post action=/Poll>"
+				+ (user.isInstructor()?"<input type=hidden name=UserRequest value=OpenPoll />":"")
+				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+				+ "<input type=hidden name=r value=" + r + " />"
+				+ "<input type=submit value='" + (user.isInstructor()?"Open the Poll":"View the Poll") + "' />"
+				+ "</form><br/><br/>");
+		
 		return buf.toString();
 	}
 	
-String showPollQuestions(User user, Assignment a,HttpServletRequest request) {
+	String showPollQuestions(User user, Assignment a,HttpServletRequest request) {
 		/*
 		 * This method is reached by Learners or Instructors who launch the correct LTI Resource Link in the LMS, thereby binding
-		 * the assignmentId to their User entity. The GET request lands here if and only if the PollRepo parameter state == 1.
+		 * the assignmentId to their User entity.
 		 */
+		
+		if (a.pollClosed) return waitForPoll(user);  // nobody gets in without opening the poll first
+		
 		StringBuffer buf = new StringBuffer();
 		
 		buf.append("<h2>Class Poll</h2>");
 		
-		// Check to see if a password is required to start the exam
-		if (a.password == null || a.password.isEmpty() || a.password.equals(request.getParameter("ExamPassword")));  // continue
-		else {
-			String msg = (request.getParameter("ExamPassword")==null?"":"The password was not correct. Please wait...");
-			return passwordPrompt(user,msg);
-		}
-
 		if (user.isInstructor()) {
-			a.pollClosed = false;
-			ofy().save().entity(a).now();
+			buf.append("<b>Please tell your students that the poll is now open so they can view the poll questions.</b><br/>");
 			
-			buf.append("<b>Please tell your students that the poll is now open.</b> "
-				+ "They will have to refresh their browsers to view the questions.<br/>");
 			buf.append("<form method=post action='/Poll' ><div id=timer0 style='display: inline'></div>&nbsp;When you are ready, please&nbsp;"
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 					+ "<input type=hidden name=UserRequest value='ClosePoll' />"
 					+ "<input type=submit value='click here to close the poll and view the results' />"
 					+ "</form>"
-					+ "You must then instruct your students to refresh their browsers to see the results.");
+					+ "You should then inform your students to click the button to view the poll results.");
 		}
 		
 		buf.append("<OL>");
@@ -332,12 +308,15 @@ String showPollQuestions(User user, Assignment a,HttpServletRequest request) {
 
 	PollTransaction submitResponses(User user,HttpServletRequest request) {
 		PollTransaction pt = getPollTransaction(user);
+		
+		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
+		if (a.pollClosed) return null;
+		
 		pt.completed = new Date();
 		pt.score = 0;
 		pt.possibleScore = 0;
 		pt.responses = new HashMap<Key<Question>,String>();
 		
-		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 		for (Key<Question> k : a.questionKeys) {
 			try {
 				Question q = getQuestion(k);
@@ -374,32 +353,36 @@ String showPollQuestions(User user, Assignment a,HttpServletRequest request) {
 		return q;
 	}
 	
-	String waitPage(User user) {
-		return waitPage(user, getPollTransaction(user));
+	String waitForResults(User user) {
+		return waitForResults(user,getPollTransaction(user));
 	}
 	
-	String waitPage(User user,PollTransaction pt) {
-		StringBuffer buf = new StringBuffer();
+	String waitForResults(User user,PollTransaction pt) {
+		StringBuffer buf = new StringBuffer(Subject.banner);
 		if (pt != null && pt.possibleScore>0) {
 			buf.append("<h3>Thank you for submitting your responses to this class poll</h3>");
 			buf.append("Your responses were submitted at " + pt.completed + "<br />");
 			buf.append("Your score was " + pt.score + " points out a possible " + pt.possibleScore + " points.");
 		}
 		
+		int r = new Random().nextInt(999);
+		
 		if (user.isInstructor()) {
 			buf.append("<h3>The poll is still open.</h3>"
 					+ "<form method=post action='/Poll' ><div id=timer0 style='display: inline'></div>&nbsp;When you are ready, please&nbsp;"
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-					+ "<input type=hidden name=UserRequest value='ClosePoll' />"
+					+ "<input type=hidden name=UserRequest value='ViewResults' />"
+					+ "<input type=hidden name=r value=" + r + " />"
 					+ "<input type=submit value='click here to close the poll and view the results' />"
-					+ "</form>"
-					+ "You must then instruct your students to refresh their browsers to see the results.");
+					+ "</form><br/>"
+					+ "You should then inform your students that they can view the poll results.");
 		} else {
 			buf.append("<h3>Please wait until the poll closes</h3>Your instructor will tell you "
-					+ "when you can click the button below to view the class results for the poll.<br/>"
-					+ "<form method=get action='/Poll' >"
+					+ "when you can click the button below to view the class results for the poll.<br/><br/>"
+					+ "<form method=post action='/Poll' >"
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-					+ "<input type=hidden name=UserRequest value='ShowResults' />"
+					+ "<input type=hidden name=UserRequest value='ViewResults' />"
+					+ "<input type=hidden name=r value=" + r + " />"
 					+ "<input type=submit value='View the Poll Results' />"
 					+ "</form>");
 		}
@@ -411,7 +394,7 @@ String showPollQuestions(User user, Assignment a,HttpServletRequest request) {
 		StringBuffer debug = new StringBuffer("Debug:");
 		debug.append("a.");
 		
-		if (!user.isInstructor() && !a.pollClosed) return waitPage(user);
+		if (!user.isInstructor() && !a.pollClosed) return waitForResults(user);
 		else {
 			a.pollClosed = true;
 			ofy().save().entity(a).now();
