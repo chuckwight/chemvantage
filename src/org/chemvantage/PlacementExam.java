@@ -51,7 +51,7 @@ public class PlacementExam extends HttpServlet {
 		return "This servlet presents and scores a General Chemistry placement exam for the user.";
 	}
 	
-	@Override public void init() {
+	private void initializeExam() {
 		List<Topic> topics = ofy().load().type(Topic.class).list();
 		List<Key<Question>> keys = new ArrayList<Key<Question>>();
 		for (Topic t : topics) {
@@ -76,6 +76,8 @@ public class PlacementExam extends HttpServlet {
 
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
+			
+			if (examQuestions.isEmpty()) initializeExam();
 			
 			switch (userRequest) {
 				case "AssignExamQuestions":
@@ -119,7 +121,8 @@ public class PlacementExam extends HttpServlet {
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 
-
+			if (examQuestions.isEmpty()) initializeExam();
+			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 			
