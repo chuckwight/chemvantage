@@ -194,10 +194,17 @@ public class Poll extends HttpServlet {
 				+ "When the poll is open, students can view the poll questions and submit responses.<br/>"
 				+ "When the poll is closed, responses are not accepted and students are provided a link to view the poll results.<br/><br/>");
 		
+		int nSubmissions = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).count();
+		buf.append("There are currently " + nSubmissions + " completed submissions for this poll. "
+				+ (a.pollClosed?
+					"<a href=/Poll?UserRequest=ViewResults&sig=" + user.getTokenSignature() + ">View the Results</a>":
+					"<a href=/Poll?sig=" + user.getTokenSignature() + ">Refresh this page</a>") 
+				+ "<br/><br/>");
+		
 		buf.append("<form method=post action=/Poll ><b>This class poll is currently " + (a.pollClosed?"closed":"open") + ".</b> "
 				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 				+ "<input type=hidden name=UserRequest value='" + (a.pollClosed?"OpenPoll":"ClosePoll") + "' />"
-				+ "<input type=submit value='" + (a.pollClosed?"Open the Poll":"Close the Poll") + "' />"
+				+ "<input type=submit value='" + (a.pollClosed?"Open the Poll":"Close the Poll") + "' /> "
 				+ "</form><br/><br/>");
 		
 		buf.append("<a style='text-decoration: none' href='/Poll?UserRequest=PrintPoll&sig=" + user.getTokenSignature() + "'>"
