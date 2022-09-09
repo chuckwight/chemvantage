@@ -46,6 +46,7 @@ import com.googlecode.objectify.cmd.Query;
 public class Poll extends HttpServlet {
 	private static final long serialVersionUID = 137L;
 	
+	private Map<Long,Assignment> pollAssignments = new HashMap<Long,Assignment>();
 	private Map<Key<Question>,Question> pollQuestions = new HashMap<Key<Question>,Question>();
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -60,11 +61,11 @@ public class Poll extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 			
-			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+			Assignment a = getAssignment(user);
 			
 			switch (userRequest) {
 			case "EditPoll":
-				out.println(Subject.header() + editPage(user,request) + Subject.footer);
+				out.println(Subject.header() + editPage(user,a,request) + Subject.footer);
 				break;
 			case "NewQuestion":
 				out.println(Subject.header() + newQuestionForm(user,request) + Subject.footer);
@@ -79,7 +80,7 @@ public class Poll extends HttpServlet {
 				out.println(Subject.header() + resultsPage(user,a) + Subject.footer);
 				break;
 			default:
-				if (user.isInstructor()) out.println(Subject.header() + instructorPage(user,request) + Subject.footer);
+				if (user.isInstructor()) out.println(Subject.header() + instructorPage(user,a,request) + Subject.footer);
 				else {
 					if (a.pollClosed) out.println(Subject.header() + waitForPoll(user) + Subject.footer);
 					else out.println(Subject.header() + showPollQuestions(user,a,request) + Subject.footer);
@@ -102,40 +103,39 @@ public class Poll extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 			
-			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
+			Assignment a = getAssignment(user);
 			
 			switch (userRequest) {
-			case "LaunchPoll":
-				if (!user.isInstructor()) break;
-				PollTransaction pt = getPollTransaction(user);
-				pt.downloaded = new Date();
-				ofy().save().entity(pt);  // essential for purgeActivePolls to work properly			
-				pollQuestions.putAll(ofy().load().keys(a.questionKeys));
-				out.println(Subject.header() + showPollQuestions(user,a,request) + Subject.footer);
-				return;
 			case "ClosePoll":
 				if (!user.isInstructor()) break;
 				a.pollClosed = true;
 				ofy().save().entity(a).now();
+				if (request.getParameter("r")!=null) {  // this signals a request from the showPollQuestions or waitForResults page
+					out.println(Subject.header() + resultsPage(user,a) + Subject.footer);
+					return;
+				}
 				break;
 			case "OpenPoll":
 				if (!user.isInstructor()) break;
 				a.pollClosed = false;
 				ofy().save().entity(a).now();
+				if (request.getParameter("r")!=null) {  // this signals a request from the waitForPoll page
+					out.println(Subject.header() + showPollQuestions(user,a,request) + Subject.footer);
+					return;
+				}
 				break;
 			case "Save New Question":
 				if (!user.isInstructor()) break;
 				long qid = createQuestion(user,request);
 				if (qid > 0) {
-					a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 					a.questionKeys.add(Key.create(Question.class,qid));
 					ofy().save().entity(a).now();
 				}
-				out.println(Subject.header() + editPage(user,request) + Subject.footer);
+				out.println(Subject.header() + editPage(user,a,request) + Subject.footer);
 				return;
 			case "SubmitResponses":
-				pt = submitResponses(user,request);
-				if (pt.completed!=null) out.println(Subject.header() + waitForResults(user,pt) + Subject.footer);
+				PollTransaction pt = submitResponses(user,a,request);
+				if (pt!=null && pt.completed!=null) out.println(Subject.header() + waitForResults(user,pt) + Subject.footer);
 				else out.println(Subject.header() + Subject.banner 
 						+ "<h3>Sorry, the poll closed before you submitted your responses.</h3>" 
 						+ Subject.footer);
@@ -143,32 +143,43 @@ public class Poll extends HttpServlet {
 			case "AddQuestions":
 				if (!user.isInstructor()) break;
 				addQuestions(user,request);
-				out.println(Subject.header() + editPage(user,request) + Subject.footer);
+				out.println(Subject.header() + editPage(user,a,request) + Subject.footer);
 				return;
 			case "DeleteQuestions":
 				if (!user.isInstructor()) break;
 				deleteQuestions(user,request);
-				out.println(Subject.header() + editPage(user,request) + Subject.footer);
+				out.println(Subject.header() + editPage(user,a,request) + Subject.footer);
 				return;
 			}
-			doGet(request,response);
+			doGet(request,response); 	// including this in doPost allows:
+										//  - close/open poll doPost requests to loop back to beginning
+										//  - hiding of normal request parameters in wait page buttons, not URL
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
 	}
 
+	Assignment getAssignment(User user) {
+		Assignment a = pollAssignments.get(user.getAssignmentId());
+		if (a==null) {
+			a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
+			pollAssignments.put(user.getAssignmentId(), a);
+			cacheQuestions(a);
+		}
+		return a;
+	}
+	
 	boolean responsesRecorded(User user) {
 		return getPollTransaction(user).completed != null;
 	}
 	
-	String instructorPage(User user,HttpServletRequest request) {
+	String instructorPage(User user,Assignment a,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		
 		buf.append("<h2>Welcome to the Class Poll</h2>");
 		if (!user.isInstructor()) return "You must be an instructor to view this page.";
 		
-		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
-		if (a.questionKeys.size()==0) return editPage(user,request);
+		if (a.questionKeys.size()==0) return editPage(user,a,request);
 		else {
 			buf.append("You may review and edit the questions for this poll by <a href=/Poll?UserRequest=EditPoll&sig=" + user.getTokenSignature() + ">clicking this link</a>.<br/><br/>");
 		}
@@ -214,7 +225,8 @@ public class Poll extends HttpServlet {
 				+ (user.isInstructor()?"<input type=hidden name=UserRequest value=OpenPoll />":"")
 				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 				+ "<input type=hidden name=r value=" + r + " />"
-				+ "<input type=submit value='" + (user.isInstructor()?"Open the Poll":"View the Poll") + "' />"
+				+ "<input type=submit value='" + (user.isInstructor()?"Open the Poll":"View the Poll") + "' /> "
+				+ (user.isInstructor()?"<a href=/Poll?sig=" + user.getTokenSignature() + ">Cancel</a>":"")
 				+ "</form><br/><br/>");
 		
 		return buf.toString();
@@ -226,7 +238,7 @@ public class Poll extends HttpServlet {
 		 * the assignmentId to their User entity.
 		 */
 		
-		if (a.pollClosed) return waitForPoll(user);  // nobody gets in without opening the poll first
+		if (a.pollClosed) return waitForPoll(user);  // nobody gets in without the instructor opening the poll first
 		
 		StringBuffer buf = new StringBuffer();
 		
@@ -238,6 +250,7 @@ public class Poll extends HttpServlet {
 			buf.append("<form method=post action='/Poll' ><div id=timer0 style='display: inline'></div>&nbsp;When you are ready, please&nbsp;"
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 					+ "<input type=hidden name=UserRequest value='ClosePoll' />"
+					+ "<input type=hidden name=r value=" + new Random().nextInt(999) + " />"
 					+ "<input type=submit value='click here to close the poll and view the results' />"
 					+ "</form>"
 					+ "You should then inform your students to click the button to view the poll results.");
@@ -250,7 +263,7 @@ public class Poll extends HttpServlet {
 		
 		for (Key<Question> k : a.questionKeys) {  // main loop to present questions
 			Question q = getQuestion(k); // this should nearly always work
-			if (q==null) continue;
+			if (q==null) continue;		 // but skip the question if it has been deleted
 			q.setParameters(a.id % Integer.MAX_VALUE);
 			buf.append("<li>" + q.print() + "<br /></li>");
 			possibleScore += q.correctAnswer==null || q.correctAnswer.isEmpty()?0:q.pointValue;
@@ -306,12 +319,11 @@ public class Poll extends HttpServlet {
 				+ "</SCRIPT>"; 
 	}
 
-	PollTransaction submitResponses(User user,HttpServletRequest request) {
-		PollTransaction pt = getPollTransaction(user);
+	PollTransaction submitResponses(User user,Assignment a,HttpServletRequest request) {
 		
-		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 		if (a.pollClosed) return null;
 		
+		PollTransaction pt = getPollTransaction(user);
 		pt.completed = new Date();
 		pt.score = 0;
 		pt.possibleScore = 0;
@@ -347,10 +359,20 @@ public class Poll extends HttpServlet {
 	
 	Question getQuestion(Key<Question> k) {
 		Question q = pollQuestions.get(k);
-		if (q != null) return q;
-		q = ofy().load().key(k).now();
-		if (q != null) pollQuestions.put(k,q);
-		return q;
+		if (q == null) {
+			q = ofy().load().key(k).now();
+			if (q != null) pollQuestions.put(k,q);
+		}
+		return q;  // returns null only if the question has been deleted
+	}
+	
+	void cacheQuestions(Assignment a) {
+		List<Key<Question>> newKeys = new ArrayList<Key<Question>>();
+		for (Key<Question> k : a.questionKeys) {
+			if (!this.pollQuestions.containsKey(k)) newKeys.add(k);
+		}
+		if (newKeys.size()>0) pollQuestions.putAll(ofy().load().keys(newKeys));
+		return;
 	}
 	
 	String waitForResults(User user) {
@@ -371,7 +393,7 @@ public class Poll extends HttpServlet {
 			buf.append("<h3>The poll is still open.</h3>"
 					+ "<form method=post action='/Poll' ><div id=timer0 style='display: inline'></div>&nbsp;When you are ready, please&nbsp;"
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-					+ "<input type=hidden name=UserRequest value='ViewResults' />"
+					+ "<input type=hidden name=UserRequest value='ClosePoll' />"
 					+ "<input type=hidden name=r value=" + r + " />"
 					+ "<input type=submit value='click here to close the poll and view the results' />"
 					+ "</form><br/>"
@@ -401,7 +423,7 @@ public class Poll extends HttpServlet {
 		}
 		
 		buf.append("<h2>Poll Results</h2>");
-		if (user.isInstructor()) buf.append("<b>Be sure to tell your students that the poll is now closed</b> and to refresh their browsers to view these results.<br/><br/> ");
+		if (user.isInstructor()) buf.append("<b>Be sure to tell your students that the poll is now closed</b> and to click the button to view the poll results.<br/><br/> ");
 		debug.append("b.");
 		
 		PollTransaction pt = getPollTransaction(user);	
@@ -615,11 +637,9 @@ public class Poll extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String editPage(User user,HttpServletRequest request) {
+	String editPage(User user,Assignment a,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		if (!user.isInstructor()) return "Not Authorized";
-		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
-		if (a == null) return "Assignment could not be fund.";
 		
 		if (a.getQuestionKeys().size() == 0) buf.append("<h2>Create a New Class Poll</h2>");
 		else buf.append("<h2>Edit Class Poll</h2>");
