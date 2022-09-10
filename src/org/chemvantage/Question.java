@@ -308,9 +308,9 @@ public class Question implements Serializable, Cloneable {
 			buf.append("<label>");
 			switch (getNumericItemType()) {
 			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact value.</span><br/>"); break;
-			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. For scientific notation use a format like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. For scientific notation use a format like 4.29E-15</span><br/>"); break;
 			case 2: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value to within " + requiredPrecision + "% precision. For scientific notation use a format like 4.29E-15</span><br/>"); break;
-			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. For scientific notation use a format like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. For scientific notation use a format like 4.29E-15</span><br/>"); break;
 			default:
 			}			
 			buf.append("<input size=25 type=text name=" + this.id + " id=answer" + this.id + " value='" + studentAnswer + "' onFocus=showWorkBox('" + this.id + "'); />");
@@ -381,9 +381,9 @@ public class Question implements Serializable, Cloneable {
 			buf.append(parseString(text) + "<br/>");
 			switch (getNumericItemType()) {
 			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact value.</span><br/>"); break;
-			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. For scientific notation use a format like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. For scientific notation use a format like 4.29E-15</span><br/>"); break;
 			case 2: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value to within " + requiredPrecision + "% precision. For scientific notation use a format like 4.29E-15</span><br/>"); break;
-			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. For scientific notation use a format like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. For scientific notation use a format like 4.29E-15</span><br/>"); break;
 			default:
 			}
 			buf.append("<span style='border: 1px solid black'>"
@@ -464,9 +464,9 @@ public class Question implements Serializable, Cloneable {
 			buf.append(parseString(text) + "<br/>");
 			switch (getNumericItemType()) {
 			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact value.</span><br/>"); break;
-			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. For scientific notation use a format like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. For scientific notation use a format like 4.29E-15</span><br/>"); break;
 			case 2: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value to within " + requiredPrecision + "% precision. For scientific notation use a format like 4.29E-15</span><br/>"); break;
-			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. For scientific notation use a format like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. For scientific notation use a format like 4.29E-15</span><br/>"); break;
 			default:
 			}
 			buf.append("<span style='border: 1px solid black'>"
@@ -580,9 +580,9 @@ public class Question implements Serializable, Cloneable {
 			buf.append(parseString(text) + "<br/>");
 			switch (getNumericItemType()) {
 			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact value.</span><br/>"); break;
-			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. For scientific notation use a format like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. For scientific notation use a format like 4.29E-15</span><br/>"); break;
 			case 2: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value to within " + requiredPrecision + "% precision. For scientific notation use a format like 4.29E-15</span><br/>"); break;
-			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. For scientific notation use a format like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. For scientific notation use a format like 4.29E-15</span><br/>"); break;
 			default:
 			}
 			buf.append("<span style='border: 1px solid black'>"
@@ -711,9 +711,9 @@ public class Question implements Serializable, Cloneable {
 				buf.append("<FONT SIZE=-2>Significant figures: <input size=5 name=SignificantFigures value='" + significantFigures + "'/> Required precision: <input size=5 name=RequiredPrecision value='" + requiredPrecision + "'/> (set to zero to require exact answer)</FONT><br/>");
 				switch (getNumericItemType()) {
 				case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact value.</span><br/>"); break;
-				case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. For scientific notation use a format like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+				case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. For scientific notation use a format like 4.29E-15</span><br/>"); break;
 				case 2: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value to within " + requiredPrecision + "% precision. For scientific notation use a format like 4.29E-15</span><br/>"); break;
-				case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. For scientific notation use a format like " + String.format("%."+significantFigures+"G",4.2873648E-15) + "</span><br/>"); break;
+				case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. For scientific notation use a format like 4.29E-15</span><br/>"); break;
 				default:
 				}
 				buf.append("Correct answer:");
