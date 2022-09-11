@@ -529,6 +529,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				if (videoId != null) a.videoId = Long.parseLong(videoId);
 				break;
 			case "Poll":
+				a.pollClosed = true;
 				break;
 			}
 			return a;
