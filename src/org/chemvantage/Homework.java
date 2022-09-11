@@ -46,7 +46,6 @@ public class Homework extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	
-	private Map<Long,Assignment> hwAssignments = new HashMap<Long,Assignment>();
 	private Map<Long,Topic> hwTopics = new HashMap<Long,Topic>();
 	private Map<Key<Question>,Question> hwQuestions = new HashMap<Key<Question>,Question>();
 	
@@ -69,7 +68,7 @@ public class Homework extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 			
-			Assignment a = getAssignment(user);
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 			
 			switch (userRequest) {
 			case "ShowScores":
@@ -106,7 +105,7 @@ public class Homework extends HttpServlet {
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 
-			Assignment a = getAssignment(user);
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
@@ -140,7 +139,6 @@ public class Homework extends HttpServlet {
 					a.attemptsAllowed = null;
 				}
 				ofy().save().entity(a).now();
-				hwAssignments.put(a.id,a);
 				response.sendRedirect("/Homework?sig=" + user.getTokenSignature());
 				break;
 			case "Synchronize Scores":
@@ -154,18 +152,6 @@ public class Homework extends HttpServlet {
 		}
 	}
 
-	Assignment getAssignment(User user) {
-		if (user.isAnonymous()) return null;
-		Assignment a = hwAssignments.get(user.getAssignmentId());
-		if (a==null) {
-			a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
-			hwAssignments.put(user.getAssignmentId(), a);
-			cacheQuestions(a);
-			cacheTopic(a);
-		}
-		return a;
-	}
-	
 	Topic getTopic(long topicId) {
 		Topic t = hwTopics.get(topicId);
 		if (t==null)  t = ofy().load().type(Topic.class).id(topicId).now();

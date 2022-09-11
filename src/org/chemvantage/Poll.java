@@ -46,7 +46,6 @@ import com.googlecode.objectify.cmd.Query;
 public class Poll extends HttpServlet {
 	private static final long serialVersionUID = 137L;
 	
-	private Map<Long,Assignment> pollAssignments = new HashMap<Long,Assignment>();
 	private Map<Key<Question>,Question> pollQuestions = new HashMap<Key<Question>,Question>();
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -61,7 +60,7 @@ public class Poll extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 			
-			Assignment a = getAssignment(user);
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 			
 			switch (userRequest) {
 			case "EditPoll":
@@ -103,7 +102,7 @@ public class Poll extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 			
-			Assignment a = getAssignment(user);
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 			
 			switch (userRequest) {
 			case "ClosePoll":
@@ -159,16 +158,6 @@ public class Poll extends HttpServlet {
 		}
 	}
 
-	Assignment getAssignment(User user) {
-		Assignment a = pollAssignments.get(user.getAssignmentId());
-		if (a==null) {
-			a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
-			pollAssignments.put(user.getAssignmentId(), a);
-			cacheQuestions(a);
-		}
-		return a;
-	}
-	
 	boolean responsesRecorded(User user) {
 		return getPollTransaction(user).completed != null;
 	}
