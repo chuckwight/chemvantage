@@ -142,12 +142,12 @@ public class Poll extends HttpServlet {
 				return;
 			case "AddQuestions":
 				if (!user.isInstructor()) break;
-				addQuestions(user,request);
+				addQuestions(user,a,request);
 				out.println(Subject.header() + editPage(user,a,request) + Subject.footer);
 				return;
 			case "DeleteQuestions":
 				if (!user.isInstructor()) break;
-				deleteQuestions(user,request);
+				deleteQuestions(user,a,request);
 				out.println(Subject.header() + editPage(user,a,request) + Subject.footer);
 				return;
 			}
@@ -219,7 +219,7 @@ public class Poll extends HttpServlet {
 		buf.append(Subject.banner + "<h3>The poll is now closed.</h3>");
 		
 		if (user.isInstructor()) {
-			buf.append("When you are ready, please click the button below to open the poll and view the questions.<br/>"
+			buf.append("When you are ready, please click the button below to open the poll and view the questions. "
 					+ "You should inform your students that the poll is open so they can view the poll questions, too.<br/><br/>");
 		} else {
 			buf.append("Please wait. Your instructor should inform you when the poll is open.<br/>"
@@ -748,27 +748,30 @@ public class Poll extends HttpServlet {
 	}
 	
 
-	void addQuestions(User user,HttpServletRequest request) {
+	void addQuestions(User user,Assignment a,HttpServletRequest request) {
 		String[] qids = request.getParameterValues("QuestionId");
 		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
-		for (String qid : qids) questionKeys.add(Key.create(Question.class,Long.parseLong(qid)));
+		for (String qid : qids) {
+			try {
+				questionKeys.add(Key.create(Question.class,Long.parseLong(qid)));
+			} catch (Exception e) {}
+		}
 		if (questionKeys.size()>0) {
-			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 			if (a.questionKeys == null) a.questionKeys = questionKeys;
 			else a.questionKeys.addAll(questionKeys);
 			ofy().save().entity(a).now();
 		}
 	}
 	
-	void deleteQuestions(User user,HttpServletRequest request) {
+	void deleteQuestions(User user,Assignment a,HttpServletRequest request) {
 		String[] qids = request.getParameterValues("QuestionId");
 		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 		for (String qid : qids) {
-			Key<Question> k = Key.create(Question.class,Long.parseLong(qid));
-			questionKeys.add(k);
+			try {
+				questionKeys.add(Key.create(Question.class,Long.parseLong(qid)));
+			} catch (Exception e) {}
 		}
 		if (questionKeys.size()>0) {
-			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 			a.questionKeys.removeAll(questionKeys);
 			ofy().save().entity(a).now();
 		}
