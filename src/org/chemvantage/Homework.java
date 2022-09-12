@@ -26,6 +26,8 @@ import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -48,6 +50,7 @@ public class Homework extends HttpServlet {
 	
 	private Map<Long,Topic> hwTopics = new HashMap<Long,Topic>();
 	private Map<Key<Question>,Question> hwQuestions = new HashMap<Key<Question>,Question>();
+	private Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
 	
 	int retryDelayMinutes = 2;  // minimum time between answer submissions for any single question
 
@@ -113,7 +116,6 @@ public class Homework extends HttpServlet {
 			switch (userRequest) {
 			case "UpdateAssignment":
 				a.updateQuestions(request);
-				cacheQuestions(a);
 				response.sendRedirect("/Homework?sig=" + user.getTokenSignature());
 				break;
 			case "AddQuestion":
@@ -154,8 +156,11 @@ public class Homework extends HttpServlet {
 
 	Topic getTopic(long topicId) {
 		Topic t = hwTopics.get(topicId);
-		if (t==null)  t = ofy().load().type(Topic.class).id(topicId).now();
-		hwTopics.put(topicId, t);
+		if (t==null)  {
+			t = ofy().load().type(Topic.class).id(topicId).now();
+			hwTopics.put(topicId, t);
+			cacheQuestions(topicId);
+		}
 		return t;
 	}
 	
@@ -168,18 +173,14 @@ public class Homework extends HttpServlet {
 		return q;  // returns null only if the question has been deleted
 	}
 	
-	void cacheQuestions(Assignment a) {
+	void cacheQuestions(long topicId) {
+		List<Key<Question>> keys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topicId).keys().list();
 		List<Key<Question>> newKeys = new ArrayList<Key<Question>>();
-		for (Key<Question> k : a.questionKeys) {
+		for (Key<Question> k : keys) {
 			if (!this.hwQuestions.containsKey(k)) newKeys.add(k);
 		}
 		if (newKeys.size()>0) hwQuestions.putAll(ofy().load().keys(newKeys));
 		return;
-	}
-	
-	void cacheTopic(Assignment a) {
-		if (a==null) return;
-		if (!hwTopics.containsKey(a.topicId)) hwTopics.put(a.topicId, ofy().load().type(Topic.class).id(a.topicId).now());
 	}
 	
 	String instructorPage(User user,Assignment a,HttpServletRequest request) {
@@ -228,14 +229,10 @@ public class Homework extends HttpServlet {
 		
 		try {
 			long topicId = (hwa==null?tId:hwa.getTopicId());
-			Topic topic = getTopic(topicId);
-			// get a List of homework questions for this assignment
-			List<Question> hwQuestions = new ArrayList<Question>();
-			try {
-				for (Key<Question> k : hwa.questionKeys) hwQuestions.add(getQuestion(k).clone());
-			} catch (Exception e) {
-				hwQuestions = ofy().load().type(Question.class).filter("topicId",topicId).list();
-			}
+			Topic topic = getTopic(topicId);  // caches all hwQuestoins for this topic
+			
+			// get a List of homework questionKeys for this topic:
+			List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topic.id).keys().list();
 			
 			if (user.isAnonymous()) buf.append(Subject.banner);  // present the ChemVantage banner
 			
@@ -249,10 +246,12 @@ public class Homework extends HttpServlet {
 
 			if (user.isAnonymous())	buf.append("<h3><font color=#EE0000>Anonymous User</font></h3>");
 			
-			buf.append("\nHomework Rules<UL>");
-			buf.append("\n<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
-			buf.append("\n<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question.</LI>");
-			buf.append("\n<LI>Most questions are customized, so the correct answers are different for each student.</LI>");
+			buf.append("Homework Rules<UL>");
+			if (hwa==null||hwa.attemptsAllowed==null)
+				buf.append("<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
+			else buf.append("<LI>For each problem you are allowed " + hwa.attemptsAllowed + (hwa.attemptsAllowed==1?" attempt.":" attempts.") + "</LI>");
+			buf.append("<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question.</LI>");
+			buf.append("<LI>Most questions are customized, so the correct answers are different for each student.</LI>");
 			if (!user.isAnonymous()) buf.append("\n<LI>A checkmark will appear to the left of each correctly solved problem.</LI>");
 			buf.append("</UL>");
 
@@ -285,8 +284,8 @@ public class Homework extends HttpServlet {
 			// This is the main loop for presenting assigned and optional questions in order of increasing difficulty:
 			int i=1;
 			int j=1;
-			for (Question q : hwQuestions) {
-				Key<Question> k = Key.create(Question.class,q.id);
+			for (Key<Question> k : questionKeys) {
+				Question q = getQuestion(k).clone();  // clone the question so we can parameterize it
 				boolean assigned = (hwa != null) && (hwa.questionKeys.contains(k));
 				StringBuffer questionBuffer = new StringBuffer("<div style='display:table-row'><div style='display:table-cell;font-size:small'>");
 				String hashMe = user.getId() + (hwa==null?"":hwa.id);
@@ -461,7 +460,7 @@ public class Homework extends HttpServlet {
 			// Send response to the user:
 			if (studentScore > 0) {
 				buf.append("<h3>Congratulations. You answered the question correctly. "
-						+ (!user.isAnonymous()?"<a href=# onClick=document.getElementById('solution').style='display:inline';>(show me)</a>":"") 
+						+ (!user.isAnonymous()?"<a id=showLink href=# onClick=document.getElementById('solution').style='display:inline';this.style='display:none'>(show me)</a>":"") 
 						+ "</h3>");
 			}
 			else if (studentAnswer.length() > 0) {
@@ -493,7 +492,7 @@ public class Homework extends HttpServlet {
 				} else buf.append("The retry delay for this question is " + retryDelayMinutes + (retryDelayMinutes>1?" minutes. ":" minute. ") + "<br/><br/>");
 			
 				if (user.isInstructor() || user.isTeachingAssistant()) {
-					buf.append("<br/>Instructor only: <a href=# onClick=document.getElementById('solution').style='display:inline';>show the solution</a>.<br/><br/>");
+					buf.append("<br/>Instructor: <a href=# onClick=document.getElementById('solution').style='display:inline';this.style='display:none';>show the solution</a><br/><br/>");
 				} else if (!user.isAnonymous() && user.isEligibleForHints(q.id)) {
 					buf.append("<br/><form method=post action=Help>"
 							+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
@@ -846,8 +845,7 @@ public class Homework extends HttpServlet {
 		try {
 			Topic topic = getTopic(a.topicId);
 			
-			List<Question> hwQuestions = new ArrayList<Question>();
-			for (Key<Question> k : topic.questionKeys) hwQuestions.add(getQuestion(k).clone());
+			List<Question> questions = getSortedHWQuestions(topic.id);
 					
 			buf.append("<h3>Customize Homework Assignment</h3>");
 			buf.append("<b>Topic: " + topic.title + "</b><br/><br/>");
@@ -855,14 +853,14 @@ public class Homework extends HttpServlet {
 			buf.append("By default, students may submit answers to the homework problems as many times as they wish. This rewards students who persist "
 					+ "to achieve a better score. However, you may limit the number of attempts here. Leave the field blank to permit unlimited attempts.<br/>"
 					+ "<form action=/Homework method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-					+ "Number of submissions allowed for each question of this assignment: <input type=text size=10 name=AttemptsAllowed " 
+					+ "<input type=text size=10 name=AttemptsAllowed " 
 					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /> "
-					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' /><br/>"
+					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' />"
 					+ "</form><br/><br/>");
 			
 			// Allow instructor to pick individual question items from all active questions:
-			buf.append("Select the homework questions to be assigned for grading. The questions are presented below in "
-					+ "approximate order of increasing difficuly, as measured by the percentage of correct submissions. "
+			buf.append("Select the homework questions below to be assigned for grading. "  // The questions are presented below in "
+				//	+ "approximate order of increasing difficuly, as measured by the percentage of correct submissions. "
 					+ "Then click the 'Use Selected Items' button. Each question is worth 1 point, so the maximum possible "
 					+ "score is equal to the number of questions selected. Students may work the optional problems; "
 					+ "however, these are not included in the scores reported to the class LMS.<p>"
@@ -886,7 +884,7 @@ public class Homework extends HttpServlet {
 
 			
 			int i=0;
-			for (Question q : hwQuestions) {
+			for (Question q : questions) {
 				q.setParameters();  // creates randomly selected parameters
 				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
 						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
@@ -903,11 +901,58 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
+	List<Question> getSortedHWQuestions(long topicId) {
+		
+		List<Key<Question>> keys = ofy().load().type(Question.class).filter("assignmentType", "Homework").filter("topicId", topicId).filter("isActive", true).keys().list();
+		if (keys.size() > 1) Collections.sort(keys, new SortBySuccessPct());
+		
+		List<Key<Question>> newKeys = new ArrayList<Key<Question>>();
+		for (Key<Question> k : keys) {
+			if (!this.hwQuestions.containsKey(k)) newKeys.add(k);
+		}
+		if (newKeys.size()>0) hwQuestions.putAll(ofy().load().keys(newKeys));
+
+		List<Question> orderedQuestions = new ArrayList<Question>();
+		for (Key<Question> k : keys) orderedQuestions.add(hwQuestions.get(k));
+		return orderedQuestions;
+	}
+
 	String orderResponses(String[] answers) {
 		Arrays.sort(answers);
 		String studentAnswer = "";
 		for (String a : answers) studentAnswer = studentAnswer + a;
 		return studentAnswer;
+	}
+
+	class SortBySuccessPct implements Comparator<Key<Question>> {
+		
+		SortBySuccessPct() {}
+		
+		public int compare(Key<Question> o1, Key<Question> o2) {
+			Integer success1 = successPct.get(o1);
+			if (success1==null) {
+				int totalResponses = ofy().load().type(Response.class).filter("questionId",o1.getId()).count();
+				if (totalResponses==0) success1 = 100;
+				else {
+					int successResponses = ofy().load().type(Response.class).filter("questionId",o1.getId()).filter("score >",0).count();
+					success1 = successResponses*100/totalResponses;
+				}
+				successPct.put(o1,success1);
+			}
+			Integer success2 = successPct.get(o2);
+			if (success2==null) {
+				int totalResponses = ofy().load().type(Response.class).filter("questionId",o2.getId()).count();
+				if (totalResponses==0) success2 = 100;
+				else {
+					int successResponses = ofy().load().type(Response.class).filter("questionId",o2.getId()).filter("score >",0).count();
+					success2 = successResponses*100/totalResponses;
+				}
+				successPct.put(o2,success2);
+			}
+			int rank = success2-success1; // this reverses the normal Comparator to give higher rank to lower successPct
+			if (rank==0) rank = o1.compareTo(o2); // tie breaker required
+			return rank;  
+		}
 	}
 
 }
