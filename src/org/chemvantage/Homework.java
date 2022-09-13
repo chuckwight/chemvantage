@@ -26,6 +26,8 @@ import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -45,7 +47,10 @@ import com.googlecode.objectify.Key;
 public class Homework extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
-	QuestionCache qcache = new QuestionCache();
+	
+	private Map<Long,Topic> hwTopics = new HashMap<Long,Topic>();
+	private Map<Key<Question>,Question> hwQuestions = new HashMap<Key<Question>,Question>();
+	private Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
 	
 	int retryDelayMinutes = 2;  // minimum time between answer submissions for any single question
 
@@ -66,6 +71,8 @@ public class Homework extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 			
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
+			
 			switch (userRequest) {
 			case "ShowScores":
 				String forUserId = request.getParameter("ForUserId");
@@ -76,15 +83,15 @@ public class Homework extends HttpServlet {
 				out.println(Subject.header("Your Class ChemVantage Scores") + showSummary(user,request) + Subject.footer);
 				break;
 			case "AssignHomeworkQuestions":
-				if (user.isInstructor()) out.println(Subject.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user) + Subject.footer);
+				if (user.isInstructor()) out.println(Subject.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user,a) + Subject.footer);
 				else out.println(Subject.header("Customize ChemVantage Homework Assignment") + "<h2>Forbidden</h2>You must be signed in as the instructor to perform this functuon." + Subject.footer);
 				break;
 			case "PrintHomework":
-				out.println(Subject.header("ChemVantage Homework") + printHomework(user,request) + Subject.footer);
+				out.println(Subject.header("ChemVantage Homework") + printHomework(user,a,request) + Subject.footer);
 				break;
 			default:
-				if (user.isInstructor()) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,request) + Subject.footer);
-				else out.println(Subject.header("ChemVantage Homework") + printHomework(user,request) + Subject.footer);
+				if (user.isInstructor()) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a,request) + Subject.footer);
+				else out.println(Subject.header("ChemVantage Homework") + printHomework(user,a,request) + Subject.footer);
 			}
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig") + "&e=" + e.toString());
@@ -101,14 +108,14 @@ public class Homework extends HttpServlet {
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
+			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 
 			switch (userRequest) {
 			case "UpdateAssignment":
-				Assignment a = qcache.getAssignment(user.getAssignmentId());
 				a.updateQuestions(request);
-				qcache.putAssignment(a);
 				response.sendRedirect("/Homework?sig=" + user.getTokenSignature());
 				break;
 			case "AddQuestion":
@@ -116,13 +123,13 @@ public class Homework extends HttpServlet {
 				if (user.isEditor()) {
 					Key<Question> key = Key.create(Question.class,Long.parseLong(request.getParameter("QuestionId")));
 					Question q = ofy().load().key(key).safe();
-					qcache.putQuestion(q);
+					hwQuestions.put(key,q);
 				}
 				break;
 			case "DeleteQuestion":
 				if (user.isEditor()) {
 					Key<Question> key = Key.create(Question.class,Long.parseLong(request.getParameter("QuestionId")));
-					qcache.removeQuestion(key);
+					hwQuestions.remove(key);
 				}
 				break;
 			case "Set Allowed Attempts":
@@ -134,27 +141,53 @@ public class Homework extends HttpServlet {
 					a.attemptsAllowed = null;
 				}
 				ofy().save().entity(a).now();
-				qcache.putAssignment(a);
 				response.sendRedirect("/Homework?sig=" + user.getTokenSignature());
 				break;
 			case "Synchronize Scores":
-				if (synchronizeScores(user,request)) doGet(request,response);
+				if (synchronizeScores(user,a,request)) doGet(request,response);
 				else out.println("Synchronization request failed.");
 				break;
-			default: out.println(Subject.header("ChemVantage Homework Grading Results") + printScore(user,request) + Subject.footer);
+			default: out.println(Subject.header("ChemVantage Homework Grading Results") + printScore(user,a,request) + Subject.footer);
 			}
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
 	}
 
-	String instructorPage(User user,HttpServletRequest request) {
+	Topic getTopic(long topicId) {
+		Topic t = hwTopics.get(topicId);
+		if (t==null)  {
+			t = ofy().load().type(Topic.class).id(topicId).now();
+			hwTopics.put(topicId, t);
+			cacheQuestions(topicId);
+		}
+		return t;
+	}
+	
+	Question getQuestion(Key<Question> k) {
+		Question q = hwQuestions.get(k);
+		if (q == null) {
+			q = ofy().load().key(k).now();
+			if (q != null) hwQuestions.put(k,q);
+		}
+		return q;  // returns null only if the question has been deleted
+	}
+	
+	void cacheQuestions(long topicId) {
+		List<Key<Question>> keys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topicId).keys().list();
+		List<Key<Question>> newKeys = new ArrayList<Key<Question>>();
+		for (Key<Question> k : keys) {
+			if (!this.hwQuestions.containsKey(k)) newKeys.add(k);
+		}
+		if (newKeys.size()>0) hwQuestions.putAll(ofy().load().keys(newKeys));
+		return;
+	}
+	
+	String instructorPage(User user,Assignment a,HttpServletRequest request) {
 		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
 		
 		StringBuffer buf = new StringBuffer();		
 		try {
-			long assignmentId=user.getAssignmentId();
-			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
 			
@@ -174,35 +207,32 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String printHomework(User user, HttpServletRequest request) {
+	String printHomework(User user, Assignment a,HttpServletRequest request) {
 		try {
-			long assignmentId = user.getAssignmentId();
-			long topicId = 0L;
-			if (assignmentId > 0) topicId = ofy().load().type(Assignment.class).id(assignmentId).now().topicId;
+			long topicId=0L;
+			if (a != null) topicId = a.id;
 			else topicId = Long.parseLong(request.getParameter("TopicId"));
 			long hintQuestionId = 0L;
 			String hqi = request.getParameter("Q"); // questionId for offering a hint
 			if (hqi != null) hintQuestionId = Long.parseLong(hqi);			
-			return printHomework(user,topicId,hintQuestionId);
+			return printHomework(user,a,topicId,hintQuestionId);
 		} catch (Exception e) {  // select a random topic from the OpenStax group
 			List<Topic> topics = ofy().load().type(Topic.class).filter("topicGroup",1).list();
 			Random rand = new Random();
 			Topic t = topics.get(rand.nextInt(topics.size()));
-			return printHomework(user,t.id,0L);
+			return printHomework(user,a,t.id,0L);
 		}
 	}
 
-	String printHomework(User user, long tId, long hintQuestionId) {
+	String printHomework(User user, Assignment hwa, long tId, long hintQuestionId) {
 		StringBuffer buf = new StringBuffer();
 		
 		try {
-			long assignmentId = user.getAssignmentId(); // should be non-zero for LTI user
-			Assignment hwa = qcache.getAssignment(assignmentId);
 			long topicId = (hwa==null?tId:hwa.getTopicId());
-			Topic topic = qcache.getTopic(topicId);
+			Topic topic = getTopic(topicId);  // caches all hwQuestoins for this topic
 			
-			//  Load the Question items for this topic:
-			List<Question> hwQuestions = qcache.getSortedHWQuestions(topicId);
+			// get a List of homework questionKeys for this topic:
+			List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topic.id).keys().list();
 			
 			if (user.isAnonymous()) buf.append(Subject.banner);  // present the ChemVantage banner
 			
@@ -216,10 +246,12 @@ public class Homework extends HttpServlet {
 
 			if (user.isAnonymous())	buf.append("<h3><font color=#EE0000>Anonymous User</font></h3>");
 			
-			buf.append("\nHomework Rules<UL>");
-			buf.append("\n<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
-			buf.append("\n<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question.</LI>");
-			buf.append("\n<LI>Most questions are customized, so the correct answers are different for each student.</LI>");
+			buf.append("Homework Rules<UL>");
+			if (hwa==null||hwa.attemptsAllowed==null)
+				buf.append("<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
+			else buf.append("<LI>For each problem you are allowed " + hwa.attemptsAllowed + (hwa.attemptsAllowed==1?" attempt.":" attempts.") + "</LI>");
+			buf.append("<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question.</LI>");
+			buf.append("<LI>Most questions are customized, so the correct answers are different for each student.</LI>");
 			if (!user.isAnonymous()) buf.append("\n<LI>A checkmark will appear to the left of each correctly solved problem.</LI>");
 			buf.append("</UL>");
 
@@ -252,8 +284,8 @@ public class Homework extends HttpServlet {
 			// This is the main loop for presenting assigned and optional questions in order of increasing difficulty:
 			int i=1;
 			int j=1;
-			for (Question q : hwQuestions) {
-				Key<Question> k = Key.create(Question.class,q.id);
+			for (Key<Question> k : questionKeys) {
+				Question q = getQuestion(k).clone();  // clone the question so we can parameterize it
 				boolean assigned = (hwa != null) && (hwa.questionKeys.contains(k));
 				StringBuffer questionBuffer = new StringBuffer("<div style='display:table-row'><div style='display:table-cell;font-size:small'>");
 				String hashMe = user.getId() + (hwa==null?"":hwa.id);
@@ -290,7 +322,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	String printScore(User user,HttpServletRequest request) {
+	String printScore(User user,Assignment hwa,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Start...");
 		
@@ -300,22 +332,15 @@ public class Homework extends HttpServlet {
 			Key<Question> k = Key.create(Question.class,questionId);
 			Question q = null;
 			long topicId = Long.parseLong(request.getParameter("TopicId"));
-			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
+			Topic topic = getTopic(topicId);
 			debug.append("topic:"+topic.title+"...");
-			
-			long assignmentId = 0;
-			Assignment hwa = null;
-			try {
-				assignmentId = user.getAssignmentId();
-				hwa = ofy().load().type(Assignment.class).id(assignmentId).safe();
-			} catch (Exception e) {}
 			
 			if (hwa != null && hwa.attemptsAllowed != null) {
 				int nAttempts = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("questionId",questionId).count();
 				if (nAttempts >= hwa.attemptsAllowed) return "<h2>Sorry, you are only allowed " + hwa.attemptsAllowed + " attempt" + (hwa.attemptsAllowed==1?"":"s") + " for each question on this assignment.</h2>";
 			}
 			
-			q = qcache.getQuestion(k).clone(); // make a copy of the question so we can parameterize it
+			q = getQuestion(k).clone(); // make a copy of the question so we can parameterize it
 			q.id = questionId;
 			
 			// Set the Question parameters for this user (this is why we made a copy, to prevent thread collisions with a class variable)
@@ -350,7 +375,7 @@ public class Homework extends HttpServlet {
 			if (secondsRemaining > 0 && !solvedRecently) {  
 				buf.append("<h2>Please Wait For The Retry Delay To Complete</h2>");
 				buf.append(df.format(now));
-				buf.append("<p>The retry delay for this homework problem is <span id=delay style='color: #EE0000'></span><p>");
+				buf.append("<p>The retry delay for this homework problem is " + (user.isAnonymous()?retryDelayMinutes+" minutes. ":"<span id=delay style='color: #EE0000'></span>") + "<br/><br/>");
 				buf.append("Please take these few moments to check your work carefully.  You can sometimes find alternate routes to the "
 						+ "same solution, or it may be possible to use your answer to back-calculate the data given in the problem.<br/><br/>");
 				if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) 
@@ -360,41 +385,44 @@ public class Homework extends HttpServlet {
 						+ "<a href=/Homework?" + (hwa==null?"TopicId=" + topic.id : "AssignmentId=" + hwa.id)
 						+ "&sig=" + user.getTokenSignature() + ">" 
 						+ "return to this homework assignment</a> to work on another problem.<p>");
-		
-				buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework>"
-						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
-						+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + assignmentId + "'>"
-						+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
-						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
-						+ q.print(showWork,studentAnswer) + "<br>");
-				
-				buf.append("<INPUT TYPE=SUBMIT id='RetryButton' DISABLED=true VALUE='Grade This Exercise'></FORM>");
-				buf.append("<SCRIPT language='JavaScript'>"
-						+ "var seconds;var minutes;var oddSeconds;"
-						+ "var endTime = new Date().getTime() + " + secondsRemaining + "*1000;"
-						+ "function countdown() {"
-						+ " var now = new Date().getTime();"
-						+ " seconds=Math.round((endTime-now)/1000);"
-						+ " minutes = seconds<0?Math.ceil(seconds/60):Math.floor(seconds/60);"
-						+ " oddSeconds = seconds%60;"
-						+ " if (seconds > 0) {"
-						+ "  document.getElementById('delay').innerHTML = minutes + ' minutes ' + oddSeconds + ' seconds.';"
-						+ "  setTimeout('countdown()',1000);"
-						+ " }"
-						+ " else {"
-						+ "  document.getElementById('delay').innerHTML = minutes + ' minutes ' + oddSeconds + ' seconds.';"
-						+ "  document.getElementById('RetryButton').disabled=false;"
-						+ " }"
-						+ "}"
-						+ "countdown();");
-				buf.append("function showWorkBox(qid) {"  // this script displays a box for the user to show their work
-						+ "document.getElementById('showWork'+qid).style.display='';"
-						+ "document.getElementById('answer'+qid).placeholder='Enter your answer here';"
-						+ "}"
-						+ "showWorkBox(" + q.id + ");");
-				buf.append("</SCRIPT>"); 
+				if (hwa!=null) {
+					buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework>"
+							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
+							+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>"
+							+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
+							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
+							+ q.print(showWork,studentAnswer) + "<br>");
+
+					buf.append("<INPUT TYPE=SUBMIT id='RetryButton' DISABLED=true VALUE='Grade This Exercise'></FORM>");
+					buf.append("<SCRIPT language='JavaScript'>"
+							+ "var seconds;var minutes;var oddSeconds;"
+							+ "var endTime = new Date().getTime() + " + secondsRemaining + "*1000;"
+							+ "function countdown() {"
+							+ " var now = new Date().getTime();"
+							+ " seconds=Math.round((endTime-now)/1000);"
+							+ " minutes = seconds<0?Math.ceil(seconds/60):Math.floor(seconds/60);"
+							+ " oddSeconds = seconds%60;"
+							+ " if (seconds > 0) {"
+							+ "  document.getElementById('delay').innerHTML = minutes + ' minutes ' + oddSeconds + ' seconds.';"
+							+ "  setTimeout('countdown()',1000);"
+							+ " }"
+							+ " else {"
+							+ "  document.getElementById('delay').innerHTML = minutes + ' minutes ' + oddSeconds + ' seconds.';"
+							+ "  document.getElementById('RetryButton').disabled=false;"
+							+ " }"
+							+ "}"
+							+ "countdown();");
+					buf.append("function showWorkBox(qid) {"  // this script displays a box for the user to show their work
+							+ "document.getElementById('showWork'+qid).style.display='';"
+							+ "document.getElementById('answer'+qid).placeholder='Enter your answer here';"
+							+ "}"
+							+ "showWorkBox(" + q.id + ");");
+					buf.append("</SCRIPT>");
+				}
 				return buf.toString();
 			}
+			
+			if (user.isAnonymous()) buf.append(Subject.banner);
 			
 			buf.append("<h2>Homework Results - " + topic.title + "</h2>\n");
 			
@@ -406,18 +434,18 @@ public class Homework extends HttpServlet {
 			
 			debug.append("score is " + studentScore + " out of " + possibleScore + " points...");
 			HWTransaction ht = null;
+			long assignmentId = hwa==null?0:hwa.id;
+			
 			showWork = request.getParameter("ShowWork"+questionId);
 			
 			if (!studentAnswer.isEmpty()) { // an answer was submitted
 				// create and store a Response entity:
 				Response r = new Response("Homework",topic.id,q.id,studentAnswer,q.getCorrectAnswer(),studentScore,possibleScore,user.getId(),now);
 				ofy().save().entity(r);
+				debug.append("response saved...");
 				
-				// create a new HWTransaction entity:
 				ht = new HWTransaction(q.id,topic.id,topic.title,user.getId(),now,studentScore,assignmentId,possibleScore,showWork);
 				ofy().save().entity(ht).now();
-
-				debug.append("HW transaction id="+ht.id+"...");
 				
 				// create/update/store a HomeworkScore object
 				try {  // throws exception if hwa==null
@@ -431,7 +459,9 @@ public class Homework extends HttpServlet {
 			}
 			// Send response to the user:
 			if (studentScore > 0) {
-				buf.append("<h3>Congratulations. You answered the question correctly.</h3><p>");
+				buf.append("<h3>Congratulations. You answered the question correctly. "
+						+ (!user.isAnonymous()?"<a id=showLink href=# onClick=document.getElementById('solution').style='display:inline';this.style='display:none'>(show me)</a>":"") 
+						+ "</h3>");
 			}
 			else if (studentAnswer.length() > 0) {
 				switch (q.getQuestionType()) {
@@ -439,7 +469,7 @@ public class Homework extends HttpServlet {
 						try {
 							@SuppressWarnings("unused")
 							double dAnswer = Double.parseDouble(q.parseString(studentAnswer));  // throws exception for non-numeric answer
-							if (!q.agreesToRequiredPrecision(studentAnswer)) buf.append("<h3>Incorrect Answer</h3>Your answer does not " + (q.requiredPrecision==0?"exactly match the answer in the database.":"agree with the answer in the database to within the required precision (" + q.requiredPrecision + "%).<br/><br/>"));
+							if (!q.agreesToRequiredPrecision(studentAnswer)) buf.append("<h3>Incorrect Answer</h3>Your answer does not " + (q.requiredPrecision==0?"exactly match the answer in the database. ":"agree with the answer in the database to within the required precision (" + q.requiredPrecision + "%).<br/><br/>"));
 							else if (!q.hasCorrectSigFigs(studentAnswer)) buf.append("<h3>Almost there!</h3>It appears that you've done the calculation correctly, but your answer does not have the correct number of significant figures appropriate for the data given in the question. "
 									+ "If your answer ends in a zero, be sure to include a decimal point to indicate which digits are significant.<br/><br/>");
 						}
@@ -454,51 +484,56 @@ public class Homework extends HttpServlet {
 							+ "answer in the database.<br/>");
 				}
 				
-				if (!user.isAnonymous() && user.isEligibleForHints(q.id)) {
-					buf.append("<form method=post action=Help>"
-							+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-							+ "<input type=hidden name=AssignmentType value=Homework />"
-							+ "<input type=hidden name=TransactionId value=" + ht.id + " />"
-							+ "<input type=hidden name=HashCode value=" + hashMe.hashCode() + " />");
-					buf.append("<font color=#EE0000>Do you need some help from your instructor or teaching assistant? </font>");
-					buf.append("<input type=submit value='Get Some Help Here'></form><br/><br/>");
-				}
-				
 				int nAttempts = 0;
 				if (hwa != null && hwa.attemptsAllowed != null) {
 					nAttempts = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",hwa.id).count();
 					buf.append("The maximum number of attempts for each question on this assignment is " + hwa.attemptsAllowed + "<br/>");
 					if (nAttempts<hwa.attemptsAllowed) buf.append("The retry delay for this question is " + retryDelayMinutes + (retryDelayMinutes>1?" minutes. ":" minute. ") + "<br/>");
-				} else buf.append("The retry delay for this question is " + retryDelayMinutes + (retryDelayMinutes>1?" minutes. ":" minute. ") + "<br/>");
+				} else buf.append("The retry delay for this question is " + retryDelayMinutes + (retryDelayMinutes>1?" minutes. ":" minute. ") + "<br/><br/>");
+			
+				if (user.isInstructor() || user.isTeachingAssistant()) {
+					buf.append("<br/>Instructor: <a href=# onClick=document.getElementById('solution').style='display:inline';this.style='display:none';>show the solution</a><br/><br/>");
+				} else if (!user.isAnonymous() && user.isEligibleForHints(q.id)) {
+					buf.append("<br/><form method=post action=Help>"
+							+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+							+ "<input type=hidden name=AssignmentType value=Homework />"
+							+ "<input type=hidden name=TransactionId value=" + ht.id + " />"
+							+ "<input type=hidden name=HashCode value=" + hashMe.hashCode() + " />");
+					buf.append("<font color=#EE0000>Do you need some help from your instructor or teaching assistant? </font>");
+					buf.append("<input type=submit value='Get Some Help Here'></form><br/>");
+				}				
 			}  
 			else {
 				buf.append("<h3>The answer to the question was left blank.</h3>");
 			}
 
-			if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) 
-				buf.append("<img src=/images/learn_more.png alt='learn more here' /> You can learn more about this topic at <a href='" + q.learn_more_url + "' target=_blank>" + q.learn_more_url + "</a><br/><br/>");
-			
-			buf.append(ajaxJavaScript(user.getTokenSignature()));
-			
-			if (studentScore>0) {
-				buf.append("<div>" + (user.isAnonymous()?q.printAnswerToStudents():q.printAllToStudents(studentAnswer)) + "</div><br/>");
-			}
-			
 			boolean offerHint = studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id);
 
-			// if the user response was correct, seek five-star feedback:
-			if (studentScore > 0) buf.append(fiveStars());
-			else buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
-			
-			if (hwa != null) buf.append("You may <a href=/Homework?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review your scores on this assignment</a>.<p>");
+			buf.append(ajaxJavaScript(user.getTokenSignature()));
 
+			if (!user.isAnonymous()) {
+				if (studentScore>0 || user.isInstructor()) {
+					buf.append("<div id=solution style='display:none'>" 
+							+ (user.isAnonymous()?q.printAnswerToStudents():q.printAllToStudents(studentAnswer)) 
+							+ "</div><br/>");
+				}
+
+				if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) 
+					buf.append("<img src=/images/learn_more.png alt='learn more here' /> You can learn more about this topic at <a href='" + q.learn_more_url + "' target=_blank>" + q.learn_more_url + "</a><br/><br/>");
+
+				// if the user response was correct, seek five-star feedback:
+				if (studentScore > 0) buf.append(fiveStars());
+				else buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
+
+				if (hwa != null) buf.append("You may <a href=/Homework?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review your scores on this assignment</a>.<p>");
+			}
 			buf.append("<a href=/Homework?UserRequest=PrintHomework&"
-					+ (assignmentId>0?"AssignmentId=" + assignmentId : "TopicId=" + topic.id)
+					+ (hwa!=null&&hwa.id>0?"AssignmentId=" + hwa.id : "TopicId=" + topic.id)
 					+ "&sig=" + user.getTokenSignature()  
 					+ (offerHint?"&Q=" + q.id + "><span style='color:#EE0000'>Please give me a hint</span>":">Return to this homework assignment") + "</a> or "
 					+ "<a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a> ");
 			
-			if (user.isAnonymous()) buf.append(" or go back to the <a href=/>ChemVantage home page</a>.");
+			if (user.isAnonymous()) buf.append(" or go back to the <a href=/>ChemVantage home page</a>.<br/><br/>");
 			}
 		catch (Exception e) {
 			buf.append("<p>Sorry, we were unable to score this question: " + e.toString() + "<p>" + debug.toString());
@@ -773,11 +808,10 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	boolean synchronizeScores(User user,HttpServletRequest request) {
+	boolean synchronizeScores(User user,Assignment a,HttpServletRequest request) {
 		// This method looks for assignment scores that are different from the LMS scores and resubmits the score to the LMS
 		try {
 			if (!user.isInstructor()) throw new Exception();  // only instructors can use this function
-			Assignment a = qcache.getAssignment(user.getAssignmentId());
 			if (a==null) throw new Exception();  // can only do this for a known assignment
 			if (a.lti_ags_lineitem_url == null || a.lti_nrps_context_memberships_url == null) throw new Exception(); // need both of these to work
 			Map<String,String> scores = LTIMessage.readMembershipScores(a);
@@ -806,14 +840,12 @@ public class Homework extends HttpServlet {
 		return true;
 	}
 	
-	String selectQuestionsForm(User user) {
+	String selectQuestionsForm(User user,Assignment a) {
 		StringBuffer buf = new StringBuffer();
 		try {
-			Assignment a = qcache.getAssignment(user.getAssignmentId());
-			Topic topic = qcache.getTopic(a.topicId);
+			Topic topic = getTopic(a.topicId);
 			
-			//  Load the Question items for this topic, if necessary:
-			List<Question> hwQuestions = qcache.getSortedHWQuestions(topic.id);
+			List<Question> questions = getSortedHWQuestions(topic.id);
 					
 			buf.append("<h3>Customize Homework Assignment</h3>");
 			buf.append("<b>Topic: " + topic.title + "</b><br/><br/>");
@@ -821,14 +853,14 @@ public class Homework extends HttpServlet {
 			buf.append("By default, students may submit answers to the homework problems as many times as they wish. This rewards students who persist "
 					+ "to achieve a better score. However, you may limit the number of attempts here. Leave the field blank to permit unlimited attempts.<br/>"
 					+ "<form action=/Homework method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-					+ "Number of submissions allowed for each question of this assignment: <input type=text size=10 name=AttemptsAllowed " 
+					+ "<input type=text size=10 name=AttemptsAllowed " 
 					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /> "
-					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' /><br/>"
+					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' />"
 					+ "</form><br/><br/>");
 			
 			// Allow instructor to pick individual question items from all active questions:
-			buf.append("Select the homework questions to be assigned for grading. The questions are presented below in "
-					+ "approximate order of increasing difficuly, as measured by the percentage of correct submissions. "
+			buf.append("Select the homework questions below to be assigned for grading. "  // The questions are presented below in "
+				//	+ "approximate order of increasing difficuly, as measured by the percentage of correct submissions. "
 					+ "Then click the 'Use Selected Items' button. Each question is worth 1 point, so the maximum possible "
 					+ "score is equal to the number of questions selected. Students may work the optional problems; "
 					+ "however, these are not included in the scores reported to the class LMS.<p>"
@@ -852,7 +884,7 @@ public class Homework extends HttpServlet {
 
 			
 			int i=0;
-			for (Question q : hwQuestions) {
+			for (Question q : questions) {
 				q.setParameters();  // creates randomly selected parameters
 				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
 						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
@@ -869,11 +901,58 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
+	List<Question> getSortedHWQuestions(long topicId) {
+		
+		List<Key<Question>> keys = ofy().load().type(Question.class).filter("assignmentType", "Homework").filter("topicId", topicId).filter("isActive", true).keys().list();
+		if (keys.size() > 1) Collections.sort(keys, new SortBySuccessPct());
+		
+		List<Key<Question>> newKeys = new ArrayList<Key<Question>>();
+		for (Key<Question> k : keys) {
+			if (!this.hwQuestions.containsKey(k)) newKeys.add(k);
+		}
+		if (newKeys.size()>0) hwQuestions.putAll(ofy().load().keys(newKeys));
+
+		List<Question> orderedQuestions = new ArrayList<Question>();
+		for (Key<Question> k : keys) orderedQuestions.add(hwQuestions.get(k));
+		return orderedQuestions;
+	}
+
 	String orderResponses(String[] answers) {
 		Arrays.sort(answers);
 		String studentAnswer = "";
 		for (String a : answers) studentAnswer = studentAnswer + a;
 		return studentAnswer;
+	}
+
+	class SortBySuccessPct implements Comparator<Key<Question>> {
+		
+		SortBySuccessPct() {}
+		
+		public int compare(Key<Question> o1, Key<Question> o2) {
+			Integer success1 = successPct.get(o1);
+			if (success1==null) {
+				int totalResponses = ofy().load().type(Response.class).filter("questionId",o1.getId()).count();
+				if (totalResponses==0) success1 = 100;
+				else {
+					int successResponses = ofy().load().type(Response.class).filter("questionId",o1.getId()).filter("score >",0).count();
+					success1 = successResponses*100/totalResponses;
+				}
+				successPct.put(o1,success1);
+			}
+			Integer success2 = successPct.get(o2);
+			if (success2==null) {
+				int totalResponses = ofy().load().type(Response.class).filter("questionId",o2.getId()).count();
+				if (totalResponses==0) success2 = 100;
+				else {
+					int successResponses = ofy().load().type(Response.class).filter("questionId",o2.getId()).filter("score >",0).count();
+					success2 = successResponses*100/totalResponses;
+				}
+				successPct.put(o2,success2);
+			}
+			int rank = success2-success1; // this reverses the normal Comparator to give higher rank to lower successPct
+			if (rank==0) rank = o1.compareTo(o2); // tie breaker required
+			return rank;  
+		}
 	}
 
 }

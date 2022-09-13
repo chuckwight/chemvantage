@@ -530,7 +530,7 @@ public class LTIDeepLinks extends HttpServlet {
 	
 			// At this point all of the topicIds or VideoIds are in the List topicIds
 			// If the assignmentType is PracticeExam, make a single Assignment, otherwise one per topic
-			// If the assignmentType is Poll, there are no topics at this point
+			// If the assignmentType is Poll, there are no topics at this point, but set pollClosed=true;
 			
 			Assignment a = null;
 			List<Assignment> assignments = new ArrayList<Assignment>();
@@ -546,6 +546,7 @@ public class LTIDeepLinks extends HttpServlet {
 				break;
 			case "Poll":
 				a = new Assignment(assignmentType,0L,null,d.platform_deployment_id);
+				a.pollClosed = true;
 				assignments.add(a);
 				break;
 			case "PlacementExam":

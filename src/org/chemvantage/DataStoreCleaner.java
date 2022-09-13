@@ -40,10 +40,13 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
+import com.google.cloud.datastore.Cursor;
+import com.google.cloud.datastore.QueryResults;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.googlecode.objectify.Key;
+import com.googlecode.objectify.cmd.Query;
 
 
 @WebServlet("/DataStoreCleaner")
@@ -274,139 +277,145 @@ public class DataStoreCleaner extends HttpServlet {
 	private String cleanAssignments(boolean testOnly, HttpServletRequest request) {
 		// This method matches assignments to the current lineitem container from the LMS; validates the good and deletes the missing
 		StringBuffer buf = new StringBuffer();
+		StringBuffer debug = new StringBuffer("Debug: ");
 		buf.append("<h2>Clean Assignments</h2>");
 		Date now = new Date();
-		try {
-			Assignment member = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
-			String lti_ags_lineitems_url = member.lti_ags_lineitems_url;
-			String platform_deployment_id = member.domain;
-			if (lti_ags_lineitems_url==null || platform_deployment_id==null) return "Error: The Assignment must contain lti_ags_lineitems_url and domain.";
+		
+		if (request.getParameter("AssignmentId") != null) {
+			try {  // LTIv1p3Launch starts this Task with AssignmentId for any assignment not validated in the last month
+				debug.append("AssignmentId=" + request.getParameter("AssignmentId") + "...");
+				Assignment member = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
+				String lti_ags_lineitems_url = member.lti_ags_lineitems_url;
+				String platform_deployment_id = member.domain;
+				if (lti_ags_lineitems_url==null || platform_deployment_id==null) return "Error: The Assignment must contain lti_ags_lineitems_url and domain.";
 
-			// find the deployment because we will need to get the lineitem container
-			Deployment d = Deployment.getInstance(platform_deployment_id);
-			
-			// initially put all assignments with matching lineitem_urls into the List for deletion
-			List<Assignment> assignments = ofy().load().type(Assignment.class).filter("lti_ags_lineitems_url",lti_ags_lineitems_url).list();
-			
-			// make a Map of all assignments so they're easy to find by lineitem_url; don't replace any duplicate entries
-			Map<String,Assignment> assignmentMap = new HashMap<String,Assignment>();
-			for (Assignment a : assignments) if (!assignmentMap.containsKey(a.lti_ags_lineitem_url)) assignmentMap.put(a.lti_ags_lineitem_url, a);
-				
-			buf.append("Identified " + assignments.size() + " assignments for this class.<br/>");
-			
-			// get the lineitem container from the LMS
-			JsonArray lineitem_container = LTIMessage.getLineItemContainer(d, lti_ags_lineitems_url);
-			if (lineitem_container==null) throw new Exception("Could not retrieve lineitem container from " + d.platform_deployment_id);
-			buf.append("Retrieved lineitem container with " + lineitem_container.size() + " lineitems:<br/>");
-			buf.append(lineitem_container.toString() + "<br/>");
-			// iterate over the lineitem container, saving matching assignments and removing them from the deleteList
-			Iterator<JsonElement> iterator = lineitem_container.iterator();
-			List<Assignment> assignmentsToBeSaved = new ArrayList<Assignment>();
-			while (iterator.hasNext()) {
-				JsonObject lineitem = iterator.next().getAsJsonObject();
-				String lineitem_id = lineitem.get("id").getAsString();
-				Assignment a = assignmentMap.get(lineitem_id);
-				if (a==null) continue;
-				a.valid = now;
-				assignmentsToBeSaved.add(a);
-				assignments.remove(a);
+				// find the deployment because we will need to get the lineitem container
+				Deployment d = Deployment.getInstance(platform_deployment_id);
+
+				// initially put all assignments with matching lineitem_urls into the List for deletion
+				List<Assignment> assignments = ofy().load().type(Assignment.class).filter("lti_ags_lineitems_url",lti_ags_lineitems_url).list();
+
+				// make a Map of all assignments so they're easy to find by lineitem_url; don't replace any duplicate entries
+				Map<String,Assignment> assignmentMap = new HashMap<String,Assignment>();
+				for (Assignment a : assignments) if (!assignmentMap.containsKey(a.lti_ags_lineitem_url)) assignmentMap.put(a.lti_ags_lineitem_url, a);
+
+				buf.append("Identified " + assignments.size() + " assignments for this class.<br/>");
+
+				// get the lineitem container from the LMS
+				JsonArray lineitem_container = LTIMessage.getLineItemContainer(d, lti_ags_lineitems_url);
+				if (lineitem_container==null) throw new Exception("Could not retrieve lineitem container from " + d.platform_deployment_id);
+				buf.append("Retrieved lineitem container with " + lineitem_container.size() + " lineitems:<br/>");
+				buf.append(lineitem_container.toString() + "<br/>");
+				// iterate over the lineitem container, saving matching assignments and removing them from the deleteList
+				Iterator<JsonElement> iterator = lineitem_container.iterator();
+				List<Assignment> assignmentsToBeSaved = new ArrayList<Assignment>();
+				while (iterator.hasNext()) {
+					JsonObject lineitem = iterator.next().getAsJsonObject();
+					String lineitem_id = lineitem.get("id").getAsString();
+					Assignment a = assignmentMap.get(lineitem_id);
+					if (a==null) continue;
+					a.valid = now;
+					assignmentsToBeSaved.add(a);
+					assignments.remove(a);
+				}
+				// final actions if no Exceptions have been thrown
+				if (!assignmentsToBeSaved.isEmpty()) ofy().save().entities(assignmentsToBeSaved);
+				if (!assignments.isEmpty() & !testOnly) {
+					for (Assignment a : assignments) a.valid = new Date(0); // ofy().delete().entities(assignments);
+					ofy().save().entities(assignments);
+				}
+
+				buf.append("Updated " + assignmentsToBeSaved.size() + " assignments.<br/>");
+				buf.append(assignments.size() + " assignments were " + (testOnly?"identified for deletion.":"deleted."));
+			} catch (Exception e) {
+				buf.append("Error: " + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString());
 			}
-			// final actions if no Exceptions have been thrown
-			if (!assignmentsToBeSaved.isEmpty()) ofy().save().entities(assignmentsToBeSaved);
-			if (!assignments.isEmpty() & !testOnly) {
-				for (Assignment a : assignments) a.valid = new Date(0); // ofy().delete().entities(assignments);
-				ofy().save().entities(assignments);
+		} else {  // routine cleaning of Assignments older than 6 months with no domain or no Deployment
+			try {
+				Query<Assignment> query = ofy().load().type(Assignment.class).limit(200);
+				String cursorStr = request.getParameter("cursor");
+				if (cursorStr != null)
+					query = query.startAt(Cursor.fromUrlSafe(cursorStr));
+
+				boolean continu = false;
+				List<Key<Assignment>> assignmentKeys = new ArrayList<Key<Assignment>>();
+				QueryResults<Assignment> iterator = query.iterator();
+				int nBatches = 0;
+
+				while (iterator.hasNext() && (new Date().getTime()-now.getTime()<20000)) {
+					Assignment a = iterator.next();
+					if (a.domain==null && a.created.before(sixMonthsAgo)) assignmentKeys.add(Key.create(Assignment.class,a.id));
+					else if (ofy().load().filterKey(Key.create(Deployment.class,a.domain)).count()==0) {
+						assignmentKeys.add(Key.create(Assignment.class,a.id));
+						buf.append(a.id + " " + a.assignmentType + " " + a.domain + a.lti_ags_lineitem_url + "<br/>");
+					}
+					continu = true;
+
+					if (testOnly || a.assignmentType==null) continue;
+
+					switch (a.assignmentType) {  // delete all associated transactions
+					case "Quiz":
+						List<Key<QuizTransaction>> qtKeys = ofy().load().type(QuizTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
+						nBatches = qtKeys.size()/500;
+						for (int i=0;i<nBatches;i++) ofy().delete().keys(qtKeys.subList(i*500, (i+1)*500));
+						ofy().delete().keys(qtKeys.subList(nBatches*500, qtKeys.size()));
+						break;
+					case "Homework":
+						List<Key<HWTransaction>> hwtKeys = ofy().load().type(HWTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
+						nBatches = hwtKeys.size()/500;
+						for (int i=0;i<nBatches;i++) ofy().delete().keys(hwtKeys.subList(i*500, (i+1)*500));
+						ofy().delete().keys(hwtKeys.subList(nBatches*500, hwtKeys.size()));
+						break;
+					case "PracticeExam":
+						List<Key<PracticeExamTransaction>> peKeys = ofy().load().type(PracticeExamTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
+						nBatches = peKeys.size()/500;
+						for (int i=0;i<nBatches;i++) ofy().delete().keys(peKeys.subList(i*500, (i+1)*500));
+						ofy().delete().keys(peKeys.subList(nBatches*500, peKeys.size()));
+						break;
+					case "Poll":
+						List<Key<PollTransaction>> ptKeys = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
+						nBatches = ptKeys.size()/500;
+						for (int i=0;i<nBatches;i++) ofy().delete().keys(ptKeys.subList(i*500, (i+1)*500));
+						ofy().delete().keys(ptKeys.subList(nBatches*500, ptKeys.size()));
+						break;
+					case "PlacementExam":
+						List<Key<PlacementExamTransaction>> plKeys = ofy().load().type(PlacementExamTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
+						nBatches = plKeys.size()/500;
+						for (int i=0;i<nBatches;i++) ofy().delete().keys(plKeys.subList(i*500, (i+1)*500));
+						ofy().delete().keys(plKeys.subList(nBatches*500, plKeys.size()));
+						break;
+					case "Video":
+						List<Key<VideoTransaction>> vtKeys = ofy().load().type(VideoTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
+						nBatches = vtKeys.size()/500;
+						for (int i=0;i<nBatches;i++) ofy().delete().keys(vtKeys.subList(i*500, (i+1)*500));
+						ofy().delete().keys(vtKeys.subList(nBatches*500, vtKeys.size()));
+						break;
+					default:  // it is possible that assignmentType is empty - no transactions need to be deleted
+					}
+				}
+
+				if (continu) {
+					Cursor cursor = iterator.getCursorAfter();
+					Queue queue = QueueFactory.getDefaultQueue();
+					queue.add(withUrl("/DataStoreCleaner").param("cursor", cursor.toUrlSafe()));
+				}
+
+				if (assignmentKeys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
+					nBatches = assignmentKeys.size()/500;
+					for (int i=0;i<nBatches;i++) ofy().delete().keys(assignmentKeys.subList(i*500, (i+1)*500));
+					ofy().delete().keys(assignmentKeys.subList(nBatches*500, assignmentKeys.size()));
+				}
+
+				buf.append(assignmentKeys.size() + " orphan Assignments" + (testOnly?" identified":" deleted") + ".<br>");
+				buf.append("Done.<br>");
+
+			} catch (Exception e) {
+				buf.append("Error: " + e.toString());
 			}
-			
-			buf.append("Updated " + assignmentsToBeSaved.size() + " assignments.<br/>");
-			buf.append(assignments.size() + " assignments were " + (testOnly?"identified for deletion.":"deleted."));
-		} catch (Exception e) {
-			buf.append("Error: " + e.getMessage()==null?e.toString():e.getMessage());
+			return buf.toString();
 		}
 		return buf.toString();
-/*		
-		try {
-			Query<Assignment> query = ofy().load().type(Assignment.class).limit(1000);
-			String cursorStr = request.getParameter("cursor");
-			if (cursorStr != null)
-				query = query.startAt(Cursor.fromUrlSafe(cursorStr));
 
-			boolean continu = false;
-			List<Key<Assignment>> assignmentKeys = new ArrayList<Key<Assignment>>();
-			QueryResults<Assignment> iterator = query.iterator();
-			int nBatches = 0;
-			
-			while (iterator.hasNext()) {
-				Assignment a = iterator.next();
-				if (a.domain==null && a.created.before(sixMonthsAgo)) assignmentKeys.add(Key.create(Assignment.class,a.id));
-				else if (a.domain.contains("https://")) {
-					if (ofy().load().filterKey(Key.create(Deployment.class,a.domain)).count()==0) assignmentKeys.add(Key.create(Assignment.class,a.id));
-				}
-				continu = true;
-				
-				if (testOnly || a.assignmentType==null) continue;
-				
-				switch (a.assignmentType) {  // delete all associated transactions
-				case "Quiz":
-					List<Key<QuizTransaction>> qtKeys = ofy().load().type(QuizTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
-					nBatches = qtKeys.size()/500;
-					for (int i=0;i<nBatches;i++) ofy().delete().keys(qtKeys.subList(i*500, (i+1)*500));
-					ofy().delete().keys(qtKeys.subList(nBatches*500, qtKeys.size()));
-					break;
-				case "Homework":
-					List<Key<HWTransaction>> hwtKeys = ofy().load().type(HWTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
-					nBatches = hwtKeys.size()/500;
-					for (int i=0;i<nBatches;i++) ofy().delete().keys(hwtKeys.subList(i*500, (i+1)*500));
-					ofy().delete().keys(hwtKeys.subList(nBatches*500, hwtKeys.size()));
-					break;
-				case "PracticeExam":
-					List<Key<PracticeExamTransaction>> peKeys = ofy().load().type(PracticeExamTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
-					nBatches = peKeys.size()/500;
-					for (int i=0;i<nBatches;i++) ofy().delete().keys(peKeys.subList(i*500, (i+1)*500));
-					ofy().delete().keys(peKeys.subList(nBatches*500, peKeys.size()));
-					break;
-				case "Poll":
-					List<Key<PollTransaction>> ptKeys = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
-					nBatches = ptKeys.size()/500;
-					for (int i=0;i<nBatches;i++) ofy().delete().keys(ptKeys.subList(i*500, (i+1)*500));
-					ofy().delete().keys(ptKeys.subList(nBatches*500, ptKeys.size()));
-					break;
-				case "PlacementExam":
-					List<Key<PlacementExamTransaction>> plKeys = ofy().load().type(PlacementExamTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
-					nBatches = plKeys.size()/500;
-					for (int i=0;i<nBatches;i++) ofy().delete().keys(plKeys.subList(i*500, (i+1)*500));
-					ofy().delete().keys(plKeys.subList(nBatches*500, plKeys.size()));
-					break;
-				case "Video":
-					List<Key<VideoTransaction>> vtKeys = ofy().load().type(VideoTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
-					nBatches = vtKeys.size()/500;
-					for (int i=0;i<nBatches;i++) ofy().delete().keys(vtKeys.subList(i*500, (i+1)*500));
-					ofy().delete().keys(vtKeys.subList(nBatches*500, vtKeys.size()));
-					break;
-				default:  // it is possible that assignmentType is empty - no transactions need to be deleted
-				}
-			}
-
-			if (continu) {
-				Cursor cursor = iterator.getCursorAfter();
-				Queue queue = QueueFactory.getDefaultQueue();
-				queue.add(withUrl("/DataStoreCleaner").param("cursor", cursor.toUrlSafe()));
-			}
-
-			if (assignmentKeys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
-				nBatches = assignmentKeys.size()/500;
-				for (int i=0;i<nBatches;i++) ofy().delete().keys(assignmentKeys.subList(i*500, (i+1)*500));
-				ofy().delete().keys(assignmentKeys.subList(nBatches*500, assignmentKeys.size()));
-			}
-
-			buf.append(assignmentKeys.size() + " orphan Assignments" + (testOnly?" identified":" deleted") + ".<br>");
-			buf.append("Done.<br>");
-
-		} catch (Exception e) {
-			buf.append("Error: " + e.toString());
-		}
-		return buf.toString();
-*/
 	}
 
 	String getLineitemsUrl(String lineitem_url, String platformDeploymentId) {
