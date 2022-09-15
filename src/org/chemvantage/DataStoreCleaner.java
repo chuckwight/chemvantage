@@ -40,7 +40,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
-import com.google.cloud.datastore.Cursor;
 import com.google.cloud.datastore.QueryResults;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -133,7 +132,7 @@ public class DataStoreCleaner extends HttpServlet {
 		buf.append("<label><input type=radio name=Task value=CleanResponses> Responses older than 3 years</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanTransactions> Transactions with no existing Assignment entity</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanScores> Scores older than 1 year</label><br>");
-		buf.append("<label><input type=radio name=Task value=CleanAssignments> Assignments older than 6 months with no lineitem_url</label><br>");
+		buf.append("<label><input type=radio name=Task value=CleanAssignments> Assignments unused more than 1 year with no lineitem_url</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanDeployments> Deployments with no logins for more than 1 year</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanBLTIConsumers> BLTIConsumers with no logins for more than 1 year</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanUsers> Users whose tokens have expired</label><p>");
@@ -286,15 +285,26 @@ public class DataStoreCleaner extends HttpServlet {
 				debug.append("AssignmentId=" + request.getParameter("AssignmentId") + "...");
 				Assignment member = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
 				String lti_ags_lineitems_url = member.lti_ags_lineitems_url;
-				String platform_deployment_id = member.domain;
-				if (lti_ags_lineitems_url==null || platform_deployment_id==null) return "Error: The Assignment must contain lti_ags_lineitems_url and domain.";
-
+				
 				// find the deployment because we will need to get the lineitem container
+				String platform_deployment_id = member.domain;
 				Deployment d = Deployment.getInstance(platform_deployment_id);
 
+				if (lti_ags_lineitems_url==null) lti_ags_lineitems_url = getLineitemsUrl(member.lti_ags_lineitem_url,platform_deployment_id);
+				if (lti_ags_lineitems_url==null || platform_deployment_id==null) return "Error: The Assignment must contain lti_ags_lineitems_url and domain.";
+				buf.append("Deployment: " + d.platform_deployment_id + "<br/>");
+				buf.append("Lineitems URL: " + lti_ags_lineitems_url + "<br/>");
+				
 				// initially put all assignments with matching lineitem_urls into the List for deletion
-				List<Assignment> assignments = ofy().load().type(Assignment.class).filter("lti_ags_lineitems_url",lti_ags_lineitems_url).list();
-
+				List<Assignment> assignments = ofy().load().type(Assignment.class).filter("domain",platform_deployment_id).list();
+				List<Assignment> assignmentsToBeRemoved = new ArrayList<Assignment>();  // assignments from this deployment but for other classes
+				for (Assignment a : assignments) {
+					if (a.lti_ags_lineitem_url!=null && !a.lti_ags_lineitem_url.startsWith(lti_ags_lineitems_url)) assignmentsToBeRemoved.add(a);
+				}
+				assignments.removeAll(assignmentsToBeRemoved);
+				
+				buf.append(assignments.size() + " assignments match this description.<br/>");
+				
 				// make a Map of all assignments so they're easy to find by lineitem_url; don't replace any duplicate entries
 				Map<String,Assignment> assignmentMap = new HashMap<String,Assignment>();
 				for (Assignment a : assignments) if (!assignmentMap.containsKey(a.lti_ags_lineitem_url)) assignmentMap.put(a.lti_ags_lineitem_url, a);
@@ -315,98 +325,53 @@ public class DataStoreCleaner extends HttpServlet {
 					Assignment a = assignmentMap.get(lineitem_id);
 					if (a==null) continue;
 					a.valid = now;
+					a.lti_ags_lineitems_url = lti_ags_lineitems_url;
 					assignmentsToBeSaved.add(a);
 					assignments.remove(a);
 				}
 				// final actions if no Exceptions have been thrown
-				if (!assignmentsToBeSaved.isEmpty()) ofy().save().entities(assignmentsToBeSaved);
-				if (!assignments.isEmpty() & !testOnly) {
-					for (Assignment a : assignments) a.valid = new Date(0); // ofy().delete().entities(assignments);
-					ofy().save().entities(assignments);
-				}
+				if (!assignmentsToBeSaved.isEmpty() && !testOnly) ofy().save().entities(assignmentsToBeSaved);
+				if (!assignments.isEmpty() & !testOnly) ofy().delete().entities(assignments);
 
-				buf.append("Updated " + assignmentsToBeSaved.size() + " assignments.<br/>");
-				buf.append(assignments.size() + " assignments were " + (testOnly?"identified for deletion.":"deleted."));
+				buf.append(assignmentsToBeSaved.size() + " assignments were " + (testOnly?"identified for updating.":"updated.") + "<br/>");
+				buf.append(assignments.size() + " assignments were " + (testOnly?"identified for deletion.":"deleted.") + "<br/>");
 			} catch (Exception e) {
 				buf.append("Error: " + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString());
 			}
-		} else {  // routine cleaning of Assignments older than 6 months with no domain or no Deployment
+		} else {  // routine cleaning of Assignments unused more than 1 year and no lti_ags_lineitem_url
 			try {
-				Query<Assignment> query = ofy().load().type(Assignment.class).limit(200);
+				Query<Assignment> oldAssignments = ofy().load().type(Assignment.class).filter("created<",oneYearAgo).limit(200);
+				/*
 				String cursorStr = request.getParameter("cursor");
 				if (cursorStr != null)
 					query = query.startAt(Cursor.fromUrlSafe(cursorStr));
-
 				boolean continu = false;
+				 */
 				List<Key<Assignment>> assignmentKeys = new ArrayList<Key<Assignment>>();
-				QueryResults<Assignment> iterator = query.iterator();
+				QueryResults<Assignment> iterator = oldAssignments.iterator();
 				int nBatches = 0;
 
 				while (iterator.hasNext() && (new Date().getTime()-now.getTime()<20000)) {
 					Assignment a = iterator.next();
-					if (a.domain==null && a.created.before(sixMonthsAgo)) assignmentKeys.add(Key.create(Assignment.class,a.id));
-					else if (ofy().load().filterKey(Key.create(Deployment.class,a.domain)).count()==0) {
-						assignmentKeys.add(Key.create(Assignment.class,a.id));
-						buf.append(a.id + " " + a.assignmentType + " " + a.domain + a.lti_ags_lineitem_url + "<br/>");
-					}
-					continu = true;
-
-					if (testOnly || a.assignmentType==null) continue;
-
-					switch (a.assignmentType) {  // delete all associated transactions
-					case "Quiz":
-						List<Key<QuizTransaction>> qtKeys = ofy().load().type(QuizTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
-						nBatches = qtKeys.size()/500;
-						for (int i=0;i<nBatches;i++) ofy().delete().keys(qtKeys.subList(i*500, (i+1)*500));
-						ofy().delete().keys(qtKeys.subList(nBatches*500, qtKeys.size()));
-						break;
-					case "Homework":
-						List<Key<HWTransaction>> hwtKeys = ofy().load().type(HWTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
-						nBatches = hwtKeys.size()/500;
-						for (int i=0;i<nBatches;i++) ofy().delete().keys(hwtKeys.subList(i*500, (i+1)*500));
-						ofy().delete().keys(hwtKeys.subList(nBatches*500, hwtKeys.size()));
-						break;
-					case "PracticeExam":
-						List<Key<PracticeExamTransaction>> peKeys = ofy().load().type(PracticeExamTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
-						nBatches = peKeys.size()/500;
-						for (int i=0;i<nBatches;i++) ofy().delete().keys(peKeys.subList(i*500, (i+1)*500));
-						ofy().delete().keys(peKeys.subList(nBatches*500, peKeys.size()));
-						break;
-					case "Poll":
-						List<Key<PollTransaction>> ptKeys = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
-						nBatches = ptKeys.size()/500;
-						for (int i=0;i<nBatches;i++) ofy().delete().keys(ptKeys.subList(i*500, (i+1)*500));
-						ofy().delete().keys(ptKeys.subList(nBatches*500, ptKeys.size()));
-						break;
-					case "PlacementExam":
-						List<Key<PlacementExamTransaction>> plKeys = ofy().load().type(PlacementExamTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
-						nBatches = plKeys.size()/500;
-						for (int i=0;i<nBatches;i++) ofy().delete().keys(plKeys.subList(i*500, (i+1)*500));
-						ofy().delete().keys(plKeys.subList(nBatches*500, plKeys.size()));
-						break;
-					case "Video":
-						List<Key<VideoTransaction>> vtKeys = ofy().load().type(VideoTransaction.class).filter("assignmentId",a.id).limit(1000).keys().list();
-						nBatches = vtKeys.size()/500;
-						for (int i=0;i<nBatches;i++) ofy().delete().keys(vtKeys.subList(i*500, (i+1)*500));
-						ofy().delete().keys(vtKeys.subList(nBatches*500, vtKeys.size()));
-						break;
-					default:  // it is possible that assignmentType is empty - no transactions need to be deleted
-					}
+					if (ofy().load().filterKey(Key.create(Deployment.class,a.domain)).count()==0) assignmentKeys.add(Key.create(Assignment.class,a.id));					
+					else if (a.lti_ags_lineitem_url==null && (a.valid==null || a.valid.before(oneYearAgo))) assignmentKeys.add(Key.create(Assignment.class,a.id));
 				}
-
+				
+				/*
 				if (continu) {
 					Cursor cursor = iterator.getCursorAfter();
 					Queue queue = QueueFactory.getDefaultQueue();
 					queue.add(withUrl("/DataStoreCleaner").param("cursor", cursor.toUrlSafe()));
 				}
-
-				if (assignmentKeys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
+				 */
+				
+				if (assignmentKeys.size()>0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
 					nBatches = assignmentKeys.size()/500;
 					for (int i=0;i<nBatches;i++) ofy().delete().keys(assignmentKeys.subList(i*500, (i+1)*500));
 					ofy().delete().keys(assignmentKeys.subList(nBatches*500, assignmentKeys.size()));
 				}
 
-				buf.append(assignmentKeys.size() + " orphan Assignments" + (testOnly?" identified":" deleted") + ".<br>");
+				buf.append(assignmentKeys.size() + " expired Assignments" + (testOnly?" identified":" deleted") + ".<br>");
 				buf.append("Done.<br>");
 
 			} catch (Exception e) {
@@ -420,12 +385,27 @@ public class DataStoreCleaner extends HttpServlet {
 
 	String getLineitemsUrl(String lineitem_url, String platformDeploymentId) {
 		try {
-			URL lineitemUrl = new URL(lineitem_url);
-			Deployment d = Deployment.getInstance(platformDeploymentId);
+			URL lineitemUrl = new URL(lineitem_url);  // just test to see if this  is a valid URL
 			String query = lineitemUrl.getQuery();
-			if ("moodle".equals(d.lms_type)) lineitem_url = lineitem_url.substring(0,lineitem_url.lastIndexOf("/lineitem")); /// strips "/lineitem"
-			lineitem_url = lineitem_url.substring(0,lineitem_url.lastIndexOf("/"));  // strips lineitem identifier
-			return lineitem_url + (query==null?"":"?"+query);
+			
+			Deployment d = Deployment.getInstance(platformDeploymentId);
+			String lineitems_url;
+			
+			switch (d.lms_type) { 
+			case "moodle": 
+				lineitems_url = lineitem_url.substring(0,lineitem_url.lastIndexOf("/lineitem")); /// strips "/lineitem"
+				break;
+			case "blackboard":
+			case "brightspace":
+			case "canvas":
+			case "LMS":
+				lineitems_url = lineitem_url.substring(0,lineitem_url.lastIndexOf("/"));  // strips lineitem identifier
+			break;
+			default:
+				return null;
+			}
+			
+			return lineitems_url + (query==null?"":"?"+query);
 		} catch (Exception e) {
 			return null;
 		}
