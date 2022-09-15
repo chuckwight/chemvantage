@@ -40,12 +40,10 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.taskqueue.Queue;
 import com.google.appengine.api.taskqueue.QueueFactory;
-import com.google.cloud.datastore.QueryResults;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.cmd.Query;
 
 
 @WebServlet("/DataStoreCleaner")
@@ -279,6 +277,7 @@ public class DataStoreCleaner extends HttpServlet {
 		StringBuffer debug = new StringBuffer("Debug: ");
 		buf.append("<h2>Clean Assignments</h2>");
 		Date now = new Date();
+		oneYearAgo = new Date(now.getTime()-31536000000L);
 		
 		if (request.getParameter("AssignmentId") != null) {
 			try {  // LTIv1p3Launch starts this Task with AssignmentId for any assignment not validated in the last month
@@ -340,23 +339,24 @@ public class DataStoreCleaner extends HttpServlet {
 			}
 		} else {  // routine cleaning of Assignments unused more than 1 year and no lti_ags_lineitem_url
 			try {
-				Query<Assignment> oldAssignments = ofy().load().type(Assignment.class).filter("created<",oneYearAgo).limit(200);
+				List<Assignment> oldAssignments = ofy().load().type(Assignment.class).filter("created <",oneYearAgo).limit(500).list();
 				/*
 				String cursorStr = request.getParameter("cursor");
 				if (cursorStr != null)
 					query = query.startAt(Cursor.fromUrlSafe(cursorStr));
 				boolean continu = false;
 				 */
+				
 				List<Key<Assignment>> assignmentKeys = new ArrayList<Key<Assignment>>();
-				QueryResults<Assignment> iterator = oldAssignments.iterator();
-				int nBatches = 0;
-
-				while (iterator.hasNext() && (new Date().getTime()-now.getTime()<20000)) {
-					Assignment a = iterator.next();
-					if (ofy().load().filterKey(Key.create(Deployment.class,a.domain)).count()==0) assignmentKeys.add(Key.create(Assignment.class,a.id));					
-					else if (a.lti_ags_lineitem_url==null && (a.valid==null || a.valid.before(oneYearAgo))) assignmentKeys.add(Key.create(Assignment.class,a.id));
+				StringBuffer exp = new StringBuffer();
+				for (Assignment a : oldAssignments) {
+					if (a.lti_ags_lineitem_url==null) assignmentKeys.add(Key.create(Assignment.class,a.id));
+					else if (ofy().load().key(Key.create(Deployment.class,a.domain)).now()==null) assignmentKeys.add(Key.create(Assignment.class,a.id));
+					if (assignmentKeys.contains(Key.create(a))) exp.append(a.id + " " + a.domain + " " + a.lti_ags_lineitem_url + "</br/>");
 				}
 				
+				buf.append("Found " + oldAssignments.size() + " old assignments, of which " + assignmentKeys.size() + " appear to have expired.<br/>");
+				buf.append(exp + "<br/>");
 				/*
 				if (continu) {
 					Cursor cursor = iterator.getCursorAfter();
@@ -364,7 +364,8 @@ public class DataStoreCleaner extends HttpServlet {
 					queue.add(withUrl("/DataStoreCleaner").param("cursor", cursor.toUrlSafe()));
 				}
 				 */
-				
+				int nBatches = 0;
+
 				if (assignmentKeys.size()>0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
 					nBatches = assignmentKeys.size()/500;
 					for (int i=0;i<nBatches;i++) ofy().delete().keys(assignmentKeys.subList(i*500, (i+1)*500));
