@@ -27,6 +27,7 @@ import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Date;
+import java.util.Map;
 import java.util.Properties;
 
 import javax.mail.Message;
@@ -75,7 +76,7 @@ public class Feedback extends HttpServlet {
 				String email = request.getParameter("Email");
 				UserReport r = new UserReport(userId,questionId,notes);
 				ofy().save().entity(r);
-				if (email !=null && !email.isEmpty()) sendEmailToAdmin(r,user,email);
+				sendEmailToAdmin(r,user,email);
 				break;
 			case "AjaxRating":
 				recordAjaxRating(request);
@@ -296,7 +297,18 @@ public class Feedback extends HttpServlet {
 
 		String msgBody = r.view(user);
 		if (email != null && !email.isEmpty()) msgBody += "Respond to " + email;
+		else {  // try to get the user's email address from the NRPS service
+			try {
+				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+				Map<String,String[]> members = LTIMessage.getMembership(a);
+				String userId = user.getId();
+				String raw_id = userId.substring(userId.lastIndexOf("/")+1);  // userId according to the platform
+				email = members.get(raw_id)[2];
+				if (!email.isEmpty()) msgBody += "Platform provided email: " + email;				
+			} catch (Exception e) {}
+		}
 		
+		if (email==null || email.isEmpty()) return;  // nowhere to send
 		if (msgBody.length()==0) return;  // no reports exist
 		
 		try {
