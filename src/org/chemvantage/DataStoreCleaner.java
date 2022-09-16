@@ -340,12 +340,6 @@ public class DataStoreCleaner extends HttpServlet {
 		} else {  // routine cleaning of Assignments unused more than 1 year and no lti_ags_lineitem_url
 			try {
 				List<Assignment> oldAssignments = ofy().load().type(Assignment.class).filter("created <",oneYearAgo).limit(500).list();
-				/*
-				String cursorStr = request.getParameter("cursor");
-				if (cursorStr != null)
-					query = query.startAt(Cursor.fromUrlSafe(cursorStr));
-				boolean continu = false;
-				 */
 				
 				List<Key<Assignment>> assignmentKeys = new ArrayList<Key<Assignment>>();
 				StringBuffer exp = new StringBuffer();
@@ -357,20 +351,9 @@ public class DataStoreCleaner extends HttpServlet {
 				
 				buf.append("Found " + oldAssignments.size() + " old assignments, of which " + assignmentKeys.size() + " appear to have expired.<br/>");
 				buf.append(exp + "<br/>");
-				/*
-				if (continu) {
-					Cursor cursor = iterator.getCursorAfter();
-					Queue queue = QueueFactory.getDefaultQueue();
-					queue.add(withUrl("/DataStoreCleaner").param("cursor", cursor.toUrlSafe()));
-				}
-				 */
-				int nBatches = 0;
-
-				if (assignmentKeys.size()>0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
-					nBatches = assignmentKeys.size()/500;
-					for (int i=0;i<nBatches;i++) ofy().delete().keys(assignmentKeys.subList(i*500, (i+1)*500));
-					ofy().delete().keys(assignmentKeys.subList(nBatches*500, assignmentKeys.size()));
-				}
+				
+				// delete all the expired keys
+				if (assignmentKeys.size()>0 && !testOnly) ofy().delete().keys(assignmentKeys);  // note: ofy().delete() limited to 500 entities
 
 				buf.append(assignmentKeys.size() + " expired Assignments" + (testOnly?" identified":" deleted") + ".<br>");
 				buf.append("Done.<br>");
