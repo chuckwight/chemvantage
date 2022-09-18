@@ -492,7 +492,6 @@ public class PracticeExam extends HttpServlet {
 	
 	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		boolean premiumUser = true;
 		try {
 			buf.append("<h2>Practice Exam Results</h2>");
 			
@@ -565,7 +564,7 @@ public class PracticeExam extends HttpServlet {
 					if (score == 0) {
 						// include question in list of incorrectly answered questions
 						wrongAnswers++;
-						missedQuestions.append("\n<LI>" + q.printAllToStudents(studentAnswer,premiumUser) + "</LI>\n");
+						missedQuestions.append("\n<LI>" + q.printAllToStudents(studentAnswer,!user.isAnonymous()) + "</LI>\n");				
 					}
 				}
 				if (q!=null && q.pointValue > 2) pt.questionShowWork.put(k, request.getParameter("ShowWork" + k.getId()));

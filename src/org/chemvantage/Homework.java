@@ -71,7 +71,8 @@ public class Homework extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 			
-			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
+			long aId = user.getAssignmentId();		
+			Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 			
 			switch (userRequest) {
 			case "ShowScores":
@@ -108,7 +109,8 @@ public class Homework extends HttpServlet {
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 
-			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
+			long aId = user.getAssignmentId();		
+			Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
