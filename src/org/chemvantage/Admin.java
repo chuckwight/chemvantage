@@ -157,17 +157,13 @@ public class Admin extends HttpServlet {
 			
 			// Recent Activity
 			buf.append("<h3>Recent Activity (past 30 days)</h3>");			
-			Date lastMonth = new Date(new Date().getTime()-2592000000L);			
-			buf.append("Active LTI Advantage deployments: " + ofy().load().type(Deployment.class).filter("lastLogin >",lastMonth).count());
-			if ("showDEPL".equals(userRequest)) {
-				buf.append("<ul>");
-				List<Deployment> recentDEPLs = ofy().load().type(Deployment.class).filter("lastLogin >",lastMonth).list();
-				for (Deployment d : recentDEPLs) {
-					buf.append("<li>" + d.organization + ": Contact: - " + d.contact_name + " (" + d.email + ")</li>");
-				}
-				buf.append("</ul>");
-			} else buf.append(" <a href=/Admin?UserRequest=showDEPL>show details</a><br/>");			
-			buf.append("Total number of Response entities: " + ofy().load().type(Response.class).filter("submitted >",lastMonth).count());
+			if ("ShowGroupEnrollments".equals(userRequest)) buf.append(Group.enrollmentReport());
+			else {
+				Date lastMonth = new Date(new Date().getTime()-2592000000L);			
+				buf.append("Active LTI Advantage deployments: " + ofy().load().type(Deployment.class).filter("lastLogin >",lastMonth).count() 
+					+ " <a href=/Admin?UserRequest=ShowGroupEnrollments>show details</a><br/>");			
+				buf.append("Total number of Response entities: " + ofy().load().type(Response.class).filter("submitted >",lastMonth).count());
+			}
 			
 			// New Accounts
 			List<Deployment> review = ofy().load().type(Deployment.class).filter("status", "pending").list();
