@@ -89,11 +89,11 @@ public class Group {
 		try {
 			Date now = new Date();
 			Date oneMonthAgo = new Date(now.getTime()-2592000000L);  // 30 days ago
-			List<Group> activeGroups = ofy().load().type(Group.class).filter("valid>",oneMonthAgo).list();
+			List<Group> activeGroups = ofy().load().type(Group.class).filter("valid >",oneMonthAgo).list();
 			if (activeGroups.size() > 0) {
 				buf.append("<table><tr><th>Organization</th><th>Course Label</th><th>Course Title</th><th>Learners</th><th>Instructors</th><th>Administrators</th></tr>");
 				for (Group g : activeGroups) {
-					buf.append("<tr><td>" + g.organization + "</td><td>" + g.label + "</td><td>" + g.title + "</td><td>" 
+					buf.append("<tr style='text-align: center;'><td>" + g.organization + "</td><td>" + g.label + "</td><td>" + g.title + "</td><td>" 
 							+ g.nLearners + "</td><td>" + g.nInstructors + "</td><td>" + g.nAdministrators + "</td></tr>");
 				}
 				buf.append("</table><br/>");
