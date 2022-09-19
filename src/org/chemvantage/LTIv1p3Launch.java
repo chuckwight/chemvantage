@@ -165,7 +165,6 @@ public class LTIv1p3Launch extends HttpServlet {
 			Deployment original_d = d.clone();  // make a copy to compare for updating later
 			Date now = new Date();
 			Date yesterday = new Date(now.getTime()-86400000L); // 24 hrs ago
-			Date oneMonthAgo = new Date(now.getTime()-2635200000L); // 30.5 days ago
 			try {
 				d.lastLogin = now;
 				d.claims = claims.toString();
@@ -261,11 +260,7 @@ public class LTIv1p3Launch extends HttpServlet {
 								resourceId = lineitem.get("resourceId").getAsString();
 							} catch (Exception e) {}					
 						}
-						try {
-							myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).safe();
-							// Check the resourceLinkId to see if this launch is from a copied course; if so, set the id to null to make a new Assignment
-							if (!resourceLinkId.equals(myAssignment.resourceLinkId)) myAssignment.id = null;
-						} catch (Exception e) {}
+						myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).now();
 					}
 				} catch (Exception e) {}
 			}
@@ -295,14 +290,14 @@ public class LTIv1p3Launch extends HttpServlet {
 
 				if (lti_nrps_context_memberships_url != null) myAssignment.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
 				
-				if (myAssignment.id!=null && (myAssignment.valid==null || myAssignment.valid.before(oneMonthAgo))) {  // start a Task to update all lineitems for this Context (class)
-					Group.update(d,claims,myAssignment);
-					QueueFactory.getDefaultQueue().add(withUrl("/DataStoreCleaner").param("Task","CleanAssignments").param("AssignmentId",String.valueOf(myAssignment.id)));  // put report into the Task Queue
-				}
 				myAssignment.valid=now;
 				
 				// If required, save the updated Assignment entity now so its id will be accessible
-				if (myAssignment.id==null || !myAssignment.equivalentTo(original_a)) ofy().save().entity(myAssignment).now();
+				if (myAssignment.id==null || !myAssignment.equivalentTo(original_a)) {
+					ofy().save().entity(myAssignment).now();
+					Group.update(d,myAssignment);
+					QueueFactory.getDefaultQueue().add(withUrl("/DataStoreCleaner").param("Task","CleanAssignments").param("AssignmentId",String.valueOf(myAssignment.id)));  // put report into the Task Queue
+				}
 			} catch (Exception e) {
 				throw new Exception("Assignment could not be updated during LTI launch sequence. " + e.getMessage());
 			}

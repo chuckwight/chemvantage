@@ -281,59 +281,61 @@ public class DataStoreCleaner extends HttpServlet {
 		
 		if (request.getParameter("AssignmentId") != null) {
 			try {  // LTIv1p3Launch starts this Task with AssignmentId for any assignment not validated in the last month
+				   // This Task gathers all Assignment entities with the same lti_ags_lineitems_url and compares them with the
+				   // lineitems provided by the LMS. Any matching lineitems are updated ans saved, while extras are deleted from the datastore.
 				debug.append("AssignmentId=" + request.getParameter("AssignmentId") + "...");
 				Assignment member = ofy().load().type(Assignment.class).id(Long.parseLong(request.getParameter("AssignmentId"))).safe();
 				String lti_ags_lineitems_url = member.lti_ags_lineitems_url;
+				debug.append("lti_ags_lineitems_url=" + lti_ags_lineitems_url + "...");
 				
 				// find the deployment because we will need to get the lineitem container
 				String platform_deployment_id = member.domain;
 				Deployment d = Deployment.getInstance(platform_deployment_id);
-
-				if (lti_ags_lineitems_url==null) lti_ags_lineitems_url = getLineitemsUrl(member.lti_ags_lineitem_url,platform_deployment_id);
+				debug.append("platform_deployment_id=" + platform_deployment_id + "...");
+				
+				if (lti_ags_lineitems_url==null) lti_ags_lineitems_url = getLineitemsUrl(member.lti_ags_lineitem_url,d.lms_type);
 				if (lti_ags_lineitems_url==null || platform_deployment_id==null) return "Error: The Assignment must contain lti_ags_lineitems_url and domain.";
 				buf.append("Deployment: " + d.platform_deployment_id + "<br/>");
 				buf.append("Lineitems URL: " + lti_ags_lineitems_url + "<br/>");
 				
-				// initially put all assignments with matching lineitem_urls into the List for deletion
-				List<Assignment> assignments = ofy().load().type(Assignment.class).filter("domain",platform_deployment_id).list();
-				List<Assignment> assignmentsToBeRemoved = new ArrayList<Assignment>();  // assignments from this deployment but for other classes
-				for (Assignment a : assignments) {
-					if (a.lti_ags_lineitem_url!=null && !a.lti_ags_lineitem_url.startsWith(lti_ags_lineitems_url)) assignmentsToBeRemoved.add(a);
+				// initially put all assignments for the deployment (all Groups) into a List
+				List<Assignment> domainAssignments = ofy().load().type(Assignment.class).filter("domain",platform_deployment_id).list();
+				// Create a Map for all the Group assignments (all assignments with a lineitem_url starting with the Group lineitems_url)
+				// It is possible that newly created assignments won't be included because they haven't been launched yet; that's OK
+				// because the routine monthly cleanAssignments finds assignments older than 1 year with no lineitem_url
+				Map<String,Assignment> groupAssignments = new HashMap<String,Assignment>();
+				int indexOfQuery = lti_ags_lineitems_url.indexOf("?");
+				String base_url = indexOfQuery>0?lti_ags_lineitems_url.substring(0,indexOfQuery):lti_ags_lineitems_url;
+				for (Assignment a : domainAssignments) {
+					if (a.lti_ags_lineitem_url!=null && a.lti_ags_lineitem_url.startsWith(base_url)) groupAssignments.put(a.lti_ags_lineitem_url,a);
 				}
-				assignments.removeAll(assignmentsToBeRemoved);
 				
-				buf.append(assignments.size() + " assignments match this description.<br/>");
-				
-				// make a Map of all assignments so they're easy to find by lineitem_url; don't replace any duplicate entries
-				Map<String,Assignment> assignmentMap = new HashMap<String,Assignment>();
-				for (Assignment a : assignments) if (!assignmentMap.containsKey(a.lti_ags_lineitem_url)) assignmentMap.put(a.lti_ags_lineitem_url, a);
-
-				buf.append("Identified " + assignments.size() + " assignments for this class.<br/>");
+				buf.append("Identified " + groupAssignments.size() + " assignments for this group.<br/>");
 
 				// get the lineitem container from the LMS
 				JsonArray lineitem_container = LTIMessage.getLineItemContainer(d, lti_ags_lineitems_url);
 				if (lineitem_container==null) throw new Exception("Could not retrieve lineitem container from " + d.platform_deployment_id);
 				buf.append("Retrieved lineitem container with " + lineitem_container.size() + " lineitems:<br/>");
-				buf.append(lineitem_container.toString() + "<br/>");
-				// iterate over the lineitem container, saving matching assignments and removing them from the deleteList
+				
+               //  iterate over the lineitem container, saving matching assignments and removing them from the groupAssignments Map
 				Iterator<JsonElement> iterator = lineitem_container.iterator();
 				List<Assignment> assignmentsToBeSaved = new ArrayList<Assignment>();
 				while (iterator.hasNext()) {
 					JsonObject lineitem = iterator.next().getAsJsonObject();
 					String lineitem_id = lineitem.get("id").getAsString();
-					Assignment a = assignmentMap.get(lineitem_id);
+					Assignment a = groupAssignments.get(lineitem_id);
 					if (a==null) continue;
 					a.valid = now;
 					a.lti_ags_lineitems_url = lti_ags_lineitems_url;
 					assignmentsToBeSaved.add(a);
-					assignments.remove(a);
+					groupAssignments.remove(lineitem_id);
 				}
-				// final actions if no Exceptions have been thrown
+				// Save the updated assignments and remove any leftover assignments (presumably deleted from the LMS)
 				if (!assignmentsToBeSaved.isEmpty() && !testOnly) ofy().save().entities(assignmentsToBeSaved);
-				if (!assignments.isEmpty() & !testOnly) ofy().delete().entities(assignments);
+				if (!groupAssignments.isEmpty() && !testOnly) ofy().delete().entities(groupAssignments);
 
 				buf.append(assignmentsToBeSaved.size() + " assignments were " + (testOnly?"identified for updating.":"updated.") + "<br/>");
-				buf.append(assignments.size() + " assignments were " + (testOnly?"identified for deletion.":"deleted.") + "<br/>");
+				buf.append(groupAssignments.size() + " assignments were " + (testOnly?"identified for deletion.":"deleted.") + "<br/>");
 			} catch (Exception e) {
 				buf.append("Error: " + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString());
 			}
@@ -367,28 +369,19 @@ public class DataStoreCleaner extends HttpServlet {
 
 	}
 
-	String getLineitemsUrl(String lineitem_url, String platformDeploymentId) {
+	String getLineitemsUrl(String lineitem_url, String lms_type) {
 		try {
 			URL lineitemUrl = new URL(lineitem_url);  // just test to see if this  is a valid URL
-			String query = lineitemUrl.getQuery();
-			
-			Deployment d = Deployment.getInstance(platformDeploymentId);
+			String query = lineitemUrl.getQuery();			
 			String lineitems_url;
 			
-			switch (d.lms_type) { 
-			case "moodle": 
-				lineitems_url = lineitem_url.substring(0,lineitem_url.lastIndexOf("/lineitem")); /// strips "/lineitem"
-				break;
-			case "blackboard":
-			case "brightspace":
+			switch (lms_type) { 
 			case "canvas":
-			case "LMS":
-				lineitems_url = lineitem_url.substring(0,lineitem_url.lastIndexOf("/"));  // strips lineitem identifier
-			break;
+				lineitems_url = lineitem_url.substring(0,lineitem_url.lastIndexOf("/line_items")+11); // strips everything after "/line_items"
+				break;
 			default:
-				return null;
-			}
-			
+				lineitems_url = lineitem_url.substring(0,lineitem_url.lastIndexOf("/lineitems")+10); // strips everything after "/lineitems"
+			}			
 			return lineitems_url + (query==null?"":"?"+query);
 		} catch (Exception e) {
 			return null;
