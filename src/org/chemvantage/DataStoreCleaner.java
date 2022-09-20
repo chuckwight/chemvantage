@@ -330,9 +330,12 @@ public class DataStoreCleaner extends HttpServlet {
 					assignmentsToBeSaved.add(a);
 					groupAssignments.remove(lineitem_id);
 				}
-				// Save the updated assignments and remove any leftover assignments (presumably deleted from the LMS)
+				// Save the updated assignments and delete any leftover assignments (presumably deleted from the LMS)
 				if (!assignmentsToBeSaved.isEmpty() && !testOnly) ofy().save().entities(assignmentsToBeSaved);
-				if (!groupAssignments.isEmpty() && !testOnly) ofy().delete().entities(groupAssignments);
+				
+				// temporarily change valid to new Date(0) instead of deleting (safety first!)
+				for (Map.Entry<String, Assignment> e : groupAssignments.entrySet()) e.getValue().valid = new Date(0);
+				//if (!groupAssignments.isEmpty() && !testOnly) ofy().delete().entities(groupAssignments);
 
 				buf.append(assignmentsToBeSaved.size() + " assignments were " + (testOnly?"identified for updating.":"updated.") + "<br/>");
 				buf.append(groupAssignments.size() + " assignments were " + (testOnly?"identified for deletion.":"deleted.") + "<br/>");

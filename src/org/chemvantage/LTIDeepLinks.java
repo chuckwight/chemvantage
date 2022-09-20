@@ -542,11 +542,13 @@ public class LTIDeepLinks extends HttpServlet {
 				for (int i=0;i<a.topicIds.size();i++) {
 					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",a.topicIds.get(i)).keys().list());
 				}
+				a.valid = now;
 				assignments.add(a);
 				break;
 			case "Poll":
 				a = new Assignment(assignmentType,0L,null,d.platform_deployment_id);
 				a.pollClosed = true;
+				a.valid = now;
 				assignments.add(a);
 				break;
 			case "PlacementExam":
@@ -555,6 +557,7 @@ public class LTIDeepLinks extends HttpServlet {
 				for (int i=0;i<a.topicIds.size();i++) {
 					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",a.topicIds.get(i)).keys().list());
 				}
+				a.valid = now;
 				assignments.add(a);
 				break;
 			default:  // Quiz, Homework or VideoQuiz
@@ -570,6 +573,7 @@ public class LTIDeepLinks extends HttpServlet {
 						a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
 						break;
 					}
+					a.valid = now;
 					assignments.add(a);
 				}
 			}

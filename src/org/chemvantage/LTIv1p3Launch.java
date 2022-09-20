@@ -103,6 +103,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				boolean refresh = Boolean.parseBoolean(request.getParameter("Refresh"));
 
 				if (!refresh && myAssignment.isValid()) {
+					myAssignment.valid = new Date();
 					ofy().save().entity(myAssignment).now();  // we will need this in a few milliseconds					
 					response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
 				} else {  // send the user back to the resourcePickerForm
