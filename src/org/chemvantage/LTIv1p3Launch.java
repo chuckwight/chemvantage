@@ -79,7 +79,6 @@ import com.googlecode.objectify.Key;
 public class LTIv1p3Launch extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
-	Map<String,Assignment> assignments = new HashMap<String,Assignment>();  // local cache of recently launched assignments
 	Map<String,User> users = new HashMap<String,User>();                    // local cache of recently launched users
 	
 	@Override
@@ -247,9 +246,8 @@ public class LTIv1p3Launch extends HttpServlet {
 			if (lti_ags_lineitem_url != null) {  // this is the default, most common way of retrieving the Assignment; uses local Map for fast retrieval
 				debug.append("Retrieving assignment by lineitem. ");
 				try {
-					myAssignment = assignments.get(lti_ags_lineitem_url);
-					if (myAssignment == null) myAssignment = ofy().load().type(Assignment.class).filter("lti_ags_lineitem_url",lti_ags_lineitem_url).first().now();
-					if (myAssignment == null) {
+					 myAssignment = ofy().load().type(Assignment.class).filter("lti_ags_lineitem_url",lti_ags_lineitem_url).first().now();
+					 if (myAssignment == null) {
 						// get the resourceId if available from the URL or lineitem, and use it to retrieve the assignment
 						switch (d.lms_type) {
 						case "canvas": 
@@ -277,8 +275,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				debug.append("Creating new assignment. ");
 				myAssignment = new Assignment(d.platform_deployment_id,resourceLinkId,lti_nrps_context_memberships_url);
 			}
-			else if (lti_ags_lineitem_url != null) assignments.put(lti_ags_lineitem_url,myAssignment);  // cache the assignment for next launch
-
+			
 			// At this point we should have a valid (but possibly incomplete) Assignment entity
 			
 			// Update the Assignment parameters:
