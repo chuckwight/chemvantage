@@ -43,20 +43,6 @@ import com.googlecode.objectify.Key;
 
 @WebServlet("/PracticeExam")
 public class PracticeExam extends HttpServlet {
-	// parameters that determine the properties of the exam program:
-	// Warning! do not use any user-specific variables here. Not thread-safe!
-
-	int nSubjectAreas = 1;               // default number of subject areas for exam overridden by values read from AssignmentInfo database
-	int nQuestionsPerSubjectArea = 10;   // number of questions presented in each area also overridden in method printExam()
-	int waitForNewDownload = 0;          // minutes; set to zero for unlimited rate of exam downloads
-	boolean enforceDeadlines = true;     // true means that exam score is not recorded after the deadline
-	boolean allowMultipleTries = true;   // false allows only one attempt at each exam; true is recommended
-	boolean scrambleQuestions = true;    // false presents the same questions each attempt; true is recommended
-	boolean allowWorkAhead = false;      // true makes every exam available; false makes available after the deadline for the previous exam expires
-	boolean showMissedQuestions = true;  // true reveals questions that were answered incorrectly as part of the grading process
-	boolean useSectionDeadlines = false; // true uses default deadlines for all sections of the course
-	int numberOfSections = 1;            // 
-	boolean trackAnswers= false;         // true keeps track of missed questions for students
 	private static final long serialVersionUID = 137L;
 	Map<Key<Question>,Question> examQuestions = new HashMap<Key<Question>,Question>();
 
