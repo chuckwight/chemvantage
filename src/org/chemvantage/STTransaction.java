@@ -33,20 +33,20 @@ public class STTransaction implements Serializable {
 	@Index	Date created;
 	@Index	Date graded;
 	@Index	Long assignmentId;
-			List<Long> topicIds;
+			List<Long> conceptIds;
 			int[] scores;
 			int[] missedQuestions;
 			
 	STTransaction() {}
 
-	STTransaction(String userId,long assignmentId,List<Long> topicIds) {
+	STTransaction(String userId,long assignmentId,List<Long> conceptIds) {
 		this.userId = Subject.hashId(userId);
 		this.created = new Date();
 		this.graded = null;
 		this.assignmentId = assignmentId;
-		this.topicIds = topicIds;
-		scores = new int[topicIds.size()];
-		missedQuestions = new int[topicIds.size()];
+		this.conceptIds = conceptIds;
+		scores = new int[conceptIds.size()];
+		missedQuestions = new int[conceptIds.size()];
 	}
 
 }
