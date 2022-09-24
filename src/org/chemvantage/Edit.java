@@ -84,6 +84,9 @@ public class Edit extends HttpServlet {
 			if (userRequest == null) userRequest = "";
 
 			switch (userRequest) {
+			case "ManageConcepts":
+				out.println(conceptsForm(request));
+				break;
 			case "ManageTopics": 
 				out.println(topicsForm(request)); 
 				break;
@@ -153,6 +156,18 @@ public class Edit extends HttpServlet {
 			case "DeleteTopic": 
 				deleteTopic(user,request);
 				out.println(topicsForm(request));
+				break;
+			case "CreateConcept":
+				createConcept(user,request);
+				out.println(conceptsForm(request));
+				break;
+			case "UpdateConcept": 
+				updateConcept(user,request); 
+				out.println(conceptsForm(request));
+				break;
+			case "DeleteConcept": 
+				deleteConcept(user,request);
+				out.println(conceptsForm(request));
 				break;
 			case "Create Video":
 				createVideo(user,request);
@@ -230,6 +245,7 @@ public class Edit extends HttpServlet {
 
 		} catch (Exception e) {
 		}
+		out.println(Subject.footer);
 	}
 
 	String editorsPage(User user,HttpServletRequest request) {
@@ -239,6 +255,7 @@ public class Edit extends HttpServlet {
 			buf.append("<a href=Edit?UserRequest=Review>"
 					+ nPending + " items are currently pending editorial review.</a><br>");
 			buf.append("<a href=Edit?UserRequest=ManageTopics>Manage Topics</a><br>");
+			buf.append("<a href=Edit?UserRequest=ManageConcepts>Manage Concepts</a><br>");
 			buf.append("<a href=Edit?UserRequest=ManageVideos>Manage Videos</a><br>");
 			buf.append("<a href=Edit?UserRequest=ManageTexts>Manage Texts</a><p>");
 			
@@ -456,6 +473,40 @@ public class Edit extends HttpServlet {
 		return buf.toString();
 	}
 	
+	String conceptsForm(HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer();
+		try {
+			// print the table of key concepts for Genereal Chemistry, roughly ordered by topic/chapter/semester, etc.:
+			buf.append("<b>Key Concepts in General Chemistry</b>\n");
+			buf.append("<TABLE BORDER=0 CELLSPACING=3>"
+					+ "<TR><TH>Order</TH><TH>Title</TH><TH>Action</TH></TR>");
+			List<Concept> concepts = ofy().load().type(Concept.class).order("orderBy").list();
+			for (Concept c : concepts) { // one row for each concept
+				buf.append("<FORM NAME=ConceptsForm" + c.id + " METHOD=POST ACTION=/Edit>"
+						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateConcept />"
+						+ "<INPUT TYPE=HIDDEN NAME=ConceptId VALUE='" + c.id + "' />");
+				buf.append("<TR>"
+						+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4 VALUE='" + c.orderBy + "' /></TD>"
+						+ "<TD ALIGN=CENTER><INPUT NAME=Title VALUE='" + Question.quot2html(c.title) + "' /></TD>"
+						+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE=Update />"
+						+ "<INPUT TYPE=SUBMIT VALUE='Delete' onClick=\"javascript: document.ConceptsForm" + c.id + ".UserRequest.value='DeleteConcept';\" />"
+						+ "</TD>"
+						+ "</FORM></TR>");
+			}
+			
+//			print one-row form to add a new Concept:
+			buf.append("<FORM METHOD=POST ACTION=/Edit><INPUT TYPE=HIDDEN NAME=UserRequest VALUE=CreateConcept>");
+			buf.append("<TR>"
+					+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4></TD>"
+					+ "<TD ALIGN=CENTER><INPUT NAME=Title></TD>"
+					+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE='Create'></TD></TR></FORM>");
+			buf.append("</TABLE>");
+		} catch (Exception e) {
+			buf.append(e.getMessage());
+		}
+		return buf.toString();
+	}
+	
 	void createTopic(User user,HttpServletRequest request) {
 		String title = request.getParameter("Title");
 		if (title==null) title = "";
@@ -472,6 +523,16 @@ public class Edit extends HttpServlet {
 		ofy().save().entity(t).now();
 	}
 
+	void createConcept(User user,HttpServletRequest request) {
+		String title = request.getParameter("Title");
+		if (title==null) title = "";
+		String orderBy = request.getParameter("OrderBy");
+		if (orderBy==null) orderBy = "";
+		Concept c = new Concept(title,orderBy);		
+		
+		ofy().save().entity(c).now();
+	}
+	
 	void updateTopic(User user,HttpServletRequest request) {
 		long topicId = 0;
 		try {
@@ -491,6 +552,20 @@ public class Edit extends HttpServlet {
 		} catch (Exception e) {}
 	}
 
+	void updateConcept(User user,HttpServletRequest request) {
+		long conceptId = 0;
+		try {
+			conceptId = Long.parseLong(request.getParameter("ConceptId"));
+			Concept c = ofy().load().type(Concept.class).id(conceptId).safe();
+			c.title = request.getParameter("Title");
+			if (c.title == null) c.title = "";
+			c.orderBy = request.getParameter("OrderBy");
+			if (c.orderBy == null) c.orderBy = "";
+			
+			ofy().save().entity(c).now();
+		} catch (Exception e) {}
+	}
+	
 	void deleteTopic(User user,HttpServletRequest request) {	
 		try {
 			Topic t = ofy().load().type(Topic.class).id(Long.parseLong(request.getParameter("TopicId"))).safe();
@@ -498,6 +573,13 @@ public class Edit extends HttpServlet {
 		} catch (Exception e) {}
 	}
 
+	void deleteConcept(User user,HttpServletRequest request) {
+		try {
+			Concept c = ofy().load().type(Concept.class).id(Long.parseLong(request.getParameter("ConceptId"))).safe();
+			ofy().delete().entity(c).now();
+		} catch (Exception e) {}
+	}
+	
 	String videosForm() {
 		StringBuffer buf = new StringBuffer("<h3>Manage Videos</h3>");
 		try {
