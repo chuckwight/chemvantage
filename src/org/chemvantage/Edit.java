@@ -52,6 +52,7 @@ public class Edit extends HttpServlet {
 	Map<String,Map<Key<Question>,Question>> questions = new HashMap<String,Map<Key<Question>,Question>>();
 	Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
 	Map<Key<Question>,Integer> pointValue = new HashMap<Key<Question>,Integer>();
+	List<Concept> concepts = new ArrayList<Concept>();
 	
 	public String getServletInfo() {
 		return "This servlet is used by editors and admins to create, review, edit and delete question items.";
@@ -428,8 +429,8 @@ public class Edit extends HttpServlet {
 			// print the table of topics for this subject:
 			buf.append("<b>" + Subject.getTitle() + "</b>\n");
 			buf.append("<TABLE BORDER=0 CELLSPACING=3>"
-					+ "<TR><TH COLSPAN=3>&nbsp;</TH><TH COLSPAN=2>View/Add/Edit Questions</TH></TR>"
-					+ "<TR><TH>Order</TH><TH>Title</TH><TH>Action</TH><TH>Quiz</TH><TH>HW</TH><TH>Exam</TH><TH>Video</TH><TH>OpenStax</TH></TR>\n");
+					+ "<TR><TH COLSPAN=3>&nbsp;</TH><TH COLSPAN=2>View/Add/Edit Questions</TH><TH></TH></TR>"
+					+ "<TR><TH>Order</TH><TH>Title</TH><TH>Action</TH><TH>Quiz</TH><TH>HW</TH><TH>Exam</TH><TH>Video</TH><TH>OpenStax</TH><TH>Concepts</TH></TR>\n");
 			Query<Topic> topics = ofy().load().type(Topic.class).order("orderBy");
 				for (Topic t : topics) { // one row for each topic
 					int nQuiz = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",t.id).count();
@@ -452,6 +453,8 @@ public class Edit extends HttpServlet {
 					buf.append("<TD ALIGN=CENTER><a href=Edit?AssignmentType=Exam&TopicId=" + t.id + "><b>" + nVideo + "</b></a></TD>");
 					// The next column is a checkbox to indicate if the topic is aligned with OpenStax textbook
 					buf.append("<TD ALIGN=CENTER><INPUT TYPE=CHECKBOX NAME=TopicGroup VALUE=1" + (t.topicGroup%2/1==1?" CHECKED":"") + "></TD>");
+					// Add a drop-down to select Concepts for this Topic
+					buf.append("<TD>" + conceptsDropDownBox(t) + "</TD>");
 					buf.append("</FORM></TR>");
 				}
 			//}
@@ -473,10 +476,21 @@ public class Edit extends HttpServlet {
 		return buf.toString();
 	}
 	
+	String conceptsDropDownBox(Topic t) {
+		StringBuffer buf = new StringBuffer();
+		if (concepts.isEmpty() || concepts.size() != ofy().load().type(Concept.class).count()) {
+			concepts = ofy().load().type(Concept.class).order("orderBy").list();
+		}
+		buf.append("<SELECT NAME=ConceptId SIZE=4 MULTIPLE>");
+		for (Concept c : concepts) buf.append("<OPTION VALUE=" + c.id + (t.conceptIds.contains(c.id)?" SELECTED>":">") + c.title + "</OPTION>");
+		buf.append("</SELECT>");
+		return buf.toString();
+	}
+	
 	String conceptsForm(HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {
-			// print the table of key concepts for Genereal Chemistry, roughly ordered by topic/chapter/semester, etc.:
+			// print the table of key concepts for General Chemistry, roughly ordered by topic/chapter/semester, etc.:
 			buf.append("<b>Key Concepts in General Chemistry</b>\n");
 			buf.append("<TABLE BORDER=0 CELLSPACING=3>"
 					+ "<TR><TH>Order</TH><TH>Title</TH><TH>Action</TH></TR>");
@@ -547,6 +561,9 @@ public class Edit extends HttpServlet {
 			if (alignments != null) {
 				for (String text : alignments) t.topicGroup += Integer.parseInt(text);
 			}
+			String[] conceptIds = request.getParameterValues("ConceptId");
+			t.conceptIds.clear();
+			for (String cId : conceptIds) t.conceptIds.add(Long.parseLong(cId));
 			
 			ofy().save().entity(t).now();
 		} catch (Exception e) {}

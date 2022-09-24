@@ -27,6 +27,8 @@ package org.chemvantage;
  * 3 = both
  */
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
@@ -38,6 +40,7 @@ public class Topic implements Serializable {
 	@Id 	Long id;
 	@Index 	String orderBy;
 	@Index	int topicGroup;
+			List<Long> conceptIds = new ArrayList<Long>();
 	 		String title;
 	
 	Topic() {}
