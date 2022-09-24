@@ -45,6 +45,8 @@ public class STTransaction implements Serializable {
 		this.graded = null;
 		this.assignmentId = assignmentId;
 		this.topicIds = topicIds;
+		scores = new int[topicIds.size()];
+		missedQuestions = new int[topicIds.size()];
 	}
 
 }

@@ -18,6 +18,8 @@
 package org.chemvantage;
 
 import java.io.Serializable;
+import java.util.List;
+import java.util.Map;
 
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
@@ -30,6 +32,7 @@ public class Text implements Serializable {
     String author;
     String publisher;
     String URL;
+    Map<String,List<Long>> chapters;
 
     Text() {}
     
