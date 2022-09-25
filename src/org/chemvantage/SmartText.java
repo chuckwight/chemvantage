@@ -1,11 +1,14 @@
 package org.chemvantage;
 
+import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -16,6 +19,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
 
 @WebServlet("SmartText")
@@ -192,10 +196,12 @@ public class SmartText extends HttpServlet {
 		   
 //		   get the index of st.conceptIds that corresponds to the conceptId for this question:
 		   int index = st.conceptIds.indexOf(conceptId);
-		   if (q.isCorrect(studentAnswer)) {
+		   boolean isCorrect = q.isCorrect(studentAnswer);
+		   if (isCorrect) {
 			   st.scores[index]++;
 			   st.answeredKeys.add(Key.create(Question.class,q.id));
 			   buf.append("<b>Congratulations! Your answer was correct.</b><br/>");
+			   QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));
 		   } else {
 			   st.missedQuestions[index]++;
 			   buf.append("<b>Sorry, your answer was incorrect.</b>"
@@ -203,6 +209,10 @@ public class SmartText extends HttpServlet {
 			   buf.append("<div id=correctAnswer style='display:none'><b>Here is the correct answer:</b><br/><br/>" 
 					   + q.printAllToStudents(studentAnswer) + "</div><br/>");
 		   }
+		   
+		   Assignment a = ofy().load().type(Assignment.class).id(assignmentId).now();
+		   Response r = new Response("SmartText",a.topicId,q.id,studentAnswer,q.getCorrectAnswer(),isCorrect?1:0,1,user.getId(),new Date());
+		   ofy().save().entity(r);
 		   
 		   int score = 0;
 		   int possibleScore = 0;

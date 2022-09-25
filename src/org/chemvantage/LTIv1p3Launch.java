@@ -571,13 +571,15 @@ public class LTIv1p3Launch extends HttpServlet {
 			buf.append("<input type=hidden name=Refresh value=false />");
 
 			String assignmentType = myAssignment.assignmentType; // convenience variable; may be null for new Assignment
-
+			if ("SmartText".equals(assignmentType)) topicKey = 1;
+			
 			// Build a table for Parts 1 and 2 (side by side in 1 row)
 			buf.append("<div style='display:table'><div style='display:table-row'><div style='display:table-cell'>");
 			buf.append("Select the type of assignment to create...<br />");
+			boolean smartTextEnabled = ofy().load().type(Text.class).filter("smartText",true).count()>0;
 			buf.append("<label><input type=radio name=AssignmentType " + ("Quiz".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='Quiz' />Quiz</label><br />"
 					+ "<label><input type=radio name=AssignmentType " + ("Homework".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='Homework' />Homework</label><br />"
-					+ "<label><input type=radio name=AssignmentType " + ("SmartText".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='SmartText' />SmartText Chapter</label><br />"
+					+ (smartTextEnabled?"<label><input type=radio name=AssignmentType " + ("SmartText".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='SmartText' />SmartText Chapter</label><br />":"")
 					+ "<label><input type=radio name=AssignmentType " + ("VideoQuiz".equals(assignmentType)?"checked ":" ") + "onClick=showVideos(); value='VideoQuiz' '>Video</label><br />"
 					+ "<label><input type=radio name=AssignmentType " + ("Poll".equals(assignmentType)?"checked ":" ") + "onClick=showPolls(); value='Poll' />In-class&nbsp;Poll</label><br />"
 					+ "<label><input type=radio name=AssignmentType " + ("PracticeExam".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='PracticeExam' />Practice&nbsp;Exam</label><br/>"

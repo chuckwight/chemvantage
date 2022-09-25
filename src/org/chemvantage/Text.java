@@ -23,16 +23,18 @@ import java.util.Map;
 
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Index;
 
 @Entity
 public class Text implements Serializable {
 	private static final long serialVersionUID = 137L;
-    @Id Long id;
-    String title;
-    String author;
-    String publisher;
-    String URL;
-    Map<String,List<Long>> chapters;
+    @Id	Long id;
+    	String title;
+    	String author;
+    	String publisher;
+    	String URL;
+    @Index boolean smartText;
+    	Map<String,List<Long>> chapters;
 
     Text() {}
     

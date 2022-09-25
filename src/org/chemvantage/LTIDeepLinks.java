@@ -251,10 +251,12 @@ public class LTIDeepLinks extends HttpServlet {
 		// Build a table for Parts 1 and 2 (side by side in 1 row)
 		String assignmentType = request.getParameter("AssignmentType");
 		if (assignmentType==null) assignmentType = "";
+		if ("SmartText".equals(assignmentType)) topicKey=1;
 		buf.append("<div style='display:table'><div style='display:table-row'><div style='display:table-cell'>");
 		buf.append("Select the type of assignment to create...<br />");
+		boolean smartTextEnabled = ofy().load().type(Text.class).filter("smartText",true).count()>0;
 		buf.append("<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('PlacementExam'); value='PlacementExam'" + (assignmentType.equals("PlacementExam")?" CHECKED />":" />") + "Placement&nbsp;Exam</label><br/>"
-				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('SmartText'); value='SmartText'" + (assignmentType.equals("SmartText")?" CHECKED />":" />") + "SmartText Chapter</label><br />"
+				+ (smartTextEnabled?"<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('SmartText'); value='SmartText'" + (assignmentType.equals("SmartText")?" CHECKED />":" />") + "SmartText Chapter</label><br />":"")
 				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('Quiz'); value='Quiz'" + (assignmentType.equals("Quiz")?" CHECKED />":" />") + "Quiz</label><br />"
 				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('Homework'); value='Homework'" + (assignmentType.equals("Homework")?" CHECKED />":" />") + "Homework</label><br />"
 				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('VideoQuiz'); value='VideoQuiz'" + (assignmentType.equals("VideoQuiz")?" CHECKED />":" />") + "Video</label><br />"
@@ -272,7 +274,7 @@ public class LTIDeepLinks extends HttpServlet {
 		buf.append("<div id=topicKeySelect style='display:table-cell;visibility:" + (assignmentType.equals("")?"hidden":"visible") + "'>");
 		buf.append("and a group of topics to choose from:<br />");
 		buf.append("<label><input type=radio name=TopicKey value=0 " + (topicKey==0?"checked ":"") + "onClick=\"document.getElementById('refresh').value=true;this.form.submit();\" />Show all topics</label><br />"
-				+ "<label><input type=radio name=TopicKey value=1 "+ (topicKey==1?"checked ":"") + "onClick=\"document.getElementById('refresh').value=true;this.form.submit();\" />Show topics for the OpenStax Chemistry 2e</label><br />");
+				+ "<label><input type=radio name=TopicKey value=1 "+ (topicKey==1?"checked ":"") + "onClick=\"document.getElementById('refresh').value=true;this.form.submit();\" />Show topics for OpenStax Chemistry 2e</label><br />");
 		buf.append("</div></div></div>");
 		// End of top table
 
