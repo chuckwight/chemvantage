@@ -476,6 +476,12 @@ public class LTIv1p3Launch extends HttpServlet {
 			a.assignmentType = request.getParameter("AssignmentType");
 
 			switch (a.assignmentType) {
+			case "SmartText":
+				topicId = request.getParameter("TopicId");
+				if (topicId != null) a.topicId = Long.parseLong(topicId);
+				Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
+				for (long conceptId : topic.conceptIds) a.questionKeys.addAll(ofy().load().type(Question.class).filter("conceptId",conceptId).keys().list());
+			break;
 			case "Quiz":
 				topicId = request.getParameter("TopicId");
 				if (topicId != null) {
@@ -571,6 +577,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			buf.append("Select the type of assignment to create...<br />");
 			buf.append("<label><input type=radio name=AssignmentType " + ("Quiz".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='Quiz' />Quiz</label><br />"
 					+ "<label><input type=radio name=AssignmentType " + ("Homework".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='Homework' />Homework</label><br />"
+					+ "<label><input type=radio name=AssignmentType " + ("SmartText".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='SmartText' />SmartText Chapter</label><br />"
 					+ "<label><input type=radio name=AssignmentType " + ("VideoQuiz".equals(assignmentType)?"checked ":" ") + "onClick=showVideos(); value='VideoQuiz' '>Video</label><br />"
 					+ "<label><input type=radio name=AssignmentType " + ("Poll".equals(assignmentType)?"checked ":" ") + "onClick=showPolls(); value='Poll' />In-class&nbsp;Poll</label><br />"
 					+ "<label><input type=radio name=AssignmentType " + ("PracticeExam".equals(assignmentType)?"checked ":" ") + "onClick=showTopics(); value='PracticeExam' />Practice&nbsp;Exam</label><br/>"
@@ -689,7 +696,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			}
 
 			String selectorType = "";
-			if ("Quiz".equals(assignmentType) || "Homework".equals(assignmentType)) selectorType = "radio";
+			if ("Quiz".equals(assignmentType) || "Homework".equals(assignmentType) || "SmartText".equals(assignmentType)) selectorType = "radio";
 			else if ("VideoQuiz".equals(assignmentType)) selectorType = "video";
 			else if ("PracticeExam".equals(assignmentType)) selectorType = "check";
 

@@ -235,7 +235,7 @@ public class LTIDeepLinks extends HttpServlet {
 		// The form has 4 sections:
 		// 1. A group of radio buttons to specify the AssignmentType (always visible)
 		// 2. A group of radio buttons (or drop-down selector) to specify the TopicKey (visible when AssignmentType is selected)
-		// 3. A group of radio buttons to select a single topic for Quiz or Homework assignment (visible when AssignmentType is Quiz or Homework)
+		// 3. A group of radio buttons to select a single topic for Quiz/Homework/SmartText assignment (visible when AssignmentType is Quiz or Homework; or SmartText)
 		// 4. A group of checkboxes to select 3 or more topics for a Practice Exam (visible when AssignmentType is PracticeExam)
 		// Clicking any AssignmentType button or loading the page with a valid AssignmentType makes the TopicKey set (2) visible
 		// and makes the relevant table of radio buttons (3) or checkboxes (4) visible (and clears and hides the opposite one).
@@ -245,7 +245,7 @@ public class LTIDeepLinks extends HttpServlet {
 		buf.append("<input type=hidden name=id_token value='" + request.getParameter("id_token") + "' />");
 		buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
 		buf.append("<input type=hidden name=UserRequest value='Select assignment' />");
-		buf.append("<input type=hidden name=Refresh value=false /");
+		buf.append("<input type=hidden name=Refresh id=refresh value=false />");
 		buf.append("<input type=hidden name=Subject value='" + claims.get("sub") + "' />");
 		
 		// Build a table for Parts 1 and 2 (side by side in 1 row)
@@ -254,6 +254,7 @@ public class LTIDeepLinks extends HttpServlet {
 		buf.append("<div style='display:table'><div style='display:table-row'><div style='display:table-cell'>");
 		buf.append("Select the type of assignment to create...<br />");
 		buf.append("<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('PlacementExam'); value='PlacementExam'" + (assignmentType.equals("PlacementExam")?" CHECKED />":" />") + "Placement&nbsp;Exam</label><br/>"
+				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('SmartText'); value='SmartText'" + (assignmentType.equals("SmartText")?" CHECKED />":" />") + "SmartText Chapter</label><br />"
 				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('Quiz'); value='Quiz'" + (assignmentType.equals("Quiz")?" CHECKED />":" />") + "Quiz</label><br />"
 				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('Homework'); value='Homework'" + (assignmentType.equals("Homework")?" CHECKED />":" />") + "Homework</label><br />"
 				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('VideoQuiz'); value='VideoQuiz'" + (assignmentType.equals("VideoQuiz")?" CHECKED />":" />") + "Video</label><br />"
@@ -270,8 +271,8 @@ public class LTIDeepLinks extends HttpServlet {
 		// Put Part 2 in a cell on the right side of the first row
 		buf.append("<div id=topicKeySelect style='display:table-cell;visibility:" + (assignmentType.equals("")?"hidden":"visible") + "'>");
 		buf.append("and a group of topics to choose from:<br />");
-		buf.append("<label><input type=radio name=TopicKey value=0 " + (topicKey==0?"checked ":"") + "onClick='this.form.Refresh.value=true;this.form.submit();' />Show all topics</label><br />"
-				+ "<label><input type=radio name=TopicKey value=1 "+ (topicKey==1?"checked ":"") + "onClick='this.form.Refresh.value=true;this.form.submit();' />Show topics for the OpenStax Chemistry 2e</label><br />");
+		buf.append("<label><input type=radio name=TopicKey value=0 " + (topicKey==0?"checked ":"") + "onClick=\"document.getElementById('refresh').value=true;this.form.submit();\" />Show all topics</label><br />"
+				+ "<label><input type=radio name=TopicKey value=1 "+ (topicKey==1?"checked ":"") + "onClick=\"document.getElementById('refresh').value=true;this.form.submit();\" />Show topics for the OpenStax Chemistry 2e</label><br />");
 		buf.append("</div></div></div>");
 		// End of top table
 
@@ -415,8 +416,8 @@ public class LTIDeepLinks extends HttpServlet {
 		buf.append("<input type=submit id=vidsub disabled=true value='Select" + (selectorType.equals("checkbox")?" at least":"") + " one video topic' />"); // submit button for videos
 		buf.append("</div>"); // end of big box for VideoQuiz selection
 
-		// Create a selector table for Quiz or Homework assignments
-		buf.append("<div id=quizSelect style='display:" + (assignmentType.equals("Quiz")||assignmentType.equals("Homework")?"block":"none") + "'>");  // big box containing radio buttons
+		// Create a selector table for Quiz or Homework or SmartText assignments
+		buf.append("<div id=quizSelect style='display:" + (assignmentType.equals("Quiz")||assignmentType.equals("Homework")||assignmentType.equals("SmartText")?"block":"none") + "'>");  // big box containing radio buttons
 		buf.append("<font color=red>Please select " + (acceptsMultiple?"at least":"") + " one topic:</font><br />");
 		buf.append("<div style='display:table'>"); // start table of radio buttons
 		buf.append("<div style='display:table-row'><div style='display:table-cell'>");   // left column Chem1 topics		
@@ -523,7 +524,7 @@ public class LTIDeepLinks extends HttpServlet {
 					}
 				}
 			break;
-			default:  // Quiz or Homework Assignment
+			default:  // Quiz or Homework or SmartText Assignment
 				topicIdArray = request.getParameterValues("TopicId");
 				for (int i=0;i<topicIdArray.length;i++) topicIds.add(Long.parseLong(topicIdArray[i]));			
 			}
@@ -560,7 +561,7 @@ public class LTIDeepLinks extends HttpServlet {
 				a.valid = now;
 				assignments.add(a);
 				break;
-			default:  // Quiz, Homework or VideoQuiz
+			default:  // Quiz, Homework, SmartText or VideoQuiz
 				for (Long tid : topicIds) {
 					a = new Assignment(assignmentType,0L,null,d.platform_deployment_id);
 					switch (assignmentType) {
@@ -572,6 +573,10 @@ public class LTIDeepLinks extends HttpServlet {
 						a.topicId = tid;
 						a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
 						break;
+					case "SmartText":
+						a.topicId = tid;
+						Topic t = ofy().load().type(Topic.class).id(tid).safe();
+						for (long conceptId : t.conceptIds) a.questionKeys.addAll(ofy().load().type(Question.class).filter("conceptId",conceptId).keys().list());
 					}
 					a.valid = now;
 					assignments.add(a);
@@ -637,7 +642,7 @@ public class LTIDeepLinks extends HttpServlet {
 						title = "General Chemistry Placement Exam";
 						maxScore = 100;
 						break;
-					default:  // Quiz or Homework
+					default:  // Quiz or Homework or SmartText
 						title = a1.assignmentType + " - " + ofy().load().type(Topic.class).id(a1.topicId).now().title;
 						maxScore = 10;
 				}
@@ -686,7 +691,7 @@ public class LTIDeepLinks extends HttpServlet {
 			
 			// Create a form to be auto-submitted to the platform by the user_agent browser
 			buf.append("Submitting your selection back to your LMS...");
-			buf.append("<div>"  // style='visibility: hidden'>"
+			buf.append("<div> style='visibility: hidden'>"
 					+ "<form id=selections method=POST action='" + deep_link_return_url + "'>"
 					+ "<input type=hidden name=JWT value='" + jwt + "' />"
 					+ "Assignment selection OK. <input type=submit />"

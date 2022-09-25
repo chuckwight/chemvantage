@@ -18,9 +18,12 @@
 package org.chemvantage;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
+import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
@@ -35,17 +38,21 @@ public class STTransaction implements Serializable {
 	@Index	Long assignmentId;
 			List<Long> conceptIds;
 			int[] scores;
+			int[] possibleScores;
 			int[] missedQuestions;
+			List<Key<Question>> answeredKeys = new ArrayList<Key<Question>>();
 			
 	STTransaction() {}
 
 	STTransaction(String userId,long assignmentId,List<Long> conceptIds) {
-		this.userId = Subject.hashId(userId);
+		this.userId = userId;
 		this.created = new Date();
 		this.graded = null;
 		this.assignmentId = assignmentId;
 		this.conceptIds = conceptIds;
 		scores = new int[conceptIds.size()];
+		possibleScores = new int[conceptIds.size()];
+		Arrays.fill(possibleScores, 2);
 		missedQuestions = new int[conceptIds.size()];
 	}
 

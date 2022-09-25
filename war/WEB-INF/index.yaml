@@ -145,6 +145,11 @@ indexes:
   - name: userId
   - name: questionId
 
+- kind: STTransaction
+  properties:
+  - name: userId
+  - name: assignmentId
+  
 - kind: VideoTransaction
   properties:
   - name: userId

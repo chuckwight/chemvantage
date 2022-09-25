@@ -38,7 +38,6 @@ public class Assignment implements java.lang.Cloneable {
 	@Index	long topicId;
 	@Index	String resourceLinkId;
 	@Index 	Date created;
-	String	title;
 	public	long videoId;    // used only for video assignments
 	public	Integer timeAllowed; // to complete assignment, in seconds default = 900 for Quiz, 3600 for PracticeExam
 	public 	Integer attemptsAllowed;
@@ -113,6 +112,7 @@ public class Assignment implements java.lang.Cloneable {
 		switch (this.assignmentType) {
 		case "Quiz": return this.topicId>0L;
 		case "Homework": return this.topicId>0L;
+		case "SmartText": return this.topicId>0;
 		case "PracticeExam": return topicIds.size()>2;
 		case "VideoQuiz": return this.videoId>0;
 		case "Poll": return true;

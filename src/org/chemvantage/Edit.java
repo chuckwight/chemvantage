@@ -337,7 +337,7 @@ public class Edit extends HttpServlet {
 					buf.append("<TD>" + q.printAll() + "</TD>");
 					buf.append("</TR></FORM>");
 				}
-				buf.append("</TABLE>");	
+				buf.append("</TABLE><br/>");	
 			} else {  // show the number of questions in each topic and assignment type
 				buf.append("<h4>Numbers of Questions By Topic and Assignment Type</h4>");
 				
@@ -484,6 +484,19 @@ public class Edit extends HttpServlet {
 		buf.append("<SELECT NAME=ConceptId SIZE=4 MULTIPLE>");
 		for (Concept c : concepts) buf.append("<OPTION VALUE=" + c.id + (t.conceptIds.contains(c.id)?" SELECTED>":">") + c.title + "</OPTION>");
 		buf.append("</SELECT>");
+		return buf.toString();
+	}
+	
+	String conceptSelectBox(Topic t, long conceptId) {
+		StringBuffer buf = new StringBuffer();
+		if (concepts.isEmpty() || concepts.size() != ofy().load().type(Concept.class).count()) {
+			concepts = ofy().load().type(Concept.class).order("orderBy").list();
+		}
+		buf.append("<SELECT NAME=ConceptId><OPTION VALUE=0>Select a key concept</OPTION>");
+		for (Concept c : concepts) if (t.conceptIds.contains(c.id)) 
+			buf.append("<OPTION VALUE=" + c.id + (c.id==conceptId?" SELECTED>":">") + c.title + "</OPTION>");
+		buf.append("</SELECT>");
+		
 		return buf.toString();
 	}
 	
@@ -899,6 +912,11 @@ public class Edit extends HttpServlet {
 				topicId = Long.parseLong(request.getParameter("TopicId"));
 			} catch (Exception e2) {}
 			
+			long conceptId = 0;
+			try {
+				conceptId = Long.parseLong(request.getParameter("ConceptId"));
+			} catch (Exception e) {}
+			
 			Question q = assembleQuestion(request);
 			if (q.requiresParser()) q.setParameters();
 			
@@ -914,8 +932,10 @@ public class Edit extends HttpServlet {
 				q.pointValue = 1;
 				buf.append(" (1 point)<br>");
 			}
-			
-			buf.append("Topic: " + ofy().load().type(Topic.class).id(topicId).safe().title + "<br>");
+			Topic t = ofy().load().type(Topic.class).id(topicId).safe();
+			Concept c = conceptId==0?null:ofy().load().type(Concept.class).id(conceptId).now();
+			buf.append("Topic: " + t.title + "<br>");
+			buf.append("Concept: " + (c==null?"n/a":c.title) + "<br/>");
 			
 			if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) buf.append("Learn more at: " + q.learn_more_url + "</br>");
 			
@@ -945,7 +965,7 @@ public class Edit extends HttpServlet {
 			buf.append("<hr><h3>Continue Editing</h3>");
 			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
 			buf.append("Topic:" + topicSelectBox(q.topicId) + "<br>");
-			
+			buf.append("Concept:" + conceptSelectBox(t,conceptId));
 			buf.append("Learn More URL: <input type=text size=40 name=LearnMoreURL value='" + (q.learn_more_url == null?"":q.learn_more_url) + "' placeholder='(optional)' /><br/>");
 			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
 			
@@ -979,10 +999,12 @@ public class Edit extends HttpServlet {
 		try {
 			long questionId = q.id;
 			Topic t = ofy().load().type(Topic.class).id(q.topicId).safe();
+			Concept c = q.conceptId==0?null:ofy().load().type(Concept.class).id(q.conceptId).now();
 			if (q.requiresParser()) q.setParameters();
 			buf.append("<h3>Current Question</h3>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
 			buf.append("Topic: " + t.title + "<br>");
+			buf.append("Concept: " + (c==null?"n/a":c.title) + "<br/>");
 			if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) buf.append("Learn more at: " + q.learn_more_url + "</br>");
 			buf.append("Author: " + q.authorId + "<br>");
 			buf.append("Editor: " + q.editorId + "<br>");
@@ -1010,6 +1032,7 @@ public class Edit extends HttpServlet {
 			
 			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
 			buf.append("Topic:" + topicSelectBox(t.id) + "<br>");
+			buf.append("Concept:" + conceptSelectBox(t,q.conceptId) + "<br/>");
 			buf.append("Learn More URL: <input type=text size=40 name=LearnMoreURL value='" + (q.learn_more_url == null?"":q.learn_more_url) + "' placeholder='(optional)' /><br/>");
 			
 			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
@@ -1099,6 +1122,10 @@ public class Edit extends HttpServlet {
 		try {
 			topicId = Long.parseLong(request.getParameter("TopicId"));
 		} catch (Exception e) {}
+		long conceptId = 0;
+		try {
+			conceptId = Long.parseLong(request.getParameter("ConceptId"));
+		} catch (Exception e) {}
 		String learn_more_url = request.getParameter("LearnMoreURL");
 		int type = q.getQuestionType();
 		try {
@@ -1144,6 +1171,7 @@ public class Edit extends HttpServlet {
 		
 		q.assignmentType = assignmentType;
 		q.topicId = topicId;
+		q.conceptId = conceptId;
 		q.learn_more_url = learn_more_url;
 		q.setQuestionType(type);
 		q.text = questionText;
