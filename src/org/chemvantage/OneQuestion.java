@@ -83,7 +83,7 @@ public class OneQuestion extends HttpServlet {
 					}
 					catch (Exception e2) {
 						buf.append("<h3>Your answer has the wrong format. Please try again.</h3>This question requires a numeric response expressed as an integer, decimal number, "
-								+ "or number in scientific notation. Your answer was scored incorrect because the program was unable to recognize "
+								+ "or number in scientific E notation (example: 6.022E-23). Your answer was scored incorrect because the program was unable to recognize "
 								+ "your answer as one of these types.<br/><br/>");
 					}
 					break;

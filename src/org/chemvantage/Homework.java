@@ -477,8 +477,8 @@ public class Homework extends HttpServlet {
 						}
 						catch (Exception e2) {
 							buf.append("<h3>Wrong Format</h3>This question requires a numeric response expressed as an integer, decimal number, "
-									+ "or number in scientific notation. Your answer was scored incorrect because the program was unable to recognize "
-									+ "your answer as one of these types.<br/>");
+									+ "or in scientific E notation (example: 6.022E-23). Your answer was scored incorrect because the computer "
+									+ "was unable to recognize your answer as one of these types.<br/>");
 						}
 						break;
 					default:  // All other types of questions
