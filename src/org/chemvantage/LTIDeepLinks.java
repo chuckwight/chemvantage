@@ -245,7 +245,7 @@ public class LTIDeepLinks extends HttpServlet {
 		buf.append("<input type=hidden name=id_token value='" + request.getParameter("id_token") + "' />");
 		buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
 		buf.append("<input type=hidden name=UserRequest value='Select assignment' />");
-		buf.append("<input type=hidden name=Refresh value=false /");
+		buf.append("<input type=hidden name=Refresh value=false />");
 		buf.append("<input type=hidden name=Subject value='" + claims.get("sub") + "' />");
 		
 		// Build a table for Parts 1 and 2 (side by side in 1 row)
