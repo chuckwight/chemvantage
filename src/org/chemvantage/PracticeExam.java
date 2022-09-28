@@ -541,6 +541,8 @@ public class PracticeExam extends HttpServlet {
 					}
 					q.setParameters((int)(pt.id - q.id));
 					int score = studentAnswer.length()==0?0:q.isCorrect(studentAnswer)?q.pointValue:0;
+					if (q.getQuestionType()==5 && score==0 && q.agreesToRequiredPrecision(studentAnswer)) score = q.pointValue-1;
+					
 					if (score > 0) studentScores[topicIds.indexOf(q.topicId)] += score;
 					if (studentAnswer.length() > 0) {
 						Response r = new Response("PracticeExam",q.topicId,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,Subject.hashId(user.getId()),now);
