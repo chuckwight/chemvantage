@@ -58,7 +58,7 @@ public class Quiz extends HttpServlet {
 		
 		try {
 			User user = User.getUser(request.getParameter("sig"));
-			if (user==null) throw new Exception();
+			if (user==null) throw new Exception("Invalid user token (may have expired).");
 			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
@@ -82,7 +82,7 @@ public class Quiz extends HttpServlet {
 				out.println(Subject.header("ChemVantage Quiz") + printQuiz(user,a,request) + Subject.footer);
 			}
 		} catch (Exception e) {
-			out.println(Logout.now(request,e));
+			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
 		}
 	}
 
@@ -93,7 +93,7 @@ public class Quiz extends HttpServlet {
 		
 		try {
 			User user = User.getUser(request.getParameter("sig"));
-			if (user==null) throw new Exception();
+			if (user==null) throw new Exception("Invalid user token (may have expired).");
 			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
@@ -136,7 +136,7 @@ public class Quiz extends HttpServlet {
 				out.println(Subject.header("ChemVantage Quiz Results") + printScore(user,a,request) + Subject.footer);
 			}
 		} catch (Exception e) {
-			out.println(Logout.now(request,e));
+			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
 		}
 	}
 	

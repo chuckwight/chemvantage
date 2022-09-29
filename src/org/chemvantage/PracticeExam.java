@@ -56,7 +56,7 @@ public class PracticeExam extends HttpServlet {
 
 		try {
 			User user = User.getUser(request.getParameter("sig"));
-			if (user==null) throw new Exception();
+			if (user==null) throw new Exception("Invalid user token (may have expired).");
 			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
@@ -84,7 +84,7 @@ public class PracticeExam extends HttpServlet {
 					out.println(Subject.header("ChemVantage Practice Exam") + printExam(user,a,request) + Subject.footer);
 			}
 		} catch (Exception e) {
-			out.println(Logout.now(request,e));
+			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
 		}
 	}
 
@@ -95,8 +95,8 @@ public class PracticeExam extends HttpServlet {
 
 		try {
 			User user = User.getUser(request.getParameter("sig"));
-			if (user==null) throw new Exception();
-
+			if (user==null) throw new Exception("Invalid user token (may have expired).");
+			
 			long aId = user.getAssignmentId();		
 			Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 
@@ -128,7 +128,7 @@ public class PracticeExam extends HttpServlet {
 				default: out.println(Subject.header("ChemVantage Practice Exam Results") + printScore(user,a,request) + Subject.footer);
 			}
 		} catch (Exception e) {
-			out.println(Logout.now(request,e));
+			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
 		}
 	}
 
