@@ -54,7 +54,7 @@ public class Logout extends HttpServlet {
 		return buf.toString();
 	}
 	
-	static String message = Subject.header("ChemVantage Logout Successful") 
+	static String message = Subject.header() 
 			+ Subject.banner
 			+ "<h3>You have successfully signed out of ChemVantage</h3>" 
 			+ "If this happened unexpectedly, it is likely that your browser's web "
