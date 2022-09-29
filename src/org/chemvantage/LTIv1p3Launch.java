@@ -313,7 +313,28 @@ public class LTIv1p3Launch extends HttpServlet {
 				if ("PlacementExam".equals(myAssignment.assignmentType)) url += "&n=1";
 				response.sendRedirect(url);
 			}
-			else response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
+			else {  // launch the assignment
+				response.setContentType("text/html");
+				PrintWriter out = response.getWriter();
+				switch(myAssignment.assignmentType) {
+				case "Quiz":
+					out.println(Subject.header("ChemVantage Quiz")
+							+ (user.isInstructor()?Quiz.instructorPage(user, myAssignment):Quiz.printQuiz(user,myAssignment))
+							+ Subject.footer);
+					break;
+				case "Homework":
+					out.println(Subject.header("ChemVantage Homework")
+							+ (user.isInstructor()?Homework.instructorPage(user, myAssignment):Homework.printHomework(user,myAssignment))
+							+ Subject.footer);
+					break;
+				case "PlacementExam":
+					out.println(Subject.header("ChemVantage Placement Exam")
+							+ (user.isInstructor()?PlacementExam.instructorPage(user, myAssignment):PlacementExam.printExam(user,myAssignment,request))
+							+ Subject.footer);
+					break;
+				default: response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
+				}
+			}
 		} catch (Exception e) {
 			ofy().save().entity(d);
 			throw new Exception("Resource Link Request Launch Failed: " + e.getMessage() + " " + debug.toString());

@@ -45,13 +45,13 @@ import com.googlecode.objectify.Key;
 public class PlacementExam extends HttpServlet {
 	
 	private static final long serialVersionUID = 137L;
-	Map<Key<Question>,Question> examQuestions = new HashMap<Key<Question>,Question>();
+	private static Map<Key<Question>,Question> examQuestions = new HashMap<Key<Question>,Question>();
 
 	public String getServletInfo() {
 		return "This servlet presents and scores a General Chemistry placement exam for the user.";
 	}
 	
-	private void initializeExam() {
+	static private void initializeExam() {
 		List<Topic> topics = ofy().load().type(Topic.class).list();
 		List<Key<Question>> keys = new ArrayList<Key<Question>>();
 		for (Topic t : topics) {
@@ -67,15 +67,17 @@ public class PlacementExam extends HttpServlet {
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+
 		try {
 			User user = User.getUser(request.getParameter("sig"));
 			if (user==null) throw new Exception();
 			
-			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
-
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
+			
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 			
 			if (examQuestions.isEmpty()) initializeExam();
 			
@@ -85,7 +87,7 @@ public class PlacementExam extends HttpServlet {
 					out.println(Subject.header("Select ChemVantage Placement Exam Topics") + selectExamQuestionsForm(user) + Subject.footer);
 					break;
 				case "ReviewExamScores":
-					out.println(Subject.header("Review ChemVantage Placement Exam Scores") + reviewExamScores(user) + Subject.footer);
+					out.println(Subject.header("Review ChemVantage Placement Exam Scores") + reviewExamScores(user,a) + Subject.footer);
 					break;
 				case "Download CSV File":
 					response.setContentType("text/csv");
@@ -96,47 +98,43 @@ public class PlacementExam extends HttpServlet {
 					String studentUserId = request.getParameter("UserId");
 					out.println(Subject.header("Review ChemVantage Placement Exam") + reviewExam(user,placementExamTransactionId,studentUserId) + Subject.footer);
 					break;
-				case "PrintExam":
-					out.println(Subject.header("ChemVantage Placement Exam") + printExam(user,request) + Subject.footer);
-					break;
 				case "SubmissionReview":
 					User forUser = new User(user.platformId,request.getParameter("ForUserId"));
 					out.println(Subject.header("ChemVantage Placement Exam") + submissionReview(user,forUser) + Subject.footer);
 					break;
 				default: 
-					if (user.isInstructor()) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,request) + Subject.footer);
-					else out.println(Subject.header("ChemVantage Placement Exam") + printExam(user,request) + Subject.footer);
+					out.println(Subject.header("ChemVantage Placement Exam") + printExam(user,a,request) + Subject.footer);
 			}
 		} catch (Exception e) {
-			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
+			out.println(Logout.now(request,e));
 		}
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+
 		try {
 			User user = User.getUser(request.getParameter("sig"));
 			if (user==null) throw new Exception();
 			
-			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
-
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+			
 			if (examQuestions.isEmpty()) initializeExam();
 			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 			
-			Assignment a = null;
 			switch(userRequest) {
 				case "UpdateAssignment":
 					if (user.isInstructor()) {
-						a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 						a.updateQuestions(request);
+						out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 					}
-					response.sendRedirect("/PlacementExam?sig=" + user.getTokenSignature());
 					break;
 				case "Submit Revised Exam Score":
-					if (submitRevisedExamScore(user,request)) out.println(Subject.header("Review ChemVantage Placement Exam Scores") + reviewExamScores(user) + Subject.footer);
+					if (submitRevisedExamScore(user,request)) out.println(Subject.header("Review ChemVantage Placement Exam Scores") + reviewExamScores(user,a) + Subject.footer);
 					else out.println("Sorry, an unexpected error occurred. Please go BACK and try again.");
 					break;
 				case "Set Allowed Time":
@@ -150,24 +148,24 @@ public class PlacementExam extends HttpServlet {
 							a.timeAllowed = 3600;
 						}
 						ofy().save().entity(a).now();
+						out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 					}
-					response.sendRedirect("/PlacementExam?sig=" + user.getTokenSignature());
 					break;
 				case "Set Allowed Attempts":
 					if (user.isInstructor()) {
 						a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 						try {
 							a.attemptsAllowed = Integer.parseInt(request.getParameter("AttemptsAllowed"));
-							if (a.attemptsAllowed<1) a.attemptsAllowed = 1;
+							if (a.attemptsAllowed<1) a.attemptsAllowed = null;
 						} catch (Exception e) {
 							a.attemptsAllowed = null;
 						}
 						ofy().save().entity(a).now();
+						out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 					}
-					response.sendRedirect("/PlacementExam?sig=" + user.getTokenSignature());
 					break;
 				case "PrintExam":
-					out.println(Subject.header("ChemVantage Placement Exam") + printExam(user,request) + Subject.footer);
+					out.println(Subject.header("ChemVantage Placement Exam") + printExam(user,a,request) + Subject.footer);
 					break;
 				case "AddQuestion":
 				case "UpdateQuestion":
@@ -189,7 +187,7 @@ public class PlacementExam extends HttpServlet {
 							Long tid = Long.parseLong(request.getParameter("tid"));
 							ofy().delete().key(Key.create(PlacementExamTransaction.class,tid)).now();
 						} catch (Exception e) {}
-						response.sendRedirect("/PlacementExam?UserRequest=ReviewExamScores&sig=" + user.getTokenSignature());
+						out.println(Subject.header("ChemVantage Instructor Page") + reviewExamScores(user,a) + Subject.footer);
 					}
 					break;
 				case "Set Password":
@@ -198,20 +196,19 @@ public class PlacementExam extends HttpServlet {
 						a.password = request.getParameter("ExamPassword");
 						if (a.password != null) a.password = a.password.trim();
 						ofy().save().entity(a).now();
+						out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 					}
-					response.sendRedirect("/PlacementExam?sig=" + user.getTokenSignature());
 					break;
 				default: out.println(Subject.header("ChemVantage Placement Exam Results") + printScore(user,request) + Subject.footer);
 			}
 		} catch (Exception e) {
-			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
+			out.println(Logout.now(request,e));
 		}
 	}
 
-	String instructorPage(User user,HttpServletRequest request) {
+	static String instructorPage(User user,Assignment a) {
 		StringBuffer buf = new StringBuffer();		
 		try {
-			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 			Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
 				
@@ -223,14 +220,17 @@ public class PlacementExam extends HttpServlet {
 					+ "<li>skills and knowledge of essential concepts in chemistry</li>"
 					+ "<li>skills and knowledge of essential concepts in mathematics</li>"
 					+ "<li>ability to interpret and solve word problems</li>"
-					+ "</ul>"
-					+ "The overall score is returned to the LMS grade book. ");
-			if (supportsMembership) buf.append("You can use the link below to review the scores on each section as well as the student responses to each question.");
+					+ "</ul>");
+			
+			buf.append("Students have " + (a.timeAllowed==null?"60":a.timeAllowed/60) + " minutes to complete the exam.<br/><br/>");
+			
+			if (supportsMembership) buf.append("You can use the link below to review the scores on each section as well as the student responses to each question.<br/><br/>");
 			
 			if (a.attemptsAllowed==null)
-			buf.append("<br/><br/>We recommend that students be allowed at least 2 attempts to complete the exam. Most of the question items are "
+				buf.append("We recommend that students be allowed multiple attempts to complete the exam. Most of the question items are "
 					+ "parameterized, so it is extremely unlikely that any two placement exams will be the same.<br/><br/>");
-			
+			else buf.append("Students may attempt this placement exam only " + a.attemptsAllowed + (a.attemptsAllowed==1?" time.":" times.") + "<br/><br/>"); 
+				
 			if (d.price > 0) {		
 				buf.append("There are two ways to pay for placement exams:<ol>"
 						+ "<li>You can <a href='/checkout2.jsp?sig=" + user.getTokenSignature() + "' target=_blank >purchase ChemVantage student licenses</a> "
@@ -245,7 +245,7 @@ public class PlacementExam extends HttpServlet {
 			
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/PlacementExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + "'>Customize this exam</a> "
-							+ "to set the time allowed, attempts allowed, optional password and select the available question items.</LI>"
+							+ "to set the time allowed, attempts allowed, an optional password and select the available question items.</LI>"
 					+ (supportsMembership?"<LI><a href='/PlacementExam?UserRequest=ReviewExamScores&sig=" + user.getTokenSignature() + "'>Review the exam results</a> and (optionally) assign partial credit for answers</LI>":"")
 					+ "</UL>");
 			
@@ -253,16 +253,16 @@ public class PlacementExam extends HttpServlet {
 				buf.append("<h4>The password for this exam is: " + a.password + "</h4>");
 			}
 			
-			buf.append("<a style='text-decoration: none' href='/PlacementExam?UserRequest=PrintExam&sig=" + user.getTokenSignature() + "'>"
+			buf.append("<a style='text-decoration: none' href='/PlacementExam?sig=" + user.getTokenSignature() + "'>"
 					+ "<button style='display: block; width: 500px; border: 1 px; background-color: #00FFFF; color: black; padding: 14px 28px; font-size: 18px; text-align: center; cursor: pointer;'>"
 					+ "Show This Assignment (recommended)</button></a>");
 		} catch (Exception e) {
-			buf.append("<br/>Instructor page error: " + e.getMessage());
+			buf.append("<br/>Instructor page error: " + (e.getMessage()==null?e.toString():e.getMessage()));
 		}
 		return buf.toString();
 	}
 	
-	String passwordPrompt(User user,String msg) {
+	static String passwordPrompt(User user,String msg) {
 		StringBuffer buf = new StringBuffer();
 		buf.append(Subject.banner);
 		buf.append("<h3>Enter the password for this assignment</h3>");
@@ -287,30 +287,10 @@ public class PlacementExam extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String printExam(User user, HttpServletRequest request) {
+	static String printExam(User user,Assignment a,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Debug:");
 		try {
-			// Get requested topic ids for this exam
-			long assignmentId = user.getAssignmentId();
-			Assignment a = null;
-			if (assignmentId>0) a = ofy().load().type(Assignment.class).id(assignmentId).safe();
-			else {  // create a dummy Assignment entity for anonymous user
-				a = new Assignment();
-				a.topicIds = new ArrayList<Long>();
-				List<Topic> topics = ofy().load().type(Topic.class).list();
-				for (Topic t : topics) {
-					switch (t.title) {
-					case "Essential Chemistry":
-					case "Essential Math":
-					case "Word Problems":
-						a.topicIds.add(t.id);
-						a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",t.id).keys().list());
-					debug.append("t");
-					}
-				}
-			}
-			
 			// Check to see if a password is required to start the exam
 			if (a.password == null || a.password.isEmpty() || a.password.equals(request.getParameter("ExamPassword")));  // continue
 			else {
@@ -364,7 +344,7 @@ public class PlacementExam extends HttpServlet {
 				Long transactionId = pt==null?null:pt.id;  // use the same id if it exists
 				pt = new PlacementExamTransaction(a.topicIds,user.getId(),now,null,new int[a.topicIds.size()],new int[a.topicIds.size()]);
 				pt.id = transactionId;
-				pt.assignmentId = assignmentId;
+				pt.assignmentId = a.id;
 				ofy().save().entity(pt).now();	
 			}
 			debug.append("2");
@@ -474,7 +454,7 @@ public class PlacementExam extends HttpServlet {
 		return buf.toString();
 	}
 
-	String timerScripts(long endMillis) {
+	static String timerScripts(long endMillis) {
 		return "<SCRIPT language='JavaScript'>"
 				+ "function toggleTimers() {"
 				+ "  var timer0 = document.getElementById('timer0');"
@@ -864,14 +844,11 @@ public class PlacementExam extends HttpServlet {
 		return buf.toString();
 	}
 
-	String reviewExamScores(User user) {
+	String reviewExamScores(User user,Assignment a) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			if (!user.isInstructor()) return "<h2>Access Denied</h2>You must be an instructor to view this page.";
 
-			long assignmentId = user.getAssignmentId();
-
-			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).now();
 			if (a == null) return "Sorry, we did not find an assignment associated with this placement exam.";
 			
 			if (a.lti_nrps_context_memberships_url == null || a.lti_nrps_context_memberships_url.isEmpty()) {
@@ -881,14 +858,14 @@ public class PlacementExam extends HttpServlet {
 			List<Topic> topics = new ArrayList<Topic>(ofy().load().type(Topic.class).ids(a.topicIds).values());
 
 			buf.append("<h2>Placement Exam Assignment Results</h2>"
-					+ "Assignment ID: " + assignmentId + "<br>"
+					+ "Assignment ID: " + a.id + "<br>"
 					+ "Created: " + a.created + "<br>"
 					+ "Topics covered:<ol>");
 			for (Topic t : topics) buf.append("<li>" + t.title + "</li>");
 			buf.append("</ol>");
 
 			// Get all of the PlacementExamTransactions associated with this assignment:
-			List<PlacementExamTransaction> pets = ofy().load().type(PlacementExamTransaction.class).filter("assignmentId",assignmentId).list();			
+			List<PlacementExamTransaction> pets = ofy().load().type(PlacementExamTransaction.class).filter("assignmentId",a.id).list();			
 			if (pets.size()==0) {
 				buf.append("There are no transactions for this placement exam yet.<p>");
 				return buf.toString();

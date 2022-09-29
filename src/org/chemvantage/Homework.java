@@ -48,11 +48,9 @@ public class Homework extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	
-	private Map<Long,Topic> hwTopics = new HashMap<Long,Topic>();
-	private Map<Key<Question>,Question> hwQuestions = new HashMap<Key<Question>,Question>();
 	private Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
 	
-	int retryDelayMinutes = 2;  // minimum time between answer submissions for any single question
+	static int retryDelayMinutes = 2;  // minimum time between answer submissions for any single question
 
 	public String getServletInfo() {
 		return "This servlet presents a homework assignment for the user.";
@@ -61,12 +59,12 @@ public class Homework extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+		
 		try {
 			User user = User.getUser(request.getParameter("sig"));
 			if (user==null) throw new Exception();
-			
-			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
 			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
@@ -87,27 +85,23 @@ public class Homework extends HttpServlet {
 				if (user.isInstructor()) out.println(Subject.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user,a) + Subject.footer);
 				else out.println(Subject.header("Customize ChemVantage Homework Assignment") + "<h2>Forbidden</h2>You must be signed in as the instructor to perform this functuon." + Subject.footer);
 				break;
-			case "PrintHomework":
-				out.println(Subject.header("ChemVantage Homework") + printHomework(user,a,request) + Subject.footer);
-				break;
 			default:
-				if (user.isInstructor()) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a,request) + Subject.footer);
-				else out.println(Subject.header("ChemVantage Homework") + printHomework(user,a,request) + Subject.footer);
+				out.println(Subject.header("ChemVantage Homework") + printHomework(user,a,request) + Subject.footer);
 			}
 		} catch (Exception e) {
-			response.sendRedirect("/Logout?sig=" + request.getParameter("sig") + "&e=" + e.toString());
+			out.println(Logout.now(request,e));
 		}
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+
 		try {
 			User user = User.getUser(request.getParameter("sig"));
 			if (user==null) throw new Exception();
-
-			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
 
 			long aId = user.getAssignmentId();		
 			Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
@@ -118,74 +112,31 @@ public class Homework extends HttpServlet {
 			switch (userRequest) {
 			case "UpdateAssignment":
 				a.updateQuestions(request);
-				response.sendRedirect("/Homework?sig=" + user.getTokenSignature());
-				break;
-			case "AddQuestion":
-			case "UpdateQuestion":
-				if (user.isEditor()) {
-					Key<Question> key = Key.create(Question.class,Long.parseLong(request.getParameter("QuestionId")));
-					Question q = ofy().load().key(key).safe();
-					hwQuestions.put(key,q);
-				}
-				break;
-			case "DeleteQuestion":
-				if (user.isEditor()) {
-					Key<Question> key = Key.create(Question.class,Long.parseLong(request.getParameter("QuestionId")));
-					hwQuestions.remove(key);
-				}
+				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 				break;
 			case "Set Allowed Attempts":
 				a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 				try {
 					a.attemptsAllowed = Integer.parseInt(request.getParameter("AttemptsAllowed"));
-					if (a.attemptsAllowed<1) a.attemptsAllowed = 1;
+					if (a.attemptsAllowed<1) a.attemptsAllowed = null;
 				} catch (Exception e) {
 					a.attemptsAllowed = null;
 				}
 				ofy().save().entity(a).now();
-				response.sendRedirect("/Homework?sig=" + user.getTokenSignature());
+				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 				break;
 			case "Synchronize Scores":
-				if (synchronizeScores(user,a,request)) doGet(request,response);
+				if (synchronizeScores(user,a,request)) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 				else out.println("Synchronization request failed.");
 				break;
-			default: out.println(Subject.header("ChemVantage Homework Grading Results") + printScore(user,a,request) + Subject.footer);
+			default: out.println(Subject.header("ChemVantage Homework Results") + printScore(user,a,request) + Subject.footer);
 			}
 		} catch (Exception e) {
-			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
+			out.println(Logout.now(request,e));
 		}
 	}
 
-	Topic getTopic(long topicId) {
-		Topic t = hwTopics.get(topicId);
-		if (t==null)  {
-			t = ofy().load().type(Topic.class).id(topicId).now();
-			hwTopics.put(topicId, t);
-			cacheQuestions(topicId);
-		}
-		return t;
-	}
-	
-	Question getQuestion(Key<Question> k) {
-		Question q = hwQuestions.get(k);
-		if (q == null) {
-			q = ofy().load().key(k).now();
-			if (q != null) hwQuestions.put(k,q);
-		}
-		return q;  // returns null only if the question has been deleted
-	}
-	
-	void cacheQuestions(long topicId) {
-		List<Key<Question>> keys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topicId).keys().list();
-		List<Key<Question>> newKeys = new ArrayList<Key<Question>>();
-		for (Key<Question> k : keys) {
-			if (!this.hwQuestions.containsKey(k)) newKeys.add(k);
-		}
-		if (newKeys.size()>0) hwQuestions.putAll(ofy().load().keys(newKeys));
-		return;
-	}
-	
-	String instructorPage(User user,Assignment a,HttpServletRequest request) {
+	static String instructorPage(User user,Assignment a) {
 		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
 		
 		StringBuffer buf = new StringBuffer();		
@@ -196,17 +147,24 @@ public class Homework extends HttpServlet {
 			buf.append("<h2>Homework - " + t.title + "</h2>");
 			buf.append("<h3>Instructor Page</h3>");
 			
+			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("This assignment allows an unlimited number of submissions for each homework question.<br/><br/>");
+			else buf.append("This assignment allows only " + a.attemptsAllowed + (a.attemptsAllowed==1?" submission":" submissions") + " for each homework question.<br/><br/>");
+			
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + "'>Customize this assignment</a> by selecting the assigned question items and selecting the number of submissions allowed for each question.</LI>"
 					+ (supportsMembership?"<LI><a href='/Homework?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' homework scores</a></LI>":"")
 					+ "</UL>");
-			buf.append("<a style='text-decoration: none' href='/Homework?UserRequest=PrintHomework&sig=" + user.getTokenSignature() + "'>"
+			buf.append("<a style='text-decoration: none' href='/Homework?sig=" + user.getTokenSignature() + "'>"
 					+ "<button style='display: block; width: 500px; border: 1 px; background-color: #00FFFF; color: black; padding: 14px 28px; font-size: 18px; text-align: center; cursor: pointer'>"
 					+ "Show This Assignment (recommended)</button></a><br/>");
 		} catch (Exception e) {
 			buf.append("<br/>Instructor page error: " + e.getMessage());
 		}
 		return buf.toString();
+	}
+	
+	static String printHomework(User user, Assignment a) {
+		return printHomework(user,a,0L,0l);
 	}
 	
 	String printHomework(User user, Assignment a,HttpServletRequest request) {
@@ -226,12 +184,12 @@ public class Homework extends HttpServlet {
 		}
 	}
 
-	String printHomework(User user, Assignment hwa, long tId, long hintQuestionId) {
+	static String printHomework(User user, Assignment hwa, long tId, long hintQuestionId) {
 		StringBuffer buf = new StringBuffer();
 		
 		try {
 			long topicId = (hwa==null?tId:hwa.getTopicId());
-			Topic topic = getTopic(topicId);  // caches all hwQuestoins for this topic
+			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
 			
 			// get a List of homework questionKeys for this topic:
 			List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topic.id).keys().list();
@@ -241,10 +199,8 @@ public class Homework extends HttpServlet {
 			// START the presentation of the Homework assignment
 			buf.append("\n<h2>Homework Exercises - " + topic.title + "</h2>");
 
-			if (hwQuestions.isEmpty()) {
-				buf.append("<h3>Sorry, there are no homework questions for this topic.</h3>");
-				return buf.toString();
-			}
+			Map<Key<Question>,Question> hwQuestions = ofy().load().keys(questionKeys);
+			
 
 			if (user.isAnonymous())	buf.append("<h3><font color=#EE0000>Anonymous User</font></h3>");
 			
@@ -287,7 +243,7 @@ public class Homework extends HttpServlet {
 			int i=1;
 			int j=1;
 			for (Key<Question> k : questionKeys) {
-				Question q = getQuestion(k).clone();  // clone the question so we can parameterize it
+				Question q = hwQuestions.get(k); 
 				boolean assigned = (hwa != null) && (hwa.questionKeys.contains(k));
 				StringBuffer questionBuffer = new StringBuffer("<div style='display:table-row'><div style='display:table-cell;font-size:small'>");
 				String hashMe = user.getId() + (hwa==null?"":hwa.id);
@@ -332,18 +288,16 @@ public class Homework extends HttpServlet {
 			// The Homework grader scores only one Question at a time, so first identify and load it
 			long questionId = Long.parseLong(request.getParameter("QuestionId"));
 			Key<Question> k = Key.create(Question.class,questionId);
-			Question q = null;
-			long topicId = Long.parseLong(request.getParameter("TopicId"));
-			Topic topic = getTopic(topicId);
+			Question q = ofy().load().key(k).safe();
+			
+			long topicId = hwa==null?Long.parseLong(request.getParameter("TopicId")):hwa.topicId;
+			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
 			debug.append("topic:"+topic.title+"...");
 			
 			if (hwa != null && hwa.attemptsAllowed != null) {
 				int nAttempts = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("questionId",questionId).count();
 				if (nAttempts >= hwa.attemptsAllowed) return "<h2>Sorry, you are only allowed " + hwa.attemptsAllowed + " attempt" + (hwa.attemptsAllowed==1?"":"s") + " for each question on this assignment.</h2>";
 			}
-			
-			q = getQuestion(k).clone(); // make a copy of the question so we can parameterize it
-			q.id = questionId;
 			
 			// Set the Question parameters for this user (this is why we made a copy, to prevent thread collisions with a class variable)
 			String hashMe = user.getId() + (hwa==null?"":hwa.id);
@@ -529,7 +483,7 @@ public class Homework extends HttpServlet {
 
 				if (hwa != null) buf.append("You may <a href=/Homework?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review your scores on this assignment</a>.<p>");
 			}
-			buf.append("<a href=/Homework?UserRequest=PrintHomework&"
+			buf.append("<a href=/Homework?"
 					+ (hwa!=null&&hwa.id>0?"AssignmentId=" + hwa.id : "TopicId=" + topic.id)
 					+ "&sig=" + user.getTokenSignature()  
 					+ (offerHint?"&Q=" + q.id + "><span style='color:#EE0000'>Please give me a hint</span>":">Return to this homework assignment") + "</a> or "
@@ -845,7 +799,7 @@ public class Homework extends HttpServlet {
 	String selectQuestionsForm(User user,Assignment a) {
 		StringBuffer buf = new StringBuffer();
 		try {
-			Topic topic = getTopic(a.topicId);
+			Topic topic = ofy().load().type(Topic.class).id(a.topicId).safe();
 			
 			List<Question> questions = getSortedHWQuestions(topic.id);
 					
@@ -908,12 +862,8 @@ public class Homework extends HttpServlet {
 		List<Key<Question>> keys = ofy().load().type(Question.class).filter("assignmentType", "Homework").filter("topicId", topicId).filter("isActive", true).keys().list();
 		if (keys.size() > 1) Collections.sort(keys, new SortBySuccessPct());
 		
-		List<Key<Question>> newKeys = new ArrayList<Key<Question>>();
-		for (Key<Question> k : keys) {
-			if (!this.hwQuestions.containsKey(k)) newKeys.add(k);
-		}
-		if (newKeys.size()>0) hwQuestions.putAll(ofy().load().keys(newKeys));
-
+		Map<Key<Question>,Question> hwQuestions = ofy().load().keys(keys);
+		
 		List<Question> orderedQuestions = new ArrayList<Question>();
 		for (Key<Question> k : keys) orderedQuestions.add(hwQuestions.get(k));
 		return orderedQuestions;

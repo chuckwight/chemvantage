@@ -45,7 +45,6 @@ import com.googlecode.objectify.Key;
 @WebServlet("/Quiz")
 public class Quiz extends HttpServlet {
 	private static final long serialVersionUID = 137L;
-	QuestionCache qcache = new QuestionCache();
 	
 	public String getServletInfo() {
 		return "This servlet presents a quiz for the user.";
@@ -53,73 +52,59 @@ public class Quiz extends HttpServlet {
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
+		response.setContentType("text/html");
+		response.setCharacterEncoding("UTF-8");
+		PrintWriter out = response.getWriter();			
+		
 		try {
 			User user = User.getUser(request.getParameter("sig"));
 			if (user==null) throw new Exception();
 			
-			response.setContentType("text/html");
-			response.setCharacterEncoding("UTF-8");
-			PrintWriter out = response.getWriter();			
-			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
+			
+			long aId = user.getAssignmentId();		
+			Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 			
 			switch (userRequest) {
 			case "ShowScores":
 				String forUserId = request.getParameter("ForUserId");
 				User forUser = forUserId==null?user:new User(user.platformId, forUserId);
-				out.println(Subject.header("ChemVantage Scores") + Subject.banner + showScores(user,forUser) + Subject.footer);
+				out.println(Subject.header("ChemVantage Scores") + Subject.banner + showScores(user,forUser,a) + Subject.footer);
 				break;
 			case "ShowSummary":
-				out.println(Subject.header("Your Class ChemVantage Scores") + showSummary(user,request) + Subject.footer);
+				out.println(Subject.header("Your Class ChemVantage Scores") + showSummary(user,a) + Subject.footer);
 				break;
 			case "AssignQuizQuestions":
-				if (user.isInstructor()) out.println(Subject.header("Customize ChemVantage Quiz Assignment") + selectQuestionsForm(user) + Subject.footer);
-				break;
-			case "PrintQuiz":
-				out.println(Subject.header("ChemVantage Quiz") + printQuiz(user,request) + Subject.footer);
+				if (user.isInstructor()) out.println(Subject.header("Customize ChemVantage Quiz Assignment") + selectQuestionsForm(user,a) + Subject.footer);
 				break;
 			default: 
-				if (user.isInstructor()) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,request) + Subject.footer);
-				else out.println(Subject.header("ChemVantage Quiz") + printQuiz(user,request) + Subject.footer);
+				out.println(Subject.header("ChemVantage Quiz") + printQuiz(user,a,request) + Subject.footer);
 			}
 		} catch (Exception e) {
-			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
+			out.println(Logout.now(request,e));
 		}
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+		
 		try {
 			User user = User.getUser(request.getParameter("sig"));
 			if (user==null) throw new Exception();
 			
-			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
-			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 			
-			Assignment a = qcache.getAssignment(user.getAssignmentId());
+			long aId = user.getAssignmentId();		
+			Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 			
 			switch (userRequest) {
 			case "UpdateAssignment":
 				a.updateQuestions(request);
-				qcache.putAssignment(a);
 				doGet(request,response);
-				break;
-			case "UpdateQuestion":
-				if (user.isEditor()) {
-					Key<Question> key = Key.create(Question.class,Long.parseLong(request.getParameter("QuestionId")));
-					Question q = ofy().load().key(key).safe();
-					qcache.putQuestion(q);
-				}
-				break;
-			case "DeleteQuestion":
-				if (user.isEditor()) {
-					Key<Question> key = Key.create(Question.class,Long.parseLong(request.getParameter("QuestionId")));
-					qcache.removeQuestion(key);
-				}
 				break;
 			case "Set Allowed Time":
 				try {
@@ -129,52 +114,52 @@ public class Quiz extends HttpServlet {
 				} catch (Exception e) {
 					a.timeAllowed = 900;
 				}
-				qcache.putAssignment(a);
 				ofy().save().entity(a).now();
-				doGet(request,response);
+				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 				break;
 			case "Set Allowed Attempts":
 				a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 				try {
 					a.attemptsAllowed = Integer.parseInt(request.getParameter("AttemptsAllowed"));
-					if (a.attemptsAllowed<1) a.attemptsAllowed = 1;
+					if (a.attemptsAllowed<1) a.attemptsAllowed = null;
 				} catch (Exception e) {
 					a.attemptsAllowed = null;
 				}
 				ofy().save().entity(a).now();
-				qcache.putAssignment(a);
-				response.sendRedirect("/Quiz?sig=" + user.getTokenSignature());
+				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 				break;
 			case "Synchronize Scores":
-				if (synchronizeScores(user,request)) doGet(request,response);
+				if (synchronizeScores(user,a)) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 				else out.println("Synchronization request failed.");
 				break;
 			default:
-				out.println(Subject.header("ChemVantage Quiz Results") + printScore(user,request) + Subject.footer);
+				out.println(Subject.header("ChemVantage Quiz Results") + printScore(user,a,request) + Subject.footer);
 			}
 		} catch (Exception e) {
-			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
+			out.println(Logout.now(request,e));
 		}
 	}
 	
-	String instructorPage(User user,HttpServletRequest request) {
+	static String instructorPage(User user, Assignment a) {
 		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
 		
 		StringBuffer buf = new StringBuffer();		
 		try {
-			long assignmentId=user.getAssignmentId();
-			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
 			
 			buf.append("<h2>General Chemistry Quiz - Instructor Page</h2>");
 			buf.append("Topic covered on this quiz: " + t.getTitle() + "<br/><br/>");
 			
+			if (a.timeAllowed != null) buf.append("Students are permitted " + a.timeAllowed/60 + " minutes to complete this quiz.<br/><br/>");
+			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("Students may attempt this quiz an unlimited number of times to improve their score.<br/><br/>");
+			else buf.append("Students may only attempt this assignment " + a.attemptsAllowed + (a.attemptsAllowed==1?" time":" times") + ".<br/><br/>");
+			
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/Quiz?UserRequest=AssignQuizQuestions&sig=" + user.getTokenSignature() + "'>Customize this quiz</a> to set the time allowed, number of attempts allowed, and select the available question items.</LI>"
 					+ (supportsMembership?"<LI><a href='/Quiz?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' quiz scores</a></LI>":"")
 					+ "</UL>");
-			buf.append("<a style='text-decoration: none' href='/Quiz?UserRequest=PrintQuiz&sig=" + user.getTokenSignature() + "'>"
+			buf.append("<a style='text-decoration: none' href='/Quiz?sig=" + user.getTokenSignature() + "'>"
 					+ "<button style='display: block; width: 500px; border: 1 px; background-color: #00FFFF; color: black; padding: 14px 28px; font-size: 18px; text-align: center; cursor: pointer;'>"
 					+ "Show This Assignment (recommended)</button></a>");
 		} catch (Exception e) {
@@ -183,30 +168,33 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String printQuiz(User user, HttpServletRequest request) { // for anonymous users accessing Quiz servlet directly
+	String printQuiz(User user, Assignment a,HttpServletRequest request) { // for anonymous users accessing Quiz servlet directly
 		try {
 			long assignmentId = user.getAssignmentId();
 			long topicId = 0L;
-			if (assignmentId > 0) topicId = qcache.getAssignment(assignmentId).topicId;
+			if (assignmentId > 0) topicId = a.topicId;
 			else topicId = Long.parseLong(request.getParameter("TopicId"));
-			return printQuiz(user,topicId);
+			return printQuiz(user,a,topicId);
 		} catch (Exception e) { // select a random Topic from the OpenStax group
 			List<Topic> topics = ofy().load().type(Topic.class).filter("topicGroup",1).list();
 			Random rand = new Random();
 			Topic t = topics.get(rand.nextInt(topics.size()));
-			return printQuiz(user,t.id);
+			return printQuiz(user,null,t.id);
 		}
 	}
 
-	String printQuiz(User user, long tId) {
+	static String printQuiz (User user, Assignment a) {
+		return printQuiz(user,a,a.topicId);
+	}
+	
+	static String printQuiz(User user, Assignment qa, long tId) {
 		if (user == null) return "<h2>Launch failed because user was not authorized.</h2>";
 		StringBuffer buf = new StringBuffer();
 		
 		try {
-			Assignment qa = qcache.getAssignment(user.getAssignmentId());
 			long assignmentId = (qa==null?0L:qa.id);
 			long topicId = qa==null?tId:qa.topicId;
-			Topic topic = qcache.getTopic(topicId);
+			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
 			
 			// Check to see if the timeAllowed has been modified by the instructor:
 			int timeAllowed = 900; // default value in seconds
@@ -233,7 +221,7 @@ public class Quiz extends HttpServlet {
 				nAttempts = ofy().load().type(QuizTransaction.class).filter("assignmentId",assignmentId).filter("userId",user.getHashedId()).count();
 				if (nAttempts >= qa.attemptsAllowed) 
 					return "<h2>Sorry, you are only allowed " + qa.attemptsAllowed + " attempt" + (qa.attemptsAllowed==1?"":"s") + " on this assignment.</h2>"
-							+ Subject.banner + showScores(user,user) + "<p>";
+							+ Subject.banner + showScores(user,user,qa) + "<p>";
 			}
 			
 			if (qt == null) {  // create a new quizTransation
@@ -274,7 +262,7 @@ public class Quiz extends HttpServlet {
 			try { // check for assigned questions
 				questionKeys = new ArrayList<Key<Question>>(qa.getQuestionKeys());  // clone the list of questions for the assignment
 			} catch (Exception e) { // no assignment exists
-				questionKeys = new ArrayList<Key<Question>>(qcache.getQuizQuestionKeys(topicId));
+				questionKeys = ofy().load().type(Question.class).filter("topicId",topicId).keys().list();
 			}
 			
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
@@ -289,14 +277,13 @@ public class Quiz extends HttpServlet {
 			// Randomly reduce the size of questionKeys to the required number of questions	
 			while (questionKeys.size()>nQuestions) questionKeys.remove(rand.nextInt(questionKeys.size()));
 		
-			Map<Key<Question>, Question> quizQuestions = qcache.getQuestionMap(questionKeys);
+			Map<Key<Question>, Question> quizQuestions = ofy().load().keys(questionKeys);
 			
 			while (i < nQuestions && questionKeys.size() > 0) {
 				Key<Question> k = questionKeys.remove(rand.nextInt(questionKeys.size()));
 				Question q = quizQuestions.get(k);
 				if (q == null) { // this catches cases where an assigned question no longer exists (rare)
 					qa.questionKeys.remove(k);
-					qcache.putAssignment(qa);
 					ofy().save().entity(qa);
 					continue;
 				}
@@ -332,7 +319,7 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String printScore(User user,HttpServletRequest request) {
+	String printScore(User user,Assignment qa,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		boolean premiumUser = true;
 		try {
@@ -353,7 +340,6 @@ public class Quiz extends HttpServlet {
 			}
 
 			// Check to see if the time limit (15 minutes) for taking the Quiz has expired:
-			Assignment qa = qcache.getAssignment(user.getAssignmentId());
 			long assignmentId = qa==null?0L:qa.id;
 			
 			int timeAllowed = 900;  // default time to complete the quiz, in seconds
@@ -386,7 +372,7 @@ public class Quiz extends HttpServlet {
 					questionKeys.add(Key.create(Question.class,Long.parseLong((String) e.nextElement())));
 				} catch (Exception e2) {}
 			}
-			Map<Key<Question>,Question> quizQuestions = qcache.getQuestionMap(questionKeys);
+			Map<Key<Question>,Question> quizQuestions = ofy().load().keys(questionKeys);
 			
 			List<Response> responses = new ArrayList<Response>();
 			
@@ -511,7 +497,7 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String timers() {
+	static String timers() {
 		return "<SCRIPT>"
 				+ "function toggleTimers() {"
 				+ "	var timer0 = document.getElementById('timer0');"
@@ -683,16 +669,15 @@ public class Quiz extends HttpServlet {
 		+ "</SCRIPT>";
 	}
 
-	String showScores (User user,User forUser) {
+	static String showScores (User user,User forUser,Assignment a) {
 		if (!user.isInstructor() && !user.getId().equals(forUser.getId())) return "<H1>Access denied.</H1>";
 		
 		StringBuffer buf = new StringBuffer("<h3>Quiz Transactions</h3>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
 		
-		Assignment a = qcache.getAssignment(user.getAssignmentId());
-		Topic t = qcache.getTopic(a.getTopicId());
 		try {
+			Topic t = ofy().load().type(Topic.class).id(a.getTopicId()).safe();
 			buf.append("Assignment Number: " + a.id + "<br>");
 			buf.append("Topic: "+ t.title + "<br>");
 			buf.append("Valid: " + df.format(now) + "<p>");
@@ -758,19 +743,18 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String showSummary(User user,HttpServletRequest request) {
+	String showSummary(User user,Assignment a) {
 		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
 		
 		StringBuffer buf = new StringBuffer();
-		Assignment a = qcache.getAssignment(user.getAssignmentId());
 		if (a==null) return "No assignment was specified for this request.";
 		
 		if (!user.isInstructor()) return "You must be logged in as the instructor to view this page.";
 
 		if (a.lti_ags_lineitem_url != null && a.lti_nrps_context_memberships_url != null) {
 			try { // code for LTI version 1.3
-				Topic t = qcache.getTopic(a.topicId);
-
+				Topic t = ofy().load().type(Topic.class).id(a.getTopicId()).safe();
+				
 				buf.append("<h3>" + a.assignmentType + " - " + t.title + "</h3>");
 				buf.append("Assignment ID: " + a.id + "<br>");
 				buf.append("Valid: " + new Date() + "<p>");
@@ -843,11 +827,10 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	boolean synchronizeScores(User user,HttpServletRequest request) {
+	boolean synchronizeScores(User user,Assignment a) {
 		// This method looks for assignment scores that are different from the LMS scores and resubmits the score to the LMS
 		try {
 			if (!user.isInstructor()) throw new Exception();  // only instructors can use this function
-			Assignment a = qcache.getAssignment(user.getAssignmentId());
 			if (a==null) throw new Exception();  // can only do this for a known assignment
 			if (a.lti_ags_lineitem_url == null || a.lti_nrps_context_memberships_url == null) throw new Exception(); // need both of these to work
 			Map<String,String> scores = LTIMessage.readMembershipScores(a);
@@ -876,16 +859,15 @@ public class Quiz extends HttpServlet {
 		return true;
 	}
 	
-	String selectQuestionsForm(User user) {
+	String selectQuestionsForm(User user, Assignment a) {
 		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
 		
 		StringBuffer buf = new StringBuffer();
 		try {
-			Assignment a = qcache.getAssignment(user.getAssignmentId());
-			Topic topic = qcache.getTopic(a.topicId);
+			Topic t = ofy().load().type(Topic.class).id(a.getTopicId()).safe();
 			
 			buf.append("<h3>Customize Quiz Assignment</h3>");
-			buf.append("<b>Topic: " + topic.title + "</b><p>");
+			buf.append("<b>Topic: " + t.title + "</b><p>");
 					
 			if (a.timeAllowed==null) a.timeAllowed = 900; // default time for completing the exam
 			
@@ -910,10 +892,9 @@ public class Quiz extends HttpServlet {
 					+ "Therefore, the total number of questions should be "
 					+ "larger than 10, but not much larger than 50.  Experience shows that 30 items is about right in most cases.<p>"
 					+ "If you don't see a question you want to include, you may "
-					+ "<a href=/Contribute?TopicId=" + topic.id + "&AssignmentType=Quiz&sig=" + user.getTokenSignature() + ">contribute a new question item</a> to the database.<p>");
+					+ "<a href=/Contribute?TopicId=" + t.id + "&AssignmentType=Quiz&sig=" + user.getTokenSignature() + ">contribute a new question item</a> to the database.<p>");
 
-			List<Question> questions = new ArrayList<Question>(qcache.getQuestionMap(qcache.getQuizQuestionKeys(topic.id)).values());
-			//Query<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",topic.id).filter("isActive",true);
+			List<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",t.id).filter("isActive",true).list();
 			
 			// This dummy form uses javascript to select/deselect all questions
 			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "

@@ -38,6 +38,22 @@ public class Logout extends HttpServlet {
 		return "Servlet for confirming logout from ChemVantage.";
 	}
 
+	static String now(HttpServletRequest request,Exception exception) {
+		StringBuffer buf = new StringBuffer("<h3>An unexpected error occurred.</h3>");
+		buf.append(exception.getMessage()==null?exception.toString():exception.getMessage() + "<br/><br/>");
+		buf.append("We apologize for the mistake. Please take a moment to <a href=/Feedback>leave us feedback</a>, "
+				+ "copying the message above and telling us what you were trying to do at the time (e.g., "
+				+ "download a quiz or submit the answer to a homework problem). We will fix it ASAP.<br/><br/>"
+				+ "Thank you<br/><br/>");
+		
+		String sig = request.getParameter("sig");
+		if (sig != null) try {
+			ofy().delete().key(Key.create(User.class, Long.parseLong(sig))).now();
+		} catch (Exception e) {}
+		
+		return buf.toString();
+	}
+	
 	static String message = Subject.header("ChemVantage Logout Successful") 
 			+ Subject.banner
 			+ "<h3>You have successfully signed out of ChemVantage</h3>" 
