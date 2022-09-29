@@ -44,23 +44,25 @@ import com.googlecode.objectify.Key;
 @WebServlet("/PracticeExam")
 public class PracticeExam extends HttpServlet {
 	private static final long serialVersionUID = 137L;
-	Map<Key<Question>,Question> examQuestions = new HashMap<Key<Question>,Question>();
-
+	
 	public String getServletInfo() {
 		return "This servlet presents and scores an exam for the user.";
 	}
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+
 		try {
 			User user = User.getUser(request.getParameter("sig"));
 			if (user==null) throw new Exception();
 			
-			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
-
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
+			
+			long aId = user.getAssignmentId();		
+			Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 			
 			switch (userRequest) {
 				case "AssignExamQuestions":
@@ -75,43 +77,40 @@ public class PracticeExam extends HttpServlet {
 					String studentUserId = request.getParameter("UserId");
 					out.println(Subject.header("Review ChemVantage Practice Exam") + reviewExam(user,practiceExamTransactionId,studentUserId) + Subject.footer);
 					break;
-				case "PrintExam":
-					out.println(Subject.header("ChemVantage Practice Exam") + printExam(user,request) + Subject.footer);
-					break;
 				case "SubmissionReview":
 					User forUser = new User(user.platformId,request.getParameter("ForUserId"));
 					out.println(Subject.header("ChemVantage Practice Exam") + submissionReview(user,forUser) + Subject.footer);
 				default: 
-					if (user.isInstructor()) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,request) + Subject.footer);
-					else out.println(Subject.header("ChemVantage Practice Exam") + printExam(user,request) + Subject.footer);
+					out.println(Subject.header("ChemVantage Practice Exam") + printExam(user,a,request) + Subject.footer);
 			}
 		} catch (Exception e) {
-			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
+			out.println(Logout.now(request,e));
 		}
 	}
 
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+
 		try {
 			User user = User.getUser(request.getParameter("sig"));
 			if (user==null) throw new Exception();
-			
-			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
 
+			long aId = user.getAssignmentId();		
+			Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
-			
-			Assignment a = null;
+
 			switch(userRequest) {
-				case "UpdateAssignment":
+			case "UpdateAssignment":
 					a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 					a.updateQuestions(request);
-					response.sendRedirect("/PracticeExam?sig=" + user.getTokenSignature());
+					out.println(Subject.header("ChemVantage Practice Exam") + instructorPage(user,a,request) + Subject.footer);
 					break;
 				case "Submit Revised Exam Score":
-					if (submitRevisedExamScore(user,request)) out.println(Subject.header("Review ChemVantage Practice Exam Scores") + reviewExamScores(user) + Subject.footer);
+					if (submitRevisedExamScore(user,a,request)) out.println(Subject.header("Review ChemVantage Practice Exam Scores") + reviewExamScores(user) + Subject.footer);
 					else out.println("Sorry, an unexpected error occurred. Please go BACK and try again.");
 					break;
 				case "Set Allowed Time":
@@ -124,33 +123,17 @@ public class PracticeExam extends HttpServlet {
 						a.timeAllowed = 3600;
 					}
 					ofy().save().entity(a).now();
-					response.sendRedirect("/PracticeExam?sig=" + user.getTokenSignature());
+					out.println(Subject.header("ChemVantage Practice Exam") + instructorPage(user,a,request) + Subject.footer);
 					break;
-				case "AddQuestion":
-				case "UpdateQuestion":
-					if (user.isEditor()) {
-						Key<Question> key = Key.create(Question.class,Long.parseLong(request.getParameter("QuestionId")));
-						Question q = ofy().load().key(key).safe();
-						if (examQuestions.containsKey(key)) examQuestions.put(key, q);
-					}
-					break;
-				case "DeleteQuestion":
-					if (user.isEditor()) {
-						Key<Question> key = Key.create(Question.class,Long.parseLong(request.getParameter("QuestionId")));
-						examQuestions.remove(key);
-					}
-					break;
-				default: out.println(Subject.header("ChemVantage Practice Exam Results") + printScore(user,request) + Subject.footer);
+				default: out.println(Subject.header("ChemVantage Practice Exam Results") + printScore(user,a,request) + Subject.footer);
 			}
 		} catch (Exception e) {
-			//response.getWriter().println(e.toString() + " " + e.getMessage());
-			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
+			out.println(Logout.now(request,e));
 		}
 	}
 
-	String designExam(User user,HttpServletRequest request) {
+	static String designExam(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer(Subject.banner);
-		//String cvsToken = request.getSession().isNew()?user.getCvsToken():null;
 		try {
 			buf.append("<h2>Practice Exam</h2>");
 			buf.append("<div id=topicsForm>");
@@ -186,29 +169,15 @@ public class PracticeExam extends HttpServlet {
 		return buf.toString();
 	}
 
-	String instructorPage(User user,HttpServletRequest request) {
+	static String instructorPage(User user,Assignment a,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();		
 		try {
-			// Get requested topic ids for this exam
-			List<Long> topicIds = new ArrayList<Long>();
-			long assignmentId = 0;
-			Assignment a = null;
-			try {  // this branch works if the practice exam is assigned
-				assignmentId=user.getAssignmentId();
-				a = ofy().load().type(Assignment.class).id(assignmentId).safe();
-				topicIds = a.topicIds;
-			} catch (Exception e) {  // otherwise this is a student-designed exam
-				String[] topicStringIds = request.getParameterValues("TopicId");
-				if (topicStringIds != null) {
-					for (int i=0;i<topicStringIds.length;i++) topicIds.add(Long.parseLong(topicStringIds[i]));
-				}
-			}
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
-			
+
 			buf.append("<h2>General Chemistry Exam - Instructor Page</h2>");
-			Map<Long,Topic> topics = ofy().load().type(Topic.class).ids(topicIds);			
+			Map<Long,Topic> topics = ofy().load().type(Topic.class).ids(a.topicIds);			
 			buf.append("Topics covered on this exam:<OL>");
-			for (long topicId : topicIds) {
+			for (long topicId : a.topicIds) {
 				buf.append("<LI>" + topics.get(topicId).title + "</LI>");
 			}
 			buf.append("</OL>");
@@ -226,28 +195,23 @@ public class PracticeExam extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String printExam(User user,HttpServletRequest request) {
+	static String printExam(User user,Assignment a,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		
 		try {
 			// Get requested topic ids for this exam
-			Assignment a = null;
 			List<Long> topicIds = new ArrayList<Long>();
-			long assignmentId = user.getAssignmentId();
-			
-			if (assignmentId>0) {  // get topicIds from the assignment
-				a = ofy().load().type(Assignment.class).id(assignmentId).safe();  // throws Exception if assignmentId==0
+			long assignmentId = 0;
+			if (a != null) {  // this branch works if the practice exam is assigned
+				assignmentId=user.getAssignmentId();
 				topicIds = a.topicIds;
-			} else {  // assign 3 random topicIds from the OpenStax group for demo exam
-				List<Key<Topic>> topicKeys = ofy().load().type(Topic.class).filter("topicGroup",1).keys().list();
-				Random rand = new Random();
-				for (int i=0;i<3;i++) {
-					int index = rand.nextInt(topicKeys.size());
-					long tid = topicKeys.remove(index).getId();
-					topicIds.add(tid);
+			} else {  // otherwise this is a user-designed exam
+				String[] topicStringIds = request.getParameterValues("TopicId");
+				if (topicStringIds != null) {
+					for (int i=0;i<topicStringIds.length;i++) topicIds.add(Long.parseLong(topicStringIds[i]));
 				}
 			}
-			
+
 			// Check to see if the timeAllowed has been modified by the instructor:
 			int timeAllowed = 3600;  // default value in seconds
 			if (a != null && a.timeAllowed!=null) {
@@ -323,12 +287,12 @@ public class PracticeExam extends HttpServlet {
 				questionKeys_15pt.removeAll(remove); remove.clear();
 			}
 			
-			// Ensure that all selected questions are in the Map of examQuestions:
-			List<Key<Question>> addQuestions = new ArrayList<Key<Question>>();
-			for (Key<Question> k : questionKeys_02pt) if (!examQuestions.containsKey(k)) addQuestions.add(k);
-			for (Key<Question> k : questionKeys_10pt) if (!examQuestions.containsKey(k)) addQuestions.add(k);
-			for (Key<Question> k : questionKeys_15pt) if (!examQuestions.containsKey(k)) addQuestions.add(k);
-			if (addQuestions.size()>0) examQuestions.putAll(ofy().load().keys(addQuestions));
+			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
+			questionKeys.addAll(questionKeys_02pt);
+			questionKeys.addAll(questionKeys_10pt);
+			questionKeys.addAll(questionKeys_15pt);
+			
+			Map<Key<Question>,Question> examQuestions = ofy().load().keys(questionKeys);
 			
 			buf.append("<script>function showWorkBox(qid){}</script>");  // prevents javascript error from Question.print()
 			
@@ -342,17 +306,6 @@ public class PracticeExam extends HttpServlet {
 			}
 			buf.append("</OL>");
 
-			/* ===== This section has been replaced by a separate instructor page =========
-			if (user.isInstructor()) {
-				buf.append("<mark>Instructor: you may <a href=/PracticeExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + ">customize this practice exam</a>. ");
-					
-				if (a.lti_nrps_context_memberships_url != null) buf.append("You may also <a href=/PracticeExam?UserRequest=ReviewExamScores&sig=" + user.getTokenSignature() 
-					+ ">review the scores</a> on this assignment.");
-				
-				buf.append("</mark><p>");
-			}
-			 ==============================================================================
-			 */			
 			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded. ");
 			if (!newExam) buf.append("You are resuming an exam originally downloaded at " + pt.downloaded);
 			
@@ -362,11 +315,12 @@ public class PracticeExam extends HttpServlet {
 			buf.append("<div id='timer0' style='color: red'></div><div id=ctrl0 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
 			buf.append("\n<input type=submit value='Grade This Practice Exam'><p>");
 
-			// Include a nonce reference as a hedge in case the session is not maintained by the user's browser
-			//buf.append(cvsToken!=null?"\n<input type=hidden name=CvsToken value='" + cvsToken + "'>":"");
 			buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "'>");
 			if (a!=null) buf.append("\n<input type=hidden name=AssignmentId value='" + a.id + "'>");
-			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
+			
+			// Randomly select the questions to be presented, eliminating each from the List of questionKeys as they are printed
+			Random r = new Random(pt.id)
+					;
 			int[] possibleScores = new int[topicIds.size()];
 
 			// Two-point questions
@@ -375,7 +329,7 @@ public class PracticeExam extends HttpServlet {
 			int nQuestions = 10;
 			int i = 0;
 			while (i<nQuestions && questionKeys_02pt.size()>0) {
-				Key<Question> k = questionKeys_02pt.remove(0);
+				Key<Question> k = questionKeys_02pt.remove(r.nextInt(questionKeys_02pt.size()));
 				Question q = examQuestions.get(k);
 				i++;
 				possibleScores[topicIds.indexOf(q.topicId)] += q.pointValue;
@@ -393,7 +347,7 @@ public class PracticeExam extends HttpServlet {
 			nQuestions = 5;
 			i=0;
 			while (i<nQuestions && questionKeys_10pt.size()>0) {
-				Key<Question> k = questionKeys_10pt.remove(0);
+				Key<Question> k = questionKeys_10pt.remove(r.nextInt(questionKeys_10pt.size()));
 				Question q = examQuestions.get(k);
 				i++;
 				possibleScores[topicIds.indexOf(q.topicId)] += q.pointValue;
@@ -412,7 +366,7 @@ public class PracticeExam extends HttpServlet {
 			nQuestions = 2;
 			i = 0;
 			while (i<nQuestions && questionKeys_15pt.size()>0) {
-				Key<Question> k = questionKeys_15pt.remove(0);
+				Key<Question> k = questionKeys_15pt.remove(r.nextInt(questionKeys_15pt.size()));
 				Question q = examQuestions.get(k);
 				i++;
 				possibleScores[topicIds.indexOf(q.topicId)] += q.pointValue;
@@ -443,7 +397,7 @@ public class PracticeExam extends HttpServlet {
 		return buf.toString();
 	}
 
-	String timerScripts(long endMillis) {
+	static String timerScripts(long endMillis) {
 		return "<SCRIPT language='JavaScript'>"
 				+ "function toggleTimers() {"
 				+ "  var timer0 = document.getElementById('timer0');"
@@ -476,16 +430,10 @@ public class PracticeExam extends HttpServlet {
 				+ "</SCRIPT>"; 
 	}
 	
-	String printScore(User user,HttpServletRequest request) {
+	String printScore(User user,Assignment a,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			buf.append("<h2>Practice Exam Results</h2>");
-			
-			Assignment a = null;
-			
-			try {
-				a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-			} catch (Exception e) {}
 			
 			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
@@ -521,7 +469,8 @@ public class PracticeExam extends HttpServlet {
 					questionKeys.add(Key.create(Question.class,Long.parseLong((String) e.nextElement())));
 				} catch (Exception e2) {}
 			}
-			  
+			
+			Map<Key<Question>,Question> examQuestions = ofy().load().keys(questionKeys);
 			List<Response> responses = new ArrayList<Response>();
 			
 			// begin the main scoring loop:
@@ -531,14 +480,6 @@ public class PracticeExam extends HttpServlet {
 				
 				if (!studentAnswer.isEmpty()) { // an answer was submitted
 					q = examQuestions.get(k);
-					if (q==null) {
-						try {
-							q = ofy().load().key(k).safe();
-							examQuestions.put(k,q);
-						} catch (Exception e) {
-							continue;
-						}
-					}
 					q.setParameters((int)(pt.id - q.id));
 					int score = studentAnswer.length()==0?0:q.isCorrect(studentAnswer)?q.pointValue:0;
 					if (q.getQuestionType()==5 && score==0 && q.agreesToRequiredPrecision(studentAnswer)) score = q.pointValue-1;
@@ -916,17 +857,11 @@ public class PracticeExam extends HttpServlet {
 			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> questionKeys_10pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> questionKeys_15pt = new ArrayList<Key<Question>>();
+			Map<Key<Question>,Question> examQuestions = ofy().load().keys(pet.questionKeys);
 			
 			for (Key<Question> k : pet.questionKeys) {
 				Question q = examQuestions.get(k);
-				if (q==null) {
-					try {
-						q = ofy().load().key(k).safe();
-						examQuestions.put(k,q);
-					} catch (Exception e) {
-						continue;  // this catches cases where an assigned question no longer exists
-					}
-				}
+				if (q==null) continue;
 				switch (q.pointValue) {
 					case (2): questionKeys_02pt.add(k); break;
 					case (10): questionKeys_10pt.add(k); break;
@@ -1033,26 +968,23 @@ public class PracticeExam extends HttpServlet {
 		return buf.toString();
 	}
 	
-	boolean submitRevisedExamScore(User instructor,HttpServletRequest request) throws Exception {
+	boolean submitRevisedExamScore(User instructor,Assignment a,HttpServletRequest request) throws Exception {
 		try {
 			// First do some validation to make sure that the user is the instructor for this assignment and the transaction is for this assignment:
 			if (!instructor.isInstructor()) throw new Exception("You must be the instructor for this course.");
 			long practiceExamTransactionId = Long.parseLong(request.getParameter("PracticeExamTransactionId"));
 			PracticeExamTransaction pet = ofy().load().type(PracticeExamTransaction.class).id(practiceExamTransactionId).safe();
-			Assignment a = ofy().load().type(Assignment.class).id(instructor.getAssignmentId()).safe();
 			if (!pet.assignmentId.equals(a.id)) throw new Exception("Mismatched assignment ID values");
 			
 			// reset the transaction scores arrays
 			pet.scores = new int[pet.topicIds.size()];
 			pet.possibleScores = new int[pet.topicIds.size()];
+			Map<Key<Question>,Question> examQuestions = ofy().load().keys(pet.questionKeys);
 			
 			// Iterate through all of the questions for this exam, getting scores from the range inputs on the review form and compiling the scores
 			for (Key<Question> k : pet.questionKeys) {
 				Question q = examQuestions.get(k);
-				if (q==null) try {
-					q = ofy().load().key(k).safe();
-					examQuestions.put(k,q);
-				} catch (Exception e) {}  // might fail if the question is deleted from the database (too bad, sorry)
+				if (q==null) continue;
 				int score = Integer.parseInt(request.getParameter("Range" + k.getId()));
 				pet.questionScores.put(k, score);
 				pet.scores[pet.topicIds.indexOf(q.topicId)] += score;

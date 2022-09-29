@@ -327,6 +327,11 @@ public class LTIv1p3Launch extends HttpServlet {
 							+ (user.isInstructor()?Homework.instructorPage(user, myAssignment):Homework.printHomework(user,myAssignment))
 							+ Subject.footer);
 					break;
+				case "PracticeExam":
+					out.println(Subject.header("ChemVantage Practice Exam")
+							+ (user.isInstructor()?PracticeExam.instructorPage(user, myAssignment,request):PracticeExam.printExam(user,myAssignment,request))
+							+ Subject.footer);
+					break;
 				case "PlacementExam":
 					out.println(Subject.header("ChemVantage Placement Exam")
 							+ (user.isInstructor()?PlacementExam.instructorPage(user, myAssignment):PlacementExam.printExam(user,myAssignment,request))
