@@ -273,10 +273,17 @@ public class PracticeExam extends HttpServlet {
 				return passwordPrompt(user,msg);
 			}
 
+			// Check to see if the timeAllowed has been modified by the instructor:
+			int timeAllowed = 3600;  // default value in seconds
+			if (a != null && a.timeAllowed!=null) {
+				timeAllowed = a.timeAllowed;  // instructor option, e.g. for student disability accommodations
+				user = User.getUser(user.getTokenSignature(),timeAllowed/60+30);
+			}
+
 			// Get requested topic ids for this exam
 			List<Long> topicIds = new ArrayList<Long>();
 			long assignmentId = 0;
-			if (a != null) {  // this branch works if the practice exam is assigned
+			if (a!=null) {  // this branch works if the practice exam is assigned
 				assignmentId=user.getAssignmentId();
 				topicIds = a.topicIds;
 			} else {  // otherwise this is a user-designed exam
@@ -285,44 +292,60 @@ public class PracticeExam extends HttpServlet {
 					for (int i=0;i<topicStringIds.length;i++) topicIds.add(Long.parseLong(topicStringIds[i]));
 				}
 			}
-
-			// Check to see if the timeAllowed has been modified by the instructor:
-			int timeAllowed = 3600;  // default value in seconds
-			if (a != null && a.timeAllowed!=null) {
-				timeAllowed = a.timeAllowed;  // instructor option, e.g. for student disability accommodations
-				user = User.getUser(user.getTokenSignature(),timeAllowed/60+30);
-			}
 			
 			// Check to see if this user has any pending exams:
 			Date now = new Date();
 			Date startTime = new Date(now.getTime()-timeAllowed*1000);  // about 1 hour ago depending on timeAllowed ago 
-			
 			List<PracticeExamTransaction> qpt = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.getHashedId()).filter("graded",null).filter("downloaded >",startTime).list();
+			
 			PracticeExamTransaction pt = null;  // placeholder for recovery of one of the pending exam transactions
-			boolean newExam = true;
+			
 			if (qpt.size()>0) {  // there is at least one pending practice exam
 				if (a == null) {  // entered by manual topic selection (no assignment)
 					pt = qpt.get(0);  // gets the first pending practice exam transaction in the list
 					topicIds = pt.topicIds;
-					newExam = false;
 				} else {  // the request is for an exam corresponding to an assignment
 					for (PracticeExamTransaction t : qpt) {
 						if (t.assignmentId==assignmentId) {
 							pt = t;  // found the correct pending exam for this assignment
-							newExam = false;
 							break;
 						}
 					}  // if the for-loop expires without finding a corresponding transaction, pt remains null and a new exam is created below
 				}
 			}
 			else if (topicIds.size() < 3) return designExam(user,request);  // redirect to get a valid set of 3+ topic keys
+			boolean resumingExam = pt != null;
 			
 			if (pt == null) {  // this is a valid request for a new exam with at least 3 topicIds; create a new transaction
+				// first check to see if a.attemptsAllowed has been reached
+				int nAttempts = a==null?0:ofy().load().type(PracticeExamTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).count();
+				if (a!=null && a.attemptsAllowed != null && nAttempts >= a.attemptsAllowed) {
+					buf.append(Subject.banner);
+					buf.append("<h2>Sorry, you are only allowed " + a.attemptsAllowed + " attempt" + (a.attemptsAllowed==1?"":"s") + " on this assignment.</h2>");
+
+					DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+					List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
+					buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Practice Exam Score (percent)</th></tr>");
+					for (PracticeExamTransaction pet : pets) {
+						int score = 0;
+						int possibleScore = 0;
+						for (int i=0;i<a.topicIds.size();i++) {
+							score += pet.scores[i];
+							possibleScore += pet.possibleScores[i];
+						}
+						int pct = (possibleScore>0?score*100/possibleScore:0);
+
+						buf.append("<tr><td>" + pet.id + "</td><td>" + df.format(pet.downloaded) + "</td><td align=center>" + (pet.graded==null?"-":pct + "%") +  "</td></tr>");
+					}
+					buf.append("</table><br>Missing scores indicate assignments that were downloaded but not submitted for scoring.<br/><br/>");
+					return buf.toString();
+				}	
+				// this new exam is allowed; create a new transaction entity:
 				pt = new PracticeExamTransaction(topicIds,user.getId(),now,null,new int[topicIds.size()],new int[topicIds.size()]);
 				pt.assignmentId = assignmentId;
 				ofy().save().entity(pt).now();	
 			}
-			
+
 			// past this point we will present a practice exam to the student. 
 			
 			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
@@ -381,7 +404,7 @@ public class PracticeExam extends HttpServlet {
 			buf.append("</OL>");
 
 			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded. ");
-			if (!newExam) buf.append("You are resuming an exam originally downloaded at " + pt.downloaded);
+			if (resumingExam) buf.append("You are resuming an exam originally downloaded at " + pt.downloaded);
 			
 			buf.append("\n<FORM NAME=PracticeExamForm METHOD=POST ACTION=PracticeExam "
 					+ "onSubmit=\"return confirm('Submit this exam for grading now. Are you sure?')\">");
@@ -409,7 +432,7 @@ public class PracticeExam extends HttpServlet {
 				possibleScores[topicIds.indexOf(q.topicId)] += q.pointValue;
 				q.setParameters((int)(pt.id - q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
-				if (newExam) pt.questionKeys.add(k);
+				if (!resumingExam) pt.questionKeys.add(k);
 			}
 			buf.append("</OL>");
 
@@ -430,7 +453,7 @@ public class PracticeExam extends HttpServlet {
 				if (assignmentId>0) buf.append("<SCRIPT>"
 						+ "document.getElementById('showWork" + q.id + "').style.display='';"
 						+ "</SCRIPT>");
-				if (newExam) pt.questionKeys.add(k);
+				if (!resumingExam) pt.questionKeys.add(k);
 			}
 			buf.append("</OL>");
 
@@ -449,7 +472,7 @@ public class PracticeExam extends HttpServlet {
 				if (assignmentId>0) buf.append("<SCRIPT>"
 						+ "document.getElementById('showWork" + q.id + "').style.display='';"
 						+ "</SCRIPT>");
-				if (newExam) pt.questionKeys.add(k);
+				if (!resumingExam) pt.questionKeys.add(k);
 			}
 			buf.append("</OL>");
 

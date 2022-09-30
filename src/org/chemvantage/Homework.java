@@ -812,7 +812,7 @@ public class Homework extends HttpServlet {
 					+ "<input type=text size=10 name=AttemptsAllowed " 
 					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /> "
 					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' />"
-					+ "</form><br/><br/>");
+					+ "</form><br/>");
 			
 			// Allow instructor to pick individual question items from all active questions:
 			buf.append("Select the homework questions below to be assigned for grading. "  // The questions are presented below in "

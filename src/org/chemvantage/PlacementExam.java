@@ -219,15 +219,17 @@ public class PlacementExam extends HttpServlet {
 					+ "<li>ability to interpret and solve word problems</li>"
 					+ "</ul>");
 			
-			buf.append("Students have " + (a.timeAllowed==null?"60":a.timeAllowed/60) + " minutes to complete the exam.<br/><br/>");
-			
-			if (supportsMembership) buf.append("You can use the link below to review the scores on each section as well as the student responses to each question.<br/><br/>");
+			buf.append("Students have " + (a.timeAllowed==null?"60":a.timeAllowed/60) + " minutes to complete the exam.<br/>");
 			
 			if (a.attemptsAllowed==null)
 				buf.append("We recommend that students be allowed multiple attempts to complete the exam. Most of the question items are "
 					+ "parameterized, so it is extremely unlikely that any two placement exams will be the same.<br/><br/>");
-			else buf.append("Students may attempt this placement exam only " + a.attemptsAllowed + (a.attemptsAllowed==1?" time.":" times.") + "<br/><br/>"); 
+			else buf.append("Students may attempt this placement exam only " + a.attemptsAllowed + (a.attemptsAllowed==1?" time.":" times.") + "<br/>"); 
 				
+			if (supportsMembership) buf.append("You can use the link below to review the scores on each section as well as the student responses to each question.<br/>");
+			
+			buf.append("<br/>");
+			
 			if (d.price > 0) {		
 				buf.append("There are two ways to pay for placement exams:<ol>"
 						+ "<li>You can <a href='/checkout2.jsp?sig=" + user.getTokenSignature() + "' target=_blank >purchase ChemVantage student licenses</a> "
@@ -1202,14 +1204,14 @@ public class PlacementExam extends HttpServlet {
 					+ "<li>10 questions worth 4 points each</li>"
 					+ "for a total of 100 points.</ul>");
 			buf.append("The default time allowed to complete the exam is 60 minutes, but you may change this "
-					+ "(e.g., to create a special assignment for a student requiring extended time up to 300 minutes).<br/><br/>");
+					+ "(e.g., to create a special assignment for a student requiring extended time up to 300 minutes).<br/>");
 			buf.append("<form action=/PlacementExam method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />" 
 					+ "Time allowed for this assignment: <input type=text size=5 name=TimeAllowed value=" + a.timeAllowed/60. + "> minutes. "
 					+ "<input type=submit name=UserRequest value='Set Allowed Time'><br>"
-					+ "</form><br/><br/>");
+					+ "</form><br/>");
 			
 			buf.append("By default, students may attempt this placement exam as many times as they wish. This rewards students who persist "
-					+ "to achieve a better score. However, you may limit the number of attempts here. Leave the field blank to permit unlimited attempts.<br/><br/>"
+					+ "to achieve a better score. However, you may limit the number of attempts here. Leave the field blank to permit unlimited attempts.<br/>"
 					+ "<form action=/PlacementExam method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "Number of attempts allowed for this assignment: <input type=text size=10 name=AttemptsAllowed " 
 					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /> "
@@ -1222,7 +1224,7 @@ public class PlacementExam extends HttpServlet {
 					+ "<input type=text name=ExamPassword value='" + (a.password==null || a.password.isEmpty()?"":a.password) + "' />"
 					+ "<input type=submit name=UserRequest value='Set Password' /></form><br/><br/>");
 			
-			buf.append("Select the items to be included in exams assigned to your class.<br/><br/>");
+			buf.append("Select the items to be included in exams assigned to your class:<br/><br/>");
 
 			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> questionKeys_04pt = new ArrayList<Key<Question>>();
