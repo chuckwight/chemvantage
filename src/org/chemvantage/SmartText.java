@@ -27,54 +27,60 @@ public class SmartText extends HttpServlet {
 	private static final long serialVersionUID = 1L;
        
    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-	   try {
+	   response.setContentType("text/html");
+	   PrintWriter out = response.getWriter();
+
+		try {
 			User user = User.getUser(request.getParameter("sig"));
 			if (user==null) throw new Exception();
 			
-			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
-
+			long aId = user.getAssignmentId();		
+			Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
+			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 			
 			switch (userRequest) {
 			case "PrintQuestion":
-				out.println(Subject.header("ChemVantage Key Concept Question") + printQuestion(user) + Subject.footer);
+				out.println(Subject.header("ChemVantage Key Concept Question") + printQuestion(user,a) + Subject.footer);
 				break;
 			default: 
-				if (user.isInstructor()) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,request) + Subject.footer);
-				else out.println(Subject.header("ChemVantage Key Concept Question") + printQuestion(user) + Subject.footer);
+				out.println(Subject.header("ChemVantage Key Concept Question") + printQuestion(user,a) + Subject.footer);
 			}
 
 		} catch (Exception e) {
+			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
 		}
    }
 
    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-	   try {
+	   response.setContentType("text/html");
+	   PrintWriter out = response.getWriter();
+
+	  try {
 		   User user = User.getUser(request.getParameter("sig"));
 		   if (user==null) throw new Exception();
 
-		   response.setContentType("text/html");
-		   PrintWriter out = response.getWriter();
+		   long aId = user.getAssignmentId();		
+		   Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 
 		   String userRequest = request.getParameter("UserRequest");
 		   if (userRequest==null) userRequest = "";
 
 		   switch (userRequest) {
 		   case "GradeQuestion":
-			   out.println(Subject.header("ChemVantage Key Concept Response") + printScore(user,request));
+			   out.println(Subject.header("ChemVantage Key Concept Response") + printScore(user,a,request));
 		   default:
 		   }
 
 	   } catch (Exception e) {
+			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
 	   }
    }
 
-   String instructorPage(User user,HttpServletRequest request) {
+   static String instructorPage(User user,Assignment a) {
 	   StringBuffer buf = new StringBuffer();		
 		try {
-			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 			Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
 			buf.append("<h2>SmartText - Instructor Page</h2>");
 			buf.append("Chapter: " + t.title + "<br/>");
@@ -92,11 +98,10 @@ public class SmartText extends HttpServlet {
 		return buf.toString();
    }
    
-   String printQuestion(User user) {
+   static String printQuestion(User user,Assignment a) {
 	   StringBuffer buf = new StringBuffer("<h3>Key Concept Question</h3>");
 	   try {
 		   // load the assignment pertaining to this launch
-		   Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 		   Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
 		   if (t.conceptIds==null || t.conceptIds.isEmpty()) return "Sorry, there are no Key Concepts identified for thie topic.";
 		   // Make a copy of the List of conceptIds:
@@ -111,18 +116,18 @@ public class SmartText extends HttpServlet {
 			   // Bulletproofing: check to ensure that conceptIds haven't been added; or start over
 			   if (st.scores.length != t.conceptIds.size()) {
 				   ofy().delete().entity(st).now();
-				   throw new Exception();
+				   throw new Exception("There was an error in the assignment settings, sorry. Please start over.");
 			   }
 			   // Calculate percent completion and remove completed conceptIds:
 			   for (int i=0; i<st.scores.length; i++) {
 				   score += st.scores[i];
 				   possibleScore += st.possibleScores[i];
 				   if (st.scores[i] == st.possibleScores[i]) conceptIds.remove(t.conceptIds.get(i));   
-				   if (score>0 && score==possibleScore) {
-					   buf.append("You have already completed this assignment.<br/>");
-					   return buf.toString();
-				   }
 				}
+			   if (score>0 && score==possibleScore) {
+				   buf.append("This assignment is complete.<br/>");
+				   return buf.toString();
+			   }
 			} catch (Exception e) {
 			   st = new STTransaction(user.getHashedId(),a.id,t.conceptIds);
 			   buf.append("Complete all key concept questions to score 100% for this assignment.<br/><br/>");
@@ -179,11 +184,11 @@ public class SmartText extends HttpServlet {
 	   return buf.toString();
    }
    
-   String printScore(User user, HttpServletRequest request) {
+   String printScore(User user, Assignment a,HttpServletRequest request) {
 	   StringBuffer buf = new StringBuffer("<h3>Key Concept Question</h3>");
 	   StringBuffer debug = new StringBuffer("Debug: ");
 	   try {
-		   long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+		   long assignmentId = a==null?Long.parseLong(request.getParameter("AssignmentId")):a.id;
 		   long conceptId = Long.parseLong(request.getParameter("ConceptId"));
 		   long questionId = Long.parseLong(request.getParameter("QuestionId"));
 		   int p = Integer.parseInt(request.getParameter("Parameter"));
@@ -210,9 +215,10 @@ public class SmartText extends HttpServlet {
 					   + q.printAllToStudents(studentAnswer) + "</div><br/>");
 		   }
 		   
-		   Assignment a = ofy().load().type(Assignment.class).id(assignmentId).now();
-		   Response r = new Response("SmartText",a.topicId,q.id,studentAnswer,q.getCorrectAnswer(),isCorrect?1:0,1,user.getId(),new Date());
-		   ofy().save().entity(r);
+		   if (a != null) {
+			   Response r = new Response("SmartText",a.topicId,q.id,studentAnswer,q.getCorrectAnswer(),isCorrect?1:0,1,user.getId(),new Date());
+			   ofy().save().entity(r);
+		   }
 		   
 		   int score = 0;
 		   int possibleScore = 0;

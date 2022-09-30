@@ -337,6 +337,11 @@ public class LTIv1p3Launch extends HttpServlet {
 							+ (user.isInstructor()?PlacementExam.instructorPage(user, myAssignment):PlacementExam.printExam(user,myAssignment,request))
 							+ Subject.footer);
 					break;
+				case "SmartText":
+					out.println(Subject.header("ChemVantage Key Concepts")
+							+ (user.isInstructor()?SmartText.instructorPage(user, myAssignment):SmartText.printQuestion(user,myAssignment))
+							+ Subject.footer);
+					break;
 				default: response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
 				}
 			}
