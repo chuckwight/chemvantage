@@ -70,7 +70,7 @@ public class PracticeExam extends HttpServlet {
 					out.println(Subject.header("Select ChemVantage Practice Exam Topics") + selectExamQuestionsForm(user) + Subject.footer);
 					break;
 				case "ReviewExamScores":
-					out.println(Subject.header("Review ChemVantage Practice Exam Scores") + reviewExamScores(user) + Subject.footer);
+					out.println(Subject.header("Review ChemVantage Practice Exam Scores") + reviewExamScores(user,a) + Subject.footer);
 					break;
 				case "ReviewExam":
 					long practiceExamTransactionId = Long.parseLong(request.getParameter("PracticeExamTransactionId"));
@@ -104,17 +104,28 @@ public class PracticeExam extends HttpServlet {
 			if (userRequest==null) userRequest = "";
 
 			switch(userRequest) {
+			case "PrintExam":
+				out.println(Subject.header("ChemVantage Practice Exam") + printExam(user,a,request) + Subject.footer);
+				break;
 			case "UpdateAssignment":
-					a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-					a.updateQuestions(request);
-					out.println(Subject.header("ChemVantage Practice Exam") + instructorPage(user,a,request) + Subject.footer);
-					break;
-				case "Submit Revised Exam Score":
-					if (submitRevisedExamScore(user,a,request)) out.println(Subject.header("Review ChemVantage Practice Exam Scores") + reviewExamScores(user) + Subject.footer);
-					else out.println("Sorry, an unexpected error occurred. Please go BACK and try again.");
-					break;
-				case "Set Allowed Time":
-					a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+				a.updateQuestions(request);
+				out.println(Subject.header("ChemVantage Practice Exam") + instructorPage(user,a) + Subject.footer);
+				break;
+			case "Submit Revised Exam Score":
+				if (submitRevisedExamScore(user,a,request)) out.println(Subject.header("Review ChemVantage Practice Exam Scores") + reviewExamScores(user,a) + Subject.footer);
+				else out.println("Sorry, an unexpected error occurred. Please go BACK and try again.");
+				break;
+			case "DeleteSubmission":
+				if (user.isInstructor()) {
+					try {
+						Long tid = Long.parseLong(request.getParameter("tid"));
+						ofy().delete().key(Key.create(PracticeExamTransaction.class,tid)).now();
+					} catch (Exception e) {}
+					out.println(Subject.header("ChemVantage Instructor Page") + reviewExamScores(user,a) + Subject.footer);
+				}
+				break;
+			case "Set Allowed Time":
+				if (user.isInstructor()) {
 					try {
 						double minutes = Double.parseDouble(request.getParameter("TimeAllowed"));
 						if (minutes > 300.) minutes = 300.;
@@ -123,9 +134,30 @@ public class PracticeExam extends HttpServlet {
 						a.timeAllowed = 3600;
 					}
 					ofy().save().entity(a).now();
-					out.println(Subject.header("ChemVantage Practice Exam") + instructorPage(user,a,request) + Subject.footer);
-					break;
-				default: out.println(Subject.header("ChemVantage Practice Exam Results") + printScore(user,a,request) + Subject.footer);
+					out.println(Subject.header("ChemVantage Practice Exam") + instructorPage(user,a) + Subject.footer);
+				}
+				break;
+			case "Set Allowed Attempts":
+				if (user.isInstructor()) {
+					try {
+						a.attemptsAllowed = Integer.parseInt(request.getParameter("AttemptsAllowed"));
+						if (a.attemptsAllowed<1) a.attemptsAllowed = null;
+					} catch (Exception e) {
+						a.attemptsAllowed = null;
+					}
+					ofy().save().entity(a).now();
+					out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
+				}
+				break;
+			case "Set Password":
+				if (user.isInstructor()) {
+					a.password = request.getParameter("ExamPassword");
+					if (a.password != null) a.password = a.password.trim();
+					ofy().save().entity(a).now();
+					out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
+				}
+				break;
+			default: out.println(Subject.header("ChemVantage Practice Exam Results") + printScore(user,a,request) + Subject.footer);
 			}
 		} catch (Exception e) {
 			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
@@ -160,7 +192,7 @@ public class PracticeExam extends HttpServlet {
 			}
 			buf.append("</div><p>");
 			
-			buf.append("You will have 60 minutes to submit this exam for scoring.<br>");
+			buf.append("The exam is designed to allow completion in 60 minutes.<br>");
 			buf.append("<INPUT TYPE=SUBMIT NAME=begin DISABLED=true VALUE='Select at least 3 topics'>");
 			buf.append("</FORM></div>");
 		} catch (Exception e) {
@@ -169,7 +201,7 @@ public class PracticeExam extends HttpServlet {
 		return buf.toString();
 	}
 
-	static String instructorPage(User user,Assignment a,HttpServletRequest request) {
+	static String instructorPage(User user,Assignment a) {
 		StringBuffer buf = new StringBuffer();		
 		try {
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
@@ -182,10 +214,20 @@ public class PracticeExam extends HttpServlet {
 			}
 			buf.append("</OL>");
 			
+			if (a.timeAllowed != null) buf.append("Students are permitted " + a.timeAllowed/60 + " minutes to complete this exam.<br/>");
+			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("Students may attempt this assignment an unlimited number of times to improve their score.<br/><br/>");
+			else buf.append("Students may only attempt this assignment " + a.attemptsAllowed + (a.attemptsAllowed==1?" time":" times") + ".<br/><br/>");
+			
 			buf.append("From here, you may<UL>"
-					+ "<LI><a href='/PracticeExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + "'>Customize this exam</a> to set the time allowed and select the available question items.</LI>"
+					+ "<LI><a href='/PracticeExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + "'>Customize this exam</a> "
+					+ "to set the time allowed, number of submissions, an optioinal passeord and select the available question items.</LI>"
 					+ (supportsMembership?"<LI><a href='/PracticeExam?UserRequest=ReviewExamScores&sig=" + user.getTokenSignature() + "'>Review the exam results</a> and (optionally) assign partial credit for answers</LI>":"")
 					+ "</UL>");
+			
+			if (a.password != null && !a.password.isEmpty()) {
+				buf.append("<h4>The password for this exam is: " + a.password + "</h4>");
+			}
+			
 			buf.append("<a style='text-decoration: none' href='/PracticeExam?UserRequest=PrintExam&sig=" + user.getTokenSignature() + "'>"
 					+ "<button style='display: block; width: 500px; border: 1 px; background-color: #00FFFF; color: black; padding: 14px 28px; font-size: 18px; text-align: center; cursor: pointer;'>"
 					+ "Show This Assignment (recommended)</button></a>");
@@ -195,10 +237,42 @@ public class PracticeExam extends HttpServlet {
 		return buf.toString();
 	}
 	
+	static String passwordPrompt(User user,String msg) {
+		StringBuffer buf = new StringBuffer();
+		buf.append(Subject.banner);
+		buf.append("<h3>Enter the password for this assignment</h3>");
+		if (msg==null) msg="";
+		buf.append("<div id='msgSpan' style='color:#EE0000'>" + msg + "</div><br/>");
+		buf.append("Your instructor should provide you with the password.</br>"
+				+ "<form method=post action=/PracticeExam >"
+				+ "<input type=hidden name=sig value='" + user.getTokenSignature()  + "' />"
+				+ "<input type=hidden name=UserRequest value=PrintExam />"
+				+ "Password: <input type=password size=30 name='ExamPassword' /> "
+				+ "<input id=start type=submit value='Begin the exam' disabled />"
+				+ "</form><br/><br/>");	
+
+  		buf.append("<script>"
+ 				+ "function enableSubmission() {"
+  				+ "  document.getElementById('msgSpan').innerHTML = '';"
+				+ "  document.getElementById('start').disabled=false;"
+				+ "}"
+				+ "if (document.getElementById('msgSpan').innerHTML === '') enableSubmission();"
+				+ "else setTimeout(enableSubmission,5000);"
+				+ "</script>");
+		return buf.toString();
+	}
+	
 	static String printExam(User user,Assignment a,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		
 		try {
+			// Check to see if a password is required to start the exam
+			if (a==null || a.password == null || a.password.isEmpty() || a.password.equals(request.getParameter("ExamPassword")));  // continue
+			else {
+				String msg = (request.getParameter("ExamPassword")==null?"":"The password was not correct. Please wait...");
+				return passwordPrompt(user,msg);
+			}
+
 			// Get requested topic ids for this exam
 			List<Long> topicIds = new ArrayList<Long>();
 			long assignmentId = 0;
@@ -752,14 +826,11 @@ public class PracticeExam extends HttpServlet {
 		return buf.toString();
 	}
 
-	String reviewExamScores(User user) {
+	String reviewExamScores(User user,Assignment a) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			if (!user.isInstructor()) return "<h2>Access Denied</h2>You must be an instructor to view this page.";
 
-			long assignmentId = user.getAssignmentId();
-
-			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).now();
 			if (a == null) return "Sorry, we did not find an assignment associated with this practice exam.";
 			
 			if (a.lti_nrps_context_memberships_url == null || a.lti_nrps_context_memberships_url.isEmpty()) {
@@ -769,14 +840,14 @@ public class PracticeExam extends HttpServlet {
 			List<Topic> topics = new ArrayList<Topic>(ofy().load().type(Topic.class).ids(a.topicIds).values());
 
 			buf.append("<h2>Practice Exam Assignment Results</h2>"
-					+ "Assignment ID: " + assignmentId + "<br>"
+					+ "Assignment ID: " + a.id + "<br>"
 					+ "Created: " + a.created + "<br>"
 					+ "Topics covered:<ol>");
 			for (Topic t : topics) buf.append("<li>" + t.title + "</li>");
 			buf.append("</ol>");
 
 			// Get all of the PracticeExamTransactions associated with this assignment:
-			List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("assignmentId",assignmentId).list();			
+			List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("assignmentId",a.id).list();			
 			if (pets.size()==0) {
 				buf.append("There are no transactions for this practice exam assignment yet.<p>");
 				return buf.toString();
@@ -792,7 +863,7 @@ public class PracticeExam extends HttpServlet {
 			int i = 0;
 			buf.append("<table><tr><th>User</th><th>Attempt</th><th>Downloaded</th><th>Elapsed Time</th>");
 			for (int j=1;j<=topics.size();j++) buf.append("<th>Topic " + j + "</th>");
-			buf.append("<th>Total Score</th><th>Reviewed</th><th></th></tr>");
+			buf.append("<th>Total Score</th><th>Reviewed</th><th></th><th></th></tr>");
 			
 			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
 				i++; // increment the user number
@@ -807,13 +878,13 @@ public class PracticeExam extends HttpServlet {
 				Collections.sort(userpets,new SortExams());
 				if (userpets.isEmpty()) {  // place a blank line in the table with the user's name
 					buf.append("<tr style='text-align: center;background-color: " + (i%2==0?"yellow":"cyan") + "'>"
-							+ "<td>" + i + ".&nbsp;" + name + "</td>" + "<td colspan=" + 6+a.topicIds.size() + ">(exam was not attempted)</td>");
+							+ "<td>" + i + ".&nbsp;" + name + "</td>" + "<td colspan=" + 7+a.topicIds.size() + ">(exam was not attempted)</td>");
 					buf.append("</tr>");					
 				} else {
 					for (int k=userpets.size();k>0;k--) {  // enter the user's transactions into the table
 						PracticeExamTransaction p = userpets.get(k-1);
 						buf.append("<tr style='text-align: center;background-color: " + (i%2==0?"yellow":"cyan") + "'>");
-						buf.append("<td>" + (p.userId.equals(user.getHashedId())?"(you)":i + ".&nbsp;" + name) + "</td><td>" + k + "</td><td>" + p.downloaded + "</td>");
+						buf.append("<td>" + i + ".&nbsp;" + name + "</td><td>" + k + "</td><td>" + p.downloaded + "</td>");
 
 						if (p.graded==null) buf.append("<td colspan=" + 4+a.topicIds.size() + ">(exam was not submitted for scoring)</td>");
 						else {
@@ -833,6 +904,12 @@ public class PracticeExam extends HttpServlet {
 									+ "<a href=PracticeExam?UserRequest=ReviewExam&PracticeExamTransactionId=" + p.id 
 									+ "&sig=" + user.getTokenSignature() + "&UserId=" + user.platformId + "/" + entry.getKey() + ">Review</a></td>");
 						}
+						buf.append("<td><form method=post action=/PracticeExam onsubmit=\"return confirm('Permanently delete this record? This action cannot be undone.');\">"
+								+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+								+ "<input type=hidden name=UserRequest value=DeleteSubmission />"
+								+ "<input type=hidden name=tid value='" + p.id + "' />"
+								+ "<input type=submit value=Delete />"
+								+ "</form></td>");
 						buf.append("</tr>");					
 					}
 				}
@@ -1011,29 +1088,44 @@ public class PracticeExam extends HttpServlet {
 	}
 
 	String selectExamQuestionsForm(User user) {
-		StringBuffer buf = new StringBuffer("<h3>Select Practice Exam Questions</h3>");
+		StringBuffer buf = new StringBuffer("<h3>Practice Exam Settings</h3>");
 		try {
 			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-			Map<Long,Topic>topics = ofy().load().type(Topic.class).ids(a.topicIds);
-			buf.append("Topics:<OL>");
-			for (Topic t:topics.values()) buf.append("<LI>" + t.title + "</LI>");
-			buf.append("</OL>");
-
+			
+			
 			if (a.timeAllowed==null) a.timeAllowed = 3600; // default time for completing the exam
-
-			buf.append("Each practice exam consists of items selected at random from the items below:<ul>"
-					+ "<li>10 quiz questions worth 2 points each</li>"
-					+ "<li> 5 homework questions worth 10 points each</li>"
-					+ "<li> 2 more challenging homework questions worth 15 points each</li></ul>"
-					+ "for a total of 100 points.<p>");
 			buf.append("The default time allowed to complete the exam is 60 minutes, but you may change this "
 					+ "(e.g., to create a special assignment for a student requiring extended time up to 300 minutes).<br>");
 			buf.append("<form action=/PracticeExam method=post><input type=hidden name=sig value=" + user.getTokenSignature() + ">" 
 					+ "Time allowed for this assignment: <input type=text size=5 name=TimeAllowed value=" + a.timeAllowed/60. + "> minutes. "
 					+ "<input type=submit name=UserRequest value='Set Allowed Time'><br>"
-					+ "</form><p>"
-					+ "Select the items to be included in exams assigned to your class.<p>");
+					+ "</form><br/>");
 
+			buf.append("By default, students may attempt this practice exam as many times as they wish. This rewards students who persist "
+					+ "to achieve a better score. However, you may limit the number of attempts here. Leave the field blank to permit unlimited attempts.<br/>"
+					+ "<form action=/PracticeExam method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "Number of attempts allowed for this assignment: <input type=text size=10 name=AttemptsAllowed " 
+					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /> "
+					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' /><br/>"
+					+ "</form><br/>");
+			
+			buf.append("By default, students will view the exam immediately after clicking the assignment link in your LMS. However, "
+					+ "you may (optionally) set a password required to start the exam by entering it below:</br>"
+					+ "<form method=post action=/PracticeExam ><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "<input type=text name=ExamPassword value='" + (a.password==null || a.password.isEmpty()?"":a.password) + "' />"
+					+ "<input type=submit name=UserRequest value='Set Password' /></form><br/>");
+			
+			Map<Long,Topic>topics = ofy().load().type(Topic.class).ids(a.topicIds);
+			buf.append("Topics:<OL>");
+			for (Topic t:topics.values()) buf.append("<LI>" + t.title + "</LI>");
+			buf.append("</OL>");
+
+			buf.append("Each practice exam consists of items selected at random from the items below:<ul>"
+					+ "<li>10 quiz questions worth 2 points each</li>"
+					+ "<li> 5 homework questions worth 10 points each</li>"
+					+ "<li> 2 more challenging homework questions worth 15 points each</li></ul>"
+					+ "for a total of 100 points. Select the items to be included in exams assigned to your class.<br/><br/>");
+			
 			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> questionKeys_10pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> questionKeys_15pt = new ArrayList<Key<Question>>();

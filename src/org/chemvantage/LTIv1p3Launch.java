@@ -329,7 +329,7 @@ public class LTIv1p3Launch extends HttpServlet {
 					break;
 				case "PracticeExam":
 					out.println(Subject.header("ChemVantage Practice Exam")
-							+ (user.isInstructor()?PracticeExam.instructorPage(user, myAssignment,request):PracticeExam.printExam(user,myAssignment,request))
+							+ (user.isInstructor()?PracticeExam.instructorPage(user, myAssignment):PracticeExam.printExam(user,myAssignment,request))
 							+ Subject.footer);
 					break;
 				case "PlacementExam":

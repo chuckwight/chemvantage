@@ -152,7 +152,7 @@ public class Quiz extends HttpServlet {
 			buf.append("Topic covered on this quiz: " + t.getTitle() + "<br/><br/>");
 			
 			if (a.timeAllowed != null) buf.append("Students are permitted " + a.timeAllowed/60 + " minutes to complete this quiz.<br/><br/>");
-			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("Students may attempt this quiz an unlimited number of times to improve their score.<br/><br/>");
+			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("Students may attempt this assignment an unlimited number of times to improve their score.<br/><br/>");
 			else buf.append("Students may only attempt this assignment " + a.attemptsAllowed + (a.attemptsAllowed==1?" time":" times") + ".<br/><br/>");
 			
 			buf.append("From here, you may<UL>"

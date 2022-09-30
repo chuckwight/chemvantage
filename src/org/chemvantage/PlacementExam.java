@@ -139,7 +139,6 @@ public class PlacementExam extends HttpServlet {
 					break;
 				case "Set Allowed Time":
 					if (user.isInstructor()) {
-						a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 						try {
 							double minutes = Double.parseDouble(request.getParameter("TimeAllowed"));
 							if (minutes > 300.) minutes = 300.;
@@ -153,7 +152,6 @@ public class PlacementExam extends HttpServlet {
 					break;
 				case "Set Allowed Attempts":
 					if (user.isInstructor()) {
-						a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 						try {
 							a.attemptsAllowed = Integer.parseInt(request.getParameter("AttemptsAllowed"));
 							if (a.attemptsAllowed<1) a.attemptsAllowed = null;
@@ -192,7 +190,6 @@ public class PlacementExam extends HttpServlet {
 					break;
 				case "Set Password":
 					if (user.isInstructor()) {
-						a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 						a.password = request.getParameter("ExamPassword");
 						if (a.password != null) a.password = a.password.trim();
 						ofy().save().entity(a).now();
@@ -268,11 +265,11 @@ public class PlacementExam extends HttpServlet {
 		buf.append("<h3>Enter the password for this assignment</h3>");
 		if (msg==null) msg="";
 		buf.append("<div id='msgSpan' style='color:#EE0000'>" + msg + "</div><br/>");
-		buf.append("Your instructor should provide you with a password. Please enter it below:</br>"
+		buf.append("Your instructor should provide you with the password.</br>"
 				+ "<form method=post action=/PlacementExam >"
 				+ "<input type=hidden name=sig value='" + user.getTokenSignature()  + "' />"
 				+ "<input type=hidden name=UserRequest value=PrintExam />"
-				+ "<input type=password size=30 name='ExamPassword' /> "
+				+ "Password: <input type=password size=30 name='ExamPassword' /> "
 				+ "<input id=start type=submit value='Begin the exam' disabled />"
 				+ "</form><br/><br/>");	
 
@@ -922,7 +919,7 @@ public class PlacementExam extends HttpServlet {
 									+ "<a href=PlacementExam?UserRequest=ReviewExam&PlacementExamTransactionId=" + p.id 
 									+ "&sig=" + user.getTokenSignature() + "&UserId=" + user.platformId + "/" + entry.getKey() + ">Review</a></td>");
 						}
-						buf.append("<td><form method=post action=/PlacementExam onsubmit=\"return confirm('Permanentlky delete this submission? This action cannot be undone.');\">"
+						buf.append("<td><form method=post action=/PlacementExam onsubmit=\"return confirm('Permanently delete this submission? This action cannot be undone.');\">"
 								+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 								+ "<input type=hidden name=UserRequest value=DeleteSubmission />"
 								+ "<input type=hidden name=tid value='" + p.id + "' />"
@@ -1190,7 +1187,7 @@ public class PlacementExam extends HttpServlet {
 	}
 
 	String selectExamQuestionsForm(User user) {
-		StringBuffer buf = new StringBuffer("<h3>Select Placement Exam Questions</h3>");
+		StringBuffer buf = new StringBuffer("<h3>Placement Exam Settings</h3>");
 		try {
 			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 			Map<Long,Topic>topics = ofy().load().type(Topic.class).ids(a.topicIds);
