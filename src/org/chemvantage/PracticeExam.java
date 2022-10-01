@@ -882,11 +882,12 @@ public class PracticeExam extends HttpServlet {
 				buf.append("The LMS returned 0 members of this group.");
 				return buf.toString();
 			}
-			  
+			
+			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.SHORT,DateFormat.SHORT);
 			int i = 0;
 			buf.append("<table><tr><th>User</th><th>Attempt</th><th>Downloaded</th><th>Elapsed Time</th>");
 			for (int j=1;j<=topics.size();j++) buf.append("<th>Topic " + j + "</th>");
-			buf.append("<th>Total Score</th><th>Reviewed</th><th></th><th></th></tr>");
+			buf.append("<th>Total Score</th><th>Review</th><th>Delete</th></tr>");
 			
 			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
 				i++; // increment the user number
@@ -901,15 +902,15 @@ public class PracticeExam extends HttpServlet {
 				Collections.sort(userpets,new SortExams());
 				if (userpets.isEmpty()) {  // place a blank line in the table with the user's name
 					buf.append("<tr style='text-align: center;background-color: " + (i%2==0?"yellow":"cyan") + "'>"
-							+ "<td>" + i + ".&nbsp;" + name + "</td>" + "<td colspan=" + 7+a.topicIds.size() + ">(exam was not attempted)</td>");
+							+ "<td>" + i + ".&nbsp;" + name + "</td>" + "<td colspan=" + (6+a.topicIds.size()) + ">(exam was not attempted)</td>");
 					buf.append("</tr>");					
 				} else {
 					for (int k=userpets.size();k>0;k--) {  // enter the user's transactions into the table
 						PracticeExamTransaction p = userpets.get(k-1);
 						buf.append("<tr style='text-align: center;background-color: " + (i%2==0?"yellow":"cyan") + "'>");
-						buf.append("<td>" + i + ".&nbsp;" + name + "</td><td>" + k + "</td><td>" + p.downloaded + "</td>");
+						buf.append("<td>" + i + ".&nbsp;" + name + "</td><td>" + k + "</td><td>" + df.format(p.downloaded) + "&nbsp;UTC</td>");
 
-						if (p.graded==null) buf.append("<td colspan=" + 4+a.topicIds.size() + ">(exam was not submitted for scoring)</td>");
+						if (p.graded==null) buf.append("<td colspan=" + (3+a.topicIds.size()) + ">(exam was not submitted for scoring)</td>");
 						else {
 							buf.append("<td>" + (p.graded==null?"-":(p.graded.getTime()-p.downloaded.getTime())/60000 + " min.") + "</td>");
 
@@ -922,8 +923,9 @@ public class PracticeExam extends HttpServlet {
 								else buf.append("<td>" + String.valueOf(100*p.scores[j]/p.possibleScores[j]) + "%" + "</td>");
 							}
 
-							buf.append("<td>" + String.valueOf(100*score/possibleScore) + "%</td><td>" 
-									+ (p.graded==null?" - ":(p.reviewed==null?"no":p.reviewed)) + "</td><td>"
+							buf.append("<td>" + String.valueOf(100*score/possibleScore) + "%</td>");
+							buf.append("<td>" 
+									+ (p.graded==null?" - ":(p.reviewed==null?"":df.format(p.reviewed)+"&nbsp;UTC<br/>"))
 									+ "<a href=PracticeExam?UserRequest=ReviewExam&PracticeExamTransactionId=" + p.id 
 									+ "&sig=" + user.getTokenSignature() + "&UserId=" + user.platformId + "/" + entry.getKey() + ">Review</a></td>");
 						}
