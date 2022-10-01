@@ -262,7 +262,7 @@ public class Quiz extends HttpServlet {
 			try { // check for assigned questions
 				questionKeys = new ArrayList<Key<Question>>(qa.getQuestionKeys());  // clone the list of questions for the assignment
 			} catch (Exception e) { // no assignment exists
-				questionKeys = ofy().load().type(Question.class).filter("topicId",topicId).keys().list();
+				questionKeys = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",topicId).keys().list();
 			}
 			
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
@@ -282,7 +282,7 @@ public class Quiz extends HttpServlet {
 			while (i < nQuestions && questionKeys.size() > 0) {
 				Key<Question> k = questionKeys.remove(rand.nextInt(questionKeys.size()));
 				Question q = quizQuestions.get(k);
-				if (q == null) { // this catches cases where an assigned question no longer exists (rare)
+				if (q == null && qa != null) { // this catches cases where an assigned question no longer exists (rare)
 					qa.questionKeys.remove(k);
 					ofy().save().entity(qa);
 					continue;
