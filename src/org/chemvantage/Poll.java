@@ -217,7 +217,7 @@ public class Poll extends HttpServlet {
 		
 		int r = new Random().nextInt(999);
 		
-		buf.append("<form method=post action=/Poll>"
+		buf.append("<form method=post action='/Poll'>"
 				+ (user.isInstructor()?"<input type=hidden name=UserRequest value=OpenPoll />":"")
 				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 				+ "<input type=hidden name=r value=" + r + " />"

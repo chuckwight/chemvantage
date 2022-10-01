@@ -450,7 +450,7 @@ public class Homework extends HttpServlet {
 				if (user.isInstructor() || user.isTeachingAssistant()) {
 					buf.append("<br/>Instructor: <a href=# onClick=document.getElementById('solution').style='display:inline';this.style='display:none';>show the solution</a><br/><br/>");
 				} else if (!user.isAnonymous() && user.isEligibleForHints(q.id)) {
-					buf.append("<br/><form method=post action=Help>"
+					buf.append("<br/><form method=post action=/Help>"
 							+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 							+ "<input type=hidden name=AssignmentType value=Homework />"
 							+ "<input type=hidden name=TransactionId value=" + ht.id + " />"

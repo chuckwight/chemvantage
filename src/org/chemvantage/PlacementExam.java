@@ -408,7 +408,7 @@ public class PlacementExam extends HttpServlet {
 			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded. ");
 			if (resumingExam) buf.append("You are resuming a placement exam originally downloaded at " + pt.downloaded);
 			
-			buf.append("\n<FORM NAME=PlacementExamForm METHOD=POST ACTION=PlacementExam "
+			buf.append("\n<FORM NAME=PlacementExamForm METHOD=POST ACTION=/PlacementExam "
 					+ "onSubmit=\"return confirm('Submit this placement exam for grading now. Are you sure?')\">");
 
 			buf.append("<div id='timer0' style='color: #EE0000'></div><div id=ctrl0 style='font-size:50%;color:#EE0000;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");

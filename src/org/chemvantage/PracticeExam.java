@@ -406,7 +406,7 @@ public class PracticeExam extends HttpServlet {
 			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded. ");
 			if (resumingExam) buf.append("You are resuming an exam originally downloaded at " + pt.downloaded);
 			
-			buf.append("\n<FORM NAME=PracticeExamForm METHOD=POST ACTION=PracticeExam "
+			buf.append("\n<FORM NAME=PracticeExamForm METHOD=POST ACTION=/PracticeExam "
 					+ "onSubmit=\"return confirm('Submit this exam for grading now. Are you sure?')\">");
 
 			buf.append("<div id='timer0' style='color: red'></div><div id=ctrl0 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
