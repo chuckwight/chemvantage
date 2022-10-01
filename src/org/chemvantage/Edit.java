@@ -273,6 +273,16 @@ public class Edit extends HttpServlet {
 			buf.append("</FORM>");
 
 			if (showQuestions) {
+				Map<Long,Concept> concepts = new HashMap<Long,Concept>();
+				try {
+					Topic t = ofy().load().type(Topic.class).id(topicId).now();
+					concepts = ofy().load().type(Concept.class).ids(t.conceptIds);
+					buf.append("<h4>Key Concepts</h4>");
+					for (Concept c : concepts.values()) buf.append("&nbsp;&nbsp;" + c.orderBy + " - " + c.title + "<br/>");
+					buf.append("<br/>");
+				} catch (Exception e) {
+					buf.append("<br/>No concepts are available for this topic.");
+				}
 				buf.append("<FORM NAME=NewQuestion METHOD=GET ACTION=Edit>");
 				buf.append("Add a new question for this topic:<br>"
 						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=NewQuestionForm>"
@@ -324,13 +334,15 @@ public class Edit extends HttpServlet {
 						buf.append("<tr><td bgcolor=cyan>" + q.pointValue + "&nbsp;pt.&nbsp;questions:</td><td colspan=2>&nbsp;<p>&nbsp;</td></tr>");
 					}
 					i++;
-
+					Concept c = concepts.get(q.conceptId);
 					buf.append("\n<FORM METHOD=GET ACTION=Edit>"
 							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topicId + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>"
 							+ "<TR ID=" + q.id + " VALIGN=TOP>"
-							+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit><p><FONT SIZE=-2>" + successPct.get(Key.create(q)) + "%&nbsp;avg&nbsp;score</FONT>"
+							+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit><br/><FONT SIZE=-2>"
+							+ (c==null?"":"Concept:&nbsp;" + c.orderBy + "<br/>")
+							+ successPct.get(Key.create(q)) + "%&nbsp;avg&nbsp;score</FONT>"
 							+ (q.learn_more_url != null && !q.learn_more_url.isEmpty()?"<br/><a href='" + q.learn_more_url + "' target=_blank><img src=/images/learn_more.png /></a>":"")
 							+ "</TD>"
 							+ "<TD ALIGN=RIGHT NOWRAP> " + i + ". </TD>");
