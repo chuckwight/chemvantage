@@ -111,6 +111,7 @@ public class SmartText extends HttpServlet {
 		   STTransaction st = null;
 		   int score = 0;
 		   int possibleScore = 0;
+		   boolean complete = false;
 		   try {
 			   st = ofy().load().type(STTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).first().safe();
 			   // Bulletproofing: check to ensure that conceptIds haven't been added; or start over
@@ -125,7 +126,10 @@ public class SmartText extends HttpServlet {
 				   if (st.scores[i] == st.possibleScores[i]) conceptIds.remove(t.conceptIds.get(i));   
 				}
 			   if (score>0 && score==possibleScore) {
-				   buf.append("This assignment is complete.<br/>");
+				   long exp = new Date(new Date().getTime()+1200000L).getTime();  // 20 minutes from now in millis
+				   buf.append("This assignment is complete. Your score is 100%.<br/>"
+				   		+ "For more practice on this subject you may "
+				   		+ "<a href=/Quiz?TopicId=" + a.topicId + "&sig=" + (new User(exp).getTokenSignature()) + ">try a practice quiz</a>.<br/><br/>");
 				   return buf.toString();
 			   }
 			} catch (Exception e) {
@@ -134,11 +138,11 @@ public class SmartText extends HttpServlet {
 		   }
 		   
 		   // Find a randomly selected question:
-		   Random r = new Random();
+		   Random random = new Random();
 		   Question q = null;
 		   long conceptId=0;
 		   while (q==null) {
-			   conceptId = conceptIds.get(r.nextInt(conceptIds.size()));
+			   conceptId = conceptIds.get(random.nextInt(conceptIds.size()));
 			   
 			   // get all the question keys for the chosen conceptId
 			   List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("conceptId",conceptId).keys().list();
@@ -150,7 +154,7 @@ public class SmartText extends HttpServlet {
 				   questionKeys.removeAll(st.answeredKeys);
 			   }
 			   if (!questionKeys.isEmpty()) {  // randomly select one questionKey and display the question
-				   Key<Question> questionKey = questionKeys.get(r.nextInt(questionKeys.size()));
+				   Key<Question> questionKey = questionKeys.get(random.nextInt(questionKeys.size()));
 				   q = ofy().load().key(questionKey).now();
 			   } else {  // close out this conceptId
 				   int index = t.conceptIds.indexOf(conceptId);
@@ -158,13 +162,17 @@ public class SmartText extends HttpServlet {
 				   ofy().save().entity(st).now();
 				   conceptIds.remove(conceptId);
 				   if (conceptIds.isEmpty()) {
-					   buf.append("You have completed this assignment.");
+					   long exp = new Date(new Date().getTime()+1200000L).getTime();  // 20 minutes from now in millis
+					   buf.append("<h2>Congratulations!</h2>"
+							   + "You have answered all of the key concept questions for this assignment. Your score is 100%.<br/>"
+							   + "For more practice on this subject you may "
+							   + "<a href=/Quiz?TopicId=" + a.topicId + "&sig=" + (new User(exp).getTokenSignature()) + ">try a practice quiz</a>.<br/><br/>");
 					   return buf.toString();
 				   }
 			   }
 		   }
 		   // At this point we should have a valid question q.
-		   int p = r.nextInt();
+		   int p = random.nextInt();
 		   q.setParameters(p);
 
 		   buf.append("<form method=post action=/SmartText>"
@@ -199,7 +207,7 @@ public class SmartText extends HttpServlet {
 		   String studentAnswer = orderResponses(request.getParameterValues(Long.toString(questionId)));
 		   STTransaction st = ofy().load().type(STTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",assignmentId).first().now();
 		   
-//		   get the index of st.conceptIds that corresponds to the conceptId for this question:
+		   //  get the index of st.conceptIds that corresponds to the conceptId for this question:
 		   int index = st.conceptIds.indexOf(conceptId);
 		   boolean isCorrect = q.isCorrect(studentAnswer);
 		   if (isCorrect) {
@@ -228,7 +236,7 @@ public class SmartText extends HttpServlet {
 		   }
 		   
 		   if (score==possibleScore) {
-			   buf.append("<h2>You have mastered all of the concepts in this chapter</h2>");
+			   buf.append("<h2>Congratulations!</h2>You have answered all of the key concept questions for this assignment. Your score is 100%.");
 		   } else if (st.missedQuestions[index]<2) {  // continue to the next question
 			   buf.append("This assignment is " + 100*score/possibleScore + "% complete.<br/><br/>");
 			   buf.append("<a href=/SmartText?UserRequest=PrintQuestion&sig=" + user.getTokenSignature() + ">"
