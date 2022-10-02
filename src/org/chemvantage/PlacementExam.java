@@ -77,7 +77,8 @@ public class PlacementExam extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 			
-			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+			Assignment a = null;
+			if (!user.isAnonymous()) a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 			
 			if (examQuestions.isEmpty()) initializeExam();
 			
@@ -119,7 +120,8 @@ public class PlacementExam extends HttpServlet {
 			User user = User.getUser(request.getParameter("sig"));
 			if (user==null) throw new Exception("Invalid user token (may have expired).");
 			
-			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+			Assignment a = null;
+			if (!user.isAnonymous()) a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 			
 			if (examQuestions.isEmpty()) initializeExam();
 			
@@ -291,19 +293,20 @@ public class PlacementExam extends HttpServlet {
 		StringBuffer debug = new StringBuffer("Debug:");
 		try {
 			// Check to see if a password is required to start the exam
-			if (a.password == null || a.password.isEmpty() || a.password.equals(request.getParameter("ExamPassword")));  // continue
+			if (a == null || a.password == null || a.password.isEmpty() || a.password.equals(request.getParameter("ExamPassword")));  // continue
 			else {
 				String msg = (request.getParameter("ExamPassword")==null?"":"The password was not correct. Please wait...");
 				return passwordPrompt(user,msg);
 			}
 			
-			debug.append("1");
+			debug.append("1a");
 			// Check to see if the timeAllowed has been modified by the instructor:
 			int timeAllowed = 3600;  // default value in seconds
 			if (a != null && a.timeAllowed!=null) {
 				timeAllowed = a.timeAllowed;  // instructor option, e.g. for student disability accommodations
 				user = User.getUser(user.getTokenSignature(),timeAllowed/60+30);
 			}
+			debug.append("1b");
 			
 			// Now we will retrieve or create a PlacementExamTransaction entity:
 			PlacementExamTransaction pt = null;
@@ -313,12 +316,29 @@ public class PlacementExam extends HttpServlet {
 			Date now = new Date();
 			Date startTime = new Date(now.getTime()-timeAllowed*1000);  // about 1 hour ago depending on timeAllowed ago 
 			
-			int nAttempts = ofy().load().type(PlacementExamTransaction.class).filter("assignmentId",a.id).filter("userId",user.getHashedId()).count();
+			List<Long> topicIds = new ArrayList<Long>();
+			int nAttempts = 0;
+			if (a == null) {
+				List<Topic> topics = ofy().load().type(Topic.class).list();
+				for (Topic t : topics) {
+					switch (t.title) {
+					case "Essential Math":
+					case "Essential Chemistry":
+					case "Word Problems":
+						topicIds.add(t.id);
+					}
+				}
+			} else {
+				topicIds = a.topicIds;
+				nAttempts = ofy().load().type(PlacementExamTransaction.class).filter("assignmentId",a.id).filter("userId",user.getHashedId()).count();
+			}
+			debug.append("1c");
+			
 			boolean resumingExam = false;
 			pt = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("graded",null).filter("downloaded >",startTime).first().now();
 			if (pt != null) resumingExam = true;
 			else {  // this is a new exam, either newly paid or authorized retake
-				if (a.attemptsAllowed != null && nAttempts >= a.attemptsAllowed) {
+				if (a != null && a.attemptsAllowed != null && nAttempts >= a.attemptsAllowed) {
 					buf.append(Subject.banner);
 					buf.append("<h2>Sorry, you are only allowed " + a.attemptsAllowed + " attempt" + (a.attemptsAllowed==1?"":"s") + " on this assignment.</h2>");
 					
@@ -328,7 +348,7 @@ public class PlacementExam extends HttpServlet {
 					for (PlacementExamTransaction pet : pets) {
 						int score = 0;
 						int possibleScore = 0;
-						for (int i=0;i<a.topicIds.size();i++) {
+						for (int i=0;i<topicIds.size();i++) {
 							score += pet.scores[i];
 							possibleScore += pet.possibleScores[i];
 						}
@@ -341,9 +361,9 @@ public class PlacementExam extends HttpServlet {
 				}	
 				pt = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("graded",null).filter("downloaded",null).first().now(); // newly  paid
 				Long transactionId = pt==null?null:pt.id;  // use the same id if it exists
-				pt = new PlacementExamTransaction(a.topicIds,user.getId(),now,null,new int[a.topicIds.size()],new int[a.topicIds.size()]);
+				pt = new PlacementExamTransaction(topicIds,user.getId(),now,null,new int[topicIds.size()],new int[topicIds.size()]);
 				pt.id = transactionId;
-				pt.assignmentId = a.id;
+				pt.assignmentId = a==null?0:a.id;
 				ofy().save().entity(pt).now();	
 			}
 			debug.append("2");
@@ -353,7 +373,7 @@ public class PlacementExam extends HttpServlet {
 			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> questionKeys_04pt = new ArrayList<Key<Question>>();
 			
-			for (long tid : a.topicIds) {  //First collect the question keys
+			for (long tid : topicIds) {  //First collect the question keys
 				questionKeys_02pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",2).keys().list());
 				questionKeys_04pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",4).keys().list());
 			}
@@ -403,7 +423,7 @@ public class PlacementExam extends HttpServlet {
 			buf.append("<h2>General Chemistry Placement Exam</h2>");
 			if (user.isAnonymous()) buf.append("Anonymous User<br/>");
 			
-			if (a.attemptsAllowed!=null) buf.append("You are allowed " + a.attemptsAllowed + (a.attemptsAllowed==1?" attempt":" attempts") + " on this exam. This is attempt #" + (nAttempts + (resumingExam?0:1)) + ".<br/>");
+			if (a!=null && a.attemptsAllowed!=null) buf.append("You are allowed " + a.attemptsAllowed + (a.attemptsAllowed==1?" attempt":" attempts") + " on this exam. This is attempt #" + (nAttempts + (resumingExam?0:1)) + ".<br/>");
 			
 			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded. ");
 			if (resumingExam) buf.append("You are resuming a placement exam originally downloaded at " + pt.downloaded);
@@ -417,7 +437,7 @@ public class PlacementExam extends HttpServlet {
 			buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "'>");
 			if (a!=null) buf.append("\n<input type=hidden name=AssignmentId value='" + a.id + "'>");
 			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
-			int[] possibleScores = new int[a.topicIds.size()];
+			int[] possibleScores = new int[topicIds.size()];
 			debug.append("6");
 			
 			buf.append("<OL>\n");
@@ -427,7 +447,7 @@ public class PlacementExam extends HttpServlet {
 				Key<Question> k = questionKeys.remove(0);
 				Question q = examQuestions.get(k);
 				i++;
-				possibleScores[a.topicIds.indexOf(q.topicId)] += q.pointValue;
+				possibleScores[topicIds.indexOf(q.topicId)] += q.pointValue;
 				q.setParameters((int)(pt.id ^ q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
 				if (!resumingExam) pt.questionKeys.add(k);
@@ -492,8 +512,7 @@ public class PlacementExam extends HttpServlet {
 			buf.append("<h2>Placement Exam Results</h2>");
 			if (user.isAnonymous()) buf.append("Anonymous User<br/>");
 			
-			Assignment a = null;
-			
+			Assignment a = null;			
 			try {
 				a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 			} catch (Exception e) {}
@@ -630,8 +649,11 @@ public class PlacementExam extends HttpServlet {
 
 			if (user.isAnonymous()) return buf.toString();
 			
-			List<PlacementExamTransaction> pets = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
-			if (pets==null || pets.size()==0) {
+			List<PlacementExamTransaction> pets = new ArrayList<PlacementExamTransaction>();
+			if (user.isAnonymous()) pets = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).order("downloaded").list();
+			else pets = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
+			
+			if (pets==null || pets.isEmpty()) {
 				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>");
 			} else {				
 				Score s = null;
