@@ -111,7 +111,6 @@ public class SmartText extends HttpServlet {
 		   STTransaction st = null;
 		   int score = 0;
 		   int possibleScore = 0;
-		   boolean complete = false;
 		   try {
 			   st = ofy().load().type(STTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).first().safe();
 			   // Bulletproofing: check to ensure that conceptIds haven't been added; or start over

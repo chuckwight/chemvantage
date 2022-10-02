@@ -278,7 +278,10 @@ public class Edit extends HttpServlet {
 					Topic t = ofy().load().type(Topic.class).id(topicId).now();
 					concepts = ofy().load().type(Concept.class).ids(t.conceptIds);
 					buf.append("<h4>Key Concepts</h4>");
-					for (Concept c : concepts.values()) buf.append("&nbsp;&nbsp;" + c.orderBy + " - " + c.title + "<br/>");
+					for (Concept c : concepts.values()) {
+						int nQuestions = ofy().load().type(Question.class).filter("conceptId",c.id).count();
+						buf.append("&nbsp;&nbsp;" + c.orderBy + " - " + c.title + " (" + nQuestions + ")<br/>");
+					}
 					buf.append("<br/>");
 				} catch (Exception e) {
 					buf.append("<br/>No concepts are available for this topic.");
