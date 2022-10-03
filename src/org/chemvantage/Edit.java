@@ -255,10 +255,10 @@ public class Edit extends HttpServlet {
 			int nPending = ofy().load().type(ProposedQuestion.class).count();
 			buf.append("<a href=Edit?UserRequest=Review>"
 					+ nPending + " items are currently pending editorial review.</a><br>");
-			buf.append("<a href=Edit?UserRequest=ManageTopics>Manage Topics</a><br>");
-			buf.append("<a href=Edit?UserRequest=ManageConcepts>Manage Concepts</a><br>");
-			buf.append("<a href=Edit?UserRequest=ManageVideos>Manage Videos</a><br>");
-			buf.append("<a href=Edit?UserRequest=ManageTexts>Manage Texts</a><p>");
+			buf.append("<a href=/Edit?UserRequest=ManageTopics>Manage Topics</a><br>");
+			buf.append("<a href=/Edit?UserRequest=ManageConcepts>Manage Concepts</a><br>");
+			buf.append("<a href=/Edit?UserRequest=ManageVideos>Manage Videos</a><br>");
+			buf.append("<a href=/Edit?UserRequest=ManageTexts>Manage Texts</a><p>");
 			
 			long topicId = 0;
 			try {
@@ -266,12 +266,13 @@ public class Edit extends HttpServlet {
 			} catch (Exception e2) {}
 			String assignmentType = request.getParameter("AssignmentType");
 			boolean showQuestions = (topicId >0 && assignmentType != null && assignmentType.length()>0);
-			buf.append("<FORM NAME=TopicSelect METHOD=GET ACTION=Edit>");
+			buf.append("<FORM NAME=TopicSelect METHOD=GET ACTION=/Edit>");
 			buf.append("<FONT" + (request.getParameter("TopicId")!=null && topicId==0?" COLOR=RED>":">") + "<b>Topic:</b></FONT>" + topicSelectBox(topicId,showQuestions));
 			buf.append("<FONT" + (assignmentType!=null && assignmentType.length()==0?" COLOR=RED>":">") + "<b> Assignment Type:</b></FONT>" + assignmentTypeDropDownBox(assignmentType,true));
 			buf.append(" <INPUT TYPE=SUBMIT VALUE=" + (showQuestions?"Refresh>":"'Show Questions'>"));
 			buf.append("</FORM>");
-
+			boolean showDetails = Boolean.parseBoolean(request.getParameter("ShowDetails"));
+			
 			if (showQuestions) {
 				Map<Long,Concept> concepts = new HashMap<Long,Concept>();
 				try {
@@ -286,7 +287,7 @@ public class Edit extends HttpServlet {
 				} catch (Exception e) {
 					buf.append("<br/>No concepts are available for this topic.");
 				}
-				buf.append("<FORM NAME=NewQuestion METHOD=GET ACTION=Edit>");
+				buf.append("<FORM NAME=NewQuestion METHOD=GET ACTION=/Edit>");
 				buf.append("Add a new question for this topic:<br>"
 						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=NewQuestionForm>"
 						+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
@@ -338,11 +339,11 @@ public class Edit extends HttpServlet {
 					}
 					i++;
 					Concept c = concepts.get(q.conceptId);
-					buf.append("\n<FORM METHOD=GET ACTION=Edit>"
+					buf.append("\n<FORM METHOD=GET ACTION=/Edit>"
 							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topicId + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>"
-							+ "<TR ID=" + q.id + " VALIGN=TOP>"
+							+ "<TR VALIGN=TOP>"
 							+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit><br/><FONT SIZE=-2>"
 							+ (c==null?"":"Concept:&nbsp;" + c.orderBy + "<br/>")
 							+ successPct.get(Key.create(q)) + "%&nbsp;avg&nbsp;score</FONT>"
@@ -353,7 +354,8 @@ public class Edit extends HttpServlet {
 					buf.append("</TR></FORM>");
 				}
 				buf.append("</TABLE><br/>");	
-			} else {  // show the number of questions in each topic and assignment type
+				
+			} else if (showDetails){  // show the number of questions in each topic and assignment type
 				buf.append("<h4>Numbers of Questions By Topic and Assignment Type</h4>");
 				
 				buf.append("<TABLE><TR><TH>Topic</><TH>Quiz</TH><TH>Homework</TH><TH>Exam</TH><TH>Video</TH><TH>OpenStax</TH></TR>");
@@ -376,6 +378,8 @@ public class Edit extends HttpServlet {
 				}
 				buf.append("<TR style='font-weight:bold'><TD>Totals</TD><TD style='text-align:center'>" + nqt + "</TD><TD style='text-align:center'>" + nht + "</TD><TD style='text-align:center'>" + net + "</TD><TD style='text-align:center'>" + nvt + "</TD></TR>");
 				buf.append("</TABLE>");
+			} else {
+				buf.append("<a href=/Edit?sig=" + user.getTokenSignature() + "&ShowDetails=true><h4>Show a summary of questions by Topic and AssignmentType</h4></a></h4>");
 			}
 		} catch (Exception e) {
 			buf.append(e.getMessage());
@@ -452,7 +456,7 @@ public class Edit extends HttpServlet {
 					int nHW = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",t.id).count();
 					int nExam = ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",t.id).count();
 					int nVideo = ofy().load().type(Question.class).filter("assignmentType","Video").filter("topicId",t.id).count();
-					buf.append("\n<FORM NAME=TopicsForm" + t.id + " METHOD=POST ACTION=Edit>"
+					buf.append("\n<FORM NAME=TopicsForm" + t.id + " METHOD=POST ACTION=/Edit>"
 							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateTopic>"
 							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + t.id + "'>");
 					buf.append("\n<TR>"
@@ -474,7 +478,7 @@ public class Edit extends HttpServlet {
 				}
 			//}
 			// print one-row form to add a new topic (quiz):
-			buf.append("<FORM METHOD=POST ACTION=Edit><INPUT TYPE=HIDDEN NAME=UserRequest VALUE=CreateTopic>");
+			buf.append("<FORM METHOD=POST ACTION=/Edit><INPUT TYPE=HIDDEN NAME=UserRequest VALUE=CreateTopic>");
 			buf.append("<TR>"
 					+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4></TD>"
 					+ "<TD ALIGN=CENTER><INPUT NAME=Title></TD>"
@@ -957,7 +961,7 @@ public class Edit extends HttpServlet {
 			buf.append("Author: " + q.authorId + "<br>");
 			buf.append("Editor: " + user.getId() + "<p>");
 			
-			buf.append("<FORM Action=Edit METHOD=POST>");
+			buf.append("<FORM ACTION=/Edit METHOD=POST>");
 			
 			buf.append(q.printAll());
 			
