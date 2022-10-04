@@ -17,7 +17,6 @@
 
 package org.chemvantage;
 
-import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
@@ -27,7 +26,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.HttpConstraint;
@@ -37,8 +35,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.appengine.api.taskqueue.Queue;
-import com.google.appengine.api.taskqueue.QueueFactory;
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
@@ -49,7 +45,7 @@ import com.googlecode.objectify.cmd.Query;
 public class Edit extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
-	Map<String,Map<Key<Question>,Question>> questions = new HashMap<String,Map<Key<Question>,Question>>();
+	Map<Key<Question>,Question> questions = new HashMap<Key<Question>,Question>();
 	Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
 	Map<Key<Question>,Integer> pointValue = new HashMap<Key<Question>,Integer>();
 	List<Concept> concepts = new ArrayList<Concept>();
@@ -300,7 +296,7 @@ public class Edit extends HttpServlet {
 						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=5;submit()\" VALUE='Numeric'>"
 						+ "</FORM>");
 
-				loadQuestions(assignmentType,topicId);
+				List<Key<Question>> questionKeys = loadQuestions(assignmentType,topicId);
 				
 				buf.append("<a href=# onClick=document.getElementById('bulkform').style.display='';><h4>Current Questions</h4></a>");				
 				buf.append("<div id=bulkform style='display:none'>");
@@ -322,14 +318,13 @@ public class Edit extends HttpServlet {
 						+ "</form><br>"
 						+ "</div>");
 
-				String key1 = assignmentType + String.valueOf(topicId);
-				buf.append("<b>This assignment draws from the following " + questions.get(key1).size() + " questions:</b><br/><br/>");
+				buf.append("<b>This assignment draws from the following " + questionKeys.size() + " questions:</b><br/><br/>");
 
 				buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
 				int i=0;
 				int pts = 0;
-				for (Map.Entry<Key<Question>,Question> entry : questions.get(key1).entrySet()) {
-					Question q = entry.getValue().clone();
+				for (Key<Question> k : questionKeys) {
+					Question q = questions.get(k).clone();
 					q.setParameters();
 					
 					if ("Exam".equals(assignmentType) && q.pointValue != pts) { // print a header for new section of questions
@@ -339,7 +334,8 @@ public class Edit extends HttpServlet {
 					}
 					i++;
 					Concept c = concepts.get(q.conceptId);
-					buf.append("\n<FORM METHOD=GET ACTION=/Edit>"
+					buf.append("\n<span id=q" + q.id + "></span>"
+							+ "<FORM METHOD=GET ACTION=/Edit>"
 							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topicId + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>"
@@ -431,15 +427,30 @@ public class Edit extends HttpServlet {
 		return buf.toString();
 	}
 	
-	void loadQuestions(String assignmentType,long topicId) {
-		String key1 = assignmentType + String.valueOf(topicId);
-		if (questions.get(key1) != null) return; // questions are already loaded
+	List<Key<Question>> loadQuestions(String assignmentType,long topicId) {
+		List<Key<Question>> keys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).keys().list();
+		List<Key<Question>> fetchKeys = new ArrayList<Key<Question>>(keys);
+		for (Key<Question> k : questions.keySet()) {
+			if (questions.containsKey(k)) fetchKeys.remove(k);  // questions map already contains this Question
+			if (!keys.contains(k)) questions.remove(k);			// this question is not in the current AssignmentType and Topic
+		}
 		
-		List<Key<Question>> topicQuestionKeys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).keys().list();
-		TreeMap<Key<Question>,Question> topicQuestions = new TreeMap<Key<Question>,Question>(new SortBySuccessPct());
-		topicQuestions.putAll(ofy().load().keys(topicQuestionKeys));
-		questions.put(key1,topicQuestions);
-		return;
+		if (!fetchKeys.isEmpty()) questions.putAll(ofy().load().keys(fetchKeys));
+		
+		for (Key<Question> k : keys) {
+			Integer success1 = successPct.get(k);
+			if (success1==null) {
+				int totalResponses = ofy().load().type(Response.class).filter("questionId",k.getId()).count();
+				if (totalResponses==0) success1 = 100;  // put new questions first
+				else {
+					int successResponses = ofy().load().type(Response.class).filter("questionId",k.getId()).filter("score >",0).count();
+					success1 = successResponses*100/totalResponses;
+				}
+				successPct.put(k,success1);
+			}
+		}
+
+		return keys;
 	}
 	
 	String topicsForm(HttpServletRequest request) {
@@ -961,7 +972,7 @@ public class Edit extends HttpServlet {
 			buf.append("Author: " + q.authorId + "<br>");
 			buf.append("Editor: " + user.getId() + "<p>");
 			
-			buf.append("<FORM ACTION=/Edit METHOD=POST>");
+			buf.append("<FORM ACTION=/Edit#q" + q.id + " METHOD=POST>");
 			
 			buf.append(q.printAll());
 			
@@ -1217,8 +1228,6 @@ public class Edit extends HttpServlet {
 			Question q = assembleQuestion(request);
 			q.isActive = true;
 			ofy().save().entity(q).now();
-			String key1 = q.assignmentType + String.valueOf(q.topicId);
-			questions.get(key1).put(Key.create(q), q);		
 	} catch (Exception e) {}
 	}
 
@@ -1231,23 +1240,7 @@ public class Edit extends HttpServlet {
 			q.editorId = user.getId();
 			q.isActive = true;
 			ofy().save().entity(q).now();
-			String key1 = q.assignmentType + String.valueOf(q.topicId);
-			questions.get(key1).put(Key.create(q), q);
-			
-			Queue queue = QueueFactory.getDefaultQueue();
-			String sig = user.getTokenSignature();
-			switch (q.assignmentType) {
-			case "Quiz":
-				queue.add(withUrl("/Quiz").param("UserRequest","UpdateQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
-				break;
-			case "Homework":
-				queue.add(withUrl("/Homework").param("UserRequest","UpdateQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
-				break;
-			case "Exam":
-				queue.add(withUrl("/PracticeExam").param("UserRequest","UpdateQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
-				queue.add(withUrl("/PlacementExam").param("UserRequest","UpdateQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
-				break;
-			}
+			questions.remove(Key.create(q));
 		} catch (Exception e) {
 			return;
 		}
@@ -1258,25 +1251,8 @@ public class Edit extends HttpServlet {
 		try {
 			questionId = Long.parseLong(request.getParameter("QuestionId"));
 			Key<Question> k = Key.create(Question.class,questionId);
-			Question q = ofy().load().key(k).now();
-			String key1 = q.assignmentType + String.valueOf(q.topicId);
-			questions.get(key1).remove(Key.create(q));
-			ofy().delete().key(k);
-			
-			Queue queue = QueueFactory.getDefaultQueue();
-			String sig = user.getTokenSignature();
-			switch (q.assignmentType) {
-			case "Quiz":
-				queue.add(withUrl("/Quiz").param("UserRequest","DeleteQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
-				break;
-			case "Homework":
-				queue.add(withUrl("/Homework").param("UserRequest","DeleteQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
-				break;
-			case "Exam":
-				queue.add(withUrl("/PracticeExam").param("UserRequest","DeleteQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
-				queue.add(withUrl("/PlacementExam").param("UserRequest","DeleteQuestion").param("QuestionId",Long.toString(q.id)).param("sig", sig));
-				break;
-			}
+			ofy().delete().key(k).now();
+			questions.remove(Key.create(Question.class,questionId));
 		} catch (Exception e) {
 			return;
 		}
@@ -1289,8 +1265,6 @@ public class Edit extends HttpServlet {
 		long topicId = Long.parseLong(request.getParameter("TopicId"));
 		List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).keys().list();
 		if (questionKeys.size()>0) ofy().delete().keys(questionKeys);
-		String key1 = assignmentType + String.valueOf(topicId);
-		this.questions.remove(key1);
 	}
 	
 	private void copyQuestionsToPracticeExam(User user,HttpServletRequest request) {
@@ -1306,8 +1280,6 @@ public class Edit extends HttpServlet {
 			q.assignmentType = "Exam";		
 		}
 		ofy().save().entities(questions);
-		String key1 = "Exam" + String.valueOf(topicId);
-		this.questions.remove(key1);
 	}
 	
 	String editVideoForm(HttpServletRequest request) {
