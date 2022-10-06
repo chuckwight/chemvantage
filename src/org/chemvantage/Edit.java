@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -275,14 +276,16 @@ public class Edit extends HttpServlet {
 					Topic t = ofy().load().type(Topic.class).id(topicId).now();
 					concepts = ofy().load().type(Concept.class).ids(t.conceptIds);
 					buf.append("<h4>Key Concepts</h4>");
-					for (Concept c : concepts.values()) {
-						int nQuestions = ofy().load().type(Question.class).filter("conceptId",c.id).count();
-						buf.append("&nbsp;&nbsp;" + c.orderBy + " - " + c.title + " (" + nQuestions + ")<br/>");
+					if (concepts.isEmpty()) buf.append("No concepts are assigned to this topic.<br/>");
+					else {
+						for (Concept c : concepts.values()) {
+							int nQuestions = ofy().load().type(Question.class).filter("conceptId",c.id).count();
+							buf.append("&nbsp;&nbsp;" + c.orderBy + " - " + c.title + " (" + nQuestions + ")<br/>");
+						}
 					}
 					buf.append("<br/>");
-				} catch (Exception e) {
-					buf.append("<br/>No concepts are available for this topic.");
-				}
+				} catch (Exception e) {}
+				
 				buf.append("<FORM NAME=NewQuestion METHOD=GET ACTION=/Edit>");
 				buf.append("Add a new question for this topic:<br>"
 						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=NewQuestionForm>"
@@ -378,7 +381,7 @@ public class Edit extends HttpServlet {
 				buf.append("<a href=/Edit?sig=" + user.getTokenSignature() + "&ShowDetails=true><h4>Show a summary of questions by Topic and AssignmentType</h4></a></h4>");
 			}
 		} catch (Exception e) {
-			buf.append(e.getMessage());
+			buf.append("Error: " + e.getMessage()==null?e.toString():e.getMessage());
 		}
 		return buf.toString();
 	}
@@ -427,29 +430,22 @@ public class Edit extends HttpServlet {
 		return buf.toString();
 	}
 	
-	List<Key<Question>> loadQuestions(String assignmentType,long topicId) {
+	List<Key<Question>> loadQuestions(String assignmentType,long topicId) throws Exception {
 		List<Key<Question>> keys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).keys().list();
-		List<Key<Question>> fetchKeys = new ArrayList<Key<Question>>(keys);
+		if (keys.isEmpty()) return keys;
+		
+		List<Key<Question>> additions = new ArrayList<Key<Question>>(keys);
+		List<Key<Question>> deletions = new ArrayList<Key<Question>>();
 		for (Key<Question> k : questions.keySet()) {
-			if (questions.containsKey(k)) fetchKeys.remove(k);  // questions map already contains this Question
-			if (!keys.contains(k)) questions.remove(k);			// this question is not in the current AssignmentType and Topic
+			if (keys.contains(k)) additions.remove(k);  // questions map already contains this Question
+			else deletions.add(k);						// this question is not in the current AssignmentType and Topic
 		}
 		
-		if (!fetchKeys.isEmpty()) questions.putAll(ofy().load().keys(fetchKeys));
+		for (Key<Question> k : deletions) questions.remove(k);
+		if (!additions.isEmpty()) questions.putAll(ofy().load().keys(additions));
 		
-		for (Key<Question> k : keys) {
-			Integer success1 = successPct.get(k);
-			if (success1==null) {
-				int totalResponses = ofy().load().type(Response.class).filter("questionId",k.getId()).count();
-				if (totalResponses==0) success1 = 100;  // put new questions first
-				else {
-					int successResponses = ofy().load().type(Response.class).filter("questionId",k.getId()).filter("score >",0).count();
-					success1 = successResponses*100/totalResponses;
-				}
-				successPct.put(k,success1);
-			}
-		}
-
+		Collections.sort(keys, new SortBySuccessPct());
+		
 		return keys;
 	}
 	
@@ -1393,40 +1389,36 @@ public class Edit extends HttpServlet {
 	class SortBySuccessPct implements Comparator<Key<Question>> {
 		public int compare(Key<Question> k1,Key<Question> k2) {
 			
-			Integer pointValue1 = pointValue.get(k1);
-			if (pointValue1==null) {
-				pointValue1 = ofy().load().key(k1).now().pointValue;
-				pointValue.put(k1, pointValue1);
+			if (pointValue.get(k1)==null) {
+				Question q1 = questions.get(k1);
+				if (q1==null) q1 = ofy().load().key(k1).now();
+				pointValue.put(k1, q1.pointValue);
 			}
-			Integer pointValue2 = pointValue.get(k2);
-			if (pointValue2==null) {
-				pointValue2 = ofy().load().key(k2).now().pointValue;
-				pointValue.put(k2, pointValue2);
+			if (pointValue.get(k2)==null) {
+				Question q2 = questions.get(k2);
+				if (q2==null) q2 = ofy().load().key(k1).now();
+				pointValue.put(k2, q2.pointValue);
 			}
-			int rank = pointValue1 - pointValue2; // primary sort by pointValue for Exam questions
+			int rank = pointValue.get(k1) - pointValue.get(k2); // primary sort by pointValue for Exam questions
 			
 			if (rank == 0) { // for Question items with same point value, sort by successPct (high to low)
-				Integer success1 = successPct.get(k1);
-				if (success1==null) {
+				if (successPct.get(k1)==null) {
 					int totalResponses = ofy().load().type(Response.class).filter("questionId",k1.getId()).count();
-					if (totalResponses==0) success1 = 100;  // put new questions first
+					if (totalResponses==0) successPct.put(k1,100);  // put new questions first
 					else {
 						int successResponses = ofy().load().type(Response.class).filter("questionId",k1.getId()).filter("score >",0).count();
-						success1 = successResponses*100/totalResponses;
+						successPct.put(k1,successResponses*100/totalResponses);
 					}
-					successPct.put(k1,success1);
 				}
-				Integer success2 = successPct.get(k2);
-				if (success2==null) {
+				if (successPct.get(k2)==null) {
 					int totalResponses = ofy().load().type(Response.class).filter("questionId",k2.getId()).count();
-					if (totalResponses==0) success2 = 100;
+					if (totalResponses==0) successPct.put(k2,100);  // put new questions first
 					else {
 						int successResponses = ofy().load().type(Response.class).filter("questionId",k2.getId()).filter("score >",0).count();
-						success2 = successResponses*100/totalResponses;
+						successPct.put(k2,successResponses*100/totalResponses);
 					}
-					successPct.put(k2,success2);
 				}
-				rank = success2-success1; // this reverses the normal Comparator to give higher rank to lower successPct
+			rank = successPct.get(k2)-successPct.get(k1); // this reverses the normal Comparator to give higher rank to lower successPct
 			}
 			if (rank==0) rank = k1.compareTo(k2); // tie breaker required else TreeMap will overwrite existing entry
 			
