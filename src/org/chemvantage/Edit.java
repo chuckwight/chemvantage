@@ -279,7 +279,7 @@ public class Edit extends HttpServlet {
 					if (concepts.isEmpty()) buf.append("No concepts are assigned to this topic.<br/>");
 					else {
 						for (Concept c : concepts.values()) {
-							int nQuestions = ofy().load().type(Question.class).filter("conceptId",c.id).count();
+							int nQuestions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",t.id).filter("conceptId",c.id).count();
 							buf.append("&nbsp;&nbsp;" + c.orderBy + " - " + c.title + " (" + nQuestions + ")<br/>");
 						}
 					}
