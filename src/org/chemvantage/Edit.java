@@ -116,6 +116,8 @@ public class Edit extends HttpServlet {
 				} catch (Exception e) {}
 				out.println(Subject.getHeader(user) + reviewProposedQuestion(user,request) + Subject.footer);
 				break;
+			case "Refresh":
+				questions.clear();
 			default: out.println(editorsPage(user,request));
 			}
 			
@@ -266,7 +268,7 @@ public class Edit extends HttpServlet {
 			buf.append("<FORM NAME=TopicSelect METHOD=GET ACTION=/Edit>");
 			buf.append("<FONT" + (request.getParameter("TopicId")!=null && topicId==0?" COLOR=RED>":">") + "<b>Topic:</b></FONT>" + topicSelectBox(topicId,showQuestions));
 			buf.append("<FONT" + (assignmentType!=null && assignmentType.length()==0?" COLOR=RED>":">") + "<b> Assignment Type:</b></FONT>" + assignmentTypeDropDownBox(assignmentType,true));
-			buf.append(" <INPUT TYPE=SUBMIT VALUE=" + (showQuestions?"Refresh>":"'Show Questions'>"));
+			buf.append(" <INPUT TYPE=SUBMIT NAME=UserRequest VALUE=" + (showQuestions?"Refresh>":"'Show Questions'>"));
 			buf.append("</FORM>");
 			boolean showDetails = Boolean.parseBoolean(request.getParameter("ShowDetails"));
 			
