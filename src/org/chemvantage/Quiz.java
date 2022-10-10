@@ -104,7 +104,8 @@ public class Quiz extends HttpServlet {
 			switch (userRequest) {
 			case "UpdateAssignment":
 				a.updateQuestions(request);
-				doGet(request,response);
+				//doGet(request,response);
+				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 				break;
 			case "Set Allowed Time":
 				try {
@@ -151,7 +152,11 @@ public class Quiz extends HttpServlet {
 			buf.append("<h2>General Chemistry Quiz - Instructor Page</h2>");
 			buf.append("Topic covered on this quiz: " + t.getTitle() + "<br/><br/>");
 			
-			if (a.timeAllowed != null) buf.append("Students are permitted " + a.timeAllowed/60 + " minutes to complete this quiz.<br/><br/>");
+			int nQuestions = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).count();
+			buf.append("Each quiz draws 10 questions randomly from a bank of " + a.questionKeys.size() + " selected questions. "
+					+ "The total number of availabe questions for this quiz is " + nQuestions + ".<br/><br/>");
+			
+			if (a.timeAllowed != null) buf.append("Students are permitted " + a.timeAllowed/60 + " minutes to complete the quiz.<br/><br/>");
 			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("Students may attempt this assignment an unlimited number of times to improve their score.<br/><br/>");
 			else buf.append("Students may only attempt this assignment " + a.attemptsAllowed + (a.attemptsAllowed==1?" time":" times") + ".<br/><br/>");
 			
@@ -257,51 +262,50 @@ public class Quiz extends HttpServlet {
 					+ "<input type=hidden name='TopicId' value='" + topicId + "' />"
 					+ "<input type=submit value='Grade This Quiz' />");
 			
-			//create a set of available questionIds either from the group assignment or from the datastore
-			List<Key<Question>> questionKeys = null;
-			try { // check for assigned questions
-				questionKeys = new ArrayList<Key<Question>>(qa.getQuestionKeys());  // clone the list of questions for the assignment
-			} catch (Exception e) { // no assignment exists
-				questionKeys = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",topicId).keys().list();
+			// verify that all of the assigned questions still exist; remove any keys for deleted questions (house cleaning)
+			List<Key<Question>> allQuestionKeys = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",topicId).keys().list();
+			if (qa != null && !allQuestionKeys.containsAll(qa.questionKeys)) {
+				List<Key<Question>> removeKeys = new ArrayList<Key<Question>>();
+				for (Key<Question> k : qa.questionKeys) if (!allQuestionKeys.contains(k)) removeKeys.add(k);
+				qa.questionKeys.removeAll(removeKeys);
+				ofy().save().entity(qa);
 			}
 			
-			// Randomly select the questions to be presented, eliminating each from questionSet as they are printed
+			//create a set of available questionKeyss either from the group assignment or from the datastore
+			if (qa != null) allQuestionKeys = new ArrayList<Key<Question>>(qa.questionKeys);  // limit the questions to these
+			
+			// Randomly select the keys to questions to be presented
 			Random rand = new Random(); // create random number generator to select quiz questions
 			rand.setSeed(qt.getId()); // random number generator seeded with QuizTransaction id value
-			int possibleScore = 0;
-			int nQuestions = questionKeys.size() > 10 ? 10 : questionKeys.size();
-
-			int i = 0;
-	
-			buf.append("<OL>");
-			// Randomly reduce the size of questionKeys to the required number of questions	
-			while (questionKeys.size()>nQuestions) questionKeys.remove(rand.nextInt(questionKeys.size()));
-		
-			Map<Key<Question>, Question> quizQuestions = ofy().load().keys(questionKeys);
+			List<Key<Question>> myQuestionKeys = new ArrayList<Key<Question>>();
+			while (myQuestionKeys.size()<10 && allQuestionKeys.size()>0) {
+				Key<Question> k = allQuestionKeys.get(rand.nextInt(allQuestionKeys.size()));
+				myQuestionKeys.add(k);
+				allQuestionKeys.remove(k);
+			}
 			
-			while (i < nQuestions && questionKeys.size() > 0) {
-				Key<Question> k = questionKeys.remove(rand.nextInt(questionKeys.size()));
+			// At this point we should have 10 (or max number) randomly selected questionKeys
+			Map<Key<Question>, Question> quizQuestions = ofy().load().keys(myQuestionKeys);
+			
+			int possibleScore = 0;
+			buf.append("<OL>");
+			
+			while (myQuestionKeys.size() > 0) {
+				Key<Question> k = myQuestionKeys.get(rand.nextInt(myQuestionKeys.size()));
+				myQuestionKeys.remove(k);
 				Question q = quizQuestions.get(k);
-				if (q == null && qa != null) { // this catches cases where an assigned question no longer exists (rare)
-					qa.questionKeys.remove(k);
-					ofy().save().entity(qa);
-					continue;
-				}
-				
-				// by this point we should have a valid question
-				i++; // this counter keeps track of the number of questions presented so far
 				possibleScore += q.getPointValue();
 				// the parameterized questions are seeded with a value based on the ids for the quizTransaction and the question
 				// in order to make the value reproducible for grading but variable for each quiz and from one question to the next
 				long seed = Math.abs(qt.getId() - q.getId());
-				if (seed == -1)
-					seed--; // -1 is a special value for randomly seeded Random generator; avoid this (unlikely) situation
+				if (seed == -1) seed--; // -1 is a special value for randomly seeded Random generator; avoid this (unlikely) situation
 				q.setParameters(seed); // the values are subtracted to prevent (unlikely) overflow
 				
 				buf.append("<li>" + q.print() +  "<br/></li>");
 			}
+			
 			qt.putPossibleScore(possibleScore);
-			ofy().save().entity(qt);
+			ofy().save().entity(qt).now();
 			buf.append("</OL>");
 		
 			buf.append("<div id='timer1' style='color: #EE0000'></div>"
