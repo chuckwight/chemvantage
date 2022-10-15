@@ -36,6 +36,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.chemvantage.Text.Chapter;
+
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
@@ -200,6 +202,18 @@ public class Edit extends HttpServlet {
 				break;
 			case "Delete Text":
 				deleteText(user,request);
+				out.println(textsForm(user,request));
+				break;
+			case "Create Chapter":
+				createChapter(request);
+				out.println(textsForm(user,request));
+				break;
+			case "Update Chapter":
+				updateChapter(request);
+				out.println(textsForm(user,request));
+				break;
+			case "Delete Chapter":
+				deleteChapter(request);
 				out.println(textsForm(user,request));
 				break;
 			case "Preview": 
@@ -791,7 +805,38 @@ public class Edit extends HttpServlet {
 	
 	String textsForm(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h3>Manage Texts</h3>");
-		buf.append("This is a list of open source textbooks shown on the Home page.");
+		try {
+			long textId = Long.parseLong(request.getParameter("TextId"));
+			Text t = ofy().load().type(Text.class).id(textId).safe();
+			buf.append("Title: " + t.title + "<br/>"
+				+ "Author: " + t.author + "<br/>"
+				+ "Publisher: " + t.publisher + "<br/>"
+				+ "URL: " + t.URL + "<br/><br/>");
+			
+			buf.append("<table>"
+				+ "<tr><th></th><th>Chapter</th>th>Title</th>th>URL</th>th>Action</th></tr><th></th>");
+			for (Chapter c : t.chapters) {
+				buf.append("<tr><form action=/Edit method=post>"
+					+ "<input type=hidden name=TextId value=" + textId + " />"
+					+ "<input type=hidden name=ChapterIndex value=" + t.chapters.indexOf(c) + " />"
+					+ "<td><input type=text size=4 name=ChapterNumber value=" + c.chapterNumber + " /></td>"
+					+ "<td><input type=text size=20 name=ChapterTitle value=" + c.title + " /></td>"
+					+ "<td><input type=text size=20 name=ChapterUrl value=" + c.url + " /></td>"
+					+ "<td><input type=submit name=UserRequest value='Update Chapter'/><input type=submit name=UserRequest value='Delete Chapter'/></td>"
+					+ "</form></tr>");
+				buf.append("<tr>"
+					+ "<td></td>"
+					+ "<td></td>"
+					+ "<td></td>"
+					+ "<td></td>"
+					+ "</tr>");
+			}
+			buf.append("</table>");
+			
+			return buf.toString();
+		} catch (Exception e) {
+		}
+		buf.append("This is a list of textbooks served by ChemVantage, especially as SmartText objects.");
 		try {
 			Query<Text> texts = ofy().load().type(Text.class);
 			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TH>Title</TH><TH>Author</TH><TH>Publisher</TH><TH>URL</TH></TR>");
@@ -803,7 +848,8 @@ public class Edit extends HttpServlet {
 						+ "<TD><INPUT TYPE=TEXT NAME=Publisher VALUE='" + Question.quot2html(text.publisher) + "'></TD>"
 						+ "<TD><INPUT TYPE=TEXT NAME=URL VALUE='" + text.URL + "'></TD>"
 						+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Update Text'>"
-						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Text'></TD></TR>"
+						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Text'>"
+						+ "<a href=/Edit?UserRequest=ManageTexts&TextId=" + text.id + ">View/Edit Chapters</a></TD></TR>"
 						+ "</FORM>");
 			}
 			buf.append("<FORM ACTION=Edit METHOD=POST><TR>"
@@ -832,12 +878,50 @@ public class Edit extends HttpServlet {
 			text.author = request.getParameter("Author");
 			text.publisher = request.getParameter("Publisher");
 			text.URL = request.getParameter("URL");
+			text.smartText = Boolean.parseBoolean(request.getParameter("SmartText"));
 			ofy().save().entity(text).now();
 		} catch (Exception e) {}
 	}
 	
 	void deleteText(User user,HttpServletRequest request) {
 		ofy().delete().key(Key.create(Text.class,Long.parseLong(request.getParameter("TextId")))).now();
+	}
+	
+	void createChapter(HttpServletRequest request) {
+		try {
+			Text text = ofy().load().type(Text.class).id(Long.parseLong(request.getParameter("TextId"))).safe();
+			Chapter ch = text.new Chapter();
+			ch.chapterNumber = Integer.parseInt(request.getParameter("ChapterNumber"));
+			ch.title = request.getParameter("Title");
+			ch.url =  request.getParameter("Url");
+			int chapterIndex = 0;
+			for (Chapter c : text.chapters) {
+				if (c.chapterNumber > ch.chapterNumber) break;
+				else chapterIndex++;
+			}
+			text.chapters.add(chapterIndex,ch);
+			ofy().save().entity(text).now();
+		} catch (Exception e) {}
+	}
+	
+	void updateChapter(HttpServletRequest request) {
+		try {
+			Text text = ofy().load().type(Text.class).id(Long.parseLong(request.getParameter("TextId"))).safe();
+			int chapterIndex = Integer.parseInt(request.getParameter("ChapterIndex"));
+			Chapter ch = text.chapters.get(chapterIndex);
+			ch.chapterNumber = Integer.parseInt(request.getParameter("ChapterNumber"));
+			ch.title = request.getParameter("Title");
+			ch.url =  request.getParameter("Url");
+			text.chapters.set(chapterIndex,ch);
+			ofy().save().entity(text).now();
+		} catch (Exception e) {}
+	}
+	
+	void deleteChapter(HttpServletRequest request) {
+		Text text = ofy().load().type(Text.class).id(Long.parseLong(request.getParameter("TextId"))).safe();
+		int chapterIndex = Integer.parseInt(request.getParameter("ChapterIndex"));
+		text.chapters.remove(chapterIndex);
+		ofy().save().entity(text).now();
 	}
 	
 	String newQuestionForm(User user,HttpServletRequest request) {
