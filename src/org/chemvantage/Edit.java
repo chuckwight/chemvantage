@@ -36,8 +36,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.chemvantage.Text.Chapter;
-
 import com.google.appengine.api.users.UserService;
 import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
@@ -258,6 +256,7 @@ public class Edit extends HttpServlet {
 			}
 
 		} catch (Exception e) {
+			out.println("Error: " + e.getMessage()==null?e.toString():e.getMessage());
 		}
 		out.println(Subject.footer);
 	}
@@ -525,6 +524,18 @@ public class Edit extends HttpServlet {
 		}
 		buf.append("<SELECT NAME=ConceptId SIZE=4 MULTIPLE>");
 		for (Concept c : concepts) buf.append("<OPTION VALUE=" + c.id + (t.conceptIds.contains(c.id)?" SELECTED>":">") + c.title + "</OPTION>");
+		buf.append("</SELECT>");
+		return buf.toString();
+	}
+	
+	String conceptsDropDownBox(Chapter ch) {
+		StringBuffer buf = new StringBuffer();
+		if (ch==null) ch = new Chapter();
+		if (concepts.isEmpty() || concepts.size() != ofy().load().type(Concept.class).count()) {
+			concepts = ofy().load().type(Concept.class).order("orderBy").list();
+		}
+		buf.append("<SELECT NAME=ConceptId SIZE=4 MULTIPLE>");
+		for (Concept c : concepts) buf.append("<OPTION VALUE=" + c.id + (ch.conceptIds.contains(c.id)?" SELECTED>":">") + c.title + "</OPTION>");
 		buf.append("</SELECT>");
 		return buf.toString();
 	}
@@ -813,43 +824,49 @@ public class Edit extends HttpServlet {
 				+ "Publisher: " + t.publisher + "<br/>"
 				+ "URL: " + t.URL + "<br/><br/>");
 			
+			if (t.chapters==null) t.chapters = new ArrayList<Chapter>();
+			
 			buf.append("<table>"
-				+ "<tr><th></th><th>Chapter</th>th>Title</th>th>URL</th>th>Action</th></tr><th></th>");
+				+ "<tr><th>Chapter</th><th>Title</th><th>URL</th><th>Key Concepts</th><th>Action</th></tr>");
 			for (Chapter c : t.chapters) {
 				buf.append("<tr><form action=/Edit method=post>"
 					+ "<input type=hidden name=TextId value=" + textId + " />"
 					+ "<input type=hidden name=ChapterIndex value=" + t.chapters.indexOf(c) + " />"
-					+ "<td><input type=text size=4 name=ChapterNumber value=" + c.chapterNumber + " /></td>"
-					+ "<td><input type=text size=20 name=ChapterTitle value=" + c.title + " /></td>"
-					+ "<td><input type=text size=20 name=ChapterUrl value=" + c.url + " /></td>"
+					+ "<td><input type=text size=4 name=ChapterNumber value='" + c.chapterNumber + "' /></td>"
+					+ "<td><input type=text size=20 name=ChapterTitle value='" + c.title + "' /></td>"
+					+ "<td><input type=text size=20 name=ChapterUrl value='" + c.url + "' /></td>"
+					+ "<td>" + conceptsDropDownBox(c) + "</td>"
 					+ "<td><input type=submit name=UserRequest value='Update Chapter'/><input type=submit name=UserRequest value='Delete Chapter'/></td>"
 					+ "</form></tr>");
-				buf.append("<tr>"
-					+ "<td></td>"
-					+ "<td></td>"
-					+ "<td></td>"
-					+ "<td></td>"
-					+ "</tr>");
 			}
+			Chapter c = new Chapter();
+			buf.append("<tr><form action=/Edit method=post>"		// extra row to add a new chapter
+					+ "<input type=hidden name=TextId value=" + textId + " />"
+					+ "<td><input type=text size=4 name=ChapterNumber value=" + (t.chapters.size()+1) + " /></td>"
+					+ "<td><input type=text size=20 name=ChapterTitle /></td>"
+					+ "<td><input type=text size=20 name=ChapterUrl /></td>"
+					+ "<td>" + conceptsDropDownBox(c) + "</td>"
+					+ "<td><input type=submit name=UserRequest value='Create Chapter'/></td>"
+					+ "</form></tr>");
+			
 			buf.append("</table>");
 			
 			return buf.toString();
 		} catch (Exception e) {
-		}
 		buf.append("This is a list of textbooks served by ChemVantage, especially as SmartText objects.");
 		try {
 			Query<Text> texts = ofy().load().type(Text.class);
 			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TH>Title</TH><TH>Author</TH><TH>Publisher</TH><TH>URL</TH></TR>");
 			for (Text text : texts) {
 				buf.append("<FORM ACTION=Edit METHOD=POST>"
-						+ "<INPUT TYPE=HIDDEN NAME=TextId VALUE=" + text.id + ">"
-						+ "<TR><TD><INPUT TYPE=TEXT NAME=Title VALUE='" + Question.quot2html(text.title) + "'</TD>"
-						+ "<TD><INPUT TYPE=TEXT NAME=Author VALUE='" + Question.quot2html(text.author) + "'></TD>"
-						+ "<TD><INPUT TYPE=TEXT NAME=Publisher VALUE='" + Question.quot2html(text.publisher) + "'></TD>"
-						+ "<TD><INPUT TYPE=TEXT NAME=URL VALUE='" + text.URL + "'></TD>"
-						+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Update Text'>"
-						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Text'>"
-						+ "<a href=/Edit?UserRequest=ManageTexts&TextId=" + text.id + ">View/Edit Chapters</a></TD></TR>"
+						+ "<INPUT TYPE=HIDDEN NAME=TextId VALUE=" + text.id + " />"
+						+ "<TR><TD><INPUT TYPE=TEXT NAME=Title VALUE='" + Question.quot2html(text.title) + "' /></TD>"
+						+ "<TD><INPUT TYPE=TEXT NAME=Author VALUE='" + Question.quot2html(text.author) + "' /></TD>"
+						+ "<TD><INPUT TYPE=TEXT NAME=Publisher VALUE='" + Question.quot2html(text.publisher) + "' /></TD>"
+						+ "<TD><INPUT TYPE=TEXT NAME=URL VALUE='" + text.URL + "' /></TD>"
+						+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Update Text'/ > "
+						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Text' /> "
+						+ "<a href=/Edit?UserRequest=ManageTexts&TextId=" + text.id + ">Chapters</a> </TD></TR>"
 						+ "</FORM>");
 			}
 			buf.append("<FORM ACTION=Edit METHOD=POST><TR>"
@@ -860,10 +877,11 @@ public class Edit extends HttpServlet {
 					+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Create Text'></TD></TR>"
 					+ "</FORM>");
 			buf.append("</TABLE>");
-		} catch (Exception e) {
-			buf.append(e.toString());
+		} catch (Exception e2) {
+			buf.append(e2.toString());
 		}
 		return buf.toString();
+		}
 	}
 
 	void createText(User user,HttpServletRequest request) {
@@ -887,13 +905,17 @@ public class Edit extends HttpServlet {
 		ofy().delete().key(Key.create(Text.class,Long.parseLong(request.getParameter("TextId")))).now();
 	}
 	
-	void createChapter(HttpServletRequest request) {
-		try {
+	void createChapter(HttpServletRequest request) throws Exception {
 			Text text = ofy().load().type(Text.class).id(Long.parseLong(request.getParameter("TextId"))).safe();
-			Chapter ch = text.new Chapter();
+			if (text.chapters==null) text.chapters = new ArrayList<Chapter>();
+			Chapter ch = new Chapter();
 			ch.chapterNumber = Integer.parseInt(request.getParameter("ChapterNumber"));
-			ch.title = request.getParameter("Title");
-			ch.url =  request.getParameter("Url");
+			ch.title = request.getParameter("ChapterTitle");
+			ch.url =  request.getParameter("ChapterUrl");
+			String[] conceptIds = request.getParameterValues("ConceptId");
+			ch.conceptIds.clear();
+			for (String cId : conceptIds) ch.conceptIds.add(Long.parseLong(cId));
+			
 			int chapterIndex = 0;
 			for (Chapter c : text.chapters) {
 				if (c.chapterNumber > ch.chapterNumber) break;
@@ -901,7 +923,6 @@ public class Edit extends HttpServlet {
 			}
 			text.chapters.add(chapterIndex,ch);
 			ofy().save().entity(text).now();
-		} catch (Exception e) {}
 	}
 	
 	void updateChapter(HttpServletRequest request) {
@@ -910,8 +931,12 @@ public class Edit extends HttpServlet {
 			int chapterIndex = Integer.parseInt(request.getParameter("ChapterIndex"));
 			Chapter ch = text.chapters.get(chapterIndex);
 			ch.chapterNumber = Integer.parseInt(request.getParameter("ChapterNumber"));
-			ch.title = request.getParameter("Title");
-			ch.url =  request.getParameter("Url");
+			ch.title = request.getParameter("ChapterTitle");
+			ch.url =  request.getParameter("ChapterUrl");
+			String[] conceptIds = request.getParameterValues("ConceptId");
+			ch.conceptIds.clear();
+			for (String cId : conceptIds) ch.conceptIds.add(Long.parseLong(cId));
+			
 			text.chapters.set(chapterIndex,ch);
 			ofy().save().entity(text).now();
 		} catch (Exception e) {}

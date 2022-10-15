@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.googlecode.objectify.annotation.Entity;
@@ -33,7 +34,7 @@ public class Text implements Serializable {
     	String publisher;
     	String URL;
     @Index boolean smartText;
-    	List<Chapter> chapters;
+    	List<Chapter> chapters = new ArrayList<Chapter>();
 
     Text() {}
     
@@ -43,15 +44,18 @@ public class Text implements Serializable {
         this.publisher = publisher;
         this.URL = URL;
     }
+}
 
-    // Note: to create a new Chapter object for the textbook txt, use
-    // Text txt = ofy().load().key(txtKey).now();
-    // Chapter newChapter = txt.new Chapter()
-    // Chapter 0 will normally refer to the front matter (title page, copyright, foreward, etc.)
-    // Additional chapters can be labeled Appendix A, Exercises, Index, etc
-    class Chapter {
-    	int chapterNumber;
-    	String title;
-    	String url;
-    }
+// Note: to create a new Chapter object for the textbook txt, use
+// Text txt = ofy().load().key(txtKey).now();
+// Chapter newChapter = txt.new Chapter()
+// Chapter 0 will normally refer to the front matter (title page, copyright, foreward, etc.)
+// Additional chapters can be labeled Appendix A, Exercises, Index, etc
+class Chapter {
+	int chapterNumber;
+	String title;
+	String url;
+	List<Long> conceptIds = new ArrayList<Long>();
+	
+	Chapter() {}
 }
