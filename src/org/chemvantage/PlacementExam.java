@@ -31,6 +31,7 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 
 import javax.servlet.ServletException;
@@ -103,6 +104,9 @@ public class PlacementExam extends HttpServlet {
 					User forUser = new User(user.platformId,request.getParameter("ForUserId"));
 					out.println(Subject.header("ChemVantage Placement Exam") + submissionReview(user,forUser) + Subject.footer);
 					break;
+				case "AnalyzeQuestions":
+					out.println(Subject.header("Review ChemVantage Placement Exam Scores") + analyzeQuestions(user,a) + Subject.footer);
+					break;	
 				default: 
 					out.println(Subject.header("ChemVantage Placement Exam") + printExam(user,a,request) + Subject.footer);
 			}
@@ -956,6 +960,7 @@ public class PlacementExam extends HttpServlet {
 			buf.append("</table><p>");
 			buf.append("<p>");
 			buf.append("<a href=/PlacementExam?sig=" + user.getTokenSignature() + "&UserRequest=Download+CSV+File>Download CSV File</a><p>");
+			buf.append("<a href=/PlacementExam?sig=" + user.getTokenSignature() + "&UserRequest=AnalyzeQuestions>Analysis of Question Items</a><p>");
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}
@@ -1321,6 +1326,156 @@ public class PlacementExam extends HttpServlet {
 		String studentAnswer = "";
 		for (String a : answers) studentAnswer = studentAnswer + a;
 		return studentAnswer;
+	}
+	
+	String analyzeQuestions(User user, Assignment a) {
+		StringBuffer buf = new StringBuffer(Subject.banner + "<h2>Placement Exam Question Item Analysis</h2>");
+		if (!user.isInstructor()) return "Not Authorized";
+		
+		// iterate through all the transactions for this assignment and make a deduplicated Map<userId,score> if the best transactions
+		List<PlacementExamTransaction> transactions = ofy().load().type(PlacementExamTransaction.class).filter("assignmentId",a.id).list();
+		List<PlacementExamTransaction> bestTransactions = new ArrayList<PlacementExamTransaction>();
+		Map<String,Integer> userScores = new HashMap<String,Integer>();
+		
+		// iterate through the transactions and create a deduplicated Map of users' best scores
+		for (PlacementExamTransaction t : transactions) {
+			int score = score(t);
+			if (userScores.containsKey(t.userId)) {  // this user has more than one transaction
+				if (score(t) < userScores.get(t.userId)) continue;  // don't replace with a lower score
+				else {  // search for the old transaction and remove it
+					for (int i=0;i<bestTransactions.size();i++) if (bestTransactions.get(i).userId.equals(t.userId)) bestTransactions.remove(i);
+				}
+			}
+			userScores.put(t.userId, score);
+			bestTransactions.add(t);
+		}
+		
+		// make a List of userScore Entries and sort it by decreasing score (top users first)
+		List<Entry<String,Integer>> entries = new ArrayList<Entry<String,Integer>>(userScores.entrySet());
+		Collections.sort(entries,new SortUserScores());
+		
+		// use the sorted List of Entries to make Lists of the top and low scoring 27% of userIds
+		int groupSize = Math.round((float)(0.27 * entries.size()+0.5));
+		List<String> topUserIds = new ArrayList<String>();
+		List<String> lowUserIds = new ArrayList<String>();
+		for (int i=0;i<groupSize;i++) {
+			topUserIds.add(entries.get(i).getKey());
+			lowUserIds.add(entries.get(entries.size()-1-i).getKey());
+		}
+		
+		//Create 2 Lists of questionKeys, one for each possibleScores
+		List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
+		List<Key<Question>> questionKeys_04pt = new ArrayList<Key<Question>>();
+		for (long tid : a.topicIds) {  //First collect the question keys
+			questionKeys_02pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",2).keys().list());
+			questionKeys_04pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",4).keys().list());
+		}
+		
+		//  Create Maps to hold the question statistics by questionKey
+		Map<Key<Question>,Integer> topScores = new HashMap<Key<Question>,Integer>();			// total earned scores for each question by top students
+		Map<Key<Question>,Integer> lowScores = new HashMap<Key<Question>,Integer>();			// total earned scores for each question by low students
+		Map<Key<Question>,Integer> topPossibleScores = new HashMap<Key<Question>,Integer>();	// total possible scores for each question by top students
+		Map<Key<Question>,Integer> lowPossibleScores = new HashMap<Key<Question>,Integer>();	// total possible scores for each question by low students
+		
+		List<Response> responses = new ArrayList<Response>();
+		for (PlacementExamTransaction pet : bestTransactions) {
+			if (topUserIds.contains(pet.userId)) {
+				responses = ofy().load().type(Response.class).filter("assignmentType","PlacementExam").filter("transactionId",pet.id).list();
+				for (Response r : responses) {  // update stats for all questions that received a Response
+					Key<Question> k = Key.create(Question.class,r.questionId);
+					topScores.put(k,topScores.get(k)==null?r.score:topScores.get(k)+r.score);
+					topPossibleScores.put(k,topPossibleScores.get(k)==null?r.possibleScore:topPossibleScores.get(k)+r.possibleScore);
+					pet.questionKeys.remove(k);
+				}
+				for (Key<Question> k : pet.questionKeys) {
+					if (questionKeys_02pt.contains(k)) topPossibleScores.put(k, topPossibleScores.get(k)==null?2:topPossibleScores.get(k)+2);
+					else if (questionKeys_04pt.contains(k)) topPossibleScores.put(k, topPossibleScores.get(k)==null?4:topPossibleScores.get(k)+4);
+				}
+			} else if (lowUserIds.contains(pet.userId)) {
+				responses = ofy().load().type(Response.class).filter("assignmentType","PlacementExam").filter("transactionId",pet.id).list();
+				for (Response r : responses) {  // update stats for all questions that received a Response
+					Key<Question> k = Key.create(Question.class,r.questionId);
+					lowScores.put(k,lowScores.get(k)==null?r.score:lowScores.get(k)+r.score);
+					lowPossibleScores.put(k,lowPossibleScores.get(k)==null?r.possibleScore:lowPossibleScores.get(k)+r.possibleScore);
+					pet.questionKeys.remove(k);
+				}
+				for (Key<Question> k : pet.questionKeys) {
+					if (questionKeys_02pt.contains(k)) lowPossibleScores.put(k, lowPossibleScores.get(k)==null?2:lowPossibleScores.get(k)+2);
+					else if (questionKeys_04pt.contains(k)) lowPossibleScores.put(k, lowPossibleScores.get(k)==null?4:lowPossibleScores.get(k)+4);
+				}
+			}
+		}
+		
+		int i = 0;
+		double successIndex = 0;
+		double discriminationIndex = 0;
+		Map<Key<Question>,Question> questions = new HashMap<Key<Question>,Question>();
+		
+		buf.append("<h3>2-point question items</h3>");
+		buf.append("<table>");
+		questions = ofy().load().keys(questionKeys_02pt);
+		for (Key<Question> k : questionKeys_02pt) {
+			if (!a.questionKeys.contains(k)) continue;
+			i++;
+			Question q = questions.get(k);
+			q.setParameters();
+			try {
+				successIndex = (topScores.get(k) + lowScores.get(k))*100/(topPossibleScores.get(k) + lowPossibleScores.get(k))/100.0;
+				discriminationIndex = (topScores.get(k)*100/topPossibleScores.get(k) - lowScores.get(k)*100/lowPossibleScores.get(k))/100.0;
+			} catch (Exception e) {
+				successIndex = 0;
+				discriminationIndex = 0;
+			}
+			buf.append("<TR VALIGN=TOP NOWRAP><TD>Success&nbsp;Index:&nbsp;" + (successIndex) + "<br/>"
+					+ "Discrimination&nbsp;Index:&nbsp;" + (discriminationIndex) + "</TD>");
+			buf.append("<TD>&nbsp;&nbsp;<b>"+i+".</b></TD>");
+			buf.append("<TD>" + q.printAll() + "</TD>");
+			buf.append("</TR>");
+		}
+		buf.append("</table>");
+		
+		i=0;
+		buf.append("<h3>4-point question items</h3>");
+		buf.append("<table>");
+		questions = ofy().load().keys(questionKeys_02pt);
+		for (Key<Question> k : questionKeys_02pt) {
+			if (!a.questionKeys.contains(k)) continue;
+			i++;
+			Question q = questions.get(k);
+			q.setParameters();
+			try {
+				successIndex = (topScores.get(k) + lowScores.get(k))*100/(topPossibleScores.get(k) + lowPossibleScores.get(k))/100.0;
+				discriminationIndex = (topScores.get(k)*100/topPossibleScores.get(k) - lowScores.get(k)*100/lowPossibleScores.get(k))/100.0;
+			} catch (Exception e) {
+				successIndex = 0;
+				discriminationIndex = 0;
+			}
+			buf.append("<TR VALIGN=TOP NOWRAP><TD>Success&nbsp;Index:&nbsp;" + (successIndex) + "<br/>"
+					+ "Discrimination&nbsp;Index:&nbsp;" + (discriminationIndex) + "</TD>");
+			buf.append("<TD>&nbsp;&nbsp;<b>"+i+".</b></TD>");
+			buf.append("<TD>" + q.printAll() + "</TD>");
+			buf.append("</TR>");
+		}
+		buf.append("</table>");
+		
+		return buf.toString();
+	}
+	
+	int score(PlacementExamTransaction t) {
+		int score = 0;
+		try {
+			for (int i=0;i<t.topicIds.size();i++) score += t.scores[i];
+		} catch (Exception e) {
+			return 0;
+		}
+		return score;
+	}
+}
+
+class SortUserScores implements Comparator<Entry<String,Integer>> {
+	// used by analyzeQuestions to sort userIds by best score
+	public int compare(Entry<String,Integer> a, Entry<String,Integer> b) {
+		return a.getValue().compareTo(b.getValue());
 	}
 }
 
