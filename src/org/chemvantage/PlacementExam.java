@@ -1339,6 +1339,7 @@ public class PlacementExam extends HttpServlet {
 		
 		// iterate through the transactions and create a deduplicated Map of users' best scores
 		for (PlacementExamTransaction t : transactions) {
+			if (t.graded == null) continue; // don't use unsubmitted exams for the analysis
 			int score = score(t);
 			if (userScores.containsKey(t.userId)) {  // this user has more than one transaction
 				if (score(t) < userScores.get(t.userId)) continue;  // don't replace with a lower score
@@ -1437,11 +1438,11 @@ public class PlacementExam extends HttpServlet {
 				qLowScores = lowScores.get(k)==null?0:lowScores.get(k);
 				qTopPossScores = topPossibleScores.get(k)==null?0:topPossibleScores.get(k);
 				qLowPossScores = lowPossibleScores.get(k)==null?0:lowPossibleScores.get(k);
-				successIndex = qTopPossScores+qLowPossScores==0?0:((qTopScores + qLowScores)*100.0/(qTopPossScores+qLowPossScores))/100.0;
+				successIndex = qTopPossScores+qLowPossScores==0?0:(qTopScores + qLowScores)*100.0/(qTopPossScores+qLowPossScores);
 				discriminationIndex = qTopPossScores==0?0:qTopScores*100.0/qTopPossScores;
 				discriminationIndex -= qLowPossScores==0?0:qLowScores*100.0/qLowPossScores;
 				discriminationIndex = discriminationIndex/100.0;
-				buf.append("<TD>Success&nbsp;Index:&nbsp;" + (successIndex) + "<br/>" + "Discrimination&nbsp;Index:&nbsp;" + (discriminationIndex) + "</TD>");
+				buf.append("<TD>Success&nbsp;Percentage:&nbsp;" + String.format("%,.1f", successIndex) + "%<br/>" + "Discrimination&nbsp;Index:&nbsp;" + String.format("%,.3f", discriminationIndex) + "</TD>");
 			} catch (Exception e) {
 				buf.append("<TD>Insufficient Data</TD>");
 			}
@@ -1466,11 +1467,11 @@ public class PlacementExam extends HttpServlet {
 				qLowScores = lowScores.get(k)==null?0:lowScores.get(k);
 				qTopPossScores = topPossibleScores.get(k)==null?0:topPossibleScores.get(k);
 				qLowPossScores = lowPossibleScores.get(k)==null?0:lowPossibleScores.get(k);
-				successIndex = qTopPossScores+qLowPossScores==0?0:((qTopScores + qLowScores)*100.0/(qTopPossScores+qLowPossScores))/100.0;
+				successIndex = qTopPossScores+qLowPossScores==0?0:(qTopScores + qLowScores)*100.0/(qTopPossScores+qLowPossScores);
 				discriminationIndex = qTopPossScores==0?0:qTopScores*100.0/qTopPossScores;
 				discriminationIndex -= qLowPossScores==0?0:qLowScores*100.0/qLowPossScores;
 				discriminationIndex = discriminationIndex/100.0;
-				buf.append("<TD>Success&nbsp;Index:&nbsp;" + (successIndex) + "<br/>" + "Discrimination&nbsp;Index:&nbsp;" + (discriminationIndex) + "</TD>");
+				buf.append("<TD>Success&nbsp;Percentage:&nbsp;" + String.format("%,.1f", successIndex) + "%<br/>" + "Discrimination&nbsp;Index:&nbsp;" + String.format("%,.3f", discriminationIndex) + "</TD>");
 			} catch (Exception e) {
 				buf.append("<TD>Insufficient Data</TD>");
 			}
@@ -1497,7 +1498,7 @@ public class PlacementExam extends HttpServlet {
 class SortUserScores implements Comparator<Entry<String,Integer>> {
 	// used by analyzeQuestions to sort userIds by best score
 	public int compare(Entry<String,Integer> a, Entry<String,Integer> b) {
-		return b.getValue().compareTo(a.getValue());
+		return b.getValue().compareTo(a.getValue());  // reverse order (highest scores before lower)
 	}
 }
 
