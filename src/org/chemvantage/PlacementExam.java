@@ -1380,33 +1380,45 @@ public class PlacementExam extends HttpServlet {
 		List<Response> responses = new ArrayList<Response>();
 		for (PlacementExamTransaction pet : bestTransactions) {
 			if (topUserIds.contains(pet.userId)) {
-				responses = ofy().load().type(Response.class).filter("assignmentType","PlacementExam").filter("transactionId",pet.id).list();
-				for (Response r : responses) {  // update stats for all questions that received a Response
-					Key<Question> k = Key.create(Question.class,r.questionId);
-					topScores.put(k,topScores.get(k)==null?r.score:topScores.get(k)+r.score);
-					topPossibleScores.put(k,topPossibleScores.get(k)==null?r.possibleScore:topPossibleScores.get(k)+r.possibleScore);
-					pet.questionKeys.remove(k);
-				}
-				for (Key<Question> k : pet.questionKeys) {
-					if (questionKeys_02pt.contains(k)) topPossibleScores.put(k, topPossibleScores.get(k)==null?2:topPossibleScores.get(k)+2);
-					else if (questionKeys_04pt.contains(k)) topPossibleScores.put(k, topPossibleScores.get(k)==null?4:topPossibleScores.get(k)+4);
-				}
+				try {
+					responses = ofy().load().type(Response.class).filter("assignmentType","PlacementExam").filter("transactionId",pet.id).list();
+					for (Response r : responses) {  // update stats for all questions that received a Response
+						Key<Question> k = Key.create(Question.class,r.questionId);
+						topScores.put(k,topScores.get(k)==null?r.score:topScores.get(k)+r.score);
+						topPossibleScores.put(k,topPossibleScores.get(k)==null?r.possibleScore:topPossibleScores.get(k)+r.possibleScore);
+						pet.questionKeys.remove(k);
+					}
+					for (Key<Question> k : pet.questionKeys) {
+						if (topScores.get(k)==null) topScores.put(k, 0);
+						if (questionKeys_02pt.contains(k)) topPossibleScores.put(k, topPossibleScores.get(k)==null?2:topPossibleScores.get(k)+2);
+						else if (questionKeys_04pt.contains(k)) topPossibleScores.put(k, topPossibleScores.get(k)==null?4:topPossibleScores.get(k)+4);
+					}
+				} catch (Exception e) {}
 			} else if (lowUserIds.contains(pet.userId)) {
-				responses = ofy().load().type(Response.class).filter("assignmentType","PlacementExam").filter("transactionId",pet.id).list();
-				for (Response r : responses) {  // update stats for all questions that received a Response
-					Key<Question> k = Key.create(Question.class,r.questionId);
-					lowScores.put(k,lowScores.get(k)==null?r.score:lowScores.get(k)+r.score);
-					lowPossibleScores.put(k,lowPossibleScores.get(k)==null?r.possibleScore:lowPossibleScores.get(k)+r.possibleScore);
-					pet.questionKeys.remove(k);
-				}
-				for (Key<Question> k : pet.questionKeys) {
-					if (questionKeys_02pt.contains(k)) lowPossibleScores.put(k, lowPossibleScores.get(k)==null?2:lowPossibleScores.get(k)+2);
-					else if (questionKeys_04pt.contains(k)) lowPossibleScores.put(k, lowPossibleScores.get(k)==null?4:lowPossibleScores.get(k)+4);
-				}
+				try {
+					responses = ofy().load().type(Response.class).filter("assignmentType","PlacementExam").filter("transactionId",pet.id).list();
+					for (Response r : responses) {  // update stats for all questions that received a Response
+						Key<Question> k = Key.create(Question.class,r.questionId);
+						lowScores.put(k,lowScores.get(k)==null?r.score:lowScores.get(k)+r.score);
+						lowPossibleScores.put(k,lowPossibleScores.get(k)==null?r.possibleScore:lowPossibleScores.get(k)+r.possibleScore);
+						pet.questionKeys.remove(k);
+					}
+					for (Key<Question> k : pet.questionKeys) {
+						if (lowScores.get(k)==null) lowScores.put(k, 0);
+						if (questionKeys_02pt.contains(k)) lowPossibleScores.put(k, lowPossibleScores.get(k)==null?2:lowPossibleScores.get(k)+2);
+						else if (questionKeys_04pt.contains(k)) lowPossibleScores.put(k, lowPossibleScores.get(k)==null?4:lowPossibleScores.get(k)+4);
+					}
+				} catch (Exception e) {}
 			}
 		}
+
+		buf.append("Group size: " + groupSize + "<br/><br/>");
 		
 		int i = 0;
+		int qTopScores = 0;
+		int qLowScores = 0;
+		int qTopPossScores = 0;
+		int qLowPossScores = 0;
 		double successIndex = 0;
 		double discriminationIndex = 0;
 		Map<Key<Question>,Question> questions = new HashMap<Key<Question>,Question>();
@@ -1419,15 +1431,20 @@ public class PlacementExam extends HttpServlet {
 			i++;
 			Question q = questions.get(k);
 			q.setParameters();
+			buf.append("<TR VALIGN=TOP NOWRAP>");
 			try {
-				successIndex = (topScores.get(k) + lowScores.get(k))*100/(topPossibleScores.get(k) + lowPossibleScores.get(k))/100.0;
-				discriminationIndex = (topScores.get(k)*100/topPossibleScores.get(k) - lowScores.get(k)*100/lowPossibleScores.get(k))/100.0;
+				qTopScores = topScores.get(k)==null?0:topScores.get(k);
+				qLowScores = lowScores.get(k)==null?0:lowScores.get(k);
+				qTopPossScores = topPossibleScores.get(k)==null?0:topPossibleScores.get(k);
+				qLowPossScores = lowPossibleScores.get(k)==null?0:lowPossibleScores.get(k);
+				successIndex = qTopPossScores+qLowPossScores==0?0:((qTopScores + qLowScores)*100.0/(qTopPossScores+qLowPossScores))/100.0;
+				discriminationIndex = qTopPossScores==0?0:qTopScores*100.0/qTopPossScores;
+				discriminationIndex -= qLowPossScores==0?0:qLowScores*100.0/qLowPossScores;
+				discriminationIndex = discriminationIndex/100.0;
+				buf.append("<TD>Success&nbsp;Index:&nbsp;" + (successIndex) + "<br/>" + "Discrimination&nbsp;Index:&nbsp;" + (discriminationIndex) + "</TD>");
 			} catch (Exception e) {
-				successIndex = 0;
-				discriminationIndex = 0;
+				buf.append("<TD>Insufficient Data</TD>");
 			}
-			buf.append("<TR VALIGN=TOP NOWRAP><TD>Success&nbsp;Index:&nbsp;" + (successIndex) + "<br/>"
-					+ "Discrimination&nbsp;Index:&nbsp;" + (discriminationIndex) + "</TD>");
 			buf.append("<TD>&nbsp;&nbsp;<b>"+i+".</b></TD>");
 			buf.append("<TD>" + q.printAll() + "</TD>");
 			buf.append("</TR>");
@@ -1437,21 +1454,26 @@ public class PlacementExam extends HttpServlet {
 		i=0;
 		buf.append("<h3>4-point question items</h3>");
 		buf.append("<table>");
-		questions = ofy().load().keys(questionKeys_02pt);
-		for (Key<Question> k : questionKeys_02pt) {
+		questions = ofy().load().keys(questionKeys_04pt);
+		for (Key<Question> k : questionKeys_04pt) {
 			if (!a.questionKeys.contains(k)) continue;
 			i++;
 			Question q = questions.get(k);
 			q.setParameters();
+			buf.append("<TR VALIGN=TOP NOWRAP>");
 			try {
-				successIndex = (topScores.get(k) + lowScores.get(k))*100/(topPossibleScores.get(k) + lowPossibleScores.get(k))/100.0;
-				discriminationIndex = (topScores.get(k)*100/topPossibleScores.get(k) - lowScores.get(k)*100/lowPossibleScores.get(k))/100.0;
+				qTopScores = topScores.get(k)==null?0:topScores.get(k);
+				qLowScores = lowScores.get(k)==null?0:lowScores.get(k);
+				qTopPossScores = topPossibleScores.get(k)==null?0:topPossibleScores.get(k);
+				qLowPossScores = lowPossibleScores.get(k)==null?0:lowPossibleScores.get(k);
+				successIndex = qTopPossScores+qLowPossScores==0?0:((qTopScores + qLowScores)*100.0/(qTopPossScores+qLowPossScores))/100.0;
+				discriminationIndex = qTopPossScores==0?0:qTopScores*100.0/qTopPossScores;
+				discriminationIndex -= qLowPossScores==0?0:qLowScores*100.0/qLowPossScores;
+				discriminationIndex = discriminationIndex/100.0;
+				buf.append("<TD>Success&nbsp;Index:&nbsp;" + (successIndex) + "<br/>" + "Discrimination&nbsp;Index:&nbsp;" + (discriminationIndex) + "</TD>");
 			} catch (Exception e) {
-				successIndex = 0;
-				discriminationIndex = 0;
+				buf.append("<TD>Insufficient Data</TD>");
 			}
-			buf.append("<TR VALIGN=TOP NOWRAP><TD>Success&nbsp;Index:&nbsp;" + (successIndex) + "<br/>"
-					+ "Discrimination&nbsp;Index:&nbsp;" + (discriminationIndex) + "</TD>");
 			buf.append("<TD>&nbsp;&nbsp;<b>"+i+".</b></TD>");
 			buf.append("<TD>" + q.printAll() + "</TD>");
 			buf.append("</TR>");
@@ -1475,7 +1497,7 @@ public class PlacementExam extends HttpServlet {
 class SortUserScores implements Comparator<Entry<String,Integer>> {
 	// used by analyzeQuestions to sort userIds by best score
 	public int compare(Entry<String,Integer> a, Entry<String,Integer> b) {
-		return a.getValue().compareTo(b.getValue());
+		return b.getValue().compareTo(a.getValue());
 	}
 }
 
