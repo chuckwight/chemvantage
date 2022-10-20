@@ -853,6 +853,10 @@ public class Question implements Serializable, Cloneable {
 	boolean agreesToRequiredPrecision(String studentAnswer) {
 		// This method is used for numeric questions to determine if the student's response agrees with the correct answer to within the required precision
 		if (!"NUMERIC".equals(type) || studentAnswer == null || studentAnswer.isEmpty() || hasNoCorrectAnswer()) return false;
+		if (studentAnswer.length()<3 && (studentAnswer.endsWith("+") || studentAnswer.endsWith("-"))) {  // deal with oxidation state like 5+ or 3-
+			char sign = studentAnswer.charAt(studentAnswer.length()-1);
+			studentAnswer = sign + studentAnswer.substring(0,studentAnswer.length()-1);
+		}
 		try {
 			studentAnswer = studentAnswer.replaceAll(",", "").replaceAll("\\s", "").toUpperCase();  // removes comma separators and whitespace from numbers, turns e to E
 			double dStudentAnswer = Double.parseDouble(parseString(studentAnswer,0));
