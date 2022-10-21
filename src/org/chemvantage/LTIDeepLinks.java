@@ -67,13 +67,10 @@ public class LTIDeepLinks extends HttpServlet {
 			}
 			
 			if ("Select assignment".equals(request.getParameter("UserRequest"))) {  // submitting desired links
-				if (Boolean.parseBoolean(request.getParameter("Refresh"))) {
-					int topicKey = 0;
-					try {topicKey = Integer.parseInt(request.getParameter("TopicKey"));} catch (Exception e) {}
-					out.println(contentPickerForm(user,request,claims,topicKey));
-				} else out.println(deepLinkResponseMsg(request));
+				if (Boolean.parseBoolean(request.getParameter("Refresh"))) out.println(contentPickerForm(user,request,claims));
+				else out.println(deepLinkResponseMsg(request));
 			} else if (request.getParameter("id_token") != null) { // This is a fresh Deep Links request.
-				out.println(contentPickerForm(user,request,claims,1));
+				out.println(contentPickerForm(user,request,claims));
 			}
 		} catch (Exception e) {	 
 			Enumeration<String> parameterNames = request.getParameterNames();
@@ -213,7 +210,7 @@ public class LTIDeepLinks extends HttpServlet {
 		if (!authorized) throw new Exception("Sorry, this link works only for the course instructor.");
 	}
 	
-	String contentPickerForm(User user, HttpServletRequest request,JsonObject claims,int topicKey) throws Exception {
+	String contentPickerForm(User user, HttpServletRequest request,JsonObject claims) throws Exception {
 		StringBuffer buf = new StringBuffer(Subject.header("Select ChemVantage Assignment"));
 		try {
 		JsonObject settings = claims.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings").getAsJsonObject();
@@ -235,7 +232,7 @@ public class LTIDeepLinks extends HttpServlet {
 		// The form has 4 sections:
 		// 1. A group of radio buttons to specify the AssignmentType (always visible)
 		// 2. A group of radio buttons (or drop-down selector) to specify the TopicKey (visible when AssignmentType is selected)
-		// 3. A group of radio buttons to select a single topic for Quiz/Homework/SmartText assignment (visible when AssignmentType is Quiz or Homework; or SmartText)
+		// 3. A group of radio buttons to select a single topic for Quiz or Homework assignment (visible when AssignmentType is Quiz or Homework)
 		// 4. A group of checkboxes to select 3 or more topics for a Practice Exam (visible when AssignmentType is PracticeExam)
 		// Clicking any AssignmentType button or loading the page with a valid AssignmentType makes the TopicKey set (2) visible
 		// and makes the relevant table of radio buttons (3) or checkboxes (4) visible (and clears and hides the opposite one).
@@ -252,7 +249,7 @@ public class LTIDeepLinks extends HttpServlet {
 		// Build a table for Parts 1 and 2 (side by side in 1 row)
 		String assignmentType = request.getParameter("AssignmentType");
 		if (assignmentType==null) assignmentType = "";
-		if ("SmartText".equals(assignmentType)) topicKey=1;
+		
 		buf.append("<div style='display:table'><div style='display:table-row'><div style='display:table-cell'>");
 		buf.append("Select the type of assignment to create...<br />");
 		boolean smartTextEnabled = ofy().load().type(Text.class).filter("smartText",true).count()>0;
@@ -265,17 +262,19 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('PracticeExam'); value='PracticeExam'" + (assignmentType.equals("PracticeExam")?" CHECKED />":" />") + "Practice&nbsp;Exam</label><p></p>");
 		buf.append("</div>");
 
-		// Each textbook is associated with an integer topicKey in sequence of powers of 2 so that for each text i, topicKey[i] = 2^(i-1) where i=1,2,3,...,N
-		// Each topic has a topicGroup attribute which is the sum of the sum of topicKeys for aligned texts, so topicGroup ranges from 0 to 2^(N)-1
-		// topicGroup=3 means alignment with both text1 and text2, topicGroup=4 means alignment only with text3, and so on.
-		// In general, the topicGroup value includes a topicKey iff topicGroup % 2*topicKey / topicKey == 1 where % and / are the integer modulus and div operators
-		// A topic having topicGroup = 0 means that the topic does not align with any particular text, but can be viewed if topicKey = 0 (meaning view all topics).
-
-		// Put Part 2 in a cell on the right side of the first row
-		buf.append("<div id=topicKeySelect style='display:table-cell;visibility:" + (assignmentType.equals("")?"hidden":"visible") + "'>");
+		// Put textbook selector div on the right side of the first row
+		buf.append("<div id=textSelect style='display:table-cell;visibility:" + (assignmentType.equals("")?"hidden":"visible") + "'>");
 		buf.append("and a group of topics to choose from:<br />");
-		buf.append("<label><input type=radio name=TopicKey value=0 " + (topicKey==0?"checked ":"") + "onClick=\"document.getElementById('refresh').value=true;this.form.submit();\" />Show all topics</label><br />"
-				+ "<label><input type=radio name=TopicKey value=1 "+ (topicKey==1?"checked ":"") + "onClick=\"document.getElementById('refresh').value=true;this.form.submit();\" />Show topics for OpenStax Chemistry 2e</label><br />");
+		long textId = 0L;
+		Text text = null;
+		try {
+			textId = Long.parseLong(request.getParameter("TextId"));
+			List<Text> texts = ofy().load().type(Text.class).list();
+			for (Text txt : texts) {
+				if (txt.id==textId) text = txt;
+				buf.append("<label><input type=radio name=TextId value='" + txt.id + "' " + (textId==txt.id?"checked ":"") + "onclick=\"document.getElementById('refresh').value=true;this.form.submit();\" />" + text.title + "</label></br/>");
+			}
+		} catch (Exception e) {}
 		buf.append("</div></div></div>");
 		// End of top table
 
@@ -286,6 +285,7 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "      document.getElementById('topicKeySelect').style.visibility='visible';"
 				+ "      document.getElementById('examSelect').style.display='block';"
 				+ "      document.getElementById('videoSelect').style.display='none';"
+				+ "      document.getElementById('textChapterSelect').style.display='none';"
 				+ "      document.getElementById('quizSelect').style.display='none';"
 				+ "      document.getElementById('pollNotice').style.display='none';"
 				+ "      document.getElementById('placementNotice').style.display='none';"
@@ -294,6 +294,7 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "      document.getElementById('topicKeySelect').style.visibility='hidden';"
 				+ "      document.getElementById('examSelect').style.display='none';"
 				+ "      document.getElementById('videoSelect').style.display='block';"
+				+ "      document.getElementById('textChapterSelect').style.display='none';"
 				+ "      document.getElementById('quizSelect').style.display='none';"
 				+ "      document.getElementById('pollNotice').style.display='none';"
 				+ "      document.getElementById('placementNotice').style.display='none';"
@@ -303,6 +304,7 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "      document.getElementById('examSelect').style.display='none';"
 				+ "      document.getElementById('pollNotice').style.display='block';"
 				+ "      document.getElementById('videoSelect').style.display='none';"
+				+ "      document.getElementById('textChapterSelect').style.display='none';"
 				+ "      document.getElementById('quizSelect').style.display='none';"
 				+ "      document.getElementById('placementNotice').style.display='none';"
 				+ "      break;"
@@ -311,13 +313,24 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "      document.getElementById('examSelect').style.display='none';"
 				+ "      document.getElementById('pollNotice').style.display='none';"
 				+ "      document.getElementById('videoSelect').style.display='none';"
+				+ "      document.getElementById('textChapterSelect').style.display='none';"
 				+ "      document.getElementById('quizSelect').style.display='none';"
 				+ "      document.getElementById('placementNotice').style.display='block';"
+				+ "      break;"
+				+ "    case 'SmartText': "
+				+ "      document.getElementById('topicKeySelect').style.visibility='hidden';"
+				+ "      document.getElementById('examSelect').style.display='none';"
+				+ "      document.getElementById('pollNotice').style.display='none';"
+				+ "      document.getElementById('videoSelect').style.display='none';"
+				+ "      document.getElementById('textChapterSelect').style.display='block';"
+				+ "      document.getElementById('quizSelect').style.display='none';"
+				+ "      document.getElementById('placementNotice').style.display='none';"
 				+ "      break;"
 				+ "    default: "
 				+ "      document.getElementById('topicKeySelect').style.visibility='visible';"
 				+ "      document.getElementById('examSelect').style.display='none';"
 				+ "      document.getElementById('videoSelect').style.display='none';"
+				+ "      document.getElementById('textChapterSelect').style.display='none';"
 				+ "      document.getElementById('quizSelect').style.display='block';"
 				+ "      document.getElementById('pollNotice').style.display='none';"
 				+ "      document.getElementById('placementNotice').style.display='none';"
@@ -326,9 +339,11 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "function countChecks(type) {"
 				+ "  var examArray=document.getElementsByName('TopicIds');"
 				+ "  var videoArray=document.getElementsByName('VideoId');"
+				+ "  var stArray=document.getElementsByName('ChapterNumber');"
 				+ "  var quizArray=document.getElementsByName('TopicId');"
 				+ "  var checkSubmit = document.getElementById('checksub');"
 				+ "  var videoSubmit = document.getElementById('vidsub');"
+				+ "  var stSubmit = document.getElementById('stsub');"
 				+ "  var radioSubmit = document.getElementById('radsub');"
 				+ "  var count=0;"
 				+ "  switch (type) {"
@@ -338,6 +353,9 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "        for (var i=0;i<videoArray.length;i++) videoArray[i].checked=false;"
 				+ "        videoSubmit.disabled = true;"
 				+ "        videoSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one video topic';"
+				+ "        for (var i=0;i<stArray.length;i++) stArray[i].checked=false;"
+				+ "        stSubmit.disabled = true;"
+				+ "        stSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one chapter';"
 				+ "        for (var i=0;i<quizArray.length;i++) quizArray[i].checked=false;"
 				+ "        radioSubmit.disabled = true;"
 				+ "        radioSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one topic';"
@@ -350,6 +368,9 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "      for (var i=0;i<examArray.length;i++) examArray[i].checked=false;"
 				+ "      checkSubmit.disabled = true;"
 				+ "      checkSubmit.value = 'Select at least 3 topics for this exam';"
+				+ "      for (var i=0;i<stArray.length;i++) stArray[i].checked=false;"
+				+ "      stSubmit.disabled = true;"
+				+ "      stSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one chapter';"
 				+ "      for (var i=0;i<quizArray.length;i++) quizArray[i].checked=false;"
 				+ "      radioSubmit.disabled = true;"
 				+ "      radioSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one topic';"
@@ -358,10 +379,25 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "      if (count<1) videoSubmit.value='Select" + (acceptsMultiple?" at least":"") + " one video topic';"
 				+ "      else videoSubmit.value='Create " + (acceptsMultiple?"these assignments":"this assignment") + "';"
 				+ "      break;"
+				+ "    case 'SmartText':"
+				+ "      for (var i=0;i<examArray.length;i++) examArray[i].checked=false;"
+				+ "      checkSubmit.disabled = true;"
+				+ "      checkSubmit.value = 'Select at least 3 topics for this exam';"
+				+ "      for (var i=0;i<quizArray.length;i++) quizArray[i].checked=false;"
+				+ "      radioSubmit.disabled = true;"
+				+ "      radioSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one topic';"
+				+ "      for (var i=0;i<stArray.length;i++) if (stArray[i].checked) count++;"
+				+ "      stSubmit.disabled = (count<1);"
+				+ "      if (count<1) stSubmit.value='Select" + (acceptsMultiple?" at least":"") + " one chapter';"
+				+ "      else stSubmit.value='Create " + (acceptsMultiple?"these assignments":"this assignment") + "';"
+				+ "      break;"
 				+ "    default:"
 				+ "      for (var i=0;i<examArray.length;i++) examArray[i].checked=false;"
 				+ "      checkSubmit.disabled = true;"
 				+ "      checkSubmit.value = 'Select at least 3 topics for this exam';"
+				+ "      for (var i=0;i<stArray.length;i++) stArray[i].checked=false;"
+				+ "      stSubmit.disabled = true;"
+				+ "      stSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one chapter';"
 				+ "      for (var i=0;i<videoArray.length;i++) videoArray[i].checked=false;"
 				+ "      videoSubmit.disabled = true;"
 				+ "      videoSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one video topic';"
@@ -382,8 +418,8 @@ public class LTIDeepLinks extends HttpServlet {
 		List<Topic> sem1Topics = new ArrayList<Topic>();
 		List<Topic> sem2Topics = new ArrayList<Topic>();
 		for (Topic t : topics) {
-			if (t.orderBy.startsWith("1") && (topicKey==0 || t.topicGroup%(2*topicKey)/topicKey==1)) sem1Topics.add(t);
-			else if (t.orderBy.startsWith("2") && (topicKey==0 || t.topicGroup%(2*topicKey)/topicKey==1)) sem2Topics.add(t);
+			if (t.orderBy.startsWith("1")) sem1Topics.add(t);
+			else if (t.orderBy.startsWith("2")) sem2Topics.add(t);
 		}
 
 		// Make a separate list of videos with embedded quizzes to display in a radio-type video selector
@@ -419,8 +455,16 @@ public class LTIDeepLinks extends HttpServlet {
 		buf.append("<input type=submit id=vidsub disabled=true value='Select" + (selectorType.equals("checkbox")?" at least":"") + " one video topic' />"); // submit button for videos
 		buf.append("</div>"); // end of big box for VideoQuiz selection
 
-		// Create a selector table for Quiz or Homework or SmartText assignments
-		buf.append("<div id=quizSelect style='display:" + (assignmentType.equals("Quiz")||assignmentType.equals("Homework")||assignmentType.equals("SmartText")?"block":"none") + "'>");  // big box containing radio buttons
+		// Create a table for SmartText assignments
+		buf.append("<div id=textChapterSelect style='display:" + (assignmentType.equals("SmartText")?"block":"none") + "'>");
+		buf.append("<font color=red>Please select " + (acceptsMultiple?"at least":"") + " one reading assignment:</font><br />");
+		buf.append("<input type=hidden name=TextId value=" + text.id + " />");
+		for (Chapter ch : text.chapters) buf.append("<label><input type=" + selectorType + " name=ChapterNumber value=" + ch.chapterNumber + "onClick=countChecks('SmartText'); />Chapter " + ch.chapterNumber + ": " + ch.title + "</label></br/>"); 
+		buf.append("<input type=submit id=stsub disabled=true value='Select " + (selectorType.equals("checkbox")?"at least ":"") + "one chapter' />");
+		buf.append("</div>"); // end of big box for textChapter selection
+
+		// Create a selector table for Quiz or Homework assignments
+		buf.append("<div id=quizSelect style='display:" + (assignmentType.equals("Quiz")||assignmentType.equals("Homework")?"block":"none") + "'>");  // big box containing radio buttons
 		buf.append("<font color=red>Please select " + (acceptsMultiple?"at least":"") + " one topic:</font><br />");
 		buf.append("<div style='display:table'>"); // start table of radio buttons
 		buf.append("<div style='display:table-row'><div style='display:table-cell'>");   // left column Chem1 topics		
