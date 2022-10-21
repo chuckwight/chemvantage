@@ -80,33 +80,62 @@ public class SmartText extends HttpServlet {
 
    static String instructorPage(User user,Assignment a) {
 	   StringBuffer buf = new StringBuffer();		
-		try {
-			Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
-			buf.append("<h2>SmartText - Instructor Page</h2>");
-			buf.append("Chapter: " + t.title + "<br/>");
-			Map<Long,Concept> concepts = ofy().load().type(Concept.class).ids(t.conceptIds);
-			buf.append("Concepts covered:<ul>");
-			for (Concept c : concepts.values()) buf.append("<li>" + c.title + "</li>");
-			buf.append("</ul>");
-			
-			buf.append("<a style='text-decoration: none' href='/SmartText?UserRequest=PrintQuestion&sig=" + user.getTokenSignature() + "'>"
-					+ "<button style='display: block; width: 500px; border: 1 px; background-color: #00FFFF; color: black; padding: 14px 28px; font-size: 18px; text-align: center; cursor: pointer'>"
-					+ "Show This Assignment (recommended)</button></a><br/>");
-		} catch (Exception e) {
-			buf.append("<br/>Error: " + e.getMessage()==null?e.toString():e.getMessage());
-		}
-		return buf.toString();
+	   try {
+		   Text text = ofy().load().type(Text.class).id(a.textId).safe();
+		   Chapter chapter = null;
+		   for (Chapter ch : text.chapters) {
+			   if (ch.chapterNumber == a.chapterNumber) {
+				   chapter = ch;
+				   break;
+			   }
+		   }
+		   if (chapter==null) return "Sorry, we were unable to find the chapter of this textbook.";
+		   
+		   buf.append("<h2>SmartText - Instructor Page</h2>");
+		   buf.append(printTextHeader(text,chapter));
+		   Map<Long,Concept> concepts = ofy().load().type(Concept.class).ids(chapter.conceptIds);
+		   buf.append("Concepts covered:<ul>");
+		   for (Concept c : concepts.values()) buf.append("<li>" + c.title + "</li>");
+		   buf.append("</ul>");
+
+		   buf.append("<a style='text-decoration: none' href='/SmartText?UserRequest=PrintQuestion&sig=" + user.getTokenSignature() + "'>"
+				   + "<button style='display: block; width: 500px; border: 1 px; background-color: #00FFFF; color: black; padding: 14px 28px; font-size: 18px; text-align: center; cursor: pointer'>"
+				   + "Show This Assignment (recommended)</button></a><br/>");
+	   } catch (Exception e) {
+		   buf.append("<br/>Error: " + e.getMessage()==null?e.toString():e.getMessage());
+	   }
+	   return buf.toString();
+   }
+
+   static String printTextHeader(Text t,Chapter c) {
+	   StringBuffer buf = new StringBuffer();
+	   buf.append("<h2>Reading Assignment</h2>");
+	   buf.append("Textbook: <b>" + t.title + "</b><br/>"
+	   		+ "Author: " + t.author + "<br/>"
+	   		+ "Chapter " + c.chapterNumber + ": " + c.title + "<br/><br/>");
+	   buf.append("<h3>Reading Options</h3>");
+	   if (c.url != null) buf.append("Read this chapter online: <a href='" + c.url + "' target=_blank>" + c.url + "</a><br/>");
+	   
+	   return buf.toString();
    }
    
    static String printQuestion(User user,Assignment a) {
-	   StringBuffer buf = new StringBuffer("<h3>Key Concept Question</h3>");
+	   StringBuffer buf = new StringBuffer();
 	   try {
 		   // load the assignment pertaining to this launch
-		   Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
-		   if (t.conceptIds==null || t.conceptIds.isEmpty()) return "Sorry, there are no Key Concepts identified for thie topic.";
-		   // Make a copy of the List of conceptIds:
-		   List<Long> conceptIds = new ArrayList<Long>(t.conceptIds);
+		   Text text = ofy().load().type(Text.class).id(a.textId).safe();
+		   Chapter chapter = null;
+		   for (Chapter ch : text.chapters) {
+			   if (ch.chapterNumber == a.chapterNumber) {
+				   chapter = ch;
+				   break;
+			   }
+		   }
+		   if (chapter==null) return "Sorry, we were unable to find the chapter of this textbook.";
 		   
+		   buf.append(printTextHeader(text,chapter) + "<hr>");
+		  
+		   buf.append("<h3>Key Concept Questions</h3>");
 		   // load the SmartText transaction entity for this user if one exists
 		   STTransaction st = null;
 		   int score = 0;
@@ -114,7 +143,7 @@ public class SmartText extends HttpServlet {
 		   try {
 			   st = ofy().load().type(STTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).first().safe();
 			   // Bulletproofing: check to ensure that conceptIds haven't been added; or start over
-			   if (st.scores.length != t.conceptIds.size()) {
+			   if (st.scores.length != chapter.conceptIds.size()) {
 				   ofy().delete().entity(st).now();
 				   throw new Exception("There was an error in the assignment settings, sorry. Please start over.");
 			   }
@@ -122,7 +151,7 @@ public class SmartText extends HttpServlet {
 			   for (int i=0; i<st.scores.length; i++) {
 				   score += st.scores[i];
 				   possibleScore += st.possibleScores[i];
-				   if (st.scores[i] == st.possibleScores[i]) conceptIds.remove(t.conceptIds.get(i));   
+				   if (st.scores[i] == st.possibleScores[i]) chapter.conceptIds.remove(chapter.conceptIds.get(i));   
 				}
 			   if (score>0 && score==possibleScore) {
 				   long exp = new Date(new Date().getTime()+1200000L).getTime();  // 20 minutes from now in millis
@@ -132,7 +161,7 @@ public class SmartText extends HttpServlet {
 				   return buf.toString();
 			   }
 			} catch (Exception e) {
-			   st = new STTransaction(user.getHashedId(),a.id,t.conceptIds);
+			   st = new STTransaction(user.getHashedId(),a.id,chapter.conceptIds);
 			   buf.append("Complete all key concept questions to score 100% for this assignment.<br/><br/>");
 		   }
 		   
@@ -141,7 +170,7 @@ public class SmartText extends HttpServlet {
 		   Question q = null;
 		   long conceptId=0;
 		   while (q==null) {
-			   conceptId = conceptIds.get(random.nextInt(conceptIds.size()));
+			   conceptId = chapter.conceptIds.get(random.nextInt(chapter.conceptIds.size()));
 			   
 			   // get all the question keys for the chosen conceptId
 			   List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("conceptId",conceptId).keys().list();
@@ -156,13 +185,13 @@ public class SmartText extends HttpServlet {
 				   Key<Question> questionKey = questionKeys.get(random.nextInt(questionKeys.size()));
 				   q = ofy().load().key(questionKey).now();
 			   } else {  // close out this conceptId
-				   int index = t.conceptIds.indexOf(conceptId);
+				   int index = chapter.conceptIds.indexOf(conceptId);
 				   st.possibleScores[index] = st.scores[index];
 				   ofy().save().entity(st).now();
-				   conceptIds.remove(conceptId);
-				   if (conceptIds.isEmpty()) {
+				   chapter.conceptIds.remove(conceptId);
+				   if (chapter.conceptIds.isEmpty()) {
 					   long exp = new Date(new Date().getTime()+1200000L).getTime();  // 20 minutes from now in millis
-					   buf.append("<h2>Congratulations!</h2>"
+					   buf.append("Congratulations! "
 							   + "You have answered all of the key concept questions for this assignment. Your score is 100%.<br/>"
 							   + "For more practice on this subject you may "
 							   + "<a href=/Quiz?TopicId=" + a.topicId + "&sig=" + (new User(exp).getTokenSignature()) + ">try a practice quiz</a>.<br/><br/>");
