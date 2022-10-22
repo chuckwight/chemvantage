@@ -152,15 +152,13 @@ public class SmartText extends HttpServlet {
 				   score += st.scores[i];
 				   possibleScore += st.possibleScores[i];
 				   if (st.scores[i] == st.possibleScores[i]) chapter.conceptIds.remove(chapter.conceptIds.get(i));   
-				}
+			   }
 			   if (score>0 && score==possibleScore) {
-				   long exp = new Date(new Date().getTime()+1200000L).getTime();  // 20 minutes from now in millis
-				   buf.append("This assignment is complete. Your score is 100%.<br/>"
-				   		+ "For more practice on this subject you may "
-				   		+ "<a href=/Quiz?TopicId=" + a.topicId + "&sig=" + (new User(exp).getTokenSignature()) + ">try a practice quiz</a>.<br/><br/>");
+				   //long exp = new Date(new Date().getTime()+1200000L).getTime();  // 20 minutes from now in millis
+				   buf.append("This assignment is complete. Your score is 100%.<br/>");
 				   return buf.toString();
 			   }
-			} catch (Exception e) {
+		   } catch (Exception e) {
 			   st = new STTransaction(user.getHashedId(),a.id,chapter.conceptIds);
 			   buf.append("Complete all key concept questions to score 100% for this assignment.<br/><br/>");
 		   }
@@ -190,11 +188,9 @@ public class SmartText extends HttpServlet {
 				   ofy().save().entity(st).now();
 				   chapter.conceptIds.remove(conceptId);
 				   if (chapter.conceptIds.isEmpty()) {
-					   long exp = new Date(new Date().getTime()+1200000L).getTime();  // 20 minutes from now in millis
+					   //long exp = new Date(new Date().getTime()+1200000L).getTime();  // 20 minutes from now in millis
 					   buf.append("Congratulations! "
-							   + "You have answered all of the key concept questions for this assignment. Your score is 100%.<br/>"
-							   + "For more practice on this subject you may "
-							   + "<a href=/Quiz?TopicId=" + a.topicId + "&sig=" + (new User(exp).getTokenSignature()) + ">try a practice quiz</a>.<br/><br/>");
+							   + "You have answered all of the key concept questions for this assignment. Your score is 100%.<br/>");
 					   return buf.toString();
 				   }
 			   }
@@ -221,10 +217,20 @@ public class SmartText extends HttpServlet {
    }
    
    String printScore(User user, Assignment a,HttpServletRequest request) {
-	   StringBuffer buf = new StringBuffer("<h3>Key Concept Question</h3>");
+	   StringBuffer buf = new StringBuffer();
 	   StringBuffer debug = new StringBuffer("Debug: ");
 	   try {
 		   long assignmentId = a==null?Long.parseLong(request.getParameter("AssignmentId")):a.id;
+		   Text text = ofy().load().type(Text.class).id(a.textId).now();
+		   Chapter chapter = null;
+		   for (Chapter ch : text.chapters) {
+			   if (ch.chapterNumber == a.chapterNumber) {
+				   chapter = ch;
+				   break;
+			   }
+		   }
+		   buf.append(printTextHeader(text,chapter) + "<hr>");
+		   buf.append("<h3>Key Concept Questions</h3>");
 		   long conceptId = Long.parseLong(request.getParameter("ConceptId"));
 		   long questionId = Long.parseLong(request.getParameter("QuestionId"));
 		   int p = Integer.parseInt(request.getParameter("Parameter"));
@@ -264,7 +270,7 @@ public class SmartText extends HttpServlet {
 		   }
 		   
 		   if (score==possibleScore) {
-			   buf.append("<h2>Congratulations!</h2>You have answered all of the key concept questions for this assignment. Your score is 100%.");
+			   buf.append("You have answered all of the key concept questions for this assignment. Your score is 100%.");
 		   } else if (st.missedQuestions[index]<2) {  // continue to the next question
 			   buf.append("This assignment is " + 100*score/possibleScore + "% complete.<br/><br/>");
 			   buf.append("<a href=/SmartText?UserRequest=PrintQuestion&sig=" + user.getTokenSignature() + ">"
