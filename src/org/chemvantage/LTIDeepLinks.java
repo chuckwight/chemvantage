@@ -216,279 +216,134 @@ public class LTIDeepLinks extends HttpServlet {
 		JsonObject settings = claims.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings").getAsJsonObject();
 		boolean acceptsLtiResourceLink = settings.get("accept_types").getAsJsonArray().contains(new JsonPrimitive("ltiResourceLink"));
 		if (!acceptsLtiResourceLink) throw new Exception("Deep Link request failed because platform does not accept new LtiResourceLinks.");
-		boolean acceptsMultiple = settings.get("accept_multiple").getAsBoolean();
 		
-		// Print a nice banner
 		buf.append(Subject.banner);
-
 		buf.append("<h2>Assignment Setup Page</h2>");
-
-		if (acceptsMultiple) buf.append("Use this page to create multiple ChemVantage assignments in your learning management system (LMS). "
-				+ "Select the assignment type (e.g., Quiz) and then select the topics of all the different quizzes to create "
-				+ "(one quiz per topic). Return to this page to create multiple Video or Homework assignments, if needed. For Practice Exam "
-				+ "assignents, each exam covers multiple topics, so you can create only one Practice Exam for each visit to this page.<p></p>");
-		
-		// Start building a form to select the assignment attributes:
-		// The form has 4 sections:
-		// 1. A group of radio buttons to specify the AssignmentType (always visible)
-		// 2. A group of radio buttons (or drop-down selector) to specify the TopicKey (visible when AssignmentType is selected)
-		// 3. A group of radio buttons to select a single topic for Quiz or Homework assignment (visible when AssignmentType is Quiz or Homework)
-		// 4. A group of checkboxes to select 3 or more topics for a Practice Exam (visible when AssignmentType is PracticeExam)
-		// Clicking any AssignmentType button or loading the page with a valid AssignmentType makes the TopicKey set (2) visible
-		// and makes the relevant table of radio buttons (3) or checkboxes (4) visible (and clears and hides the opposite one).
-		// Clicking any TopicKey button reloads the page from the server with a modified set of topics
 
 		buf.append("<form name=AssignmentForm action=/lti/deeplinks method=POST>");
 		buf.append("<input type=hidden name=id_token value='" + request.getParameter("id_token") + "' />");
 		buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
 		buf.append("<input type=hidden name=UserRequest value='Select assignment' />");
-		buf.append("<input type=hidden name=Refresh id=refresh value=false />");
-
+		buf.append("<input type=hidden name=Refresh id=refresh value=true />");
 		buf.append("<input type=hidden name=Subject value='" + claims.get("sub") + "' />");
 		
-		// Build a table for Parts 1 and 2 (side by side in 1 row)
 		String assignmentType = request.getParameter("AssignmentType");
-		if (assignmentType==null) assignmentType = "";
+		if (assignmentType==null) assignmentType="";
 		
-		buf.append("<div style='display:table'><div style='display:table-row'><div style='display:table-cell'>");
-		buf.append("Select the type of assignment to create...<br />");
-		boolean smartTextEnabled = ofy().load().type(Text.class).filter("smartText",true).count()>0;
-		buf.append("<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('PlacementExam'); value='PlacementExam'" + (assignmentType.equals("PlacementExam")?" CHECKED />":" />") + "Placement&nbsp;Exam</label><br/>"
-				+ (smartTextEnabled?"<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('SmartText'); value='SmartText'" + (assignmentType.equals("SmartText")?" CHECKED />":" />") + "SmartText Chapter</label><br />":"")
-				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('Quiz'); value='Quiz'" + (assignmentType.equals("Quiz")?" CHECKED />":" />") + "Quiz</label><br />"
-				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('Homework'); value='Homework'" + (assignmentType.equals("Homework")?" CHECKED />":" />") + "Homework</label><br />"
-				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('VideoQuiz'); value='VideoQuiz'" + (assignmentType.equals("VideoQuiz")?" CHECKED />":" />") + "Video</label><br />"
-				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('Poll'); value='Poll'" + (assignmentType.equals("Poll")?" CHECKED />":" />") + "In-class&nbsp;Poll</label><br />"
-				+ "<label><input type=radio name=AssignmentType onClick=showAssignmentTopics('PracticeExam'); value='PracticeExam'" + (assignmentType.equals("PracticeExam")?" CHECKED />":" />") + "Practice&nbsp;Exam</label><p></p>");
-		buf.append("</div>");
-
-		// Put textbook selector div on the right side of the first row
-		buf.append("<div id=textSelect style='display:table-cell;visibility:" + (assignmentType.equals("")?"hidden":"visible") + "'>");
-		buf.append("and a group of topics to choose from:<br />");
-		long textId = 0L;
-		Text text = null;
-		try {
-			textId = Long.parseLong(request.getParameter("TextId"));
-			List<Text> texts = ofy().load().type(Text.class).list();
-			for (Text txt : texts) {
-				if (txt.id==textId) text = txt;
-				buf.append("<label><input type=radio name=TextId value='" + txt.id + "' " + (textId==txt.id?"checked ":"") + "onclick=\"document.getElementById('refresh').value=true;this.form.submit();\" />" + text.title + "</label></br/>");
-			}
-		} catch (Exception e) {}
-		buf.append("</div></div></div>");
-		// End of top table
-
+		buf.append("Select the type of assignment to create:");
+		buf.append("<div style='display:table;width:100%'><div style='display:table-row'><div style='display:table-cell'>"
+				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='PlacementExam'" + (assignmentType.equals("PlacementExam")?" CHECKED />":" />") + "Placement&nbsp;Exam</label><br/>"
+				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='SmartText'" + (assignmentType.equals("SmartText")?" CHECKED />":" />") + "SmartText Chapter</label><br />"
+				+ "</div><div style='display:table-cell'>"
+				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Quiz'" + (assignmentType.equals("Quiz")?" CHECKED />":" />") + "Quiz</label><br />"
+				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Homework'" + (assignmentType.equals("Homework")?" CHECKED />":" />") + "Homework</label><br />"
+				+ "</div><div style='display:table-cell'>"
+				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='VideoQuiz'" + (assignmentType.equals("VideoQuiz")?" CHECKED />":" />") + "Video</label><br />"
+				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Poll'" + (assignmentType.equals("Poll")?" CHECKED />":" />") + "In-class&nbsp;Poll</label><br />"
+				+ "</div><div style='display:table-cell'>"
+				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='PracticeExam'" + (assignmentType.equals("PracticeExam")?" CHECKED />":" />") + "Practice&nbsp;Exam</label><br/>"
+				+ "</div></div></div><br/>");
+		buf.append("<div id=plswait style='color:red;display:none'>Please wait...</div>");
+		// find out whether the LMS accepts multiple assignments in the Deep Linking process
+		boolean acceptsMultiple = settings.get("accept_multiple").getAsBoolean();
+		
+		// display a selector, depending on the type of assignment selected:
+		List<Topic> topics = null;
+		switch (assignmentType) {
+		case "PlacementExam":
+			buf.append("<input type=submit onClick=\"document.getElementById('refresh').value=false\"; value='Create a placement exam for General Chemistry' /><br/><br/>");
+			break;
+		case "Poll":
+			buf.append("Poll questions will be selected or created when the assignment is launched by the instructor.<br/><br/>"
+					+ "<input type=submit onClick=\"document.getElementById('refresh').value=false\"; value='Create an in-class poll' />");
+			break;
+		case "SmartText":
+			long textId = 0L;
+			Text text = null;
+			List<Text> texts = ofy().load().type(Text.class).filter("smartText",true).list();
+			try {
+				textId = Long.parseLong(request.getParameter("TextId"));
+				buf.append("<input type=hidden name=TextId value=" + textId + " />");
+				for (Text txt : texts) {
+					if (txt.id==textId) text = txt;
+					buf.append("<label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />" + txt.title + "</label></br/>");
+				}
+				buf.append("<div style='color:red'>Select " + (acceptsMultiple?"at least ":"") + "one of the chapters below for this reading assignment.</div>");
+				for (Chapter ch : text.chapters) {
+					buf.append("<label><input type=" + (acceptsMultiple?"checkbox":"radio") + " name=ChapterNumber onClick=countChecks('SmartText'); "
+						+ "value=" + ch.chapterNumber + " />Chapter " + ch.chapterNumber + ". " + ch.title + "</label><br/>");
+				}
+				buf.append("<input id=stsub type=submit disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select" + (acceptsMultiple?" at least":"") + " one chapter' />");
+			} catch (Exception e) {
+				buf.append("<div style='color:red'>Please select one of the available ChemVantage smart textbooks below:</div><br/>");
+				for (Text txt : texts) buf.append("<label><input type=radio name=TextId value=" + txt.id + " onclick=this.form.submit(); />" + txt.title + "</label></br/>");
+			}		
+			break;
+		case "Quiz":
+		case "Homework":
+			topics = ofy().load().type(Topic.class).order("orderBy").list();
+			buf.append("<span style='color:red'>Please select " + (acceptsMultiple?"at least":"") + " one topic:</span><br />");
+			for (Topic t : topics) buf.append("<label><input type=" + (acceptsMultiple?"checkbox":"radio") + " name=TopicId value=" + t.id + " onClick=countChecks('Quiz'); />" + t.title + "</label><br />");
+			buf.append("<input type=submit id=qhsub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select" + (acceptsMultiple?" at least":"") + " one topic' />");
+			break;
+		case "PracticeExam":
+			topics = ofy().load().type(Topic.class).order("orderBy").list();
+			buf.append("<div style='color:red'>Please select at least 3 topics for this practice exam:</div>");
+			for (Topic t : topics) buf.append("<label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks('PracticeExam'); />" + t.title + "</label><br />");
+			buf.append("<input type=submit id=pesub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select at least 3 topics' />");
+			break;
+		case "VideoQuiz":
+			buf.append("Videos marked with an asterisk (*) have embedded quizzes; others will give full credit for watching to the end.<br/>");
+			List<Video> videos = ofy().load().type(Video.class).order("orderBy").list();
+			buf.append("<div style='color:red'>Please select " + (acceptsMultiple?"at least":"") + " one topic:</div>");
+			for (Video v : videos) buf.append("<label><input type=" + (acceptsMultiple?"checkbox":"radio") + " name=VideoId value=" + v.id + " onClick=countChecks('VideoQuiz'); />" + v.title + (v.breaks==null?"":" *") + "</label><br />");
+			buf.append("<input type=submit id=vidsub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select" + (acceptsMultiple?" at least":"") + " one topic' />");
+			break;
+		default:  // no assignmentType selected
+		}
+		
+		buf.append("</form>");
+		
 		buf.append("<script>"
-				+ "function showAssignmentTopics(type){"
-				+ "  switch (type) {"
-				+ "    case 'PracticeExam': "
-				+ "      document.getElementById('topicKeySelect').style.visibility='visible';"
-				+ "      document.getElementById('examSelect').style.display='block';"
-				+ "      document.getElementById('videoSelect').style.display='none';"
-				+ "      document.getElementById('textChapterSelect').style.display='none';"
-				+ "      document.getElementById('quizSelect').style.display='none';"
-				+ "      document.getElementById('pollNotice').style.display='none';"
-				+ "      document.getElementById('placementNotice').style.display='none';"
-				+ "      break;"
-				+ "    case 'VideoQuiz': "
-				+ "      document.getElementById('topicKeySelect').style.visibility='hidden';"
-				+ "      document.getElementById('examSelect').style.display='none';"
-				+ "      document.getElementById('videoSelect').style.display='block';"
-				+ "      document.getElementById('textChapterSelect').style.display='none';"
-				+ "      document.getElementById('quizSelect').style.display='none';"
-				+ "      document.getElementById('pollNotice').style.display='none';"
-				+ "      document.getElementById('placementNotice').style.display='none';"
-				+ "      break;"
-				+ "    case 'Poll': "
-				+ "      document.getElementById('topicKeySelect').style.visibility='hidden';"
-				+ "      document.getElementById('examSelect').style.display='none';"
-				+ "      document.getElementById('pollNotice').style.display='block';"
-				+ "      document.getElementById('videoSelect').style.display='none';"
-				+ "      document.getElementById('textChapterSelect').style.display='none';"
-				+ "      document.getElementById('quizSelect').style.display='none';"
-				+ "      document.getElementById('placementNotice').style.display='none';"
-				+ "      break;"
-				+ "    case 'PlacementExam': "
-				+ "      document.getElementById('topicKeySelect').style.visibility='hidden';"
-				+ "      document.getElementById('examSelect').style.display='none';"
-				+ "      document.getElementById('pollNotice').style.display='none';"
-				+ "      document.getElementById('videoSelect').style.display='none';"
-				+ "      document.getElementById('textChapterSelect').style.display='none';"
-				+ "      document.getElementById('quizSelect').style.display='none';"
-				+ "      document.getElementById('placementNotice').style.display='block';"
-				+ "      break;"
-				+ "    case 'SmartText': "
-				+ "      document.getElementById('topicKeySelect').style.visibility='hidden';"
-				+ "      document.getElementById('examSelect').style.display='none';"
-				+ "      document.getElementById('pollNotice').style.display='none';"
-				+ "      document.getElementById('videoSelect').style.display='none';"
-				+ "      document.getElementById('textChapterSelect').style.display='block';"
-				+ "      document.getElementById('quizSelect').style.display='none';"
-				+ "      document.getElementById('placementNotice').style.display='none';"
-				+ "      break;"
-				+ "    default: "
-				+ "      document.getElementById('topicKeySelect').style.visibility='visible';"
-				+ "      document.getElementById('examSelect').style.display='none';"
-				+ "      document.getElementById('videoSelect').style.display='none';"
-				+ "      document.getElementById('textChapterSelect').style.display='none';"
-				+ "      document.getElementById('quizSelect').style.display='block';"
-				+ "      document.getElementById('pollNotice').style.display='none';"
-				+ "      document.getElementById('placementNotice').style.display='none';"
-				+ "  }"
-				+ "}"
 				+ "function countChecks(type) {"
 				+ "  var examArray=document.getElementsByName('TopicIds');"
 				+ "  var videoArray=document.getElementsByName('VideoId');"
 				+ "  var stArray=document.getElementsByName('ChapterNumber');"
-				+ "  var quizArray=document.getElementsByName('TopicId');"
-				+ "  var checkSubmit = document.getElementById('checksub');"
-				+ "  var videoSubmit = document.getElementById('vidsub');"
+				+ "  var qhArray=document.getElementsByName('TopicId');"
+				+ "  var peSubmit = document.getElementById('pesub');"
+				+ "  var vidSubmit = document.getElementById('vidsub');"
 				+ "  var stSubmit = document.getElementById('stsub');"
-				+ "  var radioSubmit = document.getElementById('radsub');"
+				+ "  var qhSubmit = document.getElementById('qhsub');"
 				+ "  var count=0;"
 				+ "  switch (type) {"
 				+ "    case 'PracticeExam':"
 				+ "      for (var i=0;i<examArray.length;i++) if (examArray[i].checked) count++;"
-				+ "      if (count==1) {"
-				+ "        for (var i=0;i<videoArray.length;i++) videoArray[i].checked=false;"
-				+ "        videoSubmit.disabled = true;"
-				+ "        videoSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one video topic';"
-				+ "        for (var i=0;i<stArray.length;i++) stArray[i].checked=false;"
-				+ "        stSubmit.disabled = true;"
-				+ "        stSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one chapter';"
-				+ "        for (var i=0;i<quizArray.length;i++) quizArray[i].checked=false;"
-				+ "        radioSubmit.disabled = true;"
-				+ "        radioSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one topic';"
-				+ "      }"
-				+ "      checkSubmit.disabled=(count<3);"
-				+ "      if (count<3) checkSubmit.value='Select at least 3 topics';"
-				+ "      else checkSubmit.value='Create this exam';"
+				+ "        peSubmit.disabled=(count<3);"
+				+ "      if (count<3) peSubmit.value='Select at least 3 topics';"
+				+ "      else peSubmit.value='Create this exam';"
 				+ "      break;"
 				+ "    case 'VideoQuiz':"
-				+ "      for (var i=0;i<examArray.length;i++) examArray[i].checked=false;"
-				+ "      checkSubmit.disabled = true;"
-				+ "      checkSubmit.value = 'Select at least 3 topics for this exam';"
-				+ "      for (var i=0;i<stArray.length;i++) stArray[i].checked=false;"
-				+ "      stSubmit.disabled = true;"
-				+ "      stSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one chapter';"
-				+ "      for (var i=0;i<quizArray.length;i++) quizArray[i].checked=false;"
-				+ "      radioSubmit.disabled = true;"
-				+ "      radioSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one topic';"
 				+ "      for (var i=0;i<videoArray.length;i++) if (videoArray[i].checked) count++;"
-				+ "      videoSubmit.disabled = (count<1);"
-				+ "      if (count<1) videoSubmit.value='Select" + (acceptsMultiple?" at least":"") + " one video topic';"
-				+ "      else videoSubmit.value='Create " + (acceptsMultiple?"these assignments":"this assignment") + "';"
+				+ "      vidSubmit.disabled = (count<1);"
+				+ "      if (count<1) vidSubmit.value='Select" + (acceptsMultiple?" at least":"") + " one topic';"
+				+ "      else vidSubmit.value='Create " + (acceptsMultiple?"these assignments":"this assignment") + "';"
 				+ "      break;"
 				+ "    case 'SmartText':"
-				+ "      for (var i=0;i<examArray.length;i++) examArray[i].checked=false;"
-				+ "      checkSubmit.disabled = true;"
-				+ "      checkSubmit.value = 'Select at least 3 topics for this exam';"
-				+ "      for (var i=0;i<quizArray.length;i++) quizArray[i].checked=false;"
-				+ "      radioSubmit.disabled = true;"
-				+ "      radioSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one topic';"
 				+ "      for (var i=0;i<stArray.length;i++) if (stArray[i].checked) count++;"
 				+ "      stSubmit.disabled = (count<1);"
 				+ "      if (count<1) stSubmit.value='Select" + (acceptsMultiple?" at least":"") + " one chapter';"
 				+ "      else stSubmit.value='Create " + (acceptsMultiple?"these assignments":"this assignment") + "';"
 				+ "      break;"
-				+ "    default:"
-				+ "      for (var i=0;i<examArray.length;i++) examArray[i].checked=false;"
-				+ "      checkSubmit.disabled = true;"
-				+ "      checkSubmit.value = 'Select at least 3 topics for this exam';"
-				+ "      for (var i=0;i<stArray.length;i++) stArray[i].checked=false;"
-				+ "      stSubmit.disabled = true;"
-				+ "      stSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one chapter';"
-				+ "      for (var i=0;i<videoArray.length;i++) videoArray[i].checked=false;"
-				+ "      videoSubmit.disabled = true;"
-				+ "      videoSubmit.value = 'Select" + (acceptsMultiple?" at least":"") + " one video topic';"
-				+ "      for (var i=0;i<quizArray.length;i++) if (quizArray[i].checked) count++;"
-				+ "      radioSubmit.disabled = (count<1);"
-				+ "      if (count<1) radioSubmit.value='Select" + (acceptsMultiple?" at least":"") + " one topic';"
-				+ "      else radioSubmit.value='Create " + (acceptsMultiple?"these assignments":"this assignment") + "';"
+				+ "    case 'Quiz':"
+				+ "    case 'Homework':"
+				+ "      for (var i=0;i<qhArray.length;i++) if (qhArray[i].checked) count++;"
+				+ "      qhSubmit.disabled = (count<1);"
+				+ "      if (count<1) qhSubmit.value='Select" + (acceptsMultiple?" at least":"") + " one topic';"
+				+ "      else qhSubmit.value='Create " + (acceptsMultiple?"these assignments":"this assignment") + "';"
 				+ "  }"
 				+ "}"
 				+ "</script>");
-		
-		String selectorType = (acceptsMultiple?"checkbox":"radio");
-		
-		// Retrieve the entire list of topics from the datastore
-		List<Topic> topics = ofy().load().type(Topic.class).order("orderBy").list();
-		// Split the topics List into two separate lists corresponding to first-semester and second-semester topics (traditional)
-		// The orderBy attribute starts with a 1 or 2, except pre-semester assessments and hidden topics
-		List<Topic> sem1Topics = new ArrayList<Topic>();
-		List<Topic> sem2Topics = new ArrayList<Topic>();
-		for (Topic t : topics) {
-			if (t.orderBy.startsWith("1")) sem1Topics.add(t);
-			else if (t.orderBy.startsWith("2")) sem2Topics.add(t);
-		}
 
-		// Make a separate list of videos with embedded quizzes to display in a radio-type video selector
-		List<Video> videos = ofy().load().type(Video.class).order("orderBy").list();
-		// Split the topics List into two separate lists corresponding to first-semester and second-semester topics (traditional)
-		// The orderBy attribute starts with a 1 or 2, except pre-semester assessments and hidden topics
-		List<Video> sem1Videos = new ArrayList<Video>();
-		List<Video> sem2Videos = new ArrayList<Video>();
-		for (Video v : videos) {
-			if (v.orderBy.startsWith("1")) sem1Videos.add(v);
-			else if (v.orderBy.startsWith("2") ) sem2Videos.add(v);
-		}
-
-		// Create instructions for the Poll assignmentType:
-		buf.append("<div id=pollNotice style='display:none'><input type=submit value='Create an in-class poll' /><br />"
-				+ "Poll questions will be selected or created when the assignment is launched by the instructor.</div>");
-
-		// Create notice for Placement Exams
-		buf.append("<div id=placementNotice style='display:none'>"
-				+ "<input type=submit value='Create a placement exam for General Chemistry' /><br />"
-				+ "This can be used to advise students about their level of preparation for a General Chemistry course.</div>");
-
-		// Create a selector table for VideoQuiz assignments
-		buf.append("<div id=videoSelect style='display:" + (assignmentType.equals("VideoQuiz")?"block":"none") + "'>");
-		buf.append("<font color=red>Please select " + (acceptsMultiple?"at least":"") + " one video:</font><br />");
-		buf.append("<div style='display:table'>"); // start table of radio buttons
-		buf.append("<div style='display:table-row'><div style='display:table-cell'>");   // left column Chem1 topics		
-		for (Video v : sem1Videos) buf.append("<label><input type=" + selectorType + " name=VideoId value=" + v.id + " onClick=countChecks('VideoQuiz'); />" + v.title + (v.breaks==null?"":" *") + "</label><br />");
-		buf.append("</div><div style='display:table-cell'>");  // right column Chem2 topics
-		for (Video v : sem2Videos) buf.append("<label><input type=" + selectorType + " name=VideoId value=" + v.id + " onClick=countChecks('VideoQuiz'); />" + v.title + (v.breaks==null?"":" *") + "</label><br />");
-		buf.append("</div></div></div><br />");  // end of cell, row, table
-		buf.append("Video marked with an asterisk (*) have embedded quizzes; others will give full credit for watching to the end.<br />");
-		buf.append("<input type=submit id=vidsub disabled=true value='Select" + (selectorType.equals("checkbox")?" at least":"") + " one video topic' />"); // submit button for videos
-		buf.append("</div>"); // end of big box for VideoQuiz selection
-
-		// Create a table for SmartText assignments
-		buf.append("<div id=textChapterSelect style='display:" + (assignmentType.equals("SmartText")?"block":"none") + "'>");
-		buf.append("<font color=red>Please select " + (acceptsMultiple?"at least":"") + " one reading assignment:</font><br />");
-		buf.append("<input type=hidden name=TextId value=" + text.id + " />");
-		for (Chapter ch : text.chapters) buf.append("<label><input type=" + selectorType + " name=ChapterNumber value=" + ch.chapterNumber + "onClick=countChecks('SmartText'); />Chapter " + ch.chapterNumber + ": " + ch.title + "</label></br/>"); 
-		buf.append("<input type=submit id=stsub disabled=true value='Select " + (selectorType.equals("checkbox")?"at least ":"") + "one chapter' />");
-		buf.append("</div>"); // end of big box for textChapter selection
-
-		// Create a selector table for Quiz or Homework assignments
-		buf.append("<div id=quizSelect style='display:" + (assignmentType.equals("Quiz")||assignmentType.equals("Homework")?"block":"none") + "'>");  // big box containing radio buttons
-		buf.append("<font color=red>Please select " + (acceptsMultiple?"at least":"") + " one topic:</font><br />");
-		buf.append("<div style='display:table'>"); // start table of radio buttons
-		buf.append("<div style='display:table-row'><div style='display:table-cell'>");   // left column Chem1 topics		
-		for (Topic t : sem1Topics) buf.append("<label><input type=" + selectorType + " name=TopicId value=" + t.id + " onClick=countChecks('Quiz'); />" + t.title + "</label><br />");
-		buf.append("</div><div style='display:table-cell'>");  // right column Chem2 topics
-		for (Topic t : sem2Topics) buf.append("<label><input type=" + selectorType + " name=TopicId value=" + t.id + " onClick=countChecks('Quiz'); />" + t.title + "</label><br />");
-		buf.append("</div></div></div>");  // end of cell, row, table
-		buf.append("<input type=submit id=radsub disabled=true value='Select" + (selectorType.equals("checkbox")?" at least":"") + " one topic' />"); // submit button for radios
-		buf.append("</div>"); // end of big box for Quiz/Homework selection
-
-		// Create a table with check boxes for Practice Exam assignments
-		buf.append("<div id=examSelect style='display:" + (assignmentType.equals("PracticeExam")?"block":"none") + "'>"); // big box containing check boxes
-		buf.append("<font color=red>Please select 3 or more topics for this exam:</font><br />");
-		buf.append("<div style='display:table'>"); // start table of check boxes
-		buf.append("<div style='display:table-row'><div style='display:table-cell'>");   // left column Chem1 topics		
-		for (Topic t : sem1Topics) buf.append("<label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks('PracticeExam'); />" + t.title + "</label><br />");
-		buf.append("</div><div style='display:table-cell'>");  // right column Chem2 topics
-		for (Topic t : sem2Topics) buf.append("<label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks('PracticeExam'); />" + t.title + "</label><br />");
-		buf.append("</div></div></div>");  // end of cell, row, table
-		buf.append("<input type=submit id=checksub disabled=true value='Select at least 3 topics for this exam' /><br />");
-		buf.append("</div>"); // end of big box for PracticeExam selection
-	
-		buf.append("</form>");
-		
 		buf.append(Subject.footer);
 		} catch (Exception e) {
 			buf.append(e.toString() + " " + e.getMessage());
@@ -545,8 +400,10 @@ public class LTIDeepLinks extends HttpServlet {
 			// VideoQuiz assignments transmit as VideoId (checkboxes if acceptsMultiple; otherwise radio)
 			// Quiz or Homework assignments transmit as TopicId (checkboxes if acceptsMultiple; otherwise radio)
 			
+			Long textId = null;
 			String[] topicIdArray;
 			List<Long> topicIds = new ArrayList<Long>();
+			List<Integer> chapterNumbers = new ArrayList<Integer>();
 			switch (assignmentType) {
 			case "PracticeExam":
 				topicIdArray = request.getParameterValues("TopicIds");
@@ -571,14 +428,21 @@ public class LTIDeepLinks extends HttpServlet {
 					}
 				}
 			break;
-			default:  // Quiz or Homework or SmartText Assignment
+			case "Quiz":
+			case "Homework":
 				topicIdArray = request.getParameterValues("TopicId");
 				for (int i=0;i<topicIdArray.length;i++) topicIds.add(Long.parseLong(topicIdArray[i]));			
+				break;
+			case "SmartText":
+				textId = Long.parseLong(request.getParameter("TextId"));
+				topicIdArray = request.getParameterValues("ChapterNumber");
+				for (int i=0;i<topicIdArray.length;i++) chapterNumbers.add(Integer.parseInt(topicIdArray[i]));
+				break;
 			}
-	
-			// At this point all of the topicIds or VideoIds are in the List topicIds
-			// If the assignmentType is PracticeExam, make a single Assignment, otherwise one per topic
-			// If the assignmentType is Poll, there are no topics at this point, but set pollClosed=true;
+			// At this point all of the topicIds or VideoIds or ChapterNumbers are in the List topicIds
+			// If assignmentType is PracticeExam, make a single Assignment, otherwise one Assignment per topic
+			// If assignmentType is PlacementExam, the topics are fixed
+			// If assignmentType is Poll, there are no topics at this point, but set pollClosed=true;
 			
 			Assignment a = null;
 			List<Assignment> assignments = new ArrayList<Assignment>();
@@ -608,7 +472,9 @@ public class LTIDeepLinks extends HttpServlet {
 				a.valid = now;
 				assignments.add(a);
 				break;
-			default:  // Quiz, Homework, SmartText or VideoQuiz
+			case "Quiz":
+			case "Homework":
+			case "VideoQuiz":
 				for (Long tid : topicIds) {
 					a = new Assignment(assignmentType,0L,null,d.platform_deployment_id);
 					switch (assignmentType) {
@@ -621,13 +487,27 @@ public class LTIDeepLinks extends HttpServlet {
 						a.questionKeys = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).keys().list();
 						break;
 					case "SmartText":
-						a.topicId = tid;
-						Topic t = ofy().load().type(Topic.class).id(tid).safe();
-						for (long conceptId : t.conceptIds) a.questionKeys.addAll(ofy().load().type(Question.class).filter("conceptId",conceptId).keys().list());
 					}
 					a.valid = now;
 					assignments.add(a);
 				}
+				break;
+			case "SmartText":
+				for (Integer chN : chapterNumbers) {
+					a = new Assignment(assignmentType,0L,null,d.platform_deployment_id);
+					a.textId = textId;
+					a.chapterNumber = chN;
+					Text text = ofy().load().type(Text.class).id(textId).safe();
+					for (Chapter ch : text.chapters) {
+						if (ch.chapterNumber == a.chapterNumber) {
+							for (Long conceptId : ch.conceptIds) a.questionKeys.addAll(ofy().load().type(Question.class).filter("conceptId",conceptId).keys().list());
+							break;
+						}
+					}
+					a.valid = now;
+					assignments.add(a);
+				}
+				break;
 			}
 				
 			ofy().save().entities(assignments).now();
