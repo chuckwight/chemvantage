@@ -33,16 +33,18 @@ public class Text implements Serializable {
     	String author;
     	String publisher;
     	String URL;
+    	String imgUrl;
     @Index boolean smartText;
     	List<Chapter> chapters = new ArrayList<Chapter>();
 
     Text() {}
     
-    Text(String title, String author, String publisher, String URL) {
+    Text(String title, String author, String publisher, String URL, String imgUrl) {
         this.title = title;
         this.author = author;
         this.publisher = publisher;
         this.URL = URL;
+        this.imgUrl = imgUrl;
     }
 }
 

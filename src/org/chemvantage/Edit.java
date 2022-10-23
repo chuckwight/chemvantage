@@ -856,7 +856,7 @@ public class Edit extends HttpServlet {
 		buf.append("This is a list of textbooks served by ChemVantage, especially as SmartText objects.");
 		try {
 			Query<Text> texts = ofy().load().type(Text.class);
-			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TH>Title</TH><TH>Author</TH><TH>Publisher</TH><TH>URL</TH></TR>");
+			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TH>Title</TH><TH>Author</TH><TH>Publisher</TH><TH>Text URL</TH><TH>Image URL</TH></TR>");
 			for (Text text : texts) {
 				buf.append("<FORM ACTION=Edit METHOD=POST>"
 						+ "<INPUT TYPE=HIDDEN NAME=TextId VALUE=" + text.id + " />"
@@ -864,6 +864,7 @@ public class Edit extends HttpServlet {
 						+ "<TD><INPUT TYPE=TEXT NAME=Author VALUE='" + Question.quot2html(text.author) + "' /></TD>"
 						+ "<TD><INPUT TYPE=TEXT NAME=Publisher VALUE='" + Question.quot2html(text.publisher) + "' /></TD>"
 						+ "<TD><INPUT TYPE=TEXT NAME=URL VALUE='" + text.URL + "' /></TD>"
+						+ "<TD><INPUT TYPE=TEXT NAME=ImgURL VALUE='" + text.imgUrl + "' /></TD>"
 						+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Update Text'/ > "
 						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Text' /> "
 						+ "<a href=/Edit?UserRequest=ManageTexts&TextId=" + text.id + ">Chapters</a> </TD></TR>"
@@ -874,6 +875,7 @@ public class Edit extends HttpServlet {
 					+ "<TD><INPUT TYPE=TEXT NAME=Author></TD>"
 					+ "<TD><INPUT TYPE=TEXT NAME=Publisher></TD>"
 					+ "<TD><INPUT TYPE=TEXT NAME=URL></TD>"
+					+ "<TD><INPUT TYPE=TEXT NAME=ImgURL></TD>"
 					+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Create Text'></TD></TR>"
 					+ "</FORM>");
 			buf.append("</TABLE>");
@@ -885,7 +887,7 @@ public class Edit extends HttpServlet {
 	}
 
 	void createText(User user,HttpServletRequest request) {
-		Text text = new Text(request.getParameter("Title"),request.getParameter("Author"),request.getParameter("Publisher"),request.getParameter("URL"));
+		Text text = new Text(request.getParameter("Title"),request.getParameter("Author"),request.getParameter("Publisher"),request.getParameter("URL"),request.getParameter("ImgURL"));
 		ofy().save().entity(text).now();
 	}
 	
@@ -896,6 +898,7 @@ public class Edit extends HttpServlet {
 			text.author = request.getParameter("Author");
 			text.publisher = request.getParameter("Publisher");
 			text.URL = request.getParameter("URL");
+			text.imgUrl = request.getParameter("ImgURL");
 			text.smartText = Boolean.parseBoolean(request.getParameter("SmartText"));
 			ofy().save().entity(text).now();
 		} catch (Exception e) {}
