@@ -229,11 +229,12 @@ public class LTIDeepLinks extends HttpServlet {
 		
 		String assignmentType = request.getParameter("AssignmentType");
 		if (assignmentType==null) assignmentType="";
+		boolean smart = ofy().load().type(Text.class).filter("smartText",true).count()>0;
 		
 		buf.append("Select the type of assignment to create:");
 		buf.append("<div style='display:table;width:100%'><div style='display:table-row'><div style='display:table-cell'>"
 				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='PlacementExam'" + (assignmentType.equals("PlacementExam")?" CHECKED />":" />") + "Placement&nbsp;Exam</label><br/>"
-				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='SmartText'" + (assignmentType.equals("SmartText")?" CHECKED />":" />") + "SmartText Chapter</label><br />"
+				+ (smart?"<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='SmartText'" + (assignmentType.equals("SmartText")?" CHECKED />":" />") + "SmartText Chapter</label><br />":"")
 				+ "</div><div style='display:table-cell'>"
 				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Quiz'" + (assignmentType.equals("Quiz")?" CHECKED />":" />") + "Quiz</label><br />"
 				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Homework'" + (assignmentType.equals("Homework")?" CHECKED />":" />") + "Homework</label><br />"
@@ -249,7 +250,7 @@ public class LTIDeepLinks extends HttpServlet {
 		
 		// display a selector, depending on the type of assignment selected:
 		List<Topic> topics = null;
-		int halfway = 0;
+		int oneThird = 0;
 		int i = 0;
 		switch (assignmentType) {
 		case "PlacementExam":
@@ -273,9 +274,9 @@ public class LTIDeepLinks extends HttpServlet {
 				buf.append("<br/>");
 				buf.append("<div style='color:red'>Select " + (acceptsMultiple?"at least ":"") + "one of the chapters below for this reading assignment.</div>");
 				buf.append("<div style=display:table;width:100%><div style=display:table-row><div style=display:table-cell>");
-				halfway = text.chapters.size()/2;
+				oneThird = text.chapters.size()/3;
 					for (Chapter ch : text.chapters) {
-					if (i==halfway) buf.append("</div><div style=display:table-cell>");
+					if (i==oneThird || i==2*oneThird) buf.append("</div><div style=display:table-cell>");
 					i++;
 					buf.append("<div><label><input type=" + (acceptsMultiple?"checkbox":"radio") + " name=ChapterNumber onClick=countChecks('SmartText'); "
 						+ "value=" + ch.chapterNumber + " />Chapter " + ch.chapterNumber + ". " + ch.title + "</label></div>");
@@ -290,12 +291,12 @@ public class LTIDeepLinks extends HttpServlet {
 		case "Quiz":
 		case "Homework":
 			topics = ofy().load().type(Topic.class).order("orderBy").list();
-			halfway = topics.size()/2;
+			oneThird = topics.size()/3;
 			buf.append("<div style='color:red'>Please select " + (acceptsMultiple?"at least":"") + " one topic:</div>");
 			buf.append("<div style=display:table;width:100%><div style=display:table-row><div style=display:table-cell>");
 			for (Topic t : topics) {
 				if (t.orderBy.equals("Hide")) continue;
-				if (i==halfway) buf.append("</div><div style=display:table-cell>");
+				if (i==oneThird || i==2*oneThird) buf.append("</div><div style=display:table-cell>");
 				i++;
 				buf.append("<div><label><input type=" + (acceptsMultiple?"checkbox":"radio") + " name=TopicId value=" + t.id + " onClick=countChecks('Quiz'); />" + t.title + "</label></div>");
 			}
@@ -304,12 +305,12 @@ public class LTIDeepLinks extends HttpServlet {
 			break;
 		case "PracticeExam":
 			topics = ofy().load().type(Topic.class).order("orderBy").list();
-			halfway = topics.size()/2;
+			oneThird = topics.size()/3;
 			buf.append("<div style='color:red'>Please select at least 3 topics for this practice exam:</div>");
 			buf.append("<div style=display:table><div style=display:table-row><div style=display:table-cell>");
 			for (Topic t : topics) {
 				if (t.orderBy.equals("Hide")) continue;
-				if (i==halfway) buf.append("</div><div style=display:table-cell>");
+				if (i==oneThird || i==2*oneThird) buf.append("</div><div style=display:table-cell>");
 				i++;
 				buf.append("<div><label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks('PracticeExam'); />" + t.title + "</label></div>");
 			}
@@ -319,12 +320,12 @@ public class LTIDeepLinks extends HttpServlet {
 		case "VideoQuiz":
 			buf.append("Videos marked with an asterisk (*) have embedded quizzes; others will give full credit for watching to the end.<br/>");
 			List<Video> videos = ofy().load().type(Video.class).order("orderBy").list();
-			halfway = videos.size()/2;
+			oneThird = videos.size()/3;
 			buf.append("<div style='color:red'>Please select " + (acceptsMultiple?"at least":"") + " one topic:</div>");
 			buf.append("<div style=display:table><div style=display:table-row><div style=display:table-cell>");
 			for (Video v : videos) {
 				if (v.orderBy.equals("Hide")) continue;
-				if (i==halfway) buf.append("</div><div style=display:table-cell>");
+				if (i==oneThird || i==2*oneThird) buf.append("</div><div style=display:table-cell>");
 				i++;
 				buf.append("<div><label><input type=" + (acceptsMultiple?"checkbox":"radio") + " name=VideoId value=" + v.id + " onClick=countChecks('VideoQuiz'); />" + v.title + (v.breaks==null?"":" *") + "</label></div>");
 			}

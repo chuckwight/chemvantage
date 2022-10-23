@@ -94,8 +94,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			if (request.getParameter("id_token") != null) ltiv1p3LaunchRequest(request,response);  // handle LTI v1p3 launch request			
 			else if ("UpdateAssignment".equals(request.getParameter("UserRequest"))) { // POST the assignmentType and topicIds			
 				User user = getUser(request.getParameter("sig"));
-				if (user==null) throw new Exception("User token was missing or invalid.");
-				
+				if (user==null) throw new Exception("User token was missing or invalid.");				
 				if (!user.isInstructor()) throw new Exception("User must be instructor to update this assignment.");
 
 				Assignment myAssignment = updateAssignment(request,user);
@@ -106,9 +105,7 @@ public class LTIv1p3Launch extends HttpServlet {
 					ofy().save().entity(myAssignment).now();  // we will need this in a few milliseconds					
 					response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
 				} else {  // send the user back to the resourcePickerForm
-					int topicKey = 1;
-					try {topicKey = Integer.parseInt(request.getParameter("TopicKey"));} catch (Exception e) {}
-					response.getWriter().println(Subject.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,topicKey) + Subject.footer);
+					response.getWriter().println(Subject.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,request) + Subject.footer);
 				}
 			} else {
 				throw new Exception("Wrong URL or Bad Request. This URL only receives LTI Advantage (v1.3) Resource Link and Submission Review launch requests for ChemVantage. "
@@ -306,7 +303,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			
 			// If this is the first time this Assignment has been used, it may be missing the assignmentType and topicId(s)
 			if (!myAssignment.isValid()) {  //Show the the pickResource form:
-				response.getWriter().println(Subject.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,1) + Subject.footer);
+				response.getWriter().println(Subject.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,request) + Subject.footer);
 				return;
 			} else if (!isPremiumUser) {
 				String url = "/checkout0.jsp?sig=" + user.getTokenSignature() + "&d=" + d.platform_deployment_id;
@@ -569,33 +566,176 @@ public class LTIv1p3Launch extends HttpServlet {
 		}
 	}
 	
-	String pickResourceForm(User user,Assignment myAssignment,int topicKey) throws Exception {
+	String pickResourceForm(User user,Assignment myAssignment,HttpServletRequest request) throws Exception {
 		StringBuffer buf = new StringBuffer();
 		try {
-			// Print a nice banner
 			buf.append(Subject.banner);
+			buf.append("<h2>Assignment Setup Page</h2>");
 
-			buf.append("<h2>Assignment Setup Page</h2>"
-					+ "The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment.<p></p>");
-
-			if (user.isInstructor()) buf.append("Please select the ChemVantage assignment that should be associated with this link. "
-					+ "ChemVantage will remember this choice and send students directly to the assignment.<p></p>");
-			else {
-				buf.append("<b>Please ask your instructor to click the LMS assignment link to make this missing association.</b> "
+			if (!user.isInstructor()) {
+				buf.append("The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment. "
+						+ "<b>Please ask your instructor to click the same link in your LMS to complete the setup.</b> "
 						+ "You will not be able to complete this assignment until after this has been done.");
 				return buf.toString();
 			}
 
-			// Start building a form to select the assignment attributes:
-			// The form has 4 sections:
-			// 1. A group of radio buttons to specify the AssignmentType (always visible)
-			// 2. A group of radio buttons (or drop-down selector) to specify the TopicKey (visible when AssignmentType is selected)
-			// 3. A group of radio buttons to select a single topic for Quiz or Homework assignment (visible when AssignmentType is Quiz or Homework)
-			// 4. A group of checkboxes to select 3 or more topics for a Practice Exam (visible when AssignmentType is PracticeExam)
-			// Clicking any AssignmentType button or loading the page with a valid AssignmentType makes the TopicKey set (2) visible
-			// and makes the relevant table of radio buttons (3) or checkboxes (4) visible (and clears and hides the opposite one).
-			// Clicking any TopicKey button reloads the page from the server with a modified set of topics
+			buf.append("<form name=AssignmentForm action=/lti/launch method=POST>");
+			//buf.append("<input type=hidden name=id_token value='" + request.getParameter("id_token") + "' />");
+			buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
+			buf.append("<input type=hidden name=UserRequest value='UpdateAssignment' />");
+			buf.append("<input type=hidden name=Refresh id=refresh value=true />");
+			
+			String assignmentType = request.getParameter("AssignmentType");
+			if (assignmentType==null) assignmentType="";
+			
+			buf.append("Select the type of assignment to create:");
+			buf.append("<div style='display:table;width:100%'><div style='display:table-row'><div style='display:table-cell'>"
+					+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='PlacementExam'" + (assignmentType.equals("PlacementExam")?" CHECKED />":" />") + "Placement&nbsp;Exam</label><br/>"
+					+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='SmartText'" + (assignmentType.equals("SmartText")?" CHECKED />":" />") + "SmartText Chapter</label><br />"
+					+ "</div><div style='display:table-cell'>"
+					+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Quiz'" + (assignmentType.equals("Quiz")?" CHECKED />":" />") + "Quiz</label><br />"
+					+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Homework'" + (assignmentType.equals("Homework")?" CHECKED />":" />") + "Homework</label><br />"
+					+ "</div><div style='display:table-cell'>"
+					+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='VideoQuiz'" + (assignmentType.equals("VideoQuiz")?" CHECKED />":" />") + "Video</label><br />"
+					+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Poll'" + (assignmentType.equals("Poll")?" CHECKED />":" />") + "In-class&nbsp;Poll</label><br />"
+					+ "</div><div style='display:table-cell'>"
+					+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='PracticeExam'" + (assignmentType.equals("PracticeExam")?" CHECKED />":" />") + "Practice&nbsp;Exam</label><br/>"
+					+ "</div></div></div><br/>");
+			buf.append("<div id=plswait style='color:red;display:none'>Please wait...</div>");
+			// find out whether the LMS accepts multiple assignments in the Deep Linking process
+			boolean acceptsMultiple = false; // LTI Launches can only set up one assignment //settings.get("accept_multiple").getAsBoolean();
+			
+			// display a selector, depending on the type of assignment selected:
+			List<Topic> topics = null;
+			int oneThird = 0;
+			int i = 0;
+			switch (assignmentType) {
+			case "PlacementExam":
+				buf.append("<input type=submit onClick=\"document.getElementById('refresh').value=false\"; value='Create a placement exam for General Chemistry' /><br/><br/>");
+				break;
+			case "Poll":
+				buf.append("Poll questions will be selected or created when the assignment is launched by the instructor.<br/><br/>"
+						+ "<input type=submit onClick=\"document.getElementById('refresh').value=false\"; value='Create an in-class poll' />");
+				break;
+			case "SmartText":
+				long textId = 0L;
+				Text text = null;
+				List<Text> texts = ofy().load().type(Text.class).filter("smartText",true).list();
+				try {
+					textId = Long.parseLong(request.getParameter("TextId"));
+					buf.append("<div>Please select one of the available ChemVantage smart textbooks below:</div>");
+					for (Text txt : texts) {
+						if (txt.id==textId) text = txt;
+						buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />" + txt.title + "</label></div>");
+					}
+					buf.append("<br/>");
+					buf.append("<div style='color:red'>Select " + (acceptsMultiple?"at least ":"") + "one of the chapters below for this reading assignment.</div>");
+					buf.append("<div style=display:table;width:100%><div style=display:table-row><div style=display:table-cell>");
+					oneThird = text.chapters.size()/3;
+						for (Chapter ch : text.chapters) {
+						if (i==oneThird || i==2*oneThird) buf.append("</div><div style=display:table-cell>");
+						i++;
+						buf.append("<div><label><input type=" + (acceptsMultiple?"checkbox":"radio") + " name=ChapterNumber onClick=countChecks('SmartText'); "
+							+ "value=" + ch.chapterNumber + " />Chapter " + ch.chapterNumber + ". " + ch.title + "</label></div>");
+					}
+					buf.append("</div></div></div>");
+					buf.append("<input id=stsub type=submit disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select" + (acceptsMultiple?" at least":"") + " one chapter' />");
+				} catch (Exception e) {
+					buf.append("<div style='color:red'>Please select one of the available ChemVantage smart textbooks below:</div>");
+					for (Text txt : texts) buf.append("<div><label><input type=radio name=TextId value=" + txt.id + " onclick=this.form.submit(); />" + txt.title + "</label></div>");
+				}		
+				break;
+			case "Quiz":
+			case "Homework":
+				topics = ofy().load().type(Topic.class).order("orderBy").list();
+				oneThird = topics.size()/3;
+				buf.append("<div style='color:red'>Please select " + (acceptsMultiple?"at least":"") + " one topic:</div>");
+				buf.append("<div style=display:table;width:100%><div style=display:table-row><div style=display:table-cell>");
+				for (Topic t : topics) {
+					if (t.orderBy.equals("Hide")) continue;
+					if (i==oneThird || i==2*oneThird) buf.append("</div><div style=display:table-cell>");
+					i++;
+					buf.append("<div><label><input type=" + (acceptsMultiple?"checkbox":"radio") + " name=TopicId value=" + t.id + " onClick=countChecks('Quiz'); />" + t.title + "</label></div>");
+				}
+				buf.append("</div></div></div>");
+				buf.append("<input type=submit id=qhsub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select" + (acceptsMultiple?" at least":"") + " one topic' />");
+				break;
+			case "PracticeExam":
+				topics = ofy().load().type(Topic.class).order("orderBy").list();
+				oneThird = topics.size()/3;
+				buf.append("<div style='color:red'>Please select at least 3 topics for this practice exam:</div>");
+				buf.append("<div style=display:table><div style=display:table-row><div style=display:table-cell>");
+				for (Topic t : topics) {
+					if (t.orderBy.equals("Hide")) continue;
+					if (i==oneThird || i==2*oneThird) buf.append("</div><div style=display:table-cell>");
+					i++;
+					buf.append("<div><label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks('PracticeExam'); />" + t.title + "</label></div>");
+				}
+				buf.append("</div></div></div>");
+				buf.append("<input type=submit id=pesub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select at least 3 topics' />");
+				break;
+			case "VideoQuiz":
+				buf.append("Videos marked with an asterisk (*) have embedded quizzes; others will give full credit for watching to the end.<br/>");
+				List<Video> videos = ofy().load().type(Video.class).order("orderBy").list();
+				oneThird = videos.size()/3;
+				buf.append("<div style='color:red'>Please select " + (acceptsMultiple?"at least":"") + " one topic:</div>");
+				buf.append("<div style=display:table><div style=display:table-row><div style=display:table-cell>");
+				for (Video v : videos) {
+					if (v.orderBy.equals("Hide")) continue;
+					if (i==oneThird || i==2*oneThird) buf.append("</div><div style=display:table-cell>");
+					i++;
+					buf.append("<div><label><input type=" + (acceptsMultiple?"checkbox":"radio") + " name=VideoId value=" + v.id + " onClick=countChecks('VideoQuiz'); />" + v.title + (v.breaks==null?"":" *") + "</label></div>");
+				}
+				buf.append("</div></div></div>");
+				buf.append("<input type=submit id=vidsub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select" + (acceptsMultiple?" at least":"") + " one topic' />");
+				break;
+			default:  // no assignmentType selected
+			}
+			
+			buf.append("</form>");
+			
+			buf.append("<script>"
+					+ "function countChecks(type) {"
+					+ "  var examArray=document.getElementsByName('TopicIds');"
+					+ "  var videoArray=document.getElementsByName('VideoId');"
+					+ "  var stArray=document.getElementsByName('ChapterNumber');"
+					+ "  var qhArray=document.getElementsByName('TopicId');"
+					+ "  var peSubmit = document.getElementById('pesub');"
+					+ "  var vidSubmit = document.getElementById('vidsub');"
+					+ "  var stSubmit = document.getElementById('stsub');"
+					+ "  var qhSubmit = document.getElementById('qhsub');"
+					+ "  var count=0;"
+					+ "  switch (type) {"
+					+ "    case 'PracticeExam':"
+					+ "      for (var i=0;i<examArray.length;i++) if (examArray[i].checked) count++;"
+					+ "        peSubmit.disabled=(count<3);"
+					+ "      if (count<3) peSubmit.value='Select at least 3 topics';"
+					+ "      else peSubmit.value='Create this exam';"
+					+ "      break;"
+					+ "    case 'VideoQuiz':"
+					+ "      for (var i=0;i<videoArray.length;i++) if (videoArray[i].checked) count++;"
+					+ "      vidSubmit.disabled = (count<1);"
+					+ "      if (count<1) vidSubmit.value='Select" + (acceptsMultiple?" at least":"") + " one topic';"
+					+ "      else vidSubmit.value='Create " + (acceptsMultiple?"these assignments":"this assignment") + "';"
+					+ "      break;"
+					+ "    case 'SmartText':"
+					+ "      for (var i=0;i<stArray.length;i++) if (stArray[i].checked) count++;"
+					+ "      stSubmit.disabled = (count<1);"
+					+ "      if (count<1) stSubmit.value='Select" + (acceptsMultiple?" at least":"") + " one chapter';"
+					+ "      else stSubmit.value='Create " + (acceptsMultiple?"these assignments":"this assignment") + "';"
+					+ "      break;"
+					+ "    case 'Quiz':"
+					+ "    case 'Homework':"
+					+ "      for (var i=0;i<qhArray.length;i++) if (qhArray[i].checked) count++;"
+					+ "      qhSubmit.disabled = (count<1);"
+					+ "      if (count<1) qhSubmit.value='Select" + (acceptsMultiple?" at least":"") + " one topic';"
+					+ "      else qhSubmit.value='Create " + (acceptsMultiple?"these assignments":"this assignment") + "';"
+					+ "  }"
+					+ "}"
+					+ "</script>");
 
+			
+			/*
 			buf.append("<form name=AssignmentForm method=POST>");
 			buf.append("<input type=hidden name=UserRequest value=UpdateAssignment />");
 			buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
@@ -780,6 +920,8 @@ public class LTIv1p3Launch extends HttpServlet {
 			buf.append("</div>"); // end of big box with check boxes
 
 			buf.append("</form>");
+			*/
+			
 			return buf.toString();
 		} catch (Exception e) {
 			throw new Exception("Sorry, an unexpected error occured during the assignment selection process. " + e.getMessage());
