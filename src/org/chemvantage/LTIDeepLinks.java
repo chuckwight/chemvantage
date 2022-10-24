@@ -251,6 +251,7 @@ public class LTIDeepLinks extends HttpServlet {
 		// display a selector, depending on the type of assignment selected:
 		List<Topic> topics = null;
 		int oneThird = 0;
+		int oneHalf = 0;
 		int i = 0;
 		switch (assignmentType) {
 		case "PlacementExam":
@@ -274,9 +275,9 @@ public class LTIDeepLinks extends HttpServlet {
 				buf.append("<br/>");
 				buf.append("<div style='color:red'>Select " + (acceptsMultiple?"at least ":"") + "one of the chapters below for this reading assignment.</div>");
 				buf.append("<div style=display:table;width:100%><div style=display:table-row><div style=display:table-cell>");
-				oneThird = text.chapters.size()/3;
+				oneHalf = text.chapters.size()/2;
 					for (Chapter ch : text.chapters) {
-					if (i==oneThird || i==2*oneThird) buf.append("</div><div style=display:table-cell>");
+					if (i==oneHalf) buf.append("</div><div style=display:table-cell>");
 					i++;
 					buf.append("<div><label><input type=" + (acceptsMultiple?"checkbox":"radio") + " name=ChapterNumber onClick=countChecks('SmartText'); "
 						+ "value=" + ch.chapterNumber + " />Chapter " + ch.chapterNumber + ". " + ch.title + "</label></div>");
@@ -327,7 +328,7 @@ public class LTIDeepLinks extends HttpServlet {
 				if (v.orderBy.equals("Hide")) continue;
 				if (i==oneThird || i==2*oneThird) buf.append("</div><div style=display:table-cell>");
 				i++;
-				buf.append("<div><label><input type=" + (acceptsMultiple?"checkbox":"radio") + " name=VideoId value=" + v.id + " onClick=countChecks('VideoQuiz'); />" + v.title + (v.breaks==null?"":" *") + "</label></div>");
+				buf.append("<div><label><input type=" + (acceptsMultiple?"checkbox":"radio") + " name=VideoId value=" + v.id + " onClick=countChecks('VideoQuiz'); />" + v.title + (v.breaks==null?"":"*") + "</label></div>");
 			}
 			buf.append("</div></div></div>");
 			buf.append("<input type=submit id=vidsub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select" + (acceptsMultiple?" at least":"") + " one topic' />");
