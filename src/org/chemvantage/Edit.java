@@ -815,10 +815,12 @@ public class Edit extends HttpServlet {
 	}
 	
 	String textsForm(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer("<h3>Manage Texts</h3>");
+		StringBuffer buf = new StringBuffer("");
 		try {
 			long textId = Long.parseLong(request.getParameter("TextId"));
 			Text t = ofy().load().type(Text.class).id(textId).safe();
+			buf.append("<h3>Manage Chapters</h3>");
+			buf.append("<a href=/Edit?UserRequest=ManageTexts>Return to Manage Texts</a><br/><br/>");
 			buf.append("Title: " + t.title + "<br/>"
 				+ "Author: " + t.author + "<br/>"
 				+ "Publisher: " + t.publisher + "<br/>"
@@ -855,8 +857,9 @@ public class Edit extends HttpServlet {
 		} catch (Exception e) {
 		buf.append("This is a list of textbooks served by ChemVantage, especially as SmartText objects.");
 		try {
+			buf.append("<h3>Manage Texts</h3>");
 			Query<Text> texts = ofy().load().type(Text.class);
-			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TH>Title</TH><TH>Author</TH><TH>Publisher</TH><TH>Text URL</TH><TH>Image URL</TH></TR>");
+			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TH>Title</TH><TH>Author</TH><TH>Publisher</TH><TH>Text URL</TH><TH>Image URL</TH><TH>Print Copy URL</TH><TH>Smart</TH><TH></TH></TR>");
 			for (Text text : texts) {
 				buf.append("<FORM ACTION=Edit METHOD=POST>"
 						+ "<INPUT TYPE=HIDDEN NAME=TextId VALUE=" + text.id + " />"
@@ -865,9 +868,11 @@ public class Edit extends HttpServlet {
 						+ "<TD><INPUT TYPE=TEXT NAME=Publisher VALUE='" + Question.quot2html(text.publisher) + "' /></TD>"
 						+ "<TD><INPUT TYPE=TEXT NAME=URL VALUE='" + text.URL + "' /></TD>"
 						+ "<TD><INPUT TYPE=TEXT NAME=ImgURL VALUE='" + text.imgUrl + "' /></TD>"
+						+ "<TD><INPUT TYPE=TEXT NAME=PrintCopyURL VALUE='" + text.printCopyUrl + "' /></TD>"
+						+ "<TD style=text-align:center><INPUT TYPE=CHECKBOX NAME=SmartText VALUE=True " + (text.smartText?"CHECKED ":"") + " /></TD>"
 						+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Update Text'/ > "
 						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Text' /> "
-						+ "<a href=/Edit?UserRequest=ManageTexts&TextId=" + text.id + ">Chapters</a> </TD></TR>"
+						+ "<a href=/Edit?UserRequest=ManageTexts&TextId=" + text.id + ">Chapters</a>&nbsp;</TD></TR>"
 						+ "</FORM>");
 			}
 			buf.append("<FORM ACTION=Edit METHOD=POST><TR>"
@@ -876,6 +881,8 @@ public class Edit extends HttpServlet {
 					+ "<TD><INPUT TYPE=TEXT NAME=Publisher></TD>"
 					+ "<TD><INPUT TYPE=TEXT NAME=URL></TD>"
 					+ "<TD><INPUT TYPE=TEXT NAME=ImgURL></TD>"
+					+ "<TD><INPUT TYPE=TEXT NAME=PrintCopyURL></TD>"
+					+ "<TD style=text-align:center><INPUT TYPE=CHECKBOX NAME=SmartText VALUE=True /></TD>"
 					+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Create Text'></TD></TR>"
 					+ "</FORM>");
 			buf.append("</TABLE>");
@@ -887,7 +894,7 @@ public class Edit extends HttpServlet {
 	}
 
 	void createText(User user,HttpServletRequest request) {
-		Text text = new Text(request.getParameter("Title"),request.getParameter("Author"),request.getParameter("Publisher"),request.getParameter("URL"),request.getParameter("ImgURL"));
+		Text text = new Text(request.getParameter("Title"),request.getParameter("Author"),request.getParameter("Publisher"),request.getParameter("URL"),request.getParameter("ImgURL"),request.getParameter("PrintCopyURL"));
 		ofy().save().entity(text).now();
 	}
 	
@@ -899,6 +906,7 @@ public class Edit extends HttpServlet {
 			text.publisher = request.getParameter("Publisher");
 			text.URL = request.getParameter("URL");
 			text.imgUrl = request.getParameter("ImgURL");
+			text.printCopyUrl = request.getParameter("PrintCopyURL");
 			text.smartText = Boolean.parseBoolean(request.getParameter("SmartText"));
 			ofy().save().entity(text).now();
 		} catch (Exception e) {}

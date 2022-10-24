@@ -115,7 +115,10 @@ public class SmartText extends HttpServlet {
 	   		+ "Author: " + t.author + "<br/><br/>"
 	   		+ "Chapter " + c.chapterNumber + ": " + c.title + "<br/>");
 	   buf.append("<h3>Reading Options</h3>");
-	   if (c.url != null) buf.append("Read this chapter online: <a href='" + c.url + "' target=_blank>" + c.url + "</a><br/>");
+	   buf.append("<ul>");
+	   if (c.url != null) buf.append("<li><a href='" + c.url + "' target=_blank>Read this chapter online</a></li>");
+	   buf.append("<li><a href='" + t.printCopyUrl + "' target=_blank>Order a print copy of this book</a></li>");
+	   buf.append("</ul>");
 	   buf.append("</div><div style=display:table-cell;vertical-align:top>");
 	   buf.append("<img src='" + t.imgUrl + "' alt='Textbook cover art'>");
 	   buf.append("</div></div></div>");
