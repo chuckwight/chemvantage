@@ -662,7 +662,7 @@ public class LTIDeepLinks extends HttpServlet {
 			
 			// Create a form to be auto-submitted to the platform by the user_agent browser
 			buf.append("Submitting your selection back to your LMS...");
-			buf.append("<div> style='visibility: hidden'>"
+			buf.append("<div style='visibility: hidden'>"
 					+ "<form id=selections method=POST action='" + deep_link_return_url + "'>"
 					+ "<input type=hidden name=JWT value='" + jwt + "' />"
 					+ "Assignment selection OK. <input type=submit />"
