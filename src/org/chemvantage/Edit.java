@@ -628,8 +628,10 @@ public class Edit extends HttpServlet {
 				for (String text : alignments) t.topicGroup += Integer.parseInt(text);
 			}
 			String[] conceptIds = request.getParameterValues("ConceptId");
-			t.conceptIds.clear();
-			for (String cId : conceptIds) t.conceptIds.add(Long.parseLong(cId));
+			if (concepts != null) {
+				t.conceptIds.clear();
+				for (String cId : conceptIds) t.conceptIds.add(Long.parseLong(cId));
+			}
 			
 			ofy().save().entity(t).now();
 		} catch (Exception e) {}
