@@ -666,7 +666,7 @@ public class LTIDeepLinks extends HttpServlet {
 					+ "<form id=selections method=POST action='" + deep_link_return_url + "'>"
 					+ "<input type=hidden name=JWT value='" + jwt + "' />"
 					+ "Assignment selection OK. <input type=submit />"
-					+ "</form></div>Please click submit if this form is not submitted automatically.");
+					+ "</form>Please click submit if this form is not submitted automatically.</div>");
 			buf.append("<script>document.getElementById('selections').submit();</script>");
 			//buf.append("The new content items are: " + content_items.toString());
 		} catch (Exception e) {

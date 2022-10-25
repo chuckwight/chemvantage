@@ -154,7 +154,7 @@ public class Quiz extends HttpServlet {
 			
 			int nQuestions = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).count();
 			buf.append("Each quiz draws 10 questions randomly from a bank of " + a.questionKeys.size() + " selected questions. "
-					+ "The total number of availabe questions for this quiz is " + nQuestions + ".<br/><br/>");
+					+ "The total number of available questions for this quiz is " + nQuestions + ".<br/><br/>");
 			
 			if (a.timeAllowed != null) buf.append("Students are permitted " + a.timeAllowed/60 + " minutes to complete the quiz.<br/><br/>");
 			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("Students may attempt this assignment an unlimited number of times to improve their score.<br/><br/>");
