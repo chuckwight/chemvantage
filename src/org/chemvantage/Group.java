@@ -101,12 +101,19 @@ public class Group {
 			Date now = new Date();
 			Date oneMonthAgo = new Date(now.getTime()-2592000000L);  // 30 days ago
 			List<Group> activeGroups = ofy().load().type(Group.class).filter("valid >",oneMonthAgo).list();
+			int nLearners = 0;
+			int nInstructors = 0;
+			int nAdministrators = 0;
 			if (activeGroups.size() > 0) {
 				buf.append("<table><tr><th>Organization</th><th>LMS</th><th>Course Label</th><th>Title</th><th>Learners</th><th>Instructors</th><th>Administrators</th></tr>");
 				for (Group g : activeGroups) {
 					buf.append("<tr style='text-align: center;'><td>" + g.organization + "</td><td>" + g.lms_type + "</td><td>" + g.label + "</td><td>" + g.title + "</td>"
 							+ "<td>" + g.nLearners + "</td><td>" + g.nInstructors + "</td><td>" + g.nAdministrators + "</td></tr>");
+					nLearners += g.nLearners;
+					nInstructors += g.nInstructors;
+					nAdministrators += g.nAdministrators;
 				}
+				buf.append("<tr style='text-align: center;'><td></td><td></td><td></td><td></td><td style='border: 1px solid;'>" + nLearners + "</td><td style='border: 1px solid;'>" + nInstructors + "</td><td style='border: 1px solid;'>" + nAdministrators + "</td></tr>");
 				buf.append("</table><br/>");
 			} else buf.append("There are no active groups.</br>");
 		} catch (Exception e) {
