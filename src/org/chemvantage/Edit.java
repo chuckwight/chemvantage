@@ -471,7 +471,7 @@ public class Edit extends HttpServlet {
 			buf.append("<b>" + Subject.getTitle() + "</b>\n");
 			buf.append("<TABLE BORDER=0 CELLSPACING=3>"
 					+ "<TR><TH COLSPAN=3>&nbsp;</TH><TH COLSPAN=2>View/Add/Edit Questions</TH><TH></TH></TR>"
-					+ "<TR><TH>Order</TH><TH>Title</TH><TH>Action</TH><TH>Quiz</TH><TH>HW</TH><TH>Exam</TH><TH>Video</TH><TH>OpenStax</TH><TH>Concepts</TH></TR>\n");
+					+ "<TR><TH>Order (in use)</TH><TH>Title</TH><TH>Action</TH><TH>Quiz</TH><TH>HW</TH><TH>Exam</TH><TH>Video</TH><TH>OpenStax</TH><TH>Concepts</TH></TR>\n");
 			Query<Topic> topics = ofy().load().type(Topic.class).order("orderBy");
 				for (Topic t : topics) { // one row for each topic
 					int nQuiz = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",t.id).count();
@@ -482,7 +482,7 @@ public class Edit extends HttpServlet {
 							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateTopic>"
 							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + t.id + "'>");
 					buf.append("\n<TR>"
-							+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4 VALUE='" + t.orderBy + "'></TD>"
+							+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4 VALUE='" + t.orderBy + "'> (" + ofy().load().type(Assignment.class).filter("topicId",t.id).count() + ")</TD>"
 							+ "<TD ALIGN=CENTER><INPUT NAME=Title VALUE='" + Question.quot2html(t.title) + "'></TD>"
 							+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE=Update>"
 							+ ((nQuiz==0 && nHW==0 && nExam==0 && nVideo==0)?"<INPUT TYPE=SUBMIT VALUE='Delete' "
@@ -628,7 +628,7 @@ public class Edit extends HttpServlet {
 				for (String text : alignments) t.topicGroup += Integer.parseInt(text);
 			}
 			String[] conceptIds = request.getParameterValues("ConceptId");
-			if (concepts != null) {
+			if (conceptIds != null) {
 				t.conceptIds.clear();
 				for (String cId : conceptIds) t.conceptIds.add(Long.parseLong(cId));
 			}
