@@ -252,6 +252,10 @@ public class Edit extends HttpServlet {
 				deleteAllQuestions(user,request);
 				out.println(editorsPage(user,request));
 				break;
+			case "Assign Key Concepts":
+				assignKeyConcepts(user,request);
+				out.println(editorsPage(user,request));
+				break;
 			default: out.println(editorsPage(user,request));
 			}
 
@@ -279,13 +283,69 @@ public class Edit extends HttpServlet {
 			String assignmentType = request.getParameter("AssignmentType");
 			boolean showQuestions = (topicId >0 && assignmentType != null && assignmentType.length()>0);
 			buf.append("<FORM NAME=TopicSelect METHOD=GET ACTION=/Edit>");
-			buf.append("<FONT" + (request.getParameter("TopicId")!=null && topicId==0?" COLOR=RED>":">") + "<b>Topic:</b></FONT>" + topicSelectBox(topicId,showQuestions));
-			buf.append("<FONT" + (assignmentType!=null && assignmentType.length()==0?" COLOR=RED>":">") + "<b> Assignment Type:</b></FONT>" + assignmentTypeDropDownBox(assignmentType,true));
-			buf.append(" <INPUT TYPE=SUBMIT NAME=UserRequest VALUE=" + (showQuestions?"Refresh>":"'Show Questions'>"));
+			//buf.append("<FONT" + (request.getParameter("TopicId")!=null && topicId==0?" COLOR=RED>":">") + "<b>Topic:</b></FONT>" + topicSelectBox(topicId,showQuestions));
+			buf.append("<FONT" + (request.getParameter("TopicId")!=null && topicId==0?" COLOR=RED>":">") + "<b>Topic:</b></FONT>" + topicSelectBox(topicId,false));
+			//buf.append("<FONT" + (assignmentType!=null && assignmentType.length()==0?" COLOR=RED>":">") + "<b> Assignment Type:</b></FONT>" + assignmentTypeDropDownBox(assignmentType,true));
+			buf.append("<FONT" + (assignmentType!=null && assignmentType.length()==0?" COLOR=RED>":">") + "<b> Assignment Type:</b></FONT>" + assignmentTypeDropDownBox(assignmentType,false));
+			buf.append(" <INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Show Questions' />");
+			buf.append(" <INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Assign Key Concepts' />");
+			buf.append(" <INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Refresh' />");
 			buf.append("</FORM>");
-			boolean showDetails = Boolean.parseBoolean(request.getParameter("ShowDetails"));
 			
-			if (showQuestions) {
+			boolean assignKeyConcepts = showQuestions && "Assign Key Concepts".equals(request.getParameter("UserRequest"));
+			
+			if (assignKeyConcepts) {
+				Map<Key<Concept>,Concept> concepts = new HashMap<Key<Concept>,Concept>();
+				Topic t = ofy().load().type(Topic.class).id(topicId).now();
+				try {
+					List<Key<Concept>> conceptKeys = ofy().load().type(Concept.class).keys().list();
+					concepts = ofy().load().keys(conceptKeys);
+					buf.append("<h4>Key Concepts</h4>");
+					if (concepts.isEmpty()) buf.append("No concepts are assigned to this topic.<br/>");
+					else {
+						for (Concept c : concepts.values()) {
+							if (t.conceptIds.contains(c.id)) {
+								int nQuestions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",t.id).filter("conceptId",c.id).count();
+								buf.append("&nbsp;&nbsp;" + c.orderBy + " - " + c.title + " (" + nQuestions + ")<br/>");
+							}
+						}
+					}
+					buf.append("<br/>");
+				} catch (Exception e) {}
+				
+				List<Key<Question>> questionKeys = loadQuestions(assignmentType,topicId);
+				
+				buf.append("<form method=post action=/Edit>"
+						+ "<input type=hidden name=UserRequest value='Assign Key Concepts' />"
+						+ "<input type=hidden name=AssignmentType value=" + request.getParameter("AssignmentType") + ">"
+						+ "<input type=hidden name=TopicId value=" + request.getParameter("TopicId") + ">");
+				buf.append("Select a key concept and check all the corresponding questions. " + conceptSelectBox());
+				buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");				
+				
+				for (Key<Question> k : questionKeys) {
+					Question q = questions.get(k).clone();
+					q.setParameters();
+					String conceptTitle = "";
+					String conceptColor = "";
+					try {
+						conceptTitle = concepts.get(Key.create(Concept.class,q.conceptId)).title;
+						if (!t.conceptIds.contains(q.conceptId)) conceptColor="cyan";
+					} catch (Exception e) {
+						conceptColor = "yellow";
+					}
+					buf.append("<tr style='vertical-align: top'><td" + (conceptColor.isEmpty()?">":" style='background-color:" + conceptColor + "'>") + "<input type=checkbox name=QuestionId value=" + q.id + " /> " + conceptTitle + "</td><td>" + q.printAll() + "</td></tr>");
+				}
+				buf.append("</TABLE>");
+				buf.append("<input id=subConceptAssign type=submit value='Assign these questions to the selected key concept' disabled=true />");
+				buf.append("</form>");
+				buf.append("<script>"
+						+ "function enableSubmit() {"
+						+ "  var selectConcept = document.getElementById('selectConcept');"
+						+ "  var subConceptAssign = document.getElementById('subConceptAssign');"
+						+ "  if (selectConcept.selectedIndex>0) subConceptAssign.disabled=false;"
+						+ "}"
+						+ "</script>");
+			} else if (showQuestions) {
 				Map<Long,Concept> concepts = new HashMap<Long,Concept>();
 				try {
 					Topic t = ofy().load().type(Topic.class).id(topicId).now();
@@ -367,34 +427,8 @@ public class Edit extends HttpServlet {
 					buf.append("<TD>" + q.printAll() + "</TD>");
 					buf.append("</TR></FORM>");
 				}
-				buf.append("</TABLE><br/>");	
-				
-			} else if (showDetails){  // show the number of questions in each topic and assignment type
-				buf.append("<h4>Numbers of Questions By Topic and Assignment Type</h4>");
-				
-				buf.append("<TABLE><TR><TH>Topic</><TH>Quiz</TH><TH>Homework</TH><TH>Exam</TH><TH>Video</TH><TH>OpenStax</TH></TR>");
-				Query<Topic> topics = ofy().load().type(Topic.class).order("orderBy");
-				int nqt = 0;
-				int nht = 0;
-				int net = 0;
-				int nvt = 0;
-				for (Topic t:topics) {
-					buf.append("<TR><TD>" + t.title + "</TD>");
-					int nq = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",t.id).count();
-					nqt += nq; // running total
-					int nh = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",t.id).count();
-					nht += nh; // running total
-					int ne = ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",t.id).count();
-					net += ne; // running total					
-					int nv = ofy().load().type(Question.class).filter("assignmentType","Video").filter("topicId",t.id).count();
-					nvt += nv; // running total					
-					buf.append("<TD style='text-align:center'>" + nq + "</TD><TD style='text-align:center'>" + nh + "</TD><TD style='text-align:center'>" + ne + "</TD><TD style='text-align:center'>" + nv + "</TD><TD style='text-align:center'>" + (t.topicGroup%2/1==1?"&#10025;":"") + "</TD></TR>");
-				}
-				buf.append("<TR style='font-weight:bold'><TD>Totals</TD><TD style='text-align:center'>" + nqt + "</TD><TD style='text-align:center'>" + nht + "</TD><TD style='text-align:center'>" + net + "</TD><TD style='text-align:center'>" + nvt + "</TD></TR>");
-				buf.append("</TABLE>");
-			} else {
-				buf.append("<a href=/Edit?sig=" + user.getTokenSignature() + "&ShowDetails=true><h4>Show a summary of questions by Topic and AssignmentType</h4></a></h4>");
-			}
+				buf.append("</TABLE><br/>");			
+			} 
 		} catch (Exception e) {
 			buf.append("Error: " + e.getMessage()==null?e.toString():e.getMessage());
 		}
@@ -553,6 +587,18 @@ public class Edit extends HttpServlet {
 		return buf.toString();
 	}
 	
+	String conceptSelectBox() {
+		StringBuffer buf = new StringBuffer();
+		if (concepts.isEmpty() || concepts.size() != ofy().load().type(Concept.class).count()) {
+			concepts = ofy().load().type(Concept.class).order("orderBy").list();
+		}
+		buf.append("<SELECT id=selectConcept NAME=ConceptId onChange=javascript:enableSubmit(); ><OPTION VALUE=0>Select a key concept</OPTION>");
+		for (Concept c : concepts) buf.append("<OPTION VALUE=" + c.id + ">" + c.title + "</OPTION>");
+		buf.append("</SELECT>");
+		
+		return buf.toString();
+	}
+	
 	String conceptsForm(HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -585,6 +631,20 @@ public class Edit extends HttpServlet {
 			buf.append(e.getMessage());
 		}
 		return buf.toString();
+	}
+	
+	void assignKeyConcepts(User user,HttpServletRequest request) throws Exception {
+		long conceptId = Long.parseLong(request.getParameter("ConceptId"));
+		String[] questionIdStrings = request.getParameterValues("QuestionId");
+		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
+		for (int i=0; i<questionIdStrings.length; i++) questionKeys.add(Key.create(Question.class,Long.parseLong(questionIdStrings[i])));
+		List<Question> revised = new ArrayList<Question>();
+		for (Key<Question> k : questionKeys) {
+			Question q = this.questions.get(k);
+			q.conceptId = conceptId;
+			revised.add(q);
+		}
+		ofy().save().entities(revised);
 	}
 	
 	void createTopic(User user,HttpServletRequest request) {
