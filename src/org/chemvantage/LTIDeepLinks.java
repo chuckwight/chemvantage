@@ -210,7 +210,7 @@ public class LTIDeepLinks extends HttpServlet {
 		if (!authorized) throw new Exception("Sorry, this link works only for the course instructor.");
 	}
 	
-	String contentPickerForm(User user, HttpServletRequest request,JsonObject claims) throws Exception {
+	static String contentPickerForm(User user, HttpServletRequest request,JsonObject claims) throws Exception {
 		StringBuffer buf = new StringBuffer(Subject.header("Select ChemVantage Assignment"));
 		try {
 		JsonObject settings = claims.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings").getAsJsonObject();
@@ -280,7 +280,7 @@ public class LTIDeepLinks extends HttpServlet {
 					if (i==oneHalf) buf.append("</div><div style=display:table-cell>");
 					i++;
 					buf.append("<div><label><input type=" + (acceptsMultiple?"checkbox":"radio") + " name=ChapterNumber onClick=countChecks('SmartText'); "
-						+ "value=" + ch.chapterNumber + " />Chapter " + ch.chapterNumber + ". " + ch.title + "</label></div>");
+						+ "value=" + ch.chapterNumber + " />" + ch.chapterNumber + ". " + ch.title + "</label></div>");
 				}
 				buf.append("</div></div></div>");
 				buf.append("<input id=stsub type=submit disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select" + (acceptsMultiple?" at least":"") + " one chapter' />");

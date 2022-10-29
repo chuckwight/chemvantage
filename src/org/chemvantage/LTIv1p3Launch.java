@@ -637,7 +637,7 @@ public class LTIv1p3Launch extends HttpServlet {
 						if (i==oneHalf) buf.append("</div><div style=display:table-cell>");
 						i++;
 						buf.append("<div><label><input type=" + (acceptsMultiple?"checkbox":"radio") + " name=ChapterNumber onClick=countChecks('SmartText'); "
-							+ "value=" + ch.chapterNumber + " />Chapter " + ch.chapterNumber + ". " + ch.title + "</label></div>");
+							+ "value=" + ch.chapterNumber + " />" + ch.chapterNumber + ". " + ch.title + "</label></div>");
 					}
 					buf.append("</div></div></div>");
 					buf.append("<input id=stsub type=submit disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select" + (acceptsMultiple?" at least":"") + " one chapter' />");
