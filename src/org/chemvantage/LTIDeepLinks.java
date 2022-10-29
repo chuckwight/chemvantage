@@ -537,7 +537,7 @@ public class LTIDeepLinks extends HttpServlet {
 					a.chapterNumber = chN;
 					for (Chapter ch : text.chapters) {
 						if (ch.chapterNumber == a.chapterNumber) {
-							for (Long conceptId : ch.conceptIds) a.questionKeys.addAll(ofy().load().type(Question.class).filter("conceptId",conceptId).keys().list());
+							for (Long conceptId : ch.conceptIds) a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",conceptId).keys().list());
 							break;
 						}
 					}

@@ -508,7 +508,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				topicId = request.getParameter("TopicId");
 				if (topicId != null) a.topicId = Long.parseLong(topicId);
 				Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
-				for (long conceptId : topic.conceptIds) a.questionKeys.addAll(ofy().load().type(Question.class).filter("conceptId",conceptId).keys().list());
+				for (long conceptId : topic.conceptIds) a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",conceptId).keys().list());
 			break;
 			case "Quiz":
 				topicId = request.getParameter("TopicId");
