@@ -289,6 +289,7 @@ public class LTIDeepLinks extends HttpServlet {
 				buf.append("<div style='color:red'>Please select one of the available ChemVantage smart textbooks below:</div>");
 				for (Text txt : texts) buf.append("<div><label><input type=radio name=TextId value=" + txt.id + " onclick=this.form.submit(); />" + txt.title + "</label></div>");
 			}		
+			buf.append("<br/>");
 			break;
 		case "Quiz":
 		case "Homework":
@@ -296,27 +297,44 @@ public class LTIDeepLinks extends HttpServlet {
 				texts = ofy().load().type(Text.class).list();
 				textId = Long.parseLong(request.getParameter("TextId"));
 				buf.append("<div>Please select one of the topic groups below:</div>");
+				Text allTopics = null;
 				for (Text txt : texts) {
 					if (txt.chapters.isEmpty()) continue;
 					if (txt.id==textId) text = txt;
+					if (txt.title.equals("View All Topics")) {
+						allTopics = txt;
+						continue;
+					}
 					buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />" + txt.title + "</label></div>");
 				}
-				buf.append("<br/>");
+				buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />" + allTopics.title + "</label></div><br/>");
+				
 				buf.append("<div style='color:red'>Select " + (acceptsMultiple?"at least ":"") + "one of the chapters below for this reading assignment.</div>");
 				buf.append("<div style=display:table;width:100%><div style=display:table-row><div style=display:table-cell>");
 				oneHalf = text.chapters.size()/2;
 					for (Chapter ch : text.chapters) {
 					if (i==oneHalf) buf.append("</div><div style=display:table-cell>");
 					i++;
-					buf.append("<div><label><input type=" + (acceptsMultiple?"checkbox":"radio") + " name=ChapterNumber onClick=countChecks('Quiz'); "
+					buf.append("<div><label><input type=" + (acceptsMultiple?"checkbox":"radio") + " name=ChapterNumber onClick=countChecks('" + assignmentType + "'); "
 						+ "value=" + ch.chapterNumber + " />" + ch.chapterNumber + ". " + ch.title + "</label></div>");
 				}
 				buf.append("</div></div></div>");
-				buf.append("<input type=submit id=qhsub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select" + (acceptsMultiple?" at least":"") + " one topic' />");
+				buf.append("<input type=submit id=stsub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select" + (acceptsMultiple?" at least":"") + " one topic' />");
 			} catch (Exception e) {
 				buf.append("<div style='color:red'>Please select one of the topic groups below:</div>");
-				for (Text txt : texts) buf.append("<div><label><input type=radio name=TextId value=" + txt.id + " onclick=this.form.submit(); />" + txt.title + "</label></div>");
-			}			
+				Text allTopics = null;
+				for (Text txt : texts) {
+					if (txt.chapters.isEmpty()) continue;
+					if (txt.id==textId) text = txt;
+					if (txt.title.equals("View All Topics")) {
+						allTopics = txt;
+						continue;
+					}
+					buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />" + txt.title + "</label></div>");
+				}
+				buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />" + allTopics.title + "</label></div><br/>");
+			}	
+			break;
 		case "PracticeExam":
 			topics = ofy().load().type(Topic.class).order("orderBy").list();
 			oneThird = topics.size()/3;
@@ -356,11 +374,9 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "  var examArray=document.getElementsByName('TopicIds');"
 				+ "  var videoArray=document.getElementsByName('VideoId');"
 				+ "  var stArray=document.getElementsByName('ChapterNumber');"
-				+ "  var qhArray=document.getElementsByName('TopicId');"
 				+ "  var peSubmit = document.getElementById('pesub');"
 				+ "  var vidSubmit = document.getElementById('vidsub');"
 				+ "  var stSubmit = document.getElementById('stsub');"
-				+ "  var qhSubmit = document.getElementById('qhsub');"
 				+ "  var count=0;"
 				+ "  switch (type) {"
 				+ "    case 'PracticeExam':"
@@ -375,18 +391,14 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "      if (count<1) vidSubmit.value='Select" + (acceptsMultiple?" at least":"") + " one topic';"
 				+ "      else vidSubmit.value='Create ' + (count==1?'this assignment':'these assignments');"
 				+ "      break;"
-				+ "    case 'SmartText':"
+				+ "    case 'Quiz':"
+				+ "	   case 'Homework':"
+				+ "	   case 'SmartText':"
 				+ "      for (var i=0;i<stArray.length;i++) if (stArray[i].checked) count++;"
 				+ "      stSubmit.disabled = (count<1);"
 				+ "      if (count<1) stSubmit.value='Select" + (acceptsMultiple?" at least":"") + " one chapter';"
 				+ "      else stSubmit.value='Create ' + (count==1?'this assignment':'these assignments');"
 				+ "      break;"
-				+ "    case 'Quiz':"
-				+ "    case 'Homework':"
-				+ "      for (var i=0;i<qhArray.length;i++) if (qhArray[i].checked) count++;"
-				+ "      qhSubmit.disabled = (count<1);"
-				+ "      if (count<1) qhSubmit.value='Select" + (acceptsMultiple?" at least":"") + " one topic';"
-				+ "      else qhSubmit.value='Create ' + (count==1?'this assignment':'these assignments');"
 				+ "  }"
 				+ "}"
 				+ "</script>");
@@ -620,7 +632,7 @@ public class LTIDeepLinks extends HttpServlet {
 						break;
 					case "Quiz":
 					case "Homework":
-						title = a1.assignmentType + " - " + ofy().load().type(Topic.class).id(a1.topicId).now().title;
+						title = a1.assignmentType + " - " + a1.title;
 						maxScore = 10;
 						break;
 				}

@@ -32,7 +32,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -86,7 +85,7 @@ public class Homework extends HttpServlet {
 				else out.println(Subject.header("Customize ChemVantage Homework Assignment") + "<h2>Forbidden</h2>You must be signed in as the instructor to perform this functuon." + Subject.footer);
 				break;
 			default:
-				out.println(Subject.header("ChemVantage Homework") + printHomework(user,a,request) + Subject.footer);
+				out.println(Subject.header("ChemVantage Homework") + printHomework(user,a) + Subject.footer);
 			}
 		} catch (Exception e) {
 			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
@@ -141,10 +140,11 @@ public class Homework extends HttpServlet {
 		
 		StringBuffer buf = new StringBuffer();		
 		try {
-			Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
+			String title = a.title;
+			if (title==null || title.isEmpty()) title = ofy().load().type(Topic.class).id(a.topicId).safe().title;
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
 			
-			buf.append("<h2>Homework - " + t.title + "</h2>");
+			buf.append("<h2>Homework - " + title + "</h2>");
 			buf.append("<h3>Instructor Page</h3>");
 			
 			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("This assignment allows an unlimited number of submissions for each homework question.<br/><br/>");
@@ -164,48 +164,47 @@ public class Homework extends HttpServlet {
 	}
 	
 	static String printHomework(User user, Assignment a) {
-		return printHomework(user,a,0L,0l);
+		return printHomework(user,a,0L);
 	}
 	
-	String printHomework(User user, Assignment a,HttpServletRequest request) {
-		try {
-			long topicId=0L;
-			if (a != null) topicId = a.id;
-			else topicId = Long.parseLong(request.getParameter("TopicId"));
-			long hintQuestionId = 0L;
-			String hqi = request.getParameter("Q"); // questionId for offering a hint
-			if (hqi != null) hintQuestionId = Long.parseLong(hqi);			
-			return printHomework(user,a,topicId,hintQuestionId);
-		} catch (Exception e) {  // select a random topic from the OpenStax group
-			List<Topic> topics = ofy().load().type(Topic.class).filter("topicGroup",1).list();
-			Random rand = new Random();
-			Topic t = topics.get(rand.nextInt(topics.size()));
-			return printHomework(user,a,t.id,0L);
-		}
-	}
-
-	static String printHomework(User user, Assignment hwa, long tId, long hintQuestionId) {
+	static String printHomework(User user, Assignment hwa, long hintQuestionId) {
 		StringBuffer buf = new StringBuffer();
 		
 		try {
-			long topicId = (hwa==null?tId:hwa.getTopicId());
-			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
+			if (hwa==null) {  // anonymous user; print a quiz on Chapter 1 of the first smartText entity
+				hwa = new Assignment();
+				hwa.assignmentType = "Quiz";
+				Text text = ofy().load().type(Text.class).filter("smartText",true).first().now();
+				hwa.title = text.chapters.get(0).title;
+				hwa.conceptIds = text.chapters.get(0).conceptIds;
+			} else if (hwa.title==null || hwa.title.isEmpty()) {  // legacy Quiz only provided topicId
+				Topic t = ofy().load().type(Topic.class).id(hwa.topicId).now();
+				hwa.title = t.title;
+				hwa.conceptIds = t.conceptIds;
+				ofy().save().entity(hwa);
+			}
 			
 			// get a List of homework questionKeys for this topic:
-			List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",topic.id).keys().list();
+			List<Key<Question>> allQuestionKeys = new ArrayList<Key<Question>>();
+			for (Long cId : hwa.conceptIds) allQuestionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());
+			
+			if (!allQuestionKeys.containsAll(hwa.questionKeys)) {  // might be missing a few questions due to customization
+				List<Key<Question>> addKeys = new ArrayList<Key<Question>>();
+				for (Key<Question> k : hwa.questionKeys) if (!allQuestionKeys.contains(k)) addKeys.add(k);
+				if (!addKeys.isEmpty()) allQuestionKeys.addAll(addKeys);
+			}
+			
+			Map<Key<Question>,Question> allQuestions = new HashMap<Key<Question>,Question>(ofy().load().keys(allQuestionKeys));
 			
 			if (user.isAnonymous()) buf.append(Subject.banner);  // present the ChemVantage banner
 			
 			// START the presentation of the Homework assignment
-			buf.append("\n<h2>Homework Exercises - " + topic.title + "</h2>");
-
-			Map<Key<Question>,Question> hwQuestions = ofy().load().keys(questionKeys);
-			
+			buf.append("<h2>Homework Exercises - " + hwa.title + "</h2>");
 
 			if (user.isAnonymous())	buf.append("<h3><font color=#EE0000>Anonymous User</font></h3>");
 			
 			buf.append("Homework Rules<UL>");
-			if (hwa==null||hwa.attemptsAllowed==null)
+			if (hwa.attemptsAllowed==null)
 				buf.append("<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
 			else buf.append("<LI>For each problem you are allowed " + hwa.attemptsAllowed + (hwa.attemptsAllowed==1?" attempt.":" attempts.") + "</LI>");
 			buf.append("<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question.</LI>");
@@ -216,8 +215,7 @@ public class Homework extends HttpServlet {
 			// Review the HWTransactions for this user to record which problems have been solved for this assignment and retrieve the current showWork strings:
 			List<Long> solvedQuestions = new ArrayList<Long>();
 			Map<Long,String> workStrings = new HashMap<Long,String>();
-			List<HWTransaction> hwTransactions = new ArrayList<HWTransaction>();
-			if (hwa!=null) hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",hwa.id).order("-graded").list();
+			List<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",hwa.id).order("-graded").list();
 			
 			for (HWTransaction ht : hwTransactions) {
 				if (solvedQuestions.contains(ht.questionId)) continue;
@@ -242,11 +240,11 @@ public class Homework extends HttpServlet {
 			// This is the main loop for presenting assigned and optional questions in order of increasing difficulty:
 			int i=1;
 			int j=1;
-			for (Key<Question> k : questionKeys) {
-				Question q = hwQuestions.get(k); 
-				boolean assigned = (hwa != null) && (hwa.questionKeys.contains(k));
+			for (Key<Question> k : allQuestionKeys) {
+				Question q = allQuestions.get(k); 
+				boolean assigned = hwa.questionKeys.contains(k);
 				StringBuffer questionBuffer = new StringBuffer("<div style='display:table-row'><div style='display:table-cell;font-size:small'>");
-				String hashMe = user.getId() + (hwa==null?"":hwa.id);
+				String hashMe = user.getId() + hwa.id;
 				q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
 				
 				if (solvedQuestions.contains(q.id)) questionBuffer.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");
@@ -257,7 +255,7 @@ public class Homework extends HttpServlet {
 
 				questionBuffer.append("<FORM METHOD=POST ACTION=/Homework>"
 						+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "'>"
-						+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
+						//+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ (hwa==null?"":"<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>")
 						+ "<div style='display:table-cell'><b>" + (assigned?i:j) + ".&nbsp;</b></div>"
@@ -290,17 +288,21 @@ public class Homework extends HttpServlet {
 			Key<Question> k = Key.create(Question.class,questionId);
 			Question q = ofy().load().key(k).safe();
 			
-			long topicId = hwa==null?Long.parseLong(request.getParameter("TopicId")):hwa.topicId;
-			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
-			debug.append("topic:"+topic.title+"...");
+			if (hwa==null) {  // anonymous user; use the quiz on Chapter 1 of the first smartText entity
+				hwa = new Assignment();
+				hwa.assignmentType = "Quiz";
+				Text text = ofy().load().type(Text.class).filter("smartText",true).first().now();
+				hwa.title = text.chapters.get(0).title;
+				hwa.conceptIds = text.chapters.get(0).conceptIds;
+			}
 			
-			if (hwa != null && hwa.attemptsAllowed != null) {
+			if (hwa.attemptsAllowed != null) {
 				int nAttempts = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("questionId",questionId).count();
 				if (nAttempts >= hwa.attemptsAllowed) return "<h2>Sorry, you are only allowed " + hwa.attemptsAllowed + " attempt" + (hwa.attemptsAllowed==1?"":"s") + " for each question on this assignment.</h2>";
 			}
 			
 			// Set the Question parameters for this user (this is why we made a copy, to prevent thread collisions with a class variable)
-			String hashMe = user.getId() + (hwa==null?"":hwa.id);
+			String hashMe = user.getId() + hwa.id;
 			q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
 			debug.append("question parameters set with "+hashMe.hashCode()+"...");
 			
@@ -338,13 +340,12 @@ public class Homework extends HttpServlet {
 					buf.append("<img src=/images/learn_more.png alt='learn more here' /> You can learn more about this topic at <a href='" 
 					+ q.learn_more_url + "' target=_blank>" + q.learn_more_url + "</a><br/><br/>");
 				buf.append("Alternatively, you may wish to "
-						+ "<a href=/Homework?" + (hwa==null?"TopicId=" + topic.id : "AssignmentId=" + hwa.id)
+						+ "<a href=/Homework?AssignmentId=" + (hwa.id==null?0:hwa.id)
 						+ "&sig=" + user.getTokenSignature() + ">" 
 						+ "return to this homework assignment</a> to work on another problem.<p>");
-				if (hwa!=null) {
 					buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework>"
-							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
-							+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>"
+							//+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
+							+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" +(hwa.id==null?0:hwa.id) + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
 							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 							+ q.print(showWork,studentAnswer) + "<br>");
@@ -374,13 +375,13 @@ public class Homework extends HttpServlet {
 							+ "}"
 							+ "showWorkBox(" + q.id + ");");
 					buf.append("</SCRIPT>");
-				}
+				
 				return buf.toString();
 			}
 			
 			if (user.isAnonymous()) buf.append(Subject.banner);
 			
-			buf.append("<h2>Homework Results - " + topic.title + "</h2>\n");
+			buf.append("<h2>Homework Results - " + hwa.title + "</h2>\n");
 			
 			if (user.isAnonymous()) buf.append("<h3><font color=#EE0000>Anonymous User</font></h3>");
 			buf.append(df.format(now));
@@ -396,11 +397,11 @@ public class Homework extends HttpServlet {
 			
 			if (!studentAnswer.isEmpty()) { // an answer was submitted
 				// create and store a Response entity:
-				Response r = new Response("Homework",topic.id,q.id,studentAnswer,q.getCorrectAnswer(),studentScore,possibleScore,user.getId(),now);
+				Response r = new Response("Homework",hwa.id,q.id,studentAnswer,q.getCorrectAnswer(),studentScore,possibleScore,user.getId(),now);
 				ofy().save().entity(r);
 				debug.append("response saved...");
 				
-				ht = new HWTransaction(q.id,topic.id,topic.title,user.getId(),now,studentScore,assignmentId,possibleScore,showWork);
+				ht = new HWTransaction(q.id,user.getId(),now,studentScore,assignmentId,possibleScore,showWork);
 				ofy().save().entity(ht).now();
 				
 				// create/update/store a HomeworkScore object
@@ -483,9 +484,7 @@ public class Homework extends HttpServlet {
 
 				if (hwa != null) buf.append("You may <a href=/Homework?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review your scores on this assignment</a>.<p>");
 			}
-			buf.append("<a href=/Homework?"
-					+ (hwa!=null&&hwa.id>0?"AssignmentId=" + hwa.id : "TopicId=" + topic.id)
-					+ "&sig=" + user.getTokenSignature()  
+			buf.append("<a href=/Homework?AssignmentId=" + hwa==null?0:hwa.id + "&sig=" + user.getTokenSignature()  
 					+ (offerHint?"&Q=" + q.id + "><span style='color:#EE0000'>Please give me a hint</span>":">Return to this homework assignment") + "</a> or "
 					+ "<a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a> ");
 			
@@ -624,8 +623,7 @@ public class Homework extends HttpServlet {
 
 		try {
 			buf.append("Assignment Number: " + a.id + "<br>");
-			Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
-			buf.append("Topic: "+ t.title + "<br>");
+			buf.append("Topic: "+ a.title + "<br>");
 			buf.append("Valid: " + df.format(now) + "<p>");
 			
 			List<HWTransaction> hwts = ofy().load().type(HWTransaction.class).filter("userId",forUser.getHashedId()).filter("assignmentId",a.id).order("graded").list();

@@ -114,8 +114,8 @@ public class Assignment implements java.lang.Cloneable {
 		if (this.assignmentType==null) return false;
 		
 		switch (this.assignmentType) {
-		case "Quiz": return this.topicId>0L;
-		case "Homework": return this.topicId>0L;
+		case "Quiz": return this.topicId>0L || (this.textId>0 && this.chapterNumber>0);
+		case "Homework": return this.topicId>0L  || (this.textId>0 && this.chapterNumber>0);
 		case "SmartText": return this.textId>0 && this.chapterNumber>0;
 		case "PracticeExam": return topicIds.size()>2;
 		case "VideoQuiz": return this.videoId>0;

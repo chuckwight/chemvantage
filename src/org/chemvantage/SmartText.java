@@ -233,7 +233,7 @@ public class SmartText extends HttpServlet {
 		   }
 		   
 		   if (a != null) {
-			   Response r = new Response("SmartText",a.topicId,q.id,studentAnswer,q.getCorrectAnswer(),isCorrect?1:0,1,user.getId(),new Date());
+			   Response r = new Response("SmartText",conceptId,q.id,studentAnswer,q.getCorrectAnswer(),isCorrect?1:0,1,user.getId(),new Date());
 			   ofy().save().entity(r);
 		   }
 		   

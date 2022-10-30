@@ -30,6 +30,7 @@ public class Response implements Serializable {
 	private static final long serialVersionUID = 137L;
 	@Id 	Long id;
 	@Index 	String assignmentType;
+	@Index	long assignmentId;
 	@Index 	long topicId;
 	@Index 	long questionId;
 	@Index 	String userId;
@@ -49,9 +50,9 @@ public class Response implements Serializable {
 			
 	Response() {}
     
-	Response(String assignmentType, long topicId, long questionId, String studentResponse, String correctAnswer, int score, int possibleScore, String userId, Date submitted) {
+	Response(String assignmentType, long assignmentId, long questionId, String studentResponse, String correctAnswer, int score, int possibleScore, String userId, Date submitted) {
         this.assignmentType = assignmentType;
-        this.topicId = topicId;
+        this.assignmentId = topicId;
         this.questionId = questionId;
         this.studentResponse = studentResponse;
         this.correctAnswer = correctAnswer;

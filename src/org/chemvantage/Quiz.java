@@ -79,7 +79,7 @@ public class Quiz extends HttpServlet {
 				if (user.isInstructor()) out.println(Subject.header("Customize ChemVantage Quiz Assignment") + selectQuestionsForm(user,a) + Subject.footer);
 				break;
 			default: 
-				out.println(Subject.header("ChemVantage Quiz") + printQuiz(user,a,request) + Subject.footer);
+				out.println(Subject.header("ChemVantage Quiz") + printQuiz(user,a) + Subject.footer);
 			}
 		} catch (Exception e) {
 			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
@@ -146,15 +146,15 @@ public class Quiz extends HttpServlet {
 		
 		StringBuffer buf = new StringBuffer();		
 		try {
-			Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
+			
+			String title = a.title;
+			if (title==null || title.isEmpty()) title = ofy().load().type(Topic.class).id(a.topicId).safe().title;
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
 			
-			buf.append("<h2>General Chemistry Quiz - Instructor Page</h2>");
-			buf.append("Topic covered on this quiz: " + t.getTitle() + "<br/><br/>");
+			buf.append("<h2>Instructor Page</h2>");
+			buf.append("Quiz: " + title + "<br/><br/>");
 			
-			int nQuestions = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).count();
-			buf.append("Each quiz draws 10 questions randomly from a bank of " + a.questionKeys.size() + " selected questions. "
-					+ "The total number of available questions for this quiz is " + nQuestions + ".<br/><br/>");
+			buf.append("Each quiz draws 10 questions randomly from a bank of " + a.questionKeys.size() + " selected questions.<br/><br/>");
 			
 			if (a.timeAllowed != null) buf.append("Students are permitted " + a.timeAllowed/60 + " minutes to complete the quiz.<br/><br/>");
 			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("Students may attempt this assignment an unlimited number of times to improve their score.<br/><br/>");
@@ -173,37 +173,27 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String printQuiz(User user, Assignment a,HttpServletRequest request) { // for anonymous users accessing Quiz servlet directly
-		try {
-			long assignmentId = user.getAssignmentId();
-			long topicId = 0L;
-			if (assignmentId > 0) topicId = a.topicId;
-			else topicId = Long.parseLong(request.getParameter("TopicId"));
-			return printQuiz(user,a,topicId);
-		} catch (Exception e) { // select a random Topic from the OpenStax group
-			List<Topic> topics = ofy().load().type(Topic.class).filter("topicGroup",1).list();
-			Random rand = new Random();
-			Topic t = topics.get(rand.nextInt(topics.size()));
-			return printQuiz(user,null,t.id);
-		}
-	}
-
-	static String printQuiz (User user, Assignment a) {
-		return printQuiz(user,a,a.topicId);
-	}
-	
-	static String printQuiz(User user, Assignment qa, long tId) {
+	static String printQuiz(User user, Assignment qa) {
 		if (user == null) return "<h2>Launch failed because user was not authorized.</h2>";
 		StringBuffer buf = new StringBuffer();
 		
 		try {
-			long assignmentId = (qa==null?0L:qa.id);
-			long topicId = qa==null?tId:qa.topicId;
-			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
+			if (qa==null) {  // anonymous user; print a quiz on Chapter 1 of the first smartText entity
+				qa = new Assignment();
+				qa.assignmentType = "Quiz";
+				Text text = ofy().load().type(Text.class).filter("smartText",true).first().now();
+				qa.title = text.chapters.get(0).title;
+				qa.conceptIds = text.chapters.get(0).conceptIds;
+			} else if (qa.title==null || qa.title.isEmpty()) {  // legacy Quiz only provided topicId
+				Topic t = ofy().load().type(Topic.class).id(qa.topicId).now();
+				qa.title = t.title;
+				qa.conceptIds = t.conceptIds;
+				ofy().save().entity(qa);
+			}
 			
 			// Check to see if the timeAllowed has been modified by the instructor:
 			int timeAllowed = 900; // default value in seconds
-			if (qa != null && qa.timeAllowed != null) {
+			if (qa.timeAllowed != null) {
 				timeAllowed = qa.timeAllowed; // instructor option, e.g. for student disability accommodations
 				user = User.getUser(user.getTokenSignature(), timeAllowed / 60);
 			}
@@ -211,26 +201,20 @@ public class Quiz extends HttpServlet {
 			// Check to see if this user has any pending quizzes on this topic:
 			Date now = new Date();
 			Date t15minAgo = new Date(now.getTime() - timeAllowed * 1000); // 15 minutes ago or whatever time was allowed
-			QuizTransaction qt = null;
-			// try to resume a quiz in progress:
-			if (qa == null)  // anonymous user
-				qt = ofy().load().type(QuizTransaction.class).filter("userId", user.getHashedId()).filter("topicId", topicId)
-						.filter("graded", null).filter("downloaded >", t15minAgo).first().now();
-			else   // LTI user
-				qt = ofy().load().type(QuizTransaction.class).filter("userId", user.getHashedId())
-						.filter("assignmentId", assignmentId).filter("graded", null).filter("downloaded >", t15minAgo)
-						.first().now();
+			QuizTransaction qt = ofy().load().type(QuizTransaction.class).filter("userId", user.getHashedId())
+						.filter("assignmentId", qa.id).filter("graded", null).filter("downloaded >", t15minAgo).first().now();
+			
 			// check to see if attemptsAllowed has been reached
-			int nAttempts = 1;
-			if (qa != null && qa.attemptsAllowed != null) {
-				nAttempts = ofy().load().type(QuizTransaction.class).filter("assignmentId",assignmentId).filter("userId",user.getHashedId()).count();
+			int nAttempts = 0;
+			if (qt==null && qa.attemptsAllowed != null) {
+				nAttempts = ofy().load().type(QuizTransaction.class).filter("assignmentId",qa.id).filter("userId",user.getHashedId()).count();
 				if (nAttempts >= qa.attemptsAllowed) 
 					return "<h2>Sorry, you are only allowed " + qa.attemptsAllowed + " attempt" + (qa.attemptsAllowed==1?"":"s") + " on this assignment.</h2>"
 							+ Subject.banner + showScores(user,user,qa) + "<p>";
 			}
 			
 			if (qt == null) {  // create a new quizTransation
-				qt = new QuizTransaction(topicId, topic.getTitle(), user.getId(), now, null, 0, assignmentId, 0);
+				qt = new QuizTransaction(qa.id,user.getId());  //topicId, topic.getTitle(), user.getId(), now, null, 0, assignmentId, 0);
 				ofy().save().entity(qt).now(); // creates a long id value to use in random number generator
 				nAttempts++;
 			}	
@@ -240,7 +224,7 @@ public class Quiz extends HttpServlet {
 			
 			if (user.isAnonymous()) buf.append(Subject.banner);  // present the ChemVantage banner
 			
-			buf.append("<h2>Quiz - " + topic.title + "</h2>");
+			buf.append("<h2>Quiz - " + qa.title + "</h2>");
 			
 			if (user.isAnonymous()) buf.append("<h3 style='color:#EE0000'>Anonymous User</h3>");			
 			else {
@@ -257,26 +241,14 @@ public class Quiz extends HttpServlet {
 			
 			buf.append("<FORM NAME=Quiz id=quizForm METHOD=POST ACTION='/Quiz' onSubmit='return confirmSubmission()' >"
 					+ "<INPUT TYPE=HIDDEN NAME='sig' VALUE='" + user.getTokenSignature() + "' />"
-					+ "<INPUT TYPE=HIDDEN NAME='AssignmentId' VALUE='" + assignmentId + "' />"
+					+ "<INPUT TYPE=HIDDEN NAME='AssignmentId' VALUE='" + qa.id + "' />"
 					+ "<input type=hidden name='QuizTransactionId' value='" + qt.getId() + "' />"
-					+ "<input type=hidden name='TopicId' value='" + topicId + "' />"
 					+ "<input type=submit value='Grade This Quiz' />");
-			
-			// verify that all of the assigned questions still exist; remove any keys for deleted questions (house cleaning)
-			List<Key<Question>> allQuestionKeys = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",topicId).keys().list();
-			if (qa != null && !allQuestionKeys.containsAll(qa.questionKeys)) {
-				List<Key<Question>> removeKeys = new ArrayList<Key<Question>>();
-				for (Key<Question> k : qa.questionKeys) if (!allQuestionKeys.contains(k)) removeKeys.add(k);
-				qa.questionKeys.removeAll(removeKeys);
-				ofy().save().entity(qa);
-			}
-			
-			//create a set of available questionKeyss either from the group assignment or from the datastore
-			if (qa != null) allQuestionKeys = new ArrayList<Key<Question>>(qa.questionKeys);  // limit the questions to these
 			
 			// Randomly select the keys to questions to be presented
 			Random rand = new Random(); // create random number generator to select quiz questions
 			rand.setSeed(qt.getId()); // random number generator seeded with QuizTransaction id value
+			List<Key<Question>> allQuestionKeys = new ArrayList<Key<Question>>(qa.questionKeys);  // clone the List
 			List<Key<Question>> myQuestionKeys = new ArrayList<Key<Question>>();
 			while (myQuestionKeys.size()<10 && allQuestionKeys.size()>0) {
 				Key<Question> k = allQuestionKeys.get(rand.nextInt(allQuestionKeys.size()));
@@ -286,6 +258,12 @@ public class Quiz extends HttpServlet {
 			
 			// At this point we should have 10 (or max number) randomly selected questionKeys
 			Map<Key<Question>, Question> quizQuestions = ofy().load().keys(myQuestionKeys);
+			
+			// Housekeeping: if any of the questions does not exist, remove the key from the assignment:
+			if (!quizQuestions.keySet().containsAll(myQuestionKeys)) {
+				for (Key<Question> k : myQuestionKeys) if (!quizQuestions.keySet().contains(k)) qa.questionKeys.remove(k);
+				ofy().save().entity(qa);
+			}
 			
 			int possibleScore = 0;
 			buf.append("<OL>");
@@ -343,8 +321,13 @@ public class Quiz extends HttpServlet {
 							+ "assignment by launching it from your class learning management system.");
 			}
 
-			// Check to see if the time limit (15 minutes) for taking the Quiz has expired:
-			long assignmentId = qa==null?0L:qa.id;
+			if (qa==null) {  // anonymous user; use the quiz on Chapter 1 of the first smartText entity
+				qa = new Assignment();
+				qa.assignmentType = "Quiz";
+				Text text = ofy().load().type(Text.class).filter("smartText",true).first().now();
+				qa.title = text.chapters.get(0).title;
+				qa.conceptIds = text.chapters.get(0).conceptIds;
+			}
 			
 			int timeAllowed = 900;  // default time to complete the quiz, in seconds
 			try {
@@ -352,13 +335,11 @@ public class Quiz extends HttpServlet {
 			} catch (Exception e) {}
 			
 			boolean timeExpired = now.getTime() - qt.downloaded.getTime() > (timeAllowed*1000+10000);
-			//if (now.getTime() - qt.downloaded.getTime() > (timeAllowed*1000+10000)) // includes 10 second grace period
-				//return "Sorry, the " + timeAllowed/60 + " minute time limit for this quiz has expired.";
 			
 			int studentScore = 0;
 			int wrongAnswers = 0;
 
-			buf.append("<h2>Quiz Results - " + qt.topicTitle + "</h2>");
+			buf.append("<h2>Quiz Results - " + qa.title + "</h2>");
 			
 			if (user.isAnonymous()) buf.append("<h3><font color=#EE0000>Anonymous User</font></h3>");
 			buf.append(df.format(now));
@@ -391,7 +372,7 @@ public class Quiz extends HttpServlet {
 						q.setParameters(seed);
 						int score = q.isCorrect(studentAnswer)?q.pointValue:0;
 
-						responses.add(new Response("Quiz",qt.topicId,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,user.getId(),now));
+						responses.add(new Response("Quiz",qa.id,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,user.getId(),now));
 
 						studentScore += score;
 						if (score == 0) {  
@@ -413,7 +394,7 @@ public class Quiz extends HttpServlet {
 			try {
 				if (user.isAnonymous()) throw new Exception();  // don't save Scores for anonymous users
 				Score.updateQuizScore(user.getId(),qt);
-				if (qa.lti_ags_lineitem_url != null) QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue
+				if (qa.lti_ags_lineitem_url != null) QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(qa.id)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue
 			} catch (Exception e) {}
 
 			if (timeExpired) buf.append("<h4>Your score on this quiz is 0 points because it was submitted after the allowed time of " + timeAllowed/60 + " minutes.</h4>");
@@ -681,9 +662,8 @@ public class Quiz extends HttpServlet {
 		Date now = new Date();
 		
 		try {
-			Topic t = ofy().load().type(Topic.class).id(a.getTopicId()).safe();
 			buf.append("Assignment Number: " + a.id + "<br>");
-			buf.append("Topic: "+ t.title + "<br>");
+			buf.append("Topic: "+ a.title + "<br>");
 			buf.append("Valid: " + df.format(now) + "<p>");
 			
 			List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).filter("userId",forUser.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
