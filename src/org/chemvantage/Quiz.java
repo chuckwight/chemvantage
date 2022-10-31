@@ -107,6 +107,11 @@ public class Quiz extends HttpServlet {
 				//doGet(request,response);
 				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 				break;
+			case "Save New Title":
+				a.title = request.getParameter("AssignmentTitle");
+				ofy().save().entity(a).now();
+				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
+				break;
 			case "Set Allowed Time":
 				try {
 					double minutes = Double.parseDouble(request.getParameter("TimeAllowed"));
@@ -146,19 +151,23 @@ public class Quiz extends HttpServlet {
 		
 		StringBuffer buf = new StringBuffer();		
 		try {
+			if (a.topicId!=0 && (a.title==null || a.conceptIds.isEmpty())) {  // legacy Quiz only provided topicId
+				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
+				a.title = t.title;
+				a.conceptIds = t.conceptIds;
+				ofy().save().entity(a);
+			}
 			
-			String title = a.title;
-			if (title==null || title.isEmpty()) title = ofy().load().type(Topic.class).id(a.topicId).safe().title;
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
 			
 			buf.append("<h2>Instructor Page</h2>");
-			buf.append("Quiz: " + title + "<br/><br/>");
+			buf.append("Quiz - " + a.title + "<br/><br/>");
 			
-			buf.append("Each quiz draws 10 questions randomly from a bank of " + a.questionKeys.size() + " selected questions.<br/><br/>");
-			
-			if (a.timeAllowed != null) buf.append("Students are permitted " + a.timeAllowed/60 + " minutes to complete the quiz.<br/><br/>");
-			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("Students may attempt this assignment an unlimited number of times to improve their score.<br/><br/>");
-			else buf.append("Students may only attempt this assignment " + a.attemptsAllowed + (a.attemptsAllowed==1?" time":" times") + ".<br/><br/>");
+			buf.append("Each quiz draws 10 questions randomly from a bank of " + a.questionKeys.size() + " selected questions.<br/>");			
+			if (a.timeAllowed != null) buf.append("Students are permitted " + a.timeAllowed/60 + " minutes to complete the quiz.<br/>");
+			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("Students may attempt this assignment an unlimited number of times to improve their score.<br/>");
+			else buf.append("Students may only attempt this assignment " + a.attemptsAllowed + (a.attemptsAllowed==1?" time":" times") + ".<br/>");
+			buf.append("<br/>");
 			
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/Quiz?UserRequest=AssignQuizQuestions&sig=" + user.getTokenSignature() + "'>Customize this quiz</a> to set the time allowed, number of attempts allowed, and select the available question items.</LI>"
@@ -184,7 +193,7 @@ public class Quiz extends HttpServlet {
 				Text text = ofy().load().type(Text.class).filter("smartText",true).first().now();
 				qa.title = text.chapters.get(0).title;
 				qa.conceptIds = text.chapters.get(0).conceptIds;
-			} else if (qa.title==null || qa.title.isEmpty()) {  // legacy Quiz only provided topicId
+			} else if (qa.topicId!=0 && (qa.title==null || qa.conceptIds.isEmpty())) {  // legacy Quiz only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(qa.topicId).now();
 				qa.title = t.title;
 				qa.conceptIds = t.conceptIds;
@@ -214,7 +223,7 @@ public class Quiz extends HttpServlet {
 			}
 			
 			if (qt == null) {  // create a new quizTransation
-				qt = new QuizTransaction(qa.id,user.getId());  //topicId, topic.getTitle(), user.getId(), now, null, 0, assignmentId, 0);
+				qt = new QuizTransaction(qa.id,user.getHashedId());
 				ofy().save().entity(qt).now(); // creates a long id value to use in random number generator
 				nAttempts++;
 			}	
@@ -295,7 +304,7 @@ public class Quiz extends HttpServlet {
 			buf.append("<script>startTimers(" + new Date(qt.getDownloaded().getTime() + timeAllowed * 1000).getTime() + ");</script>");
 			
 		} catch (Exception e) {
-			return "<h2>Launch failed because no topic ID was specified.</h2>"; 
+			return "<h2>Sorry, the quiz failed</h2>" + e.getMessage()==null?e.toString():e.getMessage(); 
 		}
 		
 		return buf.toString();
@@ -315,11 +324,8 @@ public class Quiz extends HttpServlet {
 			if (qt.graded != null) {
 				return "<h2>No Score</h2>"
 						+ "Sorry, this quiz was graded on " + df.format(qt.graded) + " and cannot be regraded.<p>"
-						+ "Your score on this quiz was " + qt.score + " out of a possible " + qt.possibleScore + " points.<p>"
-						+ (user.isAnonymous()?"<p><a href=/Quiz?TopicId=" + qt.topicId + "&sig=" + user.getTokenSignature() + ">"
-						+ "Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a>.":"You may repeat this "
-							+ "assignment by launching it from your class learning management system.");
-			}
+						+ "Your score on this quiz was " + qt.score + " out of a possible " + qt.possibleScore + " points.<br/><br/>";
+				}
 
 			if (qa==null) {  // anonymous user; use the quiz on Chapter 1 of the first smartText entity
 				qa = new Assignment();
@@ -471,11 +477,7 @@ public class Quiz extends HttpServlet {
 						+ (user.isInstructor()?"For instructors this is common.":"") + "<p>");				
 			}
 			
-			// If qa==null this is an anonymous user, otherwise is an LTI user:
-			if (user.isAnonymous()) buf.append("<a href=/Quiz?TopicId=" + qt.topicId + "&sig=" + user.getTokenSignature() + ">Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a> ");
-			else if (qa.attemptsAllowed==null) buf.append("You may take this quiz again by clicking the assignment link in your learning management system "		
-					+ "or <a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a>.");
-			else buf.append("This quiz may be attempted a total of " + qa.attemptsAllowed + " times to improve your score.");
+			if (!user.isAnonymous()) buf.append("Use the assignment link in your learning management system to repeat this quiz, or <a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a>");
 		} catch (Exception e) {
 			buf.append("Sorry, this quiz could not be scored.<br>" + e.getMessage());
 		}
@@ -706,11 +708,8 @@ public class Quiz extends HttpServlet {
 									+ "even for a score of zero, and ChemVantage will try to refresh the best score to the LMS.<p>");
 						} else throw new Exception();
 					} catch (Exception e) {
-						buf.append("ChemVantage was unable to retrieve the score for this assignment from the LMS.<br>"
-								+ "Sometimes it takes several seconds for a score to be posted in the LMS grade book.<br>");
-						if (s.score==0 && s.numberOfAttempts<=1) buf.append("It appears that the assignment may not have been submitted for a score yet. ");
-						if (forUser.isInstructor()) buf.append("Some LMS providers do not accept score submissions for instructors or test students.");
-						buf.append("<p>");
+						if (s.score==0 && s.numberOfAttempts<=1) buf.append("It appears that the assignment may not have been submitted for a score yet.<br/>");
+						buf.append("<br/>");
 					}
 				}
 				buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Quiz Score</th></tr>");
@@ -737,9 +736,9 @@ public class Quiz extends HttpServlet {
 
 		if (a.lti_ags_lineitem_url != null && a.lti_nrps_context_memberships_url != null) {
 			try { // code for LTI version 1.3
-				Topic t = ofy().load().type(Topic.class).id(a.getTopicId()).safe();
+				//Topic t = ofy().load().type(Topic.class).id(a.getTopicId()).safe();
 				
-				buf.append("<h3>" + a.assignmentType + " - " + t.title + "</h3>");
+				buf.append("<h3>" + a.assignmentType + " - " + a.title + "</h3>");
 				buf.append("Assignment ID: " + a.id + "<br>");
 				buf.append("Valid: " + new Date() + "<p>");
 				buf.append("The roster below is obtained using the Names and Role Provisioning service offered by your learning management system, "
@@ -848,10 +847,13 @@ public class Quiz extends HttpServlet {
 		
 		StringBuffer buf = new StringBuffer();
 		try {
-			Topic t = ofy().load().type(Topic.class).id(a.getTopicId()).safe();
+			//Topic t = ofy().load().type(Topic.class).id(a.getTopicId()).safe();
 			
 			buf.append("<h3>Customize Quiz Assignment</h3>");
-			buf.append("<b>Topic: " + t.title + "</b><p>");
+			buf.append("<form action=/Quiz method=post>"
+					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+					+ "<b>Title:</b>&nbsp;Quiz - <input type=text size=25 name=AssignmentTitle value='" + a.title + "' />&nbsp;"
+					+ "<input type=submit name=UserRequest value='Save New Title' /></form><br/>");
 					
 			if (a.timeAllowed==null) a.timeAllowed = 900; // default time for completing the exam
 			
@@ -859,7 +861,7 @@ public class Quiz extends HttpServlet {
 			buf.append("Each quiz consists of 10 questions selected at random from the items below. The default time allowed "
 					+ "to complete each quiz is 15 minutes, but you may change this (e.g., to create a special assignment for "
 					+ "a student requiring extended time up to 60 minutes).<br>");
-			buf.append("<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + ">"
+			buf.append("<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "Time allowed for this assignment: <input type=text size=5 name=TimeAllowed value=" + a.timeAllowed/60. + "> minutes. "
 					+ "<input type=submit name=UserRequest value='Set Allowed Time'><br>"
 					+ "</form><p>");
@@ -876,9 +878,15 @@ public class Quiz extends HttpServlet {
 					+ "Therefore, the total number of questions should be "
 					+ "larger than 10, but not much larger than 50.  Experience shows that 30 items is about right in most cases.<p>"
 					+ "If you don't see a question you want to include, you may "
-					+ "<a href=/Contribute?TopicId=" + t.id + "&AssignmentType=Quiz&sig=" + user.getTokenSignature() + ">contribute a new question item</a> to the database.<p>");
+					+ "<a href=/Contribute?AssignmentType=Quiz&sig=" + user.getTokenSignature() + ">contribute a new question item</a> to the database.<p>");
 
-			List<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",t.id).filter("isActive",true).list();
+			// make a List of Questions for the assignment's conceptIds, including any extra questions already in a.questionKeys
+			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
+			for (Long cId : a.conceptIds) questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",cId).keys().list());
+			if (!questionKeys.containsAll(a.questionKeys)) {  // add the missing keys
+				for (Key<Question> k : a.questionKeys) if (!questionKeys.contains(k)) questionKeys.add(k);
+			}
+			List<Question> questions = new ArrayList<Question>(ofy().load().keys(a.questionKeys).values());
 			
 			// This dummy form uses javascript to select/deselect all questions
 			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "

@@ -67,8 +67,8 @@ public class UserReport implements Serializable {
 			try {
 				Question q = ofy().load().type(Question.class).id(this.questionId).safe();
 				q.setParameters(-1); // -1 randomizes the question
-				Topic topic = ofy().load().type(Topic.class).id(q.topicId).now();
-				buf.append("Topic: " + topic.title + " (" + q.assignmentType + " question)<br>");
+				//Topic topic = ofy().load().type(Topic.class).id(q.topicId).now();
+				//buf.append("Topic: " + topic.title + " (" + q.assignmentType + " question)<br>");
 				buf.append(q.printAnswerToStudents());
 				if (this.userId != null) {
 					List<Response> responses = ofy().load().type(Response.class).filter("userId",this.userId).filter("questionId",this.questionId).list();
@@ -79,7 +79,7 @@ public class UserReport implements Serializable {
 						buf.append("</table>");
 					}
 				}
-				if (user.isEditor()) buf.append("<a href=Edit?UserRequest=Edit&QuestionId=" + this.questionId + "&TopicId=" + topic.id + "&AssignmentType=" + q.assignmentType + ">Edit Question</a> ");
+				if (user.isEditor()) buf.append("<a href=Edit?UserRequest=Edit&QuestionId=" + this.questionId + "&AssignmentType=" + q.assignmentType + ">Edit Question</a><br/>");
 			} catch (Exception e2) {}
 			if (user.isChemVantageAdmin()) // Create a form for deleting the report
 				buf.append("<FORM METHOD=POST ACTION=Feedback>"
