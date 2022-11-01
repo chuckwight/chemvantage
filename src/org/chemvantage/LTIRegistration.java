@@ -324,25 +324,16 @@ public class LTIRegistration extends HttpServlet {
 					+ "<li>Go back to the LTI Tool Providers page, and from the dropdown menu on the ChemVantage app select Manage Placements"
 					+ "<li>Click Create Placement"
 					+ "<ul><li>Label: ChemVantage</li>"
-					+ " <li>Description: ChemVantage is an Open Educational Resource for teaching and learning college-level General Chemistry"
+					+ " <li>Description: ChemVantage is an Open Educational Resource for General Chemistry"
 					+ " <li>Handle: (any unique string)"
 					+ " <li>Availability: Yes"
-					+ " <li>Course Content Tool (supports deep linking)"
-					+ " <li>Tool Provider URL: " + iss + "/lti/deeplinks"
+					+ " <li>Deep Linking Tool (do not allow student access)"
+					+ " <li>Taget Link URI: " + iss + "/lti/deeplinks"
 					+ " <li>Custom Parameters (leave blank)"
 					+ " <li>Submit</li></ul></ol>");
 			buf.append("<hr><br>To the Course Instructor:");
 			buf.append("<ol><li>Go to the course | Content | Build Content | ChemVantage</li>"
-					+ "<li>Name: as appropriate (e.g., Quiz - Heat & Enthalpy)</li>"
-					+ "<li>Grading:"
-					+ "<ul><li>Enable Evaluation - Yes</li>"
-					+ " <li>Points - 10 for quiz or homework; 5 for video; 100 for practice exam</li>"
-					+ " <li>Visible to Students - Yes</li>"
-					+ "</ul></li>"
-					+ "<li>Submit</li>"
-					+ "<li>Click the new assignment link to launch ChemVantage</li>"
-					+ "<li>Choose the relevant assignment (e.g., Quiz on Heat & Enthalpy)</li>"
-					+ "<li>Customize the assignment, if desired, using the highlighted link</li>"
+					+ "<li>Select the ChemVantage assignment type and topic</li>"
 					+ "</ol>");
 			break;
 		case "canvas":
