@@ -265,9 +265,80 @@ public class SmartText extends HttpServlet {
 	   } catch (Exception e) {
 		   buf.append("Error: " + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString());
 	   }
+	   
+	   buf.append(ajaxJavaScript(user.getTokenSignature())); // load javascript for AJAX problem reporting form
+		
 	   return buf.toString();
    }
    
+	String ajaxJavaScript(String signature) {
+		return "<SCRIPT TYPE='text/javascript'>\n"
+		+ "function ajaxSubmit(url,id,note,email) {\n"
+		+ "  var xmlhttp;\n"
+		+ "  if (url.length==0) return false;\n"
+		+ "  xmlhttp=GetXmlHttpObject();\n"
+		+ "  if (xmlhttp==null) {\n"
+		+ "    alert ('Sorry, your browser does not support AJAX!');\n"
+		+ "    return false;\n"
+		+ "  }\n"
+		+ "  xmlhttp.onreadystatechange=function() {\n"
+		+ "    if (xmlhttp.readyState==4) {\n"
+		+ "      document.getElementById('feedback' + id).innerHTML="
+		+ "      '<FONT COLOR=#EE0000><b>Thank you. An editor will review your comment. "
+		+ "</b></FONT><p>';\n"
+		+ "    }\n"
+		+ "  }\n"
+		+ "  url += '&QuestionId=' + id + '&sig=" + signature + "&Notes=' + note + '&Email=' + email;\n"
+		+ "  xmlhttp.open('GET',url,true);\n"
+		+ "  xmlhttp.send(null);\n"
+		+ "  return false;\n"
+		+ "}\n"
+		+ "function ajaxStars(nStars) {\n"
+		+ "  var xmlhttp;\n"
+		+ "  if (nStars==0) return false;\n"
+		+ "  xmlhttp=GetXmlHttpObject();\n"
+		+ "  if (xmlhttp==null) {\n"
+		+ "    alert ('Sorry, your browser does not support AJAX!');\n"
+		+ "    return false;\n"
+		+ "  }\n"
+		+ "  xmlhttp.onreadystatechange=function() {\n"
+		+ "    var msg;\n"
+		+ "    switch (nStars) {\n"
+		+ "      case '1': msg='1 star - If you are dissatisfied with ChemVantage, '"
+		+ "                + 'please take a moment to <a href=/Feedback?sig=" + signature + ">tell us why</a>.';"
+		+ "                break;\n"
+		+ "      case '2': msg='2 stars - If you are dissatisfied with ChemVantage, '"
+		+ "                + 'please take a moment to <a href=/Feedback?sig=" + signature + ">tell us why</a>.';"
+		+ "                break;\n"
+		+ "      case '3': msg='3 stars - Thank you. <a href=/Feedback?sig=" + signature + ">Click here</a> '"
+		+ "                + 'to provide additional feedback.';"
+		+ "                break;\n"
+		+ "      case '4': msg='4 stars - Thank you';"
+		+ "                break;\n"
+		+ "      case '5': msg='5 stars - Thank you!';"
+		+ "                break;\n"
+		+ "      default: msg='You clicked ' + nStars + ' stars.';\n"
+		+ "    }\n"
+		+ "    if (xmlhttp.readyState==4) {\n"
+		+ "      document.getElementById('vote').innerHTML=msg;\n"
+		+ "    }\n"
+		+ "  }\n"
+		+ "  xmlhttp.open('GET','Feedback?UserRequest=AjaxRating&NStars='+nStars,true);\n"
+		+ "  xmlhttp.send(null);\n"
+		+ "  return false;\n"
+		+ "}\n"
+		+ "function GetXmlHttpObject() {\n"
+		+ "  if (window.XMLHttpRequest) { // code for IE7+, Firefox, Chrome, Opera, Safari\n"
+		+ "    return new XMLHttpRequest();\n"
+		+ "  }\n"
+		+ "  if (window.ActiveXObject) { // code for IE6, IE5\n"
+		+ "    return new ActiveXObject('Microsoft.XMLHTTP');\n"
+		+ "  }\n"
+		+ "  return null;\n"
+		+ "}\n"
+		+ "</SCRIPT>";
+	}
+
 	String orderResponses(String[] answers) {
 		Arrays.sort(answers);
 		String studentAnswer = "";
