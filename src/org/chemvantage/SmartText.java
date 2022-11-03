@@ -219,13 +219,16 @@ public class SmartText extends HttpServlet {
 		   //  get the index of st.conceptIds that corresponds to the conceptId for this question:
 		   int index = st.conceptIds.indexOf(conceptId);
 		   boolean isCorrect = q.isCorrect(studentAnswer);
+		   buf.append(ajaxJavaScript(user.getTokenSignature()));  // for providing user feedback on the question item
+		   
 		   if (isCorrect) {
 			   st.scores[index]++;
 			   st.answeredKeys.add(Key.create(Question.class,q.id));
 			   buf.append("<b>Congratulations! Your answer was correct.</b><br/>");
-			   QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));
+			   Score s = Score.getInstance(user.getId(), a);
+			   ofy().save().entity(s).now();
+			   QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue   
 		   } else {
-			   buf.append(ajaxJavaScript(user.getTokenSignature()));  // for providing user feedback on the question item
 			   st.missedQuestions[index]++;
 			   buf.append("<b>Sorry, your answer was incorrect.</b>"
 			   		+ " (<a href=# onClick=\"document.getElementById('correctAnswer').style='display:block';return false;\">show me</a>)<br/>");
@@ -246,10 +249,8 @@ public class SmartText extends HttpServlet {
 		   }
 		   
 		   if (score==possibleScore) {
-			   buf.append("You have answered all of the key concept questions for this assignment. Your score is 100%.");
-			   Score s = Score.getInstance(user.getId(), a);
-			   ofy().save().entity(s).now();
-			   QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue   
+			   buf.append("You have answered all of the key concept questions for this assignment. Your score is 100%.<br/><br/>");
+			   buf.append(fiveStars());
 		   } else if (st.missedQuestions[index]<2) {  // continue to the next question
 			   buf.append("This assignment is " + 100*score/possibleScore + "% complete.<br/><br/>");
 			   buf.append("<a href=/SmartText?UserRequest=PrintQuestion&STTransactionId=" + st.id + "&sig=" + user.getTokenSignature() + ">"
@@ -334,6 +335,45 @@ public class SmartText extends HttpServlet {
 		+ "  return null;\n"
 		+ "}\n"
 		+ "</SCRIPT>";
+	}
+
+	String fiveStars() {
+		StringBuffer buf = new StringBuffer();
+
+		buf.append("<script type='text/javascript'>"
+				+ "  var star1 = new Image(); star1.src='images/star1.gif';"
+				+ "  var star2 = new Image(); star2.src='images/star2.gif';"
+				+ "  var set = false;"
+				+ "  function showStars(n) {"
+				+ "    if (!set) {"
+				+ "      document.getElementById('vote').innerHTML=(n==0?'(click a star)':''+n+(n>1?' stars':' star'));"
+				+ "      for (i=1;i<6;i++) {document.getElementById(i).src=(i<=n?star2.src:star1.src)}"
+				+ "    }"
+				+ "  }"
+				+ "  function setStars(n) {"
+				+ "    if (!set) {"
+				+ "      ajaxStars(n);"
+				+ "      set = true;"
+				+ "      document.getElementById('sliderspan').style='display:none';"
+				+ "    }"
+				+ "  }"
+				+ "</script>");
+
+		buf.append("<div>Please rate your overall experience with ChemVantage:<br />"
+				+ "<span id='vote' style='font-family:tahoma; color:#EE0000;'>(click a star):</span><br>");
+
+		for (int iStar=1;iStar<6;iStar++) {
+			buf.append("<img src='images/star1.gif' id='" + iStar + "' "
+					+ "style='width:30px; height:30px;' "
+					+ "onmouseover=showStars(this.id); onClick=setStars(this.id); onmouseout=showStars(0); />");
+		}
+		buf.append("<span id=sliderspan style='opacity:0'>"
+				+ "<input type=range id=slider min=1 max=5 value=3 onfocus=document.getElementById('sliderspan').style='opacity:1';showStars(this.value); oninput=showStars(this.value);>"
+				+ "<button onClick=setStars(document.getElementById('slider').value);>submit</button>"
+				+ "</span>");
+		buf.append("</div><br/>");
+
+		return buf.toString(); 
 	}
 
 	String orderResponses(String[] answers) {
