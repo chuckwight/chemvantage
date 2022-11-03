@@ -295,8 +295,9 @@ public class Feedback extends HttpServlet {
 		Properties props = new Properties();
 		Session session = Session.getDefaultInstance(props, null);
 
+		if (email==null) email = "";
 		String msgBody = r.view(user);
-		if (email != null && !email.isEmpty()) msgBody += "Respond to " + email;
+		if (!email.isEmpty()) msgBody += "Respond to " + email;
 		else {  // try to get the user's email address from the NRPS service
 			try {
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
@@ -304,7 +305,7 @@ public class Feedback extends HttpServlet {
 				String userId = user.getId();
 				String raw_id = userId.substring(userId.lastIndexOf("/")+1);  // userId according to the platform
 				email = members.get(raw_id)[2];
-				if (!email.isEmpty()) msgBody += "Platform provided email: " + email;				
+				if (email != null && !email.isEmpty()) msgBody += "Platform provided email: " + email;				
 			} catch (Exception e) {}
 		}
 		

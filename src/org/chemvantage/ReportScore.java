@@ -105,8 +105,13 @@ public class ReportScore extends HttpServlet {
 			Score s = ofy().load().key(k).safe();
 			String response = LTIMessage.postUserScore(s,userId);
 			buf.append(response);
-			if (response.contains("Success") || response.contains("422"));
-			else {			
+			if (response.contains("Success") || response.contains("422")) return buf.toString();
+			else {
+				int slashIndex = userId.lastIndexOf("/");
+				String platform_id = userId.substring(0, slashIndex);
+				String lmsId = userId.substring(slashIndex+1);
+				User u = new User(platform_id,lmsId);
+				if (u.isInstructor()) return buf.toString();
 				if (attempts < 4) {
 					long countdownMillis = (long) Math.pow(2,attempts)*10800000L;
 					Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue

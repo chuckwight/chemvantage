@@ -261,7 +261,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				} catch (Exception e) {}
 			}
 
-			// It is still possible to create assignments without DeepLinking; in this case, retrieve the assignment via the ResourceLinkId value
+		// It is still possible to create assignments without DeepLinking; in this case, retrieve the assignment via the ResourceLinkId value
 			if (myAssignment == null) {
 				debug.append("Retrieving assignment by resourceLinkId. ");
 				myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();
@@ -507,13 +507,16 @@ public class LTIv1p3Launch extends HttpServlet {
 			case "Quiz":
 			case "Homework":
 				a.textId = Long.parseLong(request.getParameter("TextId"));
-				a.chapterNumber = Integer.parseInt(request.getParameter("ChaptrNumber"));
+				a.chapterNumber = Integer.parseInt(request.getParameter("ChapterNumber"));
 				Text text = ofy().load().type(Text.class).id(a.textId).safe();
 				for (Chapter ch : text.chapters) {
 					if (ch.chapterNumber == a.chapterNumber) {
 						a.title = a.assignmentType + " - " + ch.title;
+						a.conceptIds = ch.conceptIds;
 						a.questionKeys.clear();
-						for (Long conceptId : ch.conceptIds) a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType",a.assignmentType.equals("SmartText")?"Quiz":a.assignmentType).filter("conceptId",conceptId).keys().list());
+						for (Long conceptId : ch.conceptIds) {
+							a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType",a.assignmentType.equals("SmartText")?"Quiz":a.assignmentType).filter("conceptId",conceptId).keys().list());
+						}
 						break;
 					}
 				}

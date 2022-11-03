@@ -501,7 +501,7 @@ public class Question implements Serializable, Cloneable {
 		if (showDetails) {
 			buf.append("<div id='feedback" + this.id + "'>");
 			buf.append("<FORM NAME=suggest" + this.id 
-					+ " onSubmit=\" return ajaxSubmit('/Feedback?UserRequest=ReportAProblem','" + this.id + "',document.suggest" + this.id + ".Notes.value,document.suggest" + this.id + ".Email.value);\">"
+					+ " onSubmit=\" return ajaxSubmit('/Feedback?UserRequest=ReportAProblem','" + this.id + "',document.suggest" + this.id + ".Notes.value,document.suggest" + this.id + ".Email.value); return false;\">"
 					+ "<INPUT TYPE=BUTTON VALUE='Report a problem with this question' "
 					+ "onClick=\"javascript:getElementById('form" + this.id + "').style.display='';this.style.display='none'\" />"
 					+ "<div id='form" + this.id + "' style='display: none'>");
