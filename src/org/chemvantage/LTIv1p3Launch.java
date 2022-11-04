@@ -509,16 +509,12 @@ public class LTIv1p3Launch extends HttpServlet {
 				a.textId = Long.parseLong(request.getParameter("TextId"));
 				a.chapterNumber = Integer.parseInt(request.getParameter("ChapterNumber"));
 				Text text = ofy().load().type(Text.class).id(a.textId).safe();
-				for (Chapter ch : text.chapters) {
-					if (ch.chapterNumber == a.chapterNumber) {
-						a.title = a.assignmentType + " - " + ch.title;
-						a.conceptIds = ch.conceptIds;
-						a.questionKeys.clear();
-						for (Long conceptId : ch.conceptIds) {
-							a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType",a.assignmentType.equals("SmartText")?"Quiz":a.assignmentType).filter("conceptId",conceptId).keys().list());
-						}
-						break;
-					}
+				Chapter ch = null;
+				for (Chapter c : text.chapters) if (c.chapterNumber == a.chapterNumber) ch = c;
+				a.title = a.assignmentType + " - " + ch.title;
+				a.questionKeys.clear();
+				for (Long conceptId : ch.conceptIds) {
+					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType",a.assignmentType.equals("SmartText")?"Quiz":a.assignmentType).filter("conceptId",conceptId).keys().list());
 				}
 				break;
 			case "PracticeExam":

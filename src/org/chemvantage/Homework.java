@@ -144,10 +144,9 @@ public class Homework extends HttpServlet {
 		
 		StringBuffer buf = new StringBuffer();		
 		try {
-			if (a.topicId!=0 && (a.title==null || a.conceptIds.isEmpty())) {  // legacy Quiz only provided topicId
+			if (a.topicId!=0 && a.title==null) {  // legacy Quiz only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
 				a.title = t.title;
-				a.conceptIds = t.conceptIds;
 				ofy().save().entity(a);
 			}
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
@@ -182,20 +181,27 @@ public class Homework extends HttpServlet {
 		try {
 			if (hwa==null) {  // anonymous user; print a quiz on Chapter 1 of the first smartText entity
 				hwa = new Assignment();
+				hwa.id = 0L;
 				hwa.assignmentType = "Quiz";
 				Text text = ofy().load().type(Text.class).filter("smartText",true).first().now();
-				hwa.title = text.chapters.get(0).title;
-				hwa.conceptIds = text.chapters.get(0).conceptIds;
-			} else if (hwa.title==null || hwa.conceptIds.isEmpty()) {  // legacy Quiz only provided topicId
+				Chapter ch = text.chapters.get(0);
+				hwa.title = ch.title;
+				hwa.textId = text.id;
+				hwa.chapterNumber = ch.chapterNumber;
+			} else if (hwa.title==null) {  // legacy Quiz only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(hwa.topicId).now();
 				hwa.title = t.title;
-				hwa.conceptIds = t.conceptIds;
 				ofy().save().entity(hwa);
 			}
 			
 			// get a List of homework questionKeys for this topic:
 			List<Key<Question>> allQuestionKeys = new ArrayList<Key<Question>>();
-			for (Long cId : hwa.conceptIds) allQuestionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());
+			Text text = ofy().load().type(Text.class).id(hwa.textId).now();
+			Chapter ch = null;
+			for (Chapter c : text.chapters) {
+				if (c.chapterNumber == hwa.chapterNumber) ch = c;
+			}
+			for (Long cId : ch.conceptIds) allQuestionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());
 			
 			if (!allQuestionKeys.containsAll(hwa.questionKeys)) {  // might be missing a few questions due to customization
 				List<Key<Question>> addKeys = new ArrayList<Key<Question>>();
@@ -280,7 +286,7 @@ public class Homework extends HttpServlet {
 					j++;
 				}
 			}
-			buf.append((i>1?"<h4>Assigned Exercises</h4>":"") + assignedQuestions + "</div>" + (hwa!=null && j>1?"<h4>Optional Exercises</h4>":"") + optionalQuestions + "</div>");
+			buf.append((i>1?"<h4>Assigned Exercises</h4>":"") + assignedQuestions + "</div>" + (i>1 && j>1?"<h4>Optional Exercises</h4>":"") + optionalQuestions + "</div>");
 		} catch (Exception e) {
 			buf.append(e.toString() + " " + e.getMessage());
 		}
@@ -299,10 +305,10 @@ public class Homework extends HttpServlet {
 			
 			if (hwa==null) {  // anonymous user; use the quiz on Chapter 1 of the first smartText entity
 				hwa = new Assignment();
-				hwa.assignmentType = "Quiz";
+				hwa.id = 0L;
+				hwa.assignmentType = "Homework";
 				Text text = ofy().load().type(Text.class).filter("smartText",true).first().now();
 				hwa.title = text.chapters.get(0).title;
-				hwa.conceptIds = text.chapters.get(0).conceptIds;
 			}
 			
 			if (hwa.attemptsAllowed != null) {
@@ -349,7 +355,7 @@ public class Homework extends HttpServlet {
 					buf.append("<img src=/images/learn_more.png alt='learn more here' /> You can learn more about this topic at <a href='" 
 					+ q.learn_more_url + "' target=_blank>" + q.learn_more_url + "</a><br/><br/>");
 				buf.append("Alternatively, you may wish to "
-						+ "<a href=/Homework?AssignmentId=" + (hwa.id==null?0:hwa.id)
+						+ "<a href=/Homework?AssignmentId=" + hwa.id
 						+ "&sig=" + user.getTokenSignature() + ">" 
 						+ "return to this homework assignment</a> to work on another problem.<p>");
 					buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework>"
@@ -400,7 +406,6 @@ public class Homework extends HttpServlet {
 			
 			debug.append("score is " + studentScore + " out of " + possibleScore + " points...");
 			HWTransaction ht = null;
-			long assignmentId = hwa==null?0:hwa.id;
 			
 			showWork = request.getParameter("ShowWork"+questionId);
 			
@@ -410,12 +415,12 @@ public class Homework extends HttpServlet {
 				ofy().save().entity(r);
 				debug.append("response saved...");
 				
-				ht = new HWTransaction(q.id,user.getHashedId(),now,studentScore,assignmentId,possibleScore,showWork);
+				ht = new HWTransaction(q.id,user.getHashedId(),now,studentScore,hwa.id,possibleScore,showWork);
 				ofy().save().entity(ht).now();
 				
 				// create/update/store a HomeworkScore object
 				try {  // throws exception if hwa==null
-					if (hwa.questionKeys.contains(k) && hwa.lti_ags_lineitem_url != null) {
+					if (!user.isAnonymous() && hwa.questionKeys.contains(k) && hwa.lti_ags_lineitem_url != null) {
 						Score s = Score.getInstance(user.getId(),hwa);
 						ofy().save().entity(s).now();
 						QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",hwa.id.toString()).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue	
@@ -451,7 +456,7 @@ public class Homework extends HttpServlet {
 				}
 				
 				int nAttempts = 0;
-				if (hwa != null && hwa.attemptsAllowed != null) {
+				if (hwa.attemptsAllowed != null) {
 					nAttempts = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",hwa.id).count();
 					buf.append("The maximum number of attempts for each question on this assignment is " + hwa.attemptsAllowed + "<br/>");
 					if (nAttempts<hwa.attemptsAllowed) buf.append("The retry delay for this question is " + retryDelayMinutes + (retryDelayMinutes>1?" minutes. ":" minute. ") + "<br/>");
@@ -476,12 +481,10 @@ public class Homework extends HttpServlet {
 			boolean offerHint = studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id);
 
 			buf.append(ajaxJavaScript(user.getTokenSignature()));
-
+			
 			if (!user.isAnonymous()) {
 				if (studentScore>0 || user.isInstructor()) {
-					buf.append("<div id=solution style='display:none'>" 
-							+ (user.isAnonymous()?q.printAnswerToStudents():q.printAllToStudents(studentAnswer)) 
-							+ "</div><br/>");
+					buf.append("<div id=solution style='display:none'>" + q.printAllToStudents(studentAnswer) + "</div><br/>");
 				}
 
 				if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) 
@@ -493,7 +496,7 @@ public class Homework extends HttpServlet {
 
 				if (hwa != null) buf.append("You may <a href=/Homework?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review your scores on this assignment</a>.<p>");
 			}
-			buf.append("<a href=/Homework?AssignmentId=" + hwa==null?0:hwa.id + "&sig=" + user.getTokenSignature()  
+			buf.append("<a href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature()  
 					+ (offerHint?"&Q=" + q.id + "><span style='color:#EE0000'>Please give me a hint</span>":">Return to this homework assignment") + "</a> or "
 					+ "<a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a> ");
 			
@@ -863,8 +866,13 @@ public class Homework extends HttpServlet {
 	
 	List<Question> getSortedHWQuestions(Assignment a) {
 		// make a List of Questions for the assignment's conceptIds, including any extra questions already in a.questionKeys
+		Text text = ofy().load().type(Text.class).id(a.textId).now();
+		Chapter ch = null;
+		for (Chapter c : text.chapters) {
+			if (c.chapterNumber == a.chapterNumber) ch = c;
+		}
 		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
-		for (Long cId : a.conceptIds) questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",cId).keys().list());
+		for (Long cId : ch.conceptIds) questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());
 		if (!questionKeys.containsAll(a.questionKeys)) {  // add the missing keys
 			for (Key<Question> k : a.questionKeys) if (!questionKeys.contains(k)) questionKeys.add(k);
 		}
