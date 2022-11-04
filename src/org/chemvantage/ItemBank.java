@@ -45,7 +45,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.googlecode.objectify.cmd.Query;
 
 @WebServlet("/items")
 public class ItemBank extends HttpServlet {
