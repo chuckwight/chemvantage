@@ -147,6 +147,7 @@ public class Homework extends HttpServlet {
 			if (a.topicId!=0 && a.title==null) {  // legacy Quiz only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
 				a.title = t.title;
+				a.topicId = 0;
 				ofy().save().entity(a);
 			}
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
@@ -191,6 +192,7 @@ public class Homework extends HttpServlet {
 			} else if (hwa.title==null) {  // legacy Quiz only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(hwa.topicId).now();
 				hwa.title = t.title;
+				hwa.topicId = 0;
 				ofy().save().entity(hwa);
 			}
 			
@@ -887,6 +889,7 @@ public class Homework extends HttpServlet {
 	}
 
 	String orderResponses(String[] answers) {
+		if (answers==null) return "";
 		Arrays.sort(answers);
 		String studentAnswer = "";
 		for (String a : answers) studentAnswer = studentAnswer + a;

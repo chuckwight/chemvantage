@@ -154,6 +154,7 @@ public class Quiz extends HttpServlet {
 			if (a.topicId!=0 && a.title==null) {  // legacy Quiz only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
 				a.title = t.title;
+				a.topicId = 0;
 				ofy().save().entity(a);
 			}
 			
@@ -197,6 +198,7 @@ public class Quiz extends HttpServlet {
 			} else if (qa.topicId!=0 && qa.title==null) {  // legacy Quiz only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(qa.topicId).now();
 				qa.title = t.title;
+				qa.topicId = 0;
 				ofy().save().entity(qa);
 			}
 			debug.append("1");
@@ -934,6 +936,7 @@ public class Quiz extends HttpServlet {
 	}
 	
 	String orderResponses(String[] answers) {
+		if (answers==null) return "";
 		Arrays.sort(answers);
 		String studentAnswer = "";
 		for (String a : answers) studentAnswer = studentAnswer + a;

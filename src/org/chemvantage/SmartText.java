@@ -83,8 +83,8 @@ public class SmartText extends HttpServlet {
 
    static String printTextHeader(Text t,Chapter c) {
 	   StringBuffer buf = new StringBuffer();
-	   buf.append("<h2>Reading Assignment</h2>");
-	   buf.append("<div style=display:table><div style=display:table-row><div style=display:table-cell;vertical-align:top;width:450px;padding-right:20px>");
+	   buf.append("<div style=display:table><div style='display:table-row;'><div style='display:table-cell;vertical-align:top;width:450px;padding-right:20px'>");
+	   buf.append("<h3>Reading Assignment</h3>");
 	   buf.append("Textbook: <b>" + t.title + "</b><br/>"
 	   		+ "Author: " + t.author + "<br/><br/>"
 	   		+ "Chapter " + c.chapterNumber + ": " + c.title + "<br/>");
@@ -93,7 +93,7 @@ public class SmartText extends HttpServlet {
 	   if (c.url != null) buf.append("<li><a href='" + c.url + "' target=_blank>Read this chapter online</a></li>");
 	   buf.append("<li><a href='" + t.printCopyUrl + "' target=_blank>Order a print copy of this book</a></li>");
 	   buf.append("</ul>");
-	   buf.append("</div><div style=display:table-cell;vertical-align:top>");
+	   buf.append("</div><div style='display:table-cell;vertical-align:top;'>");
 	   buf.append("<img src='" + t.imgUrl + "' alt='Textbook cover art'>");
 	   buf.append("</div></div></div>");
 	  
@@ -377,11 +377,12 @@ public class SmartText extends HttpServlet {
 	}
 
 	String orderResponses(String[] answers) {
-	   Arrays.sort(answers);
-	   String studentAnswer = "";
-	   for (String a : answers) studentAnswer = studentAnswer + a;
-	   return studentAnswer;
-   }
+		if (answers==null) return "";
+		Arrays.sort(answers);
+		String studentAnswer = "";
+		for (String a : answers) studentAnswer = studentAnswer + a;
+		return studentAnswer;
+	}
 
 
 }
