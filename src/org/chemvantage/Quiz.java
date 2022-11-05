@@ -76,7 +76,7 @@ public class Quiz extends HttpServlet {
 				out.println(Subject.header("Your Class ChemVantage Scores") + showSummary(user,a) + Subject.footer);
 				break;
 			case "AssignQuizQuestions":
-				if (user.isInstructor()) out.println(Subject.header("Customize ChemVantage Quiz Assignment") + selectQuestionsForm(user,a) + Subject.footer);
+				if (user.isInstructor()) out.println(Subject.header("Customize ChemVantage Quiz Assignment") + selectQuestionsForm(user,a,request) + Subject.footer);
 				break;
 			default: 
 				out.println(Subject.header("ChemVantage Quiz") + printQuiz(user,a) + Subject.footer);
@@ -850,7 +850,7 @@ public class Quiz extends HttpServlet {
 		return true;
 	}
 	
-	String selectQuestionsForm(User user, Assignment a) {
+	String selectQuestionsForm(User user,Assignment a, HttpServletRequest request) {
 		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
 		
 		StringBuffer buf = new StringBuffer();
@@ -878,37 +878,65 @@ public class Quiz extends HttpServlet {
 					+ "<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "Number of attempts allowed for this assignment: <input type=text size=10 name=AttemptsAllowed " 
 					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /> "
-					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' /><br/>"
-					+ "</form><br/><br/>");
+					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' />"
+					+ "</form><br/>");
 			
-			buf.append("You may select the items that will be used for this group by checking the boxes in the left column. "
-					+ "Students are provided answers to the items that they answer incorrectly. "
-					+ "Therefore, the total number of questions should be "
-					+ "larger than 10, but not much larger than 50.  Experience shows that 30 items is about right in most cases.<p>"
+			buf.append("You may select the items that will be used for this assignment by checking the boxes in the left column below. "
+					+ "Students are provided answers to the items that they answer incorrectly. Therefore, the total number of questions should be "
+					+ "larger than 10, but not much larger than 50.  Experience shows that 40 items is about right in most cases. "
 					+ "If you don't see a question you want to include, you may "
-					+ "<a href=/Contribute?AssignmentType=Quiz&sig=" + user.getTokenSignature() + ">contribute a new question item</a> to the database.<p>");
+					+ "<a href=/Contribute?AssignmentType=Quiz&sig=" + user.getTokenSignature() + ">contribute a new question item</a> to the database.<br/><br/>");
 
-			// make a List of Questions for the assignment's conceptIds, including any extra questions already in a.questionKeys
-			Text text = ofy().load().type(Text.class).id(a.textId).now();
-			Chapter ch = null;
-			for (Chapter c : text.chapters) {
-				if (c.chapterNumber == a.chapterNumber) ch = c;
-			}
-			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
-			for (Long cId : ch.conceptIds) questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",cId).keys().list());
+			// make a List of conceptIds covered by this Quiz
+			List<Long> conceptIds = new ArrayList<Long>();
+			// first, include conceptIds from the text chapter, if one exists
+			try {
+				Text text = ofy().load().type(Text.class).id(a.textId).safe();
+				for (Chapter c : text.chapters) {
+					if (c.chapterNumber == a.chapterNumber) conceptIds.addAll(c.conceptIds);
+					break;
+				}
+			} catch (Exception e) {}
+			// next, include a new conceptId if selected:
+			try {
+				conceptIds.add(Long.parseLong(request.getParameter("ConceptId")));
+			} catch (Exception e) {}
 			
+			// Make a list of key concepts already covered by this Quiz:
+			List<Key<Concept>> conceptKeys = ofy().load().type(Concept.class).keys().list();
+			Map<Key<Concept>,Concept> keyConcepts = ofy().load().keys(conceptKeys);
+			if (conceptIds.size()>0) {
+				buf.append("The questions listed below cover the following key concepts:<ul>");
+				for (Long cId : conceptIds) buf.append("<li>" + keyConcepts.get(Key.create(Concept.class,cId)).title + "</li>");
+				buf.append("</ul>");
+			}
+			// Create a short form to select one additional key concept to include (will exclude the previous selection, if any)
+			buf.append("<form method=get action=/Quiz>"
+					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+					+ "You may include additional question items from another key concept: "
+					+ "<input type=hidden name=UserRequest value=AssignQuizQuestions /><select name=ConceptId>");
+			for (Key<Concept> k : conceptKeys) if (!conceptIds.contains(k.getId())) buf.append("<option value=" + k.getId() + ">" + keyConcepts.get(k).title + "</option>");
+			buf.append("<input type=submit value='Include This Concept' /></form><hr><br/>");
+			
+			// now we have all of the relevant conceptIds. Make a list of questions carrying these attributes:
+			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
+			for (Long cId : conceptIds) questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",cId).keys().list());
+			
+			// if necessary, add any existing questiinKeys not already in the list (from legacy or edited assignments)
 			if (!questionKeys.containsAll(a.questionKeys)) {  // add the missing keys
 				for (Key<Question> k : a.questionKeys) if (!questionKeys.contains(k)) questionKeys.add(k);
 			}
 			
-			List<Question> questions = new ArrayList<Question>(ofy().load().keys(a.questionKeys).values());
+			// make a list questions to select for this assignment
+			List<Question> questions = new ArrayList<Question>(ofy().load().keys(questionKeys).values());
 			
 			// This dummy form uses javascript to select/deselect all questions
-			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
+			buf.append("<FORM NAME=DummyForm><INPUT id=selectAll TYPE=CHECKBOX NAME=SelectAll this.indeterminant=true"
 					+ "onClick=\"for (var i=0;i<document.Questions.QuestionId.length;i++)"
 					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}\""
 					+ "> Select/Unselect All</FORM>");
-
+			buf.append("<script>document.getElementById('selectAll').indeterminate=true;</script>");
+			
 			// Make a list of individual questions that can be selected or deselected for this assignment
 			buf.append("<FORM NAME=Questions METHOD=POST ACTION=/Quiz>"
 					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"

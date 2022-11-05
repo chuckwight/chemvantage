@@ -81,7 +81,7 @@ public class Homework extends HttpServlet {
 				out.println(Subject.header("Your Class ChemVantage Scores") + showSummary(user,request) + Subject.footer);
 				break;
 			case "AssignHomeworkQuestions":
-				if (user.isInstructor()) out.println(Subject.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user,a) + Subject.footer);
+				if (user.isInstructor()) out.println(Subject.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user,a,request) + Subject.footer);
 				else out.println(Subject.header("Customize ChemVantage Homework Assignment") + "<h2>Forbidden</h2>You must be signed in as the instructor to perform this functuon." + Subject.footer);
 				break;
 			default:
@@ -144,7 +144,7 @@ public class Homework extends HttpServlet {
 		
 		StringBuffer buf = new StringBuffer();		
 		try {
-			if (a.topicId!=0 && a.title==null) {  // legacy Quiz only provided topicId
+			if (a.topicId!=0 && a.title==null) {  // legacy assignment only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
 				a.title = t.title;
 				a.topicId = 0;
@@ -180,16 +180,16 @@ public class Homework extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		
 		try {
-			if (hwa==null) {  // anonymous user; print a quiz on Chapter 1 of the first smartText entity
+			if (hwa==null) {  // anonymous user; print an assignment on Chapter 1 of the first smartText entity
 				hwa = new Assignment();
 				hwa.id = 0L;
-				hwa.assignmentType = "Quiz";
+				hwa.assignmentType = "Homework";
 				Text text = ofy().load().type(Text.class).filter("smartText",true).first().now();
 				Chapter ch = text.chapters.get(0);
 				hwa.title = ch.title;
 				hwa.textId = text.id;
 				hwa.chapterNumber = ch.chapterNumber;
-			} else if (hwa.title==null) {  // legacy Quiz only provided topicId
+			} else if (hwa.title==null) {  // legacy Homework assignment only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(hwa.topicId).now();
 				hwa.title = t.title;
 				hwa.topicId = 0;
@@ -305,7 +305,7 @@ public class Homework extends HttpServlet {
 			Key<Question> k = Key.create(Question.class,questionId);
 			Question q = ofy().load().key(k).safe();
 			
-			if (hwa==null) {  // anonymous user; use the quiz on Chapter 1 of the first smartText entity
+			if (hwa==null) {  // anonymous user; use the assignment on Chapter 1 of the first smartText entity
 				hwa = new Assignment();
 				hwa.id = 0L;
 				hwa.assignmentType = "Homework";
@@ -805,11 +805,11 @@ public class Homework extends HttpServlet {
 		return true;
 	}
 	
-	String selectQuestionsForm(User user,Assignment a) {
+	String selectQuestionsForm(User user,Assignment a,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			buf.append("<h3>Customize Homework Assignment</h3>");
-			buf.append("<form action=/Quiz method=post>"
+			buf.append("<form action=/Homework method=post>"
 					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "<b>Title:</b>&nbspHomework - <input type=text size=25 name=AssignmentTitle value='" + a.title + "' />&nbsp;"
 					+ "<input type=submit name=UserRequest value='Save New Title' /></form><br/>");
@@ -824,20 +824,76 @@ public class Homework extends HttpServlet {
 			
 			// Allow instructor to pick individual question items from all active questions:
 			buf.append("Select the homework questions below to be assigned for grading. "  // The questions are presented below in "
-				//	+ "approximate order of increasing difficuly, as measured by the percentage of correct submissions. "
+				//	+ "approximate order of increasing difficulty, as measured by the percentage of correct submissions. "
 					+ "Then click the 'Use Selected Items' button. Each question is worth 1 point, so the maximum possible "
 					+ "score is equal to the number of questions selected. Students may work the optional problems; "
-					+ "however, these are not included in the scores reported to the class LMS.<p>"
+					+ "however, these are not included in the scores reported to the class LMS. "
 					+ "If you don't see a question you want to include, you may "
 					+ "<a href=/Contribute?AssignmentType=Homework&sig=" + user.getTokenSignature() 
 					+ ">contribute a new question item</a> to the database.<p>");
 			
+			// make a List of conceptIds covered by this assignment
+			List<Long> conceptIds = new ArrayList<Long>();
+			// first, include conceptIds from the text chapter, if one exists
+			try {
+				Text text = ofy().load().type(Text.class).id(a.textId).safe();
+				for (Chapter c : text.chapters) {
+					if (c.chapterNumber == a.chapterNumber) conceptIds.addAll(c.conceptIds);
+					break;
+				}
+			} catch (Exception e) {}
+			// next, include any conceptIds included in this request:
+			try {
+				String[] newConceptIds = request.getParameterValues("ConceptId");
+				if (newConceptIds != null) {
+					for (int i=0;i<newConceptIds.length;i++) {
+						Long cId = Long.parseLong(newConceptIds[i]);
+						if (!conceptIds.contains(cId)) conceptIds.add(cId);
+					}
+				}
+			} catch (Exception e) {}
+
+			// Make a list of key concepts already covered by this assignment:
+			List<Key<Concept>> conceptKeys = ofy().load().type(Concept.class).keys().list();
+			Map<Key<Concept>,Concept> keyConcepts = ofy().load().keys(conceptKeys);
+			if (conceptIds.size()>0) {
+				buf.append("The questions listed below cover the following key concepts:<ul>");
+				for (Long cId : conceptIds) buf.append("<li>" + keyConcepts.get(Key.create(Concept.class,cId)).title + "</li>");
+				buf.append("</ul>");
+			}
+			// Create a short form to select one additional key concept to include (will exclude the previous selection, if any)
+			buf.append("<form method=get action=/Homework>"
+					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+					+ "You may include additional question items from another key concept: "
+					+ "<input type=hidden name=UserRequest value=AssignHomeworkQuestions /><select name=ConceptId>");
+			for (Key<Concept> k : conceptKeys) if (!conceptIds.contains(k.getId())) buf.append("<option value=" + k.getId() + ">" + keyConcepts.get(k).title + "</option>");
+			buf.append("<input type=submit value='Include This Concept' /></form><hr><br/>");
+
+			// now we have all of the relevant conceptIds. Make a list of questions carrying these attributes:
+			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
+			for (Long cId : conceptIds) questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());
+
+			// if necessary, add any existing questiinKeys not already in the list (from legacy or edited assignments)
+			if (!questionKeys.containsAll(a.questionKeys)) {  // add the missing keys
+				for (Key<Question> k : a.questionKeys) if (!questionKeys.contains(k)) questionKeys.add(k);
+			}
+						
+			// sort the questionKeys in order of increasing difficulty
+			if (questionKeys.size()>1) Collections.sort(questionKeys, new SortBySuccessPct());
+			// get a Map of all the questions (unordered)
+			Map<Key<Question>,Question> questions = ofy().load().keys(questionKeys);
+			
+			// create an ordered List of Questions (by difficulty)
+			List<Question> orderedQuestions = new ArrayList<Question>();
+			for (Key<Question> k : questionKeys) orderedQuestions.add(questions.get(k));
+			
 			// This dummy form uses javascript to select/deselect all questions
-			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
+			buf.append("<FORM NAME=DummyForm><INPUT id=selectAll TYPE=CHECKBOX NAME=SelectAll "
 					+ "onClick='for (var i=0;i<document.Questions.QuestionId.length;i++)"
 					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}'"
 					+ "> Select/Unselect All</FORM>");
-
+			buf.append("<script>document.getElementById('selectAll').indeterminate=true;</script>");
+			
 			// Make a list of individual questions that can be selected or deselected for this assignment
 			buf.append("<FORM NAME=Questions METHOD=POST ACTION=/Homework>"
 					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
@@ -846,10 +902,8 @@ public class Homework extends HttpServlet {
 					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items'>");
 			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
 
-			List<Question> questions = getSortedHWQuestions(a);
-			
 			int i=0;
-			for (Question q : questions) {
+			for (Question q : orderedQuestions) {
 				q.setParameters();  // creates randomly selected parameters
 				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
 						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
@@ -866,28 +920,6 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	List<Question> getSortedHWQuestions(Assignment a) {
-		// make a List of Questions for the assignment's conceptIds, including any extra questions already in a.questionKeys
-		Text text = ofy().load().type(Text.class).id(a.textId).now();
-		Chapter ch = null;
-		for (Chapter c : text.chapters) {
-			if (c.chapterNumber == a.chapterNumber) ch = c;
-		}
-		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
-		for (Long cId : ch.conceptIds) questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());
-		if (!questionKeys.containsAll(a.questionKeys)) {  // add the missing keys
-			for (Key<Question> k : a.questionKeys) if (!questionKeys.contains(k)) questionKeys.add(k);
-		}
-		// sort the keys by the percentage of correct answers by other users (increasing difficulty)
-		if (questionKeys.size()>1) Collections.sort(questionKeys, new SortBySuccessPct());
-		
-		Map<Key<Question>,Question> questions = ofy().load().keys(questionKeys);
-
-		List<Question> orderedQuestions = new ArrayList<Question>();
-		for (Key<Question> k : questionKeys) orderedQuestions.add(questions.get(k));
-		return orderedQuestions;
-	}
-
 	String orderResponses(String[] answers) {
 		if (answers==null) return "";
 		Arrays.sort(answers);
