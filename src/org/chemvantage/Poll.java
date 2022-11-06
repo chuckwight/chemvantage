@@ -636,67 +636,50 @@ public class Poll extends HttpServlet {
 	String editPage(User user,Assignment a,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		if (!user.isInstructor()) return "Not Authorized";
-		
+
 		if (a.getQuestionKeys().size() == 0) buf.append("<h2>Create a New Class Poll</h2>");
 		else buf.append("<h2>Edit Class Poll</h2>");
-		
-		long topicId = 0;
+
+		Long conceptId = null;
+		List<Question> addQuestions = new ArrayList<Question>();
 		try {
-			topicId = Long.parseLong(request.getParameter("TopicId"));
-		} catch (Exception e2) {}
-		String assignmentType = request.getParameter("AssignmentType");
-		if (assignmentType == null) assignmentType = "";
-		
-		// Display a selector to display candidate questions by topic and assignmentType
-		buf.append("Add questions to this poll by selecting from existing question items:");
+			conceptId = Long.parseLong(request.getParameter("ConceptId"));
+			addQuestions = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",conceptId).list();
+		} catch (Exception e) {}
 
-		buf.append("<FORM NAME=TopicSelect METHOD=GET><INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "' />");
-		buf.append("<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='EditPoll' />");
-		buf.append("Topic:" + topicSelectBox(topicId) + " Assignment Type:" + assignmentTypeDropDownBox(assignmentType));
-		buf.append(" <INPUT TYPE=SUBMIT VALUE='Display Questions' />");
-		buf.append("</FORM><br />");
-		
-		boolean selecting = (topicId>0 && !assignmentType.isEmpty());
-		
-		if (!selecting) buf.append("<form method=get action='/Poll'>"
+		// Display a selector to display candidate questions by key concept:
+		List<Concept> concepts = ofy().load().type(Concept.class).list();
+		buf.append("<form method=get action=/Poll>"
 				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-				+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='NewQuestion' />"
-				+ "or <input type=submit value='Create a custom question of your own' />"
-				+ "</form><p></p>");
+				+ "<input type=hidden name=UserRequest value=EditPoll>"
+				+ "Add questions related to:"
+				+ "<select name=ConceptId onchange=this.form.submit();><option value=0>Select a key concept</option>");
+		for (Concept c : concepts) buf.append("<option value=" + c.id + (c.id.equals(conceptId)?" selected>":">") + c.title + "</option>");
+		buf.append("</select></form>");
 
-		int i = 0;		
-		if (selecting) {  // show a list of existing question items
-			buf.append("<h3>Available Questions for this Topic</h3>");
-			
-			List<Question> questions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId", topicId).order("pointValue").list();
-			buf.append("<form method=post action='/Poll'><input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
-			buf.append("<input type=hidden name=UserRequest value='AddQuestions' />");
-			buf.append("<input type=submit value='Include the selected items below in the poll' /><p></p>");
-			for (Question q : questions) {
-				i++;
-				q.setParameters(a.id % Integer.MAX_VALUE);
-				buf.append("<div style='display: table-row'>");
-				buf.append("<div style='display: table-cell;width: 55px;'><input type=checkbox name=QuestionId value='" + q.id + "' />&nbsp;" + i + ".</div>");
-				buf.append("<div style='display: table-cell'>" + q.printAll() + "</div>");
-				buf.append("</div>");  // end of row
-			}
-			buf.append("<input type=submit value='Include the selected items below in the poll' /><p></p>");
-			buf.append("</form>");
-		} else if (a.getQuestionKeys().size() > 0) {  // Print a copy of the current poll questions here:
+		int i=0;
+		if (addQuestions.isEmpty()) {  // give option to create a new question and show current questions
+			buf.append("<form method=get action='/Poll'>"
+					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='NewQuestion' />"
+					+ "or <input type=submit value='Create a custom question of your own' /> "
+					+ "</form>");
 			buf.append("<form method=post action='/Poll'><input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 					+ "<input type=hidden name=UserRequest value='DeleteQuestions' />"
-					+ "or <input type=submit value='Remove the selected items below from this poll' />");
-			
+					+ "or <input type=submit value='Remove the selected items below from this poll' /> "
+					+ "or <a href=/Poll?sig=" + user.getTokenSignature() + ">Done Editing</a>");
+
 			buf.append("<h3>Current Questions For This Poll</h3>");
 			int possibleScore = 0;
+			Map<Key<Question>,Question> currentQuestions = ofy().load().keys(a.questionKeys);
 			for (Key<Question> k : a.questionKeys) {  // main loop to present questions
-				Question q = getQuestion(k);
+				Question q = currentQuestions.get(k);
 				if (q==null) { // somehow the question has been deleted from the database
 					a.questionKeys.remove(k);
 					ofy().save().entity(a);
 					continue;
 				}
-				q.setParameters(a.id % Integer.MAX_VALUE);
+				q.setParameters();
 				i++;
 				buf.append("<div style='display: table-row'>");
 				buf.append("<div style='display: table-cell;width: 55px;'><input type=checkbox name=QuestionId value='" + q.id + "' />&nbsp;" + i + ".</div>");
@@ -705,13 +688,26 @@ public class Poll extends HttpServlet {
 				possibleScore += q.pointValue;
 			}
 			buf.append("</form>");
-			
-			if (a.questionKeys.size()>0) buf.append("<hr />This poll is worth a possible " + possibleScore + " points.");
-		
-			// Click here when done editing:
-			buf.append("<form method=get action='/Poll'><input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-					+ "<input type=submit value='Click here when you are finished editing this poll' /></form>");
-		}
+
+			if (a.questionKeys.size()>0) buf.append("<hr/>This poll is worth a possible " + possibleScore + " points. "
+					+ "<a href=/Poll?sig=" + user.getTokenSignature() + ">Done Editing</a><br/><br/>");		
+		} else {  // present candidate questions for including in the Poll
+			buf.append("<form method=post action='/Poll'><input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
+			buf.append("<input type=hidden name=UserRequest value='AddQuestions' />");
+			buf.append("<input type=submit value='Include the selected items below in the poll' /> "
+					+ "or <a href=/Poll?UserRequest=EditPoll&sig=" + user.getTokenSignature() + ">Cancel</a><br/><br/>");
+			for (Question q : addQuestions) {
+				i++;
+				q.setParameters(a.id % Integer.MAX_VALUE);
+				buf.append("<div style='display: table-row'>");
+				buf.append("<div style='display: table-cell;width: 55px;'><input type=checkbox name=QuestionId value='" + q.id + "' />&nbsp;" + i + ".</div>");
+				buf.append("<div style='display: table-cell'>" + q.printAll() + "</div>");
+				buf.append("</div>");  // end of row
+			}
+			buf.append("<input type=submit value='Include the selected items above in the poll' /> "
+					+ "or <a href=/Poll?UserRequest=EditPoll&sig=" + user.getTokenSignature() + ">Cancel</a><br/><br/>");
+			buf.append("</form>");
+		} 
 		return buf.toString();
 	}
 
