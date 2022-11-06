@@ -37,37 +37,43 @@ public class QuizTransaction implements Serializable {
 			int possibleScore;
 			String topicTitle;
 			
-    QuizTransaction() {}
-    
-    public QuizTransaction(long topicId,String topicTitle,String userId,Date downloaded,Date graded,int score,long assignmentId,int possibleScore) {
-    	this.topicId = topicId;
-    	this.topicTitle = topicTitle;
-    	this.userId = Subject.hashId(userId);
-        this.downloaded = downloaded;
-        this.graded = graded;
-        this.score = score;
-        this.assignmentId = assignmentId;
-        this.possibleScore = possibleScore;
-   }
-   
-    public Long getId() {
-    	return this.id;
-    }
-    
-    public Date getGraded() {
-    	return graded;
-    }
-    
-    public void putPossibleScore(int ps) {
-    	this.possibleScore = ps;
-    }
-    
-    public Date getDownloaded() {
-    	return this.downloaded;
-    }
-    
-    public String tableRow() {
-    	return "<tr><td>" + topicTitle + "</td><td>" + downloaded + "</td><td>" + graded + "</td><td>" + score + "/" + possibleScore + "</td></tr>";
-    }
-    
+	QuizTransaction() {}
+
+	public QuizTransaction(long topicId,String topicTitle,String userId,Date downloaded,Date graded,int score,long assignmentId,int possibleScore) {
+		this.topicId = topicId;
+		this.topicTitle = topicTitle;
+		this.userId = Subject.hashId(userId);
+		this.downloaded = downloaded;
+		this.graded = graded;
+		this.score = score;
+		this.assignmentId = assignmentId;
+		this.possibleScore = possibleScore;
+	}
+
+	public QuizTransaction(long assignmentId,String hashedId) {
+		this.assignmentId = assignmentId;
+		this.userId = hashedId;
+		this.downloaded = new Date();
+	}
+	
+	public Long getId() {
+		return this.id;
+	}
+
+	public Date getGraded() {
+		return graded;
+	}
+
+	public void putPossibleScore(int ps) {
+		this.possibleScore = ps;
+	}
+
+	public Date getDownloaded() {
+		return this.downloaded;
+	}
+
+	public String tableRow() {
+		return "<tr><td>" + topicTitle + "</td><td>" + downloaded + "</td><td>" + graded + "</td><td>" + score + "/" + possibleScore + "</td></tr>";
+	}
+
 }

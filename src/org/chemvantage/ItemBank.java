@@ -26,6 +26,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Properties;
@@ -44,7 +45,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.googlecode.objectify.cmd.Query;
 
 @WebServlet("/items")
 public class ItemBank extends HttpServlet {
@@ -279,12 +279,15 @@ public class ItemBank extends HttpServlet {
 		StringBuffer buf = new StringBuffer(Subject.banner);
 		buf.append("<h2>Question Item Bank</h2>");
 		
-		long topicId = 0;
+		Text text = ofy().load().type(Text.class).filter("title","All Topics").first().now();
+		Chapter chapter = null;
 		try {
-			topicId = Long.parseLong(request.getParameter("TopicId"));
-		} catch (Exception e2) {}
+			int chapterNumber = Integer.parseInt(request.getParameter("ChapterNumber"));
+			for (Chapter c : text.chapters) if (c.chapterNumber == chapterNumber) {chapter = c;break;}
+		} catch (Exception e) {}
+		
 		String assignmentType = request.getParameter("AssignmentType");
-		boolean showQuestions = (topicId >0 && assignmentType != null && assignmentType.length()>0);
+		boolean showQuestions = (chapter != null && assignmentType != null);
 		
 		if (!showQuestions) buf.append("ChemVantage LLC is pleased to share the quiz and homework question items in our database for your "
 				+ "private noncommercial use in teaching. In that context you are not required to provide attribution to ChemVantage. "
@@ -293,8 +296,8 @@ public class ItemBank extends HttpServlet {
 		
 		buf.append("<FORM NAME=TopicSelect METHOD=GET ACTION=/items>");
 		buf.append("<input type=hidden name=code value='" + code + "' />");
-		buf.append("<FONT" + (request.getParameter("TopicId")!=null && topicId==0?" COLOR=RED>":">") + "<b>Topic:</b></FONT>" + topicSelectBox(topicId,true));
-		buf.append("<FONT" + (assignmentType!=null && assignmentType.length()==0?" COLOR=RED>":">") + "<b> Assignment Type:</b></FONT>" + assignmentTypeDropDownBox(assignmentType,true));
+		buf.append("<FONT" + (chapter != null?" COLOR=RED>":">") + "<b>Topic:</b></FONT>" + chapterSelectBox(text,chapter,true));
+		buf.append("<FONT" + (assignmentType != null?" COLOR=RED>":">") + "<b> Assignment Type:</b></FONT>" + assignmentTypeDropDownBox(assignmentType,true));
 		buf.append("<span style='display:none' id=refreshing > Please wait...</span>");
 		buf.append("</FORM><br/>");
 				
@@ -303,7 +306,8 @@ public class ItemBank extends HttpServlet {
 		if ("Homework".equals(assignmentType)) buf.append("For parameterized questions, you can view another version by refreshing your browser page.<br/><br/><hr>");
 		else buf.append("<br/><hr>");
 		
-		List<Question> questions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).list();
+		List<Question> questions = new ArrayList<Question>();
+		for (Long cId : chapter.conceptIds)	questions.addAll(ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",cId).list());
 		if (questions.size()==0) buf.append("Sorry, this topic contains no questions of this type.");
 		
 		for (Question q : questions) {
@@ -323,14 +327,13 @@ public class ItemBank extends HttpServlet {
 		return buf.toString();
 	}
 
-	String topicSelectBox(long topicId,boolean autoSubmit) {
+	String chapterSelectBox(Text text,Chapter chapter,boolean autoSubmit) {
 		StringBuffer buf = new StringBuffer("\n<SELECT NAME=TopicId" + (autoSubmit?" onChange=document.getElementById('refreshing').style='display:inline';submit()>":">"));
-		if (topicId == 0) buf.append("\n<OPTION VALUE=''>Select a topic</OPTION>");
-		Query<Topic> topics = ofy().load().type(Topic.class).order("orderBy");
-		for (Topic t : topics) {
-			if ("Hide".equals(t.orderBy)) continue;
-			buf.append("<OPTION VALUE=" + t.id + (t.id.equals(topicId)?" SELECTED>":">")
-					+ t.title + "</OPTION>\n");
+		if (chapter==null) buf.append("\n<OPTION VALUE=''>Select a topic</OPTION>");
+		for (Chapter c : text.chapters) {
+			buf.append("<OPTION VALUE=" 
+				+ c.chapterNumber + (chapter!=null && c.chapterNumber==chapter.chapterNumber?" SELECTED>":">") + c.title 
+				+ "</OPTION>\n");
 		}
 		buf.append("</SELECT>");
 		return buf.toString();

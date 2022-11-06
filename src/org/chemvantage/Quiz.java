@@ -76,10 +76,10 @@ public class Quiz extends HttpServlet {
 				out.println(Subject.header("Your Class ChemVantage Scores") + showSummary(user,a) + Subject.footer);
 				break;
 			case "AssignQuizQuestions":
-				if (user.isInstructor()) out.println(Subject.header("Customize ChemVantage Quiz Assignment") + selectQuestionsForm(user,a) + Subject.footer);
+				if (user.isInstructor()) out.println(Subject.header("Customize ChemVantage Quiz Assignment") + selectQuestionsForm(user,a,request) + Subject.footer);
 				break;
 			default: 
-				out.println(Subject.header("ChemVantage Quiz") + printQuiz(user,a,request) + Subject.footer);
+				out.println(Subject.header("ChemVantage Quiz") + printQuiz(user,a) + Subject.footer);
 			}
 		} catch (Exception e) {
 			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
@@ -105,6 +105,11 @@ public class Quiz extends HttpServlet {
 			case "UpdateAssignment":
 				a.updateQuestions(request);
 				//doGet(request,response);
+				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
+				break;
+			case "Save New Title":
+				a.title = request.getParameter("AssignmentTitle");
+				ofy().save().entity(a).now();
 				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 				break;
 			case "Set Allowed Time":
@@ -146,19 +151,23 @@ public class Quiz extends HttpServlet {
 		
 		StringBuffer buf = new StringBuffer();		
 		try {
-			Topic t = ofy().load().type(Topic.class).id(a.topicId).safe();
+			if (a.topicId!=0 && a.title==null) {  // legacy Quiz only provided topicId
+				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
+				a.title = t.title;
+				a.topicId = 0;
+				ofy().save().entity(a);
+			}
+			
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
 			
-			buf.append("<h2>General Chemistry Quiz - Instructor Page</h2>");
-			buf.append("Topic covered on this quiz: " + t.getTitle() + "<br/><br/>");
+			buf.append("<h2>Instructor Page</h2>");
+			buf.append("Quiz - " + a.title + "<br/><br/>");
 			
-			int nQuestions = ofy().load().type(Question.class).filter("assignmentType",a.assignmentType).filter("topicId",a.topicId).count();
-			buf.append("Each quiz draws 10 questions randomly from a bank of " + a.questionKeys.size() + " selected questions. "
-					+ "The total number of available questions for this quiz is " + nQuestions + ".<br/><br/>");
-			
-			if (a.timeAllowed != null) buf.append("Students are permitted " + a.timeAllowed/60 + " minutes to complete the quiz.<br/><br/>");
-			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("Students may attempt this assignment an unlimited number of times to improve their score.<br/><br/>");
-			else buf.append("Students may only attempt this assignment " + a.attemptsAllowed + (a.attemptsAllowed==1?" time":" times") + ".<br/><br/>");
+			buf.append("Each quiz draws 10 questions randomly from a bank of " + a.questionKeys.size() + " selected questions.<br/>");			
+			if (a.timeAllowed != null) buf.append("Students are permitted " + a.timeAllowed/60 + " minutes to complete the quiz.<br/>");
+			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("Students may attempt this assignment an unlimited number of times to improve their score.<br/>");
+			else buf.append("Students may only attempt this assignment " + a.attemptsAllowed + (a.attemptsAllowed==1?" time":" times") + ".<br/>");
+			buf.append("<br/>");
 			
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/Quiz?UserRequest=AssignQuizQuestions&sig=" + user.getTokenSignature() + "'>Customize this quiz</a> to set the time allowed, number of attempts allowed, and select the available question items.</LI>"
@@ -173,64 +182,54 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String printQuiz(User user, Assignment a,HttpServletRequest request) { // for anonymous users accessing Quiz servlet directly
-		try {
-			long assignmentId = user.getAssignmentId();
-			long topicId = 0L;
-			if (assignmentId > 0) topicId = a.topicId;
-			else topicId = Long.parseLong(request.getParameter("TopicId"));
-			return printQuiz(user,a,topicId);
-		} catch (Exception e) { // select a random Topic from the OpenStax group
-			List<Topic> topics = ofy().load().type(Topic.class).filter("topicGroup",1).list();
-			Random rand = new Random();
-			Topic t = topics.get(rand.nextInt(topics.size()));
-			return printQuiz(user,null,t.id);
-		}
-	}
-
-	static String printQuiz (User user, Assignment a) {
-		return printQuiz(user,a,a.topicId);
-	}
-	
-	static String printQuiz(User user, Assignment qa, long tId) {
+	static String printQuiz(User user, Assignment qa) {
 		if (user == null) return "<h2>Launch failed because user was not authorized.</h2>";
 		StringBuffer buf = new StringBuffer();
-		
+		StringBuffer debug = new StringBuffer("Debug: ");
 		try {
-			long assignmentId = (qa==null?0L:qa.id);
-			long topicId = qa==null?tId:qa.topicId;
-			Topic topic = ofy().load().type(Topic.class).id(topicId).safe();
-			
+			if (qa==null) {  // anonymous user; print a quiz on Chapter 1 of the first smartText entity
+				qa = new Assignment();
+				qa.id = 0L;
+				qa.assignmentType = "Quiz";
+				Text text = ofy().load().type(Text.class).filter("smartText",true).first().now();
+				Chapter ch = text.chapters.get(0);
+				qa.title = ch.title;
+				for (Long cId : ch.conceptIds) qa.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",cId).keys().list());
+			} else if (qa.topicId!=0 && qa.title==null) {  // legacy Quiz only provided topicId
+				Topic t = ofy().load().type(Topic.class).id(qa.topicId).now();
+				qa.title = t.title;
+				qa.topicId = 0;
+				ofy().save().entity(qa);
+			}
+			debug.append("1");
 			// Check to see if the timeAllowed has been modified by the instructor:
 			int timeAllowed = 900; // default value in seconds
-			if (qa != null && qa.timeAllowed != null) {
+			if (qa.timeAllowed != null) {
 				timeAllowed = qa.timeAllowed; // instructor option, e.g. for student disability accommodations
 				user = User.getUser(user.getTokenSignature(), timeAllowed / 60);
 			}
-
+			debug.append("2");
+			
 			// Check to see if this user has any pending quizzes on this topic:
 			Date now = new Date();
 			Date t15minAgo = new Date(now.getTime() - timeAllowed * 1000); // 15 minutes ago or whatever time was allowed
 			QuizTransaction qt = null;
-			// try to resume a quiz in progress:
-			if (qa == null)  // anonymous user
-				qt = ofy().load().type(QuizTransaction.class).filter("userId", user.getHashedId()).filter("topicId", topicId)
-						.filter("graded", null).filter("downloaded >", t15minAgo).first().now();
-			else   // LTI user
-				qt = ofy().load().type(QuizTransaction.class).filter("userId", user.getHashedId())
-						.filter("assignmentId", assignmentId).filter("graded", null).filter("downloaded >", t15minAgo)
-						.first().now();
+			if (!user.isAnonymous()) qt = ofy().load().type(QuizTransaction.class).filter("userId", user.getHashedId())
+						.filter("assignmentId", qa.id).filter("graded", null).filter("downloaded >", t15minAgo).first().now();
+			debug.append("3");
+			
 			// check to see if attemptsAllowed has been reached
-			int nAttempts = 1;
-			if (qa != null && qa.attemptsAllowed != null) {
-				nAttempts = ofy().load().type(QuizTransaction.class).filter("assignmentId",assignmentId).filter("userId",user.getHashedId()).count();
+			int nAttempts = 0;
+			if (qt==null && qa.attemptsAllowed != null) {
+				nAttempts = ofy().load().type(QuizTransaction.class).filter("assignmentId",qa.id).filter("userId",user.getHashedId()).count();
 				if (nAttempts >= qa.attemptsAllowed) 
 					return "<h2>Sorry, you are only allowed " + qa.attemptsAllowed + " attempt" + (qa.attemptsAllowed==1?"":"s") + " on this assignment.</h2>"
 							+ Subject.banner + showScores(user,user,qa) + "<p>";
 			}
+			debug.append("4");
 			
 			if (qt == null) {  // create a new quizTransation
-				qt = new QuizTransaction(topicId, topic.getTitle(), user.getId(), now, null, 0, assignmentId, 0);
+				qt = new QuizTransaction(qa.id,user.getHashedId());
 				ofy().save().entity(qt).now(); // creates a long id value to use in random number generator
 				nAttempts++;
 			}	
@@ -240,7 +239,7 @@ public class Quiz extends HttpServlet {
 			
 			if (user.isAnonymous()) buf.append(Subject.banner);  // present the ChemVantage banner
 			
-			buf.append("<h2>Quiz - " + topic.title + "</h2>");
+			buf.append("<h2>Quiz - " + qa.title + "</h2>");
 			
 			if (user.isAnonymous()) buf.append("<h3 style='color:#EE0000'>Anonymous User</h3>");			
 			else {
@@ -255,37 +254,34 @@ public class Quiz extends HttpServlet {
 			buf.append("<div id='timer0' style='color: #EE0000'></div>"
 					+ "	<div id='ctrl0' style='font-size: 50%; color: #EE0000'><a href=javascript:toggleTimers() >hide timers</a><p></div>");
 			
+			debug.append("5");
+			
 			buf.append("<FORM NAME=Quiz id=quizForm METHOD=POST ACTION='/Quiz' onSubmit='return confirmSubmission()' >"
 					+ "<INPUT TYPE=HIDDEN NAME='sig' VALUE='" + user.getTokenSignature() + "' />"
-					+ "<INPUT TYPE=HIDDEN NAME='AssignmentId' VALUE='" + assignmentId + "' />"
+					+ "<INPUT TYPE=HIDDEN NAME='AssignmentId' VALUE='" + qa.id + "' />"
 					+ "<input type=hidden name='QuizTransactionId' value='" + qt.getId() + "' />"
-					+ "<input type=hidden name='TopicId' value='" + topicId + "' />"
 					+ "<input type=submit value='Grade This Quiz' />");
-			
-			// verify that all of the assigned questions still exist; remove any keys for deleted questions (house cleaning)
-			List<Key<Question>> allQuestionKeys = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",topicId).keys().list();
-			if (qa != null && !allQuestionKeys.containsAll(qa.questionKeys)) {
-				List<Key<Question>> removeKeys = new ArrayList<Key<Question>>();
-				for (Key<Question> k : qa.questionKeys) if (!allQuestionKeys.contains(k)) removeKeys.add(k);
-				qa.questionKeys.removeAll(removeKeys);
-				ofy().save().entity(qa);
-			}
-			
-			//create a set of available questionKeyss either from the group assignment or from the datastore
-			if (qa != null) allQuestionKeys = new ArrayList<Key<Question>>(qa.questionKeys);  // limit the questions to these
 			
 			// Randomly select the keys to questions to be presented
 			Random rand = new Random(); // create random number generator to select quiz questions
 			rand.setSeed(qt.getId()); // random number generator seeded with QuizTransaction id value
+			List<Key<Question>> allQuestionKeys = new ArrayList<Key<Question>>(qa.questionKeys);  // clone the List
 			List<Key<Question>> myQuestionKeys = new ArrayList<Key<Question>>();
 			while (myQuestionKeys.size()<10 && allQuestionKeys.size()>0) {
 				Key<Question> k = allQuestionKeys.get(rand.nextInt(allQuestionKeys.size()));
 				myQuestionKeys.add(k);
 				allQuestionKeys.remove(k);
 			}
+			debug.append("5");
 			
 			// At this point we should have 10 (or max number) randomly selected questionKeys
 			Map<Key<Question>, Question> quizQuestions = ofy().load().keys(myQuestionKeys);
+			
+			// Housekeeping: if any of the questions does not exist, remove the key from the assignment:
+			if (!quizQuestions.keySet().containsAll(myQuestionKeys)) {
+				for (Key<Question> k : myQuestionKeys) if (!quizQuestions.keySet().contains(k)) qa.questionKeys.remove(k);
+				ofy().save().entity(qa);
+			}
 			
 			int possibleScore = 0;
 			buf.append("<OL>");
@@ -317,7 +313,7 @@ public class Quiz extends HttpServlet {
 			buf.append("<script>startTimers(" + new Date(qt.getDownloaded().getTime() + timeAllowed * 1000).getTime() + ");</script>");
 			
 		} catch (Exception e) {
-			return "<h2>Launch failed because no topic ID was specified.</h2>"; 
+			return "<h2>Sorry, the quiz failed</h2>" + e.getMessage()==null?e.toString():e.getMessage(); 
 		}
 		
 		return buf.toString();
@@ -337,14 +333,16 @@ public class Quiz extends HttpServlet {
 			if (qt.graded != null) {
 				return "<h2>No Score</h2>"
 						+ "Sorry, this quiz was graded on " + df.format(qt.graded) + " and cannot be regraded.<p>"
-						+ "Your score on this quiz was " + qt.score + " out of a possible " + qt.possibleScore + " points.<p>"
-						+ (user.isAnonymous()?"<p><a href=/Quiz?TopicId=" + qt.topicId + "&sig=" + user.getTokenSignature() + ">"
-						+ "Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a>.":"You may repeat this "
-							+ "assignment by launching it from your class learning management system.");
-			}
+						+ "Your score on this quiz was " + qt.score + " out of a possible " + qt.possibleScore + " points.<br/><br/>";
+				}
 
-			// Check to see if the time limit (15 minutes) for taking the Quiz has expired:
-			long assignmentId = qa==null?0L:qa.id;
+			if (qa==null) {  // anonymous user; use the quiz on Chapter 1 of the first smartText entity
+				qa = new Assignment();
+				qa.id = 0L;
+				qa.assignmentType = "Quiz";
+				Text text = ofy().load().type(Text.class).filter("smartText",true).first().now();
+				qa.title = text.chapters.get(0).title;
+			}
 			
 			int timeAllowed = 900;  // default time to complete the quiz, in seconds
 			try {
@@ -352,13 +350,11 @@ public class Quiz extends HttpServlet {
 			} catch (Exception e) {}
 			
 			boolean timeExpired = now.getTime() - qt.downloaded.getTime() > (timeAllowed*1000+10000);
-			//if (now.getTime() - qt.downloaded.getTime() > (timeAllowed*1000+10000)) // includes 10 second grace period
-				//return "Sorry, the " + timeAllowed/60 + " minute time limit for this quiz has expired.";
 			
 			int studentScore = 0;
 			int wrongAnswers = 0;
 
-			buf.append("<h2>Quiz Results - " + qt.topicTitle + "</h2>");
+			buf.append("<h2>Quiz Results - " + qa.title + "</h2>");
 			
 			if (user.isAnonymous()) buf.append("<h3><font color=#EE0000>Anonymous User</font></h3>");
 			buf.append(df.format(now));
@@ -391,7 +387,7 @@ public class Quiz extends HttpServlet {
 						q.setParameters(seed);
 						int score = q.isCorrect(studentAnswer)?q.pointValue:0;
 
-						responses.add(new Response("Quiz",qt.topicId,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,user.getId(),now));
+						responses.add(new Response("Quiz",qa.id,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,user.getId(),now));
 
 						studentScore += score;
 						if (score == 0) {  
@@ -413,7 +409,7 @@ public class Quiz extends HttpServlet {
 			try {
 				if (user.isAnonymous()) throw new Exception();  // don't save Scores for anonymous users
 				Score.updateQuizScore(user.getId(),qt);
-				if (qa.lti_ags_lineitem_url != null) QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue
+				if (qa.lti_ags_lineitem_url != null) QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(qa.id)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue
 			} catch (Exception e) {}
 
 			if (timeExpired) buf.append("<h4>Your score on this quiz is 0 points because it was submitted after the allowed time of " + timeAllowed/60 + " minutes.</h4>");
@@ -482,7 +478,7 @@ public class Quiz extends HttpServlet {
 			if (studentScore == qt.possibleScore && !timeExpired) buf.append(fiveStars());
 			else buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
 
-			if (qa != null) buf.append("You may <a href=/Quiz?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review all your scores on this assignment</a>.<p>") ;
+			if (!user.isAnonymous()) buf.append("You may <a href=/Quiz?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review all your scores on this assignment</a>.<p>") ;
 
 			if (!user.isAnonymous() && qa.lti_ags_lineitem_url == null) {
 				buf.append("<b>Please note:</b> Your score was not reported back to the grade book of your class "
@@ -490,11 +486,7 @@ public class Quiz extends HttpServlet {
 						+ (user.isInstructor()?"For instructors this is common.":"") + "<p>");				
 			}
 			
-			// If qa==null this is an anonymous user, otherwise is an LTI user:
-			if (user.isAnonymous()) buf.append("<a href=/Quiz?TopicId=" + qt.topicId + "&sig=" + user.getTokenSignature() + ">Take this quiz again</a> or go back to the <a href=/>ChemVantage home page</a> ");
-			else if (qa.attemptsAllowed==null) buf.append("You may take this quiz again by clicking the assignment link in your learning management system "		
-					+ "or <a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a>.");
-			else buf.append("This quiz may be attempted a total of " + qa.attemptsAllowed + " times to improve your score.");
+			if (!user.isAnonymous()) buf.append("Use the assignment link in your learning management system to repeat this quiz, or <a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a>");
 		} catch (Exception e) {
 			buf.append("Sorry, this quiz could not be scored.<br>" + e.getMessage());
 		}
@@ -618,8 +610,7 @@ public class Quiz extends HttpServlet {
 		+ "  xmlhttp.onreadystatechange=function() {\n"
 		+ "    if (xmlhttp.readyState==4) {\n"
 		+ "      document.getElementById('feedback' + id).innerHTML="
-		+ "      '<FONT COLOR=#EE0000><b>Thank you. An editor will review your comment. "
-		+ "</b></FONT><p>';\n"
+		+ "      '<FONT COLOR=#EE0000><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
 		+ "  url += '&QuestionId=' + id + '&sig=" + signature + "&Notes=' + note + '&Email=' + email;\n"
@@ -681,9 +672,8 @@ public class Quiz extends HttpServlet {
 		Date now = new Date();
 		
 		try {
-			Topic t = ofy().load().type(Topic.class).id(a.getTopicId()).safe();
 			buf.append("Assignment Number: " + a.id + "<br>");
-			buf.append("Topic: "+ t.title + "<br>");
+			buf.append("Topic: "+ a.title + "<br>");
 			buf.append("Valid: " + df.format(now) + "<p>");
 			
 			List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).filter("userId",forUser.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
@@ -726,11 +716,8 @@ public class Quiz extends HttpServlet {
 									+ "even for a score of zero, and ChemVantage will try to refresh the best score to the LMS.<p>");
 						} else throw new Exception();
 					} catch (Exception e) {
-						buf.append("ChemVantage was unable to retrieve the score for this assignment from the LMS.<br>"
-								+ "Sometimes it takes several seconds for a score to be posted in the LMS grade book.<br>");
-						if (s.score==0 && s.numberOfAttempts<=1) buf.append("It appears that the assignment may not have been submitted for a score yet. ");
-						if (forUser.isInstructor()) buf.append("Some LMS providers do not accept score submissions for instructors or test students.");
-						buf.append("<p>");
+						if (s.score==0 && s.numberOfAttempts<=1) buf.append("It appears that the assignment may not have been submitted for a score yet.<br/>");
+						buf.append("<br/>");
 					}
 				}
 				buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Quiz Score</th></tr>");
@@ -757,9 +744,9 @@ public class Quiz extends HttpServlet {
 
 		if (a.lti_ags_lineitem_url != null && a.lti_nrps_context_memberships_url != null) {
 			try { // code for LTI version 1.3
-				Topic t = ofy().load().type(Topic.class).id(a.getTopicId()).safe();
+				//Topic t = ofy().load().type(Topic.class).id(a.getTopicId()).safe();
 				
-				buf.append("<h3>" + a.assignmentType + " - " + t.title + "</h3>");
+				buf.append("<h3>" + a.assignmentType + " - " + a.title + "</h3>");
 				buf.append("Assignment ID: " + a.id + "<br>");
 				buf.append("Valid: " + new Date() + "<p>");
 				buf.append("The roster below is obtained using the Names and Role Provisioning service offered by your learning management system, "
@@ -863,15 +850,18 @@ public class Quiz extends HttpServlet {
 		return true;
 	}
 	
-	String selectQuestionsForm(User user, Assignment a) {
+	String selectQuestionsForm(User user,Assignment a, HttpServletRequest request) {
 		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
 		
 		StringBuffer buf = new StringBuffer();
 		try {
-			Topic t = ofy().load().type(Topic.class).id(a.getTopicId()).safe();
+			//Topic t = ofy().load().type(Topic.class).id(a.getTopicId()).safe();
 			
 			buf.append("<h3>Customize Quiz Assignment</h3>");
-			buf.append("<b>Topic: " + t.title + "</b><p>");
+			buf.append("<form action=/Quiz method=post>"
+					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+					+ "<b>Title:</b>&nbsp;Quiz - <input type=text size=25 name=AssignmentTitle value='" + a.title + "' />&nbsp;"
+					+ "<input type=submit name=UserRequest value='Save New Title' /></form><br/>");
 					
 			if (a.timeAllowed==null) a.timeAllowed = 900; // default time for completing the exam
 			
@@ -879,7 +869,7 @@ public class Quiz extends HttpServlet {
 			buf.append("Each quiz consists of 10 questions selected at random from the items below. The default time allowed "
 					+ "to complete each quiz is 15 minutes, but you may change this (e.g., to create a special assignment for "
 					+ "a student requiring extended time up to 60 minutes).<br>");
-			buf.append("<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + ">"
+			buf.append("<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "Time allowed for this assignment: <input type=text size=5 name=TimeAllowed value=" + a.timeAllowed/60. + "> minutes. "
 					+ "<input type=submit name=UserRequest value='Set Allowed Time'><br>"
 					+ "</form><p>");
@@ -888,24 +878,65 @@ public class Quiz extends HttpServlet {
 					+ "<form action=/Quiz method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "Number of attempts allowed for this assignment: <input type=text size=10 name=AttemptsAllowed " 
 					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /> "
-					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' /><br/>"
-					+ "</form><br/><br/>");
+					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' />"
+					+ "</form><br/>");
 			
-			buf.append("You may select the items that will be used for this group by checking the boxes in the left column. "
-					+ "Students are provided answers to the items that they answer incorrectly. "
-					+ "Therefore, the total number of questions should be "
-					+ "larger than 10, but not much larger than 50.  Experience shows that 30 items is about right in most cases.<p>"
+			buf.append("You may select the items that will be used for this assignment by checking the boxes in the left column below. "
+					+ "Students are provided answers to the items that they answer incorrectly. Therefore, the total number of questions should be "
+					+ "larger than 10, but not much larger than 50.  Experience shows that 40 items is about right in most cases. "
 					+ "If you don't see a question you want to include, you may "
-					+ "<a href=/Contribute?TopicId=" + t.id + "&AssignmentType=Quiz&sig=" + user.getTokenSignature() + ">contribute a new question item</a> to the database.<p>");
+					+ "<a href=/Contribute?AssignmentType=Quiz&sig=" + user.getTokenSignature() + ">contribute a new question item</a> to the database.<br/><br/>");
 
-			List<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",t.id).filter("isActive",true).list();
+			// make a List of conceptIds covered by this Quiz
+			List<Long> conceptIds = new ArrayList<Long>();
+			// first, include conceptIds from the text chapter, if one exists
+			try {
+				Text text = ofy().load().type(Text.class).id(a.textId).safe();
+				for (Chapter c : text.chapters) {
+					if (c.chapterNumber == a.chapterNumber) conceptIds.addAll(c.conceptIds);
+					break;
+				}
+			} catch (Exception e) {}
+			// next, include a new conceptId if selected:
+			try {
+				conceptIds.add(Long.parseLong(request.getParameter("ConceptId")));
+			} catch (Exception e) {}
+			
+			// Make a list of key concepts already covered by this Quiz:
+			List<Key<Concept>> conceptKeys = ofy().load().type(Concept.class).keys().list();
+			Map<Key<Concept>,Concept> keyConcepts = ofy().load().keys(conceptKeys);
+			if (conceptIds.size()>0) {
+				buf.append("The questions listed below cover the following key concepts:<ul>");
+				for (Long cId : conceptIds) buf.append("<li>" + keyConcepts.get(Key.create(Concept.class,cId)).title + "</li>");
+				buf.append("</ul>");
+			}
+			// Create a short form to select one additional key concept to include (will exclude the previous selection, if any)
+			buf.append("<form method=get action=/Quiz>"
+					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+					+ "You may include additional question items from another key concept: "
+					+ "<input type=hidden name=UserRequest value=AssignQuizQuestions /><select name=ConceptId>");
+			for (Key<Concept> k : conceptKeys) if (!conceptIds.contains(k.getId())) buf.append("<option value=" + k.getId() + ">" + keyConcepts.get(k).title + "</option>");
+			buf.append("<input type=submit value='Include This Concept' /></form><hr><br/>");
+			
+			// now we have all of the relevant conceptIds. Make a list of questions carrying these attributes:
+			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
+			for (Long cId : conceptIds) questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",cId).keys().list());
+			
+			// if necessary, add any existing questiinKeys not already in the list (from legacy or edited assignments)
+			if (!questionKeys.containsAll(a.questionKeys)) {  // add the missing keys
+				for (Key<Question> k : a.questionKeys) if (!questionKeys.contains(k)) questionKeys.add(k);
+			}
+			
+			// make a list questions to select for this assignment
+			List<Question> questions = new ArrayList<Question>(ofy().load().keys(questionKeys).values());
 			
 			// This dummy form uses javascript to select/deselect all questions
-			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
+			buf.append("<FORM NAME=DummyForm><INPUT id=selectAll TYPE=CHECKBOX NAME=SelectAll this.indeterminant=true"
 					+ "onClick=\"for (var i=0;i<document.Questions.QuestionId.length;i++)"
 					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}\""
 					+ "> Select/Unselect All</FORM>");
-
+			buf.append("<script>document.getElementById('selectAll').indeterminate=true;</script>");
+			
 			// Make a list of individual questions that can be selected or deselected for this assignment
 			buf.append("<FORM NAME=Questions METHOD=POST ACTION=/Quiz>"
 					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
@@ -933,6 +964,7 @@ public class Quiz extends HttpServlet {
 	}
 	
 	String orderResponses(String[] answers) {
+		if (answers==null) return "";
 		Arrays.sort(answers);
 		String studentAnswer = "";
 		for (String a : answers) studentAnswer = studentAnswer + a;

@@ -83,8 +83,8 @@ public class SmartText extends HttpServlet {
 
    static String printTextHeader(Text t,Chapter c) {
 	   StringBuffer buf = new StringBuffer();
-	   buf.append("<h2>Reading Assignment</h2>");
-	   buf.append("<div style=display:table><div style=display:table-row><div style=display:table-cell;vertical-align:top;width:450px;padding-right:20px>");
+	   buf.append("<div style=display:table><div style='display:table-row;'><div style='display:table-cell;vertical-align:top;width:450px;padding-right:20px'>");
+	   buf.append("<h3>Reading Assignment</h3>");
 	   buf.append("Textbook: <b>" + t.title + "</b><br/>"
 	   		+ "Author: " + t.author + "<br/><br/>"
 	   		+ "Chapter " + c.chapterNumber + ": " + c.title + "<br/>");
@@ -93,7 +93,7 @@ public class SmartText extends HttpServlet {
 	   if (c.url != null) buf.append("<li><a href='" + c.url + "' target=_blank>Read this chapter online</a></li>");
 	   buf.append("<li><a href='" + t.printCopyUrl + "' target=_blank>Order a print copy of this book</a></li>");
 	   buf.append("</ul>");
-	   buf.append("</div><div style=display:table-cell;vertical-align:top>");
+	   buf.append("</div><div style='display:table-cell;vertical-align:top;'>");
 	   buf.append("<img src='" + t.imgUrl + "' alt='Textbook cover art'>");
 	   buf.append("</div></div></div>");
 	  
@@ -219,11 +219,15 @@ public class SmartText extends HttpServlet {
 		   //  get the index of st.conceptIds that corresponds to the conceptId for this question:
 		   int index = st.conceptIds.indexOf(conceptId);
 		   boolean isCorrect = q.isCorrect(studentAnswer);
+		   buf.append(ajaxJavaScript(user.getTokenSignature()));  // for providing user feedback on the question item
+		   
 		   if (isCorrect) {
 			   st.scores[index]++;
 			   st.answeredKeys.add(Key.create(Question.class,q.id));
 			   buf.append("<b>Congratulations! Your answer was correct.</b><br/>");
-			   QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));
+			   Score s = Score.getInstance(user.getId(), a);
+			   ofy().save().entity(s).now();
+			   QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue   
 		   } else {
 			   st.missedQuestions[index]++;
 			   buf.append("<b>Sorry, your answer was incorrect.</b>"
@@ -233,7 +237,7 @@ public class SmartText extends HttpServlet {
 		   }
 		   
 		   if (a != null) {
-			   Response r = new Response("SmartText",a.topicId,q.id,studentAnswer,q.getCorrectAnswer(),isCorrect?1:0,1,user.getId(),new Date());
+			   Response r = new Response("SmartText",conceptId,q.id,studentAnswer,q.getCorrectAnswer(),isCorrect?1:0,1,user.getId(),new Date());
 			   ofy().save().entity(r);
 		   }
 		   
@@ -245,10 +249,8 @@ public class SmartText extends HttpServlet {
 		   }
 		   
 		   if (score==possibleScore) {
-			   buf.append("You have answered all of the key concept questions for this assignment. Your score is 100%.");
-			   Score s = Score.getInstance(user.getId(), a);
-			   ofy().save().entity(s).now();
-			   QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue   
+			   buf.append("You have answered all of the key concept questions for this assignment. Your score is 100%.<br/><br/>");
+			   buf.append(fiveStars());
 		   } else if (st.missedQuestions[index]<2) {  // continue to the next question
 			   buf.append("This assignment is " + 100*score/possibleScore + "% complete.<br/><br/>");
 			   buf.append("<a href=/SmartText?UserRequest=PrintQuestion&STTransactionId=" + st.id + "&sig=" + user.getTokenSignature() + ">"
@@ -270,7 +272,7 @@ public class SmartText extends HttpServlet {
 		
 	   return buf.toString();
    }
-   
+
 	String ajaxJavaScript(String signature) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note,email) {\n"
@@ -284,8 +286,7 @@ public class SmartText extends HttpServlet {
 		+ "  xmlhttp.onreadystatechange=function() {\n"
 		+ "    if (xmlhttp.readyState==4) {\n"
 		+ "      document.getElementById('feedback' + id).innerHTML="
-		+ "      '<FONT COLOR=#EE0000><b>Thank you. An editor will review your comment. "
-		+ "</b></FONT><p>';\n"
+		+ "      '<FONT COLOR=#EE0000><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
 		+ "  url += '&QuestionId=' + id + '&sig=" + signature + "&Notes=' + note + '&Email=' + email;\n"
@@ -339,7 +340,47 @@ public class SmartText extends HttpServlet {
 		+ "</SCRIPT>";
 	}
 
+	String fiveStars() {
+		StringBuffer buf = new StringBuffer();
+
+		buf.append("<script type='text/javascript'>"
+				+ "  var star1 = new Image(); star1.src='images/star1.gif';"
+				+ "  var star2 = new Image(); star2.src='images/star2.gif';"
+				+ "  var set = false;"
+				+ "  function showStars(n) {"
+				+ "    if (!set) {"
+				+ "      document.getElementById('vote').innerHTML=(n==0?'(click a star)':''+n+(n>1?' stars':' star'));"
+				+ "      for (i=1;i<6;i++) {document.getElementById(i).src=(i<=n?star2.src:star1.src)}"
+				+ "    }"
+				+ "  }"
+				+ "  function setStars(n) {"
+				+ "    if (!set) {"
+				+ "      ajaxStars(n);"
+				+ "      set = true;"
+				+ "      document.getElementById('sliderspan').style='display:none';"
+				+ "    }"
+				+ "  }"
+				+ "</script>");
+
+		buf.append("<div>Please rate your overall experience with ChemVantage:<br />"
+				+ "<span id='vote' style='font-family:tahoma; color:#EE0000;'>(click a star):</span><br>");
+
+		for (int iStar=1;iStar<6;iStar++) {
+			buf.append("<img src='images/star1.gif' id='" + iStar + "' "
+					+ "style='width:30px; height:30px;' "
+					+ "onmouseover=showStars(this.id); onClick=setStars(this.id); onmouseout=showStars(0); />");
+		}
+		buf.append("<span id=sliderspan style='opacity:0'>"
+				+ "<input type=range id=slider min=1 max=5 value=3 onfocus=document.getElementById('sliderspan').style='opacity:1';showStars(this.value); oninput=showStars(this.value);>"
+				+ "<button onClick=setStars(document.getElementById('slider').value);>submit</button>"
+				+ "</span>");
+		buf.append("</div><br/>");
+
+		return buf.toString(); 
+	}
+
 	String orderResponses(String[] answers) {
+		if (answers==null) return "";
 		Arrays.sort(answers);
 		String studentAnswer = "";
 		for (String a : answers) studentAnswer = studentAnswer + a;
