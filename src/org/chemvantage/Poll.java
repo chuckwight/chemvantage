@@ -40,7 +40,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
-import com.googlecode.objectify.cmd.Query;
 
 @WebServlet("/Poll")
 public class Poll extends HttpServlet {
@@ -654,7 +653,10 @@ public class Poll extends HttpServlet {
 				+ "<input type=hidden name=UserRequest value=EditPoll>"
 				+ "Add questions related to:"
 				+ "<select name=ConceptId onchange=this.form.submit();><option value=0>Select a key concept</option>");
-		for (Concept c : concepts) buf.append("<option value=" + c.id + (c.id.equals(conceptId)?" selected>":">") + c.title + "</option>");
+		for (Concept c : concepts) {
+			if (c.orderBy.startsWith("0")) continue; // skip reserved concepts
+			buf.append("<option value=" + c.id + (c.id.equals(conceptId)?" selected>":">") + c.title + "</option>");
+		}
 		buf.append("</select></form>");
 
 		int i=0;
@@ -710,29 +712,6 @@ public class Poll extends HttpServlet {
 		} 
 		return buf.toString();
 	}
-
-	String assignmentTypeDropDownBox(String defaultType) {
-		if (defaultType == null) defaultType = "";
-		StringBuffer buf = new StringBuffer("<SELECT NAME=AssignmentType>");
-		if (defaultType.isEmpty()) buf.append("<OPTION VALUE=''>Select a type</OPTION>");
-		buf.append("<OPTION" + (defaultType.equals("Quiz")?" SELECTED":"") + ">Quiz</OPTION>"
-		+ "<OPTION" + (defaultType.equals("Homework")?" SELECTED":"") + ">Homework</OPTION>"
-		+ "<OPTION" + (defaultType.equals("Exam")?" SELECTED":"") + ">Exam</OPTION>"
-		+ "<OPTION" + (defaultType.equals("Video")?" SELECTED":"") + ">Video</OPTION>"
-		+ "</SELECT>");
-		return buf.toString();
-	}
-
-	String topicSelectBox(long topicId) {
-		StringBuffer buf = new StringBuffer("<SELECT NAME=TopicId>");
-		if (topicId == 0) buf.append("<OPTION VALUE=''>Select a topic</OPTION>");
-		Query<Topic> topics = ofy().load().type(Topic.class).order("orderBy");
-		for (Topic t : topics) buf.append("<OPTION VALUE=" + t.id + (t.id.equals(topicId)?" SELECTED>":">") + t.title + "</OPTION>");
-		buf.append("</SELECT>");
-		return buf.toString();
-	}
-	
-
 	void addQuestions(User user,Assignment a,HttpServletRequest request) {
 		String[] qids = request.getParameterValues("QuestionId");
 		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();

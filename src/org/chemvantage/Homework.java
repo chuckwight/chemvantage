@@ -860,7 +860,10 @@ public class Homework extends HttpServlet {
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 					+ "You may include additional question items from another key concept: "
 					+ "<input type=hidden name=UserRequest value=AssignHomeworkQuestions /><select name=ConceptId>");
-			for (Key<Concept> k : conceptKeys) if (!conceptIds.contains(k.getId())) buf.append("<option value=" + k.getId() + ">" + keyConcepts.get(k).title + "</option>");
+			for (Key<Concept> k : conceptKeys) {
+				if (conceptIds.contains(k.getId()) || keyConcepts.get(k).title.startsWith("0")) continue;  // skip current and hidden conceptIds
+				buf.append("<option value=" + k.getId() + ">" + keyConcepts.get(k).title + "</option>");
+			}
 			buf.append("<input type=submit value='Include This Concept' /></form><hr><br/>");
 
 			// now we have all of the relevant conceptIds. Make a list of questions carrying these attributes:
