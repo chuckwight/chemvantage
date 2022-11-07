@@ -474,36 +474,19 @@ public class LTIDeepLinks extends HttpServlet {
 				topicIdArray = request.getParameterValues("VideoId");
 				for (int i=0;i<topicIdArray.length;i++) topicIds.add(Long.parseLong(topicIdArray[i]));			
 				break;
-			case "Poll":
-				break; // nothing to do here
-			case "PlacementExam":  // this assignment has fixed hidden topicIds
-				List<Topic> topics = ofy().load().type(Topic.class).list();
-				for (Topic t : topics) {
-					switch (t.title) {
-					case "Essential Chemistry":
-					case "Essential Math":
-					case "Word Problems":
-						topicIds.add(t.id);
-					break;
-					default: continue;
-					}
-				}
-			break;
 			case "Quiz":
 			case "Homework":
-				textId = Long.parseLong(request.getParameter("TextId"));
-				chapterNoArray = request.getParameterValues("ChapterNumber");
-				for (int i=0;i<chapterNoArray.length;i++) chapterNumbers.add(Integer.parseInt(chapterNoArray[i]));
-				break;
 			case "SmartText":
 				textId = Long.parseLong(request.getParameter("TextId"));
 				chapterNoArray = request.getParameterValues("ChapterNumber");
 				for (int i=0;i<chapterNoArray.length;i++) chapterNumbers.add(Integer.parseInt(chapterNoArray[i]));
 				break;
+			case "Poll":
+			case "PlacementExam":  // this assignment has fixed hidden conceptIds
 			}
 			// At this point all of the topicIds or VideoIds or ChapterNumbers are in the List topicIds
-			// If assignmentType is PracticeExam, make a single Assignment, otherwise one Assignment per topic
-			// If assignmentType is PlacementExam, the topics are fixed
+			// If assignmentType is Quiz, Homework, SmartText or Video, allow multiple assignments
+			// If assignmentTyupe is PracticeExam, PlacementExam or Poll, only one assignment will be created
 			// If assignmentType is Poll, there are no topics at this point, but set pollClosed=true;
 			debug.append("data complete.");
 			Assignment a = null;
@@ -529,8 +512,19 @@ public class LTIDeepLinks extends HttpServlet {
 			case "PlacementExam":
 				a = new Assignment(assignmentType,0L,topicIds,d.platform_deployment_id);
 				a.questionKeys = new ArrayList<Key<Question>>();
-				for (int i=0;i<a.topicIds.size();i++) {
-					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",a.topicIds.get(i)).keys().list());
+				a.conceptIds = new ArrayList<Long>();
+				List<Concept> concepts = ofy().load().type(Concept.class).list();
+				for (Concept c : concepts) {
+					switch (c.title) {
+					case "Essential Chemistry":
+					case "Essential Math":
+					case "Word Problems":
+						a.conceptIds.add(c.id);
+					break;
+					}
+				}
+				for (int i=0;i<a.conceptIds.size();i++) {
+					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",a.conceptIds.get(i)).keys().list());
 				}
 				a.valid = now;
 				assignments.add(a);
@@ -548,7 +542,10 @@ public class LTIDeepLinks extends HttpServlet {
 					for (Chapter ch : text.chapters) {
 						if (ch.chapterNumber == a.chapterNumber) {
 							a.title = ch.title;
-							for (Long conceptId : ch.conceptIds) a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType",assignmentType.equals("SmartText")?"Quiz":assignmentType).filter("conceptId",conceptId).keys().list());
+							for (Long conceptId : ch.conceptIds) {
+								a.conceptIds.add(conceptId);
+								a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType",assignmentType.equals("SmartText")?"Quiz":assignmentType).filter("conceptId",conceptId).keys().list());
+							}
 							break;
 						}
 					}

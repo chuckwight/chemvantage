@@ -215,6 +215,7 @@ public class PlacementExam extends HttpServlet {
 			if (a.conceptIds.isEmpty()) {  // legacy assignment with topicIds
 				List<Topic> topics = new ArrayList<Topic>(ofy().load().type(Topic.class).ids(a.topicIds).values());
 				for (Topic t : topics) a.conceptIds.add(t.conceptIds.get(0));
+				ofy().save().entity(a).now();
 			}
 
 			Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
@@ -306,26 +307,9 @@ public class PlacementExam extends HttpServlet {
 			else {
 				String msg = (request.getParameter("ExamPassword")==null?"":"The password was not correct. Please wait...");
 				return passwordPrompt(user,msg);
-			}
-			
+			}			
 			debug.append("1a");
-			// Check to see if the timeAllowed has been modified by the instructor:
-			int timeAllowed = 3600;  // default value in seconds
-			if (a != null && a.timeAllowed!=null) {
-				timeAllowed = a.timeAllowed;  // instructor option, e.g. for student disability accommodations
-				user = User.getUser(user.getTokenSignature(),timeAllowed/60+30);
-			}
-			debug.append("1b");
 			
-			// Now we will retrieve or create a PlacementExamTransaction entity:
-			PlacementExamTransaction pt = null;
-			
-			// Check to see if this user has any pending exams:
-			// A blank transaction means a student has paid for an exam but not taken it yet
-			Date now = new Date();
-			Date startTime = new Date(now.getTime()-timeAllowed*1000);  // about 1 hour ago depending on timeAllowed ago 
-			int nAttempts = 0;
-
 			if (a==null) {  // start dummy assignment for anonymous user
 				a = new Assignment();
 				a.id = 0L;
@@ -342,7 +326,25 @@ public class PlacementExam extends HttpServlet {
 			} else if (a.conceptIds.isEmpty()) {  // legacy assignment with topicIds
 				List<Topic> topics = new ArrayList<Topic>(ofy().load().type(Topic.class).ids(a.topicIds).values());
 				for (Topic t : topics) a.conceptIds.add(t.conceptIds.get(0));
+				ofy().save().entity(a).now();
 			}
+
+			// Check to see if the timeAllowed has been modified by the instructor:
+			int timeAllowed = 3600;  // default value in seconds
+			if (a.timeAllowed!=null) {
+				timeAllowed = a.timeAllowed;  // instructor option, e.g. for student disability accommodations
+				user = User.getUser(user.getTokenSignature(),timeAllowed/60+30);
+			}
+			debug.append("1b");
+			
+			// Now we will retrieve or create a PlacementExamTransaction entity:
+			PlacementExamTransaction pt = null;
+			
+			// Check to see if this user has any pending exams:
+			// A blank transaction means a student has paid for an exam but not taken it yet
+			Date now = new Date();
+			Date startTime = new Date(now.getTime()-timeAllowed*1000);  // about 1 hour ago depending on timeAllowed ago 
+			int nAttempts = 0;
 
 			boolean resumingExam = false;
 			pt = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("graded",null).filter("downloaded >",startTime).first().now();
@@ -1234,9 +1236,10 @@ public class PlacementExam extends HttpServlet {
 		StringBuffer buf = new StringBuffer("<h3>Placement Exam Settings</h3>");
 		try {
 			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-			Map<Long,Topic>topics = ofy().load().type(Topic.class).ids(a.topicIds);
-			buf.append("Topics:<OL>");
-			for (Topic t:topics.values()) buf.append("<LI>" + t.title + "</LI>");
+			
+			List<Concept> concepts = new ArrayList<Concept>(ofy().load().type(Concept.class).ids(a.conceptIds).values());
+			buf.append("Topics covered:<OL>");
+			for (Concept c : concepts) buf.append("<LI>" + c.title + "</LI>");
 			buf.append("</OL>");
 
 			if (a.timeAllowed==null) a.timeAllowed = 3600; // default time for completing the exam
@@ -1266,14 +1269,14 @@ public class PlacementExam extends HttpServlet {
 					+ "<input type=text name=ExamPassword value='" + (a.password==null || a.password.isEmpty()?"":a.password) + "' />"
 					+ "<input type=submit name=UserRequest value='Set Password' /></form><br/><br/>");
 			
-			buf.append("Select the items to be included in exams assigned to your class:<br/><br/>");
+			buf.append("Select the items to be included in this placement exam:<br/><br/>");
 
 			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> questionKeys_04pt = new ArrayList<Key<Question>>();
 			
-			for (long tid : a.topicIds) {  // Sort and collect the question keys
-				questionKeys_02pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",2).keys().list());
-				questionKeys_04pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",4).keys().list());
+			for (long cId : a.conceptIds) {  // Sort and collect the question keys
+				questionKeys_02pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",cId).filter("pointValue",2).keys().list());
+				questionKeys_04pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",cId).filter("pointValue",4).keys().list());
 			}
 
 			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
@@ -1382,9 +1385,9 @@ public class PlacementExam extends HttpServlet {
 		//Create 2 Lists of questionKeys, one for each possibleScores
 		List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
 		List<Key<Question>> questionKeys_04pt = new ArrayList<Key<Question>>();
-		for (long tid : a.topicIds) {  //First collect the question keys
-			questionKeys_02pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",2).keys().list());
-			questionKeys_04pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",4).keys().list());
+		for (long cId : a.conceptIds) {  //First collect the question keys
+			questionKeys_02pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",cId).filter("pointValue",2).keys().list());
+			questionKeys_04pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",cId).filter("pointValue",4).keys().list());
 		}
 		
 		//  Create Maps to hold the question statistics by questionKey
@@ -1502,7 +1505,7 @@ public class PlacementExam extends HttpServlet {
 	int score(PlacementExamTransaction t) {
 		int score = 0;
 		try {
-			for (int i=0;i<t.topicIds.size();i++) score += t.scores[i];
+			for (int i=0;i<t.conceptIds.size();i++) score += t.scores[i];
 		} catch (Exception e) {
 			return 0;
 		}

@@ -154,7 +154,7 @@ public class Quiz extends HttpServlet {
 			if (a.title==null) {  // legacy Quiz only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
 				a.title = t.title;
-				ofy().save().entity(a);
+				ofy().save().entity(a).now();
 			}
 			
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
@@ -197,7 +197,7 @@ public class Quiz extends HttpServlet {
 			} else if (qa.title==null) {  // legacy Quiz only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(qa.topicId).now();
 				qa.title = t.title;
-				ofy().save().entity(qa);
+				ofy().save().entity(qa).now();
 			}
 			debug.append("1");
 			// Check to see if the timeAllowed has been modified by the instructor:
