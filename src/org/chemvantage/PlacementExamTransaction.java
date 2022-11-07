@@ -39,6 +39,7 @@ public class PlacementExamTransaction implements Serializable {
 	@Index	Long assignmentId;
 			Date reviewed;
 			List<Long> topicIds;
+			List<Long> conceptIds;
 			int[] scores;
 			int[] possibleScores;
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
@@ -46,6 +47,15 @@ public class PlacementExamTransaction implements Serializable {
 			Map<Key<Question>,Integer> questionScores = new HashMap<Key<Question>,Integer>();
 
 	public PlacementExamTransaction() {}
+	
+	PlacementExamTransaction(User user,Assignment a) {
+		this.userId = user.getHashedId();
+		this.downloaded = new Date();
+		this.assignmentId = a.id;
+		this.conceptIds = a.conceptIds;
+		this.scores = new int[a.conceptIds.size()];
+		this.possibleScores = new int[a.conceptIds.size()];
+	}
 
 	PlacementExamTransaction(List<Long> topicIds,String userId,Date downloaded,Date graded,int[] scores,int[] possibleScores) {
 		this.topicIds = topicIds;

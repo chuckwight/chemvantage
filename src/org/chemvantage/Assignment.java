@@ -50,7 +50,7 @@ public class Assignment implements java.lang.Cloneable {
 			int chapterNumber;
 			boolean pollClosed=false;
 			String password;
-			//List<Long> conceptIds = new ArrayList<Long>();
+			List<Long> conceptIds = new ArrayList<Long>();
 			List<Long> topicIds; // used for practice exams which have multiple topicIds
 			List<String> resourceLinkIds = new ArrayList<String>();  // deprecated
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();

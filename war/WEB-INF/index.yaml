@@ -110,6 +110,7 @@ indexes:
   properties:
   - name: assignmentType
   - name: conceptId
+  - name: pointValue
   
 - kind: Question
   properties:
