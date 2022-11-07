@@ -144,10 +144,9 @@ public class Homework extends HttpServlet {
 		
 		StringBuffer buf = new StringBuffer();		
 		try {
-			if (a.topicId!=0 && a.title==null) {  // legacy assignment only provided topicId
+			if (a.title==null) {  // legacy assignment only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
 				a.title = t.title;
-				a.topicId = 0;
 				ofy().save().entity(a);
 			}
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
@@ -192,7 +191,6 @@ public class Homework extends HttpServlet {
 			} else if (hwa.title==null) {  // legacy Homework assignment only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(hwa.topicId).now();
 				hwa.title = t.title;
-				hwa.topicId = 0;
 				ofy().save().entity(hwa);
 			}
 			
@@ -272,7 +270,6 @@ public class Homework extends HttpServlet {
 
 				questionBuffer.append("<FORM METHOD=POST ACTION=/Homework>"
 						+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "'>"
-						//+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ (hwa==null?"":"<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>")
 						+ "<div style='display:table-cell'><b>" + (assigned?i:j) + ".&nbsp;</b></div>"
@@ -361,7 +358,6 @@ public class Homework extends HttpServlet {
 						+ "&sig=" + user.getTokenSignature() + ">" 
 						+ "return to this homework assignment</a> to work on another problem.<p>");
 					buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework>"
-							//+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + topic.id + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" +(hwa.id==null?0:hwa.id) + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
 							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
@@ -708,8 +704,6 @@ public class Homework extends HttpServlet {
 		if (!user.isInstructor()) return "You must be logged in as the instructor to view this page.";
 
 		try {
-			//Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
-
 			if (a.lti_nrps_context_memberships_url==null) throw new Exception("No Names and Roles Provisioning support.");
 
 			buf.append("<h3>" + a.assignmentType + " - " + a.title + "</h3>");

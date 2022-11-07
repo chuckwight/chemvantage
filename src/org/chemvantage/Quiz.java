@@ -151,10 +151,9 @@ public class Quiz extends HttpServlet {
 		
 		StringBuffer buf = new StringBuffer();		
 		try {
-			if (a.topicId!=0 && a.title==null) {  // legacy Quiz only provided topicId
+			if (a.title==null) {  // legacy Quiz only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
 				a.title = t.title;
-				a.topicId = 0;
 				ofy().save().entity(a);
 			}
 			
@@ -195,10 +194,9 @@ public class Quiz extends HttpServlet {
 				Chapter ch = text.chapters.get(0);
 				qa.title = ch.title;
 				for (Long cId : ch.conceptIds) qa.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",cId).keys().list());
-			} else if (qa.topicId!=0 && qa.title==null) {  // legacy Quiz only provided topicId
+			} else if (qa.title==null) {  // legacy Quiz only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(qa.topicId).now();
 				qa.title = t.title;
-				qa.topicId = 0;
 				ofy().save().entity(qa);
 			}
 			debug.append("1");
@@ -743,9 +741,7 @@ public class Quiz extends HttpServlet {
 		if (!user.isInstructor()) return "You must be logged in as the instructor to view this page.";
 
 		if (a.lti_ags_lineitem_url != null && a.lti_nrps_context_memberships_url != null) {
-			try { // code for LTI version 1.3
-				//Topic t = ofy().load().type(Topic.class).id(a.getTopicId()).safe();
-				
+			try { 
 				buf.append("<h3>" + a.assignmentType + " - " + a.title + "</h3>");
 				buf.append("Assignment ID: " + a.id + "<br>");
 				buf.append("Valid: " + new Date() + "<p>");
@@ -855,8 +851,6 @@ public class Quiz extends HttpServlet {
 		
 		StringBuffer buf = new StringBuffer();
 		try {
-			//Topic t = ofy().load().type(Topic.class).id(a.getTopicId()).safe();
-			
 			buf.append("<h3>Customize Quiz Assignment</h3>");
 			buf.append("<form action=/Quiz method=post>"
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
