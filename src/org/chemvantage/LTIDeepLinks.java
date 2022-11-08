@@ -407,7 +407,7 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "  var count=0;"
 				+ "  switch (type) {"
 				+ "    case 'PracticeExam':"
-				+ "      for (var i=0;i<stArray.length;i++) if (examArray[i].checked) count++;"
+				+ "      for (var i=0;i<stArray.length;i++) if (stArray[i].checked) count++;"
 				+ "        peSubmit.disabled=(count<3);"
 				+ "      if (count<3) peSubmit.value='Select at least 3 topics';"
 				+ "      else peSubmit.value='Create this exam';"
@@ -524,7 +524,7 @@ public class LTIDeepLinks extends HttpServlet {
 				a.created = now;
 				a.domain = d.platform_deployment_id;
 				a.textId = textId;
-				a.title = "Practice Exam - ";
+				a.title = "";
 				text = ofy().load().type(Text.class).id(textId).safe();
 				a.questionKeys = new ArrayList<Key<Question>>();
 				for (Chapter ch : text.chapters) {
@@ -532,9 +532,8 @@ public class LTIDeepLinks extends HttpServlet {
 						a.title += ch.title + ", ";
 						for (Long conceptId : ch.conceptIds) {
 							a.conceptIds.add(conceptId);
-							a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType",assignmentType.equals("SmartText")?"Quiz":assignmentType).filter("conceptId",conceptId).keys().list());
+							a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",conceptId).keys().list());
 						}
-						break;
 					}
 				}
 				a.title = a.title.substring(0, a.title.lastIndexOf(", "));
