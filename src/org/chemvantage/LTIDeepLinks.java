@@ -252,7 +252,6 @@ public class LTIDeepLinks extends HttpServlet {
 		long textId = 0L;
 		Text text = null;
 		List<Text> texts = null;
-		List<Topic> topics = null;
 		int oneThird = 0;
 		int oneHalf = 0;
 		int i = 0;
@@ -274,7 +273,7 @@ public class LTIDeepLinks extends HttpServlet {
 					buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />" + txt.title + "</label></div>");
 				}
 				buf.append("<br/>");
-				buf.append("<div style='color:red'>Select " + (acceptsMultiple?"at least ":"") + "one of the chapters below for this reading assignment.</div>");
+				buf.append("<div style='color:red'>Select " + (acceptsMultiple?"at least ":"") + "one of the chapters below for this assignment.</div>");
 				buf.append("<div style=display:table;width:100%><div style=display:table-row><div style=display:table-cell>");
 				oneHalf = text.chapters.size()/2;
 					for (Chapter ch : text.chapters) {
@@ -309,7 +308,7 @@ public class LTIDeepLinks extends HttpServlet {
 				}
 				buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />" + allTopics.title + "</label></div><br/>");
 				
-				buf.append("<div style='color:red'>Select " + (acceptsMultiple?"at least ":"") + "one of the chapters below for this reading assignment.</div>");
+				buf.append("<div style='color:red'>Select " + (acceptsMultiple?"at least ":"") + "one of the topics below for this assignment.</div>");
 				buf.append("<div style=display:table;width:100%><div style=display:table-row><div style=display:table-cell>");
 				oneHalf = text.chapters.size()/2;
 					for (Chapter ch : text.chapters) {
@@ -336,18 +335,47 @@ public class LTIDeepLinks extends HttpServlet {
 			}	
 			break;
 		case "PracticeExam":
-			topics = ofy().load().type(Topic.class).order("orderBy").list();
-			oneThird = topics.size()/3;
-			buf.append("<div style='color:red'>Please select at least 3 topics for this practice exam:</div>");
-			buf.append("<div style=display:table><div style=display:table-row><div style=display:table-cell>");
-			for (Topic t : topics) {
-				if (t.orderBy.equals("Hide")) continue;
-				if (i==oneThird || i==2*oneThird) buf.append("</div><div style=display:table-cell>");
-				i++;
-				buf.append("<div><label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks('PracticeExam'); />" + t.title + "</label></div>");
-			}
-			buf.append("</div></div></div>");
-			buf.append("<input type=submit id=pesub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select at least 3 topics' />");
+			try {
+				texts = ofy().load().type(Text.class).list();
+				textId = Long.parseLong(request.getParameter("TextId"));
+				buf.append("<div>Please select one of the topic groups below:</div>");
+				Text allTopics = null;
+				for (Text txt : texts) {
+					if (txt.chapters.isEmpty()) continue;
+					if (txt.id==textId) text = txt;
+					if (txt.title.equals("View All Topics")) {
+						allTopics = txt;
+						continue;
+					}
+					buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />" + txt.title + "</label></div>");
+				}
+				buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />" + allTopics.title + "</label></div><br/>");
+				
+				buf.append("<div style='color:red'>Select at least three of the topics below for this assignment.</div>");
+				buf.append("<div style=display:table;width:100%><div style=display:table-row><div style=display:table-cell>");
+				oneHalf = text.chapters.size()/2;
+					for (Chapter ch : text.chapters) {
+					if (i==oneHalf) buf.append("</div><div style=display:table-cell>");
+					i++;
+					buf.append("<div><label><input type=checkbox name=ChapterNumber onClick=countChecks('" + assignmentType + "'); "
+						+ "value=" + ch.chapterNumber + " />" + ch.chapterNumber + ". " + ch.title + "</label></div>");
+				}
+				buf.append("</div></div></div>");
+				buf.append("<input type=submit id=pesub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select at loeast three topics' />");
+			} catch (Exception e) {
+				buf.append("<div style='color:red'>Please select one of the topic groups below:</div>");
+				Text allTopics = null;
+				for (Text txt : texts) {
+					if (txt.chapters.isEmpty()) continue;
+					if (txt.id==textId) text = txt;
+					if (txt.title.equals("View All Topics")) {
+						allTopics = txt;
+						continue;
+					}
+					buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />" + txt.title + "</label></div>");
+				}
+				buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />" + allTopics.title + "</label></div><br/>");
+			}	
 			break;
 		case "VideoQuiz":
 			buf.append("Videos marked with an asterisk (*) have embedded quizzes; others will give full credit for watching to the end.<br/>");
@@ -371,7 +399,6 @@ public class LTIDeepLinks extends HttpServlet {
 		
 		buf.append("<script>"
 				+ "function countChecks(type) {"
-				+ "  var examArray=document.getElementsByName('TopicIds');"
 				+ "  var videoArray=document.getElementsByName('VideoId');"
 				+ "  var stArray=document.getElementsByName('ChapterNumber');"
 				+ "  var peSubmit = document.getElementById('pesub');"
@@ -380,7 +407,7 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "  var count=0;"
 				+ "  switch (type) {"
 				+ "    case 'PracticeExam':"
-				+ "      for (var i=0;i<examArray.length;i++) if (examArray[i].checked) count++;"
+				+ "      for (var i=0;i<stArray.length;i++) if (examArray[i].checked) count++;"
 				+ "        peSubmit.disabled=(count<3);"
 				+ "      if (count<3) peSubmit.value='Select at least 3 topics';"
 				+ "      else peSubmit.value='Create this exam';"
@@ -461,22 +488,19 @@ public class LTIDeepLinks extends HttpServlet {
 			// Quiz or Homework assignments transmit as TopicId (checkboxes if acceptsMultiple; otherwise radio)
 			
 			Long textId = null;
-			String[] topicIdArray;
+			String[] videoIdArray;
 			String[] chapterNoArray;
-			List<Long> topicIds = new ArrayList<Long>();
+			List<Long> videoIds = new ArrayList<Long>();
 			List<Integer> chapterNumbers = new ArrayList<Integer>();
 			switch (assignmentType) {
-			case "PracticeExam":
-				topicIdArray = request.getParameterValues("TopicIds");
-				for (int i=0;i<topicIdArray.length;i++) topicIds.add(Long.parseLong(topicIdArray[i]));			
-				break;
 			case "VideoQuiz":
-				topicIdArray = request.getParameterValues("VideoId");
-				for (int i=0;i<topicIdArray.length;i++) topicIds.add(Long.parseLong(topicIdArray[i]));			
+				videoIdArray = request.getParameterValues("VideoId");
+				for (int i=0;i<videoIdArray.length;i++) videoIds.add(Long.parseLong(videoIdArray[i]));			
 				break;
 			case "Quiz":
 			case "Homework":
 			case "SmartText":
+			case "PracticeExam":
 				textId = Long.parseLong(request.getParameter("TextId"));
 				chapterNoArray = request.getParameterValues("ChapterNumber");
 				for (int i=0;i<chapterNoArray.length;i++) chapterNumbers.add(Integer.parseInt(chapterNoArray[i]));
@@ -484,7 +508,7 @@ public class LTIDeepLinks extends HttpServlet {
 			case "Poll":
 			case "PlacementExam":  // this assignment has fixed hidden conceptIds
 			}
-			// At this point all of the topicIds or VideoIds or ChapterNumbers are in the List topicIds
+			// At this point all of the VideoIds or ChapterNumbers are recorded in the corresponding List
 			// If assignmentType is Quiz, Homework, SmartText or Video, allow multiple assignments
 			// If assignmentTyupe is PracticeExam, PlacementExam or Poll, only one assignment will be created
 			// If assignmentType is Poll, there are no topics at this point, but set pollClosed=true;
@@ -495,11 +519,25 @@ public class LTIDeepLinks extends HttpServlet {
 			
 			switch (assignmentType) {
 			case "PracticeExam":
-				a = new Assignment("PracticeExam",0L,topicIds,d.platform_deployment_id);
+				a = new Assignment();
+				a.assignmentType = "PracticeExam";
+				a.created = now;
+				a.domain = d.platform_deployment_id;
+				a.textId = textId;
+				a.title = "Practice Exam - ";
+				text = ofy().load().type(Text.class).id(textId).safe();
 				a.questionKeys = new ArrayList<Key<Question>>();
-				for (int i=0;i<a.topicIds.size();i++) {
-					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",a.topicIds.get(i)).keys().list());
+				for (Chapter ch : text.chapters) {
+					if (chapterNumbers.contains(ch.chapterNumber)) {
+						a.title += ch.title + ", ";
+						for (Long conceptId : ch.conceptIds) {
+							a.conceptIds.add(conceptId);
+							a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType",assignmentType.equals("SmartText")?"Quiz":assignmentType).filter("conceptId",conceptId).keys().list());
+						}
+						break;
+					}
 				}
+				a.title = a.title.substring(0, a.title.lastIndexOf(", "));
 				a.valid = now;
 				assignments.add(a);
 				break;
@@ -510,7 +548,10 @@ public class LTIDeepLinks extends HttpServlet {
 				assignments.add(a);
 				break;
 			case "PlacementExam":
-				a = new Assignment(assignmentType,0L,topicIds,d.platform_deployment_id);
+				a = new Assignment();
+				a.assignmentType = "PracticeExam";
+				a.created = now;
+				a.domain = d.platform_deployment_id;
 				a.questionKeys = new ArrayList<Key<Question>>();
 				a.conceptIds = new ArrayList<Long>();
 				List<Concept> concepts = ofy().load().type(Concept.class).list();
@@ -532,9 +573,7 @@ public class LTIDeepLinks extends HttpServlet {
 			case "SmartText":
 			case "Quiz":
 			case "Homework":
-				debug.append(assignmentType + ".");
 				text = ofy().load().type(Text.class).id(textId).safe();
-				debug.append(text.title + ".");
 				for (Integer chN : chapterNumbers) {
 					a = new Assignment(assignmentType,0L,null,d.platform_deployment_id);
 					a.textId = textId;
@@ -555,9 +594,12 @@ public class LTIDeepLinks extends HttpServlet {
 				}
 				break;		
 			case "VideoQuiz":
-				for (Long tid : topicIds) {
-					a = new Assignment(assignmentType,0L,null,d.platform_deployment_id);
-					a.videoId = tid;
+				for (Long vId : videoIds) {
+					a = new Assignment();
+					a.assignmentType = "VideoQuiz";
+					a.created = now;
+					a.domain = d.platform_deployment_id;
+					a.videoId = vId;
 					a.valid = now;
 					assignments.add(a);
 				}
@@ -606,9 +648,7 @@ public class LTIDeepLinks extends HttpServlet {
 				int maxScore = 10;
 				switch (assignmentType) {
 					case "PracticeExam":
-						title = "Practice Exam - ";
-						for (long tId : topicIds) title += ofy().load().type(Topic.class).id(tId).now().title + ", ";
-						title.substring(0, title.length()-2);  // strip off the last comma and space
+						title = a1.title;
 						maxScore = 100;
 						break;
 					case "VideoQuiz":

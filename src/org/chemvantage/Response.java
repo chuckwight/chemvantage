@@ -52,7 +52,7 @@ public class Response implements Serializable {
     
 	Response(String assignmentType, long assignmentId, long questionId, String studentResponse, String correctAnswer, int score, int possibleScore, String userId, Date submitted) {
         this.assignmentType = assignmentType;
-        this.assignmentId = topicId;
+        this.assignmentId = assignmentId;
         this.questionId = questionId;
         this.studentResponse = studentResponse;
         this.correctAnswer = correctAnswer;

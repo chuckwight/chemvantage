@@ -39,6 +39,7 @@ public class PracticeExamTransaction implements Serializable {
 	@Index	Long assignmentId;
 			Date reviewed;
 			List<Long> topicIds;
+			List<Long> conceptIds;
 			int[] scores;
 			int[] possibleScores;
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
@@ -47,6 +48,13 @@ public class PracticeExamTransaction implements Serializable {
 
 	PracticeExamTransaction() {}
 
+	PracticeExamTransaction(String userId,Long assignmentId,List<Long> conceptIds) {
+		this.userId = Subject.hashId(userId);
+		this.assignmentId = assignmentId;
+		this.conceptIds = conceptIds;
+		this.downloaded = new Date();
+	}
+	
 	PracticeExamTransaction(List<Long> topicIds,String userId,Date downloaded,Date graded,int[] scores,int[] possibleScores) {
 		this.topicIds = topicIds;
 		this.userId = Subject.hashId(userId);

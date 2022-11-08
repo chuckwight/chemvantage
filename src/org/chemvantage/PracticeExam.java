@@ -75,7 +75,7 @@ public class PracticeExam extends HttpServlet {
 				case "ReviewExam":
 					long practiceExamTransactionId = Long.parseLong(request.getParameter("PracticeExamTransactionId"));
 					String studentUserId = request.getParameter("UserId");
-					out.println(Subject.header("Review ChemVantage Practice Exam") + reviewExam(user,practiceExamTransactionId,studentUserId) + Subject.footer);
+					out.println(Subject.header("Review ChemVantage Practice Exam") + reviewExam(user,a,practiceExamTransactionId,studentUserId) + Subject.footer);
 					break;
 				case "SubmissionReview":
 					User forUser = new User(user.platformId,request.getParameter("ForUserId"));
@@ -164,60 +164,23 @@ public class PracticeExam extends HttpServlet {
 		}
 	}
 
-	static String designExam(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer(Subject.banner);
-		try {
-			buf.append("<h2>Practice Exam</h2>");
-			buf.append("<div id=topicsForm>");
-
-			buf.append("Please select <b>at least 3 topics</b> below to be covered on this practice exam.<p>");
-			buf.append("<FORM NAME=TopicForm METHOD=GET>");
-			buf.append("<input type=hidden name=sig value=" + user.getTokenSignature() + ">");
-			
-			buf.append("<div style='display:table'>");
-			List<Topic> topics = ofy().load().type(Topic.class).list();
-			int i = 0;
-			for (Topic t : topics) {
-				if ("Hide".equals(t.orderBy)) continue;
-				buf.append((i%3==0?"<div style='display:table-row'>":"") + "<div style='display:table-cell'>");
-				buf.append("<label><INPUT TYPE=CHECKBOX NAME=TopicId VALUE='" + t.id + "' "
-						+ "onClick=\"javascript: var checked=0; "
-						+ "for(i=0;i<document.TopicForm.TopicId.length;i++) if(document.TopicForm.TopicId[i].checked) checked++;"
-						+ "document.TopicForm.begin.disabled=(checked<3);"
-						+ "if(document.TopicForm.begin.disabled) document.TopicForm.begin.value='Select at least 3 topics';"
-						+ "else document.TopicForm.begin.value='Begin the exam';\">" 
-						+ t.title + "</label><br>\n");
-				buf.append(i%3==2?"</div></div>":"</div>");
-				i++;
-			}
-			buf.append("</div><p>");
-			
-			buf.append("The exam is designed to allow completion in 60 minutes.<br>");
-			buf.append("<INPUT TYPE=SUBMIT NAME=begin DISABLED=true VALUE='Select at least 3 topics'>");
-			buf.append("</FORM></div>");
-		} catch (Exception e) {
-			buf.append("designExam: " + e.toString());
-		}
-		return buf.toString();
-	}
-
 	static String instructorPage(User user,Assignment a) {
 		StringBuffer buf = new StringBuffer();		
 		try {
-			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
-
 			buf.append("<h2>General Chemistry Exam - Instructor Page</h2>");
-			Map<Long,Topic> topics = ofy().load().type(Topic.class).ids(a.topicIds);			
-			buf.append("Topics covered on this exam:<OL>");
-			for (long topicId : a.topicIds) {
-				buf.append("<LI>" + topics.get(topicId).title + "</LI>");
+			
+			if (a.conceptIds.isEmpty()) { // legacy assignment uses topicIds
+				List<Topic> topics = new ArrayList<Topic>(ofy().load().type(Topic.class).ids(a.topicIds).values());
+				for (Topic t : topics) {
+					a.conceptIds.addAll(t.conceptIds);
+				}
 			}
-			buf.append("</OL>");
 			
 			if (a.timeAllowed != null) buf.append("Students are permitted " + a.timeAllowed/60 + " minutes to complete this exam.<br/>");
 			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("Students may attempt this assignment an unlimited number of times to improve their score.<br/><br/>");
 			else buf.append("Students may only attempt this assignment " + a.attemptsAllowed + (a.attemptsAllowed==1?" time":" times") + ".<br/><br/>");
 			
+			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/PracticeExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + "'>Customize this exam</a> "
 					+ "to set the time allowed, number of submissions, an optioinal passeord and select the available question items.</LI>"
@@ -273,50 +236,34 @@ public class PracticeExam extends HttpServlet {
 				return passwordPrompt(user,msg);
 			}
 
+			if (a==null) { // anonymous user 
+				//=============************ MAKE A DUMMY ASSIGNMENT HERE **************===============
+				a = new Assignment();
+				a.id = 0L;
+				a.assignmentType = "PracticeExam";
+				
+				//====================================================================================
+			} else if (a.conceptIds.isEmpty()) { // legacy assignment uses topicIds
+				List<Topic> topics = new ArrayList<Topic>(ofy().load().type(Topic.class).ids(a.topicIds).values());
+				for (Topic t : topics) {
+					a.conceptIds.addAll(t.conceptIds);
+				}
+			}
+			
 			// Check to see if the timeAllowed has been modified by the instructor:
 			int timeAllowed = 3600;  // default value in seconds
-			if (a != null && a.timeAllowed!=null) {
+			if (a.timeAllowed!=null) {
 				timeAllowed = a.timeAllowed;  // instructor option, e.g. for student disability accommodations
 				user = User.getUser(user.getTokenSignature(),timeAllowed/60+30);
 			}
 
-			// Get requested topic ids for this exam
-			List<Long> topicIds = new ArrayList<Long>();
-			long assignmentId = 0;
-			if (a!=null) {  // this branch works if the practice exam is assigned
-				assignmentId=user.getAssignmentId();
-				topicIds = a.topicIds;
-			} else {  // otherwise this is a user-designed exam
-				String[] topicStringIds = request.getParameterValues("TopicId");
-				if (topicStringIds != null) {
-					for (int i=0;i<topicStringIds.length;i++) topicIds.add(Long.parseLong(topicStringIds[i]));
-				}
-			}
-			
 			// Check to see if this user has any pending exams:
 			Date now = new Date();
 			Date startTime = new Date(now.getTime()-timeAllowed*1000);  // about 1 hour ago depending on timeAllowed ago 
-			List<PracticeExamTransaction> qpt = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.getHashedId()).filter("graded",null).filter("downloaded >",startTime).list();
-			
-			PracticeExamTransaction pt = null;  // placeholder for recovery of one of the pending exam transactions
-			
-			if (qpt.size()>0) {  // there is at least one pending practice exam
-				if (a == null) {  // entered by manual topic selection (no assignment)
-					pt = qpt.get(0);  // gets the first pending practice exam transaction in the list
-					topicIds = pt.topicIds;
-				} else {  // the request is for an exam corresponding to an assignment
-					for (PracticeExamTransaction t : qpt) {
-						if (t.assignmentId==assignmentId) {
-							pt = t;  // found the correct pending exam for this assignment
-							break;
-						}
-					}  // if the for-loop expires without finding a corresponding transaction, pt remains null and a new exam is created below
-				}
-			}
-			else if (topicIds.size() < 3) return designExam(user,request);  // redirect to get a valid set of 3+ topic keys
+			PracticeExamTransaction pt = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).filter("graded",null).filter("downloaded >",startTime).first().now();			
 			boolean resumingExam = pt != null;
 			
-			if (pt == null) {  // this is a valid request for a new exam with at least 3 topicIds; create a new transaction
+			if (pt == null) {  // this is a valid request for a new exam with at least 3 topics; create a new transaction
 				// first check to see if a.attemptsAllowed has been reached
 				int nAttempts = a==null?0:ofy().load().type(PracticeExamTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).count();
 				if (a!=null && a.attemptsAllowed != null && nAttempts >= a.attemptsAllowed) {
@@ -329,7 +276,7 @@ public class PracticeExam extends HttpServlet {
 					for (PracticeExamTransaction pet : pets) {
 						int score = 0;
 						int possibleScore = 0;
-						for (int i=0;i<a.topicIds.size();i++) {
+						for (int i=0;i<a.conceptIds.size();i++) {
 							score += pet.scores[i];
 							possibleScore += pet.possibleScores[i];
 						}
@@ -341,8 +288,7 @@ public class PracticeExam extends HttpServlet {
 					return buf.toString();
 				}	
 				// this new exam is allowed; create a new transaction entity:
-				pt = new PracticeExamTransaction(topicIds,user.getId(),now,null,new int[topicIds.size()],new int[topicIds.size()]);
-				pt.assignmentId = assignmentId;
+				pt = new PracticeExamTransaction(user.getId(),a.id,a.conceptIds); 
 				ofy().save().entity(pt).now();	
 			}
 
@@ -352,10 +298,10 @@ public class PracticeExam extends HttpServlet {
 			List<Key<Question>> questionKeys_10pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> questionKeys_15pt = new ArrayList<Key<Question>>();
 			
-			for (long tid : topicIds) {  //First collect the question keys
-				questionKeys_02pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",2).keys().list());
-				questionKeys_10pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",10).keys().list());
-				questionKeys_15pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",15).keys().list());
+			for (long cId : a.conceptIds) {  //First collect the question keys
+				questionKeys_02pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",cId).filter("pointValue",2).keys().list());
+				questionKeys_10pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",cId).filter("pointValue",10).keys().list());
+				questionKeys_15pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",cId).filter("pointValue",15).keys().list());
 			}
 
 			// Reduce the size of questionKeys Lists to the number of questions needed, either by using the previously
@@ -395,14 +341,6 @@ public class PracticeExam extends HttpServlet {
 			
 			buf.append("<h2>General Chemistry Exam</h2>");
 			
-			Map<Long,Topic> topics = ofy().load().type(Topic.class).ids(topicIds);
-			
-			buf.append("Topics covered on this exam:<OL>");
-			for (long topicId : topicIds) {
-				buf.append("<LI>" + topics.get(topicId).title + "</LI>");
-			}
-			buf.append("</OL>");
-
 			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded. ");
 			if (resumingExam) buf.append("You are resuming an exam originally downloaded at " + pt.downloaded);
 			
@@ -416,9 +354,8 @@ public class PracticeExam extends HttpServlet {
 			if (a!=null) buf.append("\n<input type=hidden name=AssignmentId value='" + a.id + "'>");
 			
 			// Randomly select the questions to be presented, eliminating each from the List of questionKeys as they are printed
-			Random r = new Random(pt.id)
-					;
-			int[] possibleScores = new int[topicIds.size()];
+			Random r = new Random(pt.id);
+			int[] possibleScores = new int[a.conceptIds.size()];
 
 			// Two-point questions
 			buf.append("<U>2 point questions:</U>");
@@ -429,7 +366,7 @@ public class PracticeExam extends HttpServlet {
 				Key<Question> k = questionKeys_02pt.remove(r.nextInt(questionKeys_02pt.size()));
 				Question q = examQuestions.get(k);
 				i++;
-				possibleScores[topicIds.indexOf(q.topicId)] += q.pointValue;
+				possibleScores[a.conceptIds.indexOf(q.conceptId)] += q.pointValue;
 				q.setParameters((int)(pt.id - q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
 				if (!resumingExam) pt.questionKeys.add(k);
@@ -447,10 +384,10 @@ public class PracticeExam extends HttpServlet {
 				Key<Question> k = questionKeys_10pt.remove(r.nextInt(questionKeys_10pt.size()));
 				Question q = examQuestions.get(k);
 				i++;
-				possibleScores[topicIds.indexOf(q.topicId)] += q.pointValue;
+				possibleScores[a.conceptIds.indexOf(q.conceptId)] += q.pointValue;
 				q.setParameters((int)(pt.id - q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
-				if (assignmentId>0) buf.append("<SCRIPT>"
+				if (a.id>0) buf.append("<SCRIPT>"
 						+ "document.getElementById('showWork" + q.id + "').style.display='';"
 						+ "</SCRIPT>");
 				if (!resumingExam) pt.questionKeys.add(k);
@@ -466,10 +403,10 @@ public class PracticeExam extends HttpServlet {
 				Key<Question> k = questionKeys_15pt.remove(r.nextInt(questionKeys_15pt.size()));
 				Question q = examQuestions.get(k);
 				i++;
-				possibleScores[topicIds.indexOf(q.topicId)] += q.pointValue;
+				possibleScores[a.conceptIds.indexOf(q.conceptId)] += q.pointValue;
 				q.setParameters((int)(pt.id - q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
-				if (assignmentId>0) buf.append("<SCRIPT>"
+				if (a.id>0) buf.append("<SCRIPT>"
 						+ "document.getElementById('showWork" + q.id + "').style.display='';"
 						+ "</SCRIPT>");
 				if (!resumingExam) pt.questionKeys.add(k);
@@ -547,17 +484,12 @@ public class PracticeExam extends HttpServlet {
 			
 			if (now.getTime() - pt.downloaded.getTime() > 1000*(timeAllowed+300)) return "Sorry, the grading period for this exam has expired.";  // 5-minute grace period
 
-			// if everything is still OK, score the exam:
-			List<Long> topicIds = pt.topicIds;			
-			List<String> topicTitles = new ArrayList<String>();
-			for (int i=0;i<topicIds.size();i++) topicTitles.add(ofy().load().type(Topic.class).id(topicIds.get(i)).safe().title);
-			
 			// create a buffer to hold the correct solutions to missed questions:
 			StringBuffer missedQuestions = new StringBuffer();
 			missedQuestions.append("The following questions were answered incorrectly. There may be additional questions (not shown) that were left unanswered.");			
 			missedQuestions.append("<OL>");
 
-			int[] studentScores = new int[topicIds.size()];
+			int[] studentScores = new int[a.conceptIds.size()];
 			int wrongAnswers = 0;
 
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
@@ -581,9 +513,9 @@ public class PracticeExam extends HttpServlet {
 					int score = studentAnswer.length()==0?0:q.isCorrect(studentAnswer)?q.pointValue:0;
 					if (q.getQuestionType()==5 && score==0 && q.agreesToRequiredPrecision(studentAnswer)) score = q.pointValue-1;
 					
-					if (score > 0) studentScores[topicIds.indexOf(q.topicId)] += score;
+					if (score > 0) studentScores[a.conceptIds.indexOf(q.conceptId)] += score;
 					if (studentAnswer.length() > 0) {
-						Response r = new Response("PracticeExam",q.topicId,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,Subject.hashId(user.getId()),now);
+						Response r = new Response("PracticeExam",a.id,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,Subject.hashId(user.getId()),now);
 						r.transactionId = pt.id;
 						responses.add(r);
 					}
@@ -601,7 +533,7 @@ public class PracticeExam extends HttpServlet {
 			ofy().save().entity(pt).now();
 			ofy().save().entities(responses);
 			
-			try {
+			if (a.id>0) try {
 				Score s = Score.getInstance(user.getId(),a);
 				ofy().save().entity(s).now();
 				if (a.lti_ags_lineitem_url != null) LTIMessage.postUserScore(s,user.getId());
@@ -609,25 +541,25 @@ public class PracticeExam extends HttpServlet {
 
 			int score = 0;
 			int possibleScore = 0;
-			for (int i=0;i<topicIds.size();i++) {
+			for (int i=0;i<a.conceptIds.size();i++) {
 				score += studentScores[i];
 				possibleScore += pt.possibleScores[i];
 			}
 			buf.append("<b>Your score on this exam is " + score + " out of a possible " + possibleScore + " points.</b><p>");
 			if (score > 0 && score == possibleScore) buf.append ("<b>Congratulations on a perfect score!</b>");
 			else {
-				buf.append("<TABLE><TR><TD><b>Topic</b></TD><TD><b>Score</b></TD>"
+				buf.append("<TABLE><TR><TD><b>Key Concept</b></TD><TD><b>Score</b></TD>"
 						+ "<TD><b>Possible</b></TD><TD><b>Percent</b></TD><TD></TD></TR>");
 				int pct = 0;
-				for (int i=0;i<topicIds.size();i++) {
+				Map<Long,Concept> concepts = ofy().load().type(Concept.class).ids(a.conceptIds);
+				for (int i=0;i<a.conceptIds.size();i++) {
 					if (pt.possibleScores[i]>0) pct = (int)Math.round(pt.scores[i]*100./pt.possibleScores[i]);
 					else pct = 0;
 					String color = (pct>84?"#00FF00":(pct<50?"#FF0000":"#FFFF00"));
 					buf.append("<TR>"
-							+ "<TD>" + topicTitles.get(i) + "</TD>"
+							+ "<TD>" + concepts.get(a.conceptIds.get(i)).title + "</TD>"
 							+ "<TD ALIGN=RIGHT>" + pt.scores[i] + "</TD>"
 							+ "<TD ALIGN=RIGHT>" + pt.possibleScores[i] + "</TD>"
-							+ "<TD ALIGN=RIGHT>" + pct + "%</TD>"
 							+ "<TD><div style='background-color:" + color + ";width:" + pct 
 							+ "px;'/>&nbsp;</TD></TR>");
 				}
@@ -693,7 +625,7 @@ public class PracticeExam extends HttpServlet {
 				for (PracticeExamTransaction pet : pets) {
 					score = 0;
 					possibleScore = 0;
-					for (int i=0;i<topicIds.size();i++) {
+					for (int i=0;i<a.conceptIds.size();i++) {
 						score += pet.scores[i];
 						possibleScore += pet.possibleScores[i];
 					}
@@ -815,7 +747,7 @@ public class PracticeExam extends HttpServlet {
 			for (PracticeExamTransaction pet : pets) {
 				score = 0;
 				possibleScore = 0;
-				for (int i=0;i<pet.topicIds.size();i++) {
+				for (int i=0;i<pet.conceptIds.size();i++) {
 					score += pet.scores[i];
 					possibleScore += pet.possibleScores[i];
 				}
@@ -826,17 +758,16 @@ public class PracticeExam extends HttpServlet {
 			}
 			buf.append("</table><br>Missing scores indicate assignments that were downloaded but not submitted for scoring.<p>");
 			
-			List<String> topicTitles = new ArrayList<String>();
-			for (int i=0;i<bestPt.topicIds.size();i++) topicTitles.add(ofy().load().type(Topic.class).id(bestPt.topicIds.get(i)).safe().title);
+			Map<Long,Concept> concepts = ofy().load().type(Concept.class).ids(bestPt.conceptIds);
 			
 			buf.append("<h3>Detailed Scores for the Best Practice Exam</h3>");
 			buf.append("<TABLE><TR><TD><b>Topic</b></TD><TD><b>Score</b></TD>"
 					+ "<TD><b>Possible</b></TD><TD><b>Percent</b></TD><TD></TD></TR>");
-			for (int i=0;i<bestPt.topicIds.size();i++) {
+			for (int i=0;i<bestPt.conceptIds.size();i++) {
 				int pct = (bestPt.possibleScores[i]>0?bestPt.scores[i]*100/bestPt.possibleScores[i]:0);
 				String color = (pct>84?"#00FF00":(pct<50?"#FF0000":"#FFFF00"));
 				buf.append("<TR>"
-						+ "<TD>" + topicTitles.get(i) + "</TD>"
+						+ "<TD>" + concepts.get(bestPt.conceptIds.get(i)).title + "</TD>"
 						+ "<TD ALIGN=RIGHT>" + bestPt.scores[i] + "</TD>"
 						+ "<TD ALIGN=RIGHT>" + bestPt.possibleScores[i] + "</TD>"
 						+ "<TD ALIGN=RIGHT>" + pct + "%</TD>"
@@ -859,14 +790,12 @@ public class PracticeExam extends HttpServlet {
 			if (a.lti_nrps_context_memberships_url == null || a.lti_nrps_context_memberships_url.isEmpty()) {
 				return "Sorry, your LMS does not support the Memberships service, so exams cannot be reviewed.";
 			}
-
-			List<Topic> topics = new ArrayList<Topic>(ofy().load().type(Topic.class).ids(a.topicIds).values());
-
+			Map<Long,Concept> concepts = ofy().load().type(Concept.class).ids(a.conceptIds);
 			buf.append("<h2>Practice Exam Assignment Results</h2>"
 					+ "Assignment ID: " + a.id + "<br>"
 					+ "Created: " + a.created + "<br>"
-					+ "Topics covered:<ol>");
-			for (Topic t : topics) buf.append("<li>" + t.title + "</li>");
+					+ "Key concepts covered:<ol>");
+			for (Long cId : a.conceptIds) buf.append("<li>" + concepts.get(cId).title + "</li>");
 			buf.append("</ol>");
 
 			// Get all of the PracticeExamTransactions associated with this assignment:
@@ -886,7 +815,7 @@ public class PracticeExam extends HttpServlet {
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.SHORT,DateFormat.SHORT);
 			int i = 0;
 			buf.append("<table><tr><th>User</th><th>Attempt</th><th>Downloaded</th><th>Elapsed Time</th>");
-			for (int j=1;j<=topics.size();j++) buf.append("<th>Topic " + j + "</th>");
+			for (int j=1;j<=a.conceptIds.size();j++) buf.append("<th>Concept " + j + "</th>");
 			buf.append("<th>Total Score</th><th>Review</th><th>Delete</th></tr>");
 			
 			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
@@ -902,7 +831,7 @@ public class PracticeExam extends HttpServlet {
 				Collections.sort(userpets,new SortExams());
 				if (userpets.isEmpty()) {  // place a blank line in the table with the user's name
 					buf.append("<tr style='text-align: center;background-color: " + (i%2==0?"yellow":"cyan") + "'>"
-							+ "<td>" + i + ".&nbsp;" + name + "</td>" + "<td colspan=" + (6+a.topicIds.size()) + ">(exam was not attempted)</td>");
+							+ "<td>" + i + ".&nbsp;" + name + "</td>" + "<td colspan=" + (6+a.conceptIds.size()) + ">(exam was not attempted)</td>");
 					buf.append("</tr>");					
 				} else {
 					for (int k=userpets.size();k>0;k--) {  // enter the user's transactions into the table
@@ -910,16 +839,16 @@ public class PracticeExam extends HttpServlet {
 						buf.append("<tr style='text-align: center;background-color: " + (i%2==0?"yellow":"cyan") + "'>");
 						buf.append("<td>" + i + ".&nbsp;" + name + "</td><td>" + k + "</td><td>" + df.format(p.downloaded) + "&nbsp;UTC</td>");
 
-						if (p.graded==null) buf.append("<td colspan=" + (3+a.topicIds.size()) + ">(exam was not submitted for scoring)</td>");
+						if (p.graded==null) buf.append("<td colspan=" + (3+a.conceptIds.size()) + ">(exam was not submitted for scoring)</td>");
 						else {
 							buf.append("<td>" + (p.graded==null?"-":(p.graded.getTime()-p.downloaded.getTime())/60000 + " min.") + "</td>");
 
 							int score = 0;
 							int possibleScore = 0;
-							for (int j=0;j<a.topicIds.size();j++) {
+							for (int j=0;j<a.conceptIds.size();j++) {
 								score += p.scores[j];
 								possibleScore += p.possibleScores[j];
-								if (p.possibleScores[j] == 0) buf.append("<td>0%</td>");
+								if (p.possibleScores[j] == 0) buf.append("<td> - </td>");
 								else buf.append("<td>" + String.valueOf(100*p.scores[j]/p.possibleScores[j]) + "%" + "</td>");
 							}
 
@@ -947,7 +876,7 @@ public class PracticeExam extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String reviewExam(User user, long practiceExamTransactionId, String studentUserId) {
+	String reviewExam(User user, Assignment a, long practiceExamTransactionId, String studentUserId) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			if (!user.isInstructor()) return "<h2>Access Denied</h2>You must be an instructor to view this page.";
@@ -976,15 +905,14 @@ public class PracticeExam extends HttpServlet {
 			Map<Long,String> studentAnswers = new HashMap<Long,String>();
 			for (Response r : responses) studentAnswers.put(r.questionId,r.studentResponse);
 			
-			buf.append("<h2>General Chemistry Exam</h2>");
-		
-			
-			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-			List<Topic> topics = new ArrayList<Topic>(ofy().load().type(Topic.class).ids(a.topicIds).values());
-			buf.append("Topics covered:<ol>");
-			for (Topic t : topics) buf.append("<li>" + t.title + "</li>");
+			buf.append("<h2>General Chemistry Exam</h2>"
+					+ "Assignment ID: " + a.id + "<br>"
+					+ "Created: " + a.created + "<br>"
+					+ "Key concepts covered:<ol>");	
+			Map<Long,Concept> concepts = ofy().load().type(Concept.class).ids(a.conceptIds);
+			for (Long cId : a.conceptIds) buf.append("<li>" + concepts.get(cId).title + "</li>");
 			buf.append("</ol>");
-
+			
 			buf.append("<form action=/PracticeExam method=post>"
 					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "<input type=hidden name=StudentUserId value=" + studentUserId + " />"
@@ -1079,8 +1007,8 @@ public class PracticeExam extends HttpServlet {
 			if (!pet.assignmentId.equals(a.id)) throw new Exception("Mismatched assignment ID values");
 			
 			// reset the transaction scores arrays
-			pet.scores = new int[pet.topicIds.size()];
-			pet.possibleScores = new int[pet.topicIds.size()];
+			pet.scores = new int[pet.conceptIds.size()];
+			pet.possibleScores = new int[pet.conceptIds.size()];
 			Map<Key<Question>,Question> examQuestions = ofy().load().keys(pet.questionKeys);
 			
 			// Iterate through all of the questions for this exam, getting scores from the range inputs on the review form and compiling the scores
@@ -1089,8 +1017,8 @@ public class PracticeExam extends HttpServlet {
 				if (q==null) continue;
 				int score = Integer.parseInt(request.getParameter("Range" + k.getId()));
 				pet.questionScores.put(k, score);
-				pet.scores[pet.topicIds.indexOf(q.topicId)] += score;
-				pet.possibleScores[pet.topicIds.indexOf(q.topicId)] += q.pointValue; 
+				pet.scores[pet.conceptIds.indexOf(q.conceptId)] += score;
+				pet.possibleScores[pet.conceptIds.indexOf(q.conceptId)] += q.pointValue; 
 			}
 			
 			// Record the timestamp for the exam review and save the revised transaction entity
@@ -1140,11 +1068,6 @@ public class PracticeExam extends HttpServlet {
 					+ "<input type=text name=ExamPassword value='" + (a.password==null || a.password.isEmpty()?"":a.password) + "' />"
 					+ "<input type=submit name=UserRequest value='Set Password' /></form><br/>");
 			
-			Map<Long,Topic>topics = ofy().load().type(Topic.class).ids(a.topicIds);
-			buf.append("Topics:<OL>");
-			for (Topic t:topics.values()) buf.append("<LI>" + t.title + "</LI>");
-			buf.append("</OL>");
-
 			buf.append("Each practice exam consists of items selected at random from the items below:<ul>"
 					+ "<li>10 quiz questions worth 2 points each</li>"
 					+ "<li> 5 homework questions worth 10 points each</li>"
@@ -1155,10 +1078,10 @@ public class PracticeExam extends HttpServlet {
 			List<Key<Question>> questionKeys_10pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> questionKeys_15pt = new ArrayList<Key<Question>>();
 
-			for (long tid : a.topicIds) {  // Sort and collect the question keys
-				questionKeys_02pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",2).keys().list());
-				questionKeys_10pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",10).keys().list());
-				questionKeys_15pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tid).filter("pointValue",15).keys().list());
+			for (long cId : a.conceptIds) {  // Sort and collect the question keys
+				questionKeys_02pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",cId).filter("pointValue",2).keys().list());
+				questionKeys_10pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",cId).filter("pointValue",10).keys().list());
+				questionKeys_15pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",cId).filter("pointValue",15).keys().list());
 			}
 
 			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "

@@ -70,21 +70,10 @@ indexes:
   - name: assignmentId
   - name: downloaded
 
-- kind: PlacementExamTransaction
-  properties:
-  - name: userId
-  - name: graded
-  - name: downloaded
-
 - kind: PracticeExamTransaction
   properties:
   - name: userId
   - name: assignmentId
-  - name: downloaded
-
-- kind: PracticeExamTransaction
-  properties:
-  - name: userId
   - name: graded
   - name: downloaded
 
