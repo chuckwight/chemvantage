@@ -647,7 +647,7 @@ public class LTIDeepLinks extends HttpServlet {
 				int maxScore = 10;
 				switch (assignmentType) {
 					case "PracticeExam":
-						title = a1.title;
+						title = "Exam - " + a1.title;
 						maxScore = 100;
 						break;
 					case "VideoQuiz":

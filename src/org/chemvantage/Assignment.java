@@ -51,7 +51,7 @@ public class Assignment implements java.lang.Cloneable {
 			boolean pollClosed=false;
 			String password;
 			List<Long> conceptIds = new ArrayList<Long>();
-			List<Long> topicIds; // used for practice exams which have multiple topicIds
+			List<Long> topicIds = new ArrayList<Long>(); // used for practice exams which have multiple topicIds
 			List<String> resourceLinkIds = new ArrayList<String>();  // deprecated
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 
@@ -117,10 +117,10 @@ public class Assignment implements java.lang.Cloneable {
 		case "Quiz": return this.topicId>0L || (this.textId>0 && this.chapterNumber>0);
 		case "Homework": return this.topicId>0L  || (this.textId>0 && this.chapterNumber>0);
 		case "SmartText": return this.textId>0 && this.chapterNumber>0;
-		case "PracticeExam": return topicIds.size()>2;
+		case "PracticeExam": return topicIds.size()>2 || conceptIds.size()>2;
 		case "VideoQuiz": return this.videoId>0;
 		case "Poll": return true;
-		case "PlacementExam": return this.topicIds.size()>0;
+		case "PlacementExam": return !topicIds.isEmpty() || !conceptIds.isEmpty();
 		default: return false;
 		}
 	}
