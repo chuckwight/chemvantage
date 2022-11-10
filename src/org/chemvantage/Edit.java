@@ -116,6 +116,9 @@ public class Edit extends HttpServlet {
 				} catch (Exception e) {}
 				out.println(Subject.getHeader(user) + reviewProposedQuestion(user,request) + Subject.footer);
 				break;
+			case "ViewConceptQuestions":
+				out.println(viewConceptQuestions(user,request));
+				break;
 			case "Refresh":
 				questions.clear();
 			default: out.println(editorsPage(user,request));
@@ -256,6 +259,10 @@ public class Edit extends HttpServlet {
 				assignKeyConcepts(user,request);
 				out.println(editorsPage(user,request));
 				break;
+			case "RemoveQuestionConceptIds":
+				removeQuestionConceptIds(user,request);
+				out.println(viewConceptQuestions(user,request));
+				break;
 			default: out.println(editorsPage(user,request));
 			}
 
@@ -270,12 +277,12 @@ public class Edit extends HttpServlet {
 		try {
 			int nPending = ofy().load().type(ProposedQuestion.class).count();
 			buf.append("<a href=Edit?UserRequest=Review>"
-					+ nPending + " items are currently pending editorial review.</a><br>");
-			buf.append("<a href=/Edit?UserRequest=ManageTopics>Manage Topics</a><br>");
-			buf.append("<a href=/Edit?UserRequest=ManageConcepts>Manage Concepts</a><br>");
-			buf.append("<a href=/Edit?UserRequest=ManageVideos>Manage Videos</a><br>");
-			buf.append("<a href=/Edit?UserRequest=ManageTexts>Manage Texts</a><p>");
-			
+					+ nPending + " items are currently pending editorial review.</a><br/>");
+			buf.append("<a href=/Edit?UserRequest=ManageTopics>Manage Topics</a><br/>");
+			buf.append("<a href=/Edit?UserRequest=ManageConcepts>Manage Concepts</a><br/>");
+			buf.append("<a href=/Edit?UserRequest=ManageVideos>Manage Videos</a><br/>");
+			buf.append("<a href=/Edit?UserRequest=ManageTexts>Manage Texts</a><br/>");
+			buf.append("<a href=/Edit?UserRequest=ViewConceptQuestions>View Concept Questions</a><br/><br/>");	
 			long topicId = 0;
 			try {
 				topicId = Long.parseLong(request.getParameter("TopicId"));
@@ -435,6 +442,52 @@ public class Edit extends HttpServlet {
 		return buf.toString();
 	}
 
+	String viewConceptQuestions(User user, HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer("<h3>Key Concept Questions</h3>");
+		
+		// make a short form to select the desired key concept
+		long conceptId = 0L;
+		try { conceptId = Long.parseLong(request.getParameter("ConceptId")); } catch (Exception e) {}
+		List<Concept> concepts = ofy().load().type(Concept.class).order("orderBy").list();
+		buf.append("<form method=get action=/Edit>"
+				+ "<input type=hidden name=UserRequest value=ViewConceptQuestions />"
+				+ "Select a key concept: <select name=ConceptId><option value=0>Select a key concept</option>");
+		for (Concept c : concepts) buf.append("<option value=" + c.id + (c.id==conceptId?" selected>":">") + c.title + "</option>");
+		buf.append("</select> "
+				+ "and assignment type: <select name=AssignmentType>"
+				+ "<option value=Quiz>Quiz</option>"
+				+ "<option value=Homework>Homework</option>"
+				+ "<option value=Exam>Exam</option>"
+				+ "</select> "
+				+ "<input type=submit value=Go> or <a href=/Edit>Return to the main Edit page</a>"
+				+ "</form><br/>");
+		if (conceptId==0) return buf.toString();
+		
+		// retrieve the questions for the selected conceptId and assignmentType
+		String assignmentType = request.getParameter("AssignmentType");
+		List<Question> conceptQuestions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",conceptId).list();
+		if (conceptQuestions.isEmpty()) return "There are no questions for this key concept.";
+		
+		// print a table to view/delete the questions
+		buf.append("<form method=post action=/Edit>"
+				+ "<input type=submit value='Remove the conceptId from the selected questions' /><br/><br/>"
+				+ "<input type=hidden name=UserRequest value=RemoveQuestionConceptIds />"
+				+ "<input type=hidden name=AssignmentType value=" + assignmentType + " />"
+				+ "<input type=hidden name=ConceptId value=" + conceptId + " />"
+				+ "<div style='display: table'>");
+		int i = 0;
+		for (Question q : conceptQuestions) {
+			i++;
+			buf.append("<div style='display: table-row;padding-right: 5px'>"
+					+ "<div style='display: table-cell'><input type=checkbox name=QuestionId value=" + q.id + " /> " + i + ". </div>"
+					+ "<div style='display: table-cell'>" + q.printAll() + "</div>"
+					+ "</div>"); // closes row
+		}
+		buf.append("</div></div>"  // closes table
+				+ "<br/><input type=submit value='Remove the conceptId from the selected questions' /></form><br/>"); 
+		return buf.toString();
+	}
+	
 	String assignmentTypeDropDownBox(String defaultType) {
 		return assignmentTypeDropDownBox(defaultType,false);
 	}
@@ -645,6 +698,19 @@ public class Edit extends HttpServlet {
 			revised.add(q);
 		}
 		ofy().save().entities(revised);
+	}
+	
+	void removeQuestionConceptIds(User user,HttpServletRequest request) {
+		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
+		String[] qIds = request.getParameterValues("QuestionId");
+		for (int i=0;i<qIds.length;i++) {
+			try {
+				questionKeys.add(Key.create(Question.class,Long.parseLong(qIds[i])));
+			} catch (Exception e) {}
+		}
+		List<Question> questions = new ArrayList<Question>(ofy().load().keys(questionKeys).values());
+		for (Question q : questions) q.conceptId = 0;
+		ofy().save().entities(questions).now();
 	}
 	
 	void createTopic(User user,HttpServletRequest request) {
