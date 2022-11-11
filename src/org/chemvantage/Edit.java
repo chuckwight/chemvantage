@@ -313,7 +313,8 @@ public class Edit extends HttpServlet {
 					buf.append("<br/>");
 				} catch (Exception e) {}
 				
-				List<Key<Question>> questionKeys = loadQuestions(assignmentType,topicId);
+				//List<Key<Question>> questionKeys = loadQuestions(assignmentType,topicId);
+				List<Question> questions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).list();
 				
 				buf.append("<form method=post action=/Edit>"
 						+ "<input type=hidden name=UserRequest value='Assign Key Concepts' />"
@@ -322,8 +323,7 @@ public class Edit extends HttpServlet {
 				buf.append("Select a key concept and check all the corresponding questions. " + conceptSelectBox());
 				buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");				
 				
-				for (Key<Question> k : questionKeys) {
-					Question q = questions.get(k).clone();
+				for (Question q : questions) {
 					q.setParameters();
 					String conceptTitle = "";
 					String conceptColor = "";
@@ -638,13 +638,9 @@ public class Edit extends HttpServlet {
 		String[] questionIdStrings = request.getParameterValues("QuestionId");
 		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 		for (int i=0; i<questionIdStrings.length; i++) questionKeys.add(Key.create(Question.class,Long.parseLong(questionIdStrings[i])));
-		List<Question> revised = new ArrayList<Question>();
-		for (Key<Question> k : questionKeys) {
-			Question q = this.questions.get(k);
-			q.conceptId = conceptId;
-			revised.add(q);
-		}
-		ofy().save().entities(revised);
+		List<Question> questions = new ArrayList<Question>(ofy().load().keys(questionKeys).values());
+		for (Question q : questions) q.conceptId = conceptId;
+		ofy().save().entities(questions).now();
 	}
 	
 	void createTopic(User user,HttpServletRequest request) {
