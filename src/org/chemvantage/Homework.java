@@ -198,12 +198,14 @@ public class Homework extends HttpServlet {
 			
 			// get a List of homework questionKeys for this topic:
 			List<Key<Question>> allQuestionKeys = new ArrayList<Key<Question>>();
-			Text text = ofy().load().type(Text.class).id(hwa.textId).now();
-			Chapter ch = null;
-			for (Chapter c : text.chapters) {
-				if (c.chapterNumber == hwa.chapterNumber) ch = c;
-			}
-			for (Long cId : ch.conceptIds) allQuestionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());
+			try {
+				Text text = ofy().load().type(Text.class).id(hwa.textId).now();
+				Chapter ch = null;
+				for (Chapter c : text.chapters) {
+					if (c.chapterNumber == hwa.chapterNumber) ch = c;
+				}
+				for (Long cId : ch.conceptIds) allQuestionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());
+			} catch (Exception e) {}
 			
 			if (!allQuestionKeys.containsAll(hwa.questionKeys)) {  // might be missing a few questions due to customization
 				List<Key<Question>> addKeys = new ArrayList<Key<Question>>();
