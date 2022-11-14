@@ -841,14 +841,10 @@ public class Homework extends HttpServlet {
 				}
 			} catch (Exception e) {}
 			// next, include any conceptIds included in this request:
+			Long newConcept = null;
 			try {
-				String[] newConceptIds = request.getParameterValues("ConceptId");
-				if (newConceptIds != null) {
-					for (int i=0;i<newConceptIds.length;i++) {
-						Long cId = Long.parseLong(newConceptIds[i]);
-						if (!conceptIds.contains(cId)) conceptIds.add(cId);
-					}
-				}
+				newConcept = Long.parseLong(request.getParameter("ConceptId"));
+				conceptIds.add(newConcept);
 			} catch (Exception e) {}
 
 			// Make a list of key concepts already covered by this assignment:
@@ -862,14 +858,17 @@ public class Homework extends HttpServlet {
 			// Create a short form to select one additional key concept to include (will exclude the previous selection, if any)
 			buf.append("<form method=get action=/Homework>"
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-					+ "You may include additional question items from another key concept: "
-					+ "<input type=hidden name=UserRequest value=AssignHomeworkQuestions /><select name=ConceptId>");
+					+ "You may include additional question items from: "
+					+ "<input type=hidden name=UserRequest value=AssignHomeworkQuestions />"
+					+ "<select name=ConceptId><option value='Select'>Select a key concept</option>");
 			for (Key<Concept> k : conceptKeys) {
-				if (conceptIds.contains(k.getId()) || keyConcepts.get(k).title.startsWith("0")) continue;  // skip current and hidden conceptIds
-				buf.append("<option value=" + k.getId() + ">" + keyConcepts.get(k).title + "</option>");
+				try {
+					if (conceptIds.contains(k.getId()) || keyConcepts.get(k).orderBy.startsWith(" 0")) continue;  // skip current and hidden conceptIds
+					buf.append("<option value='" + k.getId() + "'" + (newConcept!=null && k.getId()==newConcept?" selected>":">") + keyConcepts.get(k).title + "</option>");
+				} catch (Exception e) {}
 			}
-			buf.append("<input type=submit value='Include This Concept' /></form><hr><br/>");
-
+			buf.append("<input type=submit value='Show questions' /></form><hr><br/>");
+			
 			// now we have all of the relevant conceptIds. Make a list of questions carrying these attributes:
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 			for (Long cId : conceptIds) questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());
