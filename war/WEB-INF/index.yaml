@@ -54,21 +54,21 @@ indexes:
   - name: questionId
   - name: score
 
-- kind: PollTransaction
-  properties:
-  - name: assignmentId
-  - name: downloaded
-
-- kind: PollTransaction
-  properties:
-  - name: assignmentId
-  - name: userId
-
 - kind: PlacementExamTransaction
   properties:
   - name: userId
   - name: assignmentId
   - name: downloaded
+
+- kind: PollTransaction
+  properties:
+  - name: assignmentId
+  - name: downloaded
+
+- kind: PollTransaction
+  properties:
+  - name: assignmentId
+  - name: userId
 
 - kind: PracticeExamTransaction
   properties:

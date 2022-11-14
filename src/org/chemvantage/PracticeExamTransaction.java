@@ -48,13 +48,15 @@ public class PracticeExamTransaction implements Serializable {
 
 	PracticeExamTransaction() {}
 
-	PracticeExamTransaction(String userId,Long assignmentId,List<Long> conceptIds) {
-		this.userId = Subject.hashId(userId);
-		this.assignmentId = assignmentId;
-		this.conceptIds = conceptIds;
+	PracticeExamTransaction(User user,Assignment a) {
+		this.userId = user.getHashedId();
 		this.downloaded = new Date();
+		this.assignmentId = a.id;
+		this.conceptIds = a.conceptIds;
+		this.scores = new int[a.conceptIds.size()];
+		this.possibleScores = new int[a.conceptIds.size()];
 	}
-	
+
 	PracticeExamTransaction(List<Long> topicIds,String userId,Date downloaded,Date graded,int[] scores,int[] possibleScores) {
 		this.topicIds = topicIds;
 		this.userId = Subject.hashId(userId);

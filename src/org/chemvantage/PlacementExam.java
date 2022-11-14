@@ -341,21 +341,22 @@ public class PlacementExam extends HttpServlet {
 			PlacementExamTransaction pt = null;
 			
 			// Check to see if this user has any pending exams:
-			// A blank transaction means a student has paid for an exam but not taken it yet
 			Date now = new Date();
 			Date startTime = new Date(now.getTime()-timeAllowed*1000);  // about 1 hour ago depending on timeAllowed ago 
-			int nAttempts = 0;
-
+			List<PlacementExamTransaction> pets = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
+			int nAttempts = pets.size();
+			
+			// get the most recent transaction and determine whether this is resuming a recent exam
+			pt = nAttempts==0?null:pets.get(nAttempts-1);
 			boolean resumingExam = false;
-			pt = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("graded",null).filter("downloaded >",startTime).first().now();
-			if (pt != null) resumingExam = true;
-			else {  // this is a new exam, either newly paid or authorized retake
+			if (pt != null && pt.graded==null && pt.downloaded.after(startTime)) resumingExam = true;
+			else { // this is a new exam
+				pt =  new PlacementExamTransaction(user,a);		  
 				if (a.attemptsAllowed != null && nAttempts >= a.attemptsAllowed) {
 					buf.append(Subject.banner);
 					buf.append("<h2>Sorry, you are only allowed " + a.attemptsAllowed + " attempt" + (a.attemptsAllowed==1?"":"s") + " on this assignment.</h2>");
 					
 					DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-					List<PlacementExamTransaction> pets = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
 					buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Placement Exam Score (percent)</th></tr>");
 					for (PlacementExamTransaction pet : pets) {
 						int score = 0;
@@ -371,11 +372,7 @@ public class PlacementExam extends HttpServlet {
 					buf.append("</table><br>Missing scores indicate assignments that were downloaded but not submitted for scoring.<br/><br/>");
 					return buf.toString();
 				}	
-				pt = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("graded",null).filter("downloaded",null).first().now(); // newly  paid
-				Long transactionId = pt==null?null:pt.id;  // use the same id if it exists
-				pt = new PlacementExamTransaction(user,a);
-				pt.id = transactionId;
-				ofy().save().entity(pt).now();	
+				ofy().save().entity(pt).now();	// need to save this to get the pt.id for setting Question parameters
 			}
 			debug.append("2");
 			
@@ -517,6 +514,7 @@ public class PlacementExam extends HttpServlet {
 	
 	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
+		StringBuffer debug = new StringBuffer("Debug: ");
 		try {
 			buf.append("<h2>Placement Exam Results</h2>");
 			if (user.isAnonymous()) buf.append("Anonymous User<br/>");
@@ -669,23 +667,27 @@ public class PlacementExam extends HttpServlet {
 			buf.append(ajaxScoreJavaScript(user.getTokenSignature()));
 
 			if (user.isAnonymous()) return buf.toString();
-			
+			debug.append("1");
 			List<PlacementExamTransaction> pets = new ArrayList<PlacementExamTransaction>();
 			if (user.isAnonymous()) pets = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).order("downloaded").list();
 			else pets = ofy().load().type(PlacementExamTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
 			
 			if (pets==null || pets.isEmpty()) {
 				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>");
-			} else {				
+			} else {
+				debug.append("2");
 				Score s = null;
 				try { // retrieve the score and ensure that it is up to date
+					debug.append("a");
 					s = ofy().load().key(Key.create(Key.create(User.class,user.getId()),Score.class,a.id)).safe();
-					if (s.numberOfAttempts != pets.size()) throw new Exception();
+					if (s.numberOfAttempts != pets.size()) throw new Exception("Score is not up to date.");
 				} catch (Exception e) { // create a fresh Score entity from scratch
+					debug.append("b");
 					s = Score.getInstance(user.getId(), a);
 					ofy().save().entity(s);
 				}
-
+				debug.append("3");
+				
 				buf.append("<h3>Your Scores for This Placement Exam Assignment</h3>");
 
 				buf.append("Your best score on this assignment is " + Math.round(s.getPctScore()) + "%.<br>");
@@ -727,7 +729,7 @@ public class PlacementExam extends HttpServlet {
 			for (PlacementExamTransaction pet : pets) {
 				score = 0;
 				possibleScore = 0;
-				for (int i=0;i<a.conceptIds.size();i++) {
+				for (int i=0;i<pet.scores.length;i++) {
 					score += pet.scores[i];
 					possibleScore += pet.possibleScores[i];
 				}
@@ -742,7 +744,7 @@ public class PlacementExam extends HttpServlet {
 			else buf.append("The number of allowed attempts for this assignment (" + a.attemptsAllowed + ") has been reached.");
 		}
 		catch (Exception e) {
-			buf.append(e.toString() + ": " + e.getMessage());
+			buf.append((e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString());
 		}
 		return buf.toString();
 	}

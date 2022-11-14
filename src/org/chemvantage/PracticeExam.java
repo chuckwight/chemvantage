@@ -265,19 +265,21 @@ public class PracticeExam extends HttpServlet {
 			// Check to see if this user has any pending exams:
 			Date now = new Date();
 			Date startTime = new Date(now.getTime()-timeAllowed*1000);  // about 1 hour ago depending on timeAllowed ago 
-			PracticeExamTransaction pt = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).filter("graded",null).filter("downloaded >",startTime).first().now();			
-			boolean resumingExam = pt != null;
+			List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
+			int nAttempts = pets.size();
 			
-			if (pt == null) {  // this is a valid request for a new exam with at least 3 topics; create a new transaction
-				// first check to see if a.attemptsAllowed has been reached
-				int nAttempts = a==null?0:ofy().load().type(PracticeExamTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).count();
-				if (a!=null && a.attemptsAllowed != null && nAttempts >= a.attemptsAllowed) {
+			//	get the most recent transaction and determine whether this is resuming a recent exam
+			PracticeExamTransaction pt = nAttempts==0?null:pets.get(nAttempts-1);
+			boolean resumingExam = false;
+			if (pt != null && pt.graded==null && pt.downloaded.after(startTime)) resumingExam = true;
+			else { // this is a new exam
+				pt =  new PracticeExamTransaction(user,a);		  
+				if (a.attemptsAllowed != null && nAttempts >= a.attemptsAllowed) {
 					buf.append(Subject.banner);
 					buf.append("<h2>Sorry, you are only allowed " + a.attemptsAllowed + " attempt" + (a.attemptsAllowed==1?"":"s") + " on this assignment.</h2>");
-
+					
 					DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-					List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
-					buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Practice Exam Score (percent)</th></tr>");
+					buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Placement Exam Score (percent)</th></tr>");
 					for (PracticeExamTransaction pet : pets) {
 						int score = 0;
 						int possibleScore = 0;
@@ -292,9 +294,7 @@ public class PracticeExam extends HttpServlet {
 					buf.append("</table><br>Missing scores indicate assignments that were downloaded but not submitted for scoring.<br/><br/>");
 					return buf.toString();
 				}	
-				// this new exam is allowed; create a new transaction entity:
-				pt = new PracticeExamTransaction(user.getId(),a.id,a.conceptIds); 
-				ofy().save().entity(pt).now();	
+				ofy().save().entity(pt).now();	// need to save this to get the pt.id for setting Question parameters			
 			}
 
 			// past this point we will present a practice exam to the student. 
@@ -642,7 +642,7 @@ public class PracticeExam extends HttpServlet {
 				for (PracticeExamTransaction pet : pets) {
 					score = 0;
 					possibleScore = 0;
-					for (int i=0;i<a.conceptIds.size();i++) {
+					for (int i=0;i<pet.scores.length;i++) {
 						score += pet.scores[i];
 						possibleScore += pet.possibleScores[i];
 					}
