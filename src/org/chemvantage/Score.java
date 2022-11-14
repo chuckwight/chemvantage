@@ -81,14 +81,11 @@ public class Score {    // this object represents a best score achieved by a use
 			for (PracticeExamTransaction pt : practiceExamTransactions) {
 				if (pt.graded==null) continue;
 				s.numberOfAttempts++;  // number of pre-deadline quiz attempts
-				int score = 0;
-				for (int i=0;i<pt.scores.length;i++) score += pt.scores[i];
+				int score = pt.getScore();
 				s.score = (score>s.score?score:s.score);  // keep the best (max) score
 				if (s.mostRecentAttempt==null || pt.downloaded.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far
 					s.mostRecentAttempt = pt.downloaded;
-					int possibleScore = 0;
-					for (int i=0;i<pt.possibleScores.length;i++) possibleScore += pt.possibleScores[i];
-					s.maxPossibleScore = possibleScore;
+					s.maxPossibleScore = pt.getPossibleScore();
 				}				
 			}			
 			break;

@@ -281,13 +281,7 @@ public class PracticeExam extends HttpServlet {
 					DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 					buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Placement Exam Score (percent)</th></tr>");
 					for (PracticeExamTransaction pet : pets) {
-						int score = 0;
-						int possibleScore = 0;
-						for (int i=0;i<a.conceptIds.size();i++) {
-							score += pet.scores[i];
-							possibleScore += pet.possibleScores[i];
-						}
-						int pct = (possibleScore>0?score*100/possibleScore:0);
+						int pct = (pet.getPossibleScore()>0?pet.getScore()*100/pet.getPossibleScore():0);
 
 						buf.append("<tr><td>" + pet.id + "</td><td>" + df.format(pet.downloaded) + "</td><td align=center>" + (pet.graded==null?"-":pct + "%") +  "</td></tr>");
 					}
@@ -360,8 +354,8 @@ public class PracticeExam extends HttpServlet {
 			
 			// Randomly select the questions to be presented, eliminating each from the List of questionKeys as they are printed
 			Random r = new Random(pt.id);
-			int[] possibleScores = new int[a.conceptIds.size()];
-
+			pt.putPossibleScore(0);
+			
 			// Two-point questions
 			buf.append("<U>2 point questions:</U>");
 			buf.append("<OL>\n");
@@ -371,7 +365,7 @@ public class PracticeExam extends HttpServlet {
 				Key<Question> k = questionKeys_02pt.remove(r.nextInt(questionKeys_02pt.size()));
 				Question q = examQuestions.get(k);
 				i++;
-				possibleScores[a.conceptIds.indexOf(q.conceptId)] += q.pointValue;
+				pt.addPossibleScore(q.pointValue);
 				q.setParameters((int)(pt.id - q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
 				if (!resumingExam) pt.questionKeys.add(k);
@@ -389,7 +383,7 @@ public class PracticeExam extends HttpServlet {
 				Key<Question> k = questionKeys_10pt.remove(r.nextInt(questionKeys_10pt.size()));
 				Question q = examQuestions.get(k);
 				i++;
-				possibleScores[a.conceptIds.indexOf(q.conceptId)] += q.pointValue;
+				pt.addPossibleScore(q.pointValue);
 				q.setParameters((int)(pt.id - q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
 				if (a.id>0) buf.append("<SCRIPT>"
@@ -408,7 +402,7 @@ public class PracticeExam extends HttpServlet {
 				Key<Question> k = questionKeys_15pt.remove(r.nextInt(questionKeys_15pt.size()));
 				Question q = examQuestions.get(k);
 				i++;
-				possibleScores[a.conceptIds.indexOf(q.conceptId)] += q.pointValue;
+				pt.addPossibleScore(q.pointValue);
 				q.setParameters((int)(pt.id - q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
 				if (a.id>0) buf.append("<SCRIPT>"
@@ -418,7 +412,6 @@ public class PracticeExam extends HttpServlet {
 			}
 			buf.append("</OL>");
 
-			pt.possibleScores = possibleScores;
 			ofy().save().entity(pt).now();
 
 			buf.append("\n<input type=hidden name='ExamId' value=" + pt.id + ">");
@@ -506,7 +499,6 @@ public class PracticeExam extends HttpServlet {
 			missedQuestions.append("The following questions were answered incorrectly. There may be additional questions (not shown) that were left unanswered.");			
 			missedQuestions.append("<OL>");
 
-			int[] studentScores = new int[a.conceptIds.size()];
 			int wrongAnswers = 0;
 
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
@@ -518,6 +510,7 @@ public class PracticeExam extends HttpServlet {
 			
 			Map<Key<Question>,Question> examQuestions = ofy().load().keys(questionKeys);
 			List<Response> responses = new ArrayList<Response>();
+			pt.putScore(0);
 			
 			// begin the main scoring loop:
 			for (Key<Question> k : questionKeys) {
@@ -530,7 +523,7 @@ public class PracticeExam extends HttpServlet {
 					int score = studentAnswer.length()==0?0:q.isCorrect(studentAnswer)?q.pointValue:0;
 					if (q.getQuestionType()==5 && score==0 && q.agreesToRequiredPrecision(studentAnswer)) score = q.pointValue-1;
 					
-					if (score > 0) studentScores[a.conceptIds.indexOf(q.conceptId)] += score;
+					if (score > 0) pt.addScore(score);
 					if (studentAnswer.length() > 0) {
 						Response r = new Response("PracticeExam",a.id,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,Subject.hashId(user.getId()),now);
 						r.transactionId = pt.id;
@@ -545,7 +538,6 @@ public class PracticeExam extends HttpServlet {
 				if (q!=null && q.pointValue > 2) pt.questionShowWork.put(k, request.getParameter("ShowWork" + k.getId()));
 			}
 			missedQuestions.append("</OL>\n");
-			pt.scores = studentScores;
 			pt.graded = now;
 			ofy().save().entity(pt).now();
 			ofy().save().entities(responses);
@@ -556,34 +548,11 @@ public class PracticeExam extends HttpServlet {
 				if (a.lti_ags_lineitem_url != null) LTIMessage.postUserScore(s,user.getId());
 			} catch (Exception e) {}
 
-			int score = 0;
-			int possibleScore = 0;
-			for (int i=0;i<a.conceptIds.size();i++) {
-				score += studentScores[i];
-				possibleScore += pt.possibleScores[i];
-			}
-			buf.append("<b>Your score on this exam is " + score + " out of a possible " + possibleScore + " points.</b><p>");
-			if (score > 0 && score == possibleScore) buf.append ("<b>Congratulations on a perfect score!</b>");
-			else {
-				buf.append("<TABLE><TR><TD><b>Key Concept</b></TD><TD><b>Score</b></TD>"
-						+ "<TD><b>Possible</b></TD><TD><b>Percent</b></TD><TD></TD></TR>");
-				int pct = 0;
-				Map<Long,Concept> concepts = ofy().load().type(Concept.class).ids(a.conceptIds);
-				for (int i=0;i<a.conceptIds.size();i++) {
-					if (pt.possibleScores[i]>0) pct = (int)Math.round(pt.scores[i]*100./pt.possibleScores[i]);
-					else pct = 0;
-					String color = (pct>84?"#00FF00":(pct<50?"#FF0000":"#FFFF00"));
-					buf.append("<TR>"
-							+ "<TD>" + concepts.get(a.conceptIds.get(i)).title + "</TD>"
-							+ "<TD ALIGN=RIGHT>" + pt.scores[i] + "</TD>"
-							+ "<TD ALIGN=RIGHT>" + pt.possibleScores[i] + "</TD>"
-							+ "<TD><div style='background-color:" + color + ";width:" + pct 
-							+ "px;'/>&nbsp;</TD></TR>");
-				}
-				buf.append("</TABLE><p>");
-				if (wrongAnswers > 0) buf.append(missedQuestions); // list of missed questions with correct answers
-				else buf.append("Some questions were left blank.");
-			}
+			buf.append("<b>Your score on this exam is " + pt.getScore() + " out of a possible " + pt.getPossibleScore() + " points.</b><p>");
+			if (pt.getScore() > 0 && pt.getScore() == pt.getPossibleScore()) buf.append ("<b>Congratulations on a perfect score!</b>");
+			else if (wrongAnswers > 0) buf.append(missedQuestions); // list of missed questions with correct answers
+			else buf.append("Some questions were left blank.");
+			
 			// embed ajax code to provide feedback
 			buf.append(ajaxScoreJavaScript(user.getTokenSignature()));
 
@@ -640,13 +609,7 @@ public class PracticeExam extends HttpServlet {
 
 				buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Practice Exam Score (percent)</th></tr>");
 				for (PracticeExamTransaction pet : pets) {
-					score = 0;
-					possibleScore = 0;
-					for (int i=0;i<pet.scores.length;i++) {
-						score += pet.scores[i];
-						possibleScore += pet.possibleScores[i];
-					}
-					int pct = (possibleScore>0?score*100/possibleScore:0);
+					int pct = (pet.getPossibleScore()>0?pet.getScore()*100/pet.getPossibleScore():0);
 
 					buf.append("<tr><td>" + pet.id + "</td><td>" + df.format(pet.downloaded) + "</td><td align=center>" + (pet.graded==null?"-":pct + "%") +  "</td></tr>");
 				}
@@ -757,42 +720,11 @@ public class PracticeExam extends HttpServlet {
 			buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Practice Exam Score (percent)</th></tr>");
 
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			int score = 0;
-			int possibleScore = 0;
-			PracticeExamTransaction bestPt = null;
-			int bestPct = 0;
 			for (PracticeExamTransaction pet : pets) {
-				score = 0;
-				possibleScore = 0;
-				for (int i=0;i<pet.conceptIds.size();i++) {
-					score += pet.scores[i];
-					possibleScore += pet.possibleScores[i];
-				}
-				int pct = (possibleScore>0?score*100/possibleScore:0);
-				if (pct >= bestPct) bestPt = pet;
-
+				int pct = (pet.getPossibleScore()>0?pet.getScore()*100/pet.getPossibleScore():0);
 				buf.append("<tr><td>" + pet.id + "</td><td>" + df.format(pet.downloaded) + "</td><td align=center>" + (pet.graded==null?"-":pct + "%") +  "</td></tr>");
 			}
 			buf.append("</table><br>Missing scores indicate assignments that were downloaded but not submitted for scoring.<p>");
-			
-			Map<Long,Concept> concepts = ofy().load().type(Concept.class).ids(bestPt.conceptIds);
-			
-			buf.append("<h3>Detailed Scores for the Best Practice Exam</h3>");
-			buf.append("<TABLE><TR><TD><b>Topic</b></TD><TD><b>Score</b></TD>"
-					+ "<TD><b>Possible</b></TD><TD><b>Percent</b></TD><TD></TD></TR>");
-			for (int i=0;i<bestPt.conceptIds.size();i++) {
-				int pct = (bestPt.possibleScores[i]>0?bestPt.scores[i]*100/bestPt.possibleScores[i]:0);
-				String color = (pct>84?"#00FF00":(pct<50?"#FF0000":"#FFFF00"));
-				buf.append("<TR>"
-						+ "<TD>" + concepts.get(bestPt.conceptIds.get(i)).title + "</TD>"
-						+ "<TD ALIGN=RIGHT>" + bestPt.scores[i] + "</TD>"
-						+ "<TD ALIGN=RIGHT>" + bestPt.possibleScores[i] + "</TD>"
-						+ "<TD ALIGN=RIGHT>" + pct + "%</TD>"
-						+ "<TD><div style='background-color:" + color + ";width:" + pct 
-						+ "px;'/>&nbsp;</TD></TR>");
-			}
-			buf.append("</TABLE><p>");
-	
 		}
 		return buf.toString();
 	}
@@ -807,14 +739,10 @@ public class PracticeExam extends HttpServlet {
 			if (a.lti_nrps_context_memberships_url == null || a.lti_nrps_context_memberships_url.isEmpty()) {
 				return "Sorry, your LMS does not support the Memberships service, so exams cannot be reviewed.";
 			}
-			Map<Long,Concept> concepts = ofy().load().type(Concept.class).ids(a.conceptIds);
 			buf.append("<h2>Practice Exam Assignment Results</h2>"
 					+ "Assignment ID: " + a.id + "<br>"
-					+ "Created: " + a.created + "<br>"
-					+ "Key concepts covered:<ol>");
-			for (Long cId : a.conceptIds) buf.append("<li>" + concepts.get(cId).title + "</li>");
-			buf.append("</ol>");
-
+					+ "Created: " + a.created + "<br>");
+			
 			// Get all of the PracticeExamTransactions associated with this assignment:
 			List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("assignmentId",a.id).list();			
 			if (pets.size()==0) {
@@ -832,7 +760,6 @@ public class PracticeExam extends HttpServlet {
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.SHORT,DateFormat.SHORT);
 			int i = 0;
 			buf.append("<table><tr><th>User</th><th>Attempt</th><th>Downloaded</th><th>Elapsed Time</th>");
-			for (int j=1;j<=a.conceptIds.size();j++) buf.append("<th>Concept " + j + "</th>");
 			buf.append("<th>Total Score</th><th>Review</th><th>Delete</th></tr>");
 			
 			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
@@ -848,7 +775,7 @@ public class PracticeExam extends HttpServlet {
 				Collections.sort(userpets,new SortExams());
 				if (userpets.isEmpty()) {  // place a blank line in the table with the user's name
 					buf.append("<tr style='text-align: center;background-color: " + (i%2==0?"yellow":"cyan") + "'>"
-							+ "<td>" + i + ".&nbsp;" + name + "</td>" + "<td colspan=" + (6+a.conceptIds.size()) + ">(exam was not attempted)</td>");
+							+ "<td>" + i + ".&nbsp;" + name + "</td>" + "<td colspan=6>(exam was not attempted)</td>");
 					buf.append("</tr>");					
 				} else {
 					for (int k=userpets.size();k>0;k--) {  // enter the user's transactions into the table
@@ -856,20 +783,10 @@ public class PracticeExam extends HttpServlet {
 						buf.append("<tr style='text-align: center;background-color: " + (i%2==0?"yellow":"cyan") + "'>");
 						buf.append("<td>" + i + ".&nbsp;" + name + "</td><td>" + k + "</td><td>" + df.format(p.downloaded) + "&nbsp;UTC</td>");
 
-						if (p.graded==null) buf.append("<td colspan=" + (3+a.conceptIds.size()) + ">(exam was not submitted for scoring)</td>");
+						if (p.graded==null) buf.append("<td colspan=3>(exam was not submitted for scoring)</td>");
 						else {
 							buf.append("<td>" + (p.graded==null?"-":(p.graded.getTime()-p.downloaded.getTime())/60000 + " min.") + "</td>");
-
-							int score = 0;
-							int possibleScore = 0;
-							for (int j=0;j<a.conceptIds.size();j++) {
-								score += p.scores[j];
-								possibleScore += p.possibleScores[j];
-								if (p.possibleScores[j] == 0) buf.append("<td> - </td>");
-								else buf.append("<td>" + String.valueOf(100*p.scores[j]/p.possibleScores[j]) + "%" + "</td>");
-							}
-
-							buf.append("<td>" + String.valueOf(100*score/possibleScore) + "%</td>");
+							buf.append("<td>" + String.valueOf(p.getPossibleScore()>0?p.getScore()*100/p.getPossibleScore():0) + "%</td>");
 							buf.append("<td>" 
 									+ (p.graded==null?" - ":(p.reviewed==null?"":df.format(p.reviewed)+"&nbsp;UTC<br/>"))
 									+ "<a href=PracticeExam?UserRequest=ReviewExam&PracticeExamTransactionId=" + p.id 
@@ -1024,8 +941,8 @@ public class PracticeExam extends HttpServlet {
 			if (!pet.assignmentId.equals(a.id)) throw new Exception("Mismatched assignment ID values");
 			
 			// reset the transaction scores arrays
-			pet.scores = new int[pet.conceptIds.size()];
-			pet.possibleScores = new int[pet.conceptIds.size()];
+			pet.putScore(0);
+			pet.putPossibleScore(0);
 			Map<Key<Question>,Question> examQuestions = ofy().load().keys(pet.questionKeys);
 			
 			// Iterate through all of the questions for this exam, getting scores from the range inputs on the review form and compiling the scores
@@ -1034,8 +951,8 @@ public class PracticeExam extends HttpServlet {
 				if (q==null) continue;
 				int score = Integer.parseInt(request.getParameter("Range" + k.getId()));
 				pet.questionScores.put(k, score);
-				pet.scores[pet.conceptIds.indexOf(q.conceptId)] += score;
-				pet.possibleScores[pet.conceptIds.indexOf(q.conceptId)] += q.pointValue; 
+				pet.addScore(score);
+				pet.addPossibleScore(q.pointValue); 
 			}
 			
 			// Record the timestamp for the exam review and save the revised transaction entity

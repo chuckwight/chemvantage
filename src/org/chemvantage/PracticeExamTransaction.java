@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
@@ -40,8 +42,10 @@ public class PracticeExamTransaction implements Serializable {
 			Date reviewed;
 			List<Long> topicIds;
 			List<Long> conceptIds;
-			int[] scores;
-			int[] possibleScores;
+	private	int score;
+	private	int possibleScore;
+	private int[] scores;
+	private int[] possibleScores;
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 			Map<Key<Question>,String> questionShowWork = new HashMap<Key<Question>,String>();
 			Map<Key<Question>,Integer> questionScores = new HashMap<Key<Question>,Integer>();
@@ -53,8 +57,8 @@ public class PracticeExamTransaction implements Serializable {
 		this.downloaded = new Date();
 		this.assignmentId = a.id;
 		this.conceptIds = a.conceptIds;
-		this.scores = new int[a.conceptIds.size()];
-		this.possibleScores = new int[a.conceptIds.size()];
+		//this.scores = new int[a.conceptIds.size()];
+		//this.possibleScores = new int[a.conceptIds.size()];
 	}
 
 	PracticeExamTransaction(List<Long> topicIds,String userId,Date downloaded,Date graded,int[] scores,int[] possibleScores) {
@@ -62,10 +66,38 @@ public class PracticeExamTransaction implements Serializable {
 		this.userId = Subject.hashId(userId);
 		this.downloaded = downloaded;
 		this.graded = graded;
-		this.scores = scores;
-		this.possibleScores = possibleScores;
+		//this.scores = scores;
+		//this.possibleScores = possibleScores;
 	}
 
+	void putScore(int s) {
+		score = s;
+	}
+	
+	void putPossibleScore(int p) {
+		possibleScore = p;
+	}
+	
+	void addScore(int s) {
+		score += s;
+	}
+	
+	void addPossibleScore(int p) {
+		possibleScore += p;
+	}
+	
+	int getScore() {
+		if (score==0) for (int i=0;i<scores.length;i++) score += scores[i];
+		ofy().save().entity(this);
+		return score;
+	}
+	
+	int getPossibleScore() {
+		if (possibleScore==0) for (int i=0;i<possibleScores.length;i++) possibleScore += possibleScores[i];
+		ofy().save().entity(this);
+		return possibleScore;
+	}
+	
     boolean topicsMatch(List<Long> topicIds) {  // matches if both Lists have identical members but not necessarily in the same order
     	if (this.topicIds.size() != topicIds.size()) return false;
     	for (Long tId : this.topicIds) if (!topicIds.contains(tId)) return false;
