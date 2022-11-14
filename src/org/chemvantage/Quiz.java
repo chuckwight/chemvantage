@@ -154,6 +154,7 @@ public class Quiz extends HttpServlet {
 			if (a.title==null) {  // legacy Quiz only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
 				a.title = t.title;
+				if (a.conceptIds.isEmpty()) a.conceptIds = t.conceptIds;
 				ofy().save().entity(a).now();
 			}
 			
@@ -197,6 +198,7 @@ public class Quiz extends HttpServlet {
 			} else if (qa.title==null) {  // legacy Quiz only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(qa.topicId).now();
 				qa.title = t.title;
+				if (qa.conceptIds.isEmpty()) qa.conceptIds = t.conceptIds;
 				ofy().save().entity(qa).now();
 			}
 			debug.append("1");

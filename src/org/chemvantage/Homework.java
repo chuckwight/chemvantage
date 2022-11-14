@@ -147,6 +147,7 @@ public class Homework extends HttpServlet {
 			if (a.title==null) {  // legacy assignment only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
 				a.title = t.title;
+				if (a.conceptIds.isEmpty()) a.conceptIds = t.conceptIds;
 				ofy().save().entity(a).now();
 			}
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
@@ -191,6 +192,7 @@ public class Homework extends HttpServlet {
 			} else if (hwa.title==null) {  // legacy Homework assignment only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(hwa.topicId).now();
 				hwa.title = t.title;
+				if (hwa.conceptIds.isEmpty()) hwa.conceptIds = t.conceptIds;
 				ofy().save().entity(hwa).now();
 			}
 			

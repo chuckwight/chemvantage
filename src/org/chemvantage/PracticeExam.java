@@ -174,6 +174,7 @@ public class PracticeExam extends HttpServlet {
 				for (Topic t : topics) {
 					a.conceptIds.addAll(t.conceptIds);
 				}
+				ofy().save().entity(a).now();
 			}
 			
 			if (a.timeAllowed != null) buf.append("Students are permitted " + a.timeAllowed/60 + " minutes to complete this exam.<br/>");
@@ -237,17 +238,21 @@ public class PracticeExam extends HttpServlet {
 			}
 
 			if (a==null) { // anonymous user 
-				//=============************ MAKE A DUMMY ASSIGNMENT HERE **************===============
 				a = new Assignment();
 				a.id = 0L;
 				a.assignmentType = "PracticeExam";
-				
-				//====================================================================================
+				Text text = ofy().load().type(Text.class).filter("smartText",true).first().now();
+				for (int i=0;i<3;i++) {
+					Chapter ch = text.chapters.get(i);
+					a.conceptIds.addAll(ch.conceptIds);
+					for (Long cId : ch.conceptIds) a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",cId).keys().list());
+				}
 			} else if (a.conceptIds.isEmpty()) { // legacy assignment uses topicIds
 				List<Topic> topics = new ArrayList<Topic>(ofy().load().type(Topic.class).ids(a.topicIds).values());
 				for (Topic t : topics) {
 					a.conceptIds.addAll(t.conceptIds);
 				}
+				ofy().save().entity(a).now();
 			}
 			
 			// Check to see if the timeAllowed has been modified by the instructor:
@@ -468,6 +473,18 @@ public class PracticeExam extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		try {
 			buf.append("<h2>Practice Exam Results</h2>");
+			
+			if (a==null) { // anonymous user 
+				a = new Assignment();
+				a.id = 0L;
+				a.assignmentType = "PracticeExam";
+				Text text = ofy().load().type(Text.class).filter("smartText",true).first().now();
+				for (int i=0;i<3;i++) {
+					Chapter ch = text.chapters.get(i);
+					a.conceptIds.addAll(ch.conceptIds);
+					for (Long cId : ch.conceptIds) a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",cId).keys().list());
+				}
+			}
 			
 			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
