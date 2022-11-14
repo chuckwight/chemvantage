@@ -531,8 +531,10 @@ public class LTIDeepLinks extends HttpServlet {
 					if (chapterNumbers.contains(ch.chapterNumber)) {
 						a.title += ch.title + ", ";
 						for (Long conceptId : ch.conceptIds) {
-							a.conceptIds.add(conceptId);
-							a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",conceptId).keys().list());
+							if (!a.conceptIds.contains(conceptId)) {
+								a.conceptIds.add(conceptId);
+								a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",conceptId).keys().list());
+							}
 						}
 					}
 				}
