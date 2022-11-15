@@ -37,7 +37,7 @@ public class Question implements Serializable, Cloneable {
 	private static final long serialVersionUID = 137L;
 	@Id 	Long id;
 	@Index(IfNotZero.class)	long topicId;
-	@Index(IfNotZero.class) long conceptId; 
+	@Index	Long conceptId; 
 	@Index	String assignmentType;
 			String text;
 			String type;

@@ -116,13 +116,16 @@ public class Edit extends HttpServlet {
 				} catch (Exception e) {}
 				out.println(Subject.getHeader(user) + reviewProposedQuestion(user,request) + Subject.footer);
 				break;
+			case "ViewConceptQuestions":
+				out.println(viewConceptQuestions(user,request));
+				break;
 			case "Refresh":
 				questions.clear();
 			default: out.println(editorsPage(user,request));
 			}
 			
 		} catch (Exception e) {
-			out.println(e.getMessage());
+			out.println(e.getMessage()==null?e.toString():e.getMessage());
 		}
 		out.println(Subject.footer);
 	}
@@ -255,6 +258,10 @@ public class Edit extends HttpServlet {
 			case "Assign Key Concepts":
 				assignKeyConcepts(user,request);
 				out.println(editorsPage(user,request));
+				break;
+			case "UnlinkConceptId":
+				unlinkConceptId(user,request);
+				out.println(viewConceptQuestions(user,request));
 				break;
 			default: out.println(editorsPage(user,request));
 			}
@@ -605,7 +612,7 @@ public class Edit extends HttpServlet {
 			// print the table of key concepts for General Chemistry, roughly ordered by topic/chapter/semester, etc.:
 			buf.append("<b>Key Concepts in General Chemistry</b>\n");
 			buf.append("<TABLE BORDER=0 CELLSPACING=3>"
-					+ "<TR><TH>Order</TH><TH>Title</TH><TH>Action</TH></TR>");
+					+ "<TR><TH>Order</TH><TH>Title</TH><TH>Action</TH><TH>Quiz</TH><TH>Homework</TH><TH>Exam</TH></TR>");
 			List<Concept> concepts = ofy().load().type(Concept.class).order("orderBy").list();
 			for (Concept c : concepts) { // one row for each concept
 				buf.append("<FORM NAME=ConceptsForm" + c.id + " METHOD=POST ACTION=/Edit>"
@@ -617,6 +624,9 @@ public class Edit extends HttpServlet {
 						+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE=Update />"
 						+ "<INPUT TYPE=SUBMIT VALUE='Delete' onClick=\"javascript: document.ConceptsForm" + c.id + ".UserRequest.value='DeleteConcept';\" />"
 						+ "</TD>"
+						+ "<TD ALIGN=CENTER><b><a href=/Edit?UserRequest=ViewConceptQuestions&AssignmentType=Quiz&ConceptId=" + c.id + ">" + ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",c.id).count() + "</a></b></TD>"
+						+ "<TD ALIGN=CENTER><b><a href=/Edit?UserRequest=ViewConceptQuestions&AssignmentType=Homework&ConceptId=" + c.id + ">" + ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",c.id).count() + "</a></b></TD>"
+						+ "<TD ALIGN=CENTER><b><a href=/Edit?UserRequest=ViewConceptQuestions&AssignmentType=Exam&ConceptId=" + c.id + ">" + ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",c.id).count() + "</a></b></TD>"
 						+ "</FORM></TR>");
 			}
 			
@@ -625,7 +635,7 @@ public class Edit extends HttpServlet {
 			buf.append("<TR>"
 					+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4></TD>"
 					+ "<TD ALIGN=CENTER><INPUT NAME=Title></TD>"
-					+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE='Create'></TD></TR></FORM>");
+					+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE='Create'></TD><TD></TD><TD></TD><TD></TD></TR></FORM>");
 			buf.append("</TABLE>");
 		} catch (Exception e) {
 			buf.append(e.getMessage());
@@ -641,6 +651,39 @@ public class Edit extends HttpServlet {
 		List<Question> questions = new ArrayList<Question>(ofy().load().keys(questionKeys).values());
 		for (Question q : questions) q.conceptId = conceptId;
 		ofy().save().entities(questions).now();
+	}
+	
+	void unlinkConceptId(User user,HttpServletRequest request) throws Exception {
+		Long questionId = Long.parseLong(request.getParameter("QuestionId"));
+		Question q = ofy().load().type(Question.class).id(questionId).safe();
+		q.conceptId = null;
+		ofy().save().entity(q).now();
+	}
+	
+	String viewConceptQuestions(User user, HttpServletRequest request) throws Exception {
+		StringBuffer buf = new StringBuffer();
+		String assignmentType = request.getParameter("AssignmentType");
+		Long conceptId = Long.parseLong(request.getParameter("ConceptId"));
+		Concept c = ofy().load().type(Concept.class).id(conceptId).safe();
+		List<Question> questions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",conceptId).list();
+		Collections.sort(questions, new AlphabetizeQuestions());
+		buf.append("<h3>Concept Questions: " + c.title + "</h3>");
+		buf.append("Click Unlink to remove the conceptId from the question item or <a href=/Edit?UserRequest=ManageConcepts>return to the Concepts page</a><br/><br/>");
+		buf.append("<table>");
+		for (Question q : questions) {
+			q.setParameters();
+			buf.append("<tr style=vertical-align:text-top><td style=padding-right:10px>" 
+			+  "<form method=post action=/Edit>"
+			+ "<input type=hidden name=UserRequest value=UnlinkConceptId />"
+			+ "<input type=hidden name=AssignmentType value=" + assignmentType + " />"
+			+ "<input type=hidden name=ConceptId value=" + conceptId + " />"
+			+ "<input type=hidden name=QuestionId value=" + q.id + " />"
+			+ "<input type=submit value=Unlink />"
+			+ "</form>"
+			+ "</td><td>" + q.printAll() + "</td></tr>");
+		}
+		buf.append("</table>");
+		return buf.toString();
 	}
 	
 	void createTopic(User user,HttpServletRequest request) {
@@ -1118,7 +1161,7 @@ public class Edit extends HttpServlet {
 				topicId = Long.parseLong(request.getParameter("TopicId"));
 			} catch (Exception e2) {}
 			
-			long conceptId = 0;
+			Long conceptId = null;
 			try {
 				conceptId = Long.parseLong(request.getParameter("ConceptId"));
 			} catch (Exception e) {}
@@ -1139,7 +1182,7 @@ public class Edit extends HttpServlet {
 				buf.append(" (1 point)<br>");
 			}
 			Topic t = ofy().load().type(Topic.class).id(topicId).safe();
-			Concept c = conceptId==0?null:ofy().load().type(Concept.class).id(conceptId).now();
+			Concept c = conceptId==null || conceptId==0?null:ofy().load().type(Concept.class).id(conceptId).now();
 			buf.append("Topic: " + t.title + "<br>");
 			buf.append("Concept: " + (c==null?"n/a":c.title) + "<br/>");
 			
@@ -1205,7 +1248,7 @@ public class Edit extends HttpServlet {
 		try {
 			long questionId = q.id;
 			Topic t = ofy().load().type(Topic.class).id(q.topicId).safe();
-			Concept c = q.conceptId==0?null:ofy().load().type(Concept.class).id(q.conceptId).now();
+			Concept c = q.conceptId==null || q.conceptId==0?null:ofy().load().type(Concept.class).id(q.conceptId).now();
 			if (q.requiresParser()) q.setParameters();
 			buf.append("<h3>Current Question</h3>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
@@ -1564,6 +1607,12 @@ public class Edit extends HttpServlet {
 			return buf.toString() + e.getMessage();
 		}
 		return buf.toString();
+	}
+	
+	class AlphabetizeQuestions implements Comparator<Question> {
+		public int compare(Question q1,Question q2) {
+			return q1.text.compareTo(q2.text);
+		}
 	}
 	
 	class SortBySuccessPct implements Comparator<Key<Question>> {
