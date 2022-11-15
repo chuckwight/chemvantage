@@ -46,6 +46,7 @@ import com.googlecode.objectify.cmd.Query;
 public class Edit extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
+	static Map<Long,int[]> nConceptQuestions = new HashMap<Long,int[]>();  // size=3 in order: Quiz/Homework/Exam
 	Map<Key<Question>,Question> questions = new HashMap<Key<Question>,Question>();
 	Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
 	Map<Key<Question>,Integer> pointValue = new HashMap<Key<Question>,Integer>();
@@ -82,6 +83,8 @@ public class Edit extends HttpServlet {
 			if (userRequest == null) userRequest = "";
 
 			switch (userRequest) {
+			case "CountConceptQuestions":
+				countConceptQuestions(request);
 			case "ManageConcepts":
 				out.println(conceptsForm(request));
 				break;
@@ -615,6 +618,7 @@ public class Edit extends HttpServlet {
 					+ "<TR><TH>Order</TH><TH>Title</TH><TH>Action</TH><TH>Quiz</TH><TH>Homework</TH><TH>Exam</TH></TR>");
 			List<Concept> concepts = ofy().load().type(Concept.class).order("orderBy").list();
 			for (Concept c : concepts) { // one row for each concept
+				int[] nQuestions = nConceptQuestions.get(c.id);
 				buf.append("<FORM NAME=ConceptsForm" + c.id + " METHOD=POST ACTION=/Edit>"
 						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateConcept />"
 						+ "<INPUT TYPE=HIDDEN NAME=ConceptId VALUE='" + c.id + "' />");
@@ -624,9 +628,10 @@ public class Edit extends HttpServlet {
 						+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE=Update />"
 						+ "<INPUT TYPE=SUBMIT VALUE='Delete' onClick=\"javascript: document.ConceptsForm" + c.id + ".UserRequest.value='DeleteConcept';\" />"
 						+ "</TD>"
-						+ "<TD ALIGN=CENTER><b><a href=/Edit?UserRequest=ViewConceptQuestions&AssignmentType=Quiz&ConceptId=" + c.id + ">" + ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",c.id).count() + "</a></b></TD>"
-						+ "<TD ALIGN=CENTER><b><a href=/Edit?UserRequest=ViewConceptQuestions&AssignmentType=Homework&ConceptId=" + c.id + ">" + ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",c.id).count() + "</a></b></TD>"
-						+ "<TD ALIGN=CENTER><b><a href=/Edit?UserRequest=ViewConceptQuestions&AssignmentType=Exam&ConceptId=" + c.id + ">" + ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",c.id).count() + "</a></b></TD>"
+						+ "<TD ALIGN=CENTER><a href=/Edit?UserRequest=ViewConceptQuestions&AssignmentType=Quiz&ConceptId=" + c.id + ">" + (nQuestions==null?"View":"<b>" + nQuestions[0] + "</b>") + "</a></TD>"
+						+ "<TD ALIGN=CENTER><a href=/Edit?UserRequest=ViewConceptQuestions&AssignmentType=Homework&ConceptId=" + c.id + ">" + (nQuestions==null?"View":"<b>" + nQuestions[1] + "</b>") + "</a></TD>"
+						+ "<TD ALIGN=CENTER><a href=/Edit?UserRequest=ViewConceptQuestions&AssignmentType=Exam&ConceptId=" + c.id + ">" + (nQuestions==null?"View":"<b>" + nQuestions[2] + "</b>") + "</a></TD>"
+						+ "<TD><a href=/Edit?UserRequest=CountConceptQuestions&ConceptId=" + c.id + ">Count</a></TD>"
 						+ "</FORM></TR>");
 			}
 			
@@ -635,7 +640,7 @@ public class Edit extends HttpServlet {
 			buf.append("<TR>"
 					+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4></TD>"
 					+ "<TD ALIGN=CENTER><INPUT NAME=Title></TD>"
-					+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE='Create'></TD><TD></TD><TD></TD><TD></TD></TR></FORM>");
+					+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE='Create'></TD><TD></TD><TD></TD><TD></TD><TD></TD></TR></FORM>");
 			buf.append("</TABLE>");
 		} catch (Exception e) {
 			buf.append(e.getMessage());
@@ -651,6 +656,15 @@ public class Edit extends HttpServlet {
 		List<Question> questions = new ArrayList<Question>(ofy().load().keys(questionKeys).values());
 		for (Question q : questions) q.conceptId = conceptId;
 		ofy().save().entities(questions).now();
+	}
+	
+	void countConceptQuestions(HttpServletRequest request) throws Exception {
+		Long conceptId = Long.parseLong(request.getParameter("ConceptId"));
+		int[] nQuestions = {0,0,0};
+		nQuestions[0] = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",conceptId).count();
+		nQuestions[1] = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",conceptId).count();
+		nQuestions[2] = ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",conceptId).count();
+		nConceptQuestions.put(conceptId, nQuestions);
 	}
 	
 	void unlinkConceptId(User user,HttpServletRequest request) throws Exception {
@@ -678,8 +692,9 @@ public class Edit extends HttpServlet {
 			+ "<input type=hidden name=AssignmentType value=" + assignmentType + " />"
 			+ "<input type=hidden name=ConceptId value=" + conceptId + " />"
 			+ "<input type=hidden name=QuestionId value=" + q.id + " />"
-			+ "<input type=submit value=Unlink />"
-			+ "</form>"
+			+ "<input type=submit value=Unlink />&nbsp;"
+			+ "<a href=/Edit?UserRequest=Edit&QuestionId=" + q.id + ">Edit</a>&nbsp;"
+			+ questions.indexOf(q) + ".</form>"
 			+ "</td><td>" + q.printAll() + "</td></tr>");
 		}
 		buf.append("</table>");
