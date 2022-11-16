@@ -512,6 +512,7 @@ public class PlacementExam extends HttpServlet {
 	
 	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
+		StringBuffer debug = new StringBuffer("Debug: ");
 		try {
 			buf.append("<h2>Placement Exam Results</h2>");
 			if (user.isAnonymous()) buf.append("Anonymous User<br/>");
@@ -660,15 +661,19 @@ public class PlacementExam extends HttpServlet {
 			if (pets==null || pets.isEmpty()) {
 				buf.append("Sorry, we did not find any records for you in the database for this assignment.<p>");
 			} else {				
+				debug.append("2");
 				Score s = null;
 				try { // retrieve the score and ensure that it is up to date
-					s = ofy().load().key(Key.create(Key.create(User.class,user.getId()),Score.class,a.id)).safe();
-					if (s.numberOfAttempts != pets.size()) throw new Exception();
+					debug.append("a");
+					s = ofy().load().key(Key.create(Key.create(User.class,user.getHashedId()),Score.class,a.id)).safe();
+					if (s.numberOfAttempts != pets.size()) throw new Exception("Score is not up to date.");
 				} catch (Exception e) { // create a fresh Score entity from scratch
+					debug.append("b");
 					s = Score.getInstance(user.getId(), a);
 					ofy().save().entity(s);
 				}
-
+				debug.append("3");
+				
 				buf.append("<h3>Your Scores for This Placement Exam Assignment</h3>");
 
 				buf.append("Your best score on this assignment is " + Math.round(s.getPctScore()) + "%.<br>");
@@ -725,7 +730,7 @@ public class PlacementExam extends HttpServlet {
 			else buf.append("The number of allowed attempts for this assignment (" + a.attemptsAllowed + ") has been reached.");
 		}
 		catch (Exception e) {
-			buf.append(e.toString() + ": " + e.getMessage());
+			buf.append((e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString());
 		}
 		return buf.toString();
 	}

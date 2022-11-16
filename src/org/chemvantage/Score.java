@@ -79,7 +79,7 @@ public class Score {    // this object represents a best score achieved by a use
 		case "PracticeExam":
 			List<PracticeExamTransaction> practiceExamTransactions = ofy().load().type(PracticeExamTransaction.class).filter("userId",hashedId).filter("assignmentId",a.id).list();
 			for (PracticeExamTransaction pt : practiceExamTransactions) {
-				if (pt.graded==null || !pt.topicsMatch(a.topicIds)) continue;
+				if (pt.graded==null) continue;
 				s.numberOfAttempts++;  // number of pre-deadline quiz attempts
 				int score = 0;
 				for (int i=0;i<pt.scores.length;i++) score += pt.scores[i];
@@ -95,7 +95,7 @@ public class Score {    // this object represents a best score achieved by a use
 		case "PlacementExam":
 			List<PlacementExamTransaction> placementExamTransactions = ofy().load().type(PlacementExamTransaction.class).filter("userId",hashedId).filter("assignmentId",a.id).list();
 			for (PlacementExamTransaction pt : placementExamTransactions) {
-				if (pt.graded==null || !pt.topicsMatch(a.topicIds)) continue;
+				if (pt.graded==null) continue;
 				s.numberOfAttempts++;  // number of pre-deadline quiz attempts
 				int score = 0;
 				for (int i=0;i<pt.scores.length;i++) score += pt.scores[i];

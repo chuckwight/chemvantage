@@ -46,6 +46,7 @@ import com.googlecode.objectify.cmd.Query;
 public class Edit extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
+	static Map<Long,int[]> nConceptQuestions = new HashMap<Long,int[]>();  // size=3 in order: Quiz/Homework/Exam
 	Map<Key<Question>,Question> questions = new HashMap<Key<Question>,Question>();
 	Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
 	Map<Key<Question>,Integer> pointValue = new HashMap<Key<Question>,Integer>();
@@ -82,6 +83,8 @@ public class Edit extends HttpServlet {
 			if (userRequest == null) userRequest = "";
 
 			switch (userRequest) {
+			case "CountConceptQuestions":
+				countConceptQuestions(request);
 			case "ManageConcepts":
 				out.println(conceptsForm(request));
 				break;
@@ -125,7 +128,7 @@ public class Edit extends HttpServlet {
 			}
 			
 		} catch (Exception e) {
-			out.println(e.getMessage());
+			out.println(e.getMessage()==null?e.toString():e.getMessage());
 		}
 		out.println(Subject.footer);
 	}
@@ -259,8 +262,8 @@ public class Edit extends HttpServlet {
 				assignKeyConcepts(user,request);
 				out.println(editorsPage(user,request));
 				break;
-			case "RemoveQuestionConceptIds":
-				removeQuestionConceptIds(user,request);
+			case "UnlinkConceptId":
+				unlinkConceptId(user,request);
 				out.println(viewConceptQuestions(user,request));
 				break;
 			default: out.println(editorsPage(user,request));
@@ -272,7 +275,9 @@ public class Edit extends HttpServlet {
 		out.println(Subject.footer);
 	}
 
-	String editorsPage(User user,HttpServletRequest request) {
+	String editorsPage(User user,HttpServletRequest request) throws Exception {
+		if (request.getParameter("ConceptId")!=null) return viewConceptQuestions(user,request);
+
 		StringBuffer buf = new StringBuffer("<h3>Editors' Page</h3>");
 		try {
 			int nPending = ofy().load().type(ProposedQuestion.class).count();
@@ -320,7 +325,8 @@ public class Edit extends HttpServlet {
 					buf.append("<br/>");
 				} catch (Exception e) {}
 				
-				List<Key<Question>> questionKeys = loadQuestions(assignmentType,topicId);
+				//List<Key<Question>> questionKeys = loadQuestions(assignmentType,topicId);
+				List<Question> questions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).list();
 				
 				buf.append("<form method=post action=/Edit>"
 						+ "<input type=hidden name=UserRequest value='Assign Key Concepts' />"
@@ -329,8 +335,7 @@ public class Edit extends HttpServlet {
 				buf.append("Select a key concept and check all the corresponding questions. " + conceptSelectBox());
 				buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");				
 				
-				for (Key<Question> k : questionKeys) {
-					Question q = questions.get(k).clone();
+				for (Question q : questions) {
 					q.setParameters();
 					String conceptTitle = "";
 					String conceptColor = "";
@@ -442,52 +447,6 @@ public class Edit extends HttpServlet {
 		return buf.toString();
 	}
 
-	String viewConceptQuestions(User user, HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer("<h3>Key Concept Questions</h3>");
-		
-		// make a short form to select the desired key concept
-		long conceptId = 0L;
-		try { conceptId = Long.parseLong(request.getParameter("ConceptId")); } catch (Exception e) {}
-		List<Concept> concepts = ofy().load().type(Concept.class).order("orderBy").list();
-		buf.append("<form method=get action=/Edit>"
-				+ "<input type=hidden name=UserRequest value=ViewConceptQuestions />"
-				+ "Select a key concept: <select name=ConceptId><option value=0>Select a key concept</option>");
-		for (Concept c : concepts) buf.append("<option value=" + c.id + (c.id==conceptId?" selected>":">") + c.title + "</option>");
-		buf.append("</select> "
-				+ "and assignment type: <select name=AssignmentType>"
-				+ "<option value=Quiz>Quiz</option>"
-				+ "<option value=Homework>Homework</option>"
-				+ "<option value=Exam>Exam</option>"
-				+ "</select> "
-				+ "<input type=submit value=Go> or <a href=/Edit>Return to the main Edit page</a>"
-				+ "</form><br/>");
-		if (conceptId==0) return buf.toString();
-		
-		// retrieve the questions for the selected conceptId and assignmentType
-		String assignmentType = request.getParameter("AssignmentType");
-		List<Question> conceptQuestions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",conceptId).list();
-		if (conceptQuestions.isEmpty()) return "There are no questions for this key concept.";
-		
-		// print a table to view/delete the questions
-		buf.append("<form method=post action=/Edit>"
-				+ "<input type=submit value='Remove the conceptId from the selected questions' /><br/><br/>"
-				+ "<input type=hidden name=UserRequest value=RemoveQuestionConceptIds />"
-				+ "<input type=hidden name=AssignmentType value=" + assignmentType + " />"
-				+ "<input type=hidden name=ConceptId value=" + conceptId + " />"
-				+ "<div style='display: table'>");
-		int i = 0;
-		for (Question q : conceptQuestions) {
-			i++;
-			buf.append("<div style='display: table-row;padding-right: 5px'>"
-					+ "<div style='display: table-cell'><input type=checkbox name=QuestionId value=" + q.id + " /> " + i + ". </div>"
-					+ "<div style='display: table-cell'>" + q.printAll() + "</div>"
-					+ "</div>"); // closes row
-		}
-		buf.append("</div></div>"  // closes table
-				+ "<br/><input type=submit value='Remove the conceptId from the selected questions' /></form><br/>"); 
-		return buf.toString();
-	}
-	
 	String assignmentTypeDropDownBox(String defaultType) {
 		return assignmentTypeDropDownBox(defaultType,false);
 	}
@@ -633,8 +592,7 @@ public class Edit extends HttpServlet {
 			concepts = ofy().load().type(Concept.class).order("orderBy").list();
 		}
 		buf.append("<SELECT NAME=ConceptId><OPTION VALUE=0>Select a key concept</OPTION>");
-		for (Concept c : concepts) if (t.conceptIds.contains(c.id)) 
-			buf.append("<OPTION VALUE=" + c.id + (c.id==conceptId?" SELECTED>":">") + c.title + "</OPTION>");
+		for (Concept c : concepts) buf.append("<OPTION VALUE=" + c.id + (c.id==conceptId?" SELECTED>":">") + c.title + "</OPTION>");
 		buf.append("</SELECT>");
 		
 		return buf.toString();
@@ -658,9 +616,10 @@ public class Edit extends HttpServlet {
 			// print the table of key concepts for General Chemistry, roughly ordered by topic/chapter/semester, etc.:
 			buf.append("<b>Key Concepts in General Chemistry</b>\n");
 			buf.append("<TABLE BORDER=0 CELLSPACING=3>"
-					+ "<TR><TH>Order</TH><TH>Title</TH><TH>Action</TH></TR>");
+					+ "<TR><TH>Order</TH><TH>Title</TH><TH>Action</TH><TH>Quiz</TH><TH>Homework</TH><TH>Exam</TH></TR>");
 			List<Concept> concepts = ofy().load().type(Concept.class).order("orderBy").list();
 			for (Concept c : concepts) { // one row for each concept
+				int[] nQuestions = nConceptQuestions.get(c.id);
 				buf.append("<FORM NAME=ConceptsForm" + c.id + " METHOD=POST ACTION=/Edit>"
 						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateConcept />"
 						+ "<INPUT TYPE=HIDDEN NAME=ConceptId VALUE='" + c.id + "' />");
@@ -670,6 +629,10 @@ public class Edit extends HttpServlet {
 						+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE=Update />"
 						+ "<INPUT TYPE=SUBMIT VALUE='Delete' onClick=\"javascript: document.ConceptsForm" + c.id + ".UserRequest.value='DeleteConcept';\" />"
 						+ "</TD>"
+						+ "<TD ALIGN=CENTER><a href=/Edit?UserRequest=ViewConceptQuestions&AssignmentType=Quiz&ConceptId=" + c.id + ">" + (nQuestions==null?"View":"<b>" + nQuestions[0] + "</b>") + "</a></TD>"
+						+ "<TD ALIGN=CENTER><a href=/Edit?UserRequest=ViewConceptQuestions&AssignmentType=Homework&ConceptId=" + c.id + ">" + (nQuestions==null?"View":"<b>" + nQuestions[1] + "</b>") + "</a></TD>"
+						+ "<TD ALIGN=CENTER><a href=/Edit?UserRequest=ViewConceptQuestions&AssignmentType=Exam&ConceptId=" + c.id + ">" + (nQuestions==null?"View":"<b>" + nQuestions[2] + "</b>") + "</a></TD>"
+						+ "<TD><a href=/Edit?UserRequest=CountConceptQuestions&ConceptId=" + c.id + ">Count</a></TD>"
 						+ "</FORM></TR>");
 			}
 			
@@ -678,7 +641,7 @@ public class Edit extends HttpServlet {
 			buf.append("<TR>"
 					+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4></TD>"
 					+ "<TD ALIGN=CENTER><INPUT NAME=Title></TD>"
-					+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE='Create'></TD></TR></FORM>");
+					+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE='Create'></TD><TD></TD><TD></TD><TD></TD><TD></TD></TR></FORM>");
 			buf.append("</TABLE>");
 		} catch (Exception e) {
 			buf.append(e.getMessage());
@@ -691,26 +654,52 @@ public class Edit extends HttpServlet {
 		String[] questionIdStrings = request.getParameterValues("QuestionId");
 		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 		for (int i=0; i<questionIdStrings.length; i++) questionKeys.add(Key.create(Question.class,Long.parseLong(questionIdStrings[i])));
-		List<Question> revised = new ArrayList<Question>();
-		for (Key<Question> k : questionKeys) {
-			Question q = this.questions.get(k);
-			q.conceptId = conceptId;
-			revised.add(q);
-		}
-		ofy().save().entities(revised);
+		List<Question> questions = new ArrayList<Question>(ofy().load().keys(questionKeys).values());
+		for (Question q : questions) q.conceptId = conceptId;
+		ofy().save().entities(questions).now();
 	}
 	
-	void removeQuestionConceptIds(User user,HttpServletRequest request) {
-		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
-		String[] qIds = request.getParameterValues("QuestionId");
-		for (int i=0;i<qIds.length;i++) {
-			try {
-				questionKeys.add(Key.create(Question.class,Long.parseLong(qIds[i])));
-			} catch (Exception e) {}
+	void countConceptQuestions(HttpServletRequest request) throws Exception {
+		Long conceptId = Long.parseLong(request.getParameter("ConceptId"));
+		int[] nQuestions = {0,0,0};
+		nQuestions[0] = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",conceptId).count();
+		nQuestions[1] = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",conceptId).count();
+		nQuestions[2] = ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",conceptId).count();
+		nConceptQuestions.put(conceptId, nQuestions);
+	}
+	
+	void unlinkConceptId(User user,HttpServletRequest request) throws Exception {
+		Long questionId = Long.parseLong(request.getParameter("QuestionId"));
+		Question q = ofy().load().type(Question.class).id(questionId).safe();
+		q.conceptId = null;
+		ofy().save().entity(q).now();
+	}
+	
+	String viewConceptQuestions(User user, HttpServletRequest request) throws Exception {
+		StringBuffer buf = new StringBuffer();
+		String assignmentType = request.getParameter("AssignmentType");
+		Long conceptId = Long.parseLong(request.getParameter("ConceptId"));
+		Concept c = ofy().load().type(Concept.class).id(conceptId).safe();
+		List<Question> questions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",conceptId).list();
+		Collections.sort(questions, new AlphabetizeQuestions());
+		buf.append("<h3>Concept Questions: " + c.title + "</h3>");
+		buf.append("Click Unlink to remove the conceptId from the question item or <a href=/Edit?UserRequest=ManageConcepts>return to the Concepts page</a><br/><br/>");
+		buf.append("<table>");
+		for (Question q : questions) {
+			q.setParameters();
+			buf.append("<tr style=vertical-align:text-top><td style=padding-right:5px>" 
+			+  "<form method=post action=/Edit>"
+			+ "<input type=hidden name=UserRequest value=UnlinkConceptId />"
+			+ "<input type=hidden name=AssignmentType value=" + assignmentType + " />"
+			+ "<input type=hidden name=ConceptId value=" + conceptId + " />"
+			+ "<input type=hidden name=QuestionId value=" + q.id + " />"
+			+ "<input type=submit value=Unlink />&nbsp;"
+			+ "<a href=/Edit?UserRequest=Edit&QuestionId=" + q.id + ">Edit</a>&nbsp;&nbsp;&nbsp;"
+			+ (questions.indexOf(q)+1) + ".</form>"
+			+ "</td><td>" + q.printAll() + "</td></tr>");
 		}
-		List<Question> questions = new ArrayList<Question>(ofy().load().keys(questionKeys).values());
-		for (Question q : questions) q.conceptId = 0;
-		ofy().save().entities(questions).now();
+		buf.append("</table>");
+		return buf.toString();
 	}
 	
 	void createTopic(User user,HttpServletRequest request) {
@@ -1188,7 +1177,7 @@ public class Edit extends HttpServlet {
 				topicId = Long.parseLong(request.getParameter("TopicId"));
 			} catch (Exception e2) {}
 			
-			long conceptId = 0;
+			Long conceptId = null;
 			try {
 				conceptId = Long.parseLong(request.getParameter("ConceptId"));
 			} catch (Exception e) {}
@@ -1209,7 +1198,7 @@ public class Edit extends HttpServlet {
 				buf.append(" (1 point)<br>");
 			}
 			Topic t = ofy().load().type(Topic.class).id(topicId).safe();
-			Concept c = conceptId==0?null:ofy().load().type(Concept.class).id(conceptId).now();
+			Concept c = conceptId==null || conceptId==0?null:ofy().load().type(Concept.class).id(conceptId).now();
 			buf.append("Topic: " + t.title + "<br>");
 			buf.append("Concept: " + (c==null?"n/a":c.title) + "<br/>");
 			
@@ -1275,7 +1264,7 @@ public class Edit extends HttpServlet {
 		try {
 			long questionId = q.id;
 			Topic t = ofy().load().type(Topic.class).id(q.topicId).safe();
-			Concept c = q.conceptId==0?null:ofy().load().type(Concept.class).id(q.conceptId).now();
+			Concept c = q.conceptId==null || q.conceptId==0?null:ofy().load().type(Concept.class).id(q.conceptId).now();
 			if (q.requiresParser()) q.setParameters();
 			buf.append("<h3>Current Question</h3>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
@@ -1378,7 +1367,7 @@ public class Edit extends HttpServlet {
 			buf.append("</FORM>");
 
 		} catch (Exception e) {
-			return editorsPage(user,request);
+			return "Error: " + (e.getMessage()==null?e.toString():e.getMessage());
 		}
 		return buf.toString();
 	}
@@ -1634,6 +1623,12 @@ public class Edit extends HttpServlet {
 			return buf.toString() + e.getMessage();
 		}
 		return buf.toString();
+	}
+	
+	class AlphabetizeQuestions implements Comparator<Question> {
+		public int compare(Question q1,Question q2) {
+			return q1.text.compareTo(q2.text);
+		}
 	}
 	
 	class SortBySuccessPct implements Comparator<Key<Question>> {
