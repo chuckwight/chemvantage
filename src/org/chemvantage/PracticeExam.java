@@ -645,7 +645,7 @@ public class PracticeExam extends HttpServlet {
 				} else {				
 					Score s = null;
 					try { // retrieve the score and ensure that it is up to date
-						s = ofy().load().key(Key.create(Key.create(User.class,user.getId()),Score.class,a.id)).safe();
+						s = ofy().load().key(Key.create(Key.create(User.class,user.getHashedId()),Score.class,a.id)).safe();
 						if (s.numberOfAttempts != pets.size()) throw new Exception();
 					} catch (Exception e) { // create a fresh Score entity from scratch
 						s = Score.getInstance(user.getId(), a);
