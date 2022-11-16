@@ -178,6 +178,7 @@ public class Homework extends HttpServlet {
 	
 	static String printHomework(User user, Assignment hwa, long hintQuestionId) {
 		StringBuffer buf = new StringBuffer();
+		StringBuffer debug = new StringBuffer("Debug: ");
 		
 		try {
 			if (hwa==null) {  // anonymous user; print an assignment on Chapter 1 of the first smartText entity
@@ -205,15 +206,24 @@ public class Homework extends HttpServlet {
 					if (c.chapterNumber == hwa.chapterNumber) ch = c;
 				}
 				for (Long cId : ch.conceptIds) allQuestionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());
-			} catch (Exception e) {}
-			
-			if (!allQuestionKeys.containsAll(hwa.questionKeys)) {  // might be missing a few questions due to customization
-				List<Key<Question>> addKeys = new ArrayList<Key<Question>>();
-				for (Key<Question> k : hwa.questionKeys) if (!allQuestionKeys.contains(k)) addKeys.add(k);
-				if (!addKeys.isEmpty()) allQuestionKeys.addAll(addKeys);
+			} catch (Exception e) {  // for legacy assignments without a textId
+				for (Long cId : hwa.conceptIds) allQuestionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());	
 			}
+			debug.append(allQuestionKeys.size() + " concept questionKeys retrieved. ");
 			
 			Map<Key<Question>,Question> allQuestions = new HashMap<Key<Question>,Question>(ofy().load().keys(allQuestionKeys));
+			
+			if (!allQuestionKeys.containsAll(hwa.questionKeys)) {  // might be missing a few questions due to customization
+				for (Key<Question> k : hwa.questionKeys) {
+					try {
+						if (!allQuestionKeys.contains(k)) {
+							allQuestions.put(k, ofy().load().key(k).safe());
+							allQuestionKeys.add(k);
+						}
+					} catch (Exception e) {}
+				}
+			}
+			debug.append("Total number of questions = " + allQuestions.size());
 			
 			if (user.isAnonymous()) buf.append(Subject.banner);  // present the ChemVantage banner
 			
@@ -291,7 +301,7 @@ public class Homework extends HttpServlet {
 			}
 			buf.append((i>1?"<h4>Assigned Exercises</h4>":"") + assignedQuestions + "</div>" + (i>1 && j>1?"<h4>Optional Exercises</h4>":"") + optionalQuestions + "</div>");
 		} catch (Exception e) {
-			buf.append(e.toString() + " " + e.getMessage());
+			buf.append((e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString());
 		}
 		return buf.toString();
 	}
@@ -839,7 +849,9 @@ public class Homework extends HttpServlet {
 					if (c.chapterNumber == a.chapterNumber) conceptIds.addAll(c.conceptIds);
 					break;
 				}
-			} catch (Exception e) {}
+			} catch (Exception e) {
+				conceptIds = a.conceptIds;
+			}
 			// next, include any conceptIds included in this request:
 			Long newConcept = null;
 			try {
@@ -873,15 +885,22 @@ public class Homework extends HttpServlet {
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 			for (Long cId : conceptIds) questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());
 
-			// if necessary, add any existing questiinKeys not already in the list (from legacy or edited assignments)
-			if (!questionKeys.containsAll(a.questionKeys)) {  // add the missing keys
-				for (Key<Question> k : a.questionKeys) if (!questionKeys.contains(k)) questionKeys.add(k);
+			Map<Key<Question>,Question> questions = ofy().load().keys(questionKeys);
+			
+			if (!questionKeys.containsAll(a.questionKeys)) {  // might be missing a few questions due to customization
+				for (Key<Question> k : a.questionKeys) {
+					try {
+						if (!questionKeys.contains(k)) {
+							questions.put(k, ofy().load().key(k).safe());
+							questionKeys.add(k);
+						}
+					} catch (Exception e) {}
+				}
 			}
 						
 			// sort the questionKeys in order of increasing difficulty
 			if (questionKeys.size()>1) Collections.sort(questionKeys, new SortBySuccessPct());
 			// get a Map of all the questions (unordered)
-			Map<Key<Question>,Question> questions = ofy().load().keys(questionKeys);
 			
 			// create an ordered List of Questions (by difficulty)
 			List<Question> orderedQuestions = new ArrayList<Question>();
