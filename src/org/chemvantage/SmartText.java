@@ -259,8 +259,8 @@ public class SmartText extends HttpServlet {
 		   } else { // missed 2 questions; go back to the text
 			   Concept c = ofy().load().type(Concept.class).id(conceptId).safe();
 			   buf.append("You missed 2 questions on the key concept: <b>" + c.title + "</b>.<br/>"
-			   		+ "Please return to the textbook and review this section. Don't worry. You can still earn 100% "
-			   		+ "by completing the remaining Key Concept questions after your review. <br/><br/>");
+			   		+ "Please return to the textbook and review this chapter. Don't worry. You can still earn 100% "
+			   		+ "by relaunching this assignment after completing your review. <br/><br/>");
 			   st.missedQuestions[index]=0; // reset the missed questions for this concept only
 		   }
 		   ofy().save().entity(st).now();
