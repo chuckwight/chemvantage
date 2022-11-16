@@ -275,7 +275,9 @@ public class Edit extends HttpServlet {
 		out.println(Subject.footer);
 	}
 
-	String editorsPage(User user,HttpServletRequest request) {
+	String editorsPage(User user,HttpServletRequest request) throws Exception {
+		if (request.getParameter("ConceptId")!=null) return viewConceptQuestions(user,request);
+
 		StringBuffer buf = new StringBuffer("<h3>Editors' Page</h3>");
 		try {
 			int nPending = ofy().load().type(ProposedQuestion.class).count();
@@ -590,8 +592,7 @@ public class Edit extends HttpServlet {
 			concepts = ofy().load().type(Concept.class).order("orderBy").list();
 		}
 		buf.append("<SELECT NAME=ConceptId><OPTION VALUE=0>Select a key concept</OPTION>");
-		for (Concept c : concepts) if (t.conceptIds.contains(c.id)) 
-			buf.append("<OPTION VALUE=" + c.id + (c.id==conceptId?" SELECTED>":">") + c.title + "</OPTION>");
+		for (Concept c : concepts) buf.append("<OPTION VALUE=" + c.id + (c.id==conceptId?" SELECTED>":">") + c.title + "</OPTION>");
 		buf.append("</SELECT>");
 		
 		return buf.toString();
@@ -686,15 +687,15 @@ public class Edit extends HttpServlet {
 		buf.append("<table>");
 		for (Question q : questions) {
 			q.setParameters();
-			buf.append("<tr style=vertical-align:text-top><td style=padding-right:10px>" 
+			buf.append("<tr style=vertical-align:text-top><td style=padding-right:5px>" 
 			+  "<form method=post action=/Edit>"
 			+ "<input type=hidden name=UserRequest value=UnlinkConceptId />"
 			+ "<input type=hidden name=AssignmentType value=" + assignmentType + " />"
 			+ "<input type=hidden name=ConceptId value=" + conceptId + " />"
 			+ "<input type=hidden name=QuestionId value=" + q.id + " />"
 			+ "<input type=submit value=Unlink />&nbsp;"
-			+ "<a href=/Edit?UserRequest=Edit&QuestionId=" + q.id + ">Edit</a>&nbsp;"
-			+ questions.indexOf(q) + ".</form>"
+			+ "<a href=/Edit?UserRequest=Edit&QuestionId=" + q.id + ">Edit</a>&nbsp;&nbsp;&nbsp;"
+			+ (questions.indexOf(q)+1) + ".</form>"
 			+ "</td><td>" + q.printAll() + "</td></tr>");
 		}
 		buf.append("</table>");
@@ -1366,7 +1367,7 @@ public class Edit extends HttpServlet {
 			buf.append("</FORM>");
 
 		} catch (Exception e) {
-			return editorsPage(user,request);
+			return "Error: " + (e.getMessage()==null?e.toString():e.getMessage());
 		}
 		return buf.toString();
 	}

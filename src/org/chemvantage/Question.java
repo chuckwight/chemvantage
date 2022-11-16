@@ -339,7 +339,7 @@ public class Question implements Serializable, Cloneable {
 			buf.append("<span style='color:#EE0000;font-size: small;'>Select only the best answer:</span><UL>");
 			while (choice_keys.size()>0) {
 				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
-				buf.append("<LI>" 
+				buf.append("<LI style='color: " + (scrambleChoices?"red":"black") + "'>" 
 						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
 						+ quot2html(choices.get(choice-'a'))
 						+ (correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>")
@@ -363,7 +363,7 @@ public class Question implements Serializable, Cloneable {
 			buf.append("<span style='color:#EE0000;font-size: small;'>Select all of the correct answers:</span><UL>");
 			while (choice_keys.size()>0) {
 				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
-				buf.append("<LI>"
+				buf.append("<LI style='color: " + (scrambleChoices?"red":"black") + "'>"
 						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
 						+ quot2html(choices.get(choice-'a'))
 						+ (correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>")
