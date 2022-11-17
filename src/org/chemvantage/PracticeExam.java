@@ -341,7 +341,6 @@ public class PracticeExam extends HttpServlet {
 			if (a!=null) buf.append("\n<input type=hidden name=AssignmentId value='" + a.id + "'>");
 			
 			// Randomly select the questions to be presented, eliminating each from the List of questionKeys as they are printed
-			Random r = new Random(pt.id);
 			pt.putPossibleScore(0);
 			
 			// Two-point questions
@@ -350,7 +349,7 @@ public class PracticeExam extends HttpServlet {
 			int nQuestions = 10;
 			int i = 0;
 			while (i<nQuestions && questionKeys_02pt.size()>0) {
-				Key<Question> k = questionKeys_02pt.remove(r.nextInt(questionKeys_02pt.size()));
+				Key<Question> k = questionKeys_02pt.remove(resumingExam?0:rand.nextInt(questionKeys_02pt.size()));
 				Question q = questions.get(k);
 				i++;
 				pt.addPossibleScore(q.pointValue);
@@ -368,7 +367,7 @@ public class PracticeExam extends HttpServlet {
 			nQuestions = 5;
 			i=0;
 			while (i<nQuestions && questionKeys_10pt.size()>0) {
-				Key<Question> k = questionKeys_10pt.remove(r.nextInt(questionKeys_10pt.size()));
+				Key<Question> k = questionKeys_10pt.remove(resumingExam?0:rand.nextInt(questionKeys_10pt.size()));
 				Question q = questions.get(k);
 				i++;
 				pt.addPossibleScore(q.pointValue);
@@ -387,7 +386,7 @@ public class PracticeExam extends HttpServlet {
 			nQuestions = 2;
 			i = 0;
 			while (i<nQuestions && questionKeys_15pt.size()>0) {
-				Key<Question> k = questionKeys_15pt.remove(r.nextInt(questionKeys_15pt.size()));
+				Key<Question> k = questionKeys_15pt.remove(resumingExam?0:rand.nextInt(questionKeys_15pt.size()));
 				Question q = questions.get(k);
 				i++;
 				pt.addPossibleScore(q.pointValue);
