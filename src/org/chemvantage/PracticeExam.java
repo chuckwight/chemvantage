@@ -305,10 +305,6 @@ public class PracticeExam extends HttpServlet {
 			List<Key<Question>> remove = new ArrayList<Key<Question>>();
 			for (Key<Question> k : new ArrayList<Key<Question>>(questions.keySet())) {
 				Question q = questions.get(k);
-				if (q==null) {
-					remove.add(k);
-					continue;
-				}
 				switch (q.pointValue) {
 				case 2:  questionKeys_02pt.add(k); break;
 				case 10: questionKeys_10pt.add(k); break;
@@ -1022,16 +1018,36 @@ public class PracticeExam extends HttpServlet {
 					+ "<li> 2 more challenging homework questions worth 15 points each</li></ul>"
 					+ "for a total of 100 points. Select the items to be included in exams assigned to your class.<br/><br/>");
 			
+			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
+			for (long cId : a.conceptIds) {  // retrieve the keys for all Exam questions for the relevant key concepts
+				questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",cId).keys().list());
+			}
+			// add all existing assignment keys to the top of this List, removing any duplicates first
+			questionKeys.removeAll(a.questionKeys);
+			questionKeys.addAll(0,a.questionKeys);
+			
+			Map<Key<Question>,Question> questions = getQuestions(questionKeys);
+			
+			// Sort the questionKeys by point Value
 			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> questionKeys_10pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> questionKeys_15pt = new ArrayList<Key<Question>>();
 
-			for (long cId : a.conceptIds) {  // Sort and collect the question keys
-				questionKeys_02pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",cId).filter("pointValue",2).keys().list());
-				questionKeys_10pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",cId).filter("pointValue",10).keys().list());
-				questionKeys_15pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",cId).filter("pointValue",15).keys().list());
+			List<Key<Question>> remove = new ArrayList<Key<Question>>();
+			for (Key<Question> k : new ArrayList<Key<Question>>(questions.keySet())) {
+				Question q = questions.get(k);
+				switch (q.pointValue) {
+				case 2:  questionKeys_02pt.add(k); break;
+				case 10: questionKeys_10pt.add(k); break;
+				case 15: questionKeys_15pt.add(k); break;
+				default: remove.add(k); // remove any keys having an invalid point value
+				}
 			}
-
+			if (remove.size()>0) {
+				a.questionKeys.removeAll(remove);
+				ofy().save().entity(a);
+			}
+			
 			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
 					+ "onClick=\"for (var i=0;i<document.Questions.QuestionId.length;i++)"
 					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}\""
@@ -1053,11 +1069,7 @@ public class PracticeExam extends HttpServlet {
 			i=0;
 			for (Key<Question> k : questionKeys_02pt) {
 				i++;
-				try {
-					q = ofy().load().key(k).safe();
-				} catch (Exception e) {
-					continue;
-				}
+				q = questions.get(k);
 				q.setParameters();
 				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
 						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
@@ -1071,11 +1083,7 @@ public class PracticeExam extends HttpServlet {
 			i=0;
 			for (Key<Question> k : questionKeys_10pt) {
 				i++;
-				try {
-					q = ofy().load().key(k).safe();
-				} catch (Exception e) {
-					continue;
-				}
+				q = questions.get(k);
 				q.setParameters();
 				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
 						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
@@ -1089,11 +1097,7 @@ public class PracticeExam extends HttpServlet {
 			i=0;
 			for (Key<Question> k : questionKeys_15pt) {
 				i++;
-				try {
-					q = ofy().load().key(k).safe();
-				} catch (Exception e) {
-					continue;
-				}
+				q = questions.get(k);
 				q.setParameters();
 				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
 						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
