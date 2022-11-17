@@ -361,7 +361,7 @@ public class LTIDeepLinks extends HttpServlet {
 						+ "value=" + ch.chapterNumber + " />" + ch.chapterNumber + ". " + ch.title + "</label></div>");
 				}
 				buf.append("</div></div></div>");
-				buf.append("<input type=submit id=pesub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select at loeast three topics' />");
+				buf.append("<input type=submit id=pesub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select at least three topics' />");
 			} catch (Exception e) {
 				buf.append("<div style='color:red'>Please select one of the topic groups below:</div>");
 				Text allTopics = null;
