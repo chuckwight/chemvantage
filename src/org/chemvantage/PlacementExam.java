@@ -394,8 +394,8 @@ public class PlacementExam extends HttpServlet {
 			
 			if (a.attemptsAllowed!=null) buf.append("You are allowed " + a.attemptsAllowed + (a.attemptsAllowed==1?" attempt":" attempts") + " on this exam. This is attempt #" + (nAttempts + (resumingExam?0:1)) + ".<br/>");
 			
-			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded. ");
-			if (resumingExam) buf.append("You are resuming a placement exam originally downloaded at " + pt.downloaded);
+			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded.<br/>");
+			if (resumingExam) buf.append("You are resuming a placement exam originally downloaded at " + pt.downloaded + "<br/>");
 			
 			buf.append("\n<FORM NAME=PlacementExamForm METHOD=POST ACTION=/PlacementExam "
 					+ "onSubmit=\"return confirm('Submit this placement exam for grading now. Are you sure?')\">");
@@ -415,13 +415,15 @@ public class PlacementExam extends HttpServlet {
 			int nQuestions = 30;
 			int i = 0;
 			while (i<nQuestions && questionKeys_02pt.size()>0) {
-				Key<Question> k = questionKeys_02pt.remove(resumingExam?0:rand.nextInt(questionKeys_02pt.size()));
-				Question q = questions.get(k);
-				i++;
-				possibleScores[a.conceptIds.indexOf(q.conceptId)] += q.pointValue;
-				q.setParameters((int)(pt.id ^ q.id));
-				buf.append("\n<li>" + q.print() + "<br></li>\n");
-				if (!resumingExam) pt.questionKeys.add(k);
+				try {
+					Key<Question> k = questionKeys_02pt.remove(resumingExam?0:rand.nextInt(questionKeys_02pt.size()));
+					Question q = questions.get(k);
+					i++;
+					possibleScores[a.conceptIds.indexOf(q.conceptId)] += q.pointValue;
+					q.setParameters((int)(pt.id ^ q.id));
+					buf.append("\n<li>" + q.print() + "<br></li>\n");
+					if (!resumingExam) pt.questionKeys.add(k);
+				} catch (Exception e) {}
 			}
 			buf.append("</OL>");
 
@@ -431,13 +433,15 @@ public class PlacementExam extends HttpServlet {
 			nQuestions = 10;
 			i=0;
 			while (i<nQuestions && questionKeys_04pt.size()>0) {
-				Key<Question> k = questionKeys_04pt.remove(resumingExam?0:rand.nextInt(questionKeys_04pt.size()));
-				Question q = questions.get(k);
-				i++;
-				possibleScores[a.conceptIds.indexOf(q.conceptId)] += q.pointValue;
-				q.setParameters((int)(pt.id ^ q.id));
-				buf.append("\n<li>" + q.print() + "<br></li>\n");
-				if (!resumingExam) pt.questionKeys.add(k);
+				try {
+					Key<Question> k = questionKeys_04pt.remove(resumingExam?0:rand.nextInt(questionKeys_04pt.size()));
+					Question q = questions.get(k);
+					i++;
+					possibleScores[a.conceptIds.indexOf(q.conceptId)] += q.pointValue;
+					q.setParameters((int)(pt.id ^ q.id));
+					buf.append("\n<li>" + q.print() + "<br></li>\n");
+					if (!resumingExam) pt.questionKeys.add(k);
+				} catch (Exception e) {}
 			}
 			buf.append("</OL>");
 
