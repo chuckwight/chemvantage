@@ -376,50 +376,38 @@ public class PlacementExam extends HttpServlet {
 			}
 			debug.append("2");
 			
-			// past this point we will present a practice exam to the student. 
-			
+			// past this point we will present a placement exam to the student. 
+			// first retrieve all the questions using the assignment.questionKeys List:
+			Map<Key<Question>,Question> questions = new HashMap<Key<Question>,Question>();
+			if (resumingExam && !pt.questionKeys.isEmpty()) questions = getQuestions(pt.questionKeys);
+			else questions = getQuestions(a.questionKeys);  // this method tolerates keys for questions that have been deleted
+
 			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> questionKeys_04pt = new ArrayList<Key<Question>>();
-			
-			for (Long cId : a.conceptIds) {  //First collect the question keys
-				questionKeys_02pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",cId).filter("pointValue",2).keys().list());
-				questionKeys_04pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",cId).filter("pointValue",4).keys().list());
-			}
-			debug.append("3");
-			
-			// Reduce the size of questionKeys Lists to the number of questions needed, either by using the previously
-			// selected questions in the PracticExamTransaction or by random elimination
-			Random rand = new Random(pt.id);  // create random number generator to select exam questions
 			List<Key<Question>> remove = new ArrayList<Key<Question>>();
-			if (pt.questionKeys.isEmpty()) {  // create a new set of questions, eliminating any not included in a.questionKeys
-				for (Key<Question> k : questionKeys_02pt) if (!a.questionKeys.contains(k)) remove.add(k);
-				questionKeys_02pt.removeAll(remove); remove.clear();
-				for (Key<Question> k : questionKeys_04pt) if (!a.questionKeys.contains(k)) remove.add(k);
-				questionKeys_04pt.removeAll(remove); remove.clear();
-				while (questionKeys_02pt.size()>30) questionKeys_02pt.remove(rand.nextInt(questionKeys_02pt.size()));
-				while (questionKeys_04pt.size()>10) questionKeys_04pt.remove(rand.nextInt(questionKeys_04pt.size()));
-			} else {  // eliminate all but the prior selected questions for this transaction
-				for (Key<Question> k : questionKeys_02pt) if (!pt.questionKeys.contains(k)) remove.add(k);
-				questionKeys_02pt.removeAll(remove); remove.clear();
-				for (Key<Question> k : questionKeys_04pt) if (!pt.questionKeys.contains(k)) remove.add(k);
-				questionKeys_04pt.removeAll(remove); remove.clear();
+			for (Key<Question> k : new ArrayList<Key<Question>>(questions.keySet())) {
+				Question q = questions.get(k);
+				switch (q.pointValue) {
+				case 2: questionKeys_02pt.add(k); break;
+				case 4: questionKeys_04pt.add(k); break;
+				default: remove.add(k); // remove any keys having an invalid point value
+				}
 			}
+			if (remove.size()>0) {
+				a.questionKeys.removeAll(remove);
+				ofy().save().entity(a);
+			}
+			
+			// Reduce the size of questionKeys Lists to the number of questions needed
+			Random rand = new Random();  // create random number generator to select exam questions
+			rand.setSeed(pt.id);  // random number generator seeded with PracticeExamTransaction id value
+			while (questionKeys_02pt.size()>30) questionKeys_02pt.remove(rand.nextInt(questionKeys_02pt.size()));
+			while (questionKeys_04pt.size()>10) questionKeys_04pt.remove(rand.nextInt(questionKeys_04pt.size()));
+
 			debug.append("4");
-			rand.setSeed(pt.id);
-			// Consolidate the two lists into a single list of questions, but randomize the order in each section
-			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
-			while (questionKeys_02pt.size()>0) questionKeys.add(questionKeys_02pt.remove(rand.nextInt(questionKeys_02pt.size())));
-			while (questionKeys_04pt.size()>0) questionKeys.add(questionKeys_04pt.remove(rand.nextInt(questionKeys_04pt.size())));
-			
-			// Ensure that all selected questions are in the Map of examQuestions:		
-			List<Key<Question>> addQuestions = new ArrayList<Key<Question>>();
-			for (Key<Question> k : questionKeys) if (!examQuestions.containsKey(k)) addQuestions.add(k);
-			if (addQuestions.size()>0) examQuestions.putAll(ofy().load().keys(addQuestions));
-			
-			debug.append("5");
 			
 			// Check to make sure that some questions exist:
-			if (questionKeys.size()==0) return "<h2>General Chemistry Placement Exam</h2>"
+			if (questions.size()==0) return "<h2>General Chemistry Placement Exam</h2>"
 					+ "Thanks for visiting. We are in the process of developing and validating the question items for this exam.<br/><br/>";
 			
 			buf.append("<script>function showWorkBox(qid){}</script>");  // prevents javascript error from Question.print()
@@ -446,16 +434,37 @@ public class PlacementExam extends HttpServlet {
 			int[] possibleScores = new int[a.conceptIds.size()];
 			debug.append("6");
 			
+			// 2-point questions
+			buf.append("<U>2 point questions:</U>");
 			buf.append("<OL>\n");
-			int nQuestions = 40;
+			int nQuestions = 30;
 			int i = 0;
-			while (i<nQuestions && questionKeys.size()>0) {
-				Key<Question> k = questionKeys.remove(0);
-				Question q = examQuestions.get(k);
+			while (i<nQuestions && questionKeys_02pt.size()>0) {
+				Key<Question> k = questionKeys_02pt.remove(resumingExam?0:rand.nextInt(questionKeys_02pt.size()));
+				Question q = questions.get(k);
 				i++;
 				possibleScores[a.conceptIds.indexOf(q.conceptId)] += q.pointValue;
 				q.setParameters((int)(pt.id ^ q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
+				if (!resumingExam) pt.questionKeys.add(k);
+			}
+			buf.append("</OL>");
+
+			// 4-point questions
+			buf.append("<U>4 point questions:</U>");
+			buf.append("<OL>\n");
+			nQuestions = 10;
+			i=0;
+			while (i<nQuestions && questionKeys_04pt.size()>0) {
+				Key<Question> k = questionKeys_04pt.remove(resumingExam?0:rand.nextInt(questionKeys_04pt.size()));
+				Question q = questions.get(k);
+				i++;
+				possibleScores[a.conceptIds.indexOf(q.conceptId)] += q.pointValue;
+				q.setParameters((int)(pt.id ^ q.id));
+				buf.append("\n<li>" + q.print() + "<br></li>\n");
+				if (a.id>0) buf.append("<SCRIPT>"
+						+ "document.getElementById('showWork" + q.id + "').style.display='';"
+						+ "</SCRIPT>");
 				if (!resumingExam) pt.questionKeys.add(k);
 			}
 			buf.append("</OL>");
@@ -479,6 +488,25 @@ public class PlacementExam extends HttpServlet {
 		return buf.toString();
 	}
 
+	static Map<Key<Question>,Question> getQuestions(List<Key<Question>> keys1) {
+		try {
+			return ofy().load().keys(keys1); // all keys are good
+		} catch (Exception e) { // throws Exception if a Question has been deleted from the datastore
+			if (keys1.size()==1) return new HashMap<Key<Question>,Question>(); // this key was bad; end recursion with empty Map
+			
+			// break the List into 2 pieces
+			List<Key<Question>> keys2 = keys1.subList(0, keys1.size()/2);
+			keys1.removeAll(keys2);
+			
+			// build both maps recursively
+			Map<Key<Question>,Question> map1 = getQuestions(keys1);
+			Map<Key<Question>,Question> map2 = getQuestions(keys2);
+			// combine the results into a single Map and return it
+			map1.putAll(map2);
+			return map1;
+		}
+	}
+	
 	static String timerScripts(long endMillis) {
 		return "<SCRIPT language='JavaScript'>"
 				+ "function toggleTimers() {"

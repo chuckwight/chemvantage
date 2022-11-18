@@ -550,7 +550,7 @@ public class LTIDeepLinks extends HttpServlet {
 				break;
 			case "PlacementExam":
 				a = new Assignment();
-				a.assignmentType = "PracticeExam";
+				a.assignmentType = "PlacementExam";
 				a.created = now;
 				a.domain = d.platform_deployment_id;
 				a.questionKeys = new ArrayList<Key<Question>>();

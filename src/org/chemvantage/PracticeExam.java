@@ -570,11 +570,11 @@ public class PracticeExam extends HttpServlet {
 				} else {				
 					Score s = null;
 					try { // retrieve the score and ensure that it is up to date
-						debug.append("a");
+						debug.append("1a");
 						s = ofy().load().key(Key.create(Key.create(User.class,user.getHashedId()),Score.class,a.id)).safe();
 						if (s.numberOfAttempts != pets.size()) throw new Exception();
 					} catch (Exception e) { // create a fresh Score entity from scratch
-						debug.append("b");
+						debug.append("1b");
 						s = Score.getInstance(user.getId(), a);
 						ofy().save().entity(s);
 					}
@@ -611,22 +611,25 @@ public class PracticeExam extends HttpServlet {
 									+ "Sometimes it takes several seconds for the score to be posted in the LMS grade book.<br>");
 							if (s.score==0 && s.numberOfAttempts<=1) buf.append("It appears that you may not have submitted a score for this assignment yet. ");
 							if (user.isInstructor()) buf.append("Some LMS providers do not store scores for instructors.");
-							buf.append("<p>");
+							buf.append("<br/><br/>");
 						}
 					}
 				}
-
+				debug.append("2");
+				
 				buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Practice Exam Score (percent)</th></tr>");
 				for (PracticeExamTransaction pet : pets) {
 					int pct = (pet.getPossibleScore()>0?pet.getScore()*100/pet.getPossibleScore():0);
-
+					debug.append("a");
 					buf.append("<tr><td>" + pet.id + "</td><td>" + df.format(pet.downloaded) + "</td><td align=center>" + (pet.graded==null?"-":pct + "%") +  "</td></tr>");
 				}
 				buf.append("</table><br>Missing scores indicate assignments that were downloaded but not submitted for scoring.<p>");
 			}
+			debug.append("3");
+			
 		}
 		catch (Exception e) {
-			buf.append(e.toString() + ": " + e.getMessage());
+			buf.append((e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString());
 		}
 		return buf.toString();
 	}
