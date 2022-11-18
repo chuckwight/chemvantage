@@ -67,7 +67,7 @@ public class SmartText extends HttpServlet {
 
 		   switch (userRequest) {
 		   case "GradeQuestion":
-			   out.println(Subject.header("ChemVantage Key Concept Response") + printScore(user,a,request));
+			   out.println(Subject.header("ChemVantage Key Concept Response") + printScore(user,a,request) + Subject.footer);
 		   default:
 		   }
 
@@ -184,6 +184,7 @@ public class SmartText extends HttpServlet {
 				   + q.print()
 				   + "<input type=submit />"
 				   + "</form>");
+		   st.armed = true;
 		   ofy().save().entity(st).now();
 	   } catch (Exception e) {
 		   buf.append("Error: " + (e.getMessage()==null?e.toString():e.getMessage()));
@@ -221,7 +222,8 @@ public class SmartText extends HttpServlet {
 		   boolean isCorrect = q.isCorrect(studentAnswer);
 		   buf.append(ajaxJavaScript(user.getTokenSignature()));  // for providing user feedback on the question item
 		   
-		   if (isCorrect) {
+		   if (!st.armed) buf.append("<b>Sorry, it looks like this question has already been scored.</b><br/>");
+		   else if (isCorrect) {
 			   st.scores[index]++;
 			   st.answeredKeys.add(Key.create(Question.class,q.id));
 			   buf.append("<b>Congratulations! Your answer was correct.</b><br/>");
@@ -236,7 +238,7 @@ public class SmartText extends HttpServlet {
 					   + q.printAllToStudents(studentAnswer) + "</div><br/>");
 		   }
 		   
-		   if (a != null) {
+		   if (a != null && st.armed) {
 			   Response r = new Response("SmartText",conceptId,q.id,studentAnswer,q.getCorrectAnswer(),isCorrect?1:0,1,user.getId(),new Date());
 			   ofy().save().entity(r);
 		   }
@@ -263,6 +265,7 @@ public class SmartText extends HttpServlet {
 			   		+ "by relaunching this assignment after completing your review. <br/><br/>");
 			   st.missedQuestions[index]=0; // reset the missed questions for this concept only
 		   }
+		   st.armed = false;
 		   ofy().save().entity(st).now();
 	   } catch (Exception e) {
 		   buf.append("Error: " + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString());

@@ -36,6 +36,7 @@ public class STTransaction implements Serializable {
 	@Index	Date created;
 	@Index	Date graded;
 	@Index	Long assignmentId;
+			boolean armed = false;  // signifies that a question has been posed; discourages using backspace/corrected answer
 			List<Long> conceptIds;
 			int[] scores;
 			int[] possibleScores;
