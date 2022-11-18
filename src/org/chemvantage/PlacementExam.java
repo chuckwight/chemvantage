@@ -46,26 +46,11 @@ import com.googlecode.objectify.Key;
 public class PlacementExam extends HttpServlet {
 	
 	private static final long serialVersionUID = 137L;
-	private static Map<Key<Question>,Question> examQuestions = new HashMap<Key<Question>,Question>();
-
+	
 	public String getServletInfo() {
 		return "This servlet presents and scores a General Chemistry placement exam for the user.";
 	}
 	
-	static private void initializeExam() {
-		List<Concept> concepts = ofy().load().type(Concept.class).list();
-		List<Key<Question>> keys = new ArrayList<Key<Question>>();
-		for (Concept c : concepts) {
-			switch (c.title) {
-			case "Essential Chemistry":
-			case "Essential Math":
-			case "Word Problems":
-				keys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",c.id).keys().list());
-			}
-		}
-		examQuestions.putAll(ofy().load().keys(keys));
-	}
-
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
 		response.setContentType("text/html");
@@ -80,8 +65,6 @@ public class PlacementExam extends HttpServlet {
 			
 			Assignment a = null;
 			if (!user.isAnonymous()) a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-			
-			if (examQuestions.isEmpty()) initializeExam();
 			
 			switch (userRequest) {
 				case "AssignExamQuestions":
@@ -127,8 +110,6 @@ public class PlacementExam extends HttpServlet {
 			Assignment a = null;
 			if (!user.isAnonymous()) a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 			
-			if (examQuestions.isEmpty()) initializeExam();
-			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
 			
@@ -170,20 +151,6 @@ public class PlacementExam extends HttpServlet {
 					break;
 				case "PrintExam":
 					out.println(Subject.header("ChemVantage Placement Exam") + printExam(user,a,request) + Subject.footer);
-					break;
-				case "AddQuestion":
-				case "UpdateQuestion":
-					if (user.isEditor()) {
-						Key<Question> key = Key.create(Question.class,Long.parseLong(request.getParameter("QuestionId")));
-						Question q = ofy().load().key(key).safe();
-						if (examQuestions.containsKey(key)) examQuestions.put(key, q);
-					}
-					break;
-				case "DeleteQuestion":
-					if (user.isEditor()) {
-						Key<Question> key = Key.create(Question.class,Long.parseLong(request.getParameter("QuestionId")));
-						examQuestions.remove(key);
-					}
 					break;
 				case "DeleteSubmission":
 					if (user.isInstructor()) {
@@ -379,9 +346,17 @@ public class PlacementExam extends HttpServlet {
 			// past this point we will present a placement exam to the student. 
 			// first retrieve all the questions using the assignment.questionKeys List:
 			Map<Key<Question>,Question> questions = new HashMap<Key<Question>,Question>();
-			if (resumingExam && !pt.questionKeys.isEmpty()) questions = getQuestions(pt.questionKeys);
-			else questions = getQuestions(a.questionKeys);  // this method tolerates keys for questions that have been deleted
-
+			if (resumingExam && !pt.questionKeys.isEmpty()) {
+				debug.append("a" + pt.questionKeys.size());
+				questions = getQuestions(pt.questionKeys);
+			}
+			else {
+				debug.append("b" + a.questionKeys.size());
+				questions = getQuestions(a.questionKeys);  // this method tolerates keys for questions that have been deleted
+			}
+			if (questions.isEmpty()) throw new Exception("Error: No questions were found for this assignment.");
+			debug.append("3");
+			
 			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> questionKeys_04pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> remove = new ArrayList<Key<Question>>();
@@ -462,9 +437,6 @@ public class PlacementExam extends HttpServlet {
 				possibleScores[a.conceptIds.indexOf(q.conceptId)] += q.pointValue;
 				q.setParameters((int)(pt.id ^ q.id));
 				buf.append("\n<li>" + q.print() + "<br></li>\n");
-				if (a.id>0) buf.append("<SCRIPT>"
-						+ "document.getElementById('showWork" + q.id + "').style.display='';"
-						+ "</SCRIPT>");
 				if (!resumingExam) pt.questionKeys.add(k);
 			}
 			buf.append("</OL>");
@@ -488,21 +460,24 @@ public class PlacementExam extends HttpServlet {
 		return buf.toString();
 	}
 
-	static Map<Key<Question>,Question> getQuestions(List<Key<Question>> keys1) {
+	static Map<Key<Question>,Question> getQuestions(List<Key<Question>> keys) throws Exception {
 		try {
-			return ofy().load().keys(keys1); // all keys are good
+			Map<Key<Question>,Question> map = ofy().load().keys(keys);
+			@SuppressWarnings("unused")
+			Question q = map.get(keys.get(0)); // this is done here to throw the Exception because ofy().load().keys() is an asynchronous operation
+			return  map; // all keys are good
 		} catch (Exception e) { // throws Exception if a Question has been deleted from the datastore
-			if (keys1.size()==1) return new HashMap<Key<Question>,Question>(); // this key was bad; end recursion with empty Map
+			if (keys.size()==1) return new HashMap<Key<Question>,Question>(); // this key was bad; end recursion with empty Map
 			
 			// break the List into 2 pieces
-			List<Key<Question>> keys2 = keys1.subList(0, keys1.size()/2);
-			keys1.removeAll(keys2);
+			List<Key<Question>> keys1 = new ArrayList<Key<Question>>(keys.subList(0, keys.size()/2));
+			List<Key<Question>> keys2 = new ArrayList<Key<Question>>(keys.subList(keys.size()/2, keys.size()));
 			
 			// build both maps recursively
 			Map<Key<Question>,Question> map1 = getQuestions(keys1);
 			Map<Key<Question>,Question> map2 = getQuestions(keys2);
 			// combine the results into a single Map and return it
-			map1.putAll(map2);
+			if (!map2.isEmpty()) map1.putAll(map2);
 			return map1;
 		}
 	}
@@ -598,10 +573,9 @@ public class PlacementExam extends HttpServlet {
 					questionKeys.add(Key.create(Question.class,Long.parseLong((String) e.nextElement())));
 				} catch (Exception e2) {}
 			}
-			// Make sure that all of the questions are currently in the examQuestions HashMap:
-			List<Key<Question>> addQuestions = new ArrayList<Key<Question>>();
-			for (Key<Question> k : questionKeys) if (!examQuestions.containsKey(k)) addQuestions.add(k);
-			if (addQuestions.size()>0) examQuestions.putAll(ofy().load().keys(addQuestions));
+			
+			// Load all of the relevant questions
+			Map<Key<Question>,Question> questions = getQuestions(questionKeys);
 			
 			List<Response> responses = new ArrayList<Response>();
 			
@@ -610,16 +584,7 @@ public class PlacementExam extends HttpServlet {
 				Question q=null;
 				String studentAnswer = orderResponses(request.getParameterValues(Long.toString(k.getId())));
 				if (!studentAnswer.isEmpty()) { // an answer was submitted
-					q = examQuestions.get(k);
-					if (q==null) {
-						try {
-							q = ofy().load().key(k).safe();
-							examQuestions.put(k,q);
-						} catch (Exception e) {
-							continue;
-						}
-					}
-					
+					q = questions.get(k);				
 					try {
 						if ("NUMERIC".equals(q.type)) {  // this section converts ionic charge 2+ to +2 and 3- to -3
 							int length = studentAnswer.length();  // length of the trimmed String
@@ -1106,25 +1071,20 @@ public class PlacementExam extends HttpServlet {
 			PlacementExamTransaction pet = ofy().load().type(PlacementExamTransaction.class).id(placementExamTransactionId).safe();
 			if (pet.assignmentId != user.getAssignmentId()) return "<h2>Access Denied</h2>Go back and relaunch this assignment from your LMS.";
 			
-			// Get the question keys from the PlacementExamTransaction and sort them into 3 lists by point value
+			// Get the question keys from the PlacementExamTransaction and sort them into 2 lists by point value
 			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> questionKeys_04pt = new ArrayList<Key<Question>>();
 			
-			for (Key<Question> k : pet.questionKeys) {
-				Question q = examQuestions.get(k);
-				if (q==null) {
-					try {
-						q = ofy().load().key(k).safe();
-						examQuestions.put(k,q);
-					} catch (Exception e) {
-						continue;  // this catches cases where an assigned question no longer exists
-					}
-				}
+			Map<Key<Question>,Question> questions = getQuestions(pet.questionKeys);
+			
+			for (Key<Question> k : new ArrayList<Key<Question>>(questions.keySet())) {
+				Question q = questions.get(k);
 				switch (q.pointValue) {
-					case (2): questionKeys_02pt.add(k); break;
-					case (4): questionKeys_04pt.add(k); break;
+				case 2: questionKeys_02pt.add(k); break;
+				case 4: questionKeys_04pt.add(k); break;
+				default: continue;
 				}
-			}
+			}	
 			
 			// create a HashMap of all the questionIds and student's responses for all items submitted
 			List<Response> responses = ofy().load().type(Response.class).filter("transactionId",pet.id).list();
@@ -1156,7 +1116,7 @@ public class PlacementExam extends HttpServlet {
 			buf.append("<table>");
 			for(Key<Question> k : questionKeys_02pt) {
 				i++;
-				Question q = examQuestions.get(k);
+				Question q = questions.get(k);
 				q.setParameters((int)(pet.id ^ q.id));
 				buf.append("<tr style='vertical-align:middle'><td><b>" + i + ". </b>" 
 						+ q.printAllToStudents(studentAnswers.get(q.id),true) + "</td>");
@@ -1183,7 +1143,7 @@ public class PlacementExam extends HttpServlet {
 			buf.append("<table>");
 			for(Key<Question> k : questionKeys_04pt) {
 				i++;
-				Question q = examQuestions.get(k);
+				Question q = questions.get(k);
 				q.setParameters((int)(pet.id ^ q.id));
 				buf.append("<tr style='vertical-align:middle'><td><b>" + i + ". </b>" 
 						+ q.printAllToStudents(studentAnswers.get(q.id),true,pet.questionShowWork.get(k)) + "</td>");
@@ -1229,11 +1189,12 @@ public class PlacementExam extends HttpServlet {
 			pet.possibleScores = new int[a.conceptIds.size()];
 			
 			// Iterate through all of the questions for this exam, getting scores from the range inputs on the review form and compiling the scores
+			Map<Key<Question>,Question> questions = getQuestions(pet.questionKeys);
 			for (Key<Question> k : pet.questionKeys) {
-				Question q = examQuestions.get(k);
+				Question q = questions.get(k);
 				if (q==null) try {
 					q = ofy().load().key(k).safe();
-					examQuestions.put(k,q);
+					questions.put(k,q);
 				} catch (Exception e) {}  // might fail if the question is deleted from the database (too bad, sorry)
 				int score = Integer.parseInt(request.getParameter("Range" + k.getId()));
 				pet.questionScores.put(k, score);
@@ -1309,6 +1270,9 @@ public class PlacementExam extends HttpServlet {
 				questionKeys_04pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",cId).filter("pointValue",4).keys().list());
 			}
 
+			Map<Key<Question>,Question> questions = getQuestions(questionKeys_02pt);
+			questions.putAll(getQuestions(questionKeys_04pt));
+			
 			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
 					+ "onClick=\"for (var i=0;i<document.Questions.QuestionId.length;i++)"
 					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}\""
@@ -1330,11 +1294,7 @@ public class PlacementExam extends HttpServlet {
 			i=0;
 			for (Key<Question> k : questionKeys_02pt) {
 				i++;
-				try {
-					q = ofy().load().key(k).safe();
-				} catch (Exception e) {
-					continue;
-				}
+				q = questions.get(k);
 				q.setParameters();
 				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
 						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
@@ -1348,11 +1308,7 @@ public class PlacementExam extends HttpServlet {
 			i=0;
 			for (Key<Question> k : questionKeys_04pt) {
 				i++;
-				try {
-					q = ofy().load().key(k).safe();
-				} catch (Exception e) {
-					continue;
-				}
+				q = questions.get(k);
 				q.setParameters();
 				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
 						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");

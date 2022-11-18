@@ -416,15 +416,18 @@ public class PracticeExam extends HttpServlet {
 		return buf.toString();
 	}
 
-	static Map<Key<Question>,Question> getQuestions(List<Key<Question>> keys1) {
+	static Map<Key<Question>,Question> getQuestions(List<Key<Question>> keys) {
 		try {
-			return ofy().load().keys(keys1); // all keys are good
+			Map<Key<Question>,Question> map = ofy().load().keys(keys);
+			@SuppressWarnings("unused")
+			Question q = map.get(keys.get(0)); // this is done here to throw the Exception because ofy().load().keys() is an asynchronous operation
+			return  map; // all keys are good
 		} catch (Exception e) { // throws Exception if a Question has been deleted from the datastore
-			if (keys1.size()==1) return new HashMap<Key<Question>,Question>(); // this key was bad; end recursion with empty Map
+			if (keys.size()==1) return new HashMap<Key<Question>,Question>(); // this key was bad; end recursion with empty Map
 			
 			// break the List into 2 pieces
-			List<Key<Question>> keys2 = keys1.subList(0, keys1.size()/2);
-			keys1.removeAll(keys2);
+			List<Key<Question>> keys1 = new ArrayList<Key<Question>>(keys.subList(0, keys.size()/2));
+			List<Key<Question>> keys2 = new ArrayList<Key<Question>>(keys.subList(keys.size()/2, keys.size()));
 			
 			// build both maps recursively
 			Map<Key<Question>,Question> map1 = getQuestions(keys1);
