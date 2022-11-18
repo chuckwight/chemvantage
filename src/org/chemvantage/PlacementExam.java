@@ -348,11 +348,11 @@ public class PlacementExam extends HttpServlet {
 			Map<Key<Question>,Question> questions = new HashMap<Key<Question>,Question>();
 			if (resumingExam && !pt.questionKeys.isEmpty()) {
 				debug.append("a" + pt.questionKeys.size());
-				questions = getQuestions(pt.questionKeys);
+				questions = ofy().load().keys(pt.questionKeys);
 			}
 			else {
 				debug.append("b" + a.questionKeys.size());
-				questions = getQuestions(a.questionKeys);  // this method tolerates keys for questions that have been deleted
+				questions = ofy().load().keys(a.questionKeys);  // this method tolerates keys for questions that have been deleted
 			}
 			if (questions.isEmpty()) throw new Exception("Error: No questions were found for this assignment.");
 			debug.append("3");
@@ -459,28 +459,6 @@ public class PlacementExam extends HttpServlet {
 		}
 		return buf.toString();
 	}
-
-	static Map<Key<Question>,Question> getQuestions(List<Key<Question>> keys) throws Exception {
-		try {
-			Map<Key<Question>,Question> map = ofy().load().keys(keys);
-			@SuppressWarnings("unused")
-			Question q = map.get(keys.get(0)); // this is done here to throw the Exception because ofy().load().keys() is an asynchronous operation
-			return  map; // all keys are good
-		} catch (Exception e) { // throws Exception if a Question has been deleted from the datastore
-			if (keys.size()==1) return new HashMap<Key<Question>,Question>(); // this key was bad; end recursion with empty Map
-			
-			// break the List into 2 pieces
-			List<Key<Question>> keys1 = new ArrayList<Key<Question>>(keys.subList(0, keys.size()/2));
-			List<Key<Question>> keys2 = new ArrayList<Key<Question>>(keys.subList(keys.size()/2, keys.size()));
-			
-			// build both maps recursively
-			Map<Key<Question>,Question> map1 = getQuestions(keys1);
-			Map<Key<Question>,Question> map2 = getQuestions(keys2);
-			// combine the results into a single Map and return it
-			if (!map2.isEmpty()) map1.putAll(map2);
-			return map1;
-		}
-	}
 	
 	static String timerScripts(long endMillis) {
 		return "<SCRIPT language='JavaScript'>"
@@ -575,7 +553,7 @@ public class PlacementExam extends HttpServlet {
 			}
 			
 			// Load all of the relevant questions
-			Map<Key<Question>,Question> questions = getQuestions(questionKeys);
+			Map<Key<Question>,Question> questions = ofy().load().keys(questionKeys);
 			
 			List<Response> responses = new ArrayList<Response>();
 			
@@ -1075,7 +1053,7 @@ public class PlacementExam extends HttpServlet {
 			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> questionKeys_04pt = new ArrayList<Key<Question>>();
 			
-			Map<Key<Question>,Question> questions = getQuestions(pet.questionKeys);
+			Map<Key<Question>,Question> questions = ofy().load().keys(pet.questionKeys);
 			
 			for (Key<Question> k : new ArrayList<Key<Question>>(questions.keySet())) {
 				Question q = questions.get(k);
@@ -1189,7 +1167,7 @@ public class PlacementExam extends HttpServlet {
 			pet.possibleScores = new int[a.conceptIds.size()];
 			
 			// Iterate through all of the questions for this exam, getting scores from the range inputs on the review form and compiling the scores
-			Map<Key<Question>,Question> questions = getQuestions(pet.questionKeys);
+			Map<Key<Question>,Question> questions = ofy().load().keys(pet.questionKeys);
 			for (Key<Question> k : pet.questionKeys) {
 				Question q = questions.get(k);
 				if (q==null) try {
@@ -1270,8 +1248,9 @@ public class PlacementExam extends HttpServlet {
 				questionKeys_04pt.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",cId).filter("pointValue",4).keys().list());
 			}
 
-			Map<Key<Question>,Question> questions = getQuestions(questionKeys_02pt);
-			questions.putAll(getQuestions(questionKeys_04pt));
+			 List<Key<Question>> questionKeys = new ArrayList<Key<Question>>(questionKeys_02pt);
+			 questionKeys.addAll(questionKeys_04pt);
+			 Map<Key<Question>,Question> questions = ofy().load().keys(questionKeys);
 			
 			buf.append("<FORM NAME=DummyForm><INPUT TYPE=CHECKBOX NAME=SelectAll "
 					+ "onClick=\"for (var i=0;i<document.Questions.QuestionId.length;i++)"

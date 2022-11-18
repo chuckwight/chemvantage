@@ -294,8 +294,8 @@ public class PracticeExam extends HttpServlet {
 			// past this point we will present a practice exam to the student. 
 			// first retrieve all the questions using the assignment.questionKeys List:
 			Map<Key<Question>,Question> questions = new HashMap<Key<Question>,Question>();
-			if (resumingExam && !pt.questionKeys.isEmpty()) questions = getQuestions(pt.questionKeys);
-			else questions = getQuestions(a.questionKeys);  // this method tolerates keys for questions that have been deleted
+			if (resumingExam && !pt.questionKeys.isEmpty()) questions = ofy().load().keys(pt.questionKeys);
+			else questions = ofy().load().keys(a.questionKeys);  // this method tolerates keys for questions that have been deleted
 			
 			// sort the question keys by point value:
 			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
@@ -415,7 +415,7 @@ public class PracticeExam extends HttpServlet {
 		}
 		return buf.toString();
 	}
-
+/*
 	static Map<Key<Question>,Question> getQuestions(List<Key<Question>> keys) {
 		try {
 			Map<Key<Question>,Question> map = ofy().load().keys(keys);
@@ -437,7 +437,7 @@ public class PracticeExam extends HttpServlet {
 			return map1;
 		}
 	}
-	
+*/	
 	static String timerScripts(long endMillis) {
 		return "<SCRIPT language='JavaScript'>"
 				+ "function toggleTimers() {"
@@ -1031,7 +1031,7 @@ public class PracticeExam extends HttpServlet {
 			questionKeys.removeAll(a.questionKeys);
 			questionKeys.addAll(0,a.questionKeys);
 			
-			Map<Key<Question>,Question> questions = getQuestions(questionKeys);
+			Map<Key<Question>,Question> questions = ofy().load().keys(questionKeys);
 			
 			// Sort the questionKeys by point Value
 			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
