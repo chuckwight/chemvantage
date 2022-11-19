@@ -502,13 +502,14 @@ public class LTIv1p3Launch extends HttpServlet {
 			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			a.assignmentType = request.getParameter("AssignmentType");
 
+			Text text = null;
 			switch (a.assignmentType) {
 			case "SmartText":
 			case "Quiz":
 			case "Homework":
 				a.textId = Long.parseLong(request.getParameter("TextId"));
 				a.chapterNumber = Integer.parseInt(request.getParameter("ChapterNumber"));
-				Text text = ofy().load().type(Text.class).id(a.textId).safe();
+				text = ofy().load().type(Text.class).id(a.textId).safe();
 				Chapter ch = null;
 				for (Chapter c : text.chapters) if (c.chapterNumber == a.chapterNumber) ch = c;
 				a.title = a.assignmentType + " - " + ch.title;
@@ -518,14 +519,22 @@ public class LTIv1p3Launch extends HttpServlet {
 				}
 				break;
 			case "PracticeExam":
-				String[] topicIds = request.getParameterValues("TopicIds");
-				if (topicIds!=null) {
-					a.topicIds = new ArrayList<Long>();
-					a.questionKeys = new ArrayList<Key<Question>>();
-					for (int i=0;i<topicIds.length;i++) {
-						long tId = Long.parseLong(topicIds[i]);
-						a.topicIds.add(tId);
-						a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",tId).keys().list());
+				a.textId = Long.parseLong(request.getParameter("TextId"));
+				a.chapterNumber = Integer.parseInt(request.getParameter("ChapterNumber"));
+				text = ofy().load().type(Text.class).id(a.textId).safe();
+				String[] chapterNoArray = request.getParameterValues("ChapterNumber");
+				List<Integer> chapterNumbers = new ArrayList<Integer>();
+				for (int i=0;i<chapterNoArray.length;i++) chapterNumbers.add(Integer.parseInt(chapterNoArray[i]));
+				a.title = "General Chemistry Exam";
+				a.questionKeys.clear();
+				for (Chapter chp : text.chapters) {
+					if (chapterNumbers.contains(chp.chapterNumber)) {
+						for (Long conceptId : chp.conceptIds) {
+							if (!a.conceptIds.contains(conceptId)) {
+								a.conceptIds.add(conceptId);
+								a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",conceptId).keys().list());
+							}
+						}
 					}
 				}
 				break;
@@ -546,6 +555,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				}
 				break;
 			case "VideoQuiz":
+				a.assignmentType = "VideoQuiz";
 				String videoId = request.getParameter("VideoId");
 				if (videoId != null) a.videoId = Long.parseLong(videoId);
 				break;
