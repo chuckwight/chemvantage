@@ -87,14 +87,20 @@ public class PracticeExamTransaction implements Serializable {
 	}
 	
 	int getScore() {
-		if (score==0) for (int i=0;i<scores.length;i++) score += scores[i];
-		ofy().save().entity(this);
+		if (score==0 && scores!=null) {
+			for (int i=0;i<scores.length;i++) score += scores[i];
+			scores = null;
+			ofy().save().entity(this).now();
+		}
 		return score;
 	}
 	
 	int getPossibleScore() {
-		if (possibleScore==0) for (int i=0;i<possibleScores.length;i++) possibleScore += possibleScores[i];
-		ofy().save().entity(this);
+		if (possibleScore==0 && possibleScores!=null) {
+			for (int i=0;i<possibleScores.length;i++) possibleScore += possibleScores[i];
+			possibleScores = null;
+			ofy().save().entity(this).now();
+		}
 		return possibleScore;
 	}
 	
