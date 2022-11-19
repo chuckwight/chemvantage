@@ -41,7 +41,8 @@ public class Logout extends HttpServlet {
 	static String now(HttpServletRequest request,Exception exception) {
 		StringBuffer buf = new StringBuffer(Subject.banner + "<h3>An unexpected error occurred.</h3>");
 		buf.append(exception.getMessage()==null?exception.toString():exception.getMessage());
-		buf.append("<br/><br/>We apologize for the error. Please take a moment to <a href=/Feedback>leave us feedback</a>, "
+		buf.append("<br/><br/>We apologize for the error. If this happened unexpectedly, please take a moment to "
+				+ "<a href=/Feedback>leave us feedback</a>, "
 				+ "copying the message above and telling us what you were trying to do at the time (e.g., "
 				+ "download a quiz or submit the answer to a homework problem). We will fix it ASAP.<br/><br/>"
 				+ "Thank you<br/><br/>");
