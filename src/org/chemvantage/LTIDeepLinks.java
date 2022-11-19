@@ -229,12 +229,11 @@ public class LTIDeepLinks extends HttpServlet {
 		
 		String assignmentType = request.getParameter("AssignmentType");
 		if (assignmentType==null) assignmentType="";
-		boolean smart = ofy().load().type(Text.class).filter("smartText",true).count()>0;
 		
 		buf.append("Select the type of assignment to create:");
 		buf.append("<div style='display:table;width:100%'><div style='display:table-row'><div style='display:table-cell'>"
 				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='PlacementExam'" + (assignmentType.equals("PlacementExam")?" CHECKED />":" />") + "Placement&nbsp;Exam</label><br/>"
-				+ (smart?"<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='SmartText'" + (assignmentType.equals("SmartText")?" CHECKED />":" />") + "SmartText Chapter</label><br />":"")
+				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='SmartText'" + (assignmentType.equals("SmartText")?" CHECKED />":" />") + "SmartText Chapter</label><br />"
 				+ "</div><div style='display:table-cell'>"
 				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Quiz'" + (assignmentType.equals("Quiz")?" CHECKED />":" />") + "Quiz</label><br />"
 				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Homework'" + (assignmentType.equals("Homework")?" CHECKED />":" />") + "Homework</label><br />"
@@ -245,6 +244,7 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='PracticeExam'" + (assignmentType.equals("PracticeExam")?" CHECKED />":" />") + "Practice&nbsp;Exam</label><br/>"
 				+ "</div></div></div><br/>");
 		buf.append("<div id=plswait style='color:red;display:none'>Please wait...</div>");
+		
 		// find out whether the LMS accepts multiple assignments in the Deep Linking process
 		boolean acceptsMultiple = settings.get("accept_multiple").getAsBoolean();
 		

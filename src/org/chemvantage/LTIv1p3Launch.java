@@ -563,190 +563,227 @@ public class LTIv1p3Launch extends HttpServlet {
 	
 	String pickResourceForm(User user,Assignment myAssignment,HttpServletRequest request) throws Exception {
 		StringBuffer buf = new StringBuffer();
-		try {
-			buf.append(Subject.banner);
-			buf.append("<h2>Assignment Setup Page</h2>");
 
-			if (!user.isInstructor()) {
-				buf.append("The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment. "
-						+ "<b>Please ask your instructor to click the same link in your LMS to complete the setup.</b> "
-						+ "You will not be able to complete this assignment until after this has been done.");
-				return buf.toString();
-			}
+		buf.append(Subject.banner);
+		buf.append("<h2>Assignment Setup Page</h2>");
 
-			buf.append("<form name=AssignmentForm action=/lti/launch method=POST>");
-			//buf.append("<input type=hidden name=id_token value='" + request.getParameter("id_token") + "' />");
-			buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
-			buf.append("<input type=hidden name=UserRequest value='UpdateAssignment' />");
-			buf.append("<input type=hidden name=Refresh id=refresh value=true />");
-			
-			String assignmentType = request.getParameter("AssignmentType");
-			if (assignmentType==null) assignmentType="";
-			
-			buf.append("Select the type of assignment to create:");
-			buf.append("<div style='display:table;width:100%'><div style='display:table-row'><div style='display:table-cell'>"
-					+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='PlacementExam'" + (assignmentType.equals("PlacementExam")?" CHECKED />":" />") + "Placement&nbsp;Exam</label><br/>"
-					+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='SmartText'" + (assignmentType.equals("SmartText")?" CHECKED />":" />") + "SmartText Chapter</label><br />"
-					+ "</div><div style='display:table-cell'>"
-					+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Quiz'" + (assignmentType.equals("Quiz")?" CHECKED />":" />") + "Quiz</label><br />"
-					+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Homework'" + (assignmentType.equals("Homework")?" CHECKED />":" />") + "Homework</label><br />"
-					+ "</div><div style='display:table-cell'>"
-					+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='VideoQuiz'" + (assignmentType.equals("VideoQuiz")?" CHECKED />":" />") + "Video</label><br />"
-					+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Poll'" + (assignmentType.equals("Poll")?" CHECKED />":" />") + "In-class&nbsp;Poll</label><br />"
-					+ "</div><div style='display:table-cell'>"
-					+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='PracticeExam'" + (assignmentType.equals("PracticeExam")?" CHECKED />":" />") + "Practice&nbsp;Exam</label><br/>"
-					+ "</div></div></div><br/>");
-			buf.append("<div id=plswait style='color:red;display:none'>Please wait...</div>");
-			
-			// display a selector, depending on the type of assignment selected:
-			List<Topic> topics = null;
-			List<Text> texts = null;
-			long textId = 0L;
-			Text text = null;
-			int oneThird = 0;
-			int oneHalf = 0;
-			int i = 0;
-			switch (assignmentType) {
-			case "PlacementExam":
-				buf.append("<input type=submit onClick=\"document.getElementById('refresh').value=false\"; value='Create a placement exam for General Chemistry' /><br/><br/>");
-				break;
-			case "Poll":
-				buf.append("Poll questions will be selected or created when the assignment is launched by the instructor.<br/><br/>"
-						+ "<input type=submit onClick=\"document.getElementById('refresh').value=false\"; value='Create an in-class poll' />");
-				break;
-			case "SmartText":
-				texts = ofy().load().type(Text.class).filter("smartText",true).list();
-				try {
-					textId = Long.parseLong(request.getParameter("TextId"));
-					buf.append("<div>Please select one of the available ChemVantage smart textbooks below:</div>");
-					for (Text txt : texts) {
-						if (txt.id==textId) text = txt;
-						buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />" + txt.title + "</label></div>");
-					}
-					buf.append("<br/>");
-					buf.append("<div style='color:red'>Select one of the chapters below for this reading assignment.</div>");
-					buf.append("<div style=display:table;width:100%><div style=display:table-row><div style=display:table-cell>");
-					oneHalf = text.chapters.size()/2;
-						for (Chapter ch : text.chapters) {
-						if (i==oneHalf) buf.append("</div><div style=display:table-cell>");
-						i++;
-						buf.append("<div><label><input type=radio name=ChapterNumber onClick=countChecks('SmartText'); "
-							+ "value=" + ch.chapterNumber + " />" + ch.chapterNumber + ". " + ch.title + "</label></div>");
-					}
-					buf.append("</div></div></div>");
-					buf.append("<input id=stsub type=submit disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select one chapter' />");
-				} catch (Exception e) {
-					buf.append("<div style='color:red'>Please select one of the available ChemVantage smart textbooks below:</div>");
-					for (Text txt : texts) buf.append("<div><label><input type=radio name=TextId value=" + txt.id + " onclick=this.form.submit(); />" + txt.title + "</label></div>");
-				}		
-				break;
-			case "Quiz":
-			case "Homework":
-				texts = ofy().load().type(Text.class).list();
-				try {
-					textId = Long.parseLong(request.getParameter("TextId"));
-					buf.append("<div>Please select one of the topic groups below:</div>");
-					for (Text txt : texts) {
-						if (txt.chapters.isEmpty()) continue;
-						if (txt.id==textId) text = txt;
-						buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />" + txt.title + "</label></div>");
-					}
-					buf.append("<br/>");
-					buf.append("<div style='color:red'>Select one of the chapters below for this reading assignment.</div>");
-					buf.append("<div style=display:table;width:100%><div style=display:table-row><div style=display:table-cell>");
-					oneHalf = text.chapters.size()/2;
-						for (Chapter ch : text.chapters) {
-						if (i==oneHalf) buf.append("</div><div style=display:table-cell>");
-						i++;
-						buf.append("<div><label><input type=radio name=ChapterNumber onClick=countChecks('Quiz'); "
-							+ "value=" + ch.chapterNumber + " />" + ch.chapterNumber + ". " + ch.title + "</label></div>");
-					}
-					buf.append("</div></div></div>");
-					buf.append("<input type=submit id=qhsub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select one topic' />");
-				} catch (Exception e) {
-					buf.append("<div style='color:red'>Please select one of the topic groups below:</div>");
-					for (Text txt : texts) buf.append("<div><label><input type=radio name=TextId value=" + txt.id + " onclick=this.form.submit(); />" + txt.title + "</label></div>");
-				}			
-				break;
-			case "PracticeExam":
-				topics = ofy().load().type(Topic.class).order("orderBy").list();
-				oneThird = topics.size()/3;
-				buf.append("<div style='color:red'>Please select at least 3 topics for this practice exam:</div>");
-				buf.append("<div style=display:table><div style=display:table-row><div style=display:table-cell>");
-				for (Topic t : topics) {
-					if (t.orderBy.equals("Hide")) continue;
-					if (i==oneThird || i==2*oneThird) buf.append("</div><div style=display:table-cell>");
-					i++;
-					buf.append("<div><label><input type=checkbox name=TopicIds value=" + t.id + " onClick=countChecks('PracticeExam'); />" + t.title + "</label></div>");
-				}
-				buf.append("</div></div></div>");
-				buf.append("<input type=submit id=pesub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select at least 3 topics' />");
-				break;
-			case "VideoQuiz":
-				buf.append("Videos marked with an asterisk (*) have embedded quizzes; others will give full credit for watching to the end.<br/>");
-				List<Video> videos = ofy().load().type(Video.class).order("orderBy").list();
-				oneThird = videos.size()/3;
-				buf.append("<div style='color:red'>Please select one topic:</div>");
-				buf.append("<div style=display:table><div style=display:table-row><div style=display:table-cell>");
-				for (Video v : videos) {
-					if (v.orderBy.equals("Hide")) continue;
-					if (i==oneThird || i==2*oneThird) buf.append("</div><div style=display:table-cell>");
-					i++;
-					buf.append("<div><label><input type=radio name=VideoId value=" + v.id + " onClick=countChecks('VideoQuiz'); />" + v.title + (v.breaks==null?"":"*") + "</label></div>");
-				}
-				buf.append("</div></div></div>");
-				buf.append("<input type=submit id=vidsub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select one topic' />");
-				break;
-			default:  // no assignmentType selected
-			}
-			
-			buf.append("</form>");
-			
-			buf.append("<script>"
-					+ "function countChecks(type) {"
-					+ "  var examArray=document.getElementsByName('TopicIds');"
-					+ "  var videoArray=document.getElementsByName('VideoId');"
-					+ "  var stArray=document.getElementsByName('ChapterNumber');"
-					+ "  var qhArray=document.getElementsByName('TopicId');"
-					+ "  var peSubmit = document.getElementById('pesub');"
-					+ "  var vidSubmit = document.getElementById('vidsub');"
-					+ "  var stSubmit = document.getElementById('stsub');"
-					+ "  var qhSubmit = document.getElementById('qhsub');"
-					+ "  var count=0;"
-					+ "  switch (type) {"
-					+ "    case 'PracticeExam':"
-					+ "      for (var i=0;i<examArray.length;i++) if (examArray[i].checked) count++;"
-					+ "        peSubmit.disabled=(count<3);"
-					+ "      if (count<3) peSubmit.value='Select at least 3 topics';"
-					+ "      else peSubmit.value='Create this exam';"
-					+ "      break;"
-					+ "    case 'VideoQuiz':"
-					+ "      for (var i=0;i<videoArray.length;i++) if (videoArray[i].checked) count++;"
-					+ "      vidSubmit.disabled = (count<1);"
-					+ "      if (count<1) vidSubmit.value='Select one topic';"
-					+ "      else vidSubmit.value='Create ' + (count==1?'this assignment':'these assignments');"
-					+ "      break;"
-					+ "    case 'SmartText':"
-					+ "      for (var i=0;i<stArray.length;i++) if (stArray[i].checked) count++;"
-					+ "      stSubmit.disabled = (count<1);"
-					+ "      if (count<1) stSubmit.value='Select one chapter';"
-					+ "      else stSubmit.value='Create ' + (count==1?'this assignment':'these assignments');"
-					+ "      break;"
-					+ "    case 'Quiz':"
-					+ "    case 'Homework':"
-					+ "      for (var i=0;i<qhArray.length;i++) if (qhArray[i].checked) count++;"
-					+ "      qhSubmit.disabled = (count<1);"
-					+ "      if (count<1) qhSubmit.value='Select one topic';"
-					+ "      else qhSubmit.value='Create ' + (count==1?'this assignment':'these assignments');"
-					+ "  }"
-					+ "}"
-					+ "</script>");
+		if (!user.isInstructor()) {
+			buf.append("The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment. "
+					+ "<b>Please ask your instructor to click the same link in your LMS to complete the setup.</b> "
+					+ "You will not be able to complete this assignment until after this has been done.");
 			return buf.toString();
-		} catch (Exception e) {
-			throw new Exception("Sorry, an unexpected error occured during the assignment selection process. " + e.getMessage());
 		}
+
+		buf.append("<form name=AssignmentForm action=/lti/launch method=POST>");
+		buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
+		buf.append("<input type=hidden name=UserRequest value='UpdateAssignment' />");
+		buf.append("<input type=hidden name=Refresh id=refresh value=true />");
+
+		String assignmentType = request.getParameter("AssignmentType");
+		if (assignmentType==null) assignmentType="";
+
+		buf.append("Select the type of assignment to create:");
+		buf.append("<div style='display:table;width:100%'><div style='display:table-row'><div style='display:table-cell'>"
+				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='PlacementExam'" + (assignmentType.equals("PlacementExam")?" CHECKED />":" />") + "Placement&nbsp;Exam</label><br/>"
+				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='SmartText'" + (assignmentType.equals("SmartText")?" CHECKED />":" />") + "SmartText Chapter</label><br />"
+				+ "</div><div style='display:table-cell'>"
+				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Quiz'" + (assignmentType.equals("Quiz")?" CHECKED />":" />") + "Quiz</label><br />"
+				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Homework'" + (assignmentType.equals("Homework")?" CHECKED />":" />") + "Homework</label><br />"
+				+ "</div><div style='display:table-cell'>"
+				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='VideoQuiz'" + (assignmentType.equals("VideoQuiz")?" CHECKED />":" />") + "Video</label><br />"
+				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Poll'" + (assignmentType.equals("Poll")?" CHECKED />":" />") + "In-class&nbsp;Poll</label><br />"
+				+ "</div><div style='display:table-cell'>"
+				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='PracticeExam'" + (assignmentType.equals("PracticeExam")?" CHECKED />":" />") + "Practice&nbsp;Exam</label><br/>"
+				+ "</div></div></div><br/>");
+		buf.append("<div id=plswait style='color:red;display:none'>Please wait...</div>");
+
+		// this method only accepts single assignments (different from DeepLinking)
+		boolean acceptsMultiple = false;
+		
+		// display a selector, depending on the type of assignment selected:
+		long textId = 0L;
+		Text text = null;
+		List<Text> texts = null;
+		int oneThird = 0;
+		int oneHalf = 0;
+		int i = 0;
+		switch (assignmentType) {
+		case "PlacementExam":
+			buf.append("<input type=submit onClick=\"document.getElementById('refresh').value=false\"; value='Create a placement exam for General Chemistry' /><br/><br/>");
+			break;
+		case "Poll":
+			buf.append("Poll questions will be selected or created when the assignment is launched by the instructor.<br/><br/>"
+					+ "<input type=submit onClick=\"document.getElementById('refresh').value=false\"; value='Create an in-class poll' />");
+			break;
+		case "SmartText":
+			try {
+				texts = ofy().load().type(Text.class).filter("smartText",true).list();
+				textId = Long.parseLong(request.getParameter("TextId"));
+				buf.append("<div>Please select one of the available ChemVantage smart textbooks below:</div>");
+				for (Text txt : texts) {
+					if (txt.id==textId) text = txt;
+					buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />" + txt.title + "</label></div>");
+				}
+				buf.append("<br/>");
+				buf.append("<div style='color:red'>Select " + (acceptsMultiple?"at least ":"") + "one of the chapters below for this assignment.</div>");
+				buf.append("<div style=display:table;width:100%><div style=display:table-row><div style=display:table-cell>");
+				oneHalf = text.chapters.size()/2;
+					for (Chapter ch : text.chapters) {
+					if (i==oneHalf) buf.append("</div><div style=display:table-cell>");
+					i++;
+					buf.append("<div><label><input type=" + (acceptsMultiple?"checkbox":"radio") + " name=ChapterNumber onClick=countChecks('SmartText'); "
+						+ "value=" + ch.chapterNumber + " />" + ch.chapterNumber + ". " + ch.title + "</label></div>");
+				}
+				buf.append("</div></div></div>");
+				buf.append("<input id=stsub type=submit disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select" + (acceptsMultiple?" at least":"") + " one chapter' />");
+			} catch (Exception e) {
+				buf.append("<div style='color:red'>Please select one of the available ChemVantage smart textbooks below:</div>");
+				for (Text txt : texts) buf.append("<div><label><input type=radio name=TextId value=" + txt.id + " onclick=this.form.submit(); />" + txt.title + "</label></div>");
+			}		
+			break;
+		case "Quiz":
+		case "Homework":
+			try {
+				texts = ofy().load().type(Text.class).list();
+				textId = Long.parseLong(request.getParameter("TextId"));
+				buf.append("<div>Please select one of the topic groups below:</div>");
+				Text allTopics = null;
+				for (Text txt : texts) {
+					if (txt.chapters.isEmpty()) continue;
+					if (txt.id==textId) text = txt;
+					if (txt.title.equals("View All Topics")) {
+						allTopics = txt;
+						continue;
+					}
+					buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />" + txt.title + "</label></div>");
+				}
+				buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />" + allTopics.title + "</label></div><br/>");
+				
+				buf.append("<div style='color:red'>Select " + (acceptsMultiple?"at least ":"") + "one of the topics below for this assignment.</div>");
+				buf.append("<div style=display:table;width:100%><div style=display:table-row><div style=display:table-cell>");
+				oneHalf = text.chapters.size()/2;
+					for (Chapter ch : text.chapters) {
+					if (i==oneHalf) buf.append("</div><div style=display:table-cell>");
+					i++;
+					buf.append("<div><label><input type=" + (acceptsMultiple?"checkbox":"radio") + " name=ChapterNumber onClick=countChecks('" + assignmentType + "'); "
+						+ "value=" + ch.chapterNumber + " />" + ch.chapterNumber + ". " + ch.title + "</label></div>");
+				}
+				buf.append("</div></div></div>");
+				buf.append("<input type=submit id=stsub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select" + (acceptsMultiple?" at least":"") + " one topic' />");
+			} catch (Exception e) {
+				buf.append("<div style='color:red'>Please select one of the topic groups below:</div>");
+				Text allTopics = null;
+				for (Text txt : texts) {
+					if (txt.chapters.isEmpty()) continue;
+					if (txt.id==textId) text = txt;
+					if (txt.title.equals("View All Topics")) {
+						allTopics = txt;
+						continue;
+					}
+					buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />" + txt.title + "</label></div>");
+				}
+				buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />" + allTopics.title + "</label></div><br/>");
+			}			
+			break;
+		case "PracticeExam":
+			try {
+				texts = ofy().load().type(Text.class).list();
+				textId = Long.parseLong(request.getParameter("TextId"));
+				buf.append("<div>Please select one of the topic groups below:</div>");
+				Text allTopics = null;
+				for (Text txt : texts) {
+					if (txt.chapters.isEmpty()) continue;
+					if (txt.id==textId) text = txt;
+					if (txt.title.equals("View All Topics")) {
+						allTopics = txt;
+						continue;
+					}
+					buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />" + txt.title + "</label></div>");
+				}
+				buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />" + allTopics.title + "</label></div><br/>");
+				
+				buf.append("<div style='color:red'>Select at least three of the topics below for this assignment.</div>");
+				buf.append("<div style=display:table;width:100%><div style=display:table-row><div style=display:table-cell>");
+				oneHalf = text.chapters.size()/2;
+					for (Chapter ch : text.chapters) {
+					if (i==oneHalf) buf.append("</div><div style=display:table-cell>");
+					i++;
+					buf.append("<div><label><input type=checkbox name=ChapterNumber onClick=countChecks('" + assignmentType + "'); "
+						+ "value=" + ch.chapterNumber + " />" + ch.chapterNumber + ". " + ch.title + "</label></div>");
+				}
+				buf.append("</div></div></div>");
+				buf.append("<input type=submit id=pesub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select at least three topics' />");
+			} catch (Exception e) {
+				buf.append("<div style='color:red'>Please select one of the topic groups below:</div>");
+				Text allTopics = null;
+				for (Text txt : texts) {
+					if (txt.chapters.isEmpty()) continue;
+					if (txt.id==textId) text = txt;
+					if (txt.title.equals("View All Topics")) {
+						allTopics = txt;
+						continue;
+					}
+					buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />" + txt.title + "</label></div>");
+				}
+				buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />" + allTopics.title + "</label></div><br/>");
+			}	
+			break;
+		case "VideoQuiz":
+			buf.append("Videos marked with an asterisk (*) have embedded quizzes; others will give full credit for watching to the end.<br/>");
+			List<Video> videos = ofy().load().type(Video.class).order("orderBy").list();
+			oneThird = videos.size()/3;
+			buf.append("<div style='color:red'>Please select " + (acceptsMultiple?"at least":"") + " one topic:</div>");
+			buf.append("<div style=display:table><div style=display:table-row><div style=display:table-cell>");
+			for (Video v : videos) {
+				if (v.orderBy.equals("Hide")) continue;
+				if (i==oneThird || i==2*oneThird) buf.append("</div><div style=display:table-cell>");
+				i++;
+				buf.append("<div><label><input type=" + (acceptsMultiple?"checkbox":"radio") + " name=VideoId value=" + v.id + " onClick=countChecks('VideoQuiz'); />" + v.title + (v.breaks==null?"":"*") + "</label></div>");
+			}
+			buf.append("</div></div></div>");
+			buf.append("<input type=submit id=vidsub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select" + (acceptsMultiple?" at least":"") + " one topic' />");
+			break;
+		default:  // no assignmentType selected
+		}
+
+		buf.append("</form>");
+
+		buf.append("<script>"
+				+ "function countChecks(type) {"
+				+ "  var videoArray=document.getElementsByName('VideoId');"
+				+ "  var stArray=document.getElementsByName('ChapterNumber');"
+				+ "  var peSubmit = document.getElementById('pesub');"
+				+ "  var vidSubmit = document.getElementById('vidsub');"
+				+ "  var stSubmit = document.getElementById('stsub');"
+				+ "  var count=0;"
+				+ "  switch (type) {"
+				+ "    case 'PracticeExam':"
+				+ "      for (var i=0;i<stArray.length;i++) if (stArray[i].checked) count++;"
+				+ "        peSubmit.disabled=(count<3);"
+				+ "      if (count<3) peSubmit.value='Select at least 3 topics';"
+				+ "      else peSubmit.value='Create this exam';"
+				+ "      break;"
+				+ "    case 'VideoQuiz':"
+				+ "      for (var i=0;i<videoArray.length;i++) if (videoArray[i].checked) count++;"
+				+ "      vidSubmit.disabled = (count<1);"
+				+ "      if (count<1) vidSubmit.value='Select" + (acceptsMultiple?" at least":"") + " one topic';"
+				+ "      else vidSubmit.value='Create ' + (count==1?'this assignment':'these assignments');"
+				+ "      break;"
+				+ "    case 'Quiz':"
+				+ "	   case 'Homework':"
+				+ "	   case 'SmartText':"
+				+ "      for (var i=0;i<stArray.length;i++) if (stArray[i].checked) count++;"
+				+ "      stSubmit.disabled = (count<1);"
+				+ "      if (count<1) stSubmit.value='Select" + (acceptsMultiple?" at least":"") + " one chapter';"
+				+ "      else stSubmit.value='Create ' + (count==1?'this assignment':'these assignments');"
+				+ "      break;"
+				+ "  }"
+				+ "}"
+				+ "</script>");
+
+		return buf.toString();
 	}
-	
+
 	User getUser(String sig) {
 		Date now = new Date();
 		User user = users.get(sig);
