@@ -359,18 +359,13 @@ public class PlacementExam extends HttpServlet {
 			
 			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
 			List<Key<Question>> questionKeys_04pt = new ArrayList<Key<Question>>();
-			List<Key<Question>> remove = new ArrayList<Key<Question>>();
 			for (Key<Question> k : new ArrayList<Key<Question>>(questions.keySet())) {
 				Question q = questions.get(k);
+				if (isInvalid(q)) continue;
 				switch (q.pointValue) {
 				case 2: questionKeys_02pt.add(k); break;
 				case 4: questionKeys_04pt.add(k); break;
-				default: remove.add(k); // remove any keys having an invalid point value
 				}
-			}
-			if (remove.size()>0) {
-				a.questionKeys.removeAll(remove);
-				ofy().save().entity(a);
 			}
 			
 			// Reduce the size of questionKeys Lists to the number of questions needed
@@ -463,7 +458,11 @@ public class PlacementExam extends HttpServlet {
 		}
 		return buf.toString();
 	}
-	
+
+	static boolean isInvalid(Question q) {
+		return q==null || q.conceptId==0 || !(q.pointValue==2 || q.pointValue==4);
+	}
+
 	static String timerScripts(long endMillis) {
 		return "<SCRIPT language='JavaScript'>"
 				+ "function toggleTimers() {"
