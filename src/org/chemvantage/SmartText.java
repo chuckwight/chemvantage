@@ -57,7 +57,7 @@ public class SmartText extends HttpServlet {
 
 	  try {
 		   User user = User.getUser(request.getParameter("sig"));
-		   if (user==null) throw new Exception();
+		   if (user==null) throw new Exception("Invalid token (may have expired after 90 minutes).");
 
 		   long aId = user.getAssignmentId();		
 		   Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
