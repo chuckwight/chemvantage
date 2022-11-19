@@ -654,7 +654,7 @@ public class Poll extends HttpServlet {
 				+ "Add questions related to:"
 				+ "<select name=ConceptId onchange=this.form.submit();><option value=0>Select a key concept</option>");
 		for (Concept c : concepts) {
-			if (c.orderBy.startsWith("0")) continue; // skip reserved concepts
+			if (c.orderBy.startsWith(" 0")) continue; // skip reserved concepts
 			buf.append("<option value=" + c.id + (c.id.equals(conceptId)?" selected>":">") + c.title + "</option>");
 		}
 		buf.append("</select></form>");
