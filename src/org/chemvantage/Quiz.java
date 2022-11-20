@@ -914,14 +914,14 @@ public class Quiz extends HttpServlet {
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 					+ "You may include additional question items from: "
 					+ "<input type=hidden name=UserRequest value=AssignQuizQuestions />"
-					+ "<select name=ConceptId><option value='Select'>Select a key concept</option>");
+					+ "<select name=ConceptId onchange=this.form.submit();><option value='Select'>Select a key concept</option>");
 			for (Key<Concept> k : conceptKeys) {
 				try {
 					if (conceptIds.contains(k.getId()) || keyConcepts.get(k).orderBy.startsWith(" 0")) continue;  // skip current and hidden conceptIds
 					buf.append("<option value='" + k.getId() + "'" + (newConcept!=null && k.getId()==newConcept?" selected>":">") + keyConcepts.get(k).title + "</option>");
 				} catch (Exception e) {}
 			}
-			buf.append("<input type=submit value='Show questions' /></form><hr><br/>");
+			buf.append("</select></form><hr><br/>");
 
 			// now we have all of the relevant conceptIds. Make a list of questions carrying these attributes:
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();

@@ -670,7 +670,8 @@ public class Poll extends HttpServlet {
 					+ "<input type=hidden name=UserRequest value='DeleteQuestions' />"
 					+ "or <input type=submit value='Remove the selected items below from this poll' /> "
 					+ "or <a href=/Poll?sig=" + user.getTokenSignature() + ">Done Editing</a>");
-
+			if (conceptId!=null) buf.append("<br/><br/><span style=background-color:yellow;font-weight:bold;>Sorry, there are no avalable questions for the selected key concept.</span>");
+			
 			buf.append("<h3>Current Questions For This Poll</h3>");
 			int possibleScore = 0;
 			Map<Key<Question>,Question> currentQuestions = ofy().load().keys(a.questionKeys);
