@@ -321,6 +321,7 @@ public class LTIDeepLinks extends HttpServlet {
 				buf.append("<input type=submit id=stsub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select" + (acceptsMultiple?" at least":"") + " one topic' />");
 			} catch (Exception e) {
 				buf.append("<div style='color:red'>Please select one of the topic groups below:</div>");
+				texts = ofy().load().type(Text.class).list();
 				Text allTopics = null;
 				for (Text txt : texts) {
 					if (txt.chapters.isEmpty()) continue;

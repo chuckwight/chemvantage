@@ -103,7 +103,8 @@ public class LTIv1p3Launch extends HttpServlet {
 				if (!refresh && myAssignment.isValid()) {
 					myAssignment.valid = new Date();
 					ofy().save().entity(myAssignment).now();  // we will need this in a few milliseconds					
-					response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
+					//response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
+					launchResourceRequest(user,myAssignment,request,response);
 				} else {  // send the user back to the resourcePickerForm
 					response.getWriter().println(Subject.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,request) + Subject.footer);
 				}
@@ -310,41 +311,44 @@ public class LTIv1p3Launch extends HttpServlet {
 				if ("PlacementExam".equals(myAssignment.assignmentType)) url += "&n=1";
 				response.sendRedirect(url);
 			}
-			else {  // launch the assignment
-				response.setContentType("text/html");
-				PrintWriter out = response.getWriter();
-				switch(myAssignment.assignmentType) {
-				case "Quiz":
-					out.println(Subject.header("ChemVantage Quiz")
-							+ (user.isInstructor()?Quiz.instructorPage(user, myAssignment):Quiz.printQuiz(user,myAssignment))
-							+ Subject.footer);
-					break;
-				case "Homework":
-					out.println(Subject.header("ChemVantage Homework")
-							+ (user.isInstructor()?Homework.instructorPage(user, myAssignment):Homework.printHomework(user,myAssignment))
-							+ Subject.footer);
-					break;
-				case "PracticeExam":
-					out.println(Subject.header("ChemVantage Practice Exam")
-							+ (user.isInstructor()?PracticeExam.instructorPage(user, myAssignment):PracticeExam.printExam(user,myAssignment,request))
-							+ Subject.footer);
-					break;
-				case "PlacementExam":
-					out.println(Subject.header("ChemVantage Placement Exam")
-							+ (user.isInstructor()?PlacementExam.instructorPage(user, myAssignment):PlacementExam.printExam(user,myAssignment,request))
-							+ Subject.footer);
-					break;
-				case "SmartText":
-					out.println(Subject.header("ChemVantage Key Concepts")
-							+ (user.isInstructor()?SmartText.instructorPage(user, myAssignment):SmartText.printQuestion(user,myAssignment,null))
-							+ Subject.footer);
-					break;
-				default: response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
-				}
-			}
+			else launchResourceRequest(user,myAssignment,request,response);
+			
 		} catch (Exception e) {
 			ofy().save().entity(d);
 			throw new Exception("Resource Link Request Launch Failed: " + e.getMessage() + " " + debug.toString());
+		}
+	}
+	
+	void launchResourceRequest (User user,Assignment myAssignment,HttpServletRequest request,HttpServletResponse response) throws Exception {
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+		switch(myAssignment.assignmentType) {
+		case "Quiz":
+			out.println(Subject.header("ChemVantage Quiz")
+					+ (user.isInstructor()?Quiz.instructorPage(user, myAssignment):Quiz.printQuiz(user,myAssignment))
+					+ Subject.footer);
+			break;
+		case "Homework":
+			out.println(Subject.header("ChemVantage Homework")
+					+ (user.isInstructor()?Homework.instructorPage(user, myAssignment):Homework.printHomework(user,myAssignment))
+					+ Subject.footer);
+			break;
+		case "PracticeExam":
+			out.println(Subject.header("ChemVantage Practice Exam")
+					+ (user.isInstructor()?PracticeExam.instructorPage(user, myAssignment):PracticeExam.printExam(user,myAssignment,request))
+					+ Subject.footer);
+			break;
+		case "PlacementExam":
+			out.println(Subject.header("ChemVantage Placement Exam")
+					+ (user.isInstructor()?PlacementExam.instructorPage(user, myAssignment):PlacementExam.printExam(user,myAssignment,request))
+					+ Subject.footer);
+			break;
+		case "SmartText":
+			out.println(Subject.header("ChemVantage Key Concepts")
+					+ (user.isInstructor()?SmartText.instructorPage(user, myAssignment):SmartText.printQuestion(user,myAssignment,null))
+					+ Subject.footer);
+			break;
+		default: response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
 		}
 	}
 	
@@ -494,14 +498,14 @@ public class LTIv1p3Launch extends HttpServlet {
 		}
 	}
 	
-	Assignment updateAssignment(HttpServletRequest request, User user) throws Exception {			
+	Assignment updateAssignment(HttpServletRequest request, User user) throws Exception {	
+		Assignment a = null;
 		try {
 			long assignmentId = user.getAssignmentId();
 			if (assignmentId == 0L) throw new Exception("Assignment ID was 0L.");
 
-			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+			a = ofy().load().type(Assignment.class).id(assignmentId).safe();
 			a.assignmentType = request.getParameter("AssignmentType");
-
 			Text text = null;
 			switch (a.assignmentType) {
 			case "SmartText":
@@ -512,7 +516,8 @@ public class LTIv1p3Launch extends HttpServlet {
 				text = ofy().load().type(Text.class).id(a.textId).safe();
 				Chapter ch = null;
 				for (Chapter c : text.chapters) if (c.chapterNumber == a.chapterNumber) ch = c;
-				a.title = a.assignmentType + " - " + ch.title;
+				a.title = ch.title;
+				a.conceptIds = ch.conceptIds;
 				a.questionKeys.clear();
 				for (Long conceptId : ch.conceptIds) {
 					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType",a.assignmentType.equals("SmartText")?"Quiz":a.assignmentType).filter("conceptId",conceptId).keys().list());
@@ -539,16 +544,16 @@ public class LTIv1p3Launch extends HttpServlet {
 				}
 				break;
 			case "PlacementExam":
-				List<Topic> topics = ofy().load().type(Topic.class).list();
-				a.topicIds = new ArrayList<Long>();
+				List<Concept> concepts = ofy().load().type(Concept.class).list();
 				a.questionKeys = new ArrayList<Key<Question>>();
-				for (Topic t : topics) {
-					switch (t.title) {
+				a.title = "General Chemistry Placement Exam";
+				for (Concept c : concepts) {
+					switch (c.title) {
 					case "Essential Chemistry":
 					case "Essential Math":
 					case "Word Problems":
-						a.topicIds.add(t.id);
-						a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",t.id).keys().list());
+						a.conceptIds.add(c.id);
+						a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",c.id).keys().list());
 						break;
 					default: continue;
 					}
@@ -562,13 +567,10 @@ public class LTIv1p3Launch extends HttpServlet {
 			case "Poll":
 				a.pollClosed = true;
 				break;
-			}
-			a.valid = new Date();
-			
-			return a;
+			}	
 		} catch (Exception e) {
-			throw new Exception("Failed to update the assignment: " + e.getMessage());
 		}
+		return a;
 	}
 	
 	String pickResourceForm(User user,Assignment myAssignment,HttpServletRequest request) throws Exception {
@@ -654,8 +656,8 @@ public class LTIv1p3Launch extends HttpServlet {
 		case "Quiz":
 		case "Homework":
 			try {
-				texts = ofy().load().type(Text.class).list();
 				textId = Long.parseLong(request.getParameter("TextId"));
+				texts = ofy().load().type(Text.class).list();
 				buf.append("<div>Please select one of the topic groups below:</div>");
 				Text allTopics = null;
 				for (Text txt : texts) {
@@ -682,6 +684,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				buf.append("<input type=submit id=stsub disabled=true onClick=\"document.getElementById('refresh').value=false\" value='Select" + (acceptsMultiple?" at least":"") + " one topic' />");
 			} catch (Exception e) {
 				buf.append("<div style='color:red'>Please select one of the topic groups below:</div>");
+				texts = ofy().load().type(Text.class).list();
 				Text allTopics = null;
 				for (Text txt : texts) {
 					if (txt.chapters.isEmpty()) continue;
@@ -693,7 +696,7 @@ public class LTIv1p3Launch extends HttpServlet {
 					buf.append("<div><label><input type=radio name=TextId value=" + txt.id + (textId==txt.id?" checked ":" ") + "onclick=this.form.submit(); />" + txt.title + "</label></div>");
 				}
 				buf.append("<div><label><input type=radio name=TextId value=" + allTopics.id + (textId==allTopics.id?" checked ":" ") + "onclick=this.form.submit(); />" + allTopics.title + "</label></div><br/>");
-			}			
+			}	
 			break;
 		case "PracticeExam":
 			try {

@@ -46,7 +46,7 @@ public class Assignment implements java.lang.Cloneable {
 	public	String lti_nrps_context_memberships_url;
 	@Index	Date valid;
 			String title;
-			Long textId;			// textId and chapterNumber are used to specify a SmartText assignment
+			Long textId = null;;			// textId and chapterNumber are used to specify a SmartText assignment
 			int chapterNumber;
 			boolean pollClosed=false;
 			String password;
@@ -114,13 +114,17 @@ public class Assignment implements java.lang.Cloneable {
 		if (this.assignmentType==null) return false;
 		
 		switch (this.assignmentType) {
-		case "Quiz": return this.topicId>0L || !this.conceptIds.isEmpty();
-		case "Homework": return this.topicId>0L  || !this.conceptIds.isEmpty();
-		case "SmartText": return this.textId>0 && this.chapterNumber>0;
-		case "PracticeExam": return topicIds.size()>2 || conceptIds.size()>2;
-		case "VideoQuiz": return this.videoId>0;
-		case "Poll": return true;
-		case "PlacementExam": return !topicIds.isEmpty() || !conceptIds.isEmpty();
+		case "Quiz":
+		case "Homework":
+		case "PracticeExam":
+		case "PlacementExam": 
+			return !questionKeys.isEmpty();
+		case "SmartText":
+			return textId!=null && chapterNumber!=0;
+		case "VideoQuiz": 
+			return videoId>0;
+		case "Poll": 
+			return true;
 		default: return false;
 		}
 	}
