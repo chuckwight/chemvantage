@@ -132,16 +132,18 @@ public class SmartText extends HttpServlet {
 			   buf.append("Complete all key concept questions to score 100% for this assignment.<br/><br/>");
 		   }
 		   
-		   // Make a List of completed conceptIds:
+		   // Ciunt the missed questions and make a List of completed conceptIds:
 		   List<Long> completed = new ArrayList<Long>();
+		   int nMissedQuestions = 0;
 		   for (int i=0; i<chapter.conceptIds.size(); i++) {
+			   nMissedQuestions += st.missedQuestions[i];
 			   int qCount = ofy().load().type(Question.class).filter("conceptId",chapter.conceptIds.get(i)).count();
 			   st.possibleScores[i] = qCount>0?(qCount>1?2:1):0;
 			   if (st.scores[i] >= st.possibleScores[i]) completed.add(chapter.conceptIds.get(i));   
 		   }
 		   
-		   // Find a randomly selected question:
-		   Random random = new Random(user.sig==null?0:user.sig);
+		  // Find a randomly selected question. Set the Random seed so it is unique for each user but also resets every time a question is missed
+		   Random random = new Random(user.sig==null?0:user.sig + nMissedQuestions);
 		   Question q = null;
 		   long conceptId=0;
 		   
