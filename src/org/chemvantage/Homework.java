@@ -326,7 +326,10 @@ public class Homework extends HttpServlet {
 			
 			if (hwa.attemptsAllowed != null) {
 				int nAttempts = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("questionId",questionId).count();
-				if (nAttempts >= hwa.attemptsAllowed) return "<h2>Sorry, you are only allowed " + hwa.attemptsAllowed + " attempt" + (hwa.attemptsAllowed==1?"":"s") + " for each question on this assignment.</h2>";
+				if (nAttempts >= hwa.attemptsAllowed) return Subject.banner 
+						+ "<h2>Sorry, you are only allowed " + hwa.attemptsAllowed + " attempt" + (hwa.attemptsAllowed==1?"":"s") + " for each question on this assignment.</h2>"
+						+ ("<a href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature() + ">Return to this homework assignment" + "</a> or "
+						+ "<a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a> ");
 			}
 			
 			// Set the Question parameters for this user (this is why we made a copy, to prevent thread collisions with a class variable)
