@@ -141,7 +141,7 @@ public class SmartText extends HttpServlet {
 		   }
 		   
 		   // Find a randomly selected question:
-		   Random random = new Random();
+		   Random random = new Random(user.sig==null?0:user.sig);
 		   Question q = null;
 		   long conceptId=0;
 		   
