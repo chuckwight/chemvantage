@@ -118,7 +118,7 @@ public class Assignment implements java.lang.Cloneable {
 		case "Homework":
 		case "PracticeExam":
 		case "PlacementExam": 
-			return questionKeys.isEmpty() || !conceptIds.isEmpty();
+			return !questionKeys.isEmpty() || !conceptIds.isEmpty();
 		case "SmartText":
 			return textId!=null && chapterNumber!=0;
 		case "VideoQuiz": 
