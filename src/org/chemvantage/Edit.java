@@ -264,7 +264,157 @@ public class Edit extends HttpServlet {
 		}
 		out.println(Subject.footer);
 	}
+	
+	String editorsPage(User user,HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer("<h3>Editor's Page</h3>");
+		try {
+			int nPending = ofy().load().type(ProposedQuestion.class).count();
+			buf.append("<a href=Edit?UserRequest=Review>"
+					+ nPending + " items are currently pending editorial review.</a><br/>");
+			buf.append("<a href=/Edit?UserRequest=ManageConcepts>Manage Concepts</a><br/>");
+			buf.append("<a href=/Edit?UserRequest=ManageVideos>Manage Videos</a><br/>");
+			buf.append("<a href=/Edit?UserRequest=ManageTexts>Manage Texts</a><br/>");
+			
+			// display a table to select questions by AssignmentType and Text/Chapter/Concept or directly by Concept:
+			buf.append("<div style=display:table><div style=display:table-row>");
+			buf.append("<form method=get action=/Edit>");
+			
+			String assignmentType = request.getParameter("AssignmentType");
+			Text text = null;
+			Chapter chapter = null;
+			Concept concept = null;
+			
+			// the first cell contains a set of radio buttons to select the AssignmentTypoe
+			buf.append("<div style='display:table-cell;padding-right:25px;'><h4>Select an Assignment Type</h4>");
+			buf.append("<label><input type=radio name=AssignmentType value=Quiz " + ("Quiz".equals(assignmentType)?"checked":"onClick=this.form.submit()") + " />Quiz</label><br/>");
+			buf.append("<label><input type=radio name=AssignmentType value=Homework " + ("Homework".equals(assignmentType)?"checked":"onClick=this.form.submit()") + " />Homework</label><br/>");
+			buf.append("<label><input type=radio name=AssignmentType value=Exam " + ("Exam".equals(assignmentType)?"checked":"onClick=this.form.submit()") + " />Exam</label><br/>");
+			buf.append("</div>");  // end cell1
+			
+			if (assignmentType != null) {  // ask for text or concept
+				// the second cell contains selectors for text and chapter (optional)
+				Long textId = null;
+				try {
+					textId = Long.parseLong(request.getParameter("TextId"));
+				} catch (Exception e) {}
+				Text allTopics = null;
+				List<Text> texts = ofy().load().type(Text.class).list();
+				buf.append("<div style='display:table-cell;padding-right:25px;'><h4>Select a Text/Chapter</h4>");
+				buf.append("<select id=tsel name=TextId onChange=this.form.submit();>"
+						+ "<option>Select a text</option>");
+				for (Text t : texts) {
+					if (t.chapters.isEmpty()) continue;
+					if (t.id.equals(textId)) text = t;
+					if (t.title.equals("View All Topics")) {
+						allTopics = t;
+						continue;
+					}
+					buf.append("<option value=" + t.id + (t.id.equals(textId)?" selected>":">") + t.title + "</option>");
+				}
+				if (allTopics != null) buf.append("<option value=" + allTopics.id + (allTopics.id.equals(textId)?" selected>":">") + allTopics.title + "</option>");
+				buf.append("</select>"
+						+ "<button type=button onclick=document.getElementById('tsel').value='null';this.form.submit();>Reset</button>"
+						+ "<br/><br/>");
+				// next, present a selector for a chapter if the text is known
+				Integer chapterNumber = null;
+				if (text != null) {
+					try {
+						chapterNumber = Integer.parseInt(request.getParameter("ChapterNumber"));
+					} catch (Exception e) {}
+					buf.append("<select name=ChapterNumber onChange=this.form.submit();>"
+							+ "<option>Select a chapter</option>");
+					for (Chapter ch : text.chapters) {
+						if (chapterNumber!=null && chapterNumber.equals(ch.chapterNumber)) chapter = ch;
+						buf.append("<option value=" + ch.chapterNumber + (ch.equals(chapter)?" selected>":">") + ch.title + "</option>");
+					}
+					buf.append("</select>");
+				}
+				buf.append("</div>");  // end cell2
 
+				// the third cell contains a selector for a Concept
+				buf.append("<div style='display:table-cell;'><h4>Select a Key Concept</h4>");
+				Long conceptId = null;
+				try {
+					conceptId = Long.parseLong(request.getParameter("ConceptId"));
+				} catch (Exception e) {}
+				List<Key<Concept>> conceptKeys = ofy().load().type(Concept.class).keys().list();
+				Map<Key<Concept>,Concept> concepts = ofy().load().keys(conceptKeys);
+				if (conceptId!=null) concept = concepts.get(Key.create(Concept.class,conceptId));
+				
+				if (chapter!=null) {  // present a radio-style selector for chapter concepts
+					for (Long cId : chapter.conceptIds) {
+						int nQuestions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",cId).count();
+						buf.append("<label><input type=radio name=ConceptId value=" + cId 
+							+ (cId.equals(conceptId)?" checked />":" onClick=this.form.submit(); />") 
+							+ concepts.get(Key.create(Concept.class,cId)).title + " (" + nQuestions + ")</label><br/>");
+					}
+				} else if (text==null) {  // otherwise show a drop-down selector for all concepts
+					buf.append("<select id=csel name=ConceptId onchange=document.getElementById('tsel').value='null';this.form.submit()><option>Select a concept</option>");
+					for (Concept c : concepts.values()) buf.append("<option value=" + c.id + (c.id.equals(conceptId)?" selected>":">") + c.title + "</option>");
+					buf.append("</select>"
+							+ "<button type=button onclick=document.getElementById('csel').value='null';this.form.submit();>Reset</button>");
+				}
+				buf.append("</div>");  // end cell3
+			}
+			buf.append("</form>");
+			buf.append("</div></div><br/>"); // end row,table
+			
+			if (concept!=null) {
+				List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",concept.id).keys().list();
+				Collections.sort(questionKeys,new SortBySuccessPct());
+				
+				Map<Key<Question>,Question> questions = ofy().load().keys(questionKeys);
+				buf.append("<h3>" + questions.size() + " " + assignmentType + " Questions for Key Concept: " + concept.title + "</h3>");
+
+				buf.append("<FORM NAME=NewQuestion METHOD=GET ACTION=/Edit>");
+				buf.append("Add a new question for this key concept:<br>"
+						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=NewQuestionForm>"
+						+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
+						+ "<INPUT TYPE=HIDDEN NAME=ConceptId VALUE='" + concept.id + "'>"
+						+ "<INPUT TYPE=HIDDEN NAME=QuestionType>"
+						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=1;submit()\" VALUE='Multiple Choice'> "
+						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=2;submit()\" VALUE='True/False'> "
+						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=3;submit()\" VALUE='Select Multiple'> "
+						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=4;submit()\" VALUE='Fill in Word'> "
+						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=5;submit()\" VALUE='Numeric'>"
+						+ "</FORM><br/>");
+
+				buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
+				int i=0;
+				int pts = 0;
+				for (Key<Question> k : questionKeys) {
+					Question q = questions.get(k);
+					q.setParameters();
+
+					if ("Exam".equals(assignmentType) && q.pointValue != pts) { // print a header for new section of questions
+						pts = q.pointValue;
+						i=0;
+						buf.append("<tr><td bgcolor=cyan>" + q.pointValue + "&nbsp;pt.&nbsp;questions:</td><td colspan=2>&nbsp;<p>&nbsp;</td></tr>");
+					}
+					i++;
+					buf.append("\n<span id=q" + q.id + "></span>"
+							+ "<FORM METHOD=GET ACTION=/Edit>"
+							+ "<INPUT TYPE=HIDDEN NAME=ConceptId VALUE='" + concept.id + "'>"
+							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
+							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>"
+							+ "<TR VALIGN=TOP>"
+							+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit><br/><FONT SIZE=-2>"
+							+ successPct.get(Key.create(q)) + "%&nbsp;avg&nbsp;score</FONT>"
+							+ (q.learn_more_url != null && !q.learn_more_url.isEmpty()?"<br/><a href='" + q.learn_more_url + "' target=_blank><img src=/images/learn_more.png /></a>":"")
+							+ "</TD>"
+							+ "<TD ALIGN=RIGHT NOWRAP> " + i + ". </TD>");
+					buf.append("<TD>" + q.printAll() + "</TD>");
+					buf.append("</TR></FORM>");
+				}
+				buf.append("</TABLE><br/>");			
+			}
+		} catch (Exception e) {
+			buf.append("Error: " + e.getMessage()==null?e.toString():e.getMessage());
+		}
+		return buf.toString();
+	}
+	
+/*
 	String editorsPage(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h3>Editors' Page</h3>");
 		try {
@@ -434,7 +584,7 @@ public class Edit extends HttpServlet {
 		}
 		return buf.toString();
 	}
-
+*/
 	String assignmentTypeDropDownBox(String defaultType) {
 		return assignmentTypeDropDownBox(defaultType,false);
 	}
@@ -467,6 +617,14 @@ public class Edit extends HttpServlet {
 		return buf.toString();
 	}
 	
+	String conceptSelectBox(Long conceptId) {
+		StringBuffer buf = new StringBuffer("<select name=ConceptId>");
+		List<Concept> concepts = ofy().load().type(Concept.class).order("orderBy").list();
+		for (Concept c : concepts) buf.append("<option value=" + c.id + (c.id.equals(conceptId)?" selected>":">") + c.title + "</option>");
+		buf.append("</select>");
+		return buf.toString();
+	}
+	
 	String questionTypeDropDownBox(int questionType) {
 		StringBuffer buf = new StringBuffer();
 		buf.append("\n<SELECT NAME=QuestionType>"
@@ -478,7 +636,7 @@ public class Edit extends HttpServlet {
 				+ "</SELECT>");
 		return buf.toString();
 	}
-	
+/*	
 	List<Key<Question>> loadQuestions(String assignmentType,long topicId) throws Exception {
 		List<Key<Question>> keys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).keys().list();
 		if (keys.isEmpty()) return keys;
@@ -497,7 +655,7 @@ public class Edit extends HttpServlet {
 		
 		return keys;
 	}
-	
+*/	
 	String topicsForm(HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h3>Manage Quiz/Homework/Exam Topics</h3>");
 		try {
@@ -1024,11 +1182,10 @@ public class Edit extends HttpServlet {
 	
 	String newQuestionForm(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		long topicId = 0;
+		Long conceptId = null;
 		try {
-			topicId = Long.parseLong(request.getParameter("TopicId"));
-		} catch (Exception e) {}
-		
+			conceptId = Long.parseLong(request.getParameter("ConceptId"));
+		} catch (Exception e) {}		
 		String assignmentType = request.getParameter("AssignmentType");
 
 		int questionType = 0;
@@ -1066,7 +1223,7 @@ public class Edit extends HttpServlet {
 					+ "<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + user.getId() + "'>");
 			buf.append("<INPUT TYPE=HIDDEN NAME=QuestionType VALUE=" + questionType + ">");
 			
-			buf.append("Topic: " + topicSelectBox(topicId) + "<br>");
+			buf.append("Concept: " + conceptSelectBox(conceptId) + "<br>");
 			
 			buf.append("Point Value: " + pointValueSelectBox(assignmentType) + "<br>");
 			buf.append(question.edit());
@@ -1122,7 +1279,7 @@ public class Edit extends HttpServlet {
 				topicId = Long.parseLong(request.getParameter("TopicId"));
 			} catch (Exception e2) {}
 			
-			long conceptId = 0;
+			Long conceptId = null;
 			try {
 				conceptId = Long.parseLong(request.getParameter("ConceptId"));
 			} catch (Exception e) {}
@@ -1142,9 +1299,11 @@ public class Edit extends HttpServlet {
 				q.pointValue = 1;
 				buf.append(" (1 point)<br>");
 			}
-			Topic t = ofy().load().type(Topic.class).id(topicId).safe();
-			Concept c = conceptId==0?null:ofy().load().type(Concept.class).id(conceptId).now();
-			buf.append("Topic: " + t.title + "<br>");
+			if (topicId>0) {
+				Topic t = ofy().load().type(Topic.class).id(topicId).safe();
+				buf.append("Topic: " + t.title + "<br>");
+			}
+			Concept c = conceptId==null?null:ofy().load().type(Concept.class).id(conceptId).now();
 			buf.append("Concept: " + (c==null?"n/a":c.title) + "<br/>");
 			
 			if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) buf.append("Learn more at: " + q.learn_more_url + "</br>");
@@ -1174,8 +1333,8 @@ public class Edit extends HttpServlet {
 			
 			buf.append("<hr><h3>Continue Editing</h3>");
 			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
-			buf.append("Topic:" + topicSelectBox(q.topicId) + "<br>");
-			buf.append("Concept:" + conceptSelectBox(t,conceptId));
+			if (topicId>0) buf.append("Topic:" + topicSelectBox(q.topicId) + "<br>");
+			buf.append("Concept:" + conceptSelectBox(conceptId));
 			buf.append("Learn More URL: <input type=text size=40 name=LearnMoreURL value='" + (q.learn_more_url == null?"":q.learn_more_url) + "' placeholder='(optional)' /><br/>");
 			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
 			
@@ -1208,12 +1367,12 @@ public class Edit extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		try {
 			long questionId = q.id;
-			Topic t = ofy().load().type(Topic.class).id(q.topicId).safe();
+			//Topic t = ofy().load().type(Topic.class).id(q.topicId).safe();
 			Concept c = q.conceptId==0?null:ofy().load().type(Concept.class).id(q.conceptId).now();
 			if (q.requiresParser()) q.setParameters();
 			buf.append("<h3>Current Question</h3>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
-			buf.append("Topic: " + t.title + "<br>");
+			//buf.append("Topic: " + t.title + "<br>");
 			buf.append("Concept: " + (c==null?"n/a":c.title) + "<br/>");
 			if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) buf.append("Learn more at: " + q.learn_more_url + "</br>");
 			buf.append("Author: " + q.authorId + "<br>");
@@ -1233,7 +1392,7 @@ public class Edit extends HttpServlet {
 			if (q.editorId==null) q.editorId="";
 			buf.append("<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + q.authorId + "'>");
 			buf.append("<INPUT TYPE=HIDDEN NAME=EditorId VALUE='" + q.editorId + "'>");
-			
+			if (q.topicId>0) buf.append("<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + q.id + "'>");
 			buf.append("<INPUT TYPE=HIDDEN NAME=QuestionId VALUE=" + questionId + ">");
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Question'>");
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit'>");
@@ -1241,8 +1400,8 @@ public class Edit extends HttpServlet {
 			buf.append("<hr><h3>Edit This Question</h3>");
 			
 			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
-			buf.append("Topic:" + topicSelectBox(t.id) + "<br>");
-			buf.append("Concept:" + conceptSelectBox(t,q.conceptId) + "<br/>");
+			//buf.append("Topic:" + topicSelectBox(t.id) + "<br>");
+			buf.append("Concept:" + conceptSelectBox(q.conceptId) + "<br/>");
 			buf.append("Learn More URL: <input type=text size=40 name=LearnMoreURL value='" + (q.learn_more_url == null?"":q.learn_more_url) + "' placeholder='(optional)' /><br/>");
 			
 			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
