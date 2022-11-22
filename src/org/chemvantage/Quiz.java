@@ -222,11 +222,11 @@ public class Quiz extends HttpServlet {
 			int nAttempts = 0;
 			if (qt==null && qa.attemptsAllowed != null) {
 				nAttempts = ofy().load().type(QuizTransaction.class).filter("assignmentId",qa.id).filter("userId",user.getHashedId()).count();
-				if (nAttempts >= qa.attemptsAllowed) 
-					return "<h2>Sorry, you are only allowed " + qa.attemptsAllowed + " attempt" + (qa.attemptsAllowed==1?"":"s") + " on this assignment.</h2>"
-							+ Subject.banner + showScores(user,user,qa) + "<p>";
+				if (nAttempts >= qa.attemptsAllowed) {
+					return Subject.banner + "<h2>Sorry, you are only allowed " + qa.attemptsAllowed + " attempt" + (qa.attemptsAllowed==1?"":"s") + " on this assignment.</h2>"
+							+ showScores(user,user,qa) + "<br/><br/>";
+				}
 			}
-			debug.append("4");
 			
 			if (qt == null) {  // create a new quizTransation
 				qt = new QuizTransaction(qa.id,user.getHashedId());
