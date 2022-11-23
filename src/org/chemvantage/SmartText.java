@@ -257,9 +257,14 @@ public class SmartText extends HttpServlet {
 			   buf.append(fiveStars());
 		   } else if (st.missedQuestions[index]<2) {  // continue to the next question
 			   buf.append("This assignment is " + 100*score/possibleScore + "% complete.<br/><br/>");
-			   buf.append("<a href=/SmartText?UserRequest=PrintQuestion&STTransactionId=" + st.id + "&sig=" + user.getTokenSignature() + ">"
-			   		+ "<button style='border: none; color: white; padding: 10px 10px; margin: 4px 2px; font-size: 16px; cursor: pointer; border-radius: 10px; background-color: blue;'>"
-			   		+ "Continue to the Next Question</button></a><br/><br/>");
+			   
+			   // Print a nice button to continue
+			   buf.append("<form method=get action=/SmartText>"
+			   		+ "<input type=hidden name=UserRequest value=PrintQuestion />"
+			   		+ "<input type=hidden name=STTransactionId value=" + st.id + " />"
+			   		+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+			   		+ "<button id=btn type=submit style='border:none;color:white;padding:10px 10px;margin:4px 2px;font-size:16px;cursor:pointer;border-radius:10px;background-color:blue;' "
+			   		+ "onclick=this.style.opacity=0.2;>Continue to the Next Question</button></form>");
 		   } else { // missed 2 questions; go back to the text
 			   Concept c = ofy().load().type(Concept.class).id(conceptId).safe();
 			   buf.append("You missed 2 questions on the key concept: <b>" + c.title + "</b>.<br/>"
