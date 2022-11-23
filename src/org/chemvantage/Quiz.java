@@ -104,7 +104,6 @@ public class Quiz extends HttpServlet {
 			switch (userRequest) {
 			case "UpdateAssignment":
 				a.updateQuestions(request);
-				//doGet(request,response);
 				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 				break;
 			case "Save New Title":
@@ -883,25 +882,16 @@ public class Quiz extends HttpServlet {
 					+ "If you don't see a question you want to include, you may "
 					+ "<a href=/Contribute?AssignmentType=Quiz&sig=" + user.getTokenSignature() + ">contribute a new question item</a> to the database.<br/><br/>");
 
-			// make a List of conceptIds covered by this Quiz
-			List<Long> conceptIds = new ArrayList<Long>();
-			// first, include conceptIds from the text chapter, if one exists
+			// make a List of conceptIds covered by this assignment
+			List<Long> conceptIds = a.conceptIds;
+			// Include any conceptId included in this request:
+			Long newConceptId = null;
 			try {
-				Text text = ofy().load().type(Text.class).id(a.textId).safe();
-				for (Chapter c : text.chapters) {
-					if (c.chapterNumber == a.chapterNumber) conceptIds.addAll(c.conceptIds);
-					break;
-				}
-			} catch (Exception e) {}
-			
-			// next, include any conceptIds included in this request:
-			Long newConcept = null;
-			try {
-				newConcept = Long.parseLong(request.getParameter("ConceptId"));
-				conceptIds.add(newConcept);
+				newConceptId = Long.parseLong(request.getParameter("ConceptId"));
+				conceptIds.add(newConceptId);
 			} catch (Exception e) {}
 
-			// Make a list of key concepts already covered by this Quiz:
+			// Make a list of key concepts already covered by this assignment:
 			List<Key<Concept>> conceptKeys = ofy().load().type(Concept.class).keys().list();
 			Map<Key<Concept>,Concept> keyConcepts = ofy().load().keys(conceptKeys);
 			if (conceptIds.size()>0) {
@@ -918,23 +908,22 @@ public class Quiz extends HttpServlet {
 			for (Key<Concept> k : conceptKeys) {
 				try {
 					if (conceptIds.contains(k.getId()) || keyConcepts.get(k).orderBy.startsWith(" 0")) continue;  // skip current and hidden conceptIds
-					buf.append("<option value='" + k.getId() + "'" + (newConcept!=null && k.getId()==newConcept?" selected>":">") + keyConcepts.get(k).title + "</option>");
+					buf.append("<option value='" + k.getId() + "'" + (newConceptId!=null && k.getId()==newConceptId?" selected>":">") + keyConcepts.get(k).title + "</option>");
 				} catch (Exception e) {}
 			}
 			buf.append("</select></form><hr><br/>");
-
+						
 			// now we have all of the relevant conceptIds. Make a list of questions carrying these attributes:
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 			for (Long cId : conceptIds) questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",cId).keys().list());
-			
-			// if necessary, add any existing questiinKeys not already in the list (from legacy or edited assignments)
-			if (!questionKeys.containsAll(a.questionKeys)) {  // add the missing keys
-				for (Key<Question> k : a.questionKeys) if (!questionKeys.contains(k)) questionKeys.add(k);
+
+			Map<Key<Question>,Question> questions = ofy().load().keys(questionKeys);
+
+			if (!questionKeys.containsAll(a.questionKeys)) {  // might be missing a few questions due to customization
+				questions.putAll(ofy().load().keys(a.questionKeys));
+				questionKeys = new ArrayList<Key<Question>>(questions.keySet()); // this avoids duplicate keys
 			}
-			
-			// make a list questions to select for this assignment
-			List<Question> questions = new ArrayList<Question>(ofy().load().keys(questionKeys).values());
-			
+
 			// This dummy form uses javascript to select/deselect all questions
 			buf.append("<FORM NAME=DummyForm><INPUT id=selectAll TYPE=CHECKBOX NAME=SelectAll this.indeterminant=true"
 					+ "onClick=\"for (var i=0;i<document.Questions.QuestionId.length;i++)"
@@ -951,7 +940,7 @@ public class Quiz extends HttpServlet {
 			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
 
 			int i=0;
-			for (Question q : questions) {
+			for (Question q : questions.values()) {
 				i++;
 				q.setParameters();
 				buf.append("<TR><TD VALIGN=TOP NOWRAP>"

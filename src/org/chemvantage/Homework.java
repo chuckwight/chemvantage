@@ -853,22 +853,12 @@ public class Homework extends HttpServlet {
 					+ ">contribute a new question item</a> to the database.<p>");
 			
 			// make a List of conceptIds covered by this assignment
-			List<Long> conceptIds = new ArrayList<Long>();
-			// first, include conceptIds from the text chapter, if one exists
+			List<Long> conceptIds = a.conceptIds;
+			// Include any conceptId included in this request:
+			Long newConceptId = null;
 			try {
-				Text text = ofy().load().type(Text.class).id(a.textId).safe();
-				for (Chapter c : text.chapters) {
-					if (c.chapterNumber == a.chapterNumber) conceptIds.addAll(c.conceptIds);
-					break;
-				}
-			} catch (Exception e) {
-				conceptIds = a.conceptIds;
-			}
-			// next, include any conceptIds included in this request:
-			Long newConcept = null;
-			try {
-				newConcept = Long.parseLong(request.getParameter("ConceptId"));
-				conceptIds.add(newConcept);
+				newConceptId = Long.parseLong(request.getParameter("ConceptId"));
+				conceptIds.add(newConceptId);
 			} catch (Exception e) {}
 
 			// Make a list of key concepts already covered by this assignment:
@@ -888,7 +878,7 @@ public class Homework extends HttpServlet {
 			for (Key<Concept> k : conceptKeys) {
 				try {
 					if (conceptIds.contains(k.getId()) || keyConcepts.get(k).orderBy.startsWith(" 0")) continue;  // skip current and hidden conceptIds
-					buf.append("<option value='" + k.getId() + "'" + (newConcept!=null && k.getId()==newConcept?" selected>":">") + keyConcepts.get(k).title + "</option>");
+					buf.append("<option value='" + k.getId() + "'" + (newConceptId!=null && k.getId()==newConceptId?" selected>":">") + keyConcepts.get(k).title + "</option>");
 				} catch (Exception e) {}
 			}
 			buf.append("</select></form><hr><br/>");
@@ -900,14 +890,8 @@ public class Homework extends HttpServlet {
 			Map<Key<Question>,Question> questions = ofy().load().keys(questionKeys);
 			
 			if (!questionKeys.containsAll(a.questionKeys)) {  // might be missing a few questions due to customization
-				for (Key<Question> k : a.questionKeys) {
-					try {
-						if (!questionKeys.contains(k)) {
-							questions.put(k, ofy().load().key(k).safe());
-							questionKeys.add(k);
-						}
-					} catch (Exception e) {}
-				}
+				questions.putAll(ofy().load().keys(a.questionKeys));
+				questionKeys = new ArrayList<Key<Question>>(questions.keySet()); // this avoids duplicate keys
 			}
 						
 			// sort the questionKeys in order of increasing difficulty
@@ -926,11 +910,12 @@ public class Homework extends HttpServlet {
 			buf.append("<script>document.getElementById('selectAll').indeterminate=true;</script>");
 			
 			// Make a list of individual questions that can be selected or deselected for this assignment
-			buf.append("<FORM NAME=Questions METHOD=POST ACTION=/Homework>"
-					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
-					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment'>"
-					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + a.id + "'>"
-					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items'>");
+			buf.append("<FORM NAME=Questions METHOD=POST ACTION=/Homework />"
+					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + " />"
+					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment' />"
+					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + a.id + "' />"
+					+ (newConceptId==null?"":"<input type=hidden name=NewConceptId value=" + newConceptId + " />")
+					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items' />");
 			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
 
 			int i=0;
@@ -944,7 +929,7 @@ public class Homework extends HttpServlet {
 				buf.append("\n<TD>" + q.printAll() + "</TD>");
 				buf.append("</TR>");
 			}
-			buf.append("</TABLE><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM>");
+			buf.append("</TABLE><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM><br/>");
 		} catch (Exception e) {
 			buf.append(e.toString() + " " + e.getMessage());
 		}
