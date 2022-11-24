@@ -229,6 +229,9 @@ public class Edit extends HttpServlet {
 				deleteQuestion(user,request);
 				out.println(editorsPage(user,request)); 
 				break;
+			case "Assign to Concept":
+				assignToConcept(user,request);
+				break;
 			case "Activate This Question":
 				createQuestion(user,request);
 				try {
@@ -414,6 +417,45 @@ public class Edit extends HttpServlet {
 		return buf.toString();
 	}
 	
+	String manageOrphanQuestions(User user, HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer(Subject.banner + "<h3>Question Without A ConceptId</h3>");
+		Question orphan = ofy().load().type(Question.class).filter("conceptId",null).first().now();
+		orphan.setParameters();
+		try {
+			Topic t = ofy().load().type(Topic.class).id(orphan.topicId).safe();
+			buf.append("Topic: " + t.title + "<br/>");
+		} catch (Exception e) {}
+		buf.append(orphan.printAll());
+		
+		buf.append("<h3>Closest Match</h3>");
+		Question match = ofy().load().type(Question.class).filter("assignmentType",orphan.assignmentType).filter("text >=",orphan.text).first().now();
+		match.setParameters();
+		try {
+			Topic t = ofy().load().type(Topic.class).id(match.topicId).safe();
+			buf.append("Topic: " + t.title + "<br/>");
+		} catch (Exception e) {}
+		try {
+			Concept c = ofy().load().type(Concept.class).id(match.conceptId).safe();
+			buf.append("Concept: " + c.title + "<br/>");
+		} catch (Exception e) {}
+		buf.append(match.printAll());
+		
+		buf.append("<br/><br/>");
+		
+		buf.append("<form method=post action=/Edit>"
+				+ "<input type=hidden name=QuestionId />"
+				+ "<input type=submit name=UserRequest value='Delete Question' />&nbsp;"
+				+ "<input type=submit name=UserRequest value='Assign to Concept' />"
+				+ "<select name=ConceptId><option value=0>Zero conceptId (hidden)</option>");
+		List<Concept> concepts = ofy().load().type(Concept.class).order("orderBy").list();
+		for (Concept c : concepts) buf.append("<option value=" + c.id + (c.id.equals(match.conceptId)?" selected>":">") + c.title + "</option");
+		buf.append("</select>");
+		return buf.toString();
+	}
+	
+	void assignToConcept(User user, HttpServletRequest request) {
+		
+	}
 /*
 	String editorsPage(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h3>Editors' Page</h3>");
