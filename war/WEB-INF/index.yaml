@@ -104,6 +104,11 @@ indexes:
 - kind: Question
   properties:
   - name: assignmentType
+  - name: text
+
+- kind: Question
+  properties:
+  - name: assignmentType
   - name: topicId
 
 - kind: QuizTransaction

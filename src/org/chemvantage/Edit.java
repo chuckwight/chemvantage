@@ -93,6 +93,7 @@ public class Edit extends HttpServlet {
 				break;
 			case "ManageOrphanQuestions":
 				out.println(manageOrphanQuestions(request));
+				break;
 			case "EditVideo": 
 				out.println(editVideoForm(request)); 
 				break;
@@ -226,6 +227,10 @@ public class Edit extends HttpServlet {
 			case "Update Question":
 				updateQuestion(user,request);
 				out.println(editorsPage(user,request)); 
+				break;
+			case "Delete This Question":
+				deleteQuestion(user,request);
+				out.println(manageOrphanQuestions(request));
 				break;
 			case "Delete Question":
 				deleteQuestion(user,request);
@@ -427,7 +432,7 @@ public class Edit extends HttpServlet {
 		Long questionId = null;
 		try { questionId = Long.parseLong(request.getParameter("QuestionId")); } catch (Exception e) { questionId = 1L;}  // tracks position in search
 		Key<Question> key = Key.create(Question.class,questionId);
-		
+
 		Question orphan = null;
 		while (orphan==null) {
 			List<Question> questions = ofy().load().type(Question.class).filterKey(">",key).limit(10).list();  // next 10 questions
@@ -438,71 +443,70 @@ public class Edit extends HttpServlet {
 				} else key = Key.create(q);
 			}
 		}
-		
+
 		orphan.setParameters();
+		buf.append("Assignment Type: " + orphan.assignmentType + "<br/>");
 		try {
 			Topic t = ofy().load().type(Topic.class).id(orphan.topicId).safe();
 			buf.append("Topic: " + t.title + "<br/>");
-		} catch (Exception e) {}
+		} catch (Exception e) {
+			buf.append("Topic: unknown<br/>");
+		}
+		buf.append("Question ID: " + orphan.id + "<br/>");
 		buf.append(orphan.printAll());
 		buf.append("<br/><br/>");
-		
+
 		StringBuffer comp = new StringBuffer();
-		Question match = ofy().load().type(Question.class).filter("assignmentType",orphan.assignmentType).filter("text",orphan.text).first().now();
-		if (match!=null) {
-			comp.append("<h3>Exact Match</h3>");
-			match.setParameters();
-			try {
-				Topic t = ofy().load().type(Topic.class).id(match.topicId).safe();
-				comp.append("Topic: " + t.title + "<br/>");
-			} catch (Exception e) {}
-			try {
-				Concept c = ofy().load().type(Concept.class).id(match.conceptId).safe();
-				comp.append("Concept: " + c.title + "<br/>");
-			} catch (Exception e) {}
-			comp.append(match.printAll());			
-			comp.append("<br/><br/>");			
-		} else {
-			match = ofy().load().type(Question.class).filter("assignmentType",orphan.assignmentType).filter("text <",orphan.text).first().now();
-			comp.append("<h3>Previous Question</h3>");
-			match.setParameters();
-			try {
-				Topic t = ofy().load().type(Topic.class).id(match.topicId).safe();
-				comp.append("Topic: " + t.title + "<br/>");
-			} catch (Exception e) {}
-			try {
-				Concept c = ofy().load().type(Concept.class).id(match.conceptId).safe();
-				comp.append("Concept: " + c.title + "<br/>");
-			} catch (Exception e) {}
-			comp.append(match.printAll());			
-			
-			match = ofy().load().type(Question.class).filter("assignmentType",orphan.assignmentType).filter("text >",orphan.text).first().now();
-			comp.append("<h3>Next Question</h3>");
-			match.setParameters();
-			try {
-				Topic t = ofy().load().type(Topic.class).id(match.topicId).safe();
-				comp.append("Topic: " + t.title + "<br/>");
-			} catch (Exception e) {}
-			try {
-				Concept c = ofy().load().type(Concept.class).id(match.conceptId).safe();
-				comp.append("Concept: " + c.title + "<br/>");
-			} catch (Exception e) {}
-			comp.append(match.printAll());			
-		}
+		List<Question> matches = ofy().load().type(Question.class).filter("assignmentType",orphan.assignmentType).filter("text >=",orphan.text).limit(2).list();
+		Question match = matches.get(0).id.equals(orphan.id)?matches.get(1):matches.get(0);
 		
+		comp.append("<h3>Next Question</h3>");
+		match.setParameters();
+		comp.append("Assignment Type: " + match.assignmentType + "<br/>");
+		try {
+			Topic t = ofy().load().type(Topic.class).id(match.topicId).safe();
+			comp.append("Topic: " + t.title + "<br/>");
+		} catch (Exception e) {
+			comp.append("Topic: unknown<br/>");
+		}
+		try {
+			Concept c = ofy().load().type(Concept.class).id(match.conceptId).safe();
+			comp.append("Concept: " + c.title + "<br/>");
+		} catch (Exception e) {}
+		comp.append("Question ID: " + match.id + "<br/>");
+		comp.append(match.printAll());			
+
+		match = ofy().load().type(Question.class).filter("assignmentType",orphan.assignmentType).filter("text <",orphan.text).order("-text").first().now();
+		
+		comp.append("<h3>Previous Question</h3>");
+		match.setParameters();
+		comp.append("Assignment Type: " + match.assignmentType + "<br/>");
+		try {
+			Topic t = ofy().load().type(Topic.class).id(match.topicId).safe();
+			comp.append("Topic: " + t.title + "<br/>");
+		} catch (Exception e) {
+			comp.append("Topic: unknown<br/>");
+		}
+		try {
+			Concept c = ofy().load().type(Concept.class).id(match.conceptId).safe();
+			comp.append("Concept: " + c.title + "<br/>");
+		} catch (Exception e) {}
+		comp.append("Question ID: " + match.id + "<br/>");
+		comp.append(match.printAll());
+
 		buf.append("<form method=post action=/Edit>"
-				+ "<input type=hidden name=QuestionId />"
+				+ "<input type=hidden name=QuestionId value=" + orphan.id + " />"
 				+ "<input type=submit name=UserRequest value='Delete This Question' />&nbsp;"
 				+ "<input type=submit name=UserRequest value='Assign to Concept' />"
 				+ "<select name=ConceptId><option value=0>Zero conceptId (hidden)</option>");
 		List<Concept> concepts = ofy().load().type(Concept.class).order("orderBy").list();
-		for (Concept c : concepts) buf.append("<option value=" + c.id + (c.id.equals(match.conceptId)?" selected>":">") + c.title + "</option");
+		for (Concept c : concepts) buf.append("<option value=" + c.id + (c.id.equals(match.conceptId)?" selected>":">") + c.title + "</option>");
 		buf.append("</select></form>");
-		
+
 		buf.append(comp);
-		
+
 		return buf.toString();
-	}
+}
 	
 	void assignToConcept(User user, HttpServletRequest request) {
 		try {
