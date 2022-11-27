@@ -30,16 +30,15 @@ import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Ignore;
 import com.googlecode.objectify.annotation.Index;
-import com.googlecode.objectify.condition.IfNotZero;
 
 @Entity
 public class Question implements Serializable, Cloneable {
 	private static final long serialVersionUID = 137L;
 	@Id 	Long id;
-	@Index(IfNotZero.class)	long topicId;
-	@Index(IfNotZero.class) Long conceptId; 
+	@Index	long topicId;
+	@Index	Long conceptId; 
 	@Index	String assignmentType;
-			String text;
+	@Index	String text;
 			String type;
 			int nChoices=0;
 			List<String> choices = new ArrayList<String>();
