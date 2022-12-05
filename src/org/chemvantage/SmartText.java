@@ -229,10 +229,7 @@ public class SmartText extends HttpServlet {
 			   st.scores[index]++;
 			   st.answeredKeys.add(Key.create(Question.class,q.id));
 			   buf.append("<b>Congratulations! Your answer was correct.</b><br/>");
-			   Score s = Score.getInstance(user.getId(), a);
-			   ofy().save().entity(s).now();
-			   QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue   
-		   } else {
+			 } else {
 			   st.missedQuestions[index]++;
 			   buf.append("<b>Sorry, your answer was incorrect.</b>"
 			   		+ " (<a href=# onClick=\"document.getElementById('correctAnswer').style='display:block';return false;\">show me</a>)<br/>");
@@ -274,6 +271,10 @@ public class SmartText extends HttpServlet {
 		   }
 		   st.armed = false;
 		   ofy().save().entity(st).now();
+		   
+		   Score s = Score.getInstance(user.getId(), a);
+		   ofy().save().entity(s).now();
+		   QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue   
 	   } catch (Exception e) {
 		   buf.append("Error: " + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString());
 	   }
