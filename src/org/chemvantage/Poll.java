@@ -647,7 +647,7 @@ public class Poll extends HttpServlet {
 		} catch (Exception e) {}
 
 		// Display a selector to display candidate questions by key concept:
-		List<Concept> concepts = ofy().load().type(Concept.class).list();
+		List<Concept> concepts = ofy().load().type(Concept.class).order("orderBy").list();
 		buf.append("<form method=get action=/Poll>"
 				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 				+ "<input type=hidden name=UserRequest value=EditPoll>"
