@@ -368,10 +368,9 @@ public class Edit extends HttpServlet {
 			buf.append("</div></div><br/>"); // end row,table
 			
 			if (concept!=null) {
-				List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",concept.id).keys().list();
-				Collections.sort(questionKeys,new SortBySuccessPct());
 				
-				Map<Key<Question>,Question> questions = ofy().load().keys(questionKeys);
+				List<Key<Question>> questionKeys = loadQuestions(assignmentType,concept.id);
+				
 				buf.append("<h3>" + questions.size() + " " + assignmentType + " Questions for Key Concept: " + concept.title + "</h3>");
 
 				buf.append("<FORM NAME=NewQuestion METHOD=GET ACTION=/Edit>");
@@ -749,26 +748,25 @@ public class Edit extends HttpServlet {
 				+ "</SELECT>");
 		return buf.toString();
 	}
-/*	
-	List<Key<Question>> loadQuestions(String assignmentType,long topicId) throws Exception {
-		List<Key<Question>> keys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("topicId",topicId).keys().list();
-		if (keys.isEmpty()) return keys;
+	
+	List<Key<Question>> loadQuestions(String assignmentType,Long conceptId) throws Exception {
+		List<Key<Question>> keys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",conceptId).keys().list();
+		if (keys.isEmpty() || questions.keySet().containsAll(keys)) return keys;  // nothing more to do here
 		
 		List<Key<Question>> additions = new ArrayList<Key<Question>>(keys);
 		List<Key<Question>> deletions = new ArrayList<Key<Question>>();
 		for (Key<Question> k : questions.keySet()) {
 			if (keys.contains(k)) additions.remove(k);  // questions map already contains this Question
-			else deletions.add(k);						// this question is not in the current AssignmentType and Topic
+			else deletions.add(k);						// this question is not in the current AssignmentType and conceptId
 		}
 		
 		for (Key<Question> k : deletions) questions.remove(k);
 		if (!additions.isEmpty()) questions.putAll(ofy().load().keys(additions));
 		
 		Collections.sort(keys, new SortBySuccessPct());
-		
 		return keys;
 	}
-*/	
+	
 	String topicsForm(HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h3>Manage Quiz/Homework/Exam Topics</h3>");
 		try {
