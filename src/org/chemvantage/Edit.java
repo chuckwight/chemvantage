@@ -708,6 +708,7 @@ public class Edit extends HttpServlet {
 		buf.append("<OPTION" + (defaultType.equals("Quiz")?" SELECTED":"") + ">Quiz</OPTION>"
 		+ "<OPTION" + (defaultType.equals("Homework")?" SELECTED":"") + ">Homework</OPTION>"
 		+ "<OPTION" + (defaultType.equals("Exam")?" SELECTED":"") + ">Exam</OPTION>"
+		+ "<OPTION" + (defaultType.equals("Poll")?" SELECTED":"") + ">Poll</OPTION>"
 		+ "<OPTION" + (defaultType.equals("Video")?" SELECTED":"") + ">Video</OPTION>"
 		+ "</SELECT>");
 		return buf.toString();
@@ -1480,7 +1481,7 @@ public class Edit extends HttpServlet {
 		try {
 			long questionId = q.id;
 			//Topic t = ofy().load().type(Topic.class).id(q.topicId).safe();
-			Concept c = q.conceptId==0?null:ofy().load().type(Concept.class).id(q.conceptId).now();
+			Concept c = (q.conceptId==null || q.conceptId==0L)?null:ofy().load().type(Concept.class).id(q.conceptId).now();
 			if (q.requiresParser()) q.setParameters();
 			buf.append("<h3>Current Question</h3>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
