@@ -1411,10 +1411,10 @@ public class Edit extends HttpServlet {
 				q.pointValue = 1;
 				buf.append(" (1 point)<br>");
 			}
-			if (topicId>0) {
+			if (topicId>0) try {
 				Topic t = ofy().load().type(Topic.class).id(topicId).safe();
 				buf.append("Topic: " + t.title + "<br>");
-			}
+			} catch (Exception e) {}
 			Concept c = conceptId==null?null:ofy().load().type(Concept.class).id(conceptId).now();
 			buf.append("Concept: " + (c==null?"n/a":c.title) + "<br/>");
 			
