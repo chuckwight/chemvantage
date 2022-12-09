@@ -892,7 +892,7 @@ public class Quiz extends HttpServlet {
 			} catch (Exception e) {}
 
 			// Make a list of key concepts already covered by this assignment:
-			List<Key<Concept>> conceptKeys = ofy().load().type(Concept.class).keys().list();
+			List<Key<Concept>> conceptKeys = ofy().load().type(Concept.class).order("orderBy").keys().list();
 			Map<Key<Concept>,Concept> keyConcepts = ofy().load().keys(conceptKeys);
 			if (conceptIds.size()>0) {
 				buf.append("The questions listed below cover the following key concepts:<ul>");
