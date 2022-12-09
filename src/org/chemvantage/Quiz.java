@@ -925,9 +925,9 @@ public class Quiz extends HttpServlet {
 			}
 
 			// This dummy form uses javascript to select/deselect all questions
-			buf.append("<FORM NAME=DummyForm><INPUT id=selectAll TYPE=CHECKBOX NAME=SelectAll this.indeterminant=true"
-					+ "onClick=\"for (var i=0;i<document.Questions.QuestionId.length;i++)"
-					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}\""
+			buf.append("<FORM NAME=DummyForm><INPUT id=selectAll TYPE=CHECKBOX NAME=SelectAll "
+					+ "onClick='for (var i=0;i<document.Questions.QuestionId.length;i++)"
+					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}'"
 					+ "> Select/Unselect All</FORM>");
 			buf.append("<script>document.getElementById('selectAll').indeterminate=true;</script>");
 			

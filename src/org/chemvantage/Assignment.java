@@ -88,7 +88,7 @@ public class Assignment implements java.lang.Cloneable {
 			if (questionIds != null) for (String id : questionIds) this.questionKeys.add(Key.create(Question.class,Long.parseLong(id)));
 			List<Question> questions = new ArrayList<Question>(ofy().load().keys(this.questionKeys).values());
 			this.conceptIds.clear();
-			for (Question q : questions) if (q.conceptId>0 && !conceptIds.contains(q.conceptId)) conceptIds.add(q.conceptId);
+			for (Question q : questions) if (q.conceptId!=null && q.conceptId>0 && !conceptIds.contains(q.conceptId)) conceptIds.add(q.conceptId);
 			ofy().save().entity(this).now();	
 		} catch (Exception e) {}
 	}
