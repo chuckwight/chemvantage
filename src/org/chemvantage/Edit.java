@@ -345,7 +345,7 @@ public class Edit extends HttpServlet {
 				try {
 					conceptId = Long.parseLong(request.getParameter("ConceptId"));
 				} catch (Exception e) {}
-				List<Key<Concept>> conceptKeys = ofy().load().type(Concept.class).keys().list();
+				List<Key<Concept>> conceptKeys = ofy().load().type(Concept.class).order("orderBy").keys().list();
 				Map<Key<Concept>,Concept> concepts = ofy().load().keys(conceptKeys);
 				if (conceptId!=null) concept = concepts.get(Key.create(Concept.class,conceptId));
 				
@@ -358,7 +358,10 @@ public class Edit extends HttpServlet {
 					}
 				} else if (text==null) {  // otherwise show a drop-down selector for all concepts
 					buf.append("<select id=csel name=ConceptId onchange=document.getElementById('tsel').value='null';this.form.submit()><option>Select a concept</option>");
-					for (Concept c : concepts.values()) buf.append("<option value=" + c.id + (c.id.equals(conceptId)?" selected>":">") + c.title + "</option>");
+					for (Key<Concept> k : conceptKeys) {
+						Concept c = concepts.get(k);
+						buf.append("<option value=" + c.id + (c.id.equals(conceptId)?" selected>":">") + c.title + "</option>");
+					}
 					buf.append("</select>"
 							+ "<button type=button onclick=document.getElementById('csel').value='null';this.form.submit();>Reset</button>");
 				}
