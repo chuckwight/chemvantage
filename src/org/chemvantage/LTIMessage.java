@@ -506,7 +506,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			j.addProperty("timestamp", timestamp);
 			j.addProperty("scoreGiven", Double.valueOf(s.score));
 			j.addProperty("scoreMaximum", Double.valueOf(s.maxPossibleScore));
-			j.addProperty("comment", "Number of attempts="+s.numberOfAttempts);
+			j.addProperty("comment", "Attempt "+s.numberOfAttempts+": "+s.score+"/"+s.maxPossibleScore);
 			j.addProperty("activityProgress", "Completed");
 			j.addProperty("gradingProgress", "FullyGraded");
 			j.addProperty("userId", raw_id);
