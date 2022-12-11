@@ -754,19 +754,14 @@ public class Edit extends HttpServlet {
 	
 	List<Key<Question>> loadQuestions(String assignmentType,Long conceptId) throws Exception {
 		List<Key<Question>> keys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",conceptId).keys().list();
-		if (keys.isEmpty() || questions.keySet().containsAll(keys)) return keys;  // nothing more to do here
-		
-		List<Key<Question>> additions = new ArrayList<Key<Question>>(keys);
-		List<Key<Question>> deletions = new ArrayList<Key<Question>>();
-		for (Key<Question> k : questions.keySet()) {
-			if (keys.contains(k)) additions.remove(k);  // questions map already contains this Question
-			else deletions.add(k);						// this question is not in the current AssignmentType and conceptId
+		if (questions.size()==keys.size() && questions.keySet().containsAll(keys)) return keys;  // nothing more to do here
+		else {
+			questions.clear();
+			if (keys.size()>0) {
+				questions = ofy().load().keys(keys);
+				Collections.sort(keys, new SortBySuccessPct());
+			}
 		}
-		
-		for (Key<Question> k : deletions) questions.remove(k);
-		if (!additions.isEmpty()) questions.putAll(ofy().load().keys(additions));
-		
-		Collections.sort(keys, new SortBySuccessPct());
 		return keys;
 	}
 	
