@@ -544,7 +544,7 @@ public class LTIDeepLinks extends HttpServlet {
 				assignments.add(a);
 				break;
 			case "Poll":
-				a = new Assignment(assignmentType,0L,null,d.platform_deployment_id);
+				a = new Assignment(assignmentType,d.platform_deployment_id);
 				a.pollClosed = true;
 				a.valid = now;
 				assignments.add(a);
@@ -577,7 +577,7 @@ public class LTIDeepLinks extends HttpServlet {
 			case "Homework":
 				text = ofy().load().type(Text.class).id(textId).safe();
 				for (Integer chN : chapterNumbers) {
-					a = new Assignment(assignmentType,0L,null,d.platform_deployment_id);
+					a = new Assignment(assignmentType,d.platform_deployment_id);
 					a.textId = textId;
 					a.chapterNumber = chN;
 					for (Chapter ch : text.chapters) {
@@ -585,7 +585,8 @@ public class LTIDeepLinks extends HttpServlet {
 							a.title = ch.title;
 							for (Long conceptId : ch.conceptIds) {
 								a.conceptIds.add(conceptId);
-								a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType",assignmentType.equals("SmartText")?"Quiz":assignmentType).filter("conceptId",conceptId).keys().list());
+								List<Key<Question>> conceptQuestionKeys = ofy().load().type(Question.class).filter("assignmentType",(assignmentType.equals("SmartText")?"Quiz":assignmentType)).filter("conceptId",conceptId).keys().list();
+								if (!conceptQuestionKeys.isEmpty()) a.questionKeys.addAll(conceptQuestionKeys);
 							}
 							break;
 						}

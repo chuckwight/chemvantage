@@ -63,13 +63,10 @@ public class Assignment implements java.lang.Cloneable {
 		this.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
 		this.created = new Date();
 	}
-	
-	Assignment(String assignmentType, long topicId, List<Long> topicIds, String platform_deployment_id) {
+
+	Assignment(String assignmentType, String platform_deployment_id) {
 		this.assignmentType = assignmentType;
-		this.topicId = topicId;
-		this.topicIds = topicIds;
 		this.domain = platform_deployment_id;
-		this.questionKeys = ofy().load().type(Question.class).filter("assignmentType",this.assignmentType).filter("topicId",this.topicId).keys().list();
 		this.created = new Date();
 	}
 	
