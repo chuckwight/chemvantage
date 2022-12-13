@@ -31,7 +31,7 @@ public class SmartText extends HttpServlet {
 
 		try {
 			User user = User.getUser(request.getParameter("sig"));
-			if (user==null) throw new Exception();
+			if (user==null) throw new Exception("User token expired.");
 			
 			long aId = user.getAssignmentId();		
 			Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
@@ -103,6 +103,18 @@ public class SmartText extends HttpServlet {
    static String printQuestion(User user,Assignment a,Long stId) {
 	   StringBuffer buf = new StringBuffer();
 	   try {
+		   if (a==null) { // example assignment for anonymous user
+			   a = new Assignment();
+			   a.id=0L;
+			   List<Text> texts = ofy().load().type(Text.class).list();
+			   for (Text t : texts) {
+				   if (t.smartText) {
+					   a.textId = t.id;
+					   a.chapterNumber=1;
+					   break;
+				   }
+			   }
+		   }
 		   // load the assignment pertaining to this launch
 		   Text text = ofy().load().type(Text.class).id(a.textId).safe();
 		   Chapter chapter = null;
@@ -132,59 +144,60 @@ public class SmartText extends HttpServlet {
 			   buf.append("Complete all key concept questions to score 100% for this assignment.<br/><br/>");
 		   }
 		   
-		   // Ciunt the missed questions and make a List of completed conceptIds:
+		   // Count the missed questions and make a List of completed conceptIds:
 		   List<Long> completed = new ArrayList<Long>();
-		   int nMissedQuestions = 0;
 		   for (int i=0; i<chapter.conceptIds.size(); i++) {
-			   nMissedQuestions += st.missedQuestions[i];
-			   int qCount = ofy().load().type(Question.class).filter("conceptId",chapter.conceptIds.get(i)).count();
+			   int qCount = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",chapter.conceptIds.get(i)).count();
 			   st.possibleScores[i] = qCount>0?(qCount>1?2:1):0;
 			   if (st.scores[i] >= st.possibleScores[i]) completed.add(chapter.conceptIds.get(i));   
 		   }
 		   
-		  // Find a randomly selected question. Set the Random seed so it is unique for each user but also resets every time a question is missed
-		   Random random = new Random(user.sig==null?0:user.sig + nMissedQuestions);
-		   Question q = null;
-		   long conceptId=0;
-		   
-		   while (q==null && !completed.containsAll(chapter.conceptIds)) {
-			   chapter.conceptIds.removeAll(completed);
-			   if (chapter.conceptIds.size()==0) break;
-			   
-			   conceptId = chapter.conceptIds.get(random.nextInt(chapter.conceptIds.size()));
-			   
-			   // get all the question keys for the chosen conceptId
-			   List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("conceptId",conceptId).keys().list();
-			   
-			   // remove any question keys not in the assignment or already answered correctly
-			   if (!questionKeys.isEmpty() && !st.answeredKeys.isEmpty()) questionKeys.removeAll(st.answeredKeys);
-			
-			   // randomly select one questionKey and display the question
-			   if (!questionKeys.isEmpty()) {  
-				   Key<Question> questionKey = questionKeys.get(random.nextInt(questionKeys.size()));
-				   q = ofy().load().key(questionKey).now();
-			   } else completed.add(conceptId);
-		   }
-		   
 		   // Determine if the assignment is complete:
-		   if (completed.containsAll(chapter.conceptIds)) {
-			   buf.append("This assignment is complete. Your score is 100%.<br/>");
-			   return buf.toString();
+		   boolean complete = completed.containsAll(chapter.conceptIds);
+		   if (complete) {
+			   buf.append("<b>This assignment is complete. Your score is 100%. You may continue just for practice.</b><br/><br/>");
+			   completed.clear();
 		   }
-		     
+		   
+		   // Create a random number generator and (possibly) seed it with st.graded to prevent question-shopping
+		   Random random = new Random();
+		   if (!complete && st.graded!=null) random.setSeed(st.graded.getTime());
+		   
+		   Question q = null;
+		   Long conceptId = null;
+		   List<Long> availableConceptIds = new ArrayList<Long>(chapter.conceptIds);
+		   if (!completed.isEmpty()) availableConceptIds.removeAll(completed);
+		   
+		   while (q==null) {
+			   // Randomly select a conceptId from the remaining concepts
+			   conceptId = availableConceptIds.get(random.nextInt(availableConceptIds.size()));
+
+			   // get all the question keys for the chosen conceptId
+			   List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",conceptId).keys().list();
+
+			   // Remove any question keys already answered correctly and select one remaining key at random
+			   if (!complete) questionKeys.removeAll(st.answeredKeys);
+			   else if (questionKeys.isEmpty()) {
+				   availableConceptIds.remove(conceptId);
+				   continue;
+			   }
+			   if (availableConceptIds.isEmpty()) return "Sorry, there are no available questins.";
+			   
+			   Key<Question> questionKey = questionKeys.get(random.nextInt(questionKeys.size()));
+			   q = ofy().load().key(questionKey).now();
+		   }
 		   // At this point we should have a valid question q.
 		   int p = random.nextInt();
 		   q.setParameters(p);
 
 		   buf.append("<form method=post action=/SmartText>"
 				   + "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-				   + "<input type=hidden name=AssignmentId value='" + a.id + "' />"
 				   + "<input type=hidden name=ConceptId value='" + conceptId + "' />"
 				   + "<input type=hidden name=QuestionId value='" + q.id + "' />"
 				   + "<input type=hidden name=Parameter value='" + p + "' />"
 				   + "<input type=hidden name=UserRequest value='GradeQuestion' />"
 				   + q.print()
-				   + "<input type=submit />"
+				   + "<input type=submit onclick=this.style.opacity=0.2; />"
 				   + "</form>");
 		   st.armed = true;
 		   ofy().save().entity(st).now();
@@ -198,7 +211,19 @@ public class SmartText extends HttpServlet {
 	   StringBuffer buf = new StringBuffer();
 	   StringBuffer debug = new StringBuffer("Debug: ");
 	   try {
-		   long assignmentId = a==null?Long.parseLong(request.getParameter("AssignmentId")):a.id;
+		   long assignmentId;
+		   if (a==null) { // example assignment for anonymous user
+			   a = new Assignment();
+			   List<Text> texts = ofy().load().type(Text.class).list();
+			   for (Text t : texts) {
+				   if (t.smartText) {
+					   a.textId = t.id;
+					   a.chapterNumber=1;
+					   break;
+				   }
+			   }
+			   assignmentId=0;
+		   } else assignmentId = a.id;
 		   Text text = ofy().load().type(Text.class).id(a.textId).now();
 		   Chapter chapter = null;
 		   for (Chapter ch : text.chapters) {
@@ -219,6 +244,15 @@ public class SmartText extends HttpServlet {
 		   String studentAnswer = orderResponses(request.getParameterValues(Long.toString(questionId)));
 		   STTransaction st = ofy().load().type(STTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",assignmentId).first().now();
 		   
+		   // determine if this assignment has already been completed
+		   boolean complete = true;
+		   for (int i=0;i<st.conceptIds.size();i++) {
+			   if (st.scores[i]<st.possibleScores[i]) {
+				   complete = false;
+				   break;
+			   }
+		   }
+		   
 		   //  get the index of st.conceptIds that corresponds to the conceptId for this question:
 		   int index = st.conceptIds.indexOf(conceptId);
 		   boolean isCorrect = q.isCorrect(studentAnswer);
@@ -226,8 +260,10 @@ public class SmartText extends HttpServlet {
 		   
 		   if (!st.armed) buf.append("<b>Sorry, it looks like this question has already been scored.</b><br/>");
 		   else if (isCorrect) {
-			   st.scores[index]++;
-			   st.answeredKeys.add(Key.create(Question.class,q.id));
+			   if (!complete) {
+				   st.scores[index]++;
+				   st.answeredKeys.add(Key.create(Question.class,q.id));
+			   }
 			   buf.append("<b>Congratulations! Your answer was correct.</b><br/>");
 			 } else {
 			   st.missedQuestions[index]++;
@@ -237,7 +273,7 @@ public class SmartText extends HttpServlet {
 					   + q.printAllToStudents(studentAnswer) + "</div><br/>");
 		   }
 		   
-		   if (a != null && st.armed) {
+		   if (st.armed && !user.isAnonymous()) {
 			   Response r = new Response("SmartText",conceptId,q.id,studentAnswer,q.getCorrectAnswer(),isCorrect?1:0,1,user.getId(),new Date());
 			   ofy().save().entity(r);
 		   }
@@ -248,33 +284,42 @@ public class SmartText extends HttpServlet {
 			   score += st.scores[i];
 			   possibleScore += st.possibleScores[i];
 		   }
-		   
-		   if (score==possibleScore) {
-			   buf.append("You have answered all of the key concept questions for this assignment. Your score is 100%.<br/><br/>");
-			   buf.append(fiveStars());
-		   } else if (st.missedQuestions[index]<2) {  // continue to the next question
-			   buf.append("This assignment is " + 100*score/possibleScore + "% complete.<br/><br/>");
-			   
-			   // Print a nice button to continue
-			   buf.append("<form method=get action=/SmartText>"
+
+		   String continueButton = "<form method=get action=/SmartText>"
 			   		+ "<input type=hidden name=UserRequest value=PrintQuestion />"
 			   		+ "<input type=hidden name=STTransactionId value=" + st.id + " />"
 			   		+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 			   		+ "<button id=btn type=submit style='border:none;color:white;padding:10px 10px;margin:4px 2px;font-size:16px;cursor:pointer;border-radius:10px;background-color:blue;' "
-			   		+ "onclick=this.style.opacity=0.2;>Continue to the Next Question</button></form>");
+			   		+ "onclick=this.style.opacity=0.2;>Continue to the Next Question</button></form>";
+
+		   if (score==possibleScore) { // just completed for first time
+			   if (complete) {
+				   buf.append(continueButton);
+			   } else {
+				   buf.append("You have answered all of the key concept questions for this assignment. Your score is 100%.<br/><br/>");
+				   buf.append(fiveStars());
+			   }
+		   } else if (st.missedQuestions[index]<2) {  // continue to the next question
+			   buf.append("This assignment is " + 100*score/possibleScore + "% complete.<br/><br/>");
+			   buf.append(continueButton);
 		   } else { // missed 2 questions; go back to the text
 			   Concept c = ofy().load().type(Concept.class).id(conceptId).safe();
 			   buf.append("You missed 2 questions on the key concept: <b>" + c.title + "</b>.<br/>"
-			   		+ "Please return to the textbook and review this chapter. Don't worry. You can still earn 100% "
-			   		+ "by relaunching this assignment after completing your review. <br/><br/>");
+					   + "Please return to the textbook and review this chapter. ");
+			   if (complete) buf.append("Don't worry. Your score on this assignment is still 100%.<br/><br/>");
+			   else buf.append("Don't worry. You can still earn 100% by relaunching this assignment after completing your review.<br/><br/>");
 			   st.missedQuestions[index]=0; // reset the missed questions for this concept only
 		   }
 		   st.armed = false;
-		   ofy().save().entity(st).now();
 		   
-		   Score s = Score.getInstance(user.getId(), a);
-		   ofy().save().entity(s).now();
-		   QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue   
+		   if (!complete && !user.isAnonymous()) {
+			   st.graded = new Date();
+			   Score s = Score.getInstance(user.getId(), a);
+			   ofy().save().entity(s).now();
+			   QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue   
+		   }
+		   ofy().save().entity(st).now();
+
 	   } catch (Exception e) {
 		   buf.append("Error: " + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString());
 	   }
