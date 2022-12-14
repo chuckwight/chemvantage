@@ -406,12 +406,11 @@ public class Edit extends HttpServlet {
 						buf.append("<tr><td bgcolor=cyan>" + q.pointValue + "&nbsp;pt.&nbsp;questions:</td><td colspan=2>&nbsp;<p>&nbsp;</td></tr>");
 					}
 					i++;
-					buf.append("\n<span id=q" + q.id + "></span>"
-							+ "<FORM METHOD=GET ACTION=/Edit>"
+					buf.append("\n<FORM METHOD=GET ACTION=/Edit>"
 							+ "<INPUT TYPE=HIDDEN NAME=ConceptId VALUE='" + concept.id + "' />"
 							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "' />"
 							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "' />"
-							+ "<TR VALIGN=TOP>"
+							+ "<TR id=q" + q.id + " VALIGN=TOP>"
 							+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit />"
 							+ "<br/><FONT SIZE=-2>" + successPct.get(Key.create(q)) + "%&nbsp;avg&nbsp;score</FONT>"
 							//+ (q.learn_more_url != null && !q.learn_more_url.isEmpty()?"<br/><a href='" + q.learn_more_url + "' target=_blank><img src=/images/learn_more.png /></a>":"")
@@ -1431,7 +1430,7 @@ public class Edit extends HttpServlet {
 			buf.append("Author: " + q.authorId + "<br>");
 			buf.append("Editor: " + user.getId() + "<p>");
 			
-			buf.append("<FORM ACTION=/Edit#q" + q.id + " METHOD=POST>");
+			buf.append("<FORM ACTION=/Edit#q" + questionId + " METHOD=POST>");
 			
 			buf.append(q.printAll());
 			
@@ -1504,7 +1503,7 @@ public class Edit extends HttpServlet {
 			double successPct = nTotalAttmp>0?100.*nSuccessful/nTotalAttmp:0;
 			buf.append("Success Rate: " + nSuccessful + "/" + nTotalAttmp + " (" + successPct + "%)<p>");
 			
-			buf.append("<FORM Action=Edit METHOD=POST>");
+			buf.append("<FORM Action=/Edit METHOD=POST>");
 			
 			buf.append(q.printAll());
 			
