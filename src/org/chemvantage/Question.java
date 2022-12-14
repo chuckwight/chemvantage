@@ -335,8 +335,8 @@ public class Question implements Serializable, Cloneable {
 		switch (getQuestionType()) {
 		case 1: // Multiple Choice
 			buf.append(text + "<br/>");
+			buf.append("<span style='color:#EE0000;font-size: small;'>Select only the best answer:</span><br/>");
 			buf.append("<UL" + (scrambleChoices?" style=color:red":"") + ">");
-			buf.append("<UL style=color:" + (scrambleChoices?"red":"black") + ">");
 			while (choice_keys.size()>0) {
 				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
 				buf.append("<LI>" 

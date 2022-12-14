@@ -1509,12 +1509,12 @@ public class Edit extends HttpServlet {
 			
 			if (q.authorId==null) q.authorId="";
 			if (q.editorId==null) q.editorId="";
-			buf.append("<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + q.authorId + "'>");
-			buf.append("<INPUT TYPE=HIDDEN NAME=EditorId VALUE='" + q.editorId + "'>");
-			if (q.topicId>0) buf.append("<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + q.id + "'>");
-			buf.append("<INPUT TYPE=HIDDEN NAME=QuestionId VALUE=" + questionId + ">");
-			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Question'>");
-			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit'>");
+			buf.append("<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + q.authorId + "' />");
+			buf.append("<INPUT TYPE=HIDDEN NAME=EditorId VALUE='" + q.editorId + "' />");
+			if (q.topicId>0) buf.append("<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + q.id + "' />");
+			buf.append("<INPUT TYPE=HIDDEN NAME=QuestionId VALUE=" + questionId + " />");
+			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Question' />");
+			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit' />");
 			
 			buf.append("<hr><h3>Edit This Question</h3>");
 			
@@ -1528,7 +1528,7 @@ public class Edit extends HttpServlet {
 			
 			buf.append(q.edit());
 			
-			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Preview>");
+			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Preview />");
 			buf.append("</FORM>");
 		} catch (Exception e) {
 			buf.append(e.toString());
