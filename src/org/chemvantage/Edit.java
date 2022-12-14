@@ -236,6 +236,10 @@ public class Edit extends HttpServlet {
 				assignToConcept(user,request);
 				out.println(manageOrphanQuestions(request)); 
 				break;
+			case "Hide":
+				hideDuplicateQuestion(user,request);
+				out.println(editorsPage(user,request)); 
+				break;
 			case "Activate This Question":
 				createQuestion(user,request);
 				try {
@@ -404,15 +408,22 @@ public class Edit extends HttpServlet {
 					i++;
 					buf.append("\n<span id=q" + q.id + "></span>"
 							+ "<FORM METHOD=GET ACTION=/Edit>"
-							+ "<INPUT TYPE=HIDDEN NAME=ConceptId VALUE='" + concept.id + "'>"
-							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
-							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>"
+							+ "<INPUT TYPE=HIDDEN NAME=ConceptId VALUE='" + concept.id + "' />"
+							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "' />"
+							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "' />"
 							+ "<TR VALIGN=TOP>"
-							+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit><br/><FONT SIZE=-2>"
-							+ successPct.get(Key.create(q)) + "%&nbsp;avg&nbsp;score</FONT>"
-							+ (q.learn_more_url != null && !q.learn_more_url.isEmpty()?"<br/><a href='" + q.learn_more_url + "' target=_blank><img src=/images/learn_more.png /></a>":"")
+							+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit />"
+							+ "<br/><FONT SIZE=-2>" + successPct.get(Key.create(q)) + "%&nbsp;avg&nbsp;score</FONT>"
+							//+ (q.learn_more_url != null && !q.learn_more_url.isEmpty()?"<br/><a href='" + q.learn_more_url + "' target=_blank><img src=/images/learn_more.png /></a>":"")
+							+ "</TD>");
+					buf.append("</FORM>");
+					buf.append("<FORM METHOD=POST ACTION=/Edit>"
+							+ "<INPUT TYPE=HIDDEN NAME=ConceptId VALUE='" + concept.id + "' />"
+							+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "' />"
+							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "' />"
+							+ "<TD style='padding-right:5px;'><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Hide' />"
 							+ "</TD>"
-							+ "<TD ALIGN=RIGHT NOWRAP> " + i + ". </TD>");
+							+ "<TD ALIGN=RIGHT  style='padding-right:5px;'> " + i + ". </TD>");
 					buf.append("<TD>" + q.printAll() + "</TD>");
 					buf.append("</TR></FORM>");
 				}
@@ -759,7 +770,7 @@ public class Edit extends HttpServlet {
 			questions.clear();
 			if (keys.size()>0) {
 				questions = ofy().load().keys(keys);
-				Collections.sort(keys, new SortBySuccessPct());
+				Collections.sort(keys, new SortByQuestionText());
 			}
 		}
 		return keys;
@@ -1679,6 +1690,26 @@ public class Edit extends HttpServlet {
 	} catch (Exception e) {}
 	}
 
+	private void hideDuplicateQuestion(User user,HttpServletRequest request) {  // moves question to Concept called duplicates (hidden from instructors but accessible to assignments
+		try {
+			// find the Concept that holds duplicate questions in escrow
+			Long conceptId = null;
+			List<Concept> concepts = ofy().load().type(Concept.class).filter("orderBy <"," 1").list();
+			for (Concept c : concepts) {
+				if (c.title.equals("duplicates")) {
+					conceptId = c.id;
+					break;
+				}
+			}
+			if (conceptId!=null) {
+				Long questionId = Long.parseLong(request.getParameter("QuestionId"));
+				Question q = ofy().load().type(Question.class).id(questionId).now();
+				q.conceptId = conceptId;
+				ofy().save().entity(q).now();
+			}
+		} catch (Exception e) {}
+	}
+	
 	private void updateQuestion(User user,HttpServletRequest request) {
 		long questionId = 0;
 		try {
@@ -1838,6 +1869,39 @@ public class Edit extends HttpServlet {
 		return buf.toString();
 	}
 	
+	class SortByQuestionText implements Comparator<Key<Question>> {
+		public int compare(Key<Question> k1,Key<Question> k2) {
+			Question q1 = questions.get(k1);
+			Question q2 = questions.get(k2);
+			
+			if (pointValue.get(k1)==null) pointValue.put(k1, q1.pointValue);
+			if (pointValue.get(k2)==null) pointValue.put(k2, q2.pointValue);
+			int rank = pointValue.get(k1) - pointValue.get(k2);
+			
+			if (successPct.get(k1)==null) {
+				int totalResponses = ofy().load().type(Response.class).filter("questionId",k1.getId()).count();
+				if (totalResponses==0) successPct.put(k1,100);  // put new questions first
+				else {
+					int successResponses = ofy().load().type(Response.class).filter("questionId",k1.getId()).filter("score >",0).count();
+					successPct.put(k1,successResponses*100/totalResponses);
+				}
+			}
+			if (successPct.get(k2)==null) {
+				int totalResponses = ofy().load().type(Response.class).filter("questionId",k2.getId()).count();
+				if (totalResponses==0) successPct.put(k2,100);  // put new questions first
+				else {
+					int successResponses = ofy().load().type(Response.class).filter("questionId",k2.getId()).filter("score >",0).count();
+					successPct.put(k2,successResponses*100/totalResponses);
+				}
+			}
+		
+			if (rank==0) rank = q1.text.compareTo(q2.text); // alphabetize on Question.text
+			if (rank==0) rank = k1.compareTo(k2); // tie breaker
+			
+			return rank;  
+		}
+	}
+	
 	class SortBySuccessPct implements Comparator<Key<Question>> {
 		public int compare(Key<Question> k1,Key<Question> k2) {
 			
@@ -1872,7 +1936,7 @@ public class Edit extends HttpServlet {
 				}
 			rank = successPct.get(k2)-successPct.get(k1); // this reverses the normal Comparator to give higher rank to lower successPct
 			}
-			if (rank==0) rank = k1.compareTo(k2); // tie breaker required else TreeMap will overwrite existing entry
+			if (rank==0) rank = k2.compareTo(k1); // tie breaker required else TreeMap will overwrite existing entry
 			
 			return rank;  
 		}
