@@ -335,7 +335,8 @@ public class Question implements Serializable, Cloneable {
 		switch (getQuestionType()) {
 		case 1: // Multiple Choice
 			buf.append(text + "<br/>");
-			buf.append("<span style='color:#EE0000;font-size: small;'>Select only the best answer:</span><UL>");
+			buf.append("<UL" + (scrambleChoices?" style=color:red":"") + ">");
+			buf.append("<UL style=color:" + (scrambleChoices?"red":"black") + ">");
 			while (choice_keys.size()>0) {
 				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
 				buf.append("<LI>" 
@@ -359,7 +360,8 @@ public class Question implements Serializable, Cloneable {
 			break;
 		case 3: // Select Multiple
 			buf.append(text + "<br/>");
-			buf.append("<span style='color:#EE0000;font-size: small;'>Select all of the correct answers:</span><UL>");
+			buf.append("<span style='color:#EE0000;font-size: small;'>Select all of the correct answers:</span>");
+			buf.append("<UL" + (scrambleChoices?" style=color:red":"") + ">");
 			while (choice_keys.size()>0) {
 				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
 				buf.append("<LI>"
