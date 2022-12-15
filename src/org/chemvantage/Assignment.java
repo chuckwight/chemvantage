@@ -48,7 +48,8 @@ public class Assignment implements java.lang.Cloneable {
 			String title;
 			Long textId = null;;			// textId and chapterNumber are used to specify a SmartText assignment
 			int chapterNumber;
-			boolean pollClosed=false;
+			boolean pollIsOpen=false;
+			Date pollOpened = null;
 			String password;
 			List<Long> conceptIds = new ArrayList<Long>();
 			List<Long> topicIds = new ArrayList<Long>(); // used for practice exams which have multiple topicIds
