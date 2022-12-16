@@ -75,12 +75,15 @@ public class Poll extends HttpServlet {
 				out.println(Subject.header() + showPollQuestions(user,a,request) + Subject.footer);
 				break;
 			case "ViewResults":
-				out.println(Subject.header() + resultsPage(user,a) + Subject.footer);
+				if (user.isInstructor()) out.println(Subject.header() + resultsPage(user,a) + Subject.footer);
+				break;
+			case "Synch":
+				out.println(a.pollClosesAt.getTime());
 				break;
 			default:
 				if (user.isInstructor()) out.println(Subject.header() + instructorPage(user,a,request) + Subject.footer);
 				else {
-					if (!a.pollIsOpen) out.println(Subject.header() + waitForPoll(user) + Subject.footer);
+					if (a.pollIsClosed) out.println(Subject.header() + waitForPoll(user) + Subject.footer);
 					else out.println(Subject.header() + showPollQuestions(user,a,request) + Subject.footer);
 				}
 			}
@@ -104,23 +107,31 @@ public class Poll extends HttpServlet {
 			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 			
 			switch (userRequest) {
-			case "ClosePoll":
+			case "Close the Poll":
 				if (!user.isInstructor()) break;
-				a.pollIsOpen = false;
-				ofy().save().entity(a).now();
-				if (request.getParameter("r")!=null) {  // this signals a request from the showPollQuestions or waitForResults page
-					out.println(Subject.header() + resultsPage(user,a) + Subject.footer);
-					return;
+				if (a.pollClosesAt!=null) {
+					a.pollClosesAt = new Date();  // records the closing time to give students a few seconds grace period
+					Thread.sleep(3000); // delay allows autosubmit results to complete
 				}
+				a.pollIsClosed = true;
+				ofy().save().entity(a).now();
+				if ("InstructorPage".equals(request.getParameter("Destination"))) out.println(Subject.header() + instructorPage(user,a,request) + Subject.footer);
+				else out.println(Subject.header() + resultsPage(user,a) + Subject.footer);
 				break;
-			case "OpenPoll":
+			case "Open the Poll":
 				if (!user.isInstructor()) break;
-				a.pollIsOpen = true;
+				try { a.pollClosesAt = new Date(new Date().getTime() + Long.parseLong(request.getParameter("TimeLimit"))*60000L); } catch (Exception e) { a.pollClosesAt = null; }
+				a.pollIsClosed = false;
 				ofy().save().entity(a).now();
-				if (request.getParameter("r")!=null) {  // this signals a request from the waitForPoll page
-					out.println(Subject.header() + showPollQuestions(user,a,request) + Subject.footer);
-					return;
-				}
+				if ("InstructorPage".equals(request.getParameter("Destination"))) out.println(Subject.header() + instructorPage(user,a,request) + Subject.footer);
+				else out.println(Subject.header() + showPollQuestions(user,a,request) + Subject.footer);
+				break;
+			case "Reset":
+				if (!user.isInstructor()) break;
+				try { a.pollClosesAt = new Date(new Date().getTime() + Long.parseLong(request.getParameter("TimeLimit"))*60000L); } catch (Exception e) { a.pollClosesAt = null; }
+				a.pollIsClosed = false;
+				ofy().save().entity(a).now();
+				out.println(Subject.header() + instructorPage(user,a,request) + Subject.footer);
 				break;
 			case "Save New Question":
 				if (!user.isInstructor()) break;
@@ -130,28 +141,30 @@ public class Poll extends HttpServlet {
 					ofy().save().entity(a).now();
 				}
 				out.println(Subject.header() + editPage(user,a,request) + Subject.footer);
-				return;
+				break;
 			case "SubmitResponses":
 				PollTransaction pt = submitResponses(user,a,request);
-				if (pt!=null && pt.completed!=null) out.println(Subject.header() + waitForResults(user,pt) + Subject.footer);
+				if (pt!=null && pt.completed!=null) {
+					out.println(Subject.header() + waitForResults(user,a) + Subject.footer);
+				}
 				else out.println(Subject.header() + Subject.banner 
 						+ "<h3>Sorry, the poll closed before you submitted your responses.</h3>" 
 						+ Subject.footer);
-				return;
+				break;
 			case "AddQuestions":
 				if (!user.isInstructor()) break;
 				addQuestions(user,a,request);
 				out.println(Subject.header() + editPage(user,a,request) + Subject.footer);
-				return;
+				break;
 			case "DeleteQuestions":
 				if (!user.isInstructor()) break;
 				deleteQuestions(user,a,request);
 				out.println(Subject.header() + editPage(user,a,request) + Subject.footer);
-				return;
+				break;
+			case "View the Poll Results":
+				out.println(Subject.header() + resultsPage(user,a) + Subject.footer);
+				break;
 			}
-			doGet(request,response); 	// including this in doPost allows:
-										//  - close/open poll doPost requests to loop back to beginning
-										//  - hiding of normal request parameters in wait page buttons, not URL
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
 		}
@@ -184,46 +197,73 @@ public class Poll extends HttpServlet {
 		
 		int nSubmissions = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).count();
 		buf.append("There are currently " + nSubmissions + " completed submissions for this poll. "
-				+ (!a.pollIsOpen?
+				+ (a.pollIsClosed?
 					"<a href=/Poll?UserRequest=ViewResults&sig=" + user.getTokenSignature() + ">View the Results</a>":
 					"<a href=/Poll?sig=" + user.getTokenSignature() + ">Refresh this page</a>") 
 				+ "<br/><br/>");
-		
-		buf.append("<form method=post action=/Poll ><b>This class poll is currently " + (a.pollIsOpen?"open":"closed") + ".</b> "
-				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-				+ "<input type=hidden name=UserRequest value='" + (a.pollIsOpen?"ClosePoll":"OpenPoll") + "' />"
-				+ "<input type=submit value='" + (a.pollIsOpen?"Close the Poll":"Open the Poll") + "' /> "
+/*		
+		Long timeLimit = null;
+		try {
+			timeLimit = Long.parseLong(request.getParameter("TimeLimit"));
+		} catch (Exception e) {}
+*/		
+		// If the poll is open, provide a quick way to close it while staying on this page
+		buf.append("<b>This class poll is currently " + (a.pollIsClosed?"closed.</b>":"open.</b> <form style='display:inline;' method=post action=/Poll >"
+				+ "<input type=hidden name=Destination value=InstructorPage /><input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+				+ "<input name=UserRequest type=submit value='Close the Poll' /></form> <div id='timer0' style='display:inline;color:#EE0000'>&nbsp;</div>") + "<br/>");
+
+		// Here is a simpler version of the tool below
+		if (a.pollIsClosed) buf.append("Set a time limit for this poll (in minutes): "
+				+ "<form style=display:inline method=post action=/Poll ><input type=text size=8 name=TimeLimit placeholder=unlimited />"
+				+ "<input type=hidden name=Destination value=InstructorPage /><input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+				+ "<input type=submit name=UserRequest value='Open the Poll' /> " 
 				+ "</form><br/><br/>");
+/*		
+		// Here is a form to open the poll while setting a time limit, or, if the poll is already open, extending/shortening the time limit
+		buf.append((a.pollIsClosed?"Set a time limit for this poll (in minutes): ":"Or reset the remaining time for this poll (in minutes): ")
+				+ "<form style=display:inline method=post action=/Poll ><input type=text size=8 name=TimeLimit placeholder=unlimited " + (timeLimit==null?"/>":"value=" + timeLimit + " />")
+				+ "<input type=hidden name=Destination value=InstructorPage /><input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+				+ "<input type=submit name=UserRequest value='" + (a.pollIsClosed?"Open the Poll":"Reset") + "' /> " 
+				+ "<div id='timer0' style='color:#EE0000'>&nbsp;</div>"
+				+ "</form><br/>");
+*/		
+		// This is a hidden form submitted by javascript when time expires and results are shown
+		buf.append("<form name=ViewResults method=post action=/Poll><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+				+ "<input type=hidden name=UserRequest value='Close the Poll' /></form>");
 		
+		// This is the big blue button to view the assignment (almost) like students see it
 		buf.append("<a style='text-decoration: none' href='/Poll?UserRequest=PrintPoll&sig=" + user.getTokenSignature() + "'>"
 				+ "<button style='display: block; width: 500px; border: 1 px; background-color: #00FFFF; color: black; padding: 14px 28px; font-size: 18px; text-align: center; cursor: pointer;'>"
 				+ "Show This Assignment (recommended)</button></a>");
-	
+		
+		if (!a.pollIsClosed && a.pollClosesAt != null) {
+			buf.append(timer(user));
+			//buf.append("<script>synchTimer();</script>");
+			buf.append("<script>startTimer(" + new Date().getTime() + ");</script>");
+		}
+		
 		return buf.toString();
 	}
 	
 	String waitForPoll(User user) {
 		StringBuffer buf = new StringBuffer();
-		buf.append(Subject.banner + "<h3>The poll is now closed.</h3>");
+		buf.append(Subject.banner + "<h3>The poll is closed.</h3>");
 		
 		if (user.isInstructor()) {
-			buf.append("When you are ready, please click the button below to open the poll and view the questions. "
-					+ "You should inform your students that the poll is open so they can view the poll questions, too.<br/><br/>");
+			buf.append("When ready, open the poll so you and your students can view the poll questions.<br/><br/>");
+			buf.append("<form method=post action=/Poll />"
+					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+					+ "<input type=submit name=UserRequest value='Open the Poll' /> "
+					+ "<a href=/Poll?sig=" + user.getTokenSignature() + ">Cancel</a>"
+					+ "</form><br/><br/>");
 		} else {
 			buf.append("Please wait. Your instructor should inform you when the poll is open.<br/>"
 					+ "At that time you can click the button below to view the poll questions.<br/><br/>");
+			buf.append("<form method=get action=/Poll />"
+					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+					+ "<input type=submit value='View the Poll' /> "
+					+ "</form><br/><br/>");
 		}
-		
-		int r = new Random().nextInt(999);
-		
-		buf.append("<form method=post action='/Poll'>"
-				+ (user.isInstructor()?"<input type=hidden name=UserRequest value=OpenPoll />":"")
-				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-				+ "<input type=hidden name=r value=" + r + " />"
-				+ "<input type=submit value='" + (user.isInstructor()?"Open the Poll":"View the Poll") + "' /> "
-				+ (user.isInstructor()?"<a href=/Poll?sig=" + user.getTokenSignature() + ">Cancel</a>":"")
-				+ "</form><br/><br/>");
-		
 		return buf.toString();
 	}
 	
@@ -233,27 +273,30 @@ public class Poll extends HttpServlet {
 		 * the assignmentId to their User entity.
 		 */
 		
-		if (!a.pollIsOpen) return waitForPoll(user);  // nobody gets in without the instructor opening the poll first
+		if (a.pollIsClosed) return waitForPoll(user);  // nobody gets in without the instructor opening the poll first
 		
 		StringBuffer buf = new StringBuffer();
 		
 		buf.append("<h2>Class Poll</h2>");
+		buf.append("<div id='timer0' style='color: #EE0000'></div><br/>");
 		
 		if (user.isInstructor()) {
 			buf.append("<b>Please tell your students that the poll is now open so they can view the poll questions.</b><br/>");
 			
-			buf.append("<form method=post action='/Poll' ><div id=timer0 style='display: inline'></div>&nbsp;When you are ready, please&nbsp;"
+			if (a.pollClosesAt!=null) buf.append("The poll will close automatically when the timer reaches zero.<br/>");
+			
+			buf.append("<form method=post action='/Poll' >"
+					+ "<a href=/Poll?sig=" + user.getTokenSignature() + ">Return to the instructor page</a>, or "
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-					+ "<input type=hidden name=UserRequest value='ClosePoll' />"
+					+ "<input type=hidden name=UserRequest value='Close the Poll' />"
 					+ "<input type=hidden name=r value=" + new Random().nextInt(999) + " />"
-					+ "<input type=submit value='click here to close the poll and view the results' />"
-					+ "</form>"
-					+ "You should then inform your students to click the button to view the poll results.");
+					+ "<input type=submit value='Close the Poll' />"
+					+ "</form>");
 		}
 		
 		buf.append("<OL>");
 		int possibleScore = 0;
-		buf.append("<form id=pollForm method=post action='/Poll' onSubmit='return confirmSubmission(" + a.questionKeys.size() + ")'>"
+		buf.append("<form name=Poll id=pollForm method=post action='/Poll' onSubmit='return confirmSubmission(" + a.questionKeys.size() + ")'>"
 				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
 		
 		for (Key<Question> k : a.questionKeys) {  // main loop to present questions
@@ -264,28 +307,59 @@ public class Poll extends HttpServlet {
 			possibleScore += q.correctAnswer==null || q.correctAnswer.isEmpty()?0:q.pointValue;
 		}
 		buf.append("</OL>");
-		buf.append(javaScripts()); 
+		buf.append(javaScripts(user)); 
 
+		buf.append("<div id='timer1' style='color: #EE0000'></div><br/>");
+		
 		buf.append("<input type=hidden name=PossibleScore value='" + possibleScore + "' />");
 		buf.append("<input type=hidden name=UserRequest value='SubmitResponses' />");
 		buf.append("<input type=submit id=pollSubmit value='Submit My Responses Now' />");
 		buf.append("</form>");
 		
+		//if (a.pollClosesAt != null) buf.append("<script>synchTimer();let timer = setInterval(() => synchTimer(), 50000);</script>");
+		if (a.pollClosesAt != null) buf.append("<script>startTimer(" + new Date().getTime() + ");</script>");
+	
+		
 		return buf.toString();
 	}
 	
-	String javaScripts() {
+	String javaScripts(User u) {
 		return "<SCRIPT language='JavaScript'>"
-				+ "var start = new Date();"
-				+ "function countup() {"
-				+ "  var now = new Date();"
-				+ "  var elapsedSeconds = (now.getTime() - start.getTime())/1000;"
-				+ "  var minutes = Math.floor(elapsedSeconds/60);"
-				+ "  var oddSeconds = Math.floor(elapsedSeconds % 60);"
-				+ "  document.getElementById('timer0').innerHTML='Elapsed Time: ' + minutes + ':' + (oddSeconds<10?'0':'') + oddSeconds;"
-				+ "  setTimeout('countup()',1000);"
+				+ "var seconds;"
+				+ "var minutes;"
+				+ "var oddSeconds;"
+				+ "var endMillis;"
+				+ "function countdown() {"
+				+ "	var nowMillis = new Date().getTime();"
+				+ "	var seconds=Math.round((endMillis-nowMillis)/1000);"
+				+ "	var minutes = seconds<0?Math.ceil(seconds/60.):Math.floor(seconds/60.);"
+				+ "	var oddSeconds = seconds%60;"
+				+ " if (oddSeconds<10) oddSeconds = '0'+oddSeconds;"
+				+ "	for (i=0;i<2;i++) document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ':' + oddSeconds;"
+				+ "	if (seconds < 0) document.Poll.submit();"
+				+ "	else setTimeout('countdown()',1000);"
 				+ "}"
-				+ "countup();"
+				+ "function startTimer(m) {"
+				+ " endMillis = m;"
+				+ " countdown();"
+				+ "}"
+				+ "function synchTimer() {"
+				+ "  var xmlhttp=new XMLHttpRequest();"
+				+ "  if (xmlhttp==null) {"
+				+ "    alert ('Sorry, your browser does not support AJAX!');"
+				+ "    return false;"
+				+ "  }"
+				+ "  xmlhttp.onreadystatechange=function() {"
+				+ "    if (xmlhttp.readyState==4) {"
+				+ "      endMillis = xmlhttp.responseText.trim();"
+				+ "      countdown();"
+				+ "    }"
+				+ "  }\n"
+				+ "  var url = 'Poll?UserRequest=Synch&sig=" +u.getTokenSignature() + "';"
+				+ "  xmlhttp.open('GET',url,true);"
+				+ "  xmlhttp.send(null);"
+				+ "  return false;"
+				+ "}\n"
 				+ "function confirmSubmission(nQuestions) {"
 				+ "  var elements = document.getElementById('pollForm').elements;"
 				+ "  var nAnswers;"
@@ -315,8 +389,9 @@ public class Poll extends HttpServlet {
 	}
 
 	PollTransaction submitResponses(User user,Assignment a,HttpServletRequest request) {
-		
-		if (!a.pollIsOpen) return null;
+		Date threeSecondsAgo = new Date(new Date().getTime()-3000L);
+		if (a.pollClosesAt!=null && a.pollClosesAt.before(threeSecondsAgo)) return null;  // missed the deadline
+		else if (a.pollIsClosed) return null;
 		
 		PollTransaction pt = getPollTransaction(user);
 		pt.completed = new Date();
@@ -370,55 +445,84 @@ public class Poll extends HttpServlet {
 		return;
 	}
 	
-	String waitForResults(User user) {
-		return waitForResults(user,getPollTransaction(user));
+	String waitForResults(User user, Assignment a) {
+		
+		StringBuffer buf = new StringBuffer(Subject.banner);
+		
+		buf.append("<h3>The poll is still open.</h3>"
+				+ "<div id='timer0' style='color: #EE0000'></div><br/>");
+		
+		if (a.pollClosesAt != null) buf.append("The poll will close automatically when the timer reaches zero.<br/><br/>");
+		
+		buf.append("<form name=ViewResults method=post action='/Poll' >"
+				+ (user.isInstructor()?"When submissions are complete, you can ":"Your instructor will tell you when can ")
+				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+				+ "<input type=hidden name=UserRequest value='" + (user.isInstructor()?"Close the Poll":"View the Poll Results") + "' />"
+				+ "<input type=submit value='" + (user.isInstructor()?"Close the Poll":"View the Poll Results") + "' /> ");
+		if (user.isInstructor()) buf.append("and view the results,<br/>or you can <a href=/Poll?sig=" + user.getTokenSignature() + ">return to the instructor page</a>.<br/><br/>");
+		buf.append("</form>");
+
+		if (!a.pollIsClosed && a.pollClosesAt != null) {
+			buf.append(timer(user));
+			buf.append("<script>startTimer(" + new Date().getTime() + ");</script>");
+		}
+		
+		return buf.toString();	
 	}
 	
-	String waitForResults(User user,PollTransaction pt) {
-		StringBuffer buf = new StringBuffer(Subject.banner);
-		if (pt != null && pt.possibleScore>0) {
-			buf.append("<h3>Thank you for submitting your responses to this class poll</h3>");
-			buf.append("Your responses were submitted at " + pt.completed + "<br />");
-			buf.append("Your score was " + pt.score + " points out a possible " + pt.possibleScore + " points.");
-		}
-		
-		int r = new Random().nextInt(999);
-		
-		if (user.isInstructor()) {
-			buf.append("<h3>The poll is still open.</h3>"
-					+ "<form method=post action='/Poll' ><div id=timer0 style='display: inline'></div>&nbsp;When you are ready, please&nbsp;"
-					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-					+ "<input type=hidden name=UserRequest value='ClosePoll' />"
-					+ "<input type=hidden name=r value=" + r + " />"
-					+ "<input type=submit value='click here to close the poll and view the results' />"
-					+ "</form><br/>"
-					+ "You should then inform your students that they can view the poll results.");
-		} else {
-			buf.append("<h3>Please wait until the poll closes</h3>Your instructor will tell you "
-					+ "when you can click the button below to view the class results for the poll.<br/><br/>"
-					+ "<form method=post action='/Poll' >"
-					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-					+ "<input type=hidden name=UserRequest value='ViewResults' />"
-					+ "<input type=hidden name=r value=" + r + " />"
-					+ "<input type=submit value='View the Poll Results' />"
-					+ "</form>");
-		}
-		return buf.toString();	
+	static String timer(User u) {
+		return "\n<SCRIPT language='JavaScript'>"
+				+ "var seconds;"
+				+ "var minutes;"
+				+ "var oddSeconds;"
+				+ "var endMillis;"
+				+ "var timer0 = document.getElementById('timer0');"
+				+ "function countdown() {"
+				+ "	var nowMillis = new Date().getTime();"
+				+ "	var seconds=Math.round((endMillis-nowMillis)/1000);"
+				+ "	var minutes = seconds<0?Math.ceil(seconds/60.):Math.floor(seconds/60.);"
+				+ "	var oddSeconds = seconds%60;"
+				+ "	timer0.innerHTML='Time remaining: ' + minutes + ':' + oddSeconds;"
+				+ "	if (seconds <= 0) {"
+				+ "  timer0.innerHTML = 'Compiling the poll results. Please wait a few moments...';"
+				+ "  setTimeout('document.ViewResults.submit();',2000);"
+				+ " }"
+				+ "	else setTimeout('countdown()',1000);"
+				+ "}\n"
+				+ "function startTimer(m) {"
+				+ " endMillis = m;"
+				+ " countdown();"
+				+ "}"
+				+ "function synchTimer() {"
+				+ "  var xmlhttp=new XMLHttpRequest();"
+				+ "  if (xmlhttp==null) {"
+				+ "    alert ('Sorry, your browser does not support AJAX!');"
+				+ "    return false;"
+				+ "  }"
+				+ "  xmlhttp.onreadystatechange=function() {"
+				+ "    if (xmlhttp.readyState==4) {"
+				+ "      endMillis = xmlhttp.responseText.trim();"
+				+ "      countdown();"
+				+ "    }"
+				+ "  }\n"
+				+ "  var url = 'Poll?UserRequest=Synch&sig=" +u.getTokenSignature() + "';"
+				+ "  xmlhttp.open('GET',url,true);"
+				+ "  xmlhttp.send(null);"
+				+ "  return false;"
+				+ "}\n"
+				+ "</SCRIPT>";
 	}
 	
 	String resultsPage(User user,Assignment a) {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Debug:");
-		debug.append("a.");
 		
-		if (!user.isInstructor() && a.pollIsOpen) return waitForResults(user);
-		else {
-			a.pollIsOpen = false;
-			ofy().save().entity(a).now();
-		}
+		try {
+		if (!user.isInstructor() && !a.pollIsClosed) return waitForResults(user,a);
 		
 		buf.append("<h2>Poll Results</h2>");
-		if (user.isInstructor()) buf.append("<b>Be sure to tell your students that the poll is now closed</b> and to click the button to view the poll results.<br/><br/> ");
+		if (user.isInstructor()) buf.append("<b>Be sure to tell your students that the poll is now closed</b> and to click the button to view the poll results.<br/>"
+				+ "You can <a href=/Poll?sig=" + user.getTokenSignature() + ">return to the instructor page</a> at any time.<br/><br/> ");
 		debug.append("b.");
 		
 		PollTransaction pt = getPollTransaction(user);	
@@ -628,7 +732,9 @@ public class Poll extends HttpServlet {
 			}
 		}
 		buf.append("</div>");  // end of table
-		
+		} catch (Exception e) {
+			buf.append(e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString());
+		}
 		return buf.toString();
 	}
 	

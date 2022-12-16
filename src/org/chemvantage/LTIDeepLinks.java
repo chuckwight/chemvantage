@@ -545,7 +545,7 @@ public class LTIDeepLinks extends HttpServlet {
 				break;
 			case "Poll":
 				a = new Assignment(assignmentType,d.platform_deployment_id);
-				a.pollIsOpen = false;
+				a.pollIsClosed = true;
 				a.valid = now;
 				assignments.add(a);
 				break;
