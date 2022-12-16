@@ -30,7 +30,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Random;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -201,16 +200,11 @@ public class Poll extends HttpServlet {
 					"<a href=/Poll?UserRequest=ViewResults&sig=" + user.getTokenSignature() + ">View the Results</a>":
 					"<a href=/Poll?sig=" + user.getTokenSignature() + ">Refresh this page</a>") 
 				+ "<br/><br/>");
-/*		
-		Long timeLimit = null;
-		try {
-			timeLimit = Long.parseLong(request.getParameter("TimeLimit"));
-		} catch (Exception e) {}
-*/		
+
 		// If the poll is open, provide a quick way to close it while staying on this page
 		buf.append("<b>This class poll is currently " + (a.pollIsClosed?"closed.</b>":"open.</b> <form style='display:inline;' method=post action=/Poll >"
-				+ "<input type=hidden name=Destination value=InstructorPage /><input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-				+ "<input name=UserRequest type=submit value='Close the Poll' /></form> <div id='timer0' style='display:inline;color:#EE0000'>&nbsp;</div>") + "<br/>");
+				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+				+ "<input name=UserRequest type=submit value='Close the Poll' /></form> <div id='timer0' style='display:inline;color:#EE0000'>&nbsp;</div><br/>") + "<br/>");
 
 		// Here is a simpler version of the tool below
 		if (a.pollIsClosed) buf.append("Set a time limit for this poll (in minutes): "
@@ -218,15 +212,7 @@ public class Poll extends HttpServlet {
 				+ "<input type=hidden name=Destination value=InstructorPage /><input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 				+ "<input type=submit name=UserRequest value='Open the Poll' /> " 
 				+ "</form><br/><br/>");
-/*		
-		// Here is a form to open the poll while setting a time limit, or, if the poll is already open, extending/shortening the time limit
-		buf.append((a.pollIsClosed?"Set a time limit for this poll (in minutes): ":"Or reset the remaining time for this poll (in minutes): ")
-				+ "<form style=display:inline method=post action=/Poll ><input type=text size=8 name=TimeLimit placeholder=unlimited " + (timeLimit==null?"/>":"value=" + timeLimit + " />")
-				+ "<input type=hidden name=Destination value=InstructorPage /><input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-				+ "<input type=submit name=UserRequest value='" + (a.pollIsClosed?"Open the Poll":"Reset") + "' /> " 
-				+ "<div id='timer0' style='color:#EE0000'>&nbsp;</div>"
-				+ "</form><br/>");
-*/		
+
 		// This is a hidden form submitted by javascript when time expires and results are shown
 		buf.append("<form name=ViewResults method=post action=/Poll><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 				+ "<input type=hidden name=UserRequest value='Close the Poll' /></form>");
@@ -238,8 +224,7 @@ public class Poll extends HttpServlet {
 		
 		if (!a.pollIsClosed && a.pollClosesAt != null) {
 			buf.append(timer(user));
-			//buf.append("<script>synchTimer();</script>");
-			buf.append("<script>startTimer(" + new Date().getTime() + ");</script>");
+			buf.append("<script>startTimer(" + (a.pollClosesAt.getTime()+3000L) + ");</script>");
 		}
 		
 		return buf.toString();
@@ -289,7 +274,6 @@ public class Poll extends HttpServlet {
 					+ "<a href=/Poll?sig=" + user.getTokenSignature() + ">Return to the instructor page</a>, or "
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 					+ "<input type=hidden name=UserRequest value='Close the Poll' />"
-					+ "<input type=hidden name=r value=" + new Random().nextInt(999) + " />"
 					+ "<input type=submit value='Close the Poll' />"
 					+ "</form>");
 		}
@@ -316,9 +300,7 @@ public class Poll extends HttpServlet {
 		buf.append("<input type=submit id=pollSubmit value='Submit My Responses Now' />");
 		buf.append("</form>");
 		
-		//if (a.pollClosesAt != null) buf.append("<script>synchTimer();let timer = setInterval(() => synchTimer(), 50000);</script>");
-		if (a.pollClosesAt != null) buf.append("<script>startTimer(" + new Date().getTime() + ");</script>");
-	
+		if (a.pollClosesAt != null) buf.append("<script>startTimer(" + a.pollClosesAt.getTime() + ");</script>");
 		
 		return buf.toString();
 	}
@@ -340,7 +322,7 @@ public class Poll extends HttpServlet {
 				+ "	else setTimeout('countdown()',1000);"
 				+ "}"
 				+ "function startTimer(m) {"
-				+ " endMillis = m;"
+				+ " endMillis = m" + (u.isInstructor()?"+3000":"") + ";"
 				+ " countdown();"
 				+ "}"
 				+ "function synchTimer() {"
@@ -389,9 +371,7 @@ public class Poll extends HttpServlet {
 	}
 
 	PollTransaction submitResponses(User user,Assignment a,HttpServletRequest request) {
-		Date threeSecondsAgo = new Date(new Date().getTime()-3000L);
-		if (a.pollClosesAt!=null && a.pollClosesAt.before(threeSecondsAgo)) return null;  // missed the deadline
-		else if (a.pollIsClosed) return null;
+		if (a.pollIsClosed) return null;
 		
 		PollTransaction pt = getPollTransaction(user);
 		pt.completed = new Date();
@@ -449,13 +429,11 @@ public class Poll extends HttpServlet {
 		
 		StringBuffer buf = new StringBuffer(Subject.banner);
 		
-		buf.append("<h3>The poll is still open.</h3>"
+		buf.append("<h3>Please wait for the poll to close.</h3>"
 				+ "<div id='timer0' style='color: #EE0000'></div><br/>");
 		
-		if (a.pollClosesAt != null) buf.append("The poll will close automatically when the timer reaches zero.<br/><br/>");
-		
 		buf.append("<form name=ViewResults method=post action='/Poll' >"
-				+ (user.isInstructor()?"When submissions are complete, you can ":"Your instructor will tell you when can ")
+				+ (user.isInstructor()?"Whenever submissions are complete, you can ":"Your instructor will tell you when can ")
 				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 				+ "<input type=hidden name=UserRequest value='" + (user.isInstructor()?"Close the Poll":"View the Poll Results") + "' />"
 				+ "<input type=submit value='" + (user.isInstructor()?"Close the Poll":"View the Poll Results") + "' /> ");
@@ -464,7 +442,7 @@ public class Poll extends HttpServlet {
 
 		if (!a.pollIsClosed && a.pollClosesAt != null) {
 			buf.append(timer(user));
-			buf.append("<script>startTimer(" + new Date().getTime() + ");</script>");
+			buf.append("<script>startTimer(" + (a.pollClosesAt.getTime()+3000L) + ");</script>");
 		}
 		
 		return buf.toString();	
@@ -482,7 +460,8 @@ public class Poll extends HttpServlet {
 				+ "	var seconds=Math.round((endMillis-nowMillis)/1000);"
 				+ "	var minutes = seconds<0?Math.ceil(seconds/60.):Math.floor(seconds/60.);"
 				+ "	var oddSeconds = seconds%60;"
-				+ "	timer0.innerHTML='Time remaining: ' + minutes + ':' + oddSeconds;"
+				+ " if (oddSeconds<10) oddSeconds = '0'+oddSeconds;"
+				+ " timer0.innerHTML='Time remaining: ' + minutes + ':' + oddSeconds;"
 				+ "	if (seconds <= 0) {"
 				+ "  timer0.innerHTML = 'Compiling the poll results. Please wait a few moments...';"
 				+ "  setTimeout('document.ViewResults.submit();',2000);"
