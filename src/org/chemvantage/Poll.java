@@ -108,10 +108,6 @@ public class Poll extends HttpServlet {
 			switch (userRequest) {
 			case "Close the Poll":
 				if (!user.isInstructor()) break;
-				if (a.pollClosesAt!=null) {
-					a.pollClosesAt = new Date();  // records the closing time to give students a few seconds grace period
-					Thread.sleep(3000); // delay allows autosubmit results to complete
-				}
 				a.pollIsClosed = true;
 				ofy().save().entity(a).now();
 				if ("InstructorPage".equals(request.getParameter("Destination"))) out.println(Subject.header() + instructorPage(user,a,request) + Subject.footer);
@@ -224,7 +220,7 @@ public class Poll extends HttpServlet {
 		
 		if (!a.pollIsClosed && a.pollClosesAt != null) {
 			buf.append(timer(user));
-			buf.append("<script>startTimer(" + (a.pollClosesAt.getTime()+3000L) + ");</script>");
+			buf.append("<script>startTimer(" + a.pollClosesAt.getTime() + ");</script>");
 		}
 		
 		return buf.toString();
@@ -300,7 +296,7 @@ public class Poll extends HttpServlet {
 		buf.append("<input type=submit id=pollSubmit value='Submit My Responses Now' />");
 		buf.append("</form>");
 		
-		if (a.pollClosesAt != null) buf.append("<script>startTimer(" + a.pollClosesAt.getTime() + ");</script>");
+		if (a.pollClosesAt != null) buf.append("<script>startTimer(" + (a.pollClosesAt.getTime()-3000L) + ");</script>");
 		
 		return buf.toString();
 	}
@@ -318,7 +314,7 @@ public class Poll extends HttpServlet {
 				+ "	var oddSeconds = seconds%60;"
 				+ " if (oddSeconds<10) oddSeconds = '0'+oddSeconds;"
 				+ "	for (i=0;i<2;i++) document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ':' + oddSeconds;"
-				+ "	if (seconds < 0) document.Poll.submit();"
+				+ "	if (seconds <= 0) document.Poll.submit();"
 				+ "	else setTimeout('countdown()',1000);"
 				+ "}"
 				+ "function startTimer(m) {"
@@ -427,6 +423,13 @@ public class Poll extends HttpServlet {
 	
 	String waitForResults(User user, Assignment a) {
 		
+		if (a.pollIsClosed) return resultsPage(user,a);
+		if (user.isInstructor() && a.pollClosesAt!=null && a.pollClosesAt.before(new Date())) {
+			a.pollIsClosed = true;
+			ofy().save().entity(a).now();
+			return resultsPage(user,a);
+		}
+		
 		StringBuffer buf = new StringBuffer(Subject.banner);
 		
 		buf.append("<h3>Please wait for the poll to close.</h3>"
@@ -442,7 +445,7 @@ public class Poll extends HttpServlet {
 
 		if (!a.pollIsClosed && a.pollClosesAt != null) {
 			buf.append(timer(user));
-			buf.append("<script>startTimer(" + (a.pollClosesAt.getTime()+3000L) + ");</script>");
+			buf.append("<script>startTimer(" + (a.pollClosesAt.getTime()+(user.isInstructor()?0L:3000L)) + ");</script>");
 		}
 		
 		return buf.toString();	
@@ -463,8 +466,8 @@ public class Poll extends HttpServlet {
 				+ " if (oddSeconds<10) oddSeconds = '0'+oddSeconds;"
 				+ " timer0.innerHTML='Time remaining: ' + minutes + ':' + oddSeconds;"
 				+ "	if (seconds <= 0) {"
-				+ "  timer0.innerHTML = 'Compiling the poll results. Please wait a few moments...';"
-				+ "  setTimeout('document.ViewResults.submit();',2000);"
+				+ "  timer0.innerHTML = '0:00';"
+				+ "  document.ViewResults.submit();"
 				+ " }"
 				+ "	else setTimeout('countdown()',1000);"
 				+ "}\n"
@@ -500,8 +503,11 @@ public class Poll extends HttpServlet {
 		if (!user.isInstructor() && !a.pollIsClosed) return waitForResults(user,a);
 		
 		buf.append("<h2>Poll Results</h2>");
-		if (user.isInstructor()) buf.append("<b>Be sure to tell your students that the poll is now closed</b> and to click the button to view the poll results.<br/>"
-				+ "You can <a href=/Poll?sig=" + user.getTokenSignature() + ">return to the instructor page</a> at any time.<br/><br/> ");
+		if (user.isInstructor()) {
+			if (a.pollIsClosed) buf.append("<b>Be sure to tell your students that the poll is now closed</b> and to click the button to view the poll results.<br/>");
+			else buf.append("The poll is still open. ");
+			buf.append("You can <a href=/Poll?sig=" + user.getTokenSignature() + ">return to the instructor page</a> at any time.<br/><br/> ");
+		}
 		debug.append("b.");
 		
 		PollTransaction pt = getPollTransaction(user);	
@@ -543,7 +549,7 @@ public class Poll extends HttpServlet {
 		int i=0;
 		buf.append("<div style='display: table'>"); // big-table
 		buf.append("<div style='display: table-row;'>"
-				+ "<div style='display: table-cell'></div>"
+				+ "<div style='display: table-cell'></div>"  // column for question number
 				+ "<div style='display: table-cell'><h3>Questions</h3></div>"
 				+ "<div style='display: table-cell'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>"  // horizontal buffer
 				+ "<div style='display: table-cell'><h3>Responses</h3></div>"
