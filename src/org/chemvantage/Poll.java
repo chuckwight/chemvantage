@@ -77,7 +77,7 @@ public class Poll extends HttpServlet {
 				if (user.isInstructor()) out.println(Subject.header() + resultsPage(user,a) + Subject.footer);
 				break;
 			case "Synch":
-				out.println(a.pollClosesAt.getTime());
+				out.println(new Date().getTime());
 				break;
 			default:
 				if (user.isInstructor()) out.println(Subject.header() + instructorPage(user,a,request) + Subject.footer);
@@ -210,7 +210,7 @@ public class Poll extends HttpServlet {
 				+ "</form><br/><br/>");
 
 		// This is a hidden form submitted by javascript when time expires and results are shown
-		buf.append("<form name=ViewResults method=post action=/Poll><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+		buf.append("<form id=pollForm method=post action=/Poll><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 				+ "<input type=hidden name=UserRequest value='Close the Poll' /></form>");
 		
 		// This is the big blue button to view the assignment (almost) like students see it
@@ -276,7 +276,7 @@ public class Poll extends HttpServlet {
 		
 		buf.append("<OL>");
 		int possibleScore = 0;
-		buf.append("<form name=Poll id=pollForm method=post action='/Poll' onSubmit='return confirmSubmission(" + a.questionKeys.size() + ")'>"
+		buf.append("<form id=pollForm method=post action='/Poll' onSubmit='return confirmSubmission(" + a.questionKeys.size() + ")'>"
 				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
 		
 		for (Key<Question> k : a.questionKeys) {  // main loop to present questions
@@ -287,57 +287,23 @@ public class Poll extends HttpServlet {
 			possibleScore += q.correctAnswer==null || q.correctAnswer.isEmpty()?0:q.pointValue;
 		}
 		buf.append("</OL>");
-		buf.append(javaScripts(user)); 
-
-		buf.append("<div id='timer1' style='color: #EE0000'></div><br/>");
 		
+		buf.append("<div id='timer1' style='color: #EE0000'></div><br/>");
+		buf.append(timer(user));
+		buf.append(confirmSubmission(user)); 
+
 		buf.append("<input type=hidden name=PossibleScore value='" + possibleScore + "' />");
 		buf.append("<input type=hidden name=UserRequest value='SubmitResponses' />");
 		buf.append("<input type=submit id=pollSubmit value='Submit My Responses Now' />");
 		buf.append("</form>");
 		
-		if (a.pollClosesAt != null) buf.append("<script>startTimer(" + (a.pollClosesAt.getTime()-3000L) + ");</script>");
+		if (a.pollClosesAt != null) buf.append("<script>startTimer(" + (a.pollClosesAt.getTime()-(user.isInstructor()?0L:3000L)) + ");</script>");
 		
 		return buf.toString();
 	}
 	
-	String javaScripts(User u) {
-		return "<SCRIPT language='JavaScript'>"
-				+ "var seconds;"
-				+ "var minutes;"
-				+ "var oddSeconds;"
-				+ "var endMillis;"
-				+ "function countdown() {"
-				+ "	var nowMillis = new Date().getTime();"
-				+ "	var seconds=Math.round((endMillis-nowMillis)/1000);"
-				+ "	var minutes = seconds<0?Math.ceil(seconds/60.):Math.floor(seconds/60.);"
-				+ "	var oddSeconds = seconds%60;"
-				+ " if (oddSeconds<10) oddSeconds = '0'+oddSeconds;"
-				+ "	for (i=0;i<2;i++) document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ':' + oddSeconds;"
-				+ "	if (seconds <= 0) document.Poll.submit();"
-				+ "	else setTimeout('countdown()',1000);"
-				+ "}"
-				+ "function startTimer(m) {"
-				+ " endMillis = m" + (u.isInstructor()?"+3000":"") + ";"
-				+ " countdown();"
-				+ "}"
-				+ "function synchTimer() {"
-				+ "  var xmlhttp=new XMLHttpRequest();"
-				+ "  if (xmlhttp==null) {"
-				+ "    alert ('Sorry, your browser does not support AJAX!');"
-				+ "    return false;"
-				+ "  }"
-				+ "  xmlhttp.onreadystatechange=function() {"
-				+ "    if (xmlhttp.readyState==4) {"
-				+ "      endMillis = xmlhttp.responseText.trim();"
-				+ "      countdown();"
-				+ "    }"
-				+ "  }\n"
-				+ "  var url = 'Poll?UserRequest=Synch&sig=" +u.getTokenSignature() + "';"
-				+ "  xmlhttp.open('GET',url,true);"
-				+ "  xmlhttp.send(null);"
-				+ "  return false;"
-				+ "}\n"
+	static String confirmSubmission(User u) {
+		return "<SCRIPT>"
 				+ "function confirmSubmission(nQuestions) {"
 				+ "  var elements = document.getElementById('pollForm').elements;"
 				+ "  var nAnswers;"
@@ -435,7 +401,7 @@ public class Poll extends HttpServlet {
 		buf.append("<h3>Please wait for the poll to close.</h3>"
 				+ "<div id='timer0' style='color: #EE0000'></div><br/>");
 		
-		buf.append("<form name=ViewResults method=post action='/Poll' >"
+		buf.append("<form id=pollForm method=post action='/Poll' >"
 				+ (user.isInstructor()?"Whenever submissions are complete, you can ":"Your instructor will tell you when can ")
 				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 				+ "<input type=hidden name=UserRequest value='" + (user.isInstructor()?"Close the Poll":"View the Poll Results") + "' />"
@@ -452,29 +418,31 @@ public class Poll extends HttpServlet {
 	}
 	
 	static String timer(User u) {
-		return "\n<SCRIPT language='JavaScript'>"
+		return "\n<SCRIPT>"
 				+ "var seconds;"
 				+ "var minutes;"
 				+ "var oddSeconds;"
 				+ "var endMillis;"
+				+ "var clock;"
 				+ "var timer0 = document.getElementById('timer0');"
+				+ "var timer1 = document.getElementById('timer1');"
+				+ "var form = document.getElementById('pollForm');"
 				+ "function countdown() {"
-				+ "	var nowMillis = new Date().getTime();"
-				+ "	var seconds=Math.round((endMillis-nowMillis)/1000);"
+				+ "	var seconds=Math.round((endMillis-Date.now())/1000);"
 				+ "	var minutes = seconds<0?Math.ceil(seconds/60.):Math.floor(seconds/60.);"
 				+ "	var oddSeconds = seconds%60;"
-				+ " if (oddSeconds<10) oddSeconds = '0'+oddSeconds;"
-				+ " timer0.innerHTML='Time remaining: ' + minutes + ':' + oddSeconds;"
-				+ "	if (seconds <= 0) {"
-				+ "  timer0.innerHTML = '0:00';"
-				+ "  document.ViewResults.submit();"
-				+ " }"
-				+ "	else setTimeout('countdown()',1000);"
+				+ " if (oddSeconds<10) oddSeconds = '0'+ oddSeconds;"
+				+ " clock = seconds<=0?'0:00':minutes + ':' + oddSeconds;"
+				+ " if (timer0!=null) timer0.innerHTML = 'Time remaining: ' + clock;"
+				+ " if (timer1!=null) timer1.innerHTML = 'Time remaining: ' + clock;"
+				+ "	if (seconds <= 0) form.submit();"
+				+ " else setTimeout(() => countdown(), 1000);"
 				+ "}\n"
 				+ "function startTimer(m) {"
 				+ " endMillis = m;"
 				+ " countdown();"
-				+ "}"
+				+ " setTimeout(() => synchTimer(), Math.floor(Math.random()*10000)+10000);"  // schedule synch 10-20 s from now
+				+ "}\n"
 				+ "function synchTimer() {"
 				+ "  var xmlhttp=new XMLHttpRequest();"
 				+ "  if (xmlhttp==null) {"
@@ -483,11 +451,12 @@ public class Poll extends HttpServlet {
 				+ "  }"
 				+ "  xmlhttp.onreadystatechange=function() {"
 				+ "    if (xmlhttp.readyState==4) {"
-				+ "      endMillis = xmlhttp.responseText.trim();"
-				+ "      countdown();"
+				+ "     const serverNowMillis = xmlhttp.responseText.trim();"  // server returned new Date().getTime()
+				+ "     endMillis += Date.now() - serverNowMillis;"          // corrects for fast or slow browser clock
 				+ "    }"
 				+ "  }\n"
 				+ "  var url = 'Poll?UserRequest=Synch&sig=" +u.getTokenSignature() + "';"
+				+ "  timer0.innerHTML = 'synchronizing clocks...';"
 				+ "  xmlhttp.open('GET',url,true);"
 				+ "  xmlhttp.send(null);"
 				+ "  return false;"
