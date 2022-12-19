@@ -159,6 +159,10 @@ public class Poll extends HttpServlet {
 			case "View the Poll Results":
 				out.println(Subject.header() + resultsPage(user,a) + Subject.footer);
 				break;
+			case "Preview":
+			case "Quit":
+				doGet(request,response);
+				break;
 			}
 		} catch (Exception e) {
 			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
@@ -865,6 +869,7 @@ public class Poll extends HttpServlet {
 
 	String previewQuestion(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
+		StringBuffer debug = new StringBuffer("Debug:");
 		try {
 			long questionId = 0;
 			boolean current = false;
@@ -872,16 +877,22 @@ public class Poll extends HttpServlet {
 			try {
 				questionId = Long.parseLong(request.getParameter("QuestionId"));
 				current = true;
-			} catch (Exception e2) {}
+			} catch (Exception e2) {
+				debug.append("a");
+			}
 			long proposedQuestionId = 0;
 			try {
 				proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
 				proposed = true;
 				current = false;
-			} catch (Exception e2) {}
+			} catch (Exception e2) {
+				debug.append("b");
+			}
 			
 			Question q = assembleQuestion(request);
+			debug.append("c");
 			if (q.requiresParser()) q.setParameters();
+			debug.append("d");
 			
 			buf.append("<h3>Preview Custom Poll Question</h3>");
 			
@@ -924,7 +935,7 @@ public class Poll extends HttpServlet {
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Preview />");
 			buf.append("</FORM>");
 		} catch (Exception e) {
-			buf.append(e.toString());
+			buf.append("<br/>Error: " + e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString());
 		}
 		return buf.toString();
 	}
