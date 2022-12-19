@@ -99,6 +99,35 @@ shows their work and previous submissions.<br/><br/>
 </div>
 
 <div class='seg2'>
+<br/><b>SmartText Reading Assignments</b><br/><br/>
+Finding it hard to get students to read the textbook? ChemVantage reading assignments incorporate a sequence of question items 
+on key concepts related to the assigned chapter. If a student misses 2 questions on any key concept, they are sent back to review 
+the chapter before proceeding with the assignment. After correctly answering 2 questions on each key concept, the assignment gets 
+full credit but is still available to students who wish to practice their skills. SmartText assignments are available for the 
+following textbooks:<ul>
+<li>Chemistry 2e (OpenStax)</li>
+<li>Chemistry: Atoms First 2e (OpenStax)</li>
+<li>Chemistry: A Molecular Approach (Pearson)</li>
+</ul>
+The keys to success for this type of assignment are 1) colocating the reading assignment with a formative assessment, and 
+2) assigning at least a small number of points for completing the task.
+<br/><br/>
+
+<div style='text-align: center;'><a href='/SmartText?sig=<%= sig %>'>See a sample SmartText assignment</a></div>
+</div>
+
+<div class='seg1'>
+<!--  <img class='float' src='images/img05.jpg' alt='student taking notes'/> -->
+<br/><b>Video lectures</b><br/><br/>
+Some of the more important lessons in the text have been captured as 10-minute instructional videos. Most of the videos have short 
+(two-question) quizzes embedded in the video to ensure that students are watching and comprehending. You can assign these to students 
+for 3-5 points. Even if the video has no embedded quizzes, ChemVantage will only award the points if the student finishes the video 
+to the end.<br/><br/>
+
+<div style='text-align: center;'><a href='/VideoQuiz?sig=<%= sig %>'>Try a sample video</a></div>
+</div>
+
+<div class='seg2'>
 <img class='float' src='images/img05.jpg' alt='student taking notes'/>
 <br/><b>Practice Exams</b><br/><br/>
 Students can take timed practice exams that draw questions from any group of 3 or more topics.  Each exam is designed to take 60 minutes 
@@ -140,16 +169,6 @@ course anyway?
 <div style='text-align: center;'><a href='mailto:admin@chemvantage.org'>Schedule a free demo placement exam</a></div>
 </div>
 
-<div class='seg1'>
-<!--  <img class='float' src='images/img05.jpg' alt='student taking notes'/> -->
-<br/><b>Video lectures</b><br/><br/>
-Some of the more important lessons in the text have been captured as 10-minute instructional videos. Most of the videos have short 
-(two-question) quizzes embedded in the video to ensure that students are watching and comprehending. You can assign these to students 
-for 3-5 points. Even if the video has no embedded quizzes, ChemVantage will only award the points if the student finishes the video 
-to the end.<br/><br/>
-
-<div style='text-align: center;'><a href='/VideoQuiz?sig=<%= sig %>'>Try a sample video</a></div>
-</div>
 </main>
 
 <footer><hr/><img style='padding-left: 15px; vertical-align: middle;width:30px' src=images/CVLogo.png alt='ChemVantage logo' />&nbsp;
