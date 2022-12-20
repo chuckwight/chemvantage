@@ -88,7 +88,8 @@ public class LTIDeepLinks extends HttpServlet {
 	}
 
 	JsonObject validateDeepLinkRequest(HttpServletRequest request) throws Exception {
-			
+			if (request.getParameter("id_token")==null && request.getParameter("login_hint")!=null) 
+				throw new Exception("The required id_token was missing. Please ensure that the OIDC Initiation URL is set to https://www.chemvantage.org/auth/token");
 			Deployment d = validateIdToken(request);  // returns the validated Deployment
 			
 			// Decode the JWT id_token payload as a JsonObject:
