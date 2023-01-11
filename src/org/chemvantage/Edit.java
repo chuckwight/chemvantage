@@ -1695,7 +1695,7 @@ public class Edit extends HttpServlet {
 			Long conceptId = null;
 			List<Concept> concepts = ofy().load().type(Concept.class).filter("orderBy <"," 1").list();
 			for (Concept c : concepts) {
-				if (c.title.equals("duplicates")) {
+				if (c.title.equals("Hide")) {
 					conceptId = c.id;
 					break;
 				}
