@@ -957,7 +957,7 @@ public class PlacementExam extends HttpServlet {
 			buf.append("</table><p>");
 			buf.append("<p>");
 			buf.append("<a href=/PlacementExam?sig=" + user.getTokenSignature() + "&UserRequest=Download+CSV+File>Download CSV File</a><p>");
-			buf.append("<a href=/PlacementExam?sig=" + user.getTokenSignature() + "&UserRequest=Download+Detailed+CSV+File>Download Detailed Scores CSV File</a><p>");
+			//buf.append("<a href=/PlacementExam?sig=" + user.getTokenSignature() + "&UserRequest=Download+Detailed+CSV+File>Download Detailed Scores CSV File</a><p>");
 			buf.append("<a href=/PlacementExam?sig=" + user.getTokenSignature() + "&UserRequest=AnalyzeQuestions>Analysis of Question Items</a><p>");
 		} catch (Exception e) {
 			buf.append(e.toString());
