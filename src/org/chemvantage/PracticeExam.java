@@ -884,7 +884,12 @@ public class PracticeExam extends HttpServlet {
 						+ q.printAllToStudents(studentAnswers.get(q.id),true) + "</td>");
 
 				// Try to get the question score from the PracticeExamTransaction. If null, recompute it from the student's response
-				int score = pet.questionScores.get(k)==null?(q.isCorrect(studentAnswers.get(q.id))?q.pointValue:0):pet.questionScores.get(k);
+				int score = 0;
+				if (pet.questionScores.get(k)!=null) score = pet.questionScores.get(k);
+				else {  // recalculate the original score
+					if (q.isCorrect(studentAnswers.get(q.id))) score = q.pointValue;
+					else if (q.agreesToRequiredPrecision(studentAnswers.get(q.id))) score = q.pointValue-1;
+				}
 				
 				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"
 						+ "<input type=range name=Range" + q.id + " value=" + score + " min=0 max=" + q.pointValue 
@@ -906,7 +911,12 @@ public class PracticeExam extends HttpServlet {
 						+ q.printAllToStudents(studentAnswers.get(q.id),true,pet.questionShowWork.get(k)) + "</td>");
 
 				// Try to get the question score from the PracticeExamTransaction. If null, recompute it from the student's response
-				int score = pet.questionScores.get(k)==null?(q.isCorrect(studentAnswers.get(q.id))?q.pointValue:0):pet.questionScores.get(k);
+				int score = 0;
+				if (pet.questionScores.get(k)!=null) score = pet.questionScores.get(k);
+				else {  // recalculate the original score
+					if (q.isCorrect(studentAnswers.get(q.id))) score = q.pointValue;
+					else if (q.agreesToRequiredPrecision(studentAnswers.get(q.id))) score = q.pointValue-1;
+				}
 				
 				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"
 						+ "<input type=range name=Range" + q.id + " value=" + score + " min=0 max=" + q.pointValue 
@@ -928,7 +938,12 @@ public class PracticeExam extends HttpServlet {
 						+ q.printAllToStudents(studentAnswers.get(q.id),true,pet.questionShowWork.get(k)) + "</td>");
 
 				// Try to get the question score from the PracticeExamTransaction. If null, recompute it from the student's response
-				int score = pet.questionScores.get(k)==null?(q.isCorrect(studentAnswers.get(q.id))?q.pointValue:0):pet.questionScores.get(k);
+				int score = 0;
+				if (pet.questionScores.get(k)!=null) score = pet.questionScores.get(k);
+				else {  // recalculate the original score
+					if (q.isCorrect(studentAnswers.get(q.id))) score = q.pointValue;
+					else if (q.agreesToRequiredPrecision(studentAnswers.get(q.id))) score = q.pointValue-1;
+				}
 				
 				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"
 						+ "<input type=range name=Range" + q.id + " value=" + score + " min=0 max=" + q.pointValue 
