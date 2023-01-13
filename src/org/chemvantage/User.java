@@ -94,10 +94,6 @@ public class User {
 		}
 	}
 
-	User(String id) {  // used only for LTIv1.1 launches
-		this(null,id);
-	}
-	
 	public static User getUser(String sig) {  // default token expiration of 90 minutes
     	return getUser(sig,90);
 	}
@@ -260,10 +256,12 @@ public class User {
     }
 
    static String encryptId(String id, long sig) {
-    	/* This method uses a simple one-time pad to encrypt a userId value prior to storing inthe database.
+    	/* This method uses a simple one-time pad to encrypt a userId value prior to storing in the database.
     	 * The uses sig as a seed for Random. Each 8-bit random integer (0 to 127) is XORed with one byte
     	 * of the input String and converted to a two-character hexadecimal number for storage as a printable value.
     	 * The final output should have 2 characters for every byte of input, so the encryption is weak.
+    	 * 
+    	 * NOTE: the sig valus are generated randomly, so decryption is only possible while the User entity is persisted in the database (about 1 day)
     	 */
     	try {
     		byte[] input = id.getBytes("UTF-8");
