@@ -161,7 +161,7 @@ public class User {
 	}
 	
 	public String getHashedId() {  // public method to support JSP files to retrieve hashed userId value
-		return (hashedId==null || hashedId.isEmpty())?Subject.hashId(encryptedId):hashedId;
+		return (isAnonymous()?Subject.hashId(encryptedId):hashedId);
 	}
 	
 	public boolean isAnonymous() {
