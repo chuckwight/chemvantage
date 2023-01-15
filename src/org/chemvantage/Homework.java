@@ -80,6 +80,11 @@ public class Homework extends HttpServlet {
 			case "ShowSummary":
 				out.println(Subject.header("Your Class ChemVantage Scores") + showSummary(user,request) + Subject.footer);
 				break;
+			case "Review":
+				forUserId = request.getParameter("ForUserId");
+				String forUserName = request.getParameter("ForUserName");
+				out.println(Subject.header("Homework Review") + reviewSubmissions(user,forUserId,forUserName));
+				break;
 			case "AssignHomeworkQuestions":
 				if (user.isInstructor()) out.println(Subject.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user,a,request) + Subject.footer);
 				else out.println(Subject.header("Customize ChemVantage Homework Assignment") + "<h2>Forbidden</h2>You must be signed in as the instructor to perform this functuon." + Subject.footer);
@@ -287,7 +292,7 @@ public class Homework extends HttpServlet {
 						+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ (hwa==null?"":"<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>")
-						+ "<div style='display:table-cell'><b>" + (assigned?i:j) + ".&nbsp;</b></div>"
+						+ "<div style='display:table-cell;vertical-align:text-top;padding-right:10px;'><b>" + (assigned?i:j) + ".</b></div>"
 						+ "<div style='display:table-cell'>" + q.print(workStrings.get(q.id),"") 
 						+ (q.id == hintQuestionId?"Hint:<br>" + q.getHint():"")
 						+ "<INPUT TYPE=SUBMIT VALUE='Grade This Exercise'><p>"
@@ -326,7 +331,10 @@ public class Homework extends HttpServlet {
 			}
 			
 			if (hwa.attemptsAllowed != null) {
-				List<HWTransaction> priorAttempts = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("questionId",questionId).list();
+				List<HWTransaction> transactions = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("questionId",questionId).list();
+				List<HWTransaction> priorAttempts = new ArrayList<HWTransaction>();
+				for (HWTransaction t : transactions) if (t.assignmentId==hwa.id.longValue()) priorAttempts.add(t);
+				
 				if (priorAttempts.size() >= hwa.attemptsAllowed) {
 					buf.append(Subject.banner 
 						+ "<h2>Sorry, you are only allowed " + hwa.attemptsAllowed + " attempt" + (hwa.attemptsAllowed==1?"":"s") + " for each question on this assignment.</h2>");
@@ -437,12 +445,12 @@ public class Homework extends HttpServlet {
 			if (!studentAnswer.isEmpty()) { // an answer was submitted
 				// create and store a Response entity:
 				Response r = new Response("Homework",hwa.id,q.id,studentAnswer,q.getCorrectAnswer(),studentScore,possibleScore,user.getId(),now);
-				ofy().save().entity(r);
-				debug.append("response saved...");
 				
 				ht = new HWTransaction(q.id,user.getHashedId(),now,studentScore,hwa.id,possibleScore,showWork);
 				ofy().save().entity(ht).now();
-				
+				r.transactionId = ht.id;
+				ofy().save().entity(r);
+						
 				// create/update/store a HomeworkScore object
 				try {  // throws exception if hwa==null
 					if (!user.isAnonymous() && hwa.questionKeys.contains(k) && hwa.lti_ags_lineitem_url != null) {
@@ -492,7 +500,6 @@ public class Homework extends HttpServlet {
 				} else if (!user.isAnonymous() && user.isEligibleForHints(q.id)) {
 					buf.append("<br/><form method=post action=/Help>"
 							+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-							+ "<input type=hidden name=AssignmentType value=Homework />"
 							+ "<input type=hidden name=TransactionId value=" + ht.id + " />"
 							+ "<input type=hidden name=HashCode value=" + hashMe.hashCode() + " />");
 					buf.append("<font color=#EE0000>Do you need some help from your instructor or teaching assistant? </font>");
@@ -756,20 +763,23 @@ public class Homework extends HttpServlet {
 				keys.put(id,Key.create(Key.create(User.class,Subject.hashId(platform_id+id)),Score.class,a.id));
 			}
 			Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
-			buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th></tr>");
+			buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th><th>Scores Detail</th></tr>");
 			int i=0;
 			boolean synched = true;
 			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
 				if (entry == null) continue;
 				String s = scores.get(entry.getKey());
 				Score cvScore = cvScores.get(keys.get(entry.getKey()));
+				String forUserId = platform_id + entry.getKey();  // only send hashed values through links
 				i++;
 				buf.append("<tr><td>" + i + ".&nbsp;</td>"
 						+ "<td>" + entry.getValue()[1] + "</td>"
 						+ "<td>" + entry.getValue()[2] + "</td>"
 						+ "<td>" + entry.getValue()[0] + "</td>"
 						+ "<td align=center>" + (s == null?" - ":s + "%") + "</td>"
-						+ "<td align=center>" + (cvScore == null?" - ":String.valueOf(cvScore.getPctScore()) + "%") + "</td></tr>");
+						+ "<td align=center>" + (cvScore == null?" - ":String.valueOf(cvScore.getPctScore()) + "%") + "</td>"
+						+ "<td align=center><a href=/Homework?UserRequest=Review&sig=" + user.getTokenSignature() + "&ForUserId=" + forUserId + "&ForUserName=" + entry.getValue()[1].replaceAll(" ","+") + ">show</a></td>"
+						+ "</tr>");
 				// Flag this score set as unsynchronizde only if there is one or more non-null ChemVantage Learner score that is not equal to the LMS score
 				// Ignore Instructor scores because the LMS often does not report them, and ignore null cvScore entities because they cannot be reported.
 				synched = synched && (!"Learner".equals(entry.getValue()[0]) || (cvScore!=null?String.valueOf(cvScore.getPctScore()).equals(s):true));
@@ -790,6 +800,101 @@ public class Homework extends HttpServlet {
 			return buf.toString();
 		} catch (Exception e) {
 			buf.append(e.toString());
+		}
+		return buf.toString();
+	}
+	
+	String reviewSubmissions(User user, String forUserId, String forUserName) {
+		StringBuffer buf = new StringBuffer();
+		StringBuffer debug = new StringBuffer("Debug: ");
+		try {
+			if (!user.isInstructor()) return "You must be the instructor to view this page.";
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+			String forUserHashedId = Subject.hashId(forUserId);
+			Map<Key<Question>,Question> questions = ofy().load().keys(a.questionKeys);
+			List<HWTransaction> transactions = ofy().load().type(HWTransaction.class).filter("userId",forUserHashedId).filter("assignmentId",a.id).order("-graded").list();
+			List<Response> responses = ofy().load().type(Response.class).filter("userId",forUserHashedId).filter("assignmentId",a.id).list();
+			Map<Long,Response> responseMap = new HashMap<Long,Response>();
+			for (Response r : responses) if (r.transactionId>0) responseMap.put(r.transactionId, r);
+			
+			// Response entities older than 1/16/23 do not have transactionId values, and Responses prior to Nov 16, 2022 don't have assignmentId values, 
+			// so pair these by submission time and questionId:
+			for (HWTransaction t : transactions) {
+				if (responseMap.get(t.id)==null) {
+					for (Response r : responses) {
+						if (r.questionId==t.questionId && Math.abs(r.submitted.getTime()-t.graded.getTime())<60000L) {
+							responseMap.put(t.id, r);
+							break;
+						}
+					}
+				}
+				if (responseMap.get(t.id)==null) {
+					List<Response> userResponses = ofy().load().type(Response.class).filter("userId",forUserHashedId).filter("questionId",t.questionId).list();
+					for (Response r : userResponses) {
+						if (Math.abs(r.submitted.getTime()-t.graded.getTime())<60000L) {
+							responseMap.put(t.id, r);
+							break;
+						}
+					}			
+				}
+			}
+			
+			buf.append("<h3>Homework Submissions</h3>");
+			buf.append("Name: " + forUserName + "<br/>"
+					+ "Assignment: " + a.title + "<br/>"
+					+ "Date: " + new Date() + "<br/><br/>");
+			debug.append("0");
+			
+			buf.append("<table>");
+			for (Key<Question> k : a.questionKeys) {  // this is the main loop through the assigned questions
+				Question q = questions.get(k);
+				String hashMe = forUserId + a.id;
+				q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
+				debug.append("1");
+				
+				List<HWTransaction> qTransactions = new ArrayList<HWTransaction>();
+				for (HWTransaction t : transactions) if (q.id.longValue() == t.questionId) qTransactions.add(t);
+				debug.append("2");
+				
+				String studentResponse = null;
+				String showWork = null;
+				HWTransaction hwt = qTransactions.isEmpty()?null:qTransactions.get(0);
+				if (hwt!=null) {
+					showWork = hwt.showWork;
+					if (responseMap.get(hwt.id)!=null) studentResponse = responseMap.get(hwt.id).studentResponse;
+				}
+				debug.append("3");
+				
+				buf.append("<tr><td style='text-align:right;vertical-align:text-top;padding-right:10px;'><b>" + (a.questionKeys.indexOf(k)+1) + ".</b></td><td>" + q.printAllToStudents(studentResponse,true,showWork) + "<br/></td></tr>");
+				
+				// print a small table of student submissions fort this question
+				buf.append("<tr><td></td><td>");
+				if (!qTransactions.isEmpty()) {
+					buf.append("<table style='text-align: center'><tr><th style='padding-right:20px'>Timestamp</th><th style='padding-right:20px'>Student Response</th><th style='padding-right:20px'>Correct Answer</th><th>Correct</th></tr>");
+					for (HWTransaction t : qTransactions) {
+						String correctAnswer = q.getCorrectAnswer();
+						studentResponse = null;
+						if (responseMap.get(t.id)!=null) {
+							studentResponse = responseMap.get(t.id).studentResponse;
+							correctAnswer = responseMap.get(t.id).correctAnswer;
+						}
+						
+						if (studentResponse==null) buf.append("<tr><td style='padding-right:20px'>" + t.graded + "</td><td colspan=2 style='padding-right:20px'>(response detail is unavailable)</td>");
+						else buf.append("<tr><td style='padding-right:20px'>" + t.graded + "</td><td style='padding-right:20px'>" + studentResponse + "</td><td style='padding-right:20px'>" + correctAnswer + "</td>");
+						
+						if (t.score==1) buf.append("<td><img src=/images/checkmark.gif alt='checkmark' height=24 width=17></td>");
+						else if (q.agreesToRequiredPrecision(studentResponse)) buf.append("<td><img src=/images/partCredit.png alt='partial credit' height=25 width=25></td>");
+						else buf.append("<td><img src=/images/xmark.png alt='x-mark' height=24 width=24></td>");
+						buf.append("</tr>");
+					}
+					buf.append("</table><br/>");
+				}
+				buf.append("</td></tr>");
+			}
+			buf.append("</table><br/>");
+			buf.append(ajaxJavaScript(user.getTokenSignature()));
+		} catch (Exception e) {
+			buf.append("Error: " + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString());
 		}
 		return buf.toString();
 	}
