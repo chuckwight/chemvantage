@@ -106,73 +106,64 @@ public class Help extends HttpServlet {
 	protected String showStudentSubmission(JsonObject payload) throws Exception {
 		StringBuffer buf = new StringBuffer(Subject.header("ChemVantage Help Page") + Subject.banner);
 		Date exp = new Date(payload.get("exp").getAsLong()*1000L);
-		
+
 		buf.append("<h3>A student is seeking your help with a ChemVantage assignment.</h3>");
 		buf.append("The information below may help to illuminate the problem. This information may contain updates since "
 				+ "the student made this request (i.e., they may have solved the problem on their own).<p>"
 				+ "The token contained in the URL you just entered is only valid for 3 days, and will expire at "
-				+ exp + ". Please communicate your response directly to the student, not through ChemVantage.<p>");
+				+ exp + ". Please communicate your response directly to the student, not through ChemVantage.<br/><br/>");
 		/*
 		 * The expected contents of the payload are:
-		 *  1) aty (AssignmentType: Q, H, or P)
+		 *  1) aid (Assignment ID: long)
 		 *  2) tid (Transaction ID: long)
 		 *  3) exp (Expires: 3 days after issuance)
 		 *  4) hsh (int hashcode for question parameters)
 		 */
-		switch (payload.get("aty").getAsString()) {
-			case "Q": throw new Exception("Not implemented yet, sorry"); 
-			case "P": throw new Exception("Not implemented yet, sorry"); 
-			case "H":
-				HWTransaction hwt = ofy().load().type(HWTransaction.class).id(payload.get("tid").getAsLong()).safe();
-				List<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",hwt.userId).filter("questionId",hwt.questionId).order("graded").list();
-				hwt = hwTransactions.get(hwTransactions.size()-1); // loads the most recent transaction, regardless of the one in the token
-				
-				Topic topic = ofy().load().type(Topic.class).id(hwt.topicId).safe();
-				buf.append("<h4>Assignment: Homework - " + topic.title + "</h4>");
-				
-				Question q = ofy().load().type(Question.class).id(hwt.questionId).safe();
-				int hashCode = -1;
-				try {
-					hashCode = payload.get("hsh").getAsInt();
-				} catch (Exception e) {}
-				q.setParameters(hashCode);  // creates different parameters for different assignments
-				buf.append(q.print(hwt.showWork,""));
-				
-				buf.append("<script>document.getElementById('showWork" + q.id + "').style.display='';</script>");
-				
-				List<Response> responses = ofy().load().type(Response.class).filter("userId",hwt.userId).filter("questionId",q.id).list();
-				
-				Date solved = null;
-				StringBuffer tablebuf = new StringBuffer();
-				if (responses.size() > 0) {
-					tablebuf.append("<table><tr><td>Date/Time (UTC)</td><td>Student Response</td><td>Score</td></tr>");
-					for (Response r : responses) {
-						if (r.score>0 && (solved==null || solved.after(r.submitted))) solved = r.submitted;
-						tablebuf.append("<tr><td>" + r.submitted.toString() + "</td><td align=center>" + r.studentResponse 
-							+ "</td><td align=center>" + r.score + "</td></tr>");	
-					}
-					tablebuf.append("</table><br>");
-				}
-				if (solved != null) buf.append("<font color=red><b>Note: This question was answered correctly on " + solved + "</b></font><p>");
-				buf.append(tablebuf);
-				break;
-			default: throw new Exception("The assignment type was not valid.");
+
+		HWTransaction hwt = ofy().load().type(HWTransaction.class).id(payload.get("tid").getAsLong()).safe();
+		List<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",hwt.userId).filter("assignmentId",hwt.assignmentId).order("graded").list();
+		hwt = hwTransactions.get(hwTransactions.size()-1); // loads the most recent transaction, regardless of the one in the token
+
+		String title = "<h2>Homework Assignment</h2>";
+		try {
+			Assignment a = ofy().load().type(Assignment.class).id(hwt.assignmentId).safe();
+			title = "<h2>Assignment: Homework - " + a.title + "</h2>";
+		} catch (Exception e) {}		
+		buf.append(title);
+
+		Question q = ofy().load().type(Question.class).id(hwt.questionId).safe();
+		int hashCode = -1;
+		try {
+			hashCode = payload.get("hsh").getAsInt();
+		} catch (Exception e) {}
+		q.setParameters(hashCode);  // creates different parameters for different assignments
+		buf.append(q.print(hwt.showWork,""));
+
+		buf.append("<script>document.getElementById('showWork" + q.id + "').style.display='';</script>");
+
+		List<Response> responses = ofy().load().type(Response.class).filter("userId",hwt.userId).filter("questionId",q.id).list();
+
+		Date solved = null;
+		StringBuffer tablebuf = new StringBuffer();
+		if (responses.size() > 0) {
+			tablebuf.append("<table><tr><td>Date/Time (UTC)</td><td>Student Response</td><td>Score</td></tr>");
+			for (Response r : responses) {
+				if (r.assignmentId==0 || r.assignmentId != hwt.assignmentId) continue;
+				if (r.score>0 && (solved==null || solved.after(r.submitted))) solved = r.submitted;
+				tablebuf.append("<tr><td>" + r.submitted.toString() + "</td><td align=center>" + r.studentResponse 
+						+ "</td><td align=center>" + r.score + "</td></tr>");	
+			}
+			tablebuf.append("</table><br>");
 		}
+		if (solved != null) buf.append("<font color=red><b>Note: This question was answered correctly on " + solved + "</b></font><p>");
+		buf.append(tablebuf);
+
 		buf.append(Subject.footer);
-		
+
 		return buf.toString();
 	}
 	
 	protected String createJWT(HttpServletRequest request) throws Exception {
-		String aty = request.getParameter("AssignmentType");
-		if (aty==null) throw new Exception("Missing assignment type");
-		switch (aty) {
-			case "Quiz": aty = "Q"; break;
-			case "Homework": aty = "H"; break;
-			case "PracticeExam": aty = "P"; break;
-			default: aty = null;
-		}
-		
 		long tid = Long.parseLong(request.getParameter("TransactionId"));
 		int hsh = Integer.parseInt(request.getParameter("HashCode"));
 		
@@ -180,7 +171,6 @@ public class Help extends HttpServlet {
 		Date in3Days = new Date(now.getTime() + 259200000L);
 		
 		String token = JWT.create()
-				.withClaim("aty", aty)
 				.withClaim("tid", tid)
 				.withClaim("hsh", hsh)
 				.withExpiresAt(in3Days)
