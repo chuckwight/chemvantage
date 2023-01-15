@@ -933,6 +933,7 @@ public class Homework extends HttpServlet {
 	
 	String selectQuestionsForm(User user,Assignment a,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
+		StringBuffer debug = new StringBuffer("Debug: ");
 		try {
 			buf.append("<h3>Customize Homework Assignment</h3>");
 			buf.append("<form action=/Homework method=post>"
@@ -958,6 +959,7 @@ public class Homework extends HttpServlet {
 					+ "<a href=/Contribute?AssignmentType=Homework&sig=" + user.getTokenSignature() 
 					+ ">contribute a new question item</a> to the database.<p>");
 			
+			debug.append("1");
 			// make a List of conceptIds covered by this assignment
 			List<Long> conceptIds = a.conceptIds;
 			// Include any conceptId included in this request:
@@ -966,15 +968,25 @@ public class Homework extends HttpServlet {
 				newConceptId = Long.parseLong(request.getParameter("ConceptId"));
 				conceptIds.add(newConceptId);
 			} catch (Exception e) {}
-
+			debug.append("2");
+			
 			// Make a list of key concepts already covered by this assignment:
 			List<Key<Concept>> conceptKeys = ofy().load().type(Concept.class).order("orderBy").keys().list();
 			Map<Key<Concept>,Concept> keyConcepts = ofy().load().keys(conceptKeys);
 			if (conceptIds.size()>0) {
 				buf.append("The questions listed below cover the following key concepts:<ul>");
-				for (Long cId : conceptIds) buf.append("<li>" + keyConcepts.get(Key.create(Concept.class,cId)).title + "</li>");
+				for (Long cId : conceptIds) {
+					Concept c = keyConcepts.get(Key.create(Concept.class,cId));
+					if (c==null) {
+						a.conceptIds.remove(cId);
+						ofy().save().entity(a);
+					}
+					else buf.append("<li>" + c.title + "</li>");
+				}
 				buf.append("</ul>");
 			}
+			debug.append("3");
+			
 			// Create a short form to select one additional key concept to include (will exclude the previous selection, if any)
 			buf.append("<form method=get action=/Homework>"
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
@@ -988,6 +1000,7 @@ public class Homework extends HttpServlet {
 				} catch (Exception e) {}
 			}
 			buf.append("</select></form><hr><br/>");
+			debug.append("4");
 			
 			// now we have all of the relevant conceptIds. Make a list of questions carrying these attributes:
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
@@ -1037,7 +1050,7 @@ public class Homework extends HttpServlet {
 			}
 			buf.append("</TABLE><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM><br/>");
 		} catch (Exception e) {
-			buf.append(e.toString() + " " + e.getMessage());
+			buf.append(e.toString() + " " + e.getMessage() + "<br/>" + debug.toString());
 		}
 		return buf.toString();
 	}
