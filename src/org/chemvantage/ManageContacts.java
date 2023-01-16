@@ -51,7 +51,7 @@ public class ManageContacts extends HttpServlet {
 		String userId = userService.getCurrentUser().getUserId();
 		User user = new User("https://"+request.getServerName(), userId);
 		user.setIsChemVantageAdmin(true);
-		user.setToken();
+		//user.setToken();
 		
 		StringBuffer buf = new StringBuffer("<h2>Manage Contacts</h2>");
 		int nContacts = ofy().load().type(Contact.class).count();
@@ -90,7 +90,7 @@ public class ManageContacts extends HttpServlet {
 		String userId = userService.getCurrentUser().getUserId();
 		User user = new User("https://"+request.getServerName(), userId);
 		user.setIsChemVantageAdmin(true);
-		user.setToken();
+		//user.setToken();
 		
 		String userRequest = request.getParameter("UserRequest");
 		

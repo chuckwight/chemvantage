@@ -1047,7 +1047,9 @@ public class Homework extends HttpServlet {
 				buf.append("<b>&nbsp;" + i + ".</b></TD>");
 				buf.append("\n<TD>" + q.printAll() + "</TD>");
 				buf.append("</TR>");
+				if (q.conceptId!=null && !a.conceptIds.contains(q.conceptId)) a.conceptIds.add(q.conceptId);
 			}
+			if (a.conceptIds.size()!=conceptIds.size() || !a.conceptIds.containsAll(conceptIds)) ofy().save().entity(a);
 			buf.append("</TABLE><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM><br/>");
 		} catch (Exception e) {
 			buf.append(e.toString() + " " + e.getMessage() + "<br/>" + debug.toString());

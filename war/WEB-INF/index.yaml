@@ -156,6 +156,11 @@ indexes:
   - name: userId
   - name: assignmentId
   
+- kind: User
+  properties:
+  - name: hashedId
+  - name: assignmentId
+  
 - kind: VideoTransaction
   properties:
   - name: userId

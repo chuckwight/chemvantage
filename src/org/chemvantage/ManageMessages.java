@@ -60,7 +60,7 @@ public class ManageMessages extends HttpServlet {
 			String userId = userService.getCurrentUser().getUserId();
 			user = new User("https://"+request.getServerName(), userId);
 			user.setIsChemVantageAdmin(true);
-			user.setToken();
+			//user.setToken();
 		} catch (Exception e) {
 			user = new User();
 		}

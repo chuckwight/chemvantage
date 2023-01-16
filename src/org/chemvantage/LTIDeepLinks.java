@@ -453,9 +453,9 @@ public class LTIDeepLinks extends HttpServlet {
 		Iterator<JsonElement> roles_iterator = roles.iterator();
 		while(roles_iterator.hasNext()){
 			String role = roles_iterator.next().getAsString().toLowerCase();
-			if (!user.isTeachingAssistant()) user.setIsTeachingAssistant(role.contains("teachingassistant"));
-			if (!user.isInstructor()) user.setIsInstructor(role.contains("instructor"));
-			if (!user.isAdministrator()) user.setIsAdministrator(role.contains("administrator"));
+			user.setIsTeachingAssistant(role.contains("teachingassistant"));
+			user.setIsInstructor(role.contains("instructor"));
+			user.setIsAdministrator(role.contains("administrator"));
 		}
 		return user;
 	}

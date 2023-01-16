@@ -74,7 +74,7 @@ public class Edit extends HttpServlet {
 			String userId = userService.getCurrentUser().getUserId();
 			User user = new User("https://"+request.getServerName(), userId);
 			user.setIsChemVantageAdmin(true);
-			user.setToken();
+			//user.setToken();
 			
 			out.println(Subject.getHeader(user));
 			
@@ -140,7 +140,7 @@ public class Edit extends HttpServlet {
 			String userId = userService.getCurrentUser().getUserId();
 			User user = new User("https://"+request.getServerName(), userId);
 			user.setIsChemVantageAdmin(true);
-			user.setToken();
+			//user.setToken();
 			
 			out.println(Subject.getHeader(user));
 			

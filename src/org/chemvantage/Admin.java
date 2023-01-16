@@ -53,7 +53,7 @@ public class Admin extends HttpServlet {
 			String userId = userService.getCurrentUser().getUserId();
 			User user = new User("https://"+request.getServerName(), userId);
 			user.setIsChemVantageAdmin(true);
-			user.setToken();
+			//user.setToken();
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
@@ -71,9 +71,11 @@ public class Admin extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			User user = User.getUser(request.getParameter("sig"));
-			if (user==null) throw new Exception();
-			if (!user.isChemVantageAdmin()) throw new Exception();
+			UserService userService = UserServiceFactory.getUserService();
+			String userId = userService.getCurrentUser().getUserId();
+			User user = new User("https://"+request.getServerName(), userId);
+			user.setIsChemVantageAdmin(true);
+			//user.setToken();
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();

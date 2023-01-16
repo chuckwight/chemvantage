@@ -33,7 +33,7 @@ public class User {
 	@Index	Date 	exp;				   // max 90 minutes from now
 			String  encryptedId;		   // stored temporarily in encrypted form
 			String	platformId;			   // URL of the LMS
-			long	assignmentId = 0L;     // used only for LTI users
+	@Index	long	assignmentId = 0L;     // used only for LTI users
 			int 	roles = 0;             // student
 
 /*
@@ -64,7 +64,7 @@ public class User {
 		hashedId = Subject.hashId(encryptedId);
 	}
 
-	User(String platformId, String id) {  // used for LTI 1.3 and LTIv1.1 launches
+	User(String platformId, String id) {  // used for LTI 1.3 and LTIDeepLinks launches
 		// First look for this user in the database to avoid creating a duplicate entry
 		// If not found, create a new one.
 		this.platformId = platformId;
@@ -72,7 +72,9 @@ public class User {
 		String user_id = platformId==null?id:platformId + "/" + id;
 		this.hashedId = Subject.hashId(user_id);
 		this.exp = new Date(new Date().getTime() + 5400000L);  // value expires 90 minutes from now
-		
+		this.encryptedId = encryptId(user_id,0L);  // temporary until sig is assigned in setToken()
+	}
+/*	
 		try {
 			User u = ofy().load().type(User.class).filter("hashedId",hashedId).first().safe();
 			this.roles = u.roles;
@@ -93,7 +95,7 @@ public class User {
 			ofy().save().entity(this).now();
 		}
 	}
-
+*/
 	public static User getUser(String sig) {  // default token expiration of 90 minutes
     	return getUser(sig,90);
 	}
@@ -102,13 +104,12 @@ public class User {
 		if (sig==null) return null;
     	if (minutesRequired > 500) minutesRequired = 500;
 		Date now = new Date();
-    	Date grace = new Date(now.getTime() + minutesRequired*60000L);  // start of grace period
     	Date expires = new Date(now.getTime() + (minutesRequired+5)*60000L);   // includes 5-minute grace period
 		
     	try {  // try to find the LTI User entity in the datastore
     		User user = ofy().load().type(User.class).id(Long.parseLong(sig)).safe();
     		if (user.exp.before(now)) return null; // entity has expired
-    		if (user.exp.before(grace)) { // extend the exp time
+    		else { // extend the exp time
     			user.exp = expires;
     			ofy().save().entity(user);
     		}
@@ -118,8 +119,6 @@ public class User {
     	try {  // try to validate an anonymous user
     		Date exp = new Date(encode(Long.parseLong(sig,16)));
     		Date aMonthFromNow = new Date(now.getTime() + 2678400000L);
-    		if (exp.after(now) && exp.before(expires)) return new User(exp.getTime());
-    		// the following line allows entry by a sig code up to a month in the future (email link)
     		if (exp.after(now) && exp.before(aMonthFromNow)) return new User(expires.getTime());
     	} catch (Exception e) {}
 
@@ -181,11 +180,11 @@ public class User {
 	}
 
 	boolean isTeachingAssistant() {    
-		return ((roles%8)/4 == 1);
+		return ((roles%8)/4 == 1) || this.isInstructor();
 	}
 
 	boolean isEditor() {
-		return ((roles%4)/2 == 1 || this.isAdministrator());
+		return ((roles%4)/2 == 1 || this.isChemVantageAdmin());
 	}
 
 	boolean isContributor() {
@@ -195,6 +194,7 @@ public class User {
 	boolean setIsChemVantageAdmin(boolean makeAdmin) {  // returns true if state is changed; otherwise returns false
 		if (isChemVantageAdmin() ^ makeAdmin) {
 			roles += makeAdmin?+32:-32;
+			setToken();
 			return true;
 		}
 		else return false;
@@ -247,8 +247,19 @@ public class User {
 	}
 	
 	void setToken() {
-		if (this.isAnonymous()) return;
-		else ofy().save().entity(this).now();
+		if (this.isAnonymous()) return;  // never save anonymous users to the database
+		else { // check to see ig this user/assignment combination already exists
+			try {  // check to see if there is a current user in the database
+				User u = ofy().load().type(User.class).filter("hashedId",this.hashedId).filter("assignmentId",this.assignmentId).first().safe();
+				this.sig = u.sig;  // this is a current user; just use it
+				this.encryptedId = u.encryptedId;
+				ofy().save().entity(this);
+			} catch (Exception e) {  // store a new user
+				this.sig = ofy().factory().allocateId(User.class).getId();
+				this.encryptedId = encryptId(decryptId(this.encryptedId,0L),sig);  // change the temporary encrypted value to one matching sig
+				ofy().save().entity(this).now();	
+			}
+		}
 	}
 	
     public long getAssignmentId() {

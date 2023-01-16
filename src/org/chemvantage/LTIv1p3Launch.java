@@ -50,10 +50,8 @@ import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -79,7 +77,6 @@ import com.googlecode.objectify.Key;
 public class LTIv1p3Launch extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
-	Map<String,User> users = new HashMap<String,User>();                    // local cache of recently launched users
 	
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) 
@@ -93,7 +90,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		try {
 			if (request.getParameter("id_token") != null) ltiv1p3LaunchRequest(request,response);  // handle LTI v1p3 launch request			
 			else if ("UpdateAssignment".equals(request.getParameter("UserRequest"))) { // POST the assignmentType and topicIds			
-				User user = getUser(request.getParameter("sig"));
+				User user = User.getUser(request.getParameter("sig"));
 				if (user==null) throw new Exception("User token was missing or invalid.");				
 				if (!user.isInstructor()) throw new Exception("User must be instructor to update this assignment.");
 
@@ -292,14 +289,13 @@ public class LTIv1p3Launch extends HttpServlet {
 				if (myAssignment.id==null || !myAssignment.equivalentTo(original_a)) {
 					ofy().save().entity(myAssignment).now();
 					Group.update(d,myAssignment);
-					QueueFactory.getDefaultQueue().add(withUrl("/DataStoreCleaner").param("Task","CleanAssignments").param("AssignmentId",String.valueOf(myAssignment.id)));  // put report into the Task Queue
+					QueueFactory.getDefaultQueue().add(withUrl("/DataStoreCleaner").param("Task","CleanAssignments").param("AssignmentId",String.valueOf(myAssignment.id)));  // put task into the Task Queue
 				}
 			} catch (Exception e) {
 				throw new Exception("Assignment could not be updated during LTI launch sequence. " + e.getMessage());
 			}
 			// Create a cross-site request forgery (CSRF) token containing the Assignment.id
-			user.setAssignment(myAssignment.id);
-			users.put(user.getTokenSignature(), user);  // store in local cache for speedy launches
+			user.setAssignment(myAssignment.id);  // this sets the assignment and token and saves the user to the database
 			debug.append("User credentials set OK. ");
 			
 			// If this is the first time this Assignment has been used, it may be missing the assignmentType and topicId(s)
@@ -488,9 +484,9 @@ public class LTIv1p3Launch extends HttpServlet {
 		Iterator<JsonElement> roles_iterator = roles.iterator();
 		while(roles_iterator.hasNext()){
 			String role = roles_iterator.next().getAsString().toLowerCase();
-			if (!user.isTeachingAssistant()) user.setIsTeachingAssistant(role.contains("teachingassistant"));
-			if (!user.isInstructor()) user.setIsInstructor(role.contains("instructor"));
-			if (!user.isAdministrator()) user.setIsAdministrator(role.contains("administrator"));
+			user.setIsTeachingAssistant(role.contains("teachingassistant"));
+			user.setIsInstructor(role.contains("instructor"));
+			user.setIsAdministrator(role.contains("administrator"));
 		}
 		return user;
 		} catch (Exception e) {
@@ -797,15 +793,6 @@ public class LTIv1p3Launch extends HttpServlet {
 		return buf.toString();
 	}
 
-	User getUser(String sig) {
-		Date now = new Date();
-		User user = users.get(sig);
-		if (user == null || user.exp.before(now)) {
-			user = User.getUser(sig);
-			users.put(sig, user);
-		}
-		return user;
-	}
 /*	
 	private void sendEmailToAdmin(String message) {
 		Properties props = new Properties();
