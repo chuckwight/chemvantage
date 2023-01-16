@@ -168,32 +168,39 @@ public class User {
 	}
 
 	boolean isChemVantageAdmin() {
-		return ((roles%64)/32 == 1);
+		return (roles & 32)>0;
+		//return ((roles%64)/32 == 1);
 	}
 	
 	boolean isAdministrator() {
-		return ((roles%32)/16 == 1 || this.isChemVantageAdmin());
+		return (roles & 16)>0 || isChemVantageAdmin();		
+		//return ((roles%32)/16 == 1 || this.isChemVantageAdmin());
 	}
 
 	public boolean isInstructor() {
-		return ((roles%16)/8 == 1 || this.isAdministrator());
+		return (roles & 8)>0 || isAdministrator();
+		//return ((roles%16)/8 == 1 || this.isAdministrator());
 	}
 
 	boolean isTeachingAssistant() {    
-		return ((roles%8)/4 == 1) || this.isInstructor();
+		return (roles & 4)>0 || isInstructor();
+		//return ((roles%8)/4 == 1) || this.isInstructor();
 	}
 
 	boolean isEditor() {
-		return ((roles%4)/2 == 1 || this.isChemVantageAdmin());
+		return (roles & 2)>0;
+		//return ((roles%4)/2 == 1 || this.isChemVantageAdmin());
 	}
 
 	boolean isContributor() {
-		return ((roles%2)/1 == 1);
+		return (roles & 1)>0;
+		//return ((roles%2)/1 == 1);
 	}
 
 	boolean setIsChemVantageAdmin(boolean makeAdmin) {  // returns true if state is changed; otherwise returns false
 		if (isChemVantageAdmin() ^ makeAdmin) {
-			roles += makeAdmin?+32:-32;
+			roles = roles | (makeAdmin?32:63^32);  // bitwise operation to set or unset the proper roles bit
+			//roles += makeAdmin?+32:-32;
 			setToken();
 			return true;
 		}
@@ -202,7 +209,8 @@ public class User {
 
 	boolean setIsAdministrator(boolean makeAdmin) {  // returns true if state is changed; otherwise returns false
 		if (isAdministrator() ^ makeAdmin) {
-			roles += makeAdmin?+16:-16;
+			roles = roles | (makeAdmin?16:63^16);
+			//roles += makeAdmin?+16:-16;
 			return true;
 		}
 		else return false;
@@ -210,7 +218,8 @@ public class User {
 
 	boolean setIsInstructor(boolean makeInstructor) {  // returns true if state is changed; otherwise returns false
 		if (isInstructor() ^ makeInstructor) {
-			roles += makeInstructor?+8:-8;
+			roles = roles | (makeInstructor?8:63^8);
+			//roles += makeInstructor?+8:-8;
 			return true;
 		}
 		else return false;		
@@ -218,7 +227,8 @@ public class User {
 
 	boolean setIsTeachingAssistant(boolean makeTeachingAssistant) { // returns true if the state is changed; else false
 		if (isTeachingAssistant() ^ makeTeachingAssistant) {
-			roles += makeTeachingAssistant?+4:-4;
+			roles = roles | (makeTeachingAssistant?4:63^4);
+			//roles += makeTeachingAssistant?+4:-4;
 			return true;
 		}
 		else return false;
