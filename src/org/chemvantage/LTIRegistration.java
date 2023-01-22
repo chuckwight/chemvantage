@@ -446,7 +446,7 @@ public class LTIRegistration extends HttpServlet {
 		case "schoology":
 			buf.append("This request indicates that you are using the cloud-based Schoology LMS. "
 					+ "To configure ChemVantage in Schoology please perform the following steps:<ol>"
-					+ "<li>Complete the registration form at https://www.chemvantage.org (done)."
+					+ "<li>Complete the registration form at https://www.chemvantage.org/lti/registration (done)."
 					+ "<li>Click the Apps icon | App Center | My Developer Apps. Click \"Add App\" and enter "
 					+ "the required ChemVantage app data:<ul>"
 					+  "<li>Name: ChemVantage"
