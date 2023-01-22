@@ -329,7 +329,12 @@ public class LTIRegistration extends HttpServlet {
 					+ " <li>Deep Linking Tool (do not allow student access)"
 					+ " <li>Taget Link URI: " + iss + "/lti/deeplinks"
 					+ " <li>Custom Parameters (leave blank)"
-					+ " <li>Submit</li></ul></ol>");
+					+ " <li>Submit</li></ul>");
+			buf.append("<li>Click the link below to register the new client_id and deployment_id created in step 1 with ChemVantage</ol>");
+			buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
+					+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><br/><br/>");
+
+			
 			buf.append("<hr><br>To the Course Instructor:");
 			buf.append("<ol><li>Go to the course | Content | Build Content | ChemVantage</li>"
 					+ "<li>Select the ChemVantage assignment type and topic</li>"
@@ -425,7 +430,7 @@ public class LTIRegistration extends HttpServlet {
 
 			buf.append("When you have finished the configuration, Moodle generates a preconfigured tool. You must activate it and "
 					+ "then click 'View configuration details'. When you have these details in hand, including the client_id and deployment_id, "
-					+ "click the link below to enter them into ChemVantage.<br/><br/>");
+					+ "click the link below to enter them into ChemVantage. This step is NOT needed for Dynamic Registration.<br/><br/>");
 
 			buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
 					+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><br/><br/>");
@@ -487,7 +492,12 @@ public class LTIRegistration extends HttpServlet {
 					+ "<li>Click the tokenized link in the email that you received in Step 1. Enter the client_id and "
 					+ "deployment_id from Steps 4 and 5. If the link expired, you "
 					+ "can simply complete Step 1 again to get a new link."
+					+ "<li>Click the link below to register the new client_id and deployment_id with ChemVantage."
 					+ "</ol>");
+			
+			buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
+					+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><br/><br/>");
+
 			buf.append("<hr><br>To the Course Instructor:");
 			buf.append("<ol><li>Go to the course | Materials | Add Materials | ChemVantage</li>"
 					+ "<li>Select the ChemVantage assignment type and topic</li>"
