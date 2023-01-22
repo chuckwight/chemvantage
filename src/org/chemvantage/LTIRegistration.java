@@ -515,6 +515,13 @@ public class LTIRegistration extends HttpServlet {
 				buf.append("Client ID: " + clientId + "<br>"
 						+ "Deployment ID: <input type=text size=40 name=DeploymentId><p>");
 				break;
+			case "schoology":
+				buf.append("The Schoology admin can get the deployment_id value for ChemVantage by clicking "
+						+ "Apps icon | App Center | My Developer Apps. Find ChemVantage and click Configure.<p>"
+						+ "The ChemVantage client_id can be found on the My Developer Apps page by selecting Options | API Info.<p>");
+				buf.append("deployment_id: <input type=text size=40 name=DeploymentId><p>");
+				buf.append("client_id: <input type=text size=40 name=ClientId><p>");
+				break;
 			case "canvas":
 				buf.append("Canvas account URL: <input type=text size=40 name=AccountUrl placeholder=https://myschool.instructure.com><p>");
 				buf.append("Canvas uses the developer key as the client_id, so enter that value from the list of "
@@ -579,6 +586,12 @@ public class LTIRegistration extends HttpServlet {
 			oidc_auth_url = "https://developer.blackboard.com/api/v1/gateway/oidcauth";
 			well_known_jwks_url = "https://developer.blackboard.com/api/v1/management/applications/" + client_id + "/jwks.json";
 			oauth_access_token_url = "https://developer.blackboard.com/api/v1/gateway/oauth2/jwttoken";
+			break;
+		case "schoology":
+			platform_id = "https://schoology.schoology.com";
+			oidc_auth_url = "https://lti-service.svc.schoology.com/lti-service/authorize-redirect";
+			well_known_jwks_url = "https://lti-service.svc.schoology.com/lti-service/.well-known/jwks";
+			oauth_access_token_url = "https://lti-service.svc.schoology.com/lti-service/access-token";
 			break;
 		case "canvas":
 			platform_id = "https://canvas.instructure.com";
