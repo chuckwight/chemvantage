@@ -307,8 +307,7 @@ public class LTIRegistration extends HttpServlet {
 				+ "registration link below will be active for 7 days and expires at " + jwt.getExpiresAt() + ".<p>"
 				+ "<hr>"
 				+ "<br>To the LMS Administrator:<p>"
-				+ "ChemVantage is a free Open Education Resource for teaching and learning college-"
-				+ "level General Chemistry. Learn more about ChemVantage "
+				+ "ChemVantage is an Open Education Resource for General Chemistry. Learn more about ChemVantage "
 				+ "<a href=https://www.chemvantage.org/about.html>here</a>.<p>");
 		switch (lms) {
 		case "blackboard":
@@ -443,6 +442,56 @@ public class LTIRegistration extends HttpServlet {
 			buf.append("The deployment_id will be recorded automatically. Please click the link below to register the new client_id with ChemVantage:<br>"
 					+ "<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
 					+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><br/><br/>");
+			break;
+		case "schoology":
+			buf.append("This request indicates that you are using the cloud-based Schoology LMS. "
+					+ "To configure ChemVantage in Schoology please perform the following steps:<ol>"
+					+ "<li>Complete the registration form at https://www.chemvantage.org (done)."
+					+ "<li>Click the Apps icon | App Center | My Developer Apps. Click \"Add App\" and enter "
+					+ "the required ChemVantage app data:<ul>"
+					+  "<li>Name: ChemVantage"
+					+  "<li>Description: ChemVantage is an Open Education Resource for General Chemistry."
+					+  "<li>Category: Science"
+					+  "<li>Available for: Only people in my school"
+					+  "<li>App Logo: You can upload the graphic found here: https://www.chemvantage.org/images/CVLogo_thumb.jpg"
+					+  "<li>Type of App: LTI 1.3 app (launch app in Schoology checked)"
+					+  "<li>Can be installed for: Courses<ul>"
+					+   "<li>Course Materials Selection > checked"
+					+   "<li>In the Overwrite Domain/URL field, enter the following: https://www.chemvantage.org/lti/deeplinks </ul>"
+					+  "<li>Configuration Type: Manual"
+					+  "<li>Privacy: Send Name and Email/Username of user who launches the tool"
+					+  "<li>LTI Advantage Extensions:<ul>"
+					+   "<li>Deep Linking > checked by default"
+					+   "<li>Assignment and Grade Services > checked"
+					+   "<li>Names and Roles Services > checked </ul>"
+					+  "<li>JWKS URL: https://www.chemvantage.org/jwks"
+					+  "<li>Domain/URL: https://www.chemvantage.org"
+					+  "<li>OIDC Login Init URL: https://www.chemvantage.org/auth/token"
+					+  "<li>Redirect URLs (comma separated, no spaces): https://www.chemvantage.org/lti/launch,https://www.chemvantage.org/lti/deeplinks"
+					+  "<li>This application meets the Schoology Terms of Use > checked"
+					+  "<li>Submit </ul>"
+					+ "<li>After that, the LMS Admin should click the Apps icon | App Center | My Developer Apps and locate ChemVantage.<ul>"
+					+  "<li>Click Install LTI 1.3 App."
+					+  "<li>Click I Agree to the terms to continue with the installation."
+					+  "<li>Click Add to Organization."
+					+  "<li>Find ChemVantage and click the Install/Remove button.<ul>"
+					+   "<li>Check All Users (Student, System Admin, Teacher)"
+					+   "<li>Check All Courses"
+					+   "<li>Submit </ul></ul>"
+					+ "<li>You will be directed back to the Organization Apps page. Click ‘Configure’ and copy the "
+					+ "deployment_id for use in Step 6. Then Cancel (becuse no changes were made)."
+					+ "<li>Click the Apps icon | App Center | My Developer Apps<ul>"
+					+  "<li>For ChemVantage, select Options | API Info"
+					+  "<li>Copy the client_id for use in Step 6."
+					+  "<li>Close the dialog box. </ul>"
+					+ "<li>Click the tokenized link in the email that you received in Step 1. Enter the client_id and "
+					+ "deployment_id from Steps 4 and 5. If the link expired, you "
+					+ "can simply complete Step 1 again to get a new link."
+					+ "</ol>");
+			buf.append("<hr><br>To the Course Instructor:");
+			buf.append("<ol><li>Go to the course | Materials | Add Materials | ChemVantage</li>"
+					+ "<li>Select the ChemVantage assignment type and topic</li>"
+					+ "</ol>");
 			break;
 		default:
 			buf.append("This registration request uses the LTI Advantage (version 1.3) specifications. "
