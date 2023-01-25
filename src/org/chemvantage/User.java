@@ -188,7 +188,7 @@ public class User {
 	}
 
 	boolean isEditor() {
-		return (roles & 2)>0;
+		return (roles & 2)>0 || isChemVantageAdmin();
 		//return ((roles%4)/2 == 1 || this.isChemVantageAdmin());
 	}
 
