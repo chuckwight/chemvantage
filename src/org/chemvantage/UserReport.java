@@ -79,7 +79,7 @@ public class UserReport implements Serializable {
 						buf.append("</table>");
 					}
 				}
-				if (user.isEditor()) buf.append("<a href=Edit?UserRequest=Edit&QuestionId=" + this.questionId + "&AssignmentType=" + q.assignmentType + ">Edit Question</a><br/>");
+				if (user.isEditor()) buf.append("<a href=Edit?UserRequest=Edit&QuestionId=" + this.questionId + "&AssignmentType=" + q.assignmentType + ">Edit Question</a>&nbsp;or&nbsp;");
 			} catch (Exception e2) {}
 			if (user.isChemVantageAdmin()) // Create a form for deleting the report
 				buf.append("<FORM METHOD=POST ACTION=Feedback>"
