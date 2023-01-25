@@ -451,28 +451,28 @@ public class LTIRegistration extends HttpServlet {
 		case "schoology":
 			buf.append("This request indicates that you are using the cloud-based Schoology LMS. "
 					+ "To configure ChemVantage in Schoology please perform the following steps:<ol>"
-					+ "<li>Complete the registration form at https://www.chemvantage.org/lti/registration (done)."
+					+ "<li>Complete the registration form at " + iss + "/lti/registration (done)."
 					+ "<li>Click the Apps icon | App Center | My Developer Apps. Click \"Add App\" and enter "
 					+ "the required ChemVantage app data:<ul>"
 					+  "<li>Name: ChemVantage"
 					+  "<li>Description: ChemVantage is an Open Education Resource for General Chemistry."
 					+  "<li>Category: Science"
 					+  "<li>Available for: Only people in my school"
-					+  "<li>App Logo: You can upload the graphic found here: https://www.chemvantage.org/images/CVLogo_thumb.jpg"
+					+  "<li>App Logo: You can upload the graphic found here: " + iss + "/images/CVLogo_thumb.jpg"
 					+  "<li>Type of App: LTI 1.3 app (launch app in Schoology checked)"
 					+  "<li>Can be installed for: Courses<ul>"
 					+   "<li>Course Materials Selection > checked"
-					+   "<li>In the Overwrite Domain/URL field, enter the following: https://www.chemvantage.org/lti/deeplinks </ul>"
+					+   "<li>In the Overwrite Domain/URL field, enter the following: " + iss + "/lti/deeplinks </ul>"
 					+  "<li>Configuration Type: Manual"
 					+  "<li>Privacy: Send Name and Email/Username of user who launches the tool"
 					+  "<li>LTI Advantage Extensions:<ul>"
 					+   "<li>Deep Linking > checked by default"
 					+   "<li>Assignment and Grade Services > checked"
 					+   "<li>Names and Roles Services > checked </ul>"
-					+  "<li>JWKS URL: https://www.chemvantage.org/jwks"
-					+  "<li>Domain/URL: https://www.chemvantage.org"
-					+  "<li>OIDC Login Init URL: https://www.chemvantage.org/auth/token"
-					+  "<li>Redirect URLs (comma separated, no spaces): https://www.chemvantage.org/lti/launch,https://www.chemvantage.org/lti/deeplinks"
+					+  "<li>JWKS URL: " + iss + "/jwks"
+					+  "<li>Domain/URL: " + iss
+					+  "<li>OIDC Login Init URL: " + iss + "/auth/token"
+					+  "<li>Redirect URLs (comma separated, no spaces): " + iss + "/lti/launch," + iss + "/lti/deeplinks"
 					+  "<li>This application meets the Schoology Terms of Use > checked"
 					+  "<li>Submit </ul>"
 					+ "<li>After that, the LMS Admin should click the Apps icon | App Center | My Developer Apps and locate ChemVantage.<ul>"
@@ -481,7 +481,7 @@ public class LTIRegistration extends HttpServlet {
 					+  "<li>Click Add to Organization."
 					+  "<li>Find ChemVantage and click the Install/Remove button.<ul>"
 					+   "<li>Check All Users (Student, System Admin, Teacher)"
-					+   "<li>Check All Courses"
+					+   "<li>Check All Courses, or select the set of courses that can access ChemVantage"
 					+   "<li>Submit </ul></ul>"
 					+ "<li>You will be directed back to the Organization Apps page. Click ‘Configure’ and copy the "
 					+ "deployment_id for use in Step 6. Then Cancel (becuse no changes were made)."
@@ -576,9 +576,9 @@ public class LTIRegistration extends HttpServlet {
 				break;
 			case "schoology":
 				buf.append("The Schoology admin can get the deployment_id value for ChemVantage by clicking "
-						+ "Apps icon | App Center | My Developer Apps. Find ChemVantage and click Configure.<p>"
+						+ "Apps icon | App Center | My Developer Apps. Find ChemVantage and click Configure.<br/>"
 						+ "The ChemVantage client_id can be found on the My Developer Apps page by selecting Options | API Info.<p>");
-				buf.append("deployment_id: <input type=text size=40 name=DeploymentId><p>");
+				buf.append("deployment_id: <input type=text size=40 name=DeploymentId><br/>");
 				buf.append("client_id: <input type=text size=40 name=ClientId><p>");
 				break;
 			case "canvas":
