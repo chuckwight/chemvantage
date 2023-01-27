@@ -341,7 +341,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			return null;  //e.toString() + " " + e.getMessage() + "<br>" + debug.toString();
 		}
 	}
-
+/*
 	static void updateLineItem(Deployment d, String lti_ags_lineitem_url, long assignmentId) throws Exception {
 		if (d==null || lti_ags_lineitem_url == null || assignmentId == 0L) return;
 		
@@ -355,14 +355,13 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		// check for required id element:
 		if (lineitem.get("id") == null) return;  // not a valid lineitem
 		
-		String resourceId = null;
-		if (lineitem.get("resourceId") != null)	{
-			resourceId = lineitem.remove("resourceId").getAsString();
+		try {
+			String resourceId = lineitem.remove("resourceId").getAsString();
 			if (resourceId.equals(String.valueOf(assignmentId))) return; // everything is OK
+			lineitem.addProperty("resourceId",String.valueOf(assignmentId));
+		} catch (Exception e) {
+			return;
 		}
-		
-		// add the proper value of the resourceId:
-		lineitem.addProperty("resourceId", String.valueOf(assignmentId));
 		
 		// PUT the revised lineitem to the platform:
 		try {
@@ -388,7 +387,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		} catch (Exception e) {
 		}	
 	}
-	
+*/	
 	static Map<String,String> readMembershipScores(Assignment a) {
 		// This method uses the LTIv1p3 message protocol to retrieve a JSON containing all of
 		// the existing  scores for one assignment from the LMS. 

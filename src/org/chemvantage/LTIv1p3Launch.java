@@ -241,25 +241,36 @@ public class LTIv1p3Launch extends HttpServlet {
 			if (lti_ags_lineitem_url != null) {  // this is the default, most common way of retrieving the Assignment; uses local Map for fast retrieval
 				debug.append("Retrieving assignment by lineitem. ");
 				try {
-					 myAssignment = ofy().load().type(Assignment.class).filter("lti_ags_lineitem_url",lti_ags_lineitem_url).first().now();
-					 if (myAssignment == null) {
-						// get the resourceId if available from the URL or lineitem, and use it to retrieve the assignment
+					myAssignment = ofy().load().type(Assignment.class).filter("lti_ags_lineitem_url",lti_ags_lineitem_url).first().safe();
+				} catch (Exception e) {
+					debug.append("not found. Now looking for resourceId.");
+					try {
+						JsonObject custom = claims.get("https://purl.imsglobal.org/spec/lti/claim/custom").getAsJsonObject();
+						resourceId = custom.get("resourceId").getAsString();
+					} catch (Exception e2) {
+						debug.append("custom parameter not found.");
 						switch (d.lms_type) {
-						case "canvas": 
+						case "canvas": // older canvas assignments may have this in the launch URL query
 							resourceId = request.getParameter("resourceId");
 							break;
-						default:
+						default:  // all other lms platforms may have this in the lineitem from DeepLinking
 							if (lineitem==null) lineitem = LTIMessage.getLineItem(d, lti_ags_lineitem_url);
-							try {
-								resourceId = lineitem.get("resourceId").getAsString();
-							} catch (Exception e) {}					
+							resourceId = lineitem.get("resourceId").getAsString();					
 						}
-						myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).now();
 					}
-				} catch (Exception e) {}
-			}
+					debug.append("resourceId=" + resourceId + ".");
+					if (resourceId != null) myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).safe();
 
-		// It is still possible to create assignments without DeepLinking; in this case, retrieve the assignment via the ResourceLinkId value
+					// detect if the current launch is of a copied course/assignment (changed lti_ags_lineitem_url) 
+					if (myAssignment != null && myAssignment.lti_ags_lineitem_url != null && !myAssignment.lti_ags_lineitem_url.equals(lti_ags_lineitem_url)) {  
+						// and change the id to make a new copy of the Assignment entity
+						myAssignment.id = ofy().factory().allocateId(Assignment.class).getId();
+						myAssignment.created = new Date();
+					}
+				}
+			}
+			
+			// It is still possible to create assignments without DeepLinking; in this case, retrieve the assignment via the ResourceLinkId value
 			if (myAssignment == null) {
 				debug.append("Retrieving assignment by resourceLinkId. ");
 				myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();

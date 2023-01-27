@@ -682,7 +682,9 @@ public class LTIDeepLinks extends HttpServlet {
 				JsonObject lineitem = new JsonObject();
 				lineitem.addProperty("scoreMaximum", maxScore);
 				lineitem.addProperty("label", title);
+				lineitem.addProperty("resourceId",String.valueOf(a1.id));
 				
+/*				
 				switch (d.lms_type) { // this section binds a resourceId (String version of assignmentId) to the lineitem
 				case "canvas":        // Unfortunately, canvas does not support this, so we have to bind it as a request parameter instead
 					launchUrl = serverUrl + "/lti/launch?resourceId=" + a1.id;
@@ -691,11 +693,19 @@ public class LTIDeepLinks extends HttpServlet {
 					launchUrl = serverUrl + "/lti/launch";
 					lineitem.addProperty("resourceId", String.valueOf(a1.id));
 				}
+*/
 				JsonObject submissionReview = new JsonObject();
 				submissionReview.add("reviewableStatus", new JsonArray());
 				lineitem.add("submissionReview", submissionReview);
 				
 				item.add("lineItem", lineitem);
+				
+				// adding the assignmentId as a custom parameter should work for every LMS but is required for canvas
+				JsonObject custom = new JsonObject();
+				custom.addProperty("resourceId",String.valueOf(a1.id));
+				item.add("custom", custom);
+				
+				if (d.lms_type.equals("canvas")) launchUrl += "?resourceId=" + a1.id;
 				item.addProperty("url", launchUrl);
 				
 				JsonObject icon = new JsonObject();
