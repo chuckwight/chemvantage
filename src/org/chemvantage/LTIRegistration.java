@@ -329,11 +329,8 @@ public class LTIRegistration extends HttpServlet {
 					+ " <li>Deep Linking Tool (do not allow student access)"
 					+ " <li>Taget Link URI: " + iss + "/lti/deeplinks"
 					+ " <li>Custom Parameters (leave blank)"
-					+ " <li>Submit</li></ul>");
-			buf.append("<li>Click the link below to register the new client_id and deployment_id created in step 1 with ChemVantage</ol>");
-			buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
-					+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><br/><br/>");
-
+					+ " <li>Submit</li></ul></ol>");
+			
 			
 			buf.append("<hr><br>To the Course Instructor:");
 			buf.append("<ol><li>Go to the course | Content | Build Content | ChemVantage</li>"
@@ -489,10 +486,9 @@ public class LTIRegistration extends HttpServlet {
 					+  "<li>For ChemVantage, select Options | API Info"
 					+  "<li>Copy the client_id for use in Step 6."
 					+  "<li>Close the dialog box. </ul>"
-					+ "<li>Click the tokenized link in the email that you received in Step 1. Enter the client_id and "
-					+ "deployment_id from Steps 4 and 5. If the link expired, you "
+					+ "<li>Click the tokenized link below. Enter the client_id and deployment_id from Steps 4 and 5. "
+					+ "Also, edit any of the URLs for your LMS, if necessary. If the tokenized link expired, you "
 					+ "can simply complete Step 1 again to get a new link."
-					+ "<li>Click the link below to register the new client_id and deployment_id with ChemVantage."
 					+ "</ol>");
 			
 			buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
@@ -559,54 +555,70 @@ public class LTIRegistration extends HttpServlet {
 			aud = jwt.getAudience().get(0);
 			url = jwt.getClaim("url").asString();
 			lms = jwt.getClaim("lms").asString();
+			String client_id = "";
+			String deployment_id = "";
+			String platform_id = "";
+			String oidc_auth_url = "";
+			String oauth_access_token_url = "";
+			String well_known_jwks_url = "";
+			
 			buf.append("<h4>To the LMS Administrator:</h4>"
 					+ "By now you should have configured your LMS to connect with ChemVantage, and you should have "
-					+ "received a client_id from your LMS that identifies the ChemVantage tool and a deployment_id "
-					+ "that identifies your account in your LMS. Please enter these values here:<br/><br/>"
+					+ "received a Client ID and Deployment ID from your LMS. Please enter these below, along with the "
+					+ "secure URLs (https://) that identify the service endpoints for your LMS. In some cases, these are "
+					+ "provided below, but you may need to edit them for your specific situation.<p>"
 					+ "<form method=post action=/lti/registration>"
 					+ "<input type=hidden name=UserRequest value='finalize'>"
 					+ "<input type=hidden name=Token value='" + token + "'>");
 			
 			switch (lms) {
 			case "blackboard":
-				String clientId = (iss.equals("https://dev-vantage-hrd.appspot.com")?"ec076e8c-b90f-4ecf-9b5d-a9eff03976be":"be1004de-6f8e-45b9-aae4-2c1370c24e1e");
-				buf.append("<input type=hidden name=ClientId value=" + clientId + ">");
-				buf.append("Client ID: " + clientId + "<br>"
-						+ "Deployment ID: <input type=text size=40 name=DeploymentId><p>");
+				client_id = (iss.equals("https://dev-vantage-hrd.appspot.com")?"ec076e8c-b90f-4ecf-9b5d-a9eff03976be":"be1004de-6f8e-45b9-aae4-2c1370c24e1e");
+				platform_id = "https://blackboard.com";
+				oidc_auth_url = "https://developer.blackboard.com/api/v1/gateway/oidcauth";
+				well_known_jwks_url = "https://developer.blackboard.com/api/v1/management/applications/" + client_id + "/jwks.json";
+				oauth_access_token_url = "https://developer.blackboard.com/api/v1/gateway/oauth2/jwttoken";
 				break;
 			case "schoology":
+				platform_id = "https://schoology.schoology.com";
+				oidc_auth_url = "https://lti-service.svc.schoology.com/lti-service/authorize-redirect";
+				well_known_jwks_url = "https://lti-service.svc.schoology.com/lti-service/.well-known/jwks";
+				oauth_access_token_url = "https://lti-service.svc.schoology.com/lti-service/access-token";
+				
 				buf.append("The Schoology admin can get the deployment_id value for ChemVantage by clicking "
 						+ "Apps icon | App Center | My Developer Apps. Find ChemVantage and click Configure.<br/>"
 						+ "The ChemVantage client_id can be found on the My Developer Apps page by selecting Options | API Info.<p>");
-				buf.append("deployment_id: <input type=text size=40 name=DeploymentId><br/>");
-				buf.append("client_id: <input type=text size=40 name=ClientId><p>");
 				break;
 			case "canvas":
-				buf.append("Canvas account URL: <input type=text size=40 name=AccountUrl placeholder=https://myschool.instructure.com><p>");
-				buf.append("Canvas uses the developer key as the client_id, so enter that value from the list of "
-						+ "developer keys. It is a numeric value that looks something like 32570000000000041.<br/>");
-				buf.append("client_id: <input type=text size=40 name=ClientId><p>");
-				buf.append("The deployment_id can be found in Settings | Apps | App Configurations by opening the "
+				platform_id = "https://canvas.instructure.com";
+				oidc_auth_url = "https://canvas.instructure.com/api/lti/authorize_redirect";
+				well_known_jwks_url = "https://canvas.instructure.com/api/lti/security/jwks";
+				oauth_access_token_url = "https://canvas.instructure.com/login/oauth2/token";
+				
+				buf.append("Canvas uses the developer key as the Client ID, so enter that value from the list of "
+						+ "developer keys. It is a numeric value that looks something like 32570000000000041.<br/>"
+						+ "The Deployment ID can be found in Settings | Apps | App Configurations by opening the "
 						+ "settings menu for ChemVantage. It is a compound value that consists of a number and a hex string "
-						+ "separated by a colon and looks something like 10408:7db438070728c02373713c12c73869b3af470b68.<br>");
-				buf.append("deployment_id: <input type=text size=50 name=DeploymentId><p>");
+						+ "separated by a colon and looks something like 10408:7db438070728c02373713c12c73869b3af470b68.<p>");
 				break;
 			case "LTI Certification":
-				buf.append("<input type=hidden name=DeploymentId value=testdeploy />");
-				buf.append("Deployment ID: testdeploy<br>"
-						+ "Client ID: <input type=text size=40 name=ClientId><p>");
+			case "1EdTech Certification":
+				platform_id = "https://ltiadvantagevalidator.imsglobal.org";
+				oidc_auth_url = "https://ltiadvantagevalidator.imsglobal.org/ltitool/oidcauthurl.html";
+				well_known_jwks_url = "https://oauth2server.imsglobal.org/jwks";
+				oauth_access_token_url = "https://ltiadvantagevalidator.imsglobal.org/ltitool/authcodejwt.html";
+				deployment_id = "testdeploy";
 				break;
 			default:
-				buf.append("Client ID: <input type=text size=40 name=ClientId><br>"
-						+ "Deployment ID: <input type=text size=40 name=DeploymentId><p>");
-				buf.append("In addition, ChemVantage needs URLs for the end points on your LMS in order to access services "
-						+ "(e.g., Assignment and Grade Services) provided by your LMS platform. All fields are required, "
-						+ "and all URLs should begin with https://<br>"
-						+ "Platform ID: <input type=text size=40 name=PlatformId> (base URL for your LMS)<br>"
-						+ "Platform OIDC Auth URL: <input type=text name=OIDCAuthUrl><br>"
-						+ "Platform OAuth Access Token URL: <input type=text name=OauthAccessTokenUrl><br>"
-						+ "Platform JSON Web Key Set URL: <input type=text name=JWKSUrl><br>");
 			}
+			
+			buf.append("Client ID: <input type=text size=40 name=ClientId value='" + client_id + "' /><br>"
+					+ "Deployment ID: <input type=text size=40 name=DeploymentId value='" + deployment_id + "' /><br>"
+					+ "Platform ID: <input type=text size=40 name=PlatformId value='" + platform_id + "' /> (base URL for your LMS)<br>"
+					+ "Platform OIDC Auth URL: <input type=text size=40 name=OIDCAuthUrl value='" + oidc_auth_url + "' /><br>"
+					+ "Platform OAuth Access Token URL: <input type=text size=40 name=OauthAccessTokenUrl value='" + oauth_access_token_url + "' /><br>"
+					+ "Platform JSON Web Key Set URL: <input type=text size=40 name=JWKSUrl value='" + well_known_jwks_url + "' /><br>");
+
 			buf.append("<input type=submit value='Complete the LTI Registration'></form>");	
 		} catch (Exception e) {
 			buf.append("<h3>Registration Failed</h3>"
@@ -630,53 +642,20 @@ public class LTIRegistration extends HttpServlet {
 		String organization = jwt.getAudience().get(0);
 		String org_url = jwt.getClaim("url").asString();
 		String lms = jwt.getClaim("lms").asString();
-		String client_id = request.getParameter("ClientId");
-		if (client_id==null) throw new Exception("Client ID value is required.");
-		String deployment_id = request.getParameter("DeploymentId");
-		if (deployment_id==null) throw new Exception("Deployment ID value is required.");
-		String platform_id;
-		String oidc_auth_url;
-		String oauth_access_token_url;
-		String well_known_jwks_url;
 		
-		switch (lms) {
-		case "blackboard":
-			platform_id = "https://blackboard.com";
-			oidc_auth_url = "https://developer.blackboard.com/api/v1/gateway/oidcauth";
-			well_known_jwks_url = "https://developer.blackboard.com/api/v1/management/applications/" + client_id + "/jwks.json";
-			oauth_access_token_url = "https://developer.blackboard.com/api/v1/gateway/oauth2/jwttoken";
-			break;
-		case "schoology":
-			platform_id = "https://schoology.schoology.com";
-			oidc_auth_url = "https://lti-service.svc.schoology.com/lti-service/authorize-redirect";
-			well_known_jwks_url = "https://lti-service.svc.schoology.com/lti-service/.well-known/jwks";
-			oauth_access_token_url = "https://lti-service.svc.schoology.com/lti-service/access-token";
-			break;
-		case "canvas":
-			platform_id = "https://canvas.instructure.com";
-			oidc_auth_url = "https://canvas.instructure.com/api/lti/authorize_redirect";
-			well_known_jwks_url = "https://canvas.instructure.com/api/lti/security/jwks";
-			URL account_url = new URL(request.getParameter("AccountUrl"));
-			if (account_url.getHost().contains("instructure.com")) oauth_access_token_url = "https://" + account_url.getHost() + "/login/oauth2/token";
-			else oauth_access_token_url = "https://canvas.instructure.com/login/oauth2/token";
-			break;
-		case "LTI Certification":
-		case "1EdTech Certification":
-			platform_id = "https://ltiadvantagevalidator.imsglobal.org";
-			oidc_auth_url = "https://ltiadvantagevalidator.imsglobal.org/ltitool/oidcauthurl.html";
-			well_known_jwks_url = "https://oauth2server.imsglobal.org/jwks";
-			oauth_access_token_url = "https://ltiadvantagevalidator.imsglobal.org/ltitool/authcodejwt.html";
-			break;
-		default:
-			platform_id = request.getParameter("PlatformId");
-			if (platform_id==null || platform_id.isEmpty()) throw new Exception("Platform ID value is required.");
-			oidc_auth_url = request.getParameter("OIDCAuthUrl");
-			if (oidc_auth_url==null || oidc_auth_url.isEmpty()) throw new Exception("OIDC Auth URL is required.");
-			oauth_access_token_url = request.getParameter("OauthAccessTokenUrl");
-			if (oauth_access_token_url==null || oauth_access_token_url.isEmpty()) throw new Exception("OAuth Access Token URL is required.");
-			well_known_jwks_url = request.getParameter("JWKSUrl");
-			if (well_known_jwks_url==null || well_known_jwks_url.isEmpty()) throw new Exception("JSON Web Key Set URL is required.");
-		}
+		String client_id = request.getParameter("ClientId");
+		String deployment_id = request.getParameter("DeploymentId");
+		String platform_id = request.getParameter("PlatformId");
+		String oidc_auth_url = request.getParameter("OIDCAuthUrl");
+		String oauth_access_token_url = request.getParameter("OauthAccessTokenUrl");
+		String well_known_jwks_url = request.getParameter("JWKSUrl");
+		
+		if (client_id==null) throw new Exception("Client ID value is required.");
+		if (deployment_id==null) throw new Exception("Deployment ID value is required.");
+		if (platform_id==null || platform_id.isEmpty()) throw new Exception("Platform ID value is required.");
+		if (oidc_auth_url==null || oidc_auth_url.isEmpty()) throw new Exception("OIDC Auth URL is required.");
+		if (oauth_access_token_url==null || oauth_access_token_url.isEmpty()) throw new Exception("OAuth Access Token URL is required.");
+		if (well_known_jwks_url==null || well_known_jwks_url.isEmpty()) throw new Exception("JSON Web Key Set URL is required.");
 			
 		Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
 		d.status = "pending";
@@ -691,7 +670,7 @@ public class LTIRegistration extends HttpServlet {
 		if (prior!=null) {  // this is a repeat registration
 			d.status = prior.status==null?"pending":prior.status;
 			if (prior.client_id.equals(d.client_id)) msg += "Note: this platform deployment was registered previously. The registration data have now been updated.<p>";
-			else msg += "Note: This platform deployment was registered previously. The client_id and registration data have now been updated. If this is not correct, you should contact admin@chemvantage.org immediately.<p>";
+			else msg += "<p>Note: This platform deployment was registered previously. The client_id and registration data have now been updated. If this is not correct, you should contact admin@chemvantage.org immediately.<p>";
 		}
 		
 		ofy().save().entity(d).now();  // registration is now complete
