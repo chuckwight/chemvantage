@@ -230,19 +230,28 @@ public class LTIv1p3Launch extends HttpServlet {
 			String resourceId = null;  // this is a String representation of the assignmentId that is set during the DeepLinking flow
 			JsonObject lineitem = null;
 
-			if (lti_ags_lineitem_url == null && scope.contains("lineitem")) {  // not common; the deployment should usually send the lineitem URL
-				debug.append("Fetching Lineitem.");
-				try {
-					lineitem = LTIMessage.getLineItem(d, resourceLinkId, lti_ags_lineitems_url);
-					lti_ags_lineitem_url = lineitem==null?null:lineitem.get("id").getAsString();
-				} catch (Exception e) {}
-			}
-
-			if (lti_ags_lineitem_url != null) {  // this is the default, most common way of retrieving the Assignment; uses local Map for fast retrieval
+			if (lti_ags_lineitem_url != null) {  // this is the default, most common way of retrieving the Assignment
 				debug.append("Retrieving assignment by lineitem. ");
-				try {
-					myAssignment = ofy().load().type(Assignment.class).filter("lti_ags_lineitem_url",lti_ags_lineitem_url).first().safe();
-				} catch (Exception e) {
+				myAssignment = ofy().load().type(Assignment.class).filter("lti_ags_lineitem_url",lti_ags_lineitem_url).first().now();
+				
+				if (myAssignment==null) {  // this may be a fresh copy of an assignment; try to find the original by its resourceLinkId history
+					try {
+						JsonObject custom = claims.get("https://purl.imsglobal.org/spec/lti/claim/custom").getAsJsonObject();
+						String resourceLinkIdHistory = custom.get("resource_link_id_history").getAsString();
+						switch (resourceLinkIdHistory) {
+						case "": break;  // not supported by the LMS
+						case "$ResourceLink.id.history": break;  // no parent lineitem known
+						default:
+							int i = resourceLinkIdHistory.indexOf(",");
+							if (i>0) resourceLinkIdHistory = resourceLinkIdHistory.substring(0,i);  // shorten to most recent parent value
+							myAssignment = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkIdHistory).first().now();						
+							myAssignment.id = ofy().factory().allocateId(Assignment.class).getId();  // forces a new copy to be saved
+							myAssignment.created = new Date();  // with a new created Date
+						}
+					} catch (Exception e) {}
+				}
+				
+				if (myAssignment==null) {  // this may be the first launch of a deeplinking item; check for the resourceId in custom parameters, launch parameters or lineitem
 					debug.append("not found. Now looking for resourceId.");
 					try {
 						JsonObject custom = claims.get("https://purl.imsglobal.org/spec/lti/claim/custom").getAsJsonObject();
@@ -259,15 +268,16 @@ public class LTIv1p3Launch extends HttpServlet {
 						}
 					}
 					debug.append("resourceId=" + resourceId + ".");
-					if (resourceId != null) myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).safe();
-
-					// detect if the current launch is of a copied course/assignment (changed lti_ags_lineitem_url) 
-					if (myAssignment != null && myAssignment.lti_ags_lineitem_url != null && !myAssignment.lti_ags_lineitem_url.equals(lti_ags_lineitem_url)) {  
-						// and change the id to make a new copy of the Assignment entity
-						myAssignment.id = ofy().factory().allocateId(Assignment.class).getId();
-						myAssignment.created = new Date();
+					if (resourceId != null) {  // found an ancestor Assignment but could be parent, grandparent, etc
+						try {
+							myAssignment = ofy().load().type(Assignment.class).id(Long.parseLong(resourceId)).safe();
+							if (myAssignment.lti_ags_lineitem_url != null) {  // current launch is for a copy (descendant) assignment
+								myAssignment.id = ofy().factory().allocateId(Assignment.class).getId();  // forces a new copy Assignment entity to be saved
+								myAssignment.created = new Date();  // with a new created Date
+							}
+						} catch (Exception e) {}
 					}
-				}
+				}	
 			}
 			
 			// It is still possible to create assignments without DeepLinking; in this case, retrieve the assignment via the ResourceLinkId value
