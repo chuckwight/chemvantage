@@ -241,6 +241,8 @@ public class Poll extends HttpServlet {
 					+ "<input type=submit name=UserRequest value='Open the Poll' /> "
 					+ "<a href=/Poll?sig=" + user.getTokenSignature() + ">Cancel</a>"
 					+ "</form><br/><br/>");
+		} else if (user.isTeachingAssistant()) {
+			buf.append("<a href=/Poll?UserRequest=ViewResults&sig=" + user.getTokenSignature() + ">View the Results</a>");
 		} else {
 			buf.append("Please wait. Your instructor should inform you when the poll is open.<br/>"
 					+ "At that time you can click the button below to view the poll questions.<br/><br/>");
@@ -473,7 +475,7 @@ public class Poll extends HttpServlet {
 		StringBuffer debug = new StringBuffer("Debug:");
 		
 		try {
-		if (!user.isInstructor() && !a.pollIsClosed) return waitForResults(user,a);
+		if (!user.isTeachingAssistant() && !a.pollIsClosed) return waitForResults(user,a);
 		
 		buf.append("<h2>Poll Results</h2>");
 		if (user.isInstructor()) {
