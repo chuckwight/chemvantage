@@ -517,12 +517,15 @@ public class Poll extends HttpServlet {
 		if (forUserHashedId==null) pt = getPollTransaction(user);
 		else if (user.isInstructor()) {
 			pt = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).filter("userId",forUserHashedId).first().now();
-			buf.append("Name: " + (forUserName==null?"(withheld)":forUserName) + "<br/>"
-					+ "Assignment ID: " + a.id + "<br/>");
 			if (pt==null) {
 				buf.append("<br/>There was no poll submission for this user.");
 				return buf.toString();
-			} else buf.append("Submitted: " + new Date() + "<br/><br/>");	
+			} else {
+				buf.append("Name: " + (forUserName==null?"(withheld)":forUserName) + "<br/>"
+						+ "Assignment ID: " + a.id + "<br/>"
+						+ "Transaction ID: " + pt.id + "<br/>"
+						+ "Submitted: " + pt.completed + "<br/><br/>");	
+			}
 		}
 		
 		List<PollTransaction> pts = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).list();
