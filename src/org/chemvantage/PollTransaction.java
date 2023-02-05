@@ -19,6 +19,7 @@ package org.chemvantage;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 
 import com.googlecode.objectify.Key;
@@ -34,9 +35,10 @@ public class PollTransaction implements Serializable {
 	@Index  long assignmentId;
 	@Index	Date downloaded;
 			Date completed;
+			int nSubmissions;
 			int score;
 			int possibleScore;
-			Map<Key<Question>,String> responses;
+			Map<Key<Question>,String> responses = new HashMap<Key<Question>,String>();
 	
     PollTransaction() {}
     

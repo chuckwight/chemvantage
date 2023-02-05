@@ -189,10 +189,6 @@ public class Poll extends HttpServlet {
 		}
 	}
 
-	boolean responsesRecorded(User user) {
-		return getPollTransaction(user).completed != null;
-	}
-	
 	String instructorPage(User user,Assignment a,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		
@@ -309,11 +305,16 @@ public class Poll extends HttpServlet {
 		buf.append("<form id=pollForm method=post action='/Poll' onSubmit='return confirmSubmission(" + a.questionKeys.size() + ")'>"
 				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
 		
+		// see if this user already has a submission for this assignment; else get a new PollTransaction
+		PollTransaction pt = getPollTransaction(user,a);
+		
 		for (Key<Question> k : a.questionKeys) {  // main loop to present questions
 			Question q = getQuestion(k); // this should nearly always work
 			if (q==null) continue;		 // but skip the question if it has been deleted
 			q.setParameters(a.id % Integer.MAX_VALUE);
-			buf.append("<li>" + q.print() + "<br /></li>");
+			String studentResponse = pt.responses.get(k);
+			if (studentResponse==null) studentResponse = "";
+			buf.append("<li>" + q.print(null,studentResponse) + "<br/></li>");
 			possibleScore += q.correctAnswer==null || q.correctAnswer.isEmpty()?0:q.pointValue;
 		}
 		buf.append("</OL>");
@@ -365,11 +366,11 @@ public class Poll extends HttpServlet {
 	PollTransaction submitResponses(User user,Assignment a,HttpServletRequest request) {
 		if (a.pollIsClosed) return null;
 		
-		PollTransaction pt = getPollTransaction(user);
+		PollTransaction pt = getPollTransaction(user,a);
 		pt.completed = new Date();
 		pt.score = 0;
 		pt.possibleScore = 0;
-		pt.responses = new HashMap<Key<Question>,String>();
+		pt.nSubmissions++;
 		
 		for (Key<Question> k : a.questionKeys) {
 			try {
@@ -393,8 +394,8 @@ public class Poll extends HttpServlet {
 		return pt;
 	}
 	
-	PollTransaction getPollTransaction(User user) {
-		PollTransaction pt = ofy().load().type(PollTransaction.class).filter("assignmentId",user.getAssignmentId()).filter("userId",user.getHashedId()).first().now();
+	PollTransaction getPollTransaction(User user,Assignment a) {
+		PollTransaction pt = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).filter("userId",user.getHashedId()).first().now();
 		if (pt == null) pt = new PollTransaction(user.getId(),new Date(),user.getAssignmentId());
 		return pt;
 	}
@@ -514,7 +515,7 @@ public class Poll extends HttpServlet {
 		debug.append("b.");
 		
 		PollTransaction pt = null;
-		if (forUserHashedId==null) pt = getPollTransaction(user);
+		if (forUserHashedId==null) pt = getPollTransaction(user,a);
 		else if (user.isInstructor()) {
 			pt = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).filter("userId",forUserHashedId).first().now();
 			if (pt==null) {
@@ -524,6 +525,8 @@ public class Poll extends HttpServlet {
 				buf.append("Name: " + (forUserName==null?"(withheld)":forUserName) + "<br/>"
 						+ "Assignment ID: " + a.id + "<br/>"
 						+ "Transaction ID: " + pt.id + "<br/>"
+						+ "Submissions: " + pt.nSubmissions + "<br/>"
+						+ (pt.nSubmissions>1?"First Submitted: " + pt.downloaded + "<br/>Last ":"")
 						+ "Submitted: " + pt.completed + "<br/><br/>");	
 			}
 		}
