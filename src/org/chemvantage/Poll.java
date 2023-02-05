@@ -25,6 +25,7 @@ import java.io.PrintWriter;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -76,8 +77,19 @@ public class Poll extends HttpServlet {
 			case "ViewResults":
 				if (user.isInstructor()) out.println(Subject.header() + resultsPage(user,a) + Subject.footer);
 				break;
+			case "ShowSummary":
+				out.println(Subject.header("Your Class ChemVantage Scores") + showSummary(user,request) + Subject.footer);
+				break;
+			case "Review":
+				String forUserHashedId = request.getParameter("ForUserHashedId");
+				String forUserName = request.getParameter("ForUserName");
+				out.println(Subject.header("Poll Submission Review") + resultsPage(user,forUserHashedId,forUserName,a));
+				break;
 			case "Synch":
 				out.println(new Date().getTime());
+				break;
+			case "Edit":
+				out.println(Subject.header() + editQuestion(user,request) + Subject.footer);
 				break;
 			default:
 				if (user.isInstructor()) out.println(Subject.header() + instructorPage(user,a,request) + Subject.footer);
@@ -151,13 +163,21 @@ public class Poll extends HttpServlet {
 				addQuestions(user,a,request);
 				out.println(Subject.header() + editPage(user,a,request) + Subject.footer);
 				break;
-			case "DeleteQuestions":
+			case "Remove":
 				if (!user.isInstructor()) break;
-				deleteQuestions(user,a,request);
+				removeQuestion(user,a,request);
 				out.println(Subject.header() + editPage(user,a,request) + Subject.footer);
 				break;
 			case "View the Poll Results":
 				out.println(Subject.header() + resultsPage(user,a) + Subject.footer);
+				break;
+			case "MvUp":
+				moveUp(user,a,request);
+				out.println(Subject.header() + editPage(user,a,request) + Subject.footer);
+				break;
+			case "MvDn":
+				moveDn(user,a,request);
+				out.println(Subject.header() + editPage(user,a,request) + Subject.footer);
 				break;
 			case "Preview":
 			case "Quit":
@@ -195,12 +215,16 @@ public class Poll extends HttpServlet {
 				+ "When the poll is closed, responses are not accepted and students are provided a link to view the poll results.<br/><br/>");
 		
 		int nSubmissions = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).count();
-		buf.append("There are currently " + nSubmissions + " completed submissions for this poll. "
-				+ (a.pollIsClosed?
-					"<a href=/Poll?UserRequest=ViewResults&sig=" + user.getTokenSignature() + ">View the Results</a>":
-					"<a href=/Poll?sig=" + user.getTokenSignature() + ">Refresh this page</a>") 
-				+ "<br/><br/>");
-
+		boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
+		buf.append("There are currently " + nSubmissions + " completed submissions for this poll. ");
+		if (a.pollIsClosed) {
+			buf.append("<br/>You may <a href=/Poll?UserRequest=ViewResults&sig=" + user.getTokenSignature() + ">view the poll results</a> "
+					+ (supportsMembership?"or <a href='/Poll?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>review your students' scores</a>":"") 
+					+ ".<br/><br/>");
+		} else {
+			buf.append("<a href=/Poll?sig=" + user.getTokenSignature() + ">Refresh this page</a><br/><br/>");
+		}
+		
 		// If the poll is open, provide a quick way to close it while staying on this page
 		buf.append("<b>This class poll is currently " + (a.pollIsClosed?"closed.</b>":"open.</b> <form style='display:inline;' method=post action=/Poll >"
 				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
@@ -471,6 +495,10 @@ public class Poll extends HttpServlet {
 	}
 	
 	String resultsPage(User user,Assignment a) {
+		return resultsPage(user,null,null,a);
+	}
+	
+	String resultsPage(User user,String forUserHashedId,String forUserName,Assignment a) {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Debug:");
 		
@@ -478,14 +506,25 @@ public class Poll extends HttpServlet {
 		if (!user.isTeachingAssistant() && !a.pollIsClosed) return waitForResults(user,a);
 		
 		buf.append("<h2>Poll Results</h2>");
-		if (user.isInstructor()) {
+		if (user.isInstructor() && forUserHashedId==null) {
 			if (a.pollIsClosed) buf.append("<b>Be sure to tell your students that the poll is now closed</b> and to click the button to view the poll results.<br/>");
 			else buf.append("The poll is still open. ");
 			buf.append("You can <a href=/Poll?sig=" + user.getTokenSignature() + ">return to the instructor page</a> at any time.<br/><br/> ");
 		}
 		debug.append("b.");
 		
-		PollTransaction pt = getPollTransaction(user);	
+		PollTransaction pt = null;
+		if (forUserHashedId==null) pt = getPollTransaction(user);
+		else if (user.isInstructor()) {
+			pt = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).filter("userId",forUserHashedId).first().now();
+			buf.append("Name: " + (forUserName==null?"(withheld)":forUserName) + "<br/>"
+					+ "Assignment ID: " + a.id + "<br/>");
+			if (pt==null) {
+				buf.append("<br/>There was no poll submission for this user.");
+				return buf.toString();
+			} else buf.append("Submitted: " + new Date() + "<br/><br/>");	
+		}
+		
 		List<PollTransaction> pts = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).list();
 		buf.append("\n");
 		buf.append("<script>"
@@ -731,11 +770,8 @@ public class Poll extends HttpServlet {
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='NewQuestion' />"
 					+ "or <input type=submit value='Create a custom question of your own' /> "
-					+ "</form>");
-			buf.append("<form method=post action='/Poll'><input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-					+ "<input type=hidden name=UserRequest value='DeleteQuestions' />"
-					+ "or <input type=submit value='Remove the selected items below from this poll' /> "
-					+ "or <a href=/Poll?sig=" + user.getTokenSignature() + ">Done Editing</a>");
+					+ "</form>or <a href=/Poll?sig=" + user.getTokenSignature() + ">Done Editing</a>");
+			
 			if (conceptId!=null) buf.append("<br/><br/><span style=background-color:yellow;font-weight:bold;>Sorry, there are no avalable questions for the selected key concept.</span>");
 			
 			buf.append("<h3>Current Questions For This Poll</h3>");
@@ -751,13 +787,24 @@ public class Poll extends HttpServlet {
 				q.setParameters();
 				i++;
 				buf.append("<div style='display: table-row'>");
-				buf.append("<div style='display: table-cell;width: 55px;'><input type=checkbox name=QuestionId value='" + q.id + "' />&nbsp;" + i + ".</div>");
+				buf.append("<div style='display: table-cell;width: 75px;padding-right:20px;align: center'>" 
+						+ "<div style='text-align: right';>" + i + ".</div>"
+						+ "<form action=/Poll method=post>"
+						+ "<input type=hidden name=QuestionId value='" + q.id + "' />"
+						+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+						+ (a.questionKeys.indexOf(k)>0?"<input type=submit name=UserRequest value='MvUp' />":"")
+						+ (a.questionKeys.indexOf(k)<a.questionKeys.size()-1?"<input type=submit name=UserRequest value='MvDn' />":"")
+						+ "<br/><input type=submit name=UserRequest value='Remove' />"
+						+ "</form>");
+				if (user.getId().equals(q.authorId)) {  // give a chance to edit the question
+					buf.append("<a href=/Poll?sig=" + user.getTokenSignature() + "&UserRequest=Edit&QuestionId=" + q.id + ">Edit</a>");
+				}
+				buf.append("</div>");
 				buf.append("<div style='display: table-cell'>" + q.printAll() + "</div>");
-				buf.append("</div><br />"); // end of row
+				buf.append("</div><br/>"); // end of row
 				possibleScore += q.pointValue;
 			}
-			buf.append("</form>");
-
+			
 			if (a.questionKeys.size()>0) buf.append("<hr/>This poll is worth a possible " + possibleScore + " points. "
 					+ "<a href=/Poll?sig=" + user.getTokenSignature() + ">Done Editing</a><br/><br/>");		
 		} else {  // present candidate questions for including in the Poll
@@ -794,18 +841,12 @@ public class Poll extends HttpServlet {
 		}
 	}
 	
-	void deleteQuestions(User user,Assignment a,HttpServletRequest request) {
-		String[] qids = request.getParameterValues("QuestionId");
-		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
-		for (String qid : qids) {
-			try {
-				questionKeys.add(Key.create(Question.class,Long.parseLong(qid)));
-			} catch (Exception e) {}
-		}
-		if (questionKeys.size()>0) {
-			a.questionKeys.removeAll(questionKeys);
-			ofy().save().entity(a).now();
-		}
+	void removeQuestion(User user,Assignment a,HttpServletRequest request) {
+		try {
+			Long questionId = Long.parseLong(request.getParameter("QuestionId"));
+			Key<Question> k = Key.create(Question.class,questionId);
+			if (a.questionKeys.remove(k)) ofy().save().entity(a).now();
+		} catch (Exception e) {}
 	}
 	
 	String newQuestionForm(User user,HttpServletRequest request) {
@@ -869,6 +910,50 @@ public class Poll extends HttpServlet {
 		return buf.toString();
 	}
 
+	String editQuestion (User user,HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer();
+		try {
+			long questionId = Long.parseLong(request.getParameter("QuestionId"));
+			Question q = ofy().load().type(Question.class).id(questionId).safe();
+			
+			if (!user.isInstructor() || !user.getId().equals(q.authorId)) throw new Exception("Access denied.");
+			
+			if (q.requiresParser()) q.setParameters();
+			buf.append("<h3>Current Question</h3>");
+			buf.append("Assignment Type: Poll<br>");
+			buf.append("Author: " + q.authorId + "<br>");
+			buf.append("Editor: " + q.editorId + "<br>");
+			
+			buf.append("<FORM Action=/Poll METHOD=POST>"
+					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />");
+			
+			buf.append(q.printAll());
+			
+			if (q.authorId==null) q.authorId="";
+			if (q.editorId==null) q.editorId="";
+			buf.append("<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + q.authorId + "' />");
+			buf.append("<INPUT TYPE=HIDDEN NAME=EditorId VALUE='" + q.editorId + "' />");
+			buf.append("<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + questionId + "' />");
+			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Question' />");
+			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit' />");
+			
+			buf.append("<hr><h3>Edit This Question</h3>");
+			
+			buf.append("Assignment Type: Poll<br>");
+			
+			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
+			buf.append(" Point Value: 1<br>");
+			
+			buf.append(q.edit());
+			
+			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Preview />");
+			buf.append("</FORM>");
+		} catch (Exception e) {
+			buf.append(e.toString());
+		}
+		return buf.toString();
+	}
+	
 	String previewQuestion(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Debug:");
@@ -896,7 +981,7 @@ public class Poll extends HttpServlet {
 			if (q.requiresParser()) q.setParameters();
 			debug.append("d");
 			
-			buf.append("<h3>Preview Custom Poll Question</h3>");
+			buf.append("<h3>Preview Poll Question</h3>");
 			
 			q.assignmentType = "Poll";
 				
@@ -1051,4 +1136,102 @@ public class Poll extends HttpServlet {
 		return studentAnswer;
 	}
 
+	static String showSummary(User user, HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer();
+		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
+		if (a==null) return "No assignment was specified for this request.";
+		if (!user.isInstructor()) return "You must be logged in as the instructor to view this page.";
+		if (a.lti_nrps_context_memberships_url==null) return "Sorry, your LMS does not support the Names and Roles Provisioning Service.";
+
+		try {
+			buf.append("<h3>" + a.assignmentType + "</h3>");
+			buf.append("Valid: " + new Date() + "<p>");
+			buf.append("The roster below is obtained using the Names and Role Provisioning service offered by your learning management system, "
+					+ "and may or may not include user's names or emails, depending on the settings of your LMS.<br/><br/>");
+
+			Map<String,String> scores = LTIMessage.readMembershipScores(a);
+			if (scores==null) scores = new HashMap<String,String>();  // in case service call fails
+
+			Map<String,String[]> membership = LTIMessage.getMembership(a);
+			if (membership==null) membership = new HashMap<String,String[]>(); // in case service call fails
+
+			Map<String,Key<Score>> keys = new HashMap<String,Key<Score>>();
+			Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
+			String platform_id = d.getPlatformId() + "/";
+			for (String id : membership.keySet()) {
+				keys.put(id,Key.create(Key.create(User.class,Subject.hashId(platform_id+id)),Score.class,a.id));
+			}
+			Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
+			buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th><th>Scores Detail</th></tr>");
+			int i=0;
+			boolean synched = true;
+			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
+				if (entry == null) continue;
+				String s = scores.get(entry.getKey());
+				Score cvScore = cvScores.get(keys.get(entry.getKey()));
+				String forUserHashedId = Subject.hashId(platform_id + entry.getKey());  // only send hashed values through links
+				i++;
+				buf.append("<tr><td>" + i + ".&nbsp;</td>"
+						+ "<td>" + entry.getValue()[1] + "</td>"
+						+ "<td>" + entry.getValue()[2] + "</td>"
+						+ "<td>" + entry.getValue()[0] + "</td>"
+						+ "<td align=center>" + (s == null?" - ":s + "%") + "</td>"
+						+ "<td align=center>" + (cvScore == null?" - ":String.valueOf(cvScore.getPctScore()) + "%") + "</td>"
+						+ "<td align=center>" + (cvScore == null?" - ":"<a href=/Poll?UserRequest=Review&sig=" + user.getTokenSignature() + "&ForUserHashedId=" + forUserHashedId + "&ForUserName=" + entry.getValue()[1].replaceAll(" ","+") + ">show</a>") + "</td>"
+						+ "</tr>");
+				// Flag this score set as unsynchronized only if there is one or more non-null ChemVantage Learner score that is not equal to the LMS score
+				// Ignore Instructor scores because the LMS often does not report them, and ignore null cvScore entities because they cannot be reported.
+				synched = synched && (!"Learner".equals(entry.getValue()[0]) || (cvScore!=null?String.valueOf(cvScore.getPctScore()).equals(s):true));
+			}
+			buf.append("</table><br/>");
+			if (!synched) {
+				buf.append("If any of the Learner scores above are not synchronized, you may use the button below to launch a background task " 
+						+ "where ChemVantage will resubmit them to your LMS. This can take several seconds to minutes depending on the "
+						+ "number of scores to process. Please note that you may have to adjust the settings in your LMS to accept the "
+						+ "revised scores. For example, in Canvas you may need to change the assignment settings to Unlimited Submissions. "
+						+ "This may also cause the submission to be counted as late if the LMS assignment deadline has passed.<br/>"
+						+ "<form method=post action=/Poll >"
+						+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+						+ "<input type=hidden name=UserRequest value='Synchronize Scores' />"
+						+ "<input type=submit value='Synchronize Scores' />"
+						+ "</form>");
+			}
+			return buf.toString();
+		} catch (Exception e) {
+			buf.append(e.toString());
+		}
+
+		return buf.toString();
+	}
+	
+	void moveUp(User user,Assignment a,HttpServletRequest request) {
+		// this method moves a Poll question earlier in the Poll
+		if (!user.isInstructor()) return;
+		try {
+			Long questionId = Long.parseLong(request.getParameter("QuestionId"));
+			Key<Question> k = Key.create(Question.class,questionId);
+			int i = a.questionKeys.indexOf(k);
+			if(i>0) {
+				Collections.swap(a.questionKeys, i, i-1);
+				ofy().save().entity(a).now();
+			}
+		} catch (Exception e) {			
+		}
+	}
+	
+	void moveDn(User user,Assignment a,HttpServletRequest request) {
+		// this method moves a Poll question later in the Poll
+		if (!user.isInstructor()) return;
+		try {
+			Long questionId = Long.parseLong(request.getParameter("QuestionId"));
+			Key<Question> k = Key.create(Question.class,questionId);
+			int i = a.questionKeys.indexOf(k);
+			if(i<a.questionKeys.size()-1) {
+				Collections.swap(a.questionKeys, i, i+1);
+				ofy().save().entity(a).now();
+			}
+		} catch (Exception e) {			
+		}
+	}
+	
 }
