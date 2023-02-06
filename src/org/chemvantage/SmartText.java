@@ -1,6 +1,5 @@
 package org.chemvantage;
 
-import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
@@ -18,7 +17,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
 
 @WebServlet("SmartText")
@@ -316,7 +314,8 @@ public class SmartText extends HttpServlet {
 			   st.graded = new Date();
 			   Score s = Score.getInstance(user.getId(), a);
 			   ofy().save().entity(s).now();
-			   QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue   
+			   CreateTask.init("/ReportScore?AssignmentId="+assignmentId+"&UserId="+URLEncoder.encode(user.getId(),"UTF-8"),0);
+				//QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue   
 		   }
 		   ofy().save().entity(st).now();
 

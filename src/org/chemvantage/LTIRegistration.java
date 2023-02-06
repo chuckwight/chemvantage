@@ -52,10 +52,10 @@ import javax.servlet.http.HttpServletResponse;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 @WebServlet(urlPatterns = {"/lti/registration","/lti/registration/","/lti_config.xml"})
 public class LTIRegistration extends HttpServlet {
@@ -259,7 +259,7 @@ public class LTIRegistration extends HttpServlet {
 		
 		// read & interpret the JSON response from Google
     	BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-		JsonObject captchaResponse = JsonParser.parseReader(reader).getAsJsonObject();
+		JsonObject captchaResponse = new Gson().fromJson(reader, JsonObject.class);
     	reader.close();
 		
 		//JsonObject captchaResp = JsonParser.parseString(res.toString()).getAsJsonObject();
@@ -785,7 +785,7 @@ public class LTIRegistration extends HttpServlet {
     		int responseCode = uc.getResponseCode();
     		if (responseCode == 200) {
     			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-    			JsonObject openIdConfiguration = JsonParser.parseReader(reader).getAsJsonObject();
+    			JsonObject openIdConfiguration = new Gson().fromJson(reader, JsonObject.class);
     			reader.close();
     			return openIdConfiguration;
     		} else throw new Exception("Platform returned response code " + responseCode);
@@ -943,7 +943,7 @@ public class LTIRegistration extends HttpServlet {
 		try {
 			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
 			debug.append("e");
-			registrationResponse = JsonParser.parseReader(reader).getAsJsonObject();
+			registrationResponse = new Gson().fromJson(reader, JsonObject.class);
 			debug.append("f");
 		} catch (Exception e) {
 			debug.append("g");

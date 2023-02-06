@@ -38,9 +38,9 @@ import javax.servlet.http.HttpServletResponse;
 import com.google.appengine.api.appidentity.AppIdentityService;
 import com.google.appengine.api.appidentity.AppIdentityServiceFactory;
 import com.google.common.io.CharStreams;
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 @WebServlet(name = "DatastoreExportServlet", value = "/cloud-datastore-export")
 @ServletSecurity(@HttpConstraint(rolesAllowed = {"admin"}))
@@ -142,7 +142,7 @@ public class DatastoreExportServlet extends HttpServlet {
 
 			// Success, print export operation information
 			InputStreamReader r = new InputStreamReader(connection.getInputStream(),StandardCharsets.UTF_8);
-			JsonObject exportResponse = JsonParser.parseReader(r).getAsJsonObject();
+			JsonObject exportResponse = new Gson().fromJson(r, JsonObject.class);
 			
 			response.setContentType("text/plain");
 			response.getWriter().println(

@@ -41,8 +41,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
 
@@ -271,7 +271,7 @@ public class Feedback extends HttpServlet {
 
 			// read & interpret the JSON response from Google
 			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-			captchaResponse = JsonParser.parseReader(reader).getAsJsonObject();
+			captchaResponse = new Gson().fromJson(reader, JsonObject.class);
 			reader.close();
 		} catch (Exception e) {
 		} finally {

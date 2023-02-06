@@ -17,8 +17,6 @@
 
 package org.chemvantage;
 
-import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
-
 /* This servlet executes a valid LTI ResourceLink launch request using LTI v1.3 specifications
  * The basic requesting entity is a Deployment. Although a single LMS platform may host several
  * Deployments (e.g., as separate accounts), each Deployment will designate a client_id that identifies
@@ -46,6 +44,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -66,11 +65,10 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.auth0.jwt.interfaces.JWTVerifier;
-import com.google.appengine.api.taskqueue.QueueFactory;
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.googlecode.objectify.Key;
 
 @WebServlet(urlPatterns = {"/lti/launch","/lti/launch/"})
@@ -128,7 +126,7 @@ public class LTIv1p3Launch extends HttpServlet {
 		try {
 			DecodedJWT id_token = JWT.decode(request.getParameter("id_token"));
 			String json = new String(Base64.getUrlDecoder().decode(id_token.getPayload()));
-			claims = JsonParser.parseString(json).getAsJsonObject();
+			claims = new Gson().fromJson(json, JsonObject.class);
 		} catch (Exception e) {
 			throw new Exception("id_token was not a valid JWT.");
 		}
@@ -310,7 +308,8 @@ public class LTIv1p3Launch extends HttpServlet {
 				if (myAssignment.id==null || !myAssignment.equivalentTo(original_a)) {
 					ofy().save().entity(myAssignment).now();
 					Group.update(d,myAssignment);
-					QueueFactory.getDefaultQueue().add(withUrl("/DataStoreCleaner").param("Task","CleanAssignments").param("AssignmentId",String.valueOf(myAssignment.id)));  // put task into the Task Queue
+					CreateTask.init("/DataStoreCleaner?Task=CleanAssignments&AssignmentId="+myAssignment.id,0);
+					// QueueFactory.getDefaultQueue().add(withUrl("/DataStoreCleaner").param("Task","CleanAssignments").param("AssignmentId",String.valueOf(myAssignment.id)));  // put task into the Task Queue
 				}
 			} catch (Exception e) {
 				throw new Exception("Assignment could not be updated during LTI launch sequence. " + e.getMessage());
@@ -414,7 +413,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			if (!Nonce.isUnique(nonce)) throw new Exception("Nonce was used previously.");
 
 			// return the state token payload as a JSON
-			return JsonParser.parseString(new String(Base64.getUrlDecoder().decode(JWT.decode(state).getPayload()))).getAsJsonObject();
+			return new Gson().fromJson(new String(Base64.getUrlDecoder().decode(JWT.decode(state).getPayload())), JsonObject.class);
 		} catch (Exception e) {
 			throw new Exception("State parameter was invalid: " + e.getMessage());
 		}

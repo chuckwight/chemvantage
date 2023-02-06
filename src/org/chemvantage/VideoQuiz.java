@@ -17,7 +17,6 @@
 
 package org.chemvantage;
 
-import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
@@ -39,8 +38,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.appengine.api.taskqueue.Queue;
-import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
 
 @WebServlet("/VideoQuiz")
@@ -366,8 +363,9 @@ public class VideoQuiz extends HttpServlet {
 
 		if (reportScoreToLms) {
 			try {
-				Queue queue = QueueFactory.getDefaultQueue();  // Task queue used for reporting scores to the LMS
-				queue.add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue
+				CreateTask.init("/ReportScore?AssignmentId="+a.id+"&UserId="+URLEncoder.encode(user.getId(),"UTF-8"),0);
+				//Queue queue = QueueFactory.getDefaultQueue();  // Task queue used for reporting scores to the LMS
+				//queue.add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue
 			} catch (Exception e) {}
 		} else if (!user.isAnonymous()) {
 			buf.append("<b>Please note:</b> Your score was not reported back to the grade book of your class "

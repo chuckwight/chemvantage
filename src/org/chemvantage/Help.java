@@ -34,8 +34,8 @@ import javax.servlet.http.HttpServletResponse;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 @WebServlet(urlPatterns = {"/Help","/help"})
 public class Help extends HttpServlet {
@@ -99,7 +99,7 @@ public class Help extends HttpServlet {
 		// This method verifies that the token is properly signed and has not expired
 		DecodedJWT token = JWT.decode(jwt);            // throws JWTDecodeException if not a valid JWT
 		JWT.require(algorithm).build().verify(token);  // throws JWTVerificationException if not valid		
-		JsonObject payload = JsonParser.parseString(new String(Base64.getUrlDecoder().decode(token.getPayload()))).getAsJsonObject();
+		JsonObject payload = new Gson().fromJson(new String(Base64.getUrlDecoder().decode(token.getPayload())), JsonObject.class);
 		return payload;
 	}
 

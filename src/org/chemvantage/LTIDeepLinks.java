@@ -35,10 +35,10 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.auth0.jwt.interfaces.JWTVerifier;
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
 import com.googlecode.objectify.Key;
 
@@ -97,7 +97,7 @@ public class LTIDeepLinks extends HttpServlet {
 			try {
 				DecodedJWT id_token = JWT.decode(request.getParameter("id_token"));
 				String json = new String(Base64.getUrlDecoder().decode(id_token.getPayload()));
-				claims = JsonParser.parseString(json).getAsJsonObject();
+				claims = new Gson().fromJson(json, JsonObject.class);
 				d.claims = claims.toString();
 				ofy().save().entity(d);
 			} catch (Exception e) {
@@ -132,7 +132,7 @@ public class LTIDeepLinks extends HttpServlet {
 	    if (!Nonce.isUnique(nonce)) throw new Exception("Nonce was used previously.");
 	    
 	    // return the state token payload as a JSON
-	    JsonObject state_json = JsonParser.parseString(new String(Base64.getUrlDecoder().decode(JWT.decode(state).getPayload()))).getAsJsonObject();
+	    JsonObject state_json =new Gson().fromJson(new String(Base64.getUrlDecoder().decode(JWT.decode(state).getPayload())), JsonObject.class);
 	    if (!state_json.get("redirect_uri").getAsString().contains("https://" + request.getServerName() + "/lti/deeplinks")) throw new Exception("Invalid redirect_uri.");
 	}
 
@@ -468,7 +468,7 @@ public class LTIDeepLinks extends HttpServlet {
 			JsonObject claims = null;
 			DecodedJWT id_token = JWT.decode(request.getParameter("id_token"));
 			String json = new String(Base64.getUrlDecoder().decode(id_token.getPayload()));
-			claims = JsonParser.parseString(json).getAsJsonObject();
+			claims = new Gson().fromJson(json, JsonObject.class);
 			
 			String platform_id = claims.get("iss").getAsString();
 			String deployment_id = claims.get("https://purl.imsglobal.org/spec/lti/claim/deployment_id").getAsString();

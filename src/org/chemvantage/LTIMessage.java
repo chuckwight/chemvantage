@@ -47,10 +47,10 @@ import javax.mail.internet.MimeMessage;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+JSON" messages to a Tool Consumer (LMS)
 	
@@ -75,7 +75,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 
 			String authToken = authTokens.get(platformDeploymentId);
 			if (authToken != null) {  //found a cached authToken; check the expiration and use it
-				JsonObject jAuthToken = JsonParser.parseString(authToken).getAsJsonObject();
+				JsonObject jAuthToken = new Gson().fromJson(authToken, JsonObject.class);
 				if (in15Minutes.before(new Date(jAuthToken.get("exp").getAsLong()))) return jAuthToken.get("access_token").getAsString();			
 			}
 
@@ -129,7 +129,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			debug.append(uc.getContent().toString() + "<br/>");
 			
 			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
-			JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+			JsonObject json = new Gson().fromJson(reader, JsonObject.class);
 			reader.close();
 			debug.append("Response: " + json.toString() + "<br/>");
 
@@ -158,7 +158,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     	String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem";    	
     	try {
     		String lineitems = getLineItemContainer(d,lti_ags_lineitems_url,resourceLinkId,scope);
-    		JsonArray lineitems_json_array = JsonParser.parseString(lineitems).getAsJsonArray();
+    		JsonArray lineitems_json_array = new Gson().fromJson(lineitems, JsonArray.class);
 
     		// We submitted the request including the resourceLinkId query, so there are only two possible valid responses:
     		// 0 - if the array is empty, we need to return null
@@ -188,7 +188,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     		responseCode = uc.getResponseCode();
     		if (responseCode == 200) {
     			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-    			JsonObject lineitem_json = JsonParser.parseReader(reader).getAsJsonObject();
+    			JsonObject lineitem_json = new Gson().fromJson(reader, JsonObject.class);
     			reader.close();
     			return lineitem_json;
     		} 
@@ -222,7 +222,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     			uc.setRequestProperty("Accept", "application/vnd.ims.lis.v2.lineitemcontainer+json");
     			uc.connect();
     			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-    			container.addAll(JsonParser.parseReader(reader).getAsJsonArray());
+    			container.addAll(new Gson().fromJson(reader, JsonArray.class));
     			reader.close();
     			
     			next_url = null;
@@ -258,7 +258,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     		if (responseCode > 199 && responseCode < 300) { // OK
     			JsonArray lineitems_json = null;
         		BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-    			lineitems_json = JsonParser.parseReader(reader).getAsJsonArray();
+    			lineitems_json = new Gson().fromJson(reader, JsonArray.class);
     			reader.close();
     			return lineitems_json.toString();
     		} else {
@@ -325,7 +325,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 
 			boolean success = responseCode>199 && responseCode<203;
 			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-			JsonObject lineitem = JsonParser.parseReader(reader).getAsJsonObject();
+			JsonObject lineitem = new Gson().fromJson(reader, JsonObject.class);
 			lineItemUrl = lineitem.get("id").getAsString();
 			reader.close();
 			toTC.close();
@@ -418,7 +418,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			int responseCode = uc.getResponseCode();
 			if (responseCode > 199 && responseCode < 203) {  // OK
 				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-				JsonArray json = JsonParser.parseReader(reader).getAsJsonArray();
+				JsonArray json = new Gson().fromJson(reader, JsonArray.class);
 				reader.close();
 
 				Iterator<JsonElement> iterator = json.iterator();
@@ -466,7 +466,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			int responseCode = uc.getResponseCode();
 			if (responseCode == HttpURLConnection.HTTP_OK) { // 200
 				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-				JsonArray json = JsonParser.parseReader(reader).getAsJsonArray();
+				JsonArray json = new Gson().fromJson(reader, JsonArray.class);
 				reader.close();
 
 				Iterator<JsonElement> iterator = json.iterator();
@@ -592,7 +592,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				int responseCode = uc.getResponseCode();
 				if (responseCode > 199 && responseCode < 203) { // OK
 					BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-					JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+					JsonObject json = new Gson().fromJson(reader, JsonObject.class);
 					reader.close();
 
 					// Copy the relevant parts of the json to the membershipContainer if they don;t already exist:
@@ -646,7 +646,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				int responseCode = uc.getResponseCode();
 				if (responseCode > 199 && responseCode < 203) { // OK
 					BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-					JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+					JsonObject json = new Gson().fromJson(reader, JsonObject.class);
 					reader.close();
 
 					JsonArray members = json.get("members").getAsJsonArray();

@@ -17,12 +17,12 @@
 
 package org.chemvantage;
 
-import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.List;
 import java.util.Properties;
 
@@ -39,8 +39,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.appengine.api.taskqueue.Queue;
-import com.google.appengine.api.taskqueue.QueueFactory;
 import com.googlecode.objectify.Key;
 
 @WebServlet("/ReportScore")
@@ -113,9 +111,10 @@ public class ReportScore extends HttpServlet {
 				User u = new User(platform_id,lmsId);
 				if (u.isInstructor()) return buf.toString();
 				if (attempts < 4) {
-					long countdownMillis = (long) Math.pow(2,attempts)*10800000L;
-					Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
-					queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",userId).param("Retry",Integer.toString(attempts)).countdownMillis(countdownMillis));			
+					int countdownSeconds = (int) Math.pow(2,attempts)*10800;
+					CreateTask.init("/ReportScore?AssignmentId="+a.id+"&UserId="+URLEncoder.encode(userId,"UTF-8")+"&Retry="+attempts,countdownSeconds);
+					// Queue queue = QueueFactory.getDefaultQueue();  // used for storing individual responses by Task queue
+					//queue.add(withUrl("/ReportScore").param("AssignmentId",Long.toString(a.id)).param("UserId",userId).param("Retry",Integer.toString(attempts)).countdownMillis(countdownMillis));			
 				} else throw new Exception("User " + userId + " earned a score of " + s.getPctScore() + "% on assignment "
 						+ a.id + "; however, the score could not be posted to the LMS grade book, even after " + attempts + " attempts. "
 						+ "The response from your LMS was: " + response);

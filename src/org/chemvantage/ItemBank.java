@@ -43,8 +43,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 @WebServlet("/items")
 public class ItemBank extends HttpServlet {
@@ -233,7 +233,7 @@ public class ItemBank extends HttpServlet {
 		
 		// read & interpret the JSON response from Google
     	BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-		JsonObject captchaResponse = JsonParser.parseReader(reader).getAsJsonObject();
+		JsonObject captchaResponse = new Gson().fromJson(reader, JsonObject.class);
     	reader.close();
 		
 		//JsonObject captchaResp = JsonParser.parseString(res.toString()).getAsJsonObject();
