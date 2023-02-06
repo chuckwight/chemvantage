@@ -368,22 +368,25 @@ public class Poll extends HttpServlet {
 		
 		PollTransaction pt = getPollTransaction(user,a);
 		pt.completed = new Date();
-		pt.score = 0;
-		pt.possibleScore = 0;
 		pt.nSubmissions++;
+		
+		int score = 0;
+		int possibleScore = 0;
 		
 		for (Key<Question> k : a.questionKeys) {
 			try {
 				Question q = getQuestion(k);
-				pt.possibleScore += q.pointValue;
+				possibleScore += q.pointValue;
 				String studentAnswer = orderResponses(request.getParameterValues(Long.toString(k.getId())));
 				if (!studentAnswer.isEmpty()) {
 					pt.responses.put(k, studentAnswer);
 					q.setParameters(a.id % Integer.MAX_VALUE);
-					pt.score += q.isCorrect(studentAnswer) || !q.hasACorrectAnswer()?q.pointValue:0;
+					score += q.isCorrect(studentAnswer) || !q.hasACorrectAnswer()?q.pointValue:0;
 				}
 			} catch (Exception e) {}
 		}
+		if (possibleScore != pt.possibleScore) pt.possibleScore = possibleScore;
+		if (score > pt.score) pt.score = score; 
 		ofy().save().entity(pt).now();
 		try {
 			if (user.isAnonymous()) throw new Exception();  // don't save Scores for anonymous users
