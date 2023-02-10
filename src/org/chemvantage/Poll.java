@@ -149,6 +149,13 @@ public class Poll extends HttpServlet {
 				}
 				out.println(Subject.header() + editPage(user,a,request) + Subject.footer);
 				break;
+			case "Update Question":
+				if (!user.isInstructor()) break;
+				Question q = assembleQuestion(request);
+				q.id = Long.parseLong(request.getParameter("QuestionId"));
+				ofy().save().entity(q).now();
+				out.println(Subject.header() + editPage(user,a,request) + Subject.footer);
+				break;
 			case "SubmitResponses":
 				PollTransaction pt = submitResponses(user,a,request);
 				if (pt!=null && pt.completed!=null) {
