@@ -5,6 +5,12 @@ indexes:
   - name: domain
   - name: resourceLinkId
 
+- kind: Assignment
+  properties:
+  - name: assignmentType
+  - name: lti_ags_lineitems_url
+  - name: valid
+
 - kind: Contact
   properties:
   - name: unsubscribed

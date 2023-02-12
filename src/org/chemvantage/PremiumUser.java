@@ -13,7 +13,7 @@ public class PremiumUser {
 	@Id 	String 	hashedId;
 	@Index	public Date exp;
 	@Index	Date start;
-			int paid;
+	@Index	int paid;
 			String org;
 	
 	public PremiumUser() {}

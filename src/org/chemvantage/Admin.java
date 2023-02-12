@@ -62,8 +62,13 @@ public class Admin extends HttpServlet {
 			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
-
-			out.println(Subject.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Subject.footer);
+			switch (userRequest) {
+			case "OpenStaxReport":
+				out.println(Subject.getHeader(user) + Group.openStaxReport() + Subject.footer);
+				break;
+			default: 
+				out.println(Subject.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Subject.footer);
+			}
 		} catch (Exception e) {
 		}
 	}
@@ -181,6 +186,8 @@ public class Admin extends HttpServlet {
 						+ "<input type=submit name=action value='Block'/>&nbsp;"
 						+ "<input type=submit name=action value='Delete'/></form><br/>");
 			}
+			
+			buf.append("<h3><a href=/Admin?UserRequest=OpenStaxReport>Generate OpenStax Report for Prior Quarter</a></h3>");
 			
 			buf.append("<h3>Signature Code for 1 month Anonymous Access: " + Long.toHexString(User.encode(new Date(new Date().getTime() + 2678400000L).getTime())) + "</h3>");	
 		}
