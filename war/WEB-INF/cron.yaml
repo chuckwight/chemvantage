@@ -1,4 +1,8 @@
 cron:
+- url: '/Admin?UserRequest=OpenStaxReport'
+  schedule: '1 of jan,apr,jul,oct 02:00'
+  timezone: 'America/New_York'
+  description: 'Sends OpenStax quarterly report to Admin'
 - url: '/cloud-datastore-export?output_url_prefix=gs://chem-vantage-hrd-backups'
   schedule: '1 of month 03:00'
   timezone: 'America/New_York'

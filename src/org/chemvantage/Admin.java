@@ -94,6 +94,11 @@ public class Admin extends HttpServlet {
 			case "Announce": 
 				Subject.setAnnouncement(request.getParameter("Announcement"));
 				break;
+			case "OpenStaxReport":  // for monthly cron job
+				String project_id = System.getProperty("com.google.appengine.application.id");
+				if (project_id.equals("chem-vantage-hrd")) LTIMessage.sendEmailToAdmin("OpenStax Quarterly Report", Group.openStaxReport());
+				out.println("Done.");
+				return;
 			case "Submit Review":
 				Deployment d = ofy().load().type(Deployment.class).id(request.getParameter("platform_deployment_id")).safe();
 				switch(request.getParameter("action")) {
