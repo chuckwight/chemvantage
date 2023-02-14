@@ -388,6 +388,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		}	
 	}
 */	
+
 	static Map<String,String> readMembershipScores(Assignment a) {
 		// This method uses the LTIv1p3 message protocol to retrieve a JSON containing all of
 		// the existing  scores for one assignment from the LMS. 
@@ -406,30 +407,41 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			// append "/scores" to the lineitem URL, taking into account that the URL may have a query part (thank you, Moodle)
 			URL u = null;
 			int i = a.lti_ags_lineitem_url.indexOf("?")==-1?a.lti_ags_lineitem_url.length():a.lti_ags_lineitem_url.indexOf("?");
-			u = new URL(a.lti_ags_lineitem_url.substring(0,i) + "/results" + a.lti_ags_lineitem_url.substring(i));
+			
+			String next_url = a.lti_ags_lineitem_url.substring(0,i) + "/results" + a.lti_ags_lineitem_url.substring(i);
+			
+			while (next_url != null) {
+				u = new URL(next_url);
 
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			uc.setDoInput(true);
-			uc.setRequestMethod("GET");
-			uc.setRequestProperty("Authorization", bearerAuth);
-			uc.setRequestProperty("Accept", "application/vnd.ims.lis.v2.resultcontainer+json");
-			uc.connect();
+				HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+				uc.setDoInput(true);
+				uc.setRequestMethod("GET");
+				uc.setRequestProperty("Authorization", bearerAuth);
+				uc.setRequestProperty("Accept", "application/vnd.ims.lis.v2.resultcontainer+json");
+				uc.connect();
 
-			int responseCode = uc.getResponseCode();
-			if (responseCode > 199 && responseCode < 203) {  // OK
-				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-				JsonArray json = JsonParser.parseReader(reader).getAsJsonArray();
-				reader.close();
+				int responseCode = uc.getResponseCode();
+				if (responseCode > 199 && responseCode < 203) {  // OK
+					BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+					JsonArray json = JsonParser.parseReader(reader).getAsJsonArray();
+					reader.close();
 
-				Iterator<JsonElement> iterator = json.iterator();
-				while(iterator.hasNext()) {
-					JsonObject result = iterator.next().getAsJsonObject();
-					String userId = result.get("userId").getAsString();
-					scores.put(userId,String.valueOf(Math.round(1000.*result.get("resultScore").getAsDouble()/result.get("resultMaximum").getAsDouble())/10.));
+					Iterator<JsonElement> iterator = json.iterator();
+					while(iterator.hasNext()) {
+						JsonObject result = iterator.next().getAsJsonObject();
+						String userId = result.get("userId").getAsString();
+						scores.put(userId,String.valueOf(Math.round(1000.*result.get("resultScore").getAsDouble()/result.get("resultMaximum").getAsDouble())/10.));
+					}
 				}
+				next_url = null;
+				try {  // per LTI AGS specs, this section looks for a HttpLink to the next page of results
+					String[] links = uc.getHeaderField("Link").split(",");  // splits comma-separated list of Links
+					for (String l : links) if (l.contains("next")) next_url = l.substring(l.indexOf("<")+1,l.indexOf(">")); // url is enclosed in <>
+				} catch (Exception e2) {}
+				uc.disconnect();
 			}
 		} catch (Exception e) {	
-			scores = null;
+			scores.put("Error", e.getMessage()==null?e.toString():e.getMessage());
 		}
 		return scores;
 	}
@@ -603,7 +615,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 						
 				} else return null;
 				next_url = null;
-				String[] links = uc.getHeaderField("Link").split(",");
+				String[] links = null;
+				if ( uc.getHeaderField("Link") != null) links = uc.getHeaderField("Link").split(",");
 				for (String l : links) {
 					if (l.contains("next")) {
 						next_url = l.trim().substring(1); // removes any leading/trailing white space and the first <
@@ -676,13 +689,10 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 					}
 				} else return null; 
 				next_url = null;
-				String[] links = uc.getHeaderField("Link").split(",");
-				for (String l : links) {
-					if (l.contains("next")) {
-						next_url = l.trim().substring(1); // removes any leading/trailing white space and the first <
-						next_url = next_url.substring(0,next_url.indexOf(">"));
-					}
-				}
+				try {  // per LTI NPRS specs, this section looks for a HttpLink to the next page of results
+					String[] links = uc.getHeaderField("Link").split(",");  // splits comma-separated list of Links
+					for (String l : links) if (l.contains("next")) next_url = l.substring(l.indexOf("<")+1,l.indexOf(">")); // url is enclosed in <>
+				} catch (Exception e2) {}
 			}
 		} catch (Exception e) {	
 			}
