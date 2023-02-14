@@ -9,7 +9,9 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import javax.servlet.ServletException;
@@ -38,6 +40,13 @@ public class SmartText extends HttpServlet {
 			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest==null) userRequest = "";
+			
+			switch (userRequest) {
+			case "ReviewScores":
+				out.println(Subject.header() + reviewScores(user,a) + Subject.footer);
+				return;
+				default:
+			}
 			
 			Long stTransactionId = null;
 			try {
@@ -68,7 +77,11 @@ public class SmartText extends HttpServlet {
 		   switch (userRequest) {
 		   case "GradeQuestion":
 			   out.println(Subject.header("ChemVantage Key Concept Response") + printScore(user,a,request) + Subject.footer);
-		   default:
+		   case "Synchronize Scores":
+				if (synchronizeScores(user,a,request)) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
+				else out.println("Synchronization request failed.");
+				break;
+			default:
 		   }
 
 	   } catch (Exception e) {
@@ -126,7 +139,11 @@ public class SmartText extends HttpServlet {
 		   }
 		   if (chapter==null) return "Sorry, we were unable to find the chapter of this textbook.";
 		   
-		   buf.append(printTextHeader(text,chapter) + "<hr>");
+		   buf.append(printTextHeader(text,chapter));
+		   
+		   if (user.isInstructor()) {
+			   buf.append("<b>Instructor: </b><a href=/SmartText?UserRequest=ReviewScores&sig=" + user.getTokenSignature() + ">Review student scores</a><br/><hr>");
+		   }
 		  
 		   buf.append("<h3>Key Concept Questions</h3>");
 		   // load the SmartText transaction entity for this user if one exists
@@ -435,6 +452,106 @@ public class SmartText extends HttpServlet {
 		return buf.toString(); 
 	}
 
+	static String reviewScores(User user, Assignment a) {
+		StringBuffer buf = new StringBuffer();
+		if (!user.isInstructor()) return "You must be logged in as the instructor to view this page.";
+
+		try {
+			if (a.lti_nrps_context_memberships_url==null) throw new Exception("No Names and Roles Provisioning support.");
+
+			buf.append("<h3>" + a.assignmentType + " - " + a.title + "</h3>");
+			buf.append("Valid: " + new Date() + "<p>");
+			buf.append("The roster below is obtained using the Names and Role Provisioning service offered by your learning management system, "
+					+ "and may or may not include user's names or emails, depending on the settings of your LMS.<br/><br/>");
+
+			Map<String,String> scores = LTIMessage.readMembershipScores(a);
+			if (scores==null) scores = new HashMap<String,String>();  // in case service call fails
+
+			Map<String,String[]> membership = LTIMessage.getMembership(a);
+			if (membership==null) membership = new HashMap<String,String[]>(); // in case service call fails
+
+			Map<String,Key<Score>> keys = new HashMap<String,Key<Score>>();
+			Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
+			String platform_id = d.getPlatformId() + "/";
+			for (String id : membership.keySet()) {
+				keys.put(id,Key.create(Key.create(User.class,Subject.hashId(platform_id+id)),Score.class,a.id));
+			}
+			Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
+			buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th></tr>");
+			int i=0;
+			boolean synched = true;
+			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
+				if (entry == null) continue;
+				String s = scores.get(entry.getKey());
+				Score cvScore = cvScores.get(keys.get(entry.getKey()));
+				//String forUserId = platform_id + entry.getKey();  // only send hashed values through links
+				i++;
+				buf.append("<tr><td>" + i + ".&nbsp;</td>"
+						+ "<td>" + entry.getValue()[1] + "</td>"
+						+ "<td>" + entry.getValue()[2] + "</td>"
+						+ "<td>" + entry.getValue()[0] + "</td>"
+						+ "<td align=center>" + (s == null?" - ":s + "%") + "</td>"
+						+ "<td align=center>" + (cvScore == null?" - ":String.valueOf(cvScore.getPctScore()) + "%") + "</td>"
+						//+ "<td align=center><a href=/Homework?UserRequest=Review&sig=" + user.getTokenSignature() + "&ForUserId=" + forUserId + "&ForUserName=" + entry.getValue()[1].replaceAll(" ","+") + ">show</a></td>"
+						+ "</tr>");
+				// Flag this score set as unsynchronizde only if there is one or more non-null ChemVantage Learner score that is not equal to the LMS score
+				// Ignore Instructor scores because the LMS often does not report them, and ignore null cvScore entities because they cannot be reported.
+				synched = synched && (!"Learner".equals(entry.getValue()[0]) || (cvScore!=null?String.valueOf(cvScore.getPctScore()).equals(s):true));
+			}
+			buf.append("</table><br/>");
+			if (!synched) {
+				buf.append("If any of the Learner scores above are not synchronized, you may use the button below to launch a background task " 
+						+ "where ChemVantage will resubmit them to your LMS. This can take several seconds to minutes depending on the "
+						+ "number of scores to process. Please note that you may have to adjust the settings in your LMS to accept the "
+						+ "revised scores. For example, in Canvas you may need to change the assignment settings to Unlimited Submissions. "
+						+ "This may also cause the submission to be counted as late if the LMS assignment deadline has passed.<br/>"
+						+ "<form method=post action=/Homework >"
+						+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+						+ "<input type=hidden name=UserRequest value='Synchronize Scores' />"
+						+ "<input type=submit value='Synchronize Scores' />"
+						+ "</form>");
+			}
+			return buf.toString();
+		} catch (Exception e) {
+			buf.append(e.toString());
+		}
+		return buf.toString();
+	
+		
+	}
+	
+	boolean synchronizeScores(User user,Assignment a,HttpServletRequest request) {
+		// This method looks for assignment scores that are different from the LMS scores and resubmits the score to the LMS
+		try {
+			if (!user.isInstructor()) throw new Exception();  // only instructors can use this function
+			if (a==null) throw new Exception();  // can only do this for a known assignment
+			if (a.lti_ags_lineitem_url == null || a.lti_nrps_context_memberships_url == null) throw new Exception(); // need both of these to work
+			Map<String,String> scores = LTIMessage.readMembershipScores(a);
+			if (scores==null || scores.size()==0) throw new Exception();  // this only works if we can get info from the LMS
+			Map<String,String[]> membership = LTIMessage.getMembership(a);
+			if (membership==null || membership.size()==0) throw new Exception();  // there must be some members of this class
+			Map<String,Key<Score>> keys = new HashMap<String,Key<Score>>();
+			Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
+			String platform_id = d.getPlatformId() + "/";
+			for (String id : membership.keySet()) {
+				String hashedUserId = Subject.hashId(platform_id + id);
+				keys.put(id,Key.create(Key.create(User.class,hashedUserId),Score.class,a.id));
+			}
+			Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
+			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
+				if (entry == null) continue;
+				Score cvScore = cvScores.get(keys.get(entry.getKey()));
+				if (cvScore==null) continue;
+				String s = scores.get(entry.getKey());
+				if (String.valueOf(cvScore.getPctScore()).equals(s)) continue;  // the scores match (good!)
+				QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(platform_id + entry.getKey(),"UTF-8")));  // put report into the Task Queue
+			}
+		} catch (Exception e) {
+			return false;
+		}
+		return true;
+	}
+	
 	String orderResponses(String[] answers) {
 		if (answers==null) return "";
 		Arrays.sort(answers);
