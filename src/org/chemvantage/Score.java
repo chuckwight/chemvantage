@@ -131,14 +131,14 @@ public class Score {    // this object represents a best score achieved by a use
 			List<STTransaction> stTransactions = ofy().load().type(STTransaction.class).filter("userId",hashedId).filter("assignmentId",a.id).list();
 			for (STTransaction st : stTransactions) {
 				s.numberOfAttempts++;  // number of pre-deadline quiz attempts
-				int score = 0;
-				for (int i=0;i<st.scores.length;i++) score += st.scores[i];
-				s.score = (score>s.score?score:s.score);  // keep the best (max) score
-				if (s.mostRecentAttempt==null || st.created.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far
-					s.mostRecentAttempt = st.created;
-					int possibleScore = 0;
-					for (int i=0;i<st.possibleScores.length;i++) possibleScore += st.possibleScores[i];
-					s.maxPossibleScore = possibleScore;
+				if (s.mostRecentAttempt==null || st.graded.after(s.mostRecentAttempt)) {  // this transaction is the most recent so far
+					s.mostRecentAttempt = st.graded;
+					s.maxPossibleScore = 0;
+					s.score = 0;
+					for (int i=0;i<st.scores.length;i++) {
+						s.score += st.scores[i];
+						s.maxPossibleScore += st.possibleScores[i];
+					}
 				}
 			}
 			break;	

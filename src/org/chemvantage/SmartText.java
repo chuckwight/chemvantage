@@ -77,6 +77,7 @@ public class SmartText extends HttpServlet {
 		   switch (userRequest) {
 		   case "GradeQuestion":
 			   out.println(Subject.header("ChemVantage Key Concept Response") + printScore(user,a,request) + Subject.footer);
+			   break;
 		   case "Synchronize Scores":
 				if (synchronizeScores(user,a,request)) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 				else out.println("Synchronization request failed.");
@@ -91,7 +92,7 @@ public class SmartText extends HttpServlet {
 
    static String instructorPage(User user,Assignment a) {
 	   // this is a placeholder until instructors are granted customization privileges
-	   return printQuestion(user,a,null);
+	   return user.isInstructor()?printQuestion(user,a,null):"";
    }
 
    static String printTextHeader(Text t,Chapter c) {
@@ -137,7 +138,7 @@ public class SmartText extends HttpServlet {
 				   break;
 			   }
 		   }
-		   if (chapter==null) return "Sorry, we were unable to find the chapter of this textbook.";
+		   if (chapter==null) return "Sorry, we were unable to find the assigned chapter for this textbook.";
 		   
 		   buf.append(printTextHeader(text,chapter));
 		   
@@ -163,14 +164,15 @@ public class SmartText extends HttpServlet {
 		   
 		   // Count the missed questions and make a List of completed conceptIds:
 		   List<Long> completed = new ArrayList<Long>();
-		   for (int i=0; i<chapter.conceptIds.size(); i++) {
-			   int qCount = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",chapter.conceptIds.get(i)).count();
-			   st.possibleScores[i] = qCount>0?(qCount>1?2:1):0;
-			   if (st.scores[i] >= st.possibleScores[i]) completed.add(chapter.conceptIds.get(i));   
+		   boolean complete = true;
+		   for (Long cId : st.conceptIds) {
+			   int index = st.conceptIds.indexOf(cId);
+			   int qCount = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",cId).count();
+			   st.possibleScores[index] = qCount > 2?2:qCount;
+			   if (st.scores[index] >= st.possibleScores[index]) completed.add(cId);
+			   else complete = false;
 		   }
-		   
-		   // Determine if the assignment is complete:
-		   boolean complete = completed.containsAll(chapter.conceptIds);
+
 		   if (complete) {
 			   buf.append("<b>This assignment is complete. Your score is 100%. You may continue just for practice.</b><br/><br/>");
 			   completed.clear();
@@ -182,7 +184,7 @@ public class SmartText extends HttpServlet {
 		   
 		   Question q = null;
 		   Long conceptId = null;
-		   List<Long> availableConceptIds = new ArrayList<Long>(chapter.conceptIds);
+		   List<Long> availableConceptIds = new ArrayList<Long>(st.conceptIds);
 		   if (!completed.isEmpty()) availableConceptIds.removeAll(completed);
 		   
 		   while (q==null) {
@@ -262,10 +264,10 @@ public class SmartText extends HttpServlet {
 		   STTransaction st = ofy().load().type(STTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",assignmentId).first().now();
 		   
 		   // determine if this assignment has already been completed
-		   boolean complete = true;
+		   boolean completed = true;
 		   for (int i=0;i<st.conceptIds.size();i++) {
 			   if (st.scores[i]<st.possibleScores[i]) {
-				   complete = false;
+				   completed = false;
 				   break;
 			   }
 		   }
@@ -277,24 +279,24 @@ public class SmartText extends HttpServlet {
 		   
 		   if (!st.armed) buf.append("<b>Sorry, it looks like this question has already been scored.</b><br/>");
 		   else if (isCorrect) {
-			   if (!complete) {
+			   if (!completed) {
 				   st.scores[index]++;
 				   st.answeredKeys.add(Key.create(Question.class,q.id));
 			   }
 			   buf.append("<b>Congratulations! Your answer was correct.</b><br/>");
-			 } else {
+		   } else {
 			   st.missedQuestions[index]++;
 			   buf.append("<b>Sorry, your answer was incorrect.</b>"
-			   		+ " (<a href=# onClick=\"document.getElementById('correctAnswer').style='display:block';return false;\">show me</a>)<br/>");
+					   + " (<a href=# onClick=\"document.getElementById('correctAnswer').style='display:block';return false;\">show me</a>)<br/>");
 			   buf.append("<div id=correctAnswer style='display:none'><b>Here is the correct answer:</b><br/><br/>" 
 					   + q.printAllToStudents(studentAnswer) + "</div><br/>");
 		   }
-		   
+
 		   if (st.armed && !user.isAnonymous()) {
 			   Response r = new Response("SmartText",conceptId,q.id,studentAnswer,q.getCorrectAnswer(),isCorrect?1:0,1,user.getId(),new Date());
 			   ofy().save().entity(r);
 		   }
-		   
+
 		   int score = 0;
 		   int possibleScore = 0;
 		   for (int i=0; i<st.scores.length; i++) {
@@ -309,10 +311,10 @@ public class SmartText extends HttpServlet {
 			   		+ "<button id=btn type=submit style='border:none;color:white;padding:10px 10px;margin:4px 2px;font-size:16px;cursor:pointer;border-radius:10px;background-color:blue;' "
 			   		+ "onclick=this.style.opacity=0.2;>Continue to the Next Question</button></form>";
 
-		   if (score==possibleScore) { // just completed for first time
-			   if (complete) {
+		   if (score==possibleScore) { // finished
+			   if (completed) {  // this was just for practice
 				   buf.append(continueButton);
-			   } else {
+			   } else {  // just completed for first time
 				   buf.append("You have answered all of the key concept questions for this assignment. Your score is 100%.<br/><br/>");
 				   buf.append(fiveStars());
 			   }
@@ -323,19 +325,17 @@ public class SmartText extends HttpServlet {
 			   Concept c = ofy().load().type(Concept.class).id(conceptId).safe();
 			   buf.append("You missed 2 questions on the key concept: <b>" + c.title + "</b>.<br/>"
 					   + "Please return to the textbook and review this chapter. ");
-			   if (complete) buf.append("Don't worry. Your score on this assignment is still 100%.<br/><br/>");
+			   if (completed) buf.append("Don't worry. Your score on this assignment is still 100%.<br/><br/>");
 			   else buf.append("Don't worry. You can still earn 100% by relaunching this assignment after completing your review.<br/><br/>");
 			   st.missedQuestions[index]=0; // reset the missed questions for this concept only
 		   }
 		   st.armed = false;
 		   
-		   if (!complete && !user.isAnonymous()) {
+		   if (!completed && !user.isAnonymous()) {
 			   st.graded = new Date();
-			   Score s = Score.getInstance(user.getId(), a);
-			   ofy().save().entity(s).now();
+			   ofy().save().entity(st).now();
 			   QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue   
-		   }
-		   ofy().save().entity(st).now();
+		   } else ofy().save().entity(st).now();
 
 	   } catch (Exception e) {
 		   buf.append("Error: " + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString());
