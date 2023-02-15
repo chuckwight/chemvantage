@@ -127,7 +127,87 @@ public class Group {
 		return buf.toString();
 	}
 	
-	static String openStaxReport() {
+	static String openStaxCSVReport() { // this generates a CSV version of openStaxReport for uploading to OpenStax
+		StringBuffer buf = new StringBuffer();
+		try {
+			// Find the current quarter
+			Calendar cal = Calendar.getInstance(Locale.US);
+			int year = cal.get(Calendar.YEAR);
+			int month = cal.get(Calendar.MONTH);
+			int quarter = (month / 3) + 1;
+			
+			// Find the prior quarter and year
+			int priorQuarter = quarter - 1 + (quarter==1?4:0);
+			year = year - (quarter==1?1:0);
+			
+			// reset the Calendar to the beginning of the prior quarter
+			cal = new GregorianCalendar(year,(priorQuarter-1)*3,1,0,0);
+			Date qStart = cal.getTime();
+			// now move the calendar ahead to the end of the prior quarter
+			cal.add(Calendar.MONTH,3);
+			cal.add(Calendar.MINUTE,-1);
+			Date qEnd = cal.getTime();
+			
+			SimpleDateFormat df = new SimpleDateFormat("MMM d, yyyy");
+			Date now = new Date();
+			
+			buf.append("\"ChemVantage LLC\"\n"
+					+ "\"Reporting Period: " + df.format(qStart) + " - " + df.format(qEnd) + "\"\n"
+					+ "\"Report Date: " + df.format(now) + "\"\n"
+					+ "\"Contact: Charles Wight (admin@chemvantage.org)\"\n\n");
+			
+			// Find enrollment data for the report
+			   // Total current ChemVantage users
+			List<Group> activeGroups = ofy().load().type(Group.class).filter("valid >",qStart).list();
+			List<String> groupIds = new ArrayList<String>();
+			
+			StringBuffer table = new StringBuffer("\"Institution\",\"Course\",\"Users\"\n");
+			int gUsers = 0; // number of users in each group (course)
+			int nUsers = 0; // number of active ChemVantage users (all groups)
+			int sUsers = 0; // number of users with active smartText assignments
+			for (Group g : activeGroups) {
+				if (g.organization.contains("ChemVantage")) continue;
+				groupIds.add(g.id);  // this is the group organization (e.g., university name)
+				gUsers = g.nLearners + g.nInstructors + g.nAdministrators;
+				nUsers += gUsers;
+				boolean usesSmartText = ofy().load().type(Assignment.class).filter("assignmentType","SmartText").filter("valid >",qStart).filter("lti_ags_lineitems_url",g.id).count() > 0;
+				if (usesSmartText) {
+					table.append("\"" + g.organization + "\",\"" + g.label + "\",\"" + gUsers + "\"\n");
+					sUsers += gUsers;
+				}
+			}
+			
+			// Find the number and amount of paid subscriptions for this period
+			List<PremiumUser> premiumUsers = ofy().load().type(PremiumUser.class).filter("paid >",0).list();
+			int pUsers = 0; // paid SmartText users
+			int paid = 0;   // total SmartText subscription receipts for this period
+			for (PremiumUser pu : premiumUsers) {
+				if (pu.start.before(qStart) || pu.start.after(qEnd)) continue; // only count subscriptions started during the quarter
+				if (groupIds.contains(pu.org)) {
+					pUsers ++;
+					paid += pu.paid;
+				}
+			}
+			double receipts = (double)paid;
+			
+			buf.append("\"Total active ChemVantage users\",,\"" + nUsers + "\"\n"
+					+ "\"Total active ChemVantage/OpenStax SmartText users\",,\"" + sUsers + "\"\n"
+					+ "\"Total paid SmartText subscriptions for this reporting period\",,\"" + pUsers + "\"\n"
+					+ "\"Total subscription receipts for this reporting period\",,\"$" + String.format("%,.2f", receipts) + "\"\n"
+					+ "\"OpenStax Mission Support Fee for this reporting period\",,\"$" + String.format("%,.2f", receipts/10) + "\"\n"
+					+ "\"Mission Suport Fees carried forward from prior periods\",,\"\"\n"
+					+ "\"Total amount due to OpenStax\",,\"\"\n"
+					+ "\"Amount carried forward to the next reporting period\",,\"\"\n\n\n");
+			
+			buf.append(table);
+			
+		} catch (Exception e) {
+			buf.append(e.getMessage()==null?e.toString():e.getMessage());
+		}
+		return buf.toString();
+	}
+	
+	static String openStaxReport() { // this generates a readable version of the quarterly OpenStax Ally Partner Report
 		StringBuffer buf = new StringBuffer(Subject.banner);
 
 		try {

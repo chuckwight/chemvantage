@@ -64,7 +64,11 @@ public class Admin extends HttpServlet {
 			if (userRequest == null) userRequest = "";
 			switch (userRequest) {
 			case "OpenStaxReport":
-				out.println(Subject.getHeader(user) + Group.openStaxReport() + Subject.footer);
+				out.println(Subject.header() + Group.openStaxReport() + Subject.footer);
+				break;
+			case "OpenStaxCSVReport":
+				response.setContentType("text/csv");
+				out.println(Group.openStaxCSVReport());
 				break;
 			default: 
 				out.println(Subject.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Subject.footer);
@@ -96,8 +100,14 @@ public class Admin extends HttpServlet {
 				break;
 			case "OpenStaxReport":  // for monthly cron job
 				String project_id = System.getProperty("com.google.appengine.application.id");
-				if (project_id.equals("chem-vantage-hrd")) LTIMessage.sendEmailToAdmin("OpenStax Quarterly Report", Group.openStaxReport());
-				out.println("Done.");
+				if (project_id.equals("chem-vantage-hrd")) {
+					String msg = "<h3>Your Quarterly OpenStax Ally Partner Report Is Ready</h3>"
+							+ "<ol><li>Download the CSV file <a href=https://www.chemvantage.org/Admin?UserRequest=OpenStaxCSVReport>here</a></li>"
+							+ "<li>Import the CSV file to cell B3 of the Excel template file at Drive -> ChemVantage LLC-> OpenStax Partnership -> Quarterly Reports</li>"
+							+ "<li>Review the file, including any carry-forward amounts from previous quarter (up to $500.)</li>"
+							+ "<li>Save and upload the file to the <a href=https://openstax-community.force.com/partnerportal>OpenStax Partner Portal</a></li></ol>";
+					LTIMessage.sendEmailToAdmin("OpenStax Quarterly Report", msg);
+				}
 				return;
 			case "Submit Review":
 				Deployment d = ofy().load().type(Deployment.class).id(request.getParameter("platform_deployment_id")).safe();
@@ -192,7 +202,8 @@ public class Admin extends HttpServlet {
 						+ "<input type=submit name=action value='Delete'/></form><br/>");
 			}
 			
-			buf.append("<h3><a href=/Admin?UserRequest=OpenStaxReport>Generate OpenStax Report for Prior Quarter</a></h3>");
+			buf.append("<h3>Quarterly OpenStax Ally Partner Report</h3>"
+					+ "<a href=/Admin?UserRequest=OpenStaxReport>Preview</a> or <a href=/Admin?UserRequest=OpenStaxCSVReport>Download CSV File</a>");
 			
 			buf.append("<h3>Signature Code for 1 month Anonymous Access: " + Long.toHexString(User.encode(new Date(new Date().getTime() + 2678400000L).getTime())) + "</h3>");	
 		}
