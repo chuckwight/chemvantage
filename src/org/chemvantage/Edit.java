@@ -36,8 +36,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.appengine.api.users.UserService;
-import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
 
@@ -70,8 +68,7 @@ public class Edit extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		try {
-			UserService userService = UserServiceFactory.getUserService();
-			String userId = userService.getCurrentUser().getUserId();
+			String userId = "admin";
 			User user = new User("https://"+request.getServerName(), userId);
 			user.setIsChemVantageAdmin(true);
 			//user.setToken();
@@ -136,8 +133,7 @@ public class Edit extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		try {
-			UserService userService = UserServiceFactory.getUserService();
-			String userId = userService.getCurrentUser().getUserId();
+			String userId = "admin";
 			User user = new User("https://"+request.getServerName(), userId);
 			user.setIsChemVantageAdmin(true);
 			//user.setToken();

@@ -33,8 +33,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.appengine.api.users.UserService;
-import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
 
 @WebServlet("/contacts")
@@ -47,8 +45,7 @@ public class ManageContacts extends HttpServlet {
     }
    
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		UserService userService = UserServiceFactory.getUserService();
-		String userId = userService.getCurrentUser().getUserId();
+		String userId = "admin";
 		User user = new User("https://"+request.getServerName(), userId);
 		user.setIsChemVantageAdmin(true);
 		//user.setToken();
@@ -86,8 +83,7 @@ public class ManageContacts extends HttpServlet {
 	}
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-		UserService userService = UserServiceFactory.getUserService();
-		String userId = userService.getCurrentUser().getUserId();
+		String userId = "admin";
 		User user = new User("https://"+request.getServerName(), userId);
 		user.setIsChemVantageAdmin(true);
 		//user.setToken();

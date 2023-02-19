@@ -74,28 +74,7 @@ public class User {
 		this.exp = new Date(new Date().getTime() + 5400000L);  // value expires 90 minutes from now
 		this.encryptedId = encryptId(user_id,0L);  // temporary until sig is assigned in setToken()
 	}
-/*	
-		try {
-			User u = ofy().load().type(User.class).filter("hashedId",hashedId).first().safe();
-			this.roles = u.roles;
-			this.assignmentId = u.assignmentId;
-			Date now = new Date();
-			if (u.exp.after(now)) {
-				this.sig = u.sig;  // this is a current user; just use it
-				this.encryptedId = u.encryptedId;
-				ofy().save().entity(this);
-			}
-			else {  //this is an expired LTI user
-				ofy().delete().entity(u);
-				throw new Exception();
-			}
-		} catch (Exception e) {	 // this is an LTI user not found in the datastore
-			this.sig = ofy().factory().allocateId(User.class).getId();
-			this.encryptedId = encryptId(user_id,sig);
-			ofy().save().entity(this).now();
-		}
-	}
-*/
+
 	public static User getUser(String sig) {  // default token expiration of 90 minutes
     	return getUser(sig,90);
 	}
@@ -163,6 +142,10 @@ public class User {
 		return (isAnonymous()?Subject.hashId(encryptedId):hashedId);
 	}
 	
+	boolean isAdministrator() {
+		return (roles & 16)>0 || isChemVantageAdmin();		
+	}
+
 	public boolean isAnonymous() {
 		return encryptedId.startsWith("anonymous");
 	}
@@ -172,11 +155,6 @@ public class User {
 		//return ((roles%64)/32 == 1);
 	}
 	
-	boolean isAdministrator() {
-		return (roles & 16)>0 || isChemVantageAdmin();		
-		//return ((roles%32)/16 == 1 || this.isChemVantageAdmin());
-	}
-
 	public boolean isInstructor() {
 		return (roles & 8)>0 || isAdministrator();
 		//return ((roles%16)/8 == 1 || this.isAdministrator());

@@ -32,8 +32,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.appengine.api.users.UserService;
-import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.cmd.Query;
 
 @WebServlet("/Admin")
@@ -49,11 +47,9 @@ public class Admin extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			UserService userService = UserServiceFactory.getUserService();
-			String userId = userService.getCurrentUser().getUserId();
+			String userId = "admin";
 			User user = new User("https://"+request.getServerName(), userId);
 			user.setIsChemVantageAdmin(true);
-			//user.setToken();
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
@@ -80,11 +76,9 @@ public class Admin extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		try {
-			UserService userService = UserServiceFactory.getUserService();
-			String userId = userService.getCurrentUser().getUserId();
+			String userId = "admin";
 			User user = new User("https://"+request.getServerName(), userId);
 			user.setIsChemVantageAdmin(true);
-			//user.setToken();
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();

@@ -40,8 +40,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.taskqueue.QueueFactory;
-import com.google.appengine.api.users.UserService;
-import com.google.appengine.api.users.UserServiceFactory;
 import com.googlecode.objectify.Key;
 
 @WebServlet("/messages")
@@ -56,8 +54,7 @@ public class ManageMessages extends HttpServlet {
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		User user = null;
 		try {
-			UserService userService = UserServiceFactory.getUserService();
-			String userId = userService.getCurrentUser().getUserId();
+			String userId = "admin";
 			user = new User("https://"+request.getServerName(), userId);
 			user.setIsChemVantageAdmin(true);
 			//user.setToken();
