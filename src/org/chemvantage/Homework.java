@@ -89,6 +89,9 @@ public class Homework extends HttpServlet {
 				if (user.isInstructor()) out.println(Subject.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user,a,request) + Subject.footer);
 				else out.println(Subject.header("Customize ChemVantage Homework Assignment") + "<h2>Forbidden</h2>You must be signed in as the instructor to perform this functuon." + Subject.footer);
 				break;
+			case "Synchronize Score":
+				out.println(synchronizeScore(user,a,request.getParameter("ForUserId")));
+				break;
 			default:
 				out.println(Subject.header("ChemVantage Homework") + printHomework(user,a) + Subject.footer);
 			}
@@ -553,11 +556,26 @@ public class Homework extends HttpServlet {
 		+ "  xmlhttp.onreadystatechange=function() {\n"
 		+ "    if (xmlhttp.readyState==4) {\n"
 		+ "      document.getElementById('feedback' + id).innerHTML="
-		+ "      '<FONT COLOR=#EE0000><b>Thank you. An editor will review your comment. "
-		+ "</b></FONT><p>';\n"
+		+ "      '<FONT COLOR=#EE0000><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
 		+ "  url += '&QuestionId=' + id + '&sig=" + signature + "&Notes=' + note + '&Email=' + email;\n"
+		+ "  xmlhttp.open('GET',url,true);\n"
+		+ "  xmlhttp.send(null);\n"
+		+ "  return false;\n"
+		+ "}\n"
+		+ "function synchronizeScore(forUserId) {\n"
+		+ "  let xmlhttp=GetXmlHttpObject();\n"
+		+ "  let url = '/Homework?UserRequest=SynchronizeScore&sig=" + signature + "&ForUserId=' + forUserId;\n"
+		+ "  if (xmlhttp==null) {\n"
+		+ "    alert ('Sorry, your browser does not support AJAX!');\n"
+		+ "    return false;\n"
+		+ "  }\n"
+		+ "  xmlhttp.onreadystatechange=function() {\n"
+		+ "    if (xmlhttp.readyState==4) {\n"
+		+ "      document.getElementById('cell'+forUserId).innerHTML='OK';\n"
+		+ "    }\n"
+		+ "  }\n"
 		+ "  xmlhttp.open('GET',url,true);\n"
 		+ "  xmlhttp.send(null);\n"
 		+ "  return false;\n"
@@ -743,12 +761,7 @@ public class Homework extends HttpServlet {
 			buf.append("<h3>" + a.assignmentType + " - " + a.title + "</h3>");
 			buf.append("Valid: " + new Date() + "<p>");
 			buf.append("The roster below is obtained using the Names and Role Provisioning service offered by your learning management system, "
-					+ "and may or may not include user's names or emails, depending on the settings of your LMS. The easiest way to "
-					+ "resolve any discrepancies between scores reported by the LMS grade book and ChemVantage is for the user to "
-					+ "submit the assignment again (even for a score of zero). This causes ChemVantage to recalculate the "
-					+ "user's best score and report it to the LMS. However, some discrepancies are to be expected, for example "
-					+ "if the instructor adjusts a score in the LMS manually or if an assignment was submitted after the "
-					+ "deadline and was not accepted by the LMS.<p>");
+					+ "and may or may not include user's names or emails, depending on the settings of your LMS.<br/><br/>");
 
 			Map<String,String> scores = LTIMessage.readMembershipScores(a);
 			if (scores==null) scores = new HashMap<String,String>();  // in case service call fails
@@ -765,11 +778,13 @@ public class Homework extends HttpServlet {
 			Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
 			buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th><th>Scores Detail</th></tr>");
 			int i=0;
-			boolean synched = true;
+			boolean classSynched = true;
 			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
 				if (entry == null) continue;
 				String s = scores.get(entry.getKey());
 				Score cvScore = cvScores.get(keys.get(entry.getKey()));
+				String cvScoreString = cvScore==null?" - ":String.valueOf(cvScore.getPctScore());
+				boolean synched = !"Learner".equals(entry.getValue()[0]) || cvScoreString.equals(s);
 				String forUserId = platform_id + entry.getKey();  // only send hashed values through links
 				i++;
 				buf.append("<tr><td>" + i + ".&nbsp;</td>"
@@ -777,20 +792,21 @@ public class Homework extends HttpServlet {
 						+ "<td>" + entry.getValue()[2] + "</td>"
 						+ "<td>" + entry.getValue()[0] + "</td>"
 						+ "<td align=center>" + (s == null?" - ":s + "%") + "</td>"
-						+ "<td align=center>" + (cvScore == null?" - ":String.valueOf(cvScore.getPctScore()) + "%") + "</td>"
+						+ "<td align=center>" + cvScoreString + "%</td>"
 						+ "<td align=center><a href=/Homework?UserRequest=Review&sig=" + user.getTokenSignature() + "&ForUserId=" + forUserId + "&ForUserName=" + entry.getValue()[1].replaceAll(" ","+") + ">show</a></td>"
+						+ (synched?"":"<td><span id='cell" + forUserId + "'><button onClick=this.disabled=true;synchronizeScore('" + forUserId + "'); >sync</button></span></td>")
 						+ "</tr>");
-				// Flag this score set as unsynchronizde only if there is one or more non-null ChemVantage Learner score that is not equal to the LMS score
+				// Flag this score set as unsynchronized only if there is one or more non-null ChemVantage Learner score that is not equal to the LMS score
 				// Ignore Instructor scores because the LMS often does not report them, and ignore null cvScore entities because they cannot be reported.
-				synched = synched && (!"Learner".equals(entry.getValue()[0]) || (cvScore!=null?String.valueOf(cvScore.getPctScore()).equals(s):true));
+				classSynched = classSynched && synched;
 			}
 			buf.append("</table><br/>");
-			if (!synched) {
-				buf.append("If any of the Learner scores above are not synchronized, you may use the button below to launch a background task " 
-						+ "where ChemVantage will resubmit them to your LMS. This can take several seconds to minutes depending on the "
-						+ "number of scores to process. Please note that you may have to adjust the settings in your LMS to accept the "
-						+ "revised scores. For example, in Canvas you may need to change the assignment settings to Unlimited Submissions. "
-						+ "This may also cause the submission to be counted as late if the LMS assignment deadline has passed.<br/>"
+			if (!classSynched) {
+				buf.append(ajaxJavaScript(user.getTokenSignature()));
+				buf.append("You may use the sync buttons above to resubmit individual scores to the LMS or use the button below to synchronize all scores for this assignment. "
+						+ "You may have to adjust the assignment settings in your LMS to get the revised score to show in the LMS grade book. Note that some score differences "
+						+ "are to be expected, for example if the instructor adjusts a score in the LMS manually or if an assignment was submitted after the deadline and was "
+						+ "not accepted by the LMS.<br/>"
 						+ "<form method=post action=/Homework >"
 						+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 						+ "<input type=hidden name=UserRequest value='Synchronize Scores' />"
@@ -929,6 +945,17 @@ public class Homework extends HttpServlet {
 			return false;
 		}
 		return true;
+	}
+	
+	String synchronizeScore(User user, Assignment a, String forUserId) {
+		try {
+			if (!user.isInstructor()) throw new Exception();  // only instructors can use this function
+			if (a==null) throw new Exception();  // can only do this for a known assignment
+			QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(forUserId,"UTF-8")));  // put report into the Task Queue			
+			return "OK";
+		} catch (Exception e) {
+			return "Failed";
+		}
 	}
 	
 	String selectQuestionsForm(User user,Assignment a,HttpServletRequest request) {
