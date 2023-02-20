@@ -725,7 +725,7 @@ public class Homework extends HttpServlet {
 						} else if (gotScoreOK) { // there is a significant difference between LMS and ChemVantage scores. Please explain:
 							buf.append("The score recorded in your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%. The difference may be due to<br>"
 									+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<br>"
-									+ "If you think this may be due to a stale score, th3e user may submit this assignment for grading,<br>"
+									+ "If you think this may be due to a stale score, you may submit this assignment for grading,<br>"
 									+ "even for a score of zero, and ChemVantage will try to refresh the best score to the LMS.<p>");
 						} else throw new Exception();
 					} catch (Exception e) {
@@ -778,7 +778,7 @@ public class Homework extends HttpServlet {
 			Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
 			buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th><th>Scores Detail</th></tr>");
 			int i=0;
-			boolean classSynched = true;
+			int nMismatched = 0;
 			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
 				if (entry == null) continue;
 				String s = scores.get(entry.getKey());
@@ -792,17 +792,17 @@ public class Homework extends HttpServlet {
 						+ "<td>" + entry.getValue()[2] + "</td>"
 						+ "<td>" + entry.getValue()[0] + "</td>"
 						+ "<td align=center>" + (s == null?" - ":s + "%") + "</td>"
-						+ "<td align=center>" + cvScoreString + "%</td>"
+						+ "<td align=center>" + (cvScore==null?" - ":cvScoreString + "%") + "</td>"
 						+ "<td align=center><a href=/Homework?UserRequest=Review&sig=" + user.getTokenSignature() + "&ForUserId=" + forUserId + "&ForUserName=" + entry.getValue()[1].replaceAll(" ","+") + ">show</a></td>"
 						+ (synched?"":"<td><span id='cell" + forUserId + "'><button onClick=this.disabled=true;synchronizeScore('" + forUserId + "'); >sync</button></span></td>")
 						+ "</tr>");
 				// Flag this score set as unsynchronized only if there is one or more non-null ChemVantage Learner score that is not equal to the LMS score
 				// Ignore Instructor scores because the LMS often does not report them, and ignore null cvScore entities because they cannot be reported.
-				classSynched = classSynched && synched;
+				if (!synched) nMismatched++;
 			}
 			buf.append("</table><br/>");
-			if (!classSynched) {
-				buf.append(ajaxJavaScript(user.getTokenSignature()));
+			if (nMismatched > 0) buf.append(ajaxJavaScript(user.getTokenSignature()));
+			if (nMismatched > 5) {
 				buf.append("You may use the sync buttons above to resubmit individual scores to the LMS or use the button below to synchronize all scores for this assignment. "
 						+ "You may have to adjust the assignment settings in your LMS to get the revised score to show in the LMS grade book. Note that some score differences "
 						+ "are to be expected, for example if the instructor adjusts a score in the LMS manually or if an assignment was submitted after the deadline and was "
