@@ -781,18 +781,19 @@ public class Homework extends HttpServlet {
 			int nMismatched = 0;
 			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
 				if (entry == null) continue;
-				String s = scores.get(entry.getKey());
+				String lmsScoreString = scores.get(entry.getKey());
+				lmsScoreString = (lmsScoreString==null?" - ":lmsScoreString + "%");
 				Score cvScore = cvScores.get(keys.get(entry.getKey()));
-				String cvScoreString = cvScore==null?" - ":String.valueOf(cvScore.getPctScore());
-				boolean synched = !"Learner".equals(entry.getValue()[0]) || cvScoreString.equals(s);
+				String cvScoreString = cvScore==null?" - ":String.valueOf(cvScore.getPctScore() + "%");
+				boolean synched = !"Learner".equals(entry.getValue()[0]) || cvScoreString.equals(lmsScoreString);
 				String forUserId = platform_id + entry.getKey();  // only send hashed values through links
 				i++;
 				buf.append("<tr><td>" + i + ".&nbsp;</td>"
 						+ "<td>" + entry.getValue()[1] + "</td>"
 						+ "<td>" + entry.getValue()[2] + "</td>"
 						+ "<td>" + entry.getValue()[0] + "</td>"
-						+ "<td align=center>" + (s == null?" - ":s + "%") + "</td>"
-						+ "<td align=center>" + (cvScore==null?" - ":cvScoreString + "%") + "</td>"
+						+ "<td align=center>" + lmsScoreString + "</td>"
+						+ "<td align=center>" + cvScoreString + "</td>"
 						+ "<td align=center><a href=/Homework?UserRequest=Review&sig=" + user.getTokenSignature() + "&ForUserId=" + forUserId + "&ForUserName=" + entry.getValue()[1].replaceAll(" ","+") + ">show</a></td>"
 						+ (synched?"":"<td><span id='cell" + forUserId + "'><button onClick=this.disabled=true;synchronizeScore('" + forUserId + "'); >sync</button></span></td>")
 						+ "</tr>");
