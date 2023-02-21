@@ -110,7 +110,7 @@ public class LTIv1p3Launch extends HttpServlet {
 						+ "Please check to ensure that your LMS is registered properly. Contact admin@chemvantage.org for assistance.");
 			}
 		} catch (Exception e) {	
-			String message = "LTI ResourceLinkRequest Failure. Status 401: " + (e.getMessage()==null?e.toString():e.getMessage());
+			String message = "LTI Launch Failure. Status 401: " + (e.getMessage()==null?e.toString():e.getMessage());
 			//sendEmailToAdmin(message);
 			response.sendError(401, message);
 		}
@@ -371,21 +371,30 @@ public class LTIv1p3Launch extends HttpServlet {
 	
 	void launchSubmissionReview(HttpServletResponse response, JsonObject claims, Deployment d, User u) throws Exception {
 		try {		
-			String for_user_id = claims.get("https://purl.imsglobal.org/spec/lti/claim/for_user").getAsJsonObject().get("user_id").getAsString();  // required
+			JsonElement for_user_claim = claims.get("https://purl.imsglobal.org/spec/lti/claim/for_user");
+			if (for_user_claim==null) throw new Exception("for_user claim not found.");
+			
+			JsonElement for_user_id_claim = for_user_claim.getAsJsonObject().get("user_id");
+			if (for_user_id_claim==null) throw new Exception("for_user_id_claim not found");
+			
+			String for_user_id = for_user_id_claim.getAsString();
+			if (for_user_id==null) throw new Exception("for_user_id not found.");
+			
 			User forUser = new User(claims.get("iss").getAsString(), for_user_id);
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
 
 			if (u.getId().equals(forUser.getId()) || u.isInstructor()) { // viewing the submission record is approved
 				String resourceLinkId = claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link").getAsJsonObject().get("id").getAsString();
-				Assignment a = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().now();
-
+				Assignment a = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().safe();
+				u.setAssignment(a.id);
+							
 				switch (a.assignmentType) {
 				case "Quiz":
 					response.sendRedirect("/Quiz?sig=" + u.getTokenSignature() + "&ForUserId=" + forUser.getId());
 					break;
 				case "Homework":
-					response.sendRedirect("/Homework?sig=" + u.getTokenSignature() + "&ForUserId=" + forUser.getId());
+					response.sendRedirect("/Homework?sig=" + u.getTokenSignature() + "&UserRequest=Review&ForUserId=" + forUser.getId());
 					break;
 				case "PracticeExam":
 					response.sendRedirect("/PracticeExam?sig=" + u.getTokenSignature() + "&ForUserId=" + forUser.getId());
@@ -393,9 +402,9 @@ public class LTIv1p3Launch extends HttpServlet {
 				default:
 					out.println(Subject.header() + Subject.banner + "<h2>Sorry, submission review is not currently available for this type of ChemVantage assignment.</h2>" + Subject.footer);
 				}
-			} else throw new Exception("Submission Reciew Launch Failed: You must be logged into your LMS ");
+			} else throw new Exception("Submission Review Launch Failed: You must be logged into your LMS ");
 		} catch (Exception e) {
-			throw new Exception("Submission Review Launch Failed: " + e.getMessage());
+			throw new Exception("Submission Review Launch Failed: " + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + claims.toString());
 		}
 	}
 	

@@ -226,7 +226,10 @@ public class User {
 
 	public String getTokenSignature() {
 		if (this.isAnonymous()) return Long.toHexString(sig);
-		else return String.valueOf(sig);     // String version of @Id value of User in the datastore
+		else {
+			if (sig==null) setToken();
+			return String.valueOf(sig);     // String version of @Id value of User in the datastore
+		}
 	}
 	
 	void setAssignment(long assignmentId) {  // LTI Advantage

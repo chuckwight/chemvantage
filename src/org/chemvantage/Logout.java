@@ -39,12 +39,12 @@ public class Logout extends HttpServlet {
 	}
 
 	static String now(HttpServletRequest request,Exception exception) {
-		StringBuffer buf = new StringBuffer(Subject.banner + "<h3>An unexpected error occurred.</h3>");
+		StringBuffer buf = new StringBuffer(Subject.banner + "<h3>You are logged out of ChemVantage.</h3>");
 		buf.append(exception.getMessage()==null?exception.toString():exception.getMessage());
-		buf.append("<br/><br/>We apologize for the error. If this happened unexpectedly, please take a moment to "
-				+ "<a href=/Feedback>leave us feedback</a>, "
-				+ "copying the message above and telling us what you were trying to do at the time (e.g., "
-				+ "download a quiz or submit the answer to a homework problem). We will fix it ASAP.<br/><br/>"
+		buf.append("<br/><br/>Most likely, your access token expired after a period of inactivity. You can simply relaunch the "
+				+ "assignment from your class learning management system. If you think it's a more serious problem, please take "
+				+ "a moment to <a href=/Feedback>leave us feedback</a>. Copy the error message above and tell us what you were "
+				+ "trying to do at the time (e.g., download a quiz or submit the answer to a homework problem). We will fix it ASAP.<br/><br/>"
 				+ "Thank you<br/><br/>");
 		
 		String sig = request.getParameter("sig");
