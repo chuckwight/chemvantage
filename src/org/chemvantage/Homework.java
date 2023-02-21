@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -45,14 +46,20 @@ import com.googlecode.objectify.Key;
 @WebServlet("/Homework")
 public class Homework extends HttpServlet {
 
-	private static final long serialVersionUID = 137L;
-	
+	private static final long serialVersionUID = 137L;	
 	private Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
-	
+	//private static Date lastUpdated;
 	static int retryDelayMinutes = 2;  // minimum time between answer submissions for any single question
 
 	public String getServletInfo() {
 		return "This servlet presents a homework assignment for the user.";
+	}
+
+	public void init (ServletConfig config) throws ServletException {
+		super.init(config);
+		//Date now = new Date();
+		//Date oneWeekAgo = new Date(now.getTime()-604800000L);
+		//if (lastUpdated.before(oneWeekAgo)) successPct.clear(); // resets Map of Question success percentages weekly
 	}
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
@@ -83,7 +90,7 @@ public class Homework extends HttpServlet {
 			case "Review":
 				forUserId = request.getParameter("ForUserId");
 				String forUserName = request.getParameter("ForUserName");
-				out.println(Subject.header("Homework Review") + reviewSubmissions(user,forUserId,forUserName));
+				out.println(Subject.header("Homework Review") + reviewSubmissions(user,a,forUserId,forUserName));
 				break;
 			case "AssignHomeworkQuestions":
 				if (user.isInstructor()) out.println(Subject.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user,a,request) + Subject.footer);
@@ -315,7 +322,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	String printScore(User user,Assignment hwa,HttpServletRequest request) {
+	static String printScore(User user,Assignment hwa,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Start...");
 		
@@ -543,7 +550,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	String ajaxJavaScript(String signature) {
+	static String ajaxJavaScript(String signature) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note,email) {\n"
 		+ "  var xmlhttp;\n"
@@ -626,7 +633,7 @@ public class Homework extends HttpServlet {
 		+ "</SCRIPT>";
 	}
 
-	String fiveStars() {
+	static String fiveStars() {
 		StringBuffer buf = new StringBuffer();
 
 		buf.append("<script type='text/javascript'>\n"
@@ -667,7 +674,7 @@ public class Homework extends HttpServlet {
 		return buf.toString(); 
 	}
 
-	String showScores(User user, User forUser) {
+	static String showScores(User user, User forUser) {
 		if (!user.isInstructor() && !user.getId().equals(forUser.getId())) return "<H1>Access denied.</H1>";
 		
 		StringBuffer buf = new StringBuffer("<h2>Your Homework Transactions</h2>");
@@ -748,7 +755,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String showSummary(User user,HttpServletRequest request) {
+	static String showSummary(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 		if (a==null) return "No assignment was specified for this request.";
@@ -821,12 +828,12 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String reviewSubmissions(User user, String forUserId, String forUserName) {
+	static String reviewSubmissions(User user, Assignment a, String forUserId, String forUserName) {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Debug: ");
 		try {
 			if (!user.isInstructor()) return "You must be the instructor to view this page.";
-			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+			//Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 			String forUserHashedId = Subject.hashId(forUserId);
 			Map<Key<Question>,Question> questions = ofy().load().keys(a.questionKeys);
 			List<HWTransaction> transactions = ofy().load().type(HWTransaction.class).filter("userId",forUserHashedId).filter("assignmentId",a.id).order("-graded").list();
@@ -916,7 +923,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	boolean synchronizeScores(User user,Assignment a,HttpServletRequest request) {
+	static boolean synchronizeScores(User user,Assignment a,HttpServletRequest request) {
 		// This method looks for assignment scores that are different from the LMS scores and resubmits the score to the LMS
 		try {
 			if (!user.isInstructor()) throw new Exception();  // only instructors can use this function
@@ -1085,7 +1092,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String orderResponses(String[] answers) {
+	static String orderResponses(String[] answers) {
 		if (answers==null) return "";
 		Arrays.sort(answers);
 		String studentAnswer = "";
