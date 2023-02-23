@@ -255,7 +255,7 @@ public class LTIv1p3Launch extends HttpServlet {
 					debug.append("not found. Now looking for resourceId.");
 					try {
 						JsonObject custom = claims.get("https://purl.imsglobal.org/spec/lti/claim/custom").getAsJsonObject();
-						resourceId = custom.get("resourceId").getAsString();
+						resourceId = custom.get("resourceId")==null?custom.get("resourceid").getAsString():custom.get("resourceId").getAsString();  // schoology changes "resopurceId" to lowercase 
 					} catch (Exception e2) {
 						debug.append("custom parameter not found.");
 						switch (d.lms_type) {
