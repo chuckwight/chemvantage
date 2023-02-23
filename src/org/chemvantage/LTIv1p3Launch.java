@@ -387,10 +387,10 @@ public class LTIv1p3Launch extends HttpServlet {
 				response.sendRedirect("/Quiz?sig=" + u.getTokenSignature() + "&ForUserId=" + for_user_id);
 				break;
 			case "Homework":
-				out.println(Subject.header() + Homework.reviewSubmissions(u, a, for_user_id, "(withheld)") + Subject.footer);
+				out.println(Subject.header() + Homework.reviewSubmissions(u,a,for_user_id,null) + Subject.footer);
 				break;
 			case "PracticeExam":
-				response.sendRedirect("/PracticeExam?sig=" + u.getTokenSignature() + "&ForUserId=" + for_user_id);
+				out.println(Subject.header() + PracticeExam.showExamScores(u,a,for_user_id,null) + Subject.footer);
 				break;
 			default:
 				out.println(Subject.header() + Subject.banner + "<h2>Sorry, submission review is not currently available for this type of ChemVantage assignment.</h2>" + Subject.footer);

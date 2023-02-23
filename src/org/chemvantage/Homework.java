@@ -833,7 +833,6 @@ public class Homework extends HttpServlet {
 		StringBuffer debug = new StringBuffer("Debug: ");
 		try {
 			if (!user.isInstructor()) return "You must be the instructor to view this page.";
-			//Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 			String forUserHashedId = Subject.hashId(forUserId);
 			Map<Key<Question>,Question> questions = ofy().load().keys(a.questionKeys);
 			List<HWTransaction> transactions = ofy().load().type(HWTransaction.class).filter("userId",forUserHashedId).filter("assignmentId",a.id).order("-graded").list();
@@ -863,8 +862,8 @@ public class Homework extends HttpServlet {
 				}
 			}
 			
-			buf.append("<h3>Homework Submissions</h3>");
-			buf.append("Name: " + forUserName + "<br/>"
+			buf.append("<h3>Homework Submissions</h3>"
+					+ (forUserName==null?"":"Name: " + forUserName + "<br/>")
 					+ "Assignment: " + a.title + "<br/>"
 					+ "Date: " + new Date() + "<br/><br/>");
 			debug.append("0");

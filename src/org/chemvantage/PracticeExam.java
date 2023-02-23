@@ -743,6 +743,47 @@ public class PracticeExam extends HttpServlet {
 		}
 		return buf.toString();
 	}
+	
+	static String showExamScores(User user, Assignment a, String for_user_id, String for_user_name) {
+		// This method shows a table of PracticeExamTransaction entities for one user on the assignment
+		// with links to review individual submissions
+		StringBuffer buf = new StringBuffer();
+		if (!user.isInstructor()) return "Unauthorized.";
+		try {
+			buf.append("<h2>User Practice Exam Transactions</h2>"
+					+ (for_user_name==null?"":"Name: " + for_user_name + "<br/>")
+					+ "Exam: " + a.title + "<br/>"
+					+ "Date: " + new Date() + "<br/><br/>");
+			String for_user_hashed_id = Subject.hashId(for_user_id);
+			List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("userId",for_user_hashed_id).filter("assignmentId",a.id).order("downloaded").list();			
+			if (pets.isEmpty()) throw new Exception("No transactions were found for this user on this assignment.");
+			buf.append("<div style='display:table;text-align:center;'>");
+			buf.append("<div style='display:table-row'>"  // header row
+					+ "<div style='display:table-cell;font-weight:bold;padding-right:20px;'>Attempt</div>"
+					+ "<div style='display:table-cell;font-weight:bold;padding-right:20px;'>Downloaded</div>"
+					+ "<div style='display:table-cell;font-weight:bold;padding-right:20px;'>Elapsed Time</div>"
+					+ "<div style='display:table-cell;font-weight:bold;padding-right:20px;'>Total Score</div>"
+					+ "<div style='display:table-cell;font-weight:bold;padding-right:20px;'>Reviewed</div>"
+					+ "<div style='display:table-cell;font-weight:bold;padding-right:20px;'></div>"
+					+ "</div>"); // end of header row
+			for (PracticeExamTransaction pet : pets) {
+				String elapsedTime = pet.graded==null?" - ":String.valueOf((pet.graded.getTime()-pet.downloaded.getTime())/60000L) + " min.";
+				String score = pet.graded==null?"no submission":String.valueOf(pet.getPossibleScore()>0?pet.getScore()*100/pet.getPossibleScore():0)+"%";
+				buf.append("<div style='display:table-row'>"  // row for one transaction
+						+ "<div style='display:table-cell;padding-right:20px;'>" + (pets.indexOf(pet)+1) + "</div>"
+						+ "<div style='display:table-cell;padding-right:20px;'>" + pet.downloaded + "</div>"
+						+ "<div style='display:table-cell;padding-right:20px;'>" + elapsedTime + "</div>"
+						+ "<div style='display:table-cell;padding-right:20px;'>" + score + "</div>"
+						+ "<div style='display:table-cell;padding-right:20px;'>" + (pet.reviewed==null?" - ":pet.reviewed) + "</div>"
+						+ "<div style='display:table-cell;padding-right:20px;'>" + (user.isInstructor()?"<a href=/PracticeExam?UserRequest=ReviewExam&PracticeExamTransactionId=" + pet.id + "&sig=" + user.getTokenSignature() + "&UserId=" + for_user_id + ">Review</a>":"") + "</div>"
+						+ "</div>");  // end of row
+			}
+			buf.append("</div><br/><br/>"); // end of table
+		} catch (Exception e) {
+			 buf.append(e.getMessage()==null?e.toString():e.getMessage());
+		}
+		return buf.toString();
+	}
 
 	String reviewExamScores(User user,Assignment a) {
 		StringBuffer buf = new StringBuffer();
@@ -804,7 +845,7 @@ public class PracticeExam extends HttpServlet {
 							buf.append("<td>" + String.valueOf(p.getPossibleScore()>0?p.getScore()*100/p.getPossibleScore():0) + "%</td>");
 							buf.append("<td>" 
 									+ (p.graded==null?" - ":(p.reviewed==null?"":df.format(p.reviewed)+"&nbsp;UTC<br/>"))
-									+ "<a href=PracticeExam?UserRequest=ReviewExam&PracticeExamTransactionId=" + p.id 
+									+ "<a href=/PracticeExam?UserRequest=ReviewExam&PracticeExamTransactionId=" + p.id 
 									+ "&sig=" + user.getTokenSignature() + "&UserId=" + user.platformId + "/" + entry.getKey() + ">Review</a></td>");
 						}
 						buf.append("<td><form method=post action=/PracticeExam onsubmit=\"return confirm('Permanently delete this record? This action cannot be undone.');\">"
