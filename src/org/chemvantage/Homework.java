@@ -81,8 +81,7 @@ public class Homework extends HttpServlet {
 			switch (userRequest) {
 			case "ShowScores":
 				String forUserId = request.getParameter("ForUserId");
-				User forUser = forUserId==null?user:new User(user.platformId, forUserId);
-				out.println(Subject.header("ChemVantage Scores") + showScores(user,forUser) + Subject.footer);
+				out.println(Subject.header("ChemVantage Scores") + showScores(user,a,forUserId) + Subject.footer);
 				break;
 			case "ShowSummary":
 				out.println(Subject.header("Your Class ChemVantage Scores") + showSummary(user,request) + Subject.footer);
@@ -96,7 +95,7 @@ public class Homework extends HttpServlet {
 				if (user.isInstructor()) out.println(Subject.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user,a,request) + Subject.footer);
 				else out.println(Subject.header("Customize ChemVantage Homework Assignment") + "<h2>Forbidden</h2>You must be signed in as the instructor to perform this functuon." + Subject.footer);
 				break;
-			case "Synchronize Score":
+			case "SynchronizeScore":
 				out.println(synchronizeScore(user,a,request.getParameter("ForUserId")));
 				break;
 			default:
@@ -580,7 +579,11 @@ public class Homework extends HttpServlet {
 		+ "  }\n"
 		+ "  xmlhttp.onreadystatechange=function() {\n"
 		+ "    if (xmlhttp.readyState==4) {\n"
-		+ "      document.getElementById('cell'+forUserId).innerHTML='OK';\n"
+		+ "      if (xmlhttp.responseText.includes('OK')) {\n"
+		+ "        setTimeout(() => {location.reload();}, 500);\n"
+		+ "      } else {\n"
+		+ "        document.getElementById('cell'+forUserId).innerHTML=xmlhttp.responseText;"
+		+ "      }\n"
 		+ "    }\n"
 		+ "  }\n"
 		+ "  xmlhttp.open('GET',url,true);\n"
@@ -674,28 +677,20 @@ public class Homework extends HttpServlet {
 		return buf.toString(); 
 	}
 
-	static String showScores(User user, User forUser) {
-		if (!user.isInstructor() && !user.getId().equals(forUser.getId())) return "<H1>Access denied.</H1>";
+	static String showScores(User user, Assignment a, String forUserId) {
+		if (!user.isInstructor() && forUserId!=null) return "<H1>Access denied.</H1>";
+		if (forUserId==null) forUserId = user.getId();  // user is viewing their own scores
 		
 		StringBuffer buf = new StringBuffer("<h2>Your Homework Transactions</h2>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
 		
-		Assignment a = null;
-		try {
-			long assignmentId = user.getAssignmentId();
-			a = ofy().load().type(Assignment.class).id(assignmentId).safe();
-		} catch (Exception e) {
-			buf.append("Invalid assignment.");
-			return buf.toString();
-		}
-
 		try {
 			buf.append("Assignment Number: " + a.id + "<br>");
 			buf.append("Topic: "+ a.title + "<br>");
 			buf.append("Valid: " + df.format(now) + "<p>");
 			
-			List<HWTransaction> hwts = ofy().load().type(HWTransaction.class).filter("userId",forUser.getHashedId()).filter("assignmentId",a.id).order("graded").list();
+			List<HWTransaction> hwts = ofy().load().type(HWTransaction.class).filter("userId",Subject.hashId(forUserId)).filter("assignmentId",a.id).order("graded").list();
 			
 			if (hwts.size()==0) {
 				buf.append("Sorry, we did not find any records for this user in the database for this assignment.<p>");
@@ -703,42 +698,41 @@ public class Homework extends HttpServlet {
 			} else {
 				Score s = null;
 				try { // retrieve the score and ensure that it is up to date
-					s = ofy().load().key(Key.create(Key.create(User.class,forUser.getId()),Score.class,a.id)).safe();
+					s = ofy().load().key(Key.create(Key.create(User.class,forUserId),Score.class,a.id)).safe();
 					if (s.numberOfAttempts != hwts.size()) throw new Exception();
 				} catch (Exception e) { // create a fresh Score entity from scratch
-					s = Score.getInstance(forUser.getId(), a);
+					s = Score.getInstance(forUserId, a);
 					ofy().save().entity(s);
 				}
 				
 				buf.append("This user's overall score on the assignment is " + 10.*Math.round(s.getPctScore())/10. + "%.<br>");
 
-				if (!forUser.isAnonymous()) {  // try to validate the score with the LMS grade book entry
-					try {
-						double lmsPctScore = 0;
-						String lmsScore = null;
-						boolean gotScoreOK = false;
+				try {
+					double lmsPctScore = 0;
+					String lmsScore = null;
+					boolean gotScoreOK = false;
 
-						if (a.lti_ags_lineitem_url != null) {  // LTI version 1p3
-							lmsScore = LTIMessage.readUserScore(a, forUser.getId());
-							try {
-								lmsPctScore = Double.parseDouble(lmsScore);
-								gotScoreOK = true;
-							} catch (Exception e) {
-							}
+					if (a.lti_ags_lineitem_url != null) {  // LTI version 1p3
+						lmsScore = LTIMessage.readUserScore(a, forUserId);
+						try {
+							lmsPctScore = Double.parseDouble(lmsScore);
+							gotScoreOK = true;
+						} catch (Exception e) {
+							buf.append("The LMS returned: " + lmsScore + "<br/>");
 						}
-						
-						if (gotScoreOK && Math.abs(lmsPctScore-s.getPctScore())<1.0) { // LMS readResult agrees to within 1%
-							buf.append("This score is accurately recorded in the grade book of your class learning management system.<p>");
-						} else if (gotScoreOK) { // there is a significant difference between LMS and ChemVantage scores. Please explain:
-							buf.append("The score recorded in your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%. The difference may be due to<br>"
-									+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<br>"
-									+ "If you think this may be due to a stale score, you may submit this assignment for grading,<br>"
-									+ "even for a score of zero, and ChemVantage will try to refresh the best score to the LMS.<p>");
-						} else throw new Exception();
-					} catch (Exception e) {
-						if (s.score==0 && s.numberOfAttempts==0) buf.append("It appears that this assignment may not have been submitted for a score yet.<br/>");
-						buf.append("<br/>");
 					}
+
+					if (gotScoreOK && Math.abs(lmsPctScore-s.getPctScore())<1.0) { // LMS readResult agrees to within 1%
+						buf.append("This score is accurately recorded in the grade book of your class learning management system.<p>");
+					} else if (gotScoreOK) { // there is a significant difference between LMS and ChemVantage scores. Please explain:
+						buf.append("The score recorded in your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%. The difference may be due to<br>"
+								+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<br>"
+								+ "If you think this may be due to a stale score, you may submit this assignment for grading,<br>"
+								+ "even for a score of zero, and ChemVantage will try to refresh the best score to the LMS.<p>");
+					} else throw new Exception();
+				} catch (Exception e) {
+					if (s.score==0 && s.numberOfAttempts==0) buf.append("It appears that this assignment may not have been submitted for a score yet.<br/>");
+					buf.append("<br/>");
 				}
 				buf.append("<table><tr><th>Transaction Number</th><th>QuestionID</th><th>Graded</th><th>Score</th></tr>");
 				for (HWTransaction hwt : hwts) {
@@ -810,7 +804,7 @@ public class Homework extends HttpServlet {
 			}
 			buf.append("</table><br/>");
 			if (nMismatched > 0) buf.append(ajaxJavaScript(user.getTokenSignature()));
-			if (nMismatched > 5) {
+			if (nMismatched > 1) {
 				buf.append("You may use the sync buttons above to resubmit individual scores to the LMS or use the button below to synchronize all scores for this assignment. "
 						+ "You may have to adjust the assignment settings in your LMS to get the revised score to show in the LMS grade book. Note that some score differences "
 						+ "are to be expected, for example if the instructor adjusts a score in the LMS manually or if an assignment was submitted after the deadline and was "
@@ -818,7 +812,7 @@ public class Homework extends HttpServlet {
 						+ "<form method=post action=/Homework >"
 						+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 						+ "<input type=hidden name=UserRequest value='Synchronize Scores' />"
-						+ "<input type=submit value='Synchronize Scores' />"
+						+ "<input type=submit value='Synchronize All Scores' />"
 						+ "</form>");
 			}
 			return buf.toString();
@@ -958,11 +952,9 @@ public class Homework extends HttpServlet {
 		try {
 			if (!user.isInstructor()) throw new Exception();  // only instructors can use this function
 			if (a==null) throw new Exception();  // can only do this for a known assignment
-			QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(forUserId,"UTF-8")));  // put report into the Task Queue			
-			return "OK";
-		} catch (Exception e) {
-			return "Failed";
-		}
+			if (LTIMessage.postUserScore(Score.getInstance(forUserId,a), forUserId).contains("Success")) return "OK";
+		} catch (Exception e) {}
+		return "Failed";
 	}
 	
 	String selectQuestionsForm(User user,Assignment a,HttpServletRequest request) {

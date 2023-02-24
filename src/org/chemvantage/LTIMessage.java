@@ -450,37 +450,51 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		// This method uses the LTIv1p3 message protocol to retrieve a user's score from the LMS.
 		// The lineitem URL corresponds to the LMS grade book column fpr the Assignment entity,
 		// and the specific cell is identified by the user_id value defined by the LMS platform
+		StringBuffer debug = new StringBuffer("Debug: ");
+		HttpURLConnection uc = null;
 		try {
 			String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly";
 			String bearerAuth = "Bearer " + getAccessToken(a.domain,scope);
-
+			//debug.append(bearerAuth + "<br/>");
+			
 			String user_id = userId.substring(userId.lastIndexOf("/")+1); // stripped of the platform_id and "/"
 			
 			if (a.lti_ags_lineitem_url==null) throw new Exception("the lineitem URL for this assignment is unknown");
 			
+			
+			// There is some uncertainty ab9ut the query parameter; The LTI spec is user_id but the container has userId
 			URL u = null;
-			if (a.lti_ags_lineitem_url.contains("?")) { // the lineitem URL already has a query part
+			Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
+			switch (d.lms_type) {
+			case "moodle":
 				String base_url = a.lti_ags_lineitem_url.substring(0,a.lti_ags_lineitem_url.indexOf("?")) + "/results";
 				String query = a.lti_ags_lineitem_url.substring(a.lti_ags_lineitem_url.indexOf("?"));
 				u = new URL(base_url + query + "&user_id=" + user_id + "&userId=" + user_id);
-			} else {
-				u = new URL(a.lti_ags_lineitem_url + "/results?user_id=" + user_id + "&userId=" + user_id);
+				break;
+			case "schoology":
+				u = new URL(a.lti_ags_lineitem_url + "/results?user_id=" + user_id.substring(0,user_id.indexOf(":")));
+				break;
+			default:
+				u = new URL(a.lti_ags_lineitem_url + "/results?userId=" + user_id + "&user_id=" + user_id);				
 			}
 			
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			//uc.setDoOutput(true);
+			debug.append("0");
+			uc = (HttpURLConnection) u.openConnection();
 			uc.setDoInput(true);
 			uc.setRequestMethod("GET");
 			uc.setRequestProperty("Authorization", bearerAuth);
 			uc.setRequestProperty("Accept", "application/vnd.ims.lis.v2.resultcontainer+json");
 			uc.connect();
-
+			debug.append("1");
+			
 			int responseCode = uc.getResponseCode();
+			debug.append("2");
 			if (responseCode == HttpURLConnection.HTTP_OK) { // 200
 				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
 				JsonArray json = JsonParser.parseReader(reader).getAsJsonArray();
 				reader.close();
-
+				debug.append("3");
+				
 				Iterator<JsonElement> iterator = json.iterator();
 				while(iterator.hasNext()){
 					JsonObject result = iterator.next().getAsJsonObject();
@@ -489,9 +503,19 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 					}
 				}
 				return "no score found: " + json.toString();
-			} else return "response code=" + responseCode + " for " + u.toString(); 
-		} catch (Exception e) {	
-			return e.toString();
+			} else {
+				debug.append("4");
+				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));
+				debug.append("5");
+				
+				JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+				reader.close();
+				debug.append("6");
+				return "response code=" + responseCode + " for " + u.toString() + "<br/>" + json.toString(); 
+			}
+		} catch (Exception e) {
+			
+			return (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString();
 		}
 	}
 	
@@ -547,9 +571,10 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				s.lisReportComplete = true;
 				ofy().save().entity(s);
 				buf.append("Success " + responseCode + "<br/>AuthToken: " + authToken + "<br/>JSON: " + json);
-				//if (a.domain.equals("https://canvas.instructure.com/10812:5d76708f19931de80763b1b539e8bb0233b99bbd")) sendEmailToAdmin("Score submission success",buf.toString());
+				//sendEmailToAdmin("Score submission success",buf.toString());
 			} else if (responseCode==422) {
 				buf.append("Response code 422: This LMS does not allow LTI score submissions for instructors or test students.<br/>");
+				//sendEmailToAdmin("Score submission code 422",buf.toString());
 			} else {			
 				buf.append(uc.getRequestMethod() + " " + u.toString() + "<br>"
 						+ "Content-Type: application/vnd.ims.lis.v1.score+json<br>"
@@ -572,7 +597,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	    		//sendEmailToAdmin("Score submission failed",buf.toString());
 			}
 		} catch (Exception e) {
-			//sendEmailToAdmin("Score submission failed",buf.toString());
+			sendEmailToAdmin("Score submission failed",buf.toString());
 			return "Score submission error: " + e.toString() + e.getMessage() + "<br>" + buf.toString();
 		}
 		return buf.toString();
