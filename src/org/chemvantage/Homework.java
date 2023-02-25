@@ -954,7 +954,7 @@ public class Homework extends HttpServlet {
 			if (a==null) throw new Exception();  // can only do this for a known assignment
 			if (LTIMessage.postUserScore(Score.getInstance(forUserId,a), forUserId).contains("Success")) return "OK";
 		} catch (Exception e) {}
-		return "Failed";
+		return "Failed. Check assignment settings in the LMS.";
 	}
 	
 	String selectQuestionsForm(User user,Assignment a,HttpServletRequest request) {
