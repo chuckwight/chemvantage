@@ -98,7 +98,7 @@ public class User {
     	try {  // try to validate an anonymous user
     		Date exp = new Date(encode(Long.parseLong(sig,16)));
     		Date aMonthFromNow = new Date(now.getTime() + 2678400000L);
-    		if (exp.after(now) && exp.before(aMonthFromNow)) return new User(expires.getTime());
+    		if (exp.after(now) && exp.before(aMonthFromNow)) return new User(exp.getTime());
     	} catch (Exception e) {}
 
     	return null;   	
