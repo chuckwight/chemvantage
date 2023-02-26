@@ -84,7 +84,7 @@ public class Homework extends HttpServlet {
 				out.println(Subject.header("ChemVantage Scores") + showScores(user,a,forUserId) + Subject.footer);
 				break;
 			case "ShowSummary":
-				out.println(Subject.header("Your Class ChemVantage Scores") + showSummary(user,request) + Subject.footer);
+				out.println(Subject.header("Your Class ChemVantage Scores") + showSummary(user, a) + Subject.footer);
 				break;
 			case "Review":
 				forUserId = request.getParameter("ForUserId");
@@ -452,12 +452,10 @@ public class Homework extends HttpServlet {
 			showWork = request.getParameter("ShowWork"+questionId);
 			
 			if (!studentAnswer.isEmpty()) { // an answer was submitted
-				// create and store a Response entity:
-				Response r = new Response("Homework",hwa.id,q.id,studentAnswer,q.getCorrectAnswer(),studentScore,possibleScore,user.getId(),now);
-				
 				ht = new HWTransaction(q.id,user.getHashedId(),now,studentScore,hwa.id,possibleScore,showWork);
 				ofy().save().entity(ht).now();
-				r.transactionId = ht.id;
+				// create and store a Response entity:
+				Response r = new Response("Homework",hwa.id,q.id,studentAnswer,q.getCorrectAnswer(),studentScore,possibleScore,user.getId(),ht.id,now);
 				ofy().save().entity(r);
 						
 				// create/update/store a HomeworkScore object
@@ -580,6 +578,7 @@ public class Homework extends HttpServlet {
 		+ "  xmlhttp.onreadystatechange=function() {\n"
 		+ "    if (xmlhttp.readyState==4) {\n"
 		+ "      if (xmlhttp.responseText.includes('OK')) {\n"
+		+ "        document.getElementById('cell'+forUserId).innerHTML='OK. Check grade book settings.';"
 		+ "        setTimeout(() => {location.reload();}, 500);\n"
 		+ "      } else {\n"
 		+ "        document.getElementById('cell'+forUserId).innerHTML=xmlhttp.responseText;"
@@ -749,9 +748,8 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	static String showSummary(User user,HttpServletRequest request) {
+	static String showSummary(User user,Assignment a) {
 		StringBuffer buf = new StringBuffer();
-		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 		if (a==null) return "No assignment was specified for this request.";
 
 		if (!user.isInstructor()) return "You must be logged in as the instructor to view this page.";
@@ -803,19 +801,21 @@ public class Homework extends HttpServlet {
 				if (!synched) nMismatched++;
 			}
 			buf.append("</table><br/>");
-			if (nMismatched > 0) buf.append(ajaxJavaScript(user.getTokenSignature()));
-			if (nMismatched > 1) {
-				buf.append("You may use the sync buttons above to resubmit individual scores to the LMS or use the button below to synchronize all scores for this assignment. "
-						+ "You may have to adjust the assignment settings in your LMS to get the revised score to show in the LMS grade book. Note that some score differences "
-						+ "are to be expected, for example if the instructor adjusts a score in the LMS manually or if an assignment was submitted after the deadline and was "
-						+ "not accepted by the LMS.<br/>"
-						+ "<form method=post action=/Homework >"
-						+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-						+ "<input type=hidden name=UserRequest value='Synchronize Scores' />"
-						+ "<input type=submit value='Synchronize All Scores' />"
-						+ "</form>");
+			if (nMismatched > 0) {
+				buf.append(ajaxJavaScript(user.getTokenSignature()));
+				buf.append("You may use the individual 'sync' buttons above to resubmit any ChemVantage score to the LMS. Note that in some cases, mismatched scores are expected (e.g., when "
+						+ "the instructor overrides a score or when a late submission is not accepted by the LMS). You may have to adjust the settings in your LMS to accept the "
+						+ "revised score (e.g., change the due date, grade override or allowed number of submissions). ");
 			}
-			return buf.toString();
+			if (nMismatched>1) {
+				buf.append("Use the button below to synchronize all of the Learner scores. This might take a minute, depending on the number of mismatches.<br/>"
+					+ "<form method=post action=/Homework >"
+					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "<input type=hidden name=UserRequest value='Synchronize Scores' />"
+					+ "<input type=submit value='Synchronize All Scores' />"
+					+ "</form>");
+			}
+				return buf.toString();
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}
@@ -948,7 +948,7 @@ public class Homework extends HttpServlet {
 		return true;
 	}
 	
-	String synchronizeScore(User user, Assignment a, String forUserId) {
+	static String synchronizeScore(User user, Assignment a, String forUserId) {
 		try {
 			if (!user.isInstructor()) throw new Exception();  // only instructors can use this function
 			if (a==null) throw new Exception();  // can only do this for a known assignment

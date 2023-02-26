@@ -195,6 +195,7 @@ public class ResponseServlet extends HttpServlet {
 					Integer.parseInt(request.getParameter("Score")),
 					Integer.parseInt(request.getParameter("PossibleScore")),
 					request.getParameter("UserId"),
+					Long.parseLong(request.getParameter("TransactionId")),
 					new Date());
 			ofy().save().entity(r);		
 		} catch (Exception e) {

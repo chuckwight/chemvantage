@@ -293,7 +293,7 @@ public class SmartText extends HttpServlet {
 		   }
 
 		   if (st.armed && !user.isAnonymous()) {
-			   Response r = new Response("SmartText",conceptId,q.id,studentAnswer,q.getCorrectAnswer(),isCorrect?1:0,1,user.getId(),new Date());
+			   Response r = new Response("SmartText",conceptId,q.id,studentAnswer,q.getCorrectAnswer(),isCorrect?1:0,1,user.getId(),st.id,new Date());
 			   ofy().save().entity(r);
 		   }
 

@@ -535,8 +535,7 @@ public class PracticeExam extends HttpServlet {
 					
 					if (score > 0) pt.addScore(score);
 					if (studentAnswer.length() > 0) {
-						Response r = new Response("PracticeExam",a.id,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,Subject.hashId(user.getId()),now);
-						r.transactionId = pt.id;
+						Response r = new Response("PracticeExam",a.id,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,Subject.hashId(user.getId()),pt.id,now);
 						responses.add(r);
 					}
 					if (score == 0) {
@@ -785,7 +784,7 @@ public class PracticeExam extends HttpServlet {
 		return buf.toString();
 	}
 
-	String reviewExamScores(User user,Assignment a) {
+	static String reviewExamScores(User user,Assignment a) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			if (!user.isInstructor()) return "<h2>Access Denied</h2>You must be an instructor to view this page.";

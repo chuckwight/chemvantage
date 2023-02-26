@@ -373,8 +373,9 @@ public class LTIv1p3Launch extends HttpServlet {
 		StringBuffer debug = new StringBuffer("Debug: ");
 		if (!u.isInstructor()) throw new Exception("Instructor role required.");
 		
-		try {		
-			String for_user_id = claims.get("iss").getAsString() + "/" + claims.get("https://purl.imsglobal.org/spec/lti/claim/for_user").getAsJsonObject().get("user_id").getAsString();
+		try {
+			JsonElement for_user = claims.get("https://purl.imsglobal.org/spec/lti/claim/for_user");
+			String for_user_id = for_user==null?null:claims.get("iss").getAsString() + "/" + for_user.getAsJsonObject().get("user_id").getAsString();
 			String resourceLinkId = claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link").getAsJsonObject().get("id").getAsString();
 			Assignment a = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().safe();
 			u.setAssignment(a.id);
@@ -384,13 +385,16 @@ public class LTIv1p3Launch extends HttpServlet {
 			
 			switch (a.assignmentType) {
 			case "Quiz":
-				response.sendRedirect("/Quiz?sig=" + u.getTokenSignature() + "&ForUserId=" + for_user_id);
+				out.println(Subject.header() + (for_user_id==null?Quiz.showSummary(u,a):Quiz.showScores(u,a,Subject.hashId(for_user_id),null)) + Subject.footer);
 				break;
 			case "Homework":
-				out.println(Subject.header() + Homework.reviewSubmissions(u,a,for_user_id,null) + Subject.footer);
+				out.println(Subject.header() + (for_user_id==null?Homework.showSummary(u,a):Homework.reviewSubmissions(u,a,for_user_id,null)) + Subject.footer);
 				break;
 			case "PracticeExam":
-				out.println(Subject.header() + PracticeExam.showExamScores(u,a,for_user_id,null) + Subject.footer);
+				out.println(Subject.header() + (for_user_id==null?PracticeExam.reviewExamScores(u,a):PracticeExam.showExamScores(u,a,for_user_id,null)) + Subject.footer);
+				break;
+			case "PlacementExam":
+				out.println(Subject.header() + (for_user_id==null?PlacementExam.reviewExamScores(u,a):PlacementExam.submissionReview(u,a,for_user_id)) + Subject.footer);
 				break;
 			default:
 				out.println(Subject.header() + Subject.banner + "<h2>Sorry, submission review is not currently available for this type of ChemVantage assignment.</h2>" + Subject.footer);

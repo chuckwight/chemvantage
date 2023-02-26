@@ -144,6 +144,11 @@ indexes:
 
 - kind: Response
   properties:
+  - name: assignmentId
+  - name: transactionId
+
+- kind: Response
+  properties:
   - name: questionId
   - name: score
 

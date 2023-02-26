@@ -67,16 +67,22 @@ public class Quiz extends HttpServlet {
 			Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 			
 			switch (userRequest) {
+			case "ShowQuiz":
+				String quizTransactionId = request.getParameter("QuizTransactionId");
+				out.println(Subject.header("ChemVantage Quiz") + Subject.banner + showQuiz(user,a,quizTransactionId) + Subject.footer);
+				break;
 			case "ShowScores":
-				String forUserId = request.getParameter("ForUserId");
-				User forUser = forUserId==null?user:new User(user.platformId, forUserId);
-				out.println(Subject.header("ChemVantage Scores") + Subject.banner + showScores(user,forUser,a) + Subject.footer);
+				String forUserHashedId = request.getParameter("ForUserHashedId");
+				out.println(Subject.header("ChemVantage Scores") + Subject.banner + showScores(user,a,forUserHashedId,null) + Subject.footer);
 				break;
 			case "ShowSummary":
 				out.println(Subject.header("Your Class ChemVantage Scores") + showSummary(user,a) + Subject.footer);
 				break;
 			case "AssignQuizQuestions":
 				if (user.isInstructor()) out.println(Subject.header("Customize ChemVantage Quiz Assignment") + selectQuestionsForm(user,a,request) + Subject.footer);
+				break;
+			case "SynchronizeScore":
+				out.println(synchronizeScore(user,a,request.getParameter("ForUserId")));
 				break;
 			default: 
 				out.println(Subject.header("ChemVantage Quiz") + printQuiz(user,a) + Subject.footer);
@@ -223,7 +229,7 @@ public class Quiz extends HttpServlet {
 				nAttempts = ofy().load().type(QuizTransaction.class).filter("assignmentId",qa.id).filter("userId",user.getHashedId()).count();
 				if (nAttempts >= qa.attemptsAllowed) {
 					return Subject.banner + "<h2>Sorry, you are only allowed " + qa.attemptsAllowed + " attempt" + (qa.attemptsAllowed==1?"":"s") + " on this assignment.</h2>"
-							+ showScores(user,user,qa) + "<br/><br/>";
+							+ showScores(user,qa,user.getId(),null) + "<br/><br/>";
 				}
 			}
 			
@@ -386,7 +392,7 @@ public class Quiz extends HttpServlet {
 						q.setParameters(seed);
 						int score = q.isCorrect(studentAnswer)?q.pointValue:0;
 
-						responses.add(new Response("Quiz",qa.id,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,user.getId(),now));
+						responses.add(new Response("Quiz",qa.id,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,user.getId(),qt.id,now));
 
 						studentScore += score;
 						if (score == 0) {  
@@ -596,7 +602,7 @@ public class Quiz extends HttpServlet {
 		return buf.toString(); 
 	}
 
-	String ajaxJavaScript(String signature) {
+	static String ajaxJavaScript(String signature) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,note,email) {\n"
 		+ "  var xmlhttp;\n"
@@ -613,6 +619,27 @@ public class Quiz extends HttpServlet {
 		+ "    }\n"
 		+ "  }\n"
 		+ "  url += '&QuestionId=' + id + '&sig=" + signature + "&Notes=' + note + '&Email=' + email;\n"
+		+ "  xmlhttp.open('GET',url,true);\n"
+		+ "  xmlhttp.send(null);\n"
+		+ "  return false;\n"
+		+ "}\n"
+		+ "function synchronizeScore(forUserId) {\n"
+		+ "  let xmlhttp=GetXmlHttpObject();\n"
+		+ "  let url = '/Quiz?UserRequest=SynchronizeScore&sig=" + signature + "&ForUserId=' + forUserId;\n"
+		+ "  if (xmlhttp==null) {\n"
+		+ "    alert ('Sorry, your browser does not support AJAX!');\n"
+		+ "    return false;\n"
+		+ "  }\n"
+		+ "  xmlhttp.onreadystatechange=function() {\n"
+		+ "    if (xmlhttp.readyState==4) {\n"
+		+ "      if (xmlhttp.responseText.includes('OK')) {\n"
+		+ "        document.getElementById('cell'+forUserId).innerHTML='OK. Check grade book settings.';"
+		+ "        setTimeout(() => {location.reload();}, 500);\n"
+		+ "      } else {\n"
+		+ "        document.getElementById('cell'+forUserId).innerHTML=xmlhttp.responseText;"
+		+ "      }\n"
+		+ "    }\n"
+		+ "  }\n"
 		+ "  xmlhttp.open('GET',url,true);\n"
 		+ "  xmlhttp.send(null);\n"
 		+ "  return false;\n"
@@ -662,7 +689,7 @@ public class Quiz extends HttpServlet {
 		+ "}\n"
 		+ "</SCRIPT>";
 	}
-
+/*
 	static String showScores (User user,User forUser,Assignment a) {
 		if (!user.isInstructor() && !user.getId().equals(forUser.getId())) return "<H1>Access denied.</H1>";
 		
@@ -732,27 +759,101 @@ public class Quiz extends HttpServlet {
 		}
 		return buf.toString();
 	}
+*/	
+	static String showQuiz (User user, Assignment a, String quizTransactionId) {
+		StringBuffer buf = new StringBuffer();
+		try {
+			Long qtId = Long.parseLong(quizTransactionId);
+			QuizTransaction qt = ofy().load().type(QuizTransaction.class).id(qtId).safe();
+			List<Response> responses = ofy().load().type(Response.class).filter("assignmentId",a.id).filter("transactionId",qtId).list();
+			
+			buf.append("<h2>Quiz Results</h2>");
+			buf.append("Topic: " + a.title + "<br/>");
+			buf.append("Submitted: " + qt.graded + "<br/>");
+			buf.append("Score: " + String.valueOf(qt.score>0?qt.score*100/qt.possibleScore:0)+"%<br/>");
+			
+			buf.append("<ol>");
+			for (Response r : responses) {
+				Question q = ofy().load().type(Question.class).id(r.questionId).now();
+				if (q==null) continue; // question might have been deleted
+				q.setParameters(Math.abs(qt.getId() - q.getId()));
+				buf.append("<li>" + q.printAllToStudents(r.studentResponse) + "</li>");
+			}
+			buf.append("</ol>");
+			
+			int nUnanswered = qt.possibleScore - responses.size();
+			if (responses.size()==0) buf.append("The detailed responses to this quiz are not available.");
+			else if (nUnanswered>0) buf.append(String.valueOf(nUnanswered) + " question" + (nUnanswered>1?"s were":" was") + " left blank.");
+			
+		} catch (Exception e) {
+			buf.append(e.getMessage()==null?e.toString():e.getMessage());
+		}
+		return buf.toString();
+	}
 	
-	String showSummary(User user,Assignment a) {
+	static String showScores(User user, Assignment a, String for_user_hashed_id, String for_user_name) {
+		// This method shows a table of QuizTransaction entities for one user on the assignment
+		// with links to view individual Quiz submissions
+		StringBuffer buf = new StringBuffer();
+		
+		if (!user.isInstructor() || for_user_hashed_id == null) for_user_hashed_id = user.getHashedId();  // non-instructors can only view their own records
+		
+		try {
+			buf.append("<h2>Quiz Transactions</h2>");
+			if (for_user_name != null) buf.append("Name: " + for_user_name + "<br/>");
+			buf.append("Topic: "+ a.title + "<br>");
+			buf.append("Assignment ID: " + a.id + "<br/>");
+			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+			buf.append("Valid: " + df.format(new Date()) + "<br/><br/>");
+			
+			List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).filter("userId",for_user_hashed_id).filter("assignmentId",a.id).order("downloaded").list();
+			if (qts.size()==0) {
+				buf.append("Sorry, we did not find any records for this user on this assignment.<p>");
+				return buf.toString();
+			}	
+		
+			buf.append("<div style='display:table;text-align:center;'>");
+			buf.append("<div style='display:table-row'>"  // header row
+					+ "<div style='display:table-cell;font-weight:bold;padding-right:20px;'>Attempt</div>"
+					+ "<div style='display:table-cell;font-weight:bold;padding-right:20px;'>Downloaded</div>"
+					+ "<div style='display:table-cell;font-weight:bold;padding-right:20px;'>Elapsed Time</div>"
+					+ "<div style='display:table-cell;font-weight:bold;padding-right:20px;'>Total Score</div>"
+					+ "<div style='display:table-cell;font-weight:bold;padding-right:20px;'></div>"
+					+ "</div>"); // end of header row
+			for (QuizTransaction qt : qts) {
+				String elapsedMin = String.valueOf((qt.graded.getTime()-qt.downloaded.getTime())/60000L);
+				String elapsedSec = String.valueOf((qt.graded.getTime()-qt.downloaded.getTime())/1000L%60L);
+				String elapsedTime = qt.graded==null?" - ":elapsedMin + " min " + elapsedSec + " s";
+				String score = qt.graded==null?"no submission":String.valueOf(qt.score>0?qt.score*100/qt.possibleScore:0)+"%";
+				int nResponses = ofy().load().type(Response.class).filter("assignmentId",a.id).filter("transactionId",qt.id).count();
+				buf.append("<div style='display:table-row'>"  // row for one transaction
+						+ "<div style='display:table-cell;padding-right:20px;'>" + (qts.indexOf(qt)+1) + "</div>"
+						+ "<div style='display:table-cell;padding-right:20px;'>" + qt.downloaded + "</div>"
+						+ "<div style='display:table-cell;padding-right:20px;'>" + elapsedTime + "</div>"
+						+ "<div style='display:table-cell;padding-right:20px;'>" + score + "</div>"
+						+ "<div style='display:table-cell;padding-right:20px;'>" + (nResponses>0?"<a href=/Quiz?UserRequest=ShowQuiz&QuizTransactionId=" + qt.id + "&sig=" + user.getTokenSignature() + "&ForUserHashedId=" + for_user_hashed_id + ">View Quiz</a>":"") + "</div>"
+						+ "</div>");  // end of row
+			}
+			buf.append("</div><br/><br/>"); // end of table
+		} catch (Exception e) {
+			 buf.append(e.getMessage()==null?e.toString():e.getMessage());
+		}
+		return buf.toString();
+	}
+
+	static String showSummary(User user,Assignment a) {
 		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
 		
 		StringBuffer buf = new StringBuffer();
 		if (a==null) return "No assignment was specified for this request.";
 		
-		if (!user.isInstructor()) return "You must be logged in as the instructor to view this page.";
-
 		if (a.lti_ags_lineitem_url != null && a.lti_nrps_context_memberships_url != null) {
 			try { 
 				buf.append("<h3>" + a.assignmentType + " - " + a.title + "</h3>");
 				buf.append("Assignment ID: " + a.id + "<br>");
 				buf.append("Valid: " + new Date() + "<p>");
 				buf.append("The roster below is obtained using the Names and Role Provisioning service offered by your learning management system, "
-						+ "and may or may not include user's names or emails, depending on the settings of your LMS. The easiest way to "
-						+ "resolve any discrepancies between scores reported by the LMS grade book and ChemVantage is for the user to "
-						+ "submit the assignment again (even for a score of zero). This causes ChemVantage to recalculate the "
-						+ "user's best score and report it to the LMS. However, some discrepancies are to be expected, for example "
-						+ "if the instructor adjusts a score in the LMS manually or if an assignment was submitted after the "
-						+ "deadline and was not accepted by the LMS.<p>");
+						+ "and may or may not include user's names or emails, depending on the settings of your LMS.<br/><br/>");
 
 				Map<String,String> scores = LTIMessage.readMembershipScores(a);
 				if (scores==null) scores = new HashMap<String,String>();  // in case service call fails
@@ -774,35 +875,43 @@ public class Quiz extends HttpServlet {
 				}
 				Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
 				
-				buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th></tr>");
+				buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th><th>Details</th></tr>");
 				int i=0;
-				boolean synched = true;
+				int nMismatched = 0;
 				for (Map.Entry<String,String[]> entry : membership.entrySet()) {
 					if (entry == null) continue;
 					String s = scores.get(entry.getKey());
+					String lmsScoreString = (s==null?" - ":s + "%");
 					Score cvScore = cvScores.get(keys.get(entry.getKey()));
+					String cvScoreString = cvScore==null?" - ":String.valueOf(cvScore.getPctScore() + "%");
+					String forUserHashedId = keys.get(entry.getKey()).getParent().getName();
+					boolean synched = !"Learner".equals(entry.getValue()[0]) || cvScoreString.equals(lmsScoreString);
+					if (!synched) nMismatched++;  // number of Learner scores not same in CV and LMS
+					String forUserId = platform_id + entry.getKey();  // only send hashed values through links					
 					i++;
 					buf.append("<tr><td>" + i + ".&nbsp;</td>"
 							+ "<td>" + entry.getValue()[1] + "</td>"
 							+ "<td>" + entry.getValue()[2] + "</td>"
 							+ "<td>" + entry.getValue()[0] + "</td>"
-							+ "<td align=center>" + (s == null?" - ":s + "%") + "</td>"
-							+ "<td align=center>" + (cvScore == null?" - ":String.valueOf(cvScore.getPctScore()) + "%") + "</td></tr>");
-					// Flag this score set as unsynchronizde only if there is one or more non-null ChemVantage Learner score that is not equal to the LMS score
-					// Ignore Instructor scores because the LMS often does not report them, and ignore null cvScore entities because they cannot be reported.
-					synched = synched && (!"Learner".equals(entry.getValue()[0]) || (cvScore!=null?String.valueOf(cvScore.getPctScore()).equals(s):true));
+							+ "<td align=center>" + (s == null?" - ":lmsScoreString) + "</td>"
+							+ "<td align=center>" + (cvScore == null?" - ":String.valueOf(cvScore.getPctScore()) + "%") + "</td>"
+							+ "<td>" +  (cvScore == null?"":"<a href=/Quiz?UserRequest=ShowScores&sig=" + user.getTokenSignature() + "&ForUserHashedId=" + forUserHashedId + ">Show Scores</a>") + "</td>"
+							+ (synched?"":"<td><span id='cell" + forUserId + "'><button onClick=this.disabled=true;synchronizeScore('" + forUserId + "'); >sync</button></span></td>")
+							+ "</tr>");
 				}
 				buf.append("</table><br/>");
-				if (!synched) {
-					buf.append("If any of the Learner scores above are not synchronized, you may use the button below to launch a background task " 
-						+ "where ChemVantage will resubmit them to your LMS. This can take several seconds to minutes depending on the "
-						+ "number of scores to process. Please note that you may have to adjust the settings in your LMS to accept the "
-						+ "revised scores. For example, in Canvas you may need to change the assignment settings to Unlimited Submissions. "
-						+ "This may also cause the submission to be counted as late if the LMS assignment deadline has passed.<br/>"
+				if (nMismatched > 0) {
+					buf.append(ajaxJavaScript(user.getTokenSignature()));
+					buf.append("You may use the individual 'sync' buttons above to resubmit any ChemVantage score to the LMS. Note that in some cases, mismatched scores are expected (e.g., when "
+							+ "the instructor overrides a score or when a late submission is not accepted by the LMS). You may have to adjust the settings in your LMS to accept the "
+							+ "revised score (e.g., change the due date, grade override or allowed number of submissions). ");
+				}
+				if (nMismatched>1) {
+					buf.append("Use the button below to synchronize all of the Learner scores. This might take a minute, depending on the number of mismatches.<br/>"
 						+ "<form method=post action=/Quiz >"
 						+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 						+ "<input type=hidden name=UserRequest value='Synchronize Scores' />"
-						+ "<input type=submit value='Synchronize Scores' />"
+						+ "<input type=submit value='Synchronize All Scores' />"
 						+ "</form>");
 				}
 				return buf.toString();
@@ -813,6 +922,15 @@ public class Quiz extends HttpServlet {
 			buf.append("Sorry, there is not enough information available from your LMS to support this request.<p>");			
 		}
 		return buf.toString();
+	}
+	
+	String synchronizeScore(User user, Assignment a, String forUserId) {
+		try {
+			if (!user.isInstructor()) throw new Exception();  // only instructors can use this function
+			if (a==null) throw new Exception();  // can only do this for a known assignment
+			if (LTIMessage.postUserScore(Score.getInstance(forUserId,a), forUserId).contains("Success")) return "OK";
+		} catch (Exception e) {}
+		return "Failed. Check assignment settings in the LMS.";
 	}
 	
 	boolean synchronizeScores(User user,Assignment a) {

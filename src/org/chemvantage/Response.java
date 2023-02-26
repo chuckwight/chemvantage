@@ -50,7 +50,7 @@ public class Response implements Serializable {
 			
 	Response() {}
     
-	Response(String assignmentType, long assignmentId, long questionId, String studentResponse, String correctAnswer, int score, int possibleScore, String userId, Date submitted) {
+	Response(String assignmentType, long assignmentId, long questionId, String studentResponse, String correctAnswer, int score, int possibleScore, String userId, Long transactionId, Date submitted) {
         this.assignmentType = assignmentType;
         this.assignmentId = assignmentId;
         this.questionId = questionId;
@@ -59,6 +59,7 @@ public class Response implements Serializable {
         this.score = score;
         this.possibleScore = possibleScore;
         this.userId = Subject.hashId(userId);
+        this.transactionId = transactionId;
         this.submitted = submitted;
     }
 }

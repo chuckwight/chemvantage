@@ -88,8 +88,8 @@ public class PlacementExam extends HttpServlet {
 					out.println(Subject.header("Review ChemVantage Placement Exam") + reviewExam(user,placementExamTransactionId,studentUserId) + Subject.footer);
 					break;
 				case "SubmissionReview":
-					User forUser = new User(user.platformId,request.getParameter("ForUserId"));
-					out.println(Subject.header("ChemVantage Placement Exam") + submissionReview(user,forUser) + Subject.footer);
+					String forUserId = request.getParameter("ForUserId");
+					out.println(Subject.header("ChemVantage Placement Exam") + submissionReview(user,a,forUserId) + Subject.footer);
 					break;
 				case "AnalyzeQuestions":
 					out.println(Subject.header("Review ChemVantage Placement Exam Scores") + analyzeQuestions(user,a) + Subject.footer);
@@ -585,8 +585,7 @@ public class PlacementExam extends HttpServlet {
 					if (score==0 && q.agreesToRequiredPrecision(studentAnswer)) score = q.pointValue - 1;  // partial credit for wrong sig figs
 					if (score > 0) studentScores[a.conceptIds.indexOf(q.conceptId)] += score;
 					if (studentAnswer.length() > 0) {
-						Response r = new Response("PlacementExam",a.id,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,Subject.hashId(user.getId()),now);
-						r.transactionId = pt.id;
+						Response r = new Response("PlacementExam",a.id,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,Subject.hashId(user.getId()),pt.id,now);
 						responses.add(r);
 					}
 					if (score < q.pointValue) {
@@ -798,16 +797,16 @@ public class PlacementExam extends HttpServlet {
 		+ "</SCRIPT>";
 	}
 	
-	String submissionReview(User user,User forUser) {
+	static String submissionReview(User user,Assignment a,String forUserId) {
 		StringBuffer buf = new StringBuffer();
 
-		if (!user.getId().equals(forUser.getId()) && !user.isInstructor()) return "Access denied.";
+		if (!user.getId().equals(forUserId) && !user.isInstructor()) return "Access denied.";
 
-		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
-
-		List<PlacementExamTransaction> pets = ofy().load().type(PlacementExamTransaction.class).filter("userId",forUser.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
+		//Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
+		String forUserHashedId = Subject.hashId(forUserId);
+		List<PlacementExamTransaction> pets = ofy().load().type(PlacementExamTransaction.class).filter("userId",forUserHashedId).filter("assignmentId",a.id).order("downloaded").list();
 		if (pets.size()==0) {
-			buf.append("Sorry, we did not find any records for " + (user.getId().equals(forUser.getId())?"you":"this user") + " in the database for this assignment.<p>");
+			buf.append("Sorry, we did not find any records for " + (user.hashedId.equals(forUserHashedId)?"you":"this user") + " in the database for this assignment.<p>");
 		} else {				
 			Score s = null;
 			try { // retrieve the score and ensure that it is up to date
@@ -866,7 +865,7 @@ public class PlacementExam extends HttpServlet {
 		return buf.toString();
 	}
 
-	String reviewExamScores(User user,Assignment a) {
+	static String reviewExamScores(User user,Assignment a) {
 		StringBuffer buf = new StringBuffer();
 		try {
 			if (!user.isInstructor()) return "<h2>Access Denied</h2>You must be an instructor to view this page.";

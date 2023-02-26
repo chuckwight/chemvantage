@@ -269,7 +269,7 @@ public class VideoQuiz extends HttpServlet {
 						if (seed==-1) seed--;  // -1 is a special value for randomly seeded Random generator; avoid this (unlikely) situation
 						q.setParameters(seed);
 						int score = q.isCorrect(studentAnswer)?q.pointValue:0;
-						responses.add(new Response("VideoQuiz",0,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,user.getId(),now));
+						responses.add(new Response("VideoQuiz",0,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,user.getId(),vt.id,now));
 						quizletScore += score;
 						if (score == 0) {  
 							// include question in list of incorrectly answered questions
