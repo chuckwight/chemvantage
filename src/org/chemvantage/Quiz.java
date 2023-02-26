@@ -821,9 +821,7 @@ public class Quiz extends HttpServlet {
 					+ "<div style='display:table-cell;font-weight:bold;padding-right:20px;'></div>"
 					+ "</div>"); // end of header row
 			for (QuizTransaction qt : qts) {
-				String elapsedMin = String.valueOf((qt.graded.getTime()-qt.downloaded.getTime())/60000L);
-				String elapsedSec = String.valueOf((qt.graded.getTime()-qt.downloaded.getTime())/1000L%60L);
-				String elapsedTime = qt.graded==null?" - ":elapsedMin + " min " + elapsedSec + " s";
+				String elapsedTime = qt.graded==null?" - ":String.valueOf((qt.graded.getTime()-qt.downloaded.getTime())/60000L) + " min " + String.valueOf((qt.graded.getTime()-qt.downloaded.getTime())/1000L%60L) + " s";
 				String score = qt.graded==null?"no submission":String.valueOf(qt.score>0?qt.score*100/qt.possibleScore:0)+"%";
 				int nResponses = ofy().load().type(Response.class).filter("assignmentId",a.id).filter("transactionId",qt.id).count();
 				buf.append("<div style='display:table-row'>"  // row for one transaction
