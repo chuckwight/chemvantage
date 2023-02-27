@@ -258,6 +258,10 @@ public class Question implements Serializable, Cloneable {
 	}
 	
 	public String print(String showWork,String studentAnswer) {
+		return print(showWork,studentAnswer,null);
+	}
+	
+	public String print(String showWork,String studentAnswer,Integer attemptsRemaining) {
 		StringBuffer buf = new StringBuffer();
 		char choice = 'a';
 		List<Character> choice_keys = new ArrayList<Character>();
@@ -305,7 +309,7 @@ public class Question implements Serializable, Cloneable {
 					+ "<label>Show your work:<br/><TEXTAREA NAME=ShowWork" + this.id + " ROWS=5 COLS=50 WRAP=SOFT "
 					+ "onkeyup=this.value=this.value.substring(0,500); placeholder='Show your work here'>" + (showWork==null?"":showWork) + "</TEXTAREA>"
 					+ "</label><br/></div>");
-			buf.append("<label>");
+			//buf.append("<label>");
 			switch (getNumericItemType()) {
 			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact value. <a href=# onclick=\"alert('Your answer must have exactly the correct value. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
@@ -313,8 +317,9 @@ public class Question implements Serializable, Cloneable {
 				buf.append("<span style='color:#EE0000;font-size: small;'>Include at least " + sf + " significant figures in your answer. <a href=# onclick=\"alert('To be scored correct, your answer must agree with the correct answer to at least " + sf + " significant figures. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 			default:
-			}			
-			buf.append("<input size=25 type=text name=" + this.id + " id=answer" + this.id + " value='" + studentAnswer + "' onFocus=showWorkBox('" + this.id + "'); />");
+			}
+			String placeholder = attemptsRemaining==null?"":(" (" + attemptsRemaining + " attempt" + (attemptsRemaining==1?"":"s") + " remaining)");
+			buf.append("<label><input size=25 type=text name=" + this.id + " id=answer" + this.id + " value='" + studentAnswer + "' placeholder='" + placeholder + "' onFocus=showWorkBox('" + this.id + "'); />");
 			buf.append("&nbsp;" + parseString(tag) + "</label><br/><br/>");
 			break;        
 		}

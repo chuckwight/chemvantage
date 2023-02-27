@@ -260,8 +260,11 @@ public class Homework extends HttpServlet {
 			List<Long> solvedQuestions = new ArrayList<Long>();
 			Map<Long,String> workStrings = new HashMap<Long,String>();
 			List<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",hwa.id).order("-graded").list();
+			Map<Long,Integer> priorAttempts = new HashMap<Long,Integer>();
 			
 			for (HWTransaction ht : hwTransactions) {
+				int att = priorAttempts.get(ht.questionId)==null?1:priorAttempts.get(ht.questionId)+1; // prior attempts of this question
+				priorAttempts.put(ht.questionId, att); // maintain a Map of prior attempts for each question
 				if (solvedQuestions.contains(ht.questionId)) continue;
 				if (ht.score > 0) solvedQuestions.add(ht.questionId);
 				if (workStrings.containsKey(ht.questionId)) continue;
@@ -291,18 +294,24 @@ public class Homework extends HttpServlet {
 				String hashMe = user.getId() + hwa.id;
 				q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
 				
+				Integer attemptsRemaining = null;
+				if (hwa.attemptsAllowed!=null) {
+					attemptsRemaining = hwa.attemptsAllowed - (priorAttempts.get(q.id)==null?0:priorAttempts.get(q.id));
+					if (attemptsRemaining < 0) attemptsRemaining = 0;
+				}
+				
 				if (solvedQuestions.contains(q.id)) questionBuffer.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");
 				else if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) questionBuffer.append("<br/><a href='" + q.learn_more_url + "' target=_blank><img src=/images/learn_more.png alt='learn more here' align=top /><br/>learn</a>&nbsp;");
 				//questionBuffer.append("<br/>" + qcache.getSuccessPct(k));
 				
 				questionBuffer.append("</div>");
-
+				
 				questionBuffer.append("<FORM METHOD=POST ACTION=/Homework>"
 						+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ (hwa==null?"":"<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>")
 						+ "<div style='display:table-cell;vertical-align:text-top;padding-right:10px;'><b>" + (assigned?i:j) + ".</b></div>"
-						+ "<div style='display:table-cell'>" + q.print(workStrings.get(q.id),"") 
+						+ "<div style='display:table-cell'>" + q.print(workStrings.get(q.id),"",attemptsRemaining) 
 						+ (q.id == hintQuestionId?"Hint:<br>" + q.getHint():"")
 						+ "<INPUT TYPE=SUBMIT VALUE='Grade This Exercise'><p>"
 						+ "</div></div></FORM>\n");
