@@ -263,6 +263,7 @@ public class Question implements Serializable, Cloneable {
 	
 	public String print(String showWork,String studentAnswer,Integer attemptsRemaining) {
 		StringBuffer buf = new StringBuffer();
+		String placeholder = attemptsRemaining==null?"":(" (" + attemptsRemaining + " attempt" + (attemptsRemaining==1?"":"s") + " remaining)");
 		char choice = 'a';
 		List<Character> choice_keys = new ArrayList<Character>();
 		Random rand = new Random();
@@ -275,7 +276,7 @@ public class Question implements Serializable, Cloneable {
 				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
 				buf.append("<label><input type=radio name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED />":" />") + choices.get(choice-'a') + "</label><br/>");
 			}
-			buf.append("<br/>");
+			buf.append("<span style='color: gray; font-size: 0.8em;'>" + placeholder + "</span><br/>");
 			break;
 		case 2: // True/False
 			buf.append(text);
@@ -283,7 +284,7 @@ public class Question implements Serializable, Cloneable {
 			buf.append("<span style='color:#EE0000;font-size: small;'>Select true or false:</span><br/>");
 			buf.append("<label><input type=radio name=" + this.id + " value='true'" + (studentAnswer.equals("true")?" CHECKED />":" />") + " True</label><br/>");
 			buf.append("<label><input type=radio name=" + this.id + " value='false'" + (studentAnswer.equals("false")?" CHECKED />":" />") + " False</label><br/>");
-			buf.append("<br/>");
+			buf.append("<span style='color: gray; font-size: 0.8em;'>" + placeholder + "</span><br/>");
 			break;
 		case 3: // Select Multiple
 			buf.append(text + "<br/>");
@@ -293,13 +294,13 @@ public class Question implements Serializable, Cloneable {
 				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
 				buf.append("<label><input type=checkbox name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED />":" />") + choices.get(choice-'a') + "</label><br/>");
 			}
-			buf.append("<br/>");
+			buf.append("<span style='color: gray; font-size: 0.8em;'>" + placeholder + "</span><br/>");
 			break;
 		case 4: // Fill-in-the-Word
 			buf.append(text);
 			buf.append("<br/>");
 			buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct word or phrase:</span><br/>");
-			buf.append("<label><input id=" + this.id + " type=text name=" + this.id + " value='" + quot2html(studentAnswer) + "' />");
+			buf.append("<label><input id=" + this.id + " type=text name=" + this.id + " value='" + quot2html(studentAnswer) + "' placeholder='" + placeholder + "' />");
 			buf.append("&nbsp;" + tag + "</label><br/><br/>");
 			break;
 		case 5: // Numeric Answer
@@ -318,7 +319,6 @@ public class Question implements Serializable, Cloneable {
 			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 			default:
 			}
-			String placeholder = attemptsRemaining==null?"":(" (" + attemptsRemaining + " attempt" + (attemptsRemaining==1?"":"s") + " remaining)");
 			buf.append("<label><input size=25 type=text name=" + this.id + " id=answer" + this.id + " value='" + studentAnswer + "' placeholder='" + placeholder + "' onFocus=showWorkBox('" + this.id + "'); />");
 			buf.append("&nbsp;" + parseString(tag) + "</label><br/><br/>");
 			break;        
