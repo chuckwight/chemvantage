@@ -341,53 +341,6 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			return null;  //e.toString() + " " + e.getMessage() + "<br>" + debug.toString();
 		}
 	}
-/*
-	static void updateLineItem(Deployment d, String lti_ags_lineitem_url, long assignmentId) throws Exception {
-		if (d==null || lti_ags_lineitem_url == null || assignmentId == 0L) return;
-		
-		JsonObject lineitem = null;
-		try {
-			lineitem = LTIMessage.getLineItem(d, lti_ags_lineitem_url);
-		} catch (Exception e) {
-			throw new Exception("Failed to get Lineitem. " + e.toString() + " " + e.getMessage());
-		}
-		
-		// check for required id element:
-		if (lineitem.get("id") == null) return;  // not a valid lineitem
-		
-		try {
-			String resourceId = lineitem.remove("resourceId").getAsString();
-			if (resourceId.equals(String.valueOf(assignmentId))) return; // everything is OK
-			lineitem.addProperty("resourceId",String.valueOf(assignmentId));
-		} catch (Exception e) {
-			return;
-		}
-		
-		// PUT the revised lineitem to the platform:
-		try {
-			String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem";
-			String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id,scope);
-			
-			URL u = new URL(lti_ags_lineitem_url);
-
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			uc.setDoOutput(true);
-			uc.setRequestMethod("PUT");
-			uc.setRequestProperty("Authorization", bearerAuth);
-			uc.setRequestProperty("Content-Type", "application/vnd.ims.lis.v2.lineitem+json");
-			uc.setRequestProperty("Accept-Type", "application/vnd.ims.lis.v2.lineitem+json");
-			uc.setRequestProperty("Content-Length", String.valueOf(lineitem.toString().length()));
-			uc.connect();
-
-			// send the message
-			OutputStreamWriter toTC = new OutputStreamWriter(uc.getOutputStream());
-			toTC.write(lineitem.toString());
-			toTC.flush();
-			toTC.close();
-		} catch (Exception e) {
-		}	
-	}
-*/	
 
 	static Map<String,String> readMembershipScores(Assignment a) {
 		// This method uses the LTIv1p3 message protocol to retrieve a JSON containing all of
@@ -597,7 +550,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	    		//sendEmailToAdmin("Score submission failed",buf.toString());
 			}
 		} catch (Exception e) {
-			sendEmailToAdmin("Score submission failed",buf.toString());
+			//sendEmailToAdmin("Score submission failed",buf.toString());
 			return "Score submission error: " + e.toString() + e.getMessage() + "<br>" + buf.toString();
 		}
 		return buf.toString();
