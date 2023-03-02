@@ -184,7 +184,7 @@ public class PracticeExam extends HttpServlet {
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/PracticeExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + "'>Customize this exam</a> "
-					+ "to set the time allowed, number of submissions, an optioinal passeord and select the available question items.</LI>"
+					+ "to set the time allowed, number of submissions, an optional password and select the available question items.</LI>"
 					+ (supportsMembership?"<LI><a href='/PracticeExam?UserRequest=ReviewExamScores&sig=" + user.getTokenSignature() + "'>Review the exam results</a> and (optionally) assign partial credit for answers</LI>":"")
 					+ "</UL>");
 			
