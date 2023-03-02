@@ -325,7 +325,8 @@ public class Homework extends HttpServlet {
 			}
 			buf.append((i>1?"<h4>Assigned Exercises</h4>":"") + assignedQuestions + "</div>" + (i>1 && j>1?"<h4>Optional Exercises</h4>":"") + optionalQuestions + "</div>");
 		} catch (Exception e) {
-			buf.append((e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString());
+			buf.append("Sorry, there was an unexpected error: " + e.getMessage()==null?e.toString():e.getMessage());
+			LTIMessage.sendEmailToAdmin("Error during Homework.printHomework: ", e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString());
 		}
 		return buf.toString();
 	}
@@ -551,7 +552,8 @@ public class Homework extends HttpServlet {
 			if (user.isAnonymous()) buf.append(" or go back to the <a href=/>ChemVantage home page</a>.<br/><br/>");
 			}
 		catch (Exception e) {
-			buf.append("<p>Sorry, we were unable to score this question: " + e.toString() + "<p>" + debug.toString());
+			buf.append("Sorry, there was an unexpected error: " + e.getMessage()==null?e.toString():e.getMessage());
+			LTIMessage.sendEmailToAdmin("Error during Homework.printScore: ", e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString());
 		}
 		return buf.toString();
 	}

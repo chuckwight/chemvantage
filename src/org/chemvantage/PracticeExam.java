@@ -228,7 +228,7 @@ public class PracticeExam extends HttpServlet {
 	
 	static String printExam(User user,Assignment a,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		
+		StringBuffer debug = new StringBuffer("Debug: ");
 		try {
 			// Check to see if a password is required to start the exam
 			if (a==null || a.password == null || a.password.isEmpty() || a.password.equals(request.getParameter("ExamPassword")));  // continue
@@ -236,7 +236,8 @@ public class PracticeExam extends HttpServlet {
 				String msg = (request.getParameter("ExamPassword")==null?"":"The password was not correct. Please wait...");
 				return passwordPrompt(user,msg);
 			}
-
+			debug.append("1");
+			
 			if (a==null) { // anonymous user 
 				a = new Assignment();
 				a.id = 0L;
@@ -254,19 +255,23 @@ public class PracticeExam extends HttpServlet {
 				}
 				ofy().save().entity(a).now();
 			}
+			debug.append("2");
 			
 			// Check to see if the timeAllowed has been modified by the instructor:
 			int timeAllowed = 3600;  // default value in seconds
 			if (a.timeAllowed!=null) {
 				timeAllowed = a.timeAllowed;  // instructor option, e.g. for student disability accommodations
 				user = User.getUser(user.getTokenSignature(),timeAllowed/60+30);
+				if (user==null) return Logout.message;
 			}
-
+			debug.append("3");
+			
 			// Check to see if this user has any pending exams:
 			Date now = new Date();
 			Date startTime = new Date(now.getTime()-timeAllowed*1000);  // about 1 hour ago depending on timeAllowed ago 
 			List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
 			int nAttempts = pets.size();
+			debug.append("4");
 			
 			//	get the most recent transaction and determine whether this is resuming a recent exam
 			PracticeExamTransaction pt = nAttempts==0?null:pets.get(nAttempts-1);
@@ -290,12 +295,14 @@ public class PracticeExam extends HttpServlet {
 				}	
 				ofy().save().entity(pt).now();	// need to save this to get the pt.id for setting Question parameters			
 			}
-
+			debug.append("5");
+			
 			// past this point we will present a practice exam to the student. 
 			// first retrieve all the questions using the assignment.questionKeys List:
 			Map<Key<Question>,Question> questions = new HashMap<Key<Question>,Question>();
 			if (resumingExam && !pt.questionKeys.isEmpty()) questions = ofy().load().keys(pt.questionKeys);
 			else questions = ofy().load().keys(a.questionKeys);  // this method tolerates keys for questions that have been deleted
+			debug.append("6");
 			
 			// sort the question keys by point value:
 			List<Key<Question>> questionKeys_02pt = new ArrayList<Key<Question>>();
@@ -316,6 +323,7 @@ public class PracticeExam extends HttpServlet {
 				a.questionKeys.removeAll(remove);
 				ofy().save().entity(a);
 			}
+			debug.append("7");
 			
 			// Reduce the size of questionKeys Lists to the number of questions needed
 			Random rand = new Random();  // create random number generator to select exam questions
@@ -323,8 +331,10 @@ public class PracticeExam extends HttpServlet {
 			while (questionKeys_02pt.size()>10) questionKeys_02pt.remove(rand.nextInt(questionKeys_02pt.size()));
 			while (questionKeys_10pt.size()> 5) questionKeys_10pt.remove(rand.nextInt(questionKeys_10pt.size()));
 			while (questionKeys_15pt.size()> 2) questionKeys_15pt.remove(rand.nextInt(questionKeys_15pt.size()));
+			debug.append("8");
 			
 			buf.append("<script>function showWorkBox(qid){}</script>");  // prevents javascript error from Question.print()
+			debug.append("9");
 			
 			buf.append("<h2>General Chemistry Exam</h2>");
 			
@@ -411,7 +421,8 @@ public class PracticeExam extends HttpServlet {
 			// this code for displaying/hiding timers and a 30-seconds-remaining alert box
 			buf.append(timerScripts(endMillis)); 
 		} catch (Exception e) {
-			buf.append("printExam: " + e.toString());
+			buf.append("Sorry, there was an unexpected error: " + e.getMessage()==null?e.toString():e.getMessage());
+			LTIMessage.sendEmailToAdmin("Error during PracticeExam.printExam: ", e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString());
 		}
 		return buf.toString();
 	}
