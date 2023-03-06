@@ -74,7 +74,7 @@
 			<option value=1>1 month</option>
 			<option value=2>2 months</option>
 			<option value=5>5 months</option>
-			<option value=10>10 months</option>
+			<option value=12>12 months</option>
 		</select><br /><br /> 
 		
 		
@@ -99,7 +99,7 @@
 	   		case "1": amtPaid="<%= d.price %>"; break;
 	   		case "2": amtPaid="<%= 2*d.price %>"; break;
 	   		case "5": amtPaid="<%= 4*d.price %>"; break;
-	   		case "10": amtPaid="<%= 7*d.price %>"; break;
+	   		case "12": amtPaid="<%= 8*d.price %>"; break;
 	   		}
 	   		document.getElementById("amt").innerHTML=nMonths + (nMonths=="1"?' month':' months') + ' - $' + amtPaid + '.00 USD';
     	}

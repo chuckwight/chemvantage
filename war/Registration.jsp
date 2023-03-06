@@ -3,7 +3,7 @@
 <%@ page import="java.util.*,com.googlecode.objectify.*,org.chemvantage.*,com.google.common.net.InternetDomainName"%>
 
 <%
-	String price = "2";
+	int price = 2;  // posted monthky subscription price in USD
 	String message = request.getParameter("message");
 	String sub = request.getParameter("sub");
 	String email = request.getParameter("email");
@@ -50,8 +50,9 @@
 
 Please complete the form below to create a trusted LTI Advantage connection between your LMS and ChemVantage 
 that is convenient, secure and <a href=https://site.imsglobal.org/certifications?query=chemvantage>certified by 1EdTech</a>.
-When you submit the form, ChemVantage will send a registration request to your LMS. If successful, you  
-will need to activate the deployment in your LMS before a launch to ChemVantage can take place.<br/><br/>
+When you submit the form, ChemVantage will send 
+<%= dynamic?"a registration request to your LMS. If successful, you must activate the deployment in your LMS.":"a confirmation email with a tokenized link to complete the registration." %>
+<br/><br/>
 
 Please tell us how to contact you if there is ever a problem with your account (see our <a href=https://www.chemvantage.org/about.html#privacy>Privacy Policy</a>):<br/>
 <label>Your Name: <input type=text name=sub size=40 value='<%= (sub==null?"":sub) %>' /> </label><br/>
@@ -91,8 +92,8 @@ Please note that the server is sometimes in an unstable state, and accounts may 
 Pricing:
 <ul>
 <li>LTI registration and instructor accounts are free.</li>
-<li>Each student account costs $<%= price %>.00 USD per month for an all-access subscription.</li>
-<li>Institutions have the option of purchasing student licenses in bulk at deeply discounted rates.</li>
+<li>Each student account costs $<%= price %>.00 USD per month or $<%= 4*price %>.00 USD per semester for an all-access subscription.</li>
+<li>Institutions have the option of purchasing student licenses in bulk for as little as $<%= price %>.00 USD per year.</li>
 </ul>
 <% } %>
 
