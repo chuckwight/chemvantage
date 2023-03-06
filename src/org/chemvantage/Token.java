@@ -45,12 +45,13 @@ public class Token extends HttpServlet {
 			//debug.append("client_id=" + client_id);
 			
 			Deployment d = getDeployment(platform_id,deployment_id,client_id);
-			
+			if (d==null) response.sendRedirect("/Registration.jsp?message=To+start+using+ChemVantage,+please+register+your+LMS.");
+			/*
 			if (d==null) throw new Exception("ChemVantage was unable to identify this deployment from your LMS. "
 					+ "If you received a registration email within the past 7 days, please use the tokenized link in that message to "
 					+ "submit (or resubmit) the deployment_id and other required parameters. Otherwise, you may "
 					+ "repeat the registration process at https://www.chemvantage.org/lti/registration");
-			
+			*/
 			String redirect_uri = target_link_uri;
 			
 			Date now = new Date();

@@ -308,7 +308,16 @@ public class LTIRegistration extends HttpServlet {
 				+ "<hr>"
 				+ "<br>To the LMS Administrator:<p>"
 				+ "ChemVantage is an Open Education Resource for General Chemistry. Learn more about ChemVantage "
-				+ "<a href=https://www.chemvantage.org/about.html>here</a>.<p>");
+				+ "<a href=https://www.chemvantage.org/about.html>here</a>.<p>"
+				+ "Detailed instructions for installing ChemVantage in your LMS can be found "
+				+ "<a href=https://www.chemvantage.org/install.html>here</a>.<p>");
+		
+		buf.append("When you have finished configuring your LMS, please click the tokenized link below to register the Client ID, Deployment ID and "
+				+ "configuration URLs with ChemVantage. If the link expires, click <a href=" + iss + "/lti/registration>here</a> to get anther one.<p>");
+		
+		buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
+				+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><br/><br/>");
+/*		
 		switch (lms) {
 		case "blackboard":
 			buf.append("This request indicates that you are using the cloud-based Blackboard Learn LMS. "
@@ -520,7 +529,7 @@ public class LTIRegistration extends HttpServlet {
 			buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
 					+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><p>");
 		}
-
+*/
 		buf.append("If you  need additional assistance, please contact me at admin@chemvantage.org. <p>"
 				+ "-Chuck Wight");
 
@@ -580,14 +589,17 @@ public class LTIRegistration extends HttpServlet {
 				oauth_access_token_url = "https://developer.blackboard.com/api/v1/gateway/oauth2/jwttoken";
 				break;
 			case "schoology":
+				client_id = (iss.equals("https://www.chemvantage.org")?"6558245496":"");
 				platform_id = "https://schoology.schoology.com";
 				oidc_auth_url = "https://lti-service.svc.schoology.com/lti-service/authorize-redirect";
 				well_known_jwks_url = "https://lti-service.svc.schoology.com/lti-service/.well-known/jwks";
 				oauth_access_token_url = "https://lti-service.svc.schoology.com/lti-service/access-token";
 				
-				buf.append("The Schoology admin can get the deployment_id value for ChemVantage by clicking "
-						+ "Apps icon | App Center | My Developer Apps. Find ChemVantage and click Configure.<br/>"
-						+ "The ChemVantage client_id can be found on the My Developer Apps page by selecting Options | API Info.<p>");
+				buf.append("The Schoology admin can get the Deployment ID value for ChemVantage by clicking the "
+						+ "Apps icon > App Center > " + (iss.equals("https://www.chemvantage.org")?"Organization Apps. ":"My Developer Apps. ") 
+						+ "Find ChemVantage and select Configure. The Deployment ID should be two large (~10-digit) numbers separated by a hyphen. "
+						+ (iss.equals("https://dev-vantage-hrd.appspot.com")?"The Client ID value is the first 10-digit number in the Deployment ID.":"") 
+						+ "<p>");
 				break;
 			case "canvas":
 				platform_id = "https://canvas.instructure.com";
