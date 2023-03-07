@@ -61,7 +61,9 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		// First, try to retrieve an appropriate authToken from the class variable HashMap authTokens
 		// If the token expires more than 5 minutes from now, use it. Otherwise, request a new one.
 		Deployment d = null;
-		Date in15Minutes = new Date(new Date().getTime() + 300000L);  // 5 minutes from now
+		Date now = new Date();
+		Date in5Min = new Date(now.getTime() + 300000L);  // 5 minutes from now
+		Date in15Min = new Date(now.getTime() + 900000L);  // 15 minutes from now
 		StringBuffer debug = new StringBuffer("Failed LTIMessage.getAccessToken()<br/>");
 		
 		DataOutputStream wr = null;
@@ -76,12 +78,11 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			String authToken = authTokens.get(platformDeploymentId);
 			if (authToken != null) {  //found a cached authToken; check the expiration and use it
 				JsonObject jAuthToken = JsonParser.parseString(authToken).getAsJsonObject();
-				if (in15Minutes.before(new Date(jAuthToken.get("exp").getAsLong()))) return jAuthToken.get("access_token").getAsString();			
+				if (in5Min.before(new Date(jAuthToken.get("exp").getAsLong()))) return jAuthToken.get("access_token").getAsString();			
 			}
 
 			// At this point no valid cached authToken was found, so we request a new authToken from the LMS platform:
 			// First, construct a request token to send to the platform
-			Date now = new Date();
 			String iss = System.getProperty("com.google.appengine.application.id").contains("dev-vantage")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
 			debug.append("Requested by: " + iss + "<br/>Denied by: " + d.oauth_access_token_url + "<br/>");
 			
@@ -98,7 +99,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 					.withSubject(sub)
 					.withAudience(aud)
 					.withKeyId(d.rsa_key_id)
-					.withExpiresAt(in15Minutes)
+					.withExpiresAt(in15Min)
 					.withIssuedAt(now)
 					.withJWTId(Nonce.generateNonce())
 					.sign(Algorithm.RSA256(null,KeyStore.getRSAPrivateKey(d.rsa_key_id)));
@@ -149,8 +150,9 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				return access_token;
 			} else throw new Exception("response code " + responseCode);
 		} catch (Exception e) {
-			sendEmailToAdmin("Failed AuthToken Request",debug.toString() + "<br/>" + e.toString() + e.getMessage());
-			return "Failed AuthToken Request <br/>" + debug.toString();
+			debug.append("Elapsed time: " + (new Date().getTime() - now.getTime()) + " ms<br/>");
+			sendEmailToAdmin("Failed AuthToken Request",debug.toString() + "<br/>" + (e.getMessage()==null?e.toString():e.getMessage()));
+			return "Failed AuthToken Request <br/>" + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString();
 		}    
 	}
    
