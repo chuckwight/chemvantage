@@ -29,7 +29,7 @@ import com.googlecode.objectify.annotation.Index;
 public class Text implements Serializable {
 	private static final long serialVersionUID = 137L;
     @Id	Long id;
-    	String title;
+    @Index	String title;
     	String author;
     	String publisher;
     	String URL;

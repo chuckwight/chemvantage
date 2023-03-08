@@ -74,6 +74,7 @@ public class ItemBank extends HttpServlet {
 			if (c.itemLicensed) out.println(Subject.header("ChemVantage Item Bank") + itemBank(code,request) + Subject.footer);
 			else out.println(Subject.header("ChemVantage Item Bank") + licenseForm(c) + Subject.footer);
 		} catch (Exception e) {
+			out.println(e.getMessage()==null?e.toString():e.getMessage());
 			out.println(Subject.header("ChemVantage Item Bank") + registrationForm(request.getParameter("msg")) + Subject.footer);
 		}	
 	}
@@ -277,68 +278,97 @@ public class ItemBank extends HttpServlet {
 	
 	String itemBank(String code,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer(Subject.banner);
-		buf.append("<h2>Question Item Bank</h2>");
+		StringBuffer debug = new StringBuffer("Debug: ");
 		
-		Text text = ofy().load().type(Text.class).filter("title","All Topics").first().now();
-		Chapter chapter = null;
 		try {
-			int chapterNumber = Integer.parseInt(request.getParameter("ChapterNumber"));
-			for (Chapter c : text.chapters) if (c.chapterNumber == chapterNumber) {chapter = c;break;}
-		} catch (Exception e) {}
-		
-		String assignmentType = request.getParameter("AssignmentType");
-		boolean showQuestions = (chapter != null && assignmentType != null);
-		
-		if (!showQuestions) buf.append("ChemVantage LLC is pleased to share the quiz and homework question items in our database for your "
-				+ "private noncommercial use in teaching. In that context you are not required to provide attribution to ChemVantage. "
-				+ "Sharing items publicly <i>outside</i> of your teaching activities may only be done under the terms of the "
-				+ "<a href=https://creativecommons.org/licenses/by/3.0/us/>Creative Commons Attribution 3.0 License</a>.<br/><br/>");
-		
-		buf.append("<FORM NAME=TopicSelect METHOD=GET ACTION=/items>");
-		buf.append("<input type=hidden name=code value='" + code + "' />");
-		buf.append("<FONT" + (chapter != null?" COLOR=RED>":">") + "<b>Topic:</b></FONT>" + chapterSelectBox(text,chapter,true));
-		buf.append("<FONT" + (assignmentType != null?" COLOR=RED>":">") + "<b> Assignment Type:</b></FONT>" + assignmentTypeDropDownBox(assignmentType,true));
-		buf.append("<span style='display:none' id=refreshing > Please wait...</span>");
-		buf.append("</FORM><br/>");
-				
-		if (!showQuestions) return buf.toString();
-		
-		if ("Homework".equals(assignmentType)) buf.append("For parameterized questions, you can view another version by refreshing your browser page.<br/><br/><hr>");
-		else buf.append("<br/><hr>");
-		
-		List<Question> questions = new ArrayList<Question>();
-		for (Long cId : chapter.conceptIds)	questions.addAll(ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",cId).list());
-		if (questions.size()==0) buf.append("Sorry, this topic contains no questions of this type.");
-		
-		for (Question q : questions) {
-			q.setParameters();
-			buf.append("<br/>" + q.printAll() + "<hr>");
+			buf.append("<h2>Question Item Bank</h2>");
+			debug.append("1");
+
+			Text text = ofy().load().type(Text.class).filter("title","View All Topics").first().now();
+			debug.append("2");
+			Chapter chapter = null;
+			try {
+				int chapterNumber = Integer.parseInt(request.getParameter("ChapterNumber"));
+				for (Chapter c : text.chapters) {
+					if (c.chapterNumber == chapterNumber) {
+						chapter = c;
+						break;
+					}
+				}
+			} catch (Exception e) {}
+			debug.append("3");
+
+			String assignmentType = request.getParameter("AssignmentType");
+			boolean showQuestions = (chapter != null && assignmentType != null && !assignmentType.isEmpty());
+			debug.append("4");
+
+			if (!showQuestions) buf.append("ChemVantage LLC is pleased to share the quiz and homework question items in our database for your "
+					+ "private noncommercial use in teaching. In that context you are not required to provide attribution to ChemVantage. "
+					+ "Sharing items publicly <i>outside</i> of your teaching activities may only be done under the terms of the "
+					+ "<a href=https://creativecommons.org/licenses/by/3.0/us/>Creative Commons Attribution 3.0 License</a>.<br/><br/>");
+
+			buf.append("<FORM NAME=TopicSelect METHOD=GET ACTION=/items>");
+			buf.append("<input type=hidden name=code value='" + code + "' />");
+			buf.append("<b>Topic: </b>" + chapterSelectBox(text,chapter,true));
+			debug.append("5");
+			buf.append("&nbsp;&nbsp;<b>Assignment Type: </b>" + assignmentTypeDropDownBox(assignmentType,true));
+			debug.append("6");
+			buf.append("<span style='display:none' id=refreshing > Please wait...</span>");
+			buf.append("</FORM><br/>");
+			debug.append("7");
+
+			if (!showQuestions) return buf.toString();
+
+			if ("Homework".equals(assignmentType)) buf.append("For parameterized questions, you can view another version by refreshing your browser page.<br/><br/><hr>");
+			else buf.append("<br/><hr>");
+			debug.append("6");
+
+			List<Question> questions = new ArrayList<Question>();
+			for (Long cId : chapter.conceptIds)	questions.addAll(ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",cId).list());
+			if (questions.size()==0) buf.append("Sorry, this topic contains no questions of this type.");
+			debug.append("7");
+
+			for (Question q : questions) {
+				q.setParameters();
+				buf.append("<br/>" + q.printAll() + "<hr>");
+			}
+		} catch (Exception e) {
+			buf.append("<br/>Error: " + e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString());
 		}
-		return buf.toString();	
+		return buf.toString();
 	}
 	
 	String assignmentTypeDropDownBox(String defaultType,boolean autoSubmit) {
 		if (defaultType == null) defaultType = "";
-		StringBuffer buf = new StringBuffer("\n<SELECT NAME=AssignmentType" + (autoSubmit?" onChange=document.getElementById('refreshing').style='display:inline';submit()>":">"));
-		if (defaultType.length() == 0) buf.append("\n<OPTION VALUE=''>Select a type</OPTION>");
-		buf.append("<OPTION" + (defaultType.equals("Quiz")?" SELECTED":"") + ">Quiz</OPTION>"
-		+ "<OPTION" + (defaultType.equals("Homework")?" SELECTED":"") + ">Homework</OPTION>"
-		+ "</SELECT>");
+		StringBuffer buf = new StringBuffer("<SELECT NAME=AssignmentType" + (autoSubmit?" onChange=document.getElementById('refreshing').style='display:inline';submit()>":">"));
+		try {
+			if (defaultType.isEmpty()) buf.append("<OPTION VALUE=''>Select a type</OPTION>");
+			buf.append("<OPTION" + (defaultType.equals("Quiz")?" SELECTED":"") + ">Quiz</OPTION>"
+					+ "<OPTION" + (defaultType.equals("Homework")?" SELECTED":"") + ">Homework</OPTION>"
+					+ "</SELECT>");
+		} catch (Exception e) {
+			buf.append(e.getMessage()==null?e.toString():e.getMessage());
+		}
 		return buf.toString();
 	}
 
-	String chapterSelectBox(Text text,Chapter chapter,boolean autoSubmit) {
-		StringBuffer buf = new StringBuffer("\n<SELECT NAME=TopicId" + (autoSubmit?" onChange=document.getElementById('refreshing').style='display:inline';submit()>":">"));
-		if (chapter==null) buf.append("\n<OPTION VALUE=''>Select a topic</OPTION>");
-		for (Chapter c : text.chapters) {
-			buf.append("<OPTION VALUE=" 
-				+ c.chapterNumber + (chapter!=null && c.chapterNumber==chapter.chapterNumber?" SELECTED>":">") + c.title 
-				+ "</OPTION>\n");
+	String chapterSelectBox(Text text,Chapter chapter,boolean autoSubmit) throws Exception {
+		if (text == null) return "";
+		StringBuffer buf = new StringBuffer("<SELECT NAME=ChapterNumber" + (autoSubmit?" onChange=document.getElementById('refreshing').style='display:inline';submit(); >":" >"));
+		try {
+			if (chapter==null) buf.append("<OPTION VALUE=''>Select a topic</OPTION>");
+			for (Chapter c : text.chapters) {
+				buf.append("<OPTION VALUE='" 
+						+ c.chapterNumber + "'" + (chapter!=null && c.chapterNumber==chapter.chapterNumber?" SELECTED>":">") + c.title 
+						+ "</OPTION>");
+			}
+			buf.append("</SELECT>");
+		} catch (Exception e) {
+			buf.append(e.getMessage()==null?e.toString():e.getMessage());
 		}
-		buf.append("</SELECT>");
 		return buf.toString();
 	}
-		
+
 	String encode(String email) {
 		/* This method uses a simple one-time pad to encrypt a userId value prior to storing inthe database.
 		 * The uses sig as a seed for Random. Each 8-bit random integer (0 to 127) is XORed with one byte
