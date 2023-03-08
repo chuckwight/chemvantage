@@ -119,7 +119,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			uc.setRequestProperty("Accept", "application/json;charset=UTF-8");
 			uc.setRequestProperty("charset", "utf-8");
 			uc.setUseCaches(false);
-			uc.setReadTimeout(5000);
+			uc.setReadTimeout(15000);  // waits up to 15 s for server to respond
 			// send the message
 			wr = new DataOutputStream(uc.getOutputStream());
 			wr.writeBytes(body);
