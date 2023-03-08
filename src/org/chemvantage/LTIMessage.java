@@ -358,13 +358,15 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			String bearerAuth = "Bearer " + getAccessToken(a.domain,scope);
 
 			if (a.lti_ags_lineitem_url==null) throw new Exception("the lineitem URL for this assignment is unknown");
-			//URL u = new URL(a.lti_ags_lineitem_url + "/results");
-			// append "/scores" to the lineitem URL, taking into account that the URL may have a query part (thank you, Moodle)
+			
+			// calculate the index of the position between the path and query parts of the URL
+			int beginQuery = a.lti_ags_lineitem_url.indexOf("?");
+			if (beginQuery == -1) beginQuery = a.lti_ags_lineitem_url.length();  // end of the path (no query)
+			
+			// append "/results" to the path and reassemble the URL
+			String next_url = a.lti_ags_lineitem_url.substring(0,beginQuery) + "/results" + a.lti_ags_lineitem_url.substring(beginQuery);
+			
 			URL u = null;
-			int i = a.lti_ags_lineitem_url.indexOf("?")==-1?a.lti_ags_lineitem_url.length():a.lti_ags_lineitem_url.indexOf("?");
-			
-			String next_url = a.lti_ags_lineitem_url.substring(0,i) + "/results" + a.lti_ags_lineitem_url.substring(i);
-			
 			while (next_url != null) {
 				u = new URL(next_url);
 
@@ -417,7 +419,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			if (a.lti_ags_lineitem_url==null) throw new Exception("the lineitem URL for this assignment is unknown");
 			
 			
-			// There is some uncertainty ab9ut the query parameter; The LTI spec is user_id but the container has userId
+			// There is some uncertainty about the query parameter; The LTI spec is user_id but the container has userId
 			URL u = null;
 			Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
 			switch (d.lms_type) {

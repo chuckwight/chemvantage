@@ -728,7 +728,7 @@ public class Homework extends HttpServlet {
 							lmsPctScore = Double.parseDouble(lmsScore);
 							gotScoreOK = true;
 						} catch (Exception e) {
-							buf.append("The LMS returned: " + lmsScore + "<br/>");
+							//buf.append("The LMS returned: " + lmsScore + "<br/>");
 						}
 					}
 
