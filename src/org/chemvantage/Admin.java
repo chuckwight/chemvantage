@@ -148,7 +148,7 @@ public class Admin extends HttpServlet {
 			}
 
 			// Item Bank Requests
-			List<Contact> contacts = ofy().load().type(Contact.class).filter("role","appplicant").list();
+			List<Contact> contacts = ofy().load().type(Contact.class).filter("role","applicant").list();
 			if (contacts.size() > 0) {
 				buf.append("<h3>Requests for Access to the Item Bank</h3>");
 				buf.append("<ul>");

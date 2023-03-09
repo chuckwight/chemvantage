@@ -30,8 +30,7 @@ public class Contact {
 		String firstName;
 		String lastName;
 		String institution;   // ucsb.edu
-		String role;          // faculty,chair
-		boolean itemLicensed;
+	@Index	String role;          // faculty,chair
 	@Index	boolean vetted;   // verified instructor
 	@Index	boolean unsubscribed = false;		
 			

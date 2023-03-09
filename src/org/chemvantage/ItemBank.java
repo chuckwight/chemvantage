@@ -26,6 +26,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -72,6 +73,7 @@ public class ItemBank extends HttpServlet {
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
+		StringBuffer debug = new StringBuffer("Debug: ");
 		
 		String userRequest = request.getParameter("UserRequest");
 		if (userRequest==null) doGet(request,response);
@@ -85,7 +87,7 @@ public class ItemBank extends HttpServlet {
 				// 1) contact is already vetted as instructor
 				// 2) contact is applicant pending approval
 				
-				if ("faculty".equals(c.role)|| "chair".equals(c.role)) {
+				if ("faculty".equals(c.role) || "chair".equals(c.role)) {
 					String url = "https://www.chemvantage.org/itembank?code=" + encode(c.email); 
 					String messageBody = Subject.banner + "Thank you for your interest in using ChemVantage question items for your teaching. "
 							+ "Please use the personalized coded link below to access the ChemVantage bank of question items.<br/><br/>"
@@ -94,17 +96,22 @@ public class ItemBank extends HttpServlet {
 					String msg = "Thank+you.+A+personalized+coded+access+link+has+been+sent+to+you+at+" + c.email;
 					response.sendRedirect("/itembank?msg=" + msg);
 				} else {
+					debug.append("applicant:");
 					String messageBody = "The person below has requested access to the ChemVantage question item bank:<br/>"
 							+ "Name: " + c.getFullName() + "<br/>"
 							+ "Email: " + c.getEmail() + "<br/>"
 							+ "Institution: " + c.institution + "<br/>";
+					debug.append("1");
 					Contact a = ofy().load().type(Contact.class).id("admin@chemvantage.org").now();
+					debug.append("2");
 					sendEmail(a,messageBody);
-					String msg = "Thank+you.+We+wil+validate+your+request+and+send+a+personalized+coded+access+link+to+you+at+" + c.email;
+					debug.append("3");
+					String msg = URLEncoder.encode("Thank you. We will evaluate your request and send a personalized access link to " + c.email,"UTF-8");
+					debug.append("4");
 					response.sendRedirect("/itembank?msg=" + msg);
 				}
 			} catch (Exception e) {
-				response.sendRedirect("/itembank?msg=Registration+failed.+Please+try+again.");
+				response.sendRedirect("/itembank?msg=" + URLEncoder.encode("Registration failed. " + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString(),"UTF-8"));
 			}
 			return;
 		case "Approve":
@@ -112,8 +119,9 @@ public class ItemBank extends HttpServlet {
 			if (user==null || !user.isChemVantageAdmin()) break;
 			c = ofy().load().type(Contact.class).id(request.getParameter("Email")).now();
 			c.role = "faculty";
+			c.vetted = true;
 			ofy().save().entity(c);
-			String url = "https://www.chemvantage.org/items?code=" + encode(c.email); 
+			String url = "https://www.chemvantage.org/itembank?code=" + encode(c.email); 
 			String messageBody = Subject.banner + "<h3>ChemVantage Question Item Bank</h3>"
 					+ "Thank you for your interest in ChemVantage. Your request has been "
 					+ "approved, and you may now access our item bank, including the correct "
@@ -136,10 +144,11 @@ public class ItemBank extends HttpServlet {
 			if (user==null || !user.isChemVantageAdmin()) break;
 			c = ofy().load().type(Contact.class).id(request.getParameter("Email")).now();
 			c.role = "learner";
+			c.vetted = false;
 			ofy().save().entity(c);
 			messageBody = Subject.banner + "<h3>ChemVantage Question Item Bank</h3>"
 					+ "Thank you for your interest in ChemVantage. Unfortunately, we were unable to independently "
-					+ "confirm your role as an instructor using the information that you provided. I we made a mistake, "
+					+ "confirm your role as an instructor using the information that you provided. If we made a mistake, "
 					+ "please reply to this email with any additional information. Thanks.<br/><br/>";
 			try {
 				sendEmail(c,messageBody);
@@ -166,11 +175,12 @@ public class ItemBank extends HttpServlet {
 			c = new Contact(firstName,lastName,email);
 			c.institution = orgURL;
 			c.role = "applicant";
-		} else {  // update an existing contact but keep the current role and email
+			c.vetted = false;
+		} else {  // update an existing contact but change role only if not vetted already
 			c.firstName = firstName;
 			c.lastName = lastName;
 			c.institution = orgURL;
-			if (c.role==null) c.role="applicant";
+			if (!c.vetted) c.role="applicant";
 		}
 		ofy().save().entity(c).now();
 		return c;
@@ -219,7 +229,7 @@ public class ItemBank extends HttpServlet {
 			buf.append("<h2>ChemVantage Question Item Bank</h2>");
 			
 			String msg = request.getParameter("msg");
-			if (msg!=null) buf.append("<span style='color:red;'" + msg + "</span><br/><br/>");
+			if (msg!=null) buf.append("<span style='color:red;'>" + msg + "</span><br/><br/>");
 			
 			String code = null;
 			Contact contact = null;
@@ -262,7 +272,9 @@ public class ItemBank extends HttpServlet {
 							+ "are a chemistry instructor at a secondary or postsecondary institution, you may "
 							+ "<a href=# onclick=document.getElementById('application').style='display:inline;'>apply for free acccess</a> to "
 							+ "the correct answers and full solutions to these items.<br/><br/>");
-
+					
+					buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");  // recaptcha javascript
+					
 					buf.append("<div id=application style=display:none;>"
 							+ "<form method=post action=/itembank>"
 							+ "<input type=hidden name=UserRequest value=Register />"
