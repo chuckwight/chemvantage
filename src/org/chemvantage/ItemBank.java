@@ -45,18 +45,19 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.googlecode.objectify.Key;
 
-@WebServlet("/items")
+@WebServlet(urlPatterns = {"/itembank","/items"})
 public class ItemBank extends HttpServlet {
 	private static final long serialVersionUID = 1L;
+	private static final Text text = ofy().load().type(Text.class).filter("title","View All Topics").first().now();
+	
 /*
- * This servlet provides access to the ChemVantage question items for use by instructors in their class quizzes, homework sdets and exams.
- * 1) Normal access is via coded link (encrypted version of the user's email address)
- * 2) Users are required to accept the terms of a non-exclusive license that gives permission to use the items without attribution for
- *    non-commercial educational use. The licensee may not transfer the license to any other party.
- * 3) First access to the servlet requires completing a form for the user's email address, first name, last name and license agreement. The 
- *    coded link is then sent to the user's email address for confirmation.
+ * This servlet provides access to the ChemVantage question items for use by instructors in their class quizzes, homework sets and exams.
+ * 1) Normal access is via GET request to /itembank for 10 items without correct answers or detailed solutions (q.print())
+ * 2) Instructors may apply for a coded link to access items with solutions
  */
+	
     public ItemBank() {
         super();
     }
@@ -65,18 +66,7 @@ public class ItemBank extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
-		try {
-			String code = request.getParameter("code");
-			if (code==null) throw new Exception();
-			
-			String email = decode(code);
-			Contact c = ofy().load().type(Contact.class).id(email).safe();
-			if (c.itemLicensed) out.println(Subject.header("ChemVantage Item Bank") + itemBank(code,request) + Subject.footer);
-			else out.println(Subject.header("ChemVantage Item Bank") + licenseForm(c) + Subject.footer);
-		} catch (Exception e) {
-			out.println(e.getMessage()==null?e.toString():e.getMessage());
-			out.println(Subject.header("ChemVantage Item Bank") + registrationForm(request.getParameter("msg")) + Subject.footer);
-		}	
+		out.println(Subject.header("ChemVantage Item Bank") + itemBank(request) + Subject.footer);
 	}
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -84,6 +74,8 @@ public class ItemBank extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		String userRequest = request.getParameter("UserRequest");
+		if (userRequest==null) doGet(request,response);
+		
 		Contact c = null;
 		switch (userRequest) {
 		case "Register":
@@ -162,37 +154,6 @@ public class ItemBank extends HttpServlet {
 		}
 	}
 
-	String registrationForm(String msg) {
-		StringBuffer buf = new StringBuffer(Subject.banner);
-		if (msg != null) buf.append("<br/><div style='color:red'>" + msg + "</div>");
-		buf.append("<h2>Question Item Bank</h2>"
-				+ "ChemVantage is pleased to share the question items in its database with instructors for their private "
-				+ "noncommercial use in teaching chemistry courses. To access the question item bank, please complete the "
-				+ "form below using your institutional email address. A coded link will be sent that address for viewing "
-				+ "any of the thousands of quiz questions or hundreds of homework questions (with millions of variations) "
-				+ "in our database.<br/><br/>");
-		
-		buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'></script>");
-		
-		buf.append("<form method=post action=/items>"
-				+ "<input type=hidden name=UserRequest value=Register />"
-				+ "<label>First Name: <input type=text name=FirstName /></label> "
-				+ "<label>Last Name: <input type=text name=LastName /></label><br/>"
-				+ "<label>Your Institution\'s URL: <input type=text name=OrgURL placeholder=myschool.edu /></label><br/>"
-				+ "<label>Your Institutional Email Address: <input type=text name=Email /></label><br/>"
-				+ "<label><input type=checkbox name=License value=True /> "
-				+ "I certify that I am a chemistry instructor and if approved, ChemVantage LLC will grant me a non-exclusive license to use ChemVantage question items "
-				+ "without attribution for private, non-commercial use in my teaching activities (e.g., lecture examples, class quizzes, "
-				+ "homework problem sets and exams). I agree not to share the items publicly outside of my teaching activities. "
-				+ "I also understand that the copyright to these materials belongs to ChemVantage LLC and "
-				+ "may not be otherwise shared publicly except under the terms of a <a href=https://creativecommons.org/licenses/by/3.0/us/>"
-				+ "Creative Commons Attribution 3.0 License</a>.</label><br/>"
-				+ "<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG' aria-label='Google Recaptcha'></div><br/>"
-				+ "<input type=submit /><br/><br/>"
-				+ "</form>");
-		return buf.toString();
-	}
-	
 	Contact registerContact(HttpServletRequest request) throws Exception {
 		String firstName = request.getParameter("FirstName");
 		String lastName = request.getParameter("LastName");
@@ -252,85 +213,102 @@ public class ItemBank extends HttpServlet {
 		Transport.send(msg);
 	}
 		
-	String licenseForm(Contact c) {
-		StringBuffer buf = new StringBuffer(Subject.banner);
-		buf.append("<h3>Please accept the terms of the ChemVantage non-attribution license</h3>"
-				+ "<form method=post action=/items>"
-				+ "<input type=hidden name=UserRequest value=ConfirmLicense />"
-				+ "<input type=hidden name=Email value='" + c.email + "' />"
-				+ "Name: " + c.firstName + " " + c.lastName + "<br/>"
-				+ "<label><input type=checkbox name=License value=True /> "
-				+ "I certify that I am a chemistry instructor and if approved, ChemVantage LLC will grant me a non-exclusive license to use ChemVantage question items "
-				+ "without attribution for private, non-commercial use in my teaching activities (e.g., lecture examples, class quizzes, "
-				+ "homework problem sets and exams. I agree not to share the items publicly outside of my teaching activities. "
-				+ "I also understand that the copyright to these materials belongs to ChemVantage LLC and they "
-				+ "may not be otherwise shared publicly except under the terms of a <a href=https://creativecommons.org/licenses/by/3.0/us/>"
-				+ "Creative Commons Attribution 3.0 License</a>.</label><br/>"
-				+ "<input type=submit value='I Agree' />"
-				+ "</form><br/><br/>");
-		return buf.toString();
-	}
-	
 	void confirmLicense(Contact c, HttpServletRequest request) {
 		c.itemLicensed=Boolean.parseBoolean(request.getParameter("License"));
 		ofy().save().entity(c).now();
 	}
 	
-	String itemBank(String code,HttpServletRequest request) {
+	String itemBank(HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer(Subject.banner);
 		StringBuffer debug = new StringBuffer("Debug: ");
 		
 		try {
-			buf.append("<h2>Question Item Bank</h2>");
-			debug.append("1");
-
-			Text text = ofy().load().type(Text.class).filter("title","View All Topics").first().now();
-			debug.append("2");
+			buf.append("<h2>ChemVantage Question Item Bank</h2>");
+			
+			String code = null;
+			Contact contact = null;
+			boolean isInstructor = false;
+			try {
+				code = request.getParameter("code");
+				String email = decode(code);
+				contact = ofy().load().type(Contact.class).id(email).safe();
+				isInstructor = contact.role!=null && (contact.role.equals("faculty") || contact.role.equals("chair"));
+			} catch (Exception e) {}
+			
 			Chapter chapter = null;
 			try {
-				int chapterNumber = Integer.parseInt(request.getParameter("ChapterNumber"));
+				int chapterNumber = Integer.parseInt(request.getParameter("Topic"));
 				for (Chapter c : text.chapters) {
 					if (c.chapterNumber == chapterNumber) {
 						chapter = c;
 						break;
 					}
 				}
-			} catch (Exception e) {}
-			debug.append("3");
+			} catch (Exception e) {
+			}
+			
+			String assignmentType = request.getParameter("Type");
+			if (assignmentType==null) assignmentType = "";
+			switch (assignmentType) {
+			case "Quiz":
+			case "Homework":
+				break;
+			default: assignmentType = "";
+			}
+			
+			boolean showQuestions = (chapter != null && !assignmentType.isEmpty());
+			
+			if (!showQuestions) {
+				if (contact==null) {
+					buf.append("ChemVantage LLC is pleased to share the quiz and homework question items in our database for your "
+							+ "use in teaching and learning General Chemistry. All items are freely licensed under the terms of the "
+							+ "<a href=https://creativecommons.org/licenses/by/4.0/>Creative Commons Attribution 4.0 International License</a>. If you "
+							+ "are a chemistry instructor at a secondary or postsecondary institution, you may "
+							+ "<a href=# onclick=document.getElementById('application').style='display:inline;'>apply for free acccess</a> to "
+							+ "the correct answers and full solutions to these items.<br/><br/>");
 
-			String assignmentType = request.getParameter("AssignmentType");
-			boolean showQuestions = (chapter != null && assignmentType != null && !assignmentType.isEmpty());
-			debug.append("4");
-
-			if (!showQuestions) buf.append("ChemVantage LLC is pleased to share the quiz and homework question items in our database for your "
-					+ "private noncommercial use in teaching. In that context you are not required to provide attribution to ChemVantage. "
-					+ "Sharing items publicly <i>outside</i> of your teaching activities may only be done under the terms of the "
-					+ "<a href=https://creativecommons.org/licenses/by/3.0/us/>Creative Commons Attribution 3.0 License</a>.<br/><br/>");
-
-			buf.append("<FORM NAME=TopicSelect METHOD=GET ACTION=/items>");
-			buf.append("<input type=hidden name=code value='" + code + "' />");
+					buf.append("<div id=application style=display:none;>"
+							+ "<form method=post action=/itembank>"
+							+ "<input type=hidden name=UserRequest value=Register />"
+							+ "<label>First Name: <input type=text name=FirstName /></label> "
+							+ "<label>Last Name: <input type=text name=LastName /></label><br/>"
+							+ "<label>Your Institutional Email Address: <input type=text name=Email /></label><br/>"
+							+ "<label>Your Institution's URL: <input type=text name=OrgURL placeholder=myschool.edu /></label><br/>"
+							+ "<label><input type=checkbox name=IsInstructor value=True /> "
+							+ "I certify that I am a chemistry instructor. I understand that the copyright to these materials belongs to ChemVantage LLC and "
+							+ "that they are licensed to me under the terms of a <a href=https://creativecommons.org/licenses/by/4.0/>"
+							+ "Creative Commons Attribution 4.0 International License</a>.</label><br/>"
+							+ "<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG' aria-label='Google Recaptcha'></div><br/>"
+							+ "<input type=submit /><br/><br/>"
+							+ "</form><br/><br/>"
+							+ "</div>");
+				}
+			}
+			
+			buf.append("<FORM NAME=TopicSelect METHOD=GET ACTION=/itembank>");
+			buf.append(code==null?"":"<input type=hidden name=code value='" + code + "' />");
 			buf.append("<b>Topic: </b>" + chapterSelectBox(text,chapter,true));
-			debug.append("5");
 			buf.append("&nbsp;&nbsp;<b>Assignment Type: </b>" + assignmentTypeDropDownBox(assignmentType,true));
-			debug.append("6");
+			if (showQuestions) buf.append("&nbsp;&nbsp;<input type=submit value=refresh />");
 			buf.append("<span style='display:none' id=refreshing > Please wait...</span>");
 			buf.append("</FORM><br/>");
-			debug.append("7");
-
+			
 			if (!showQuestions) return buf.toString();
 
-			if ("Homework".equals(assignmentType)) buf.append("For parameterized questions, you can view another version by refreshing your browser page.<br/><br/><hr>");
-			else buf.append("<br/><hr>");
-			debug.append("6");
-
-			List<Question> questions = new ArrayList<Question>();
-			for (Long cId : chapter.conceptIds)	questions.addAll(ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",cId).list());
-			if (questions.size()==0) buf.append("Sorry, this topic contains no questions of this type.");
-			debug.append("7");
-
+			List<Key<Question>> keys = new ArrayList<Key<Question>>();
+			for (Long cId : chapter.conceptIds)	keys.addAll(ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",cId).keys().list());
+			if (keys.size()==0) buf.append("Sorry, this topic contains no questions of this type.");
+			
+			Random rand = new Random();
+			List<Key<Question>> tenKeys = new ArrayList<Key<Question>>();
+			while (tenKeys.size() <= 10 && keys.size() > 0) {
+				tenKeys.add(keys.remove(rand.nextInt(keys.size())));
+			}
+			
+			List<Question> questions = new ArrayList<Question>(ofy().load().keys(tenKeys).values());
 			for (Question q : questions) {
 				q.setParameters();
-				buf.append("<br/>" + q.printAll() + "<hr>");
+				buf.append("<br/>" + (isInstructor?q.printAll():q.print()) + "<hr>");
 			}
 		} catch (Exception e) {
 			buf.append("<br/>Error: " + e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString());
@@ -338,13 +316,13 @@ public class ItemBank extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String assignmentTypeDropDownBox(String defaultType,boolean autoSubmit) {
-		if (defaultType == null) defaultType = "";
-		StringBuffer buf = new StringBuffer("<SELECT NAME=AssignmentType" + (autoSubmit?" onChange=document.getElementById('refreshing').style='display:inline';submit()>":">"));
+	String assignmentTypeDropDownBox(String assignmentType,boolean autoSubmit) {
+		if (assignmentType==null) assignmentType="";
+		StringBuffer buf = new StringBuffer("<SELECT NAME=Type" + (autoSubmit?" onChange=document.getElementById('refreshing').style='display:inline';submit()>":">"));
 		try {
-			if (defaultType.isEmpty()) buf.append("<OPTION VALUE=''>Select a type</OPTION>");
-			buf.append("<OPTION" + (defaultType.equals("Quiz")?" SELECTED":"") + ">Quiz</OPTION>"
-					+ "<OPTION" + (defaultType.equals("Homework")?" SELECTED":"") + ">Homework</OPTION>"
+			if (assignmentType.isEmpty()) buf.append("<OPTION VALUE=''>Select a type</OPTION>");
+			buf.append("<OPTION" + (assignmentType.equals("Quiz")?" SELECTED":"") + ">Quiz</OPTION>"
+					+ "<OPTION" + (assignmentType.equals("Homework")?" SELECTED":"") + ">Homework</OPTION>"
 					+ "</SELECT>");
 		} catch (Exception e) {
 			buf.append(e.getMessage()==null?e.toString():e.getMessage());
@@ -354,7 +332,7 @@ public class ItemBank extends HttpServlet {
 
 	String chapterSelectBox(Text text,Chapter chapter,boolean autoSubmit) throws Exception {
 		if (text == null) return "";
-		StringBuffer buf = new StringBuffer("<SELECT NAME=ChapterNumber" + (autoSubmit?" onChange=document.getElementById('refreshing').style='display:inline';submit(); >":" >"));
+		StringBuffer buf = new StringBuffer("<SELECT NAME=Topic" + (autoSubmit?" onChange=document.getElementById('refreshing').style='display:inline';submit(); >":" >"));
 		try {
 			if (chapter==null) buf.append("<OPTION VALUE=''>Select a topic</OPTION>");
 			for (Chapter c : text.chapters) {
@@ -393,27 +371,23 @@ public class ItemBank extends HttpServlet {
 		}
 	}
 
-	String decode(String code) { 
+	String decode(String code) throws Exception { 
 		/* This method reverses the encrypt method above by converting each pair of hexadecimal characters in the input
 		 * to an integer, XORing that with a pseudo-random integer based on sig, converting to a single byte and 
 		 * finally to a String character, which is appended to the output for each pair of hexadecimal input characters.
 		 */
-		try {
-			int seed = Integer.parseInt(code.substring(0,2),16);  // first 2 characters of code
-			code = code.substring(2); // remainder of encoded string
-			int length = code.length()/2;
-			byte[] output = new byte[length];
-			Random rand = new Random(seed);
-			for (int i=0;i<length;i++) {
-				int a = rand.nextInt(256);
-				int b = Integer.parseInt(code.substring(2*i, 2*i+2),16);
-				Integer xor = a^b;
-				output[i] = xor.byteValue(); 
-			}
-			return new String(output,"UTF-8");	
-		} catch (Exception e) {
-			return e.toString() + " " + e.getMessage();
+		int seed = Integer.parseInt(code.substring(0,2),16);  // first 2 characters of code
+		code = code.substring(2); // remainder of encoded string
+		int length = code.length()/2;
+		byte[] output = new byte[length];
+		Random rand = new Random(seed);
+		for (int i=0;i<length;i++) {
+			int a = rand.nextInt(256);
+			int b = Integer.parseInt(code.substring(2*i, 2*i+2),16);
+			Integer xor = a^b;
+			output[i] = xor.byteValue(); 
 		}
+		return new String(output,"UTF-8");	
 	}
 
 }
