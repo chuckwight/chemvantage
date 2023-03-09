@@ -81,17 +81,18 @@ public class ItemBank extends HttpServlet {
 		case "Register":
 			try {
 				c = registerContact(request);
-				if (c==null) throw new Exception();
-				if (c.vetted) {
-					String url = "https://www.chemvantage.org/items?code=" + encode(c.email); 
-					String messageBody = "Thank you for your interest in using ChemVantage question items for your teaching. "
-							+ "Please use the personalized coded link below to access the database of questions.<br/><br/>"
+				// respond to 3 cases: 
+				// 1) contact is already vetted as instructor
+				// 2) contact is applicant pending approval
+				
+				if ("faculty".equals(c.role)|| "chair".equals(c.role)) {
+					String url = "https://www.chemvantage.org/itembank?code=" + encode(c.email); 
+					String messageBody = Subject.banner + "Thank you for your interest in using ChemVantage question items for your teaching. "
+							+ "Please use the personalized coded link below to access the ChemVantage bank of question items.<br/><br/>"
 							+ "<a href='" + url + "'>" + url + "</a>";
 					sendEmail(c,messageBody);
-					out.println(Subject.header("Success") + Subject.banner 
-							+ "<h3>Thank you</h3>"
-							+ "A personalized coded link has been sent to you at " + c.email + "<br/>"
-							+ Subject.footer);
+					String msg = "Thank+you.+A+personalized+coded+access+link+has+been+sent+to+you+at+" + c.email;
+					response.sendRedirect("/itembank?msg=" + msg);
 				} else {
 					String messageBody = "The person below has requested access to the ChemVantage question item bank:<br/>"
 							+ "Name: " + c.getFullName() + "<br/>"
@@ -99,58 +100,58 @@ public class ItemBank extends HttpServlet {
 							+ "Institution: " + c.institution + "<br/>";
 					Contact a = ofy().load().type(Contact.class).id("admin@chemvantage.org").now();
 					sendEmail(a,messageBody);
-					out.println(Subject.header("Success") + Subject.banner 
-							+ "<h3>Thank you</h3>"
-							+ "We will validate your request and send a personalized coded access link to you at " + c.email + "<br/>"
-							+ Subject.footer);
+					String msg = "Thank+you.+We+wil+validate+your+request+and+send+a+personalized+coded+access+link+to+you+at+" + c.email;
+					response.sendRedirect("/itembank?msg=" + msg);
 				}
 			} catch (Exception e) {
-				response.sendRedirect("/items?msg=Registration+failed.+Please+try+again.");
+				response.sendRedirect("/itembank?msg=Registration+failed.+Please+try+again.");
 			}
-			break;
+			return;
 		case "Approve":
 			User user = User.getUser(request.getParameter("sig"));
 			if (user==null || !user.isChemVantageAdmin()) break;
 			c = ofy().load().type(Contact.class).id(request.getParameter("Email")).now();
-			if (c != null) {
-				c.vetted = true;
-				ofy().save().entity(c);
-				String url = "https://www.chemvantage.org/items?code=" + encode(c.email); 
-				String messageBody = Subject.banner + "<h3>Question Item Bank</h3>"
-						+ "Thank you for your interest in ChemVantage. Your request has been "
-						+ "approved, and you may now access our item bank using the personalized "
-						+ "coded link below. Please reply to this email if you have questions.<br/><br/>"
-						+ "<a href='" + url + "'>" + url + "</a>";
-				try {
-					sendEmail(c,messageBody);
-					out.println(Subject.header("Success") + Subject.banner 
-							+ "<h2>The approval email was sent to " + c.email + "</h2>" 
-							+ Subject.footer);
-				} catch (Exception e) {
-					out.println(Subject.header("Failure") + Subject.banner 
-							+ "<h2>Failed</h2>The approval email could not be sent to " + c.email + "<br/><br/>" 
-							+ Subject.footer);
-				}
+			c.role = "faculty";
+			ofy().save().entity(c);
+			String url = "https://www.chemvantage.org/items?code=" + encode(c.email); 
+			String messageBody = Subject.banner + "<h3>ChemVantage Question Item Bank</h3>"
+					+ "Thank you for your interest in ChemVantage. Your request has been "
+					+ "approved, and you may now access our item bank, including the correct "
+					+ "responses and complete solutions, using the personalized coded link below. "
+					+ "Please reply to this email if you have questions.<br/><br/>"
+					+ "<a href='" + url + "'>" + url + "</a>";
+			try {
+				sendEmail(c,messageBody);
+				out.println(Subject.header("Success") + Subject.banner 
+						+ "<h2>The approval email was sent to " + c.email + "</h2>" 
+						+ Subject.footer);
+			} catch (Exception e) {
+				out.println(Subject.header("Failure") + Subject.banner 
+						+ "<h2>Failed</h2>The approval email could not be sent to " + c.email + "<br/><br/>" 
+						+ Subject.footer);
 			}
-			break;
+			return;
 		case "Deny":
 			user = User.getUser(request.getParameter("sig"));
 			if (user==null || !user.isChemVantageAdmin()) break;
 			c = ofy().load().type(Contact.class).id(request.getParameter("Email")).now();
-			if (c != null) ofy().delete().entity(c);
-			out.println(Subject.header("Item Bank") + Subject.banner 
-					+ "<h2>The contact " + c.getFullName() + " (" + c.email + ") was deleted.</h2>"
-					+ Subject.footer);
-			break;
-		case "ConfirmLicense":
+			c.role = "learner";
+			ofy().save().entity(c);
+			messageBody = Subject.banner + "<h3>ChemVantage Question Item Bank</h3>"
+					+ "Thank you for your interest in ChemVantage. Unfortunately, we were unable to independently "
+					+ "confirm your role as an instructor using the information that you provided. I we made a mistake, "
+					+ "please reply to this email with any additional information. Thanks.<br/><br/>";
 			try {
-				c = ofy().load().type(Contact.class).id(request.getParameter("Email")).now();
-				confirmLicense(c, request);
+				sendEmail(c,messageBody);
+				out.println(Subject.header("Success") + Subject.banner 
+						+ "<h2>The denial email was sent to " + c.email + "</h2>" 
+						+ Subject.footer);
 			} catch (Exception e) {
+				out.println(Subject.header("Failure") + Subject.banner 
+						+ "<h2>Failed</h2>The denial email could not be sent to " + c.email + "<br/><br/>" 
+						+ Subject.footer);
 			}
-			response.sendRedirect("/items?code=" + encode(c.email));
-			break;
-		default: doGet(request,response);
+			return;
 		}
 	}
 
@@ -160,21 +161,18 @@ public class ItemBank extends HttpServlet {
 		String orgURL = request.getParameter("OrgURL");
 		String email = request.getParameter("Email");
 		if (!reCaptchaOK(request)) return null;
-		boolean licensed = Boolean.parseBoolean(request.getParameter("License"));
 		Contact c = ofy().load().type(Contact.class).id(email).now();
-		if (c==null) {
-			if (firstName!=null && lastName!=null && orgURL!=null && email!=null) {
-				c = new Contact(firstName,lastName,email);
-				c.institution = orgURL;
-				c.itemLicensed = licensed;
-				c.vetted = false;
-				ofy().save().entity(c).now();
-			}
-		} else {
-			c.itemLicensed = licensed;
-			c.vetted = true;
-			ofy().save().entity(c).now();
+		if (c==null) {  // create a new Contact with the role "applicant"
+			c = new Contact(firstName,lastName,email);
+			c.institution = orgURL;
+			c.role = "applicant";
+		} else {  // update an existing contact but keep the current role and email
+			c.firstName = firstName;
+			c.lastName = lastName;
+			c.institution = orgURL;
+			if (c.role==null) c.role="applicant";
 		}
+		ofy().save().entity(c).now();
 		return c;
 	}
 	
@@ -213,17 +211,15 @@ public class ItemBank extends HttpServlet {
 		Transport.send(msg);
 	}
 		
-	void confirmLicense(Contact c, HttpServletRequest request) {
-		c.itemLicensed=Boolean.parseBoolean(request.getParameter("License"));
-		ofy().save().entity(c).now();
-	}
-	
 	String itemBank(HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer(Subject.banner);
 		StringBuffer debug = new StringBuffer("Debug: ");
 		
 		try {
 			buf.append("<h2>ChemVantage Question Item Bank</h2>");
+			
+			String msg = request.getParameter("msg");
+			if (msg!=null) buf.append("<span style='color:red;'" + msg + "</span><br/><br/>");
 			
 			String code = null;
 			Contact contact = null;
@@ -270,19 +266,19 @@ public class ItemBank extends HttpServlet {
 					buf.append("<div id=application style=display:none;>"
 							+ "<form method=post action=/itembank>"
 							+ "<input type=hidden name=UserRequest value=Register />"
-							+ "<label>First Name: <input type=text name=FirstName /></label> "
-							+ "<label>Last Name: <input type=text name=LastName /></label><br/>"
-							+ "<label>Your Institutional Email Address: <input type=text name=Email /></label><br/>"
-							+ "<label>Your Institution's URL: <input type=text name=OrgURL placeholder=myschool.edu /></label><br/>"
-							+ "<label><input type=checkbox name=IsInstructor value=True /> "
+							+ "<label>First Name: <input type=text name=FirstName required /></label> "
+							+ "<label>Last Name: <input type=text name=LastName required /></label><br/>"
+							+ "<label>Your Institutional Email Address: <input type=text name=Email required /></label><br/>"
+							+ "<label>Your Institution's URL: <input type=text name=OrgURL placeholder=myschool.edu required /></label><br/>"
+							+ "<label><input type=checkbox name=IsInstructor value=True required /> "
 							+ "I certify that I am a chemistry instructor. I understand that the copyright to these materials belongs to ChemVantage LLC and "
 							+ "that they are licensed to me under the terms of a <a href=https://creativecommons.org/licenses/by/4.0/>"
 							+ "Creative Commons Attribution 4.0 International License</a>.</label><br/>"
 							+ "<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG' aria-label='Google Recaptcha'></div><br/>"
 							+ "<input type=submit /><br/><br/>"
-							+ "</form><br/><br/>"
+							+ "</form><br/>"
 							+ "</div>");
-				}
+				} else buf.append("Welcome back.<p>");
 			}
 			
 			buf.append("<FORM NAME=TopicSelect METHOD=GET ACTION=/itembank>");
@@ -318,7 +314,7 @@ public class ItemBank extends HttpServlet {
 	
 	String assignmentTypeDropDownBox(String assignmentType,boolean autoSubmit) {
 		if (assignmentType==null) assignmentType="";
-		StringBuffer buf = new StringBuffer("<SELECT NAME=Type" + (autoSubmit?" onChange=document.getElementById('refreshing').style='display:inline';submit()>":">"));
+		StringBuffer buf = new StringBuffer("<SELECT id=type NAME=Type" + (autoSubmit?" onChange=document.getElementById('refreshing').style='display:inline';submit()>":">"));
 		try {
 			if (assignmentType.isEmpty()) buf.append("<OPTION VALUE=''>Select a type</OPTION>");
 			buf.append("<OPTION" + (assignmentType.equals("Quiz")?" SELECTED":"") + ">Quiz</OPTION>"
@@ -332,7 +328,8 @@ public class ItemBank extends HttpServlet {
 
 	String chapterSelectBox(Text text,Chapter chapter,boolean autoSubmit) throws Exception {
 		if (text == null) return "";
-		StringBuffer buf = new StringBuffer("<SELECT NAME=Topic" + (autoSubmit?" onChange=document.getElementById('refreshing').style='display:inline';submit(); >":" >"));
+		StringBuffer buf = new StringBuffer("<SELECT id=topic NAME=Topic" + (autoSubmit?
+				" onChange=document.getElementById('refreshing').style='display:inline';submit(); >":" >"));
 		try {
 			if (chapter==null) buf.append("<OPTION VALUE=''>Select a topic</OPTION>");
 			for (Chapter c : text.chapters) {

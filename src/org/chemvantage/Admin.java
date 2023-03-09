@@ -148,13 +148,13 @@ public class Admin extends HttpServlet {
 			}
 
 			// Item Bank Requests
-			List<Contact> contacts = ofy().load().type(Contact.class).filter("vetted",false).list();
+			List<Contact> contacts = ofy().load().type(Contact.class).filter("role","appplicant").list();
 			if (contacts.size() > 0) {
 				buf.append("<h3>Requests for Access to the Item Bank</h3>");
 				buf.append("<ul>");
 				for (Contact c : contacts) {
 					buf.append("<li>" + c.getFullName() + " (" + c.getEmail() + ") at " + c.institution
-							+ "<form method=post action=/items>"
+							+ "<form method=post action=/itembank>"
 							+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 							+ "<input type=hidden name=Email value='" + c.getEmail() + "' />"
 							+ "<input type=submit name=UserRequest value=Approve /> "
