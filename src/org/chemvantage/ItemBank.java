@@ -290,7 +290,7 @@ public class ItemBank extends HttpServlet {
 							+ "<input type=submit /><br/><br/>"
 							+ "</form><br/>"
 							+ "</div>");
-				} else buf.append("Welcome back.<p>");
+				} else if (isInstructor) buf.append("Welcome back. You can use this item bank directly or <a href=https://www.chemvantage.org/lti/registration>install ChemVantage</a> in your LMS.<p>");
 			}
 			
 			buf.append("<FORM NAME=TopicSelect METHOD=GET ACTION=/itembank>");
