@@ -847,6 +847,9 @@ public class Question implements Serializable, Cloneable {
 		// strip leading (non-significant) zeros, decimals and signs
 		while (mantissa.startsWith("0") || mantissa.startsWith(".") || mantissa.startsWith("-") || mantissa.startsWith("+")) mantissa = mantissa.substring(1);
 		
+		// remove embedded decimal point, if any
+		mantissa = mantissa.replace(".","");
+		
 		// see if number of remaining digits matches this.significantFigures
 		if (mantissa.length()==this.significantFigures) return true;
 		
