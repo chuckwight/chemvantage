@@ -51,7 +51,7 @@ import com.googlecode.objectify.Key;
 @WebServlet(urlPatterns = {"/itembank","/items"})
 public class ItemBank extends HttpServlet {
 	private static final long serialVersionUID = 1L;
-	private static final Text text = ofy().load().type(Text.class).filter("title","View All Topics").first().now();
+	private static Text text = null;
 	
 /*
  * This servlet provides access to the ChemVantage question items for use by instructors in their class quizzes, homework sets and exams.
@@ -63,6 +63,10 @@ public class ItemBank extends HttpServlet {
         super();
     }
 
+    public void init() throws ServletException {
+    	text =  ofy().load().type(Text.class).filter("title","View All Topics").first().now();
+    }
+    
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
