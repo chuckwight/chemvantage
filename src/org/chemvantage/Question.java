@@ -844,12 +844,9 @@ public class Question implements Serializable, Cloneable {
 		// this check has been disabled to forgive lack of a trailing decimal
 		//if (mantissa.indexOf(".")==-1 && mantissa.endsWith("0")) return false;
 		
-		// strip leading (non-significant) zeros and decimals
-		while (mantissa.startsWith("0") || mantissa.startsWith(".")) mantissa = mantissa.substring(1);
+		// strip leading (non-significant) zeros, decimals and signs
+		while (mantissa.startsWith("0") || mantissa.startsWith(".") || mantissa.startsWith("-") || mantissa.startsWith("+")) mantissa = mantissa.substring(1);
 		
-		// remove all instances of minus sign and decimal point:
-		mantissa = mantissa.replace("-","").replace(".","");
-			
 		// see if number of remaining digits matches this.significantFigures
 		if (mantissa.length()==this.significantFigures) return true;
 		
