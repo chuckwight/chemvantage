@@ -51,7 +51,7 @@ import com.googlecode.objectify.Key;
 @WebServlet(urlPatterns = {"/itembank","/items"})
 public class ItemBank extends HttpServlet {
 	private static final long serialVersionUID = 1L;
-	private static Text text = null;
+	private Text text = null;
 	
 /*
  * This servlet provides access to the ChemVantage question items for use by instructors in their class quizzes, homework sets and exams.
@@ -272,10 +272,11 @@ public class ItemBank extends HttpServlet {
 				if (contact==null) {
 					buf.append("ChemVantage LLC is pleased to share the quiz and homework question items in our database for your "
 							+ "use in teaching and learning General Chemistry. All items are freely licensed under the terms of the "
-							+ "<a href=https://creativecommons.org/licenses/by/4.0/>Creative Commons Attribution 4.0 International License</a>. If you "
+							+ "<a href=https://creativecommons.org/licenses/by/4.0/ target=_blank>Creative Commons Attribution 4.0 International License</a>. If you "
 							+ "are a chemistry instructor at a secondary or postsecondary institution, you may "
 							+ "<a href=# onclick=document.getElementById('application').style='display:inline;'>apply for free acccess</a> to "
-							+ "the correct answers and full solutions to these items.<br/><br/>");
+							+ "the correct answers and full solutions to these items, or you can "
+							+ "<a href=https://www.chemvantage.org/lti/registration target=_blank>register the ChemVantage LTI app</a> with your LMS.<br/><br/>");
 					
 					buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");  // recaptcha javascript
 					
