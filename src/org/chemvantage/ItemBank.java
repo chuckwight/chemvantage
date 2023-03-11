@@ -29,6 +29,7 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
 import java.util.Random;
@@ -63,13 +64,11 @@ public class ItemBank extends HttpServlet {
         super();
     }
 
-    public void init() throws ServletException {
-    	text =  ofy().load().type(Text.class).filter("title","View All Topics").first().now();
-    }
-    
-	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+   protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
+		
+		if (text==null) text =  ofy().load().type(Text.class).filter("title","View All Topics").first().now();
 		
 		out.println(Subject.header("ChemVantage Item Bank") + itemBank(request) + Subject.footer);
 	}
@@ -115,7 +114,7 @@ public class ItemBank extends HttpServlet {
 					response.sendRedirect("/itembank?msg=" + msg);
 				}
 			} catch (Exception e) {
-				response.sendRedirect("/itembank?msg=" + URLEncoder.encode("Registration failed. " + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString(),"UTF-8"));
+				response.sendRedirect("/itembank?msg=" + URLEncoder.encode("Registration failed. " + (e.getMessage()==null?e.toString():e.getMessage()),"UTF-8"));
 			}
 			return;
 		case "Approve":
@@ -173,7 +172,7 @@ public class ItemBank extends HttpServlet {
 		String lastName = request.getParameter("LastName");
 		String orgURL = request.getParameter("OrgURL");
 		String email = request.getParameter("Email");
-		if (!reCaptchaOK(request)) return null;
+		if (!reCaptchaOK(request)) throw new Exception("Bad ReCAPTCHA. Please try again.");
 		Contact c = ofy().load().type(Contact.class).id(email).now();
 		if (c==null) {  // create a new Contact with the role "applicant"
 			c = new Contact(firstName,lastName,email);
@@ -191,27 +190,31 @@ public class ItemBank extends HttpServlet {
 	}
 	
 	boolean reCaptchaOK(HttpServletRequest request) throws Exception {
-		String queryString = "secret=6Ld_GAcTAAAAAD2k2iFF7Ywl8lyk9LY2v_yRh3Ci&response=" 
-				+ request.getParameter("g-recaptcha-response") + "&remoteip=" + request.getRemoteAddr();
-		URL u = new URL("https://www.google.com/recaptcha/api/siteverify");
-    	HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-    	uc.setDoOutput(true);
-    	uc.setRequestMethod("POST");
-    	uc.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
-    	uc.setRequestProperty("Content-Length", String.valueOf(queryString.length()));
-    	
-    	OutputStreamWriter writer = new OutputStreamWriter(uc.getOutputStream());
-		writer.write(queryString);
-    	writer.flush();
-    	writer.close();
-		
-		// read & interpret the JSON response from Google
-    	BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-		JsonObject captchaResponse = JsonParser.parseReader(reader).getAsJsonObject();
-    	reader.close();
-		
-		//JsonObject captchaResp = JsonParser.parseString(res.toString()).getAsJsonObject();
-		return captchaResponse.get("success").getAsBoolean();
+		try {
+			String queryString = "secret=6Ld_GAcTAAAAAD2k2iFF7Ywl8lyk9LY2v_yRh3Ci&response=" 
+					+ request.getParameter("g-recaptcha-response") + "&remoteip=" + request.getRemoteAddr();
+			URL u = new URL("https://www.google.com/recaptcha/api/siteverify");
+			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+			uc.setDoOutput(true);
+			uc.setRequestMethod("POST");
+			uc.setRequestProperty("Content-Type","application/x-www-form-urlencoded");
+			uc.setRequestProperty("Content-Length", String.valueOf(queryString.length()));
+
+			OutputStreamWriter writer = new OutputStreamWriter(uc.getOutputStream());
+			writer.write(queryString);
+			writer.flush();
+			writer.close();
+
+			// read & interpret the JSON response from Google
+			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+			JsonObject captchaResponse = JsonParser.parseReader(reader).getAsJsonObject();
+			reader.close();
+
+			//JsonObject captchaResp = JsonParser.parseString(res.toString()).getAsJsonObject();
+			return captchaResponse.get("success").getAsBoolean();
+		} catch (Exception e) {
+			throw new Exception("Bad ReCaptcha. Please try again.");
+		}
 	}
 
 	void sendEmail(Contact c,String messageBody) throws Exception {
@@ -231,7 +234,7 @@ public class ItemBank extends HttpServlet {
 		
 		try {
 			buf.append("<h2>ChemVantage Question Item Bank</h2>");
-			
+
 			String msg = request.getParameter("msg");
 			if (msg!=null) buf.append("<span style='color:red;'>" + msg + "</span><br/><br/>");
 			
@@ -292,7 +295,10 @@ public class ItemBank extends HttpServlet {
 							+ "that they are licensed to me under the terms of a <a href=https://creativecommons.org/licenses/by/4.0/>"
 							+ "Creative Commons Attribution 4.0 International License</a>.</label><br/>"
 							+ "<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG' aria-label='Google Recaptcha'></div><br/>"
-							+ "<input type=submit /><br/><br/>"
+							+ "<input type=submit "
+							+ "onClick=\"setTimeout(()=>{document.getElementById('sandboxed').innerHTML='<br/>The referring page "
+							+ "may have disabled forms in this page. Please copy the URL to a new browser tab.<br/><br/>'},8000); \" /><br/><br/>"
+							+ "<span id=sandboxed style='color:red'></span>"
 							+ "</form><br/>"
 							+ "</div>");
 				} else if (isInstructor) buf.append("Welcome back. You can use this item bank directly or <a href=https://www.chemvantage.org/lti/registration>install ChemVantage</a> in your LMS.<p>");
@@ -303,8 +309,7 @@ public class ItemBank extends HttpServlet {
 			buf.append("<b>Topic: </b>" + chapterSelectBox(text,chapter,true));
 			buf.append("&nbsp;&nbsp;<b>Assignment Type: </b>" + assignmentTypeDropDownBox(assignmentType,true));
 			if (showQuestions) buf.append("&nbsp;&nbsp;<input type=submit value=refresh />");
-			buf.append("<span style='display:none' id=refreshing > Please wait...</span>");
-			buf.append("</FORM><br/>");
+			buf.append("<span style='display:none;' id=refreshing > Wait a moment...</span><br/>");
 			
 			if (!showQuestions) return buf.toString();
 
@@ -331,7 +336,11 @@ public class ItemBank extends HttpServlet {
 	
 	String assignmentTypeDropDownBox(String assignmentType,boolean autoSubmit) {
 		if (assignmentType==null) assignmentType="";
-		StringBuffer buf = new StringBuffer("<SELECT id=type NAME=Type" + (autoSubmit?" onChange=document.getElementById('refreshing').style='display:inline';submit()>":">"));
+		StringBuffer buf = new StringBuffer("<SELECT id=type NAME=Type" + (autoSubmit?
+				" onChange=\"document.getElementById('refreshing').style='display:inline;color:red';"
+				+ "setTimeout(()=>{document.getElementById('refreshing').innerHTML='<br/>The referring page "
+				+ "may have disabled forms in this page. Please copy the URL to a new browser tab.<br/><br/>'},8000);submit();\" >"
+				:" >"));
 		try {
 			if (assignmentType.isEmpty()) buf.append("<OPTION VALUE=''>Select a type</OPTION>");
 			buf.append("<OPTION" + (assignmentType.equals("Quiz")?" SELECTED":"") + ">Quiz</OPTION>"
@@ -346,7 +355,10 @@ public class ItemBank extends HttpServlet {
 	String chapterSelectBox(Text text,Chapter chapter,boolean autoSubmit) throws Exception {
 		if (text == null) return "";
 		StringBuffer buf = new StringBuffer("<SELECT id=topic NAME=Topic" + (autoSubmit?
-				" onChange=document.getElementById('refreshing').style='display:inline';submit(); >":" >"));
+				" onChange=\"document.getElementById('refreshing').style='display:inline;color:red';"
+				+ "setTimeout(()=>{document.getElementById('refreshing').innerHTML='<br/>The referring page "
+				+ "may have disabled forms in this page. Please copy the URL to a new browser tab.<br/><br/>'},8000);submit();\" >"
+				:" >"));
 		try {
 			if (chapter==null) buf.append("<OPTION VALUE=''>Select a topic</OPTION>");
 			for (Chapter c : text.chapters) {
