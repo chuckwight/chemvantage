@@ -1014,7 +1014,7 @@ public class Homework extends HttpServlet {
 				buf.append("The questions listed below cover the following key concepts:<ul>");
 				for (Long cId : conceptIds) {
 					Concept c = keyConcepts.get(Key.create(Concept.class,cId));
-					if (c==null) {
+					if (c==null || c.orderBy.startsWith(" 0")) {
 						a.conceptIds.remove(cId);
 						ofy().save().entity(a);
 					}
