@@ -263,8 +263,10 @@ public class LTIv1p3Launch extends HttpServlet {
 							resourceId = request.getParameter("resourceId");
 							break;
 						default:  // all other lms platforms may have this in the lineitem from DeepLinking
+							try {
 							if (lineitem==null) lineitem = LTIMessage.getLineItem(d, lti_ags_lineitem_url);
-							resourceId = lineitem.get("resourceId").getAsString();					
+							resourceId = lineitem.get("resourceId").getAsString();	
+							} catch (Exception e) {}
 						}
 					}
 					debug.append("resourceId=" + resourceId + ".");
