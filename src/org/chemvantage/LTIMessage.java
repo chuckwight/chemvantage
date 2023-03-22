@@ -47,7 +47,6 @@ import javax.mail.internet.MimeMessage;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
-import com.google.appengine.api.utils.SystemProperty;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
