@@ -47,6 +47,7 @@ import javax.mail.internet.MimeMessage;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.google.appengine.api.utils.SystemProperty;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -151,7 +152,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			} else throw new Exception("response code " + responseCode);
 		} catch (Exception e) {
 			debug.append("Elapsed time: " + (new Date().getTime() - now.getTime()) + " ms<br/>");
-			sendEmailToAdmin("Failed AuthToken Request",debug.toString() + "<br/>" + (e.getMessage()==null?e.toString():e.getMessage()));
+			if (System.getProperty("com.google.appengine.application.id").equals("chem-vantage-hrd"))
+				sendEmailToAdmin("Failed AuthToken Request",debug.toString() + "<br/>" + (e.getMessage()==null?e.toString():e.getMessage()));
 			return "Failed AuthToken Request <br/>" + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString();
 		}    
 	}
