@@ -190,7 +190,7 @@ public class ItemBank extends HttpServlet {
 	
 	boolean reCaptchaOK(HttpServletRequest request) throws Exception {
 		try {
-			String queryString = "secret=6Ld_GAcTAAAAAD2k2iFF7Ywl8lyk9LY2v_yRh3Ci&response=" 
+			String queryString = "secret=" + Subject.getReCaptchaSecret() + "&response=" 
 					+ request.getParameter("g-recaptcha-response") + "&remoteip=" + request.getRemoteAddr();
 			URL u = new URL("https://www.google.com/recaptcha/api/siteverify");
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
@@ -293,7 +293,7 @@ public class ItemBank extends HttpServlet {
 							+ "I certify that I am a chemistry instructor. I understand that the copyright to these materials belongs to ChemVantage LLC and "
 							+ "that they are licensed to me under the terms of a <a href=https://creativecommons.org/licenses/by/4.0/>"
 							+ "Creative Commons Attribution 4.0 International License</a>.</label><br/>"
-							+ "<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG' aria-label='Google Recaptcha'></div><br/>"
+							+ "<div class='g-recaptcha' data-sitekey=" + Subject.getReCaptchaSiteKey() + " aria-label='Google Recaptcha'></div><br/>"
 							+ "<input type=submit "
 							+ "onClick=\"setTimeout(()=>{document.getElementById('sandboxed').innerHTML='<br/>The referring page "
 							+ "may have disabled forms in this page. Please copy the URL to a new browser tab.<br/><br/>'},8000); \" /><br/><br/>"
@@ -310,7 +310,7 @@ public class ItemBank extends HttpServlet {
 			if (showQuestions) buf.append("&nbsp;&nbsp;<input type=submit value=refresh />");
 			buf.append("<span style='display:none;' id=refreshing > Wait a moment...</span><br/>");
 			
-			if (!showQuestions) return buf.toString();
+			if (!showQuestions) return buf.toString() + "<br/><br/>";
 
 			List<Key<Question>> keys = new ArrayList<Key<Question>>();
 			for (Long cId : chapter.conceptIds)	keys.addAll(ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",cId).keys().list());

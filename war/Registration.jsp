@@ -99,7 +99,7 @@ Pricing:
 
 <label><input type=checkbox name=AcceptChemVantageTOS value=true <%= ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") %>/>Accept the <a href=/about.html#terms target=_blank aria-label='opens new tab'>ChemVantage Terms of Service</a></label><br/><br/>
 
-<div class='g-recaptcha' data-sitekey='6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG' aria-label='Google Recaptcha'></div><br/><br/>
+<div class='g-recaptcha' data-sitekey='<%= Subject.getReCaptchaSiteKey() %>' aria-label='Google Recaptcha'></div><br/><br/>
 
 <input type=submit value='Submit Registration'/>
 

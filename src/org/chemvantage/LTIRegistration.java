@@ -243,7 +243,7 @@ public class LTIRegistration extends HttpServlet {
 	}
 		
 	boolean reCaptchaOK(HttpServletRequest request) throws Exception {
-		String queryString = "secret=6Ld_GAcTAAAAAD2k2iFF7Ywl8lyk9LY2v_yRh3Ci&response=" 
+		String queryString = "secret=" + Subject.getReCaptchaSecret() + "&response=" 
 				+ request.getParameter("g-recaptcha-response") + "&remoteip=" + request.getRemoteAddr();
 		URL u = new URL("https://www.google.com/recaptcha/api/siteverify");
     	HttpURLConnection uc = (HttpURLConnection) u.openConnection();
