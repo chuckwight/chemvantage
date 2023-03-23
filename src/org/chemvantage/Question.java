@@ -56,6 +56,7 @@ public class Question implements Serializable, Cloneable {
 			String notes;
 			String learn_more_url;
 			boolean scrambleChoices;
+			boolean strictSpelling;
 			// Note: the parameters array formerly had the attribute @Transient javax.persistence.Transient
 	@Ignore		int[] parameters = {0,0,0,0};
 	@Index		boolean isActive = false;
@@ -383,7 +384,8 @@ public class Question implements Serializable, Cloneable {
 			buf.append("<span style='border: 1px solid black'>"
 					+ "<b>" + (this.hasACorrectAnswer()?quot2html(correctAnswer):"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;") + "</b>"
 					+ "</span>");
-			buf.append("&nbsp;" + tag + "<br/><br/>");
+			buf.append("&nbsp;" + tag + "<br/>"
+					+ (this.hasACorrectAnswer()?"Spelling: " + (strictSpelling?"strict":"lenient"):"") + "<br/><br/>");
 			break;
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br/>");
@@ -715,6 +717,7 @@ public class Question implements Serializable, Cloneable {
 						+ quot2html(amp2html(correctAnswer)) + "\"'/><br/>");
 				buf.append("<TEXTAREA name=QuestionTag rows=5 cols=60 wrap=soft>" 
 						+ amp2html(tag) + "</TEXTAREA><br/>");
+				buf.append("<label><input type=checkbox name=StrictSpelling value=true " + (this.strictSpelling?"CHECKED":"") + " />Strict spelling</label><br/><br/>");
 				break;
 			case 5: // Numeric Answer
 				buf.append("Question Text:<br/><TEXTAREA name=QuestionText rows=5 cols=60 wrap=soft>" 
@@ -774,7 +777,7 @@ public class Question implements Serializable, Cloneable {
 			for (int i=0;i<correctAnswers.length;i++) {
 				correctAnswers[i] = correctAnswers[i].replaceAll("\\W","");
 				if (compare.equals(studentAnswer,correctAnswers[i])) return true;
-				else if (closeEnough(studentAnswer.toLowerCase(),correctAnswers[i].toLowerCase())) return true;
+				else if (!strictSpelling && closeEnough(studentAnswer.toLowerCase(),correctAnswers[i].toLowerCase())) return true;
 			}
 			return false;
 		case 5: // Numeric Answer
