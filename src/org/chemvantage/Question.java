@@ -385,7 +385,7 @@ public class Question implements Serializable, Cloneable {
 					+ "<b>" + (this.hasACorrectAnswer()?quot2html(correctAnswer):"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;") + "</b>"
 					+ "</span>");
 			buf.append("&nbsp;" + tag + "<br/>"
-					+ (this.hasACorrectAnswer()?"Spelling: " + (strictSpelling?"strict":"lenient"):"") + "<br/><br/>");
+					+ (this.hasACorrectAnswer() && this.strictSpelling?"Spelling: strict<br/><br/>":"<br/>"));
 			break;
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br/>");
