@@ -65,6 +65,7 @@ public class Group {
 	
 	static void update(Deployment d, Assignment a) {
 		String group_id = a.lti_ags_lineitems_url;
+		if (group_id==null) return;
 		Group g = getInstance(group_id);
 		g.valid = new Date();
 		g.organization = d.organization;
