@@ -5,6 +5,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.List;
 
 import javax.servlet.ServletException;
@@ -39,19 +40,17 @@ public class Token extends HttpServlet {
 			if (target_link_uri == null) throw new Exception("Missing required target_link_uri parameter.");
 			
 			String deployment_id = request.getParameter("lti_deployment_id");
-			//debug.append("deployment_id=" + deployment_id + " ");
-			
+			if (deployment_id==null) deployment_id = request.getParameter("login_hint");
 			String client_id = request.getParameter("client_id");
-			//debug.append("client_id=" + client_id);
 			
 			Deployment d = getDeployment(platform_id,deployment_id,client_id);
-			if (d==null) response.sendRedirect("/Registration.jsp?message=To+start+using+ChemVantage,+please+register+your+LMS.");
-			/*
+			//if (d==null) response.sendRedirect("/Registration.jsp?message=To+start+using+ChemVantage,+please+register+your+LMS.");
+			
 			if (d==null) throw new Exception("ChemVantage was unable to identify this deployment from your LMS. "
 					+ "If you received a registration email within the past 7 days, please use the tokenized link in that message to "
 					+ "submit (or resubmit) the deployment_id and other required parameters. Otherwise, you may "
 					+ "repeat the registration process at https://www.chemvantage.org/lti/registration");
-			*/
+			
 			String redirect_uri = target_link_uri;
 			
 			Date now = new Date();
@@ -94,7 +93,12 @@ public class Token extends HttpServlet {
 			
 			response.sendRedirect(oidc_auth_url);
 		} catch (Exception e) {
-			response.sendError(401,"Failed Auth Token. " + (e.getMessage()==null?e.toString():e.getMessage()) + debug.toString());
+			Enumeration<String> parameterNames = request.getParameterNames();
+			while (parameterNames.hasMoreElements()) {
+				String name = parameterNames.nextElement();
+				debug.append(name + ":" + request.getParameter(name) + ";");
+			}
+			response.sendError(401,"Failed Auth Token. " + (e.getMessage()==null?e.toString():e.getMessage()) + "\n" + debug.toString());
 		}
 	}
 
