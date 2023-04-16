@@ -205,7 +205,8 @@ public class Question implements Serializable, Cloneable {
 		// this section uses a fully licensed version of the Jbc Math Parser
 		// from bestcode.com (license purchased by C. Wight on Nov 18, 2007)
 
-		raw = parseFractions(raw);
+		raw = parseFractions(raw);  // converts a fraction like (|3|2|) to readable HTML form
+		raw = parseNumber(raw);		// converts entire input like "forty-two" to "42"
 		
 		IMathParser parser = MathParserFactory.create();
 		try {
@@ -818,23 +819,7 @@ public class Question implements Serializable, Cloneable {
 		if (y <= x && y <= z) return y; 
 		else return z; 
 	} 
-/*	  
-	boolean hasCorrectSigFigs(String studentAnswer) {
-		// This method check the value to ensure that it has a number of significant figures that is consistent with Question.significantFigures
-		// Actually, it only ensures that value does not have more sig figs, because there may be an ambiguity in the number of sig figs if the 
-		// last significant digit in either the question item or the studentAnswer is a zero.
-		if (significantFigures==0) return true; // correct sig figs not required for this question
-		try {
-			studentAnswer = studentAnswer.replaceAll(",", "").replaceAll("\\s", "").toUpperCase();  // removes comma separators and whitespace from numbers, turns e to E
-			Double proposedValue = Double.valueOf(String.format("%."+(significantFigures+6)+"G", Double.valueOf(studentAnswer)));  // high-resolution representation of value
-			Double roundedValue = Double.valueOf(String.format("%."+significantFigures+"G", Double.valueOf(studentAnswer)));       // rounded to proper number of significant figures
-			if (Double.compare(roundedValue,proposedValue)==0) return true;
-			else return false;
-		} catch (Exception e) {  // unexpected error
-			return false;
-		}
-	}
-*/	
+
 	boolean hasCorrectSigFigs(String studentAnswer) {
 		if (significantFigures==0) return true;  // no sig figs required
 		
@@ -876,6 +861,59 @@ public class Question implements Serializable, Cloneable {
 		} catch (Exception e) {
 			return false;
 		}
+	}
+	
+	String parseNumber(String input) {  // converts input like "forty-two" to "42"
+		if (input==null || input.isEmpty()) return input;
+		String words = input.replaceAll("-", " ").toLowerCase().replaceAll(" and", " ");
+		String[] splitParts = words.trim().split("\\s+");
+		int n = 0;
+		int m = 0;
+		for (String s : splitParts) {
+			switch  (s) {
+			case "zero": n += 0; break;
+			case "one": n += 1; break;
+			case "two": n += 2; break;
+			case "three": n += 3; break;
+			case "four": n += 4; break;
+			case "five": n += 5; break;
+			case "six": n += 6; break;
+			case "seven": n += 7; break;
+			case "eight": n += 8; break;
+			case "nine": n += 9; break;
+			case "ten": n += 10; break;
+			case "eleven": n += 11; break;
+			case "twelve": n += 12; break;
+			case "thirteen": n += 13; break;
+			case "fourteen": n += 14; break;
+			case "fifteen": n += 15; break;
+			case "sixteen": n += 16; break;
+			case "seventeen": n += 17; break;
+			case "eighteen": n += 18; break;
+			case "nineteen": n += 19; break;
+			case "twenty": n += 20; break;
+			case "thirty": n += 30; break;
+			case "forty": n += 40; break;
+			case "fifty": n += 50; break;
+			case "sixty": n += 60; break;
+			case "seventy": n += 70; break;
+			case "eighty": n += 80; break;
+			case "ninety": n += 90; break;
+			case "hundred": n *= 100; break;
+			case "thousand": 
+				n *= 1000; 
+				m += n; 
+				n=0; 
+				break;
+			case "million": 
+				n *= 1000000; 
+				m += n; 
+				n=0; 
+				break;
+			default: return input;  // a word was not recognized
+			}
+		}
+		return Integer.toString(m+n);
 	}
 	
 	public Question clone() {
