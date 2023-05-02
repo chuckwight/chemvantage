@@ -48,7 +48,6 @@ public class Homework extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;	
 	private Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
-	//private static Date lastUpdated;
 	static int retryDelayMinutes = 2;  // minimum time between answer submissions for any single question
 
 	public String getServletInfo() {
@@ -57,9 +56,6 @@ public class Homework extends HttpServlet {
 
 	public void init (ServletConfig config) throws ServletException {
 		super.init(config);
-		//Date now = new Date();
-		//Date oneWeekAgo = new Date(now.getTime()-604800000L);
-		//if (lastUpdated.before(oneWeekAgo)) successPct.clear(); // resets Map of Question success percentages weekly
 	}
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
@@ -302,7 +298,6 @@ public class Homework extends HttpServlet {
 				
 				if (solvedQuestions.contains(q.id)) questionBuffer.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");
 				else if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) questionBuffer.append("<br/><a href='" + q.learn_more_url + "' target=_blank><img src=/images/learn_more.png alt='learn more here' align=top /><br/>learn</a>&nbsp;");
-				//questionBuffer.append("<br/>" + qcache.getSuccessPct(k));
 				
 				questionBuffer.append("</div>");
 				
@@ -1036,7 +1031,7 @@ public class Homework extends HttpServlet {
 					buf.append("<option value='" + k.getId() + "'" + (newConceptId!=null && k.getId()==newConceptId?" selected>":">") + keyConcepts.get(k).title + "</option>");
 				} catch (Exception e) {}
 			}
-			buf.append("</select></form><hr><br/>");
+			buf.append("</select></form><hr>");
 			debug.append("4");
 			
 			// now we have all of the relevant conceptIds. Make a list of questions carrying these attributes:
@@ -1057,6 +1052,9 @@ public class Homework extends HttpServlet {
 			// create an ordered List of Questions (by difficulty)
 			List<Question> orderedQuestions = new ArrayList<Question>();
 			for (Key<Question> k : questionKeys) orderedQuestions.add(questions.get(k));
+			
+			buf.append("<b>Select assigned questions</b><br/>"
+					+ "Current number of assigned questions = " + a.questionKeys.size() + " out of " + orderedQuestions.size());
 			
 			// This dummy form uses javascript to select/deselect all questions
 			buf.append("<FORM NAME=DummyForm><INPUT id=selectAll TYPE=CHECKBOX NAME=SelectAll "
