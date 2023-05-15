@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.Date;
 import java.util.Enumeration;
-import java.util.List;
+import java.util.Map;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -15,8 +15,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import com.auth0.jwt.JWT;
-import com.auth0.jwt.algorithms.Algorithm;
-import com.googlecode.objectify.Key;;
+import com.auth0.jwt.algorithms.Algorithm;;
 
 @WebServlet("/auth/token")
 public class Token extends HttpServlet {
@@ -103,87 +102,33 @@ public class Token extends HttpServlet {
 		// be used in case the platform supports multiple deployments with different client_id values for the tool.
 		// However, this is not technically required by the specifications. Hmm.
 		Deployment d = null;
-		try {
-			String platform_id = request.getParameter("iss");   // this should be the platform_id URL (aud)
-			if (platform_id.endsWith("/")) platform_id = platform_id.substring(0,platform_id.length()-1);  // strip any trailing / from platform_id
-			
-			URL platform = new URL(platform_id);
-			if (!platform.getProtocol().equals("https")) throw new Exception("The platform_id must be a secure URL.");
-			
-			// Take the optimistic route first; this should always work if the deployment_id has been provided, else return null;
-			String deployment_id = request.getParameter("lti_deployment_id");
-			if (deployment_id != null) {
-				String platform_deployment_id = platform_id + "/" + deployment_id;
-				d = ofy().load().type(Deployment.class).id(platform_deployment_id).now();
-				if (d == null) {
-					try {  // look for a deployment with a blank deployment_id from this platform
-						d = ofy().load().type(Deployment.class).id(platform_id + "/").safe();
-						ofy().delete().entity(d);
-						d.platform_deployment_id = platform_id + "/" + deployment_id;
-						d.created = new Date();
-						ofy().save().entity(d).now();
-					} catch (Exception e) {
-					}
-				}
-				return d;
-			}
+		String platform_id = request.getParameter("iss");   // this should be the platform_id URL (aud)
+		if (platform_id.endsWith("/")) platform_id = platform_id.substring(0,platform_id.length()-1);  // strip any trailing / from platform_id
 
-			// DeploymentId was not sent; prepare to search for all deployments from this platform:
-			Key<Deployment> kstart = Key.create(Deployment.class, platform_id);
-			Key<Deployment> kend = Key.create(Deployment.class, platform_id + "~");			
-			String client_id = request.getParameter("client_id");
-			
-			List<Deployment> deployments = null;
-			if (client_id != null) {
-				// Find all deployments from this platform with the specified client_id; there SHOULD be only one if the deployment_id was not provided.
-				deployments = ofy().load().type(Deployment.class).filterKey(">=",kstart).filterKey("<",kend).filter("client_id",client_id).list();
-				if (deployments.size()==1) return deployments.get(0);
-			} else {
-				// Find all of the deployments from this platform; there SHOULD be only one if neither deployment_id nor client_id was provided.
-				deployments = ofy().load().type(Deployment.class).filterKey(">=",kstart).filterKey("<",kend).list();
-				if (deployments.size()==1) return deployments.get(0);  // this must be the registered deployment
-			}
-			
-			// Next, check the login_hint for a clue to the deployment. Schoology puts the deployment_id here
-			String login_hint = request.getParameter("login_hint");
-			try {
-				deployment_id = login_hint;
-				String platform_deployment_id = platform_id + "/" + deployment_id;
-				d = ofy().load().type(Deployment.class).id(platform_deployment_id).safe();
-				return d;
-			} catch (Exception e) {
-			}
-						
-			if (d==null) {  // Still no joy. Check to see if there might be an error in the platform_id or iss value (e.g., using an instructure test platform)
-				deployments =  ofy().load().type(Deployment.class).filter("client_id",client_id).list();
-				if (deployments.size()==1) {
-					d = deployments.get(0);
-					if ("canvas".equals(d.lms_type) && platform_id.contains("instructure.com") && d.lastLogin==null) {
-						// create new Deployment with the correct platform_id and access points
-						String oidc_auth_url = platform_id + "/api/lti/authorize_redirect";
-						String oauth_access_token_url = platform_id + "/login/oauth2/token";
-						String well_known_jwks_url = platform_id + "/api/lti/security/jwks";
-						String client_name = d.contact_name;
-						String email = d.email;
-						String organization = d.organization;
-						String org_url = d.org_url;
-						String lms = d.lms_type;
-						Deployment d2 = new Deployment(platform_id,d.getDeploymentId(),client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);				
-						ofy().save().entity(d2).now();
-						ofy().delete().entity(d);
-						return d2;
-					}
-				}
-			}		
+		URL platform = new URL(platform_id);
+		if (!platform.getProtocol().equals("https")) throw new Exception("The platform_id must be a secure URL.");
+
+		// Take the optimistic route first; this should always work if the deployment_id has been provided, else return null;
+		String deployment_id = request.getParameter("lti_deployment_id");  // moodle, brightspace, blackboard
+		if (deployment_id == null) deployment_id = request.getParameter("deployment_id");  // canvas
+		if (deployment_id == null) deployment_id = request.getParameter("login_hint");  // schoology
+
+		try {
+			String platform_deployment_id = platform_id + "/" + deployment_id;
+			d = ofy().load().type(Deployment.class).id(platform_deployment_id).safe();
 		} catch (Exception e) {
-			
+			// send advisory email to ChemVantage administrator:
+			Map<String,String[]> params = request.getParameterMap();
+			String message = "Query parameters:<br/>";
+			for (String name : params.keySet()) message += name + "=" + params.get(name)[0] + "<br/>";
+			LTIMessage.sendEmailToAdmin("AuthToken Request Failure",message);
 		}
-		
 		return d;
-	}
+}
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 			throws ServletException, IOException {
 		doGet(request, response);
 	}
+	
 }
