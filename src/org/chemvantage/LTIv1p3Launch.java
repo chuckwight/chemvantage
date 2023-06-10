@@ -206,8 +206,7 @@ public class LTIv1p3Launch extends HttpServlet {
 					d.nLicensesRemaining--;
 					new PremiumUser(user.getHashedId(),12,0,d.organization);
 					isPremiumUser = true;
-				}
-				else if (d.price == 0) {
+				} else if (d.price == 0) {
 					new PremiumUser(user.getHashedId(),12,0,d.organization);
 					isPremiumUser = true;
 				}
@@ -328,6 +327,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			} else if (!isPremiumUser) {
 				String url = "/checkout0.jsp?sig=" + user.getTokenSignature() + "&d=" + d.platform_deployment_id;
 				if ("PlacementExam".equals(myAssignment.assignmentType)) url += "&n=1";
+				else url += "&n=5";
 				response.sendRedirect(url);
 			}
 			else launchResourceRequest(user,myAssignment,request,response);
