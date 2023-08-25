@@ -119,7 +119,7 @@ public class Token extends HttpServlet {
 		} catch (Exception e) {
 			// send advisory email to ChemVantage administrator:
 			Map<String,String[]> params = request.getParameterMap();
-			String message = "Query parameters:<br/>";
+			String message = "<h3>Deployment Not Found</h3>Query parameters:<br/>";
 			for (String name : params.keySet()) message += name + "=" + params.get(name)[0] + "<br/>";
 			LTIMessage.sendEmailToAdmin("AuthToken Request Failure",message);
 		}
