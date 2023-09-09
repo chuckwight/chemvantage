@@ -21,6 +21,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.text.DateFormat;
 import java.util.Date;
 import java.util.List;
 
@@ -118,6 +119,14 @@ public class Admin extends HttpServlet {
 					ofy().delete().entity(d);
 				}
 				break;
+			case "Create Vouchers":
+				try {
+					int n = Integer.parseInt(request.getParameter("NVouchers"));
+					String org = request.getParameter("Organization");
+					if (org == null) throw new Exception();
+					for (int i=0; i<n; i++) new Voucher(org);
+				} catch (Exception e) {}
+				break;
 			}
 			out.println(Subject.getHeader(user) + mainAdminForm(user,userRequest,searchString,cursor) + Subject.footer);
 		} catch (Exception e) {
@@ -196,9 +205,35 @@ public class Admin extends HttpServlet {
 						+ "<input type=submit name=action value='Delete'/></form><br/>");
 			}
 			
+			// OpenStax
 			buf.append("<h3>Quarterly OpenStax Ally Partner Report</h3>"
 					+ "<a href=/Admin?UserRequest=OpenStaxReport>Preview</a> or <a href=/Admin?UserRequest=OpenStaxCSVReport>Download CSV File</a>");
 			
+			// Create subscription vouchers
+			buf.append("<h3>1-Year Subscription Vouchers</h3>");
+			
+			if ("Create Vouchers".equals(userRequest)) {
+				buf.append("Unclaimed Vouchers:<br/>");
+				DateFormat df = DateFormat.getDateInstance(DateFormat.SHORT);
+				List<Voucher> vouchers = ofy().load().type(Voucher.class).filter("activated =",null).order("-purchased").list();
+				if (vouchers.size()>0) {
+					buf.append("<table><tr><th>Org</th><th>Purchased</th><th>Paid</th><th>Months</th><th>Code</th></th>");
+					for (Voucher v : vouchers) buf.append("<tr>"
+							+ "<td style='text-align:center'>" + v.org + "</td>"
+							+ "<td style='text-align:center'>" + df.format(v.purchased) + "</td>"
+							+ "<td style='text-align:center'>$" + v.paid + "</td>"
+							+ "<td style='text-align:center'>" + v.months + "</td>"
+							+ "<td style='text-align:center'>" + v.code + "</td>"
+							+ "</tr>");
+					buf.append("</table>");
+				}
+			}
+			
+			buf.append("<form method=post>");
+			buf.append("<input type=hidden name=UserRequest value='Create Vouchers' />");
+			buf.append("Create <input type=text size=3 name=NVouchers value=0 /> new vouchers for <input type=text name=Organization placeholder=organization /> <input type=submit value='Show Codes' />");
+			buf.append("</form>");
+			// Signature Code
 			buf.append("<h3>Signature Code for 1 month Anonymous Access: " + Long.toHexString(User.encode(new Date(new Date().getTime() + 2678400000L).getTime())) + "</h3>");	
 		}
 		catch (Exception e) {

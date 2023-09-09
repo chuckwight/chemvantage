@@ -39,6 +39,7 @@ public class ObjectifyWebListener implements ServletContextListener {
     ObjectifyService.register(UserReport.class);
     ObjectifyService.register(Video.class);
     ObjectifyService.register(VideoTransaction.class);
+    ObjectifyService.register(Voucher.class);
     
     ObjectifyService.begin();
 	

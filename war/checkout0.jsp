@@ -28,6 +28,7 @@
 	String sig = request.getParameter("sig");
 	User user = User.getUser(sig);
 	String hashedId = request.getParameter("HashedId");
+	String voucherCode = request.getParameter("VoucherCode");
 	if (user == null || user.isAnonymous()) response.sendError(401, "You must be logged in through your LMS to see this page.");
 	Date now = new Date();
 	Date exp = null;
@@ -35,23 +36,26 @@
 	Deployment d = null;
 	int nMonthsPurchased = 5;
 	try {
-		nMonthsPurchased = Integer.parseInt(request.getParameter("n"));
+		nMonthsPurchased = Integer.parseInt(request.getParameter("nmonths"));
 	} catch (Exception e) {}
 	int amountPaid = 0;
 	try {
 		d = ofy().load().type(Deployment.class).id(request.getParameter("d")).now();
-		if (hashedId.equals(user.getHashedId())) { // successful purchase; throws exception on first pass because hashedId==null
+		Voucher v = null;
+		if (voucherCode != null) v = ofy().load().type(Voucher.class).id(voucherCode.toUpperCase()).now();
+		
+		if (user.getHashedId().equals(hashedId) || v.activate()) { // successful purchase or voucherCode submission;
 			amountPaid = Integer.parseInt(request.getParameter("AmountPaid"));
-			PremiumUser u = new PremiumUser(hashedId, nMonthsPurchased, amountPaid, d.getOrganization()); // constructor automatically saves new entity
+			PremiumUser u = new PremiumUser(user.getHashedId(), nMonthsPurchased, amountPaid, d.getOrganization()); // constructor automatically saves new entity
 			exp = u.exp;
 %> 
 			<h2>Thank you for your payment!</h2>
 			Your ChemVantage subscription is now active and expires on <%= df.format(exp) %><br/>
 			Print or save this page as proof of purchase. Then return to your LMS and relaunch the assignment.<br/><br/>	
 			Details: <%= request.getParameter("OrderDetails") %><br/>
-			Months Purchased: <%= request.getParameter("n") %>
+			Months Purchased: <%= request.getParameter("nmonths") %>
 <%
-		}
+		} else throw new Exception("Invalid hashedId or voucherCode");
 	} catch (Exception e) {  // the remainder of the JSP is devoted to presenting the purchase page
 
 		String client_id = System.getProperty("com.google.appengine.application.id").equals("dev-vantage-hrd")
@@ -68,15 +72,23 @@
 <%	
 		}
 %>
-
-		Please select the desired number of months you wish to purchase: 
+	<form method=post>
+		<input type=hidden name=sig value='<%= user.getTokenSignature() %>' />
+  		<input type=hidden name=d value='<%= d.getPlatformDeploymentId() %>' />
+  		<input type=hidden name=nmonths value=12 />
+  		<input type=hidden name=AmountPaid value='<%= 8*d.price %>' />
+ 		<input type=hidden name=OrderDetails value='Voucher' />
+		If you have a subscription voucher, please enter the code here and click submit: <input type=text size=10 name=VoucherCode /><input type=submit />
+	</form>
+		
+		
+		Otherwise, please select the desired number of months you wish to purchase: 
 		<select id=nMonthsChoice onChange=updateAmount();>
 			<option value=1>1 month</option>
 			<option value=2>2 months</option>
 			<option value=5>5 months</option>
 			<option value=12>12 months</option>
 		</select><br /><br /> 
-		
 		
 		Select your preferred payment method below. When the transaction is completed, your subscription will be activated immediately.
 
@@ -147,7 +159,7 @@
   		<form id=activationForm method=post action='/checkout0.jsp'>
   		<input type=hidden name=sig value='<%= user.getTokenSignature() %>' />
   		<input type=hidden name=d value='<%= d.getPlatformDeploymentId() %>' />
-  		<input type=hidden name=n id=nmonths />
+  		<input type=hidden name=nmonths id=nmonths />
   		<input type=hidden name=AmountPaid id=amtPaid />
  		<input type=hidden name=OrderDetails id=orderdetails />
   		<input type=hidden name=HashedId value='<%= user.getHashedId() %>' />
