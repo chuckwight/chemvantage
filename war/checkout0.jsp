@@ -68,28 +68,39 @@
 		PremiumUser u = ofy().load().type(PremiumUser.class).id(user.getHashedId()).now();		
 		if (u != null && u.exp.before(now)) {
 %>		
-			<h3>Your ChemVantage subscription expired: <%= df.format(u.exp) %></h3>
+			<h4>Your ChemVantage subscription expired: <%= df.format(u.exp) %></h4>
 <%	
 		}
+		
+		int nVouchersAvailable = ofy().load().type(Voucher.class).filter("activated",null).count();
+		if (nVouchersAvailable > 0) {
 %>
-	<form method=post>
-		<input type=hidden name=sig value='<%= user.getTokenSignature() %>' />
-  		<input type=hidden name=d value='<%= d.getPlatformDeploymentId() %>' />
-  		<input type=hidden name=nmonths value=12 />
-  		<input type=hidden name=AmountPaid value='<%= 8*d.price %>' />
- 		<input type=hidden name=OrderDetails value='Voucher' />
-		If you have a subscription voucher, please enter the code here and click submit: <input type=text size=10 name=VoucherCode /><input type=submit />
-	</form>
-		
-		
-		Otherwise, please select the desired number of months you wish to purchase: 
+		<form method=post>
+			<input type=hidden name=sig value='<%= user.getTokenSignature() %>' />
+  			<input type=hidden name=d value='<%= d.getPlatformDeploymentId() %>' />
+  			<input type=hidden name=nmonths value=12 />
+  			<input type=hidden name=AmountPaid value='<%= 8*d.price %>' />
+ 			<input type=hidden name=OrderDetails value='Voucher' />
+			If you have a subscription voucher, please enter the code here: <input type=text size=10 name=VoucherCode /> <br/>
+			<label><input type=checkbox name=terms value=true> I have read and understood the <a href=/about.html#terms target=_blank>ChemVantage Terms and Conditions of Use</a></label> <br/>
+			<input type=submit />
+		</form>
+		Otherwise, please select the desired number of months you wish to purchase:
+<% 
+		} else {
+%>	
+		Please select the desired number of months you wish to purchase: 
+<%
+		}
+%>
 		<select id=nMonthsChoice onChange=updateAmount();>
 			<option value=1>1 month</option>
 			<option value=2>2 months</option>
 			<option value=5>5 months</option>
 			<option value=12>12 months</option>
-		</select><br /><br /> 
-		
+		</select><br />
+		<label><input type=checkbox name=terms value=true> I have read and understood the <a href=/about.html#terms target=_blank>ChemVantage Terms and Conditions of Use</a></label> <br/><br/>
+			
 		Select your preferred payment method below. When the transaction is completed, your subscription will be activated immediately.
 
 		<h2>Purchase: <span id=amt></span></h2>
