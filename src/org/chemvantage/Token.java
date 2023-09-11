@@ -4,6 +4,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.Base64;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.Map;
@@ -15,7 +16,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import com.auth0.jwt.JWT;
-import com.auth0.jwt.algorithms.Algorithm;;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.interfaces.DecodedJWT;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;;
 
 @WebServlet("/auth/token")
 public class Token extends HttpServlet {
@@ -115,7 +119,49 @@ public class Token extends HttpServlet {
 
 		try {
 			String platform_deployment_id = platform_id + "/" + deployment_id;
-			d = ofy().load().type(Deployment.class).id(platform_deployment_id).safe();
+			d = ofy().load().type(Deployment.class).id(platform_deployment_id).now();  // previously used .safe()
+			if (d != null) return d;
+			
+			// experimental: automatic deployment registration
+			if ("https://canvas.instructure.com".equals(platform_id)) {  // auto register canvas account
+				DecodedJWT hint_token = JWT.decode(request.getParameter("lti_message_hint"));
+				String json = new String(Base64.getUrlDecoder().decode(hint_token.getPayload()));
+				JsonObject claims = JsonParser.parseString(json).getAsJsonObject();
+				String canvas_domain = claims.get("canvas_domain").getAsString();
+				String client_id = request.getParameter("client_id");
+				String oidc_auth_url = "https://canvas.instructure.com/api/lti/authorize_redirect";
+				String oauth_access_token_url = "https://canvas.instructure.com/login/oauth2/token";
+				String well_known_jwks_url = "https://canvas.instructure.com/api/lti/security/jwks";
+				String contact_name = null;
+				String email = null;
+				String organization = canvas_domain;
+				String org_url = null;
+				String lms = "canvas";
+				d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,contact_name,email,organization,org_url,lms);
+				ofy().save().entity(d).now();
+				Map<String,String[]> params = request.getParameterMap();
+				String message = "<h3>Deployment Registration</h3>Query parameters:<br/>";
+				for (String name : params.keySet()) message += name + "=" + params.get(name)[0] + "<br/>";
+				LTIMessage.sendEmailToAdmin("Automatic Canvas Registration",message);
+				return d;
+			} else if ("https://schoology.schoology.com".equals(platform_id)) {  // auto register schoology account
+				String client_id = request.getParameter("client_id");
+				String oidc_auth_url = "https://lti-service.svc.schoology.com/lti-service/authorize-redirect";
+				String well_known_jwks_url = "https://lti-service.svc.schoology.com/lti-service/.well-known/jwks";
+				String oauth_access_token_url = "https://lti-service.svc.schoology.com/lti-service/access-token";
+				String contact_name = null;
+				String email = null;
+				String organization = null;
+				String org_url = null;
+				String lms = "schoology";
+				d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,contact_name,email,organization,org_url,lms);
+				ofy().save().entity(d).now();
+				Map<String,String[]> params = request.getParameterMap();
+				String message = "<h3>Deployment Registration</h3>Query parameters:<br/>";
+				for (String name : params.keySet()) message += name + "=" + params.get(name)[0] + "<br/>";
+				LTIMessage.sendEmailToAdmin("Automatic Schoology Registration",message);
+				return d;
+			} else throw new Exception("Deployment Not Found");
 		} catch (Exception e) {
 			// send advisory email to ChemVantage administrator:
 			Map<String,String[]> params = request.getParameterMap();
