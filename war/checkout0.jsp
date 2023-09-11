@@ -63,7 +63,8 @@
 		} else {
 %>
 			<h2>ChemVantage Subscription Activation Failed</h2>
-			Sorry, something went wrong. Please return to your LMS and launch the assignment again.<br/><br/>
+			Sorry, something went wrong. Please return to your LMS and launch the assignment again.<br/>
+			If you need assistance, please send email to <a href='mailto:admin@chemvantage.org'>admin@chemvantage.org</a><br/><br/>
 <%
 		}
 	} catch (Exception e) {  // the remainder of the JSP is devoted to presenting the purchase page
