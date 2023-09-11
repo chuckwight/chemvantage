@@ -42,20 +42,30 @@
 	try {
 		d = ofy().load().type(Deployment.class).id(request.getParameter("d")).now();
 		Voucher v = null;
-		if (voucherCode != null) v = ofy().load().type(Voucher.class).id(voucherCode.toUpperCase()).now();
+		if (voucherCode != null) {
+			voucherCode = voucherCode.toUpperCase();
+			v = ofy().load().type(Voucher.class).id(voucherCode).now();
+		}
 		
 		if (user.getHashedId().equals(hashedId) || v.activate()) { // successful purchase or voucherCode submission;
 			amountPaid = Integer.parseInt(request.getParameter("AmountPaid"));
 			PremiumUser u = new PremiumUser(user.getHashedId(), nMonthsPurchased, amountPaid, d.getOrganization()); // constructor automatically saves new entity
 			exp = u.exp;
+			String details = request.getParameter("OrderDetails");
+			if (v != null) details = details + " " + voucherCode;
 %> 
 			<h2>Thank you for your payment!</h2>
 			Your ChemVantage subscription is now active and expires on <%= df.format(exp) %><br/>
 			Print or save this page as proof of purchase. Then return to your LMS and relaunch the assignment.<br/><br/>	
-			Details: <%= request.getParameter("OrderDetails") %><br/>
+			Details: <%= details %><br/>
 			Months Purchased: <%= request.getParameter("nmonths") %>
 <%
-		} else throw new Exception("Invalid hashedId or voucherCode");
+		} else {
+%>
+			<h2>ChemVantage Subscription Activation Failed</h2>
+			Sorry, something went wrong. Please return to your LMS and launch the assignment again.<br/><br/>
+<%
+		}
 	} catch (Exception e) {  // the remainder of the JSP is devoted to presenting the purchase page
 
 		String client_id = System.getProperty("com.google.appengine.application.id").equals("dev-vantage-hrd")
@@ -63,7 +73,8 @@
 		"AYlUNqRJZXhJJ9z7pG7GRMOwC-Y_Ke58s8eacfl1R51833ISAqOUhR8To0Km297MPcShAqm9ffp5faun"; // Paypal live client_id
 %>
 		<h3>Individual ChemVantage Subscription</h3>
-		A subscription is required to access ChemVantage assignments created by your instructor through this learning management system.<br/><br/>
+		A subscription is required to access ChemVantage assignments created by your instructor through this learning management system. 
+		First, indicate your agreement with the two statements below by checking the boxes.<br/><br/>
 <% 
 		PremiumUser u = ofy().load().type(PremiumUser.class).id(user.getHashedId()).now();		
 		if (u != null && u.exp.before(now)) {
@@ -72,6 +83,13 @@
 <%	
 		}
 		
+		// User acknowledgements:
+%>
+		<label><input type=checkbox id=terms onChange=showPurchase();> I understand and agree to the <a href=/about.html#terms target=_blank>ChemVantage Terms and Conditions of Use</a>.</label> <br/>
+		<label><input type=checkbox id=norefunds onChange=showPurchase();> I understand that all ChemVantage subscription fees are nonrefundable.</label> <br/><br/>
+
+		<div id=purchase style='display:none'>
+<%		
 		int nVouchersAvailable = ofy().load().type(Voucher.class).filter("activated",null).count();
 		if (nVouchersAvailable > 0) {
 %>
@@ -81,11 +99,10 @@
   			<input type=hidden name=nmonths value=12 />
   			<input type=hidden name=AmountPaid value='<%= 8*d.price %>' />
  			<input type=hidden name=OrderDetails value='Voucher' />
-			If you have a subscription voucher, please enter the code here: <input type=text size=10 name=VoucherCode /> <br/>
-			<label><input type=checkbox name=terms value=true> I have read and understood the <a href=/about.html#terms target=_blank>ChemVantage Terms and Conditions of Use</a></label> <br/>
+			If you have a subscription voucher, please enter the code here: <input type=text size=10 name=VoucherCode />
 			<input type=submit />
 		</form>
-		Otherwise, please select the desired number of months you wish to purchase:
+		<br/>Otherwise, please select the desired number of months you wish to purchase:
 <% 
 		} else {
 %>	
@@ -98,8 +115,7 @@
 			<option value=2>2 months</option>
 			<option value=5>5 months</option>
 			<option value=12>12 months</option>
-		</select><br />
-		<label><input type=checkbox name=terms value=true> I have read and understood the <a href=/about.html#terms target=_blank>ChemVantage Terms and Conditions of Use</a></label> <br/><br/>
+		</select><br/><br/>
 			
 		Select your preferred payment method below. When the transaction is completed, your subscription will be activated immediately.
 
@@ -110,8 +126,18 @@
             <div id="paypal-button-container"></div>
           </div>
         </div>
+        
+        </div>
+        
  		<script src='https://www.paypal.com/sdk/js?client-id=<%= client_id %>&enable-funding=venmo&currency=USD'></script>
    		<script>
+   		var agreeTerms = document.getElementById('terms');
+   		var agreeNoRefunds = document.getElementById('norefunds');
+   		var purchase = document.getElementById('purchase');
+   		function showPurchase() {
+   			if (agreeTerms.checked && agreeNoRefunds.checked) purchase.style = 'display:inline';
+   			else purchase.style = 'display:none';
+   		}
   		var nMonths = <%= nMonthsPurchased %>;
    		var amtPaid = "";
    		var nMonthsInp = document.getElementById("nMonthsChoice");
