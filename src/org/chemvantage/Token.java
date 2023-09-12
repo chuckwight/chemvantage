@@ -138,6 +138,7 @@ public class Token extends HttpServlet {
 				String org_url = null;
 				String lms = "canvas";
 				d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,contact_name,email,organization,org_url,lms);
+				d.status = "pending";
 				ofy().save().entity(d).now();
 				Map<String,String[]> params = request.getParameterMap();
 				String message = "<h3>Deployment Registration</h3>Query parameters:<br/>";
@@ -155,6 +156,7 @@ public class Token extends HttpServlet {
 				String org_url = null;
 				String lms = "schoology";
 				d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,contact_name,email,organization,org_url,lms);
+				d.status = "pending";
 				ofy().save().entity(d).now();
 				Map<String,String[]> params = request.getParameterMap();
 				String message = "<h3>Deployment Registration</h3>Query parameters:<br/>";
