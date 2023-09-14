@@ -1018,7 +1018,7 @@ public class LTIRegistration extends HttpServlet {
 			buf.append("ChemVantage is pleased to provide free access to our software development server for testing LTI connections. "
 					+ "Please note that the server is sometimes in an unstable state, and accounts may be reset or even deleted at any time.<br/><br/>");
 		} else {
-			buf.append("Your ChemVantage has been fully activated and provisioned with 5 free student licenses. Each unique student "
+			buf.append("Your ChemVantage has been fully activated and provisioned with 1 free student license for testing. Each unique student "
 					+ "login will use one license. You may purchase additional licenses in bulk directly from ChemVantage at a discount. "
 					+ "Otherwise, ChemVantage will charge each student a subsciption price of $" + price + ".00 USD per month to access the assignments. "
 					+ "As a reminder, access to ChemVantage by instructors and LMS account administrators is always free.<br/><br/>");
