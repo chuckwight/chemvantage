@@ -87,27 +87,37 @@ public class LTIv1p3Launch extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 			throws ServletException, IOException {
+		
+		String userRequest = request.getParameter("UserRequest");
+		if (userRequest==null) userRequest = "";
+		
 		try {
-			if (request.getParameter("id_token") != null) ltiv1p3LaunchRequest(request,response);  // handle LTI v1p3 launch request			
-			else if ("UpdateAssignment".equals(request.getParameter("UserRequest"))) { // POST the assignmentType and topicIds			
+			if (request.getParameter("id_token") != null) ltiv1p3LaunchRequest(request,response);  // handle LTIv1p3 launch request			
+			else {
 				User user = User.getUser(request.getParameter("sig"));
 				if (user==null) throw new Exception("User token was missing or invalid.");				
-				if (!user.isInstructor()) throw new Exception("User must be instructor to update this assignment.");
+				if (!user.isInstructor()) throw new Exception("Unauthorized. User must be an instructor or administrator for this request.");
 
-				Assignment myAssignment = updateAssignment(request,user);
-				boolean refresh = Boolean.parseBoolean(request.getParameter("Refresh"));
-
-				if (!refresh && myAssignment.isValid()) {
-					myAssignment.valid = new Date();
-					ofy().save().entity(myAssignment).now();  // we will need this in a few milliseconds					
-					//response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
-					launchResourceRequest(user,myAssignment,request,response);
-				} else {  // send the user back to the resourcePickerForm
-					response.getWriter().println(Subject.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,request) + Subject.footer);
+				switch (userRequest) {
+				case "UpdateAssignment":
+					Assignment myAssignment = updateAssignment(request,user);
+					boolean refresh = Boolean.parseBoolean(request.getParameter("Refresh"));
+					if (!refresh && myAssignment.isValid()) {
+						myAssignment.valid = new Date();
+						ofy().save().entity(myAssignment).now();  // we will need this in a few milliseconds					
+						//response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
+						launchResourceRequest(user,myAssignment,request,response);
+					} else {  // send the user back to the resourcePickerForm
+						response.getWriter().println(Subject.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,request) + Subject.footer);
+					}
+					break;
+				case "Register":
+					response.getWriter().println(registrationForm(user,request,request.getParameter("platform_deployment_id")));
+					break;
+				default:
+					throw new Exception("Wrong URL or Bad Request. This URL only receives LTI Advantage (v1.3) Resource Link and Submission Review launch requests for ChemVantage. "
+							+ "Please check to ensure that your LMS is registered properly. Contact admin@chemvantage.org for assistance.");
 				}
-			} else {
-				throw new Exception("Wrong URL or Bad Request. This URL only receives LTI Advantage (v1.3) Resource Link and Submission Review launch requests for ChemVantage. "
-						+ "Please check to ensure that your LMS is registered properly. Contact admin@chemvantage.org for assistance.");
 			}
 		} catch (Exception e) {	
 			String message = "LTI Launch Failure. Status 401: " + (e.getMessage()==null?e.toString():e.getMessage());
@@ -138,6 +148,12 @@ public class LTIv1p3Launch extends HttpServlet {
 		
 		verifyLtiMessageClaims(claims); // required
 		User user = getUserClaims(claims);
+		
+		// Check to see if registration is complete and gather required info if necessary:
+		if (user.isInstructor() && "auto".equals(d.status)) {
+			response.getWriter().println(registrationForm(user,request,d.platform_deployment_id));
+			return;
+		}
 		
 		// At this point we have all of the REQUIRED info for a valid LTI launch
 		// Process all remaining optional claims in try/catch structures to avoid
@@ -821,6 +837,64 @@ public class LTIv1p3Launch extends HttpServlet {
 		return buf.toString();
 	}
 
+	String registrationForm(User user, HttpServletRequest request,String platform_deployment_id) throws Exception {
+		StringBuffer buf = new StringBuffer(Subject.header("ChemVantage Registration") + Subject.banner);
+		try {
+			Deployment d = ofy().load().type(Deployment.class).id(platform_deployment_id).now();
+			
+			if (registrationCompleted(request,d)) {
+				buf.append("<h2>Thank you</h2>"
+						+ "Registration is now complete. Please return to your LMS and relaunch the assignment to continue.<br/><br/>");
+			} else {
+				buf.append("<h2>ChemVantage Registration</h2>"
+						+ "Please provide the information below and accept the Terms of Service to complete the registration.<p></p>"
+						+ "<form method=post><input type=hidden name=UserRequest value=Register />"
+						+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+						+ "<input type=hidden name=platform_deployment_id value='" + d.platform_deployment_id + "' />");
+				buf.append("Please tell us how to contact you if there is ever a problem with your account:<br/>"
+						+ "<label>Your Name: " + (d.contact_name==null?"<input type=text name=contact_name size=40 />":d.contact_name) + "</label><br/>"
+						+ "<label>Your Email: " + (d.email==null?"<input type=text name=contact_email size=40 />":d.email) + "</label><br/><br/>"
+						+ "Please tell us about your school, business or organization:<br/>"
+						+ "<label>Org Name: " + (d.organization==null?"<input type=text name=org_name size=40 />":d.organization) + "</label><br/>"
+						+ "<label>Home Page: " + (d.org_url==null?"<input type=text name=org_url placeholder='https://myschool.edu' size=40 />":d.org_url) + "</label><br/><br/>");
+				buf.append("Pricing:"
+						+ "<ul>"
+						+ "<li>LTI registration and instructor accounts are free.</li>"
+						+ "<li>Each student license costs $2.00 USD per month or $8.00 USD per semester.</li>"
+						+ "<li>Institutions may purchase student licenses in bulk for as little as $2.00 USD per year.</li>"
+						+ "</ul>"
+						+ "If you have questions or need assistance, please email admin@chemvantage.org<br/><br/>"
+						+ "<label><input type=checkbox name=AcceptChemVantageTOS value=true />Accept the <a href=/about.html#terms target=_blank aria-label='opens new tab'>ChemVantage Terms of Service</a></label><br/><br/>"
+						+ "<input type=submit value='Complete Registration'/><br/><br/>");
+				buf.append("</form>");
+			}
+			buf.append(Subject.footer);
+		} catch (Exception e) {
+			
+		}
+		return buf.toString();
+	}
+	
+	boolean registrationCompleted(HttpServletRequest request, Deployment d) {
+		try {
+			String contact_name = request.getParameter("contact_name");
+			String email = request.getParameter("contact_email");
+			String organization = request.getParameter("org_name");
+			String org_url = request.getParameter("org_url");
+			if (d.contact_name==null && !contact_name.trim().isEmpty()) d.contact_name = contact_name;
+			if (d.email==null && !email.trim().isEmpty()) d.email = email;
+			if (d.organization==null && !organization.trim().isEmpty()) d.organization = organization;
+			if (d.org_url==null && !org_url.trim().isEmpty()) d.org_url = org_url;
+			boolean terms = Boolean.parseBoolean(request.getParameter("AcceptChemVantageTOS"));
+			boolean incomplete = d.contact_name==null || d.email==null || d.organization==null || d.org_url==null || !terms;
+			d.status = incomplete?"auto":"pending";
+			ofy().save().entity(d).now();
+			return !incomplete;
+		} catch (Exception e) {
+			return false;
+		}
+	}
+	
 /*	
 	private void sendEmailToAdmin(String message) {
 		Properties props = new Properties();
