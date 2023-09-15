@@ -72,20 +72,14 @@
 		String client_id = System.getProperty("com.google.appengine.application.id").equals("dev-vantage-hrd")
 		? "AVJ8NuVQnTBwTbmkouWCjZhUT_eHeTm9fjAKwXJO0-RK-9VZFBtWm4J6V8o-47DvbOoaVCUiEb4JMXz8": // Paypal sandbox client_id
 		"AYlUNqRJZXhJJ9z7pG7GRMOwC-Y_Ke58s8eacfl1R51833ISAqOUhR8To0Km297MPcShAqm9ffp5faun"; // Paypal live client_id
-%>
-		<h3>Individual ChemVantage Subscription</h3>
+		
+		PremiumUser u = ofy().load().type(PremiumUser.class).id(user.getHashedId()).now();		
+		String title = (u != null && u.exp.before(now))?"Your ChemVantage subscription expired on " + df.format(u.exp):"Individual ChemVantage Subscription";
+%>	
+		<h3><%= title %></h3>h3>
 		A subscription is required to access ChemVantage assignments created by your instructor through this learning management system. 
 		First, indicate your agreement with the two statements below by checking the boxes.<br/><br/>
-<% 
-		PremiumUser u = ofy().load().type(PremiumUser.class).id(user.getHashedId()).now();		
-		if (u != null && u.exp.before(now)) {
-%>		
-			<h4>Your ChemVantage subscription expired: <%= df.format(u.exp) %></h4>
-<%	
-		}
 		
-		// User acknowledgements:
-%>
 		<label><input type=checkbox id=terms onChange=showPurchase();> I understand and agree to the <a href=/about.html#terms target=_blank>ChemVantage Terms and Conditions of Use</a>.</label> <br/>
 		<label><input type=checkbox id=norefunds onChange=showPurchase();> I understand that all ChemVantage subscription fees are nonrefundable.</label> <br/><br/>
 
