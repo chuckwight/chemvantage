@@ -76,7 +76,7 @@
 		PremiumUser u = ofy().load().type(PremiumUser.class).id(user.getHashedId()).now();		
 		String title = (u != null && u.exp.before(now))?"Your ChemVantage subscription expired on " + df.format(u.exp):"Individual ChemVantage Subscription";
 %>	
-		<h3><%= title %></h3>h3>
+		<h3><%= title %></h3>
 		A subscription is required to access ChemVantage assignments created by your instructor through this learning management system. 
 		First, indicate your agreement with the two statements below by checking the boxes.<br/><br/>
 		
