@@ -161,6 +161,7 @@ public class Group {
 			   // Total current ChemVantage users
 			List<Group> activeGroups = ofy().load().type(Group.class).filter("valid >",qStart).list();
 			List<String> groupIds = new ArrayList<String>();
+			List<String> groupOrgs = new ArrayList<String>();
 			
 			StringBuffer table = new StringBuffer("\"Institution\",\"Course\",\"Users\"\n");
 			int gUsers = 0; // number of users in each group (course)
@@ -184,7 +185,7 @@ public class Group {
 			int paid = 0;   // total SmartText subscription receipts for this period
 			for (PremiumUser pu : premiumUsers) {
 				if (pu.start.before(qStart) || pu.start.after(qEnd)) continue; // only count subscriptions started during the quarter
-				if (groupIds.contains(pu.org)) {
+				if (groupOrgs.contains(pu.org)) {
 					pUsers ++;
 					paid += pu.paid;
 				}
@@ -243,6 +244,7 @@ public class Group {
 			   // Total current ChemVantage users
 			List<Group> activeGroups = ofy().load().type(Group.class).filter("valid >",qStart).list();
 			List<String> groupIds = new ArrayList<String>();
+			List<String> groupOrgs = new ArrayList<String>();
 			
 			StringBuffer table = new StringBuffer("<table><tr><th>Institution</th><th>Course</th><th>Users</th></tr>");
 			int gUsers = 0; // number of users in each group (course)
@@ -267,7 +269,7 @@ public class Group {
 			int paid = 0;   // total SmartText subscription receipts for this period
 			for (PremiumUser pu : premiumUsers) {
 				if (pu.start.before(qStart) || pu.start.after(qEnd)) continue; // only count subscriptions started during the quarter
-				if (groupIds.contains(pu.org)) {
+				if (groupOrgs.contains(pu.org)) {
 					pUsers ++;
 					paid += pu.paid;
 				}
