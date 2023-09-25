@@ -75,10 +75,10 @@ public class Group {
 		// use the NPRS MembershipContainer to complete the remaining Group fields
 		JsonObject membershipContainer = LTIMessage.getMembershipContainer(a);
 		try {  // although the "context" object and id are required, label and title are optional
-			JsonElement tmp = membershipContainer.get("context").getAsJsonObject().get("label");
-			if (tmp != null) g.label = tmp.getAsString(); else g.label = "";
-			tmp = membershipContainer.get("context").getAsJsonObject().get("title");
-			if (tmp != null) g.title = tmp.getAsString(); else g.title = "";
+			g.label = membershipContainer.get("context").getAsJsonObject().get("label").getAsString();
+		} catch (Exception e) {}
+		try {
+			g.title = membershipContainer.get("context").getAsJsonObject().get("title").getAsString();
 		} catch (Exception e) {}
 
 		g.nLearners = 0;
