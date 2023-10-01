@@ -170,6 +170,7 @@ public class Group {
 			for (Group g : activeGroups) {
 				if (g.organization.contains("ChemVantage")) continue;
 				groupIds.add(g.id);  // this is the group organization (e.g., university name)
+				groupOrgs.add(g.organization);
 				gUsers = g.nLearners + g.nInstructors + g.nAdministrators;
 				nUsers += gUsers;
 				boolean usesSmartText = ofy().load().type(Assignment.class).filter("assignmentType","SmartText").filter("valid >",qStart).filter("lti_ags_lineitems_url",g.id).count() > 0;
@@ -253,6 +254,7 @@ public class Group {
 			for (Group g : activeGroups) {
 				if (g.organization.contains("ChemVantage")) continue;
 				groupIds.add(g.id);  // this is the group organization (e.g., university name)
+				groupOrgs.add(g.organization);
 				gUsers = g.nLearners + g.nInstructors + g.nAdministrators;
 				nUsers += gUsers;
 				boolean usesSmartText = ofy().load().type(Assignment.class).filter("assignmentType","SmartText").filter("valid >",qStart).filter("lti_ags_lineitems_url",g.id).count() > 0;
