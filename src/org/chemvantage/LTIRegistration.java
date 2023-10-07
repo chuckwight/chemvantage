@@ -290,7 +290,7 @@ public class LTIRegistration extends HttpServlet {
 		} else {
 			buf.append("<h3>Getting Started</h3>"
 					+ "When you complete the registration steps below, your account will be activated immediately. You may create ChemVantage "
-					+ "assignments using Deep Linking to explore and customize placement exams, quizzes, homework, practice exams, "
+					+ "assignments using Deep Linking to explore and customize placement exams, SmartText assignment, quizzes, homework, practice exams, "
 					+ "video lectures, and in-class polls. In order to access the assignments, students must subscribe to the ChemVantage service "
 					+ "for $" + price + ".00 USD per month (1 month minimum). As a reminder, access to ChemVantage by instructors and LMS account "
 					+ "administrators is always free. ");
@@ -309,16 +309,18 @@ public class LTIRegistration extends HttpServlet {
 				+ "<br>To the LMS Administrator:<p>"
 				+ "ChemVantage is an Open Education Resource for General Chemistry. Learn more about ChemVantage "
 				+ "<a href=https://www.chemvantage.org/about.html>here</a>.<p>"
-				+ "Detailed instructions for installing ChemVantage in your LMS can be found "
-				+ "<a href=https://www.chemvantage.org/install.html>here</a>.<p>");
+				+ "Follow the detailed instructions for installing ChemVantage in your LMS at "
+				+ "<a href=https://www.chemvantage.org/install.html>https://www.chemvantage.org/install.html</a>.");
 		
-		buf.append("When you have finished configuring your LMS, please click the tokenized link below to register the Client ID, Deployment ID and "
-				+ "configuration URLs with ChemVantage. If the link expires, click <a href=" + iss + "/lti/registration>here</a> to get anther one.<p>");
+		buf.append("<h3>After you finish installing ChemVantage in your LMS</h3>"
+				+ "The installation instructions MAY ask you to click the tokenized link below "
+				+ "to complete the registration by providing the Client ID, Deployment ID and/or "
+				+ "configuration URLs to ChemVantage. If the link expires, click <a href=" + iss + "/lti/registration>here</a> to get anther one.<p>");
 		
 		buf.append("<a href=" + iss + "/lti/registration?UserRequest=final&token=" + token + ">"
 				+ iss + "/lti/registration?UserRequest=final&token=" + token + "</a><br/><br/>");
 
-		buf.append("If you  need additional assistance, please contact me at admin@chemvantage.org. <p>"
+		buf.append("If you need additional assistance, please contact me at admin@chemvantage.org. <p>"
 				+ "-Chuck Wight");
 
 		sendEmail(name,email,"ChemVantage LTI Registration",buf.toString());

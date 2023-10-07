@@ -23,16 +23,10 @@ An Open Education Resource for General Chemistry
 
 <main>
 <h2>How to Install ChemVantage</h2>
-ChemVantage is certified to comply with 1EdTech specifications for LTI Advantage Complete (version 1.3). Due to potential security vulnerabilities, 
-we no longer support LTI version 1.1 registrations. Unfortunately, the registration process is highly dependent on which LMS you are using. To get 
-started, please follow the instruction below.
+ChemVantage is certified to comply with 1EdTech specifications for LTI Advantage Complete (version 1.3). To install ChemVantage as an LTI tool in your LMS, 
+you should have administrator privileges in your LMS.<br/><br/>
 
-<h3>Does your LMS support LTI Dynamic Registration?</h3>
-
-<ul>
-  <li><b>IF YES:</b> the LMS administrator should go to the LTI registration page in your LMS and use the Dynamic Registration URL: https://www.chemvantage.org/lti/registration<br/>
-      They will submit a brief form, activate the ChemVantage app, and configure which organizational units in your institution can access it. That's all!<br/><br/></li>
-  <li><b>IF NO:</b> please select your LMS from the following options for detailed installation instructions<br/>
+Please select your LMS from the following options:<br/>
       <button onclick="document.getElementById('instructions').innerHTML=document.getElementById('blackboard').innerHTML;">blackboard</button>
       <button onclick="document.getElementById('instructions').innerHTML=document.getElementById('brightspace').innerHTML;">brightspace</button>
       <button onclick="document.getElementById('instructions').innerHTML=document.getElementById('canvas').innerHTML;">canvas</button>
@@ -40,10 +34,9 @@ started, please follow the instruction below.
       <button onclick="document.getElementById('instructions').innerHTML=document.getElementById('sakai').innerHTML;">sakai</button>
       <button onclick="document.getElementById('instructions').innerHTML=document.getElementById('schoology').innerHTML;">schoology</button>
       <button onclick="document.getElementById('instructions').innerHTML=document.getElementById('other').innerHTML;">other</button>
-  </li>
-</ul>
 
 <div id='instructions'></div>  <!-- This is where the LMS-specific instructions are displayed -->
+
 
 <!-- Each section below contains instructions that are copied to the 'instructions' div above using the buttons -->
 
@@ -52,7 +45,7 @@ started, please follow the instruction below.
   The institution's account administrator should perform the following steps:
   <ol>
     <li>Browse to <a href="https://www.chemvantage.org/Registration.jsp?lms=blackboard">https://www.chemvantage.org/Registration.jsp</a> and complete a brief form to provide your contact information. We will send an email confirmation with a tokenized registration link.</li>
-    <li>Go to System Admin | Integrations: LTI Tool Providers | Register LTI 1.3 Tool</li>
+    <li>In Blackboard, go to System Admin | Integrations: LTI Tool Providers | Register LTI 1.3 Tool</li>
     <li>Enter the Client ID: be1004de-6f8e-45b9-aae4-2c1370c24e1e</li>
     <li>Make a copy of the deployment_id and set Tool status: Approved</li>
     <li>Institution Policies: Send Role, Name, Email; Allow Grade Service and Membership Service</li>
@@ -81,8 +74,23 @@ started, please follow the instruction below.
 
 <div id=brightspace style=display:none>
   <h4>Installation instructions for D2L Brightspace</h4>
-  First of all, Brightspace supports LTI Advantage Dynamic Registration! The Brightspace documentation can be found <a href=https://documentation.brightspace.com/EN/integrations/ipsis/LTI%20Advantage/LTI_register_external_learning_tool.htm>here</a>. 
-  We strongly encourage you to try that first (see above), but the institution's account administrator still has the option of manual registration:
+  The detailed Brightspace documentation can be found <a href="https://community.d2l.com/brightspace/kb/articles/18081-tool-registration-deployment-and-links">here</a>.
+  The institution's account administrator should perform the following steps:
+  <ol>
+    <li>Go to Admin Tools | Manage Extensibility</li>
+    <li>Select the LTI Advantage tab and click Register Tool</li>
+    <li>Select Dynamic Registration, enter the tool registration endpoint: https://www.chemvantage.org/lti/registration</li>
+    <li>Check the box for Configure Deployment and click Register</li>
+    <li>Complete the ChemVantage registration form and submit.</li>
+	<li>When the registration is successful, click the link to close the window and return to Brightspace.</li>
+	<li>Select the checkbox for the ChemVantage tool and click Enable.</li>
+  	<li>Go to Admin Tools | External Learning Tools</li>
+  	<li>Under Deployment Name, click the ChemVantage link to edit the deployment</li>
+  	<li>Click Add Org Units to add the Chemistry Department to make ChemVantage visible in General Chemistry courses.</li>
+  	<li>Click Save and Close</li> 	
+  </ol>
+  That's all! You should now be able to go to any course in the Chemistry Department Org and add a ChemVantage assignment by selecting a content module, clicking Add Existing, and selecting ChemVantage.<br/><br/>
+  If the registration fails for any reason, the account administrator still has the option of manual registration:
   <ol>
     <li>Browse to <a href="https://www.chemvantage.org/Registration.jsp?lms=brightspace">https://www.chemvantage.org/Registration.jsp</a> and complete a brief form to provide your contact information. We will send an email confirmation with a tokenized registration link.</li>
     <li>In Brightspace, ensure the Manage LTI Advantage Tool Registrations and Manage LTI Advantage Tool Deployments permissions are set at the organization level.</li>
@@ -90,7 +98,7 @@ started, please follow the instruction below.
     <li>Choose Standard registration, click Register.</li>
     <li>Tool Name: ChemVantage</li>
     <li>Description: ChemVantage is an Open Educational Resource for college-level General Chemistry</li>
-    <li>Domain: https://www.chemvantage.org <span style=color:red>Note: Domains can only be used in one enabled registration at a time. If you attempt to register a tool with a domain that is already in use, you will be prompted to disable the existing registration.</span>
+    <li>Domain: https://www.chemvantage.org <span style=color:red>Note: Domains can only be used in one enabled registration at a time. In order to register a tool with a domain that is already in use, you must first disable the existing registration.</span>
     <li>Redirect URIs: https://www.chemvantage.org/lti/launch https://www.chemvantage.org/lti/deeplinks</li>
     <li>OpenID Connect Login URL: https://www.chemvantage.org/auth/token</li>
     <li>Target Link URI: https://www.chemvantage.org/lti/launch</li>
@@ -100,7 +108,7 @@ started, please follow the instruction below.
     <li>Extensions: Deep Linking, Assignment and Grade Services, Names and Role Provisioning Services</li>
     <li>Deep Linking Content Selection URL: https://www.chemvantage.org/lti/deeplinks</li>
     <li>Under Roles, choose to Context role information. Sending Institutional role information is optional. Setting the Deployment security to Anonymous will work; however, instructors will be unable to verify or synchronize ChemVantage scores to the Brightspace grade book using this setting.</li>
-    <li>Substitution Parameters: resource_link_id_history=$ResourceLink.id.hisory</li>
+    <li>Substitution Parameters: resource_link_id_history=$ResourceLink.id.history</li>
     <li>Custom parameters: (none)</li>
     <li>Click Register</li>
     <li>Review the configuration details to obtain the client_id and deployment_id, and click the tokenized link in the email confirmation from step 1 to register them with ChemVantage. If the link expired, you can simply repeat step 1 to get another one.</li>
@@ -144,8 +152,19 @@ started, please follow the instruction below.
 
 <div id=moodle style=display:none>
   <h4>Installation instructions for Moodle</h4>
-  First of all, Moodle supports LTI Advantage Dynamic Registration! The Moodle documentation can be found <a href=https://docs.moodle.org/401/en/Publish_as_LTI_tool>here</a>. 
-  We strongly encourage you to try that first (see above), but the institution's account administrator still has the option of manual registration:
+  The detailed Moodle documentation can be found <a href="https://community.d2l.com/brightspace/kb/articles/18081-tool-registration-deployment-and-links">here</a>.
+  The institution's account administrator should perform the following steps:
+  <ol>
+    <li>Go to Site Administration and select the Plugins tab</li>
+    <li>Click External tool | Manage Tools</li>
+    <li>In the Add Tool box, enter the Tool URL: https://www.chemvantage.org/lti/registration and click Add LTI Advantage</li>
+    <li>Complete the ChemVantage registration form and submit.</li>
+	<li>When the registration is successful, click the link to close the window and return to Moodle.</li>
+	<li>Find the new ChemVantage tool and click Activate.</li>
+   </ol>
+  That's all! You should now be able to go to any course and add a ChemVantage assignment by turning Edit Mode on, clicking Add an Activity or Resource, and 
+  selecting External Tool. Under Preconfigured Tool, select ChemVantage and click Select Content.<br/><br/>
+  If the registration fails for any reason, the account administrator still has the option of manual registration:
   <ol>
     <li>Browse to <a href="https://www.chemvantage.org/Registration.jsp?lms=moodle">https://www.chemvantage.org/Registration.jsp</a> and complete a brief form to provide your contact information. We will send an email confirmation with a tokenized registration link.</li>
     <li>As an admin user, go to "Site administration > Plugins > External tool > Manage tools"</li>
