@@ -55,6 +55,14 @@ public class Logout extends HttpServlet {
 		return buf.toString();
 	}
 	
+	static String now(User user) {
+		StringBuffer buf = new StringBuffer(Subject.banner + "<h3>Sorry, there was an unexpected error.</h3>");
+		try {
+			ofy().delete().entity(user).now();
+		} catch (Exception e) {}
+		return buf.toString();
+	}
+	
 	static String message = Subject.header() 
 			+ Subject.banner
 			+ "<h3>You have successfully signed out of ChemVantage</h3>" 
