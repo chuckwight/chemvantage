@@ -77,7 +77,12 @@
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
 			<version>2.9.0</version>
-		</dependency>    
+		</dependency>
+		<dependency>
+    		<groupId>org.eclipse.jetty</groupId>
+    		<artifactId>apache-jsp</artifactId>
+    		<version>9.4.52.v20230823</version>
+		</dependency>  
     </dependencies>
     
   <build>
