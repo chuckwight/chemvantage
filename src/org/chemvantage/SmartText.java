@@ -323,11 +323,17 @@ public class SmartText extends HttpServlet {
 			   buf.append(continueButton);
 		   } else { // missed 2 questions; go back to the text
 			   Concept c = ofy().load().type(Concept.class).id(conceptId).safe();
-			   buf.append("You missed 2 questions on the key concept: <b>" + c.title + "</b>.<br/>"
-					   + "Please return to the textbook and review this chapter. ");
+			   buf.append("You missed 2 questions on the key concept: <b>" + c.title + "</b>.<br/><br/>");
+				//	   + "Please return to the textbook and review this chapter. ");
+			   buf.append("<a href='" + chapter.url + "' target=_blank>"
+			   		+ "<button style='border: none; color: white; padding: 10px 10px; margin: 4px 2px; font-size: 16px; cursor: pointer; border-radius: 10px; background-color: blue;'>"
+			   		+ "To continue, click here to review this chapter in the textbook."
+			   		+ "</button>"
+			   		+ "</a><br/>");
 			   if (completed) buf.append("Don't worry. Your score on this assignment is still 100%.<br/><br/>");
 			   else buf.append("Don't worry. You can still earn 100% by relaunching this assignment after completing your review.<br/><br/>");
 			   st.missedQuestions[index]=0; // reset the missed questions for this concept only
+			   ofy().delete().entity(user).now();
 		   }
 		   st.armed = false;
 		   
