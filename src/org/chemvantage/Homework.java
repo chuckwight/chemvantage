@@ -321,7 +321,7 @@ public class Homework extends HttpServlet {
 			buf.append((i>1?"<h4>Assigned Exercises</h4>":"") + assignedQuestions + "</div>" + (i>1 && j>1?"<h4>Optional Exercises</h4>":"") + optionalQuestions + "</div>");
 		} catch (Exception e) {
 			// buf.append("Sorry, there was an unexpected error: " + e.getMessage()==null?e.toString():e.getMessage());
-			LTIMessage.sendEmailToAdmin("Error during Homework.printHomework: ", e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString());
+			LTIMessage.sendEmailToAdmin("Error during Homework.printHomework: ", e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString() + "<br/>" + user.getId());
 			return Logout.now(user);
 		}
 		return buf.toString();
@@ -549,7 +549,8 @@ public class Homework extends HttpServlet {
 			}
 		catch (Exception e) {
 			buf.append("Sorry, there was an unexpected error: " + e.getMessage()==null?e.toString():e.getMessage());
-			LTIMessage.sendEmailToAdmin("Error during Homework.printScore: ", e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString());
+			LTIMessage.sendEmailToAdmin("Error during Homework.printScore: ", e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString() + "<br/>" + user.getId());
+			return Logout.now(user);
 		}
 		return buf.toString();
 	}
