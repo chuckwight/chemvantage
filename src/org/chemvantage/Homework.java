@@ -95,7 +95,11 @@ public class Homework extends HttpServlet {
 				out.println(synchronizeScore(user,a,request.getParameter("ForUserId")));
 				break;
 			default:
-				out.println(Subject.header("ChemVantage Homework") + printHomework(user,a) + Subject.footer);
+				long hintQuestionId = 0L;
+				try {
+					hintQuestionId = Long.parseLong(request.getParameter("Q"));
+				} catch (Exception e) {}
+				out.println(Subject.header("ChemVantage Homework") + printHomework(user,a,hintQuestionId) + Subject.footer);
 			}
 		} catch (Exception e) {
 			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
