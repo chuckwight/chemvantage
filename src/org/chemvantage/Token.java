@@ -3,6 +3,7 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.URL;
 import java.util.Date;
 import java.util.Enumeration;
@@ -85,7 +86,23 @@ public class Token extends HttpServlet {
 			
 			debug.append("Sending token: " + oidc_auth_url + "<p>");
 			
-			response.sendRedirect(oidc_auth_url);
+			//======= New section with postMessage storage ============
+			response.setContentType("text/html");
+			PrintWriter out = response.getWriter();
+			StringBuffer buf = new StringBuffer();
+			buf.append(Subject.header() + Subject.banner);
+			buf.append("<h2>Welcome to ChemVantage</h2>"
+					+ "We are preparing your assignment..."
+					+ "<button onclick=continueRedirect();>continue</button>");
+			buf.append("<script>"
+					+ "function continueRedirect() {"
+					+ "window.location.replace('" + oidc_auth_url + "');"
+					+ "}"
+					+ "</script>");
+			buf.append(Subject.footer);
+			out.println(buf.toString());
+			//======= End section with postMessage storage ============
+			//response.sendRedirect(oidc_auth_url);
 		} catch (Exception e) {
 			Enumeration<String> parameterNames = request.getParameterNames();
 			while (parameterNames.hasMoreElements()) {
