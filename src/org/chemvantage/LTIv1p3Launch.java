@@ -357,33 +357,31 @@ public class LTIv1p3Launch extends HttpServlet {
 	void launchResourceRequest (User user,Assignment myAssignment,HttpServletRequest request,HttpServletResponse response) throws Exception {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		switch(myAssignment.assignmentType) {
-		case "Quiz":
-			out.println(Subject.header("ChemVantage Quiz")
-					+ (user.isInstructor()?Quiz.instructorPage(user, myAssignment):Quiz.printQuiz(user,myAssignment))
-					+ Subject.footer);
-			break;
-		case "Homework":
-			out.println(Subject.header("ChemVantage Homework")
-					+ (user.isInstructor()?Homework.instructorPage(user, myAssignment):Homework.printHomework(user,myAssignment))
-					+ Subject.footer);
-			break;
-		case "PracticeExam":
-			out.println(Subject.header("ChemVantage Practice Exam")
-					+ (user.isInstructor()?PracticeExam.instructorPage(user, myAssignment):PracticeExam.printExam(user,myAssignment,request))
-					+ Subject.footer);
-			break;
-		case "PlacementExam":
-			out.println(Subject.header("ChemVantage Placement Exam")
-					+ (user.isInstructor()?PlacementExam.instructorPage(user, myAssignment):PlacementExam.printExam(user,myAssignment,request))
-					+ Subject.footer);
-			break;
-		case "SmartText":
-			out.println(Subject.header("ChemVantage Key Concepts")
-					+ (user.isInstructor()?SmartText.instructorPage(user, myAssignment):SmartText.printQuestion(user,myAssignment,null))
-					+ Subject.footer);
-			break;
-		default: response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
+		
+		if (user.isInstructor()) {
+			switch(myAssignment.assignmentType) {
+			case "Quiz":
+				out.println(Subject.header("ChemVantage Quiz") + Quiz.instructorPage(user, myAssignment) + Subject.footer);
+				break;
+			case "Homework":
+				out.println(Subject.header("ChemVantage Homework") + Homework.instructorPage(user, myAssignment) + Subject.footer);
+				break;
+			case "PracticeExam":
+				out.println(Subject.header("ChemVantage Practice Exam") + PracticeExam.instructorPage(user, myAssignment) + Subject.footer);
+				break;
+			case "PlacementExam":
+				out.println(Subject.header("ChemVantage Placement Exam") + PlacementExam.instructorPage(user, myAssignment) + Subject.footer);
+				break;
+			case "SmartText":
+				out.println(Subject.header("ChemVantage Key Concepts") + SmartText.instructorPage(user, myAssignment) + Subject.footer);
+				break;
+			default: response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
+			}
+		} else {
+			String state = request.getParameter("state");
+			String nonce = JWT.decode(state).getClaim("nonce").asString();			
+			out.println(validationPage(user,myAssignment.assignmentType,nonce));
+			//response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
 		}
 	}
 	
@@ -872,6 +870,29 @@ public class LTIv1p3Launch extends HttpServlet {
 		} catch (Exception e) {
 			
 		}
+		return buf.toString();
+	}
+	
+	static String validationPage(User user,String assignmentType,String nonce) {
+		StringBuffer buf = new StringBuffer();
+		String sig = user.getTokenSignature();
+		String shortSig = "";
+		try {
+			shortSig = String.valueOf(Long.parseLong(sig) - nonce.hashCode());
+		} catch (Exception e) {			
+		}
+		buf.append(Subject.header());
+		buf.append("<script>"
+				+ "const urlParams = new URLSearchParams(window.location.seach);"
+				+ "try {"
+				+ " let sig = parseInt(" + shortSig + ",10) + parseInt(window.sessionStorage.getItem('sig'),10);"
+				+ " window.sessionStorage.clear();"
+				+ " window.location.replace('/" + assignmentType + "?sig=' + sig + '&validated=true');"
+				+ "} catch (error) {"
+				+ " window.location.replace('/" + assignmentType + "?sig=" + sig + "&validated=false');"
+				+ "}"
+				+ "</script>");
+		buf.append(Subject.footer);
 		return buf.toString();
 	}
 	
