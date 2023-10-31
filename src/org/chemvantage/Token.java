@@ -137,9 +137,9 @@ public class Token extends HttpServlet {
 			
 			if ("https://canvas.instructure.com".equals(platform_id)) {  // auto register canvas account
 				String client_id = request.getParameter("client_id");
-				String oidc_auth_url = "https://canvas.instructure.com/api/lti/authorize_redirect";
-				String oauth_access_token_url = "https://canvas.instructure.com/login/oauth2/token";
-				String well_known_jwks_url = "https://canvas.instructure.com/api/lti/security/jwks";
+				String oidc_auth_url = "https://sso.canvaslms.com/api/lti/authorize_redirect";
+				String oauth_access_token_url = "https://sso.canvaslms.com/login/oauth2/token";
+				String well_known_jwks_url = "https://sso.canvaslms.com/api/lti/security/jwks";
 				String contact_name = null;
 				String email = null;
 				String organization = null;

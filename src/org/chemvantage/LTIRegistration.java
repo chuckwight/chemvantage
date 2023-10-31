@@ -393,9 +393,9 @@ public class LTIRegistration extends HttpServlet {
 				break;
 			case "canvas":
 				platform_id = "https://canvas.instructure.com";
-				oidc_auth_url = "https://canvas.instructure.com/api/lti/authorize_redirect";
-				well_known_jwks_url = "https://canvas.instructure.com/api/lti/security/jwks";
-				oauth_access_token_url = "https://canvas.instructure.com/login/oauth2/token";
+				oidc_auth_url = "https://sso.canvaslms.com/api/lti/authorize_redirect";
+				well_known_jwks_url = "https://sso.canvaslms.com/api/lti/security/jwks";
+				oauth_access_token_url = "https://sso.canvaslms.com/login/oauth2/token";
 				
 				buf.append("Canvas uses the developer key as the Client ID, so enter that value from the list of "
 						+ "developer keys. It is a numeric value that looks something like 32570000000000041.<br/>"
