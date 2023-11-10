@@ -910,7 +910,10 @@ public class PracticeExam extends HttpServlet {
 					+ "Created: " + a.created + "<br>"
 					+ "Key concepts covered:<ol>");	
 			Map<Long,Concept> concepts = ofy().load().type(Concept.class).ids(a.conceptIds);
-			for (Long cId : a.conceptIds) buf.append("<li>" + concepts.get(cId).title + "</li>");
+			for (Long cId : a.conceptIds) {
+				Concept c = concepts.get(cId);
+				if (c != null) buf.append("<li>" + c.title + "</li>");
+			}
 			buf.append("</ol>");
 			
 			buf.append("<form action=/PracticeExam method=post>"
