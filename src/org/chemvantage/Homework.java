@@ -20,8 +20,13 @@ package org.chemvantage;
 import static com.google.appengine.api.taskqueue.TaskOptions.Builder.withUrl;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
@@ -41,6 +46,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import com.google.appengine.api.taskqueue.QueueFactory;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.googlecode.objectify.Key;
 
 @WebServlet("/Homework")
@@ -305,14 +313,14 @@ public class Homework extends HttpServlet {
 				
 				questionBuffer.append("</div>");
 				
-				questionBuffer.append("<FORM METHOD=POST ACTION=/Homework>"
+				questionBuffer.append("<FORM METHOD=POST ACTION=/Homework onsubmit=waitForScore('" + q.id + "'); >"
 						+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ (hwa==null?"":"<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>")
 						+ "<div style='display:table-cell;vertical-align:text-top;padding-right:10px;'><b>" + (assigned?i:j) + ".</b></div>"
 						+ "<div style='display:table-cell'>" + q.print(workStrings.get(q.id),"",attemptsRemaining) 
 						+ (q.id == hintQuestionId?"Hint:<br>" + q.getHint():"")
-						+ "<INPUT TYPE=SUBMIT VALUE='Grade This Exercise'><p>"
+						+ "<INPUT id=sub" + q.id + " TYPE=SUBMIT VALUE='Grade This Exercise'><p>"
 						+ "</div></div></FORM>\n");
 				if (assigned) {
 					assignedQuestions.append(questionBuffer);
@@ -323,6 +331,13 @@ public class Homework extends HttpServlet {
 				}
 			}
 			buf.append((i>1?"<h4>Assigned Exercises</h4>":"") + assignedQuestions + "</div>" + (i>1 && j>1?"<h4>Optional Exercises</h4>":"") + optionalQuestions + "</div>");
+			buf.append("<SCRIPT>"
+					+ "function waitForScore(qid) {"
+					+ " let b = document.getElementById('sub' + qid);"
+					+ " b.disabled = true;"
+					+ " b.value = 'Please wait a moment while we score your response.';"
+					+ "}"
+					+ "</SCRIPT>");
 		} catch (Exception e) {
 			// buf.append("Sorry, there was an unexpected error: " + e.getMessage()==null?e.toString():e.getMessage());
 			LTIMessage.sendEmailToAdmin("Error during Homework.printHomework: ", e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString() + "<br/>" + user.getId());
@@ -334,6 +349,7 @@ public class Homework extends HttpServlet {
 	static String printScore(User user,Assignment hwa,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Start...");
+		JsonObject api_score = null;	// this contains the score and feedback for essay questions from ChatGPT
 		
 		try {
 			// The Homework grader scores only one Question at a time, so first identify and load it
@@ -356,7 +372,7 @@ public class Homework extends HttpServlet {
 				
 				if (priorAttempts.size() >= hwa.attemptsAllowed) {
 					buf.append(Subject.banner 
-						+ "<h2>Sorry, you are only allowed " + hwa.attemptsAllowed + " attempt" + (hwa.attemptsAllowed==1?"":"s") + " for each question on this assignment.</h2>");
+						+ "<h2>Sorry, you are only allowed " + hwa.attemptsAllowed + " attempt" + (hwa.attemptsAllowed==1?"":"s") + " for this question.</h2>");
 					DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 					buf.append("<table><tr><th>Transaction Number</th><th>Graded</th><th>Score</th></tr>");
 					for (HWTransaction hwt : priorAttempts) buf.append("<tr><td>" + hwt.id + "</td><td>" + df.format(hwt.graded) + "</td><td align=center>" + hwt.score +  "</td></tr>");
@@ -411,7 +427,7 @@ public class Homework extends HttpServlet {
 						+ "<a href=/Homework?AssignmentId=" + hwa.id
 						+ "&sig=" + user.getTokenSignature() + ">" 
 						+ "return to this homework assignment</a> to work on another problem.<p>");
-					buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework>"
+					buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework onsubmit=waitForScore(); >"
 							+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" +(hwa.id==null?0:hwa.id) + "'>"
 							+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
 							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
@@ -435,6 +451,11 @@ public class Homework extends HttpServlet {
 							+ "  document.getElementById('RetryButton').disabled=false;"
 							+ " }"
 							+ "}"
+							+ "function waitForScore() {"
+							+ " let b = document.getElementById('RetryButton');"
+							+ " b.disabled = true;"
+							+ " b.value = 'Please wait a moment while we score your response.';"
+							+ "}"
 							+ "countdown();");
 					buf.append("function showWorkBox(qid) {"  // this script displays a box for the user to show their work
 							+ "document.getElementById('showWork'+qid).style.display='';"
@@ -455,13 +476,59 @@ public class Homework extends HttpServlet {
 			
 			int studentScore = q.isCorrect(studentAnswer)?q.pointValue:0;
 			int possibleScore = q.pointValue;
-			
+						
 			debug.append("score is " + studentScore + " out of " + possibleScore + " points...");
 			HWTransaction ht = null;
 			
 			showWork = request.getParameter("ShowWork"+questionId);
 			
 			if (!studentAnswer.isEmpty()) { // an answer was submitted
+				switch (q.getQuestionType()) {
+				case 6:  // Handle five-star rating response
+					studentScore = q.pointValue;  // full marks for submitting a response
+					break;
+				case 7:  // New section for scoring essay questions with Chat GPT
+					if (studentAnswer.length()>800) studentAnswer = studentAnswer.substring(0,799);
+					JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
+					api_request.addProperty("model","gpt-3.5-turbo");
+					api_request.addProperty("max_tokens",200);
+					api_request.addProperty("temperature",0.2);
+					JsonObject m = new JsonObject();  // api request message
+					m.addProperty("role", "user");
+					String prompt = "Question: \"" + q.text +  "\"\n My response: \"" + studentAnswer + "\"\n "
+							+ "Using JSON format, give a score for this response on a scale 0-5 and "
+							+ "feedback for how to improve my response.";
+					m.addProperty("content", prompt);
+					JsonArray messages = new JsonArray();
+					messages.add(m);
+					api_request.add("messages", messages);
+					URL u = new URL("https://api.openai.com/v1/chat/completions");
+					HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+					uc.setRequestMethod("POST");
+					uc.setDoInput(true);
+					uc.setDoOutput(true);
+					uc.setRequestProperty("Authorization", "Bearer " + Subject.getOpenAIKey());
+					uc.setRequestProperty("Content-Type", "application/json");
+					uc.setRequestProperty("Accept", "application/json");
+					OutputStream os = uc.getOutputStream();
+					byte[] json_bytes = api_request.toString().getBytes("utf-8");
+					os.write(json_bytes, 0, json_bytes.length);           
+					os.close();
+						
+					BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+					JsonObject api_response = JsonParser.parseReader(reader).getAsJsonObject();
+					reader.close();
+					
+					// get the ChatGPT score from the response:
+					try {
+						String content = api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString();
+						api_score = JsonParser.parseString(content).getAsJsonObject();
+						studentScore = api_score.get("score").getAsInt();
+					} catch (Exception e) {}
+					break;
+				default:
+				}
+				
 				ht = new HWTransaction(q.id,user.getHashedId(),now,studentScore,hwa.id,possibleScore,showWork);
 				ofy().save().entity(ht).now();
 				// create and store a Response entity:
@@ -480,9 +547,22 @@ public class Homework extends HttpServlet {
 			}
 			// Send response to the user:
 			if (studentScore > 0) {
-				buf.append("<h3>Congratulations. You answered the question correctly. "
+				switch (q.getQuestionType()) {
+				case 6: // Five star response
+					buf.append("<h3>Thank you for the rating.</h3>");
+					buf.append(q.printAllToStudents(studentAnswer) + "<br/>");
+					break;
+				case 7: // Essay response
+					buf.append("<h3>Your score on this question is " + api_score.get("score").getAsInt()*100/5 + "%.</h3>");
+					buf.append(api_score.get("feedback").getAsString() + "<br/><br/>");
+					buf.append("<h4>Essay Question</h4>");
+					buf.append(q.printAllToStudents(studentAnswer) + "<br/>");
+					break;
+				default:
+					buf.append("<h3>Congratulations. You answered the question correctly. "
 						+ (!user.isAnonymous()?"<a id=showLink href=# onClick=document.getElementById('solution').style='display:inline';this.style='display:none'>(show me)</a>":"") 
 						+ "</h3>");
+				}
 			}
 			else if (studentAnswer.length() > 0) {
 				switch (q.getQuestionType()) {
@@ -499,6 +579,12 @@ public class Homework extends HttpServlet {
 									+ "or in scientific E notation (example: 6.022E-23). Your answer was scored incorrect because the computer "
 									+ "was unable to recognize your answer as one of these types.<br/>");
 						}
+						break;
+					case 6:  // Five star rating
+						buf.append("<h3>No rating was submitted for this item.</h3>");
+						break;
+					case 7:  // Essay question
+						buf.append("<h3>Your score on this question was zero.</h3>");
 						break;
 					default:  // All other types of questions
 						buf.append("<h3>Incorrect Answer</h3>Your answer was scored incorrect because it does not agree with the "

@@ -34,6 +34,7 @@ public class Subject {
 	private String HMAC256Secret;
 	private String reCaptchaSecret;
 	private String reCaptchaSiteKey;
+	private String openai_key;
 	private String salt;
 	private String announcement;
 	private int nStarReports;
@@ -129,6 +130,11 @@ public class Subject {
 		} catch (Exception e) {
         	return null;
         }
+	}
+	
+	static String getOpenAIKey() {
+		if (s==null) refresh();
+		return s.openai_key;
 	}
 	
 	public static String header(String title) {

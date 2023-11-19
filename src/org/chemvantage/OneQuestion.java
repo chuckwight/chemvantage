@@ -2,7 +2,12 @@ package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Enumeration;
@@ -13,6 +18,10 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
 @WebServlet("/item")
 public class OneQuestion extends HttpServlet {
@@ -37,8 +46,16 @@ public class OneQuestion extends HttpServlet {
 				q = ofy().load().type(Question.class).id(Long.parseLong(questionId)).safe();
 				q.setParameters(p);
 				
-				buf.append("<br/><br/><form method=post action=/item><input type=hidden name=p value=" + p + " />"
-						+ q.print() + "<input type=submit value='Submit' />" + "</form>");
+				buf.append("<br/><br/><form method=post action=/item onsubmit=waitForScore(); >"
+						+ "<input type=hidden name=p value=" + p + " />"
+						+ q.print() + "<input id=SubmitButton type=submit value='Submit' />" + "</form>");
+				buf.append("<SCRIPT>"
+						+ "function waitForScore() {"
+						+ " let b = document.getElementById('SubmitButton');"
+						+ " b.disabled = true;"
+						+ " b.value = 'Please wait a moment while we score your response.';"
+						+ "}"
+						+ "</SCRIPT>");
 			} catch (Exception e){
 				buf.append("<br/><br/>Not found.");
 			}
@@ -87,18 +104,53 @@ public class OneQuestion extends HttpServlet {
 								+ "your answer as one of these types.<br/><br/>");
 					}
 					break;
-				default:  // All other types of questions
-					buf.append("<h3>Your answer was not correct. Please try again.</h3>");
-				}
-				buf.append("<form method=post action=/item><input type=hidden name=p value=" + p + " />"						
-						+ q.print() + "<input type=submit value='Submit' />" + "</form><br/><br/>");
-				switch (q.getQuestionType()) {
-				case 1:
-				case 3:
+				case 6:  // Five-star rating submission
 					break;
-				default:
-					buf.append("<b>The answer submitted was: " + answer + "</b>&nbsp;&nbsp;<IMG SRC=/images/xmark.png ALT='X mark' align=middle><br/><br/>");
+				case 7:  // Essay question
+					if (answer.length()>800) answer = answer.substring(0,799);
+					JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
+					api_request.addProperty("model","gpt-3.5-turbo");
+					api_request.addProperty("max_tokens",200);
+					api_request.addProperty("temperature",0.2);
+					JsonObject m = new JsonObject();  // api request message
+					m.addProperty("role", "user");
+					String prompt = "Question: \"" + q.text +  "\"\n My response: \"" + answer + "\"\n "
+							+ "Using JSON format, give a score for this response on a scale 0-5 and "
+							+ "feedback for how to improve my response.";
+					m.addProperty("content", prompt);
+					JsonArray messages = new JsonArray();
+					messages.add(m);
+					api_request.add("messages", messages);
+					URL u = new URL("https://api.openai.com/v1/chat/completions");
+					HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+					uc.setRequestMethod("POST");
+					uc.setDoInput(true);
+					uc.setDoOutput(true);
+					uc.setRequestProperty("Authorization", "Bearer " + Subject.getOpenAIKey());
+					uc.setRequestProperty("Content-Type", "application/json");
+					uc.setRequestProperty("Accept", "application/json");
+					OutputStream os = uc.getOutputStream();
+					byte[] json_bytes = api_request.toString().getBytes("utf-8");
+					os.write(json_bytes, 0, json_bytes.length);           
+					os.close();
+						
+					BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+					JsonObject api_response = JsonParser.parseReader(reader).getAsJsonObject();
+					reader.close();
+					
+					// get the ChatGPT score from the response:
+					try {
+						String content = api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString();
+						JsonObject api_score = JsonParser.parseString(content).getAsJsonObject();
+						buf.append("<h3>Your score on this question is " + api_score.get("score").getAsInt()*100/5 + "%.</h3>");
+						buf.append(api_score.get("feedback").getAsString() + "<br/><br/>");
+					} catch (Exception e) {}
+				
+					break;
+				default:  // All other types of questions
+					buf.append("<h3>Your answer was not correct. Please <a href=/item?q=" + q.id + ">try again</a>.</h3>");
 				}
+				buf.append("The answer submitted was: <b>" + answer + "</b><br/><br/>");
 				buf.append("<a href=/>Learn more about ChemVantage here</a><br/><br/>");
 			}
 		} catch (Exception e) {

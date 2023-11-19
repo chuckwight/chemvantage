@@ -386,7 +386,9 @@ public class Edit extends HttpServlet {
 						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=2;submit()\" VALUE='True/False'> "
 						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=3;submit()\" VALUE='Select Multiple'> "
 						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=4;submit()\" VALUE='Fill in Word'> "
-						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=5;submit()\" VALUE='Numeric'>"
+						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=5;submit()\" VALUE='Numeric'> "
+						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=6;submit()\" VALUE='Five Star'> "
+						+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=7;submit()\" VALUE='Essay'>"
 						+ "</FORM><br/>");
 
 				buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
@@ -584,6 +586,8 @@ public class Edit extends HttpServlet {
 				+ "<OPTION VALUE=3" + (questionType==3?" SELECTED>":">") + "Select Multiple</OPTION>"
 				+ "<OPTION VALUE=4" + (questionType==4?" SELECTED>":">") + "Fill in word/phrase</OPTION>"
 				+ "<OPTION VALUE=5" + (questionType==5?" SELECTED>":">") + "Numeric</OPTION>"
+				+ "<OPTION VALUE=6" + (questionType==6?" SELECTED>":">") + "Five Star</OPTION>"
+				+ "<OPTION VALUE=7" + (questionType==7?" SELECTED>":">") + "Essay</OPTION>"
 				+ "</SELECT>");
 		return buf.toString();
 	}
@@ -1157,6 +1161,12 @@ public class Edit extends HttpServlet {
 					+ "of the student's response in percent (default = 2%). Use the bottom "
 					+ "textarea box to finish the question text and/or to indicate the "
 					+ "expected dimensions or units of the student's answer."); break;
+			case (6): buf.append("<h3>New Five Star " + assignmentType + " Question</h3>");
+			buf.append("Fill in the question text. The user will be asked to provide a rating "
+					+ "from 1 to 5 stars."); break;
+			case (7): buf.append("<h3>New Essay " + assignmentType + " Question</h3>");
+			buf.append("Fill in the question text. The user will be asked to provide a short "
+					+ "essay response."); break;
 			default: buf.append("An unexpected error occurred. Please try again.");
 			}
 			Question question = new Question(questionType);
