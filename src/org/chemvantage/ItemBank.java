@@ -69,7 +69,9 @@ public class ItemBank extends HttpServlet {
 		
 		if (text==null) text =  ofy().load().type(Text.class).filter("title","View All Topics").first().now();
 		
-		out.println(Subject.header("ChemVantage Item Bank") + itemBank(request) + Subject.footer);
+		String p = request.getParameter("p");
+		if ("iframe".equals(p)) out.println(itemBank(request));
+		else out.println(Subject.header("ChemVantage Item Bank") + Subject.banner + "<h4>Question Item Bank</h4>" + itemBank(request) + Subject.footer);
 	}
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -228,20 +230,22 @@ public class ItemBank extends HttpServlet {
 	}
 		
 	String itemBank(HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer(Subject.banner);
+		StringBuffer buf = new StringBuffer("<style>"
+				+ " body {background-color: white; font-family: Calibri,Arial,sans-serif;}"
+				+ "</style>");
 		StringBuffer debug = new StringBuffer("Debug: ");
 		
 		try {
-			buf.append("<h2>ChemVantage Question Item Bank</h2>");
-
 			String msg = request.getParameter("msg");
 			if (msg!=null) buf.append("<span style='color:red;'>" + msg + "</span><br/><br/>");
 			
 			String code = null;
+			String p = null;
 			Contact contact = null;
 			boolean isInstructor = false;
 			try {
 				code = request.getParameter("code");
+				p = request.getParameter("p");
 				String email = decode(code);
 				contact = ofy().load().type(Contact.class).id(email).safe();
 				isInstructor = contact.role!=null && (contact.role.equals("faculty") || contact.role.equals("chair"));
@@ -270,45 +274,17 @@ public class ItemBank extends HttpServlet {
 			
 			boolean showQuestions = (chapter != null && !assignmentType.isEmpty());
 			
-			if (!showQuestions) {
-				if (contact==null) {
-					buf.append("ChemVantage LLC is pleased to share the quiz and homework question items in our database for your "
-							+ "use in teaching and learning General Chemistry. All items are freely licensed under the terms of the "
-							+ "<a href=https://creativecommons.org/licenses/by/4.0/ target=_blank>Creative Commons Attribution 4.0 International License</a>. If you "
-							+ "are a chemistry instructor at a secondary or postsecondary institution, you may "
-							+ "<a href=# onclick=document.getElementById('application').style='display:inline;'>apply for free acccess</a> to "
-							+ "the correct answers and full solutions to these items, or you can "
-							+ "<a href=https://www.chemvantage.org/lti/registration target=_blank>register the ChemVantage LTI app</a> with your LMS.<br/><br/>");
-					
-					buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");  // recaptcha javascript
-					
-					buf.append("<div id=application style=display:none;>"
-							+ "<form method=post action=/itembank>"
-							+ "<input type=hidden name=UserRequest value=Register />"
-							+ "<label>First Name: <input type=text name=FirstName required /></label> "
-							+ "<label>Last Name: <input type=text name=LastName required /></label><br/>"
-							+ "<label>Your Institutional Email Address: <input type=text name=Email required /></label><br/>"
-							+ "<label>Your Institution's URL: <input type=text name=OrgURL placeholder=myschool.edu required /></label><br/>"
-							+ "<label><input type=checkbox name=IsInstructor value=True required /> "
-							+ "I certify that I am a chemistry instructor. I understand that the copyright to these materials belongs to ChemVantage LLC and "
-							+ "that they are licensed to me under the terms of a <a href=https://creativecommons.org/licenses/by/4.0/>"
-							+ "Creative Commons Attribution 4.0 International License</a>.</label><br/>"
-							+ "<div class='g-recaptcha' data-sitekey=" + Subject.getReCaptchaSiteKey() + " aria-label='Google Recaptcha'></div><br/>"
-							+ "<input type=submit "
-							+ "onClick=\"setTimeout(()=>{document.getElementById('sandboxed').innerHTML='<br/>The referring page "
-							+ "may have disabled forms in this page. Please copy the URL to a new browser tab.<br/><br/>'},8000); \" /><br/><br/>"
-							+ "<span id=sandboxed style='color:red'></span>"
-							+ "</form><br/>"
-							+ "</div>");
-				} else if (isInstructor) buf.append("Welcome back. You can use this item bank directly or <a href=https://www.chemvantage.org/lti/registration>install ChemVantage</a> in your LMS.<p>");
-			}
-			
+			buf.append("More than 5000 ChemVantage question items are free to use under the terms of a "
+					+ "<a href=https://creativecommons.org/licenses/by/4.0/ target=_blank>Creative Commons CC-BY License</a>. "
+					+ "Instructor can access the correct answers and full solutions through their campus "
+					+ "LMS. <a href=Registration.jsp target=_blank>Registration is free</a>.<br/><br/>");
+
 			buf.append("<FORM NAME=TopicSelect METHOD=GET ACTION=/itembank>");
+			buf.append(p==null?"":"<input type=hidden name=p value=iframe />");
 			buf.append(code==null?"":"<input type=hidden name=code value='" + code + "' />");
 			buf.append("<b>Topic: </b>" + chapterSelectBox(text,chapter,true));
 			buf.append("&nbsp;&nbsp;<b>Assignment Type: </b>" + assignmentTypeDropDownBox(assignmentType,true));
-			if (showQuestions) buf.append("&nbsp;&nbsp;<input type=submit value=refresh />");
-			buf.append("<span style='display:none;' id=refreshing > Wait a moment...</span><br/>");
+			buf.append("&nbsp;&nbsp;<input type=submit value='View Items' /><br/><br/>");
 			
 			if (!showQuestions) return buf.toString() + "<br/><br/>";
 
@@ -317,12 +293,12 @@ public class ItemBank extends HttpServlet {
 			if (keys.size()==0) buf.append("Sorry, this topic contains no questions of this type.");
 			
 			Random rand = new Random();
-			List<Key<Question>> tenKeys = new ArrayList<Key<Question>>();
-			while (tenKeys.size() <= 10 && keys.size() > 0) {
-				tenKeys.add(keys.remove(rand.nextInt(keys.size())));
+			List<Key<Question>> itemKeys = new ArrayList<Key<Question>>();
+			while (itemKeys.size() < 3 && keys.size() > 0) {
+				itemKeys.add(keys.remove(rand.nextInt(keys.size())));
 			}
 			
-			List<Question> questions = new ArrayList<Question>(ofy().load().keys(tenKeys).values());
+			List<Question> questions = new ArrayList<Question>(ofy().load().keys(itemKeys).values());
 			for (Question q : questions) {
 				q.setParameters();
 				buf.append("<br/>" + (isInstructor?q.printAll():q.print()) + "<hr>");
@@ -335,11 +311,7 @@ public class ItemBank extends HttpServlet {
 	
 	String assignmentTypeDropDownBox(String assignmentType,boolean autoSubmit) {
 		if (assignmentType==null) assignmentType="";
-		StringBuffer buf = new StringBuffer("<SELECT id=type NAME=Type" + (autoSubmit?
-				" onChange=\"document.getElementById('refreshing').style='display:inline;color:red';"
-				+ "setTimeout(()=>{document.getElementById('refreshing').innerHTML='<br/>The referring page "
-				+ "may have disabled forms in this page. Please copy the URL to a new browser tab.<br/><br/>'},8000);submit();\" >"
-				:" >"));
+		StringBuffer buf = new StringBuffer("<SELECT id=type NAME=Type>");
 		try {
 			if (assignmentType.isEmpty()) buf.append("<OPTION VALUE=''>Select a type</OPTION>");
 			buf.append("<OPTION" + (assignmentType.equals("Quiz")?" SELECTED":"") + ">Quiz</OPTION>"
@@ -353,11 +325,7 @@ public class ItemBank extends HttpServlet {
 
 	String chapterSelectBox(Text text,Chapter chapter,boolean autoSubmit) throws Exception {
 		if (text == null) return "";
-		StringBuffer buf = new StringBuffer("<SELECT id=topic NAME=Topic" + (autoSubmit?
-				" onChange=\"document.getElementById('refreshing').style='display:inline;color:red';"
-				+ "setTimeout(()=>{document.getElementById('refreshing').innerHTML='<br/>The referring page "
-				+ "may have disabled forms in this page. Please copy the URL to a new browser tab.<br/><br/>'},8000);submit();\" >"
-				:" >"));
+		StringBuffer buf = new StringBuffer("<SELECT id=topic NAME=Topic>");
 		try {
 			if (chapter==null) buf.append("<OPTION VALUE=''>Select a topic</OPTION>");
 			for (Chapter c : text.chapters) {
