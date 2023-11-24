@@ -276,7 +276,7 @@ public class ItemBank extends HttpServlet {
 			
 			buf.append("More than 5000 ChemVantage question items are free to use under the terms of a "
 					+ "<a href=https://creativecommons.org/licenses/by/4.0/ target=_blank>Creative Commons CC-BY License</a>. "
-					+ "Instructor can access the correct answers and full solutions through their campus "
+					+ "Instructors can access the correct answers and full solutions through their campus "
 					+ "LMS. <a href=Registration.jsp target=_blank>Registration is free</a>.<br/><br/>");
 
 			buf.append("<FORM NAME=TopicSelect METHOD=GET ACTION=/itembank>");
