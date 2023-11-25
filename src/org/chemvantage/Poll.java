@@ -684,6 +684,17 @@ public class Poll extends HttpServlet {
 						}
 					}
 					break;
+				case Question.FIVE_STAR:
+					histogram.put("5 stars", 0);
+					histogram.put("4 stars", 0);
+					histogram.put("3 stars", 0);
+					histogram.put("2 stars", 0);
+					histogram.put("1 stars", 0);
+					for (PollTransaction t : pts) {
+						if (t.completed==null || t.responses==null || t.responses.get(k)==null) continue;
+						histogram.put(t.responses.get(k), histogram.get(t.responses.get(k))+1);
+					}
+					break;
 				default:
 				}
 				debug.append("histogram initialized.");
@@ -706,6 +717,7 @@ public class Poll extends HttpServlet {
 					case Question.MULTIPLE_CHOICE:
 					case Question.TRUE_FALSE:
 					case Question.SELECT_MULTIPLE:
+					case Question.FIVE_STAR:
 						buf.append("Summary of responses received for this question:<p></p>");
 						buf.append("<table>");
 						for (Entry<String,Integer> e : histogram.entrySet()) {
@@ -736,6 +748,8 @@ public class Poll extends HttpServlet {
 							buf.append("</table>");
 						} else buf.append(otherResponses);
 						break;	
+					case Question.ESSAY:
+						break; // don't print anything
 					}
 				} else buf.append("No responses were submitted for this question.");
 				
@@ -895,6 +909,11 @@ public class Poll extends HttpServlet {
 					+ "of the student's response in percent (default = 2%). Use the bottom "
 					+ "textarea box to finish the question text and/or to indicate the "
 					+ "expected dimensions or units of the student's answer."); break;
+			case (6): buf.append("<h3>New 5-Star Rating " + assignmentType + " Question</h3>");
+			buf.append("Fill in the question text with a request to rate something."); break;
+			case (7): buf.append("<h3>New Essay " + assignmentType + " Question</h3");
+			buf.append("Fill in the question text with instructions to write a short essay."); break;
+			
 			default: buf.append("An unexpected error occurred. Please try again.");
 			}
 			Question question = new Question(questionType);
@@ -921,6 +940,8 @@ public class Poll extends HttpServlet {
 					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=3;submit()\" VALUE='Select Multiple' /> "
 					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=4;submit()\" VALUE='Fill in Word' /> "
 					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=5;submit()\" VALUE='Numeric' />"
+					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=6;submit()\" VALUE='Five Star Rating' />"
+					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=7;submit()\" VALUE='Essay' />"
 					+ "</FORM>");
 		}
 		return buf.toString();
@@ -1130,6 +1151,8 @@ public class Poll extends HttpServlet {
 				+ "<OPTION VALUE=3" + (questionType==3?" SELECTED>":">") + "Select Multiple</OPTION>"
 				+ "<OPTION VALUE=4" + (questionType==4?" SELECTED>":">") + "Fill in word/phrase</OPTION>"
 				+ "<OPTION VALUE=5" + (questionType==5?" SELECTED>":">") + "Numeric</OPTION>"
+				+ "<OPTION VALUE=6" + (questionType==6?" SELECTED>":">") + "Five Star</OPTION>"
+				+ "<OPTION VALUE=7" + (questionType==7?" SELECTED>":">") + "Essay</OPTION>"
 				+ "</SELECT>");
 		return buf.toString();
 	}

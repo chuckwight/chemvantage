@@ -21,7 +21,6 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.Serializable;
 import java.util.Date;
-import java.util.List;
 
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
@@ -35,13 +34,15 @@ public class UserReport implements Serializable {
 			String userId;
 			int stars;
 			long questionId;
+			String studentAnswer;
 			String comments = "";
 	
 	UserReport() {}
 	
-	UserReport(String userId,long questionId,String comments) {
+	UserReport(String userId,long questionId,String studentAnswer,String comments) {
 		this.userId = Subject.hashId(userId);
 		this.questionId = questionId;
+		this.studentAnswer = studentAnswer;
 		this.comments = comments;
 		this.submitted = new Date();
 	}
@@ -69,7 +70,8 @@ public class UserReport implements Serializable {
 				q.setParameters(-1); // -1 randomizes the question
 				//Topic topic = ofy().load().type(Topic.class).id(q.topicId).now();
 				//buf.append("Topic: " + topic.title + " (" + q.assignmentType + " question)<br>");
-				buf.append(q.printAnswerToStudents());
+				buf.append(q.printAllToStudents(studentAnswer,false));
+				/*
 				if (this.userId != null) {
 					List<Response> responses = ofy().load().type(Response.class).filter("userId",this.userId).filter("questionId",this.questionId).list();
 					if (responses.size() > 0) {
@@ -79,6 +81,7 @@ public class UserReport implements Serializable {
 						buf.append("</table>");
 					}
 				}
+				*/
 				if (user.isEditor()) buf.append("<a href=Edit?UserRequest=Edit&QuestionId=" + this.questionId + "&AssignmentType=" + q.assignmentType + ">Edit Question</a>&nbsp;or&nbsp;");
 			} catch (Exception e2) {}
 			if (user.isChemVantageAdmin()) // Create a form for deleting the report

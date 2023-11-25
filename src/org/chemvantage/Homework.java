@@ -481,7 +481,7 @@ public class Homework extends HttpServlet {
 			HWTransaction ht = null;
 			
 			showWork = request.getParameter("ShowWork"+questionId);
-			
+			BufferedReader reader = null;
 			if (!studentAnswer.isEmpty()) { // an answer was submitted
 				switch (q.getQuestionType()) {
 				case 6:  // Handle five-star rating response
@@ -496,8 +496,8 @@ public class Homework extends HttpServlet {
 					JsonObject m = new JsonObject();  // api request message
 					m.addProperty("role", "user");
 					String prompt = "Question: \"" + q.text +  "\"\n My response: \"" + studentAnswer + "\"\n "
-							+ "Using JSON format, give a score for this response on a scale 0-5 and "
-							+ "feedback for how to improve my response.";
+							+ "Using JSON format, give a score for my response on a scale 0-" + q.pointValue + " "
+							+ "and feedback for how to improve my response.";
 					m.addProperty("content", prompt);
 					JsonArray messages = new JsonArray();
 					messages.add(m);
@@ -515,7 +515,7 @@ public class Homework extends HttpServlet {
 					os.write(json_bytes, 0, json_bytes.length);           
 					os.close();
 						
-					BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+					reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
 					JsonObject api_response = JsonParser.parseReader(reader).getAsJsonObject();
 					reader.close();
 					
@@ -553,8 +553,13 @@ public class Homework extends HttpServlet {
 					buf.append(q.printAllToStudents(studentAnswer) + "<br/>");
 					break;
 				case 7: // Essay response
-					buf.append("<h3>Your score on this question is " + api_score.get("score").getAsInt()*100/5 + "%.</h3>");
-					buf.append(api_score.get("feedback").getAsString() + "<br/><br/>");
+					buf.append("<h3>Your score on this question is " + studentScore + " out of " + q.pointValue + " (" + studentScore*100/q.pointValue + "%).</h3>");
+					try {
+						buf.append(api_score.get("feedback").getAsString() + "<br/><br/>");
+					} catch (Exception e) {
+						buf.append("Oops, an error occurred. Please report this below.<br/>" 
+								+ (reader==null?"No input stream.":reader.toString()) + "<br/>");
+					}
 					buf.append("<h4>Essay Question</h4>");
 					buf.append(q.printAllToStudents(studentAnswer) + "<br/>");
 					break;
@@ -647,7 +652,7 @@ public class Homework extends HttpServlet {
 
 	static String ajaxJavaScript(String signature) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
-		+ "function ajaxSubmit(url,id,note,email) {\n"
+		+ "function ajaxSubmit(url,id,studentAnswer,note,email) {\n"
 		+ "  var xmlhttp;\n"
 		+ "  if (url.length==0) return false;\n"
 		+ "  xmlhttp=GetXmlHttpObject();\n"
@@ -661,7 +666,7 @@ public class Homework extends HttpServlet {
 		+ "      '<FONT COLOR=#EE0000><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
-		+ "  url += '&QuestionId=' + id + '&sig=" + signature + "&Notes=' + note + '&Email=' + email;\n"
+		+ "  url += '&QuestionId=' + id + '&sig=" + signature + "&Notes=' + note + '&Email=' + email + '&StudentAnswer=' + studentAnswer;\n"
 		+ "  xmlhttp.open('GET',url,true);\n"
 		+ "  xmlhttp.send(null);\n"
 		+ "  return false;\n"

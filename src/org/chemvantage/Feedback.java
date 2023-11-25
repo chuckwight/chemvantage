@@ -74,7 +74,8 @@ public class Feedback extends HttpServlet {
 				long questionId = Long.parseLong(request.getParameter("QuestionId"));
 				String notes = request.getParameter("Notes");
 				String email = request.getParameter("Email");
-				UserReport r = new UserReport(userId,questionId,notes);
+				String studentAnswer = request.getParameter("StudentAnswer");
+				UserReport r = new UserReport(userId,questionId,studentAnswer,notes);
 				ofy().save().entity(r);
 				sendEmailToAdmin(r,user,email);
 				break;

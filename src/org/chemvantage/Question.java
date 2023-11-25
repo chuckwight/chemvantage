@@ -570,7 +570,10 @@ public class Question implements Serializable, Cloneable {
 			buf.append("<br/>");
 			break;
 		case 7:
-			buf.append(parseString(text) + "<br/><br/>Your response was<br/><div style='border-style: solid; width: 600px; padding: 10px'>" + studentAnswer + "</div><br/>");
+			buf.append(text);
+			buf.append("<br/>");
+			buf.append("<span style='color:#990000;font-size:small;'>(800 characters max):</span><br/>");
+			buf.append("<textarea rows=5 cols=60 wrap=soft placeholder='Enter your answer here' maxlength=800 >" + studentAnswer + "</textarea><br/>");
 			break;
 		}
 		
@@ -589,7 +592,7 @@ public class Question implements Serializable, Cloneable {
 		if (showDetails) {
 			buf.append("<div id='feedback" + this.id + "'>");
 			buf.append("<FORM NAME=suggest" + this.id 
-					+ " onSubmit=\" return ajaxSubmit('/Feedback?UserRequest=ReportAProblem','" + this.id + "',document.suggest" + this.id + ".Notes.value,document.suggest" + this.id + ".Email.value); return false;\">"
+					+ " onSubmit=\" return ajaxSubmit('/Feedback?UserRequest=ReportAProblem','" + this.id + "','" + studentAnswer + "',document.suggest" + this.id + ".Notes.value,document.suggest" + this.id + ".Email.value); return false;\">"
 					+ "<INPUT TYPE=BUTTON VALUE='Report a problem with this question' "
 					+ "onClick=\"javascript:getElementById('form" + this.id + "').style.display='';this.style.display='none'\" />"
 					+ "<div id='form" + this.id + "' style='display: none'>");
@@ -619,8 +622,8 @@ public class Question implements Serializable, Cloneable {
 		}
 		return buf.toString(); 
 	}
-
-	String printAnswerToStudents() {
+/*
+	String printAnswerToStudents(String studentAnswer) {
 		// use this method to display an example of the question and correct answer, but no detailed solution
 		
 		StringBuffer buf = new StringBuffer("<a name=" + this.id + "></a>");
@@ -682,13 +685,20 @@ public class Question implements Serializable, Cloneable {
 					+ "<b>" + getCorrectAnswer() + "</b>"
 					+ "</span>");
 			buf.append("&nbsp;" + parseString(tag) + "<br/>");
-			break;        
+			break; 
+		case 6: 
+			break;
+		case 7:
+			buf.append(text);
+			buf.append("<br/>");
+			buf.append("<span style='color:#990000;font-size:small;'>(800 characters max):</span><br/>");
+			buf.append("<textarea id=" + this.id + " name=" + this.id + " rows=5 cols=60 wrap=soft placeholder='Enter your answer here' maxlength=800 >" + studentAnswer + "</textarea><br>");
 		}
 
 		buf.append("<br/>");
 		return buf.toString();
 	}
-	
+*/	
 	public boolean hasSolution() {
 		if (solution == null) solution = "";
 		return solution.length()>0?true:false;

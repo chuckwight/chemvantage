@@ -103,8 +103,11 @@ public class OneQuestion extends HttpServlet {
 								+ "or number in scientific E notation (example: 6.022E-23). Your answer was scored incorrect because the program was unable to recognize "
 								+ "your answer as one of these types.<br/><br/>");
 					}
+					buf.append("The answer submitted was: <b>" + answer + "</b><br/><br/>");
 					break;
 				case 6:  // Five-star rating submission
+					buf.append("<h3>Thank you for the rating.</h3>");
+					buf.append(q.printAllToStudents(answer) + "<br/><br/>");
 					break;
 				case 7:  // Essay question
 					if (answer.length()>800) answer = answer.substring(0,799);
@@ -115,7 +118,7 @@ public class OneQuestion extends HttpServlet {
 					JsonObject m = new JsonObject();  // api request message
 					m.addProperty("role", "user");
 					String prompt = "Question: \"" + q.text +  "\"\n My response: \"" + answer + "\"\n "
-							+ "Using JSON format, give a score for this response on a scale 0-5 and "
+							+ "Using JSON format, score this response as 0 or " + q.pointValue + ", and give "
 							+ "feedback for how to improve my response.";
 					m.addProperty("content", prompt);
 					JsonArray messages = new JsonArray();
@@ -140,17 +143,25 @@ public class OneQuestion extends HttpServlet {
 					
 					// get the ChatGPT score from the response:
 					try {
-						String content = api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString();
-						JsonObject api_score = JsonParser.parseString(content).getAsJsonObject();
-						buf.append("<h3>Your score on this question is " + api_score.get("score").getAsInt()*100/5 + "%.</h3>");
-						buf.append(api_score.get("feedback").getAsString() + "<br/><br/>");
+						buf.append(q.printAllToStudents(answer) + "<br/>");
+						try {
+							String content = api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString();
+							JsonObject api_score = JsonParser.parseString(content).getAsJsonObject();
+							int studentScore = api_score.get("score").getAsInt();
+							buf.append("<h3>Your score on this question is " + studentScore + " out of " + q.pointValue + " (" + studentScore*100/q.pointValue + "%).</h3>");
+							buf.append(api_score.get("feedback").getAsString() + "<br/><br/>");
+						} catch (Exception e) {
+							buf.append("Oops, an error occurred. Please report a problem with this question.<br/>" 
+									+ (reader==null?"No input stream.":reader.toString()) + "<br/>");
+						}
+						break;
 					} catch (Exception e) {}
 				
 					break;
 				default:  // All other types of questions
 					buf.append("<h3>Your answer was not correct. Please <a href=/item?q=" + q.id + ">try again</a>.</h3>");
+					buf.append("The answer submitted was: <b>" + answer + "</b><br/><br/>");
 				}
-				buf.append("The answer submitted was: <b>" + answer + "</b><br/><br/>");
 				buf.append("<a href=/>Learn more about ChemVantage here</a><br/><br/>");
 			}
 		} catch (Exception e) {
