@@ -339,7 +339,7 @@ public class Poll extends HttpServlet {
 		
 		return buf.toString();
 	}
-	
+/*	
 	static String confirmSubmission(User u) {
 		return "<SCRIPT>"
 				+ "function confirmSubmission(nQuestions) {"
@@ -369,7 +369,46 @@ public class Poll extends HttpServlet {
 				+ "function showWorkBox(qid) {}" 
 				+ "</SCRIPT>"; 
 	}
+*/
+	static String confirmSubmission(User u) {
+		return "<SCRIPT>"
+				+ "function confirmSubmission(nQuestions) {"
+				+ "  var elements = document.getElementById('pollForm').elements;"
+				+ "  var nAnswers;"
+				+ "  var i;"
+				+ "  var checkboxes;"
+				+ "  var lastCheckboxIndex;"
+				+ "  nAnswers = 0;"
+				+ "  for (i=0;i<elements.length;i++) {"
+				+ "    if (isNaN(elements[i].name)) continue;"
+				+ "    switch (elements[i].type) {"
+				+ "    case 'hidden':"
+				+ "    case 'textarea':"
+				+ "    case 'text':"
+				+ "      if (elements[i].value.length>0) nAnswers++;"
+				+ "      break;"
+				+ "    case 'radio':"
+				+ "      if (elements[i].checked) nAnswers++;"
+				+ "      break;"
+				+ "    case 'checkbox':"
+				+ "      checkboxes = document.getElementsByName(elements[i].name);"
+				+ "      lastCheckboxIndex = i + checkboxes.length - 1;"
+				+ "      for (j=0;j<checkboxes.length;j++) if (checkboxes[j].checked==true) {"
+				+ "        nAnswers++;"
+				+ "        i = lastCheckboxIndex;"
+				+ "        break;"
+				+ "      }"
+				+ "      break;"
+				+ "    }"
+				+ "  }"
+				+ "  if (nAnswers<nQuestions) return confirm('Submit your responses now? ' + (nQuestions-nAnswers) + ' answers may have been left blank.');"
+				+ "  else return true;"
+				+ "}"
+				+ "function showWorkBox(qid) {}" 
+				+ "</SCRIPT>"; 
+	}
 
+	
 	PollTransaction submitResponses(User user,Assignment a,HttpServletRequest request) {
 		if (a.pollIsClosed) return null;
 		
@@ -594,9 +633,9 @@ public class Poll extends HttpServlet {
 				if (q.correctAnswer==null) q.correctAnswer = "";
 				i++;
 				buf.append("<div style='display: table-row;vertical-align: top;'>");
-				buf.append("<div style='display: table-cell;vertical-align: top;'>" + i + ".&nbsp;</div>"); // number cell
+				buf.append("<div style='display: table-cell;vertical-align: top;'><br/>" + i + ".&nbsp;</div>"); // number cell
 				
-				buf.append("<div style='display: table-cell;vertical-align: top;width: 400px;'>"); // question cell
+				buf.append("<div style='display: table-cell;vertical-align: top;width: 400px;'><br/>"); // question cell
 				
 				String userResponse = pt.responses==null?"":(pt.responses.get(k)==null?"":pt.responses.get(k));
 				
@@ -685,15 +724,19 @@ public class Poll extends HttpServlet {
 					}
 					break;
 				case Question.FIVE_STAR:
-					histogram.put("5 stars", 0);
-					histogram.put("4 stars", 0);
-					histogram.put("3 stars", 0);
-					histogram.put("2 stars", 0);
-					histogram.put("1 stars", 0);
+					for (char nStars='1'; nStars<'6'; nStars++) histogram.put(String.valueOf(nStars),0);
 					for (PollTransaction t : pts) {
 						if (t.completed==null || t.responses==null || t.responses.get(k)==null) continue;
 						histogram.put(t.responses.get(k), histogram.get(t.responses.get(k))+1);
 					}
+					break;
+				case Question.ESSAY:
+					int nEssays = 0;
+					for (PollTransaction t :pts) {
+						if (t.completed==null || t.responses==null || t.responses.get(k)==null) continue;
+						nEssays++;
+					}
+					histogram.put("N", nEssays);
 					break;
 				default:
 				}
@@ -710,15 +753,14 @@ public class Poll extends HttpServlet {
 				debug.append("maxValue="+maxValue+".totalValues="+totalValues+".");
 				buf.append("\n");
 				
-				buf.append("<div id=chart_div" + i + " style='display: table-cell;vertical-align: top;'>");  // histogram cell
+				buf.append("<div id=chart_div" + i + " style='display: table-cell;vertical-align: top;'><br/>");  // histogram cell
 				if (totalValues>0) {
 					// Print a histogram as a table containing a horizontal bar graph:
 					switch (q.getQuestionType()) {
 					case Question.MULTIPLE_CHOICE:
 					case Question.TRUE_FALSE:
 					case Question.SELECT_MULTIPLE:
-					case Question.FIVE_STAR:
-						buf.append("Summary of responses received for this question:<p></p>");
+						buf.append("Summary&nbsp;of&nbsp;responses&nbsp;received&nbsp;for&nbsp;this&nbsp;question:<p></p>");
 						buf.append("<table>");
 						for (Entry<String,Integer> e : histogram.entrySet()) {
 							buf.append("<tr><td>");
@@ -731,7 +773,7 @@ public class Poll extends HttpServlet {
 						break;
 					case Question.FILL_IN_WORD:
 					case Question.NUMERIC:
-						buf.append("Summary of responses received for this question:<p></p>");
+						buf.append("Summary&nbsp;of&nbsp;responses&nbsp;received&nbsp;for&nbsp;this&nbsp;question:<p></p>");
 						if (q.hasACorrectAnswer()) {
 							buf.append("<table>");
 							buf.append("<tr><td>");
@@ -748,8 +790,21 @@ public class Poll extends HttpServlet {
 							buf.append("</table>");
 						} else buf.append(otherResponses);
 						break;	
+					case Question.FIVE_STAR:
+						buf.append("Summary&nbsp;of&nbsp;responses&nbsp;received&nbsp;for&nbsp;this&nbsp;question:<p></p>");
+						buf.append("<table>");
+						for (char nStars='5'; nStars>='1'; nStars--) {
+							buf.append("<tr><td>");
+							buf.append(String.valueOf(nStars) + (nStars=='1'?"&nbsp;star":"&nbsp;stars") + "&nbsp;");
+							buf.append("</td><td>");
+							buf.append("<div style='background-color: blue;display: inline-block; width: " + 150*histogram.get(String.valueOf(nStars))/(totalValues+1) + "px;'>&nbsp;</div>");
+							buf.append("&nbsp;" + histogram.get(String.valueOf(nStars)) + "</td></tr>");
+						}
+						buf.append("</table>");
+					break;
 					case Question.ESSAY:
-						break; // don't print anything
+						buf.append(histogram.get("N") + (histogram.get("N")==1?" response was ":" responses were ") + "submitted for this question.");
+						break;
 					}
 				} else buf.append("No responses were submitted for this question.");
 				
