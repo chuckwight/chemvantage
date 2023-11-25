@@ -496,7 +496,7 @@ public class Homework extends HttpServlet {
 					JsonObject m = new JsonObject();  // api request message
 					m.addProperty("role", "user");
 					String prompt = "Question: \"" + q.text +  "\"\n My response: \"" + studentAnswer + "\"\n "
-							+ "Using JSON format, give a score for my response on a scale 0-" + q.pointValue + " "
+							+ "Using JSON format, give a score for my response (integer in the range 0 to " + q.pointValue + ") "
 							+ "and feedback for how to improve my response.";
 					m.addProperty("content", prompt);
 					JsonArray messages = new JsonArray();
@@ -590,7 +590,7 @@ public class Homework extends HttpServlet {
 						break;
 					case 7:  // Essay question
 						buf.append("<h3>Your score on this question was zero.</h3>");
-						break;
+						buf.append(api_score.get("feedback").getAsString() + "<br/><br/>");						break;
 					default:  // All other types of questions
 						buf.append("<h3>Incorrect Answer</h3>Your answer was scored incorrect because it does not agree with the "
 							+ "answer in the database.<br/>");
