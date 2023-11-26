@@ -18,10 +18,10 @@
 package org.chemvantage;
 
 import java.io.Serializable;
-import java.net.URLEncoder;
 import java.text.Collator;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -443,9 +443,8 @@ public class Question implements Serializable, Cloneable {
 				buf.append("Hint: " + parseString(hint) + "<br/><br/>");
 			}
 			if (solution.length()>0) {
-				buf.append("Solution:<br/>" + parseString(solution));
+				buf.append("Solution:<br/>" + parseString(solution) + "<br/><br/>");
 			}
-			buf.append("<br/>");
 			break;        
 		case 6: // FIVE_STAR rating
 			buf.append(text);
@@ -591,12 +590,12 @@ public class Question implements Serializable, Cloneable {
 		}
 		
 		if (showDetails) {
-			try {
-				studentAnswer = URLEncoder.encode(studentAnswer,"UTF-8");  // to send with URL
-			} catch (Exception e) {}
+			//try {
+			//	studentAnswer = URLEncoder.encode(studentAnswer,"UTF-8");  // to send with URL
+			//} catch (Exception e) {}
 			buf.append("<div id='feedback" + this.id + "'>");
 			buf.append("<FORM NAME=suggest" + this.id 
-					+ " onSubmit=\" return ajaxSubmit('/Feedback?UserRequest=ReportAProblem','" + this.id + "','" + studentAnswer + "',document.suggest" + this.id + ".Notes.value,document.suggest" + this.id + ".Email.value); return false;\">"
+					+ " onSubmit=\" return ajaxSubmit('/Feedback?UserRequest=ReportAProblem','" + this.id + "','" + Arrays.toString(this.parameters) + "','" + studentAnswer + "',document.suggest" + this.id + ".Notes.value,document.suggest" + this.id + ".Email.value); return false;\">"
 					+ "<INPUT TYPE=BUTTON VALUE='Report a problem with this question' "
 					+ "onClick=\"javascript:getElementById('form" + this.id + "').style.display='';this.style.display='none'\" />"
 					+ "<div id='form" + this.id + "' style='display: none'>");

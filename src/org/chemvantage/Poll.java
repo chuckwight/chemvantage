@@ -583,7 +583,7 @@ public class Poll extends HttpServlet {
 		List<PollTransaction> pts = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).list();
 		buf.append("\n");
 		buf.append("<script>"
-				+ "function ajaxSubmit(url,id,studentAnswer,note,email) {\n"
+				+ "function ajaxSubmit(url,id,params,studentAnswer,note,email) {\n"
 				+ "  var xmlhttp;\n"
 				+ "  if (url.length==0) return false;\n"
 				+ "  xmlhttp=GetXmlHttpObject();\n"
@@ -594,11 +594,10 @@ public class Poll extends HttpServlet {
 				+ "  xmlhttp.onreadystatechange=function() {\n"
 				+ "    if (xmlhttp.readyState==4) {\n"
 				+ "      document.getElementById('feedback' + id).innerHTML="
-				+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment. "
-				+ "</b></FONT><p></p>';\n"
+				+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
 				+ "    }\n"
 				+ "  }\n"
-				+ "  url += '&QuestionId=' + id + '&sig=" + user.getTokenSignature()+ "&Notes=' + note + '&Email=' + email + '&StudentAnswer=' + studentAnswer;\n"
+				+ "  url += '&QuestionId=' + id + '&Params=' + params + '&sig=" + user.getTokenSignature() + "&Notes=' + note + '&Email=' + email + '&StudentAnswer=' + studentAnswer;\n"
 				+ "  xmlhttp.open('GET',url,true);\n"
 				+ "  xmlhttp.send(null);\n"
 				+ "  return false;\n"

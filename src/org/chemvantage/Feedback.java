@@ -72,10 +72,15 @@ public class Feedback extends HttpServlet {
 			case "ReportAProblem":
 				String userId = user==null?"":user.getId();
 				long questionId = Long.parseLong(request.getParameter("QuestionId"));
+				int[] params = {0,0,0,0};
+				try {
+					String[] sparams = request.getParameter("Params").replace("[","").replace("]","").split(",");
+					for (int i=0;i<sparams.length;i++) params[i]=Integer.parseInt(sparams[i]);
+				} catch (Exception e) {}
 				String notes = request.getParameter("Notes");
 				String email = request.getParameter("Email");
 				String studentAnswer = request.getParameter("StudentAnswer");
-				UserReport r = new UserReport(userId,questionId,studentAnswer,notes);
+				UserReport r = new UserReport(userId,questionId,params,studentAnswer,notes);
 				ofy().save().entity(r);
 				sendEmailToAdmin(r,user,email);
 				break;
@@ -295,9 +300,8 @@ public class Feedback extends HttpServlet {
 	private void sendEmailToAdmin(UserReport r,User user,String email) {
 		Properties props = new Properties();
 		Session session = Session.getDefaultInstance(props, null);
-
 		if (email==null) email = "";
-		String msgBody = r.view(user);
+		String msgBody = r.view();
 		if (!email.isEmpty()) msgBody += "Respond to " + email;
 		else {  // try to get the user's email address from the NRPS service
 			try {

@@ -34,6 +34,7 @@ public class UserReport implements Serializable {
 			String userId;
 			int stars;
 			long questionId;
+			int[] params;
 			String studentAnswer;
 			String comments = "";
 	
@@ -47,6 +48,15 @@ public class UserReport implements Serializable {
 		this.submitted = new Date();
 	}
 	
+	UserReport(String userId,long questionId,int[] params,String studentAnswer,String comments) {
+		this.userId = Subject.hashId(userId);
+		this.questionId = questionId;
+		this.params = params;
+		this.studentAnswer = studentAnswer;
+		this.comments = comments;
+		this.submitted = new Date();
+	}
+	
 	public UserReport(String userId,int stars,String comments) {
 		this.userId = Subject.hashId(userId);
 		this.stars = stars;
@@ -54,42 +64,42 @@ public class UserReport implements Serializable {
 		this.submitted = new Date();
 	}
 	
+	public String view() {
+		StringBuffer buf = new StringBuffer();
+		buf.append("On " + submitted + " a user said:<br>");
+
+		if (stars>0) buf.append(" (" + stars + " stars)<br>");
+		buf.append("<FONT COLOR=RED>" + comments + "</FONT><br>");
+		Question q = ofy().load().type(Question.class).id(this.questionId).safe();
+		q.parameters = this.params;
+
+		buf.append(q.printAllToStudents(studentAnswer));
+		return buf.toString();
+	}
+
 	public String view(User user) {
+		
+		if (!user.isChemVantageAdmin()) return null;
+		
 		StringBuffer buf = new StringBuffer();
 		
-		// User must be author of the report or the ChemVantage administrator
-		if (user==null || !(Subject.hashId(user.getId()).equals(this.userId) || user.isChemVantageAdmin())) return null;  
-
 		try {
-			buf.append("On " + submitted + (user.getId().equals(this.userId)?" you":" a user") + " said:<br>");
+			buf.append("On " + submitted + " a user said:<br>");
 			
 			if (stars>0) buf.append(" (" + stars + " stars)<br>");
 			buf.append("<FONT COLOR=RED>" + comments + "</FONT><br>");
-			try {
-				Question q = ofy().load().type(Question.class).id(this.questionId).safe();
-				q.setParameters(-1); // -1 randomizes the question
-				//Topic topic = ofy().load().type(Topic.class).id(q.topicId).now();
-				//buf.append("Topic: " + topic.title + " (" + q.assignmentType + " question)<br>");
-				buf.append(q.printAllToStudents(studentAnswer,false));
-				/*
-				if (this.userId != null) {
-					List<Response> responses = ofy().load().type(Response.class).filter("userId",this.userId).filter("questionId",this.questionId).list();
-					if (responses.size() > 0) {
-						buf.append("<table><tr><td>Date/Time (UTC)</td><td>Student Response</td><td>Correct Response</td><td>Score</td></tr>");
-						for (Response r : responses) buf.append("<tr><td>" + r.submitted.toString() + "</td><td align=center>" + r.studentResponse 
-								+ "</td><td align=center>" + r.correctAnswer + "</td><td align=center>" + r.score + "</td></tr>");
-						buf.append("</table>");
-					}
-				}
-				*/
-				if (user.isEditor()) buf.append("<a href=Edit?UserRequest=Edit&QuestionId=" + this.questionId + "&AssignmentType=" + q.assignmentType + ">Edit Question</a>&nbsp;or&nbsp;");
-			} catch (Exception e2) {}
-			if (user.isChemVantageAdmin()) // Create a form for deleting the report
-				buf.append("<FORM METHOD=POST ACTION=Feedback>"
+			Question q = ofy().load().type(Question.class).id(this.questionId).safe();
+			q.parameters = this.params;
+
+			buf.append(q.printAllToStudents(studentAnswer));
+			
+			buf.append("<a href=Edit?UserRequest=Edit&QuestionId=" + this.questionId + "&AssignmentType=" + q.assignmentType + ">Edit Question</a>&nbsp;or&nbsp;");
+			buf.append("<FORM METHOD=POST style='display: inline' ACTION=Feedback>"
 					+ "<INPUT TYPE=HIDDEN NAME=ReportId VALUE=" + this.id + ">"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Report'>"
 					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "'>"
 					+ "</FORM><p>");
+
 		} catch (Exception e) {
 			buf.append("<br>" + e.toString());
 		}

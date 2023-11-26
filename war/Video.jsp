@@ -191,7 +191,7 @@ function setStars(n) {
   }
 }
 
-function ajaxSubmit(url,id,studentAnswer,note,email) {
+function ajaxSubmit(url,id,params,studentAnswer,note,email) {
   var xmlhttp;
   if (url.length==0) return false;
   xmlhttp=GetXmlHttpObject();
@@ -204,7 +204,7 @@ function ajaxSubmit(url,id,studentAnswer,note,email) {
       document.getElementById('feedback' + id).innerHTML='<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';
     }
   }
-  url += '&QuestionId=' + id + '&sig=' + sig + '&Notes=' + note + '&Email=' + email + '&StudentAnswer=' + studentAnswer;
+  url += '&QuestionId=' + id + '&Params=' + params + '&sig=' + sig + '&Notes=' + note + '&Email=' + email + '&StudentAnswer=' + studentAnswer;
   xmlhttp.open('GET',url,true);
   xmlhttp.send(null);
   return false;

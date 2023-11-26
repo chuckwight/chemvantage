@@ -652,7 +652,7 @@ public class Homework extends HttpServlet {
 
 	static String ajaxJavaScript(String signature) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
-		+ "function ajaxSubmit(url,id,studentAnswer,note,email) {\n"
+		+ "function ajaxSubmit(url,id,params,studentAnswer,note,email) {\n"
 		+ "  var xmlhttp;\n"
 		+ "  if (url.length==0) return false;\n"
 		+ "  xmlhttp=GetXmlHttpObject();\n"
@@ -663,10 +663,10 @@ public class Homework extends HttpServlet {
 		+ "  xmlhttp.onreadystatechange=function() {\n"
 		+ "    if (xmlhttp.readyState==4) {\n"
 		+ "      document.getElementById('feedback' + id).innerHTML="
-		+ "      '<FONT COLOR=#EE0000><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
+		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
-		+ "  url += '&QuestionId=' + id + '&sig=" + signature + "&Notes=' + note + '&Email=' + email + '&StudentAnswer=' + studentAnswer;\n"
+		+ "  url += '&QuestionId=' + id + '&Params=' + params + '&sig=" + signature + "&Notes=' + note + '&Email=' + email + '&StudentAnswer=' + studentAnswer;\n"
 		+ "  xmlhttp.open('GET',url,true);\n"
 		+ "  xmlhttp.send(null);\n"
 		+ "  return false;\n"
