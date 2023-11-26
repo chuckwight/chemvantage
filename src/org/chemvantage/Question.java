@@ -480,14 +480,18 @@ public class Question implements Serializable, Cloneable {
 	}
 
 	String printAllToStudents(String studentAnswer) {
-		return printAllToStudents(studentAnswer,true,"");
+		return printAllToStudents(studentAnswer,true,true,"");
 	}
 	
 	String printAllToStudents(String studentAnswer,boolean showDetails) {
-		return printAllToStudents(studentAnswer,showDetails,"");
+		return printAllToStudents(studentAnswer,showDetails,true,"");
 	}
 	
-	String printAllToStudents(String studentAnswer,boolean showDetails,String showWork) {
+	String printAllToStudents(String studentAnswer,boolean showDetails,boolean reportable) {
+		return printAllToStudents(studentAnswer,showDetails,reportable,"");
+	}
+	
+	String printAllToStudents(String studentAnswer,boolean showDetails,boolean reportable,String showWork) {
 		// use this method to display an example of the question, correct answer and solution
 		// this differs from printAll() because only the first of several 
 		// correct fill-in-word answers is presented, and choices are not scrambled
@@ -589,7 +593,7 @@ public class Question implements Serializable, Cloneable {
 			buf.append("<br/><br/>");
 		}
 		
-		if (showDetails) {
+		if (reportable) {
 			//try {
 			//	studentAnswer = URLEncoder.encode(studentAnswer,"UTF-8");  // to send with URL
 			//} catch (Exception e) {}

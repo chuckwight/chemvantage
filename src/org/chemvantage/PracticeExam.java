@@ -962,7 +962,7 @@ public class PracticeExam extends HttpServlet {
 				Question q = examQuestions.get(k);
 				q.setParameters((int)(pet.id - q.id));
 				buf.append("<tr style='vertical-align:middle'><td><b>" + i + ". </b>" 
-						+ q.printAllToStudents(studentAnswers.get(q.id),true,pet.questionShowWork.get(k)) + "</td>");
+						+ q.printAllToStudents(studentAnswers.get(q.id),true,true,pet.questionShowWork.get(k)) + "</td>");
 
 				// Try to get the question score from the PracticeExamTransaction. If null, recompute it from the student's response
 				int score = 0;
@@ -989,7 +989,7 @@ public class PracticeExam extends HttpServlet {
 				Question q = examQuestions.get(k);
 				q.setParameters((int)(pet.id - q.id));
 				buf.append("<tr style='vertical-align:middle'><td><b>" + i + ". </b>" 
-						+ q.printAllToStudents(studentAnswers.get(q.id),true,pet.questionShowWork.get(k)) + "</td>");
+						+ q.printAllToStudents(studentAnswers.get(q.id),true,true,pet.questionShowWork.get(k)) + "</td>");
 
 				// Try to get the question score from the PracticeExamTransaction. If null, recompute it from the student's response
 				int score = 0;

@@ -1228,7 +1228,7 @@ public class PlacementExam extends HttpServlet {
 				Question q = questions.get(k);
 				q.setParameters((int)(pet.id ^ q.id));
 				buf.append("<tr style='vertical-align:middle'><td><b>" + i + ". </b>" 
-						+ q.printAllToStudents(studentAnswers.get(q.id),true,pet.questionShowWork.get(k)) + "</td>");
+						+ q.printAllToStudents(studentAnswers.get(q.id),true,true,pet.questionShowWork.get(k)) + "</td>");
 
 				// Try to get the question score from the PlacementExamTransaction. If null, recompute it from the student's response
 				int score = 0;

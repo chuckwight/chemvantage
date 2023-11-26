@@ -985,7 +985,7 @@ public class Homework extends HttpServlet {
 				}
 				debug.append("3");
 				
-				buf.append("<tr><td style='text-align:right;vertical-align:text-top;padding-right:10px;'><b>" + (a.questionKeys.indexOf(k)+1) + ".</b></td><td>" + q.printAllToStudents(studentResponse,true,showWork) + "<br/></td></tr>");
+				buf.append("<tr><td style='text-align:right;vertical-align:text-top;padding-right:10px;'><b>" + (a.questionKeys.indexOf(k)+1) + ".</b></td><td>" + q.printAllToStudents(studentResponse,true,true,showWork) + "<br/></td></tr>");
 				
 				// print a small table of student submissions fort this question
 				buf.append("<tr><td></td><td>");

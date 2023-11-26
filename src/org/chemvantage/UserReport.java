@@ -73,7 +73,7 @@ public class UserReport implements Serializable {
 		Question q = ofy().load().type(Question.class).id(this.questionId).safe();
 		q.parameters = this.params;
 
-		buf.append(q.printAllToStudents(studentAnswer));
+		buf.append(q.printAllToStudents(studentAnswer,true,false));
 		return buf.toString();
 	}
 
@@ -91,7 +91,7 @@ public class UserReport implements Serializable {
 			Question q = ofy().load().type(Question.class).id(this.questionId).safe();
 			q.parameters = this.params;
 
-			buf.append(q.printAllToStudents(studentAnswer));
+			buf.append(q.printAllToStudents(studentAnswer,true,false));
 			
 			buf.append("<a href=Edit?UserRequest=Edit&QuestionId=" + this.questionId + "&AssignmentType=" + q.assignmentType + ">Edit Question</a>&nbsp;or&nbsp;");
 			buf.append("<FORM METHOD=POST style='display: inline' ACTION=Feedback>"
