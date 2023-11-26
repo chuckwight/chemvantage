@@ -496,7 +496,7 @@ public class Homework extends HttpServlet {
 					JsonObject m = new JsonObject();  // api request message
 					m.addProperty("role", "user");
 					String prompt = "Question: \"" + q.text +  "\"\n My response: \"" + studentAnswer + "\"\n "
-							+ "Using JSON format, give a score for my response (integer in the range 0 to " + q.pointValue + ") "
+							+ "Using JSON format, give a score for my response (integer in the range 0 to 3) "
 							+ "and feedback for how to improve my response.";
 					m.addProperty("content", prompt);
 					JsonArray messages = new JsonArray();
@@ -524,6 +524,7 @@ public class Homework extends HttpServlet {
 						String content = api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString();
 						api_score = JsonParser.parseString(content).getAsJsonObject();
 						studentScore = api_score.get("score").getAsInt();
+						studentScore = studentScore>=2?q.pointValue:0;
 					} catch (Exception e) {}
 					break;
 				default:
@@ -553,20 +554,21 @@ public class Homework extends HttpServlet {
 					buf.append(q.printAllToStudents(studentAnswer) + "<br/>");
 					break;
 				case 7: // Essay response
-					buf.append("<h3>Your score on this question is " + studentScore + " out of " + q.pointValue + " (" + studentScore*100/q.pointValue + "%).</h3>");
+					buf.append("<h3>Your score on this question is " + studentScore + " out of " + q.pointValue + " (" + studentScore*100/q.pointValue + "%).</h3>"
+					+ (!user.isAnonymous()?"<a id=showLink href=# onClick=document.getElementById('solution').style='display:inline';this.style='display:none'>(show me)</a>":"") 
+					+ "<br/>");
 					try {
-						buf.append(api_score.get("feedback").getAsString() + "<br/><br/>");
+						studentAnswer += "<br/><br/><b>Feedback: </b>" + api_score.get("feedback").getAsString() 
+								+ "<br/><br/><b>Score: </b>" + studentScore + "/" + possibleScore + "<br/>";
 					} catch (Exception e) {
 						buf.append("Oops, an error occurred. Please report this below.<br/>" 
 								+ (reader==null?"No input stream.":reader.toString()) + "<br/>");
 					}
-					buf.append("<h4>Essay Question</h4>");
-					buf.append(q.printAllToStudents(studentAnswer) + "<br/>");
 					break;
 				default:
-					buf.append("<h3>Congratulations. You answered the question correctly. "
+					buf.append("<h3>Congratulations. You answered the question correctly.</h3>"
 						+ (!user.isAnonymous()?"<a id=showLink href=# onClick=document.getElementById('solution').style='display:inline';this.style='display:none'>(show me)</a>":"") 
-						+ "</h3>");
+						+ "<br/>");
 				}
 			}
 			else if (studentAnswer.length() > 0) {

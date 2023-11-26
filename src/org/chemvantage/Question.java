@@ -577,7 +577,7 @@ public class Question implements Serializable, Cloneable {
 			buf.append(text);
 			buf.append("<br/>");
 			buf.append("<span style='color:#990000;font-size:small;'>(800 characters max):</span><br/>");
-			buf.append("<textarea rows=5 cols=60 wrap=soft placeholder='Enter your answer here' maxlength=800 >" + studentAnswer + "</textarea><br/>");
+			//buf.append("<textarea rows=5 cols=60 wrap=soft placeholder='Enter your answer here' maxlength=800 >" + studentAnswer + "</textarea><br/>");
 			break;
 		}
 		
@@ -591,6 +591,8 @@ public class Question implements Serializable, Cloneable {
 					+ "<br/>Your answer must have exactly " + significantFigures + " significant digits.<br/>If your answer ends in a zero, then it must also have a decimal point to indicate which digits are significant.");
 			else buf.append("<IMG SRC=/images/xmark.png ALT='X mark' align=middle>");
 			buf.append("<br/><br/>");
+		} else if (getQuestionType()==7) {
+			buf.append("<b>The answer submitted was: </b><br/>" + studentAnswer + "<br/>");
 		}
 		
 		if (reportable) {
