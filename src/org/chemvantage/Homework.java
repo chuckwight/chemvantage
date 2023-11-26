@@ -490,13 +490,14 @@ public class Homework extends HttpServlet {
 				case 7:  // New section for scoring essay questions with Chat GPT
 					if (studentAnswer.length()>800) studentAnswer = studentAnswer.substring(0,799);
 					JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
-					api_request.addProperty("model","gpt-3.5-turbo");
+					api_request.addProperty("model","gpt-4");
+					//api_request.addProperty("model","gpt-3.5-turbo");
 					api_request.addProperty("max_tokens",200);
 					api_request.addProperty("temperature",0.2);
 					JsonObject m = new JsonObject();  // api request message
 					m.addProperty("role", "user");
 					String prompt = "Question: \"" + q.text +  "\"\n My response: \"" + studentAnswer + "\"\n "
-							+ "Using JSON format, give a score for my response (integer in the range 0 to 3) "
+							+ "Using JSON format, give a score for my response (integer in the range 0 to 5) "
 							+ "and feedback for how to improve my response.";
 					m.addProperty("content", prompt);
 					JsonArray messages = new JsonArray();
@@ -524,7 +525,7 @@ public class Homework extends HttpServlet {
 						String content = api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString();
 						api_score = JsonParser.parseString(content).getAsJsonObject();
 						studentScore = api_score.get("score").getAsInt();
-						studentScore = studentScore>=2?q.pointValue:0;
+						studentScore = studentScore>=4?q.pointValue:0;
 					} catch (Exception e) {}
 					break;
 				default:
@@ -554,17 +555,13 @@ public class Homework extends HttpServlet {
 					buf.append(q.printAllToStudents(studentAnswer) + "<br/>");
 					break;
 				case 7: // Essay response
-					buf.append("<h3>Your score on this question is " + studentScore + " out of " + q.pointValue + " (" + studentScore*100/q.pointValue + "%).</h3>"
-					+ (!user.isAnonymous()?"<a id=showLink href=# onClick=document.getElementById('solution').style='display:inline';this.style='display:none'>(show me)</a>":"") 
-					+ "<br/>");
 					try {
 						studentAnswer += "<br/><br/><b>Feedback: </b>" + api_score.get("feedback").getAsString() 
-								+ "<br/><br/><b>Score: </b>" + studentScore + "/" + possibleScore + "<br/>";
+								+ "<br/><br/><b>Score: </b>" + api_score.get("score") + "/5" + "<br/>";
 					} catch (Exception e) {
 						buf.append("Oops, an error occurred. Please report this below.<br/>" 
 								+ (reader==null?"No input stream.":reader.toString()) + "<br/>");
 					}
-					break;
 				default:
 					buf.append("<h3>Congratulations. You answered the question correctly.</h3>"
 						+ (!user.isAnonymous()?"<a id=showLink href=# onClick=document.getElementById('solution').style='display:inline';this.style='display:none'>(show me)</a>":"") 
