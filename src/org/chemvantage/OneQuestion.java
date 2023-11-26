@@ -11,6 +11,7 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.Random;
 
 import javax.servlet.ServletException;
@@ -22,6 +23,7 @@ import javax.servlet.http.HttpServletResponse;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.googlecode.objectify.Key;
 
 @WebServlet("/item")
 public class OneQuestion extends HttpServlet {
@@ -112,14 +114,14 @@ public class OneQuestion extends HttpServlet {
 				case 7:  // Essay question
 					if (answer.length()>800) answer = answer.substring(0,799);
 					JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
-					api_request.addProperty("model","gpt-3.5-turbo");
+					api_request.addProperty("model","gpt-4");
 					api_request.addProperty("max_tokens",200);
 					api_request.addProperty("temperature",0.2);
 					JsonObject m = new JsonObject();  // api request message
 					m.addProperty("role", "user");
 					String prompt = "Question: \"" + q.text +  "\"\n My response: \"" + answer + "\"\n "
-							+ "Using JSON format, score this response as 0 or " + q.pointValue + ", and give "
-							+ "feedback for how to improve my response.";
+							+ "Using JSON format, score this response ona scale of 0-5 and give "
+							+ "feedback for how to improve my response, but do not give me the correct response.";
 					m.addProperty("content", prompt);
 					JsonArray messages = new JsonArray();
 					messages.add(m);
@@ -143,25 +145,43 @@ public class OneQuestion extends HttpServlet {
 					
 					// get the ChatGPT score from the response:
 					try {
-						buf.append(q.printAllToStudents(answer) + "<br/>");
 						try {
 							String content = api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString();
 							JsonObject api_score = JsonParser.parseString(content).getAsJsonObject();
-							int studentScore = api_score.get("score").getAsInt();
-							buf.append("<h3>Your score on this question is " + studentScore + " out of " + q.pointValue + " (" + studentScore*100/q.pointValue + "%).</h3>");
-							buf.append(api_score.get("feedback").getAsString() + "<br/><br/>");
+							int score = api_score.get("score").getAsInt();
+							switch (score) {
+							case 0:
+							case 1: 
+								buf.append("<h3>Your answer is incorrect.</h3>");
+								break;
+							case 2:
+							case 3:
+								buf.append("<h3>Your answer is partly correct, but needs improvement.</h3>");
+								break;
+							case 4:
+							case 5:
+								buf.append("<h3>Congratulations. You answered the question correctly.</h3>");
+								break;
+								}
+							answer += "<br/><br/><b>Feedback: </b>" + api_score.get("feedback").getAsString() 
+									+ "<br/><br/><b>Score: </b>" + score + "/5" + "<br/>";
+							buf.append(q.printAllToStudents(answer) + "<br/>");
 						} catch (Exception e) {
 							buf.append("Oops, an error occurred. Please report a problem with this question.<br/>" 
 									+ (reader==null?"No input stream.":reader.toString()) + "<br/>");
 						}
 						break;
 					} catch (Exception e) {}
-				
 					break;
 				default:  // All other types of questions
 					buf.append("<h3>Your answer was not correct. Please <a href=/item?q=" + q.id + ">try again</a>.</h3>");
 					buf.append("The answer submitted was: <b>" + answer + "</b><br/><br/>");
 				}
+				List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("assignmentType",q.assignmentType).filter("conceptId",q.conceptId).keys().list();
+				int i = new Random().nextInt(questionKeys.size());
+				long questionId = questionKeys.get(i).getId();
+				buf.append("<a href=/item?q=" + questionId + ">Try another similar question</a>");
+				buf.append("&nbsp;&nbsp;");
 				buf.append("<a href=/>Learn more about ChemVantage here</a><br/><br/>");
 			}
 		} catch (Exception e) {
@@ -196,7 +216,7 @@ public class OneQuestion extends HttpServlet {
 	String ajaxJavaScript() {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "var sig = '" + getSig() + "';"
-		+ "function ajaxSubmit(url,id,note,email) {\n"
+		+ "function ajaxSubmit(url,id,params,studentAnswer,note,email) {\n"
 		+ "  var xmlhttp;\n"
 		+ "  if (url.length==0) return false;\n"
 		+ "  xmlhttp=GetXmlHttpObject();\n"
@@ -211,7 +231,7 @@ public class OneQuestion extends HttpServlet {
 		+ "</b></FONT><p>';\n"
 		+ "    }\n"
 		+ "  }\n"
-		+ "  url += '&QuestionId=' + id + '&sig=' + sig + '&Notes=' + note + '&Email=' + email;\n"
+		+ "  url += '&QuestionId=' + id + '&Params=' + params + '&sig=' + sig + '&Notes=' + note + '&Email=' + email + '&StudentAnswer=' + studentAnswer;\n"
 		+ "  xmlhttp.open('GET',url,true);\n"
 		+ "  xmlhttp.send(null);\n"
 		+ "  return false;\n"
