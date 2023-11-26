@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import java.io.Serializable;
+import java.net.URLEncoder;
 import java.text.Collator;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -590,6 +591,9 @@ public class Question implements Serializable, Cloneable {
 		}
 		
 		if (showDetails) {
+			try {
+				studentAnswer = URLEncoder.encode(studentAnswer,"UTF-8");  // to send with URL
+			} catch (Exception e) {}
 			buf.append("<div id='feedback" + this.id + "'>");
 			buf.append("<FORM NAME=suggest" + this.id 
 					+ " onSubmit=\" return ajaxSubmit('/Feedback?UserRequest=ReportAProblem','" + this.id + "','" + studentAnswer + "',document.suggest" + this.id + ".Notes.value,document.suggest" + this.id + ".Email.value); return false;\">"

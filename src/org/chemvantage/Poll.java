@@ -583,7 +583,7 @@ public class Poll extends HttpServlet {
 		List<PollTransaction> pts = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).list();
 		buf.append("\n");
 		buf.append("<script>"
-				+ "function ajaxSubmit(url,id,note,email) {\n"
+				+ "function ajaxSubmit(url,id,studentAnswer,note,email) {\n"
 				+ "  var xmlhttp;\n"
 				+ "  if (url.length==0) return false;\n"
 				+ "  xmlhttp=GetXmlHttpObject();\n"
@@ -598,7 +598,7 @@ public class Poll extends HttpServlet {
 				+ "</b></FONT><p></p>';\n"
 				+ "    }\n"
 				+ "  }\n"
-				+ "  url += '&QuestionId=' + id + '&sig=" + user.getTokenSignature() + "&Notes=' + note + '&Email=' + email;\n"
+				+ "  url += '&QuestionId=' + id + '&sig=" + user.getTokenSignature()+ "&Notes=' + note + '&Email=' + email + '&StudentAnswer=' + studentAnswer;\n"
 				+ "  xmlhttp.open('GET',url,true);\n"
 				+ "  xmlhttp.send(null);\n"
 				+ "  return false;\n"
