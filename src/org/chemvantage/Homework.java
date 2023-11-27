@@ -588,8 +588,11 @@ public class Homework extends HttpServlet {
 						buf.append("<h3>No rating was submitted for this item.</h3>");
 						break;
 					case 7:  // Essay question
-						buf.append("<h3>Your score on this question was zero.</h3>");
-						buf.append(api_score.get("feedback").getAsString() + "<br/><br/>");						break;
+						int score = api_score.get("score").getAsInt();
+						if (score<=1) buf.append("<h3>Your answer to this question is incorrect.</h3>");
+						else buf.append("<h3>Your answer is partly correct, but needs improvement.</h3>");
+						buf.append(api_score.get("feedback").getAsString() + "<br/><br/>");
+						break;
 					default:  // All other types of questions
 						buf.append("<h3>Incorrect Answer</h3>Your answer was scored incorrect because it does not agree with the "
 							+ "answer in the database.<br/>");
