@@ -119,9 +119,10 @@ public class OneQuestion extends HttpServlet {
 					api_request.addProperty("temperature",0.2);
 					JsonObject m = new JsonObject();  // api request message
 					m.addProperty("role", "user");
-					String prompt = "Question: \"" + q.text +  "\"\n My response: \"" + answer + "\"\n "
-							+ "Using JSON format, score this response ona scale of 0-5 and give "
-							+ "feedback for how to improve my response, but do not give me the correct response.";
+					String prompt = "Your role is a chemistry professor grading student exam questions. "
+							+ "Question: \"" + q.text +  "\"\n Student Response: \"" + answer + "\"\n "
+							+ "Using JSON format, provide a 'score' for this response on a scale of 0-5 and give "
+							+ "'feedback' for how to improve the response, but do not reveal the correct response.";
 					m.addProperty("content", prompt);
 					JsonArray messages = new JsonArray();
 					messages.add(m);
@@ -167,8 +168,9 @@ public class OneQuestion extends HttpServlet {
 									+ "<br/><br/><b>Score: </b>" + score + "/5" + "<br/>";
 							buf.append(q.printAllToStudents(answer) + "<br/>");
 						} catch (Exception e) {
-							buf.append("Oops, an error occurred. Please report a problem with this question.<br/>" 
-									+ (reader==null?"No input stream.":reader.toString()) + "<br/>");
+							buf.append("<h3>Oops, an error occurred. Please <a href=/Feedback>report a problem</a> with this question.</h3>" 
+									+ (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>");
+							buf.append(api_response.toString() + "<br/><br/>");
 						}
 						break;
 					} catch (Exception e) {}
