@@ -63,7 +63,7 @@ public class Feedback extends HttpServlet {
 		
 		try {
 			User user = User.getUser(request.getParameter("sig"));
-			if (user == null) user = new User();
+			if (user == null) user = new User();  // creates new anonymous User
 			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
@@ -74,7 +74,7 @@ public class Feedback extends HttpServlet {
 				long questionId = Long.parseLong(request.getParameter("QuestionId"));
 				int[] params = {0,0,0,0};
 				try {
-					String[] sparams = request.getParameter("Params").replace("[","").replace("]","").split(",");
+					String[] sparams = request.getParameter("Params").replace("[","").replace("]","").replaceAll("\\s", "").split(",");
 					for (int i=0;i<sparams.length;i++) params[i]=Integer.parseInt(sparams[i]);
 				} catch (Exception e) {}
 				String notes = request.getParameter("Notes");
