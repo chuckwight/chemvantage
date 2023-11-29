@@ -17,6 +17,8 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.ofy;
+
 import java.io.Serializable;
 import java.net.URLEncoder;
 import java.text.Collator;
@@ -59,6 +61,8 @@ public class Question implements Serializable, Cloneable {
 			String learn_more_url;
 			boolean scrambleChoices;
 			boolean strictSpelling;
+	private Integer nSuccessful = null;
+	private Integer nTotalAttmp = null;
 			// Note: the parameters array formerly had the attribute @Transient javax.persistence.Transient
 	@Ignore		int[] parameters = {0,0,0,0};
 	@Index		boolean isActive = false;
@@ -633,83 +637,30 @@ public class Question implements Serializable, Cloneable {
 		}
 		return buf.toString(); 
 	}
-/*
-	String printAnswerToStudents(String studentAnswer) {
-		// use this method to display an example of the question and correct answer, but no detailed solution
-		
-		StringBuffer buf = new StringBuffer("<a name=" + this.id + "></a>");
-		char choice = 'a';
-		switch (getQuestionType()) {
-		case 1: // Multiple Choice
-			buf.append(text + "<br/>");
-			buf.append("<span style='color:#EE0000;font-size: small;'>Select only the best answer:</span><br/>");
-			for (int i = 0; i < nChoices; i++) {
-				buf.append("&nbsp;" + choice + ". "
-						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
-						+ quot2html(choices.get(i))
-						+ (correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>") + "<br/>");
-				choice++;
-			}
-			break;
-		case 2: // True/False
-			buf.append(text + "<br/>");
-			buf.append("<span style='color:#EE0000;font-size: small;'>Select true or false:</span><UL>");
-			buf.append("<LI>" 
-					+ (correctAnswer.equals("true")?"<B>True</B>":"<FONT COLOR=#888888>True</FONT>") 
-					+ "</LI>");
-			buf.append("<LI>" 
-					+ (correctAnswer.equals("false")?"<B>False</B>":"<FONT COLOR=#888888>False</FONT>")
-					+ "</LI>");
-			buf.append("</UL>");
-			break;
-		case 3: // Select Multiple
-			buf.append(text + "<br/>");
-			buf.append("<span style='color:#EE0000;font-size: small;'>Select all of the correct answers:</span><br/>");
-			for (int i = 0; i < nChoices; i++) {
-				buf.append("&nbsp;" + choice + ". "
-						+ (correctAnswer.indexOf(choice)>=0?"<B>":"<FONT COLOR=#888888>")
-						+ quot2html(choices.get(i))
-						+ (correctAnswer.indexOf(choice)>=0?"</B>":"</FONT>") + "<br/>");
-				choice++;
-			}
-			break;
-		case 4: // Fill-in-the-Word
-			buf.append(text + "<br/>");
-			buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct word or phrase:</span><br/>");
-			String[] answers = correctAnswer.split(",");
-			buf.append("<span style='border: 1px solid black'>"
-					+ "<b>" + quot2html(answers[0]) + "</b>"
-					+ "</span>");
-			if (tag.length() > 0) buf.append("&nbsp;" + tag + "<br/>");
-			break;
-		case 5: // Numeric Answer
-			buf.append(parseString(text) + "<br/>");
-			switch (getNumericItemType()) {
-			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact value. <a href=# onclick=\"alert('Your answer must have exactly the correct value. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
-			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
-			case 2: int sf = (int)Math.ceil(-Math.log10(requiredPrecision/100.))+1;
-				buf.append("<span style='color:#EE0000;font-size: small;'>Include at least " + sf + " significant figures in your answer. <a href=# onclick=\"alert('To be scored correct, your answer must agree with the correct answer to at least " + sf + " significant figures. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
-			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
-			default:
-			}			
-			buf.append("<span style='border: 1px solid black'>"
-					+ "<b>" + getCorrectAnswer() + "</b>"
-					+ "</span>");
-			buf.append("&nbsp;" + parseString(tag) + "<br/>");
-			break; 
-		case 6: 
-			break;
-		case 7:
-			buf.append(text);
-			buf.append("<br/>");
-			buf.append("<span style='color:#990000;font-size:small;'>(800 characters max):</span><br/>");
-			buf.append("<textarea id=" + this.id + " name=" + this.id + " rows=5 cols=60 wrap=soft placeholder='Enter your answer here' maxlength=800 >" + studentAnswer + "</textarea><br>");
-		}
-
-		buf.append("<br/>");
-		return buf.toString();
+	
+	public void addSuccess(boolean isCorrect) {
+		if (nTotalAttmp==null) initializeCounters();
+		nTotalAttmp++;
+		if(isCorrect) nSuccessful++;
+		ofy().save().entity(this);
 	}
-*/	
+	
+	public String getSuccess() {
+		if (nTotalAttmp==null) initializeCounters();
+		return String.valueOf(nSuccessful) + "/" + String.valueOf(nTotalAttmp) + "(" + getPctSuccess() + ")";
+	}
+	
+	public int getPctSuccess() {
+		if (nTotalAttmp==null) initializeCounters();
+		return nTotalAttmp==0?0:100*nSuccessful/nTotalAttmp;
+	}
+	
+	private void initializeCounters() {
+		nTotalAttmp = ofy().load().type(Response.class).filter("questionId",id).count();
+		nSuccessful = ofy().load().type(Response.class).filter("questionId",id).filter("score >",0).count();
+		ofy().save().entity(this);
+	}
+	
 	public boolean hasSolution() {
 		if (solution == null) solution = "";
 		return solution.length()>0?true:false;

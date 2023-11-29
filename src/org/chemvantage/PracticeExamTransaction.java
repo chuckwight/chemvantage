@@ -49,7 +49,9 @@ public class PracticeExamTransaction implements Serializable {
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 			Map<Key<Question>,String> questionShowWork = new HashMap<Key<Question>,String>();
 			Map<Key<Question>,Integer> questionScores = new HashMap<Key<Question>,Integer>();
-
+			Map<Key<Question>,String> studentAnswers = new HashMap<Key<Question>,String>();
+			Map<Key<Question>,String> correctAnswers = new HashMap<Key<Question>,String>();
+			
 	PracticeExamTransaction() {}
 
 	PracticeExamTransaction(User user,Assignment a) {

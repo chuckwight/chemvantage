@@ -37,6 +37,8 @@ public class HWTransaction implements Serializable {
 			int possibleScore;
 			String topicTitle;
 			String showWork;
+			String studentAnswer;
+			String correctAnswer;
 	
     HWTransaction() {}
     

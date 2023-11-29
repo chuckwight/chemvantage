@@ -36,6 +36,8 @@ public class QuizTransaction implements Serializable {
 	@Index  long assignmentId;
 			int possibleScore;
 			String topicTitle;
+			String studentAnswer;
+			String correctAnswer;
 			
 	QuizTransaction() {}
 
