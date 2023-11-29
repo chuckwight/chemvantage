@@ -61,8 +61,8 @@ public class Question implements Serializable, Cloneable {
 			String learn_more_url;
 			boolean scrambleChoices;
 			boolean strictSpelling;
-	private Integer nSuccessful = null;
-	private Integer nTotalAttmp = null;
+	private Integer nCorrectAnswers = null;
+	private Integer nTotalAttempts = null;
 			// Note: the parameters array formerly had the attribute @Transient javax.persistence.Transient
 	@Ignore		int[] parameters = {0,0,0,0};
 	@Index		boolean isActive = false;
@@ -638,26 +638,26 @@ public class Question implements Serializable, Cloneable {
 		return buf.toString(); 
 	}
 	
-	public void addSuccess(boolean isCorrect) {
-		if (nTotalAttmp==null) initializeCounters();
-		nTotalAttmp++;
-		if(isCorrect) nSuccessful++;
+	public void addAttempt(boolean isCorrect) {
+		if (nTotalAttempts==null) initializeCounters();
+		nTotalAttempts++;
+		if(isCorrect) nCorrectAnswers++;
 		ofy().save().entity(this);
 	}
 	
 	public String getSuccess() {
-		if (nTotalAttmp==null) initializeCounters();
-		return String.valueOf(nSuccessful) + "/" + String.valueOf(nTotalAttmp) + "(" + getPctSuccess() + ")";
+		if (nTotalAttempts==null) initializeCounters();
+		return String.valueOf(nCorrectAnswers) + "/" + String.valueOf(nTotalAttempts) + "(" + getPctSuccess() + ")";
 	}
 	
 	public int getPctSuccess() {
-		if (nTotalAttmp==null) initializeCounters();
-		return nTotalAttmp==0?0:100*nSuccessful/nTotalAttmp;
+		if (nTotalAttempts==null) initializeCounters();
+		return nTotalAttempts==0?0:100*nCorrectAnswers/nTotalAttempts;
 	}
 	
 	private void initializeCounters() {
-		nTotalAttmp = ofy().load().type(Response.class).filter("questionId",id).count();
-		nSuccessful = ofy().load().type(Response.class).filter("questionId",id).filter("score >",0).count();
+		nTotalAttempts = ofy().load().type(Response.class).filter("questionId",id).count();
+		nCorrectAnswers = ofy().load().type(Response.class).filter("questionId",id).filter("score >",0).count();
 		ofy().save().entity(this);
 	}
 	
