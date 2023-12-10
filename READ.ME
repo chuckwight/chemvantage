@@ -1,0 +1,11 @@
+Instructions for running this project:
+
+To view static HTML and JSP files locally:
+	cd into the directory containing pom.xml
+	mvn clean package exec:java
+
+To deploy on Google Cloud:
+	cd into the directory containing pom.xml
+	edit pom.xml to set project <version> pattern yyyymmddthhmmss
+	gcloud config set project PROJECT_ID
+	mvn clean package appengine:deploy
