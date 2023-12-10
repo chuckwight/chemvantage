@@ -26,7 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.logging.Logger;
+//import java.util.logging.Logger;
 
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
@@ -50,7 +50,7 @@ public class DatastoreExportServlet extends HttpServlet {
 
 	private static final String PROJECT_ID = System.getenv("GOOGLE_CLOUD_PROJECT");
 
-	private static final Logger log = Logger.getLogger(DatastoreExportServlet.class.getName());
+	//private static final Logger log = Logger.getLogger(DatastoreExportServlet.class.getName());
 
 	@Override
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
@@ -133,11 +133,12 @@ public class DatastoreExportServlet extends HttpServlet {
 						String.format(
 								"got error (%d) response %s from %s",
 								connection.getResponseCode(), CharStreams.toString(r), connection.toString());
-				log.warning(errorMessage);
+				//log.warning(errorMessage);
 				response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 				response.setContentType("text/plain");
 				response.getWriter().println(
 						"Failed to initiate export.");
+				Utilities.sendEmail("ChemVantage","admin@chemvantage.org","DataStore Backup Failed",errorMessage);
 				return;   
 			}
 
