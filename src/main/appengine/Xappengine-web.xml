@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appengine-web-app xmlns="http://appengine.google.com/ns/1.0">
+
+  <threadsafe>true</threadsafe>
+<!--    <sessions-enabled>true</sessions-enabled>  -->
+  <runtime>java8</runtime>
+<!--  
+  <basic-scaling>
+    <max-instances>8</max-instances>
+    <idle-timeout>5m</idle-timeout>
+  </basic-scaling>
+  -->
+  
+  <static-files>
+    <include path="/**.html" ></include>
+    <include path="/images/**.png" ></include>
+    <include path="/images/**.jpg" ></include>
+    <include path="/images/**.gif" ></include>
+  </static-files>
+
+  <system-properties>
+    <property name="java.util.logging.config.file" value="WEB-INF/logging.properties"/>
+  </system-properties>
+
+</appengine-web-app>

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta http-equiv='Content-type' content='text/html;charset=iso-8859-1' />
+<meta name='Description' content='An online quiz and homework site' />
+<meta name='Keywords' content='chemistry,learning,online,quiz,homework,video,textbook,open,education' />
+<link rel='icon' type='image/png' href='/images/favicon.png' />
+<title>ChemVantage</title>
+<style>
+ body     {background-color: white; font-family: Calibri,Arial,sans-serif; max-width: 1000px}
+</style>
+</head>
+
+<body>
+
+<div class='top'>
+<a href="/" style='text-decoration: none;'>
+<span style='color: blue; font-size: 2em; font-weight: bold;'>Chem</span><span style='color: red; font-size: 2em; font-weight: bold;'>Vantage</span><br/>
+</a>
+An Open Education Resource for General Chemistry
+</div>
+
+<main>
+<h2>How to Install ChemVantage</h2>
+ChemVantage is certified to comply with 1EdTech specifications for LTI Advantage Complete (version 1.3). To install ChemVantage as an LTI tool in your LMS, 
+you should have administrator privileges in your LMS.<br/><br/>
+
+Please select your LMS from the following options:<br/>
+      <button onclick="document.getElementById('instructions').innerHTML=document.getElementById('blackboard').innerHTML;">blackboard</button>
+      <button onclick="document.getElementById('instructions').innerHTML=document.getElementById('brightspace').innerHTML;">brightspace</button>
+      <button onclick="document.getElementById('instructions').innerHTML=document.getElementById('canvas').innerHTML;">canvas</button>
+      <button onclick="document.getElementById('instructions').innerHTML=document.getElementById('moodle').innerHTML;">moodle</button>
+      <button onclick="document.getElementById('instructions').innerHTML=document.getElementById('sakai').innerHTML;">sakai</button>
+      <button onclick="document.getElementById('instructions').innerHTML=document.getElementById('schoology').innerHTML;">schoology</button>
+      <button onclick="document.getElementById('instructions').innerHTML=document.getElementById('other').innerHTML;">other</button>
+
+<div id='instructions'></div>  <!-- This is where the LMS-specific instructions are displayed -->
+
+
+<!-- Each section below contains instructions that are copied to the 'instructions' div above using the buttons -->
+
+<div id=blackboard style=display:none>
+  <h4>Installation instructions for Blackboard Learn</h4>
+  The institution's account administrator should perform the following steps:
+  <ol>
+    <li>Browse to <a href="https://www.chemvantage.org/Registration.jsp?lms=blackboard">https://www.chemvantage.org/Registration.jsp</a> and complete a brief form to provide your contact information. We will send an email confirmation with a tokenized registration link.</li>
+    <li>In Blackboard, go to System Admin | Integrations: LTI Tool Providers | Register LTI 1.3 Tool</li>
+    <li>Enter the Client ID: be1004de-6f8e-45b9-aae4-2c1370c24e1e</li>
+    <li>Make a copy of the deployment_id and set Tool status: Approved</li>
+    <li>Institution Policies: Send Role, Name, Email; Allow Grade Service and Membership Service</li>
+    <li>Submit</li>
+    <li>Use the tokenized link from the email in step 1 to register your deployment_id with ChemVantage. If the link expired, you can simply repeat step 1 to get another one.</li>
+    <li>Go back to the LTI Tool Providers page, and from the dropdown menu on the ChemVantage app select Manage Placements</li>
+    <li>Click Create Placement
+      <ul>
+        <li>Label: ChemVantage</li>
+        <li>Description: ChemVantage is an Open Educational Resource for General Chemistry</li>
+        <li>Handle: (any unique string)</li>
+        <li>Availability: Yes</li>
+        <li>Deep Linking Tool (do not allow student access)</li>
+        <li>Target Link URI: https://www.chemvantage.org/lti/deeplinks</li>
+        <li>Custom Parameters (leave blank)</li>
+        <li>Submit</li>
+      </ul>
+    </li>
+  </ol>
+  The course instructor can then create any ChemVantage assignment:
+  <ol>
+    <li>Go to the course | Content | Build Content | ChemVantage</li>
+    <li>Select the ChemVantage assignment type and topic</li>
+  </ol>
+</div>
+
+<div id=brightspace style=display:none>
+  <h4>Installation instructions for D2L Brightspace</h4>
+  The detailed Brightspace documentation can be found <a href="https://community.d2l.com/brightspace/kb/articles/18081-tool-registration-deployment-and-links">here</a>.
+  The institution's account administrator should perform the following steps:
+  <ol>
+    <li>Go to Admin Tools | Manage Extensibility</li>
+    <li>Select the LTI Advantage tab and click Register Tool</li>
+    <li>Select Dynamic Registration, enter the tool registration endpoint: https://www.chemvantage.org/lti/registration</li>
+    <li>Check the box for Configure Deployment and click Register</li>
+    <li>Complete the ChemVantage registration form and submit.</li>
+	<li>When the registration is successful, click the link to close the window and return to Brightspace.</li>
+	<li>Select the checkbox for the ChemVantage tool and click Enable.</li>
+  	<li>Go to Admin Tools | External Learning Tools</li>
+  	<li>Under Deployment Name, click the ChemVantage link to edit the deployment</li>
+  	<li>Click Add Org Units to add the Chemistry Department to make ChemVantage visible in General Chemistry courses.</li>
+  	<li>Click Save and Close</li> 	
+  </ol>
+  That's all! You should now be able to go to any course in the Chemistry Department Org and add a ChemVantage assignment by selecting a content module, clicking Add Existing, and selecting ChemVantage.<br/><br/>
+  If the registration fails for any reason, the account administrator still has the option of manual registration:
+  <ol>
+    <li>Browse to <a href="https://www.chemvantage.org/Registration.jsp?lms=brightspace">https://www.chemvantage.org/Registration.jsp</a> and complete a brief form to provide your contact information. We will send an email confirmation with a tokenized registration link.</li>
+    <li>In Brightspace, ensure the Manage LTI Advantage Tool Registrations and Manage LTI Advantage Tool Deployments permissions are set at the organization level.</li>
+    <li>From the Admin Tools menu, click Manage Extensibility. In the LTI Advantage tab, click Register Tool.</li>
+    <li>Choose Standard registration, click Register.</li>
+    <li>Tool Name: ChemVantage</li>
+    <li>Description: ChemVantage is an Open Educational Resource for college-level General Chemistry</li>
+    <li>Domain: https://www.chemvantage.org <span style=color:red>Note: Domains can only be used in one enabled registration at a time. In order to register a tool with a domain that is already in use, you must first disable the existing registration.</span>
+    <li>Redirect URIs: https://www.chemvantage.org/lti/launch https://www.chemvantage.org/lti/deeplinks</li>
+    <li>OpenID Connect Login URL: https://www.chemvantage.org/auth/token</li>
+    <li>Target Link URI: https://www.chemvantage.org/lti/launch</li>
+    <li>LTI version: LTI 1.3</li>
+    <li>Keyset URL: https://www.chemvantage.org/jwks</li>
+    <li>Tool URL: https://www.chemvantage.org/lti/launch</li>
+    <li>Extensions: Deep Linking, Assignment and Grade Services, Names and Role Provisioning Services</li>
+    <li>Deep Linking Content Selection URL: https://www.chemvantage.org/lti/deeplinks</li>
+    <li>Under Roles, choose to Context role information. Sending Institutional role information is optional. Setting the Deployment security to Anonymous will work; however, instructors will be unable to verify or synchronize ChemVantage scores to the Brightspace grade book using this setting.</li>
+    <li>Substitution Parameters: resource_link_id_history=$ResourceLink.id.history</li>
+    <li>Custom parameters: (none)</li>
+    <li>Click Register</li>
+    <li>Review the configuration details to obtain the client_id and deployment_id, and click the tokenized link in the email confirmation from step 1 to register them with ChemVantage. If the link expired, you can simply repeat step 1 to get another one.</li>
+  </ol>
+</div>
+
+<div id=canvas style=display:none>
+  <h4>Installation instructions for Instructure Canvas</h4>
+  The institution's account administrator should perform the following steps:
+  <ol>
+  <li>Browse to <a href="https://www.chemvantage.org/Registration.jsp?lms=canvas">https://www.chemvantage.org/Registration.jsp</a> and complete a brief form to provide your contact information. We will send an email confirmation with a tokenized registration link.</li>
+  <li>Configure a new LTI Developer Key for your Canvas Account (see detailed instructions <a href=>here</a>)
+  <li>Use the following Key Settings:
+  <ul>
+    <li>Key Name: ChemVantage</li>
+    <li>Owner Email: admin@chemvantage.org</li>
+    <li>Redirect URIs:<br/>https://www.chemvantage.org/lti/launch<br/>https://www.chemvantage.org/lti/deeplinks</li>
+    <li>Configure Method: Enter URL</li>
+    <li>JSON URL: https://www.chemvantage.org/lti/registration?UserRequest=config</li>
+  </ul></li>
+  <li>Click Save</li>
+  <li>Copy or write down the client_id and deployment_id created in step 2. This is the tricky part, because Canvas doesn't make it easy. 
+      Canvas uses the developer key as the client_id, so it can be viewed from the list of developer keys. It is a numeric value that looks something like 32570000000000041. 
+      The deployment_id can be found in Settings | Apps | App Configurations by opening the settings menu for ChemVantage. It is a compound value that consists of a number 
+      and a hex string separated by a colon and looks something like 10408:7db438070728c02373713c12c73869b3af470b68.</li>
+  <li>Add ChemVantage as an External App to your account using the client_id created in step 2 (see detailed instructions <a href=https://community.canvaslms.com/docs/DOC-16730-42141110273>here</a>)
+  <li>Click the tokenized link in the email confirmation from step 1 to register the client_id and deployment_id with ChemVantage. If the link expired, you can simply repeat step 1 to get another one.</li>
+  </ol>
+  
+  The course instructor can then create any ChemVantage assignment as follows:
+  <ol>
+    <li>Create a new Canvas assignment with the following recommended parameters:</li>
+    <li>Name: (as appropriate, e.g. Quiz - Heat and Enthalpy)</li>
+    <li>Points: 10 for quiz or homework; 5 for video, poll or reading assignment; 100 for placement exam or practice exam</li>
+    <li>Submission Type: External Tool</li>
+    <li>External Tool URL: Find ChemVantage or enter https://www.chemvantage.org/lti/launch</li>
+    <li>Save or Save and Publish</li>
+    <li>When you launch the assignment, you may use the links on the Instructor page to customize it for your class.</li>
+  </ol>
+</div>
+
+<div id=moodle style=display:none>
+  <h4>Installation instructions for Moodle</h4>
+  The detailed Moodle documentation can be found <a href="https://community.d2l.com/brightspace/kb/articles/18081-tool-registration-deployment-and-links">here</a>.
+  The institution's account administrator should perform the following steps:
+  <ol>
+    <li>Go to Site Administration and select the Plugins tab</li>
+    <li>Click External tool | Manage Tools</li>
+    <li>In the Add Tool box, enter the Tool URL: https://www.chemvantage.org/lti/registration and click Add LTI Advantage</li>
+    <li>Complete the ChemVantage registration form and submit.</li>
+	<li>When the registration is successful, click the link to close the window and return to Moodle.</li>
+	<li>Find the new ChemVantage tool and click Activate.</li>
+   </ol>
+  That's all! You should now be able to go to any course and add a ChemVantage assignment by turning Edit Mode on, clicking Add an Activity or Resource, and 
+  selecting External Tool. Under Preconfigured Tool, select ChemVantage and click Select Content.<br/><br/>
+  If the registration fails for any reason, the account administrator still has the option of manual registration:
+  <ol>
+    <li>Browse to <a href="https://www.chemvantage.org/Registration.jsp?lms=moodle">https://www.chemvantage.org/Registration.jsp</a> and complete a brief form to provide your contact information. We will send an email confirmation with a tokenized registration link.</li>
+    <li>As an admin user, go to "Site administration > Plugins > External tool > Manage tools"</li>
+    <li>Click the link to "Configure a tool manually"</li>
+    <li>External Tool Configuration
+    <ul>
+      <li>Tool Name: ChemVantage</li>
+      <li>Tool URL: https://www.chemvantage.org/lti/launch</li>
+      <li>Tool Description: ChemVantage is an Open Educational Resource for teaching and learning college-level General Chemistry</li>
+      <li>LTI version: LTI 1.3</li>
+      <li>Public Key Type: Keyset URL</li>
+      <li>Public Keyset: https://www.chemvantage.org/jwks</li>
+      <li>Initiate Login URL: https://www.chemvantage.org/auth/token</li>
+      <li>Redirection URIs:<br/>https://www.chemvantage.org/lti/launch<br/>https://www.chemvantage.org/lti/deeplinks</li>
+      <li>Custom parameters: (none)</li>
+      <li>Check 'Supports Deep Linking'</li>
+      <li>Content Selection URL: https://www.chemvantage.org/lti/deeplinks</li>
+      <li>Services | LTI Assignment and Grade Services: select Use for grade sync only</li>
+      <li>Services | LTI Names and Role Provisioning: select Use this service</li>
+      <li>Privacy | check Force SSL</li>
+      <li>Save Changes</li>
+    </ul></li>
+    <li>When you have finished the configuration, Moodle generates a preconfigured tool. You must activate it and then click 'View configuration details'. 
+        When you have these details in hand, including the client_id and deployment_id, click the tokenized link in the email confirmation from step 1 to register the configuration details with ChemVantage. If the link expired, you can simply repeat step 1 to get another one.</li>
+  </ol>
+  The course instructor can then create any ChemVantage assignment as follows:
+  <ol>
+    <li>In any course, turn Edit Mode on and click 'Add an activity or resource'</li>
+    <li>Select External tool</li>
+    <li>Activity Name: (as appropriate, e.g. Quiz - Heat and Enthalpy)</li>
+    <li>Preconfigured Tool: select ChemVantage</li>
+    <li>Click 'Select Content' and choose the assignment type and topics from the ChemVantage popup window</li>
+    <li>Configure Grade and Privacy settings as desired</li>
+    <li>When you launch the assignment, you may use the links on the Instructor page to customize it for your class.</li>
+  </ol>
+  
+</div>
+
+<div id=sakai style=display:none>
+  <h4>Installation instructions for Sakai</h4>
+  First of all, Sakai supports LTI Advantage Dynamic Registration! The Sakai documentation can be found <a href=https://sakai.screenstepslive.com/s/sakai_help/m/108646/l/1502032-how-do-i-set-up-an-lti-advantage-tool-using-auto-configuration>here</a>. 
+  We strongly encourage you to try that first (see above). The institution's account administrator still has the option of manual registration, but we don't have detailed instructions for this. 
+  <ol>
+    <li>Browse to <a href="https://www.chemvantage.org/Registration.jsp?lms=sakai">https://www.chemvantage.org/Registration.jsp</a> and complete a brief form to provide your contact information. We will send an email confirmation with a tokenized registration link.</li>
+  <li>Use the following information to configure your LMS to connect to ChemVantage:
+    <ul>
+      <li>Name: ChemVantage</li>
+      <li>Description: ChemVantage is an Open Educational Resource for General Chemistry</li>
+      <li>Tool Domain URL: https://www.chemvantage.org
+      <li>Tool Redirect URL: https://www.chemvantage.org/lti/launch</li>
+      <li>Tool Deep Linking URL: https://www.chemvantage.org/lti/deeplinks</li>
+      <li>OIDC Login Initiation URL: https://www.chemvantage.org/auth/token</li>
+      <li>JSON Web Key Set URL: https://www.chemvantage.org/jwks</li>
+    </ul></li>
+    <li>When you have finished the configuration, activate the ChemVantage tool in your LMS and open a window to view the configuration details. 
+        When you have these details in hand, including the client_id and deployment_id, click the tokenized link in the email confirmation from step 1 to register the configuration details with ChemVantage. If the link expired, you can simply repeat step 1 to get another one.</li>
+  </ol>
+</div>
+
+<div id=schoology style=display:none>
+  <h4>Installation instructions for PowerSchool Schoology</h4>
+  <ol>
+    <li>Click the App Center icon, then select App Center.</li>
+    <li>Locate ChemVantage and click the title</li>
+    <li>Click Install LTI 1.3 App > I Agree > Continue > Add to Organization</li>
+    <li>You will be directed to Organization Apps to continue the installation.</li>
+    <li>Click the Install/Remove button for ChemVantage</li>
+    <li>Select All Users, All Courses, or areas where you want to install ChemVantage. Then Submit.</li>
+    <li>Click Configure and copy the Deployment ID for ChemVantage. It should be two 10-digit numbers separated by a hyphen. You will need it to complete the registration.</li>
+    <li>Browse to <a href="https://www.chemvantage.org/Registration.jsp?lms=schoology">https://www.chemvantage.org/Registration.jsp</a> and complete a brief form to provide your contact information. We will send an email confirmation with a tokenized registration link.</li>
+    <li>Click the tokenized link in the email confirmation to register the Deployment ID and other configuration details with ChemVantage. If the link expires, you can simply repeat the previous step to get another one.</li>
+ </ol>
+ 
+ The course instructor can then create any ChemVantage assignment as follows:
+  <ol>
+    <li>In any course, click 'Add Materials' and select ChemVantage</li>
+    <li>Choose the assignment type and topics from the ChemVantage popup window</li>
+    <li>Use the Schoology assignment settings to edit the Grading Configuration and points</li>
+    <li>When you launch the assignment, you may use the links on the ChemVantage Instructor page to customize it for your class.</li>
+  </ol>
+  
+</div>
+
+<div id=other style=display:none>
+  <h4>Installation instructions for other LMS platforms</h4>
+  <ol>
+    <li>Browse to <a href="https://www.chemvantage.org/Registration.jsp?lms=other">https://www.chemvantage.org/Registration.jsp</a> and complete a brief form to provide your contact information. We will send an email confirmation with a tokenized registration link.</li>
+    <li>Use the following information to configure your LMS to connect to ChemVantage:
+    <ul>
+      <li>Name: ChemVantage</li>
+      <li>Description: ChemVantage is an Open Educational Resource for General Chemistry</li>
+      <li>Tool Domain URL: https://www.chemvantage.org
+      <li>Tool Redirect URL: https://www.chemvantage.org/lti/launch</li>
+      <li>Tool Deep Linking URL: https://www.chemvantage.org/lti/deeplinks</li>
+      <li>OIDC Login Initiation URL: https://www.chemvantage.org/auth/token</li>
+      <li>JSON Web Key Set URL: https://www.chemvantage.org/jwks</li>
+      <li>It's rare, but in case you need an X509-style public key instead of the JWKS, you can get it <a href=https://www.chemvantage.org/jwks?fmt=X509&kid=eabd5bdc-2a1f-4147-80d5-4cd4f35f0092>here</a>.</li>
+    </ul></li>
+    <li>When you have finished the configuration, activate the ChemVantage tool in your LMS and open a window to view the configuration details. 
+        When you have these details in hand, including the client_id and deployment_id, click the tokenized link in the email confirmation from step 1 to register the configuration details with ChemVantage. If the link expired, you can simply repeat step 1 to get another one.</li>
+  </ol>
+</div>
+
+<br/><br/>
+If you have any difficulty with these instructions, please send email to admin@chemvantage.org so we can help you!<br/>
+<br/>
+Chuck Wight<br/>
+ChemVantage LLC<br/>
+<br/><br/>
+
+</main>
+<footer><hr/><img style='padding-left: 15px; vertical-align: middle;width:30px' src=images/CVLogo.png alt='ChemVantage logo' />&nbsp;
+<a href=/index.html style='text-decoration: none;'><span style='color: blue;font-weight: bold;'>Chem</span><span style='color: #EE0000;font-weight: bold;'>Vantage</span></a> | 
+<a href=/about.html#terms>Terms and Conditions of Use</a> | 
+<a href=/about.html#privacy>Privacy Policy</a> | 
+<a href=/about.html#copyright>Copyright</a></footer>
+
+</body>
+</html>
