@@ -922,6 +922,7 @@ class MathParserImpl implements IMathParser {
 	 * @param formula
 	 */
 	private Node createVarNode(FastStr formula) {
+		@SuppressWarnings("unlikely-arg-type")
 		Variable variable = (Variable)m_Variables.get(formula);
     if (variable!=null){
       //optimize constant nodes right away:      
@@ -1520,7 +1521,8 @@ class _TTwoParamParam {
 class Variable {
   public boolean isConstant;
   public double value;
-  private Variable(){
+  @SuppressWarnings("unused")
+private Variable(){
   }
   public Variable(double newVal){
     value = newVal;
