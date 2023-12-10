@@ -1,0 +1,55 @@
+runtime: java11
+instance_class: F1
+
+handlers:
+
+- url: /Admin
+  script: Admin.java
+  secure: always
+  login: admin
+
+- url: /DataStoreCleaner
+  script: DataStoreCleaner.java
+  secure: always
+  login: admin
+
+- url: /cloud-datastore-export
+  script: DataStoreExportServlet.java
+  secure: always
+  login: admin
+
+- url: /Edit
+  script: Edit.java
+  secure: always
+  login: admin
+
+- url: /EraseEntity
+  script: EraseEntity.java
+  secure: always
+  login: admin
+
+- url: /contacts
+  script: ManageContacts.java
+  secure: always
+  login: admin
+
+- url: /messages
+  script: ManageMessages.java
+  secure: always
+  login: admin
+
+- url: /ReportScore
+  script: ReportScore.java
+  secure: always
+  login: admin
+
+- url: /ResponseServlet
+  script: ResponseServlet.java
+  secure: always
+  login: admin
+
+- url: /.*
+  secure: always
+  redirect_http_response_code: 301
+  script: auto
+
