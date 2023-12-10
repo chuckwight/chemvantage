@@ -78,7 +78,7 @@ public class LTIv1p3Launch extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
-		response.sendRedirect("/lti/registration");
+		response.sendRedirect(Subject.serverUrl + "/lti/registration");
 	}
 
 	@Override
@@ -102,7 +102,6 @@ public class LTIv1p3Launch extends HttpServlet {
 					if (!refresh && myAssignment.isValid()) {
 						myAssignment.valid = new Date();
 						ofy().save().entity(myAssignment).now();  // we will need this in a few milliseconds					
-						//response.sendRedirect("/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
 						launchResourceRequest(user,myAssignment,request,response);
 					} else {  // send the user back to the resourcePickerForm
 						response.getWriter().println(Subject.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,request) + Subject.footer);
@@ -341,7 +340,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				response.getWriter().println(Subject.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,request) + Subject.footer);
 				return;
 			} else if (!isPremiumUser) {
-				String url = "/checkout0.jsp?sig=" + user.getTokenSignature() + "&d=" + d.platform_deployment_id;
+				String url = Subject.serverUrl + "/checkout0.jsp?sig=" + user.getTokenSignature() + "&d=" + d.platform_deployment_id;
 				if ("PlacementExam".equals(myAssignment.assignmentType)) url += "&n=1";
 				else url += "&n=5";
 				response.sendRedirect(url);
@@ -387,7 +386,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			//String state = request.getParameter("state");
 			//String nonce = JWT.decode(state).getClaim("nonce").asString();			
 			//out.println(validationPage(user,myAssignment.assignmentType,nonce));
-			response.sendRedirect(request.getServerName() + "/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
+			response.sendRedirect(Subject.serverUrl + "/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
 		}
 	}
 	

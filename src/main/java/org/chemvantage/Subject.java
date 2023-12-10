@@ -23,9 +23,11 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.text.DecimalFormat;
 
+import com.google.cloud.ServiceOptions;
 import com.googlecode.objectify.NotFoundException;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
+import com.googlecode.objectify.annotation.Ignore;
 
 @Entity
 public class Subject {
@@ -41,7 +43,9 @@ public class Subject {
 	private int nStarReports;
 	private double avgStars;
 	private static Subject s;
-	
+	@Ignore public static final String projectId = ServiceOptions.getDefaultProjectId();
+	@Ignore public static final String serverUrl =  "https://" + (projectId.equals("dev-vantage-hrd")?"dev-vantage-hrd.appspot.com":"www.chemvantage.org");
+
 	private Subject() {}
 	
 	private static void refresh() {

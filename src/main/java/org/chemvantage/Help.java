@@ -91,7 +91,7 @@ public class Help extends HttpServlet {
 			out.println(Subject.header("ChemVantage Help Page") + Subject.banner + displayHelpUrl(jwt,iss) + Subject.footer);
 			
 		} catch (Exception e) {
-			response.sendRedirect("/Logout");
+			response.sendRedirect(Subject.serverUrl + "/Logout");
 		}
 	}
 	

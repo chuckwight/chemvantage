@@ -85,7 +85,7 @@ public class Feedback extends HttpServlet {
 				out.println((user.isChemVantageAdmin()?Subject.getHeader(user):Subject.header("ChemVantage Feedback Form")) + feedbackForm(user) + Subject.footer);
 			}
 		} catch (Exception e) {
-			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
+			response.sendRedirect(Subject.serverUrl + "/Logout?sig=" + request.getParameter("sig"));
 		}
 	}
 
@@ -113,7 +113,7 @@ public class Feedback extends HttpServlet {
 			}
 			out.println(Subject.footer);
 		} catch (Exception e) {
-			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
+			response.sendRedirect(Subject.serverUrl + "/Logout?sig=" + request.getParameter("sig"));
 		}
 	}
 

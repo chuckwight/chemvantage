@@ -95,18 +95,18 @@ public class ManageContacts extends HttpServlet {
 			switch (userRequest) {
 			case "Add New Contact":
 				addNewContact(request);
-				response.sendRedirect("/contacts?Email=" + request.getParameter("Email"));
+				response.sendRedirect(Subject.serverUrl + "/contacts?Email=" + request.getParameter("Email"));
 				break;
 			case "Paste New Contact":
 				String email = pasteNewContact(request);
-				response.sendRedirect("/contacts?Email=" + email);
+				response.sendRedirect(Subject.serverUrl + "/contacts?Email=" + email);
 			case "Save Revised Contact":
 				saveRevisedContact(request);
-				response.sendRedirect("/contacts?Email=" + request.getParameter("Email"));
+				response.sendRedirect(Subject.serverUrl + "/contacts?Email=" + request.getParameter("Email"));
 				break;
 			case "Delete This Contact":
 				deleteContact(request);
-				response.sendRedirect("/contacts?Email=" + request.getParameter("Email"));
+				response.sendRedirect(Subject.serverUrl + "/contacts?Email=" + request.getParameter("Email"));
 				break;
 			default: throw new Exception("Bad User request.");
 			}

@@ -92,7 +92,7 @@ public class ItemBank extends HttpServlet {
 							+ "<a href='" + url + "'>" + url + "</a>";
 					Utilities.sendEmail(c.getFullName(),c.email,"ChemVantage Question Item Bank",messageBody);
 					String msg = "Thank+you.+A+personalized+coded+access+link+has+been+sent+to+you+at+" + c.email;
-					response.sendRedirect("/itembank?msg=" + msg);
+					response.sendRedirect(Subject.serverUrl + "/itembank?msg=" + msg);
 				} else {
 					debug.append("applicant:");
 					String messageBody = "The person below has requested access to the ChemVantage question item bank:<br/>"
@@ -106,10 +106,10 @@ public class ItemBank extends HttpServlet {
 					debug.append("3");
 					String msg = URLEncoder.encode("Thank you. We will evaluate your request and send a personalized access link to " + c.email,"UTF-8");
 					debug.append("4");
-					response.sendRedirect("/itembank?msg=" + msg);
+					response.sendRedirect(Subject.serverUrl + "/itembank?msg=" + msg);
 				}
 			} catch (Exception e) {
-				response.sendRedirect("/itembank?msg=" + URLEncoder.encode("Registration failed. " + (e.getMessage()==null?e.toString():e.getMessage()),"UTF-8"));
+				response.sendRedirect(Subject.serverUrl + "/itembank?msg=" + URLEncoder.encode("Registration failed. " + (e.getMessage()==null?e.toString():e.getMessage()),"UTF-8"));
 			}
 			return;
 		case "Approve":

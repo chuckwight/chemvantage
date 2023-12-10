@@ -53,7 +53,7 @@
 			end = v.breaks[segment]; // play to this value and stop
 
 	} catch (Exception e) {
-		response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
+		response.sendRedirect(Subject.serverUrl + "/Logout?sig=" + request.getParameter("sig"));
 	}
 %>
 

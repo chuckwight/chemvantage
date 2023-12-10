@@ -88,7 +88,7 @@ public class VideoQuiz extends HttpServlet {
 			case "ShowVideo":
 				String projectId = ServiceOptions.getDefaultProjectId();
 				String url = projectId.equals("chem-vantage-hrd")?"https://www.chemvantage.org":"https://dev-vantage-hrd.appspot.com";
-				url += "/Video.jsp?VideoId=" + videoId + "&sig=" + user.getTokenSignature();
+				url += Subject.serverUrl + "/Video.jsp?VideoId=" + videoId + "&sig=" + user.getTokenSignature();
 				response.sendRedirect(url);
 				break;
 			case "ShowQuizlet":
@@ -102,10 +102,10 @@ public class VideoQuiz extends HttpServlet {
 			break;
 			default:
 				if (user.isInstructor()) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
-				else response.sendRedirect("/Video.jsp?VideoId=" + videoId + "&sig=" + user.getTokenSignature());
+				else response.sendRedirect(Subject.serverUrl + "/Video.jsp?VideoId=" + videoId + "&sig=" + user.getTokenSignature());
 			}			
 		} catch (Exception e) {
-			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
+			response.sendRedirect(Subject.serverUrl + "/Logout?sig=" + request.getParameter("sig"));
 		}
 	}
 
@@ -120,7 +120,7 @@ public class VideoQuiz extends HttpServlet {
 			
 			out.println(scoreQuizlet(user,request));
 		} catch (Exception e) {
-			response.sendRedirect("/Logout?sig=" + request.getParameter("sig"));
+			response.sendRedirect(Subject.serverUrl + "/Logout?sig=" + request.getParameter("sig"));
 		}
 	}
 

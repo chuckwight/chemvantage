@@ -112,7 +112,7 @@ public class LTIRegistration extends HttpServlet {
 				out.println(Subject.header("LTI Registration") + clientIdForm(token) + Subject.footer);
 			} else {
 				String queryString = request.getQueryString();
-				String registrationURL = "/Registration.jsp" + (queryString==null?"":"?" + queryString);
+				String registrationURL = Subject.serverUrl + "/Registration.jsp" + (queryString==null?"":"?" + queryString);
 				response.sendRedirect(registrationURL);
 			}
 		} catch (Exception e) {
@@ -162,7 +162,7 @@ public class LTIRegistration extends HttpServlet {
 			}
 		} catch (Exception e) {
 			String message = (e.getMessage()==null?e.toString():e.getMessage());
-			String registrationURL = "/Registration.jsp?message=" + URLEncoder.encode(message,"utf-8");
+			String registrationURL = Subject.serverUrl + "/Registration.jsp?message=" + URLEncoder.encode(message,"utf-8");
 			Enumeration<String> enumeration = request.getParameterNames();
 			while(enumeration.hasMoreElements()){
 	            String parameterName = enumeration.nextElement();
