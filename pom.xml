@@ -2,17 +2,20 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.chemvantage</groupId>
   <artifactId>chemvantage</artifactId>
-  <version>cloud8</version>
+  <version>202312070753</version>
   <name>ChemVantage</name>
-  <description>A free resource for teaching and learning college-level General Chemistry.</description>
-  <properties>           
-        <appengine.maven.plugin.version>2.1.0</appengine.maven.plugin.version>           
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>           
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>           
-        <maven.compiler.source>1.8</maven.compiler.source>           
-        <maven.compiler.target>1.8</maven.compiler.target>           
-        <maven.compiler.showDeprecation>true</maven.compiler.showDeprecation>         
-  </properties>     
+  <description>An Open Educational Resource for teaching and learning college-level General Chemistry.</description>
+   <properties>
+    <!-- App Engine currently supports Java 11 -->
+    <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <jetty.version>9.4.31.v20200723</jetty.version>
+
+    <!-- Project-specific properties -->
+    <exec.mainClass>org.chemvantage.ServerMain</exec.mainClass>
+    <googleCloudProjectId>GCLOUD_CONFIG</googleCloudProjectId>
+  </properties>
   <dependencyManagement>           
         <dependencies>                 
             <dependency>                       
@@ -25,125 +28,153 @@
         </dependencies>
   </dependencyManagement>
   <dependencies>
-           <!-- Compile/runtime dependencies -->           
-        <dependency>                  
-            <groupId>javax.servlet</groupId>                  
-            <artifactId>javax.servlet-api</artifactId>                 
-            <version>4.0.1</version>                  
-            <scope>provided</scope>                
-        </dependency>            
-        <dependency>
-            <groupId>javax.servlet.jsp</groupId>                  
-            <artifactId>javax.servlet.jsp-api</artifactId>                  
-            <version>2.3.3</version>                  
-            <scope>provided</scope>               
-        </dependency>            
-        <dependency>                 
-            <groupId>jstl</groupId>
-            <artifactId>jstl</artifactId>                 
-            <version>1.2</version>                
-        </dependency>            
-        <dependency>
-            <groupId>com.googlecode.objectify</groupId>
-            <artifactId>objectify</artifactId>
-            <version>6.0.7</version>
-        </dependency>
-        <dependency>
-            <groupId>com.google.appengine</groupId>
-            <artifactId>appengine-api-1.0-sdk</artifactId>
-            <version>2.0.5</version>
-        </dependency>
-        <dependency>
-            <groupId>com.google.endpoints</groupId>
-            <artifactId>endpoints-framework</artifactId>
-            <version>2.2.2</version>
-        </dependency>
-        <dependency>
-  		<groupId>com.google.oauth-client</groupId>
-  			<artifactId>google-oauth-client</artifactId>
-  			<version>1.34.1</version>
-		</dependency>
-		<dependency>
-    		<groupId>com.auth0</groupId>
-    		<artifactId>java-jwt</artifactId>
-    		<version>4.0.0</version>
-		</dependency>
-        <dependency>
-    		<groupId>com.auth0</groupId>
-    		<artifactId>jwks-rsa</artifactId>
-    		<version>0.21.1</version>
-		</dependency>
-		<dependency>
-			<groupId>com.google.code.gson</groupId>
-			<artifactId>gson</artifactId>
-			<version>2.9.0</version>
-		</dependency>
-		<dependency>
-    		<groupId>org.eclipse.jetty</groupId>
-    		<artifactId>apache-jsp</artifactId>
-    		<version>9.4.52.v20230823</version>
-		</dependency>  
-    </dependencies>
+    <!-- Java Servlets API -->
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>javax.servlet-api</artifactId>
+      <version>4.0.1</version>
+    </dependency>
+	<dependency>
+      <groupId>javax.activation</groupId>
+      <artifactId>activation</artifactId>
+      <version>1.1.1</version>
+	</dependency>
+	
+    <!-- Jetty -->
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-server</artifactId>
+      <version>${jetty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-annotations</artifactId>
+      <version>${jetty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>apache-jsp</artifactId>
+      <version>${jetty.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>apache-jstl</artifactId>
+      <version>${jetty.version}</version>
+      <type>pom</type>
+    </dependency>
+
+    <!-- Objectify -->
+    <dependency>
+      <groupId>com.googlecode.objectify</groupId>
+      <artifactId>objectify</artifactId>
+      <version>6.0.7</version>
+    </dependency>
     
-  <build>
-  		<!-- for hot reload of the web application-->            
-        <outputDirectory>${project.build.directory}/${project.build.finalName}/WEB-INF/classes</outputDirectory>
-        <sourceDirectory>src</sourceDirectory>
-    	<resources>
-      		<resource>
-        		<directory>src</directory>
-        		<excludes>
-          			<exclude>**/*.java</exclude>
-        		</excludes>
-      		</resource>
-      		<resource>
-        		<directory>war/WEB-INF/lib</directory>
-        		<excludes>
-          		<exclude>**/*.java</exclude>
-        		</excludes>
-      		</resource>
-    	</resources>
+    <!-- App Engine Legacy Bundled Services -->
+    <dependency>
+      <groupId>com.google.appengine</groupId>
+      <artifactId>appengine-api-1.0-sdk</artifactId>
+      <version>2.0.22</version>
+    </dependency>
+	
+	<!-- Code for JWT and JSON -->
+	<dependency>
+      <groupId>com.auth0</groupId>
+      <artifactId>java-jwt</artifactId>
+      <version>4.0.0</version>
+	</dependency>
+	<dependency>
+      <groupId>com.auth0</groupId>
+      <artifactId>jwks-rsa</artifactId>
+      <version>0.21.1</version>
+	</dependency>
+	<dependency>
+	  <groupId>com.google.code.gson</groupId>
+	  <artifactId>gson</artifactId>
+	  <version>2.9.0</version>
+	</dependency>
+	
+	<!-- Google Cloud Tasks bom -->
+	<dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-tasks</artifactId>
+    </dependency>
+    
+    <!-- SendGrid API third=party email sender trough GCP -->
+    <dependency>
+      <groupId>com.sendgrid</groupId>
+      <artifactId>sendgrid-java</artifactId>
+      <version>4.10.1</version>
+	</dependency>
+
+  </dependencies>
+    
+ <build>
+    <plugins>
+      <!-- Copy static resources like html files into the output jar file. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>2.7</version>
+        <executions>
+          <execution>
+            <id>copy-web-resources</id>
+            <phase>compile</phase>
+            <goals><goal>copy-resources</goal></goals>
+            <configuration>
+              <outputDirectory>
+                ${project.build.directory}/classes/META-INF/resources
+              </outputDirectory>
+              <resources>
+                <resource><directory>./src/main/webapp</directory></resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Package everything into a single executable jar file. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.2.4</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals><goal>shade</goal></goals>
+            <configuration>
+			  <createDependencyReducedPom>false</createDependencyReducedPom>
+              <filters>
+                <filter>
+                  <artifact>*:*</artifact>
+                    <excludes>
+                      <exclude>META-INF/*.SF</exclude>
+                      <exclude>META-INF/*.DSA</exclude>
+                      <exclude>META-INF/*.RSA</exclude>
+                    </excludes>
+                </filter>
+              </filters>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>${exec.mainClass}</mainClass>
+                </transformer>
+              </transformers>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- App Engine plugin for deploying to the live site. -->
+      <plugin>
+        <groupId>com.google.cloud.tools</groupId>
+        <artifactId>appengine-maven-plugin</artifactId>
+        <version>2.2.0</version>
+        <configuration>
+          <projectId>${googleCloudProjectId}</projectId>
+          <version>${project.version}</version>
+        </configuration>
+      </plugin>
       
-		<plugins>                 
-            <plugin>
-            	<groupId>com.google.cloud.tools</groupId>
-            	<artifactId>appengine-maven-plugin</artifactId>
-            	<version>2.0.0</version>
-            	<configuration>
-                	<projectId>chem-vantage-hrd.appspot.com</projectId>
-                	<version>1</version>
-            	</configuration>
-        	</plugin>
-        	           
-            <plugin>                       
-                <groupId>org.apache.maven.plugins</groupId>                       
-                <artifactId>maven-enforcer-plugin</artifactId>                       
-                <version>3.0.0-M2</version>                       
-                <executions>                             
-                    <execution>                                   
-                        <id>enforce-maven</id>                                   
-                        <goals>                                         
-                            <goal>enforce</goal>                                       
-                        </goals>                                   
-                        <configuration>                                         
-                            <rules>                                               
-                                <!-- appengine-maven-plugin requires Maven 3.5.0 -->                                               
-                                <requireMavenVersion>                                                     
-                                    <version>3.5.0</version>                                                   
-                                </requireMavenVersion>                                             
-                            </rules>                                        
-                        </configuration>                                 
-                    </execution>                           
-                </executions>                     
-            </plugin>            
-            
-            <plugin>
-   	 			<groupId>com.google.cloud.tools</groupId>
-    			<artifactId>endpoints-framework-maven-plugin</artifactId>
-    			<version>2.0.1</version>
-			</plugin>     
-    	    
-       </plugins>
-  </build>
-  
+    </plugins>
+  </build>   
 </project>            
