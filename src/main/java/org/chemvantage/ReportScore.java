@@ -90,17 +90,19 @@ public class ReportScore extends HttpServlet {
 				String reply = LTIMessage.postUserScore(s,userId);
 				debug.append("6");
 				
-				if (reply.contains("Success") || reply.contains("422")) out.println(response);
+				if (reply.contains("Success") || reply.contains("422")) out.println(reply);
 				else {
-					String message = "User " + userId + " earned a score of " + s.getPctScore() + "% on assignment "
+					User user = ofy().load().type(User.class).filter("hashedId",Subject.hashId(userId)).first().now();
+					if (user.isInstructor()) return; // no harm; LMS refused to post instructor score
+					debug.append("User " + userId + " earned a score of " + s.getPctScore() + "% on assignment "
 							+ a.id + "; however, the score could not be posted to the LMS grade book. "
-							+ "The response from the " + a.domain + " LMS was: " + reply;
-					Utilities.sendEmail("ChemVantage","admin@chemvantage.org","ReportScore Failure",message);
+							+ "The response from the " + a.domain + " LMS was: " + reply);
 				}
 				debug.append("7");
 			}
 		} catch (Exception e) {
 			Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Failed ReportScore",e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString());
+			response.sendError(401,"Failed ReportScore");
 		}
 	}	
 }

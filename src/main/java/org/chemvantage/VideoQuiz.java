@@ -37,7 +37,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.cloud.ServiceOptions;
 import com.google.gson.JsonObject;
 import com.googlecode.objectify.Key;
 
@@ -86,10 +85,7 @@ public class VideoQuiz extends HttpServlet {
 			
 			switch (userRequest) {
 			case "ShowVideo":
-				String projectId = ServiceOptions.getDefaultProjectId();
-				String url = projectId.equals("chem-vantage-hrd")?"https://www.chemvantage.org":"https://dev-vantage-hrd.appspot.com";
-				url += Subject.serverUrl + "/Video.jsp?VideoId=" + videoId + "&sig=" + user.getTokenSignature();
-				response.sendRedirect(url);
+				response.sendRedirect(Subject.serverUrl + "/Video.jsp?VideoId=" + videoId + "&sig=" + user.getTokenSignature());
 				break;
 			case "ShowQuizlet":
 				out.println(showQuizlet(user,videoId,segment));

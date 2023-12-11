@@ -46,7 +46,6 @@ import javax.servlet.http.HttpServletResponse;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.google.cloud.ServiceOptions;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -621,9 +620,8 @@ public class LTIRegistration extends HttpServlet {
 		responseTypes.add("id_token");
 		regJson.add("response_types", responseTypes);
 		String iss = null;
-		String project_id = ServiceOptions.getDefaultProjectId();
 		String domain = null;
-		switch (project_id) {
+		switch (Subject.projectId) {
 		case "dev-vantage-hrd":
 			iss = "https://dev-vantage-hrd.appspot.com";
 			domain = "dev-vantage-hrd.appspot.com";
@@ -854,9 +852,8 @@ public class LTIRegistration extends HttpServlet {
 	
 	static void sendApprovalEmail(Deployment d, HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		String project_id = ServiceOptions.getDefaultProjectId();
 		String iss = null;
-		switch (project_id) {
+		switch (Subject.projectId) {
 		case "dev-vantage-hrd":
 			iss = "https://dev-vantage-hrd.appspot.com";
 			break;

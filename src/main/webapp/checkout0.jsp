@@ -3,7 +3,7 @@
 
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ page import="static com.googlecode.objectify.ObjectifyService.ofy" %>
-<%@ page import="java.util.Date,java.text.DateFormat,com.googlecode.objectify.*,org.chemvantage.*,com.google.common.net.InternetDomainName,com.google.cloud.ServiceOptions"%>
+<%@ page import="java.util.Date,java.text.DateFormat,com.googlecode.objectify.*,org.chemvantage.*,com.google.common.net.InternetDomainName"%>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -69,7 +69,7 @@
 		}
 	} catch (Exception e) {  // the remainder of the JSP is devoted to presenting the purchase page
 
-		String client_id = ServiceOptions.getDefaultProjectId().equals("dev-vantage-hrd")
+		String client_id = Subject.projectId.equals("dev-vantage-hrd")
 		? "AVJ8NuVQnTBwTbmkouWCjZhUT_eHeTm9fjAKwXJO0-RK-9VZFBtWm4J6V8o-47DvbOoaVCUiEb4JMXz8": // Paypal sandbox client_id
 		"AYlUNqRJZXhJJ9z7pG7GRMOwC-Y_Ke58s8eacfl1R51833ISAqOUhR8To0Km297MPcShAqm9ffp5faun"; // Paypal live client_id
 		

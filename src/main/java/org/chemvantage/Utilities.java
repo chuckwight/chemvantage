@@ -5,7 +5,6 @@ import java.nio.charset.Charset;
 import java.time.Clock;
 import java.time.Instant;
 
-import com.google.cloud.ServiceOptions;
 import com.google.cloud.tasks.v2.AppEngineHttpRequest;
 import com.google.cloud.tasks.v2.CloudTasksClient;
 import com.google.cloud.tasks.v2.HttpMethod;
@@ -14,13 +13,13 @@ import com.google.cloud.tasks.v2.Task;
 import com.google.gson.JsonObject;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Timestamp;
-
 import com.sendgrid.Method;
 import com.sendgrid.Request;
 import com.sendgrid.Response;
 import com.sendgrid.SendGrid;
 import com.sendgrid.helpers.mail.Mail;
-import com.sendgrid.helpers.mail.objects.*;
+import com.sendgrid.helpers.mail.objects.Content;
+import com.sendgrid.helpers.mail.objects.Email;
 
 public class Utilities {
 	
@@ -31,7 +30,7 @@ public class Utilities {
 	public static void createTask(String relativeUri, JsonObject payload, int seconds)
 			throws IOException {
 		// This method accepts a relativeUri (e.g., /ReportScore) to POST a request to a ChemVantage servlet
-		String projectId = ServiceOptions.getDefaultProjectId();
+		String projectId = Subject.projectId;
 		String location = "us-central1";
 		String queueName = "default";
 		// Instantiates a client.

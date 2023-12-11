@@ -41,7 +41,6 @@ import java.util.Map.Entry;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
-import com.google.cloud.ServiceOptions;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -80,8 +79,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 
 			// At this point no valid cached authToken was found, so we request a new authToken from the LMS platform:
 			// First, construct a request token to send to the platform
-			String projectId = ServiceOptions.getDefaultProjectId();
-			String iss = projectId.equals("dev-vantage-hrd")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
+			String iss = Subject.projectId.equals("dev-vantage-hrd")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
 			//String iss = System.getProperty("com.google.appengine.application.id").contains("dev-vantage")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
 			debug.append("Requested by: " + iss + "<br/>Denied by: " + d.oauth_access_token_url + "<br/>");
 			
@@ -150,7 +148,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			} else throw new Exception("response code " + responseCode);
 		} catch (Exception e) {
 			debug.append("Elapsed time: " + (new Date().getTime() - now.getTime()) + " ms<br/>");
-			if (ServiceOptions.getDefaultProjectId().equals("chem-vantage-hrd"))
+			if (Subject.projectId.equals("chem-vantage-hrd"))
 				Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Failed AuthToken Request",debug.toString() + "<br/>" + (e.getMessage()==null?e.toString():e.getMessage()));
 			return "Failed AuthToken Request <br/>" + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString();
 		}    
@@ -476,12 +474,11 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		}
 	}
 	
-	static String postUserScore(Score s, String userId) {
+	static String postUserScore(Score s, String userId) throws Exception {
 		// This method uses the LTIv1p3 message protocol to post a user's score to the LMS grade book.
 		// The lineitem URL corresponds to the LMS grade book column for the Assignment entity,
 		// and the specific cell is identified by the user_id value defined by the LMS platform
 		StringBuffer buf = new StringBuffer("PostUserScoreDebug:");
-		try {
 			Assignment a = ofy().load().type(Assignment.class).id(s.assignmentId).safe();
 			String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/score";
 			buf.append("AssignmentId=" + (a==null?"unknown":a.id) + "<br/>");
@@ -554,12 +551,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	    			buf.append(line);
 	    		}
 	    		reader.close();
-	    		Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Score submission failed",buf.toString());
+	    		//Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Score submission failed",buf.toString());
 			}
-		} catch (Exception e) {
-			//sendEmailToAdmin("Score submission failed",buf.toString());
-			return "Score submission error: " + e.toString() + e.getMessage() + "<br>" + buf.toString();
-		}
 		return buf.toString();
 	}
 	

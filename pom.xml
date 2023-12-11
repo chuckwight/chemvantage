@@ -37,7 +37,7 @@
       <version>${jetty.version}</version>
     </dependency>
 
-    <!-- Objectify -->
+    <!-- Objectify 6.0.7-->
     <dependency>
       <groupId>com.googlecode.objectify</groupId>
       <artifactId>objectify</artifactId>
