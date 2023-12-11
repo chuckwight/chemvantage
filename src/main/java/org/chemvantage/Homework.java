@@ -564,7 +564,7 @@ public class Homework extends HttpServlet {
 								+ (reader==null?"No input stream.":reader.toString()) + "<br/>");
 					}
 				default:
-					buf.append("<h3>Congratulations. You answered the question correctly.</h3>"
+					buf.append("<h3>Congratulations. You answered the question correctly. <IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom /></h3>"
 						+ (!user.isAnonymous()?"<a id=showLink href=# onClick=document.getElementById('solution').style='display:inline';this.style='display:none'>(show me)</a>":"") 
 						+ "<br/>");
 				}
@@ -575,7 +575,7 @@ public class Homework extends HttpServlet {
 						try {
 							@SuppressWarnings("unused")
 							double dAnswer = Double.parseDouble(q.parseString(studentAnswer));  // throws exception for non-numeric answer
-							if (!q.agreesToRequiredPrecision(studentAnswer)) buf.append("<h3>Incorrect Answer</h3>Your answer does not " + (q.requiredPrecision==0?"exactly match the answer in the database. ":"agree with the answer in the database to within the required precision (" + q.requiredPrecision + "%).<br/><br/>"));
+							if (!q.agreesToRequiredPrecision(studentAnswer)) buf.append("<h3>Incorrect Answer <IMG SRC=/images/xmark.png ALT='X mark' align=middle></h3>Your answer does not " + (q.requiredPrecision==0?"exactly match the answer in the database. ":"agree with the answer in the database to within the required precision (" + q.requiredPrecision + "%).<br/><br/>"));
 							else if (!q.hasCorrectSigFigs(studentAnswer)) buf.append("<h3>Almost there!</h3>It appears that you've done the calculation correctly, but your answer does not have the correct number of significant figures appropriate for the data given in the question. "
 									+ "If your answer ends in a zero, be sure to include a decimal point to indicate which digits are significant or (better!) use <a href=https://en.wikipedia.org/wiki/Scientific_notation#E_notation>scientific E notation</a>.<br/><br/>");
 						}
@@ -590,12 +590,12 @@ public class Homework extends HttpServlet {
 						break;
 					case 7:  // Essay question
 						int score = api_score.get("score").getAsInt();
-						if (score<=1) buf.append("<h3>Your answer to this question is incorrect.</h3>");
+						if (score<=1) buf.append("<h3>Your answer to this question is incorrect. <IMG SRC=/images/xmark.png ALT='X mark' align=middle></h3>");
 						else buf.append("<h3>Your answer is partly correct, but needs improvement.</h3>");
 						buf.append(api_score.get("feedback").getAsString() + "<br/><br/>");
 						break;
 					default:  // All other types of questions
-						buf.append("<h3>Incorrect Answer</h3>Your answer was scored incorrect because it does not agree with the "
+						buf.append("<h3>Incorrect Answer <IMG SRC=/images/xmark.png ALT='X mark' align=middle></h3>Your answer was scored incorrect because it does not agree with the "
 							+ "answer in the database.<br/>");
 				}
 				
