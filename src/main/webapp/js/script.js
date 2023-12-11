@@ -55,8 +55,7 @@ const fns = () => {
     let bar = document.querySelector('.solid-bar'),
       close = document.querySelector('.close'),
       navList = document.querySelector('.nav-list'),
-      header = document.querySelector('.header-nav'),
-      navItem = document.querySelectorAll('.nav-item');
+      header = document.querySelector('.header-nav');
 
     bar.addEventListener("click", () => {
       if (navList.style.display === 'block') {
@@ -71,13 +70,6 @@ const fns = () => {
     close.addEventListener('click', () => {
       navList.style.display = 'none';
       header.classList.remove("collapsed");
-    });
-
-    navItem.forEach(item => {
-      item.addEventListener('click', () => {
-        navList.style.display = 'none';
-        header.classList.remove("collapsed");
-      });
     });
   }
   responsiveNav();
