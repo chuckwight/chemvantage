@@ -1,0 +1,772 @@
+/* 
+-----------------
+Template Name : Chemistry class homepage
+Author : Rifat Bhuiya
+Author E-mail : hello.rifatbhuiya@gmail.com 
+Version : 01.00
+-----------------
+*/
+
+:root {
+    --red: #ff272a;
+    --green: #70b31c;
+    --blue: #00347f;
+    --black: #000000;
+    --white: #ffffff;
+    --text: #364964;
+    --footer-text: #8b8d8a;
+    --g-white: #f9fff2;
+    --body-white: #fdfffc;
+    --body-off-white: #f1f1f1;
+    --footer-bg: #151811;
+    --radius-sm: 3px;
+    --radius-md: 5px;
+    --radius-large: 25px;
+    --radius-round: 50%;
+    --h1: 48px;
+    --h2: 40px;
+    --h3: 33px;
+    --h4: 28px;
+    --h5: 23px;
+    --h6: 19px;
+    --large: 19px;
+    --base: 16px;
+    --small: 14px;
+    --transition: all ease 0.5s;
+    --font-normal: "Poppins", sans-serif;
+    --font-stylish: "Shantell Sans", "cursive";
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    outline: 0;
+}
+
+img,
+svg {
+    vertical-align: middle;
+}
+
+a {
+    text-decoration: none;
+    display: inline-block;
+}
+
+ul,
+ol {
+    list-style: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+a,
+ul,
+li,
+span,
+address {
+    margin: 0;
+    padding: 0;
+}
+
+::selection {
+    color: var(--white);
+    background-color: var(--blue);
+}
+
+::-moz-selection {
+    color: var(--white);
+    background-color: var(--blue);
+}
+
+body {
+    background-color: var(--body-white);
+    font-family: var(--font-normal);
+    font-size: var(--base);
+    color: var(--text);
+    scroll-behavior: smooth;
+}
+
+.bg-white {
+    background-color: var(--body-white);
+}
+
+.bg-off-white {
+    background-color: var(--body-off-white);
+}
+
+h1 {
+    font-size: var(--h1);
+}
+
+h2 {
+    font-size: var(--h2);
+}
+
+h3 {
+    font-size: var(--h3);
+}
+
+h4 {
+    font-size: var(--h4);
+}
+
+h5 {
+    font-size: var(--h5);
+}
+
+h6 {
+    font-size: var(--h6);
+}
+
+.container {
+    width: 90%;
+    margin: 0 auto;
+}
+
+.m-container {
+    width: 65%;
+    margin: 0 auto;
+}
+
+.d-flex {
+    display: flex;
+}
+
+.flex-end {
+    justify-content: flex-end;
+}
+
+.flex-wrap {
+    flex-wrap: wrap;
+}
+
+.justify-center {
+    justify-content: center;
+}
+
+.justify-between {
+    justify-content: space-between;
+}
+
+.justify-around {
+    justify-content: space-around;
+}
+
+.justify-evenly {
+    justify-content: space-evenly;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.text-end {
+    text-align: end;
+}
+
+.align-center {
+    align-items: center;
+}
+
+.i-flex {
+    display: inline-flex;
+}
+
+.gap-1 {
+    gap: 6px;
+}
+
+.gap-2 {
+    gap: 12px;
+}
+
+.gap-3 {
+    gap: 18px;
+}
+
+.h-100 {
+    height: 100%;
+}
+
+.w-100 {
+    width: 100%;
+}
+
+.w-90 {
+    width: 90%;
+}
+
+.w-80 {
+    width: 80%;
+}
+
+.w-70 {
+    width: 70%;
+}
+
+.w-60 {
+    width: 60%;
+}
+
+.w-50 {
+    width: 50%;
+}
+
+.w-40 {
+    width: 40%;
+}
+
+.w-30 {
+    width: 30%;
+}
+
+.w-25 {
+    width: 25%;
+}
+
+.w-20 {
+    width: 20%;
+}
+
+.w-10 {
+    width: 10%;
+}
+
+em {
+    font-family: var(--font-stylish);
+}
+
+.btn {
+    padding: 6px 24px;
+    font-weight: 500;
+    font-size: var(--base);
+    border-radius: var(--radius-large);
+    -webkit-border-radius: var(--radius-large);
+    -moz-border-radius: var(--radius-large);
+    -ms-border-radius: var(--radius-large);
+    -o-border-radius: var(--radius-large);
+    transition: var(--transition);
+    -webkit-transition: var(--transition);
+    -moz-transition: var(--transition);
+    -ms-transition: var(--transition);
+    -o-transition: var(--transition);
+}
+
+.btn-one {
+    color: var(--white);
+    background-color: var(--green);
+    border: 2px solid transparent;
+}
+
+.btn-one:hover {
+    color: var(--blue);
+    border: 2px solid var(--green);
+    background-color: transparent;
+}
+
+.btn-two {
+    color: var(--blue);
+    border: 2px solid var(--green);
+}
+
+.btn-two:hover {
+    color: var(--white);
+    background-color: var(--green);
+    border: 2px solid transparent;
+}
+
+.section-padding {
+    padding: 96px 0;
+}
+
+.section-heading h3 {
+    font-weight: 400;
+    position: relative;
+    top: 0;
+    left: 0;
+    padding-left: 12px;
+    line-height: 1.3;
+    color: var(--blue);
+}
+
+.section-heading h3::after {
+    position: absolute;
+    content: '';
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 6px;
+    background-color: var(--green);
+    border-radius: var(--radius-md);
+    -webkit-border-radius: var(--radius-md);
+    -moz-border-radius: var(--radius-md);
+    -ms-border-radius: var(--radius-md);
+    -o-border-radius: var(--radius-md);
+}
+
+.section-heading-top-gap {
+    padding-top: 48px;
+}
+
+.section-image {
+    box-shadow: .5px .5px 3px 0 rgba(0, 0, 0, 0.2);
+    border-radius: var(--radius-md);
+    -webkit-border-radius: var(--radius-md);
+    -moz-border-radius: var(--radius-md);
+    -ms-border-radius: var(--radius-md);
+    -o-border-radius: var(--radius-md);
+    transform: rotate(-1deg);
+    -webkit-transform: rotate(-1deg);
+    -moz-transform: rotate(-1deg);
+    -ms-transform: rotate(-1deg);
+    -o-transform: rotate(-1deg);
+}
+/* Common CSS End */
+
+.webpage-header {
+    padding: 8px 0;
+    background-color: var(--g-white);
+    box-shadow: .5px .5px 3px 0 rgba(0, 0, 0, 0.2);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 99;
+    transition: var(--transition);
+    -webkit-transition: var(--transition);
+    -moz-transition: var(--transition);
+    -ms-transition: var(--transition);
+    -o-transition: var(--transition);
+}
+
+.webpage-logo {
+    width: 200px;
+    transition: var(--transition);
+    -webkit-transition: var(--transition);
+    -moz-transition: var(--transition);
+    -ms-transition: var(--transition);
+    -o-transition: var(--transition);
+}
+
+.header-nav ul li {
+    display: inline-block;
+    margin: 0 4px;
+    transition: background 200ms;
+    -webkit-transition: background 200ms;
+    -moz-transition: background 200ms;
+    -ms-transition: background 200ms;
+    -o-transition: background 200ms;
+}
+
+.header-nav ul li a {
+    font-weight: 600;
+    font-size: var(--base);
+    color: var(--blue);
+    position: relative;
+    top: 0;
+    left: 0;
+    transition: var(--transition);
+    -webkit-transition: var(--transition);
+    -moz-transition: var(--transition);
+    -ms-transition: var(--transition);
+    -o-transition: var(--transition);
+}
+
+.header-nav ul li a:hover {
+    opacity: .7;
+}
+
+.header-nav ul .active a::after {
+    position: absolute;
+    content: '';
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background-color: var(--blue);
+    transition: var(--transition);
+    -webkit-transition: var(--transition);
+    -moz-transition: var(--transition);
+    -ms-transition: var(--transition);
+    -o-transition: var(--transition);
+}
+
+.header-nav ul .active a::after {
+    width: calc(100% - 30px);
+}
+
+.header-nav .header-action {
+    font-weight: 500;
+    font-size: var(--small);
+    color: var(--blue);
+    padding: 6px 20px;
+    border: 2px solid var(--green);
+    border-radius: var(--radius-large);
+    -webkit-border-radius: var(--radius-large);
+    -moz-border-radius: var(--radius-large);
+    -ms-border-radius: var(--radius-large);
+    -o-border-radius: var(--radius-large);
+}
+
+.header-nav .header-action:hover {
+    border: 2px solid transparent;
+    color: var(--white);
+    background-color: var(--green);
+}
+
+.header-nav button {
+    cursor: pointer;
+    background-color: transparent;
+    display: none;
+}
+
+.header-nav .close {
+    font-size: 26px;
+    border: none;
+}
+
+.header-nav .solid-bar {
+    font-size: 22px;
+    opacity: .6;
+    padding: 0 6px;
+    transition: var(--transition);
+    -webkit-transition: var(--transition);
+    -moz-transition: var(--transition);
+    -ms-transition: var(--transition);
+    -o-transition: var(--transition);
+    border: 2px solid var(--black);
+    border-radius: var(--radius-sm);
+    -webkit-border-radius: var(--radius-sm);
+    -moz-border-radius: var(--radius-sm);
+    -ms-border-radius: var(--radius-sm);
+    -o-border-radius: var(--radius-sm);
+}
+
+.header-nav .solid-bar:hover {
+    opacity: 1;
+}
+/* Webpage Header CSS End */
+
+.webpage-heroarea {
+    padding: 240px 0 140px 0;
+    position: relative;
+    top: 0;
+    left: 0;
+}
+
+.chemistry-icon.left {
+    position: absolute;
+    top: 30%;
+    left: 40px;
+}
+
+.chemistry-icon.right {
+    position: absolute;
+    top: 70%;
+    right: 40px;
+}
+
+.chemistry-icon img {
+    width: 80px;
+    opacity: .3;
+    animation: spin  8s linear infinite;
+    -webkit-animation: spin  8s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+        -webkit-transform: rotate(0deg);
+        -moz-transform: rotate(0deg);
+        -ms-transform: rotate(0deg);
+        -o-transform: rotate(0deg);
+}
+
+    100% {
+        transform: rotate(360deg);
+        -webkit-transform: rotate(360deg);
+        -moz-transform: rotate(360deg);
+        -ms-transform: rotate(360deg);
+        -o-transform: rotate(360deg);
+    }
+}
+
+.heroarea-content h1 {
+    font-weight: 800;
+}
+
+.heroarea-content h1 em {
+    font-weight: 700;
+    color: var(--green);
+}
+
+.heroarea-content p {
+    margin-top: 8px;
+}
+
+.heroarea-content p em {
+    font-weight: 600;
+    color: var(--blue);
+}
+
+.heroarea-content ul {
+    margin-top: 24px;
+}
+/* Webpage HeroArea CSS End */
+
+.btt {
+    position: fixed;
+    bottom: 40px;
+    right: 40px;
+}
+
+.btt img {
+    position: relative;
+    top: 0;
+    left: 0;
+    padding: 8px;
+    width: 40px;
+    background-color: var(--green);
+    border-radius: var(--radius-round);
+    -webkit-border-radius: var(--radius-round);
+    -moz-border-radius: var(--radius-round);
+    -ms-border-radius: var(--radius-round);
+    -o-border-radius: var(--radius-round);
+    animation: btt 1s linear 2;
+    -webkit-animation: btt 1s linear 2;
+    transition: var(--transition);
+    -webkit-transition: var(--transition);
+    -moz-transition: var(--transition);
+    -ms-transition: var(--transition);
+    -o-transition: var(--transition);
+    cursor: pointer;
+}
+
+.btt img:hover {
+    opacity: .8;
+}
+
+@keyframes btt {
+    0% {
+        transform: scale(.4);
+        -webkit-transform: scale(.4);
+        -moz-transform: scale(.4);
+        -ms-transform: scale(.4);
+        -o-transform: scale(.4);
+    }
+  
+    100% {
+        transform: scale(1);
+        -webkit-transform: scale(1);
+        -moz-transform: scale(1);
+        -ms-transform: scale(1);
+        -o-transform: scale(1);
+    }
+  }
+/* Webpage BTT CSS End */
+
+.about-content {
+    gap: 40px;
+}
+
+.about-content.mt {
+    margin-top: 32px;
+}
+
+.about-content h5 {
+    font-weight: 300;
+    margin-bottom: 12px;
+}
+
+.about-content p {
+    margin: 6px 0;
+}
+
+.about-content .openstax {
+    width: 160px;
+    padding: 4px 8px;
+}
+
+.about-content.mt p b {
+    font-weight: 600;
+}
+
+.about-content a {
+    font-weight: 500;
+    color: var(--blue);
+    transition: var(--transition);
+    -webkit-transition: var(--transition);
+    -moz-transition: var(--transition);
+    -ms-transition: var(--transition);
+    -o-transition: var(--transition);
+}
+
+.about-content a:hover {
+    text-decoration: underline;
+}
+
+.about-content h6 {
+    margin-top: 16px;
+    font-weight: 500;
+}
+/* Webpage About CSS End */
+
+.placement-content {
+    gap: 40px;
+}
+
+.placement-content h5,
+h6 {
+    font-weight: 500;
+}
+
+.placement-content ul {
+    margin: 12px 0 12px 12px;
+}
+
+.placement-content ul li {
+    list-style-position: inside;
+    list-style-type: square;
+    margin: 2px 0;
+}
+
+.placement-content p {
+    margin: 6px 0;
+}
+/* Webpage Placement CSS End */
+
+.pricing-content {
+    gap: 40px;
+}
+
+.pricing-content h5 {
+    font-weight: 500;
+}
+
+.pricing-content ul {
+    margin: 12px 0 12px 12px;
+}
+
+.pricing-content ul li {
+    list-style-position: inside;
+    list-style-type: square;
+    margin: 2px 0;
+}
+/* Webpage Pricing CSS End */
+
+footer {
+    padding: 48px 0;
+    background-color: var(--footer-bg);
+    color: var(--footer-text);
+}
+
+footer .container {
+    width: 75%;
+}
+
+.footer-content {
+    margin-bottom: 20px;
+}
+
+.footer-content .social li {
+    display: inline-block;
+    margin: 0 2px;
+}
+
+.footer-content .social img {
+    height: 32px;
+    width: 32px;
+    background-color: var(--footer-text);
+    border-radius: var(--radius-sm);
+    -webkit-border-radius: var(--radius-sm);
+    -moz-border-radius: var(--radius-sm);
+    -ms-border-radius: var(--radius-sm);
+    -o-border-radius: var(--radius-sm);
+    transition: var(--transition);
+    -webkit-transition: var(--transition);
+    -moz-transition: var(--transition);
+    -ms-transition: var(--transition);
+    -o-transition: var(--transition);
+    opacity: .7;
+}
+
+.footer-content .social img:hover {
+    opacity: 1;
+}
+
+.footer-content address {
+    margin: 0;
+    font-style: normal;
+    font-size: var(--base);
+}
+
+.footer-content .location {
+    margin-top: 8px;
+    color: var(--footer-text);
+    transition: var(--transition);
+    -webkit-transition: var(--transition);
+    -moz-transition: var(--transition);
+    -ms-transition: var(--transition);
+    -o-transition: var(--transition);
+}
+
+.footer-content .location:hover {
+    text-decoration: underline;
+}
+
+.footer-content .contact a {
+    font-size: var(--base);
+    color: var(--footer-text);
+    transition: var(--transition);
+    -webkit-transition: var(--transition);
+    -moz-transition: var(--transition);
+    -ms-transition: var(--transition);
+    -o-transition: var(--transition);
+}
+
+.footer-content .contact a:hover {
+    text-decoration: underline;
+}
+
+.footer-btm-content {
+    padding: 12px 0;
+    border-top: 1px solid var(--text);
+    border-bottom: 1px solid var(--text);
+}
+
+.footer-btm-content .copy {
+    font-size: var(--small);
+}
+
+.footer-btm-content ul li {
+    display: inline-block;
+}
+
+.footer-btm-content ul li a {
+    font-size: var(--small);
+    color: var(--footer-text);
+    padding: 0 6px;
+    border-left: 1px solid var(--footer-text);
+    line-height: 1.3;
+    transition: var(--transition);
+    -webkit-transition: var(--transition);
+    -moz-transition: var(--transition);
+    -ms-transition: var(--transition);
+    -o-transition: var(--transition);
+}
+
+.footer-btm-content ul li:first-child a {
+    border-left: 1px solid transparent;
+}
+
+.footer-btm-content ul li a:hover {
+    text-decoration: underline;
+}
+/* Webpage Footer CSS End */

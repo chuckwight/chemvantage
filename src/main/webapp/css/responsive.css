@@ -1,0 +1,324 @@
+:root {
+    --red: #ff272a;
+    --green: #70b31c;
+    --blue: #00347f;
+    --black: #000000;
+    --white: #ffffff;
+    --text: #364964;
+    --footer-text: #8b8d8a;
+    --g-white: #f9fff2;
+    --body-white: #fdfffc;
+    --body-off-white: #f1f1f1;
+    --radius-sm: 3px;
+    --radius-md: 5px;
+    --radius-large: 25px;
+    --radius-round: 50%;
+    --transition: all ease 0.5s;
+}
+
+@media (max-width: 991.98px) {
+    .header-nav .nav-list {
+        display: none;
+    }
+
+    .collapsed .nav-list {
+        height: 100%;
+        width: 100%;
+        position: fixed;
+        top: 0;
+        left: 0;
+        background-color: rgba(0, 0, 0, 0.950);
+        text-align:center;
+        overflow-x: hidden;
+        transition: var(--transition);
+        -webkit-transition: var(--transition);
+        -moz-transition: var(--transition);
+        -ms-transition: var(--transition);
+        -o-transition: var(--transition);
+        z-index: 100;
+    }
+
+    .collapsed .nav-list ul {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translateY(-50%) translateX(-50%);
+        -webkit-transform: translateY(-50%) translateX(-50%);
+        -moz-transform: translateY(-50%) translateX(-50%);
+        -ms-transform: translateY(-50%) translateX(-50%);
+        -o-transform: translateY(-50%) translateX(-50%);
+    }
+
+    .collapsed ul li {
+        display: block;
+        color: var(--footer-text);
+        margin: 8px 0;
+    }
+
+    .collapsed ul li a {
+        font-weight: 400;
+        color: var(--footer-text);
+        font-size: var(--large);
+    }
+    
+    .collapsed ul li a:hover {
+        color: var(--g-white);
+    }
+
+    .header-nav ul .active a {
+        color: var(--g-white);
+    }
+
+    .collapsed ul .active a::after {
+        background-color: var(--g-white);
+    }
+
+    .header-nav .solid-bar {
+        display: block;
+    }
+
+    .collapsed .close {
+        display: block;
+        position: absolute;
+        top: 40px;
+        font-size: 36px;
+        right: 40px;
+        margin-left: 54px;
+        color: var(--footer-text);
+        z-index: 101;
+    }
+
+    .collapsed .close:hover {
+        color: var(--g-white);
+    }
+
+    footer .container {
+        width: 90%;
+    }
+
+    .m-container {
+        width: 90%;
+    }
+}
+
+@media (min-width: 768px) and (max-width: 991.98px) {
+    :root {
+        --h1: 43px;
+        --h2: 35px;
+        --h3: 30px;
+        --h4: 26px;
+        --h5: 21px;
+        --h6: 17px;
+        --large: 17px;
+        --base: 15px;
+        --small: 14px;
+    }
+
+    .webpage-heroarea {
+        padding: 200px 0 80px 0;
+    }
+
+    .heroarea-content .w-60 {
+        width: 80%;
+    }
+
+    .about-content,
+    .placement-content,
+    .pricing-content {
+        flex-wrap: wrap !important;
+    }
+
+    .about-content .w-40,
+    .placement-content .w-40,
+    .pricing-content .w-40 {
+        width: 60% !important;
+        margin: 0 auto;
+    }
+
+    .about-content .w-60,
+    .placement-content .w-60,
+    .pricing-content .w-60 {
+        width: 100% !important;
+    }
+}
+
+@media (min-width: 576px) and (max-width: 767.98px) {
+    :root {
+        --h1: 39px;
+        --h2: 32px;
+        --h3: 28px;
+        --h4: 23px;
+        --h5: 19px;
+        --h6: 16px;
+        --large: 16px;
+        --base: 15px;
+        --small: 14px;
+    }
+
+    .webpage-heroarea {
+        padding: 200px 0 80px 0;
+    }
+
+    .heroarea-content .w-60 {
+        width: 80%;
+    }
+
+    .about-content,
+    .placement-content,
+    .pricing-content {
+        flex-wrap: wrap !important;
+    }
+
+    .about-content .w-40,
+    .placement-content .w-40,
+    .pricing-content .w-40 {
+        width: 60% !important;
+        margin: 0 auto;
+    }
+
+    .about-content .w-60,
+    .placement-content .w-60,
+    .pricing-content .w-60 {
+        width: 100% !important;
+    }
+
+    .footer-content {
+        margin-bottom: 0;
+        flex-wrap: wrap;
+    }
+
+    .footer-btm-content {
+        padding: 0;
+    }
+
+    footer .footer-btm-content {
+        flex-wrap: wrap;
+        border-top: 1px solid transparent;
+        border-bottom: 1px solid transparent;
+    }
+
+    footer .m-container .w-40,
+    .footer-content .w-40 {
+        width: 100%;
+        text-align: center;
+        margin-bottom: 12px;
+    }
+
+    footer .m-container .w-60 {
+        width: 100%;
+        text-align: center;
+        
+    }
+
+    .webpage-items .w-80 {
+        width: 100%;
+    }
+
+    .chemistry-icon img {
+        width: 60px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    :root {
+        --h1: 33px;
+        --h2: 28px;
+        --h3: 25px;
+        --h4: 21px;
+        --h5: 18px;
+        --h6: 16px;
+        --large: 15px;
+        --base: 15px;
+        --small: 14px;
+    }
+
+    .section-padding {
+        padding: 64px 0;
+    }
+
+    .header-nav .header-action {
+        display: none;
+    }
+
+    .webpage-heroarea {
+        padding: 180px 0 80px 0;
+    }
+
+    .heroarea-content h1 {
+        font-weight: 700;
+        line-height: 1.3;
+    }
+
+    .heroarea-content .w-60,
+    .heroarea-content .w-80,
+    .heroarea-content .w-50 {
+        width: 100%;
+    }
+
+    .heroarea-content .gap-3 {
+        gap: 10px;
+    }
+
+    .heroarea-content ul {
+        margin-top: 20px;
+    }
+
+    .about-content,
+    .placement-content,
+    .pricing-content {
+        flex-wrap: wrap !important;
+    }
+
+    .about-content .w-40,
+    .placement-content .w-40,
+    .pricing-content .w-40 {
+        width: 90% !important;
+        margin: 0 auto;
+    }
+
+    .about-content .w-60,
+    .placement-content .w-60,
+    .pricing-content .w-60 {
+        width: 100% !important;
+    }
+
+    .footer-content {
+        margin-bottom: 0;
+        flex-wrap: wrap;
+    }
+
+    .footer-btm-content {
+        padding: 0;
+    }
+
+    footer .footer-btm-content {
+        flex-wrap: wrap;
+        border-top: 1px solid transparent;
+        border-bottom: 1px solid transparent;
+    }
+
+    footer .m-container .w-40,
+    .footer-content .w-40 {
+        width: 100%;
+        text-align: center;
+        margin-bottom: 12px;
+    }
+
+    footer .m-container .w-60 {
+        width: 100%;
+        text-align: center;
+        
+    }
+
+    .webpage-items .w-80 {
+        width: 100%;
+    }
+
+    .chemistry-icon img {
+        display: none;
+    }
+
+    .btt {
+        display: none;
+    }
+}

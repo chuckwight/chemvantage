@@ -1,120 +1,304 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-<meta http-equiv='Content-type' content='text/html;charset=iso-8859-1' />
-<meta name='Description' content='An online quiz and homework site' />
-<meta name='Keywords' content='chemistry,learning,online,quiz,homework,video,textbook,open,education' />
-<link rel='icon' type='image/png' href='/images/favicon.png' />
-<title>ChemVantage Home Page</title>
-<style>
- body     {background-color: white; font-family: Calibri,Arial,sans-serif; max-width: 1000px}
- div.seg1 {padding-left: 30px; padding-bottom: 30px; padding-right: 20px; overflow: auto; background-color: #FFFFFF;}
- div.seg2 {padding-left: 30px; padding-bottom: 30px; padding-right: 20px; overflow: auto; background-color: #DDDDDD;}
- img.float {float: right; vertical-align: text-top; margin: 20px; max-width: 40%;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="images/favicon.png">
+    <!-- Fav-Icon -->
+    <title>ChemVantage | Home</title>
+    <!-- Title -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Shantell+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <!-- Font Family -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Main Style Sheet -->
+    <link rel="stylesheet" href="css/responsive.css">
+    <!-- Responsive Style Sheet -->
 </head>
-
 <body>
+    <!-- Webpage Header Start -->
+    <header class="webpage-header">
+        <div class="container">
+            <div class="d-flex justify-between align-center">
+                <div class="w-20">
+                    <a href="index.html">
+                        <img src="images/logo.png" class="webpage-logo" alt="website logo"/>
+                    </a>
+                </div>
+                <div class="w-60">
+                    <nav class="header-nav d-flex flex-end align-center gap-3">
+                        <div class="nav-list">
+                            <ul>
+                                <li class="nav-item active">
+                                    <a href="#home" class="nav-link">Home</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="#about" class="nav-link">About Us</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="#placement" class="nav-link">Placement</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="#pricing" class="nav-link">Pricing</a>
+                                </li>
+                            </ul>
+                            <button class="close">&times;</button>
+                        </div>
+                        <a href="https://www.chemvantage.org/install.html" target="_blank" class="header-action">
+                            Get Started
+                        </a>
+                        <button class="solid-bar">&#9776;</button>
+                        
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- Webpage Header End -->
 
-<main><h1 style='display: none'>Welcome to ChemVantage</h1>
+    <!-- Webpage HeroArea Start -->
+    <section id="home" class="webpage-heroarea webpage-section">
+        <div class="chemistry-icon left">
+            <img src="images/chemistry-icon.png" alt="chemistry-icon"/>
+        </div>
+        <div class="chemistry-icon right">
+            <img src="images/chemistry-icon.png" alt="chemistry-icon"/>
+        </div>
+        <div class="container">
+            <div class="heroarea-content d-flex justify-center flex-wrap">
+                <div class="w-60 text-center">
+                    <h1>An Open Education <em>Resource</em> for General Chemistry</h1>
+                </div>
+                <div class="w-80 text-center">
+                    <p>
+                        <em>ChemVantage</em> was founded in 2010 on the idea that the most effective learning takes place during repeated intermittent engagement with the subject material. By offering several kinds of online assignments.
+                    </p>
+                </div>
+                <div class="w-50">
+                    <ul class="d-flex gap-3 justify-center">
+                        <li>
+                            <a class="btn btn-one" href="https://www.chemvantage.org/install.html" target="_blank">
+                                Get Started
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#items" class="btn btn-two nav-link">View Items</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- Webpage HeroArea End -->
 
-<div class='seg1'>
-<br/><br/><img class='float' src='images/img01.jpg' alt='flask on desk' />
-<a href="/" style='text-decoration: none;'>
-<span style='color: blue; font-size: 2em; font-weight: bold;'>Chem</span><span style='color: red; font-size: 2em; font-weight: bold;'>Vantage</span><br/>
-</a>
-An Open Education Resource for General Chemistry<br/><br/><br/>
+    <!-- Webpage BTT Start -->
+    <div class="btt">
+        <a href="#home" class="nav-link">
+            <img src="images/up-arrow.png" alt="up-arrow"/>
+        </a>
+    </div>
+    <!-- Webpage BTT End -->
 
-<b>Let's face it. Chemistry is hard.</b><br/><br/>
-But with commitment and lots of practice, almost anyone can master it. 
-ChemVantage was founded in 2010 on the idea that the most effective learning takes place during repeated 
-intermittent engagement with the subject material. By offering several kinds of online assignments, we help you challenge students to
-<ul>
-<li>prepare themselves in advance for class discussions</li>
-<li>engage with in-class polls using their own phones or laptops (no clickers required)</li>
-<li>apply their new knowledge to solving computer-graded homework problems and get immediate feedback</li>
-<li>work in teams to promote collaborative learning and peer instruction</li>
-</ul>
-... all at about 1/10 the cost of our nearest competitor.<br/><br/>
+    <!-- Webpage About Start -->
+    <section id="about" class="webpage-about webpage-section section-padding bg-off-white">
+        <div class="container">
+            <div class="section-heading">
+                <h3>About Us</h3>
+            </div>
+            <div class="d-flex align-center section-heading-top-gap about-content">
+                <div class="w-40">
+                    <img src="images/about-banner.jpg" class="w-100 section-image" alt="about banner"/>
+                </div>
+                <div class="w-60">
+                    <h5>
+                        <b>ChemVantage LLC</b> was founded in 2010 to provide Open Education Resources for teaching and learning General Chemistry.
+                    </h5>
+                    <p>
+                        The founder and chief software architect of ChemVantage is <b>Chuck Wight</b>, who has taught General Chemistry since 1984 at the University of Utah, Weber State University and now Salisbury University.
+                    </p>
+                    <p>
+                        Chemistry is usually taught from a problem-solving approach, and students need lots of practice to build a solid foundation for solving scientific problems. We create web sites that provide immediate feedback so that students can learn problem-solving skills without having to wait for their assignments to be graded by a human instructor.
+                    </p>
+                </div>
+            </div>
+            <div class="d-flex about-content mt">
+                <div class="w-100">
+                    <p>
+                        ChemVantage is proud to partner with <a href="https://openstax.org/" target="_blank"><img class="openstax" src="images/openstax-logo.svg" alt="openstax-logo"/></a> the largest provider of OER textbooks for General Chemistry. We provide tools that are aligned with the OpenStax <a href="https://openstax.org/details/books/chemistry-2e" target="_blank">Chemistry/2e</a> and <a href="https://openstax.org/details/books/chemistry-atoms-first-2e" target="_blank">Chemistry: Atoms First/2e</a> texts, including a new SmartText app that combines reading assignments with adaptive questions covering key concepts in each chapter. This ensures that your students are <b>reading and understanding</b> the content in a timely way.
+                    </p>
+                    <h6>
+                        ChemVantage works with your learning management system using LTI
+                    </h6>
+                    <p>
+                        You create ChemVantage assignments in your LMS, and the scores are posted automatically to the LMS grade book. No student personal identifiable information (PII) is stored on ChemVantage servers, so your data are always secure.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- Webpage About End -->
 
-<a href=https://openstax.org>
-<img src=https://staxlogos.openstax.org/OSX-Stacked-TM-RGB-150dpi-2016.png style='float:left;width:75px;margin:10px' alt='OpenStax Logo' />
-</a>
-ChemVantage is proud to partner with OpenStax, the largest provider of OER textbooks for General Chemistry. We provide tools 
-that are aligned with the OpenStax <a href=https://openstax.org/details/books/chemistry-2e>Chemistry/2e</a> and 
-<a href=https://openstax.org/details/books/chemistry-atoms-first-2e>Chemistry: Atoms First/2e</a> texts, including a new SmartText 
-app that combines reading assignments with adaptive questions covering key concepts in each chapter. This ensures that your students are 
-<b>reading</b> and <b>understanding</b> the content in a timely way.<br/><br/>
+    <!-- Webpage Placement Start -->
+    <section id="placement" class="webpage-section section-padding webpage-placement">
+        <div class="container">
+            <div class="section-heading">
+                <h3>Placement Exam</h3>
+            </div>
+            <div class="d-flex align-center section-heading-top-gap placement-content">
+                <div class="w-40">
+                    <img src="images/placement-banner.jpg" class="w-100 section-image" alt="placement banner"/>
+                </div>
+                <div class="w-60">
+                    <h5>
+                        Getting students into the right course at the right time is essential. The ChemVantage placement exam assesses.
+                    </h5>
+                    <ul>
+                        <li>Knowledge of basic chemistry.</li>
+                        <li>Essential math skills.</li>
+                        <li>Ability to interpret word problems.</li>
+                    </ul>
+                    <p>
+                        To predict success in General Chemistry with up to 74% accuracy! This allows you to take the right mitigation steps, such as advising some students to take an appropriate prep course or to provide them with supplemental instruction to ensure their success.
+                    </p>
+                    <h6>
+                        Create ChemVantage assignments for your students
+                    </h6>
+                    <p>
+                        With a few clicks in your LMS, you can assign students to watch instructional videos with embedded questions, take short quizzes on the reading assignment, use in-class polls, work homework problems, and complete practice exams to validate their learning. ChemVantage makes it easy.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- Webpage Placement End -->
 
-<div style='text-align: center;'><a href=/itembank>Visit the free ChemVantage Question Item Bank</a></div>
+    <!-- Webpage ItemBank Start -->
+    <section id="items" class="webpage-section section-padding bg-off-white webpage-items">
+        <div class="container">
+            <div class="section-heading">
+                <h3>Explore Item Bank</h3>
+            </div>
+            <div class="d-flex justify-center section-heading-top-gap">
+                <div class="w-80">
+                    <iframe src="https://www.chemvantage.org/itembank?p=iframe" width="100%"  style="border:none; min-height: 360px;"></iframe>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- Webpage ItemBank End -->
 
-</div>
+    <!-- Webpage Pricing Start -->
+    <section id="pricing" class="webpage-section section-padding">
+        <div class="container">
+            <div class="section-heading">
+                <h3>Pricing Plan</h3>
+            </div>
+            <div class="d-flex align-center section-heading-top-gap pricing-content">
+                <div class="w-40">
+                    <img src="images/pricing-banner.jpg" class="w-100 section-image" alt="pricing banner"/>
+                </div>
+                <div class="w-60">
+                    <h5>
+                        Basic pricing plan for students.
+                    </h5>
+                    <ul>
+                        <li>LTI registration and instructor accounts are free.</li>
+                        <li>Each student account costs only <b>$2.00</b> USD per month for an all-access subscription.</li>
+                        <li>Institutions have the option of purchasing student licenses in bulk at deeply discounted rates.</li>
+                    </ul>
+                    <a href="https://www.chemvantage.org/Registration.jsp" class="btn btn-two" target="_blank">
+                        Register Now
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- Webpage Pricing End -->
 
-<div class='seg2'>
-<br/><b>ChemVantage works with your learning management system using LTI</b><br/><br/>
-You create ChemVantage assignments in your LMS, and the scores are posted automatically to the LMS grade book. 
-No student personal identifiable information (PII) is stored on ChemVantage servers, so your data are always secure.<br/><br/>
-<div style='text-align: center;'><a href=/install.html>Register your LMS and try ChemVantage for free</a></div>
-</div>
-
-<div class='seg1'>
-<img class='float' src='images/img02.jpg' alt='studying at the beach' />
-<br/><b>Start with a placement exam</b><br/><br/>
-Getting students into the right course at the right time is essential. The ChemVantage placement exam assesses
-<ul>
-<li>knowledge of basic chemistry</li>
-<li>essential math skills</li> 
-<li>ability to interpret word problems</li> 
-</ul>
-to predict success in General Chemistry with up to 74% accuracy! This allows you to take the right mitigation steps, such as 
-advising some students to take an appropriate prep course or to provide them with supplemental instruction to ensure their success. </div>
-
-<div class='seg2'>
-<br/><b>Then create ChemVantage assignments for your students</b><br/><br/>
-With a few clicks in your LMS, you can assign students to watch instructional <b>videos</b> with embedded questions, 
-take short <b>quizzes</b> on the reading assignment, use <b>in-class polls</b>, work <b>homework problems</b>, 
-and complete <b>practice exams</b> to validate their learning. ChemVantage makes it easy.<br/><br/>
-<div style='text-align: center;'><a href=/examples.jsp>Explore some example assignments</a></div>
-</div>
-
-<div class='seg1'>
-<br/><b>Explore the ChemVantage Item Bank</b><br/><br/>
-<iframe src='https://www.chemvantage.org/itembank?p=iframe' width=100% height=300 style='border:none;'></iframe>
-</div>
-
-<div class='seg2'>
-<br/><b>ChemVantage is designed to be very low cost</b><br/><br/>
-Our open source software is deployed on Google App Engine servers, which provide massive scaling at extremely low cost. The services 
-are heavily text-based with no fancy widgets. We own all our content, so we don't pay royalties to publishers. We pass these savings 
-on to our users, and for many students and institutions, ChemVantage is completely free.<br/><br/>
-<div style='text-align: center;'><a href='/about.html#pricing'>See pricing details</a></div>
-</div>
-
-<div class='seg1'>
-<img class='float' src='images/img03.jpg' alt='happy student' />
-<br/><b>So what are you waiting for?</b><br/><br/>
-When used in combination with an open source textbook, ChemVantage can help you make your General Chemistry class more affordable, more 
-accessible, and help your students be more successful. Studies conducted at a large public research university showed that students who earned at least 
-50% credit on ChemVantage assignments passed the course with a grade of C- or better 95% of the time. Wow.<br/><br/>
-<div style='text-align: center;'><b>Can your current vendor do that?</b></div><br/>
-ChemVantage has scored millions of quiz and homework questions for students since 2010. You owe it to yourself and your students to find out 
-more about ChemVantage and the advantages of open source learning solutions. 
-Contact Chuck Wight at <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a> with your questions.<br/><br/>
- 
- <div style='text-align: center;'>
-  <a href=https://www.chemvantage.org/about.html>
-  <button style='border: none; color: white; padding: 10px 10px; margin: 4px 2px; font-size: 16px; cursor: pointer; border-radius: 10px; background-color: blue;'>Learn More</button>
-  </a>
- </div>
- 
-</div>
-</main>
-<footer><hr/><img style='padding-left: 15px; vertical-align: middle;width:30px' src=images/CVLogo.png alt='ChemVantage logo' />&nbsp;
-<a href=/index.html style='text-decoration: none;'><span style='color: blue;font-weight: bold;'>Chem</span><span style='color: #EE0000;font-weight: bold;'>Vantage</span></a> | 
-<a href=/about.html#terms>Terms and Conditions of Use</a> | 
-<a href=/about.html#privacy>Privacy Policy</a> | 
-<a href=/about.html#copyright>Copyright</a></footer>
-
+    <!-- Webpage Footer Start -->
+    <footer>
+        <div class="container">
+            <div class="d-flex footer-content justify-between align-center">
+                <div class="w-40">
+                    <ul class="social">
+                        <li>
+                            <a href="#" target="_blank">
+                                <img src="images/facebook.png" alt="facebook"/>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" target="_blank">
+                                <img src="images/instagram.png" alt="instagram"/>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" target="_blank">
+                                <img src="images/twitterx.png" alt="twitterx"/>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" target="_blank">
+                                <img src="images/linkedin.png" alt="linkedin"/>
+                            </a>
+                        </li>
+                    </ul>
+                    <address>
+                        <a 
+                            href="https://maps.app.goo.gl/V9n9XW7w7CSMQ5TSA" 
+                            target="_blank"
+                            class="location"
+                            title="address">
+                            4140 Parker Rd. Allentown, New Mexico 31134
+                        </a>
+                    </address>
+                </div>
+                <div class="w-40 text-end">
+                    <ul class="contact">
+                        <li>
+                            <a href="tel:+18012438242" title="phone">
+                                +1 (801)243-8242
+                            </a>
+                        </li>
+                        <li>
+                            <a href="mailto:admin@chemvantage.org" title="email">
+                                admin@chemvantage.org
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="m-container">
+            <div class="d-flex align-center footer-btm-content">
+                <div class="w-40">
+                    <span class="copy">
+                        &copy; 2010 - <script>document.write(new Date().getFullYear())</script> All Rights Reserved | ChemVantage
+                    </span>
+                </div>
+                <div class="w-60 text-end">
+                    <ul>
+                        <li>
+                            <a href="https://www.chemvantage.org/about.html#terms" target="_blank">
+                                Terms & conditions
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.chemvantage.org/about.html#privacy" target="_blank">
+                                Privacy Policy
+                            </a>
+                        </li>
+                        <li>
+                            <a href="https://www.chemvantage.org/about.html#copyright" target="_blank">
+                                Copyright
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <!-- Webpage Footer End -->
+    
+    <script src="js/script.js"></script>
+    <!-- Main Script Sheet -->
 </body>
 </html>
