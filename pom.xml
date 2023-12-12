@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.chemvantage</groupId>
   <artifactId>chemvantage</artifactId>
-  <version>20231211t1030</version>
+  <version>20231212t1012</version>
   <name>ChemVantage</name>
   <description>An Open Educational Resource for teaching and learning college-level General Chemistry.</description>
    <properties>
@@ -32,7 +32,7 @@
   <dependencies>
 
     <!-- Embedded Jetty Server -->
-    <dependency>
+   <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>apache-jsp</artifactId>
       <version>${jetty.version}</version>
@@ -49,12 +49,12 @@
 	<dependency>
       <groupId>com.auth0</groupId>
       <artifactId>java-jwt</artifactId>
-      <version>4.0.0</version>
+      <version>4.4.0</version>
 	</dependency>
 	<dependency>
       <groupId>com.auth0</groupId>
       <artifactId>jwks-rsa</artifactId>
-      <version>0.21.1</version>
+      <version>0.22.1</version>
 	</dependency>
 	<dependency>
 	  <groupId>com.google.code.gson</groupId>
