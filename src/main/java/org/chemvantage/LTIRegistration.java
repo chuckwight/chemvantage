@@ -111,7 +111,7 @@ public class LTIRegistration extends HttpServlet {
 				out.println(Subject.header("LTI Registration") + clientIdForm(token) + Subject.footer);
 			} else {
 				String queryString = request.getQueryString();
-				String registrationURL = Subject.serverUrl + "/Registration.jsp" + (queryString==null?"":"?" + queryString);
+				String registrationURL = iss + "/Registration.jsp" + (queryString==null?"":"?" + queryString);
 				response.sendRedirect(registrationURL);
 			}
 		} catch (Exception e) {
@@ -161,7 +161,7 @@ public class LTIRegistration extends HttpServlet {
 			}
 		} catch (Exception e) {
 			String message = (e.getMessage()==null?e.toString():e.getMessage());
-			String registrationURL = Subject.serverUrl + "/Registration.jsp?message=" + URLEncoder.encode(message,"utf-8");
+			String registrationURL = iss + "/Registration.jsp?message=" + URLEncoder.encode(message,"utf-8");
 			Enumeration<String> enumeration = request.getParameterNames();
 			while(enumeration.hasMoreElements()){
 	            String parameterName = enumeration.nextElement();
@@ -619,9 +619,10 @@ public class LTIRegistration extends HttpServlet {
 		JsonArray responseTypes = new JsonArray();
 		responseTypes.add("id_token");
 		regJson.add("response_types", responseTypes);
+		String projectId = Subject.projectId;
 		String iss = null;
 		String domain = null;
-		switch (Subject.projectId) {
+		switch (projectId) {
 		case "dev-vantage-hrd":
 			iss = "https://dev-vantage-hrd.appspot.com";
 			domain = "dev-vantage-hrd.appspot.com";
@@ -852,8 +853,9 @@ public class LTIRegistration extends HttpServlet {
 	
 	static void sendApprovalEmail(Deployment d, HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
+		String project_id = Subject.projectId;
 		String iss = null;
-		switch (Subject.projectId) {
+		switch (project_id) {
 		case "dev-vantage-hrd":
 			iss = "https://dev-vantage-hrd.appspot.com";
 			break;
