@@ -22,8 +22,12 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.text.DateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -124,8 +128,11 @@ public class Admin extends HttpServlet {
 				try {
 					int n = Integer.parseInt(request.getParameter("NVouchers"));
 					String org = request.getParameter("Organization");
+					int price = Integer.parseInt(request.getParameter("Price"));
 					if (org == null) throw new Exception();
-					for (int i=0; i<n; i++) new Voucher(org);
+					List<Voucher> newVouchers = new ArrayList<Voucher>();
+					for (int i=0; i<n; i++) newVouchers.add(new Voucher(org,price));
+					ofy().save().entities(newVouchers).now();
 				} catch (Exception e) {}
 				break;
 			}
@@ -212,27 +219,45 @@ public class Admin extends HttpServlet {
 			
 			// Create subscription vouchers
 			buf.append("<h3>1-Year Subscription Vouchers</h3>");
+			List<Voucher> vouchers = ofy().load().type(Voucher.class).filter("activated =",null).order("-purchased").list();
 			
 			if ("Create Vouchers".equals(userRequest)) {
-				buf.append("Unclaimed Vouchers:<br/>");
+				Date fiveSecondsAgo = new Date(new Date().getTime()-5000L);
+				buf.append("<b>New Voucher Codes - these will only be displayed once</b>:<br/>");
 				DateFormat df = DateFormat.getDateInstance(DateFormat.SHORT);
-				List<Voucher> vouchers = ofy().load().type(Voucher.class).filter("activated =",null).order("-purchased").list();
-				if (vouchers.size()>0) {
-					buf.append("<table><tr><th>Org</th><th>Purchased</th><th>Paid</th><th>Months</th><th>Code</th></th>");
-					for (Voucher v : vouchers) buf.append("<tr>"
+				buf.append("<table><tr><th>Organization</th><th>Purchased</th><th>Paid</th><th>Months</th><th>Code</th></th>");
+				for (Voucher v : vouchers) {
+					if (v.purchased.before(fiveSecondsAgo)) break;
+					buf.append("<tr>"
 							+ "<td style='text-align:center'>" + v.org + "</td>"
 							+ "<td style='text-align:center'>" + df.format(v.purchased) + "</td>"
 							+ "<td style='text-align:center'>$" + v.paid + "</td>"
 							+ "<td style='text-align:center'>" + v.months + "</td>"
 							+ "<td style='text-align:center'>" + v.code + "</td>"
 							+ "</tr>");
-					buf.append("</table>");
 				}
+				buf.append("</table><br/>");
+			} else {
+				buf.append("<b>There are " + vouchers.size() + " unclaimed vouchers.</b><br/>");
+				if (vouchers.size()>0) {
+					Map<String,Integer> voucherCounts = new HashMap<String,Integer>();
+					for (Voucher v : vouchers) { // increment count for this org
+						voucherCounts.put(v.org, voucherCounts.containsKey(v.org)?voucherCounts.get(v.org)+1:1);
+					}
+					buf.append("<table><tr><th>Organization</th><th>Vouchers</th></th>");
+					for (Entry<String,Integer> e : voucherCounts.entrySet()) {
+						buf.append("<tr><td>" + e.getKey() + "</td><td style='text-align:center'>" + e.getValue() + "</td></tr>");
+					}
+				}
+				buf.append("</table><br/>");
 			}
-			
+
 			buf.append("<form method=post>");
 			buf.append("<input type=hidden name=UserRequest value='Create Vouchers' />");
-			buf.append("Create <input type=text size=3 name=NVouchers value=0 /> new vouchers for <input type=text name=Organization placeholder=organization /> <input type=submit value='Show Codes' />");
+			buf.append("Create <input type=text size=3 name=NVouchers value=0 /> new vouchers for "
+					+ "<input type=text name=Organization placeholder=organization /> at "
+					+ "$<input type=text size=3 name=Price value=16> each. "
+					+ "<input type=submit value='Show Codes' />");
 			buf.append("</form>");
 			// Signature Code
 			buf.append("<h3>Signature Code for 1 month Anonymous Access: " + Long.toHexString(User.encode(new Date(new Date().getTime() + 2678400000L).getTime())) + "</h3>");	

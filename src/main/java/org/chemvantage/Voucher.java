@@ -20,13 +20,12 @@ public class Voucher {
 	
 	public Voucher() {}
 	
-	public Voucher(String org) {
+	public Voucher(String org,int price) {
 		this.code = Integer.toHexString(1048576 + new Random().nextInt(15728640)).toUpperCase(); // 6-character HEX
 		this.purchased = new Date();
 		this.months = 12;
-		this.paid = 16;
+		this.paid = price;
 		this.org = org;
-		ofy().save().entity(this).now();
 	}
 	
 	public boolean activate() {
