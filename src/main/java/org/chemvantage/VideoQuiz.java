@@ -21,6 +21,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,7 +38,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.gson.JsonObject;
 import com.googlecode.objectify.Key;
 
 @WebServlet("/VideoQuiz")
@@ -254,7 +254,6 @@ public class VideoQuiz extends HttpServlet {
 		debug.append("qkeys.");
 		
 		StringBuffer missedQuestions = new StringBuffer();	// contains solutions to questions answered incorrectly		
-		List<Response> responses = new ArrayList<Response>();
 		
 		if (questionKeys.size()>0) {  // This is the main scoring loop:			
 			int quizletScore = 0;
@@ -268,7 +267,11 @@ public class VideoQuiz extends HttpServlet {
 						if (seed==-1) seed--;  // -1 is a special value for randomly seeded Random generator; avoid this (unlikely) situation
 						q.setParameters(seed);
 						int score = q.isCorrect(studentAnswer)?q.pointValue:0;
-						responses.add(new Response("VideoQuiz",0,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,user.getId(),vt.id,now));
+						vt.questionKeys.add(k);
+						vt.questionScores.put(k, score);
+						vt.studentAnswers.put(k, studentAnswer);
+						vt.correctAnswers.put(k, q.getCorrectAnswer());
+						q.addAttempt(score>0);
 						quizletScore += score;
 						if (score == 0) {  
 							// include question in list of incorrectly answered questions
@@ -280,7 +283,6 @@ public class VideoQuiz extends HttpServlet {
 				}
 			}
 			debug.append("scoring done.");
-			ofy().save().entities(responses);
 			vt.quizletScores.set(segment,quizletScore);
 			vt.missedQuestions.set(segment,missedQuestions.toString());
 		}
@@ -365,11 +367,7 @@ public class VideoQuiz extends HttpServlet {
 
 		if (reportScoreToLms) {
 			try {
-				JsonObject payload = new JsonObject();
-				payload.addProperty("AssignmentId",a.id);
-				payload.addProperty("UserId",user.getId());
-				Utilities.createTask("/ReportScore",payload);
-				
+				Utilities.createTask("/ReportScore","AssignmentId=" + a.id + "&UserId=" + URLEncoder.encode(user.getId(),"UTF-8"));
 				//Queue queue = QueueFactory.getDefaultQueue();  // Task queue used for reporting scores to the LMS
 				//queue.add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue
 			} catch (Exception e) {}

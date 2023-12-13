@@ -562,8 +562,6 @@ public class PlacementExam extends HttpServlet {
 			// Load all of the relevant questions
 			Map<Key<Question>,Question> questions = ofy().load().keys(questionKeys);
 			
-			List<Response> responses = new ArrayList<Response>();
-			
 			// begin the main scoring loop:
 			for (Key<Question> k : questionKeys) {
 				Question q=null;
@@ -584,10 +582,12 @@ public class PlacementExam extends HttpServlet {
 					int score = studentAnswer.length()==0?0:q.isCorrect(studentAnswer)?q.pointValue:0;
 					if (score==0 && q.agreesToRequiredPrecision(studentAnswer)) score = q.pointValue - 1;  // partial credit for wrong sig figs
 					if (score > 0) studentScores[a.conceptIds.indexOf(q.conceptId)] += score;
-					if (studentAnswer.length() > 0) {
-						Response r = new Response("PlacementExam",a.id,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,Subject.hashId(user.getId()),pt.id,now);
-						responses.add(r);
-					}
+					
+					pt.questionKeys.add(k);
+					pt.questionScores.put(k, score);
+					pt.studentAnswers.put(k, studentAnswer);
+					pt.correctAnswers.put(k, q.getCorrectAnswer());
+					
 					if (score < q.pointValue) {
 						// include question in list of incorrectly answered questions
 						wrongAnswers++;
@@ -600,7 +600,6 @@ public class PlacementExam extends HttpServlet {
 			pt.scores = studentScores;
 			pt.graded = now;
 			ofy().save().entity(pt).now();
-			ofy().save().entities(responses);
 			
 			if (!user.isAnonymous()) {
 				try {
@@ -1114,12 +1113,9 @@ public class PlacementExam extends HttpServlet {
 							buf.append("\"" + (p.graded.getTime()-p.downloaded.getTime())/60000 + " min.\",");
 
 							// print a row of scores for each question; leave blank if no response was recorded
-							List<Response> responses = ofy().load().type(Response.class).filter("transactionId",p.id).list();
-							Map<Key<Question>,Response> responseMap = new HashMap<Key<Question>,Response>();
-							for (Response r : responses) responseMap.put(Key.create(Question.class,r.questionId), r);
 							for (Key<Question> key : a.questionKeys) {
-								Response r = responseMap.get(key);
-								buf.append(r==null?",":r.score + ",");
+								Integer score = p.questionScores.get(key);
+								buf.append(score==null?",":score + ",");
 							}
 							
 							int score = 0;
@@ -1168,11 +1164,6 @@ public class PlacementExam extends HttpServlet {
 				}
 			}	
 			
-			// create a HashMap of all the questionIds and student's responses for all items submitted
-			List<Response> responses = ofy().load().type(Response.class).filter("transactionId",pet.id).list();
-			Map<Long,String> studentAnswers = new HashMap<Long,String>();
-			for (Response r : responses) studentAnswers.put(r.questionId,r.studentResponse);
-			
 			buf.append("<h2>General Chemistry Placement Exam</h2>");
 		
 			
@@ -1201,14 +1192,14 @@ public class PlacementExam extends HttpServlet {
 				Question q = questions.get(k);
 				q.setParameters((int)(pet.id ^ q.id));
 				buf.append("<tr style='vertical-align:middle'><td><b>" + i + ". </b>" 
-						+ q.printAllToStudents(studentAnswers.get(q.id),true) + "</td>");
+						+ q.printAllToStudents(pet.studentAnswers.get(Key.create(q)),true) + "</td>");
 
 				// Try to get the question score from the PlacementExamTransaction. If null, recompute it from the student's response
 				int score = 0;
 				if (pet.questionScores.get(k)!=null) score = pet.questionScores.get(k);
-				else if (studentAnswers.get(q.id)!=null && !studentAnswers.get(q.id).isEmpty()) {  // an answer was submitted
-					score = q.isCorrect(studentAnswers.get(q.id))?q.pointValue:0;
-					if (score==0 && q.agreesToRequiredPrecision(studentAnswers.get(q.id))) score = q.pointValue - 1;  // partial credit for wrong sig figs
+				else if (pet.studentAnswers.get(Key.create(q))!=null && !pet.studentAnswers.get(Key.create(q)).isEmpty()) {  // an answer was submitted
+					score = q.isCorrect(pet.studentAnswers.get(Key.create(q)))?q.pointValue:0;
+					if (score==0 && q.agreesToRequiredPrecision(pet.studentAnswers.get(Key.create(q)))) score = q.pointValue - 1;  // partial credit for wrong sig figs
 				}
 				
 				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"
@@ -1228,14 +1219,14 @@ public class PlacementExam extends HttpServlet {
 				Question q = questions.get(k);
 				q.setParameters((int)(pet.id ^ q.id));
 				buf.append("<tr style='vertical-align:middle'><td><b>" + i + ". </b>" 
-						+ q.printAllToStudents(studentAnswers.get(q.id),true,true,pet.questionShowWork.get(k)) + "</td>");
+						+ q.printAllToStudents(pet.studentAnswers.get(Key.create(q)),true,true,pet.questionShowWork.get(k)) + "</td>");
 
 				// Try to get the question score from the PlacementExamTransaction. If null, recompute it from the student's response
 				int score = 0;
 				if (pet.questionScores.get(k)!=null) score = pet.questionScores.get(k);
-				else if (studentAnswers.get(q.id)!=null && !studentAnswers.get(q.id).isEmpty()) {  // an answer was submitted
-					score = q.isCorrect(studentAnswers.get(q.id))?q.pointValue:0;
-					if (score==0 && q.agreesToRequiredPrecision(studentAnswers.get(q.id))) score = q.pointValue - 1;  // partial credit for wrong sig figs
+				else if (pet.studentAnswers.get(Key.create(q))!=null && !pet.studentAnswers.get(Key.create(q)).isEmpty()) {  // an answer was submitted
+					score = q.isCorrect(pet.studentAnswers.get(Key.create(q)))?q.pointValue:0;
+					if (score==0 && q.agreesToRequiredPrecision(pet.studentAnswers.get(Key.create(q)))) score = q.pointValue - 1;  // partial credit for wrong sig figs
 				}
 				
 				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"
@@ -1465,36 +1456,23 @@ public class PlacementExam extends HttpServlet {
 		Map<Key<Question>,Integer> topPossibleScores = new HashMap<Key<Question>,Integer>();	// total possible scores for each question by top students
 		Map<Key<Question>,Integer> lowPossibleScores = new HashMap<Key<Question>,Integer>();	// total possible scores for each question by low students
 		
-		List<Response> responses = new ArrayList<Response>();
 		for (PlacementExamTransaction pet : bestTransactions) {
 			if (topUserIds.contains(pet.userId)) {
 				try {
-					responses = ofy().load().type(Response.class).filter("assignmentType","PlacementExam").filter("transactionId",pet.id).list();
-					for (Response r : responses) {  // update stats for all questions that received a Response
-						Key<Question> k = Key.create(Question.class,r.questionId);
-						topScores.put(k,topScores.get(k)==null?r.score:topScores.get(k)+r.score);
-						topPossibleScores.put(k,topPossibleScores.get(k)==null?r.possibleScore:topPossibleScores.get(k)+r.possibleScore);
-						pet.questionKeys.remove(k);
-					}
-					for (Key<Question> k : pet.questionKeys) {
-						if (topScores.get(k)==null) topScores.put(k, 0);
-						if (questionKeys_02pt.contains(k)) topPossibleScores.put(k, topPossibleScores.get(k)==null?2:topPossibleScores.get(k)+2);
-						else if (questionKeys_04pt.contains(k)) topPossibleScores.put(k, topPossibleScores.get(k)==null?4:topPossibleScores.get(k)+4);
+					for (Key<Question> k : pet.questionKeys) {  // update stats for all questions that received a response, else enter 0
+						Integer score = pet.questionScores.get(k);
+						if (score==null) score = 0;
+						topScores.put(k,topScores.get(k)==null?score:topScores.get(k)+score);
+						topPossibleScores.put(k,topPossibleScores.get(k)==null?pet.questionValues.get(k):topPossibleScores.get(k)+pet.questionValues.get(k));
 					}
 				} catch (Exception e) {}
 			} else if (lowUserIds.contains(pet.userId)) {
 				try {
-					responses = ofy().load().type(Response.class).filter("assignmentType","PlacementExam").filter("transactionId",pet.id).list();
-					for (Response r : responses) {  // update stats for all questions that received a Response
-						Key<Question> k = Key.create(Question.class,r.questionId);
-						lowScores.put(k,lowScores.get(k)==null?r.score:lowScores.get(k)+r.score);
-						lowPossibleScores.put(k,lowPossibleScores.get(k)==null?r.possibleScore:lowPossibleScores.get(k)+r.possibleScore);
-						pet.questionKeys.remove(k);
-					}
-					for (Key<Question> k : pet.questionKeys) {
-						if (lowScores.get(k)==null) lowScores.put(k, 0);
-						if (questionKeys_02pt.contains(k)) lowPossibleScores.put(k, lowPossibleScores.get(k)==null?2:lowPossibleScores.get(k)+2);
-						else if (questionKeys_04pt.contains(k)) lowPossibleScores.put(k, lowPossibleScores.get(k)==null?4:lowPossibleScores.get(k)+4);
+					for (Key<Question> k : pet.questionKeys) {  // update stats for all questions that received a response, else enter 0
+						Integer score = pet.questionScores.get(k);
+						if (score==null) score = 0;
+						lowScores.put(k,lowScores.get(k)==null?score:lowScores.get(k)+score);
+						lowPossibleScores.put(k,lowPossibleScores.get(k)==null?pet.questionValues.get(k):lowPossibleScores.get(k)+pet.questionValues.get(k));
 					}
 				} catch (Exception e) {}
 			}

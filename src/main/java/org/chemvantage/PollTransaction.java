@@ -18,8 +18,10 @@
 package org.chemvantage;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.googlecode.objectify.Key;
@@ -38,8 +40,11 @@ public class PollTransaction implements Serializable {
 			int nSubmissions;
 			int score;
 			int possibleScore;
-			Map<Key<Question>,String> responses = new HashMap<Key<Question>,String>();
-	
+			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
+			Map<Key<Question>,Integer> questionScores = new HashMap<Key<Question>,Integer>();
+			Map<Key<Question>,String> studentAnswers = new HashMap<Key<Question>,String>();
+			Map<Key<Question>,String> correctAnswers = new HashMap<Key<Question>,String>();
+			
     PollTransaction() {}
     
     public PollTransaction(String userId,Date downloaded,long assignmentId) {

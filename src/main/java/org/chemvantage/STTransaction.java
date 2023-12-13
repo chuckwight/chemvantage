@@ -21,7 +21,9 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
@@ -42,6 +44,9 @@ public class STTransaction implements Serializable {
 			int[] possibleScores;
 			int[] missedQuestions;
 			List<Key<Question>> answeredKeys = new ArrayList<Key<Question>>();
+			Map<Key<Question>,Integer> questionScores = new HashMap<Key<Question>,Integer>();
+			Map<Key<Question>,String> studentAnswers = new HashMap<Key<Question>,String>();
+			Map<Key<Question>,String> correctAnswers = new HashMap<Key<Question>,String>();
 			
 	STTransaction() {}
 

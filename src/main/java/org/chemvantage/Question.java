@@ -645,6 +645,12 @@ public class Question implements Serializable, Cloneable {
 		ofy().save().entity(this);
 	}
 	
+	public void addBulkAttempts(int nTotal,int nCorrect) {
+		if (nTotalAttempts==null) initializeCounters();
+		this.nTotalAttempts += nTotal;
+		this.nCorrectAnswers += nCorrect;
+	}
+	
 	public String getSuccess() {
 		if (nTotalAttempts==null) initializeCounters();
 		return String.valueOf(nCorrectAnswers) + "/" + String.valueOf(nTotalAttempts) + "(" + getPctSuccess() + ")";
@@ -656,9 +662,8 @@ public class Question implements Serializable, Cloneable {
 	}
 	
 	private void initializeCounters() {
-		nTotalAttempts = ofy().load().type(Response.class).filter("questionId",id).count();
-		nCorrectAnswers = ofy().load().type(Response.class).filter("questionId",id).filter("score >",0).count();
-		ofy().save().entity(this);
+		nTotalAttempts = 0;
+		nCorrectAnswers = 0;
 	}
 	
 	public boolean hasSolution() {

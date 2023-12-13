@@ -22,9 +22,10 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -32,6 +33,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
 
 @WebServlet("/ResponseServlet")
@@ -182,6 +184,192 @@ public class ResponseServlet extends HttpServlet {
 	
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
+		// this method accepts an assignmentId and updates all of the associated transactions with the 
+		// studentAnswers and correctAnswers. It then eliminates the Response entities that contained the information
+		// At the same time, the Question entities are updated with nTotalAttempts and nCorrectAnswers statistics
+		StringBuffer debug = new StringBuffer("Debug:");
+		try {
+			long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
+			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+			debug.append("Assignment " + a==null?"is null.":a.id + " has ");
+			List<Response> responses = ofy().load().type(Response.class).filter("assignmentId",a.id).list();
+			if (responses.size()==0) return;  // this assignment is already updated
+			debug.append(responses.size()+ " " + a.assignmentType + " Response entities.");
+			// These Maps are for collecting stats for questions answered on this assignment
+			Map<Long,Integer> nTotalAttempts = new HashMap<Long,Integer>();
+			Map<Long,Integer> nCorrectAnswers = new HashMap<Long,Integer>();
+
+			switch (a.assignmentType) {
+			case "Homework":
+				// Using the Response items for this assignment, collect all of the relevant HWTransaction keys
+				List<Key<HWTransaction>> hwTransactionKeys = new ArrayList<Key<HWTransaction>>();
+				for (Response r : responses) hwTransactionKeys.add(Key.create(HWTransaction.class,r.transactionId));
+				// Make a Map of HWTransactions for these Response items
+				Map<Key<HWTransaction>,HWTransaction> hwTransactions = ofy().load().keys(hwTransactionKeys);
+				debug.append(hwTransactions.size() + " HWTransaction entities ");
+				for (Response r : responses) {
+					try {
+						HWTransaction hwt = hwTransactions.get(Key.create(HWTransaction.class,r.transactionId));  // get the HWTransaction for this Response
+						hwt.studentAnswer = r.studentResponse;					// update the HWTransaction data
+						hwt.correctAnswer = r.correctAnswer;
+						Integer nt = nTotalAttempts.get(hwt.questionId);		// record the stats for this question
+						nTotalAttempts.put(hwt.questionId,nt==null?1:nt+1);
+						Integer nc = nCorrectAnswers.get(hwt.questionId);
+						nCorrectAnswers.put(hwt.questionId,nc==null?1:nc+r.score>0?1:0);
+					} catch (Exception e) {}
+				}
+				ofy().save().entities(new ArrayList<HWTransaction>(hwTransactions.values()));
+				debug.append("saved.");
+				break;
+			case "Quiz":
+				List<Key<QuizTransaction>> qTransactionKeys = new ArrayList<Key<QuizTransaction>>();
+				for (Response r : responses) {
+					Key<QuizTransaction> k = Key.create(QuizTransaction.class,r.transactionId);
+					if (!qTransactionKeys.contains(k)) qTransactionKeys.add(k);
+				}
+				Map<Key<QuizTransaction>,QuizTransaction> qTransactions = ofy().load().keys(qTransactionKeys);
+				for (Response r : responses) {
+					try {
+						QuizTransaction qt = qTransactions.get(Key.create(r.transactionId));
+						Key<Question> k = Key.create(Question.class,r.questionId);
+						qt.questionKeys.add(k);
+						qt.studentAnswers.put(k,r.studentResponse);
+						qt.correctAnswers.put(k,r.correctAnswer);
+						Integer nt = nTotalAttempts.get(r.questionId);
+						nTotalAttempts.put(r.id,nt==null?1:nt+1);
+						Integer nc = nCorrectAnswers.get(r.questionId);
+						nCorrectAnswers.put(r.id,nc==null?1:nc+r.score>0?1:0);
+					} catch (Exception e) {}
+				}
+				ofy().save().entities(new ArrayList<QuizTransaction>(qTransactions.values()));
+				break;
+			case "Poll":
+				List<Key<PollTransaction>> pollTransactionKeys = new ArrayList<Key<PollTransaction>>();
+				for (Response r : responses) {
+					Key<PollTransaction> k = Key.create(PollTransaction.class,r.transactionId);
+					if (!pollTransactionKeys.contains(k)) pollTransactionKeys.add(k);
+				}
+				Map<Key<PollTransaction>,PollTransaction> pollTransactions = ofy().load().keys(pollTransactionKeys);
+				for (Response r : responses) {
+					try {
+						PollTransaction pt = pollTransactions.get(Key.create(r.transactionId));
+						Key<Question> k = Key.create(Question.class,r.questionId);
+						pt.questionKeys.add(k);
+						pt.studentAnswers.put(k,r.studentResponse);
+						pt.correctAnswers.put(k,r.correctAnswer);
+						Integer nt = nTotalAttempts.get(r.questionId);
+						nTotalAttempts.put(r.id,nt==null?1:nt+1);
+						Integer nc = nCorrectAnswers.get(r.questionId);
+						nCorrectAnswers.put(r.id,nc==null?1:nc+r.score>0?1:0);
+					} catch (Exception e) {}
+				}
+				ofy().save().entities(new ArrayList<PollTransaction>(pollTransactions.values()));
+				break;
+			case "PracticeExam":
+				List<Key<PracticeExamTransaction>> prExTransactionKeys = new ArrayList<Key<PracticeExamTransaction>>();
+				for (Response r : responses) {
+					Key<PracticeExamTransaction> k = Key.create(PracticeExamTransaction.class,r.transactionId);
+					if (!prExTransactionKeys.contains(k)) prExTransactionKeys.add(k);
+				}
+				Map<Key<PracticeExamTransaction>,PracticeExamTransaction> prExTransactions = ofy().load().keys(prExTransactionKeys);
+				for (Response r : responses) {
+					try {
+						PracticeExamTransaction pt = prExTransactions.get(Key.create(r.transactionId));
+						Key<Question> k = Key.create(Question.class,r.questionId);
+						pt.questionKeys.add(k);
+						pt.studentAnswers.put(k,r.studentResponse);
+						pt.correctAnswers.put(k,r.correctAnswer);
+						Integer nt = nTotalAttempts.get(r.questionId);
+						nTotalAttempts.put(r.id,nt==null?1:nt+1);
+						Integer nc = nCorrectAnswers.get(r.questionId);
+						nCorrectAnswers.put(r.id,nc==null?1:nc+r.score>0?1:0);
+					} catch (Exception e) {}
+				}
+				ofy().save().entities(new ArrayList<PracticeExamTransaction>(prExTransactions.values()));
+				break;
+			case "PlacementExam":
+				List<Key<PlacementExamTransaction>> plExTransactionKeys = new ArrayList<Key<PlacementExamTransaction>>();
+				for (Response r : responses) {
+					Key<PlacementExamTransaction> k = Key.create(PlacementExamTransaction.class,r.transactionId);
+					if (!plExTransactionKeys.contains(k)) plExTransactionKeys.add(k);
+				}
+				Map<Key<PlacementExamTransaction>,PlacementExamTransaction> plExTransactions = ofy().load().keys(plExTransactionKeys);
+				for (Response r : responses) {
+					try {
+						PlacementExamTransaction pt = plExTransactions.get(Key.create(r.transactionId));
+						Key<Question> k = Key.create(Question.class,r.questionId);
+						pt.questionKeys.add(k);
+						pt.studentAnswers.put(k,r.studentResponse);
+						pt.correctAnswers.put(k,r.correctAnswer);
+						Integer nt = nTotalAttempts.get(r.questionId);
+						nTotalAttempts.put(r.id,nt==null?1:nt+1);
+						Integer nc = nCorrectAnswers.get(r.questionId);
+						nCorrectAnswers.put(r.id,nc==null?1:nc+r.score>0?1:0);
+					} catch (Exception e) {}
+				}
+				ofy().save().entities(new ArrayList<PlacementExamTransaction>(plExTransactions.values()));
+				break;
+			case "VideoQuiz":
+				List<Key<VideoTransaction>> vTransactionKeys = new ArrayList<Key<VideoTransaction>>();
+				for (Response r : responses) {
+					Key<VideoTransaction> k = Key.create(VideoTransaction.class,r.transactionId);
+					if (!vTransactionKeys.contains(k)) vTransactionKeys.add(k);
+				}
+				Map<Key<VideoTransaction>,VideoTransaction> vTransactions = ofy().load().keys(vTransactionKeys);
+				for (Response r : responses) {
+					try {
+						VideoTransaction vt = vTransactions.get(Key.create(r.transactionId));
+						Key<Question> k = Key.create(Question.class,r.questionId);
+						vt.questionKeys.add(k);
+						vt.studentAnswers.put(k,r.studentResponse);
+						vt.correctAnswers.put(k,r.correctAnswer);
+						Integer nt = nTotalAttempts.get(r.id);
+						nTotalAttempts.put(r.id,nt==null?1:nt+1);
+						Integer nc = nCorrectAnswers.get(r.id);
+						nCorrectAnswers.put(r.id,nc==null?1:nc+r.score>0?1:0);
+					} catch (Exception e) {}
+				}
+				ofy().save().entities(new ArrayList<VideoTransaction>(vTransactions.values()));
+				break;
+			case "SmartText":
+				List<Key<STTransaction>> sTransactionKeys = new ArrayList<Key<STTransaction>>();
+				for (Response r : responses) {
+					Key<STTransaction> k = Key.create(STTransaction.class,r.transactionId);
+					if (!sTransactionKeys.contains(k)) sTransactionKeys.add(k);
+				}
+				Map<Key<STTransaction>,STTransaction> sTransactions = ofy().load().keys(sTransactionKeys);
+				for (Response r : responses) {
+					try {
+						STTransaction st = sTransactions.get(Key.create(r.transactionId));
+						Key<Question> k = Key.create(Question.class,r.questionId);
+						st.answeredKeys.add(k);
+						st.studentAnswers.put(k,r.studentResponse);
+						st.correctAnswers.put(k,r.correctAnswer);
+						Integer nt = nTotalAttempts.get(r.id);
+						nTotalAttempts.put(r.id,nt==null?1:nt+1);
+						Integer nc = nCorrectAnswers.get(r.id);
+						nCorrectAnswers.put(r.id,nc==null?1:nc+r.score>0?1:0);
+					} catch (Exception e) {}
+				}
+				ofy().save().entities(new ArrayList<STTransaction>(sTransactions.values()));
+				break;
+
+			default: return;
+			}
+			ofy().delete().entities(responses);
+			debug.append("Responses deleted.");
+			Map<Long,Question> questions = ofy().load().type(Question.class).ids(new ArrayList<Long>(nTotalAttempts.keySet()));
+			for (Entry<Long,Question> e : questions.entrySet()) {
+				e.getValue().addBulkAttempts(nTotalAttempts.get(e.getKey()),nCorrectAnswers.get(e.getKey()));
+			}
+			ofy().save().entities(new ArrayList<Question>(questions.values()));
+			debug.append("Questions updated.Done.");
+			//throw new Exception("Finished OK.");
+		} catch (Exception e) {
+			Utilities.sendEmail("ChemVantage", "admin@chemvantage.org", "ResponseServlet Failed", e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString());
+		}
+	}
+/*		
 		try {
 			Response r = new Response(
 					request.getParameter("AssignmentType"),
@@ -198,7 +386,7 @@ public class ResponseServlet extends HttpServlet {
 		} catch (Exception e) {
 		}
 	}
-	
+*/	
 	String topicSelectBox() {
 		StringBuffer buf = new StringBuffer();
 		buf.append("<SELECT NAME=TopicId><OPTION VALUE=all>Include all topics</OPTION>");

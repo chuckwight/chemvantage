@@ -10,7 +10,6 @@ import com.google.cloud.tasks.v2.CloudTasksClient;
 import com.google.cloud.tasks.v2.HttpMethod;
 import com.google.cloud.tasks.v2.QueueName;
 import com.google.cloud.tasks.v2.Task;
-import com.google.gson.JsonObject;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Timestamp;
 import com.sendgrid.Method;
@@ -23,11 +22,11 @@ import com.sendgrid.helpers.mail.objects.Email;
 
 public class Utilities {
 	
-	public static void createTask(String relativeUri, JsonObject payload) throws IOException {
-		createTask(relativeUri, payload, 0);
+	public static void createTask(String relativeUri, String query) throws IOException {
+		createTask(relativeUri, query, 0);
 	}
 	
-	public static void createTask(String relativeUri, JsonObject payload, int seconds)
+	public static void createTask(String relativeUri, String query, int seconds)
 			throws IOException {
 		// This method accepts a relativeUri (e.g., /ReportScore) to POST a request to a ChemVantage servlet
 		String projectId = Subject.projectId;
@@ -38,14 +37,15 @@ public class Utilities {
 			// Construct the fully qualified queue name.
 			String queuePath = QueueName.of(projectId, location, queueName).toString();
 
-			// Construct the task body.
+			// Build the Task:
 			Task.Builder taskBuilder =
 					Task.newBuilder()
 					.setAppEngineHttpRequest(
 							AppEngineHttpRequest.newBuilder()
-							.setBody(ByteString.copyFrom(payload.toString(), Charset.defaultCharset()))
+							.setBody(ByteString.copyFrom(query, Charset.defaultCharset()))
 							.setRelativeUri(relativeUri)
 							.setHttpMethod(HttpMethod.POST)
+							.putHeaders("Content-Type", "application/x-www-form-urlencoded")
 							.build());
 
 			// Add the scheduled time to the request.

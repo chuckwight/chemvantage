@@ -30,7 +30,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.gson.JsonObject;
 import com.googlecode.objectify.Key;
 
 /* 
@@ -154,10 +153,7 @@ public class ManageMessages extends HttpServlet {
 				msg = "Sending " + nSending + " messages in " + nTasks + " tasks of 10 messages each at 1 task/minute. ";
 				for (i=0; i<nTasks;i++) {
 					int delaySeconds = i * 60;
-					JsonObject payload = new JsonObject();
-					payload.addProperty("UserRequest","Send 10 Messages");
-					payload.addProperty("MessageId",m.id);
-					Utilities.createTask("/messages",payload,delaySeconds);
+					Utilities.createTask("/messages","UserRequest=Send+10+Messages&MessageId=" + m.id,delaySeconds);
 					
 					//QueueFactory.getDefaultQueue().add(withUrl("/messages").param("UserRequest","Send 10 Messages").param("MessageId",String.valueOf(m.id)).countdownMillis(delayMillis));
 				}
@@ -179,10 +175,7 @@ public class ManageMessages extends HttpServlet {
 					int i = 0;
 					for (i=0; i<nTasks;i++) {
 						int delaySeconds = i * 60;
-						JsonObject payload = new JsonObject();
-						payload.addProperty("UserRequest","Send 10 Messages");
-						payload.addProperty("MessageId",m.id);
-						Utilities.createTask("/messages",payload,delaySeconds);
+						Utilities.createTask("/messages","UserRequest=Send+10+Messages&MessageId=" + m.id,delaySeconds);
 						
 						//QueueFactory.getDefaultQueue().add(withUrl("/messages").param("UserRequest","Send 10 Messages").param("MessageId",String.valueOf(message.id)).countdownMillis(delayMillis));
 					}

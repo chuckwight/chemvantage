@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -52,7 +53,6 @@ import com.googlecode.objectify.Key;
 public class Homework extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;	
-	private Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
 	static int retryDelayMinutes = 2;  // minimum time between answer submissions for any single question
 
 	public String getServletInfo() {
@@ -529,19 +529,17 @@ public class Homework extends HttpServlet {
 				}
 				
 				ht = new HWTransaction(q.id,user.getHashedId(),now,studentScore,hwa.id,possibleScore,showWork);
+				ht.studentAnswer = studentAnswer;
+				ht.correctAnswer = q.correctAnswer;				
 				ofy().save().entity(ht).now();
-				// create and store a Response entity:
-				Response r = new Response("Homework",hwa.id,q.id,studentAnswer,q.getCorrectAnswer(),studentScore,possibleScore,user.getId(),ht.id,now);
-				ofy().save().entity(r);
-						
+				
 				// create/update/store a HomeworkScore object
 				try {  // throws exception if hwa==null
 					if (!user.isAnonymous() && hwa.questionKeys.contains(k) && hwa.lti_ags_lineitem_url != null) {
+						q.addAttempt(studentScore>0);
 						Score s = Score.getInstance(user.getId(),hwa);
 						ofy().save().entity(s).now();
-						JsonObject payload = new JsonObject();
-						payload.addProperty("AssignmentId",hwa.id);
-						payload.addProperty("UserId",user.getId());
+						String payload = "AssignmentId=" + hwa.id + "&UserId=" + URLEncoder.encode(user.getId(),"UTF-8");
 						Utilities.createTask("/ReportScore",payload);
 						//QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",hwa.id.toString()).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue	
 					}
@@ -936,31 +934,6 @@ public class Homework extends HttpServlet {
 			String forUserHashedId = Subject.hashId(forUserId);
 			Map<Key<Question>,Question> questions = ofy().load().keys(a.questionKeys);
 			List<HWTransaction> transactions = ofy().load().type(HWTransaction.class).filter("userId",forUserHashedId).filter("assignmentId",a.id).order("-graded").list();
-			List<Response> responses = ofy().load().type(Response.class).filter("userId",forUserHashedId).filter("assignmentId",a.id).list();
-			Map<Long,Response> responseMap = new HashMap<Long,Response>();
-			for (Response r : responses) if (r.transactionId>0) responseMap.put(r.transactionId, r);
-			
-			// Response entities older than 1/16/23 do not have transactionId values, and Responses prior to Nov 16, 2022 don't have assignmentId values, 
-			// so pair these by submission time and questionId:
-			for (HWTransaction t : transactions) {
-				if (responseMap.get(t.id)==null) {
-					for (Response r : responses) {
-						if (r.questionId==t.questionId && Math.abs(r.submitted.getTime()-t.graded.getTime())<60000L) {
-							responseMap.put(t.id, r);
-							break;
-						}
-					}
-				}
-				if (responseMap.get(t.id)==null) {
-					List<Response> userResponses = ofy().load().type(Response.class).filter("userId",forUserHashedId).filter("questionId",t.questionId).list();
-					for (Response r : userResponses) {
-						if (Math.abs(r.submitted.getTime()-t.graded.getTime())<60000L) {
-							responseMap.put(t.id, r);
-							break;
-						}
-					}			
-				}
-			}
 			
 			buf.append("<h3>Homework Submissions</h3>"
 					+ (forUserName==null?"":"Name: " + forUserName + "<br/>")
@@ -979,34 +952,27 @@ public class Homework extends HttpServlet {
 				for (HWTransaction t : transactions) if (q.id.longValue() == t.questionId) qTransactions.add(t);
 				debug.append("2");
 				
-				String studentResponse = null;
+				String studentAnswer = null;
 				String showWork = null;
 				HWTransaction hwt = qTransactions.isEmpty()?null:qTransactions.get(0);
 				if (hwt!=null) {
 					showWork = hwt.showWork;
-					if (responseMap.get(hwt.id)!=null) studentResponse = responseMap.get(hwt.id).studentResponse;
+					studentAnswer = hwt.studentAnswer;
 				}
 				debug.append("3");
 				
-				buf.append("<tr><td style='text-align:right;vertical-align:text-top;padding-right:10px;'><b>" + (a.questionKeys.indexOf(k)+1) + ".</b></td><td>" + q.printAllToStudents(studentResponse,true,true,showWork) + "<br/></td></tr>");
+				buf.append("<tr><td style='text-align:right;vertical-align:text-top;padding-right:10px;'><b>" + (a.questionKeys.indexOf(k)+1) + ".</b></td><td>" + q.printAllToStudents(studentAnswer,true,true,showWork) + "<br/></td></tr>");
 				
-				// print a small table of student submissions fort this question
+				// print a small table of student submissions for this question
 				buf.append("<tr><td></td><td>");
 				if (!qTransactions.isEmpty()) {
 					buf.append("<table style='text-align: center'><tr><th style='padding-right:20px'>Timestamp</th><th style='padding-right:20px'>Student Response</th><th style='padding-right:20px'>Correct Answer</th><th>Correct</th></tr>");
 					for (HWTransaction t : qTransactions) {
-						String correctAnswer = q.getCorrectAnswer();
-						studentResponse = null;
-						if (responseMap.get(t.id)!=null) {
-							studentResponse = responseMap.get(t.id).studentResponse;
-							correctAnswer = responseMap.get(t.id).correctAnswer;
-						}
-						
-						if (studentResponse==null) buf.append("<tr><td style='padding-right:20px'>" + t.graded + "</td><td colspan=2 style='padding-right:20px'>(response detail is unavailable)</td>");
-						else buf.append("<tr><td style='padding-right:20px'>" + t.graded + "</td><td style='padding-right:20px'>" + studentResponse + "</td><td style='padding-right:20px'>" + correctAnswer + "</td>");
+						if (t.studentAnswer==null) buf.append("<tr><td style='padding-right:20px'>" + t.graded + "</td><td colspan=2 style='padding-right:20px'>(response detail is unavailable)</td>");
+						else buf.append("<tr><td style='padding-right:20px'>" + t.graded + "</td><td style='padding-right:20px'>" + t.studentAnswer + "</td><td style='padding-right:20px'>" + t.correctAnswer + "</td>");
 						
 						if (t.score==1) buf.append("<td><img src=/images/checkmark.gif alt='checkmark' height=24 width=17></td>");
-						else if (q.agreesToRequiredPrecision(studentResponse)) buf.append("<td><img src=/images/partCredit.png alt='partial credit' height=25 width=25></td>");
+						else if (q.agreesToRequiredPrecision(t.studentAnswer)) buf.append("<td><img src=/images/partCredit.png alt='partial credit' height=25 width=25></td>");
 						else buf.append("<td><img src=/images/xmark.png alt='x-mark' height=24 width=24></td>");
 						buf.append("</tr>");
 					}
@@ -1046,9 +1012,7 @@ public class Homework extends HttpServlet {
 				if (cvScore==null) continue;
 				String s = scores.get(entry.getKey());
 				if (String.valueOf(cvScore.getPctScore()).equals(s)) continue;  // the scores match (good!)
-				JsonObject payload = new JsonObject();
-				payload.addProperty("AssignmentId",a.id);
-				payload.addProperty("UserId",platform_id + entry.getKey());
+				String payload = "AssignmentId=" + a.id + "&UserId=" + URLEncoder.encode(platform_id + entry.getKey(),"UTF-8");
 				Utilities.createTask("/ReportScore",payload);
 				//QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(platform_id + entry.getKey(),"UTF-8")));  // put report into the Task Queue
 			}
@@ -1138,24 +1102,17 @@ public class Homework extends HttpServlet {
 			buf.append("</select></form><hr>");
 			debug.append("4");
 			
+			
 			// now we have all of the relevant conceptIds. Make a list of questions carrying these attributes:
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 			for (Long cId : conceptIds) questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());
-
-			Map<Key<Question>,Question> questions = ofy().load().keys(questionKeys);
-			
 			if (!questionKeys.containsAll(a.questionKeys)) {  // might be missing a few questions due to customization
-				questions.putAll(ofy().load().keys(a.questionKeys));
-				questionKeys = new ArrayList<Key<Question>>(questions.keySet()); // this avoids duplicate keys
+				for (Key<Question> k : a.questionKeys) if (!questionKeys.contains(k)) questionKeys.add(k);
 			}
-						
-			// sort the questionKeys in order of increasing difficulty
-			if (questionKeys.size()>1) Collections.sort(questionKeys, new SortBySuccessPct());
-			// get a Map of all the questions (unordered)
 			
 			// create an ordered List of Questions (by difficulty)
-			List<Question> orderedQuestions = new ArrayList<Question>();
-			for (Key<Question> k : questionKeys) orderedQuestions.add(questions.get(k));
+			List<Question> orderedQuestions = new ArrayList<Question>(ofy().load().keys(questionKeys).values());		
+			if (orderedQuestions.size()>1) Collections.sort(orderedQuestions,new SortBySuccessPct());
 			
 			buf.append("<b>Select assigned questions</b><br/>"
 					+ "Current number of assigned questions = " + a.questionKeys.size() + " out of " + orderedQuestions.size());
@@ -1204,36 +1161,15 @@ public class Homework extends HttpServlet {
 		return studentAnswer;
 	}
 
-	class SortBySuccessPct implements Comparator<Key<Question>> {
+	class SortBySuccessPct implements Comparator<Question> {
 		
 		SortBySuccessPct() {}
 		
-		public int compare(Key<Question> o1, Key<Question> o2) {
-			Integer success1 = successPct.get(o1);
-			if (success1==null) {
-				int totalResponses = ofy().load().type(Response.class).filter("questionId",o1.getId()).count();
-				if (totalResponses==0) success1 = 100;
-				else {
-					int successResponses = ofy().load().type(Response.class).filter("questionId",o1.getId()).filter("score >",0).count();
-					success1 = successResponses*100/totalResponses;
-				}
-				successPct.put(o1,success1);
-			}
-			Integer success2 = successPct.get(o2);
-			if (success2==null) {
-				int totalResponses = ofy().load().type(Response.class).filter("questionId",o2.getId()).count();
-				if (totalResponses==0) success2 = 100;
-				else {
-					int successResponses = ofy().load().type(Response.class).filter("questionId",o2.getId()).filter("score >",0).count();
-					success2 = successResponses*100/totalResponses;
-				}
-				successPct.put(o2,success2);
-			}
-			int rank = success2-success1; // this reverses the normal Comparator to give higher rank to lower successPct
-			if (rank==0) rank = o1.compareTo(o2); // tie breaker required
-			return rank;  
+		public int compare(Question q1, Question q2) {
+			int rank = q2.getPctSuccess() - q1.getPctSuccess(); 
+			if (rank==0) rank = q2.id.compareTo(q1.id);
+			return rank;
 		}
-	}
-
+	}	
 }
 

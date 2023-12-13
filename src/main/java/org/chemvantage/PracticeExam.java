@@ -530,7 +530,6 @@ public class PracticeExam extends HttpServlet {
 			}
 			
 			Map<Key<Question>,Question> examQuestions = ofy().load().keys(questionKeys);
-			List<Response> responses = new ArrayList<Response>();
 			pt.putScore(0);
 			
 			// begin the main scoring loop:
@@ -545,10 +544,12 @@ public class PracticeExam extends HttpServlet {
 					if (q.getQuestionType()==5 && score==0 && q.agreesToRequiredPrecision(studentAnswer)) score = q.pointValue-1;
 					
 					if (score > 0) pt.addScore(score);
-					if (studentAnswer.length() > 0) {
-						Response r = new Response("PracticeExam",a.id,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,Subject.hashId(user.getId()),pt.id,now);
-						responses.add(r);
-					}
+					
+					pt.questionKeys.add(k);
+					pt.questionScores.put(k, score);
+					pt.studentAnswers.put(k, studentAnswer);
+					pt.correctAnswers.put(k, q.getCorrectAnswer());
+					
 					if (score == 0) {
 						// include question in list of incorrectly answered questions
 						wrongAnswers++;
@@ -560,7 +561,6 @@ public class PracticeExam extends HttpServlet {
 			missedQuestions.append("</OL>\n");
 			pt.graded = now;
 			ofy().save().entity(pt).now();
-			ofy().save().entities(responses);
 			
 			if (a.id>0) try {
 				Score s = Score.getInstance(user.getId(),a);
@@ -899,11 +899,12 @@ public class PracticeExam extends HttpServlet {
 					case (15): questionKeys_15pt.add(k); break;
 				}
 			}
-			
+			/*
 			// create a HashMap of all the questionIds and student's responses for all items submitted
 			List<Response> responses = ofy().load().type(Response.class).filter("transactionId",pet.id).list();
 			Map<Long,String> studentAnswers = new HashMap<Long,String>();
 			for (Response r : responses) studentAnswers.put(r.questionId,r.studentResponse);
+			*/
 			
 			buf.append("<h2>General Chemistry Exam</h2>"
 					+ "Assignment ID: " + a.id + "<br>"
@@ -935,14 +936,14 @@ public class PracticeExam extends HttpServlet {
 				Question q = examQuestions.get(k);
 				q.setParameters((int)(pet.id - q.id));
 				buf.append("<tr style='vertical-align:middle'><td><b>" + i + ". </b>" 
-						+ q.printAllToStudents(studentAnswers.get(q.id),true) + "</td>");
+						+ q.printAllToStudents(pet.studentAnswers.get(Key.create(q)),true) + "</td>");
 
 				// Try to get the question score from the PracticeExamTransaction. If null, recompute it from the student's response
 				int score = 0;
 				if (pet.questionScores.get(k)!=null) score = pet.questionScores.get(k);
 				else {  // recalculate the original score
-					if (q.isCorrect(studentAnswers.get(q.id))) score = q.pointValue;
-					else if (q.agreesToRequiredPrecision(studentAnswers.get(q.id))) score = q.pointValue-1;
+					if (q.isCorrect(pet.studentAnswers.get(Key.create(q)))) score = q.pointValue;
+					else if (q.agreesToRequiredPrecision(pet.studentAnswers.get(Key.create(q)))) score = q.pointValue-1;
 				}
 				
 				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"
@@ -962,14 +963,14 @@ public class PracticeExam extends HttpServlet {
 				Question q = examQuestions.get(k);
 				q.setParameters((int)(pet.id - q.id));
 				buf.append("<tr style='vertical-align:middle'><td><b>" + i + ". </b>" 
-						+ q.printAllToStudents(studentAnswers.get(q.id),true,true,pet.questionShowWork.get(k)) + "</td>");
+						+ q.printAllToStudents(pet.studentAnswers.get(Key.create(q)),true,true,pet.questionShowWork.get(k)) + "</td>");
 
 				// Try to get the question score from the PracticeExamTransaction. If null, recompute it from the student's response
 				int score = 0;
 				if (pet.questionScores.get(k)!=null) score = pet.questionScores.get(k);
 				else {  // recalculate the original score
-					if (q.isCorrect(studentAnswers.get(q.id))) score = q.pointValue;
-					else if (q.agreesToRequiredPrecision(studentAnswers.get(q.id))) score = q.pointValue-1;
+					if (q.isCorrect(pet.studentAnswers.get(Key.create(q)))) score = q.pointValue;
+					else if (q.agreesToRequiredPrecision(pet.studentAnswers.get(Key.create(q)))) score = q.pointValue-1;
 				}
 				
 				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"
@@ -989,14 +990,14 @@ public class PracticeExam extends HttpServlet {
 				Question q = examQuestions.get(k);
 				q.setParameters((int)(pet.id - q.id));
 				buf.append("<tr style='vertical-align:middle'><td><b>" + i + ". </b>" 
-						+ q.printAllToStudents(studentAnswers.get(q.id),true,true,pet.questionShowWork.get(k)) + "</td>");
+						+ q.printAllToStudents(pet.studentAnswers.get(Key.create(q)),true,true,pet.questionShowWork.get(k)) + "</td>");
 
 				// Try to get the question score from the PracticeExamTransaction. If null, recompute it from the student's response
 				int score = 0;
 				if (pet.questionScores.get(k)!=null) score = pet.questionScores.get(k);
 				else {  // recalculate the original score
-					if (q.isCorrect(studentAnswers.get(q.id))) score = q.pointValue;
-					else if (q.agreesToRequiredPrecision(studentAnswers.get(q.id))) score = q.pointValue-1;
+					if (q.isCorrect(pet.studentAnswers.get(Key.create(q)))) score = q.pointValue;
+					else if (q.agreesToRequiredPrecision(pet.studentAnswers.get(Key.create(q)))) score = q.pointValue-1;
 				}
 				
 				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"

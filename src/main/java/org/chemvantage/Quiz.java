@@ -21,6 +21,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URLEncoder;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,7 +38,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.gson.JsonObject;
 import com.googlecode.objectify.Key;
 
 @WebServlet("/Quiz")
@@ -377,8 +377,6 @@ public class Quiz extends HttpServlet {
 			}
 			Map<Key<Question>,Question> quizQuestions = ofy().load().keys(questionKeys);
 			
-			List<Response> responses = new ArrayList<Response>();
-			
 			// This is the main scoring loop:
 			for (Key<Question> k : questionKeys) {
 				try {
@@ -390,8 +388,11 @@ public class Quiz extends HttpServlet {
 						q.setParameters(seed);
 						int score = q.isCorrect(studentAnswer)?q.pointValue:0;
 
-						responses.add(new Response("Quiz",qa.id,q.id,studentAnswer,q.getCorrectAnswer(),score,q.pointValue,user.getId(),qt.id,now));
-
+						qt.questionKeys.add(k);
+						qt.questionScores.put(k, score);
+						qt.studentAnswers.put(k, studentAnswer);
+						qt.correctAnswers.put(k, q.getCorrectAnswer());
+						
 						studentScore += score;
 						if (score == 0) {  
 							// include question in list of incorrectly answered questions
@@ -403,7 +404,6 @@ public class Quiz extends HttpServlet {
 					continue;  // this parameter does not correspond to a questionId
 				}
 			}
-			if (responses.size()>0) ofy().save().entities(responses);  // batch save of Response entities
 			qt.graded = now;
 			qt.score = timeExpired?0:studentScore;
 			ofy().save().entity(qt);
@@ -413,11 +413,8 @@ public class Quiz extends HttpServlet {
 				if (user.isAnonymous()) throw new Exception();  // don't save Scores for anonymous users
 				Score.updateQuizScore(user.getId(),qt);
 				if (qa.lti_ags_lineitem_url != null) {
-					JsonObject payload = new JsonObject();
-					payload.addProperty("AssignmentId",qa.id);
-					payload.addProperty("UserId",user.getId());
-					Utilities.createTask("/ReportScore",payload);
-				}
+					Utilities.createTask("/ReportScore","AssignmentId=" + qa.id + "&UserId=" + URLEncoder.encode(user.getId(),"UTF-8"));
+					}
 					//QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(qa.id)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue
 			} catch (Exception e) {}
 
@@ -769,7 +766,7 @@ public class Quiz extends HttpServlet {
 		try {
 			Long qtId = Long.parseLong(quizTransactionId);
 			QuizTransaction qt = ofy().load().type(QuizTransaction.class).id(qtId).safe();
-			List<Response> responses = ofy().load().type(Response.class).filter("assignmentId",a.id).filter("transactionId",qtId).list();
+			//List<Response> responses = ofy().load().type(Response.class).filter("assignmentId",a.id).filter("transactionId",qtId).list();
 			
 			buf.append("<h2>Quiz Results</h2>");
 			buf.append("Topic: " + a.title + "<br/>");
@@ -777,16 +774,16 @@ public class Quiz extends HttpServlet {
 			buf.append("Score: " + String.valueOf(qt.score>0?qt.score*100/qt.possibleScore:0)+"%<br/>");
 			
 			buf.append("<ol>");
-			for (Response r : responses) {
-				Question q = ofy().load().type(Question.class).id(r.questionId).now();
-				if (q==null) continue; // question might have been deleted
+			
+			List<Question> questions = new ArrayList<Question>(ofy().load().keys(qt.questionKeys).values());
+			for (Question q : questions) {
 				q.setParameters(Math.abs(qt.getId() - q.getId()));
-				buf.append("<li>" + q.printAllToStudents(r.studentResponse) + "</li>");
+				buf.append("<li>" + q.printAllToStudents(qt.studentAnswers.get(Key.create(q))) + "</li>");
 			}
 			buf.append("</ol>");
 			
-			int nUnanswered = qt.possibleScore - responses.size();
-			if (responses.size()==0) buf.append("The detailed responses to this quiz are not available.");
+			int nUnanswered = qt.possibleScore - questions.size();
+			if (questions.size()==0) buf.append("The detailed responses to this quiz are not available.");
 			else if (nUnanswered>0) buf.append(String.valueOf(nUnanswered) + " question" + (nUnanswered>1?"s were":" was") + " left blank.");
 			
 		} catch (Exception e) {
@@ -827,13 +824,12 @@ public class Quiz extends HttpServlet {
 			for (QuizTransaction qt : qts) {
 				String elapsedTime = qt.graded==null?" - ":String.valueOf((qt.graded.getTime()-qt.downloaded.getTime())/60000L) + " min " + String.valueOf((qt.graded.getTime()-qt.downloaded.getTime())/1000L%60L) + " s";
 				String score = qt.graded==null?"no submission":String.valueOf(qt.score>0?qt.score*100/qt.possibleScore:0)+"%";
-				int nResponses = ofy().load().type(Response.class).filter("assignmentId",a.id).filter("transactionId",qt.id).count();
 				buf.append("<div style='display:table-row'>"  // row for one transaction
 						+ "<div style='display:table-cell;padding-right:20px;'>" + (qts.indexOf(qt)+1) + "</div>"
 						+ "<div style='display:table-cell;padding-right:20px;'>" + qt.downloaded + "</div>"
 						+ "<div style='display:table-cell;padding-right:20px;'>" + elapsedTime + "</div>"
 						+ "<div style='display:table-cell;padding-right:20px;'>" + score + "</div>"
-						+ "<div style='display:table-cell;padding-right:20px;'>" + (nResponses>0?"<a href=/Quiz?UserRequest=ShowQuiz&QuizTransactionId=" + qt.id + "&sig=" + user.getTokenSignature() + "&ForUserHashedId=" + for_user_hashed_id + ">View Quiz</a>":"") + "</div>"
+						+ "<div style='display:table-cell;padding-right:20px;'>" + (qt.studentAnswers.size()>0?"<a href=/Quiz?UserRequest=ShowQuiz&QuizTransactionId=" + qt.id + "&sig=" + user.getTokenSignature() + "&ForUserHashedId=" + for_user_hashed_id + ">View Quiz</a>":"") + "</div>"
 						+ "</div>");  // end of row
 			}
 			buf.append("</div><br/><br/>"); // end of table
@@ -959,10 +955,7 @@ public class Quiz extends HttpServlet {
 				if (cvScore==null) continue;
 				String s = scores.get(entry.getKey());
 				if (String.valueOf(cvScore.getPctScore()).equals(s)) continue;  // the scores match (good!)
-				JsonObject payload = new JsonObject();
-				payload.addProperty("AssignmentId",a.id);
-				payload.addProperty("UserId",platform_id + entry.getKey());
-				Utilities.createTask("/ReportScore",payload);
+				Utilities.createTask("/ReportScore","AssignmentId=" + a.id + "&UserId=" + URLEncoder.encode(platform_id + entry.getKey(),"UTF-8"));
 				//QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(platform_id + entry.getKey(),"UTF-8")));  // put report into the Task Queue
 			}
 		} catch (Exception e) {

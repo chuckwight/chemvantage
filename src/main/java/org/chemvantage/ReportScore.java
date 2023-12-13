@@ -29,9 +29,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-
 /* 
  * Access to this servlet is restricted to ChemVantage admin users and the project service account
  * by specifying login: admin in a url handler of the project app.yaml file
@@ -72,15 +69,13 @@ public class ReportScore extends HttpServlet {
 		StringBuffer debug = new StringBuffer("Debug:");
 		try {  // post single user score
 			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
 			debug.append("1");
-			JsonObject payload = JsonParser.parseReader(request.getReader()).getAsJsonObject();
+			PrintWriter out = response.getWriter();
+			String userId = request.getParameter("UserId");
+			Long assignmentId = Long.parseLong(request.getParameter("AssignmentId"));
 			debug.append("2");
-			String userId = payload.get("UserId").getAsString();
-			long assignmentId = payload.get("AssignmentId").getAsLong();
-			debug.append("3");
-			
 			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+			debug.append("3");
 			Score s = Score.getInstance(userId, a);
 			ofy().save().entity(s).now();
 			debug.append("4");

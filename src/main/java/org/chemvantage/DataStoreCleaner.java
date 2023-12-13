@@ -95,32 +95,12 @@ public class DataStoreCleaner extends HttpServlet {
 		case "CleanDeployments": buf.append(cleanDeployments(testOnly)); break;
 		case "CleanUsers": buf.append(cleanUsers(testOnly)); break;
 		case "CleanAll":
-			JsonObject payload;
-			payload = new JsonObject();
-			
-			payload.addProperty("Task","CleanResponses");
-			payload.addProperty("TestOnly", testOnly?"true":"false");
-			Utilities.createTask("/DataStoreCleaner",payload);
-			
-			payload.addProperty("Task","CleanTransactions");
-			payload.addProperty("TestOnly", testOnly?"true":"false");
-			Utilities.createTask("/DataStoreCleaner",payload);
-			
-			payload.addProperty("Task","CleanScores");
-			payload.addProperty("TestOnly", testOnly?"true":"false");
-			Utilities.createTask("/DataStoreCleaner",payload);
-			
-			payload.addProperty("Task","CleanAssignments");
-			payload.addProperty("TestOnly", testOnly?"true":"false");
-			Utilities.createTask("/DataStoreCleaner",payload);
-			
-			payload.addProperty("Task","CleanDeployments");
-			payload.addProperty("TestOnly", testOnly?"true":"false");
-			Utilities.createTask("/DataStoreCleaner",payload);
-			
-			payload.addProperty("Task","CleanUsers");
-			payload.addProperty("TestOnly", testOnly?"true":"false");
-			Utilities.createTask("/DataStoreCleaner",payload);
+			Utilities.createTask("/DataStoreCleaner","Task=CleanResponses&TestOnly="+testOnly);
+			Utilities.createTask("/DataStoreCleaner","Task=CleanTransactions&TestOnly="+testOnly);
+			Utilities.createTask("/DataStoreCleaner","Task=CleanScores&TestOnly="+testOnly);
+			Utilities.createTask("/DataStoreCleaner","Task=CleanAssignments&TestOnly="+testOnly);
+			Utilities.createTask("/DataStoreCleaner","Task=CleanDeployments&TestOnly="+testOnly);
+			Utilities.createTask("/DataStoreCleaner","Task=CleanUsers&TestOnly="+testOnly);
 			
 /*			// This section handles the parent case from the cron job
 			Queue queue = QueueFactory.getDefaultQueue();

@@ -19,8 +19,11 @@ package org.chemvantage;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
@@ -39,7 +42,11 @@ public class VideoTransaction {
 			List<String> missedQuestions;
 			int possibleScore;
 			String videoTitle;
-	
+			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
+			Map<Key<Question>,Integer> questionScores = new HashMap<Key<Question>,Integer>();
+			Map<Key<Question>,String> studentAnswers = new HashMap<Key<Question>,String>();
+			Map<Key<Question>,String> correctAnswers = new HashMap<Key<Question>,String>();
+			
     VideoTransaction() {}
     
     VideoTransaction(long videoId,String videoTitle,int nBreaks, String userId,long assignmentId,int possibleScore) {

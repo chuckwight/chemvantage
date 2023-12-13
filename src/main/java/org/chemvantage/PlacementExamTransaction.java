@@ -47,6 +47,7 @@ public class PlacementExamTransaction implements Serializable {
 			Map<Key<Question>,String> studentAnswers = new HashMap<Key<Question>,String>();
 			Map<Key<Question>,String> correctAnswers = new HashMap<Key<Question>,String>();
 			Map<Key<Question>,Integer> questionScores = new HashMap<Key<Question>,Integer>();
+			Map<Key<Question>,Integer> questionValues = new HashMap<Key<Question>,Integer>();
 
 	public PlacementExamTransaction() {}
 	

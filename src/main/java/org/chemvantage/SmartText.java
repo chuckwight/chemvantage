@@ -4,6 +4,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -18,7 +19,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.gson.JsonObject;
 import com.googlecode.objectify.Key;
 
 @WebServlet("SmartText")
@@ -290,11 +290,6 @@ public class SmartText extends HttpServlet {
 					   + q.printAllToStudents(studentAnswer) + "</div><br/>");
 		   }
 
-		   if (st.armed && !user.isAnonymous()) {
-			   Response r = new Response("SmartText",conceptId,q.id,studentAnswer,q.getCorrectAnswer(),isCorrect?1:0,1,user.getId(),st.id,new Date());
-			   ofy().save().entity(r);
-		   }
-
 		   int score = 0;
 		   int possibleScore = 0;
 		   for (int i=0; i<st.scores.length; i++) {
@@ -338,11 +333,8 @@ public class SmartText extends HttpServlet {
 		   if (!completed && !user.isAnonymous()) {
 			   st.graded = new Date();
 			   ofy().save().entity(st).now();
-			   JsonObject payload = new JsonObject();
-			   payload.addProperty("AssignmentId",a.id);
-			   payload.addProperty("UserId",user.getId());
-			   Utilities.createTask("/ReportScore",payload);
-			   //QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue   
+			   Utilities.createTask("/ReportScore","AssignmentId=" + assignmentId + "&UserId=" + URLEncoder.encode(user.getId(),"UTF-8"));
+				//QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(assignmentId)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue   
 		   } else ofy().save().entity(st).now();
 
 	   } catch (Exception e) {
@@ -552,11 +544,8 @@ public class SmartText extends HttpServlet {
 				if (cvScore==null) continue;
 				String s = scores.get(entry.getKey());
 				if (String.valueOf(cvScore.getPctScore()).equals(s)) continue;  // the scores match (good!)
-				 JsonObject payload = new JsonObject();
-				 payload.addProperty("AssignmentId",a.id);
-				 payload.addProperty("UserId",user.getId());
-				 Utilities.createTask("/ReportScore",payload);
-				 //QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(platform_id + entry.getKey(),"UTF-8")));  // put report into the Task Queue
+				 Utilities.createTask("/ReportScore","AssignmentId=" + a.id + "&UserId=" + URLEncoder.encode(platform_id + entry.getKey(),"UTF-8"));
+					 //QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(platform_id + entry.getKey(),"UTF-8")));  // put report into the Task Queue
 			}
 		} catch (Exception e) {
 			return false;

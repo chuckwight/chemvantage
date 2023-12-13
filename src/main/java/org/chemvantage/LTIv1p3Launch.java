@@ -323,10 +323,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				if (myAssignment.id==null || !myAssignment.equivalentTo(original_a)) {
 					ofy().save().entity(myAssignment).now();
 					Group.update(d,myAssignment);
-					 JsonObject payload = new JsonObject();
-					 payload.addProperty("Task","CleanAssignment");
-					 payload.addProperty("AssignmentId",myAssignment.id);
-					 Utilities.createTask("/DataStoreCleaner",payload);
+					Utilities.createTask("/DataStoreCleaner","Task=CleanAssignments&AssignmentId=" + myAssignment.id);
 				}
 			} catch (Exception e) {
 				throw new Exception("Assignment could not be updated during LTI launch sequence. " + e.getMessage());

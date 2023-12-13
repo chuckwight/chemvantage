@@ -21,6 +21,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,7 +37,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.gson.JsonObject;
 import com.googlecode.objectify.Key;
 
 @WebServlet("/Poll")
@@ -326,7 +326,7 @@ public class Poll extends HttpServlet {
 			Question q = getQuestion(k); // this should nearly always work
 			if (q==null) continue;		 // but skip the question if it has been deleted
 			q.setParameters(a.id % Integer.MAX_VALUE);
-			String studentResponse = pt.responses.get(k);
+			String studentResponse = pt.studentAnswers.get(k);
 			if (studentResponse==null) studentResponse = "";
 			buf.append("<li>" + q.print(null,studentResponse) + "<br/></li>");
 			possibleScore += q.correctAnswer==null || q.correctAnswer.isEmpty()?0:q.pointValue;
@@ -432,7 +432,7 @@ public class Poll extends HttpServlet {
 				possibleScore += q.pointValue;
 				String studentAnswer = orderResponses(request.getParameterValues(Long.toString(k.getId())));
 				if (!studentAnswer.isEmpty()) {
-					pt.responses.put(k, studentAnswer);
+					pt.studentAnswers.put(k, studentAnswer);
 					q.setParameters(a.id % Integer.MAX_VALUE);
 					score += q.isCorrect(studentAnswer) || !q.hasACorrectAnswer()?q.pointValue:0;
 				}
@@ -444,10 +444,7 @@ public class Poll extends HttpServlet {
 		try {
 			if (user.isAnonymous()) throw new Exception();  // don't save Scores for anonymous users
 			if (a.lti_ags_lineitem_url != null) {
-				JsonObject payload = new JsonObject();
-				payload.addProperty("AssignmentId",a.id);
-				payload.addProperty("UserId",user.getId());
-				Utilities.createTask("/ReportScore",payload);
+				Utilities.createTask("/ReportScore","AssignmentId=" + a.id + "&UserId=" + URLEncoder.encode(user.getId(),"UTF-8"));
 				//QueueFactory.getDefaultQueue().add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue
 			}
 		} catch (Exception e) {}
@@ -647,7 +644,7 @@ public class Poll extends HttpServlet {
 				
 				buf.append("<div style='display: table-cell;vertical-align: top;width: 400px;'><br/>"); // question cell
 				
-				String userResponse = pt.responses==null?"":(pt.responses.get(k)==null?"":pt.responses.get(k));
+				String userResponse = pt.studentAnswers==null?"":(pt.studentAnswers.get(k)==null?"":pt.studentAnswers.get(k));
 				
 				buf.append(q.correctAnswer.isEmpty()?q.print():q.printAllToStudents(userResponse));
 				//buf.append(q.printAll());
@@ -673,8 +670,8 @@ public class Poll extends HttpServlet {
 					}
 					debug.append("2a.");
 					for (PollTransaction t : pts) {
-						if (t.completed==null || t.responses==null || t.responses.get(k)==null) continue;
-						histogram.put(t.responses.get(k),histogram.get(t.responses.get(k))+1);
+						if (t.completed==null || t.studentAnswers==null || t.studentAnswers.get(k)==null) continue;
+						histogram.put(t.studentAnswers.get(k),histogram.get(t.studentAnswers.get(k))+1);
 					}
 					break;
 				case Question.TRUE_FALSE:
@@ -683,8 +680,8 @@ public class Poll extends HttpServlet {
 					//chart_height = 100;
 					debug.append("2b.");
 					for (PollTransaction t : pts) {
-						if (t.completed==null || t.responses==null || t.responses.get(k)==null) continue;
-						histogram.put(t.responses.get(k),histogram.get(t.responses.get(k))+1);
+						if (t.completed==null || t.studentAnswers==null || t.studentAnswers.get(k)==null) continue;
+						histogram.put(t.studentAnswers.get(k),histogram.get(t.studentAnswers.get(k))+1);
 					}
 					break;
 				case Question.SELECT_MULTIPLE:
@@ -694,8 +691,8 @@ public class Poll extends HttpServlet {
 					}
 					debug.append("2c.");
 					for (PollTransaction t : pts) {
-						if (t.completed==null || t.responses==null || t.responses.get(k)==null) continue;
-						String response = t.responses.get(k);
+						if (t.completed==null || t.studentAnswers==null || t.studentAnswers.get(k)==null) continue;
+						String response = t.studentAnswers.get(k);
 						debug.append(response + ".");
 						for (int m=0; m<response.length();m++) {
 							debug.append("4.");
@@ -709,12 +706,12 @@ public class Poll extends HttpServlet {
 					//chart_height = 100;
 					debug.append("2d.");
 					for (PollTransaction t : pts) {
-						if (t.completed==null || t.responses==null || t.responses.get(k)==null) continue;
-						if (q.isCorrect(t.responses.get(k))) histogram.put("correct",histogram.get("correct")+1);
+						if (t.completed==null || t.studentAnswers==null || t.studentAnswers.get(k)==null) continue;
+						if (q.isCorrect(t.studentAnswers.get(k))) histogram.put("correct",histogram.get("correct")+1);
 						else {
 							histogram.put("incorrect", histogram.get("incorrect") + 1);
-							if (otherResponses==null) otherResponses = t.responses.get(k);
-							else if (otherResponses.length()<500 && t.responses.get(k) != null && !otherResponses.toLowerCase().contains(t.responses.get(k).toLowerCase())) otherResponses += "; " + t.responses.get(k);
+							if (otherResponses==null) otherResponses = t.studentAnswers.get(k);
+							else if (otherResponses.length()<500 && t.studentAnswers.get(k) != null && !otherResponses.toLowerCase().contains(t.studentAnswers.get(k).toLowerCase())) otherResponses += "; " + t.studentAnswers.get(k);
 						}
 					}
 					break;
@@ -724,26 +721,26 @@ public class Poll extends HttpServlet {
 					//chart_height = 100;
 					debug.append("2e.");
 					for (PollTransaction t : pts) {
-						if (t.completed==null || t.responses==null || t.responses.get(k)==null) continue;
-						if (q.isCorrect(t.responses.get(k))) histogram.put("correct",histogram.get("correct")+1);
+						if (t.completed==null || t.studentAnswers==null || t.studentAnswers.get(k)==null) continue;
+						if (q.isCorrect(t.studentAnswers.get(k))) histogram.put("correct",histogram.get("correct")+1);
 						else {
 							histogram.put("incorrect", histogram.get("incorrect") + 1);
-							if (otherResponses==null) otherResponses = t.responses.get(k);
-							else if (otherResponses.length()<500 && t.responses.get(k) != null && !otherResponses.toLowerCase().contains(t.responses.get(k).toLowerCase())) otherResponses += "; " + t.responses.get(k);
+							if (otherResponses==null) otherResponses = t.studentAnswers.get(k);
+							else if (otherResponses.length()<500 && t.studentAnswers.get(k) != null && !otherResponses.toLowerCase().contains(t.studentAnswers.get(k).toLowerCase())) otherResponses += "; " + t.studentAnswers.get(k);
 						}
 					}
 					break;
 				case Question.FIVE_STAR:
 					for (char nStars='1'; nStars<'6'; nStars++) histogram.put(String.valueOf(nStars),0);
 					for (PollTransaction t : pts) {
-						if (t.completed==null || t.responses==null || t.responses.get(k)==null) continue;
-						histogram.put(t.responses.get(k), histogram.get(t.responses.get(k))+1);
+						if (t.completed==null || t.studentAnswers==null || t.studentAnswers.get(k)==null) continue;
+						histogram.put(t.studentAnswers.get(k), histogram.get(t.studentAnswers.get(k))+1);
 					}
 					break;
 				case Question.ESSAY:
 					int nEssays = 0;
 					for (PollTransaction t :pts) {
-						if (t.completed==null || t.responses==null || t.responses.get(k)==null) continue;
+						if (t.completed==null || t.studentAnswers==null || t.studentAnswers.get(k)==null) continue;
 						nEssays++;
 					}
 					histogram.put("N", nEssays);
