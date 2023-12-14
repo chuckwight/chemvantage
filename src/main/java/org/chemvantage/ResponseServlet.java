@@ -208,14 +208,16 @@ public class ResponseServlet extends HttpServlet {
 				Map<Key<HWTransaction>,HWTransaction> hwTransactions = ofy().load().keys(hwTransactionKeys);
 				debug.append(hwTransactions.size() + " HWTransaction entities ");
 				for (Response r : responses) {
-					try {
+					try {  // update the question stats
+						Integer nt = nTotalAttempts.get(r.questionId);		// record the stats for this question
+						nTotalAttempts.put(r.questionId,nt==null?1:nt+1);
+						Integer nc = nCorrectAnswers.get(r.questionId);
+						nCorrectAnswers.put(r.questionId,nc==null?1:nc+r.score>0?1:0);
+					} catch (Exception e) {}
+					try {  // put Response data into the transaction
 						HWTransaction hwt = hwTransactions.get(Key.create(HWTransaction.class,r.transactionId));  // get the HWTransaction for this Response
 						hwt.studentAnswer = r.studentResponse;					// update the HWTransaction data
 						hwt.correctAnswer = r.correctAnswer;
-						Integer nt = nTotalAttempts.get(hwt.questionId);		// record the stats for this question
-						nTotalAttempts.put(hwt.questionId,nt==null?1:nt+1);
-						Integer nc = nCorrectAnswers.get(hwt.questionId);
-						nCorrectAnswers.put(hwt.questionId,nc==null?1:nc+r.score>0?1:0);
 					} catch (Exception e) {}
 				}
 				ofy().save().entities(new ArrayList<HWTransaction>(hwTransactions.values()));
@@ -229,16 +231,18 @@ public class ResponseServlet extends HttpServlet {
 				}
 				Map<Key<QuizTransaction>,QuizTransaction> qTransactions = ofy().load().keys(qTransactionKeys);
 				for (Response r : responses) {
+					try {  // update the question stats
+						Integer nt = nTotalAttempts.get(r.questionId);		// record the stats for this question
+						nTotalAttempts.put(r.questionId,nt==null?1:nt+1);
+						Integer nc = nCorrectAnswers.get(r.questionId);
+						nCorrectAnswers.put(r.questionId,nc==null?1:nc+r.score>0?1:0);
+					} catch (Exception e) {}
 					try {
 						QuizTransaction qt = qTransactions.get(Key.create(r.transactionId));
 						Key<Question> k = Key.create(Question.class,r.questionId);
 						qt.questionKeys.add(k);
 						qt.studentAnswers.put(k,r.studentResponse);
 						qt.correctAnswers.put(k,r.correctAnswer);
-						Integer nt = nTotalAttempts.get(r.questionId);
-						nTotalAttempts.put(r.id,nt==null?1:nt+1);
-						Integer nc = nCorrectAnswers.get(r.questionId);
-						nCorrectAnswers.put(r.id,nc==null?1:nc+r.score>0?1:0);
 					} catch (Exception e) {}
 				}
 				ofy().save().entities(new ArrayList<QuizTransaction>(qTransactions.values()));
@@ -251,16 +255,18 @@ public class ResponseServlet extends HttpServlet {
 				}
 				Map<Key<PollTransaction>,PollTransaction> pollTransactions = ofy().load().keys(pollTransactionKeys);
 				for (Response r : responses) {
+					try {  // update the question stats
+						Integer nt = nTotalAttempts.get(r.questionId);		// record the stats for this question
+						nTotalAttempts.put(r.questionId,nt==null?1:nt+1);
+						Integer nc = nCorrectAnswers.get(r.questionId);
+						nCorrectAnswers.put(r.questionId,nc==null?1:nc+r.score>0?1:0);
+					} catch (Exception e) {}
 					try {
 						PollTransaction pt = pollTransactions.get(Key.create(r.transactionId));
 						Key<Question> k = Key.create(Question.class,r.questionId);
 						pt.questionKeys.add(k);
 						pt.studentAnswers.put(k,r.studentResponse);
 						pt.correctAnswers.put(k,r.correctAnswer);
-						Integer nt = nTotalAttempts.get(r.questionId);
-						nTotalAttempts.put(r.id,nt==null?1:nt+1);
-						Integer nc = nCorrectAnswers.get(r.questionId);
-						nCorrectAnswers.put(r.id,nc==null?1:nc+r.score>0?1:0);
 					} catch (Exception e) {}
 				}
 				ofy().save().entities(new ArrayList<PollTransaction>(pollTransactions.values()));
@@ -273,16 +279,18 @@ public class ResponseServlet extends HttpServlet {
 				}
 				Map<Key<PracticeExamTransaction>,PracticeExamTransaction> prExTransactions = ofy().load().keys(prExTransactionKeys);
 				for (Response r : responses) {
+					try {  // update the question stats
+						Integer nt = nTotalAttempts.get(r.questionId);		// record the stats for this question
+						nTotalAttempts.put(r.questionId,nt==null?1:nt+1);
+						Integer nc = nCorrectAnswers.get(r.questionId);
+						nCorrectAnswers.put(r.questionId,nc==null?1:nc+r.score>0?1:0);
+					} catch (Exception e) {}
 					try {
 						PracticeExamTransaction pt = prExTransactions.get(Key.create(r.transactionId));
 						Key<Question> k = Key.create(Question.class,r.questionId);
 						pt.questionKeys.add(k);
 						pt.studentAnswers.put(k,r.studentResponse);
 						pt.correctAnswers.put(k,r.correctAnswer);
-						Integer nt = nTotalAttempts.get(r.questionId);
-						nTotalAttempts.put(r.id,nt==null?1:nt+1);
-						Integer nc = nCorrectAnswers.get(r.questionId);
-						nCorrectAnswers.put(r.id,nc==null?1:nc+r.score>0?1:0);
 					} catch (Exception e) {}
 				}
 				ofy().save().entities(new ArrayList<PracticeExamTransaction>(prExTransactions.values()));
@@ -295,16 +303,18 @@ public class ResponseServlet extends HttpServlet {
 				}
 				Map<Key<PlacementExamTransaction>,PlacementExamTransaction> plExTransactions = ofy().load().keys(plExTransactionKeys);
 				for (Response r : responses) {
+					try {  // update the question stats
+						Integer nt = nTotalAttempts.get(r.questionId);		// record the stats for this question
+						nTotalAttempts.put(r.questionId,nt==null?1:nt+1);
+						Integer nc = nCorrectAnswers.get(r.questionId);
+						nCorrectAnswers.put(r.questionId,nc==null?1:nc+r.score>0?1:0);
+					} catch (Exception e) {}
 					try {
 						PlacementExamTransaction pt = plExTransactions.get(Key.create(r.transactionId));
 						Key<Question> k = Key.create(Question.class,r.questionId);
 						pt.questionKeys.add(k);
 						pt.studentAnswers.put(k,r.studentResponse);
 						pt.correctAnswers.put(k,r.correctAnswer);
-						Integer nt = nTotalAttempts.get(r.questionId);
-						nTotalAttempts.put(r.id,nt==null?1:nt+1);
-						Integer nc = nCorrectAnswers.get(r.questionId);
-						nCorrectAnswers.put(r.id,nc==null?1:nc+r.score>0?1:0);
 					} catch (Exception e) {}
 				}
 				ofy().save().entities(new ArrayList<PlacementExamTransaction>(plExTransactions.values()));
@@ -317,16 +327,18 @@ public class ResponseServlet extends HttpServlet {
 				}
 				Map<Key<VideoTransaction>,VideoTransaction> vTransactions = ofy().load().keys(vTransactionKeys);
 				for (Response r : responses) {
+					try {  // update the question stats
+						Integer nt = nTotalAttempts.get(r.questionId);		// record the stats for this question
+						nTotalAttempts.put(r.questionId,nt==null?1:nt+1);
+						Integer nc = nCorrectAnswers.get(r.questionId);
+						nCorrectAnswers.put(r.questionId,nc==null?1:nc+r.score>0?1:0);
+					} catch (Exception e) {}
 					try {
 						VideoTransaction vt = vTransactions.get(Key.create(r.transactionId));
 						Key<Question> k = Key.create(Question.class,r.questionId);
 						vt.questionKeys.add(k);
 						vt.studentAnswers.put(k,r.studentResponse);
 						vt.correctAnswers.put(k,r.correctAnswer);
-						Integer nt = nTotalAttempts.get(r.id);
-						nTotalAttempts.put(r.id,nt==null?1:nt+1);
-						Integer nc = nCorrectAnswers.get(r.id);
-						nCorrectAnswers.put(r.id,nc==null?1:nc+r.score>0?1:0);
 					} catch (Exception e) {}
 				}
 				ofy().save().entities(new ArrayList<VideoTransaction>(vTransactions.values()));
@@ -339,16 +351,18 @@ public class ResponseServlet extends HttpServlet {
 				}
 				Map<Key<STTransaction>,STTransaction> sTransactions = ofy().load().keys(sTransactionKeys);
 				for (Response r : responses) {
+					try {  // update the question stats
+						Integer nt = nTotalAttempts.get(r.questionId);		// record the stats for this question
+						nTotalAttempts.put(r.questionId,nt==null?1:nt+1);
+						Integer nc = nCorrectAnswers.get(r.questionId);
+						nCorrectAnswers.put(r.questionId,nc==null?1:nc+r.score>0?1:0);
+					} catch (Exception e) {}
 					try {
 						STTransaction st = sTransactions.get(Key.create(r.transactionId));
 						Key<Question> k = Key.create(Question.class,r.questionId);
 						st.answeredKeys.add(k);
 						st.studentAnswers.put(k,r.studentResponse);
 						st.correctAnswers.put(k,r.correctAnswer);
-						Integer nt = nTotalAttempts.get(r.id);
-						nTotalAttempts.put(r.id,nt==null?1:nt+1);
-						Integer nc = nCorrectAnswers.get(r.id);
-						nCorrectAnswers.put(r.id,nc==null?1:nc+r.score>0?1:0);
 					} catch (Exception e) {}
 				}
 				ofy().save().entities(new ArrayList<STTransaction>(sTransactions.values()));
