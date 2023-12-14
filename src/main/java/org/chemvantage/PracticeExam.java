@@ -522,11 +522,15 @@ public class PracticeExam extends HttpServlet {
 
 			int wrongAnswers = 0;
 
-			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
-			for (Enumeration<?> e = request.getParameterNames();e.hasMoreElements();) {
-				try {
-					questionKeys.add(Key.create(Question.class,Long.parseLong((String) e.nextElement())));
-				} catch (Exception e2) {}
+			List<Key<Question>> questionKeys = pt.questionKeys;
+			if (questionKeys==null || questionKeys.isEmpty()) {
+				questionKeys = new ArrayList<Key<Question>>();
+				for (Enumeration<?> e = request.getParameterNames();e.hasMoreElements();) {
+					try {
+						questionKeys.add(Key.create(Question.class,Long.parseLong((String) e.nextElement())));
+					} catch (Exception e2) {}
+				}
+				pt.questionKeys = questionKeys;
 			}
 			
 			Map<Key<Question>,Question> examQuestions = ofy().load().keys(questionKeys);
@@ -545,7 +549,6 @@ public class PracticeExam extends HttpServlet {
 					
 					if (score > 0) pt.addScore(score);
 					
-					pt.questionKeys.add(k);
 					pt.questionScores.put(k, score);
 					pt.studentAnswers.put(k, studentAnswer);
 					pt.correctAnswers.put(k, q.getCorrectAnswer());
