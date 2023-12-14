@@ -552,11 +552,15 @@ public class PlacementExam extends HttpServlet {
 			int[] studentScores = new int[a.conceptIds.size()];
 			int wrongAnswers = 0;
 
-			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
-			for (Enumeration<?> e = request.getParameterNames();e.hasMoreElements();) {
-				try {
-					questionKeys.add(Key.create(Question.class,Long.parseLong((String) e.nextElement())));
-				} catch (Exception e2) {}
+			List<Key<Question>> questionKeys = pt.questionKeys;
+			if (questionKeys==null || questionKeys.isEmpty()) {
+				questionKeys = new ArrayList<Key<Question>>();
+				for (Enumeration<?> e = request.getParameterNames();e.hasMoreElements();) {
+					try {
+						questionKeys.add(Key.create(Question.class,Long.parseLong((String) e.nextElement())));
+					} catch (Exception e2) {}
+				}
+				pt.questionKeys = questionKeys;
 			}
 			
 			// Load all of the relevant questions
@@ -583,7 +587,6 @@ public class PlacementExam extends HttpServlet {
 					if (score==0 && q.agreesToRequiredPrecision(studentAnswer)) score = q.pointValue - 1;  // partial credit for wrong sig figs
 					if (score > 0) studentScores[a.conceptIds.indexOf(q.conceptId)] += score;
 					
-					pt.questionKeys.add(k);
 					pt.questionScores.put(k, score);
 					pt.studentAnswers.put(k, studentAnswer);
 					pt.correctAnswers.put(k, q.getCorrectAnswer());

@@ -330,6 +330,7 @@ public class Poll extends HttpServlet {
 			if (studentResponse==null) studentResponse = "";
 			buf.append("<li>" + q.print(null,studentResponse) + "<br/></li>");
 			possibleScore += q.correctAnswer==null || q.correctAnswer.isEmpty()?0:q.pointValue;
+			pt.questionKeys.add(k);
 		}
 		buf.append("</OL>");
 		
@@ -425,8 +426,9 @@ public class Poll extends HttpServlet {
 		
 		int score = 0;
 		int possibleScore = 0;
+		if (pt.questionKeys.isEmpty()) pt.questionKeys = a.questionKeys;
 		
-		for (Key<Question> k : a.questionKeys) {
+		for (Key<Question> k : pt.questionKeys) {
 			try {
 				Question q = getQuestion(k);
 				possibleScore += q.pointValue;
@@ -631,7 +633,7 @@ public class Poll extends HttpServlet {
 				+ "<div style='display: table-cell'><h3>Responses</h3></div>"
 				+ "</div>");  // end of header row
 		debug.append("c.");
-		for (Key<Question> k : a.questionKeys) {
+		for (Key<Question> k : pt.questionKeys) {
 			buf.append("\n");
 			try {
 				Question q = getQuestion(k);
