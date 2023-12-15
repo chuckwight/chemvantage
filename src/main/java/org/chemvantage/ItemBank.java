@@ -269,7 +269,7 @@ public class ItemBank extends HttpServlet {
 			boolean showQuestions = (chapter != null && !assignmentType.isEmpty());
 			
 			buf.append("More than 5000 ChemVantage question items are free to use under the terms of a "
-					+ "<a href=https://creativecommons.org/licenses/by/4.0/ target=_blank>Creative Commons CC-BY License</a>.<br/>"
+					+ "<a href=https://creativecommons.org/licenses/by/4.0/ target=_blank>Creative Commons CC-BY License</a>. "
 					+ "Instructors can access the correct answers and full solutions through their campus "
 					+ "LMS. <a href=Registration.jsp target=_blank>Registration is free</a>.<br/><br/>");
 
