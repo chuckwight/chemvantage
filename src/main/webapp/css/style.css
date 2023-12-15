@@ -475,9 +475,9 @@ em {
 
 .chemistry-icon img {
     width: 80px;
-    opacity: .3;
+/*    opacity: .3;
     animation: spin  8s linear infinite;
-    -webkit-animation: spin  8s linear infinite;
+    -webkit-animation: spin  8s linear infinite; */
 }
 
 @keyframes spin {
