@@ -61,6 +61,23 @@
 	  <artifactId>gson</artifactId>
 	</dependency>
 	
+	<!-- Google Cloud Endpoints for connecting local dev server to Cloud datastore (tried these but no luck)
+	<dependency>
+	  <groupId>com.google.endpoints</groupId>
+	  <artifactId>endpoints-framework</artifactId>
+	  <version>2.2.2</version>
+	</dependency>
+	<dependency>
+	  <groupId>com.google.oauth-client</groupId>
+	  <artifactId>google-oauth-client</artifactId>
+	</dependency>
+	<dependency>
+	  <groupId>com.google.appengine</groupId>
+	  <artifactId>appengine-api-1.0-sdk</artifactId>
+	  <version>2.0.23</version>
+	</dependency>
+	-->
+	
 	<!-- Google Cloud Tasks bom -->
 	<dependency>
       <groupId>com.google.cloud</groupId>
