@@ -100,6 +100,10 @@ public class Group {
 		} catch (Exception e) {}
 		ofy().save().entity(g);
 		
+		try {
+		Utilities.createTask("/ResponseServlet","AssignmentId=" + a.id,60);
+		} catch (Exception e) {}
+/*		
 		// Update the Response entities for all assignments for this Group
 		List<Assignment> assignments = ofy().load().type(Assignment.class).filter("lti_ags_lineitems_url",a.lti_ags_lineitems_url).list();
 		int delay = 15;
@@ -111,6 +115,7 @@ public class Group {
 				delay += 600;	// each subsequent Task spaced by 10 min
 			} catch (Exception e) {}
 		}
+*/
 	}
 	
 	static String enrollmentReport() {

@@ -426,7 +426,7 @@ public class Poll extends HttpServlet {
 		
 		int score = 0;
 		int possibleScore = 0;
-		if (pt.questionKeys.isEmpty()) pt.questionKeys = a.questionKeys;
+		pt.questionKeys = a.questionKeys;
 		
 		for (Key<Question> k : pt.questionKeys) {
 			try {
@@ -438,6 +438,7 @@ public class Poll extends HttpServlet {
 					q.setParameters(a.id % Integer.MAX_VALUE);
 					score += q.isCorrect(studentAnswer) || !q.hasACorrectAnswer()?q.pointValue:0;
 				}
+				if (q.hasACorrectAnswer()) pt.correctAnswers.put(k, q.getCorrectAnswer());
 			} catch (Exception e) {}
 		}
 		if (possibleScore != pt.possibleScore) pt.possibleScore = possibleScore;
@@ -633,7 +634,7 @@ public class Poll extends HttpServlet {
 				+ "<div style='display: table-cell'><h3>Responses</h3></div>"
 				+ "</div>");  // end of header row
 		debug.append("c.");
-		for (Key<Question> k : pt.questionKeys) {
+		for (Key<Question> k : a.questionKeys) {
 			buf.append("\n");
 			try {
 				Question q = getQuestion(k);
@@ -646,9 +647,12 @@ public class Poll extends HttpServlet {
 				
 				buf.append("<div style='display: table-cell;vertical-align: top;width: 400px;'><br/>"); // question cell
 				
-				String userResponse = pt.studentAnswers==null?"":(pt.studentAnswers.get(k)==null?"":pt.studentAnswers.get(k));
+				String userResponse = "";
+				try {
+					userResponse = pt.studentAnswers.get(k);
+				} catch (Exception e) {}
 				
-				buf.append(q.correctAnswer.isEmpty()?q.print():q.printAllToStudents(userResponse));
+				buf.append(q.hasNoCorrectAnswer()?q.print():q.printAllToStudents(userResponse));
 				//buf.append(q.printAll());
 				
 				buf.append("</div>"   // end of question cell
@@ -843,10 +847,8 @@ public class Poll extends HttpServlet {
 		else buf.append("<h2>Edit Class Poll</h2>");
 
 		List<Question> addQuestions = new ArrayList<Question>();
-		try {
-			addQuestions = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",conceptId).list();
-		} catch (Exception e) {}
-
+		if (conceptId>0) addQuestions = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("conceptId",conceptId).list();
+		
 		// Display a selector to display candidate questions by key concept:
 		List<Concept> concepts = ofy().load().type(Concept.class).order("orderBy").list();
 		buf.append("<form method=get action=/Poll>"

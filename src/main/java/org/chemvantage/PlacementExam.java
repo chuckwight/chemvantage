@@ -524,7 +524,7 @@ public class PlacementExam extends HttpServlet {
 					}
 				}
 			}
-			
+			debug.append("a");
 			Date now = new Date();
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			buf.append(df.format(now) + "<br/><br/>");
@@ -543,6 +543,7 @@ public class PlacementExam extends HttpServlet {
 			// if everything is still OK, score the exam:
 			List<String> conceptTitles = new ArrayList<String>();
 			for (int i=0;i<a.conceptIds.size();i++) conceptTitles.add(ofy().load().type(Concept.class).id(a.conceptIds.get(i)).safe().title);
+			debug.append("b");
 			
 			// create a buffer to hold the correct solutions to missed questions:
 			StringBuffer missedQuestions = new StringBuffer();
@@ -565,6 +566,7 @@ public class PlacementExam extends HttpServlet {
 			
 			// Load all of the relevant questions
 			Map<Key<Question>,Question> questions = ofy().load().keys(questionKeys);
+			debug.append("c");
 			
 			// begin the main scoring loop:
 			for (Key<Question> k : questionKeys) {
@@ -590,6 +592,7 @@ public class PlacementExam extends HttpServlet {
 					pt.questionScores.put(k, score);
 					pt.studentAnswers.put(k, studentAnswer);
 					pt.correctAnswers.put(k, q.getCorrectAnswer());
+					debug.append(".");
 					
 					if (score < q.pointValue) {
 						// include question in list of incorrectly answered questions
@@ -597,12 +600,17 @@ public class PlacementExam extends HttpServlet {
 						missedQuestions.append("\n<LI>" + q.printAllToStudents(studentAnswer,true) + "</LI>\n");
 					}
 				}
-				if (q!=null && q.pointValue > 2) pt.questionShowWork.put(k, request.getParameter("ShowWork" + k.getId()));
+				//if (q!=null && q.pointValue > 2) pt.questionShowWork.put(k, request.getParameter("ShowWork" + k.getId()));
 			}
+			debug.append("1");
+			
 			missedQuestions.append("</OL>\n");
 			pt.scores = studentScores;
+			debug.append("2");
 			pt.graded = now;
+			debug.append("3");
 			ofy().save().entity(pt).now();
+			debug.append("d");
 			
 			if (!user.isAnonymous()) {
 				try {
@@ -620,6 +628,7 @@ public class PlacementExam extends HttpServlet {
 				score += studentScores[i];
 				possibleScore += pt.possibleScores[i];
 			}
+			debug.append("e");
 			buf.append("<b>Your score on this placement exam is " + score + " out of a possible " + possibleScore + " points.</b><p>");
 			if (score > 0 && score == possibleScore) buf.append ("<h2>Congratulations on a perfect score!</h2>");
 			else {
@@ -644,7 +653,8 @@ public class PlacementExam extends HttpServlet {
 			}
 			// embed ajax code to provide feedback
 			buf.append(ajaxScoreJavaScript(user.getTokenSignature()));
-
+			debug.append("e");
+			
 			if (user.isAnonymous()) return buf.toString();
 			debug.append("1");
 			List<PlacementExamTransaction> pets = new ArrayList<PlacementExamTransaction>();
@@ -703,7 +713,8 @@ public class PlacementExam extends HttpServlet {
 					}
 				}
 			}
-
+			debug.append("f");
+			
 			buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Placement Exam Score (percent)</th></tr>");
 			for (PlacementExamTransaction pet : pets) {
 				score = 0;
@@ -1403,9 +1414,11 @@ public class PlacementExam extends HttpServlet {
 	}
 	
 	String orderResponses(String[] answers) {
-		Arrays.sort(answers);
 		String studentAnswer = "";
-		for (String a : answers) studentAnswer = studentAnswer + a;
+		try {
+			Arrays.sort(answers);
+			for (String a : answers) studentAnswer = studentAnswer + a;
+		} catch (Exception e) {}
 		return studentAnswer;
 	}
 	

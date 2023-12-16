@@ -1193,12 +1193,13 @@ public class PracticeExam extends HttpServlet {
 	}
 	
 	String orderResponses(String[] answers) {
-		Arrays.sort(answers);
 		String studentAnswer = "";
-		for (String a : answers) studentAnswer = studentAnswer + a;
+		try {
+			Arrays.sort(answers);
+			for (String a : answers) studentAnswer = studentAnswer + a;
+		} catch (Exception e) {}
 		return studentAnswer;
 	}
-
 }
 
 class SortExams implements Comparator<PracticeExamTransaction> { 

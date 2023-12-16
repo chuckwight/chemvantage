@@ -42,6 +42,7 @@ public class PollTransaction implements Serializable {
 			int possibleScore;
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 			Map<Key<Question>,Integer> questionScores = new HashMap<Key<Question>,Integer>();
+			Map<Key<Question>,String> responses = new HashMap<Key<Question>,String>();        // phasing out; replaced by studentAnswers
 			Map<Key<Question>,String> studentAnswers = new HashMap<Key<Question>,String>();
 			Map<Key<Question>,String> correctAnswers = new HashMap<Key<Question>,String>();
 			
