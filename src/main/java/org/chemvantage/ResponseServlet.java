@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
+import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -205,7 +206,7 @@ public class ResponseServlet extends HttpServlet {
 				List<Key<HWTransaction>> hwTransactionKeys = new ArrayList<Key<HWTransaction>>();
 				for (Response r : responses) {
 					if (r.transactionId==0) continue;
-					Key<HWTransaction> k = Key.create(HWTransaction.class,r.transactionId);
+					Key<HWTransaction> k = key(HWTransaction.class,r.transactionId);
 					if (!hwTransactionKeys.contains(k)) hwTransactionKeys.add(k);
 				}
 				debug.append("Transaction keys loaded.");
@@ -223,7 +224,7 @@ public class ResponseServlet extends HttpServlet {
 					} catch (Exception e) {}
 					i++;
 					try {  // put Response data into the transaction
-						HWTransaction hwt = hwTransactions.get(Key.create(HWTransaction.class,r.transactionId));  // get the HWTransaction for this Response
+						HWTransaction hwt = hwTransactions.get(key(HWTransaction.class,r.transactionId));  // get the HWTransaction for this Response
 						hwt.studentAnswer = r.studentResponse;					// update the HWTransaction data
 						hwt.correctAnswer = r.correctAnswer;
 					} catch (Exception e) {}
@@ -236,7 +237,7 @@ public class ResponseServlet extends HttpServlet {
 				List<Key<QuizTransaction>> qTransactionKeys = new ArrayList<Key<QuizTransaction>>();
 				for (Response r : responses) {
 					if (r.transactionId==0) continue;
-					Key<QuizTransaction> k = Key.create(QuizTransaction.class,r.transactionId);
+					Key<QuizTransaction> k = key(QuizTransaction.class,r.transactionId);
 					if (!qTransactionKeys.contains(k)) qTransactionKeys.add(k);
 				}
 				debug.append("Transaction keys loaded.");
@@ -253,8 +254,8 @@ public class ResponseServlet extends HttpServlet {
 					} catch (Exception e) {}
 					i++;
 					try {
-						QuizTransaction qt = qTransactions.get(Key.create(r.transactionId));
-						Key<Question> k = Key.create(Question.class,r.questionId);
+						QuizTransaction qt = qTransactions.get(key(r.transactionId));
+						Key<Question> k = key(Question.class,r.questionId);
 						qt.questionKeys.add(k);
 						qt.studentAnswers.put(k,r.studentResponse);
 						qt.correctAnswers.put(k,r.correctAnswer);
@@ -284,7 +285,7 @@ public class ResponseServlet extends HttpServlet {
 				List<Key<PracticeExamTransaction>> prExTransactionKeys = new ArrayList<Key<PracticeExamTransaction>>();
 				for (Response r : responses) {
 					if (r.transactionId==0) continue;
-					Key<PracticeExamTransaction> k = Key.create(PracticeExamTransaction.class,r.transactionId);
+					Key<PracticeExamTransaction> k = key(PracticeExamTransaction.class,r.transactionId);
 					if (!prExTransactionKeys.contains(k)) prExTransactionKeys.add(k);
 				}
 				debug.append("Transaction keys loaded.");
@@ -301,8 +302,8 @@ public class ResponseServlet extends HttpServlet {
 					} catch (Exception e) {}
 					i++;
 					try {
-						PracticeExamTransaction pt = prExTransactions.get(Key.create(r.transactionId));
-						Key<Question> k = Key.create(Question.class,r.questionId);
+						PracticeExamTransaction pt = prExTransactions.get(key(r.transactionId));
+						Key<Question> k = key(Question.class,r.questionId);
 						pt.studentAnswers.put(k,r.studentResponse);
 						pt.correctAnswers.put(k,r.correctAnswer);
 					} catch (Exception e) {}
@@ -314,7 +315,7 @@ public class ResponseServlet extends HttpServlet {
 				List<Key<PlacementExamTransaction>> plExTransactionKeys = new ArrayList<Key<PlacementExamTransaction>>();
 				for (Response r : responses) {
 					if (r.transactionId==0) continue;
-					Key<PlacementExamTransaction> k = Key.create(PlacementExamTransaction.class,r.transactionId);
+					Key<PlacementExamTransaction> k = key(PlacementExamTransaction.class,r.transactionId);
 					if (!plExTransactionKeys.contains(k)) plExTransactionKeys.add(k);
 				}
 				debug.append("Transaction keys loaded.");
@@ -330,8 +331,8 @@ public class ResponseServlet extends HttpServlet {
 					} catch (Exception e) {}
 					i++;
 					try {
-						PlacementExamTransaction pt = plExTransactions.get(Key.create(r.transactionId));
-						Key<Question> k = Key.create(Question.class,r.questionId);
+						PlacementExamTransaction pt = plExTransactions.get(key(r.transactionId));
+						Key<Question> k = key(Question.class,r.questionId);
 						pt.studentAnswers.put(k,r.studentResponse);
 						pt.correctAnswers.put(k,r.correctAnswer);
 					} catch (Exception e) {}
@@ -343,7 +344,7 @@ public class ResponseServlet extends HttpServlet {
 				List<Key<VideoTransaction>> vTransactionKeys = new ArrayList<Key<VideoTransaction>>();
 				for (Response r : responses) {
 					if (r.transactionId==0) continue;
-					Key<VideoTransaction> k = Key.create(VideoTransaction.class,r.transactionId);
+					Key<VideoTransaction> k = key(VideoTransaction.class,r.transactionId);
 					if (!vTransactionKeys.contains(k)) vTransactionKeys.add(k);
 				}
 				debug.append("Transaction keys loaded.");
@@ -359,8 +360,8 @@ public class ResponseServlet extends HttpServlet {
 					} catch (Exception e) {}
 					i++;
 					try {
-						VideoTransaction vt = vTransactions.get(Key.create(r.transactionId));
-						Key<Question> k = Key.create(Question.class,r.questionId);
+						VideoTransaction vt = vTransactions.get(key(r.transactionId));
+						Key<Question> k = key(Question.class,r.questionId);
 						vt.questionKeys.add(k);
 						vt.studentAnswers.put(k,r.studentResponse);
 						vt.correctAnswers.put(k,r.correctAnswer);
@@ -373,7 +374,7 @@ public class ResponseServlet extends HttpServlet {
 				List<Key<STTransaction>> sTransactionKeys = new ArrayList<Key<STTransaction>>();
 				for (Response r : responses) {
 					if (r.transactionId==0) continue;
-					Key<STTransaction> k = Key.create(STTransaction.class,r.transactionId);
+					Key<STTransaction> k = key(STTransaction.class,r.transactionId);
 					if (!sTransactionKeys.contains(k)) sTransactionKeys.add(k);
 				}
 				debug.append("Transaction keys loaded.");
@@ -390,8 +391,8 @@ public class ResponseServlet extends HttpServlet {
 					} catch (Exception e) {}
 					i++;
 					try {
-						STTransaction st = sTransactions.get(Key.create(r.transactionId));
-						Key<Question> k = Key.create(Question.class,r.questionId);
+						STTransaction st = sTransactions.get(key(r.transactionId));
+						Key<Question> k = key(Question.class,r.questionId);
 						st.answeredKeys.add(k);
 						st.studentAnswers.put(k,r.studentResponse);
 						st.correctAnswers.put(k,r.correctAnswer);

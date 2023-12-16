@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
+import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -177,7 +178,7 @@ public class DataStoreCleaner extends HttpServlet {
 		List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).limit(1000).list();
 		List<Key<QuizTransaction>> qtKeys = new ArrayList<Key<QuizTransaction>>();
 		for (QuizTransaction qt :qts) {
-			if (qt.assignmentId==0 || ofy().load().filterKey(Key.create(Assignment.class,qt.assignmentId)).count()==0) qtKeys.add(Key.create(qt));
+			if (qt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,qt.assignmentId)).count()==0) qtKeys.add(key(qt));
 		}
 		if (!testOnly) {
 			int nBatches = qtKeys.size()/500;
@@ -190,7 +191,7 @@ public class DataStoreCleaner extends HttpServlet {
 		List<HWTransaction> hwts = ofy().load().type(HWTransaction.class).limit(1000).list();
 		List<Key<HWTransaction>> hwtKeys = new ArrayList<Key<HWTransaction>>();
 		for (HWTransaction hwt :hwts) {
-			if (hwt.assignmentId==0 || ofy().load().filterKey(Key.create(Assignment.class,hwt.assignmentId)).count()==0) hwtKeys.add(Key.create(hwt));
+			if (hwt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,hwt.assignmentId)).count()==0) hwtKeys.add(key(hwt));
 		}
 		if (!testOnly) {
 			int nBatches = hwtKeys.size()/500;
@@ -203,7 +204,7 @@ public class DataStoreCleaner extends HttpServlet {
 		List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).limit(1000).list();
 		List<Key<PracticeExamTransaction>> petKeys = new ArrayList<Key<PracticeExamTransaction>>();
 		for (PracticeExamTransaction pet :pets) {
-			if (pet.assignmentId==0 || ofy().load().filterKey(Key.create(Assignment.class,pet.assignmentId)).count()==0) petKeys.add(Key.create(pet));
+			if (pet.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,pet.assignmentId)).count()==0) petKeys.add(key(pet));
 		}
 		if (!testOnly) {
 			int nBatches = petKeys.size()/500;
@@ -216,7 +217,7 @@ public class DataStoreCleaner extends HttpServlet {
 		List<VideoTransaction> vts = ofy().load().type(VideoTransaction.class).limit(1000).list();
 		List<Key<VideoTransaction>> vtKeys = new ArrayList<Key<VideoTransaction>>();
 		for (VideoTransaction vt :vts) {
-			if (vt.assignmentId==0 || ofy().load().filterKey(Key.create(Assignment.class,vt.assignmentId)).count()==0) vtKeys.add(Key.create(vt));
+			if (vt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,vt.assignmentId)).count()==0) vtKeys.add(key(vt));
 		}
 		if (!testOnly) {
 			int nBatches = vtKeys.size()/500;
@@ -229,7 +230,7 @@ public class DataStoreCleaner extends HttpServlet {
 		List<PollTransaction> pts = ofy().load().type(PollTransaction.class).limit(1000).list();
 		List<Key<PollTransaction>> ptKeys = new ArrayList<Key<PollTransaction>>();
 		for (PollTransaction pt :pts) {
-			if (pt.assignmentId==0 || ofy().load().filterKey(Key.create(Assignment.class,pt.assignmentId)).count()==0) ptKeys.add(Key.create(pt));
+			if (pt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,pt.assignmentId)).count()==0) ptKeys.add(key(pt));
 		}
 		if (!testOnly) {
 			int nBatches = ptKeys.size()/500;
@@ -242,7 +243,7 @@ public class DataStoreCleaner extends HttpServlet {
 		List<PlacementExamTransaction> plts = ofy().load().type(PlacementExamTransaction.class).limit(1000).list();
 		List<Key<PlacementExamTransaction>> pltKeys = new ArrayList<Key<PlacementExamTransaction>>();
 		for (PlacementExamTransaction plt :plts) {
-			if (plt.assignmentId==0 || ofy().load().filterKey(Key.create(Assignment.class,plt.assignmentId)).count()==0) pltKeys.add(Key.create(plt));
+			if (plt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,plt.assignmentId)).count()==0) pltKeys.add(key(plt));
 		}
 		if (!testOnly) {
 			int nBatches = pltKeys.size()/500;
@@ -354,9 +355,9 @@ public class DataStoreCleaner extends HttpServlet {
 				List<Key<Assignment>> assignmentKeys = new ArrayList<Key<Assignment>>();
 				StringBuffer exp = new StringBuffer();
 				for (Assignment a : oldAssignments) {
-					if (a.lti_ags_lineitem_url==null) assignmentKeys.add(Key.create(Assignment.class,a.id));
-					else if (ofy().load().key(Key.create(Deployment.class,a.domain)).now()==null) assignmentKeys.add(Key.create(Assignment.class,a.id));
-					if (assignmentKeys.contains(Key.create(a))) exp.append(a.id + " " + a.domain + " " + a.lti_ags_lineitem_url + "</br/>");
+					if (a.lti_ags_lineitem_url==null) assignmentKeys.add(key(Assignment.class,a.id));
+					else if (ofy().load().key(key(Deployment.class,a.domain)).now()==null) assignmentKeys.add(key(Assignment.class,a.id));
+					if (assignmentKeys.contains(key(a))) exp.append(a.id + " " + a.domain + " " + a.lti_ags_lineitem_url + "</br/>");
 				}
 				
 				buf.append("Found " + oldAssignments.size() + " old assignments, of which " + assignmentKeys.size() + " appear to have expired.<br/>");

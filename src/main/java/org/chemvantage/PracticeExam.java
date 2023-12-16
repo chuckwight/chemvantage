@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
+import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -119,7 +120,7 @@ public class PracticeExam extends HttpServlet {
 				if (user.isInstructor()) {
 					try {
 						Long tid = Long.parseLong(request.getParameter("tid"));
-						ofy().delete().key(Key.create(PracticeExamTransaction.class,tid)).now();
+						ofy().delete().key(key(PracticeExamTransaction.class,tid)).now();
 					} catch (Exception e) {}
 					out.println(Subject.header("ChemVantage Instructor Page") + reviewExamScores(user,a) + Subject.footer);
 				}
@@ -527,7 +528,7 @@ public class PracticeExam extends HttpServlet {
 				questionKeys = new ArrayList<Key<Question>>();
 				for (Enumeration<?> e = request.getParameterNames();e.hasMoreElements();) {
 					try {
-						questionKeys.add(Key.create(Question.class,Long.parseLong((String) e.nextElement())));
+						questionKeys.add(key(Question.class,Long.parseLong((String) e.nextElement())));
 					} catch (Exception e2) {}
 				}
 				pt.questionKeys = questionKeys;
@@ -587,7 +588,7 @@ public class PracticeExam extends HttpServlet {
 					Score s = null;
 					try { // retrieve the score and ensure that it is up to date
 						debug.append("1a");
-						s = ofy().load().key(Key.create(Key.create(User.class,user.getHashedId()),Score.class,a.id)).safe();
+						s = ofy().load().key(key(key(User.class,user.getHashedId()),Score.class,a.id)).safe();
 						if (s.numberOfAttempts != pets.size()) throw new Exception();
 					} catch (Exception e) { // create a fresh Score entity from scratch
 						debug.append("1b");
@@ -734,7 +735,7 @@ public class PracticeExam extends HttpServlet {
 		} else {				
 			Score s = null;
 			try { // retrieve the score and ensure that it is up to date
-				s = ofy().load().key(Key.create(Key.create(User.class,user.getId()),Score.class,a.id)).safe();
+				s = ofy().load().key(key(key(User.class,user.getId()),Score.class,a.id)).safe();
 				if (s.numberOfAttempts != pets.size()) throw new Exception();
 			} catch (Exception e) { // create a fresh Score entity from scratch
 				s = Score.getInstance(user.getId(), a);
@@ -939,14 +940,14 @@ public class PracticeExam extends HttpServlet {
 				Question q = examQuestions.get(k);
 				q.setParameters((int)(pet.id - q.id));
 				buf.append("<tr style='vertical-align:middle'><td><b>" + i + ". </b>" 
-						+ q.printAllToStudents(pet.studentAnswers.get(Key.create(q)),true) + "</td>");
+						+ q.printAllToStudents(pet.studentAnswers.get(key(q)),true) + "</td>");
 
 				// Try to get the question score from the PracticeExamTransaction. If null, recompute it from the student's response
 				int score = 0;
 				if (pet.questionScores.get(k)!=null) score = pet.questionScores.get(k);
 				else {  // recalculate the original score
-					if (q.isCorrect(pet.studentAnswers.get(Key.create(q)))) score = q.pointValue;
-					else if (q.agreesToRequiredPrecision(pet.studentAnswers.get(Key.create(q)))) score = q.pointValue-1;
+					if (q.isCorrect(pet.studentAnswers.get(key(q)))) score = q.pointValue;
+					else if (q.agreesToRequiredPrecision(pet.studentAnswers.get(key(q)))) score = q.pointValue-1;
 				}
 				
 				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"
@@ -966,14 +967,14 @@ public class PracticeExam extends HttpServlet {
 				Question q = examQuestions.get(k);
 				q.setParameters((int)(pet.id - q.id));
 				buf.append("<tr style='vertical-align:middle'><td><b>" + i + ". </b>" 
-						+ q.printAllToStudents(pet.studentAnswers.get(Key.create(q)),true,true,pet.questionShowWork.get(k)) + "</td>");
+						+ q.printAllToStudents(pet.studentAnswers.get(key(q)),true,true,pet.questionShowWork.get(k)) + "</td>");
 
 				// Try to get the question score from the PracticeExamTransaction. If null, recompute it from the student's response
 				int score = 0;
 				if (pet.questionScores.get(k)!=null) score = pet.questionScores.get(k);
 				else {  // recalculate the original score
-					if (q.isCorrect(pet.studentAnswers.get(Key.create(q)))) score = q.pointValue;
-					else if (q.agreesToRequiredPrecision(pet.studentAnswers.get(Key.create(q)))) score = q.pointValue-1;
+					if (q.isCorrect(pet.studentAnswers.get(key(q)))) score = q.pointValue;
+					else if (q.agreesToRequiredPrecision(pet.studentAnswers.get(key(q)))) score = q.pointValue-1;
 				}
 				
 				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"
@@ -993,14 +994,14 @@ public class PracticeExam extends HttpServlet {
 				Question q = examQuestions.get(k);
 				q.setParameters((int)(pet.id - q.id));
 				buf.append("<tr style='vertical-align:middle'><td><b>" + i + ". </b>" 
-						+ q.printAllToStudents(pet.studentAnswers.get(Key.create(q)),true,true,pet.questionShowWork.get(k)) + "</td>");
+						+ q.printAllToStudents(pet.studentAnswers.get(key(q)),true,true,pet.questionShowWork.get(k)) + "</td>");
 
 				// Try to get the question score from the PracticeExamTransaction. If null, recompute it from the student's response
 				int score = 0;
 				if (pet.questionScores.get(k)!=null) score = pet.questionScores.get(k);
 				else {  // recalculate the original score
-					if (q.isCorrect(pet.studentAnswers.get(Key.create(q)))) score = q.pointValue;
-					else if (q.agreesToRequiredPrecision(pet.studentAnswers.get(Key.create(q)))) score = q.pointValue-1;
+					if (q.isCorrect(pet.studentAnswers.get(key(q)))) score = q.pointValue;
+					else if (q.agreesToRequiredPrecision(pet.studentAnswers.get(key(q)))) score = q.pointValue-1;
 				}
 				
 				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"
@@ -1151,7 +1152,7 @@ public class PracticeExam extends HttpServlet {
 				q.setParameters();
 				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
 						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
-				buf.append(a.questionKeys.contains(Key.create(Question.class,q.id))?" CHECKED>":">");
+				buf.append(a.questionKeys.contains(key(Question.class,q.id))?" CHECKED>":">");
 				buf.append("<b>&nbsp;" + i + ".</b></TD>");
 				buf.append("\n<TD>" + q.printAll() + "</TD>");
 				buf.append("</TR>");
@@ -1165,7 +1166,7 @@ public class PracticeExam extends HttpServlet {
 				q.setParameters();
 				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
 						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
-				buf.append(a.questionKeys.contains(Key.create(Question.class,q.id))?" CHECKED>":">");
+				buf.append(a.questionKeys.contains(key(Question.class,q.id))?" CHECKED>":">");
 				buf.append("<b>&nbsp;" + i + ".</b></TD>");
 				buf.append("\n<TD>" + q.printAll() + "</TD>");
 				buf.append("</TR>");
@@ -1179,7 +1180,7 @@ public class PracticeExam extends HttpServlet {
 				q.setParameters();
 				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
 						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
-				buf.append(a.questionKeys.contains(Key.create(Question.class,q.id))?" CHECKED>":">");
+				buf.append(a.questionKeys.contains(key(Question.class,q.id))?" CHECKED>":">");
 				buf.append("<b>&nbsp;" + i + ".</b></TD>");
 				buf.append("\n<TD>" + q.printAll() + "</TD>");
 				buf.append("</TR>");

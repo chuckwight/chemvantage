@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
+import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -151,7 +152,7 @@ public class Poll extends HttpServlet {
 				if (!user.isInstructor()) break;
 				long qid = createQuestion(user,request);
 				if (qid > 0) {
-					a.questionKeys.add(Key.create(Question.class,qid));
+					a.questionKeys.add(key(Question.class,qid));
 					ofy().save().entity(a).now();
 				}
 				out.println(Subject.header() + editPage(user,a,conceptId) + Subject.footer);
@@ -929,7 +930,7 @@ public class Poll extends HttpServlet {
 		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 		for (String qid : qids) {
 			try {
-				questionKeys.add(Key.create(Question.class,Long.parseLong(qid)));
+				questionKeys.add(key(Question.class,Long.parseLong(qid)));
 			} catch (Exception e) {}
 		}
 		if (questionKeys.size()>0) {
@@ -942,7 +943,7 @@ public class Poll extends HttpServlet {
 	void removeQuestion(User user,Assignment a,HttpServletRequest request) {
 		try {
 			Long questionId = Long.parseLong(request.getParameter("QuestionId"));
-			Key<Question> k = Key.create(Question.class,questionId);
+			Key<Question> k = key(Question.class,questionId);
 			if (a.questionKeys.remove(k)) ofy().save().entity(a).now();
 		} catch (Exception e) {}
 	}
@@ -1266,7 +1267,7 @@ public class Poll extends HttpServlet {
 			Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
 			String platform_id = d.getPlatformId() + "/";
 			for (String id : membership.keySet()) {
-				keys.put(id,Key.create(Key.create(User.class,Subject.hashId(platform_id+id)),Score.class,a.id));
+				keys.put(id,key(key(User.class,Subject.hashId(platform_id+id)),Score.class,a.id));
 			}
 			Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
 			buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th><th>Scores Detail</th></tr>");
@@ -1316,7 +1317,7 @@ public class Poll extends HttpServlet {
 		if (!user.isInstructor()) return;
 		try {
 			Long questionId = Long.parseLong(request.getParameter("QuestionId"));
-			Key<Question> k = Key.create(Question.class,questionId);
+			Key<Question> k = key(Question.class,questionId);
 			int i = a.questionKeys.indexOf(k);
 			if(i>0) {
 				Collections.swap(a.questionKeys, i, i-1);
@@ -1331,7 +1332,7 @@ public class Poll extends HttpServlet {
 		if (!user.isInstructor()) return;
 		try {
 			Long questionId = Long.parseLong(request.getParameter("QuestionId"));
-			Key<Question> k = Key.create(Question.class,questionId);
+			Key<Question> k = key(Question.class,questionId);
 			int i = a.questionKeys.indexOf(k);
 			if(i<a.questionKeys.size()-1) {
 				Collections.swap(a.questionKeys, i, i+1);

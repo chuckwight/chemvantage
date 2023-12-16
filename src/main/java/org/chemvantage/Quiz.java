@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
+import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -372,7 +373,7 @@ public class Quiz extends HttpServlet {
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 			for (Enumeration<?> e = request.getParameterNames();e.hasMoreElements();) {
 				try {
-					questionKeys.add(Key.create(Question.class,Long.parseLong((String) e.nextElement())));
+					questionKeys.add(key(Question.class,Long.parseLong((String) e.nextElement())));
 				} catch (Exception e2) {}
 			}
 			Map<Key<Question>,Question> quizQuestions = ofy().load().keys(questionKeys);
@@ -710,7 +711,7 @@ public class Quiz extends HttpServlet {
 			} else {				
 				Score s = null;
 				try { // retrieve the score and ensure that it is up to date
-					s = ofy().load().key(Key.create(Key.create(User.class,forUser.getHashedId()),Score.class,a.id)).safe();
+					s = ofy().load().key(key(key(User.class,forUser.getHashedId()),Score.class,a.id)).safe();
 					if (s.numberOfAttempts != qts.size()) throw new Exception();
 				} catch (Exception e) { // create a fresh Score entity from scratch
 					s = Score.getInstance(forUser.getId(), a);
@@ -778,7 +779,7 @@ public class Quiz extends HttpServlet {
 			List<Question> questions = new ArrayList<Question>(ofy().load().keys(qt.questionKeys).values());
 			for (Question q : questions) {
 				q.setParameters(Math.abs(qt.getId() - q.getId()));
-				buf.append("<li>" + q.printAllToStudents(qt.studentAnswers.get(Key.create(q))) + "</li>");
+				buf.append("<li>" + q.printAllToStudents(qt.studentAnswers.get(key(q))) + "</li>");
 			}
 			buf.append("</ol>");
 			
@@ -869,7 +870,7 @@ public class Quiz extends HttpServlet {
 				
 				for (String id : membership.keySet()) {
 					String hashedUserId = Subject.hashId(platform_id + id);
-					keys.put(id,Key.create(Key.create(User.class,hashedUserId),Score.class,a.id));
+					keys.put(id,key(key(User.class,hashedUserId),Score.class,a.id));
 				}
 				Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
 				
@@ -946,7 +947,7 @@ public class Quiz extends HttpServlet {
 			String platform_id = d.getPlatformId() + "/";
 			for (String id : membership.keySet()) {
 				String hashedUserId = Subject.hashId(platform_id + id);
-				keys.put(id,Key.create(Key.create(User.class,hashedUserId),Score.class,a.id));
+				keys.put(id,key(key(User.class,hashedUserId),Score.class,a.id));
 			}
 			Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
 			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
@@ -1013,7 +1014,7 @@ public class Quiz extends HttpServlet {
 			Map<Key<Concept>,Concept> keyConcepts = ofy().load().keys(conceptKeys);
 			if (conceptIds.size()>0) {
 				buf.append("The questions listed below cover the following key concepts:<ul>");
-				for (Long cId : conceptIds) buf.append("<li>" + keyConcepts.get(Key.create(Concept.class,cId)).title + "</li>");
+				for (Long cId : conceptIds) buf.append("<li>" + keyConcepts.get(key(Concept.class,cId)).title + "</li>");
 				buf.append("</ul>");
 			}
 			// Create a short form to select one additional key concept to include (will exclude the previous selection, if any)
@@ -1062,7 +1063,7 @@ public class Quiz extends HttpServlet {
 				q.setParameters();
 				buf.append("<TR><TD VALIGN=TOP NOWRAP>"
 						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
-				buf.append(a.questionKeys.contains(Key.create(Question.class,q.id))?" CHECKED>":">");
+				buf.append(a.questionKeys.contains(key(Question.class,q.id))?" CHECKED>":">");
 				buf.append("<b>&nbsp;" + i + ".</b></TD>");
 				buf.append("<TD>" + q.printAll() + "</TD>");
 				buf.append("</TR>");

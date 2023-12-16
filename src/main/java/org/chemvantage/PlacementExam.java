@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
+import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -160,7 +161,7 @@ public class PlacementExam extends HttpServlet {
 					if (user.isInstructor()) {
 						try {
 							Long tid = Long.parseLong(request.getParameter("tid"));
-							ofy().delete().key(Key.create(PlacementExamTransaction.class,tid)).now();
+							ofy().delete().key(key(PlacementExamTransaction.class,tid)).now();
 						} catch (Exception e) {}
 						out.println(Subject.header("ChemVantage Instructor Page") + reviewExamScores(user,a) + Subject.footer);
 					}
@@ -558,7 +559,7 @@ public class PlacementExam extends HttpServlet {
 				questionKeys = new ArrayList<Key<Question>>();
 				for (Enumeration<?> e = request.getParameterNames();e.hasMoreElements();) {
 					try {
-						questionKeys.add(Key.create(Question.class,Long.parseLong((String) e.nextElement())));
+						questionKeys.add(key(Question.class,Long.parseLong((String) e.nextElement())));
 					} catch (Exception e2) {}
 				}
 				pt.questionKeys = questionKeys;
@@ -668,7 +669,7 @@ public class PlacementExam extends HttpServlet {
 				Score s = null;
 				try { // retrieve the score and ensure that it is up to date
 					debug.append("a");
-					s = ofy().load().key(Key.create(Key.create(User.class,user.getId()),Score.class,a.id)).safe();
+					s = ofy().load().key(key(key(User.class,user.getId()),Score.class,a.id)).safe();
 					if (s.numberOfAttempts != pets.size()) throw new Exception("Score is not up to date.");
 				} catch (Exception e) { // create a fresh Score entity from scratch
 					debug.append("b");
@@ -823,7 +824,7 @@ public class PlacementExam extends HttpServlet {
 		} else {				
 			Score s = null;
 			try { // retrieve the score and ensure that it is up to date
-				s = ofy().load().key(Key.create(Key.create(User.class,user.getId()),Score.class,a.id)).safe();
+				s = ofy().load().key(key(key(User.class,user.getId()),Score.class,a.id)).safe();
 				if (s.numberOfAttempts != pets.size()) throw new Exception();
 			} catch (Exception e) { // create a fresh Score entity from scratch
 				s = Score.getInstance(user.getId(), a);
@@ -1206,14 +1207,14 @@ public class PlacementExam extends HttpServlet {
 				Question q = questions.get(k);
 				q.setParameters((int)(pet.id ^ q.id));
 				buf.append("<tr style='vertical-align:middle'><td><b>" + i + ". </b>" 
-						+ q.printAllToStudents(pet.studentAnswers.get(Key.create(q)),true) + "</td>");
+						+ q.printAllToStudents(pet.studentAnswers.get(key(q)),true) + "</td>");
 
 				// Try to get the question score from the PlacementExamTransaction. If null, recompute it from the student's response
 				int score = 0;
 				if (pet.questionScores.get(k)!=null) score = pet.questionScores.get(k);
-				else if (pet.studentAnswers.get(Key.create(q))!=null && !pet.studentAnswers.get(Key.create(q)).isEmpty()) {  // an answer was submitted
-					score = q.isCorrect(pet.studentAnswers.get(Key.create(q)))?q.pointValue:0;
-					if (score==0 && q.agreesToRequiredPrecision(pet.studentAnswers.get(Key.create(q)))) score = q.pointValue - 1;  // partial credit for wrong sig figs
+				else if (pet.studentAnswers.get(key(q))!=null && !pet.studentAnswers.get(key(q)).isEmpty()) {  // an answer was submitted
+					score = q.isCorrect(pet.studentAnswers.get(key(q)))?q.pointValue:0;
+					if (score==0 && q.agreesToRequiredPrecision(pet.studentAnswers.get(key(q)))) score = q.pointValue - 1;  // partial credit for wrong sig figs
 				}
 				
 				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"
@@ -1233,14 +1234,14 @@ public class PlacementExam extends HttpServlet {
 				Question q = questions.get(k);
 				q.setParameters((int)(pet.id ^ q.id));
 				buf.append("<tr style='vertical-align:middle'><td><b>" + i + ". </b>" 
-						+ q.printAllToStudents(pet.studentAnswers.get(Key.create(q)),true,true,pet.questionShowWork.get(k)) + "</td>");
+						+ q.printAllToStudents(pet.studentAnswers.get(key(q)),true,true,pet.questionShowWork.get(k)) + "</td>");
 
 				// Try to get the question score from the PlacementExamTransaction. If null, recompute it from the student's response
 				int score = 0;
 				if (pet.questionScores.get(k)!=null) score = pet.questionScores.get(k);
-				else if (pet.studentAnswers.get(Key.create(q))!=null && !pet.studentAnswers.get(Key.create(q)).isEmpty()) {  // an answer was submitted
-					score = q.isCorrect(pet.studentAnswers.get(Key.create(q)))?q.pointValue:0;
-					if (score==0 && q.agreesToRequiredPrecision(pet.studentAnswers.get(Key.create(q)))) score = q.pointValue - 1;  // partial credit for wrong sig figs
+				else if (pet.studentAnswers.get(key(q))!=null && !pet.studentAnswers.get(key(q)).isEmpty()) {  // an answer was submitted
+					score = q.isCorrect(pet.studentAnswers.get(key(q)))?q.pointValue:0;
+					if (score==0 && q.agreesToRequiredPrecision(pet.studentAnswers.get(key(q)))) score = q.pointValue - 1;  // partial credit for wrong sig figs
 				}
 				
 				buf.append("<td style='text-align:center'><span id='score" + q.id + "'>" + score + "</span> pts<br>"
@@ -1386,7 +1387,7 @@ public class PlacementExam extends HttpServlet {
 				q.setParameters();
 				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
 						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
-				buf.append(a.questionKeys.contains(Key.create(Question.class,q.id))?" CHECKED>":">");
+				buf.append(a.questionKeys.contains(key(Question.class,q.id))?" CHECKED>":">");
 				buf.append("<b>&nbsp;" + i + ".</b></TD>");
 				buf.append("\n<TD>" + q.printAll() + "</TD>");
 				buf.append("</TR>");
@@ -1400,7 +1401,7 @@ public class PlacementExam extends HttpServlet {
 				q.setParameters();
 				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
 						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
-				buf.append(a.questionKeys.contains(Key.create(Question.class,q.id))?" CHECKED>":">");
+				buf.append(a.questionKeys.contains(key(Question.class,q.id))?" CHECKED>":">");
 				buf.append("<b>&nbsp;" + i + ".</b></TD>");
 				buf.append("\n<TD>" + q.printAll() + "</TD>");
 				buf.append("</TR>");

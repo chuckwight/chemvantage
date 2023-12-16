@@ -18,7 +18,6 @@
 package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
-import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -52,7 +51,7 @@ public class Score {    // this object represents a best score achieved by a use
 		String hashedId = Subject.hashId(userId);
 		Score s = new Score();
 		s.assignmentId = a.id;
-		s.owner = key(User.class,hashedId);
+		s.owner = Key.create(User.class,hashedId);
 		
 		switch (a.assignmentType) {
 		case "Quiz":
@@ -73,7 +72,7 @@ public class Score {    // this object represents a best score achieved by a use
 			s.maxPossibleScore = a.questionKeys.size();
 			for (HWTransaction ht : hwTransactions) {				
 				s.numberOfAttempts++;
-				if (ht.score > 0 && assignmentQuestionKeys.remove(key(Question.class,ht.questionId))) s.score++; 
+				if (ht.score > 0 && assignmentQuestionKeys.remove(Key.create(Question.class,ht.questionId))) s.score++; 
 				if (s.mostRecentAttempt == null || ht.graded.after(s.mostRecentAttempt)) s.mostRecentAttempt = ht.graded;  // most recent transaction
 			}
 			break;
@@ -153,7 +152,7 @@ public class Score {    // this object represents a best score achieved by a use
 		Score s = null;
 		userId = Subject.hashId(userId);
 		try {
-			Key<Score> k = key(key(User.class,userId),Score.class,qt.assignmentId);
+			Key<Score> k = Key.create(Key.create(User.class,userId),Score.class,qt.assignmentId);
 			s = ofy().load().key(k).safe();
 			if (s.mostRecentAttempt.equals(qt.downloaded)) return s; // everything is up to date
 			else if (s.mostRecentAttempt.before(qt.downloaded)) {  // update the Score with this new QuizTransaction

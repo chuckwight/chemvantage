@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
+import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -83,7 +84,7 @@ public class Assignment implements java.lang.Cloneable {
 		try {
 			String[] questionIds = request.getParameterValues("QuestionId");
 			this.questionKeys.clear();
-			if (questionIds != null) for (String id : questionIds) this.questionKeys.add(Key.create(Question.class,Long.parseLong(id)));
+			if (questionIds != null) for (String id : questionIds) this.questionKeys.add(key(Question.class,Long.parseLong(id)));
 			List<Question> questions = new ArrayList<Question>(ofy().load().keys(this.questionKeys).values());
 			this.conceptIds.clear();
 			for (Question q : questions) if (q.conceptId!=null && q.conceptId>0 && !conceptIds.contains(q.conceptId)) conceptIds.add(q.conceptId);

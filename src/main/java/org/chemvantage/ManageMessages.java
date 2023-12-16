@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
+import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -76,7 +77,7 @@ public class ManageMessages extends HttpServlet {
 		boolean isActive = Boolean.parseBoolean(request.getParameter("IsActive"));
 		
 		List<Key<EmailMessage>> msgKeys = new ArrayList<Key<EmailMessage>>();
-		Key<EmailMessage> mKey = Key.create(m);
+		Key<EmailMessage> mKey = key(m);
 		List<Contact> contacts = new ArrayList<Contact>();
 		
 		switch (userRequest) {
@@ -271,7 +272,7 @@ public class ManageMessages extends HttpServlet {
 	
 	String unsubscribeText(Contact c) {
 		return "<span style='font-size: small;'><a href=https://www.chemvantage.org/unsubscribe?k=" 
-				+ (c==null?"":Key.create(c).toLegacyUrlSafe()) 
+				+ (c==null?"":key(c).toLegacyUrlSafe()) 
 				+ ">Unsubscribe</a></span>";
 	}
 	

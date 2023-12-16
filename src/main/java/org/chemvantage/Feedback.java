@@ -17,6 +17,7 @@
 
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.key;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.BufferedReader;
@@ -37,7 +38,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
 
 
@@ -107,7 +107,7 @@ public class Feedback extends HttpServlet {
 				out.println(submitFeedback(user,request));
 				break;
 			case "Delete Report":
-				ofy().delete().key(Key.create(UserReport.class,Long.parseLong(request.getParameter("ReportId")))).now();
+				ofy().delete().key(key(UserReport.class,Long.parseLong(request.getParameter("ReportId")))).now();
 			default:
 				out.println(feedbackForm(user));
 			}

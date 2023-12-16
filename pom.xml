@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.chemvantage</groupId>
   <artifactId>chemvantage</artifactId>
-  <version>20231216t0810</version>
+  <version>20231216t1520</version>
   <name>ChemVantage</name>
   <description>An Open Educational Resource for teaching and learning college-level General Chemistry.</description>
    <properties>
@@ -38,13 +38,17 @@
       <version>${jetty.version}</version>
     </dependency>
 
-    <!-- Objectify 6.0.7-->
+    <!-- Objectify 6.0.7 -->
     <dependency>
       <groupId>com.googlecode.objectify</groupId>
       <artifactId>objectify</artifactId>
-      <version>6.0.7</version>
+      <version>6.1.0</version>
     </dependency>
-    	
+    <dependency>
+	  <groupId>com.google.cloud</groupId>
+	  <artifactId>google-cloud-datastore</artifactId>
+	</dependency>
+	
 	<!-- Code for JWT and JSON -->
 	<dependency>
       <groupId>com.auth0</groupId>

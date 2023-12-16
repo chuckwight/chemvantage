@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
+import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -113,7 +114,7 @@ public class Edit extends HttpServlet {
 			case "Discard Question":
 				try {
 					long proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
-					ofy().delete().key(Key.create(ProposedQuestion.class,proposedQuestionId));
+					ofy().delete().key(key(ProposedQuestion.class,proposedQuestionId));
 				} catch (Exception e) {}
 				out.println(Subject.getHeader(user) + reviewProposedQuestion(user,request) + Subject.footer);
 				break;
@@ -241,14 +242,14 @@ public class Edit extends HttpServlet {
 				createQuestion(user,request);
 				try {
 					long proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
-					ofy().delete().key(Key.create(ProposedQuestion.class,proposedQuestionId)).now();
+					ofy().delete().key(key(ProposedQuestion.class,proposedQuestionId)).now();
 				} catch (Exception e) {}
 				out.println(reviewProposedQuestion(user,request));
 				break;
 			case "Discard Question":
 				try {
 					long proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
-					ofy().delete().key(Key.create(ProposedQuestion.class,proposedQuestionId)).now();
+					ofy().delete().key(key(ProposedQuestion.class,proposedQuestionId)).now();
 				} catch (Exception e) {}
 				out.println(reviewProposedQuestion(user,request));
 				break;
@@ -348,14 +349,14 @@ public class Edit extends HttpServlet {
 				} catch (Exception e) {}
 				List<Key<Concept>> conceptKeys = ofy().load().type(Concept.class).order("orderBy").keys().list();
 				Map<Key<Concept>,Concept> concepts = ofy().load().keys(conceptKeys);
-				if (conceptId!=null) concept = concepts.get(Key.create(Concept.class,conceptId));
+				if (conceptId!=null) concept = concepts.get(key(Concept.class,conceptId));
 				
 				if (chapter!=null) {  // present a radio-style selector for chapter concepts
 					for (Long cId : chapter.conceptIds) {
 						int nQuestions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",cId).count();
 						buf.append("<label><input type=radio name=ConceptId value=" + cId 
 							+ (cId.equals(conceptId)?" checked />":" onClick=this.form.submit(); />") 
-							+ concepts.get(Key.create(Concept.class,cId)).title + " (" + nQuestions + ")</label><br/>");
+							+ concepts.get(key(Concept.class,cId)).title + " (" + nQuestions + ")</label><br/>");
 					}
 				} else if (text==null) {  // otherwise show a drop-down selector for all concepts
 					buf.append("<select id=csel name=ConceptId onchange=document.getElementById('tsel').value='null';this.form.submit()><option>Select a concept</option>");
@@ -411,7 +412,7 @@ public class Edit extends HttpServlet {
 							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "' />"
 							+ "<TR id=q" + q.id + " VALIGN=TOP>"
 							+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit />"
-							+ "<br/><FONT SIZE=-2>" + successPct.get(Key.create(q)) + "%&nbsp;avg&nbsp;score</FONT>"
+							+ "<br/><FONT SIZE=-2>" + successPct.get(key(q)) + "%&nbsp;avg&nbsp;score</FONT>"
 							//+ (q.learn_more_url != null && !q.learn_more_url.isEmpty()?"<br/><a href='" + q.learn_more_url + "' target=_blank><img src=/images/learn_more.png /></a>":"")
 							+ "</TD>");
 					buf.append("</FORM>");
@@ -742,7 +743,7 @@ public class Edit extends HttpServlet {
 		long conceptId = Long.parseLong(request.getParameter("ConceptId"));
 		String[] questionIdStrings = request.getParameterValues("QuestionId");
 		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
-		for (int i=0; i<questionIdStrings.length; i++) questionKeys.add(Key.create(Question.class,Long.parseLong(questionIdStrings[i])));
+		for (int i=0; i<questionIdStrings.length; i++) questionKeys.add(key(Question.class,Long.parseLong(questionIdStrings[i])));
 		List<Question> revised = new ArrayList<Question>();
 		for (Key<Question> k : questionKeys) {
 			Question q = this.questions.get(k);
@@ -922,7 +923,7 @@ public class Edit extends HttpServlet {
 				int counter = 0;
 				for (int i = 0;i<nBreaks;i++) {
 					if (i==segment) {
-						for (String id : questionIds) questionKeys.add(Key.create(Question.class,Long.parseLong(id)));
+						for (String id : questionIds) questionKeys.add(key(Question.class,Long.parseLong(id)));
 						counter += (v.nQuestions==null || i==v.nQuestions.length)?0:v.nQuestions[i];  // skip this many keys that are being replaced
 					} else {
 						for (int j=counter;j<counter+v.nQuestions[i];j++) questionKeys.add(v.questionKeys.get(j));
@@ -978,7 +979,7 @@ public class Edit extends HttpServlet {
 	}
 	
 	void deleteVideo(User user,HttpServletRequest request) {
-		ofy().delete().key(Key.create(Video.class,Long.parseLong(request.getParameter("VideoId")))).now();
+		ofy().delete().key(key(Video.class,Long.parseLong(request.getParameter("VideoId")))).now();
 	}
 	
 	String textsForm(User user,HttpServletRequest request) {
@@ -1080,7 +1081,7 @@ public class Edit extends HttpServlet {
 	}
 	
 	void deleteText(User user,HttpServletRequest request) {
-		ofy().delete().key(Key.create(Text.class,Long.parseLong(request.getParameter("TextId")))).now();
+		ofy().delete().key(key(Text.class,Long.parseLong(request.getParameter("TextId")))).now();
 	}
 	
 	void createChapter(HttpServletRequest request) throws Exception {
@@ -1389,7 +1390,7 @@ public class Edit extends HttpServlet {
 			// If the list contains more than one proposed question, get the index of the next one
 			String nextQuestionId = null;
 			if (pendingQuestionKeys.size()>1) {
-				Key<ProposedQuestion> k = Key.create(ProposedQuestion.class,q.id);
+				Key<ProposedQuestion> k = key(ProposedQuestion.class,q.id);
 				int i = (pendingQuestionKeys.indexOf(k) + 1)%pendingQuestionKeys.size();				
 				nextQuestionId = String.valueOf(pendingQuestionKeys.get(i).getId());
 			}
@@ -1553,7 +1554,7 @@ public class Edit extends HttpServlet {
 			q.editorId = user.getId();
 			q.isActive = true;
 			ofy().save().entity(q).now();
-			questions.remove(Key.create(q));
+			questions.remove(key(q));
 		} catch (Exception e) {
 			return;
 		}
@@ -1563,9 +1564,9 @@ public class Edit extends HttpServlet {
 		long questionId = 0;
 		try {
 			questionId = Long.parseLong(request.getParameter("QuestionId"));
-			Key<Question> k = Key.create(Question.class,questionId);
+			Key<Question> k = key(Question.class,questionId);
 			ofy().delete().key(k).now();
-			questions.remove(Key.create(Question.class,questionId));
+			questions.remove(key(Question.class,questionId));
 		} catch (Exception e) {
 			return;
 		}
@@ -1689,7 +1690,7 @@ public class Edit extends HttpServlet {
 					k++;
 					q.setParameters();
 					buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
-							+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE=" + q.id + (questionKeys.contains(Key.create(Question.class,q.id))?" CHECKED>":">"));
+							+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE=" + q.id + (questionKeys.contains(key(Question.class,q.id))?" CHECKED>":">"));
 					buf.append("<b>&nbsp;" + k + ".</b></TD>");
 					buf.append("\n<TD>" + q.printAll() + "</TD>");
 					buf.append("</TR>");

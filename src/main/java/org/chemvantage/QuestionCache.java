@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
+import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -96,7 +97,7 @@ public class QuestionCache {
 	
 	void putQuestion(Question q) {
 		try {
-			questions.put(Key.create(q), q);
+			questions.put(key(q), q);
 		} catch (Exception e) {}
 	}
 	

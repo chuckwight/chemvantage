@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
+import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -66,7 +67,7 @@ public class EraseEntity extends HttpServlet {
 		if (Boolean.parseBoolean(request.getParameter("EraseDomain"))) {
 			try {
 				new URL(domain);  // throws Exception if this is a BLTIConsumer
-				ofy().delete().key(Key.create(Deployment.class,domain));
+				ofy().delete().key(key(Deployment.class,domain));
 			} catch (Exception e) {
 			}
 			// Load all of this domain's assignments Keys into the List of assignmentKeys:
@@ -74,7 +75,7 @@ public class EraseEntity extends HttpServlet {
 		} else { // otherwise, delete only selected assignments and all associated transactions
 			String[] assignmentIds = request.getParameterValues("AssignmentId");
 			if (assignmentIds != null) { 
-				for (String id : assignmentIds) assignmentKeys.add(Key.create(Assignment.class,Long.parseLong(id)));
+				for (String id : assignmentIds) assignmentKeys.add(key(Assignment.class,Long.parseLong(id)));
 				assignments = new ArrayList<Assignment>(ofy().load().keys(assignmentKeys).values());
 			}
 		}

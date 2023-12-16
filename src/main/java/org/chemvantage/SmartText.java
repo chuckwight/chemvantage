@@ -1,6 +1,7 @@
 package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
+import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -279,7 +280,7 @@ public class SmartText extends HttpServlet {
 		   else if (isCorrect) {
 			   if (!completed) {
 				   st.scores[index]++;
-				   st.answeredKeys.add(Key.create(Question.class,q.id));
+				   st.answeredKeys.add(key(Question.class,q.id));
 			   }
 			   buf.append("<b>Congratulations! Your answer was correct.</b><br/>");
 		   } else {
@@ -474,7 +475,7 @@ public class SmartText extends HttpServlet {
 			Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
 			String platform_id = d.getPlatformId() + "/";
 			for (String id : membership.keySet()) {
-				keys.put(id,Key.create(Key.create(User.class,Subject.hashId(platform_id+id)),Score.class,a.id));
+				keys.put(id,key(key(User.class,Subject.hashId(platform_id+id)),Score.class,a.id));
 			}
 			Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
 			buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th></tr>");
@@ -535,7 +536,7 @@ public class SmartText extends HttpServlet {
 			String platform_id = d.getPlatformId() + "/";
 			for (String id : membership.keySet()) {
 				String hashedUserId = Subject.hashId(platform_id + id);
-				keys.put(id,Key.create(Key.create(User.class,hashedUserId),Score.class,a.id));
+				keys.put(id,key(key(User.class,hashedUserId),Score.class,a.id));
 			}
 			Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
 			for (Map.Entry<String,String[]> entry : membership.entrySet()) {

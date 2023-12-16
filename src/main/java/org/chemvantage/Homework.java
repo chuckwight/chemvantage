@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
+import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -351,7 +352,7 @@ public class Homework extends HttpServlet {
 		try {
 			// The Homework grader scores only one Question at a time, so first identify and load it
 			long questionId = Long.parseLong(request.getParameter("QuestionId"));
-			Key<Question> k = Key.create(Question.class,questionId);
+			Key<Question> k = key(Question.class,questionId);
 			Question q = ofy().load().key(k).safe();
 			
 			if (hwa==null) {  // anonymous user; use the assignment on Chapter 1 of the first smartText entity
@@ -801,7 +802,7 @@ public class Homework extends HttpServlet {
 			} else {
 				Score s = null;
 				try { // retrieve the score and ensure that it is up to date
-					s = ofy().load().key(Key.create(Key.create(User.class,forUserId),Score.class,a.id)).safe();
+					s = ofy().load().key(key(key(User.class,forUserId),Score.class,a.id)).safe();
 					if (s.numberOfAttempts != hwts.size()) throw new Exception();
 				} catch (Exception e) { // create a fresh Score entity from scratch
 					s = Score.getInstance(forUserId, a);
@@ -876,7 +877,7 @@ public class Homework extends HttpServlet {
 			Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
 			String platform_id = d.getPlatformId() + "/";
 			for (String id : membership.keySet()) {
-				keys.put(id,Key.create(Key.create(User.class,Subject.hashId(platform_id+id)),Score.class,a.id));
+				keys.put(id,key(key(User.class,Subject.hashId(platform_id+id)),Score.class,a.id));
 			}
 			Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
 			buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th><th>Scores Detail</th></tr>");
@@ -1003,7 +1004,7 @@ public class Homework extends HttpServlet {
 			String platform_id = d.getPlatformId() + "/";
 			for (String id : membership.keySet()) {
 				String hashedUserId = Subject.hashId(platform_id + id);
-				keys.put(id,Key.create(Key.create(User.class,hashedUserId),Score.class,a.id));
+				keys.put(id,key(key(User.class,hashedUserId),Score.class,a.id));
 			}
 			Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
 			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
@@ -1076,7 +1077,7 @@ public class Homework extends HttpServlet {
 			if (conceptIds.size()>0) {
 				buf.append("The questions listed below cover the following key concepts:<ul>");
 				for (Long cId : conceptIds) {
-					Concept c = keyConcepts.get(Key.create(Concept.class,cId));
+					Concept c = keyConcepts.get(key(Concept.class,cId));
 					if (c==null || c.orderBy.startsWith(" 0")) {
 						a.conceptIds.remove(cId);
 						ofy().save().entity(a);
@@ -1138,7 +1139,7 @@ public class Homework extends HttpServlet {
 				q.setParameters();  // creates randomly selected parameters
 				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
 						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
-				buf.append(a.questionKeys.contains(Key.create(Question.class,q.id))?" CHECKED>":">");
+				buf.append(a.questionKeys.contains(key(Question.class,q.id))?" CHECKED>":">");
 				i++;
 				buf.append("<b>&nbsp;" + i + ".</b></TD>");
 				buf.append("\n<TD>" + q.printAll() + "</TD>");

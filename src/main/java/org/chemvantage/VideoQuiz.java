@@ -18,6 +18,7 @@
 package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
+import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -248,7 +249,7 @@ public class VideoQuiz extends HttpServlet {
 		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 		for (Enumeration<?> e = request.getParameterNames();e.hasMoreElements();) {
 			try {
-				questionKeys.add(Key.create(Question.class,Long.parseLong((String) e.nextElement())));
+				questionKeys.add(key(Question.class,Long.parseLong((String) e.nextElement())));
 			} catch (Exception e2) {}
 		}
 		debug.append("qkeys.");
@@ -513,7 +514,7 @@ public class VideoQuiz extends HttpServlet {
 				
 				for (String id : membership.keySet()) {
 					String hashedUserId = Subject.hashId(platform_id + id);
-					keys.put(id,Key.create(Key.create(User.class,hashedUserId),Score.class,a.id));
+					keys.put(id,key(key(User.class,hashedUserId),Score.class,a.id));
 				}
 				Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
 				
