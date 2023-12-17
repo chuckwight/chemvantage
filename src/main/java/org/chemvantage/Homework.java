@@ -531,7 +531,7 @@ public class Homework extends HttpServlet {
 				
 				ht = new HWTransaction(q.id,user.getHashedId(),now,studentScore,hwa.id,possibleScore,showWork);
 				ht.studentAnswer = studentAnswer;
-				ht.correctAnswer = q.correctAnswer;				
+				ht.correctAnswer = q.getCorrectAnswer();				
 				ofy().save().entity(ht).now();
 				
 				// create/update/store a HomeworkScore object
