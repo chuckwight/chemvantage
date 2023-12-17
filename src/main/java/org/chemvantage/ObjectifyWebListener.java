@@ -4,6 +4,9 @@ import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.annotation.WebListener;
 
+import com.google.cloud.datastore.Datastore;
+import com.google.cloud.datastore.DatastoreOptions;
+import com.googlecode.objectify.ObjectifyFactory;
 import com.googlecode.objectify.ObjectifyService;
 
 @WebListener
@@ -11,7 +14,10 @@ public class ObjectifyWebListener implements ServletContextListener {
 
   @Override
   public void contextInitialized(ServletContextEvent event) {
-    ObjectifyService.init();
+	  // Use the next line to connect to a backup (or other non-default) datastore
+	  //final Datastore datastore = DatastoreOptions.newBuilder().setDatabaseId("backup1").build().getService();
+	  final Datastore datastore = DatastoreOptions.newBuilder().build().getService();
+	  ObjectifyService.init(new ObjectifyFactory(datastore));
     
     // This is a good place to register your POJO entity classes.
     ObjectifyService.register(Assignment.class);
@@ -42,8 +48,6 @@ public class ObjectifyWebListener implements ServletContextListener {
     ObjectifyService.register(VideoTransaction.class);
     ObjectifyService.register(Voucher.class);
     
-    //ObjectifyService.begin();
-	
   }
 	
   @Override
