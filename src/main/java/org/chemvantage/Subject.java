@@ -55,10 +55,12 @@ public class Subject {
 			s = new Subject();
 			s.id = 1L;
 			s.title = "General Chemistry";
-			s.HMAC256Secret = "ChangeMeInTheDataStoreManuallyForYourProtection";
-			s.salt = "null";
+			s.HMAC256Secret = "ChangeMeInTheDatastoreManuallyForYourProtection";
+			s.salt = "ChangeMeInTheDatastoreManuallyForYourProtection";
 			s.reCaptchaSecret = "changeMe";
 			s.reCaptchaSiteKey = "changeMe";
+			s.openai_key = "changeMe";
+			s.sendGridAPIKey = "changeMe";
 			ofy().save().entity(s);
 		} catch (Exception e) {  // ofy() not ready
 			try {
