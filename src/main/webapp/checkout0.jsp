@@ -15,8 +15,8 @@
 <meta name='Description' content='An online quiz and homework site'>
 <meta name='Keywords' content='chemistry,learning,online,quiz,homework,video,textbook,open,education'>
 <meta name='msapplication-config' content='none'/><link rel='icon' type='image/png' href='/favicon.png'>
-<link rel='icon' type='image/png' href='/images/favicon.png' />
-<link rel='icon' type='image/vnd.microsoft.icon' href='/images/favicon.ico'>
+<link rel='icon' type='image/png' href='/images/logo_sq.png' />
+<link rel='icon' type='image/vnd.microsoft.icon' href='/images/logo_sq.png'>
 <title>ChemVantage Subscription</title>
 </head>
 
@@ -200,8 +200,8 @@
 	}
 %>
 </main>
-<footer><hr/><img style='padding-left: 15px; vertical-align: middle;width:30px' src=images/CVLogo.png alt='ChemVantage logo' />&nbsp;
-<a href=/index.html style='text-decoration: none;'><span style='color: blue;font-weight: bold;'>Chem</span><span style='color: #EE0000;font-weight: bold;'>Vantage</span></a> | 
+<footer><hr/><img style='padding-left: 5px; vertical-align: middle;width:30px' src=images/logo_sq.png alt='ChemVantage logo' />&nbsp;
+<a href=/index.html style='text-decoration: none;'><span style='color: navy;font-weight: bold;'>ChemVantage</span></a> |  
 <a href=/about.html#terms>Terms and Conditions of Use</a> | 
 <a href=/about.html#privacy>Privacy Policy</a> | 
 <a href=/about.html#copyright>Copyright</a></footer>

@@ -258,11 +258,11 @@ function GetXmlHttpObject() {
 </script>
 <div style='font-size:small'>If the YouTube screen is black, try using the player controls to show full screen.</div>
 <hr/>
-<img style='padding-left: 15px; vertical-align: middle;width:30px' src=images/CVLogo.png alt='ChemVantage logo' />&nbsp;
-<a href=/index.html style='text-decoration: none;'><span style='color: blue;font-weight: bold;'>Chem</span><span style='color: #EE0000;font-weight: bold;'>Vantage</span></a> | 
+<footer><hr/><img style='padding-left: 5px; vertical-align: middle;width:30px' src=images/logo_sq.png alt='ChemVantage logo' />&nbsp;
+<a href=/index.html style='text-decoration: none;'><span style='color: navy;font-weight: bold;'>ChemVantage</span></a> |  
 <a href=/about.html#terms>Terms and Conditions of Use</a> | 
 <a href=/about.html#privacy>Privacy Policy</a> | 
-<a href=/about.html#copyright>Copyright</a>
+<a href=/about.html#copyright>Copyright</a></footer>
 
 </body>
 </html>
