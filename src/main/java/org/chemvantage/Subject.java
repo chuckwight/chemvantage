@@ -205,7 +205,7 @@ public class Subject {
 		+ ((announcement==null || announcement.isEmpty())?"":"<FONT style='color: #EE0000'>" + announcement + "</FONT><br/>\n");
 	}
 	
-	public static String footer = "<footer><hr/><img src=/images/CVLogo.png alt='ChemVantage logo' style='vertical-align:middle;width:30px' /> "
+	public static String footer = "<footer><hr/><img src=/images/logo_sq.png alt='ChemVantage logo' style='vertical-align:middle;width:30px' /> "
 			+ "<a href=/index.html style='text-decoration: none;'><span style='color: blue;font-weight: bold;'>Chem</span><span style='color: #EE0000;font-weight: bold;'>Vantage</span></a> | "
 			+ "<a href=/about.html#terms>Terms and Conditions of Use</a> | "
 			+ "<a href=/about.html#privacy>Privacy Policy</a> | "
@@ -214,7 +214,7 @@ public class Subject {
 
 	public static String banner = "<div style='padding=30px; font-family: Calibri,Arial,sans-serif;'>"
 			+ "<a href='/' style='text-decoration: none;'>"
-			+ "	<span style='color: blue; font-size: 2em; font-weight: bold;'>Chem</span><span style='color: #EE0000; font-size: 2em; font-weight: bold;'>Vantage</span><br/>\n"
+			+ "	<span style='color: navy; font-size: 2em; font-weight: bold;'>ChemVantage</span><br/>\n"
 			+ "</a>"
 			+ "	An Open Education Resource for General Chemistry<br/>"
 			+ "	</div>\n";

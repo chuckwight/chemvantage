@@ -49,9 +49,10 @@ String sig = Long.toHexString(encrypt);
 
 <div class='top'>
 <a href="/" style='text-decoration: none;'>
-<span style='color: blue; font-size: 2em; font-weight: bold;'>Chem</span><span style='color: red; font-size: 2em; font-weight: bold;'>Vantage</span><br/>
+<img style='float:left;vertical-align: middle;width:60px;' src=images/logo_sq.png alt='ChemVantage logo' />
+<span style='color: navy; font-size: 2em; font-weight: bold;'>ChemVantage</span><br/>
 </a>
-An Open Education Resource for General Chemistry<br/>
+An Open Educational Resource for General Chemistry<br/>
 </div>
 
 <main><h1 style='display: none'>About ChemVantage</h1>
@@ -171,8 +172,8 @@ course anyway?
 
 </main>
 
-<footer><hr/><img style='padding-left: 15px; vertical-align: middle;width:30px' src=images/CVLogo.png alt='ChemVantage logo' />&nbsp;
-<a href=/index.html style='text-decoration: none;'><span style='color: blue;font-weight: bold;'>Chem</span><span style='color: #EE0000;font-weight: bold;'>Vantage</span></a> |  
+<footer><hr/><img style='padding-left: 15px; vertical-align: middle;width:30px' src=images/logo_sq.png alt='ChemVantage logo' />&nbsp;
+<a href=/index.html style='text-decoration: none;'><span style='color: navy;font-weight: bold;'>ChemVantage</span></a> |  
 <a href=/about.html#terms>Terms and Conditions of Use</a> | 
 <a href=/about.html#privacy>Privacy Policy</a> | 
 <a href=/about.html#copyright>Copyright</a></footer>
