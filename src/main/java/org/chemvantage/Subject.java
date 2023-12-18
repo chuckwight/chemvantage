@@ -206,7 +206,7 @@ public class Subject {
 	}
 	
 	public static String footer = "<footer><hr/><img src=/images/logo_sq.png alt='ChemVantage logo' style='vertical-align:middle;width:30px' /> "
-			+ "<a href=/index.html style='text-decoration: none;'><span style='color: blue;font-weight: bold;'>Chem</span><span style='color: #EE0000;font-weight: bold;'>Vantage</span></a> | "
+			+ "<a href=/index.html style='text-decoration: none;'><span style='color: navy;font-weight: bold;'>ChemVantage</span></a> | "
 			+ "<a href=/about.html#terms>Terms and Conditions of Use</a> | "
 			+ "<a href=/about.html#privacy>Privacy Policy</a> | "
 			+ "<a href=/about.html#copyright>Copyright</a></footer>"
