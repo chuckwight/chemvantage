@@ -149,8 +149,8 @@ public class EraseEntity extends HttpServlet {
 		else {
 			buf.append("<label><input type=radio name=EraseDomain value=false checked>Delete only the assignments selected below and their associated transactions and scores</label><p>");
 			Map<Long,String> titles = new HashMap<Long,String>();
-			List<Topic> topics = ofy().load().type(Topic.class).list();
-			for (Topic t : topics) titles.put(t.id, t.title);
+			List<Concept> concepts = ofy().load().type(Concept.class).list();
+			for (Concept c : concepts) titles.put(c.id, c.title);
 			
 			// Create a checkbox for selecting all assignments
 			if (assignments.size()>1) buf.append("<label><input type=checkbox name=SelectAll value=true onClick='for(var i=0;i<this.form.AssignmentId.length;i++)this.form.AssignmentId[i].checked=this.form.SelectAll.checked;'>Select/Unselect All Assignments</label><p>");
@@ -159,9 +159,9 @@ public class EraseEntity extends HttpServlet {
 			for (Assignment a : assignments) {
 				buf.append("<label><input type=checkbox name=AssignmentId value=" + a.id + " onClick=this.form.SelectAll.indeterminate=true>" + a.assignmentType + " - ");
 				if ("PracticeExam".equals(a.assignmentType)) {
-					String topicTitles = "";
-					for (Long id : a.topicIds) topicTitles += titles.get(id) + ", ";
-					buf.append(topicTitles.substring(0,topicTitles.length()-2));
+					String conceptTitles = "";
+					for (Long id : a.topicIds) conceptTitles += titles.get(id) + ", ";
+					if (conceptTitles.length()>2) buf.append(conceptTitles.substring(0,conceptTitles.length()-2));
 				} else buf.append(titles.get(a.topicId));
 					
 				buf.append(a.created==null?"":" created " + a.created);
