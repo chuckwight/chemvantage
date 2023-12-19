@@ -3,50 +3,26 @@ instance_class: F1
 
 handlers:
 
-- url: /Admin
-  script: Admin.java
-  secure: always
-  login: admin
+#- url: /(.*\.html)$
+#  static_files: \1
+#  upload: .*\.html$
+  
+#- url: /images
+#  static_dir: images
+  
+#- url: /css
+#  static_dir: css
+  
+#- url: /js
+#  static_dir: js
+  
+#- url: /static
+#  static_dir: static
 
-- url: /DataStoreCleaner
-  script: DataStoreCleaner.java
+- url: /(Admin|DataStoreCleaner|cloud-datastore-export|Edit|EraseEntity|contacts|messages|ReportScore|ResponseServlet)
   secure: always
   login: admin
-
-- url: /cloud-datastore-export
-  script: DataStoreExportServlet.java
-  secure: always
-  login: admin
-
-- url: /Edit
-  script: Edit.java
-  secure: always
-  login: admin
-
-- url: /EraseEntity
-  script: EraseEntity.java
-  secure: always
-  login: admin
-
-- url: /contacts
-  script: ManageContacts.java
-  secure: always
-  login: admin
-
-- url: /messages
-  script: ManageMessages.java
-  secure: always
-  login: admin
-
-- url: /ReportScore
-  script: ReportScore.java
-  secure: always
-  login: admin
-
-- url: /ResponseServlet
-  script: ResponseServlet.java
-  secure: always
-  login: admin
+  script: auto
 
 - url: /.*
   secure: always

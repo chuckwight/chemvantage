@@ -162,7 +162,6 @@ public class Subject {
 				+ "<meta namew='Keywords' content='chemistry,learning,online,quiz,homework,video,textbook,open,education' />"
 				+ "<meta name='msapplication-config' content='none'/>\n"
 				+ "<link rel='icon' type='image/png' href='/images/favicon.png' />"
-				+ "<link rel='icon' type='image/vnd.microsoft.icon' href='/images/favicon.ico' />\n"
 				+ "<title>" + (title==null || title.isEmpty()?"ChemVantage":title) + "</title>\n"
 				+ "</head>\n"
 				+ "<body style='padding: 10px; font-family: Calibri,Arial,sans-serif; background-color: white; color: black;'>\n"
@@ -187,7 +186,6 @@ public class Subject {
 		+ "<meta namew='Keywords' content='chemistry,learning,online,quiz,homework,video,textbook,open,education' />"
 		+ "<meta name='msapplication-config' content='none'/>\n"
 		+ "<link rel='icon' type='image/png' href='/images/favicon.png' />"
-		+ "<link rel='icon' type='image/vnd.microsoft.icon' href='/imagers/favicon.ico' />\n"
 		+ "<title>ChemVantage Administrator</title>\n"
 		+ "</head>\n"
 		+ "<body style='padding: 10px; font-family: Calibri,Arial,sans-serif; background-color: white; color: black;'>\n"
@@ -205,7 +203,7 @@ public class Subject {
 		+ ((announcement==null || announcement.isEmpty())?"":"<FONT style='color: #EE0000'>" + announcement + "</FONT><br/>\n");
 	}
 	
-	public static String footer = "<footer><hr/><img src=/images/logo_sq.png alt='ChemVantage logo' style='vertical-align:middle;width:30px' /> "
+	public static String footer = "<footer><hr/><img src=/images/favicon.png alt='ChemVantage logo' style='vertical-align:middle;width:30px' /> "
 			+ "<a href=/index.html style='text-decoration: none;'><span style='color: navy;font-weight: bold;'>ChemVantage</span></a> | "
 			+ "<a href=/about.html#terms>Terms and Conditions of Use</a> | "
 			+ "<a href=/about.html#privacy>Privacy Policy</a> | "

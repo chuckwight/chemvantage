@@ -33,8 +33,7 @@ String sig = Long.toHexString(encrypt);
 <meta name='Description' content='An online quiz and homework site'>
 <meta name='Keywords' content='chemistry,learning,online,quiz,homework,video,textbook,open,education'>
 <meta name='msapplication-config' content='none'/><link rel='icon' type='image/png' href='/favicon.png'>
-<link rel='icon' type='image/png' href='/images/icon.png' />
-<link rel='icon' type='image/vnd.microsoft.icon' href='/images/favicon.ico'>
+<link rel='icon' type='image/png' href='/images/favicon.png' />
 <title>ChemVantage Assignments</title>
 <style>
  body     {background-color: white; font-family: Calibri,Arial,sans-serif; max-width: 1000px}
@@ -49,7 +48,7 @@ String sig = Long.toHexString(encrypt);
 
 <div class='top'>
 <a href="/" style='text-decoration: none;'>
-<img style='float:left;vertical-align: middle;width:60px;' src=images/logo_sq.png alt='ChemVantage logo' />
+<img style='float:left;vertical-align: middle;width:60px;' src=/images/logo_sq.png alt='ChemVantage logo' />
 <span style='color: navy; font-size: 2em; font-weight: bold;'>ChemVantage</span><br/>
 </a>
 An Open Educational Resource for General Chemistry<br/>
@@ -172,7 +171,7 @@ course anyway?
 
 </main>
 
-<footer><hr/><img style='padding-left: 5px; vertical-align: middle;width:30px' src=images/logo_sq.png alt='ChemVantage logo' />&nbsp;
+<footer><hr/><img style='padding-left: 5px; vertical-align: middle;width:30px' src=/images/logo_sq.png alt='ChemVantage logo' />&nbsp;
 <a href=/index.html style='text-decoration: none;'><span style='color: navy;font-weight: bold;'>ChemVantage</span></a> |  
 <a href=/about.html#terms>Terms and Conditions of Use</a> | 
 <a href=/about.html#privacy>Privacy Policy</a> | 
