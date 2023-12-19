@@ -19,7 +19,7 @@ handlers:
 #- url: /static
 #  static_dir: static
 
-- url: /(Admin|DataStoreCleaner|cloud-datastore-export|Edit|EraseEntity|contacts|messages|ReportScore|ResponseServlet)
+- url: /(Admin|DataStoreCleaner|Edit|EraseEntity|contacts|messages|ReportScore|ResponseServlet)
   secure: always
   login: admin
   script: auto
