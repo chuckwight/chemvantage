@@ -216,8 +216,35 @@
                 <h3>Item Bank</h3>
             </div>
             <div class="section-heading-top-gap">
-            	<iframe width="800px" height="400px" style="border:none;" src="/itembank?p=iframe"></iframe>
-           </div>
+           		<h4>Question Item Bank</h4>
+                <p>
+                    More than 5000 ChemVantage question items are free to use under the terms of a <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank">Creative Commons CC-BY License</a>.
+                    Instructors can access the correct answers and full solutions through their campus LMS. <a href="/Registration.jsp" target="_blank">Registration is free</a>.
+                </p>
+                <div class="form-elements">
+                    <form onsubmit="return false;">
+                        <div class="d-flex gap-1 algin-end">
+                            <div class="w-50">
+                                <label for="topic" class="form-label">Topic <span>*</span></label>
+                                <select name="Topic" id="topic" class="form-select"></select>
+                            </div>
+                            <script src="/js/itembank.js"></script>
+                            <div class="w-30">
+                                <label for="type" class="form-label">Assignment Type <span>*</span></label>
+                                <select name="type" id="type" class="form-select">
+                                    <option value="">Select a type</option>
+                                    <option value="Quiz">Quiz</option>
+                                    <option value="Homework">Homework</option>
+                                </select>
+                            </div>
+                            <div class="w-20">
+                                <button class="btn btn-two w-100" onclick="getItems();">View Items</button>
+                            </div>
+                        </div>
+                    </form>
+                    	<div id="itemViewBox"></div>  <!--  this is where 3 sample question items are displayed  -->
+                </div>
+            </div>
         </div>
     </section>
     <!-- Item_Bank Content End -->

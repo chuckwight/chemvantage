@@ -61,12 +61,22 @@ public class ItemBank extends HttpServlet {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		
-		if (text==null) text =  ofy().load().type(Text.class).filter("title","View All Topics").first().now();
+		String userRequest = request.getParameter("r");
+		if (userRequest==null) userRequest = "";
 		
-		String p = request.getParameter("p");
-		if ("iframe".equals(p)) out.println(itemBank(request));
-		else out.println(Subject.header("ChemVantage Item Bank") + Subject.banner + "<h4>Question Item Bank</h4>" + itemBank(request) + Subject.footer);
-	}
+		switch (userRequest) {
+		case "topics":
+			out.println(getTopics());
+			break;
+		case "items":
+			out.println(sampleItems(request));
+			break;
+		case "iframe":
+			out.println(itemBank(request));
+		default:
+			out.println(Subject.header("ChemVantage Item Bank") + Subject.banner + "<h4>Question Item Bank</h4>" + itemBank(request) + Subject.footer);
+		}
+   }
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		response.setContentType("text/html");
@@ -211,22 +221,9 @@ public class ItemBank extends HttpServlet {
 			throw new Exception("Bad ReCaptcha. Please try again.");
 		}
 	}
-/*
-	void sendEmail(Contact c,String messageBody) throws Exception {
-		Message msg = new MimeMessage(Session.getDefaultInstance(new Properties()));
-		InternetAddress from = new InternetAddress("admin@chemvantage.org", "ChemVantage");
-		msg.setFrom(from);
-		msg.addRecipient(Message.RecipientType.TO,new InternetAddress(c.getEmail(),c.getFullName()));
-		msg.addRecipient(Message.RecipientType.CC,from);
-		msg.setSubject("ChemVantage Question Item Bank");
-		msg.setContent(messageBody,"text/html");
-		Transport.send(msg);
-	}
-*/		
+
 	String itemBank(HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer("<style>"
-				+ " body {background-color: white; font-family: Calibri,Arial,sans-serif;}"
-				+ "</style>");
+		StringBuffer buf = new StringBuffer(Subject.header());
 		StringBuffer debug = new StringBuffer("Debug: ");
 		
 		try {
@@ -269,16 +266,16 @@ public class ItemBank extends HttpServlet {
 			boolean showQuestions = (chapter != null && !assignmentType.isEmpty());
 			
 			buf.append("More than 5000 ChemVantage question items are free to use under the terms of a "
-					+ "<a href=https://creativecommons.org/licenses/by/4.0/ target=_blank>Creative Commons CC-BY License</a>.<br/>"
+					+ "<a href=https://creativecommons.org/licenses/by/4.0/ target=_blank>Creative Commons CC-BY License</a>. "
 					+ "Instructors can access the correct answers and full solutions through their campus "
 					+ "LMS. <a href=Registration.jsp target=_blank>Registration is free</a>.<br/><br/>");
 
 			buf.append("<FORM NAME=TopicSelect METHOD=GET ACTION=/itembank>");
 			buf.append(p==null?"":"<input type=hidden name=p value=iframe />");
 			buf.append(code==null?"":"<input type=hidden name=code value='" + code + "' />");
-			buf.append("<b>Topic: </b>" + chapterSelectBox(text,chapter,true));
-			buf.append("&nbsp;&nbsp;<b>Assignment Type: </b>" + assignmentTypeDropDownBox(assignmentType,true));
-			buf.append("&nbsp;&nbsp;<input type=submit value='View Items' /><br/><br/>");
+			buf.append("<b>Topic: </b>" + chapterSelectBox(text,chapter));
+			buf.append("&nbsp;&nbsp;<b>Assignment Type: </b>" + assignmentTypeDropDownBox(assignmentType));
+			buf.append("&nbsp;&nbsp;<input type=submit value='View Items' /></FORM><br/>");
 			
 			if (!showQuestions) return buf.toString() + "<br/><br/>";
 
@@ -300,26 +297,44 @@ public class ItemBank extends HttpServlet {
 		} catch (Exception e) {
 			buf.append("<br/>Error: " + e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString());
 		}
+		buf.append(Subject.footer);
 		return buf.toString();
 	}
 	
-	String assignmentTypeDropDownBox(String assignmentType,boolean autoSubmit) {
-		if (assignmentType==null) assignmentType="";
-		StringBuffer buf = new StringBuffer("<SELECT id=type NAME=Type>");
+	String getTopics() {
+		if (this.text == null) this.text = ofy().load().type(Text.class).filter("title","View All Topics").first().now();
+		
+		StringBuffer buf = new StringBuffer("<SELECT id=topic NAME=Topic class='form-select'>");
+		try {
+			buf.append("Select a topic");
+			for (Chapter c : text.chapters) {
+				buf.append("|" + c.title);
+			}
+		} catch (Exception e) {
+			buf.append(e.getMessage()==null?e.toString():e.getMessage());
+		}
+		return buf.toString();
+	}
+	
+	String assignmentTypeDropDownBox() {
+		return assignmentTypeDropDownBox("");
+	}
+	
+	String assignmentTypeDropDownBox(String assignmentType) {
+		StringBuffer buf = new StringBuffer("<select name='Type' id='type' >");
 		try {
 			if (assignmentType.isEmpty()) buf.append("<OPTION VALUE=''>Select a type</OPTION>");
 			buf.append("<OPTION" + (assignmentType.equals("Quiz")?" SELECTED":"") + ">Quiz</OPTION>"
 					+ "<OPTION" + (assignmentType.equals("Homework")?" SELECTED":"") + ">Homework</OPTION>"
-					+ "</SELECT>");
+					+ "</select>");
 		} catch (Exception e) {
 			buf.append(e.getMessage()==null?e.toString():e.getMessage());
 		}
 		return buf.toString();
 	}
 
-	String chapterSelectBox(Text text,Chapter chapter,boolean autoSubmit) throws Exception {
-		if (text == null) return "";
-		StringBuffer buf = new StringBuffer("<SELECT id=topic NAME=Topic>");
+	String chapterSelectBox(Text text,Chapter chapter) {
+		StringBuffer buf = new StringBuffer("<SELECT id=topic NAME=Topic class='form-select'>");
 		try {
 			if (chapter==null) buf.append("<OPTION VALUE=''>Select a topic</OPTION>");
 			for (Chapter c : text.chapters) {
@@ -328,6 +343,54 @@ public class ItemBank extends HttpServlet {
 						+ "</OPTION>");
 			}
 			buf.append("</SELECT>");
+		} catch (Exception e) {
+			buf.append(e.getMessage()==null?e.toString():e.getMessage());
+		}
+		return buf.toString();
+	}
+	
+	String sampleItems(HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer();
+		try {
+			Chapter chapter = null;
+			try {
+				int chapterNumber = Integer.parseInt(request.getParameter("Topic"));
+				for (Chapter c : text.chapters) {
+					if (c.chapterNumber == chapterNumber) {
+						chapter = c;
+						break;
+					}
+				}
+			} catch (Exception e) {
+			}
+			
+			String assignmentType = request.getParameter("Type");
+			if (assignmentType==null) assignmentType = "";
+			switch (assignmentType) {
+			case "Quiz":
+			case "Homework":
+				break;
+			default: assignmentType = "";
+			}
+			boolean showQuestions = (chapter != null && !assignmentType.isEmpty());
+			
+			if (!showQuestions) return "<br/><br/>Please select a topic and assignment type.";
+			
+			List<Key<Question>> keys = new ArrayList<Key<Question>>();
+			for (Long cId : chapter.conceptIds)	keys.addAll(ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",cId).keys().list());
+			if (keys.size()==0) buf.append("Sorry, this topic contains no questions of this type.");
+			
+			Random rand = new Random();
+			List<Key<Question>> itemKeys = new ArrayList<Key<Question>>();
+			while (itemKeys.size() < 3 && keys.size() > 0) {
+				itemKeys.add(keys.remove(rand.nextInt(keys.size())));
+			}
+			
+			List<Question> questions = new ArrayList<Question>(ofy().load().keys(itemKeys).values());
+			for (Question q : questions) {
+				q.setParameters();
+				buf.append("<br/>" + q.print() + "<hr>");
+			}
 		} catch (Exception e) {
 			buf.append(e.getMessage()==null?e.toString():e.getMessage());
 		}
