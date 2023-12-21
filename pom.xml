@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.chemvantage</groupId>
   <artifactId>chemvantage</artifactId>
-  <version>20231218t0750</version>
+  <version>202312202115</version>
   <name>ChemVantage</name>
   <description>An Open Educational Resource for teaching and learning college-level General Chemistry.</description>
    <properties>
@@ -61,7 +61,7 @@
 	  <artifactId>gson</artifactId>
 	</dependency>
 	
-	<!-- Google Cloud Tasks bom -->
+	<!-- Google Cloud Tasks -->
 	<dependency>
       <groupId>com.google.cloud</groupId>
       <artifactId>google-cloud-tasks</artifactId>

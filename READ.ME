@@ -6,6 +6,9 @@ To view static HTML and JSP files locally:
 
 To deploy on Google Cloud:
 	cd into the directory containing pom.xml
-	edit pom.xml to set project <version> pattern yyyymmddthhmmss
+	edit pom.xml to set project <version> pattern yyyymmddthhmm
+	gcloud auth application-default login
 	gcloud config set project PROJECT_ID
 	mvn clean package appengine:deploy
+	
+	To avoid the automatic gcloud CLI update, you can use gcloud app deploy instead

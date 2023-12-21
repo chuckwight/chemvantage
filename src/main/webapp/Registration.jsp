@@ -9,107 +9,294 @@
 	String email = request.getParameter("email");
 	String aud = request.getParameter("aud");
 	String url = request.getParameter("url");
-	String ver = request.getParameter("ver");
 	String lms = request.getParameter("lms");
 	String lms_other = request.getParameter("lms_other");
 	String AcceptChemVantageTOS = request.getParameter("AcceptChemVantageTOS");
 	String openid_configuration = request.getParameter("openid_configuration");
 	String registration_token = request.getParameter("registration_token");
 	boolean dynamic = openid_configuration != null;
-	boolean development = request.getServerName().contains("dev-vantage-hrd.appspot.com");
 %>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />
-<meta http-equiv='Pragma' content='no-cache' />
-<meta http-equiv='Expires' content='0' /><meta http-equiv='Content-type' content='text/html;charset=iso-8859-1'>
-<meta name='Description' content='An online quiz and homework site'>
-<meta name='Keywords' content='chemistry,learning,online,quiz,homework,video,textbook,open,education'>
-<meta name='msapplication-config' content='none'/><link rel='icon' type='image/png' href='/favicon.png'>
-<link rel='icon' type='image/png' href='/images/favicon.png' />
-<title>ChemVantage Registration Page</title>
-<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="images/logo_sq.png">
+    <!-- Fav-Icon -->
+    <title>ChemVantage | Registration</title>
+    <!-- Title -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Shantell+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <!-- Font Family -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Main Style Sheet -->
+    <link rel="stylesheet" href="css/responsive.css">
+    <!-- Responsive Style Sheet -->
 </head>
 
-<body style='background-color: white; font-family: Calibri,Arial,sans-serif; padding: 30px; max-width: 800px' >
+<body>
+    <!-- Webpage Header Start -->
+    <header class="webpage-header">
+        <div class="container">
+            <div class="d-flex justify-between align-center">
+                <div class="w-0">
+                    <a href="./index.html">
+                        <img src="images/logo.png" class="webpage-logo" alt="website logo"/>
+                    </a>
+                </div>
+                <div class="w-80">
+                    <nav class="header-nav d-flex flex-end align-center gap-3">
+                        <div class="nav-list">
+                            <ul>
+                                <li>
+                                    <a href="./index.html" class="nav-link">Home</a>
+                                </li>
+                                <li>
+                                    <a href="./about.html" class="nav-link">About Us</a>
+                                </li>
+                                <li>
+                                    <a href="./index.html#placement" class="nav-link">Placement</a>
+                                </li>
+                                <li>
+                                    <a href="./index.html#assignments" class="nav-link">Assignments</a>
+                                </li>
+                                <li>
+                                    <a href="./index.html#pricing" class="nav-link">Pricing</a>
+                                </li>
+                            </ul>
+                            <button class="close">&times;</button>
+                        </div>
+                        <a href="https://www.chemvantage.org/install.html" target="_blank" class="header-action">
+                            Get Started
+                        </a>
+                        <button class="solid-bar">&#9776;</button>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- Webpage Header End -->
 
-<%= Subject.banner %><br/>
+    <!-- Webpage BTT Start -->
+    <div class="btt">
+        <img src="images/up-arrow.png" alt="up-arrow"/>
+    </div>
+    <!-- Webpage BTT End -->
 
-<% if (message != null) { %>
-<span style='color: #EE0000; border: 2px solid red'>&nbsp;<%= message %> &nbsp;</span>
-<% } %>
+    <!-- Webpage SubPage Start -->
+    <section class="sub-page-welcome">
+        <div class="container">
+            <ul class="d-flex justify-center gap-1">
+                <li>
+                    <a href="./index.html">Home</a>
+                </li>
+                <li>
+                    <span>/</span>
+                </li>
+                <li>
+                    <span class="c">registration</span>
+                </li>
+            </ul>
+        </div>
+    </section>
+    <!-- Webpage SubPage End -->
 
-<main><h1 style="display:none">ChemVantage Registration</h1>
-<h3>ChemVantage LTI Advantage <%= dynamic?"Dynamic":"" %> Registration</h3>
+    <!-- Registration Content Start -->
+    <section class="section-padding registration-content">
+        <div class="container">
+            <div class="section-heading">
+                <h3>Registration</h3>
+            </div>
+            <div class="section-heading-top-gap">
+                <h4>ChemVantage LTI Advantage <%= dynamic?"Dynamic ":"" %>Registration</h4>
+                <p>
+                    Please complete the form below to create a trusted LTI Advantage connection between your LMS and ChemVantage that is convenient, secure and <a href="https://site.imsglobal.org/certifications?query=chemvantage" target="_blank">certified by 1EdTech</a>. 
+                    When you submit the form, ChemVantage will send <%= dynamic?"a registration request to your LMS. If successful, you must activate the deployment in your LMS.":"a confirmation email with a tokenized link to complete the registration." %>
+                </p>
+                 <div class="form-elements w-70 mx-auto">
+                 
+                 <% if (message != null) { %>
+					<div style='color: #EE0000; border: 2px solid #EE0000; padding: 5px'><%= message %></div><br/>
+				 <% } %>
+                 
+                    <p>
+                        Please tell us how to contact you if there is ever a problem with your account (see our <a href="./privacy_policy.html">Privacy Policy</a>):
+                    </p>
+                    <form id=regform method=post action="/lti/registration">
+                        <div class="d-flex gap-1">
+                            <div class="w-50 mb">
+                                <label for="name" class="form-label">Name <span>*</span></label>
+                                <input type="text" class="form-control" id="name" name="sub" value="<%= (sub==null?"":sub) %>" placeholder="Enter your name.." required>
+                            </div>
+                            <div class="w-50 mb">
+                                <label for="email" class="form-label">Email <span>*</span></label>
+                                <input type="email" class="form-control" id="email" name="email" value="<%= (email==null?"":email) %>" placeholder="Enter your email.." required>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-1">
+                            <div class="w-50 mb">
+                                <label for="org_name" class="form-label">Org Name <span>*</span></label>
+                                <input type="text" class="form-control" id="org_name" name="aud" value="<%= (aud==null?"":aud) %>" placeholder="Organization name here.." required>
+                            </div>
+                            <div class="w-50 mb">
+                                <label for="url" class="form-label">Home page <span>*</span></label>
+                                <input type="url" class="form-control" id="url" name="url" value="<%= (url==null?"":url) %>" placeholder="https://domain.edu" required>
+                            </div>
+                        </div>
+                        
+                        <% if (registration_token!=null) { %> 
+							<input type=hidden name=registration_token value='<%= registration_token %>'/> 
+						<% }  
+                        
+                        if (!dynamic) { %>
+                        
+                        <div class="mt">
+                            <p>
+                                Type of Learning Management System:
+                            </p>
+                            <div class="mb">
+                                <label for="blackboard" class="radio-label">
+                                    <input type="radio" class="form-radio" name="lms" id="blackboard" value="blackboard" <%= "blackboard".equals(lms)?"checked":"" %> required />
+                                    Blackboard
+                                </label>
+                                <label for="brightspace" class="radio-label">
+                                    <input type="radio" class="form-radio" name="lms" id="brightspace" value="brightspace" <%= "brightspace".equals(lms)?"checked":"" %> />
+                                    Brightspace
+                                </label>
+                                <label for="canvas" class="radio-label">
+                                    <input type="radio" class="form-radio" name="lms" id="canvas" value="canvas" <%= "canvas".equals(lms)?"checked":"" %> />
+                                    Canvas
+                                </label>
+                                <label for="moodle" class="radio-label">
+                                    <input type="radio" class="form-radio" name="lms" id="moodle" value="moodle" <%= "moodle".equals(lms)?"checked":"" %> />
+                                    Moodle
+                                </label>
+                                <label for="sakai" class="radio-label">
+                                    <input type="radio" class="form-radio" name="lms" id="sakai" value="sakai" <%= "sakai".equals(lms)?"checked":"" %> />
+                                    Sakai
+                                </label>
+                                <label for="schoology" class="radio-label">
+                                    <input type="radio" class="form-radio" name="lms" id="schoology" value="schoology" <%= "schoology".equals(lms)?"checked":"" %> />
+                                    Schoology
+                                </label>
+                                <label for="other" class="radio-label">
+                                    <input type="radio" class="form-radio" name="lms" id="other" value="other" <%= "other".equals(lms)?"checked":"" %> />
+                                    Other:
+                                    <input type="text" class="form-radio-input" name="lms_other" value="<%= "other".equals(lms) && lms_other!=null?lms_other:"" %>" placeholder="(Specify)" />
+                                </label>
+                            </div>
+                            
+                            <% } else { %>
+								<input type=hidden name=openid_configuration value='<%= openid_configuration %>' />
+							<% } %>
+                            
+                            <div>
+                            Pricing:
+							<ul>
+								<li>LTI registration and instructor accounts are free.</li>
+								<li>Each student account costs $<%= price %>.00 USD per month or $<%= 4*price %>.00 USD per semester (5 months).</li>
+								<li>Institutions have the option of purchasing student licenses in bulk for as little as $<%= price %>.00 USD per year.</li>
+							</ul><br/>
+                            </div>
+                        	<div class="mb btm-chk">
+                                <label for="accept" class="check-label">
+                                    <input type="checkbox" name="AcceptChemVantageTOS" id="accept" value="true" <%= "true".equals(AcceptChemVantageTOS)?"checked":"" %> required />
+                                    Accept the <a href="./terms_and_conditions.html">ChemVantage Terms of Service</a>
+                                </label>                               
+                        	</div>
+                            <div class="mb">
+                            	<% if (!request.getServerName().contains("localhost")) { %>
+                            		<div class="g-recaptcha" data-sitekey="<%= Subject.getReCaptchaSiteKey() %>" aria-label="Google Recaptcha"></div>
+                           		<% } %>
+                            </div>
+                            <button type="submit" class="btn btn-two">Submit Registration</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- Registration Content End -->
+  
+    <!-- Webpage Footer Start -->
+    <footer>
+        <div class="container">
+            <div class="d-flex footer-content justify-between align-center">
+                <div class="w-40">
+                    <ul class="social">
+                        <li>
+                            <a href="#" target="_blank">
+                                <img src="images/facebook.png" alt="facebook"/>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" target="_blank">
+                                <img src="images/instagram.png" alt="instagram"/>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" target="_blank">
+                                <img src="images/twitterx.png" alt="twitterx"/>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" target="_blank">
+                                <img src="images/linkedin.png" alt="linkedin"/>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="w-40 text-end">
+                    <ul class="contact">
+                        <li>
+                            <a href="tel:+18012438242" title="phone">
+                                +1 (801)243-8242
+                            </a>
+                        </li>
+                        <li>
+                            <a href="mailto:admin@chemvantage.org" title="email">
+                                admin@chemvantage.org
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="m-container">
+            <div class="d-flex align-center footer-btm-content">
+                <div class="w-40">
+                    <span class="copy">
+                        &copy; 2010 - <script>document.write(new Date().getFullYear())</script> ChemVantage LLC
+                    </span>
+                </div>
+                <div class="w-60 text-end">
+                    <ul>
+                        <li>
+                            <a href="./terms_and_conditions.html" target="_blank">
+                                Terms and Conditions
+                            </a>
+                        </li>
+                        <li>
+                            <a href="./privacy_policy.html" target="_blank">
+                                Privacy Policy
+                            </a>
+                        </li>
+                        <li>
+                            <a href="./copyright.html" target="_blank">
+                                Copyright
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <!-- Webpage Footer End -->
 
-<form id=regform method=post action='/lti/registration'>
-
-Please complete the form below to create a trusted LTI Advantage connection between your LMS and ChemVantage 
-that is convenient, secure and <a href=https://site.imsglobal.org/certifications?query=chemvantage>certified by 1EdTech</a>.
-When you submit the form, ChemVantage will send 
-<%= dynamic?"a registration request to your LMS. If successful, you must activate the deployment in your LMS.":"a confirmation email with a tokenized link to complete the registration." %>
-<br/><br/>
-
-Please tell us how to contact you if there is ever a problem with your account (see our <a href=https://www.chemvantage.org/about.html#privacy>Privacy Policy</a>):<br/>
-<label>Your Name: <input type=text name=sub size=40 value='<%= (sub==null?"":sub) %>' /> </label><br/>
-<label>Your Email: <input type=text name=email size=40 value='<%= (email==null?"":email) %>' /> </label><br/><br/>
-
-Please tell us about your school, business or organization:<br/>
-<label>Org Name: <input type=text name=aud  value='<%= (aud==null?"":aud) %>' /> </label><br/>
-<label>Home Page: <input type=text name=url placeholder='https://myschool.edu' value='<%= (url==null?"":url) %>' /></label><br/><br/>
-
-<% if (registration_token!=null) { %> 
- <input type=hidden name=registration_token value='<%= registration_token %>'/> 
-<% } %>
-
-<% if (!dynamic) { %>
-
-
-<fieldset style='width:400px'><legend>Type of Learning Management System:<br/></legend>
-<label><input type=radio name=lms value=blackboard <%= ((lms!=null && lms.equals("blackboard"))?"checked":"") %> />Blackboard</label><br/>
-<label><input type=radio name=lms value=brightspace <%= ((lms!=null && lms.equals("brightspace"))?"checked":"") %> />Brightspace</label><br/>
-<label><input type=radio name=lms value=canvas <%= ((lms!=null && lms.equals("canvas"))?"checked":"") %> />Canvas</label><br/>
-<label><input type=radio name=lms value=moodle <%= ((lms!=null && lms.equals("moodle"))?"checked":"") %> />Moodle</label><br/>
-<label><input type=radio name=lms value=sakai <%= ((lms!=null && lms.equals("sakai"))?"checked":"") %> />Sakai</label><br/>
-<label><input type=radio name=lms value=schoology <%= ((lms!=null && lms.equals("schoology"))?"checked":"") %> />Schoology</label><br/>
-<label><input type=radio name=lms id=other value=other <%= ((lms!=null && lms.equals("other"))?"checked":"") %> />Other:</label>
-<label><input type=text name=lms_other value='<%= (lms_other==null?"":lms_other) %>' placeholder='(specify)' onFocus="document.getElementById('other').checked=true;" /></label>
-</fieldset>
-<br/><br/>
-<% } else { %>
- <input type=hidden name=openid_configuration value='<%= openid_configuration %>' />
-<% } 
-
-if (development) { %>
-This is a development server:
-ChemVantage is pleased to provide free access to our software development server for testing LTI connections. 
-Please note that the server is sometimes in an unstable state, and accounts may be reset or even deleted at any time.<br/><br/>
-<% } else { %>
-Pricing:
-<ul>
-<li>LTI registration and instructor accounts are free.</li>
-<li>Each student account costs $<%= price %>.00 USD per month or $<%= 4*price %>.00 USD per semester for an all-access subscription.</li>
-<li>Institutions have the option of purchasing student licenses in bulk for as little as $<%= price %>.00 USD per year.</li>
-</ul>
-<% } %>
-
-<label><input type=checkbox name=AcceptChemVantageTOS value=true <%= ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") %>/>Accept the <a href=/about.html#terms target=_blank aria-label='opens new tab'>ChemVantage Terms of Service</a></label><br/><br/>
-
-<div class='g-recaptcha' data-sitekey='<%= Subject.getReCaptchaSiteKey() %>' aria-label='Google Recaptcha'></div><br/><br/>
-
-<input type=submit value='Submit Registration'/>
-
-</form><br/><br/>
-
-</main>
-<footer><hr/><img style='padding-left: 5px; vertical-align: middle;width:30px' src=images/logo_sq.png alt='ChemVantage logo' />&nbsp;
-<a href=/index.html style='text-decoration: none;'><span style='color: navy;font-weight: bold;'>ChemVantage</span></a> |  
-<a href=/about.html#terms>Terms and Conditions of Use</a> | 
-<a href=/about.html#privacy>Privacy Policy</a> | 
-<a href=/about.html#copyright>Copyright</a></footer>
-
+    <script type="text/javascript" src="https://www.google.com/recaptcha/api.js"> </script>
+    <!-- Google recaptcha -->
+    
+    <script src="js/script.js"></script>
+    <!-- Main Script Sheet -->
 </body>
 </html>

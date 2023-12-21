@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="images/logo_sq.png">
+    <!-- Fav-Icon -->
+    <title>ChemVantage | Feedback</title>
+    <!-- Title -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Shantell+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <!-- Font Family -->
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Main Style Sheet -->
+    <link rel="stylesheet" href="css/responsive.css">
+    <!-- Responsive Style Sheet -->
+</head>
+<body>
+    <!-- Webpage Header Start -->
+    <header class="webpage-header">
+        <div class="container">
+            <div class="d-flex justify-between align-center">
+                <div class="w-0">
+                    <a href="./index.html">
+                        <img src="images/logo.png" class="webpage-logo" alt="website logo"/>
+                    </a>
+                </div>
+                <div class="w-80">
+                    <nav class="header-nav d-flex flex-end align-center gap-3">
+                        <div class="nav-list">
+                            <ul>
+                                <li>
+                                    <a href="./index.html" class="nav-link">Home</a>
+                                </li>
+                                <li>
+                                    <a href="./about.html" class="nav-link">About Us</a>
+                                </li>
+                                <li>
+                                    <a href="./index.html#placement" class="nav-link">Placement</a>
+                                </li>
+                                <li>
+                                    <a href="./index.html#assignments" class="nav-link">Assignments</a>
+                                </li>
+                                <li>
+                                    <a href="./index.html#pricing" class="nav-link">Pricing</a>
+                                </li>
+                            </ul>
+                            <button class="close">&times;</button>
+                        </div>
+                        <a href="https://www.chemvantage.org/install.html" target="_blank" class="header-action">
+                            Get Started
+                        </a>
+                        <button class="solid-bar">&#9776;</button>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- Webpage Header End -->
+
+    <!-- Webpage BTT Start -->
+    <div class="btt">
+        <img src="images/up-arrow.png" alt="up-arrow"/>
+    </div>
+    <!-- Webpage BTT End -->
+
+    <!-- Webpage SubPage Start -->
+    <section class="sub-page-welcome">
+        <div class="container">
+            <ul class="d-flex justify-center gap-1">
+                <li>
+                    <a href="./index.html">Home</a>
+                </li>
+                <li>
+                    <span>/</span>
+                </li>
+                <li>
+                    <span class="c">feedback</span>
+                </li>
+            </ul>
+        </div>
+    </section>
+    <!-- Webpage SubPage End -->
+
+    <!-- Feedback Content Start -->
+    <section class="section-padding feedback-content">
+        <div class="container">
+            <div class="section-heading">
+                <h3>Feedback</h3>
+            </div>
+            <div class="section-heading-top-gap">
+                <h4>Feedback Page</h4>
+                <p>
+                    Your comments and opinions are important to us. We use this
+information to improve the functionality of the site for our users.
+                </p>
+                <div class="form-elements w-70 mx-auto">
+                    <p>
+                        Please rate your overall experience with ChemVantage:
+                    </p>
+                    <form action="">
+                        <div class="mb">
+                            <div id='vote' style='color: red;'>(click a star):</div>
+                            <img src='images/star1.gif' id='1' style='width:28px; height:28px;' onmouseover=showStars(this.id) onmouseout="showStars('0') "onClick='set=false;showStars(this.id);setStars(this.id)'/>
+                            <img src='images/star1.gif' id='2' style='width:28px; height:28px;' onmouseover=showStars(this.id) onmouseout="showStars('0') "onClick='set=false;showStars(this.id);setStars(this.id)'/>
+                            <img src='images/star1.gif' id='3' style='width:28px; height:28px;' onmouseover=showStars(this.id) onmouseout="showStars('0')" onClick='set=false;showStars(this.id);setStars(this.id)'/>
+                            <img src='images/star1.gif' id='4' style='width:28px; height:28px;' onmouseover=showStars(this.id) onmouseout="showStars('0')" onClick='set=false;showStars(this.id);setStars(this.id)'/>
+                            <img src='images/star1.gif' id='5' style='width:28px; height:28px;' onmouseover=showStars(this.id) onmouseout="showStars('0') "onClick='set=false;showStars(this.id);setStars(this.id)'/>
+                            <input type=range min=1 max=5 style='opacity:0' onfocus=this.style='opacity:1' oninput='set=false;showStars(this.value);setStars(this.value)'>
+                            <p class="t-r">(10972 user ratings; avg = 4.3 stars)</p>
+                        </div>
+                        <div class="mb">
+                            <label for="comments" class="form-label"> Comments or kudos <span>*</span></label>
+                            <textarea name="comments" placeholder="Type here.. (160 characters max)" id="comments" cols="30" rows="4" maxlength="160" class="form-control"></textarea>
+                        </div>
+                        <div class="mb">
+                            <iframe title="reCAPTCHA" width="304" height="78" role="presentation" name="a-kw0pt32wj5on" frameborder="0" scrolling="no" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation" src="https://www.google.com/recaptcha/api2/anchor?ar=1&amp;k=6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG&amp;co=aHR0cHM6Ly93d3cuY2hlbXZhbnRhZ2Uub3JnOjQ0Mw..&amp;hl=en&amp;v=u-xcq3POCWFlCr3x8_IPxgPu&amp;size=normal&amp;cb=iqk7w9x230uv"></iframe>
+                        </div>
+                        <button type="submit" class="btn btn-two">Submit Feedback</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+    <!-- Feedback Content End -->
+
+    <!-- Webpage Footer Start -->
+    <footer>
+        <div class="container">
+            <div class="d-flex footer-content justify-between align-center">
+                <div class="w-40">
+                    <ul class="social">
+                        <li>
+                            <a href="#" target="_blank">
+                                <img src="images/facebook.png" alt="facebook"/>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" target="_blank">
+                                <img src="images/instagram.png" alt="instagram"/>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" target="_blank">
+                                <img src="images/twitterx.png" alt="twitterx"/>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="#" target="_blank">
+                                <img src="images/linkedin.png" alt="linkedin"/>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="w-40 text-end">
+                    <ul class="contact">
+                        <li>
+                            <a href="tel:+18012438242" title="phone">
+                                +1 (801)243-8242
+                            </a>
+                        </li>
+                        <li>
+                            <a href="mailto:admin@chemvantage.org" title="email">
+                                admin@chemvantage.org
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="m-container">
+            <div class="d-flex align-center footer-btm-content">
+                <div class="w-40">
+                    <span class="copy">
+                        &copy; 2010 - <script>document.write(new Date().getFullYear())</script> ChemVantage LLC
+                    </span>
+                </div>
+                <div class="w-60 text-end">
+                    <ul>
+                        <li>
+                            <a href="./terms_and_conditions.html" target="_blank">
+                                Terms and Conditions
+                            </a>
+                        </li>
+                        <li>
+                            <a href="./privacy_policy.html" target="_blank">
+                                Privacy Policy
+                            </a>
+                        </li>
+                        <li>
+                            <a href="./copyright.html" target="_blank">
+                                Copyright
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <!-- Webpage Footer End -->
+
+    <script type='text/javascript'>
+        var star1 = new Image();
+        star1.src = 'images/star1.gif';
+        var star2 = new Image();
+        star2.src = 'images/star2.gif';
+        var set = false;
+        function showStars(n) {
+            if (!set) {
+                document.getElementById('vote').innerHTML = (n == 0 ? '(click a star)' : '' + n + (n > 1 ? ' stars' : ' star'));
+                for (i = 1; i < 6; i++)
+                    document.getElementById(i).src = (i <= n ? star2.src : star1.src);
+            }
+        }
+        function setStars(n) {
+            set = (n > 0 ? true : false);
+            document.FeedbackForm.Stars.value = n;
+        }
+    </script>
+
+    <script type="text/javascript" src="https://www.google.com/recaptcha/api.js"> </script>
+    <!-- Google recaptcha -->
+    
+    <script src="js/script.js"></script>
+    <!-- Main Script Sheet -->
+</body>
+</html>
