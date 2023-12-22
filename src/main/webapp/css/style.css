@@ -16,7 +16,7 @@ Version : 01.00
     --text: #364964;
     --footer-text: #8b8d8a;
     --g-white: #f9fff2;
-    --body-white: #fdfffc;
+    --body-white: #ffffff;				/*-#fdfffc; */
     --body-off-white: #f1f1f1;
     --footer-bg: #151811;
     --radius-sm: 3px;
@@ -122,6 +122,19 @@ h5 {
 
 h6 {
     font-size: var(--h6);
+}
+
+.skip-to-main-content-link {
+  background-color: black;
+  color: white;
+  opacity: 0;
+  position: absolute;
+  z-index: 999;
+}
+
+.skip-to-main-content-link:focus {
+  display: inline;
+  opacity: 1;
 }
 
 .container {
@@ -279,6 +292,12 @@ em {
     background-color: transparent;
 }
 
+.btn-one:focus {
+    color: var(--blue);
+    border: 2px solid var(--green);
+    background-color: transparent;
+}
+
 .btn-two {
     color: var(--blue);
     border: 2px solid var(--green);
@@ -286,6 +305,12 @@ em {
 }
 
 .btn-two:hover {
+    color: var(--white);
+    background-color: var(--green);
+    border: 2px solid transparent;
+}
+
+.btn-two:focus {
     color: var(--white);
     background-color: var(--green);
     border: 2px solid transparent;

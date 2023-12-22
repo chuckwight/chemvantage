@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.chemvantage</groupId>
   <artifactId>chemvantage</artifactId>
-  <version>202312202115</version>
+  <version>20231222t1110</version>
   <name>ChemVantage</name>
   <description>An Open Educational Resource for teaching and learning college-level General Chemistry.</description>
    <properties>
