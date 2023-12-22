@@ -94,16 +94,90 @@
                 </p>
                 <div class="tab-content">
                     <div class="tab">
-                        <button class="tablinks" onclick="lmsOption(event, 'blackboard')">Blackboard</button>
-                        <button class="tablinks" onclick="lmsOption(event, 'brightSpace')">Bright Space</button>
-                        <button class="tablinks" onclick="lmsOption(event, 'canvas')">Canvas</button>
-                        <button class="tablinks" onclick="lmsOption(event, 'moodle')">Moodle</button>
-                        <button class="tablinks" onclick="lmsOption(event, 'sakai')">Sakai</button>
-                        <button class="tablinks" onclick="lmsOption(event, 'schoology')">Schoology</button>
-                        <button class="tablinks" onclick="lmsOption(event, 'other')">Other</button>
+                        <div class="inner">
+                            <button class="tablinks active" onclick="lmsOption(event, 'item01')">Canvas</button>
+                            <button class="tablinks" onclick="lmsOption(event, 'item02')">Blackboard</button>
+                            <button class="tablinks" onclick="lmsOption(event, 'item03')">Bright Space</button>
+                            <button class="tablinks" onclick="lmsOption(event, 'item04')">Moodle</button>
+                            <button class="tablinks" onclick="lmsOption(event, 'item05')">Sakai</button>
+                            <button class="tablinks" onclick="lmsOption(event, 'item06')">Schoology</button>
+                            <button class="tablinks" onclick="lmsOption(event, 'item07')">Other</button>
+                        </div>
                       </div>
+
+                      <div id="item01" class="tabcontent" style="display: block;">
+                        <h5>Installation instructions for Instructure Canvas</h5>
+                        <h6>
+                            The institution's account administrator should perform the following steps:
+                        </h6>
+                        <ul>
+                            <li>
+                                Browse to <a href="https://www.chemvantage.org/Registration.jsp">https://www.chemvantage.org/Registration.jsp</a> and complete a brief form to provide your contact information. We will send an email confirmation with a tokenized registration link.
+                            </li>
+                            <li>
+                                Configure a new LTI Developer Key for your Canvas Account (see detailed instructions here)
+                            </li>
+                            <li>
+                                Use the following Key Settings:
+                                <ol>
+                                    <li>Key Name: ChemVantage</li>
+                                    <li>Owner Email: admin@chemvantage.org</li>
+                                    <li>
+                                        Redirect URIs:
+                                        <p>
+                                            https://www.chemvantage.org/lti/launch
+                                        </p>
+                                        <p>
+                                            https://www.chemvantage.org/lti/deeplinks
+                                        </p>
+                                    </li>
+                                    <li>Configure Method: Enter URL</li>
+                                    <li>JSON URL: https://www.chemvantage.org/lti/registration?UserRequest=config</li>
+                                </ol>
+                            </li>
+                            <li>
+                                Click Save
+                            </li>
+                            <li>
+                                Copy or write down the client_id and deployment_id created in step 2. This is the tricky part, because Canvas doesn't make it easy. Canvas uses the developer key as the client_id, so it can be viewed from the list of developer keys. It is a numeric value that looks something like 32570000000000041. The deployment_id can be found in Settings | Apps | App Configurations by opening the settings menu for ChemVantage. It is a compound value that consists of a number and a hex string separated by a colon and looks something like 10408:7db438070728c02373713c12c73869b3af470b68.
+                            </li>
+                            <li>
+                                Add ChemVantage as an External App to your account using the client_id created in step 2 (see detailed instructions <a href="https://community.canvaslms.com/t5/Admin-Guide/How-do-I-configure-an-external-app-for-an-account-using-a-client/ta-p/202" target="_blank">here</a>)
+                            </li>
+                            <li>
+                                Click the tokenized link in the email confirmation from step 1 to register the client_id and deployment_id with ChemVantage. If the link expired, you can simply repeat step 1 to get another one.
+                            </li>
+                        </ul>
+                        <div class="mt">
+                            <p>The course instructor can then create any ChemVantage assignment as follows:</p>
+                            <ul>
+                                <li>
+                                    Create a new Canvas assignment with the following recommended parameters:
+                                </li>
+                                <li>
+                                    Name: (as appropriate, e.g. Quiz - Heat and Enthalpy)
+                                </li>
+                                <li>
+                                    Points: 10 for quiz or homework; 5 for video, poll or reading assignment; 100 for placement exam or practice exam
+                                </li>
+                                <li>
+                                    Submission Type: External Tool
+                                </li>
+                                <li>
+                                    External Tool URL: Find ChemVantage or enter https://www.chemvantage.org/lti/launch
+                                </li>
+                                <li>
+                                    Save or Save and Publish
+                                </li>
+                                <li>
+                                    When you launch the assignment, you may use the links on the Instructor page to customize it for your class.
+                                </li>
+                            </ul>
+                        </div>
+                      </div>
+                      <!-- canvas tab-content end -->
                       
-                      <div id="blackboard" class="tabcontent">
+                      <div id="item02" class="tabcontent">
                         <h5>Installation instructions for Blackboard Learn</h5>
                         <h6>
                             The institution's account administrator should perform the following steps:
@@ -159,7 +233,7 @@
                       </div>
                       <!-- blackboard tab-content end -->
                       
-                      <div id="brightSpace" class="tabcontent">
+                      <div id="item03" class="tabcontent">
                         <h5>Installation instructions for D2L Brightspace</h5>
                         <h6>
                             The detailed Brightspace documentation can be found <a href="https://community.d2l.com/brightspace/kb/articles/18081-tool-registration-deployment-and-links" target="_blank">here</a>. The institution's account administrator should perform the following steps:
@@ -273,80 +347,8 @@
                         </div>
                       </div>
                       <!-- brightSpace tab-content end -->
-                      
-                      <div id="canvas" class="tabcontent">
-                        <h5>Installation instructions for Instructure Canvas</h5>
-                        <h6>
-                            The institution's account administrator should perform the following steps:
-                        </h6>
-                        <ul>
-                            <li>
-                                Browse to <a href="https://www.chemvantage.org/Registration.jsp">https://www.chemvantage.org/Registration.jsp</a> and complete a brief form to provide your contact information. We will send an email confirmation with a tokenized registration link.
-                            </li>
-                            <li>
-                                Configure a new LTI Developer Key for your Canvas Account (see detailed instructions here)
-                            </li>
-                            <li>
-                                Use the following Key Settings:
-                                <ol>
-                                    <li>Key Name: ChemVantage</li>
-                                    <li>Owner Email: admin@chemvantage.org</li>
-                                    <li>
-                                        Redirect URIs:
-                                        <p>
-                                            https://www.chemvantage.org/lti/launch
-                                        </p>
-                                        <p>
-                                            https://www.chemvantage.org/lti/deeplinks
-                                        </p>
-                                    </li>
-                                    <li>Configure Method: Enter URL</li>
-                                    <li>JSON URL: https://www.chemvantage.org/lti/registration?UserRequest=config</li>
-                                </ol>
-                            </li>
-                            <li>
-                                Click Save
-                            </li>
-                            <li>
-                                Copy or write down the client_id and deployment_id created in step 2. This is the tricky part, because Canvas doesn't make it easy. Canvas uses the developer key as the client_id, so it can be viewed from the list of developer keys. It is a numeric value that looks something like 32570000000000041. The deployment_id can be found in Settings | Apps | App Configurations by opening the settings menu for ChemVantage. It is a compound value that consists of a number and a hex string separated by a colon and looks something like 10408:7db438070728c02373713c12c73869b3af470b68.
-                            </li>
-                            <li>
-                                Add ChemVantage as an External App to your account using the client_id created in step 2 (see detailed instructions <a href="https://community.canvaslms.com/t5/Admin-Guide/How-do-I-configure-an-external-app-for-an-account-using-a-client/ta-p/202" target="_blank">here</a>)
-                            </li>
-                            <li>
-                                Click the tokenized link in the email confirmation from step 1 to register the client_id and deployment_id with ChemVantage. If the link expired, you can simply repeat step 1 to get another one.
-                            </li>
-                        </ul>
-                        <div class="mt">
-                            <p>The course instructor can then create any ChemVantage assignment as follows:</p>
-                            <ul>
-                                <li>
-                                    Create a new Canvas assignment with the following recommended parameters:
-                                </li>
-                                <li>
-                                    Name: (as appropriate, e.g. Quiz - Heat and Enthalpy)
-                                </li>
-                                <li>
-                                    Points: 10 for quiz or homework; 5 for video, poll or reading assignment; 100 for placement exam or practice exam
-                                </li>
-                                <li>
-                                    Submission Type: External Tool
-                                </li>
-                                <li>
-                                    External Tool URL: Find ChemVantage or enter https://www.chemvantage.org/lti/launch
-                                </li>
-                                <li>
-                                    Save or Save and Publish
-                                </li>
-                                <li>
-                                    When you launch the assignment, you may use the links on the Instructor page to customize it for your class.
-                                </li>
-                            </ul>
-                        </div>
-                      </div>
-                      <!-- canvas tab-content end -->
 
-                      <div id="moodle" class="tabcontent">
+                      <div id="item04" class="tabcontent">
                         <h5>Installation instructions for Moodle</h5>
                         <h6>
                             The detailed Moodle documentation can be found <a href="https://community.d2l.com/brightspace/kb/articles/18081-tool-registration-deployment-and-links" target="_blank">here</a>. The institution's account administrator should perform the following steps:
@@ -437,7 +439,7 @@
                       </div>
                       <!-- moodle tab-content end -->
 
-                      <div id="sakai" class="tabcontent">
+                      <div id="item05" class="tabcontent">
                         <h5>Installation instructions for Sakai</h5>
                         <p>
                             First of all, Sakai supports LTI Advantage Dynamic Registration! The Sakai documentation can be found <a href="https://sakai.screenstepslive.com/s/sakai_help/m/108646/l/1502032-how-do-i-set-up-an-lti-advantage-tool-using-auto-configuration" target="_blank">here</a>. We strongly encourage you to try that first (see above). The institution's account administrator still has the option of manual registration, but we don't have detailed instructions for this.
@@ -465,7 +467,7 @@
                       </div>
                       <!-- sakai tab-content end -->
 
-                      <div id="schoology" class="tabcontent">
+                      <div id="item06" class="tabcontent">
                         <h5>Installation instructions for PowerSchool Schoology</h5>
                         <ul>
                             <li>
@@ -518,7 +520,7 @@
                       </div>
                       <!-- schoology tab-content end -->
 
-                      <div id="other" class="tabcontent">
+                      <div id="item07" class="tabcontent">
                         <h5>Installation instructions for other LMS platforms</h5>
                         <ul>
                             <li>
@@ -648,26 +650,6 @@
         </div>
     </footer>
     <!-- Webpage Footer End -->
-
-    <script>
-        function lmsOption(evt, cityName) {
-            var i, tabcontent, tablinks;
-            tabcontent = document.getElementsByClassName("tabcontent");
-
-            for (i = 0; i < tabcontent.length; i++) {
-                tabcontent[i].style.display = "none";
-            }
-
-            tablinks = document.getElementsByClassName("tablinks");
-
-            for (i = 0; i < tablinks.length; i++) {
-                tablinks[i].className = tablinks[i].className.replace(" active", "");
-            }
-            
-            document.getElementById(cityName).style.display = "block";
-            evt.currentTarget.className += " active";
-        }
-    </script>
     
     <script src="js/script.js"></script>
     <!-- Main Script Sheet -->

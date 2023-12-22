@@ -99,6 +99,33 @@
     .m-container {
         width: 90%;
     }
+
+    .copyright-content ul {
+        margin-left: 0;
+    }
+
+    .registration-content .form-elements.w-70,
+    .feedback-content .form-elements.w-70 {
+        width: 100%;
+    }
+
+    .item-bank-content .form-elements .d-flex {
+        display: block;
+    }
+
+    .item-bank-content .form-elements .d-flex .w-50,
+    .item-bank-content .form-elements .d-flex .w-30 {
+        width: 100%;
+        margin-bottom: 8px;
+    }
+
+    .item-bank-content .form-elements .d-flex .w-20 {
+        width: 100%;
+    }
+
+    .item-bank-content .form-elements .d-flex .w-20 button {
+        width: auto;
+    }
 }
 
 @media (min-width: 768px) and (max-width: 991.98px) {
@@ -114,8 +141,12 @@
         --small: 14px;
     }
 
+    .sub-page-welcome {
+        padding: 48px 0;
+    }
+
     .webpage-heroarea {
-        padding: 200px 0 80px 0;
+        padding: 80px 0;
     }
 
     .heroarea-content .w-60 {
@@ -124,21 +155,32 @@
 
     .about-content,
     .placement-content,
-    .pricing-content {
+    .pricing-content,
+    .example-content {
         flex-wrap: wrap !important;
     }
 
     .about-content .w-40,
     .placement-content .w-40,
-    .pricing-content .w-40 {
+    .pricing-content .w-40,
+    .example-content .w-40 {
         width: 60% !important;
         margin: 0 auto;
     }
 
     .about-content .w-60,
     .placement-content .w-60,
-    .pricing-content .w-60 {
+    .pricing-content .w-60,
+    .example-content .w-60 {
         width: 100% !important;
+    }
+
+    .chemistry-icon img {
+        width: 64px;
+    }
+
+    .about-content.mt {
+        margin-top: 0;
     }
 }
 
@@ -155,30 +197,43 @@
         --small: 14px;
     }
 
-    .webpage-heroarea {
-        padding: 200px 0 80px 0;
+    .sub-page-welcome {
+        padding: 40px 0;
     }
 
-    .heroarea-content .w-60 {
-        width: 80%;
+    .webpage-heroarea {
+        padding: 80px 0 80px 0;
+    }
+
+    .heroarea-content .w-60,
+    .heroarea-content .w-80,
+    .heroarea-content .w-50 {
+        width: 100%;
+    }
+
+    .heroarea-content h1 {
+        margin-top: 16px;
     }
 
     .about-content,
     .placement-content,
-    .pricing-content {
+    .pricing-content,
+    .example-content {
         flex-wrap: wrap !important;
     }
 
     .about-content .w-40,
     .placement-content .w-40,
-    .pricing-content .w-40 {
+    .pricing-content .w-40,
+    .example-content .w-40 {
         width: 60% !important;
         margin: 0 auto;
     }
 
     .about-content .w-60,
     .placement-content .w-60,
-    .pricing-content .w-60 {
+    .pricing-content .w-60,
+    .example-content .w-60 {
         width: 100% !important;
     }
 
@@ -192,6 +247,7 @@
     }
 
     footer .footer-btm-content {
+        flex-direction: column-reverse;
         flex-wrap: wrap;
         border-top: 1px solid transparent;
         border-bottom: 1px solid transparent;
@@ -201,7 +257,7 @@
     .footer-content .w-40 {
         width: 100%;
         text-align: center;
-        margin-bottom: 12px;
+        margin-bottom: 0;
     }
 
     footer .m-container .w-60 {
@@ -216,6 +272,22 @@
 
     .chemistry-icon img {
         width: 60px;
+    }
+
+    .registration-content .form-elements.w-70 .d-flex {
+        display: block;
+    }
+
+    .registration-content .form-elements.w-70 .d-flex .w-50 {
+        width: 100%;
+    }
+
+    .install-content .tab-content .tab {
+        overflow-x: auto;
+    }
+
+    .install-content .tab-content .tab .inner {
+        width: 700px;
     }
 }
 
@@ -232,8 +304,16 @@
         --small: 14px;
     }
 
+    .sub-page-welcome {
+        padding: 20px 0;
+    }
+
     .section-padding {
         padding: 64px 0;
+    }
+
+    .section-heading-top-gap {
+        padding-top: 20px;
     }
 
     .header-nav .header-action {
@@ -241,7 +321,7 @@
     }
 
     .webpage-heroarea {
-        padding: 180px 0 80px 0;
+        padding: 80px 0 80px 0;
     }
 
     .heroarea-content h1 {
@@ -255,6 +335,10 @@
         width: 100%;
     }
 
+    .heroarea-content .w-60 img {
+        width: 100px;
+    }
+
     .heroarea-content .gap-3 {
         gap: 10px;
     }
@@ -265,20 +349,23 @@
 
     .about-content,
     .placement-content,
-    .pricing-content {
+    .pricing-content,
+    .example-content {
         flex-wrap: wrap !important;
     }
 
     .about-content .w-40,
     .placement-content .w-40,
-    .pricing-content .w-40 {
+    .pricing-content .w-40,
+    .example-content .w-40 {
         width: 90% !important;
         margin: 0 auto;
     }
 
     .about-content .w-60,
     .placement-content .w-60,
-    .pricing-content .w-60 {
+    .pricing-content .w-60,
+    .example-content .w-60 {
         width: 100% !important;
     }
 
@@ -293,6 +380,7 @@
 
     footer .footer-btm-content {
         flex-wrap: wrap;
+        flex-direction: column-reverse;
         border-top: 1px solid transparent;
         border-bottom: 1px solid transparent;
     }
@@ -301,7 +389,7 @@
     .footer-content .w-40 {
         width: 100%;
         text-align: center;
-        margin-bottom: 12px;
+        margin-bottom: 0;
     }
 
     footer .m-container .w-60 {
@@ -320,5 +408,30 @@
 
     .btt {
         display: none;
+    }
+
+    .form-elements {
+        margin-top: 12px;
+        padding: 20px 16px;
+    }
+
+    .form-label {
+        font-weight: 400;
+    }
+
+    .registration-content .form-elements.w-70 .d-flex {
+        display: block;
+    }
+
+    .registration-content .form-elements.w-70 .d-flex .w-50 {
+        width: 100%;
+    }
+
+    .install-content .tab-content .tab {
+        overflow-x: auto;
+    }
+
+    .install-content .tab-content .tab .inner {
+        width: 700px;
     }
 }
