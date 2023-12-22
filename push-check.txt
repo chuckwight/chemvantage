@@ -1,5 +1,0 @@
-hey,
-
-push check from rifat's machine.
-
-pull check from chuck's repository.
