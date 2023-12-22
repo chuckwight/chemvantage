@@ -105,7 +105,7 @@ information to improve the functionality of the site for our users.
                             <img src='images/star1.gif' id='3' style='width:28px; height:28px;' onmouseover=showStars(this.id) onmouseout="showStars('0')" onClick='set=false;showStars(this.id);setStars(this.id)'/>
                             <img src='images/star1.gif' id='4' style='width:28px; height:28px;' onmouseover=showStars(this.id) onmouseout="showStars('0')" onClick='set=false;showStars(this.id);setStars(this.id)'/>
                             <img src='images/star1.gif' id='5' style='width:28px; height:28px;' onmouseover=showStars(this.id) onmouseout="showStars('0') "onClick='set=false;showStars(this.id);setStars(this.id)'/>
-                            <input type=range min=1 max=5 style='opacity:0' onfocus=this.style='opacity:1' oninput='set=false;showStars(this.value);setStars(this.value)'>
+                            <input type=range min=1 max=5 style='opacity:0' onfocus="this.style.opacity=1" oninput='set=false;showStars(this.value);setStars(this.value)'>
                             <p class="t-r">(10972 user ratings; avg = 4.3 stars)</p>
                         </div>
                         <div class="mb">
@@ -113,7 +113,7 @@ information to improve the functionality of the site for our users.
                             <textarea name="comments" placeholder="Type here.. (160 characters max)" id="comments" cols="30" rows="4" maxlength="160" class="form-control"></textarea>
                         </div>
                         <div class="mb">
-                            <iframe title="reCAPTCHA" width="304" height="78" role="presentation" name="a-kw0pt32wj5on" frameborder="0" scrolling="no" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation" src="https://www.google.com/recaptcha/api2/anchor?ar=1&amp;k=6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG&amp;co=aHR0cHM6Ly93d3cuY2hlbXZhbnRhZ2Uub3JnOjQ0Mw..&amp;hl=en&amp;v=u-xcq3POCWFlCr3x8_IPxgPu&amp;size=normal&amp;cb=iqk7w9x230uv"></iframe>
+                            <iframe title="reCAPTCHA" width="304" height="78" role="presentation" name="a-kw0pt32wj5on" style="border:none;overflow:hidden" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-top-navigation allow-modals allow-popups-to-escape-sandbox allow-storage-access-by-user-activation" src="https://www.google.com/recaptcha/api2/anchor?ar=1&amp;k=6Ld_GAcTAAAAABmI3iCExog7rqM1VlHhG8y0d6SG&amp;co=aHR0cHM6Ly93d3cuY2hlbXZhbnRhZ2Uub3JnOjQ0Mw..&amp;hl=en&amp;v=u-xcq3POCWFlCr3x8_IPxgPu&amp;size=normal&amp;cb=iqk7w9x230uv"></iframe>
                         </div>
                         <button type="submit" class="btn btn-two">Submit Feedback</button>
                     </form>
