@@ -55,10 +55,10 @@
                                     <a href="./about.html" class="nav-link">About Us</a>
                                 </li>
                                 <li>
-                                    <a href="./index.html#placement" class="nav-link">Placement</a>
+                                    <a href="./index.html#assignments" class="nav-link">Assignments</a>
                                 </li>
                                 <li>
-                                    <a href="./index.html#assignments" class="nav-link">Assignments</a>
+                                    <a href="./index.html#itembank" class="nav-link">Items</a>
                                 </li>
                                 <li>
                                     <a href="./index.html#pricing" class="nav-link">Pricing</a>
@@ -82,24 +82,6 @@
         <img src="images/up-arrow.png" alt="up-arrow"/>
     </div>
     <!-- Webpage BTT End -->
-
-    <!-- Webpage SubPage Start -->
-    <section class="sub-page-welcome">
-        <div class="container">
-            <ul class="d-flex justify-center gap-1">
-                <li>
-                    <a href="./index.html">Home</a>
-                </li>
-                <li>
-                    <span>/</span>
-                </li>
-                <li>
-                    <span class="c">registration</span>
-                </li>
-            </ul>
-        </div>
-    </section>
-    <!-- Webpage SubPage End -->
 
     <!-- Registration Content Start -->
     <section class="section-padding registration-content">
