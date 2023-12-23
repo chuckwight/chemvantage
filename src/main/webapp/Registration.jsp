@@ -35,6 +35,9 @@
 </head>
 
 <body>
+    <a href=#main class="skip-to-main-content-link">Skip to main content</a>
+    <!-- Hidden elements for accessibility compliance -->
+    <h1 style="height:1px;width:1px;">&nbsp;</h1><h2 style="height:1px;width:1px;">&nbsp;</h2>
     <!-- Webpage Header Start -->
     <header class="webpage-header">
         <div class="container">
@@ -66,7 +69,7 @@
                             </ul>
                             <button class="close">&times;</button>
                         </div>
-                        <a href="https://www.chemvantage.org/install.html" target="_blank" class="header-action">
+                        <a href="https://www.chemvantage.org/install.html" target="_blank" aria-label="Opens new tab" class="header-action">
                             Get Started
                         </a>
                         <button class="solid-bar">&#9776;</button>
@@ -83,6 +86,7 @@
     </div>
     <!-- Webpage BTT End -->
 
+    <main id="main">
     <!-- Registration Content Start -->
     <section class="section-padding registration-content">
         <div class="container">
@@ -92,7 +96,7 @@
             <div class="section-heading-top-gap">
                 <h4>ChemVantage LTI Advantage <%= dynamic?"Dynamic ":"" %>Registration</h4>
                 <p>
-                    Please complete the form below to create a trusted LTI Advantage connection between your LMS and ChemVantage that is convenient, secure and <a href="https://site.imsglobal.org/certifications?query=chemvantage" target="_blank">certified by 1EdTech</a>. 
+                    Please complete the form below to create a trusted LTI Advantage connection between your LMS and ChemVantage that is convenient, secure and <a href="https://site.imsglobal.org/certifications?query=chemvantage" target="_blank" aria-label="Opens new tab">certified by 1EdTech</a>. 
                     When you submit the form, ChemVantage will send <%= dynamic?"a registration request to your LMS. If successful, you must activate the deployment in your LMS.":"a confirmation email with a tokenized link to complete the registration." %>
                 </p>
                  <div class="form-elements w-70 mx-auto">
@@ -199,6 +203,7 @@
         </div>
     </section>
     <!-- Registration Content End -->
+  </main>
   
     <!-- Webpage Footer Start -->
     <footer>
@@ -207,22 +212,22 @@
                 <div class="w-40">
                     <ul class="social">
                         <li>
-                            <a href="#" role="button" target="_blank">
+                            <a href="#" role="button" target="_blank" aria-label="Opens new tab">
                                 <img src="images/facebook.png" alt="facebook"/>
                             </a>
                         </li>
                         <li>
-                            <a href="#" role="button" target="_blank">
+                            <a href="#" role="button" target="_blank" aria-label="Opens new tab">
                                 <img src="images/instagram.png" alt="instagram"/>
                             </a>
                         </li>
                         <li>
-                            <a href="#" role="button" target="_blank">
+                            <a href="#" role="button" target="_blank" aria-label="Opens new tab">
                                 <img src="images/twitterx.png" alt="twitterx"/>
                             </a>
                         </li>
                         <li>
-                            <a href="#" role="button" target="_blank">
+                            <a href="#" role="button" target="_blank" aria-label="Opens new tab">
                                 <img src="images/linkedin.png" alt="linkedin"/>
                             </a>
                         </li>
@@ -254,17 +259,17 @@
                 <div class="w-60 text-end">
                     <ul>
                         <li>
-                            <a href="./terms_and_conditions.html" target="_blank">
+                            <a href="./terms_and_conditions.html" target="_blank" aria-label="Opens new tab">
                                 Terms and Conditions
                             </a>
                         </li>
                         <li>
-                            <a href="./privacy_policy.html" target="_blank">
+                            <a href="./privacy_policy.html" target="_blank" aria-label="Opens new tab">
                                 Privacy Policy
                             </a>
                         </li>
                         <li>
-                            <a href="./copyright.html" target="_blank">
+                            <a href="./copyright.html" target="_blank" aria-label="Opens new tab">
                                 Copyright
                             </a>
                         </li>

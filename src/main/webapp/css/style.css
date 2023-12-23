@@ -49,6 +49,10 @@ svg {
     vertical-align: middle;
 }
 
+a:focus {
+    border: solid green 2px;
+}
+
 a {
     text-decoration: none;
     display: inline-block;
@@ -320,7 +324,7 @@ em {
     padding: 96px 0;
 }
 
-.section-heading h3 {
+.section-heading h2,h3 {
     font-weight: 400;
     position: relative;
     top: 0;
@@ -330,7 +334,7 @@ em {
     color: var(--blue);
 }
 
-.section-heading h3::after {
+.section-heading h2,h3::after {
     position: absolute;
     content: '';
     top: 0;

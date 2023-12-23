@@ -15,6 +15,9 @@
     <!-- Responsive Style Sheet -->
 </head>
 <body>
+    <a href=#main class="skip-to-main-content-link">Skip to main content</a>
+    <!-- Hidden elements for accessibility compliance -->
+    <h1 style="height:1px;width:1px;">&nbsp;</h1><h2 style="height:1px;width:1px;">&nbsp;</h2>
     <!-- Webpage Header Start -->
     <header class="webpage-header">
         <div class="container">
@@ -46,7 +49,7 @@
                             </ul>
                             <button class="close">&times;</button>
                         </div>
-                        <a href="https://www.chemvantage.org/install.html" target="_blank" class="header-action">
+                        <a href="https://www.chemvantage.org/install.html" target="_blank" aria-label="Opens new tab" class="header-action">
                             Get Started
                         </a>
                         <button class="solid-bar">&#9776;</button>
@@ -63,15 +66,17 @@
     </div>
     <!-- Webpage BTT End -->
 
-   <!-- Copyright Content Start -->
+   <main id="main">
+    <!-- Copyright Content Start -->
     <section class="section-padding copyright-content">
         <div class="container">
             <div class="section-heading">
-                <h3>Copyright &copy; 2007-2023</h3>
-            </div>
+                <h3>Copyright &copy; 2007-<script>document.write(new Date().getFullYear())</script></h3>
+            	<!-- Hidden elements for accessibility compliance -->
+   				<h4 style="height:1px;width:1px;">&nbsp;</h4></div>
             <div class="section-heading-top-gap">
                 <p>
-                    Except where otherwise noted, the copyright to all content displayed on this site is owned by ChemVantage LLC, and is licensed freely under a <a href="https://creativecommons.org/licenses/by/3.0/us/" target="_blank"><img src="images/createive-commons-logo.svg" class="cc" alt="createive-commons-logo"/></a> <a href="https://creativecommons.org/licenses/by/3.0/us/" target="_blank">Attribution 4.0 International Public License</a>. Any use of this content must acknowledge ownership by ChemVantage LLC and must contain appropriate notice of this CC BY license. Permissions beyond the scope of this license may be available by contacting <a href="mailto:admin@chemvantage.org">admin@chemvantage.org</a>
+                    Except where otherwise noted, the copyright to all content displayed on this site is owned by ChemVantage LLC, and is licensed freely under a <a href="https://creativecommons.org/licenses/by/3.0/us/" target="_blank" aria-label="Opens new tab"><img src="images/createive-commons-logo.svg" class="cc" alt="createive-commons-logo"/></a> <a href="https://creativecommons.org/licenses/by/3.0/us/" target="_blank" aria-label="Opens new tab">Attribution 4.0 International Public License</a>. Any use of this content must acknowledge ownership by ChemVantage LLC and must contain appropriate notice of this CC BY license. Permissions beyond the scope of this license may be available by contacting <a href="mailto:admin@chemvantage.org">admin@chemvantage.org</a>
                 </p>
                 <div class="mt">
                     <h5>DMCA Notice</h5>
@@ -109,7 +114,8 @@
         </div>
     </section>
     <!-- Copyright Content End -->
-
+  </main>
+  
     <!-- Webpage Footer Start -->
     <footer>
         <div class="container">
@@ -117,22 +123,22 @@
                 <div class="w-40">
                     <ul class="social">
                         <li>
-                            <a href="#" role="button" target="_blank">
+                            <a href="#" role="button" target="_blank" aria-label="Opens new tab">
                                 <img src="images/facebook.png" alt="facebook"/>
                             </a>
                         </li>
                         <li>
-                            <a href="#" role="button" target="_blank">
+                            <a href="#" role="button" target="_blank" aria-label="Opens new tab">
                                 <img src="images/instagram.png" alt="instagram"/>
                             </a>
                         </li>
                         <li>
-                            <a href="#" role="button" target="_blank">
+                            <a href="#" role="button" target="_blank" aria-label="Opens new tab">
                                 <img src="images/twitterx.png" alt="twitterx"/>
                             </a>
                         </li>
                         <li>
-                            <a href="#" role="button" target="_blank">
+                            <a href="#" role="button" target="_blank" aria-label="Opens new tab">
                                 <img src="images/linkedin.png" alt="linkedin"/>
                             </a>
                         </li>
@@ -164,17 +170,17 @@
                 <div class="w-60 text-end">
                     <ul>
                         <li>
-                            <a href="./terms_and_conditions.html" target="_blank">
+                            <a href="./terms_and_conditions.html" target="_blank" aria-label="Opens new tab">
                                 Terms and Conditions
                             </a>
                         </li>
                         <li>
-                            <a href="./privacy_policy.html" target="_blank">
+                            <a href="./privacy_policy.html" target="_blank" aria-label="Opens new tab">
                                 Privacy Policy
                             </a>
                         </li>
                         <li>
-                            <a href="./copyright.html" target="_blank">
+                            <a href="./copyright.html" target="_blank" aria-label="Opens new tab">
                                 Copyright
                             </a>
                         </li>

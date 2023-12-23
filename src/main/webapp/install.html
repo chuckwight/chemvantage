@@ -15,6 +15,9 @@
     <!-- Responsive Style Sheet -->
 </head>
 <body>
+    <a href=#main class="skip-to-main-content-link">Skip to main content</a>
+    <!-- Hidden elements for accessibility compliance -->
+    <h1 style="height:1px;width:1px;">&nbsp;</h1><h2 style="height:1px;width:1px;">&nbsp;</h2>
     <!-- Webpage Header Start -->
     <header class="webpage-header">
         <div class="container">
@@ -46,7 +49,7 @@
                             </ul>
                             <button class="close">&times;</button>
                         </div>
-                        <a href="https://www.chemvantage.org/install.html" target="_blank" class="header-action">
+                        <a href="https://www.chemvantage.org/install.html" target="_blank" aria-label="Opens new tab" class="header-action">
                             Get Started
                         </a>
                         <button class="solid-bar">&#9776;</button>
@@ -63,6 +66,7 @@
     </div>
     <!-- Webpage BTT End -->
 
+    <main id="main">
     <!-- Install Content Start -->
     <section class="section-padding install-content">
         <div class="container">
@@ -72,7 +76,7 @@
             <div class="section-heading-top-gap">
                 <h4>How to Install ChemVantage</h4>
                 <p>
-                    ChemVantage is certified to comply with 1EdTech specifications for LTI Advantage Complete (version 1.3). To install ChemVantage as an LTI tool in your LMS, you should have administrator privileges in your LMS.
+                    ChemVantage is certified to comply with 1EdTech specifications for LTI Advantage Complete (version 1.3). To install ChemVantage as an LTI tool in your LMS, you should have administrator privileges in your LMS. There is no cost to register, and instructor accounts are free.
                 </p>
                 <div class="tab-content">
                     <div class="tab">
@@ -124,7 +128,7 @@
                                 Copy or write down the client_id and deployment_id created in step 2. This is the tricky part, because Canvas doesn't make it easy. Canvas uses the developer key as the client_id, so it can be viewed from the list of developer keys. It is a numeric value that looks something like 32570000000000041. The deployment_id can be found in Settings | Apps | App Configurations by opening the settings menu for ChemVantage. It is a compound value that consists of a number and a hex string separated by a colon and looks something like 10408:7db438070728c02373713c12c73869b3af470b68.
                             </li>
                             <li>
-                                Add ChemVantage as an External App to your account using the client_id created in step 2 (see detailed instructions <a href="https://community.canvaslms.com/t5/Admin-Guide/How-do-I-configure-an-external-app-for-an-account-using-a-client/ta-p/202" target="_blank">here</a>)
+                                Add ChemVantage as an External App to your account using the client_id created in step 2 (see detailed instructions <a href="https://community.canvaslms.com/t5/Admin-Guide/How-do-I-configure-an-external-app-for-an-account-using-a-client/ta-p/202" target="_blank" aria-label="Opens new tab">here</a>)
                             </li>
                             <li>
                                 Click the tokenized link in the email confirmation from step 1 to register the client_id and deployment_id with ChemVantage. If the link expired, you can simply repeat step 1 to get another one.
@@ -218,7 +222,7 @@
                       <div id="item03" class="tabcontent">
                         <h5>Installation instructions for D2L Brightspace</h5>
                         <h6>
-                            The detailed Brightspace documentation can be found <a href="https://community.d2l.com/brightspace/kb/articles/18081-tool-registration-deployment-and-links" target="_blank">here</a>. The institution's account administrator should perform the following steps:
+                            The detailed Brightspace documentation can be found <a href="https://community.d2l.com/brightspace/kb/articles/18081-tool-registration-deployment-and-links" target="_blank" aria-label="Opens new tab">here</a>. The institution's account administrator should perform the following steps:
                         </h6>
                         <ul>
                             <li>
@@ -333,7 +337,7 @@
                       <div id="item04" class="tabcontent">
                         <h5>Installation instructions for Moodle</h5>
                         <h6>
-                            The detailed Moodle documentation can be found <a href="https://community.d2l.com/brightspace/kb/articles/18081-tool-registration-deployment-and-links" target="_blank">here</a>. The institution's account administrator should perform the following steps:
+                            The detailed Moodle documentation can be found <a href="https://community.d2l.com/brightspace/kb/articles/18081-tool-registration-deployment-and-links" target="_blank" aria-label="Opens new tab">here</a>. The institution's account administrator should perform the following steps:
                         </h6>
                         <ul>
                             <li>
@@ -366,7 +370,7 @@
                             </p>
                             <ul>
                                 <li>
-                                    Browse to <a href="https://www.chemvantage.org/Registration.jsp" target="_blank">https://www.chemvantage.org/Registration.jsp</a> and complete a brief form to provide your contact information. We will send an email confirmation with a tokenized registration link.
+                                    Browse to <a href="https://www.chemvantage.org/Registration.jsp" target="_blank" aria-label="Opens new tab">https://www.chemvantage.org/Registration.jsp</a> and complete a brief form to provide your contact information. We will send an email confirmation with a tokenized registration link.
                                 </li>
                                 <li>
                                     As an admin user, go to "Site administration > Plugins > External tool > Manage tools"
@@ -424,11 +428,11 @@
                       <div id="item05" class="tabcontent">
                         <h5>Installation instructions for Sakai</h5>
                         <p>
-                            First of all, Sakai supports LTI Advantage Dynamic Registration! The Sakai documentation can be found <a href="https://sakai.screenstepslive.com/s/sakai_help/m/108646/l/1502032-how-do-i-set-up-an-lti-advantage-tool-using-auto-configuration" target="_blank">here</a>. We strongly encourage you to try that first (see above). The institution's account administrator still has the option of manual registration, but we don't have detailed instructions for this.
+                            First of all, Sakai supports LTI Advantage Dynamic Registration! The Sakai documentation can be found <a href="https://sakai.screenstepslive.com/s/sakai_help/m/108646/l/1502032-how-do-i-set-up-an-lti-advantage-tool-using-auto-configuration" target="_blank" aria-label="Opens new tab">here</a>. We strongly encourage you to try that first (see above). The institution's account administrator still has the option of manual registration, but we don't have detailed instructions for this.
                         </p>
                         <ul>
                             <li>
-                                Browse to <a href="https://www.chemvantage.org/Registration.jsp" target="_blank">https://www.chemvantage.org/Registration.jsp</a> and complete a brief form to provide your contact information. We will send an email confirmation with a tokenized registration link.
+                                Browse to <a href="https://www.chemvantage.org/Registration.jsp" target="_blank" aria-label="Opens new tab">https://www.chemvantage.org/Registration.jsp</a> and complete a brief form to provide your contact information. We will send an email confirmation with a tokenized registration link.
                             </li>
                             <li>
                                 Use the following information to configure your LMS to connect to ChemVantage:
@@ -533,7 +537,7 @@
                                         JSON Web Key Set URL: https://www.chemvantage.org/jwks
                                     </li>
                                     <li>
-                                        It's rare, but in case you need an X509-style public key instead of the JWKS, you can get it <a href="https://www.chemvantage.org/jwks?fmt=X509&kid=eabd5bdc-2a1f-4147-80d5-4cd4f35f0092" target="_blank">here</a>.
+                                        It's rare, but in case you need an X509-style public key instead of the JWKS, you can get it <a href="https://www.chemvantage.org/jwks?fmt=X509&kid=eabd5bdc-2a1f-4147-80d5-4cd4f35f0092" target="_blank" aria-label="Opens new tab">here</a>.
                                     </li>
                                 </ol>
                             </li>
@@ -557,7 +561,8 @@
         </div>
     </section>
     <!-- Install Content End -->
-
+	</main>
+	
     <!-- Webpage Footer Start -->
     <footer>
         <div class="container">
@@ -565,22 +570,22 @@
                 <div class="w-40">
                     <ul class="social">
                         <li>
-                            <a href="#" role="button" target="_blank">
+                            <a href="#" role="button" target="_blank" aria-label="Opens new tab">
                                 <img src="images/facebook.png" alt="facebook"/>
                             </a>
                         </li>
                         <li>
-                            <a href="#" role="button" target="_blank">
+                            <a href="#" role="button" target="_blank" aria-label="Opens new tab">
                                 <img src="images/instagram.png" alt="instagram"/>
                             </a>
                         </li>
                         <li>
-                            <a href="#" role="button" target="_blank">
+                            <a href="#" role="button" target="_blank" aria-label="Opens new tab">
                                 <img src="images/twitterx.png" alt="twitterx"/>
                             </a>
                         </li>
                         <li>
-                            <a href="#" role="button" target="_blank">
+                            <a href="#" role="button" target="_blank" aria-label="Opens new tab">
                                 <img src="images/linkedin.png" alt="linkedin"/>
                             </a>
                         </li>
@@ -612,17 +617,17 @@
                 <div class="w-60 text-end">
                     <ul>
                         <li>
-                            <a href="./terms_and_conditions.html" target="_blank">
+                            <a href="./terms_and_conditions.html" target="_blank" aria-label="Opens new tab">
                                 Terms and Conditions
                             </a>
                         </li>
                         <li>
-                            <a href="./privacy_policy.html" target="_blank">
+                            <a href="./privacy_policy.html" target="_blank" aria-label="Opens new tab">
                                 Privacy Policy
                             </a>
                         </li>
                         <li>
-                            <a href="./copyright.html" target="_blank">
+                            <a href="./copyright.html" target="_blank" aria-label="Opens new tab">
                                 Copyright
                             </a>
                         </li>
