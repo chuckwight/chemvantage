@@ -1,0 +1,111 @@
+:root {
+    --red: #ff272a;
+    --green: #70b31c;
+    --blue: #00347f;
+    --black: #000000;
+    --white: #ffffff;
+    --text: #364964;
+    --footer-text: #8b8d8a;
+    --g-white: #f9fff2;
+    --body-white: #fdfffc;
+    --body-off-white: #f1f1f1;
+    --footer-bg: #151811;
+    --radius-sm: 3px;
+    --radius-md: 5px;
+    --radius-large: 25px;
+    --radius-round: 50%;
+    --h1: 30px;
+    --h2: 25px;
+    --h3: 20px;
+    --h4: 19px;
+    --h5: 18px;
+    --h6: 16px;
+    --large: 19px;
+    --base: 16px;
+    --small: 14px;
+    --transition: all ease 0.5s;
+    --font-normal: "Poppins", sans-serif;
+}
+
+h1 {
+	font-weight: 600;
+    position: relative;
+    top: 0;
+    left: 0;
+    padding-left: 12px;
+    line-height: 1.3;
+    color: navy;
+}
+
+h1::after {
+    position: absolute;
+    content: '';
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 6px;
+    background-color: var(--green);
+    border-radius: var(--radius-md);
+    -webkit-border-radius: var(--radius-md);
+    -moz-border-radius: var(--radius-md);
+    -ms-border-radius: var(--radius-md);
+    -o-border-radius: var(--radius-md);
+}
+
+h2 {
+	font-weight: 500;
+	color: navy
+}
+
+h3,h4,h5,h6 {
+	font-weight: 400;
+	color: navy
+}
+body {
+    background-color: var(--body-white);
+    font-family: var(--font-normal);
+    font-size: var(--base);
+    color: var(--text);
+}
+.skip-to-main-content-link {
+  background-color: black;
+  color: white;
+  opacity: 0;
+  position: absolute;
+  z-index: 999;
+}
+.skip-to-main-content-link:focus {
+  display: inline;
+  opacity: 1;
+}
+a:focus {
+    border: solid green 2px;
+}
+
+.btn {
+    padding: 6px 24px;
+    font-weight: 500;
+    font-size: var(--base);
+    border-radius: var(--radius-large);
+    -webkit-border-radius: var(--radius-large);
+    -moz-border-radius: var(--radius-large);
+    -ms-border-radius: var(--radius-large);
+    -o-border-radius: var(--radius-large);
+    transition: var(--transition);
+    -webkit-transition: var(--transition);
+    -moz-transition: var(--transition);
+    -ms-transition: var(--transition);
+    -o-transition: var(--transition);
+    cursor: pointer;
+    color: var(--blue);
+    border: 2px solid var(--green);
+    background-color: transparent;
+    text-decoration: none;
+}
+.btn:hover {
+	color: var(--white);
+    background-color: var(--green);
+    border: 2px solid transparent;
+}
+
+

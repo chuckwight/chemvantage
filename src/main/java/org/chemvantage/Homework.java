@@ -173,7 +173,7 @@ public class Homework extends HttpServlet {
 			}
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
 			
-			buf.append("<h2>Homework - " + a.title + "</h2>");
+			buf.append("<h1>Homework</1><h2>" + a.title + "</h2>");
 			buf.append("<h3>Instructor Page</h3>");
 			
 			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("This assignment allows an unlimited number of submissions for each homework question.<br/>");
@@ -183,10 +183,10 @@ public class Homework extends HttpServlet {
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + "'>Customize this assignment</a> by selecting the assigned question items and selecting the number of submissions allowed for each question.</LI>"
 					+ (supportsMembership?"<LI><a href='/Homework?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' homework scores</a></LI>":"")
-					+ "</UL>");
-			buf.append("<a style='text-decoration: none' href='/Homework?sig=" + user.getTokenSignature() + "'>"
-					+ "<button style='display: block; width: 500px; border: 1 px; background-color: #00FFFF; color: black; padding: 14px 28px; font-size: 18px; text-align: center; cursor: pointer'>"
-					+ "Show This Assignment (recommended)</button></a><br/>");
+					+ "</UL><br/>");
+			
+			buf.append("<a href='/Homework?sig=" + user.getTokenSignature() + "' class='btn'>Show This Assignment (recommended)</a><br/><br/>");
+			
 		} catch (Exception e) {
 			buf.append("<br/>Instructor page error: " + e.getMessage());
 		}
@@ -249,10 +249,8 @@ public class Homework extends HttpServlet {
 			if (user.isAnonymous()) buf.append(Subject.banner);  // present the ChemVantage banner
 			
 			// START the presentation of the Homework assignment
-			buf.append("<h2>Homework Exercises - " + hwa.title + "</h2>");
+			buf.append("<h1>Homework Exercises</h1><h2>" + hwa.title + "</h2>");
 
-			if (user.isAnonymous())	buf.append("<h3><font color=#EE0000>Anonymous User</font></h3>");
-			
 			buf.append("Homework Rules<UL>");
 			if (hwa.attemptsAllowed==null)
 				buf.append("<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
@@ -282,14 +280,6 @@ public class Homework extends HttpServlet {
 			StringBuffer optionalQuestions = new StringBuffer();
 			optionalQuestions.append("<div style='display:table'>");
 			
-			// this script displays a box for the user to show their work
-			buf.append("<script>"
-					+ "function showWorkBox(qid) {"
-					+ "document.getElementById('showWork'+qid).style.display='';"
-					+ "document.getElementById('answer'+qid).placeholder='Enter your answer here';"
-					+ "}"
-					+ "</script>");
-			
 			// This is the main loop for presenting assigned and optional questions in order of increasing difficulty:
 			int i=1;
 			int j=1;
@@ -318,7 +308,7 @@ public class Homework extends HttpServlet {
 						+ "<div style='display:table-cell;vertical-align:text-top;padding-right:10px;'><b>" + (assigned?i:j) + ".</b></div>"
 						+ "<div style='display:table-cell'>" + q.print(workStrings.get(q.id),"",attemptsRemaining) 
 						+ (q.id == hintQuestionId?"Hint:<br>" + q.getHint():"")
-						+ "<INPUT id=sub" + q.id + " TYPE=SUBMIT VALUE='Grade This Exercise'><p>"
+						+ "<INPUT id=sub" + q.id + " TYPE=SUBMIT class='btn' VALUE='Grade This Exercise'><p>"
 						+ "</div></div></FORM>\n");
 				if (assigned) {
 					assignedQuestions.append(questionBuffer);
@@ -329,13 +319,6 @@ public class Homework extends HttpServlet {
 				}
 			}
 			buf.append((i>1?"<h4>Assigned Exercises</h4>":"") + assignedQuestions + "</div>" + (i>1 && j>1?"<h4>Optional Exercises</h4>":"") + optionalQuestions + "</div>");
-			buf.append("<SCRIPT>"
-					+ "function waitForScore(qid) {"
-					+ " let b = document.getElementById('sub' + qid);"
-					+ " b.disabled = true;"
-					+ " b.value = 'Please wait a moment while we score your response.';"
-					+ "}"
-					+ "</SCRIPT>");
 		} catch (Exception e) {
 			// buf.append("Sorry, there was an unexpected error: " + e.getMessage()==null?e.toString():e.getMessage());
 			Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Error during Homework.printHomework: ", e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString() + "<br/>" + user.getId());
@@ -369,7 +352,7 @@ public class Homework extends HttpServlet {
 				for (HWTransaction t : transactions) if (t.assignmentId==hwa.id.longValue()) priorAttempts.add(t);
 				
 				if (priorAttempts.size() >= hwa.attemptsAllowed) {
-					buf.append(Subject.banner 
+					buf.append("<h1>Homework</h1>"
 						+ "<h2>Sorry, you are only allowed " + hwa.attemptsAllowed + " attempt" + (hwa.attemptsAllowed==1?"":"s") + " for this question.</h2>");
 					DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 					buf.append("<table><tr><th>Transaction Number</th><th>Graded</th><th>Score</th></tr>");
@@ -413,7 +396,8 @@ public class Homework extends HttpServlet {
 			}
 			debug.append("recent transactions = "+recentTransactions.size() + "...");
 			if (secondsRemaining > 0 && !solvedRecently) {  
-				buf.append("<h2>Please Wait For The Retry Delay To Complete</h2>");
+				buf.append("<h1>Homework</h1>"
+						+ "<h2>Please Wait For The Retry Delay To Complete</h2>");
 				buf.append(df.format(now));
 				buf.append("<p>The retry delay for this homework problem is " + (user.isAnonymous()?retryDelayMinutes+" minutes. ":"<span id=delay style='color: #EE0000'></span>") + "<br/><br/>");
 				buf.append("Please take these few moments to check your work carefully.  You can sometimes find alternate routes to the "
@@ -432,44 +416,16 @@ public class Homework extends HttpServlet {
 							+ q.print(showWork,studentAnswer) + "<br>");
 
 					buf.append("<INPUT TYPE=SUBMIT id='RetryButton' DISABLED=true VALUE='Grade This Exercise'></FORM>");
-					buf.append("<SCRIPT language='JavaScript'>"
-							+ "var seconds;var minutes;var oddSeconds;"
-							+ "var endTime = new Date().getTime() + " + secondsRemaining + "*1000;"
-							+ "function countdown() {"
-							+ " var now = new Date().getTime();"
-							+ " seconds=Math.round((endTime-now)/1000);"
-							+ " minutes = seconds<0?Math.ceil(seconds/60):Math.floor(seconds/60);"
-							+ " oddSeconds = seconds%60;"
-							+ " if (seconds > 0) {"
-							+ "  document.getElementById('delay').innerHTML = minutes + ' minutes ' + oddSeconds + ' seconds.';"
-							+ "  setTimeout('countdown()',1000);"
-							+ " }"
-							+ " else {"
-							+ "  document.getElementById('delay').innerHTML = minutes + ' minutes ' + oddSeconds + ' seconds.';"
-							+ "  document.getElementById('RetryButton').disabled=false;"
-							+ " }"
-							+ "}"
-							+ "function waitForScore() {"
-							+ " let b = document.getElementById('RetryButton');"
-							+ " b.disabled = true;"
-							+ " b.value = 'Please wait a moment while we score your response.';"
-							+ "}"
-							+ "countdown();");
-					buf.append("function showWorkBox(qid) {"  // this script displays a box for the user to show their work
-							+ "document.getElementById('showWork'+qid).style.display='';"
-							+ "document.getElementById('answer'+qid).placeholder='Enter your answer here';"
-							+ "}"
-							+ "showWorkBox(" + q.id + ");");
-					buf.append("</SCRIPT>");
+					buf.append("<SCRIPT>"
+							+ "setEndTime(" + secondsRemaining + ");"
+							+ "countdown();"
+							+ "</SCRIPT>");
 				
 				return buf.toString();
 			}
 			
-			if (user.isAnonymous()) buf.append(Subject.banner);
+			buf.append("<h1>Homework Results</h1><h2>" + hwa.title + "</h2>\n");
 			
-			buf.append("<h2>Homework Results - " + hwa.title + "</h2>\n");
-			
-			if (user.isAnonymous()) buf.append("<h3><font color=#EE0000>Anonymous User</font></h3>");
 			buf.append(df.format(now));
 			
 			int studentScore = q.isCorrect(studentAnswer)?q.pointValue:0;
@@ -622,7 +578,7 @@ public class Homework extends HttpServlet {
 
 			boolean offerHint = studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id);
 
-			buf.append(ajaxJavaScript(user.getTokenSignature()));
+			//buf.append(ajaxJavaScript(user.getTokenSignature()));
 			
 			if (!user.isAnonymous()) {
 				if (studentScore>0 || user.isInstructor()) {
@@ -651,7 +607,7 @@ public class Homework extends HttpServlet {
 		}
 		return buf.toString();
 	}
-
+/*
 	static String ajaxJavaScript(String signature) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,params,studentAnswer,note,email) {\n"
@@ -739,30 +695,9 @@ public class Homework extends HttpServlet {
 		+ "}\n"
 		+ "</SCRIPT>";
 	}
-
+*/
 	static String fiveStars() {
 		StringBuffer buf = new StringBuffer();
-
-		buf.append("<script type='text/javascript'>\n"
-				+ "<!--\n"
-				+ "  var star1 = new Image(); star1.src='images/star1.gif';"
-				+ "  var star2 = new Image(); star2.src='images/star2.gif';"
-				+ "  var set = false;\n"
-				+ "  function showStars(n) {"
-				+ "    if (!set) {"
-				+ "      document.getElementById('vote').innerHTML=(n==0?'(click a star)':''+n+(n>1?' stars':' star'));"
-				+ "      for (i=1;i<6;i++) {document.getElementById(i).src=(i<=n?star2.src:star1.src)}"
-				+ "    }"
-				+ "  }\n"
-				+ "  function setStars(n) {"
-				+ "    if (!set) {"
-				+ "      ajaxStars(n);"
-				+ "      set = true;"
-				+ "      document.getElementById('sliderspan').style='display:none';"
-				+ "    }"
-				+ "  }\n"
-				+ "// -->\n"
-				+ "</script>\n");
 
 		buf.append("Please rate your overall experience with ChemVantage:<br />\n"
 				+ "<span id='vote' style='font-family:tahoma; color:#EE0000;'>(click a star):</span><br>");
@@ -907,7 +842,7 @@ public class Homework extends HttpServlet {
 			}
 			buf.append("</table><br/>");
 			if (nMismatched > 0) {
-				buf.append(ajaxJavaScript(user.getTokenSignature()));
+				//buf.append(ajaxJavaScript(user.getTokenSignature()));
 				buf.append("You may use the individual 'sync' buttons above to resubmit any ChemVantage score to the LMS. Note that in some cases, mismatched scores are expected (e.g., when "
 						+ "the instructor overrides a score or when a late submission is not accepted by the LMS). You may have to adjust the settings in your LMS to accept the "
 						+ "revised score (e.g., change the due date, grade override or allowed number of submissions). ");
@@ -982,7 +917,7 @@ public class Homework extends HttpServlet {
 				buf.append("</td></tr>");
 			}
 			buf.append("</table><br/>");
-			buf.append(ajaxJavaScript(user.getTokenSignature()));
+			//buf.append(ajaxJavaScript(user.getTokenSignature()));
 		} catch (Exception e) {
 			buf.append("Error: " + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString());
 		}

@@ -135,7 +135,7 @@ String sig = Long.toHexString(encrypt);
                         <p>
                             Each ChemVantage quiz consists of 10 short-answer question items randomly selected from a bank of 60-80 items. Question types include multiple choice, true/false, checkbox, fill-in-the-blank, and numeric answers. The quizzes are designed to ensure that students have completed the reading assignment before coming to class. Students are permitted to repeat the quizzes (in the spirit of being a learning tool rather than an assessment). However, it is unlikely that any two quizzes will contain exactly the same set of questions. Of course, you can configure your LMS to restrict the number of retries. In my classes, I encourage students to collaborate on quizzes as a way of encouraging them to form study groups. A group of three students will have to take at least 3 quizzes together for everyone to get credit for completing the assignment.
                         </p>
-                        <a href="https://www.chemvantage.org/Quiz?sig=<%= sig %>" target="_blank" aria-label="Opens new tab" class="btn btn-two">
+                        <a href="/Quiz?sig=<%= sig %>" target="_blank" aria-label="Opens new tab" class="btn btn-two">
                             Try a Sample Quiz
                         </a>
                     </div>
@@ -155,7 +155,7 @@ String sig = Long.toHexString(encrypt);
                         <p>
                             Homework assignments give students practice in solving quantitative problems having numeric answers. Answers are scored correct if the solution agrees with the solution found in the database to within a specified tolerance (indicated for each problem). For many problems, answers must be expressed with the appropriate number of significant figures. Students are allowed to rework incorrectly solved problems and resubmit the answers. Nearly all of the problems are parameterized, so the correct answer is different for each student. This makes them suitable for collaboration and working in teams, because even though the group may work to find a correct algorithm for solving a problem, each student will have to use the algorithm to find the detailed solution to his or her own problem. If students get stuck and needs help, they can email a link to an instructor or teaching assistant that shows their work and previous submissions.
                         </p>
-                        <a href="https://www.chemvantage.org/Homework?sig=<%= sig %>" target="_blank" aria-label="Opens new tab" class="btn btn-two">
+                        <a href="/Homework?sig=<%= sig %>" target="_blank" aria-label="Opens new tab" class="btn btn-two">
                             Try a Sample Homework
                         </a>
                     </div>
@@ -183,7 +183,7 @@ String sig = Long.toHexString(encrypt);
                         <p>
                             The keys to success for this type of assignment are 1) colocating the reading assignment with a formative assessment, and 2) assigning at least a small number of points for completing the task. 
                         </p>
-                        <a href="https://www.chemvantage.org/SmartText?sig=<%= sig %>" class="btn btn-two">
+                        <a href="/SmartText?sig=<%= sig %>" class="btn btn-two">
                             See a sample SmartText assignment
                         </a>
                     </div>
@@ -203,7 +203,7 @@ String sig = Long.toHexString(encrypt);
                         <p>
                             Some of the more important lessons in the text have been captured as 10-minute instructional videos. Most of the videos have short (two-question) quizzes embedded in the video to ensure that students are watching and comprehending. You can assign these to students for 3-5 points. Even if the video has no embedded quizzes, ChemVantage will only award the points if the student finishes the video to the end.
                         </p>
-                        <a href="https://www.chemvantage.org/Video.jsp?VideoId=5691392549453824&sig=<%= sig %>" target="_blank" aria-label="Opens new tab" class="btn btn-two">
+                        <a href="/Video.jsp?VideoId=5691392549453824&sig=<%= sig %>" target="_blank" aria-label="Opens new tab" class="btn btn-two">
                             Try a Sample Video
                         </a>
                     </div>
@@ -223,7 +223,7 @@ String sig = Long.toHexString(encrypt);
                         <p>
                             Students can take timed practice exams that draw questions from any group of 3 or more topics. Each exam is designed to take 60 minutes or less to complete, and includes a selection of 10 quiz questions worth 2 points each, 5 of the easier homework problems at 10 points each, and 2 more challenging homework problems worth 15 points each. The scores on each exam are disaggregated by topic to reveal the student's areas of strength and weakness. Practice exams may be repeated as often as desired. Questions are drawn at random from the database, and the numeric questions are parameterized, making it extremely unlikely that a student will ever get two identical practice exams. Instructors may (optionally) review the exam results and award partial credit.
                         </p>
-                        <a href="https://www.chemvantage.org/PracticeExam?sig=<%= sig %>" target="_blank" aria-label="Opens new tab" class="btn btn-two">
+                        <a href="/PracticeExam?sig=<%= sig %>" target="_blank" aria-label="Opens new tab" class="btn btn-two">
                             Try a Sample Practice Exam
                         </a>
                     </div>
