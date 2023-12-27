@@ -213,7 +213,7 @@ public class Subject {
 	
 	public static String footer = "</main>"
 			+ "<footer><hr/>"
-			+ "<a href=/index.html><img src=/images/logo_sq.png alt='ChemVantage logo' style='vertical-align:middle;width:30px' /><span style='color: navy;font-weight: bold;text-decoration: none;'>ChemVantage</span></a> | "
+			+ "<a href=/index.html><img src=/images/logo_sq.png alt='ChemVantage logo' style='vertical-align:middle;width:30px' /><span style='color: #000080;font-weight: bold;text-decoration: none;'>ChemVantage</span></a> | "
 			+ "<a href=/terms_and_conditions.html#terms>Terms and Conditions of Use</a> | "
 			+ "<a href=/privacy_policy.html#privacy>Privacy Policy</a> | "
 			+ "<a href=/copyright.html#copyright>Copyright</a></footer>"
@@ -223,7 +223,7 @@ public class Subject {
 
 	public static String banner = "<div style='padding=30px; font-family: Calibri,Arial,sans-serif;'>"
 			+ "<a href='/' style='text-decoration: none;'>"
-			+ "	<span style='color: navy; font-size: 2em; font-weight: bold;'>ChemVantage</span><br/>\n"
+			+ "	<span style='color: #000080; font-size: 2em; font-weight: bold;'>ChemVantage</span><br/>\n"
 			+ "</a>"
 			+ "	An Open Education Resource for General Chemistry<br/>"
 			+ "	</div>\n";

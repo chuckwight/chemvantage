@@ -34,7 +34,7 @@ h1 {
     left: 0;
     padding-left: 12px;
     line-height: 1.3;
-    color: navy;
+    color: #000080;
 }
 
 h1::after {
@@ -54,12 +54,12 @@ h1::after {
 
 h2 {
 	font-weight: 500;
-	color: navy
+	color: #000080
 }
 
 h3,h4,h5,h6 {
 	font-weight: 400;
-	color: navy
+	color: #000080
 }
 body {
     background-color: var(--body-white);
