@@ -107,5 +107,9 @@ a:focus {
     background-color: var(--green);
     border: 2px solid transparent;
 }
-
+.btn:focus {
+    color: var(--white);
+    background-color: var(--green);
+    border: 2px solid transparent;
+}
 

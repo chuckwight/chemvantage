@@ -93,7 +93,7 @@ public class Feedback extends HttpServlet {
 	throws ServletException, IOException {
 		try {
 			User user = User.getUser(request.getParameter("sig"));
-			if (user==null) throw new Exception();
+			if (user==null) user = new User(); // anonymous user
 			
 			response.setContentType("text/html");
 			PrintWriter out = response.getWriter();
@@ -131,8 +131,7 @@ public class Feedback extends HttpServlet {
 
 	String feedbackForm(User user) {
 		StringBuffer buf = new StringBuffer();
-		buf.append(Subject.banner);
-		buf.append("<h2>Feedback Page</h2>");
+		buf.append("<h1>ChemVantage Feedback Page</h1>");
 
 		buf.append("Your comments and opinions are important to us.  We use this<br>"
 				+ "information to improve the functionality of the site for our users.<p>");
@@ -192,9 +191,10 @@ public class Feedback extends HttpServlet {
 				+ "\">"
 				+ "</FORM>");
 		
-		String reports = viewUserFeedback(user);
-		if (!reports.isEmpty()) buf.append("<hr><h3>" + (user.isChemVantageAdmin()?"User":"Your") + " Feedback</h3>" + reports);
-		
+		if (user.isChemVantageAdmin()) {
+			String reports = viewUserFeedback(user);
+			if (!reports.isEmpty()) buf.append("<hr><h3>User Feedback</h3>" + reports);
+		}
 		return buf.toString(); 
 	}
 
@@ -204,7 +204,9 @@ public class Feedback extends HttpServlet {
 		try { 
 			if (user.isAnonymous() && !reCaptchaOK(request)) throw new Exception();
 		} catch (Exception e) {
-			return Subject.banner + "<h3>The ReCAPTCHA failed, sorry. Please click the BACK button on your browser and try again.</h3>";
+			return "<h1>Submission Failed</h1>"
+					+ "The ReCAPTCHA was not validated, sorry. "
+					+ "Please click the BACK button on your browser and try again.";
 		}
 		
 		int stars = 0;
@@ -231,8 +233,7 @@ public class Feedback extends HttpServlet {
 			if (email!=null && !email.isEmpty()) sendEmailToAdmin(r,user,email);
 		}
 
-		buf.append(Subject.banner);
-		buf.append("<h2>Feedback Page</h2>");
+		buf.append("<h1>ChemVantage Feedback Page</h1>");
 		buf.append(new Date().toString() + "<p>");
 		buf.append("Thank you for your feedback" + (stars>0?" (" + stars + " stars" + (stars==5?"!":"") + ").":"."));
 		

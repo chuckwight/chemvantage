@@ -179,7 +179,7 @@ public class Quiz extends HttpServlet {
 					+ (supportsMembership?"<LI><a href='/Quiz?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' quiz scores</a></LI>":"")
 					+ "</UL><br/>");
 			
-			buf.append("<a href='/Quiz?sig=" + user.getTokenSignature() + "' class='btn'>Show This Assignment (recommended)</a><br/><br/>");
+			buf.append("<a href='/Quiz?sig=" + user.getTokenSignature() + "' class='btn'>Show This Assignment</a><br/><br/>");
 			
 	/*		
 			buf.append("<a style='text-decoration: none' href='/Quiz?sig=" + user.getTokenSignature() + "'>"
@@ -249,7 +249,7 @@ public class Quiz extends HttpServlet {
 					+ "	<li>Each quiz must be completed within " + (timeAllowed / 60) + " minutes of the time when it is first downloaded.</LI>"
 					+ (qa.attemptsAllowed==null?"<li>You may repeat this quiz as many times as you wish, to improve your score.</LI>":"<LI>You are allowed " + qa.attemptsAllowed + " attempts of this quiz assignment. This is attempt #" + nAttempts + ".</LI>")
 					+ "	<li>ChemVantage always reports your best score on this assignment to your class LMS.</LI>"
-					+ "	</ul>");
+					+ "	</ul>\n");
 			
 			buf.append("<div id='timer0' style='color: #EE0000'></div>"
 					+ "	<div id='ctrl0' style='font-size: 50%; color: #EE0000'><a href=javascript:toggleTimers() >hide timers</a><p></div>");
@@ -302,7 +302,7 @@ public class Quiz extends HttpServlet {
 			
 			qt.putPossibleScore(possibleScore);
 			ofy().save().entity(qt).now();
-			buf.append("</OL>");
+			buf.append("</OL>\n");
 		
 			buf.append("<div id='timer1' style='color: #EE0000'></div>"
 					+ "	<div id='ctrl1' style='font-size: 50%; color: #EE0000'><a href=javascript:toggleTimers() >hide timers</a><p></div>");
@@ -310,12 +310,16 @@ public class Quiz extends HttpServlet {
 			buf.append("<input type=submit class='btn' value='Grade This Quiz'/>"
 					+ "</FORM>");
 			
-			buf.append("<script>startTimers(" + new Date(qt.getDownloaded().getTime() + timeAllowed * 1000).getTime() + ");</script>");
+			buf.append("<script>"
+					+ "startTimers(" + new Date(qt.getDownloaded().getTime() + timeAllowed * 1000).getTime() + ");"
+					+ "function timesUp() {"
+					+ "document.getElementById('Quiz').submit();}"
+					+ "</script>");
 			
 		} catch (Exception e) {
 			return "<h2>Sorry, the quiz failed</h2>" + e.getMessage()==null?e.toString():e.getMessage() + buf.toString() + "<br/>" + debug.toString(); 
 		}
-		
+		buf.append("<script>function showWorkBox() {}</script>"); // prevents javascript error showing the ShowWork box for numeric questions
 		return buf.toString();
 	}
 	
@@ -441,7 +445,7 @@ public class Quiz extends HttpServlet {
 					}
 					
 					if (nAnswersEligible > 0) {
-						buf.append("<a id=wrongAnsLink href=# onClick=document.getElementById('wrongAnsLink').style='display:none';document.getElementById('wrongAnsDiv').style='display:inline'>Show me</a>");
+						buf.append("<a id=wrongAnsLink class='btn' href=# onClick=document.getElementById('wrongAnsLink').style='display:none';document.getElementById('wrongAnsDiv').style='display:inline'>show me</a> ");
 						buf.append("<div id=wrongAnsDiv style='display:none'>");
 						buf.append("The correct answer" + (nAnswersEligible>1?"s ":" ") + (nAnswersEligible<wrongAnswers?"to " + nAnswersEligible + " of these ":"") + (nAnswersEligible==1?"is":"are") + " shown below. ");
 						if (nAnswersEligible < wrongAnswers) buf.append("The more questions you answer correctly, the more correct answers to missed questions will be displayed.");
@@ -453,6 +457,7 @@ public class Quiz extends HttpServlet {
 						buf.append("</OL>");
 						buf.append("</div>");
 					}  else buf.append("You must answer at least one question correctly to view the correct answers to questions that you missed. ");
+					buf.append("<br/><br/>");
 				}
 			}
 			
@@ -536,7 +541,7 @@ public class Quiz extends HttpServlet {
 			buf.append("<h1>Quiz Transactions</h1>");
 			if (for_user_name != null) buf.append("Name: " + for_user_name + "<br/>");
 			buf.append("Topic: "+ a.title + "<br>");
-			buf.append("Assignment ID: " + a.id + "<br/>");
+			//buf.append("Assignment ID: " + a.id + "<br/>");
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			buf.append("Valid: " + df.format(new Date()) + "<br/><br/>");
 			

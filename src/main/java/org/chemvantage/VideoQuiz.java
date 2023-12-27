@@ -122,7 +122,7 @@ public class VideoQuiz extends HttpServlet {
 	}
 
 	static String instructorPage(User user, Assignment a) {
-		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
+		if (!user.isInstructor()) return "<h1>You must be logged in as an instructor to view this page</h1>";
 		
 		StringBuffer buf = new StringBuffer();		
 		try {
@@ -130,15 +130,13 @@ public class VideoQuiz extends HttpServlet {
 			
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
 			
-			buf.append("<h2>General Chemistry Video - Instructor Page</h2>");
-			buf.append("Topic covered in this video: " + v.title + "<br/>");
+			buf.append("<h1>General Chemistry Video</h1><h2>" + v.title + "</h2><h3>Instructor Page</h3>");
 			
 			if (supportsMembership) buf.append("From here, you may<UL>"
 					+ "<LI><a href='/VideoQuiz?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' video scores</a></LI>"
 					+ "</UL>");
 			buf.append("<a style='text-decoration: none' href='/VideoQuiz?UserRequest=ShowVideo&sig=" + user.getTokenSignature() + "'>"
-					+ "<button style='display: block; width: 500px; border: 1 px; background-color: #00FFFF; color: black; padding: 14px 28px; font-size: 18px; text-align: center; cursor: pointer;'>"
-					+ "Show This Assignment (recommended)</button></a><br/>");
+					+ "<button class='btn'>Show This Assignment</button></a><br/>");
 		} catch (Exception e) {
 			buf.append("<br/>Instructor page error: " + e.getMessage());
 		}
@@ -160,7 +158,7 @@ public class VideoQuiz extends HttpServlet {
 			if (v.nQuestions==null) v.nQuestions = new int[0];
 			if (v.questionKeys==null) v.questionKeys = new ArrayList<Key<Question>>();
 
-			buf.append("<h4>Please answer these questions before resuming the video:</h4>\n");
+			buf.append("<h1>Video</h1><h2>Please answer these questions before resuming the video:</h2>\n");
 
 			// Check to see if this user has any pending videos on this topic in the last 90 minutes.
 			// Normally, a new VideoTransaction is created when the LTILaunchRequest is made, but sometimes things happen...
@@ -216,7 +214,8 @@ public class VideoQuiz extends HttpServlet {
 		buf.append("<input type=hidden name=VideoId value=" + v.id + ">");
 		buf.append("<input type=hidden name=VideoTransactionId value=" + vt.id + ">");
 		buf.append("<input type=hidden name=Segment value=" + segment + ">");
-		buf.append("<input type=submit value='Submit and Resume the Video'> or <a href=/Video.jsp?Segment=" + segment + "&VideoId=" + v.id + "&sig=" + user.getTokenSignature() + ">Replay This Segment</a>");
+		buf.append("<input type=submit class='btn' value='Submit and Resume the Video'> or "
+				+ "<a href=/Video.jsp?Segment=" + segment + "&VideoId=" + v.id + "&sig=" + user.getTokenSignature() + ">Replay This Segment</a>");
 		buf.append("</form>");
 		} catch (Exception e) {
 			buf.append(e.getMessage());

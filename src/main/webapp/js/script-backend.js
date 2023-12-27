@@ -1,5 +1,5 @@
-const star1 = new Image();
-const star2 = new Image();
+var star1 = new Image();
+var star2 = new Image();
 star1.src = '/images/star1.gif';
 star2.src = '/images/star2.gif';
 var set = false;
@@ -37,18 +37,20 @@ function setStars(n,sig) {
     document.getElementById('sliderspan').style='display:none';
   }
 }
-				
-var seconds;
-var minutes;
-var oddSeconds;
+
 var endMillis;
 function countdown() {
-	var nowMillis = new Date().getTime();
-	var seconds=Math.round((endMillis-nowMillis)/1000);
+	var seconds;
+    var minutes;
+    var oddSeconds;
+    var nowMillis = new Date().getTime();
+    var seconds=Math.round((endMillis-nowMillis)/1000);
 	var minutes = seconds<0?Math.ceil(seconds/60.):Math.floor(seconds/60.);
 	var oddSeconds = seconds%60;
-	for (i=0;i<2;i++) document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ' minutes ' + oddSeconds + ' seconds.';
-	if (seconds < 0) document.Quiz.submit();
+	for (i=0;i<2;i++) try {  // change the display of timer0 and/or timer1 in the parent page
+		    document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ' minutes ' + oddSeconds + ' seconds.';}
+		catch(Exception){}
+    if (seconds <= 0) try { timesUp() } catch (Exception) {} // run a custom script function in the parent page
 	else setTimeout('countdown()',1000);
 }
 function startTimers(m) {
@@ -80,13 +82,7 @@ function confirmSubmission() {
 	else return true;
 }
 
-function showWorkBox(qid) {
-	if (qid==0) return;
-    document.getElementById('showWork'+qid).style.display='';
-    document.getElementById('answer'+qid).placeholder='Enter your answer here';
-}
-
-function ajaxSubmit(url,id,params,studentAnswer,note,email,sig) {
+function ajaxSubmit(url,id,params,studentAnswer,note,email) {
   var xmlhttp;
   if (url.length==0) return false;
   xmlhttp=GetXmlHttpObject();
@@ -100,7 +96,7 @@ function ajaxSubmit(url,id,params,studentAnswer,note,email,sig) {
       '<FONT COLOR=#EE0000><b>Thank you. An editor will review your comment.</b></FONT><p>';
     }
   }
-  url += '&QuestionId=' + id + '&Params=' + params + '&sig=' + sig + '&Notes=' + note + '&Email=' + email + '&StudentAnswer=' + studentAnswer;
+  url += '&QuestionId=' + id + '&Params=' + params + '&Notes=' + note + '&Email=' + email + '&StudentAnswer=' + studentAnswer;
   xmlhttp.open('GET',url,true);
   xmlhttp.send(null);
   return false;
@@ -170,28 +166,6 @@ function GetXmlHttpObject() {
   return null;
 }
 
-var seconds;
-var minutes;
-var oddSeconds;
-var endTime;
-function setEndTime(secondsRemaining) {
-	endTime = new Date().getTime() + secondsRemaining*1000;
-}
-function countdown() {
-  var now = new Date().getTime();
-  seconds=Math.round((endTime-now)/1000);
-  minutes = seconds<0?Math.ceil(seconds/60):Math.floor(seconds/60);
-  oddSeconds = seconds%60;
-  if (seconds > 0) {
-    document.getElementById('delay').innerHTML = minutes + ' minutes ' + oddSeconds + ' seconds.';
-    setTimeout('countdown()',1000);
-  }
-  else {
-    document.getElementById('delay').innerHTML = minutes + ' minutes ' + oddSeconds + ' seconds.';
-    document.getElementById('RetryButton').disabled=false;
-  }
-}
-
 function waitForScore() {
  let b = document.getElementById('RetryButton');
  b.disabled = true;
@@ -204,3 +178,22 @@ function waitForScore(qid) {
  b.value = 'Please wait a moment while we score your response.';
 }
 
+function synchTimer(sig) {
+  var xmlhttp=new XMLHttpRequest();
+  if (xmlhttp==null) {
+    alert ('Sorry, your browser does not support AJAX!');
+    return false;
+  }
+  xmlhttp.onreadystatechange=function() {
+    if (xmlhttp.readyState==4) {
+     const serverNowMillis = xmlhttp.responseText.trim();  // server returned new Date().getTime()
+     endMillis += Date.now() - serverNowMillis;          // corrects for fast or slow browser clock
+    }
+  }
+  var url = 'Poll?UserRequest=Synch&sig=' + sig;
+  timer0.innerHTML = 'synchronizing clocks...';
+  xmlhttp.open('GET',url,true);
+  xmlhttp.send(null);
+  return false;
+}
+				

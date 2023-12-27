@@ -275,7 +275,7 @@ public class Edit extends HttpServlet {
 	}
 	
 	String editorsPage(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer("<h3>Editor's Page</h3>");
+		StringBuffer buf = new StringBuffer("<h1>Editor's Page</h1>");
 		try {
 			int nPending = ofy().load().type(ProposedQuestion.class).count();
 			buf.append("<a href=Edit?UserRequest=Review>"
@@ -435,7 +435,7 @@ public class Edit extends HttpServlet {
 	}
 	
 	String manageOrphanQuestions(HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer(Subject.banner + "<h3>Question Without A ConceptId</h3>");
+		StringBuffer buf = new StringBuffer("<h1>Edit</h1><h2>Question Without A ConceptId</h2>");
 		// find an orphan Question where conceptId==null or conceptId==0 
 		String text = request.getParameter("text");  // starting point for search
 		if (text==null) text = "";
@@ -605,7 +605,7 @@ public class Edit extends HttpServlet {
 	}
 	
 	String topicsForm(HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer("<h3>Manage Quiz/Homework/Exam Topics</h3>");
+		StringBuffer buf = new StringBuffer("<h1>Edit</h1?<h2>Manage Quiz/Homework/Exam Topics</h2>");
 		try {
 			// print the table of topics for this subject:
 			buf.append("<b>" + Subject.getTitle() + "</b>\n");
@@ -987,7 +987,8 @@ public class Edit extends HttpServlet {
 		try {
 			long textId = Long.parseLong(request.getParameter("TextId"));
 			Text t = ofy().load().type(Text.class).id(textId).safe();
-			buf.append("<h3>Manage Chapters</h3>");
+			buf.append("<h1>Edit</h1>"
+					+ "<h2>Manage Chapters</h2>");
 			buf.append("<a href=/Edit?UserRequest=ManageTexts>Return to Manage Texts</a><br/><br/>");
 			buf.append("Title: " + t.title + "<br/>"
 				+ "Author: " + t.author + "<br/>"
@@ -1129,7 +1130,7 @@ public class Edit extends HttpServlet {
 	}
 	
 	String newQuestionForm(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer();
+		StringBuffer buf = new StringBuffer("<h1>Edit</h1><h2>New Question</h2>");
 		Long conceptId = null;
 		try {
 			conceptId = Long.parseLong(request.getParameter("ConceptId"));
@@ -1140,33 +1141,33 @@ public class Edit extends HttpServlet {
 		try {
 			questionType = Integer.parseInt(request.getParameter("QuestionType"));
 			switch (questionType) {
-			case (1): buf.append("<h3>New Multiple-Choice " + assignmentType + " Question</h3>");
+			case (1): buf.append("<h3>Multiple-Choice " + assignmentType + " Question</h3>");
 			buf.append("Fill in the question text and the possible answers "
 					+ "(up to a maximum of 5). Be sure to select the single best "
 					+ "answer to the question."); break;
-			case (2): buf.append("<h3>New True-False " + assignmentType + " Question</h3>");
+			case (2): buf.append("<h3>True-False " + assignmentType + " Question</h3>");
 			buf.append("Write the question as an affirmative statement. Then "
 					+ "indicate below whether the statement is true or false."); break;
-			case (3): buf.append("<h3>New Select-Multiple " + assignmentType + " Question</h3>");
+			case (3): buf.append("<h3>Select-Multiple " + assignmentType + " Question</h3>");
 			buf.append("Fill in the question text and the possible answers "
 					+ "(up to a maximum of 5). Be sure to "
 					+ "select all of the correct answers to the question."); break;
-			case (4): buf.append("<h3>New Fill-in-Word " + assignmentType + " Question</h3>");
+			case (4): buf.append("<h3>Fill-in-Word " + assignmentType + " Question</h3>");
 			buf.append("Start the question text in the upper textarea box. Indicate "
 					+ "the correct answer (and optionally, an alternative correct answer) in "
 					+ "the middle boxes, and the end of the question text below that.  The answers "
 					+ "are not case-sensitive or punctuation-sensitive, but spelling must "
 					+ "be exact."); break;
-			case (5): buf.append("<h3>New Numeric " + assignmentType + " Question</h3>");
+			case (5): buf.append("<h3>Numeric " + assignmentType + " Question</h3>");
 			buf.append("Fill in the question text in the upper textarea box and "
 					+ "the correct numeric answer below. Also indicate the required precision "
 					+ "of the student's response in percent (default = 2%). Use the bottom "
 					+ "textarea box to finish the question text and/or to indicate the "
 					+ "expected dimensions or units of the student's answer."); break;
-			case (6): buf.append("<h3>New Five Star " + assignmentType + " Question</h3>");
+			case (6): buf.append("<h3>Five Star " + assignmentType + " Question</h3>");
 			buf.append("Fill in the question text. The user will be asked to provide a rating "
 					+ "from 1 to 5 stars."); break;
-			case (7): buf.append("<h3>New Essay " + assignmentType + " Question</h3>");
+			case (7): buf.append("<h3>Essay " + assignmentType + " Question</h3>");
 			buf.append("Fill in the question text. The user will be asked to provide a short "
 					+ "essay response."); break;
 			default: buf.append("An unexpected error occurred. Please try again.");
@@ -1241,7 +1242,7 @@ public class Edit extends HttpServlet {
 			Question q = assembleQuestion(request);
 			if (q.requiresParser()) q.setParameters();
 			
-			buf.append("<h3>Preview Question</h3>");
+			buf.append("<h1>Edit</h1><h2>Preview Question</h2>");
 			
 			q.assignmentType = request.getParameter("AssignmentType");
 			if (q.assignmentType==null || q.assignmentType.isEmpty()) q.assignmentType = "Quiz";
@@ -1285,7 +1286,7 @@ public class Edit extends HttpServlet {
 			
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit'>");
 			
-			buf.append("<hr><h3>Continue Editing</h3>");
+			buf.append("<hr><h2>Continue Editing</h2>");
 			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
 			if (topicId>0) buf.append("Topic:" + topicSelectBox(q.topicId) + "<br>");
 			buf.append("Concept:" + conceptSelectBox(conceptId));
@@ -1324,7 +1325,7 @@ public class Edit extends HttpServlet {
 			//Topic t = ofy().load().type(Topic.class).id(q.topicId).safe();
 			Concept c = (q.conceptId==null || q.conceptId==0L)?null:ofy().load().type(Concept.class).id(q.conceptId).now();
 			if (q.requiresParser()) q.setParameters();
-			buf.append("<h3>Current Question</h3>");
+			buf.append("<h1>Edit</h1><h2>Current Question</h2>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
 			//buf.append("Topic: " + t.title + "<br>");
 			buf.append("Concept: " + (c==null?"n/a":c.title) + "<br/>");
@@ -1351,7 +1352,7 @@ public class Edit extends HttpServlet {
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Question' />");
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit' />");
 			
-			buf.append("<hr><h3>Edit This Question</h3>");
+			buf.append("<hr><h2>Edit This Question</h2>");
 			
 			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
 			//buf.append("Topic:" + topicSelectBox(t.id) + "<br>");
@@ -1373,7 +1374,7 @@ public class Edit extends HttpServlet {
 	
 	String reviewProposedQuestion (User user, HttpServletRequest request) {
 		// identifies a ProposedQuestion item, either from a specific questionId or next in the list
-		StringBuffer buf = new StringBuffer("<h3>Proposed Question</h3>");
+		StringBuffer buf = new StringBuffer("<h1>Edit</h1><h2>Proposed Question</h2>");
 		try {
 			List<Key<ProposedQuestion>> pendingQuestionKeys = ofy().load().type(ProposedQuestion.class).keys().list();
 			
@@ -1412,7 +1413,7 @@ public class Edit extends HttpServlet {
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit'>");
 			buf.append("<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + q.authorId + "'>");
 			
-			buf.append("<hr><h3>Edit This Question</h3>");
+			buf.append("<hr><h2>Edit This Question</h2>");
 			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
 			buf.append("Topic:" + topicSelectBox(t.id) + "<br>");
 			
@@ -1621,7 +1622,7 @@ public class Edit extends HttpServlet {
 		}
 		
 		try {
-			buf.append("<h3>Embed quiz questions in a video</h3>");
+			buf.append("<h1>Edit</h1><h2>Embed quiz questions in a video</h2>");
 
 			buf.append("Video: " + v.title + "<p>");
 			

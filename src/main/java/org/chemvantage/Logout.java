@@ -38,7 +38,7 @@ public class Logout extends HttpServlet {
 	}
 
 	static String now(HttpServletRequest request,Exception exception) {
-		StringBuffer buf = new StringBuffer(Subject.banner + "<h3>You are logged out of ChemVantage.</h3>");
+		StringBuffer buf = new StringBuffer("<h1>Logout</h1><h2>You are logged out of ChemVantage.</h2>");
 		buf.append(exception.getMessage()==null?exception.toString():exception.getMessage());
 		buf.append("<br/><br/>Most likely, your access token expired after a period of inactivity. You can simply relaunch the "
 				+ "assignment from your class learning management system. If you think it's a more serious problem, please take "
@@ -55,7 +55,7 @@ public class Logout extends HttpServlet {
 	}
 	
 	static String now(User user) {
-		StringBuffer buf = new StringBuffer(Subject.banner + "<h3>Sorry, there was an unexpected error.</h3>");
+		StringBuffer buf = new StringBuffer("<h1>Logout</h1><h2>Sorry, there was an unexpected error.</h2>");
 		try {
 			ofy().delete().entity(user).now();
 		} catch (Exception e) {}

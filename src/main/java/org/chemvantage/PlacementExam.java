@@ -193,7 +193,7 @@ public class PlacementExam extends HttpServlet {
 			Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
 				
-			buf.append("<h2>General Chemistry Placement Exam - Instructor Page</h2>");
+			buf.append("<h1>Placement Exam</h1><h2>Instructor Page</h2>");
 			
 			buf.append("Many chemistry departments are now using placement exams as an advising tool for students entering General Chemistry "
 					+ "in order to maximize the probability of student success and to lower the D-F-W rate for the course. "
@@ -236,9 +236,8 @@ public class PlacementExam extends HttpServlet {
 				buf.append("<h4>The password for this exam is: " + a.password + "</h4>");
 			}
 			
-			buf.append("<a style='text-decoration: none' href='/PlacementExam?sig=" + user.getTokenSignature() + "'>"
-					+ "<button style='display: block; width: 500px; border: 1 px; background-color: #00FFFF; color: black; padding: 14px 28px; font-size: 18px; text-align: center; cursor: pointer;'>"
-					+ "Show This Assignment (recommended)</button></a>");
+			buf.append("<a href='/PlacementExam?sig=" + user.getTokenSignature() + "'>"
+					+ "<button class='btn'>Show This Assignment</button></a><br/><br/>");
 		} catch (Exception e) {
 			buf.append("<br/>Instructor page error: " + (e.getMessage()==null?e.toString():e.getMessage()));
 		}
@@ -247,8 +246,8 @@ public class PlacementExam extends HttpServlet {
 	
 	static String passwordPrompt(User user,String msg) {
 		StringBuffer buf = new StringBuffer();
-		buf.append(Subject.banner);
-		buf.append("<h3>Enter the password for this assignment</h3>");
+		buf.append("<h1>Placement Exam</h1>");
+		buf.append("<h2>Enter the password for this exam</h2>");
 		if (msg==null) msg="";
 		buf.append("<div id='msgSpan' style='color:#EE0000'>" + msg + "</div><br/>");
 		buf.append("Your instructor should provide you with the password.</br>"
@@ -256,7 +255,7 @@ public class PlacementExam extends HttpServlet {
 				+ "<input type=hidden name=sig value='" + user.getTokenSignature()  + "' />"
 				+ "<input type=hidden name=UserRequest value=PrintExam />"
 				+ "Password: <input type=password size=30 name='ExamPassword' /> "
-				+ "<input id=start type=submit value='Begin the exam' disabled />"
+				+ "<input id=start class='btn' type=submit value='Begin the exam' disabled />"
 				+ "</form><br/><br/>");	
 
   		buf.append("<script>"
@@ -381,16 +380,11 @@ public class PlacementExam extends HttpServlet {
 
 			debug.append("4");
 			
-			// Check to make sure that some questions exist:
-			if (questions.size()==0) return "<h2>General Chemistry Placement Exam</h2>"
-					+ "Thanks for visiting. We are in the process of developing and validating the question items for this exam.<br/><br/>";
-			
 			buf.append("<script>function showWorkBox(qid){}</script>");  // prevents javascript error from Question.print()
 			
 			if (user.isAnonymous()) buf.append(Subject.banner);
 			
-			buf.append("<h2>General Chemistry Placement Exam</h2>");
-			if (user.isAnonymous()) buf.append("Anonymous User<br/>");
+			buf.append("<h1>Placement Exam</h1>");
 			
 			if (a.attemptsAllowed!=null) buf.append("You are allowed " + a.attemptsAllowed + (a.attemptsAllowed==1?" attempt":" attempts") + " on this exam. This is attempt #" + (nAttempts + (resumingExam?0:1)) + ".<br/>");
 			
@@ -401,7 +395,7 @@ public class PlacementExam extends HttpServlet {
 					+ "onSubmit=\"return confirm('Submit this placement exam for grading now. Are you sure?')\">");
 
 			buf.append("<div id='timer0' style='color: #EE0000'></div><div id=ctrl0 style='font-size:50%;color:#EE0000;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
-			buf.append("\n<input type=submit value='Grade This Placement Exam'><p>");
+			buf.append("\n<input type=submit class='btn' value='Grade This Placement Exam'><p>");
 
 			buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "'>");
 			if (a!=null) buf.append("\n<input type=hidden name=AssignmentId value='" + a.id + "'>");
@@ -452,12 +446,19 @@ public class PlacementExam extends HttpServlet {
 			buf.append("\n<input type=hidden name='ExamId' value=" + pt.id + ">");
 			buf.append("\n<input type=hidden name='UserRequest' value='GradeExam'>");
 			buf.append("<div id='timer1' style='color: #EE0000'></div><div id=ctrl1 style='font-size:50%;color:#EE0000;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
-			buf.append("\n<input type=submit value='Grade This Placement Exam'>");
+			buf.append("\n<input type=submit class='btn' value='Grade This Placement Exam'>");
 			buf.append("\n</form>");
 			
 			long endMillis = pt.downloaded.getTime() + timeAllowed*1000L;
-			// this code for displaying/hiding timers and a 30-seconds-remaining alert box
-			buf.append(timerScripts(endMillis)); 
+			buf.append("<script>"
+					+ "startTimers(" + endMillis + ");"
+					+ "function timesUp() {"
+					+ "  try {"
+					+ "	   document.getElementById('PlacementExamForm').submit();"
+					+ "  } catch (Exception) {}"
+					+ "}"
+					+ "</script>");
+			
 		} catch (Exception e) {
 			buf.append("printExam: " + e.toString() + " " + debug.toString());
 		}
@@ -468,39 +469,6 @@ public class PlacementExam extends HttpServlet {
 		return q==null || q.conceptId==0 || !(q.pointValue==2 || q.pointValue==4);
 	}
 
-	static String timerScripts(long endMillis) {
-		return "<SCRIPT language='JavaScript'>"
-				+ "function toggleTimers() {"
-				+ "  var timer0 = document.getElementById('timer0');"
-				+ "  var timer1 = document.getElementById('timer1');"
-				+ "  var ctrl0 = document.getElementById('ctrl0');"
-				+ "  var ctrl1 = document.getElementById('ctrl1');"
-				+ "  if (timer0.style.display=='') {" 
-				+ "    timer0.style.display='none';timer1.style.display='none';"
-				+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
-				+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
-				+ "  } else {"
-				+ "    timer0.style.display='';timer1.style.display='';"
-				+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
-				+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
-				+ "  }"
-				+ "}"
-				+ "var seconds;var minutes;var oddSeconds;"
-				+ "var endTime = " + endMillis + ";"
-				+ "function countdown() {"
-				+ "var now = new Date().getTime();"
-				+ "seconds=Math.round((endTime-now)/1000);"
-				+ "minutes = seconds<0?Math.ceil(seconds/60):Math.floor(seconds/60);"
-				+ "oddSeconds = seconds%60;"
-				+ "for(i=0;i<2;i++) document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ' minutes ' + oddSeconds + ' seconds.';"
-				+ "if (seconds==30) alert('30 seconds remaining');"
-				+ "if (seconds < 0) document.PlacementExamForm.submit();"
-				+ "else setTimeout('countdown()',1000);"
-				+ "}"
-				+ "countdown();"
-				+ "</SCRIPT>"; 
-	}
-	
 	String printScore(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Debug: ");
@@ -652,8 +620,6 @@ public class PlacementExam extends HttpServlet {
 				if (wrongAnswers > 0) buf.append(missedQuestions); // list of missed questions with correct answers
 				else buf.append("Some questions were left blank.");
 			}
-			// embed ajax code to provide feedback
-			buf.append(ajaxScoreJavaScript(user.getTokenSignature()));
 			debug.append("e");
 			
 			if (user.isAnonymous()) return buf.toString();
@@ -716,7 +682,7 @@ public class PlacementExam extends HttpServlet {
 			}
 			debug.append("f");
 			
-			buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Placement Exam Score (percent)</th></tr>");
+			buf.append("<table><tr><th>Downloaded</th><th>Placement Exam Score (percent)</th></tr>");
 			for (PlacementExamTransaction pet : pets) {
 				score = 0;
 				possibleScore = 0;
@@ -726,7 +692,7 @@ public class PlacementExam extends HttpServlet {
 				}
 				int pct = (possibleScore>0?score*100/possibleScore:0);
 
-				buf.append("<tr><td>" + pet.id + "</td><td>" + df.format(pet.downloaded) + "</td><td align=center>" + (pet.graded==null?"-":pct + "%") +  "</td></tr>");
+				buf.append("<tr><td>" + df.format(pet.downloaded) + "</td><td align=center>" + (pet.graded==null?"-":pct + "%") +  "</td></tr>");
 			}
 			buf.append("</table><br>Missing scores indicate assignments that were downloaded but not submitted for scoring.<br/><br/>");
 
@@ -740,7 +706,7 @@ public class PlacementExam extends HttpServlet {
 		return buf.toString();
 	}
 
-
+/*
 	String ajaxScoreJavaScript(String signature) {
 		return "<SCRIPT TYPE='text/javascript'>\n"
 		+ "function ajaxSubmit(url,id,params,studentAnswer,note,email) {\n"
@@ -810,7 +776,7 @@ public class PlacementExam extends HttpServlet {
 		+ "}\n"
 		+ "</SCRIPT>";
 	}
-	
+*/	
 	static String submissionReview(User user,Assignment a,String forUserId) {
 		StringBuffer buf = new StringBuffer();
 
@@ -1157,7 +1123,7 @@ public class PlacementExam extends HttpServlet {
 	}
 	
 	String reviewExam(User user, long placementExamTransactionId, String studentUserId) {
-		StringBuffer buf = new StringBuffer();
+		StringBuffer buf = new StringBuffer("<h1>Placement Exam</h1>");
 		try {
 			if (!user.isInstructor()) return "<h2>Access Denied</h2>You must be an instructor to view this page.";
 
@@ -1178,9 +1144,6 @@ public class PlacementExam extends HttpServlet {
 				default: continue;
 				}
 			}	
-			
-			buf.append("<h2>General Chemistry Placement Exam</h2>");
-		
 			
 			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 			List<Concept> concepts = new ArrayList<Concept>(ofy().load().type(Concept.class).ids(a.conceptIds).values());
@@ -1312,7 +1275,7 @@ public class PlacementExam extends HttpServlet {
 	}
 
 	String selectExamQuestionsForm(User user) {
-		StringBuffer buf = new StringBuffer("<h3>Placement Exam Settings</h3>");
+		StringBuffer buf = new StringBuffer("<h1>Placement Exam</h1><h2>Custom Settings</h2>");
 		try {
 			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 			

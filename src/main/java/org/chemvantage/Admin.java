@@ -35,8 +35,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.googlecode.objectify.cmd.Query;
-
 /* 
  * Access to this servlet is restricted to ChemVantage admin users and the project service account
  * by specifying login: admin in a url handler of the project app.yaml file
@@ -101,7 +99,7 @@ public class Admin extends HttpServlet {
 			case "OpenStaxReport":  // for monthly cron job
 				String project_id = System.getProperty("com.google.appengine.application.id");
 				if (project_id.equals("chem-vantage-hrd")) {
-					String msg = "<h3>Your Quarterly OpenStax Ally Partner Report Is Ready</h3>"
+					String msg = "<b>Your Quarterly OpenStax Ally Partner Report Is Ready</b>"
 							+ "<ol><li>Download the CSV file <a href=https://www.chemvantage.org/Admin?UserRequest=OpenStaxCSVReport>here</a></li>"
 							+ "<li>Import the CSV file to cell B3 of the Excel template file at Drive -> ChemVantage LLC-> OpenStax Partnership -> Quarterly Reports</li>"
 							+ "<li>Review the file, including any carry-forward amounts from previous quarter (up to $500.)</li>"
@@ -143,10 +141,10 @@ public class Admin extends HttpServlet {
 	}
 
 	private String mainAdminForm(User user,String userRequest,String searchString,String cursor) {
-		StringBuffer buf = new StringBuffer("\n\n<h2>Administration</h2>");
+		StringBuffer buf = new StringBuffer("<h1>Administration</h1>");
 		try {
 			// Announcements
-			buf.append("<h3>Announcements</h3>");
+			buf.append("<h2>Announcements</h2>");
 			buf.append("The following message will be posted in red font at the top of each main page: ");
 			
 			buf.append("<FORM ACTION=Admin METHOD=POST>"
@@ -156,18 +154,16 @@ public class Admin extends HttpServlet {
 					+ "<INPUT TYPE=SUBMIT VALUE='Post this message now'></FORM>");
 
 			// User Feedback
-			Query<UserReport> reports = ofy().load().type(UserReport.class).order("-submitted");
-			if (reports.count() > 0)  {
-				buf.append("<h3>User Feedback</h3>");
-				for (UserReport r : reports) {
-					buf.append(r.view(user) + "<hr>");  // returns report only for ChemVantage admin
-				}
+			int nUserReports = ofy().load().type(UserReport.class).count();
+			if (nUserReports > 0)  {
+				buf.append("<h2>User Feedback</h2>"
+						+ "You have " + nUserReports + " new user feedback reports.");
 			}
 
 			// Item Bank Requests
 			List<Contact> contacts = ofy().load().type(Contact.class).filter("role","applicant").list();
 			if (contacts.size() > 0) {
-				buf.append("<h3>Requests for Access to the Item Bank</h3>");
+				buf.append("<h2>Requests for Access to the Item Bank</h2>");
 				buf.append("<ul>");
 				for (Contact c : contacts) {
 					buf.append("<li>" + c.getFullName() + " (" + c.getEmail() + ") at " + c.institution
@@ -184,12 +180,12 @@ public class Admin extends HttpServlet {
 			
 			// Contributed Questions
 			int nPending = ofy().load().type(ProposedQuestion.class).count();
-			if (nPending > 0) buf.append("<h3>Contributed Questions</h3>"
+			if (nPending > 0) buf.append("<h2>Contributed Questions</h2>"
 					+ "<a href=Edit?UserRequest=Review>"
 					+ nPending + " items are currently pending editorial review.</a>");
 			
 			// Recent Activity
-			buf.append("<h3>Recent Activity (past 30 days)</h3>");			
+			buf.append("<h2>Recent Activity (past 30 days)</h2>");			
 			if ("ShowGroupEnrollments".equals(userRequest)) buf.append(Group.enrollmentReport());
 			else {
 				Date lastMonth = new Date(new Date().getTime()-2592000000L);			
@@ -200,7 +196,7 @@ public class Admin extends HttpServlet {
 			
 			// New Accounts
 			List<Deployment> review = ofy().load().type(Deployment.class).filter("status", "pending").list();
-			if (review.size() > 0) buf.append("<h3>Accounts Needing Review and Approval</h3>");
+			if (review.size() > 0) buf.append("<h2>Accounts Needing Review and Approval</h2>");
 			for (Deployment d : review) {
 				buf.append("<form method=post><input type=hidden name=UserRequest value='Submit Review'/><input type=hidden name=sig value='" + user.getTokenSignature() + "'/>"
 						+ "<input type=hidden name=platform_deployment_id value='" + d.platform_deployment_id + "'/>"
@@ -214,11 +210,11 @@ public class Admin extends HttpServlet {
 			}
 			
 			// OpenStax
-			buf.append("<h3>Quarterly OpenStax Ally Partner Report</h3>"
+			buf.append("<h2>Quarterly OpenStax Ally Partner Report</h2>"
 					+ "<a href=/Admin?UserRequest=OpenStaxReport>Preview</a> or <a href=/Admin?UserRequest=OpenStaxCSVReport>Download CSV File</a>");
 			
 			// Create subscription vouchers
-			buf.append("<h3>1-Year Subscription Vouchers</h3>");
+			buf.append("<h2>1-Year Subscription Vouchers</h2>");
 			List<Voucher> vouchers = ofy().load().type(Voucher.class).filter("activated =",null).order("-purchased").list();
 			
 			if ("Create Vouchers".equals(userRequest)) {
@@ -260,7 +256,7 @@ public class Admin extends HttpServlet {
 					+ "<input type=submit value='Show Codes' />");
 			buf.append("</form>");
 			// Signature Code
-			buf.append("<h3>Signature Code for 1 month Anonymous Access: " + Long.toHexString(User.encode(new Date(new Date().getTime() + 2678400000L).getTime())) + "</h3>");	
+			buf.append("<h2>Signature Code for 1 month Anonymous Access: " + Long.toHexString(User.encode(new Date(new Date().getTime() + 2678400000L).getTime())) + "</h2>");	
 		}
 		catch (Exception e) {
 			buf.append("<p>" + e.toString());

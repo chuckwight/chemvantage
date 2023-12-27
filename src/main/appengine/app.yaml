@@ -1,5 +1,6 @@
 runtime: java11
 instance_class: F1
+default_expiration: 1m
 
 # The following handlers cause appengine to upload copies of the static files to Gooogle Cloud Storage and serve them from there
 # URL requests for these files are handled by the App Engine infrastructure directly, and do not reach the language runtime of the application.
@@ -39,7 +40,7 @@ handlers:
   require_matching_file: True
   secure: always
   
-# Map everything in the static directory to static copies  
+# Map everything in the docs directory to static copies  
 - url: /docs
   static_dir: classes/META-INF/resources/static
   require_matching_file: True
@@ -56,4 +57,3 @@ handlers:
   secure: always
   redirect_http_response_code: 301
   script: auto
-

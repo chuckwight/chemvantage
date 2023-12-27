@@ -56,7 +56,7 @@
 		response.sendRedirect(Subject.serverUrl + "/Logout?sig=" + request.getParameter("sig"));
 	}
 %>
-
+<h1>Video</h1>
 <div id=video_div style='width:560px;height:315px'></div>
 <br>
 <div id=quiz_div style='width:560px;background-color:white;min-height:315;display:none'></div>

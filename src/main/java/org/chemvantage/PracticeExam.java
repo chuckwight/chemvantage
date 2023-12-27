@@ -130,7 +130,7 @@ public class PracticeExam extends HttpServlet {
 					try {
 						double minutes = Double.parseDouble(request.getParameter("TimeAllowed"));
 						if (minutes > 300.) minutes = 300.;
-						a.timeAllowed = minutes<1.0?60:(int)(minutes*60);
+						a.timeAllowed = minutes<1.0?60:(int)(minutes*60);  // time is entered in minutes, but recorded in seconds
 					} catch (Exception e) {
 						a.timeAllowed = 3600;
 					}
@@ -168,7 +168,7 @@ public class PracticeExam extends HttpServlet {
 	static String instructorPage(User user,Assignment a) {
 		StringBuffer buf = new StringBuffer();		
 		try {
-			buf.append("<h2>General Chemistry Exam - Instructor Page</h2>");
+			buf.append("<h1>General Chemistry Exam</h1><h2>Instructor Page</h2>");
 			
 			if (a.conceptIds.isEmpty()) { // legacy assignment uses topicIds
 				List<Topic> topics = new ArrayList<Topic>(ofy().load().type(Topic.class).ids(a.topicIds).values());
@@ -178,7 +178,7 @@ public class PracticeExam extends HttpServlet {
 				ofy().save().entity(a).now();
 			}
 			
-			if (a.timeAllowed != null) buf.append("Students are permitted " + a.timeAllowed/60 + " minutes to complete this exam.<br/>");
+			buf.append("Students are permitted " + (a.timeAllowed==null?60:a.timeAllowed/60) + " minutes to complete this exam.<br/>");
 			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("Students may attempt this assignment an unlimited number of times to improve their score.<br/><br/>");
 			else buf.append("Students may only attempt this assignment " + a.attemptsAllowed + (a.attemptsAllowed==1?" time":" times") + ".<br/><br/>");
 			
@@ -190,13 +190,16 @@ public class PracticeExam extends HttpServlet {
 					+ "</UL>");
 			
 			if (a.password != null && !a.password.isEmpty()) {
-				buf.append("<h4>The password for this exam is: " + a.password + "</h4>");
+				buf.append("<b>The password for this exam is: " + a.password + "</b>");
 			}
 			
-			buf.append("<a style='text-decoration: none' href='/PracticeExam?UserRequest=PrintExam&sig=" + user.getTokenSignature() + "'>"
+			buf.append("<a href='/PracticeExam?sig=" + user.getTokenSignature() + "' class='btn'>Show This Assignment</a><br/><br/>");
+			
+/*			buf.append("<a style='text-decoration: none' href='/PracticeExam?UserRequest=PrintExam&sig=" + user.getTokenSignature() + "'>"
 					+ "<button style='display: block; width: 500px; border: 1 px; background-color: #00FFFF; color: black; padding: 14px 28px; font-size: 18px; text-align: center; cursor: pointer;'>"
-					+ "Show This Assignment (recommended)</button></a>");
-		} catch (Exception e) {
+					+ "Show This Assignment</button></a>");
+*/
+			} catch (Exception e) {
 			buf.append("<br/>Instructor page error: " + e.getMessage());
 		}
 		return buf.toString();
@@ -204,8 +207,8 @@ public class PracticeExam extends HttpServlet {
 	
 	static String passwordPrompt(User user,String msg) {
 		StringBuffer buf = new StringBuffer();
-		buf.append(Subject.banner);
-		buf.append("<h3>Enter the password for this assignment</h3>");
+		buf.append("<h1>General Chemistry Exam</h1>");
+		buf.append("<h2>Enter the password for this assignment</h2>");
 		if (msg==null) msg="";
 		buf.append("<div id='msgSpan' style='color:#EE0000'>" + msg + "</div><br/>");
 		buf.append("Your instructor should provide you with the password.</br>"
@@ -213,7 +216,7 @@ public class PracticeExam extends HttpServlet {
 				+ "<input type=hidden name=sig value='" + user.getTokenSignature()  + "' />"
 				+ "<input type=hidden name=UserRequest value=PrintExam />"
 				+ "Password: <input type=password size=30 name='ExamPassword' /> "
-				+ "<input id=start type=submit value='Begin the exam' disabled />"
+				+ "<input id=start type=submit class='btn' value='Begin the exam' disabled />"
 				+ "</form><br/><br/>");	
 
   		buf.append("<script>"
@@ -281,7 +284,7 @@ public class PracticeExam extends HttpServlet {
 			else { // this is a new exam
 				pt =  new PracticeExamTransaction(user,a);		  
 				if (a.attemptsAllowed != null && nAttempts >= a.attemptsAllowed) {
-					buf.append(Subject.banner);
+					buf.append("<h1>General Chemistry Exam</h1>");
 					buf.append("<h2>Sorry, you are only allowed " + a.attemptsAllowed + " attempt" + (a.attemptsAllowed==1?"":"s") + " on this assignment.</h2>");
 					
 					DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
@@ -345,8 +348,8 @@ public class PracticeExam extends HttpServlet {
 			buf.append("\n<FORM NAME=PracticeExamForm METHOD=POST ACTION=/PracticeExam "
 					+ "onSubmit=\"return confirm('Submit this exam for grading now. Are you sure?')\">");
 
-			buf.append("<div id='timer0' style='color: red'></div><div id=ctrl0 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
-			buf.append("\n<input type=submit value='Grade This Practice Exam'><p>");
+			buf.append("<div id='timer0' style='color:#EE0000'></div><div id=ctrl0 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
+			buf.append("\n<input type=submit class='btn' value='Grade This Practice Exam'><p>");
 
 			buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "'>");
 			if (a!=null) buf.append("\n<input type=hidden name=AssignmentId value='" + a.id + "'>");
@@ -414,75 +417,26 @@ public class PracticeExam extends HttpServlet {
 
 			buf.append("\n<input type=hidden name='ExamId' value=" + pt.id + ">");
 			buf.append("\n<input type=hidden name='UserRequest' value='GradeExam'>");
-			buf.append("<div id='timer1' style='color: red'></div><div id=ctrl1 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
-			buf.append("\n<input type=submit value='Grade This Practice Exam'>");
-			buf.append("\n</form>");
+			buf.append("\n<input type=submit class='btn' value='Grade This Practice Exam'>");
+			buf.append("\n</form><br/>");
 			
-			long endMillis = pt.downloaded.getTime() + timeAllowed*1000L;
-			// this code for displaying/hiding timers and a 30-seconds-remaining alert box
-			buf.append(timerScripts(endMillis)); 
+			buf.append("<div id='timer1' style='color:#EE0000'></div><div id=ctrl1 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
+			buf.append("<script>"
+					+ "startTimers(" + pt.downloaded.getTime() + a.timeAllowed*1000 + ");"
+					+ "function timesUp() {"
+					+ "  try {"
+					+ "	   document.getElementById('PracticeExamForm').submit();"
+					+ "  } catch (Exception) {}"
+					+ "}"
+					+ "</script>");
+			
 		} catch (Exception e) {
 			buf.append("Sorry, there was an unexpected error: " + e.getMessage()==null?e.toString():e.getMessage());
 			Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Error during PracticeExam.printExam: ", e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString());
 		}
 		return buf.toString();
 	}
-/*
-	static Map<Key<Question>,Question> getQuestions(List<Key<Question>> keys) {
-		try {
-			Map<Key<Question>,Question> map = ofy().load().keys(keys);
-			@SuppressWarnings("unused")
-			Question q = map.get(keys.get(0)); // this is done here to throw the Exception because ofy().load().keys() is an asynchronous operation
-			return  map; // all keys are good
-		} catch (Exception e) { // throws Exception if a Question has been deleted from the datastore
-			if (keys.size()==1) return new HashMap<Key<Question>,Question>(); // this key was bad; end recursion with empty Map
-			
-			// break the List into 2 pieces
-			List<Key<Question>> keys1 = new ArrayList<Key<Question>>(keys.subList(0, keys.size()/2));
-			List<Key<Question>> keys2 = new ArrayList<Key<Question>>(keys.subList(keys.size()/2, keys.size()));
-			
-			// build both maps recursively
-			Map<Key<Question>,Question> map1 = getQuestions(keys1);
-			Map<Key<Question>,Question> map2 = getQuestions(keys2);
-			// combine the results into a single Map and return it
-			map1.putAll(map2);
-			return map1;
-		}
-	}
-*/	
-	static String timerScripts(long endMillis) {
-		return "<SCRIPT language='JavaScript'>"
-				+ "function toggleTimers() {"
-				+ "  var timer0 = document.getElementById('timer0');"
-				+ "  var timer1 = document.getElementById('timer1');"
-				+ "  var ctrl0 = document.getElementById('ctrl0');"
-				+ "  var ctrl1 = document.getElementById('ctrl1');"
-				+ "  if (timer0.style.display=='') {" 
-				+ "    timer0.style.display='none';timer1.style.display='none';"
-				+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
-				+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>show timers</a><p>';"
-				+ "  } else {"
-				+ "    timer0.style.display='';timer1.style.display='';"
-				+ "    ctrl0.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
-				+ "    ctrl1.innerHTML='<a href=javascript:toggleTimers()>hide timers</a><p>';"
-				+ "  }"
-				+ "}"
-				+ "var seconds;var minutes;var oddSeconds;"
-				+ "var endTime = " + endMillis + ";"
-				+ "function countdown() {"
-				+ "var now = new Date().getTime();"
-				+ "seconds=Math.round((endTime-now)/1000);"
-				+ "minutes = seconds<0?Math.ceil(seconds/60):Math.floor(seconds/60);"
-				+ "oddSeconds = seconds%60;"
-				+ "for(i=0;i<2;i++) document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ' minutes ' + oddSeconds + ' seconds.';"
-				+ "if (seconds==30) alert('30 seconds remaining');"
-				+ "if (seconds < 0) document.PracticeExamForm.submit();"
-				+ "else setTimeout('countdown()',1000);"
-				+ "}"
-				+ "countdown();"
-				+ "</SCRIPT>"; 
-	}
-	
+
 	String printScore(User user,Assignment a,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Debug: ");
@@ -577,9 +531,6 @@ public class PracticeExam extends HttpServlet {
 			else if (wrongAnswers > 0) buf.append(missedQuestions); // list of missed questions with correct answers
 			else buf.append("Some questions were left blank.");
 			
-			// embed ajax code to provide feedback
-			buf.append(ajaxScoreJavaScript(user.getTokenSignature()));
-
 			if (!user.isAnonymous()) {
 				List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).filter("userId",user.getHashedId()).filter("assignmentId",a.id).order("downloaded").list();
 				if (pets==null || pets.size()==0) {
@@ -649,77 +600,6 @@ public class PracticeExam extends HttpServlet {
 			buf.append((e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString());
 		}
 		return buf.toString();
-	}
-
-
-	String ajaxScoreJavaScript(String signature) {
-		return "<SCRIPT TYPE='text/javascript'>\n"
-		+ "function ajaxSubmit(url,id,params,studentAnswer,note,email) {\n"
-		+ "  var xmlhttp;\n"
-		+ "  if (url.length==0) return false;\n"
-		+ "  xmlhttp=GetXmlHttpObject();\n"
-		+ "  if (xmlhttp==null) {\n"
-		+ "    alert ('Sorry, your browser does not support AJAX!');\n"
-		+ "    return false;\n"
-		+ "  }\n"
-		+ "  xmlhttp.onreadystatechange=function() {\n"
-		+ "    if (xmlhttp.readyState==4) {\n"
-		+ "      document.getElementById('feedback' + id).innerHTML="
-		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
-		+ "    }\n"
-		+ "  }\n"
-		+ "  url += '&QuestionId=' + id + '&Params=' + params + '&sig=" + signature + "&Notes=' + note + '&Email=' + email + '&StudentAnswer=' + studentAnswer;\n"
-		+ "  xmlhttp.open('GET',url,true);\n"
-		+ "  xmlhttp.send(null);\n"
-		+ "  return false;\n"
-		+ "}\n"
-		+ "function ajaxStars(nStars) {\n"
-		+ "  var xmlhttp;\n"
-		+ "  if (nStars==0) return false;\n"
-		+ "  xmlhttp=GetXmlHttpObject();\n"
-		+ "  if (xmlhttp==null) {\n"
-		+ "    alert ('Sorry, your browser does not support AJAX!');\n"
-		+ "    return false;\n"
-		+ "  }\n"
-		+ "  xmlhttp.onreadystatechange=function() {\n"
-		+ "    var msg;\n"
-		+ "    switch (nStars) {\n"
-		+ "      case '1': msg='1 star - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to tell us why:'"
-		+ "                + '<FORM ACTION=Feedback METHOD=POST><INPUT TYPE=HIDDEN NAME=Stars Value=1><INPUT TYPE=HIDDEN NAME=Save VALUE=No>'"
-		+ "                + '<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback><INPUT NAME=Comments SIZE=60><INPUT TYPE=SUBMIT></FORM>';"
-		+ "                break;\n"
-		+ "      case '2': msg='2 stars - How we can serve you better?</a>'"
-		+ "                + '<FORM ACTION=Feedback METHOD=POST><INPUT TYPE=HIDDEN NAME=Stars Value=2><INPUT TYPE=HIDDEN NAME=Save VALUE=No>'"
-		+ "                + '<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback><INPUT NAME=Comments SIZE=60><INPUT TYPE=SUBMIT></FORM>';"
-		+ "                break;\n"
-		+ "      case '3': msg='3 stars - Thank you. <a href=Feedback>Click here</a> '"
-		+ "                + 'to provide additional feedback.';"
-		+ "                break;\n"
-		+ "      case '4': msg='4 stars - Thank you';"
-		+ "                break;\n"
-		+ "      case '5': msg='5 stars - Thank you!';"
-		+ "                break;\n"
-		+ "      default: msg='You clicked ' + nStars + ' stars.';\n"
-		+ "    }\n"
-		+ "    if (xmlhttp.readyState==4) {\n"
-		+ "      document.getElementById('vote').innerHTML=msg;\n"
-		+ "    }\n"
-		+ "  }\n"
-		+ "  xmlhttp.open('GET','Feedback?UserRequest=AjaxRating&NStars='+nStars,true);\n"
-		+ "  xmlhttp.send(null);\n"
-		+ "  return false;\n"
-		+ "}\n"
-		+ "function GetXmlHttpObject() {\n"
-		+ "  if (window.XMLHttpRequest) { // code for IE7+, Firefox, Chrome, Opera, Safari\n"
-		+ "    return new XMLHttpRequest();\n"
-		+ "  }\n"
-		+ "  if (window.ActiveXObject) { // code for IE6, IE5\n"
-		+ "    return new ActiveXObject('Microsoft.XMLHTTP');\n"
-		+ "  }\n"
-		+ "  return null;\n"
-		+ "}\n"
-		+ "</SCRIPT>";
 	}
 	
 	String submissionReview(User user,User forUser) {

@@ -605,7 +605,7 @@ public class Question implements Serializable, Cloneable {
 				studentAnswer = URLEncoder.encode(studentAnswer,"UTF-8");  // to send with URL
 			} catch (Exception e) {}
 			buf.append("<div id='feedback" + this.id + "'>");
-			buf.append("<FORM NAME='suggest" + this.id + "' >"
+			buf.append("<FORM id='suggest" + this.id + "' >"
 					+ "<INPUT TYPE=BUTTON VALUE='Report a problem with this question' "
 					+ "onClick=\"javascript:getElementById('form" + this.id + "').style.display='';this.style.display='none'\" />"
 					+ "<div id='form" + this.id + "' style='display: none'>");
@@ -631,7 +631,7 @@ public class Question implements Serializable, Cloneable {
 			buf.append("Your Comment: <INPUT TYPE=TEXT SIZE=80 NAME=Notes /><br/>");
 			buf.append("Your Email: <INPUT TYPE=TEXT SIZE=50 PLACEHOLDER=' optional, if you want a response' NAME=Email /><br/>");
 			buf.append("<INPUT TYPE=BUTTON VALUE='Submit Feedback' "
-					+ "onClick=\" return ajaxSubmit('/Feedback?UserRequest=ReportAProblem','" + this.id + "','" + Arrays.toString(this.parameters) + "','" + studentAnswer + "',encodeURIComponent(document.suggest" + this.id + ".Notes.value),encodeURIComponent(document.suggest" + this.id + ".Email.value)); return false;\" />"
+					+ "onClick=\" return ajaxSubmit('/Feedback?UserRequest=ReportAProblem','" + this.id + "','" + Arrays.toString(this.parameters) + "','" + studentAnswer + "',encodeURIComponent(document.getElementById('suggest" + this.id + "').Notes.value),encodeURIComponent(document.getElementById('suggest" + this.id + "').Email.value)); return false;\" />"
 					+ "</div></FORM><br/>");
 			buf.append("</div>");
 		}

@@ -185,7 +185,7 @@ public class Homework extends HttpServlet {
 					+ (supportsMembership?"<LI><a href='/Homework?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' homework scores</a></LI>":"")
 					+ "</UL><br/>");
 			
-			buf.append("<a href='/Homework?sig=" + user.getTokenSignature() + "' class='btn'>Show This Assignment (recommended)</a><br/><br/>");
+			buf.append("<a href='/Homework?sig=" + user.getTokenSignature() + "' class='btn'>Show This Assignment</a><br/><br/>");
 			
 		} catch (Exception e) {
 			buf.append("<br/>Instructor page error: " + e.getMessage());
@@ -297,7 +297,7 @@ public class Homework extends HttpServlet {
 				}
 				
 				if (solvedQuestions.contains(q.id)) questionBuffer.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");
-				else if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) questionBuffer.append("<br/><a href='" + q.learn_more_url + "' target=_blank><img src=/images/learn_more.png alt='learn more here' align=top /><br/>learn</a>&nbsp;");
+				//else if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) questionBuffer.append("<br/><a href='" + q.learn_more_url + "' target=_blank><img src=/images/learn_more.png alt='learn more here' align=top /><br/>learn</a>&nbsp;");
 				
 				questionBuffer.append("</div>");
 				
@@ -319,7 +319,12 @@ public class Homework extends HttpServlet {
 				}
 			}
 			buf.append((i>1?"<h4>Assigned Exercises</h4>":"") + assignedQuestions + "</div>" + (i>1 && j>1?"<h4>Optional Exercises</h4>":"") + optionalQuestions + "</div>");
-		} catch (Exception e) {
+			buf.append("<script>function showWorkBox(qid) {\n"
+					+ "	if (qid==0) return;\n"
+					+ "    document.getElementById('showWork'+qid).style.display='';\n"
+					+ "    document.getElementById('answer'+qid).placeholder='Enter your answer here';\n"
+					+ "}</script>");
+			} catch (Exception e) {
 			// buf.append("Sorry, there was an unexpected error: " + e.getMessage()==null?e.toString():e.getMessage());
 			Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Error during Homework.printHomework: ", e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString() + "<br/>" + user.getId());
 			return Logout.now(user);
@@ -399,28 +404,30 @@ public class Homework extends HttpServlet {
 				buf.append("<h1>Homework</h1>"
 						+ "<h2>Please Wait For The Retry Delay To Complete</h2>");
 				buf.append(df.format(now));
-				buf.append("<p>The retry delay for this homework problem is " + (user.isAnonymous()?retryDelayMinutes+" minutes. ":"<span id=delay style='color: #EE0000'></span>") + "<br/><br/>");
+				buf.append("<p>The retry delay for this homework problem is <span id=timer0 style='color: #EE0000'></span>");
 				buf.append("Please take these few moments to check your work carefully.  You can sometimes find alternate routes to the "
 						+ "same solution, or it may be possible to use your answer to back-calculate the data given in the problem.<br/><br/>");
-				if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) 
-					buf.append("<img src=/images/learn_more.png alt='learn more here' /> You can learn more about this topic at <a href='" 
-					+ q.learn_more_url + "' target=_blank>" + q.learn_more_url + "</a><br/><br/>");
+				//if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) 
+				//	buf.append("<img src=/images/learn_more.png alt='learn more here' /> You can learn more about this topic at <a href='" 
+				//	+ q.learn_more_url + "' target=_blank>" + q.learn_more_url + "</a><br/><br/>");
 				buf.append("Alternatively, you may wish to "
 						+ "<a href=/Homework?AssignmentId=" + hwa.id
 						+ "&sig=" + user.getTokenSignature() + ">" 
 						+ "return to this homework assignment</a> to work on another problem.<p>");
-					buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework onsubmit=waitForScore(); >"
-							+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" +(hwa.id==null?0:hwa.id) + "'>"
-							+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
-							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
-							+ q.print(showWork,studentAnswer) + "<br>");
+				buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework onsubmit=waitForScore(); >"
+						+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" +(hwa.id==null?0:hwa.id) + "'>"
+						+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
+						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
+						+ q.print(showWork,studentAnswer) + "<br>");
 
-					buf.append("<INPUT TYPE=SUBMIT id='RetryButton' DISABLED=true VALUE='Grade This Exercise'></FORM>");
-					buf.append("<SCRIPT>"
-							+ "setEndTime(" + secondsRemaining + ");"
-							+ "countdown();"
-							+ "</SCRIPT>");
-				
+				buf.append("<INPUT TYPE=SUBMIT id='RetryButton' DISABLED=true style='opacity:0.5' VALUE='Grade This Exercise'></FORM><br/><br/>");
+				buf.append("<script>"
+						+ "startTimers('" + (now.getTime() + retryDelayMinutes*60000) + "');"
+						+ "function timesUp() {"
+						+ "document.getElementById('RetryButton').style='disabled:false;opacity:1';"
+						+ "}"
+						+ "</script>");
+
 				return buf.toString();
 			}
 			
@@ -578,8 +585,6 @@ public class Homework extends HttpServlet {
 
 			boolean offerHint = studentScore==0 && q.hasHint() && user.isEligibleForHints(q.id);
 
-			//buf.append(ajaxJavaScript(user.getTokenSignature()));
-			
 			if (!user.isAnonymous()) {
 				if (studentScore>0 || user.isInstructor()) {
 					buf.append("<div id=solution style='display:none'>" + q.printAllToStudents(studentAnswer) + "</div><br/>");
@@ -607,95 +612,7 @@ public class Homework extends HttpServlet {
 		}
 		return buf.toString();
 	}
-/*
-	static String ajaxJavaScript(String signature) {
-		return "<SCRIPT TYPE='text/javascript'>\n"
-		+ "function ajaxSubmit(url,id,params,studentAnswer,note,email) {\n"
-		+ "  var xmlhttp;\n"
-		+ "  if (url.length==0) return false;\n"
-		+ "  xmlhttp=GetXmlHttpObject();\n"
-		+ "  if (xmlhttp==null) {\n"
-		+ "    alert ('Sorry, your browser does not support AJAX!');\n"
-		+ "    return false;\n"
-		+ "  }\n"
-		+ "  xmlhttp.onreadystatechange=function() {\n"
-		+ "    if (xmlhttp.readyState==4) {\n"
-		+ "      document.getElementById('feedback' + id).innerHTML="
-		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
-		+ "    }\n"
-		+ "  }\n"
-		+ "  url += '&QuestionId=' + id + '&Params=' + params + '&sig=" + signature + "&Notes=' + note + '&Email=' + email + '&StudentAnswer=' + studentAnswer;\n"
-		+ "  xmlhttp.open('GET',url,true);\n"
-		+ "  xmlhttp.send(null);\n"
-		+ "  return false;\n"
-		+ "}\n"
-		+ "function synchronizeScore(forUserId) {\n"
-		+ "  let xmlhttp=GetXmlHttpObject();\n"
-		+ "  let url = '/Homework?UserRequest=SynchronizeScore&sig=" + signature + "&ForUserId=' + forUserId;\n"
-		+ "  if (xmlhttp==null) {\n"
-		+ "    alert ('Sorry, your browser does not support AJAX!');\n"
-		+ "    return false;\n"
-		+ "  }\n"
-		+ "  xmlhttp.onreadystatechange=function() {\n"
-		+ "    if (xmlhttp.readyState==4) {\n"
-		+ "      if (xmlhttp.responseText.includes('OK')) {\n"
-		+ "        document.getElementById('cell'+forUserId).innerHTML='OK. Check grade book settings.';"
-		+ "        setTimeout(() => {location.reload();}, 500);\n"
-		+ "      } else {\n"
-		+ "        document.getElementById('cell'+forUserId).innerHTML=xmlhttp.responseText;"
-		+ "      }\n"
-		+ "    }\n"
-		+ "  }\n"
-		+ "  xmlhttp.open('GET',url,true);\n"
-		+ "  xmlhttp.send(null);\n"
-		+ "  return false;\n"
-		+ "}\n"
-		+ "function ajaxStars(nStars) {\n"
-		+ "  var xmlhttp;\n"
-		+ "  if (nStars==0) return false;\n"
-		+ "  xmlhttp=GetXmlHttpObject();\n"
-		+ "  if (xmlhttp==null) {\n"
-		+ "    alert ('Sorry, your browser does not support AJAX!');\n"
-		+ "    return false;\n"
-		+ "  }\n"
-		+ "  xmlhttp.onreadystatechange=function() {\n"
-		+ "    var msg;\n"
-		+ "    switch (nStars) {\n"
-		+ "      case '1': msg='1 star - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to <a href=/Feedback?sig=" + signature + ">tell us why</a>.';"
-		+ "                break;\n"
-		+ "      case '2': msg='2 stars - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to <a href=/Feedback?sig=" + signature + ">tell us why</a>.';"
-		+ "                break;\n"
-		+ "      case '3': msg='3 stars - Thank you. <a href=/Feedback?sig=" + signature + ">Click here</a> '"
-		+ "                + 'to provide additional feedback.';"
-		+ "                break;\n"
-		+ "      case '4': msg='4 stars - Thank you';"
-		+ "                break;\n"
-		+ "      case '5': msg='5 stars - Thank you!';"
-		+ "                break;\n"
-		+ "      default: msg='You clicked ' + nStars + ' stars.';\n"
-		+ "    }\n"
-		+ "    if (xmlhttp.readyState==4) {\n"
-		+ "      document.getElementById('vote').innerHTML=msg;\n"
-		+ "    }\n"
-		+ "  }\n"
-		+ "  xmlhttp.open('GET','Feedback?UserRequest=AjaxRating&NStars='+nStars,true);\n"
-		+ "  xmlhttp.send(null);\n"
-		+ "  return false;\n"
-		+ "}\n"
-		+ "function GetXmlHttpObject() {\n"
-		+ "  if (window.XMLHttpRequest) { // code for IE7+, Firefox, Chrome, Opera, Safari\n"
-		+ "    return new XMLHttpRequest();\n"
-		+ "  }\n"
-		+ "  if (window.ActiveXObject) { // code for IE6, IE5\n"
-		+ "    return new ActiveXObject('Microsoft.XMLHTTP');\n"
-		+ "  }\n"
-		+ "  return null;\n"
-		+ "}\n"
-		+ "</SCRIPT>";
-	}
-*/
+
 	static String fiveStars() {
 		StringBuffer buf = new StringBuffer();
 
@@ -720,12 +637,12 @@ public class Homework extends HttpServlet {
 		if (!user.isInstructor() && forUserId!=null) return "<H1>Access denied.</H1>";
 		if (forUserId==null) forUserId = user.getId();  // user is viewing their own scores
 		
-		StringBuffer buf = new StringBuffer("<h2>Your Homework Transactions</h2>");
+		StringBuffer buf = new StringBuffer("<h1>Homework Transactions</h1>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
 		
 		try {
-			buf.append("Assignment Number: " + a.id + "<br>");
+			//buf.append("Assignment Number: " + a.id + "<br>");
 			buf.append("Topic: "+ a.title + "<br>");
 			buf.append("Valid: " + df.format(now) + "<p>");
 			
@@ -773,9 +690,9 @@ public class Homework extends HttpServlet {
 					if (s.score==0 && s.numberOfAttempts==0) buf.append("It appears that this assignment may not have been submitted for a score yet.<br/>");
 					buf.append("<br/>");
 				}
-				buf.append("<table><tr><th>Transaction Number</th><th>QuestionID</th><th>Graded</th><th>Score</th></tr>");
+				buf.append("<table><tr><th>QuestionID</th><th>Graded</th><th>Score</th></tr>");
 				for (HWTransaction hwt : hwts) {
-					buf.append("<tr align=center><td>" + hwt.id + "</td><td>" + hwt.questionId + "</td><td>" + df.format(hwt.graded) + "</td><td>" + hwt.score +  "</td></tr>");
+					buf.append("<tr align=center><td>" + hwt.questionId + "</td><td>" + df.format(hwt.graded) + "</td><td>" + hwt.score +  "</td></tr>");
 				}
 				buf.append("</table><br/><br/>");
 				
@@ -834,7 +751,7 @@ public class Homework extends HttpServlet {
 						+ "<td align=center>" + lmsScoreString + "</td>"
 						+ "<td align=center>" + cvScoreString + "</td>"
 						+ "<td align=center><a href=/Homework?UserRequest=Review&sig=" + user.getTokenSignature() + "&ForUserId=" + forUserId + "&ForUserName=" + entry.getValue()[1].replaceAll(" ","+") + ">show</a></td>"
-						+ (synched?"":"<td><span id='cell" + forUserId + "'><button onClick=this.disabled=true;synchronizeScore('" + forUserId + "'); >sync</button></span></td>")
+						+ (synched?"":"<td><span id='cell" + forUserId + "'><button onClick=this.disabled=true;this.style.opacity=0.5;synchronizeScore('" + forUserId + "'); >sync</button></span></td>")
 						+ "</tr>");
 				// Flag this score set as unsynchronized only if there is one or more non-null ChemVantage Learner score that is not equal to the LMS score
 				// Ignore Instructor scores because the LMS often does not report them, and ignore null cvScore entities because they cannot be reported.

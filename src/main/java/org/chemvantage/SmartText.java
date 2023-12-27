@@ -97,11 +97,11 @@ public class SmartText extends HttpServlet {
    static String printTextHeader(Text t,Chapter c) {
 	   StringBuffer buf = new StringBuffer();
 	   buf.append("<div style=display:table><div style='display:table-row;'><div style='display:table-cell;vertical-align:top;width:450px;padding-right:20px'>");
-	   buf.append("<h3>Reading Assignment</h3>");
+	   buf.append("<h1>Reading Assignment</h1>");
 	   buf.append("Textbook: <b>" + t.title + "</b><br/>"
 	   		+ "Author: " + t.author + "<br/><br/>"
 	   		+ "Chapter " + c.chapterNumber + ": " + c.title + "<br/>");
-	   buf.append("<h3>Reading Options</h3>");
+	   buf.append("<h2>Reading Options</h2>");
 	   buf.append("<ul>");
 	   if (c.url != null) buf.append("<li><a href='" + c.url + "' target=_blank>Read this chapter online</a></li>");
 	   buf.append("<li><a href='" + t.printCopyUrl + "' target=_blank>Order a print copy of this book</a></li>");
@@ -145,7 +145,7 @@ public class SmartText extends HttpServlet {
 			   buf.append("<b>Instructor: </b><a href=/SmartText?UserRequest=ReviewScores&sig=" + user.getTokenSignature() + ">Review student scores</a><br/><hr>");
 		   }
 		  
-		   buf.append("<h3>Key Concept Questions</h3>");
+		   buf.append("<h2>Key Concept Questions</h2>");
 		   // load the SmartText transaction entity for this user if one exists
 		   STTransaction st = null;
 		   try {
@@ -215,8 +215,8 @@ public class SmartText extends HttpServlet {
 				   + "<input type=hidden name=Parameter value='" + p + "' />"
 				   + "<input type=hidden name=UserRequest value='GradeQuestion' />"
 				   + q.print()
-				   + "<input type=submit onclick=this.style.opacity=0.2; />"
-				   + "</form>");
+				   + "<input type=submit class='btn' onclick=this.style.opacity=0.2; />"
+				   + "</form><br/>");
 		   st.armed = true;
 		   ofy().save().entity(st).now();
 	   } catch (Exception e) {
@@ -274,7 +274,6 @@ public class SmartText extends HttpServlet {
 		   //  get the index of st.conceptIds that corresponds to the conceptId for this question:
 		   int index = st.conceptIds.indexOf(conceptId);
 		   boolean isCorrect = q.isCorrect(studentAnswer);
-		   buf.append(ajaxJavaScript(user.getTokenSignature()));  // for providing user feedback on the question item
 		   
 		   if (!st.armed) buf.append("<b>Sorry, it looks like this question has already been scored.</b><br/>");
 		   else if (isCorrect) {
@@ -302,8 +301,8 @@ public class SmartText extends HttpServlet {
 			   		+ "<input type=hidden name=UserRequest value=PrintQuestion />"
 			   		+ "<input type=hidden name=STTransactionId value=" + st.id + " />"
 			   		+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-			   		+ "<button id=btn type=submit style='border:none;color:white;padding:10px 10px;margin:4px 2px;font-size:16px;cursor:pointer;border-radius:10px;background-color:blue;' "
-			   		+ "onclick=this.style.opacity=0.2;>Continue to the Next Question</button></form>";
+			   		+ "<button id=btn type=submit class='btn' "
+			   		+ "onclick=this.style.opacity=0.2;>Continue to the Next Question</button></form><br/>";
 
 		   if (score==possibleScore) { // finished
 			   if (completed) {  // this was just for practice
@@ -342,77 +341,8 @@ public class SmartText extends HttpServlet {
 		   buf.append("Error: " + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString());
 	   }
 	   
-	   buf.append(ajaxJavaScript(user.getTokenSignature())); // load javascript for AJAX problem reporting form
-		
 	   return buf.toString();
    }
-
-	String ajaxJavaScript(String signature) {
-		return "<SCRIPT TYPE='text/javascript'>\n"
-		+ "function ajaxSubmit(url,id,params,studentAnswer,note,email) {\n"
-		+ "  var xmlhttp;\n"
-		+ "  if (url.length==0) return false;\n"
-		+ "  xmlhttp=GetXmlHttpObject();\n"
-		+ "  if (xmlhttp==null) {\n"
-		+ "    alert ('Sorry, your browser does not support AJAX!');\n"
-		+ "    return false;\n"
-		+ "  }\n"
-		+ "  xmlhttp.onreadystatechange=function() {\n"
-		+ "    if (xmlhttp.readyState==4) {\n"
-		+ "      document.getElementById('feedback' + id).innerHTML="
-		+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
-		+ "    }\n"
-		+ "  }\n"
-		+ "  url += '&QuestionId=' + id + '&Params=' + params + '&sig=" + signature + "&Notes=' + note + '&Email=' + email + '&StudentAnswer=' + studentAnswer;\n"
-		+ "  xmlhttp.open('GET',url,true);\n"
-		+ "  xmlhttp.send(null);\n"
-		+ "  return false;\n"
-		+ "}\n"
-		+ "function ajaxStars(nStars) {\n"
-		+ "  var xmlhttp;\n"
-		+ "  if (nStars==0) return false;\n"
-		+ "  xmlhttp=GetXmlHttpObject();\n"
-		+ "  if (xmlhttp==null) {\n"
-		+ "    alert ('Sorry, your browser does not support AJAX!');\n"
-		+ "    return false;\n"
-		+ "  }\n"
-		+ "  xmlhttp.onreadystatechange=function() {\n"
-		+ "    var msg;\n"
-		+ "    switch (nStars) {\n"
-		+ "      case '1': msg='1 star - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to <a href=/Feedback?sig=" + signature + ">tell us why</a>.';"
-		+ "                break;\n"
-		+ "      case '2': msg='2 stars - If you are dissatisfied with ChemVantage, '"
-		+ "                + 'please take a moment to <a href=/Feedback?sig=" + signature + ">tell us why</a>.';"
-		+ "                break;\n"
-		+ "      case '3': msg='3 stars - Thank you. <a href=/Feedback?sig=" + signature + ">Click here</a> '"
-		+ "                + 'to provide additional feedback.';"
-		+ "                break;\n"
-		+ "      case '4': msg='4 stars - Thank you';"
-		+ "                break;\n"
-		+ "      case '5': msg='5 stars - Thank you!';"
-		+ "                break;\n"
-		+ "      default: msg='You clicked ' + nStars + ' stars.';\n"
-		+ "    }\n"
-		+ "    if (xmlhttp.readyState==4) {\n"
-		+ "      document.getElementById('vote').innerHTML=msg;\n"
-		+ "    }\n"
-		+ "  }\n"
-		+ "  xmlhttp.open('GET','Feedback?UserRequest=AjaxRating&NStars='+nStars,true);\n"
-		+ "  xmlhttp.send(null);\n"
-		+ "  return false;\n"
-		+ "}\n"
-		+ "function GetXmlHttpObject() {\n"
-		+ "  if (window.XMLHttpRequest) { // code for IE7+, Firefox, Chrome, Opera, Safari\n"
-		+ "    return new XMLHttpRequest();\n"
-		+ "  }\n"
-		+ "  if (window.ActiveXObject) { // code for IE6, IE5\n"
-		+ "    return new ActiveXObject('Microsoft.XMLHTTP');\n"
-		+ "  }\n"
-		+ "  return null;\n"
-		+ "}\n"
-		+ "</SCRIPT>";
-	}
 
 	String fiveStars() {
 		StringBuffer buf = new StringBuffer();
@@ -460,7 +390,7 @@ public class SmartText extends HttpServlet {
 		try {
 			if (a.lti_nrps_context_memberships_url==null) throw new Exception("No Names and Roles Provisioning support.");
 
-			buf.append("<h3>" + a.assignmentType + " - " + a.title + "</h3>");
+			buf.append("<h1>Reading Assignment</h1><h2>" + a.title + "</h2>");
 			buf.append("Valid: " + new Date() + "<p>");
 			buf.append("The roster below is obtained using the Names and Role Provisioning service offered by your learning management system, "
 					+ "and may or may not include user's names or emails, depending on the settings of your LMS.<br/><br/>");
@@ -485,7 +415,6 @@ public class SmartText extends HttpServlet {
 				if (entry == null) continue;
 				String s = scores.get(entry.getKey());
 				Score cvScore = cvScores.get(keys.get(entry.getKey()));
-				//String forUserId = platform_id + entry.getKey();  // only send hashed values through links
 				i++;
 				buf.append("<tr><td>" + i + ".&nbsp;</td>"
 						+ "<td>" + entry.getValue()[1] + "</td>"
@@ -493,7 +422,6 @@ public class SmartText extends HttpServlet {
 						+ "<td>" + entry.getValue()[0] + "</td>"
 						+ "<td align=center>" + (s == null?" - ":s + "%") + "</td>"
 						+ "<td align=center>" + (cvScore == null?" - ":String.valueOf(cvScore.getPctScore()) + "%") + "</td>"
-						//+ "<td align=center><a href=/Homework?UserRequest=Review&sig=" + user.getTokenSignature() + "&ForUserId=" + forUserId + "&ForUserName=" + entry.getValue()[1].replaceAll(" ","+") + ">show</a></td>"
 						+ "</tr>");
 				// Flag this score set as unsynchronizde only if there is one or more non-null ChemVantage Learner score that is not equal to the LMS score
 				// Ignore Instructor scores because the LMS often does not report them, and ignore null cvScore entities because they cannot be reported.
