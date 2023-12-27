@@ -473,7 +473,7 @@ public class PlacementExam extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Debug: ");
 		try {
-			buf.append("<h2>Placement Exam Results</h2>");
+			buf.append("<h1>Placement Exam</h1><h2>Results</h2>");
 			if (user.isAnonymous()) buf.append("Anonymous User<br/>");
 			
 			Assignment a = null;			
