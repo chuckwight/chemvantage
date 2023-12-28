@@ -36,8 +36,6 @@
 
 <body>
     <a href=#main class="skip-to-main-content-link">Skip to main content</a>
-    <!-- Hidden elements for accessibility compliance -->
-    <h1 style="height:1px;width:1px;">&nbsp;</h1><h2 style="height:1px;width:1px;">&nbsp;</h2>
     <!-- Webpage Header Start -->
     <header class="webpage-header">
         <div class="container">

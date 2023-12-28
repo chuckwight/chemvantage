@@ -42,8 +42,6 @@ String sig = Long.toHexString(encrypt);
 
 <body>
     <a href=#main class="skip-to-main-content-link">Skip to main content</a>
-    <!-- Hidden elements for accessibility compliance -->
-    <h1 style="height:1px;width:1px;">&nbsp;</h1><h2 style="height:1px;width:1px;">&nbsp;</h2>
     <!-- Webpage Header Start -->
     <header class="webpage-header">
         <div class="container">
@@ -129,9 +127,9 @@ String sig = Long.toHexString(encrypt);
                         <img src="images/examples/1.jpg" class="w-100 section-image" alt="examples"/>
                     </div>
                     <div class="w-60">
-                        <h5>
+                        <h3>
                             Quizzes
-                        </h5>
+                        </h3>
                         <p>
                             Each ChemVantage quiz consists of 10 short-answer question items randomly selected from a bank of 60-80 items. Question types include multiple choice, true/false, checkbox, fill-in-the-blank, and numeric answers. The quizzes are designed to ensure that students have completed the reading assignment before coming to class. Students are permitted to repeat the quizzes (in the spirit of being a learning tool rather than an assessment). However, it is unlikely that any two quizzes will contain exactly the same set of questions. Of course, you can configure your LMS to restrict the number of retries. In my classes, I encourage students to collaborate on quizzes as a way of encouraging them to form study groups. A group of three students will have to take at least 3 quizzes together for everyone to get credit for completing the assignment.
                         </p>
@@ -149,9 +147,9 @@ String sig = Long.toHexString(encrypt);
                         <img src="images/examples/2.jpg" class="w-100 section-image" alt="examples"/>
                     </div>
                     <div class="w-60">
-                        <h5>
+                        <h3>
                             Homework
-                        </h5>
+                        </h3>
                         <p>
                             Homework assignments give students practice in solving quantitative problems having numeric answers. Answers are scored correct if the solution agrees with the solution found in the database to within a specified tolerance (indicated for each problem). For many problems, answers must be expressed with the appropriate number of significant figures. Students are allowed to rework incorrectly solved problems and resubmit the answers. Nearly all of the problems are parameterized, so the correct answer is different for each student. This makes them suitable for collaboration and working in teams, because even though the group may work to find a correct algorithm for solving a problem, each student will have to use the algorithm to find the detailed solution to his or her own problem. If students get stuck and needs help, they can email a link to an instructor or teaching assistant that shows their work and previous submissions.
                         </p>
@@ -169,9 +167,9 @@ String sig = Long.toHexString(encrypt);
                         <img src="images/examples/3.jpg" class="w-100 section-image" alt="examples"/>
                     </div>
                     <div class="w-60">
-                        <h5>
+                        <h3>
                             SmartText Reading Assignments
-                        </h5>
+                        </h3>
                         <p>
                             Finding it hard to get students to read the textbook? ChemVantage reading assignments incorporate a sequence of question items on key concepts related to the assigned chapter. If a student misses 2 questions on any key concept, they are sent back to review the chapter before proceeding with the assignment. After correctly answering 2 questions on each key concept, the assignment gets full credit but is still available to students who wish to practice their skills. SmartText assignments are available for the following textbooks:
                         </p>
@@ -197,9 +195,9 @@ String sig = Long.toHexString(encrypt);
                         <img src="images/examples/4.jpg" class="w-100 section-image" alt="examples"/>
                     </div>
                     <div class="w-60">
-                        <h5>
+                        <h3>
                             Video lectures
-                        </h5>
+                        </h3>
                         <p>
                             Some of the more important lessons in the text have been captured as 10-minute instructional videos. Most of the videos have short (two-question) quizzes embedded in the video to ensure that students are watching and comprehending. You can assign these to students for 3-5 points. Even if the video has no embedded quizzes, ChemVantage will only award the points if the student finishes the video to the end.
                         </p>
@@ -217,9 +215,9 @@ String sig = Long.toHexString(encrypt);
                         <img src="images/examples/5.jpg" class="w-100 section-image" alt="examples"/>
                     </div>
                     <div class="w-60">
-                        <h5>
+                        <h3>
                             Practice Exams
-                        </h5>
+                        </h3>
                         <p>
                             Students can take timed practice exams that draw questions from any group of 3 or more topics. Each exam is designed to take 60 minutes or less to complete, and includes a selection of 10 quiz questions worth 2 points each, 5 of the easier homework problems at 10 points each, and 2 more challenging homework problems worth 15 points each. The scores on each exam are disaggregated by topic to reveal the student's areas of strength and weakness. Practice exams may be repeated as often as desired. Questions are drawn at random from the database, and the numeric questions are parameterized, making it extremely unlikely that a student will ever get two identical practice exams. Instructors may (optionally) review the exam results and award partial credit.
                         </p>
@@ -237,9 +235,9 @@ String sig = Long.toHexString(encrypt);
                         <img src="images/examples/6.jpg" class="w-100 section-image" alt="examples"/>
                     </div>
                     <div class="w-60">
-                        <h5>
+                        <h3>
                             In-class polls
-                        </h5>
+                        </h3>
                         <p>
                             Clickers have become popular in recent years, but they increase the cost of the course for students and faculty. A ChemVantage poll can be set up in a few minutes from inside your LMS. You may select any of the thousands of available quiz, homework or exam questions, or you can create your own question. Students log into the LMS using their phone or laptop in class to respond to the question items. The responses are then displayed on the classroom computer so students can see how their response compared with the responses of others.
                         </p>
@@ -257,9 +255,9 @@ String sig = Long.toHexString(encrypt);
                         <img src="images/examples/7.jpg" class="w-100 section-image" alt="examples"/>
                     </div>
                     <div class="w-60">
-                        <h5>
+                        <h3>
                             Placement Exams
-                        </h5>
+                        </h3>
                         <p>
                             Each placement exam consists of 40 question items (30 two-point items plus 10 four-point items). Question items are randomly selected from three different topic ares in order to assess the student's
                         </p>

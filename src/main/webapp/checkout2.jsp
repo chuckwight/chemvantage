@@ -79,7 +79,7 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
 <main><h1 style='display: none'>Purchase ChemVantage Student Licenses</h1>
 	<div id=offer>
 		
-		<h3>Purchase Student Licenses for your ChemVantage Account</h3>
+		<h2>Purchase Student Licenses for your ChemVantage Account</h2>
 		Your ChemVantage account currently has
 		<%= d.getNLicensesRemaining() %> student licenses remaining.<br /><br />
 		You may purchase more licenses on behalf of students at your institution in the following quantities:
@@ -105,9 +105,9 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
 		When the payment process is completed you will receive a
 		printable receipt on this page.<br /><br />
 
-		<h2>
+		<h3>
 			Purchase: <span id=amt>50 licenses - $250 USD</span>
-		</h2>
+		</h3>
 	</div>
 
 	<div id="smart-button-container">
