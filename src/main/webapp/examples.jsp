@@ -98,10 +98,10 @@ String sig = Long.toHexString(encrypt);
         <div class="section-padding example-content">
             <div class="container">
                 <div class="section-heading">
-                    <h3>Examples</h3>
+                    <h1>Examples</h1>
                 </div>
                 <div class="section-heading-top-gap">
-                    <h4>ChemVantage Assignments</h4>
+                    <h2>ChemVantage Assignments</h2>
                     <p>
                         Students don't do optional assignments, but most students will actually work hard on them if
                     </p>
