@@ -340,7 +340,7 @@ public class PracticeExam extends HttpServlet {
 			buf.append("<script>function showWorkBox(qid){}</script>");  // prevents javascript error from Question.print()
 			debug.append("9");
 			
-			buf.append("<h2>General Chemistry Exam</h2>");
+			buf.append("<h1>General Chemistry Exam</h1>");
 			
 			buf.append("This exam must be submitted for grading within " + timeAllowed/60 + " minutes of when it is first downloaded. ");
 			if (resumingExam) buf.append("You are resuming an exam originally downloaded at " + pt.downloaded);
@@ -421,8 +421,9 @@ public class PracticeExam extends HttpServlet {
 			buf.append("\n</form><br/>");
 			
 			buf.append("<div id='timer1' style='color:#EE0000'></div><div id=ctrl1 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
+			long endMillis = pt.downloaded.getTime() + timeAllowed*1000L;
 			buf.append("<script>"
-					+ "startTimers(" + pt.downloaded.getTime() + a.timeAllowed*1000 + ");"
+					+ "startTimers(" + endMillis + ");"
 					+ "function timesUp() {"
 					+ "  try {"
 					+ "	   document.getElementById('PracticeExamForm').submit();"
@@ -441,7 +442,7 @@ public class PracticeExam extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Debug: ");
 		try {
-			buf.append("<h2>Practice Exam Results</h2>");
+			buf.append("<h1>General Chemistry Exam</h1><h2>Results</h2>");
 			
 			if (a==null) { // anonymous user 
 				a = new Assignment();
@@ -622,7 +623,7 @@ public class PracticeExam extends HttpServlet {
 				ofy().save().entity(s);
 			}
 
-			buf.append("<h3>Your Scores for This Practice Exam Assignment</h3>");
+			buf.append("<h1>General Chemistry Exam</h1><h2>Your Scores for This Assignment</h2>");
 
 			buf.append("The best score for this user on this assignment is " + Math.round(s.getPctScore()) + "%.<br>");
 
@@ -644,7 +645,7 @@ public class PracticeExam extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		if (!user.isInstructor()) return "Unauthorized.";
 		try {
-			buf.append("<h2>User Practice Exam Transactions</h2>"
+			buf.append("<h1>General Chemistry Exam</h1><h2>Transactions</h2>"
 					+ (for_user_name==null?"":"Name: " + for_user_name + "<br/>")
 					+ "Exam: " + a.title + "<br/>"
 					+ "Date: " + new Date() + "<br/><br/>");
@@ -680,7 +681,7 @@ public class PracticeExam extends HttpServlet {
 	}
 
 	static String reviewExamScores(User user,Assignment a) {
-		StringBuffer buf = new StringBuffer();
+		StringBuffer buf = new StringBuffer("<h1>General Chemistry Exam</h1>");
 		try {
 			if (!user.isInstructor()) return "<h2>Access Denied</h2>You must be an instructor to view this page.";
 
@@ -689,7 +690,7 @@ public class PracticeExam extends HttpServlet {
 			if (a.lti_nrps_context_memberships_url == null || a.lti_nrps_context_memberships_url.isEmpty()) {
 				return "Sorry, your LMS does not support the Memberships service, so exams cannot be reviewed.";
 			}
-			buf.append("<h2>Practice Exam Assignment Results</h2>"
+			buf.append("<h2>Results</h2>"
 					+ "Assignment ID: " + a.id + "<br>"
 					+ "Created: " + a.created + "<br>");
 			
@@ -761,9 +762,9 @@ public class PracticeExam extends HttpServlet {
 	}
 	
 	String reviewExam(User user, Assignment a, long practiceExamTransactionId, String studentUserId) {
-		StringBuffer buf = new StringBuffer();
+		StringBuffer buf = new StringBuffer("<h1>General Chemistry Exam</h1>");
 		try {
-			if (!user.isInstructor()) return "<h2>Access Denied</h2>You must be an instructor to view this page.";
+			if (!user.isInstructor()) return "<h2>Access Denied. You must be an instructor to view this page.</h2>";
 
 			PracticeExamTransaction pet = ofy().load().type(PracticeExamTransaction.class).id(practiceExamTransactionId).safe();
 			if (pet.assignmentId != user.getAssignmentId()) return "<h2>Access Denied</h2>Go back and relaunch this assignment from your LMS.";
@@ -790,7 +791,7 @@ public class PracticeExam extends HttpServlet {
 			for (Response r : responses) studentAnswers.put(r.questionId,r.studentResponse);
 			*/
 			
-			buf.append("<h2>General Chemistry Exam</h2>"
+			buf.append("<h2>Review</h2>"
 					+ "Assignment ID: " + a.id + "<br>"
 					+ "Created: " + a.created + "<br>"
 					+ "Key concepts covered:<ol>");	
@@ -944,7 +945,7 @@ public class PracticeExam extends HttpServlet {
 	}
 
 	String selectExamQuestionsForm(User user) {
-		StringBuffer buf = new StringBuffer("<h3>Practice Exam Settings</h3>");
+		StringBuffer buf = new StringBuffer("<h1>General Chemistrey Exam</h1><h2>Settings</h2>");
 		try {
 			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 			
