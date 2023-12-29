@@ -79,7 +79,7 @@
 		A subscription is required to access ChemVantage assignments created by your instructor through this learning management system. 
 		First, indicate your agreement with the two statements below by checking the boxes.<br/><br/>
 		
-		<label><input type=checkbox id=terms onChange=showPurchase();> I understand and agree to the <a href=/about.html#terms target=_blank>ChemVantage Terms and Conditions of Use</a>.</label> <br/>
+		<label><input type=checkbox id=terms onChange=showPurchase();> I understand and agree to the <a href=/terms_and_conditions.html target=_blank>ChemVantage Terms and Conditions of Use</a>.</label> <br/>
 		<label><input type=checkbox id=norefunds onChange=showPurchase();> I understand that all ChemVantage subscription fees are nonrefundable.</label> <br/><br/>
 
 		<div id=purchase style='display:none'>
@@ -201,9 +201,9 @@
 </main>
 <footer><hr/><img style='padding-left: 5px; vertical-align: middle;width:30px' src=images/logo_sq.png alt='ChemVantage logo' />&nbsp;
 <a href=/index.html style='text-decoration: none;'><span style='color: #000080;font-weight: bold;'>ChemVantage</span></a> |  
-<a href=/about.html#terms>Terms and Conditions of Use</a> | 
-<a href=/about.html#privacy>Privacy Policy</a> | 
-<a href=/about.html#copyright>Copyright</a></footer>
+<a href=/terms_and_conditions.html>Terms and Conditions of Use</a> | 
+<a href=/privacy_policy.html>Privacy Policy</a> | 
+<a href=/copyright.html>Copyright</a></footer>
 
 
 </body>

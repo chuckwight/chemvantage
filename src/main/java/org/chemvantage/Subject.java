@@ -214,9 +214,9 @@ public class Subject {
 	public static String footer = "</main>"
 			+ "<footer><hr/>"
 			+ "<a href=/index.html><img src=/images/logo_sq.png alt='ChemVantage logo' style='vertical-align:middle;width:30px' /><span style='color: #000080;font-weight: bold;text-decoration: none;'>ChemVantage</span></a> | "
-			+ "<a href=/terms_and_conditions.html#terms>Terms and Conditions of Use</a> | "
-			+ "<a href=/privacy_policy.html#privacy>Privacy Policy</a> | "
-			+ "<a href=/copyright.html#copyright>Copyright</a></footer>"
+			+ "<a href=/terms_and_conditions.html>Terms and Conditions of Use</a> | "
+			+ "<a href=/privacy_policy.html>Privacy Policy</a> | "
+			+ "<a href=/copyright.html>Copyright</a></footer>"
 			+ "    <!-- Main Script Sheet -->"
 			+ "<script src='/js/script-backend.js'></script>\n"
 			+ "</body>\n</html>";

@@ -644,8 +644,8 @@ public class LTIRegistration extends HttpServlet {
 		contactEmails.add("admin@chemvantage.org");
 		regJson.add("contacts", contactEmails);		
 		regJson.addProperty("client_uri", iss);
-		regJson.addProperty("tos_uri", iss + "/about.html#terms");
-		regJson.addProperty("policy_uri", iss + "/about.html#privacy");
+		regJson.addProperty("tos_uri", iss + "/terms_and_conditions.html");
+		regJson.addProperty("policy_uri", iss + "/privacy_policy.html");
 		regJson.addProperty("scope", "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly https://purl.imsglobal.org/spec/lti-ags/scope/score https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly");
 		JsonObject ltiToolConfig = new JsonObject();
 		ltiToolConfig.addProperty("domain", domain);

@@ -190,9 +190,9 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
 </main>
 <footer><hr/><img style='padding-left: 5px; vertical-align: middle;width:30px' src=images/logo_sq.png alt='ChemVantage logo' />&nbsp;
 <a href=/index.html style='text-decoration: none;'><span style='color: #000080;font-weight: bold;'>ChemVantage</span></a> |  
-<a href=/about.html#terms>Terms and Conditions of Use</a> | 
-<a href=/about.html#privacy>Privacy Policy</a> | 
-<a href=/about.html#copyright>Copyright</a></footer>
+<a href=/terms_and_conditions.html>Terms and Conditions of Use</a> | 
+<a href=/privacy_policy.html>Privacy Policy</a> | 
+<a href=/copyright.html>Copyright</a></footer>
 
 </body>
 </html>

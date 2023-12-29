@@ -763,7 +763,7 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "<li>Institutions may purchase student licenses in bulk for as little as $2.00 USD per year.</li>"
 				+ "</ul>"
 				+ "If you have questions or need assistance, please email admin@chemvantage.org<br/><br/>"
-				+ "<label><input type=checkbox name=AcceptChemVantageTOS value=true />Accept the <a href=/about.html#terms target=_blank aria-label='opens new tab'>ChemVantage Terms of Service</a></label><br/><br/>"
+				+ "<label><input type=checkbox name=AcceptChemVantageTOS value=true />Accept the <a href=/terms_and_conditions.html target=_blank aria-label='opens new tab'>ChemVantage Terms of Service</a></label><br/><br/>"
 				+ "<input type=submit value='Complete Registration'/><br/><br/>");
 		buf.append("</form>");
 		buf.append(Subject.footer);
