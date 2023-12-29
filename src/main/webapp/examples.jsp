@@ -285,7 +285,7 @@ String sig = Long.toHexString(encrypt);
         <div class="container">
             <div class="d-flex footer-content justify-between align-center">
                 <div class="w-40">
-                    <ul class="social">
+                    <ul class="social"> <!--  
                         <li>
                             <a href="#" role="button" target="_blank" aria-label="Opens new tab">
                                 <img src="images/facebook.png" alt="facebook"/>
@@ -305,7 +305,7 @@ String sig = Long.toHexString(encrypt);
                             <a href="#" role="button" target="_blank" aria-label="Opens new tab">
                                 <img src="images/linkedin.png" alt="linkedin"/>
                             </a>
-                        </li>
+                        </li> -->
                     </ul>
                 </div>
                 <div class="w-40 text-end">
