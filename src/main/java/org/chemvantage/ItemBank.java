@@ -68,7 +68,7 @@ public class ItemBank extends HttpServlet {
 	String getTopics() {
 		if (this.text == null) this.text = ofy().load().type(Text.class).filter("title","View All Topics").first().now();
 		
-		StringBuffer buf = new StringBuffer("<SELECT id=topic NAME=Topic class='form-select'>");
+		StringBuffer buf = new StringBuffer();
 		try {
 			buf.append("Select a topic");
 			for (Chapter c : text.chapters) {
