@@ -254,7 +254,7 @@ public class ResponseServlet extends HttpServlet {
 					} catch (Exception e) {}
 					i++;
 					try {
-						QuizTransaction qt = qTransactions.get(key(r.transactionId));
+						QuizTransaction qt = qTransactions.get(key(QuizTransaction.class,r.transactionId));
 						Key<Question> k = key(Question.class,r.questionId);
 						qt.questionKeys.add(k);
 						qt.studentAnswers.put(k,r.studentResponse);
@@ -302,7 +302,7 @@ public class ResponseServlet extends HttpServlet {
 					} catch (Exception e) {}
 					i++;
 					try {
-						PracticeExamTransaction pt = prExTransactions.get(key(r.transactionId));
+						PracticeExamTransaction pt = prExTransactions.get(key(PracticeExamTransaction.class,r.transactionId));
 						Key<Question> k = key(Question.class,r.questionId);
 						pt.studentAnswers.put(k,r.studentResponse);
 						pt.correctAnswers.put(k,r.correctAnswer);
@@ -331,7 +331,7 @@ public class ResponseServlet extends HttpServlet {
 					} catch (Exception e) {}
 					i++;
 					try {
-						PlacementExamTransaction pt = plExTransactions.get(key(r.transactionId));
+						PlacementExamTransaction pt = plExTransactions.get(key(PlacementExamTransaction.class,r.transactionId));
 						Key<Question> k = key(Question.class,r.questionId);
 						pt.studentAnswers.put(k,r.studentResponse);
 						pt.correctAnswers.put(k,r.correctAnswer);
@@ -360,7 +360,7 @@ public class ResponseServlet extends HttpServlet {
 					} catch (Exception e) {}
 					i++;
 					try {
-						VideoTransaction vt = vTransactions.get(key(r.transactionId));
+						VideoTransaction vt = vTransactions.get(key(VideoTransaction.class,r.transactionId));
 						Key<Question> k = key(Question.class,r.questionId);
 						vt.questionKeys.add(k);
 						vt.studentAnswers.put(k,r.studentResponse);
@@ -391,7 +391,7 @@ public class ResponseServlet extends HttpServlet {
 					} catch (Exception e) {}
 					i++;
 					try {
-						STTransaction st = sTransactions.get(key(r.transactionId));
+						STTransaction st = sTransactions.get(key(STTransaction.class,r.transactionId));
 						Key<Question> k = key(Question.class,r.questionId);
 						st.answeredKeys.add(k);
 						st.studentAnswers.put(k,r.studentResponse);
