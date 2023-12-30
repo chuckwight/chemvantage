@@ -390,7 +390,7 @@ public class SmartText extends HttpServlet {
 		try {
 			if (a.lti_nrps_context_memberships_url==null) throw new Exception("No Names and Roles Provisioning support.");
 
-			buf.append("<h1>Reading Assignment</h1><h2>" + a.title + "</h2>");
+			buf.append("<h1>Reading Assignment</h1><h2>" + (a.title==null?"":a.title) + "</h2>");
 			buf.append("Valid: " + new Date() + "<p>");
 			buf.append("The roster below is obtained using the Names and Role Provisioning service offered by your learning management system, "
 					+ "and may or may not include user's names or emails, depending on the settings of your LMS.<br/><br/>");
