@@ -200,6 +200,19 @@ public class DataStoreCleaner extends HttpServlet {
 		}
 		buf.append(hwtKeys.size() + " orphan HWTransactions" + (testOnly?" identified":" deleted") + ".<br>");
 		
+		// Clean STTransactions
+		List<STTransaction> stts = ofy().load().type(STTransaction.class).limit(1000).list();
+		List<Key<STTransaction>> sttKeys = new ArrayList<Key<STTransaction>>();
+		for (STTransaction stt :stts) {
+			if (stt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,stt.assignmentId)).count()==0) sttKeys.add(key(stt));
+		}
+		if (!testOnly) {
+			int nBatches = sttKeys.size()/500;
+			for (int i=0;i<nBatches;i++) ofy().delete().keys(sttKeys.subList(i*500, (i+1)*500));
+			ofy().delete().keys(sttKeys.subList(nBatches*500, sttKeys.size()));
+		}
+		buf.append(sttKeys.size() + " orphan STTransactions" + (testOnly?" identified":" deleted") + ".<br>");
+		
 		// Clean PracticeExamTransactions
 		List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).limit(1000).list();
 		List<Key<PracticeExamTransaction>> petKeys = new ArrayList<Key<PracticeExamTransaction>>();
