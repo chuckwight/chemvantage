@@ -47,7 +47,7 @@ public class Edit extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
 	Map<Key<Question>,Question> questions = new HashMap<Key<Question>,Question>();
-	Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
+	//Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
 	Map<Key<Question>,Integer> pointValue = new HashMap<Key<Question>,Integer>();
 	List<Concept> concepts = new ArrayList<Concept>();
 	
@@ -412,7 +412,7 @@ public class Edit extends HttpServlet {
 							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "' />"
 							+ "<TR id=q" + q.id + " VALIGN=TOP>"
 							+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Edit />"
-							+ "<br/><FONT SIZE=-2>" + successPct.get(key(q)) + "%&nbsp;avg&nbsp;score</FONT>"
+							+ "<br/><FONT SIZE=-2>" + q.getPctSuccess() + "%&nbsp;avg&nbsp;score</FONT>"
 							//+ (q.learn_more_url != null && !q.learn_more_url.isEmpty()?"<br/><a href='" + q.learn_more_url + "' target=_blank><img src=/images/learn_more.png /></a>":"")
 							+ "</TD>");
 					buf.append("</FORM>");
@@ -1333,11 +1333,7 @@ public class Edit extends HttpServlet {
 			buf.append("Author: " + q.authorId + "<br>");
 			buf.append("Editor: " + q.editorId + "<br>");
 			
-			// Calculate the current success rate for this question:
-			int nSuccessful = ofy().load().type(Response.class).filter("questionId",q.id).filter("score >",0).count();
-			int nTotalAttmp = ofy().load().type(Response.class).filter("questionId",q.id).count();
-			double successPct = nTotalAttmp>0?100.*nSuccessful/nTotalAttmp:0;
-			buf.append("Success Rate: " + nSuccessful + "/" + nTotalAttmp + " (" + successPct + "%)<p>");
+			buf.append("Success Rate: " + q.getSuccess() + "<p>");
 			
 			buf.append("<FORM Action=/Edit METHOD=POST>");
 			
@@ -1714,68 +1710,10 @@ public class Edit extends HttpServlet {
 			if (pointValue.get(k2)==null) pointValue.put(k2, q2.pointValue);
 			int rank = pointValue.get(k1) - pointValue.get(k2);
 			
-			if (successPct.get(k1)==null) {
-				int totalResponses = ofy().load().type(Response.class).filter("questionId",k1.getId()).count();
-				if (totalResponses==0) successPct.put(k1,100);  // put new questions first
-				else {
-					int successResponses = ofy().load().type(Response.class).filter("questionId",k1.getId()).filter("score >",0).count();
-					successPct.put(k1,successResponses*100/totalResponses);
-				}
-			}
-			if (successPct.get(k2)==null) {
-				int totalResponses = ofy().load().type(Response.class).filter("questionId",k2.getId()).count();
-				if (totalResponses==0) successPct.put(k2,100);  // put new questions first
-				else {
-					int successResponses = ofy().load().type(Response.class).filter("questionId",k2.getId()).filter("score >",0).count();
-					successPct.put(k2,successResponses*100/totalResponses);
-				}
-			}
-		
 			if (rank==0) rank = q1.text.compareTo(q2.text); // alphabetize on Question.text
 			if (rank==0) rank = k1.compareTo(k2); // tie breaker
 			
 			return rank;  
 		}
 	}
-	
-	class SortBySuccessPct implements Comparator<Key<Question>> {
-		public int compare(Key<Question> k1,Key<Question> k2) {
-			
-			if (pointValue.get(k1)==null) {
-				Question q1 = questions.get(k1);
-				if (q1==null) q1 = ofy().load().key(k1).now();
-				pointValue.put(k1, q1.pointValue);
-			}
-			if (pointValue.get(k2)==null) {
-				Question q2 = questions.get(k2);
-				if (q2==null) q2 = ofy().load().key(k1).now();
-				pointValue.put(k2, q2.pointValue);
-			}
-			int rank = pointValue.get(k1) - pointValue.get(k2); // primary sort by pointValue for Exam questions
-			
-			if (rank == 0) { // for Question items with same point value, sort by successPct (high to low)
-				if (successPct.get(k1)==null) {
-					int totalResponses = ofy().load().type(Response.class).filter("questionId",k1.getId()).count();
-					if (totalResponses==0) successPct.put(k1,100);  // put new questions first
-					else {
-						int successResponses = ofy().load().type(Response.class).filter("questionId",k1.getId()).filter("score >",0).count();
-						successPct.put(k1,successResponses*100/totalResponses);
-					}
-				}
-				if (successPct.get(k2)==null) {
-					int totalResponses = ofy().load().type(Response.class).filter("questionId",k2.getId()).count();
-					if (totalResponses==0) successPct.put(k2,100);  // put new questions first
-					else {
-						int successResponses = ofy().load().type(Response.class).filter("questionId",k2.getId()).filter("score >",0).count();
-						successPct.put(k2,successResponses*100/totalResponses);
-					}
-				}
-			rank = successPct.get(k2)-successPct.get(k1); // this reverses the normal Comparator to give higher rank to lower successPct
-			}
-			if (rank==0) rank = k2.compareTo(k1); // tie breaker required else TreeMap will overwrite existing entry
-			
-			return rank;  
-		}
-	}
-
 }

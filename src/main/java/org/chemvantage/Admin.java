@@ -188,10 +188,17 @@ public class Admin extends HttpServlet {
 			buf.append("<h2>Recent Activity (past 30 days)</h2>");			
 			if ("ShowGroupEnrollments".equals(userRequest)) buf.append(Group.enrollmentReport());
 			else {
-				Date lastMonth = new Date(new Date().getTime()-2592000000L);			
-				buf.append("Active LTI Advantage deployments: " + ofy().load().type(Deployment.class).filter("lastLogin >",lastMonth).count() 
+				Date oneMonthAgo = new Date(new Date().getTime()-2592000000L);			
+				buf.append("Active LTI Advantage deployments: " + ofy().load().type(Deployment.class).filter("lastLogin >",oneMonthAgo).count() 
 					+ " <a href=/Admin?UserRequest=ShowGroupEnrollments>show details</a><br/>");			
-				buf.append("Total number of Response entities: " + ofy().load().type(Response.class).filter("submitted >",lastMonth).count());
+				buf.append("Total number of transactions:<br/>"
+						+ "Homework: " +  ofy().load().type(HWTransaction.class).filter("graded >",oneMonthAgo).count()
+						+ "Quiz: " +  ofy().load().type(QuizTransaction.class).filter("graded >",oneMonthAgo).count()
+						+ "SmartText: " +  ofy().load().type(STTransaction.class).filter("graded >",oneMonthAgo).count()
+						+ "Practice Exam: " +  ofy().load().type(PracticeExamTransaction.class).filter("graded >",oneMonthAgo).count()
+						+ "Placement Exam: " +  ofy().load().type(PlacementExamTransaction.class).filter("graded >",oneMonthAgo).count()
+						+ "Video: " +  ofy().load().type(VideoTransaction.class).filter("graded >",oneMonthAgo).count()
+						+ "Poll: " +  ofy().load().type(PollTransaction.class).filter("completed >",oneMonthAgo).count());
 			}
 			
 			// New Accounts

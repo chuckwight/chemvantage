@@ -141,17 +141,15 @@ public class Help extends HttpServlet {
 
 		buf.append("<script>document.getElementById('showWork" + q.id + "').style.display='';</script>");
 
-		List<Response> responses = ofy().load().type(Response.class).filter("userId",hwt.userId).filter("questionId",q.id).list();
-
 		Date solved = null;
 		StringBuffer tablebuf = new StringBuffer();
-		if (responses.size() > 0) {
+		if (hwTransactions.size() > 0) {
 			tablebuf.append("<table><tr><td>Date/Time (UTC)</td><td>Student Response</td><td>Score</td></tr>");
-			for (Response r : responses) {
-				if (r.assignmentId==0 || r.assignmentId != hwt.assignmentId) continue;
-				if (r.score>0 && (solved==null || solved.after(r.submitted))) solved = r.submitted;
-				tablebuf.append("<tr><td>" + r.submitted.toString() + "</td><td align=center>" + r.studentResponse 
-						+ "</td><td align=center>" + r.score + "</td></tr>");	
+			for (HWTransaction hwtr : hwTransactions) {
+				if (hwtr.assignmentId==0) continue;
+				if (hwtr.score>0 && (solved==null || solved.after(hwtr.graded))) solved = hwtr.graded;
+				tablebuf.append("<tr><td>" + hwtr.graded.toString() + "</td><td align=center>" + hwtr.studentAnswer 
+						+ "</td><td align=center>" + hwtr.score + "</td></tr>");	
 			}
 			tablebuf.append("</table><br>");
 		}

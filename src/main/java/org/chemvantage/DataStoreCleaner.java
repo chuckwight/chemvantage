@@ -89,14 +89,12 @@ public class DataStoreCleaner extends HttpServlet {
 		boolean testOnly = Boolean.parseBoolean(request.getParameter("TestOnly"));
 		
 		switch (task) {
-		case "CleanResponses": buf.append(cleanResponses(testOnly)); break;
 		case "CleanTransactions": buf.append(cleanTransactions(testOnly)); break;
 		case "CleanScores": buf.append(cleanScores(testOnly)); break;
 		case "CleanAssignments": buf.append(cleanAssignments(testOnly,request)); break;
 		case "CleanDeployments": buf.append(cleanDeployments(testOnly)); break;
 		case "CleanUsers": buf.append(cleanUsers(testOnly)); break;
 		case "CleanAll":
-			Utilities.createTask("/DataStoreCleaner","Task=CleanResponses&TestOnly="+testOnly);
 			Utilities.createTask("/DataStoreCleaner","Task=CleanTransactions&TestOnly="+testOnly);
 			Utilities.createTask("/DataStoreCleaner","Task=CleanScores&TestOnly="+testOnly);
 			Utilities.createTask("/DataStoreCleaner","Task=CleanAssignments&TestOnly="+testOnly);
@@ -144,27 +142,6 @@ public class DataStoreCleaner extends HttpServlet {
 		buf.append("<input type=submit><br>");
 		buf.append("</form>");
 
-		return buf.toString();
-	}
-
-	private String cleanResponses(boolean testOnly) {
-		// This method deletes all Response entities older than 3 years
-
-		StringBuffer buf = new StringBuffer();
-		buf.append("<h2>Clean Responses</h2>");
-		try {
-			List<Key<Response>> keys = ofy().load().type(Response.class).filter("submitted <",threeYearsAgo).keys().list();			
-			if (keys.size() > 0 && !testOnly) {  // delete all the expired keys in batches of 500 (max allowed by ofy().delete)
-				int nBatches = keys.size()/500;
-				for (int i=0;i<nBatches;i++) ofy().delete().keys(keys.subList(i*500, (i+1)*500));
-				ofy().delete().keys(keys.subList(nBatches*500, keys.size()));
-			}
-			
-			buf.append(keys.size() + " Responses more than 3 years old" + (testOnly?" identified":" deleted") + ".<br>");
-			buf.append("Done.<br>");
-		} catch (Exception e) {
-			buf.append("Error: " + e.toString());
-		}
 		return buf.toString();
 	}
 
