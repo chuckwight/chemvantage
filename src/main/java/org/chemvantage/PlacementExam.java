@@ -562,6 +562,7 @@ public class PlacementExam extends HttpServlet {
 					pt.studentAnswers.put(k, studentAnswer);
 					pt.correctAnswers.put(k, q.getCorrectAnswer());
 					debug.append(".");
+					q.addAttemptsNoSave(1, score>0?1:0);
 					
 					if (score < q.pointValue) {
 						// include question in list of incorrectly answered questions
@@ -579,6 +580,7 @@ public class PlacementExam extends HttpServlet {
 			pt.graded = now;
 			debug.append("3");
 			ofy().save().entity(pt).now();
+			ofy().save().entities(questions.values());
 			debug.append("d");
 			
 			if (!user.isAnonymous()) {

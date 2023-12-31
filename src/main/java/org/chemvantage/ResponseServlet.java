@@ -23,10 +23,8 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -47,9 +45,65 @@ public class ResponseServlet extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
 		PrintWriter out = response.getWriter();
-		response.setContentType("text/html");;
+		response.setContentType("text/html");
 		StringBuffer buf = new StringBuffer();
+
+		buf.append("<h1>Response Servlet</h1>"
+				+ "This servlet deletes Response items after updating the respective Question items.<br/>"
+				+ "<form method=post>"
+				+ "<input type=submit value=Go />"
+				+ "</form>");
+		out.println(buf.toString());
+	}
+	
+	public void doPost(HttpServletRequest request,HttpServletResponse response)
+			throws ServletException, IOException {
+		PrintWriter out = response.getWriter();
+		response.setContentType("text/html");
+		StringBuffer buf = new StringBuffer("Starting.");
+		long rId = 1L;
+		try {
+			rId = Long.parseLong(request.getParameter("ResponseId"));
+		} catch (Exception e) {}
 		
+		List<Response> responses = null;
+		try {
+			// Get the next batch of Response entities (knowing that the previous delete may not be complete)
+			Key<Response> rk = key(Response.class,rId);
+			responses = ofy().load().type(Response.class).filterKey(">",rk).limit(500).list();
+			if (responses.size()==0) throw new Exception("No more responses.");
+			// Make a list of unique Question keys
+			List <Key<Question>> questionKeys = new ArrayList<Key<Question>>();
+			for (Response r : responses) {
+				try {
+					Key<Question> qk = key(Question.class,r.questionId);
+					if (!questionKeys.contains(qk)) questionKeys.add(qk);
+				} catch (Exception e) {}
+			}
+			// retrieve all the questions for this batch of Response items
+			Map<Key<Question>,Question> questions = ofy().load().keys(questionKeys);
+			
+			// for each response, update the Question stats (may need to initialize the fields)
+			for (Response r : responses) {
+				questions.get(key(Question.class,r.questionId)).addAttemptsNoSave(1,r.score>0?1:0);
+			}
+			
+			// Save the Questions and delete the Responses
+			ofy().save().entities(questions.values());
+			ofy().delete().entities(responses);
+			
+			// Start a new round
+			Utilities.createTask("/ResponseServlet", "ResponseId=" + responses.get(responses.size()-1).id,10);
+			
+			buf.append("Processed " + responses.size() + " responses.");
+			buf.append("The last response ID is " + responses.get(responses.size()-1).id);
+		} catch (Exception e) {
+			Utilities.sendEmail("ChermVantage", "admin@chemvantage.org", "ResponseServlet", (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + buf.toString());
+		}
+		
+		out.println(buf.toString());
+	}		
+		/*		
 		buf.append("<h1>Response Servlet</h1>"
 				+ "This servlet puts Response items for one assignment into the proper transactions.<br/>"
 				+ "<form method=post>"
@@ -190,7 +244,7 @@ public class ResponseServlet extends HttpServlet {
 			response.setContentType("text/html");
 			out.println("Error: " + e.getMessage());
 		}
-*/
+
 	}
 	
 	public void doPost(HttpServletRequest request,HttpServletResponse response)

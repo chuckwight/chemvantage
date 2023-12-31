@@ -386,6 +386,8 @@ public class Quiz extends HttpServlet {
 						q.setParameters(seed);
 						int score = q.isCorrect(studentAnswer)?q.pointValue:0;
 
+						q.addAttemptsNoSave(1, score>0?1:0);  // update Question stats
+						
 						qt.questionKeys.add(k);
 						qt.questionScores.put(k, score);
 						qt.studentAnswers.put(k, studentAnswer);
@@ -405,6 +407,7 @@ public class Quiz extends HttpServlet {
 			qt.graded = now;
 			qt.score = timeExpired?0:studentScore;
 			ofy().save().entity(qt);
+			ofy().save().entities(quizQuestions.values());  // save updated questions
 			
 			// Try to post the score to the student's LMS:
 			try {

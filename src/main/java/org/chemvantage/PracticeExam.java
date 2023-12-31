@@ -508,7 +508,7 @@ public class PracticeExam extends HttpServlet {
 					pt.questionScores.put(k, score);
 					pt.studentAnswers.put(k, studentAnswer);
 					pt.correctAnswers.put(k, q.getCorrectAnswer());
-					
+					q.addAttemptsNoSave(1, score>0?1:0);
 					if (score == 0) {
 						// include question in list of incorrectly answered questions
 						wrongAnswers++;
@@ -520,6 +520,7 @@ public class PracticeExam extends HttpServlet {
 			missedQuestions.append("</OL>\n");
 			pt.graded = now;
 			ofy().save().entity(pt).now();
+			ofy().save().entities(examQuestions.values());
 			
 			if (a.id>0) try {
 				Score s = Score.getInstance(user.getId(),a);

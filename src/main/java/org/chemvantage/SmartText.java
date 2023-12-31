@@ -281,6 +281,7 @@ public class SmartText extends HttpServlet {
 				   st.scores[index]++;
 				   st.answeredKeys.add(key(Question.class,q.id));
 			   }
+			   q.addAttemptSave(true);
 			   buf.append("<b>Congratulations! Your answer was correct.</b><br/>");
 		   } else {
 			   st.missedQuestions[index]++;
@@ -288,8 +289,9 @@ public class SmartText extends HttpServlet {
 					   + " (<a href=# onClick=\"document.getElementById('correctAnswer').style='display:block';return false;\">show me</a>)<br/>");
 			   buf.append("<div id=correctAnswer style='display:none'><b>Here is the correct answer:</b><br/><br/>" 
 					   + q.printAllToStudents(studentAnswer) + "</div><br/>");
+			   q.addAttemptSave(false);
 		   }
-
+		   
 		   int score = 0;
 		   int possibleScore = 0;
 		   for (int i=0; i<st.scores.length; i++) {

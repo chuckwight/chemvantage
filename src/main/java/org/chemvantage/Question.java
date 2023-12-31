@@ -638,14 +638,14 @@ public class Question implements Serializable, Cloneable {
 		return buf.toString(); 
 	}
 	
-	public void addAttempt(boolean isCorrect) {
+	public void addAttemptSave(boolean isCorrect) {
 		if (nTotalAttempts==null) initializeCounters();
 		nTotalAttempts++;
 		if(isCorrect) nCorrectAnswers++;
 		ofy().save().entity(this);
 	}
 	
-	public void addBulkAttempts(int nTotal,int nCorrect) {
+	public void addAttemptsNoSave(int nTotal,int nCorrect) {
 		if (nTotalAttempts==null) initializeCounters();
 		this.nTotalAttempts += nTotal;
 		this.nCorrectAnswers += nCorrect;

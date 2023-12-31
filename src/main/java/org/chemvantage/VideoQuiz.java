@@ -271,7 +271,7 @@ public class VideoQuiz extends HttpServlet {
 						vt.questionScores.put(k, score);
 						vt.studentAnswers.put(k, studentAnswer);
 						vt.correctAnswers.put(k, q.getCorrectAnswer());
-						q.addAttempt(score>0);
+						q.addAttemptsNoSave(1,score>0?1:0);
 						quizletScore += score;
 						if (score == 0) {  
 							// include question in list of incorrectly answered questions

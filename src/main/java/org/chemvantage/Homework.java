@@ -500,7 +500,7 @@ public class Homework extends HttpServlet {
 				// create/update/store a HomeworkScore object
 				try {  // throws exception if hwa==null
 					if (!user.isAnonymous() && hwa.questionKeys.contains(k) && hwa.lti_ags_lineitem_url != null) {
-						q.addAttempt(studentScore>0);
+						q.addAttemptSave(studentScore>0);
 						Score s = Score.getInstance(user.getId(),hwa);
 						ofy().save().entity(s).now();
 						String payload = "AssignmentId=" + hwa.id + "&UserId=" + URLEncoder.encode(user.getId(),"UTF-8");
