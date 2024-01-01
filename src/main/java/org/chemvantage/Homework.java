@@ -404,7 +404,7 @@ public class Homework extends HttpServlet {
 				buf.append("<h1>Homework</h1>"
 						+ "<h2>Please Wait For The Retry Delay To Complete</h2>");
 				buf.append(df.format(now));
-				buf.append("<p>The retry delay for this homework problem is <span id=timer0 style='color: #EE0000'></span>");
+				buf.append("<p>The retry delay for this homework problem is <span id=timer0 style='color: #EE0000'></span><br/>");
 				buf.append("Please take these few moments to check your work carefully.  You can sometimes find alternate routes to the "
 						+ "same solution, or it may be possible to use your answer to back-calculate the data given in the problem.<br/><br/>");
 				//if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) 
@@ -422,7 +422,7 @@ public class Homework extends HttpServlet {
 
 				buf.append("<INPUT TYPE=SUBMIT id='RetryButton' DISABLED=true style='opacity:0.5' VALUE='Grade This Exercise'></FORM><br/><br/>");
 				buf.append("<script>"
-						+ "startTimers('" + (now.getTime() + retryDelayMinutes*60000) + "');"
+						+ "startTimers('" + (now.getTime() + secondsRemaining*1000) + "');"
 						+ "function timesUp() {"
 						+ "document.getElementById('RetryButton').style='disabled:false;opacity:1';"
 						+ "}"
