@@ -424,7 +424,8 @@ public class Homework extends HttpServlet {
 				buf.append("<script>"
 						+ "startTimers('" + (now.getTime() + secondsRemaining*1000) + "');"
 						+ "function timesUp() {"
-						+ "document.getElementById('RetryButton').style='disabled:false;opacity:1';"
+						+ "document.getElementById('RetryButton').disabled=false;"
+						+ "document.getElementById('RetryButton').style.opacity=1;"
 						+ "}"
 						+ "</script>");
 
