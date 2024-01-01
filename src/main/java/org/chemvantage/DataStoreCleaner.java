@@ -101,18 +101,7 @@ public class DataStoreCleaner extends HttpServlet {
 			Utilities.createTask("/DataStoreCleaner","Task=CleanDeployments&TestOnly="+testOnly);
 			Utilities.createTask("/DataStoreCleaner","Task=CleanUsers&TestOnly="+testOnly);
 			
-/*			// This section handles the parent case from the cron job
-			Queue queue = QueueFactory.getDefaultQueue();
-
-			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanResponses").param("TestOnly", testOnly?"true":"false"));
-			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanTransactions").param("TestOnly", testOnly?"true":"false"));
-			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanScores").param("TestOnly", testOnly?"true":"false"));
-			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanAssignments").param("TestOnly", testOnly?"true":"false"));
-			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanDeployments").param("TestOnly", testOnly?"true":"false"));
-			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanBLTIConsumers").param("TestOnly", testOnly?"true":"false"));
-			queue.add(withUrl("/DataStoreCleaner").param("Task","CleanUsers").param("TestOnly", testOnly?"true":"false"));
-*/			
-			buf.append("6 background tasks launched to scrub all obsolete entity types from the datastore.");
+			buf.append("5 background tasks launched to scrub all obsolete entity types from the datastore.");
 			break;
 		}
 		
@@ -131,12 +120,10 @@ public class DataStoreCleaner extends HttpServlet {
 		buf.append("<label><input type=radio name=TestOnly value=false> Delete entities (cannot be undone)</label><p>");
 		
 		buf.append("Entities to be scrubbed from the datastore:<br>");
-		buf.append("<label><input type=radio name=Task value=CleanResponses> Responses older than 3 years</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanTransactions> Transactions with no existing Assignment entity</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanScores> Scores older than 1 year</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanAssignments> Assignments unused more than 1 year with no lineitem_url</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanDeployments> Deployments with no logins for more than 1 year</label><br>");
-		buf.append("<label><input type=radio name=Task value=CleanBLTIConsumers> BLTIConsumers with no logins for more than 1 year</label><br>");
 		buf.append("<label><input type=radio name=Task value=CleanUsers> Users whose tokens have expired</label><p>");
 		buf.append("<label><input type=radio name=Task value=CleanAll>All of the entities above (launches background job)</label><p>");
 		buf.append("<input type=submit><br>");
@@ -154,8 +141,12 @@ public class DataStoreCleaner extends HttpServlet {
 		// Clean QuizTransactions
 		List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).limit(1000).list();
 		List<Key<QuizTransaction>> qtKeys = new ArrayList<Key<QuizTransaction>>();
-		for (QuizTransaction qt :qts) {
-			if (qt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,qt.assignmentId)).count()==0) qtKeys.add(key(qt));
+		while (qts.size()>0) {
+			for (QuizTransaction qt :qts) {
+				if (qt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,qt.assignmentId)).count()==0) qtKeys.add(key(qt));
+			}
+			long last = qts.get(qts.size()-1).id;
+			qts = ofy().load().type(QuizTransaction.class).filterKey(">", key(QuizTransaction.class,last)).limit(1000).list();
 		}
 		if (!testOnly) {
 			int nBatches = qtKeys.size()/500;
@@ -167,8 +158,12 @@ public class DataStoreCleaner extends HttpServlet {
 		// Clean HWTransactions
 		List<HWTransaction> hwts = ofy().load().type(HWTransaction.class).limit(1000).list();
 		List<Key<HWTransaction>> hwtKeys = new ArrayList<Key<HWTransaction>>();
-		for (HWTransaction hwt :hwts) {
-			if (hwt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,hwt.assignmentId)).count()==0) hwtKeys.add(key(hwt));
+		while (hwts.size()>0) {
+			for (HWTransaction hwt :hwts) {
+				if (hwt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,hwt.assignmentId)).count()==0) hwtKeys.add(key(hwt));
+			}
+			long last = hwts.get(hwts.size()-1).id;
+			hwts = ofy().load().type(HWTransaction.class).filterKey(">", key(HWTransaction.class,last)).limit(1000).list();
 		}
 		if (!testOnly) {
 			int nBatches = hwtKeys.size()/500;
@@ -180,8 +175,12 @@ public class DataStoreCleaner extends HttpServlet {
 		// Clean STTransactions
 		List<STTransaction> stts = ofy().load().type(STTransaction.class).limit(1000).list();
 		List<Key<STTransaction>> sttKeys = new ArrayList<Key<STTransaction>>();
-		for (STTransaction stt :stts) {
-			if (stt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,stt.assignmentId)).count()==0) sttKeys.add(key(stt));
+		while (stts.size()>0) {
+			for (STTransaction stt :stts) {
+				if (stt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,stt.assignmentId)).count()==0) sttKeys.add(key(stt));
+			}
+			long last = stts.get(stts.size()-1).id;
+			stts = ofy().load().type(STTransaction.class).filterKey(">", key(STTransaction.class,last)).limit(1000).list();
 		}
 		if (!testOnly) {
 			int nBatches = sttKeys.size()/500;
@@ -189,12 +188,16 @@ public class DataStoreCleaner extends HttpServlet {
 			ofy().delete().keys(sttKeys.subList(nBatches*500, sttKeys.size()));
 		}
 		buf.append(sttKeys.size() + " orphan STTransactions" + (testOnly?" identified":" deleted") + ".<br>");
-		
+
 		// Clean PracticeExamTransactions
 		List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).limit(1000).list();
 		List<Key<PracticeExamTransaction>> petKeys = new ArrayList<Key<PracticeExamTransaction>>();
-		for (PracticeExamTransaction pet :pets) {
-			if (pet.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,pet.assignmentId)).count()==0) petKeys.add(key(pet));
+		while (pets.size()>0) {
+			for (PracticeExamTransaction pet :pets) {
+				if (pet.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,pet.assignmentId)).count()==0) petKeys.add(key(pet));
+			}
+			long last = pets.get(pets.size()-1).id;
+			pets = ofy().load().type(PracticeExamTransaction.class).filterKey(">", key(PracticeExamTransaction.class,last)).limit(1000).list();
 		}
 		if (!testOnly) {
 			int nBatches = petKeys.size()/500;
@@ -206,8 +209,12 @@ public class DataStoreCleaner extends HttpServlet {
 		// Clean VideoTransactions
 		List<VideoTransaction> vts = ofy().load().type(VideoTransaction.class).limit(1000).list();
 		List<Key<VideoTransaction>> vtKeys = new ArrayList<Key<VideoTransaction>>();
-		for (VideoTransaction vt :vts) {
-			if (vt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,vt.assignmentId)).count()==0) vtKeys.add(key(vt));
+		while (vts.size()>0) {
+			for (VideoTransaction vt :vts) {
+				if (vt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,vt.assignmentId)).count()==0) vtKeys.add(key(vt));
+			}
+			long last = vts.get(vts.size()-1).id;
+			vts = ofy().load().type(VideoTransaction.class).filterKey(">", key(VideoTransaction.class,last)).limit(1000).list();
 		}
 		if (!testOnly) {
 			int nBatches = vtKeys.size()/500;
@@ -219,8 +226,12 @@ public class DataStoreCleaner extends HttpServlet {
 		// Clean PollTransactions
 		List<PollTransaction> pts = ofy().load().type(PollTransaction.class).limit(1000).list();
 		List<Key<PollTransaction>> ptKeys = new ArrayList<Key<PollTransaction>>();
-		for (PollTransaction pt :pts) {
-			if (pt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,pt.assignmentId)).count()==0) ptKeys.add(key(pt));
+		while (pts.size()>0) {
+			for (PollTransaction pt :pts) {
+				if (pt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,pt.assignmentId)).count()==0) ptKeys.add(key(pt));
+			}
+			long last = pts.get(pts.size()-1).id;
+			pts = ofy().load().type(PollTransaction.class).filterKey(">", key(PollTransaction.class,last)).limit(1000).list();
 		}
 		if (!testOnly) {
 			int nBatches = ptKeys.size()/500;
@@ -232,8 +243,12 @@ public class DataStoreCleaner extends HttpServlet {
 		// Clean PlacementExamTransactions
 		List<PlacementExamTransaction> plts = ofy().load().type(PlacementExamTransaction.class).limit(1000).list();
 		List<Key<PlacementExamTransaction>> pltKeys = new ArrayList<Key<PlacementExamTransaction>>();
-		for (PlacementExamTransaction plt :plts) {
-			if (plt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,plt.assignmentId)).count()==0) pltKeys.add(key(plt));
+		while (plts.size()>0) {
+			for (PlacementExamTransaction plt :plts) {
+				if (plt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,plt.assignmentId)).count()==0) pltKeys.add(key(plt));
+			}
+			long last = plts.get(plts.size()-1).id;
+			plts = ofy().load().type(PlacementExamTransaction.class).filterKey(">", key(PlacementExamTransaction.class,last)).limit(1000).list();
 		}
 		if (!testOnly) {
 			int nBatches = pltKeys.size()/500;
@@ -273,6 +288,7 @@ public class DataStoreCleaner extends HttpServlet {
 		StringBuffer debug = new StringBuffer("Debug: ");
 		buf.append("<h2>Clean Assignments</h2>");
 		Date now = new Date();
+		sixMonthsAgo = new Date(now.getTime()-15768000000L);
 		oneYearAgo = new Date(now.getTime()-31536000000L);
 		
 		if (request.getParameter("AssignmentId") != null) {
@@ -344,18 +360,23 @@ public class DataStoreCleaner extends HttpServlet {
 				
 				List<Key<Assignment>> assignmentKeys = new ArrayList<Key<Assignment>>();
 				StringBuffer exp = new StringBuffer();
-				for (Assignment a : oldAssignments) {
-					if (a.lti_ags_lineitem_url==null) assignmentKeys.add(key(Assignment.class,a.id));
-					else if (ofy().load().key(key(Deployment.class,a.domain)).now()==null) assignmentKeys.add(key(Assignment.class,a.id));
+				for (Assignment a : oldAssignments) {													// Mark for deletion if
+					if (a.created.before(sixMonthsAgo) && a.lti_ags_lineitem_url==null) assignmentKeys.add(key(Assignment.class,a.id));	// No lineitem_url
+					else if ((a.valid==null && a.created.before(sixMonthsAgo)) || a.valid.before(oneYearAgo)) assignmentKeys.add(key(Assignment.class,a.id));	// unused for >1 year
+					else if (ofy().load().key(key(Deployment.class,a.domain)).now()==null) assignmentKeys.add(key(Assignment.class,a.id));	// parent deployment doesn't exist
 					if (assignmentKeys.contains(key(a))) exp.append(a.id + " " + a.domain + " " + a.lti_ags_lineitem_url + "</br/>");
 				}
 				
 				buf.append("Found " + oldAssignments.size() + " old assignments, of which " + assignmentKeys.size() + " appear to have expired.<br/>");
 				buf.append(exp + "<br/>");
 				
-				// delete all the expired keys
-				if (assignmentKeys.size()>0 && !testOnly) ofy().delete().keys(assignmentKeys);  // note: ofy().delete() limited to 500 entities
-
+				// delete all the expired keys in batches of 500
+				if (!testOnly) {
+					int nBatches = assignmentKeys.size()/500;
+					for (int i=0;i<nBatches;i++) ofy().delete().keys(assignmentKeys.subList(i*500, (i+1)*500));
+					ofy().delete().keys(assignmentKeys.subList(nBatches*500, assignmentKeys.size()));
+				}
+				
 				buf.append(assignmentKeys.size() + " expired Assignments" + (testOnly?" identified":" deleted") + ".<br>");
 				buf.append("Done.<br>");
 
