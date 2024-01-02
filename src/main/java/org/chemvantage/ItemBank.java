@@ -81,6 +81,8 @@ public class ItemBank extends HttpServlet {
 	}
 	
 	String sampleItems(HttpServletRequest request) {
+		if (this.text == null) this.text = ofy().load().type(Text.class).filter("title","View All Topics").first().now();
+		
 		StringBuffer buf = new StringBuffer();
 		try {
 			Chapter chapter = null;
