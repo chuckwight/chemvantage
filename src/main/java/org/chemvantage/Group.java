@@ -211,7 +211,7 @@ public class Group {
 	}
 	
 	static String openStaxReport() { // this generates a readable version of the quarterly OpenStax Ally Partner Report
-		StringBuffer buf = new StringBuffer(Subject.banner);
+		StringBuffer buf = new StringBuffer("<h1>ChemVantage</h1>");
 
 		try {
 			// Find the current quarter

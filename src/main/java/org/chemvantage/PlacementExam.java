@@ -324,7 +324,7 @@ public class PlacementExam extends HttpServlet {
 			else { // this is a new exam
 				pt =  new PlacementExamTransaction(user,a);		  
 				if (a.attemptsAllowed != null && nAttempts >= a.attemptsAllowed) {
-					buf.append(Subject.banner);
+					buf.append("<h1>Placement Exam</h1>");
 					buf.append("<h2>Sorry, you are only allowed " + a.attemptsAllowed + " attempt" + (a.attemptsAllowed==1?"":"s") + " on this assignment.</h2>");
 					
 					DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
@@ -381,8 +381,6 @@ public class PlacementExam extends HttpServlet {
 			debug.append("4");
 			
 			buf.append("<script>function showWorkBox(qid){}</script>");  // prevents javascript error from Question.print()
-			
-			if (user.isAnonymous()) buf.append(Subject.banner);
 			
 			buf.append("<h1>Placement Exam</h1>");
 			
@@ -1389,7 +1387,7 @@ public class PlacementExam extends HttpServlet {
 	}
 	
 	String analyzeQuestions(User user, Assignment a) {
-		StringBuffer buf = new StringBuffer(Subject.banner + "<h2>Placement Exam Question Item Analysis</h2>");
+		StringBuffer buf = new StringBuffer("<h1>Placement Exam</h1><h2>Question Item Analysis</h2>");
 		if (!user.isInstructor()) return "Not Authorized";
 		
 		// iterate through all the transactions for this assignment and make a deduplicated Map<userId,score> if the best transactions

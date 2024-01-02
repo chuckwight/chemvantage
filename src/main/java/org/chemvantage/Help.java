@@ -60,7 +60,7 @@ public class Help extends HttpServlet {
     	response.setCharacterEncoding("UTF-8");
     	String jwt = request.getParameter("JWT");
     	
-    	if (jwt==null) out.println(Subject.header("ChemVantage Help Page") + Subject.banner + "The ChemVantage Help Page is only "
+    	if (jwt==null) out.println(Subject.header("ChemVantage Help Page") + "<h1>Help Page</h1>" + "The ChemVantage Help Page is only "
     			+ "accessible to users through our LTI interface. To use this service, please login through your school "
     			+ "learning management system." + Subject.footer);
 		try {
@@ -88,7 +88,7 @@ public class Help extends HttpServlet {
 			response.setContentType("text/html");
 			String iss = "https://" + request.getServerName();
 			
-			out.println(Subject.header("ChemVantage Help Page") + Subject.banner + displayHelpUrl(jwt,iss) + Subject.footer);
+			out.println(Subject.header("ChemVantage Help Page") + "<h1>Help Page</h1>" + displayHelpUrl(jwt,iss) + Subject.footer);
 			
 		} catch (Exception e) {
 			response.sendRedirect(Subject.serverUrl + "/Logout");
@@ -104,10 +104,10 @@ public class Help extends HttpServlet {
 	}
 
 	protected String showStudentSubmission(JsonObject payload) throws Exception {
-		StringBuffer buf = new StringBuffer(Subject.header("ChemVantage Help Page") + Subject.banner);
+		StringBuffer buf = new StringBuffer(Subject.header("ChemVantage Help Page") + "<h1>Help Page</h1>");
 		Date exp = new Date(payload.get("exp").getAsLong()*1000L);
 
-		buf.append("<h3>A student is seeking your help with a ChemVantage assignment.</h3>");
+		buf.append("<h2>A student is seeking your help with a ChemVantage assignment.</h2>");
 		buf.append("The information below may help to illuminate the problem. This information may contain updates since "
 				+ "the student made this request (i.e., they may have solved the problem on their own).<p>"
 				+ "The token contained in the URL you just entered is only valid for 3 days, and will expire at "
@@ -124,10 +124,10 @@ public class Help extends HttpServlet {
 		List<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",hwt.userId).filter("assignmentId",hwt.assignmentId).order("graded").list();
 		hwt = hwTransactions.get(hwTransactions.size()-1); // loads the most recent transaction, regardless of the one in the token
 
-		String title = "<h2>Homework Assignment</h2>";
+		String title = "<h3>Homework Assignment</h3>";
 		try {
 			Assignment a = ofy().load().type(Assignment.class).id(hwt.assignmentId).safe();
-			title = "<h2>Assignment: Homework - " + a.title + "</h2>";
+			title = "<h3>Assignment: Homework - " + a.title + "</h3>";
 		} catch (Exception e) {}		
 		buf.append(title);
 

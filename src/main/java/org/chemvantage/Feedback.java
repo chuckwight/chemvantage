@@ -235,12 +235,12 @@ public class Feedback extends HttpServlet {
 
 		buf.append("<h1>ChemVantage Feedback Page</h1>");
 		buf.append(new Date().toString() + "<p>");
-		buf.append("Thank you for your feedback" + (stars>0?" (" + stars + " stars" + (stars==5?"!":"") + ").":"."));
+		buf.append("Thank you for your feedback" + (stars>0?" (" + stars + " stars" + (stars==5?"!":"") + "). ":". "));
 		
 		if (stars > 0) buf.append("<br>The average user rating for ChemVantage is " + Subject.getAvgStars() + " stars (" + Subject.getNStarReports() + " user ratings).<p>");
 		
 		if (comments.length() > 0) {
-			buf.append("Your comment: <font color=red>" + comments + "</font><p>");
+			buf.append("Your comment was: <br/><font color=red>" + comments + "</font><p>");
 		
 			if (email==null) buf.append("We will review your comment, but we're unable to provide a response because you did not provide an email address.<p>");
 			else buf.append("We will review your comment. Any response will be sent to " + email + ".<p>");

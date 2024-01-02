@@ -218,14 +218,13 @@ public class LTIDeepLinks extends HttpServlet {
 	}
 	
 	static String contentPickerForm(User user, HttpServletRequest request,JsonObject claims) throws Exception {
-		StringBuffer buf = new StringBuffer(Subject.header("Select ChemVantage Assignment"));
+		StringBuffer buf = new StringBuffer(Subject.header("ChemVantage Assignment Setup"));
 		try {
 		JsonObject settings = claims.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings").getAsJsonObject();
 		boolean acceptsLtiResourceLink = settings.get("accept_types").getAsJsonArray().contains(new JsonPrimitive("ltiResourceLink"));
 		if (!acceptsLtiResourceLink) throw new Exception("Deep Link request failed because platform does not accept new LtiResourceLinks.");
 		
-		buf.append(Subject.banner);
-		buf.append("<h2>Assignment Setup Page</h2>");
+		buf.append("<h1>Assignment Setup Page</h1>");
 
 		buf.append("<form name=AssignmentForm action=/lti/deeplinks method=POST>");
 		buf.append("<input type=hidden name=id_token value='" + request.getParameter("id_token") + "' />");

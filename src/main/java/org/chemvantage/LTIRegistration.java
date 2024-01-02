@@ -136,7 +136,7 @@ public class LTIRegistration extends HttpServlet {
 			if ("finalize".contentEquals(userRequest)) {				
 				String token = request.getParameter("Token");
 				JWT.require(algorithm).withIssuer(iss).build().verify(token);
-				out.println(Subject.header("ChemVantage LTI Registration") + Subject.banner + createDeployment(request) + Subject.footer);			
+				out.println(Subject.header("ChemVantage LTI Registration") + "<h1>ChemVantage Registration</h1>" + createDeployment(request) + Subject.footer);			
 			} else {
 				if (request.getParameter("email")==null) throw new Exception("Email was not given.");
 				String token = validateApplicationFormContents(request);
@@ -156,7 +156,7 @@ public class LTIRegistration extends HttpServlet {
 					out.println(successfulRegistrationRequestPage(openIdConfiguration,request));
 				} else {
 					sendRegistrationEmail(token,request);
-					out.println(Subject.header("ChemVantage LTI Registration") + Subject.banner + "<h3>Registration Success</h3>Thank you. A registration email has been sent to your address.<p>" + Subject.footer);			
+					out.println(Subject.header("ChemVantage LTI Registration") + "<h1>ChemVantage</h1>" + "<h2>Registration Success</h2>Thank you. A registration email has been sent to your address.<p>" + Subject.footer);			
 				}
 			}
 		} catch (Exception e) {
@@ -332,7 +332,7 @@ public class LTIRegistration extends HttpServlet {
 	}
 */		
 	String clientIdForm(String token) {
-		StringBuffer buf = new StringBuffer(Subject.banner);
+		StringBuffer buf = new StringBuffer("<h1>ChemVantage Registration</h1>");
 		String iss = null;
 		String sub = null;
 		String email = null;
@@ -355,7 +355,7 @@ public class LTIRegistration extends HttpServlet {
 			String oauth_access_token_url = "";
 			String well_known_jwks_url = "";
 			
-			buf.append("<h4>To the LMS Administrator:</h4>"
+			buf.append("<h2>To the LMS Administrator:</h2>"
 					+ "By now you should have configured your LMS to connect with ChemVantage, and you should have "
 					+ "received a Client ID and Deployment ID from your LMS. Please enter these below, along with the "
 					+ "secure URLs (https://) that identify the service endpoints for your LMS. In some cases, these are "
@@ -793,8 +793,8 @@ public class LTIRegistration extends HttpServlet {
 	
 	String successfulRegistrationRequestPage(JsonObject openid_configuration, HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		buf.append(Subject.header() + Subject.banner);
-		buf.append("<h3>Your Registration Request Was Successful</h3>"
+		buf.append(Subject.header() + "<h1>ChemVantage</h1>");
+		buf.append("<h2>Your Registration Request Was Successful</h2>"
 				+ "The LTI Advantage deployment was created in ChemVantage and in your LMS.<br/>"
 				+ "Please be sure to activate the deployment in your LMS.<br/><br/>");
 
@@ -817,7 +817,7 @@ public class LTIRegistration extends HttpServlet {
 		
 		switch (lms) {
 		case "moodle":
-			buf.append("<h3>For the Instructor</h3>"
+			buf.append("<h2>For the Instructor</h2>"
 					+ "To add ChemVantage assignments to your course, turn editing ON and:<ol>"
 					+ "<li>Click 'Add an activity or resource'</li>"
 					+ "<li>Click 'External Tool'</li>"
@@ -826,7 +826,7 @@ public class LTIRegistration extends HttpServlet {
 					+ "</ol>");
 			break;
 		case "canvas":
-			buf.append("<h3>For the Instructor</h3>"
+			buf.append("<h2>For the Instructor</h2>"
 					+ "To add ChemVantage assignments to your course, go to the Assignments page:<ol>"
 					+ "<li>Click the red '+ Assignment' button</li>"
 					+ "<li>For Submission Type select 'External Tool'</li>"
@@ -836,7 +836,7 @@ public class LTIRegistration extends HttpServlet {
 					+ "</ol>");
 			break;
 		default:
-			buf.append("<h3>For the Course Instructor:</h3>"
+			buf.append("<h2>For the Course Instructor:</h2>"
 					+ "Although we do not have specific instructions for how to add a ChemVantage assignment to your course in " + lms + ", "
 					+ "in general you should navigate to your course page and<ol>"
 					+ "<li>Add a new assignment, content or resource</li>"

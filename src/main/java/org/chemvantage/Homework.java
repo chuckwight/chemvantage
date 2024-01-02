@@ -246,8 +246,6 @@ public class Homework extends HttpServlet {
 			}
 			debug.append("Total number of questions = " + allQuestions.size());
 			
-			if (user.isAnonymous()) buf.append(Subject.banner);  // present the ChemVantage banner
-			
 			// START the presentation of the Homework assignment
 			buf.append("<h1>Homework Exercises</h1><h2>" + hwa.title + "</h2>");
 
@@ -318,7 +316,7 @@ public class Homework extends HttpServlet {
 					j++;
 				}
 			}
-			buf.append((i>1?"<h4>Assigned Exercises</h4>":"") + assignedQuestions + "</div>" + (i>1 && j>1?"<h4>Optional Exercises</h4>":"") + optionalQuestions + "</div>");
+			buf.append((i>1?"<h2>Assigned Exercises</h2>":"") + assignedQuestions + "</div>" + (i>1 && j>1?"<h2>Optional Exercises</h2>":"") + optionalQuestions + "</div>");
 			buf.append("<script>function showWorkBox(qid) {\n"
 					+ "	if (qid==0) return;\n"
 					+ "    document.getElementById('showWork'+qid).style.display='';\n"

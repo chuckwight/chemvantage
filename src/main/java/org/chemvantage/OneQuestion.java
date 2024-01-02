@@ -64,12 +64,12 @@ public class OneQuestion extends HttpServlet {
 		}
 		buf.append("<br/><br/>");  // Put some space at the bottom
 		response.setContentType("text/html");
-		response.getWriter().println(Subject.header() + Subject.banner + buf.toString() + Subject.footer);
+		response.getWriter().println(Subject.header() + "<h1>Question Item</h1>" + buf.toString() + Subject.footer);
 	}
 
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		String signature = new User().getTokenSignature();
-		StringBuffer buf = new StringBuffer(Subject.header() + Subject.banner + ajaxJavaScript(signature));
+		StringBuffer buf = new StringBuffer(Subject.header() + "<h1>Question Item</h1>" + ajaxJavaScript(signature));
 		try {
 			long qid=0L;
 			for (Enumeration<?> e = request.getParameterNames();e.hasMoreElements();) {

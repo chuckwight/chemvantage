@@ -169,8 +169,8 @@ public class Poll extends HttpServlet {
 				if (pt!=null && pt.completed!=null) {
 					out.println(Subject.header() + waitForResults(user,a) + Subject.footer);
 				}
-				else out.println(Subject.header() + Subject.banner 
-						+ "<h3>Sorry, the poll closed before you submitted your responses.</h3>" 
+				else out.println(Subject.header() + "<h1>Poll</h1>" 
+						+ "<h2>Sorry, the poll closed before you submitted your responses.</h2>" 
 						+ Subject.footer);
 				break;
 			case "AddQuestions":
@@ -499,9 +499,9 @@ public class Poll extends HttpServlet {
 			return resultsPage(user,a);
 		}
 		
-		StringBuffer buf = new StringBuffer(Subject.banner);
+		StringBuffer buf = new StringBuffer("<h1>Poll</h1>");
 		
-		buf.append("<h3>Please wait for the poll to close.</h3>"
+		buf.append("<h2>Please wait for the poll to close.</h2>"
 				+ "<div id='timer0' style='color: #EE0000'></div><br/>");
 		
 		buf.append("<form id=pollForm method=post action='/Poll' >"

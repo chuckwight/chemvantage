@@ -160,7 +160,7 @@ public class Subject {
 		+ "    <meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />\n"
 		+ "    <meta http-equiv='Pragma' content='no-cache' />\n"
 		+ "    <meta http-equiv='Expires' content='0' />\n"
-		+ "    <link rel='icon' href='images/favicon.png'>\n"
+		+ "    <link rel='icon' href='images/logo_sq.png'>\n"
 		+ "    <title>ChemVantage</title>\n"
 		+ "    <!-- Font Family -->\n"
 		+ "    <link href='https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Shantell+Sans:wght@300;400;500;600;700;800&display=swap' rel='stylesheet'/>\n"
@@ -189,7 +189,7 @@ public class Subject {
 		+ "    <meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />\n"
 		+ "    <meta http-equiv='Pragma' content='no-cache' />\n"
 		+ "    <meta http-equiv='Expires' content='0' />\n"
-		+ "    <link rel='icon' href='images/favicon.png'>\n"
+		+ "    <link rel='icon' href='images/logo_sq.png'>\n"
 		+ "    <title>ChemVantage Admin</title>\n"
 		+ "    <!-- Font Family -->\n"
 		+ "    <link href='https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Shantell+Sans:wght@300;400;500;600;700;800&display=swap' rel='stylesheet'/>\n"
@@ -213,7 +213,7 @@ public class Subject {
 	
 	public static String footer = "</main>"
 			+ "<footer><hr/>"
-			+ "<a href=/index.html><img src=/images/logo_sq.png alt='ChemVantage logo' style='vertical-align:middle;width:30px' /><span style='color: #000080;font-weight: bold;text-decoration: none;'>ChemVantage</span></a> | "
+			+ "<a href=/index.html><img src=/images/logo_sq.png alt='ChemVantage logo' style='vertical-align:middle;width:30px;text-decoration:none;color:#000080;font-weight:bold' /> ChemVantage</a> | "
 			+ "<a href=/terms_and_conditions.html>Terms and Conditions of Use</a> | "
 			+ "<a href=/privacy_policy.html>Privacy Policy</a> | "
 			+ "<a href=/copyright.html>Copyright</a></footer>"
@@ -221,10 +221,4 @@ public class Subject {
 			+ "<script src='/js/script-backend.js'></script>\n"
 			+ "</body>\n</html>";
 
-	public static String banner = "<div style='padding=30px; font-family: Calibri,Arial,sans-serif;'>"
-			+ "<a href='/' style='text-decoration: none;'>"
-			+ "	<span style='color: #000080; font-size: 2em; font-weight: bold;'>ChemVantage</span><br/>\n"
-			+ "</a>"
-			+ "	An Open Education Resource for General Chemistry<br/>"
-			+ "	</div>\n";
 }

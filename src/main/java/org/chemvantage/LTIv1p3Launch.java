@@ -415,7 +415,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				out.println(Subject.header() + (for_user_id==null?PlacementExam.reviewExamScores(u,a):PlacementExam.submissionReview(u,a,for_user_id)) + Subject.footer);
 				break;
 			default:
-				out.println(Subject.header() + Subject.banner + "<h2>Sorry, submission review is not currently available for this type of ChemVantage assignment.</h2>" + Subject.footer);
+				out.println(Subject.header() + "<h1>Submission Review</h1>" + "<h2>Sorry, submission review is not currently available for this type of ChemVantage assignment.</h2>" + Subject.footer);
 			}
 		} catch (Exception e) {
 			throw new Exception("Submission Review Launch Failed: " + (e.getMessage()==null?e.toString():e.getMessage()) + "\n" + debug.toString() + "\n" + claims.toString());
@@ -616,8 +616,7 @@ public class LTIv1p3Launch extends HttpServlet {
 	String pickResourceForm(User user,Assignment myAssignment,HttpServletRequest request) throws Exception {
 		StringBuffer buf = new StringBuffer();
 
-		buf.append(Subject.banner);
-		buf.append("<h2>Assignment Setup Page</h2>");
+		buf.append("<1>Assignment Setup Page</h1>");
 
 		if (!user.isInstructor()) {
 			buf.append("The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment. "
@@ -838,7 +837,7 @@ public class LTIv1p3Launch extends HttpServlet {
 	}
 
 	String registrationForm(User user, HttpServletRequest request,String platform_deployment_id) throws Exception {
-		StringBuffer buf = new StringBuffer(Subject.header("ChemVantage Registration") + Subject.banner);
+		StringBuffer buf = new StringBuffer(Subject.header("ChemVantage Registration") + "<h1>ChemVantage Registration</h1>");
 		try {
 			Deployment d = ofy().load().type(Deployment.class).id(platform_deployment_id).now();
 			
