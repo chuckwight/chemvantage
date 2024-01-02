@@ -16,12 +16,14 @@
 <meta name='Keywords' content='chemistry,learning,online,quiz,homework,video,textbook,open,education'>
 <meta name='msapplication-config' content='none'/><link rel='icon' type='image/png' href='/favicon.png'>
 <link rel='icon' type='image/png' href='/images/favicon.png' />
+<link rel="stylesheet" href="css/style.css">
 <title>ChemVantage Subscription</title>
 </head>
 
-<body style='background-color: white; font-family: Calibri,Arial,sans-serif; max-width: 800px;'>
-<%= Subject.banner %>
-<main><h1 style='display: none'>Welcome to ChemVantage</h1>
+<body>
+ <a href=#main class="skip-to-main-content-link">Skip to main content</a>
+   
+<main>
 
 <%
 	String sig = request.getParameter("sig");
@@ -53,7 +55,7 @@
 			String details = request.getParameter("OrderDetails");
 			if (v != null) details = details + " " + voucherCode;
 %> 
-			<h2>Thank you for your payment!</h2>
+			<h1>Thank you for your payment!</h1>
 			Your ChemVantage subscription is now active and expires on <%= df.format(exp) %><br/>
 			Print or save this page as proof of purchase. Then return to your LMS and relaunch the assignment.<br/><br/>	
 			Details: <%= details %><br/>
@@ -61,7 +63,7 @@
 <%
 		} else {
 %>
-			<h2>ChemVantage Subscription Activation Failed</h2>
+			<h1>ChemVantage Subscription Activation Failed</h1>
 			Sorry, something went wrong. Please return to your LMS and launch the assignment again.<br/>
 			If you need assistance, please send email to <a href='mailto:admin@chemvantage.org'>admin@chemvantage.org</a><br/><br/>
 <%
@@ -75,7 +77,7 @@
 		PremiumUser u = ofy().load().type(PremiumUser.class).id(user.getHashedId()).now();		
 		String title = (u != null && u.exp.before(now))?"Your ChemVantage subscription expired on " + df.format(u.exp):"Individual ChemVantage Subscription";
 %>	
-		<h3><%= title %></h3>
+		<h1><%= title %></h1>
 		A subscription is required to access ChemVantage assignments created by your instructor through this learning management system. 
 		First, indicate your agreement with the two statements below by checking the boxes.<br/><br/>
 		

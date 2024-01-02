@@ -18,8 +18,8 @@
 <title>Purchase ChemVantage Licenses</title>
 </head>
 
-<body style='background-color: white; font-family: Calibri,Arial,sans-serif; max-width: 800px;'>
-<%= Subject.banner %>
+<body>
+ <a href=#main class="skip-to-main-content-link">Skip to main content</a>
 
 <%
 String sig = request.getParameter("sig");
