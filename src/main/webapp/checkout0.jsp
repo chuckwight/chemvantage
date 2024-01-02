@@ -5,25 +5,7 @@
 <%@ page import="static com.googlecode.objectify.ObjectifyService.ofy" %>
 <%@ page import="java.util.Date,java.text.DateFormat,com.googlecode.objectify.*,org.chemvantage.*,com.google.common.net.InternetDomainName"%>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />
-<meta http-equiv='Pragma' content='no-cache' />
-<meta http-equiv='Expires' content='0' /><meta http-equiv='Content-type' content='text/html;charset=iso-8859-1'>
-<meta name='Description' content='An online quiz and homework site'>
-<meta name='Keywords' content='chemistry,learning,online,quiz,homework,video,textbook,open,education'>
-<meta name='msapplication-config' content='none'/><link rel='icon' type='image/png' href='/favicon.png'>
-<link rel='icon' type='image/png' href='/images/favicon.png' />
-<link rel="stylesheet" href="css/style.css">
-<title>ChemVantage Subscription</title>
-</head>
-
-<body>
- <a href=#main class="skip-to-main-content-link">Skip to main content</a>
-   
-<main>
+<%= Subject.header("ChemVantage Subscription") %>
 
 <%
 	String sig = request.getParameter("sig");
@@ -200,13 +182,5 @@
 <% 
 	}
 %>
-</main>
-<footer><hr/><img style='padding-left: 5px; vertical-align: middle;width:30px' src=images/logo_sq.png alt='ChemVantage logo' />&nbsp;
-<a href=/index.html style='text-decoration: none;'><span style='color: #000080;font-weight: bold;'>ChemVantage</span></a> |  
-<a href=/terms_and_conditions.html>Terms and Conditions of Use</a> | 
-<a href=/privacy_policy.html>Privacy Policy</a> | 
-<a href=/copyright.html>Copyright</a></footer>
 
-
-</body>
-</html>
+<%= Subject.footer %>

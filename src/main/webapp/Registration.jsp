@@ -89,11 +89,10 @@
     <section class="section-padding registration-content">
         <div class="container">
             <div class="section-heading">
-                <h1>Registration</h1>
+                <h1>ChemVantage LTI <%= dynamic?"Dynamic ":"" %>Registration</h1>
             </div>
             <div class="section-heading-top-gap">
-                <h2>ChemVantage LTI Advantage <%= dynamic?"Dynamic ":"" %>Registration</h2>
-                <p>
+                 <p>
                     Please complete the form below to create a trusted LTI Advantage connection between your LMS and ChemVantage that is convenient, secure and <a href="https://site.imsglobal.org/certifications?query=chemvantage" target="_blank" aria-label="Opens new tab">certified by 1EdTech</a>. 
                     When you submit the form, ChemVantage will send <%= dynamic?"a registration request to your LMS. If successful, you must activate the deployment in your LMS.":"a confirmation email with a tokenized link to complete the registration." %>
                 </p>

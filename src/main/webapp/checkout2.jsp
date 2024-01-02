@@ -4,22 +4,7 @@
 <%@ page import="static com.googlecode.objectify.ObjectifyService.ofy" %>
 <%@ page import="java.util.Date,java.text.DateFormat,com.googlecode.objectify.*,org.chemvantage.*,com.google.common.net.InternetDomainName"%>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />
-<meta http-equiv='Pragma' content='no-cache' />
-<meta http-equiv='Expires' content='0' /><meta http-equiv='Content-type' content='text/html;charset=iso-8859-1'>
-<meta name='Description' content='An online quiz and homework site'>
-<meta name='Keywords' content='chemistry,learning,online,quiz,homework,video,textbook,open,education'>
-<meta name='msapplication-config' content='none'/><link rel='icon' type='image/png' href='/favicon.png'>
-<link rel='icon' type='image/png' href='/images/favicon.png' />
-<title>Purchase ChemVantage Licenses</title>
-</head>
-
-<body>
- <a href=#main class="skip-to-main-content-link">Skip to main content</a>
+<%= Subject.header("ChemVantage Licenses") %>
 
 <%
 String sig = request.getParameter("sig");
@@ -46,7 +31,7 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
 		orderDetails = request.getParameter("OrderDetails");
 		d.putNLicensesRemaining(d.getNLicensesRemaining() + nLicensesPurchased);
 %>
-		<h3>Success! Thank you for your purchase.</h3>
+		<h1>Success! Thank you for your purchase.</h1>
 		<h2>Receipt</h2>
 		ChemVantage LLC<br/>
 		606 Tony Tank Ln, Salisbury, MD USA<br/>
@@ -55,7 +40,7 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
 <%
 	} catch (Exception e) {
 %>
-		<h3>Purchase Failed</h3>
+		<h1>Purchase Failed</h1>
 		There was an unexpected problem with the transaction, sorry. Please contact 
 		Chuck Wight at admin@chemvantage.org to resolve the situation. It will be most 
 		helpful to cut/paste any information below in your message:<br/><br/>
@@ -76,10 +61,9 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
 <%
 } else {    // first time here; present the offer to purchase exams
 %>
-<main><h1 style='display: none'>Purchase ChemVantage Student Licenses</h1>
 	<div id=offer>
 		
-		<h2>Purchase Student Licenses for your ChemVantage Account</h2>
+		<h1>Purchase Student Licenses for your ChemVantage Account</h1>
 		Your ChemVantage account currently has
 		<%= d.getNLicensesRemaining() %> student licenses remaining.<br /><br />
 		You may purchase more licenses on behalf of students at your institution in the following quantities:
@@ -105,9 +89,9 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
 		When the payment process is completed you will receive a
 		printable receipt on this page.<br /><br />
 
-		<h3>
+		<h2>
 			Purchase: <span id=amt>50 licenses - $250 USD</span>
-		</h3>
+		</h2>
 	</div>
 
 	<div id="smart-button-container">
@@ -187,12 +171,5 @@ if (user.getHashedId().equals(hashedId)) { // successful payment; process a user
 <%
 }
 %>
-</main>
-<footer><hr/><img style='padding-left: 5px; vertical-align: middle;width:30px' src=images/logo_sq.png alt='ChemVantage logo' />&nbsp;
-<a href=/index.html style='text-decoration: none;'><span style='color: #000080;font-weight: bold;'>ChemVantage</span></a> |  
-<a href=/terms_and_conditions.html>Terms and Conditions of Use</a> | 
-<a href=/privacy_policy.html>Privacy Policy</a> | 
-<a href=/copyright.html>Copyright</a></footer>
 
-</body>
-</html>
+<%= Subject.footer %>

@@ -213,7 +213,7 @@ public class Subject {
 	
 	public static String footer = "</main>"
 			+ "<footer><hr/>"
-			+ "<a href=/index.html><img src=/images/logo_sq.png alt='ChemVantage logo' style='vertical-align:middle;width:30px;text-decoration:none;color:#000080;font-weight:bold' /> ChemVantage</a> | "
+			+ "<a style='text-decoration:none;color:#000080;font-weight:bold' href=/index.html><img src=/images/logo_sq.png alt='ChemVantage logo' style='vertical-align:middle;width:30px;' /> ChemVantage</a> | "
 			+ "<a href=/terms_and_conditions.html>Terms and Conditions of Use</a> | "
 			+ "<a href=/privacy_policy.html>Privacy Policy</a> | "
 			+ "<a href=/copyright.html>Copyright</a></footer>"
