@@ -18,12 +18,15 @@
 package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
+import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -76,6 +79,7 @@ public class ManageContacts extends HttpServlet {
 		
 		buf.append(addNewContact());
 		buf.append(pasteNewContact());
+		buf.append(exportCSVFile());
 			
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
@@ -107,6 +111,9 @@ public class ManageContacts extends HttpServlet {
 			case "Delete This Contact":
 				deleteContact(request);
 				response.sendRedirect(Subject.serverUrl + "/contacts?Email=" + request.getParameter("Email"));
+				break;
+			case "Export CSV File":
+				exportCSVFile(request,response);
 				break;
 			default: throw new Exception("Bad User request.");
 			}
@@ -140,6 +147,14 @@ public class ManageContacts extends HttpServlet {
 				+ "</form><br/><br/>"; 
 	}
 	
+	String exportCSVFile() {
+		return "<h4>Export CSV File</h4>"
+				+ "<form method=post action=/contacts>"
+				+ "<input type=radio name=Domain value=All checked /> All contacts<br/>"
+				+ "<input type=radio name=Domain value=Summary /> Summary by domain<br/>"
+				+ "<input type=submit name=UserRequest value='Export CSV File' /><br/><br/>";
+	}
+	
 	void addNewContact(HttpServletRequest request) throws Exception {
 		Contact c = null;
 		try {
@@ -168,6 +183,39 @@ public class ManageContacts extends HttpServlet {
 		} catch (Exception e) {
 		}
 		return url;
+	}
+	
+	void exportCSVFile(HttpServletRequest request,HttpServletResponse response) throws IOException {
+		String domain = request.getParameter("Domain");
+		List<Contact> contacts = ofy().load().type(Contact.class).limit(1000).list();
+		PrintWriter out = response.getWriter();
+		response.setContentType("text/csv");
+		
+		switch (domain) {
+		case "All":
+			out.println("\"Firstname\",\"Lastname\",\"Email\",\"Unsubscribed\"");
+			while (contacts.size()>0) {
+				for (Contact c : contacts) {
+					out.println("\"" + c.firstName + "\",\"" + c.lastName + "\",\"" + c.email + "\"" + (c.unsubscribed?",\"unsubscribed\"":""));
+				}
+				String email = contacts.get(contacts.size()-1).email;
+				contacts = ofy().load().type(Contact.class).filterKey(">",key(Contact.class,email)).limit(1000).list();
+			}
+			break;
+		case "Summary":
+			out.println("\"Domain\",\"NContacts\"");
+			Map<String,Integer> domainMap = new HashMap<String,Integer>();
+			while (contacts.size()>0) {
+				for (Contact c : contacts) {
+					String domainName = c.email.substring(c.email.indexOf("@") + 1);
+					domainMap.merge(domainName, 1, Integer::sum);
+				}
+				String email = contacts.get(contacts.size()-1).email;
+				contacts = ofy().load().type(Contact.class).filterKey(">",key(Contact.class,email)).limit(1000).list();
+			}
+			for (Entry<String,Integer> e : domainMap.entrySet()) out.println("\"" + e.getKey() + "\"," + e.getValue());
+			break;
+		}
 	}
 	
 	String editExistingContact(Contact c) {
