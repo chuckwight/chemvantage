@@ -48,7 +48,7 @@ function countdown() {
 	var minutes = seconds<0?Math.ceil(seconds/60.):Math.floor(seconds/60.);
 	var oddSeconds = seconds%60;
 	for (i=0;i<2;i++) try {  // change the display of timer0 and/or timer1 in the parent page
-		    document.getElementById('timer'+i).innerHTML='Time remaining: ' + minutes + ' minutes ' + oddSeconds + ' seconds.';}
+		    document.getElementById('timer'+i).innerHTML='Time remaining: ' + (minutes==0?'':minutes + (minutes==1?' minute ':' minutes ')) + oddSeconds + ' seconds.';}
 		catch(Exception){}
     if (seconds <= 0) try { timesUp() } catch (Exception) {} // run a custom script function in the parent page
 	else setTimeout('countdown()',1000);
