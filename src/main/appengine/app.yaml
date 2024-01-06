@@ -1,6 +1,6 @@
 runtime: java11
 instance_class: F1
-default_expiration: 1m
+#default_expiration: 1m
 
 # The following handlers cause appengine to upload copies of the static files to Gooogle Cloud Storage and serve them from there
 # URL requests for these files are handled by the App Engine infrastructure directly, and do not reach the language runtime of the application.

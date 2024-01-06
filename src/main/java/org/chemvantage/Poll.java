@@ -303,7 +303,7 @@ public class Poll extends HttpServlet {
 		
 		StringBuffer buf = new StringBuffer();
 		
-		buf.append("<h2>Class Poll</h2>");
+		buf.append("<h1>Class Poll</h1>");
 		buf.append("<div id='timer0' style='color: #EE0000'></div><br/>");
 		
 		if (user.isInstructor()) {

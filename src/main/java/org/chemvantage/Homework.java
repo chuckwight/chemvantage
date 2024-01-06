@@ -641,7 +641,7 @@ public class Homework extends HttpServlet {
 		Date now = new Date();
 		
 		try {
-			//buf.append("Assignment Number: " + a.id + "<br>");
+			buf.append("Assignment Number: " + a.id + "<br>");
 			buf.append("Topic: "+ a.title + "<br>");
 			buf.append("Valid: " + df.format(now) + "<p>");
 			
@@ -713,7 +713,9 @@ public class Homework extends HttpServlet {
 		try {
 			if (a.lti_nrps_context_memberships_url==null) throw new Exception("No Names and Roles Provisioning support.");
 
-			buf.append("<h3>" + a.assignmentType + " - " + a.title + "</h3>");
+			buf.append("<h1>Homework Scores</h1>");
+			buf.append("Title: " + a.title + "<br/>");
+			buf.append("Assignment ID: " + a.id + "<br/>");
 			buf.append("Valid: " + new Date() + "<p>");
 			buf.append("The roster below is obtained using the Names and Role Provisioning service offered by your learning management system, "
 					+ "and may or may not include user's names or emails, depending on the settings of your LMS.<br/><br/>");
@@ -787,8 +789,8 @@ public class Homework extends HttpServlet {
 			Map<Key<Question>,Question> questions = ofy().load().keys(a.questionKeys);
 			List<HWTransaction> transactions = ofy().load().type(HWTransaction.class).filter("userId",forUserHashedId).filter("assignmentId",a.id).order("-graded").list();
 			
-			buf.append("<h3>Homework Submissions</h3>"
-					+ (forUserName==null?"":"Name: " + forUserName + "<br/>")
+			buf.append("<h1>Homework Submissions</h1>"
+					+ (forUserName==null || forUserName.isEmpty()?"":"Name: " + forUserName + "<br/>")
 					+ "Assignment: " + a.title + "<br/>"
 					+ "Date: " + new Date() + "<br/><br/>");
 			debug.append("0");
@@ -887,7 +889,7 @@ public class Homework extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Debug: ");
 		try {
-			buf.append("<h3>Customize Homework Assignment</h3>");
+			buf.append("<h1>Customize Homework Assignment</h1>");
 			buf.append("<form action=/Homework method=post>"
 					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "<b>Title:</b>&nbspHomework - <input type=text size=25 name=AssignmentTitle value='" + a.title + "' />&nbsp;"
