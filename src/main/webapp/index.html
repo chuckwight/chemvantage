@@ -15,6 +15,12 @@
     <!-- Main Style Sheet -->
     <link rel="stylesheet" href="css/responsive.css">
     <!-- Responsive Style Sheet -->
+
+    <!-- Calendly badge widget begin -->
+    <link href="https://assets.calendly.com/assets/external/widget.css" rel="stylesheet">
+    <script src="https://assets.calendly.com/assets/external/widget.js" type="text/javascript" async></script>
+    <script type="text/javascript">window.onload = function() { Calendly.initBadgeWidget({ url: 'https://calendly.com/richkingsford/30m', text: 'Schedule a setup', color: '#0069FF', textColor: '#FFFFFF', branding: undefined }); }</script>
+    <!-- Calendly badge widget end -->
 </head>
 <body>
     <a href=#main class="skip-to-main-content-link">Skip to main content</a>
@@ -49,9 +55,9 @@
                             </ul>
                             <button class="close">&times;</button>
                         </div>
-                        <a class="btn btn-two" href="/install.html" target="_blank" aria-label="Opens a new tab">
-                            Get Started
-                        </a>
+                        <button onclick="Calendly.showPopupWidget('https://calendly.com/chemvantage/install-chemvantage');" class="btn btn-two">
+                            Schedule a Setup
+                        </button>
                         <button class="solid-bar">&#9776;</button>
                     </nav>
                 </div>
@@ -70,7 +76,6 @@
 		<div class="container">
             <div class="heroarea-content d-flex justify-center flex-wrap">
                 <div class="w-60 text-center">
-                    <img src="images/logo_sq.png" alt="logo" style="float:left"/>
                     <h1 style="color:#000080;">ChemVantage</h1>
                     <h2 style="font-size: 1em">An Open Educational Resource for General Chemistry</h2>
                 </div>
@@ -81,16 +86,37 @@
 							Our computer-scored assignments give students immediate feedback to keep them 
 							progressing through the course.
                     </p>
+                    <div class="form-elements">
+                        <form onsubmit="return false;">
+                            <div class="d-flex gap-1 align-end">
+                                <div class="w-50">
+                                    <label for="topic" class="form-label">Topic <span>*</span></label>
+                                    <select name="Topic" id="topic" class="form-select"></select>
+                                </div>
+                                <script src="/js/itembank.js"></script>
+                                <div class="w-30">
+                                    <label for="type" class="form-label">Assignment Type <span>*</span></label>
+                                    <select name="type" id="type" class="form-select">
+                                        <option value="">Select a type</option>
+                                        <option value="Quiz">Quiz</option>
+                                        <option value="Homework">Homework</option>
+                                    </select>
+                                </div>
+                                <div class="w-20">
+                                    <button class="btn btn-two w-100" onclick="getItems();">View Items</button>
+                                </div>
+                            </div>
+                        </form>
+                        <div id="itemViewBox"></div>  
+                        <!--  this is where 3 sample question items are displayed  -->
+                    </div>
                 </div>
                 <div class="w-50">
                     <ul class="d-flex gap-3 justify-center">
                         <li>
-                            <a class="btn btn-two" href="/install.html" target="_blank" aria-label="Opens a new tab">
-                                Get Started
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="#itembank" class="btn btn-two nav-link">Sample Questions</a>
+                            <button onclick="Calendly.showPopupWidget('https://calendly.com/chemvantage/install-chemvantage');" class="btn btn-two">
+                                Schedule a Setup <br> <span>First Semester Free</span>
+                            </button>
                         </li>
                     </ul>
                 </div>
@@ -289,7 +315,7 @@
         </div>
     </section>
     <!-- Webpage Pricing End -->
-  </main>
+    </main>
   
     <!-- Webpage Footer Start -->
     <footer>

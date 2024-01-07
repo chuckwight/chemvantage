@@ -269,8 +269,9 @@ em {
 
 .btn {
     padding: 6px 24px;
-    font-weight: 500;
+    font-weight: 500 !important;
     font-size: var(--base);
+    font-family: var(--font-normal);
     border-radius: var(--radius-large);
     -webkit-border-radius: var(--radius-large);
     -moz-border-radius: var(--radius-large);
@@ -600,7 +601,8 @@ em {
     background-color: var(--green);
 }
 
-.header-nav button {
+.header-nav .solid-bar,
+.header-nav .close {
     cursor: pointer;
     background-color: transparent;
     display: none;
@@ -634,7 +636,7 @@ em {
 /* Webpage Header CSS End */
 
 .webpage-heroarea {
-    padding: 160px 0;
+    padding: 80px 0;
     position: relative;
     top: 0;
     left: 0;
@@ -677,6 +679,23 @@ em {
 .heroarea-content ul {
     margin-top: 24px;
 }
+
+.heroarea-content .form-elements .btn {
+    border-radius: var(--radius-sm);
+    -webkit-border-radius: var(--radius-sm);
+    -moz-border-radius: var(--radius-sm);
+    -ms-border-radius: var(--radius-sm);
+    -o-border-radius: var(--radius-sm);
+}
+
+.heroarea-content .btn span {
+    color: #838383;
+    font-size: var(--small);
+}
+
+.heroarea-content .btn-two:hover span {
+    color: var(--white);
+}  
 /* Webpage HeroArea CSS End */
 
 .btt {

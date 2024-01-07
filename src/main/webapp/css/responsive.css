@@ -16,6 +16,24 @@
     --transition: all ease 0.5s;
 }
 
+@media (min-width: 992px) and (max-width: 1199.98px) {
+    :root {
+        --h1: 40px;
+        --h2: 33px;
+        --h3: 28px;
+        --h4: 24px;
+        --h5: 20px;
+        --h6: 17px;
+        --large: 17px;
+        --base: 15px;
+        --small: 14px;
+    }
+
+    .heroarea-content .w-60 img {
+        width: 180px;
+    }
+}
+
 @media (max-width: 991.98px) {
     .header-nav .nav-list {
         display: none;
@@ -153,6 +171,10 @@
         width: 80%;
     }
 
+    .heroarea-content .w-60 img {
+        width: 180px;
+    }
+
     .about-content,
     .placement-content,
     .pricing-content,
@@ -213,6 +235,10 @@
 
     .heroarea-content h1 {
         margin-top: 16px;
+    }
+
+    .heroarea-content .w-60 img {
+        width: 160px;
     }
 
     .about-content,
@@ -302,6 +328,10 @@
         --large: 15px;
         --base: 15px;
         --small: 14px;
+    }
+
+    .header-nav .btn-two {
+        display: none;
     }
 
     .sub-page-welcome {
@@ -433,5 +463,20 @@
 
     .install-content .tab-content .tab .inner {
         width: 700px;
+    }
+}
+
+@media (max-width: 390.98px) {
+    .heroarea-content .w-60 {
+        text-align: center;
+        margin-bottom: 8px;
+    }
+
+    .heroarea-content .w-60 img {
+        float: none !important;
+    }
+
+    .heroarea-content .w-50 .btn {
+        padding: 6px 16px;
     }
 }
