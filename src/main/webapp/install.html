@@ -106,9 +106,6 @@
                             </li>
                             <li>
                                 Configure a new LTI Developer Key for your Canvas Account (see detailed instructions <a href="https://community.canvaslms.com/t5/Admin-Guide/How-do-I-configure-an-LTI-key-for-an-account/ta-p/140">here</a>.)
-                            </li>
-                            <li>
-                                Use the following Key Settings:
                                 <ol>
                                     <li>Key Name: ChemVantage</li>
                                     <li>Owner Email: admin@chemvantage.org</li>
@@ -129,10 +126,21 @@
                                 Click Save
                             </li>
                             <li>
-                                Copy or write down the client_id and deployment_id created in step 2. This is the tricky part, because Canvas doesn't make it easy. Canvas uses the developer key as the client_id, so it can be viewed from the list of developer keys. It is a numeric value that looks something like 32570000000000041. The deployment_id can be found in Settings | Apps | App Configurations by opening the settings menu for ChemVantage. It is a compound value that consists of a number and a hex string separated by a colon and looks something like 10408:7db438070728c02373713c12c73869b3af470b68.
+                                From the list of developer keys, locate ChemVantage. Copy or write down the client_id from the Details column. It is a numeric value that looks something like 32570000000000741. Then click the toggle switch in the State column to activate the developer key.
                             </li>
                             <li>
                                 Add ChemVantage as an External App to your account using the client_id created in step 2 (see detailed instructions <a href="https://community.canvaslms.com/t5/Admin-Guide/How-do-I-configure-an-external-app-for-an-account-using-a-client/ta-p/202" target="_blank" aria-label="Opens new tab">here</a>)
+                                <ol>
+                                    <li>
+                                        Go to Admin | Settings | Apps | View App Configurations
+                                    </li>
+                                    <li>
+                                        Click the blue +App button. Then click Configuration Type and and select By Client ID. Paste the client_id that you copied in step 4. Click Submit, then Install.
+                                    </li>
+                                </ol>
+                            </li>
+                            <li>
+                                 From the list of External Apps, locate ChemVantage and click the Settings gear on the right. Select Deployment ID and copy or write down the value.  It consists of a number and a hex string separated by a colon and looks something like 10408:7db438070728c02373713c12c73869b3af470b68.
                             </li>
                             <li>
                                 Click the tokenized link in the email confirmation from step 1 to register the client_id and deployment_id with ChemVantage. If the link expired, you can simply repeat step 1 to get another one.
@@ -154,7 +162,7 @@
                                     Submission Type: External Tool
                                 </li>
                                 <li>
-                                    External Tool URL: Find ChemVantage or enter https://www.chemvantage.org/lti/launch
+                                    External Tool URL: Click Find and select ChemVantage. Then select the assignment type and text/chapter/topics.
                                 </li>
                                 <li>
                                     Save or Save and Publish
