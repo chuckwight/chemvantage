@@ -34,6 +34,11 @@ handlers:
   require_matching_file: True
   secure: always
   
+# Map everything in the error directory to static copies  
+- url: /error
+  static_dir: classes/META-INF/resources/error
+  require_matching_file: True
+  
 # Map everything in the js directory to static copies  
 - url: /js
   static_dir: classes/META-INF/resources/js
@@ -57,3 +62,6 @@ handlers:
   secure: always
   redirect_http_response_code: 301
   script: auto
+
+error_handlers:
+  - file: clesses/META-INF/resources/error/404.html
