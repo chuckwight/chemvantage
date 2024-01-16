@@ -77,7 +77,8 @@ public class LTIDeepLinks extends HttpServlet {
 				break;
 			default:
 				if (request.getParameter("id_token") == null) throw new Exception("ID token not found");
-				if ("auto".equals(d.status)) out.println(registrationForm(user,request,claims,d));
+				if ("canvas".equals(d.lms_type)) out.println(contentPickerForm(user,request,claims));
+				else if ("auto".equals(d.status)) out.println(registrationForm(user,request,claims,d));
 				else out.println(contentPickerForm(user,request,claims));
 			}
 		} catch (Exception e) {	 
