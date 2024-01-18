@@ -35,7 +35,7 @@ import com.googlecode.objectify.annotation.Index;
 public class Assignment implements java.lang.Cloneable {
 	@Id 	Long id;
 	@Index	public String domain;
-	@Index	String assignmentType;
+	@Index	public String assignmentType;
 	@Index	long topicId;
 	@Index	String resourceLinkId;
 	@Index 	Date created;

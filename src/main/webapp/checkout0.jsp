@@ -36,12 +36,14 @@
 			exp = u.exp;
 			String details = request.getParameter("OrderDetails");
 			if (v != null) details = details + " " + voucherCode;
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 %> 
 			<h1>Thank you for your payment!</h1>
 			Your ChemVantage subscription is now active and expires on <%= df.format(exp) %><br/>
-			Print or save this page as proof of purchase. Then return to your LMS and relaunch the assignment.<br/><br/>	
+			Print or save this page as proof of purchase.<br/><br/>	
 			Details: <%= details %><br/>
-			Months Purchased: <%= request.getParameter("nmonths") %>
+			Months Purchased: <%= request.getParameter("nmonths") %><br/><br/>
+			<a class="btn btn-two" href="/<%= a.assignmentType %>?sig=<%= user.getTokenSignature() %>">Continue to your assignment</a><br/><br/>
 <%
 		} else {
 %>
