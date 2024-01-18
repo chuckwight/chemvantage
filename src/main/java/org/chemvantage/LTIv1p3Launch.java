@@ -527,10 +527,10 @@ public class LTIv1p3Launch extends HttpServlet {
 		JsonArray roles = roles_claim.getAsJsonArray();
 		Iterator<JsonElement> roles_iterator = roles.iterator();
 		while(roles_iterator.hasNext()){
-			String role = roles_iterator.next().getAsString().toLowerCase();
-			user.setIsTeachingAssistant(role.contains("teachingassistant"));
-			user.setIsInstructor(role.contains("instructor"));
-			user.setIsAdministrator(role.contains("administrator"));
+			String role = roles_iterator.next().getAsString();
+			user.setIsTeachingAssistant(role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership/Instructor#TeachingAssistant"));
+			user.setIsInstructor(role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Instructor"));
+			user.setIsAdministrator(role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Administrator"));
 		}
 		return user;
 		} catch (Exception e) {
