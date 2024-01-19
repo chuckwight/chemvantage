@@ -71,15 +71,9 @@ public class LTIDeepLinks extends HttpServlet {
 				if (Boolean.parseBoolean(request.getParameter("Refresh"))) out.println(contentPickerForm(user,request,claims));
 				else out.println(deepLinkResponseMsg(request));
 				break;
-			case "Register":
-				if (registrationCompleted(request,d)) out.println(contentPickerForm(user,request,claims));
-				else out.println(registrationForm(user,request,claims,d));
-				break;
 			default:
 				if (request.getParameter("id_token") == null) throw new Exception("ID token not found");
-				if ("canvas".equals(d.lms_type)) out.println(contentPickerForm(user,request,claims));
-				else if ("auto".equals(d.status)) out.println(registrationForm(user,request,claims,d));
-				else out.println(contentPickerForm(user,request,claims));
+				out.println(contentPickerForm(user,request,claims));
 			}
 		} catch (Exception e) {	 
 			Enumeration<String> parameterNames = request.getParameterNames();
@@ -458,10 +452,10 @@ public class LTIDeepLinks extends HttpServlet {
 		JsonArray roles = roles_claim.getAsJsonArray();
 		Iterator<JsonElement> roles_iterator = roles.iterator();
 		while(roles_iterator.hasNext()){
-			String role = roles_iterator.next().getAsString().toLowerCase();
-			user.setIsTeachingAssistant(role.contains("teachingassistant"));
-			user.setIsInstructor(role.contains("instructor"));
-			user.setIsAdministrator(role.contains("administrator"));
+			String role = roles_iterator.next().getAsString();
+			user.setIsTeachingAssistant(role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership/Instructor#TeachingAssistant"));
+			user.setIsInstructor(role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Instructor"));
+			user.setIsAdministrator(role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Administrator"));
 		}
 		return user;
 	}
@@ -741,69 +735,4 @@ public class LTIDeepLinks extends HttpServlet {
 		}
 		return buf.toString();
 	}
-	
-	String registrationForm(User user, HttpServletRequest request, JsonObject claims, Deployment d) throws Exception {
-		StringBuffer buf = new StringBuffer(Subject.header("ChemVantage Registration"));
-		buf.append("<h2>ChemVantage Registration</h2>"
-				+ "Please provide the information below and accept the Terms of Service to complete the registration.<p></p>"
-				+ "<form method=post><input type=hidden name=UserRequest value=Register />"
-				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-				+ "<input type=hidden name=Subject value='" + claims.get("sub") + "' />"
-				+ "<input type=hidden name=id_token value='" + request.getParameter("id_token") + "' />");
-		buf.append("Please tell us how to contact you if there is ever a problem with your account:<br/>"
-				+ "<label>Your Name: " + (d.contact_name==null?"<input type=text name=contact_name size=40 />":d.contact_name) + "</label><br/>"
-				+ "<label>Your Email: " + (d.email==null?"<input type=text name=contact_email size=40 />":d.email) + "</label><br/><br/>"
-				+ "Please tell us about your school, business or organization:<br/>"
-				+ "<label>Org Name: " + (d.organization==null?"<input type=text name=org_name size=40 />":d.organization) + "</label><br/>"
-				+ "<label>Home Page: " + (d.org_url==null?"<input type=text name=org_url placeholder='https://myschool.edu' size=40 />":d.org_url) + "</label><br/><br/>");
-		buf.append("Pricing:"
-				+ "<ul>"
-				+ "<li>LTI registration and instructor accounts are free.</li>"
-				+ "<li>Each student license costs $2.00 USD per month or $8.00 USD per semester.</li>"
-				+ "<li>Institutions may purchase student licenses in bulk for as little as $2.00 USD per year.</li>"
-				+ "</ul>"
-				+ "If you have questions or need assistance, please email admin@chemvantage.org<br/><br/>"
-				+ "<label><input type=checkbox name=AcceptChemVantageTOS value=true />Accept the <a href=/terms_and_conditions.html target=_blank aria-label='opens new tab'>ChemVantage Terms of Service</a></label><br/><br/>"
-				+ "<input type=submit value='Complete Registration'/><br/><br/>");
-		buf.append("</form>");
-		buf.append(Subject.footer);
-		return buf.toString();
-	}
-	
-	boolean registrationCompleted(HttpServletRequest request, Deployment d) {
-		try {
-			String contact_name = request.getParameter("contact_name");
-			String email = request.getParameter("contact_email");
-			String organization = request.getParameter("org_name");
-			String org_url = request.getParameter("org_url");
-			if (d.contact_name==null && !contact_name.trim().isEmpty()) d.contact_name = contact_name;
-			if (d.email==null && !email.trim().isEmpty()) d.email = email;
-			if (d.organization==null && !organization.trim().isEmpty()) d.organization = organization;
-			if (d.org_url==null && !org_url.trim().isEmpty()) d.org_url = org_url;
-			boolean terms = Boolean.parseBoolean(request.getParameter("AcceptChemVantageTOS"));
-			boolean incomplete = d.contact_name==null || d.email==null || d.organization==null || d.org_url==null || !terms;
-			d.status = incomplete?"auto":"pending";
-			ofy().save().entity(d).now();
-			return !incomplete;
-		} catch (Exception e) {
-			return false;
-		}
-	}
-/*	
-	private void sendEmailToAdmin(String message) {
-		Properties props = new Properties();
-		Session session = Session.getDefaultInstance(props, null);
-
-		try {
-			Message msg = new MimeMessage(session);
-			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-			msg.addRecipient(Message.RecipientType.TO,
-					new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-			msg.setSubject("DeepLinking Error");
-			msg.setContent(message,"text/html");
-			Transport.send(msg);
-		} catch (Exception e) {
-		}
-	}
-*/
 }
