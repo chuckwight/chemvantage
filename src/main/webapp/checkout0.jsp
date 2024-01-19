@@ -10,9 +10,9 @@
 <%
 	String sig = request.getParameter("sig");
 	User user = User.getUser(sig);
+	String platformDeploymentId = request.getParameter("d");
 	String hashedId = request.getParameter("HashedId");
 	String voucherCode = request.getParameter("VoucherCode");
-	if (user == null || user.isAnonymous()) response.sendError(401, "You must be logged in through your LMS to see this page.");
 	Date now = new Date();
 	Date exp = null;
 	DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.FULL);
@@ -23,22 +23,27 @@
 	} catch (Exception e) {}
 	int amountPaid = 0;
 	try {
-		d = ofy().load().type(Deployment.class).id(request.getParameter("d")).now();
+		if (user == null || user.isAnonymous() || platformDeploymentId==null) throw new Exception("You must be logged in through your LMS to see this page.");
+		d = ofy().load().type(Deployment.class).id(platformDeploymentId).safe();
 		Voucher v = null;
+		boolean voucherRedeemed = false;
 		if (voucherCode != null) {
 			voucherCode = voucherCode.toUpperCase();
 			v = ofy().load().type(Voucher.class).id(voucherCode).now();
+			if (v==null) throw new Exception("The voucher code was invalid.");
+			if (v.activate()) voucherRedeemed = true;
+			else throw new Exception("The voucher code was redeemed previously.");
 		}
 		
-		if (user.getHashedId().equals(hashedId) || v.activate()) { // successful purchase or voucherCode submission;
+		if (user.getHashedId().equals(hashedId) || voucherRedeemed) { // successful purchase or voucherCode submission;
 			amountPaid = Integer.parseInt(request.getParameter("AmountPaid"));
 			PremiumUser u = new PremiumUser(user.getHashedId(), nMonthsPurchased, amountPaid, d.getOrganization()); // constructor automatically saves new entity
 			exp = u.exp;
 			String details = request.getParameter("OrderDetails");
-			if (v != null) details = details + " " + voucherCode;
+			if (voucherRedeemed) details = details + " " + voucherCode;
 			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 %> 
-			<h1>Thank you for your payment!</h1>
+			<h1>Thank you for your purchase!</h1>
 			Your ChemVantage subscription is now active and expires on <%= df.format(exp) %><br/>
 			Print or save this page as proof of purchase.<br/><br/>	
 			Details: <%= details %><br/>
@@ -46,68 +51,61 @@
 			<a class="btn btn-two" href="/<%= a.assignmentType %>?sig=<%= user.getTokenSignature() %>">Continue to your assignment</a><br/><br/>
 <%
 		} else {
-%>
-			<h1>ChemVantage Subscription Activation Failed</h1>
-			Sorry, something went wrong. Please return to your LMS and launch the assignment again.<br/>
-			If you need assistance, please send email to <a href='mailto:admin@chemvantage.org'>admin@chemvantage.org</a><br/><br/>
-<%
-		}
-	} catch (Exception e) {  // the remainder of the JSP is devoted to presenting the purchase page
-
-		String client_id = Subject.projectId.equals("dev-vantage-hrd")
-		? "AVJ8NuVQnTBwTbmkouWCjZhUT_eHeTm9fjAKwXJO0-RK-9VZFBtWm4J6V8o-47DvbOoaVCUiEb4JMXz8": // Paypal sandbox client_id
-		"AYlUNqRJZXhJJ9z7pG7GRMOwC-Y_Ke58s8eacfl1R51833ISAqOUhR8To0Km297MPcShAqm9ffp5faun"; // Paypal live client_id
-		
-		PremiumUser u = ofy().load().type(PremiumUser.class).id(user.getHashedId()).now();		
-		String title = (u != null && u.exp.before(now))?"Your ChemVantage subscription expired on " + df.format(u.exp):"Individual ChemVantage Subscription";
-%>	
-		<h1><%= title %></h1>
-		A subscription is required to access ChemVantage assignments created by your instructor through this learning management system. 
-		First, indicate your agreement with the two statements below by checking the boxes.<br/><br/>
-		
-		<label><input type=checkbox id=terms onChange=showPurchase();> I understand and agree to the <a href=/terms_and_conditions.html target=_blank>ChemVantage Terms and Conditions of Use</a>.</label> <br/>
-		<label><input type=checkbox id=norefunds onChange=showPurchase();> I understand that all ChemVantage subscription fees are nonrefundable.</label> <br/><br/>
-
-		<div id=purchase style='display:none'>
-<%		
-		int nVouchersAvailable = ofy().load().type(Voucher.class).filter("activated",null).count();
-		if (nVouchersAvailable > 0) {
-%>
-		<form method=post>
-			<input type=hidden name=sig value='<%= user.getTokenSignature() %>' />
-  			<input type=hidden name=d value='<%= d.getPlatformDeploymentId() %>' />
-  			<input type=hidden name=nmonths value=12 />
-  			<input type=hidden name=AmountPaid value='<%= 8*d.price %>' />
- 			<input type=hidden name=OrderDetails value='Voucher' />
-			If you have a subscription voucher, please enter the code here: <input type=text size=10 name=VoucherCode />
-			<input type=submit />
-		</form>
-		<br/>Otherwise, please select the desired number of months you wish to purchase:
-<% 
-		} else {
-%>	
-		Please select the desired number of months you wish to purchase: 
-<%
-		}
-%>
-		<select id=nMonthsChoice onChange=updateAmount();>
-			<option value=1>1 month</option>
-			<option value=2>2 months</option>
-			<option value=5>5 months</option>
-			<option value=12>12 months</option>
-		</select><br/><br/>
 			
-		Select your preferred payment method below. When the transaction is completed, your subscription will be activated immediately.
+			String client_id = Subject.projectId.equals("dev-vantage-hrd")
+			? "AVJ8NuVQnTBwTbmkouWCjZhUT_eHeTm9fjAKwXJO0-RK-9VZFBtWm4J6V8o-47DvbOoaVCUiEb4JMXz8": // Paypal sandbox client_id
+			"AYlUNqRJZXhJJ9z7pG7GRMOwC-Y_Ke58s8eacfl1R51833ISAqOUhR8To0Km297MPcShAqm9ffp5faun"; // Paypal live client_id
+		
+			PremiumUser u = ofy().load().type(PremiumUser.class).id(user.getHashedId()).now();		
+			String title = (u != null && u.exp.before(now))?"Your ChemVantage subscription expired on " + df.format(u.exp):"Individual ChemVantage Subscription";
+%>	
+			<h1><%= title %></h1>
+			A subscription is required to access ChemVantage assignments created by your instructor through this learning management system. 
+			First, indicate your agreement with the two statements below by checking the boxes.<br/><br/>
+		
+			<label><input type=checkbox id=terms onChange=showPurchase();> I understand and agree to the <a href=/terms_and_conditions.html target=_blank>ChemVantage Terms and Conditions of Use</a>.</label> <br/>
+			<label><input type=checkbox id=norefunds onChange=showPurchase();> I understand that all ChemVantage subscription fees are non-refundable.</label> <br/><br/>
 
-		<h2>Purchase: <span id=amt></span></h2>
+			<div id=purchase style='display:none'>
+<%		
+			int nVouchersAvailable = ofy().load().type(Voucher.class).filter("activated",null).count();
+			if (nVouchersAvailable > 0) {
+%>
+				<form method=post>
+					<input type=hidden name=sig value='<%= user.getTokenSignature() %>' />
+  					<input type=hidden name=d value='<%= d.getPlatformDeploymentId() %>' />
+  					<input type=hidden name=nmonths value=12 />
+  					<input type=hidden name=AmountPaid value='<%= 8*d.price %>' />
+ 					<input type=hidden name=OrderDetails value='Voucher' />
+					If you have a subscription voucher, please enter the code here: <input type=text size=10 name=VoucherCode />
+					<input type=submit />
+				</form>
+				<br/>Otherwise, please select the desired number of months you wish to purchase:
+<% 
+			} else {
+%>	
+				Please select the desired number of months you wish to purchase: 
+<%
+			}
+%>
+			<select id=nMonthsChoice onChange=updateAmount();>
+				<option value=1>1 month</option>
+				<option value=2>2 months</option>
+				<option value=5>5 months</option>
+				<option value=12>12 months</option>
+			</select><br/><br/>
+			
+			Select your preferred payment method below. When the transaction is completed, your subscription will be activated immediately.
 
-		<div id="smart-button-container">
-      	  <div style="text-align: center;">
-            <div id="paypal-button-container"></div>
-          </div>
-        </div>
+			<h2>Purchase: <span id=amt></span></h2>
+
+			<div id="smart-button-container">
+      		  <div style="text-align: center;">
+     	        <div id="paypal-button-container"></div>
+      	      </div>
+      	    </div>
         
-        </div>
+       	</div>
         
  		<script src='https://www.paypal.com/sdk/js?client-id=<%= client_id %>&enable-funding=venmo&currency=USD'></script>
    		<script>
@@ -182,6 +180,15 @@
   		<input type=hidden name=HashedId value='<%= user.getHashedId() %>' />
 		</form>
 <% 
+		}
+	} catch (Exception e) {
+		if (user != null) ofy().delete().entity(user).now();  // log the user out
+%>
+		<h1>ChemVantage Subscription Activation Failed</h1>
+		Sorry, something went wrong. Please return to your LMS and launch the assignment again.<br/><br/>
+		<%= e.getMessage()==null?e.toString():e.getMessage() %> <br/><br/>
+		If you need assistance, please send email to <a href='mailto:admin@chemvantage.org'>admin@chemvantage.org</a><br/><br/>
+<%
 	}
 %>
 
