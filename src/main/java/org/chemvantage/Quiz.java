@@ -465,7 +465,7 @@ public class Quiz extends HttpServlet {
 			}
 			
 			// if the user response was correct, seek five-star feedback:
-			if (studentScore == qt.possibleScore && !timeExpired) buf.append(fiveStars());
+			if (studentScore == qt.possibleScore && !timeExpired) buf.append(fiveStars(user.getTokenSignature()));
 			else buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
 
 			if (!user.isAnonymous()) buf.append("You may <a href=/Quiz?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review all your scores on this assignment</a>.<p>") ;
@@ -483,7 +483,7 @@ public class Quiz extends HttpServlet {
 		return buf.toString();
 	}
 	
-	String fiveStars() {
+	String fiveStars(String sig) {
 		StringBuffer buf = new StringBuffer();
 		
 		buf.append("Please rate your overall experience with ChemVantage:<br />"
@@ -492,11 +492,11 @@ public class Quiz extends HttpServlet {
 		for (int iStar=1;iStar<6;iStar++) {
 			buf.append("<img src='images/star1.gif' id='" + iStar + "' "
 					+ "style='width:30px; height:30px;' "
-					+ "onmouseover=showStars(this.id); onClick=setStars(this.id); onmouseout=showStars(0); />");
+					+ "onmouseover=showStars(this.id); onClick=setStars(this.id,'" + sig + "'); onmouseout=showStars(0); />");
 		}
 		buf.append("<span id=sliderspan style='opacity:0'>"
 				+ "<input type=range id=slider min=1 max=5 value=3 onfocus=document.getElementById('sliderspan').style='opacity:1';showStars(this.value); oninput=showStars(this.value);>"
-				+ "<button onClick=setStars(document.getElementById('slider').value);>submit</button>"
+				+ "<button onClick=setStars(document.getElementById('slider').value,'" + sig + "');>submit</button>"
 				+ "</span>");
 		buf.append("<p>");
 

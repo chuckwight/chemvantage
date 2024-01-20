@@ -9,10 +9,6 @@ function showStars(n) {
     for (i = 1; i < 6; i++) document.getElementById(i).src = (i <= n ? star2.src : star1.src);
   }
 }
-function setStars(n) {
-  set = (n > 0 ? true : false);
-  document.FeedbackForm.Stars.value = n;
-}
 function toggleTimers() {
 	var timer0 = document.getElementById('timer0');
 	var timer1 = document.getElementById('timer1');
@@ -30,12 +26,17 @@ function toggleTimers() {
 	}
 }
 
+function setFeedbackStars(n) {
+	set = (n > 0 ? true : false);
+	if (set) {
+		document.FeedbackForm.Stars.value = n;
+		document.getElementById('sliderspan').style='display:none';
+	}
+}
 function setStars(n,sig) {
-  if (!set) {
-    ajaxStars(n,sig);
-    set = true;
-    document.getElementById('sliderspan').style='display:none';
-  }
+  if (!set) ajaxStars(n,sig);
+  set = true;
+  document.getElementById('sliderspan').style='display:none';
 }
 
 var endMillis;

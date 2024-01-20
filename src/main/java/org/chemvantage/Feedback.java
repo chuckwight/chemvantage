@@ -135,43 +135,25 @@ public class Feedback extends HttpServlet {
 
 		buf.append("Your comments and opinions are important to us.  We use this<br>"
 				+ "information to improve the functionality of the site for our users.<p>");
-				
-		buf.append("<script type='text/javascript'>\n"
-				+ "<!--\n"
-				+ "var star1 = new Image(); star1.src='images/star1.gif';\n"
-				+ "var star2 = new Image(); star2.src='images/star2.gif';\n"
-				+ "var set = false;\n"
-				+ "function showStars(n) {"
-				+ "  if (!set) {"
-				+ "    document.getElementById('vote').innerHTML=(n==0?'(click a star)':''+n+(n>1?' stars':' star'));"
-				+ "    for (i=1;i<6;i++) document.getElementById(i).src=(i<=n?star2.src:star1.src);"
-				+ "  }"
-				+ "}\n"
-				+ "function setStars(n) {"
-				+ "  set = (n>0?true:false);"
-				+ "  document.FeedbackForm.Stars.value = n;"
-				+ "}\n"
-				+ "// -->\n"
-				+ "</script>\n");
 
 		buf.append("Please rate your overall experience with ChemVantage:\n");
 
 		buf.append("<div id='vote' style='color:red;'>(click a star):</div>\n");
 		for (int istar=1;istar<6;istar++) {
 			buf.append("<img src='images/star1.gif' id='" + istar + "' style='width:30px; height:30px;' "        // properties
-					+ "onmouseover=showStars(this.id) onmouseout=showStars('0') onClick='set=false;showStars(this.id);setStars(this.id)' />" ); // mouse actions
+					+ "onmouseover=showStars(this.id) onmouseout=showStars('0') onClick=\"set=false;showStars(this.id);setFeedbackStars(this.id)\"; />" ); // mouse actions
 		}
-		buf.append("&nbsp;&nbsp;&nbsp;&nbsp;<input type=range min=1 max=5 style='opacity:0' onfocus=this.style='opacity:1' oninput='set=false;showStars(this.value);setStars(this.value)'>");
+		buf.append("&nbsp;&nbsp;&nbsp;&nbsp;<input type=range min=1 max=5 style='opacity:0' onfocus=this.style='opacity:1' oninput=\"set=false;showStars(this.value);setFeedbackStars(this.value);\">");
 		buf.append("<br clear='all'>");
 		buf.append("<FONT SIZE=-1>(" + Subject.getNStarReports() + " user ratings; avg = " + Subject.getAvgStars() + " stars)</FONT><p>\n");
 
 		if (user.isAnonymous()) buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");				
 		
-		buf.append("<FORM NAME=FeedbackForm ACTION=Feedback METHOD=POST>\n"
+		buf.append("<FORM NAME=FeedbackForm id=FeedbackForm ACTION=Feedback METHOD=POST>\n"
 				+ "Comments or kudos: <FONT SIZE=-1>(160 characters max.)</FONT><br>"
-				+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback>"
-				+ "<INPUT TYPE=HIDDEN NAME=Stars>"
-				+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "'>"
+				+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback />"
+				+ "<INPUT TYPE=HIDDEN NAME=Stars />"
+				+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "' />"
 				+ "<TEXTAREA NAME=Comments ROWS=5 COLS=60 WRAP=SOFT "				
 				+ "onKeyUp=javascript:{document.FeedbackForm.Comments.value=document.FeedbackForm.Comments.value.substring(0,160);document.getElementById('cbox').style.visibility='visible';}>"
 				+ "</TEXTAREA><br>");
@@ -198,11 +180,11 @@ public class Feedback extends HttpServlet {
 		return buf.toString(); 
 	}
 
-	String submitFeedback(User user,HttpServletRequest request) {
+	String submitFeedback(User user,HttpServletRequest request) throws Exception {
 		StringBuffer buf = new StringBuffer();
 		
 		try { 
-			if (user.isAnonymous() && !reCaptchaOK(request)) throw new Exception();
+			if (!request.getServerName().equals("localhost") && user.isAnonymous() && !reCaptchaOK(request)) throw new Exception();
 		} catch (Exception e) {
 			return "<h1>Submission Failed</h1>"
 					+ "The ReCAPTCHA was not validated, sorry. "
@@ -212,11 +194,10 @@ public class Feedback extends HttpServlet {
 		int stars = 0;
 		try {
 			stars = Integer.parseInt(request.getParameter("Stars"));
-			if (stars>0) Subject.addStarReport(stars);
-		} catch (Exception e) {
-		}
+		} catch (Exception e) {}
+		
 		String comments = request.getParameter("Comments");
-		if (stars == 0 && (comments == null || comments.isEmpty())) return feedbackForm(user);   //(user==null?anonymousFeedbackForm():feedbackForm(user));
+		if (comments == null || comments.isEmpty()) return feedbackForm(user);   //(user==null?anonymousFeedbackForm():feedbackForm(user));
 		
 		String userId = user==null?null:user.getId();
 		String email = request.getParameter("Email");
@@ -226,21 +207,19 @@ public class Feedback extends HttpServlet {
 		} catch (Exception e) {
 			email = null;
 		}
-	
+		
 		if (comments.length() > 0) {
 			UserReport r = new UserReport(userId,stars,comments);
 			ofy().save().entity(r);
-			if (email!=null && !email.isEmpty()) sendEmailToAdmin(r,user,email);
+			if (email!=null) sendEmailToAdmin(r,user,email);
 		}
 
 		buf.append("<h1>ChemVantage Feedback Page</h1>");
 		buf.append(new Date().toString() + "<p>");
-		buf.append("Thank you for your feedback" + (stars>0?" (" + stars + " stars" + (stars==5?"!":"") + "). ":". "));
-		
-		if (stars > 0) buf.append("<br>The average user rating for ChemVantage is " + Subject.getAvgStars() + " stars (" + Subject.getNStarReports() + " user ratings).<p>");
+		buf.append("Thank you for your feedback" + (stars>0?" (" + stars + " stars)":"") + ". ");
 		
 		if (comments.length() > 0) {
-			buf.append("Your comment was: <br/><font color=red>" + comments + "</font><p>");
+			buf.append("Your comment was: <p><font color=red>" + comments + "</font><p>");
 		
 			if (email==null) buf.append("We will review your comment, but we're unable to provide a response because you did not provide an email address.<p>");
 			else buf.append("We will review your comment. Any response will be sent to " + email + ".<p>");
@@ -293,9 +272,6 @@ public class Feedback extends HttpServlet {
 	}
 	
 	private void sendEmailToAdmin(UserReport r,User user,String email) {
-		//Properties props = new Properties();
-		//Session session = Session.getDefaultInstance(props, null);
-		if (email==null) email = "";
 		String msgBody = r.view();
 		if (!email.isEmpty()) msgBody += "Respond to " + email;
 		else {  // try to get the user's email address from the NRPS service
@@ -315,19 +291,6 @@ public class Feedback extends HttpServlet {
 		try {
 		Utilities.sendEmail("ChemVantage","admin@chemvantage.org","ChemVantage Feedback Report",msgBody);
 		} catch (Exception e) {}
-		
-/*		
-		try {
-			Message msg = new MimeMessage(session);
-			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-			msg.addRecipient(Message.RecipientType.TO,
-					new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-			msg.setSubject("ChemVantage Feedback Report");
-			msg.setContent(msgBody,"text/html");
-			Transport.send(msg);
-		} catch (Exception e) {
-		}
-*/
 	}
 }
 

@@ -401,7 +401,7 @@ public class Homework extends HttpServlet {
 			if (secondsRemaining > 0 && !solvedRecently) {  
 				buf.append("<h1>Homework</h1>"
 						+ "<h2>Please Wait For The Retry Delay To Complete</h2>");
-				buf.append(df.format(now));
+				//buf.append(df.format(now));
 				buf.append("<span id=timer0 style='color: #EE0000'></span><br/>");
 				buf.append("Please take these few moments to check your work carefully.  You can sometimes find alternate routes to the "
 						+ "same solution, or it may be possible to use your answer to back-calculate the data given in the problem.<br/><br/>");
@@ -593,7 +593,7 @@ public class Homework extends HttpServlet {
 					buf.append("<img src=/images/learn_more.png alt='learn more here' /> You can learn more about this topic at <a href='" + q.learn_more_url + "' target=_blank>" + q.learn_more_url + "</a><br/><br/>");
 
 				// if the user response was correct, seek five-star feedback:
-				if (studentScore > 0) buf.append(fiveStars());
+				if (studentScore > 0) buf.append(fiveStars(user.getTokenSignature()));
 				else buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
 
 				if (hwa != null) buf.append("You may <a href=/Homework?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review your scores on this assignment</a>.<p>");
@@ -612,20 +612,20 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	static String fiveStars() {
+	static String fiveStars(String sig) {
 		StringBuffer buf = new StringBuffer();
-
-		buf.append("Please rate your overall experience with ChemVantage:<br />\n"
+		
+		buf.append("Please rate your overall experience with ChemVantage:<br />"
 				+ "<span id='vote' style='font-family:tahoma; color:#EE0000;'>(click a star):</span><br>");
 
 		for (int iStar=1;iStar<6;iStar++) {
 			buf.append("<img src='images/star1.gif' id='" + iStar + "' "
 					+ "style='width:30px; height:30px;' "
-					+ "onmouseover=showStars(this.id); onClick=setStars(this.id); onmouseout=showStars(0); />");
+					+ "onmouseover=showStars(this.id); onClick=setStars(this.id,'" + sig + "'); onmouseout=showStars(0); />");
 		}
 		buf.append("<span id=sliderspan style='opacity:0'>"
 				+ "<input type=range id=slider min=1 max=5 value=3 onfocus=document.getElementById('sliderspan').style='opacity:1';showStars(this.value); oninput=showStars(this.value);>"
-				+ "<button onClick=setStars(document.getElementById('slider').value);>submit</button>"
+				+ "<button onClick=setStars(document.getElementById('slider').value,'" + sig + "');>submit</button>"
 				+ "</span>");
 		buf.append("<p>");
 

@@ -70,10 +70,12 @@ public class UserReport implements Serializable {
 
 		if (stars>0) buf.append(" (" + stars + " stars)<br>");
 		buf.append("<FONT COLOR=RED>" + comments + "</FONT><br>");
-		Question q = ofy().load().type(Question.class).id(this.questionId).safe();
-		q.parameters = this.params;
+		if (this.questionId>0) {			
+			Question q = ofy().load().type(Question.class).id(this.questionId).safe();
+			q.parameters = this.params;
 
-		buf.append(q.printAllToStudents(studentAnswer,true,false));
+			buf.append(q.printAllToStudents(studentAnswer,true,false));
+		}
 		return buf.toString();
 	}
 
@@ -88,12 +90,13 @@ public class UserReport implements Serializable {
 			
 			if (stars>0) buf.append(" (" + stars + " stars)<br>");
 			buf.append("<FONT COLOR=RED>" + comments + "</FONT><br>");
-			Question q = ofy().load().type(Question.class).id(this.questionId).safe();
-			q.parameters = this.params;
-
-			buf.append(q.printAllToStudents(studentAnswer,true,false));
 			
-			buf.append("<a href=Edit?UserRequest=Edit&QuestionId=" + this.questionId + "&AssignmentType=" + q.assignmentType + ">Edit Question</a>&nbsp;or&nbsp;");
+			if (this.questionId>0) {			
+				Question q = ofy().load().type(Question.class).id(this.questionId).safe();
+				q.parameters = this.params;
+				buf.append(q.printAllToStudents(studentAnswer,true,false));
+				buf.append("<a href=Edit?UserRequest=Edit&QuestionId=" + this.questionId + "&AssignmentType=" + q.assignmentType + ">Edit Question</a>&nbsp;or&nbsp;");
+			}
 			buf.append("<FORM METHOD=POST style='display: inline' ACTION=Feedback>"
 					+ "<INPUT TYPE=HIDDEN NAME=ReportId VALUE=" + this.id + ">"
 					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Report'>"
