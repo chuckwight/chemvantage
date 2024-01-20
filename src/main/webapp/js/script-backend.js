@@ -167,7 +167,7 @@ function GetXmlHttpObject() {
   return null;
 }
 
-function waitForScore() {
+function waitForRetryScore() {
  let b = document.getElementById('RetryButton');
  b.disabled = true;
  b.value = 'Please wait a moment while we score your response.';

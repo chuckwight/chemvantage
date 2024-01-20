@@ -253,7 +253,7 @@ public class Homework extends HttpServlet {
 			if (hwa.attemptsAllowed==null)
 				buf.append("<LI>You may rework problems and resubmit answers as many times as you wish, to improve your score.</LI>");
 			else buf.append("<LI>For each problem you are allowed " + hwa.attemptsAllowed + (hwa.attemptsAllowed==1?" attempt.":" attempts.") + "</LI>");
-			buf.append("<LI>There is a retry delay of " + retryDelayMinutes + " minutes between answer submissions for any single question.</LI>");
+			buf.append("<LI>There is a retry delay of " + retryDelayMinutes + " minute" +(retryDelayMinutes==1?"":"s") + " between answer submissions for any single question.</LI>");
 			buf.append("<LI>Most questions are customized, so the correct answers are different for each student.</LI>");
 			if (!user.isAnonymous()) buf.append("\n<LI>A checkmark will appear to the left of each correctly solved problem.</LI>");
 			buf.append("</UL>");
@@ -412,18 +412,18 @@ public class Homework extends HttpServlet {
 						+ "<a href=/Homework?AssignmentId=" + hwa.id
 						+ "&sig=" + user.getTokenSignature() + ">" 
 						+ "return to this homework assignment</a> to work on another problem.<p>");
-				buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework onsubmit=waitForScore(); >"
+				buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework onsubmit=waitForRetryScore(); >"
 						+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" +(hwa.id==null?0:hwa.id) + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ q.print(showWork,studentAnswer) + "<br>");
 
-				buf.append("<INPUT TYPE=SUBMIT id='RetryButton' DISABLED=true style='opacity:0.5' VALUE='Grade This Exercise'></FORM><br/><br/>");
+				buf.append("<INPUT TYPE=SUBMIT id='RetryButton' class='btn' DISABLED=true VALUE='Please wait' /></FORM><br/><br/>");
 				buf.append("<script>"
 						+ "startTimers('" + (now.getTime() + secondsRemaining*1000) + "');"
 						+ "function timesUp() {"
 						+ "document.getElementById('RetryButton').disabled=false;"
-						+ "document.getElementById('RetryButton').style.opacity=1;"
+						+ "document.getElementById('RetryButton').value='Grade This Exercise';"
 						+ "}"
 						+ "</script>");
 
