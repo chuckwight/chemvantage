@@ -946,7 +946,7 @@ public class PracticeExam extends HttpServlet {
 	}
 
 	String selectExamQuestionsForm(User user) {
-		StringBuffer buf = new StringBuffer("<h1>General Chemistrey Exam</h1><h2>Settings</h2>");
+		StringBuffer buf = new StringBuffer("<h1>General Chemistry Exam</h1><h2>Settings</h2>");
 		try {
 			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 			
