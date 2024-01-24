@@ -96,7 +96,7 @@ public class ReportScore extends HttpServlet {
 				debug.append("7");
 			}
 		} catch (Exception e) {
-			Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Failed ReportScore",e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString());
+			Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Failed ReportScore",(e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString());
 			response.sendError(401,"Failed ReportScore");
 		}
 	}	
