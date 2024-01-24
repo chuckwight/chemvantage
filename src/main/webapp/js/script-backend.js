@@ -167,6 +167,11 @@ function GetXmlHttpObject() {
   return null;
 }
 
+function waitforSync() {
+	let b = document.getElementById('syncAll');
+	b.disabled = true;
+	b.value = 'Please wait while we recalculate all scores.';
+}
 function waitForRetryScore() {
  let b = document.getElementById('RetryButton');
  b.disabled = true;

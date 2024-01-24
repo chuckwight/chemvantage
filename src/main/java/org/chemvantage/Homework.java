@@ -774,10 +774,10 @@ public class Homework extends HttpServlet {
 			}
 			if (nMismatched>1) {
 				buf.append("Use the button below to synchronize all of the Learner scores. This might take a minute, depending on the number of mismatches.<br/>"
-					+ "<form method=post action=/Homework >"
+					+ "<form method=post action=/Homework onsubmit=waitforSync(); >"
 					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "<input type=hidden name=UserRequest value='Synchronize Scores' />"
-					+ "<input type=submit value='Synchronize All Scores' />"
+					+ "<input type=submit id=syncAll value='Synchronize All Scores' />"
 					+ "</form>");
 			}
 				return buf.toString();
