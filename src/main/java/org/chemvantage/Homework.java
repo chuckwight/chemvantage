@@ -316,7 +316,14 @@ public class Homework extends HttpServlet {
 					j++;
 				}
 			}
-			buf.append((i>1?"<h2>Assigned Exercises</h2>":"") + assignedQuestions + "</div>" + (i>1 && j>1?"<h2>Optional Exercises</h2>":"") + optionalQuestions + "</div>");
+			
+			// Print the list of problems for the student
+			buf.append((i>1?"<h2>Assigned Exercises</h2>":"") + assignedQuestions + "</div>");
+			if (i>1 && j>1) {
+				buf.append("<hr><hr><span style='font-weight: bold;'> **** END OF ASSIGNED EXERCISES **** </span><hr><hr>");
+				buf.append("<h2>Optional Exercises</h2>" + optionalQuestions + "</div>");
+			}
+			
 			buf.append("<script>function showWorkBox(qid) {\n"
 					+ "	if (qid==0) return;\n"
 					+ "    document.getElementById('showWork'+qid).style.display='';\n"
@@ -752,7 +759,7 @@ public class Homework extends HttpServlet {
 						+ "<td align=center>" + lmsScoreString + "</td>"
 						+ "<td align=center>" + cvScoreString + "</td>"
 						+ "<td align=center><a href=/Homework?UserRequest=Review&sig=" + user.getTokenSignature() + "&ForUserId=" + forUserId + "&ForUserName=" + entry.getValue()[1].replaceAll(" ","+") + ">show</a></td>"
-						+ (synched?"":"<td><span id='cell" + forUserId + "'><button onClick=this.disabled=true;this.style.opacity=0.5;synchronizeScore('" + forUserId + "'); >sync</button></span></td>")
+						+ (synched?"":"<td><span id='cell" + forUserId + "'><button onClick=this.disabled=true;this.style.opacity=0.5;synchronizeScore('" + forUserId + "','" + user.getTokenSignature() + "','/Homework'); >sync</button></span></td>")
 						+ "</tr>");
 				// Flag this score set as unsynchronized only if there is one or more non-null ChemVantage Learner score that is not equal to the LMS score
 				// Ignore Instructor scores because the LMS often does not report them, and ignore null cvScore entities because they cannot be reported.

@@ -102,9 +102,9 @@ function ajaxSubmit(url,id,params,studentAnswer,note,email) {
   xmlhttp.send(null);
   return false;
 }
-function synchronizeScore(forUserId,sig) {
+function synchronizeScore(forUserId,sig,path) {
   let xmlhttp=GetXmlHttpObject();
-  let url = '/Quiz?UserRequest=SynchronizeScore&sig=' + sig + '&ForUserId=' + forUserId;
+  let url = path + '?UserRequest=SynchronizeScore&sig=' + sig + '&ForUserId=' + forUserId;
   if (xmlhttp==null) {
     alert ('Sorry, your browser does not support AJAX!');
     return false;

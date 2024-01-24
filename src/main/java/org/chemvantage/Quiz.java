@@ -635,7 +635,7 @@ public class Quiz extends HttpServlet {
 							+ "<td align=center>" + (s == null?" - ":lmsScoreString) + "</td>"
 							+ "<td align=center>" + (cvScore == null?" - ":String.valueOf(cvScore.getPctScore()) + "%") + "</td>"
 							+ "<td>" +  (cvScore == null?"":"<a href=/Quiz?UserRequest=ShowScores&sig=" + user.getTokenSignature() + "&ForUserHashedId=" + forUserHashedId + ">Show Scores</a>") + "</td>"
-							+ (synched?"":"<td><span id='cell" + forUserId + "'><button onClick=this.disabled=true;synchronizeScore('" + forUserId + "','" + user.getTokenSignature() + "'); >sync</button></span></td>")
+							+ (synched?"":"<td><span id='cell" + forUserId + "'><button onClick=this.disabled=true;synchronizeScore('" + forUserId + "','" + user.getTokenSignature() + "','/Quiz'); >sync</button></span></td>")
 							+ "</tr>");
 				}
 				buf.append("</table><br/>");
