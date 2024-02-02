@@ -348,7 +348,7 @@ public class Poll extends HttpServlet {
 		buf.append("</form>");
 		
 		if (a.pollClosesAt != null) 
-			buf.append("script>"
+			buf.append("<script>"
 					+ "function timesUp() {"
 					+ "  document.getElementById('pollForm').submit();"
 					+ "}"
