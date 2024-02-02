@@ -257,7 +257,7 @@ public class Poll extends HttpServlet {
 				+ "<button class='btn'>Show This Assignment</button></a><br/>");
 		
 		if (!a.pollIsClosed && a.pollClosesAt != null) {
-			buf.append("script>"
+			buf.append("<script>"
 					+ "function timesUp() {"
 					+ "  document.getElementById('pollForm').submit();"
 					+ "}"
