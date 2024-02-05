@@ -1,9 +1,8 @@
 package org.chemvantage;
 
-import javax.servlet.annotation.WebFilter;
+import com.googlecode.objectify.ObjectifyService;
 
-import com.googlecode.objectify.ObjectifyFilter;
+import jakarta.servlet.annotation.WebFilter;
 
-@SuppressWarnings("deprecation")
-@WebFilter(urlPatterns = "/*")
-public class ObjectifyWebFilter extends ObjectifyFilter {}
+@WebFilter(urlPatterns = {"/*"})
+public class ObjectifyWebFilter extends ObjectifyService.Filter {}
