@@ -337,7 +337,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				response.getWriter().println(Subject.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,request) + Subject.footer);
 				return;
 			} else if (!isPremiumUser) {
-				String url = Subject.serverUrl + "/checkout0.jsp?sig=" + user.getTokenSignature() + "&d=" + d.platform_deployment_id;
+				String url = Subject.serverUrl + "/checkout?sig=" + user.getTokenSignature() + "&d=" + d.platform_deployment_id;
 				if ("PlacementExam".equals(myAssignment.assignmentType)) url += "&n=1";
 				else url += "&n=5";
 				response.sendRedirect(url);

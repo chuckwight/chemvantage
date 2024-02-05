@@ -216,10 +216,10 @@ public class PlacementExam extends HttpServlet {
 			
 			if (d.price > 0) {		
 				buf.append("There are two ways to pay for placement exams:<ol>"
-						+ "<li>You can <a href='/checkout2.jsp?sig=" + user.getTokenSignature() + "' target=_blank >purchase ChemVantage student licenses</a> "
-						+ "for this LTI account in quantities of 50 or more for as little as $2.00 USD per license. Every unique student who "
-						+ "downloads a placement exam will use one license, which is valid for a period of 10 months.</li>"
-						+ "<li>When there are no licenses remaining in your account, each student will be charged $" + d.price + ".00 USD per month for an individual license.</li></ol>"
+						+ "<li>Contact us at admin@chemvantage.org to purchase student licenses in quantities of 50 or more. Every unique student who "
+						+ "downloads a placement exam will use one license, which is valid for a period of 12 months.</li>"
+						+ "<li>When there are no licenses remaining in your account, each student will be charged $" + d.price + ".00 USD per month "
+								+ "or $" + 4*d.price + " per semester (5 months) for an individual license.</li></ol>"
 						+ "You can use the settings in your LMS to restrict the number of placement exam retakes, if desired.<br/><br/>");
 
 				buf.append("<b>Your account has " + d.nLicensesRemaining + " licenses remaining.</b><br/><br/>"
