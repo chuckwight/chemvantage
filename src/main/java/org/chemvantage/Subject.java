@@ -211,6 +211,8 @@ public class Subject {
 		+ ((announcement==null || announcement.isEmpty())?"":"<FONT style='color: #EE0000'>" + announcement + "</FONT><br/>\n");
 	}
 	
+	static String banner = "<div style='font-size: 1.5em'><image src='/images/CVLogo_thumb.png' alt='ChemVantage Logo'>ChemVantage</div>";
+			
 	public static String footer = "</main>"
 			+ "<footer><hr/>"
 			+ "<a style='text-decoration:none;color:#000080;font-weight:bold' href=/index.html><img src=/images/logo_sq.png alt='ChemVantage logo' style='vertical-align:middle;width:30px;' /> ChemVantage</a> | "

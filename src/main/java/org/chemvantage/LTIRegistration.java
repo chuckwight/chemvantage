@@ -30,9 +30,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLEncoder;
 import java.util.Date;
-import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.regex.Pattern;
 
@@ -105,9 +103,7 @@ public class LTIRegistration extends HttpServlet {
 				JWT.require(algorithm).withIssuer(iss).build().verify(token);
 				out.println(Subject.header("LTI Registration") + clientIdForm(token) + Subject.footer);
 			} else {
-				String queryString = request.getQueryString();
-				String registrationURL = iss + "/Registration.jsp" + (queryString==null?"":"?" + queryString);
-				response.sendRedirect(registrationURL);
+				out.println(Subject.header() + Subject.banner + registrationForm(request,null) + Subject.footer);
 			}
 		} catch (Exception e) {
 			response.sendError(401, e.getMessage());
@@ -157,14 +153,7 @@ public class LTIRegistration extends HttpServlet {
 			}
 		} catch (Exception e) {
 			String message = (e.getMessage()==null?e.toString():e.getMessage());
-			String registrationURL = iss + "/Registration.jsp?message=" + URLEncoder.encode(message,"utf-8");
-			Enumeration<String> enumeration = request.getParameterNames();
-			while(enumeration.hasMoreElements()){
-	            String parameterName = enumeration.nextElement();
-	            String parameterValue = request.getParameter(parameterName);
-	            registrationURL += "&" + parameterName + "=" + URLEncoder.encode(parameterValue,"utf-8");
-	        }
-			try {
+			if (dynamicRegistration) {
 				message += "<br/>"
 						+ "Name: " + request.getParameter("sub") + "<br/>"
 						+ "Email: " + request.getParameter("email") + "<br/>"
@@ -172,14 +161,88 @@ public class LTIRegistration extends HttpServlet {
 						+ "URL: " + request.getParameter("url") + "<br/>"
 						+ "LMS: " + request.getParameter("lms") + "<br/>"
 						+ debug.toString();
-				if (dynamicRegistration && debug.length()>0) Utilities.sendEmail("ChemVantage Administrator","admin@chemvantage.org","Dynamic Registration Error",message+"<br/>"+debug.toString());
-			} catch (Exception e1) {
-				e1.printStackTrace();
+				Utilities.sendEmail("ChemVantage Administrator","admin@chemvantage.org","Dynamic Registration Error",message);
+			} else {
+				out.println(Subject.header() + Subject.banner + registrationForm(request,message) + Subject.footer);
 			}
-			response.sendRedirect(registrationURL);
 		}
 	}
 		
+	String registrationForm(HttpServletRequest request, String message) {
+		String sub = request.getParameter("sub");
+		String email = request.getParameter("email");
+		String aud = request.getParameter("aud");
+		String url = request.getParameter("url");
+		String lms = request.getParameter("lms");
+		String lms_other = request.getParameter("lms_other");
+		String AcceptChemVantageTOS = request.getParameter("AcceptChemVantageTOS");
+		String openid_configuration = request.getParameter("openid_configuration");
+		String registration_token = request.getParameter("registration_token");
+		boolean dynamic = openid_configuration != null;
+		
+		StringBuffer buf = new StringBuffer(Subject.banner);
+		
+		if (message != null) {
+			buf.append("<span style='color: #EE0000; border: 2px solid red'>&nbsp;" + message + " &nbsp;</span>");
+		}
+		
+		buf.append("<main>"
+				+ "<h2>LTI Advantage " + (dynamic?"Dynamic ":"") + "Registration</h2>");
+		
+		buf.append("<form id=regform method=post action=/registration>"
+				+ "Please complete the form below to create a trusted LTI Advantage connection between your LMS and ChemVantage "
+				+ "that is convenient, secure and <a href=https://site.imsglobal.org/certifications/chemvantage/chemvantage>certified by 1EdTech</a>. "
+				+ "When you submit the form, ChemVantage will send "
+				+ (dynamic?"a back-end registration request to your LMS. If successful, you must activate the deployment in your LMS.":"a confirmation email with a tokenized link to complete the registration. ")
+				+ "<br/><br/>\n");
+		
+		buf.append("Please tell us how to contact you if there is ever a problem with your account (see our <a href=https://chemvantage.org/about.html#privacy>Privacy Policy</a>):<br/>"
+				+ "<label>Your Name: <input type=text required name=sub size=40 value='" + (sub==null?"":sub) + "' /> </label><br/>"
+				+ "<label>Your Email: <input type=text required name=email size=40 value='" + (email==null?"":email) + "' /> </label><br/><br/>\n");
+		
+		buf.append("Please tell us about your school, business or organization:<br/>"
+				+ "<label>Org Name: <input type=text required name=aud  value='" + (aud==null?"":aud) + "' /> </label><br/>\n"
+				+ "<label>Home Page: <input type=text required name=url placeholder='https://myschool.edu' value='" + (url==null?"":url) + "' /></label><br/><br/>\n");
+		
+		if (registration_token!=null) {
+			buf.append("<input type=hidden name=registration_token value='" + registration_token + "' />");
+		}
+		
+		if (dynamic) {
+			buf.append("<input type=hidden name=openid_configuration value='" + openid_configuration + "' />");
+		} else {
+			buf.append("<fieldset style='width:400px'><legend>Type of Learning Management System:<br/></legend>\n"
+					+ "<label><input type=radio name=lms value=blackboard " + ((lms!=null && lms.equals("blackboard"))?"checked":"") + "  />Blackboard</label><br/>\n"
+					+ "<label><input type=radio name=lms value=brightspace " + ((lms!=null && lms.equals("brightspace"))?"checked":"") + "  />Brightspace</label><br/>\n"
+					+ "<label><input type=radio name=lms value=canvas " + ((lms!=null && lms.equals("canvas"))?"checked":"") + "  />Canvas</label><br/>\n"
+					+ "<label><input type=radio name=lms value=moodle " + ((lms!=null && lms.equals("moodle"))?"checked":"") + "  />Moodle</label><br/>\n"
+					+ "<label><input type=radio name=lms value=sakai " + ((lms!=null && lms.equals("sakai"))?"checked":"") + "  />Sakai</label><br/>\n"
+					+ "<label><input type=radio name=lms value=schoology " + ((lms!=null && lms.equals("schoology"))?"checked":"") + "  />Schoology</label><br/>\n"
+					+ "<label><input type=radio name=lms id=other value=other " + ((lms!=null && lms.equals("other"))?"checked":"") + "  />Other:</label>\n"
+					+ "<label><input type=text name=lms_other value='" + (lms_other==null?"":lms_other) + "' placeholder='(specify)' onFocus=document.getElementById('other').checked=true; /></label>\n"
+					+ "</fieldset>\n"
+					+ "<br/><br/>");
+		}
+		
+		buf.append("Pricing:"
+				+ "  <ul>"
+				+ "	<li>LTI registration and instructor accounts are free.</li>"
+				+ "	<li>Each student account costs only $2 USD per month or $8 USD per semester (5 months).</li>"
+				+ "	<li>Institutions can purchase student licenses in quantity for as little as $2 USD per year.</li>"
+				+ "  </ul>\n");
+		
+		buf.append("<label><input type=checkbox name=AcceptChemVantageTOS value=true " + ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"")+ " />Accept the <a href=/about.html#terms target=_blank aria-label='opens new tab'>ChemVantage Terms of Service</a></label><br/><br/>\n");
+		
+		buf.append("<div class='g-recaptcha' data-sitekey='" + Subject.getReCaptchaSiteKey() + "' aria-label='Google Recaptcha'></div><br/><br/>"
+				+ "<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>\n");
+		
+		buf.append("<input type=submit value='Submit Registration'/>"
+				+ "</form><br/><br/>"
+				+ "</main>");
+		
+		return buf.toString();
+	}
+	
 	String validateApplicationFormContents(HttpServletRequest request) throws Exception {
 		String sub = request.getParameter("sub");
 		String email = request.getParameter("email");
