@@ -5,15 +5,20 @@
   <version>20240122t0757</version>
   <name>ChemVantage</name>
   <description>An Open Educational Resource for teaching and learning college-level General Chemistry.</description>
-   <properties>
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.1.0</version>
+    <relativePath/> <!-- lookup parent from repository -->
+  </parent> 
+  <properties>
     <!-- App Engine currently supports Java 11 -->
-    <maven.compiler.source>11</maven.compiler.source>
-    <maven.compiler.target>11</maven.compiler.target>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <jetty.version>9.4.31.v20200723</jetty.version>
-
+    
     <!-- Project-specific properties -->
-    <exec.mainClass>org.chemvantage.ServerMain</exec.mainClass>
+    <exec.mainClass>org.chemvantage.SpringbootMain</exec.mainClass>
     <googleCloudProjectId>GCLOUD_CONFIG</googleCloudProjectId>
   </properties>
 
@@ -30,15 +35,20 @@
   </dependencyManagement>
 
   <dependencies>
-
-    <!-- Embedded Jetty Server -->
-   <dependency>
-      <groupId>org.eclipse.jetty</groupId>
-      <artifactId>apache-jsp</artifactId>
-      <version>${jetty.version}</version>
+	
+	<!-- Spring Boot embedded web server -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
     </dependency>
 
-    <!-- Objectify 6.1.0 -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  
+	<!-- Objectify 6.1.0 -->
     <dependency>
       <groupId>com.googlecode.objectify</groupId>
       <artifactId>objectify</artifactId>
@@ -71,18 +81,28 @@
     <dependency>
       <groupId>com.sendgrid</groupId>
       <artifactId>sendgrid-java</artifactId>
-      <version>4.10.1</version>
-	</dependency>
+    </dependency>
 
   </dependencies>
     
- <build>
+  <build>
     <plugins>
+       <plugin>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-maven-plugin</artifactId>
+		<executions>
+          <execution>
+			<goals>
+			  <goal>repackage</goal>
+			</goals>
+		  </execution>
+		</executions>
+	  </plugin>
+      
       <!-- Copy static resources like html files into the output jar file. -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-resources-plugin</artifactId>
-        <version>2.7</version>
         <executions>
           <execution>
             <id>copy-web-resources</id>
@@ -100,42 +120,11 @@
         </executions>
       </plugin>
 
-      <!-- Package everything into a single executable jar file. -->
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>3.2.4</version>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals><goal>shade</goal></goals>
-            <configuration>
-			  <createDependencyReducedPom>false</createDependencyReducedPom>
-              <filters>
-                <filter>
-                  <artifact>*:*</artifact>
-                    <excludes>
-                      <exclude>META-INF/*.SF</exclude>
-                      <exclude>META-INF/*.DSA</exclude>
-                      <exclude>META-INF/*.RSA</exclude>
-                    </excludes>
-                </filter>
-              </filters>
-              <transformers>
-                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                  <mainClass>${exec.mainClass}</mainClass>
-                </transformer>
-              </transformers>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-
       <!-- App Engine plugin for deploying to the live site. -->
       <plugin>
         <groupId>com.google.cloud.tools</groupId>
         <artifactId>appengine-maven-plugin</artifactId>
-        <version>2.2.0</version>
+        <version>2.4.4</version>
         <configuration>
           <projectId>${googleCloudProjectId}</projectId>
           <version>${project.version}</version>
