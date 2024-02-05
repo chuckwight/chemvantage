@@ -77,7 +77,6 @@ public class LTIRegistration extends HttpServlet {
 	 * */
 	
 	private static final long serialVersionUID = 137L;
-	Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
 	static String price = "2";
 	
 	@Override
@@ -102,6 +101,7 @@ public class LTIRegistration extends HttpServlet {
 			} else if (request.getParameter("token")!=null) {
 				response.setContentType("text/html");
 				String token = request.getParameter("token");
+				Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
 				JWT.require(algorithm).withIssuer(iss).build().verify(token);
 				out.println(Subject.header("LTI Registration") + clientIdForm(token) + Subject.footer);
 			} else {
@@ -130,6 +130,7 @@ public class LTIRegistration extends HttpServlet {
 		try {
 			if ("finalize".contentEquals(userRequest)) {				
 				String token = request.getParameter("Token");
+				Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
 				JWT.require(algorithm).withIssuer(iss).build().verify(token);
 				out.println(Subject.header("ChemVantage LTI Registration") + "<h1>ChemVantage Registration</h1>" + createDeployment(request) + Subject.footer);			
 			} else {
@@ -217,6 +218,7 @@ public class LTIRegistration extends HttpServlet {
 		// Construct a new registration token
 		Date now = new Date();
 		Date exp = new Date(now.getTime() + 604800000L); // seven days from now
+		Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
 		String token = JWT.create()
 				.withIssuer(iss)
 				.withSubject(sub)
