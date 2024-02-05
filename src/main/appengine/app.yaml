@@ -9,11 +9,11 @@ handlers:
 
 # Map the base URL to a static copy of index.html
 # Path for static files/directories starts at target (where the new jar file is built)
-- url: /
-  static_files: classes/META-INF/resources/index.html
-  upload: classes/META-INF/resources/index.html
-  require_matching_file: True
-  secure: always
+#- url: /
+#  static_files: classes/META-INF/resources/index.html
+#  upload: classes/META-INF/resources/index.html
+#  require_matching_file: True
+#  secure: always
   
 # Map all .html files to static copies
 - url: (/.*\.html)
