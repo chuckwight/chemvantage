@@ -233,7 +233,7 @@ public class Examples extends HttpServlet {
 				+ "                        <p>"
 				+ "                            Some of the more important lessons in the text have been captured as 10-minute instructional videos. Most of the videos have short (two-question) quizzes embedded in the video to ensure that students are watching and comprehending. You can assign these to students for 3-5 points. Even if the video has no embedded quizzes, ChemVantage will only award the points if the student finishes the video to the end."
 				+ "                        </p>"
-				+ "                        <a href='/Video.jsp?VideoId=5691392549453824&sig=" + sig + "' target='_blank' aria-label='Opens new tab' class='btn btn-two'>"
+				+ "                        <a href='/VideoQuiz?VideoId=5691392549453824&sig=" + sig + "' target='_blank' aria-label='Opens new tab' class='btn btn-two'>"
 				+ "                            Try a Sample Video"
 				+ "                        </a>"
 				+ "                    </div>"

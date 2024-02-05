@@ -86,7 +86,7 @@ public class VideoQuiz extends HttpServlet {
 			
 			switch (userRequest) {
 			case "ShowVideo":
-				response.sendRedirect(Subject.serverUrl + "/Video.jsp?VideoId=" + videoId + "&sig=" + user.getTokenSignature());
+				out.println(Subject.header("Video") + showVideo(user,videoId,segment) + Subject.footer);
 				break;
 			case "ShowQuizlet":
 				out.println(showQuizlet(user,videoId,segment));
@@ -99,7 +99,7 @@ public class VideoQuiz extends HttpServlet {
 			break;
 			default:
 				if (user.isInstructor()) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
-				else response.sendRedirect(Subject.serverUrl + "/Video.jsp?VideoId=" + videoId + "&sig=" + user.getTokenSignature());
+				else response.sendRedirect(Subject.serverUrl + "/VideoQuiz?VideoId=" + videoId + "&sig=" + user.getTokenSignature());
 			}			
 		} catch (Exception e) {
 			response.sendRedirect(Subject.serverUrl + "/Logout?sig=" + request.getParameter("sig"));
@@ -143,6 +143,234 @@ public class VideoQuiz extends HttpServlet {
 		return buf.toString();
 	}
 	
+	public String showVideo(User user, long videoId, int segment) throws Exception {
+		StringBuffer buf = new StringBuffer();
+		
+		int start = 0;
+		int end = -1;
+		long assignmentId = user.getAssignmentId();
+		if (assignmentId > 0L) {
+			try {
+				videoId = ofy().load().type(Assignment.class).id(assignmentId).now().videoId;
+			} catch (Exception e) {
+			}
+		}
+		Video v = ofy().load().type(Video.class).id(videoId).now();
+		int[] breaks = v.breaks;
+		String videoSerialNumber = v.serialNumber;
+		
+		if (v.breaks == null)
+			v.breaks = new int[0];
+
+		if (segment > 0)
+			start = v.breaks[segment - 1]; // start at the end of the last segment
+		if (v.breaks.length > segment)
+			end = v.breaks[segment]; // play to this value and stop
+		
+		buf.append("<h1>Video</h1>\n"
+				+ "<div id=video_div style='width:560px;height:315px'></div>\n"
+				+ "<br>\n"
+				+ "<div id=quiz_div style='width:560px;background-color:white;min-height:315;display:none'></div>\n"
+				+ "<p>");
+		
+		buf.append("<script type=text/javascript>\n"
+				+ "\n"
+				+ "var tag = document.createElement('script'); tag.src='https://www.youtube.com/iframe_api';\n"
+				+ "var firstScriptTag = document.getElementsByTagName('script')[0]; firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);\n"
+				+ "var player;\n"
+				+ "var quiz_div = document.getElementById('quiz_div');\n"
+				+ "var sig = '" + user.getTokenSignature() + "';\n"
+				+ "var segment = " + segment + ";\n"
+				+ "var breaks = " + Arrays.toString(breaks) + ";\n"
+				+ "var videoSerialNumber = '" + videoSerialNumber + "';\n"
+				+ "var start = " + start + ";\n"
+				+ "var end = " + end + ";\n"
+				+ "\n"
+				+ "function onYouTubeIframeAPIReady() {\n"
+				+ "  player = new YT.Player('video_div', {\n"
+				+ "	height: '315',\n"
+				+ "	width: '560',\n"
+				+ "	videoId: '" + videoSerialNumber + "',\n"
+				+ "	playerVars: {\n"
+				+ "	  'enablejsapi': 1,\n"
+				+ "	  'autoplay': 0,\n"
+				+ "	  'start': " + start + ",\n"
+				+ "	  'end': " + end + ",\n"
+				+ "	  'modestbranding': 1,\n"
+				+ "	  'origin': '" + Subject.serverUrl + "'\n"
+				+ "	},\n"
+				+ "	events: {\n"
+				+ "		'onReady': onPlayerReady,\n"
+				+ "        'onStateChange': onPlayerStateChange\n"
+				+ "    }\n"
+				+ "  });\n"
+				+ "}\n"
+				+ "\n"
+				+ "function onPlayerReady(event) {\n"
+				+ "	start = segment == 0?0:breaks[segment-1];\n"
+				+ "	end = breaks.length <= segment?-1:breaks[segment];\n"
+				+ "	player.loadVideoById({'videoId':videoSerialNumber,'startSeconds':start,'endSeconds':end});\n"
+				+ "	ajaxLoadQuiz();\n"
+				+ "}\n"
+				+ "\n"
+				+ "function onPlayerStateChange(event) {\n"
+				+ "	switch (event.data) {\n"
+				+ "	  case YT.PlayerState.ENDED:\n"
+				+ "		if (document.exitFullscreen) document.exitFullscreen();\n"
+				+ "		else if (document.webkitExitFullscreen) document.webkitExitFullscreen();\n"
+				+ "	    else if (document.mozCancelFullScreen) document.mozCancelFullScreen();\n"
+				+ "	    else if (document.msExitFullscreen) document.msExitFullscreen();\n"
+				+ "		video_div.style.display = 'none';\n"
+				+ "		quiz_div.style.display = '';\n"
+				+ "		break;\n"
+				+ "	  case YT.PlayerState.PLAYING:\n"
+				+ "		video_div.style.display = '';\n"
+				+ "		quiz_div.style.display = 'none';\n"
+				+ "		break;\n"
+				+ "	  default:\n"
+				+ "    }\n"
+				+ "}\n"
+				+ "\n"
+				+ "function ajaxLoadQuiz() {\n"
+				+ "  var xmlhttp=GetXmlHttpObject();\n"
+				+ "  quiz_div.innerHTML = \"Loading questions...\";\n"
+				+ "  if (xmlhttp==null) {\n"
+				+ "	    alert ('Sorry, your browser does not support AJAX. To access the video quiz, switch to a supported browser like Chrome or Safari.');\n"
+				+ "	    return false;\n"
+				+ "  }\n"
+				+ "  xmlhttp.onreadystatechange=function() {\n"
+				+ "	if (xmlhttp.readyState==4) {\n"
+				+ "	  quiz_div.innerHTML=xmlhttp.responseText;\n"
+				+ "	}\n"
+				+ "  }\n"
+				+ "  xmlhttp.open('GET','/VideoQuiz?VideoId='+'" + videoId + "'+'&UserRequest=ShowQuizlet&Segment='+segment+'&sig='+sig,true);\n"
+				+ "  xmlhttp.send(null);\n"
+				+ "  return true;\n"
+				+ "}\n"
+				+ "\n"
+				+ "function ajaxSubmitQuiz() {\n"
+				+ "  try {\n"
+				+ "	var xmlhttp=GetXmlHttpObject();\n"
+				+ "	xmlhttp.onreadystatechange=function() {\n"
+				+ "	  if (xmlhttp.readyState==4) {\n"
+				+ "		quiz_div.style.display = start>=0?'none':'';\n"
+				+ "		quiz_div.innerHTML = xmlhttp.responseText;\n"
+				+ "	  }\n"
+				+ "	}\n"
+				+ "	xmlhttp.open('POST','/VideoQuiz',true);\n"
+				+ "	xmlhttp.setRequestHeader('Content-Type','application/x-www-form-urlencoded');\n"
+				+ "	var formData = new FormData(document.getElementById('quizlet'));\n"
+				+ "	xmlhttp.send(urlencodeFormData(formData));\n"
+				+ "  } catch (e) {\n"
+				+ "	  quiz_div.innerHTML = e.message;  \n"
+				+ "  }\n"
+				+ "   \n"
+				+ "  segment++;\n"
+				+ "  start = breaks[segment-1];\n"
+				+ "  end = (breaks.length > segment?breaks[segment]:-1);  // play to this value or stop at end\n"
+				+ "  try {\n"
+				+ "	if (start>=0) player.loadVideoById({'videoId':videoSerialNumber,'startSeconds':start,'endSeconds':end});\n"
+				+ "  } catch (e) {}\n"
+				+ "  \n"
+				+ "  return false;\n"
+				+ "}\n"
+				+ "\n"
+				+ "function urlencodeFormData(fd){\n"
+				+ "    var params = new URLSearchParams();\n"
+				+ "    var pair;\n"
+				+ "    for(pair of fd.entries()){\n"
+				+ "        typeof pair[1]=='string' && params.append(pair[0], pair[1]);\n"
+				+ "    }\n"
+				+ "    return params.toString();\n"
+				+ "}\n"
+/*
+				+ "function showWorkBox(qid) {}\n"
+				+ "\n"
+				+ "var star1 = new Image(); star1.src='images/star1.gif';\n"
+				+ "var star2 = new Image(); star2.src='images/star2.gif';\n"
+				+ "var set = false;\n"
+				+ "function showStars(n) {\n"
+				+ "  if (!set) {\n"
+				+ "    document.getElementById('vote').innerHTML=(n==0?'(click a star)':''+n+(n>1?' stars':' star'));\n"
+				+ "    for (i=1;i<6;i++) {document.getElementById(i).src=(i<=n?star2.src:star1.src)}\n"
+				+ "  }\n"
+				+ "}\n"
+				+ "function setStars(n) {\n"
+				+ "  if (!set) {\n"
+				+ "    ajaxStars(n);\n"
+				+ "    set = true;\n"
+				+ "    document.getElementById('sliderspan').style='display:none';\n"
+				+ "  }\n"
+				+ "}\n"
+				+ "\n"
+				+ "function ajaxSubmit(url,id,params,studentAnswer,note,email) {\n"
+				+ "  var xmlhttp;\n"
+				+ "  if (url.length==0) return false;\n"
+				+ "  xmlhttp=GetXmlHttpObject();\n"
+				+ "  if (xmlhttp==null) {\n"
+				+ "    alert ('Sorry, your browser does not support AJAX!');\n"
+				+ "    return false;\n"
+				+ "  }\n"
+				+ "  xmlhttp.onreadystatechange=function() {\n"
+				+ "    if (xmlhttp.readyState==4) {\n"
+				+ "      document.getElementById('feedback' + id).innerHTML='<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
+				+ "    }\n"
+				+ "  }\n"
+				+ "  url += '&QuestionId=' + id + '&Params=' + params + '&sig=' + sig + '&Notes=' + note + '&Email=' + email + '&StudentAnswer=' + studentAnswer;\n"
+				+ "  xmlhttp.open('GET',url,true);\n"
+				+ "  xmlhttp.send(null);\n"
+				+ "  return false;\n"
+				+ "}\n"
+				+ "\n"
+				+ "function ajaxStars(nStars) {\n"
+				+ "  var xmlhttp;\n"
+				+ "  if (nStars==0) return false;\n"
+				+ "  xmlhttp=GetXmlHttpObject();\n"
+				+ "  if (xmlhttp==null) {\n"
+				+ "    alert ('Sorry, your browser does not support AJAX!');\n"
+				+ "    return false;\n"
+				+ "  }\n"
+				+ "  xmlhttp.onreadystatechange=function() {\n"
+				+ "    var msg;\n"
+				+ "    switch (nStars) {\n"
+				+ "      case '1': msg='1 star - If you are dissatisfied with ChemVantage, '\n"
+				+ "                + 'please take a moment to <a href=/Feedback?sig=' + sig + '>tell us why.</a>.';\n"
+				+ "                break;\n"
+				+ "      case '2': msg='2 stars - If you are dissatisfied with ChemVantage, '\n"
+				+ "                + 'please take a moment to <a href=/Feedback?sig=' + sig + '>tell us why.</a>.';\n"
+				+ "                break;\n"
+				+ "      case '3': msg='3 stars - Thank you. <a href=/Feedback?sig=' + sig + '>Click here</a> '\n"
+				+ "                + ' to provide additional feedback.';\n"
+				+ "                break;\n"
+				+ "      case '4': msg='4 stars - Thank you';\n"
+				+ "                break;\n"
+				+ "      case '5': msg='5 stars - Thank you!';\n"
+				+ "                break;\n"
+				+ "      default: msg='You clicked ' + nStars + ' stars.';\n"
+				+ "    }\n"
+				+ "    if (xmlhttp.readyState==4) {\n"
+				+ "      document.getElementById('vote').innerHTML=msg;\n"
+				+ "    }\n"
+				+ "  }\n"
+				+ "  xmlhttp.open('GET','Feedback?UserRequest=AjaxRating&NStars='+nStars,true);\n"
+				+ "  xmlhttp.send(null);\n"
+				+ "  return false;\n"
+				+ "}\n"
+				+ "\n"
+				+ "function GetXmlHttpObject() {\n"
+				+ "  if (window.XMLHttpRequest) { // code for IE7+, Firefox, Chrome, Opera, Safari\n"
+				+ "    return new XMLHttpRequest();\n"
+				+ "  }\n"
+				+ "  if (window.ActiveXObject) { // code for IE6, IE5\n"
+				+ "    return new ActiveXObject('Microsoft.XMLHTTP');\n"
+				+ "  }\n"
+				+ "  return null;\n"
+				+ "}\n"
+*/
+				+ "</script>");
+		return buf.toString();
+	}
+
 	public String showQuizlet(User user,long videoId,int segment) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -181,7 +409,7 @@ public class VideoQuiz extends HttpServlet {
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 			for (int j=counter;j<counter+v.nQuestions[segment];j++) questionKeys.add(v.questionKeys.get(j));
 
-			if (questionKeys.size()==0) return "Sorry, there are no questions at this point. <a href='/Video.jsp?VideoId=" + videoId + "&Segment=" + segment+1 + "&sig=" + user.getTokenSignature() + "'>Continue the video</a><p>";
+			if (questionKeys.size()==0) return "Sorry, there are no questions at this point. <a href='/VideoQuiz?VideoId=" + videoId + "&Segment=" + segment+1 + "&sig=" + user.getTokenSignature() + "'>Continue the video</a><p>";
 
 			// Randomly select the questions to be presented, eliminating each from questionKeys as they are printed
 			Random rand = new Random(vt.id % Integer.MAX_VALUE);  // create random number generator to select quiz questions
@@ -215,7 +443,7 @@ public class VideoQuiz extends HttpServlet {
 		buf.append("<input type=hidden name=VideoTransactionId value=" + vt.id + ">");
 		buf.append("<input type=hidden name=Segment value=" + segment + ">");
 		buf.append("<input type=submit class='btn' value='Submit and Resume the Video'> or "
-				+ "<a href=/Video.jsp?Segment=" + segment + "&VideoId=" + v.id + "&sig=" + user.getTokenSignature() + ">Replay This Segment</a>");
+				+ "<a href=/VideoQuiz?Segment=" + segment + "&VideoId=" + v.id + "&sig=" + user.getTokenSignature() + ">Replay This Segment</a>");
 		buf.append("</form>");
 		} catch (Exception e) {
 			buf.append(e.getMessage());
@@ -382,7 +610,7 @@ public class VideoQuiz extends HttpServlet {
 
 
 		// If a==null this is an anonymous user, otherwise is an LTI user:
-		buf.append((a==null?"<a href=/Video.jsp?VideoId=" + vt.videoId + "&Segment=0&sig=" + user.getTokenSignature() + ">Watch this video again</a> or go back to the <a href=/>ChemVantage home page</a> " :
+		buf.append((a==null?"<a href=/VideoQuiz?VideoId=" + vt.videoId + "&Segment=0&sig=" + user.getTokenSignature() + ">Watch this video again</a> or go back to the <a href=/>ChemVantage home page</a> " :
 				"You may view this video again by clicking the assignment link in your learning management system ")			
 				+ "or <a href=/Logout>logout of ChemVantage</a>.");
 
