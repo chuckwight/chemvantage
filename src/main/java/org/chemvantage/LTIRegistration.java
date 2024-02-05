@@ -60,7 +60,7 @@ public class LTIRegistration extends HttpServlet {
 	 *   1) All users complete a basic form giving information about their org and the LTI request. If the
 	 *      launch uses Dynamic Registration, this information is used to eliminate some of the fields. If
 	 *      present, the OpenID Configuration URL and Registration Token are included in the POST to ChemVantage.
-	 *   2) ChemVantage validates the registration parameters, and if necessary, redirects to Registration.jsp
+	 *   2) ChemVantage validates the registration parameters, and if necessary, displays the form again
 	 *      to correct any errors.
 	 *   3) The registration email contains an activation token and, if necessary, the ChemVantage endpoints 
 	 *      and configuration JSON to complete the registration in the LMS. 
@@ -189,7 +189,7 @@ public class LTIRegistration extends HttpServlet {
 		buf.append("<main>"
 				+ "<h2>LTI Advantage " + (dynamic?"Dynamic ":"") + "Registration</h2>");
 		
-		buf.append("<form id=regform method=post action=/registration>"
+		buf.append("<form id=regform method=post action=/lti/registration>"
 				+ "Please complete the form below to create a trusted LTI Advantage connection between your LMS and ChemVantage "
 				+ "that is convenient, secure and <a href=https://site.imsglobal.org/certifications/chemvantage/chemvantage>certified by 1EdTech</a>. "
 				+ "When you submit the form, ChemVantage will send "
