@@ -166,7 +166,7 @@ public class Checkout extends HttpServlet {
 			buf.append(Subject.header("Thank you") + Subject.banner + "<h1>Thank you for your purchase</h1>"
 					+ "Your ChemVantage subscription is now active and expires on " + df.format(u.exp) + "<br/>"
 					+ "Print or save this page as proof of purchase.<br/><br/>\n"
-					+ "<a href='/" + a.assignmentType + "?sig=" + user.getTokenSignature() + "'><button class=btn>Proceed to your assignment</button></a><br/><br/>"
+					+ "<a class='btn btn-two' href='/" + a.assignmentType + "?sig=" + user.getTokenSignature() + "'>Proceed to your assignment</a><br/><br/>"
 					+ "Purchase details: " + details);
 		} catch (Exception e) {
 			buf.append("<h1>Oops, something went wrong</h1>Please contact admin@chemvantage.org for support.");
