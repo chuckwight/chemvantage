@@ -40,8 +40,7 @@ import com.google.gson.JsonParser;
 @WebServlet(urlPatterns = {"/Help","/help"})
 public class Help extends HttpServlet {
 	private static final long serialVersionUID = 137L;
-	Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
-   
+	
     /**
      * This servlet allows students to seek help on a Homework assignment by obtaining a Java Web Token (JWT)
      * that can be emailed to an instructor as part of a URL pointing to this servlet. Possession of a valid
@@ -98,6 +97,7 @@ public class Help extends HttpServlet {
 	protected JsonObject validateJWT(String jwt) throws Exception {
 		// This method verifies that the token is properly signed and has not expired
 		DecodedJWT token = JWT.decode(jwt);            // throws JWTDecodeException if not a valid JWT
+		Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
 		JWT.require(algorithm).build().verify(token);  // throws JWTVerificationException if not valid		
 		JsonObject payload = JsonParser.parseString(new String(Base64.getUrlDecoder().decode(token.getPayload()))).getAsJsonObject();
 		return payload;
@@ -167,7 +167,8 @@ public class Help extends HttpServlet {
 		
 		Date now = new Date();
 		Date in3Days = new Date(now.getTime() + 259200000L);
-		
+		Algorithm algorithm = Algorithm.HMAC256(Subject.getHMAC256Secret());
+		   
 		String token = JWT.create()
 				.withClaim("tid", tid)
 				.withClaim("hsh", hsh)
