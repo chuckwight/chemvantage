@@ -97,8 +97,7 @@ public class Admin extends HttpServlet {
 				Subject.setAnnouncement(request.getParameter("Announcement"));
 				break;
 			case "OpenStaxReport":  // for monthly cron job
-				String project_id = System.getProperty("com.google.appengine.application.id");
-				if (project_id.equals("chem-vantage-hrd")) {
+				if (Subject.projectId.equals("chem-vantage-hrd")) {
 					String msg = "<b>Your Quarterly OpenStax Ally Partner Report Is Ready</b>"
 							+ "<ol><li>Download the CSV file <a href=https://www.chemvantage.org/Admin?UserRequest=OpenStaxCSVReport>here</a></li>"
 							+ "<li>Import the CSV file to cell B3 of the Excel template file at Drive -> ChemVantage LLC-> OpenStax Partnership -> Quarterly Reports</li>"

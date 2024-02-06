@@ -43,13 +43,15 @@ public class Subject {
 	private int nStarReports;
 	private double avgStars;
 	private static Subject s;
-	@Ignore public static final String projectId = ServiceOptions.getDefaultProjectId();
-	@Ignore public static final String serverUrl =  "https://" + (projectId.equals("dev-vantage-hrd")?"dev-vantage-hrd.appspot.com":"www.chemvantage.org");
+	@Ignore static String projectId;
+	@Ignore static String serverUrl;
 
 	private Subject() {}
 	
 	private static void refresh() {
 		try {
+			projectId = ServiceOptions.getDefaultProjectId();
+			serverUrl = "https://" + (projectId.equals("dev-vantage-hrd")?"dev-vantage-hrd.appspot.com":"www.chemvantage.org");
 			if (s==null) s = ofy().load().type(Subject.class).id(1L).safe();
 		} catch (NotFoundException e) {  // runs only once at inception of datastore
 			s = new Subject();
