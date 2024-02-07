@@ -22,7 +22,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import com.googlecode.objectify.Key;
 
-@WebServlet("SmartText")
+@WebServlet("/SmartText")
 public class SmartText extends HttpServlet {
 	private static final long serialVersionUID = 1L;
        
