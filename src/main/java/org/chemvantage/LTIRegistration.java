@@ -103,7 +103,7 @@ public class LTIRegistration extends HttpServlet {
 				JWT.require(algorithm).withIssuer(iss).build().verify(token);
 				out.println(Subject.header("LTI Registration") + clientIdForm(token) + Subject.footer);
 			} else {
-				out.println(Subject.header() + Subject.banner + registrationForm(request,null) + Subject.footer);
+				out.println(Subject.header() + registrationForm(request,null) + Subject.footer);
 			}
 		} catch (Exception e) {
 			response.sendError(401, e.getMessage());
@@ -154,17 +154,16 @@ public class LTIRegistration extends HttpServlet {
 		} catch (Exception e) {
 			String message = (e.getMessage()==null?e.toString():e.getMessage());
 			if (dynamicRegistration) {
-				message += "<br/>"
+				String emailmessage = message + "<br/>"
 						+ "Name: " + request.getParameter("sub") + "<br/>"
 						+ "Email: " + request.getParameter("email") + "<br/>"
 						+ "Org: " + request.getParameter("aud") + "<br/>"
 						+ "URL: " + request.getParameter("url") + "<br/>"
 						+ "LMS: " + request.getParameter("lms") + "<br/>"
 						+ debug.toString();
-				Utilities.sendEmail("ChemVantage Administrator","admin@chemvantage.org","Dynamic Registration Error",message);
-			} else {
-				out.println(Subject.header() + Subject.banner + registrationForm(request,message) + Subject.footer);
+				Utilities.sendEmail("ChemVantage Administrator","admin@chemvantage.org","Dynamic Registration Error",emailmessage);
 			}
+			out.println(Subject.header() + Subject.banner + registrationForm(request,message) + Subject.footer);
 		}
 	}
 		
@@ -204,11 +203,8 @@ public class LTIRegistration extends HttpServlet {
 				+ "<label>Org Name: <input type=text required name=aud  value='" + (aud==null?"":aud) + "' /> </label><br/>\n"
 				+ "<label>Home Page: <input type=text required name=url placeholder='https://myschool.edu' value='" + (url==null?"":url) + "' /></label><br/><br/>\n");
 		
-		if (registration_token!=null) {
-			buf.append("<input type=hidden name=registration_token value='" + registration_token + "' />");
-		}
-		
 		if (dynamic) {
+			if (registration_token!=null) buf.append("<input type=hidden name=registration_token value='" + registration_token + "' />");
 			buf.append("<input type=hidden name=openid_configuration value='" + openid_configuration + "' />");
 		} else {
 			buf.append("<fieldset style='width:400px'><legend>Type of Learning Management System:<br/></legend>\n"
@@ -231,10 +227,12 @@ public class LTIRegistration extends HttpServlet {
 				+ "	<li>Institutions can purchase student licenses in quantity for as little as $2 USD per year.</li>"
 				+ "  </ul>\n");
 		
-		buf.append("<label><input type=checkbox name=AcceptChemVantageTOS value=true " + ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"")+ " />Accept the <a href=/about.html#terms target=_blank aria-label='opens new tab'>ChemVantage Terms of Service</a></label><br/><br/>\n");
+		buf.append("<label><input type=checkbox name=AcceptChemVantageTOS value=true " + ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") + " />Accept the <a href=/terms_and_conditions.html target=_blank aria-label='opens new tab'>ChemVantage Terms of Service</a></label><br/><br/>\n");
 		
-		buf.append("<div class='g-recaptcha' data-sitekey='" + Subject.getReCaptchaSiteKey() + "' aria-label='Google Recaptcha'></div><br/><br/>"
-				+ "<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>\n");
+		if (!dynamic) {  // show recaptcha tool
+			buf.append("<div class='g-recaptcha' data-sitekey='" + Subject.getReCaptchaSiteKey() + "' aria-label='Google Recaptcha'></div><br/><br/>"
+					+ "<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>\n");
+			}
 		
 		buf.append("<input type=submit value='Submit Registration'/>"
 				+ "</form><br/><br/>"
@@ -270,12 +268,11 @@ public class LTIRegistration extends HttpServlet {
 			if (lms==null) throw new Exception("Please select the type of LMS that you are connecting to ChemVantage. ");
 			if ("other".equals(lms) && (lms_other==null || lms_other.isEmpty())) throw new Exception("Please describe the type of LMS that you are connecting to ChemVantage. ");
 			if ("other".equals(lms)) lms = lms_other;
+			if (!reCaptchaOK(request)) throw new Exception("ReCaptcha tool was unverified. Please try again. ");
 		}
 		
 		if (!"true".equals(request.getParameter("AcceptChemVantageTOS"))) throw new Exception("Please read and accept the ChemVantage Terms of Service. ");
 
-		if (!reCaptchaOK(request)) throw new Exception("ReCaptcha tool was unverified. Please try again. ");
-		
 		String iss = request.getServerName().contains("dev-vantage")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
 		
 		// Construct a new registration token
