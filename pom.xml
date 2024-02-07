@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.chemvantage</groupId>
   <artifactId>chemvantage</artifactId>
-  <version>20240122t0757</version>
+  <version>20240207t0610</version>
   <name>ChemVantage</name>
   <description>An Open Educational Resource for teaching and learning college-level General Chemistry.</description>
   <parent>
@@ -126,8 +126,8 @@
         <artifactId>appengine-maven-plugin</artifactId>
         <version>2.4.4</version>
         <configuration>
-          <projectId>${googleCloudProjectId}</projectId>
-          <version>${project.version}</version>
+          <projectId>GCLOUD_CONFIG</projectId>
+          <version>GCLOUD_CONFIG</version>
         </configuration>
       </plugin>
       
