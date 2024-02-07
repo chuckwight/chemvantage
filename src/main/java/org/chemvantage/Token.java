@@ -149,8 +149,14 @@ public class Token extends HttpServlet {
 				d.status = "auto";
 				d.nLicensesRemaining = 0;
 				ofy().save().entity(d).now();
+				String message = "<h3>Deployment Registration</h3>";
+				try {
+					String token = request.getParameter("lti_message_hint");
+					String canvas_domain = JWT.decode(token).getClaims().get("canvas_domain").asString();
+					message += "Canvas domain: " + canvas_domain + "<br/><br/>";
+				} catch (Exception e) {}
 				Map<String,String[]> params = request.getParameterMap();
-				String message = "<h3>Deployment Registration</h3>Query parameters:<br/>";
+				message += "Query parameters:<br/>";
 				for (String name : params.keySet()) message += name + "=" + params.get(name)[0] + "<br/>";
 				Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Automatic Canvas Registration",message);
 				return d;
