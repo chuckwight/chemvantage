@@ -262,8 +262,8 @@ public class Poll extends HttpServlet {
 					+ "  document.getElementById('pollForm').submit();"
 					+ "}"
 					+ "startTimers(" + (a.pollClosesAt.getTime()+(user.isInstructor()?0L:3000L)) + ");"
-					+ "setTimeout(() => synchTimer(), Math.floor(Math.random()*10000)+10000);"  // schedule synch 10-20 s from now
-					+ "}\n"
+					//+ "setTimeout(() => synchTimer(), Math.floor(Math.random()*10000)+10000);"  // schedule synch 10-20 s from now
+					//+ "}\n"
 					+ "</script>");
 		}
 		return buf.toString();
@@ -353,8 +353,8 @@ public class Poll extends HttpServlet {
 					+ "  document.getElementById('pollForm').submit();"
 					+ "}"
 					+ "startTimers(" + (a.pollClosesAt.getTime()+(user.isInstructor()?0L:3000L)) + ");"
-					+ "setTimeout(() => synchTimer(), Math.floor(Math.random()*10000)+10000);"  // schedule synch 10-20 s from now
-					+ "}\n"
+					//+ "setTimeout(() => synchTimer(), Math.floor(Math.random()*10000)+10000);"  // schedule synch 10-20 s from now
+					//+ "}\n"
 					+ "</script>");
 		
 		return buf.toString();
@@ -513,13 +513,13 @@ public class Poll extends HttpServlet {
 		buf.append("</form>");
 		
 		if (!a.pollIsClosed && a.pollClosesAt != null) {
-			buf.append("script>"
+			buf.append("<script>"
 					+ "function timesUp() {"
 					+ "  document.getElementById('pollForm').submit();"
 					+ "}"
 					+ "startTimers(" + (a.pollClosesAt.getTime()+(user.isInstructor()?0L:3000L)) + ");"
-					+ "setTimeout(() => synchTimer(), Math.floor(Math.random()*10000)+10000);"  // schedule synch 10-20 s from now
-					+ "}\n"
+					//+ "setTimeout(() => synchTimer(), Math.floor(Math.random()*10000)+10000);"  // schedule synch 10-20 s from now
+					//+ "}\n"
 					+ "</script>");
 		}		
 		return buf.toString();	
