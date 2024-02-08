@@ -88,8 +88,9 @@ public class DataStoreCleaner extends HttpServlet {
 		
 		boolean testOnly = Boolean.parseBoolean(request.getParameter("TestOnly"));
 		
+		try {
 		switch (task) {
-		case "CleanTransactions": buf.append(cleanTransactions(testOnly)); break;
+		case "CleanTransactions": buf.append(cleanTransactions(testOnly,request)); break;
 		case "CleanScores": buf.append(cleanScores(testOnly)); break;
 		case "CleanAssignments": buf.append(cleanAssignments(testOnly,request)); break;
 		case "CleanDeployments": buf.append(cleanDeployments(testOnly)); break;
@@ -104,7 +105,9 @@ public class DataStoreCleaner extends HttpServlet {
 			buf.append("5 background tasks launched to scrub all obsolete entity types from the datastore.");
 			break;
 		}
-		
+		} catch (Exception e) {
+			buf.append(e.getMessage()==null?e.toString():e.getMessage());
+		}
 		buf.append("<br>" + Subject.footer);
 		
 		out.println(buf.toString());
@@ -132,135 +135,378 @@ public class DataStoreCleaner extends HttpServlet {
 		return buf.toString();
 	}
 
-	private String cleanTransactions(boolean testOnly) {
-		// this method deletes all transactions that have no corresponding assignment and were not deleted by Clean Assignments
+	private String cleanTransactions(boolean testOnly, HttpServletRequest request) throws Exception {
+		// this method deletes all transactions older than 1 year or have no corresponding assignment
 		
 		StringBuffer buf = new StringBuffer();
 		buf.append("<h2>Clean Transactions</h2>");
 		
-		// Clean QuizTransactions
-		List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).limit(1000).list();
-		List<Key<QuizTransaction>> qtKeys = new ArrayList<Key<QuizTransaction>>();
-		while (qts.size()>0) {
-			for (QuizTransaction qt :qts) {
-				if (qt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,qt.assignmentId)).count()==0) qtKeys.add(key(qt));
-			}
-			long last = qts.get(qts.size()-1).id;
-			qts = ofy().load().type(QuizTransaction.class).filterKey(">", key(QuizTransaction.class,last)).limit(1000).list();
-		}
-		if (!testOnly) {
-			int nBatches = qtKeys.size()/500;
-			for (int i=0;i<nBatches;i++) ofy().delete().keys(qtKeys.subList(i*500, (i+1)*500));
-			ofy().delete().keys(qtKeys.subList(nBatches*500, qtKeys.size()));
-		}
-		buf.append(qtKeys.size() + " orphan QuizTransactions" + (testOnly?" identified":" deleted") + ".<br>");
+		String transactionType = request.getParameter("TransactionType");
+		if (transactionType==null) transactionType = "all";
+		Long startId = null;
+		try {
+			startId = Long.parseLong(request.getParameter("StartId"));
+		} catch (Exception e) {}
 		
-		// Clean HWTransactions
-		List<HWTransaction> hwts = ofy().load().type(HWTransaction.class).limit(1000).list();
-		List<Key<HWTransaction>> hwtKeys = new ArrayList<Key<HWTransaction>>();
-		while (hwts.size()>0) {
-			for (HWTransaction hwt :hwts) {
-				if (hwt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,hwt.assignmentId)).count()==0) hwtKeys.add(key(hwt));
-			}
-			long last = hwts.get(hwts.size()-1).id;
-			hwts = ofy().load().type(HWTransaction.class).filterKey(">", key(HWTransaction.class,last)).limit(1000).list();
+		switch (transactionType) {
+		case "QuizTransaction":
+			buf.append(cleanQuizTransactions(testOnly, startId));
+			break;
+		case "HWTransaction":
+			buf.append(cleanHWTransactions(testOnly, startId));
+			break;
+		case "STTransaction":
+			buf.append(cleanSTTransactions(testOnly, startId));
+			break;
+		case "PracticeExamTransaction":
+			buf.append(cleanPracticeExamTransactions(testOnly, startId));
+			break;
+		case "VideoTransaction":
+			buf.append(cleanVideoTransactions(testOnly, startId));
+			break;
+		case "PollTransaction":
+			buf.append(cleanPollTransactions(testOnly, startId));
+			break;
+		case "PlacementExamTransaction":
+			buf.append(cleanPlacementExamTransactions(testOnly, startId));
+			break;
+		default:
+			Utilities.createTask("/DataStoreCleaner", "Task=CleanTransactions&TransactionType=QuizTransaction", 0);
+			Utilities.createTask("/DataStoreCleaner", "Task=CleanTransactions&TransactionType=HWTransaction", 10);
+			Utilities.createTask("/DataStoreCleaner", "Task=CleanTransactions&TransactionType=STTransaction", 20);
+			Utilities.createTask("/DataStoreCleaner", "Task=CleanTransactions&TransactionType=PracticeExamTransaction", 30);
+			Utilities.createTask("/DataStoreCleaner", "Task=CleanTransactions&TransactionType=VideoTransaction", 40);
+			Utilities.createTask("/DataStoreCleaner", "Task=CleanTransactions&TransactionType=PollTransaction", 50);
+			Utilities.createTask("/DataStoreCleaner", "Task=CleanTransactions&TransactionType=PlacementExamTransaction", 60);
+			buf.append("Started 7 background tasks.");
 		}
-		if (!testOnly) {
-			int nBatches = hwtKeys.size()/500;
-			for (int i=0;i<nBatches;i++) ofy().delete().keys(hwtKeys.subList(i*500, (i+1)*500));
-			ofy().delete().keys(hwtKeys.subList(nBatches*500, hwtKeys.size()));
-		}
-		buf.append(hwtKeys.size() + " orphan HWTransactions" + (testOnly?" identified":" deleted") + ".<br>");
-		
-		// Clean STTransactions
-		List<STTransaction> stts = ofy().load().type(STTransaction.class).limit(1000).list();
-		List<Key<STTransaction>> sttKeys = new ArrayList<Key<STTransaction>>();
-		while (stts.size()>0) {
-			for (STTransaction stt :stts) {
-				if (stt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,stt.assignmentId)).count()==0) sttKeys.add(key(stt));
-			}
-			long last = stts.get(stts.size()-1).id;
-			stts = ofy().load().type(STTransaction.class).filterKey(">", key(STTransaction.class,last)).limit(1000).list();
-		}
-		if (!testOnly) {
-			int nBatches = sttKeys.size()/500;
-			for (int i=0;i<nBatches;i++) ofy().delete().keys(sttKeys.subList(i*500, (i+1)*500));
-			ofy().delete().keys(sttKeys.subList(nBatches*500, sttKeys.size()));
-		}
-		buf.append(sttKeys.size() + " orphan STTransactions" + (testOnly?" identified":" deleted") + ".<br>");
-
-		// Clean PracticeExamTransactions
-		List<PracticeExamTransaction> pets = ofy().load().type(PracticeExamTransaction.class).limit(1000).list();
-		List<Key<PracticeExamTransaction>> petKeys = new ArrayList<Key<PracticeExamTransaction>>();
-		while (pets.size()>0) {
-			for (PracticeExamTransaction pet :pets) {
-				if (pet.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,pet.assignmentId)).count()==0) petKeys.add(key(pet));
-			}
-			long last = pets.get(pets.size()-1).id;
-			pets = ofy().load().type(PracticeExamTransaction.class).filterKey(">", key(PracticeExamTransaction.class,last)).limit(1000).list();
-		}
-		if (!testOnly) {
-			int nBatches = petKeys.size()/500;
-			for (int i=0;i<nBatches;i++) ofy().delete().keys(petKeys.subList(i*500, (i+1)*500));
-			ofy().delete().keys(petKeys.subList(nBatches*500, petKeys.size()));
-		}
-		buf.append(petKeys.size() + " orphan PracticeExamTransactions" + (testOnly?" identified":" deleted") + ".<br>");
-
-		// Clean VideoTransactions
-		List<VideoTransaction> vts = ofy().load().type(VideoTransaction.class).limit(1000).list();
-		List<Key<VideoTransaction>> vtKeys = new ArrayList<Key<VideoTransaction>>();
-		while (vts.size()>0) {
-			for (VideoTransaction vt :vts) {
-				if (vt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,vt.assignmentId)).count()==0) vtKeys.add(key(vt));
-			}
-			long last = vts.get(vts.size()-1).id;
-			vts = ofy().load().type(VideoTransaction.class).filterKey(">", key(VideoTransaction.class,last)).limit(1000).list();
-		}
-		if (!testOnly) {
-			int nBatches = vtKeys.size()/500;
-			for (int i=0;i<nBatches;i++) ofy().delete().keys(vtKeys.subList(i*500, (i+1)*500));
-			ofy().delete().keys(vtKeys.subList(nBatches*500, vtKeys.size()));
-		}
-		buf.append(vtKeys.size() + " orphan VideoTransactions" + (testOnly?" identified":" deleted") + ".<br>");
-
-		// Clean PollTransactions
-		List<PollTransaction> pts = ofy().load().type(PollTransaction.class).limit(1000).list();
-		List<Key<PollTransaction>> ptKeys = new ArrayList<Key<PollTransaction>>();
-		while (pts.size()>0) {
-			for (PollTransaction pt :pts) {
-				if (pt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,pt.assignmentId)).count()==0) ptKeys.add(key(pt));
-			}
-			long last = pts.get(pts.size()-1).id;
-			pts = ofy().load().type(PollTransaction.class).filterKey(">", key(PollTransaction.class,last)).limit(1000).list();
-		}
-		if (!testOnly) {
-			int nBatches = ptKeys.size()/500;
-			for (int i=0;i<nBatches;i++) ofy().delete().keys(ptKeys.subList(i*500, (i+1)*500));
-			ofy().delete().keys(ptKeys.subList(nBatches*500, ptKeys.size()));
-		}
-		buf.append(ptKeys.size() + " orphan PollTransactions" + (testOnly?" identified":" deleted") + ".<br>");
-
-		// Clean PlacementExamTransactions
-		List<PlacementExamTransaction> plts = ofy().load().type(PlacementExamTransaction.class).limit(1000).list();
-		List<Key<PlacementExamTransaction>> pltKeys = new ArrayList<Key<PlacementExamTransaction>>();
-		while (plts.size()>0) {
-			for (PlacementExamTransaction plt :plts) {
-				if (plt.assignmentId==0 || ofy().load().filterKey(key(Assignment.class,plt.assignmentId)).count()==0) pltKeys.add(key(plt));
-			}
-			long last = plts.get(plts.size()-1).id;
-			plts = ofy().load().type(PlacementExamTransaction.class).filterKey(">", key(PlacementExamTransaction.class,last)).limit(1000).list();
-		}
-		if (!testOnly) {
-			int nBatches = pltKeys.size()/500;
-			for (int i=0;i<nBatches;i++) ofy().delete().keys(pltKeys.subList(i*500, (i+1)*500));
-			ofy().delete().keys(pltKeys.subList(nBatches*500, pltKeys.size()));
-		}
-		buf.append(pltKeys.size() + " orphan PlacementExamTransactions" + (testOnly?" identified":" deleted") + ".<br>");
-		buf.append("Done.<br>");
-
 		return buf.toString();
 	}
 	
+	String cleanQuizTransactions(boolean testOnly, Long startId) throws Exception {
+		StringBuffer buf = new StringBuffer();
+		int count = 0;
+		// Delete all transactions older than one year
+		List<Key<QuizTransaction>> tKeys = ofy().load().type(QuizTransaction.class).filter("downloaded <", oneYearAgo).limit(500).keys().list();
+		while(tKeys.size()>0) {
+			count += tKeys.size();
+			ofy().delete().keys(tKeys).now();
+			tKeys = ofy().load().type(QuizTransaction.class).filter("downloaded <", oneYearAgo).limit(500).keys().list();
+		}
+		
+		// Delete all transactions not associated with a current Assignment
+		List<QuizTransaction> ts = null;
+		if (startId==null) ts = ofy().load().type(QuizTransaction.class).limit(1000).list();
+		else ts = ofy().load().type(QuizTransaction.class).filterKey(">",key(QuizTransaction.class,startId)).limit(1000).list();
+		
+		List<Long> currentAssignmentIds = new ArrayList<Long>();
+		List<Long> deletedAssignmentIds = new ArrayList<Long>();	
+		for (QuizTransaction t : ts) {
+			if (t.assignmentId==0 || deletedAssignmentIds.contains(t.assignmentId) ) {
+				tKeys.add(key(t));  // slated for deletion
+			} else if (currentAssignmentIds.contains(t.assignmentId)) {
+				 // do nothing
+			} else { // classify the new assaignmentId
+				boolean exists = ofy().load().filterKey(key(Assignment.class,t.assignmentId)).count() == 1;
+				if (exists) currentAssignmentIds.add(t.assignmentId);
+				else {
+					deletedAssignmentIds.add(t.assignmentId);
+					tKeys.add(key(t));  // slated for deletion
+				}
+			}
+			if (tKeys.size() >= 500) break;  // 
+		}
+		if (!testOnly) {
+			ofy().delete().keys(tKeys);
+			if (tKeys.size() >= 500) {
+				try {
+					Utilities.createTask("/DataStoreCleaner","Task=CleanTransactions&TransactionType=QuizTransaction&StartId=" + ts.get(ts.size()-1).id, 60);
+				} catch (Exception e) {}
+			}
+		}
+		count += tKeys.size();
+		buf.append((testOnly?"Found ":"Deleted ") + count + " QuizTransaction entities.<br/>");
+		return buf.toString();
+	}
+	
+	String cleanHWTransactions(boolean testOnly, Long startId) throws Exception {
+		StringBuffer buf = new StringBuffer();
+		int count = 0;
+		// Delete all transactions older than one year
+		List<Key<HWTransaction>> tKeys = ofy().load().type(HWTransaction.class).filter("graded <", oneYearAgo).limit(500).keys().list();
+		while(tKeys.size()>0) {
+			count += tKeys.size();
+			ofy().delete().keys(tKeys).now();
+			tKeys = ofy().load().type(HWTransaction.class).filter("graded <", oneYearAgo).limit(500).keys().list();
+		}
+		
+		// Delete all transactions not associated with a current Assignment
+		List<HWTransaction> ts = null;
+		if (startId==null) ts = ofy().load().type(HWTransaction.class).limit(1000).list();
+		else ts = ofy().load().type(HWTransaction.class).filterKey(">",key(HWTransaction.class,startId)).limit(1000).list();
+		
+		List<Long> currentAssignmentIds = new ArrayList<Long>();
+		List<Long> deletedAssignmentIds = new ArrayList<Long>();	
+		for (HWTransaction t : ts) {
+			if (t.assignmentId==0 || deletedAssignmentIds.contains(t.assignmentId) ) {
+				tKeys.add(key(t));  // slated for deletion
+			} else if (currentAssignmentIds.contains(t.assignmentId)) {
+				 // do nothing
+			} else { // classify the new assaignmentId
+				boolean exists = ofy().load().filterKey(key(Assignment.class,t.assignmentId)).count() == 1;
+				if (exists) currentAssignmentIds.add(t.assignmentId);
+				else {
+					deletedAssignmentIds.add(t.assignmentId);
+					tKeys.add(key(t));  // slated for deletion
+				}
+			}
+			if (tKeys.size() >= 500) break;  // 
+		}
+		if (!testOnly) {
+			ofy().delete().keys(tKeys);
+			if (tKeys.size() >= 500) {
+				try {
+					Utilities.createTask("/DataStoreCleaner","Task=CleanTransactions&TransactionType=HWTransaction&StartId=" + ts.get(ts.size()-1).id, 60);
+				} catch (Exception e) {}
+			}
+		}
+		count += tKeys.size();
+		buf.append((testOnly?"Found ":"Deleted ") + count + " HWTransaction entities.<br/>");
+		return buf.toString();
+	}
+	
+	String cleanSTTransactions(boolean testOnly, Long startId) throws Exception {
+		StringBuffer buf = new StringBuffer();
+		int count = 0;
+		// Delete all transactions older than one year
+		List<Key<STTransaction>> tKeys = ofy().load().type(STTransaction.class).filter("created <", oneYearAgo).limit(500).keys().list();
+		while(tKeys.size()>0) {
+			count += tKeys.size();
+			ofy().delete().keys(tKeys).now();
+			tKeys = ofy().load().type(STTransaction.class).filter("created <", oneYearAgo).limit(500).keys().list();
+		}
+		
+		// Delete all transactions not associated with a current Assignment
+		List<STTransaction> ts = null;
+		if (startId==null) ts = ofy().load().type(STTransaction.class).limit(1000).list();
+		else ts = ofy().load().type(STTransaction.class).filterKey(">",key(STTransaction.class,startId)).limit(1000).list();
+		
+		List<Long> currentAssignmentIds = new ArrayList<Long>();
+		List<Long> deletedAssignmentIds = new ArrayList<Long>();	
+		for (STTransaction t : ts) {
+			if (t.assignmentId==0 || deletedAssignmentIds.contains(t.assignmentId) ) {
+				tKeys.add(key(t));  // slated for deletion
+			} else if (currentAssignmentIds.contains(t.assignmentId)) {
+				 // do nothing
+			} else { // classify the new assaignmentId
+				boolean exists = ofy().load().filterKey(key(Assignment.class,t.assignmentId)).count() == 1;
+				if (exists) currentAssignmentIds.add(t.assignmentId);
+				else {
+					deletedAssignmentIds.add(t.assignmentId);
+					tKeys.add(key(t));  // slated for deletion
+				}
+			}
+			if (tKeys.size() >= 500) break;  // 
+		}
+		if (!testOnly) {
+			ofy().delete().keys(tKeys);
+			if (tKeys.size() >= 500) {
+				try {
+					Utilities.createTask("/DataStoreCleaner","Task=CleanTransactions&TransactionType=STTransaction&StartId=" + ts.get(ts.size()-1).id, 60);
+				} catch (Exception e) {}
+			}
+		}
+		count += tKeys.size();
+		buf.append((testOnly?"Found ":"Deleted ") + count + " STTransaction entities.<br/>");
+		return buf.toString();
+	}
+	
+	String cleanPracticeExamTransactions(boolean testOnly, Long startId) throws Exception {
+		StringBuffer buf = new StringBuffer();
+		int count = 0;
+		// Delete all transactions older than one year
+		List<Key<PracticeExamTransaction>> tKeys = ofy().load().type(PracticeExamTransaction.class).filter("downloaded <", oneYearAgo).limit(500).keys().list();
+		while(tKeys.size()>0) {
+			count += tKeys.size();
+			ofy().delete().keys(tKeys).now();
+			tKeys = ofy().load().type(PracticeExamTransaction.class).filter("downloaded <", oneYearAgo).limit(500).keys().list();
+		}
+		
+		// Delete all transactions not associated with a current Assignment
+		List<PracticeExamTransaction> ts = null;
+		if (startId==null) ts = ofy().load().type(PracticeExamTransaction.class).limit(1000).list();
+		else ts = ofy().load().type(PracticeExamTransaction.class).filterKey(">",key(PracticeExamTransaction.class,startId)).limit(1000).list();
+		
+		List<Long> currentAssignmentIds = new ArrayList<Long>();
+		List<Long> deletedAssignmentIds = new ArrayList<Long>();	
+		for (PracticeExamTransaction t : ts) {
+			if (t.assignmentId==0 || deletedAssignmentIds.contains(t.assignmentId) ) {
+				tKeys.add(key(t));  // slated for deletion
+			} else if (currentAssignmentIds.contains(t.assignmentId)) {
+				 // do nothing
+			} else { // classify the new assaignmentId
+				boolean exists = ofy().load().filterKey(key(Assignment.class,t.assignmentId)).count() == 1;
+				if (exists) currentAssignmentIds.add(t.assignmentId);
+				else {
+					deletedAssignmentIds.add(t.assignmentId);
+					tKeys.add(key(t));  // slated for deletion
+				}
+			}
+			if (tKeys.size() >= 500) break;  // 
+		}
+		if (!testOnly) {
+			ofy().delete().keys(tKeys);
+			if (tKeys.size() >= 500) {
+				try {
+					Utilities.createTask("/DataStoreCleaner","Task=CleanTransactions&TransactionType=PracticeExamTransaction&StartId=" + ts.get(ts.size()-1).id, 60);
+				} catch (Exception e) {}
+			}
+		}
+		count += tKeys.size();
+		buf.append((testOnly?"Found ":"Deleted ") + count + " PracticeExamTransaction entities.<br/>");
+		return buf.toString();
+	}
+	
+	String cleanVideoTransactions(boolean testOnly, Long startId) throws Exception {
+		StringBuffer buf = new StringBuffer();
+		int count = 0;
+		// Delete all transactions older than one year
+		List<Key<VideoTransaction>> tKeys = ofy().load().type(VideoTransaction.class).filter("downloaded <", oneYearAgo).limit(500).keys().list();
+		while(tKeys.size()>0) {
+			count += tKeys.size();
+			ofy().delete().keys(tKeys).now();
+			tKeys = ofy().load().type(VideoTransaction.class).filter("downloaded <", oneYearAgo).limit(500).keys().list();
+		}
+		
+		// Delete all transactions not associated with a current Assignment
+		List<VideoTransaction> ts = null;
+		if (startId==null) ts = ofy().load().type(VideoTransaction.class).limit(1000).list();
+		else ts = ofy().load().type(VideoTransaction.class).filterKey(">",key(VideoTransaction.class,startId)).limit(1000).list();
+		
+		List<Long> currentAssignmentIds = new ArrayList<Long>();
+		List<Long> deletedAssignmentIds = new ArrayList<Long>();	
+		for (VideoTransaction t : ts) {
+			if (t.assignmentId==0 || deletedAssignmentIds.contains(t.assignmentId) ) {
+				tKeys.add(key(t));  // slated for deletion
+			} else if (currentAssignmentIds.contains(t.assignmentId)) {
+				 // do nothing
+			} else { // classify the new assaignmentId
+				boolean exists = ofy().load().filterKey(key(Assignment.class,t.assignmentId)).count() == 1;
+				if (exists) currentAssignmentIds.add(t.assignmentId);
+				else {
+					deletedAssignmentIds.add(t.assignmentId);
+					tKeys.add(key(t));  // slated for deletion
+				}
+			}
+			if (tKeys.size() >= 500) break;  // 
+		}
+		if (!testOnly) {
+			ofy().delete().keys(tKeys);
+			if (tKeys.size() >= 500) {
+				try {
+					Utilities.createTask("/DataStoreCleaner","Task=CleanTransactions&TransactionType=VideoTransaction&StartId=" + ts.get(ts.size()-1).id, 60);
+				} catch (Exception e) {}
+			}
+		}
+		count += tKeys.size();
+		buf.append((testOnly?"Found ":"Deleted ") + count + " VideoTransaction entities.<br/>");
+		return buf.toString();
+	}
+	
+	String cleanPollTransactions(boolean testOnly, Long startId) throws Exception {
+		StringBuffer buf = new StringBuffer();
+		int count = 0;
+		// Delete all transactions older than one year
+		List<Key<PollTransaction>> tKeys = ofy().load().type(PollTransaction.class).filter("downloaded <", oneYearAgo).limit(500).keys().list();
+		while(tKeys.size()>0) {
+			count += tKeys.size();
+			ofy().delete().keys(tKeys).now();
+			tKeys = ofy().load().type(PollTransaction.class).filter("downloaded <", oneYearAgo).limit(500).keys().list();
+		}
+		
+		// Delete all transactions not associated with a current Assignment
+		List<PollTransaction> ts = null;
+		if (startId==null) ts = ofy().load().type(PollTransaction.class).limit(1000).list();
+		else ts = ofy().load().type(PollTransaction.class).filterKey(">",key(PollTransaction.class,startId)).limit(1000).list();
+		
+		List<Long> currentAssignmentIds = new ArrayList<Long>();
+		List<Long> deletedAssignmentIds = new ArrayList<Long>();	
+		for (PollTransaction t : ts) {
+			if (t.assignmentId==0 || deletedAssignmentIds.contains(t.assignmentId) ) {
+				tKeys.add(key(t));  // slated for deletion
+			} else if (currentAssignmentIds.contains(t.assignmentId)) {
+				 // do nothing
+			} else { // classify the new assaignmentId
+				boolean exists = ofy().load().filterKey(key(Assignment.class,t.assignmentId)).count() == 1;
+				if (exists) currentAssignmentIds.add(t.assignmentId);
+				else {
+					deletedAssignmentIds.add(t.assignmentId);
+					tKeys.add(key(t));  // slated for deletion
+				}
+			}
+			if (tKeys.size() >= 500) break;  // 
+		}
+		if (!testOnly) {
+			ofy().delete().keys(tKeys);
+			if (tKeys.size() >= 500) {
+				try {
+					Utilities.createTask("/DataStoreCleaner","Task=CleanTransactions&TransactionType=PollTransaction&StartId=" + ts.get(ts.size()-1).id, 60);
+				} catch (Exception e) {}
+			}
+		}
+		count += tKeys.size();
+		buf.append((testOnly?"Found ":"Deleted ") + count + " PollTransaction entities.<br/>");
+		return buf.toString();
+	}
+	
+	String cleanPlacementExamTransactions(boolean testOnly, Long startId) throws Exception {
+		StringBuffer buf = new StringBuffer();
+		int count = 0;
+		// Delete all transactions older than one year
+		List<Key<PlacementExamTransaction>> tKeys = ofy().load().type(PlacementExamTransaction.class).filter("downloaded <", oneYearAgo).limit(500).keys().list();
+		while(tKeys.size()>0) {
+			count += tKeys.size();
+			ofy().delete().keys(tKeys).now();
+			tKeys = ofy().load().type(PlacementExamTransaction.class).filter("downloaded <", oneYearAgo).limit(500).keys().list();
+		}
+		
+		// Delete all transactions not associated with a current Assignment
+		List<PlacementExamTransaction> ts = null;
+		if (startId==null) ts = ofy().load().type(PlacementExamTransaction.class).limit(1000).list();
+		else ts = ofy().load().type(PlacementExamTransaction.class).filterKey(">",key(PlacementExamTransaction.class,startId)).limit(1000).list();
+		
+		List<Long> currentAssignmentIds = new ArrayList<Long>();
+		List<Long> deletedAssignmentIds = new ArrayList<Long>();	
+		for (PlacementExamTransaction t : ts) {
+			if (t.assignmentId==0 || deletedAssignmentIds.contains(t.assignmentId) ) {
+				tKeys.add(key(t));  // slated for deletion
+			} else if (currentAssignmentIds.contains(t.assignmentId)) {
+				 // do nothing
+			} else { // classify the new assaignmentId
+				boolean exists = ofy().load().filterKey(key(Assignment.class,t.assignmentId)).count() == 1;
+				if (exists) currentAssignmentIds.add(t.assignmentId);
+				else {
+					deletedAssignmentIds.add(t.assignmentId);
+					tKeys.add(key(t));  // slated for deletion
+				}
+			}
+			if (tKeys.size() >= 500) break;  // 
+		}
+		if (!testOnly) {
+			ofy().delete().keys(tKeys);
+			if (tKeys.size() >= 500) {
+				try {
+					Utilities.createTask("/DataStoreCleaner","Task=CleanTransactions&TransactionType=PlacementExamTransaction&StartId=" + ts.get(ts.size()-1).id, 60);
+				} catch (Exception e) {}
+			}
+		}
+		count += tKeys.size();
+		buf.append((testOnly?"Found ":"Deleted ") + count + " PlacementExamTransaction entities.<br/>");
+		return buf.toString();
+	}
+	
+	
+		
 	private String cleanScores(boolean testOnly) {
 		// This method deletes all Score entities older than one year
 
@@ -407,6 +653,7 @@ public class DataStoreCleaner extends HttpServlet {
 			return null;
 		}
 	}
+	
 	private String cleanDeployments(boolean testOnly) {
 		// This method searches for Deployment entities with no logins for at least 1 year
 		
