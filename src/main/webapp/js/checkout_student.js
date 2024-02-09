@@ -1,4 +1,3 @@
-<script>
   var agreeTerms = document.getElementById('terms');
   var agreeNoRefunds = document.getElementById('norefunds');
   var purchase = document.getElementById('purchase');
@@ -6,23 +5,23 @@
     if (agreeTerms.checked && agreeNoRefunds.checked) purchase.style = 'display:inline';
    	else purchase.style = 'display:none';
   }
-  var nMonths = <%= nMonthsPurchased %>;
+  var price = 2;
+  var nMonths = 5;
   var amtPaid = "";
   var nMonthsInp = document.getElementById("nMonthsChoice");
-  if (nMonths==5) nMonthsInp.selectedIndex=2;
    		
   function updateAmount() {
     nMonths = nMonthsInp.options[nMonthsInp.selectedIndex].value;
 	switch (nMonths) {
-	case "1": amtPaid="<%= d.price %>"; break;
-	case "2": amtPaid="<%= 2*d.price %>"; break;
-	case "5": amtPaid="<%= 4*d.price %>"; break;
-	case "12": amtPaid="<%= 8*d.price %>"; break;
+	case "1": amtPaid=price; break;
+	case "2": amtPaid=2*price; break;
+	case "5": amtPaid=4*price; break;
+	case "12": amtPaid=8*price; break;
 	}
 	document.getElementById("amt").innerHTML=nMonths + (nMonths=="1"?' month':' months') + ' - $' + amtPaid + '.00 USD';
   }
   updateAmount();
-  function initPayPalButton() {
+  function initPayPalButton(hashedId) {
     paypal.Buttons({
     style: {
       shape: 'pill',
@@ -32,7 +31,7 @@
     },
     createOrder: function(data, actions) {
       return actions.order.create({
-        purchase_units: [{"description":nMonths + "-month ChemVantage subscription for user: <%=user.getHashedId()%>","amount":{"currency_code":"USD","value":amtPaid+".00"}}]});
+        purchase_units: [{"description":nMonths + "-month ChemVantage subscription for user: " + hashedId,"amount":{"currency_code":"USD","value":amtPaid+".00"}}]});
       },
       onApprove: function(data, actions) {
         return actions.order.capture().then(function(orderData) {
@@ -51,6 +50,4 @@
       }
     }).render('#paypal-button-container');
   }
-  initPayPalButton();
-</script>
- 
+

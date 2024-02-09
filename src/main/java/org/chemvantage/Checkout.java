@@ -121,7 +121,7 @@ public class Checkout extends HttpServlet {
 		buf.append("<select id=nMonthsChoice onChange=updateAmount();>"
 				+ "<option value=1>1 month</option>"
 				+ "<option value=2>2 months</option>"
-				+ "<option value=5>5 months</option>"
+				+ "<option value=5 selected>5 months</option>"
 				+ "<option value=12>12 months</option>"
 				+ "</select><br/><br/>"
 				+ "Select your preferred payment method below. When the transaction is completed, your subscription will be activated immediately."
@@ -134,7 +134,18 @@ public class Checkout extends HttpServlet {
 				+ "</div>\n");
 		
 		buf.append("<script src='https://www.paypal.com/sdk/js?client-id=" + client_id +"&enable-funding=venmo&currency=USD'></script>\n");
-		buf.append("<script src=/js/checkout_student.js></script>");
+		buf.append("<script src='/js/checkout_student.js'></script>");
+		buf.append("<script>initPayPalButton('" + user.getHashedId() + "')</script>");
+		
+		// Add a hidden activation form to submit via javascript when the payment is successful
+		buf.append("<form id=activationForm method=post action='/checkout'>"
+				+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+				+ "<input type=hidden name=d value='" + d.getPlatformDeploymentId() + "' />"
+				+ "<input type=hidden name=nmonths id=nmonths />"
+				+ "<input type=hidden name=AmountPaid id=amtPaid />"
+				+ "<input type=hidden name=OrderDetails id=orderdetails />"
+				+ "<input type=hidden name=HashedId value='" + user.getHashedId() + "' />"
+				+ "</form>");
 		return buf.toString();
 	}
 	
