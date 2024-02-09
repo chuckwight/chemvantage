@@ -38,8 +38,8 @@ public class VideoTransaction {
 	@Index	Date graded;
 			int score;
 	@Index(IfNotZero.class)	long assignmentId;
-			List<Integer> quizletScores;
-			List<String> missedQuestions;
+			List<Integer> quizletScores = new ArrayList<Integer>();
+			List<String> missedQuestions = new ArrayList<String>();
 			int possibleScore;
 			String videoTitle;
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
@@ -58,8 +58,6 @@ public class VideoTransaction {
         this.assignmentId = assignmentId;
         this.possibleScore = possibleScore;
         this.downloaded = new Date();
-        this.quizletScores = new ArrayList<Integer>();
-        this.missedQuestions = new ArrayList<String>();
         for (int i=0;i<nBreaks;i++) {
         	quizletScores.add(0);
         	missedQuestions.add("");

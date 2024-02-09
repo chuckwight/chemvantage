@@ -99,7 +99,7 @@ public class VideoQuiz extends HttpServlet {
 			break;
 			default:
 				if (user.isInstructor()) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
-				else response.sendRedirect(Subject.serverUrl + "/VideoQuiz?VideoId=" + videoId + "&sig=" + user.getTokenSignature());
+				else response.sendRedirect(Subject.serverUrl + "/VideoQuiz?UserRequest=ShowVideo&VideoId=" + videoId + "&sig=" + user.getTokenSignature());
 			}			
 		} catch (Exception e) {
 			response.sendRedirect(Subject.serverUrl + "/Logout?sig=" + request.getParameter("sig"));
@@ -386,7 +386,7 @@ public class VideoQuiz extends HttpServlet {
 			if (v.nQuestions==null) v.nQuestions = new int[0];
 			if (v.questionKeys==null) v.questionKeys = new ArrayList<Key<Question>>();
 
-			buf.append("<h1>Video</h1><h2>Please answer these questions before resuming the video:</h2>\n");
+			buf.append("<h2>Please answer these questions before resuming the video:</h2>\n");
 
 			// Check to see if this user has any pending videos on this topic in the last 90 minutes.
 			// Normally, a new VideoTransaction is created when the LTILaunchRequest is made, but sometimes things happen...
