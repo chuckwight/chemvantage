@@ -44,7 +44,7 @@ import com.googlecode.objectify.Key;
 public class Poll extends HttpServlet {
 	private static final long serialVersionUID = 137L;
 	
-	private Map<Key<Question>,Question> pollQuestions = new HashMap<Key<Question>,Question>();
+	//private Map<Key<Question>,Question> pollQuestions = new HashMap<Key<Question>,Question>();
 	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		try {
@@ -86,8 +86,7 @@ public class Poll extends HttpServlet {
 				break;
 			case "Review":
 				String forUserHashedId = request.getParameter("ForUserHashedId");
-				String forUserName = request.getParameter("ForUserName");
-				out.println(Subject.header("Poll Submission Review") + resultsPage(user,forUserHashedId,forUserName,a));
+				out.println(Subject.header("Poll Submission Review") + resultsPage(user,forUserHashedId,a));
 				break;
 			case "Synch":
 				out.println(new Date().getTime());
@@ -327,8 +326,9 @@ public class Poll extends HttpServlet {
 		// see if this user already has a submission for this assignment; else get a new PollTransaction
 		PollTransaction pt = getPollTransaction(user,a);
 		
+		Map<Key<Question>,Question> questions = ofy().load().keys(a.questionKeys);		
 		for (Key<Question> k : a.questionKeys) {  // main loop to present questions
-			Question q = getQuestion(k); // this should nearly always work
+			Question q = questions.get(k); // this should nearly always work
 			if (q==null) continue;		 // but skip the question if it has been deleted
 			q.setParameters(a.id % Integer.MAX_VALUE);
 			String studentResponse = pt.studentAnswers.get(k);
@@ -440,9 +440,11 @@ public class Poll extends HttpServlet {
 		int possibleScore = 0;
 		pt.questionKeys = a.questionKeys;
 		
+		Map<Key<Question>,Question> questions = ofy().load().keys(a.questionKeys);		
 		for (Key<Question> k : pt.questionKeys) {
 			try {
-				Question q = getQuestion(k);
+				Question q = questions.get(k);
+				if (q==null) continue;
 				possibleScore += q.pointValue;
 				String studentAnswer = orderResponses(request.getParameterValues(Long.toString(k.getId())));
 				if (!studentAnswer.isEmpty()) {
@@ -466,12 +468,12 @@ public class Poll extends HttpServlet {
 		return pt;
 	}
 	
-	PollTransaction getPollTransaction(User user,Assignment a) {
+	static PollTransaction getPollTransaction(User user,Assignment a) {
 		PollTransaction pt = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).filter("userId",user.getHashedId()).first().now();
 		if (pt == null) pt = new PollTransaction(user.getId(),new Date(),user.getAssignmentId());
 		return pt;
 	}
-	
+/*	
 	Question getQuestion(Key<Question> k) {
 		Question q = pollQuestions.get(k);
 		if (q == null) {
@@ -489,8 +491,8 @@ public class Poll extends HttpServlet {
 		if (newKeys.size()>0) pollQuestions.putAll(ofy().load().keys(newKeys));
 		return;
 	}
-	
-	String waitForResults(User user, Assignment a) {
+*/	
+	static String waitForResults(User user, Assignment a) {
 		
 		if (a.pollIsClosed) return resultsPage(user,a);
 		if (user.isInstructor() && a.pollClosesAt!=null && a.pollClosesAt.before(new Date())) {
@@ -567,280 +569,284 @@ public class Poll extends HttpServlet {
 				+ "</SCRIPT>";
 	}
 */	
-	String resultsPage(User user,Assignment a) {
-		return resultsPage(user,null,null,a);
+	static String resultsPage(User user,Assignment a) {
+		return resultsPage(user,null,a);
 	}
 	
-	String resultsPage(User user,String forUserHashedId,String forUserName,Assignment a) {
+	static String resultsPage(User user,String forUserHashedId,Assignment a) {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Debug:");
-		
+
 		try {
-		if (!user.isTeachingAssistant() && !a.pollIsClosed) return waitForResults(user,a);
-		
-		buf.append("<h2>Poll Results</h2>");
-		if (user.isInstructor() && forUserHashedId==null) {
-			if (a.pollIsClosed) buf.append("<b>Be sure to tell your students that the poll is now closed</b> and to click the button to view the poll results.<br/>");
-			else buf.append("The poll is still open. ");
-			buf.append("You can <a href=/Poll?sig=" + user.getTokenSignature() + ">return to the instructor page</a> at any time.<br/><br/> ");
-		}
-		debug.append("b.");
-		
-		PollTransaction pt = null;
-		if (forUserHashedId==null) pt = getPollTransaction(user,a);
-		else if (user.isInstructor()) {
-			pt = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).filter("userId",forUserHashedId).first().now();
-			if (pt==null) {
-				buf.append("<br/>There was no poll submission for this user.");
-				return buf.toString();
-			} else {
-				buf.append("Name: " + (forUserName==null?"(withheld)":forUserName) + "<br/>"
-						+ "Assignment ID: " + a.id + "<br/>"
-						+ "Transaction ID: " + pt.id + "<br/>"
-						+ "Submissions: " + pt.nSubmissions + "<br/>"
-						+ (pt.nSubmissions>1?"First Submitted: " + pt.downloaded + "<br/>Last ":"")
-						+ "Submitted: " + pt.completed + "<br/><br/>");	
+			
+			if (!user.isInstructor() && forUserHashedId==null && !a.pollIsClosed) return waitForResults(user,a);
+			
+			buf.append("<h2>Poll Results</h2>");
+			if (user.isInstructor() && forUserHashedId==null) {
+				if (a.pollIsClosed) buf.append("<b>Be sure to tell your students that the poll is now closed</b> and to click the button to view the poll results.<br/>");
+				else buf.append("The poll is still open. ");
+				buf.append("You can <a href=/Poll?sig=" + user.getTokenSignature() + ">return to the instructor page</a> at any time.<br/><br/> ");
 			}
-		}
+			debug.append("b.");
+
+			PollTransaction pt = null;
+			if (!user.isInstructor() || forUserHashedId==null) pt = getPollTransaction(user,a);
+			else if (user.isInstructor()) {
+				pt = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).filter("userId",forUserHashedId).first().now();
+				if (pt==null) {
+					buf.append("<br/>There was no poll submission for this user.");
+					return buf.toString();
+				} else {
+					buf.append("Assignment ID: " + a.id + "<br/>"
+							+ "Transaction ID: " + pt.id + "<br/>"
+							+ "Submissions: " + pt.nSubmissions + "<br/>"
+							+ (pt.nSubmissions>1?"First Submitted: " + pt.downloaded + "<br/>Last ":"")
+							+ "Submitted: " + pt.completed + "<br/><br/>");	
+				}
+			} else return "Unauthorized.";
+			
+			int pctScore = pt.possibleScore==0?0:pt.score*100/pt.possibleScore;
+			buf.append((user.isInstructor()?"The ":"Your ") + "score for this assignment is: " + pt.score + " out of " + pt.possibleScore + " points ("+ pctScore + "%).<br/><br/>");
 		
-		List<PollTransaction> pts = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).list();
-		buf.append("\n");
-		buf.append("<script>"
-				+ "function ajaxSubmit(url,id,params,studentAnswer,note,email) {\n"
-				+ "  var xmlhttp;\n"
-				+ "  if (url.length==0) return false;\n"
-				+ "  xmlhttp=GetXmlHttpObject();\n"
-				+ "  if (xmlhttp==null) {\n"
-				+ "    alert ('Sorry, your browser does not support AJAX!');\n"
-				+ "    return false;\n"
-				+ "  }\n"
-				+ "  xmlhttp.onreadystatechange=function() {\n"
-				+ "    if (xmlhttp.readyState==4) {\n"
-				+ "      document.getElementById('feedback' + id).innerHTML="
-				+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
-				+ "    }\n"
-				+ "  }\n"
-				+ "  url += '&QuestionId=' + id + '&Params=' + params + '&sig=" + user.getTokenSignature() + "&Notes=' + note + '&Email=' + email + '&StudentAnswer=' + studentAnswer;\n"
-				+ "  xmlhttp.open('GET',url,true);\n"
-				+ "  xmlhttp.send(null);\n"
-				+ "  return false;\n"
-				+ "}\n"
-				+ "function GetXmlHttpObject() {\n"
-				+ "  if (window.XMLHttpRequest) { // code for IE7+, Firefox, Chrome, Opera, Safari\n"
-				+ "    return new XMLHttpRequest();\n"
-				+ "  }\n"
-				+ "  if (window.ActiveXObject) { // code for IE6, IE5\n"
-				+ "    return new ActiveXObject('Microsoft.XMLHTTP');\n"
-				+ "  }\n"
-				+ "  return null;\n"
-				+ "}\n"
-				+ "</script>");	
-		buf.append("\n");
-		
-		int i=0;
-		buf.append("<div style='display: table'>"); // big-table
-		buf.append("<div style='display: table-row;'>"
-				+ "<div style='display: table-cell'></div>"  // column for question number
-				+ "<div style='display: table-cell'><h3>Questions</h3></div>"
-				+ "<div style='display: table-cell'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>"  // horizontal buffer
-				+ "<div style='display: table-cell'><h3>Responses</h3></div>"
-				+ "</div>");  // end of header row
-		debug.append("c.");
-		for (Key<Question> k : a.questionKeys) {
+			List<PollTransaction> pts = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).list();
 			buf.append("\n");
-			try {
-				Question q = getQuestion(k);
-				if (q==null) continue;
-				q.setParameters(a.id % Integer.MAX_VALUE);
-				if (q.correctAnswer==null) q.correctAnswer = "";
-				i++;
-				buf.append("<div style='display: table-row;vertical-align: top;'>");
-				buf.append("<div style='display: table-cell;vertical-align: top;'><br/>" + i + ".&nbsp;</div>"); // number cell
-				
-				buf.append("<div style='display: table-cell;vertical-align: top;width: 400px;'><br/>"); // question cell
-				
-				String userResponse = "";
-				try {
-					userResponse = pt.studentAnswers.get(k);
-				} catch (Exception e) {}
-				
-				buf.append(q.hasNoCorrectAnswer()?q.print():q.printAllToStudents(userResponse));
-				//buf.append(q.printAll());
-				
-				buf.append("</div>"   // end of question cell
-						+ "<div style='display: table-cell;vertical-align: top;'></div>");  // horizontal buffer
-				
-				// This is where we will construct a histogram showing the distribution of responses
-				debug.append("start.");
-				
-				Map<String,Integer> histogram = new HashMap<String,Integer>();
-				//String correctResponse = q.getCorrectAnswer();
-				String otherResponses = null;
-				char choice = 'a';
-				//int chart_height = 150;
-				debug.append("1.");
-				
-				switch (q.getQuestionType()) {
-				case Question.MULTIPLE_CHOICE:
-					for (int j = 0; j < q.nChoices; j++) {
-						histogram.put(String.valueOf(choice),0);
-						choice++;
-					}
-					debug.append("2a.");
-					for (PollTransaction t : pts) {
-						if (t.completed==null || t.studentAnswers==null || t.studentAnswers.get(k)==null) continue;
-						histogram.put(t.studentAnswers.get(k),histogram.get(t.studentAnswers.get(k))+1);
-					}
-					break;
-				case Question.TRUE_FALSE:
-					histogram.put("true", 0);
-					histogram.put("false", 0);
-					//chart_height = 100;
-					debug.append("2b.");
-					for (PollTransaction t : pts) {
-						if (t.completed==null || t.studentAnswers==null || t.studentAnswers.get(k)==null) continue;
-						histogram.put(t.studentAnswers.get(k),histogram.get(t.studentAnswers.get(k))+1);
-					}
-					break;
-				case Question.SELECT_MULTIPLE:
-					for (int j = 0; j < q.nChoices; j++) {
-						histogram.put(String.valueOf(choice),0);
-						choice++;
-					}
-					debug.append("2c.");
-					for (PollTransaction t : pts) {
-						if (t.completed==null || t.studentAnswers==null || t.studentAnswers.get(k)==null) continue;
-						String response = t.studentAnswers.get(k);
-						debug.append(response + ".");
-						for (int m=0; m<response.length();m++) {
-							debug.append("4.");
-							histogram.put(String.valueOf(response.charAt(m)),histogram.get(String.valueOf(response.charAt(m)))+1);
-						}
-					}
-				break;
-				case Question.FILL_IN_WORD:
-					histogram.put("correct", 0);
-					histogram.put("incorrect", 0);
-					//chart_height = 100;
-					debug.append("2d.");
-					for (PollTransaction t : pts) {
-						if (t.completed==null || t.studentAnswers==null || t.studentAnswers.get(k)==null) continue;
-						if (q.isCorrect(t.studentAnswers.get(k))) histogram.put("correct",histogram.get("correct")+1);
-						else {
-							histogram.put("incorrect", histogram.get("incorrect") + 1);
-							if (otherResponses==null) otherResponses = t.studentAnswers.get(k);
-							else if (otherResponses.length()<500 && t.studentAnswers.get(k) != null && !otherResponses.toLowerCase().contains(t.studentAnswers.get(k).toLowerCase())) otherResponses += "; " + t.studentAnswers.get(k);
-						}
-					}
-					break;
-				case Question.NUMERIC:
-					histogram.put("correct", 0);
-					histogram.put("incorrect", 0);
-					//chart_height = 100;
-					debug.append("2e.");
-					for (PollTransaction t : pts) {
-						if (t.completed==null || t.studentAnswers==null || t.studentAnswers.get(k)==null) continue;
-						if (q.isCorrect(t.studentAnswers.get(k))) histogram.put("correct",histogram.get("correct")+1);
-						else {
-							histogram.put("incorrect", histogram.get("incorrect") + 1);
-							if (otherResponses==null) otherResponses = t.studentAnswers.get(k);
-							else if (otherResponses.length()<500 && t.studentAnswers.get(k) != null && !otherResponses.toLowerCase().contains(t.studentAnswers.get(k).toLowerCase())) otherResponses += "; " + t.studentAnswers.get(k);
-						}
-					}
-					break;
-				case Question.FIVE_STAR:
-					for (char nStars='1'; nStars<'6'; nStars++) histogram.put(String.valueOf(nStars),0);
-					for (PollTransaction t : pts) {
-						if (t.completed==null || t.studentAnswers==null || t.studentAnswers.get(k)==null) continue;
-						histogram.put(t.studentAnswers.get(k), histogram.get(t.studentAnswers.get(k))+1);
-					}
-					break;
-				case Question.ESSAY:
-					int nEssays = 0;
-					for (PollTransaction t :pts) {
-						if (t.completed==null || t.studentAnswers==null || t.studentAnswers.get(k)==null) continue;
-						nEssays++;
-					}
-					histogram.put("N", nEssays);
-					break;
-				default:
-				}
-				debug.append("histogram initialized.");
-				
-				// Calculate a scale factor for the maximum width of the graph bars based on the max % response
-				
-				int maxValue = 0;
-				int totalValues = 0;
-				for (Entry<String,Integer> e : histogram.entrySet()) {
-					totalValues += e.getValue();
-					if (e.getValue() > maxValue) maxValue = e.getValue();
-				}
-				debug.append("maxValue="+maxValue+".totalValues="+totalValues+".");
+			buf.append("<script>"
+					+ "function ajaxSubmit(url,id,params,studentAnswer,note,email) {\n"
+					+ "  var xmlhttp;\n"
+					+ "  if (url.length==0) return false;\n"
+					+ "  xmlhttp=GetXmlHttpObject();\n"
+					+ "  if (xmlhttp==null) {\n"
+					+ "    alert ('Sorry, your browser does not support AJAX!');\n"
+					+ "    return false;\n"
+					+ "  }\n"
+					+ "  xmlhttp.onreadystatechange=function() {\n"
+					+ "    if (xmlhttp.readyState==4) {\n"
+					+ "      document.getElementById('feedback' + id).innerHTML="
+					+ "      '<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
+					+ "    }\n"
+					+ "  }\n"
+					+ "  url += '&QuestionId=' + id + '&Params=' + params + '&sig=" + user.getTokenSignature() + "&Notes=' + note + '&Email=' + email + '&StudentAnswer=' + studentAnswer;\n"
+					+ "  xmlhttp.open('GET',url,true);\n"
+					+ "  xmlhttp.send(null);\n"
+					+ "  return false;\n"
+					+ "}\n"
+					+ "function GetXmlHttpObject() {\n"
+					+ "  if (window.XMLHttpRequest) { // code for IE7+, Firefox, Chrome, Opera, Safari\n"
+					+ "    return new XMLHttpRequest();\n"
+					+ "  }\n"
+					+ "  if (window.ActiveXObject) { // code for IE6, IE5\n"
+					+ "    return new ActiveXObject('Microsoft.XMLHTTP');\n"
+					+ "  }\n"
+					+ "  return null;\n"
+					+ "}\n"
+					+ "</script>");	
+			buf.append("\n");
+
+			int i=0;
+			buf.append("<div style='display: table'>"); // big-table
+			buf.append("<div style='display: table-row;'>"
+					+ "<div style='display: table-cell'></div>"  // column for question number
+					+ "<div style='display: table-cell'><h3>Questions</h3></div>"
+					+ "<div style='display: table-cell'>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>"  // horizontal buffer
+					+ "<div style='display: table-cell'><h3>Responses</h3></div>"
+					+ "</div>");  // end of header row
+			debug.append("c.");
+			Map<Key<Question>,Question> questions = ofy().load().keys(a.questionKeys);		
+			for (Key<Question> k : a.questionKeys) {
 				buf.append("\n");
-				
-				buf.append("<div id=chart_div" + i + " style='display: table-cell;vertical-align: top;'><br/>");  // histogram cell
-				if (totalValues>0) {
-					// Print a histogram as a table containing a horizontal bar graph:
+				try {
+					Question q = questions.get(k);
+					if (q==null) continue;
+					q.setParameters(a.id % Integer.MAX_VALUE);
+					if (q.correctAnswer==null) q.correctAnswer = "";
+					i++;
+					buf.append("<div style='display: table-row;vertical-align: top;'>");
+					buf.append("<div style='display: table-cell;vertical-align: top;'><br/>" + i + ".&nbsp;</div>"); // number cell
+
+					buf.append("<div style='display: table-cell;vertical-align: top;width: 400px;'><br/>"); // question cell
+
+					String userResponse = "";
+					try {
+						userResponse = pt.studentAnswers.get(k);
+					} catch (Exception e) {}
+
+					buf.append(q.hasNoCorrectAnswer()?q.print():q.printAllToStudents(userResponse));
+					//buf.append(q.printAll());
+
+					buf.append("</div>"   // end of question cell
+							+ "<div style='display: table-cell;vertical-align: top;'></div>");  // horizontal buffer
+
+					// This is where we will construct a histogram showing the distribution of responses
+					debug.append("start.");
+
+					Map<String,Integer> histogram = new HashMap<String,Integer>();
+					//String correctResponse = q.getCorrectAnswer();
+					String otherResponses = null;
+					char choice = 'a';
+					//int chart_height = 150;
+					debug.append("1.");
+
 					switch (q.getQuestionType()) {
 					case Question.MULTIPLE_CHOICE:
-					case Question.TRUE_FALSE:
-					case Question.SELECT_MULTIPLE:
-						buf.append("Summary&nbsp;of&nbsp;responses&nbsp;received&nbsp;for&nbsp;this&nbsp;question:<p></p>");
-						buf.append("<table>");
-						for (Entry<String,Integer> e : histogram.entrySet()) {
-							buf.append("<tr><td>");
-							buf.append(e.getKey() + "&nbsp;");
-							buf.append("</td><td>");
-							buf.append("<div style='background-color: blue;display: inline-block; width: " + 150*e.getValue()/(totalValues+1) + "px;'>&nbsp;</div>");
-							buf.append("&nbsp;" + e.getValue() + "</td></tr>");
+						for (int j = 0; j < q.nChoices; j++) {
+							histogram.put(String.valueOf(choice),0);
+							choice++;
 						}
-						buf.append("</table>");
+						debug.append("2a.");
+						for (PollTransaction t : pts) {
+							if (t.completed==null || t.studentAnswers==null || t.studentAnswers.get(k)==null) continue;
+							histogram.put(t.studentAnswers.get(k),histogram.get(t.studentAnswers.get(k))+1);
+						}
+						break;
+					case Question.TRUE_FALSE:
+						histogram.put("true", 0);
+						histogram.put("false", 0);
+						//chart_height = 100;
+						debug.append("2b.");
+						for (PollTransaction t : pts) {
+							if (t.completed==null || t.studentAnswers==null || t.studentAnswers.get(k)==null) continue;
+							histogram.put(t.studentAnswers.get(k),histogram.get(t.studentAnswers.get(k))+1);
+						}
+						break;
+					case Question.SELECT_MULTIPLE:
+						for (int j = 0; j < q.nChoices; j++) {
+							histogram.put(String.valueOf(choice),0);
+							choice++;
+						}
+						debug.append("2c.");
+						for (PollTransaction t : pts) {
+							if (t.completed==null || t.studentAnswers==null || t.studentAnswers.get(k)==null) continue;
+							String response = t.studentAnswers.get(k);
+							debug.append(response + ".");
+							for (int m=0; m<response.length();m++) {
+								debug.append("4.");
+								histogram.put(String.valueOf(response.charAt(m)),histogram.get(String.valueOf(response.charAt(m)))+1);
+							}
+						}
 						break;
 					case Question.FILL_IN_WORD:
-					case Question.NUMERIC:
-						buf.append("Summary&nbsp;of&nbsp;responses&nbsp;received&nbsp;for&nbsp;this&nbsp;question:<p></p>");
-						if (q.hasACorrectAnswer()) {
-							buf.append("<table>");
-							buf.append("<tr><td>");
-							buf.append("correct" + "&nbsp;");
-							buf.append("</td><td>");
-							buf.append("<div style='background-color: blue;display: inline-block; width: " + 150*histogram.get("correct")/(totalValues+1) + "px;'>&nbsp;</div>");
-							buf.append("&nbsp;" + histogram.get("correct") + "</td></tr>");
-							buf.append("<tr><td>");
-							buf.append("incorrect" + "&nbsp;");
-							buf.append("</td><td>");
-							buf.append("<div style='background-color: blue;display: inline-block; width: " + 150*histogram.get("incorrect")/(totalValues+1) + "px;'>&nbsp;</div>");
-							buf.append("&nbsp;" + histogram.get("incorrect") + "</td></tr>");
-							if (otherResponses != null) buf.append("<tr><td colspan=2><br />Incorrect Responses: " + otherResponses + "</td></tr>");							
-							buf.append("</table>");
-						} else buf.append(otherResponses);
-						break;	
-					case Question.FIVE_STAR:
-						buf.append("Summary&nbsp;of&nbsp;responses&nbsp;received&nbsp;for&nbsp;this&nbsp;question:<p></p>");
-						buf.append("<table>");
-						for (char nStars='5'; nStars>='1'; nStars--) {
-							buf.append("<tr><td>");
-							buf.append(String.valueOf(nStars) + (nStars=='1'?"&nbsp;star":"&nbsp;stars") + "&nbsp;");
-							buf.append("</td><td>");
-							buf.append("<div style='background-color: blue;display: inline-block; width: " + 150*histogram.get(String.valueOf(nStars))/(totalValues+1) + "px;'>&nbsp;</div>");
-							buf.append("&nbsp;" + histogram.get(String.valueOf(nStars)) + "</td></tr>");
+						histogram.put("correct", 0);
+						histogram.put("incorrect", 0);
+						//chart_height = 100;
+						debug.append("2d.");
+						for (PollTransaction t : pts) {
+							if (t.completed==null || t.studentAnswers==null || t.studentAnswers.get(k)==null) continue;
+							if (q.isCorrect(t.studentAnswers.get(k))) histogram.put("correct",histogram.get("correct")+1);
+							else {
+								histogram.put("incorrect", histogram.get("incorrect") + 1);
+								if (otherResponses==null) otherResponses = t.studentAnswers.get(k);
+								else if (otherResponses.length()<500 && t.studentAnswers.get(k) != null && !otherResponses.toLowerCase().contains(t.studentAnswers.get(k).toLowerCase())) otherResponses += "; " + t.studentAnswers.get(k);
+							}
 						}
-						buf.append("</table>");
-					break;
-					case Question.ESSAY:
-						buf.append(histogram.get("N") + (histogram.get("N")==1?" response was ":" responses were ") + "submitted for this question.");
 						break;
+					case Question.NUMERIC:
+						histogram.put("correct", 0);
+						histogram.put("incorrect", 0);
+						//chart_height = 100;
+						debug.append("2e.");
+						for (PollTransaction t : pts) {
+							if (t.completed==null || t.studentAnswers==null || t.studentAnswers.get(k)==null) continue;
+							if (q.isCorrect(t.studentAnswers.get(k))) histogram.put("correct",histogram.get("correct")+1);
+							else {
+								histogram.put("incorrect", histogram.get("incorrect") + 1);
+								if (otherResponses==null) otherResponses = t.studentAnswers.get(k);
+								else if (otherResponses.length()<500 && t.studentAnswers.get(k) != null && !otherResponses.toLowerCase().contains(t.studentAnswers.get(k).toLowerCase())) otherResponses += "; " + t.studentAnswers.get(k);
+							}
+						}
+						break;
+					case Question.FIVE_STAR:
+						for (char nStars='1'; nStars<'6'; nStars++) histogram.put(String.valueOf(nStars),0);
+						for (PollTransaction t : pts) {
+							if (t.completed==null || t.studentAnswers==null || t.studentAnswers.get(k)==null) continue;
+							histogram.put(t.studentAnswers.get(k), histogram.get(t.studentAnswers.get(k))+1);
+						}
+						break;
+					case Question.ESSAY:
+						int nEssays = 0;
+						for (PollTransaction t :pts) {
+							if (t.completed==null || t.studentAnswers==null || t.studentAnswers.get(k)==null) continue;
+							nEssays++;
+						}
+						histogram.put("N", nEssays);
+						break;
+					default:
 					}
-				} else buf.append("No responses were submitted for this question.");
-				
-				buf.append("</div></div>"); // end of table cell and row
-				debug.append("endOfHistogram.");
-			
-			} catch (Exception e) {
-				buf.append(e.toString() + " " + e.getMessage() + "" + debug.toString() + "</div>");
+					debug.append("histogram initialized.");
+
+					// Calculate a scale factor for the maximum width of the graph bars based on the max % response
+
+					int maxValue = 0;
+					int totalValues = 0;
+					for (Entry<String,Integer> e : histogram.entrySet()) {
+						totalValues += e.getValue();
+						if (e.getValue() > maxValue) maxValue = e.getValue();
+					}
+					debug.append("maxValue="+maxValue+".totalValues="+totalValues+".");
+					buf.append("\n");
+
+					buf.append("<div id=chart_div" + i + " style='display: table-cell;vertical-align: top;'><br/>");  // histogram cell
+					if (totalValues>0) {
+						// Print a histogram as a table containing a horizontal bar graph:
+						switch (q.getQuestionType()) {
+						case Question.MULTIPLE_CHOICE:
+						case Question.TRUE_FALSE:
+						case Question.SELECT_MULTIPLE:
+							buf.append("Summary&nbsp;of&nbsp;responses&nbsp;received&nbsp;for&nbsp;this&nbsp;question:<p></p>");
+							buf.append("<table>");
+							for (Entry<String,Integer> e : histogram.entrySet()) {
+								buf.append("<tr><td>");
+								buf.append(e.getKey() + "&nbsp;");
+								buf.append("</td><td>");
+								buf.append("<div style='background-color: blue;display: inline-block; width: " + 150*e.getValue()/(totalValues+1) + "px;'>&nbsp;</div>");
+								buf.append("&nbsp;" + e.getValue() + "</td></tr>");
+							}
+							buf.append("</table>");
+							break;
+						case Question.FILL_IN_WORD:
+						case Question.NUMERIC:
+							buf.append("Summary&nbsp;of&nbsp;responses&nbsp;received&nbsp;for&nbsp;this&nbsp;question:<p></p>");
+							if (q.hasACorrectAnswer()) {
+								buf.append("<table>");
+								buf.append("<tr><td>");
+								buf.append("correct" + "&nbsp;");
+								buf.append("</td><td>");
+								buf.append("<div style='background-color: blue;display: inline-block; width: " + 150*histogram.get("correct")/(totalValues+1) + "px;'>&nbsp;</div>");
+								buf.append("&nbsp;" + histogram.get("correct") + "</td></tr>");
+								buf.append("<tr><td>");
+								buf.append("incorrect" + "&nbsp;");
+								buf.append("</td><td>");
+								buf.append("<div style='background-color: blue;display: inline-block; width: " + 150*histogram.get("incorrect")/(totalValues+1) + "px;'>&nbsp;</div>");
+								buf.append("&nbsp;" + histogram.get("incorrect") + "</td></tr>");
+								if (otherResponses != null) buf.append("<tr><td colspan=2><br />Incorrect Responses: " + otherResponses + "</td></tr>");							
+								buf.append("</table>");
+							} else buf.append(otherResponses);
+							break;	
+						case Question.FIVE_STAR:
+							buf.append("Summary&nbsp;of&nbsp;responses&nbsp;received&nbsp;for&nbsp;this&nbsp;question:<p></p>");
+							buf.append("<table>");
+							for (char nStars='5'; nStars>='1'; nStars--) {
+								buf.append("<tr><td>");
+								buf.append(String.valueOf(nStars) + (nStars=='1'?"&nbsp;star":"&nbsp;stars") + "&nbsp;");
+								buf.append("</td><td>");
+								buf.append("<div style='background-color: blue;display: inline-block; width: " + 150*histogram.get(String.valueOf(nStars))/(totalValues+1) + "px;'>&nbsp;</div>");
+								buf.append("&nbsp;" + histogram.get(String.valueOf(nStars)) + "</td></tr>");
+							}
+							buf.append("</table>");
+							break;
+						case Question.ESSAY:
+							buf.append(histogram.get("N") + (histogram.get("N")==1?" response was ":" responses were ") + "submitted for this question.");
+							break;
+						}
+					} else buf.append("No responses were submitted for this question.");
+
+					buf.append("</div></div>"); // end of table cell and row
+					debug.append("endOfHistogram.");
+
+				} catch (Exception e) {
+					buf.append(e.toString() + " " + e.getMessage() + "" + debug.toString() + "</div>");
+				}
 			}
-		}
-		buf.append("</div>");  // end of table
+			buf.append("</div>");  // end of table
 		} catch (Exception e) {
 			buf.append(e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString());
 		}

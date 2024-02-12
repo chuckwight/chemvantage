@@ -117,14 +117,11 @@ public class LTIv1p3Launch extends HttpServlet {
 			}
 		} catch (Exception e) {	
 			String message = "LTI Launch Failure. Status 401: " + (e.getMessage()==null?e.toString():e.getMessage());
-			//sendEmailToAdmin(message);
 			response.sendError(401, message);
 		}
 	}
 
-	void ltiv1p3LaunchRequest(HttpServletRequest request,HttpServletResponse response) 
-			throws Exception {
-		//StringBuffer debug = new StringBuffer();
+	void ltiv1p3LaunchRequest(HttpServletRequest request,HttpServletResponse response) throws Exception {
 		JsonObject state = validateStateToken(request); // ensures proper OIDC authorization flow completed			
 
 		Deployment d = validateIdToken(request);  // returns the validated Deployment
@@ -380,20 +377,19 @@ public class LTIv1p3Launch extends HttpServlet {
 			default: return;
 			}
 		} else {
-			//String state = request.getParameter("state");
-			//String nonce = JWT.decode(state).getClaim("nonce").asString();			
-			//out.println(validationPage(user,myAssignment.assignmentType,nonce));
 			response.sendRedirect(Subject.serverUrl + "/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
 		}
 	}
 	
 	void launchSubmissionReview(HttpServletResponse response, JsonObject claims, Deployment d, User u) throws Exception {
 		StringBuffer debug = new StringBuffer("Debug: ");
-		if (!u.isInstructor()) throw new Exception("Instructor role required.");
+		//if (!u.isInstructor()) throw new Exception("Instructor role required.");
 		
 		try {
 			JsonElement for_user = claims.get("https://purl.imsglobal.org/spec/lti/claim/for_user");
 			String for_user_id = for_user==null?null:claims.get("iss").getAsString() + "/" + for_user.getAsJsonObject().get("user_id").getAsString();
+			//if (!u.isInstructor()) for_user_id = u.getId();  // bulletproofing: only instructors can view others'scores
+			String for_user_hashedId = for_user_id==null?null:Subject.hashId(for_user_id);
 			String resourceLinkId = claims.get("https://purl.imsglobal.org/spec/lti/claim/resource_link").getAsJsonObject().get("id").getAsString();
 			Assignment a = ofy().load().type(Assignment.class).filter("domain",d.platform_deployment_id).filter("resourceLinkId",resourceLinkId).first().safe();
 			u.setAssignment(a.id);
@@ -403,19 +399,28 @@ public class LTIv1p3Launch extends HttpServlet {
 			
 			switch (a.assignmentType) {
 			case "Quiz":
-				out.println(Subject.header() + (for_user_id==null?Quiz.showSummary(u,a):Quiz.showScores(u,a,Subject.hashId(for_user_id),null)) + Subject.footer);
+				if (u.isInstructor()) out.println(Subject.header() + (for_user_id==null?Quiz.showSummary(u,a):Quiz.showScores(u,a,for_user_hashedId,null)) + Subject.footer);
+				else out.println(Subject.header() + Quiz.showScores(u,a,null,null) + Subject.footer);
 				break;
 			case "Homework":
-				out.println(Subject.header() + (for_user_id==null?Homework.showSummary(u,a):Homework.reviewSubmissions(u,a,for_user_id,null)) + Subject.footer);
+				if (u.isInstructor()) out.println(Subject.header() + (for_user_id==null?Homework.showSummary(u,a):Homework.reviewSubmissions(u,a,for_user_id,null)) + Subject.footer);
+				else out.println(Subject.header() + Homework.showScores(u,a,null) + Subject.footer);
 				break;
 			case "PracticeExam":
-				out.println(Subject.header() + (for_user_id==null?PracticeExam.reviewExamScores(u,a):PracticeExam.showExamScores(u,a,for_user_id,null)) + Subject.footer);
+				out.println(Subject.header() + (for_user_id==null?PracticeExam.reviewExamScores(u,a):PracticeExam.showExamScores(u,a,for_user_id)) + Subject.footer);
 				break;
 			case "PlacementExam":
 				out.println(Subject.header() + (for_user_id==null?PlacementExam.reviewExamScores(u,a):PlacementExam.submissionReview(u,a,for_user_id)) + Subject.footer);
 				break;
+			case "Poll":
+				out.println(Subject.header() + Poll.resultsPage(u,for_user_hashedId,a) + Subject.footer);
+				break;
+			case "SmartText":
+				out.println(Subject.header() + SmartText.reviewScore(u,a,for_user_id) + Subject.footer);
+				break;
+			case "Video":
 			default:
-				out.println(Subject.header() + "<h1>Submission Review</h1>" + "<h2>Sorry, submission review is not currently available for this type of ChemVantage assignment.</h2>" + Subject.footer);
+				out.println(Subject.header() + "<h1>Video Transactions</h1>" + "<h4>Sorry, submission review is not currently available for this type of ChemVantage assignment.</h4>" + Subject.footer);
 			}
 		} catch (Exception e) {
 			throw new Exception("Submission Review Launch Failed: " + (e.getMessage()==null?e.toString():e.getMessage()) + "\n" + debug.toString() + "\n" + claims.toString());

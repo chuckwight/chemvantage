@@ -640,14 +640,13 @@ public class PracticeExam extends HttpServlet {
 		return buf.toString();
 	}
 	
-	static String showExamScores(User user, Assignment a, String for_user_id, String for_user_name) {
+	static String showExamScores(User user, Assignment a, String for_user_id) {
 		// This method shows a table of PracticeExamTransaction entities for one user on the assignment
 		// with links to review individual submissions
 		StringBuffer buf = new StringBuffer();
-		if (!user.isInstructor()) return "Unauthorized.";
+		if (!user.isInstructor()) for_user_id = user.getId();
 		try {
 			buf.append("<h1>General Chemistry Exam</h1><h2>Transactions</h2>"
-					+ (for_user_name==null?"":"Name: " + for_user_name + "<br/>")
 					+ "Exam: " + a.title + "<br/>"
 					+ "Date: " + new Date() + "<br/><br/>");
 			String for_user_hashed_id = Subject.hashId(for_user_id);

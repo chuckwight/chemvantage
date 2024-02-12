@@ -384,16 +384,47 @@ public class SmartText extends HttpServlet {
 
 		return buf.toString(); 
 	}
-
-	static String reviewScores(User user, Assignment a) {
+	
+	static String reviewScore (User user, Assignment a, String for_user_id) {
 		StringBuffer buf = new StringBuffer();
-		if (!user.isInstructor()) return "You must be logged in as the instructor to view this page.";
-
+		buf.append("<h1>Reading Assignment</h1>"
+				+ "<h2>" + (a.title==null?"":a.title) + "</h2>");
+		buf.append("Valid: " + new Date() + "<p>");
+		
+		// students can only view their own scores
+		if (!user.isInstructor()) for_user_id = user.getId();
+		
+		// calculate the user's current Score for this assignment
+		Score myScore = Score.getInstance(for_user_id, a);
+		
+		buf.append("ChemVantage Score: " + (myScore==null?"0":myScore.getPctScore() + "%<br/>"));
+		
+		String lmsScore = null;
+		try {
+			lmsScore = LTIMessage.readUserScore(a, for_user_id);
+			double lmsPctScore = Double.parseDouble(lmsScore);
+			if (Math.abs(lmsPctScore-myScore.getPctScore())<1.0) buf.append("This score is correctly recorded in your LMS grade book.<br/><br/>");
+			else buf.append("The score recorded in your class LMS is " + Math.round(10.*lmsPctScore)/10. + "%.<br/>The difference may be due to "
+					+ "enforcement of assignment deadlines, grading policies and/or instructor discretion.<br/><br/>");
+		} catch (Exception e) {
+			buf.append("The score in your LMS grade book is unavailable.<br/><br/>");
+		}
+		
+		return buf.toString();
+	}
+	
+	static String reviewScores(User user, Assignment a) throws Exception {
+		if (!user.isInstructor()) throw new Exception("Unauthorized.");
+		// from here on, User is the instructor
+		
+		StringBuffer buf = new StringBuffer();
+		buf.append("<h1>Reading Assignment</h1>"
+				+ "<h2>" + (a.title==null?"":a.title) + "</h2>");
+		buf.append("Valid: " + new Date() + "<p>");
+		
 		try {
 			if (a.lti_nrps_context_memberships_url==null) throw new Exception("No Names and Roles Provisioning support.");
 
-			buf.append("<h1>Reading Assignment</h1><h2>" + (a.title==null?"":a.title) + "</h2>");
-			buf.append("Valid: " + new Date() + "<p>");
 			buf.append("The roster below is obtained using the Names and Role Provisioning service offered by your learning management system, "
 					+ "and may or may not include user's names or emails, depending on the settings of your LMS.<br/><br/>");
 

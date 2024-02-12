@@ -640,16 +640,15 @@ public class Homework extends HttpServlet {
 	}
 
 	static String showScores(User user, Assignment a, String forUserId) {
-		if (!user.isInstructor() && forUserId!=null) return "<H1>Access denied.</H1>";
-		if (forUserId==null) forUserId = user.getId();  // user is viewing their own scores
+		if (!user.isInstructor() || forUserId==null) forUserId = user.getId();  // user is viewing their own scores
 		
 		StringBuffer buf = new StringBuffer("<h1>Homework Transactions</h1>");
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 		Date now = new Date();
 		
 		try {
+			buf.append("<h2>Topic: "+ a.title + "</h2>");
 			buf.append("Assignment Number: " + a.id + "<br>");
-			buf.append("Topic: "+ a.title + "<br>");
 			buf.append("Valid: " + df.format(now) + "<p>");
 			
 			List<HWTransaction> hwts = ofy().load().type(HWTransaction.class).filter("userId",Subject.hashId(forUserId)).filter("assignmentId",a.id).order("graded").list();
@@ -791,8 +790,9 @@ public class Homework extends HttpServlet {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Debug: ");
 		try {
-			if (!user.isInstructor()) return "You must be the instructor to view this page.";
-			String forUserHashedId = Subject.hashId(forUserId);
+			// this line restricts non-instructor users to viewing their own scores
+			String forUserHashedId = user.isInstructor()?Subject.hashId(forUserId):user.getHashedId();
+			
 			Map<Key<Question>,Question> questions = ofy().load().keys(a.questionKeys);
 			List<HWTransaction> transactions = ofy().load().type(HWTransaction.class).filter("userId",forUserHashedId).filter("assignmentId",a.id).order("-graded").list();
 			

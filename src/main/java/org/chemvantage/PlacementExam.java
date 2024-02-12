@@ -782,28 +782,26 @@ public class PlacementExam extends HttpServlet {
 
 		if (!user.getId().equals(forUserId) && !user.isInstructor()) return "Access denied.";
 
-		//Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
+		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+		Date now = new Date();
+		
 		String forUserHashedId = Subject.hashId(forUserId);
 		List<PlacementExamTransaction> pets = ofy().load().type(PlacementExamTransaction.class).filter("userId",forUserHashedId).filter("assignmentId",a.id).order("downloaded").list();
 		if (pets.size()==0) {
 			buf.append("Sorry, we did not find any records for " + (user.hashedId.equals(forUserHashedId)?"you":"this user") + " in the database for this assignment.<p>");
 		} else {				
-			Score s = null;
-			try { // retrieve the score and ensure that it is up to date
-				s = ofy().load().key(key(key(User.class,user.getId()),Score.class,a.id)).safe();
-				if (s.numberOfAttempts != pets.size()) throw new Exception();
-			} catch (Exception e) { // create a fresh Score entity from scratch
-				s = Score.getInstance(user.getId(), a);
-				ofy().save().entity(s);
-			}
+			Score s = Score.getInstance(forUserId, a);
+			ofy().save().entity(s);
 
-			buf.append("<h3>Your Scores for This Placement Exam Assignment</h3>");
+			buf.append("<h1>Placement Exam Transactions</h1>"
+					+ "Assignment ID: " + a.id + "<br/>"
+					+ "Valid: " + df.format(now) + "<p>");
+			
 
-			buf.append("The best score for this user on this assignment is " + Math.round(s.getPctScore()) + "%.<br>");
+			buf.append("The best score for this assignment is " + Math.round(s.getPctScore()) + "%.<br>");
 
 			buf.append("<table><tr><th>Transaction Number</th><th>Downloaded</th><th>Placement Exam Score (percent)</th></tr>");
 
-			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
 			int score = 0;
 			int possibleScore = 0;
 			PlacementExamTransaction bestPt = null;
@@ -816,11 +814,15 @@ public class PlacementExam extends HttpServlet {
 					possibleScore += pet.possibleScores[i];
 				}
 				int pct = (possibleScore>0?score*100/possibleScore:0);
-				if (pct >= bestPct) bestPt = pet;
+				if (pct >= bestPct) {
+					bestPct = pct;    // track the best percentage overall score
+					bestPt = pet;     // track the transaction with the best overall score
+				}
 
 				buf.append("<tr><td>" + pet.id + "</td><td>" + df.format(pet.downloaded) + "</td><td align=center>" + (pet.graded==null?"-":pct + "%") +  "</td></tr>");
 			}
-			buf.append("</table><br>Missing scores indicate assignments that were downloaded but not submitted for scoring.<p>");
+			buf.append("</table><br>"
+					+ "Missing scores indicate assignments that were downloaded but not submitted for scoring.<p>");
 			
 			List<String> conceptTitles = new ArrayList<String>();
 			for (int i=0;i<a.conceptIds.size();i++) conceptTitles.add(ofy().load().type(Concept.class).id(a.conceptIds.get(i)).safe().title);
@@ -858,7 +860,7 @@ public class PlacementExam extends HttpServlet {
 
 			List<Concept> concepts = new ArrayList<Concept>(ofy().load().type(Concept.class).ids(a.conceptIds).values());
 
-			buf.append("<h2>Placement Exam Assignment Results</h2>"
+			buf.append("<h1>Placement Exam Assignment Results</h1>"
 					+ "Assignment ID: " + a.id + "<br>"
 					+ "Created: " + a.created + "<br>"
 					+ "Topics covered:<ol>");

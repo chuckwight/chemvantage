@@ -543,10 +543,10 @@ public class Quiz extends HttpServlet {
 		try {
 			buf.append("<h1>Quiz Transactions</h1>");
 			if (for_user_name != null) buf.append("Name: " + for_user_name + "<br/>");
-			buf.append("Topic: "+ a.title + "<br>");
-			//buf.append("Assignment ID: " + a.id + "<br/>");
+			buf.append("<h2?Topic: "+ a.title + "</h2>");
+			buf.append("Assignment ID: " + a.id + "<br/>");
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-			buf.append("Valid: " + df.format(new Date()) + "<br/><br/>");
+			buf.append("Valid: " + df.format(new Date()) + "<p>");
 			
 			List<QuizTransaction> qts = ofy().load().type(QuizTransaction.class).filter("userId",for_user_hashed_id).filter("assignmentId",a.id).order("downloaded").list();
 			if (qts.size()==0) {

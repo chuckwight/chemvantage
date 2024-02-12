@@ -404,14 +404,16 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		// This method uses the LTIv1p3 message protocol to retrieve a user's score from the LMS.
 		// The lineitem URL corresponds to the LMS grade book column fpr the Assignment entity,
 		// and the specific cell is identified by the user_id value defined by the LMS platform
+		// This method accepts either the full ChemVantage userId or the raw LMS user_id
 		StringBuffer debug = new StringBuffer("Debug: ");
 		HttpURLConnection uc = null;
 		try {
 			String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly";
 			String bearerAuth = "Bearer " + getAccessToken(a.domain,scope);
-			//debug.append(bearerAuth + "<br/>");
 			
-			String user_id = userId.substring(userId.lastIndexOf("/")+1); // stripped of the platform_id and "/"
+			// If necessary, convert the full ChemVantage userId (with domain and slash) to raw LMNS user_ud
+			int lastSlash = userId.lastIndexOf("/");  // returns -1 if no slashes (raw LMS user_id)
+			String user_id = lastSlash<0?userId:userId.substring(lastSlash+1); // stripped of the platform_id and "/"
 			
 			if (a.lti_ags_lineitem_url==null) throw new Exception("the lineitem URL for this assignment is unknown");
 			
@@ -675,21 +677,5 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			}
 			return membership;
 		}
-/*
-	static void sendEmailToAdmin(String subject,String message) {
-		Properties props = new Properties();
-		Session session = Session.getDefaultInstance(props, null);
 
-		try {
-			Message msg = new MimeMessage(session);
-			msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-			msg.addRecipient(Message.RecipientType.TO,
-					new InternetAddress("admin@chemvantage.org", "ChemVantage"));
-			msg.setSubject(subject);
-			msg.setContent(message,"text/html");
-			Transport.send(msg);
-		} catch (Exception e) {
-		}
-	}
-*/
 }
