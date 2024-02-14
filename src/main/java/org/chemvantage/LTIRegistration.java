@@ -163,7 +163,7 @@ public class LTIRegistration extends HttpServlet {
 						+ debug.toString();
 				Utilities.sendEmail("ChemVantage Administrator","admin@chemvantage.org","Dynamic Registration Error",emailmessage);
 			}
-			out.println(Subject.header() + Subject.banner + registrationForm(request,message) + Subject.footer);
+			out.println(Subject.header() + registrationForm(request,message) + Subject.footer);
 		}
 	}
 		
@@ -174,6 +174,7 @@ public class LTIRegistration extends HttpServlet {
 		String url = request.getParameter("url");
 		String lms = request.getParameter("lms");
 		String lms_other = request.getParameter("lms_other");
+		String reg_code = request.getParameter("reg_code");
 		String AcceptChemVantageTOS = request.getParameter("AcceptChemVantageTOS");
 		String openid_configuration = request.getParameter("openid_configuration");
 		String registration_token = request.getParameter("registration_token");
@@ -208,27 +209,31 @@ public class LTIRegistration extends HttpServlet {
 			buf.append("<input type=hidden name=openid_configuration value='" + openid_configuration + "' />");
 		} else {
 			buf.append("<fieldset style='width:400px'><legend>Type of Learning Management System:<br/></legend>\n"
-					+ "<label><input type=radio name=lms value=blackboard " + ((lms!=null && lms.equals("blackboard"))?"checked":"") + "  />Blackboard</label><br/>\n"
-					+ "<label><input type=radio name=lms value=brightspace " + ((lms!=null && lms.equals("brightspace"))?"checked":"") + "  />Brightspace</label><br/>\n"
-					+ "<label><input type=radio name=lms value=canvas " + ((lms!=null && lms.equals("canvas"))?"checked":"") + "  />Canvas</label><br/>\n"
-					+ "<label><input type=radio name=lms value=moodle " + ((lms!=null && lms.equals("moodle"))?"checked":"") + "  />Moodle</label><br/>\n"
-					+ "<label><input type=radio name=lms value=sakai " + ((lms!=null && lms.equals("sakai"))?"checked":"") + "  />Sakai</label><br/>\n"
-					+ "<label><input type=radio name=lms value=schoology " + ((lms!=null && lms.equals("schoology"))?"checked":"") + "  />Schoology</label><br/>\n"
-					+ "<label><input type=radio name=lms id=other value=other " + ((lms!=null && lms.equals("other"))?"checked":"") + "  />Other:</label>\n"
+					+ "<label><input type=radio name=lms required value=blackboard " + ((lms!=null && lms.equals("blackboard"))?"checked":"") + "  />Blackboard</label><br/>\n"
+					+ "<label><input type=radio name=lms required value=brightspace " + ((lms!=null && lms.equals("brightspace"))?"checked":"") + "  />Brightspace</label><br/>\n"
+					+ "<label><input type=radio name=lms required value=canvas " + ((lms!=null && lms.equals("canvas"))?"checked":"") + "  />Canvas</label><br/>\n"
+					+ "<label><input type=radio name=lms required value=moodle " + ((lms!=null && lms.equals("moodle"))?"checked":"") + "  />Moodle</label><br/>\n"
+					+ "<label><input type=radio name=lms required value=sakai " + ((lms!=null && lms.equals("sakai"))?"checked":"") + "  />Sakai</label><br/>\n"
+					+ "<label><input type=radio name=lms required value=schoology " + ((lms!=null && lms.equals("schoology"))?"checked":"") + "  />Schoology</label><br/>\n"
+					+ "<label><input type=radio name=lms required id=other value=other " + ((lms!=null && lms.equals("other"))?"checked":"") + "  />Other:</label>\n"
 					+ "<label><input type=text name=lms_other value='" + (lms_other==null?"":lms_other) + "' placeholder='(specify)' onFocus=document.getElementById('other').checked=true; /></label>\n"
 					+ "</fieldset>\n"
 					+ "<br/><br/>");
 		}
-		
-		buf.append("Pricing:"
-				+ "  <ul>"
-				+ "	<li>LTI registration and instructor accounts are free.</li>"
-				+ "	<li>Each student account costs only $2 USD per month or $8 USD per semester (5 months).</li>"
-				+ "	<li>Institutions can purchase student licenses in quantity for as little as $2 USD per year.</li>"
-				+ "  </ul>\n");
-		
-		buf.append("<label><input type=checkbox name=AcceptChemVantageTOS value=true " + ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") + " />Accept the <a href=/terms_and_conditions.html target=_blank aria-label='opens new tab'>ChemVantage Terms of Service</a></label><br/><br/>\n");
-		
+
+		if (Subject.projectId.equals("dev-vantage-hrd")) {
+			buf.append("Enter your registration code here: <input type=text required name=reg_code value='" + (reg_code==null?"":reg_code) + "' /><br/>"
+					+ "To purchase a registration code, please contact us at admin@chemvantage.org<br/><br/>");
+		} else {
+			buf.append("Pricing:"
+					+ "<ul>"
+					+ "	<li>LTI registration and instructor accounts are free.</li>"
+					+ "	<li>Each student account costs only $2 USD per month or $8 USD per semester (5 months).</li>"
+					+ "	<li>Institutions can purchase student licenses in quantity for as little as $2 USD per year.</li>"
+					+ "</ul>\n");
+		}
+		buf.append("<label><input type=checkbox required name=AcceptChemVantageTOS value=true " + ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") + " />Accept the <a href=/terms_and_conditions.html target=_blank aria-label='opens new tab'>ChemVantage Terms of Service</a></label><br/><br/>\n");
+
 		if (!dynamic) {  // show recaptcha tool
 			buf.append("<div class='g-recaptcha' data-sitekey='" + Subject.getReCaptchaSiteKey() + "' aria-label='Google Recaptcha'></div><br/><br/>"
 					+ "<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>\n");
@@ -268,12 +273,20 @@ public class LTIRegistration extends HttpServlet {
 			if (lms==null) throw new Exception("Please select the type of LMS that you are connecting to ChemVantage. ");
 			if ("other".equals(lms) && (lms_other==null || lms_other.isEmpty())) throw new Exception("Please describe the type of LMS that you are connecting to ChemVantage. ");
 			if ("other".equals(lms)) lms = lms_other;
-			if (!reCaptchaOK(request)) throw new Exception("ReCaptcha tool was unverified. Please try again. ");
+			if (!request.getServerName().equals("localhost") && !reCaptchaOK(request)) throw new Exception("ReCaptcha tool was unverified. Please try again. ");
 		}
 		
 		if (!"true".equals(request.getParameter("AcceptChemVantageTOS"))) throw new Exception("Please read and accept the ChemVantage Terms of Service. ");
 
-		String iss = request.getServerName().contains("dev-vantage")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
+		String iss = Subject.projectId.equals("dev-vantage-hrd")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
+		
+		if (Subject.projectId.equals("dev-vantage-hrd") ) {
+			String reg_code = request.getParameter("reg_code");
+			Date now = new Date();
+			Date exp = new Date(User.encode(Long.parseLong(reg_code,16)));
+    		Date aMonthFromNow = new Date(now.getTime() + 2678400000L);
+    		if (exp.before(now) || exp.after(aMonthFromNow)) throw new Exception("Registration code was invalid or expired.");
+		}
 		
 		// Construct a new registration token
 		Date now = new Date();
@@ -336,7 +349,7 @@ public class LTIRegistration extends HttpServlet {
 		buf.append("Thank you for your ChemVantage registration request.<p>");
 		
 		if (iss.contains("dev-vantage-hrd.appspot.com")) {
-			buf.append("ChemVantage is pleased to provide free access to our software development server for testing LTI connections. "
+			buf.append("ChemVantage is pleased to provide access to our software development server for testing LTI connections. "
 					+ "Please note that the server is sometimes in an unstable state, and accounts may be reset or even deleted at any time. ");
 		} else {
 			buf.append("<h3>Getting Started</h3>"
@@ -811,7 +824,7 @@ public class LTIRegistration extends HttpServlet {
 				+ "Please be sure to activate the deployment in your LMS.<br/><br/>");
 
 		if (request.getServerName().contains("dev-vantage-hrd.appspot.com")) {
-			buf.append("ChemVantage is pleased to provide free access to our software development server for testing LTI connections. "
+			buf.append("ChemVantage is pleased to provide access to our software development server for testing LTI connections. "
 					+ "Please note that the server is sometimes in an unstable state, and accounts may be reset or even deleted at any time.<br/><br/>");
 		} else {
 			buf.append("Your ChemVantage has been fully activated and provisioned with 1 free student license for testing. Each unique student "
