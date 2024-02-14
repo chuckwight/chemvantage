@@ -154,6 +154,10 @@ public class LTIDeepLinks extends HttpServlet {
 			
 			if (d==null) throw new Exception("The deployment was not found in the ChemVantage database.");
 			
+			if (d.expires != null && d.expires.before(new Date())) d.status = "blocked";
+			if ("blocked".equals(d.status)) throw new Exception("Sorry, we were unable to launch ChemVantage from this "
+					+ "account. Please contact admin@chemvantage.org for assistance to reactivate the account. Thank you.");
+			
 			// validate the id_token audience:
 			List<String> aud = id_token.getAudience();
 			if (aud.size()==1 && aud.get(0).contentEquals(d.client_id)); // OK, continue
