@@ -73,6 +73,7 @@ public class VideoQuiz extends HttpServlet {
 				videoId = videos.get(rand.nextInt(videos.size())).id;
 			} else {
 				a = ofy().load().type(Assignment.class).id(assignmentId).now();
+				videoId = a.videoId;
 			}
 			
 			int segment = 0;
@@ -102,7 +103,8 @@ public class VideoQuiz extends HttpServlet {
 				else response.sendRedirect(Subject.serverUrl + "/VideoQuiz?UserRequest=ShowVideo&VideoId=" + videoId + "&sig=" + user.getTokenSignature());
 			}			
 		} catch (Exception e) {
-			response.sendRedirect(Subject.serverUrl + "/Logout?sig=" + request.getParameter("sig"));
+			out.println("Error: " + e.getMessage()==null?e.toString():e.getMessage());
+			//response.sendRedirect(Subject.serverUrl + "/Logout?sig=" + request.getParameter("sig"));
 		}
 	}
 
@@ -145,7 +147,9 @@ public class VideoQuiz extends HttpServlet {
 	
 	public String showVideo(User user, long videoId, int segment) throws Exception {
 		StringBuffer buf = new StringBuffer();
+		StringBuffer debug = new StringBuffer();
 		
+		try {
 		int start = 0;
 		int end = -1;
 		long assignmentId = user.getAssignmentId();
@@ -155,17 +159,20 @@ public class VideoQuiz extends HttpServlet {
 			} catch (Exception e) {
 			}
 		}
+		debug.append("Segment:" + segment  + " videoId:" + videoId + " ");
+		
 		Video v = ofy().load().type(Video.class).id(videoId).now();
-		int[] breaks = v.breaks;
 		String videoSerialNumber = v.serialNumber;
 		
-		if (v.breaks == null)
-			v.breaks = new int[0];
-
+		if (v.breaks == null) v.breaks = new int[0];
+		String breaks = Arrays.toString(v.breaks);
+		
 		if (segment > 0)
 			start = v.breaks[segment - 1]; // start at the end of the last segment
 		if (v.breaks.length > segment)
 			end = v.breaks[segment]; // play to this value and stop
+		
+		debug.append("start:" + start + " end:" + end + " breaks:" + breaks + " ");
 		
 		buf.append("<h1>Video</h1>\n"
 				+ "<div id=video_div style='width:560px;height:315px'></div>\n"
@@ -181,7 +188,7 @@ public class VideoQuiz extends HttpServlet {
 				+ "var quiz_div = document.getElementById('quiz_div');\n"
 				+ "var sig = '" + user.getTokenSignature() + "';\n"
 				+ "var segment = " + segment + ";\n"
-				+ "var breaks = " + Arrays.toString(breaks) + ";\n"
+				+ "var breaks = " + breaks + ";\n"
 				+ "var videoSerialNumber = '" + videoSerialNumber + "';\n"
 				+ "var start = " + start + ";\n"
 				+ "var end = " + end + ";\n"
@@ -216,10 +223,12 @@ public class VideoQuiz extends HttpServlet {
 				+ "function onPlayerStateChange(event) {\n"
 				+ "	switch (event.data) {\n"
 				+ "	  case YT.PlayerState.ENDED:\n"
+				+ "    try {"
 				+ "		if (document.exitFullscreen) document.exitFullscreen();\n"
 				+ "		else if (document.webkitExitFullscreen) document.webkitExitFullscreen();\n"
 				+ "	    else if (document.mozCancelFullScreen) document.mozCancelFullScreen();\n"
 				+ "	    else if (document.msExitFullscreen) document.msExitFullscreen();\n"
+				+ "    } catch (e) {}"
 				+ "		video_div.style.display = 'none';\n"
 				+ "		quiz_div.style.display = '';\n"
 				+ "		break;\n"
@@ -250,26 +259,25 @@ public class VideoQuiz extends HttpServlet {
 				+ "\n"
 				+ "function ajaxSubmitQuiz() {\n"
 				+ "  try {\n"
-				+ "	var xmlhttp=GetXmlHttpObject();\n"
-				+ "	xmlhttp.onreadystatechange=function() {\n"
-				+ "	  if (xmlhttp.readyState==4) {\n"
+				+ "	  var xmlhttp=GetXmlHttpObject();\n"
+				+ "	  xmlhttp.onreadystatechange=function() {\n"
+				+ "	   if (xmlhttp.readyState==4) {\n"
 				+ "		quiz_div.style.display = start>=0?'none':'';\n"
 				+ "		quiz_div.innerHTML = xmlhttp.responseText;\n"
+				+ "	   }\n"
 				+ "	  }\n"
-				+ "	}\n"
-				+ "	xmlhttp.open('POST','/VideoQuiz',true);\n"
-				+ "	xmlhttp.setRequestHeader('Content-Type','application/x-www-form-urlencoded');\n"
-				+ "	var formData = new FormData(document.getElementById('quizlet'));\n"
-				+ "	xmlhttp.send(urlencodeFormData(formData));\n"
+				+ "	  xmlhttp.open('POST','/VideoQuiz',true);\n"
+				+ "	  xmlhttp.setRequestHeader('Content-Type','application/x-www-form-urlencoded');\n"
+				+ "	  var formData = new FormData(document.getElementById('quizlet'));\n"
+				+ "	  xmlhttp.send(urlencodeFormData(formData));\n"
 				+ "  } catch (e) {\n"
 				+ "	  quiz_div.innerHTML = e.message;  \n"
 				+ "  }\n"
-				+ "   \n"
 				+ "  segment++;\n"
 				+ "  start = breaks[segment-1];\n"
 				+ "  end = (breaks.length > segment?breaks[segment]:-1);  // play to this value or stop at end\n"
 				+ "  try {\n"
-				+ "	if (start>=0) player.loadVideoById({'videoId':videoSerialNumber,'startSeconds':start,'endSeconds':end});\n"
+				+ "	  if (start>=0) player.loadVideoById({'videoId':videoSerialNumber,'startSeconds':start,'endSeconds':end});\n"
 				+ "  } catch (e) {}\n"
 				+ "  \n"
 				+ "  return false;\n"
@@ -283,8 +291,8 @@ public class VideoQuiz extends HttpServlet {
 				+ "    }\n"
 				+ "    return params.toString();\n"
 				+ "}\n"
-/*
 				+ "function showWorkBox(qid) {}\n"
+/*
 				+ "\n"
 				+ "var star1 = new Image(); star1.src='images/star1.gif';\n"
 				+ "var star2 = new Image(); star2.src='images/star2.gif';\n"
@@ -368,6 +376,9 @@ public class VideoQuiz extends HttpServlet {
 				+ "}\n"
 */
 				+ "</script>");
+		} catch (Exception e) {
+			return (e.getMessage()==null?e.toString():e.getMessage()) + debug.toString();
+		}
 		return buf.toString();
 	}
 
@@ -535,8 +546,9 @@ public class VideoQuiz extends HttpServlet {
 			vt.score = 0;
 			for (int s : vt.quizletScores) vt.score += s;
 		}				
-		vt.graded = new Date();  // vt will be saved after missed Questions List is printed later (line 322)
-
+		vt.graded = new Date();  
+		
+		ofy().save().entity(vt).now();  // save vt now to calculate Score and in case noQuizlets
 		// Try to post the score to the student's LMS:
 		// Retrieve the assignment, if it exists (may be null for anonymous users)
 		boolean reportScoreToLms = false;
@@ -551,48 +563,49 @@ public class VideoQuiz extends HttpServlet {
 		}
 		if (noQuizlets) {
 			buf.append("<h4>Thanks for watching</h4>");
+			if (vt.score == 1) buf.append("You have received full credit for watching the video.<br/><br/>");
+
 			buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
-			return buf.toString();
-		}
-
-		buf.append("<h3>Video Quiz Results - " + vt.videoTitle + "</h3>\n");
-
-		if (user.isAnonymous()) buf.append("<font color=red>Anonymous User</font><br>");
-		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
-		buf.append(df.format(new Date()));
-
-		buf.append("<h4>Your score on this quiz is " + vt.score + " point" + (vt.score==1?"":"s") + " out of a possible " + vt.possibleScore + " points.</h4>\n");
-
-		// Seek some feedback for ChemVantage:
-		if (vt.possibleScore > 0 && vt.score == vt.possibleScore) {
-			buf.append("<H2>Congratulations on a perfect score! Good job.</H2>\n");
-			buf.append("Please rate your overall experience with ChemVantage:<br />\n"
-					+ "<span id='vote' style='font-family:tahoma; color:red;'>(click a star):</span><br>");
-
-			for (int iStar=1;iStar<6;iStar++) {
-				buf.append("<img src='images/star1.gif' id='" + iStar + "' "
-						+ "style='width:30px; height:30px;' "
-						+ "onmouseover=showStars(this.id); onClick=setStars(this.id); onmouseout=showStars(0); />");
-			}
-			buf.append("<span id=sliderspan style='opacity:0'>"
-					+ "<input type=range id=slider min=1 max=5 value=3 onfocus=document.getElementById('sliderspan').style='opacity:1';showStars(this.value); oninput=showStars(this.value);>"
-					+ "<button onClick=setStars(document.getElementById('slider').value);>submit</button>"
-					+ "</span>");
-			buf.append("<p>");
-
 		} else {
-			buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
 
-			String missedQuestions = "";
-			for (String mq : vt.missedQuestions) missedQuestions += mq;
+			buf.append("<h3>Video Quiz Results - " + vt.videoTitle + "</h3>\n");
 
-			if (!missedQuestions.isEmpty()) { // Give the correct answers to missed questions:
-				buf.append("The following questions were answered incorrectly:<ol>" + missedQuestions + "</ol>");
+			if (user.isAnonymous()) buf.append("<font color=red>Anonymous User</font><br>");
+			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
+			buf.append(df.format(new Date()));
+
+			buf.append("<h4>Your score on this quiz is " + vt.score + " point" + (vt.score==1?"":"s") + " out of a possible " + vt.possibleScore + " points.</h4>\n");
+
+			// Seek some feedback for ChemVantage:
+			if (vt.possibleScore > 0 && vt.score == vt.possibleScore) {
+				buf.append("<H2>Congratulations on a perfect score! Good job.</H2>\n");
+				buf.append("Please rate your overall experience with ChemVantage:<br />\n"
+						+ "<span id='vote' style='font-family:tahoma; color:red;'>(click a star):</span><br>");
+
+				for (int iStar=1;iStar<6;iStar++) {
+					buf.append("<img src='images/star1.gif' id='" + iStar + "' "
+							+ "style='width:30px; height:30px;' "
+							+ "onmouseover=showStars(this.id); onClick=setStars(this.id); onmouseout=showStars(0); />");
+				}
+				buf.append("<span id=sliderspan style='opacity:0'>"
+						+ "<input type=range id=slider min=1 max=5 value=3 onfocus=document.getElementById('sliderspan').style='opacity:1';showStars(this.value); oninput=showStars(this.value);>"
+						+ "<button onClick=setStars(document.getElementById('slider').value);>submit</button>"
+						+ "</span>");
+				buf.append("<p>");
+
+			} else {
+				buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
+
+				String missedQuestions = "";
+				for (String mq : vt.missedQuestions) missedQuestions += mq;
+
+				if (!missedQuestions.isEmpty()) { // Give the correct answers to missed questions:
+					buf.append("The following questions were answered incorrectly:<ol>" + missedQuestions + "</ol>");
+				}
 			}
+			vt.missedQuestions.clear();
+			ofy().save().entity(vt).now();
 		}
-		vt.missedQuestions.clear();
-		ofy().save().entity(vt).now();
-
 		if (reportScoreToLms) {
 			try {
 				Utilities.createTask("/ReportScore","AssignmentId=" + a.id + "&UserId=" + URLEncoder.encode(user.getId(),"UTF-8"));

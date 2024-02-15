@@ -32,15 +32,15 @@ import com.googlecode.objectify.condition.IfNotZero;
 @Entity
 public class VideoTransaction {
 	@Id		Long id;
-	@Index	long videoId;
+	@Index	long videoId = 0L;
 	@Index	String userId;
 	@Index	Date downloaded;
 	@Index	Date graded;
-			int score;
+			int score = 0;
 	@Index(IfNotZero.class)	long assignmentId;
 			List<Integer> quizletScores = new ArrayList<Integer>();
 			List<String> missedQuestions = new ArrayList<String>();
-			int possibleScore;
+			int possibleScore = 0;
 			String videoTitle;
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 			Map<Key<Question>,Integer> questionScores = new HashMap<Key<Question>,Integer>();

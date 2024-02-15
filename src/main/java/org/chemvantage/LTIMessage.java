@@ -29,9 +29,8 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -479,23 +478,28 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 		// This method uses the LTIv1p3 message protocol to post a user's score to the LMS grade book.
 		// The lineitem URL corresponds to the LMS grade book column for the Assignment entity,
 		// and the specific cell is identified by the user_id value defined by the LMS platform
+
 		StringBuffer buf = new StringBuffer("PostUserScoreDebug:");
+		try {
 			Assignment a = ofy().load().type(Assignment.class).id(s.assignmentId).safe();
 			String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/score";
 			buf.append("AssignmentId=" + (a==null?"unknown":a.id) + "<br/>");
-			
+
 			String authToken = getAccessToken(a.domain,scope);
 			buf.append("AuthToken:" + authToken);
-			
+
 			if (authToken.startsWith("Failed")) throw new Exception("Failed: could not get access token. " + authToken);
 			String bearerAuth = "Bearer " + authToken;
 			buf.append("Authorization: " + bearerAuth + "<br>");
-			
+
 			String raw_id = userId.substring(userId.lastIndexOf("/")+1);
-			String timestamp = ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT);
 			
+			SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+			Timestamp timestamp = new Timestamp(new Date().getTime());
+			//String timestamp = ZonedDateTime.now(ZoneOffset.UTC).format());   //.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+
 			JsonObject j = new JsonObject();
-			j.addProperty("timestamp", timestamp);
+			j.addProperty("timestamp", sdf2.format(timestamp));
 			j.addProperty("scoreGiven", Double.valueOf(s.score));
 			j.addProperty("scoreMaximum", Double.valueOf(s.maxPossibleScore));
 			j.addProperty("comment", "Attempt "+s.numberOfAttempts+": "+s.score+"/"+s.maxPossibleScore);
@@ -503,28 +507,28 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			j.addProperty("gradingProgress", "FullyGraded");
 			j.addProperty("userId", raw_id);
 			String json = j.toString();
-			
+
 			// append "/scores" to the lineitem URL, taking into account that the URL may have a query part (thank you, Moodle)
 			URL u = null;
 			int i = a.lti_ags_lineitem_url.indexOf("?")==-1?a.lti_ags_lineitem_url.length():a.lti_ags_lineitem_url.indexOf("?");
 			u = new URL(a.lti_ags_lineitem_url.substring(0,i) + "/scores" + a.lti_ags_lineitem_url.substring(i));
-			
+
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setRequestMethod("POST");
 			uc.setRequestProperty("Authorization", bearerAuth);
 			uc.setRequestProperty("Content-Type", "application/vnd.ims.lis.v1.score+json");
 			uc.setDoOutput(true);
-			
+
 			// send the message
 			//OutputStreamWriter toTC = new OutputStreamWriter(uc.getOutputStream());
-		    OutputStream os = uc.getOutputStream();
-		    byte[] json_bytes = json.getBytes("utf-8");
+			OutputStream os = uc.getOutputStream();
+			byte[] json_bytes = json.getBytes("utf-8");
 			os.write(json_bytes, 0, json_bytes.length);           
 			os.close();
-			
+
 			int responseCode = uc.getResponseCode(); // success if 200-202
 			buf.append("Response Code = " + responseCode + "<br/>");
-			
+
 			boolean success = responseCode>199 && responseCode<203;
 			if (success) {  
 				s.lisReportComplete = true;
@@ -533,7 +537,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				//sendEmailToAdmin("Score submission success",buf.toString());
 			} else if (responseCode==422) {
 				buf.append("Response code 422: This LMS does not allow LTI score submissions for instructors or test students.<br/>");
-				//sendEmailToAdmin("Score submission code 422",buf.toString());
+				//Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Score submission failed",buf.toString());
 			} else {			
 				buf.append(uc.getRequestMethod() + " " + u.toString() + "<br>"
 						+ "Content-Type: application/vnd.ims.lis.v1.score+json<br>"
@@ -545,15 +549,19 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 					for (String es : e.getValue()) buf.append(es + " ");
 					buf.append("<br>");
 				}
-				
+
 				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));
 				String line;
-	    		while ((line = reader.readLine()) != null) {
-	    			buf.append(line);
-	    		}
-	    		reader.close();
-	    		//Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Score submission failed",buf.toString());
+				while ((line = reader.readLine()) != null) {
+					buf.append(line);
+				}
+				reader.close();
+				Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Score submission failed",buf.toString());
 			}
+		}
+		catch (Exception e) {
+			Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Score submission failed",buf.toString());
+		}
 		return buf.toString();
 	}
 	
