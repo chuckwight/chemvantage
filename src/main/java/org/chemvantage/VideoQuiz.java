@@ -96,8 +96,11 @@ public class VideoQuiz extends HttpServlet {
 				out.println(Subject.header("Video assignment scores") + showScores(user,request) + Subject.footer);
 				break;
 			case "ShowSummary":
-				out.println(Subject.header("Class video scores") + showSummary(user,request) + Subject.footer);
-			break;
+				out.println(Subject.header("Class video scores") + showSummary(user,a) + Subject.footer);
+				break;
+			case "SynchronizeScore":
+				out.println(synchronizeScore(user,a,request.getParameter("ForUserId")));
+				break;
 			default:
 				if (user.isInstructor()) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 				else response.sendRedirect(Subject.serverUrl + "/VideoQuiz?UserRequest=ShowVideo&VideoId=" + videoId + "&sig=" + user.getTokenSignature());
@@ -112,12 +115,24 @@ public class VideoQuiz extends HttpServlet {
 			throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		
+
 		try {
 			User user = User.getUser(request.getParameter("sig"));
 			if (user==null) throw new Exception();
-			
-			out.println(scoreQuizlet(user,request));
+
+			String userRequest = request.getParameter("UserRequest");		
+			if (userRequest==null) userRequest = "";
+
+			switch (userRequest) {
+
+			case "Synchronize Scores":
+				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+				if (synchronizeScores(user,a,request)) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
+				else out.println("Synchronization request failed.");
+				break;
+			default:
+				out.println(scoreQuizlet(user,request));
+			}
 		} catch (Exception e) {
 			response.sendRedirect(Subject.serverUrl + "/Logout?sig=" + request.getParameter("sig"));
 		}
@@ -150,232 +165,153 @@ public class VideoQuiz extends HttpServlet {
 		StringBuffer debug = new StringBuffer();
 		
 		try {
-		int start = 0;
-		int end = -1;
-		long assignmentId = user.getAssignmentId();
-		if (assignmentId > 0L) {
-			try {
-				videoId = ofy().load().type(Assignment.class).id(assignmentId).now().videoId;
-			} catch (Exception e) {
+			int start = 0;
+			int end = -1;
+			long assignmentId = user.getAssignmentId();
+			Assignment a = null;
+			if (assignmentId > 0L) {  // might be 0L for anonymous user
+				a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+				videoId = a.videoId;
 			}
-		}
-		debug.append("Segment:" + segment  + " videoId:" + videoId + " ");
-		
-		Video v = ofy().load().type(Video.class).id(videoId).now();
-		String videoSerialNumber = v.serialNumber;
-		
-		if (v.breaks == null) v.breaks = new int[0];
-		String breaks = Arrays.toString(v.breaks);
-		
-		if (segment > 0)
-			start = v.breaks[segment - 1]; // start at the end of the last segment
-		if (v.breaks.length > segment)
-			end = v.breaks[segment]; // play to this value and stop
-		
-		debug.append("start:" + start + " end:" + end + " breaks:" + breaks + " ");
-		
-		buf.append("<h1>Video</h1>\n"
-				+ "<div id=video_div style='width:560px;height:315px'></div>\n"
-				+ "<br>\n"
-				+ "<div id=quiz_div style='width:560px;background-color:white;min-height:315;display:none'></div>\n"
-				+ "<p>");
-		
-		buf.append("<script type=text/javascript>\n"
-				+ "\n"
-				+ "var tag = document.createElement('script'); tag.src='https://www.youtube.com/iframe_api';\n"
-				+ "var firstScriptTag = document.getElementsByTagName('script')[0]; firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);\n"
-				+ "var player;\n"
-				+ "var quiz_div = document.getElementById('quiz_div');\n"
-				+ "var sig = '" + user.getTokenSignature() + "';\n"
-				+ "var segment = " + segment + ";\n"
-				+ "var breaks = " + breaks + ";\n"
-				+ "var videoSerialNumber = '" + videoSerialNumber + "';\n"
-				+ "var start = " + start + ";\n"
-				+ "var end = " + end + ";\n"
-				+ "\n"
-				+ "function onYouTubeIframeAPIReady() {\n"
-				+ "  player = new YT.Player('video_div', {\n"
-				+ "	height: '315',\n"
-				+ "	width: '560',\n"
-				+ "	videoId: '" + videoSerialNumber + "',\n"
-				+ "	playerVars: {\n"
-				+ "	  'enablejsapi': 1,\n"
-				+ "	  'autoplay': 0,\n"
-				+ "	  'start': " + start + ",\n"
-				+ "	  'end': " + end + ",\n"
-				+ "	  'modestbranding': 1,\n"
-				+ "	  'origin': '" + Subject.serverUrl + "'\n"
-				+ "	},\n"
-				+ "	events: {\n"
-				+ "		'onReady': onPlayerReady,\n"
-				+ "        'onStateChange': onPlayerStateChange\n"
-				+ "    }\n"
-				+ "  });\n"
-				+ "}\n"
-				+ "\n"
-				+ "function onPlayerReady(event) {\n"
-				+ "	start = segment == 0?0:breaks[segment-1];\n"
-				+ "	end = breaks.length <= segment?-1:breaks[segment];\n"
-				+ "	player.loadVideoById({'videoId':videoSerialNumber,'startSeconds':start,'endSeconds':end});\n"
-				+ "	ajaxLoadQuiz();\n"
-				+ "}\n"
-				+ "\n"
-				+ "function onPlayerStateChange(event) {\n"
-				+ "	switch (event.data) {\n"
-				+ "	  case YT.PlayerState.ENDED:\n"
-				+ "    try {"
-				+ "		if (document.exitFullscreen) document.exitFullscreen();\n"
-				+ "		else if (document.webkitExitFullscreen) document.webkitExitFullscreen();\n"
-				+ "	    else if (document.mozCancelFullScreen) document.mozCancelFullScreen();\n"
-				+ "	    else if (document.msExitFullscreen) document.msExitFullscreen();\n"
-				+ "    } catch (e) {}"
-				+ "		video_div.style.display = 'none';\n"
-				+ "		quiz_div.style.display = '';\n"
-				+ "		break;\n"
-				+ "	  case YT.PlayerState.PLAYING:\n"
-				+ "		video_div.style.display = '';\n"
-				+ "		quiz_div.style.display = 'none';\n"
-				+ "		break;\n"
-				+ "	  default:\n"
-				+ "    }\n"
-				+ "}\n"
-				+ "\n"
-				+ "function ajaxLoadQuiz() {\n"
-				+ "  var xmlhttp=GetXmlHttpObject();\n"
-				+ "  quiz_div.innerHTML = \"Loading questions...\";\n"
-				+ "  if (xmlhttp==null) {\n"
-				+ "	    alert ('Sorry, your browser does not support AJAX. To access the video quiz, switch to a supported browser like Chrome or Safari.');\n"
-				+ "	    return false;\n"
-				+ "  }\n"
-				+ "  xmlhttp.onreadystatechange=function() {\n"
-				+ "	if (xmlhttp.readyState==4) {\n"
-				+ "	  quiz_div.innerHTML=xmlhttp.responseText;\n"
-				+ "	}\n"
-				+ "  }\n"
-				+ "  xmlhttp.open('GET','/VideoQuiz?VideoId='+'" + videoId + "'+'&UserRequest=ShowQuizlet&Segment='+segment+'&sig='+sig,true);\n"
-				+ "  xmlhttp.send(null);\n"
-				+ "  return true;\n"
-				+ "}\n"
-				+ "\n"
-				+ "function ajaxSubmitQuiz() {\n"
-				+ "  try {\n"
-				+ "	  var xmlhttp=GetXmlHttpObject();\n"
-				+ "	  xmlhttp.onreadystatechange=function() {\n"
-				+ "	   if (xmlhttp.readyState==4) {\n"
-				+ "		quiz_div.style.display = start>=0?'none':'';\n"
-				+ "		quiz_div.innerHTML = xmlhttp.responseText;\n"
-				+ "	   }\n"
-				+ "	  }\n"
-				+ "	  xmlhttp.open('POST','/VideoQuiz',true);\n"
-				+ "	  xmlhttp.setRequestHeader('Content-Type','application/x-www-form-urlencoded');\n"
-				+ "	  var formData = new FormData(document.getElementById('quizlet'));\n"
-				+ "	  xmlhttp.send(urlencodeFormData(formData));\n"
-				+ "  } catch (e) {\n"
-				+ "	  quiz_div.innerHTML = e.message;  \n"
-				+ "  }\n"
-				+ "  segment++;\n"
-				+ "  start = breaks[segment-1];\n"
-				+ "  end = (breaks.length > segment?breaks[segment]:-1);  // play to this value or stop at end\n"
-				+ "  try {\n"
-				+ "	  if (start>=0) player.loadVideoById({'videoId':videoSerialNumber,'startSeconds':start,'endSeconds':end});\n"
-				+ "  } catch (e) {}\n"
-				+ "  \n"
-				+ "  return false;\n"
-				+ "}\n"
-				+ "\n"
-				+ "function urlencodeFormData(fd){\n"
-				+ "    var params = new URLSearchParams();\n"
-				+ "    var pair;\n"
-				+ "    for(pair of fd.entries()){\n"
-				+ "        typeof pair[1]=='string' && params.append(pair[0], pair[1]);\n"
-				+ "    }\n"
-				+ "    return params.toString();\n"
-				+ "}\n"
-				+ "function showWorkBox(qid) {}\n"
-/*
-				+ "\n"
-				+ "var star1 = new Image(); star1.src='images/star1.gif';\n"
-				+ "var star2 = new Image(); star2.src='images/star2.gif';\n"
-				+ "var set = false;\n"
-				+ "function showStars(n) {\n"
-				+ "  if (!set) {\n"
-				+ "    document.getElementById('vote').innerHTML=(n==0?'(click a star)':''+n+(n>1?' stars':' star'));\n"
-				+ "    for (i=1;i<6;i++) {document.getElementById(i).src=(i<=n?star2.src:star1.src)}\n"
-				+ "  }\n"
-				+ "}\n"
-				+ "function setStars(n) {\n"
-				+ "  if (!set) {\n"
-				+ "    ajaxStars(n);\n"
-				+ "    set = true;\n"
-				+ "    document.getElementById('sliderspan').style='display:none';\n"
-				+ "  }\n"
-				+ "}\n"
-				+ "\n"
-				+ "function ajaxSubmit(url,id,params,studentAnswer,note,email) {\n"
-				+ "  var xmlhttp;\n"
-				+ "  if (url.length==0) return false;\n"
-				+ "  xmlhttp=GetXmlHttpObject();\n"
-				+ "  if (xmlhttp==null) {\n"
-				+ "    alert ('Sorry, your browser does not support AJAX!');\n"
-				+ "    return false;\n"
-				+ "  }\n"
-				+ "  xmlhttp.onreadystatechange=function() {\n"
-				+ "    if (xmlhttp.readyState==4) {\n"
-				+ "      document.getElementById('feedback' + id).innerHTML='<FONT COLOR=RED><b>Thank you. An editor will review your comment.</b></FONT><p>';\n"
-				+ "    }\n"
-				+ "  }\n"
-				+ "  url += '&QuestionId=' + id + '&Params=' + params + '&sig=' + sig + '&Notes=' + note + '&Email=' + email + '&StudentAnswer=' + studentAnswer;\n"
-				+ "  xmlhttp.open('GET',url,true);\n"
-				+ "  xmlhttp.send(null);\n"
-				+ "  return false;\n"
-				+ "}\n"
-				+ "\n"
-				+ "function ajaxStars(nStars) {\n"
-				+ "  var xmlhttp;\n"
-				+ "  if (nStars==0) return false;\n"
-				+ "  xmlhttp=GetXmlHttpObject();\n"
-				+ "  if (xmlhttp==null) {\n"
-				+ "    alert ('Sorry, your browser does not support AJAX!');\n"
-				+ "    return false;\n"
-				+ "  }\n"
-				+ "  xmlhttp.onreadystatechange=function() {\n"
-				+ "    var msg;\n"
-				+ "    switch (nStars) {\n"
-				+ "      case '1': msg='1 star - If you are dissatisfied with ChemVantage, '\n"
-				+ "                + 'please take a moment to <a href=/Feedback?sig=' + sig + '>tell us why.</a>.';\n"
-				+ "                break;\n"
-				+ "      case '2': msg='2 stars - If you are dissatisfied with ChemVantage, '\n"
-				+ "                + 'please take a moment to <a href=/Feedback?sig=' + sig + '>tell us why.</a>.';\n"
-				+ "                break;\n"
-				+ "      case '3': msg='3 stars - Thank you. <a href=/Feedback?sig=' + sig + '>Click here</a> '\n"
-				+ "                + ' to provide additional feedback.';\n"
-				+ "                break;\n"
-				+ "      case '4': msg='4 stars - Thank you';\n"
-				+ "                break;\n"
-				+ "      case '5': msg='5 stars - Thank you!';\n"
-				+ "                break;\n"
-				+ "      default: msg='You clicked ' + nStars + ' stars.';\n"
-				+ "    }\n"
-				+ "    if (xmlhttp.readyState==4) {\n"
-				+ "      document.getElementById('vote').innerHTML=msg;\n"
-				+ "    }\n"
-				+ "  }\n"
-				+ "  xmlhttp.open('GET','Feedback?UserRequest=AjaxRating&NStars='+nStars,true);\n"
-				+ "  xmlhttp.send(null);\n"
-				+ "  return false;\n"
-				+ "}\n"
-				+ "\n"
-				+ "function GetXmlHttpObject() {\n"
-				+ "  if (window.XMLHttpRequest) { // code for IE7+, Firefox, Chrome, Opera, Safari\n"
-				+ "    return new XMLHttpRequest();\n"
-				+ "  }\n"
-				+ "  if (window.ActiveXObject) { // code for IE6, IE5\n"
-				+ "    return new ActiveXObject('Microsoft.XMLHTTP');\n"
-				+ "  }\n"
-				+ "  return null;\n"
-				+ "}\n"
-*/
-				+ "</script>");
+			debug.append("Segment:" + segment  + " videoId:" + videoId + " ");
+
+			Video v = ofy().load().type(Video.class).id(videoId).now();
+			String videoSerialNumber = v.serialNumber;
+
+			if (a != null && a.title == null) {
+				a.title = v.title;
+				ofy().save().entity(a);
+			}
+
+			if (v.breaks == null) v.breaks = new int[0];
+			String breaks = Arrays.toString(v.breaks);
+
+			if (segment > 0)
+				start = v.breaks[segment - 1]; // start at the end of the last segment
+			if (v.breaks.length > segment)
+				end = v.breaks[segment]; // play to this value and stop
+
+			debug.append("start:" + start + " end:" + end + " breaks:" + breaks + " ");
+
+			buf.append("<h1>Video</h1>\n"
+					+ "<div id=video_div style='width:560px;height:315px'></div>\n"
+					+ "<br>\n"
+					+ "<div id=quiz_div style='width:560px;background-color:white;min-height:315;display:none'></div>\n"
+					+ "<p>");
+
+			buf.append("<script type=text/javascript>\n"
+					+ "\n"
+					+ "var tag = document.createElement('script'); tag.src='https://www.youtube.com/iframe_api';\n"
+					+ "var firstScriptTag = document.getElementsByTagName('script')[0]; firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);\n"
+					+ "var player;\n"
+					+ "var quiz_div = document.getElementById('quiz_div');\n"
+					+ "var sig = '" + user.getTokenSignature() + "';\n"
+					+ "var segment = " + segment + ";\n"
+					+ "var breaks = " + breaks + ";\n"
+					+ "var videoSerialNumber = '" + videoSerialNumber + "';\n"
+					+ "var start = " + start + ";\n"
+					+ "var end = " + end + ";\n"
+					+ "\n"
+					+ "function onYouTubeIframeAPIReady() {\n"
+					+ "  player = new YT.Player('video_div', {\n"
+					+ "	height: '315',\n"
+					+ "	width: '560',\n"
+					+ "	videoId: '" + videoSerialNumber + "',\n"
+					+ "	playerVars: {\n"
+					+ "	  'enablejsapi': 1,\n"
+					+ "	  'autoplay': 0,\n"
+					+ "	  'start': " + start + ",\n"
+					+ "	  'end': " + end + ",\n"
+					+ "	  'modestbranding': 1,\n"
+					+ "	  'origin': '" + Subject.serverUrl + "'\n"
+					+ "	},\n"
+					+ "	events: {\n"
+					+ "		'onReady': onPlayerReady,\n"
+					+ "        'onStateChange': onPlayerStateChange\n"
+					+ "    }\n"
+					+ "  });\n"
+					+ "}\n"
+					+ "\n"
+					+ "function onPlayerReady(event) {\n"
+					+ "	start = segment == 0?0:breaks[segment-1];\n"
+					+ "	end = breaks.length <= segment?-1:breaks[segment];\n"
+					+ "	player.loadVideoById({'videoId':videoSerialNumber,'startSeconds':start,'endSeconds':end});\n"
+					+ "	ajaxLoadQuiz();\n"
+					+ "}\n"
+					+ "\n"
+					+ "function onPlayerStateChange(event) {\n"
+					+ "	switch (event.data) {\n"
+					+ "	  case YT.PlayerState.ENDED:\n"
+					+ "    try {"
+					+ "		if (document.exitFullscreen) document.exitFullscreen();\n"
+					+ "		else if (document.webkitExitFullscreen) document.webkitExitFullscreen();\n"
+					+ "	    else if (document.mozCancelFullScreen) document.mozCancelFullScreen();\n"
+					+ "	    else if (document.msExitFullscreen) document.msExitFullscreen();\n"
+					+ "    } catch (e) {}"
+					+ "		video_div.style.display = 'none';\n"
+					+ "		quiz_div.style.display = '';\n"
+					+ "		break;\n"
+					+ "	  case YT.PlayerState.PLAYING:\n"
+					+ "		video_div.style.display = '';\n"
+					+ "		quiz_div.style.display = 'none';\n"
+					+ "		break;\n"
+					+ "	  default:\n"
+					+ "    }\n"
+					+ "}\n"
+					+ "\n"
+					+ "function ajaxLoadQuiz() {\n"
+					+ "  var xmlhttp=GetXmlHttpObject();\n"
+					+ "  quiz_div.innerHTML = \"Loading questions...\";\n"
+					+ "  if (xmlhttp==null) {\n"
+					+ "	    alert ('Sorry, your browser does not support AJAX. To access the video quiz, switch to a supported browser like Chrome or Safari.');\n"
+					+ "	    return false;\n"
+					+ "  }\n"
+					+ "  xmlhttp.onreadystatechange=function() {\n"
+					+ "	if (xmlhttp.readyState==4) {\n"
+					+ "	  quiz_div.innerHTML=xmlhttp.responseText;\n"
+					+ "	}\n"
+					+ "  }\n"
+					+ "  xmlhttp.open('GET','/VideoQuiz?VideoId='+'" + videoId + "'+'&UserRequest=ShowQuizlet&Segment='+segment+'&sig='+sig,true);\n"
+					+ "  xmlhttp.send(null);\n"
+					+ "  return true;\n"
+					+ "}\n"
+					+ "\n"
+					+ "function ajaxSubmitQuiz() {\n"
+					+ "  try {\n"
+					+ "	  var xmlhttp=GetXmlHttpObject();\n"
+					+ "	  xmlhttp.onreadystatechange=function() {\n"
+					+ "	   if (xmlhttp.readyState==4) {\n"
+					+ "		quiz_div.style.display = start>=0?'none':'';\n"
+					+ "		quiz_div.innerHTML = xmlhttp.responseText;\n"
+					+ "	   }\n"
+					+ "	  }\n"
+					+ "	  xmlhttp.open('POST','/VideoQuiz',true);\n"
+					+ "	  xmlhttp.setRequestHeader('Content-Type','application/x-www-form-urlencoded');\n"
+					+ "	  var formData = new FormData(document.getElementById('quizlet'));\n"
+					+ "	  xmlhttp.send(urlencodeFormData(formData));\n"
+					+ "  } catch (e) {\n"
+					+ "	  quiz_div.innerHTML = e.message;  \n"
+					+ "  }\n"
+					+ "  segment++;\n"
+					+ "  start = breaks[segment-1];\n"
+					+ "  end = (breaks.length > segment?breaks[segment]:-1);  // play to this value or stop at end\n"
+					+ "  try {\n"
+					+ "	  if (start>=0) player.loadVideoById({'videoId':videoSerialNumber,'startSeconds':start,'endSeconds':end});\n"
+					+ "  } catch (e) {}\n"
+					+ "  \n"
+					+ "  return false;\n"
+					+ "}\n"
+					+ "\n"
+					+ "function urlencodeFormData(fd){\n"
+					+ "    var params = new URLSearchParams();\n"
+					+ "    var pair;\n"
+					+ "    for(pair of fd.entries()){\n"
+					+ "        typeof pair[1]=='string' && params.append(pair[0], pair[1]);\n"
+					+ "    }\n"
+					+ "    return params.toString();\n"
+					+ "}\n"
+					+ "function showWorkBox(qid) {}\n"
+					+ "</script>");
 		} catch (Exception e) {
 			return (e.getMessage()==null?e.toString():e.getMessage()) + debug.toString();
 		}
@@ -705,7 +641,126 @@ public class VideoQuiz extends HttpServlet {
 		}
 		return buf.toString();
 	}
+	
+	static String showSummary(User user,Assignment a) {
+		StringBuffer buf = new StringBuffer();
+		if (a==null) return "No assignment was specified for this request.";
 
+		if (!user.isInstructor()) return "You must be logged in as the instructor to view this page.";
+
+		try {
+			if (a.lti_nrps_context_memberships_url==null) throw new Exception("No Names and Roles Provisioning support.");
+
+			buf.append("<h1>Video Scores</h1>");
+			if (a.title!=null) buf.append("Title: " + a.title + "<br/>");
+			buf.append("Assignment ID: " + a.id + "<br/>");
+			buf.append("Valid: " + new Date() + "<p>");
+			buf.append("The roster below is obtained using the Names and Role Provisioning service offered by your learning management system, "
+					+ "and may or may not include user's names or emails, depending on the settings of your LMS.<br/><br/>");
+
+			Map<String,String> scores = LTIMessage.readMembershipScores(a);
+			if (scores==null) scores = new HashMap<String,String>();  // in case service call fails
+
+			Map<String,String[]> membership = LTIMessage.getMembership(a);
+			if (membership==null) membership = new HashMap<String,String[]>(); // in case service call fails
+
+			Map<String,Key<Score>> keys = new HashMap<String,Key<Score>>();
+			Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
+			String platform_id = d.getPlatformId() + "/";
+			for (String id : membership.keySet()) {
+				keys.put(id,key(key(User.class,Subject.hashId(platform_id+id)),Score.class,a.id));
+			}
+			Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
+			buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th></tr>");
+			int i=0;
+			int nMismatched = 0;
+			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
+				if (entry == null) continue;
+				String lmsScoreString = scores.get(entry.getKey());
+				lmsScoreString = (lmsScoreString==null?" - ":lmsScoreString + "%");
+				Score cvScore = cvScores.get(keys.get(entry.getKey()));
+				String cvScoreString = cvScore==null?" - ":String.valueOf(cvScore.getPctScore() + "%");
+				boolean synched = !"Learner".equals(entry.getValue()[0]) || cvScoreString.equals(lmsScoreString);
+				String forUserId = platform_id + entry.getKey();  // only send hashed values through links
+				i++;
+				buf.append("<tr><td>" + i + ".&nbsp;</td>"
+						+ "<td>" + entry.getValue()[1] + "</td>"
+						+ "<td>" + entry.getValue()[2] + "</td>"
+						+ "<td>" + entry.getValue()[0] + "</td>"
+						+ "<td align=center>" + lmsScoreString + "</td>"
+						+ "<td align=center>" + cvScoreString + "</td>"
+						+ (synched?"<td></td>":"<td><span id='cell" + forUserId + "'><button onClick=this.disabled=true;this.style.opacity=0.5;synchronizeScore('" + forUserId + "','" + user.getTokenSignature() + "','/VideoQuiz'); >sync</button></span></td>")
+						+ "</tr>");
+				// Flag this score set as unsynchronized only if there is one or more non-null ChemVantage Learner score that is not equal to the LMS score
+				// Ignore Instructor scores because the LMS often does not report them, and ignore null cvScore entities because they cannot be reported.
+				if (!synched) nMismatched++;
+			}
+			buf.append("</table><br/>");
+			if (nMismatched > 0) {
+				//buf.append(ajaxJavaScript(user.getTokenSignature()));
+				buf.append("You may use the individual 'sync' buttons above to resubmit any ChemVantage score to the LMS. Note that in some cases, mismatched scores are expected (e.g., when "
+						+ "the instructor overrides a score or when a late submission is not accepted by the LMS). You may have to adjust the settings in your LMS to accept the "
+						+ "revised score (e.g., change the due date, grade override or allowed number of submissions). ");
+			}
+			if (nMismatched>1) {
+				buf.append("Use the button below to synchronize all of the Learner scores. This might take a minute, depending on the number of mismatches.<br/>"
+					+ "<form method=post action='/VideoQuiz' onsubmit='waitforSync()'; >"
+					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "<input type=hidden name=UserRequest value='Synchronize Scores' />"
+					+ "<input type=submit id=syncAll value='Synchronize All Scores' />"
+					+ "</form>");
+			}
+				return buf.toString();
+		} catch (Exception e) {
+			buf.append(e.toString());
+		}
+		return buf.toString();
+	}
+	
+	static boolean synchronizeScores(User user, Assignment a, HttpServletRequest request) {
+		// This method looks for assignment scores that are different from the LMS scores and resubmits the score to the LMS
+		try {
+			if (!user.isInstructor()) throw new Exception();  // only instructors can use this function
+			if (a==null) throw new Exception();
+			if (a.lti_ags_lineitem_url == null || a.lti_nrps_context_memberships_url == null) throw new Exception(); // need both of these to work
+			Map<String,String> scores = LTIMessage.readMembershipScores(a);
+			if (scores==null || scores.size()==0) throw new Exception();  // this only works if we can get info from the LMS
+			Map<String,String[]> membership = LTIMessage.getMembership(a);
+			if (membership==null || membership.size()==0) throw new Exception();  // there must be some members of this class
+			Map<String,Key<Score>> keys = new HashMap<String,Key<Score>>();
+			Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
+			String platform_id = d.getPlatformId() + "/";
+			for (String id : membership.keySet()) {
+				String hashedUserId = Subject.hashId(platform_id + id);
+				keys.put(id,key(key(User.class,hashedUserId),Score.class,a.id));
+			}
+			Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
+			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
+				if (entry == null) continue;
+				Score cvScore = cvScores.get(keys.get(entry.getKey()));
+				if (cvScore==null) continue;
+				String s = scores.get(entry.getKey());
+				if (String.valueOf(cvScore.getPctScore()).equals(s)) continue;  // the scores match (good!)
+				String payload = "AssignmentId=" + a.id + "&UserId=" + URLEncoder.encode(platform_id + entry.getKey(),"UTF-8");
+				Utilities.createTask("/ReportScore",payload);
+			}
+		} catch (Exception e) {
+			return false;
+		}
+		return true;
+	}
+	
+	static String synchronizeScore(User user, Assignment a, String forUserId) {
+		try {
+			if (!user.isInstructor()) throw new Exception();  // only instructors can use this function
+			if (a==null) throw new Exception();  // can only do this for a known assignment
+			if (LTIMessage.postUserScore(Score.getInstance(forUserId,a), forUserId).contains("Success")) return "OK";
+		} catch (Exception e) {}
+		return "Failed. Check assignment settings in the LMS.";
+	}
+	
+
+/*
 	String showSummary(User user,HttpServletRequest request) {
 		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
 		
@@ -782,7 +837,7 @@ public class VideoQuiz extends HttpServlet {
 		}
 		return buf.toString();
 	}
-	
+*/	
 	String orderResponses(String[] answers) {
 		Arrays.sort(answers);
 		String studentAnswer = "";
