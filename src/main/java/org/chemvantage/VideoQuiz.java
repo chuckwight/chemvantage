@@ -364,7 +364,7 @@ public class VideoQuiz extends HttpServlet {
 		
 		//buf.append("Questions to be presented="+nQuestions+".<hr>");
 		
-		buf.append("<form id=quizlet method=post action='/VideoQuiz' onSubmit='return ajaxSubmitQuiz()'>");
+		buf.append("<form id=quizlet method=post action='/VideoQuiz' onSubmit=\"document.getElementById('submitButton').disabled=true;return ajaxSubmitQuiz();\" >");
 				
 		int i = 0;
 		buf.append("<OL>\n");
@@ -389,7 +389,7 @@ public class VideoQuiz extends HttpServlet {
 		buf.append("<input type=hidden name=VideoId value=" + v.id + ">");
 		buf.append("<input type=hidden name=VideoTransactionId value=" + vt.id + ">");
 		buf.append("<input type=hidden name=Segment value=" + segment + ">");
-		buf.append("<input type=submit class='btn' value='Submit and Resume the Video'> or "
+		buf.append("<input type=submit id=submitButton class='btn' value='Submit and Resume the Video'> or "
 				+ "<a href=/VideoQuiz?Segment=" + segment + "&VideoId=" + v.id + "&sig=" + user.getTokenSignature() + ">Replay This Segment</a>");
 		buf.append("</form>");
 		} catch (Exception e) {
