@@ -486,12 +486,11 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			buf.append("AssignmentId=" + (a==null?"unknown":a.id) + "<br/>");
 
 			String authToken = getAccessToken(a.domain,scope);
-			buf.append("AuthToken:" + authToken);
+			buf.append("AuthToken:" + authToken + "<br/>");
 
 			if (authToken.startsWith("Failed")) throw new Exception("Failed: could not get access token. " + authToken);
 			String bearerAuth = "Bearer " + authToken;
-			buf.append("Authorization: " + bearerAuth + "<br>");
-
+			
 			String raw_id = userId.substring(userId.lastIndexOf("/")+1);
 			
 			SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
@@ -556,7 +555,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 					buf.append(line);
 				}
 				reader.close();
-				Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Score submission failed",buf.toString());
+				//Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Score submission failed",buf.toString());
 			}
 		}
 		catch (Exception e) {
