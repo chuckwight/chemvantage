@@ -77,7 +77,7 @@ public class LTIDeepLinks extends HttpServlet {
 			}
 		} catch (Exception e) {	 
 			Enumeration<String> parameterNames = request.getParameterNames();
-			String message = e.getMessage()==null?e.toString():e.getMessage();
+			String message = "<h1>LTI DeepLinking Failed. Status 401</h1>" + e.getMessage()==null?e.toString():e.getMessage();
 			message += "<br/>To: " + request.getServerName();
 			message += "<br/>From: " + request.getRemoteHost();
 			while (parameterNames.hasMoreElements()) {
@@ -87,7 +87,8 @@ public class LTIDeepLinks extends HttpServlet {
 			message += "<br/>" + debug.toString();
 			if (!message.contains("Unauthorized")) Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Deep Linking Error",message);
 			
-			response.sendError(401,e.getMessage()==null?e.toString():e.getMessage());
+			out.println(message);
+			//response.sendError(401,e.getMessage()==null?e.toString():e.getMessage());
 		}
 	}
 

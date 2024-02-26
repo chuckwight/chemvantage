@@ -116,8 +116,9 @@ public class LTIv1p3Launch extends HttpServlet {
 				}
 			}
 		} catch (Exception e) {	
-			String message = "LTI Launch Failure. Status 401: " + (e.getMessage()==null?e.toString():e.getMessage());
-			response.sendError(401, message);
+			String message = "<h1>LTI Launch Failure. Status 401</h1>" + (e.getMessage()==null?e.toString():e.getMessage());
+			response.getWriter().println(message);
+			//response.sendError(401, message);
 		}
 	}
 
@@ -619,9 +620,9 @@ public class LTIv1p3Launch extends HttpServlet {
 	}
 	
 	String pickResourceForm(User user,Assignment myAssignment,HttpServletRequest request) throws Exception {
-		StringBuffer buf = new StringBuffer();
+		StringBuffer buf = new StringBuffer(Subject.banner);
 
-		buf.append("<1>Assignment Setup Page</h1>");
+		buf.append("<h1>Assignment Setup Page</h1>");
 
 		if (!user.isInstructor()) {
 			buf.append("The link that you just activated in your learning management system (LMS) is not yet associated with a ChemVantage assignment. "
