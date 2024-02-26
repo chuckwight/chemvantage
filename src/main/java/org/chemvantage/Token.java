@@ -1,12 +1,14 @@
 package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
+import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
 import java.util.Date;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.Map;
 
 import jakarta.servlet.ServletException;
@@ -16,7 +18,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import com.auth0.jwt.JWT;
-import com.auth0.jwt.algorithms.Algorithm;;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.googlecode.objectify.Key;
 
 @WebServlet("/auth/token")
 public class Token extends HttpServlet {
@@ -132,6 +135,12 @@ public class Token extends HttpServlet {
 			d = ofy().load().type(Deployment.class).id(platform_deployment_id).now();  // previously used .safe()
 			
 			if (d != null) return d;
+			
+			// test to see if the platform has a single registered deployment
+			Key<Deployment> kstart = key(Deployment.class, platform_id);
+			Key<Deployment> kend = key(Deployment.class, platform_id + "/~");
+			List<Deployment> range = ofy().load().type(Deployment.class).filterKey(">=", kstart).filterKey("<", kend).list();
+			if (range.size()==1) return range.get(0);
 			
 			// experimental: automatic deployment registration
 			
