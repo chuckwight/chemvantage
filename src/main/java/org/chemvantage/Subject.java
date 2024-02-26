@@ -213,7 +213,7 @@ public class Subject {
 		+ ((announcement==null || announcement.isEmpty())?"":"<FONT style='color: #EE0000'>" + announcement + "</FONT><br/>\n");
 	}
 	
-	static String banner = "<div style='font-size: 1.5em'><image src='/images/CVLogo_thumb.png' alt='ChemVantage Logo'>ChemVantage</div>";
+	static String banner = "<div style='font-size:2em;font-weight:bold;color:#000080;'><img src='/images/CVLogo_thumb.png' alt='ChemVantage Logo' style='vertical-align:middle;width:60px;'> ChemVantage</div>";
 			
 	public static String footer = "</main>"
 			+ "<footer><hr/>"
