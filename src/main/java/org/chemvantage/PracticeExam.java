@@ -68,7 +68,7 @@ public class PracticeExam extends HttpServlet {
 			switch (userRequest) {
 				case "AssignExamQuestions":
 					if (!user.isInstructor()) throw new Exception();
-					out.println(Subject.header("Select ChemVantage Practice Exam Topics") + selectExamQuestionsForm(user) + Subject.footer);
+					out.println(Subject.header("Select ChemVantage Practice Exam Topics") + selectExamQuestionsForm(user,request) + Subject.footer);
 					break;
 				case "ReviewExamScores":
 					out.println(Subject.header("Review ChemVantage Practice Exam Scores") + reviewExamScores(user,a) + Subject.footer);
@@ -944,7 +944,7 @@ public class PracticeExam extends HttpServlet {
 		return true;
 	}
 
-	String selectExamQuestionsForm(User user) {
+	String selectExamQuestionsForm(User user, HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h1>General Chemistry Exam</h1><h2>Settings</h2>");
 		try {
 			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
@@ -978,6 +978,43 @@ public class PracticeExam extends HttpServlet {
 					+ "<li> 2 more challenging homework questions worth 15 points each</li></ul>"
 					+ "for a total of 100 points. Select the items to be included in exams assigned to your class.<br/><br/>");
 			
+			// Show a List of concepts covered by this assignment
+			Long newConceptId = null;
+			try {  // add a new conceptId
+				newConceptId = Long.parseLong(request.getParameter("ConceptId"));
+				a.conceptIds.add(newConceptId);
+			} catch (Exception e) {}
+
+			List<Key<Concept>> conceptKeys = ofy().load().type(Concept.class).order("orderBy").keys().list();
+			Map<Key<Concept>,Concept> keyConcepts = ofy().load().keys(conceptKeys);
+			if (a.conceptIds.size()>0) {
+				buf.append("The questions listed below cover the following key concepts:<ul>");
+				for (Long cId : a.conceptIds) {
+					Concept c = keyConcepts.get(key(Concept.class,cId));
+					try {
+						buf.append("<li>" + c.title + "</li>");
+					} catch (Exception e) {
+						a.conceptIds.remove(cId);  // remove id for null Concept
+					}
+				}
+				buf.append("</ul>");
+			}
+
+			// Create a short form to select one additional key concept to include (will exclude the previous selection, if any)
+			buf.append("<form method=get action=/Homework>"
+					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+					+ "You may include additional question items from: "
+					+ "<input type=hidden name=UserRequest value=AssignHomeworkQuestions />"
+					+ "<select name=ConceptId onchange=this.form.submit();><option value='Select'>Select a key concept</option>");
+			for (Key<Concept> k : conceptKeys) {
+				try {
+					if (a.conceptIds.contains(k.getId()) || keyConcepts.get(k).orderBy.startsWith(" 0")) continue;  // skip current and hidden conceptIds
+					buf.append("<option value='" + k.getId() + "'" + (newConceptId!=null && k.getId()==newConceptId?" selected>":">") + keyConcepts.get(k).title + "</option>");
+				} catch (Exception e) {}
+			}
+			buf.append("</select></form><hr>");
+			
+			// retrieve all of the question keys for the requested concepts
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
 			for (long cId : a.conceptIds) {  // retrieve the keys for all Exam questions for the relevant key concepts
 				questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Exam").filter("conceptId",cId).keys().list());

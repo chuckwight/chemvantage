@@ -919,35 +919,29 @@ public class Homework extends HttpServlet {
 					+ "If you don't see a question you want to include, you may "
 					+ "<a href=/Contribute?AssignmentType=Homework&sig=" + user.getTokenSignature() 
 					+ ">contribute a new question item</a> to the database.<p>");
-			
-			debug.append("1");
-			// make a List of conceptIds covered by this assignment
-			List<Long> conceptIds = a.conceptIds;
-			// Include any conceptId included in this request:
+
+			// Show a List of concepts covered by this assignment
 			Long newConceptId = null;
-			try {
+			try {  // add a new conceptId
 				newConceptId = Long.parseLong(request.getParameter("ConceptId"));
-				conceptIds.add(newConceptId);
+				a.conceptIds.add(newConceptId);
 			} catch (Exception e) {}
-			debug.append("2");
 			
-			// Make a list of key concepts already covered by this assignment:
 			List<Key<Concept>> conceptKeys = ofy().load().type(Concept.class).order("orderBy").keys().list();
 			Map<Key<Concept>,Concept> keyConcepts = ofy().load().keys(conceptKeys);
-			if (conceptIds.size()>0) {
+			if (a.conceptIds.size()>0) {
 				buf.append("The questions listed below cover the following key concepts:<ul>");
-				for (Long cId : conceptIds) {
+				for (Long cId : a.conceptIds) {
 					Concept c = keyConcepts.get(key(Concept.class,cId));
-					if (c==null || c.orderBy.startsWith(" 0")) {
-						a.conceptIds.remove(cId);
-						ofy().save().entity(a);
+					try {
+						buf.append("<li>" + c.title + "</li>");
+					} catch (Exception e) {
+						a.conceptIds.remove(cId);  // remove id for null Concept
 					}
-					else buf.append("<li>" + c.title + "</li>");
 				}
 				buf.append("</ul>");
 			}
-			debug.append("3");
-			
+
 			// Create a short form to select one additional key concept to include (will exclude the previous selection, if any)
 			buf.append("<form method=get action=/Homework>"
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
@@ -956,17 +950,16 @@ public class Homework extends HttpServlet {
 					+ "<select name=ConceptId onchange=this.form.submit();><option value='Select'>Select a key concept</option>");
 			for (Key<Concept> k : conceptKeys) {
 				try {
-					if (conceptIds.contains(k.getId()) || keyConcepts.get(k).orderBy.startsWith(" 0")) continue;  // skip current and hidden conceptIds
+					if (a.conceptIds.contains(k.getId()) || keyConcepts.get(k).orderBy.startsWith(" 0")) continue;  // skip current and hidden conceptIds
 					buf.append("<option value='" + k.getId() + "'" + (newConceptId!=null && k.getId()==newConceptId?" selected>":">") + keyConcepts.get(k).title + "</option>");
 				} catch (Exception e) {}
 			}
 			buf.append("</select></form><hr>");
-			debug.append("4");
 			
 			
 			// now we have all of the relevant conceptIds. Make a list of questions carrying these attributes:
 			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
-			for (Long cId : conceptIds) questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());
+			for (Long cId : a.conceptIds) questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());
 			if (!questionKeys.containsAll(a.questionKeys)) {  // might be missing a few questions due to customization
 				for (Key<Question> k : a.questionKeys) if (!questionKeys.contains(k)) questionKeys.add(k);
 			}
@@ -1006,7 +999,6 @@ public class Homework extends HttpServlet {
 				buf.append("</TR>");
 				if (q.conceptId!=null && !a.conceptIds.contains(q.conceptId)) a.conceptIds.add(q.conceptId);
 			}
-			if (a.conceptIds.size()!=conceptIds.size() || !a.conceptIds.containsAll(conceptIds)) ofy().save().entity(a);
 			buf.append("</TABLE><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM><br/>");
 		} catch (Exception e) {
 			buf.append(e.toString() + " " + e.getMessage() + "<br/>" + debug.toString());
