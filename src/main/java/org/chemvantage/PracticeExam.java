@@ -974,8 +974,8 @@ public class PracticeExam extends HttpServlet {
 			
 			buf.append("Each practice exam consists of items selected at random from the items below:<ul>"
 					+ "<li>10 quiz questions worth 2 points each</li>"
-					+ "<li> 5 homework questions worth 10 points each</li>"
-					+ "<li> 2 more challenging homework questions worth 15 points each</li></ul>"
+					+ "<li> 5 homework-style questions worth 10 points each</li>"
+					+ "<li> 2 more challenging homework-style questions worth 15 points each</li></ul>"
 					+ "for a total of 100 points. Select the items to be included in exams assigned to your class.<br/><br/>");
 			
 			// Show a List of concepts covered by this assignment
@@ -1001,10 +1001,10 @@ public class PracticeExam extends HttpServlet {
 			}
 
 			// Create a short form to select one additional key concept to include (will exclude the previous selection, if any)
-			buf.append("<form method=get action=/Homework>"
+			buf.append("<form method=get action=/PracticeExam>"
 					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 					+ "You may include additional question items from: "
-					+ "<input type=hidden name=UserRequest value=AssignHomeworkQuestions />"
+					+ "<input type=hidden name=UserRequest value=AssignExamQuestions />"
 					+ "<select name=ConceptId onchange=this.form.submit();><option value='Select'>Select a key concept</option>");
 			for (Key<Concept> k : conceptKeys) {
 				try {
