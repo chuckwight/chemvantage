@@ -37,6 +37,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
@@ -105,7 +106,8 @@ public class Homework extends HttpServlet {
 				try {
 					hintQuestionId = Long.parseLong(request.getParameter("Q"));
 				} catch (Exception e) {}
-				out.println(Subject.header("ChemVantage Homework") + printHomework(user,a,hintQuestionId) + Subject.footer);
+				boolean showOptional = Boolean.parseBoolean(request.getParameter("ShowOptional"));
+				out.println(Subject.header("ChemVantage Homework") + printHomework(user,a,hintQuestionId,showOptional) + Subject.footer);
 			}
 		} catch (Exception e) {
 			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
@@ -193,11 +195,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	static String printHomework(User user, Assignment a) throws IOException {
-		return printHomework(user,a,0L);
-	}
-	
-	static String printHomework(User user, Assignment hwa, long hintQuestionId) throws IOException  {
+	static String printHomework(User user, Assignment hwa, long hintQuestionId, boolean showOptional) throws IOException  {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Debug: ");
 		
@@ -211,41 +209,17 @@ public class Homework extends HttpServlet {
 				hwa.title = ch.title;
 				hwa.textId = text.id;
 				hwa.chapterNumber = ch.chapterNumber;
+				hwa.conceptIds = ch.conceptIds;
+				for (Long cId : hwa.conceptIds) hwa.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());
+				Random rand = new Random();  // use a random number generator to select 10 keys
+				while (hwa.questionKeys.size() > 10) hwa.questionKeys.remove(rand.nextInt(hwa.questionKeys.size()));
 			} else if (hwa.title==null) {  // legacy Homework assignment only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(hwa.topicId).now();
 				hwa.title = t.title;
 				if (hwa.conceptIds.isEmpty()) hwa.conceptIds = t.conceptIds;
 				ofy().save().entity(hwa).now();
 			}
-			
-			// get a List of homework questionKeys for this topic:
-			List<Key<Question>> allQuestionKeys = new ArrayList<Key<Question>>();
-			try {
-				Text text = ofy().load().type(Text.class).id(hwa.textId).now();
-				Chapter ch = null;
-				for (Chapter c : text.chapters) {
-					if (c.chapterNumber == hwa.chapterNumber) ch = c;
-				}
-				for (Long cId : ch.conceptIds) allQuestionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());
-			} catch (Exception e) {  // for legacy assignments without a textId
-				for (Long cId : hwa.conceptIds) allQuestionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());	
-			}
-			debug.append(allQuestionKeys.size() + " concept questionKeys retrieved. ");
-			
-			Map<Key<Question>,Question> allQuestions = new HashMap<Key<Question>,Question>(ofy().load().keys(allQuestionKeys));
-			
-			if (!allQuestionKeys.containsAll(hwa.questionKeys)) {  // might be missing a few questions due to customization
-				for (Key<Question> k : hwa.questionKeys) {
-					try {
-						if (!allQuestionKeys.contains(k)) {
-							allQuestions.put(k, ofy().load().key(k).safe());
-							allQuestionKeys.add(k);
-						}
-					} catch (Exception e) {}
-				}
-			}
-			debug.append("Total number of questions = " + allQuestions.size());
-			
+						
 			// START the presentation of the Homework assignment
 			buf.append("<h1>Homework Exercises</h1><h2>" + hwa.title + "</h2>");
 
@@ -273,56 +247,89 @@ public class Homework extends HttpServlet {
 				workStrings.put(ht.questionId,ht.showWork);
 			}
 			
-			StringBuffer assignedQuestions = new StringBuffer();
-			assignedQuestions.append("<div style='display:table'>");
-			StringBuffer optionalQuestions = new StringBuffer();
-			optionalQuestions.append("<div style='display:table'>");
-			
-			// This is the main loop for presenting assigned and optional questions in order of increasing difficulty:
-			int i=1;
-			int j=1;
-			for (Key<Question> k : allQuestionKeys) {
-				Question q = allQuestions.get(k); 
-				boolean assigned = hwa.questionKeys.contains(k);
-				StringBuffer questionBuffer = new StringBuffer("<div style='display:table-row'><div style='display:table-cell;font-size:small'>");
+			List<Key<Question>> allQuestionKeys = new ArrayList<Key<Question>>();
+			Map<Key<Question>,Question> questions = new HashMap<Key<Question>,Question>();  // container for the questions to be presented
+			if (showOptional) {
+				for (Long cId : hwa.conceptIds) allQuestionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());
+				if (!allQuestionKeys.containsAll(hwa.questionKeys)) {
+					for (Key<Question> k : hwa.questionKeys) if (!allQuestionKeys.contains(k)) allQuestionKeys.add(k);
+				}
+				questions = ofy().load().keys(allQuestionKeys);
+			} else {
+				questions = ofy().load().keys(hwa.questionKeys);
+			}
+
+			buf.append("<h2>Assigned Exercises</h2>");
+			buf.append("<div style='display:table'>"); // start the table of questions
+			// This is the main loop for presenting assigned questions in order of increasing difficulty:
+			int i=0;
+			for (Key<Question> k : hwa.questionKeys) {
+				i++;
+				Question q = questions.get(k); 
+				buf.append("<div style='display:table-row'><div style='display:table-cell;font-size:small'>");
 				String hashMe = user.getId() + hwa.id;
 				q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
-				
+
 				Integer attemptsRemaining = null;
 				if (hwa.attemptsAllowed!=null) {
 					attemptsRemaining = hwa.attemptsAllowed - (priorAttempts.get(q.id)==null?0:priorAttempts.get(q.id));
 					if (attemptsRemaining < 0) attemptsRemaining = 0;
 				}
-				
-				if (solvedQuestions.contains(q.id)) questionBuffer.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");
+
+				if (solvedQuestions.contains(q.id)) buf.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");
 				//else if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) questionBuffer.append("<br/><a href='" + q.learn_more_url + "' target=_blank><img src=/images/learn_more.png alt='learn more here' align=top /><br/>learn</a>&nbsp;");
-				
-				questionBuffer.append("</div>");
-				
-				questionBuffer.append("<FORM METHOD=POST ACTION=/Homework onsubmit=waitForScore('" + q.id + "'); >"
+
+				buf.append("</div>");
+
+				buf.append("<FORM METHOD=POST ACTION=/Homework onsubmit=waitForScore('" + q.id + "'); >"
 						+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
 						+ (hwa==null?"":"<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>")
-						+ "<div style='display:table-cell;vertical-align:text-top;padding-right:10px;'><b>" + (assigned?i:j) + ".</b></div>"
+						+ "<div style='display:table-cell;vertical-align:text-top;padding-right:10px;'><b>" + i + ".</b></div>"
 						+ "<div style='display:table-cell'>" + q.print(workStrings.get(q.id),"",attemptsRemaining) 
 						+ (q.id == hintQuestionId?"Hint:<br>" + q.getHint():"")
 						+ "<INPUT id=sub" + q.id + " TYPE=SUBMIT class='btn' VALUE='Grade This Exercise'><p>"
 						+ "</div></div></FORM>\n");
-				if (assigned) {
-					assignedQuestions.append(questionBuffer);
-					i++; 
-				} else {
-					optionalQuestions.append(questionBuffer);
-					j++;
-				}
 			}
+			if (i==0) buf.append("(none)");
+			buf.append("</div>");  // end of assigned questions table
 			
-			// Print the list of problems for the student
-			buf.append((i>1?"<h2>Assigned Exercises</h2>":"") + assignedQuestions + "</div>");
-			if (i>1 && j>1) {
-				buf.append("<hr><hr><span style='font-weight: bold;'> **** END OF ASSIGNED EXERCISES **** </span><hr><hr>");
-				buf.append("<h2>Optional Exercises</h2>" + optionalQuestions + "</div>");
-			}
+			if (showOptional) {
+				allQuestionKeys.removeAll(hwa.questionKeys);
+				buf.append("<h2>Optional Exercises</h2>");
+				buf.append("<div style='display:table'>"); // start the table of questions
+				// This is the main loop for presenting assigned questions in order of increasing difficulty:
+				i=0;
+				for (Key<Question> k : allQuestionKeys) {
+					i++;
+					Question q = questions.get(k); 
+					buf.append("<div style='display:table-row'><div style='display:table-cell;font-size:small'>");
+					String hashMe = user.getId() + hwa.id;
+					q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
+
+					Integer attemptsRemaining = null;
+					if (hwa.attemptsAllowed!=null) {
+						attemptsRemaining = hwa.attemptsAllowed - (priorAttempts.get(q.id)==null?0:priorAttempts.get(q.id));
+						if (attemptsRemaining < 0) attemptsRemaining = 0;
+					}
+
+					if (solvedQuestions.contains(q.id)) buf.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");
+					
+					buf.append("</div>");
+
+					buf.append("<FORM METHOD=POST ACTION=/Homework onsubmit=waitForScore('" + q.id + "'); >"
+							+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "'>"
+							+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
+							+ (hwa==null?"":"<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>")
+							+ "<div style='display:table-cell;vertical-align:text-top;padding-right:10px;'><b>" + i + ".</b></div>"
+							+ "<div style='display:table-cell'>" + q.print(workStrings.get(q.id),"",attemptsRemaining) 
+							+ (q.id == hintQuestionId?"Hint:<br>" + q.getHint():"")
+							+ "<INPUT id=sub" + q.id + " TYPE=SUBMIT class='btn' VALUE='Grade This Exercise'><p>"
+							+ "</div></div></FORM>\n");
+				}
+				if (i==0) buf.append("(none)");
+				buf.append("</div>");  // end of assigned questions table
+			} else if (!user.isAnonymous()) buf.append("<a href=/Homework?sig=" + user.getTokenSignature() + "&ShowOptional=true >Show Optional Questions</a>");
 			
 			buf.append("<script>function showWorkBox(qid) {\n"
 					+ "	if (qid==0) return;\n"
@@ -330,7 +337,6 @@ public class Homework extends HttpServlet {
 					+ "    document.getElementById('answer'+qid).placeholder='Enter your answer here';\n"
 					+ "}</script>");
 			} catch (Exception e) {
-			// buf.append("Sorry, there was an unexpected error: " + e.getMessage()==null?e.toString():e.getMessage());
 			Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Error during Homework.printHomework: ", e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString() + "<br/>" + user.getId());
 			return Logout.now(user);
 		}
