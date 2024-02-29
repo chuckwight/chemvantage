@@ -990,11 +990,12 @@ public class Homework extends HttpServlet {
 			int i=0;
 			for (Question q : orderedQuestions) {
 				q.setParameters();  // creates randomly selected parameters
-				buf.append("\n<TR><TD VALIGN=TOP NOWRAP>"
+				buf.append("\n<TR><TD style='vertical-align:text-top;' NOWRAP>"
 						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
 				buf.append(a.questionKeys.contains(key(Question.class,q.id))?" CHECKED>":">");
 				i++;
-				buf.append("<b>&nbsp;" + i + ".</b></TD>");
+				buf.append("<b>&nbsp;" + i + ".</b><br/>"
+						+ "<span style='font-size:0.5em'>" + q.getSuccess() + "</span></TD>");
 				buf.append("\n<TD>" + q.printAll() + "</TD>");
 				buf.append("</TR>");
 				if (q.conceptId!=null && !a.conceptIds.contains(q.conceptId)) a.conceptIds.add(q.conceptId);

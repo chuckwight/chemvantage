@@ -653,7 +653,7 @@ public class Question implements Serializable, Cloneable {
 	
 	public String getSuccess() {
 		if (nTotalAttempts==null) initializeCounters();
-		return String.valueOf(nCorrectAnswers) + "/" + String.valueOf(nTotalAttempts) + "(" + getPctSuccess() + ")";
+		return String.valueOf(nCorrectAnswers) + "/" + String.valueOf(nTotalAttempts) + "<br/>(" + getPctSuccess() + "%)";
 	}
 	
 	public int getPctSuccess() {
