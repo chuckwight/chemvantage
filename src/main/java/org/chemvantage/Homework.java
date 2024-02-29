@@ -924,7 +924,7 @@ public class Homework extends HttpServlet {
 			Long newConceptId = null;
 			try {  // add a new conceptId
 				newConceptId = Long.parseLong(request.getParameter("ConceptId"));
-				a.conceptIds.add(newConceptId);
+				a.conceptIds.add(0,newConceptId);
 			} catch (Exception e) {}
 			
 			List<Key<Concept>> conceptKeys = ofy().load().type(Concept.class).order("orderBy").keys().list();
@@ -957,48 +957,89 @@ public class Homework extends HttpServlet {
 			buf.append("</select></form><hr>");
 			
 			
-			// now we have all of the relevant conceptIds. Make a list of questions carrying these attributes:
-			List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
-			for (Long cId : a.conceptIds) questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());
-			if (!questionKeys.containsAll(a.questionKeys)) {  // might be missing a few questions due to customization
-				for (Key<Question> k : a.questionKeys) if (!questionKeys.contains(k)) questionKeys.add(k);
+			// now we have all of the relevant conceptIds. Make 2 lists of Assigned and Optional questions:
+			StringBuffer assignedQuestions = new StringBuffer();
+			StringBuffer optionalQuestions = new StringBuffer();
+			int i = 1;  // counter for assigned questions
+			int j = 1;  // counter for optional questions
+			
+			for (Long cId : a.conceptIds) {
+				List<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).list();		
+				if (questions.size()>1) Collections.sort(questions,new SortBySuccessPct());
+				for (Question q : questions) {
+					boolean assigned = a.questionKeys.remove(key(q));
+					StringBuffer qbuf = new StringBuffer();
+					q.setParameters();  // creates randomly selected parameters
+					qbuf.append("\n<TR>"
+							+ "<TD style='vertical-align:top;' NOWRAP>"
+							+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'"
+							+ (assigned?" CHECKED>":">")
+							+ "<b>&nbsp;" + (assigned?i:j) + ".</b><br/>"
+							+ "<span style='font-size:0.5em'>" + q.getSuccess() + "</span></TD>"
+							+ "<TD>" + q.printAll() + "</TD>"
+							+ "</TR>");
+					if (assigned) {
+						assignedQuestions.append(qbuf);
+						i++;
+					} else {
+						optionalQuestions.append(qbuf);
+						j++;
+					}
+				}
 			}
 			
-			// create an ordered List of Questions (by difficulty)
-			List<Question> orderedQuestions = new ArrayList<Question>(ofy().load().keys(questionKeys).values());		
-			if (orderedQuestions.size()>1) Collections.sort(orderedQuestions,new SortBySuccessPct());
+			// If any orphan questions remain, add them to assignedQuestions (this is uncommon)
+			if (!a.questionKeys.isEmpty()) {
+				List<Question> questions = (List<Question>) ofy().load().keys(a.questionKeys).values();		
+				for (Question q : questions) {
+					boolean assigned = a.questionKeys.remove(key(q));
+					StringBuffer qbuf = new StringBuffer();
+					q.setParameters();  // creates randomly selected parameters
+					qbuf.append("\n<TR>"
+							+ "<TD style='vertical-align:top;' NOWRAP>"
+							+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'"
+							+ (assigned?" CHECKED>":">")
+							+ "<b>&nbsp;" + (assigned?i:j) + ".</b><br/>"
+							+ "<span style='font-size:0.5em'>" + q.getSuccess() + "</span></TD>"
+							+ "<TD>" + q.printAll() + "</TD>"
+							+ "</TR>");
+					if (assigned) {
+						assignedQuestions.append(qbuf);
+						i++;
+					} else {
+						optionalQuestions.append(qbuf);
+						j++;
+					}
+				}
+			}
 			
-			buf.append("<b>Select assigned questions</b><br/>"
-					+ "Current number of assigned questions = " + a.questionKeys.size() + " out of " + orderedQuestions.size());
+			
+			buf.append("<b>Select the question items for this assignment</b><br/>");
 			
 			// This dummy form uses javascript to select/deselect all questions
-			buf.append("<FORM NAME=DummyForm><INPUT id=selectAll TYPE=CHECKBOX NAME=SelectAll "
+			buf.append("<FORM style='display:inline;' NAME=DummyForm><INPUT id=selectAll TYPE=CHECKBOX NAME=SelectAll "
 					+ "onClick='for (var i=0;i<document.Questions.QuestionId.length;i++)"
 					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}'"
-					+ "> Select/Unselect All</FORM>");
+					+ "> Select/Unselect All</FORM>&nbsp;&nbsp;&nbsp;");
 			buf.append("<script>document.getElementById('selectAll').indeterminate=true;</script>");
 			
 			// Make a list of individual questions that can be selected or deselected for this assignment
-			buf.append("<FORM NAME=Questions METHOD=POST ACTION=/Homework />"
+			buf.append("<FORM style='display:inline;' NAME=Questions METHOD=POST ACTION=/Homework />"
 					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + " />"
 					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment' />"
 					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + a.id + "' />"
 					+ (newConceptId==null?"":"<input type=hidden name=NewConceptId value=" + newConceptId + " />")
-					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items' />");
+					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items' /><br/><br/>");
+			
+			// Make a table of assigned and optional questions
 			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
-
-			int i=0;
-			for (Question q : orderedQuestions) {
-				q.setParameters();  // creates randomly selected parameters
-				buf.append("\n<TR><TD style='vertical-align:text-top;' NOWRAP>"
-						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'");
-				buf.append(a.questionKeys.contains(key(Question.class,q.id))?" CHECKED>":">");
-				i++;
-				buf.append("<b>&nbsp;" + i + ".</b><br/>"
-						+ "<span style='font-size:0.5em'>" + q.getSuccess() + "</span></TD>");
-				buf.append("\n<TD>" + q.printAll() + "</TD>");
-				buf.append("</TR>");
-				if (q.conceptId!=null && !a.conceptIds.contains(q.conceptId)) a.conceptIds.add(q.conceptId);
+			if (!assignedQuestions.isEmpty()) {
+				buf.append("<TR><TD COLSPAN=2><b>Assigned Questions:</b></TD></TR>");
+				buf.append(assignedQuestions);
+			}
+			if (!optionalQuestions.isEmpty()) {
+				buf.append("<TR><TD COLSPAN=2><b>Optional Questions:</b></TD></TR>");
+				buf.append(optionalQuestions);
 			}
 			buf.append("</TABLE><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM><br/>");
 		} catch (Exception e) {
