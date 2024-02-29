@@ -84,7 +84,13 @@ public class Assignment implements java.lang.Cloneable {
 		try {
 			String[] questionIds = request.getParameterValues("QuestionId");
 			this.questionKeys.clear();
-			if (questionIds != null) for (String id : questionIds) this.questionKeys.add(key(Question.class,Long.parseLong(id)));
+			if (questionIds != null) 
+				for (String id : questionIds) {  // eliminate any duplicate question keys
+					try {
+					Key<Question> k = key(Question.class,Long.parseLong(id));
+					if (!this.questionKeys.contains(k)) this.questionKeys.add(k);
+					} catch (Exception e) {}
+				}
 			List<Question> questions = new ArrayList<Question>(ofy().load().keys(this.questionKeys).values());
 			this.conceptIds.clear();
 			for (Question q : questions) if (q.conceptId!=null && q.conceptId>0 && !conceptIds.contains(q.conceptId)) conceptIds.add(q.conceptId);
