@@ -83,6 +83,9 @@ public class Quiz extends HttpServlet {
 			case "SynchronizeScore":
 				out.println(synchronizeScore(user,a,request.getParameter("ForUserId")));
 				break;
+			case "Logout":
+				out.println(Subject.header() + Logout.now(user) + Subject.footer);
+				break;
 			default: 
 				out.println(Subject.header("ChemVantage Quiz") + printQuiz(user,a) + Subject.footer);
 			}
@@ -181,11 +184,6 @@ public class Quiz extends HttpServlet {
 			
 			buf.append("<a href='/Quiz?sig=" + user.getTokenSignature() + "' class='btn'>Show This Assignment</a><br/><br/>");
 			
-	/*		
-			buf.append("<a style='text-decoration: none' href='/Quiz?sig=" + user.getTokenSignature() + "'>"
-					+ "<button style='display: block; width: 500px; border: 1 px; background-color: #00FFFF; color: black; padding: 14px 28px; font-size: 18px; text-align: center; cursor: pointer;'>"
-					+ "Show This Assignment (recommended)</button></a>");
-					*/
 		} catch (Exception e) {
 			buf.append("<br/>Instructor page error: " + e.getMessage());
 		}
@@ -476,7 +474,7 @@ public class Quiz extends HttpServlet {
 						+ (user.isInstructor()?"For instructors this is common.":"") + "<p>");				
 			}
 			
-			if (!user.isAnonymous()) buf.append("Use the assignment link in your learning management system to repeat this quiz, or <a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a>");
+			if (!user.isAnonymous()) buf.append("Use the assignment link in your learning management system to repeat this quiz, or <a href=/Quiz?sig=" + user.getTokenSignature() + "&UserRequest=Logout >logout of ChemVantage</a>");
 		} catch (Exception e) {
 			buf.append("Sorry, this quiz could not be scored.<br>" + e.getMessage());
 		}

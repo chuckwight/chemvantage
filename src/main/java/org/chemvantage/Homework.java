@@ -101,6 +101,9 @@ public class Homework extends HttpServlet {
 			case "SynchronizeScore":
 				out.println(synchronizeScore(user,a,request.getParameter("ForUserId")));
 				break;
+			case "Logout":
+				out.println(Subject.header() + Logout.now(user) + Subject.footer);
+				break;
 			default:
 				long hintQuestionId = 0L;
 				try {
@@ -376,7 +379,7 @@ public class Homework extends HttpServlet {
 					buf.append("</table><br/>");
 					
 					buf.append("<a href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature() + ">Return to this homework assignment" + "</a> or "
-							+ "<a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a> ");
+							+ "<a href=/Homework?sig=" + user.getTokenSignature() + "&UserRequest=Logout >logout of ChemVantage</a> ");
 				
 					return buf.toString();
 				}
@@ -615,16 +618,16 @@ public class Homework extends HttpServlet {
 				+ (offerHint?"&Q=" + q.id + ">Please give me a hint":">Continue with this assignment") + "</a><br clear=left /><br/>");
 				
 				if (hwa != null) buf.append("You may also <a href=/Homework?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review your scores on this assignment</a> "
-						+ "or <a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a>");
+						+ "or <a href=/Homework?sig=" + user.getTokenSignature() + "&UserRequest=Logout >logout of ChemVantage</a>");
 			} else { // user is anonymous
 				buf.append("<a class=btn href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature() + ">Continue with this assignment</a><br clear=left /><br/>");
 				
-				buf.append("You may also <a href=/>Return to the ChemVantage home page</a> or <a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a> ");
+				buf.append("You may also <a href=/>Return to the ChemVantage home page</a> or <a href=/Homework?sig=" + user.getTokenSignature() + "&UserRequest=Logout >logout of ChemVantage</a> ");
 			}
 		} catch (Exception e) {
 			buf.append("Sorry, there was an unexpected error: " + e.getMessage()==null?e.toString():e.getMessage());
 			Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Error during Homework.printScore: ", e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString() + "<br/>" + user.getId());
-			return Logout.now(user);
+			return Logout.now(request,e);
 		}
 		return buf.toString();
 	}

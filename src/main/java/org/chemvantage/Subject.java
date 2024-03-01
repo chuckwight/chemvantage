@@ -183,6 +183,7 @@ public class Subject {
 
 	public static String getHeader(User user) {
 		String announcement = Subject.getAnnouncement();
+		String sig = user.getTokenSignature();
 		return "<!DOCTYPE html>\n"
 		+ "<html lang='en'>\n"
 		+ "<head>\n"
@@ -202,13 +203,13 @@ public class Subject {
 		+ "<div>"
 		+ "<a href=/ style='padding-right:25px'>Home</a> "
 		+ "<a href=/about.html style='padding-right:25px'>About Us</a> "
-		+ "<a href='/Feedback?sig=" + user.getTokenSignature() + "' style='padding-right:25px'>Feedback</a> "
-		+ "<a href='/Contribute?sig=" + user.getTokenSignature() + "' style='padding-right:25px'>Authors</a> "
-		+ "<a href='/Edit?sig=" + user.getTokenSignature() + "' style='padding-right:25px'>Editors</a> "
-		+ "<a href='/Admin?sig=" + user.getTokenSignature() + "' style='padding-right:25px'>Admin</a> "
+		+ "<a href='/Feedback?sig=" + sig + "' style='padding-right:25px'>Feedback</a> "
+		+ "<a href='/Contribute?sig=" + sig + "' style='padding-right:25px'>Authors</a> "
+		+ "<a href='/Edit?sig=" + sig + "' style='padding-right:25px'>Editors</a> "
+		+ "<a href='/Admin?sig=" + sig + "' style='padding-right:25px'>Admin</a> "
 		+ "<a href='/contacts' style='padding-right:25px'>Contacts</a> "
 		+ "<a href='/messages' style='padding-right:25px'>Messages</a> "
-		+ "<a href=/Logout>Sign out</a>"
+		//+ "<a href=/Logout?sig=" + sig + ">Sign out</a>"
 		+ "</div><br/>"
 		+ ((announcement==null || announcement.isEmpty())?"":"<FONT style='color: #EE0000'>" + announcement + "</FONT><br/>\n");
 	}

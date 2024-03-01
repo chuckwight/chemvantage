@@ -50,7 +50,7 @@ public class Checkout extends HttpServlet {
 			if (user==null || deployment==null) throw new Exception("You must be logged in through your class LMS to see this page.");
 			out.println(checkoutForm(user,deployment));	
 		} catch (Exception e) {
-			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
+			out.println(Subject.header("Logout") + Logout.now(request,e) + Subject.footer);
 		}
 	}
 
@@ -77,7 +77,7 @@ public class Checkout extends HttpServlet {
 			String details = request.getParameter("OrderDetails");
 			out.println(thankYouPage(user, paymentMethod, details));
 		} catch (Exception e) {
-			out.println(Subject.header("Logout") + Logout.now(user) + Subject.footer);
+			out.println(Subject.header("Logout") + Logout.now(request,e) + Subject.footer);
 		}
 	}
 

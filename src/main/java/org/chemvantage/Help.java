@@ -66,7 +66,7 @@ public class Help extends HttpServlet {
     		JsonObject payload = validateJWT(jwt); // throws exception if expired or otherwise invalid
     		out.println(showStudentSubmission(payload));
     	} catch (Exception e) {
-    		response.sendError(401, e.getMessage());
+    		response.getWriter().println(Subject.header() + Logout.now(request,e) + Subject.footer);
     	}
 		
     }
@@ -90,7 +90,7 @@ public class Help extends HttpServlet {
 			out.println(Subject.header("ChemVantage Help Page") + "<h1>Help Page</h1>" + displayHelpUrl(jwt,iss) + Subject.footer);
 			
 		} catch (Exception e) {
-			response.sendRedirect(Subject.serverUrl + "/Logout");
+			response.getWriter().println(Subject.header() + Logout.now(request,e) + Subject.footer);
 		}
 	}
 	

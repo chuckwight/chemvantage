@@ -106,8 +106,7 @@ public class VideoQuiz extends HttpServlet {
 				else response.sendRedirect(Subject.serverUrl + "/VideoQuiz?UserRequest=ShowVideo&VideoId=" + videoId + "&sig=" + user.getTokenSignature());
 			}			
 		} catch (Exception e) {
-			out.println("Error: " + e.getMessage()==null?e.toString():e.getMessage());
-			//response.sendRedirect(Subject.serverUrl + "/Logout?sig=" + request.getParameter("sig"));
+			response.getWriter().println(Logout.now(request,e));
 		}
 	}
 
@@ -134,7 +133,7 @@ public class VideoQuiz extends HttpServlet {
 				out.println(scoreQuizlet(user,request));
 			}
 		} catch (Exception e) {
-			response.sendRedirect(Subject.serverUrl + "/Logout?sig=" + request.getParameter("sig"));
+			response.getWriter().println(Logout.now(request,e));
 		}
 	}
 
@@ -545,8 +544,6 @@ public class VideoQuiz extends HttpServlet {
 		if (reportScoreToLms) {
 			try {
 				Utilities.createTask("/ReportScore","AssignmentId=" + a.id + "&UserId=" + URLEncoder.encode(user.getId(),"UTF-8"));
-				//Queue queue = QueueFactory.getDefaultQueue();  // Task queue used for reporting scores to the LMS
-				//queue.add(withUrl("/ReportScore").param("AssignmentId",String.valueOf(a.id)).param("UserId",URLEncoder.encode(user.getId(),"UTF-8")));  // put report into the Task Queue
 			} catch (Exception e) {}
 		} else if (!user.isAnonymous()) {
 			buf.append("<b>Please note:</b> Your score was not reported back to the grade book of your class "
@@ -561,7 +558,7 @@ public class VideoQuiz extends HttpServlet {
 		// If a==null this is an anonymous user, otherwise is an LTI user:
 		buf.append((a==null?"<a href=/VideoQuiz?VideoId=" + vt.videoId + "&Segment=0&sig=" + user.getTokenSignature() + ">Watch this video again</a> or go back to the <a href=/>ChemVantage home page</a> " :
 				"You may view this video again by clicking the assignment link in your learning management system ")			
-				+ "or <a href=/Logout>logout of ChemVantage</a>.");
+				+ "or <a href=/?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a>.");
 
 		return buf.toString();	
 

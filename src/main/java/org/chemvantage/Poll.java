@@ -44,8 +44,6 @@ import com.googlecode.objectify.Key;
 public class Poll extends HttpServlet {
 	private static final long serialVersionUID = 137L;
 	
-	//private Map<Key<Question>,Question> pollQuestions = new HashMap<Key<Question>,Question>();
-	
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		try {
 			User user = User.getUser(request.getParameter("sig"));
@@ -102,7 +100,7 @@ public class Poll extends HttpServlet {
 				}
 			}
 			} catch (Exception e) {
-				response.sendRedirect(Subject.serverUrl + "/Logout?sig=" + request.getParameter("sig"));
+				response.getWriter().println(Logout.now(request,e));
 			}
 		}
 
@@ -199,7 +197,7 @@ public class Poll extends HttpServlet {
 				break;
 			}
 		} catch (Exception e) {
-			response.sendRedirect(Subject.serverUrl + "/Logout?sig=" + request.getParameter("sig"));
+			response.getWriter().println(Logout.now(request,e));
 		}
 	}
 

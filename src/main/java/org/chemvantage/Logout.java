@@ -24,8 +24,31 @@ import jakarta.servlet.http.HttpServletRequest;
 
 public class Logout {
 
-	public String getServletInfo() {
-		return "Servlet for confirming logout from ChemVantage.";
+	static String message = Subject.header() 
+			+ "<h1>Logout</h1>"
+			+ "<h2>You have successfully signed out of ChemVantage</h2>" 
+			+ "If this happened unexpectedly, it is likely that your browser's web "
+			+ "session timed out after a period of inactivity, or the access token "
+			+ "exchanged between your learning management system (LMS) and ChemVantage "
+			+ "has expired (after a period of typically 90 minutes)."
+			+ "<p>"
+			+ "You can activate a new session and token by returning to your learning "
+			+ "management system (LMS) and clicking the link for any assignment there.<p>"
+			+ "If you are having technical difficulty using ChemVantage, <a href=/Feedback>"
+			+ "please tell us</a> so we can fix the problem."	
+			+ Subject.footer;
+	
+	static String now(HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer("<h1>Logout</h1>");
+		String sig = request.getParameter("sig");
+		try {
+			ofy().delete().entity(User.getUser(sig)).now();
+			buf.append("<h2>You are now logged out of ChemVantage</h2>");
+		} catch (Exception e) {
+			buf.append("<h2>Failed</h2>"
+					+ "An attempt to log you out of ChemVantage failed, most likely because you were not logged in at the time.<br/><br/>");
+		}
+		return buf.toString();
 	}
 
 	static String now(HttpServletRequest request,Exception exception) {
@@ -46,24 +69,12 @@ public class Logout {
 	}
 
 	static String now(User user) {
-		StringBuffer buf = new StringBuffer("<h1>Logout</h1><h2>Sorry, there was an unexpected error.</h2>");
+		StringBuffer buf = new StringBuffer("<h1>Logout</h1>");
 		try {
 			ofy().delete().entity(user).now();
 		} catch (Exception e) {}
+		buf.append("<h2>You are now logged out of ChemVantage.</h2>");
 		return buf.toString();
 	}
 
-	static String message = Subject.header() 
-			+ "<h1>Logout</h1>"
-			+ "<h2>You have successfully signed out of ChemVantage</h2>" 
-			+ "If this happened unexpectedly, it is likely that your browser's web "
-			+ "session timed out after a period of inactivity, or the access token "
-			+ "exchanged between your learning management system (LMS) and ChemVantage "
-			+ "has expired (after a period of typically 90 minutes)."
-			+ "<p>"
-			+ "You can activate a new session and token by returning to your learning "
-			+ "management system (LMS) and clicking the link for any assignment there.<p>"
-			+ "If you are having technical difficulty using ChemVantage, <a href=/Feedback>"
-			+ "please tell us</a> so we can fix the problem."	
-			+ Subject.footer;
 }
