@@ -538,9 +538,11 @@ public class Homework extends HttpServlet {
 								+ (reader==null?"No input stream.":reader.toString()) + "<br/>");
 					}
 				default:
-					buf.append("<h3>Congratulations. You answered the question correctly. <IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom /></h3>"
-						+ (!user.isAnonymous()?"<a id=showLink href=# onClick=document.getElementById('solution').style='display:inline';this.style='display:none'>(show me)</a>":"") 
-						+ "<br/>");
+					buf.append("<div><img id=polly src='/images/parrot.png' alt='Fun parrot character' style='float:left; margin:10px'>"
+							+ "<h2>Congratulations!<h2><h3>You answered the question correctly. <IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom /></h3>"
+						+ (!user.isAnonymous()?"<a id=showLink href=# onClick=document.getElementById('solution').style='display:inline';"
+								+ "document.getElementById('polly').style='display:none';this.style='display:none'>(show me)</a>":"") 
+						+ "</div>");
 				}
 			}
 			else if (studentAnswer.length() > 0) {
@@ -609,15 +611,17 @@ public class Homework extends HttpServlet {
 				if (studentScore > 0) buf.append(fiveStars(user.getTokenSignature()));
 				else buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
 
-				if (hwa != null) buf.append("You may <a href=/Homework?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review your scores on this assignment</a>.<p>");
+				buf.append("<a class=btn href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature()  
+				+ (offerHint?"&Q=" + q.id + ">Please give me a hint":">Continue with this assignment") + "</a><br clear=left /><br/>");
+				
+				if (hwa != null) buf.append("You may also <a href=/Homework?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review your scores on this assignment</a> "
+						+ "or <a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a>");
+			} else { // user is anonymous
+				buf.append("<a class=btn href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature() + ">Continue with this assignment</a><br clear=left /><br/>");
+				
+				buf.append("You may also <a href=/>Return to the ChemVantage home page</a> or <a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a> ");
 			}
-			buf.append("<a href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature()  
-					+ (offerHint?"&Q=" + q.id + "><span style='color:#EE0000'>Please give me a hint</span>":">Return to this homework assignment") + "</a> or "
-					+ "<a href=/Logout?sig=" + user.getTokenSignature() + ">logout of ChemVantage</a> ");
-			
-			if (user.isAnonymous()) buf.append(" or go back to the <a href=/>ChemVantage home page</a>.<br/><br/>");
-			}
-		catch (Exception e) {
+		} catch (Exception e) {
 			buf.append("Sorry, there was an unexpected error: " + e.getMessage()==null?e.toString():e.getMessage());
 			Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Error during Homework.printScore: ", e.getMessage()==null?e.toString():e.getMessage() + "<br/>" + debug.toString() + "<br/>" + user.getId());
 			return Logout.now(user);
