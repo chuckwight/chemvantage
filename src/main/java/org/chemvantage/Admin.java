@@ -190,14 +190,24 @@ public class Admin extends HttpServlet {
 				Date oneMonthAgo = new Date(new Date().getTime()-2592000000L);			
 				buf.append("Active LTI Advantage deployments: " + ofy().load().type(Deployment.class).filter("lastLogin >",oneMonthAgo).count() 
 					+ " <a href=/Admin?UserRequest=ShowGroupEnrollments>show details</a><br/>");			
-				buf.append("Total number of transactions:<br/>"
-						+ "Homework: " +  ofy().load().type(HWTransaction.class).filter("graded >",oneMonthAgo).count()
-						+ "Quiz: " +  ofy().load().type(QuizTransaction.class).filter("graded >",oneMonthAgo).count()
-						+ "SmartText: " +  ofy().load().type(STTransaction.class).filter("graded >",oneMonthAgo).count()
-						+ "Practice Exam: " +  ofy().load().type(PracticeExamTransaction.class).filter("graded >",oneMonthAgo).count()
-						+ "Placement Exam: " +  ofy().load().type(PlacementExamTransaction.class).filter("graded >",oneMonthAgo).count()
-						+ "Video: " +  ofy().load().type(VideoTransaction.class).filter("graded >",oneMonthAgo).count()
-						+ "Poll: " +  ofy().load().type(PollTransaction.class).filter("completed >",oneMonthAgo).count());
+				int hwt = ofy().load().type(HWTransaction.class).filter("graded >",oneMonthAgo).count();
+				int qzt = ofy().load().type(QuizTransaction.class).filter("graded >",oneMonthAgo).count();
+				int stt = ofy().load().type(STTransaction.class).filter("graded >",oneMonthAgo).count();
+				int pet = ofy().load().type(PracticeExamTransaction.class).filter("graded >",oneMonthAgo).count();
+				int plt = ofy().load().type(PlacementExamTransaction.class).filter("graded >",oneMonthAgo).count();
+				int vdt = ofy().load().type(VideoTransaction.class).filter("graded >",oneMonthAgo).count();
+				int pot = ofy().load().type(PollTransaction.class).filter("completed >",oneMonthAgo).count();
+				buf.append("Total number of transactions: " + (hwt+qzt+stt+pet+plt+vdt+pot) + " "
+						+ "<a href=# onclick=document.getElementById('transdetail').style.display=''>show details</a><br/>"
+						+ "<div id=transdetail style='display:none;'>"
+						+ "Homework: " +  hwt + "<br/>"
+						+ "Quiz: " + qzt + "<br/>"
+						+ "SmartText: " + stt + "<br/>"
+						+ "Practice Exam: " + pet + "<br/>"
+						+ "Placement Exam: " + plt + "<br/>"
+						+ "Video: " + vdt + "<br/>"
+						+ "Poll: " + pot
+						+ "</div>");
 			}
 			
 			// New Accounts
