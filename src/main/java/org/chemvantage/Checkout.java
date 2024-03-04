@@ -70,7 +70,7 @@ public class Checkout extends HttpServlet {
 			} catch (Exception e) {}
 			int amountPaid = 0;
 			try {
-				Integer.parseInt(request.getParameter("AmountPaid"));
+				amountPaid = Integer.parseInt(request.getParameter("AmountPaid"));
 			} catch (Exception e) {}
 			Deployment deployment = ofy().load().type(Deployment.class).id(request.getParameter("d")).now();
 			new PremiumUser(user.getHashedId(), nMonthsPurchased, amountPaid, deployment.getOrganization()); // constructor automatically saves new entity
