@@ -198,6 +198,7 @@ public class Subject {
 		+ "    <link href='https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Shantell+Sans:wght@300;400;500;600;700;800&display=swap' rel='stylesheet'/>\n"
 		+ "    <!-- Main Style Sheet -->\n"
 		+ "    <link rel='stylesheet' href='/css/style-backend.css'>\n"
+		+ "    <script src='/js/script-backend.js'></script>\n"
 		+ "</head>"
 		+ "<body style='padding: 10px; font-family: Calibri,Arial,sans-serif; background-color: white; color: black;'>\n"
 		+ "<div>"
@@ -209,7 +210,6 @@ public class Subject {
 		+ "<a href='/Admin?sig=" + sig + "' style='padding-right:25px'>Admin</a> "
 		+ "<a href='/contacts' style='padding-right:25px'>Contacts</a> "
 		+ "<a href='/messages' style='padding-right:25px'>Messages</a> "
-		//+ "<a href=/Logout?sig=" + sig + ">Sign out</a>"
 		+ "</div><br/>"
 		+ ((announcement==null || announcement.isEmpty())?"":"<FONT style='color: #EE0000'>" + announcement + "</FONT><br/>\n");
 	}
@@ -222,8 +222,6 @@ public class Subject {
 			+ "<a href=/terms_and_conditions.html>Terms and Conditions of Use</a> | "
 			+ "<a href=/privacy_policy.html>Privacy Policy</a> | "
 			+ "<a href=/copyright.html>Copyright</a></footer>"
-			+ "    <!-- Main Script Sheet -->"
-			+ "<script src='/js/script-backend.js'></script>\n"
 			+ "</body>\n</html>";
 
 }
