@@ -273,8 +273,9 @@ public class Admin extends HttpServlet {
 			buf.append("</form>");
 			// Signature Code
 			buf.append("<h2>Signature Code for 1 month Anonymous Access: " + Long.toHexString(User.encode(new Date(new Date().getTime() + 2678400000L).getTime())) + "</h2>");	
-		}
-		catch (Exception e) {
+			buf.append("<h2>Signature Code for 1 year Anonymous Access: " + Long.toHexString(User.encode(new Date(new Date().getTime() + 31536000000L).getTime())) + "</h2>");	
+		
+		} catch (Exception e) {
 			buf.append("<p>" + e.toString());
 		}
 		return buf.toString();
