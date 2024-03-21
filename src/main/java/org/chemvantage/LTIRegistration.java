@@ -284,8 +284,8 @@ public class LTIRegistration extends HttpServlet {
 			String reg_code = request.getParameter("reg_code");
 			Date now = new Date();
 			Date exp = new Date(User.encode(Long.parseLong(reg_code,16)));
-    		Date aMonthFromNow = new Date(now.getTime() + 2678400000L);
-    		if (exp.before(now) || exp.after(aMonthFromNow)) throw new Exception("Registration code was invalid or expired.");
+    		Date oneYearFromNow = new Date(now.getTime() + 31536000000L);
+    		if (exp.before(now) || exp.after(oneYearFromNow)) throw new Exception("Registration code was invalid or expired.");
 		}
 		
 		// Construct a new registration token
