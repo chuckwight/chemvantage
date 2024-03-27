@@ -117,6 +117,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			}
 		} catch (Exception e) {	
 			String message = "<h1>LTI Launch Failure. Status 401</h1>" + (e.getMessage()==null?e.toString():e.getMessage());
+			if (Subject.projectId.equals("dev-vantage-hrd")) Utilities.sendEmail("ChemVantage", "admin@chemvantage.org", "LTI Launch Failure", message + "<br/>id_token: " + request.getParameter("id_token"));
 			response.getWriter().println(message);
 			//response.sendError(401, message);
 		}
