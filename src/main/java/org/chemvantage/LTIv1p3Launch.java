@@ -116,8 +116,9 @@ public class LTIv1p3Launch extends HttpServlet {
 				}
 			}
 		} catch (Exception e) {	
-			String message = "<h1>LTI Launch Failure. Status 401</h1>" + (e.getMessage()==null?e.toString():e.getMessage());
-			if (Subject.projectId.equals("dev-vantage-hrd")) Utilities.sendEmail("ChemVantage", "admin@chemvantage.org", "LTI Launch Failure", message + "<br/>id_token: " + request.getParameter("id_token"));
+			String message = "<h1>LTI Launch Failure. Status 401</h1>" + Subject.projectId + "<p>" + (e.getMessage()==null?e.toString():e.getMessage());
+			Utilities.sendEmail("ChemVantage", "admin@chemvantage.org", "LTI Launch Failure", message + "<br/>id_token: " + request.getParameter("id_token"));
+			response.setContentType("text/html");
 			response.getWriter().println(message);
 			//response.sendError(401, message);
 		}
@@ -455,7 +456,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			DecodedJWT id_token = JWT.decode(request.getParameter("id_token"));
 
 			// get the platform_id and deployment_id to load the correct Deployment d
-			String platform_id = id_token.getIssuer();
+			String platform_id = id_token.getIssuer().trim();
 			if (platform_id.endsWith("/")) platform_id = platform_id.substring(0,platform_id.length()-1);
 
 			String deployment_id = id_token.getClaim("https://purl.imsglobal.org/spec/lti/claim/deployment_id").asString();
@@ -465,7 +466,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			Deployment d = Deployment.getInstance(platformDeploymentId);
 
 			if (d==null) {
-				Utilities.sendEmail("ChemVantage", "admin@chemvantage.org", "LTI Launch Failure", request.getParameter("id_token"));
+				//Utilities.sendEmail("ChemVantage", "admin@chemvantage.org", "LTI Launch Failure", request.getParameter("id_token"));
 				throw new Exception("The deployment was not found in the ChemVantage database. You "
 						+ "can register your LMS with ChemVantage at https://www.chemvantage.org/lti/registration");
 			}

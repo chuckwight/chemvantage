@@ -68,7 +68,7 @@ public class Group {
 		if (group_id==null) return;
 		Group g = getInstance(group_id);
 		g.valid = new Date();
-		g.organization = d.organization;
+		g.organization = d.organization==null?"undisclosed":d.organization;
 		g.lms_type = d.lms_type;
 		g.label = "undisclosed";
 		g.title = "undisclosed";
