@@ -11,4 +11,6 @@ To deploy on Google Cloud:
 	gcloud config set project PROJECT_ID
 	mvn clean package appengine:deploy
 	
-	To avoid the automatic gcloud CLI update, you can use gcloud app deploy instead
+	To avoid the automatic gcloud CLI update, you can use gcloud app deploy instead.
+	Also, if a cached image has been deleted on app engine, you may need to use
+	gcloud app deploy --no-cache

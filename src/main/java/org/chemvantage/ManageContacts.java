@@ -71,7 +71,7 @@ public class ManageContacts extends HttpServlet {
 		if (email!=null) {
 			for (int i=0;i<email.length;i++) {
 				try {
-					buf.append(editExistingContact(ofy().load().type(Contact.class).id(email[i].trim()).safe()));
+					buf.append(editExistingContact(ofy().load().type(Contact.class).id(email[i].trim().toLowerCase()).safe()));
 				} catch (Exception e) {}
 				email[0] = null;
 			}
