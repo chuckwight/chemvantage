@@ -216,7 +216,7 @@ public class Token extends HttpServlet {
 			Map<String,String[]> params = request.getParameterMap();
 			String message = "<h3>Deployment Not Found</h3>Query parameters:<br/>";
 			for (String name : params.keySet()) message += name + "=" + params.get(name)[0] + "<br/>";
-			if (Subject.projectId.equals("chem-vantage-hrd")) Utilities.sendEmail("ChemVantage","admin@chemvantage.org","AuthToken Request Failure",message);
+			if (Subject.projectId.equals("chem-vantage-hrd")) Utilities.sendEmail("ChemVantage","admin@chemvantage.org","AuthToken Request Failure (Production)",message);
 		}
 		return d;
 }
