@@ -6,11 +6,12 @@ To view static HTML and JSP files locally:
 
 To deploy on Google Cloud:
 	cd into the directory containing pom.xml
-	edit pom.xml to set project <version> pattern yyyymmddthhmm
 	gcloud auth application-default login
 	gcloud config set project PROJECT_ID
 	mvn clean package appengine:deploy
 	
 	To avoid the automatic gcloud CLI update, you can use gcloud app deploy instead.
-	Also, if a cached image has been deleted on app engine, you may need to use
+	
+	You may encounter a deployment error if a cached image has been deleted on app engine 
+	 (i.e., you haven't deployed for more than a month). To fix this, use
 	gcloud app deploy --no-cache
