@@ -35,6 +35,8 @@ public class Token extends HttpServlet {
 		try {
 			// store parameters required by third-party initiated login procedure:
 			String platform_id = request.getParameter("iss");   // this should be the platform_id URL (aud)
+			// production server does not accept connections from ngrok.com domains
+			if (platform_id.contains("ngrok") && Subject.projectId.equals("chem-vantage-hrd")) throw new Exception();
 			String login_hint = request.getParameter("login_hint");
 			String target_link_uri = request.getParameter("target_link_uri");
 			
