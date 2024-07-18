@@ -105,7 +105,7 @@ public class Token extends HttpServlet {
 					+ "window.location.replace('" + oidc_auth_url + "');"
 					+ "</script>");
 			buf.append(Subject.footer);
-			if (oidc_auth_url.contains("imc")) Utilities.sendEmail("ChemVantage", "admin@chemvantage.org", "IMC OIDC Auth URL", oidc_auth_url);
+			//if (oidc_auth_url.contains("imc")) Utilities.sendEmail("ChemVantage", "admin@chemvantage.org", "IMC OIDC Auth URL", oidc_auth_url);
 			out.println(buf.toString());
 		} catch (Exception e) {
 			Enumeration<String> parameterNames = request.getParameterNames();
