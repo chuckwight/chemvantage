@@ -101,6 +101,9 @@ public class Homework extends HttpServlet {
 			case "SynchronizeScore":
 				out.println(synchronizeScore(user,a,request.getParameter("ForUserId")));
 				break;
+			case "CreateCustomQuestion":
+				out.println(Subject.header("Create Question") + newQuestionForm(user,request) + Subject.footer);
+				break;
 			case "Logout":
 				out.println(Subject.header() + Logout.now(user) + Subject.footer);
 				break;
@@ -154,6 +157,16 @@ public class Homework extends HttpServlet {
 				ofy().save().entity(a).now();
 				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 				break;
+			case "Save Question":
+				saveQuestion(user,request);
+				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
+				break;
+			case "Quit":
+				out.println(Subject.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user,a,request) + Subject.footer);
+				break;
+			case "Preview":
+				out.println(Subject.header() + previewQuestion(user,request) + Subject.footer);
+				break;
 			case "Synchronize Scores":
 				if (synchronizeScores(user,a,request)) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 				else out.println("Synchronization request failed.");
@@ -163,6 +176,86 @@ public class Homework extends HttpServlet {
 		} catch (Exception e) {
 			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
 		}
+	}
+
+	static Question assembleQuestion(HttpServletRequest request) throws Exception {
+		int questionType = Integer.parseInt(request.getParameter("QuestionType"));
+		String assignmentType = request.getParameter("AssignmentType");
+		Question q = new Question(questionType);
+		String questionText = request.getParameter("QuestionText");
+		ArrayList<String> choices = new ArrayList<String>();
+		int nChoices = 0;
+		char choice = 'A';
+		for (int i=0;i<5;i++) {
+			String choiceText = request.getParameter("Choice"+ choice +"Text");
+			if (choiceText==null) choiceText = "";
+			if (choiceText.length() > 0) {
+				choices.add(choiceText);
+				nChoices++;
+			}
+			choice++;
+		}
+		double requiredPrecision = 0.; // percent
+		int significantFigures = 0;
+		int pointValue = 1;
+		try {
+			requiredPrecision = Double.parseDouble(request.getParameter("RequiredPrecision"));
+		} catch (Exception e) {
+		}
+		try {
+			significantFigures = Integer.parseInt(request.getParameter("SignificantFigures"));
+		} catch (Exception e) {
+		}
+		String correctAnswer = "";
+		try {
+			String[] allAnswers = request.getParameterValues("CorrectAnswer");
+			for (int i = 0; i < allAnswers.length; i++) correctAnswer += allAnswers[i];
+		} catch (Exception e) {
+			correctAnswer = request.getParameter("CorrectAnswer");
+		}
+		String parameterString = request.getParameter("ParameterString");
+		if (parameterString == null) parameterString = "";
+		
+		q.setQuestionType(questionType);
+		q.assignmentType = assignmentType;
+		q.text = questionText;
+		q.nChoices = nChoices;
+		q.choices = choices;
+		q.requiredPrecision = requiredPrecision;
+		q.significantFigures = significantFigures;
+		q.correctAnswer = correctAnswer;
+		q.tag = request.getParameter("QuestionTag");
+		q.pointValue = pointValue;
+		q.parameterString = parameterString;
+		q.hint = request.getParameter("Hint");
+		q.solution = request.getParameter("Solution");
+		q.notes = "";
+		q.authorId = request.getParameter("AuthorId");
+		q.editorId = request.getParameter("EditorId");
+		q.scrambleChoices = Boolean.parseBoolean(request.getParameter("ScrambleChoices"));
+		q.strictSpelling = Boolean.parseBoolean(request.getParameter("StrictSpelling"));
+		q.validateFields();
+		return q;
+	}
+
+	static String fiveStars(String sig) {
+		StringBuffer buf = new StringBuffer();
+		
+		buf.append("Please rate your overall experience with ChemVantage:<br />"
+				+ "<span id='vote' style='font-family:tahoma; color:#EE0000;'>(click a star):</span><br>");
+	
+		for (int iStar=1;iStar<6;iStar++) {
+			buf.append("<img src='images/star1.gif' id='" + iStar + "' "
+					+ "style='width:30px; height:30px;' "
+					+ "onmouseover=showStars(this.id); onClick=setStars(this.id,'" + sig + "'); onmouseout=showStars(0); />");
+		}
+		buf.append("<span id=sliderspan style='opacity:0'>"
+				+ "<input type=range id=slider min=1 max=5 value=3 onfocus=document.getElementById('sliderspan').style='opacity:1';showStars(this.value); oninput=showStars(this.value);>"
+				+ "<button onClick=setStars(document.getElementById('slider').value,'" + sig + "');>submit</button>"
+				+ "</span>");
+		buf.append("<p>");
+	
+		return buf.toString(); 
 	}
 
 	static String instructorPage(User user,Assignment a) {
@@ -198,7 +291,125 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	static String printHomework(User user, Assignment hwa, long hintQuestionId, boolean showOptional) throws IOException  {
+	static String newQuestionForm(User user,HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer("<h1>Create Custom Homework Question</h1>");
+		if (!user.isInstructor()) return null;
+		
+		String assignmentType = "Custom";
+		
+		int questionType = 0;
+		try {
+			questionType = Integer.parseInt(request.getParameter("QuestionType"));
+		} catch (Exception e) {
+			buf.append("Use this tool to create your own custom homework question for this assignment.<br/>"
+					+ "First, choose the type of question to create:<br/>");
+			
+			buf.append("<FORM NAME=NewQuestion METHOD=GET ACTION=/Homework>");
+			buf.append("<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=CreateCustomQuestion>"
+					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "'>"
+					+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
+					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + user.getAssignmentId() + "'>"
+					+ "<INPUT TYPE=HIDDEN NAME=QuestionType>"
+					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=1;submit()\" VALUE='Multiple Choice'> "
+					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=2;submit()\" VALUE='True/False'> "
+					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=3;submit()\" VALUE='Select Multiple'> "
+					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=4;submit()\" VALUE='Fill in Word'> "
+					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=5;submit()\" VALUE='Numeric'> "
+					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=6;submit()\" VALUE='Five Star'> "
+					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=7;submit()\" VALUE='Essay'>"
+					+ "</FORM><br/>");
+			return buf.toString();
+		}
+		
+		// if questionType has already been selected:
+		switch (questionType) {
+		case (1): buf.append("<h3>Multiple-Choice " + assignmentType + " Question</h3>");
+		buf.append("Fill in the question text and the possible answers "
+				+ "(up to a maximum of 5). Be sure to select the single best "
+				+ "answer to the question."); break;
+		case (2): buf.append("<h3>True-False " + assignmentType + " Question</h3>");
+		buf.append("Write the question as an affirmative statement. Then "
+				+ "indicate below whether the statement is true or false."); break;
+		case (3): buf.append("<h3>Select-Multiple " + assignmentType + " Question</h3>");
+		buf.append("Fill in the question text and the possible answers "
+				+ "(up to a maximum of 5). Be sure to "
+				+ "select all of the correct answers to the question."); break;
+		case (4): buf.append("<h3>Fill-in-Word " + assignmentType + " Question</h3>");
+		buf.append("Start the question text in the upper textarea box. Indicate "
+				+ "the correct answer (and optionally, an alternative correct answer) in "
+				+ "the middle boxes, and the end of the question text below that.  The answers "
+				+ "are not case-sensitive or punctuation-sensitive, but spelling must "
+				+ "be exact."); break;
+		case (5): buf.append("<h3>Numeric " + assignmentType + " Question</h3>");
+		buf.append("Fill in the question text in the upper textarea box and "
+				+ "the correct numeric answer below. Also indicate the required precision "
+				+ "of the student's response in percent (default = 2%). Use the bottom "
+				+ "textarea box to finish the question text and/or to indicate the "
+				+ "expected dimensions or units of the student's answer."); break;
+		case (6): buf.append("<h3>Five Star " + assignmentType + " Question</h3>");
+		buf.append("Fill in the question text. The user will be asked to provide a rating "
+				+ "from 1 to 5 stars."); break;
+		case (7): buf.append("<h3>Essay " + assignmentType + " Question</h3>");
+		buf.append("Fill in the question text. The user will be asked to provide a short "
+				+ "essay response."); break;
+		default: buf.append("An unexpected error occurred. Please try again.");
+		}
+		Question question = new Question(questionType);
+		buf.append("<p><FORM METHOD=POST ACTION=/Homework>"
+				+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "'>"
+				+ "<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='" + assignmentType + "'>"
+				+ "<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + user.getId() + "'>");
+		buf.append("<INPUT TYPE=HIDDEN NAME=QuestionType VALUE=" + questionType + ">");
+
+		question.pointValue = 1;
+		buf.append(question.edit());
+		buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Preview'></FORM>");
+
+		return buf.toString();
+	}
+
+static String orderResponses(String[] answers) {
+		if (answers==null) return "";
+		Arrays.sort(answers);
+		String studentAnswer = "";
+		for (String a : answers) studentAnswer = studentAnswer + a;
+		return studentAnswer;
+	}
+
+String previewQuestion(User user,HttpServletRequest request) {
+	StringBuffer buf = new StringBuffer();
+	if (!user.isInstructor()) return null;
+	try {
+		Question q = assembleQuestion(request);
+		if (q.requiresParser()) q.setParameters();
+		
+		buf.append("<h1>Create Custom Homework Question</h1><h2>Preview</h2>");
+		
+		buf.append("<FORM ACTION=/Homework METHOD=POST>");
+		
+		buf.append(q.printAll());
+		
+		if (q.authorId==null) q.authorId = user.getId();
+		buf.append("<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "'>");
+		buf.append("<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + q.authorId + "'>");
+		buf.append("<INPUT TYPE=HIDDEN NAME=EditorId VALUE='" + user.getId() + "'>");
+		
+		buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save Question'>");		
+		buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit'>");
+		
+		buf.append("<hr><h2>Continue Editing</h2>");
+		buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
+		buf.append(q.edit());
+		
+		buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Preview>");
+		buf.append("</FORM>");
+	} catch (Exception e) {
+		buf.append(e.toString());
+	}
+	return buf.toString();
+}
+
+static String printHomework(User user, Assignment hwa, long hintQuestionId, boolean showOptional) throws Exception  {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Debug: ");
 		
@@ -250,25 +461,16 @@ public class Homework extends HttpServlet {
 				workStrings.put(ht.questionId,ht.showWork);
 			}
 			
-			List<Key<Question>> allQuestionKeys = new ArrayList<Key<Question>>();
-			Map<Key<Question>,Question> questions = new HashMap<Key<Question>,Question>();  // container for the questions to be presented
-			if (showOptional) {
-				for (Long cId : hwa.conceptIds) allQuestionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());
-				if (!allQuestionKeys.containsAll(hwa.questionKeys)) {
-					for (Key<Question> k : hwa.questionKeys) if (!allQuestionKeys.contains(k)) allQuestionKeys.add(k);
-				}
-				questions = ofy().load().keys(allQuestionKeys);
-			} else {
-				questions = ofy().load().keys(hwa.questionKeys);
-			}
-
+			Map<Key<Question>,Question> questions = ofy().load().keys(hwa.questionKeys);  // container for the questions to be presented
+			
 			buf.append("<h2>Assigned Exercises</h2>");
 			buf.append("<div style='display:table'>"); // start the table of questions
 			// This is the main loop for presenting assigned questions in order of increasing difficulty:
 			int i=0;
 			for (Key<Question> k : hwa.questionKeys) {
-				i++;
 				Question q = questions.get(k); 
+				if (q==null) continue;
+				i++;
 				buf.append("<div style='display:table-row'><div style='display:table-cell;font-size:small'>");
 				String hashMe = user.getId() + hwa.id;
 				q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
@@ -298,14 +500,19 @@ public class Homework extends HttpServlet {
 			buf.append("</div>");  // end of assigned questions table
 			
 			if (showOptional) {
+				List<Key<Question>> allQuestionKeys = new ArrayList<Key<Question>>();
+				for (Long cId : hwa.conceptIds) allQuestionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).keys().list());
 				allQuestionKeys.removeAll(hwa.questionKeys);
+				questions = ofy().load().keys(allQuestionKeys); 
+				
 				buf.append("<h2>Optional Exercises</h2>");
 				buf.append("<div style='display:table'>"); // start the table of questions
 				// This is the main loop for presenting assigned questions in order of increasing difficulty:
 				i=0;
 				for (Key<Question> k : allQuestionKeys) {
-					i++;
 					Question q = questions.get(k); 
+					if (q==null) continue;
+					i++;
 					buf.append("<div style='display:table-row'><div style='display:table-cell;font-size:small'>");
 					String hashMe = user.getId() + hwa.id;
 					q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
@@ -632,24 +839,250 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	static String fiveStars(String sig) {
+	static String questionTypeDropDownBox(int questionType) {
 		StringBuffer buf = new StringBuffer();
-		
-		buf.append("Please rate your overall experience with ChemVantage:<br />"
-				+ "<span id='vote' style='font-family:tahoma; color:#EE0000;'>(click a star):</span><br>");
-
-		for (int iStar=1;iStar<6;iStar++) {
-			buf.append("<img src='images/star1.gif' id='" + iStar + "' "
-					+ "style='width:30px; height:30px;' "
-					+ "onmouseover=showStars(this.id); onClick=setStars(this.id,'" + sig + "'); onmouseout=showStars(0); />");
+		buf.append("\n<SELECT NAME=QuestionType>"
+				+ "<OPTION VALUE=1" + (questionType==1?" SELECTED>":">") + "Multiple Choice</OPTION>"
+				+ "<OPTION VALUE=2" + (questionType==2?" SELECTED>":">") + "True/False</OPTION>"
+				+ "<OPTION VALUE=3" + (questionType==3?" SELECTED>":">") + "Select Multiple</OPTION>"
+				+ "<OPTION VALUE=4" + (questionType==4?" SELECTED>":">") + "Fill in word/phrase</OPTION>"
+				+ "<OPTION VALUE=5" + (questionType==5?" SELECTED>":">") + "Numeric</OPTION>"
+				+ "<OPTION VALUE=6" + (questionType==6?" SELECTED>":">") + "Five Star</OPTION>"
+				+ "<OPTION VALUE=7" + (questionType==7?" SELECTED>":">") + "Essay</OPTION>"
+				+ "</SELECT>");
+		return buf.toString();
+	}
+	
+	static String reviewSubmissions(User user, Assignment a, String forUserId, String forUserName) {
+		StringBuffer buf = new StringBuffer();
+		StringBuffer debug = new StringBuffer("Debug: ");
+		try {
+			// this line restricts non-instructor users to viewing their own scores
+			String forUserHashedId = user.isInstructor()?Subject.hashId(forUserId):user.getHashedId();
+			
+			Map<Key<Question>,Question> questions = ofy().load().keys(a.questionKeys);
+			List<HWTransaction> transactions = ofy().load().type(HWTransaction.class).filter("userId",forUserHashedId).filter("assignmentId",a.id).order("-graded").list();
+			
+			buf.append("<h1>Homework Submissions</h1>"
+					+ (forUserName==null || forUserName.isEmpty()?"":"Name: " + forUserName + "<br/>")
+					+ "Assignment: " + a.title + "<br/>"
+					+ "Date: " + new Date() + "<br/><br/>");
+			debug.append("0");
+			
+			buf.append("<table>");
+			for (Key<Question> k : a.questionKeys) {  // this is the main loop through the assigned questions
+				Question q = questions.get(k);
+				String hashMe = forUserId + a.id;
+				q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
+				debug.append("1");
+				
+				List<HWTransaction> qTransactions = new ArrayList<HWTransaction>();
+				for (HWTransaction t : transactions) if (q.id.longValue() == t.questionId) qTransactions.add(t);
+				debug.append("2");
+				
+				String studentAnswer = null;
+				String showWork = null;
+				HWTransaction hwt = qTransactions.isEmpty()?null:qTransactions.get(0);
+				if (hwt!=null) {
+					showWork = hwt.showWork;
+					studentAnswer = hwt.studentAnswer;
+				}
+				debug.append("3");
+				
+				buf.append("<tr><td style='text-align:right;vertical-align:text-top;padding-right:10px;'><b>" + (a.questionKeys.indexOf(k)+1) + ".</b></td><td>" + q.printAllToStudents(studentAnswer,true,true,showWork) + "<br/></td></tr>");
+				
+				// print a small table of student submissions for this question
+				buf.append("<tr><td></td><td>");
+				if (!qTransactions.isEmpty()) {
+					buf.append("<table style='text-align: center'><tr><th style='padding-right:20px'>Timestamp</th><th style='padding-right:20px'>Student Response</th><th style='padding-right:20px'>Correct Answer</th><th>Correct</th></tr>");
+					for (HWTransaction t : qTransactions) {
+						if (t.studentAnswer==null) buf.append("<tr><td style='padding-right:20px'>" + t.graded + "</td><td colspan=2 style='padding-right:20px'>(response detail is unavailable)</td>");
+						else buf.append("<tr><td style='padding-right:20px'>" + t.graded + "</td><td style='padding-right:20px'>" + t.studentAnswer + "</td><td style='padding-right:20px'>" + t.correctAnswer + "</td>");
+						
+						if (t.score==1) buf.append("<td><img src=/images/checkmark.gif alt='checkmark' height=24 width=17></td>");
+						else if (q.agreesToRequiredPrecision(t.studentAnswer)) buf.append("<td><img src=/images/partCredit.png alt='partial credit' height=25 width=25></td>");
+						else buf.append("<td><img src=/images/xmark.png alt='x-mark' height=24 width=24></td>");
+						buf.append("</tr>");
+					}
+					buf.append("</table><br/>");
+				}
+				buf.append("</td></tr>");
+			}
+			buf.append("</table><br/>");
+			//buf.append(ajaxJavaScript(user.getTokenSignature()));
+		} catch (Exception e) {
+			buf.append("Error: " + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString());
 		}
-		buf.append("<span id=sliderspan style='opacity:0'>"
-				+ "<input type=range id=slider min=1 max=5 value=3 onfocus=document.getElementById('sliderspan').style='opacity:1';showStars(this.value); oninput=showStars(this.value);>"
-				+ "<button onClick=setStars(document.getElementById('slider').value,'" + sig + "');>submit</button>"
-				+ "</span>");
-		buf.append("<p>");
+		return buf.toString();
+	}
+	
+	static void saveQuestion(User user, HttpServletRequest request) {
+		if (!user.isInstructor()) return;
+		try {
+			Question q = assembleQuestion(request);
+			q.isActive = true;
+			ofy().save().entity(q).now();
+			long assignmentId = user.getAssignmentId();
+			Assignment a = ofy().load().type(Assignment.class).id(assignmentId).safe();
+			a.questionKeys.add(0, key(q));
+			ofy().save().entity(a).now();
+		} catch (Exception e) {}
+	}
 
-		return buf.toString(); 
+	String selectQuestionsForm(User user,Assignment a,HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer();
+		StringBuffer debug = new StringBuffer("Debug: ");
+		try {
+			buf.append("<h1>Customize Homework Assignment</h1>");
+			buf.append("<form action=/Homework method=post>"
+					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "<b>Title:</b>&nbspHomework - <input type=text size=25 name=AssignmentTitle value='" + a.title + "' />&nbsp;"
+					+ "<input type=submit name=UserRequest value='Save New Title' /></form><br/>");
+							
+			buf.append("By default, students may submit answers to the homework problems as many times as they wish. This rewards students who persist "
+					+ "to achieve a better score. However, you may limit the number of attempts here. Leave the field blank to permit unlimited attempts.<br/>"
+					+ "<form action=/Homework method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "<input type=text size=10 name=AttemptsAllowed " 
+					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /> "
+					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' />"
+					+ "</form><br/>");
+			
+			// Allow instructor to pick individual question items from all active questions:
+			buf.append("Select the homework questions below to be assigned for grading. "  // The questions are presented below in "
+				//	+ "approximate order of increasing difficulty, as measured by the percentage of correct submissions. "
+					+ "Then click the 'Use Selected Items' button. Each question is worth 1 point, so the maximum possible "
+					+ "score is equal to the number of questions selected. Students may work the optional problems; "
+					+ "however, these are not included in the scores reported to the class LMS. "
+					+ "If you want to include a question that is not included here, you may "
+					+ "<a href=/Homework?UserRequest=CreateCustomQuestion&sig=" + user.getTokenSignature() 
+					+ ">create a custom question for this assignment</a>.<p>");
+	
+			// Show a List of concepts covered by this assignment
+			Long newConceptId = null;
+			try {  // add a new conceptId
+				newConceptId = Long.parseLong(request.getParameter("ConceptId"));
+				a.conceptIds.add(0,newConceptId);
+			} catch (Exception e) {}
+			
+			List<Key<Concept>> conceptKeys = ofy().load().type(Concept.class).order("orderBy").keys().list();
+			Map<Key<Concept>,Concept> keyConcepts = ofy().load().keys(conceptKeys);
+			if (a.conceptIds.size()>0) {
+				buf.append("The questions listed below cover the following key concepts:<ul>");
+				for (Long cId : a.conceptIds) {
+					Concept c = keyConcepts.get(key(Concept.class,cId));
+					try {
+						buf.append("<li>" + c.title + "</li>");
+					} catch (Exception e) {
+						a.conceptIds.remove(cId);  // remove id for null Concept
+					}
+				}
+				buf.append("</ul>");
+			}
+	
+			// Create a short form to select one additional key concept to include (will exclude the previous selection, if any)
+			buf.append("<form method=get action=/Homework>"
+					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
+					+ "You may include additional question items from: "
+					+ "<input type=hidden name=UserRequest value=AssignHomeworkQuestions />"
+					+ "<select name=ConceptId onchange=this.form.submit();><option value='Select'>Select a key concept</option>");
+			for (Key<Concept> k : conceptKeys) {
+				try {
+					if (a.conceptIds.contains(k.getId()) || keyConcepts.get(k).orderBy.startsWith(" 0")) continue;  // skip current and hidden conceptIds
+					buf.append("<option value='" + k.getId() + "'" + (newConceptId!=null && k.getId()==newConceptId?" selected>":">") + keyConcepts.get(k).title + "</option>");
+				} catch (Exception e) {}
+			}
+			buf.append("</select></form><hr>");
+			
+			
+			// now we have all of the relevant conceptIds. Make 2 lists of Assigned and Optional questions:
+			StringBuffer assignedQuestions = new StringBuffer();
+			StringBuffer optionalQuestions = new StringBuffer();
+			int i = 1;  // counter for assigned questions
+			int j = 1;  // counter for optional questions
+			
+			for (Long cId : a.conceptIds) {
+				List<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).list();		
+				if (questions.size()>1) Collections.sort(questions,new SortBySuccessPct());
+				for (Question q : questions) {
+					boolean assigned = a.questionKeys.remove(key(q));
+					StringBuffer qbuf = new StringBuffer();
+					q.setParameters();  // creates randomly selected parameters
+					qbuf.append("\n<TR>"
+							+ "<TD style='vertical-align:top;' NOWRAP>"
+							+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'"
+							+ (assigned?" CHECKED>":">")
+							+ "<b>&nbsp;" + (assigned?i:j) + ".</b><br/>"
+							+ "<span style='font-size:0.5em'>" + q.getSuccess() + "</span></TD>"
+							+ "<TD>" + q.printAll() + "</TD>"
+							+ "</TR>");
+					if (assigned) {
+						assignedQuestions.append(qbuf);
+						i++;
+					} else {
+						optionalQuestions.append(qbuf);
+						j++;
+					}
+				}
+			}
+			
+			// If any orphan questions remain, add them to assignedQuestions (this is uncommon)
+			if (!a.questionKeys.isEmpty()) {
+				List<Question> questions = new ArrayList<Question>(ofy().load().keys(a.questionKeys).values());		
+				for (Question q : questions) {
+					boolean assigned = a.questionKeys.remove(key(q));
+					StringBuffer qbuf = new StringBuffer();
+					q.setParameters();  // creates randomly selected parameters
+					qbuf.append("\n<TR>"
+							+ "<TD style='vertical-align:top;' NOWRAP>"
+							+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'"
+							+ (assigned?" CHECKED>":">")
+							+ "<b>&nbsp;" + (assigned?i:j) + ".</b><br/>"
+							+ "<span style='font-size:0.5em'>" + q.getSuccess() + "</span></TD>"
+							+ "<TD>" + q.printAll() + "</TD>"
+							+ "</TR>");
+					if (assigned) {
+						assignedQuestions.append(qbuf);
+						i++;
+					} else {
+						optionalQuestions.append(qbuf);
+						j++;
+					}
+				}
+			}
+			
+			
+			buf.append("<b>Select the question items for this assignment</b><br/>");
+			
+			// This dummy form uses javascript to select/deselect all questions
+			buf.append("<FORM style='display:inline;' NAME=DummyForm><INPUT id=selectAll TYPE=CHECKBOX NAME=SelectAll "
+					+ "onClick='for (var i=0;i<document.Questions.QuestionId.length;i++)"
+					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}'"
+					+ "> Select/Unselect All</FORM>&nbsp;&nbsp;&nbsp;");
+			buf.append("<script>document.getElementById('selectAll').indeterminate=true;</script>");
+			
+			// Make a list of individual questions that can be selected or deselected for this assignment
+			buf.append("<FORM style='display:inline;' NAME=Questions METHOD=POST ACTION=/Homework />"
+					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + " />"
+					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment' />"
+					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + a.id + "' />"
+					+ (newConceptId==null?"":"<input type=hidden name=NewConceptId value=" + newConceptId + " />")
+					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items' /><br/><br/>");
+			
+			// Make a table of assigned and optional questions
+			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
+			if (!assignedQuestions.isEmpty()) {
+				buf.append("<TR><TD COLSPAN=2><b>Assigned Questions:</b></TD></TR>");
+				buf.append(assignedQuestions);
+			}
+			if (!optionalQuestions.isEmpty()) {
+				buf.append("<TR><TD COLSPAN=2><b>Optional Questions:</b></TD></TR>");
+				buf.append(optionalQuestions);
+			}
+			buf.append("</TABLE><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM><br/>");
+		} catch (Exception e) {
+			buf.append(e.toString() + " " + e.getMessage() + "<br/>" + debug.toString());
+		}
+		return buf.toString();
 	}
 
 	static String showScores(User user, Assignment a, String forUserId) {
@@ -799,69 +1232,15 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 	
-	static String reviewSubmissions(User user, Assignment a, String forUserId, String forUserName) {
-		StringBuffer buf = new StringBuffer();
-		StringBuffer debug = new StringBuffer("Debug: ");
+	static String synchronizeScore(User user, Assignment a, String forUserId) {
 		try {
-			// this line restricts non-instructor users to viewing their own scores
-			String forUserHashedId = user.isInstructor()?Subject.hashId(forUserId):user.getHashedId();
-			
-			Map<Key<Question>,Question> questions = ofy().load().keys(a.questionKeys);
-			List<HWTransaction> transactions = ofy().load().type(HWTransaction.class).filter("userId",forUserHashedId).filter("assignmentId",a.id).order("-graded").list();
-			
-			buf.append("<h1>Homework Submissions</h1>"
-					+ (forUserName==null || forUserName.isEmpty()?"":"Name: " + forUserName + "<br/>")
-					+ "Assignment: " + a.title + "<br/>"
-					+ "Date: " + new Date() + "<br/><br/>");
-			debug.append("0");
-			
-			buf.append("<table>");
-			for (Key<Question> k : a.questionKeys) {  // this is the main loop through the assigned questions
-				Question q = questions.get(k);
-				String hashMe = forUserId + a.id;
-				q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
-				debug.append("1");
-				
-				List<HWTransaction> qTransactions = new ArrayList<HWTransaction>();
-				for (HWTransaction t : transactions) if (q.id.longValue() == t.questionId) qTransactions.add(t);
-				debug.append("2");
-				
-				String studentAnswer = null;
-				String showWork = null;
-				HWTransaction hwt = qTransactions.isEmpty()?null:qTransactions.get(0);
-				if (hwt!=null) {
-					showWork = hwt.showWork;
-					studentAnswer = hwt.studentAnswer;
-				}
-				debug.append("3");
-				
-				buf.append("<tr><td style='text-align:right;vertical-align:text-top;padding-right:10px;'><b>" + (a.questionKeys.indexOf(k)+1) + ".</b></td><td>" + q.printAllToStudents(studentAnswer,true,true,showWork) + "<br/></td></tr>");
-				
-				// print a small table of student submissions for this question
-				buf.append("<tr><td></td><td>");
-				if (!qTransactions.isEmpty()) {
-					buf.append("<table style='text-align: center'><tr><th style='padding-right:20px'>Timestamp</th><th style='padding-right:20px'>Student Response</th><th style='padding-right:20px'>Correct Answer</th><th>Correct</th></tr>");
-					for (HWTransaction t : qTransactions) {
-						if (t.studentAnswer==null) buf.append("<tr><td style='padding-right:20px'>" + t.graded + "</td><td colspan=2 style='padding-right:20px'>(response detail is unavailable)</td>");
-						else buf.append("<tr><td style='padding-right:20px'>" + t.graded + "</td><td style='padding-right:20px'>" + t.studentAnswer + "</td><td style='padding-right:20px'>" + t.correctAnswer + "</td>");
-						
-						if (t.score==1) buf.append("<td><img src=/images/checkmark.gif alt='checkmark' height=24 width=17></td>");
-						else if (q.agreesToRequiredPrecision(t.studentAnswer)) buf.append("<td><img src=/images/partCredit.png alt='partial credit' height=25 width=25></td>");
-						else buf.append("<td><img src=/images/xmark.png alt='x-mark' height=24 width=24></td>");
-						buf.append("</tr>");
-					}
-					buf.append("</table><br/>");
-				}
-				buf.append("</td></tr>");
-			}
-			buf.append("</table><br/>");
-			//buf.append(ajaxJavaScript(user.getTokenSignature()));
-		} catch (Exception e) {
-			buf.append("Error: " + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString());
-		}
-		return buf.toString();
+			if (!user.isInstructor()) throw new Exception();  // only instructors can use this function
+			if (a==null) throw new Exception();  // can only do this for a known assignment
+			if (LTIMessage.postUserScore(Score.getInstance(forUserId,a), forUserId).contains("Success")) return "OK";
+		} catch (Exception e) {}
+		return "Failed. Check assignment settings in the LMS.";
 	}
-	
+
 	static boolean synchronizeScores(User user,Assignment a,HttpServletRequest request) {
 		// This method looks for assignment scores that are different from the LMS scores and resubmits the score to the LMS
 		try {
@@ -896,179 +1275,6 @@ public class Homework extends HttpServlet {
 		return true;
 	}
 	
-	static String synchronizeScore(User user, Assignment a, String forUserId) {
-		try {
-			if (!user.isInstructor()) throw new Exception();  // only instructors can use this function
-			if (a==null) throw new Exception();  // can only do this for a known assignment
-			if (LTIMessage.postUserScore(Score.getInstance(forUserId,a), forUserId).contains("Success")) return "OK";
-		} catch (Exception e) {}
-		return "Failed. Check assignment settings in the LMS.";
-	}
-	
-	String selectQuestionsForm(User user,Assignment a,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer();
-		StringBuffer debug = new StringBuffer("Debug: ");
-		try {
-			buf.append("<h1>Customize Homework Assignment</h1>");
-			buf.append("<form action=/Homework method=post>"
-					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-					+ "<b>Title:</b>&nbspHomework - <input type=text size=25 name=AssignmentTitle value='" + a.title + "' />&nbsp;"
-					+ "<input type=submit name=UserRequest value='Save New Title' /></form><br/>");
-							
-			buf.append("By default, students may submit answers to the homework problems as many times as they wish. This rewards students who persist "
-					+ "to achieve a better score. However, you may limit the number of attempts here. Leave the field blank to permit unlimited attempts.<br/>"
-					+ "<form action=/Homework method=post><input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-					+ "<input type=text size=10 name=AttemptsAllowed " 
-					+ (a.attemptsAllowed==null?"placeholder=unlimited":"value=" + a.attemptsAllowed) + " /> "
-					+ "<input type=submit name=UserRequest value='Set Allowed Attempts' />"
-					+ "</form><br/>");
-			
-			// Allow instructor to pick individual question items from all active questions:
-			buf.append("Select the homework questions below to be assigned for grading. "  // The questions are presented below in "
-				//	+ "approximate order of increasing difficulty, as measured by the percentage of correct submissions. "
-					+ "Then click the 'Use Selected Items' button. Each question is worth 1 point, so the maximum possible "
-					+ "score is equal to the number of questions selected. Students may work the optional problems; "
-					+ "however, these are not included in the scores reported to the class LMS. "
-					+ "If you don't see a question you want to include, you may "
-					+ "<a href=/Contribute?AssignmentType=Homework&sig=" + user.getTokenSignature() 
-					+ ">contribute a new question item</a> to the database.<p>");
-
-			// Show a List of concepts covered by this assignment
-			Long newConceptId = null;
-			try {  // add a new conceptId
-				newConceptId = Long.parseLong(request.getParameter("ConceptId"));
-				a.conceptIds.add(0,newConceptId);
-			} catch (Exception e) {}
-			
-			List<Key<Concept>> conceptKeys = ofy().load().type(Concept.class).order("orderBy").keys().list();
-			Map<Key<Concept>,Concept> keyConcepts = ofy().load().keys(conceptKeys);
-			if (a.conceptIds.size()>0) {
-				buf.append("The questions listed below cover the following key concepts:<ul>");
-				for (Long cId : a.conceptIds) {
-					Concept c = keyConcepts.get(key(Concept.class,cId));
-					try {
-						buf.append("<li>" + c.title + "</li>");
-					} catch (Exception e) {
-						a.conceptIds.remove(cId);  // remove id for null Concept
-					}
-				}
-				buf.append("</ul>");
-			}
-
-			// Create a short form to select one additional key concept to include (will exclude the previous selection, if any)
-			buf.append("<form method=get action=/Homework>"
-					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
-					+ "You may include additional question items from: "
-					+ "<input type=hidden name=UserRequest value=AssignHomeworkQuestions />"
-					+ "<select name=ConceptId onchange=this.form.submit();><option value='Select'>Select a key concept</option>");
-			for (Key<Concept> k : conceptKeys) {
-				try {
-					if (a.conceptIds.contains(k.getId()) || keyConcepts.get(k).orderBy.startsWith(" 0")) continue;  // skip current and hidden conceptIds
-					buf.append("<option value='" + k.getId() + "'" + (newConceptId!=null && k.getId()==newConceptId?" selected>":">") + keyConcepts.get(k).title + "</option>");
-				} catch (Exception e) {}
-			}
-			buf.append("</select></form><hr>");
-			
-			
-			// now we have all of the relevant conceptIds. Make 2 lists of Assigned and Optional questions:
-			StringBuffer assignedQuestions = new StringBuffer();
-			StringBuffer optionalQuestions = new StringBuffer();
-			int i = 1;  // counter for assigned questions
-			int j = 1;  // counter for optional questions
-			
-			for (Long cId : a.conceptIds) {
-				List<Question> questions = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("conceptId",cId).list();		
-				if (questions.size()>1) Collections.sort(questions,new SortBySuccessPct());
-				for (Question q : questions) {
-					boolean assigned = a.questionKeys.remove(key(q));
-					StringBuffer qbuf = new StringBuffer();
-					q.setParameters();  // creates randomly selected parameters
-					qbuf.append("\n<TR>"
-							+ "<TD style='vertical-align:top;' NOWRAP>"
-							+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'"
-							+ (assigned?" CHECKED>":">")
-							+ "<b>&nbsp;" + (assigned?i:j) + ".</b><br/>"
-							+ "<span style='font-size:0.5em'>" + q.getSuccess() + "</span></TD>"
-							+ "<TD>" + q.printAll() + "</TD>"
-							+ "</TR>");
-					if (assigned) {
-						assignedQuestions.append(qbuf);
-						i++;
-					} else {
-						optionalQuestions.append(qbuf);
-						j++;
-					}
-				}
-			}
-			
-			// If any orphan questions remain, add them to assignedQuestions (this is uncommon)
-			if (!a.questionKeys.isEmpty()) {
-				List<Question> questions = (List<Question>) ofy().load().keys(a.questionKeys).values();		
-				for (Question q : questions) {
-					boolean assigned = a.questionKeys.remove(key(q));
-					StringBuffer qbuf = new StringBuffer();
-					q.setParameters();  // creates randomly selected parameters
-					qbuf.append("\n<TR>"
-							+ "<TD style='vertical-align:top;' NOWRAP>"
-							+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'"
-							+ (assigned?" CHECKED>":">")
-							+ "<b>&nbsp;" + (assigned?i:j) + ".</b><br/>"
-							+ "<span style='font-size:0.5em'>" + q.getSuccess() + "</span></TD>"
-							+ "<TD>" + q.printAll() + "</TD>"
-							+ "</TR>");
-					if (assigned) {
-						assignedQuestions.append(qbuf);
-						i++;
-					} else {
-						optionalQuestions.append(qbuf);
-						j++;
-					}
-				}
-			}
-			
-			
-			buf.append("<b>Select the question items for this assignment</b><br/>");
-			
-			// This dummy form uses javascript to select/deselect all questions
-			buf.append("<FORM style='display:inline;' NAME=DummyForm><INPUT id=selectAll TYPE=CHECKBOX NAME=SelectAll "
-					+ "onClick='for (var i=0;i<document.Questions.QuestionId.length;i++)"
-					+ "{document.Questions.QuestionId[i].checked=document.DummyForm.SelectAll.checked;}'"
-					+ "> Select/Unselect All</FORM>&nbsp;&nbsp;&nbsp;");
-			buf.append("<script>document.getElementById('selectAll').indeterminate=true;</script>");
-			
-			// Make a list of individual questions that can be selected or deselected for this assignment
-			buf.append("<FORM style='display:inline;' NAME=Questions METHOD=POST ACTION=/Homework />"
-					+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + " />"
-					+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE='UpdateAssignment' />"
-					+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + a.id + "' />"
-					+ (newConceptId==null?"":"<input type=hidden name=NewConceptId value=" + newConceptId + " />")
-					+ "<INPUT TYPE=SUBMIT Value='Use Selected Items' /><br/><br/>");
-			
-			// Make a table of assigned and optional questions
-			buf.append("<TABLE BORDER=0 CELLSPACING=3 CELLPADDING=0>");
-			if (!assignedQuestions.isEmpty()) {
-				buf.append("<TR><TD COLSPAN=2><b>Assigned Questions:</b></TD></TR>");
-				buf.append(assignedQuestions);
-			}
-			if (!optionalQuestions.isEmpty()) {
-				buf.append("<TR><TD COLSPAN=2><b>Optional Questions:</b></TD></TR>");
-				buf.append(optionalQuestions);
-			}
-			buf.append("</TABLE><INPUT TYPE=SUBMIT Value='Use Selected Items'></FORM><br/>");
-		} catch (Exception e) {
-			buf.append(e.toString() + " " + e.getMessage() + "<br/>" + debug.toString());
-		}
-		return buf.toString();
-	}
-	
-	static String orderResponses(String[] answers) {
-		if (answers==null) return "";
-		Arrays.sort(answers);
-		String studentAnswer = "";
-		for (String a : answers) studentAnswer = studentAnswer + a;
-		return studentAnswer;
-	}
-
 	class SortBySuccessPct implements Comparator<Question> {
 		
 		SortBySuccessPct() {}
