@@ -110,6 +110,11 @@ indexes:
 - kind: Question
   properties:
   - name: assignmentType
+  - name: authorId
+
+- kind: Question
+  properties:
+  - name: assignmentType
   - name: text
 
 - kind: Question

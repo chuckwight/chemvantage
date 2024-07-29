@@ -171,6 +171,12 @@ public class Homework extends HttpServlet {
 				if (synchronizeScores(user,a,request)) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
 				else out.println("Synchronization request failed.");
 				break;
+			case "IncludeCustomQuestions":
+				if (user.isInstructor()) {
+					includeCustomQuestions(user,a,request);
+					out.println(Subject.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user,a,request) + Subject.footer);
+				}
+				break;
 			default: out.println(Subject.header("ChemVantage Homework Results") + printScore(user,a,request) + Subject.footer);
 			}
 		} catch (Exception e) {
@@ -258,6 +264,19 @@ public class Homework extends HttpServlet {
 		return buf.toString(); 
 	}
 
+	static void includeCustomQuestions(User user, Assignment a, HttpServletRequest request) {
+		if (!user.isInstructor()) return;
+		String[] questionIds = request.getParameterValues("QuestionId");
+		if (questionIds == null) return;
+		for (String id : questionIds) {  // eliminate any duplicate question keys
+			try {
+				Key<Question> k = key(Question.class,Long.parseLong(id));
+				if (!a.questionKeys.contains(k)) a.questionKeys.add(k);
+			} catch (Exception e) {}
+		}
+		ofy().save().entity(a).now();
+	}
+	
 	static String instructorPage(User user,Assignment a) {
 		if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
 		
@@ -317,7 +336,30 @@ public class Homework extends HttpServlet {
 					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=5;submit()\" VALUE='Numeric'> "
 					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=6;submit()\" VALUE='Five Star'> "
 					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=7;submit()\" VALUE='Essay'>"
-					+ "</FORM><br/>");
+					+ "</FORM><p>");
+			
+			List<Question> myCustomQuestions = ofy().load().type(Question.class).filter("assignmentType =","Custom").filter("authorId =",user.getId()).list();
+			
+			if (myCustomQuestions.isEmpty()) return buf.toString();  // done
+			
+			// Print a list of this user's custom questions
+			buf.append("<hr>"
+					+ "Or, you may include selected questions below that you created previously.<br/>"
+					+ "<form method=post action=/Homework>"
+					+ "<input type=hidden name=UserRequest value=IncludeCustomQuestions />"
+					+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "'/>"
+					+ "<input type=submit value='Add the selected questions below to this assignment' /><p>");
+			buf.append("<TABLE>");
+			
+			for (Question q : myCustomQuestions) {
+				q.setParameters();  // creates randomly selected parameters
+				buf.append("\n<TR>"
+						+ "<TD style='vertical-align:top;' NOWRAP>"
+						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'></TD>"
+						+ "<TD>" + q.printAll() + "</TD>"
+						+ "</TR>");
+			}
+			buf.append("</TABLE></form>");
 			return buf.toString();
 		}
 		
@@ -393,6 +435,7 @@ String previewQuestion(User user,HttpServletRequest request) {
 		buf.append("<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "'>");
 		buf.append("<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + q.authorId + "'>");
 		buf.append("<INPUT TYPE=HIDDEN NAME=EditorId VALUE='" + user.getId() + "'>");
+		buf.append("<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='Custom' />");
 		
 		buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save Question'>");		
 		buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit'>");
