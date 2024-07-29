@@ -336,14 +336,14 @@ public class Homework extends HttpServlet {
 					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=5;submit()\" VALUE='Numeric'> "
 					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=6;submit()\" VALUE='Five Star'> "
 					+ "<INPUT TYPE=BUTTON onCLick=\"document.NewQuestion.QuestionType.value=7;submit()\" VALUE='Essay'>"
-					+ "</FORM><p>");
+					+ "</FORM><p><p>");
 			
 			List<Question> myCustomQuestions = ofy().load().type(Question.class).filter("assignmentType =","Custom").filter("authorId =",user.getId()).list();
 			
 			if (myCustomQuestions.isEmpty()) return buf.toString();  // done
 			
 			// Print a list of this user's custom questions
-			buf.append("<hr>"
+			buf.append("<hr><p>"
 					+ "Or, you may include selected questions below that you created previously.<br/>"
 					+ "<form method=post action=/Homework>"
 					+ "<input type=hidden name=UserRequest value=IncludeCustomQuestions />"
@@ -359,7 +359,9 @@ public class Homework extends HttpServlet {
 						+ "<TD>" + q.printAll() + "</TD>"
 						+ "</TR>");
 			}
-			buf.append("</TABLE></form>");
+			buf.append("</TABLE><p>"
+					+ "<input type=submit value='Add the selected questions below to this assignment' />"
+					+ "</form><p>");
 			return buf.toString();
 		}
 		
