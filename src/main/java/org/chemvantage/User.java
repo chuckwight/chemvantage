@@ -170,7 +170,7 @@ public class User {
 		//return ((roles%4)/2 == 1 || this.isChemVantageAdmin());
 	}
 
-	boolean isContributor() {
+	boolean isObserver() {
 		return (roles & 1)>0;
 		//return ((roles%2)/1 == 1);
 	}
@@ -212,6 +212,14 @@ public class User {
 		else return false;
 	}
 
+	boolean setIsObserver(boolean makeObserver) {
+		if (isObserver() ^ makeObserver) {
+			roles = roles | (makeObserver?2:63^2);
+			return true;
+		}
+		else return false;
+	}
+	
 	public boolean isEligibleForHints(long questionId) {
 		// users are eligible for hints on homework questions if they have submitted
 		// more than 2 answers more than 15 minutes ago
