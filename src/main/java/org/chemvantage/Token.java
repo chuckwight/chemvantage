@@ -35,11 +35,14 @@ public class Token extends HttpServlet {
 		try {
 			// store parameters required by third-party initiated login procedure:
 			String platform_id = request.getParameter("iss");   // this should be the platform_id URL (aud)
-			String login_hint = request.getParameter("login_hint");
-			String target_link_uri = request.getParameter("target_link_uri");
-			
 			if (platform_id == null) throw new Exception("Missing required iss parameter.");
+			// production server does not accept connections from ngrok.com domains
+			if (platform_id.contains("ngrok") && Subject.projectId.equals("chem-vantage-hrd")) response.sendError(401);
+			
+			String login_hint = request.getParameter("login_hint");
 			if (login_hint == null) throw new Exception("Missing required login_hint parameter.");
+			
+			String target_link_uri = request.getParameter("target_link_uri");
 			if (target_link_uri == null) throw new Exception("Missing required target_link_uri parameter.");
 			
 			Deployment d = getDeployment(request);
@@ -102,7 +105,7 @@ public class Token extends HttpServlet {
 					+ "window.location.replace('" + oidc_auth_url + "');"
 					+ "</script>");
 			buf.append(Subject.footer);
-			if (oidc_auth_url.contains("imc")) Utilities.sendEmail("ChemVantage", "admin@chemvantage.org", "IMC OIDC Auth URL", oidc_auth_url);
+			//if (oidc_auth_url.contains("imc")) Utilities.sendEmail("ChemVantage", "admin@chemvantage.org", "IMC OIDC Auth URL", oidc_auth_url);
 			out.println(buf.toString());
 		} catch (Exception e) {
 			Enumeration<String> parameterNames = request.getParameterNames();
@@ -216,7 +219,7 @@ public class Token extends HttpServlet {
 			Map<String,String[]> params = request.getParameterMap();
 			String message = "<h3>Deployment Not Found</h3>Query parameters:<br/>";
 			for (String name : params.keySet()) message += name + "=" + params.get(name)[0] + "<br/>";
-			Utilities.sendEmail("ChemVantage","admin@chemvantage.org","AuthToken Request Failure",message);
+			if (Subject.projectId.equals("chem-vantage-hrd")) Utilities.sendEmail("ChemVantage","admin@chemvantage.org","AuthToken Request Failure (Production)",message);
 		}
 		return d;
 }

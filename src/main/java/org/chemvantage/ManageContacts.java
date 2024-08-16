@@ -71,7 +71,7 @@ public class ManageContacts extends HttpServlet {
 		if (email!=null) {
 			for (int i=0;i<email.length;i++) {
 				try {
-					buf.append(editExistingContact(ofy().load().type(Contact.class).id(email[i]).safe()));
+					buf.append(editExistingContact(ofy().load().type(Contact.class).id(email[i].trim().toLowerCase()).safe()));
 				} catch (Exception e) {}
 				email[0] = null;
 			}
@@ -94,15 +94,15 @@ public class ManageContacts extends HttpServlet {
 		//user.setToken();
 		
 		String userRequest = request.getParameter("UserRequest");
-		
+		String email = request.getParameter("Email").trim().toLowerCase();
 		try {
 			switch (userRequest) {
 			case "Add New Contact":
 				addNewContact(request);
-				response.sendRedirect(Subject.serverUrl + "/contacts?Email=" + request.getParameter("Email"));
+				response.sendRedirect(Subject.serverUrl + "/contacts?Email=" + email);
 				break;
 			case "Paste New Contact":
-				String email = pasteNewContact(request);
+				email = pasteNewContact(request);
 				response.sendRedirect(Subject.serverUrl + "/contacts?Email=" + email);
 			case "Save Revised Contact":
 				saveRevisedContact(request);

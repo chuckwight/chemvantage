@@ -54,7 +54,7 @@ public class Question implements Serializable, Cloneable {
 			String parameterString;
 			String hint;
 			String solution;
-			String authorId;
+	@Index	String authorId;
 			String contributorId;
 			String editorId;
 			String notes;

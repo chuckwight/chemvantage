@@ -211,7 +211,7 @@ public class Feedback extends HttpServlet {
 		if (comments.length() > 0) {
 			UserReport r = new UserReport(userId,stars,comments);
 			ofy().save().entity(r);
-			if (email!=null) sendEmailToAdmin(r,user,email);
+			if (email!=null && !user.isAnonymous()) sendEmailToAdmin(r,user,email);
 		}
 
 		buf.append("<h1>ChemVantage Feedback Page</h1>");
