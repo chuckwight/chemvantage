@@ -537,12 +537,19 @@ public class LTIv1p3Launch extends HttpServlet {
 		if (roles_claim == null || !roles_claim.isJsonArray()) throw new Exception("Required roles claim is missing from the id_token");
 		JsonArray roles = roles_claim.getAsJsonArray();
 		Iterator<JsonElement> roles_iterator = roles.iterator();
+		boolean isLearner = false;
+		boolean isMentor = false;
 		while(roles_iterator.hasNext()){
 			String role = roles_iterator.next().getAsString();
 			user.setIsTeachingAssistant(role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership/Instructor#TeachingAssistant"));
 			user.setIsInstructor(role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Instructor"));
 			user.setIsAdministrator(role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Administrator"));
 			user.setIsAdministrator(role.equals("http://purl.imsglobal.org/vocab/lis/v2/institution/person#Administrator"));
+			if (role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Learner")) isLearner = true;
+			if (role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Mentor")) isMentor = true;
+		}
+		if (!user.isInstructor() && (!isLearner || isMentor)) {  // unusual login; send a message to ChemVantage administrator
+			Utilities.sendEmail("ChemVantage Admin","admin@chemvantage.org","Unusual Login User Roles",claims.getAsString());
 		}
 		return user;
 		} catch (Exception e) {
