@@ -11,6 +11,7 @@ To deploy on Google Cloud:
 	mvn clean package appengine:deploy
 	
 	To avoid the automatic gcloud CLI update, you can use gcloud app deploy instead.
+	
 	You may encounter a deployment error if a cached image has been deleted on app engine 
 	 (i.e., you haven't deployed for more than a month). To fix this, use
 	gcloud app deploy --no-cache

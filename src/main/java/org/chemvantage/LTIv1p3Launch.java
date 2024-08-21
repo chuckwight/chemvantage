@@ -151,13 +151,6 @@ public class LTIv1p3Launch extends HttpServlet {
 			return;
 		}
 		
-		// Check to see if this is an observer (parent)
-		if (user.isObserver()) {
-			response.setContentType("text/html");
-			PrintWriter out = response.getWriter();
-			out.println(Subject.header() + observerPage() + Subject.footer);
-			return;
-		}
 		// At this point we have all of the REQUIRED info for a valid LTI launch
 		// Process all remaining optional claims in try/catch structures to avoid
 		// throwing unnecessary Exceptions
@@ -391,16 +384,6 @@ public class LTIv1p3Launch extends HttpServlet {
 		}
 	}
 	
-	String observerPage() {
-		StringBuffer buf = new StringBuffer();
-		buf.append("<h1>Observer Launch</h1>"
-				+ "Your learning management system has identified you as having an observer role (e.g., parent or guardian of a student). "
-				+ "At this time, ChemVantage does not provide support for this role, although you should be able to see the "
-				+ "scores for this assignment in the LMS grade book.<p>"
-				+ "We hope to add more support for observers in the near future.<p>");
-		return buf.toString();
-	}
-	
 	void launchSubmissionReview(HttpServletResponse response, JsonObject claims, Deployment d, User u) throws Exception {
 		StringBuffer debug = new StringBuffer("Debug: ");
 		//if (!u.isInstructor()) throw new Exception("Instructor role required.");
@@ -556,7 +539,6 @@ public class LTIv1p3Launch extends HttpServlet {
 		Iterator<JsonElement> roles_iterator = roles.iterator();
 		while(roles_iterator.hasNext()){
 			String role = roles_iterator.next().getAsString();
-			user.setIsObserver(role.equals("http://purl.imsglobal.org/vocab/lis/v2/institution/person#Observer"));
 			user.setIsTeachingAssistant(role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership/Instructor#TeachingAssistant"));
 			user.setIsInstructor(role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Instructor"));
 			user.setIsAdministrator(role.equals("http://purl.imsglobal.org/vocab/lis/v2/membership#Administrator"));
