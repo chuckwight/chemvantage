@@ -107,6 +107,9 @@ public class Homework extends HttpServlet {
 			case "Logout":
 				out.println(Subject.header() + Logout.now(user) + Subject.footer);
 				break;
+			case "Preview":
+				out.println(Subject.header() + previewQuestion(user,request) + Subject.footer);
+				break;
 			default:
 				long hintQuestionId = 0L;
 				try {
@@ -159,7 +162,11 @@ public class Homework extends HttpServlet {
 				break;
 			case "Save Question":
 				saveQuestion(user,request);
-				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
+				out.println(Subject.header("ChemVantage Instructor Page") + selectQuestionsForm(user,a,request) + Subject.footer);
+				break;
+			case "Delete Question":
+				deleteQuestion(user,request);
+				out.println(Subject.header("ChemVantage Instructor Page") + selectQuestionsForm(user,a,request) + Subject.footer);
 				break;
 			case "Quit":
 				out.println(Subject.header("Customize ChemVantage Homework Assignment") + selectQuestionsForm(user,a,request) + Subject.footer);
@@ -188,6 +195,9 @@ public class Homework extends HttpServlet {
 		int questionType = Integer.parseInt(request.getParameter("QuestionType"));
 		String assignmentType = request.getParameter("AssignmentType");
 		Question q = new Question(questionType);
+		try {
+			q.id = Long.parseLong(request.getParameter("QuestionId"));
+		} catch (Exception e) {}
 		String questionText = request.getParameter("QuestionText");
 		ArrayList<String> choices = new ArrayList<String>();
 		int nChoices = 0;
@@ -243,7 +253,16 @@ public class Homework extends HttpServlet {
 		q.validateFields();
 		return q;
 	}
-
+	
+	static void deleteQuestion(User user, HttpServletRequest request) {
+		if (!user.isInstructor()) return;
+		Question q = null;
+		try {
+			q = ofy().load().type(Question.class).id(Long.parseLong(request.getParameter("QuestionId"))).safe();
+		} catch (Exception e) {}
+		if (user.getId().equals(q.authorId)) ofy().delete().entity(q).now();
+	}
+	
 	static String fiveStars(String sig) {
 		StringBuffer buf = new StringBuffer();
 		
@@ -355,7 +374,10 @@ public class Homework extends HttpServlet {
 				q.setParameters();  // creates randomly selected parameters
 				buf.append("\n<TR>"
 						+ "<TD style='vertical-align:top;' NOWRAP>"
-						+ "<INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'></TD>"
+						+ "<label><INPUT TYPE=CHECKBOX NAME=QuestionId VALUE='" + q.id + "'>Select</label><br/>"
+						+ "&nbsp;or&nbsp;<a href=/Homework?UserRequest=Preview&sig=" + user.getTokenSignature() + "&QuestionId=" + q.id + ">Edit</a>"
+						+ "</TD>"
+						+ "<TD style='width:20px'></TD>"
 						+ "<TD>" + q.printAll() + "</TD>"
 						+ "</TR>");
 			}
@@ -412,7 +434,7 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-static String orderResponses(String[] answers) {
+	static String orderResponses(String[] answers) {
 		if (answers==null) return "";
 		Arrays.sort(answers);
 		String studentAnswer = "";
@@ -420,41 +442,51 @@ static String orderResponses(String[] answers) {
 		return studentAnswer;
 	}
 
-String previewQuestion(User user,HttpServletRequest request) {
-	StringBuffer buf = new StringBuffer();
-	if (!user.isInstructor()) return null;
-	try {
-		Question q = assembleQuestion(request);
+	String previewQuestion(User user,HttpServletRequest request) throws Exception {
+		if (!user.isInstructor()) throw new Exception("You must be an instructor for this.");
+		StringBuffer buf = new StringBuffer();
+		
+		Question q = null;
+		try {
+			long questionId = Long.parseLong(request.getParameter("QuestionId"));
+			q = ofy().load().type(Question.class).id(questionId).safe();
+		} catch (Exception e) {}
+		try {
+			q = assembleQuestion(request);
+		} catch (Exception e) {}
+		
 		if (q.requiresParser()) q.setParameters();
-		
-		buf.append("<h1>Create Custom Homework Question</h1><h2>Preview</h2>");
-		
+
+		buf.append("<h1>Custom Homework Question</h1><h2>Preview</h2>");
+
 		buf.append("<FORM ACTION=/Homework METHOD=POST>");
-		
+
 		buf.append(q.printAll());
-		
+
 		if (q.authorId==null) q.authorId = user.getId();
 		buf.append("<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "'>");
 		buf.append("<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + q.authorId + "'>");
 		buf.append("<INPUT TYPE=HIDDEN NAME=EditorId VALUE='" + user.getId() + "'>");
 		buf.append("<INPUT TYPE=HIDDEN NAME=AssignmentType VALUE='Custom' />");
 		
-		buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save Question'>");		
-		buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit'>");
-		
-		buf.append("<hr><h2>Continue Editing</h2>");
-		buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
-		buf.append(q.edit());
-		
-		buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Preview>");
-		buf.append("</FORM>");
-	} catch (Exception e) {
-		buf.append(e.toString());
-	}
-	return buf.toString();
-}
+		buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Save Question' />&nbsp;");		
+		if (q.id != null) {
+			buf.append("<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "' />");
+			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Question' />&nbsp;");
+		}
+		buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit' />");
 
-static String printHomework(User user, Assignment hwa, long hintQuestionId, boolean showOptional) throws Exception  {
+		buf.append("<hr><h2>Continue Editing</h2>");
+		buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()) + "<br/>");
+		
+		buf.append(q.edit());
+
+		buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Preview' />");
+		buf.append("</FORM>");
+		return buf.toString();
+	}
+
+	static String printHomework(User user, Assignment hwa, long hintQuestionId, boolean showOptional) throws Exception  {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Debug: ");
 		
@@ -993,14 +1025,13 @@ static String printHomework(User user, Assignment hwa, long hintQuestionId, bool
 					+ "</form><br/>");
 			
 			// Allow instructor to pick individual question items from all active questions:
-			buf.append("Select the homework questions below to be assigned for grading. "  // The questions are presented below in "
-				//	+ "approximate order of increasing difficulty, as measured by the percentage of correct submissions. "
-					+ "Then click the 'Use Selected Items' button. Each question is worth 1 point, so the maximum possible "
-					+ "score is equal to the number of questions selected. Students may work the optional problems; "
-					+ "however, these are not included in the scores reported to the class LMS. "
+			buf.append("Select the homework questions below to be assigned for grading, "
+					+ "then click the 'Use Selected Items' button. All questions have equal point value. "
 					+ "If you want to include a question that is not included here, you may "
 					+ "<a href=/Homework?UserRequest=CreateCustomQuestion&sig=" + user.getTokenSignature() 
-					+ ">create a custom question for this assignment</a>.<p>");
+					+ ">create a custom question for this assignment</a>.<p>"
+					+ "Students may work the optional problems; however, these are not included in the scores "
+					+ "reported to the class LMS.<p>");
 	
 			// Show a List of concepts covered by this assignment
 			Long newConceptId = null;

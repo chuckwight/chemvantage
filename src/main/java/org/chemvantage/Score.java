@@ -23,6 +23,7 @@ import static com.googlecode.objectify.ObjectifyService.key;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
@@ -70,6 +71,13 @@ public class Score {    // this object represents a best score achieved by a use
 			List<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",hashedId).filter("assignmentId",a.id).list();
 			List<Key<Question>> assignmentQuestionKeys = new ArrayList<Key<Question>>();
 			assignmentQuestionKeys.addAll(a.questionKeys);  // clones the assignment List of question keys
+			
+			// Check a.questionKeys for possible inclusion of deleted question
+			Map<Key<Question>, Question> qmap = ofy().load().keys(a.questionKeys);
+			if (a.questionKeys.size() != qmap.size()) {
+				a.questionKeys = new ArrayList<Key<Question>>(qmap.keySet());
+				ofy().save().entity(a);
+			}
 			s.maxPossibleScore = a.questionKeys.size();
 			for (HWTransaction ht : hwTransactions) {				
 				s.numberOfAttempts++;
