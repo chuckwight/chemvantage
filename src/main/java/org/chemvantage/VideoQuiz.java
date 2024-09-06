@@ -195,7 +195,8 @@ public class VideoQuiz extends HttpServlet {
 			buf.append("<h1>Video</h1>\n"
 					+ "<div id=video_div style='width:560px;height:315px'></div>\n"
 					+ "<br>\n"
-					+ "<div id=quiz_div style='width:560px;background-color:white;min-height:315;display:none'></div>\n"
+					+ "<div id=quiz_div style='width:560px;background-color:white;min-height:315;display:none'></div><br/>"
+					+ "<div style='font-size:small'>If the YouTube screen is black, try using the player controls to show full screen.</div>\n"
 					+ "<p>");
 
 			buf.append("<script type=text/javascript>\n"
