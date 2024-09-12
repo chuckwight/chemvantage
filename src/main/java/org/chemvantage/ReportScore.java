@@ -83,7 +83,7 @@ public class ReportScore extends HttpServlet {
 			if (a.lti_ags_lineitem_url != null && !a.lti_ags_lineitem_url.contains("localhost")) {  // use LTIAdvantage reporting specs
 				debug.append("5");
 				String reply = LTIMessage.postUserScore(s,userId);
-				debug.append("6<br/>" + Subject.projectId + "<br/>" + a.lti_ags_lineitem_url + "<br/>");
+				debug.append("6<br/>" + Subject.getProjectId() + "<br/>" + a.lti_ags_lineitem_url + "<br/>");
 				
 				if (reply.contains("Success") || reply.contains("422")) out.println(reply);
 				else {

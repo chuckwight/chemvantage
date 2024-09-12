@@ -78,7 +78,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 
 			// At this point no valid cached authToken was found, so we request a new authToken from the LMS platform:
 			// First, construct a request token to send to the platform
-			String iss = Subject.projectId.equals("dev-vantage-hrd")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
+			String iss = Subject.getProjectId().equals("dev-vantage-hrd")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
 			debug.append("Requested by: " + iss + "<br/>Denied by: " + d.oauth_access_token_url + "<br/>");
 			
 			String aud = d.oauth_access_token_url;
@@ -146,7 +146,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			} else throw new Exception("response code " + responseCode);
 		} catch (Exception e) {
 			debug.append("Elapsed time: " + (new Date().getTime() - now.getTime()) + " ms<br/>");
-			if (Subject.projectId.equals("chem-vantage-hrd"))
+			if (Subject.getProjectId().equals("chem-vantage-hrd"))
 				Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Failed AuthToken Request",debug.toString() + "<br/>" + (e.getMessage()==null?e.toString():e.getMessage()));
 			return "Failed AuthToken Request <br/>" + (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString();
 		}    

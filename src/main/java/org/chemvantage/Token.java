@@ -37,7 +37,7 @@ public class Token extends HttpServlet {
 			String platform_id = request.getParameter("iss");   // this should be the platform_id URL (aud)
 			if (platform_id == null) throw new Exception("Missing required iss parameter.");
 			// production server does not accept connections from ngrok.com domains
-			if (platform_id.contains("ngrok") && Subject.projectId.equals("chem-vantage-hrd")) response.sendError(401);
+			if (platform_id.contains("ngrok") && Subject.getProjectId().equals("chem-vantage-hrd")) response.sendError(401);
 			
 			String login_hint = request.getParameter("login_hint");
 			if (login_hint == null) throw new Exception("Missing required login_hint parameter.");
@@ -219,7 +219,7 @@ public class Token extends HttpServlet {
 			Map<String,String[]> params = request.getParameterMap();
 			String message = "<h3>Deployment Not Found</h3>Query parameters:<br/>";
 			for (String name : params.keySet()) message += name + "=" + params.get(name)[0] + "<br/>";
-			if (Subject.projectId.equals("chem-vantage-hrd")) Utilities.sendEmail("ChemVantage","admin@chemvantage.org","AuthToken Request Failure (Production)",message);
+			if (Subject.getProjectId().equals("chem-vantage-hrd")) Utilities.sendEmail("ChemVantage","admin@chemvantage.org","AuthToken Request Failure (Production)",message);
 		}
 		return d;
 }

@@ -78,7 +78,7 @@ public class LTIv1p3Launch extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
-		response.sendRedirect(Subject.serverUrl + "/lti/registration");
+		response.sendRedirect(Subject.getServerUrl() + "/lti/registration");
 	}
 
 	@Override
@@ -116,8 +116,8 @@ public class LTIv1p3Launch extends HttpServlet {
 				}
 			}
 		} catch (Exception e) {	
-			if (Subject.projectId.equals("dev-vantage-hrd")) {
-				String message = "<h1>LTI Launch Failure. Status 401</h1>" + Subject.projectId + "<p>" + (e.getMessage()==null?e.toString():e.getMessage());
+			if (Subject.getProjectId().equals("dev-vantage-hrd")) {
+				String message = "<h1>LTI Launch Failure. Status 401</h1>" + Subject.getProjectId() + "<p>" + (e.getMessage()==null?e.toString():e.getMessage());
 				//Utilities.sendEmail("ChemVantage", "admin@chemvantage.org", "LTI Launch Failure", message + "<br/>id_token: " + request.getParameter("id_token") + "<br/>state: " + request.getParameter("state"));
 				response.setContentType("text/html");
 				response.getWriter().println(message);
@@ -338,7 +338,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				response.getWriter().println(Subject.header("Select A ChemVantage Assignment") + pickResourceForm(user,myAssignment,request) + Subject.footer);
 				return;
 			} else if (!isPremiumUser) {
-				String url = Subject.serverUrl + "/checkout?sig=" + user.getTokenSignature() + "&d=" + d.platform_deployment_id;
+				String url = Subject.getServerUrl() + "/checkout?sig=" + user.getTokenSignature() + "&d=" + d.platform_deployment_id;
 				if ("PlacementExam".equals(myAssignment.assignmentType)) url += "&n=1";
 				else url += "&n=5";
 				response.sendRedirect(url);
@@ -381,7 +381,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			default: return;
 			}
 		} else {
-			response.sendRedirect(Subject.serverUrl + "/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
+			response.sendRedirect(Subject.getServerUrl() + "/" + myAssignment.assignmentType + "?sig=" + user.getTokenSignature());
 		}
 	}
 	

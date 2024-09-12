@@ -103,7 +103,7 @@ public class VideoQuiz extends HttpServlet {
 				break;
 			default:
 				if (user.isInstructor()) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
-				else response.sendRedirect(Subject.serverUrl + "/VideoQuiz?UserRequest=ShowVideo&VideoId=" + videoId + "&sig=" + user.getTokenSignature());
+				else response.sendRedirect(Subject.getServerUrl() + "/VideoQuiz?UserRequest=ShowVideo&VideoId=" + videoId + "&sig=" + user.getTokenSignature());
 			}			
 		} catch (Exception e) {
 			response.getWriter().println(Logout.now(request,e));
@@ -223,7 +223,7 @@ public class VideoQuiz extends HttpServlet {
 					+ "	  'start': " + start + ",\n"
 					+ "	  'end': " + end + ",\n"
 					+ "	  'modestbranding': 1,\n"
-					+ "	  'origin': '" + Subject.serverUrl + "'\n"
+					+ "	  'origin': '" + Subject.getServerUrl() + "'\n"
 					+ "	},\n"
 					+ "	events: {\n"
 					+ "		'onReady': onPlayerReady,\n"

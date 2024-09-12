@@ -221,7 +221,7 @@ public class LTIRegistration extends HttpServlet {
 					+ "<br/><br/>");
 		}
 
-		if (Subject.projectId.equals("dev-vantage-hrd")) {
+		if (Subject.getProjectId().equals("dev-vantage-hrd")) {
 			buf.append("Enter your registration code here: <input type=text required name=reg_code value='" + (reg_code==null?"":reg_code) + "' /><br/>"
 					+ "To purchase a registration code, please contact us at admin@chemvantage.org<br/><br/>");
 		} else {
@@ -278,9 +278,9 @@ public class LTIRegistration extends HttpServlet {
 		
 		if (!"true".equals(request.getParameter("AcceptChemVantageTOS"))) throw new Exception("Please read and accept the ChemVantage Terms of Service. ");
 
-		String iss = Subject.projectId.equals("dev-vantage-hrd")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
+		String iss = Subject.getProjectId().equals("dev-vantage-hrd")?"https://dev-vantage-hrd.appspot.com":"https://www.chemvantage.org";
 		
-		if (Subject.projectId.equals("dev-vantage-hrd") ) {
+		if (Subject.getProjectId().equals("dev-vantage-hrd") ) {
 			String reg_code = request.getParameter("reg_code");
 			Date now = new Date();
 			Date exp = new Date(User.encode(Long.parseLong(reg_code,16)));
@@ -644,7 +644,7 @@ public class LTIRegistration extends HttpServlet {
 		JsonArray responseTypes = new JsonArray();
 		responseTypes.add("id_token");
 		regJson.add("response_types", responseTypes);
-		String projectId = Subject.projectId;
+		String projectId = Subject.getProjectId();
 		String iss = null;
 		String domain = null;
 		switch (projectId) {
@@ -878,7 +878,7 @@ public class LTIRegistration extends HttpServlet {
 	
 	static void sendApprovalEmail(Deployment d, HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
-		String project_id = Subject.projectId;
+		String project_id = Subject.getProjectId();
 		String iss = null;
 		switch (project_id) {
 		case "dev-vantage-hrd":
