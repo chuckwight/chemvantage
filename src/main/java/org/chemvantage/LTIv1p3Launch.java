@@ -116,11 +116,12 @@ public class LTIv1p3Launch extends HttpServlet {
 				}
 			}
 		} catch (Exception e) {	
-			String message = "<h1>LTI Launch Failure. Status 401</h1>" + Subject.projectId + "<p>" + (e.getMessage()==null?e.toString():e.getMessage());
-			//Utilities.sendEmail("ChemVantage", "admin@chemvantage.org", "LTI Launch Failure", message + "<br/>id_token: " + request.getParameter("id_token"));
-			//response.setContentType("text/html");
-			//response.getWriter().println(message);
-			response.sendError(401, message);
+			if (Subject.projectId.equals("dev-vantage-hrd")) {
+				String message = "<h1>LTI Launch Failure. Status 401</h1>" + Subject.projectId + "<p>" + (e.getMessage()==null?e.toString():e.getMessage());
+				//Utilities.sendEmail("ChemVantage", "admin@chemvantage.org", "LTI Launch Failure", message + "<br/>id_token: " + request.getParameter("id_token") + "<br/>state: " + request.getParameter("state"));
+				response.setContentType("text/html");
+				response.getWriter().println(message);
+			} else response.sendError(401);
 		}
 	}
 
