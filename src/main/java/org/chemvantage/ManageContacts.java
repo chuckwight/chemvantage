@@ -94,7 +94,8 @@ public class ManageContacts extends HttpServlet {
 		//user.setToken();
 		
 		String userRequest = request.getParameter("UserRequest");
-		String email = request.getParameter("Email").trim().toLowerCase();
+		String email = request.getParameter("Email");
+		if (email != null) email = email.trim().toLowerCase();
 		try {
 			switch (userRequest) {
 			case "Add New Contact":
