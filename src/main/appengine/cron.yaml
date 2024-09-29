@@ -1,3 +1,6 @@
+# To deploy this cron file, use
+# gcloud app deploy cron.yaml
+
 cron:
 - url: '/Admin?UserRequest=OpenStaxReport'
   schedule: '1 of jan,apr,jul,oct 02:00'
@@ -15,3 +18,4 @@ cron:
   schedule: 'every day 04:15'
   timezone: 'America/New_York'
   description: 'Sends N email marketing messages'
+

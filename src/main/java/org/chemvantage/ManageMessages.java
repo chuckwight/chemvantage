@@ -59,12 +59,24 @@ public class ManageMessages extends HttpServlet {
 		StringBuffer buf = new StringBuffer("<h2>Manage Messages</h2>");
 		
 		EmailMessage m = null;
-		try {  // load the current or requested message
+		try {  // load the requested message
 			m = ofy().load().type(EmailMessage.class).id(Long.parseLong(request.getParameter("MessageId"))).safe();
-		} catch (Exception e) {   // load the newest message (first load)
-			m = ofy().load().type(EmailMessage.class).order("-created").first().now();
+		} catch (Exception e) {   // or load the first active message
+			List<EmailMessage> messages = ofy().load().type(EmailMessage.class).order("created").list();
+			for (EmailMessage message : messages) {
+				if (!message.isActive) continue;
+				m = message;
+				break;
+			}
 		}
+		// if there are no active messages, load the most recent message
+		if (m==null) m = ofy().load().type(EmailMessage.class).order("-created").first().now();
 		if (m==null) m = new EmailMessage("subject line","message body text",false);  // in case no messages exist yet
+		
+		Integer nMessagesToSend = 100;
+		try {
+			nMessagesToSend = Integer.parseInt(request.getParameter("N"));
+		} catch (Exception e) {}
 		
 		String userRequest = request.getParameter("UserRequest");
 		if (userRequest==null) userRequest = "";
@@ -131,68 +143,38 @@ public class ManageMessages extends HttpServlet {
 				String lastName = request.getParameter("LastName");
 				String email = request.getParameter("Email");
 				contacts.add(new Contact(firstName,lastName,email));
-				int count = send10Messages(m,testOnly,contacts);
+				int count = sendNMessages(m,testOnly,contacts);
 				msg = count + " test message was sent OK.";
 			} catch (Exception e) {
 				msg = "Send failed. " + e.toString() + " " + e.getMessage();
 			}
 			break;
-		case "Send 10 Messages":
+		case "SendMessages":  // automated task from cron.yaml
+			if (!m.isActive) return;  // only send active messages
+			
+			// determine the number of messages to be sent'
+			int nContacts = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created >",m.lastRecipientCreated).count();
+			if (nContacts < nMessagesToSend) nMessagesToSend = nContacts;
+			
+			// break into Tasks of 100 messages each to be queued with a delay
+			try {
+				int nTasks = nMessagesToSend/100 + (nMessagesToSend%100==0?0:1);
+				for (int i=0; i<nTasks;i++) {
+					int delaySeconds = 300 + i * 60;  // 5 min delay plus 1 min per task
+					Utilities.createTask("/messages","UserRequest=Send+100+Messages&N=" + (nMessagesToSend > 100?100:nMessagesToSend) + "&MessageId=" + m.id,delaySeconds);
+					if (nMessagesToSend > 100) nMessagesToSend -= 100;
+					else nMessagesToSend = 0;
+				}
+			} catch (Exception e) {
+			}
+			break;
+		case "Send 100 Messages":
 			try {
 				boolean testOnly = false;
-				contacts = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created >",m.lastRecipientCreated).limit(10).list();
-				send10Messages(m,testOnly,contacts);
+				contacts = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created >",m.lastRecipientCreated).limit(nMessagesToSend).list();
+				if (contacts.size() > 0) sendNMessages(m,testOnly,contacts);
 			} catch (Exception e) {}
 			return;
-		case "Send 50 Messages":
-			int nMessages = 50;
-			try {
-				int nAvailable = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created >",m.lastRecipientCreated).count();
-				int nSending = nAvailable > nMessages? nMessages:nAvailable;
-				int nTasks = nSending/10 + (nSending%10==0?0:1);
-				int i = 0;
-				msg = "Sending " + nSending + " messages in " + nTasks + " tasks of 10 messages each at 1 task/minute. ";
-				for (i=0; i<nTasks;i++) {
-					int delaySeconds = i * 60;
-					Utilities.createTask("/messages","UserRequest=Send+10+Messages&MessageId=" + m.id,delaySeconds);
-					
-					//QueueFactory.getDefaultQueue().add(withUrl("/messages").param("UserRequest","Send 10 Messages").param("MessageId",String.valueOf(m.id)).countdownMillis(delayMillis));
-				}
-				msg += i + " tasks were launched OK.";
-			} catch (Exception e) {
-				msg += "Send failed. " + e.toString() + " " + e.getMessage();
-			}
-			break;
-		case "SendMessages":  // this task is fully automated by cron.yaml
-			if (request.getServerName().contains("dev-vantage")) break;  // don't run this every day from the dev server
-			int nMessagesToSend = Integer.parseInt(request.getParameter("N"));
-			List<EmailMessage> messages = ofy().load().type(EmailMessage.class).order("created").list();
-			for (EmailMessage message : messages) {
-				if (!message.isActive) continue;
-				try {
-					int nAvailable = ofy().load().type(Contact.class).filter("created >",message.lastRecipientCreated).count();
-					int nSending = nAvailable > nMessagesToSend? nMessagesToSend:nAvailable;
-					int nTasks = nSending/10 + (nSending%10==0?0:1);
-					int i = 0;
-					for (i=0; i<nTasks;i++) {
-						int delaySeconds = i * 60;
-						Utilities.createTask("/messages","UserRequest=Send+10+Messages&MessageId=" + m.id,delaySeconds);
-						
-						//QueueFactory.getDefaultQueue().add(withUrl("/messages").param("UserRequest","Send 10 Messages").param("MessageId",String.valueOf(message.id)).countdownMillis(delayMillis));
-					}
-					nAvailable -= nSending;
-					
-					if (nAvailable == 0) {  // deactivate the message if it has been sent to all eligible recipients
-						message.isActive = false;
-						ofy().save().entity(message).now();
-					}
-					
-					nMessagesToSend -= nSending;
-					if (nMessagesToSend == 0) break;  // end the loop through messages if all N messages have been sent
-				} catch (Exception e) {
-				}
-			}
-			break;
 		default:
 		}
 		
@@ -229,13 +211,13 @@ public class ManageMessages extends HttpServlet {
 		int nAvailable = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created >",m.lastRecipientCreated).count();
 		boolean unsent = m.lastRecipientCreated == null || m.lastRecipientCreated.getTime() == 0L;
 		return "<h4>Send This Message</h4>"
-			+ "You have " + nContacts + " contacts in the database, " + nUnsubscribed + " of whom have unsubscribed from your messages.<br/>"
+			+ "You have " + nContacts + " contacts in the database, " + (nContacts - nUnsubscribed) + " remain subscribed.<br/>"
 			+ "This message " 
-			+ (unsent?"has not yet been sent to any contacts.":"can be sent to as many as " + nAvailable + " more contacts in batches of up to 50 messages.") 
+			+ (unsent?"has not yet been sent to any contacts.":"can be sent to as many as " + nAvailable + " more contacts.") 
 			+ "<br/>"
 			+ "<form method=post action=/messages>"
 			+ "<input type=hidden name=MessageId value=" + m.id + " />"
-			+ "<input type=submit name=UserRequest value='Send 50 Messages' />&nbsp;"
+			//+ "<input type=submit name=UserRequest value='Send 50 Messages' />&nbsp;"
 			+ "<input type=submit name=UserRequest value='Send 1 Test Message' /> to "
 			+ "<input type=text size=7 name=FirstName value=Chuck /> "
 			+ "<input type=text size=7 name=LastName value=Wight /> "
@@ -243,28 +225,18 @@ public class ManageMessages extends HttpServlet {
 			+ "</form>";		
 	}
 	
-	int send10Messages(EmailMessage m,boolean testOnly,List<Contact> contacts) throws Exception {
-		//Properties props = new Properties();
-		//Session session = Session.getDefaultInstance(props, null);
+	int sendNMessages(EmailMessage m,boolean testOnly,List<Contact> contacts) throws Exception {
 		int count = 0;
 		for (Contact c : contacts) {
 			try {
 				Utilities.sendEmail(c.getFullName(),c.email,m.subjectLine,salutationText(c) + m.text + unsubscribeText(c));
-				/*
-				Message msg = new MimeMessage(session);
-				msg.setFrom(new InternetAddress("admin@chemvantage.org", "ChemVantage LLC"));
-				msg.addRecipient(Message.RecipientType.TO, new InternetAddress(c.email, c.getFullName()));
-				msg.setSubject(m.subjectLine);
-				msg.setContent(salutationText(c) + m.text + unsubscribeText(c) ,"text/html");
-				Transport.send(msg);
-				*/
 			} catch (Exception e) {
 				c.role = "failed message";
 				ofy().save().entity(c);
+				continue;
 			}
-			if (!testOnly) m.lastRecipientCreated = c.created;
+			if (!testOnly && c.created.after(m.lastRecipientCreated)) m.lastRecipientCreated = c.created;
 			count++;
-			Thread.sleep(1000);  // slows execution to 1 message per second
 		}
 		ofy().save().entity(m).now();
 		return count;
