@@ -14,7 +14,7 @@ cron:
   schedule: 'every day 04:00'
   timezone: 'America/New_York'
   description: 'Provides daily routine maintenance for User entities'
-- url: '/messages?UserRequest=SendMessages&N=2000'
+- url: '/messages?UserRequest=SendMessages&N=1000'
   schedule: 'every day 04:15'
   timezone: 'America/New_York'
   description: 'Sends N email marketing messages'
