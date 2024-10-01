@@ -44,7 +44,8 @@ public class Subject {
 	private static Subject s;
 	private String projectId;
 	private String serverUrl;
-
+	private String gptModel = "ChangeMe";
+	
 	private Subject() {}
 	
 	private static void refresh() {
@@ -143,6 +144,11 @@ public class Subject {
 		} catch (Exception e) {
         	return null;
         }
+	}
+	
+	static public String getGPTModel() {
+		if (s==null) refresh(); 
+		return s.gptModel;
 	}
 	
 	static String getOpenAIKey() {
