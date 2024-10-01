@@ -36,6 +36,9 @@ public class Sage extends HttpServlet {
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
 		
+		// available only to the dev server
+		if (Subject.getProjectId().equals("chem-vantage-hrd")) return;
+				
 		PrintWriter out = response.getWriter();
 		response.setContentType("text/html");
 		
@@ -83,8 +86,12 @@ public class Sage extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
 		
+		// available only to the dev server
+		if (Subject.getProjectId().equals("chem-vantage-hrd")) return;
+		
 		PrintWriter out = response.getWriter();
 		response.setContentType("text/html");
+		
 		StringBuffer debug = new StringBuffer("Debug: ");
 
 		try {
@@ -320,7 +327,7 @@ public class Sage extends HttpServlet {
 		Long currentQuestionId = st.currentQuestionId;  // don't duplicate this
 		int score = st.scores[st.conceptIds.indexOf(conceptId)];
 		int scoreQuintile = score==100?4:score/20;			// ranges from 0-4
-		int nConceptQuestions = ofy().load().type(Question.class).filter("conceptId",conceptId).count();
+		int nConceptQuestions = ofy().load().type(Question.class).filter("assignmentType","Sage").filter("conceptId",conceptId).count();
 		if (nConceptQuestions == 0) throw new Exception("Sorry, there are no questions for this Concept.");
 		
 		// select a level of difficulty between 0-4 based on user's scoreQuintile
@@ -333,14 +340,14 @@ public class Sage extends HttpServlet {
 				break;
 			}
 		}
-		int nQuintileQuestions =  ofy().load().type(Question.class).filter("conceptId",conceptId).filter("difficulty",difficulty).count();
+		int nQuintileQuestions =  ofy().load().type(Question.class).filter("assignmentType","Sage").filter("conceptId",conceptId).filter("difficulty",difficulty).count();
 		
 		// select one question index at random
 		Key<Question> k = null;
 		if (nQuintileQuestions >= 5) {
-			k = ofy().load().type(Question.class).filter("conceptId",conceptId).filter("difficulty",difficulty).offset(rand.nextInt(nQuintileQuestions)).keys().first().safe();
+			k = ofy().load().type(Question.class).filter("assignmentType","Sage").filter("conceptId",conceptId).filter("difficulty",difficulty).offset(rand.nextInt(nQuintileQuestions)).keys().first().safe();
 		} else {  // use the full range of questions for this Concept
-			k = ofy().load().type(Question.class).filter("conceptId",conceptId).offset(rand.nextInt(nConceptQuestions)).keys().first().safe();	
+			k = ofy().load().type(Question.class).filter("assignmentType","Sage").filter("conceptId",conceptId).offset(rand.nextInt(nConceptQuestions)).keys().first().safe();	
 		}
 		
 		// If this duplicates the current question, try again (recursively)

@@ -119,6 +119,12 @@ indexes:
 
 - kind: Question
   properties:
+  - name: assignmentId
+  - name: conceptId
+  - name: difficulty
+
+- kind: Question
+  properties:
   - name: assignmentType
   - name: topicId
 
