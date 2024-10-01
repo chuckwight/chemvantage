@@ -100,18 +100,18 @@ public class ManageContacts extends HttpServlet {
 			switch (userRequest) {
 			case "Add New Contact":
 				addNewContact(request);
-				response.sendRedirect(Subject.serverUrl + "/contacts?Email=" + email);
+				response.sendRedirect(Subject.getServerUrl() + "/contacts?Email=" + email);
 				break;
 			case "Paste New Contact":
 				email = pasteNewContact(request);
-				response.sendRedirect(Subject.serverUrl + "/contacts?Email=" + email);
+				response.sendRedirect(Subject.getServerUrl() + "/contacts?Email=" + email);
 			case "Save Revised Contact":
 				saveRevisedContact(request);
-				response.sendRedirect(Subject.serverUrl + "/contacts?Email=" + request.getParameter("Email"));
+				response.sendRedirect(Subject.getServerUrl() + "/contacts?Email=" + request.getParameter("Email"));
 				break;
 			case "Delete This Contact":
 				deleteContact(request);
-				response.sendRedirect(Subject.serverUrl + "/contacts?Email=" + request.getParameter("Email"));
+				response.sendRedirect(Subject.getServerUrl() + "/contacts?Email=" + request.getParameter("Email"));
 				break;
 			case "Export CSV File":
 				exportCSVFile(request,response);

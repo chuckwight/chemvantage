@@ -29,7 +29,7 @@ public class Utilities {
 	public static void createTask(String relativeUri, String query, int seconds)
 			throws IOException {
 		// This method accepts a relativeUri (e.g., /ReportScore) to POST a request to a ChemVantage servlet
-		String projectId = Subject.projectId;
+		String projectId = Subject.getProjectId();
 		String location = "us-central1";
 		String queueName = "default";
 		// Instantiates a client.

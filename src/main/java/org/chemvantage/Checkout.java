@@ -89,7 +89,7 @@ public class Checkout extends HttpServlet {
 		
 		buf.append(Subject.header("ChemVantage Subscription") + Subject.banner);
 		
-		String client_id = Subject.projectId.equals("dev-vantage-hrd")
+		String client_id = Subject.getProjectId().equals("dev-vantage-hrd")
 				? "AVJ8NuVQnTBwTbmkouWCjZhUT_eHeTm9fjAKwXJO0-RK-9VZFBtWm4J6V8o-47DvbOoaVCUiEb4JMXz8": // Paypal sandbox client_id
 					"AYlUNqRJZXhJJ9z7pG7GRMOwC-Y_Ke58s8eacfl1R51833ISAqOUhR8To0Km297MPcShAqm9ffp5faun"; // Paypal live client_id
 

@@ -59,6 +59,7 @@ public class Question implements Serializable, Cloneable {
 			String editorId;
 			String notes;
 			String learn_more_url;
+			String sageAdvice;
 			boolean scrambleChoices;
 			boolean strictSpelling;
 	private Integer nCorrectAnswers = null;
@@ -636,6 +637,64 @@ public class Question implements Serializable, Cloneable {
 			buf.append("</div>");
 		}
 		return buf.toString(); 
+	}
+	
+	String printForSage() {
+		StringBuffer buf = new StringBuffer();
+		char choice = 'a';
+		List<Character> choice_keys = new ArrayList<Character>();
+		Random rand = new Random();
+		switch (getQuestionType()) {
+		case 1: // Multiple Choice
+			buf.append(text + "\n");
+			for (int i=0; i<nChoices; i++) choice_keys.add(Character.valueOf((char)('a'+i)));
+			buf.append("Select only the best answer:\n");
+			while (choice_keys.size()>0) {
+				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
+				buf.append(choices.get(choice-'a') + "\n");
+			}
+			break;
+		case 2: // True/False
+			buf.append(text + "\n");
+			buf.append("Select true or false:\n");
+			buf.append("True\n");
+			buf.append("False\n");
+			break;
+		case 3: // Select Multiple
+			buf.append(text + "\n");
+			for (int i=0; i<nChoices; i++) choice_keys.add(Character.valueOf((char)('a'+i)));
+			buf.append("Select all of the correct answers:\n");
+			while (choice_keys.size()>0) {
+				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
+				buf.append(choices.get(choice-'a') + "\n");
+			}
+			break;
+		case 4: // Fill-in-the-Word
+			buf.append("Fill in the blank with the correct word or phrase:\n" 
+					+ text + "_______________" + tag + "\n");
+			break;
+		case 5: // Numeric Answer
+			buf.append(parseString(text) + "\n");
+			switch (getNumericItemType()) {
+			case 0: buf.append("Enter the exact value: "); break;
+			case 1: buf.append("Enter the value with the appropriate number of significant figures:\n"); break;
+			case 2: int sf = (int)Math.ceil(-Math.log10(requiredPrecision/100.))+1;
+				buf.append("Include at least " + sf + " significant figures in your answer: \n"); break;
+			case 3: buf.append("Enter the value with the appropriate number of significant figures \n"); break;
+			default:
+			}
+			buf.append("____________" + parseString(tag) + "\n");
+			break;        
+		case 6: // FIVE_STAR rating
+			buf.append(text + "\n");
+			buf.append("Enter your rating from 1 to 5 stars: ______\n");
+			break;
+		case 7: // Short ESSAY question
+			buf.append(text + "\n");
+			buf.append("Enter your answer in 800 characters or less: ___________\n");
+			break;
+		}
+		return buf.toString();	
 	}
 	
 	public void addAttemptSave(boolean isCorrect) {

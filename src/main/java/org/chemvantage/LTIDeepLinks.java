@@ -85,7 +85,7 @@ public class LTIDeepLinks extends HttpServlet {
 				message += "<br />" + name + ": " + request.getParameter(name);
 			}
 			message += "<br/>" + debug.toString();
-			if (Subject.projectId.equals("dev-vantage-hrd")) Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Deep Linking Error",message);
+			if (Subject.getProjectId().equals("dev-vantage-hrd")) Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Deep Linking Error",message);
 			//if (!message.contains("Unauthorized")) Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Deep Linking Error",message);
 			//Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Deep Linking Error",message);
 			

@@ -27,7 +27,6 @@ import com.google.cloud.ServiceOptions;
 import com.googlecode.objectify.NotFoundException;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
-import com.googlecode.objectify.annotation.Ignore;
 
 @Entity
 public class Subject {
@@ -43,15 +42,14 @@ public class Subject {
 	private int nStarReports;
 	private double avgStars;
 	private static Subject s;
-	@Ignore static String projectId;
-	@Ignore static String serverUrl;
-
+	private String projectId;
+	private String serverUrl;
+	private String gptModel = "ChangeMe";
+	
 	private Subject() {}
 	
 	private static void refresh() {
 		try {
-			projectId = ServiceOptions.getDefaultProjectId();
-			serverUrl = "https://" + (projectId.equals("dev-vantage-hrd")?"dev-vantage-hrd.appspot.com":"www.chemvantage.org");
 			if (s==null) s = ofy().load().type(Subject.class).id(1L).safe();
 		} catch (NotFoundException e) {  // runs only once at inception of datastore
 			s = new Subject();
@@ -63,6 +61,8 @@ public class Subject {
 			s.reCaptchaSiteKey = "changeMe";
 			s.openai_key = "changeMe";
 			s.sendGridAPIKey = "changeMe";
+			s.projectId = ServiceOptions.getDefaultProjectId();
+			s.serverUrl = "https://" + (s.projectId.equals("dev-vantage-hrd")?"dev-vantage-hrd.appspot.com":"www.chemvantage.org");
 			ofy().save().entity(s);
 		} catch (Exception e) {  // ofy() not ready
 			try {
@@ -146,9 +146,24 @@ public class Subject {
         }
 	}
 	
+	static public String getGPTModel() {
+		if (s==null) refresh(); 
+		return s.gptModel;
+	}
+	
 	static String getOpenAIKey() {
 		if (s==null) refresh();
 		return s.openai_key;
+	}
+	
+	static String getProjectId() {
+		if (s==null) refresh();
+		return s.projectId;
+	}
+	
+	static String getServerUrl() {
+		if (s==null) refresh();
+		return s.serverUrl;
 	}
 	
 	public static String header(String title) {
