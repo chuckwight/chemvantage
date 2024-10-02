@@ -60,6 +60,7 @@ public class Subject {
 			s.reCaptchaSecret = "changeMe";
 			s.reCaptchaSiteKey = "changeMe";
 			s.openai_key = "changeMe";
+			s.gptModel = "changeMe";
 			s.sendGridAPIKey = "changeMe";
 			s.projectId = ServiceOptions.getDefaultProjectId();
 			s.serverUrl = "https://" + (s.projectId.equals("dev-vantage-hrd")?"dev-vantage-hrd.appspot.com":"www.chemvantage.org");

@@ -378,6 +378,8 @@ public class LTIv1p3Launch extends HttpServlet {
 			case "VideoQuiz":
 				out.println(Subject.header("Video") + VideoQuiz.instructorPage(user,myAssignment) + Subject.footer);
 				break;
+			case "Sage":
+				out.println(Subject.header("Sage") + Sage.instructorPage(user,myAssignment) + Subject.footer);
 			default: return;
 			}
 		} else {
@@ -665,6 +667,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Poll'" + (assignmentType.equals("Poll")?" CHECKED />":" />") + "In-class&nbsp;Poll</label><br />"
 				+ "</div><div style='display:table-cell'>"
 				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='PracticeExam'" + (assignmentType.equals("PracticeExam")?" CHECKED />":" />") + "Practice&nbsp;Exam</label><br/>"
+				+ (Subject.getProjectId().equals("chem-vantage-hrd")?"":"<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Sage'" + (assignmentType.equals("Sage")?" CHECKED />":" />") + "Sage&nbsp;Tutor</label><br/>")
 				+ "</div></div></div><br/>");
 		buf.append("<div id=plswait style='color:red;display:none'>Please wait...</div>");
 
@@ -713,6 +716,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			}		
 			break;
 		case "Quiz":
+		case "SAage":
 		case "Homework":
 			try {
 				textId = Long.parseLong(request.getParameter("TextId"));

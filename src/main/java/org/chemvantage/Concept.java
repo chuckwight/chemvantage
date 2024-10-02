@@ -57,9 +57,8 @@ public class Concept implements Serializable {
 		if (summary == null) {
 			try {
 				JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
-				api_request.addProperty("model","gpt-4");
-				//api_request.addProperty("model","gpt-3.5-turbo");
-				api_request.addProperty("max_tokens",200);
+				api_request.addProperty("model",Subject.getGPTModel());
+				//api_request.addProperty("max_tokens",200);
 				api_request.addProperty("temperature",0.2);
 
 				JsonArray messages = new JsonArray();
@@ -69,7 +68,7 @@ public class Concept implements Serializable {
 				messages.add(m1);
 				JsonObject m2 = new JsonObject();  // api request message
 				m2.addProperty("role", "user");
-				m2.addProperty("content", "Write a brief summary to teach me the key concept: " + this.title);
+				m2.addProperty("content", "Write a brief summary of this key concept: " + this.title);
 				messages.add(m2);
 
 				api_request.add("messages", messages);
@@ -94,11 +93,13 @@ public class Concept implements Serializable {
 				content.replaceAll("\\n\\n", "<p>");
 				
 				// save this summary in the datastore
+				this.summary = content;
 				ofy().save().entity(this);
 				
 				return content;
 			} catch (Exception e) {
-				return "Sorry, Sage is unable to provide a summary of this concepot at the moment.";
+				return "Sorry, Sage is unable to provide a summary of this concepot at the moment.<p>"
+						+ e.getMessage()==null?e.toString():e.getMessage();
 			}
 		} else return summary;
 	}

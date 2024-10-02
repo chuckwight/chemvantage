@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
 
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
@@ -86,8 +87,9 @@ public class SageTransaction implements Serializable {
 		if (newQuintileRank < oldQuintileRank) proposedScore = (oldQuintileRank - 1)*20;  // minimum score
 		
 		// return the updated Score object
-		score = proposedScore;
+		scores[conceptIds.indexOf(conceptId)] = proposedScore;
 		currentQuestionId = proposedScore==100?null:Sage.getNewQuestionId(this,conceptId);
+		currentParameter =  new Random().nextLong(Long. MAX_VALUE);
 		helped =  false;
 		
 		return newQuintileRank > oldQuintileRank;

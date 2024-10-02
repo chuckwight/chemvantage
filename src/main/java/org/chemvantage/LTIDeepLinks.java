@@ -250,6 +250,7 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Poll'" + (assignmentType.equals("Poll")?" CHECKED />":" />") + "In-class&nbsp;Poll</label><br />"
 				+ "</div><div style='display:table-cell'>"
 				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='PracticeExam'" + (assignmentType.equals("PracticeExam")?" CHECKED />":" />") + "Practice&nbsp;Exam</label><br/>"
+			+ (Subject.getProjectId().equals("chem-vantage-hrd")?"":"<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Sage'" + (assignmentType.equals("Sage")?" CHECKED />":" />") + "Sage&nbsp;Tutor</label><br/>")
 				+ "</div></div></div><br/>");
 		buf.append("<div id=plswait style='color:red;display:none'>Please wait...</div>");
 		
@@ -300,6 +301,7 @@ public class LTIDeepLinks extends HttpServlet {
 			break;
 		case "Quiz":
 		case "Homework":
+		case "Sage":
 			try {
 				texts = ofy().load().type(Text.class).list();
 				textId = Long.parseLong(request.getParameter("TextId"));
@@ -428,6 +430,7 @@ public class LTIDeepLinks extends HttpServlet {
 				+ "      else vidSubmit.value='Create ' + (count==1?'this assignment':'these assignments');"
 				+ "      break;"
 				+ "    case 'Quiz':"
+				+ "    case 'Sage':"
 				+ "	   case 'Homework':"
 				+ "	   case 'SmartText':"
 				+ "      for (var i=0;i<stArray.length;i++) if (stArray[i].checked) count++;"
@@ -507,6 +510,7 @@ public class LTIDeepLinks extends HttpServlet {
 				videoIdArray = request.getParameterValues("VideoId");
 				for (int i=0;i<videoIdArray.length;i++) videoIds.add(Long.parseLong(videoIdArray[i]));			
 				break;
+			case "Sage":
 			case "Quiz":
 			case "Homework":
 			case "SmartText":
@@ -583,6 +587,7 @@ public class LTIDeepLinks extends HttpServlet {
 				break;
 			case "SmartText":
 			case "Quiz":
+			case "Sage":
 			case "Homework":
 				text = ofy().load().type(Text.class).id(textId).safe();
 				for (Integer chN : chapterNumbers) {

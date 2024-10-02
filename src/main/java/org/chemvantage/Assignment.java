@@ -123,6 +123,7 @@ public class Assignment implements java.lang.Cloneable {
 		
 		switch (this.assignmentType) {
 		case "Quiz":
+		case "Sage":
 		case "Homework":
 		case "PracticeExam":
 		case "PlacementExam": 
