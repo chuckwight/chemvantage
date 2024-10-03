@@ -74,6 +74,7 @@ public class Sage extends HttpServlet {
 
 			switch (userRequest) {
 			case "AssignSageConcepts":
+				out.println(assignConcepts(user,a));
 				break;
 			case "ShowSummary":
 				break;
@@ -83,6 +84,8 @@ public class Sage extends HttpServlet {
 			case "menu":
 				out.println(menuPage(user,st));
 				break;
+			case "InstructorPage":
+				out.println(instructorPage(user,a));
 			default:
 				boolean getHelp = Boolean.parseBoolean(request.getParameter("Help"));
 				out.println(poseQuestion(user,st,concept,getHelp));
@@ -136,24 +139,35 @@ public class Sage extends HttpServlet {
 			debug.append("1");
 
 			switch (userRequest) {
+			case "AddConcept":
+				if (!a.conceptIds.contains(concept.id)) {
+					a.conceptIds.add(concept.id);
+					ofy().save().entity(a).now();
+				}
+				out.println(assignConcepts(user,a));
+				break;
 			case "Ask Sage":
 				try {
-					String topic = request.getParameter("Topic");
 					String userPrompt = request.getParameter("UserPrompt");
 					String nonce = request.getParameter("Nonce");
-					if (!Nonce.isUnique(nonce)) throw new Exception("replay attempt");
+					if (!Nonce.isUnique(nonce)) throw new Exception("Only one question is allowed per concept level.");
 					int score = st.scores[st.conceptIds.indexOf(concept.id)];
-					out.println(askSage(topic,score,userPrompt));
+					out.println(askSage(user,concept.id,score,userPrompt));
 					return;
 				} catch (Exception e) {
 					out.println(Subject.header("Sage")
-							+ "<h1>Sorry, Sage only answers one question at a time.</h1>"
+							+ "<h1>Sorry, Sage cannot answer your question.</h1>"
+							+ (e.getMessage()==null?e.toString():e.getMessage()) + "<p>"
 							+ "Your session will continue in a moment."
 							+ "<script>"
-							+ " setTimeout(() => { window.location.replace('/Sage'); }, 2000);"  // pause, then continue
+							+ " setTimeout(() => { window.location.replace('/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + concept.id + "'); }, 2000);"  // pause, then continue
 							+ "</script>"
 							+ Subject.footer);
 				}
+				break;
+			case "DeleteConcept":
+				if (a.conceptIds.remove(concept.id)) ofy().save().entity(a).now();
+				out.println(assignConcepts(user,a));
 				break;
 			case "Score This Response":  
 				try {			
@@ -170,21 +184,21 @@ public class Sage extends HttpServlet {
 					out.println(e.getMessage()==null?e.toString():e.getMessage());
 				}
 				break;
-			default: response.sendError(400);
+			default: throw new Exception("Invalid request");
 			}
 		} catch (Exception e) {
 			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
 		}
 	}
 
-	static String askAQuestion(User user, String topic, String nonce) {
+	static String askAQuestion(User user, Long conceptId, String nonce) {
 		StringBuffer buf = new StringBuffer();
 		buf.append("<button id=askButton class=btn onClick=showAskForm(); >Ask Sage a Question</button>");
 		buf.append("<div id=askForm style='display:none;' >"
-				+ "If you have any question for Sage about <b>" + topic + "</b> you may ask it here:<br/>"
+				+ "If you have any question for Sage about <b>" + conceptMap.get(conceptId).title + "</b> you may ask it here:<br/>"
 				+ "<form method=post action=/Sage onsubmit='waitForScore();'>"
-				+ "<input type=hidden name=Topic value='" + topic + "' />"
 				+ "<input type=hidden name=Nonce value='" + nonce + "' />"
+				+ "<input type=hidden name=ConceptId value='" + conceptId + "' />"
 				+ "<input type=hidden name=UserRequest value='Ask Sage' />"
 				+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 				+ "<textarea rows=4 cols=80 name=UserPrompt ></textarea><br/>"
@@ -207,8 +221,11 @@ public class Sage extends HttpServlet {
 		return buf.toString();
 	}
 
-	static String askSage(String topic, int score, String userPrompt) {
+	static String askSage(User user, Long conceptId, int score, String userPrompt) {
 		StringBuffer buf = new StringBuffer(Subject.header("Sage"));
+		buf.append("<script id='MathJax-script' async src='https://polyfill.io/v3/polyfill.min.js'></script>\n"
+				+ " <script id='MathJax-script' async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'></script>\n");
+		
 		try {
 			BufferedReader reader = null;
 			JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
@@ -220,7 +237,7 @@ public class Sage extends HttpServlet {
 			JsonObject m1 = new JsonObject();  // api request message
 			m1.addProperty("role", "system");
 			m1.addProperty("content","You are a tutor assisting a college student taking General Chemistry. "
-					+ "You must restrict your response to the topic " + topic + " in General Chemistry."
+					+ "You must restrict your response to the topic " + conceptMap.get(conceptId).title + " in General Chemistry."
 					+ "Format the response in HTML and use LaTex math mode specific delimiters as follows:\n"
 					+ "inline math mode : `\\(` and `\\)`\n"
 					+ "display math mode: `\\[` and `\\]`\n");
@@ -264,7 +281,7 @@ public class Sage extends HttpServlet {
 			buf.append("<script>"
 					+ "function wasHelpful(response) {"
 					+ " document.getElementById('helpful').innerHTML='<br/><b>Thank you for the feedback.</b>';"
-					+ " setTimeout(() => { window.location.replace('/Sage" + (score==100?"?UserRequest=menu":"") + "'); }, 1000);"  // pause, then continue
+					+ " setTimeout(() => { window.location.replace('/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + conceptId + (score==100?"&UserRequest=menu":"") + "'); }, 1000);"  // pause, then continue
 					+ " try {"
 					+ "  var xmlhttp = new XMLHttpRequest();"
 					+ "  xmlhttp.open('GET','/feedback?UserRequest=HelpfulAnswer&Response=' + response,true);"
@@ -278,13 +295,53 @@ public class Sage extends HttpServlet {
 		return buf.toString() + Subject.footer;
 	}
 	
+	static String assignConcepts(User user, Assignment a) {
+		StringBuffer buf = new StringBuffer(Subject.header("Sage"));
+		buf.append("<h1>" + a.title + "</h1>"
+				+ "<h2>Select Key Concepts For This Assignment</h2>"
+				+ "The key concepts covered in this Sage tutoring assignment are listed below. "
+				+ "You may delete any of these or add new concepts to customize this assignment "
+				+ "for your class. Students may complete the concepts in any order.<p>");
+		buf.append("<ol>");
+		
+		if (a.conceptIds.isEmpty()) buf.append("<b>This assignment has no key concepts.</b><p>");
+		else {
+			for (Long conceptId : a.conceptIds) {
+				buf.append("<li>"
+						+ "<form method=post action=/Sage>" + conceptMap.get(conceptId).title + "&nbsp;"
+						+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+						+ "<input type=hidden name=ConceptId value=" + conceptId + " />"
+						+ "<input type=hidden name=UserRequest value=DeleteConcept />"
+						+ "<input type=submit value=Delete class=btn />"
+						+ "</form>"
+						+ "</li>");
+			}
+		buf.append("</ol>");
+		}
+		
+		buf.append("<form method=post action=/Sage>Add a new concept to this assignment: "
+				+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+				+ "<input type=hidden name=UserRequest value=AddConcept />");
+		buf.append("<select name=ConceptId><option>Select a concept</option>");
+		for (Concept c : conceptList) {
+			if (a.conceptIds.contains(c.id)) continue;
+			buf.append("<option value=" + c.id + ">" + c.title + "</option>");
+		}
+		buf.append("</select>&nbsp;"
+				+ "<input type=submit value='Add' class=btn />"
+				+ "</form><p>");
+		
+		buf.append("<a href='/Sage?sig=" + user.getTokenSignature() + "&UserRequest=InstructorPage' class=btn>Return to the Instructor Page</a>");
+		return buf.toString() + Subject.footer;
+	}
+	
 	static String getHelp(Question q) throws Exception {
 		if (q.sageAdvice != null) return q.sageAdvice; // stored AI response
 		
 		BufferedReader reader = null;
 		JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
 		api_request.addProperty("model",Subject.getGPTModel());
-		api_request.addProperty("max_tokens",200);
+		//api_request.addProperty("max_tokens",200);
 		api_request.addProperty("temperature",0.2);
 		
 		JsonArray messages = new JsonArray();
@@ -293,14 +350,16 @@ public class Sage extends HttpServlet {
 		m1.addProperty("content","You are a tutor assisting a college student taking General Chemistry. "
 				+ "The student is requesting your help to answer a homework question. Guide the student "
 				+ "in the right general direction, but do not give the correct answer to the question.\n"
-				+ "Format the response as HTML.");
+				+ "Format your response as HTML. The question is:\n" + q.printForSage());
 		messages.add(m1);;
+		/*
 		JsonObject m2 = new JsonObject();  // api request message
 		m2 = new JsonObject();  // api request message
 		m2.addProperty("role", "user");
 		m2.addProperty("content","Please help me answer this General Chemistry problem: \n"
 				+ q.printForSage());
 		messages.add(m2);
+		*/
 		api_request.add("messages", messages);
 		URL u = new URL("https://api.openai.com/v1/chat/completions");
 		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
@@ -322,8 +381,10 @@ public class Sage extends HttpServlet {
 		String content = api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString();
 		
 		// Save the response for the next time a user needs help with this question
-		q.sageAdvice = content;
-		ofy().save().entity(q);
+		if (!q.requiresParser()) {
+			q.sageAdvice = content;
+			ofy().save().entity(q);
+		}
 		
 		return content;
 	}
@@ -407,14 +468,15 @@ public class Sage extends HttpServlet {
 
 		try {
 			buf.append("<h1>Sage Is Your Tutor</h1>"
-					+ "Select any of the key concepts listed below for this assignment.<p>");
+					+ "Select any of the key concepts listed below for this assignment.<br/>"
+					+ "Your current scores are indicated in parentheses.<p>");
 
 			//	construct an ordered list of assigned key concepts
 			buf.append("<ol>");
 			for (Long cId : st.conceptIds) {
 				buf.append("<li><a href=/Sage?ConceptId=" + cId + "&sig=" + user.getTokenSignature() + (st.scores[st.conceptIds.indexOf(cId)]==0?"&UserRequest=ConceptDescription":"") + ">" 
 						+ conceptMap.get(cId).title + "</a>" 
-						+ "(" + st.scores[st.conceptIds.indexOf(cId)] + "%)</li>\n");
+						+ "&nbsp;(" + st.scores[st.conceptIds.indexOf(cId)] + "%)</li>\n");
 			}
 			buf.append("</ol>");
 
@@ -447,6 +509,9 @@ public class Sage extends HttpServlet {
 			
 			buf.append("<div style='width:800px; height=300px; overflow=auto; display:flex; align-items:center;'>");
 			if (getHelp) {
+				buf.append("<script id='MathJax-script' async src='https://polyfill.io/v3/polyfill.min.js'></script>\n"
+						+ " <script id='MathJax-script' async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'></script>\n");
+				
 				buf.append("<div>"
 						+ getHelp(q)
 						+ "</div>"
@@ -474,7 +539,7 @@ public class Sage extends HttpServlet {
 				buf.append("<div>"
 						+ "Please submit your answer to the question below.<p>"
 						+ "If you get stuck, I am here to help you, but your score will be higher if you do it by yourself.<p>"
-						+ "<a id=help class=btn role=button href=/Sage?Help=true&p=" + st.currentParameter + " onclick=waitForHelp(); >Please help me with this question</a>"
+						+ "<a id=help class=btn role=button href=/Sage?sig=" + user.getTokenSignature() + "&Help=true&ConceptId=" + concept.id + "&p=" + st.currentParameter + " onclick=waitForHelp(); >Please help me with this question</a>"
 						+ "</div>"
 						+ "<img src=/images/sage.png alt='Confucius Parrot' style='float:right'>"
 						+ "</div>");
@@ -533,8 +598,6 @@ public class Sage extends HttpServlet {
 
 	static String printScore(User user, HttpServletRequest request, Long conceptId, SageTransaction st) throws Exception {
 		// Prepare a section that allows the user to ask Sage a question
-		String topic =conceptMap.get(conceptId).title;
-
 		StringBuffer buf = new StringBuffer(Subject.header("Sage"));
 		
 		int rawScore = 0;  // result is 0, 1 or 2. Tne partial score 1 is for wrong sig figs.
@@ -650,12 +713,12 @@ public class Sage extends HttpServlet {
 			int score = st.scores[st.conceptIds.indexOf(conceptId)];
 			if (score == 100) { 
 				buf.append("<h2>Your score is 100%</h2>");
-				buf.append("You have mastered the concept: <b>" + topic +"</b>.</br/>");
-				if (level_up) buf.append(askAQuestion(user, topic,Nonce.generateNonce()));
+				buf.append("You have mastered the concept: <b>" + conceptMap.get(conceptId).title +"</b>.<p>");
+				if (level_up) buf.append(askAQuestion(user, conceptId, Nonce.generateNonce()));
 			} else if (level_up) {
 				buf.append("<h3>You have moved up to Level " + (score/20 + 1) + ".</h3>"
-						+ "<b>Your current score on this concept is " + score + "%.</b>&nbsp;");
-				if (score >= 60 && score < 80) buf.append("<p>" + askAQuestion(user,topic,Nonce.generateNonce()) + "Otherwise...");
+						+ "<b>Your current score on this concept is " + score + "%.</b><p>");
+				buf.append(askAQuestion(user,conceptId,Nonce.generateNonce()) + " Otherwise...");
 			} else {
 				buf.append("<p><b>Your current score on this concept is " + score + "%.</b>&nbsp;");
 			}
@@ -793,7 +856,7 @@ public class Sage extends HttpServlet {
 				+ "instructor. For each concept you will be guided through a series of questions and problems, "
 				+ "with the Sage at your side, ready to provide help whenever you need it. "
 				+ "Each concept has 5 levels. Whenever you complete a level or finish a concept with a score of 100%, "
-				+ "you will have an opportunity to ask Sage any question of your choice about that concept.<p>"
+				+ "you will have an opportunity to ask Sage a question of your choice about that concept.<p>"
 				+ "<a href='/Sage?UserRequest=menu&sig=" + user.getTokenSignature() + "' class=btn>Continue</a>"
 				+ "</div>");
 		return buf.toString() + Subject.footer;
