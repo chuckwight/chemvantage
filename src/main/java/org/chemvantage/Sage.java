@@ -10,6 +10,7 @@ import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -844,6 +845,86 @@ public class Sage extends HttpServlet {
 			api_score.addProperty("feedback", "Sorry, an error occurred: " + e.getMessage()==null?e.toString():e.getMessage());
 		}
 		return api_score;
+	}
+	
+	static String showSummary(User user,Assignment a) {
+		StringBuffer buf = new StringBuffer();
+		if (a==null) return "No assignment was specified for this request.";
+
+		if (!user.isInstructor()) return "You must be logged in as the instructor to view this page.";
+
+		try {
+			if (a.lti_nrps_context_memberships_url==null) throw new Exception("No Names and Roles Provisioning support.");
+
+			buf.append("<h1>Sage Tutor Scores</h1>");
+			buf.append("Title: " + a.title + "<br/>");
+			buf.append("Assignment ID: " + a.id + "<br/>");
+			buf.append("Valid: " + new Date() + "<p>");
+			buf.append("The roster below is obtained using the Names and Role Provisioning service offered by your learning management system, "
+					+ "and may or may not include user's names or emails, depending on the settings of your LMS.<br/><br/>");
+
+			Map<String,String> scores = LTIMessage.readMembershipScores(a);
+			if (scores==null) scores = new HashMap<String,String>();  // in case service call fails
+
+			Map<String,String[]> membership = LTIMessage.getMembership(a);
+			if (membership==null) membership = new HashMap<String,String[]>(); // in case service call fails
+
+			List<SageTransaction> sTList = ofy().load().type(SageTransaction.class).filter("assignmentId",a.id).list();
+			Map<String,SageTransaction> stMap = new HashMap<String,SageTransaction>();
+			for (SageTransaction sT : sTList) stMap.put(sT.userId, sT);
+			
+			Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
+			String platform_id = d.getPlatformId() + "/";
+			
+			buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th><th>Scores Detail</th></tr>");
+			int i=0;
+			int nMismatched = 0;
+			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
+				if (entry == null) continue;
+				String lmsScoreString = scores.get(entry.getKey());
+				lmsScoreString = (lmsScoreString==null?" - ":lmsScoreString + "%");
+				String hashedId = Subject.hashId(platform_id + entry.getKey());
+				SageTransaction st = stMap.get(hashedId);
+				int cvScore = 0;
+				for (int s : st.scores) cvScore += s;  // total score for all concepts
+				cvScore = cvScore / st.conceptIds.size();  // overall percent score
+				String cvScoreString = String.valueOf(cvScore) + "%";
+				boolean synched = !"Learner".equals(entry.getValue()[0]) || cvScoreString.equals(lmsScoreString);
+				String forUserId = platform_id + entry.getKey();  // only send hashed values through links
+				i++;
+				buf.append("<tr><td>" + i + ".&nbsp;</td>"
+						+ "<td>" + entry.getValue()[1] + "</td>"
+						+ "<td>" + entry.getValue()[2] + "</td>"
+						+ "<td>" + entry.getValue()[0] + "</td>"
+						+ "<td align=center>" + lmsScoreString + "</td>"
+						+ "<td align=center>" + cvScoreString + "</td>"
+						//+ "<td align=center><a href=/Homework?UserRequest=Review&sig=" + user.getTokenSignature() + "&ForUserId=" + forUserId + "&ForUserName=" + entry.getValue()[1].replaceAll(" ","+") + ">show</a></td>"
+						+ (synched?"":"<td><span id='cell" + forUserId + "'><button onClick=this.disabled=true;this.style.opacity=0.5;synchronizeScore('" + forUserId + "','" + user.getTokenSignature() + "','/Sage'); >sync</button></span></td>")
+						+ "</tr>");
+				// Flag this score set as unsynchronized only if there is one or more non-null ChemVantage Learner score that is not equal to the LMS score
+				// Ignore Instructor scores because the LMS often does not report them, and ignore null cvScore entities because they cannot be reported.
+				if (!synched) nMismatched++;
+			}
+			buf.append("</table><br/>");
+			if (nMismatched > 0) {
+				//buf.append(ajaxJavaScript(user.getTokenSignature()));
+				buf.append("You may use the individual 'sync' buttons above to resubmit any ChemVantage score to the LMS. Note that in some cases, mismatched scores are expected (e.g., when "
+						+ "the instructor overrides a score or when a late submission is not accepted by the LMS). You may have to adjust the settings in your LMS to accept the "
+						+ "revised score (e.g., change the due date, grade override or allowed number of submissions). ");
+			}
+			if (nMismatched>1) {
+				buf.append("Use the button below to synchronize all of the Learner scores. This might take a minute, depending on the number of mismatches.<br/>"
+					+ "<form method=post action=/Homework onsubmit=waitforSync(); >"
+					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "<input type=hidden name=UserRequest value='Synchronize Scores' />"
+					+ "<input type=submit id=syncAll value='Synchronize All Scores' />"
+					+ "</form>");
+			}
+				return buf.toString();
+		} catch (Exception e) {
+			buf.append(e.toString());
+		}
+		return buf.toString();
 	}
 	
 	static String welcomePage(User user) throws Exception {
