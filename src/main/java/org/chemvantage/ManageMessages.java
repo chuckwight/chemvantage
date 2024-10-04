@@ -163,7 +163,11 @@ public class ManageMessages extends HttpServlet {
 					int delaySeconds = 300 + i * 60;  // 5 min delay plus 1 min per task
 					Utilities.createTask("/messages","UserRequest=Send+100+Messages&N=" + (nMessagesToSend > 100?100:nMessagesToSend) + "&MessageId=" + m.id,delaySeconds);
 					if (nMessagesToSend > 100) nMessagesToSend -= 100;
-					else nMessagesToSend = 0;
+					else {
+						nMessagesToSend = 0;
+						m.isActive = false;
+						ofy().save().entity(m);
+					}
 				}
 			} catch (Exception e) {
 			}

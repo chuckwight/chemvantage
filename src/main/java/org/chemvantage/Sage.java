@@ -78,6 +78,7 @@ public class Sage extends HttpServlet {
 				out.println(assignConcepts(user,a));
 				break;
 			case "ShowSummary":
+				out.println(showSummary(user,a));
 				break;
 			case "ConceptDescription":
 				out.println(printConceptDescription(user,concept));
@@ -848,7 +849,7 @@ public class Sage extends HttpServlet {
 	}
 	
 	static String showSummary(User user,Assignment a) {
-		StringBuffer buf = new StringBuffer();
+		StringBuffer buf = new StringBuffer(Subject.header("Sage"));
 		if (a==null) return "No assignment was specified for this request.";
 
 		if (!user.isInstructor()) return "You must be logged in as the instructor to view this page.";
@@ -886,9 +887,11 @@ public class Sage extends HttpServlet {
 				String hashedId = Subject.hashId(platform_id + entry.getKey());
 				SageTransaction st = stMap.get(hashedId);
 				int cvScore = 0;
-				for (int s : st.scores) cvScore += s;  // total score for all concepts
-				cvScore = cvScore / st.conceptIds.size();  // overall percent score
-				String cvScoreString = String.valueOf(cvScore) + "%";
+				if (st != null) {
+					for (int s : st.scores) cvScore += s;  // total score for all concepts
+					cvScore = cvScore / st.conceptIds.size();  // overall percent score
+				}
+				String cvScoreString = cvScore==0?" - ":String.valueOf(cvScore) + "%";
 				boolean synched = !"Learner".equals(entry.getValue()[0]) || cvScoreString.equals(lmsScoreString);
 				String forUserId = platform_id + entry.getKey();  // only send hashed values through links
 				i++;
@@ -924,7 +927,7 @@ public class Sage extends HttpServlet {
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}
-		return buf.toString();
+		return buf.toString() + Subject.footer;
 	}
 	
 	static String welcomePage(User user) throws Exception {
