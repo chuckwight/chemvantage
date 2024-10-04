@@ -9,6 +9,7 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
@@ -57,22 +58,30 @@ public class Sage extends HttpServlet {
 			if (userRequest == null) userRequest = "";
 			
 			// Get the SageTreansaction for this assignment
-			SageTransaction st = ofy().load().type(SageTransaction.class).filter("userId",user.hashedId).filter("assignmentId",a.id).first().now();
-			if (st == null) {
+			SageTransaction st = null;
+			try {
+				st = ofy().load().type(SageTransaction.class).filter("userId",user.hashedId).filter("assignmentId",a.id).first().safe();
+				if (!st.conceptIds.equals(a.conceptIds)) {  // the assignment was revised
+					st = revisedTransaction(a,st); // symchronize st to the revised assignment
+					ofy().save().entity(st).now();
+				}
+			} catch (Exception e) {  // first time visiting this assignment
 				st = new SageTransaction(user.hashedId,a.id,a.conceptIds);
 				ofy().save().entity(st).now();
-				out.println(welcomePage(user));
-				return;
-			} else if (!st.conceptIds.equals(a.conceptIds)) {  // the assignment was revised
-				st = revisedTransaction(a,st); // symchronize st to the revised assignment
+				if (userRequest.isEmpty()) {
+					out.println(welcomePage(user));
+					return;
+				}
 			}
-
-			Concept concept = null;
+			
+			Long conceptId = null;
 			try {  // request from menuPage
-				Long conceptId = Long.parseLong(request.getParameter("ConceptId"));
-				concept = conceptMap.get(conceptId);
-			} catch (Exception e) {}
-
+				conceptId = Long.parseLong(request.getParameter("ConceptId"));
+			} catch (Exception e) {
+				if (userRequest.isEmpty()) userRequest = "menu";
+			}
+			Concept concept = conceptMap.get(conceptId); // might be null 
+			
 			switch (userRequest) {
 			case "AssignSageConcepts":
 				out.println(assignConcepts(user,a));
@@ -88,6 +97,10 @@ public class Sage extends HttpServlet {
 				break;
 			case "InstructorPage":
 				out.println(instructorPage(user,a));
+				break;
+			case "SynchronizeScore":
+				out.println(synchronizeScore(user,a,request.getParameter("ForUserId")));
+				break;
 			default:
 				boolean getHelp = Boolean.parseBoolean(request.getParameter("Help"));
 				out.println(poseQuestion(user,st,concept,getHelp));
@@ -124,18 +137,7 @@ public class Sage extends HttpServlet {
 				Long conceptId = Long.parseLong(request.getParameter("ConceptId"));
 				concept = conceptMap.get(conceptId);
 			} catch (Exception e) {}
-			/*	
-				if (st.scores[st.conceptIds.indexOf(conceptId)] == 0) {  // score on this concept is zero
-					out.println(printConceptDescription(user,concept));
-					return;
-				} else {
-					boolean getHelp = Boolean.parseBoolean(request.getParameter("Help"));
-					out.println(poseQuestion(user,st,concept,getHelp));
-				}
-			} catch (Exception e) {
-				out.println(menuPage(user,st));
-			}
-			*/
+			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 			debug.append("1");
@@ -185,6 +187,10 @@ public class Sage extends HttpServlet {
 				} catch (Exception e) {
 					out.println(e.getMessage()==null?e.toString():e.getMessage());
 				}
+				break;
+			case "Synchronize Scores":
+				if (synchronizeScores(user,a)) out.println(instructorPage(user,a));
+				else out.println("Synchronization request failed.");
 				break;
 			default: throw new Exception("Invalid request");
 			}
@@ -299,41 +305,45 @@ public class Sage extends HttpServlet {
 	
 	static String assignConcepts(User user, Assignment a) {
 		StringBuffer buf = new StringBuffer(Subject.header("Sage"));
-		buf.append("<h1>" + a.title + "</h1>"
-				+ "<h2>Select Key Concepts For This Assignment</h2>"
-				+ "The key concepts covered in this Sage tutoring assignment are listed below. "
-				+ "You may delete any of these or add new concepts to customize this assignment "
-				+ "for your class. Students may complete the concepts in any order.<p>");
-		buf.append("<ol>");
-		
-		if (a.conceptIds.isEmpty()) buf.append("<b>This assignment has no key concepts.</b><p>");
-		else {
-			for (Long conceptId : a.conceptIds) {
-				buf.append("<li>"
-						+ "<form method=post action=/Sage>" + conceptMap.get(conceptId).title + "&nbsp;"
-						+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-						+ "<input type=hidden name=ConceptId value=" + conceptId + " />"
-						+ "<input type=hidden name=UserRequest value=DeleteConcept />"
-						+ "<input type=submit value=Delete class=btn />"
-						+ "</form>"
-						+ "</li>");
+		try {
+			buf.append("<h1>" + a.title + "</h1>"
+					+ "<h2>Select Key Concepts For This Assignment</h2>"
+					+ "The key concepts covered in this Sage tutoring assignment are listed below. "
+					+ "You may delete any of these or add new concepts to customize this assignment "
+					+ "for your class. Students may complete the concepts in any order.<p>");
+			buf.append("<ol>");
+
+			if (a.conceptIds.isEmpty()) buf.append("<b>This assignment has no key concepts.</b><p>");
+			else {
+				for (Long conceptId : a.conceptIds) {
+					buf.append("<li>"
+							+ "<form method=post action=/Sage>" + conceptMap.get(conceptId).title + "&nbsp;"
+							+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+							+ "<input type=hidden name=ConceptId value=" + conceptId + " />"
+							+ "<input type=hidden name=UserRequest value=DeleteConcept />"
+							+ "<input type=submit value=Delete class=btn />"
+							+ "</form>"
+							+ "</li>");
+				}
+				buf.append("</ol>");
 			}
-		buf.append("</ol>");
+
+			buf.append("<form method=post action=/Sage>Add a new concept to this assignment: "
+					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
+					+ "<input type=hidden name=UserRequest value=AddConcept />");
+			buf.append("<select name=ConceptId><option>Select a concept</option>");
+			for (Concept c : conceptList) {
+				if (a.conceptIds.contains(c.id)) continue;
+				buf.append("<option value=" + c.id + ">" + c.title + "</option>");
+			}
+			buf.append("</select>&nbsp;"
+					+ "<input type=submit value='Add' class=btn />"
+					+ "</form><p>");
+
+			buf.append("<a id=backToInstPage href='/Sage?sig=" + user.getTokenSignature() + "&UserRequest=InstructorPage' class=btn onclick=waitAMoment('backToInstPage');>Return to the Instructor Page</a><p>");
+			} catch (Exception e) {
+			buf.append("<p>" + e.getMessage()==null?e.toString():e.getMessage());
 		}
-		
-		buf.append("<form method=post action=/Sage>Add a new concept to this assignment: "
-				+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-				+ "<input type=hidden name=UserRequest value=AddConcept />");
-		buf.append("<select name=ConceptId><option>Select a concept</option>");
-		for (Concept c : conceptList) {
-			if (a.conceptIds.contains(c.id)) continue;
-			buf.append("<option value=" + c.id + ">" + c.title + "</option>");
-		}
-		buf.append("</select>&nbsp;"
-				+ "<input type=submit value='Add' class=btn />"
-				+ "</form><p>");
-		
-		buf.append("<a href='/Sage?sig=" + user.getTokenSignature() + "&UserRequest=InstructorPage' class=btn>Return to the Instructor Page</a>");
 		return buf.toString() + Subject.footer;
 	}
 	
@@ -433,7 +443,7 @@ public class Sage extends HttpServlet {
 	static String instructorPage(User user, Assignment a) {
 	if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
 		
-		StringBuffer buf = new StringBuffer();		
+		StringBuffer buf = new StringBuffer(Subject.header("Sage"));		
 		try {
 			if (a.title==null) {  // legacy assignment only provided topicId
 				Topic t = ofy().load().type(Topic.class).id(a.topicId).now();
@@ -462,7 +472,7 @@ public class Sage extends HttpServlet {
 		} catch (Exception e) {
 			buf.append("<br/>Instructor page error: " + e.getMessage());
 		}
-		return buf.toString();
+		return buf.toString() + Subject.footer;
 	}
 
 	static String menuPage (User user, SageTransaction st) {
@@ -721,6 +731,9 @@ public class Sage extends HttpServlet {
 				buf.append("<h3>You have moved up to Level " + (score/20 + 1) + ".</h3>"
 						+ "<b>Your current score on this concept is " + score + "%.</b><p>");
 				buf.append(askAQuestion(user,conceptId,Nonce.generateNonce()) + " Otherwise...");
+				// Report the user's score to the LMS
+				String payload = "AssignmentId=" + user.getAssignmentId() + "&UserId=" + URLEncoder.encode(user.getId(),"UTF-8");
+				Utilities.createTask("/ReportScore",payload);
 			} else {
 				buf.append("<p><b>Your current score on this concept is " + score + "%.</b>&nbsp;");
 			}
@@ -877,7 +890,7 @@ public class Sage extends HttpServlet {
 			Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
 			String platform_id = d.getPlatformId() + "/";
 			
-			buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th><th>Scores Detail</th></tr>");
+			buf.append("<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th></tr>");
 			int i=0;
 			int nMismatched = 0;
 			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
@@ -886,12 +899,15 @@ public class Sage extends HttpServlet {
 				lmsScoreString = (lmsScoreString==null?" - ":lmsScoreString + "%");
 				String hashedId = Subject.hashId(platform_id + entry.getKey());
 				SageTransaction st = stMap.get(hashedId);
-				int cvScore = 0;
+				int cvScore = 0;  // overall total score
 				if (st != null) {
-					for (int s : st.scores) cvScore += s;  // total score for all concepts
-					cvScore = cvScore / st.conceptIds.size();  // overall percent score
+					for (Long conceptId : a.conceptIds) {
+						int j = st.conceptIds.indexOf(conceptId);
+						cvScore += j==-1?0:st.scores[j];  // add scores for all concepts in the assignment
+					}
 				}
-				String cvScoreString = cvScore==0?" - ":String.valueOf(cvScore) + "%";
+				
+				String cvScoreString = cvScore==0?" - ":String.valueOf(Math.round(10.*cvScore/a.conceptIds.size())/10.) + "%";
 				boolean synched = !"Learner".equals(entry.getValue()[0]) || cvScoreString.equals(lmsScoreString);
 				String forUserId = platform_id + entry.getKey();  // only send hashed values through links
 				i++;
@@ -913,21 +929,75 @@ public class Sage extends HttpServlet {
 				//buf.append(ajaxJavaScript(user.getTokenSignature()));
 				buf.append("You may use the individual 'sync' buttons above to resubmit any ChemVantage score to the LMS. Note that in some cases, mismatched scores are expected (e.g., when "
 						+ "the instructor overrides a score or when a late submission is not accepted by the LMS). You may have to adjust the settings in your LMS to accept the "
-						+ "revised score (e.g., change the due date, grade override or allowed number of submissions). ");
+						+ "revised score (e.g., change the due date, grade override or allowed number of submissions).<p>");
 			}
 			if (nMismatched>1) {
 				buf.append("Use the button below to synchronize all of the Learner scores. This might take a minute, depending on the number of mismatches.<br/>"
-					+ "<form method=post action=/Homework onsubmit=waitforSync(); >"
+					+ "<form method=post action=/Sage onsubmit=waitforSync(); >"
 					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "<input type=hidden name=UserRequest value='Synchronize Scores' />"
 					+ "<input type=submit id=syncAll value='Synchronize All Scores' />"
-					+ "</form>");
+					+ "</form><p>");
 			}
-				return buf.toString();
+			buf.append("<a id=backToInstPage href='/Sage?sig=" + user.getTokenSignature() + "&UserRequest=InstructorPage' class=btn onclick=waitAMoment('backToInstPage');>Return to the Instructor Page</a><p>");
 		} catch (Exception e) {
 			buf.append(e.toString());
 		}
 		return buf.toString() + Subject.footer;
+	}
+	
+	static String synchronizeScore(User user, Assignment a, String forUserId) {
+		try {
+			if (!user.isInstructor()) throw new Exception();  // only instructors can use this function
+			if (a==null) throw new Exception();  // can only do this for a known assignment
+			if (LTIMessage.postUserScore(Score.getInstance(forUserId,a), forUserId).contains("Success")) return "OK";
+		} catch (Exception e) {}
+		return "Failed. Check assignment settings in the LMS.";
+	}
+
+	static boolean synchronizeScores(User user,Assignment a) {
+		// This method looks for assignment scores that are different from the LMS scores and resubmits the score to the LMS
+		try {
+			if (!user.isInstructor()) throw new Exception();  // only instructors can use this function
+			if (a==null) throw new Exception();  // can only do this for a known assignment
+			if (a.lti_ags_lineitem_url == null || a.lti_nrps_context_memberships_url == null) throw new Exception(); // need both of these to work
+			Map<String,String> scores = LTIMessage.readMembershipScores(a);
+			if (scores==null || scores.size()==0) throw new Exception();  // this only works if we can get info from the LMS
+			Map<String,String[]> membership = LTIMessage.getMembership(a);
+			if (membership==null || membership.size()==0) throw new Exception();  // there must be some members of this class
+			
+			Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
+			String platform_id = d.getPlatformId() + "/";
+			
+			List<SageTransaction> sTList = ofy().load().type(SageTransaction.class).filter("assignmentId",a.id).list();
+			Map<String,SageTransaction> stMap = new HashMap<String,SageTransaction>();
+			for (SageTransaction sT : sTList) stMap.put(sT.userId, sT);
+			
+			for (Map.Entry<String,String[]> entry : membership.entrySet()) {
+				if (entry == null) continue;
+				String lmsScoreString = scores.get(entry.getKey());
+				lmsScoreString = (lmsScoreString==null?" - ":lmsScoreString + "%");
+				String hashedId = Subject.hashId(platform_id + entry.getKey());
+				SageTransaction st = stMap.get(hashedId);
+				int cvScore = 0;  // overall total score
+				if (st != null) {
+					for (Long conceptId : a.conceptIds) {
+						int j = st.conceptIds.indexOf(conceptId);
+						cvScore += j==-1?0:st.scores[j];  // add scores for all concepts in the assignment
+					}
+				}
+				
+				String cvScoreString = cvScore==0?" - ":String.valueOf(Math.round(10.*cvScore/a.conceptIds.size())/10.) + "%";
+				boolean synched = !"Learner".equals(entry.getValue()[0]) || cvScoreString.equals(lmsScoreString);
+				if (synched) continue;  // scores match; no action required
+				
+				String payload = "AssignmentId=" + a.id + "&UserId=" + URLEncoder.encode(platform_id + entry.getKey(),"UTF-8");
+				Utilities.createTask("/ReportScore",payload);
+			}
+		} catch (Exception e) {
+			return false;
+		}
+		return true;
 	}
 	
 	static String welcomePage(User user) throws Exception {

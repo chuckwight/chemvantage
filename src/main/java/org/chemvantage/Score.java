@@ -67,6 +67,17 @@ public class Score {    // this object represents a best score achieved by a use
 				}
 			}
 			break;
+		case "Sage":
+			SageTransaction sgt = ofy().load().type(SageTransaction.class).filter("userId",hashedId).filter("assignmentId",a.id).first().now();
+			s.score = 0;
+			for (Long conceptId : a.conceptIds) {
+				int j = sgt.conceptIds.indexOf(conceptId);
+				s.score += j==-1?0:sgt.scores[j];  // add scores for all concepts in the assignment
+			}
+			s.maxPossibleScore = 100*a.conceptIds.size();
+			s.mostRecentAttempt = new Date();
+
+			break;
 		case "Homework":
 			List<HWTransaction> hwTransactions = ofy().load().type(HWTransaction.class).filter("userId",hashedId).filter("assignmentId",a.id).list();
 			List<Key<Question>> assignmentQuestionKeys = new ArrayList<Key<Question>>();

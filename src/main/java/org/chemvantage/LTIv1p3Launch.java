@@ -379,7 +379,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				out.println(Subject.header("Video") + VideoQuiz.instructorPage(user,myAssignment) + Subject.footer);
 				break;
 			case "Sage":
-				out.println(Subject.header("Sage") + Sage.instructorPage(user,myAssignment) + Subject.footer);
+				out.println(Sage.instructorPage(user,myAssignment));
 			default: return;
 			}
 		} else {
