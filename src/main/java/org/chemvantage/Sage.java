@@ -408,7 +408,6 @@ public class Sage extends HttpServlet {
 		// a question where the difficulty is the same as the user's scoreQuintile.
 		int[][] qSelCutoff = { {10,17,20,20},{4,14,18,20},{1,5,15,19},{0,2,6,16},{0,0,3,10} };
 		
-		Long currentQuestionId = st.currentQuestionId;  // don't duplicate this
 		int score = st.scores[st.conceptIds.indexOf(conceptId)];
 		int scoreQuintile = score==100?4:score/20;			// ranges from 0-4
 		int nConceptQuestions = ofy().load().type(Question.class).filter("conceptId",conceptId).count();
@@ -426,18 +425,18 @@ public class Sage extends HttpServlet {
 		}
 		int nQuintileQuestions =  ofy().load().type(Question.class).filter("conceptId",conceptId).filter("difficulty",difficulty).count();
 		
-		// select one question index at random
-		Key<Question> k = null;
-		if (nQuintileQuestions >= 5) {
-			k = ofy().load().type(Question.class).filter("conceptId",conceptId).filter("difficulty",difficulty).offset(rand.nextInt(nQuintileQuestions)).keys().first().safe();
-		} else {  // use the full range of questions for this Concept
-			k = ofy().load().type(Question.class).filter("conceptId",conceptId).offset(rand.nextInt(nConceptQuestions)).keys().first().safe();	
+		List<Key<Question>> questionKeys = null;
+		if (nQuintileQuestions >4) questionKeys = ofy().load().type(Question.class).filter("conceptId",conceptId).filter("difficulty",difficulty).keys().list();
+		else questionKeys = ofy().load().type(Question.class).filter("conceptId",conceptId).keys().list();
+		
+		Random random = new Random(st.random);
+		Long questionId = questionKeys.get(random.nextInt(questionKeys.size())).getId();
+		while (st.answeredIds.contains(questionId));{
+			st.answeredIds.remove(questionId);
+			questionId = questionKeys.get(random.nextInt(questionKeys.size())).getId();
 		}
 		
-		// If this duplicates the current question, try again (recursively)
-		if (k.getId().equals(currentQuestionId) && nConceptQuestions > 1) return getNewQuestionId(st,conceptId);
-		
-		return k.getId();
+		return questionId;
 	}
 	
 	static String instructorPage(User user, Assignment a) {
@@ -509,13 +508,9 @@ public class Sage extends HttpServlet {
 	static String poseQuestion(User user, SageTransaction st, Concept concept, boolean getHelp) throws Exception {
 		StringBuffer buf = new StringBuffer(Subject.header("Sage"));
 		try {
-			if (st.currentQuestionId == null) {
-				st.currentQuestionId = getNewQuestionId(st,concept.id);
-				st.currentParameter = new Random().nextLong(Long. MAX_VALUE);
-				ofy().save().entity(st).now();
-			}
-			Question q = ofy().load().type(Question.class).id(st.currentQuestionId).now();
-			q.setParameters(st.currentParameter);
+			Long questionId = getNewQuestionId(st,concept.id);
+			Question q = ofy().load().type(Question.class).id(questionId).now();
+			q.setParameters(st.random);
 	
 			buf.append("<h1>" + concept.title + "</h1>");
 			
@@ -551,7 +546,7 @@ public class Sage extends HttpServlet {
 				buf.append("<div>"
 						+ "Please submit your answer to the question below.<p>"
 						+ "If you get stuck, I am here to help you, but your score will be higher if you do it by yourself.<p>"
-						+ "<a id=help class=btn role=button href=/Sage?sig=" + user.getTokenSignature() + "&Help=true&ConceptId=" + concept.id + "&p=" + st.currentParameter + " onclick=waitForHelp(); >Please help me with this question</a>"
+						+ "<a id=help class=btn role=button href=/Sage?sig=" + user.getTokenSignature() + "&Help=true&ConceptId=" + concept.id + "&p=" + st.random + " onclick=waitForHelp(); >Please help me with this question</a>"
 						+ "</div>"
 						+ "<img src=/images/sage.png alt='Confucius Parrot' style='float:right'>"
 						+ "</div>");
@@ -570,7 +565,7 @@ public class Sage extends HttpServlet {
 			buf.append("<form method=post style='max-width:800px;' onsubmit='waitForScore();' >"
 					+ "<input type=hidden name=QuestionId value='" + q.id + "' />"
 					+ "<input type=hidden name=ConceptId value='" + q.conceptId + "' />"
-					+ "<input type=hidden name=Parameter value='" + st.currentParameter + "' />"
+					+ "<input type=hidden name=Parameter value='" + st.random + "' />"
 					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "<input type=hidden name=UserRequest value='Score This Response' />"
 					+ q.print()
@@ -615,7 +610,6 @@ public class Sage extends HttpServlet {
 		int rawScore = 0;  // result is 0, 1 or 2. Tne partial score 1 is for wrong sig figs.
 		
 		Long questionId = Long.parseLong(request.getParameter("QuestionId"));
-		if (!questionId.equals(st.currentQuestionId)) throw new Exception("Wrong question is being scored.");
 		
 		String[] responses = request.getParameterValues(Long.toString(questionId));
 		String studentAnswer = orderResponses(responses);
@@ -808,8 +802,7 @@ public class Sage extends HttpServlet {
 		revised.answeredIds = st.answeredIds;
 		revised.created = st.graded;
 		revised.graded = st.graded;
-		revised.currentQuestionId = st.currentQuestionId;
-		revised.currentParameter = st.currentParameter;
+		revised.random = st.random;
 		revised.helped = st.helped;
 		return revised;
 	}

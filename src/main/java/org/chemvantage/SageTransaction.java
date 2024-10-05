@@ -36,8 +36,7 @@ public class SageTransaction implements Serializable {
 	@Index	Long assignmentId;
 			Date created;
 			Date graded;
-			Long currentQuestionId;
-			Long currentParameter;
+			Long random = new Random().nextLong();
 			boolean helped;
 			List<Long> conceptIds;
 			int[] scores;
@@ -86,10 +85,8 @@ public class SageTransaction implements Serializable {
 		int newQuintileRank = proposedScore/20 + 1;
 		if (newQuintileRank < oldQuintileRank) proposedScore = (oldQuintileRank - 1)*20;  // minimum score
 		
-		// return the updated Score object
 		scores[conceptIds.indexOf(conceptId)] = proposedScore;
-		currentQuestionId = proposedScore==100?null:Sage.getNewQuestionId(this,conceptId);
-		currentParameter =  new Random().nextLong(Long. MAX_VALUE);
+		random =  new Random().nextLong();
 		helped =  false;
 		
 		return newQuintileRank > oldQuintileRank;
