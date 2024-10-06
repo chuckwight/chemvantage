@@ -1,5 +1,6 @@
 package org.chemvantage;
 
+import static com.googlecode.objectify.ObjectifyService.key;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.BufferedReader;
@@ -10,6 +11,7 @@ import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
@@ -153,6 +155,7 @@ public class Sage extends HttpServlet {
 			case "Ask Sage":
 				try {
 					String userPrompt = request.getParameter("UserPrompt");
+					if (userPrompt.isEmpty()) throw new Exception("The question was blank.");
 					String nonce = request.getParameter("Nonce");
 					if (!Nonce.isUnique(nonce)) throw new Exception("Only one question is allowed per concept level.");
 					int score = st.scores[st.conceptIds.indexOf(concept.id)];
@@ -229,77 +232,76 @@ public class Sage extends HttpServlet {
 		return buf.toString();
 	}
 
-	static String askSage(User user, Long conceptId, int score, String userPrompt) {
+	static String askSage(User user, Long conceptId, int score, String userPrompt) throws Exception {
 		StringBuffer buf = new StringBuffer(Subject.header("Sage"));
+
 		buf.append("<script id='MathJax-script' async src='https://polyfill.io/v3/polyfill.min.js'></script>\n"
 				+ " <script id='MathJax-script' async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'></script>\n");
+
+		BufferedReader reader = null;
+		JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
+		api_request.addProperty("model",Subject.getGPTModel());
+		api_request.addProperty("max_tokens",400);
+		api_request.addProperty("temperature",0.4);
+
+		JsonArray messages = new JsonArray();
+		JsonObject m1 = new JsonObject();  // api request message
+		m1.addProperty("role", "system");
+		m1.addProperty("content","You are a tutor assisting a college student taking General Chemistry. "
+				+ "You must restrict your response to the topic " + conceptMap.get(conceptId).title + " in General Chemistry."
+				+ "Format the response in HTML and use LaTex math mode specific delimiters as follows:\n"
+				+ "inline math mode : `\\(` and `\\)`\n"
+				+ "display math mode: `\\[` and `\\]`\n");
+		messages.add(m1);;
+		JsonObject m2 = new JsonObject();  // api request message
+		m2 = new JsonObject();  // api request message
+		m2.addProperty("role", "user");
+		m2.addProperty("content",userPrompt);
+		messages.add(m2);
+		api_request.add("messages", messages);
+		URL u = new URL("https://api.openai.com/v1/chat/completions");
+		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+		uc.setRequestMethod("POST");
+		uc.setDoInput(true);
+		uc.setDoOutput(true);
+		uc.setRequestProperty("Authorization", "Bearer " + Subject.getOpenAIKey());
+		uc.setRequestProperty("Content-Type", "application/json");
+		uc.setRequestProperty("Accept", "application/json");
+		OutputStream os = uc.getOutputStream();
+		byte[] json_bytes = api_request.toString().getBytes("utf-8");
+		os.write(json_bytes, 0, json_bytes.length);           
+		os.close();
+
+		reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+		JsonObject api_response = JsonParser.parseReader(reader).getAsJsonObject();
+		reader.close();
+
+		String content = api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString();
+
+		if (content==null || content.isEmpty()) throw new Exception("It appears that the Sage was stumped!");
 		
-		try {
-			BufferedReader reader = null;
-			JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
-			api_request.addProperty("model",Subject.getGPTModel());
-			api_request.addProperty("max_tokens",400);
-			api_request.addProperty("temperature",0.4);
-			
-			JsonArray messages = new JsonArray();
-			JsonObject m1 = new JsonObject();  // api request message
-			m1.addProperty("role", "system");
-			m1.addProperty("content","You are a tutor assisting a college student taking General Chemistry. "
-					+ "You must restrict your response to the topic " + conceptMap.get(conceptId).title + " in General Chemistry."
-					+ "Format the response in HTML and use LaTex math mode specific delimiters as follows:\n"
-					+ "inline math mode : `\\(` and `\\)`\n"
-					+ "display math mode: `\\[` and `\\]`\n");
-			messages.add(m1);;
-			JsonObject m2 = new JsonObject();  // api request message
-			m2 = new JsonObject();  // api request message
-			m2.addProperty("role", "user");
-			m2.addProperty("content",userPrompt);
-			messages.add(m2);
-			api_request.add("messages", messages);
-			URL u = new URL("https://api.openai.com/v1/chat/completions");
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			uc.setRequestMethod("POST");
-			uc.setDoInput(true);
-			uc.setDoOutput(true);
-			uc.setRequestProperty("Authorization", "Bearer " + Subject.getOpenAIKey());
-			uc.setRequestProperty("Content-Type", "application/json");
-			uc.setRequestProperty("Accept", "application/json");
-			OutputStream os = uc.getOutputStream();
-			byte[] json_bytes = api_request.toString().getBytes("utf-8");
-			os.write(json_bytes, 0, json_bytes.length);           
-			os.close();
-				
-			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-			JsonObject api_response = JsonParser.parseReader(reader).getAsJsonObject();
-			reader.close();
-			
-			String content = api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString();
-			
-			buf.append("<h1>Sage Response</h1>");
-			
-			buf.append("<div style='width:800px;' >");
-			buf.append("<img src=/images/sage.png alt='Confucius Parrot' style='margin-left:20px;float:right;' />" + content);	
-			buf.append("</div>");
-			buf.append("<div id=helpful>"
-					+ "<span><b>Was this answer helpful?</b></span> " 
-					+ "<a href=#  style='vertical-align:middle' onclick=wasHelpful(true);><img src=/images/thumbs_up.png alt='thumbs up' style='height:30px' /></a>&nbsp;"
-					+ "<a href=#  style='vertical-align:middle' onclick=wasHelpful(false);><img src=/images/thumbs_down.png alt='thumbs down' style='height:30px' /></a>"
-					+ "</div><p>");
-			// include some javascript to process the response
-			buf.append("<script>"
-					+ "function wasHelpful(response) {"
-					+ " document.getElementById('helpful').innerHTML='<br/><b>Thank you for the feedback.</b>';"
-					+ " setTimeout(() => { window.location.replace('/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + conceptId + (score==100?"&UserRequest=menu":"") + "'); }, 1000);"  // pause, then continue
-					+ " try {"
-					+ "  var xmlhttp = new XMLHttpRequest();"
-					+ "  xmlhttp.open('GET','/feedback?UserRequest=HelpfulAnswer&Response=' + response,true);"
-					+ "  xmlhttp.send(null);"
-					+ " } catch (error) {}"
-					+ "}"
-					+ "</script>");
-		} catch (Exception e) {
-			buf.append("<p>Error: " + (e.getMessage()==null?e.toString():e.getMessage()) + "<p>");
-		}
+		buf.append("<h1>Sage Response</h1>");
+
+		buf.append("<div style='width:800px;' >");
+		buf.append("<img src=/images/sage.png alt='Confucius Parrot' style='margin-left:20px;float:right;' />" + content);	
+		buf.append("</div>");
+		buf.append("<div id=helpful>"
+				+ "<span><b>Was this answer helpful?</b></span> " 
+				+ "<a href=#  style='vertical-align:middle' onclick=wasHelpful(true);><img src=/images/thumbs_up.png alt='thumbs up' style='height:30px' /></a>&nbsp;"
+				+ "<a href=#  style='vertical-align:middle' onclick=wasHelpful(false);><img src=/images/thumbs_down.png alt='thumbs down' style='height:30px' /></a>"
+				+ "</div><p>");
+		// include some javascript to process the response
+		buf.append("<script>"
+				+ "function wasHelpful(response) {"
+				+ " document.getElementById('helpful').innerHTML='<br/><b>Thank you for the feedback.</b>';"
+				+ " setTimeout(() => { window.location.replace('/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + conceptId + (score==100?"&UserRequest=menu":"") + "'); }, 1000);"  // pause, then continue
+				+ " try {"
+				+ "  var xmlhttp = new XMLHttpRequest();"
+				+ "  xmlhttp.open('GET','/feedback?UserRequest=HelpfulAnswer&Response=' + response,true);"
+				+ "  xmlhttp.send(null);"
+				+ " } catch (error) {}"
+				+ "}"
+				+ "</script>");
 		return buf.toString() + Subject.footer;
 	}
 	
@@ -423,6 +425,7 @@ public class Sage extends HttpServlet {
 				break;
 			}
 		}
+		
 		int nQuintileQuestions =  ofy().load().type(Question.class).filter("conceptId",conceptId).filter("difficulty",difficulty).count();
 		
 		List<Key<Question>> questionKeys = null;
@@ -431,8 +434,10 @@ public class Sage extends HttpServlet {
 		
 		Random random = new Random(st.random);
 		Long questionId = questionKeys.get(random.nextInt(questionKeys.size())).getId();
-		while (st.answeredIds.contains(questionId));{
-			st.answeredIds.remove(questionId);
+		Key<Concept> conceptKey = key(Concept.class,conceptId);
+		List<Long> answeredConceptQuestionIds = st.answeredQuestionIds.get(conceptKey);
+		while (answeredConceptQuestionIds != null && answeredConceptQuestionIds.contains(questionId)) {
+			answeredConceptQuestionIds.remove(questionId);
 			questionId = questionKeys.get(random.nextInt(questionKeys.size())).getId();
 		}
 		
@@ -488,6 +493,9 @@ public class Sage extends HttpServlet {
 				buf.append("<li><a href=/Sage?ConceptId=" + cId + "&sig=" + user.getTokenSignature() + (st.scores[st.conceptIds.indexOf(cId)]==0?"&UserRequest=ConceptDescription":"") + ">" 
 						+ conceptMap.get(cId).title + "</a>" 
 						+ "&nbsp;(" + st.scores[st.conceptIds.indexOf(cId)] + "%)</li>\n");
+				if (st.scores[st.conceptIds.indexOf(cId)] == 100) {  // purge the answeredQuestionIds for this concept
+					st.answeredQuestionIds.remove(key(Concept.class,cId));
+				}
 			}
 			buf.append("</ol>");
 
@@ -682,6 +690,13 @@ public class Sage extends HttpServlet {
 		
 		// Update and save the Score object
 		boolean level_up = st.update(rawScore,conceptId);
+		// Save the questionId in a List of answered questoinIds in the transaction
+		List<Long> answeredConceptQuestionIds = st.answeredQuestionIds.get(key(Concept.class,conceptId));
+		if (answeredConceptQuestionIds == null) {
+			answeredConceptQuestionIds = new ArrayList<Long>();
+			answeredConceptQuestionIds.add(questionId);
+		} else if (!answeredConceptQuestionIds.contains(questionId)) answeredConceptQuestionIds.add(questionId);
+		// Save the updated transaction
 		ofy().save().entity(st).now();
 		
 		try {
@@ -731,7 +746,6 @@ public class Sage extends HttpServlet {
 			} else {
 				buf.append("<p><b>Your current score on this concept is " + score + "%.</b>&nbsp;");
 			}
-			
 			// print a button to continue
 			buf.append("<a class=btn role=button href='/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + conceptId + (score==100?"&UserRequest=menu":"") + "'>Continue</a><p>");
 		} catch (Exception e) {
@@ -799,7 +813,7 @@ public class Sage extends HttpServlet {
 			revised.scores[i] = j==-1?0:st.scores[j];
 		}
 		revised.id = st.id;
-		revised.answeredIds = st.answeredIds;
+		revised.answeredQuestionIds = st.answeredQuestionIds;
 		revised.created = st.graded;
 		revised.graded = st.graded;
 		revised.random = st.random;

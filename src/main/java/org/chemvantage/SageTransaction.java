@@ -18,12 +18,14 @@
 package org.chemvantage;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
+import com.googlecode.objectify.Key;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
@@ -41,7 +43,7 @@ public class SageTransaction implements Serializable {
 			List<Long> conceptIds;
 			int[] scores;
 			int[] possibleScores;
-			List<Long> answeredIds = new ArrayList<Long>();
+			Map<Key<Concept>,List<Long>> answeredQuestionIds = new HashMap<Key<Concept>,List<Long>>();
 			
 	SageTransaction() {}
 
@@ -57,6 +59,7 @@ public class SageTransaction implements Serializable {
 	}
 
 	boolean update(int rawScore, Long conceptId) throws Exception {
+		graded = new Date();
 		int score = scores[conceptIds.indexOf(conceptId)];
 		int oldQuintileRank = score/20 + 1;
 		if (oldQuintileRank == 6) return false;
