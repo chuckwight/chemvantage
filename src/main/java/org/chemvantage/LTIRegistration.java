@@ -196,7 +196,7 @@ public class LTIRegistration extends HttpServlet {
 				+ (dynamic?"a back-end registration request to your LMS. If successful, you must activate the deployment in your LMS.":"a confirmation email with a tokenized link to complete the registration. ")
 				+ "<br/><br/>\n");
 		
-		buf.append("Please tell us how to contact you if there is ever a problem with your account (see our <a href=https://chemvantage.org/about.html#privacy>Privacy Policy</a>):<br/>"
+		buf.append("Please tell us how to contact you if there is ever a problem with your account (see our <a href=/privacy_policy.html>Privacy Policy</a>):<br/>"
 				+ "<label>Your Name: <input type=text required name=sub size=40 value='" + (sub==null?"":sub) + "' /> </label><br/>"
 				+ "<label>Your Email: <input type=text required name=email size=40 value='" + (email==null?"":email) + "' /> </label><br/><br/>\n");
 		
@@ -372,7 +372,7 @@ public class LTIRegistration extends HttpServlet {
 				+ "<hr>"
 				+ "<br>To the LMS Administrator:<p>"
 				+ "ChemVantage is an Open Education Resource for General Chemistry. Learn more about ChemVantage "
-				+ "<a href=https://www.chemvantage.org/about.html>here</a>.<p>"
+				+ "<a href=https://www.chemvantage.org>here</a>.<p>"
 				+ "Follow the detailed instructions for installing ChemVantage in your LMS at "
 				+ "<a href=https://www.chemvantage.org/install.html>https://www.chemvantage.org/install.html</a>.");
 		

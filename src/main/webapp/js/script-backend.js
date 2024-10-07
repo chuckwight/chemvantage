@@ -167,6 +167,12 @@ function GetXmlHttpObject() {
   return null;
 }
 
+function waitForSage(buttonId) {
+  let b = document.getElementById(buttonId);
+  b.disabled = true;
+  b.innnerHTML = 'Please wait a moment..';
+}
+
 function waitforSync() {
 	let b = document.getElementById('syncAll');
 	b.disabled = true;

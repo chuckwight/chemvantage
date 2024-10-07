@@ -471,7 +471,7 @@ public class Sage extends HttpServlet {
 					+ (supportsMembership?"<LI><a href='/Sage?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' Sage scores</a></LI>":"")
 					+ "</UL><br/>");
 			
-			buf.append("<a href='/Sage?UserRequest=menu&sig=" + user.getTokenSignature() + "' class='btn'>Show This Assignment</a><br/><br/>");
+			buf.append("<a id=showAssignment href='/Sage?UserRequest=menu&sig=" + user.getTokenSignature() + "' class='btn' onclick=waitForSage('showAssignment');>Show This Assignment</a><br/><br/>");
 			
 		} catch (Exception e) {
 			buf.append("<br/>Instructor page error: " + e.getMessage());
