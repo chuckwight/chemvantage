@@ -471,8 +471,13 @@ public class Sage extends HttpServlet {
 					+ (supportsMembership?"<LI><a href='/Sage?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' Sage scores</a></LI>":"")
 					+ "</UL><br/>");
 			
-			buf.append("<a id=showAssignment href='/Sage?UserRequest=menu&sig=" + user.getTokenSignature() + "' class='btn' onclick=waitForSage('showAssignment');>Show This Assignment</a><br/><br/>");
-			
+			buf.append("<script>"
+					+ "function wait() {"
+					+ "  let b = document.getElementById('showAssignment');"
+					+ "  b.innerHTML = 'Preparing your assignment...';"
+					+ "}"
+					+ "</script>");
+			buf.append("<a id=showAssignment href='/Sage?UserRequest=menu&sig=" + user.getTokenSignature() + "' class='btn' onclick=wait();>Show This Assignment</a><br/><br/>");
 		} catch (Exception e) {
 			buf.append("<br/>Instructor page error: " + e.getMessage());
 		}
@@ -598,11 +603,17 @@ public class Sage extends HttpServlet {
 		StringBuffer buf = new StringBuffer(Subject.header("Sage"));
 		try {
 			if (concept == null) throw new Exception("No concept was specified for this requeat.");
+			buf.append("<script>"
+					+ "function wait() {"
+					+ "  let b = document.getElementById('continueButton');"
+					+ "  b.innerHTML = 'Preparing your assignment...';"
+					+ "}"
+					+ "</script>");
 			buf.append("<h1>" + concept.title + "</h1>"
 					+ "<div style='max-width:800px'>"
 					+ "<img src=/images/sage.png alt='Confucius Parrot' style='float:right;margin:20px;'>"
 					+ concept.getSummary() + "<p>"
-					+ "<a class=btn role=button href='/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + concept.id + "'>Continue</a>"
+					+ "<a class=btn id=continueButton onclick=wait(); href='/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + concept.id + "'>Continue</a>"
 					+ "</div>");
 	
 		} catch (Exception e) {
@@ -621,7 +632,17 @@ public class Sage extends HttpServlet {
 		
 		String[] responses = request.getParameterValues(Long.toString(questionId));
 		String studentAnswer = orderResponses(responses);
-		if (studentAnswer == null || studentAnswer.isEmpty()) return null;
+		if (studentAnswer == null || studentAnswer.isEmpty()) {
+			buf.append("<script>"
+					+ "function wait() {"
+					+ "  let b = document.getElementById('tryAgain');"
+					+ "  b.innerHTML = 'Here we go!';"
+					+ "}"
+					+ "</script>");
+			buf.append("<h1>No answer was submitted</h1>"
+					+ "<a id=tryAgain class=btn onclick=wait(); href='/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + conceptId + "'>Try Again</a><p>");
+			return buf.toString() + Subject.footer;
+		};
 		
 		Question q = ofy().load().type(Question.class).id(questionId).safe();
 		long p = 0L;
@@ -747,7 +768,13 @@ public class Sage extends HttpServlet {
 				buf.append("<p><b>Your current score on this concept is " + score + "%.</b>&nbsp;");
 			}
 			// print a button to continue
-			buf.append("<a class=btn role=button href='/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + conceptId + (score==100?"&UserRequest=menu":"") + "'>Continue</a><p>");
+			buf.append("<script>"
+					+ "function wait() {"
+					+ "  let b = document.getElementById('continue');"
+					+ "  b.innerHTML = 'Please wait a moment...';"
+					+ "}"
+					+ "</script>");
+			buf.append("<a id=continue class=btn onclick=wait(); href='/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + conceptId + (score==100?"&UserRequest=menu":"") + "'>Continue</a><p>");
 		} catch (Exception e) {
 			buf.append("<p>" + e.getMessage()==null?e.toString():e.getMessage());
 		}
@@ -794,7 +821,13 @@ public class Sage extends HttpServlet {
 		
 		// print a button to continue
 		int score = st.scores[st.conceptIds.indexOf(conceptId)];
-		buf.append("<a class=btn role=button href='/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + conceptId + (score==100?"&UserRequest=menu":"") + "'>Continue</a><p>");
+		buf.append("<script>"
+				+ "function wait() {"
+				+ "  let b = document.getElementById('continueButton');"
+				+ "  b.innerHTML = 'Please wait a moment...';"
+				+ "}"
+				+ "</script>");
+		buf.append("<a id=continueButton class=btn onclick=wait(); href='/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + conceptId + (score==100?"&UserRequest=menu":"") + "'>Continue</a><p>");
 		return buf.toString() + Subject.footer;
 	}
 
@@ -1009,6 +1042,12 @@ public class Sage extends HttpServlet {
 	
 	static String welcomePage(User user) throws Exception {
 		StringBuffer buf = new StringBuffer(Subject.header("Sage"));
+		buf.append("<script>"
+				+ "function wait() {"
+				+ "  let b = document.getElementById('start');"
+				+ "  b.innerHTML = 'Starting your session...';"
+				+ "}"
+				+ "</script>");
 		buf.append("<h1>Welcome to Sage</h1>"
 				+ "<h2>Sage is an intelligent tutor for General Chemistry.</h2>"
 				+ "<div style='max-width:800px;'>"
@@ -1018,7 +1057,7 @@ public class Sage extends HttpServlet {
 				+ "with the Sage at your side, ready to provide help whenever you need it. "
 				+ "Each concept has 5 levels. Whenever you complete a level or finish a concept with a score of 100%, "
 				+ "you will have an opportunity to ask Sage a question of your choice about that concept.<p>"
-				+ "<a href='/Sage?UserRequest=menu&sig=" + user.getTokenSignature() + "' class=btn>Continue</a>"
+				+ "<a id=start onclick=wait(); href='/Sage?UserRequest=menu&sig=" + user.getTokenSignature() + "' class=btn>Continue</a>"
 				+ "</div>");
 		return buf.toString() + Subject.footer;
 	}
