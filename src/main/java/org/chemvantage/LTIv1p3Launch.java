@@ -78,7 +78,16 @@ public class LTIv1p3Launch extends HttpServlet {
 	@Override
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) 
 	throws ServletException, IOException {
-		response.sendRedirect(Subject.getServerUrl() + "/lti/registration");
+		//response.sendRedirect(Subject.getServerUrl() + "/lti/registration");
+		response.setContentType("text/html");
+		PrintWriter out = response.getWriter();
+		StringBuffer buf = new StringBuffer(Subject.header("ChemVantage"));
+		buf.append("<h1>Welcome to ChemVantage</h1>"
+				+ "If you are a student trying to access an assignment, you must login to your class "
+				+ "learning management system (LMS) and click the assignment link there.<p>"
+				+ "This URL only accepts POST requests from LMS servers with a valid id_token.");
+		buf.append(Subject.footer);
+		out.println(buf.toString());
 	}
 
 	@Override
