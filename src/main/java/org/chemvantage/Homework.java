@@ -82,6 +82,11 @@ public class Homework extends HttpServlet {
 			Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 			
 			switch (userRequest) {
+			case "GetExplanation":
+				long questionId = Long.parseLong(request.getParameter("QuestionId"));
+				long parameter = Long.parseLong(request.getParameter("Parameter"));
+				out.println(getExplanation(questionId,parameter));
+				break;
 			case "ShowScores":
 				String forUserId = request.getParameter("ForUserId");
 				out.println(Subject.header("ChemVantage Scores") + showScores(user,a,forUserId) + Subject.footer);
@@ -283,7 +288,51 @@ public class Homework extends HttpServlet {
 		return buf.toString(); 
 	}
 
-	static void includeCustomQuestions(User user, Assignment a, HttpServletRequest request) {
+	static String getExplanation(long questionId, long parameter) {
+		// Get the AI to compute an explanation
+		StringBuffer buf = new StringBuffer();
+		try {
+			Question q = ofy().load().type(Question.class).id(questionId).safe();
+			if (q.requiresParser()) q.setParameters(parameter);
+			
+			BufferedReader reader = null;
+			JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
+			api_request.addProperty("model",Subject.getGPTModel());
+			api_request.addProperty("max_tokens",600);
+			api_request.addProperty("temperature",0.4);
+
+			JsonArray messages = new JsonArray();
+			JsonObject m1 = new JsonObject();  // api request message
+			m1.addProperty("role", "system");
+			m1.addProperty("content","You are a tutor assisting a college student taking General Chemistry."
+					+ "Explain why\n" + q.getCorrectAnswerForSage() + "\n"
+					+ "is the correct answer to this problem:\n" + q.printForSage());
+			messages.add(m1);
+			api_request.add("messages", messages);
+			URL u = new URL("https://api.openai.com/v1/chat/completions");
+			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+			uc.setRequestMethod("POST");
+			uc.setDoInput(true);
+			uc.setDoOutput(true);
+			uc.setRequestProperty("Authorization", "Bearer " + Subject.getOpenAIKey());
+			uc.setRequestProperty("Content-Type", "application/json");
+			uc.setRequestProperty("Accept", "application/json");
+			OutputStream os = uc.getOutputStream();
+			byte[] json_bytes = api_request.toString().getBytes("utf-8");
+			os.write(json_bytes, 0, json_bytes.length);           
+			os.close();
+
+			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+			JsonObject api_response = JsonParser.parseReader(reader).getAsJsonObject();
+			reader.close();
+			buf.append(api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString());
+		} catch (Exception e) {
+			buf.append("<br/>Sorry, Sage was unable to elaborate. " + (e.getMessage()==null?e.toString():e.toString() + ":" + e.getMessage()) + "<p>");
+		}
+		return buf.toString();
+	}
+
+static void includeCustomQuestions(User user, Assignment a, HttpServletRequest request) {
 		if (!user.isInstructor()) return;
 		String[] questionIds = request.getParameterValues("QuestionId");
 		if (questionIds == null) return;
@@ -888,7 +937,36 @@ public class Homework extends HttpServlet {
 
 			if (!user.isAnonymous()) {
 				if (studentScore>0 || user.isInstructor()) {
-					buf.append("<div id=solution style='display:none'>" + q.printAllToStudents(studentAnswer) + "</div><br/>");
+					buf.append("<div id=solution style='display:none'>"
+							+ q.printAllToStudents(studentAnswer)
+							+ " <p>\n"
+							+ " <div id=explanation style='max-width:800px'>"
+							+ " <button id=explainThis class=btn onclick=getExplanation();>Please explain this answer</button>"
+							+ " </div>\n"
+							+ "<script>\n"
+							+ "function getExplanation() {\n"
+							+ "  document.getElementById('explainThis').innerHTML='Please wait a moment...';\n"
+							+ "  try {\n"
+							+ "    var xmlhttp = GetXmlHttpObject();\n"
+							+ "    if (xmlhttp==null) {\n"
+							+ "      alert('Sorry, your browser does not support AJAX!');\n"
+							+ "	     return false;\n"
+							+ "    }\n"
+							+ "	   xmlhttp.onreadystatechange=function() {\n"
+							+ "      if (xmlhttp.readyState==4) {\n"
+							+ "        document.getElementById('explanation').innerHTML = xmlhttp.responseText;\n"  // Sage explanation
+							+ "        var mathjax = document.createElement('script');\n"
+							+ "        mathjax.type = 'text/javascript';\n"
+							+ "        mathjax.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';\n"
+							+ "        document.head.appendChild(mathjax);\n"
+							+ "      }\n"
+							+ "    }\n"
+							+ "  } catch (error) {}\n"
+							+ "  xmlhttp.open('GET','/Homework?sig=" + user.getTokenSignature() + "&UserRequest=GetExplanation&QuestionId=" + q.id + "&Parameter=" + hashMe.hashCode() + "',true);\n"
+							+ "  xmlhttp.send(null);\n"
+							+ "}\n"
+							+ "</script>\n"
+							+ "</div><p>\n");				
 				}
 
 				if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) 

@@ -19,7 +19,12 @@ package org.chemvantage;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.Serializable;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.text.Collator;
 import java.text.DecimalFormat;
@@ -30,6 +35,9 @@ import java.util.Random;
 
 import com.bestcode.mathparser.IMathParser;
 import com.bestcode.mathparser.MathParserFactory;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Ignore;
@@ -561,12 +569,6 @@ public class Question implements Serializable, Cloneable {
 					+ (showDetails?"<b>" + getCorrectAnswer() + "</b>":"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;")
 					+ "</span>");
 			buf.append("&nbsp;" + parseString(tag) + "<br/>");
-			if (showDetails && hint.length()>0) {
-				buf.append("<br/>Hint:<br/>" + parseString(hint) + "<br/>");
-			}
-			if (showDetails && solution.length()>0) {
-				buf.append("<br/>Solution:<br/>" + parseString(solution) + "<br/>");
-			}
 			break;        
 		case 6:
 			buf.append(parseString(text) + "<br/>");
@@ -583,7 +585,6 @@ public class Question implements Serializable, Cloneable {
 			buf.append(text);
 			buf.append("<br/>");
 			buf.append("<span style='color:#990000;font-size:small;'>(800 characters max):</span><br/>");
-			//buf.append("<textarea rows=5 cols=60 wrap=soft placeholder='Enter your answer here' maxlength=800 >" + studentAnswer + "</textarea><br/>");
 			break;
 		}
 		
@@ -639,6 +640,51 @@ public class Question implements Serializable, Cloneable {
 		return buf.toString(); 
 	}
 	
+	String getExplanation() {
+		// Get the AI to compute an explanation
+		StringBuffer buf = new StringBuffer();
+		try {
+			BufferedReader reader = null;
+			JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
+			api_request.addProperty("model",Subject.getGPTModel());
+			api_request.addProperty("max_tokens",600);
+			api_request.addProperty("temperature",0.4);
+
+			JsonArray messages = new JsonArray();
+			JsonObject m1 = new JsonObject();  // api request message
+			m1.addProperty("role", "system");
+			m1.addProperty("content","You are a tutor assisting a college student taking General Chemistry."
+					+ "Briefly explain why\n" + getCorrectAnswerForSage() + "\n"
+					+ "is the correct answer to this problem:\n" + printForSage() + "\n"
+					+ "Format the response in HTML and use LaTex math mode specific delimiters as follows:\n"
+					+ "inline math mode : `\\(` and `\\)`\n"
+					+ "display math mode: `\\[` and `\\]`\n"
+					+ "");
+			messages.add(m1);
+			api_request.add("messages", messages);
+			URL u = new URL("https://api.openai.com/v1/chat/completions");
+			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+			uc.setRequestMethod("POST");
+			uc.setDoInput(true);
+			uc.setDoOutput(true);
+			uc.setRequestProperty("Authorization", "Bearer " + Subject.getOpenAIKey());
+			uc.setRequestProperty("Content-Type", "application/json");
+			uc.setRequestProperty("Accept", "application/json");
+			OutputStream os = uc.getOutputStream();
+			byte[] json_bytes = api_request.toString().getBytes("utf-8");
+			os.write(json_bytes, 0, json_bytes.length);           
+			os.close();
+
+			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+			JsonObject api_response = JsonParser.parseReader(reader).getAsJsonObject();
+			reader.close();
+			buf.append(api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString());
+		} catch (Exception e) {
+			buf.append("<br/>Sorry, Sage was unable to elaborate. " + (e.getMessage()==null?e.toString():e.toString() + ":" + e.getMessage()) + "<p>");
+		}
+		return buf.toString();
+	}
+
 	String printForSage() {
 		StringBuffer buf = new StringBuffer();
 		char choice = 'a';
@@ -1124,4 +1170,24 @@ public class Question implements Serializable, Cloneable {
 		// Test to see if there is another fraction at this level:
 		return parseFractions(expression,k+1);
 	}
+	
+	public String getCorrectAnswerForSage() { 
+		// similar to getCorrectAnswer but expands MULTIPLE_CHOICE and SELECT_MULTIPLE answers
+		switch (getQuestionType()) {
+		case 1: // MULTIPLE_CHOICE
+		case 3: // SELECT_MULTIPLE
+			char[] ch = correctAnswer.toCharArray();
+			String ans = "";
+			for (char c : ch) ans += choices.get(c - 'a') + "\n";
+			ans = ans.substring(0,ans.length()-2); // trims the last newline character
+			return ans;
+		case 4: // FILL-IN-WORD
+			String[] answers = correctAnswer.split(",");
+			return answers[0];
+		case 5: // NUMERIC
+			return parseString(correctAnswer);
+		default: return correctAnswer;
+		}
+	}
+	
 }

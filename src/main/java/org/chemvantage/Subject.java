@@ -186,6 +186,12 @@ public class Subject {
 		+ "    <link rel='stylesheet' href='/css/style-backend.css'>\n"
 		+ "    <!-- Main JavaScript file -->\n"
 		+ "    <script src='/js/script-backend.js'></script>\n"
+		/*
+		+ ("Sage".equals(title)?
+				"<script src='https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6'></script>"
+				//+ "<script id='MathJax-script' async src='https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js'></script>"
+				:"")
+		*/
 		+ "</head>"
 		+ "<body>\n"
 		+ "<a href=#main class='skip-to-main-content-link'>Skip to main content</a>\n"

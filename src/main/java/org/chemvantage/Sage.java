@@ -59,12 +59,19 @@ public class Sage extends HttpServlet {
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 			
-			// Get the SageTreansaction for this assignment
+			if (userRequest.equals("GetExplanation")) {  // AJAX request
+				long questionId = Long.parseLong(request.getParameter("QuestionId"));
+				long parameter = Long.parseLong(request.getParameter("Parameter"));
+				out.println(getExplanation(questionId,parameter));
+				return;
+			}
+			
+			// Get the SageTransaction for this assignment
 			SageTransaction st = null;
 			try {
 				st = ofy().load().type(SageTransaction.class).filter("userId",user.hashedId).filter("assignmentId",a.id).first().safe();
 				if (!st.conceptIds.equals(a.conceptIds)) {  // the assignment was revised
-					st = revisedTransaction(a,st); // symchronize st to the revised assignment
+					st = revisedTransaction(a,st); // synchronize st to the revised assignment
 					ofy().save().entity(st).now();
 				}
 			} catch (Exception e) {  // first time visiting this assignment
@@ -183,14 +190,6 @@ public class Sage extends HttpServlet {
 					out.println(e.getMessage()==null?e.toString():e.getMessage());
 				}
 				break;
-			case "Show Full Solution":
-				try {	
-					debug.append("3");
-					out.println(printSolution(user,request,concept.id,st));
-				} catch (Exception e) {
-					out.println(e.getMessage()==null?e.toString():e.getMessage());
-				}
-				break;
 			case "Synchronize Scores":
 				if (synchronizeScores(user,a)) out.println(instructorPage(user,a));
 				else out.println("Synchronization request failed.");
@@ -235,9 +234,6 @@ public class Sage extends HttpServlet {
 	static String askSage(User user, Long conceptId, int score, String userPrompt) throws Exception {
 		StringBuffer buf = new StringBuffer(Subject.header("Sage"));
 
-		buf.append("<script id='MathJax-script' async src='https://polyfill.io/v3/polyfill.min.js'></script>\n"
-				+ " <script id='MathJax-script' async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'></script>\n");
-
 		BufferedReader reader = null;
 		JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
 		api_request.addProperty("model",Subject.getGPTModel());
@@ -248,10 +244,7 @@ public class Sage extends HttpServlet {
 		JsonObject m1 = new JsonObject();  // api request message
 		m1.addProperty("role", "system");
 		m1.addProperty("content","You are a tutor assisting a college student taking General Chemistry. "
-				+ "You must restrict your response to the topic " + conceptMap.get(conceptId).title + " in General Chemistry."
-				+ "Format the response in HTML and use LaTex math mode specific delimiters as follows:\n"
-				+ "inline math mode : `\\(` and `\\)`\n"
-				+ "display math mode: `\\[` and `\\]`\n");
+				+ "You must restrict your response to the topic " + conceptMap.get(conceptId).title + " in General Chemistry.");
 		messages.add(m1);;
 		JsonObject m2 = new JsonObject();  // api request message
 		m2 = new JsonObject();  // api request message
@@ -349,6 +342,50 @@ public class Sage extends HttpServlet {
 		return buf.toString() + Subject.footer;
 	}
 	
+	static String getExplanation(long questionId, long parameter) {
+		// Get the AI to compute an explanation
+		StringBuffer buf = new StringBuffer();
+		try {
+			Question q = ofy().load().type(Question.class).id(questionId).safe();
+			if (q.requiresParser()) q.setParameters(parameter);
+			
+			BufferedReader reader = null;
+			JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
+			api_request.addProperty("model",Subject.getGPTModel());
+			api_request.addProperty("max_tokens",600);
+			api_request.addProperty("temperature",0.4);
+
+			JsonArray messages = new JsonArray();
+			JsonObject m1 = new JsonObject();  // api request message
+			m1.addProperty("role", "system");
+			m1.addProperty("content","You are a tutor assisting a college student taking General Chemistry."
+					+ "Explain why\n" + q.getCorrectAnswerForSage() + "\n"
+					+ "is the correct answer to this problem:\n" + q.printForSage());
+			messages.add(m1);
+			api_request.add("messages", messages);
+			URL u = new URL("https://api.openai.com/v1/chat/completions");
+			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+			uc.setRequestMethod("POST");
+			uc.setDoInput(true);
+			uc.setDoOutput(true);
+			uc.setRequestProperty("Authorization", "Bearer " + Subject.getOpenAIKey());
+			uc.setRequestProperty("Content-Type", "application/json");
+			uc.setRequestProperty("Accept", "application/json");
+			OutputStream os = uc.getOutputStream();
+			byte[] json_bytes = api_request.toString().getBytes("utf-8");
+			os.write(json_bytes, 0, json_bytes.length);           
+			os.close();
+
+			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+			JsonObject api_response = JsonParser.parseReader(reader).getAsJsonObject();
+			reader.close();
+			buf.append(api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString());
+		} catch (Exception e) {
+			buf.append("<br/>Sorry, Sage was unable to elaborate. " + (e.getMessage()==null?e.toString():e.toString() + ":" + e.getMessage()) + "<p>");
+		}
+		return buf.toString();
+	}
+
 	static String getHelp(Question q) throws Exception {
 		if (q.sageAdvice != null) return q.sageAdvice; // stored AI response
 		
@@ -362,18 +399,11 @@ public class Sage extends HttpServlet {
 		JsonObject m1 = new JsonObject();  // api request message
 		m1.addProperty("role", "system");
 		m1.addProperty("content","You are a tutor assisting a college student taking General Chemistry. "
-				+ "The student is requesting your help to answer a homework question. Guide the student "
-				+ "in the right general direction, but do not give the correct answer to the question.\n"
-				+ "Format your response as HTML. The question is:\n" + q.printForSage());
+				+ "The student is requesting your help to answer the following question item:\n"
+				+ q.printForSage()
+				+ "\nPlease guide the student in the right general direction, "
+				+ "but do not give the correct answer to the question.\n");
 		messages.add(m1);;
-		/*
-		JsonObject m2 = new JsonObject();  // api request message
-		m2 = new JsonObject();  // api request message
-		m2.addProperty("role", "user");
-		m2.addProperty("content","Please help me answer this General Chemistry problem: \n"
-				+ q.printForSage());
-		messages.add(m2);
-		*/
 		api_request.add("messages", messages);
 		URL u = new URL("https://api.openai.com/v1/chat/completions");
 		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
@@ -529,9 +559,7 @@ public class Sage extends HttpServlet {
 			
 			buf.append("<div style='width:800px; height=300px; overflow=auto; display:flex; align-items:center;'>");
 			if (getHelp) {
-				buf.append("<script id='MathJax-script' async src='https://polyfill.io/v3/polyfill.min.js'></script>\n"
-						+ " <script id='MathJax-script' async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'></script>\n");
-				
+				buf.append("<script id='Mathjax-script' async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'></script>");						
 				buf.append("<div>"
 						+ getHelp(q)
 						+ "</div>"
@@ -569,6 +597,7 @@ public class Sage extends HttpServlet {
 						+ " let a = document.getElementById('help');"
 						+ " a.innerHTML = 'Please wait a moment for Sage to answer.';"
 						+ "}"
+						+ "function showWorkBox(qid) {return;}"  // do nothing
 						+ "</script>");
 				}
 			
@@ -603,11 +632,12 @@ public class Sage extends HttpServlet {
 		StringBuffer buf = new StringBuffer(Subject.header("Sage"));
 		try {
 			if (concept == null) throw new Exception("No concept was specified for this requeat.");
-			buf.append("<script>"
+			buf.append("<script id='Mathjax-script' async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'</script>"
+					+ "<script>"
 					+ "function wait() {"
 					+ "  let b = document.getElementById('continueButton');"
 					+ "  b.innerHTML = 'Preparing your assignment...';"
-					+ "}"
+					+ "}\n"
 					+ "</script>");
 			buf.append("<h1>" + concept.title + "</h1>"
 					+ "<div style='max-width:800px'>"
@@ -632,15 +662,17 @@ public class Sage extends HttpServlet {
 		
 		String[] responses = request.getParameterValues(Long.toString(questionId));
 		String studentAnswer = orderResponses(responses);
+		
+		buf.append("\n<script>"
+				+ "function wait(buttonId,message) {\n"
+				+ "  let b = document.getElementById(buttonId);\n"
+				+ "  b.innerHTML = message;\n"
+				+ "}\n"
+				+ "</script>\n");
+		
 		if (studentAnswer == null || studentAnswer.isEmpty()) {
-			buf.append("<script>"
-					+ "function wait() {"
-					+ "  let b = document.getElementById('tryAgain');"
-					+ "  b.innerHTML = 'Here we go!';"
-					+ "}"
-					+ "</script>");
-			buf.append("<h1>No answer was submitted</h1>"
-					+ "<a id=tryAgain class=btn onclick=wait(); href='/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + conceptId + "'>Try Again</a><p>");
+			buf.append("<h1>No answer was submitted</h1>\n"
+					+ "<a id=tryAgain class=btn onclick=wait('tryAgain','Here we go!'); href='/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + conceptId + "'>Try Again</a><p>");
 			return buf.toString() + Subject.footer;
 		};
 		
@@ -662,37 +694,43 @@ public class Sage extends HttpServlet {
 		case 4:
 		case 5:
 			rawScore = q.isCorrect(studentAnswer)?2:q.agreesToRequiredPrecision(studentAnswer)?1:0;
-			if (q.requiresParser()) {  // offer a POST form to get an AI response
-				// include some javascript to change the submit button
-				showMeLink.append("<script>"
-						+ "function waitForScore() {\n"
-						+ " let b = document.getElementById('showFullSolution');\n"
-						+ " b.disabled = true;\n"
-						+ " b.value = 'Please wait a moment for Sage to respond.';\n"
-						+ "}\n"
-						+ "</script>");
-				showMeLink.append("<form method=post action=/Sage onsubmit='waitForScore();'>"
-						+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-						+ "<input type=hidden name=ConceptId value=" + conceptId + " />"
-						+ "<input type=hidden name=QuestionId value=" + q.id + " />"
-						+ "<input type=hidden name=Parameter value=" + p + " />");
-				for (String r : responses) showMeLink.append("<input type=hidden name=" + q.id + " value='" + r + "' />");
-				showMeLink.append("<input type=hidden name=RawScore value=" + rawScore + " />"
-						+ "<input type=hidden name=UserRequest value='Show Full Solution' />"
-						+ "<input id=showFullSolution type=submit class=btn value='Show me' />"
-						+ "</form>");
-			} else {  // offer the static solution
-				showMeLink.append("<script>"
-						+ "function showSolution() {"
-						+ " document.getElementById('link').style.display='none';"
-						+ " document.getElementById('solution').style.display='inline';"
-						+ "}"
-						+ "</script>");
-				showMeLink.append("<div id=link><a href=# class=btn role=button onclick='showSolution();'>Show me</a></div>"
-						+ "<div id=solution style='display: none'>" 
-						+ q.printAllToStudents(studentAnswer) 
-						+ "</div>");
-			}
+			showMeLink.append("<script>"
+					+ "function showAnswer() {\n"
+					+ "  document.getElementById('link').style.display='none';\n"
+					+ "  document.getElementById('shortAnswer').style.display='inline';\n"
+					+ "}\n"
+					+ "</script>\n");
+			showMeLink.append("<a id=link class=btn href=# onclick=showAnswer();>Show Me</a>\n");
+			showMeLink.append("<div id=shortAnswer style='display:none';>\n"
+					+ q.printAllToStudents(studentAnswer)
+					+ " <p>\n"
+					+ " <div id=explanation>"
+					+ " <button id=explainThis class=btn onclick=getExplanation();>Please explain this answer</button>"
+					+ " </div>\n"
+					+ "<script>\n"
+					+ "function getExplanation() {\n"
+					+ "  document.getElementById('explainThis').innerHTML='Please wait a moment for Sage to respond.';\n"
+					+ "  try {\n"
+					+ "    var xmlhttp = GetXmlHttpObject();\n"
+					+ "    if (xmlhttp==null) {\n"
+					+ "      alert('Sorry, your browser does not support AJAX!');\n"
+					+ "	     return false;\n"
+					+ "    }\n"
+					+ "	   xmlhttp.onreadystatechange=function() {\n"
+					+ "      if (xmlhttp.readyState==4) {\n"
+					+ "        document.getElementById('explanation').innerHTML = xmlhttp.responseText;\n"  // Sage explanation
+					+ "        var mathjax = document.createElement('script');\n"
+					+ "        mathjax.type = 'text/javascript';\n"
+					+ "        mathjax.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';\n"
+					+ "        document.head.appendChild(mathjax);\n"
+					+ "      }\n"
+					+ "    }\n"
+					+ "  } catch (error) {}\n"
+					+ "  xmlhttp.open('GET','/Sage?sig=" + user.getTokenSignature() + "&UserRequest=GetExplanation&QuestionId=" + q.id + "&Parameter=" + p + "',true);\n"
+					+ "  xmlhttp.send(null);\n"
+					+ "}\n"
+					+ "</script>\n"
+					+ "</div><p>\n");
 			break;
 		case 6:  // Handle five-star rating response
 			try {
@@ -717,6 +755,7 @@ public class Sage extends HttpServlet {
 			answeredConceptQuestionIds = new ArrayList<Long>();
 			answeredConceptQuestionIds.add(questionId);
 		} else if (!answeredConceptQuestionIds.contains(questionId)) answeredConceptQuestionIds.add(questionId);
+		st.random = new Random().nextLong();
 		// Save the updated transaction
 		ofy().save().entity(st).now();
 		
@@ -726,28 +765,28 @@ public class Sage extends HttpServlet {
 			} else {
 				switch (rawScore) {  // 0, 1 or 2
 				case 2:  // correct answer
-					buf.append("<h1>Congratulations!</h1>"
-							+ "<b>Your answer is correct. </b><IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom /><p>"
-							+ "<div style='width:800px;display:flex;align-items:center;'>"
+					buf.append("<h1>Congratulations!</h1>\n"
+							+ "<b>Your answer is correct. </b><IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom /><p>\n"
+							+ "<div style='width:800px;display:flex;align-items:center;'>\n"
 							
 							+ showMeLink
-							+ "<img id=polly src='/images/parrot.png' alt='Parrot character' style='margin-left:20px;'>"
-							+ "</div>");
+							+ "<img id=polly src='/images/parrot.png' alt='Parrot character' style='margin-left:20px;'>\n"
+							+ "</div>\n");
 					break;
 				case 1: // partial credit			
-					buf.append("<h1>Your answer is partially correct</h1>"
-							+ "<b>You received half credit.</b><p>"
-							+ "<div style='width:800px;display:flex; align-items:center;'>"
+					buf.append("<h1>Your answer is partially correct</h1>\n"
+							+ "<b>You received half credit.</b><p>\n"
+							+ "<div style='width:800px;display:flex; align-items:center;'>\n"
 							+ showMeLink
-							+ "<img id=polly src='/images/parrot1.png' alt='Parrot character' style='margin-left:20px;'>"
-							+ "</div>");
+							+ "<img id=polly src='/images/parrot1.png' alt='Parrot character' style='margin-left:20px;'>\n"
+							+ "</div>\n");
 					break;
 				case 0: // wrong answer
-					buf.append("<h1>Sorry, your answer is not correct.<IMG SRC=/images/xmark.png ALT='X mark' align=middle></h1>"
-							+ "<div style='width:800px;display:flex; align-items:center;'>"
+					buf.append("<h1>Sorry, your answer is not correct.<IMG SRC=/images/xmark.png ALT='X mark' align=middle></h1>\n"
+							+ "<div style='width:800px;display:flex; align-items:center;'>\n"
 							+ showMeLink
 							+ "<img id=polly src='/images/parrot0.png' alt='Parrot character' style='margin-left:20px;'>\n"
-							+ "</div>");
+							+ "</div>\n");
 					break;
 				}
 			}
@@ -768,66 +807,11 @@ public class Sage extends HttpServlet {
 				buf.append("<p><b>Your current score on this concept is " + score + "%.</b>&nbsp;");
 			}
 			// print a button to continue
-			buf.append("<script>"
-					+ "function wait() {"
-					+ "  let b = document.getElementById('continue');"
-					+ "  b.innerHTML = 'Please wait a moment...';"
-					+ "}"
-					+ "</script>");
-			buf.append("<a id=continue class=btn onclick=wait(); href='/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + conceptId + (score==100?"&UserRequest=menu":"") + "'>Continue</a><p>");
+			buf.append("<a id=continue class=btn onclick=wait('continue','Please wait a moment...'); href='/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + conceptId + (score==100?"&UserRequest=menu":"") + "'>Continue</a><p>");
 		} catch (Exception e) {
 			buf.append("<p>" + e.getMessage()==null?e.toString():e.getMessage());
 		}
-		return buf.toString() + Subject.footer;
-	}
-
-	static String printSolution(User user, HttpServletRequest request, Long conceptId, SageTransaction st) throws Exception {
-		StringBuffer buf = new StringBuffer(Subject.header("Sage"));
-		int rawScore = Integer.parseInt(request.getParameter("RawScore"));
-		switch (rawScore) {
-		case 2:
-			buf.append("<h1>Congratulations!</h1>"
-					+ "<b>Your answer is correct. </b><IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom /><p>");
-			break;
-		case 1:
-			buf.append("<h1>Your answer is partially correct</h1>"
-					+ "<b>You received half credit.</b><p>");
-			break;
-		case 0:
-			buf.append("<h1>Sorry, your answer is not correct.<IMG SRC=/images/xmark.png ALT='X mark' align=middle></h1>");
-			break;
-		default:
-		}
-		long questionId = Long.parseLong(request.getParameter("QuestionId"));
-		long p = Long.parseLong(request.getParameter("Parameter"));
-		String[] responses = request.getParameterValues(Long.toString(questionId));
-		String studentAnswer = orderResponses(responses);
-		Question q = ofy().load().type(Question.class).id(questionId).safe();
-		q.setParameters(p);
-		buf.append("<div style='width:800px;display:flex;align-items:center;'>"
-				+ "<div style='width:600px'>" + q.printAllToStudents(studentAnswer) + "</div><p>");
-		switch (rawScore) {
-		case 2:
-			buf.append("<img id=polly src='/images/parrot.png' alt='Parrot character' style='margin-left:20px;'>");
-			break;
-		case 1:
-			buf.append("<img id=polly src='/images/parrot1.png' alt='Parrot character' style='margin-left:20px;'>");
-			break;
-		case 0:
-			buf.append("<img id=polly src='/images/parrot0.png' alt='Parrot character' style='margin-left:20px;'>");
-			break;
-		}
-		buf.append("</div>");			
 		
-		// print a button to continue
-		int score = st.scores[st.conceptIds.indexOf(conceptId)];
-		buf.append("<script>"
-				+ "function wait() {"
-				+ "  let b = document.getElementById('continueButton');"
-				+ "  b.innerHTML = 'Please wait a moment...';"
-				+ "}"
-				+ "</script>");
-		buf.append("<a id=continueButton class=btn onclick=wait(); href='/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + conceptId + (score==100?"&UserRequest=menu":"") + "'>Continue</a><p>");
 		return buf.toString() + Subject.footer;
 	}
 
@@ -966,7 +950,6 @@ public class Sage extends HttpServlet {
 			}
 			buf.append("</table><br/>");
 			if (nMismatched > 0) {
-				//buf.append(ajaxJavaScript(user.getTokenSignature()));
 				buf.append("You may use the individual 'sync' buttons above to resubmit any ChemVantage score to the LMS. Note that in some cases, mismatched scores are expected (e.g., when "
 						+ "the instructor overrides a score or when a late submission is not accepted by the LMS). You may have to adjust the settings in your LMS to accept the "
 						+ "revised score (e.g., change the due date, grade override or allowed number of submissions).<p>");
