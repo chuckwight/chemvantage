@@ -229,7 +229,7 @@ public class LTIRegistration extends HttpServlet {
 					+ "<ul>"
 					+ "	<li>LTI registration and instructor accounts are free.</li>"
 					+ "	<li>Each student account costs only $2 USD per month or $8 USD per semester (5 months).</li>"
-					+ "	<li>Institutions can purchase student licenses in quantity for as little as $2 USD per year.</li>"
+					+ "	<li>Institutions can purchase 1-year student licenses for $5 USD/each (10 license minimum). Contact admin@chemvantage.org for an invoice.</li>"
 					+ "</ul>\n");
 		}
 		buf.append("<label><input type=checkbox required name=AcceptChemVantageTOS value=true " + ((AcceptChemVantageTOS!=null && AcceptChemVantageTOS.equals("true"))?"checked":"") + " />Accept the <a href=/terms_and_conditions.html target=_blank aria-label='opens new tab'>ChemVantage Terms of Service</a></label><br/><br/>\n");
