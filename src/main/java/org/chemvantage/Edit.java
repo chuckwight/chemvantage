@@ -17,26 +17,37 @@
 
 package org.chemvantage;
 
-import static com.googlecode.objectify.ObjectifyService.ofy;
 import static com.googlecode.objectify.ObjectifyService.key;
+import static com.googlecode.objectify.ObjectifyService.ofy;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.googlecode.objectify.Key;
+import com.googlecode.objectify.cmd.Query;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
-import com.googlecode.objectify.Key;
-import com.googlecode.objectify.cmd.Query;
 
 /* 
  * Access to this servlet is restricted to ChemVantage admin users and the project service account
@@ -81,6 +92,9 @@ public class Edit extends HttpServlet {
 			if (userRequest == null) userRequest = "";
 
 			switch (userRequest) {
+	case "ImportQuestionsFromSage":
+		out.println(importQuestions(request));
+		break;
 			case "ManageConcepts":
 				out.println(conceptsForm(request));
 				break;
@@ -274,6 +288,54 @@ public class Edit extends HttpServlet {
 		out.println(Subject.footer);
 	}
 	
+	static String importQuestions(HttpServletRequest request) throws Exception {
+		StringBuffer buf = new StringBuffer("<h1>Import Questions From Sage</h1>");
+		
+		List<Concept> concepts = ofy().load().type(Concept.class).list();
+		
+		URL u = null;
+		HttpURLConnection uc = null;
+		BufferedReader reader = null;
+		Gson gson = new Gson();
+		List<Question> questions = new ArrayList<Question>();
+		for (Concept c : concepts) {
+			try {
+				String url = "https://sage.chemvantage.org/sage?UserRequest=GetQuestions&Concept=" + URLEncoder.encode(c.title, "utf-8");
+				buf.append(url);
+				u = new URL(url);
+				uc = (HttpURLConnection) u.openConnection();
+				uc.setDoInput(true);
+				uc.setRequestMethod("GET");
+				uc.setRequestProperty("Accept", "application/json");
+				uc.setRequestProperty("charset", "utf-8");
+				uc.setUseCaches(false);
+				uc.setReadTimeout(15000);  // waits up to 15 s for server to respond
+
+				reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
+				JsonArray array = JsonParser.parseReader(reader).getAsJsonArray();
+				reader.close();
+				
+				if (array==null || array.isEmpty()) continue;
+				
+				questions.clear();
+				Iterator<JsonElement> iterator = array.iterator();
+				while(iterator.hasNext()) {
+					JsonObject question = iterator.next().getAsJsonObject();
+					Question q = gson.fromJson(question, Question.class);
+					q.id=null;
+					q.conceptId = c.id;
+					q.assignmentType = "Sage";
+					questions.add(q);
+				}				
+				if (questions.size() > 0) ofy().save().entities(questions);
+				buf.append(" - saved "+ questions.size() + " questions.<br/>");
+			} catch (Exception e) {
+				buf.append(" - " + e.getMessage()==null?e.toString():e.getMessage() + "<br/>");
+			}
+		} 
+		return buf.toString();
+	}
+
 	String editorsPage(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h1>Editor's Page</h1>");
 		try {
@@ -284,6 +346,7 @@ public class Edit extends HttpServlet {
 			buf.append("<a href=/Edit?UserRequest=ManageVideos>Manage Videos</a><br/>");
 			buf.append("<a href=/Edit?UserRequest=ManageTexts>Manage Texts</a><br/>");
 			buf.append("<a href=/Edit?UserRequest=ManageOrphanQuestions>Manage Orphan Questions</a><br/>");
+	buf.append("<a href=/Edit?UserRequest=ImportQuestionsFromSage>Import Questions From Sage</a><br/>");
 			
 			// display a table to select questions by AssignmentType and Text/Chapter/Concept or directly by Concept:
 			buf.append("<div style=display:table><div style=display:table-row>");

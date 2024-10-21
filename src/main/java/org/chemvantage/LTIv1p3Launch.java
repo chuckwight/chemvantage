@@ -581,6 +581,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			switch (a.assignmentType) {
 			case "SmartText":
 			case "Quiz":
+			case "Sage":
 			case "Homework":
 				a.textId = Long.parseLong(request.getParameter("TextId"));
 				a.chapterNumber = Integer.parseInt(request.getParameter("ChapterNumber"));
@@ -589,6 +590,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				for (Chapter c : text.chapters) if (c.chapterNumber == a.chapterNumber) ch = c;
 				a.title = ch.title;
 				a.conceptIds = ch.conceptIds;
+				if ("Sage".equals(a.assignmentType)) break;  // don't store questionKeys for this assignment
 				a.questionKeys.clear();
 				for (Long conceptId : ch.conceptIds) {
 					a.questionKeys.addAll(ofy().load().type(Question.class).filter("assignmentType",a.assignmentType.equals("SmartText")?"Quiz":a.assignmentType).filter("conceptId",conceptId).keys().list());
@@ -676,7 +678,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Poll'" + (assignmentType.equals("Poll")?" CHECKED />":" />") + "In-class&nbsp;Poll</label><br />"
 				+ "</div><div style='display:table-cell'>"
 				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='PracticeExam'" + (assignmentType.equals("PracticeExam")?" CHECKED />":" />") + "Practice&nbsp;Exam</label><br/>"
-				+ (Subject.getProjectId().equals("chem-vantage-hrd")?"":"<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Sage'" + (assignmentType.equals("Sage")?" CHECKED />":" />") + "Sage&nbsp;Tutor</label><br/>")
+				+ "<label><input type=radio name=AssignmentType onClick=document.getElementById('plswait').style='display:block';this.form.submit(); value='Sage'" + (assignmentType.equals("Sage")?" CHECKED />":" />") + "Sage&nbsp;Tutor</label><br/>"
 				+ "</div></div></div><br/>");
 		buf.append("<div id=plswait style='color:red;display:none'>Please wait...</div>");
 
@@ -725,7 +727,7 @@ public class LTIv1p3Launch extends HttpServlet {
 			}		
 			break;
 		case "Quiz":
-		case "SAage":
+		case "Sage":
 		case "Homework":
 			try {
 				textId = Long.parseLong(request.getParameter("TextId"));
@@ -855,6 +857,7 @@ public class LTIv1p3Launch extends HttpServlet {
 				+ "      else vidSubmit.value='Create ' + (count==1?'this assignment':'these assignments');"
 				+ "      break;"
 				+ "    case 'Quiz':"
+				+ "    case 'Sage':"
 				+ "	   case 'Homework':"
 				+ "	   case 'SmartText':"
 				+ "      for (var i=0;i<stArray.length;i++) if (stArray[i].checked) count++;"

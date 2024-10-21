@@ -39,12 +39,11 @@ public class Sage extends HttpServlet {
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
-		
-		// available only to the dev server
-		if (Subject.getProjectId().equals("chem-vantage-hrd")) return;
 				
 		PrintWriter out = response.getWriter();
 		response.setContentType("text/html");
+		
+		refreshConcepts();
 		
 		//StringBuffer debug = new StringBuffer("Debug: ");
 		try {
@@ -54,15 +53,15 @@ public class Sage extends HttpServlet {
 			long aId = user.getAssignmentId();		
 			Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
 			
-			if (conceptMap == null) refreshConcepts();
-			
 			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) userRequest = "";
 			
 			if (userRequest.equals("GetExplanation")) {  // AJAX request
 				long questionId = Long.parseLong(request.getParameter("QuestionId"));
 				long parameter = Long.parseLong(request.getParameter("Parameter"));
-				out.println(getExplanation(questionId,parameter));
+				Question q = ofy().load().type(Question.class).id(questionId).now();
+				if (q.requiresParser()) q.setParameters(parameter);
+				out.println(q.getExplanation());
 				return;
 			}
 			
@@ -122,11 +121,10 @@ public class Sage extends HttpServlet {
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
 		
-		// available only to the dev server
-		if (Subject.getProjectId().equals("chem-vantage-hrd")) return;
-		
 		PrintWriter out = response.getWriter();
 		response.setContentType("text/html");
+		
+		refreshConcepts();
 		
 		StringBuffer debug = new StringBuffer("Debug: ");
 
@@ -136,8 +134,6 @@ public class Sage extends HttpServlet {
 
 			long aId = user.getAssignmentId();		
 			Assignment a = aId==0?null:ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-			
-			if (conceptMap == null) refreshConcepts();
 			
 			SageTransaction st = ofy().load().type(SageTransaction.class).filter("userId",user.hashedId).filter("assignmentId",a.id).first().safe();
 			
@@ -342,50 +338,6 @@ public class Sage extends HttpServlet {
 		return buf.toString() + Subject.footer;
 	}
 	
-	static String getExplanation(long questionId, long parameter) {
-		// Get the AI to compute an explanation
-		StringBuffer buf = new StringBuffer();
-		try {
-			Question q = ofy().load().type(Question.class).id(questionId).safe();
-			if (q.requiresParser()) q.setParameters(parameter);
-			
-			BufferedReader reader = null;
-			JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
-			api_request.addProperty("model",Subject.getGPTModel());
-			api_request.addProperty("max_tokens",600);
-			api_request.addProperty("temperature",0.4);
-
-			JsonArray messages = new JsonArray();
-			JsonObject m1 = new JsonObject();  // api request message
-			m1.addProperty("role", "system");
-			m1.addProperty("content","You are a tutor assisting a college student taking General Chemistry."
-					+ "Explain why\n" + q.getCorrectAnswerForSage() + "\n"
-					+ "is the correct answer to this problem:\n" + q.printForSage());
-			messages.add(m1);
-			api_request.add("messages", messages);
-			URL u = new URL("https://api.openai.com/v1/chat/completions");
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			uc.setRequestMethod("POST");
-			uc.setDoInput(true);
-			uc.setDoOutput(true);
-			uc.setRequestProperty("Authorization", "Bearer " + Subject.getOpenAIKey());
-			uc.setRequestProperty("Content-Type", "application/json");
-			uc.setRequestProperty("Accept", "application/json");
-			OutputStream os = uc.getOutputStream();
-			byte[] json_bytes = api_request.toString().getBytes("utf-8");
-			os.write(json_bytes, 0, json_bytes.length);           
-			os.close();
-
-			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-			JsonObject api_response = JsonParser.parseReader(reader).getAsJsonObject();
-			reader.close();
-			buf.append(api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString());
-		} catch (Exception e) {
-			buf.append("<br/>Sorry, Sage was unable to elaborate. " + (e.getMessage()==null?e.toString():e.toString() + ":" + e.getMessage()) + "<p>");
-		}
-		return buf.toString();
-	}
-
 	static String getHelp(Question q) throws Exception {
 		if (q.sageAdvice != null) return q.sageAdvice; // stored AI response
 		
@@ -438,13 +390,18 @@ public class Sage extends HttpServlet {
 		// a question at random from those having a similar degree of difficulty (1-5). The selection 
 		// process is random, but a bias is imposed to ensure that there is a 50% chance of selecting 
 		// a question where the difficulty is the same as the user's scoreQuintile.
+		Long questionId = null;
+		StringBuffer debug = new StringBuffer();
+		
 		int[][] qSelCutoff = { {10,17,20,20},{4,14,18,20},{1,5,15,19},{0,2,6,16},{0,0,3,10} };
-		
+		debug.append("1");
 		int score = st.scores[st.conceptIds.indexOf(conceptId)];
+		debug.append("2");
 		int scoreQuintile = score==100?4:score/20;			// ranges from 0-4
-		int nConceptQuestions = ofy().load().type(Question.class).filter("conceptId",conceptId).count();
+		int nConceptQuestions = ofy().load().type(Question.class).filter("assignmentType","Sage").filter("conceptId",conceptId).count();
+		debug.append("3");
 		if (nConceptQuestions == 0) throw new Exception("Sorry, there are no questions for this Concept.");
-		
+
 		// select a level of difficulty between 0-4 based on user's scoreQuintile
 		Random rand = new Random();
 		int r = rand.nextInt(20);
@@ -455,27 +412,33 @@ public class Sage extends HttpServlet {
 				break;
 			}
 		}
-		
-		int nQuintileQuestions =  ofy().load().type(Question.class).filter("conceptId",conceptId).filter("difficulty",difficulty).count();
-		
+		debug.append("4");
+
+		int nQuintileQuestions =  ofy().load().type(Question.class).filter("assignmentType","Sage").filter("conceptId",conceptId).filter("difficulty",difficulty).count();
+
 		List<Key<Question>> questionKeys = null;
-		if (nQuintileQuestions >4) questionKeys = ofy().load().type(Question.class).filter("conceptId",conceptId).filter("difficulty",difficulty).keys().list();
-		else questionKeys = ofy().load().type(Question.class).filter("conceptId",conceptId).keys().list();
-		
+		if (nQuintileQuestions >4) questionKeys = ofy().load().type(Question.class).filter("assignmentType","Sage").filter("conceptId",conceptId).filter("difficulty",difficulty).keys().list();
+		else questionKeys = ofy().load().type(Question.class).filter("assignmentType","Sage").filter("conceptId",conceptId).keys().list();
+		debug.append("5");
+
 		Random random = new Random(st.random);
-		Long questionId = questionKeys.get(random.nextInt(questionKeys.size())).getId();
+		debug.append("6");
+		questionId = questionKeys.get(random.nextInt(questionKeys.size())).getId();
 		Key<Concept> conceptKey = key(Concept.class,conceptId);
 		List<Long> answeredConceptQuestionIds = st.answeredQuestionIds.get(conceptKey);
+		debug.append("7");
 		while (answeredConceptQuestionIds != null && answeredConceptQuestionIds.contains(questionId)) {
 			answeredConceptQuestionIds.remove(questionId);
 			questionId = questionKeys.get(random.nextInt(questionKeys.size())).getId();
 		}
-		
+		debug.append("8");
+			
 		return questionId;
 	}
 	
 	static String instructorPage(User user, Assignment a) {
 	if (!user.isInstructor()) return "<h2>You must be logged in as an instructor to view this page</h2>";
+		refreshConcepts();
 		
 		StringBuffer buf = new StringBuffer(Subject.header("Sage"));		
 		try {
@@ -548,13 +511,17 @@ public class Sage extends HttpServlet {
 		return studentAnswer;
 	}
 
-	static String poseQuestion(User user, SageTransaction st, Concept concept, boolean getHelp) throws Exception {
+	static String poseQuestion(User user, SageTransaction st, Concept concept, boolean getHelp) {
 		StringBuffer buf = new StringBuffer(Subject.header("Sage"));
+		StringBuffer debug = new StringBuffer("Debug: ");
 		try {
 			Long questionId = getNewQuestionId(st,concept.id);
+			debug.append("a");
 			Question q = ofy().load().type(Question.class).id(questionId).now();
+			debug.append("b");
 			q.setParameters(st.random);
-	
+			debug.append("c");
+			
 			buf.append("<h1>" + concept.title + "</h1>");
 			
 			buf.append("<div style='width:800px; height=300px; overflow=auto; display:flex; align-items:center;'>");
@@ -602,7 +569,8 @@ public class Sage extends HttpServlet {
 				}
 			
 			buf.append("<hr style='width:800px;margin-left:0'>");  // break between Sage helper panel and question panel
-	
+			debug.append("d");
+			
 			// Print the question for the student
 			buf.append("<form method=post style='max-width:800px;' onsubmit='waitForScore();' >"
 					+ "<input type=hidden name=QuestionId value='" + q.id + "' />"
@@ -623,7 +591,7 @@ public class Sage extends HttpServlet {
 					+ "}\n"
 					+ "</script>");
 		} catch (Exception e) {
-			buf.append("<p>Error: " + e.getMessage()==null?e.toString():e.getMessage());
+			buf.append("<p>Error: " + e.getMessage()==null?e.toString():e.getMessage() + "<p>");  // + debug.toString());
 		}
 		return buf.toString() + Subject.footer;	
 	}
@@ -632,7 +600,7 @@ public class Sage extends HttpServlet {
 		StringBuffer buf = new StringBuffer(Subject.header("Sage"));
 		try {
 			if (concept == null) throw new Exception("No concept was specified for this requeat.");
-			buf.append("<script id='Mathjax-script' async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'</script>"
+			buf.append("<script id='Mathjax-script' async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'></script>"
 					+ "<script>"
 					+ "function wait() {"
 					+ "  let b = document.getElementById('continueButton');"
@@ -816,11 +784,13 @@ public class Sage extends HttpServlet {
 	}
 
 	static void refreshConcepts() {
-		conceptList = ofy().load().type(Concept.class).order("orderBy").list();
-		conceptMap = new HashMap<Long,Concept>();
-		for (Concept c : conceptList) conceptMap.put(c.id, c);
+		if (conceptMap == null) {
+    		conceptList = ofy().load().type(Concept.class).order("orderBy").list();
+    		conceptMap = new HashMap<Long,Concept>();
+    		for (Concept c : conceptList) conceptMap.put(c.id, c);
+    	}
 	}
-
+	
 	static SageTransaction revisedTransaction(Assignment a, SageTransaction st) throws Exception {
 		// this method creates a revised version of the SageTransaction 
 		// in case the assignment conceptIds is revised by the instructor

@@ -68,7 +68,9 @@ public class Concept implements Serializable {
 				messages.add(m1);
 				JsonObject m2 = new JsonObject();  // api request message
 				m2.addProperty("role", "user");
-				m2.addProperty("content", "Write a brief summary of this key concept: " + this.title);
+				m2.addProperty("content", "Write a brief summary of this key concept: " + this.title + ".\n"
+						+ "Format the response for MathJax using delimiters \\( and \\) for inline expressions"
+						+ "and \\[ and \\] for display mode.");
 				messages.add(m2);
 
 				api_request.add("messages", messages);
@@ -79,7 +81,7 @@ public class Concept implements Serializable {
 				uc.setDoOutput(true);
 				uc.setRequestProperty("Authorization", "Bearer " + Subject.getOpenAIKey());
 				uc.setRequestProperty("Content-Type", "application/json");
-				uc.setRequestProperty("Accept", "text/html");
+				uc.setRequestProperty("Accept", "application/json");
 				OutputStream os = uc.getOutputStream();
 				byte[] json_bytes = api_request.toString().getBytes("utf-8");
 				os.write(json_bytes, 0, json_bytes.length);           
@@ -90,7 +92,7 @@ public class Concept implements Serializable {
 				reader.close();
 				
 				String content = json.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString();
-				content.replaceAll("\\n\\n", "<p>");
+				content.replaceAll("\\n", "<br/>");
 				
 				// save this summary in the datastore
 				this.summary = content;

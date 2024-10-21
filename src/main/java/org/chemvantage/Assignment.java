@@ -123,7 +123,6 @@ public class Assignment implements java.lang.Cloneable {
 		
 		switch (this.assignmentType) {
 		case "Quiz":
-		case "Sage":
 		case "Homework":
 		case "PracticeExam":
 		case "PlacementExam": 
@@ -132,6 +131,7 @@ public class Assignment implements java.lang.Cloneable {
 			return textId!=null && chapterNumber!=0;
 		case "VideoQuiz": 
 			return videoId>0;
+		case "Sage":
 		case "Poll": 
 			return true;
 		default: return false;

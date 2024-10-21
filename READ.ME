@@ -15,3 +15,9 @@ To deploy on Google Cloud:
 	You may encounter a deployment error if a cached image has been deleted on app engine 
 	 (i.e., you haven't deployed for more than a month). To fix this, use
 	gcloud app deploy --no-cache
+	
+To build missing datastore indexes:
+  gcloud --project chem-vantage-hrd datastore indexes create index.yaml
+
+To clean up unused indexes:
+  gcloud --project chem-vantage-hrd datastore indexes cleanup index.yaml

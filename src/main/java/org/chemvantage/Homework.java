@@ -85,7 +85,9 @@ public class Homework extends HttpServlet {
 			case "GetExplanation":
 				long questionId = Long.parseLong(request.getParameter("QuestionId"));
 				long parameter = Long.parseLong(request.getParameter("Parameter"));
-				out.println(getExplanation(questionId,parameter));
+				Question q = ofy().load().type(Question.class).id(questionId).now();
+				if (q.requiresParser()) q.setParameters(parameter);
+				out.println(q.getExplanation());
 				break;
 			case "ShowScores":
 				String forUserId = request.getParameter("ForUserId");
@@ -287,52 +289,8 @@ public class Homework extends HttpServlet {
 	
 		return buf.toString(); 
 	}
-
-	static String getExplanation(long questionId, long parameter) {
-		// Get the AI to compute an explanation
-		StringBuffer buf = new StringBuffer();
-		try {
-			Question q = ofy().load().type(Question.class).id(questionId).safe();
-			if (q.requiresParser()) q.setParameters(parameter);
-			
-			BufferedReader reader = null;
-			JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
-			api_request.addProperty("model",Subject.getGPTModel());
-			api_request.addProperty("max_tokens",600);
-			api_request.addProperty("temperature",0.4);
-
-			JsonArray messages = new JsonArray();
-			JsonObject m1 = new JsonObject();  // api request message
-			m1.addProperty("role", "system");
-			m1.addProperty("content","You are a tutor assisting a college student taking General Chemistry."
-					+ "Explain why\n" + q.getCorrectAnswerForSage() + "\n"
-					+ "is the correct answer to this problem:\n" + q.printForSage());
-			messages.add(m1);
-			api_request.add("messages", messages);
-			URL u = new URL("https://api.openai.com/v1/chat/completions");
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			uc.setRequestMethod("POST");
-			uc.setDoInput(true);
-			uc.setDoOutput(true);
-			uc.setRequestProperty("Authorization", "Bearer " + Subject.getOpenAIKey());
-			uc.setRequestProperty("Content-Type", "application/json");
-			uc.setRequestProperty("Accept", "application/json");
-			OutputStream os = uc.getOutputStream();
-			byte[] json_bytes = api_request.toString().getBytes("utf-8");
-			os.write(json_bytes, 0, json_bytes.length);           
-			os.close();
-
-			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-			JsonObject api_response = JsonParser.parseReader(reader).getAsJsonObject();
-			reader.close();
-			buf.append(api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString());
-		} catch (Exception e) {
-			buf.append("<br/>Sorry, Sage was unable to elaborate. " + (e.getMessage()==null?e.toString():e.toString() + ":" + e.getMessage()) + "<p>");
-		}
-		return buf.toString();
-	}
-
-static void includeCustomQuestions(User user, Assignment a, HttpServletRequest request) {
+	
+	static void includeCustomQuestions(User user, Assignment a, HttpServletRequest request) {
 		if (!user.isInstructor()) return;
 		String[] questionIds = request.getParameterValues("QuestionId");
 		if (questionIds == null) return;
