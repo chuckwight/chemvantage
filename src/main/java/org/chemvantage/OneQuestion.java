@@ -6,6 +6,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
@@ -31,25 +32,39 @@ public class OneQuestion extends HttpServlet {
        
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		StringBuffer buf = new StringBuffer();
-		String questionId = request.getParameter("q");
 		
+		PrintWriter out = response.getWriter();
+		response.setContentType("text/html");
+		
+		Long questionId = null;
+		Long parameter = null;
+		
+		String userRequest = request.getParameter("UserRequest");
+		if (userRequest==null) userRequest = "";
+		
+		try {
+			questionId = Long.parseLong(request.getParameter("q"));
+			parameter = Long.parseLong(request.getParameter("p"));
+			switch (userRequest) {
+			case "GetExplanation":
+				Question q = ofy().load().type(Question.class).id(questionId).now();
+				if (q.requiresParser()) q.setParameters(parameter);
+				out.println(q.getExplanation());
+				return;		
+			}
+		} catch (Exception e) {}
+
 		if (questionId==null) 
-			buf.append("<br/><br/><br/><form method=get>QuestionId: <input type=text size=10 name=q value='" + (questionId==null?"":questionId) + "' />"
-				+ "&nbsp;<input type=submit value='Submit' /></form>");
+			buf.append("<br/><br/><br/><form method=get>QuestionId: <input type=text size=10 name=q />"
+					+ "&nbsp;<input type=submit value='Submit' /></form>");
 		else {  // retrieve the question and display the HTML code below
-			Question q = null;
-			Long p = null;
-			try {
-				try {
-					p = Long.parseLong(request.getParameter("p"));
-				}catch (Exception e) {
-					p = new Date().getTime();
-				}
-				q = ofy().load().type(Question.class).id(Long.parseLong(questionId)).safe();
-				q.setParameters(p);
-				
+			try{
+				Question q = ofy().load().type(Question.class).id(questionId).safe();
+				if (parameter == null) parameter = new Date().getTime();
+				q.setParameters(parameter);
+
 				buf.append("<br/><br/><form method=post action=/item onsubmit=waitForScore(); >"
-						+ "<input type=hidden name=p value=" + p + " />"
+						+ "<input type=hidden name=p value=" + parameter + " />"
 						+ q.print() + "<input id=SubmitButton type=submit value='Submit' />" + "</form>");
 				buf.append("<SCRIPT>"
 						+ "function waitForScore() {"
@@ -63,7 +78,6 @@ public class OneQuestion extends HttpServlet {
 			}
 		}
 		buf.append("<br/><br/>");  // Put some space at the bottom
-		response.setContentType("text/html");
 		response.getWriter().println(Subject.header() + "<h1>Question Item</h1>" + buf.toString() + Subject.footer);
 	}
 
@@ -85,7 +99,35 @@ public class OneQuestion extends HttpServlet {
 			
 			if (q.isCorrect(answer)) {
 				buf.append("<h2>Congratulations! Your answer is correct.</h2>" 
-						+ q.printAllToStudents(answer,true) + "<br/>");
+						+ q.printAllToStudents(answer,true) 
+						+ " <p>\n"
+						+ " <div id=explanation style='max-width:800px'>"
+						+ " <button id=explainThis class=btn onclick=getExplanation();>Please explain this answer</button>"
+						+ " </div>\n"
+						+ "<script>\n"
+						+ "function getExplanation() {\n"
+						+ "  document.getElementById('explainThis').innerHTML='Please wait a moment...';\n"
+						+ "  try {\n"
+						+ "    var xmlhttp = GetXmlHttpObject();\n"
+						+ "    if (xmlhttp==null) {\n"
+						+ "      alert('Sorry, your browser does not support AJAX!');\n"
+						+ "	     return false;\n"
+						+ "    }\n"
+						+ "	   xmlhttp.onreadystatechange=function() {\n"
+						+ "      if (xmlhttp.readyState==4) {\n"
+						+ "        document.getElementById('explanation').innerHTML = xmlhttp.responseText;\n"  // Sage explanation
+						+ "        var mathjax = document.createElement('script');\n"
+						+ "        mathjax.type = 'text/javascript';\n"
+						+ "        mathjax.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';\n"
+						+ "        document.head.appendChild(mathjax);\n"
+						+ "      }\n"
+						+ "    }\n"
+						+ "  } catch (error) {}\n"
+						+ "  xmlhttp.open('GET','/item?UserRequest=GetExplanation&q=" + q.id + "&p=" + p + "',true);\n"
+						+ "  xmlhttp.send(null);\n"
+						+ "}\n"
+						+ "</script>\n"
+						+ "</div><p>\n");
 				buf.append("<a href=/item?q=" + q.id + ">Try another version of this question</a><br/><br/>");
 			} else if (answer.isEmpty()) { 
 				buf.append("<h3>The answer to the question was left blank. Please try again.</h3>");
