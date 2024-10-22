@@ -128,9 +128,9 @@ public class OneQuestion extends HttpServlet {
 						+ "}\n"
 						+ "</script>\n"
 						+ "</div><p>\n");
-				buf.append("<a href=/item?q=" + q.id + ">Try another version of this question</a><br/><br/>");
+				//buf.append("<a href=/item?q=" + q.id + ">Try another version of this question</a><br/><br/>");
 			} else if (answer.isEmpty()) { 
-				buf.append("<h3>The answer to the question was left blank. Please try again.</h3>");
+				buf.append("<h3>The answer to the question was left blank.</h3>");
 				buf.append("<form method=post action=/item><input type=hidden name=p value=" + p + " />"
 						+ q.print() + "<br/><input type=submit />" + "</form><br/><br/>");
 				buf.append("<a href=/>Learn more about ChemVantage here</a><br/><br/>");
@@ -139,12 +139,12 @@ public class OneQuestion extends HttpServlet {
 				case 5:  // Numeric question
 					try {
 						Double.parseDouble(q.parseString(answer));  // throws exception for non-numeric answer
-						if (!q.agreesToRequiredPrecision(answer)) buf.append("<h3>Your answer was not correct. Please try again.</h3>");
-						else if (!q.hasCorrectSigFigs(answer)) buf.append("<h3>Oh, so close! Please try again.</h3>It appears that you've done the calculation correctly, but your answer does not have the correct number of significant figures appropriate for the data given in the question. "
+						if (!q.agreesToRequiredPrecision(answer)) buf.append("<h3>Your answer was not correct.</h3>");
+						else if (!q.hasCorrectSigFigs(answer)) buf.append("<h3>Oh, so close!</h3>It appears that you've done the calculation correctly, but your answer does not have the correct number of significant figures appropriate for the data given in the question. "
 								+ "If your answer ends with a zero, be sure to include a decimal point to indicate which digits are significant.<br/><br/>");
 					}
 					catch (Exception e2) {
-						buf.append("<h3>Your answer has the wrong format. Please try again.</h3>This question requires a numeric response expressed as an integer, decimal number, "
+						buf.append("<h3>Your answer has the wrong format.</h3>This question requires a numeric response expressed as an integer, decimal number, "
 								+ "or number in scientific E notation (example: 6.022E-23). Your answer was scored incorrect because the program was unable to recognize "
 								+ "your answer as one of these types.<br/><br/>");
 					}
@@ -222,10 +222,10 @@ public class OneQuestion extends HttpServlet {
 					buf.append("<h3>Your answer was not correct. Please <a href=/item?q=" + q.id + ">try again</a>.</h3>");
 					buf.append("The answer submitted was: <b>" + answer + "</b><br/><br/>");
 				}
-				List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("assignmentType",q.assignmentType).filter("conceptId",q.conceptId).keys().list();
+				List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("conceptId",q.conceptId).keys().list();
 				int i = new Random().nextInt(questionKeys.size());
 				long questionId = questionKeys.get(i).getId();
-				buf.append("<a href=/item?q=" + questionId + ">Try another similar question</a>");
+				buf.append("<a class=btn href='/item?q=" + questionId + "'>Try another question on this concept.</a>");
 				buf.append("&nbsp;&nbsp;");
 				buf.append("<a href=/>Learn more about ChemVantage here</a><br/><br/>");
 			}
