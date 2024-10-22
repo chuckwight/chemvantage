@@ -222,13 +222,13 @@ public class OneQuestion extends HttpServlet {
 					buf.append("<h3>Your answer was not correct. Please <a href=/item?q=" + q.id + ">try again</a>.</h3>");
 					buf.append("The answer submitted was: <b>" + answer + "</b><br/><br/>");
 				}
-				List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("conceptId",q.conceptId).keys().list();
-				int i = new Random().nextInt(questionKeys.size());
-				long questionId = questionKeys.get(i).getId();
-				buf.append("<a class=btn href='/item?q=" + questionId + "'>Try another question on this concept.</a>");
-				buf.append("&nbsp;&nbsp;");
-				buf.append("<a href=/>Learn more about ChemVantage here</a><br/><br/>");
 			}
+			List<Key<Question>> questionKeys = ofy().load().type(Question.class).filter("conceptId",q.conceptId).keys().list();
+			int i = new Random().nextInt(questionKeys.size());
+			long questionId = questionKeys.get(i).getId();
+			buf.append("<a class=btn href='/item?q=" + questionId + "'>Try another question on this concept.</a>");
+			buf.append("&nbsp;&nbsp;");
+			buf.append("<a href=/>Learn more about ChemVantage here</a><br/><br/>");
 		} catch (Exception e) {
 			buf.append("<br/>Failed. " + e.getMessage());
 		}
