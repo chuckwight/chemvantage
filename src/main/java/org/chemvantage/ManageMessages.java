@@ -192,7 +192,7 @@ public class ManageMessages extends HttpServlet {
 
 	String editMessage(String subjectLine, String text, long messageId, boolean isActive) {
 		return "<div style='width: 350px;border-style:solid;border-width: 1px;padding-left:25px;'>" + subjectLine + "</div>"
-			+ "<div style='width: 750px;height: 300px;border-style: solid;border-width: 1px;padding: 25px;'>"
+			+ "<div style='width: 750px;border-style: solid;border-width: 1px;padding: 25px;'>"
 			+ salutationText(null) + (text.isEmpty()?"A preview of the message will be shown here.":text) + unsubscribeText(null) + "</div>"
 			+ "<h4>Edit the message here:</h4>"
 			+ "<form method=post action=/messages>"
