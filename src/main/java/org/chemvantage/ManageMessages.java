@@ -145,7 +145,10 @@ public class ManageMessages extends HttpServlet {
 			}
 			break;
 		case "SendMessages":  // automated task from cron.yaml /messages?UserRequest=SendMessages&N=1000
-			if (!m.isActive) return;  // only send active messages
+			if (!m.isActive) {
+				msg = "No emails were sent because the message is not active.";  // only send active messages
+				break;
+			}
 			
 			// determine the actual number of messages to be sent'
 			Integer nMessagesToSend = 0;
