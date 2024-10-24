@@ -73,11 +73,6 @@ public class ManageMessages extends HttpServlet {
 		if (m==null) m = ofy().load().type(EmailMessage.class).order("-created").first().now();
 		if (m==null) m = new EmailMessage("subject line","message body text",false);  // in case no messages exist yet
 		
-		Integer nMessagesToSend = 100;
-		try {
-			nMessagesToSend = Integer.parseInt(request.getParameter("N"));
-		} catch (Exception e) {}
-		
 		String userRequest = request.getParameter("UserRequest");
 		if (userRequest==null) userRequest = "";
 		
@@ -149,42 +144,67 @@ public class ManageMessages extends HttpServlet {
 				msg = "Send failed. " + e.toString() + " " + e.getMessage();
 			}
 			break;
-		case "SendMessages":  // automated task from cron.yaml
+		case "SendMessages":  // automated task from cron.yaml /messages?UserRequest=SendMessages&N=1000
 			if (!m.isActive) return;  // only send active messages
 			
-			// determine the number of messages to be sent'
+			// determine the actual number of messages to be sent'
+			Integer nMessagesToSend = 0;
+			try {
+				nMessagesToSend = Integer.parseInt(request.getParameter("N"));
+			} catch (Exception e) {}
 			int nContacts = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created >",m.lastRecipientCreated).count();
 			if (nContacts < nMessagesToSend) nMessagesToSend = nContacts;
 			
-			// break into Tasks of 100 messages each to be queued with a delay
-			try {
-				int nTasks = nMessagesToSend/100 + (nMessagesToSend%100==0?0:1);
-				for (int i=0; i<nTasks;i++) {
-					int delaySeconds = 300 + i * 60;  // 5 min delay plus 1 min per task
-					Utilities.createTask("/messages","UserRequest=Send+100+Messages&N=" + (nMessagesToSend > 100?100:nMessagesToSend) + "&MessageId=" + m.id,delaySeconds);
-					if (nMessagesToSend > 100) nMessagesToSend -= 100;
-					else {
-						nMessagesToSend = 0;
+			if (nMessagesToSend > 100) {  // break this into Tasks of 100 messages each
+				int nMessagesSent = nMessagesToSend;
+				try {
+					int nTasks = nMessagesToSend/100 + (nMessagesToSend%100==0?0:1);
+					for (int i=0; i<nTasks;i++) {
+						int delaySeconds = 300 + i * 60;  // 5 min delay plus 1 min per task
+						Utilities.createTask("/messages","UserRequest=SendMessages&N=" + (nMessagesToSend > 100?100:nMessagesToSend) + "&MessageId=" + m.id,delaySeconds);
+						if (nMessagesToSend > 100) nMessagesToSend -= 100;
+						else nMessagesToSend = 0;
+					}
+					msg = nMessagesSent + " messages were queued to send in " + nTasks + " tasks.";
+				} catch (Exception e) {
+					msg = "an error occurred: " + e.getMessage()==null?e.toString():e.getMessage();
+				}
+			} else {  // send all messages now (usually as directed in a Task)
+				try {
+					boolean testOnly = false;
+					contacts = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created >",m.lastRecipientCreated).limit(nMessagesToSend).list();
+					if (contacts.size() > 0) msg = sendNMessages(m,testOnly,contacts) + " messages sent OK.";
+					if (nContacts == contacts.size()) {  // last message has been sent; deactivate the message
 						m.isActive = false;
 						ofy().save().entity(m);
 					}
-				}
-			} catch (Exception e) {
+				} catch (Exception e) {}
 			}
 			break;
-		case "Send 100 Messages":
-			try {
-				boolean testOnly = false;
-				contacts = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created >",m.lastRecipientCreated).limit(nMessagesToSend).list();
-				if (contacts.size() > 0) sendNMessages(m,testOnly,contacts);
-			} catch (Exception e) {}
-			return;
 		default:
 		}
 		
 		buf.append(editMessage(subjectLine,text,m.id,m.isActive));
 		if (!msg.isEmpty()) buf.append("<br/>" + msg + "<br/>");
-		if (m!=null) buf.append(sendMessage(m));
+		if (m!=null) {
+			int nContacts = ofy().load().type(Contact.class).count();
+			int nUnsubscribed = ofy().load().type(Contact.class).filter("unsubscribed",true).count();
+			int nAvailable = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created >",m.lastRecipientCreated).count();
+			boolean unsent = m.lastRecipientCreated == null || m.lastRecipientCreated.getTime() == 0L;
+			buf.append("<h4>Send This Message</h4>"
+				+ "You have " + nContacts + " contacts in the database, " + (nContacts - nUnsubscribed) + " remain subscribed.<br/>"
+				+ "This message " 
+				+ (unsent?"has not yet been sent to any contacts.":"can be sent to as many as " + nAvailable + " more contacts.") 
+				+ "<br/>"
+				+ "<form method=post action=/messages>"
+				+ "<input type=hidden name=MessageId value=" + m.id + " />"
+				//+ "<input type=submit name=UserRequest value='Send 50 Messages' />&nbsp;"
+				+ "<input type=submit name=UserRequest value='Send 1 Test Message' /> to "
+				+ "<input type=text size=7 name=FirstName value=Chuck /> "
+				+ "<input type=text size=7 name=LastName value=Wight /> "
+				+ "<input type=text name=Email value='chuck.wight@gmail.com' />"
+				+ "</form>");	
+		}
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
 		out.println(Subject.getHeader(user) + buf.toString() + Subject.footer);
@@ -209,26 +229,6 @@ public class ManageMessages extends HttpServlet {
 			+ "</form>";
 	}
 	
-	String sendMessage(EmailMessage m) {
-		int nContacts = ofy().load().type(Contact.class).count();
-		int nUnsubscribed = ofy().load().type(Contact.class).filter("unsubscribed",true).count();
-		int nAvailable = ofy().load().type(Contact.class).filter("unsubscribed",false).filter("created >",m.lastRecipientCreated).count();
-		boolean unsent = m.lastRecipientCreated == null || m.lastRecipientCreated.getTime() == 0L;
-		return "<h4>Send This Message</h4>"
-			+ "You have " + nContacts + " contacts in the database, " + (nContacts - nUnsubscribed) + " remain subscribed.<br/>"
-			+ "This message " 
-			+ (unsent?"has not yet been sent to any contacts.":"can be sent to as many as " + nAvailable + " more contacts.") 
-			+ "<br/>"
-			+ "<form method=post action=/messages>"
-			+ "<input type=hidden name=MessageId value=" + m.id + " />"
-			//+ "<input type=submit name=UserRequest value='Send 50 Messages' />&nbsp;"
-			+ "<input type=submit name=UserRequest value='Send 1 Test Message' /> to "
-			+ "<input type=text size=7 name=FirstName value=Chuck /> "
-			+ "<input type=text size=7 name=LastName value=Wight /> "
-			+ "<input type=text name=Email value='chuck.wight@gmail.com' />"
-			+ "</form>";		
-	}
-	
 	int sendNMessages(EmailMessage m,boolean testOnly,List<Contact> contacts) throws Exception {
 		int count = 0;
 		for (Contact c : contacts) {
@@ -242,7 +242,7 @@ public class ManageMessages extends HttpServlet {
 			if (!testOnly && c.created.after(m.lastRecipientCreated)) m.lastRecipientCreated = c.created;
 			count++;
 		}
-		ofy().save().entity(m).now();
+		if (!testOnly && count > 0) ofy().save().entity(m).now();
 		return count;
 	}
 	
