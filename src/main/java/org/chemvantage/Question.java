@@ -107,10 +107,10 @@ public class Question implements Serializable, Cloneable {
 		this.isActive = false;
 	}
 
-	Question (long topicId,String text,String type,int nChoices,List<String> choices,
+	Question (long conceptId,String text,String type,int nChoices,List<String> choices,
 			double requiredPrecision,int significantFigures,String correctAnswer,String tag,int pointValue,String parameterString,
 			String hint,String solution,String authorId,String contributorId,String editorId,String notes) {
-		this.topicId = topicId;
+		this.conceptId = conceptId;
 		this.text = text;
 		this.type = type;
 		this.nChoices = nChoices;
@@ -164,7 +164,7 @@ public class Question implements Serializable, Cloneable {
 	}
 	
 	public boolean requiresParser() {
-		return text.contains("#") || this.parameterString.length()>0;
+		return text.contains("#") || this.parameterString != null && !this.parameterString.isEmpty();
 	}
 	
 	public void setParameters() {
@@ -454,10 +454,10 @@ public class Question implements Serializable, Cloneable {
 					+ "<b>" + (this.hasACorrectAnswer()?getCorrectAnswer():"&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;") + "</b>"
 					+ "</span>");
 			buf.append("&nbsp;" + parseString(tag) + "<br/><br/>");
-			if (hint.length()>0) {
+			if (hint != null && hint.length()>0) {
 				buf.append("Hint: " + parseString(hint) + "<br/><br/>");
 			}
-			if (solution.length()>0) {
+			if (solution != null && solution.length()>0) {
 				buf.append("Solution:<br/>" + parseString(solution) + "<br/><br/>");
 			}
 			break;        

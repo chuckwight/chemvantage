@@ -20,26 +20,15 @@ package org.chemvantage;
 import static com.googlecode.objectify.ObjectifyService.key;
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.googlecode.objectify.Key;
 import com.googlecode.objectify.cmd.Query;
 
@@ -92,9 +81,9 @@ public class Edit extends HttpServlet {
 			if (userRequest == null) userRequest = "";
 
 			switch (userRequest) {
-	case "ImportQuestionsFromSage":
-		out.println(importQuestions(request));
-		break;
+			//case "ImportQuestionsFromSage":
+			//	out.println(importQuestions(request));
+			//	break;
 			case "ManageConcepts":
 				out.println(conceptsForm(request));
 				break;
@@ -287,7 +276,7 @@ public class Edit extends HttpServlet {
 		}
 		out.println(Subject.footer);
 	}
-	
+/*
 	static String importQuestions(HttpServletRequest request) throws Exception {
 		StringBuffer buf = new StringBuffer("<h1>Import Questions From Sage</h1>");
 		
@@ -335,7 +324,7 @@ public class Edit extends HttpServlet {
 		} 
 		return buf.toString();
 	}
-
+*/
 	String editorsPage(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h1>Editor's Page</h1>");
 		try {
@@ -361,6 +350,7 @@ public class Edit extends HttpServlet {
 			buf.append("<div style='display:table-cell;padding-right:25px;'><h4>Select an Assignment Type</h4>");
 			buf.append("<label><input type=radio name=AssignmentType value=Quiz " + ("Quiz".equals(assignmentType)?"checked":"onClick=this.form.submit()") + " />Quiz</label><br/>");
 			buf.append("<label><input type=radio name=AssignmentType value=Homework " + ("Homework".equals(assignmentType)?"checked":"onClick=this.form.submit()") + " />Homework</label><br/>");
+			buf.append("<label><input type=radio name=AssignmentType value=Sage " + ("Sage".equals(assignmentType)?"checked":"onClick=this.form.submit()") + " />Sage</label><br/>");
 			buf.append("<label><input type=radio name=AssignmentType value=Exam " + ("Exam".equals(assignmentType)?"checked":"onClick=this.form.submit()") + " />Exam</label><br/>");
 			buf.append("</div>");  // end cell1
 			
@@ -609,13 +599,14 @@ public class Edit extends HttpServlet {
 	String assignmentTypeDropDownBox(String defaultType,boolean autoSubmit) {
 		if (defaultType == null) defaultType = "";
 		StringBuffer buf = new StringBuffer("\n<SELECT NAME=AssignmentType" + (autoSubmit?" onChange=submit()>":">"));
-		if (defaultType.length() == 0) buf.append("\n<OPTION VALUE=''>Select a type</OPTION>");
+		if (defaultType.isEmpty()) buf.append("\n<OPTION VALUE=''>Select a type</OPTION>");
 		buf.append("<OPTION" + (defaultType.equals("Quiz")?" SELECTED":"") + ">Quiz</OPTION>"
-		+ "<OPTION" + (defaultType.equals("Homework")?" SELECTED":"") + ">Homework</OPTION>"
-		+ "<OPTION" + (defaultType.equals("Exam")?" SELECTED":"") + ">Exam</OPTION>"
-		+ "<OPTION" + (defaultType.equals("Poll")?" SELECTED":"") + ">Poll</OPTION>"
-		+ "<OPTION" + (defaultType.equals("Video")?" SELECTED":"") + ">Video</OPTION>"
-		+ "</SELECT>");
+				+ "<OPTION" + (defaultType.equals("Homework")?" SELECTED":"") + ">Homework</OPTION>"
+				+ "<OPTION" + (defaultType.equals("Sage")?" SELECTED":"") + ">Sage</OPTION>"
+				+ "<OPTION" + (defaultType.equals("Exam")?" SELECTED":"") + ">Exam</OPTION>"
+				+ "<OPTION" + (defaultType.equals("Poll")?" SELECTED":"") + ">Poll</OPTION>"
+				+ "<OPTION" + (defaultType.equals("Video")?" SELECTED":"") + ">Video</OPTION>"
+				+ "</SELECT>");
 		return buf.toString();
 	}
 
@@ -636,7 +627,8 @@ public class Edit extends HttpServlet {
 	}
 	
 	String conceptSelectBox(Long conceptId) {
-		StringBuffer buf = new StringBuffer("<select name=ConceptId>");
+		StringBuffer buf = new StringBuffer("<select name=ConceptId>"
+				+ "<option>Select a concept</option>");
 		List<Concept> concepts = ofy().load().type(Concept.class).order("orderBy").list();
 		for (Concept c : concepts) buf.append("<option value=" + c.id + (c.id.equals(conceptId)?" selected>":">") + c.title + "</option>");
 		buf.append("</select>");
@@ -1292,10 +1284,6 @@ public class Edit extends HttpServlet {
 				proposed = true;
 				current = false;
 			} catch (Exception e2) {}
-			long topicId = 0;
-			try {
-				topicId = Long.parseLong(request.getParameter("TopicId"));
-			} catch (Exception e2) {}
 			
 			Long conceptId = null;
 			try {
@@ -1317,10 +1305,6 @@ public class Edit extends HttpServlet {
 				q.pointValue = 1;
 				buf.append(" (1 point)<br>");
 			}
-			if (topicId>0) try {
-				Topic t = ofy().load().type(Topic.class).id(topicId).safe();
-				buf.append("Topic: " + t.title + "<br>");
-			} catch (Exception e) {}
 			Concept c = conceptId==null?null:ofy().load().type(Concept.class).id(conceptId).now();
 			buf.append("Concept: " + (c==null?"n/a":c.title) + "<br/>");
 			
@@ -1351,7 +1335,6 @@ public class Edit extends HttpServlet {
 			
 			buf.append("<hr><h2>Continue Editing</h2>");
 			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
-			if (topicId>0) buf.append("Topic:" + topicSelectBox(q.topicId) + "<br>");
 			buf.append("Concept:" + conceptSelectBox(conceptId));
 			buf.append("Learn More URL: <input type=text size=40 name=LearnMoreURL value='" + (q.learn_more_url == null?"":q.learn_more_url) + "' placeholder='(optional)' /><br/>");
 			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
@@ -1436,6 +1419,7 @@ public class Edit extends HttpServlet {
 		StringBuffer buf = new StringBuffer("<h1>Edit</h1><h2>Proposed Question</h2>");
 		try {
 			List<Key<ProposedQuestion>> pendingQuestionKeys = ofy().load().type(ProposedQuestion.class).keys().list();
+			if (pendingQuestionKeys.size()==0) return editorsPage(user,request);  // done!
 			
 			String questionId = request.getParameter("NextQuestionId");
 			ProposedQuestion q = null;
@@ -1445,7 +1429,16 @@ public class Edit extends HttpServlet {
 			} else { // get the designated question in the list
 				q = ofy().load().type(ProposedQuestion.class).id(Long.parseLong(questionId)).now();
 			}
-			if (q.requiresParser()) q.setParameters();
+			
+			switch (q.getQuestionType()) {
+			case 1:
+			case 3:
+				q.nChoices = q.choices.size();
+				break;
+			case 5:
+				if (q.requiresParser()) q.setParameters();
+				break;	
+			}
 			
 			// If the list contains more than one proposed question, get the index of the next one
 			String nextQuestionId = null;
@@ -1455,8 +1448,11 @@ public class Edit extends HttpServlet {
 				nextQuestionId = String.valueOf(pendingQuestionKeys.get(i).getId());
 			}
 			
-			Topic t = ofy().load().type(Topic.class).id(q.topicId).safe();
-			buf.append("Topic: " + t.title + "<br>");
+			Concept c = null;
+			if (q.conceptId != null) c = ofy().load().type(Concept.class).id(q.conceptId).now();
+			if (q.authorId == null) q.authorId = "ChatGPT";
+			
+			buf.append("Concept: " + (c==null?"null":c.title) + "<br>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
 			buf.append("Author: " + q.authorId + "<p>");
 			buf.append("<FORM Action=Edit METHOD=GET>");
@@ -1474,7 +1470,7 @@ public class Edit extends HttpServlet {
 			
 			buf.append("<hr><h2>Edit This Question</h2>");
 			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
-			buf.append("Topic:" + topicSelectBox(t.id) + "<br>");
+			buf.append("Concept:" + conceptSelectBox(c==null?null:c.id) + "<br>");
 			
 			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
 			buf.append(" Point Value: " + pointValueSelectBox(q.pointValue) + "<br>");
@@ -1485,7 +1481,7 @@ public class Edit extends HttpServlet {
 			buf.append("</FORM>");
 
 		} catch (Exception e) {
-			return editorsPage(user,request);
+			buf.append(e.getMessage()==null?e.toString():e.getMessage());
 		}
 		return buf.toString();
 	}
