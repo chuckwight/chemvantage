@@ -298,7 +298,13 @@ public class Contribute extends HttpServlet {
 
 		StringBuffer buf = new StringBuffer();
 		try {
-			String json = request.getParameter("QuestionJson").replaceAll("\ufffd", "\"");  // removes whitespace and converts special characters to double quotes
+			String json = request.getParameter("QuestionJson");
+			
+			buf.append(json + "<p>");
+			
+			json = json.replaceAll("'", "&apos;")  // converts apostrophe characters to HTML
+					.replaceAll("\ufffd", "\"");  // converts remaining UNICODE replacement characters to double quotes
+			
 			JsonArray questionArray = JsonParser.parseString(json).getAsJsonArray();
 			for (int i=0;i<questionArray.size();i++) {
 				try {
