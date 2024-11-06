@@ -73,7 +73,6 @@ public class Edit extends HttpServlet {
 			String userId = "admin";
 			User user = new User("https://"+request.getServerName(), userId);
 			user.setIsChemVantageAdmin(true);
-			//user.setToken();
 			
 			out.println(Subject.getHeader(user));
 			
@@ -81,9 +80,6 @@ public class Edit extends HttpServlet {
 			if (userRequest == null) userRequest = "";
 
 			switch (userRequest) {
-			//case "ImportQuestionsFromSage":
-			//	out.println(importQuestions(request));
-			//	break;
 			case "ManageConcepts":
 				out.println(conceptsForm(request));
 				break;
@@ -119,7 +115,7 @@ public class Edit extends HttpServlet {
 					long proposedQuestionId = Long.parseLong(request.getParameter("ProposedQuestionId"));
 					ofy().delete().key(key(ProposedQuestion.class,proposedQuestionId));
 				} catch (Exception e) {}
-				out.println(Subject.getHeader(user) + reviewProposedQuestion(user,request) + Subject.footer);
+				out.println(reviewProposedQuestion(user,request));
 				break;
 			case "Refresh":
 				questions.clear();

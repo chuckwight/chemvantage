@@ -110,8 +110,15 @@ public class Contribute extends HttpServlet {
 				+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 				+ "<input type=hidden name=UserRequest value=Batch />"
 				+ "<textarea id=box name=QuestionJson rows=20 cols=80 ></textarea></br>"
-				+ "<input type=submit >" 
+				+ "<input type=submit onclick=replaceCurlies(); >" 
 				+ "</form><p>");
+		
+		buf.append("<script>"
+				+ "function replaceCurlies() {"
+				+ "  var box = document.getElementById('box');"
+				+ "  box.value = box.value.replace(/\\u201c/g,'\"').replace(/\\u201d/g,'\"').replace(/\\u2019/g,'&apos;');"
+				+ "}"
+				+ "</script>");
 				
 		return buf.toString();
 	}
@@ -297,13 +304,9 @@ public class Contribute extends HttpServlet {
 		List<Question> questions = new ArrayList<Question>();
 
 		StringBuffer buf = new StringBuffer();
+		String json = null;
 		try {
-			String json = request.getParameter("QuestionJson");
-			
-			buf.append(json + "<p>");
-			
-			json = json.replaceAll("'", "&apos;")  // converts apostrophe characters to HTML
-					.replaceAll("\ufffd", "\"");  // converts remaining UNICODE replacement characters to double quotes
+			json = request.getParameter("QuestionJson");
 			
 			JsonArray questionArray = JsonParser.parseString(json).getAsJsonArray();
 			for (int i=0;i<questionArray.size();i++) {
@@ -320,7 +323,7 @@ public class Contribute extends HttpServlet {
 			}
 			ofy().save().entities(questions);
 		} catch (Exception e) {
-			buf.append("Error: " + e.getMessage()==null?e.toString():e.getMessage());
+			buf.append("Error: " + e.getMessage()==null?e.toString():e.getMessage() + "<p>" + json);
 		}
 		buf.append(questions.size() + " proposed question items were uploaded successfully.<p>"
 				+ "<a href='/Contribute?UserRequest=Batch&sig=" + user.getTokenSignature() + "'>Upload another JSON</a> or "
