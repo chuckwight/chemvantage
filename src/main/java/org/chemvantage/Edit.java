@@ -104,7 +104,8 @@ public class Edit extends HttpServlet {
 			case "NewQuestionForm": 
 				out.println(newQuestionForm(user,request)); 
 				break;
-			case "Review": 
+			case "Review":
+			case "Skip":
 				out.println(reviewProposedQuestion(user,request)); 
 				break;
 			case "Edit": 
@@ -1426,9 +1427,14 @@ public class Edit extends HttpServlet {
 				q = ofy().load().type(ProposedQuestion.class).id(Long.parseLong(questionId)).now();
 			}
 			
+			if (q.assignmentType == null) { // assign a default type
+				q.assignmentType = q.getQuestionType()<5?"Quiz":"Homework";
+			}
+			
 			switch (q.getQuestionType()) {
 			case 1:
 			case 3:
+				q.scrambleChoices = true;
 				q.nChoices = q.choices.size();
 				break;
 			case 5:
@@ -1451,15 +1457,17 @@ public class Edit extends HttpServlet {
 			buf.append("Concept: " + (c==null?"null":c.title) + "<br>");
 			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
 			buf.append("Author: " + q.authorId + "<p>");
-			buf.append("<FORM Action=Edit METHOD=GET>");
+			buf.append("<FORM id=review Action=Edit METHOD=GET>");
 			
 			buf.append(q.printAll());
 			
 			buf.append("<INPUT TYPE=HIDDEN NAME=ProposedQuestionId VALUE='" + questionId + "'>");
-			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Discard Question'>");
+			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Discard Question'> "
+					+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Activate This Question' onclick=document.getElementById('review').method='post'; /> ");
+			
 			if (nextQuestionId != null) {
-				buf.append("<INPUT TYPE=HIDDEN NAME=NextQuestionId VALUE='" + nextQuestionId + "'>\n");
-				buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Skip>");
+				buf.append("<INPUT TYPE=HIDDEN NAME=NextQuestionId VALUE='" + nextQuestionId + "'>");
+				buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Skip> ");
 			}
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit'>");
 			buf.append("<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + q.authorId + "'>");
@@ -1473,7 +1481,7 @@ public class Edit extends HttpServlet {
 			
 			buf.append(q.edit());
 			
-			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Preview>");
+			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Preview />");
 			buf.append("</FORM>");
 
 		} catch (Exception e) {
