@@ -50,6 +50,7 @@ public class Edit extends HttpServlet {
 	//Map<Key<Question>,Integer> successPct = new HashMap<Key<Question>,Integer>();
 	Map<Key<Question>,Integer> pointValue = new HashMap<Key<Question>,Integer>();
 	List<Concept> concepts = new ArrayList<Concept>();
+	Map<Long,Concept> conceptMap = new HashMap<Long,Concept>();
 	
 	public String getServletInfo() {
 		return "This servlet is used by editors and admins to create, review, edit and delete question items.";
@@ -332,7 +333,7 @@ public class Edit extends HttpServlet {
 			buf.append("<a href=/Edit?UserRequest=ManageVideos>Manage Videos</a><br/>");
 			buf.append("<a href=/Edit?UserRequest=ManageTexts>Manage Texts</a><br/>");
 			buf.append("<a href=/Edit?UserRequest=ManageOrphanQuestions>Manage Orphan Questions</a><br/>");
-	buf.append("<a href=/Edit?UserRequest=ImportQuestionsFromSage>Import Questions From Sage</a><br/>");
+	//buf.append("<a href=/Edit?UserRequest=ImportQuestionsFromSage>Import Questions From Sage</a><br/>");
 			
 			// display a table to select questions by AssignmentType and Text/Chapter/Concept or directly by Concept:
 			buf.append("<div style=display:table><div style=display:table-row>");
@@ -508,28 +509,43 @@ public class Edit extends HttpServlet {
 
 		orphan.setParameters();
 		Long conceptId = null;
+		buf.append("<table><tr><td valign=top>");
 		buf.append("Assignment Type: " + orphan.assignmentType + "<br/>");
+		Topic topic = null;
 		try {
-			Topic topic = null;
 			topic = ofy().load().type(Topic.class).id(orphan.topicId).safe();
 			buf.append("Topic: " + topic.title + "<br/>");
 			if (topic.conceptIds.size()>0) conceptId = topic.conceptIds.get(0);
 		} catch (Exception e) {
 			buf.append("Topic: unknown<br/>");
 		}
-		buf.append("Question ID: " + orphan.id + "<br/>");
-		buf.append("<form method=post action=/Edit>"
+		buf.append("Question ID: " + orphan.id + "<br/>"
+				+ "<a href=/Edit?UserRequest=Edit&QuestionId=" + orphan.id + ">Edit this questipn</a><br/>");
+		buf.append("</td><td width=20px;></td><td>");
+		buf.append("<form id=conceptForm method=post action=/Edit>"
 				+ "<input type=hidden name=AssignmentType value='" + orphan.assignmentType + "' />"
 				+ "<input type=hidden name=QuestionId value=" + orphan.id + " />"
 				+ "<input type=hidden name=Text value='" + orphan.text + "' />"
-				+ "<input type=hidden name=UserRequest value='AssignToConcept' />"
-				+ "<select name=ConceptId><option value=0>Zero conceptId (hidden)</option>");
-		List<Concept> concepts = ofy().load().type(Concept.class).order("orderBy").list();
+				+ "<input type=hidden name=UserRequest value='AssignToConcept' />");
+		
+		if (this.concepts.isEmpty()) concepts = ofy().load().type(Concept.class).order("orderBy").list();
+		if (this.conceptMap.isEmpty()) for (Concept c : concepts) conceptMap.put(c.id, c);
+		Concept hide = null;
+		for (Concept c : concepts) if (c.title.equals("Hide")) hide = c;
+		
+		for (Long c : topic.conceptIds) {
+			buf.append("<label><input type=radio name=ConceptId value=" + c + " onclick=document.getElementById('conceptForm').submit(); />" + conceptMap.get(c).title + "</label><br/>");
+		}
+		buf.append("<label><input type=radio name=ConceptId value=" + hide.id + " onclick=document.getElementById('conceptForm').submit(); />Hide</label><br/>");
+		
+		buf.append("<select name=ConceptId onchange=document.getElementById('conceptForm').submit(); >"
+				+ "<option value=null>Select a concept</option>");
 		for (Concept c : concepts) buf.append("<option value=" + c.id + (c.id.equals(conceptId)?" selected>":">") + c.title + "</option>");
 		buf.append("</select>"
-				+ "<input type=submit value='Assign' />"
+				//+ "<input type=submit value='Assign' />"
 				+ "</form>");
-
+		buf.append("</td></tr></table><p>");
+		
 		buf.append(orphan.printAll() + "<br/>");
 		
 		StringBuffer comp = new StringBuffer();
