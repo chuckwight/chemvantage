@@ -490,13 +490,19 @@ public class Edit extends HttpServlet {
 		// find an orphan Question where conceptId==null or conceptId==0 
 		String text = request.getParameter("text");  // starting point for search
 		if (text==null) text = "";
-		String assignmentType = request.getParameter("AssignmentType");
-		if (assignmentType==null) assignmentType = "Quiz";
 		
+		String assignmentType = request.getParameter("AssignmentType");
+		if (assignmentType==null) {
+			buf.append("<form method=get action=/Edit>"
+					+ "<input type=hidden name=UserRequest value=ManageOrphanQuestions />");
+			buf.append(assignmentTypeDropDownBox(null,true));
+			buf.append("</form>");
+			return buf.toString();
+		}
 		List<Question> questions = null;
 		Question orphan = null;
 		while (orphan==null) {
-			questions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("text >=",text).limit(10).list();  // next 10 questions
+			questions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("text >=",text).limit(200).list();  // next 10 questions
 			if (questions.size()<3) return "Done with " + assignmentType + " questions.";
 			for (int i=1;i<questions.size()-1;i++) {
 				Question q = questions.get(i);
@@ -525,16 +531,18 @@ public class Edit extends HttpServlet {
 		buf.append("<form id=conceptForm method=post action=/Edit>"
 				+ "<input type=hidden name=AssignmentType value='" + orphan.assignmentType + "' />"
 				+ "<input type=hidden name=QuestionId value=" + orphan.id + " />"
-				+ "<input type=hidden name=Text value='" + orphan.text + "' />"
+				+ "<input type=hidden name=text value='" + orphan.text + "' />"
 				+ "<input type=hidden name=UserRequest value='AssignToConcept' />");
 		
 		if (this.concepts.isEmpty()) concepts = ofy().load().type(Concept.class).order("orderBy").list();
 		if (this.conceptMap.isEmpty()) for (Concept c : concepts) conceptMap.put(c.id, c);
 		Concept hide = null;
-		for (Concept c : concepts) if (c.title.equals("Hide")) hide = c;
+		for (Concept c : concepts) if ("Hide".equals(c.title)) hide = c;
 		
-		for (Long c : topic.conceptIds) {
-			buf.append("<label><input type=radio name=ConceptId value=" + c + " onclick=document.getElementById('conceptForm').submit(); />" + conceptMap.get(c).title + "</label><br/>");
+		for (Long cId : topic.conceptIds) {
+			Concept c = conceptMap.get(cId);
+			if (c==null) continue;
+			buf.append("<label><input type=radio name=ConceptId value=" + cId + " onclick=document.getElementById('conceptForm').submit(); />" + conceptMap.get(cId).title + "</label><br/>");
 		}
 		buf.append("<label><input type=radio name=ConceptId value=" + hide.id + " onclick=document.getElementById('conceptForm').submit(); />Hide</label><br/>");
 		
