@@ -274,7 +274,335 @@ public class Edit extends HttpServlet {
 		}
 		out.println(Subject.footer);
 	}
-/*
+void assignKeyConcepts(User user,HttpServletRequest request) throws Exception {
+		long conceptId = Long.parseLong(request.getParameter("ConceptId"));
+		String[] questionIdStrings = request.getParameterValues("QuestionId");
+		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
+		for (int i=0; i<questionIdStrings.length; i++) questionKeys.add(key(Question.class,Long.parseLong(questionIdStrings[i])));
+		List<Question> revised = new ArrayList<Question>();
+		for (Key<Question> k : questionKeys) {
+			Question q = this.questions.get(k);
+			q.conceptId = conceptId;
+			revised.add(q);
+		}
+		ofy().save().entities(revised);
+	}
+
+String assignmentTypeDropDownBox(String defaultType) {
+		return assignmentTypeDropDownBox(defaultType,false);
+	}
+
+String assignmentTypeDropDownBox(String defaultType,boolean autoSubmit) {
+	if (defaultType == null) defaultType = "";
+	StringBuffer buf = new StringBuffer("\n<SELECT NAME=AssignmentType" + (autoSubmit?" onChange=submit()>":">"));
+	if (defaultType.isEmpty()) buf.append("\n<OPTION VALUE=''>Select a type</OPTION>");
+	buf.append("<OPTION" + (defaultType.equals("Quiz")?" SELECTED":"") + ">Quiz</OPTION>"
+			+ "<OPTION" + (defaultType.equals("Homework")?" SELECTED":"") + ">Homework</OPTION>"
+			+ "<OPTION" + (defaultType.equals("Sage")?" SELECTED":"") + ">Sage</OPTION>"
+			+ "<OPTION" + (defaultType.equals("Exam")?" SELECTED":"") + ">Exam</OPTION>"
+			+ "<OPTION" + (defaultType.equals("Poll")?" SELECTED":"") + ">Poll</OPTION>"
+			+ "<OPTION" + (defaultType.equals("Video")?" SELECTED":"") + ">Video</OPTION>"
+			+ "</SELECT>");
+	return buf.toString();
+}
+
+void assignToConcept(User user, HttpServletRequest request) {
+		try {
+			Long conceptId = Long.parseLong(request.getParameter("ConceptId"));
+			Long questionId = Long.parseLong(request.getParameter("QuestionId"));
+			Question q = ofy().load().type(Question.class).id(questionId).safe();
+			if (conceptId != null) {
+				q.conceptId = conceptId;
+				ofy().save().entity(q).now();
+			}
+		} catch (Exception e) {}
+	}
+
+	String conceptSelectBox() {
+	StringBuffer buf = new StringBuffer();
+	if (concepts.isEmpty() || concepts.size() != ofy().load().type(Concept.class).count()) {
+		concepts = ofy().load().type(Concept.class).order("orderBy").list();
+	}
+	buf.append("<SELECT id=selectConcept NAME=ConceptId onChange=javascript:enableSubmit(); ><OPTION VALUE=0>Select a key concept</OPTION>");
+	for (Concept c : concepts) buf.append("<OPTION VALUE=" + c.id + ">" + c.title + "</OPTION>");
+	buf.append("</SELECT>");
+	
+	return buf.toString();
+}
+
+	String conceptSelectBox(Long conceptId) {
+		StringBuffer buf = new StringBuffer("<select name=ConceptId>"
+				+ "<option>Select a concept</option>");
+		List<Concept> concepts = ofy().load().type(Concept.class).order("orderBy").list();
+		for (Concept c : concepts) buf.append("<option value=" + c.id + (c.id.equals(conceptId)?" selected>":">") + c.title + "</option>");
+		buf.append("</select>");
+		return buf.toString();
+	}
+
+	String conceptSelectBox(Topic t, long conceptId) {
+		StringBuffer buf = new StringBuffer();
+		if (concepts.isEmpty() || concepts.size() != ofy().load().type(Concept.class).count()) {
+			concepts = ofy().load().type(Concept.class).order("orderBy").list();
+		}
+		buf.append("<SELECT NAME=ConceptId><OPTION VALUE=0>Select a key concept</OPTION>");
+		for (Concept c : concepts) if (t.conceptIds.contains(c.id)) 
+			buf.append("<OPTION VALUE=" + c.id + (c.id==conceptId?" SELECTED>":">") + c.title + "</OPTION>");
+		buf.append("</SELECT>");
+		
+		return buf.toString();
+	}
+
+	String conceptsDropDownBox(Topic t) {
+		StringBuffer buf = new StringBuffer();
+		if (concepts.isEmpty() || concepts.size() != ofy().load().type(Concept.class).count()) {
+			concepts = ofy().load().type(Concept.class).order("orderBy").list();
+		}
+		buf.append("<SELECT NAME=ConceptId SIZE=4 MULTIPLE>");
+		for (Concept c : concepts) buf.append("<OPTION VALUE=" + c.id + (t.conceptIds.contains(c.id)?" SELECTED>":">") + c.title + "</OPTION>");
+		buf.append("</SELECT>");
+		return buf.toString();
+	}
+
+	String conceptsDropDownBox(Chapter ch) {
+		StringBuffer buf = new StringBuffer();
+		if (ch==null) ch = new Chapter();
+		if (concepts.isEmpty() || concepts.size() != ofy().load().type(Concept.class).count()) {
+			concepts = ofy().load().type(Concept.class).order("orderBy").list();
+		}
+		buf.append("<SELECT NAME=ConceptId SIZE=4 MULTIPLE>");
+		for (Concept c : concepts) buf.append("<OPTION VALUE=" + c.id + (ch.conceptIds.contains(c.id)?" SELECTED>":">") + c.title + "</OPTION>");
+		buf.append("</SELECT>");
+		return buf.toString();
+	}
+
+	String conceptsForm(HttpServletRequest request) {
+			StringBuffer buf = new StringBuffer();
+			try {
+				// print the table of key concepts for General Chemistry, roughly ordered by topic/chapter/semester, etc.:
+				String assignmentType = request.getParameter("AssignmentType");
+				if (assignmentType==null) assignmentType = "";
+				buf.append("<b>Key Concepts in General Chemistry</b>\n"
+						+ "<form method=get action=/Edit>"
+						+ "<input type=hidden name=UserRequest value=ManageConcepts />"
+						+ "Optional:" + assignmentTypeDropDownBox(assignmentType,true) + "<p>"
+						+ "</form>");
+				buf.append("<TABLE BORDER=0 CELLSPACING=3>"
+						+ "<TR><TH>Order</TH><TH>Title</TH><TH>Action</TH>" + (assignmentType.isEmpty()?"":"<TH>nQuestions</TH>") + "</TR>");
+				List<Concept> concepts = ofy().load().type(Concept.class).order("orderBy").list();
+				for (Concept c : concepts) { // one row for each concept
+					Integer nQuestions = null;
+					if (!assignmentType.isEmpty()) {
+						nQuestions = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",c.id).count();
+					}
+					buf.append("<FORM NAME=ConceptsForm" + c.id + " METHOD=POST ACTION=/Edit>"
+							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateConcept />"
+							+ "<INPUT TYPE=HIDDEN NAME=ConceptId VALUE='" + c.id + "' />");
+					buf.append("<TR>"
+							+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4 VALUE='" + c.orderBy + "' /></TD>"
+							+ "<TD ALIGN=CENTER><INPUT NAME=Title VALUE='" + Question.quot2html(c.title) + "' /></TD>"
+							+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE=Update />"
+							+ "<INPUT TYPE=SUBMIT VALUE='Delete' onClick=\"javascript: document.ConceptsForm" + c.id + ".UserRequest.value='DeleteConcept';\" />"
+							+ "</TD></FORM>"
+							+ (nQuestions==null?"":"<TD>"+nQuestions+"</TD>")
+							+ "</TR>");
+				}
+				
+	//			print one-row form to add a new Concept:
+				buf.append("<FORM METHOD=POST ACTION=/Edit><INPUT TYPE=HIDDEN NAME=UserRequest VALUE=CreateConcept>");
+				buf.append("<TR>"
+						+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4></TD>"
+						+ "<TD ALIGN=CENTER><INPUT NAME=Title></TD>"
+						+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE='Create'></TD></TR></FORM>");
+				buf.append("</TABLE>");
+			} catch (Exception e) {
+				buf.append(e.getMessage());
+			}
+			return buf.toString();
+		}
+
+	void createChapter(HttpServletRequest request) throws Exception {
+			Text text = ofy().load().type(Text.class).id(Long.parseLong(request.getParameter("TextId"))).safe();
+			if (text.chapters==null) text.chapters = new ArrayList<Chapter>();
+			Chapter ch = new Chapter();
+			ch.chapterNumber = Integer.parseInt(request.getParameter("ChapterNumber"));
+			ch.title = request.getParameter("ChapterTitle");
+			ch.url =  request.getParameter("ChapterUrl");
+			String[] conceptIds = request.getParameterValues("ConceptId");
+			ch.conceptIds.clear();
+			for (String cId : conceptIds) ch.conceptIds.add(Long.parseLong(cId));
+			
+			int chapterIndex = 0;
+			for (Chapter c : text.chapters) {
+				if (c.chapterNumber > ch.chapterNumber) break;
+				else chapterIndex++;
+			}
+			text.chapters.add(chapterIndex,ch);
+			ofy().save().entity(text).now();
+	}
+
+	void createConcept(User user,HttpServletRequest request) {
+		String title = request.getParameter("Title");
+		if (title==null) title = "";
+		String orderBy = request.getParameter("OrderBy");
+		if (orderBy==null) orderBy = "";
+		Concept c = new Concept(title,orderBy);		
+		
+		ofy().save().entity(c).now();
+	}
+
+	void createText(User user,HttpServletRequest request) {
+		Text text = new Text(request.getParameter("Title"),request.getParameter("Author"),request.getParameter("Publisher"),request.getParameter("URL"),request.getParameter("ImgURL"),request.getParameter("PrintCopyURL"));
+		ofy().save().entity(text).now();
+	}
+
+	void createTopic(User user,HttpServletRequest request) {
+		String title = request.getParameter("Title");
+		if (title==null) title = "";
+		String orderBy = request.getParameter("OrderBy");
+		if (orderBy==null) orderBy = "";
+		int topicGroup = 0;
+		String[] alignments = request.getParameterValues("TopicGroup");
+		if (alignments != null) {
+			for (String text : alignments) topicGroup += Integer.parseInt(text);
+		}
+		
+		Topic t = new Topic(title,orderBy,topicGroup);
+		
+		ofy().save().entity(t).now();
+	}
+
+	void createVideo(User user,HttpServletRequest request) {
+		Video v = new Video(request.getParameter("SerialNumber"),request.getParameter("Title"));
+		v.orderBy = (request.getParameter("OrderBy"));
+		v.breaks = new int[0];
+		v.questionKeys = new ArrayList<Key<Question>>();
+		ofy().save().entity(v).now();
+	}
+
+	void deleteChapter(HttpServletRequest request) {
+		Text text = ofy().load().type(Text.class).id(Long.parseLong(request.getParameter("TextId"))).safe();
+		int chapterIndex = Integer.parseInt(request.getParameter("ChapterIndex"));
+		text.chapters.remove(chapterIndex);
+		ofy().save().entity(text).now();
+	}
+
+	void deleteConcept(User user,HttpServletRequest request) {
+		try {
+			Concept c = ofy().load().type(Concept.class).id(Long.parseLong(request.getParameter("ConceptId"))).safe();
+			ofy().delete().entity(c).now();
+		} catch (Exception e) {}
+	}
+
+	String deleteQuizlet(HttpServletRequest request) {
+		Video v = null; 
+		int segment = 0;
+		
+		try {
+			v= ofy().load().type(Video.class).id(Long.parseLong(request.getParameter("VideoId"))).safe();
+			segment = Integer.parseInt(request.getParameter("Segment"));
+			if (segment==0 && v.breaks.length==1) { // deleting the only segment
+				v.breaks = null;
+				v.nQuestions = null;
+				v.questionKeys = null;
+			} else {  // copy breaks and nQuestions arrays except for current segment
+				int[] breaks = new int[v.breaks.length-1];
+				int[] nQuestions = new int[v.breaks.length-1];
+				for (int i=0;i<breaks.length;i++) {
+					if (i==segment) continue;
+					breaks[i] = i<segment?v.breaks[i]:v.breaks[i+1];
+					nQuestions[i] = i<segment?v.nQuestions[i]:v.nQuestions[i+1];
+				}
+				// delete the appropriate questionKeys
+				int count = 0;
+				for (int i=0;i<segment;i++) count += nQuestions[i];
+				for (int j=count;j<count+v.nQuestions[segment];j++) v.questionKeys.remove(count);
+				
+				// replace the arrays with the modified ones
+				v.breaks = breaks;
+				v.nQuestions = nQuestions;
+			}
+			ofy().save().entity(v).now();
+		} catch (Exception e) {			
+		}
+		return editVideoForm(v,segment==0?0:segment-1);
+	}
+
+	void deleteText(User user,HttpServletRequest request) {
+		ofy().delete().key(key(Text.class,Long.parseLong(request.getParameter("TextId")))).now();
+	}
+
+	void deleteTopic(User user,HttpServletRequest request) {	
+		try {
+			Topic t = ofy().load().type(Topic.class).id(Long.parseLong(request.getParameter("TopicId"))).safe();
+			ofy().delete().entity(t).now();
+		} catch (Exception e) {}
+	}
+
+	void deleteVideo(User user,HttpServletRequest request) {
+		ofy().delete().key(key(Video.class,Long.parseLong(request.getParameter("VideoId")))).now();
+	}
+
+	String editCurrentQuestion (User user,HttpServletRequest request) {
+		try {
+			long questionId = Long.parseLong(request.getParameter("QuestionId"));
+			Question q = ofy().load().type(Question.class).id(questionId).safe();
+			return editCurrentQuestion(user,q);
+		} catch (Exception e) {
+			return "Sorry, the question was not found in the database.";
+		}
+	}
+
+	String editCurrentQuestion (User user,Question q) {
+		StringBuffer buf = new StringBuffer();
+		try {
+			long questionId = q.id;
+			//Topic t = ofy().load().type(Topic.class).id(q.topicId).safe();
+			Concept c = (q.conceptId==null || q.conceptId==0L)?null:ofy().load().type(Concept.class).id(q.conceptId).now();
+			if (q.requiresParser()) q.setParameters();
+			buf.append("<h1>Edit</h1><h2>Current Question</h2>");
+			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
+			//buf.append("Topic: " + t.title + "<br>");
+			buf.append("Concept: " + (c==null?"n/a":c.title) + "<br/>");
+			if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) buf.append("Learn more at: " + q.learn_more_url + "</br>");
+			buf.append("Author: " + q.authorId + "<br>");
+			buf.append("Editor: " + q.editorId + "<br>");
+			
+			buf.append("Success Rate: " + q.getSuccess() + "<p>");
+			
+			buf.append("<FORM Action=/Edit METHOD=POST>");
+			
+			buf.append(q.printAll());
+			
+			if (q.authorId==null) q.authorId="";
+			if (q.editorId==null) q.editorId="";
+			buf.append("<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + q.authorId + "' />");
+			buf.append("<INPUT TYPE=HIDDEN NAME=EditorId VALUE='" + q.editorId + "' />");
+			if (q.topicId>0) buf.append("<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + q.id + "' />");
+			buf.append("<INPUT TYPE=HIDDEN NAME=QuestionId VALUE=" + questionId + " />");
+			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Question' />");
+			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit' />");
+			
+			buf.append("<hr><h2>Edit This Question</h2>");
+			
+			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
+			//buf.append("Topic:" + topicSelectBox(t.id) + "<br>");
+			buf.append("Concept:" + conceptSelectBox(q.conceptId) + "<br/>");
+			buf.append("Learn More URL: <input type=text size=40 name=LearnMoreURL value='" + (q.learn_more_url == null?"":q.learn_more_url) + "' placeholder='(optional)' /><br/>");
+			
+			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
+			buf.append(" Point Value: " + pointValueSelectBox(q.pointValue) + "<br>");
+			
+			buf.append(q.edit());
+			
+			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Preview />");
+			buf.append("</FORM>");
+		} catch (Exception e) {
+			buf.append(e.toString());
+		}
+		return buf.toString();
+	}
+
+	/*
 	static String importQuestions(HttpServletRequest request) throws Exception {
 		StringBuffer buf = new StringBuffer("<h1>Import Questions From Sage</h1>");
 		
@@ -485,6 +813,16 @@ public class Edit extends HttpServlet {
 		return buf.toString();
 	}
 	
+	List<Key<Question>> loadQuestions(String assignmentType,Long conceptId) throws Exception {
+		List<Key<Question>> keys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",conceptId).keys().list();
+		questions.clear();
+		if (keys.size()>0) {
+			questions = ofy().load().keys(keys);
+			Collections.sort(keys, new SortByQuestionText());
+		}
+		return keys;
+	}
+
 	String manageOrphanQuestions(HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h1>Edit</h1><h2>Question Without A ConceptId</h2>");
 		// find an orphan Question where conceptId==null or conceptId==0 
@@ -601,610 +939,6 @@ public class Edit extends HttpServlet {
 		return buf.toString();
 }
 	
-	void assignToConcept(User user, HttpServletRequest request) {
-		try {
-			Long conceptId = Long.parseLong(request.getParameter("ConceptId"));
-			Long questionId = Long.parseLong(request.getParameter("QuestionId"));
-			Question q = ofy().load().type(Question.class).id(questionId).safe();
-			if (conceptId != null) {
-				q.conceptId = conceptId;
-				ofy().save().entity(q).now();
-			}
-		} catch (Exception e) {}
-	}
-
-	String assignmentTypeDropDownBox(String defaultType) {
-		return assignmentTypeDropDownBox(defaultType,false);
-	}
-	
-	String assignmentTypeDropDownBox(String defaultType,boolean autoSubmit) {
-		if (defaultType == null) defaultType = "";
-		StringBuffer buf = new StringBuffer("\n<SELECT NAME=AssignmentType" + (autoSubmit?" onChange=submit()>":">"));
-		if (defaultType.isEmpty()) buf.append("\n<OPTION VALUE=''>Select a type</OPTION>");
-		buf.append("<OPTION" + (defaultType.equals("Quiz")?" SELECTED":"") + ">Quiz</OPTION>"
-				+ "<OPTION" + (defaultType.equals("Homework")?" SELECTED":"") + ">Homework</OPTION>"
-				+ "<OPTION" + (defaultType.equals("Sage")?" SELECTED":"") + ">Sage</OPTION>"
-				+ "<OPTION" + (defaultType.equals("Exam")?" SELECTED":"") + ">Exam</OPTION>"
-				+ "<OPTION" + (defaultType.equals("Poll")?" SELECTED":"") + ">Poll</OPTION>"
-				+ "<OPTION" + (defaultType.equals("Video")?" SELECTED":"") + ">Video</OPTION>"
-				+ "</SELECT>");
-		return buf.toString();
-	}
-
-	String topicSelectBox(long topicId) {
-		return topicSelectBox(topicId,false);
-	}
-	
-	String topicSelectBox(long topicId,boolean autoSubmit) {
-		StringBuffer buf = new StringBuffer("\n<SELECT NAME=TopicId" + (autoSubmit?" onChange=submit()>":">"));
-		if (topicId == 0) buf.append("\n<OPTION VALUE=''>Select a topic</OPTION>");
-		Query<Topic> topics = ofy().load().type(Topic.class).order("orderBy");
-		for (Topic t : topics) {
-			buf.append("<OPTION VALUE=" + t.id + (t.id.equals(topicId)?" SELECTED>":">")
-					+ t.title + "</OPTION>\n");
-		}
-		buf.append("</SELECT>");
-		return buf.toString();
-	}
-	
-	String conceptSelectBox(Long conceptId) {
-		StringBuffer buf = new StringBuffer("<select name=ConceptId>"
-				+ "<option>Select a concept</option>");
-		List<Concept> concepts = ofy().load().type(Concept.class).order("orderBy").list();
-		for (Concept c : concepts) buf.append("<option value=" + c.id + (c.id.equals(conceptId)?" selected>":">") + c.title + "</option>");
-		buf.append("</select>");
-		return buf.toString();
-	}
-	
-	String questionTypeDropDownBox(int questionType) {
-		StringBuffer buf = new StringBuffer();
-		buf.append("\n<SELECT NAME=QuestionType>"
-				+ "<OPTION VALUE=1" + (questionType==1?" SELECTED>":">") + "Multiple Choice</OPTION>"
-				+ "<OPTION VALUE=2" + (questionType==2?" SELECTED>":">") + "True/False</OPTION>"
-				+ "<OPTION VALUE=3" + (questionType==3?" SELECTED>":">") + "Select Multiple</OPTION>"
-				+ "<OPTION VALUE=4" + (questionType==4?" SELECTED>":">") + "Fill in word/phrase</OPTION>"
-				+ "<OPTION VALUE=5" + (questionType==5?" SELECTED>":">") + "Numeric</OPTION>"
-				+ "<OPTION VALUE=6" + (questionType==6?" SELECTED>":">") + "Five Star</OPTION>"
-				+ "<OPTION VALUE=7" + (questionType==7?" SELECTED>":">") + "Essay</OPTION>"
-				+ "</SELECT>");
-		return buf.toString();
-	}
-	
-	List<Key<Question>> loadQuestions(String assignmentType,Long conceptId) throws Exception {
-		List<Key<Question>> keys = ofy().load().type(Question.class).filter("assignmentType",assignmentType).filter("conceptId",conceptId).keys().list();
-		questions.clear();
-		if (keys.size()>0) {
-			questions = ofy().load().keys(keys);
-			Collections.sort(keys, new SortByQuestionText());
-		}
-		return keys;
-	}
-	
-	String topicsForm(HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer("<h1>Edit</h1?<h2>Manage Quiz/Homework/Exam Topics</h2>");
-		try {
-			// print the table of topics for this subject:
-			buf.append("<b>" + Subject.getTitle() + "</b>\n");
-			buf.append("<TABLE BORDER=0 CELLSPACING=3>"
-					+ "<TR><TH COLSPAN=3>&nbsp;</TH><TH COLSPAN=2>View/Add/Edit Questions</TH><TH></TH></TR>"
-					+ "<TR><TH>Order (in use)</TH><TH>Title</TH><TH>Action</TH><TH>Quiz</TH><TH>HW</TH><TH>Exam</TH><TH>Video</TH><TH>OpenStax</TH><TH>Concepts</TH></TR>\n");
-			Query<Topic> topics = ofy().load().type(Topic.class).order("orderBy");
-				for (Topic t : topics) { // one row for each topic
-					int nQuiz = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",t.id).count();
-					int nHW = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",t.id).count();
-					int nExam = ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",t.id).count();
-					int nVideo = ofy().load().type(Question.class).filter("assignmentType","Video").filter("topicId",t.id).count();
-					buf.append("\n<FORM NAME=TopicsForm" + t.id + " METHOD=POST ACTION=/Edit>"
-							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateTopic>"
-							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + t.id + "'>");
-					buf.append("\n<TR>"
-							+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4 VALUE='" + t.orderBy + "'> (" + ofy().load().type(Assignment.class).filter("topicId",t.id).count() + ")</TD>"
-							+ "<TD ALIGN=CENTER><INPUT NAME=Title VALUE='" + Question.quot2html(t.title) + "'></TD>"
-							+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE=Update>"
-							+ ((nQuiz==0 && nHW==0 && nExam==0 && nVideo==0)?"<INPUT TYPE=SUBMIT VALUE='Delete' "
-									+ "onClick=\"javascript: document.TopicsForm" + t.id + ".UserRequest.value='DeleteTopic';\">":"")
-									+ "</TD>");
-					buf.append("<TD ALIGN=CENTER><a href=Edit?AssignmentType=Quiz&TopicId=" + t.id + "><b>" + nQuiz + "</b></a></TD>");
-					buf.append("<TD ALIGN=CENTER><a href=Edit?AssignmentType=Homework&TopicId=" + t.id + "><b>" + nHW + "</b></a></TD>");
-					buf.append("<TD ALIGN=CENTER><a href=Edit?AssignmentType=Exam&TopicId=" + t.id + "><b>" + nExam + "</b></a></TD>");
-					buf.append("<TD ALIGN=CENTER><a href=Edit?AssignmentType=Exam&TopicId=" + t.id + "><b>" + nVideo + "</b></a></TD>");
-					// The next column is a checkbox to indicate if the topic is aligned with OpenStax textbook
-					buf.append("<TD ALIGN=CENTER><INPUT TYPE=CHECKBOX NAME=TopicGroup VALUE=1" + (t.topicGroup%2/1==1?" CHECKED":"") + "></TD>");
-					// Add a drop-down to select Concepts for this Topic
-					buf.append("<TD>" + conceptsDropDownBox(t) + "</TD>");
-					buf.append("</FORM></TR>");
-				}
-			//}
-			// print one-row form to add a new topic (quiz):
-			buf.append("<FORM METHOD=POST ACTION=/Edit><INPUT TYPE=HIDDEN NAME=UserRequest VALUE=CreateTopic>");
-			buf.append("<TR>"
-					+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4></TD>"
-					+ "<TD ALIGN=CENTER><INPUT NAME=Title></TD>"
-					+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE='Create New Topic'></TD><TD ALIGN=CENTER>0</TD><TD ALIGN=CENTER>0</TD><TD ALIGN=CENTER>0</TD><TD ALIGN=CENTER>0</TD><TD ALIGN=CENTER><INPUT TYPE=CHECKBOX NAME=TopicGroup VALUE=1></TD></TR></FORM>");
-			buf.append("</TABLE>");
-			buf.append("<FONT SIZE=-1 COLOR=RED>Notes:<OL>"
-					+ "<LI>The alphanumeric value of Order controls the order that topics are arranged.</LI>"
-					+ "<LI>To hide a topic from students, change the value of Order to 'Hide'.</LI>"
-					+ "<LI>A topic can be deleted only if all its questions have been deleted or moved.</LI>"
-					+ "</OL></FONT>");
-		} catch (Exception e) {
-			buf.append(e.getMessage());
-		}
-		return buf.toString();
-	}
-	
-	String conceptsDropDownBox(Topic t) {
-		StringBuffer buf = new StringBuffer();
-		if (concepts.isEmpty() || concepts.size() != ofy().load().type(Concept.class).count()) {
-			concepts = ofy().load().type(Concept.class).order("orderBy").list();
-		}
-		buf.append("<SELECT NAME=ConceptId SIZE=4 MULTIPLE>");
-		for (Concept c : concepts) buf.append("<OPTION VALUE=" + c.id + (t.conceptIds.contains(c.id)?" SELECTED>":">") + c.title + "</OPTION>");
-		buf.append("</SELECT>");
-		return buf.toString();
-	}
-	
-	String conceptsDropDownBox(Chapter ch) {
-		StringBuffer buf = new StringBuffer();
-		if (ch==null) ch = new Chapter();
-		if (concepts.isEmpty() || concepts.size() != ofy().load().type(Concept.class).count()) {
-			concepts = ofy().load().type(Concept.class).order("orderBy").list();
-		}
-		buf.append("<SELECT NAME=ConceptId SIZE=4 MULTIPLE>");
-		for (Concept c : concepts) buf.append("<OPTION VALUE=" + c.id + (ch.conceptIds.contains(c.id)?" SELECTED>":">") + c.title + "</OPTION>");
-		buf.append("</SELECT>");
-		return buf.toString();
-	}
-	
-	String conceptSelectBox(Topic t, long conceptId) {
-		StringBuffer buf = new StringBuffer();
-		if (concepts.isEmpty() || concepts.size() != ofy().load().type(Concept.class).count()) {
-			concepts = ofy().load().type(Concept.class).order("orderBy").list();
-		}
-		buf.append("<SELECT NAME=ConceptId><OPTION VALUE=0>Select a key concept</OPTION>");
-		for (Concept c : concepts) if (t.conceptIds.contains(c.id)) 
-			buf.append("<OPTION VALUE=" + c.id + (c.id==conceptId?" SELECTED>":">") + c.title + "</OPTION>");
-		buf.append("</SELECT>");
-		
-		return buf.toString();
-	}
-	
-	String conceptSelectBox() {
-		StringBuffer buf = new StringBuffer();
-		if (concepts.isEmpty() || concepts.size() != ofy().load().type(Concept.class).count()) {
-			concepts = ofy().load().type(Concept.class).order("orderBy").list();
-		}
-		buf.append("<SELECT id=selectConcept NAME=ConceptId onChange=javascript:enableSubmit(); ><OPTION VALUE=0>Select a key concept</OPTION>");
-		for (Concept c : concepts) buf.append("<OPTION VALUE=" + c.id + ">" + c.title + "</OPTION>");
-		buf.append("</SELECT>");
-		
-		return buf.toString();
-	}
-	
-	String conceptsForm(HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer();
-		try {
-			// print the table of key concepts for General Chemistry, roughly ordered by topic/chapter/semester, etc.:
-			buf.append("<b>Key Concepts in General Chemistry</b>\n");
-			buf.append("<TABLE BORDER=0 CELLSPACING=3>"
-					+ "<TR><TH>Order</TH><TH>Title</TH><TH>Action</TH></TR>");
-			List<Concept> concepts = ofy().load().type(Concept.class).order("orderBy").list();
-			for (Concept c : concepts) { // one row for each concept
-				buf.append("<FORM NAME=ConceptsForm" + c.id + " METHOD=POST ACTION=/Edit>"
-						+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateConcept />"
-						+ "<INPUT TYPE=HIDDEN NAME=ConceptId VALUE='" + c.id + "' />");
-				buf.append("<TR>"
-						+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4 VALUE='" + c.orderBy + "' /></TD>"
-						+ "<TD ALIGN=CENTER><INPUT NAME=Title VALUE='" + Question.quot2html(c.title) + "' /></TD>"
-						+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE=Update />"
-						+ "<INPUT TYPE=SUBMIT VALUE='Delete' onClick=\"javascript: document.ConceptsForm" + c.id + ".UserRequest.value='DeleteConcept';\" />"
-						+ "</TD>"
-						+ "</FORM></TR>");
-			}
-			
-//			print one-row form to add a new Concept:
-			buf.append("<FORM METHOD=POST ACTION=/Edit><INPUT TYPE=HIDDEN NAME=UserRequest VALUE=CreateConcept>");
-			buf.append("<TR>"
-					+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4></TD>"
-					+ "<TD ALIGN=CENTER><INPUT NAME=Title></TD>"
-					+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE='Create'></TD></TR></FORM>");
-			buf.append("</TABLE>");
-		} catch (Exception e) {
-			buf.append(e.getMessage());
-		}
-		return buf.toString();
-	}
-	
-	void assignKeyConcepts(User user,HttpServletRequest request) throws Exception {
-		long conceptId = Long.parseLong(request.getParameter("ConceptId"));
-		String[] questionIdStrings = request.getParameterValues("QuestionId");
-		List<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
-		for (int i=0; i<questionIdStrings.length; i++) questionKeys.add(key(Question.class,Long.parseLong(questionIdStrings[i])));
-		List<Question> revised = new ArrayList<Question>();
-		for (Key<Question> k : questionKeys) {
-			Question q = this.questions.get(k);
-			q.conceptId = conceptId;
-			revised.add(q);
-		}
-		ofy().save().entities(revised);
-	}
-	
-	void createTopic(User user,HttpServletRequest request) {
-		String title = request.getParameter("Title");
-		if (title==null) title = "";
-		String orderBy = request.getParameter("OrderBy");
-		if (orderBy==null) orderBy = "";
-		int topicGroup = 0;
-		String[] alignments = request.getParameterValues("TopicGroup");
-		if (alignments != null) {
-			for (String text : alignments) topicGroup += Integer.parseInt(text);
-		}
-		
-		Topic t = new Topic(title,orderBy,topicGroup);
-		
-		ofy().save().entity(t).now();
-	}
-
-	void createConcept(User user,HttpServletRequest request) {
-		String title = request.getParameter("Title");
-		if (title==null) title = "";
-		String orderBy = request.getParameter("OrderBy");
-		if (orderBy==null) orderBy = "";
-		Concept c = new Concept(title,orderBy);		
-		
-		ofy().save().entity(c).now();
-	}
-	
-	void updateTopic(User user,HttpServletRequest request) {
-		long topicId = 0;
-		try {
-			topicId = Long.parseLong(request.getParameter("TopicId"));
-			Topic t = ofy().load().type(Topic.class).id(topicId).safe();
-			t.title = request.getParameter("Title");
-			if (t.title == null) t.title = "";
-			t.orderBy = request.getParameter("OrderBy");
-			if (t.orderBy == null) t.orderBy = "";
-			t.topicGroup = 0;
-			String[] alignments = request.getParameterValues("TopicGroup");
-			if (alignments != null) {
-				for (String text : alignments) t.topicGroup += Integer.parseInt(text);
-			}
-			String[] conceptIds = request.getParameterValues("ConceptId");
-			if (conceptIds != null) {
-				t.conceptIds.clear();
-				for (String cId : conceptIds) t.conceptIds.add(Long.parseLong(cId));
-			}
-			
-			ofy().save().entity(t).now();
-		} catch (Exception e) {}
-	}
-
-	void updateConcept(User user,HttpServletRequest request) {
-		long conceptId = 0;
-		try {
-			conceptId = Long.parseLong(request.getParameter("ConceptId"));
-			Concept c = ofy().load().type(Concept.class).id(conceptId).safe();
-			c.title = request.getParameter("Title");
-			if (c.title == null) c.title = "";
-			c.orderBy = request.getParameter("OrderBy");
-			if (c.orderBy == null) c.orderBy = "";
-			
-			ofy().save().entity(c).now();
-		} catch (Exception e) {}
-	}
-	
-	void deleteTopic(User user,HttpServletRequest request) {	
-		try {
-			Topic t = ofy().load().type(Topic.class).id(Long.parseLong(request.getParameter("TopicId"))).safe();
-			ofy().delete().entity(t).now();
-		} catch (Exception e) {}
-	}
-
-	void deleteConcept(User user,HttpServletRequest request) {
-		try {
-			Concept c = ofy().load().type(Concept.class).id(Long.parseLong(request.getParameter("ConceptId"))).safe();
-			ofy().delete().entity(c).now();
-		} catch (Exception e) {}
-	}
-	
-	String videosForm() {
-		StringBuffer buf = new StringBuffer("<h3>Manage Videos</h3>");
-		try {
-			List<Video> videos = ofy().load().type(Video.class).order("orderBy").list();
-			
-			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TH>OrderBy</TH><TH>Title</TH><TH>Serial No.</TH><TH>Breaks</TH><TH>Questions</TH><TH>Action</TH></TR>");
-			for (Video v : videos) {
-				buf.append("<FORM ACTION=Edit METHOD=POST>"
-						+ "<INPUT TYPE=HIDDEN NAME=VideoId VALUE='" + v.id + "'>"
-						+ "<TR><TD><INPUT TYPE=TEXT NAME=OrderBy VALUE='" + v.orderBy + "'></TD>"
-						+ "<TD><INPUT TYPE=TEXT NAME=Title VALUE='" + Question.quot2html(v.title) + "'></TD>"
-						+ "<TD>" + v.serialNumber + "</TD>"
-						+ "<TD>" + (v.breaks==null?"0":v.breaks.length) + "</TD>"
-						+ "<TD>" + (v.questionKeys==null?0:v.questionKeys.size()) + "</TD>"
-						+ "<TD><a href=/Edit?UserRequest=EditVideo&VideoId=" + v.id +">Select Questions</a> "
-						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Update Video'> "
-						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Video'></TD></TR>"
-						+ "</FORM>");
-			}
-			buf.append("<FORM ACTION=Edit METHOD=POST>"
-					+ "<TR><TD><INPUT TYPE=TEXT NAME=OrderBy></TD>"
-					+ "<TD><INPUT TYPE=TEXT NAME=Title></TD>"
-					+ "<TD><INPUT TYPE=TEXT NAME=SerialNumber></TD>"
-					+ "<TD></TD>"
-					+ "<TD></TD>"
-					+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Create Video'></TD></TR>"
-					+ "</FORM>");
-			buf.append("</TABLE>");
-		} catch (Exception e) {
-			buf.append(e.toString());
-		}
-		return buf.toString();
-	}
-
-	void createVideo(User user,HttpServletRequest request) {
-		Video v = new Video(request.getParameter("SerialNumber"),request.getParameter("Title"));
-		v.orderBy = (request.getParameter("OrderBy"));
-		v.breaks = new int[0];
-		v.questionKeys = new ArrayList<Key<Question>>();
-		ofy().save().entity(v).now();
-	}
-	
-	void updateVideo(HttpServletRequest request) {
-		Video v = ofy().load().type(Video.class).id(Long.parseLong(request.getParameter("VideoId"))).safe();
-		v.title = request.getParameter("Title");
-		v.orderBy = request.getParameter("OrderBy");
-		ofy().save().entity(v).now();
-	}
-	
-	String updateQuizlet(HttpServletRequest request) { 		
-		StringBuffer buf = new StringBuffer();
-		Video v = null; 
-		int segment = -1;
-		
-		try {
-			v= ofy().load().type(Video.class).id(Long.parseLong(request.getParameter("VideoId"))).safe();
-			buf.append("Video: " + v.title + "<br>");
-			
-			String stringTopicId = request.getParameter("TopicId");
-			if (stringTopicId != null) v.topicId = Long.parseLong(stringTopicId);
-			
-			try {
-				segment = Integer.parseInt(request.getParameter("Segment"));
-			} catch (Exception e) {}
-
-			int time=-1; // negative value indicates "end of video" (unreachable time)
-			try {
-				time = Integer.parseInt(request.getParameter("Seconds")); // position of the new breakpoint for this segment
-			} catch (Exception e) {}
-
-			if (segment>=0) {
-				// Determine the number of breaks: 1) first break (1), revised break (v.breaks.length), or new break (v.breaks.length+1)
-				String[] questionIds = request.getParameterValues("QuestionId");			
-				if (questionIds==null) questionIds = new String[0];
-
-				int nBreaks = (v.breaks==null?1:(segment<v.breaks.length?v.breaks.length:v.breaks.length+1));
-				int[] breaks = new int[nBreaks];
-				int[] nQuestions = new int[nBreaks];
-
-				// Copy the breakpoints from the current video, insert or append the new breakpoint, and copy back to the video:
-				for (int i=0;i<breaks.length;i++) {
-					breaks[i] = (i==segment?time:v.breaks[i]);
-					nQuestions[i] = (i==segment?questionIds.length:v.nQuestions[i]);
-				}
-
-				buf.append("Created/updated the breakpoint.<br>");
-
-				// Create a new List of questionKeys for the video
-				ArrayList<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
-				int counter = 0;
-				for (int i = 0;i<nBreaks;i++) {
-					if (i==segment) {
-						for (String id : questionIds) questionKeys.add(key(Question.class,Long.parseLong(id)));
-						counter += (v.nQuestions==null || i==v.nQuestions.length)?0:v.nQuestions[i];  // skip this many keys that are being replaced
-					} else {
-						for (int j=counter;j<counter+v.nQuestions[i];j++) questionKeys.add(v.questionKeys.get(j));
-						counter += v.nQuestions[i];
-					}
-				}
-				buf.append("Created/updated the List of question keys.<br>");
-
-				// Update the video parameters to the new values:
-				v.breaks = breaks;
-				v.nQuestions = nQuestions;
-				v.questionKeys = questionKeys;
-			}
-			ofy().save().entity(v).now();
-		} catch (Exception e) {
-			return buf.toString() + e.getMessage();
-		}
-		return editVideoForm(v,v.breaks[segment]<0?segment:segment+1);
-	}
-
-	String deleteQuizlet(HttpServletRequest request) {
-		Video v = null; 
-		int segment = 0;
-		
-		try {
-			v= ofy().load().type(Video.class).id(Long.parseLong(request.getParameter("VideoId"))).safe();
-			segment = Integer.parseInt(request.getParameter("Segment"));
-			if (segment==0 && v.breaks.length==1) { // deleting the only segment
-				v.breaks = null;
-				v.nQuestions = null;
-				v.questionKeys = null;
-			} else {  // copy breaks and nQuestions arrays except for current segment
-				int[] breaks = new int[v.breaks.length-1];
-				int[] nQuestions = new int[v.breaks.length-1];
-				for (int i=0;i<breaks.length;i++) {
-					if (i==segment) continue;
-					breaks[i] = i<segment?v.breaks[i]:v.breaks[i+1];
-					nQuestions[i] = i<segment?v.nQuestions[i]:v.nQuestions[i+1];
-				}
-				// delete the appropriate questionKeys
-				int count = 0;
-				for (int i=0;i<segment;i++) count += nQuestions[i];
-				for (int j=count;j<count+v.nQuestions[segment];j++) v.questionKeys.remove(count);
-				
-				// replace the arrays with the modified ones
-				v.breaks = breaks;
-				v.nQuestions = nQuestions;
-			}
-			ofy().save().entity(v).now();
-		} catch (Exception e) {			
-		}
-		return editVideoForm(v,segment==0?0:segment-1);
-	}
-	
-	void deleteVideo(User user,HttpServletRequest request) {
-		ofy().delete().key(key(Video.class,Long.parseLong(request.getParameter("VideoId")))).now();
-	}
-	
-	String textsForm(User user,HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer("");
-		try {
-			long textId = Long.parseLong(request.getParameter("TextId"));
-			Text t = ofy().load().type(Text.class).id(textId).safe();
-			buf.append("<h1>Edit</h1>"
-					+ "<h2>Manage Chapters</h2>");
-			buf.append("<a href=/Edit?UserRequest=ManageTexts>Return to Manage Texts</a><br/><br/>");
-			buf.append("Title: " + t.title + "<br/>"
-				+ "Author: " + t.author + "<br/>"
-				+ "Publisher: " + t.publisher + "<br/>"
-				+ "URL: " + t.URL + "<br/><br/>");
-			
-			if (t.chapters==null) t.chapters = new ArrayList<Chapter>();
-			
-			buf.append("<table>"
-				+ "<tr><th>Chapter</th><th>Title</th><th>URL</th><th>Key Concepts</th><th>Action</th></tr>");
-			for (Chapter c : t.chapters) {
-				buf.append("<tr><form action=/Edit method=post>"
-					+ "<input type=hidden name=TextId value=" + textId + " />"
-					+ "<input type=hidden name=ChapterIndex value=" + t.chapters.indexOf(c) + " />"
-					+ "<td><input type=text size=4 name=ChapterNumber value='" + c.chapterNumber + "' /></td>"
-					+ "<td><input type=text size=20 name=ChapterTitle value='" + c.title + "' /></td>"
-					+ "<td><input type=text size=20 name=ChapterUrl value='" + c.url + "' /></td>"
-					+ "<td>" + conceptsDropDownBox(c) + "</td>"
-					+ "<td><input type=submit name=UserRequest value='Update Chapter'/><input type=submit name=UserRequest value='Delete Chapter'/></td>"
-					+ "</form></tr>");
-			}
-			Chapter c = new Chapter();
-			buf.append("<tr><form action=/Edit method=post>"		// extra row to add a new chapter
-					+ "<input type=hidden name=TextId value=" + textId + " />"
-					+ "<td><input type=text size=4 name=ChapterNumber value=" + (t.chapters.size()+1) + " /></td>"
-					+ "<td><input type=text size=20 name=ChapterTitle /></td>"
-					+ "<td><input type=text size=20 name=ChapterUrl /></td>"
-					+ "<td>" + conceptsDropDownBox(c) + "</td>"
-					+ "<td><input type=submit name=UserRequest value='Create Chapter'/></td>"
-					+ "</form></tr>");
-			
-			buf.append("</table>");
-			
-			return buf.toString();
-		} catch (Exception e) {
-		buf.append("This is a list of textbooks served by ChemVantage, especially as SmartText objects.");
-		try {
-			buf.append("<h3>Manage Texts</h3>");
-			Query<Text> texts = ofy().load().type(Text.class);
-			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TH>Title</TH><TH>Author</TH><TH>Publisher</TH><TH>Text URL</TH><TH>Image URL</TH><TH>Print Copy URL</TH><TH>Smart</TH><TH></TH></TR>");
-			for (Text text : texts) {
-				buf.append("<FORM ACTION=Edit METHOD=POST>"
-						+ "<INPUT TYPE=HIDDEN NAME=TextId VALUE=" + text.id + " />"
-						+ "<TR><TD><INPUT TYPE=TEXT NAME=Title VALUE='" + Question.quot2html(text.title) + "' /></TD>"
-						+ "<TD><INPUT TYPE=TEXT NAME=Author VALUE='" + Question.quot2html(text.author) + "' /></TD>"
-						+ "<TD><INPUT TYPE=TEXT NAME=Publisher VALUE='" + Question.quot2html(text.publisher) + "' /></TD>"
-						+ "<TD><INPUT TYPE=TEXT NAME=URL VALUE='" + text.URL + "' /></TD>"
-						+ "<TD><INPUT TYPE=TEXT NAME=ImgURL VALUE='" + text.imgUrl + "' /></TD>"
-						+ "<TD><INPUT TYPE=TEXT NAME=PrintCopyURL VALUE='" + text.printCopyUrl + "' /></TD>"
-						+ "<TD style=text-align:center><INPUT TYPE=CHECKBOX NAME=SmartText VALUE=True " + (text.smartText?"CHECKED ":"") + " /></TD>"
-						+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Update Text'/ > "
-						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Text' /> "
-						+ "<a href=/Edit?UserRequest=ManageTexts&TextId=" + text.id + ">Chapters</a>&nbsp;</TD></TR>"
-						+ "</FORM>");
-			}
-			buf.append("<FORM ACTION=Edit METHOD=POST><TR>"
-					+ "<TD><INPUT TYPE=TEXT NAME=Title></TD>"
-					+ "<TD><INPUT TYPE=TEXT NAME=Author></TD>"
-					+ "<TD><INPUT TYPE=TEXT NAME=Publisher></TD>"
-					+ "<TD><INPUT TYPE=TEXT NAME=URL></TD>"
-					+ "<TD><INPUT TYPE=TEXT NAME=ImgURL></TD>"
-					+ "<TD><INPUT TYPE=TEXT NAME=PrintCopyURL></TD>"
-					+ "<TD style=text-align:center><INPUT TYPE=CHECKBOX NAME=SmartText VALUE=True /></TD>"
-					+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Create Text'></TD></TR>"
-					+ "</FORM>");
-			buf.append("</TABLE>");
-		} catch (Exception e2) {
-			buf.append(e2.toString());
-		}
-		return buf.toString();
-		}
-	}
-
-	void createText(User user,HttpServletRequest request) {
-		Text text = new Text(request.getParameter("Title"),request.getParameter("Author"),request.getParameter("Publisher"),request.getParameter("URL"),request.getParameter("ImgURL"),request.getParameter("PrintCopyURL"));
-		ofy().save().entity(text).now();
-	}
-	
-	void updateText(User user,HttpServletRequest request) {
-		try {
-			Text text = ofy().load().type(Text.class).id(Long.parseLong(request.getParameter("TextId"))).safe();
-			text.title = request.getParameter("Title");
-			text.author = request.getParameter("Author");
-			text.publisher = request.getParameter("Publisher");
-			text.URL = request.getParameter("URL");
-			text.imgUrl = request.getParameter("ImgURL");
-			text.printCopyUrl = request.getParameter("PrintCopyURL");
-			text.smartText = Boolean.parseBoolean(request.getParameter("SmartText"));
-			ofy().save().entity(text).now();
-		} catch (Exception e) {}
-	}
-	
-	void deleteText(User user,HttpServletRequest request) {
-		ofy().delete().key(key(Text.class,Long.parseLong(request.getParameter("TextId")))).now();
-	}
-	
-	void createChapter(HttpServletRequest request) throws Exception {
-			Text text = ofy().load().type(Text.class).id(Long.parseLong(request.getParameter("TextId"))).safe();
-			if (text.chapters==null) text.chapters = new ArrayList<Chapter>();
-			Chapter ch = new Chapter();
-			ch.chapterNumber = Integer.parseInt(request.getParameter("ChapterNumber"));
-			ch.title = request.getParameter("ChapterTitle");
-			ch.url =  request.getParameter("ChapterUrl");
-			String[] conceptIds = request.getParameterValues("ConceptId");
-			ch.conceptIds.clear();
-			for (String cId : conceptIds) ch.conceptIds.add(Long.parseLong(cId));
-			
-			int chapterIndex = 0;
-			for (Chapter c : text.chapters) {
-				if (c.chapterNumber > ch.chapterNumber) break;
-				else chapterIndex++;
-			}
-			text.chapters.add(chapterIndex,ch);
-			ofy().save().entity(text).now();
-	}
-	
-	void updateChapter(HttpServletRequest request) {
-		try {
-			Text text = ofy().load().type(Text.class).id(Long.parseLong(request.getParameter("TextId"))).safe();
-			int chapterIndex = Integer.parseInt(request.getParameter("ChapterIndex"));
-			Chapter ch = text.chapters.get(chapterIndex);
-			ch.chapterNumber = Integer.parseInt(request.getParameter("ChapterNumber"));
-			ch.title = request.getParameter("ChapterTitle");
-			ch.url =  request.getParameter("ChapterUrl");
-			String[] conceptIds = request.getParameterValues("ConceptId");
-			ch.conceptIds.clear();
-			for (String cId : conceptIds) ch.conceptIds.add(Long.parseLong(cId));
-			
-			text.chapters.set(chapterIndex,ch);
-			ofy().save().entity(text).now();
-		} catch (Exception e) {}
-	}
-	
-	void deleteChapter(HttpServletRequest request) {
-		Text text = ofy().load().type(Text.class).id(Long.parseLong(request.getParameter("TextId"))).safe();
-		int chapterIndex = Integer.parseInt(request.getParameter("ChapterIndex"));
-		text.chapters.remove(chapterIndex);
-		ofy().save().entity(text).now();
-	}
-	
 	String newQuestionForm(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer("<h1>Edit</h1><h2>New Question</h2>");
 		Long conceptId = null;
@@ -1212,7 +946,7 @@ public class Edit extends HttpServlet {
 			conceptId = Long.parseLong(request.getParameter("ConceptId"));
 		} catch (Exception e) {}		
 		String assignmentType = request.getParameter("AssignmentType");
-
+	
 		int questionType = 0;
 		try {
 			questionType = Integer.parseInt(request.getParameter("QuestionType"));
@@ -1268,7 +1002,7 @@ public class Edit extends HttpServlet {
 	String pointValueSelectBox() {
 		return pointValueSelectBox(0);
 	}
-	
+
 	String pointValueSelectBox(String assignmentType) {
 		switch (assignmentType) {
 		  case "Quiz": return pointValueSelectBox(1);
@@ -1278,7 +1012,7 @@ public class Edit extends HttpServlet {
 		  default: return null;
 		}		
 	}
-	
+
 	String pointValueSelectBox(int points) {
 		return "<SELECT NAME=PointValue>"
 		+ "<OPTION" + (points==1?" SELECTED":"") + ">1</OPTION>"
@@ -1288,7 +1022,7 @@ public class Edit extends HttpServlet {
 		+ "<OPTION" + (points==15?" SELECTED":"") + ">15</OPTION>"
 		+ "</SELECT>";
 	}
-	
+
 	String previewQuestion(User user,HttpServletRequest request) {
 		StringBuffer buf = new StringBuffer();
 		try {
@@ -1375,66 +1109,20 @@ public class Edit extends HttpServlet {
 		return buf.toString();
 	}
 
-	String editCurrentQuestion (User user,HttpServletRequest request) {
-		try {
-			long questionId = Long.parseLong(request.getParameter("QuestionId"));
-			Question q = ofy().load().type(Question.class).id(questionId).safe();
-			return editCurrentQuestion(user,q);
-		} catch (Exception e) {
-			return "Sorry, the question was not found in the database.";
-		}
-	}
-	
-	String editCurrentQuestion (User user,Question q) {
+	String questionTypeDropDownBox(int questionType) {
 		StringBuffer buf = new StringBuffer();
-		try {
-			long questionId = q.id;
-			//Topic t = ofy().load().type(Topic.class).id(q.topicId).safe();
-			Concept c = (q.conceptId==null || q.conceptId==0L)?null:ofy().load().type(Concept.class).id(q.conceptId).now();
-			if (q.requiresParser()) q.setParameters();
-			buf.append("<h1>Edit</h1><h2>Current Question</h2>");
-			buf.append("Assignment Type: " + q.assignmentType + " (" + q.pointValue + (q.pointValue>1?" points":" point") + ")<br>");
-			//buf.append("Topic: " + t.title + "<br>");
-			buf.append("Concept: " + (c==null?"n/a":c.title) + "<br/>");
-			if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) buf.append("Learn more at: " + q.learn_more_url + "</br>");
-			buf.append("Author: " + q.authorId + "<br>");
-			buf.append("Editor: " + q.editorId + "<br>");
-			
-			buf.append("Success Rate: " + q.getSuccess() + "<p>");
-			
-			buf.append("<FORM Action=/Edit METHOD=POST>");
-			
-			buf.append(q.printAll());
-			
-			if (q.authorId==null) q.authorId="";
-			if (q.editorId==null) q.editorId="";
-			buf.append("<INPUT TYPE=HIDDEN NAME=AuthorId VALUE='" + q.authorId + "' />");
-			buf.append("<INPUT TYPE=HIDDEN NAME=EditorId VALUE='" + q.editorId + "' />");
-			if (q.topicId>0) buf.append("<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + q.id + "' />");
-			buf.append("<INPUT TYPE=HIDDEN NAME=QuestionId VALUE=" + questionId + " />");
-			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Question' />");
-			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Quit' />");
-			
-			buf.append("<hr><h2>Edit This Question</h2>");
-			
-			buf.append("Assignment Type:" + assignmentTypeDropDownBox(q.assignmentType) + "<br>");
-			//buf.append("Topic:" + topicSelectBox(t.id) + "<br>");
-			buf.append("Concept:" + conceptSelectBox(q.conceptId) + "<br/>");
-			buf.append("Learn More URL: <input type=text size=40 name=LearnMoreURL value='" + (q.learn_more_url == null?"":q.learn_more_url) + "' placeholder='(optional)' /><br/>");
-			
-			buf.append("Question Type:" + questionTypeDropDownBox(q.getQuestionType()));
-			buf.append(" Point Value: " + pointValueSelectBox(q.pointValue) + "<br>");
-			
-			buf.append(q.edit());
-			
-			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Preview />");
-			buf.append("</FORM>");
-		} catch (Exception e) {
-			buf.append(e.toString());
-		}
+		buf.append("\n<SELECT NAME=QuestionType>"
+				+ "<OPTION VALUE=1" + (questionType==1?" SELECTED>":">") + "Multiple Choice</OPTION>"
+				+ "<OPTION VALUE=2" + (questionType==2?" SELECTED>":">") + "True/False</OPTION>"
+				+ "<OPTION VALUE=3" + (questionType==3?" SELECTED>":">") + "Select Multiple</OPTION>"
+				+ "<OPTION VALUE=4" + (questionType==4?" SELECTED>":">") + "Fill in word/phrase</OPTION>"
+				+ "<OPTION VALUE=5" + (questionType==5?" SELECTED>":">") + "Numeric</OPTION>"
+				+ "<OPTION VALUE=6" + (questionType==6?" SELECTED>":">") + "Five Star</OPTION>"
+				+ "<OPTION VALUE=7" + (questionType==7?" SELECTED>":">") + "Essay</OPTION>"
+				+ "</SELECT>");
 		return buf.toString();
 	}
-	
+
 	String reviewProposedQuestion (User user, HttpServletRequest request) {
 		// identifies a ProposedQuestion item, either from a specific questionId or next in the list
 		StringBuffer buf = new StringBuffer("<h1>Edit</h1><h2>Proposed Question</h2>");
@@ -1507,9 +1195,332 @@ public class Edit extends HttpServlet {
 			
 			buf.append("<INPUT TYPE=SUBMIT NAME=UserRequest VALUE=Preview />");
 			buf.append("</FORM>");
-
+	
 		} catch (Exception e) {
 			buf.append(e.getMessage()==null?e.toString():e.getMessage());
+		}
+		return buf.toString();
+	}
+
+	String textsForm(User user,HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer("");
+		try {
+			long textId = Long.parseLong(request.getParameter("TextId"));
+			Text t = ofy().load().type(Text.class).id(textId).safe();
+			buf.append("<h1>Edit</h1>"
+					+ "<h2>Manage Chapters</h2>");
+			buf.append("<a href=/Edit?UserRequest=ManageTexts>Return to Manage Texts</a><br/><br/>");
+			buf.append("Title: " + t.title + "<br/>"
+				+ "Author: " + t.author + "<br/>"
+				+ "Publisher: " + t.publisher + "<br/>"
+				+ "URL: " + t.URL + "<br/><br/>");
+			
+			if (t.chapters==null) t.chapters = new ArrayList<Chapter>();
+			
+			buf.append("<table>"
+				+ "<tr><th>Chapter</th><th>Title</th><th>URL</th><th>Key Concepts</th><th>Action</th></tr>");
+			for (Chapter c : t.chapters) {
+				buf.append("<tr><form action=/Edit method=post>"
+					+ "<input type=hidden name=TextId value=" + textId + " />"
+					+ "<input type=hidden name=ChapterIndex value=" + t.chapters.indexOf(c) + " />"
+					+ "<td><input type=text size=4 name=ChapterNumber value='" + c.chapterNumber + "' /></td>"
+					+ "<td><input type=text size=20 name=ChapterTitle value='" + c.title + "' /></td>"
+					+ "<td><input type=text size=20 name=ChapterUrl value='" + c.url + "' /></td>"
+					+ "<td>" + conceptsDropDownBox(c) + "</td>"
+					+ "<td><input type=submit name=UserRequest value='Update Chapter'/><input type=submit name=UserRequest value='Delete Chapter'/></td>"
+					+ "</form></tr>");
+			}
+			Chapter c = new Chapter();
+			buf.append("<tr><form action=/Edit method=post>"		// extra row to add a new chapter
+					+ "<input type=hidden name=TextId value=" + textId + " />"
+					+ "<td><input type=text size=4 name=ChapterNumber value=" + (t.chapters.size()+1) + " /></td>"
+					+ "<td><input type=text size=20 name=ChapterTitle /></td>"
+					+ "<td><input type=text size=20 name=ChapterUrl /></td>"
+					+ "<td>" + conceptsDropDownBox(c) + "</td>"
+					+ "<td><input type=submit name=UserRequest value='Create Chapter'/></td>"
+					+ "</form></tr>");
+			
+			buf.append("</table>");
+			
+			return buf.toString();
+		} catch (Exception e) {
+		buf.append("This is a list of textbooks served by ChemVantage, especially as SmartText objects.");
+		try {
+			buf.append("<h3>Manage Texts</h3>");
+			Query<Text> texts = ofy().load().type(Text.class);
+			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TH>Title</TH><TH>Author</TH><TH>Publisher</TH><TH>Text URL</TH><TH>Image URL</TH><TH>Print Copy URL</TH><TH>Smart</TH><TH></TH></TR>");
+			for (Text text : texts) {
+				buf.append("<FORM ACTION=Edit METHOD=POST>"
+						+ "<INPUT TYPE=HIDDEN NAME=TextId VALUE=" + text.id + " />"
+						+ "<TR><TD><INPUT TYPE=TEXT NAME=Title VALUE='" + Question.quot2html(text.title) + "' /></TD>"
+						+ "<TD><INPUT TYPE=TEXT NAME=Author VALUE='" + Question.quot2html(text.author) + "' /></TD>"
+						+ "<TD><INPUT TYPE=TEXT NAME=Publisher VALUE='" + Question.quot2html(text.publisher) + "' /></TD>"
+						+ "<TD><INPUT TYPE=TEXT NAME=URL VALUE='" + text.URL + "' /></TD>"
+						+ "<TD><INPUT TYPE=TEXT NAME=ImgURL VALUE='" + text.imgUrl + "' /></TD>"
+						+ "<TD><INPUT TYPE=TEXT NAME=PrintCopyURL VALUE='" + text.printCopyUrl + "' /></TD>"
+						+ "<TD style=text-align:center><INPUT TYPE=CHECKBOX NAME=SmartText VALUE=True " + (text.smartText?"CHECKED ":"") + " /></TD>"
+						+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Update Text'/ > "
+						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Text' /> "
+						+ "<a href=/Edit?UserRequest=ManageTexts&TextId=" + text.id + ">Chapters</a>&nbsp;</TD></TR>"
+						+ "</FORM>");
+			}
+			buf.append("<FORM ACTION=Edit METHOD=POST><TR>"
+					+ "<TD><INPUT TYPE=TEXT NAME=Title></TD>"
+					+ "<TD><INPUT TYPE=TEXT NAME=Author></TD>"
+					+ "<TD><INPUT TYPE=TEXT NAME=Publisher></TD>"
+					+ "<TD><INPUT TYPE=TEXT NAME=URL></TD>"
+					+ "<TD><INPUT TYPE=TEXT NAME=ImgURL></TD>"
+					+ "<TD><INPUT TYPE=TEXT NAME=PrintCopyURL></TD>"
+					+ "<TD style=text-align:center><INPUT TYPE=CHECKBOX NAME=SmartText VALUE=True /></TD>"
+					+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Create Text'></TD></TR>"
+					+ "</FORM>");
+			buf.append("</TABLE>");
+		} catch (Exception e2) {
+			buf.append(e2.toString());
+		}
+		return buf.toString();
+		}
+	}
+
+	String topicSelectBox(long topicId) {
+		return topicSelectBox(topicId,false);
+	}
+	
+	String topicSelectBox(long topicId,boolean autoSubmit) {
+		StringBuffer buf = new StringBuffer("\n<SELECT NAME=TopicId" + (autoSubmit?" onChange=submit()>":">"));
+		if (topicId == 0) buf.append("\n<OPTION VALUE=''>Select a topic</OPTION>");
+		Query<Topic> topics = ofy().load().type(Topic.class).order("orderBy");
+		for (Topic t : topics) {
+			buf.append("<OPTION VALUE=" + t.id + (t.id.equals(topicId)?" SELECTED>":">")
+					+ t.title + "</OPTION>\n");
+		}
+		buf.append("</SELECT>");
+		return buf.toString();
+	}
+	
+	String topicsForm(HttpServletRequest request) {
+		StringBuffer buf = new StringBuffer("<h1>Edit</h1?<h2>Manage Quiz/Homework/Exam Topics</h2>");
+		try {
+			// print the table of topics for this subject:
+			buf.append("<b>" + Subject.getTitle() + "</b>\n");
+			buf.append("<TABLE BORDER=0 CELLSPACING=3>"
+					+ "<TR><TH COLSPAN=3>&nbsp;</TH><TH COLSPAN=2>View/Add/Edit Questions</TH><TH></TH></TR>"
+					+ "<TR><TH>Order (in use)</TH><TH>Title</TH><TH>Action</TH><TH>Quiz</TH><TH>HW</TH><TH>Exam</TH><TH>Video</TH><TH>OpenStax</TH><TH>Concepts</TH></TR>\n");
+			Query<Topic> topics = ofy().load().type(Topic.class).order("orderBy");
+				for (Topic t : topics) { // one row for each topic
+					int nQuiz = ofy().load().type(Question.class).filter("assignmentType","Quiz").filter("topicId",t.id).count();
+					int nHW = ofy().load().type(Question.class).filter("assignmentType","Homework").filter("topicId",t.id).count();
+					int nExam = ofy().load().type(Question.class).filter("assignmentType","Exam").filter("topicId",t.id).count();
+					int nVideo = ofy().load().type(Question.class).filter("assignmentType","Video").filter("topicId",t.id).count();
+					buf.append("\n<FORM NAME=TopicsForm" + t.id + " METHOD=POST ACTION=/Edit>"
+							+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=UpdateTopic>"
+							+ "<INPUT TYPE=HIDDEN NAME=TopicId VALUE='" + t.id + "'>");
+					buf.append("\n<TR>"
+							+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4 VALUE='" + t.orderBy + "'> (" + ofy().load().type(Assignment.class).filter("topicId",t.id).count() + ")</TD>"
+							+ "<TD ALIGN=CENTER><INPUT NAME=Title VALUE='" + Question.quot2html(t.title) + "'></TD>"
+							+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE=Update>"
+							+ ((nQuiz==0 && nHW==0 && nExam==0 && nVideo==0)?"<INPUT TYPE=SUBMIT VALUE='Delete' "
+									+ "onClick=\"javascript: document.TopicsForm" + t.id + ".UserRequest.value='DeleteTopic';\">":"")
+									+ "</TD>");
+					buf.append("<TD ALIGN=CENTER><a href=Edit?AssignmentType=Quiz&TopicId=" + t.id + "><b>" + nQuiz + "</b></a></TD>");
+					buf.append("<TD ALIGN=CENTER><a href=Edit?AssignmentType=Homework&TopicId=" + t.id + "><b>" + nHW + "</b></a></TD>");
+					buf.append("<TD ALIGN=CENTER><a href=Edit?AssignmentType=Exam&TopicId=" + t.id + "><b>" + nExam + "</b></a></TD>");
+					buf.append("<TD ALIGN=CENTER><a href=Edit?AssignmentType=Exam&TopicId=" + t.id + "><b>" + nVideo + "</b></a></TD>");
+					// The next column is a checkbox to indicate if the topic is aligned with OpenStax textbook
+					buf.append("<TD ALIGN=CENTER><INPUT TYPE=CHECKBOX NAME=TopicGroup VALUE=1" + (t.topicGroup%2/1==1?" CHECKED":"") + "></TD>");
+					// Add a drop-down to select Concepts for this Topic
+					buf.append("<TD>" + conceptsDropDownBox(t) + "</TD>");
+					buf.append("</FORM></TR>");
+				}
+			//}
+			// print one-row form to add a new topic (quiz):
+			buf.append("<FORM METHOD=POST ACTION=/Edit><INPUT TYPE=HIDDEN NAME=UserRequest VALUE=CreateTopic>");
+			buf.append("<TR>"
+					+ "<TD ALIGN=CENTER><INPUT NAME=OrderBy SIZE=4></TD>"
+					+ "<TD ALIGN=CENTER><INPUT NAME=Title></TD>"
+					+ "<TD ALIGN=CENTER><INPUT TYPE=SUBMIT VALUE='Create New Topic'></TD><TD ALIGN=CENTER>0</TD><TD ALIGN=CENTER>0</TD><TD ALIGN=CENTER>0</TD><TD ALIGN=CENTER>0</TD><TD ALIGN=CENTER><INPUT TYPE=CHECKBOX NAME=TopicGroup VALUE=1></TD></TR></FORM>");
+			buf.append("</TABLE>");
+			buf.append("<FONT SIZE=-1 COLOR=RED>Notes:<OL>"
+					+ "<LI>The alphanumeric value of Order controls the order that topics are arranged.</LI>"
+					+ "<LI>To hide a topic from students, change the value of Order to 'Hide'.</LI>"
+					+ "<LI>A topic can be deleted only if all its questions have been deleted or moved.</LI>"
+					+ "</OL></FONT>");
+		} catch (Exception e) {
+			buf.append(e.getMessage());
+		}
+		return buf.toString();
+	}
+	
+	void updateChapter(HttpServletRequest request) {
+		try {
+			Text text = ofy().load().type(Text.class).id(Long.parseLong(request.getParameter("TextId"))).safe();
+			int chapterIndex = Integer.parseInt(request.getParameter("ChapterIndex"));
+			Chapter ch = text.chapters.get(chapterIndex);
+			ch.chapterNumber = Integer.parseInt(request.getParameter("ChapterNumber"));
+			ch.title = request.getParameter("ChapterTitle");
+			ch.url =  request.getParameter("ChapterUrl");
+			String[] conceptIds = request.getParameterValues("ConceptId");
+			ch.conceptIds.clear();
+			for (String cId : conceptIds) ch.conceptIds.add(Long.parseLong(cId));
+			
+			text.chapters.set(chapterIndex,ch);
+			ofy().save().entity(text).now();
+		} catch (Exception e) {}
+	}
+
+	void updateConcept(User user,HttpServletRequest request) {
+		long conceptId = 0;
+		try {
+			conceptId = Long.parseLong(request.getParameter("ConceptId"));
+			Concept c = ofy().load().type(Concept.class).id(conceptId).safe();
+			c.title = request.getParameter("Title");
+			if (c.title == null) c.title = "";
+			c.orderBy = request.getParameter("OrderBy");
+			if (c.orderBy == null) c.orderBy = "";
+			
+			ofy().save().entity(c).now();
+		} catch (Exception e) {}
+	}
+
+	String updateQuizlet(HttpServletRequest request) { 		
+		StringBuffer buf = new StringBuffer();
+		Video v = null; 
+		int segment = -1;
+		
+		try {
+			v= ofy().load().type(Video.class).id(Long.parseLong(request.getParameter("VideoId"))).safe();
+			buf.append("Video: " + v.title + "<br>");
+			
+			String stringTopicId = request.getParameter("TopicId");
+			if (stringTopicId != null) v.topicId = Long.parseLong(stringTopicId);
+			
+			try {
+				segment = Integer.parseInt(request.getParameter("Segment"));
+			} catch (Exception e) {}
+	
+			int time=-1; // negative value indicates "end of video" (unreachable time)
+			try {
+				time = Integer.parseInt(request.getParameter("Seconds")); // position of the new breakpoint for this segment
+			} catch (Exception e) {}
+	
+			if (segment>=0) {
+				// Determine the number of breaks: 1) first break (1), revised break (v.breaks.length), or new break (v.breaks.length+1)
+				String[] questionIds = request.getParameterValues("QuestionId");			
+				if (questionIds==null) questionIds = new String[0];
+	
+				int nBreaks = (v.breaks==null?1:(segment<v.breaks.length?v.breaks.length:v.breaks.length+1));
+				int[] breaks = new int[nBreaks];
+				int[] nQuestions = new int[nBreaks];
+	
+				// Copy the breakpoints from the current video, insert or append the new breakpoint, and copy back to the video:
+				for (int i=0;i<breaks.length;i++) {
+					breaks[i] = (i==segment?time:v.breaks[i]);
+					nQuestions[i] = (i==segment?questionIds.length:v.nQuestions[i]);
+				}
+	
+				buf.append("Created/updated the breakpoint.<br>");
+	
+				// Create a new List of questionKeys for the video
+				ArrayList<Key<Question>> questionKeys = new ArrayList<Key<Question>>();
+				int counter = 0;
+				for (int i = 0;i<nBreaks;i++) {
+					if (i==segment) {
+						for (String id : questionIds) questionKeys.add(key(Question.class,Long.parseLong(id)));
+						counter += (v.nQuestions==null || i==v.nQuestions.length)?0:v.nQuestions[i];  // skip this many keys that are being replaced
+					} else {
+						for (int j=counter;j<counter+v.nQuestions[i];j++) questionKeys.add(v.questionKeys.get(j));
+						counter += v.nQuestions[i];
+					}
+				}
+				buf.append("Created/updated the List of question keys.<br>");
+	
+				// Update the video parameters to the new values:
+				v.breaks = breaks;
+				v.nQuestions = nQuestions;
+				v.questionKeys = questionKeys;
+			}
+			ofy().save().entity(v).now();
+		} catch (Exception e) {
+			return buf.toString() + e.getMessage();
+		}
+		return editVideoForm(v,v.breaks[segment]<0?segment:segment+1);
+	}
+
+	void updateText(User user,HttpServletRequest request) {
+		try {
+			Text text = ofy().load().type(Text.class).id(Long.parseLong(request.getParameter("TextId"))).safe();
+			text.title = request.getParameter("Title");
+			text.author = request.getParameter("Author");
+			text.publisher = request.getParameter("Publisher");
+			text.URL = request.getParameter("URL");
+			text.imgUrl = request.getParameter("ImgURL");
+			text.printCopyUrl = request.getParameter("PrintCopyURL");
+			text.smartText = Boolean.parseBoolean(request.getParameter("SmartText"));
+			ofy().save().entity(text).now();
+		} catch (Exception e) {}
+	}
+
+	void updateTopic(User user,HttpServletRequest request) {
+		long topicId = 0;
+		try {
+			topicId = Long.parseLong(request.getParameter("TopicId"));
+			Topic t = ofy().load().type(Topic.class).id(topicId).safe();
+			t.title = request.getParameter("Title");
+			if (t.title == null) t.title = "";
+			t.orderBy = request.getParameter("OrderBy");
+			if (t.orderBy == null) t.orderBy = "";
+			t.topicGroup = 0;
+			String[] alignments = request.getParameterValues("TopicGroup");
+			if (alignments != null) {
+				for (String text : alignments) t.topicGroup += Integer.parseInt(text);
+			}
+			String[] conceptIds = request.getParameterValues("ConceptId");
+			if (conceptIds != null) {
+				t.conceptIds.clear();
+				for (String cId : conceptIds) t.conceptIds.add(Long.parseLong(cId));
+			}
+			
+			ofy().save().entity(t).now();
+		} catch (Exception e) {}
+	}
+
+	void updateVideo(HttpServletRequest request) {
+		Video v = ofy().load().type(Video.class).id(Long.parseLong(request.getParameter("VideoId"))).safe();
+		v.title = request.getParameter("Title");
+		v.orderBy = request.getParameter("OrderBy");
+		ofy().save().entity(v).now();
+	}
+
+	String videosForm() {
+		StringBuffer buf = new StringBuffer("<h3>Manage Videos</h3>");
+		try {
+			List<Video> videos = ofy().load().type(Video.class).order("orderBy").list();
+			
+			buf.append("<TABLE BORDER=1 CELLSPACING=0><TR><TH>OrderBy</TH><TH>Title</TH><TH>Serial No.</TH><TH>Breaks</TH><TH>Questions</TH><TH>Action</TH></TR>");
+			for (Video v : videos) {
+				buf.append("<FORM ACTION=Edit METHOD=POST>"
+						+ "<INPUT TYPE=HIDDEN NAME=VideoId VALUE='" + v.id + "'>"
+						+ "<TR><TD><INPUT TYPE=TEXT NAME=OrderBy VALUE='" + v.orderBy + "'></TD>"
+						+ "<TD><INPUT TYPE=TEXT NAME=Title VALUE='" + Question.quot2html(v.title) + "'></TD>"
+						+ "<TD>" + v.serialNumber + "</TD>"
+						+ "<TD>" + (v.breaks==null?"0":v.breaks.length) + "</TD>"
+						+ "<TD>" + (v.questionKeys==null?0:v.questionKeys.size()) + "</TD>"
+						+ "<TD><a href=/Edit?UserRequest=EditVideo&VideoId=" + v.id +">Select Questions</a> "
+						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Update Video'> "
+						+ "<INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Delete Video'></TD></TR>"
+						+ "</FORM>");
+			}
+			buf.append("<FORM ACTION=Edit METHOD=POST>"
+					+ "<TR><TD><INPUT TYPE=TEXT NAME=OrderBy></TD>"
+					+ "<TD><INPUT TYPE=TEXT NAME=Title></TD>"
+					+ "<TD><INPUT TYPE=TEXT NAME=SerialNumber></TD>"
+					+ "<TD></TD>"
+					+ "<TD></TD>"
+					+ "<TD><INPUT TYPE=SUBMIT NAME=UserRequest VALUE='Create Video'></TD></TR>"
+					+ "</FORM>");
+			buf.append("</TABLE>");
+		} catch (Exception e) {
+			buf.append(e.toString());
 		}
 		return buf.toString();
 	}
