@@ -297,7 +297,7 @@ public class Question implements Serializable, Cloneable {
 				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
 				buf.append("<label><input type=radio name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED /> ":" /> ") + choices.get(choice-'a') + "</label><br/>");
 			}
-			buf.append("<span style='color: gray; font-size: 0.8em;'>" + placeholder + "</span><br/>");
+			if (!placeholder.isEmpty()) buf.append("<span style='color: gray; font-size: 0.8em;'>" + placeholder + "</span><br/>");
 			break;
 		case 2: // True/False
 			buf.append(text);
@@ -305,7 +305,7 @@ public class Question implements Serializable, Cloneable {
 			buf.append("<span style='color:#EE0000;font-size: small;'>Select true or false:</span><br/>");
 			buf.append("<label><input type=radio name=" + this.id + " value='true'" + (studentAnswer.equals("true")?" CHECKED />":" />") + " True</label><br/>");
 			buf.append("<label><input type=radio name=" + this.id + " value='false'" + (studentAnswer.equals("false")?" CHECKED />":" />") + " False</label><br/>");
-			buf.append("<span style='color: gray; font-size: 0.8em;'>" + placeholder + "</span><br/>");
+			if (!placeholder.isEmpty()) buf.append("<span style='color: gray; font-size: 0.8em;'>" + placeholder + "</span><br/>");
 			break;
 		case 3: // Select Multiple
 			buf.append(text + "<br/>");
@@ -315,14 +315,14 @@ public class Question implements Serializable, Cloneable {
 				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
 				buf.append("<label><input type=checkbox name=" + this.id + " value=" + choice + (studentAnswer.indexOf(choice)>=0?" CHECKED /> ":" /> ") + choices.get(choice-'a') + "</label><br/>");
 			}
-			buf.append("<span style='color: gray; font-size: 0.8em;'>" + placeholder + "</span><br/>");
+			if (!placeholder.isEmpty()) buf.append("<span style='color: gray; font-size: 0.8em;'>" + placeholder + "</span><br/>");
 			break;
 		case 4: // Fill-in-the-Word
-			buf.append(text);
+			buf.append("<label for=" + this.id + ">" + text + "</label>");
 			buf.append("<br/>");
 			buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct word or phrase:</span><br/>");
-			buf.append("<label><input id=" + this.id + " type=text name=" + this.id + " value='" + quot2html(studentAnswer) + "' placeholder='" + placeholder + "' />");
-			buf.append("&nbsp;" + tag + "</label><br/><br/>");
+			buf.append("<input id=" + this.id + " type=text name=" + this.id + " value='" + quot2html(studentAnswer) + "' placeholder='" + placeholder + "' />");
+			buf.append("&nbsp;" + tag + "<br/><br/>");
 			break;
 		case 5: // Numeric Answer
 			buf.append(parseString(text));

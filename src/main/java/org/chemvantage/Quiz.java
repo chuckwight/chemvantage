@@ -68,17 +68,17 @@ public class Quiz extends HttpServlet {
 			switch (userRequest) {
 			case "ShowQuiz":
 				String quizTransactionId = request.getParameter("QuizTransactionId");
-				out.println(Subject.header("ChemVantage Quiz") + showQuiz(user,a,quizTransactionId) + Subject.footer);
+				out.println(Subject.header("Quiz") + showQuiz(user,a,quizTransactionId) + Subject.footer);
 				break;
 			case "ShowScores":
 				String forUserHashedId = request.getParameter("ForUserHashedId");
-				out.println(Subject.header("ChemVantage Scores") + showScores(user,a,forUserHashedId,null) + Subject.footer);
+				out.println(Subject.header("Scores") + showScores(user,a,forUserHashedId,null) + Subject.footer);
 				break;
 			case "ShowSummary":
-				out.println(Subject.header("Your Class ChemVantage Scores") + showSummary(user,a) + Subject.footer);
+				out.println(Subject.header("Class Scores") + showSummary(user,a) + Subject.footer);
 				break;
 			case "AssignQuizQuestions":
-				if (user.isInstructor()) out.println(Subject.header("Customize ChemVantage Quiz Assignment") + selectQuestionsForm(user,a,request) + Subject.footer);
+				if (user.isInstructor()) out.println(Subject.header("Customize Quiz") + selectQuestionsForm(user,a,request) + Subject.footer);
 				break;
 			case "SynchronizeScore":
 				out.println(synchronizeScore(user,a,request.getParameter("ForUserId")));
@@ -87,7 +87,7 @@ public class Quiz extends HttpServlet {
 				out.println(Subject.header() + Logout.now(user) + Subject.footer);
 				break;
 			default: 
-				out.println(Subject.header("ChemVantage Quiz") + printQuiz(user,a) + Subject.footer);
+				out.println(Subject.header("Quiz") + printQuiz(user,a) + Subject.footer);
 			}
 		} catch (Exception e) {
 			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
@@ -112,12 +112,12 @@ public class Quiz extends HttpServlet {
 			switch (userRequest) {
 			case "UpdateAssignment":
 				a.updateQuestions(request);
-				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
+				out.println(Subject.header("Instructor Page") + instructorPage(user,a) + Subject.footer);
 				break;
 			case "Save New Title":
 				a.title = request.getParameter("AssignmentTitle");
 				ofy().save().entity(a).now();
-				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
+				out.println(Subject.header("Instructor Page") + instructorPage(user,a) + Subject.footer);
 				break;
 			case "Set Allowed Time":
 				try {
@@ -128,7 +128,7 @@ public class Quiz extends HttpServlet {
 					a.timeAllowed = 900;
 				}
 				ofy().save().entity(a).now();
-				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
+				out.println(Subject.header("Instructor Page") + instructorPage(user,a) + Subject.footer);
 				break;
 			case "Set Allowed Attempts":
 				a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
@@ -139,14 +139,14 @@ public class Quiz extends HttpServlet {
 					a.attemptsAllowed = null;
 				}
 				ofy().save().entity(a).now();
-				out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
+				out.println(Subject.header("Instructor Page") + instructorPage(user,a) + Subject.footer);
 				break;
 			case "Synchronize Scores":
-				if (synchronizeScores(user,a)) out.println(Subject.header("ChemVantage Instructor Page") + instructorPage(user,a) + Subject.footer);
+				if (synchronizeScores(user,a)) out.println(Subject.header("Instructor Page") + instructorPage(user,a) + Subject.footer);
 				else out.println("Synchronization request failed.");
 				break;
 			default:
-				out.println(Subject.header("ChemVantage Quiz Results") + printScore(user,a,request) + Subject.footer);
+				out.println(Subject.header("Quiz Results") + printScore(user,a,request) + Subject.footer);
 			}
 		} catch (Exception e) {
 			out.println(Subject.header() + Logout.now(request,e) + Subject.footer);
@@ -250,7 +250,7 @@ public class Quiz extends HttpServlet {
 					+ "	</ul>\n");
 			
 			buf.append("<div id='timer0' style='color: #EE0000'></div>"
-					+ "	<div id='ctrl0' style='font-size: 50%; color: #EE0000'><a href=javascript:toggleTimers() >hide timers</a><p></div>");
+					+ "	<div id='ctrl0' style='color: #EE0000'><a href=javascript:toggleTimers() >hide timers</a><p></div>");
 			
 			debug.append("5");
 			
@@ -303,7 +303,7 @@ public class Quiz extends HttpServlet {
 			buf.append("</OL>\n");
 		
 			buf.append("<div id='timer1' style='color: #EE0000'></div>"
-					+ "	<div id='ctrl1' style='font-size: 50%; color: #EE0000'><a href=javascript:toggleTimers() >hide timers</a><p></div>");
+					+ "	<div id='ctrl1' style='color: #EE0000'><a href=javascript:toggleTimers() >hide timers</a><p></div>");
 			
 			buf.append("<input type=submit class='btn' value='Grade This Quiz'/>"
 					+ "</FORM>");

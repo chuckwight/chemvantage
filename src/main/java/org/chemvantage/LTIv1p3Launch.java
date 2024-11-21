@@ -367,25 +367,25 @@ public class LTIv1p3Launch extends HttpServlet {
 		if (user.isInstructor()) {
 			switch(myAssignment.assignmentType) {
 			case "Quiz":
-				out.println(Subject.header("ChemVantage Quiz") + Quiz.instructorPage(user, myAssignment) + Subject.footer);
+				out.println(Subject.header("Instructor Page") + Quiz.instructorPage(user, myAssignment) + Subject.footer);
 				break;
 			case "Homework":
-				out.println(Subject.header("ChemVantage Homework") + Homework.instructorPage(user, myAssignment) + Subject.footer);
+				out.println(Subject.header("Instructor Page") + Homework.instructorPage(user, myAssignment) + Subject.footer);
 				break;
 			case "PracticeExam":
-				out.println(Subject.header("ChemVantage Practice Exam") + PracticeExam.instructorPage(user, myAssignment) + Subject.footer);
+				out.println(Subject.header("Instructor Page") + PracticeExam.instructorPage(user, myAssignment) + Subject.footer);
 				break;
 			case "PlacementExam":
-				out.println(Subject.header("ChemVantage Placement Exam") + PlacementExam.instructorPage(user, myAssignment) + Subject.footer);
+				out.println(Subject.header("Instructor Page") + PlacementExam.instructorPage(user, myAssignment) + Subject.footer);
 				break;
 			case "SmartText":
-				out.println(Subject.header("ChemVantage Key Concepts") + SmartText.instructorPage(user, myAssignment) + Subject.footer);
+				out.println(Subject.header("Instructor Page") + SmartText.instructorPage(user, myAssignment) + Subject.footer);
 				break;
 			case "Poll":
-				out.println(Subject.header("Class Poll") + Poll.instructorPage(user,myAssignment) + Subject.footer);
+				out.println(Subject.header("Instructor Page") + Poll.instructorPage(user,myAssignment) + Subject.footer);
 				break;
 			case "VideoQuiz":
-				out.println(Subject.header("Video") + VideoQuiz.instructorPage(user,myAssignment) + Subject.footer);
+				out.println(Subject.header("Instructor Page") + VideoQuiz.instructorPage(user,myAssignment) + Subject.footer);
 				break;
 			case "Sage":
 				out.println(Sage.instructorPage(user,myAssignment));

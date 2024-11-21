@@ -179,7 +179,7 @@ public class Subject {
 		+ "    <meta http-equiv='Pragma' content='no-cache' />\n"
 		+ "    <meta http-equiv='Expires' content='0' />\n"
 		+ "    <link rel='icon' href='images/logo_sq.png'>\n"
-		+ "    <title>ChemVantage</title>\n"
+		+ "    <title>ChemVantage | " + title + "</title>\n"
 		+ "    <!-- Font Family -->\n"
 		+ "    <link href='https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Shantell+Sans:wght@300;400;500;600;700;800&display=swap' rel='stylesheet'/>\n"
 		+ "    <!-- Main Style Sheet -->\n"
@@ -194,7 +194,7 @@ public class Subject {
 		*/
 		+ "</head>"
 		+ "<body>\n"
-		+ "<a href=#main class='skip-to-main-content-link'>Skip to main content</a>\n"
+		+ "<a role='button' href=#main class='skip-to-main-content-link'>Skip to main content</a>\n"
 		+ ((announcement==null || announcement.isEmpty())?"":"<FONT style='color: #EE0000'>" + announcement + "</FONT><br/>\n"
 		+ "<main id='main'>");
 	}
