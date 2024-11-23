@@ -250,7 +250,7 @@ public class Quiz extends HttpServlet {
 					+ "	</ul>\n");
 			
 			buf.append("<div id='timer0' style='color: #EE0000'></div>"
-					+ "	<div id='ctrl0' style='color: #EE0000'><a href=javascript:toggleTimers() >hide timers</a><p></div>");
+					+ "	<div id='ctrl0' style='color: #EE0000'><a role='button' href=javascript:toggleTimers() >hide timers</a><p></div>");
 			
 			debug.append("5");
 			
@@ -303,7 +303,7 @@ public class Quiz extends HttpServlet {
 			buf.append("</OL>\n");
 		
 			buf.append("<div id='timer1' style='color: #EE0000'></div>"
-					+ "	<div id='ctrl1' style='color: #EE0000'><a href=javascript:toggleTimers() >hide timers</a><p></div>");
+					+ "	<div id='ctrl1' style='color: #EE0000'><a role='button' href=javascript:toggleTimers() >hide timers</a><p></div>");
 			
 			buf.append("<input type=submit class='btn' value='Grade This Quiz'/>"
 					+ "</FORM>");
@@ -416,9 +416,9 @@ public class Quiz extends HttpServlet {
 				}
 			} catch (Exception e) {}
 
-			if (timeExpired) buf.append("<h4>Your score on this quiz is 0 points because it was submitted after the allowed time of " + timeAllowed/60 + " minutes.</h4>");
-			else buf.append("<h4>Your score on this quiz is " + studentScore 
-					+ " point" + (studentScore==1?"":"s") + " out of a possible " + qt.possibleScore + " points.</h4>");
+			if (timeExpired) buf.append("<b>Your score on this quiz is 0 points because it was submitted after the allowed time of " + timeAllowed/60 + " minutes.</b>");
+			else buf.append("<b>Your score on this quiz is " + studentScore 
+					+ " point" + (studentScore==1?"":"s") + " out of a possible " + qt.possibleScore + " points.</b>");
 
 			if (studentScore == qt.possibleScore && !timeExpired) {
 				buf.append("<H2>Congratulations on a perfect score! Good job.</H2>");
@@ -446,7 +446,7 @@ public class Quiz extends HttpServlet {
 					}
 					
 					if (nAnswersEligible > 0) {
-						buf.append("<a id=wrongAnsLink class='btn' href=# onClick=document.getElementById('wrongAnsLink').style='display:none';document.getElementById('wrongAnsDiv').style='display:inline'>show me</a> ");
+						buf.append("<a id=wrongAnsLink role='button' class='btn' href=# onClick=document.getElementById('wrongAnsLink').style='display:none';document.getElementById('wrongAnsDiv').style='display:inline'>show me</a> ");
 						buf.append("<div id=wrongAnsDiv style='display:none'>");
 						buf.append("The correct answer" + (nAnswersEligible>1?"s ":" ") + (nAnswersEligible<wrongAnswers?"to " + nAnswersEligible + " of these ":"") + (nAnswersEligible==1?"is":"are") + " shown below. ");
 						if (nAnswersEligible < wrongAnswers) buf.append("The more questions you answer correctly, the more correct answers to missed questions will be displayed.");
@@ -489,7 +489,7 @@ public class Quiz extends HttpServlet {
 
 		for (int iStar=1;iStar<6;iStar++) {
 			buf.append("<img src='images/star1.gif' id='" + iStar + "' "
-					+ "style='width:30px; height:30px;' "
+					+ "style='width:30px; height:30px;' alt='rating star " + iStar + "'"
 					+ "onmouseover=showStars(this.id); onClick=setStars(this.id,'" + sig + "'); onmouseout=showStars(0); />");
 		}
 		buf.append("<span id=sliderspan style='opacity:0'>"

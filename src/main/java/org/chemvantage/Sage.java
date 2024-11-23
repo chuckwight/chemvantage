@@ -276,8 +276,8 @@ public class Sage extends HttpServlet {
 		buf.append("</div>");
 		buf.append("<div id=helpful>"
 				+ "<span><b>Was this answer helpful?</b></span> " 
-				+ "<a href=#  style='vertical-align:middle' onclick=wasHelpful(true);><img src=/images/thumbs_up.png alt='thumbs up' style='height:30px' /></a>&nbsp;"
-				+ "<a href=#  style='vertical-align:middle' onclick=wasHelpful(false);><img src=/images/thumbs_down.png alt='thumbs down' style='height:30px' /></a>"
+				+ "<a role='button' href=#  style='vertical-align:middle' onclick=wasHelpful(true);><img src=/images/thumbs_up.png alt='thumbs up' style='height:30px' /></a>&nbsp;"
+				+ "<a role='button' href=#  style='vertical-align:middle' onclick=wasHelpful(false);><img src=/images/thumbs_down.png alt='thumbs down' style='height:30px' /></a>"
 				+ "</div><p>");
 		// include some javascript to process the response
 		buf.append("<script>"
@@ -535,8 +535,8 @@ public class Sage extends HttpServlet {
 				
 				buf.append("<div id=helpful>"
 						+ "<span><b>Is this helpful?</b></span> " 
-						+ "<a href=#  style='vertical-align:middle' onclick=wasHelpful(true);><img src=/images/thumbs_up.png alt='thumbs up' style='height:30px' /></a>&nbsp;"
-						+ "<a href=#  style='vertical-align:middle' onclick=wasHelpful(false);><img src=/images/thumbs_down.png alt='thumbs down' style='height:30px' /></a>"
+						+ "<a role='button' href=#  style='vertical-align:middle' onclick=wasHelpful(true);><img src=/images/thumbs_up.png alt='thumbs up' style='height:30px' /></a>&nbsp;"
+						+ "<a role='button' href=#  style='vertical-align:middle' onclick=wasHelpful(false);><img src=/images/thumbs_down.png alt='thumbs down' style='height:30px' /></a>"
 						+ "</div><p>");
 				// include some javascript to process the response
 				buf.append("<script>"
@@ -579,7 +579,7 @@ public class Sage extends HttpServlet {
 					+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
 					+ "<input type=hidden name=UserRequest value='Score This Response' />"
 					+ q.print()
-					+ "<input id='sub" + q.id + "' type=submit class='btn' />"
+					+ "<input role='button' aria-label='submit button' id='sub" + q.id + "' type=submit class='btn' />"
 					+ "</form><p>");
 			
 			// include some javascript to change the submit button
@@ -668,7 +668,7 @@ public class Sage extends HttpServlet {
 					+ "  document.getElementById('shortAnswer').style.display='inline';\n"
 					+ "}\n"
 					+ "</script>\n");
-			showMeLink.append("<a id=link class=btn href=# onclick=showAnswer();>Show Me</a>\n");
+			showMeLink.append("<a id=link class=btn role='button' href=# onclick=showAnswer();>Show Me</a>\n");
 			showMeLink.append("<div id=shortAnswer style='display:none';>\n"
 					+ q.printAllToStudents(studentAnswer)
 					+ " <p>\n"
@@ -765,7 +765,7 @@ public class Sage extends HttpServlet {
 				buf.append("You have mastered the concept: <b>" + conceptMap.get(conceptId).title +"</b>.<p>");
 				if (level_up) buf.append(askAQuestion(user, conceptId, Nonce.generateNonce()));
 			} else if (level_up) {
-				buf.append("<h3>You have moved up to Level " + (score/20 + 1) + ".</h3>"
+				buf.append("<h2>You have moved up to Level " + (score/20 + 1) + ".</h2>"
 						+ "<b>Your current score on this concept is " + score + "%.</b><p>");
 				buf.append(askAQuestion(user,conceptId,Nonce.generateNonce()) + " Otherwise...");
 				// Report the user's score to the LMS

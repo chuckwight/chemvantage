@@ -278,11 +278,11 @@ public class Homework extends HttpServlet {
 	
 		for (int iStar=1;iStar<6;iStar++) {
 			buf.append("<img src='images/star1.gif' id='" + iStar + "' "
-					+ "style='width:30px; height:30px;' "
+					+ "style='width:30px; height:30px;' alt='star " + iStar + " for rating' "
 					+ "onmouseover=showStars(this.id); onClick=setStars(this.id,'" + sig + "'); onmouseout=showStars(0); />");
 		}
 		buf.append("<span id=sliderspan style='opacity:0'>"
-				+ "<input type=range id=slider min=1 max=5 value=3 onfocus=document.getElementById('sliderspan').style='opacity:1';showStars(this.value); oninput=showStars(this.value);>"
+				+ "<input type=range id=slider min=1 max=5 value=3 aria-label='slider for rating ChemVantage' onfocus=document.getElementById('sliderspan').style='opacity:1';showStars(this.value); oninput=showStars(this.value);>"
 				+ "<button onClick=setStars(document.getElementById('slider').value,'" + sig + "');>submit</button>"
 				+ "</span>");
 		buf.append("<p>");
@@ -566,8 +566,7 @@ public class Homework extends HttpServlet {
 				}
 
 				if (solvedQuestions.contains(q.id)) buf.append("<IMG SRC=/images/checkmark.gif ALT='Check mark' align=top>&nbsp;");
-				//else if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) questionBuffer.append("<br/><a href='" + q.learn_more_url + "' target=_blank><img src=/images/learn_more.png alt='learn more here' align=top /><br/>learn</a>&nbsp;");
-
+				
 				buf.append("</div>");
 
 				buf.append("<FORM METHOD=POST ACTION=/Homework onsubmit=waitForScore('" + q.id + "'); >"
@@ -577,7 +576,7 @@ public class Homework extends HttpServlet {
 						+ "<div style='display:table-cell;vertical-align:text-top;padding-right:10px;'><b>" + i + ".</b></div>"
 						+ "<div style='display:table-cell'>" + q.print(workStrings.get(q.id),"",attemptsRemaining) 
 						+ (q.id == hintQuestionId?"Hint:<br>" + q.getHint():"")
-						+ "<INPUT id=sub" + q.id + " TYPE=SUBMIT class='btn' VALUE='Grade This Exercise'><p>"
+						+ "<INPUT id=sub" + q.id + " role='button' aria-label='submit this answer for scoring' TYPE=SUBMIT class='btn' VALUE='Grade This Exercise'><p>"
 						+ "</div></div></FORM>\n");
 			}
 			if (i==0) buf.append("(none)");
@@ -618,7 +617,7 @@ public class Homework extends HttpServlet {
 							+ "<div style='display:table-cell;vertical-align:text-top;padding-right:10px;'><b>" + i + ".</b></div>"
 							+ "<div style='display:table-cell'>" + q.print(workStrings.get(q.id),"",attemptsRemaining) 
 							+ (q.id == hintQuestionId?"Hint:<br>" + q.getHint():"")
-							+ "<INPUT id=sub" + q.id + " TYPE=SUBMIT class='btn' VALUE='Grade This Exercise'><p>"
+							+ "<INPUT id=sub" + q.id + " role='button' TYPE=SUBMIT class='btn' VALUE='Grade This Exercise'><p>"
 							+ "</div></div></FORM>\n");
 				}
 				if (i==0) buf.append("(none)");
@@ -712,9 +711,6 @@ public class Homework extends HttpServlet {
 				buf.append("<span id=timer0 style='color: #EE0000'></span><br/>");
 				buf.append("Please take these few moments to check your work carefully.  You can sometimes find alternate routes to the "
 						+ "same solution, or it may be possible to use your answer to back-calculate the data given in the problem.<br/><br/>");
-				//if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) 
-				//	buf.append("<img src=/images/learn_more.png alt='learn more here' /> You can learn more about this topic at <a href='" 
-				//	+ q.learn_more_url + "' target=_blank>" + q.learn_more_url + "</a><br/><br/>");
 				buf.append("Alternatively, you may wish to "
 						+ "<a href=/Homework?AssignmentId=" + hwa.id
 						+ "&sig=" + user.getTokenSignature() + ">" 
@@ -834,7 +830,7 @@ public class Homework extends HttpServlet {
 				default:
 					buf.append("<div><img id=polly src='/images/parrot.png' alt='Fun parrot character' style='float:left; margin:10px'>"
 							+ "<h2>Congratulations!<h2><h3>You answered the question correctly. <IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom /></h3>"
-						+ (!user.isAnonymous()?"<a id=showLink href=# onClick=document.getElementById('solution').style='display:inline';"
+						+ (!user.isAnonymous()?"<a id=showLink role='button' href=# onClick=document.getElementById('solution').style='display:inline';"
 								+ "document.getElementById('polly').style='display:none';this.style='display:none'>(show me)</a>":"") 
 						+ "</div>");
 				}
@@ -877,7 +873,7 @@ public class Homework extends HttpServlet {
 				} else buf.append("The retry delay for this question is " + retryDelayMinutes + (retryDelayMinutes>1?" minutes. ":" minute. ") + "<br/><br/>");
 			
 				if (user.isInstructor() || user.isTeachingAssistant()) {
-					buf.append("<br/>Instructor: <a href=# onClick=document.getElementById('solution').style='display:inline';this.style='display:none';>show the solution</a><br/><br/>");
+					buf.append("<br/>Instructor: <a role='button' href=# onClick=document.getElementById('solution').style='display:inline';this.style='display:none';>show the solution</a><br/><br/>");
 				} else if (!user.isAnonymous() && user.isEligibleForHints(q.id)) {
 					buf.append("<br/><form method=post action=/Help>"
 							+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
@@ -928,7 +924,7 @@ public class Homework extends HttpServlet {
 				}
 
 				if (q.learn_more_url != null && !q.learn_more_url.isEmpty()) 
-					buf.append("<img src=/images/learn_more.png alt='learn more here' /> You can learn more about this topic at <a href='" + q.learn_more_url + "' target=_blank>" + q.learn_more_url + "</a><br/><br/>");
+					buf.append("<img src=/images/learn_more.png alt='learn more here' /> You can learn more about this topic at <a aria-label='Opens in a new tab' href='" + q.learn_more_url + "' target=_blank>" + q.learn_more_url + "</a><br/><br/>");
 
 				// if the user response was correct, seek five-star feedback:
 				if (studentScore > 0) buf.append(fiveStars(user.getTokenSignature()));

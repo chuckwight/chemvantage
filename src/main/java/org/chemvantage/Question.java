@@ -321,7 +321,7 @@ public class Question implements Serializable, Cloneable {
 			buf.append("<label for=" + this.id + ">" + text + "</label>");
 			buf.append("<br/>");
 			buf.append("<span style='color:#EE0000;font-size: small;'>Enter the correct word or phrase:</span><br/>");
-			buf.append("<input id=" + this.id + " type=text name=" + this.id + " value='" + quot2html(studentAnswer) + "' placeholder='" + placeholder + "' />");
+			buf.append("<input id=" + this.id + " type=text aria-label='student answer' name=" + this.id + " value='" + quot2html(studentAnswer) + "' placeholder='" + placeholder + "' />");
 			buf.append("&nbsp;" + tag + "<br/><br/>");
 			break;
 		case 5: // Numeric Answer
@@ -329,18 +329,17 @@ public class Question implements Serializable, Cloneable {
 			buf.append("<br/>");
 			buf.append("<div id=showWork" + this.id + " style='display:none'>"
 					+ "<label>Show your work:<br/><TEXTAREA NAME=ShowWork" + this.id + " ROWS=5 COLS=50 WRAP=SOFT "
-					+ "onkeyup=this.value=this.value.substring(0,500); placeholder='Show your work here'>" + (showWork==null?"":showWork) + "</TEXTAREA>"
+					+ "maxlength=500 placeholder='Show your work here' aria-label='show your work here'>" + (showWork==null?"":showWork) + "</TEXTAREA>"
 					+ "</label><br/></div>");
-			//buf.append("<label>");
 			switch (getNumericItemType()) {
-			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact value. <a href=# onclick=\"alert('Your answer must have exactly the correct value. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
-			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact value. <a role='button' href=# onclick=\"alert('Your answer must have exactly the correct value. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 			case 2: int sf = (int)Math.ceil(-Math.log10(requiredPrecision/100.))+1;
-				buf.append("<span style='color:#EE0000;font-size: small;'>Include at least " + sf + " significant figures in your answer. <a href=# onclick=\"alert('To be scored correct, your answer must agree with the correct answer to at least " + sf + " significant figures. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
-			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+				buf.append("<span style='color:#EE0000;font-size: small;'>Include at least " + sf + " significant figures in your answer. <a role='button' href=# onclick=\"alert('To be scored correct, your answer must agree with the correct answer to at least " + sf + " significant figures. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 			default:
 			}
-			buf.append("<label><input size=25 type=text name=" + this.id + " id=answer" + this.id + " value='" + studentAnswer + "' placeholder='" + placeholder + "' onFocus=showWorkBox('" + this.id + "'); />");
+			buf.append("<label><input aria-label='student answer' size=25 type=text name=" + this.id + " id=answer" + this.id + " value='" + studentAnswer + "' placeholder='" + placeholder + "' onFocus=showWorkBox('" + this.id + "'); />");
 			buf.append("&nbsp;" + parseString(tag) + "</label><br/><br/>");
 			break;        
 		case 6: // FIVE_STAR rating
@@ -348,7 +347,7 @@ public class Question implements Serializable, Cloneable {
 			buf.append("<br/>");
 			buf.append("<span id='vote" + this.id + "' style='color:#990000;font-size:small;'>(click a star):</span><br/>");
 			for (int i=1;i<6;i++) {
-				buf.append("<img src='images/star1.gif' id='star" + i + String.valueOf(this.id) + "' style='width:30px; height:30px;' alt='star' "        // properties
+				buf.append("<img src='images/star1.gif' id='star" + i + String.valueOf(this.id) + "' style='width:30px; height:30px;' alt='star " + i + " for rating' "        // properties
 						+ "onmouseover=showStars" + this.id + "(" + i + ") onmouseout=showStars" + this.id + "(0) onclick=showStars" + this.id + "(" + i + ",true) />" ); // mouse actions
 			}
 			buf.append("<input id=" + this.id + " type=hidden name=" + this.id + " />");
@@ -374,7 +373,8 @@ public class Question implements Serializable, Cloneable {
 			buf.append(text);
 			buf.append("<br/>");
 			buf.append("<span style='color:#990000;font-size:small;'>(800 characters max):</span><br/>");
-			buf.append("<textarea id=" + this.id + " name=" + this.id + " rows=5 cols=60 wrap=soft placeholder='Enter your answer here' maxlength=800 >" + studentAnswer + "</textarea><br>");
+			buf.append("<textarea id=" + this.id + " aria-label='enter your essay here' name=" + this.id 
+					+ " rows=5 cols=60 wrap=soft placeholder='Enter your answer here' maxlength=800 >" + studentAnswer + "</textarea><br>");
 			break;
 		}
 		return buf.toString();
@@ -443,11 +443,11 @@ public class Question implements Serializable, Cloneable {
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br/>");
 			switch (getNumericItemType()) {
-			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact value. <a href=# onclick=\"alert('Your answer must have exactly the correct value. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
-			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact value. <a role='button' href=# onclick=\"alert('Your answer must have exactly the correct value. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 			case 2: int sf = (int)Math.ceil(-Math.log10(requiredPrecision/100.))+1;
-				buf.append("<span style='color:#EE0000;font-size: small;'>Include at least " + sf + " significant figures in your answer. <a href=# onclick=\"alert('To be scored correct, your answer must agree with the correct answer to at least " + sf + " significant figures. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
-			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+				buf.append("<span style='color:#EE0000;font-size: small;'>Include at least " + sf + " significant figures in your answer. <a role='button' href=# onclick=\"alert('To be scored correct, your answer must agree with the correct answer to at least " + sf + " significant figures. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 			default:
 			}			
 			buf.append("<span style='border: 1px solid black'>"
@@ -559,11 +559,11 @@ public class Question implements Serializable, Cloneable {
 		case 5: // Numeric Answer
 			buf.append(parseString(text) + "<br/>");
 			switch (getNumericItemType()) {
-			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact value. <a href=# onclick=\"alert('Your answer must have exactly the correct value. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
-			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+			case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact value. <a role='button' href=# onclick=\"alert('Your answer must have exactly the correct value. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+			case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 			case 2: int sf = (int)Math.ceil(-Math.log10(requiredPrecision/100.))+1;
-				buf.append("<span style='color:#EE0000;font-size: small;'>Include at least " + sf + " significant figures in your answer. <a href=# onclick=\"alert('To be scored correct, your answer must agree with the correct answer to at least " + sf + " significant figures. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
-			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+				buf.append("<span style='color:#EE0000;font-size: small;'>Include at least " + sf + " significant figures in your answer. <a role='button' href=# onclick=\"alert('To be scored correct, your answer must agree with the correct answer to at least " + sf + " significant figures. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+			case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 			default:
 			}			
 			buf.append("<span style='border: 1px solid black'>"
@@ -609,7 +609,7 @@ public class Question implements Serializable, Cloneable {
 			} catch (Exception e) {}
 			buf.append("<div id='feedback" + this.id + "'>");
 			buf.append("<FORM id='suggest" + this.id + "' >"
-					+ "<INPUT TYPE=BUTTON VALUE='Report a problem with this question' "
+					+ "<INPUT role='button' aria-label='Report a problem with this question' TYPE=BUTTON VALUE='Report a problem with this question' "
 					+ "onClick=\"javascript:getElementById('form" + this.id + "').style.display='';this.style.display='none'\" />"
 					+ "<div id='form" + this.id + "' style='display: none'>");
 
@@ -995,11 +995,11 @@ public class Question implements Serializable, Cloneable {
 						+ amp2html(text) + "</TEXTAREA><br/>");
 				buf.append("<FONT SIZE=-2>Significant figures: <input size=5 name=SignificantFigures value='" + significantFigures + "'/> Required precision: <input size=5 name=RequiredPrecision value='" + requiredPrecision + "'/> (set to zero to require exact answer)</FONT><br/>");
 				switch (getNumericItemType()) {
-				case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact value. <a href=# onclick=\"alert('Your answer must have exactly the correct value. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
-				case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+				case 0: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the exact value. <a role='button' href=# onclick=\"alert('Your answer must have exactly the correct value. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+				case 1: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 				case 2: int sf = (int)Math.ceil(-Math.log10(requiredPrecision/100.))+1;
-					buf.append("<span style='color:#EE0000;font-size: small;'>Include at least " + sf + " significant figures in your answer. <a href=# onclick=\"alert('To be scored correct, your answer must agree with the correct answer to at least " + sf + " significant figures. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
-				case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+					buf.append("<span style='color:#EE0000;font-size: small;'>Include at least " + sf + " significant figures in your answer. <a role='button' href=# onclick=\"alert('To be scored correct, your answer must agree with the correct answer to at least " + sf + " significant figures. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
+				case 3: buf.append("<span style='color:#EE0000;font-size: small;'>Enter the value with the appropriate number of significant figures. <a role='button' href=# onclick=\"alert('Use the information in the problem to determine the correct number of sig figs in your answer. You may use scientific E notation. Example: enter 3.56E-12 to represent the number 3.56\u00D710\u207B\u00B9\u00B2');return false;\">&#9432;</a></span><br/>"); break;
 				default:
 				}			
 				buf.append("Correct answer:");

@@ -348,7 +348,7 @@ public class PracticeExam extends HttpServlet {
 			buf.append("\n<FORM NAME=PracticeExamForm METHOD=POST ACTION=/PracticeExam "
 					+ "onSubmit=\"return confirm('Submit this exam for grading now. Are you sure?')\">");
 
-			buf.append("<div id='timer0' style='color:#EE0000'></div><div id=ctrl0 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
+			buf.append("<div id='timer0' style='color:#EE0000'></div><div id=ctrl0 style='color:red;'><a role='button' href=javascript:toggleTimers()>hide timers</a><p></div>");
 			buf.append("\n<input type=submit class='btn' value='Grade This Practice Exam'><p>");
 
 			buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "'>");
@@ -420,7 +420,7 @@ public class PracticeExam extends HttpServlet {
 			buf.append("\n<input type=submit class='btn' value='Grade This Practice Exam'>");
 			buf.append("\n</form><br/>");
 			
-			buf.append("<div id='timer1' style='color:#EE0000'></div><div id=ctrl1 style='font-size:50%;color:red;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
+			buf.append("<div id='timer1' style='color:#EE0000'></div><div id=ctrl1 style='color:red;'><a role='button' href=javascript:toggleTimers()>hide timers</a><p></div>");
 			long endMillis = pt.downloaded.getTime() + timeAllowed*1000L;
 			buf.append("<script>"
 					+ "startTimers(" + endMillis + ");"

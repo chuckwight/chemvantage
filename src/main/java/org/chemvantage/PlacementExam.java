@@ -392,7 +392,7 @@ public class PlacementExam extends HttpServlet {
 			buf.append("\n<FORM NAME=PlacementExamForm METHOD=POST ACTION=/PlacementExam "
 					+ "onSubmit=\"return confirm('Submit this placement exam for grading now. Are you sure?')\">");
 
-			buf.append("<div id='timer0' style='color: #EE0000'></div><div id=ctrl0 style='font-size:50%;color:#EE0000;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
+			buf.append("<div id='timer0' style='color: #EE0000'></div><div id=ctrl0 style='color:#EE0000;'><a role='button' href=javascript:toggleTimers()>hide timers</a><p></div>");
 			buf.append("\n<input type=submit class='btn' value='Grade This Placement Exam'><p>");
 
 			buf.append("<input type=hidden name=sig value='" + user.getTokenSignature() + "'>");
@@ -443,7 +443,7 @@ public class PlacementExam extends HttpServlet {
 
 			buf.append("\n<input type=hidden name='ExamId' value=" + pt.id + ">");
 			buf.append("\n<input type=hidden name='UserRequest' value='GradeExam'>");
-			buf.append("<div id='timer1' style='color: #EE0000'></div><div id=ctrl1 style='font-size:50%;color:#EE0000;'><a href=javascript:toggleTimers()>hide timers</a><p></div>");
+			buf.append("<div id='timer1' style='color: #EE0000'></div><div id=ctrl1 style='color:#EE0000;'><a role='button' href=javascript:toggleTimers()>hide timers</a><p></div>");
 			buf.append("\n<input type=submit class='btn' value='Grade This Placement Exam'>");
 			buf.append("\n</form>");
 			

@@ -103,8 +103,8 @@ public class SmartText extends HttpServlet {
 	   		+ "Chapter " + c.chapterNumber + ": " + c.title + "<br/>");
 	   buf.append("<h2>Reading Options</h2>");
 	   buf.append("<ul>");
-	   if (c.url != null) buf.append("<li><a href='" + c.url + "' target=_blank>Read this chapter online</a></li>");
-	   buf.append("<li><a href='" + t.printCopyUrl + "' target=_blank>Order a print copy of this book</a></li>");
+	   if (c.url != null) buf.append("<li><a aria-label='Opens in a new tab' href='" + c.url + "' target=_blank>Read this chapter online</a></li>");
+	   buf.append("<li><a aria-label='Opens in a new tab' href='" + t.printCopyUrl + "' target=_blank>Order a print copy of this book</a></li>");
 	   buf.append("</ul>");
 	   buf.append("</div><div style='display:table-cell;vertical-align:top;'>");
 	   buf.append("<img src='" + t.imgUrl + "' alt='Textbook cover art'>");
@@ -215,7 +215,7 @@ public class SmartText extends HttpServlet {
 				   + "<input type=hidden name=Parameter value='" + p + "' />"
 				   + "<input type=hidden name=UserRequest value='GradeQuestion' />"
 				   + q.print()
-				   + "<input type=submit class='btn' onclick=this.style.opacity=0.2; />"
+				   + "<input aria-label='submit the answer for scoring' type=submit class='btn' onclick=this.style.opacity=0.2; />"
 				   + "</form><br/>");
 		   st.armed = true;
 		   ofy().save().entity(st).now();
@@ -303,7 +303,7 @@ public class SmartText extends HttpServlet {
 			   		+ "<input type=hidden name=UserRequest value=PrintQuestion />"
 			   		+ "<input type=hidden name=STTransactionId value=" + st.id + " />"
 			   		+ "<input type=hidden name=sig value=" + user.getTokenSignature() + " />"
-			   		+ "<button id=btn type=submit class='btn' "
+			   		+ "<button id=btn aria-label='continue to th3e next question' type=submit class='btn' "
 			   		+ "onclick=this.style.opacity=0.2;>Continue to the Next Question</button></form><br/>";
 
 		   if (score==possibleScore) { // finished

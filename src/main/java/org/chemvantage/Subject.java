@@ -186,15 +186,10 @@ public class Subject {
 		+ "    <link rel='stylesheet' href='/css/style-backend.css'>\n"
 		+ "    <!-- Main JavaScript file -->\n"
 		+ "    <script src='/js/script-backend.js'></script>\n"
-		/*
-		+ ("Sage".equals(title)?
-				"<script src='https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6'></script>"
-				//+ "<script id='MathJax-script' async src='https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js'></script>"
-				:"")
-		*/
 		+ "</head>"
 		+ "<body>\n"
 		+ "<a role='button' href=#main class='skip-to-main-content-link'>Skip to main content</a>\n"
+		+ "<a role='button' href=#footer class='skip-to-main-content-link'>Skip to page footer</a>\n"
 		+ ((announcement==null || announcement.isEmpty())?"":"<FONT style='color: #EE0000'>" + announcement + "</FONT><br/>\n"
 		+ "<main id='main'>");
 	}
@@ -239,12 +234,11 @@ public class Subject {
 	static String banner = "<div style='font-size:2em;font-weight:bold;color:#000080;'><img src='/images/CVLogo_thumb.png' alt='ChemVantage Logo' style='vertical-align:middle;width:60px;'> ChemVantage</div>";
 			
 	public static String footer = "</main>"
-			+ "<footer><hr/>"
+			+ "<footer id=footer><hr/>"
 			+ "<a style='text-decoration:none;color:#000080;font-weight:bold' href=/index.html><img src=/images/logo_sq.png alt='ChemVantage logo' style='vertical-align:middle;width:30px;' /> ChemVantage</a> | "
 			+ "<a href=/terms_and_conditions.html>Terms and Conditions of Use</a> | "
 			+ "<a href=/privacy_policy.html>Privacy Policy</a> | "
 			+ "<a href=/copyright.html>Copyright</a></footer>"
-			+ "<script> (function(){ var s = document.createElement('script'); var h = document.querySelector('head') || document.body; s.src = 'https://acsbapp.com/apps/app/dist/js/app.js'; s.async = true; s.onload = function(){ acsbJS.init({ statementLink : '', footerHtml : '', hideMobile : false, hideTrigger : false, disableBgProcess : false, language : 'en', position : 'right', leadColor : '#146FF8', triggerColor : '#146FF8', triggerRadius : '50%', triggerPositionX : 'right', triggerPositionY : 'bottom', triggerIcon : 'people', triggerSize : 'bottom', triggerOffsetX : 20, triggerOffsetY : 20, mobile : { triggerSize : 'small', triggerPositionX : 'right', triggerPositionY : 'bottom', triggerOffsetX : 10, triggerOffsetY : 10, triggerRadius : '20' } }); }; h.appendChild(s); })(); </script>"
 			+ "</body>\n</html>";
 
 }
