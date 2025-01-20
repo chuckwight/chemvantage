@@ -213,7 +213,7 @@ public class Subject {
 		
 		switch (customJSFile) {
 		case "checkout":
-			buf.append("<script src='https://www.paypal.com/sdk/js?client-id=" + getPayPalClientId() + "&enable-funding=venmo&currency=USD&intent=capture'></script>");
+			buf.append("<script src='https://www.paypal.com/sdk/js?client-id=" + getPayPalClientId() + "&enable-funding=venmo&disable-funding=paylater'></script>");
 			buf.append("<script src='/js/checkout.js'></script>");
 			break;
 		}
