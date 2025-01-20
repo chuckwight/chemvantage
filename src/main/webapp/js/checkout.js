@@ -65,28 +65,10 @@
   function startCheckout() {
     nmonths = document.getElementById('nmonths').value;
     let value = price * (nmonths - Math.floor(nmonths/3));
-    selectPaymentMethod.innerHTML = "<h2>" + nmonths + " - month ChemVantage subscription: $" + value + ".00 USD" + "</h2>";
+    selectPaymentMethod.innerHTML = "<h2>" + nmonths + "-month ChemVantage subscription: $" + value + ".00 USD" + "</h2>";
     payment_div.style = "display: inline";
   }
- /*
-  ********** CHECKPOINT ***************
- */
- /* 
-  let url_to_head = (url) => {
-    return new Promise(function(resolve,reject) {
-      var script = document.createElement('script');
-      script.src = url;
-      script.onload = function() {
-        resolve();
-      };
-      script.onerror = function() {
-        reject('Error loading script.');
-      };
-      document.head.appendChild(script);
-    });
-  }
- */
-  
+   
   window.paypal.Buttons({
       style: {
         shape: 'rect',
@@ -129,7 +111,7 @@
           selectPaymentMethod.innerHTML = "Thank you for your purchase: "
             + order_details.purchase_units[0].payments["captures"][0].amount.value + " "
             + order_details.purchase_units[0].payments["captures"][0].amount.currency_code + "<br/>"
-            + "Your " + nmonths + " - month ChemVantage subscription is now active and expires on " + order_details.expires + ".<br/>"
+            + "Your " + nmonths + "-month ChemVantage subscription is now active and expires on " + order_details.expires + ".<br/>"
             + "OrderId: " + order_id + "<br/>"
             + "Please print a copy of this page for your records.";
           

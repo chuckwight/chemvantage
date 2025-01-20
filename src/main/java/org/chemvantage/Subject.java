@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.text.DecimalFormat;
+import java.util.Random;
 
 import com.google.cloud.ServiceOptions;
 import com.googlecode.objectify.NotFoundException;
@@ -214,7 +215,7 @@ public class Subject {
 		switch (customJSFile) {
 		case "checkout":
 			buf.append("<script src='https://www.paypal.com/sdk/js?client-id=" + getPayPalClientId() + "&enable-funding=venmo&disable-funding=paylater'></script>");
-			buf.append("<script src='/js/checkout.js'></script>");
+			buf.append("<script src='/js/checkout.js?r=" + new Random().nextInt() + "'></script>");
 			break;
 		}
 		

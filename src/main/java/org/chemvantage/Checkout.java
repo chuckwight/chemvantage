@@ -148,7 +148,7 @@ public class Checkout extends HttpServlet {
 		buf.append("<div id=select_payment_method style='display:none'>\n");
 
 		buf.append( "If you have a subscription voucher, please enter the code here: "
-				+ "<input id=voucher_code type=text size=10 />"
+				+ "<input id=voucher_code type=text size=10 />&nbsp;"
 				+ "<button class=btn onclick=redeemVoucher('" + user.getTokenSignature() + "','" + d.getPlatformDeploymentId() + "')>&nbsp;Redeem</button><br/>");
 		
 		buf.append("<hr>Otherwise, please select the desired number of months you wish to purchase:<br/>"
