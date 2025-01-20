@@ -307,9 +307,12 @@ public class Checkout extends HttpServlet {
 		JsonObject resp = JsonParser.parseReader(reader).getAsJsonObject();
 		reader.close();
 		
-		// Create a PremiumUser
-		PremiumUser pu = new PremiumUser(user.getHashedId(), order.nMonths, order.value, deployment.getOrganization(),order.id);
-		resp.addProperty("expires", pu.exp.toString());
+		order.status = resp.get("status").getAsString();  // update order status
+		if (order.status.equals("COMPLETED")) {  // create new PremiumUser
+			PremiumUser pu = new PremiumUser(user.getHashedId(), order.nMonths, order.value, deployment.getOrganization(),order.id);
+			resp.addProperty("expires", pu.exp.toString());
+		}
+		ofy().save().entity(order);
 		
 		return resp;
 	}
@@ -326,7 +329,7 @@ class PayPalOrder {
 			int value;
 			String hashedId;
 			String platform_deployment_id;
-			String status = "created";
+			String status = "CREATED";
 			
 	PayPalOrder() {}
 	PayPalOrder(String id, Date created, String order_data, int nMonths, int value, User user, String platform_deployment_id, String request_id) {
