@@ -31,6 +31,8 @@ import com.googlecode.objectify.annotation.Id;
 @Entity
 public class Subject {
 	@Id Long id;
+	private static Subject s;
+	
 	private String title;
 	private String HMAC256Secret;
 	private String reCaptchaSecret;
@@ -41,10 +43,11 @@ public class Subject {
 	private String sendGridAPIKey;
 	private int nStarReports;
 	private double avgStars;
-	private static Subject s;
 	private String projectId;
 	private String serverUrl;
-	private String gptModel = "ChangeMe";
+	private String gptModel;
+	private String payPalClientId;
+	private String payPalClientSecret;
 	
 	private Subject() {}
 	
@@ -62,6 +65,8 @@ public class Subject {
 			s.openai_key = "changeMe";
 			s.gptModel = "changeMe";
 			s.sendGridAPIKey = "changeMe";
+			s.payPalClientId = "changeMe";
+			s.payPalClientSecret = "changeMe";
 			s.projectId = ServiceOptions.getDefaultProjectId();
 			s.serverUrl = "https://" + (s.projectId.equals("dev-vantage-hrd")?"dev-vantage-hrd.appspot.com":"www.chemvantage.org");
 			ofy().save().entity(s);
@@ -88,7 +93,7 @@ public class Subject {
 		return s.reCaptchaSecret;
 	}
 	
-	public static String getReCaptchaSiteKey() {
+	static String getReCaptchaSiteKey() {
 		if (s==null) refresh();
 		return s.reCaptchaSiteKey;
 	}
@@ -98,7 +103,7 @@ public class Subject {
 		return s.salt; 
 	}
 	
-	public static String getAnnouncement() { 
+	static String getAnnouncement() { 
 		if (s==null) refresh();
 		return s.announcement; 
 	}
@@ -106,6 +111,16 @@ public class Subject {
 	static String getSendGridKey() {
 		if (s==null) refresh();
 		return s.sendGridAPIKey;
+	}
+	
+	static String getPayPalClientId() {
+		if (s==null) refresh();
+		return s.payPalClientId;
+	}
+	
+	static String getPayPalClientSecret() {
+		if (s==null) refresh();
+		return s.payPalClientSecret;
 	}
 	
 	static int getNStarReports() { 
@@ -147,7 +162,7 @@ public class Subject {
         }
 	}
 	
-	static public String getGPTModel() {
+	static String getGPTModel() {
 		if (s==null) refresh(); 
 		return s.gptModel;
 	}
@@ -167,9 +182,18 @@ public class Subject {
 		return s.serverUrl;
 	}
 	
-	public static String header(String title) {
+	public static String header() {
+		return header("ChemVantage");
+	}
+
+	static String header(String title) {
+		return header(title, "");
+	}
+	
+	static String header(String title, String customJSFile) {
+		StringBuffer buf = new StringBuffer();
 		String announcement = Subject.getAnnouncement();
-		return "<!DOCTYPE html>\n"
+		buf.append("<!DOCTYPE html>\n"
 		+ "<html lang='en'>\n"
 		+ "<head>\n"
 		+ "<head>\n"
@@ -185,19 +209,25 @@ public class Subject {
 		+ "    <!-- Main Style Sheet -->\n"
 		+ "    <link rel='stylesheet' href='/css/style-backend.css'>\n"
 		+ "    <!-- Main JavaScript file -->\n"
-		+ "    <script src='/js/script-backend.js'></script>\n"
-		+ "</head>"
+		+ "    <script src='/js/script-backend.js'></script>\n");
+		
+		switch (customJSFile) {
+		case "checkout":
+			buf.append("<script src='https://www.paypal.com/sdk/js?client-id=" + getPayPalClientId() + "&enable-funding=venmo&currency=USD&intent=capture'></script>");
+			buf.append("<script src='/js/checkout.js'></script>");
+			break;
+		}
+		
+		buf.append("</head>"
 		+ "<body>\n"
 		+ "<a role='button' href=#main class='skip-to-main-content-link'>Skip to main content</a>\n"
 		+ "<a role='button' href=#footer class='skip-to-main-content-link'>Skip to page footer</a>\n"
 		+ ((announcement==null || announcement.isEmpty())?"":"<FONT style='color: #EE0000'>" + announcement + "</FONT><br/>\n"
-		+ "<main id='main'>");
+		+ "<main id='main'>"));
+		
+		return buf.toString();
 	}
 	
-	public static String header() {
-		return header("ChemVantage");
-	}
-
 	public static String getHeader(User user) {
 		String announcement = Subject.getAnnouncement();
 		String sig = user.getTokenSignature();

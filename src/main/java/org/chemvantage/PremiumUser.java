@@ -10,16 +10,17 @@ import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 
 @Entity
-public class PremiumUser {
+class PremiumUser {
 	@Id 	String 	hashedId;
-	@Index	public Date exp;
+	@Index	Date exp;
 	@Index	Date start;
 	@Index	int paid;
 			String org;
+			String order_id;
 	
 	public PremiumUser() {}
 	
-	public PremiumUser(String id, int months, int paid, String org) {
+	public PremiumUser(String id, int months, int paid, String org, String order_id) {
 		hashedId = id;
 		start = new Date();
 		Calendar calendar = Calendar.getInstance();
@@ -28,6 +29,7 @@ public class PremiumUser {
         exp = calendar.getTime();
         this.paid = paid;
 		this.org = org;
+		this.order_id = order_id;
 		ofy().save().entity(this).now();
 	}
 }

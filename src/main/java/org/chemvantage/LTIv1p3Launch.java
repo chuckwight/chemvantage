@@ -226,10 +226,10 @@ public class LTIv1p3Launch extends HttpServlet {
 				debug.append("t1");
 				if (d.getNLicensesRemaining()>0) {
 					d.nLicensesRemaining--;
-					new PremiumUser(user.getHashedId(),12,0,d.organization);
+					new PremiumUser(user.getHashedId(),12,0,d.organization,"allocated");
 					isPremiumUser = true;
 				} else if (d.price == 0) {
-					new PremiumUser(user.getHashedId(),12,0,d.organization);
+					new PremiumUser(user.getHashedId(),12,0,d.organization,"comped");
 					isPremiumUser = true;
 				}
 			}
