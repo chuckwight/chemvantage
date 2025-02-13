@@ -281,6 +281,10 @@ public class Sage extends HttpServlet {
 				+ "</div><p>");
 		// include some javascript to process the response
 		buf.append("<script>"
+				+ "var mathjax = document.createElement('script');\n"
+				+ "mathjax.type = 'text/javascript';\n"
+				+ "mathjax.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';\n"
+				+ "document.head.appendChild(mathjax);\n"
 				+ "function wasHelpful(response) {"
 				+ " document.getElementById('helpful').innerHTML='<br/><b>Thank you for the feedback.</b>';"
 				+ " setTimeout(() => { window.location.replace('/Sage?sig=" + user.getTokenSignature() + "&ConceptId=" + conceptId + (score==100?"&UserRequest=menu":"") + "'); }, 1000);"  // pause, then continue
