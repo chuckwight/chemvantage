@@ -514,7 +514,7 @@ public class LTIRegistration extends HttpServlet {
 			
 		Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
 		d.status = "pending";
-		d.price = Integer.parseInt(price);
+		d.price = Subject.getProjectId().equals("dev-vantage-hrd")?0:Integer.parseInt(price);
 		
 		Deployment prior = Deployment.getInstance(d.platform_deployment_id);
 		
