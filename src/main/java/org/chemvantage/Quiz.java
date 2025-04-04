@@ -358,7 +358,7 @@ public class Quiz extends HttpServlet {
 
 			buf.append("<h1>Quiz Results</h1><h2>" + qa.title + "</h2>");
 			
-			buf.append(df.format(now));
+			buf.append(df.format(now) + "<br/>");
 			
 			// Create a StringBuffer to contain correct answers to questions answered correctly
 			List<String> missedQuestions = new ArrayList<String>();	 // questions with correct answers
@@ -416,9 +416,9 @@ public class Quiz extends HttpServlet {
 				}
 			} catch (Exception e) {}
 
-			if (timeExpired) buf.append("<b>Your score on this quiz is 0 points because it was submitted after the allowed time of " + timeAllowed/60 + " minutes.</b>");
+			if (timeExpired) buf.append("<b>Your score on this quiz is 0 points because it was submitted after the allowed time of " + timeAllowed/60 + " minutes.</b><br/>");
 			else buf.append("<b>Your score on this quiz is " + studentScore 
-					+ " point" + (studentScore==1?"":"s") + " out of a possible " + qt.possibleScore + " points.</b>");
+					+ " point" + (studentScore==1?"":"s") + " out of a possible " + qt.possibleScore + " points.</b><br/>");
 
 			if (studentScore == qt.possibleScore && !timeExpired) {
 				buf.append("<H2>Congratulations on a perfect score! Good job.</H2>");
