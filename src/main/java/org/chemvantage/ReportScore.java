@@ -88,7 +88,7 @@ public class ReportScore extends HttpServlet {
 				if (reply.contains("Success") || reply.contains("422")) out.println(reply);
 				else {
 					User user = ofy().load().type(User.class).filter("hashedId",Subject.hashId(userId)).first().now();
-					if (user.isInstructor()) return; // no harm; LMS refused to post instructor score
+					if (user!=null && user.isInstructor()) return; // no harm; LMS refused to post instructor score
 					debug.append("User " + userId + " earned a score of " + s.getPctScore() + "% on assignment "
 							+ a.id + "; however, the score could not be posted to the LMS grade book. "
 							+ "The response from the " + a.domain + " LMS was: " + reply);
