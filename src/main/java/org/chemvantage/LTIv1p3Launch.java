@@ -887,11 +887,11 @@ public class LTIv1p3Launch extends HttpServlet {
 						+ "<input type=hidden name=sig value='" + user.getTokenSignature() + "' />"
 						+ "<input type=hidden name=platform_deployment_id value='" + d.platform_deployment_id + "' />");
 				buf.append("Please tell us how to contact you if there is ever a problem with your account:<br/>"
-						+ "<label>Your Name: " + (d.contact_name==null?"<input type=text name=contact_name size=40 />":d.contact_name) + "</label><br/>"
-						+ "<label>Your Email: " + (d.email==null?"<input type=text name=contact_email size=40 />":d.email) + "</label><br/><br/>"
+						+ "<label>Your Name: " + (d.contact_name==null?"<input type=text name=contact_name size=40 required />":d.contact_name) + "</label><br/>"
+						+ "<label>Your Email: " + (d.email==null?"<input type=text name=contact_email size=40 required />":d.email) + "</label><br/><br/>"
 						+ "Please tell us about your school, business or organization:<br/>"
-						+ "<label>Org Name: " + (d.organization==null?"<input type=text name=org_name size=40 />":d.organization) + "</label><br/>"
-						+ "<label>Home Page: " + (d.org_url==null?"<input type=text name=org_url placeholder='https://myschool.edu' size=40 />":d.org_url) + "</label><br/><br/>");
+						+ "<label>Org Name: " + (d.organization==null?"<input type=text name=org_name size=40 required />":d.organization) + "</label><br/>"
+						+ "<label>Home Page: " + (d.org_url==null?"<input type=text name=org_url placeholder='https://myschool.edu' size=40 required />":d.org_url) + "</label><br/><br/>");
 				buf.append("Pricing:"
 						+ "<ul>"
 						+ "<li>LTI registration and instructor accounts are free.</li>"
@@ -899,7 +899,7 @@ public class LTIv1p3Launch extends HttpServlet {
 						+ "<li>Institutions may purchase student licenses in bulk for as little as $2.00 USD per year.</li>"
 						+ "</ul>"
 						+ "If you have questions or need assistance, please email admin@chemvantage.org<br/><br/>"
-						+ "<label><input type=checkbox name=AcceptChemVantageTOS value=true />Accept the <a href=/terms_and_conditions.html target=_blank aria-label='opens new tab'>ChemVantage Terms of Service</a></label><br/><br/>"
+						+ "<label><input type=checkbox name=AcceptChemVantageTOS value=true required />Accept the <a href=/terms_and_conditions.html target=_blank aria-label='opens new tab'>ChemVantage Terms of Service</a></label><br/><br/>"
 						+ "<input type=submit value='Complete Registration'/><br/><br/>");
 				buf.append("</form>");
 			}
