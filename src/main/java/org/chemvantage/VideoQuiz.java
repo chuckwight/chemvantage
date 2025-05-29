@@ -152,7 +152,13 @@ public class VideoQuiz extends HttpServlet {
 					+ "<LI><a href='/VideoQuiz?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' video scores</a></LI>"
 					+ "</UL>");
 			buf.append("<a style='text-decoration: none' href='/VideoQuiz?UserRequest=ShowVideo&sig=" + user.getTokenSignature() + "'>"
-					+ "<button class='btn'>Show This Assignment</button></a><br/>");
+					+ "<button class='btn'>Show This Assignment</button></a><br/><br/>");
+			
+			Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
+			if (d.price > 0 && d.nLicensesRemaining > 0) {		
+				buf.append("Your account has " + d.nLicensesRemaining + " unclaimed student license" + (d.nLicensesRemaining>1?"s":"") + " remaining.<br/><br/>");
+			}
+			
 		} catch (Exception e) {
 			buf.append("<br/>Instructor page error: " + e.getMessage());
 		}

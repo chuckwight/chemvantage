@@ -195,11 +195,11 @@ public class PracticeExam extends HttpServlet {
 			
 			buf.append("<a href='/PracticeExam?sig=" + user.getTokenSignature() + "' class='btn'>Show This Assignment</a><br/><br/>");
 			
-/*			buf.append("<a style='text-decoration: none' href='/PracticeExam?UserRequest=PrintExam&sig=" + user.getTokenSignature() + "'>"
-					+ "<button style='display: block; width: 500px; border: 1 px; background-color: #00FFFF; color: black; padding: 14px 28px; font-size: 18px; text-align: center; cursor: pointer;'>"
-					+ "Show This Assignment</button></a>");
-*/
-			} catch (Exception e) {
+			Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
+			if (d.price > 0 && d.nLicensesRemaining > 0) {		
+				buf.append("Your account has " + d.nLicensesRemaining + " unclaimed student license" + (d.nLicensesRemaining>1?"s":"") + " remaining.<br/><br/>");
+			}
+		} catch (Exception e) {
 			buf.append("<br/>Instructor page error: " + e.getMessage());
 		}
 		return buf.toString();

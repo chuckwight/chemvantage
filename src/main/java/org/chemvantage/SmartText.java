@@ -138,13 +138,19 @@ public class SmartText extends HttpServlet {
 			   }
 		   }
 		   if (chapter==null) return "Sorry, we were unable to find the assigned chapter for this textbook.";
-		   
+
 		   buf.append(printTextHeader(text,chapter));
-		   
+
 		   if (user.isInstructor()) {
-			   buf.append("<b>Instructor: </b><a href=/SmartText?UserRequest=ReviewScores&sig=" + user.getTokenSignature() + ">Review student scores</a><br/><hr>");
+			   buf.append("<b>Instructor: </b><a href=/SmartText?UserRequest=ReviewScores&sig=" + user.getTokenSignature() + ">Review student scores</a><br/>");
+			   Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
+				if (d.price > 0 && d.nLicensesRemaining > 0) {		
+					buf.append("Your account has " + d.nLicensesRemaining + " unclaimed student license" + (d.nLicensesRemaining>1?"s":"") + " remaining.<br/>");
+				}
+				
 		   }
-		  
+		   buf.append("<hr>");
+
 		   buf.append("<h2>Key Concept Questions</h2>");
 		   // load the SmartText transaction entity for this user if one exists
 		   STTransaction st = null;
@@ -160,7 +166,7 @@ public class SmartText extends HttpServlet {
 			   st = new STTransaction(user.getHashedId(),a.id,chapter.conceptIds);
 			   buf.append("Complete all key concept questions to score 100% for this assignment.<br/><br/>");
 		   }
-		   
+
 		   // Count the missed questions and make a List of completed conceptIds:
 		   List<Long> completed = new ArrayList<Long>();
 		   boolean complete = true;
@@ -176,16 +182,16 @@ public class SmartText extends HttpServlet {
 			   buf.append("<b>This assignment is complete. Your score is 100%. You may continue just for practice.</b><br/><br/>");
 			   completed.clear();
 		   }
-		   
+
 		   // Create a random number generator and (possibly) seed it with st.graded to prevent question-shopping
 		   Random random = new Random();
 		   if (!complete && st.graded!=null) random.setSeed(st.graded.getTime());
-		   
+
 		   Question q = null;
 		   Long conceptId = null;
 		   List<Long> availableConceptIds = new ArrayList<Long>(st.conceptIds);
 		   if (!completed.isEmpty()) availableConceptIds.removeAll(completed);
-		   
+
 		   while (q==null) {
 			   // Randomly select a conceptId from the remaining concepts
 			   conceptId = availableConceptIds.get(random.nextInt(availableConceptIds.size()));
@@ -200,7 +206,7 @@ public class SmartText extends HttpServlet {
 				   continue;
 			   }
 			   if (availableConceptIds.isEmpty()) return "Sorry, there are no available questins.";
-			   
+
 			   Key<Question> questionKey = questionKeys.get(random.nextInt(questionKeys.size()));
 			   q = ofy().load().key(questionKey).now();
 		   }
@@ -224,7 +230,7 @@ public class SmartText extends HttpServlet {
 	   }
 	   return buf.toString();
    }
-   
+
    String printScore(User user, Assignment a,HttpServletRequest request) {
 	   StringBuffer buf = new StringBuffer();
 	   StringBuffer debug = new StringBuffer("Debug: ");

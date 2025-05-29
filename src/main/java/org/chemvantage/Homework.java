@@ -330,6 +330,11 @@ public class Homework extends HttpServlet {
 			
 			buf.append("<a href='/Homework?sig=" + user.getTokenSignature() + "' class='btn'>Show This Assignment</a><br/><br/>");
 			
+			Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
+			if (d.price > 0 && d.nLicensesRemaining > 0) {		
+				buf.append("Your account has " + d.nLicensesRemaining + " unclaimed student license" + (d.nLicensesRemaining>1?"s":"") + " remaining.<br/><br/>");
+			}
+			
 		} catch (Exception e) {
 			buf.append("<br/>Instructor page error: " + e.getMessage());
 		}

@@ -251,7 +251,12 @@ public class Poll extends HttpServlet {
 		
 		// This is the big blue button to view the assignment (almost) like students see it
 		buf.append("<a style='text-decoration: none' href='/Poll?UserRequest=PrintPoll&sig=" + user.getTokenSignature() + "'>"
-				+ "<button class='btn'>Show This Assignment</button></a><br/>");
+				+ "<button class='btn'>Show This Assignment</button></a><br/><br/>");
+		
+		Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
+		if (d.price > 0 && d.nLicensesRemaining > 0) {		
+			buf.append("Your account has " + d.nLicensesRemaining + " unclaimed student license" + (d.nLicensesRemaining>1?"s":"") + " remaining.<br/><br/>");
+		}
 		
 		if (!a.pollIsClosed && a.pollClosesAt != null) {
 			buf.append("<script>"

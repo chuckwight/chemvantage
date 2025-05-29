@@ -190,7 +190,6 @@ public class PlacementExam extends HttpServlet {
 				ofy().save().entity(a).now();
 			}
 
-			Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
 				
 			buf.append("<h1>Placement Exam</h1><h2>Instructor Page</h2>");
@@ -205,31 +204,13 @@ public class PlacementExam extends HttpServlet {
 			
 			buf.append("Students have " + (a.timeAllowed==null?"60":a.timeAllowed/60) + " minutes to complete the exam.<br/>");
 			
-			if (a.attemptsAllowed==null)
-				buf.append("We recommend that students be allowed multiple attempts to complete the exam. Most of the question items are "
-					+ "parameterized, so it is extremely unlikely that any two placement exams will be the same.<br/><br/>");
-			else buf.append("Students may attempt this placement exam only " + a.attemptsAllowed + (a.attemptsAllowed==1?" time.":" times.") + "<br/>"); 
+			if (a.attemptsAllowed==null) buf.append("Students may attempt this placement exam an unlimited number of times.<br/><br/>");
+			else buf.append("Students may attempt this placement exam only " + a.attemptsAllowed + (a.attemptsAllowed==1?" time.":" times.") + "<br/><br/>"); 
 				
-			if (supportsMembership) buf.append("You can use the link below to review the scores on each section as well as the student responses to each question.<br/>");
-			
-			buf.append("<br/>");
-			
-			if (d.price > 0) {		
-				buf.append("There are two ways to pay for placement exams:<ol>"
-						+ "<li>Contact us at admin@chemvantage.org to purchase student licenses in quantities of 50 or more. Every unique student who "
-						+ "downloads a placement exam will use one license, which is valid for a period of 12 months.</li>"
-						+ "<li>When there are no licenses remaining in your account, each student will be charged $" + d.price + ".00 USD per month "
-								+ "or $" + 4*d.price + " per semester (5 months) for an individual license.</li></ol>"
-						+ "You can use the settings in your LMS to restrict the number of placement exam retakes, if desired.<br/><br/>");
-
-				buf.append("<b>Your account has " + d.nLicensesRemaining + " licenses remaining.</b><br/><br/>"
-						+ "You have connected to ChemVantage as an instructor or administrator; therefore, you have unlimited free access to this tool (no license required).<br/><br/>");
-			}
-			
 			buf.append("From here, you may<UL>"
 					+ "<LI><a href='/PlacementExam?UserRequest=AssignExamQuestions&sig=" + user.getTokenSignature() + "'>Customize this exam</a> "
 							+ "to set the time allowed, attempts allowed, an optional password and select the available question items.</LI>"
-					+ (supportsMembership?"<LI><a href='/PlacementExam?UserRequest=ReviewExamScores&sig=" + user.getTokenSignature() + "'>Review the exam results</a> and (optionally) assign partial credit for answers</LI>":"")
+					+ (supportsMembership?"<LI><a href='/PlacementExam?UserRequest=ReviewExamScores&sig=" + user.getTokenSignature() + "'>Review the exam results</a> and (optionally) assign partial credit for answers.</LI>":"")
 					+ "</UL>");
 			
 			if (a.password != null && !a.password.isEmpty()) {
@@ -238,6 +219,13 @@ public class PlacementExam extends HttpServlet {
 			
 			buf.append("<a href='/PlacementExam?sig=" + user.getTokenSignature() + "'>"
 					+ "<button class='btn'>Show This Assignment</button></a><br/><br/>");
+			
+			Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
+			if (d.price > 0 && d.nLicensesRemaining > 0) {		
+				buf.append("Your account has " + d.nLicensesRemaining + " unclaimed student license" + (d.nLicensesRemaining>1?"s":"") + " remaining.<br/><br/>");
+			}
+			
+			
 		} catch (Exception e) {
 			buf.append("<br/>Instructor page error: " + (e.getMessage()==null?e.toString():e.getMessage()));
 		}
