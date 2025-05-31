@@ -143,11 +143,13 @@ public class SmartText extends HttpServlet {
 
 		   if (user.isInstructor()) {
 			   buf.append("<b>Instructor: </b><a href=/SmartText?UserRequest=ReviewScores&sig=" + user.getTokenSignature() + ">Review student scores</a><br/>");
+			   buf.append("Not completely satisfied? Please <a href=/Feedback?sig=" + user.getTokenSignature() + "&AssignmentId=" + a.id + ">submit a comment, question or request here</a>.<br/>");			
+
 			   Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
-				if (d.price > 0 && d.nLicensesRemaining > 0) {		
-					buf.append("Your account has " + d.nLicensesRemaining + " unclaimed student license" + (d.nLicensesRemaining>1?"s":"") + " remaining.<br/>");
-				}
-				
+			   if (d.price > 0 && d.nLicensesRemaining > 0) {		
+				   buf.append("Your account has " + d.nLicensesRemaining + " unclaimed student license" + (d.nLicensesRemaining>1?"s":"") + " remaining.<br/>");
+			   }
+
 		   }
 		   buf.append("<hr>");
 

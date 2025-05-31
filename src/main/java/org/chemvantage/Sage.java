@@ -476,6 +476,8 @@ public class Sage extends HttpServlet {
 					+ "</script>");
 			buf.append("<a id=showAssignment href='/Sage?UserRequest=menu&sig=" + user.getTokenSignature() + "' class='btn' onclick=wait();>Show This Assignment</a><br/><br/>");
 			
+			buf.append("Not completely satisfied? Please <a href=/Feedback?sig=" + user.getTokenSignature() + "&AssignmentId=" + a.id + ">submit a comment, question or request here</a>.<br/><br/>");			
+			
 			Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
 			if (d.price > 0 && d.nLicensesRemaining > 0) {		
 				buf.append("Your account has " + d.nLicensesRemaining + " unclaimed student license" + (d.nLicensesRemaining>1?"s":"") + " remaining.<br/><br/>");

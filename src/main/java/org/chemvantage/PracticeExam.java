@@ -195,6 +195,8 @@ public class PracticeExam extends HttpServlet {
 			
 			buf.append("<a href='/PracticeExam?sig=" + user.getTokenSignature() + "' class='btn'>Show This Assignment</a><br/><br/>");
 			
+			buf.append("Not completely satisfied? Please <a href=/Feedback?sig=" + user.getTokenSignature() + "&AssignmentId=" + a.id + ">submit a comment, question or request here</a>.<br/><br/>");			
+			
 			Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
 			if (d.price > 0 && d.nLicensesRemaining > 0) {		
 				buf.append("Your account has " + d.nLicensesRemaining + " unclaimed student license" + (d.nLicensesRemaining>1?"s":"") + " remaining.<br/><br/>");

@@ -47,7 +47,7 @@ public class Feedback extends HttpServlet {
 	private static final long serialVersionUID = 137L;
 	
 	public String getServletInfo() {
-		return "This servlet is used by contributors to suggest new and revised Quiz and Homework questions.";
+		return "This servlet is used by users to submit comments, questions or requests.";
 	}
 
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
@@ -136,9 +136,9 @@ public class Feedback extends HttpServlet {
 		buf.append("Your comments and opinions are important to us.  We use this<br>"
 				+ "information to improve the functionality of the site for our users.<p>");
 
-		buf.append("Please rate your overall experience with ChemVantage:\n");
+		buf.append("Please rate your overall experience with ChemVantage:<br/>");
 
-		buf.append("<div id='vote' style='color:red;'>(click a star):</div>\n");
+		buf.append("<span id='vote' style='color:red;'>(click a star):</span><br/>");
 		for (int istar=1;istar<6;istar++) {
 			buf.append("<img src='images/star1.gif' id='" + istar + "' style='width:30px; height:30px;' "        // properties
 					+ "onmouseover=showStars(this.id) onmouseout=showStars('0') onClick=\"set=false;showStars(this.id);setFeedbackStars(this.id)\"; />" ); // mouse actions
@@ -149,8 +149,11 @@ public class Feedback extends HttpServlet {
 
 		if (user.isAnonymous()) buf.append("<script type='text/javascript' src='https://www.google.com/recaptcha/api.js'> </script>");				
 		
+		String[] member = getMember(user);  // role, name, email
+		String email = member!=null && member[2]!=null?member[2]:null;
+		
 		buf.append("<FORM NAME=FeedbackForm id=FeedbackForm ACTION=Feedback METHOD=POST>\n"
-				+ "Comments or kudos: <FONT SIZE=-1>(160 characters max.)</FONT><br>"
+				+ "Comments, suggestions or requests: <FONT SIZE=-1>(160 characters max.)</FONT><br>"
 				+ "<INPUT TYPE=HIDDEN NAME=UserRequest VALUE=SubmitFeedback />"
 				+ "<INPUT TYPE=HIDDEN NAME=Stars />"
 				+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "' />"
@@ -158,7 +161,9 @@ public class Feedback extends HttpServlet {
 				+ "onKeyUp=javascript:{document.FeedbackForm.Comments.value=document.FeedbackForm.Comments.value.substring(0,160);document.getElementById('cbox').style.visibility='visible';}>"
 				+ "</TEXTAREA><br>");
 
-		buf.append("<label id=cbox style='visibility:hidden'>Email: <input type=text size=50 placeholder=' optional, if you want a response to your comment' name=Email></label><p>");
+		if (email==null || email.isEmpty()) buf.append("<label id=cbox style='visibility:hidden'>Email: <input type=text size=50 placeholder=' optional, if you want a response to your comment' name=Email></label><p>");
+		else buf.append("<span id=cbox style='visibility:hidden'>Our response will be sent to you at " + email + "<br/></span>"
+				+ "<input type=hidden name=Email value=" + email + " />");
 		
 		// If the user is anonymous, insert the Google reCaptcha tool (version 2) on the page
 		if (user.isAnonymous()) buf.append("<div class='g-recaptcha' data-sitekey='" + Subject.getReCaptchaSiteKey() + "'></div><p>");				
@@ -180,6 +185,18 @@ public class Feedback extends HttpServlet {
 		return buf.toString(); 
 	}
 
+	String[] getMember(User user) {
+		String[] member = null;
+		try {
+			if (user.isAnonymous()) throw new Exception();
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+			Map<String,String[]> membership = LTIMessage.getMembership(a);
+			String userId = user.getId();  // includes platform_id
+			member = membership.get(userId.substring(userId.lastIndexOf("/")+1));  // LMS userId
+		} catch (Exception e) {}
+		return member;
+	}
+	
 	String submitFeedback(User user,HttpServletRequest request) throws Exception {
 		StringBuffer buf = new StringBuffer();
 		
@@ -194,10 +211,13 @@ public class Feedback extends HttpServlet {
 		int stars = 0;
 		try {
 			stars = Integer.parseInt(request.getParameter("Stars"));
+			if (stars>0) Subject.addStarReport(stars);
 		} catch (Exception e) {}
 		
 		String comments = request.getParameter("Comments");
-		if (comments == null || comments.isEmpty()) return feedbackForm(user);   //(user==null?anonymousFeedbackForm():feedbackForm(user));
+		if (stars==0 && (comments == null || comments.isEmpty())) {
+			return feedbackForm(user);
+		}
 		
 		String userId = user==null?null:user.getId();
 		String email = request.getParameter("Email");
@@ -211,7 +231,7 @@ public class Feedback extends HttpServlet {
 		if (comments.length() > 0) {
 			UserReport r = new UserReport(userId,stars,comments);
 			ofy().save().entity(r);
-			if (email!=null && !user.isAnonymous()) sendEmailToAdmin(r,user,email);
+			if (!user.isAnonymous()) sendEmailToAdmin(r,user,email);
 		}
 
 		buf.append("<h1>ChemVantage Feedback Page</h1>");
@@ -221,9 +241,9 @@ public class Feedback extends HttpServlet {
 		if (comments.length() > 0) {
 			buf.append("Your comment was: <p><font color=red>" + comments + "</font><p>");
 		
-			if (email==null) buf.append("We will review your comment, but we're unable to provide a response because you did not provide an email address.<p>");
+			if (email==null) buf.append("We will review your comment, but we're unable to provide a response because you did not provide a valid email address.<p>");
 			else buf.append("We will review your comment. Any response will be sent to " + email + ".<p>");
-			buf.append("Feel free to email any additional comments to <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><p>");
+			buf.append("Feel free to email any additional comments to us at <a href=mailto:admin@chemvantage.org>admin@chemvantage.org</a><p>");
 		}
 		
 		if (user.isAnonymous()) buf.append("<p><a href=Home>Return to the Home page</a><br>");
@@ -273,19 +293,21 @@ public class Feedback extends HttpServlet {
 	
 	private void sendEmailToAdmin(UserReport r,User user,String email) {
 		String msgBody = r.view();
-		if (!email.isEmpty()) msgBody += "Respond to " + email;
-		else {  // try to get the user's email address from the NRPS service
-			try {
-				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
-				Map<String,String[]> members = LTIMessage.getMembership(a);
-				String userId = user.getId();
-				String raw_id = userId.substring(userId.lastIndexOf("/")+1);  // userId according to the platform
-				email = members.get(raw_id)[2];
-				if (email != null && !email.isEmpty()) msgBody += "Platform provided email: " + email;				
-			} catch (Exception e) {}
-		}
+		String name = "";
 		
+		try {
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).safe();
+			Map<String,String[]> members = LTIMessage.getMembership(a);
+			String userId = user.getId();
+			String raw_id = userId.substring(userId.lastIndexOf("/")+1);  // userId according to the platform
+			String[] member = members.get(raw_id);
+			if (member[1]!=null && !member[1].isEmpty()) name=member[1];
+			if (member[2]!=null && !member[2].isEmpty()) email = member[2];
+		} catch (Exception e) {}
+
 		if (email==null || email.isEmpty()) return;  // nowhere to send
+		else msgBody += "<p>Respond to" + (user.isInstructor()?" instructor: ":": ") + name + " &lt;" + email + "&gt;";
+			
 		if (msgBody.length()==0) return;  // no reports exist
 		
 		try {
