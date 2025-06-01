@@ -316,19 +316,21 @@ public class Homework extends HttpServlet {
 			}
 			boolean supportsMembership = a.lti_nrps_context_memberships_url != null;
 			
-			buf.append("<h1>Homework</1><h2>" + a.title + "</h2>");
+			buf.append("<h1>Homework</h1>"
+					+ "<h2>" + a.title + "</h2>");
 			buf.append("<h3>Instructor Page</h3>");
 			
-			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("This assignment allows an unlimited number of submissions for each homework question.<br/>");
-			else buf.append("This assignment allows only " + a.attemptsAllowed + (a.attemptsAllowed==1?" submission":" submissions") + " for each homework question.<br/>");
-			buf.append("<br/>");
+			buf.append("<a href='/Homework?sig=" + user.getTokenSignature() + "' class='btn'>Show This Assignment</a><br/><br/>");
 			
-			buf.append("From here, you may<UL>"
+			buf.append("Currently, this assignment has " + a.questionKeys.size() + " assigned question items.<br/>");
+			
+			if (a.attemptsAllowed==null || a.attemptsAllowed<1) buf.append("An unlimited number of submissions is allowed for each question.<br/>");
+			else buf.append("Only " + a.attemptsAllowed + (a.attemptsAllowed==1?" submission is ":" submissions are ") + "allowed for each question.<br/>");
+			
+			buf.append("<UL>"
 					+ "<LI><a href='/Homework?UserRequest=AssignHomeworkQuestions&sig=" + user.getTokenSignature() + "'>Customize this assignment</a> by selecting the assigned question items and selecting the number of submissions allowed for each question.</LI>"
 					+ (supportsMembership?"<LI><a href='/Homework?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' homework scores</a></LI>":"")
 					+ "</UL>");
-			
-			buf.append("<a href='/Homework?sig=" + user.getTokenSignature() + "' class='btn'>Show This Assignment</a><br/><br/>");
 			
 			buf.append("Not completely satisfied? Please <a href=/Feedback?sig=" + user.getTokenSignature() + "&AssignmentId=" + a.id + ">submit a comment, question or request here</a>.<br/><br/>");			
 			
@@ -1106,8 +1108,7 @@ public class Homework extends HttpServlet {
 					buf.append("<option value='" + k.getId() + "'" + (newConceptId!=null && k.getId()==newConceptId?" selected>":">") + keyConcepts.get(k).title + "</option>");
 				} catch (Exception e) {}
 			}
-			buf.append("</select></form><hr>");
-			
+			buf.append("</select></form><br/><hr>");
 			
 			// now we have all of the relevant conceptIds. Make 2 lists of Assigned and Optional questions:
 			StringBuffer assignedQuestions = new StringBuffer();
@@ -1165,8 +1166,9 @@ public class Homework extends HttpServlet {
 				}
 			}
 			
+			buf.append("Currently, this assignment has " + (i-1) + " assigned question items and " + (j-1) + " optional questions.<br/><br/>");
 			
-			buf.append("<b>Select the question items for this assignment</b><br/>");
+			buf.append("<b>Select the assigned question items for this assignment</b><br/>");
 			
 			// This dummy form uses javascript to select/deselect all questions
 			buf.append("<FORM style='display:inline;' NAME=DummyForm><INPUT id=selectAll TYPE=CHECKBOX NAME=SelectAll "
