@@ -69,6 +69,20 @@ public class Edit extends HttpServlet {
 	throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
+
+/********* temporary utility for Microsoft Partnership *************************
+		if ("Get Json".equals(request.getParameter("UserRequest"))) {
+			try {
+				response.setContentType("text/plain");
+				Integer n = Integer.parseInt(request.getParameter("n"));
+				if (n<=0) throw new Exception("Enter a valid integer.");
+				out.println(sampleQuestions(n));
+			} catch (Exception e) {
+				out.println(e.getMessage());
+			}
+			return;
+		}
+*********************************************************************************/
 		
 		try {
 			String userId = "admin";
@@ -661,7 +675,16 @@ void assignToConcept(User user, HttpServletRequest request) {
 			buf.append("<a href=/Edit?UserRequest=ManageVideos>Manage Videos</a><br/>");
 			buf.append("<a href=/Edit?UserRequest=ManageTexts>Manage Texts</a><br/>");
 			buf.append("<a href=/Edit?UserRequest=ManageOrphanQuestions>Manage Orphan Questions</a><br/>");
-	//buf.append("<a href=/Edit?UserRequest=ImportQuestionsFromSage>Import Questions From Sage</a><br/>");
+		//	buf.append("<a href=/Edit?UserRequest=ImportQuestionsFromSage>Import Questions From Sage</a><br/>");
+
+			/********* temporary utility for Microsoft Partnership *************************
+
+			// Temporary section to extract questions as JsonArray
+			buf.append("<form method=get>"
+					+ "Get <input type=text size=3 name=n /> questions as Json array "
+					+ "<input type=submit name=UserRequest value='Get Json' />"
+					+ "</form>");
+***************************************************************************************/
 			
 			// display a table to select questions by AssignmentType and Text/Chapter/Concept or directly by Concept:
 			buf.append("<div style=display:table><div style=display:table-row>");
@@ -1282,6 +1305,73 @@ void assignToConcept(User user, HttpServletRequest request) {
 		}
 	}
 
+	/********* temporary utility for Microsoft Partnership *************************
+
+	JsonArray sampleQuestions(int n) {
+		JsonArray questions = new JsonArray();
+		List<Key<Question>> keys = ofy().load().type(Question.class).keys().list();
+		Map<Long,Concept> concepts = getConcepts();
+		Random random = new Random();
+		while (questions.size() < n) {
+			int i = random.nextInt(keys.size());  // choose a random position in the List
+			Key<Question> k = keys.remove(i);     // remove it from the List
+			Question q = ofy().load().key(k).now();  // get the Question entity
+			
+			if (q.conceptId==null || concepts.get(q.conceptId)==null) continue;  // must be authentic concept
+			JsonObject question = new JsonObject();
+			JsonArray choices = new JsonArray();
+			question.addProperty("concept", concepts.get(q.conceptId).title);
+			switch (q.getQuestionType()) {
+			case(1):
+				question.addProperty("question_type", "multiple_choice");
+				question.addProperty("text",q.text);
+				for (String choice:q.choices) choices.add(choice);
+				question.add("choices", choices);
+				question.addProperty("correct_answer", q.correctAnswer);
+				break;
+			case(2):
+				question.addProperty("question_type", "true_false");
+				question.addProperty("text",q.text);
+				question.addProperty("correct_answer", q.correctAnswer);
+				break;
+			case(3):
+				question.addProperty("question_type", "checkbox");
+				question.addProperty("text",q.text);
+				for (String choice:q.choices) choices.add(choice);
+				question.add("choices", choices);
+				question.addProperty("correct_answer", q.correctAnswer);
+				break;
+			case(4):
+				question.addProperty("question_type", "fill_in_blank");
+				question.addProperty("text",q.text);
+				question.addProperty("correct_answer", q.getCorrectAnswer());
+				if (q.tag!=null) question.addProperty("tag", q.tag);
+				break;
+			case(5):
+				q.setParameters();
+				question.addProperty("question_type", "numeric");
+				question.addProperty("text",q.parseString(q.text));
+				question.addProperty("correct_answer", q.getCorrectAnswer());
+				if (q.tag!=null) question.addProperty("units", q.parseString(q.tag));
+				if (q.solution!=null) question.addProperty("solution", q.parseString(q.solution));
+				break;
+			default: continue;
+			}		
+			questions.add(question);
+		}
+		return questions;
+	}
+	
+	Map<Long,Concept> getConcepts() {
+		Map<Long,Concept> conceptMap = new HashMap<Long,Concept>();
+		List<Concept> conceptList = ofy().load().type(Concept.class).list();
+		for (Concept c : conceptList) {
+			if (c.orderBy.compareTo("1")>0) conceptMap.put(c.id, c); // skips early concepts
+		}
+		return conceptMap;
+	}
+**********************************************************************************/
+	
 	String topicSelectBox(long topicId) {
 		return topicSelectBox(topicId,false);
 	}
