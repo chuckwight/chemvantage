@@ -93,13 +93,13 @@ public class DataStoreCleaner extends HttpServlet {
 		case "CleanTransactions": buf.append(cleanTransactions(testOnly,request)); break;
 		case "CleanScores": buf.append(cleanScores(testOnly)); break;
 		case "CleanAssignments": buf.append(cleanAssignments(testOnly,request)); break;
-		case "CleanDeployments": buf.append(cleanDeployments(testOnly)); break;
+		//case "CleanDeployments": buf.append(cleanDeployments(testOnly)); break;
 		case "CleanUsers": buf.append(cleanUsers(testOnly)); break;
 		case "CleanAll":
 			Utilities.createTask("/DataStoreCleaner","Task=CleanTransactions&TestOnly="+testOnly);
 			Utilities.createTask("/DataStoreCleaner","Task=CleanScores&TestOnly="+testOnly);
 			Utilities.createTask("/DataStoreCleaner","Task=CleanAssignments&TestOnly="+testOnly);
-			Utilities.createTask("/DataStoreCleaner","Task=CleanDeployments&TestOnly="+testOnly);
+			//Utilities.createTask("/DataStoreCleaner","Task=CleanDeployments&TestOnly="+testOnly);
 			Utilities.createTask("/DataStoreCleaner","Task=CleanUsers&TestOnly="+testOnly);
 			
 			buf.append("5 background tasks launched to scrub all obsolete entity types from the datastore.");
@@ -653,7 +653,7 @@ public class DataStoreCleaner extends HttpServlet {
 			return null;
 		}
 	}
-	
+/*	============= Deleted because query included new Deployments where lastLogin is blank ============
 	private String cleanDeployments(boolean testOnly) {
 		// This method searches for Deployment entities with no logins for at least 1 year
 		
@@ -675,7 +675,7 @@ public class DataStoreCleaner extends HttpServlet {
 		}
 		return buf.toString();
 	}
-	
+*/	
 	private String cleanUsers(boolean testOnly) {
 		// This method clears all User entity tokens that have expired
 		
