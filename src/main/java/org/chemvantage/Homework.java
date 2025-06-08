@@ -564,7 +564,7 @@ public class Homework extends HttpServlet {
 				Question q = questions.get(k); 
 				if (q==null) continue;
 				i++;
-				buf.append("<div style='display:table-row'><div style='display:table-cell;font-size:small'>");
+				buf.append("<div id=q" + i + " style='display:table-row'><div style='display:table-cell;font-size:small'>");
 				String hashMe = user.getId() + hwa.id;
 				q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
 
@@ -580,7 +580,8 @@ public class Homework extends HttpServlet {
 
 				buf.append("<FORM METHOD=POST ACTION=/Homework onsubmit=waitForScore('" + q.id + "'); >"
 						+ "<INPUT TYPE=HIDDEN NAME=sig VALUE='" + user.getTokenSignature() + "'>"
-						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
+						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>"
+						+ "<input type=hidden name=QNumber value=" + i + " />"  // this is the assigned question number on the page
 						+ (hwa==null?"":"<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" + hwa.id + "'>")
 						+ "<div style='display:table-cell;vertical-align:text-top;padding-right:10px;'><b>" + i + ".</b></div>"
 						+ "<div style='display:table-cell'>" + q.print(workStrings.get(q.id),"",attemptsRemaining) 
@@ -653,6 +654,7 @@ public class Homework extends HttpServlet {
 		try {
 			// The Homework grader scores only one Question at a time, so first identify and load it
 			long questionId = Long.parseLong(request.getParameter("QuestionId"));
+			String qn = request.getParameter("QNumber");
 			Key<Question> k = key(Question.class,questionId);
 			Question q = ofy().load().key(k).safe();
 			
@@ -722,12 +724,13 @@ public class Homework extends HttpServlet {
 						+ "same solution, or it may be possible to use your answer to back-calculate the data given in the problem.<br/><br/>");
 				buf.append("Alternatively, you may wish to "
 						+ "<a href=/Homework?AssignmentId=" + hwa.id
-						+ "&sig=" + user.getTokenSignature() + ">" 
+						+ "&sig=" + user.getTokenSignature() + (qn==null?"":"#q" + qn) + ">" 
 						+ "return to this homework assignment</a> to work on another problem.<p>");
 				buf.append("<FORM NAME=Homework METHOD=POST ACTION=Homework onsubmit=waitForRetryScore(); >"
 						+ "<INPUT TYPE=HIDDEN NAME=AssignmentId VALUE='" +(hwa.id==null?0:hwa.id) + "'>"
 						+ "<INPUT TYPE=HIDDEN NAME=sig VALUE=" + user.getTokenSignature() + ">"
 						+ "<INPUT TYPE=HIDDEN NAME=QuestionId VALUE='" + q.id + "'>" 
+						+ (qn==null?"":"<input type=hidden name=QNumber value=" + qn + " />")  // this is the assigned question number on the page
 						+ q.print(showWork,studentAnswer) + "<br>");
 
 				buf.append("<INPUT TYPE=SUBMIT id='RetryButton' class='btn' DISABLED=true VALUE='Please wait' /></FORM><br/><br/>");
@@ -939,8 +942,9 @@ public class Homework extends HttpServlet {
 				if (studentScore > 0) buf.append(fiveStars(user.getTokenSignature()));
 				else buf.append("Please take a moment to <a href=/Feedback?sig=" + user.getTokenSignature() + ">tell us about your ChemVantage experience</a>.<p>");
 
-				buf.append("<a class=btn href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature()  
-				+ (offerHint?"&Q=" + q.id + ">Please give me a hint":">Continue with this assignment") + "</a><br clear=left /><br/>");
+				buf.append("<a class=btn href=/Homework?AssignmentId=" + hwa.id + "&sig=" + user.getTokenSignature() + (offerHint?"&Q=" + q.id:"") + (qn==null?"":"#q" + qn) + ">"
+				+ (offerHint?"Please give me a hint":"Continue with this assignment") 
+				+ "</a><br clear=left /><br/>");
 				
 				if (hwa != null) buf.append("You may also <a href=/Homework?UserRequest=ShowScores&sig=" + user.getTokenSignature() + ">review your scores on this assignment</a> "
 						+ "or <a href=/Homework?sig=" + user.getTokenSignature() + "&UserRequest=Logout >logout of ChemVantage</a>");
