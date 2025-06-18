@@ -66,7 +66,7 @@ public class Utilities {
 		Email to = new Email(recipientEmail,recipientName);
 		Content content = new Content("text/html", message);
 		Mail mail = new Mail(from, subject, to, content);
-
+			
 		SendGrid sg = new SendGrid(Subject.getSendGridKey());
 		Request request = new Request();
 		request.setMethod(Method.POST);
@@ -76,5 +76,10 @@ public class Utilities {
 		System.out.println(response.getStatusCode());
 		System.out.println(response.getBody());
 		System.out.println(response.getHeaders());
+		
+		// For all outgoing email except marketing, send a copy to admin@chemvantage.org
+		if (!"admin@chemvantage.org".equals(recipientEmail) && !message.contains("unsubscribe")) {
+			sendEmail("ChemVantage LLC","admin@chemvantage.org",subject,message);
+		}
 	}
 }
