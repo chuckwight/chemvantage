@@ -798,6 +798,7 @@ public class Sage extends HttpServlet {
 	static void refreshConcepts() {
 		if (conceptMap == null) {
     		conceptList = ofy().load().type(Concept.class).order("orderBy").list();
+    		conceptList.removeIf(obj -> obj != null && obj.orderBy != null && obj.orderBy.startsWith(" 0"));
     		conceptMap = new HashMap<Long,Concept>();
     		for (Concept c : conceptList) conceptMap.put(c.id, c);
     	}
