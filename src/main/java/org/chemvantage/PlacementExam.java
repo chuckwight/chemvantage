@@ -220,7 +220,7 @@ public class PlacementExam extends HttpServlet {
 			buf.append("<a href='/PlacementExam?sig=" + user.getTokenSignature() + "'>"
 					+ "<button class='btn'>Show This Assignment</button></a><br/><br/>");
 			
-			buf.append("Not completely satisfied? Please <a href=/Feedback?sig=" + user.getTokenSignature() + "&AssignmentId=" + a.id + ">submit a comment, question or request here</a>.<br/><br/>");			
+			buf.append("Need help? Please <a href=/Feedback?sig=" + user.getTokenSignature() + "&AssignmentId=" + a.id + ">submit a comment, question or request here</a>.<br/><br/>");			
 			
 			Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
 			if (d.price > 0 && d.nLicensesRemaining > 0) {		

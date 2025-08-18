@@ -222,7 +222,7 @@ public class Poll extends HttpServlet {
 				+ "When the poll is open, students can view the poll questions and submit responses.<br/>"
 				+ "When the poll is closed, responses are not accepted and students are provided a link to view the poll results.<br/><br/>");
 		
-		buf.append("Not completely satisfied? Please <a href=/Feedback?sig=" + user.getTokenSignature() + "&AssignmentId=" + a.id + ">submit a comment, question or request here</a>.<br/><br/>");			
+		buf.append("Need help? Please <a href=/Feedback?sig=" + user.getTokenSignature() + "&AssignmentId=" + a.id + ">submit a comment, question or request here</a>.<br/><br/>");			
 		
 		int nSubmissions = ofy().load().type(PollTransaction.class).filter("assignmentId",a.id).count();
 		boolean supportsMembership = a.lti_nrps_context_memberships_url != null;

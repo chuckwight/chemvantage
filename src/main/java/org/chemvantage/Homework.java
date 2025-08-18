@@ -332,7 +332,7 @@ public class Homework extends HttpServlet {
 					+ (supportsMembership?"<LI><a href='/Homework?UserRequest=ShowSummary&sig=" + user.getTokenSignature() + "'>Review your students' homework scores</a></LI>":"")
 					+ "</UL>");
 			
-			buf.append("Not completely satisfied? Please <a href=/Feedback?sig=" + user.getTokenSignature() + "&AssignmentId=" + a.id + ">submit a comment, question or request here</a>.<br/><br/>");			
+			buf.append("Need help? Please <a href=/Feedback?sig=" + user.getTokenSignature() + "&AssignmentId=" + a.id + ">submit a comment, question or request here</a>.<br/><br/>");			
 			
 			Deployment d = ofy().load().type(Deployment.class).id(a.domain).now();
 			if (d.price > 0 && d.nLicensesRemaining > 0) {		
