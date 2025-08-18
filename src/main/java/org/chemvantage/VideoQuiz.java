@@ -67,7 +67,7 @@ public class VideoQuiz extends HttpServlet {
 			
 			Assignment a = null;
 			long assignmentId = user.getAssignmentId();
-			if (assignmentId==0L && videoId==0L) {  // anonymous user; select a random video with embedded quizlet
+			if (assignmentId==0L) {  // anonymous user; select a random video with embedded quizlet
 				List<Video> videos = ofy().load().type(Video.class).filter("breaks >",0).list();
 				Random rand = new Random();
 				videoId = videos.get(rand.nextInt(videos.size())).id;
