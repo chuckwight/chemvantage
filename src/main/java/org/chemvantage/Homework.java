@@ -17,8 +17,8 @@
 
 package org.chemvantage;
 
-import static com.googlecode.objectify.ObjectifyService.ofy;
 import static com.googlecode.objectify.ObjectifyService.key;
+import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -39,18 +39,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.googlecode.objectify.Key;
+
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.googlecode.objectify.Key;
 
 @WebServlet("/Homework")
 public class Homework extends HttpServlet {
@@ -767,6 +766,9 @@ public class Homework extends HttpServlet {
 					if (studentAnswer.length()>800) studentAnswer = studentAnswer.substring(0,799);
 					JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
 					api_request.addProperty("model",Subject.getGPTModel());
+					JsonObject type = new JsonObject();
+					type.addProperty("type", "json_object");
+					api_request.add("response_format", type);
 					JsonObject m = new JsonObject();  // api request message
 					m.addProperty("role", "user");
 					String prompt = "Question: \"" + q.text +  "\"\n My response: \"" + studentAnswer + "\"\n "
@@ -793,19 +795,9 @@ public class Homework extends HttpServlet {
 					JsonObject api_response = JsonParser.parseReader(reader).getAsJsonObject();
 					reader.close();
 					
-					// get the ChatGPT score from the response:
-					JsonArray choices = api_response.get("choices").getAsJsonArray();
-					JsonElement message = null;
-					for (int i = 0; i < choices.size(); i++) {
-						message = choices.get(i);
-						if (message != null) break;
-					}
-					if (message != null) {
-						content = message.getAsJsonObject().get("content").getAsJsonObject();
-					} else {
-						content.addProperty("score", 0);
-						content.addProperty("feedback", "Sorry, the AI model was unable to score your response.");
-					}
+					// get the ChatGPT score and feedback from the response:
+					content = JsonParser.parseString(api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString()).getAsJsonObject();
+					
 					studentScore = content.get("score").getAsInt();
 					studentScore = studentScore>=4?q.pointValue:0;
 					break;
