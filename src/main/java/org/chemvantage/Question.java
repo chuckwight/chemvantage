@@ -651,8 +651,6 @@ public class Question implements Serializable, Cloneable {
 			BufferedReader reader = null;
 			JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
 			api_request.addProperty("model",Subject.getGPTModel());
-			//api_request.addProperty("max_tokens",600);
-			api_request.addProperty("temperature",0.4);
 			JsonArray messages = new JsonArray();
 			JsonObject m1 = new JsonObject();  // api request message
 			m1.addProperty("role", "system");
@@ -691,103 +689,6 @@ public class Question implements Serializable, Cloneable {
 		return buf.toString();
 	}
 
-
-	/*
-	String getExplanation() {
-		// if an explanation was stored previously 
-		if (!this.requiresParser() && this.explanation != null && !explanation.isEmpty()) return explanation;
-		// Otherwise, compute an explanation
-		StringBuffer buf = new StringBuffer();
-		try {
-			BufferedReader reader = null;
-			JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
-			api_request.addProperty("model",Subject.getGPTModel());
-			//api_request.addProperty("max_tokens",600);
-			api_request.addProperty("temperature",0.4);
-
-			JsonArray messages = new JsonArray();
-			JsonObject m1 = new JsonObject();  // api request message
-			m1.addProperty("role", "system");
-			m1.addProperty("content","You are a tutor assisting a college student taking General Chemistry. "
-					+ "Explain why\n" + getCorrectAnswerForSage() + "\n"
-					+ "is the correct answer to the following question item:\n"
-					+ printForSage() + "\n"
-					+ "Format your response in HTML ans use LaTeX for math.");
-			messages.add(m1);
-			api_request.add("messages", messages);
-			URL u = new URL("https://api.openai.com/v1/chat/completions");
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			uc.setRequestMethod("POST");
-			uc.setDoInput(true);
-			uc.setDoOutput(true);
-			uc.setRequestProperty("Authorization", "Bearer " + Subject.getOpenAIKey());
-			uc.setRequestProperty("Content-Type", "application/json");
-			uc.setRequestProperty("Accept", "application/json");
-			OutputStream os = uc.getOutputStream();
-			byte[] json_bytes = api_request.toString().getBytes("utf-8");
-			os.write(json_bytes, 0, json_bytes.length);           
-			os.close();
-
-			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-			JsonObject api_response = JsonParser.parseReader(reader).getAsJsonObject();
-			reader.close();
-			this.explanation = api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString();
-
-			if (!this.requiresParser()) ofy().save().entity(this);
-			buf.append(explanation);
-		} catch (Exception e) {
-			buf.append("<br/>Sorry, Sage was unable to elaborate. " + (e.getMessage()==null?e.toString():e.toString() + ":" + e.getMessage()) + "<p>");
-		}
-		return buf.toString();
-	}
-
-
-	/*
-	String getExplanation() {
-		// Get the AI to compute an explanation
-		StringBuffer buf = new StringBuffer();
-		try {
-			BufferedReader reader = null;
-			JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
-			api_request.addProperty("model",Subject.getGPTModel());
-			api_request.addProperty("max_tokens",600);
-			api_request.addProperty("temperature",0.4);
-
-			JsonArray messages = new JsonArray();
-			JsonObject m1 = new JsonObject();  // api request message
-			m1.addProperty("role", "system");
-			m1.addProperty("content","You are a tutor assisting a college student taking General Chemistry."
-					+ "Briefly explain why\n" + getCorrectAnswerForSage() + "\n"
-					+ "is the correct answer to this problem:\n" + printForSage() + "\n"
-					+ "Format the response in HTML and use LaTex math mode specific delimiters as follows:\n"
-					+ "inline math mode : `\\(` and `\\)`\n"
-					+ "display math mode: `\\[` and `\\]`\n"
-					+ "");
-			messages.add(m1);
-			api_request.add("messages", messages);
-			URL u = new URL("https://api.openai.com/v1/chat/completions");
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			uc.setRequestMethod("POST");
-			uc.setDoInput(true);
-			uc.setDoOutput(true);
-			uc.setRequestProperty("Authorization", "Bearer " + Subject.getOpenAIKey());
-			uc.setRequestProperty("Content-Type", "application/json");
-			uc.setRequestProperty("Accept", "application/json");
-			OutputStream os = uc.getOutputStream();
-			byte[] json_bytes = api_request.toString().getBytes("utf-8");
-			os.write(json_bytes, 0, json_bytes.length);           
-			os.close();
-
-			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-			JsonObject api_response = JsonParser.parseReader(reader).getAsJsonObject();
-			reader.close();
-			buf.append(api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString());
-		} catch (Exception e) {
-			buf.append("<br/>Sorry, Sage was unable to elaborate. " + (e.getMessage()==null?e.toString():e.toString() + ":" + e.getMessage()) + "<p>");
-		}
-		return buf.toString();
-	}
-*/
 	String printForSage() {
 		StringBuffer buf = new StringBuffer();
 		char choice = 'a';

@@ -233,9 +233,7 @@ public class Sage extends HttpServlet {
 		BufferedReader reader = null;
 		JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
 		api_request.addProperty("model",Subject.getGPTModel());
-		api_request.addProperty("max_tokens",400);
-		api_request.addProperty("temperature",0.4);
-
+		
 		JsonArray messages = new JsonArray();
 		JsonObject m1 = new JsonObject();  // api request message
 		m1.addProperty("role", "system");
@@ -348,8 +346,6 @@ public class Sage extends HttpServlet {
 		BufferedReader reader = null;
 		JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
 		api_request.addProperty("model",Subject.getGPTModel());
-		//api_request.addProperty("max_tokens",200);
-		api_request.addProperty("temperature",0.2);
 		
 		JsonArray messages = new JsonArray();
 		JsonObject m1 = new JsonObject();  // api request message
@@ -825,8 +821,6 @@ public class Sage extends HttpServlet {
 		if (studentAnswer.length()>800) studentAnswer = studentAnswer.substring(0,799);
 		JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
 		api_request.addProperty("model",Subject.getGPTModel());
-		api_request.addProperty("max_tokens",200);
-		api_request.addProperty("temperature",0.2);
 		JsonObject m = new JsonObject();  // api request message
 		m.addProperty("role", "user");
 		String prompt = "Question: \"" + questionText +  "\"\n My response: \"" + studentAnswer + "\"\n "

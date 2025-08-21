@@ -47,6 +47,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.googlecode.objectify.Key;
@@ -649,7 +650,7 @@ public class Homework extends HttpServlet {
 	static String printScore(User user,Assignment hwa,HttpServletRequest request) throws IOException {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Start...");
-		JsonObject api_score = null;	// this contains the score and feedback for essay questions from ChatGPT
+		JsonObject content = new JsonObject();	// this contains the score and feedback for essay questions from ChatGPT
 		
 		try {
 			// The Homework grader scores only one Question at a time, so first identify and load it
@@ -766,8 +767,6 @@ public class Homework extends HttpServlet {
 					if (studentAnswer.length()>800) studentAnswer = studentAnswer.substring(0,799);
 					JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
 					api_request.addProperty("model",Subject.getGPTModel());
-					api_request.addProperty("max_tokens",200);
-					api_request.addProperty("temperature",0.2);
 					JsonObject m = new JsonObject();  // api request message
 					m.addProperty("role", "user");
 					String prompt = "Question: \"" + q.text +  "\"\n My response: \"" + studentAnswer + "\"\n "
@@ -795,12 +794,20 @@ public class Homework extends HttpServlet {
 					reader.close();
 					
 					// get the ChatGPT score from the response:
-					try {
-						String content = api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString();
-						api_score = JsonParser.parseString(content).getAsJsonObject();
-						studentScore = api_score.get("score").getAsInt();
-						studentScore = studentScore>=4?q.pointValue:0;
-					} catch (Exception e) {}
+					JsonArray choices = api_response.get("choices").getAsJsonArray();
+					JsonElement message = null;
+					for (int i = 0; i < choices.size(); i++) {
+						message = choices.get(i);
+						if (message != null) break;
+					}
+					if (message != null) {
+						content = message.getAsJsonObject().get("content").getAsJsonObject();
+					} else {
+						content.addProperty("score", 0);
+						content.addProperty("feedback", "Sorry, the AI model was unable to score your response.");
+					}
+					studentScore = content.get("score").getAsInt();
+					studentScore = studentScore>=4?q.pointValue:0;
 					break;
 				default:
 				}
@@ -832,8 +839,8 @@ public class Homework extends HttpServlet {
 					break;
 				case 7: // Essay response
 					try {
-						studentAnswer += "<br/><br/><b>Feedback: </b>" + api_score.get("feedback").getAsString() 
-								+ "<br/><br/><b>Score: </b>" + api_score.get("score") + "/5" + "<br/>";
+						studentAnswer += "<br/><br/><b>Feedback: </b>" + content.get("feedback").getAsString() 
+								+ "<br/><br/><b>Score: </b>" + content.get("score") + "/5 (full credit)" + "<br/>";
 					} catch (Exception e) {
 						buf.append("Oops, an error occurred. Please report this below.<br/>" 
 								+ (reader==null?"No input stream.":reader.toString()) + "<br/>");
@@ -866,10 +873,10 @@ public class Homework extends HttpServlet {
 						buf.append("<h3>No rating was submitted for this item.</h3>");
 						break;
 					case 7:  // Essay question
-						int score = api_score.get("score").getAsInt();
+						int score = content.get("score").getAsInt();
 						if (score<=1) buf.append("<h3>Your answer to this question is incorrect. <IMG SRC=/images/xmark.png ALT='X mark' align=middle></h3>");
 						else buf.append("<h3>Your answer is partly correct, but needs improvement.</h3>");
-						buf.append(api_score.get("feedback").getAsString() + "<br/><br/>");
+						buf.append(content.get("feedback").getAsString() + "<br/><br/>");
 						break;
 					default:  // All other types of questions
 						buf.append("<h3>Incorrect Answer <IMG SRC=/images/xmark.png ALT='X mark' align=middle></h3>Your answer was scored incorrect because it does not agree with the "

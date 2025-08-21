@@ -158,8 +158,6 @@ public class OneQuestion extends HttpServlet {
 					if (answer.length()>800) answer = answer.substring(0,799);
 					JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
 					api_request.addProperty("model",Subject.getGPTModel());
-					api_request.addProperty("max_tokens",200);
-					api_request.addProperty("temperature",0.2);
 					JsonObject m = new JsonObject();  // api request message
 					m.addProperty("role", "user");
 					String prompt = "Your role is a chemistry professor grading student exam questions. "
