@@ -796,7 +796,14 @@ public class Homework extends HttpServlet {
 					reader.close();
 					
 					// get the ChatGPT score and feedback from the response:
-					content = JsonParser.parseString(api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString()).getAsJsonObject();
+					JsonArray choices = api_response.get("choices").getAsJsonArray();
+					for (int i = 0; i<choices.size(); i++) {
+						if (choices.get(i).isJsonObject() && choices.get(i).getAsJsonObject().has("message")) {
+							String content_string = choices.get(i).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString();
+							content = JsonParser.parseString(content_string).getAsJsonObject();
+							break;
+						}
+					}
 					
 					studentScore = content.get("score").getAsInt();
 					studentScore = studentScore>=4?q.pointValue:0;
