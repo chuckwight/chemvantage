@@ -765,8 +765,7 @@ public class Homework extends HttpServlet {
 				case 7:  // New section for scoring essay questions with Chat GPT
 					if (studentAnswer.length()>800) studentAnswer = studentAnswer.substring(0,799);
 					JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
-					api_request.addProperty("model","gpt-4");
-					//api_request.addProperty("model","gpt-3.5-turbo");
+					api_request.addProperty("model",Subject.getGPTModel());
 					api_request.addProperty("max_tokens",200);
 					api_request.addProperty("temperature",0.2);
 					JsonObject m = new JsonObject();  // api request message
