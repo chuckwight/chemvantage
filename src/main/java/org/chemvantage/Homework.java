@@ -689,14 +689,14 @@ public class Homework extends HttpServlet {
 			// Set the Question parameters for this user (this is why we made a copy, to prevent thread collisions with a class variable)
 			String hashMe = user.getId() + hwa.id;
 			q.setParameters(hashMe.hashCode());  // creates different parameters for different assignments
-			debug.append("question parameters set with "+hashMe.hashCode()+"...");
+			debug.append("questionId " + q.id + (q.requiresParser()?" parameters set with " + hashMe.hashCode():"") + "...");
 			
 			String studentAnswer = orderResponses(request.getParameterValues(Long.toString(questionId)));
 			
 			String showWork = request.getParameter("ShowWork"+q.id);
 			if (showWork==null) showWork="";  // required because later we check to see if showWork.isEmpty()
 			
-			debug.append("student answer:"+studentAnswer+"...");
+			debug.append("student answer:" + studentAnswer + "...");
 			
 			// This section checks for recent submissions to enforce the retry delay (discourages guessing)
 			DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG,DateFormat.FULL);
@@ -763,6 +763,7 @@ public class Homework extends HttpServlet {
 					studentScore = q.pointValue;  // full marks for submitting a response
 					break;
 				case 7:  // New section for scoring essay questions with Chat GPT
+					debug.append("essay question...");
 					if (studentAnswer.length()>800) studentAnswer = studentAnswer.substring(0,799);
 					JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
 					api_request.addProperty("model",Subject.getGPTModel());
@@ -778,6 +779,7 @@ public class Homework extends HttpServlet {
 					JsonArray messages = new JsonArray();
 					messages.add(m);
 					api_request.add("messages", messages);
+					debug.append("OpenAI API request JSON: " + api_request.toString());
 					URL u = new URL("https://api.openai.com/v1/chat/completions");
 					HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 					uc.setRequestMethod("POST");
@@ -790,10 +792,17 @@ public class Homework extends HttpServlet {
 					byte[] json_bytes = api_request.toString().getBytes("utf-8");
 					os.write(json_bytes, 0, json_bytes.length);           
 					os.close();
-						
-					reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-					JsonObject api_response = JsonParser.parseReader(reader).getAsJsonObject();
-					reader.close();
+					
+					JsonObject api_response = null;
+					if (uc.getResponseCode()/100==2) { //valid response
+						reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+						api_response = JsonParser.parseReader(reader).getAsJsonObject();
+						reader.close();
+					} else {
+						reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));
+						debug.append("ErrorStream: " + JsonParser.parseReader(reader).getAsJsonObject().toString());
+						throw new Exception("Sorry, we got an error code from ChatGPT: ");
+					}
 					
 					// get the ChatGPT score and feedback from the response:
 					JsonArray choices = api_response.get("choices").getAsJsonArray();
