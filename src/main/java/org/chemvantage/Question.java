@@ -651,7 +651,7 @@ public class Question implements Serializable, Cloneable {
 		try {
 			BufferedReader reader = null;
 			JsonObject api_request = new JsonObject();
-			api_request.addProperty("model", "gpt-4o");
+			api_request.addProperty("model", Subject.getGPTModel());
 			  JsonObject prompt = new JsonObject();
 			  prompt.addProperty("id", "pmpt_68ae17560ce08197a4584964c31e79510acd7153761d1f7b");
 			    JsonObject variables = new JsonObject();
@@ -687,6 +687,8 @@ public class Question implements Serializable, Cloneable {
 				debug.append(JsonParser.parseReader(reader).getAsJsonObject().toString());
 				reader.close();
 			}
+			
+			// Find the output text buried in the response JSON:
 			JsonArray output = api_response.get("output").getAsJsonArray();
 			JsonObject message = null;
 			JsonObject output_text = null;
@@ -997,6 +999,8 @@ public class Question implements Serializable, Cloneable {
 			return hasCorrectSigFigs(studentAnswer) && agreesToRequiredPrecision(studentAnswer);
 		case 6: // Five star rating
 			return !studentAnswer.isEmpty();
+		case 7: // ESSAY
+			return false;  // graded separately in Homework to get feedback
 		default:  // exact match to non-numeric answer (MULTIPLE_CHOICE, TRUE_FALSE, SELECT_MULTIPLE)
 			return correctAnswer.equals(studentAnswer);
 		}
