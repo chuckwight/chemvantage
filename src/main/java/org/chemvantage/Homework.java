@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Random;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.googlecode.objectify.Key;
@@ -646,10 +647,10 @@ public class Homework extends HttpServlet {
 		return buf.toString();
 	}
 
-	static String printScore(User user,Assignment hwa,HttpServletRequest request) throws IOException {
+	static String printScore(User user,Assignment hwa,HttpServletRequest request) throws Exception {
 		StringBuffer buf = new StringBuffer();
 		StringBuffer debug = new StringBuffer("Start...");
-		JsonObject content = new JsonObject();	// this contains the score and feedback for essay questions from ChatGPT
+		JsonObject essay_score = new JsonObject(); // contains essay score and feedback
 		
 		try {
 			// The Homework grader scores only one Question at a time, so first identify and load it
@@ -751,12 +752,11 @@ public class Homework extends HttpServlet {
 			
 			int studentScore = q.isCorrect(studentAnswer)?q.pointValue:0;
 			int possibleScore = q.pointValue;
-						
+			
 			debug.append("score is " + studentScore + " out of " + possibleScore + " points...");
 			HWTransaction ht = null;
 			
 			showWork = request.getParameter("ShowWork"+questionId);
-			BufferedReader reader = null;
 			if (!studentAnswer.isEmpty()) { // an answer was submitted
 				switch (q.getQuestionType()) {
 				case 6:  // Handle five-star rating response
@@ -765,22 +765,19 @@ public class Homework extends HttpServlet {
 				case 7:  // New section for scoring essay questions with Chat GPT
 					debug.append("essay question...");
 					if (studentAnswer.length()>800) studentAnswer = studentAnswer.substring(0,799);
-					JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
-					api_request.addProperty("model",Subject.getGPTModel());
-					JsonObject type = new JsonObject();
-					type.addProperty("type", "json_object");
-					api_request.add("response_format", type);
-					JsonObject m = new JsonObject();  // api request message
-					m.addProperty("role", "user");
-					String prompt = "Question: \"" + q.text +  "\"\n My response: \"" + studentAnswer + "\"\n "
-							+ "Using JSON format, give a score for my response (integer in the range 0 to 5) "
-							+ "and feedback for how to improve my response.";
-					m.addProperty("content", prompt);
-					JsonArray messages = new JsonArray();
-					messages.add(m);
-					api_request.add("messages", messages);
-					debug.append("OpenAI API request JSON: " + api_request.toString());
-					URL u = new URL("https://api.openai.com/v1/chat/completions");
+					
+					BufferedReader reader = null;
+					JsonObject api_request = new JsonObject();
+					api_request.addProperty("model", Subject.getGPTModel());
+					JsonObject prompt = new JsonObject();
+					prompt.addProperty("id", "pmpt_68b05dd3c7e88190b02ec3c4a41e412003d177cd13da4c5d");
+					JsonObject variables = new JsonObject();
+					variables.addProperty("question_item", q.printForSage());
+					variables.addProperty("student_answer", studentAnswer);
+					prompt.add("variables", variables);
+					api_request.add("prompt", prompt);
+
+					URL u = new URL("https://api.openai.com/v1/responses");
 					HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 					uc.setRequestMethod("POST");
 					uc.setDoInput(true);
@@ -792,30 +789,42 @@ public class Homework extends HttpServlet {
 					byte[] json_bytes = api_request.toString().getBytes("utf-8");
 					os.write(json_bytes, 0, json_bytes.length);           
 					os.close();
-					
+
+					int response_code = uc.getResponseCode();
+					debug.append("HTTP Response Code: " + response_code);
+
 					JsonObject api_response = null;
-					if (uc.getResponseCode()/100==2) { //valid response
+					if (response_code/100==2) {
 						reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
 						api_response = JsonParser.parseReader(reader).getAsJsonObject();
+						debug.append(api_response.toString());
 						reader.close();
 					} else {
 						reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));
-						debug.append("ErrorStream: " + JsonParser.parseReader(reader).getAsJsonObject().toString());
-						throw new Exception("Sorry, we got an error code from ChatGPT: ");
+						debug.append(JsonParser.parseReader(reader).getAsJsonObject().toString());
+						reader.close();
 					}
-					
-					// get the ChatGPT score and feedback from the response:
-					JsonArray choices = api_response.get("choices").getAsJsonArray();
-					for (int i = 0; i<choices.size(); i++) {
-						if (choices.get(i).isJsonObject() && choices.get(i).getAsJsonObject().has("message")) {
-							String content_string = choices.get(i).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString();
-							content = JsonParser.parseString(content_string).getAsJsonObject();
+
+					// Find the output text buried in the response JSON:
+					JsonArray output = api_response.get("output").getAsJsonArray();
+					JsonObject message = null;
+					JsonObject output_text = null;
+					for (JsonElement element0 : output) {
+						message = element0.getAsJsonObject();
+						if (message.has("content")) {
+							JsonArray content = message.get("content").getAsJsonArray();
+							for (JsonElement element1 : content) {
+								output_text = element1.getAsJsonObject();
+								if (output_text.has("text")) {
+									essay_score = JsonParser.parseString(output_text.get("text").getAsString()).getAsJsonObject();
+									studentScore = essay_score.get("score").getAsInt()>=4?q.pointValue:0;
+									break;
+								}
+							}
 							break;
 						}
 					}
-					
-					studentScore = content.get("score").getAsInt();
-					studentScore = studentScore>=4?q.pointValue:0;
+					debug.append("e");
 					break;
 				default:
 				}
@@ -846,13 +855,8 @@ public class Homework extends HttpServlet {
 					buf.append(q.printAllToStudents(studentAnswer) + "<br/>");
 					break;
 				case 7: // Essay response
-					try {
-						studentAnswer += "<br/><br/><b>Feedback: </b>" + content.get("feedback").getAsString() 
-								+ "<br/><br/><b>Score: </b>" + content.get("score") + "/5 (full credit)" + "<br/>";
-					} catch (Exception e) {
-						buf.append("Oops, an error occurred. Please report this below.<br/>" 
-								+ (reader==null?"No input stream.":reader.toString()) + "<br/>");
-					}
+						studentAnswer += "<br/><br/><b>Feedback: </b>" + essay_score.get("feedback").getAsString() 
+								+ "<br/><br/><b>Score: </b>" + essay_score.get("score").getAsInt() + "/5 (full credit)" + "<br/>";
 				default:
 					buf.append("<div><img id=polly src='/images/parrot.png' alt='Fun parrot character' style='float:left; margin:10px'>"
 							+ "<h2>Congratulations!<h2><h3>You answered the question correctly. <IMG SRC=/images/checkmark.gif ALT='Check mark' align=bottom /></h3>"
@@ -881,10 +885,10 @@ public class Homework extends HttpServlet {
 						buf.append("<h3>No rating was submitted for this item.</h3>");
 						break;
 					case 7:  // Essay question
-						int score = content.get("score").getAsInt();
+						int score = essay_score.get("score").getAsInt();
 						if (score<=1) buf.append("<h3>Your answer to this question is incorrect. <IMG SRC=/images/xmark.png ALT='X mark' align=middle></h3>");
 						else buf.append("<h3>Your answer is partly correct, but needs improvement.</h3>");
-						buf.append(content.get("feedback").getAsString() + "<br/><br/>");
+						buf.append(essay_score.get("feedback").getAsString() + "<br/><br/>");
 						break;
 					default:  // All other types of questions
 						buf.append("<h3>Incorrect Answer <IMG SRC=/images/xmark.png ALT='X mark' align=middle></h3>Your answer was scored incorrect because it does not agree with the "
