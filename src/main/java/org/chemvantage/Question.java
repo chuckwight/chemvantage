@@ -36,6 +36,7 @@ import java.util.Random;
 import com.bestcode.mathparser.IMathParser;
 import com.bestcode.mathparser.MathParserFactory;
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.googlecode.objectify.annotation.Entity;
@@ -649,19 +650,17 @@ public class Question implements Serializable, Cloneable {
 		StringBuffer debug = new StringBuffer("Debug: ");
 		try {
 			BufferedReader reader = null;
-			JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
-			api_request.addProperty("model",Subject.getGPTModel());
-			JsonArray messages = new JsonArray();
-			JsonObject m1 = new JsonObject();  // api request message
-			m1.addProperty("role", "system");
-			m1.addProperty("content","You are a tutor assisting a college student taking General Chemistry. "
-					+ "Explain why\n" + this.getCorrectAnswerForSage() + "\n"
-					+ "is the correct answer to the following question item:\n"
-					+ this.printForSage() + "\n"
-					+ "Format your response in HTML with LaTeX.");
-			messages.add(m1);
-			api_request.add("messages", messages);
-			URL u = new URL("https://api.openai.com/v1/chat/completions");
+			JsonObject api_request = new JsonObject();
+			api_request.addProperty("model", "gpt-4o");
+			  JsonObject prompt = new JsonObject();
+			  prompt.addProperty("id", "pmpt_68ae17560ce08197a4584964c31e79510acd7153761d1f7b");
+			    JsonObject variables = new JsonObject();
+			    variables.addProperty("question_item", this.printForSage());
+			    variables.addProperty("correct_answer", this.getCorrectAnswerForSage());
+			  prompt.add("variables", variables);
+			api_request.add("prompt", prompt);
+			
+			URL u = new URL("https://api.openai.com/v1/responses");
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setRequestMethod("POST");
 			uc.setDoInput(true);
@@ -674,17 +673,45 @@ public class Question implements Serializable, Cloneable {
 			os.write(json_bytes, 0, json_bytes.length);           
 			os.close();
 			
-			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-			JsonObject api_response = JsonParser.parseReader(reader).getAsJsonObject();
-			reader.close();
+			int response_code = uc.getResponseCode();
+			debug.append("HTTP Response Code: " + response_code);
 			
-			this.explanation = api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString();
+			JsonObject api_response = null;
+			if (response_code/100==2) {
+				reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+				api_response = JsonParser.parseReader(reader).getAsJsonObject();
+				debug.append(api_response.toString());
+				reader.close();
+			} else {
+				reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));
+				debug.append(JsonParser.parseReader(reader).getAsJsonObject().toString());
+				reader.close();
+			}
+			JsonArray output = api_response.get("output").getAsJsonArray();
+			JsonObject message = null;
+			JsonObject output_text = null;
+			for (JsonElement element0 : output) {
+				message = element0.getAsJsonObject();
+				if (message.has("content")) {
+					JsonArray content = message.get("content").getAsJsonArray();
+					for (JsonElement element1 : content) {
+						output_text = element1.getAsJsonObject();
+						if (output_text.has("text")) {
+							this.explanation = output_text.get("text").getAsString();
+							if (this.explanation==null) throw new Exception("Failed to read api_response.");
+							break;
+						}
+					}
+					break;
+				}
+			}
 			debug.append("e");
 			
 			if (!this.requiresParser()) ofy().save().entity(this);
 			buf.append(this.explanation);
+			//buf.append(api_response.toString());
 		} catch (Exception e) {
-			buf.append("<br/>Sorry, an explanation is not available at this time. " + (e.getMessage()==null?e.toString():e.toString()));  // + "<p>" + debug.toString()) + "<p>");
+			buf.append("<br/>Sorry, an explanation is not available at this time. " + (e.getMessage()==null?e.toString():e.toString()) + "<p>" + debug.toString() + "<p>");
 		}
 		return buf.toString();
 	}
